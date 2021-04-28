@@ -4,7 +4,8 @@
 # $ ruby osher-riemann-test.rb
 #
 # PJ, 2020-02-07
-# 
+#     2021-04-28 flux calculation
+#
 $LOAD_PATH << '~/dgdinst/lib'
 require 'eilmer/gas'
 
@@ -36,3 +37,8 @@ puts "pstar=%g wstar=%g wL=%g wR=%g velX0=%g" % [pstar, wstar, wL, wR, velX0]
 puts "state2: %s" % [state2]
 puts "state3: %s" % [state3]
 puts "state0: %s" % [state0]
+
+puts "Compute flux at x0 directly."
+f_mass, f_x_momentum, f_energy = \
+    flow.osher_flux(state4, state1, 0.0, 0.0)
+puts "F_mass=%g F_x_momentum=%g F_energy=%g" % [f_mass, f_x_momentum, f_energy]

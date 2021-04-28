@@ -4,11 +4,12 @@
 # $ python3 osher-riemann-test.py
 #
 # PJ, 2020-02-07
-# 
+#     2021-04-28 flux exercise
+#
 import math
 def approxEqual(a, b):
     result = math.isclose(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5)
-    print("a=",a, "b=",b, "rel=",(a-b)/b, "abs=",a-b, "result=",result) 
+    print("a=",a, "b=",b, "rel=",(a-b)/b, "abs=",a-b, "result=",result)
     return result
 from eilmer.gas import GasModel, GasState, GasFlow
 from eilmer.zero_solvers import secant
@@ -40,7 +41,7 @@ print("state2: %s" % state2)
 print("state3: %s" % state3)
 print("state0: %s" % state0)
 
-print("Solve again using the state-to-state functions")
+print("Solve Riemann problem again using the state-to-state functions")
 # as used in the classic shock tube analysis script.
 states = []
 for i in range(5): states.append(GasState(gmodel))
@@ -86,3 +87,8 @@ assert (abs(v2g - wstar)/v2g < 2.0e-2), "mismatch in contact-surface velocities"
 assert (abs(states[2].p - state2.p)/states[2].p < 2.0e-2), "mismatch in post-shock pressure"
 assert (abs(states[2].T - state2.T)/states[2].T < 5.0e-2), "mismatch in post-shock temperature"
 assert (abs(states[3].T - state3.T)/states[3].T < 2.0e-2), "mismatch in expanded-gas temperature"
+
+print("Compute flux at x0 directly.")
+F_mass, F_x_momentum, F_energy = \
+    flow.osher_flux(state4, state1, 0.0, 0.0)
+print("F_mass=%g F_x_momentum=%g F_energy=%g" % (F_mass, F_x_momentum, F_energy))

@@ -92,6 +92,9 @@ module Gas
   extern 'int gasflow_osher_riemann(int stateL_id, int stateR_id, double velL, double velR,
                                     int stateLstar_id, int stateRstar_id,
                                     int stateX0_id, int gm_id, double* results)'
+  extern 'int gasflow_osher_flux(int stateL_id, int stateR_id, double velL, double velR,
+                                 int gm_id, double* results)'
+
   extern 'int gasflow_lrivp(int stateL_id, int stateR_id, double velL, double velR,
                             int gmL_id, int gmR_id, double* wstar, double* pstar)'
   extern 'int gasflow_piston_at_left(int stateR_id, double velR, int gm_id,
@@ -750,8 +753,15 @@ class GasFlow
     flag = Gas.gasflow_osher_riemann(stateL.id, stateR.id, velL, velR,
                                      stateLstar.id, stateRstar.id,
                                      stateX0.id, @gmodel.id, my_results)
-    if flag < 0 then raise "failed to compute solution to Riemann problem." end
+    if flag < 0 then raise "failed to compute solution to Osher Riemann problem." end
     return my_results[0, my_results.size].unpack("ddddd") # [pstar, wstar, wL, wR, velX0]
+  end
+
+  def osher_flux(stateL, stateR, velL, velR)
+    my_results = [0.0, 0.0, 0.0].pack("d*")
+    flag = Gas.gasflow_osher_flux(stateL.id, stateR.id, velL, velR, @gmodel.id, my_results)
+    if flag < 0 then raise "failed to compute Osher flux." end
+    return my_results[0, my_results.size].unpack("ddd") # [f_mass, f_x_momentum, f_energy]
   end
 
   def lrivp(stateL, stateR, velL, velR)

@@ -18,6 +18,7 @@ module nm.bracketing;
 import std.math;
 import std.algorithm;
 import nm.complex;
+debug { import std.stdio; }
 
 int bracket(alias f, T)(ref T x1, ref T x2,
                         T x1_min = -1.0e38, T x2_max = +1.0e38,
@@ -45,6 +46,7 @@ int bracket(alias f, T)(ref T x1, ref T x2,
             } catch (Exception e) {
                 // Presume that we have gone into an invalid region,
                 // so reset to the boundary.
+                debug { writeln("bracket trying x1 e.msg=", e.msg); }
                 x1 = x1_min;
                 f1 = f(x1);
             }
@@ -56,6 +58,7 @@ int bracket(alias f, T)(ref T x1, ref T x2,
             } catch (Exception e) {
                 // Presume that we have gone into an invalid region,
                 // so reset to the boundary.
+                debug { writeln("bracket trying x2 e.msg=", e.msg); }
                 x2 = x2_max;
                 f2 = f(x2);
             }

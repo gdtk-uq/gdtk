@@ -996,14 +996,30 @@ int gasflow_osher_riemann(int stateL_id, int stateR_id, double velL, double velR
                           int stateX0_id, int gm_id, double* results)
 {
     try {
-        double[] my_results = osher_riemann(gas_states[stateL_id], gas_states[stateR_id], velL, velR,
-                                            gas_states[stateLstar_id], gas_states[stateRstar_id],
-                                            gas_states[stateX0_id], gas_models[gm_id]);
+        double[5] my_results = osher_riemann(gas_states[stateL_id], gas_states[stateR_id], velL, velR,
+                                             gas_states[stateLstar_id], gas_states[stateRstar_id],
+                                             gas_states[stateX0_id], gas_models[gm_id]);
         results[0] = my_results[0]; // pstar
         results[1] = my_results[1]; // wstar
         results[2] = my_results[2]; // wL
         results[3] = my_results[3]; // wR
         results[4] = my_results[4]; // velX0
+        return 0;
+    } catch (Exception e) {
+        stderr.writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern(C)
+int gasflow_osher_flux(int stateL_id, int stateR_id, double velL, double velR,
+                       int gm_id, double* results)
+{
+    try {
+        double[3] F = osher_flux(gas_states[stateL_id], gas_states[stateR_id], velL, velR, gas_models[gm_id]);
+        results[0] = F[0]; // mass
+        results[1] = F[1]; // x-momentum
+        results[2] = F[2]; // energy
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);

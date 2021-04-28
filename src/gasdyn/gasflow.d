@@ -311,7 +311,7 @@ number[] normal_shock_p2p1(const(GasState) state1, number p2p1,
     };
     number vguess1 = V1ideal;
     number vguess2 = 1.1 * V1ideal;
-    if (bracket!error_in_p2p1(vguess1, vguess2) < 0) {
+    if (bracket!error_in_p2p1(vguess1, vguess2, 1.001*state1.a) < 0) {
         throw new GasFlowException("normal_shock_p2p1 could not bracket the shock velocity.");
     }
     number V1 = solve!error_in_p2p1(vguess1, vguess2, 1.0e-6);
@@ -727,10 +727,10 @@ number finite_wave_dv(const(GasState) state1, number V1,
 immutable double near_zero_pressure = 1.0e-6; // in Pascals
 
 
-number[] osher_riemann(const(GasState) stateL, const(GasState) stateR,
-                       number velL, number velR,
-                       GasState stateLstar, GasState stateRstar, GasState stateX0,
-                       GasModel gm)
+number[5] osher_riemann(const(GasState) stateL, const(GasState) stateR,
+                        number velL, number velR,
+                        GasState stateLstar, GasState stateRstar, GasState stateX0,
+                        GasModel gm)
 /**
  * Osher-type solution to the Riemann problem.
  *
@@ -897,6 +897,22 @@ number[] osher_riemann(const(GasState) stateL, const(GasState) stateR,
     //
     return [pstar, wstar, wL, wR, velX0];
 } // end osher_riemann()
+
+number[3] osher_flux(const(GasState) stateL, const(GasState) stateR,
+                     number velL, number velR, GasModel gm)
+{
+    GasState stateLstar = new GasState(gm);
+    GasState stateRstar = new GasState(gm);
+    GasState stateX0 = new GasState(gm);
+    number[5] rsol = osher_riemann(stateL, stateR, velL, velR, stateLstar, stateRstar, stateX0, gm);
+    number rho = stateX0.rho;
+    number p = stateX0.p;
+    number u = gm.internal_energy(stateX0);
+    number velx = rsol[4];
+    // Fluxes:     mass      x-momentum       energy
+    number[3] F = [rho*velx, rho*velx*velx+p, rho*velx*(u+p/rho+0.5*velx*velx)];
+    return F;
+}
 
 // The following two function solvers are used in lrivp (below)
 // to get approximate estimates of the intermediate pressure
