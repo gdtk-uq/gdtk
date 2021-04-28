@@ -42,7 +42,7 @@ public:
     bool brakes_on;
     double brakes_friction_force; // in N
     double x_buffer;
-    bool hit_buffer;
+    bool on_buffer;
     int ecL_id;
     int ecR_id;
     EndCondition ecL;
@@ -50,7 +50,7 @@ public:
 
     bool is_restrain0;
     bool brakes_on0;
-    bool hit_buffer0;
+    bool on_buffer0;
     double x0;
     double vel0;
     double[2] dxdt;
@@ -112,17 +112,17 @@ public:
         vel = to!double(items[2]);
         is_restrain = (to!int(items[3]) == 1);
         brakes_on = (to!int(items[4]) == 1);
-        hit_buffer = (to!int(items[5]) == 1);
+        on_buffer = (to!int(items[5]) == 1);
     } // end read_data()
 
     void write_data(File fp, int tindx, bool write_header)
     {
         if (write_header) {
-            fp.writeln("# tindx  x  vel  is_restrain  brakes_on  hit_buffer");
+            fp.writeln("# tindx  x  vel  is_restrain  brakes_on  on_buffer");
         }
         fp.writeln(format("%d %e %e %d %d %d", tindx, x, vel,
                           ((is_restrain)?1:0), ((brakes_on)?1:0),
-                          ((hit_buffer)?1:0)));
+                          ((on_buffer)?1:0)));
     } // end write_data()
 
     @nogc @property
@@ -136,7 +136,7 @@ public:
     {
         is_restrain0 = is_restrain;
         brakes_on0 = brakes_on;
-        hit_buffer0 = hit_buffer;
+        on_buffer0 = on_buffer;
         x0 = x;
         vel0 = vel;
         return;
@@ -147,21 +147,30 @@ public:
     {
         is_restrain = is_restrain0;
         brakes_on = brakes_on0;
-        hit_buffer = hit_buffer0;
+        on_buffer = on_buffer0;
         x = x0;
         vel = vel0;
         return;
     }
 
-    void check_for_buffer_strike(double t)
+    void check_for_buffer_interaction(double t)
     {
-        if ((x > x_buffer) && (vel > 0.0)) {
-            vel = 0.0;
-            hit_buffer = true;
-            string msg = format("t=%e Piston[%d] buffer strike with vel=%e\n", t, indx, vel);
-            write(msg);
-            append(L1dConfig.job_name~"/events.txt", msg);
+        if (on_buffer) {
+            if (vel < -0.001) {
+                on_buffer = false;
+            }
+        } else { // not (yet) identified as being on the buffer
+            if ((x > x_buffer) && (vel > 0.0)) {
+                on_buffer = true;
+                if (vel > 0.001) {
+                    // Only report an impact with significant speed.
+                    string msg = format("t=%e Piston[%d] buffer strike with vel=%e\n", t, indx, vel);
+                    write(msg);
+                    append(L1dConfig.job_name~"/events.txt", msg);
+                }
+            }
         }
+        if (on_buffer) { vel = 0.0; }
         return;
     }
 

@@ -16,7 +16,7 @@ function FluidBlock:new(o)
       error("Make sure that you are using FluidBlock:new{} and not FluidBlock.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"grid", "initialState", "fillCondition", "active",
+   flag = checkAllowedNames(o, {"grid", "gridMetadata", "initialState", "fillCondition", "active",
                                 "label", "omegaz", "may_be_turbulent", "bcList", "bcDict",
                                 "hcellList", "xforceList", "fluidBlockArrayId"})
    if not flag then
@@ -37,8 +37,8 @@ function FluidBlock:new(o)
    -- Set to -1 if NOT part of a fluid-block-array, otherwise use supplied value
    o.fluidBlockArrayId = o.fluidBlockArrayId or -1
    -- Must have a grid and initialState
-   assert(o.grid, "need to supply a grid")
-   assert(o.initialState, "need to supply a initialState")
+   assert(o.grid or o.gridMetadata, "need to supply a grid or its metadata")
+   assert(o.initialState, "need to supply an initialState")
    if getmetatable(o.initialState) == FlowSolution then
       -- Let's build a initialState function here from a FlowSolution.
       o.initialState = makeFlowStateFn(o.initialState)
@@ -59,70 +59,128 @@ function FluidBlock:new(o)
    o.hcellList = o.hcellList or {}
    o.xforceList = o.xforceList or {}
    -- Check the grid information.
-   if config.dimensions ~= o.grid:get_dimensions() then
-      local msg = string.format("Mismatch in dimensions, config %d grid %d.",
-				config.dimensions, o.grid.get_dimensions())
-      error(msg)
-   end
-   if o.grid:get_type() == "structured_grid" then
-      -- Extract some information from the StructuredGrid
-      -- Note 0-based indexing for vertices and cells.
-      o.nic = o.grid:get_niv() - 1
-      o.njc = o.grid:get_njv() - 1
-      if config.dimensions == 3 then
-	 o.nkc = o.grid:get_nkv() - 1
-      else
-	 o.nkc = 1
+   if o.grid then
+      if config.dimensions ~= o.grid:get_dimensions() then
+         local msg = string.format("Mismatch in dimensions, config %d grid %d.",
+                                   config.dimensions, o.grid:get_dimensions())
+         error(msg)
       end
-      o.ncells = o.nic * o.njc * o.nkc
-      -- The following table p for the corner locations,
-      -- is to be used later for testing for block connections.
-      o.p = {}
-      if config.dimensions == 3 then
-	 o.p[0] = o.grid:get_vtx(0, 0, 0)
-	 o.p[1] = o.grid:get_vtx(o.nic, 0, 0)
-	 o.p[2] = o.grid:get_vtx(o.nic, o.njc, 0)
-	 o.p[3] = o.grid:get_vtx(0, o.njc, 0)
-	 o.p[4] = o.grid:get_vtx(0, 0, o.nkc)
-	 o.p[5] = o.grid:get_vtx(o.nic, 0, o.nkc)
-	 o.p[6] = o.grid:get_vtx(o.nic, o.njc, o.nkc)
-	 o.p[7] = o.grid:get_vtx(0, o.njc, o.nkc)
-      else
-	 o.p[0] = o.grid:get_vtx(0, 0)
-	 o.p[1] = o.grid:get_vtx(o.nic, 0)
-	 o.p[2] = o.grid:get_vtx(o.nic, o.njc)
-	 o.p[3] = o.grid:get_vtx(0, o.njc)
+      if o.grid:get_type() == "structured_grid" then
+         -- Extract some information from the StructuredGrid
+         -- Note 0-based indexing for vertices and cells.
+         o.nic = o.grid:get_niv() - 1
+         o.njc = o.grid:get_njv() - 1
+         if config.dimensions == 3 then
+            o.nkc = o.grid:get_nkv() - 1
+         else
+            o.nkc = 1
+         end
+         o.ncells = o.nic * o.njc * o.nkc
+         -- The following table p for the corner locations,
+         -- is to be used later for testing for block connections.
+         o.p = {}
+         if config.dimensions == 3 then
+            o.p[0] = o.grid:get_vtx(0, 0, 0)
+            o.p[1] = o.grid:get_vtx(o.nic, 0, 0)
+            o.p[2] = o.grid:get_vtx(o.nic, o.njc, 0)
+            o.p[3] = o.grid:get_vtx(0, o.njc, 0)
+            o.p[4] = o.grid:get_vtx(0, 0, o.nkc)
+            o.p[5] = o.grid:get_vtx(o.nic, 0, o.nkc)
+            o.p[6] = o.grid:get_vtx(o.nic, o.njc, o.nkc)
+            o.p[7] = o.grid:get_vtx(0, o.njc, o.nkc)
+         else
+            o.p[0] = o.grid:get_vtx(0, 0)
+            o.p[1] = o.grid:get_vtx(o.nic, 0)
+            o.p[2] = o.grid:get_vtx(o.nic, o.njc)
+            o.p[3] = o.grid:get_vtx(0, o.njc)
+         end
+         -- print("FluidBlock id=", o.id, "p0=", tostring(o.p[0]), "p1=", tostring(o.p[1]),
+         --       "p2=", tostring(o.p[2]), "p3=", tostring(o.p[3]))
+         -- Attach default boundary conditions for those not specified.
+         -- Note that, in the classic preparation, the structured-grid bcs arrive in bcList.
+         for _,face in ipairs(faceList(config.dimensions)) do
+            o.bcList[face] = o.bcList[face] or WallBC_WithSlip:new()
+         end
       end
-      -- print("FluidBlock id=", o.id, "p0=", tostring(o.p[0]), "p1=", tostring(o.p[1]),
-      --       "p2=", tostring(o.p[2]), "p3=", tostring(o.p[3]))
-      -- Attach default boundary conditions for those not specified.
-      for _,face in ipairs(faceList(config.dimensions)) do
-	 o.bcList[face] = o.bcList[face] or WallBC_WithSlip:new()
+      if o.grid:get_type() == "unstructured_grid" then
+         -- Extract some information from the UnstructuredGrid
+         o.ncells = o.grid:get_ncells()
+         o.nvertices = o.grid:get_nvertices()
+         o.nfaces = o.grid:get_nfaces()
+         o.nboundaries = o.grid:get_nboundaries()
+         -- Attach boundary conditions from list or from the dictionary of conditions.
+         for i = 0, o.nboundaries-1 do
+            local mybc = o.bcList[i]
+            if (mybc == nil) and o.bcDict then
+               local tag = o.grid:get_boundaryset_tag(i)
+               mybc = o.bcDict[tag]
+            end
+            mybc = mybc or WallBC_WithSlip:new() -- default boundary condition
+            o.bcList[i] = mybc
+         end
       end
-   end
-   if o.grid:get_type() == "unstructured_grid" then
-      -- Extract some information from the UnstructuredGrid
-      o.ncells = o.grid:get_ncells()
-      o.nvertices = o.grid:get_nvertices()
-      o.nfaces = o.grid:get_nfaces()
-      o.nboundaries = o.grid:get_nboundaries()
-      -- Attach boundary conditions from list or from the dictionary of conditions.
-      for i = 0, o.nboundaries-1 do
-	 local mybc = o.bcList[i]
-	 if (mybc == nil) and o.bcDict then
-	    local tag = o.grid:get_boundaryset_tag(i)
-	    mybc = o.bcDict[tag]
-	 end
-	 mybc = mybc or WallBC_WithSlip:new() -- default boundary condition
-	 o.bcList[i] = mybc
+   else -- We have gridMetadata
+      if config.dimensions ~= o.gridMetadata.dimensions then
+         local msg = string.format("Mismatch in dimensions, config %d grid %d.",
+                                   config.dimensions, o.gridMetadata.dimensions)
+         error(msg)
+      end
+      if o.gridMetadata.type == "structured_grid" then
+         -- Extract some information from the StructuredGrid
+         -- Note 0-based indexing for vertices and cells.
+         o.nic = o.gridMetadata.nic
+         o.njc = o.gridMetadata.njc
+         o.nkc = o.gridMetadata.nkc
+         o.ncells = o.nic * o.njc * o.nkc
+         -- The following table p for the corner locations,
+         -- may be used later for testing for block connections.
+         o.p = {}
+         if config.dimensions == 3 then
+            o.p[0] = o.gridMetadata.p0
+            o.p[1] = o.gridMetadata.p1
+            o.p[2] = o.gridMetadata.p2
+            o.p[3] = o.gridMetadata.p3
+            o.p[4] = o.gridMetadata.p4
+            o.p[5] = o.gridMetadata.p5
+            o.p[6] = o.gridMetadata.p6
+            o.p[7] = o.gridMetadata.p7
+         else
+            o.p[0] = o.gridMetadata.p0
+            o.p[1] = o.gridMetadata.p1
+            o.p[2] = o.gridMetadata.p2
+            o.p[3] = o.gridMetadata.p3
+         end
+         -- print("FluidBlock id=", o.id, "p0=", tostring(o.p[0]), "p1=", tostring(o.p[1]),
+         --       "p2=", tostring(o.p[2]), "p3=", tostring(o.p[3]))
+         -- Attach default boundary conditions for those not specified.
+         -- Note that, in the staged-preparation, the bcs arrive as bcDict.
+         for _,face in ipairs(faceList(config.dimensions)) do
+            o.bcList[face] = o.bcDict[face] or WallBC_WithSlip:new()
+         end
+      end
+      if o.gridMetadata.type == "unstructured_grid" then
+         -- Extract some information from the UnstructuredGrid
+         o.ncells = o.gridMetadata.ncells
+         o.nvertices = o.gridMetadata.nvertices
+         o.nfaces = o.gridMetadata.nfaces
+         o.nboundaries = o.gridMetadata.nboundaries
+         -- Attach boundary conditions from list or from the dictionary of conditions.
+         for i = 0, o.nboundaries-1 do
+            local mybc = o.bcList[i]
+            if (mybc == nil) and o.bcDict then
+               error("FIX-ME set the unstructured-gird bcs")
+               local tag = o.gridMetadata.get_boundaryset_tag(i) -- [FIX-ME]
+               mybc = o.bcDict[tag]
+            end
+            mybc = mybc or WallBC_WithSlip:new() -- default boundary condition
+            o.bcList[i] = mybc
+         end
       end
    end
    return o
 end
 
 function FluidBlock:tojson()
-   -- [TODO] Should refactor the boundary condition checking and error messages.
-   -- [TODO] Only the loops are different and we should error() rather than exit(), I think. PJ 2017-04-29
    local str = string.format('"block_%d": {\n', self.id)
    str = str .. string.format('    "type": "%s",\n', self.myType)
    str = str .. string.format('    "label": "%s",\n', self.label)
@@ -130,8 +188,14 @@ function FluidBlock:tojson()
    str = str .. string.format('    "fluidBlockArrayId": %d,\n', self.fluidBlockArrayId)
    str = str .. string.format('    "omegaz": %.18e,\n', self.omegaz)
    str = str .. string.format('    "may_be_turbulent": %s,\n', tostring(self.may_be_turbulent))
-   str = str .. string.format('    "grid_type": "%s",\n', self.grid:get_type())
-   if self.grid:get_type() == "structured_grid" then
+   local grid_type
+   if self.grid then
+      grid_type = self.grid:get_type()
+   else
+      grid_type = self.gridMetadata.type
+   end
+   str = str .. string.format('    "grid_type": "%s",\n', grid_type)
+   if grid_type == "structured_grid" then
       str = str .. string.format('    "nic": %d,\n', self.nic)
       str = str .. string.format('    "njc": %d,\n', self.njc)
       str = str .. string.format('    "nkc": %d,\n', self.nkc)
@@ -156,7 +220,7 @@ function FluidBlock:tojson()
 	    self.bcList[face]:tojson() .. ',\n'
       end
    end
-   if self.grid:get_type() == "unstructured_grid" then
+   if grid_type == "unstructured_grid" then
       str = str .. string.format('    "ncells": %d,\n', self.ncells)
       str = str .. string.format('    "nvertices": %d,\n', self.nvertices)
       str = str .. string.format('    "nfaces": %d,\n', self.nfaces)
@@ -232,7 +296,10 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
       print("connectBlocks: blkA.id=", blkA.id, "faceA=", faceA,
             "blkB.id=", blkB.id, "faceB=", faceB, "orientation=", orientation)
    end
-   if blkA.grid:get_type() ~= "structured_grid" or blkB.grid:get_type() ~= "structured_grid" then
+   -- Note that, when doing staged preparation, we may not have the grid object
+   -- actually present at the point of making a FluidBlock connection.
+   if ((blkA.grid and (blkA.grid:get_type() ~= "structured_grid")) or
+      (blkA.grid and (blkB.grid:get_type() ~= "structured_grid"))) then
       error("connectBlocks() Works only for structured-grid blocks.", 2)
    end
    if blkA.myType == "FluidBlock" and blkB.myType == "FluidBlock" then

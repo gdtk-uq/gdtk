@@ -155,16 +155,8 @@ string[] build_flow_variable_list()
 
 //--------------------------------- Block IO ----------------------------------------
 //
-double read_solution(FluidBlock blk, string filename, bool overwrite_geometry_data)
-{
-    auto sblk = cast(SFluidBlock) blk;
-    if (sblk) { return read_solution(sblk, filename, overwrite_geometry_data); }
-    auto ublk = cast(UFluidBlock) blk;
-    if (ublk) { return read_solution(ublk, filename, overwrite_geometry_data); }
-    throw new Error("Oops, unknown type of FluidBlock");
-}
 
-double read_solution(SFluidBlock blk, string filename, bool overwrite_geometry_data)
+double read_legacy_solution(SFluidBlock blk, string filename, bool overwrite_geometry_data)
 // Note that the position data is read into grid-time-level 0
 // by scan_values_from_string().
 // Returns sim_time from file.
@@ -283,7 +275,7 @@ double read_solution(SFluidBlock blk, string filename, bool overwrite_geometry_d
     return sim_time;
 } // end read_solution() for structured-grid block
 
-double read_solution(UFluidBlock blk, string filename, bool overwrite_geometry_data)
+double read_legacy_solution(UFluidBlock blk, string filename, bool overwrite_geometry_data)
 // Note that this function needs to be kept in sync with the BlockFlow class
 // over in flowsolution.d and with write_solution() below and with
 // write_initial_usg_flow_file_from_lua() in luaflowstate.d.
@@ -836,8 +828,7 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
     return;
 } // end write_initial_flow_file() UnstructuredGrid version
 
-
-extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
+extern(C) int write_initial_sg_flow_legacy_file_from_lua(lua_State* L)
 {
     auto fname = to!string(luaL_checkstring(L, 1));
     auto grid = checkStructuredGrid(L, 2);
@@ -1030,10 +1021,11 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
         return 0;
     } // end if lua_isfunction
     lua_settop(L, 0); // clear stack
+    
     return -1;
 } // end write_initial_sg_flow_file_from_lua()
 
-extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
+extern(C) int write_initial_usg_flow_legacy_file_from_lua(lua_State* L)
 {
     auto fname = to!string(luaL_checkstring(L, 1));
     auto grid = checkUnstructuredGrid(L, 2);
@@ -1180,7 +1172,8 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 } // end write_initial_usg_flow_file_from_lua()
 
 
-void read_block_data_from_file(BlockFlow blk, string filename, Grid_t gridType, string flow_format)
+
+void read_block_data_from_legacy_file(BlockFlow blk, string filename, Grid_t gridType, string flow_format)
 {
     string myLabel;
     size_t nvariables;

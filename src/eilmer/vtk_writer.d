@@ -242,31 +242,33 @@ void write_VTU_file(BlockFlow flow, Grid grid, string fileName, bool binary_form
     //
     // Write the special variables:
     // i.e. variables constructed from those in the dictionary.
-    fp.write(" <DataArray Name=\"vel.vector\" type=\"Float32\" NumberOfComponents=\"3\"");
-    if (binary_format) {
-        fp.writef(" format=\"appended\" offset=\"%d\">", binary_data_offset);
-        binary_data.length = 0;
-    } else {
-        fp.write(" format=\"ascii\">\n");
-    }
-    foreach (i; 0 .. flow.ncells) {
-        float x = uflowz(flow["vel.x",i]);
-        float y = uflowz(flow["vel.y",i]);
-        float z = uflowz(flow["vel.z",i]);
+    if (canFind(flow.variableNames, "vel.x") && canFind(flow.variableNames, "vel.y") && canFind(flow.variableNames, "vel.z")) {
+        fp.write(" <DataArray Name=\"vel.vector\" type=\"Float32\" NumberOfComponents=\"3\"");
         if (binary_format) {
-            binary_data ~= nativeToBigEndian(x);
-            binary_data ~= nativeToBigEndian(y);
-            binary_data ~= nativeToBigEndian(z);
+            fp.writef(" format=\"appended\" offset=\"%d\">", binary_data_offset);
+            binary_data.length = 0;
         } else {
-            fp.writef(" %.18e %.18e %.18e\n", x, y, z);
+            fp.write(" format=\"ascii\">\n");
         }
-    } // end foreach i
-    fp.write(" </DataArray>\n");
-    if (binary_format) {
-        uint32_t binary_data_count = to!uint32_t(binary_data.length); // 4-byte count of bytes
-        binary_data_string ~= nativeToBigEndian(binary_data_count);
-        binary_data_string ~= binary_data;
-        binary_data_offset += 4 + binary_data.length;
+        foreach (i; 0 .. flow.ncells) {
+            float x = uflowz(flow["vel.x",i]);
+            float y = uflowz(flow["vel.y",i]);
+            float z = uflowz(flow["vel.z",i]);
+            if (binary_format) {
+                binary_data ~= nativeToBigEndian(x);
+                binary_data ~= nativeToBigEndian(y);
+                binary_data ~= nativeToBigEndian(z);
+            } else {
+                fp.writef(" %.18e %.18e %.18e\n", x, y, z);
+            }
+        } // end foreach i
+        fp.write(" </DataArray>\n");
+        if (binary_format) {
+            uint32_t binary_data_count = to!uint32_t(binary_data.length); // 4-byte count of bytes
+            binary_data_string ~= nativeToBigEndian(binary_data_count);
+            binary_data_string ~= binary_data;
+            binary_data_offset += 4 + binary_data.length;
+        }
     }
     //
     if (canFind(flow.variableNames, "c.x")) {

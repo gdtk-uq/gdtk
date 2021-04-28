@@ -88,6 +88,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_string_field("base_file_name", "base_file_name"));
     mixin(get_string_field("grid_format", "grid_format"));
     mixin(get_string_field("flow_format", "flow_format"));
+    mixin(get_bool_field("new_flow_format", "new_flow_format"));
     mixin(get_string_field("title", "title"));
     mixin(get_string_field("gas_model_file", "gas_model_file"));
     mixin(get_string_field("udf_supervisor_file", "udf_supervisor_file"));
@@ -177,6 +178,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_enum_field("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
     mixin(get_enum_field("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(get_bool_field("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
+    mixin(get_bool_field("save_viscous_gradients", "save_viscous_gradients"));
     mixin(get_double_field("viscous_factor_increment", "viscous_factor_increment"));
     mixin(get_double_field("viscous_delay", "viscous_delay"));
     mixin(get_double_field("shear_stress_relative_limit", "shear_stress_relative_limit"));
@@ -257,6 +259,8 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("do_temporal_DFT", "do_temporal_DFT"));
     mixin(get_int_field("DFT_n_modes", "DFT_n_modes"));
     mixin(get_int_field("DFT_step_interval", "DFT_step_interval"));
+    //
+    mixin(get_bool_field("do_flow_average", "do_flow_average"));
 
     // Look for unused keys. These are unsupported keys that the user
     // has supplied. Give a warning.
@@ -284,6 +288,7 @@ extern(C) int configGet(lua_State* L)
     case "base_file_name": lua_pushstring(L, GlobalConfig.base_file_name.toStringz); break;
     case "grid_format": lua_pushstring(L, GlobalConfig.grid_format.toStringz); break;
     case "flow_format": lua_pushstring(L, GlobalConfig.flow_format.toStringz); break;
+    case "new_flow_format": lua_pushboolean(L, GlobalConfig.new_flow_format); break;
     case "title": lua_pushstring(L, GlobalConfig.title.toStringz); break;
     case "gas_model_file": lua_pushstring(L, GlobalConfig.gas_model_file.toStringz); break;
     case "udf_supervisor_file": lua_pushstring(L, toStringz(GlobalConfig.udf_supervisor_file)); break;
@@ -373,6 +378,7 @@ extern(C) int configGet(lua_State* L)
     case "spatial_deriv_calc": lua_pushstring(L, spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc).toStringz); break;
     case "spatial_deriv_locn": lua_pushstring(L, spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn).toStringz); break;
     case "include_ghost_cells_in_spatial_deriv_clouds": lua_pushboolean(L, GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds); break;
+    case "save_viscous_gradients": lua_pushboolean(L, GlobalConfig.save_viscous_gradients); break;
     case "viscous_factor_increment": lua_pushnumber(L, GlobalConfig.viscous_factor_increment); break;
     case "viscous_delay": lua_pushnumber(L, GlobalConfig.viscous_delay); break;
     case "shear_stress_relative_limit": lua_pushnumber(L, GlobalConfig.shear_stress_relative_limit); break;
@@ -451,6 +457,8 @@ extern(C) int configGet(lua_State* L)
     case "do_temporal_DFT": lua_pushboolean(L, GlobalConfig.do_temporal_DFT); break;
     case "DFT_n_modes": lua_pushnumber(L, GlobalConfig.DFT_n_modes); break;
     case "DFT_step_interval": lua_pushnumber(L, GlobalConfig.DFT_step_interval); break;
+        //
+    case "do_flow_average": lua_pushboolean(L, GlobalConfig.do_flow_average); break;
         //
     default: lua_pushnil(L);
     }

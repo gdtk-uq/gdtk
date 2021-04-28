@@ -1,0 +1,16 @@
+{
+  "name": "gperftools_d",
+  "description": "D bindings for gperftools",
+  "copyright": "Copyright © 2017, Prasun Anand",
+  "authors": ["Prasun Anand"],
+  "license": "BSD 3-Clause License",
+  "homepage": "http://www.prasunanand.com",
+  "libs": ["profiler"],
+  "configurations": [
+    {"name": "library", "targetType": "library"},
+    {"name": "source", "targetType": "sourceLibrary"},
+    {"name": "static", "targetType": "staticLibrary"},
+    {"name": "dynamic", "targetType": "dynamicLibrary"},
+    {"name": "binary", "targetType": "executable"}
+  ]
+}

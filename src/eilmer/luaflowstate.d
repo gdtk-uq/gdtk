@@ -29,6 +29,7 @@ import geom.luawrap;
 import globalconfig;
 import luaglobalconfig;
 import fluidblockio_old;
+import fluidblockio;
 
 // Name for FlowState object in Lua scripts.
 // PJ, 2017-12-02: Note the preceding underscore in the name.

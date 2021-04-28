@@ -5,7 +5,9 @@
 --
 -- Authors: PJ, RJG, Kyle D., Nick G. and Daryl B.
 --
-print("Loading prep-grids.lua...")
+if false then -- debug
+   print("Begin loading prep-grids.lua.")
+end
 
 require 'lua_helper'
 deepclone = lua_helper.deepclone
@@ -38,7 +40,8 @@ function registerGrid(o)
    -- A single table with named items.
    -- grid: a StructuredGrid or UnstructuredGrid object that has been generated
    --    or imported.
-   -- tag: a string that will be used to select the initial flow condition from
+   -- tag: a string to identify the grid later in the user's script
+   -- fsTag: a string that will be used to select the initial flow condition from
    --    a dictionary when the FluidBlock is later constructed.
    -- bcTags: a table of strings that will be used to attach boundary conditions
    --    from a dictionary when the FluidBlock is later constructed.
@@ -52,7 +55,7 @@ function registerGrid(o)
       error("registerGrid expects a single table with named items.", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"grid", "tag", "bcTags", "gridArrayId"})
+   flag = checkAllowedNames(o, {"grid", "tag", "fsTag", "bcTags", "gridArrayId"})
    if not flag then
       error("Invalid name for item supplied to registerGrid.", 2)
    end
@@ -67,6 +70,8 @@ function registerGrid(o)
    gridsDict[o.tag] = o.id
    -- Set to -1 if NOT part of a grid-array, otherwise use supplied value
    o.gridArrayId = o.gridArrayId or -1
+   -- Initial FlowState tag
+   o.fsTag = o.fsTag or ""
    -- Must have a grid.
    assert(o.grid, "need to supply a grid")
    -- Check the grid information.
@@ -75,7 +80,8 @@ function registerGrid(o)
 				config.dimensions, o.grid.get_dimensions())
       error(msg)
    end
-   if o.grid:get_type() == "structured_grid" then
+   o.type = o.grid:get_type()
+   if o.type == "structured_grid" then
       -- Extract some information from the StructuredGrid
       -- Note 0-based indexing for vertices and cells.
       o.nic = o.grid:get_niv() - 1
@@ -111,7 +117,7 @@ function registerGrid(o)
 	 o.bcTags[face] = o.bcTags[face] or ""
       end
    end
-   if o.grid:get_type() == "unstructured_grid" then
+   if o.type == "unstructured_grid" then
       -- Extract some information from the UnstructuredGrid
       o.ncells = o.grid:get_ncells()
       o.nvertices = o.grid:get_nvertices()
@@ -128,8 +134,9 @@ end -- function registerGrid
 function gridMetadataAsJSON(g)
    str = '{\n'
    str = str .. string.format('  "tag": "%s",\n', g.tag)
-   if g.grid:get_type() == "structured_grid" then
-      str = str .. '  "type": "structured_grid",\n'
+   str = str .. string.format('  "fsTag": "%s",\n', g.fsTag)
+   str = str .. string.format('  "type": "%s",\n', g.type)
+   if g.type == "structured_grid" then
       str = str .. string.format('  "dimensions": %d,\n', g.grid:get_dimensions())
       str = str .. string.format('  "niv": %d,\n', g.grid:get_niv())
       str = str .. string.format('  "njv": %d,\n', g.grid:get_njv())
@@ -146,8 +153,7 @@ function gridMetadataAsJSON(g)
             str = str .. string.format(fmt, i, g.p[i].x, g.p[i].y, g.p[i].z)
          end
       end
-   else
-      str = str .. '  "type": "unstructured_grid",\n'
+   else -- unstructured-grid
       str = str .. string.format('  "dimensions": %d,\n', g.grid:get_dimensions())
       str = str .. string.format('  "nvertices": %d,\n', g.grid:get_nvertices())
       str = str .. string.format('  "ncells": %d,\n', g.grid:get_ncells())
@@ -155,7 +161,7 @@ function gridMetadataAsJSON(g)
       str = str .. string.format('  "nboundaries": %d,\n', g.grid:get_nboundaries())
    end
    str = str .. '  "bcTags": {\n'
-   if g.grid:get_type() == "structured_grid" then
+   if g.type == "structured_grid" then
       for k, v in pairs(g.bcTags) do
          str = str .. string.format('    "%s": "%s",\n', k, v) -- Expect named boundaries
       end
@@ -177,7 +183,7 @@ end
 connectionList = {}
 
 function connectGrids(idA, faceA, idB, faceB, orientation)
-   if false then --DEBUG
+   if false then -- debug
       print(string.format('connectGrids(idA=%d, faceA="%s", idB=%d, faceB="%s", orientation=%d)',
                           idA, faceA, idB, faceB, orientation))
    end
@@ -219,6 +225,11 @@ function identifyGridConnections(includeList, excludeList, tolerance)
    for _,A in ipairs(myGridList) do
       if A.grid:get_type() == "unstructured_grid" then excludeList[#excludeList+1] = A end
    end
+   if false then -- debug
+      print('myGridList=[')
+      for _,A in ipairs(myGridList) do print('  ', A.id, ',') end
+      print(']')
+   end
    tolerance = tolerance or 1.0e-6
    --
    for _,A in ipairs(myGridList) do
@@ -229,10 +240,12 @@ function identifyGridConnections(includeList, excludeList, tolerance)
 	    if config.dimensions == 2 then
 	       -- print("2D test A.id=", A.id, " B.id=", B.id) -- DEBUG
 	       for vtxPairs,connection in pairs(connections2D) do
-		  -- print("vtxPairs=", tostringVtxPairList(vtxPairs),
-		  --       "connection=", tostringConnection(connection)) -- DEBUG
+                  if false then -- debug
+                     print("vtxPairs=", tostringVtxPairList(vtxPairs),
+                           "connection=", tostringConnection(connection))
+                  end
                   if verticesAreCoincident(A, B, vtxPairs, tolerance) then
-		     local faceA, faceB = unpack(connection)
+		     local faceA, faceB, orientation = unpack(connection)
 		     connectGrids(A.id, faceA, B.id, faceB, 0)
 		     connectionCount = connectionCount + 1
 		  end
@@ -263,7 +276,193 @@ end -- identifyGridConnections
 gridArraysList = {}
 
 function registerGridArray(o)
-   print("[FIX-ME] implement registerGridArray as per FBArray:new.")
+   -- Input:
+   -- A single table with named items.
+   -- grid: a StructuredGrid object that has been generated or imported.
+   -- tag: a string to identify the gridArray later in the user's script
+   -- fsTag: a string that will be used to select the initial flow condition from
+   --    a dictionary when the FluidBlocks are later constructed.
+   -- bcTags: a table of strings that will be used to attach boundary conditions
+   --    from a dictionary when the FluidBlocks are later constructed.
+   --
+   -- Returns:
+   -- the gridArray table so that the user may use the interior pieces later in their script..
+   --
+   if false then -- debug
+      print("Begin registerGridArray.")
+   end
+   local flag = type(o)=='table'
+   if not flag then
+      error("registerGridArray expected to receive a single table with named entries", 2)
+   end
+   o = o or {}
+   local flag = checkAllowedNames(o, {"grid", "tag", "fsTag", "bcTags", "nib", "njb", "nkb"})
+   if not flag then
+      error("Invalid name for item supplied to registerGridArray.", 2)
+   end
+   -- We will embed the FBArray identity in the individual blocks
+   -- and we would like that identity to start from 0 for the D code.
+   o.id = #(gridArraysList)
+   --
+   o.tag = o.tag or ""
+   if not o.grid then
+      error("You need to supply a grid to registerGridArray.", 2)
+   end
+   if (not o.grid.get_type) or o.grid:get_type() ~= "structured_grid" then
+      error("You need to supply a structured_grid to registerGrisdrray.", 2)
+   end
+   o.fsTag = o.fsTag or ""
+   o.bcTags = o.bcTags or {} -- for boundary conditions to be applied to the FluidBlocks
+   for _,face in ipairs(faceList(config.dimensions)) do
+      o.bcTags[face] = o.bcTags[face] or ""
+   end
+   -- Numbers of subgrids in each coordinate direction
+   o.nib = o.nib or 1
+   o.njb = o.njb or 1
+   o.nkb = o.nkb or 1
+   if config.dimensions == 2 then
+      o.nkb = 1
+   end
+   -- Extract some information from the underlying StructuredGrid
+   o.niv = o.grid:get_niv()
+   o.njv = o.grid:get_njv()
+   o.nkv = o.grid:get_nkv()
+   -- Subdivide the block based on numbers of cells.
+   -- Note 0-based indexing for vertices and cells in the D-domain.
+   local nic_total = o.niv - 1
+   local dnic = math.floor(nic_total/o.nib)
+   local njc_total = o.njv - 1
+   local dnjc = math.floor(njc_total/o.njb)
+   local nkc_total = o.nkv - 1
+   local dnkc = math.floor(nkc_total/o.nkb)
+   if config.dimensions == 2 then
+      nkc_total = 1
+      dnkc = 1
+   end
+   o.gridArray = {} -- will be a multi-dimensional array, indexed as [ib][jb][kb],
+                    -- with 1<=ib<=nib, 1<=jb<=njb, 1<=kb<=nkb
+   o.gridCollection = {} -- will be a single-dimensional array, also starting at 1
+   -- Work along each index direction and work out numbers of cells in sub-blocks.
+   o.nics = {} -- numbers of cells in each sub-block
+   local nic_remaining = nic_total
+   for ib = 1, o.nib do
+      local nic = math.floor(nic_remaining/(o.nib-ib+1))
+      if (ib == o.nib) then
+         -- On last block, just use what's left
+         nic = nic_remaining
+      end
+      o.nics[#o.nics+1] = nic
+      nic_remaining = nic_remaining - nic
+   end
+   o.njcs = {}
+   local njc_remaining = njc_total
+   for jb = 1, o.njb do
+      local njc = math.floor(njc_remaining/(o.njb-jb+1))
+      if (jb == o.njb) then
+         njc = njc_remaining
+      end
+      o.njcs[#o.njcs+1] = njc
+      njc_remaining = njc_remaining - njc
+   end
+   o.nkcs = {}
+   if config.dimensions == 2 then
+      o.nkcs[1] = 1
+   else
+      local nkc_remaining = nkc_total
+      for kb = 1, o.nkb do
+         local nkc = math.floor(nkc_remaining/(o.nkb-kb+1))
+         if (kb == o.nkb) then
+            nkc = nkc_remaining
+         end
+         o.nkcs[#o.nkcs+1] = nkc
+         nkc_remaining = nkc_remaining - nkc
+      end
+   end
+   -- Now, generate the subgrids.
+   local i0 = 0
+   for ib = 1, o.nib do
+      o.gridArray[ib] = {}
+      local nic = o.nics[ib]
+      local j0 = 0
+      for jb = 1, o.njb do
+         local njc = o.njcs[jb]
+	 if config.dimensions == 2 then
+	    -- 2D flow
+            if false then
+               -- May activate print statements for debug.
+               print("ib=", ib, "jb= ", jb)
+               print("i0= ", i0, " nic= ", nic, " j0= ", j0, " njc= ", njc)
+            end
+            if nic < 1 then
+               error(string.format("Invalid nic=%d while making subgrid ib=%d, jb=%d", nic, ib, jb), 2)
+            end
+            if njc < 1 then
+               error(string.format("Invalid njc=%d while making subgrid ib=%d, jb=%d", njc, ib, jb), 2)
+            end
+	    local subgrid = o.grid:subgrid(i0,nic+1,j0,njc+1)
+	    local bcTags = {north="", east="", south="", west=""}
+	    if ib == 1 then bcTags['west'] = o.bcTags['west'] end
+	    if ib == o.nib then bcTags['east'] = o.bcTags['east'] end
+	    if jb == 1 then bcTags['south'] = o.bcTags['south'] end
+	    if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
+	    local new_grid_id = registerGrid{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=o.id}
+            local new_grid = gridsList[new_grid_id+1]
+	    o.gridArray[ib][jb] = new_grid
+	    o.gridCollection[#o.gridCollection+1] = new_grid
+	 else
+	    -- 3D flow, need one more level in the array
+	    o.gridArray[ib][jb] = {}
+            local k0 = 0
+	    for kb = 1, o.nkb do
+               local nkc = o.nkcs[kb]
+               if nic < 1 then
+                  error(string.format("Invalid nic=%d while making subgrid ib=%d, jb=%d, kb=%d", nic, ib, jb, kb), 2)
+               end
+               if njc < 1 then
+                  error(string.format("Invalid njc=%d while making subgrid ib=%d, jb=%d, kb=%d", njc, ib, jb, kb), 2)
+               end
+               if nkc < 1 then
+                  error(string.format("Invalid nkc=%d while making subgrid ib=%d, jb=%d, kb=%d", nkc, ib, jb, kb), 2)
+               end
+	       local subgrid = o.grid:subgrid(i0,nic+1,j0,njc+1,k0,nkc+1)
+	       local bcTags = {north="", east="", south="", west="", top="", bottom=""}
+	       if ib == 1 then bcTags['west'] = o.bcTags['west'] end
+	       if ib == o.nib then bcTags['east'] = o.bcTags['east'] end
+	       if jb == 1 then bcTags['south'] = o.bcTags['south'] end
+	       if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
+	       if kb == 1 then bcTags['bottom'] = o.bcTags['bottom'] end
+	       if kb == o.nkb then bcTags['top'] = o.bctags['top'] end
+	       local new_grid_id = registerGrid{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=o.id}
+               local new_grid = gridsList[new_grid_id+1]
+	       o.gridArray[ib][jb][kb] = new_grid
+	       o.gridCollection[#o.gridCollection+1] = new_grid
+               -- Prepare k0 at end of loop, ready for next iteration
+               k0 = k0 + nkc
+	    end -- kb loop
+	 end -- dimensions
+         -- Prepare j0 at end of loop, ready for next iteration
+         j0 = j0 + njc
+      end -- jb loop
+      -- Prepare i0 at end of loop, ready for next iteration
+      i0 = i0 + nic
+   end -- ib loop
+   -- Make the inter-subblock connections
+   if #o.gridCollection > 1 then
+      identifyGridConnections(o.gridCollection)
+   end
+   --
+   -- Retain meta-information about the new gridArray
+   -- for use later in the user-defined functions, during simulation.
+   -- Note that the index of this array starts at 1 (in the Lua way).
+   gridArraysList[#gridArraysList+1] = o
+   --
+   return o.id
+end -- registerGridArray
+
+
+function gridArrayAsJSON(o)
+   str = "[TODO] implement gridArrayAsJSON"
+   return str
 end
 
 
@@ -271,7 +470,7 @@ end
 -- IO functions to write the grid and connection files.
 --
 function writeGridFiles(jobName)
-   print("Write grid files for job=", jobName)
+   print(string.format('Write grid files for job="%s"', jobName))
    --
    os.execute("mkdir -p grid")
    local fileName = "grid/" .. jobName .. ".grid-metadata"
@@ -286,6 +485,7 @@ function writeGridFiles(jobName)
    f:write('  ]\n')
    f:write('}\n')
    f:close()
+   print(string.format("  #connections: %d", #connectionList))
    --
    os.execute("mkdir -p grid/t0000")
    for i, g in ipairs(gridsList) do
@@ -307,4 +507,5 @@ function writeGridFiles(jobName)
       f:write(gridMetadataAsJSON(g) .. '\n')
       f:close()
    end
+   print(string.format("  #grids %d", #gridsList))
 end

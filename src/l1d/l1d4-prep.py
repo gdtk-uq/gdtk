@@ -32,6 +32,7 @@ Versions:
   2012-Sep-Oct Much cleaning up and Sphinx docs.
   2020-Apr-04  L1d4 flavour started
   2021-Apr-16  Matt McGilvray's heat-transfer coefficient factor.
+  2021-Apr-23  Improve piston+buffer interaction.
 """
 
 # ----------------------------------------------------------------------
@@ -769,14 +770,14 @@ class Piston():
                 'back_seal_f', 'back_seal_area', \
                 'p_restrain', 'is_restrain', \
                 'with_brakes', 'brakes_on', 'brakes_friction_force', \
-                'x_buffer', 'hit_buffer', 'ecL', 'ecR'
+                'x_buffer', 'on_buffer', 'ecL', 'ecR'
 
     def __init__(self, mass, diam, xL0, xR0, vel0,
                  front_seal_f=0.0, front_seal_area=0.0,
                  back_seal_f=0.0, back_seal_area=0.0,
                  p_restrain=0.0, is_restrain=0,
                  with_brakes=False, brakes_on=0, brakes_friction_force=0.0,
-                 x_buffer=10.e6, hit_buffer = 0,
+                 x_buffer=10.e6, on_buffer = 0,
                  label=""):
         """
         Create a piston with specified properties.
@@ -802,7 +803,7 @@ class Piston():
         self.brakes_on = brakes_on
         self.brakes_friction_force = brakes_friction_force
         self.x_buffer = x_buffer
-        self.hit_buffer = hit_buffer
+        self.on_buffer = on_buffer
         #
         # Connections to boundary conditions will be made later,
         # the gas path is assembled.
@@ -854,10 +855,10 @@ class Piston():
         Write state data.
         """
         if write_header:
-            fp.write("# tindx  x  vel  is_restrain  brakes_on  hit_buffer\n")
+            fp.write("# tindx  x  vel  is_restrain  brakes_on  on_buffer\n")
         fp.write("%d %e %e %d %d %d\n" %
                  (tindx, self.x0, self.vel0,
-                  self.is_restrain, self.brakes_on, self.hit_buffer))
+                  self.is_restrain, self.brakes_on, self.on_buffer))
         return
 
     @property

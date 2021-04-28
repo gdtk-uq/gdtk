@@ -43,11 +43,13 @@ import sfluidblock; // needed for some special-case processing, below
 import shockdetectors;
 import block;
 import jacobian;
+import fluidblockio;
+import fluidblockio_new;
 version(mpi_parallel) {
     import mpi;
 }
 
-// version(matplotlib) {
+// version(diagnostics) {
 // import plt = matplotlibd.pyplot;
 // import std.format;
 // }
@@ -111,53 +113,53 @@ public:
 
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
-        FlowJacobianT flowJacobianT;
-        immutable size_t MAX_PERTURBED_INTERFACES = 800;
-        FVCell cellSave;
-        FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
+    FlowJacobianT flowJacobianT;
+    immutable size_t MAX_PERTURBED_INTERFACES = 800;
+    FVCell cellSave;
+    FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
 
-	size_t[] local_pcell_global_coord_list;
-	size_t[][] local_ecell_global_coord_list;
-	number[][] local_entry_list;
+    size_t[] local_pcell_global_coord_list;
+    size_t[][] local_ecell_global_coord_list;
+    number[][] local_entry_list;
 
-        // local objective function evaluation
-        number locObjFcn;
-        // arrays used to temporarily store data during construction of the flow Jacobian transpose
-        number[][] aa;
-        size_t[][] ja;
-        // local effects matrix for flow Jacobian transpose.
-        // dimensions: [# local cells x # primitive vars] X [# local cells x # primitive vars]
-        SMatrix!number JlocT;
-        // external effects matrix for flow Jacobian transpose.
-        // dimensions: [# local boundary cells x # primitive vars] X [# global cells x # primitive vars]
-        SMatrix!number JextT;
-        // Matrix used in preconditioning (low order, local, flow Jacobian).
-        SMatrix!number P;
-        SMatrix!number A; // Jacobian (w.r.t conserved variables)
-        SMatrix!number Aext; // Jacobian (w.r.t conserved variables)
-        // objective function senstivity w.r.t primitive variables
-        number[] f;
-        number[] b;
-        // adjoint variables
-        number[] psi;
-        number[] delpsi;
-        // residual sensitivity w.r.t. design variables (transposed)
-        Matrix!number rT;
-        // local dot product of the residual sensitivity w.r.t. design variables (transposed) with the adjoint variables
-        number[] rTdotPsi;
-        // These arrays and matrices are directly tied to using the
-        // GMRES iterative solver (use some directly from steady-state solver).
-        number[] Z, z, wext, zext;
-        //
-        // Make a block-local copy of conserved quantities info
-        size_t nConserved;
-        size_t MASS;
-        size_t X_MOM;
-        size_t Y_MOM;
-        size_t Z_MOM;
-        size_t TOT_ENERGY;
-        size_t TKE;
-        size_t SPECIES;
+    // local objective function evaluation
+    number locObjFcn;
+    // arrays used to temporarily store data during construction of the flow Jacobian transpose
+    number[][] aa;
+    size_t[][] ja;
+    // local effects matrix for flow Jacobian transpose.
+    // dimensions: [# local cells x # primitive vars] X [# local cells x # primitive vars]
+    SMatrix!number JlocT;
+    // external effects matrix for flow Jacobian transpose.
+    // dimensions: [# local boundary cells x # primitive vars] X [# global cells x # primitive vars]
+    SMatrix!number JextT;
+    // Matrix used in preconditioning (low order, local, flow Jacobian).
+    SMatrix!number P;
+    SMatrix!number A; // Jacobian (w.r.t conserved variables)
+    SMatrix!number Aext; // Jacobian (w.r.t conserved variables)
+    // objective function senstivity w.r.t primitive variables
+    number[] f;
+    number[] b;
+    // adjoint variables
+    number[] psi;
+    number[] delpsi;
+    // residual sensitivity w.r.t. design variables (transposed)
+    Matrix!number rT;
+    // local dot product of the residual sensitivity w.r.t. design variables (transposed) with the adjoint variables
+    number[] rTdotPsi;
+    // These arrays and matrices are directly tied to using the
+    // GMRES iterative solver (use some directly from steady-state solver).
+    number[] Z, z, wext, zext;
+    //
+    // Make a block-local copy of conserved quantities info
+    size_t nConserved;
+    size_t MASS;
+    size_t X_MOM;
+    size_t Y_MOM;
+    size_t Z_MOM;
+    size_t TOT_ENERGY;
+    size_t TKE;
+    size_t SPECIES;
     }
 
     version(nk_accelerator)
@@ -175,6 +177,13 @@ public:
     number[] g0, g1;
     Matrix!number Q1;
     Matrix!number V;
+    }
+
+    FluidBlockIO[] block_io; // io handlers
+
+    this(int id, string label)
+    {
+        super(id, label);
     }
 
     this(int id, Grid_t grid_type, size_t ncells, size_t n_ghost_cell_layers, string label)
@@ -195,13 +204,15 @@ public:
         Rght = new FlowState(dedicatedConfig[id].gmodel);
     }
 
-    ~this()
+    void add_IO()
     {
-       lua_close(myL);
+        if (!is_legacy_format())
+            block_io = get_fluid_block_io(this);
     }
 
     override string toString() const { return "Block(id=" ~ to!string(id) ~ ")"; }
     @nogc size_t globalCellId(size_t localCellId) { return globalCellIdStart + localCellId; }
+    abstract JSONValue get_header();
 
     @nogc abstract int get_interpolation_order();
     @nogc abstract void set_interpolation_order(int order);
@@ -590,7 +601,7 @@ public:
                 iface.average_vertex_deriv_values();
             }
             // Turbulence models will need cell centered gradients (also for axisymmetric!)
-            if (myConfig.axisymmetric || (myConfig.turb_model.isTurbulent)){
+            if (myConfig.axisymmetric || (myConfig.turb_model.isTurbulent || myConfig.save_viscous_gradients)){
                 foreach (cell; cells) {
                     cell.average_vertex_deriv_values();
                 }
@@ -626,7 +637,7 @@ public:
 
             // Finished computing gradients at interfaces, now copy them around if needed
             // Turbulence models and axisymmetric source terms need cell centered gradients
-            if (myConfig.axisymmetric || (myConfig.turb_model.isTurbulent)){
+            if (myConfig.axisymmetric || (myConfig.turb_model.isTurbulent || myConfig.save_viscous_gradients)){
                 foreach (cell; cells) {
                     cell.average_interface_deriv_values();
                 }
@@ -1541,4 +1552,14 @@ public:
         Q1 = new Matrix!number(mOuter+1, mOuter+1);
     }
     }
+
+    void update_aux(double dt, double time, size_t step) 
+    {
+        foreach (cell ; cells) {
+            foreach(aux ; cell.aux_cell_data) {
+                aux.update(cell, dt, time, step);
+            }
+        }
+    }
+
 } // end class FluidBlock

@@ -358,6 +358,7 @@ final class GlobalConfig {
     shared static string base_file_name = "job"; // Change this to suit at run time.
     shared static string grid_format = "gziptext"; // alternative is "rawbinary"
     shared static string flow_format = "gziptext";
+    shared static bool new_flow_format = false; // enable/disable new flow format (to be deprecated)
     // Depending on the format of the contained data, grid and solution files will have
     // a particular file extension.
     shared static string gridFileExt = "gz";
@@ -613,6 +614,9 @@ final class GlobalConfig {
     shared static SpatialDerivLocn spatial_deriv_locn = SpatialDerivLocn.vertices;
     shared static bool include_ghost_cells_in_spatial_deriv_clouds = true;
     //
+    // save the gradients used in the viscous calculations to file
+    shared static bool save_viscous_gradients = false;
+    //
     // A factor to scale the viscosity in order to achieve a soft start.
     // The soft-start for viscous effects may be handy for impulsively-started flows.
     // A value of 1.0 means that the viscous effects are fully applied.
@@ -748,6 +752,8 @@ final class GlobalConfig {
     shared static int DFT_n_modes = 5;
     shared static int DFT_step_interval = 10;
 
+    shared static bool do_flow_average = false;
+
     // Parameters related to the gpu chemistry mode
     version (gpu_chem) {
         static GPUChem gpuChem;
@@ -761,7 +767,7 @@ final class GlobalConfig {
         static ShapeSensitivityCalculatorOptions sscOptions;
     }
 
-    ~this()
+    static void finalize()
     {
         lua_close(master_lua_State);
     }
@@ -779,6 +785,7 @@ public:
     int universe_blk_id;
     string grid_format;
     string flow_format;
+    bool new_flow_format;
     int dimensions;
     bool axisymmetric;
     GasdynamicUpdate gasdynamic_update_scheme;
@@ -846,6 +853,7 @@ public:
     bool viscous;
     bool use_viscosity_from_cells;
     bool spatial_deriv_from_many_points;
+    bool save_viscous_gradients;
     SpatialDerivCalc spatial_deriv_calc;
     SpatialDerivLocn spatial_deriv_locn;
     bool include_ghost_cells_in_spatial_deriv_clouds;
@@ -905,6 +913,8 @@ public:
     int DFT_n_modes;
     int DFT_step_interval;
 
+    bool do_flow_average;
+
     version (nk_accelerator) {
         SteadyStateSolverOptions sssOptions;
     }
@@ -921,6 +931,7 @@ public:
         this.universe_blk_id = universe_blk_id;
         grid_format = GlobalConfig.grid_format;
         flow_format = GlobalConfig.flow_format;
+        new_flow_format = GlobalConfig.new_flow_format;
         dimensions = GlobalConfig.dimensions;
         axisymmetric = GlobalConfig.axisymmetric;
         gasdynamic_update_scheme = GlobalConfig.gasdynamic_update_scheme;
@@ -995,6 +1006,7 @@ public:
         spatial_deriv_locn = GlobalConfig.spatial_deriv_locn;
         include_ghost_cells_in_spatial_deriv_clouds =
             GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds;
+        save_viscous_gradients = GlobalConfig.save_viscous_gradients;
         shear_stress_relative_limit = GlobalConfig.shear_stress_relative_limit;
         apply_shear_stress_relative_limit = GlobalConfig.apply_shear_stress_relative_limit;
         viscous_factor = GlobalConfig.viscous_factor;
@@ -1041,6 +1053,8 @@ public:
         do_temporal_DFT = GlobalConfig.do_temporal_DFT;
         DFT_n_modes = GlobalConfig.DFT_n_modes;
         DFT_step_interval = GlobalConfig.DFT_step_interval;
+        //
+        do_flow_average = GlobalConfig.do_flow_average;
         //
         version (nk_accelerator) {
             sssOptions = GlobalConfig.sssOptions;
@@ -1151,6 +1165,7 @@ JSONValue read_config_file()
     mixin(update_double("start_time", "start_time"));
     mixin(update_string("grid_format", "grid_format"));
     mixin(update_string("flow_format", "flow_format"));
+    mixin(update_bool("new_flow_format", "new_flow_format"));
     mixin(update_string("gas_model_file", "gas_model_file"));
     auto gm = init_gas_model(GlobalConfig.gas_model_file);
     // The following checks on gas model will need to be maintained
@@ -1196,6 +1211,7 @@ JSONValue read_config_file()
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  grid_format: ", to!string(GlobalConfig.grid_format));
         writeln("  flow_format: ", to!string(GlobalConfig.flow_format));
+        writeln("  new_flow_format: ", to!string(GlobalConfig.new_flow_format));
         writeln("  title: ", to!string(GlobalConfig.title));
         writeln("  gas_model_file: ", to!string(GlobalConfig.gas_model_file));
         writeln("  udf_supervisor_file: ", to!string(GlobalConfig.udf_supervisor_file));
@@ -1379,6 +1395,7 @@ JSONValue read_config_file()
     mixin(update_enum("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
     mixin(update_enum("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(update_bool("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
+    mixin(update_bool("save_viscous_gradients", "save_viscous_gradients"));
     mixin(update_double("viscous_delay", "viscous_delay"));
     mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
     mixin(update_double("shear_stress_relative_limit", "shear_stress_relative_limit"));
@@ -1400,6 +1417,7 @@ JSONValue read_config_file()
         writeln("  spatial_deriv_calc: ", spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc));
         writeln("  spatial_deriv_locn: ", spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn));
         writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
+        writeln("  save_viscous_gradients: ", GlobalConfig.save_viscous_gradients);
         writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
         writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
         writeln("  shear_stress_relative_limit: ", GlobalConfig.shear_stress_relative_limit);
@@ -1484,6 +1502,7 @@ JSONValue read_config_file()
     mixin(update_bool("do_temporal_DFT", "do_temporal_DFT"));
     mixin(update_int("DFT_n_modes", "DFT_n_modes"));
     mixin(update_int("DFT_step_interval", "DFT_step_interval"));
+    mixin(update_bool("do_flow_average", "do_flow_average"));
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  diffuse_wall_bcs_on_init: ", GlobalConfig.diffuseWallBCsOnInit);
         writeln("  number_init_passes: ", GlobalConfig.nInitPasses);
@@ -1502,6 +1521,7 @@ JSONValue read_config_file()
         writeln("  do_temporal_DFT: ", GlobalConfig.do_temporal_DFT);
         writeln("  DFT_n_modes: ", GlobalConfig.DFT_n_modes);
         writeln("  DFT_step_interval: ", GlobalConfig.DFT_step_interval);
+        writeln("  do_flow_average: ", GlobalConfig.do_flow_average);
     }
 
     configCheckPoint4();

@@ -5,7 +5,9 @@
 --
 -- Authors: PJ, RJG, Kyle D., Nick G. and Daryl B.
 --
-print("Loading prep-flow.lua...")
+if false then -- debug
+   print("Loading prep-flow.lua.")
+end
 
 require 'lua_helper'
 deepclone = lua_helper.deepclone
@@ -109,6 +111,56 @@ reactionZones = {}
 turbulentZones = {}
 suppressReconstructionZones = {}
 
+gridConnections = {} -- Will be overwritten when the JSON data is parsed.
+
+-- ---------------------------------------------------------------------------------------
+
+function makeFluidBlocks(bcDict, flowDict)
+   -- Using the list of grids, apply boundary-conditions and initial flow conditions
+   -- to build FluidBlock objects that are ready for flow simulation.
+   if false then -- debug
+      print("Make FluidBlock objects.")
+   end
+   for idx, g in ipairs(gridsList) do
+      if false then -- debug
+         print("Make FluidBlock for g.id=", g.id)
+      end
+      local ifs
+      if g.fsTag then ifs = flowDict[g.fsTag] end
+      if not ifs then
+         error(string.format("Grid.id=%d fsTag=%s, does not seem to have a valid initial FlowState.", g.id, g.fsTag))
+      end
+      if g.type == "structured_grid" then
+         -- Build the bc list for this block,
+         -- using the tags that the user applied when building the grid.
+         bcs = {}
+         for _,face in ipairs(faceList(config.dimensions)) do
+            local tag = g.bcTags[face] -- get the user's spec for this face
+            if tag and tag ~= "" then
+               local bc = bcDict[tag]
+               if bc then bcs[face] = bc end
+            end
+         end
+      else -- unstructured_grid
+         -- We just use the same user-supplied dictionary for all blocks.
+         bcs = bcDict
+      end
+      if false then --debug
+         print("  bcs=[")
+         for face, bc in pairs(bcs) do print("    face=", face, " bc=", bc) end
+         print("  ]")
+      end
+      fb = FluidBlock:new{gridMetadata=g, initialState=ifs, bcDict=bcs}
+   end
+   if false then -- debug
+      print("Make block-to-block connections.")
+   end
+   for idx, c in ipairs(gridConnections) do
+      -- Remember that the Lua array index will be one more than the block id.
+      connectBlocks(fluidBlocks[c.idA+1], c.faceA, fluidBlocks[c.idB+1], c.faceB, c.orientation)
+   end
+end
+
 -- ---------------------------------------------------------------------------------------
 
 function readGridMetadata(jobName)
@@ -119,15 +171,21 @@ function readGridMetadata(jobName)
    f:close()
    local jsonData = json.parse(jsonStr)
    gridConnections = jsonData["grid-connections"]
-   print('number of connections=', #gridConnections)
-   for i, c in ipairs(gridConnections) do
-      print("i=", i, "idA=", c.idA, "faceA=", c.faceA,
-            "idB=", c.idB, "faceB=", c.faceB, "orientation=", c.orientation)
+   if false then -- debug
+      print('number of connections=', #gridConnections)
+      for i, c in ipairs(gridConnections) do
+         print("i=", i, "idA=", c.idA, "faceA=", c.faceA,
+               "idB=", c.idB, "faceB=", c.faceB, "orientation=", c.orientation)
+      end
    end
+   print(string.format('  #connections: %d', #gridConnections))
+   --
    local ngrids = jsonData["ngrids"]
    for i=1, ngrids do
       local fileName = "grid/" .. jobName .. string.format(".grid.b%04d.metadata", i-1)
-      print('Set up grid object from file', fileName)
+      if false then --debug
+         print('Set up grid object from file', fileName)
+      end
       local f = assert(io.open(fileName, "r"))
       local jsonStr = f:read("*a")
       f:close()
@@ -135,15 +193,16 @@ function readGridMetadata(jobName)
       gridMetadata.id = i-1
       gridsList[#gridsList+1] = gridMetadata
    end
+   print(string.format('  #grids: %d', #gridsList))
 end
 
 function buildRuntimeConfigFiles(jobName)
+   print(string.format('Build runtime config files for job="%s"', jobName))
    perform_spatial_gradient_consistency_check()
    warn_if_blocks_not_connected()
    if config.do_temporal_DFT then
        check_DFT_settings()
    end
-   print("Build runtime config files for job:", jobName)
    os.execute("mkdir -p config")
    write_config_file("config/" .. jobName .. ".config")
    write_control_file("config/" .. jobName .. ".control")
@@ -154,10 +213,13 @@ function buildRuntimeConfigFiles(jobName)
    if config.grid_motion == "shock_fitting" then
       write_shock_fitting_helper_files(jobName)
    end
-   print("Done buildRuntimeConfigFiles.")
+   if false then -- debug
+      print("Done buildRuntimeConfigFiles.")
+   end
 end
 
 function buildFlowFiles(jobName)
+   print(string.format('Build flow files for job="%s"', jobName))
    if #fluidBlockIdsForPrep == 0 then
       -- We'll set *all* blocks for processing.
       for i=1,#fluidBlocks do
@@ -166,24 +228,41 @@ function buildFlowFiles(jobName)
    end
    os.execute("mkdir -p flow/t0000")
    for i, id in ipairs(fluidBlockIdsForPrep) do
-      if false then
-         -- May activate print statement for debug.
+      if false then -- May activate print statement for debug.
          print("FluidBlock id=", id)
       end
       local idx = id+1
+      local blk = fluidBlocks[idx]
+      local gridMetadata = gridsList[idx]
       local fileName = "flow/t0000/" .. jobName .. string.format(".flow.b%04d.t0000", id)
-      if (config.flow_format == "gziptext") then
+      if config.flow_format == "gziptext" then
 	 fileName = fileName .. ".gz"
-      elseif (config.flow_format == "rawbinary") then
+      elseif config.flow_format == "rawbinary" then
 	 fileName = fileName .. ".bin"
       else
 	 error(string.format("Oops, invalid flow_format: %s", config.flow_format))
       end
       --
-      -- [TODO] Need to have grid loaded at this point,
-      --        so that the flow state writing can use the cell locations.
+      if not blk.grid then
+         -- We assume a direct match between FluidBlock and grid id numbers.
+         local gridFileName = "grid/t0000/" .. jobName .. string.format(".grid.b%04d.t0000", id)
+         if config.grid_format == "gziptext" then
+            gridFileName = gridFileName .. ".gz"
+         elseif config.grid_format == "rawbinary" then
+            gridFileName = gridFileName .. ".bin"
+         else
+            error(string.format("Oops, invalid grid_format: %s", config.grid_format))
+         end
+         if gridMetadata.type == "structured_grid" then
+            blk.grid = StructuredGrid:new{filename=gridFileName, fmt="gziptext"}
+         else
+            blk.grid = UnstructuredGrid:new{filename=gridFileName, fmt="gziptext"}
+         end
+      end
       --
-      local ifs = fluidBlocks[idx].initialState
+      local ifs = blk.initialState
+      -- Check if we need to do something special with initialState
+      -- before calling the Dlang function to write the initial flow file.
       if type(ifs) == "table" and ifs.myType == "FlowState" then
 	 -- We have one of the pure-Lua FlowState objects and we convert it to
 	 -- a wrapped-D-language _FlowState object.
@@ -212,6 +291,7 @@ function buildFlowFiles(jobName)
       else
 	 error("Unexpected type for initial flow state in block.")
       end
+      -- Ready to use initialState in the Dlang function.
       if type(ifs) ~= "string" then
          local grid = fluidBlocks[idx].grid
          local omegaz = fluidBlocks[idx].omegaz
@@ -224,7 +304,11 @@ function buildFlowFiles(jobName)
    end
    --
    if #fluidBlocks == 0 then print("Warning: number of FluidBlocks is zero.") end
-   print("Done buildingFlowFiles.")
+   if false then -- debug
+      print("Done buildingFlowFiles.")
+   end
 end
 
-print("Done loading prep-flow.lua")
+if false then -- debug
+   print("Done loading prep-flow.lua")
+end
