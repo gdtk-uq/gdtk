@@ -123,19 +123,53 @@ class ParkHTCVT : RelaxationTime {
 
         number tau_submodel = m_rt.eval(gs, molef, numden);
 
-        number pi = to!double(PI);
+        double sigma = compute_cross_section(gs);
         number cs = sqrt(8.0*Boltzmann_constant*gs.T/pi/m_mu); // Mean particle velocity
-        number tau_park = 1.0/(m_sigma*cs*numden[m_q]);        // Notice q is the colliding particle
+        number tau_park = 1.0/(sigma*cs*numden[m_q]);        // Notice q is the colliding particle
         return tau_submodel + tau_park;
     }
 
-private:
+protected:
+    immutable double pi = to!double(PI);
     int m_p;
     int m_q;
     double m_sigma;
     double m_mu;
     RelaxationTime m_rt;
     GasModel m_gmodel;
+
+    @nogc
+    double compute_cross_section(const GasState gs) {
+        return m_sigma;
+    }
+}
+
+class ParkHTC2VT : ParkHTCVT {
+/*
+    High temperature correction taken Park 1993 (page 387).
+    @author: Nick Gibbons
+*/
+    this(int p, int q, double sigma, double mu, RelaxationTime rt, GasModel gmodel)
+    {
+        super(p, q, sigma, mu, rt, gmodel);
+    }
+
+    this(lua_State *L, int p, int q, GasModel gmodel)
+    {
+        super(L, p, q, gmodel);
+    }
+
+    override ParkHTC2VT dup()
+    {
+        return new ParkHTC2VT(m_p, m_q, m_sigma, m_mu, m_rt, m_gmodel);
+    }
+
+protected:
+    @nogc
+    override double compute_cross_section(const GasState gs) {
+        // TODO: This will throw away from the complex part of sigma. Is that okay?
+        return m_sigma*(50e3/gs.T)*(50e3/gs.T);
+    }
 }
 
 RelaxationTime createRelaxationTime(lua_State *L, int p, int q, GasModel gmodel)
@@ -146,10 +180,11 @@ RelaxationTime createRelaxationTime(lua_State *L, int p, int q, GasModel gmodel)
 	return new MillikanWhiteVT(L, q);
     case "ParkHTC":
 	return new ParkHTCVT(L, p, q, gmodel);
+    case "ParkHTC2":
+	return new ParkHTC2VT(L, p, q, gmodel);
     default:
 	string msg = format("The relaxation time model: %s is not known.", model);
 	throw new Error(msg);
     }
-
 }
 

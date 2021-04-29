@@ -52,6 +52,13 @@ function transformRelaxationTime(rt, p, q, db)
       else
          t.sigma = rt.sigma
       end
+   elseif t.model == "ParkHTC2" then
+      t.submodel = transformRelaxationTime(rt.submodel, p, q, db)
+      if rt.sigma == nil then
+         t.sigma = 1.0e-21 -- Default collision cross section in m^2
+      else
+         t.sigma = rt.sigma
+      end
    else
       print("The relaxation time model: ", t.model, " it not known.")
       print("Bailing out!")
@@ -68,6 +75,9 @@ function relaxationTimeToLuaStr(rt)
    elseif rt.model == "ParkHTC" then
       submodelstr = relaxationTimeToLuaStr(rt.submodel)
       str = string.format("{model='ParkHTC', sigma=%.4e, submodel=%s}", rt.sigma, submodelstr)
+   elseif rt.model == "ParkHTC2" then
+      submodelstr = relaxationTimeToLuaStr(rt.submodel)
+      str = string.format("{model='ParkHTC2', sigma=%.4e, submodel=%s}", rt.sigma, submodelstr)
    else
       print(string.format("ERROR: relaxation time model '%s' is not known.", rt.model))
       os.exit(1)
