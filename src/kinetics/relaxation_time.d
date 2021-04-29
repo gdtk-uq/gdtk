@@ -123,7 +123,7 @@ class ParkHTCVT : RelaxationTime {
 
         number tau_submodel = m_rt.eval(gs, molef, numden);
 
-        double sigma = compute_cross_section(gs);
+        number sigma = compute_cross_section(gs);
         number cs = sqrt(8.0*Boltzmann_constant*gs.T/pi/m_mu); // Mean particle velocity
         number tau_park = 1.0/(sigma*cs*numden[m_q]);        // Notice q is the colliding particle
         return tau_submodel + tau_park;
@@ -139,8 +139,8 @@ protected:
     GasModel m_gmodel;
 
     @nogc
-    double compute_cross_section(const GasState gs) {
-        return m_sigma;
+    number compute_cross_section(const GasState gs) {
+        return to!number(m_sigma);
     }
 }
 
@@ -166,7 +166,7 @@ class ParkHTC2VT : ParkHTCVT {
 
 protected:
     @nogc
-    override double compute_cross_section(const GasState gs) {
+    override number compute_cross_section(const GasState gs) {
         // TODO: This will throw away from the complex part of sigma. Is that okay?
         return m_sigma*(50e3/gs.T)*(50e3/gs.T);
     }
