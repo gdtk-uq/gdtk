@@ -46,6 +46,7 @@ public:
         mR.length = mNSpecies;
         mDel_hf.length = mNSpecies;
         mCpTR.length = mNSpecies;
+        ms.length = mNSpecies;
         foreach (isp, spName; speciesNames) {
             if (spName == "e-") mElectronIdx = to!int(isp);
             lua_getglobal(L, "db");
@@ -237,13 +238,16 @@ public:
     @nogc
     override number entropy(in GasState gs)
     {
-        throw new GasModelException("TwoTemperatureGas: entropy() not implemented.");
+        foreach ( isp; 0 .. mNSpecies ) {
+            ms[isp] = mCurves[isp].eval_s(gs.T) - mR[isp]*log(gs.p/P_atm);
+        }
+        return mass_average(gs, ms);
     }
 
     @nogc
     override number entropyPerSpecies(in GasState gs, int isp)
     {
-        throw new GasModelException("TwoTemperatureGas: entropyPerSpecies() not implemented.");
+        return mCurves[isp].eval_s(gs.T);
     }
     
 
@@ -273,6 +277,7 @@ public:
     
 private:
     double[] mR;
+    number[] ms;
     double[] mCpTR;
     number[] mDel_hf;
     CEAThermoCurve[] mCurves;
