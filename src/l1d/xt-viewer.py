@@ -105,6 +105,18 @@ for x,t,v in xtData:
     # We want only one colour bar displayed for multiple slugs.
     if not cbar : cbar = fig.colorbar(contourf_)
 
+# Render the edges of slugs with black lines,
+# so that pistons and contact surfaces show up clearly.
+xLimits = ax.get_xlim()
+tLimits = ax.get_ylim()
+def within_limits(xx, tt, xLimits=xLimits, tLimits=tLimits):
+    return xLimits[0] <= xx <= xLimits[1] and tLimits[0] <= tt <= tLimits[1]
+for s in slugs:
+    xtL = np.array([(x,t) for x,t in zip(s['xL'], s['simTimes']) if within_limits(x,t)])
+    xtR = np.array([(x,t) for x,t in zip(s['xR'], s['simTimes']) if within_limits(x,t)])
+    ax.plot(xtL[:,0], xtL[:,1], color='black')
+    ax.plot(xtR[:,0], xtR[:,1], color='black')
+
 # Assume that all slugs have the same list of variables and units and
 # just pick the names out of the first one.
 allVarNames = slugs[0]["varNames"]

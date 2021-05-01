@@ -119,17 +119,24 @@ void generate_xt_dataset(int tindxStart, int tindxEnd, bool milliSec, string fmt
     foreach (islug, s; gasslugs) {
         writeln("  Read state data for slug ", islug);
         size_t ncells = 0;
-        File fp = File(L1dConfig.job_name~format("/slug-%04d-cells.data", islug), "r");
+        File fpcells = File(L1dConfig.job_name~format("/slug-%04d-cells.data", islug), "r");
+        File fpfaces = File(L1dConfig.job_name~format("/slug-%04d-faces.data", islug), "r");
         string[] varNames = ["x", "t", "p", "T", "rho", "vel"];
         string[] varUnits = ["m", (milliSec)?"ms":"s", "Pa", "K", "kg/m^3", "m/s"];
         assert(varNames.length == varUnits.length, "Mismatch in variable names and units.");
         double[][][string] data;
         foreach (v; varNames) { data[v].length = ntimes; }
+        double[] simTimes; simTimes.length = ntimes;
+        double[] xL; xL.length = ntimes;
+        double[] xR; xR.length = ntimes;
+        //
         size_t jt = 0;
         foreach (tindx; tindxStart .. tindxEnd+1) {
             if (tindices.canFind(tindx)) {
                 writeln("  Get data for tindx=", tindx);
-                s.read_cell_data(fp, tindx);
+                double simTime = (milliSec) ? times[tindx]*1000.0 : times[tindx];
+                //
+                s.read_cell_data(fpcells, tindx);
                 if (ncells == 0) {
                     ncells = s.cells.length;
                 } else {
@@ -141,16 +148,23 @@ void generate_xt_dataset(int tindxStart, int tindxEnd, bool milliSec, string fmt
                 foreach (v; varNames) { data[v][jt].length = ncells; }
                 foreach (ix, c; s.cells) {
                     data["x"][jt][ix] = c.xmid;
-                    data["t"][jt][ix] = (milliSec) ? times[tindx]*1000.0 : times[tindx];
+                    data["t"][jt][ix] = simTime;
                     data["p"][jt][ix] = c.gas.p;
                     data["T"][jt][ix] = c.gas.T;
                     data["rho"][jt][ix] = c.gas.rho;
                     data["vel"][jt][ix] = c.vel;
                 } // foreach c
+                //
+                s.read_face_data(fpfaces, tindx);
+                xL[jt] = s.faces[0].x;
+                xR[jt] = s.faces[$-1].x;
+                simTimes[jt] = simTime;
+                //
                 jt += 1;
             }
         } // foreach tindx
-        fp.close();
+        fpcells.close();
+        fpfaces.close();
         //
         switch (fmt) {
         case "VTK":
@@ -187,26 +201,29 @@ void generate_xt_dataset(int tindxStart, int tindxEnd, bool milliSec, string fmt
             fpj.writefln("\"ntimes\": %d,", ntimes);
             fpj.writefln("\"ncells\": %d,", ncells);
             fpj.write("\"varNames\": [");
-            foreach (i, v; varNames) {
-                fpj.writef("\"%s\"%s", v, (i<(varNames.length-1))?", ":"");
-            }
+            foreach (i, v; varNames) { fpj.writef("\"%s\"%s", v, (i<(varNames.length-1))?", ":""); }
             fpj.writeln("],");
             fpj.write("\"varUnits\": [");
-            foreach (i, v; varUnits) {
-                fpj.writef("\"%s\"%s", v, (i<(varUnits.length-1))?", ":"");
-            }
+            foreach (i, v; varUnits) { fpj.writef("\"%s\"%s", v, (i<(varUnits.length-1))?", ":""); }
             fpj.writeln("],");
             foreach (i, v; varNames) {
                 fpj.writefln("\"%s\": [", v);
                 foreach (nt; 0 .. ntimes) {
                     fpj.write("  [");
-                    foreach (ix; 0 .. ncells) {
-                        fpj.writef("%g%s", data[v][nt][ix], (ix<(ncells-1))?", ":"");
-                    }
+                    foreach (ix; 0 .. ncells) { fpj.writef("%g%s", data[v][nt][ix], (ix<(ncells-1))?", ":""); }
                     fpj.writefln("]%s", (nt<(ntimes-1))?", ":"");
                 }
                 fpj.writefln("],");
             }
+            fpj.write("\"xL\": [");
+            foreach (i, v; xL) { fpj.writef("%g%s", v, (i<(xL.length-1))?", ":""); }
+            fpj.writeln("],");
+            fpj.write("\"xR\": [");
+            foreach (i, v; xR) { fpj.writef("%g%s", v, (i<(xR.length-1))?", ":""); }
+            fpj.writeln("],");
+            fpj.write("\"simTimes\": [");
+            foreach (i, v; simTimes) { fpj.writef("%g%s", v, (i<(simTimes.length-1))?", ":""); }
+            fpj.writeln("],");
             fpj.writeln("\"dummy\": 0");
             fpj.writeln("}");
             fpj.close();
