@@ -1,6 +1,15 @@
 /**
  * Interface and implementation for relaxation time calculations for energy exchange mechanisms.
  *
+ *  - "Conservation Equations and Physical Models for Hypersonic Air Flows in Thermal and Chemical Nonequilibrium"
+ *     Peter A. Gnoffo and Roop N. Gupta and Judy L. Shinn, NASA Technical Paper 2867, 1989
+ *
+ *  - "Review of Chemical-Kinetic Problems for Future NASA Missions, I: Earth Entries"
+ *     Chul Park, Journal of Thermophysics and Heat Transfer, Volume 7, Number 3, July-Sept 1993
+ *
+ *  - "Modification of chemical-kinetic parameters for 11-air species in re-entry flows"
+ *     Jae Gang Kim and Sung Min Jo, International Journal of Heat and Mass Transfer, Volume 169, 2021
+ *
  * Author: Rowan G.
  * Date: 2021-03-28
  */
@@ -167,10 +176,41 @@ class ParkHTC2VT : ParkHTCVT {
 protected:
     @nogc
     override number compute_cross_section(const GasState gs) {
-        // TODO: This will throw away from the complex part of sigma. Is that okay?
         return m_sigma*(50e3/gs.T)*(50e3/gs.T);
     }
 }
+
+class KimHTCVT : ParkHTCVT {
+/*
+    High temperature correction taken from Kim 2021 (Table I).
+    @author: Nick Gibbons
+*/
+    this(int p, int q, double sigma, double exponent, double mu, RelaxationTime rt, GasModel gmodel)
+    {
+        m_exponent = exponent;
+        super(p, q, sigma, mu, rt, gmodel);
+    }
+
+    this(lua_State *L, int p, int q, GasModel gmodel)
+    {
+        m_exponent = getDouble(L, -1, "exponent");
+        super(L, p, q, gmodel);
+    }
+
+    override KimHTCVT dup()
+    {
+        return new KimHTCVT(m_p, m_q, m_sigma, m_exponent, m_mu, m_rt, m_gmodel);
+    }
+
+protected:
+    double m_exponent;
+
+    @nogc
+    override number compute_cross_section(const GasState gs) {
+        return m_sigma*pow(gs.T, m_exponent);
+    }
+}
+
 
 RelaxationTime createRelaxationTime(lua_State *L, int p, int q, GasModel gmodel)
 {
@@ -182,6 +222,8 @@ RelaxationTime createRelaxationTime(lua_State *L, int p, int q, GasModel gmodel)
 	return new ParkHTCVT(L, p, q, gmodel);
     case "ParkHTC2":
 	return new ParkHTC2VT(L, p, q, gmodel);
+    case "KimHTC":
+	return new KimHTCVT(L, p, q, gmodel);
     default:
 	string msg = format("The relaxation time model: %s is not known.", model);
 	throw new Error(msg);

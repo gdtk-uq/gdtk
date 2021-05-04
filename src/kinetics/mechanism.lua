@@ -59,6 +59,10 @@ function transformRelaxationTime(rt, p, q, db)
       else
          t.sigma = rt.sigma
       end
+   elseif t.model == "KimHTC" then
+      t.submodel = transformRelaxationTime(rt.submodel, p, q, db)
+      t.sigma = rt.sigma
+      t.exponent = rt.exponent
    else
       print("The relaxation time model: ", t.model, " it not known.")
       print("Bailing out!")
@@ -78,6 +82,9 @@ function relaxationTimeToLuaStr(rt)
    elseif rt.model == "ParkHTC2" then
       submodelstr = relaxationTimeToLuaStr(rt.submodel)
       str = string.format("{model='ParkHTC2', sigma=%.4e, submodel=%s}", rt.sigma, submodelstr)
+   elseif rt.model == "KimHTC" then
+      submodelstr = relaxationTimeToLuaStr(rt.submodel)
+      str = string.format("{model='KimHTC', sigma=%.4e, exponent=%.4f, submodel=%s}", rt.sigma, rt.exponent, submodelstr)
    else
       print(string.format("ERROR: relaxation time model '%s' is not known.", rt.model))
       os.exit(1)
