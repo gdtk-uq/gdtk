@@ -1,8 +1,8 @@
 config.title = "Sphere fired into air."
 print(config.title)
 gproGrid = "gridpro/sphere-orig.grd"
-no_flow_times = 10.0
 
+no_flow_times = 5.0
 njb = 4
 Db = 14.0e-3
 Rc = Db/2
@@ -31,7 +31,7 @@ config.max_time = no_flow_times*body_flow_time
 config.max_step = 80000
 config.dt_init = 1.0e-10
 config.cfl_value = 0.75
-config.dt_plot = config.max_time/100
+config.dt_plot = config.max_time/no_flow_times
 
 grids = importGridproGrid(gproGrid, 1.0)
 blk = FBArray:new{grid=grids[1], initialState=inflow, label='blk',
