@@ -1,0 +1,200 @@
+-- 11 Species Air Reaction File, from:
+-- "Theoretical and Experimental Studies of Reentry Plasmas", Table I, Page 52
+-- Michael G. Dunn and Sang-Wook Kang, NASA Contractor Report, CR-2232, April 1934
+-- Notes:
+--    - Note that in the input file (here), the reactions are specified in CGS units,
+--      primarily cm. prep-chem converts these into SI units automatically for the 
+--      machine readable reaction file that gets fed into the lua interpreter at runtime.
+-- @author: Nick Gibbons
+
+Config{
+   tempLimits = {lower=300.0, upper=30000.0},
+   odeStep = {method='rkf', errTol=1.000000e-09},
+   tightTempCoupling = true,
+}
+
+Reaction{ 'O2 + N <=> O + O + N',
+   fr={'Arrhenius', A=3.6e18, n=-1.0, C=5.95e4},
+   br={'Arrhenius', A=3.0e15, n=-0.5, C=0.0},
+   label='r1a',
+}
+Reaction{ 'O2 + NO <=> O + O + NO',
+   fr={'Arrhenius', A=3.6e18, n=-1.0, C=5.95e4},
+   br={'Arrhenius', A=3.0e15, n=-0.5, C=0.0},
+   label='r1b',
+}
+
+Reaction{ 'N2 + O <=> N + N + O',
+   fr={'Arrhenius', A=1.9e17, n=-0.5, C=1.13e5},
+   br={'Arrhenius', A=1.1e16, n=-0.5, C=0.0},
+   label='r2a',
+}
+Reaction{ 'N2 + NO <=> N + N + NO',
+   fr={'Arrhenius', A=1.9e17, n=-0.5, C=1.13e5},
+   br={'Arrhenius', A=1.1e16, n=-0.5, C=0.0},
+   label='r2b',
+}
+Reaction{ 'N2 + O2 <=> N + N + O2',
+   fr={'Arrhenius', A=1.9e17, n=-0.5, C=1.13e5},
+   br={'Arrhenius', A=1.1e16, n=-0.5, C=0.0},
+   label='r2c',
+}
+
+Reaction{ 'NO + O2 <=> N + O + O2',
+   fr={'Arrhenius', A=3.9e20, n=-1.5, C=7.55e4},
+   br={'Arrhenius', A=1.0e20, n=-1.5, C=0.0},
+   label='r3a',
+}
+Reaction{ 'NO + N2 <=> N + O + N2',
+   fr={'Arrhenius', A=3.9e20, n=-1.5, C=7.55e4},
+   br={'Arrhenius', A=1.0e20, n=-1.5, C=0.0},
+   label='r3b',
+}
+
+Reaction{ 'O + NO <=> N + O2',
+   fr={'Arrhenius', A=3.2e9, n=1.0, C=1.97e4},
+   br={'Arrhenius', A=1.3e10, n=1.0, C=3.58e3},
+   label='r4',
+}
+
+Reaction{ 'O + N2 <=> N + NO',
+   fr={'Arrhenius', A=7.0e13, n=0.0, C=3.8e4},
+   br={'Arrhenius', A=1.56e13, n=0.0, C=0.0},
+   label='r5',
+}
+
+Reaction{ 'N + N2 <=> N + N + N',
+   fr={'Arrhenius', A=4.085e22, n=-1.5, C=1.13e5},
+   br={'Arrhenius', A=2.27e21, n=-1.5, C=0.0},
+   label='r6',
+}
+
+Reaction{ 'O + N <=> NO+ + e-',
+   fr={'Arrhenius', A=1.4e6, n=1.5, C=3.19e4},
+   br={'Park', A=6.7e21, n=-1.5, C=0.0, s=0},
+   label='r7',
+}
+
+Reaction{ 'O + e- <=> O+ + e- + e-',
+   fr={'Park', A=3.6e31, n=-2.91, C=1.58e5, s=0},
+   br={'Park', A=2.2e40, n=-4.5, C=0.0, s=0},
+   label='r8',
+}
+
+Reaction{ 'N + e- <=> N+ + e- + e-',
+   fr={'Park', A=1.1e32, n=-3.14, C=1.69e5, s=0},
+   br={'Park', A=2.2e40, n=-4.5, C=0.0, s=0},
+   label='r9',
+}
+
+Reaction{ 'O + O <=> O2+ + e-',
+   fr={'Arrhenius', A=1.6e17, n=-0.98, C=8.08e4},
+   br={'Park', A=8e21, n=-1.5, C=0.0, s=0},
+   label='r10',
+}
+
+Reaction{ 'O + O2+ <=> O2 + O+',
+   fr={'Arrhenius', A=2.92e18, n=-1.11, C=2.8e4},
+   br={'Arrhenius', A=7.8e11, n=0.5, C=0.0},
+   label='r11',
+}
+
+Reaction{ 'N2 + N+ <=> N + N2+',
+   fr={'Arrhenius', A=2.02e11, n=0.81, C=1.3e4},
+   br={'Arrhenius', A=7.8e11, n=0.5, C=0.0},
+   label='r12',
+}
+
+Reaction{ 'N + N <=> N2+ + e-',
+   fr={'Arrhenius', A=1.4e13, n=0.0, C=6.78e4},
+   br={'Park', A=1.5e22, n=-1.5, C=0.0, s=0.0},
+   label='r13',
+}
+
+Reaction{ 'O2 + N2 <=> NO + NO+ + e-',
+   fr={'Arrhenius', A=1.38e20, n=-1.84, C=1.41e5},
+   br={'Park', A=1.0e24, n=-2.5, C=0.0, s=0.0},
+   label='r14',
+}
+
+Reaction{ 'NO + N2 <=> NO+ + e- + N2',
+   fr={'Arrhenius', A=2.2e15, n=-0.35, C=1.08e5},
+   br={'Park', A=2.2e26, n=-2.5, C=0.0, s=0.0},
+   label='r15',
+}
+
+Reaction{ 'O + NO+ <=> NO + O+',
+   fr={'Arrhenius', A=3.63e15, n=-0.6, C=5.08e4},
+   br={'Arrhenius', A=1.5e13, n=0.0, C=0.0},
+   label='r16',
+}
+
+Reaction{ 'N2 + O+ <=> O + N2+',
+   fr={'Arrhenius', A=3.4e19, n=-2.0, C=2.3e4},
+   br={'Arrhenius', A=2.48e19, n=-2.2, C=0.0},
+   label='r17',
+}
+
+Reaction{ 'N + NO+ <=> NO + N+',
+   fr={'Arrhenius', A=1.0e19, n=-0.93, C=6.1e4},
+   br={'Arrhenius', A=4.8e14, n=0.0, C=0.0},
+   label='r18',
+}
+
+Reaction{ 'O2 + NO+ <=> NO + O2+',
+   fr={'Arrhenius', A=1.8e15, n=0.17, C=3.3e4},
+   br={'Arrhenius', A=1.8e13, n=0.5, C=0.0},
+   label='r19',
+}
+
+Reaction{ 'O + NO+ <=> O2 + N+',
+   fr={'Arrhenius', A=1.34e13, n=0.31, C=7.727e4},
+   br={'Arrhenius', A=1.0e14, n=0.0, C=0.0},
+   label='r20',
+}
+
+Reaction{ 'NO + O2 <=> NO+ + e- + O2',
+   fr={'Arrhenius', A=8.8e15, n=-0.35, C=1.08e5},
+   br={'Park', A=8.8e26, n=-2.5, C=0.0, s=0.0},
+   label='r21',
+}
+
+Reaction{ 'O2 + O <=> O + O + O',
+   fr={'Arrhenius', A=9.0e19, n=-1.0, C=5.95e4},
+   br={'Arrhenius', A=7.5e16, n=-0.5, C=0.0},
+   label='r22',
+}
+
+Reaction{ 'O2 + O2 <=> O + O + O2',
+   fr={'Arrhenius', A=3.24e19, n=-1.0, C=5.95e4},
+   br={'Arrhenius', A=2.7e16, n=-0.5, C=0.0},
+   label='r23',
+}
+
+Reaction{ 'O2 + N2 <=> O + O + N2',
+   fr={'Arrhenius', A=7.2e18, n=-1.0, C=5.95e4},
+   br={'Arrhenius', A=6.0e15, n=-0.5, C=0.0},
+   label='r24',
+}
+
+Reaction{ 'N2 + N2 <=> N + N + N2',
+   fr={'Arrhenius', A=4.7e17, n=-0.5, C=1.13e5},
+   br={'Arrhenius', A=2.72e16, n=-0.5, C=0.0},
+   label='r25',
+}
+
+Reaction{ 'NO + O <=> N + O + O',
+   fr={'Arrhenius', A=7.8e20, n=-1.5, C=7.55e4},
+   br={'Arrhenius', A=2.0e20, n=-1.5, C=0.0},
+   label='r26a',
+}
+Reaction{ 'NO + N <=> N + O + N',
+   fr={'Arrhenius', A=7.8e20, n=-1.5, C=7.55e4},
+   br={'Arrhenius', A=2.0e20, n=-1.5, C=0.0},
+   label='r26b',
+}
+Reaction{ 'NO + NO <=> N + O + NO',
+   fr={'Arrhenius', A=7.8e20, n=-1.5, C=7.55e4},
+   br={'Arrhenius', A=2.0e20, n=-1.5, C=0.0},
+   label='r26c',
+}

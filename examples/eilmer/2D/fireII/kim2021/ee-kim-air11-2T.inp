@@ -1,0 +1,248 @@
+-- VT Exchange Rates from Table 1 Kim and Jo, 2021
+
+Mechanism{
+    "(N2) ~~ (N2)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=221.53, b=0.0290}, sigma=1.7e-23, exponent=0.55}
+}
+
+Mechanism{
+    "(N2) ~~ (O2)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=228.76, b=0.0295}, sigma=4.5e-23, exponent=0.50}
+}
+
+Mechanism{
+    "(N2) ~~ (NO)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=225.30, b=0.0293}, sigma=4.5e-23, exponent=0.50}
+}
+
+Mechanism{
+    "(N2) ~~ (N)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=184.44, b=0.0389}, sigma=1.0e-22, exponent=0.52}
+}
+
+Mechanism{
+    "(N2) ~~ (O)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=72.400, b=0.0150}, sigma=4.5e-22, exponent=0.30}
+}
+
+Mechanism{
+    "(N2) ~~ (N2+)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=221.53, b=0.0290}, sigma=1.7e-23, exponent=0.55}
+}
+
+Mechanism{
+    "(N2) ~~ (O2+)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=228.76, b=0.0295}, sigma=4.5e-23, exponent=0.50}
+}
+
+Mechanism{
+    "(N2) ~~ (NO+)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=225.30, b=0.0293}, sigma=4.5e-23, exponent=0.50}
+}
+
+Mechanism{
+    "(N2) ~~ (N+)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=180.00, b=0.0262}, sigma=4.5e-23, exponent=0.50}
+}
+
+Mechanism{
+    "(N2) ~~ (O+)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=188.89, b=0.0268}, sigma=4.5e-23, exponent=0.50}
+}
+
+Mechanism{
+    "(O2) ~~ (N2)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=131.32, b=0.0295}, sigma=7.5e-22, exponent=0.28}
+}
+
+Mechanism{
+    "(O2) ~~ (O2)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=130.15, b=0.0303}, sigma=5.0e-24, exponent=0.70}
+}
+
+Mechanism{
+    "(O2) ~~ (NO)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=133.71, b=0.0298}, sigma=7.5e-22, exponent=0.28}
+}
+
+Mechanism{
+    "(O2) ~~ (N)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=72.400, b=0.0150}, sigma=7.5e-22, exponent=0.28}
+}
+
+Mechanism{
+    "(O2) ~~ (O)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"Millikan-White", a=-27.320, b=0.1465}
+}
+
+Mechanism{
+    "(O2) ~~ (N2+)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=131.32, b=0.0295}, sigma=7.5e-22, exponent=0.28}
+}
+
+Mechanism{
+    "(O2) ~~ (O2+)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=130.15, b=0.0303}, sigma=5.0e-24, exponent=0.70}
+}
+
+Mechanism{
+    "(O2) ~~ (NO+)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=133.71, b=0.0298}, sigma=7.5e-22, exponent=0.28}
+}
+
+Mechanism{
+    "(O2) ~~ (N+)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=106.06, b=0.0265}, sigma=7.5e-22, exponent=0.28}
+}
+
+Mechanism{
+    "(O2) ~~ (O+)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=110.97, b=0.0271}, sigma=7.5e-22, exponent=0.28}
+}
+
+Mechanism{
+    "(NO) ~~ (N2)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"ParkHTC", submodel={"Millikan-White", a=49.500, b=0.0420}, sigma=5.80e-20}
+}
+
+Mechanism{
+    "(NO) ~~ (O2)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"ParkHTC", submodel={"Millikan-White", a=49.500, b=0.0420}, sigma=5.80e-20}
+}
+
+Mechanism{
+    "(NO) ~~ (NO)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"ParkHTC", submodel={"Millikan-White", a=49.500, b=0.0420}, sigma=5.80e-20}
+}
+
+Mechanism{
+    "(NO) ~~ (N)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"ParkHTC", submodel={"Millikan-White", a=49.500, b=0.0420}, sigma=5.80e-20}
+}
+
+Mechanism{
+    "(NO) ~~ (O)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"ParkHTC", submodel={"Millikan-White", a=49.500, b=0.0420}, sigma=5.80e-20}
+}
+
+Mechanism{
+    "(NO) ~~ (N2+)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=175.67, b=0.0293}, sigma=8.5e-22, exponent=0.35}
+}
+
+Mechanism{
+    "(NO) ~~ (O2+)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=181.60, b=0.0298}, sigma=8.5e-22, exponent=0.35}
+}
+
+Mechanism{
+    "(NO) ~~ (NO+)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=178.76, b=0.0295}, sigma=8.5e-22, exponent=0.35}
+}
+
+Mechanism{
+    "(NO) ~~ (N+)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=142.62, b=0.0264}, sigma=8.5e-22, exponent=0.35}
+}
+
+Mechanism{
+    "(NO) ~~ (O+)",
+    type = "V-T",
+    rate = "Landau-Teller",
+    relaxation_time = {"KimHTC", submodel={"Millikan-White", a=149.08, b=0.0270}, sigma=8.5e-22, exponent=0.35}
+}
+
+-- ET Rates are apparently the same as from Gnoffo 1989
+Mechanism{
+    "(e-) ~~ (N2)",
+    type = "E-T",
+    exchange_cross_section = {type="GnoffoNeutral", a = 7.5e-20, b = 5.5e-24, c = -1.0e-28}
+}
+
+Mechanism{
+    "(e-) ~~ (O2)",
+    type = "E-T",
+    exchange_cross_section = {type="GnoffoNeutral", a = 2.0e-20, b = 6.0e-24, c = 0.0e-00}
+}
+
+Mechanism{
+    "(e-) ~~ (N)",
+    type = "E-T",
+    exchange_cross_section = {type="GnoffoNeutral", a = 5.0e-20, b = 0.0e+00, c = 0.0e+00}
+}
+
+Mechanism{
+    "(e-) ~~ (O)",
+    type = "E-T",
+    exchange_cross_section = {type="GnoffoNeutral", a = 1.2e-20, b = 1.7e-24, c = -2.0e-29}
+}
+    
+Mechanism{
+    "(e-) ~~ (NO)",
+    type = "E-T",
+    exchange_cross_section = {type="GnoffoNeutral", a = 1.0e-19, b = 0.0e+00, c = 0.0e+00}
+}
+
+Mechanism{
+    "(e-) ~~ (*ions)",
+    type = "E-T",
+    exchange_cross_section = {type="Coulomb"}
+}
