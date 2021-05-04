@@ -111,46 +111,6 @@ Reaction{'NO + M <=> N + O + M',
                  ['e-']=0.0},
 }
 
-Reaction{'NO + N2 <=> N + O + N2',
-   fr={'Park', A=1.450e+15, n=0.000, C=75200, s=0.5}, 
-}
-
-Reaction{'NO + O2 <=> N + O + O2',
-   fr={'Park', A=1.450e+15, n=0.000, C=75200, s=0.5}, 
-}
-
-Reaction{'NO + NO <=> N + O + NO',
-   fr={'Park', A=9.640e+14, n=0.000, C=75200, s=0.5}, 
-}
-
-Reaction{'NO + N <=> N + O + N',
-   fr={'Park', A=9.640e+14, n=0.000, C=75200, s=0.5}, 
-}
-
-Reaction{'NO + O <=> N + O + O',
-   fr={'Park', A=9.640e+14, n=0.000, C=75200, s=0.5}, 
-}
-
-Reaction{'NO + N2+ <=> N + O + N2+',
-   fr={'Park', A=1.450e+15, n=0.000, C=75200, s=0.5}, 
-}
-
-Reaction{'NO + O2+ <=> N + O + O2+',
-   fr={'Park', A=1.450e+15, n=0.000, C=75200, s=0.5}, 
-}
-
-Reaction{'NO + NO+ <=> N + O + NO+',
-   fr={'Park', A=9.640e+14, n=0.000, C=75200, s=0.5}, 
-}
-
-Reaction{'NO + N+ <=> N + O + N+',
-   fr={'Park', A=9.640e+14, n=0.000, C=75200, s=0.5}, 
-}
-
-Reaction{'NO + O+ <=> N + O + O+',
-   fr={'Park', A=9.640e+14, n=0.000, C=75200, s=0.5}, 
-}
-
 -- The rest of the mechanism is the same as Park 1993
 -- Dissociation Reactions (electron impact)
 Reaction{ 'N2 + e- <=> N + N + e-',
