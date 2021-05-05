@@ -24,7 +24,7 @@ public:
         this.label = label;
 
         // Lua interpreter for the block.
-        if (GlobalConfig.verbosity_level > 0) {
+        if (GlobalConfig.verbosity_level > 1) {
             writefln("Starting new Lua interpreter in Block blk.id=%d", id);
         }
         if (myL) {

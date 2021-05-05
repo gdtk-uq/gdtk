@@ -326,7 +326,7 @@ public:
     // BoundaryInterfaceEffect objects may need to initialize it.
     void init_lua_State(string luafname)
     {
-        if (GlobalConfig.verbosity_level > 0) {
+        if (GlobalConfig.verbosity_level > 1) {
             writefln("Starting new Lua interpreter in BC: user-file=%s, blk.id=%d, bndry=%d",
                      luafname, blk.id, which_boundary);
         }
