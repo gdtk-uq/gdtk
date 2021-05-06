@@ -369,10 +369,10 @@ public:
     FlowState fstate;
 
 private:
-    number[] _massf;
+    number[] _massf, _ev;
     number _e, _rho, _p, _u, _v;
     FlowState _fstate;
-    int _nsp;
+    int _nsp, _nmodes;
 
 public:
     this(int id, int boundary, in FlowState fstate)
@@ -395,6 +395,13 @@ public:
             _massf.length = _nsp;
             for (int _isp=0; _isp < _nsp; _isp++) {
                 _massf[_isp] = fstate.gas.massf[_isp];
+            }
+        }
+        _nmodes = gmodel.n_modes;
+        version(multi_T_gas) {
+            _ev.length = _nmodes;
+            for (int n=0; n<_nmodes; n++ ){
+                _ev[n] = fstate.gas.u_modes[n];
             }
         }
         this.fstate = fstate.dup();
@@ -456,7 +463,9 @@ public:
                 }
             }
             version(multi_T_gas) {
-                // [TODO]: Kyle, separate energy modes for multi-species simulations.
+                for ( int n=0; n<_nmodes; n++ ){
+                    f.F.energies[n] = f.F.mass * _ev[n];
+                }
             }
         }
     }
