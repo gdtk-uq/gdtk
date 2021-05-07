@@ -1152,6 +1152,7 @@ public:
         if (!force_euler) {
             final switch (myConfig.gasdynamic_update_scheme) {
             case GasdynamicUpdate.euler:
+            case GasdynamicUpdate.backward_euler:
             case GasdynamicUpdate.moving_grid_1_stage:
             case GasdynamicUpdate.moving_grid_2_stage:
             case GasdynamicUpdate.pc: gamma_1 = 1.0; break;
@@ -1232,6 +1233,7 @@ public:
         double gamma_2 = 0.5;
         final switch (myConfig.gasdynamic_update_scheme) {
         case GasdynamicUpdate.euler:
+        case GasdynamicUpdate.backward_euler:
         case GasdynamicUpdate.moving_grid_1_stage: assert(false, "invalid for 1-stage update.");
         case GasdynamicUpdate.moving_grid_2_stage:
         case GasdynamicUpdate.pc: gamma_1 = 0.5, gamma_2 = 0.5; break;
@@ -1301,6 +1303,7 @@ public:
         double gamma_3 = 4.0/6.0;
         final switch (myConfig.gasdynamic_update_scheme) {
         case GasdynamicUpdate.euler:
+        case GasdynamicUpdate.backward_euler:
         case GasdynamicUpdate.moving_grid_1_stage:
         case GasdynamicUpdate.moving_grid_2_stage:
         case GasdynamicUpdate.pc:

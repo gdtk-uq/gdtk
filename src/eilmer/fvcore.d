@@ -37,7 +37,8 @@ enum GasdynamicUpdate {
     rkl1,
     rkl2,
     moving_grid_1_stage,
-    moving_grid_2_stage
+    moving_grid_2_stage,
+    backward_euler
 }
 
 @nogc
@@ -54,6 +55,7 @@ string gasdynamic_update_scheme_name(GasdynamicUpdate gdut)
     case GasdynamicUpdate.rkl2: return "rkl2";
     case GasdynamicUpdate.moving_grid_1_stage: return "moving_grid_1_stage";
     case GasdynamicUpdate.moving_grid_2_stage: return "moving_grid_2_stage";
+    case GasdynamicUpdate.backward_euler: return "backward_euler";
     }
 } // end gasdynamic_update_scheme_name()
 
@@ -71,6 +73,7 @@ size_t number_of_stages_for_update_scheme(GasdynamicUpdate gdut)
     case GasdynamicUpdate.rkl2: return 3;
     case GasdynamicUpdate.moving_grid_1_stage: return 1;
     case GasdynamicUpdate.moving_grid_2_stage: return 2;
+    case GasdynamicUpdate.backward_euler: return 1;
     }
 } // end number_of_stages_for_update_scheme()
 
@@ -88,6 +91,7 @@ size_t final_index_for_update_scheme(GasdynamicUpdate gdut)
     case GasdynamicUpdate.rkl2: return 3;
     case GasdynamicUpdate.moving_grid_1_stage: return 1;
     case GasdynamicUpdate.moving_grid_2_stage: return 2;
+    case GasdynamicUpdate.backward_euler: return 1;
     }
 } // end final_index_for_update_scheme()
 
@@ -112,6 +116,7 @@ GasdynamicUpdate update_scheme_from_name(string name)
     case "moving-grid-1-stage": return GasdynamicUpdate.moving_grid_1_stage;
     case "moving_grid_2_stage": return GasdynamicUpdate.moving_grid_2_stage;
     case "moving-grid-2-stage": return GasdynamicUpdate.moving_grid_2_stage;
+    case "backward_euler": return GasdynamicUpdate.backward_euler;
     default:
         throw new FlowSolverException("Invalid gasdynamic update scheme name");
     }

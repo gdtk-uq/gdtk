@@ -958,6 +958,12 @@ int integrate_in_time(double target_time_as_requested)
         // Fixed grid
         if (GlobalConfig.with_super_time_stepping) {
             gasdynamic_step = &sts_gasdynamic_explicit_increment_with_fixed_grid;
+        } else if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.backward_euler) {
+            version(complex_numbers) {
+                gasdynamic_step = &gasdynamic_implicit_increment_with_fixed_grid;
+            } else {
+                throw new Error("Implicit gasdynamic update not available in double-numbers build.");
+            }
         } else {
             gasdynamic_step = &gasdynamic_explicit_increment_with_fixed_grid;
         }

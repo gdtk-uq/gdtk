@@ -268,13 +268,14 @@ public:
         double gamma1 = 1.0; // Assume Euler
         e[1] = e[0] + dt*gamma1*dedt[0];
    }
-    
+
     void stage1Update(double dt)
     {
         double gamma1 = 1.0; // Assume Euler
 //      if (!force_euler) {
             final switch (myConfig.gasdynamic_update_scheme) {
             case GasdynamicUpdate.euler:
+            case GasdynamicUpdate.backward_euler:
             case GasdynamicUpdate.moving_grid_1_stage:
             case GasdynamicUpdate.moving_grid_2_stage:
             case GasdynamicUpdate.pc: gamma1 = 1.0; break;
@@ -284,7 +285,7 @@ public:
             case GasdynamicUpdate.denman_rk3: gamma1 = 8.0/15.0; break;
             case GasdynamicUpdate.rkl1:
             case GasdynamicUpdate.rkl2: assert(false, "invalid option");
-            }    
+            }
 //    }
         e[1] = e[0] + dt*gamma1*dedt[0];
    }
@@ -295,6 +296,7 @@ public:
         double gamma2 = 0.5;
         final switch (myConfig.gasdynamic_update_scheme) {
         case GasdynamicUpdate.euler:
+        case GasdynamicUpdate.backward_euler:
         case GasdynamicUpdate.moving_grid_1_stage: assert(false, "invalid for 1-stage update.");
         case GasdynamicUpdate.moving_grid_2_stage:
         case GasdynamicUpdate.pc: gamma1 = 0.5, gamma2 = 0.5; break;
@@ -315,6 +317,7 @@ public:
         double gamma3 = 4.0/6.0;
         final switch (myConfig.gasdynamic_update_scheme) {
         case GasdynamicUpdate.euler:
+        case GasdynamicUpdate.backward_euler:
         case GasdynamicUpdate.moving_grid_1_stage:
         case GasdynamicUpdate.moving_grid_2_stage:
         case GasdynamicUpdate.pc:
