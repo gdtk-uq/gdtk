@@ -70,31 +70,24 @@ public:
         may_be_turbulent = getJSONbool(json_data, "may_be_turbulent", true);
     } // end constructor from json
 
-     this(lua_State* L)
+    this(lua_State* L)
+    // Construct from a Lua state.
     // Note that we assume the FlowState fs to be in a nonrotating frame.
     {
-
         auto grid = checkUnstructuredGrid(L, 2);
         double omegaz = luaL_checknumber(L, 5);
-
         ncells = grid.ncells;
-
         super(-1, "nil");
         grid_type = Grid_t.structured_grid;
         ncells_expected = ncells;
         n_ghost_cell_layers = 0;
-
-
         // do we need a lighter weight config instantiation process?
         // where could we get a pre-built instance from, GlobalConfig?
         myConfig = new LocalConfig(-1);
-        myConfig.init_gas_model_bits(); 
-
+        myConfig.init_gas_model_bits();
         cells.length = ncells; // not defined yet
-
         bool lua_fs = false;
         FlowState myfs;
-
         // check where our flowstate is coming from
         if ( isObjType(L, 3, "_FlowState") ) {
             myfs = checkFlowState(L, 3);
@@ -102,30 +95,25 @@ public:
         } else if (lua_isfunction(L, 3)) {
             lua_fs = true;
         }
-
         string msg = "get_unstructured_grid_fv(): ";
         Vector3 pos;
         number volume, xyplane_area, iLength, jLength, kLength, L_min;
-        
-
         foreach(cell_idx, ref cell; cells) {
-
             // collect the vertices for this cell
             Vector3[] vertices;
             foreach (j; grid.cells[cell_idx].vtx_id_list) {
                 vertices ~= grid.vertices[j];
             }
-
             if (GlobalConfig.dimensions == 2 ) {
                 switch (vertices.length) {
                 case 3:
                     xyplane_triangle_cell_properties(vertices[0], vertices[1], vertices[2],
-                                                    pos, xyplane_area, iLength, jLength, L_min);
+                                                     pos, xyplane_area, iLength, jLength, L_min);
                     break;
                 case 4:
                     xyplane_quad_cell_properties(vertices[0], vertices[1],
-                                                vertices[2], vertices[3],
-                                                pos, xyplane_area, iLength, jLength, L_min);
+                                                 vertices[2], vertices[3],
+                                                 pos, xyplane_area, iLength, jLength, L_min);
                     break;
                 default:
                     debug { msg ~= format("Unhandled number of vertices: %d", vertices.length); }
@@ -136,8 +124,8 @@ public:
                 switch (vertices.length) {
                 case 4:
                     tetrahedron_properties(vertices[0], vertices[1],
-                                        vertices[2], vertices[3],
-                                        pos, volume, L_min);
+                                           vertices[2], vertices[3],
+                                           pos, volume, L_min);
                     break;
                 case 8:
                     hex_cell_properties(vertices[0], vertices[1], vertices[2], vertices[3],
@@ -146,24 +134,21 @@ public:
                     break;
                 case 5:
                     pyramid_properties(vertices[0], vertices[1], vertices[2], vertices[3],
-                                    vertices[4], pos, volume, L_min);
+                                       vertices[4], pos, volume, L_min);
                     break;
                 case 6:
                     wedge_properties(vertices[0], vertices[1], vertices[2],
-                                    vertices[3], vertices[4], vertices[5],
-                                    pos, volume, L_min);
+                                     vertices[3], vertices[4], vertices[5],
+                                     pos, volume, L_min);
                     break;
                 default:
                     debug { msg ~= format("Unhandled number of vertices: %d", vertices.length); }
                     throw new FlowSolverException(msg);
                 }
             }
-
-
             if (omegaz != 0.0) {
                 throw new Error("Oops, we have not yet implemented rotating-frame code here.");
             }
-
             if (lua_fs) {
                 // Now grab flow state via Lua function call.
                 // If the block is in a rotating frame with omegaz != 0.0,
@@ -190,16 +175,11 @@ public:
                     luaL_error(L, errMsg.toStringz);
                 }
             }
-
             cells[cell_idx] = new FVCell(myConfig, pos, myfs, volume, to!int(cell_idx));
-
         }
-
         block_io = get_fluid_block_io(this);
-
-        if (lua_fs) lua_settop(L, 0); // clear stack
-
-    } // end constructor
+        if (lua_fs) { lua_settop(L, 0); }
+    } // end constructor from Lua state
 
     override JSONValue get_header()
     // return information in JSON format that describes this block

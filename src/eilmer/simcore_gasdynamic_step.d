@@ -1962,7 +1962,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
         shared int gtl = 0; // grid time-level remains at zero for the non-moving grid
         int flagTooManyBadCells;
         try {
-            // Appempt an update.
+            // Attempt an update.
             //
             // [FIX-ME] PJ 2021-05-07
             // This is still an explicit Euler update and needs to be turned into a backward-Euler step.
