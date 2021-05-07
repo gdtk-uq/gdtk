@@ -239,9 +239,6 @@ function write_config_file(fileName)
    f:write(string.format('"diffusion_coefficient_type": "%s",\n', string.lower(config.diffusion_coefficient_type)))
    f:write(string.format('"lewis_number": %.18e,\n', config.lewis_number))
 
-   f:write(string.format('"separate_update_for_viscous_terms": %s,\n',
-			 tostring(config.separate_update_for_viscous_terms)))
-
    f:write(string.format('"turbulence_model": "%s",\n',
 			 string.lower(config.turbulence_model)))
    f:write(string.format('"turbulence_prandtl_number": %.18e,\n',

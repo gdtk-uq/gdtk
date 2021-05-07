@@ -274,7 +274,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
 	}
     }
-    if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
+    if (GlobalConfig.viscous) {
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) {
@@ -343,9 +343,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	double local_sim_time = SimState.time;
 	foreach (cell; blk.cells) {
 	    cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
-	    if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
-		cell.add_viscous_source_vector();
-	    }
+	    if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
 	    if (blk.myConfig.udf_source_terms) { // [TODO] may want to apply serially
 		size_t i_cell = cell.id;
 		size_t j_cell = 0;
@@ -495,7 +493,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 		if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
 	    }
 	}
-        if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
+        if (GlobalConfig.viscous) {
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) {
@@ -564,9 +562,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    double local_sim_time = SimState.time;
 	    foreach (cell; blk.cells) {
 		cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
-		if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
-		    cell.add_viscous_source_vector();
-		}
+		if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
 		if (blk.myConfig.udf_source_terms) { // [TODO] may want to apply serially
 		    size_t i_cell = cell.id;
 		    size_t j_cell = 0;
@@ -780,7 +776,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
                 }
             }
-            if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
+            if (GlobalConfig.viscous) {
                 if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
                         if (blk.active) {
@@ -848,9 +844,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 double local_sim_time = SimState.time;
                 foreach (cell; blk.cells) {
                     cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
-                    if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
-                        cell.add_viscous_source_vector();
-                    }
+                    if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
                     if (blk.myConfig.udf_source_terms) { // [TODO] may want to apply serially
                         size_t i_cell = cell.id;
                         size_t j_cell = 0;
@@ -1004,7 +998,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                         if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
                     }
                 }
-                if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
+                if (GlobalConfig.viscous) {
                     if (GlobalConfig.apply_bcs_in_parallel) {
                         foreach (blk; parallel(localFluidBlocksBySize,1)) {
                             if (blk.active) {
@@ -1073,9 +1067,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     double local_sim_time = SimState.time;
                     foreach (cell; blk.cells) {
                         cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
-                        if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
-                            cell.add_viscous_source_vector();
-                        }
+                        if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
                         if (blk.myConfig.udf_source_terms) {
                             size_t i_cell = cell.id;
                             size_t j_cell = 0;
@@ -1228,7 +1220,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                         if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
                     }
                 }
-                if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
+                if (GlobalConfig.viscous) {
                     if (GlobalConfig.apply_bcs_in_parallel) {
                         foreach (blk; parallel(localFluidBlocksBySize,1)) {
                             if (blk.active) {
@@ -1298,9 +1290,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     double local_sim_time = SimState.time;
                     foreach (cell; blk.cells) {
                         cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
-                        if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
-                            cell.add_viscous_source_vector();
-                        }
+                        if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
                         if (blk.myConfig.udf_source_terms) {
                             size_t i_cell = cell.id;
                             size_t j_cell = 0;
@@ -1541,7 +1531,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
                 }
             }
-            if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
+            if (GlobalConfig.viscous) {
                 if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
                         if (blk.active) {
@@ -1610,9 +1600,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 double local_sim_time = SimState.time;
                 foreach (cell; blk.cells) {
                     cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
-                    if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
-                        cell.add_viscous_source_vector();
-                    }
+                    if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
                     if (blk.myConfig.udf_source_terms) { // [TODO] may want to apply serially
                         size_t i_cell = cell.id;
                         size_t j_cell = 0;
@@ -1756,7 +1744,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                         if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
                     }
                 }
-                if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
+                if (GlobalConfig.viscous) {
                     if (GlobalConfig.apply_bcs_in_parallel) {
                         foreach (blk; parallel(localFluidBlocksBySize,1)) {
                             if (blk.active) {
@@ -1825,9 +1813,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     double local_sim_time = SimState.time;
                     foreach (cell; blk.cells) {
                         cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
-                        if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
-                            cell.add_viscous_source_vector();
-                        }
+                        if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
                         if (blk.myConfig.udf_source_terms) {
                             size_t i_cell = cell.id;
                             size_t j_cell = 0;
@@ -1981,7 +1967,8 @@ void gasdynamic_implicit_increment_with_fixed_grid()
             // We've put this detector step here because it needs the ghost-cell data
             // to be current, as it should be just after a call to apply_convective_bc().
             if ((GlobalConfig.do_shock_detect) &&
-                ((!GlobalConfig.frozen_shock_detector) || (GlobalConfig.shock_detector_freeze_step > SimState.step))) {
+                ((!GlobalConfig.frozen_shock_detector) ||
+                 (GlobalConfig.shock_detector_freeze_step > SimState.step))) {
                 detect_shocks(gtl, ftl);
             }
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -2003,7 +1990,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
                 }
             }
-            if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
+            if (GlobalConfig.viscous) {
                 if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
                         if (blk.active) {
@@ -2071,9 +2058,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                 double local_sim_time = SimState.time;
                 foreach (cell; blk.cells) {
                     cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
-                    if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
-                        cell.add_viscous_source_vector();
-                    }
+                    if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
                     if (blk.myConfig.udf_source_terms) { // [TODO] may want to apply serially
                         size_t i_cell = cell.id;
                         size_t j_cell = 0;

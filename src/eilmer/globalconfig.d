@@ -449,11 +449,6 @@ final class GlobalConfig {
     // Scaling factor applied to vertices in shock fitting simulations for stability.
     shared static double shock_fitting_scale_factor = 0.5;
 
-    // We might update some properties in with the main convective-terms
-    // time-stepping function or we might choose to update them separately,
-    // like the chemistry update.
-    shared static bool separate_update_for_viscous_terms = false;
-
     // Some of the user-defined functionality depends on having access to all blocks
     // from a single thread.  For safety, in those cases, do not use parallel loops.
     shared static bool apply_bcs_in_parallel = true;
@@ -869,8 +864,6 @@ public:
     double viscous_signal_factor;
     double turbulent_signal_factor;
 
-    bool separate_update_for_viscous_terms;
-
     string turbulence_model_name;
     double turbulence_prandtl_number;
     double turbulence_schmidt_number;
@@ -1017,8 +1010,6 @@ public:
         stringent_cfl = GlobalConfig.stringent_cfl;
         viscous_signal_factor = GlobalConfig.viscous_signal_factor;
         turbulent_signal_factor = GlobalConfig.turbulent_signal_factor;
-        //
-        separate_update_for_viscous_terms = GlobalConfig.separate_update_for_viscous_terms;
         //
         turbulence_model_name = GlobalConfig.turbulence_model_name;
         turbulence_prandtl_number = GlobalConfig.turbulence_prandtl_number;
@@ -1403,7 +1394,6 @@ JSONValue read_config_file()
     mixin(update_enum("mass_diffusion_model", "mass_diffusion_model", "massDiffusionModelFromName"));
     mixin(update_string("diffusion_coefficient_type", "diffusion_coefficient_type"));
     mixin(update_double("lewis_number", "lewis_number"));
-    mixin(update_bool("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
     mixin(update_string("turbulence_model", "turbulence_model_name"));
     mixin(update_double("turbulence_prandtl_number", "turbulence_prandtl_number"));
     mixin(update_double("turbulence_schmidt_number", "turbulence_schmidt_number"));
@@ -1425,7 +1415,6 @@ JSONValue read_config_file()
         writeln("  mass_diffusion_model: ", massDiffusionModelName(GlobalConfig.mass_diffusion_model));
         writeln("  diffusion_coefficient_type: ", GlobalConfig.diffusion_coefficient_type);
         writeln("  lewis_number: ", GlobalConfig.lewis_number);
-        writeln("  separate_update_for_viscous_terms: ", GlobalConfig.separate_update_for_viscous_terms);
         writeln("  turbulence_model: ", GlobalConfig.turbulence_model_name);
         writeln("  turbulence_prandtl_number: ", GlobalConfig.turbulence_prandtl_number);
         writeln("  turbulence_schmidt_number: ", GlobalConfig.turbulence_schmidt_number);

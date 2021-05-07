@@ -189,8 +189,6 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_string_field("diffusion_coefficient_type", "diffusion_coefficient_type"));
     mixin(get_double_field("lewis_number", "lewis_number"));
     //
-    mixin(get_bool_field("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
-    //
     mixin(get_string_field("turbulence_model", "turbulence_model_name"));
     mixin(get_double_field("turbulence_prandtl_number", "turbulence_prandtl_number"));
     mixin(get_double_field("turbulence_schmidt_number", "turbulence_schmidt_number"));
@@ -388,8 +386,6 @@ extern(C) int configGet(lua_State* L)
     case "mass_diffusion_model": lua_pushstring(L, massDiffusionModelName(GlobalConfig.mass_diffusion_model).toStringz); break;
     case "diffusion_coefficient_type": lua_pushstring(L, GlobalConfig.diffusion_coefficient_type.toStringz); break;
     case "lewis_number": lua_pushnumber(L, GlobalConfig.lewis_number); break;
-        //
-    case "separate_update_for_viscous_terms": lua_pushboolean(L, GlobalConfig.separate_update_for_viscous_terms); break;
         //
     case "turbulence_model": lua_pushstring(L, GlobalConfig.turbulence_model_name.toStringz); break;
     case "turbulence_prandtl_number": lua_pushnumber(L, GlobalConfig.turbulence_prandtl_number); break;
