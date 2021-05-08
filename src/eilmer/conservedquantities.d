@@ -15,6 +15,10 @@ import nm.number;
 import geom;
 import gas;
 
+
+// Underlying definition of the conserved quantities collection,
+// as seen by the transient solver.
+
 class ConservedQuantities {
 public:
     number mass;           // density, kg/m**3
@@ -24,7 +28,7 @@ public:
         number[] massf;    // mass fractions of species
     }
     version(multi_T_gas) {
-        number[] energies; // modal energies 
+        number[] energies; // modal energies
     }
     version(MHD) {
         Vector3 B;         // magnetic field, Tesla
@@ -32,7 +36,7 @@ public:
         number divB;       // divergence of the magnetic field
     }
     version(turbulence) {
-        number[2] rhoturb;    // turbulent conserved 
+        number[2] rhoturb;    // turbulent conserved
     }
 
     this(int n_species, int n_modes)
@@ -214,3 +218,56 @@ version(complex_numbers) {
 } // end version(complex)
 
 } // end class ConservedQuantities
+
+
+// When formulating the sensitivity matrices for the steady-state solvers,
+// it is convenient to be able to look at the ConservedQuantities object
+// as a vector of quantities that can be simply indexed.
+// This collections of indices helps us do that.
+// Note that this view of the ConservedQuantities vector is not quite the
+// same as that seen by the explicit updates in the transient code.
+
+struct ConservedQuantitiesIndices {
+    size_t nConservedQuantities;
+    size_t mass;
+    size_t xMom;
+    size_t yMom;
+    size_t zMom;
+    size_t totEnergy;
+    size_t tke;
+    size_t species;
+
+    this(int dimensions, size_t nturb, size_t nmodes, size_t nspecies) {
+        mass = 0;
+        xMom = 1;
+        yMom = 2;
+        if ( dimensions == 2 ) {
+            totEnergy = 3;
+            nConservedQuantities = 4;
+        }
+        else { // 3D simulations
+            zMom = 3;
+            totEnergy = 4;
+            nConservedQuantities = 5;
+        }
+        if ( nturb > 0) {
+            tke = nConservedQuantities;
+            nConservedQuantities += nturb;
+        }
+        if ( nspecies > 1) {
+            species = nConservedQuantities;
+            nConservedQuantities += nspecies;
+        }
+    }
+
+    number get_mass(number[] cqv) { return cqv[0]; }
+    void set_mass(number[] cqv, number value) { cqv[0] = value; }
+    // [TODO] PJ 2021-05-08 Should we fill in more accessor functions so that we can
+    // move to using simple arrays for the Vectors of conserved quantities?
+    // Using simple arrays is likely to simplify much of the gasdynamic update code
+    // and we are likely only to want to use these functions at the encode and
+    // decode functions for the conserved quantities.
+    // I think that most of the code in the ConservedQuantities class above
+    // is likely to be eliminated.
+
+} // end ConvservedQuantitiesIndices

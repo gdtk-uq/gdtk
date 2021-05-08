@@ -36,6 +36,7 @@ version (cuda_gpu_chem) {
 import json_helper;
 import globaldata;
 import flowstate;
+import conservedquantities;
 import fluidblock;
 import fluidblockarray;
 import fluidblockio_old;
@@ -52,40 +53,6 @@ import loads;
 import turbulence;
 
 //--------------------------------------------------------------------------------
-
-struct ConservedQuantitiesIndices {
-    size_t nConservedQuantities;
-    size_t mass;
-    size_t xMom;
-    size_t yMom;
-    size_t zMom;
-    size_t totEnergy;
-    size_t tke;
-    size_t species;
-
-    this(int dimensions, ulong nturb, uint nmodes, uint nspecies) {
-        mass = 0;
-        xMom = 1;
-        yMom = 2;
-        if ( dimensions == 2 ) {
-            totEnergy = 3;
-            nConservedQuantities = 4;
-        }
-        else { // 3D simulations
-            zMom = 3;
-            totEnergy = 4;
-            nConservedQuantities = 5;
-        }
-        if ( nturb > 0) {
-            tke = nConservedQuantities;
-            nConservedQuantities += nturb;
-        }
-        if ( nspecies > 1) {
-            species = nConservedQuantities;
-            nConservedQuantities += nspecies;
-        }
-    }
-} // end ConvservedQuantitiesIndices
 
 enum StrangSplittingMode { full_T_full_R, half_R_full_T_half_R }
 @nogc
@@ -375,10 +342,10 @@ final class GlobalConfig {
     static uint n_heavy;
     static uint n_modes;
     static bool sticky_electrons = false; // Default to electrons being a separate species.
-    // Setting sticky_electrons=true will cause the electron mass fraction to be reset after every 
+    // Setting sticky_electrons=true will cause the electron mass fraction to be reset after every
     // timestep to preserve charge neutrality in each cell. Note that a transport equation for the
     // electrons is still solved, even though its output is effectively discarded.
-    //
+
     // Customization of the simulation is via user-defined actions.
     shared static string udf_supervisor_file; // empty to start
     // A scratch-pad area for the user-defined functions.
@@ -395,6 +362,7 @@ final class GlobalConfig {
     shared static int nSolidBlocks = 0; // Number of solid blocks in the overall simulation.
     shared static int dimensions = 2; // default is 2, other valid option is 3
     shared static bool axisymmetric = false;
+    shared static ConservedQuantitiesIndices cqi;
     shared static int nFluidBlockArrays = 0;
 
     // Parameters controlling update
@@ -740,8 +708,6 @@ final class GlobalConfig {
     // Delay activation of Thermionic Emission BC
     shared static double thermionic_emission_bc_time_delay = 0.0;
 
-    shared static ConservedQuantitiesIndices cqi;
-
     // Parameters for the on-the-go DFT
     shared static bool do_temporal_DFT = false;
     shared static int DFT_n_modes = 5;
@@ -781,8 +747,10 @@ public:
     string grid_format;
     string flow_format;
     bool new_flow_format;
+
     int dimensions;
     bool axisymmetric;
+    ConservedQuantitiesIndices cqi;
     GasdynamicUpdate gasdynamic_update_scheme;
     size_t n_flow_time_levels;
     bool residual_smoothing;
@@ -900,8 +868,6 @@ public:
 
     int verbosity_level;
 
-    ConservedQuantitiesIndices cqi;
-
     bool do_temporal_DFT;
     int DFT_n_modes;
     int DFT_step_interval;
@@ -927,6 +893,7 @@ public:
         new_flow_format = GlobalConfig.new_flow_format;
         dimensions = GlobalConfig.dimensions;
         axisymmetric = GlobalConfig.axisymmetric;
+        cqi = GlobalConfig.cqi;
         gasdynamic_update_scheme = GlobalConfig.gasdynamic_update_scheme;
         n_flow_time_levels = GlobalConfig.n_flow_time_levels;
         residual_smoothing = GlobalConfig.residual_smoothing;
@@ -1038,8 +1005,6 @@ public:
         thermionic_emission_bc_time_delay = GlobalConfig.thermionic_emission_bc_time_delay;
         //
         verbosity_level = GlobalConfig.verbosity_level;
-        //
-        cqi = GlobalConfig.cqi;
         //
         do_temporal_DFT = GlobalConfig.do_temporal_DFT;
         DFT_n_modes = GlobalConfig.DFT_n_modes;
@@ -1609,6 +1574,10 @@ JSONValue read_config_file()
     // This list needs to be built before the block-local config is copied.
     foreach (vname; build_flow_variable_list()) { GlobalConfig.flow_variable_list ~= vname; }
 
+    // We have enough information here to create the ConservedQuantitiesIndices struct.
+    GlobalConfig.cqi = ConservedQuantitiesIndices(GlobalConfig.dimensions, GlobalConfig.turb_model.nturb,
+                                                  GlobalConfig.n_modes, GlobalConfig.n_species);
+
     // Now, configure blocks that make up the flow domain.
     //
     // This is done in phases.  The blocks need valid references to LocalConfig objects
@@ -1626,9 +1595,6 @@ JSONValue read_config_file()
             writefln("  fluid_block_array_%d: %s", i, fba);
         }
     }
-
-    // we have enough information here to create the ConservedQuantitiesIndices struct
-    GlobalConfig.cqi = ConservedQuantitiesIndices(GlobalConfig.dimensions, GlobalConfig.turb_model.nturb, GlobalConfig.n_modes, GlobalConfig.n_species);
 
     // Set up dedicated copies of the configuration parameters for the threads.
     foreach (i; 0 .. GlobalConfig.nFluidBlocks) {
