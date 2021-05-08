@@ -1239,9 +1239,8 @@ public:
                     k_cell = ijk_indices[2];
                 }
                 */
-                addUDFSourceTermsToCell(myL, cell, 0,
-                                        0.0, myConfig,
-                                        id, i_cell, j_cell, k_cell);
+                getUDFSourceTermsForCell(myL, cell, 0, 0.0, myConfig, id, i_cell, j_cell, k_cell);
+                cell.add_udf_source_vector();
             }
             cell.time_derivatives(gtl, ftl);
         }

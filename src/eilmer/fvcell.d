@@ -113,6 +113,7 @@ public:
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
     ConservedQuantities[] dUdt; // Time derivatives for the update stages.
     ConservedQuantities Q; // source (or production) terms
+    ConservedQuantities Qudf; // source terms from user-defined function (temporary storage, each update)
     ConservedQuantities[2] dUdt_copy; // for residual smoothing
     // for unstructured grids, we may be doing high-order reconstruction
     LSQInterpWorkspace ws;
@@ -215,6 +216,8 @@ public:
         }
         Q = new ConservedQuantities(n_species, n_modes);
         Q.clear();
+        Qudf = new ConservedQuantities(n_species, n_modes);
+        Qudf.clear();
         if (myConfig.residual_smoothing) {
             dUdt_copy[0] = new ConservedQuantities(n_species, n_modes);
             dUdt_copy[1] = new ConservedQuantities(n_species, n_modes);
@@ -1839,6 +1842,13 @@ public:
         } // end if ( myConfig.electric_field_work )
         return;
     } // end add_viscous_source_vector()
+
+
+    @nogc
+    void add_udf_source_vector()
+    {
+        Q.add(Qudf);
+    }
 
     @nogc
     void add_chemistry_source_vector()

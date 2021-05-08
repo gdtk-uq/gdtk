@@ -2087,9 +2087,8 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
                 j_cell = ijk_indices[1];
                 k_cell = ijk_indices[2];
             }
-            addUDFSourceTermsToCell(blk.myL, cell, 0,
-                                    0.0, blk.myConfig,
-                                    blk.id, i_cell, j_cell, k_cell);
+            getUDFSourceTermsForCell(blk.myL, cell, 0, 0.0, blk.myConfig, blk.id, i_cell, j_cell, k_cell);
+            cell.add_udf_source_vector();
         }
     }
     // copy perturbed flux
@@ -2681,9 +2680,10 @@ void evalRHS(double pseudoSimTime, int ftl, int gtl)
                     j_cell = ijk_indices[1];
                     k_cell = ijk_indices[2];
                 }
-                addUDFSourceTermsToCell(blk.myL, cell, gtl, 
-                                        pseudoSimTime, blk.myConfig,
-                                        blk.id, i_cell, j_cell, k_cell);
+                getUDFSourceTermsForCell(blk.myL, cell, gtl,
+                                         pseudoSimTime, blk.myConfig,
+                                         blk.id, i_cell, j_cell, k_cell);
+                cell.add_udf_source_vector();
             }
             cell.time_derivatives(gtl, ftl);
         }

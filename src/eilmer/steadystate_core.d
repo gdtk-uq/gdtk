@@ -1186,9 +1186,8 @@ void evalRHS(double pseudoSimTime, int ftl)
                     j_cell = ijk_indices[1];
                     k_cell = ijk_indices[2];
                 }
-                addUDFSourceTermsToCell(blk.myL, cell, 0, 
-                                        pseudoSimTime, blk.myConfig,
-                                        blk.id, i_cell, j_cell, k_cell);
+                getUDFSourceTermsForCell(blk.myL, cell, 0, pseudoSimTime, blk.myConfig, blk.id, i_cell, j_cell, k_cell);
+                cell.add_udf_source_vector();
             }
             cell.time_derivatives(0, ftl);
         }
