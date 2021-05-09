@@ -1575,8 +1575,11 @@ JSONValue read_config_file()
     foreach (vname; build_flow_variable_list()) { GlobalConfig.flow_variable_list ~= vname; }
 
     // We have enough information here to create the ConservedQuantitiesIndices struct.
-    GlobalConfig.cqi = ConservedQuantitiesIndices(GlobalConfig.dimensions, GlobalConfig.turb_model.nturb,
-                                                  GlobalConfig.n_modes, GlobalConfig.n_species);
+    GlobalConfig.cqi = ConservedQuantitiesIndices(GlobalConfig.dimensions,
+                                                  GlobalConfig.turb_model.nturb,
+                                                  GlobalConfig.MHD,
+                                                  GlobalConfig.n_species,
+                                                  GlobalConfig.n_modes);
 
     // Now, configure blocks that make up the flow domain.
     //

@@ -1001,7 +1001,7 @@ public:
             cell.gather_residual_stencil_lists(spatial_order_of_jacobian);
             nentry += cell.cell_list.length;
         }
-        shared size_t my_nConserved = GlobalConfig.cqi.nConservedQuantities;
+        shared size_t my_nConserved = GlobalConfig.cqi.n;
         size_t ncells = cells.length;
         flowJacobianT = new FlowJacobianT(myConfig.dimensions, my_nConserved, spatial_order_of_jacobian, nentry, ncells);
 
@@ -1049,7 +1049,7 @@ public:
     void evaluate_block_row_of_jacobian(FVCell pcell)
     {
         // Make a stack-local copy of conserved quantities info
-        size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+        size_t nConserved = GlobalConfig.cqi.n;
         size_t MASS = GlobalConfig.cqi.mass;
         size_t X_MOM = GlobalConfig.cqi.xMom;
         size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -1265,7 +1265,7 @@ public:
          */
 
         // Make a stack-local copy of conserved quantities info
-        size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+        size_t nConserved = GlobalConfig.cqi.n;
         size_t MASS = GlobalConfig.cqi.mass;
         size_t X_MOM = GlobalConfig.cqi.xMom;
         size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -1412,7 +1412,7 @@ public:
         initialize_transpose_jacobian(1);
         evaluate_transpose_jacobian();
         assert(flowJacobianT !is null, "Oops, we expect a flowJacobianT object to be attached to the fluidblock.");
-        size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+        size_t nConserved = GlobalConfig.cqi.n;
 
         // temporarily change interpolation order
         shared int interpolation_order_save = GlobalConfig.interpolation_order;
@@ -1464,7 +1464,7 @@ public:
     } // end verify_transpose_jacobian
 
     void evalConservativeJacobianVecProd(number[] vec, ref number[] sol) {
-        size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+        size_t nConserved = GlobalConfig.cqi.n;
         size_t MASS = GlobalConfig.cqi.mass;
         size_t X_MOM = GlobalConfig.cqi.xMom;
         size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -1520,7 +1520,7 @@ public:
     version(nk_accelerator) {
     void allocate_GMRES_workspace()
     {
-        size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+        size_t nConserved = GlobalConfig.cqi.n;
         int n_species = GlobalConfig.gmodel_master.n_species();
         int n_modes = GlobalConfig.gmodel_master.n_modes();
         maxRate = new ConservedQuantities(n_species, n_modes);

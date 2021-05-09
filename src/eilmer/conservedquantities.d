@@ -228,46 +228,57 @@ version(complex_numbers) {
 // same as that seen by the explicit updates in the transient code.
 
 struct ConservedQuantitiesIndices {
-    size_t nConservedQuantities;
+    size_t n;
     size_t mass;
     size_t xMom;
     size_t yMom;
     size_t zMom;
     size_t totEnergy;
     size_t tke;
+    size_t xB;
+    size_t yB;
+    size_t zB;
+    size_t psi;
+    size_t divB;
     size_t species;
+    size_t modes;
 
-    this(int dimensions, size_t nturb, size_t nmodes, size_t nspecies) {
+    this(int dimensions, size_t nturb, bool MHD, size_t nspecies, size_t nmodes) {
         mass = 0;
         xMom = 1;
         yMom = 2;
-        if ( dimensions == 2 ) {
+        if (dimensions == 2) {
             totEnergy = 3;
-            nConservedQuantities = 4;
-        }
-        else { // 3D simulations
+            n = 4;
+        } else {
+            // 3D simulations
             zMom = 3;
             totEnergy = 4;
-            nConservedQuantities = 5;
+            n = 5;
         }
-        if ( nturb > 0) {
-            tke = nConservedQuantities;
-            nConservedQuantities += nturb;
+        if (nturb > 0) {
+            tke = n;
+            n += nturb;
         }
-        if ( nspecies > 1) {
-            species = nConservedQuantities;
-            nConservedQuantities += nspecies;
+        if (MHD) {
+            xB = n;
+            yB = n+1;
+            zB = n+2;
+            psi = n+3;
+            divB = n+4;
+            n += 5;
         }
-    }
-
-    number get_mass(number[] cqv) { return cqv[0]; }
-    void set_mass(number[] cqv, number value) { cqv[0] = value; }
-    // [TODO] PJ 2021-05-08 Should we fill in more accessor functions so that we can
-    // move to using simple arrays for the Vectors of conserved quantities?
-    // Using simple arrays is likely to simplify much of the gasdynamic update code
-    // and we are likely only to want to use these functions at the encode and
-    // decode functions for the conserved quantities.
-    // I think that most of the code in the ConservedQuantities class above
-    // is likely to be eliminated.
-
+        if (nspecies > 1) {
+            species = n;
+            n += nspecies;
+            // Note that we only carry species in the conserved-quantities vector
+            // if we have a multi-species gas model.
+            // A single-species gas model assumes a species fraction on 1.0
+            // throughout the flow solver code.
+        }
+        if (nmodes > 0) {
+            modes = n;
+            n += nmodes;
+        }
+    } // end constructor
 } // end ConvservedQuantitiesIndices

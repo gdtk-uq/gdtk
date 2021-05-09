@@ -227,10 +227,10 @@ public:
             ws_grad = new WLSQGradWorkspace();
         }
         version(shape_sensitivity) {
-            dQdU.length = GlobalConfig.cqi.nConservedQuantities; // number of conserved variables
-            dqdQ.length = GlobalConfig.cqi.nConservedQuantities;
-	    foreach (ref a; dQdU) a.length = GlobalConfig.cqi.nConservedQuantities;
-	    foreach (ref a; dqdQ) a.length = GlobalConfig.cqi.nConservedQuantities;
+            dQdU.length = GlobalConfig.cqi.n; // number of conserved variables
+            dqdQ.length = GlobalConfig.cqi.n;
+	    foreach (ref a; dQdU) a.length = GlobalConfig.cqi.n;
+	    foreach (ref a; dqdQ) a.length = GlobalConfig.cqi.n;
             foreach (i; 0..dQdU.length) {
                 foreach (j; 0..dQdU[i].length) {
                     dQdU[i][j] = 0.0;
@@ -261,7 +261,7 @@ public:
                 }
             }
 
-            size_t nConserved = myConfig.cqi.nConservedQuantities;
+            size_t nConserved = myConfig.cqi.n;
             scalar_diag_inv.length = nConserved;
             dFdU = new Matrix!number(nConserved,nConserved);
             dFdU.zeros;
@@ -1991,7 +1991,7 @@ public:
         // Compute a relaxation subiteration dU^{k+1} = D^{-1} * (R - 0.5*LU)
 
         // Make a stack-local copy of conserved quantities info
-        size_t nConserved = myConfig.cqi.nConservedQuantities;
+        size_t nConserved = myConfig.cqi.n;
         size_t MASS = myConfig.cqi.mass;
         size_t X_MOM = myConfig.cqi.xMom;
         size_t Y_MOM = myConfig.cqi.yMom;
@@ -2044,7 +2044,7 @@ public:
         //
 
         // Make a stack-local copy of conserved quantities info
-        size_t nConserved = myConfig.cqi.nConservedQuantities;
+        size_t nConserved = myConfig.cqi.n;
         size_t MASS = myConfig.cqi.mass;
         size_t X_MOM = myConfig.cqi.xMom;
         size_t Y_MOM = myConfig.cqi.yMom;
@@ -2138,7 +2138,7 @@ public:
         //
 
         // Make a stack-local copy of conserved quantities info
-        size_t nConserved = myConfig.cqi.nConservedQuantities;
+        size_t nConserved = myConfig.cqi.n;
         size_t MASS = myConfig.cqi.mass;
         size_t X_MOM = myConfig.cqi.xMom;
         size_t Y_MOM = myConfig.cqi.yMom;

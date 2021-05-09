@@ -1,5 +1,5 @@
  /** shape_sensitivity_calc.d
- * 
+ *
  * Eilmer4 shape sensitivity calculator top-level function.
  *
  * This file coordinates all the functions required for the Eilmer4 sensitivity analysis code, including:
@@ -273,7 +273,7 @@ void main(string[] args) {
             
 
             // Make a stack-local copy of conserved quantities info
-            myblk.nConserved = myblk.myConfig.cqi.nConservedQuantities;
+            myblk.nConserved = myblk.myConfig.cqi.n;
             myblk.MASS = myblk.myConfig.cqi.mass;
             myblk.X_MOM = myblk.myConfig.cqi.xMom;
             myblk.Y_MOM = myblk.myConfig.cqi.yMom;
@@ -284,7 +284,7 @@ void main(string[] args) {
         
         size_t nPrimitive; 
 
-        nPrimitive = GlobalConfig.cqi.nConservedQuantities;  // density, velocity(x,y), pressure
+        nPrimitive = GlobalConfig.cqi.n;  // density, velocity(x,y), pressure
         //if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
         //if (with_k_omega) nPrimitive += 2; // tke, omega
 
@@ -678,7 +678,7 @@ void main(string[] args) {
 
         foreach (myblk; localFluidBlocks) {
             // Make a stack-local copy of conserved quantities info
-            myblk.nConserved = myblk.myConfig.cqi.nConservedQuantities;
+            myblk.nConserved = myblk.myConfig.cqi.n;
             myblk.MASS = myblk.myConfig.cqi.mass;
             myblk.X_MOM = myblk.myConfig.cqi.xMom;
             myblk.Y_MOM = myblk.myConfig.cqi.yMom;
@@ -689,7 +689,7 @@ void main(string[] args) {
 
         // set number of primitive variables
         size_t nPrimitive; 
-        nPrimitive = GlobalConfig.cqi.nConservedQuantities; //4;  // density, velocity(x,y), pressure
+        nPrimitive = GlobalConfig.cqi.n; //4;  // density, velocity(x,y), pressure
         //if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
         //if (with_k_omega) nPrimitive += 2; // tke, omega
         
@@ -783,7 +783,7 @@ void main(string[] args) {
     if (verifyConservativeJacobianFlag) {
         foreach (myblk; localFluidBlocks) {
             // Make a stack-local copy of conserved quantities info
-            myblk.nConserved = myblk.myConfig.cqi.nConservedQuantities;
+            myblk.nConserved = myblk.myConfig.cqi.n;
             myblk.MASS = myblk.myConfig.cqi.mass;
             myblk.X_MOM = myblk.myConfig.cqi.xMom;
             myblk.Y_MOM = myblk.myConfig.cqi.yMom;
@@ -793,7 +793,7 @@ void main(string[] args) {
         }
         
         size_t nPrimitive; 
-        nPrimitive = GlobalConfig.cqi.nConservedQuantities; //4;  // density, velocity(x,y), pressure
+        nPrimitive = GlobalConfig.cqi.n; //4;  // density, velocity(x,y), pressure
         //if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
         //if (with_k_omega) nPrimitive += 2; // tke, omega
         
@@ -986,7 +986,7 @@ void main(string[] args) {
     if (verifySSSPreconditionerFlag) {
         foreach (myblk; localFluidBlocks) {
             // Make a stack-local copy of conserved quantities info
-            myblk.nConserved = myblk.myConfig.cqi.nConservedQuantities;
+            myblk.nConserved = myblk.myConfig.cqi.n;
             myblk.MASS = myblk.myConfig.cqi.mass;
             myblk.X_MOM = myblk.myConfig.cqi.xMom;
             myblk.Y_MOM = myblk.myConfig.cqi.yMom;
@@ -996,7 +996,7 @@ void main(string[] args) {
         }
         
         size_t nPrimitive; 
-        nPrimitive = GlobalConfig.cqi.nConservedQuantities; //4;  // density, velocity(x,y), pressure
+        nPrimitive = GlobalConfig.cqi.n; //4;  // density, velocity(x,y), pressure
         //if (GlobalConfig.dimensions == 3) nPrimitive += 1; // velocity(z)
         //if (with_k_omega) nPrimitive += 2; // tke, omega
 

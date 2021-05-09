@@ -147,7 +147,7 @@ public:
         q_conduction = to!number(0.0);
         // rotation matrices used in the LU-SGS solver
         version(steady_state) {
-            const size_t nConserved = myConfig.cqi.nConservedQuantities;
+            const size_t nConserved = myConfig.cqi.n;
             T = new Matrix!number(nConserved,nConserved);
             Tinv = new Matrix!number(nConserved,nConserved);
         }
@@ -351,7 +351,7 @@ public:
         // rotation matrices used in the LU-SGS solver
 
         // Make a stack-local copy of conserved quantities info
-        size_t nConserved = myConfig.cqi.nConservedQuantities;
+        size_t nConserved = myConfig.cqi.n;
         size_t MASS = myConfig.cqi.mass;
         size_t X_MOM = myConfig.cqi.xMom;
         size_t Y_MOM = myConfig.cqi.yMom;

@@ -84,7 +84,7 @@ struct RestartInfo {
 void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
 {
     // Make a stack-local copy of conserved quantities info
-    size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+    size_t nConserved = GlobalConfig.cqi.n;
     size_t MASS = GlobalConfig.cqi.mass;
     size_t X_MOM = GlobalConfig.cqi.xMom;
     size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -177,7 +177,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     number mass_balance = 0.0;
     
     // Make a stack-local copy of conserved quantities info
-    size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+    size_t nConserved = GlobalConfig.cqi.n;
     size_t MASS = GlobalConfig.cqi.mass;
     size_t X_MOM = GlobalConfig.cqi.xMom;
     size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -1205,7 +1205,7 @@ void evalJacobianVecProd(double pseudoSimTime, double sigma)
 void evalRealMatVecProd(double pseudoSimTime, double sigma)
 {
     // Make a stack-local copy of conserved quantities info
-    size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+    size_t nConserved = GlobalConfig.cqi.n;
     size_t MASS = GlobalConfig.cqi.mass;
     size_t X_MOM = GlobalConfig.cqi.xMom;
     size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -1276,7 +1276,7 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
 {
     version(complex_numbers) {
         // Make a stack-local copy of conserved quantities info
-        size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+        size_t nConserved = GlobalConfig.cqi.n;
         size_t MASS = GlobalConfig.cqi.mass;
         size_t X_MOM = GlobalConfig.cqi.xMom;
         size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -1394,7 +1394,7 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, ref double residual,
     //
 
     // Make a stack-local copy of conserved quantities info
-    size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+    size_t nConserved = GlobalConfig.cqi.n;
     size_t MASS = GlobalConfig.cqi.mass;
     size_t X_MOM = GlobalConfig.cqi.xMom;
     size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -1485,7 +1485,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     ref double residual, ref int nRestarts, int startStep)
 {
     // Make a stack-local copy of conserved quantities info
-    size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+    size_t nConserved = GlobalConfig.cqi.n;
     size_t MASS = GlobalConfig.cqi.mass;
     size_t X_MOM = GlobalConfig.cqi.xMom;
     size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -2129,7 +2129,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 void max_residuals(ConservedQuantities residuals)
 {
     // Make a stack-local copy of conserved quantities info
-    size_t nConserved = GlobalConfig.cqi.nConservedQuantities;
+    size_t nConserved = GlobalConfig.cqi.n;
 
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
