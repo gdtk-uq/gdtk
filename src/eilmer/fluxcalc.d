@@ -117,14 +117,17 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
         break;
     } // end switch
     ConservedQuantities F = IFace.F;
+    auto cqi = myConfig.cqi;
     version(MHD) {
         // Adjustment of the magnetic field flux and associated parameter psi as per Dedner et al.
         if (myConfig.MHD) {
-            F.divB = 0.5 * (Rght.B.x - Lft.B.x);
+            F.vec[cqi.divB] = 0.5 * (Rght.B.x - Lft.B.x);
             if (myConfig.divergence_cleaning) {
-                F.B.refx += Lft.psi + 0.5 * (Rght.psi - Lft.psi) - (myConfig.c_h / 2.0) * (Rght.B.x - Lft.B.x);
-                F.psi += (Lft.B.x + 0.5 * (Rght.B.x - Lft.B.x) - (1.0 / (2.0 * myConfig.c_h)) *
-                          (Rght.psi - Lft.psi)) * myConfig.c_h * myConfig.c_h;
+                F.vec[cqi.xB] += Lft.psi + 0.5 * (Rght.psi - Lft.psi) - (myConfig.c_h / 2.0) * (Rght.B.x - Lft.B.x);
+                F.vec[cqi.yB] += Lft.psi + 0.5 * (Rght.psi - Lft.psi) - (myConfig.c_h / 2.0) * (Rght.B.y - Lft.B.y);
+                F.vec[cqi.xB] += Lft.psi + 0.5 * (Rght.psi - Lft.psi) - (myConfig.c_h / 2.0) * (Rght.B.z - Lft.B.z);
+                F.vec[cqi.psi] += (Lft.B.x + 0.5 * (Rght.B.x - Lft.B.x) -
+                                   (1.0 / (2.0 * myConfig.c_h)) * (Rght.psi - Lft.psi)) * myConfig.c_h^^2;
             }
         }
     }
@@ -136,18 +139,20 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
         // The conserved quantity is rotating-frame total energy,
         // so we need to take -(u**2)/2 off the total energy.
         // Note that rotating frame velocity u = omegaz * r.
-        F.total_energy -= F.mass * 0.5*omegaz*omegaz*rsq;
+        F.vec[cqi.totEnergy] -= F.vec[cqi.mass] * 0.5*omegaz*omegaz*rsq;
     }
     // Transform fluxes back from interface frame of reference to local frame of reference.
     // Flux of Total Energy
     number v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z;
-    F.total_energy += 0.5 * F.mass * v_sqr + F.momentum.dot(IFace.gvel);
+    F.vec[cqi.totEnergy] += 0.5 * F.vec[cqi.mass] * v_sqr +
+        (F.vec[cqi.xMom]*IFace.gvel.x + F.vec[cqi.yMom]*IFace.gvel.y +
+         ((cqi.threeD) ? F.vec[cqi.zMom]*IFace.gvel.z: to!number(0.0)));
     // Flux of momentum: Add component for interface velocity then
     // rotate back to the global frame of reference.
-    Vector3 momentum_increment;
-    momentum_increment.set(IFace.gvel); momentum_increment *= F.mass;
-    F.momentum += momentum_increment;
-    F.momentum.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+    F.vec[cqi.xMom] += IFace.gvel.x * F.vec[cqi.mass];
+    F.vec[cqi.yMom] += IFace.gvel.y * F.vec[cqi.mass];
+    if (cqi.threeD) { F.vec[cqi.zMom] += IFace.gvel.z * F.vec[cqi.mass]; }
+    F.momentum.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2); // <-------------- 2021-05-10, UP TO HERE WITH CHANGE TO CQVECTOR
     // Also, transform the interface (grid) velocity and magnetic field.
     IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
     version(MHD) {
