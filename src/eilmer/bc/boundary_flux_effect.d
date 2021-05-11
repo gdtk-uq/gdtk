@@ -464,8 +464,8 @@ public:
             }
             f.F.vec[cqi.totEnergy] = massFlux * (_e + 0.5*(_u*_u+_v*_v)) + _p*(_u*f.n.x+_v*f.n.y);
             version(multi_species_gas) {
-                foreach (_isp; 0 .. _nsp){
-                    f.F.vec[cqi.species+_isp] = massFlux * _massf[_isp];
+                if (cqi.n_species > 1) {
+                    foreach (_isp; 0 .. _nsp){ f.F.vec[cqi.species+_isp] = massFlux * _massf[_isp]; }
                 }
             }
             version(multi_T_gas) {
@@ -584,7 +584,9 @@ private:
                 // [TODO] PJ 2018-10-25 MHD?
             }
             version(multi_species_gas) {
-                foreach (i; 0 .. cqi.n_species) { face.F.vec[cqi.species+i] = mass_flux * fs.gas.massf[i]; }
+                if (cqi.n_species > 1) {
+                    foreach (i; 0 .. cqi.n_species) { face.F.vec[cqi.species+i] = mass_flux * fs.gas.massf[i]; }
+                }
             }
             version(multi_T_gas) {
                 foreach (i; 0 .. cqi.n_modes) { face.F.vec[cqi.modes+i] = mass_flux * fs.gas.u_modes[i]; }
@@ -606,7 +608,9 @@ private:
                 // [TODO] PJ 2018-10-25 MHD?
             }
             version(multi_species_gas) {
-                foreach (i; 0 .. cqi.n_species) { face.F.vec[cqi.species+i] = 0.0; }
+                if (cqi.n_species > 1) {
+                    foreach (i; 0 .. cqi.n_species) { face.F.vec[cqi.species+i] = 0.0; }
+                }
             }
             version(multi_T_gas) {
                 foreach (i; 0 .. cqi.n_modes) { face.F.vec[cqi.modes+i] = 0.0; }

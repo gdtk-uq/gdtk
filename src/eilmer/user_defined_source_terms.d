@@ -64,32 +64,34 @@ void getUDFSourceTermsForCell(lua_State* L, FVCell cell, size_t gtl,
         }
     }
     version(multi_species_gas) {
-        lua_getfield(L, -1, "species");
-        if ( lua_istable(L, -1) ) {
-            // Iterate over species by names.
-            int idx = lua_gettop(L);
-            lua_pushnil(L);
-            while ( lua_next(L, idx) != 0 ) {
-                string key = to!string(lua_tostring(L, -2));
-                auto isp = gmodel.species_index(key);
-                if ( isp == -1 ) {
-                    string errMsg = format("ERROR: In the user-defined source terms, the species name '%s'\n", key);
-                    errMsg ~= "in the species table is not a valid species name.\n";
+        if (cqi.n_species > 1) {
+            lua_getfield(L, -1, "species");
+            if ( lua_istable(L, -1) ) {
+                // Iterate over species by names.
+                int idx = lua_gettop(L);
+                lua_pushnil(L);
+                while ( lua_next(L, idx) != 0 ) {
+                    string key = to!string(lua_tostring(L, -2));
+                    auto isp = gmodel.species_index(key);
+                    if ( isp == -1 ) {
+                        string errMsg = format("ERROR: In the user-defined source terms, the species name '%s'\n", key);
+                        errMsg ~= "in the species table is not a valid species name.\n";
+                        lua_pop(L, 1);
+                        throw new LuaInputException(errMsg);
+                    }
+                    cell.Qudf.vec[cqi.species+isp] = lua_tonumber(L, -1);
                     lua_pop(L, 1);
-                    throw new LuaInputException(errMsg);
                 }
-                cell.Qudf.vec[cqi.species+isp] = lua_tonumber(L, -1);
-                lua_pop(L, 1);
+                lua_pop(L, 1); // discard species table
+            } else {
+                lua_pop(L, 1); // discard species item first
+                // For the single-species case, we just set the
+                // source terms of the single-species to equal
+                // that of the mass term.
+                // if (n_species == 1) { There is no storage for cell.Qudf.vec[cqi.species+0] }
+                // For multi-component gases, there is really no sensible decision,
+                // so leave it alone.
             }
-            lua_pop(L, 1); // discard species table
-        } else {
-            lua_pop(L, 1); // discard species item first
-            // For the single-species case, we just set the
-            // source terms of the single-species to equal
-            // that of the mass term.
-            // if (n_species == 1) { There is no storage for cell.Qudf.vec[cqi.species+0] }
-            // For multi-component gases, there is really no sensible decision,
-            // so leave it alone.
         }
     }
     version(multi_T_gas) {

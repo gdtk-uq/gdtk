@@ -534,21 +534,25 @@ public:
         if (cqi.threeD) { myU.vec[cqi.zMom] = fs.gas.rho*fs.vel.z; }
         version(MHD) {
             // Magnetic field
-            myU.vec[cqi.xB] = fs.B.x;
-            myU.vec[cqi.yB] = fs.B.y;
-            myU.vec[cqi.zB] = fs.B.z;
-            myU.vec[cqi.psi] = fs.psi;
-            myU.vec[cqi.divB] = fs.divB;
+            if (cqi.MHD) {
+                myU.vec[cqi.xB] = fs.B.x;
+                myU.vec[cqi.yB] = fs.B.y;
+                myU.vec[cqi.zB] = fs.B.z;
+                myU.vec[cqi.psi] = fs.psi;
+                myU.vec[cqi.divB] = fs.divB;
+            }
         }
         // Total Energy / unit volume
         number u = myConfig.gmodel.internal_energy(fs.gas);
         number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y+fs.vel.z*fs.vel.z);
         myU.vec[cqi.totEnergy] = fs.gas.rho*(u + ke);
         version(turbulence) {
-            foreach(i; 0 .. myConfig.turb_model.nturb){
-                myU.vec[cqi.rhoturb+i] = fs.gas.rho * fs.turb[i];
+            if (cqi.turb) {
+                foreach(i; 0 .. myConfig.turb_model.nturb){
+                    myU.vec[cqi.rhoturb+i] = fs.gas.rho * fs.turb[i];
+                }
+                myU.vec[cqi.totEnergy] += fs.gas.rho * myConfig.turb_model.turbulent_kinetic_energy(fs);
             }
-            myU.vec[cqi.totEnergy] += fs.gas.rho * myConfig.turb_model.turbulent_kinetic_energy(fs);
         }
         version(MHD) {
             if (myConfig.MHD) {
@@ -578,8 +582,10 @@ public:
         }
         version(multi_species_gas) {
             // Species densities: mass of species is per unit volume.
-            foreach(isp; 0 .. cqi.n_species) {
-                myU.vec[cqi.species+isp] = fs.gas.rho*fs.gas.massf[isp];
+            if (cqi.n_species > 1) {
+                foreach(isp; 0 .. cqi.n_species) {
+                    myU.vec[cqi.species+isp] = fs.gas.rho*fs.gas.massf[isp];
+                }
             }
         }
         assert(U[ftl].vec[cqi.mass] > 0.0, "invalid density in conserved quantities vector" ~
@@ -624,9 +630,11 @@ public:
         fs.vel.set(myU.vec[cqi.xMom]*dinv, myU.vec[cqi.yMom]*dinv, zMom*dinv);
         version(MHD) {
             // Magnetic field.
-            fs.B.set(myU.vec[cqi.xB], myU.vec[cqi.yB], myU.vec[cqi.zB]);
-            fs.psi = myU.vec[cqi.psi];
-            fs.divB = myU.vec[cqi.divB];
+            if (cqi.MHD) {
+                fs.B.set(myU.vec[cqi.xB], myU.vec[cqi.yB], myU.vec[cqi.zB]);
+                fs.psi = myU.vec[cqi.psi];
+                fs.divB = myU.vec[cqi.divB];
+            }
         }
         // Divide up the total energy per unit volume.
         number rE;
@@ -644,24 +652,28 @@ public:
         }
         version(MHD) {
             number me = 0.0;
-            if (myConfig.MHD) { me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z); }
-            rE -= me;
+            if (cqi.MHD) {
+                me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z);
+                rE -= me;
+            }
         }
         // Start with the total energy, then take out the other components.
         // Internal energy is what remains.
         number u = rE * dinv;
         version(turbulence) {
-            if (allow_k_omega_update) {
-                foreach(i; 0 .. myConfig.turb_model.nturb) {
-                    // for stability, we enforce tke and omega to be positive.
-                    // This approach is referred to as clipping in Chisholm's (2007) thesis:
-                    // A fully coupled Newton-Krylov solver with a one-equation turbulence model.
-                    // to prevent division by 0.0 set variables to a very small positive value.
-                    fs.turb[i] = myU.vec[cqi.rhoturb+i] * dinv;
-                    if (fs.turb[i] < 0.0) fs.turb[i] = 1.0e-10;
+            if (cqi.turb) {
+                if (allow_k_omega_update) {
+                    foreach(i; 0 .. myConfig.turb_model.nturb) {
+                        // for stability, we enforce tke and omega to be positive.
+                        // This approach is referred to as clipping in Chisholm's (2007) thesis:
+                        // A fully coupled Newton-Krylov solver with a one-equation turbulence model.
+                        // to prevent division by 0.0 set variables to a very small positive value.
+                        fs.turb[i] = myU.vec[cqi.rhoturb+i] * dinv;
+                        if (fs.turb[i] < 0.0) fs.turb[i] = 1.0e-10;
+                    }
                 }
+                u -= myConfig.turb_model.turbulent_kinetic_energy(fs);
             }
-            u -= myConfig.turb_model.turbulent_kinetic_energy(fs);
         }
         // Remove kinetic energy for bulk flow.
         number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y + fs.vel.z*fs.vel.z);
@@ -678,7 +690,11 @@ public:
         // Thermochemical species, if appropriate.
         version(multi_species_gas) {
             try {
-		foreach(isp; 0 .. myConfig.n_species) { fs.gas.massf[isp] = myU.vec[cqi.species+isp] * dinv; }
+                if (cqi.n_species > 1) {
+                    foreach(isp; 0 .. cqi.n_species) { fs.gas.massf[isp] = myU.vec[cqi.species+isp] * dinv; }
+                } else {
+                    fs.gas.massf[0] = 1.0;
+                }
 		if (myConfig.sticky_electrons) { gmodel.balance_charge(fs.gas); }
 		if (myConfig.n_species > 1) { scale_mass_fractions(fs.gas.massf); }
 	    } catch (GasModelException err) {
@@ -1195,8 +1211,10 @@ public:
         auto cqi = myConfig.cqi;
         version(multi_species_gas) {
             // Species densities: mass of species isp per unit volume.
-            foreach(isp; 0 .. fs.gas.massf.length) {
-                U[0].vec[cqi.species+isp] = fs.gas.rho * fs.gas.massf[isp];
+            if (cqi.n_species > 1) {
+                foreach(isp; 0 .. fs.gas.massf.length) {
+                    U[0].vec[cqi.species+isp] = fs.gas.rho * fs.gas.massf[isp];
+                }
             }
         }
         version(multi_T_gas) {
@@ -1472,8 +1490,13 @@ public:
     {
         version(multi_species_gas) {
             auto cqi = myConfig.cqi;
+            // It does not make a lot of sense to call this function for n_species == 1
+            // Maybe we should just set chem_source[0] = 0.0.
+            // 2021-05-11 PJ [TODO] Ask Rowan.
             rmech.eval_source_terms(myConfig.gmodel, fs.gas, chem_conc, chem_rates, chem_source);
-            foreach(sp; 0 .. cqi.n_species) { Q.vec[cqi.species+sp] += chem_source[sp]; }
+            if (cqi.n_species > 1) {
+                foreach(sp; 0 .. cqi.n_species) { Q.vec[cqi.species+sp] += chem_source[sp]; }
+            }
         }
     }
 

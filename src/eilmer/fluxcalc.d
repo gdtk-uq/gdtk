@@ -229,22 +229,26 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     F.vec[cqi.yMom] = 0.0;
     if (cqi.threeD) { F.vec[cqi.zMom] = 0.0; }
     F.vec[cqi.totEnergy] = pstar * vstar;
-    version(multi_species_gas) {
-        foreach (i; 0 .. myConfig.n_species) { F.vec[cqi.species+i] = 0.0; }
-    }
-    version(multi_T_gas) {
-        foreach (i; 0 .. myConfig.n_modes) { F.vec[cqi.modes+i] = 0.0; }
-    }
     version(turbulence) {
         foreach (i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] = 0.0; }
     }
+    version(multi_species_gas) {
+        if (cqi.n_species > 1) {
+            foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] = 0.0; }
+        }
+    }
+    version(multi_T_gas) {
+        foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] = 0.0; }
+    }
     version(MHD) {
-        // [TODO] magnetic field.
-        F.vec[cqi.xB] = 0.0;
-        F.vec[cqi.yB] = 0.0;
-        F.vec[cqi.zB] = 0.0;
-        F.vec[cqi.psi] = 0.0;
-        F.vec[cqi.divB] = 0.0;
+        if (cqi.MHD) {
+            // [TODO] magnetic field.
+            F.vec[cqi.xB] = 0.0;
+            F.vec[cqi.yB] = 0.0;
+            F.vec[cqi.zB] = 0.0;
+            F.vec[cqi.psi] = 0.0;
+            F.vec[cqi.divB] = 0.0;
+        }
     }
     // Rotate back to the global frame of reference.
     if (cqi.threeD) {
@@ -325,22 +329,26 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     F.vec[cqi.yMom] = 0.0;
     if (cqi.threeD) { F.vec[cqi.zMom] = 0.0; }
     F.vec[cqi.totEnergy] = pstar * vstar;
-    version(multi_species_gas) {
-        foreach (i; 0 .. myConfig.n_species) { F.vec[cqi.species+i] = 0.0; }
-    }
-    version(multi_T_gas) {
-        foreach (i; 0 .. myConfig.n_modes) { F.vec[cqi.modes+i] = 0.0; }
-    }
     version(turbulence) {
         foreach (i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] = 0.0; }
     }
+    version(multi_species_gas) {
+        if (cqi.n_species > 1) {
+            foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] = 0.0; }
+        }
+    }
+    version(multi_T_gas) {
+        foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] = 0.0; }
+    }
     version(MHD) {
-        // [TODO] magnetic field.
-        F.vec[cqi.xB] = 0.0;
-        F.vec[cqi.yB] = 0.0;
-        F.vec[cqi.zB] = 0.0;
-        F.vec[cqi.psi] = 0.0;
-        F.vec[cqi.divB] = 0.0;
+        if (cqi.MHD) {
+            // [TODO] magnetic field.
+            F.vec[cqi.xB] = 0.0;
+            F.vec[cqi.yB] = 0.0;
+            F.vec[cqi.zB] = 0.0;
+            F.vec[cqi.psi] = 0.0;
+            F.vec[cqi.divB] = 0.0;
+        }
     }
     // Rotate back to the global frame of reference.
     if (cqi.threeD) {
@@ -380,15 +388,17 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs,
     F.vec[cqi.yMom] = F.vec[cqi.mass]*vt1;
     if (cqi.threeD) { F.vec[cqi.zMom] = F.vec[cqi.mass]*vt2; }
     F.vec[cqi.totEnergy] = F.vec[cqi.mass]*(u+ke) + p*vn;
-    version(multi_species_gas) {
-        foreach (i; 0 .. myConfig.n_species) { F.vec[cqi.species+i] = F.vec[cqi.mass]*fs.gas.massf[i]; }
-    }
-    version(multi_T_gas) {
-        foreach (i; 0 .. myConfig.n_modes) { F.vec[cqi.modes+i] = F.vec[cqi.mass]*fs.gas.u_modes[i]; }
-    }
     version(turbulence) {
         F.vec[cqi.totEnergy] += myConfig.turb_model.turbulent_kinetic_energy(fs);
         foreach(i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] = F.vec[cqi.mass] * fs.turb[i]; }
+    }
+    version(multi_species_gas) {
+        if (cqi.n_species > 1) {
+            foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] = F.vec[cqi.mass]*fs.gas.massf[i]; }
+        }
+    }
+    version(multi_T_gas) {
+        foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] = F.vec[cqi.mass]*fs.gas.u_modes[i]; }
     }
 } // end set_flux_vector_in_local_frame()
 
@@ -545,10 +555,12 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] += factor*ru_half*Lft.turb[i]; }
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. myConfig.n_species) { F.vec[cqi.species+i] += factor*ru_half*Lft.gas.massf[i]; }
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += factor*ru_half*Lft.gas.massf[i]; }
+            }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. myConfig.n_modes) { F.vec[cqi.modes+i] += factor*ru_half*Lft.gas.u_modes[i]; }
+            foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] += factor*ru_half*Lft.gas.u_modes[i]; }
         }
         // NOTE: - the following relies on the free-electron mode being the last mode
         //       - for single temp models F_renergies isn't used
@@ -565,10 +577,12 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] += factor*ru_half*Rght.turb[i]; }
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. myConfig.n_species) { F.vec[cqi.species+i] += factor*ru_half*Rght.gas.massf[i]; }
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += factor*ru_half*Rght.gas.massf[i]; }
+            }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. myConfig.n_modes) { F.vec[cqi.modes+i] += factor*ru_half*Rght.gas.u_modes[i]; }
+            foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] += factor*ru_half*Rght.gas.u_modes[i]; }
         }
     }
     //
@@ -593,12 +607,14 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
             }
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. myConfig.n_species) {
-                F.vec[cqi.species+i] -= factor*d_ua*(rR*Rght.gas.massf[i] - rL*Lft.gas.massf[i]);
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) {
+                    F.vec[cqi.species+i] -= factor*d_ua*(rR*Rght.gas.massf[i] - rL*Lft.gas.massf[i]);
+                }
             }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. myConfig.n_modes) {
+            foreach (i; 0 .. cqi.n_modes) {
                 F.vec[cqi.modes+i] -= factor*d_ua*(rR*Rght.gas.u_modes[i] - rL*Lft.gas.u_modes[i]);
             }
         }
@@ -720,17 +736,19 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
         }
         // multi-species
         version(multi_species_gas) {
-            foreach (i; 0 .. myConfig.n_species) {
-                number F_massf = r*u*state.gas.massf[i];
-                number U_massf = r*state.gas.massf[i];
-                number U_star_massf = coeff*state.gas.massf[i];
-                if (star_region) { F.vec[cqi.species+i] += factor*(F_massf + S*(U_star_massf - U_massf)); }
-                else { F.vec[cqi.species+i] += factor*(F_massf); }
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) {
+                    number F_massf = r*u*state.gas.massf[i];
+                    number U_massf = r*state.gas.massf[i];
+                    number U_star_massf = coeff*state.gas.massf[i];
+                    if (star_region) { F.vec[cqi.species+i] += factor*(F_massf + S*(U_star_massf - U_massf)); }
+                    else { F.vec[cqi.species+i] += factor*(F_massf); }
+                }
             }
         }
         // multi-T gas
         version(multi_T_gas) {
-            foreach (i; 0 .. myConfig.n_modes) {
+            foreach (i; 0 .. cqi.n_modes) {
                 number F_energies = r*u*state.gas.u_modes[i];
                 number U_energies = r*state.gas.u_modes[i];
                 number U_star_energies = coeff*state.gas.u_modes[i];
@@ -843,12 +861,14 @@ void ldfss(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
         }
     }
     version(multi_species_gas) {
-        foreach (i; 0 .. myConfig.n_species) {
-            F.vec[cqi.species+i] += factor*(am*rL*CL*Lft.gas.massf[i] + am*rR*CR*Rght.gas.massf[i]);
+        if (cqi.n_species > 1) {
+            foreach (i; 0 .. cqi.n_species) {
+                F.vec[cqi.species+i] += factor*(am*rL*CL*Lft.gas.massf[i] + am*rR*CR*Rght.gas.massf[i]);
+            }
         }
     }
     version(multi_T_gas) {
-        foreach (i; 0 .. myConfig.n_modes) {
+        foreach (i; 0 .. cqi.n_modes) {
             F.vec[cqi.modes+i] +=  factor*(am*rL*CL*Lft.gas.u_modes[i] + am*rR*CR*Rght.gas.u_modes[i]);
         }
     }
@@ -937,12 +957,14 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
         }
     }
     version(multi_species_gas) {
-        foreach (i; 0 .. myConfig.n_species) {
-            F.vec[cqi.species+i] += factor*(uLplus*rL*Lft.gas.massf[i] + uRminus*rR*Rght.gas.massf[i]);
+        if (cqi.n_species > 1) {
+            foreach (i; 0 .. cqi.n_species) {
+                F.vec[cqi.species+i] += factor*(uLplus*rL*Lft.gas.massf[i] + uRminus*rR*Rght.gas.massf[i]);
+            }
         }
     }
     version(multi_T_gas) {
-        foreach (i; 0 .. myConfig.n_modes) {
+        foreach (i; 0 .. cqi.n_modes) {
             F.vec[cqi.modes+i] += factor*(uLplus*rL*Lft.gas.u_modes[i] + uRminus*rR*Rght.gas.u_modes[i]);
         }
     }
@@ -995,7 +1017,8 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     presL = Lft.gas.p;
     eL = gmodel.internal_energy(Lft.gas);
     hL = eL + presL/rhoL;
-    version(turbulence) { hL += myConfig.turb_model.turbulent_kinetic_energy(Lft); } // bundle turbulent energy, PJ 2017-06-17
+    version(turbulence) { hL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
+    // bundle turbulent energy, PJ 2017-06-17
     tL = Lft.gas.T;
     vnL = Lft.vel.x;
     vpL = Lft.vel.y;
@@ -1067,10 +1090,14 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] += mass_flux * Lft.turb[i]; }
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. myConfig.n_species) { F.vec[cqi.species+i] += mass_flux * Lft.gas.massf[i]; }
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += mass_flux * Lft.gas.massf[i]; }
+            }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. myConfig.n_modes) { F.vec[cqi.modes+i] += mass_flux * Lft.gas.u_modes[i]; }
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] += mass_flux * Lft.gas.u_modes[i]; }
+            }
         }
         // NOTE: - the following relies on the free-electron mode being the last mode
         //       - for single temp models F_renergies isn't used
@@ -1082,10 +1109,12 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] +=  mass_flux * Rght.turb[i]; }
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. myConfig.n_species) { F.vec[cqi.species+i] += mass_flux * Rght.gas.massf[i]; }
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += mass_flux * Rght.gas.massf[i]; }
+            }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. myConfig.n_modes) { F.vec[cqi.modes+i] += mass_flux * Rght.gas.u_modes[i]; }
+            foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] += mass_flux * Rght.gas.u_modes[i]; }
         }
     }
 } // end efmflx()
@@ -1349,10 +1378,12 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
             foreach(i; 0 ..  myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] += mass_flux * Lft.turb[i]; }
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. myConfig.n_species) { F.vec[cqi.species+i] += mass_flux * Lft.gas.massf[i]; }
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += mass_flux * Lft.gas.massf[i]; }
+            }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. myConfig.n_modes) { F.vec[cqi.modes+i] += mass_flux * Lft.gas.u_modes[i]; }
+            foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] += mass_flux * Lft.gas.u_modes[i]; }
         }
         // NOTE: - the following relies on the free-electron mode being the last mode
         //       - for single temp models F_renergies isn't used
@@ -1369,10 +1400,12 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] += mass_flux * Rght.turb[i]; }
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. myConfig.n_species) { F.vec[cqi.species+i] += mass_flux * Rght.gas.massf[i]; }
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += mass_flux * Rght.gas.massf[i]; }
+            }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. myConfig.n_modes) { F.vec[cqi.modes+i] += mass_flux * Rght.gas.u_modes[i]; }
+            foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] += mass_flux * Rght.gas.u_modes[i]; }
         }
     }
 } // end ausm_plus_up()
@@ -1523,16 +1556,20 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
         F.vec[cqi.yMom] += factor*((brp*fmomyL - blm*fmomyR + fac1*dU[2])*iden);
         if (cqi.threeD) { F.vec[cqi.zMom] += factor*((brp*fmomzL - blm*fmomzR + fac1*dU[3])*iden); }
         F.vec[cqi.totEnergy] += factor*(brp*fenergyL - blm*fenergyR + fac1*dU[7])*iden;
-        F.vec[cqi.xB] += factor*((brp*fBxL - blm*fBxR + fac1*dU[4])*iden);
-        F.vec[cqi.yB] += factor*((brp*fByL - blm*fByR + fac1*dU[5])*iden);
-        F.vec[cqi.zB] += factor*((brp*fBzL - blm*fBzR + fac1*dU[6])*iden);
+        if (cqi.MHD) {
+            F.vec[cqi.xB] += factor*((brp*fBxL - blm*fBxR + fac1*dU[4])*iden);
+            F.vec[cqi.yB] += factor*((brp*fByL - blm*fByR + fac1*dU[5])*iden);
+            F.vec[cqi.zB] += factor*((brp*fBzL - blm*fBzR + fac1*dU[6])*iden);
+        }
         version(multi_species_gas) {
-            foreach (i; 0 .. myConfig.n_species) {
-                F.vec[cqi.species+i] += mass_flux * ((mass_flux >= 0.0) ? Lft.gas.massf[i]: Rght.gas.massf[i]);
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) {
+                    F.vec[cqi.species+i] += mass_flux * ((mass_flux >= 0.0) ? Lft.gas.massf[i]: Rght.gas.massf[i]);
+                }
             }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. myConfig.n_modes) {
+            foreach (i; 0 .. cqi.n_modes) {
                 F.vec[cqi.modes+i] += mass_flux * ((mass_flux >= 0.0) ? Lft.gas.u_modes[i]: Rght.gas.u_modes[i]);
             }
         }
@@ -1670,16 +1707,19 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
     // total energy flux
     number theta = 0.0;
     version(multi_species_gas) {
+        // [TODO] PJ 2021-05-11 Is this appropriate for a single-species gas, now that Nick has adjusted things.
         uint nsp = (myConfig.sticky_electrons) ? myConfig.n_heavy : myConfig.n_species;
-        foreach (i; 0 .. nsp) {
-            number dmassf = Rght.gas.massf[i] - Lft.gas.massf[i];
-            number eiL = gmodel.internal_energy(Lft.gas, i);
-            number eiR = gmodel.internal_energy(Rght.gas, i);
-            number eihat = (sqrt(rL)*eiL+sqrt(rR)*eiR) / (sqrt(rL) + sqrt(rR));
-            number Ri = gmodel.gas_constant(IFace.fs.gas, i);
-            // equation 33b from Walters et al. (1992)
-            number psihat = Ri*That/(ghat-1.0) - eihat + kehat;
-            theta += dmassf*psihat;
+        if (cqi.n_species > 1) {
+            foreach (i; 0 .. nsp) {
+                number dmassf = Rght.gas.massf[i] - Lft.gas.massf[i];
+                number eiL = gmodel.internal_energy(Lft.gas, i);
+                number eiR = gmodel.internal_energy(Rght.gas, i);
+                number eihat = (sqrt(rL)*eiL+sqrt(rR)*eiR) / (sqrt(rL) + sqrt(rR));
+                number Ri = gmodel.gas_constant(IFace.fs.gas, i);
+                // equation 33b from Walters et al. (1992)
+                number psihat = Ri*That/(ghat-1.0) - eihat + kehat;
+                theta += dmassf*psihat;
+            }
         }
     }
     FL = rL*uL*HL;
@@ -1703,16 +1743,18 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
         }
     }
     version(multi_species_gas) {
-        foreach (i; 0 .. nsp) {
-            number massfhat = (sqrt(rL)*Lft.gas.massf[i]+sqrt(rR)*Rght.gas.massf[i]) / (sqrt(rL) + sqrt(rR));
-            number dmassf = Rght.gas.massf[i] - Lft.gas.massf[i];
-            FL = rL*uL*Lft.gas.massf[i];
-            FR = rR*uR*Rght.gas.massf[i];
-            F.vec[cqi.species+i] += factor*0.5*( FL + FR
-                                                 -( fabs(lambda[0])*((dr - dp/ahat2)*massfhat + rhat*dmassf) )
-                                                 -( fabs(lambda[1])*((dp + rhat*ahat*du)/(2.0*ahat2))*massfhat )
-                                                 -( fabs(lambda[2])*((dp - rhat*ahat*du)/(2.0*ahat2))*massfhat )
-                                                 );
+        if (cqi.n_species > 1) {
+            foreach (i; 0 .. nsp) {
+                number massfhat = (sqrt(rL)*Lft.gas.massf[i]+sqrt(rR)*Rght.gas.massf[i]) / (sqrt(rL) + sqrt(rR));
+                number dmassf = Rght.gas.massf[i] - Lft.gas.massf[i];
+                FL = rL*uL*Lft.gas.massf[i];
+                FR = rR*uR*Rght.gas.massf[i];
+                F.vec[cqi.species+i] += factor*0.5*( FL + FR
+                                                     -( fabs(lambda[0])*((dr - dp/ahat2)*massfhat + rhat*dmassf) )
+                                                     -( fabs(lambda[1])*((dp + rhat*ahat*du)/(2.0*ahat2))*massfhat )
+                                                     -( fabs(lambda[2])*((dp - rhat*ahat*du)/(2.0*ahat2))*massfhat )
+                                                     );
+            }
         }
     }
     version(multi_T_gas) {
@@ -1805,10 +1847,12 @@ void ASF_242(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loc
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] += mass_flux*Lft.turb[i]; }
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. myConfig.n_species) { F.vec[cqi.species+i] += mass_flux*Lft.gas.massf[i]; }
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += mass_flux*Lft.gas.massf[i]; }
+            }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. myConfig.n_modes) { F.vec[cqi.modes+i] += mass_flux*Lft.gas.u_modes[i]; }
+            foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] += mass_flux*Lft.gas.u_modes[i]; }
         }
     } else {
         /* Wind is blowing from the right */
@@ -1816,10 +1860,12 @@ void ASF_242(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loc
             foreach(i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] += mass_flux*Rght.turb[i]; }
         }
         version(multi_species_gas) {
-            foreach (i; 0 .. myConfig.n_species) { F.vec[cqi.species+i] += mass_flux*Rght.gas.massf[i]; }
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += mass_flux*Rght.gas.massf[i]; }
+            }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. myConfig.n_modes) { F.vec[cqi.modes+i] += mass_flux*Rght.gas.u_modes[i]; }
+            foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] += mass_flux*Rght.gas.u_modes[i]; }
         }
     }
 } // end ASF_242()

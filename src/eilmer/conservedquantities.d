@@ -11,6 +11,7 @@
 module conservedquantities;
 
 import std.string;
+import std.format;
 import std.conv;
 import nm.complex;
 import nm.number;
@@ -102,6 +103,8 @@ public:
 class ConservedQuantitiesIndices {
 public:
     bool threeD;
+    bool turb;
+    bool MHD;
     size_t n;
     size_t n_species;
     size_t n_modes;
@@ -137,9 +140,13 @@ public:
         }
         n_turb = nturb;
         if (nturb > 0) {
+            turb = true;
             rhoturb = n;
             n += nturb;
+        } else {
+            turb = false;
         }
+        this.MHD = MHD;
         if (MHD) {
             xB = n;
             yB = n+1;
@@ -167,7 +174,10 @@ public:
     this(const(ConservedQuantitiesIndices) other)
     {
         threeD = other.threeD;
+        turb = other.turb;
+        MHD = other.MHD;
         n = other.n;
+        n_turb = other.n_turb;
         n_species = other.n_species;
         n_modes = other.n_modes;
         mass = other.mass;
@@ -185,4 +195,16 @@ public:
         modes = other.modes;
     } // end copy constructor
 
+    override string toString() const
+    {
+        char[] repr;
+        repr ~= "ConservedQuantitiesIndices(";
+        repr ~= format("threeD=%s, turb=%s, MHD=%s", threeD, turb, MHD);
+        repr ~= format(", n=%d, n_turb=%d, n_species=%d, n_modes=%d", n, n_turb, n_species, n_modes);
+        repr ~= format(", mass=%d, xMom=%d, yMom=%d, zMom=%d, totEnergy=%d", mass, xMom, yMom, zMom, totEnergy);
+        repr ~= format(", rhoturb=%d, xB=%d, yB=%d, zB=%d, psi=%d, divB=%d", rhoturb, xB, yB, zB, psi, divB);
+        repr ~= format(", species=%d, modes=%d", species, modes);
+        repr ~= ")";
+        return to!string(repr);
+    }
 } // end ConvservedQuantitiesIndices

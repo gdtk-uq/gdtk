@@ -806,20 +806,20 @@ public:
             version(turbulence) {
                 if ( myConfig.turb_model.isTurbulent &&
                      !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
-
+                    //
                     // Turbulence transport of the turbulence properties themselves.
                     foreach(i; 0 .. myConfig.turb_model.nturb){
                         number tau_tx = 0.0;
                         number tau_ty = 0.0;
                         number tau_tz = 0.0;
-
+                        //
                         number mu_effective = myConfig.turb_model.viscous_transport_coeff(fs, i);
                         // Apply a limit on mu_effective in the same manner as that applied to mu_t.
                         mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
                         tau_tx = mu_effective * grad.turb[i][0];
                         tau_ty = mu_effective * grad.turb[i][1];
                         if (myConfig.dimensions == 3) { tau_tz = mu_effective * grad.turb[i][2]; }
-
+                        //
                         F.vec[cqi.rhoturb+i] -= tau_tx * nx + tau_ty * ny + tau_tz * nz;
                     }
                 }
@@ -827,8 +827,10 @@ public:
             version(multi_species_gas) {
                 if (myConfig.turb_model.isTurbulent ||
                     myConfig.mass_diffusion_model != MassDiffusionModel.none) {
-                    foreach (isp; 0 .. n_species) {
-                        F.vec[cqi.species+isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
+                    if (cqi.n_species > 1) {
+                        foreach (isp; 0 .. cqi.n_species) {
+                            F.vec[cqi.species+isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
+                        }
                     }
                 }
             }
