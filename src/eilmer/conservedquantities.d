@@ -38,7 +38,7 @@ public:
 
     @nogc void copy_values_from(ref const(ConservedQuantities) src)
     {
-        foreach (i, ref e; vec) { e = other.vec[i]; }
+        foreach (i, ref e; vec) { e = src.vec[i]; }
     }
 
     @nogc void clear()
