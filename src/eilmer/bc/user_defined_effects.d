@@ -652,34 +652,37 @@ private:
         // So we need to test every possibility and only set
         // the non-nil values.
         auto gmodel = blk.myConfig.gmodel;
+        auto cqi = blk.myConfig.cqi;
 
         lua_getfield(L, tblIdx, "mass");
         if ( !lua_isnil(L, -1) ) {
-            iface.F.mass += getDouble(L, tblIdx, "mass");
+            iface.F.vec[cqi.mass] += getDouble(L, tblIdx, "mass");
         }
         lua_pop(L, 1);
 
         lua_getfield(L, tblIdx, "momentum_x");
         if ( !lua_isnil(L, -1) ) {
-            iface.F.momentum.refx += getDouble(L, tblIdx, "momentum_x");
+            iface.F.vec[cqi.xMom] += getDouble(L, tblIdx, "momentum_x");
         }
         lua_pop(L, 1);
 
         lua_getfield(L, tblIdx, "momentum_y");
         if ( !lua_isnil(L, -1) ) {
-            iface.F.momentum.refy += getDouble(L, tblIdx, "momentum_y");
+            iface.F.vec[cqi.yMom] += getDouble(L, tblIdx, "momentum_y");
         }
         lua_pop(L, 1);
 
-        lua_getfield(L, tblIdx, "momentum_z");
-        if ( !lua_isnil(L, -1) ) {
-            iface.F.momentum.refz += getDouble(L, tblIdx, "momentum_z");
+        if (cqi.threeD) {
+            lua_getfield(L, tblIdx, "momentum_z");
+            if ( !lua_isnil(L, -1) ) {
+                iface.F.vec[cqi.zMom] += getDouble(L, tblIdx, "momentum_z");
+            }
+            lua_pop(L, 1);
         }
-        lua_pop(L, 1);
 
         lua_getfield(L, tblIdx, "total_energy");
         if ( !lua_isnil(L, -1) ) {
-            iface.F.total_energy += getDouble(L, tblIdx, "total_energy");
+            iface.F.vec[cqi.totEnergy] += getDouble(L, tblIdx, "total_energy");
         }
         lua_pop(L, 1);
 
@@ -691,18 +694,15 @@ private:
         }
 
         version(multi_species_gas) {
-            lua_getfield(L, tblIdx, "species");
-            if ( !lua_isnil(L, -1) ) {
-                int massfIdx = lua_gettop(L);
-                getSpeciesValsFromTable(L, gmodel, massfIdx, iface.F.massf, "species");
-            } else {
-                if ( gmodel.n_species() == 1 ) {
-                    iface.F.massf[0] = iface.F.mass;
-                }
-                // ELSE: There's no clear choice for multi-species.
-                // Maybe best not to alter the species flux.
-            }
-            lua_pop(L, 1);
+            // There is no storage in the flux vector for a single-species gas.
+            // Also, there's no clear choice for multi-species.
+            // Maybe best not to alter the species flux.
+            // lua_getfield(L, tblIdx, "species");
+            // if (!lua_isnil(L, -1)) {
+            //     int massfIdx = lua_gettop(L);
+            //     getSpeciesValsFromTable(L, gmodel, massfIdx, iface.F.massf, "species");
+            // }
+            // lua_pop(L, 1);
         }
 
         version(turbulence) {

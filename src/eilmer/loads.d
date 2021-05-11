@@ -199,6 +199,7 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
                              double sim_time, string fname)
 {
     auto gmodel = GlobalConfig.gmodel_master;
+    auto cqi = GlobalConfig.cqi;
     FlowState fs = iface.fs;
     FlowGradients grad = iface.grad;
     // iface orientation
@@ -225,9 +226,13 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
         // compute stress tensor at interface in global reference frame
         iface.F.clear();
         iface.viscous_flux_calc();
-        tau_wall_x = iface.F.momentum.x;
-        tau_wall_y = iface.F.momentum.y;
-        tau_wall_z = iface.F.momentum.z;
+        tau_wall_x = iface.F.vec[cqi.xMom];
+        tau_wall_y = iface.F.vec[cqi.yMom];
+        if (cqi.threeD) {
+            tau_wall_z = iface.F.vec[cqi.zMom];
+        } else {
+            tau_wall_z = 0.0;
+        }
         number tau_wall = sqrt(tau_wall_x^^2 + tau_wall_y^^2 + tau_wall_z^^2);
         // compute y+
         nu_wall = mu_wall / rho_wall;
@@ -293,6 +298,7 @@ void initRunTimeLoads(JSONValue jsonData)
 //@nogc
 void computeRunTimeLoads()
 {
+    auto cqi = GlobalConfig.cqi;
     // Make sure each process has finished getting its viscous fluxes in place.
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
     // On each process, tally up forces and moments by group
@@ -314,9 +320,9 @@ void computeRunTimeLoads()
                 if (GlobalConfig.viscous) {
                     // The shear stresses have been calculated and stored in the flux
                     // for momentum just before calling this function.
-                    Vector3 shearForce = Vector3(face.F.momentum.x*area,
-                                                 face.F.momentum.y*area,
-                                                 face.F.momentum.z*area);
+                    Vector3 shearForce = Vector3(face.F.vec[cqi.xMom]*area,
+                                                 face.F.vec[cqi.yMom]*area,
+                                                 (cqi.threeD) ? face.F.vec[cqi.zMom]*area : 0.0);
                     cross(momentContrib, momentArm, shearForce);
                     group.resultantForce += shearForce;
                     group.resultantMoment += momentContrib;

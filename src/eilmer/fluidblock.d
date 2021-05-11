@@ -197,8 +197,7 @@ public:
 
     void init_workspace()
     {
-        Linf_residuals = new ConservedQuantities(dedicatedConfig[id].n_species,
-                                                 dedicatedConfig[id].n_modes);
+        Linf_residuals = new ConservedQuantities(dedicatedConfig[id].cqi.n);
         // Workspace for flux_calc method.
         Lft = new FlowState(dedicatedConfig[id].gmodel);
         Rght = new FlowState(dedicatedConfig[id].gmodel);
@@ -670,13 +669,14 @@ public:
     void init_residuals()
     // Initialization of data for later computing residuals.
     {
+        auto cqi = myConfig.cqi;
         mass_residual = 0.0;
         mass_residual_loc.clear();
         energy_residual = 0.0;
         energy_residual_loc.clear();
         foreach(FVCell cell; cells) {
             cell.rho_at_start_of_step = cell.fs.gas.rho;
-            cell.rE_at_start_of_step = cell.U[0].total_energy;
+            cell.rE_at_start_of_step = cell.U[0].vec[cqi.totEnergy];
         }
     } // end init_residuals()
 
@@ -693,6 +693,7 @@ public:
     // for both mass and (total) energy for all cells, the record the largest
     // with their location.
     {
+        auto cqi = myConfig.cqi;
         mass_residual = 0.0;
         mass_residual_loc.clear();
         energy_residual = 0.0;
@@ -707,7 +708,8 @@ public:
             // In the following line, the zero index is used because,
             // at the end of the gas-dynamic update, that index holds
             // the updated data.
-            local_residual = (cell.U[0].total_energy - cell.rE_at_start_of_step) / cell.U[0].total_energy;
+            number currentEnergy = cell.U[0].vec[cqi.totEnergy];
+            local_residual = (currentEnergy - cell.rE_at_start_of_step) / currentEnergy;
             local_residual = fabs(local_residual);
             if ( local_residual > energy_residual ) {
                 energy_residual = local_residual;
@@ -724,47 +726,44 @@ public:
     // because here the residual is taken as R(U) = dU/dt.
     // We will assume that dUdt[0] is up-to-date.
     {
+        auto cqi = myConfig.cqi;
         Linf_residuals.copy_values_from(cells[0].dUdt[0]);
-        Linf_residuals.mass = fabs(Linf_residuals.mass);
-        Linf_residuals.momentum.set(fabs(Linf_residuals.momentum.x),
-                                    fabs(Linf_residuals.momentum.y),
-                                    fabs(Linf_residuals.momentum.z));
-        Linf_residuals.total_energy = fabs(Linf_residuals.total_energy);
-        foreach (cell; cells) {
-            Linf_residuals.mass = fmax(Linf_residuals.mass, fabs(cell.dUdt[0].mass));
-            Linf_residuals.momentum.set(fmax(Linf_residuals.momentum.x, fabs(cell.dUdt[0].momentum.x)),
-                                        fmax(Linf_residuals.momentum.y, fabs(cell.dUdt[0].momentum.y)),
-                                        fmax(Linf_residuals.momentum.z, fabs(cell.dUdt[0].momentum.z)));
-            Linf_residuals.total_energy = fmax(Linf_residuals.total_energy, fabs(cell.dUdt[0].total_energy));
+        foreach (i; 0 .. cqi.n) {
+            Linf_residuals.vec[i] = fabs(Linf_residuals.vec[i]);
+            foreach (cell; cells) {
+                Linf_residuals.vec[i] = fmax(Linf_residuals.vec[i], fabs(cell.dUdt[0].vec[i]));
+            }
         }
     } // end compute_Linf_residuals()
 
     @nogc
     void compute_L2_residual()
     {
+        auto cqi = myConfig.cqi;
         L2_residual = 0.0;
         foreach (cell; cells) {
-            L2_residual += fabs(cell.dUdt[0].mass)^^2;
-	    L2_residual += fabs(cell.dUdt[0].momentum.x)^^2;
-	    L2_residual += fabs(cell.dUdt[0].momentum.y)^^2;
-	    L2_residual += fabs(cell.dUdt[0].momentum.z)^^2;
-	    L2_residual += fabs(cell.dUdt[0].total_energy)^^2;
+            L2_residual += fabs(cell.dUdt[0].vec[cqi.mass])^^2;
+	    L2_residual += fabs(cell.dUdt[0].vec[cqi.xMom])^^2;
+	    L2_residual += fabs(cell.dUdt[0].vec[cqi.yMom])^^2;
+	    if (cqi.threeD) { L2_residual += fabs(cell.dUdt[0].vec[cqi.zMom])^^2; }
+	    L2_residual += fabs(cell.dUdt[0].vec[cqi.totEnergy])^^2;
 	    version(turbulence) {
-            foreach(it; 0 .. myConfig.turb_model.nturb){
-                L2_residual += fabs(cell.dUdt[0].rhoturb[it])^^2;
-            }
+                foreach(it; 0 .. myConfig.turb_model.nturb){
+                    L2_residual += fabs(cell.dUdt[0].vec[cqi.rhoturb+it])^^2;
+                }
 	    }
         }
-    } // end compute_Linf_residuals()
+    } // end compute_L2_residual()
 
     @nogc
     void compute_mass_balance()
     {
+        auto cqi = myConfig.cqi;
         mass_balance = 0.0;
         foreach(boundary; bc) {
             if (boundary.type != "exchange_over_full_face" && boundary.type != "exchange_using_mapped_cells") {
                 foreach(i, face; boundary.faces) {
-                    mass_balance += boundary.outsigns[i] * face.F.mass * face.area[0];
+                    mass_balance += boundary.outsigns[i] * face.F.vec[cqi.mass] * face.area[0];
                 }
             }
         }
