@@ -322,7 +322,7 @@ void computeRunTimeLoads()
                     // for momentum just before calling this function.
                     Vector3 shearForce = Vector3(face.F.vec[cqi.xMom]*area,
                                                  face.F.vec[cqi.yMom]*area,
-                                                 (cqi.threeD) ? face.F.vec[cqi.zMom]*area : 0.0);
+                                                 (cqi.threeD) ? face.F.vec[cqi.zMom]*area : to!number(0.0));
                     cross(momentContrib, momentArm, shearForce);
                     group.resultantForce += shearForce;
                     group.resultantMoment += momentContrib;

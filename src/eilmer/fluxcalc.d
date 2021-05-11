@@ -423,9 +423,9 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
     //
     // Transform fluxes back from interface frame of reference to local frame of reference.
     // Then, rotate momentum fluxes back to the global frame of reference.
-    number v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z;
+    number v_sqr = (IFace.gvel.x)^^2 + (IFace.gvel.y)^^2 + (IFace.gvel.z)^^2;
     F.vec[cqi.totEnergy] += 0.5*F.vec[cqi.mass]*v_sqr + F.vec[cqi.xMom]*IFace.gvel.x +
-        F.vec[cqi.yMom]*IFace.gvel.y + ((cqi.threeD) ? F.vec[cqi.zMom]*IFace.gvel.z : 0.0);
+        F.vec[cqi.yMom]*IFace.gvel.y + ((cqi.threeD) ? F.vec[cqi.zMom]*IFace.gvel.z : to!number(0.0));
     F.vec[cqi.xMom] += F.vec[cqi.mass] * IFace.gvel.x;
     F.vec[cqi.yMom] += F.vec[cqi.mass] * IFace.gvel.y;
     if (cqi.threeD) {
@@ -696,11 +696,11 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
         if (star_region) {
             F.vec[cqi.xMom] += factor * (F_momx + S*(U_star_momx - U_momx));
             F.vec[cqi.yMom] += factor * (F_momy + S*(U_star_momy - U_momy));
-            if (cqi.threeD) { F.vec[cqi.yMom] += factor * (F_momz + S*(U_star_momz - U_momz)); }
+            if (cqi.threeD) { F.vec[cqi.zMom] += factor * (F_momz + S*(U_star_momz - U_momz)); }
         } else {
             F.vec[cqi.xMom] += factor * F_momx;
             F.vec[cqi.yMom] += factor * F_momy;
-            if (cqi.threeD) { F.vec[cqi.yMom] += factor * F_momz; }
+            if (cqi.threeD) { F.vec[cqi.zMom] += factor * F_momz; }
         }
         // total energy
         number F_totenergy = u*(E + p);
@@ -1831,17 +1831,12 @@ void adaptive_ausmdv_asf(in FlowState Lft, in FlowState Rght, ref FVInterface IF
 //
 // The actual work is passed off to the original flux calculation functions.
 {
-
     number alpha = IFace.fs.S;
-
     if (alpha > 0.0) {
         ausmdv(Lft, Rght, IFace, myConfig, alpha);
-    } 
-    
+    }
     if (alpha < 1.0) {
         ASF_242(Lft, Rght, IFace, myConfig, 1.0-alpha);
-    } 
-
+    }
     return;
-
-} // end adaptive_flux()
+}

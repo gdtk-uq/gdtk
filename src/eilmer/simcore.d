@@ -1587,7 +1587,8 @@ void compute_Linf_residuals(ConservedQuantities Linf_residuals)
         Linf_residuals.vec[cqi.mass] = fmax(Linf_residuals.vec[cqi.mass], fabs(blk.Linf_residuals.vec[cqi.mass]));
         Linf_residuals.vec[cqi.xMom] = fmax(Linf_residuals.vec[cqi.xMom], fabs(blk.Linf_residuals.vec[cqi.xMom]));
         Linf_residuals.vec[cqi.yMom] = fmax(Linf_residuals.vec[cqi.yMom], fabs(blk.Linf_residuals.vec[cqi.yMom]));
-        Linf_residuals.vec[cqi.zMom] = (cqi.threeD) ? fmax(Linf_residuals.vec[cqi.zMom], fabs(blk.Linf_residuals.vec[cqi.zMom])) : 0.0;
+        Linf_residuals.vec[cqi.zMom] = (cqi.threeD) ?
+            fmax(Linf_residuals.vec[cqi.zMom], fabs(blk.Linf_residuals.vec[cqi.zMom])) : to!number(0.0);
         Linf_residuals.vec[cqi.totEnergy] = fmax(Linf_residuals.vec[cqi.totEnergy], fabs(blk.Linf_residuals.vec[cqi.totEnergy]));
 
     }

@@ -1430,7 +1430,7 @@ public:
 
         version(turbulence) {
             if (in_turbulent_zone) {
-                double[2] rhoturb = Q.vec[cqi.rhoturb .. cqi.rhoturb+cqi.n_turb];
+                number[2] rhoturb = Q.vec[cqi.rhoturb .. cqi.rhoturb+cqi.n_turb];
                 myConfig.turb_model.source_terms(fs, grad, pos[0].y, dwall, L_min, L_max, rhoturb);
                 Q.vec[cqi.rhoturb] = rhoturb[0]; Q.vec[cqi.rhoturb+1] = rhoturb[1];
             }
