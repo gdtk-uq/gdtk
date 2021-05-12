@@ -37,7 +37,8 @@ test_scripts << "2D/moving-grid/piston-w-const-vel/simple-reverse/piston-test.rb
 test_scripts << "2D/moving-grid/piston-in-tube/piston-1-block/pit1-test.rb"
 test_scripts << "2D/moving-grid/piston-in-tube/piston-2-block/pit2-test.rb"
 test_scripts << "2D/flat-plate-turbulent-mabey/steady-state-solver/mabey-test.rb"
-test_scripts << "2D/compression-corner-adjoint/compression-corner-adjoint-test.rb"
+# 2021-05-13 PJ Remove adjoint test while Kyle refactors the code.
+# test_scripts << "2D/compression-corner-adjoint/compression-corner-adjoint-test.rb"
 test_scripts << "2D/flat-plate-turbulent-larc/nk-5.45Tw-sa/larc-sa-test.rb"
 test_scripts << "3D/sod-shock-tube/sg/sod-test.rb"
 test_scripts << "3D/sod-shock-tube/usg/sod-usg-test.rb"

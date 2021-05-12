@@ -58,8 +58,10 @@ ifeq ($(WITH_LUSGS),1)
 endif
 
 ifeq ($(WITH_SSC),1)
-    PROGRAMS += e4ssc
-    PROGRAMS += e4opt
+    # 2021-05-13 PJ Remove these programs from the list because Kyle is refactoring them.
+    # Note that we still need to have the WITH_SSC=1 to build the steady-state solver.
+    # PROGRAMS += e4ssc
+    # PROGRAMS += e4opt
 endif
 
 ifeq ($(WITH_MPI),1)
