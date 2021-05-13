@@ -75,9 +75,9 @@ struct RestartInfo {
     double globalResidual;
     ConservedQuantities residuals;
 
-    this(int n_species, int n_modes)
+    this(size_t n)
     {
-        residuals = new ConservedQuantities(n_species, n_modes);
+        residuals = new ConservedQuantities(n);
     }
 }
 
@@ -90,11 +90,11 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
     size_t Y_MOM = GlobalConfig.cqi.yMom;
     size_t Z_MOM = GlobalConfig.cqi.zMom;
     size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
-    size_t TKE = GlobalConfig.cqi.tke;
+    size_t TKE = GlobalConfig.cqi.rhoturb;
     size_t SPECIES = GlobalConfig.cqi.species;
-    
+
     auto gmodel = GlobalConfig.gmodel_master;
-    RestartInfo restartInfo = RestartInfo(gmodel.n_species, gmodel.n_modes);
+    RestartInfo restartInfo = RestartInfo(GlobalConfig.cqi.n);
     // Start reading the times file, looking for the snapshot index
     auto timesFile = File("./config/" ~ jobName ~ ".times");
     auto line = timesFile.readln().strip();
@@ -103,23 +103,24 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
             // Process a non-comment line.
             auto tokens = line.split();
             auto idx = to!int(tokens[0]);
+            auto cqi = GlobalConfig.cqi;
             restartInfo.pseudoSimTime = to!double(tokens[1]);
             restartInfo.dt = to!double(tokens[2]);
             restartInfo.cfl = to!double(tokens[3]);
             restartInfo.step = to!int(tokens[4]);
             restartInfo.globalResidual = to!double(tokens[5]);
-            restartInfo.residuals.mass = to!double(tokens[6+MASS]);
-            restartInfo.residuals.momentum.refx = to!double(tokens[6+X_MOM]);
-            restartInfo.residuals.momentum.refy = to!double(tokens[6+Y_MOM]);
-            if ( GlobalConfig.dimensions == 3 ) 
-                restartInfo.residuals.momentum.refz = to!double(tokens[6+Z_MOM]);
-            restartInfo.residuals.total_energy = to!double(tokens[6+TOT_ENERGY]);
+            restartInfo.residuals.vec[cqi.mass] = to!double(tokens[6+MASS]);
+            restartInfo.residuals.vec[cqi.xMom] = to!double(tokens[6+X_MOM]);
+            restartInfo.residuals.vec[cqi.yMom] = to!double(tokens[6+Y_MOM]);
+            if ( GlobalConfig.dimensions == 3 )
+                restartInfo.residuals.vec[cqi.zMom] = to!double(tokens[6+Z_MOM]);
+            restartInfo.residuals.vec[cqi.totEnergy] = to!double(tokens[6+TOT_ENERGY]);
             foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
-                restartInfo.residuals.rhoturb[it] = to!double(tokens[6+TKE+it]);
+                restartInfo.residuals.vec[cqi.rhoturb+it] = to!double(tokens[6+TKE+it]);
             }
             version(multi_species_gas){
             foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
-                restartInfo.residuals.massf[sp] = to!double(tokens[6+SPECIES+sp]);
+                restartInfo.residuals.vec[cqi.species+sp] = to!double(tokens[6+SPECIES+sp]);
             }
             }
             times ~= restartInfo;
@@ -128,7 +129,7 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
     }
     timesFile.close();
     return;
-} 
+}
 
 
 void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITask)
@@ -169,13 +170,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     bool limiterFreezingCondition = false;
 
     int interpOrderSave = GlobalConfig.interpolation_order;
-    
+
     int n_species = GlobalConfig.gmodel_master.n_species();
     int n_modes = GlobalConfig.gmodel_master.n_modes();
-    ConservedQuantities maxResiduals = new ConservedQuantities(n_species, n_modes);
-    ConservedQuantities currResiduals = new ConservedQuantities(n_species, n_modes);
-    number mass_balance = 0.0;
-    
+
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
     size_t MASS = GlobalConfig.cqi.mass;
@@ -183,8 +181,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     size_t Y_MOM = GlobalConfig.cqi.yMom;
     size_t Z_MOM = GlobalConfig.cqi.zMom;
     size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
-    size_t TKE = GlobalConfig.cqi.tke;
+    size_t TKE = GlobalConfig.cqi.rhoturb;
     size_t SPECIES = GlobalConfig.cqi.species;
+
+    ConservedQuantities maxResiduals = new ConservedQuantities(nConserved);
+    ConservedQuantities currResiduals = new ConservedQuantities(nConserved);
+    number mass_balance = 0.0;
 
     double cfl, cflTrial;
     double dt;
@@ -266,7 +268,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 try {
                     version(lu_sgs) { lusgs_solve(preStep, pseudoSimTime, dt, normOld, startStep); }
                     else { rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, startStep); }
-                    
+
                 }
                 catch (FlowSolverException e) {
                     version(mpi_parallel) {
@@ -291,23 +293,24 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     size_t nturb = blk.myConfig.turb_model.nturb;
                     size_t nsp = blk.myConfig.gmodel.n_species;
                     int cellCount = 0;
+                    auto cqi = blk.myConfig.cqi;
                     foreach (cell; blk.cells) {
                         cell.U[1].copy_values_from(cell.U[0]);
-                        cell.U[1].mass = cell.U[0].mass + blk.dU[cellCount+MASS];
-                        cell.U[1].momentum.refx = cell.U[0].momentum.x + blk.dU[cellCount+X_MOM];
-                        cell.U[1].momentum.refy = cell.U[0].momentum.y + blk.dU[cellCount+Y_MOM];
-                        if ( blk.myConfig.dimensions == 3 ) 
-                            cell.U[1].momentum.refz = cell.U[0].momentum.z + blk.dU[cellCount+Z_MOM];
-                        cell.U[1].total_energy = cell.U[0].total_energy + blk.dU[cellCount+TOT_ENERGY];
+                        cell.U[1].vec[cqi.mass] = cell.U[0].vec[cqi.mass] + blk.dU[cellCount+MASS];
+                        cell.U[1].vec[cqi.xMom] = cell.U[0].vec[cqi.xMom] + blk.dU[cellCount+X_MOM];
+                        cell.U[1].vec[cqi.yMom] = cell.U[0].vec[cqi.yMom] + blk.dU[cellCount+Y_MOM];
+                        if ( blk.myConfig.dimensions == 3 )
+                            cell.U[1].vec[cqi.zMom] = cell.U[0].vec[cqi.zMom] + blk.dU[cellCount+Z_MOM];
+                        cell.U[1].vec[cqi.totEnergy] = cell.U[0].vec[cqi.totEnergy] + blk.dU[cellCount+TOT_ENERGY];
                         foreach(it; 0 .. nturb) {
-                            cell.U[1].rhoturb[it] = cell.U[0].rhoturb[it] + blk.dU[cellCount+TKE+it];
+                            cell.U[1].vec[cqi.rhoturb+it] = cell.U[0].vec[cqi.rhoturb+it] + blk.dU[cellCount+TKE+it];
                         }
                         version(multi_species_gas){
                         if (blk.myConfig.n_species > 1) {
-                            foreach(sp; 0 .. nsp) { cell.U[1].massf[sp] = cell.U[0].massf[sp] + blk.dU[cellCount+SPECIES+sp]; }
+                            foreach(sp; 0 .. nsp) { cell.U[1].vec[cqi.species+sp] = cell.U[0].vec[cqi.species+sp] + blk.dU[cellCount+SPECIES+sp]; }
                         } else {
                             // enforce mass fraction of 1 for single species gas
-                            cell.U[1].massf[0] = cell.U[1].mass;                            
+                            cell.U[1].vec[cqi.species+0] = cell.U[1].vec[cqi.mass];
                         }
                         }
                         try {
@@ -388,20 +391,21 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             foreach (blk; parallel(localFluidBlocks, 1)) {
                 size_t nturb = blk.myConfig.turb_model.nturb;
                 size_t nsp = blk.myConfig.gmodel.n_species;
+                auto cqi = blk.myConfig.cqi;
                 int cellCount = 0;
                 foreach (cell; blk.cells) {
-                    blk.FU[cellCount+MASS] = -cell.dUdt[0].mass;
-                    blk.FU[cellCount+X_MOM] = -cell.dUdt[0].momentum.x;
-                    blk.FU[cellCount+Y_MOM] = -cell.dUdt[0].momentum.y;
+                    blk.FU[cellCount+MASS] = -cell.dUdt[0].vec[cqi.mass];
+                    blk.FU[cellCount+X_MOM] = -cell.dUdt[0].vec[cqi.xMom];
+                    blk.FU[cellCount+Y_MOM] = -cell.dUdt[0].vec[cqi.yMom];
                     if ( GlobalConfig.dimensions == 3 )
-                        blk.FU[cellCount+Z_MOM] = -cell.dUdt[0].momentum.z;
-                    blk.FU[cellCount+TOT_ENERGY] = -cell.dUdt[0].total_energy;
+                        blk.FU[cellCount+Z_MOM] = -cell.dUdt[0].vec[cqi.zMom];
+                    blk.FU[cellCount+TOT_ENERGY] = -cell.dUdt[0].vec[cqi.totEnergy];
                     foreach(it; 0 .. nturb) {
-                        blk.FU[cellCount+TKE+it] = -cell.dUdt[0].rhoturb[it];
+                        blk.FU[cellCount+TKE+it] = -cell.dUdt[0].vec[cqi.rhoturb+it];
                     }
                     version(multi_species_gas){
                     if ( nsp > 1 ) {
-                        foreach(sp; 0 .. nsp) { blk.FU[cellCount+SPECIES+sp] = -cell.dUdt[0].massf[sp]; }
+                        foreach(sp; 0 .. nsp) { blk.FU[cellCount+SPECIES+sp] = -cell.dUdt[0].vec[cqi.species+sp]; }
                     }
                     }
                     cellCount += nConserved;
@@ -414,23 +418,24 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             normRef = sqrt(normRef);
         }
         if (GlobalConfig.is_master_task) {
+            auto cqi = GlobalConfig.cqi;
             writeln("Reference residuals are established as:");
             writefln("GLOBAL:         %.12e", normRef);
-            writefln("MASS:           %.12e", maxResiduals.mass.re);
-            writefln("X-MOMENTUM:     %.12e", maxResiduals.momentum.x.re);
-            writefln("Y-MOMENTUM:     %.12e", maxResiduals.momentum.y.re);
+            writefln("MASS:           %.12e", maxResiduals.vec[cqi.mass].re);
+            writefln("X-MOMENTUM:     %.12e", maxResiduals.vec[cqi.xMom].re);
+            writefln("Y-MOMENTUM:     %.12e", maxResiduals.vec[cqi.yMom].re);
             if ( GlobalConfig.dimensions == 3 )
-                writefln("Z-MOMENTUM:     %.12e", maxResiduals.momentum.z.re);
-            writefln("ENERGY:         %.12e", maxResiduals.total_energy.re);
+                writefln("Z-MOMENTUM:     %.12e", maxResiduals.vec[cqi.zMom].re);
+            writefln("ENERGY:         %.12e", maxResiduals.vec[cqi.totEnergy].re);
             foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
                 string tvname = capitalize(GlobalConfig.turb_model.primitive_variable_name(it));
-                writefln("%s:            %.12e",tvname, maxResiduals.rhoturb[it].re);
+                writefln("%s:            %.12e",tvname, maxResiduals.vec[cqi.rhoturb+it].re);
             }
             version(multi_species_gas){
             if ( GlobalConfig.gmodel_master.n_species > 1 ) {
                 foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
                     string spname = capitalize(GlobalConfig.gmodel_master.species_name(sp));
-                    writefln("%s:            %.12e",spname, maxResiduals.massf[sp].re);
+                    writefln("%s:            %.12e",spname, maxResiduals.vec[cqi.species+sp].re);
                 }
             }
             }
@@ -438,22 +443,22 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             auto refResid = File(refResidFname, "w");
             if ( GlobalConfig.dimensions == 2 ) {
                 refResid.writef("%.18e %.18e %.18e %.18e %.18e",
-                                normRef, maxResiduals.mass.re, maxResiduals.momentum.x.re,
-                                maxResiduals.momentum.y.re, maxResiduals.total_energy.re);
+                                normRef, maxResiduals.vec[cqi.mass].re, maxResiduals.vec[cqi.xMom].re,
+                                maxResiduals.vec[cqi.yMom].re, maxResiduals.vec[cqi.totEnergy].re);
             }
             else {
                 refResid.writef("%.18e %.18e %.18e %.18e %.18e %.18e",
-                                normRef, maxResiduals.mass.re, maxResiduals.momentum.x.re,
-                                maxResiduals.momentum.y.re, maxResiduals.momentum.z.re,
-                                maxResiduals.total_energy.re);
+                                normRef, maxResiduals.vec[cqi.mass].re, maxResiduals.vec[cqi.xMom].re,
+                                maxResiduals.vec[cqi.yMom].re, maxResiduals.vec[cqi.zMom].re,
+                                maxResiduals.vec[cqi.totEnergy].re);
             }
             foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
-                refResid.writef(" %.18e", maxResiduals.rhoturb[it].re);
+                refResid.writef(" %.18e", maxResiduals.vec[cqi.rhoturb+it].re);
             }
             version(multi_species_gas){
             if ( GlobalConfig.gmodel_master.n_species > 1 ) {
                 foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
-                    refResid.writef(" %.18e", maxResiduals.massf[sp].re);
+                    refResid.writef(" %.18e", maxResiduals.vec[cqi.species+sp].re);
                 }
             }
             }
@@ -473,23 +478,24 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         auto line = refResid.readln().strip();
         auto tokens = line.split();
         normRef = to!double(tokens[0]);
-        maxResiduals.mass = to!double(tokens[1+MASS]);
-        maxResiduals.momentum.refx = to!double(tokens[1+X_MOM]);
-        maxResiduals.momentum.refy = to!double(tokens[1+Y_MOM]);
-        if ( GlobalConfig.dimensions == 3 ) 
-            maxResiduals.momentum.refz = to!double(tokens[1+Z_MOM]);
-        maxResiduals.total_energy = to!double(tokens[1+TOT_ENERGY]);
+        auto cqi = GlobalConfig.cqi;
+        maxResiduals.vec[cqi.mass] = to!double(tokens[1+MASS]);
+        maxResiduals.vec[cqi.xMom] = to!double(tokens[1+X_MOM]);
+        maxResiduals.vec[cqi.yMom] = to!double(tokens[1+Y_MOM]);
+        if ( GlobalConfig.dimensions == 3 )
+            maxResiduals.vec[cqi.zMom] = to!double(tokens[1+Z_MOM]);
+        maxResiduals.vec[cqi.totEnergy] = to!double(tokens[1+TOT_ENERGY]);
         foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
-            maxResiduals.rhoturb[it] = to!double(tokens[1+TKE+it]);
+            maxResiduals.vec[cqi.rhoturb+it] = to!double(tokens[1+TKE+it]);
         }
         version(multi_species_gas){
         if ( GlobalConfig.gmodel_master.n_species > 1 ) {
             foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
-                maxResiduals.massf[sp] = to!double(tokens[1+SPECIES+sp]);
-            }   
+                maxResiduals.vec[cqi.species+sp] = to!double(tokens[1+SPECIES+sp]);
+            }
         }
         }
-        
+
         // We also need to determine how many snapshots have already been written
         auto timesFile = File("./config/" ~ jobName ~ ".times");
         line = timesFile.readln().strip();
@@ -525,11 +531,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         pseudoSimTime = restartInfo.pseudoSimTime;
         if ( GlobalConfig.is_master_task ) {
             writefln("Restarting steps from step= %d", startStep);
-            writefln("   pseudo-sim-time= %.6e dt= %.6e", pseudoSimTime, dt);  
+            writefln("   pseudo-sim-time= %.6e dt= %.6e", pseudoSimTime, dt);
         }
     }
 
-    
     auto residFname = "e4-nk.diagnostics.dat";
     File fResid;
     if (GlobalConfig.is_master_task) {
@@ -626,28 +631,29 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
             }
             if (failedAttempt > 0) { continue; }
-            
+
             foreach (blk; parallel(localFluidBlocks,1)) {
                 size_t nturb = blk.myConfig.turb_model.nturb;
                 size_t nsp = blk.myConfig.gmodel.n_species;
                 int cellCount = 0;
+                auto cqi = blk.myConfig.cqi;
                 foreach (cell; blk.cells) {
                     cell.U[1].copy_values_from(cell.U[0]);
-                    cell.U[1].mass = cell.U[0].mass + blk.dU[cellCount+MASS];
-                    cell.U[1].momentum.refx = cell.U[0].momentum.x + blk.dU[cellCount+X_MOM];
-                    cell.U[1].momentum.refy = cell.U[0].momentum.y + blk.dU[cellCount+Y_MOM];
-                    if ( blk.myConfig.dimensions == 3 ) 
-                        cell.U[1].momentum.refz = cell.U[0].momentum.z + blk.dU[cellCount+Z_MOM];
-                    cell.U[1].total_energy = cell.U[0].total_energy + blk.dU[cellCount+TOT_ENERGY];
+                    cell.U[1].vec[cqi.mass] = cell.U[0].vec[cqi.mass] + blk.dU[cellCount+MASS];
+                    cell.U[1].vec[cqi.xMom] = cell.U[0].vec[cqi.xMom] + blk.dU[cellCount+X_MOM];
+                    cell.U[1].vec[cqi.yMom] = cell.U[0].vec[cqi.yMom] + blk.dU[cellCount+Y_MOM];
+                    if ( blk.myConfig.dimensions == 3 )
+                        cell.U[1].vec[cqi.zMom] = cell.U[0].vec[cqi.zMom] + blk.dU[cellCount+Z_MOM];
+                    cell.U[1].vec[cqi.totEnergy] = cell.U[0].vec[cqi.totEnergy] + blk.dU[cellCount+TOT_ENERGY];
                     foreach(it; 0 .. nturb){
-                        cell.U[1].rhoturb[it] = cell.U[0].rhoturb[it] + blk.dU[cellCount+TKE+it];
+                        cell.U[1].vec[cqi.rhoturb+it] = cell.U[0].vec[cqi.rhoturb+it] + blk.dU[cellCount+TKE+it];
                     }
                     version(multi_species_gas){
                     if (blk.myConfig.n_species > 1) {
-                        foreach(sp; 0 .. nsp) { cell.U[1].massf[sp] = cell.U[0].massf[sp] + blk.dU[cellCount+SPECIES+sp]; }
+                        foreach(sp; 0 .. nsp) { cell.U[1].vec[cqi.species+sp] = cell.U[0].vec[cqi.species+sp] + blk.dU[cellCount+SPECIES+sp]; }
                     } else {
                         // enforce mass fraction of 1 for single species gas
-                        cell.U[1].massf[0] = cell.U[1].mass;                        
+                        cell.U[1].vec[cqi.species+0] = cell.U[1].vec[cqi.mass];
                     }
                     }
                     try {
@@ -660,7 +666,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     cellCount += nConserved;
                 }
             }
-            
+
             // Coordinate MPI tasks after try-catch statement in case one or more of the tasks encountered an exception.
             version(mpi_parallel) {
                 MPI_Allreduce(MPI_IN_PLACE, &failedAttempt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
@@ -746,7 +752,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             }
             finalStep = true;
         }
-        
+
         // Now do some output and diagnostics work
         if ( (step % writeDiagnosticsCount) == 0 || finalStep ) {
             mass_balance = 0.0;
@@ -760,26 +766,27 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 residualsUpToDate = true;
             }
             if (GlobalConfig.is_master_task) {
+                auto cqi = GlobalConfig.cqi;
                 fResid = File(residFname, "a");
                 fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %5d %.8f %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e ",
-                              step, pseudoSimTime, dt, cfl, eta, nRestarts, fnCount, wallClockElapsed, 
+                              step, pseudoSimTime, dt, cfl, eta, nRestarts, fnCount, wallClockElapsed,
                               normNew, normNew/normRef,
-                              currResiduals.mass.re, currResiduals.mass.re/maxResiduals.mass.re,
-                              currResiduals.momentum.x.re, currResiduals.momentum.x.re/maxResiduals.momentum.x.re,
-                              currResiduals.momentum.y.re, currResiduals.momentum.y.re/maxResiduals.momentum.y.re);
+                              currResiduals.vec[cqi.mass].re, currResiduals.vec[cqi.mass].re/maxResiduals.vec[cqi.mass].re,
+                              currResiduals.vec[cqi.xMom].re, currResiduals.vec[cqi.xMom].re/maxResiduals.vec[cqi.xMom].re,
+                              currResiduals.vec[cqi.yMom].re, currResiduals.vec[cqi.yMom].re/maxResiduals.vec[cqi.yMom].re);
                 if ( GlobalConfig.dimensions == 3 )
-                    fResid.writef("%20.16e  %20.16e  ", currResiduals.momentum.z.re, currResiduals.momentum.z.re/maxResiduals.momentum.z.re);
+                    fResid.writef("%20.16e  %20.16e  ", currResiduals.vec[cqi.zMom].re, currResiduals.vec[cqi.zMom].re/maxResiduals.vec[cqi.zMom].re);
                 fResid.writef("%20.16e  %20.16e  ",
-                              currResiduals.total_energy.re, currResiduals.total_energy.re/maxResiduals.total_energy.re);
+                              currResiduals.vec[cqi.totEnergy].re, currResiduals.vec[cqi.totEnergy].re/maxResiduals.vec[cqi.totEnergy].re);
                 foreach(it; 0 .. GlobalConfig.turb_model.nturb){
                     fResid.writef("%20.16e  %20.16e  ",
-                                  currResiduals.rhoturb[it].re, currResiduals.rhoturb[it].re/maxResiduals.rhoturb[it].re);
+                                  currResiduals.vec[cqi.rhoturb+it].re, currResiduals.vec[cqi.rhoturb+it].re/maxResiduals.vec[cqi.rhoturb+it].re);
                 }
                 version(multi_species_gas){
                 if ( GlobalConfig.gmodel_master.n_species > 1 ) {
                     foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species){
                         fResid.writef("%20.16e  %20.16e  ",
-                                      currResiduals.massf[sp].re, currResiduals.massf[sp].re/maxResiduals.massf[sp].re);
+                                      currResiduals.vec[cqi.species+sp].re, currResiduals.vec[cqi.species+sp].re/maxResiduals.vec[cqi.species+sp].re);
                     }
                 }
                 }
@@ -801,32 +808,33 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 update_loads_times_file(pseudoSimTime, step);
             }
         }
-        
+
         if ( (step % GlobalConfig.print_count) == 0 || finalStep ) {
             if ( !residualsUpToDate ) {
                 max_residuals(currResiduals);
                 residualsUpToDate = true;
             }
             if (GlobalConfig.is_master_task) {
+                auto cqi = GlobalConfig.cqi;
                 auto writer = appender!string();
                 formattedWrite(writer, "STEP= %7d  pseudo-time=%10.3e dt=%10.3e cfl=%10.3e  WC=%.1f \n", step, pseudoSimTime, dt, cfl, wallClockElapsed);
                 formattedWrite(writer, "RESIDUALS        absolute        relative\n");
                 formattedWrite(writer, "  global         %10.6e    %10.6e\n", normNew, normNew/normRef);
-                formattedWrite(writer, "  mass           %10.6e    %10.6e\n", currResiduals.mass.re, currResiduals.mass.re/maxResiduals.mass.re);
-                formattedWrite(writer, "  x-mom          %10.6e    %10.6e\n", currResiduals.momentum.x.re, currResiduals.momentum.x.re/maxResiduals.momentum.x.re);
-                formattedWrite(writer, "  y-mom          %10.6e    %10.6e\n", currResiduals.momentum.y.re, currResiduals.momentum.y.re/maxResiduals.momentum.y.re);
+                formattedWrite(writer, "  mass           %10.6e    %10.6e\n", currResiduals.vec[cqi.mass].re, currResiduals.vec[cqi.mass].re/maxResiduals.vec[cqi.mass].re);
+                formattedWrite(writer, "  x-mom          %10.6e    %10.6e\n", currResiduals.vec[cqi.xMom].re, currResiduals.vec[cqi.xMom].re/maxResiduals.vec[cqi.xMom].re);
+                formattedWrite(writer, "  y-mom          %10.6e    %10.6e\n", currResiduals.vec[cqi.yMom].re, currResiduals.vec[cqi.yMom].re/maxResiduals.vec[cqi.yMom].re);
                 if ( GlobalConfig.dimensions == 3 )
-                    formattedWrite(writer, "  z-mom          %10.6e    %10.6e\n", currResiduals.momentum.z.re, currResiduals.momentum.z.re/maxResiduals.momentum.z.re);
-                formattedWrite(writer, "  total-energy   %10.6e    %10.6e\n", currResiduals.total_energy.re, currResiduals.total_energy.re/maxResiduals.total_energy.re);
+                    formattedWrite(writer, "  z-mom          %10.6e    %10.6e\n", currResiduals.vec[cqi.zMom].re, currResiduals.vec[cqi.zMom].re/maxResiduals.vec[cqi.zMom].re);
+                formattedWrite(writer, "  total-energy   %10.6e    %10.6e\n", currResiduals.vec[cqi.totEnergy].re, currResiduals.vec[cqi.totEnergy].re/maxResiduals.vec[cqi.totEnergy].re);
                 foreach(it; 0 .. GlobalConfig.turb_model.nturb){
                     auto tvname = GlobalConfig.turb_model.primitive_variable_name(it);
-                    formattedWrite(writer, "  %s            %10.6e    %10.6e\n", tvname, currResiduals.rhoturb[it].re, currResiduals.rhoturb[it].re/maxResiduals.rhoturb[it].re);
+                    formattedWrite(writer, "  %s            %10.6e    %10.6e\n", tvname, currResiduals.vec[cqi.rhoturb+it].re, currResiduals.vec[cqi.rhoturb+it].re/maxResiduals.vec[cqi.rhoturb+it].re);
                 }
                 version(multi_species_gas){
                 if ( GlobalConfig.gmodel_master.n_species > 1 ) {
                     foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species){
                         auto spname = GlobalConfig.gmodel_master.species_name(sp);
-                        formattedWrite(writer, "  %s            %10.6e    %10.6e\n", spname, currResiduals.massf[sp].re, currResiduals.massf[sp].re/maxResiduals.massf[sp].re);
+                        formattedWrite(writer, "  %s            %10.6e    %10.6e\n", spname, currResiduals.vec[cqi.species+sp].re, currResiduals.vec[cqi.species+sp].re/maxResiduals.vec[cqi.species+sp].re);
                     }
                 }
                 }
@@ -1211,34 +1219,35 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
     size_t Y_MOM = GlobalConfig.cqi.yMom;
     size_t Z_MOM = GlobalConfig.cqi.zMom;
     size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
-    size_t TKE = GlobalConfig.cqi.tke;
+    size_t TKE = GlobalConfig.cqi.rhoturb;
     size_t SPECIES = GlobalConfig.cqi.species;
 
     // We perform a Frechet derivative to evaluate J*D^(-1)v
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
         size_t nsp = blk.myConfig.gmodel.n_species;
+        auto cqi = blk.myConfig.cqi;
         blk.clear_fluxes_of_conserved_quantities();
         foreach (cell; blk.cells) cell.clear_source_vector();
         int cellCount = 0;
         foreach (cell; blk.cells) {
             cell.U[1].copy_values_from(cell.U[0]);
-            cell.U[1].mass += sigma*blk.zed[cellCount+MASS];
-            cell.U[1].momentum.refx += sigma*blk.zed[cellCount+X_MOM];
-            cell.U[1].momentum.refy += sigma*blk.zed[cellCount+Y_MOM];
+            cell.U[1].vec[cqi.mass] += sigma*blk.zed[cellCount+MASS];
+            cell.U[1].vec[cqi.xMom] += sigma*blk.zed[cellCount+X_MOM];
+            cell.U[1].vec[cqi.yMom] += sigma*blk.zed[cellCount+Y_MOM];
             if ( blk.myConfig.dimensions == 3 )
-                cell.U[1].momentum.refz += sigma*blk.zed[cellCount+Z_MOM];
-            cell.U[1].total_energy += sigma*blk.zed[cellCount+TOT_ENERGY];
+                cell.U[1].vec[cqi.zMom] += sigma*blk.zed[cellCount+Z_MOM];
+            cell.U[1].vec[cqi.totEnergy] += sigma*blk.zed[cellCount+TOT_ENERGY];
             foreach(it; 0 .. nturb){
-                cell.U[1].rhoturb[it] += sigma*blk.zed[cellCount+TKE+it];
+                cell.U[1].vec[cqi.rhoturb+it] += sigma*blk.zed[cellCount+TKE+it];
             }
             version(multi_species_gas){
-            if ( nsp > 1 ) { 
-                foreach(sp; 0 .. nsp) { cell.U[1].massf[sp] += sigma*blk.zed[cellCount+SPECIES+sp]; }
+            if ( nsp > 1 ) {
+                foreach(sp; 0 .. nsp) { cell.U[1].vec[cqi.species+sp] += sigma*blk.zed[cellCount+SPECIES+sp]; }
             } else {
                 // enforce mass fraction of 1 for single species gas
                 if (blk.myConfig.n_species == 1) {
-                    cell.U[1].massf[0] = cell.U[1].mass;
+                    cell.U[1].vec[cqi.species+0] = cell.U[1].vec[cqi.mass];
                 }
             }
             }
@@ -1250,20 +1259,21 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
         size_t nsp = blk.myConfig.gmodel.n_species;
+        auto cqi = blk.myConfig.cqi;
         int cellCount = 0;
         foreach (cell; blk.cells) {
-            blk.zed[cellCount+MASS] = (cell.dUdt[1].mass - blk.FU[cellCount+MASS])/(sigma);
-            blk.zed[cellCount+X_MOM] = (cell.dUdt[1].momentum.x - blk.FU[cellCount+X_MOM])/(sigma);
-            blk.zed[cellCount+Y_MOM] = (cell.dUdt[1].momentum.y - blk.FU[cellCount+Y_MOM])/(sigma);
+            blk.zed[cellCount+MASS] = (cell.dUdt[1].vec[cqi.mass] - blk.FU[cellCount+MASS])/(sigma);
+            blk.zed[cellCount+X_MOM] = (cell.dUdt[1].vec[cqi.xMom] - blk.FU[cellCount+X_MOM])/(sigma);
+            blk.zed[cellCount+Y_MOM] = (cell.dUdt[1].vec[cqi.yMom] - blk.FU[cellCount+Y_MOM])/(sigma);
             if ( blk.myConfig.dimensions == 3 )
-                blk.zed[cellCount+Z_MOM] = (cell.dUdt[1].momentum.z - blk.FU[cellCount+Z_MOM])/(sigma);
-            blk.zed[cellCount+TOT_ENERGY] = (cell.dUdt[1].total_energy - blk.FU[cellCount+TOT_ENERGY])/(sigma);
+                blk.zed[cellCount+Z_MOM] = (cell.dUdt[1].vec[cqi.zMom] - blk.FU[cellCount+Z_MOM])/(sigma);
+            blk.zed[cellCount+TOT_ENERGY] = (cell.dUdt[1].vec[cqi.totEnergy] - blk.FU[cellCount+TOT_ENERGY])/(sigma);
             foreach(it; 0 .. nturb){
-                blk.zed[cellCount+TKE+it] = (cell.dUdt[1].rhoturb[it] - blk.FU[cellCount+TKE+it])/(sigma);
+                blk.zed[cellCount+TKE+it] = (cell.dUdt[1].vec[cqi.rhoturb+it] - blk.FU[cellCount+TKE+it])/(sigma);
             }
             version(multi_species_gas){
             if ( nsp > 1 ) {
-                foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] = (cell.dUdt[1].massf[sp] - blk.FU[cellCount+SPECIES+sp])/(sigma); }
+                foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] = (cell.dUdt[1].vec[cqi.species+sp] - blk.FU[cellCount+SPECIES+sp])/(sigma); }
             }
             }
             cell.decode_conserved(0, 0, 0.0);
@@ -1282,9 +1292,9 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
         size_t Y_MOM = GlobalConfig.cqi.yMom;
         size_t Z_MOM = GlobalConfig.cqi.zMom;
         size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
-        size_t TKE = GlobalConfig.cqi.tke;
+        size_t TKE = GlobalConfig.cqi.rhoturb;
         size_t SPECIES = GlobalConfig.cqi.species;
-        
+
         // We perform a Frechet derivative to evaluate J*D^(-1)v
         foreach (blk; parallel(localFluidBlocks,1)) {
             blk.clear_fluxes_of_conserved_quantities();
@@ -1292,24 +1302,25 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
 
             size_t nturb = blk.myConfig.turb_model.nturb;
             size_t nsp = blk.myConfig.gmodel.n_species;
+            auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (cell; blk.cells) {
                 cell.U[1].copy_values_from(cell.U[0]);
-                cell.U[1].mass += complex(0.0, sigma*blk.zed[cellCount+MASS].re);
-                cell.U[1].momentum.refx += complex(0.0, sigma*blk.zed[cellCount+X_MOM].re);
-                cell.U[1].momentum.refy += complex(0.0, sigma*blk.zed[cellCount+Y_MOM].re);
+                cell.U[1].vec[cqi.mass] += complex(0.0, sigma*blk.zed[cellCount+MASS].re);
+                cell.U[1].vec[cqi.xMom] += complex(0.0, sigma*blk.zed[cellCount+X_MOM].re);
+                cell.U[1].vec[cqi.yMom] += complex(0.0, sigma*blk.zed[cellCount+Y_MOM].re);
                 if ( blk.myConfig.dimensions == 3 )
-                    cell.U[1].momentum.refz += complex(0.0, sigma*blk.zed[cellCount+Z_MOM].re);
-                cell.U[1].total_energy += complex(0.0, sigma*blk.zed[cellCount+TOT_ENERGY].re);
+                    cell.U[1].vec[cqi.zMom] += complex(0.0, sigma*blk.zed[cellCount+Z_MOM].re);
+                cell.U[1].vec[cqi.totEnergy] += complex(0.0, sigma*blk.zed[cellCount+TOT_ENERGY].re);
                 foreach(it; 0 .. nturb){
-                    cell.U[1].rhoturb[it] += complex(0.0, sigma*blk.zed[cellCount+TKE+it].re);
+                    cell.U[1].vec[cqi.rhoturb+it] += complex(0.0, sigma*blk.zed[cellCount+TKE+it].re);
                 }
                 version(multi_species_gas){
                 if ( nsp > 1 ) {
-                    foreach(sp; 0 .. nsp){ cell.U[1].massf[sp] += complex(0.0, sigma*blk.zed[cellCount+SPECIES+sp].re); }
+                    foreach(sp; 0 .. nsp){ cell.U[1].vec[cqi.species+sp] += complex(0.0, sigma*blk.zed[cellCount+SPECIES+sp].re); }
                 } else {
                     // enforce mass fraction of 1 for single species gas
-                    cell.U[1].massf[0] = cell.U[1].mass;
+                    cell.U[1].vec[cqi.species+0] = cell.U[1].vec[cqi.mass];
                 }
                 }
                 cell.decode_conserved(0, 1, 0.0);
@@ -1320,20 +1331,21 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
         foreach (blk; parallel(localFluidBlocks,1)) {
             size_t nturb = blk.myConfig.turb_model.nturb;
             size_t nsp = blk.myConfig.gmodel.n_species;
+            auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (cell; blk.cells) {
-                blk.zed[cellCount+MASS] = cell.dUdt[1].mass.im/(sigma);
-                blk.zed[cellCount+X_MOM] = cell.dUdt[1].momentum.x.im/(sigma);
-                blk.zed[cellCount+Y_MOM] = cell.dUdt[1].momentum.y.im/(sigma);
+                blk.zed[cellCount+MASS] = cell.dUdt[1].vec[cqi.mass].im/(sigma);
+                blk.zed[cellCount+X_MOM] = cell.dUdt[1].vec[cqi.xMom].im/(sigma);
+                blk.zed[cellCount+Y_MOM] = cell.dUdt[1].vec[cqi.yMom].im/(sigma);
                 if ( blk.myConfig.dimensions == 3 )
-                    blk.zed[cellCount+Z_MOM] = cell.dUdt[1].momentum.z.im/(sigma);
-                blk.zed[cellCount+TOT_ENERGY] = cell.dUdt[1].total_energy.im/(sigma);
+                    blk.zed[cellCount+Z_MOM] = cell.dUdt[1].vec[cqi.zMom].im/(sigma);
+                blk.zed[cellCount+TOT_ENERGY] = cell.dUdt[1].vec[cqi.totEnergy].im/(sigma);
                 foreach(it; 0 .. nturb){
-                    blk.zed[cellCount+TKE+it] = cell.dUdt[1].rhoturb[it].im/(sigma);
+                    blk.zed[cellCount+TKE+it] = cell.dUdt[1].vec[cqi.rhoturb+it].im/(sigma);
                 }
                 version(multi_species_gas){
                 if ( nsp > 1 ) {
-                    foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] = cell.dUdt[1].massf[sp].im/(sigma); }
+                    foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] = cell.dUdt[1].vec[cqi.species+sp].im/(sigma); }
                 }
                 }
                 cellCount += nConserved;
@@ -1400,24 +1412,25 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, ref double residual,
     size_t Y_MOM = GlobalConfig.cqi.yMom;
     size_t Z_MOM = GlobalConfig.cqi.zMom;
     size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
-    size_t TKE = GlobalConfig.cqi.tke;
-    
+    size_t TKE = GlobalConfig.cqi.rhoturb;
+
     // Evaluate RHS residual (R)
     evalRHS(pseudoSimTime, 0);
 
     // calculate global residual
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
+        auto cqi = blk.myConfig.cqi;
         int cellCount = 0;
         foreach (i, cell; blk.cells) {
-            blk.FU[cellCount+MASS] = cell.dUdt[0].mass;
-            blk.FU[cellCount+X_MOM] = cell.dUdt[0].momentum.x;
-            blk.FU[cellCount+Y_MOM] = cell.dUdt[0].momentum.y;
+            blk.FU[cellCount+MASS] = cell.dUdt[0].vec[cqi.mass];
+            blk.FU[cellCount+X_MOM] = cell.dUdt[0].vec[cqi.xMom];
+            blk.FU[cellCount+Y_MOM] = cell.dUdt[0].vec[cqi.yMom];
             if ( GlobalConfig.dimensions == 3 )
-                blk.FU[cellCount+Z_MOM] = cell.dUdt[0].momentum.z;
-            blk.FU[cellCount+TOT_ENERGY] = cell.dUdt[0].total_energy;
+                blk.FU[cellCount+Z_MOM] = cell.dUdt[0].vec[cqi.zMom];
+            blk.FU[cellCount+TOT_ENERGY] = cell.dUdt[0].vec[cqi.totEnergy];
             foreach(it; 0 .. nturb) {
-                blk.FU[cellCount+TKE+it] = cell.dUdt[0].rhoturb[it];
+                blk.FU[cellCount+TKE+it] = cell.dUdt[0].vec[cqi.rhoturb+it];
             }
             cellCount += nConserved;
         }
@@ -1427,7 +1440,7 @@ void lusgs_solve(int step, double pseudoSimTime, double dt, ref double residual,
         MPI_Allreduce(MPI_IN_PLACE, &(residual), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
     residual = sqrt(residual);
-    
+
     mixin(lusgs_solve("dU", "FU"));
 } // end lusgs_solve()
 
@@ -1453,7 +1466,7 @@ string lusgs_solve(string lhs_vec, string rhs_vec)
     }
 
     // 3. kmax subiterations
-    foreach (k; 0 .. kmax) {  
+    foreach (k; 0 .. kmax) {
          // shuffle dU values
          foreach (blk; parallel(localFluidBlocks,1)) {
              int cellCount = 0;
@@ -1465,7 +1478,7 @@ string lusgs_solve(string lhs_vec, string rhs_vec)
 
          // exchange boundary dU values
          exchange_ghost_cell_boundary_data(pseudoSimTime, 0, 0);
-            
+
          // perform subiteraion
          foreach (blk; parallel(localFluidBlocks,1)) {
              int cellCount = 0;
@@ -1491,18 +1504,18 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     size_t Y_MOM = GlobalConfig.cqi.yMom;
     size_t Z_MOM = GlobalConfig.cqi.zMom;
     size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
-    size_t TKE = GlobalConfig.cqi.tke;
+    size_t TKE = GlobalConfig.cqi.rhoturb;
     size_t SPECIES = GlobalConfig.cqi.species;
 
     number resid;
-    
+
     int interpOrderSave = GlobalConfig.interpolation_order;
     // Presently, just do one block
     int maxIters = GlobalConfig.sssOptions.maxOuterIterations;
     // We add 1 because the user thinks of "re"starts, so they
     // might legitimately ask for no restarts. We still have
     // to execute at least once.
-    int maxRestarts = GlobalConfig.sssOptions.maxRestarts + 1; 
+    int maxRestarts = GlobalConfig.sssOptions.maxRestarts + 1;
     size_t m = to!size_t(maxIters);
     size_t r;
     size_t iterCount;
@@ -1511,7 +1524,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     // Use these for equation scaling.
     double minNonDimVal = 1.0; // minimum value used for non-dimensionalisation
                                // when our time rates of change are very small
-                               // then we'll avoid non-dimensionalising by 
+                               // then we'll avoid non-dimensionalising by
                                // values close to zero.
 
     // 1. Evaluate r0, beta, v1
@@ -1521,59 +1534,60 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
         size_t nsp = blk.myConfig.gmodel.n_species;
+        auto cqi = blk.myConfig.cqi;
         int cellCount = 0;
-        blk.maxRate.mass = 0.0;
-        blk.maxRate.momentum.refx = 0.0;
-        blk.maxRate.momentum.refy = 0.0;
+        blk.maxRate.vec[cqi.mass] = 0.0;
+        blk.maxRate.vec[cqi.xMom] = 0.0;
+        blk.maxRate.vec[cqi.yMom] = 0.0;
         if ( blk.myConfig.dimensions == 3 )
-            blk.maxRate.momentum.refz = 0.0;
-        blk.maxRate.total_energy = 0.0;
+            blk.maxRate.vec[cqi.zMom] = 0.0;
+        blk.maxRate.vec[cqi.totEnergy] = 0.0;
         foreach(it; 0 .. nturb){
-            blk.maxRate.rhoturb[it] = 0.0;
+            blk.maxRate.vec[cqi.rhoturb+it] = 0.0;
         }
         version(multi_species_gas){
         if ( nsp > 1 ) {
-            foreach(sp; 0 .. nsp){ blk.maxRate.massf[sp] = 0.0; }
+            foreach(sp; 0 .. nsp){ blk.maxRate.vec[cqi.species+sp] = 0.0; }
         }
         }
         foreach (i, cell; blk.cells) {
-            blk.FU[cellCount+MASS] = cell.dUdt[0].mass;
-            blk.FU[cellCount+X_MOM] = cell.dUdt[0].momentum.x;
-            blk.FU[cellCount+Y_MOM] = cell.dUdt[0].momentum.y;
+            blk.FU[cellCount+MASS] = cell.dUdt[0].vec[cqi.mass];
+            blk.FU[cellCount+X_MOM] = cell.dUdt[0].vec[cqi.xMom];
+            blk.FU[cellCount+Y_MOM] = cell.dUdt[0].vec[cqi.yMom];
             if ( blk.myConfig.dimensions == 3 )
-                blk.FU[cellCount+Z_MOM] = cell.dUdt[0].momentum.z;
-            blk.FU[cellCount+TOT_ENERGY] = cell.dUdt[0].total_energy;
+                blk.FU[cellCount+Z_MOM] = cell.dUdt[0].vec[cqi.zMom];
+            blk.FU[cellCount+TOT_ENERGY] = cell.dUdt[0].vec[cqi.totEnergy];
             foreach(it; 0 .. nturb){
-                blk.FU[cellCount+TKE+it] = cell.dUdt[0].rhoturb[it];
+                blk.FU[cellCount+TKE+it] = cell.dUdt[0].vec[cqi.rhoturb+it];
             }
             version(multi_species_gas){
             if ( nsp > 1 ) {
-                foreach(sp; 0 .. nsp){ blk.FU[cellCount+SPECIES+sp] = cell.dUdt[0].massf[sp]; }
+                foreach(sp; 0 .. nsp){ blk.FU[cellCount+SPECIES+sp] = cell.dUdt[0].vec[cqi.species+sp]; }
             }
             }
             cellCount += nConserved;
             /*
             if (blk.id == 0) {
-                writefln("i= %d, dUdt.mass= %e", i, cell.dUdt[0].mass.re);
+                writefln("i= %d, dUdt.mass= %e", i, cell.dUdt[0].vec[cqi.mass].re);
             }
             */
-            blk.maxRate.mass = fmax(blk.maxRate.mass, fabs(cell.dUdt[0].mass));
+            blk.maxRate.vec[cqi.mass] = fmax(blk.maxRate.vec[cqi.mass], fabs(cell.dUdt[0].vec[cqi.mass]));
             /*
             if (blk.id == 0) {
-                writefln("i= %d, maxRate.mass= %e", i, blk.maxRate.mass.re);
+                writefln("i= %d, maxRate.vec[cqi.mass]= %e", i, blk.maxRate.vec[cqi.mass].re);
             }
             */
-            blk.maxRate.momentum.refx = fmax(blk.maxRate.momentum.x, fabs(cell.dUdt[0].momentum.x));
-            blk.maxRate.momentum.refy = fmax(blk.maxRate.momentum.y, fabs(cell.dUdt[0].momentum.y));
+            blk.maxRate.vec[cqi.xMom] = fmax(blk.maxRate.vec[cqi.xMom], fabs(cell.dUdt[0].vec[cqi.xMom]));
+            blk.maxRate.vec[cqi.yMom] = fmax(blk.maxRate.vec[cqi.yMom], fabs(cell.dUdt[0].vec[cqi.yMom]));
             if ( blk.myConfig.dimensions == 3 )
-                blk.maxRate.momentum.refz = fmax(blk.maxRate.momentum.z, fabs(cell.dUdt[0].momentum.z));
-            blk.maxRate.total_energy = fmax(blk.maxRate.total_energy, fabs(cell.dUdt[0].total_energy));
+                blk.maxRate.vec[cqi.zMom] = fmax(blk.maxRate.vec[cqi.zMom], fabs(cell.dUdt[0].vec[cqi.zMom]));
+            blk.maxRate.vec[cqi.totEnergy] = fmax(blk.maxRate.vec[cqi.totEnergy], fabs(cell.dUdt[0].vec[cqi.totEnergy]));
             foreach(it; 0 .. nturb){
-                blk.maxRate.rhoturb[it] = fmax(blk.maxRate.rhoturb[it], fabs(cell.dUdt[0].rhoturb[it]));
+                blk.maxRate.vec[cqi.rhoturb+it] = fmax(blk.maxRate.vec[cqi.rhoturb+it], fabs(cell.dUdt[0].vec[cqi.rhoturb+it]));
             }
             version(multi_species_gas){
             if ( nsp > 1 ) {
-                foreach(sp; 0 .. nsp){ blk.maxRate.massf[sp] = fmax(blk.maxRate.massf[sp], fabs(cell.dUdt[0].massf[sp])); }
+                foreach(sp; 0 .. nsp){ blk.maxRate.vec[cqi.species+sp] = fmax(blk.maxRate.vec[cqi.species+sp], fabs(cell.dUdt[0].vec[cqi.species+sp])); }
             }
             }
         }
@@ -1590,19 +1604,20 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     foreach (sp; 0 .. maxSpecies.length) { maxSpecies[sp] = 0.0; }
 
     foreach (blk; localFluidBlocks) {
-        maxMass = fmax(maxMass, blk.maxRate.mass);
-        maxMomX = fmax(maxMomX, blk.maxRate.momentum.x);
-        maxMomY = fmax(maxMomY, blk.maxRate.momentum.y);
+        auto cqi = blk.myConfig.cqi;
+        maxMass = fmax(maxMass, blk.maxRate.vec[cqi.mass]);
+        maxMomX = fmax(maxMomX, blk.maxRate.vec[cqi.xMom]);
+        maxMomY = fmax(maxMomY, blk.maxRate.vec[cqi.yMom]);
         if ( blk.myConfig.dimensions == 3 )
-            maxMomZ = fmax(maxMomZ, blk.maxRate.momentum.z);
-        maxEnergy = fmax(maxEnergy, blk.maxRate.total_energy);
+            maxMomZ = fmax(maxMomZ, blk.maxRate.vec[cqi.zMom]);
+        maxEnergy = fmax(maxEnergy, blk.maxRate.vec[cqi.totEnergy]);
         foreach(it; 0 .. blk.myConfig.turb_model.nturb){
-            maxTurb[it] = fmax(maxTurb[it], blk.maxRate.rhoturb[it]);
+            maxTurb[it] = fmax(maxTurb[it], blk.maxRate.vec[cqi.rhoturb+it]);
         }
         version(multi_species_gas){
         if ( blk.myConfig.gmodel.n_species > 1 ) {
             foreach(sp; 0 .. blk.myConfig.gmodel.n_species){
-                maxSpecies[sp] = fmax(maxSpecies[sp], blk.maxRate.massf[sp]);
+                maxSpecies[sp] = fmax(maxSpecies[sp], blk.maxRate.vec[cqi.species+sp]);
             }
         }
         }
@@ -1640,38 +1655,39 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
     // Get a copy of the maxes out to each block
     foreach (blk; parallel(localFluidBlocks,1)) {
+        auto cqi = blk.myConfig.cqi;
         if (blk.myConfig.sssOptions.useScaling) {
-            blk.maxRate.mass = maxMass;
-            blk.maxRate.momentum.refx = maxMomX;
-            blk.maxRate.momentum.refy = maxMomY;
+            blk.maxRate.vec[cqi.mass] = maxMass;
+            blk.maxRate.vec[cqi.xMom] = maxMomX;
+            blk.maxRate.vec[cqi.yMom] = maxMomY;
             if ( blk.myConfig.dimensions == 3 )
-                blk.maxRate.momentum.refz = maxMomZ;
-            blk.maxRate.total_energy = maxEnergy;
+                blk.maxRate.vec[cqi.zMom] = maxMomZ;
+            blk.maxRate.vec[cqi.totEnergy] = maxEnergy;
             foreach(it; 0 .. blk.myConfig.turb_model.nturb){
-                blk.maxRate.rhoturb[it] = maxTurb[it];
+                blk.maxRate.vec[cqi.rhoturb+it] = maxTurb[it];
             }
             version(multi_species_gas){
             if ( blk.myConfig.gmodel.n_species > 1 ) {
                 foreach(sp; 0 .. blk.myConfig.gmodel.n_species){
-                    blk.maxRate.massf[sp] = maxSpecies[sp];
+                    blk.maxRate.vec[cqi.species+sp] = maxSpecies[sp];
                 }
             }
             }
         }
         else { // just scale by 1
-            blk.maxRate.mass = 1.0;
-            blk.maxRate.momentum.refx = 1.0;
-            blk.maxRate.momentum.refy = 1.0;
+            blk.maxRate.vec[cqi.mass] = 1.0;
+            blk.maxRate.vec[cqi.xMom] = 1.0;
+            blk.maxRate.vec[cqi.yMom] = 1.0;
             if ( blk.myConfig.dimensions == 3 )
-                blk.maxRate.momentum.refz = 1.0;
-            blk.maxRate.total_energy = 1.0;
+                blk.maxRate.vec[cqi.zMom] = 1.0;
+            blk.maxRate.vec[cqi.totEnergy] = 1.0;
             foreach(it; 0 .. blk.myConfig.turb_model.nturb){
-                blk.maxRate.rhoturb[it] = 1.0; 
+                blk.maxRate.vec[cqi.rhoturb+it] = 1.0;
             }
             version(multi_species_gas){
             if ( blk.myConfig.gmodel.n_species ) {
                 foreach(sp; 0 .. blk.myConfig.gmodel.n_species){
-                    blk.maxRate.massf[sp] = 1.0; 
+                    blk.maxRate.vec[cqi.species+sp] = 1.0;
                 }
             }
             }
@@ -1691,7 +1707,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             cellCount += nConserved;
         }
     }
-    
+
     double unscaledNorm2;
     mixin(dot_over_blocks("unscaledNorm2", "FU", "FU"));
     version(mpi_parallel) {
@@ -1726,22 +1742,23 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
         size_t nsp = blk.myConfig.gmodel.n_species;
+        auto cqi = blk.myConfig.cqi;
         blk.x0[] = to!number(0.0);
         int cellCount = 0;
         foreach (cell; blk.cells) {
-            blk.r0[cellCount+MASS] = (1./blk.maxRate.mass)*blk.FU[cellCount+MASS];
-            blk.r0[cellCount+X_MOM] = (1./blk.maxRate.momentum.x)*blk.FU[cellCount+X_MOM];
-            blk.r0[cellCount+Y_MOM] = (1./blk.maxRate.momentum.y)*blk.FU[cellCount+Y_MOM];
+            blk.r0[cellCount+MASS] = (1./blk.maxRate.vec[cqi.mass])*blk.FU[cellCount+MASS];
+            blk.r0[cellCount+X_MOM] = (1./blk.maxRate.vec[cqi.xMom])*blk.FU[cellCount+X_MOM];
+            blk.r0[cellCount+Y_MOM] = (1./blk.maxRate.vec[cqi.yMom])*blk.FU[cellCount+Y_MOM];
             if ( blk.myConfig.dimensions == 3 )
-                blk.r0[cellCount+Z_MOM] = (1./blk.maxRate.momentum.z)*blk.FU[cellCount+Z_MOM];
-            blk.r0[cellCount+TOT_ENERGY] = (1./blk.maxRate.total_energy)*blk.FU[cellCount+TOT_ENERGY];
+                blk.r0[cellCount+Z_MOM] = (1./blk.maxRate.vec[cqi.zMom])*blk.FU[cellCount+Z_MOM];
+            blk.r0[cellCount+TOT_ENERGY] = (1./blk.maxRate.vec[cqi.totEnergy])*blk.FU[cellCount+TOT_ENERGY];
             foreach(it; 0 .. nturb){
-                blk.r0[cellCount+TKE+it] = (1./blk.maxRate.rhoturb[it])*blk.FU[cellCount+TKE+it];
+                blk.r0[cellCount+TKE+it] = (1./blk.maxRate.vec[cqi.rhoturb+it])*blk.FU[cellCount+TKE+it];
             }
             version(multi_species_gas){
             if ( nsp > 1 ) {
                 foreach(sp; 0 .. nsp){
-                    blk.r0[cellCount+SPECIES+sp] = (1./blk.maxRate.massf[sp])*blk.FU[cellCount+SPECIES+sp];
+                    blk.r0[cellCount+SPECIES+sp] = (1./blk.maxRate.vec[cqi.species+sp])*blk.FU[cellCount+SPECIES+sp];
                 }
             }
             }
@@ -1778,26 +1795,27 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             foreach (blk; parallel(localFluidBlocks,1)) {
                 size_t nturb = blk.myConfig.turb_model.nturb;
                 size_t nsp = blk.myConfig.gmodel.n_species;
+                auto cqi = blk.myConfig.cqi;
                 int cellCount = 0;
                 foreach (cell; blk.cells) {
-                    blk.v[cellCount+MASS] *= (blk.maxRate.mass);
-                    blk.v[cellCount+X_MOM] *= (blk.maxRate.momentum.x);
-                    blk.v[cellCount+Y_MOM] *= (blk.maxRate.momentum.y);
+                    blk.v[cellCount+MASS] *= (blk.maxRate.vec[cqi.mass]);
+                    blk.v[cellCount+X_MOM] *= (blk.maxRate.vec[cqi.xMom]);
+                    blk.v[cellCount+Y_MOM] *= (blk.maxRate.vec[cqi.yMom]);
                     if ( blk.myConfig.dimensions == 3 )
-                        blk.v[cellCount+Z_MOM] *= (blk.maxRate.momentum.z);
-                    blk.v[cellCount+TOT_ENERGY] *= (blk.maxRate.total_energy);
+                        blk.v[cellCount+Z_MOM] *= (blk.maxRate.vec[cqi.zMom]);
+                    blk.v[cellCount+TOT_ENERGY] *= (blk.maxRate.vec[cqi.totEnergy]);
                     foreach(it; 0 .. nturb){
-                        blk.v[cellCount+TKE+it] *= (blk.maxRate.rhoturb[it]);
+                        blk.v[cellCount+TKE+it] *= (blk.maxRate.vec[cqi.rhoturb+it]);
                     }
                     version(multi_species_gas){
                     if ( nsp > 1 ) {
-                        foreach(sp; 0 .. nsp){ blk.v[cellCount+SPECIES+sp] *= (blk.maxRate.massf[sp]); }
+                        foreach(sp; 0 .. nsp){ blk.v[cellCount+SPECIES+sp] *= (blk.maxRate.vec[cqi.species+sp]); }
                     }
                     }
                     cellCount += nConserved;
                 }
             }
-            
+
             // apply preconditioning
             if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
                 final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
@@ -1805,7 +1823,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                         foreach (blk; parallel(localFluidBlocks,1)) {
                             int n = blk.myConfig.sssOptions.frozenPreconditionerCount; //GlobalConfig.sssOptions.frozenPreconditionerCount;
                             // We compute the precondition matrix on the very first step after the start up steps
-                            // We then only update the precondition matrix once per GMRES call on every nth flow solver step. 
+                            // We then only update the precondition matrix once per GMRES call on every nth flow solver step.
                             if (r == 0 && j == 0 && (step == blk.myConfig.sssOptions.startPreconditioning ||
                                                      step%n == 0 ||
                                                      step == startStep ||
@@ -1814,7 +1832,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                             int cellCount = 0;
                             number[] tmp;
                             tmp.length = nConserved;
-                            foreach (cell; blk.cells) { 
+                            foreach (cell; blk.cells) {
                                 nm.bbla.dot(cell.dConservative, blk.v[cellCount..cellCount+nConserved], tmp);
                                 blk.zed[cellCount..cellCount+nConserved] = tmp[];
                                 cellCount += nConserved;
@@ -1825,7 +1843,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                             foreach (blk; parallel(localFluidBlocks,1)) {
                                 int n = blk.myConfig.sssOptions.frozenPreconditionerCount; //GlobalConfig.sssOptions.frozenPreconditionerCount;
                                 // We compute the precondition matrix on the very first step after the start up steps
-                                // We then only update the precondition matrix once per GMRES call on every nth flow solver step. 
+                                // We then only update the precondition matrix once per GMRES call on every nth flow solver step.
                                 if (r == 0 && j == 0 && (step == blk.myConfig.sssOptions.startPreconditioning ||
                                                          step%n == 0 ||
                                                          step == startStep ||
@@ -1843,13 +1861,13 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                             break;
                 } // end switch
             }
-       
+
             else {
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     blk.zed[] = blk.v[];
                 }
             }
-            
+
             // Prepare 'w' with (I/dt)(P^-1)v term;
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (i, cell; blk.cells) {
@@ -1863,7 +1881,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 }
             }
 
-            
+
             // Evaluate Jz and place in z
             evalJacobianVecProd(pseudoSimTime, sigma);
 
@@ -1871,38 +1889,39 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (k; 0 .. blk.nvars)  blk.w[k] = blk.w[k] - blk.zed[k];
             }
-            
+
             // apply scaling
             foreach (blk; parallel(localFluidBlocks,1)) {
                 size_t nturb = blk.myConfig.turb_model.nturb;
                 size_t nsp = blk.myConfig.gmodel.n_species;
+                auto cqi = blk.myConfig.cqi;
                 int cellCount = 0;
                 foreach (cell; blk.cells) {
-                    blk.w[cellCount+MASS] *= (1./blk.maxRate.mass);
-                    blk.w[cellCount+X_MOM] *= (1./blk.maxRate.momentum.x);
-                    blk.w[cellCount+Y_MOM] *= (1./blk.maxRate.momentum.y);
+                    blk.w[cellCount+MASS] *= (1./blk.maxRate.vec[cqi.mass]);
+                    blk.w[cellCount+X_MOM] *= (1./blk.maxRate.vec[cqi.xMom]);
+                    blk.w[cellCount+Y_MOM] *= (1./blk.maxRate.vec[cqi.yMom]);
                     if ( blk.myConfig.dimensions == 3 )
-                        blk.w[cellCount+Z_MOM] *= (1./blk.maxRate.momentum.z);
-                    blk.w[cellCount+TOT_ENERGY] *= (1./blk.maxRate.total_energy);
+                        blk.w[cellCount+Z_MOM] *= (1./blk.maxRate.vec[cqi.zMom]);
+                    blk.w[cellCount+TOT_ENERGY] *= (1./blk.maxRate.vec[cqi.totEnergy]);
                     foreach(it; 0 .. nturb){
-                        blk.w[cellCount+TKE+it] *= (1./blk.maxRate.rhoturb[it]);
+                        blk.w[cellCount+TKE+it] *= (1./blk.maxRate.vec[cqi.rhoturb+it]);
                     }
                     version(multi_species_gas){
                     if ( nsp > 1 ) {
-                        foreach(sp; 0 .. nsp){ blk.w[cellCount+SPECIES+sp] *= (1./blk.maxRate.massf[sp]); }
+                        foreach(sp; 0 .. nsp){ blk.w[cellCount+SPECIES+sp] *= (1./blk.maxRate.vec[cqi.species+sp]); }
                     }
                     }
                     cellCount += nConserved;
                 }
             }
-            
-                
+
+
             // The remainder of the algorithm looks a lot like any standard
             // GMRES implementation (for example, see smla.d)
             foreach (i; 0 .. j+1) {
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     // Extract column 'i'
-                    foreach (k; 0 .. blk.nvars ) blk.v[k] = blk.V[k,i]; 
+                    foreach (k; 0 .. blk.nvars ) blk.v[k] = blk.V[k,i];
                 }
                 number H0_ij;
                 mixin(dot_over_blocks("H0_ij", "w", "v"));
@@ -1912,7 +1931,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 }
                 H0[i,j] = H0_ij;
                 foreach (blk; parallel(localFluidBlocks,1)) {
-                    foreach (k; 0 .. blk.nvars) blk.w[k] -= H0_ij*blk.v[k]; 
+                    foreach (k; 0 .. blk.nvars) blk.w[k] -= H0_ij*blk.v[k];
                 }
             }
             number H0_jp1j;
@@ -1923,7 +1942,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             }
             H0_jp1j = sqrt(H0_jp1j);
             H0[j+1,j] = H0_jp1j;
-        
+
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (k; 0 .. blk.nvars) {
                     blk.v[k] = blk.w[k]/H0_jp1j;
@@ -1943,7 +1962,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             // Now form new Gamma
             Gamma.eye();
             auto denom = sqrt(H0[j,j]*H0[j,j] + H0[j+1,j]*H0[j+1,j]);
-            auto s_j = H0[j+1,j]/denom; 
+            auto s_j = H0[j+1,j]/denom;
             auto c_j = H0[j,j]/denom;
             Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
             Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
@@ -1992,20 +2011,21 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         foreach (blk; parallel(localFluidBlocks,1)) {
             size_t nturb = blk.myConfig.turb_model.nturb;
             size_t nsp = blk.myConfig.gmodel.n_species;
+            auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (cell; blk.cells) {
-                blk.zed[cellCount+MASS] *= (blk.maxRate.mass);
-                blk.zed[cellCount+X_MOM] *= (blk.maxRate.momentum.x);
-                blk.zed[cellCount+Y_MOM] *= (blk.maxRate.momentum.y);
+                blk.zed[cellCount+MASS] *= (blk.maxRate.vec[cqi.mass]);
+                blk.zed[cellCount+X_MOM] *= (blk.maxRate.vec[cqi.xMom]);
+                blk.zed[cellCount+Y_MOM] *= (blk.maxRate.vec[cqi.yMom]);
                 if ( blk.myConfig.dimensions == 3 )
-                    blk.zed[cellCount+Z_MOM] *= (blk.maxRate.momentum.z);
-                blk.zed[cellCount+TOT_ENERGY] *= (blk.maxRate.total_energy);
+                    blk.zed[cellCount+Z_MOM] *= (blk.maxRate.vec[cqi.zMom]);
+                blk.zed[cellCount+TOT_ENERGY] *= (blk.maxRate.vec[cqi.totEnergy]);
                 foreach(it; 0 .. nturb){
-                    blk.zed[cellCount+TKE+it] *= (blk.maxRate.rhoturb[it]);
+                    blk.zed[cellCount+TKE+it] *= (blk.maxRate.vec[cqi.rhoturb+it]);
                 }
                 version(multi_species_gas){
                 if ( nsp > 1 ) {
-                    foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] *= (blk.maxRate.massf[sp]); }
+                    foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] *= (blk.maxRate.vec[cqi.species+sp]); }
                 }
                 }
                 cellCount += nConserved;
@@ -2038,14 +2058,14 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     break;
             } // end switch
         }
-    
+
         else {
             foreach(blk; parallel(localFluidBlocks,1)) {
                 blk.dU[] = blk.zed[];
             }
         }
 
-        
+
         foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (k; 0 .. blk.nvars) blk.dU[k] += blk.x0[k];
         }
@@ -2078,20 +2098,21 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         foreach (blk; parallel(localFluidBlocks,1)) {
             size_t nturb = blk.myConfig.turb_model.nturb;
             size_t nsp = blk.myConfig.gmodel.n_species;
+            auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (cell; blk.cells) {
-                blk.r0[cellCount+MASS] *= (1.0/blk.maxRate.mass);
-                blk.r0[cellCount+X_MOM] *= (1.0/blk.maxRate.momentum.x);
-                blk.r0[cellCount+Y_MOM] *= (1.0/blk.maxRate.momentum.y);
+                blk.r0[cellCount+MASS] *= (1.0/blk.maxRate.vec[cqi.mass]);
+                blk.r0[cellCount+X_MOM] *= (1.0/blk.maxRate.vec[cqi.xMom]);
+                blk.r0[cellCount+Y_MOM] *= (1.0/blk.maxRate.vec[cqi.yMom]);
                 if ( blk.myConfig.dimensions == 3 )
-                    blk.r0[cellCount+Z_MOM] *= (1.0/blk.maxRate.momentum.z);
-                blk.r0[cellCount+TOT_ENERGY] *= (1.0/blk.maxRate.total_energy);
+                    blk.r0[cellCount+Z_MOM] *= (1.0/blk.maxRate.vec[cqi.zMom]);
+                blk.r0[cellCount+TOT_ENERGY] *= (1.0/blk.maxRate.vec[cqi.totEnergy]);
                 foreach(it; 0 .. nturb){
-                    blk.r0[cellCount+TKE+it] *= (1.0/blk.maxRate.rhoturb[it]);
+                    blk.r0[cellCount+TKE+it] *= (1.0/blk.maxRate.vec[cqi.rhoturb+it]);
                 }
                 version(multi_species_gas){
                 if ( nsp > 1 ) {
-                    foreach(sp; 0 .. nsp){ blk.r0[cellCount+SPECIES+sp] *= (1.0/blk.maxRate.massf[sp]); }
+                    foreach(sp; 0 .. nsp){ blk.r0[cellCount+SPECIES+sp] *= (1.0/blk.maxRate.vec[cqi.species+sp]); }
                 }
                 }
                 cellCount += nConserved;
@@ -2134,69 +2155,71 @@ void max_residuals(ConservedQuantities residuals)
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
         size_t nsp = blk.myConfig.gmodel.n_species;
+        auto cqi = blk.myConfig.cqi;
         blk.residuals.copy_values_from(blk.cells[0].dUdt[0]);
-        blk.residuals.mass = fabs(blk.residuals.mass);
-        blk.residuals.momentum.refx = fabs(blk.residuals.momentum.x);
-        blk.residuals.momentum.refy = fabs(blk.residuals.momentum.y);
+        blk.residuals.vec[cqi.mass] = fabs(blk.residuals.vec[cqi.mass]);
+        blk.residuals.vec[cqi.xMom] = fabs(blk.residuals.vec[cqi.xMom]);
+        blk.residuals.vec[cqi.yMom] = fabs(blk.residuals.vec[cqi.yMom]);
         if ( blk.myConfig.dimensions == 3 )
-            blk.residuals.momentum.refz = fabs(blk.residuals.momentum.z);
-        blk.residuals.total_energy = fabs(blk.residuals.total_energy);
+            blk.residuals.vec[cqi.zMom] = fabs(blk.residuals.vec[cqi.zMom]);
+        blk.residuals.vec[cqi.totEnergy] = fabs(blk.residuals.vec[cqi.totEnergy]);
         foreach(it; 0 .. nturb){
-            blk.residuals.rhoturb[it] = fabs(blk.residuals.rhoturb[it]);
+            blk.residuals.vec[cqi.rhoturb+it] = fabs(blk.residuals.vec[cqi.rhoturb+it]);
         }
         version(multi_species_gas){
         if ( nsp > 1 ) {
-            foreach(sp; 0 .. nsp){ blk.residuals.massf[sp] = fabs(blk.residuals.massf[sp]); }
+            foreach(sp; 0 .. nsp){ blk.residuals.vec[cqi.species+sp] = fabs(blk.residuals.vec[cqi.species+sp]); }
         }
         }
         number massLocal, xMomLocal, yMomLocal, zMomLocal, energyLocal;
         number[2] turbLocal;
         // we currently expect no more than 32 species
         number[32] speciesLocal;
-        
+
         foreach (cell; blk.cells) {
-            massLocal = cell.dUdt[0].mass;
-            xMomLocal = cell.dUdt[0].momentum.x;
-            yMomLocal = cell.dUdt[0].momentum.y;
-            zMomLocal = cell.dUdt[0].momentum.z;
-            energyLocal = cell.dUdt[0].total_energy;
+            massLocal = cell.dUdt[0].vec[cqi.mass];
+            xMomLocal = cell.dUdt[0].vec[cqi.xMom];
+            yMomLocal = cell.dUdt[0].vec[cqi.yMom];
+            zMomLocal = cell.dUdt[0].vec[cqi.zMom];
+            energyLocal = cell.dUdt[0].vec[cqi.totEnergy];
             foreach(it; 0 .. nturb){
-                turbLocal[it] = cell.dUdt[0].rhoturb[it];
+                turbLocal[it] = cell.dUdt[0].vec[cqi.rhoturb+it];
             }
             version(multi_species_gas){
-            foreach(sp; 0 .. nsp){ speciesLocal[sp] = cell.dUdt[0].massf[sp]; }
+            foreach(sp; 0 .. nsp){ speciesLocal[sp] = cell.dUdt[0].vec[cqi.species+sp]; }
             }
-            blk.residuals.mass = fmax(blk.residuals.mass, massLocal);
-            blk.residuals.momentum.refx = fmax(blk.residuals.momentum.x, xMomLocal);
-            blk.residuals.momentum.refy = fmax(blk.residuals.momentum.y, yMomLocal);
+            blk.residuals.vec[cqi.mass] = fmax(blk.residuals.vec[cqi.mass], massLocal);
+            blk.residuals.vec[cqi.xMom] = fmax(blk.residuals.vec[cqi.xMom], xMomLocal);
+            blk.residuals.vec[cqi.yMom] = fmax(blk.residuals.vec[cqi.yMom], yMomLocal);
             if ( blk.myConfig.dimensions == 3 )
-                blk.residuals.momentum.refz = fmax(blk.residuals.momentum.z, zMomLocal);
-            blk.residuals.total_energy = fmax(blk.residuals.total_energy, energyLocal);
+                blk.residuals.vec[cqi.zMom] = fmax(blk.residuals.vec[cqi.zMom], zMomLocal);
+            blk.residuals.vec[cqi.totEnergy] = fmax(blk.residuals.vec[cqi.totEnergy], energyLocal);
             foreach(it; 0 .. nturb){
-                blk.residuals.rhoturb[it] = fmax(blk.residuals.rhoturb[it], turbLocal[it]);
+                blk.residuals.vec[cqi.rhoturb+it] = fmax(blk.residuals.vec[cqi.rhoturb+it], turbLocal[it]);
             }
             version(multi_species_gas){
             if ( nsp > 1 ) {
-                foreach(sp; 0 .. nsp){ blk.residuals.massf[sp] = fmax(blk.residuals.massf[sp], speciesLocal[sp]); }
+                foreach(sp; 0 .. nsp){ blk.residuals.vec[cqi.species+sp] = fmax(blk.residuals.vec[cqi.species+sp], speciesLocal[sp]); }
             }
             }
         }
     }
     residuals.copy_values_from(localFluidBlocks[0].residuals);
     foreach (blk; localFluidBlocks) {
-        residuals.mass = fmax(residuals.mass, blk.residuals.mass);
-        residuals.momentum.refx = fmax(residuals.momentum.x, blk.residuals.momentum.x);
-        residuals.momentum.refy = fmax(residuals.momentum.y, blk.residuals.momentum.y);
+        auto cqi = blk.myConfig.cqi;
+        residuals.vec[cqi.mass] = fmax(residuals.vec[cqi.mass], blk.residuals.vec[cqi.mass]);
+        residuals.vec[cqi.xMom] = fmax(residuals.vec[cqi.xMom], blk.residuals.vec[cqi.xMom]);
+        residuals.vec[cqi.yMom] = fmax(residuals.vec[cqi.yMom], blk.residuals.vec[cqi.yMom]);
         if ( blk.myConfig.dimensions == 3 )
-            residuals.momentum.refz = fmax(residuals.momentum.z, blk.residuals.momentum.z);
-        residuals.total_energy = fmax(residuals.total_energy, blk.residuals.total_energy);
+            residuals.vec[cqi.zMom] = fmax(residuals.vec[cqi.zMom], blk.residuals.vec[cqi.zMom]);
+        residuals.vec[cqi.totEnergy] = fmax(residuals.vec[cqi.totEnergy], blk.residuals.vec[cqi.totEnergy]);
         foreach(it; 0 .. blk.myConfig.turb_model.nturb){
-            residuals.rhoturb[it] = fmax(residuals.rhoturb[it], blk.residuals.rhoturb[it]);
+            residuals.vec[cqi.rhoturb+it] = fmax(residuals.vec[cqi.rhoturb+it], blk.residuals.vec[cqi.rhoturb+it]);
         }
         version(multi_species_gas){
         if ( blk.myConfig.gmodel.n_species > 1 ) {
             foreach(sp; 0 .. blk.myConfig.gmodel.n_species ){
-                residuals.massf[sp] = fmax(residuals.massf[sp], blk.residuals.massf[sp]);
+                residuals.vec[cqi.species+sp] = fmax(residuals.vec[cqi.species+sp], blk.residuals.vec[cqi.species+sp]);
             }
         }
         }
@@ -2204,28 +2227,29 @@ void max_residuals(ConservedQuantities residuals)
     version(mpi_parallel) {
         // In MPI context, only the master task (rank 0) has collated the residuals
         double maxResid;
-        MPI_Reduce(&(residuals.mass.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-        if (GlobalConfig.is_master_task) { residuals.mass.re = maxResid; }
-        MPI_Reduce(&(residuals.momentum.refx.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-        if (GlobalConfig.is_master_task) { residuals.momentum.refx = to!number(maxResid); }
-        MPI_Reduce(&(residuals.momentum.refy.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-        if (GlobalConfig.is_master_task) { residuals.momentum.refy = to!number(maxResid); }
+        auto cqi = GlobalConfig.cqi;
+        MPI_Reduce(&(residuals.vec[cqi.mass].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        if (GlobalConfig.is_master_task) { residuals.vec[cqi.mass].re = maxResid; }
+        MPI_Reduce(&(residuals.vec[cqi.xMom].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        if (GlobalConfig.is_master_task) { residuals.vec[cqi.xMom] = to!number(maxResid); }
+        MPI_Reduce(&(residuals.vec[cqi.yMom].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        if (GlobalConfig.is_master_task) { residuals.vec[cqi.yMom] = to!number(maxResid); }
         if (GlobalConfig.dimensions == 3) {
-            MPI_Reduce(&(residuals.momentum.refz.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-            if (GlobalConfig.is_master_task) { residuals.momentum.refz = to!number(maxResid); }
+            MPI_Reduce(&(residuals.vec[cqi.zMom].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+            if (GlobalConfig.is_master_task) { residuals.vec[cqi.zMom] = to!number(maxResid); }
         }
-        MPI_Reduce(&(residuals.total_energy.re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-        if (GlobalConfig.is_master_task) { residuals.total_energy.re = maxResid; }
+        MPI_Reduce(&(residuals.vec[cqi.totEnergy].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        if (GlobalConfig.is_master_task) { residuals.vec[cqi.totEnergy].re = maxResid; }
         foreach (it; 0 .. GlobalConfig.turb_model.nturb) {
-            MPI_Reduce(&(residuals.rhoturb[it].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-            if (GlobalConfig.is_master_task) { residuals.rhoturb[it].re = maxResid; }
+            MPI_Reduce(&(residuals.vec[cqi.rhoturb+it].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+            if (GlobalConfig.is_master_task) { residuals.vec[cqi.rhoturb+it].re = maxResid; }
         }
         version(multi_species_gas){
         if ( GlobalConfig.gmodel_master.n_species > 1 ) {
             foreach (sp; 0 .. GlobalConfig.gmodel_master.n_species) {
-                MPI_Reduce(&(residuals.massf[sp].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-                if (GlobalConfig.is_master_task) { residuals.massf[sp].re = maxResid; }
-            }   
+                MPI_Reduce(&(residuals.vec[cqi.species+sp].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+                if (GlobalConfig.is_master_task) { residuals.vec[cqi.species+sp].re = maxResid; }
+            }
         }
         }
     }
@@ -2236,28 +2260,29 @@ void rewrite_times_file(RestartInfo[] times)
     auto fname = format("./config/%s.times", GlobalConfig.base_file_name);
     auto f = File(fname, "w");
     f.writeln("# tindx sim_time dt_global");
+    auto cqi = GlobalConfig.cqi;
     foreach (i, rInfo; times) {
         if ( GlobalConfig.dimensions == 2 ) {
             f.writef("%04d %.18e %.18e %.18e %d %.18e %.18e %.18e %.18e %.18e",
                      i, rInfo.pseudoSimTime.re, rInfo.dt.re, rInfo.cfl.re, rInfo.step,
-                     rInfo.globalResidual.re, rInfo.residuals.mass.re,
-                     rInfo.residuals.momentum.x.re, rInfo.residuals.momentum.y.re,
-                     rInfo.residuals.total_energy.re);
+                     rInfo.globalResidual.re, rInfo.residuals.vec[cqi.mass].re,
+                     rInfo.residuals.vec[cqi.xMom].re, rInfo.residuals.vec[cqi.yMom].re,
+                     rInfo.residuals.vec[cqi.totEnergy].re);
         }
         else {
             f.writef("%04d %.18e %.18e %.18e %d %.18e %.18e %.18e %.18e %.18e %.18e",
                      i, rInfo.pseudoSimTime.re, rInfo.dt.re, rInfo.cfl.re, rInfo.step,
-                     rInfo.globalResidual.re, rInfo.residuals.mass.re,
-                     rInfo.residuals.momentum.x.re, rInfo.residuals.momentum.y.re, rInfo.residuals.momentum.z.re,
-                     rInfo.residuals.total_energy.re);
+                     rInfo.globalResidual.re, rInfo.residuals.vec[cqi.mass].re,
+                     rInfo.residuals.vec[cqi.xMom].re, rInfo.residuals.vec[cqi.yMom].re, rInfo.residuals.vec[cqi.zMom].re,
+                     rInfo.residuals.vec[cqi.totEnergy].re);
         }
         foreach(it; 0 .. GlobalConfig.turb_model.nturb){
-            f.writef(" %.18e", rInfo.residuals.rhoturb[it].re);
+            f.writef(" %.18e", rInfo.residuals.vec[cqi.rhoturb+it].re);
         }
         version(multi_species_gas){
         if ( GlobalConfig.gmodel_master.n_species > 1 ) {
             foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species){
-                f.writef(" %.18e", rInfo.residuals.massf[sp].re);
+                f.writef(" %.18e", rInfo.residuals.vec[cqi.species+sp].re);
             }
         }
         }
