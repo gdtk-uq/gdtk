@@ -1048,15 +1048,15 @@ public:
     void evaluate_block_row_of_jacobian(FVCell pcell)
     {
         // Make a stack-local copy of conserved quantities info
-        size_t nConserved = GlobalConfig.cqi.n;
-        size_t MASS = GlobalConfig.cqi.mass;
-        size_t X_MOM = GlobalConfig.cqi.xMom;
-        size_t Y_MOM = GlobalConfig.cqi.yMom;
-        size_t Z_MOM = GlobalConfig.cqi.zMom;
-        size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
-        size_t TKE = GlobalConfig.cqi.rhoturb;
-        size_t SPECIES = GlobalConfig.cqi.species;
-        auto cqi = GlobalConfig.cqi;
+        size_t nConserved = myConfig.cqi.n;
+        size_t MASS = myConfig.cqi.mass;
+        size_t X_MOM = myConfig.cqi.xMom;
+        size_t Y_MOM = myConfig.cqi.yMom;
+        size_t Z_MOM = myConfig.cqi.zMom;
+        size_t TOT_ENERGY = myConfig.cqi.totEnergy;
+        size_t TKE = myConfig.cqi.rhoturb;
+        size_t SPECIES = myConfig.cqi.species;
+        auto cqi = myConfig.cqi; // was GlobalConfig.cqi;
         number EPS = flowJacobianT.eps;
         int gtl = 0; int ftl = 1;
         pcell.U[ftl].copy_values_from(pcell.U[0]);
@@ -1265,17 +1265,17 @@ public:
          */
 
         // Make a stack-local copy of conserved quantities info
-        size_t nConserved = GlobalConfig.cqi.n;
-        size_t MASS = GlobalConfig.cqi.mass;
-        size_t X_MOM = GlobalConfig.cqi.xMom;
-        size_t Y_MOM = GlobalConfig.cqi.yMom;
-        size_t Z_MOM = GlobalConfig.cqi.zMom;
-        size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
-        size_t TKE = GlobalConfig.cqi.rhoturb;
-        size_t SPECIES = GlobalConfig.cqi.species;
+        size_t nConserved = myConfig.cqi.n;
+        size_t MASS = myConfig.cqi.mass;
+        size_t X_MOM = myConfig.cqi.xMom;
+        size_t Y_MOM = myConfig.cqi.yMom;
+        size_t Z_MOM = myConfig.cqi.zMom;
+        size_t TOT_ENERGY = myConfig.cqi.totEnergy;
+        size_t TKE = myConfig.cqi.rhoturb;
+        size_t SPECIES = myConfig.cqi.species;
         number EPS = flowJacobianT.eps;
         int gtl = 0; int ftl = 1;
-        auto cqi = GlobalConfig.cqi;
+        auto cqi = myConfig.cqi; // The block object has its own.
 
         foreach ( bndary; bc ) {
             if ( bndary.type == "exchange_using_mapped_cells" || bndary.type == "exchange_over_full_face") { continue; }

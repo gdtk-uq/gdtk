@@ -92,6 +92,7 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
     size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
     size_t TKE = GlobalConfig.cqi.rhoturb;
     size_t SPECIES = GlobalConfig.cqi.species;
+    auto cqi = GlobalConfig.cqi;
 
     auto gmodel = GlobalConfig.gmodel_master;
     RestartInfo restartInfo = RestartInfo(GlobalConfig.cqi.n);
@@ -103,7 +104,6 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
             // Process a non-comment line.
             auto tokens = line.split();
             auto idx = to!int(tokens[0]);
-            auto cqi = GlobalConfig.cqi;
             restartInfo.pseudoSimTime = to!double(tokens[1]);
             restartInfo.dt = to!double(tokens[2]);
             restartInfo.cfl = to!double(tokens[3]);
@@ -745,7 +745,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 writefln("          current value= %.12e   target value= %.12e", normNew/normRef, relGlobalResidReduction);
             }
             finalStep = true;
-        }        
+        }
 	if (GlobalConfig.halt_now == 1) {
             if (GlobalConfig.is_master_task) {
                 writeln("STOPPING: Halt set in control file.");
