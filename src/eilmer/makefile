@@ -271,10 +271,10 @@ ifeq ($(DMD), ldmd2)
         DFLAGS := -w -g -debug -version=flavour_debug
     endif
     ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -O -release -inline -boundscheck=off -version=flavour_profile
+        DFLAGS := -profile -w -O2 -release -inline -boundscheck=off -version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -inline -boundscheck=off -version=flavour_fast
+        DFLAGS := -w -g -O2 -release -inline -boundscheck=off -version=flavour_fast
     endif
     OF := -of
     DVERSION := -version=
@@ -296,10 +296,10 @@ ifeq ($(DMD), ldc2)
         # -fprofile-generate will result in profraw files being written
         # that may be viewed, showing the top 10 functions with internal block counts
         # llvm-profdata show -text -topn=10 <profraw-file>
-        DFLAGS := -fprofile-generate -g -w -O -release -enable-inlining -boundscheck=off -d-version=flavour_profile
+        DFLAGS := -fprofile-generate -g -w -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_profile
     endif
     ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -d-version=flavour_fast -ffast-math -flto=full
+        DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_fast -flto=full
     endif
     ifeq ($(WITH_THREAD_SANITIZER), 1)
         DFLAGS := $(DFLAGS) -fsanitize=thread
