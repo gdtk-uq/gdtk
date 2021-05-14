@@ -7,6 +7,7 @@
 require 'mechanism'
 
 userMechs = {}
+userCCMechs = {}
 mechanisms = {}
 
 local validateMechanism = mechanism.validateMechanism
@@ -34,6 +35,12 @@ end
 function Mechanism(t)
    -- Gather mechanisms, but don't yet validate
    userMechs[#userMechs+1] = t
+end
+
+function ChemistryCouplingMechanism(t)
+   -- Gather chemistry coupling mechanisms, these don't get validated
+   t.type = "C-V"
+   userCCMechs[#userCCMechs+1] = t
 end
 
 -----------------------------------------------
@@ -100,6 +107,10 @@ function main()
          print("Bailing out!")
          os.exit(1)
       end
+   end
+   for i,m in ipairs(userCCMechs) do
+         mechanisms[index] = m
+         index = index + 1
    end
    -- Now write out transformed results
    buildVerboseLuaFile(outFname)

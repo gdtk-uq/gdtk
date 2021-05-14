@@ -92,6 +92,17 @@ function relaxationTimeToLuaStr(rt)
    return str
 end
 
+function chemistryCouplingRateToLuaStr(rate)
+   local str = ""
+   if rate.model == "Marrone-Treanor" then
+      str = string.format("{model='Marrone-Treanor', U=%.8f, alpha=%.8f}", rate.U, rate.alpha)
+   else
+      print(string.format("ERROR: Chemistry coupling rate model '%s' is not known.", rate.model))
+      os.exit(1)
+   end
+   return str
+end
+
 function tableToString(o)
    -- Recursively evaluate a table to produce a lua-readable string
    --
@@ -139,18 +150,22 @@ function mechanismToLuaStr(index, m)
    local typeStr
    local argStr
    if m.type == "V-T" then
-      argStr = string.format("  rate = '%s',\n", m.rate)
+      argStr = string.format("  p = '%s', q = '%s',\n", m.p, m.q)
+      argStr = argStr .. string.format("  rate = '%s',\n", m.rate)
       argStr = argStr .. string.format("  relaxation_time = %s\n", relaxationTimeToLuaStr(m.rt))
    elseif m.type == "E-T" then
-      argStr = string.format("  rate = 'ElectronExchange',\n")
+      argStr = string.format("  p = '%s', q = '%s',\n", m.p, m.q)
+      argStr = argStr .. string.format("  rate = 'ElectronExchange',\n")
       argStr = argStr .. string.format("  exchange_cross_section = %s\n", tableToString(m.exchange_cross_section))
+   elseif m.type == "C-V" then
+      argStr = string.format("  reaction_label = '%s',\n", m.reaction_label)
+      argStr = argStr .. string.format("  rate = %s,\n", chemistryCouplingRateToLuaStr(m.rate))
    else
-      print("ERROR: type is not known: ", type)
+      print("ERROR: mechanism type is not known: ", type)
       os.exit(1)
    end
    local mstr = string.format("mechanism[%s] = {\n", index)
    mstr = mstr .. string.format("  type = '%s',\n", m.type)
-   mstr = mstr .. string.format("  p = '%s', q = '%s',\n", m.p, m.q)
    mstr = mstr .. argStr
    mstr = mstr .. "}\n"
    return mstr
@@ -270,7 +285,6 @@ function expandColliders(t, species, db)
    end
    return ps
 end
-
 
 function addUserMechToTable(index, m, mechanisms, species, db)
    t = parseMechString(m[1])
