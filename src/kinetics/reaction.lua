@@ -295,6 +295,7 @@ function transformReaction(t, species, energyModes, suppressWarnings)
    r = {}
    r.equation = t[1]
    r.type = "elementary"
+   r.label = t.label
 
    rs = parseReactionString(t[1])
    anonymousCollider = false
@@ -488,6 +489,9 @@ function reacToLuaStr(r, i)
 	 end
       end
       rstr = rstr .. "  },\n"
+   end
+   if r.label then
+       rstr = rstr .. string.format('  label = "%s",\n', r.label)
    end
    rstr = rstr .. "}\n"
    return rstr
