@@ -840,14 +840,14 @@ public:
         assert (j == 0, "index j is invalid");
         assert (k == 0, "index k is invalid");
     }
-    body {
+    do {
         return &(vertices[i]);
     }
 
     @nogc
     override Vector3* opIndex(size_t indx)
     in { assert (indx < nvertices, "index indx is invalid"); }
-    body {
+    do {
         return &(vertices[indx]);
     }
 
@@ -888,7 +888,7 @@ public:
         assert (j == 0, text("index j=", j, " is invalid for unstructured grid"));
         assert (k == 0, text("index k=", k, " is invalid for unstructured grid"));
     }
-    body {
+    do {
         return cells[i].vtx_id_list.dup();
     }
 
@@ -904,7 +904,7 @@ public:
         assert (indx < ncells,
                 text("index indx=", indx, " is invalid, ncells=", ncells));
     }
-    body {
+    do {
         return cells[indx].vtx_id_list.dup();
     }
 

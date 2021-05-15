@@ -159,14 +159,14 @@ public:
         assert (j < njv, text("index j=", j, " is invalid, njv=", njv));
         assert (k < nkv, text("index k=", k, " is invalid, nkv=", nkv));
     }
-    body {
+    do {
         return &(vertices[single_index(i,j,k)]);
     }
 
     @nogc
     override Vector3* opIndex(size_t indx)
     in { assert (indx < niv*njv*nkv, "index indx is invalid"); }
-    body {
+    do {
         return &(vertices[indx]);
     }
 
@@ -234,7 +234,7 @@ public:
         default: throw new GeometryException("invalid number of dimensions");
         }
     }
-    body {
+    do {
         switch (dimensions) {
         case 1: return [vtx_id[single_index(i,j,k)],
                         vtx_id[single_index(i+1,j,k)]];

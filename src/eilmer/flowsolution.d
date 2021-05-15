@@ -414,7 +414,7 @@ public:
         assert (j < njc, text("index j=", j, " is invalid, njc=", njc));
         assert (k < nkc, text("index k=", k, " is invalid, nkc=", nkc));
     }
-    body {
+    do {
         return i + nic*(j + njc*k);
     }
 

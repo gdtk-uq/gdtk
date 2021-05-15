@@ -36,7 +36,7 @@ public:
         assert(vms.length == mol_masses.length,
                brokenPreCondition("vms.length and mol_masses.length", __LINE__, __FILE__));
     }
-    body {
+    do {
         foreach (v; vms) {
             _vms ~= v.dup;
         }

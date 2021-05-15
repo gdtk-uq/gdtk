@@ -36,7 +36,7 @@ public:
         assert(tcms.length == mol_masses.length,
                brokenPreCondition("tcms.length and mol_masses.length", __LINE__, __FILE__));
     }
-    body {
+    do {
         foreach (tcm; tcms) {
             _tcms ~= tcm.dup;
         }

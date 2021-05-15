@@ -218,7 +218,7 @@ in {
     // Some faith is given that the user provides an appropriate length
     // input vector b, since in CRS we cannot easily determine the number of columns.
  }
-body {
+do {
     size_t k0, k1;
     foreach ( i; 0 .. a.ia.length-1 ) {
         k0 = a.ia[i];
@@ -470,7 +470,7 @@ in {
     assert(b.length == x0.length);
     assert(m >= 1);
 }
-body {
+do {
     immutable double ZERO_TOL = 1.0e-15;
     // 0. Allocate working matrices and vectors
     size_t n = b.length;
@@ -566,7 +566,7 @@ in {
     assert(b.length == x0.length);
     assert(maxIters >= 1);
 }
-body {
+do {
     double resid;
     // 0. Allocate working matrices and vectors
     size_t n = b.length;
@@ -726,7 +726,7 @@ in {
     assert(b.length == x0.length);
     assert(maxIters >= 1);
 }
-body {
+do {
     T resid;
     size_t n = b.length;
     size_t m = maxIters;
@@ -822,7 +822,7 @@ in {
     assert(b.length == x0.length);
     assert(mOuter >= 1);
 }
-body {
+do {
     immutable double ZERO_TOL = 1.0e-15;
     // 0. Allocate working matrices and vectors
     size_t n = b.length;
@@ -960,7 +960,7 @@ version(smla_test) {
         assert(approxEqualMatrix(d, dLU), failedUnitTest());
         // Test solve.
         // Let's give the ILU(0) method a triangular matrix that is can solve exactly.
-        // This example is taken from Faires and Burden (1993), Sec. 6.6, example 3. 
+        // This example is taken from Faires and Burden (1993), Sec. 6.6, example 3.
 	auto e = new SMatrix!number();
         e.addRow([to!number(2.), to!number(-1.)], [0, 1]);
         e.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [0, 1, 2]);

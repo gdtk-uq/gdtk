@@ -42,7 +42,7 @@ class Matrix(T) {
                 _data[row][col] = other._data[row][col];
     }
 
-    this(in T[] vec, string orient="column") 
+    this(in T[] vec, string orient="column")
     {
         if ( orient == "column" ) {
             this(vec.length, 1);
@@ -56,14 +56,14 @@ class Matrix(T) {
     this(in float[] vec, string orient="column") {
         T[] my_vec;
         my_vec.length = vec.length;
-        foreach(i; 0 .. my_vec.length) my_vec[i] = vec[i]; 
+        foreach(i; 0 .. my_vec.length) my_vec[i] = vec[i];
         this(my_vec, orient);
     }
 
     this(in int[] vec, string orient="column") {
         T[] my_vec;
         my_vec.length = vec.length;
-        foreach(i; 0 .. my_vec.length) my_vec[i] = vec[i]; 
+        foreach(i; 0 .. my_vec.length) my_vec[i] = vec[i];
         this(my_vec, orient);
     }
 
@@ -227,7 +227,7 @@ class Matrix(T) {
             foreach(col; 0 .. _ncols)
                 _data[row][col] *= s;
     }
-    
+
     @nogc
     void add(in Matrix rhs)
     {
@@ -235,7 +235,7 @@ class Matrix(T) {
             foreach(col; 0 .. _ncols)
                 _data[row][col] += rhs._data[row][col];
     }
-    
+
     override string toString() {
         string s = "Matrix["; // [TODO] add string form of type T here
         foreach(row; 0 .. _nrows) {
@@ -457,7 +457,7 @@ in {
     assert(a.nrows == c.nrows);
     assert(b.ncols == c.ncols);
 }
-body {
+do {
     size_t nrows = a.nrows;
     size_t ncols = b.ncols;
     c.zeros();
@@ -473,7 +473,7 @@ body {
 /**
  * A Dot product that only considers the upper left portion
  * of the matrices.
- * 
+ *
  * a: matrix on left of dot
  * aRow: work up to (but not including) this row number of a
  * aCol: work up to (but not including) this column number of a
@@ -498,7 +498,7 @@ in {
     assert(aRow <= c.nrows);
     assert(bCol <= c.ncols);
 }
-body {
+do {
     foreach (row; 0 .. aRow) {
         foreach (col; 0 .. bCol) {
             c[row,col] = to!T(0.0);
@@ -515,7 +515,7 @@ in {
     assert(a.ncols == b.length);
     assert(a.nrows == c.length);
 }
-body {
+do {
     size_t nrows = a.nrows;
     size_t ncols = a.ncols;
     foreach (idx; 0..c.length) c[idx] = 0.0;
@@ -534,7 +534,7 @@ in {
     assert(aCol <= b.length);
     assert(aRow <= c.length);
 }
-body {
+do {
     foreach (idx; 0..c.length) c[idx] = 0.0;
     foreach (row; 0 .. aRow) {
         foreach (col; 0 .. aCol) {
@@ -549,7 +549,7 @@ in {
     assert(src.nrows == tgt.nrows);
     assert(src.ncols == tgt.ncols);
 }
-body {
+do {
     foreach (row; 0 .. src.nrows) {
         foreach (col; 0 .. src.ncols) {
             tgt[row,col] = src[row,col];
@@ -582,7 +582,7 @@ version(bbla_test) {
         Matrix!number e2 = new Matrix!number([1, 2, 3], "row");
         assert(approxEqualMatrix!number(e2, new Matrix!number([[1,2,3]])),
                failedUnitTest());
-        
+
         Matrix!number f = new Matrix!number([[1.0,2.0,3.0],[4.0,5.0,6.0]]);
         Matrix!number g = dot!number(f,c);
         assert(approxEqualMatrix!number(g, new Matrix!number([[1,2],[4,5]])),
@@ -631,7 +631,7 @@ void gaussJordanElimination(T)(ref Matrix!T c, double very_small_value=1.0e-16)
         foreach (i; 0 .. c.nrows) {
             if (i == j) continue;
             T cij = c[i,j];
-            foreach (col; 0 .. c.ncols) { c[i,col] -= cij * c[j,col]; } 
+            foreach (col; 0 .. c.ncols) { c[i,col] -= cij * c[j,col]; }
         }
     } // end foreach j
 } // end gaussJordanElimination()
@@ -661,11 +661,11 @@ version(bbla_test) {
 }
 
 /**
- * First stage of a linear equation solver that uses LU decomposition 
+ * First stage of a linear equation solver that uses LU decomposition
  * followed by a separate backsubstitution.
  *
  * Params:
- *     c: incoming matrix, outgoing LU matrices combined 
+ *     c: incoming matrix, outgoing LU matrices combined
  *        as described in Section 2.2 of Gerald and Wheatley
  *        section 2.2 Elimination methods.
  *     very_small_value: used in our test for singularity
@@ -710,7 +710,7 @@ size_t[2][] decomp(T)(ref Matrix!T c, double very_small_value=1.0e-16)
 
 /**
  * Second stage of the linear equation solver.
- * 
+ *
  * Params:
  *     c:  decomposed matrix from the first stage.
  *         This matrix may be reused for any number of RHS vectors.
@@ -777,7 +777,7 @@ in {
     assert(n <= U.ncols);
     assert(n <= b.length);
 }
-body {
+do {
     // Back subsitution
     b[n-1] /= U[n-1,n-1];
     for (int i = to!int(n-2); i >= 0; --i) {
@@ -888,11 +888,11 @@ in {
     assert(a.nrows == a.ncols, "require a square matrix");
     assert(pivot.length == a.nrows, "pivot array wrongly sized");
 }
-body {
+do {
     int iMax;
     T largest, tmp;
     T[] vv;
-    
+
     int n = to!int(a.nrows);
     vv.length = n;
 
@@ -932,7 +932,7 @@ body {
             foreach (j; k+1 .. n) {
                 a[i,j] -= tmp*a[k,j];
             }
-        } 
+        }
     }
 }
 
@@ -943,14 +943,14 @@ in {
     assert(b.length == a.nrows, "b array wrongly sized");
     assert(x.length == a.nrows, "x array wrongly sized");
 }
-body {
+do {
     int ii, ip, n;
     ii = 0;
     T sum;
     n = to!int(a.nrows);
 
     foreach (idx; 0..x.length) { x[idx] = b[idx]; }
-    
+
     foreach (i; 0 .. n) {
         ip = pivot[i];
         sum = x[ip];
@@ -964,7 +964,7 @@ body {
         }
         x[i] = sum;
     }
-    
+
     for (int i = n-1; i >= 0; i--) {
         sum = x[i];
         foreach (j; i+1 .. n) { sum -= a[i,j]*x[j]; }
@@ -986,7 +986,7 @@ version(bbla_test) {
 
         LUDecomp!number(A, pivot);
         LUSolve!number(A, pivot, b, x);
-        
+
         // Reset A since it was converted to LU format.
         A = new Matrix!number([[0.0,  2.0,  0.0,  1.0],
                                [2.0,  2.0,  3.0,  2.0],

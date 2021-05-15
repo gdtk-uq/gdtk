@@ -193,7 +193,7 @@ public:
         debug { assert(Q.massf.length == _mol_masses.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
     }
-    body {
+    do {
         return mixture_molecular_mass(Q.massf, _mol_masses);
     }
 
@@ -203,7 +203,7 @@ public:
         debug { assert(Q.massf.length == molef.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
     }
-    body {
+    do {
         gas.gas_model.massf2molef(Q.massf, _mol_masses, molef);
     }
 
@@ -213,7 +213,7 @@ public:
         debug { assert(Q.massf.length == molef.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
     }
-    body {
+    do {
         gas.gas_model.molef2massf(molef, _mol_masses, Q.massf);
     }
 
@@ -225,7 +225,7 @@ public:
                    brokenPreCondition("Inconsistent array lengths."));
         }
     }
-    body {
+    do {
         if (isNaN(Q.rho) || (Q.rho <= 0.0)) {
             throw new GasModelException("Invalid density.");
         }
@@ -243,7 +243,7 @@ public:
                    brokenPreCondition("Inconsistent array lengths."));
         }
     }
-    body {
+    do {
         if (isNaN(Q.rho) || (Q.rho <= 0.0)) {
             throw new GasModelException("Invalid density.");
         }
@@ -255,7 +255,7 @@ public:
 
     @nogc
     final void rates2source(number[] rates, number[] source) const
-    body {
+    do {
         foreach ( i; 0.._n_species ) {
             source[i] = rates[i]*_mol_masses[i];
         }
@@ -267,7 +267,7 @@ public:
         debug { assert(Q.massf.length == numden.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
     }
-    body {
+    do {
         foreach ( i; 0.._n_species ) {
             numden[i] = Avogadro_number*Q.massf[i]*Q.rho / _mol_masses[i];
         }
@@ -279,7 +279,7 @@ public:
         debug { assert(Q.massf.length == numden.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
     }
-    body {
+    do {
         foreach ( i; 0.._n_species ) {
             Q.massf[i] = numden[i]*_mol_masses[i] / (Avogadro_number*Q.rho);
             if ( Q.massf[i] < MIN_MASS_FRACTION ) Q.massf[i] = 0.0;
@@ -377,7 +377,7 @@ void scale_mass_fractions(ref number[] massf, double tolerance=0.0,
 in {
     assert(Q.massf.length == phi.length, "Inconsistent array lengths.");
 }
-body {
+do {
     number result = 0.0;
     foreach ( i; 0..Q.massf.length ) result += Q.massf[i] * phi[i];
     return result;
@@ -388,7 +388,7 @@ version(complex_numbers) {
         in {
             assert(Q.massf.length == phi.length, "Inconsistent array lengths.");
         }
-    body {
+    do {
         number result = 0.0;
         foreach ( i; 0..Q.massf.length ) result += Q.massf[i] * phi[i];
         return result;
@@ -399,7 +399,7 @@ version(complex_numbers) {
 in {
     assert(molef.length == phi.length, "Inconsistent array lengths.");
 }
-body {
+do {
     number result = 0.0;
     foreach ( i; 0..molef.length ) result += molef[i] * phi[i];
     return result;
@@ -410,7 +410,7 @@ version(complex_numbers) {
         in {
             assert(molef.length == phi.length, "Inconsistent array lengths.");
         }
-    body {
+    do {
         number result = 0.0;
         foreach ( i; 0..molef.length ) result += molef[i] * phi[i];
         return result;
@@ -421,7 +421,7 @@ version(complex_numbers) {
 in {
     assert(massf.length == mol_masses.length, "Inconsistent array lengths.");
 }
-body {
+do {
     number M_inv = 0.0;
     foreach (i; 0 .. massf.length) M_inv += massf[i] / mol_masses[i];
     return 1.0/M_inv;
@@ -432,7 +432,7 @@ in {
     assert(massf.length == mol_masses.length, "Inconsistent array lengths.");
     assert(massf.length == molef.length, "Inconsistent array lengths.");
 }
-body {
+do {
     number mixMolMass = mixture_molecular_mass(massf, mol_masses);
     foreach ( i; 0..massf.length ) molef[i] = massf[i] * mixMolMass / mol_masses[i];
 }
@@ -442,7 +442,7 @@ in {
     assert(massf.length == mol_masses.length, "Inconsistent array lengths.");
     assert(massf.length == molef.length, "Inconsistent array lengths.");
 }
-body {
+do {
     number mixMolMass = mole_average(molef, mol_masses);
     foreach ( i; 0..massf.length ) massf[i] = molef[i] * mol_masses[i] / mixMolMass;
 }
