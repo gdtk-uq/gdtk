@@ -1554,7 +1554,7 @@ public:
     }
     }
 
-    void update_aux(double dt, double time, size_t step) 
+    void update_aux(double dt, double time, size_t step)
     {
         foreach (cell ; cells) {
             foreach(aux ; cell.aux_cell_data) {
@@ -1562,5 +1562,54 @@ public:
             }
         }
     }
+
+
+    void evalRU(int gtl, int ftl, FVCell c, bool do_reconstruction)
+    {
+        // This method evaluates the R(U) for a single cell.
+        // It is used when constructing the numerical Jacobian.
+        // Adapted from Kyle's evalRHS().
+        //
+        // [TODO] PJ 2021-05-15 Might be good to move this code to the FVCell class
+        // but we will need to make the flux-calculation functions more cell centric.
+        //
+        foreach(f; c.iface) { f.F.clear(); }
+        c.clear_source_vector();
+        //
+        FVCell[1] cell_list = [c];
+        convective_flux_phase0(do_reconstruction, gtl, cell_list, c.iface);
+        convective_flux_phase1(do_reconstruction, gtl, cell_list, c.iface);
+        //
+        // Viscous flux update
+        foreach(f; c.iface) {
+            if (f.is_on_boundary) { applyPostConvFluxAction(0.0, gtl, ftl, f); }
+        }
+        if (myConfig.viscous) {
+            foreach(f; c.iface) {
+                if (f.is_on_boundary) { applyPreSpatialDerivActionAtBndryFaces(0.0, gtl, ftl, f); }
+            }
+            // Currently, only for least-squares at faces.
+            // TODO: Kyle, generalise for all spatial gradient methods.
+            c.grad.gradients_leastsq(c.cloud_fs, c.cloud_pos, c.ws_grad); // flow_property_spatial_derivatives(0);
+            // We need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
+            // at the cell interfaces before the viscous flux calculation.
+            if (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
+                foreach(f; c.iface) {
+                    f.average_cell_deriv_values(gtl);
+                }
+                throw new Error("Do not think that this will work for point-implicit calculation.");
+            }
+            estimate_turbulence_viscosity(cell_list);
+            viscous_flux(c.iface);
+            foreach(f; c.iface) {
+                if (f.is_on_boundary) { applyPostDiffFluxAction(0.0, gtl, ftl, f); }
+            }
+        }
+        c.add_inviscid_source_vector(gtl, omegaz);
+        if (myConfig.viscous) { c.add_viscous_source_vector(); }
+        if (myConfig.reacting) { c.add_chemistry_source_vector(); }
+        if (myConfig.udf_source_terms) { c.add_udf_source_vector(); }
+        c.time_derivatives(gtl, ftl);
+    } // end evalRU()
 
 } // end class FluidBlock

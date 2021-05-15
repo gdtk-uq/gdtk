@@ -33,6 +33,9 @@ import gas.fuel_air_mix;
 import globaldata : SimState;
 import turbulence;
 import celldata;
+import fluidblock;
+import sfluidblock;
+import ufluidblock;
 
 import kinetics.chemistry_update;
 import kinetics.reaction_mechanism;

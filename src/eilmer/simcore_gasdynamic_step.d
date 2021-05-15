@@ -1908,10 +1908,6 @@ void gasdynamic_implicit_increment_with_fixed_grid()
         int flagTooManyBadCells;
         try {
             // Attempt an update.
-            //
-            // [FIX-ME] PJ 2021-05-07
-            // This is still an explicit Euler update and needs to be turned into a backward-Euler step.
-            //
             exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
             exchange_ghost_cell_gas_solid_boundary_data();
             if (GlobalConfig.apply_bcs_in_parallel) {
@@ -1930,84 +1926,6 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                  (GlobalConfig.shock_detector_freeze_step > SimState.step))) {
                 detect_shocks(gtl, ftl);
             }
-            foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
-            }
-            // for unstructured blocks we need to transfer the convective gradients before the flux calc
-            if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
-                exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
-            }
-            foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
-            }
-            if (GlobalConfig.apply_bcs_in_parallel) {
-                foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
-                }
-            } else {
-                foreach (blk; localFluidBlocksBySize) {
-                    if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
-                }
-            }
-            if (GlobalConfig.viscous) {
-                if (GlobalConfig.apply_bcs_in_parallel) {
-                    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                        if (blk.active) {
-                            blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
-                            blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
-                        }
-                    }
-                } else {
-                    foreach (blk; localFluidBlocksBySize) {
-                        if (blk.active) {
-                            blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
-                            blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
-                        }
-                    }
-                }
-                foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) {
-                        blk.flow_property_spatial_derivatives(gtl);
-                    }
-                }
-                // for unstructured blocks employing the cell-centered spatial (/viscous) gradient method,
-                // we need to transfer the viscous gradients before the flux calc
-                exchange_ghost_cell_boundary_viscous_gradient_data(SimState.time, gtl, ftl);
-                foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) {
-                        // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
-                        // at the cell interfaces before the viscous flux calculation.
-                        if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
-                            foreach(f; blk.faces) {
-                                f.average_cell_deriv_values(0);
-                            }
-                        }
-                    }
-                }
-                foreach (blk; parallel(localFluidBlocks,1)) {
-                    if (blk.active) {
-                        blk.estimate_turbulence_viscosity();
-                    }
-                }
-                // we exchange boundary data at this point to ensure the
-                // ghost cells along block-block boundaries have the most
-                // recent mu_t and k_t values.
-                exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
-                foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) {
-                        blk.viscous_flux();
-                    }
-                }
-                if (GlobalConfig.apply_bcs_in_parallel) {
-                    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                        if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
-                    }
-                } else {
-                    foreach (blk; localFluidBlocksBySize) {
-                        if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
-                    }
-                }
-            } // end if viscous
             foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
                 if (!blk.active) continue;
                 int local_ftl = ftl;
@@ -2015,16 +1933,26 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                 bool local_with_local_time_stepping = with_local_time_stepping;
                 double local_dt_global = SimState.dt_global;
                 foreach (cell; blk.cells) {
-                    cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
-                    if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
-                    if (blk.myConfig.udf_source_terms) { cell.add_udf_source_vector(); }
-                    cell.time_derivatives(local_gtl, local_ftl);
-                }
-                if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(local_ftl); }
-                bool force_euler = false;
-                foreach (cell; blk.cells) {
-                    cell.stage_1_update_for_flow_on_fixed_grid(local_dt_global, force_euler,
-                                                               local_with_local_time_stepping);
+                    //
+                    // [FIX-ME] PJ 2021-05-07, 2021-05-15
+                    // This is still an explicit Euler update and needs to be turned into a backward-Euler step.
+                    //
+                    blk.evalRU(local_gtl, local_ftl, cell, true); // last arg is do_reconstruction
+                    // Just for the temporary arrangement of the forward-euler update,
+                    // doing reconstruction doubles the computation.
+                    double dt = (local_with_local_time_stepping) ? cell.dt_local : local_dt_global;
+                    auto dUdt0 = cell.dUdt[0];
+                    auto U0 = cell.U[0];
+                    auto U1 = cell.U[1];
+                    auto cqi = blk.myConfig.cqi;
+                    foreach (j; 0 .. cqi.n) { U1.vec[j] = U0.vec[j] + dt*dUdt0.vec[j]; }
+                    version(turbulence) {
+                        foreach(j; 0 .. blk.myConfig.turb_model.nturb){
+                            U1.vec[cqi.rhoturb+j] = fmax(U1.vec[cqi.rhoturb+j],
+                                                         U0.vec[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
+                        }
+                    }
+                    // [TODO] PJ 2021-05-15 MHD bits
                     cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
                 }
                 local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
