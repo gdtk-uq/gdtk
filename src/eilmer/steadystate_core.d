@@ -324,6 +324,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                                 writeln("Failed to provide sensible update.");
                             }
                             writefln("attempt %d: dt= %e", attempt, dt);
+                            writeln("pos: ", cell.pos[0].x, ", ", cell.pos[0].y, ", ", cell.pos[0].z);
                             failedAttempt = 1;
                         }
                         cellCount += nConserved;
@@ -661,6 +662,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     }
                     catch (FlowSolverException e) {
                         writefln("Failed attempt %d: dt= %e", attempt, dt);
+                        writeln("pos: ", cell.pos[0].x, ", ", cell.pos[0].y, ", ", cell.pos[0].z);
                         failedAttempt = 1;
                     }
                     cellCount += nConserved;
@@ -1850,7 +1852,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                                                          step == blk.myConfig.sssOptions.nStartUpSteps+1)) {
 
                                     blk.evaluate_transpose_jacobian();
-                                    blk.flowJacobianT.prepare_preconditioner(dt, blk.cells.length, nConserved);
+                                    blk.flowJacobianT.prepare_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
                                 }
                                 blk.zed[] = blk.v[];
                                 nm.smla.transpose_solve(blk.flowJacobianT.local, blk.zed);

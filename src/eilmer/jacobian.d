@@ -15,6 +15,7 @@ import nm.number;
 import nm.smla;
 import nm.bbla;
 
+import globalconfig;
 import fvcell;
 import fvinterface;
 
@@ -91,7 +92,7 @@ public:
 
     } // end size_local_matrix()
 
-    void prepare_preconditioner(double dt, size_t ncells, size_t nConserved, size_t fill_in_level = 0)
+    void prepare_preconditioner(FVCell[] cells, double dt, size_t ncells, size_t nConserved, size_t fill_in_level = 0)
     {
         /*
           This method prepares the flow Jacobian for use as a precondition matrix.
@@ -106,10 +107,15 @@ public:
          */
 
         foreach ( ref entry; local.aa) { entry *= -1; }
-
-        number dtInv = 1.0/dt;        // TODO: local-time-stepping
+        number dtInv;
         foreach (i; 0..ncells) {
             foreach (j; 0..nConserved) {
+                if (GlobalConfig.with_local_time_stepping) {
+                    FVCell cell = cells[i];
+                    dtInv = 1.0/cell.dt_local;
+                } else {
+                    dtInv = 1.0/dt;
+                }        // TODO: local-time-stepping
                 ulong idx = i*nConserved + j;
                 local[idx,idx] = local[idx,idx] + dtInv;
             }
