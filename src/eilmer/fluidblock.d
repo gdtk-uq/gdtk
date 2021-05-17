@@ -868,17 +868,23 @@ public:
         // The following limits allow the simulation of the sod shock tube
         // to get just a little wobbly around the shock.
         // Lower values of cfl should be used for a smooth solution.
-        switch (number_of_stages_for_update_scheme(myConfig.gasdynamic_update_scheme)) {
-        case 1: cfl_allow = 0.9; break;
-        case 2: cfl_allow = 1.2; break;
-        case 3: cfl_allow = 1.6; break;
-        default: cfl_allow = 0.9;
-        }
-        // when using implicit residual smoothing we should be able to achieve a higher stable CFL
-        // so let's relax the cfl_allow
-        if (myConfig.residual_smoothing && myConfig.with_local_time_stepping &&
-            GlobalConfig.residual_smoothing_type == ResidualSmoothingType.implicit) {
-            cfl_allow *= 10.0;
+        if (is_explicit_update_scheme(myConfig.gasdynamic_update_scheme)) {
+            switch (number_of_stages_for_update_scheme(myConfig.gasdynamic_update_scheme)) {
+            case 1: cfl_allow = 0.9; break;
+            case 2: cfl_allow = 1.2; break;
+            case 3: cfl_allow = 1.6; break;
+            default: cfl_allow = 0.9;
+            }
+            // When using implicit residual smoothing we should be able to achieve a higher stable CFL
+            // so let's relax the cfl_allow value..
+            if (myConfig.residual_smoothing && myConfig.with_local_time_stepping &&
+                GlobalConfig.residual_smoothing_type == ResidualSmoothingType.implicit) {
+                cfl_allow *= 10.0;
+            }
+        } else {
+            // [TODO] PJ 2021-05-17 Implicit update schemes should run with cfl > 1
+            // but we don't have much experience to know how far the cfl can be pushed.
+            cfl_allow = 10.0;
         }
         // for local time-stepping we limit the larger time-steps by a factor of the smallest timestep
         int local_time_stepping_limit_factor = myConfig.local_time_stepping_limit_factor;

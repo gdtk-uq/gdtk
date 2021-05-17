@@ -78,6 +78,24 @@ size_t number_of_stages_for_update_scheme(GasdynamicUpdate gdut)
 } // end number_of_stages_for_update_scheme()
 
 @nogc
+bool is_explicit_update_scheme(GasdynamicUpdate gdut)
+{
+    final switch (gdut) {
+    case GasdynamicUpdate.euler: return true;
+    case GasdynamicUpdate.pc: return true;
+    case GasdynamicUpdate.midpoint: return true;
+    case GasdynamicUpdate.classic_rk3: return true;
+    case GasdynamicUpdate.tvd_rk3: return true;
+    case GasdynamicUpdate.denman_rk3: return true;
+    case GasdynamicUpdate.rkl1: return true;
+    case GasdynamicUpdate.rkl2: return true;
+    case GasdynamicUpdate.moving_grid_1_stage: return true;
+    case GasdynamicUpdate.moving_grid_2_stage: return true;
+    case GasdynamicUpdate.backward_euler: return false;
+    }
+} // is_explicit_update_scheme()
+
+@nogc
 size_t final_index_for_update_scheme(GasdynamicUpdate gdut)
 {
     final switch (gdut) {
