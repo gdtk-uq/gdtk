@@ -38,7 +38,7 @@ class TurbulenceModel{
 
     // Methods to be overridden.
     abstract TurbulenceModel dup();
-    @nogc abstract void source_terms(const FlowState fs,const FlowGradients grad, const number ybar, const number dwall, const number L_min, const number L_max, ref number[2] source) const;
+    @nogc abstract void source_terms(const FlowState fs,const FlowGradients grad, const number ybar, const number dwall, const number L_min, const number L_max, ref number[] source) const;
     @nogc abstract number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number ybar, const number dwall) const;
     @nogc abstract number turbulent_conductivity(const FlowState fs, GasModel gm) const;
     @nogc abstract number turbulent_signal_frequency(const FlowState fs) const;
@@ -88,7 +88,7 @@ class noTurbulenceModel : TurbulenceModel {
     @nogc final override
     void source_terms(const FlowState fs,const FlowGradients grad, const number ybar,
                       const number dwall, const number L_min, const number L_max,
-                      ref number[2] source) const {
+                      ref number[] source) const {
         return; 
     }
 
@@ -210,7 +210,7 @@ class kwTurbulenceModel : TurbulenceModel {
     @nogc final override
     void source_terms(const FlowState fs,const FlowGradients grad, const number ybar,
                       const number dwall, const number L_min, const number L_max,
-                      ref number[2] source) const {
+                      ref number[] source) const {
         /*
         Compute k-omega source terms.
         
@@ -556,7 +556,7 @@ class saTurbulenceModel : TurbulenceModel {
     @nogc override
     void source_terms(const FlowState fs,const FlowGradients grad, const number ybar,
                       const number dwall, const number L_min, const number L_max,
-                      ref number[2] source) const {
+                      ref number[] source) const {
         /*
         Spalart Allmaras Source Terms:
         Notes:
@@ -592,7 +592,6 @@ class saTurbulenceModel : TurbulenceModel {
 
         number T = production - destruction + dissipation;
         source[0] = T;
-        source[1] = 0.0;
         return; 
     }
 
