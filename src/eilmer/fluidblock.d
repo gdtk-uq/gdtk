@@ -110,18 +110,23 @@ public:
     // (used in the grid deformation methods in conjunction with
     // the shape sensitivity calculator).
     size_t[] boundaryVtxIndexList;
-
+    //
+    // Workspace for transient-solver implicit update.
+    Matrix!double crhs;
+    double[] dRUdU;
+    ConservedQuantities U0save, RU0;
+    //
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
     FlowJacobianT flowJacobianT;
     immutable size_t MAX_PERTURBED_INTERFACES = 800;
     FVCell cellSave;
     FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
-
+    //
     size_t[] local_pcell_global_coord_list;
     size_t[][] local_ecell_global_coord_list;
     number[][] local_entry_list;
-
+    //
     // local objective function evaluation
     number locObjFcn;
     // arrays used to temporarily store data during construction of the flow Jacobian transpose

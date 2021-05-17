@@ -16,11 +16,13 @@ import std.algorithm;
 import std.parallelism;
 import nm.complex;
 import nm.number;
+import nm.bbla;
 
 import geom;
 import geom.misc.kdtree;
 import gas;
 import fvcore;
+import conservedquantities;
 import globalconfig;
 import globaldata;
 import flowstate;
@@ -1928,24 +1930,74 @@ void gasdynamic_implicit_increment_with_fixed_grid()
             }
             foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
                 if (!blk.active) continue;
-                int local_ftl = ftl;
-                int local_gtl = gtl;
+                //
+                // Make sure that the workspace is of the correct size.
+                auto cqi = blk.myConfig.cqi;
+                if (!blk.crhs || blk.crhs.nrows != cqi.n || blk.crhs.ncols != (cqi.n+1)) {
+                    // Augmented matrix for our linear system.
+                    blk.crhs = new Matrix!double(cqi.n, cqi.n+1);
+                }
+                if (!blk.U0save) { blk.U0save = new ConservedQuantities(cqi.n); }
+                if (!blk.RU0) { blk.RU0 = new ConservedQuantities(cqi.n); }
+                if (blk.dRUdU.length != cqi.n) { blk.dRUdU.length = cqi.n; }
+                //
+                // Now, work through the cells, doing the update.
+                int local_ftl = ftl; assert(ftl == 0, "ftl is assumed zero but it is not.");
+                int local_gtl = gtl; assert(gtl == 0, "gtl is assumed zero but it is not.");
+                bool local_allow_high_order_interpolation = allow_high_order_interpolation;
                 bool local_with_local_time_stepping = with_local_time_stepping;
                 double local_dt_global = SimState.dt_global;
                 foreach (cell; blk.cells) {
-                    //
-                    // [FIX-ME] PJ 2021-05-07, 2021-05-15
-                    // This is still an explicit Euler update and needs to be turned into a backward-Euler step.
-                    //
-                    blk.evalRU(local_gtl, local_ftl, cell, true); // last arg is do_reconstruction
-                    // Just for the temporary arrangement of the forward-euler update,
-                    // doing reconstruction doubles the computation.
                     double dt = (local_with_local_time_stepping) ? cell.dt_local : local_dt_global;
                     auto dUdt0 = cell.dUdt[0];
                     auto U0 = cell.U[0];
                     auto U1 = cell.U[1];
-                    auto cqi = blk.myConfig.cqi;
-                    foreach (j; 0 .. cqi.n) { U1.vec[j] = U0.vec[j] + dt*dUdt0.vec[j]; }
+                    //
+                    // Set up the linear system by evaluating the sensitivity matrix.
+                    // Do this without high-order interpolation, just to be cheap.
+                    blk.U0save.copy_values_from(U0);
+                    dUdt0.clear();
+                    blk.evalRU(local_gtl, local_ftl, cell, false);
+                    blk.RU0.copy_values_from(dUdt0);
+                    foreach (j; 0 .. cqi.n) {
+                        U0.copy_values_from(blk.U0save);
+                        // Perturb one quantity and get the derivative vector d(R(U))/dU[j].
+                        version(complex_numbers) {
+                            // Use a small enough perturbation such that the error
+                            // in first derivative will be much smaller then machine precision.
+                            double h = 1.0e-16;
+                            number hc = Complex!double(0.0, h);
+                            // Perturb one quantity.
+                            U0.vec[j] += hc;
+                            // Get derivative vector.
+                            blk.evalRU(local_gtl, local_ftl, cell, false);
+                            foreach (k; 0 .. cqi.n) {
+                                blk.dRUdU[k] = (dUdt0.vec[k].im - blk.RU0.vec[k].im)/h;
+                            }
+                        } else {
+                            // Scale the perturbation on the magnitude of the conserved quantity.
+                            double h = 1.0e-5*(fabs(U0.vec[j]) + 1.0);
+                            // Perturb one quantity.
+                            U0.vec[j] += h;
+                            // Get derivative vector.
+                            blk.evalRU(local_gtl, local_ftl, cell, false);
+                            foreach (k; 0 .. cqi.n) {
+                                blk.dRUdU[k] = (dUdt0.vec[k] - blk.RU0.vec[k])/h;
+                            }
+                        }
+                        // Assemble coefficients of the linear system in the augmented matrix.
+                        foreach (k; 0 .. cqi.n) {
+                            blk.crhs._data[k][j] = ((k==j) ? 1.0/dt : 0.0) - blk.dRUdU[k];
+                        }
+                    }
+                    // Evaluate the right-hand side of the linear system equations.
+                    U0.copy_values_from(blk.U0save);
+                    blk.evalRU(local_gtl, local_ftl, cell, local_allow_high_order_interpolation);
+                    foreach (k; 0 .. cqi.n) { blk.crhs._data[k][cqi.n] = dUdt0.vec[k].re; }
+                    // Solve for dU and update U.
+                    gaussJordanElimination!double(blk.crhs);
+                    foreach (j; 0 .. cqi.n) { U1.vec[j] = U0.vec[j] + blk.crhs._data[j][cqi.n]; }
+                    //
                     version(turbulence) {
                         foreach(j; 0 .. blk.myConfig.turb_model.nturb){
                             U1.vec[cqi.rhoturb+j] = fmax(U1.vec[cqi.rhoturb+j],

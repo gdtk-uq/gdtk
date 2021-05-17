@@ -263,6 +263,18 @@ class Matrix(T) {
         return my_column;
     }
 
+    void getColumn(T[] my_column, size_t col) {
+        assert (my_column.length == nrows, "Incorrect column length.");
+        foreach(row; 0 .. nrows) { my_column[row] = _data[row][col]; }
+        return;
+    }
+
+    void setColumn(T[] my_column, size_t col) {
+        assert (my_column.length == nrows, "Incorrect column length.");
+        foreach(row; 0 .. nrows) { _data[row][col] = my_column[row]; }
+        return;
+    }
+
     T[] getRow(size_t row) {
         return _data[row].dup;
     }
