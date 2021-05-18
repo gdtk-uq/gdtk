@@ -49,11 +49,9 @@ public:
     @property @nogc number k_b() const { return _k_b; }
     @property @nogc number K_eq() const { return _K_eq; }
     @property @nogc ref int[] participants() { return _participants; }
-    @property @nogc string label() { return _label; }
 
-    this(RateConstant forward, RateConstant backward, GasModel gmodel, string label="none")
+    this(RateConstant forward, RateConstant backward, GasModel gmodel)
     {
-        _label = label;
         _gmodel = gmodel;
         _Qw = new GasState(gmodel);
 
@@ -136,7 +134,6 @@ private:
     number _w_f, _w_b; // Storage of computed rates of change
     GasModel _gmodel;
     GasState _Qw; // a GasState for temporary working
-    string _label; // User defined identifier
     int[] _participants; // Storage of indices of species that
                          // participate in this reaction
     @nogc number eval_forward_rate_constant(in GasState Q)
@@ -162,13 +159,13 @@ class ElementaryReaction : Reaction
 public:
     this(RateConstant forward, RateConstant backward, GasModel gmodel,
          int[] reac_spidx, double[] reac_coeffs, int[] prod_spidx, double[] prod_coeffs,
-         size_t n_species, string label="none")
+         size_t n_species)
     {
         assert(reac_spidx.length == reac_coeffs.length,
                brokenPreCondition("reac_spidx and reac_coeffs arrays not of equal length"));
         assert(prod_spidx.length == prod_coeffs.length,
                brokenPreCondition("prod_spdix and prod_coeffs arrays are not of equal length"));
-        super(forward, backward, gmodel, label);
+        super(forward, backward, gmodel);
         bool[int] pmap;
         foreach ( i; 0 .. reac_spidx.length ) {
             _reactants ~= tuple(reac_spidx[i], reac_coeffs[i]);
@@ -199,9 +196,9 @@ public:
         }
     }
     this(RateConstant forward, RateConstant backward, GasModel gmodel, in int[] participants,
-         in Tuple!(int, double)[] reactants, in Tuple!(int, double)[] products, in double[] nu, string label="none")
+         in Tuple!(int, double)[] reactants, in Tuple!(int, double)[] products, in double[] nu)
     {
-        super(forward, backward, gmodel, label);
+        super(forward, backward, gmodel);
         _participants = participants.dup();
         _reactants = reactants.dup();
         _products = products.dup();
@@ -210,7 +207,7 @@ public:
     override ElementaryReaction dup()
     {
         return new ElementaryReaction(_forward, _backward, _gmodel, _participants,
-                                      _reactants, _products, _nu, _label);
+                                      _reactants, _products, _nu);
     }
 
     @nogc
@@ -283,13 +280,13 @@ class AnonymousColliderReaction : Reaction
 public:
     this(RateConstant forward, RateConstant backward, GasModel gmodel,
          int[] reac_spidx, double[] reac_coeffs, int[] prod_spidx, double[] prod_coeffs,
-         Tuple!(int,double)[] efficiencies, size_t n_species, string label="none")
+         Tuple!(int,double)[] efficiencies, size_t n_species)
     {
         assert(reac_spidx.length == reac_coeffs.length,
                brokenPreCondition("reac_spidx and reac_coeffs arrays not of equal length"));
         assert(prod_spidx.length == prod_coeffs.length,
                brokenPreCondition("prod_spdix and prod_coeffs arrays are not of equal length"));
-        super(forward, backward, gmodel, label);
+        super(forward, backward, gmodel);
         bool[int] pmap;
         foreach ( i; 0 .. reac_spidx.length ) {
             _reactants ~= tuple(reac_spidx[i], reac_coeffs[i]);
@@ -321,9 +318,9 @@ public:
         _efficiencies = efficiencies.dup();
     }
     this(RateConstant forward, RateConstant backward, GasModel gmodel, in int[] participants,
-         in Tuple!(int, double)[] reactants, in Tuple!(int, double)[] products, in double[] nu, in Tuple!(int, double)[] efficiencies, string label="none")
+         in Tuple!(int, double)[] reactants, in Tuple!(int, double)[] products, in double[] nu, in Tuple!(int, double)[] efficiencies)
     {
-        super(forward, backward, gmodel, label);
+        super(forward, backward, gmodel);
         _participants = participants.dup();
         _reactants = reactants.dup();
         _products = products.dup();
@@ -333,7 +330,7 @@ public:
     override AnonymousColliderReaction dup()
     {
         return new AnonymousColliderReaction(_forward, _backward, _gmodel, _participants,
-                                             _reactants, _products, _nu, _efficiencies, _label);
+                                             _reactants, _products, _nu, _efficiencies);
     }
 
     @nogc
@@ -461,21 +458,19 @@ Reaction createReaction(lua_State* L, GasModel gmodel)
     getArrayOfInts(L, -1, "prodIdx", prodIdx);
     getArrayOfDoubles(L, -1, "prodCoeffs", prodCoeffs);
 
-    string label = getStringWithDefault(L, -1, "label", "none");
-
     // We need to specialise the creation of a Reaction
     // based on type.
     auto type = getString(L, -1, "type");
     switch (type) {
     case "elementary":
         return new ElementaryReaction(frc, brc, gmodel, reacIdx, reacCoeffs,
-                                      prodIdx, prodCoeffs, n_species, label);
+                                      prodIdx, prodCoeffs, n_species);
     case "anonymous_collider":
         // We need to get table of efficiencies also
         return new AnonymousColliderReaction(frc, brc, gmodel,
                                              reacIdx, reacCoeffs,
                                              prodIdx, prodCoeffs,
-                                             efficiencies, n_species, label);
+                                             efficiencies, n_species);
     default:
         string msg = format("The reaction type: %s is not known.", type);
         throw new Exception(msg);
