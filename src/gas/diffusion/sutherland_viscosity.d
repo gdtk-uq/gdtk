@@ -45,7 +45,7 @@ out(result) {
         assert(result > 0.0, brokenPostCondition("viscosity", __LINE__, __FILE__));
     }
 }
-body{
+do{
     number mu = mu_ref*sqrt(T/T_ref)*(T/T_ref)*(T_ref + S)/(T + S);
     return mu;
 }

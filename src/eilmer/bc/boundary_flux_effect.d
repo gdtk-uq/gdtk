@@ -169,6 +169,7 @@ public:
         number kG_dnG, kS_dnS, cosA, cosB, cosC;
         number T, q;
         int outsign;
+        auto cqi = blk.myConfig.cqi;
 
         switch(which_boundary){
         case Face.north:
@@ -215,7 +216,7 @@ public:
 
         // Finally update properties in interfaces
         myBC.ifaces[f.i_bndry].fs.gas.T = T;
-        myBC.ifaces[f.i_bndry].F.total_energy = outsign*q;
+        myBC.ifaces[f.i_bndry].F.vec[cqi.totEnergy] = outsign*q;
     }
 
     // not @nogc
@@ -226,6 +227,7 @@ public:
         number kG_dnG, kS_dnS, cosA, cosB, cosC;
         number T, q;
         int outsign;
+        auto cqi = blk.myConfig.cqi;
 
         switch(which_boundary){
         case Face.north:
@@ -273,7 +275,7 @@ public:
 
             // Finally update properties in interfaces
             myBC.ifaces[i].fs.gas.T = T;
-            myBC.ifaces[i].F.total_energy = outsign*q;
+            myBC.ifaces[i].F.vec[cqi.totEnergy] = outsign*q;
         }
 
         //auto myBC = blk.bc[which_boundary];
@@ -434,6 +436,7 @@ public:
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto blk = cast(SFluidBlock) this.blk;
+        auto cqi = blk.myConfig.cqi;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         //
@@ -441,7 +444,8 @@ public:
             // for a moving grid we need vel relative to the interface
             number _u_rel = _u - f.gvel.x;
             number _v_rel = _v - f.gvel.y;
-            f.F.mass = _rho * ( _u_rel*f.n.x + _v_rel*f.n.y );
+            number massFlux = _rho * (_u_rel*f.n.x + _v_rel*f.n.y);
+            f.F.vec[cqi.mass] = massFlux;
             /++ when the boundary is moving we use the relative velocity
              + between the fluid and the boundary interface to determine
              + the amount of mass flux across the cell face (above).
@@ -452,19 +456,21 @@ public:
              + on its velocity. Since we we want this momentum flux in global
              + coordinates there is no need to rotate the velocity.
              ++/
-            f.F.momentum.refx = _p * f.n.x + _u*f.F.mass;
-            f.F.momentum.refy = _p * f.n.y + _v*f.F.mass;
-            f.F.momentum.refz = 0.0;
-            // [TODO]: Kyle, think about z component.
-            f.F.total_energy = f.F.mass * (_e + 0.5*(_u*_u+_v*_v)) + _p*(_u*f.n.x+_v*f.n.y);
+            f.F.vec[cqi.xMom] = _p * f.n.x + _u*massFlux;
+            f.F.vec[cqi.yMom] = _p * f.n.y + _v*massFlux;
+            if (cqi.threeD) {
+                f.F.vec[cqi.zMom] = 0.0; // [TODO]: Kyle, think about z component.
+                assert(0, "[FIX-ME] Not yet implemented for 3D");
+            }
+            f.F.vec[cqi.totEnergy] = massFlux * (_e + 0.5*(_u*_u+_v*_v)) + _p*(_u*f.n.x+_v*f.n.y);
             version(multi_species_gas) {
-                for ( int _isp = 0; _isp < _nsp; _isp++ ){
-                    f.F.massf[_isp] = f.F.mass * _massf[_isp];
+                if (cqi.n_species > 1) {
+                    foreach (_isp; 0 .. _nsp){ f.F.vec[cqi.species+_isp] = massFlux * _massf[_isp]; }
                 }
             }
             version(multi_T_gas) {
-                for ( int n=0; n<_nmodes; n++ ){
-                    f.F.energies[n] = f.F.mass * _ev[n];
+                foreach (n; 0 .. _nmodes){
+                    f.F.vec[cqi.modes+n] = massFlux * _ev[n];
                 }
             }
         }
@@ -544,14 +550,15 @@ private:
     {
         // Flux equations use the local flow state information.
         // For a moving grid we need vel relative to the interface.
+        auto cqi = blk.myConfig.cqi;
         Vector3 v_rel; v_rel.set(fs.vel); v_rel -= face.gvel;
         number mass_flux = fs.gas.rho * dot(v_rel, face.n);
         if ((outsign*mass_flux) > 0.0) {
             // We have a true outflow flux.
-            face.F.mass = mass_flux;
-            face.F.momentum.refx = fs.gas.p * face.n.x + fs.vel.x * mass_flux;
-            face.F.momentum.refy = fs.gas.p * face.n.y + fs.vel.y * mass_flux;
-            face.F.momentum.refz = fs.gas.p * face.n.z + fs.vel.z * mass_flux;
+            face.F.vec[cqi.mass] = mass_flux;
+            face.F.vec[cqi.xMom] = fs.gas.p * face.n.x + fs.vel.x * mass_flux;
+            face.F.vec[cqi.yMom] = fs.gas.p * face.n.y + fs.vel.y * mass_flux;
+            if (cqi.threeD) { face.F.vec[cqi.zMom] = fs.gas.p * face.n.z + fs.vel.z * mass_flux; }
             number utot = fs.gas.u + 0.5*dot(fs.vel,fs.vel);
             version(multi_T_gas) {
                 foreach (umode; fs.gas.u_modes) { utot += umode; }
@@ -559,7 +566,7 @@ private:
             version(turbulence) {
                 utot += blk.myConfig.turb_model.turbulent_kinetic_energy(fs);
             }
-            face.F.total_energy = mass_flux*utot + fs.gas.p*dot(fs.vel,face.n);
+            face.F.vec[cqi.totEnergy] = mass_flux*utot + fs.gas.p*dot(fs.vel,face.n);
             if (omegaz != 0.0) {
                 // Rotating frame.
                 number x = face.pos.x;
@@ -568,39 +575,45 @@ private:
                 // The conserved quantity is rotating-frame total energy,
                 // so we need to take -(u**2)/2 off the total energy.
                 // Note that rotating frame velocity u = omegaz * r.
-                face.F.total_energy -= mass_flux * 0.5*omegaz*omegaz*rsq;
+                face.F.vec[cqi.totEnergy] -= mass_flux * 0.5*omegaz*omegaz*rsq;
             }
             version(turbulence) {
-                foreach (i; 0 .. blk.myConfig.turb_model.nturb) { face.F.rhoturb[i] = mass_flux * fs.turb[i]; }
+                foreach (i; 0 .. blk.myConfig.turb_model.nturb) { face.F.vec[cqi.rhoturb+i] = mass_flux * fs.turb[i]; }
             }
             version(MHD) {
                 // [TODO] PJ 2018-10-25 MHD?
             }
             version(multi_species_gas) {
-                foreach (i; 0 .. face.F.massf.length) { face.F.massf[i] = mass_flux * fs.gas.massf[i]; }
+                if (cqi.n_species > 1) {
+                    foreach (i; 0 .. cqi.n_species) { face.F.vec[cqi.species+i] = mass_flux * fs.gas.massf[i]; }
+                }
             }
             version(multi_T_gas) {
-                foreach (i; 0 .. face.F.energies.length) { face.F.energies[i] = mass_flux * fs.gas.u_modes[i]; }
+                foreach (i; 0 .. cqi.n_modes) { face.F.vec[cqi.modes+i] = mass_flux * fs.gas.u_modes[i]; }
             }
         } else {
             // We have a situation where the nominal mass flux
             // indicates that flow should be coming into the domain.
             // Since we really do not want to have this happen,
             // we close off the face and think of it as a wall.
-            face.F.mass = 0.0;
-            face.F.momentum.set(face.n); face.F.momentum *= fs.gas.p;
-            face.F.total_energy = fs.gas.p*dot(face.gvel,face.n);
+            face.F.vec[cqi.mass] = 0.0;
+            face.F.vec[cqi.xMom] = face.n.x * fs.gas.p;
+            face.F.vec[cqi.yMom] = face.n.y * fs.gas.p;
+            if (cqi.threeD) { face.F.vec[cqi.zMom] = face.n.z * fs.gas.p; }
+            face.F.vec[cqi.totEnergy] = fs.gas.p * dot(face.gvel,face.n);
             version(turbulence) {
-                foreach (i; 0 .. blk.myConfig.turb_model.nturb) { face.F.rhoturb[i] = 0.0; }
+                foreach (i; 0 .. blk.myConfig.turb_model.nturb) { face.F.vec[cqi.rhoturb+i] = 0.0; }
             }
             version(MHD) {
                 // [TODO] PJ 2018-10-25 MHD?
             }
             version(multi_species_gas) {
-                foreach (i; 0 .. face.F.massf.length) { face.F.massf[i] = 0.0; }
+                if (cqi.n_species > 1) {
+                    foreach (i; 0 .. cqi.n_species) { face.F.vec[cqi.species+i] = 0.0; }
+                }
             }
             version(multi_T_gas) {
-                foreach (i; 0 .. face.F.energies.length) { face.F.energies[i] = 0.0; }
+                foreach (i; 0 .. cqi.n_modes) { face.F.vec[cqi.modes+i] = 0.0; }
             }
         }
         return;
@@ -656,13 +669,14 @@ public:
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
+        auto cqi = blk.myConfig.cqi;
         //
         foreach (i, f; bc.faces) {
-            f.F.total_energy = f.fs.gas.p * dot(f.n, f.gvel);
-            f.F.momentum.refx = f.fs.gas.p * dot(f.n, nx);
-            f.F.momentum.refy = f.fs.gas.p * dot(f.n, ny);
-            f.F.momentum.refz = f.fs.gas.p * dot(f.n, nz);
-            f.F.mass = 0.;
+            f.F.vec[cqi.totEnergy] = f.fs.gas.p * dot(f.n, f.gvel);
+            f.F.vec[cqi.xMom] = f.fs.gas.p * dot(f.n, nx);
+            f.F.vec[cqi.yMom] = f.fs.gas.p * dot(f.n, ny);
+            if (cqi.threeD) { f.F.vec[cqi.zMom] = f.fs.gas.p * dot(f.n, nz); }
+            f.F.vec[cqi.mass] = 0.;
         }
     } // end apply_structured_grid()
 } // end BFE_UpdateEnergyWallNormalVelocity
@@ -712,17 +726,17 @@ class BFE_ThermionicElectronFlux : BoundaryFluxEffect {
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
-
+        auto cqi = blk.myConfig.cqi;
+        //
         foreach (i, f; bc.faces) {
             int sign = bc.outsigns[i];
             //version(multi_species_gas){
             //    number emf = electron_mass_flux(f);
             //    f.F.massf[electron_index] -= sign*emf;
             //}
-
             number eef = electron_energy_flux(f);
-            f.F.total_energy -= sign*eef;
-            version(multi_T_gas) { f.F.energies[0] -= sign*eef; }
+            f.F.vec[cqi.totEnergy] -= sign*eef;
+            version(multi_T_gas) { f.F.vec[cqi.modes+0] -= sign*eef; }
         }
     }
 

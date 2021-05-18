@@ -110,18 +110,23 @@ public:
     // (used in the grid deformation methods in conjunction with
     // the shape sensitivity calculator).
     size_t[] boundaryVtxIndexList;
-
+    //
+    // Workspace for transient-solver implicit update.
+    Matrix!double crhs;
+    double[] dRUdU;
+    ConservedQuantities U0save, RU0;
+    //
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
     FlowJacobianT flowJacobianT;
     immutable size_t MAX_PERTURBED_INTERFACES = 800;
     FVCell cellSave;
     FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
-
+    //
     size_t[] local_pcell_global_coord_list;
     size_t[][] local_ecell_global_coord_list;
     number[][] local_entry_list;
-
+    //
     // local objective function evaluation
     number locObjFcn;
     // arrays used to temporarily store data during construction of the flow Jacobian transpose
@@ -197,8 +202,7 @@ public:
 
     void init_workspace()
     {
-        Linf_residuals = new ConservedQuantities(dedicatedConfig[id].n_species,
-                                                 dedicatedConfig[id].n_modes);
+        Linf_residuals = new ConservedQuantities(dedicatedConfig[id].cqi.n);
         // Workspace for flux_calc method.
         Lft = new FlowState(dedicatedConfig[id].gmodel);
         Rght = new FlowState(dedicatedConfig[id].gmodel);
@@ -435,7 +439,13 @@ public:
         // detector value into faces so we have static data to work from.
         foreach (face; faces) {
             if (face.fs.S == 1.0) continue;
-            face.fs.S = fmax(face.left_cell.fs.S, face.right_cell.fs.S);
+            if (!face.left_cell.is_interior_to_domain) {
+                face.fs.S = face.right_cell.fs.S;
+            } else if (!face.right_cell.is_interior_to_domain) {
+                face.fs.S = face.left_cell.fs.S;
+            } else {
+                face.fs.S = fmax(face.left_cell.fs.S, face.right_cell.fs.S);
+            }
         }
         // now use the face shock detector value to update the cell values
         foreach (cell; cells) {
@@ -670,13 +680,14 @@ public:
     void init_residuals()
     // Initialization of data for later computing residuals.
     {
+        auto cqi = myConfig.cqi;
         mass_residual = 0.0;
         mass_residual_loc.clear();
         energy_residual = 0.0;
         energy_residual_loc.clear();
         foreach(FVCell cell; cells) {
             cell.rho_at_start_of_step = cell.fs.gas.rho;
-            cell.rE_at_start_of_step = cell.U[0].total_energy;
+            cell.rE_at_start_of_step = cell.U[0].vec[cqi.totEnergy];
         }
     } // end init_residuals()
 
@@ -693,6 +704,7 @@ public:
     // for both mass and (total) energy for all cells, the record the largest
     // with their location.
     {
+        auto cqi = myConfig.cqi;
         mass_residual = 0.0;
         mass_residual_loc.clear();
         energy_residual = 0.0;
@@ -707,7 +719,8 @@ public:
             // In the following line, the zero index is used because,
             // at the end of the gas-dynamic update, that index holds
             // the updated data.
-            local_residual = (cell.U[0].total_energy - cell.rE_at_start_of_step) / cell.U[0].total_energy;
+            number currentEnergy = cell.U[0].vec[cqi.totEnergy];
+            local_residual = (currentEnergy - cell.rE_at_start_of_step) / currentEnergy;
             local_residual = fabs(local_residual);
             if ( local_residual > energy_residual ) {
                 energy_residual = local_residual;
@@ -724,47 +737,44 @@ public:
     // because here the residual is taken as R(U) = dU/dt.
     // We will assume that dUdt[0] is up-to-date.
     {
+        auto cqi = myConfig.cqi;
         Linf_residuals.copy_values_from(cells[0].dUdt[0]);
-        Linf_residuals.mass = fabs(Linf_residuals.mass);
-        Linf_residuals.momentum.set(fabs(Linf_residuals.momentum.x),
-                                    fabs(Linf_residuals.momentum.y),
-                                    fabs(Linf_residuals.momentum.z));
-        Linf_residuals.total_energy = fabs(Linf_residuals.total_energy);
-        foreach (cell; cells) {
-            Linf_residuals.mass = fmax(Linf_residuals.mass, fabs(cell.dUdt[0].mass));
-            Linf_residuals.momentum.set(fmax(Linf_residuals.momentum.x, fabs(cell.dUdt[0].momentum.x)),
-                                        fmax(Linf_residuals.momentum.y, fabs(cell.dUdt[0].momentum.y)),
-                                        fmax(Linf_residuals.momentum.z, fabs(cell.dUdt[0].momentum.z)));
-            Linf_residuals.total_energy = fmax(Linf_residuals.total_energy, fabs(cell.dUdt[0].total_energy));
+        foreach (i; 0 .. cqi.n) {
+            Linf_residuals.vec[i] = fabs(Linf_residuals.vec[i]);
+            foreach (cell; cells) {
+                Linf_residuals.vec[i] = fmax(Linf_residuals.vec[i], fabs(cell.dUdt[0].vec[i]));
+            }
         }
     } // end compute_Linf_residuals()
 
     @nogc
     void compute_L2_residual()
     {
+        auto cqi = myConfig.cqi;
         L2_residual = 0.0;
         foreach (cell; cells) {
-            L2_residual += fabs(cell.dUdt[0].mass)^^2;
-	    L2_residual += fabs(cell.dUdt[0].momentum.x)^^2;
-	    L2_residual += fabs(cell.dUdt[0].momentum.y)^^2;
-	    L2_residual += fabs(cell.dUdt[0].momentum.z)^^2;
-	    L2_residual += fabs(cell.dUdt[0].total_energy)^^2;
+            L2_residual += fabs(cell.dUdt[0].vec[cqi.mass])^^2;
+	    L2_residual += fabs(cell.dUdt[0].vec[cqi.xMom])^^2;
+	    L2_residual += fabs(cell.dUdt[0].vec[cqi.yMom])^^2;
+	    if (cqi.threeD) { L2_residual += fabs(cell.dUdt[0].vec[cqi.zMom])^^2; }
+	    L2_residual += fabs(cell.dUdt[0].vec[cqi.totEnergy])^^2;
 	    version(turbulence) {
-            foreach(it; 0 .. myConfig.turb_model.nturb){
-                L2_residual += fabs(cell.dUdt[0].rhoturb[it])^^2;
-            }
+                foreach(it; 0 .. myConfig.turb_model.nturb){
+                    L2_residual += fabs(cell.dUdt[0].vec[cqi.rhoturb+it])^^2;
+                }
 	    }
         }
-    } // end compute_Linf_residuals()
+    } // end compute_L2_residual()
 
     @nogc
     void compute_mass_balance()
     {
+        auto cqi = myConfig.cqi;
         mass_balance = 0.0;
         foreach(boundary; bc) {
             if (boundary.type != "exchange_over_full_face" && boundary.type != "exchange_using_mapped_cells") {
                 foreach(i, face; boundary.faces) {
-                    mass_balance += boundary.outsigns[i] * face.F.mass * face.area[0];
+                    mass_balance += boundary.outsigns[i] * face.F.vec[cqi.mass] * face.area[0];
                 }
             }
         }
@@ -864,17 +874,23 @@ public:
         // The following limits allow the simulation of the sod shock tube
         // to get just a little wobbly around the shock.
         // Lower values of cfl should be used for a smooth solution.
-        switch (number_of_stages_for_update_scheme(myConfig.gasdynamic_update_scheme)) {
-        case 1: cfl_allow = 0.9; break;
-        case 2: cfl_allow = 1.2; break;
-        case 3: cfl_allow = 1.6; break;
-        default: cfl_allow = 0.9;
-        }
-        // when using implicit residual smoothing we should be able to achieve a higher stable CFL
-        // so let's relax the cfl_allow
-        if (myConfig.residual_smoothing && myConfig.with_local_time_stepping &&
-            GlobalConfig.residual_smoothing_type == ResidualSmoothingType.implicit) {
-            cfl_allow *= 10.0;
+        if (is_explicit_update_scheme(myConfig.gasdynamic_update_scheme)) {
+            switch (number_of_stages_for_update_scheme(myConfig.gasdynamic_update_scheme)) {
+            case 1: cfl_allow = 0.9; break;
+            case 2: cfl_allow = 1.2; break;
+            case 3: cfl_allow = 1.6; break;
+            default: cfl_allow = 0.9;
+            }
+            // When using implicit residual smoothing we should be able to achieve a higher stable CFL
+            // so let's relax the cfl_allow value..
+            if (myConfig.residual_smoothing && myConfig.with_local_time_stepping &&
+                GlobalConfig.residual_smoothing_type == ResidualSmoothingType.implicit) {
+                cfl_allow *= 10.0;
+            }
+        } else {
+            // [TODO] PJ 2021-05-17 Implicit update schemes should run with cfl > 1
+            // but we don't have much experience to know how far the cfl can be pushed.
+            cfl_allow = 10.0;
         }
         // for local time-stepping we limit the larger time-steps by a factor of the smallest timestep
         int local_time_stepping_limit_factor = myConfig.local_time_stepping_limit_factor;
@@ -1049,14 +1065,15 @@ public:
     void evaluate_block_row_of_jacobian(FVCell pcell)
     {
         // Make a stack-local copy of conserved quantities info
-        size_t nConserved = GlobalConfig.cqi.n;
-        size_t MASS = GlobalConfig.cqi.mass;
-        size_t X_MOM = GlobalConfig.cqi.xMom;
-        size_t Y_MOM = GlobalConfig.cqi.yMom;
-        size_t Z_MOM = GlobalConfig.cqi.zMom;
-        size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
-        size_t TKE = GlobalConfig.cqi.tke;
-        size_t SPECIES = GlobalConfig.cqi.species;
+        size_t nConserved = myConfig.cqi.n;
+        size_t MASS = myConfig.cqi.mass;
+        size_t X_MOM = myConfig.cqi.xMom;
+        size_t Y_MOM = myConfig.cqi.yMom;
+        size_t Z_MOM = myConfig.cqi.zMom;
+        size_t TOT_ENERGY = myConfig.cqi.totEnergy;
+        size_t TKE = myConfig.cqi.rhoturb;
+        size_t SPECIES = myConfig.cqi.species;
+        auto cqi = myConfig.cqi; // was GlobalConfig.cqi;
         number EPS = flowJacobianT.eps;
         int gtl = 0; int ftl = 1;
         pcell.U[ftl].copy_values_from(pcell.U[0]);
@@ -1064,15 +1081,15 @@ public:
         // perturb either the cell flow state or conserved quantities and
         // evaluate the perturbed residuals for the cells in the residual stencil
         if ( flowJacobianT.wrtConserved ) {
-            mixin(computeResidualSensitivity("pcell", "mass", "MASS", true, true));
-            mixin(computeResidualSensitivity("pcell", "momentum.refx", "X_MOM", false, true));
-            mixin(computeResidualSensitivity("pcell", "momentum.refy", "Y_MOM", false, true));
-            if ( myConfig.dimensions == 3 ) { mixin(computeResidualSensitivity("pcell", "momentum.refz", "Z_MOM", false, true)); }
-            mixin(computeResidualSensitivity("pcell", "total_energy", "TOT_ENERGY", true, true));
-            foreach(ii; 0 .. myConfig.turb_model.nturb) { mixin(computeResidualSensitivity("pcell", "rhoturb[ii]", "TKE+ii", false, true)); }
+            mixin(computeResidualSensitivity("pcell", "vec[cqi.mass]", "MASS", true, true));
+            mixin(computeResidualSensitivity("pcell", "vec[cqi.xMom]", "X_MOM", false, true));
+            mixin(computeResidualSensitivity("pcell", "vec[cqi.yMom]", "Y_MOM", false, true));
+            if ( myConfig.dimensions == 3 ) { mixin(computeResidualSensitivity("pcell", "vec[cqi.zMom]", "Z_MOM", false, true)); }
+            mixin(computeResidualSensitivity("pcell", "vec[cqi.totEnergy]", "TOT_ENERGY", true, true));
+            foreach(ii; 0 .. myConfig.turb_model.nturb) { mixin(computeResidualSensitivity("pcell", "vec[cqi.rhoturb+ii]", "TKE+ii", false, true)); }
             version(multi_species_gas){
             if (myConfig.n_species > 1) {
-                foreach(ii; 0 .. myConfig.gmodel.n_species) { mixin(computeResidualSensitivity("pcell", "massf[ii]", "SPECIES+ii", false, true)); }
+                foreach(ii; 0 .. myConfig.gmodel.n_species) { mixin(computeResidualSensitivity("pcell", "vec[cqi.species+ii]", "SPECIES+ii", false, true)); }
             }
             }
         } else { // wrtPrimitive
@@ -1139,15 +1156,15 @@ public:
         evalRHS(gtl, ftl, "~cellName~".cell_list, "~cellName~".face_list);
 
         foreach (i, cell; "~cellName~".cell_list) {
-            cell.dQdU[MASS][" ~ posInArray ~ "] = cell.dUdt[ftl].mass.im/EPS.im;
-            cell.dQdU[X_MOM][" ~ posInArray ~ "] = cell.dUdt[ftl].momentum.x.im/EPS.im;
-            cell.dQdU[Y_MOM][" ~ posInArray ~ "] = cell.dUdt[ftl].momentum.y.im/EPS.im;
-            if (myConfig.dimensions == 3) { cell.dQdU[Z_MOM][" ~ posInArray ~ "] = cell.dUdt[ftl].momentum.z.im/EPS.im; }
-            cell.dQdU[TOT_ENERGY][" ~ posInArray ~ "] = cell.dUdt[ftl].total_energy.im/EPS.im;
-            foreach(it; 0 .. myConfig.turb_model.nturb) { cell.dQdU[TKE+it][" ~ posInArray ~ "] = cell.dUdt[ftl].rhoturb[it].im/EPS.im; }
+            cell.dQdU[MASS][" ~ posInArray ~ "] = cell.dUdt[ftl].vec[cqi.mass].im/EPS.im;
+            cell.dQdU[X_MOM][" ~ posInArray ~ "] = cell.dUdt[ftl].vec[cqi.xMom].im/EPS.im;
+            cell.dQdU[Y_MOM][" ~ posInArray ~ "] = cell.dUdt[ftl].vec[cqi.yMom].im/EPS.im;
+            if (myConfig.dimensions == 3) { cell.dQdU[Z_MOM][" ~ posInArray ~ "] = cell.dUdt[ftl].vec[cqi.zMom].im/EPS.im; }
+            cell.dQdU[TOT_ENERGY][" ~ posInArray ~ "] = cell.dUdt[ftl].vec[cqi.totEnergy].im/EPS.im;
+            foreach(it; 0 .. myConfig.turb_model.nturb) { cell.dQdU[TKE+it][" ~ posInArray ~ "] = cell.dUdt[ftl].vec[cqi.rhoturb+it].im/EPS.im; }
             version(multi_species_gas){
             if (myConfig.n_species > 1) {
-                foreach(sp; 0 .. myConfig.gmodel.n_species) { cell.dQdU[SPECIES+sp][" ~ posInArray ~ "] = cell.dUdt[ftl].massf[sp].im/EPS.im; }
+                foreach(sp; 0 .. myConfig.gmodel.n_species) { cell.dQdU[SPECIES+sp][" ~ posInArray ~ "] = cell.dUdt[ftl].vec[cqi.species+sp].im/EPS.im; }
             }
             }
          }
@@ -1265,16 +1282,17 @@ public:
          */
 
         // Make a stack-local copy of conserved quantities info
-        size_t nConserved = GlobalConfig.cqi.n;
-        size_t MASS = GlobalConfig.cqi.mass;
-        size_t X_MOM = GlobalConfig.cqi.xMom;
-        size_t Y_MOM = GlobalConfig.cqi.yMom;
-        size_t Z_MOM = GlobalConfig.cqi.zMom;
-        size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
-        size_t TKE = GlobalConfig.cqi.tke;
-        size_t SPECIES = GlobalConfig.cqi.species;
+        size_t nConserved = myConfig.cqi.n;
+        size_t MASS = myConfig.cqi.mass;
+        size_t X_MOM = myConfig.cqi.xMom;
+        size_t Y_MOM = myConfig.cqi.yMom;
+        size_t Z_MOM = myConfig.cqi.zMom;
+        size_t TOT_ENERGY = myConfig.cqi.totEnergy;
+        size_t TKE = myConfig.cqi.rhoturb;
+        size_t SPECIES = myConfig.cqi.species;
         number EPS = flowJacobianT.eps;
         int gtl = 0; int ftl = 1;
+        auto cqi = myConfig.cqi; // The block object has its own.
 
         foreach ( bndary; bc ) {
             if ( bndary.type == "exchange_using_mapped_cells" || bndary.type == "exchange_over_full_face") { continue; }
@@ -1292,15 +1310,15 @@ public:
                 // calculate the sensitivity of the ghost cell with respect to
                 // a perturbation of the interior cell it shares an interface with
                 if ( flowJacobianT.wrtConserved ) {
-                    mixin(computeGhostCellSensitivity("mass", "MASS", true, true));
-                    mixin(computeGhostCellSensitivity("momentum.refx", "X_MOM", false, true));
-                    mixin(computeGhostCellSensitivity("momentum.refy", "Y_MOM", false, true));
-                    if ( myConfig.dimensions == 3 ) { mixin(computeGhostCellSensitivity("momentum.refz", "Z_MOM", false, true)); }
-                    mixin(computeGhostCellSensitivity("total_energy", "TOT_ENERGY", true, true));
-                    foreach(ii; 0 .. myConfig.turb_model.nturb) { mixin(computeGhostCellSensitivity("rhoturb[ii]", "TKE+ii", false, true)); }
+                    mixin(computeGhostCellSensitivity("vec[cqi.mass]", "MASS", true, true));
+                    mixin(computeGhostCellSensitivity("vec[cqi.xMom]", "X_MOM", false, true));
+                    mixin(computeGhostCellSensitivity("vec[cqi.yMom]", "Y_MOM", false, true));
+                    if ( myConfig.dimensions == 3 ) { mixin(computeGhostCellSensitivity("vec[cqi.zMom]", "Z_MOM", false, true)); }
+                    mixin(computeGhostCellSensitivity("vec[cqi.totEnergy]", "TOT_ENERGY", true, true));
+                    foreach(ii; 0 .. myConfig.turb_model.nturb) { mixin(computeGhostCellSensitivity("vec[cqi.rhoturb+ii]", "TKE+ii", false, true)); }
                     version(multi_species_gas){
                     if (myConfig.n_species > 1) {
-                        foreach(ii; 0 .. myConfig.gmodel.n_species) { mixin(computeGhostCellSensitivity("massf[ii]", "SPECIES+ii", false, true)); }
+                        foreach(ii; 0 .. myConfig.gmodel.n_species) { mixin(computeGhostCellSensitivity("vec[cqi.species+ii]", "SPECIES+ii", false, true)); }
                     }
                     }
                 } else {
@@ -1470,27 +1488,28 @@ public:
         size_t Y_MOM = GlobalConfig.cqi.yMom;
         size_t Z_MOM = GlobalConfig.cqi.zMom;
         size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
-        size_t TKE = GlobalConfig.cqi.tke;
+        size_t TKE = GlobalConfig.cqi.rhoturb;
         size_t SPECIES = GlobalConfig.cqi.species;
         double EPS = flowJacobianT.eps.im;
 
         // We perform a Frechet derivative to evaluate J*D^(-1)v
         size_t nturb = myConfig.turb_model.nturb;
         size_t nsp = myConfig.gmodel.n_species;
+        auto cqi = myConfig.cqi;
         clear_fluxes_of_conserved_quantities();
         foreach (cell; cells) cell.clear_source_vector();
         int cellCount = 0;
         foreach (cell; cells) {
             cell.U[1].copy_values_from(cell.U[0]);
-            cell.U[1].mass += complex(0.0, EPS*vec[cellCount+MASS].re);
-            cell.U[1].momentum.refx += complex(0.0, EPS*vec[cellCount+X_MOM].re);
-            cell.U[1].momentum.refy += complex(0.0, EPS*vec[cellCount+Y_MOM].re);
-            if ( myConfig.dimensions == 3 ) { cell.U[1].momentum.refz += complex(0.0, EPS*vec[cellCount+Z_MOM].re); }
-            cell.U[1].total_energy += complex(0.0, EPS*vec[cellCount+TOT_ENERGY].re);
-            foreach(it; 0 .. nturb) { cell.U[1].rhoturb[it] += complex(0.0, EPS*vec[cellCount+TKE+it].re); }
+            cell.U[1].vec[cqi.mass] += complex(0.0, EPS*vec[cellCount+MASS].re);
+            cell.U[1].vec[cqi.xMom] += complex(0.0, EPS*vec[cellCount+X_MOM].re);
+            cell.U[1].vec[cqi.yMom] += complex(0.0, EPS*vec[cellCount+Y_MOM].re);
+            if ( myConfig.dimensions == 3 ) { cell.U[1].vec[cqi.zMom] += complex(0.0, EPS*vec[cellCount+Z_MOM].re); }
+            cell.U[1].vec[cqi.totEnergy] += complex(0.0, EPS*vec[cellCount+TOT_ENERGY].re);
+            foreach(it; 0 .. nturb) { cell.U[1].vec[cqi.rhoturb+it] += complex(0.0, EPS*vec[cellCount+TKE+it].re); }
             version(multi_species_gas){
             if (myConfig.n_species > 1) {
-                foreach(sp; 0 .. nsp) { cell.U[1].massf[sp] += complex(0.0, EPS*vec[cellCount+SPECIES+sp].re); }
+                foreach(sp; 0 .. nsp) { cell.U[1].vec[cqi.species+sp] += complex(0.0, EPS*vec[cellCount+SPECIES+sp].re); }
             }
             }
             cell.decode_conserved(0, 1, 0.0);
@@ -1501,15 +1520,15 @@ public:
         //evalRHS(cells, ifaces);
         cellCount = 0;
         foreach (cell; cells) {
-            sol[cellCount+MASS] = cell.dUdt[1].mass.im/EPS;
-            sol[cellCount+X_MOM] = cell.dUdt[1].momentum.x.im/EPS;
-            sol[cellCount+Y_MOM] = cell.dUdt[1].momentum.y.im/EPS;
-            if ( myConfig.dimensions == 3 ) { sol[cellCount+Z_MOM] = cell.dUdt[1].momentum.z.im/EPS; }
-            sol[cellCount+TOT_ENERGY] = cell.dUdt[1].total_energy.im/EPS;
-            foreach(it; 0 .. nturb) { sol[cellCount+TKE+it] = cell.dUdt[1].rhoturb[it].im/EPS; }
+            sol[cellCount+MASS] = cell.dUdt[1].vec[cqi.mass].im/EPS;
+            sol[cellCount+X_MOM] = cell.dUdt[1].vec[cqi.xMom].im/EPS;
+            sol[cellCount+Y_MOM] = cell.dUdt[1].vec[cqi.yMom].im/EPS;
+            if ( myConfig.dimensions == 3 ) { sol[cellCount+Z_MOM] = cell.dUdt[1].vec[cqi.zMom].im/EPS; }
+            sol[cellCount+TOT_ENERGY] = cell.dUdt[1].vec[cqi.totEnergy].im/EPS;
+            foreach(it; 0 .. nturb) { sol[cellCount+TKE+it] = cell.dUdt[1].vec[cqi.rhoturb+it].im/EPS; }
             version(multi_species_gas){
             if (myConfig.n_species > 1) {
-                foreach(sp; 0 .. nsp) { sol[cellCount+SPECIES+sp] = cell.dUdt[1].massf[sp].im/EPS; }
+                foreach(sp; 0 .. nsp) { sol[cellCount+SPECIES+sp] = cell.dUdt[1].vec[cqi.species+sp].im/EPS; }
             }
             }
             cellCount += nConserved;
@@ -1523,8 +1542,8 @@ public:
         size_t nConserved = GlobalConfig.cqi.n;
         int n_species = GlobalConfig.gmodel_master.n_species();
         int n_modes = GlobalConfig.gmodel_master.n_modes();
-        maxRate = new ConservedQuantities(n_species, n_modes);
-        residuals = new ConservedQuantities(n_species, n_modes);
+        maxRate = new ConservedQuantities(nConserved);
+        residuals = new ConservedQuantities(nConserved);
 
         size_t mOuter = to!size_t(GlobalConfig.sssOptions.maxOuterIterations);
         size_t mInner = to!size_t(GlobalConfig.sssOptions.nInnerIterations);
@@ -1552,7 +1571,7 @@ public:
     }
     }
 
-    void update_aux(double dt, double time, size_t step) 
+    void update_aux(double dt, double time, size_t step)
     {
         foreach (cell ; cells) {
             foreach(aux ; cell.aux_cell_data) {
@@ -1560,5 +1579,54 @@ public:
             }
         }
     }
+
+
+    void evalRU(int gtl, int ftl, FVCell c, bool do_reconstruction)
+    {
+        // This method evaluates the R(U) for a single cell.
+        // It is used when constructing the numerical Jacobian.
+        // Adapted from Kyle's evalRHS().
+        //
+        // [TODO] PJ 2021-05-15 Might be good to move this code to the FVCell class
+        // but we will need to make the flux-calculation functions more cell centric.
+        //
+        foreach(f; c.iface) { f.F.clear(); }
+        c.clear_source_vector();
+        //
+        FVCell[1] cell_list = [c];
+        convective_flux_phase0(do_reconstruction, gtl, cell_list, c.iface);
+        convective_flux_phase1(do_reconstruction, gtl, cell_list, c.iface);
+        //
+        // Viscous flux update
+        foreach(f; c.iface) {
+            if (f.is_on_boundary) { applyPostConvFluxAction(0.0, gtl, ftl, f); }
+        }
+        if (myConfig.viscous) {
+            foreach(f; c.iface) {
+                if (f.is_on_boundary) { applyPreSpatialDerivActionAtBndryFaces(0.0, gtl, ftl, f); }
+            }
+            // Currently, only for least-squares at faces.
+            // TODO: Kyle, generalise for all spatial gradient methods.
+            c.grad.gradients_leastsq(c.cloud_fs, c.cloud_pos, c.ws_grad); // flow_property_spatial_derivatives(0);
+            // We need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
+            // at the cell interfaces before the viscous flux calculation.
+            if (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
+                foreach(f; c.iface) {
+                    f.average_cell_deriv_values(gtl);
+                }
+                throw new Error("Do not think that this will work for point-implicit calculation.");
+            }
+            estimate_turbulence_viscosity(cell_list);
+            viscous_flux(c.iface);
+            foreach(f; c.iface) {
+                if (f.is_on_boundary) { applyPostDiffFluxAction(0.0, gtl, ftl, f); }
+            }
+        }
+        c.add_inviscid_source_vector(gtl, omegaz);
+        if (myConfig.viscous) { c.add_viscous_source_vector(); }
+        if (myConfig.reacting) { c.add_chemistry_source_vector(); }
+        if (myConfig.udf_source_terms) { c.add_udf_source_vector(); }
+        c.time_derivatives(gtl, ftl);
+    } // end evalRU()
 
 } // end class FluidBlock

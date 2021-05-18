@@ -1492,7 +1492,8 @@ protected:
 
         IFace.F.clear();
         IFace.viscous_flux_calc();
-        number q_conduction = IFace.F.total_energy;
+        auto cqi = blk.myConfig.cqi;
+        number q_conduction = IFace.F.vec[cqi.totEnergy];
         IFace.F.clear();
 
         number q_rad = emissivity*SB_sigma*Twall*Twall;

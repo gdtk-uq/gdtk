@@ -1436,15 +1436,16 @@ void write_values_to_raw_binary(const(FVCell) c, ref File fout)
 
 string write_residuals_to_string(const(FVCell) c)
 {
+    auto cqi = c.myConfig.cqi;
     auto writer = appender!string();
     version(complex_numbers) {
         formattedWrite(writer, "%.18e %.18e %.18e %.18e",
-                       -c.dUdt[0].mass.re, -c.dUdt[0].momentum.x.re,
-                       -c.dUdt[0].momentum.y.re, -c.dUdt[0].total_energy.re);
+                       -c.dUdt[0].vec[cqi.mass].re, -c.dUdt[0].vec[cqi.xMom].re,
+                       -c.dUdt[0].vec[cqi.yMom].re, -c.dUdt[0].vec[cqi.totEnergy].re);
     } else {
         formattedWrite(writer, "%.18e %.18e %.18e %.18e",
-                       -c.dUdt[0].mass, -c.dUdt[0].momentum.x,
-                       -c.dUdt[0].momentum.y, -c.dUdt[0].total_energy);
+                       -c.dUdt[0].vec[cqi.mass], -c.dUdt[0].vec[cqi.xMom],
+                       -c.dUdt[0].vec[cqi.yMom], -c.dUdt[0].vec[cqi.totEnergy]);
     }
     return writer.data;
 }

@@ -52,7 +52,7 @@ private:
     size_t _njdim;
     size_t _nkdim;
 
-    SolidFVCell[] _ctr;    
+    SolidFVCell[] _ctr;
     SolidFVInterface[] _ifi;
     SolidFVInterface[] _ifj;
     SolidFVInterface[] _ifk;
@@ -96,7 +96,7 @@ public:
     {
         return (k*njcell + j)*nicell + i;
     }
-    
+
     override void initLuaGlobals()
     {
         lua_pushinteger(myL, n_ghost_cell_layers); lua_setglobal(myL, "n_ghost_cell_layers");
@@ -114,7 +114,7 @@ public:
     void copy_values_from(SolidFVCell other) {
 
     }
-    
+
     override void initBoundaryConditions(JSONValue jsonData)
     {
         foreach (boundary; 0 .. (myConfig.dimensions == 3 ? 6 : 4)) {
@@ -158,8 +158,8 @@ public:
     in {
         assert(i < _nidim && j < _njdim && k < _nkdim, "Index out of bounds.");
     }
-    body {
-        return k * (_njdim * _nidim) + j * _nidim + i; 
+    do {
+        return k * (_njdim * _nidim) + j * _nidim + i;
     }
 
     size_t[] toIJKIndices(size_t gid) const
@@ -183,7 +183,7 @@ public:
 
     override void assembleArrays()
     {
-        if ( myConfig.verbosity_level >= 2 ) 
+        if ( myConfig.verbosity_level >= 2 )
             writefln("SSolidBlock.assembleArrays(): Begin for solid_block %d", id);
         // Check for obvious errors.
         if ( _nidim <= 0 || _njdim <= 0 || _nkdim <= 0 ) {
@@ -196,8 +196,8 @@ public:
             foreach (gid; 0 .. ntot) {
                 _ctr ~= new SolidFVCell(myConfig); _ctr[gid].id = to!int(gid);
                 auto ijk = toIJKIndices(gid);
-                if ( ijk[0] >= imin && ijk[0] <= imax && 
-                     ijk[1] >= jmin && ijk[1] <= jmax && 
+                if ( ijk[0] >= imin && ijk[0] <= imax &&
+                     ijk[1] >= jmin && ijk[1] <= jmax &&
                      ijk[2] >= kmin && ijk[2] <= kmax ) {
                     activeCells ~= _ctr[gid];
                 }
@@ -366,11 +366,11 @@ public:
         // [TODO] We should test the incoming strings against the current variable names.
         line = byLine.front; byLine.popFront();
         formattedRead(line, "%d %d %d", &ni, &nj, &nk);
-        if ( ni != nicell || nj != njcell || 
+        if ( ni != nicell || nj != njcell ||
              nk != ((myConfig.dimensions == 3) ? nkcell : 1) ) {
             throw new Error(text("For solid_block[", id, "] we have a mismatch in solution size.",
                                  " Have read ni=", ni, " nj=", nj, " nk=", nk));
-        }       
+        }
         for ( size_t k = kmin; k <= kmax; ++k ) {
             for ( size_t j = jmin; j <= jmax; ++j ) {
                 for ( size_t i = imin; i <= imax; ++i ) {
@@ -408,7 +408,7 @@ public:
         } // for k
         outfile.finish();
     }
-    
+
 
     override void computePrimaryCellGeometricData()
     {
@@ -441,7 +441,7 @@ public:
         // |  c  |     |  c  |
         // |     |     |     |
         // D-----A     0-----1
-    
+
         max_vol = 0.0;
         min_vol = 1.0e30;    /* arbitrarily large */
         max_aspect = 0.0;
@@ -461,15 +461,15 @@ public:
                 xyarea = 0.5 * ((xB + xA) * (yB - yA) + (xC + xB) * (yC - yB) +
                                 (xD + xC) * (yD - yC) + (xA + xD) * (yA - yD));
                 // Cell Centroid.
-                cell.pos.refx = 1.0 / (xyarea * 6.0) * 
-                    ((yB - yA) * (xA * xA + xA * xB + xB * xB) + 
+                cell.pos.refx = 1.0 / (xyarea * 6.0) *
+                    ((yB - yA) * (xA * xA + xA * xB + xB * xB) +
                      (yC - yB) * (xB * xB + xB * xC + xC * xC) +
-                     (yD - yC) * (xC * xC + xC * xD + xD * xD) + 
+                     (yD - yC) * (xC * xC + xC * xD + xD * xD) +
                      (yA - yD) * (xD * xD + xD * xA + xA * xA));
-                cell.pos.refy = -1.0 / (xyarea * 6.0) * 
-                    ((xB - xA) * (yA * yA + yA * yB + yB * yB) + 
+                cell.pos.refy = -1.0 / (xyarea * 6.0) *
+                    ((xB - xA) * (yA * yA + yA * yB + yB * yB) +
                      (xC - xB) * (yB * yB + yB * yC + yC * yC) +
-                     (xD - xC) * (yC * yC + yC * yD + yD * yD) + 
+                     (xD - xC) * (yC * yC + yC * yD + yD * yD) +
                      (xA - xD) * (yD * yD + yD * yA + yA * yA));
                 cell.pos.refz = 0.0;
                 // Cell Volume.
@@ -504,9 +504,9 @@ public:
             for (j = jmin; j <= jmax; ++j) {
                 iface = getIfi(i,j);
                 // These are the corners.
-                xA = getVtx(i,j).pos.x; 
+                xA = getVtx(i,j).pos.x;
                 yA = getVtx(i,j).pos.y;
-                xB = getVtx(i,j+1).pos.x; 
+                xB = getVtx(i,j+1).pos.x;
                 yB = getVtx(i,j+1).pos.y;
                 LAB = sqrt((xB - xA) * (xB - xA) + (yB - yA) * (yB - yA));
                 if (LAB < 1.0e-9) {
@@ -532,7 +532,7 @@ public:
                 iface.pos = (getVtx(i,j).pos + getVtx(i,j+1).pos)/2.0;
             } // j loop
         } // i loop
-    
+
         // North-facing interfaces.
         for (i = imin; i <= imax; ++i) {
             for (j = jmin; j <= jmax+1; ++j) {
@@ -657,7 +657,7 @@ public:
             } // i loop
         } // k loop
     } // end calc_volumes_3D()
-    
+
     void calcFaces3D()
     {
         SolidFVInterface iface;
@@ -769,7 +769,7 @@ public:
             } // end foreach face
         }
     }
-    
+
     override void applyPreSpatialDerivActionAtBndryFaces(double t, int tLevel)
     {
         bc[Face.north].applyPreSpatialDerivActionAtBndryFaces(t, tLevel);
@@ -793,7 +793,7 @@ public:
             bc[Face.bottom].applyPreSpatialDerivActionAtBndryCells(t, tLevel);
         }
     }
-    
+
     override void applyPostFluxAction(double t, int tLevel)
     {
         bc[Face.north].applyPostFluxAction(t, tLevel);
@@ -832,17 +832,17 @@ public:
         // vector from left-cell-centre to right-cell-centre
         number ex = cR0.pos.x - cL0.pos.x;
         number ey = cR0.pos.y - cL0.pos.y;
-        number ez = cR0.pos.z - cL0.pos.z;                
+        number ez = cR0.pos.z - cL0.pos.z;
         // ehat
         number emag = sqrt(ex*ex + ey*ey + ez*ez);
         number ehatx = ex/emag;
         number ehaty = ey/emag;
-        number ehatz = ez/emag;                
+        number ehatz = ez/emag;
         // ndotehat
         number ndotehat = nx*ehatx + ny*ehaty + nz*ehatz;
         number avgdotehat;
         number jump;
-            
+
         avgdotehat = 0.5*(cL0.dTdx+cR0.dTdx)*ehatx +
             0.5*(cL0.dTdy+cR0.dTdy)*ehaty +
             0.5*(cL0.dTdz+cR0.dTdz)*ehatz;
@@ -901,7 +901,7 @@ public:
                     }  // i loop
                 } // j loop
             } // k loop
-            
+
             // ifj interfaces are south interfaces, with their unit normal pointing north.
             for (k = kmin; k <= kmax; ++k) {
                 for (i = imin; i <= imax; ++i) {
@@ -928,7 +928,7 @@ public:
             } // k loop
         }
     }
-    
+
     override void computeFluxes()
     {
         size_t i, j, k;
@@ -952,9 +952,9 @@ public:
                         qx = -IFace.sp.k * dTdx;
                         qy = -IFace.sp.k * dTdy;
                     }
-                    else if (myConfig.solid_has_homogeneous_properties) { 
-                        qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy; 
-                        qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;  
+                    else if (myConfig.solid_has_homogeneous_properties) {
+                        qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy;
+                        qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
                     }
                     IFace.flux = qx * IFace.n.x + qy * IFace.n.y;
                 }
@@ -962,7 +962,7 @@ public:
             // North-facing interfaces
             for ( j = jmin; j <= jmax + 1; ++j ) {
                 for ( i = imin; i <= imax; ++i ) {
-                    if ( j == jmin && bc[Face.south].setsFluxDirectly ) 
+                    if ( j == jmin && bc[Face.south].setsFluxDirectly )
                         continue;
                     if ( j == jmax+1 && bc[Face.north].setsFluxDirectly )
                         continue;
@@ -974,9 +974,9 @@ public:
                         qx = -IFace.sp.k * dTdx;
                         qy = -IFace.sp.k * dTdy;
                     }
-                    else if (myConfig.solid_has_homogeneous_properties) { 
-                        qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy; 
-                        qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;  
+                    else if (myConfig.solid_has_homogeneous_properties) {
+                        qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy;
+                        qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
                     }
                     IFace.flux = qx * IFace.n.x + qy * IFace.n.y;
                 }
@@ -999,21 +999,21 @@ public:
                         qy = -IFace.sp.k * dTdy;
                         qz = -IFace.sp.k * dTdz;
                     }
-                    else if (myConfig.solid_has_homogeneous_properties) { 
+                    else if (myConfig.solid_has_homogeneous_properties) {
                         throw new Error("solid_has_homogeneous_properties not implemented for 3D yet.");
-                        //qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy; 
+                        //qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy;
                         //qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
                     }
                     IFace.flux = qx * IFace.n.x + qy * IFace.n.y + qz * IFace.n.z;
                     }  // i loop
                 } // j loop
             } // k loop
-            
+
             // ifj interfaces are south interfaces, with their unit normal pointing north.
             for (k = kmin; k <= kmax; ++k) {
                 for (i = imin; i <= imax; ++i) {
                     for (j = jmin; j <= jmax+1; ++j) {
-                        if ( j == jmin && bc[Face.south].setsFluxDirectly ) 
+                        if ( j == jmin && bc[Face.south].setsFluxDirectly )
                             continue;
                         if ( j == jmax+1 && bc[Face.north].setsFluxDirectly )
                             continue;
@@ -1026,9 +1026,9 @@ public:
                             qy = -IFace.sp.k * dTdy;
                             qz = -IFace.sp.k * dTdz;
                         }
-                        else if (myConfig.solid_has_homogeneous_properties) { 
+                        else if (myConfig.solid_has_homogeneous_properties) {
                             throw new Error("solid_has_homogeneous_properties not implemented for 3D yet.");
-                            //qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy; 
+                            //qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy;
                             //qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
                         }
                         IFace.flux = qx * IFace.n.x + qy * IFace.n.y + qz * IFace.n.z;
@@ -1039,7 +1039,7 @@ public:
             for (i = imin; i <= imax; ++i) {
                 for (j = jmin; j <= jmax; ++j) {
                     for (k = kmin; k <= kmax+1; ++k) {
-                        if ( k == kmin && bc[Face.bottom].setsFluxDirectly ) 
+                        if ( k == kmin && bc[Face.bottom].setsFluxDirectly )
                             continue;
                         if ( k == kmax+1 && bc[Face.top].setsFluxDirectly )
                             continue;
@@ -1052,9 +1052,9 @@ public:
                             qy = -IFace.sp.k * dTdy;
                             qz = -IFace.sp.k * dTdz;
                         }
-                        else if (myConfig.solid_has_homogeneous_properties) { 
+                        else if (myConfig.solid_has_homogeneous_properties) {
                             throw new Error("solid_has_homogeneous_properties not implemented for 3D yet.");
-                            //qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy; 
+                            //qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy;
                             //qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
                         }
                         IFace.flux = qx * IFace.n.x + qy * IFace.n.y + qz * IFace.n.z;
@@ -1063,12 +1063,12 @@ public:
             } // k loop
         }
     }
-    
+
     override void clearSources()
     {
         foreach ( cell; activeCells ) cell.Q = 0.0;
     }
-    
+
     @nogc
     override double determine_time_step_size(double cfl_value)
     {
@@ -1104,7 +1104,7 @@ public:
         }
         return dt_allow.re;
     } // end determine_time_step_size()
-    
+
 }
 
 @nogc
@@ -1122,7 +1122,7 @@ void gradients_T_lsq_setup(SolidFVCell c, int dimensions)
     // as the reference point (pos).
     // For the "faces" spatial location we are expecting the primary point
     // (i.e. the face at which we are calculating the gradients) to be in
-    // the first cloud position. 
+    // the first cloud position.
     number x0 = c.pos.x; number y0 = c.pos.y; number z0 = c.pos.z;
     if (dimensions == 2) {
         foreach (i; loop_init .. n) {
@@ -1138,12 +1138,12 @@ void gradients_T_lsq_setup(SolidFVCell c, int dimensions)
             weights2[i] = 1.0/(dx*dx+dy*dy+dz*dz);
         }
     }
-    
+
     number[12] dx, dy, dz;
     //
     // Assemble and invert the normal matrix.
     // We'll reuse the resulting inverse for each flow-field quantity.
-    number[12] wx, wy, wz; 
+    number[12] wx, wy, wz;
     if (dimensions == 3) {
         number[6][3] xTx; // normal matrix, augmented to give 6 entries per row
         number xx = 0.0; number xy = 0.0; number xz = 0.0;
@@ -1168,7 +1168,7 @@ void gradients_T_lsq_setup(SolidFVCell c, int dimensions)
         double very_small_value = 1.0e-16*(normInf!(3,3,6,number)(xTx).re)^^3;
         if (0 != computeInverse!(3,3,6,number)(xTx, very_small_value)) {
             throw new FlowSolverException("Failed to invert LSQ normal matrix");
-            // Assume that the rows are linearly dependent 
+            // Assume that the rows are linearly dependent
             // because the sample points are coplanar or colinear.
         }
         // Prepare final weights for later use in the reconstruction phase.
@@ -1198,10 +1198,10 @@ void gradients_T_lsq_setup(SolidFVCell c, int dimensions)
         double very_small_value = 1.0e-16*(normInf!(2,2,4,number)(xTx).re)^^2;
         if (0 != computeInverse!(2,2,4,number)(xTx, very_small_value)) {
             throw new FlowSolverException("Failed to invert LSQ normal matrix");
-            // Assume that the rows are linearly dependent 
+            // Assume that the rows are linearly dependent
             // because the sample points are colinear.
         }
-        //number[12] wx, wy, wz; 
+        //number[12] wx, wy, wz;
         // Prepare final weights for later use in the reconstruction phase.
         foreach (i; loop_init .. n) {
             c.wx[i] = xTx[0][2]*dx[i] + xTx[0][3]*dy[i];
@@ -1219,7 +1219,7 @@ void gradients_T_lsq(SolidFVCell c, int dimensions)
     size_t n = c.cloud_pos.length;
     size_t loop_init;
     loop_init = 1; // All points count.
- 
+
     number T0;
     number[3] gradT;
     T0 = *(c.cloud_T[0]);
@@ -1230,7 +1230,7 @@ void gradients_T_lsq(SolidFVCell c, int dimensions)
         gradT[1] += c.wy[i] * dT;
         if (dimensions == 3) { gradT[2] += c.wz[i] * dT; }
     }
-     
+
     c.dTdx = gradT[0];
     c.dTdy = gradT[1];
     if (dimensions == 3) c.dTdz = gradT[2];

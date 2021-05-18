@@ -30,32 +30,33 @@ void computeFluxesAndTemperatures(int ftl, FVCell[] gasCells, FVInterface[] gasI
     number dxG, dyG, dzG, dnG, dxS, dyS, dzS, dnS;
     number kG_dnG, kS_dnS, cosA, cosB, cosC;
     number T, q;
-
+    auto cqi = gasCells[0].myConfig.cqi;
+    //
     foreach ( i; 0 .. gasCells.length ) {
         cosA = gasIFaces[i].n.x;
         cosB = gasIFaces[i].n.y;
         cosC = gasIFaces[i].n.z;
-        
+        //
         dxG = gasIFaces[i].pos.x - gasCells[i].pos[0].x;
         dyG = gasIFaces[i].pos.y - gasCells[i].pos[0].y;
         dzG = gasIFaces[i].pos.z - gasCells[i].pos[0].z;
         dnG = fabs(cosA*dxG + cosB*dyG + cosC*dzG);
-
+        //
         dxS = solidIFaces[i].pos.x - solidCells[i].pos.x;
         dyS = solidIFaces[i].pos.y - solidCells[i].pos.y;
         dzS = solidIFaces[i].pos.z - solidCells[i].pos.z;
         dnS = fabs(cosA*dxS + cosB*dyS + cosC*dzS);
-
+        //
         kG_dnG = gasCells[i].fs.gas.k / dnG;
         kS_dnS = solidCells[i].sp.k / dnS;
-
+        //
         T = (gasCells[i].fs.gas.T*kG_dnG + solidCells[i].T*kS_dnS) / (kG_dnG + kS_dnS);
         q = -kG_dnG * (T - gasCells[i].fs.gas.T);
         // Finally update properties in interfaces
         gasIFaces[i].fs.gas.T = T;
-        gasIFaces[i].F.total_energy = q; // CHECK ME: might only work for
-                                         // NORTH-SOUTH orientation.
-                                         // Need to think about sign.
+        gasIFaces[i].F.vec[cqi.totEnergy] = q; // CHECK ME: might only work for
+                                               // NORTH-SOUTH orientation.
+                                               // Need to think about sign.
         solidIFaces[i].T = T;
         solidIFaces[i].flux = q;
     }
@@ -115,13 +116,14 @@ void computeFluxesAndTemperatures2(int ftl, FVCell[] gasCells, FVInterface[] gas
     LUDecomp!number(A, pivot);
     LUSolve!number(A, pivot, B, T);
     // 3. Place temperatures and fluxes in interfaces
+    auto cqi = gasCells[0].myConfig.cqi;
     foreach (i; 0 .. gasCells.length) {
         kG = gasCells[i].fs.gas.k;
         dyG = gasIFaces[i].pos.y - gasCells[i].pos[0].y;
-	auto kG_dyG = kG/dyG; 
+	auto kG_dyG = kG/dyG;
         auto q = -kG_dyG*(T[i] - gasCells[i].fs.gas.T);
         gasIFaces[i].fs.gas.T = T[i];
-        gasIFaces[i].F.total_energy = q;
+        gasIFaces[i].F.vec[cqi.totEnergy] = q;
         solidIFaces[i].T = T[i];
         solidIFaces[i].flux = q;
     }

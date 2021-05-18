@@ -657,6 +657,49 @@ void cross_product(number ax, number ay, number az, number bx, number by, number
     return;
 }
 
+@nogc number dot(number ax, number ay, number az, ref const(Vector3) other)
+{
+    return ax*other.x + ay*other.y + az*other.z;
+}
+
+// Transform functions used to reorient vector values in the CFD codes.
+
+/**
+ * Rotate v from the global xyz coordinate system into the local frame
+ * defined by the orthogonal unit vectors n,t1,t2.
+ *
+ * We assume, without checking, that these vectors do nicely define
+ * such a local system.
+ */
+@nogc void transform_to_local_frame(ref number ax, ref number ay, ref number az,
+                                    ref const(Vector3) n,
+                                    ref const(Vector3) t1,
+                                    ref const(Vector3) t2)
+{
+    number v_x = dot(ax, ay, az, n); // normal component
+    number v_y = dot(ax, ay, az, t1); // tangential component 1
+    number v_z = dot(ax, ay, az, t2); // tangential component 2
+    ax = v_x;
+    ay = v_y;
+    az = v_z;
+}
+
+/**
+ * Rotate v back into the global (xyz) coordinate system.
+ */
+@nogc void transform_to_global_frame(ref number ax, ref number ay, ref number az,
+                                     ref const(Vector3) n,
+                                     ref const(Vector3) t1,
+                                     ref const(Vector3) t2)
+{
+    number v_x = ax*n.x + ay*t1.x + az*t2.x; // global-x
+    number v_y = ax*n.y + ay*t1.y + az*t2.y; // global-y
+    number v_z = ax*n.z + ay*t1.z + az*t2.z; // global-z
+    ax = v_x;
+    ay = v_y;
+    az = v_z;
+}
+
 /**
  * Returns true if all of the components of two vectors are approximately equal.
  */

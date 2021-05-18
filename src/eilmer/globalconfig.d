@@ -362,7 +362,7 @@ final class GlobalConfig {
     shared static int nSolidBlocks = 0; // Number of solid blocks in the overall simulation.
     shared static int dimensions = 2; // default is 2, other valid option is 3
     shared static bool axisymmetric = false;
-    shared static ConservedQuantitiesIndices cqi;
+    static ConservedQuantitiesIndices cqi;
     shared static int nFluidBlockArrays = 0;
 
     // Parameters controlling update
@@ -893,7 +893,7 @@ public:
         new_flow_format = GlobalConfig.new_flow_format;
         dimensions = GlobalConfig.dimensions;
         axisymmetric = GlobalConfig.axisymmetric;
-        cqi = GlobalConfig.cqi;
+        cqi = new ConservedQuantitiesIndices(GlobalConfig.cqi);
         gasdynamic_update_scheme = GlobalConfig.gasdynamic_update_scheme;
         n_flow_time_levels = GlobalConfig.n_flow_time_levels;
         residual_smoothing = GlobalConfig.residual_smoothing;
@@ -1575,11 +1575,11 @@ JSONValue read_config_file()
     foreach (vname; build_flow_variable_list()) { GlobalConfig.flow_variable_list ~= vname; }
 
     // We have enough information here to create the ConservedQuantitiesIndices struct.
-    GlobalConfig.cqi = ConservedQuantitiesIndices(GlobalConfig.dimensions,
-                                                  GlobalConfig.turb_model.nturb,
-                                                  GlobalConfig.MHD,
-                                                  GlobalConfig.n_species,
-                                                  GlobalConfig.n_modes);
+    GlobalConfig.cqi = new ConservedQuantitiesIndices(GlobalConfig.dimensions,
+                                                      GlobalConfig.turb_model.nturb,
+                                                      GlobalConfig.MHD,
+                                                      GlobalConfig.n_species,
+                                                      GlobalConfig.n_modes);
 
     // Now, configure blocks that make up the flow domain.
     //

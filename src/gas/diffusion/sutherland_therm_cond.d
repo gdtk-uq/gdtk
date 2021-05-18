@@ -19,7 +19,7 @@ import util.lua_service;
 import util.msg_service;
 /++
   Compute the thermal conductivity using Sutherland's expression.
-  
+
   Params:
      T = temperature of gas in K
      T_ref = reference temperature in K
@@ -43,7 +43,7 @@ out(result) {
         assert(result > 0.0, brokenPostCondition("thermal conductivity", __LINE__, __FILE__));
     }
 }
-body{
+do{
     number k = k_ref*sqrt(T/T_ref)*(T/T_ref)*(T_ref + S)/(T + S);
     return k;
 }

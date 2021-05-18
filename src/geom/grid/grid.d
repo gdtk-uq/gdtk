@@ -74,7 +74,7 @@ class Grid {
         assert (j < njv, "index j is invalid");
         assert (k < nkv, "index k is invalid");
     }
-    body {
+    do {
         return i + niv*(j + njv*k);
     }
 
@@ -82,7 +82,7 @@ class Grid {
     in {
         assert ( indx < vertices.length );
     }
-    body {
+    do {
         size_t k = indx / (niv*njv);
         indx -= k * (niv * njv);
         size_t j = indx / niv;

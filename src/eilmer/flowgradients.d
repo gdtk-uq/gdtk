@@ -171,7 +171,8 @@ public:
         }
         repr ~= ", T=" ~ to!string(T);
         version(multi_T_gas) {
-            repr ~= ", T_modes=[" ~ to!string(T_modes[0]);
+            repr ~= ", T_modes=[";
+            if (T_modes.length > 0) repr ~= to!string(T_modes[0]);
             foreach (i; 1 .. T_modes.length) repr ~= ", " ~ to!string(T_modes);
             repr ~= "]";
         }
