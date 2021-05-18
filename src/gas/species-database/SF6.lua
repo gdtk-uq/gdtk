@@ -54,3 +54,9 @@ db.SF6.ceaThermoCoeffs = {
      -8.147574587e+01
    }
 }
+db.SF6.Hf = {
+   value = -1219400.0,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

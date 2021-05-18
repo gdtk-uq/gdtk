@@ -195,3 +195,9 @@ db.CO2.chemkinThermCond = {
    }
 }
 
+db.CO2.Hf = {
+   value = -393510.0,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

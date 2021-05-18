@@ -53,3 +53,9 @@ db.NH2.grimechThermoCoeffs = {
       0.65204163E+01,
    }
 }
+db.NH2.Hf = {
+   value = 189134.713,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

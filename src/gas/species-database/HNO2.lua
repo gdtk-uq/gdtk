@@ -40,3 +40,9 @@ db.HNO2.ceaThermoCoeffs = {
      -4.608874688e+01,
    }
 }
+db.HNO2.Hf = {
+   value = -78451.922,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

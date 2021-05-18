@@ -56,3 +56,9 @@ db['NO+'].ceaThermoCoeffs = {
 -- No CEA transport data for NO+, just use NO
 db['NO+'].ceaViscosity = db.NO.ceaViscosity  
 db['NO+'].ceaThermCond = db.NO.ceaThermCond  
+db['NO+'].Hf = {
+   value = 990809.704,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

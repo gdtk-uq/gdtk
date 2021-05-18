@@ -80,3 +80,9 @@ db.HNO.grimechThermoCoeffs = {
       0.86063728E+01,
    }
 }
+db.HNO.Hf = {
+   value = 102032.725,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

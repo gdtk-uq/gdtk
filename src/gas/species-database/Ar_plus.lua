@@ -76,3 +76,9 @@ db['Ar+'].ceaThermoCoeffs = {
 db['Ar+'].ceaViscosity = db.Ar.ceaViscosity
 db['Ar+'].ceaThermCond = db.Ar.ceaThermCond
 
+db['Ar+'].Hf = {
+   value = 1526778.407,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

@@ -153,3 +153,9 @@ db.Ar.ceaThermCond = {
       D =  5.6927918e-01
    },
 }
+db.Ar.Hf = {
+   value = 0.0,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

@@ -54,3 +54,9 @@ db.C2O.grimechThermoCoeffs = {
 	}
 }
 
+db.C2O.Hf = {
+   value = 291038.666,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

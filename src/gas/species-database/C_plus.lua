@@ -51,3 +51,9 @@ db['C+'].ceaThermoCoeffs = {
      -2.280019759e+01
    }
 }
+db['C+'].Hf = {
+   value = 1809444.482,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

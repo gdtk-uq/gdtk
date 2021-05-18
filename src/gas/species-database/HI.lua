@@ -40,3 +40,9 @@ db.HI.ceaThermoCoeffs = {
      -1.182487652e+01,
    },
 }
+db.HI.Hf = {
+   value = 26359.0,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

@@ -57,3 +57,9 @@ db['Ne+'].ceaThermoCoeffs = {
 -- No CEA transport data for Ne+, just use Ne
 db['Ne+'].ceaViscosity = db.Ne.ceaViscosity 
 db['Ne+'].ceaThermCond = db.Ne.ceaThermCond 
+db['Ne+'].Hf = {
+   value = 2086965.946,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

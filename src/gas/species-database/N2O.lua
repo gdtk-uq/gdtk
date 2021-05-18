@@ -53,3 +53,9 @@ db.N2O.grimechThermoCoeffs = {
      -0.22017207E+01,
    }
 }
+db.N2O.Hf = {
+   value = 81600.0,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

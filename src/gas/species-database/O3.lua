@@ -40,3 +40,9 @@ db.O3.ceaThermoCoeffs = {
       7.029109520e+02,
    }
 }
+db.O3.Hf = {
+   value = 141800.0,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

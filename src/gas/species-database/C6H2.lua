@@ -54,3 +54,9 @@ db.C6H2.grimechThermoCoeffs = {
 	}
 }
 
+db.C6H2.Hf = {
+   value = 670000.0,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

@@ -105,6 +105,16 @@ public:
         return _reactions[ir].production(isp) - _reactions[ir].loss(isp);
     }
     @nogc
+    final const number production_rate(int ir, int isp)
+    {
+        return _reactions[ir].production(isp);
+    }
+    @nogc
+    final const number loss_rate(int ir, int isp)
+    {
+        return _reactions[ir].loss(isp);
+    }
+    @nogc
     final bool reactionHasParticipant(int ir, int isp)
     {
         foreach (p; _reactions[ir].participants) {

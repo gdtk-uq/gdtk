@@ -91,3 +91,9 @@ db.CN.grimechThermoCoeffs = {
       0.27867601E+01,
    }
 }
+db.CN.Hf = {
+   value = 438683.552,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

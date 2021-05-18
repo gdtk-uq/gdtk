@@ -53,3 +53,9 @@ db.CH3OH.grimechThermoCoeffs = {
       1.45023623E+01,
    }
 }
+db.CH3OH.Hf = {
+   value = -200940.0,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

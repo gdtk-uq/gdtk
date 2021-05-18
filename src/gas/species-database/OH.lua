@@ -158,3 +158,9 @@ db.OH.chemkinThermCond = {
    }
 }
 
+db.OH.Hf = {
+   value = 37278.206,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

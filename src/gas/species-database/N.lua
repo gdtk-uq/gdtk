@@ -144,3 +144,9 @@ db.N.ceaThermCond = {
    reference = 'from CEA2::trans.inp which cites Levin et al (1990)'
 }
 
+db.N.Hf = {
+   value = 472680.0,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

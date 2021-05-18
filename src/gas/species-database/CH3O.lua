@@ -110,3 +110,9 @@ db.CH3O.chemkinThermCond = {
    }
 }
 
+db.CH3O.Hf = {
+   value = 13000.0,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

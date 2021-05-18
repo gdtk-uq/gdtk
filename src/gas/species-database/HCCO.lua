@@ -107,3 +107,9 @@ db.HCCO.chemkinThermCond = {
    }
 }
 
+db.HCCO.Hf = {
+   value = 176568.1,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

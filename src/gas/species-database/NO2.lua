@@ -118,3 +118,9 @@ db.NO2.ceaThermCond = {
       D = -0.60899123e+00
    }
 }
+db.NO2.Hf = {
+   value = 34193.019,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

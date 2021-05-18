@@ -68,3 +68,9 @@ db['O+'].ceaThermoCoeffs = {
 db['O+'].ceaViscosity = db.O.ceaViscosity
 db['O+'].ceaThermCond = db.O.ceaThermCond 
 
+db['O+'].Hf = {
+   value = 1568787.228,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

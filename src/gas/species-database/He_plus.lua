@@ -57,3 +57,9 @@ db['He+'].ceaThermoCoeffs = {
 -- No CEA transport data for He+, just use He
 db['He+'].ceaViscosity = db.He.ceaViscosity 
 db['He+'].ceaThermCond = db.He.ceaThermCond 
+db['He+'].Hf = {
+   value = 2378521.473,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

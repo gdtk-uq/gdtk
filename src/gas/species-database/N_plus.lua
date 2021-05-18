@@ -69,3 +69,9 @@ db['N+'].ceaViscosity = db.N.ceaViscosity
 db['N+'].ceaThermCond = db.N.ceaThermCond 
 
 
+db['N+'].Hf = {
+   value = 1882127.624,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

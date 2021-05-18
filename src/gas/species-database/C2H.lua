@@ -78,3 +78,9 @@ db.C2H.chemkinThermCond = {
       D = -2.549920860076e-02,
    }
 }
+db.C2H.Hf = {
+   value = 566200.482,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

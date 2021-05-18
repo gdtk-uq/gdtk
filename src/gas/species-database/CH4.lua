@@ -153,3 +153,9 @@ db.CH4.chemkinThermCond = {
    }
 }
 
+db.CH4.Hf = {
+   value = -74600.0,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

@@ -17,6 +17,7 @@ KINETICS_FILES := $(KINETICS_DIR)/package.d \
 	$(KINETICS_DIR)/reaction_mechanism.d \
 	$(KINETICS_DIR)/relaxation_time.d \
 	$(KINETICS_DIR)/exchange_cross_section.d \
+	$(KINETICS_DIR)/exchange_chemistry_coupling.d \
 	$(KINETICS_DIR)/two_temperature_thermochemical_reactor.d \
 	$(KINETICS_DIR)/two_temperature_air_kinetics.d \
 	$(KINETICS_DIR)/two_temperature_argon_kinetics.d \

@@ -163,3 +163,9 @@ db.H2O.chemkinThermCond = {
    }
 }
 
+db.H2O.Hf = {
+   value = -241826.0,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

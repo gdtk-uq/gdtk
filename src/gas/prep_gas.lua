@@ -410,6 +410,10 @@ function write2TGas(f, species, db, optsTable)
       f:write("}\n")
       f:write(string.format("db['%s'].charge = %d\n", sp, db[sp].charge))
       f:write(string.format("db['%s'].M = %.8e\n", sp, db[sp].M.value))
+      if db[sp].Hf then
+         f:write(string.format("db['%s'].Hf = %.8e\n", sp, db[sp].Hf.value))
+      end
+      f:write(string.format("db['%s'].M = %.8e\n", sp, db[sp].M.value))
       diffusion_info_missing = false
       if db[sp].sigma then
          sigma = db[sp].sigma.value

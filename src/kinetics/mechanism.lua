@@ -9,23 +9,6 @@ local sqrt = math.sqrt
 
 require 'lex_elems'
 
-function extractVibrationalRelaxers(mechanisms)
-   local vibrational_relaxers = {}
-
-   for p,table in pairs(mechanisms) do
-      hasvib = false
-      for q,mech in pairs(table) do
-         if mech.type=='V-T' then hasvib = true end
-      end
-
-      if hasvib then
-         vibrational_relaxers[#vibrational_relaxers+1] = p
-      end
-   end
-
-   return vibrational_relaxers
-end
-
 function transformRelaxationTime(rt, p, q, db)
    local t = {}
    t.model = rt[1]
@@ -72,6 +55,42 @@ function transformRelaxationTime(rt, p, q, db)
    return t
 end
 
+function calculateDissociationEnergy(dissociating_species, db)
+   -- Calculate the dissociation energy by assuming the species splits
+   -- completely into its atomic components. This may require some scrunity
+   -- for polyatomic molecules, e.g. CO2
+   -- 
+   -- @author: Nick Gibbons
+   local D = -db[dissociating_species].Hf
+   for k,v in pairs(db[dissociating_species].atomicConstituents) do
+      if db[k] == nil then
+          print(string.format("ERROR: Atom %s (from %s) not present in gas model.", k, dissociating_species))
+          os.exit(1)
+      end
+      D = D + v*db[k].Hf
+   end
+   return D
+end
+
+function buildChemistryCouplingModel(m, dissociating_species, db)
+   -- Coupling models for chemistry vibrational coupling need their parameters
+   -- assembled into a table. We do that here, computing any things that they need.
+   --
+   -- Notes: Consider 
+   -- @author: Nick Gibbons
+   local ccm = {}
+   ccm.model = m.model
+
+   if m.model == "ImpartialDissociation" then
+       ccm.Thetav = db[dissociating_species].theta_v
+       ccm.D = calculateDissociationEnergy(dissociating_species, db)
+   else
+      print(string.format("ERROR: chemistry coupling model '%s' is not known.", m.model))
+      os.exit(1)
+   end
+   return ccm
+end
+
 function relaxationTimeToLuaStr(rt)
    local str = ""
    if rt.model == "Millikan-White" then
@@ -92,12 +111,12 @@ function relaxationTimeToLuaStr(rt)
    return str
 end
 
-function chemistryCouplingRateToLuaStr(rate)
+function chemistryCouplingTypeToLuaStr(ct)
    local str = ""
-   if rate.model == "Marrone-Treanor" then
-      str = string.format("{model='Marrone-Treanor', U=%.8f, alpha=%.8f}", rate.U, rate.alpha)
+   if ct.model == "ImpartialDissociation" then
+      str = string.format("{model='ImpartialDissociation', D=%f, Thetav=%f}", ct.D, ct.Thetav)
    else
-      print(string.format("ERROR: Chemistry coupling rate model '%s' is not known.", rate.model))
+      print(string.format("ERROR: Chemistry coupling type '%s' is not known.", ct.model))
       os.exit(1)
    end
    return str
@@ -158,8 +177,10 @@ function mechanismToLuaStr(index, m)
       argStr = argStr .. string.format("  rate = 'ElectronExchange',\n")
       argStr = argStr .. string.format("  exchange_cross_section = %s\n", tableToString(m.exchange_cross_section))
    elseif m.type == "C-V" then
-      argStr = string.format("  reaction_label = '%s',\n", m.reaction_label)
-      argStr = argStr .. string.format("  rate = %s,\n", chemistryCouplingRateToLuaStr(m.rate))
+      argStr = string.format("  p = '%s',\n", m.p)
+      argStr = argStr .. string.format("  rate = '%s',\n", m.rate)
+      argStr = argStr .. string.format("  reaction_index = %d,\n", m.reaction_index)
+      argStr = argStr .. string.format("  coupling_model = %s\n", chemistryCouplingTypeToLuaStr(m.coupling_model))
    else
       print("ERROR: mechanism type is not known: ", type)
       os.exit(1)
@@ -304,6 +325,85 @@ function addUserMechToTable(index, m, mechanisms, species, db)
             mechanisms[index].exchange_cross_section = m.exchange_cross_section
          end
          index = index + 1
+      end
+   end
+   return index
+end
+
+function seekEntriesWithLabel(table, keyname, keyvalue)
+   -- Search through a table of tables, compiling any that have a key named
+   -- "keyname" with a value equal to "keyvalue".
+   -- 
+   -- Example:
+   -- t = {one = {label="reaction1", A=1, B=2}, two={label="reaction2", A=1, B=3}}
+   -- out = seekEntriesWithLabel(t, "label", "reaction1"))
+   -- print(tableToString(out))
+   --   >> {one = {label="reaction1", A=1, B=2}}
+   -- 
+   -- @author: Nick Gibbons
+   local entries = {}
+   for k,v in pairs(table) do
+      if v[keyname] == keyvalue then entries[k] = v end
+   end
+   return entries
+end
+
+function concatenateTables(t1, t2)
+   -- Take two tables and stick them together, throwing away key information.
+   -- 
+   -- Example:
+   -- out = concatenateTables({1,2,3}, {a=4,b=5,c=6})
+   -- print(tableToString(out))
+   --   >> {1,2,3,4,5,6}
+   -- 
+   -- @author: Nick Gibbons
+   local newtable = {}
+   local index = 1
+   for _,v in ipairs(t1) do
+      newtable[index] = v
+      index = index + 1
+   end
+   for _,v in ipairs(t2) do
+      newtable[index] = v
+      index = index + 1
+   end
+   return newtable
+end
+
+function addUserChemMechToTable(index, m, mechanisms, species, db, reaction)
+   -- Look through the surface definitions for Chemistry/Vibration coupling
+   -- mechanisms. We loop through the reaction_labels table and look for
+   -- reactions with matching labels, creating a deep definition of the 
+   -- CV mechanism for each match. 
+   --
+   -- @author: Nick Gibbons
+   for _,target_label in ipairs(m.reaction_labels) do
+
+      target_reactions = seekEntriesWithLabel(reaction, "label", target_label)
+      if next(target_reactions) == nil then
+          print(string.format('ERROR: No reactions matching label "%s" found.', target_label))
+          os.exit(1)
+      end
+
+      for reaction_index, target_reaction in pairs(target_reactions) do
+         participant_species = {}
+         participant_indices = concatenateTables(target_reaction.prodIdx, target_reaction.reacIdx)
+         for k,v in ipairs(participant_indices) do
+            spname = species[v+1] -- Lua indices start from zero, and the table is d indices
+            participant_species[spname] = db[spname]
+         end
+
+         participant_molecules = seekEntriesWithLabel(participant_species, "type", "molecule")
+
+         for speciesname,dbentry in pairs(participant_molecules) do
+            mechanisms[index] = {}
+            mechanisms[index].type = m.type
+            mechanisms[index].p = speciesname
+            mechanisms[index].rate = m.rate
+            mechanisms[index].reaction_index = reaction_index - 1 -- d indexing starts at zero!
+            mechanisms[index].coupling_model = buildChemistryCouplingModel(m.coupling_model, speciesname, db)
+            index = index + 1
+         end
       end
    end
    return index

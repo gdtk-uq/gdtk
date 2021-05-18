@@ -40,3 +40,9 @@ db.HNO3.ceaThermoCoeffs = {
      -5.928392985e+01,
    }
 }
+db.HNO3.Hf = {
+   value = -133912.869,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

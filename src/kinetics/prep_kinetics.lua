@@ -13,7 +13,7 @@ mechanisms = {}
 local validateMechanism = mechanism.validateMechanism
 local addUserMechToTable = mechanism.addUserMechToTable
 local mechanismToLuaStr = mechanism.mechanismToLuaStr
-local extractVibrationalRelaxers = mechanism.extractVibrationalRelaxers
+local addUserChemMechToTable = mechanism.addUserChemMechToTable
 
 function printHelp()
    print("prep-kinetics --- Prepares an energy exchange kinetics file for Eilmer.")
@@ -58,7 +58,7 @@ end
 
 
 function main()
-   local gmodelFile, inFname, outFname
+   local gmodelFile, chemmodelFile, inFname, outFname
    
    if (#arg == 0 or arg[1] == "--help") then
       printHelp()
@@ -70,23 +70,43 @@ function main()
       printHelp()
    end
 
-   if (#arg > 3) then
+   if (#arg == 3) then
+       gmodelFile = arg[1]
+       inFname    = arg[2]
+       outFname   = arg[3]
+   end
+
+   if (#arg == 4) then
+       gmodelFile = arg[1]
+       chemFile   = arg[2]
+       inFname    = arg[3]
+       outFname   = arg[4]
+   end
+
+   if (#arg > 4) then
       print("Too many arguments.")
       print("Exiting program without doing anything.")
       printHelp()
    end
 
-   gmodelFile = arg[1]
-   inFname = arg[2]
-   outFname = arg[3]
 
    outstring = 'Creating kinetics file "' .. outFname .. '" using input file "' .. inFname .. '"...'
    print(outstring)
+
+   -- Execute chemical kinetics file in case we need reaction info
+   -- We do this before the gas file because both have a table called
+   -- "species", and we want the gas file's version to overwrite the chemFile's one.
+   if chemFile ~= nil then
+      dofile(chemFile)
+   else
+      reaction = {} 
+   end
 
    -- Execute gas model file so we can get:
    -- 1. list of species
    -- 2. list of energy modes
    dofile(gmodelFile)
+
    -- The species table has indices as keys, and species names as values.
    -- Let's augment that with a reverse lookup, names as keys and indices as values.
    -- And we'll use the D-offset for species index (from 0)
@@ -109,8 +129,7 @@ function main()
       end
    end
    for i,m in ipairs(userCCMechs) do
-         mechanisms[index] = m
-         index = index + 1
+      index = addUserChemMechToTable(index, m, mechanisms, species, db, reaction)
    end
    -- Now write out transformed results
    buildVerboseLuaFile(outFname)

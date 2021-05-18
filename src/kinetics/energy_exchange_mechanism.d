@@ -7,6 +7,10 @@
  *
  *  - "Effects of hydrogen impurities on shock structure and stability in ionizing monatomic gases. Part 1. Argon"
  *     I. I. Glass and W. S. Lio, Journal of Fluid Mechanics vol. 85, part 1, pp 55-77, 1978
+*
+ *  - "Theory and Validation of a Physically Consistent Couplied Vibration-Chemistry-Vibration Model"
+ *    O. Knab and H. H. Fruhauf and E. W. Masserschmid, Journal of Thermophysics and Heat Transfer,
+ *    Volume 9, Number 2, April-June 1995
  *
  * Author: Rowan G.
  * Date: 2021-03-28
@@ -28,6 +32,8 @@ import gas;
 
 import kinetics.relaxation_time;
 import kinetics.exchange_cross_section;
+import kinetics.reaction_mechanism;
+import kinetics.exchange_chemistry_coupling;
 
 class EnergyExchangeMechanism {
     @property @nogc number tau() const { return m_tau; }
@@ -35,7 +41,7 @@ class EnergyExchangeMechanism {
     {
         m_tau = mRT.eval(gs, molef, numden);
     }
-    @nogc abstract number rate(in GasState gs, in GasState gsEq, number[] molef, number[] numden);
+    @nogc abstract number rate(in GasState gs, in GasState gsEq, number[] molef, number[] numden, in ReactionMechanism rMech);
 
 private:
     number m_tau;
@@ -69,7 +75,7 @@ public:
     }
 
     @nogc
-    override number rate(in GasState gs, in GasState gsEq, number[] molef, number[] numden)
+    override number rate(in GasState gs, in GasState gsEq, number[] molef, number[] numden, in ReactionMechanism rMech)
     {
         // If bath pressure is very small, then practically no relaxation
         // occurs from collisions with particle q.
@@ -134,7 +140,7 @@ class ElectronExchangeET : EnergyExchangeMechanism {
     }
 
     @nogc
-    override number rate(in GasState gs, in GasState gsEq, number[] molef, number[] numden)
+    override number rate(in GasState gs, in GasState gsEq, number[] molef, number[] numden, in ReactionMechanism rMech)
     {
     /*
         Electron Exchange rate from Glass and Liu, 1978, equation (11)
@@ -182,6 +188,64 @@ private:
     }
 }
 
+class MarroneTreanorCV : EnergyExchangeMechanism {
+    /*
+        Model for the vibrational/chemistry coupling from Knab et al. 1995,
+        following the formulation of Marrone and Treanor, 1963
+
+        @author: Nick Gibbons
+    */
+    this(lua_State *L, int mode, GasModel gmodel)
+    {
+        m_mode = mode;
+        mGmodel = gmodel;
+
+        mReactionIdx = getInt(L, -1, "reaction_index");
+        mSpeciesIdx  = gmodel.species_index(getString(L, -1, "p"));
+        lua_getfield(L, -1, "coupling_model");
+        mECC = createExchangeChemistryCoupling(L);
+        lua_pop(L, 1);
+    }
+
+    this(int mode, GasModel gmodel, int reactionidx, int speciesidx, ExchangeChemistryCoupling ECC)
+    {
+        m_mode = mode;
+        mGmodel = gmodel;
+        mReactionIdx = reactionidx;
+        mSpeciesIdx = speciesidx;
+        mECC = ECC.dup();
+    }
+
+    @nogc
+    override number rate(in GasState gs, in GasState gsEq, number[] molef, number[] numden, in ReactionMechanism rMech)
+    {
+    /*
+        Based on Knab, 1995 equation 14. The reaction object handles the sign for us, so
+        the production rate is always the amount of mSpeciesIdx appearing.
+    */
+
+    // Using Knab's formulation, this is mol/m3/s * J/mol -> J/m3/s
+    number rate = rMech.production_rate(mReactionIdx, mSpeciesIdx)*mECC.Gappear(gs)
+                - rMech.loss_rate(mReactionIdx, mSpeciesIdx)*mECC.Gvanish(gs);
+
+    // Convert from J/m3/s (energy density of a specific oscillator) 
+    // to J/kg/s (total vibrational energy of per unit mass of mixture)
+    return rate/gs.rho;
+    }
+
+    @nogc
+    override void evalRelaxationTime(in GasState gs, number[] molef, number[] numden)
+    {
+        // TODO: Maybe precompute some things here
+        return;
+    }
+
+private:
+    int m_mode, mReactionIdx, mSpeciesIdx;
+    GasModel mGmodel;
+    ExchangeChemistryCoupling mECC;
+}
+
 EnergyExchangeMechanism createEnergyExchangeMechanism(lua_State *L, int mode, GasModel gmodel)
 {
     auto rateModel = getString(L, -1, "rate");
@@ -190,6 +254,8 @@ EnergyExchangeMechanism createEnergyExchangeMechanism(lua_State *L, int mode, Ga
         return new LandauTellerVT(L, mode, gmodel);
     case "ElectronExchange":
         return new ElectronExchangeET(L, mode, gmodel);
+    case "Marrone-Treanor":
+        return new MarroneTreanorCV(L, mode, gmodel);
     default:
         string msg = format("The EE mechanism rate model: %s is not known.", rateModel);
         throw new Error(msg);

@@ -53,3 +53,9 @@ db.HNCO.grimechThermoCoeffs = {
      -8.38224741E+00,
    }
 }
+db.HNCO.Hf = {
+   value = -118056.529,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

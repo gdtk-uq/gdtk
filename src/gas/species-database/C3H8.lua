@@ -53,3 +53,9 @@ db.C3H8.grimechThermoCoeffs = {
      -0.17892349E+02,
    }
 }
+db.C3H8.Hf = {
+   value = -104680.0,
+   units = 'J/mol',
+   description = 'Molar Heat of Formation at 298.15K',
+   reference = 'CEA2::thermo.inp'
+}

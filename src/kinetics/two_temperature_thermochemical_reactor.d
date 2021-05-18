@@ -296,7 +296,7 @@ private:
         
         gs.u_modes[0] = y[$-1];
         gs.u = m_uTotal - gs.u_modes[0];
-        mEES.evalRates(gs, m_duvedt);
+        mEES.evalRates(gs, mRmech, m_duvedt);
         rates[$-1] = m_duvedt[0];
     }
 

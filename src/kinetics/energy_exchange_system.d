@@ -22,10 +22,11 @@ import gas;
 
 import kinetics.energy_exchange_mechanism;
 import kinetics.relaxation_time;
+import kinetics.reaction_mechanism;
 
 interface EnergyExchangeSystem {
     @nogc void evalRelaxationTimes(in GasState gs);
-    @nogc void evalRates(in GasState gs, ref number[] rates);
+    @nogc void evalRates(in GasState gs, in ReactionMechanism, ref number[] rates);
 }
 
 class TwoTemperatureEnergyExchange : EnergyExchangeSystem {
@@ -64,7 +65,7 @@ public:
     }
 
     @nogc
-    void evalRates(in GasState gs, ref number[] rates)
+    void evalRates(in GasState gs, in ReactionMechanism rmech, ref number[] rates)
     {
         // Compute a star state at transrotational equilibrium.
         mGsEq.copy_values_from(gs);
@@ -73,7 +74,7 @@ public:
         number rate = 0.0;
         // Compute rate change from VT exchange
         foreach (mech; mEEM) {
-            rate += mech.rate(gs, mGsEq, mMolef, mNumden);
+            rate += mech.rate(gs, mGsEq, mMolef, mNumden, rmech);
         }
         rates[0] = rate;
     }
