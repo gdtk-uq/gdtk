@@ -14,7 +14,7 @@ class TestNonaka < Test::Unit::TestCase
     cmd = "prep-chem air-5sp-2T.gas GuptaEtAl-air-2T.lua air-5sp-6r-2T.chem"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
-    cmd = "prep-kinetics air-5sp-2T.gas air-VT-energy-exchange.lua air-VT.exch"
+    cmd = "prep-kinetics air-5sp-2T.gas air-5sp-6r-2T.chem air-VT-energy-exchange.lua air-VT.exch"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     cmd = "e4shared --job=nonaka --prep"
@@ -54,7 +54,7 @@ class TestNonaka < Test::Unit::TestCase
       end
     end
     # Check that we are in the same place as before relative to the experimental data
-    rms_ref = 0.012181132237136074
+    rms_ref = 0.011668210375449803
     assert((rms - rms_ref).abs < 1.0e-5,
            "Failed to get correct shock position.")
   end
