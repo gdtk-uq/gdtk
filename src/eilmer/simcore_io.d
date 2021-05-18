@@ -55,7 +55,7 @@ Tuple!(double, "t", double, "dt")[] snapshotInfo;
 void write_solution_files()
 {
 
-    bool legacy = is_legacy_format();
+    bool legacy = is_legacy_format(GlobalConfig.flow_format);
     FluidBlockIO[] io_list = localFluidBlocks[0].block_io;
 
     SimState.current_tindx = SimState.current_tindx + 1;

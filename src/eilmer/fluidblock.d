@@ -210,7 +210,7 @@ public:
 
     void add_IO()
     {
-        if (!is_legacy_format())
+        if (!is_legacy_format(GlobalConfig.flow_format))
             block_io = get_fluid_block_io(this);
     }
 

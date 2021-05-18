@@ -61,13 +61,12 @@ public:
     string jobName;
     double sim_time;
     size_t nBlocks;
-    string flow_format;
     string grid_format;
     GridMotion grid_motion;
     BlockFlow[] flowBlocks;
     Grid[] gridBlocks;
 
-    this(string jobName, string dir, int tindx, size_t nBlocks, int gindx=-1, string tag="field")
+    this(string jobName, string dir, int tindx, size_t nBlocks, int gindx=-1, string flow_format="", string tag="")
     {
         // Default action is to set gindx to tindx. The default action
         // is indicated by gindx = -1
@@ -93,16 +92,11 @@ public:
         grid_format = jsonData["grid_format"].str;
         string gridFileExt = "gz"; if (grid_format == "rawbinary") { gridFileExt = "bin"; }
 
-        flow_format = jsonData["flow_format"].str;
-        string flowFileExt = "gz"; 
-        if (flow_format == "rawbinary") { 
-            flowFileExt = "bin"; 
-        } else if (flow_format == "eilmer4text" || flow_format == "eilmer4binary") {
-            flowFileExt = "zip";
-        }
+        if (flow_format == "") flow_format = jsonData["flow_format"].str;
+        if (tag == "") tag = "field";
 
-        bool new_flow_format = false;
-        if ("new_flow_format" in jsonData) new_flow_format =  jsonData["new_flow_format"].boolean;
+        string flowFileExt = flow_format_ext(flow_format);
+        bool new_flow_format =  !is_legacy_format(flow_format);
 
         grid_motion = grid_motion_from_name(jsonData["grid_motion"].str);
         // -- end initialising JSONData

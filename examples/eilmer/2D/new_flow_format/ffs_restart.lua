@@ -9,16 +9,27 @@ config.dimensions = 2
 
 config.viscous = true
 
-config.flow_format = "rawbinary"
-
+-- new format
+config.new_flow_format = true
+-- config.flow_format = "eilmer4text"
+config.flow_format = "eilmer4binary"
+config.do_temporal_DFT = true
+config.do_flow_average = true
+config.save_viscous_gradients = true
 
 -- Gas model and flow conditions.
 nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
 print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
-initial = FlowState:new{p=101.325e3, T=300.0}
-sspeed = initial.a
+
+prevSoln = FlowSolution:new{jobName='ffs', dir='.', tindx=5, nBlocks=20, flow_format="rawbinary"}
+initial = makeFlowStateFn(prevSoln)
+
+ifs = FlowState:new{p=101.325e3, T=300.0}
+sspeed = ifs.a
+
 print("sound speed=", sspeed)
 inflow = FlowState:new{p=101.325e3, T=300.0, velx=3.0*sspeed, vely=0.0}
+
 
 -- Geometry of the flow domain.
 a0 = {x=0.0, y=0.0}; a1 = {x=0.0, y=0.2}; a2 = {x=0.0, y=1.0}
@@ -43,9 +54,9 @@ bcList01 = { west=InFlowBC_Supersonic:new{flowState=inflow, label="inflow"} }
 bcList2 = { east=OutFlowBC_Simple:new{label="outflow"} }
 
 -- Define the flow-solution blocks and stitch them together.
-blk0 = FBArray:new{grid=grid0, nib=1, njb=1, initialState=inflow, bcList=bcList01}
-blk1 = FBArray:new{grid=grid1, nib=1, njb=4, initialState=inflow, bcList=bcList01}
-blk2 = FBArray:new{grid=grid2, nib=4, njb=4, initialState=inflow, bcList=bcList2}
+blk0 = FBArray:new{grid=grid0, nib=1, njb=1, initialState=initial, bcList=bcList01}
+blk1 = FBArray:new{grid=grid1, nib=1, njb=4, initialState=initial, bcList=bcList01}
+blk2 = FBArray:new{grid=grid2, nib=4, njb=4, initialState=initial, bcList=bcList2}
 identifyBlockConnections()
 
 -- The number of MPI tasks needs to match the mpirun command.

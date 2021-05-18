@@ -39,7 +39,7 @@ FlowSolution checkFlowSolution(lua_State* L, int index)
  * This function implements our constructor for the Lua interface.
  *
  * Construction of a FlowSolution object from in Lua will accept:
- * fs = FlowSolution:new{jobName=<string>, dir=<string>, tindx=<int>, gindx=<int>, nBlocks=<int>}
+ * fs = FlowSolution:new{jobName=<string>, dir=<string>, tindx=<int>, gindx=<int>, nBlocks=<int>, flow_format=<string>, tag=<string>}
  */
 extern(C) int newFlowSolution(lua_State* L)
 {
@@ -49,7 +49,7 @@ extern(C) int newFlowSolution(lua_State* L)
         errMsg ~= " A table is expected as first (and only) argument.";
         luaL_error(L, errMsg.toStringz);
     }
-    string[] allowedNames = ["jobName", "dir", "tindx", "gindx", "nBlocks"];
+    string[] allowedNames = ["jobName", "dir", "tindx", "gindx", "nBlocks", "flow_format", "tag"];
     if ( !checkAllowedNames(L, 1, allowedNames) ) {
         string errMsg = "Error in call to FlowSolution:new.";
         errMsg ~= " The table contains unexpected names.";
@@ -158,7 +158,35 @@ extern(C) int newFlowSolution(lua_State* L)
     }
     lua_pop(L, 1);
 
-    auto fsol = new FlowSolution(jobName, dir, tindx, nBlocks, gindx);
+    string flow_format;
+    lua_getfield(L, 1, "flow_format");
+    if ( lua_isnil(L, -1) ) {
+        flow_format = "";
+    } else if ( lua_isstring(L, -1) ) {
+        flow_format = to!string(luaL_checkstring(L, -1));
+    } else {
+        string errMsg = "Error in call to FlowSolution:new.";
+        errMsg ~= " A field for flow_format was found, but the content was not valid.";
+        errMsg ~= " The flow_format should be given as a string.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+
+    string tag;
+    lua_getfield(L, 1, "tag");
+    if ( lua_isnil(L, -1) ) {
+        tag = "";
+    } else if ( lua_isstring(L, -1) ) {
+        tag = to!string(luaL_checkstring(L, -1));
+    } else {
+        string errMsg = "Error in call to FlowSolution:new.";
+        errMsg ~= " A field for tag was found, but the content was not valid.";
+        errMsg ~= " The tag should be given as a string.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+
+    auto fsol = new FlowSolution(jobName, dir, tindx, nBlocks, gindx, flow_format, tag);
     flowSolutionStore ~= pushObj!(FlowSolution, FlowSolutionMT)(L, fsol);
     return 1;
 } // end newFlowSolution()
