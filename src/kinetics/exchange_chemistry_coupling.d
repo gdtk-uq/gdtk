@@ -75,13 +75,14 @@ class ImpartialDissociation : ExchangeChemistryCoupling {
         This function is derived from Gvanish as Tv -> T. Computed using a Taylor series expansion
         about 1/Lambda = 0. See Treanor and Marrone equation 13 for the idea.
     */  
-        return 0.5*(D - Thetav*R_universal);
+        double Gapp = 0.5*(D - Thetav*R_universal);
+        return to!number(Gapp);
     }
 
 private:
     const double D, Thetav;
 
-    @nogc const number L(number T, number Y){
+    @nogc const number L(number T, double Y){
     /*
         Equation (39) from Knab, 1995, the molar vibrational energy content of the harmonic oscillator.
     */
