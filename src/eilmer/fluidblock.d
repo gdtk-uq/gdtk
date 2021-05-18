@@ -439,7 +439,13 @@ public:
         // detector value into faces so we have static data to work from.
         foreach (face; faces) {
             if (face.fs.S == 1.0) continue;
-            face.fs.S = fmax(face.left_cell.fs.S, face.right_cell.fs.S);
+            if (!face.left_cell.is_interior_to_domain) {
+                face.fs.S = face.right_cell.fs.S;
+            } else if (!face.right_cell.is_interior_to_domain) {
+                face.fs.S = face.left_cell.fs.S;
+            } else {
+                face.fs.S = fmax(face.left_cell.fs.S, face.right_cell.fs.S);
+            }
         }
         // now use the face shock detector value to update the cell values
         foreach (cell; cells) {
