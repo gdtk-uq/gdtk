@@ -893,7 +893,9 @@ public:
         new_flow_format = GlobalConfig.new_flow_format;
         dimensions = GlobalConfig.dimensions;
         axisymmetric = GlobalConfig.axisymmetric;
-        cqi = new ConservedQuantitiesIndices(GlobalConfig.cqi);
+        // Sometimes this constructor is called and GlobalConfig will not have been completely initialized.
+        // Presumably these times, not all of the GlobalConfig is needed, so press on doing what can be done.
+        if (GlobalConfig.cqi) { cqi = new ConservedQuantitiesIndices(GlobalConfig.cqi); }
         gasdynamic_update_scheme = GlobalConfig.gasdynamic_update_scheme;
         n_flow_time_levels = GlobalConfig.n_flow_time_levels;
         residual_smoothing = GlobalConfig.residual_smoothing;
