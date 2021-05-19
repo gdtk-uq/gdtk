@@ -51,7 +51,7 @@ import user_defined_source_terms;
 import conservedquantities;
 import postprocess : readTimesFile;
 import loads;
-import shape_sensitivity_core : sss_preconditioner_initialisation, sss_preconditioner;
+//import shape_sensitivity_core : sss_preconditioner_initialisation, sss_preconditioner;
 import solid_loose_coupling_update;
 
 version(mpi_parallel) {

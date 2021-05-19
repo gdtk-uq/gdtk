@@ -161,25 +161,24 @@ public:
     // Shape sensitivity calculator workspace
     FVCell[] cell_list;            // list of cells in the residual stencil
     FVInterface[] face_list;       // list of faces in the residual stencil
-    version(shape_sensitivity) {
-       	size_t[] pcell_global_coord_list;
-	size_t[][] ecell_global_coord_list;
-	number[][] entry_list;
+    version(nk_accelerator) {
+       	//size_t[] pcell_global_coord_list;
+	//size_t[][] ecell_global_coord_list;
+	//number[][] entry_list;
 
-	size_t global_id;
-	number[][] dqdQ;
-        number[][] dQdU;
+	//size_t global_id;
+        number[][] dRdU;
         // stencil of effected cells & faces used in forming the flow Jacobian
-        FVCell[] jacobian_cell_stencil;
-        FVInterface[] jacobian_face_stencil;
+        //FVCell[] jacobian_cell_stencil;
+        //FVInterface[] jacobian_face_stencil;
         // arrays used to temporarily store data intended for the neighbouring block
         // during construction of the external portion of the flow Jacobian.
-        size_t[] idList;
-        number[] aa;
+        //size_t[] idList;
+        //number[] aa;
         // block-diagonal contribution to Jacobian used in steady-state solver pre-conditioner
-        Matrix!number dPrimitive;
+        //Matrix!number dPrimitive;
         Matrix!number dConservative;
-        int[] pivot;
+        //int[] pivot;
     }
 
     // 2021-03-12: Note that we have moved the IO functions for the cell into fluidblockio.d
@@ -227,15 +226,12 @@ public:
         if (allocate_spatial_deriv_lsq_workspace) {
             ws_grad = new WLSQGradWorkspace();
         }
-        version(shape_sensitivity) {
-            dQdU.length = ncq; // number of conserved variables
-            dqdQ.length = ncq;
-	    foreach (ref a; dQdU) a.length = ncq;
-	    foreach (ref a; dqdQ) a.length = ncq;
-            foreach (i; 0..dQdU.length) {
-                foreach (j; 0..dQdU[i].length) {
-                    dQdU[i][j] = 0.0;
-		    dqdQ[i][j] = 0.0;
+        version(nk_accelerator) {
+            dRdU.length = ncq; // number of conserved variables
+            foreach (ref a; dRdU) a.length = ncq;
+            foreach (i; 0..dRdU.length) {
+                foreach (j; 0..dRdU[i].length) {
+                    dRdU[i][j] = 0.0;
                 }
             }
         }

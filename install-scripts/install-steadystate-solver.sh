@@ -4,7 +4,7 @@
 #
 cd ${DGD_REPO}/src/eilmer
 #
-if make DMD=ldmd2  WITH_COMPLEX_NUMBERS=1 WITH_SSC=1 WITH_NK=1 FLAVOUR=fast install
+if make DMD=ldmd2 WITH_NK=1 FLAVOUR=fast install
 then
     echo "Build and install successful for FLAVOUR=fast."
 else

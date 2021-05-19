@@ -31,16 +31,9 @@ public:
     SMatrix!number external;    // residual sensitivities of cells in neighbour blocks
                                 // to perturbations of local cells
 
-    number[][] dqdQ;            // used in the Jacobian boundary conditions to store the
+    number[][] dudU;            // used in the Jacobian boundary conditions to store the
                                 // the sensitivity of the ghost cell flow states to the internal
                                 // cell flow states
-
-    number[][] dRdq;            // used in the Jacobian boundary conditions to store the
-                                // the sensitivity of the internal cell residuals to perturbations
-                                // of the ghost cell flow states
-
-    number[][] dRdQ;            // used in the Jacobian boundary conditions to store the
-                                // the final boundary condition correction (i.e. dRdQ = dRdq*dqdQ)
     number eps;                 // numerical perturbation parameter
 
     // indices used for the sparse matrix representation of the Jacobian
@@ -56,12 +49,8 @@ public:
 
         size_local_matrix(nConserved, nentry, ncells);
 
-        dqdQ.length = nConserved;
-        dRdq.length = nConserved;
-        dRdQ.length = nConserved;
-        foreach (ref val; dqdQ) {val.length = nConserved; }
-        foreach (ref val; dRdq) {val.length = nConserved; }
-        foreach (ref val; dRdQ) {val.length = nConserved; }
+        dudU.length = nConserved;
+        foreach (ref val; dudU) {val.length = nConserved; }
     }
 
     void prepare_crs_indexes()

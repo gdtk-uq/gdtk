@@ -572,7 +572,7 @@ e4mpi: main.d $(EILMER_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS) -L-lmpi
 
-e4-nk-shared: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d solid/solid_loose_coupling_update.d $(EILMER_FILES) \
+e4-nk-shared: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_update.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -585,8 +585,7 @@ e4-nk-shared: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d solid
 		$(DVERSION)complex_numbers \
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
-		$(DVERSION)shape_sensitivity \
-		nk_accelerator_with_string_subst.d steadystate_core.d shape_sensitivity_core.d solid/solid_loose_coupling_update.d \
+		nk_accelerator_with_string_subst.d steadystate_core.d solid/solid_loose_coupling_update.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
@@ -596,7 +595,7 @@ e4-nk-shared: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d solid
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-e4-nk-dist: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d solid/solid_loose_coupling_update.d $(EILMER_FILES) \
+e4-nk-dist: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_update.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -611,8 +610,7 @@ e4-nk-dist: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d solid/s
 		$(DVERSION)complex_numbers \
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
-		$(DVERSION)shape_sensitivity \
-		mpi_nk_accelerator_with_string_subst.d steadystate_core.d shape_sensitivity_core.d solid/solid_loose_coupling_update.d \
+		mpi_nk_accelerator_with_string_subst.d steadystate_core.d solid/solid_loose_coupling_update.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \

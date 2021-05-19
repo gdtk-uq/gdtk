@@ -45,7 +45,7 @@ import user_defined_source_terms;
 import conservedquantities;
 import postprocess : readTimesFile;
 import loads;
-import shape_sensitivity_core : sss_preconditioner_initialisation, sss_preconditioner;
+//import shape_sensitivity_core : sss_preconditioner_initialisation, sss_preconditioner;
 import jacobian;
 import solid_loose_coupling_update;
 
@@ -1822,25 +1822,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
                 final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
                         case PreconditionMatrixType.block_diagonal:
-                        foreach (blk; parallel(localFluidBlocks,1)) {
-                            int n = blk.myConfig.sssOptions.frozenPreconditionerCount; //GlobalConfig.sssOptions.frozenPreconditionerCount;
-                            // We compute the precondition matrix on the very first step after the start up steps
-                            // We then only update the precondition matrix once per GMRES call on every nth flow solver step.
-                            if (r == 0 && j == 0 && (step == blk.myConfig.sssOptions.startPreconditioning ||
-                                                     step%n == 0 ||
-                                                     step == startStep ||
-                                                     step == blk.myConfig.sssOptions.nStartUpSteps+1))
-                                sss_preconditioner(blk, nConserved, dt);
-                            int cellCount = 0;
-                            number[] tmp;
-                            tmp.length = nConserved;
-                            foreach (cell; blk.cells) {
-                                nm.bbla.dot(cell.dConservative, blk.v[cellCount..cellCount+nConserved], tmp);
-                                blk.zed[cellCount..cellCount+nConserved] = tmp[];
-                                cellCount += nConserved;
+                            writeln("Block diagonal precondition matrix not yet implemented");
+                            foreach (blk; parallel(localFluidBlocks,1)) {
+                                blk.zed[] = blk.v[];
                             }
-                        }
-                        break;
+                            break;
                         case PreconditionMatrixType.ilu:
                             foreach (blk; parallel(localFluidBlocks,1)) {
                                 int n = blk.myConfig.sssOptions.frozenPreconditionerCount; //GlobalConfig.sssOptions.frozenPreconditionerCount;
@@ -1863,7 +1849,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                             break;
                 } // end switch
             }
-
             else {
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     blk.zed[] = blk.v[];
