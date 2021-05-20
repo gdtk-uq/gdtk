@@ -7,6 +7,8 @@
  */
 
 module fvcore;
+import std.string;
+
 
 class FlowSolverException : Exception {
     @nogc
@@ -38,7 +40,8 @@ enum GasdynamicUpdate {
     rkl2,
     moving_grid_1_stage,
     moving_grid_2_stage,
-    backward_euler
+    backward_euler,
+    implicit_rk1
 }
 
 @nogc
@@ -56,6 +59,7 @@ string gasdynamic_update_scheme_name(GasdynamicUpdate gdut)
     case GasdynamicUpdate.moving_grid_1_stage: return "moving_grid_1_stage";
     case GasdynamicUpdate.moving_grid_2_stage: return "moving_grid_2_stage";
     case GasdynamicUpdate.backward_euler: return "backward_euler";
+    case GasdynamicUpdate.implicit_rk1: return "implicit_rk1";
     }
 } // end gasdynamic_update_scheme_name()
 
@@ -74,6 +78,7 @@ size_t number_of_stages_for_update_scheme(GasdynamicUpdate gdut)
     case GasdynamicUpdate.moving_grid_1_stage: return 1;
     case GasdynamicUpdate.moving_grid_2_stage: return 2;
     case GasdynamicUpdate.backward_euler: return 1;
+    case GasdynamicUpdate.implicit_rk1: return 1;
     }
 } // end number_of_stages_for_update_scheme()
 
@@ -92,6 +97,7 @@ bool is_explicit_update_scheme(GasdynamicUpdate gdut)
     case GasdynamicUpdate.moving_grid_1_stage: return true;
     case GasdynamicUpdate.moving_grid_2_stage: return true;
     case GasdynamicUpdate.backward_euler: return false;
+    case GasdynamicUpdate.implicit_rk1: return false;
     }
 } // is_explicit_update_scheme()
 
@@ -110,31 +116,27 @@ size_t final_index_for_update_scheme(GasdynamicUpdate gdut)
     case GasdynamicUpdate.moving_grid_1_stage: return 1;
     case GasdynamicUpdate.moving_grid_2_stage: return 2;
     case GasdynamicUpdate.backward_euler: return 1;
+    case GasdynamicUpdate.implicit_rk1: return 1;
     }
 } // end final_index_for_update_scheme()
 
-@nogc
 GasdynamicUpdate update_scheme_from_name(string name)
 {
-    switch (name) {
+    string name_ = name.replace("-", "_");
+    switch (name_) {
     case "euler": return GasdynamicUpdate.euler;
     case "pc": return GasdynamicUpdate.pc;
     case "predictor_corrector": return GasdynamicUpdate.pc;
-    case "predictor-corrector": return GasdynamicUpdate.pc;
     case "midpoint": return GasdynamicUpdate.midpoint;
     case "classic_rk3": return GasdynamicUpdate.classic_rk3;
-    case "classic-rk3": return GasdynamicUpdate.classic_rk3;
     case "tvd_rk3": return GasdynamicUpdate.tvd_rk3;
-    case "tvd-rk3": return GasdynamicUpdate.tvd_rk3;
     case "denman_rk3": return GasdynamicUpdate.denman_rk3;
-    case "denman-rk3": return GasdynamicUpdate.denman_rk3;
     case "rkl1": return GasdynamicUpdate.rkl1;
     case "rkl2": return GasdynamicUpdate.rkl2;
     case "moving_grid_1_stage": return GasdynamicUpdate.moving_grid_1_stage;
-    case "moving-grid-1-stage": return GasdynamicUpdate.moving_grid_1_stage;
     case "moving_grid_2_stage": return GasdynamicUpdate.moving_grid_2_stage;
-    case "moving-grid-2-stage": return GasdynamicUpdate.moving_grid_2_stage;
     case "backward_euler": return GasdynamicUpdate.backward_euler;
+    case "implicit_rk1": return GasdynamicUpdate.implicit_rk1;
     default:
         throw new FlowSolverException("Invalid gasdynamic update scheme name");
     }
@@ -153,10 +155,10 @@ string grid_motion_name(GridMotion i)
     }
 }
 
-@nogc
 GridMotion grid_motion_from_name(string name)
 {
-    switch (name) {
+    string name_ = name.replace("-", "_");
+    switch (name_) {
     case "none": return GridMotion.none;
     case "user_defined": return GridMotion.user_defined;
     case "shock_fitting": return GridMotion.shock_fitting;

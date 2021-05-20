@@ -701,6 +701,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     final switch ( GlobalConfig.gasdynamic_update_scheme ) {
     case GasdynamicUpdate.euler:
     case GasdynamicUpdate.backward_euler:
+    case GasdynamicUpdate.implicit_rk1:
     case GasdynamicUpdate.pc: c2 = 1.0; c3 = 1.0; break;
     case GasdynamicUpdate.midpoint: c2 = 0.5; c3 = 1.0; break;
     case GasdynamicUpdate.classic_rk3: c2 = 0.5; c3 = 1.0; break;
@@ -1942,6 +1943,9 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                 if (blk.dRUdU.length != cqi.n) { blk.dRUdU.length = cqi.n; }
                 //
                 // Now, work through the cells, doing the update.
+                // Note that the only difference between the backward-Euler and the implicit-RK1 schemes
+                // is the factor of 2 that appears in 2 places.  We call this M.
+                double M = (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.implicit_rk1) ? 2.0 : 1.0;
                 int local_ftl = ftl; assert(ftl == 0, "ftl is assumed zero but it is not.");
                 int local_gtl = gtl; assert(gtl == 0, "gtl is assumed zero but it is not.");
                 bool local_allow_high_order_interpolation = allow_high_order_interpolation;
@@ -1987,7 +1991,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                         }
                         // Assemble coefficients of the linear system in the augmented matrix.
                         foreach (k; 0 .. cqi.n) {
-                            blk.crhs._data[k][j] = ((k==j) ? 1.0/dt : 0.0) - blk.dRUdU[k];
+                            blk.crhs._data[k][j] = ((k==j) ? M/dt : 0.0) - blk.dRUdU[k];
                         }
                     }
                     // Evaluate the right-hand side of the linear system equations.
@@ -1996,7 +2000,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     foreach (k; 0 .. cqi.n) { blk.crhs._data[k][cqi.n] = dUdt0.vec[k].re; }
                     // Solve for dU and update U.
                     gaussJordanElimination!double(blk.crhs);
-                    foreach (j; 0 .. cqi.n) { U1.vec[j] = U0.vec[j] + blk.crhs._data[j][cqi.n]; }
+                    foreach (j; 0 .. cqi.n) { U1.vec[j] = U0.vec[j] + M*blk.crhs._data[j][cqi.n]; }
                     //
                     version(turbulence) {
                         foreach(j; 0 .. blk.myConfig.turb_model.nturb){
