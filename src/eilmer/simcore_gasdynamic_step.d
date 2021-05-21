@@ -17,6 +17,7 @@ import std.parallelism;
 import nm.complex;
 import nm.number;
 import nm.bbla;
+import nm.schedule;
 
 import geom;
 import geom.misc.kdtree;
@@ -74,11 +75,12 @@ void determine_time_step_size()
         // Adjust the time step...
         // First, check what each block thinks should be the allowable step size.
         // Also, if we have done some steps, check the CFL limits.
+        double cfl_value = GlobalConfig.cfl_schedule.interpolate_value(SimState.time);
         foreach (i, myblk; parallel(localFluidBlocksBySize,1)) {
             // Note 'i' is not necessarily the block id but
             // that is not important here, just need a unique spot to poke into local_dt_allow.
             if (myblk.active) {
-                double[3] results = myblk.determine_time_step_size(SimState.dt_global, (SimState.step > 0));
+                double[3] results = myblk.determine_time_step_size(SimState.dt_global, cfl_value, (SimState.step > 0));
                 local_dt_allow[i] = results[0];
                 local_cfl_max[i] = results[1];
                 local_dt_allow_parab[i] = results[2];

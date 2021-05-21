@@ -855,7 +855,7 @@ public:
     } // end update_c_h()
 
     @nogc
-    double[3] determine_time_step_size(double dt_current, bool check_cfl)
+    double[3] determine_time_step_size(double dt_current, double cfl_value, bool check_cfl)
     // Compute the local time step limit for all cells in the block.
     // The overall time step is limited by the worst-case cell.
     {
@@ -865,7 +865,6 @@ public:
 	double dt_allow_hyp;
 	double dt_allow_parab;
         //
-        double cfl_value = GlobalConfig.cfl_value;
         double dt_local;
         double cfl_local;
         double signal;

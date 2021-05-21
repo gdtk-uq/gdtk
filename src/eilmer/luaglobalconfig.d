@@ -83,7 +83,7 @@ extern(C) int configSetFromTable(lua_State* L)
     //
     // Look for fields that may be present in the Lua table.
     // Once the value is read from the field, remove that field from the table.
-    // This will allow us to check for and warn about fields that have been 
+    // This will allow us to check for and warn about fields that have been
     // accidentally set in the Lua table.
     mixin(get_string_field("base_file_name", "base_file_name"));
     mixin(get_string_field("grid_format", "grid_format"));
@@ -473,7 +473,7 @@ extern(C) int configSetWithCall(lua_State* L)
 
 extern(C) int configSetFromValue(lua_State *L)
 {
-    // Argumnets to __newindex are: table, key, value
+    // Arguments to __newindex are: table, key, value
     // Let's first see if the value is non-nil. If nil,
     // we'd like to warn the user.
     if ( lua_isnil(L, 3) ) {

@@ -21,6 +21,7 @@ import std.format;
 import util.lua;
 import util.lua_service;
 import nm.luabbla;
+import nm.schedule;
 import lua_helper;
 import gas;
 import kinetics;
@@ -657,7 +658,12 @@ final class GlobalConfig {
     shared static double max_time = 1.0e-3; // final solution time, in seconds, set by user
     shared static double dt_init = 1.0e-3; // initial time step, set by user
     shared static double dt_max = 1.0e-3; // Maximum allowable time-step, after all other considerations.
-    shared static double cfl_value = 0.5; // target CFL number (worst case) set by user
+    //
+    // In the input script, the user may specify a single cfl_value of a schedule of values.
+    // Either spec will be written into the JSON .config file as a pair of tables.
+    // These will specify the target CFL number, interpolated from (time, value) pairs.
+    shared static double cfl_value = 0.5;
+    static Schedule cfl_schedule;
     shared static bool stringent_cfl = false;
     // If true, assume the worst with respect to cell geometry and wave speed.
     shared static double viscous_signal_factor = 1.0; // can reduce the viscous influence in CFL condition
@@ -1188,6 +1194,18 @@ JSONValue read_config_file()
     //
     mixin(update_enum("gasdynamic_update_scheme", "gasdynamic_update_scheme", "update_scheme_from_name"));
     GlobalConfig.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
+    // The CFL schedule arrives as a pair of tables that should have at least one entry each.
+    int cfl_schedule_length = getJSONint(jsonData, "cfl_schedule_length", 1);
+    double[] cfl_schedule_values_default;
+    double[] cfl_schedule_times_default;
+    foreach (i; 0 .. cfl_schedule_length) {
+        cfl_schedule_times_default ~= 0.0;
+        cfl_schedule_values_default ~= 0.5;
+    }
+    double[] cfl_schedule_times = getJSONdoublearray(jsonData, "cfl_schedule_times", cfl_schedule_times_default);
+    double[] cfl_schedule_values = getJSONdoublearray(jsonData, "cfl_schedule_values", cfl_schedule_values_default);
+    GlobalConfig.cfl_schedule = new Schedule(cfl_schedule_times, cfl_schedule_values);
+    //
     mixin(update_bool("residual_smoothing", "residual_smoothing"));
     mixin(update_bool("with_local_time_stepping", "with_local_time_stepping"));
     mixin(update_int("local_time_stepping_limit_factor", "local_time_stepping_limit_factor"));
@@ -1282,6 +1300,7 @@ JSONValue read_config_file()
 
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  gasdynamic_update_scheme: ", gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
+        writeln("  cfl_schedule: ", GlobalConfig.cfl_schedule);
         writeln("  residual_smoothing: ", GlobalConfig.residual_smoothing);
         writeln("  with_local_time_stepping: ", GlobalConfig.with_local_time_stepping);
         writeln("  local_time_stepping_limit_factor: ", GlobalConfig.local_time_stepping_limit_factor);
@@ -1686,7 +1705,7 @@ void read_control_file()
     JSONValue jsonData = readJSONfile("config/"~GlobalConfig.base_file_name~".control");
     mixin(update_double("dt_init", "dt_init"));
     mixin(update_double("dt_max", "dt_max"));
-    mixin(update_double("cfl_value", "cfl_value"));
+    // 2021-05-21 PJ: We no longer read cfl_value from .control file.
     mixin(update_bool("stringent_cfl", "stringent_cfl"));
     mixin(update_double("viscous_signal_factor", "viscous_signal_factor"));
     mixin(update_double("turbulent_signal_factor", "turbulent_signal_factor"));
@@ -1711,7 +1730,6 @@ void read_control_file()
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  dt_init: ", GlobalConfig.dt_init);
         writeln("  dt_max: ", GlobalConfig.dt_max);
-        writeln("  cfl_value: ", GlobalConfig.cfl_value);
         writeln("  stringent_cfl: ", GlobalConfig.stringent_cfl);
         writeln("  viscous_signal_factor: ", GlobalConfig.viscous_signal_factor);
         writeln("  turbulent_signal_factor: ", GlobalConfig.turbulent_signal_factor);

@@ -10,7 +10,6 @@ function write_control_file(fileName)
    f:write("{\n")
    f:write(string.format('"dt_init": %.18e,\n', config.dt_init))
    f:write(string.format('"dt_max": %.18e,\n', config.dt_max))
-   f:write(string.format('"cfl_value": %.18e,\n', config.cfl_value))
    f:write(string.format('"stringent_cfl": %s,\n', tostring(config.stringent_cfl)))
    f:write(string.format('"viscous_signal_factor": %.18e,\n', config.viscous_signal_factor))
    f:write(string.format('"turbulent_signal_factor": %.18e,\n', config.turbulent_signal_factor))
@@ -142,7 +141,35 @@ function write_config_file(fileName)
    f:write(string.format('"with_local_time_stepping": %s,\n', tostring(config.with_local_time_stepping)))
    f:write(string.format('"local_time_stepping_limit_factor": %d,\n', tostring(config.local_time_stepping_limit_factor)))
    f:write(string.format('"with_super_time_stepping_flexible_stages": %s,\n', tostring(config.with_super_time_stepping_flexible_stages)))
-   f:write(string.format('   "solid_domain_cfl" : %.18e,\n', config.solid_domain_cfl))
+   -- If the user has set config2.cfl_schedule_values and config2.cfl_schedule_times as tables,
+   -- write them out, else generate tables with a single time and cfl_value.
+   if (config2.cfl_schedule_values and type(config2.cfl_schedule_values) == 'table'
+       and config2.cfl_schedule_times and type(config2.cfl_schedule_times) == 'table') then
+      -- We will presume that the tables have valid entries.
+   else
+      config2.cfl_schedule_values = {(config.cfl_value or 0.5),}
+      config2.cfl_schedule_times = {0.0,}
+   end
+   if #config2.cfl_schedule_times < #config2.cfl_schedule_values then
+      config2.cfl_schedule_length = #config2.cfl_schedule_times
+   else
+      config2.cfl_schedule_length = #config2.cfl_schedule_values
+   end
+   f:write(string.format('"cfl_schedule_length": %d,\n', config2.cfl_schedule_length))
+   f:write('"cfl_schedule_values": [')
+   for i,e in ipairs(config2.cfl_schedule_values) do
+      f:write(string.format('%.18e', e))
+      if i < #config2.cfl_schedule_values then f:write(', ') end
+   end
+   f:write('],\n')
+   f:write('"cfl_schedule_times": [')
+   for i,e in ipairs(config2.cfl_schedule_times) do
+      f:write(string.format('%.18e', e))
+      if i < #config2.cfl_schedule_times then f:write(', ') end
+   end
+   f:write('],\n')
+   --
+   f:write(string.format('"solid_domain_cfl" : %.18e,\n', config.solid_domain_cfl))
    f:write(string.format('"coupling_with_solid_domains": "%s",\n',
 			 config.coupling_with_solid_domains))
    f:write(string.format('"solid_has_isotropic_properties": %s,\n', tostring(config.solid_has_isotropic_properties)))
