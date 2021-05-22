@@ -2,7 +2,7 @@
 --
 -- Author: Rowan J. Gollan
 -- Date: 2018-01-04
--- 
+--
 -- In this shock-fitted solution, we'll take the edge
 -- of the grid as the shock location.
 
@@ -12,7 +12,6 @@ local sqrt = math.sqrt
 
 print("Begin shock shape extraction.")
 
-config.grid_motion = "shock_fitting"
 jobName = "nonaka"
 Db = 14.0e-3
 R = Db/2.0

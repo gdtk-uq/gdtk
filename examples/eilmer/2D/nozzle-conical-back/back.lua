@@ -93,7 +93,7 @@ end
 supersonic_region.bcList['east'] = OutFlowBC_Simple:new{label="outflow-boundary"}
 
 -- Do a little more setting of global data.
-config.axisymmetric = 1
+config.axisymmetric = true
 config.flux_calculator = "adaptive"
 config.max_time = 4.0e-3  -- seconds
 config.max_step = 50000
