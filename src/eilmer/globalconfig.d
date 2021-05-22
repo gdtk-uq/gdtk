@@ -1121,6 +1121,15 @@ JSONValue read_config_file()
 {
     if (GlobalConfig.verbosity_level > 1) writeln("Read config file.");
     JSONValue jsonData = readJSONfile("config/"~GlobalConfig.base_file_name~".config");
+    set_config_for_core(jsonData);
+    set_config_for_blocks(jsonData);
+    // We send this config-file data back because we have not yet finished
+    // the configuration activities for the blocks and their boundary conditions.
+    return jsonData;
+}
+
+void set_config_for_core(JSONValue jsonData)
+{
     // Now that we have parsed JSON data, proceed to update those config values.
     // Note that some of the lines below are much longer than PJ would normally tolerate.
     // The trade-off for ease of reading with one line per entry won out...
@@ -1131,34 +1140,38 @@ JSONValue read_config_file()
     mixin(update_string("flow_format", "flow_format"));
     mixin(update_bool("new_flow_format", "new_flow_format"));
     mixin(update_string("gas_model_file", "gas_model_file"));
-    auto gm = init_gas_model(GlobalConfig.gas_model_file);
-    // The following checks on gas model will need to be maintained
-    // as new gas models are added.
-    bool multiSpecies = true; // assumed
-    bool multiT = false; // assumed
-    if (cast(IdealGas)gm) { multiSpecies = false; }
-    if (cast(CEAGas)gm) { multiSpecies = false; }
-    if (cast(VeryViscousAir)gm) { multiSpecies = false; }
-    if (cast(UniformLUT)gm) { multiSpecies = false; }
-    if (cast(AdaptiveLUT)gm) { multiSpecies = false; }
-    if (cast(TwoTemperatureReactingArgon)gm) { multiT = true; }
-    if (cast(TwoTemperatureAir)gm) { multiT = true; }
-    if (cast(TwoTemperatureNitrogen)gm) { multiT = true; }
-    if (cast(TwoTemperatureGasGiant)gm) { multiT = true; }
-    version(multi_species_gas) {
-        // Any gas model will do.
-    } else {
-        if (multiSpecies) { throw new Error("Cannot accommodate multi-species gas model."); }
+    // The gas model may have been initialized earlier, possibly by a setGasModel call
+    // in the user's Lua script.
+    if (!GlobalConfig.gmodel_master) {
+        auto gm = init_gas_model(GlobalConfig.gas_model_file);
+        // The following checks on gas model will need to be maintained
+        // as new gas models are added.
+        bool multiSpecies = true; // assumed
+        bool multiT = false; // assumed
+        if (cast(IdealGas)gm) { multiSpecies = false; }
+        if (cast(CEAGas)gm) { multiSpecies = false; }
+        if (cast(VeryViscousAir)gm) { multiSpecies = false; }
+        if (cast(UniformLUT)gm) { multiSpecies = false; }
+        if (cast(AdaptiveLUT)gm) { multiSpecies = false; }
+        if (cast(TwoTemperatureReactingArgon)gm) { multiT = true; }
+        if (cast(TwoTemperatureAir)gm) { multiT = true; }
+        if (cast(TwoTemperatureNitrogen)gm) { multiT = true; }
+        if (cast(TwoTemperatureGasGiant)gm) { multiT = true; }
+        version(multi_species_gas) {
+            // Any gas model will do.
+        } else {
+            if (multiSpecies) { throw new Error("Cannot accommodate multi-species gas model."); }
+        }
+        version(multi_T_gas) {
+            // Any gas model will do.
+        } else {
+            if (multiT) { throw new Error("Cannot accommodate multi-temperature gas model."); }
+        }
+        GlobalConfig.gmodel_master = gm;
     }
-    version(multi_T_gas) {
-        // Any gas model will do.
-    } else {
-        if (multiT) { throw new Error("Cannot accommodate multi-temperature gas model."); }
-    }
-    GlobalConfig.gmodel_master = gm;
-    GlobalConfig.n_species = gm.n_species;
-    GlobalConfig.n_heavy = gm.n_heavy;
-    GlobalConfig.n_modes = gm.n_modes;
+    GlobalConfig.n_species = GlobalConfig.gmodel_master.n_species;
+    GlobalConfig.n_heavy = GlobalConfig.gmodel_master.n_heavy;
+    GlobalConfig.n_modes = GlobalConfig.gmodel_master.n_modes;
     mixin(update_string("udf_supervisor_file", "udf_supervisor_file"));
     mixin(update_int("user_pad_length", "user_pad_length"));
     GlobalConfig.userPad.length = GlobalConfig.user_pad_length;
@@ -1601,7 +1614,10 @@ JSONValue read_config_file()
                                                       GlobalConfig.MHD,
                                                       GlobalConfig.n_species,
                                                       GlobalConfig.n_modes);
+} // end set_config_for_core()
 
+void set_config_for_blocks(JSONValue jsonData)
+{
     // Now, configure blocks that make up the flow domain.
     //
     // This is done in phases.  The blocks need valid references to LocalConfig objects
@@ -1694,10 +1710,7 @@ JSONValue read_config_file()
     if (GlobalConfig.grid_motion == GridMotion.user_defined) {
         doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_grid_motion_file);
     }
-    // We send this config-file data back because we have not yet finished
-    // the configuration activities for the blocks and their boundary conditions.
-    return jsonData;
-} // end read_config_file()
+} // end set_config_for_blocks()
 
 void read_control_file()
 {

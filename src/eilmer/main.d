@@ -11,6 +11,7 @@ import core.runtime;
 import core.stdc.stdlib : exit;
 import std.stdio;
 import std.string;
+import std.json;
 import std.file;
 import std.path;
 import std.getopt;
@@ -19,6 +20,7 @@ import std.parallelism;
 import std.algorithm;
 import std.math;
 
+import json_helper;
 import geom;
 import gas;
 import gas.luagas_model;
@@ -473,9 +475,6 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 string errMsg = to!string(lua_tostring(L, -1));
                 throw new FlowSolverException(errMsg);
             }
-            GlobalConfig.turb_model = init_turbulence_model(GlobalConfig.turbulence_model_name);
-            // We may not proceed to building of files if the config parameters are incompatible.
-            checkGlobalConfig();
             if (!noConfigFilesFlag) {
                 if ( luaL_dostring(L, toStringz("build_config_files(\""~jobName~"\")")) != 0 ) {
                     writeln("There was a problem in the Eilmer build function build_config_files() in prep.lua");
@@ -483,6 +482,12 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                     throw new FlowSolverException(errMsg);
                 }
             }
+            // 2021-05-22 Now that the Lua script can no longer directly alter GlobalConfig,
+            // we have to load the config from the JSON file that was previously written by Lua.
+            JSONValue jsonData = readJSONfile("config/"~jobName~".config");
+            set_config_for_core(jsonData);
+            // We may not proceed to building of files if the config parameters are incompatible.
+            checkGlobalConfig();
             if (!noBlockFilesFlag) {
                 if ( luaL_dostring(L, toStringz("build_grid_and_flow_files(\""~jobName~"\")")) != 0 ) {
                     writeln("There was a problem in the Eilmer build function build_grid_and_flow_files() in prep.lua");
@@ -537,6 +542,8 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 string errMsg = to!string(lua_tostring(L, -1));
                 throw new FlowSolverException(errMsg);
             }
+            // FIX-ME 2021-05-22 Now that the Lua script can no longer directly alter GlobalConfig,
+            // we may have to get some of the config filled in before writing grid files.
             if ( luaL_dostring(L, toStringz("writeGridFiles(\""~jobName~"\")")) != 0 ) {
                 writeln("There was a problem in the Lua function writeGridFiles() in prep-grids.lua");
                 string errMsg = to!string(lua_tostring(L, -1));
@@ -651,9 +658,6 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 string errMsg = to!string(lua_tostring(L, -1));
                 throw new FlowSolverException(errMsg);
             }
-            GlobalConfig.turb_model = init_turbulence_model(GlobalConfig.turbulence_model_name);
-            // We may not proceed to building of files if the config parameters are incompatible.
-            checkGlobalConfig();
             if (!noConfigFilesFlag) {
                 if (luaL_dostring(L, toStringz("buildRuntimeConfigFiles(\""~jobName~"\")")) != 0) {
                     writeln("There was a problem in the Eilmer build function buildRuntimeConfigFiles() in prep-flow.lua");
@@ -661,6 +665,12 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                     throw new FlowSolverException(errMsg);
                 }
             }
+            // 2021-05-22 Now that the Lua script can no longer directly alter GlobalConfig,
+            // we have to load the config from the JSON file that was previously written by Lua.
+            JSONValue jsonData = readJSONfile("config/"~jobName~".config");
+            set_config_for_core(jsonData);
+            // We may not proceed to building of block files if the config parameters are incompatible.
+            checkGlobalConfig();
             if (!noBlockFilesFlag) {
                 if (luaL_dostring(L, toStringz("buildFlowFiles(\""~jobName~"\")")) != 0) {
                     writeln("There was a problem in the Eilmer build function buildFlowFiles() in prep-flow.lua");
