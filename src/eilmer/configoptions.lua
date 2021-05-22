@@ -50,7 +50,7 @@ configOptionsHidden = { -- hidden from user
    --
    -- See struct FlowStateLimits in fvcore.d.
    flowstate_limits_max_velocity = 30000.0, -- m/s
-   flowstate_limits_max_tke = 0.01*1.0e300, -- a guess for double.max
+   flowstate_limits_max_tke = 0.01*1.0e38, -- guess for huge
    flowstate_limits_min_tke = 0.0,
    flowstate_limits_max_temp = 50000.0, -- Kelvin
    flowstate_limits_min_temp = 0.0, -- Kelvin
@@ -121,7 +121,7 @@ configOptionsHidden = { -- hidden from user
    lewis_number = 1.0,
    --
    turbulence_model = "none",
-   turbulence_prandtl_number = 0.90,
+   turbulence_prandtl_number = 0.89,
    turbulence_schmidt_number = 0.75,
    max_mu_t_factor = 300.0,
    transient_mu_t_factor = 1.0,
@@ -153,8 +153,10 @@ configOptionsHidden = { -- hidden from user
    dt_init = 1.0e-3,
    dt_max = 1.0e-3,
    cfl_value = 0.5,
-   cfl_schedule_times = {0.0,},
-   cfl_schedule_values = {0.5,},
+   -- If the user does not set a schedule of cfl values,
+   -- we drop back to using the single cfl_value to construct the schedule.
+   cfl_schedule_times = {},
+   cfl_schedule_values = {},
    stringent_cfl = false,
    cfl_count = 10,
    fixed_time_step = false,

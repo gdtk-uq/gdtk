@@ -49,7 +49,7 @@ function write_control_file(fileName)
    f:write(string.format('   "number_inner_iterations": %d,\n', SteadyStateSolver.number_inner_iterations))
    f:write(string.format('   "number_start_up_steps": %d,\n', SteadyStateSolver.number_start_up_steps))
    f:write(string.format('   "residual_based_cfl_scheduling": %s,\n', tostring(SteadyStateSolver.residual_based_cfl_scheduling)))
-
+   --
    if type(SteadyStateSolver.cfl_schedule_value_list) == 'table' then
       if SteadyStateSolver.cfl_schedule_length < #SteadyStateSolver.cfl_schedule_value_list then
          SteadyStateSolver.cfl_schedule_length = #SteadyStateSolver.cfl_schedule_value_list
@@ -72,7 +72,7 @@ function write_control_file(fileName)
       end
    end
    f:write('],\n')
-
+   --
    f:write(string.format('   "cfl_max": %.18e,\n', SteadyStateSolver.cfl_max))
    f:write(string.format('   "cfl0": %.18e,\n', SteadyStateSolver.cfl0))
    f:write(string.format('   "eta0": %.18e,\n', SteadyStateSolver.eta0))
@@ -141,13 +141,10 @@ function write_config_file(fileName)
    f:write(string.format('"with_local_time_stepping": %s,\n', tostring(config.with_local_time_stepping)))
    f:write(string.format('"local_time_stepping_limit_factor": %d,\n', tostring(config.local_time_stepping_limit_factor)))
    f:write(string.format('"with_super_time_stepping_flexible_stages": %s,\n', tostring(config.with_super_time_stepping_flexible_stages)))
-   -- If the user has set config.cfl_schedule_values and config.cfl_schedule_times as tables,
-   -- write them out, else generate tables with a single time and cfl_value.
-   if (config.cfl_schedule_values and type(config.cfl_schedule_values) == 'table'
-       and config.cfl_schedule_times and type(config.cfl_schedule_times) == 'table') then
+   if #config.cfl_schedule_values > 0 and #config.cfl_schedule_times > 0 then
       -- We will presume that the tables have valid entries.
    else
-      config.cfl_schedule_values = {(config.cfl_value or 0.5),}
+      config.cfl_schedule_values = {config.cfl_value,}
       config.cfl_schedule_times = {0.0,}
    end
    local cfl_schedule_length = #config.cfl_schedule_values
@@ -240,15 +237,15 @@ function write_config_file(fileName)
    f:write(string.format('"M_inf": %.18e,\n', config.M_inf))
    f:write(string.format('"artificial_compressibility": %s,\n', tostring(config.artificial_compressibility)))
    f:write(string.format('"ac_alpha": %.18e,\n', config.ac_alpha))
-
+   --
    f:write(string.format('"grid_motion": "%s",\n', tostring(config.grid_motion)))
    f:write(string.format('"write_vertex_velocities": %s,\n', tostring(config.write_vertex_velocities)))
    f:write(string.format('"udf_grid_motion_file": "%s",\n', tostring(config.udf_grid_motion_file)))
-
+   --
    f:write(string.format('"shock_fitting_delay": %.18e,\n', config.shock_fitting_delay))
    f:write(string.format('"shock_fitting_allow_flow_reconstruction": %s,\n', tostring(config.shock_fitting_allow_flow_reconstruction)))
    f:write(string.format('"shock_fitting_scale_factor": %.18e,\n', config.shock_fitting_scale_factor))
-
+   --
    f:write(string.format('"viscous": %s,\n', tostring(config.viscous)))
    f:write(string.format('"use_viscosity_from_cells": %s,\n', tostring(config.use_viscosity_from_cells)))
    f:write(string.format('"spatial_deriv_from_many_points": %s,\n', tostring(config.spatial_deriv_from_many_points)))
@@ -264,7 +261,7 @@ function write_config_file(fileName)
 			 string.lower(config.mass_diffusion_model)))
    f:write(string.format('"diffusion_coefficient_type": "%s",\n', string.lower(config.diffusion_coefficient_type)))
    f:write(string.format('"lewis_number": %.18e,\n', config.lewis_number))
-
+   --
    f:write(string.format('"turbulence_model": "%s",\n',
 			 string.lower(config.turbulence_model)))
    f:write(string.format('"turbulence_prandtl_number": %.18e,\n',
@@ -273,10 +270,10 @@ function write_config_file(fileName)
 			 config.turbulence_schmidt_number))
    f:write(string.format('"max_mu_t_factor": %.18e,\n', config.max_mu_t_factor))
    f:write(string.format('"transient_mu_t_factor": %.18e,\n', config.transient_mu_t_factor))
-
+   --
    f:write(string.format('"udf_source_terms_file": "%s",\n', config.udf_source_terms_file))
    f:write(string.format('"udf_source_terms": %s,\n', tostring(config.udf_source_terms)))
-
+   --
    f:write(string.format('"reacting": %s,\n', tostring(config.reacting)))
    f:write(string.format('"reactions_file": "%s",\n', config.reactions_file))
    f:write(string.format('"reaction_time_delay": %.18e,\n', config.reaction_time_delay))
@@ -288,23 +285,23 @@ function write_config_file(fileName)
    f:write(string.format('"energy_exchange_file": "%s",\n', config.energy_exchange_file))
    f:write(string.format('"radiation_energy_dump_allowed": %s,\n', tostring(config.radiation_energy_dump_allowed)))
    f:write(string.format('"radiation_energy_dump_temperature_limit": %.18e,\n', config.radiation_energy_dump_temperature_limit))
-
+   --
    f:write(string.format('"control_count": %d,\n', config.control_count))
    f:write(string.format('"nfluidblock": %d,\n', #(fluidBlocks)))
    f:write(string.format('"nfluidblockarrays": %d,\n', #(fluidBlockArrays)))
-
+   --
    f:write(string.format('"diffuse_wall_bcs_on_init": %s,\n', tostring(config.diffuse_wall_bcs_on_init)))
    f:write(string.format('"number_init_passes": %d,\n', config.number_init_passes))
    f:write(string.format('"wall_temperature_on_init": %.18e,\n', config.wall_temperature_on_init));
-
+   --
    f:write(string.format('"thermionic_emission_bc_time_delay": %.18e,\n', config.thermionic_emission_bc_time_delay))
-
+   --
    f:write(string.format('"do_temporal_DFT": %s,\n', tostring(config.do_temporal_DFT)))
    f:write(string.format('"DFT_n_modes": %d,\n', config.DFT_n_modes))
    f:write(string.format('"DFT_step_interval": %d,\n', config.DFT_step_interval))
-
+   --
    f:write(string.format('"do_flow_average": %s,\n', tostring(config.do_flow_average)))
-
+   --
    f:write('"shape_sensitivity_calculator_options" : {\n')
    f:write(string.format('   "pseudotime": %s,\n', tostring(ShapeSensitivityCalculator.pseudotime)))
    f:write(string.format('   "pseudotime_lhs_jacobian_order": %d,\n', ShapeSensitivityCalculator.pseudotime_lhs_jacobian_order))
@@ -321,7 +318,7 @@ function write_config_file(fileName)
    f:write(string.format('   "user_defined_objective_file": "%s"\n', tostring(ShapeSensitivityCalculator.user_defined_objective_file)))
    -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
    f:write('},\n')
-
+   --
    f:write(string.format('"block_marching": %s,\n',
 			 tostring(config.block_marching)))
    f:write(string.format('"nib": %d,\n', config.nib))
@@ -357,7 +354,7 @@ function write_config_file(fileName)
    for i,hcell in ipairs(solidHistoryCells) do
       f:write(string.format('"solid-history-cell-%d": [%d, %d],\n', i-1, hcell.ib, hcell.i))
    end
-
+   --
    f:write(string.format('"n-reaction-zones": %d,\n', #reactionZones))
    for i,zone in ipairs(reactionZones) do
       f:write(string.format('"reaction-zone-%d": [%.18e, %.18e, %.18e, %.18e, %.18e, %.18e],\n',
@@ -382,11 +379,11 @@ function write_config_file(fileName)
 			    i-1, zone.p0.x, zone.p0.y, zone.p0.z,
 			    zone.p1.x, zone.p1.y, zone.p1.z))
    end
-
+   --
    f:write(string.format('"udf_solid_source_terms_file": "%s",\n', config.udf_solid_source_terms_file))
    f:write(string.format('"udf_solid_source_terms": %s,\n', tostring(config.udf_solid_source_terms)))
    f:write(string.format('"nsolidblock": %d,\n', #solidBlocks))
-
+   --
    for i = 1, #fluidBlockArrays do
       f:write(fluidBlockArrays[i]:tojson())
    end
@@ -396,10 +393,10 @@ function write_config_file(fileName)
    for i = 1, #solidBlocks do
       f:write(solidBlocks[i]:tojson())
    end
-
+   --
    f:write('"dummy_entry_without_trailing_comma": 0\n') -- no comma on last entry
    f:write("}\n")
-
+   --
    f:close()
 end
 
