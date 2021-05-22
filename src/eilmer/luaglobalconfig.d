@@ -23,7 +23,7 @@ import turbulence;
 
 // -------------------------------------------------------------------------------
 // Set GlobalConfig fields from a table.
-
+/+
 extern(C) int configSetFromTable(lua_State* L)
 {
     if (!lua_istable(L, 1)) return 0; // nothing to do
@@ -501,6 +501,7 @@ extern(C) int configGetByKey(lua_State* L)
     lua_remove(L, 1);
     return configGet(L);
 }
++/
 
 //------------------------------------------------------------------------
 // Functions related to the managed gas model.
@@ -510,6 +511,13 @@ extern(C) int setGasModel(lua_State* L)
     if (lua_isstring(L, 1)) {
         string fname = to!string(luaL_checkstring(L, 1));
         GlobalConfig.gas_model_file = fname;
+        // 2021-05-22 Also, to set config.gas_model_name in Lua world.
+        lua_getglobal(L, "config".toStringz);
+        if (lua_istable(L, -1)) {
+            lua_pushstring(L, fname.toStringz);
+            lua_setfield(L, -2, "gas_model_file".toStringz);
+        }
+        lua_pop(L, 1); // dispose of config
         try {
             GlobalConfig.gmodel_master = init_gas_model(fname);
         } catch (GasModelException e) {
@@ -550,6 +558,7 @@ extern(C) int getGasModel(lua_State* L)
 
 void registerGlobalConfig(lua_State* L)
 {
+    /+
     // Register global functions for setting configuration.
     lua_pushcfunction(L, &configSetFromTable);
     lua_setglobal(L, "configSet");
@@ -572,6 +581,7 @@ void registerGlobalConfig(lua_State* L)
     luaL_getmetatable(L, "config_mt");
     lua_setmetatable(L, -2);
     lua_setglobal(L, "config");
+    +/
 
     // Register other global functions related to the managed gas model.
     lua_pushcfunction(L, &setGasModel);

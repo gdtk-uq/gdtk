@@ -23,12 +23,8 @@ for k,v in pairs(bc) do
    _G[k] = v
 end
 
--- A table to collect configuration options that are not easily poked into the Dlang world.
-config2 = {}
--- 2021-05-21 PJ [FIX-ME]
--- config2 is a quick hack to allow cfd_schedule tables to be set in user input scripts.
--- It might be better to rework the config options-setting code to be a bit more like
--- Rowan and Kyle's options-setting code for the steady-state solver.
+require 'configoptions'
+config = configoptions.config
 
 require 'gridpro'
 -- Make these functions global so that users may call them

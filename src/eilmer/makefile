@@ -153,7 +153,8 @@ SOLID_FILES := solid/solidbc.d \
 	solid/solid_udf_source_terms.d \
 	solid/luasolidprops.d
 
-LUA_MODULES := blk_conn.lua \
+LUA_MODULES := configoptions.lua \
+	blk_conn.lua \
 	bc.lua \
 	gridpro.lua \
 	flowstate.lua \

@@ -141,31 +141,30 @@ function write_config_file(fileName)
    f:write(string.format('"with_local_time_stepping": %s,\n', tostring(config.with_local_time_stepping)))
    f:write(string.format('"local_time_stepping_limit_factor": %d,\n', tostring(config.local_time_stepping_limit_factor)))
    f:write(string.format('"with_super_time_stepping_flexible_stages": %s,\n', tostring(config.with_super_time_stepping_flexible_stages)))
-   -- If the user has set config2.cfl_schedule_values and config2.cfl_schedule_times as tables,
+   -- If the user has set config.cfl_schedule_values and config.cfl_schedule_times as tables,
    -- write them out, else generate tables with a single time and cfl_value.
-   if (config2.cfl_schedule_values and type(config2.cfl_schedule_values) == 'table'
-       and config2.cfl_schedule_times and type(config2.cfl_schedule_times) == 'table') then
+   if (config.cfl_schedule_values and type(config.cfl_schedule_values) == 'table'
+       and config.cfl_schedule_times and type(config.cfl_schedule_times) == 'table') then
       -- We will presume that the tables have valid entries.
    else
-      config2.cfl_schedule_values = {(config.cfl_value or 0.5),}
-      config2.cfl_schedule_times = {0.0,}
+      config.cfl_schedule_values = {(config.cfl_value or 0.5),}
+      config.cfl_schedule_times = {0.0,}
    end
-   if #config2.cfl_schedule_times < #config2.cfl_schedule_values then
-      config2.cfl_schedule_length = #config2.cfl_schedule_times
-   else
-      config2.cfl_schedule_length = #config2.cfl_schedule_values
+   local cfl_schedule_length = #config.cfl_schedule_values
+   if #config.cfl_schedule_times < #config.cfl_schedule_values then
+      cfl_schedule_length = #config.cfl_schedule_times
    end
-   f:write(string.format('"cfl_schedule_length": %d,\n', config2.cfl_schedule_length))
+   f:write(string.format('"cfl_schedule_length": %d,\n', cfl_schedule_length))
    f:write('"cfl_schedule_values": [')
-   for i,e in ipairs(config2.cfl_schedule_values) do
+   for i,e in ipairs(config.cfl_schedule_values) do
       f:write(string.format('%.18e', e))
-      if i < #config2.cfl_schedule_values then f:write(', ') end
+      if i < #config.cfl_schedule_values then f:write(', ') end
    end
    f:write('],\n')
    f:write('"cfl_schedule_times": [')
-   for i,e in ipairs(config2.cfl_schedule_times) do
+   for i,e in ipairs(config.cfl_schedule_times) do
       f:write(string.format('%.18e', e))
-      if i < #config2.cfl_schedule_times then f:write(', ') end
+      if i < #config.cfl_schedule_times then f:write(', ') end
    end
    f:write('],\n')
    --

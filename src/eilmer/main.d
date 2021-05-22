@@ -41,6 +41,8 @@ import luasolidprops;
 import postprocess;
 import luaidealgasflow;
 import luagasflow;
+import turbulence;
+
 version(mpi_parallel) {
     import mpi;
 }
@@ -471,6 +473,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 string errMsg = to!string(lua_tostring(L, -1));
                 throw new FlowSolverException(errMsg);
             }
+            GlobalConfig.turb_model = init_turbulence_model(GlobalConfig.turbulence_model_name);
             // We may not proceed to building of files if the config parameters are incompatible.
             checkGlobalConfig();
             if (!noConfigFilesFlag) {
@@ -648,6 +651,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
                 string errMsg = to!string(lua_tostring(L, -1));
                 throw new FlowSolverException(errMsg);
             }
+            GlobalConfig.turb_model = init_turbulence_model(GlobalConfig.turbulence_model_name);
             // We may not proceed to building of files if the config parameters are incompatible.
             checkGlobalConfig();
             if (!noConfigFilesFlag) {
