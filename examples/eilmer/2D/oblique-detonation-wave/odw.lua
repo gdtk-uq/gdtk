@@ -51,11 +51,11 @@ grid1 = StructuredGrid:new{psurface=patch1, niv=nx1+1, njv=ny+1}
 -- We split the patches into roughly equal blocks so that
 -- we make good use of our multicore machines.
 blk0 = FBArray:new{grid=grid0, initialState=inflow, nib=1, njb=2,
-		       bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
-			       north=OutFlowBC_Simple:new{}}}
+                   bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
+                           north=OutFlowBC_Simple:new{}}}
 blk1 = FBArray:new{grid=grid1, initialState=initial, nib=7, njb=2,
-		       bcList={east=OutFlowBC_Simple:new{},
-			       north=OutFlowBC_Simple:new{}}}
+                   bcList={east=OutFlowBC_Simple:new{},
+                           north=OutFlowBC_Simple:new{}}}
 identifyBlockConnections()
 
 -- Do a little more setting of global data.
@@ -67,7 +67,5 @@ config.max_step = 300000
 config.dt_init = 1.0e-6
 config.dt_plot = config.max_time / 40
 config.dt_history = 10.0e-5
-config.compression_tolerance = -0.05
-config.do_shock_detect = true
 
 dofile("sketch-domain.lua")
