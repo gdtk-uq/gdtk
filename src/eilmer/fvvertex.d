@@ -10,7 +10,6 @@ module fvvertex;
 
 import std.string;
 import std.conv;
-import fvcore;
 import geom;
 import gas;
 import globalconfig;

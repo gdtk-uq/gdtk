@@ -16,12 +16,11 @@ import std.format;
 import nm.complex;
 import nm.number;
 import geom;
-import fvcore;
 import solidfvinterface;
 import solidfvvertex;
 import solidprops;
 import std.stdio;
-import globalconfig; //Anand added this to access GlobalConfig
+import globalconfig;
 
 class SolidFVCell {
 public:

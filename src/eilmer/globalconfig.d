@@ -36,7 +36,6 @@ import gas.luagas_model;
 import kinetics;
 import geom;
 import geom.luawrap;
-import fvcore;
 version (opencl_gpu_chem) {
     import opencl_gpu_chem;
 }

@@ -37,7 +37,6 @@ import geom;
 import geom.luawrap;
 import gas;
 import globalconfig;
-import fvcore;
 import flowstate;
 import luaflowstate;
 import turbulence;

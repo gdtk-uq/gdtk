@@ -21,7 +21,6 @@ import geom;
 import geom.misc.kdtree;
 import gas;
 import fileutil;
-import fvcore;
 import globalconfig;
 import globaldata;
 import flowstate;

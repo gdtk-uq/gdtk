@@ -24,7 +24,6 @@ import std.range;
 import nm.complex;
 import nm.number;
 import gzip;
-import fvcore;
 import fileutil;
 import geom;
 import gas;

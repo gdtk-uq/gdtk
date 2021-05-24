@@ -18,7 +18,6 @@ import nm.number;
 import geom;
 import geom.misc.kdtree;
 import gas;
-import fvcore;
 import globalconfig;
 import globaldata;
 import flowstate;

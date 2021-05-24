@@ -23,7 +23,6 @@ import json_helper;
 import gzip;
 import geom;
 import gas;
-import fvcore;
 import fvcell;
 import globalconfig;
 import fluidblockio_old;

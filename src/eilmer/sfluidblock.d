@@ -33,7 +33,6 @@ import globaldata;
 import flowstate;
 import fluxcalc;
 import flowgradients;
-import fvcore;
 import fvvertex;
 import fvinterface;
 import fvcell;
@@ -677,7 +676,7 @@ public:
         //
         // Bind interfaces vertices to cells.
         // There is a fixed order of faces and vertices for each cell.
-        // Refer to fvcore.d
+        // Refer to module geom.elements.nomenclature.
         foreach (k; 0 .. nkc) {
             foreach (j; 0 .. njc) {
                 foreach (i; 0 .. nic) {

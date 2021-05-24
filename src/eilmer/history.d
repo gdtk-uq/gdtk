@@ -14,7 +14,6 @@ import std.array;
 import std.format;
 import std.algorithm: find;
 
-import fvcore;
 import globalconfig;
 import globaldata;
 import fvcell;

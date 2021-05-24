@@ -1,4 +1,4 @@
-/* 
+/*
 Modular Turbulence Modelling Interface
 
 @author: Nick N. Gibbons (n.gibbons@uq.edu.au)
@@ -11,7 +11,6 @@ import std.json;
 import flowstate;
 import flowgradients;
 import gas;
-import fvcore;
 import json_helper;
 import nm.number;
 import nm.complex;

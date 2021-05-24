@@ -14,7 +14,6 @@ import nm.complex;
 import nm.number;
 import nm.luabbla;
 import lua_helper;
-import fvcore;
 import fvvertex;
 import fvinterface;
 import globalconfig;

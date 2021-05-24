@@ -25,7 +25,6 @@ import std.json;
 import nm.complex;
 import nm.number;
 
-import fvcore;
 import json_helper;
 import globalconfig;
 import globaldata;

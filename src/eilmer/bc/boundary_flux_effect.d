@@ -27,7 +27,6 @@ import globaldata;
 import fluidblock;
 import sfluidblock;
 import ufluidblock;
-import fvcore;
 import fvcell;
 import fvinterface;
 import solidfvcell;

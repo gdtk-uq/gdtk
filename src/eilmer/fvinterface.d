@@ -22,7 +22,6 @@ import nm.number;
 import nm.bbla;
 import geom;
 import gas;
-import fvcore;
 import fvvertex;
 import fvcell;
 import flowstate;

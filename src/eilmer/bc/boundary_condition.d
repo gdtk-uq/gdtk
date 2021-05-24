@@ -19,7 +19,6 @@ import gas.luagas_model;
 import nm.luabbla;
 import json_helper;
 import geom;
-import fvcore;
 import globalconfig;
 import globaldata;
 import flowstate;

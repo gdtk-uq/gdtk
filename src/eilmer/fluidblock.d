@@ -26,7 +26,6 @@ import gas;
 import kinetics;
 import globalconfig;
 import globaldata;
-import fvcore;
 import flowstate;
 import fvvertex;
 import fvinterface;

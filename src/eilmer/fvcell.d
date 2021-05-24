@@ -21,7 +21,6 @@ import nm.bbla;
 import geom;
 import gas;
 import kinetics;
-import fvcore;
 import flowstate;
 import flowgradients;
 import conservedquantities;

@@ -22,7 +22,6 @@ import nm.schedule;
 import geom;
 import geom.misc.kdtree;
 import gas;
-import fvcore;
 import conservedquantities;
 import globalconfig;
 import globaldata;

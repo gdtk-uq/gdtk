@@ -45,7 +45,6 @@ import sfluidblock;
 import globaldata;
 import globalconfig;
 import simcore : init_simulation;
-import fvcore;
 import fileutil;
 import user_defined_source_terms;
 import conservedquantities;

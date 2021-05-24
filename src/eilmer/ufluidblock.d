@@ -28,7 +28,6 @@ import globaldata;
 import flowstate;
 import fluxcalc;
 import flowgradients;
-import fvcore;
 import fvvertex;
 import fvinterface;
 import fvcell;

@@ -18,7 +18,6 @@ import geom;
 import gas;
 import flowstate;
 import conservedquantities;
-import fvcore;
 import fvinterface;
 import globalconfig;
 

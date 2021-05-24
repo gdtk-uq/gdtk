@@ -21,7 +21,6 @@ version(mpi_parallel) {
 import globalconfig;
 import globaldata;
 import flowstate;
-import fvcore;
 import fvvertex;
 import fvinterface;
 import fvcell;

@@ -12,7 +12,6 @@ import nm.complex;
 import nm.number;
 
 import gas;
-import fvcore;
 import globalconfig;
 import flowstate;
 import fvinterface;

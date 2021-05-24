@@ -41,7 +41,6 @@ import bc;
 import onedinterp;
 import lsqinterp;
 import grid_deform;
-import fvcore;
 import fileutil;
 import geom;
 import geom.luawrap;

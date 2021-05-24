@@ -15,7 +15,6 @@ import geom;
 import globalconfig;
 import globaldata;
 import flowstate;
-import fvcore;
 import fvinterface;
 import fvcell;
 import fluidblock;

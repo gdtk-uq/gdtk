@@ -48,7 +48,7 @@ configOptionsHidden = { -- hidden from user
    --
    apply_bcs_in_parallel = true,
    --
-   -- See struct FlowStateLimits in fvcore.d.
+   -- See struct FlowStateLimits in globalconfig.d.
    flowstate_limits_max_velocity = 30000.0, -- m/s
    flowstate_limits_max_tke = 0.01*1.0e38, -- guess for huge
    flowstate_limits_min_tke = 0.0,

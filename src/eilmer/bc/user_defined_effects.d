@@ -28,7 +28,6 @@ import gas.luagas_model;
 import geom;
 import simcore;
 import flowstate;
-import fvcore;
 import fvcell;
 import fvinterface;
 import sfluidblock: SFluidBlock;

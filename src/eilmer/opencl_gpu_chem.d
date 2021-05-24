@@ -8,7 +8,6 @@ import std.stdio;
 import std.string;
 import std.conv;
 
-import fvcore: FlowSolverException;
 import globalconfig;
 import globaldata;
 import fvcell;
@@ -16,7 +15,7 @@ import cl;
 import gas;
 import kinetics.reaction_mechanism;
 import kinetics.chemistry_update;
- 
+
 immutable string openCLProgName = "alpha_qss_kernel.cl";
 immutable int MAX_SOURCE_SIZE = 0x100000;
 

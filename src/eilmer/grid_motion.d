@@ -8,7 +8,6 @@ import util.lua;
 import util.lua_service;
 import nm.complex;
 import nm.number;
-import fvcore;
 import fvvertex;
 import fvinterface;
 import globalconfig;

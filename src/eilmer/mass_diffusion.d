@@ -23,7 +23,6 @@ import gas;
 import globalconfig;
 import flowstate;
 import flowgradients;
-import fvcore;
 
 private immutable double SMALL_DIFFUSION_COEFFICIENT = 1.0e-20;
 

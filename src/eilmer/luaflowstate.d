@@ -27,7 +27,6 @@ import flowstate;
 import geom;
 import geom.luawrap;
 import globalconfig;
-import luaglobalconfig;
 import fluidblockio_old;
 import fluidblockio;
 

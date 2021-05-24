@@ -35,7 +35,6 @@ import simcore;
 import globaldata: SimState;
 import util.lua;
 import geom.luawrap;
-import luaglobalconfig;
 import luaflowstate;
 import luaflowsolution;
 import luasolidprops;

@@ -96,7 +96,7 @@ endif
 
 EILMER_CORE_FILES := simcore.d simcore_gasdynamic_step.d simcore_solid_step.d \
 	simcore_exchange.d simcore_io.d \
-	fileutil.d fvcore.d fvcell.d fvvertex.d fvinterface.d \
+	fileutil.d fvcell.d fvvertex.d fvinterface.d \
 	fluxcalc.d onedinterp.d flowgradients.d lsqinterp.d limiters.d \
 	conservedquantities.d flowstate.d \
 	globalconfig.d globaldata.d \
@@ -108,7 +108,7 @@ EILMER_CORE_FILES := simcore.d simcore_gasdynamic_step.d simcore_solid_step.d \
 	mass_diffusion.d shockdetectors.d turbulence.d jacobian.d \
 	fluidblockio.d celldata.d
 
-EILMER_LUA_FILES := luaglobalconfig.d lua_helper.d \
+EILMER_LUA_FILES := lua_helper.d \
 	luaflowsolution.d luaflowstate.d user_defined_source_terms.d
 
 EILMER_EXTRA_FILES := postprocess.d flowsolution.d \

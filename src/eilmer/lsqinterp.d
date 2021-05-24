@@ -14,7 +14,6 @@ import nm.rsla;
 
 import geom;
 import gas;
-import fvcore;
 import globalconfig;
 import flowstate;
 import fvinterface;
@@ -28,7 +27,7 @@ class LSQInterpWorkspace {
 public:
     // A place to hold the intermediate results for computing
     // the least-squares model as a weighted sum of the flow data.
-    number[cloud_nmax] wx, wy, wz; 
+    number[cloud_nmax] wx, wy, wz;
 
     this()
     {

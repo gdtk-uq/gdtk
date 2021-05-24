@@ -39,7 +39,6 @@ import simcore;
 import simcore_gasdynamic_step;
 import simcore_solid_step;
 import simcore_exchange;
-import fvcore;
 import fileutil;
 import user_defined_source_terms;
 import conservedquantities;

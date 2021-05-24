@@ -18,7 +18,6 @@ import nm.number;
 import std.json;
 import util.lua;
 import nm.rsla;
-import fvcore;
 import json_helper;
 import gzip;
 import geom;
