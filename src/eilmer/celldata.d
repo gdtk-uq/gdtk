@@ -74,6 +74,11 @@ class AuxCellData
             if (name == GeneralDFT.tag) return counter;
         }
 
+        if (GlobalConfig.solve_electric_field) {
+            counter += 1;
+            if (name == FieldData.tag) return counter;
+        }
+
         if (name == "") {
             return counter; // hack to get number of items
         } else {
@@ -101,6 +106,10 @@ class AuxCellData
 
         i = get_order(GeneralDFT.tag);
         if (i >= 0) aux_data[i] = new GeneralDFT();
+
+        i = get_order(FieldData.tag);
+        if (i >= 0) aux_data[i] = new FieldData();
+
 
         foreach (ref aux; aux_data) {
             aux.init(config);
@@ -1058,6 +1067,38 @@ class CellLimiterData : AuxCellData
                 acc["phi_"~myConfig.turb_model.primitive_variable_name(it)] = new AccessTurbPhi(it);
             }
         }
+
+        return acc;
+    }
+}
+
+//=============================================================================
+// Field Variables
+//=============================================================================
+
+// Generate all of the accessors for Nick's electromagnetic field calculations
+mixin(GenCellVariableAccess!("AccessElectricPotential", "electric_potential"));
+
+class FieldData : AuxCellData
+// Pipe for accessing field data stored in the cells
+{
+    public:
+
+    static tag = "efield"; // FIXME: reclaim the "field" tag for myself
+
+    this(){
+        index = AuxCellData.get_order(tag);
+    }
+
+    override void init(LocalConfig myConfig){}
+
+    override @nogc void update(FVCell cell, double dt, double time, size_t step){}
+
+    static VariableAccess[string] get_accessors(LocalConfig myConfig)
+    {
+        VariableAccess[string] acc;
+
+        acc["electric_potential"] = new AccessElectricPotential();
 
         return acc;
     }

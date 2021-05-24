@@ -51,7 +51,7 @@ void finish_PVD_file(File f)
     f.close();
 }
 
-File begin_PVTU_file(string fileName, string[] variableNames, bool includeVelocity=true)
+File begin_PVTU_file(string fileName, string[] variableNames)
 {
     File f = File(fileName, "w");
     f.write("<VTKFile type=\"PUnstructuredGrid\">\n");
@@ -63,7 +63,7 @@ File begin_PVTU_file(string fileName, string[] variableNames, bool includeVeloci
     foreach (var; variableNames) {
         f.writef(" <DataArray Name=\"%s\" type=\"Float32\" NumberOfComponents=\"1\"/>\n", var);
     }
-    if (includeVelocity) {
+    if (canFind(variableNames,"vel.x")) {
         f.write(" <PDataArray Name=\"vel.vector\" type=\"Float32\" NumberOfComponents=\"3\"/>\n");
     }
     if (canFind(variableNames,"c.x")) {

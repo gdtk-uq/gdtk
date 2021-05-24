@@ -149,6 +149,9 @@ public:
     // array of auxiliary data
     AuxCellData[] aux_cell_data;
 
+    // Electromagnetic Field Variables
+    number electric_potential;
+
     // Shape sensitivity calculator workspace
     FVCell[] cell_list;            // list of cells in the residual stencil
     FVInterface[] face_list;       // list of faces in the residual stencil

@@ -1035,7 +1035,9 @@ final class GlobalConfig {
     shared static bool divergence_cleaning = false;
     shared static double c_h = 0.0;
     shared static double divB_damping_length = 1.0;
-    //
+    // Activate the electric field solver by Nick Gibbons
+    shared static bool solve_electric_field = false;
+
     // Parameters controlling viscous/molecular transport
     //
     shared static bool viscous = false;
@@ -1299,7 +1301,8 @@ public:
     bool divergence_cleaning;
     double c_h;
     double divB_damping_length;
-    //
+    bool solve_electric_field;
+
     bool viscous;
     bool use_viscosity_from_cells;
     bool save_viscous_gradients;
@@ -1452,6 +1455,7 @@ public:
         divergence_cleaning = cfg.divergence_cleaning;
         c_h = cfg.c_h;
         divB_damping_length = cfg.divB_damping_length;
+        solve_electric_field = cfg.solve_electric_field;
         //
         viscous = cfg.viscous;
         use_viscosity_from_cells = cfg.use_viscosity_from_cells;
@@ -1801,7 +1805,8 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("MHD_resistive", "MHD_resistive"));
     mixin(update_bool("divergence_cleaning", "divergence_cleaning"));
     mixin(update_double("divB_damping_length", "divB_damping_length"));
-    //
+    mixin(update_bool("solve_electric_field", "solve_electric_field"));
+
     // Checking of constraints.
     // The following checks/overrides must happen after the relevant config elements
     // have been set.  This is the first such check.  For details, see the function below.
@@ -1876,6 +1881,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  MHD_resistive: ", cfg.MHD_resistive);
         writeln("  divergence_cleaning: ", cfg.divergence_cleaning);
         writeln("  divB_damping_length: ", cfg.divB_damping_length);
+        writeln("  solve_electric_field: ", cfg.solve_electric_field);
     }
     configCheckPoint2();
     //

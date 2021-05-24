@@ -21,6 +21,7 @@ import ssolidblock;
 import block;
 import loads;
 import fluidblockio_new;
+import field;
 
 // State data for simulation.
 // Needs to be seen by all of the coordination functions in simcore.d.
@@ -97,3 +98,8 @@ __gshared static FBArray[] fluidBlockArrays;
 
 // A collection of IO objects that dictate what is written in and out
 __gshared static FluidBlockIO[] globalFluidBlockIO;
+
+// An object for solving the electric field across the entire simulation
+// It may cooperate with other ElectricFields in other processes
+__gshared static ElectricField eField;
+

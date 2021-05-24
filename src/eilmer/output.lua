@@ -199,6 +199,7 @@ function write_config_file(fileName)
    f:write(string.format('"MHD_resistive": %s,\n', tostring(config.MHD_resistive)))
    f:write(string.format('"divergence_cleaning": %s,\n', tostring(config.divergence_cleaning)))
    f:write(string.format('"divB_damping_length": %.18e,\n', config.divB_damping_length))
+   f:write(string.format('"solve_electric_field": %s,\n', tostring(config.solve_electric_field)))
    f:write(string.format('"apply_bcs_in_parallel": %s,\n',
 			 tostring(config.apply_bcs_in_parallel)))
    f:write(string.format('"flowstate_limits_max_velocity": %.18e,\n', config.flowstate_limits_max_velocity))

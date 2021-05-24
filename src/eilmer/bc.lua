@@ -526,6 +526,7 @@ BoundaryCondition = {
    convective_flux_computed_in_bc = false,
    is_design_surface = false,
    num_cntrl_pts = 0,
+   field_bc = "unspecified",
    preReconAction = {},
    postConvFluxAction = {},
    preSpatialDerivActionAtBndryFaces = {},
@@ -561,6 +562,7 @@ function BoundaryCondition:tojson()
                               tostring(self.is_design_surface))
    str = str .. string.format('        "num_cntrl_pts": %s, \n',
                               tostring(self.num_cntrl_pts))
+   str = str .. string.format('        "field_bc": "%s",\n', self.field_bc)
    str = str .. '        "pre_recon_action": [\n'
    for i,effect in ipairs(self.preReconAction) do
       str = str .. effect:tojson()
@@ -605,7 +607,7 @@ function WallBC_WithSlip0:new(o)
                " and not WallBC_WithSlip0.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
+   flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts", "field_bc"})
    if not flag then
       error("Invalid name for item supplied to WallBC_WithSlip0 constructor.", 2)
    end

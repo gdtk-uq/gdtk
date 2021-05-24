@@ -55,6 +55,7 @@ import history;
 import loads;
 import conservedquantities;
 import special_block_init;
+import field;
 version (opencl_gpu_chem) {
     import opencl_gpu_chem;
 }
@@ -729,6 +730,12 @@ int init_simulation(int tindx, int nextLoadsIndx,
     synchronize_corner_coords_for_all_blocks();
     //
     if (GlobalConfig.turb_model.needs_dwall) compute_wall_distances();
+    //
+
+    if (GlobalConfig.solve_electric_field){
+        eField = new ElectricField(localFluidBlocks); // efield is a global object stored in globaldata.d
+        eField.solve_efield(localFluidBlocks); // Assuming the flow field is set up, solve here too
+    }
     // Keep our memory foot-print small.
     GC.collect();
     GC.minimize();
@@ -1048,7 +1055,11 @@ int integrate_in_time(double target_time_as_requested)
                 dt_chem *= GlobalConfig.reaction_fraction_schedule.interpolate_value(SimState.time);
                 chemistry_step(dt_chem);
             }
-            //
+            // 2.5 Update electric field solution (if needed)
+            if (GlobalConfig.solve_electric_field){
+                eField.solve_efield(localFluidBlocks);
+            }
+
             // 3.0 Update the time record and (occasionally) print status.
             SimState.step = SimState.step + 1;
             if (GlobalConfig.is_master_task) {
