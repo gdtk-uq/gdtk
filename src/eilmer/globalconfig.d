@@ -1,9 +1,17 @@
 /** globalconfig.d
  * A place to keep the configuration details for the simulation.
+ * This is a long file, in several parts:
+ *   1. Symbolic names and enums
+ *   2. Special zones
+ *   3. The structs and classes defining configuration data.
+ *   4. Reading from JSON file
+ *   5. Lua interaction
  *
- * Author: Peter J. and Rowan G.
- * First code: 2014-07-18
- * Resumed work: 2015-02-05
+ * Authors: Peter J, Rowan G, Kyle D, Nick G and Daryl B.
+ * Versions:
+ *   2014-07-18: First code
+ *   2015-02-05: Resumed work
+ *   2021-05-24: Absorbed: fvcore.d and remnants of luaglobalconfig.d
  */
 
 module globalconfig;
@@ -24,6 +32,7 @@ import nm.luabbla;
 import nm.schedule;
 import lua_helper;
 import gas;
+import gas.luagas_model;
 import kinetics;
 import geom;
 import geom.luawrap;
@@ -53,7 +62,402 @@ import mass_diffusion;
 import loads;
 import turbulence;
 
-//--------------------------------------------------------------------------------
+// --------------------------------
+// PART 1. Symbolic names and enums
+// --------------------------------
+
+class FlowSolverException : Exception {
+    @nogc
+    this(string message, string file=__FILE__, size_t line=__LINE__,
+         Throwable next=null)
+    {
+        super(message, file, line, next);
+    }
+}
+
+struct FlowStateLimits {
+    double max_velocity = 30000.0; // m/s
+    double max_tke = 0.01 * double.max;
+    double min_tke = 0.0;
+    double max_temp = 50000.0; // Kelvin
+    double min_temp = 0.0;
+    double min_pressure = 0.1; // Pascals
+}
+
+// Symbolic names for the time-stepping schemes used to update the gasdynamic eqn.
+enum GasdynamicUpdate {
+    euler,
+    pc,
+    midpoint,
+    classic_rk3,
+    tvd_rk3,
+    denman_rk3,
+    rkl1,
+    rkl2,
+    moving_grid_1_stage,
+    moving_grid_2_stage,
+    backward_euler,
+    implicit_rk1
+}
+
+@nogc
+string gasdynamic_update_scheme_name(GasdynamicUpdate gdut)
+{
+    final switch ( gdut ) {
+    case GasdynamicUpdate.euler: return "euler";
+    case GasdynamicUpdate.pc: return "predictor-corrector";
+    case GasdynamicUpdate.midpoint: return "midpoint";
+    case GasdynamicUpdate.classic_rk3: return "classic-rk3";
+    case GasdynamicUpdate.tvd_rk3: return "tvd-rk3";
+    case GasdynamicUpdate.denman_rk3: return "denman-rk3";
+    case GasdynamicUpdate.rkl1: return "rkl1";
+    case GasdynamicUpdate.rkl2: return "rkl2";
+    case GasdynamicUpdate.moving_grid_1_stage: return "moving_grid_1_stage";
+    case GasdynamicUpdate.moving_grid_2_stage: return "moving_grid_2_stage";
+    case GasdynamicUpdate.backward_euler: return "backward_euler";
+    case GasdynamicUpdate.implicit_rk1: return "implicit_rk1";
+    }
+} // end gasdynamic_update_scheme_name()
+
+@nogc
+size_t number_of_stages_for_update_scheme(GasdynamicUpdate gdut)
+{
+    final switch (gdut) {
+    case GasdynamicUpdate.euler: return 1;
+    case GasdynamicUpdate.pc: return 2;
+    case GasdynamicUpdate.midpoint: return 2;
+    case GasdynamicUpdate.classic_rk3: return 3;
+    case GasdynamicUpdate.tvd_rk3: return 3;
+    case GasdynamicUpdate.denman_rk3: return 3;
+    case GasdynamicUpdate.rkl1: return 3;
+    case GasdynamicUpdate.rkl2: return 3;
+    case GasdynamicUpdate.moving_grid_1_stage: return 1;
+    case GasdynamicUpdate.moving_grid_2_stage: return 2;
+    case GasdynamicUpdate.backward_euler: return 1;
+    case GasdynamicUpdate.implicit_rk1: return 1;
+    }
+} // end number_of_stages_for_update_scheme()
+
+@nogc
+bool is_explicit_update_scheme(GasdynamicUpdate gdut)
+{
+    final switch (gdut) {
+    case GasdynamicUpdate.euler: return true;
+    case GasdynamicUpdate.pc: return true;
+    case GasdynamicUpdate.midpoint: return true;
+    case GasdynamicUpdate.classic_rk3: return true;
+    case GasdynamicUpdate.tvd_rk3: return true;
+    case GasdynamicUpdate.denman_rk3: return true;
+    case GasdynamicUpdate.rkl1: return true;
+    case GasdynamicUpdate.rkl2: return true;
+    case GasdynamicUpdate.moving_grid_1_stage: return true;
+    case GasdynamicUpdate.moving_grid_2_stage: return true;
+    case GasdynamicUpdate.backward_euler: return false;
+    case GasdynamicUpdate.implicit_rk1: return false;
+    }
+} // is_explicit_update_scheme()
+
+@nogc
+size_t final_index_for_update_scheme(GasdynamicUpdate gdut)
+{
+    final switch (gdut) {
+    case GasdynamicUpdate.euler: return 1;
+    case GasdynamicUpdate.pc: return 2;
+    case GasdynamicUpdate.midpoint: return 2;
+    case GasdynamicUpdate.classic_rk3: return 3;
+    case GasdynamicUpdate.tvd_rk3: return 3;
+    case GasdynamicUpdate.denman_rk3: return 3;
+    case GasdynamicUpdate.rkl1: return 3;
+    case GasdynamicUpdate.rkl2: return 3;
+    case GasdynamicUpdate.moving_grid_1_stage: return 1;
+    case GasdynamicUpdate.moving_grid_2_stage: return 2;
+    case GasdynamicUpdate.backward_euler: return 1;
+    case GasdynamicUpdate.implicit_rk1: return 1;
+    }
+} // end final_index_for_update_scheme()
+
+GasdynamicUpdate update_scheme_from_name(string name)
+{
+    string name_ = name.replace("-", "_");
+    switch (name_) {
+    case "euler": return GasdynamicUpdate.euler;
+    case "pc": return GasdynamicUpdate.pc;
+    case "predictor_corrector": return GasdynamicUpdate.pc;
+    case "midpoint": return GasdynamicUpdate.midpoint;
+    case "classic_rk3": return GasdynamicUpdate.classic_rk3;
+    case "tvd_rk3": return GasdynamicUpdate.tvd_rk3;
+    case "denman_rk3": return GasdynamicUpdate.denman_rk3;
+    case "rkl1": return GasdynamicUpdate.rkl1;
+    case "rkl2": return GasdynamicUpdate.rkl2;
+    case "moving_grid_1_stage": return GasdynamicUpdate.moving_grid_1_stage;
+    case "moving_grid_2_stage": return GasdynamicUpdate.moving_grid_2_stage;
+    case "backward_euler": return GasdynamicUpdate.backward_euler;
+    case "implicit_rk1": return GasdynamicUpdate.implicit_rk1;
+    default:
+        throw new FlowSolverException("Invalid gasdynamic update scheme name");
+    }
+}  // end scheme_from_name()
+
+// Symbolic names for grid motion types
+enum GridMotion { none, user_defined, shock_fitting }
+
+@nogc
+string grid_motion_name(GridMotion i)
+{
+    final switch (i) {
+    case GridMotion.none: return "none";
+    case GridMotion.user_defined: return "user_defined";
+    case GridMotion.shock_fitting: return "shock_fitting";
+    }
+}
+
+GridMotion grid_motion_from_name(string name)
+{
+    string name_ = name.replace("-", "_");
+    switch (name_) {
+    case "none": return GridMotion.none;
+    case "user_defined": return GridMotion.user_defined;
+    case "shock_fitting": return GridMotion.shock_fitting;
+    default: return GridMotion.none;
+    }
+}
+
+
+// [TODO] think about the following...
+enum CopyDataOption { all, minimal_flow, all_flow, grid, cell_lengths_only }
+
+// Symbolic names for the types of flow-data reconstruction.
+enum InterpolateOption { pt, rhou, rhop, rhot }
+
+@nogc
+string thermo_interpolator_name(InterpolateOption i)
+{
+    final switch ( i ) {
+    case InterpolateOption.pt: return "pT";
+    case InterpolateOption.rhou: return "rhou";
+    case InterpolateOption.rhop: return "rhop";
+    case InterpolateOption.rhot: return "rhoT";
+    }
+} // end thermo_interpolator_name()
+
+@nogc
+InterpolateOption thermo_interpolator_from_name(string name)
+{
+    switch ( name ) {
+    case "pT": return InterpolateOption.pt;
+    case "pt": return InterpolateOption.pt;
+    case "rhou": return InterpolateOption.rhou;
+    case "rhoe": return InterpolateOption.rhou; // allow the old name
+    case "rhop": return InterpolateOption.rhop;
+    case "rhoT": return InterpolateOption.rhot;
+    case "rhot": return InterpolateOption.rhot;
+    default: return InterpolateOption.rhou;
+    }
+} // end thermo_interpolator_from_name()
+
+// Symbolic names for the flavours of our flux_calculators.
+enum FluxCalculator {
+    ausmdv, // Wada and Liou's flux calculator AIAA Paper 94-0083
+    hllc,  // HLLC approximate Riemann solver (Details from Toro's textbook on Riemann solvers)
+    ldfss,  // A Low-diffusion flux-splitting scheme (Details in Edward's Computers & Fluids paper 1997)
+    hanel, // Hanel's flux calculator (details in Wada & Lious's 1997 SIAM paper)
+    efm, // Mike Macrossan's EFM flux calculation
+    ausm_plus_up, // Liou's 2006 all-speed flux calculator
+    adaptive_efm_ausmdv, // EFM near shocks, AUSMDV otherwise
+    adaptive_hanel_ausmdv, // Hanel near shocks, AUSMDV otherwise
+    adaptive_hanel_hllc, // Hanel near shocks, HLLC otherwise
+    adaptive_hlle_roe, // HLLE near shocks, Roe otherwise
+    hlle, // MHD HLLE approximate Riemann solver
+    roe, // Roe approximate Riemann solver
+    asf, // what does this stand for???
+    adaptive_ausmdv_asf // AUSMDV near shocks, asf otherwise
+}
+
+@nogc
+string flux_calculator_name(FluxCalculator fcalc)
+{
+    final switch ( fcalc ) {
+    case FluxCalculator.ausmdv: return "ausmdv";
+    case FluxCalculator.hllc: return "hllc";
+    case FluxCalculator.ldfss: return "ldfss";
+    case FluxCalculator.hanel: return "hanel";
+    case FluxCalculator.efm: return "efm";
+    case FluxCalculator.ausm_plus_up: return "ausm_plus_up";
+    case FluxCalculator.adaptive_efm_ausmdv: return "adaptive_efm_ausmdv";
+    case FluxCalculator.adaptive_hanel_ausmdv: return "adaptive_hanel_ausmdv";
+    case FluxCalculator.adaptive_hanel_hllc: return "adaptive_hanel_hllc";
+    case FluxCalculator.adaptive_hlle_roe: return "adaptive_hlle_roe";
+    case FluxCalculator.hlle: return "hlle";
+    case FluxCalculator.roe: return "roe";
+    case FluxCalculator.asf: return "asf";
+    case FluxCalculator.adaptive_ausmdv_asf: return "adaptive_ausmdv_asf";
+    }
+}
+
+@nogc
+FluxCalculator flux_calculator_from_name(string name)
+{
+    switch ( name ) {
+    case "ausmdv": return FluxCalculator.ausmdv;
+    case "hllc": return FluxCalculator.hllc;
+    case "ldfss": return FluxCalculator.ldfss;
+    case "hanel": return FluxCalculator.hanel;
+    case "efm": return FluxCalculator.efm;
+    case "ausm_plus_up": return FluxCalculator.ausm_plus_up;
+    case "adaptive_efm_ausmdv": return FluxCalculator.adaptive_efm_ausmdv;
+    case "adaptive_hanel_ausmdv": return FluxCalculator.adaptive_hanel_ausmdv;
+    case "adaptive_hanel_hllc": return FluxCalculator.adaptive_hanel_hllc;
+    case "adaptive": return FluxCalculator.adaptive_efm_ausmdv;
+    case "adaptive_hlle_roe": return FluxCalculator.adaptive_hlle_roe;
+    case "hlle": return FluxCalculator.hlle;
+    case "roe": return FluxCalculator.roe;
+    case "asf": return FluxCalculator.asf;
+    case "adaptive_ausmdv_asf" : return FluxCalculator.adaptive_ausmdv_asf;
+    default:
+        throw new FlowSolverException("Invalid flux calculator name");
+    }
+}
+
+// Symbolic names for the flavours of spatial-derivative calculators.
+enum SpatialDerivCalc {
+    least_squares,
+    divergence,
+}
+
+@nogc
+string spatial_deriv_calc_name(SpatialDerivCalc sdc)
+{
+    final switch ( sdc ) {
+    case SpatialDerivCalc.least_squares: return "least_squares";
+    case SpatialDerivCalc.divergence: return "divergence";
+    }
+}
+
+@nogc
+SpatialDerivCalc spatial_deriv_calc_from_name(string name)
+{
+    switch ( name ) {
+    case "least_squares": return SpatialDerivCalc.least_squares;
+    case "divergence": return SpatialDerivCalc.divergence;
+    default:
+        throw new FlowSolverException("Invalid spatial-derivative calculator name");
+    }
+}
+
+enum SpatialDerivLocn {
+    faces,
+    vertices,
+    cells
+}
+
+@nogc
+string spatial_deriv_locn_name(SpatialDerivLocn sdl)
+{
+    final switch ( sdl ) {
+    case SpatialDerivLocn.faces: return "faces";
+    case SpatialDerivLocn.vertices: return "vertices";
+    case SpatialDerivLocn.cells: return "cells";
+    }
+}
+
+@nogc
+SpatialDerivLocn spatial_deriv_locn_from_name(string name)
+{
+    switch ( name ) {
+    case "faces": return SpatialDerivLocn.faces;
+    case "vertices": return SpatialDerivLocn.vertices;
+    case "cells": return SpatialDerivLocn.cells;
+    default:
+        throw new FlowSolverException("Invalid spatial-derivative location name");
+    }
+}
+
+// Symbolic names for the flavours of unstructured limiters.
+enum UnstructuredLimiter {
+    van_albada,
+    min_mod,
+    mlp,
+    barth,
+    heuristic_van_albada,
+    venkat
+}
+
+@nogc
+string unstructured_limiter_name(UnstructuredLimiter ul)
+{
+    final switch ( ul ) {
+    case UnstructuredLimiter.van_albada: return "van_albada";
+    case UnstructuredLimiter.min_mod: return "min_mod";
+    case UnstructuredLimiter.mlp: return "mlp";
+    case UnstructuredLimiter.barth: return "barth";
+    case UnstructuredLimiter.heuristic_van_albada: return "heuristic_van_albada";
+    case UnstructuredLimiter.venkat: return "venkat";
+    }
+}
+
+@nogc
+UnstructuredLimiter unstructured_limiter_from_name(string name)
+{
+    switch ( name ) {
+    case "van_albada": return UnstructuredLimiter.van_albada;
+    case "min_mod": return UnstructuredLimiter.min_mod;
+    case "mlp": return UnstructuredLimiter.mlp;
+    case "barth": return UnstructuredLimiter.barth;
+    case "heuristic_van_albada": return UnstructuredLimiter.heuristic_van_albada;
+    case "venkat": return UnstructuredLimiter.venkat;
+    default:
+        throw new FlowSolverException("Invalid unstructured limiter name");
+    }
+}
+
+// Symbolic names for the residual smoothing
+enum ResidualSmoothingType {
+    explicit,
+    implicit
+}
+
+@nogc
+string residual_smoothing_type_name(ResidualSmoothingType rs)
+{
+    final switch ( rs ) {
+    case ResidualSmoothingType.explicit: return "explicit";
+    case ResidualSmoothingType.implicit: return "implicit";
+    }
+}
+
+@nogc
+ResidualSmoothingType residual_smoothing_type_from_name(string name)
+{
+    switch ( name ) {
+    case "explicit": return ResidualSmoothingType.explicit;
+    case "implicit": return ResidualSmoothingType.implicit;
+    default:
+        throw new FlowSolverException("Invalid residual smoothing type name");
+    }
+}
+
+// Symbolic names for the shock detectors
+enum ShockDetector {
+    PJ,
+}
+
+@nogc
+string shock_detector_name(ShockDetector sd)
+{
+    final switch ( sd ) {
+    case ShockDetector.PJ: return "PJ";
+    }
+}
+
+@nogc
+ShockDetector shock_detector_from_name(string name)
+{
+    switch ( name ) {
+    case "PJ": return ShockDetector.PJ;
+    default:
+        throw new FlowSolverException("Invalid shock detector name: ");
+    }
+}
 
 enum StrangSplittingMode { full_T_full_R, half_R_full_T_half_R }
 @nogc
@@ -123,85 +527,8 @@ SolidDomainCoupling solidDomainCouplingFromName(string name)
     }
 }
 
-struct SolidDomainLooseUpdateOptions {
-    int maxNewtonIterations = 10;
-    double toleranceNewtonUpdate = 1.0e-2;
-    int maxGMRESIterations = 10;
-    double toleranceGMRESSolve = 1.0e-3;
-    double perturbationSize = 1.0e-2;
-}
+enum PreconditionMatrixType { block_diagonal, ilu, lu_sgs }
 
-version(shape_sensitivity) {
-    struct ShapeSensitivityCalculatorOptions {
-        bool pseudotime = false;
-        int pseudotime_lhs_jacobian_order = 1;
-        int adjoint_precondition_matrix_order = 0;
-        bool read_frozen_limiter_values_from_file = false;
-	// sensitivity parameters
-        double epsilon = 1.0e-30;
-        // GMRES parameters
-        int maxOuterIterations = 10;
-        int maxRestarts = 10;
-        double cfl0 = 1.0; // initial CFL
-        double eta = 0.1; // inner loop tolerance
-        double stopOnRelativeGlobalResidual = 1.0e-16; // outer loop tolerance
-        // bezier curve fit parameters
-        double tolBezierCurveFit = 1.0e-06;
-        int maxStepsBezierCurveFit = 10000;
-        string userDefinedObjectiveFile = "";
-    }
-} // end version(shape_sensitivity)
-
-
-class BlockZone {
-    // Note that these data are not shared across threads
-    // because we will want to access them frequently at the lower levels of the code.
-    Vector3 p0, p1;
-    this(in Vector3 p0, in Vector3 p1) {
-        this.p0 = p0;
-        this.p1 = p1;
-    }
-    this(const BlockZone other)
-    {
-        p0 = other.p0;
-        p1 = other.p1;
-    }
-    override string toString() {
-        return text("BlockZone(p0=", to!string(p0), ", p1=", to!string(p1), ")");
-    }
-    @nogc
-    bool is_inside(ref const(Vector3) p, int dimensions) {
-        if ( p.x >= p0.x && p.x <= p1.x &&
-             p.y >= p0.y && p.y <= p1.y ) {
-            if ( dimensions == 2 ) {
-                return true;
-            } else if ( p.z >= p0.z && p.z <= p1.z ) {
-                return true;
-            }
-        }
-        return false;
-    } // end is_inside()
-}
-
-class IgnitionZone : BlockZone {
-    double Tig; // temperature to apply within reaction_update ensure ignition
-    this(in Vector3 p0, in Vector3 p1, double Tig) {
-        super(p0, p1);
-        this.Tig = Tig;
-    }
-    this(const IgnitionZone other)
-    {
-        super(other.p0, other.p1);
-        Tig = other.Tig;
-    }
-    override string toString() {
-        return text("IgnitionZone(p0=", to!string(p0), ", p1=", to!string(p1),
-                    ", Tig=", Tig, ")");
-    }
-} // end class IgnitionZone
-
-version(nk_accelerator) {
-    enum PreconditionMatrixType { block_diagonal, ilu, lu_sgs }
 string preconditionMatrixTypeName(PreconditionMatrixType i)
 {
     final switch (i) {
@@ -260,6 +587,91 @@ EtaStrategy etaStrategyFromName(string name)
     }
 } // end etaStrategyFromName()
 
+
+// ---------------------
+// PART 2. Special zones
+// ---------------------
+
+class BlockZone {
+    // Note that these data are not shared across threads
+    // because we will want to access them frequently at the lower levels of the code.
+    Vector3 p0, p1;
+    this(in Vector3 p0, in Vector3 p1) {
+        this.p0 = p0;
+        this.p1 = p1;
+    }
+    this(const BlockZone other)
+    {
+        p0 = other.p0;
+        p1 = other.p1;
+    }
+    override string toString() {
+        return text("BlockZone(p0=", to!string(p0), ", p1=", to!string(p1), ")");
+    }
+    @nogc
+    bool is_inside(ref const(Vector3) p, int dimensions) {
+        if ( p.x >= p0.x && p.x <= p1.x &&
+             p.y >= p0.y && p.y <= p1.y ) {
+            if ( dimensions == 2 ) {
+                return true;
+            } else if ( p.z >= p0.z && p.z <= p1.z ) {
+                return true;
+            }
+        }
+        return false;
+    } // end is_inside()
+}
+
+class IgnitionZone : BlockZone {
+    double Tig; // temperature to apply within reaction_update ensure ignition
+    this(in Vector3 p0, in Vector3 p1, double Tig) {
+        super(p0, p1);
+        this.Tig = Tig;
+    }
+    this(const IgnitionZone other)
+    {
+        super(other.p0, other.p1);
+        Tig = other.Tig;
+    }
+    override string toString() {
+        return text("IgnitionZone(p0=", to!string(p0), ", p1=", to!string(p1),
+                    ", Tig=", Tig, ")");
+    }
+} // end class IgnitionZone
+
+
+
+// -----------------------------------------------------------
+// PART 3. The structs and classes defining configuration data
+// -----------------------------------------------------------
+
+struct SolidDomainLooseUpdateOptions {
+    int maxNewtonIterations = 10;
+    double toleranceNewtonUpdate = 1.0e-2;
+    int maxGMRESIterations = 10;
+    double toleranceGMRESSolve = 1.0e-3;
+    double perturbationSize = 1.0e-2;
+}
+
+struct ShapeSensitivityCalculatorOptions {
+    bool pseudotime = false;
+    int pseudotime_lhs_jacobian_order = 1;
+    int adjoint_precondition_matrix_order = 0;
+    bool read_frozen_limiter_values_from_file = false;
+    // sensitivity parameters
+    double epsilon = 1.0e-30;
+    // GMRES parameters
+    int maxOuterIterations = 10;
+    int maxRestarts = 10;
+    double cfl0 = 1.0; // initial CFL
+    double eta = 0.1; // inner loop tolerance
+    double stopOnRelativeGlobalResidual = 1.0e-16; // outer loop tolerance
+    // bezier curve fit parameters
+    double tolBezierCurveFit = 1.0e-06;
+    int maxStepsBezierCurveFit = 10000;
+    string userDefinedObjectiveFile = "";
+}
+
 struct SteadyStateSolverOptions {
     int nConserved = 4;
     bool usePreconditioner = true;
@@ -310,9 +722,8 @@ struct SteadyStateSolverOptions {
     int nTotalSnapshots = 5;
     int writeDiagnosticsCount = 20;
     int writeLoadsCount = 20;
-}
+} // end struct SteadyStateSolverOptions
 
-} // end version(nk_accelerator)
 
 final class GlobalConfig {
     shared static bool in_mpi_context = false; // Usual context is thread-parallel only.
@@ -346,7 +757,7 @@ final class GlobalConfig {
     // Setting sticky_electrons=true will cause the electron mass fraction to be reset after every
     // timestep to preserve charge neutrality in each cell. Note that a transport equation for the
     // electrons is still solved, even though its output is effectively discarded.
-
+    //
     // Customization of the simulation is via user-defined actions.
     shared static string udf_supervisor_file; // empty to start
     // A scratch-pad area for the user-defined functions.
@@ -355,9 +766,9 @@ final class GlobalConfig {
     // The meaning of the data items is user-defined.
     shared static double[] userPad;
     shared static int user_pad_length = 0;
-
+    //
     shared static bool include_quality = false; // if true, we include quality in the solution file
-
+    //
     shared static int nBlocks = 0; // Number of blocks in the overall simulation (nFluidBlocks + nSolidBlocks).
     shared static int nFluidBlocks = 0; // Number of fluid blocks in the overall simulation.
     shared static int nSolidBlocks = 0; // Number of solid blocks in the overall simulation.
@@ -365,7 +776,7 @@ final class GlobalConfig {
     shared static bool axisymmetric = false;
     static ConservedQuantitiesIndices cqi;
     shared static int nFluidBlockArrays = 0;
-
+    //
     // Parameters controlling update
     shared static GasdynamicUpdate gasdynamic_update_scheme = GasdynamicUpdate.pc;
     shared static size_t n_flow_time_levels = 3;
@@ -377,24 +788,24 @@ final class GlobalConfig {
     shared static int local_time_stepping_limit_factor = 10000;
     shared static bool with_super_time_stepping = false;
     shared static bool with_super_time_stepping_flexible_stages = false;
-
+    //
     // Parameter controlling Strang-splitting mode when simulating reacting flows
     shared static StrangSplittingMode strangSplitting = StrangSplittingMode.full_T_full_R;
-
+    //
     // Parameters controlling solid domain update
     shared static SolidDomainCoupling coupling_with_solid_domains = SolidDomainCoupling.tight;
     shared static SolidDomainLooseUpdateOptions sdluOptions;
     shared static bool solid_has_isotropic_properties = true;
     shared static bool solid_has_homogeneous_properties = true;
     shared static double solid_domain_cfl = 0.85;
-
+    //
     // Parameters related to possible motion of the grid.
     shared static grid_motion = GridMotion.none;
     shared static bool write_vertex_velocities = false;
     shared static string udf_grid_motion_file = "dummy-grid-motion-file.txt";
     static lua_State* master_lua_State;
     shared static size_t n_grid_time_levels = 1;
-
+    //
     // The number of ghost-cell layers is adjustable for structured-grid blocks.
     // Ghost-cell layers surround the active cells of a block.
     // For the high-order reconstruction right to the edge on
@@ -403,7 +814,7 @@ final class GlobalConfig {
     // 3 will allow higher-order reconstruction for Lachlan's work.
     shared static int n_ghost_cell_layers = 2;
     // The number of ghost-cell layers for unstructured-grid blocks is always assumed to be 1.
-
+    //
     // Shock-fitting
     //
     // The amount of time by which to delay any grid movement for shock fitting.
@@ -417,17 +828,17 @@ final class GlobalConfig {
     shared static bool shock_fitting_allow_flow_reconstruction = true;
     // Scaling factor applied to vertices in shock fitting simulations for stability.
     shared static double shock_fitting_scale_factor = 0.5;
-
+    //
     // Some of the user-defined functionality depends on having access to all blocks
     // from a single thread.  For safety, in those cases, do not use parallel loops.
     shared static bool apply_bcs_in_parallel = true;
-
-    /// When decoding the array of conserved quantities,
-    /// the temperature or the density may try to go negative.
     //
-    /// If the density is OK but the update fails to find a valid temperature,
-    /// it is possible that the internal energy is erroneously small and
-    /// it may be reasonable to ignore the failure, resetting a low temperature.
+    // When decoding the array of conserved quantities,
+    // the temperature or the density may try to go negative.
+    //
+    // If the density is OK but the update fails to find a valid temperature,
+    // it is possible that the internal energy is erroneously small and
+    // it may be reasonable to ignore the failure, resetting a low temperature.
     shared static bool ignore_low_T_thermo_update_failure = true;
     shared static double suggested_low_T_value = 200.0;
     //
@@ -439,7 +850,7 @@ final class GlobalConfig {
     // without throwing an exception.
     shared static int max_invalid_cells = 0;
     shared static FlowStateLimits flowstate_limits;
-
+    //
     // Convective flux calculation can be via either:
     // (1) low-order, one-dimensional flux calculators with local flow-field
     //     reconstruction done as a preprocessing step, or
@@ -524,23 +935,23 @@ final class GlobalConfig {
     // viscous effects are important.
     shared static double compression_tolerance = -0.30;
     shared static ShockDetector shock_detector = ShockDetector.PJ;
-
+    //
     // How many iterations to perform shock detector averaging
     shared static int shock_detector_smoothing = 0;
-
+    //
     // Shock detector freezing
     shared static bool frozen_shock_detector = false;
     shared static int shock_detector_freeze_step = 1000;
-
+    //
     // With this flag on, the energy equation is modified such that
     // an artificial compressibility form of equations is solved.
     shared static bool artificial_compressibility = false;
     shared static double ac_alpha = 0.1;
-
+    //
     // With this flag on, finite-rate evolution of the vibrational energies
     // (and in turn the total energy) is computed.
     shared static bool thermal_energy_exchange = false;
-
+    //
     // For including radiation energy exchange.
     //
     shared static bool radiation = false;
@@ -549,20 +960,20 @@ final class GlobalConfig {
     shared static bool halt_on_large_flow_change = false;
     // Set to true to halt simulation when any monitor point sees a large flow change.
     shared static double tolerance_in_T;   // Temperature change for the flow change.
-
+    //
     shared static bool electric_field_work;
-
+    //
     // For Daryl Bond and Vince Wheatley's Single-fluid MHD additions.
     //
     shared static bool MHD = false;
     shared static bool MHD_static_field = false;
     shared static bool MHD_resistive = false;
-
+    //
     // Lachlan Whyborn's Divergence cleaning to go with MHD.
     shared static bool divergence_cleaning = false;
     shared static double c_h = 0.0;
     shared static double divB_damping_length = 1.0;
-
+    //
     // Parameters controlling viscous/molecular transport
     //
     shared static bool viscous = false;
@@ -601,7 +1012,7 @@ final class GlobalConfig {
     static MassDiffusion massDiffusion;
     shared static string diffusion_coefficient_type = "none";
     shared static double lewis_number = 1.0;
-
+    //
     shared static string turbulence_model_name = "none";
     shared static double turbulence_prandtl_number = 0.89;
     shared static double turbulence_schmidt_number = 0.75;
@@ -609,11 +1020,11 @@ final class GlobalConfig {
     shared static double transient_mu_t_factor = 1.0;
     static TurbulenceModel turb_model;
     static BlockZone[] turbulent_zones;
-
+    //
     // Indicate presence of user-defined source terms
     shared static string udf_source_terms_file = "dummy-source-terms.txt";
     shared static bool udf_source_terms = false;
-
+    //
     // Parameters controlling thermochemistry
     //
     // Turning on the reactions activates the chemical update function calls.
@@ -634,7 +1045,7 @@ final class GlobalConfig {
     shared static TCIModel tci_model = TCIModel.none;
     shared static bool radiation_energy_dump_allowed = false;
     shared static double radiation_energy_dump_temperature_limit = 30000.0;
-
+    //
     // Parameters controlling other simulation options
     //
     shared static int max_step = 100;      // iteration limit
@@ -643,17 +1054,17 @@ final class GlobalConfig {
     shared static int write_loads_at_step = -1; // flag for premature writing of loads files
     shared static int print_count = 20; // Number of steps between writing messages to console.
     shared static int control_count = 10; // Number of steps between rereading .control file.
-
+    //
     shared static int verbosity_level = 1;
     // Messages have a hierarchy:
     // 0 : only error messages will be omitted
     // 1 : emit messages that are useful for a long-running job (default)
     // 2 : plus verbose init messages
     // 3 : plus verbose boundary condition messages
-
+    //
     shared static bool report_residuals; // indicate if residuals are computed and reported
-                                         // to a file for time-integrated simulations
-
+    //                                   // to a file for time-integrated simulations
+    //
     shared static double start_time = 0.0; // Initial solution time, in seconds.
     shared static double max_time = 1.0e-3; // final solution time, in seconds, set by user
     shared static double dt_init = 1.0e-3; // initial time step, set by user
@@ -670,14 +1081,14 @@ final class GlobalConfig {
     shared static double turbulent_signal_factor = 1.0; // can reduce the turbulent omega influence in CFL condition
     shared static int cfl_count = 10;  // steps between checking time step size
     shared static bool fixed_time_step = false; // set true to fix dt_allow
-
+    //
     shared static double dt_plot = 1.0e-3; // interval for writing soln
     shared static int write_flow_solution_at_step = -1; // flag for premature writing of flow solution files
     shared static double dt_history = 1.0e-3; // interval for writing sample
     shared static double dt_loads = 1.0e-3; // interval for writing loads on boundary groups
     // For controlling the writing of snapshots
     shared static int snapshotCount = 1_000_000_000; // Set to something very large so that default behaviour
-                                                     // does not attempt to write snapshots.
+    //                                               // does not attempt to write snapshots.
     shared static int nTotalSnapshots = 0; // By default, do not write any snapshots
     // The following initialization preserves old behaviour
     // where only one group called loads was expected.
@@ -688,17 +1099,17 @@ final class GlobalConfig {
     shared static int run_time_loads_count = 100;
     shared static Tuple!(size_t, size_t)[] hcells;
     shared static Tuple!(size_t, size_t)[] solid_hcells;
-
+    //
     shared static double energy_residual;      // to be monitored for steady state
     shared static Vector3 energy_residual_loc; // location of largest value
     shared static double mass_residual;
     shared static Vector3 mass_residual_loc;
-
+    //
     // Parameters related to special block initialisation
     shared static bool diffuseWallBCsOnInit = false;
     shared static int nInitPasses = 30;
     shared static double initTWall = -1.0; // negative indicates that initTWall is NOT used.
-
+    //
     // Block-marching parameters
     shared static bool block_marching = false;
     shared static int nib = 1;
@@ -706,41 +1117,36 @@ final class GlobalConfig {
     shared static int nkb = 1;
     shared static bool propagate_inflow_data = false;
     shared static bool save_intermediate_results = false;
-
+    //
     // Parameters related to the solid domain and conjugate coupling
     shared static bool udfSolidSourceTerms = false;
     shared static string udfSolidSourceTermsFile = "dummy-solid-source-terms.txt";
-
+    //
     // Delay activation of Thermionic Emission BC
     shared static double thermionic_emission_bc_time_delay = 0.0;
-
+    //
     // Parameters for the on-the-go DFT
     shared static bool do_temporal_DFT = false;
     shared static int DFT_n_modes = 5;
     shared static int DFT_step_interval = 10;
-
+    //
     shared static bool do_flow_average = false;
-
+    //
     // Parameters related to the gpu chemistry mode
     version (gpu_chem) {
         static GPUChem gpuChem;
     }
-
     version (nk_accelerator) {
         static SteadyStateSolverOptions sssOptions;
     }
-
     version (shape_sensitivity) {
         static ShapeSensitivityCalculatorOptions sscOptions;
     }
-
     static void finalize()
     {
         lua_close(master_lua_State);
     }
-
     shared static string[] flow_variable_list;
-
 } // end class GlobalConfig
 
 // A place to store configuration parameters that are in memory that can be
@@ -753,7 +1159,7 @@ public:
     string grid_format;
     string flow_format;
     bool new_flow_format;
-
+    //
     int dimensions;
     bool axisymmetric;
     ConservedQuantitiesIndices cqi;
@@ -767,19 +1173,19 @@ public:
     GridMotion grid_motion;
     string udf_grid_motion_file;
     size_t n_grid_time_levels;
-
+    //
     bool shock_fitting_allow_flow_reconstruction;
     double shock_fitting_scale_factor;
-
+    //
     bool solid_has_isotropic_properties;
     bool solid_has_homogeneous_properties;
-
+    //
     bool ignore_low_T_thermo_update_failure;
     double suggested_low_T_value;
     bool adjust_invalid_cell_data;
     bool report_invalid_cells;
     FlowStateLimits flowstate_limits;
-
+    //
     bool high_order_flux_calculator;
     FluxCalculator flux_calculator;
     int interpolation_order;
@@ -809,7 +1215,7 @@ public:
     bool strict_shock_detector;
     bool artificial_compressibility;
     double ac_alpha;
-
+    //
     bool radiation;
     bool electric_field_work;
     bool MHD;
@@ -818,7 +1224,7 @@ public:
     bool divergence_cleaning;
     double c_h;
     double divB_damping_length;
-
+    //
     bool viscous;
     bool use_viscosity_from_cells;
     bool spatial_deriv_from_many_points;
@@ -833,11 +1239,11 @@ public:
     MassDiffusion massDiffusion;
     string diffusion_coefficient_type;
     double lewis_number;
-
+    //
     bool stringent_cfl;
     double viscous_signal_factor;
     double turbulent_signal_factor;
-
+    //
     string turbulence_model_name;
     double turbulence_prandtl_number;
     double turbulence_schmidt_number;
@@ -845,9 +1251,9 @@ public:
     double transient_mu_t_factor;
     TurbulenceModel turb_model;
     BlockZone[] turbulent_zones;
-
+    //
     bool udf_source_terms;
-
+    //
     bool reacting;
     double reaction_time_delay;
     double T_frozen;
@@ -856,12 +1262,12 @@ public:
     TCIModel tci_model;
     bool radiation_energy_dump_allowed;
     double radiation_energy_dump_temperature_limit;
-
+    //
     double ignition_time_start;
     double ignition_time_stop;
     IgnitionZone[] ignition_zones;
     bool ignition_zone_active;
-
+    //
     GasModel gmodel;
     uint n_species;
     uint n_heavy;
@@ -869,27 +1275,25 @@ public:
     bool sticky_electrons;
     bool include_quality;
     ThermochemicalReactor thermochemUpdate;
-
+    //
     double thermionic_emission_bc_time_delay;
-
+    //
     int verbosity_level;
-
+    //
     bool do_temporal_DFT;
     int DFT_n_modes;
     int DFT_step_interval;
-
+    //
     bool do_flow_average;
-
+    //
     version (nk_accelerator) {
         SteadyStateSolverOptions sssOptions;
     }
-
     version (shape_sensitivity) {
         ShapeSensitivityCalculatorOptions sscOptions;
     }
-
     string[] flow_variable_list;
-
+    //
     this(int universe_blk_id)
     {
         in_mpi_context = GlobalConfig.in_mpi_context;
@@ -1046,7 +1450,9 @@ public:
         }
         include_quality = GlobalConfig.include_quality;
         if (GlobalConfig.reacting) {
-            thermochemUpdate = init_thermochemical_reactor(gmodel, GlobalConfig.reactions_file, GlobalConfig.energy_exchange_file);
+            thermochemUpdate = init_thermochemical_reactor(gmodel,
+                                                           GlobalConfig.reactions_file,
+                                                           GlobalConfig.energy_exchange_file);
         }
     }
 
@@ -1062,8 +1468,10 @@ public:
     }
 } // end class LocalConfig
 
-//-----------------------------------------------------------------------------------
-// Reading from JSON file.
+
+//-------------------------------
+// PART 4. Reading from JSON file
+//-------------------------------
 
 // Utility functions to condense the following code.
 //
@@ -2026,6 +2434,10 @@ void checkGlobalConfig()
 }
 
 
+// -----------------------
+// PART 5. Lua interaction
+// -----------------------
+
 void init_master_lua_State()
 {
     GlobalConfig.master_lua_State = init_lua_State();
@@ -2085,3 +2497,65 @@ void init_master_lua_State()
     setSampleHelperFunctions(L);
     setGridMotionHelperFunctions(L);
 } // end init_master_lua_State()
+
+
+// Functions related to the managed gas model.
+
+extern(C) int setGasModel(lua_State* L)
+{
+    if (lua_isstring(L, 1)) {
+        string fname = to!string(luaL_checkstring(L, 1));
+        GlobalConfig.gas_model_file = fname;
+        // 2021-05-22 Also, to set config.gas_model_name in Lua world.
+        lua_getglobal(L, "config".toStringz);
+        if (lua_istable(L, -1)) {
+            lua_pushstring(L, fname.toStringz);
+            lua_setfield(L, -2, "gas_model_file".toStringz);
+        }
+        lua_pop(L, 1); // dispose of config
+        try {
+            GlobalConfig.gmodel_master = init_gas_model(fname);
+        } catch (GasModelException e) {
+            string msg = "\nThere is a problem in call to setGasModel. Reported errors are:\n";
+            msg ~= e.msg;
+            msg ~= "\n---------------------------\n";
+            msg ~= "The preparation stage cannot proceed. Exiting without completing.\n";
+            writeln(msg);
+            exit(1);
+        }
+        lua_settop(L, 0); // clear the stack
+        lua_pushinteger(L, GlobalConfig.gmodel_master.n_species);
+        lua_pushinteger(L, GlobalConfig.gmodel_master.n_modes);
+        GasModelStore ~= pushObj!(GasModel, GasModelMT)(L, GlobalConfig.gmodel_master);
+        return 3;
+    } else {
+        string msg = "setGasModel expects a string as the name of the gas model file.";
+        luaL_error(L, msg.toStringz);
+        return 0;
+    }
+}
+
+extern(C) int getGasModel(lua_State* L)
+{
+    if (GlobalConfig.gmodel_master is null) {
+        string msg = "The master gas model appears to be uninitialized. "~
+            "You should initialize it with setGasModel().";
+        luaL_error(L, msg.toStringz);
+    }
+    lua_settop(L, 0); // clear the stack
+    pushObj!(GasModel, GasModelMT)(L, GlobalConfig.gmodel_master);
+    return 1;
+}
+
+//-----------------------------------------------------------------------
+// Call the following function from the main program to get the
+// functions appearing in the Lua interpreter.
+
+void registerGlobalConfig(lua_State* L)
+{
+    // Register global functions related to the managed gas model.
+    lua_pushcfunction(L, &setGasModel);
+    lua_setglobal(L, "setGasModel");
+    lua_pushcfunction(L, &getGasModel);
+    lua_setglobal(L, "getGasModel");
+} // end registerGlobalConfig()

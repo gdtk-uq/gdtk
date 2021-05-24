@@ -20,7 +20,6 @@ import sfluidblock;
 import ufluidblock;
 import fvcell;
 import globalconfig;
-import fvcore: FlowSolverException;
 import fluidblockio_old : k_modesName, massfName, u_modesName, T_modesName;
 import sfluidblock : cell_index_to_logical_coordinates;
 import geom;

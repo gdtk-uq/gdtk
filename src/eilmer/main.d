@@ -30,7 +30,6 @@ import kinetics.luachemistry_update;
 import kinetics.luatwo_temperature_air_kinetics;
 import kinetics.luaelectronically_specific_kinetics;
 import nm.luabbla;
-import fvcore: FlowSolverException;
 import globalconfig;
 import simcore;
 import globaldata: SimState;

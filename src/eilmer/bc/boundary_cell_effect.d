@@ -11,7 +11,7 @@ module bc.boundary_cell_effect;
 import std.json;
 import std.string;
 
-import fvcore: FlowSolverException;
+import globalconfig: FlowSolverException;
 import fvcell;
 import fvinterface;
 import geom;

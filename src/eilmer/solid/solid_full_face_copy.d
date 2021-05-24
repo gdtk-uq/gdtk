@@ -25,7 +25,6 @@ import ssolidblock;
 import solidfvcell;
 import solidbc;
 import solid_ghost_cell;
-import fvcore: FlowSolverException;
 
 // ----------------------------------------------------------------------------------
 // MPI-specific services.

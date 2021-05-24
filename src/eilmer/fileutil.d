@@ -9,7 +9,7 @@ import std.conv;
 import std.array;
 import std.format;
 import std.string;
-import fvcore: FlowSolverException;
+import globalconfig: FlowSolverException;
 import core.thread;
 
 string make_path_name(string mytype)(int tindx)

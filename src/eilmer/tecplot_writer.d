@@ -20,7 +20,7 @@ import tecio;
 }
 import geom;
 import flowsolution;
-import fvcore: FlowSolverException;
+import globalconfig: FlowSolverException;
 
 string[] zones =
     [
