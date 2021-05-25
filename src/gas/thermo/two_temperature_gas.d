@@ -390,6 +390,34 @@ private:
         return Cv_tr;
     }
 
+    version(complex_numbers) {
+    // For the complex numbers version of the code we need
+    // a Newton's method with a fixed number of iterations.
+    // An explanation can be found in:
+    //     Efficient Construction of Discrete Adjoint Operators on Unstructured Grids
+    //     by Using Complex Variables, pg. 10, Nielsen et al., AIAA Journal, 2006.
+    @nogc
+    number vibElecTemperature(in GasState gs)
+    {
+        int MAX_ITERATIONS = 10;
+
+        // Take the supplied T_modes[0] as the initial guess.
+        number T_guess = gs.T_modes[0];
+        number f_guess = vibElecEnergyMixture(gs, T_guess) - gs.u_modes[0];
+
+        // Begin iterating.
+        int count = 0;
+        number Cv, dT;
+        foreach (iter; 0 .. MAX_ITERATIONS) {
+            Cv = vibElecCvMixture(gs, T_guess);
+            dT = -f_guess/Cv;
+            T_guess += dT;
+            f_guess = vibElecEnergyMixture(gs, T_guess) - gs.u_modes[0];
+            count++;
+        }
+        return T_guess;
+    }
+    } else {
     @nogc
     number vibElecTemperature(in GasState gs)
     {
@@ -397,7 +425,7 @@ private:
         // We'll keep adjusting our temperature estimate
         // until it is less than TOL.
         double TOL = 1.0e-6;
-        
+
         // Take the supplied T_modes[0] as the initial guess.
         number T_guess = gs.T_modes[0];
         number f_guess = vibElecEnergyMixture(gs, T_guess) - gs.u_modes[0];
@@ -422,7 +450,7 @@ private:
             f_guess = vibElecEnergyMixture(gs, T_guess) - gs.u_modes[0];
             count++;
         }
-        
+
         if (count == MAX_ITERATIONS) {
             string msg = "The 'vibTemperature' function failed to converge.\n";
             debug {
@@ -434,6 +462,7 @@ private:
         }
 
         return T_guess;
+    }
     }
 }
 

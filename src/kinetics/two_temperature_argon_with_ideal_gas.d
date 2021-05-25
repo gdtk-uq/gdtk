@@ -85,6 +85,11 @@ final class UpdateArgonFracWithIdeal : ThermochemicalReactor {
         return;
     }
 
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+        string errMsg = "eval_source_terms not implemented for two_temperature_argon_with_ideal_gas.";
+        throw new ThermochemicalReactorUpdateException(errMsg);
+    }
+
 private:
     double massf_tiny;
     GasModel ideal_gas;

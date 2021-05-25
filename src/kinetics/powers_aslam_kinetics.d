@@ -62,6 +62,11 @@ final class UpdateAB : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     }
 
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+        string errMsg = "eval_source_terms not implemented for powers_aslam_kinetics.";
+        throw new ThermochemicalReactorUpdateException(errMsg);
+    }
+
 private:
     // Reaction rate constant
     double _alpha; // 1/s

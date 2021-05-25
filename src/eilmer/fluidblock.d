@@ -1281,7 +1281,7 @@ public:
                 cell.add_viscous_source_vector();
             }
             if (myConfig.reacting) {
-                cell.add_chemistry_source_vector();
+                cell.add_thermochemical_source_vector();
             }
             if (myConfig.udf_source_terms) {
                 size_t i_cell = cell.id;
@@ -1377,11 +1377,13 @@ public:
         size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
         size_t TKE = GlobalConfig.cqi.rhoturb;
         size_t SPECIES = GlobalConfig.cqi.species;
+        size_t MODES = GlobalConfig.cqi.modes;
         double EPS = flowJacobianT.eps.im;
 
         // We perform a Frechet derivative to evaluate J*D^(-1)v
         size_t nturb = myConfig.turb_model.nturb;
         size_t nsp = myConfig.gmodel.n_species;
+        size_t nmodes = myConfig.gmodel.n_modes;
         auto cqi = myConfig.cqi;
         clear_fluxes_of_conserved_quantities();
         foreach (cell; cells) cell.clear_source_vector();
@@ -1398,6 +1400,9 @@ public:
             if (myConfig.n_species > 1) {
                 foreach(sp; 0 .. nsp) { cell.U[1].vec[cqi.species+sp] += complex(0.0, EPS*vec[cellCount+SPECIES+sp].re); }
             }
+            }
+            version(multi_T_gas){
+            foreach(imode; 0 .. nmodes) { cell.U[1].vec[cqi.modes+imode] += complex(0.0, EPS*vec[cellCount+MODES+imode].re); }
             }
             cell.decode_conserved(0, 1, 0.0);
             cellCount += nConserved;
@@ -1418,6 +1423,10 @@ public:
                 foreach(sp; 0 .. nsp) { sol[cellCount+SPECIES+sp] = cell.dUdt[1].vec[cqi.species+sp].im/EPS; }
             }
             }
+            version(multi_T_gas){
+            foreach(imode; 0 .. nmodes) { sol[cellCount+MODES+imode] = cell.dUdt[1].vec[cqi.modes+imode].im/EPS; }
+            }
+
             cellCount += nConserved;
         }
     }
@@ -1511,7 +1520,7 @@ public:
         }
         c.add_inviscid_source_vector(gtl, omegaz);
         if (myConfig.viscous) { c.add_viscous_source_vector(); }
-        if (myConfig.reacting) { c.add_chemistry_source_vector(); }
+        if (myConfig.reacting) { c.add_thermochemical_source_vector(); }
         if (myConfig.udf_source_terms) { c.add_udf_source_vector(); }
         c.time_derivatives(gtl, ftl);
     } // end evalRU()

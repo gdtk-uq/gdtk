@@ -245,6 +245,11 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
         } //end if/ else
     } //end function opCall
 
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+        string errMsg = "eval_source_terms not implemented for fuel_air_mix_kinetics.";
+        throw new ThermochemicalReactorUpdateException(errMsg);
+    }
+
 private:
     // EDM model constants
     double _A_edm=4.0; 

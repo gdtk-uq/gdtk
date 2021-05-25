@@ -91,6 +91,7 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
     size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
     size_t TKE = GlobalConfig.cqi.rhoturb;
     size_t SPECIES = GlobalConfig.cqi.species;
+    size_t MODES = GlobalConfig.cqi.modes;
     auto cqi = GlobalConfig.cqi;
 
     auto gmodel = GlobalConfig.gmodel_master;
@@ -120,6 +121,11 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
             version(multi_species_gas){
             foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
                 restartInfo.residuals.vec[cqi.species+sp] = to!double(tokens[6+SPECIES+sp]);
+            }
+            }
+            version(multi_T_gas){
+            foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes) {
+                restartInfo.residuals.vec[cqi.modes+imode] = to!double(tokens[6+MODES+imode]);
             }
             }
             times ~= restartInfo;
@@ -182,6 +188,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
     size_t TKE = GlobalConfig.cqi.rhoturb;
     size_t SPECIES = GlobalConfig.cqi.species;
+    size_t MODES = GlobalConfig.cqi.modes;
 
     ConservedQuantities maxResiduals = new ConservedQuantities(nConserved);
     ConservedQuantities currResiduals = new ConservedQuantities(nConserved);
@@ -291,6 +298,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     size_t nturb = blk.myConfig.turb_model.nturb;
                     size_t nsp = blk.myConfig.gmodel.n_species;
+                    size_t nmodes = blk.myConfig.gmodel.n_modes;
                     int cellCount = 0;
                     auto cqi = blk.myConfig.cqi;
                     foreach (cell; blk.cells) {
@@ -311,6 +319,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                             // enforce mass fraction of 1 for single species gas
                             cell.U[1].vec[cqi.species+0] = cell.U[1].vec[cqi.mass];
                         }
+                        }
+                        version(multi_T_gas){
+                        foreach(imode; 0 .. nmodes) { cell.U[1].vec[cqi.modes+imode] = cell.U[0].vec[cqi.modes+imode] + blk.dU[cellCount+MODES+imode]; }
                         }
                         try {
                             cell.decode_conserved(0, 1, 0.0);
@@ -391,6 +402,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             foreach (blk; parallel(localFluidBlocks, 1)) {
                 size_t nturb = blk.myConfig.turb_model.nturb;
                 size_t nsp = blk.myConfig.gmodel.n_species;
+                size_t nmodes = blk.myConfig.gmodel.n_modes;
                 auto cqi = blk.myConfig.cqi;
                 int cellCount = 0;
                 foreach (cell; blk.cells) {
@@ -407,6 +419,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     if ( nsp > 1 ) {
                         foreach(sp; 0 .. nsp) { blk.FU[cellCount+SPECIES+sp] = -cell.dUdt[0].vec[cqi.species+sp]; }
                     }
+                    }
+                    version(multi_T_gas){
+                    foreach(imode; 0 .. nmodes) { blk.FU[cellCount+MODES+imode] = -cell.dUdt[0].vec[cqi.modes+imode]; }
                     }
                     cellCount += nConserved;
                 }
@@ -439,6 +454,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 }
             }
             }
+            version(multi_T_gas){
+            foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes) {
+                string modename = "T_MODES["~to!string(imode)~"]"; //capitalize(GlobalConfig.gmodel_master.energy_mode_name(imode));
+                writefln("%s:            %.12e",modename, maxResiduals.vec[cqi.modes+imode].re);
+            }
+            }
             string refResidFname = jobName ~ "-ref-residuals.saved";
             auto refResid = File(refResidFname, "w");
             if ( GlobalConfig.dimensions == 2 ) {
@@ -460,6 +481,11 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
                     refResid.writef(" %.18e", maxResiduals.vec[cqi.species+sp].re);
                 }
+            }
+            }
+            version(multi_T_gas){
+            foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes) {
+                refResid.writef(" %.18e", maxResiduals.vec[cqi.modes+imode].re);
             }
             }
             refResid.write("\n");
@@ -493,6 +519,11 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
                 maxResiduals.vec[cqi.species+sp] = to!double(tokens[1+SPECIES+sp]);
             }
+        }
+        }
+        version(multi_T_gas){
+        foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes) {
+            maxResiduals.vec[cqi.modes+imode] = to!double(tokens[1+MODES+imode]);
         }
         }
 
@@ -577,7 +608,13 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     fResid.writefln("# %02d: %s-rel", 11+2*(SPECIES+sp)+1, spname);
                 }
             }
-            fResid.writefln("# %02d: mass-balance", 11+2*(TKE+nt + SPECIES+nsp));
+            auto nmodes = GlobalConfig.gmodel_master.n_modes;
+            foreach(imode; 0 .. nmodes) {
+                string modename = "T_MODES["~to!string(imode)~"]"; //GlobalConfig.gmodel_master.energy_mode_name(imode);
+                fResid.writefln("# %02d: %s-abs", 11+2*(MODES+imode), modename);
+                fResid.writefln("# %02d: %s-rel", 11+2*(MODES+imode)+1, modename);
+            }
+            fResid.writefln("# %02d: mass-balance", 11+2*(TKE+nt + SPECIES+nsp + MODES+nmodes));
             fResid.close();
         }
     }
@@ -631,10 +668,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
             }
             if (failedAttempt > 0) { continue; }
-
             foreach (blk; parallel(localFluidBlocks,1)) {
                 size_t nturb = blk.myConfig.turb_model.nturb;
                 size_t nsp = blk.myConfig.gmodel.n_species;
+                size_t nmodes = blk.myConfig.gmodel.n_modes;
                 int cellCount = 0;
                 auto cqi = blk.myConfig.cqi;
                 foreach (cell; blk.cells) {
@@ -655,6 +692,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         // enforce mass fraction of 1 for single species gas
                         cell.U[1].vec[cqi.species+0] = cell.U[1].vec[cqi.mass];
                     }
+                    }
+                    version(multi_T_gas){
+                        foreach(imode; 0 .. nmodes) { cell.U[1].vec[cqi.modes+imode] = cell.U[0].vec[cqi.modes+imode] + blk.dU[cellCount+MODES+imode]; }
                     }
                     try {
                         cell.decode_conserved(0, 1, 0.0);
@@ -791,6 +831,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     }
                 }
                 }
+                version(multi_T_gas){
+                foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes){
+                    fResid.writef("%20.16e  %20.16e  ",
+                                  currResiduals.vec[cqi.modes+imode].re, currResiduals.vec[cqi.modes+imode].re/maxResiduals.vec[cqi.modes+imode].re);
+                }
+                }
                 fResid.writef("%20.16e ", fabs(mass_balance.re));
                 fResid.write("\n");
                 fResid.close();
@@ -837,6 +883,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         auto spname = GlobalConfig.gmodel_master.species_name(sp);
                         formattedWrite(writer, "  %s            %10.6e    %10.6e\n", spname, currResiduals.vec[cqi.species+sp].re, currResiduals.vec[cqi.species+sp].re/maxResiduals.vec[cqi.species+sp].re);
                     }
+                }
+                }
+                version(multi_T_gas){
+                foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes){
+                    auto modename = "T_MODES["~to!string(imode)~"]"; //GlobalConfig.gmodel_master.energy_mode_name(imode);
+                    formattedWrite(writer, "  %s            %10.6e    %10.6e\n", modename, currResiduals.vec[cqi.modes+imode].re, currResiduals.vec[cqi.modes+imode].re/maxResiduals.vec[cqi.modes+imode].re);
                 }
                 }
                 writeln(writer.data);
@@ -1042,6 +1094,15 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     }
                 }
                 }
+                version(multi_T_gas){
+                foreach(imode; 0 .. blk.myConfig.gmodel.n_modes) {
+                    outFile.writef("%.16e \n", cell.gradients.T_modesPhi[imode].re);
+                }
+                foreach(imode; 0 .. blk.myConfig.gmodel.n_modes) {
+                    outFile.writef("%.16e \n", cell.gradients.u_modesPhi[imode].re);
+                }
+                }
+
                 
             }
             outFile.close();
@@ -1181,7 +1242,7 @@ void evalRHS(double pseudoSimTime, int ftl)
                 cell.add_viscous_source_vector();
             }
             if (blk.myConfig.reacting) {
-                cell.add_chemistry_source_vector();
+                cell.add_thermochemical_source_vector();
             }
             if (blk.myConfig.udf_source_terms) {
                 size_t i_cell = cell.id;
@@ -1222,11 +1283,13 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
     size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
     size_t TKE = GlobalConfig.cqi.rhoturb;
     size_t SPECIES = GlobalConfig.cqi.species;
+    size_t MODES = GlobalConfig.cqi.modes;
 
     // We perform a Frechet derivative to evaluate J*D^(-1)v
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
         size_t nsp = blk.myConfig.gmodel.n_species;
+        size_t nmodes = blk.myConfig.gmodel.n_modes;
         auto cqi = blk.myConfig.cqi;
         blk.clear_fluxes_of_conserved_quantities();
         foreach (cell; blk.cells) cell.clear_source_vector();
@@ -1252,6 +1315,9 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
                 }
             }
             }
+            version(multi_T_gas){
+            foreach(imode; 0 .. nmodes) { cell.U[1].vec[cqi.modes+imode] += sigma*blk.zed[cellCount+MODES+imode]; }
+            }
             cell.decode_conserved(0, 1, 0.0);
             cellCount += nConserved;
         }
@@ -1260,6 +1326,7 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
         size_t nsp = blk.myConfig.gmodel.n_species;
+        size_t nmodes = blk.myConfig.gmodel.n_modes;
         auto cqi = blk.myConfig.cqi;
         int cellCount = 0;
         foreach (cell; blk.cells) {
@@ -1276,6 +1343,9 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
             if ( nsp > 1 ) {
                 foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] = (cell.dUdt[1].vec[cqi.species+sp] - blk.FU[cellCount+SPECIES+sp])/(sigma); }
             }
+            }
+            version(multi_T_gas){
+            foreach(imode; 0 .. nmodes){ blk.zed[cellCount+MODES+imode] = (cell.dUdt[1].vec[cqi.modes+imode] - blk.FU[cellCount+MODES+imode])/(sigma); }
             }
             cell.decode_conserved(0, 0, 0.0);
             cellCount += nConserved;
@@ -1295,6 +1365,7 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
         size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
         size_t TKE = GlobalConfig.cqi.rhoturb;
         size_t SPECIES = GlobalConfig.cqi.species;
+        size_t MODES = GlobalConfig.cqi.modes;
 
         // We perform a Frechet derivative to evaluate J*D^(-1)v
         foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1303,6 +1374,7 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
 
             size_t nturb = blk.myConfig.turb_model.nturb;
             size_t nsp = blk.myConfig.gmodel.n_species;
+            size_t nmodes = blk.myConfig.gmodel.n_modes;
             auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (cell; blk.cells) {
@@ -1324,6 +1396,9 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
                     cell.U[1].vec[cqi.species+0] = cell.U[1].vec[cqi.mass];
                 }
                 }
+                version(multi_T_gas){
+                foreach(imode; 0 .. nmodes){ cell.U[1].vec[cqi.modes+imode] += complex(0.0, sigma*blk.zed[cellCount+MODES+imode].re); }
+                }
                 cell.decode_conserved(0, 1, 0.0);
                 cellCount += nConserved;
             }
@@ -1332,6 +1407,7 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
         foreach (blk; parallel(localFluidBlocks,1)) {
             size_t nturb = blk.myConfig.turb_model.nturb;
             size_t nsp = blk.myConfig.gmodel.n_species;
+            size_t nmodes = blk.myConfig.gmodel.n_modes;
             auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (cell; blk.cells) {
@@ -1348,6 +1424,9 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
                 if ( nsp > 1 ) {
                     foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] = cell.dUdt[1].vec[cqi.species+sp].im/(sigma); }
                 }
+                }
+                version(multi_T_gas){
+                foreach(imode; 0 .. nmodes){ blk.zed[cellCount+MODES+imode] = cell.dUdt[1].vec[cqi.modes+imode].im/(sigma); }
                 }
                 cellCount += nConserved;
             }
@@ -1507,6 +1586,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
     size_t TKE = GlobalConfig.cqi.rhoturb;
     size_t SPECIES = GlobalConfig.cqi.species;
+    size_t MODES = GlobalConfig.cqi.modes;
 
     number resid;
 
@@ -1535,6 +1615,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
         size_t nsp = blk.myConfig.gmodel.n_species;
+        size_t nmodes = blk.myConfig.gmodel.n_modes;
         auto cqi = blk.myConfig.cqi;
         int cellCount = 0;
         blk.maxRate.vec[cqi.mass] = 0.0;
@@ -1551,6 +1632,9 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             foreach(sp; 0 .. nsp){ blk.maxRate.vec[cqi.species+sp] = 0.0; }
         }
         }
+        version(multi_T_gas){
+        foreach(imode; 0 .. nmodes){ blk.maxRate.vec[cqi.modes+imode] = 0.0; }
+        }
         foreach (i, cell; blk.cells) {
             blk.FU[cellCount+MASS] = cell.dUdt[0].vec[cqi.mass];
             blk.FU[cellCount+X_MOM] = cell.dUdt[0].vec[cqi.xMom];
@@ -1565,6 +1649,9 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             if ( nsp > 1 ) {
                 foreach(sp; 0 .. nsp){ blk.FU[cellCount+SPECIES+sp] = cell.dUdt[0].vec[cqi.species+sp]; }
             }
+            }
+            version(multi_T_gas){
+            foreach(imode; 0 .. nmodes){ blk.FU[cellCount+MODES+imode] = cell.dUdt[0].vec[cqi.modes+imode]; }
             }
             cellCount += nConserved;
             /*
@@ -1591,6 +1678,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 foreach(sp; 0 .. nsp){ blk.maxRate.vec[cqi.species+sp] = fmax(blk.maxRate.vec[cqi.species+sp], fabs(cell.dUdt[0].vec[cqi.species+sp])); }
             }
             }
+            version(multi_T_gas){
+            foreach(imode; 0 .. nmodes){ blk.maxRate.vec[cqi.modes+imode] = fmax(blk.maxRate.vec[cqi.modes+imode], fabs(cell.dUdt[0].vec[cqi.modes+imode])); }
+            }
+
         }
     }
 
@@ -1603,6 +1694,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     // we currently expect no more than 32 species
     number[32] maxSpecies;
     foreach (sp; 0 .. maxSpecies.length) { maxSpecies[sp] = 0.0; }
+    number[2] maxModes;
+    foreach (imode; 0 .. maxModes.length) { maxModes[imode] = 0.0; }
 
     foreach (blk; localFluidBlocks) {
         auto cqi = blk.myConfig.cqi;
@@ -1622,6 +1715,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             }
         }
         }
+        version(multi_T_gas){
+        foreach(imode; 0 .. blk.myConfig.gmodel.n_modes){
+            maxModes[imode] = fmax(maxModes[imode], blk.maxRate.vec[cqi.modes+imode]);
+        }
+        }
     }
     // In distributed memory, reduce the max values and ensure everyone has a copy
     version(mpi_parallel) {
@@ -1638,6 +1736,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 MPI_Allreduce(MPI_IN_PLACE, &(maxSpecies[sp].re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
             }
         }
+        if ( GlobalConfig.gmodel_master.n_modes > 1 ) {
+            foreach (imode; 0 .. GlobalConfig.gmodel_master.n_modes) {
+                MPI_Allreduce(MPI_IN_PLACE, &(maxModes[imode].re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+            }
+        }
     }
     // Place some guards when time-rate-of-changes are very small.
     maxMass = fmax(maxMass, minNonDimVal);
@@ -1652,6 +1755,9 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     }
     foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species){
         maxSpecies[sp] = fmax(maxSpecies[sp], minNonDimVal);
+    }
+    foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes){
+        maxModes[imode] = fmax(maxModes[imode], minNonDimVal);
     }
 
     // Get a copy of the maxes out to each block
@@ -1674,6 +1780,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 }
             }
             }
+            version(multi_T_gas){
+            foreach(imode; 0 .. blk.myConfig.gmodel.n_modes){
+                blk.maxRate.vec[cqi.modes+imode] = maxModes[imode];
+            }
+            }
         }
         else { // just scale by 1
             blk.maxRate.vec[cqi.mass] = 1.0;
@@ -1692,6 +1803,12 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 }
             }
             }
+            version(multi_T_gas){
+            foreach(imode; 0 .. blk.myConfig.gmodel.n_modes){
+                blk.maxRate.vec[cqi.modes+imode] = 1.0;
+            }
+            }
+
         }
     }
 
@@ -1743,6 +1860,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
         size_t nsp = blk.myConfig.gmodel.n_species;
+        size_t nmodes = blk.myConfig.gmodel.n_modes;
         auto cqi = blk.myConfig.cqi;
         blk.x0[] = to!number(0.0);
         int cellCount = 0;
@@ -1763,6 +1881,12 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 }
             }
             }
+            version(multi_T_gas){
+            foreach(imode; 0 .. nmodes){
+                blk.r0[cellCount+MODES+imode] = (1./blk.maxRate.vec[cqi.modes+imode])*blk.FU[cellCount+MODES+imode];
+            }
+            }
+
             cellCount += nConserved;
         }
     }
@@ -1796,6 +1920,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             foreach (blk; parallel(localFluidBlocks,1)) {
                 size_t nturb = blk.myConfig.turb_model.nturb;
                 size_t nsp = blk.myConfig.gmodel.n_species;
+                size_t nmodes = blk.myConfig.gmodel.n_modes;
                 auto cqi = blk.myConfig.cqi;
                 int cellCount = 0;
                 foreach (cell; blk.cells) {
@@ -1812,6 +1937,9 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     if ( nsp > 1 ) {
                         foreach(sp; 0 .. nsp){ blk.v[cellCount+SPECIES+sp] *= (blk.maxRate.vec[cqi.species+sp]); }
                     }
+                    }
+                    version(multi_T_gas){
+                    foreach(imode; 0 .. nmodes){ blk.v[cellCount+MODES+imode] *= (blk.maxRate.vec[cqi.modes+imode]); }
                     }
                     cellCount += nConserved;
                 }
@@ -1880,6 +2008,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             foreach (blk; parallel(localFluidBlocks,1)) {
                 size_t nturb = blk.myConfig.turb_model.nturb;
                 size_t nsp = blk.myConfig.gmodel.n_species;
+                size_t nmodes = blk.myConfig.gmodel.n_modes;
                 auto cqi = blk.myConfig.cqi;
                 int cellCount = 0;
                 foreach (cell; blk.cells) {
@@ -1896,6 +2025,9 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     if ( nsp > 1 ) {
                         foreach(sp; 0 .. nsp){ blk.w[cellCount+SPECIES+sp] *= (1./blk.maxRate.vec[cqi.species+sp]); }
                     }
+                    }
+                    version(multi_T_gas){
+                    foreach(imode; 0 .. nmodes){ blk.w[cellCount+MODES+imode] *= (1./blk.maxRate.vec[cqi.modes+imode]); }
                     }
                     cellCount += nConserved;
                 }
@@ -1997,6 +2129,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         foreach (blk; parallel(localFluidBlocks,1)) {
             size_t nturb = blk.myConfig.turb_model.nturb;
             size_t nsp = blk.myConfig.gmodel.n_species;
+            size_t nmodes = blk.myConfig.gmodel.n_modes;
             auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (cell; blk.cells) {
@@ -2014,6 +2147,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] *= (blk.maxRate.vec[cqi.species+sp]); }
                 }
                 }
+                version(multi_T_gas){
+                foreach(imode; 0 .. nmodes){ blk.zed[cellCount+MODES+imode] *= (blk.maxRate.vec[cqi.modes+imode]); }
+                }
+
                 cellCount += nConserved;
             }
         }
@@ -2084,6 +2221,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         foreach (blk; parallel(localFluidBlocks,1)) {
             size_t nturb = blk.myConfig.turb_model.nturb;
             size_t nsp = blk.myConfig.gmodel.n_species;
+            size_t nmodes = blk.myConfig.gmodel.n_modes;
             auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (cell; blk.cells) {
@@ -2100,6 +2238,9 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 if ( nsp > 1 ) {
                     foreach(sp; 0 .. nsp){ blk.r0[cellCount+SPECIES+sp] *= (1.0/blk.maxRate.vec[cqi.species+sp]); }
                 }
+                }
+                version(multi_T_gas){
+                foreach(imode; 0 .. nmodes){ blk.r0[cellCount+MODES+imode] *= (1.0/blk.maxRate.vec[cqi.modes+imode]); }
                 }
                 cellCount += nConserved;
             }
@@ -2141,6 +2282,7 @@ void max_residuals(ConservedQuantities residuals)
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
         size_t nsp = blk.myConfig.gmodel.n_species;
+        size_t nmodes = blk.myConfig.gmodel.n_modes;
         auto cqi = blk.myConfig.cqi;
         blk.residuals.copy_values_from(blk.cells[0].dUdt[0]);
         blk.residuals.vec[cqi.mass] = fabs(blk.residuals.vec[cqi.mass]);
@@ -2157,10 +2299,15 @@ void max_residuals(ConservedQuantities residuals)
             foreach(sp; 0 .. nsp){ blk.residuals.vec[cqi.species+sp] = fabs(blk.residuals.vec[cqi.species+sp]); }
         }
         }
+        version(multi_T_gas){
+        foreach(imode; 0 .. nmodes){ blk.residuals.vec[cqi.modes+imode] = fabs(blk.residuals.vec[cqi.modes+imode]); }
+        }
+
         number massLocal, xMomLocal, yMomLocal, zMomLocal, energyLocal;
         number[2] turbLocal;
         // we currently expect no more than 32 species
         number[32] speciesLocal;
+        number[2] modesLocal;
 
         foreach (cell; blk.cells) {
             massLocal = cell.dUdt[0].vec[cqi.mass];
@@ -2173,6 +2320,9 @@ void max_residuals(ConservedQuantities residuals)
             }
             version(multi_species_gas){
             foreach(sp; 0 .. nsp){ speciesLocal[sp] = cell.dUdt[0].vec[cqi.species+sp]; }
+            }
+            version(multi_T_gas){
+            foreach(imode; 0 .. nmodes){ modesLocal[imode] = cell.dUdt[0].vec[cqi.modes+imode]; }
             }
             blk.residuals.vec[cqi.mass] = fmax(blk.residuals.vec[cqi.mass], massLocal);
             blk.residuals.vec[cqi.xMom] = fmax(blk.residuals.vec[cqi.xMom], xMomLocal);
@@ -2187,6 +2337,9 @@ void max_residuals(ConservedQuantities residuals)
             if ( nsp > 1 ) {
                 foreach(sp; 0 .. nsp){ blk.residuals.vec[cqi.species+sp] = fmax(blk.residuals.vec[cqi.species+sp], speciesLocal[sp]); }
             }
+            }
+            version(multi_T_gas){
+            foreach(imode; 0 .. nmodes){ blk.residuals.vec[cqi.modes+imode] = fmax(blk.residuals.vec[cqi.modes+imode], modesLocal[imode]); }
             }
         }
     }
@@ -2209,6 +2362,12 @@ void max_residuals(ConservedQuantities residuals)
             }
         }
         }
+        version(multi_T_gas){
+        foreach(imode; 0 .. blk.myConfig.gmodel.n_modes ){
+            residuals.vec[cqi.modes+imode] = fmax(residuals.vec[cqi.modes+imode], blk.residuals.vec[cqi.modes+imode]);
+        }
+        }
+
     }
     version(mpi_parallel) {
         // In MPI context, only the master task (rank 0) has collated the residuals
@@ -2236,6 +2395,12 @@ void max_residuals(ConservedQuantities residuals)
                 MPI_Reduce(&(residuals.vec[cqi.species+sp].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
                 if (GlobalConfig.is_master_task) { residuals.vec[cqi.species+sp].re = maxResid; }
             }
+        }
+        }
+        version(multi_T_gas){
+        foreach (imode; 0 .. GlobalConfig.gmodel_master.n_modes) {
+            MPI_Reduce(&(residuals.vec[cqi.modes+imode].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+            if (GlobalConfig.is_master_task) { residuals.vec[cqi.modes+imode].re = maxResid; }
         }
         }
     }
@@ -2270,6 +2435,11 @@ void rewrite_times_file(RestartInfo[] times)
             foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species){
                 f.writef(" %.18e", rInfo.residuals.vec[cqi.species+sp].re);
             }
+        }
+        }
+        version(multi_T_gas){
+        foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes){
+            f.writef(" %.18e", rInfo.residuals.vec[cqi.modes+imode].re);
         }
         }
         f.write("\n");

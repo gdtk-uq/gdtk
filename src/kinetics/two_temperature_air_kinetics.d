@@ -359,6 +359,11 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
         dtSuggest = dtSave;
     }
 
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+        string errMsg = "eval_source_terms not implemented for two_temperature_air_kinetics.";
+        throw new ThermochemicalReactorUpdateException(errMsg);
+    }
+
 private:
     // Stuff from chemistry update
     //GasState _Qinit;

@@ -46,6 +46,9 @@ public:
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params);
 
+    // for the (fully-coupled) implicit solver we need public access to source terms
+    @nogc abstract void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source);
+
     // We will need to access this referenced model from the Lua functions
     // so it needs to be public.
     GasModel _gmodel;

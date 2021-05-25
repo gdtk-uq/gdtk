@@ -93,6 +93,11 @@ final class TwoTemperatureDissociatingNitrogenKinetics : ThermochemicalReactor {
         }
     }
 
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+        string errMsg = "eval_source_terms not implemented for two_temperature_dissociating_nitrogen_kinetics.";
+        throw new ThermochemicalReactorUpdateException(errMsg);
+    }
+
 private:
     TwoTemperatureDissociatingNitrogen _N2Model;
     GasState _Qinit, _Q0;

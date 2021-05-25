@@ -64,6 +64,11 @@ public:
 
     }
 
+    @nogc override eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+        string errMsg = "eval_source_terms not implemented for pseudo_species_kinetics.";
+        throw new ThermochemicalReactorUpdateException(errMsg);
+    }
+
 private:
     PseudoSpeciesGas _psGmodel;
     number[] _conc;

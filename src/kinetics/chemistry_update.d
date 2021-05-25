@@ -327,6 +327,10 @@ final class ChemistryUpdate : ThermochemicalReactor {
         dtChemSuggest = dtSave;
     }
 
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+        rmech.eval_source_terms(gmodel, Q, conc, rates, source);
+    }
+
 private:
     // Some memory workspace
     GasState _Qinit;

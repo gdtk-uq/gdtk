@@ -112,6 +112,11 @@ final class UpdateIDG : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     } // end opCall
 
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+        string errMsg = "eval_source_terms not implemented for ideal_dissociating_gas_kinetics.";
+        throw new ThermochemicalReactorUpdateException(errMsg);
+    }
+
 private:
     // Thermodynamic constants
     double _W; // Molecular mass in g/mole

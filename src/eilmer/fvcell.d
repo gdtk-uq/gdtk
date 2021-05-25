@@ -136,9 +136,9 @@ public:
     number dwall;
 
     // source terms for finite-rate chemistr
-    number[] chem_conc;
-    number[] chem_rates;
-    number[] chem_source;
+    number[] thermochem_conc;
+    number[] thermochem_rates;
+    number[] thermochem_source;
     ReactionMechanism rmech;
 
     // For use with LU-SGS solver/preconditioner (note: we don't need complex numbers here)
@@ -245,18 +245,15 @@ public:
         version(steady_state) {
 
             if (myConfig.reacting) {
-                chem_source.length = n_species;
-                chem_conc.length = n_species;
-                chem_rates.length = n_species;
-
-                auto myChemUpdate = cast(ChemistryUpdate) myConfig.thermochemUpdate;
-                if (myChemUpdate !is null) {
-                    rmech = myChemUpdate.rmech.dup();
-                } else {
-                    throw new Exception("Opps, incorrect ThermochemicalReactor.");
-                }
+                thermochem_source.length = n_species;
+                thermochem_conc.length = n_species;
+                thermochem_rates.length = n_species;
             }
-
+            if (n_modes > 0) {
+                thermochem_source.length += n_modes;
+                thermochem_conc.length += n_modes;
+                thermochem_rates.length += n_modes;
+            }
             size_t nConserved = myConfig.cqi.n;
             scalar_diag_inv.length = nConserved;
             dFdU = new Matrix!number(nConserved,nConserved);
@@ -1483,16 +1480,21 @@ public:
     }
 
     @nogc
-    void add_chemistry_source_vector()
+    void add_thermochemical_source_vector()
     {
+        // It does not make a lot of sense to call this function for n_species == 1
+        // Maybe we should just set chem_source[0] = 0.0.
+        // 2021-05-11 PJ [TODO] Ask Rowan.
+        auto cqi = myConfig.cqi;
         version(multi_species_gas) {
-            auto cqi = myConfig.cqi;
-            // It does not make a lot of sense to call this function for n_species == 1
-            // Maybe we should just set chem_source[0] = 0.0.
-            // 2021-05-11 PJ [TODO] Ask Rowan.
-            rmech.eval_source_terms(myConfig.gmodel, fs.gas, chem_conc, chem_rates, chem_source);
+            myConfig.thermochemUpdate.eval_source_terms(myConfig.gmodel, fs.gas, thermochem_conc, thermochem_rates, thermochem_source);
             if (cqi.n_species > 1) {
-                foreach(sp; 0 .. cqi.n_species) { Q.vec[cqi.species+sp] += chem_source[sp]; }
+                foreach(sp; 0 .. cqi.n_species) { Q.vec[cqi.species+sp] += thermochem_source[sp]; }
+            }
+        }
+        version(multi_T_gas) {
+            foreach(imode; 0 .. cqi.n_modes) {
+                Q.vec[cqi.modes+imode] += thermochem_source[cqi.n_species+imode];
             }
         }
     }

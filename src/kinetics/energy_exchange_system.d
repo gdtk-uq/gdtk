@@ -27,6 +27,7 @@ import kinetics.reaction_mechanism;
 interface EnergyExchangeSystem {
     @nogc void evalRelaxationTimes(in GasState gs);
     @nogc void evalRates(in GasState gs, in ReactionMechanism, ref number[] rates);
+    @nogc void eval_source_terms(in ReactionMechanism rmech, GasState Q, ref number[] rates, ref number[] source);
 }
 
 class TwoTemperatureEnergyExchange : EnergyExchangeSystem {
@@ -77,6 +78,20 @@ public:
             rate += mech.rate(gs, mGsEq, mMolef, mNumden, rmech);
         }
         rates[0] = rate;
+    }
+
+    @nogc
+    void eval_source_terms(in ReactionMechanism rmech, in GasState Q, ref number[] rates, ref number[] source)
+    {
+        evalRelaxationTimes(Q);
+        evalRates(Q, rmech, rates);
+        rates2source(Q, rates, source);
+    }
+
+    @nogc
+    void rates2source(in GasState Q, in number[] rates, ref number[] source)
+    {
+        source[0] = rates[0]*Q.rho;
     }
 
 private:
