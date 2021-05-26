@@ -65,28 +65,45 @@ class ImpartialDissociation : ExchangeChemistryCoupling {
     */  
         number T = gs.T;
         number Tv = gs.T_modes[0];
-        number Lambda = 1.0/(1.0/Tv - 1.0/T);
-        return L(Lambda, D);
+        number iGamma = (T - Tv)/(T*Tv); // Inverse of pseudo-temperature in equation (36)
+
+        // Equation (39) gives garbage results when T and Tv are close to one another, so we switch
+        // to a non-singular approximation if iGamma gets too small.
+        if (fabs(iGamma)<iGammaSwitchThreshold){
+            return LTaylorSeries1(iGamma, D);
+        } else {
+            return L(iGamma, D);
+        }
     }
 
     @nogc
     number Gappear(in GasState gs) {
     /*
         This function is derived from Gvanish as Tv -> T. Computed using a Taylor series expansion
-        about 1/Lambda = 0. See Treanor and Marrone equation 13 for the idea.
+        about 1/Gamma = 0. See Treanor and Marrone equation 13 for the idea.
     */  
-        double Gapp = 0.5*(D - Thetav*R_universal);
-        return to!number(Gapp);
+        double L0 = 0.5*(D - Thetav*R_universal);
+        return to!number(L0);
     }
 
 private:
     const double D, Thetav;
+    immutable number iGammaSwitchThreshold = to!number(1e-7); // Determined by trial and error, see notes 26/05/21
 
-    @nogc const number L(number T, double Y){
+    @nogc const number L(number iT, double Y){
     /*
         Equation (39) from Knab, 1995, the molar vibrational energy content of the harmonic oscillator.
+
+        Notes: We use the inverse pseudo-temperature iT=1/T to save some division operations
     */
-        return R_universal*Thetav/(exp(Thetav/T) - 1.0) - Y/(exp(Y/R_universal/T) - 1.0);
+        return R_universal*Thetav/(exp(Thetav*iT) - 1.0) - Y/(exp(Y/R_universal*iT) - 1.0);
+    }
+
+    @nogc const number LTaylorSeries1(number iT, double Y){
+    /*
+        First order Taylor series expansion of equation 39, to handle precision loss issues near iT=0.
+    */
+        return 0.5*(Y - Thetav*R_universal) + iT*(Thetav*Thetav*R_universal*R_universal - Y*Y)/12.0/R_universal;
     }
 }
 
