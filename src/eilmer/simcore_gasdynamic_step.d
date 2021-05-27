@@ -1961,6 +1961,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     // Set up the linear system by evaluating the sensitivity matrix.
                     // Do this without high-order interpolation, just to be cheap.
                     blk.U0save.copy_values_from(U0);
+                    cell.decode_conserved(local_gtl, local_ftl, blk.omegaz);
                     dUdt0.clear();
                     blk.evalRU(local_gtl, local_ftl, cell, false);
                     blk.RU0.copy_values_from(dUdt0);
@@ -1974,7 +1975,9 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                             number hc = Complex!double(0.0, h);
                             // Perturb one quantity.
                             U0.vec[j] += hc;
+                            cell.decode_conserved(local_gtl, local_ftl, blk.omegaz);
                             // Get derivative vector.
+                            dUdt0.clear();
                             blk.evalRU(local_gtl, local_ftl, cell, false);
                             foreach (k; 0 .. cqi.n) {
                                 blk.dRUdU[k] = (dUdt0.vec[k].im - blk.RU0.vec[k].im)/h;
@@ -1984,7 +1987,9 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                             double h = 1.0e-5*(fabs(U0.vec[j]) + 1.0);
                             // Perturb one quantity.
                             U0.vec[j] += h;
+                            cell.decode_conserved(local_gtl, local_ftl, blk.omegaz);
                             // Get derivative vector.
+                            dUdt0.clear();
                             blk.evalRU(local_gtl, local_ftl, cell, false);
                             foreach (k; 0 .. cqi.n) {
                                 blk.dRUdU[k] = (dUdt0.vec[k] - blk.RU0.vec[k])/h;
@@ -1997,6 +2002,8 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     }
                     // Evaluate the right-hand side of the linear system equations.
                     U0.copy_values_from(blk.U0save);
+                    cell.decode_conserved(local_gtl, local_ftl, blk.omegaz);
+                    dUdt0.clear();
                     blk.evalRU(local_gtl, local_ftl, cell, local_allow_high_order_interpolation);
                     foreach (k; 0 .. cqi.n) { blk.crhs._data[k][cqi.n] = dUdt0.vec[k].re; }
                     // Solve for dU and update U.
