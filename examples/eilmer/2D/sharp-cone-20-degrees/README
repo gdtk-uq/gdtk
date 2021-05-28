@@ -1,0 +1,29 @@
+# A Very Brief Description of the 20 Degree Sharp Cone Examples #
+
+sg = Structured grid implementation.
+
+usg = Unstructured grid implementation.
+
+parametric = Parametric structured grid setup (?).
+
+sg-import-grids = Structured grid, reading in external grids written in Eilmer format.
+
+sg-mpi = Structured grid with MPI (parallel) processing.
+
+sg-sss = Structured grid steady state using the Newton-Krylov accelerator.
+
+sg-staged-prep = Structured grid with staged preparation.
+
+udf = Structured grid with simple user-defined boundary conditions.
+
+usg-metis = Unstructured grid with METIS block partitioning.
+
+usg-refined = Unstructured grid using SU2 grid, single block.
+
+usg-su2 = Unstructured grid with SU2 grid, multi-block.
+
+sg-extra = Structured grid setup with collection of extras.
+    NOTE: these all use information from an older solution, so execute ./run-base.sh first.
+    - Inflow from profile (cone20B)
+    - Restarting from an old solution (cone20-fine-restart)
+    - Writing solutions as raw binary (cone20_rawbinary)
