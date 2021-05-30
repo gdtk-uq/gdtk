@@ -9,6 +9,9 @@ if false then -- debug
    print("Begin loading prep-grids.lua.")
 end
 
+require 'configoptions'
+config = configoptions.config
+
 require 'lua_helper'
 deepclone = lua_helper.deepclone
 checkAllowedNames = lua_helper.checkAllowedNames

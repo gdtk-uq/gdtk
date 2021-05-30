@@ -31,7 +31,9 @@ import fvinterface;
 import geom;
 import special_block_init;
 import fluidblock;
+import fluidblockio;
 import fluidblockio_old;
+import fluidblockio_new;
 import sfluidblock;
 import globaldata;
 import globalconfig;
@@ -906,18 +908,31 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 writefln("Writing flow solution at step= %4d; pseudo-time= %6.3e", step, pseudoSimTime);
                 writefln("-----------------------------------------------------------------------\n");
             }
+            FluidBlockIO[] io_list = localFluidBlocks[0].block_io;
+            bool legacy = is_legacy_format(GlobalConfig.flow_format);
             nWrittenSnapshots++;
             if ( nWrittenSnapshots <= nTotalSnapshots ) {
-                if (GlobalConfig.is_master_task) {
+                if (legacy) {
                     ensure_directory_is_present(make_path_name!"flow"(nWrittenSnapshots));
                     ensure_directory_is_present(make_path_name!"solid"(nWrittenSnapshots));
+                } else {
+                    foreach(io; io_list) {
+                        string path = "CellData/"~io.tag;
+                        if (io.do_save()) ensure_directory_is_present(make_path_name(path, nWrittenSnapshots));
+                    }
                 }
                 version(mpi_parallel) {
                     MPI_Barrier(MPI_COMM_WORLD);
                 }
                 foreach (blk; localFluidBlocks) {
-                    auto fileName = make_file_name!"flow"(jobName, blk.id, nWrittenSnapshots, "gz");
-                    blk.write_solution(fileName, pseudoSimTime);
+                    if (legacy) {
+                        auto fileName = make_file_name!"flow"(jobName, blk.id, nWrittenSnapshots, "gz");
+                        blk.write_solution(fileName, pseudoSimTime);
+                    } else {
+                        foreach(io; blk.block_io) {
+                            auto fileName = make_file_name("CellData", io.tag, jobName, blk.id, nWrittenSnapshots, GlobalConfig.flowFileExt);
+                        }
+                    }
                 }
                 foreach (sblk; localSolidBlocks) {
                     auto fileName = make_file_name!"solid"(jobName, sblk.id, nWrittenSnapshots, "gz");
@@ -936,15 +951,29 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 // We need to shuffle all of the fluid snapshots...
                 foreach ( iSnap; 2 .. nTotalSnapshots+1) {
                     foreach (blk; localFluidBlocks) {
-                        auto fromName = make_file_name!"flow"(jobName, blk.id, iSnap, "gz");
-                        auto toName = make_file_name!"flow"(jobName, blk.id, iSnap-1, "gz");
-                        rename(fromName, toName);
+                        if (legacy) {
+                            auto fromName = make_file_name!"flow"(jobName, blk.id, iSnap, "gz");
+                            auto toName = make_file_name!"flow"(jobName, blk.id, iSnap-1, "gz");
+                            rename(fromName, toName);
+                        } else {
+                            foreach (io; io_list) {
+                                auto fromName = make_file_name("CellData", io.tag, jobName, blk.id, iSnap, GlobalConfig.flowFileExt);
+                                auto toName = make_file_name("CellData", io.tag, jobName, blk.id, iSnap-1, GlobalConfig.flowFileExt);
+                                rename(fromName, toName);
+                            }
+                        }
                     }
                 }
                 // ... and add the new fluid snapshot.
                 foreach (blk; localFluidBlocks) {
-                    auto fileName = make_file_name!"flow"(jobName, blk.id, nTotalSnapshots, "gz");        
-                    blk.write_solution(fileName, pseudoSimTime);
+                    if (legacy) {
+                        auto fileName = make_file_name!"flow"(jobName, blk.id, nTotalSnapshots, "gz");
+                        blk.write_solution(fileName, pseudoSimTime);
+                    } else {
+                        foreach(io; blk.block_io) {
+                            auto fileName = make_file_name("CellData", io.tag, jobName, blk.id, nTotalSnapshots, GlobalConfig.flowFileExt);
+                        }
+                    }
                 }
                 // We need to shuffle all of the solid snapshots...
                 foreach ( iSnap; 2 .. nTotalSnapshots+1) {

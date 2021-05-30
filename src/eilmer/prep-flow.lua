@@ -229,7 +229,11 @@ function buildFlowFiles(jobName)
          fluidBlockIdsForPrep[i] = fluidBlocks[i].id
       end
    end
-   os.execute("mkdir -p flow/t0000")
+   if (config.new_flow_format) then
+      os.execute("mkdir -p CellData/field/t0000")
+   else
+      os.execute("mkdir -p flow/t0000")
+   end
    for i, id in ipairs(fluidBlockIdsForPrep) do
       if false then -- May activate print statement for debug.
          print("FluidBlock id=", id)
@@ -237,13 +241,23 @@ function buildFlowFiles(jobName)
       local idx = id+1
       local blk = fluidBlocks[idx]
       local gridMetadata = gridsList[idx]
-      local fileName = "flow/t0000/" .. jobName .. string.format(".flow.b%04d.t0000", id)
-      if config.flow_format == "gziptext" then
-	 fileName = fileName .. ".gz"
-      elseif config.flow_format == "rawbinary" then
-	 fileName = fileName .. ".bin"
+      local fileName;
+      if (config.new_flow_format) then
+          fileName = "CellData/field/t0000/" .. jobName .. string.format(".field.b%04d.t0000", id)
+          if ((config.flow_format == "eilmer4text") or (config.flow_format == "eilmer4binary")) then
+              fileName = fileName .. ".zip"
+          else
+              error(string.format("Oops, new flow format selected, %s is not valid", config.flow_format))
+          end
       else
-	 error(string.format("Oops, invalid flow_format: %s", config.flow_format))
+          fileName = "flow/t0000/" .. jobName .. string.format(".flow.b%04d.t0000", id)
+          if config.flow_format == "gziptext" then
+         fileName = fileName .. ".gz"
+          elseif config.flow_format == "rawbinary" then
+         fileName = fileName .. ".bin"
+          else
+         error(string.format("Oops, invalid flow_format: %s", config.flow_format))
+          end
       end
       --
       if not blk.grid then
@@ -299,6 +313,7 @@ function buildFlowFiles(jobName)
          local grid = fluidBlocks[idx].grid
          local omegaz = fluidBlocks[idx].omegaz
          if grid:get_type() == "structured_grid" then
+             print("here")
             write_initial_sg_flow_file(fileName, grid, ifs, config.start_time, omegaz)
          else
             write_initial_usg_flow_file(fileName, grid, ifs, config.start_time, omegaz)
