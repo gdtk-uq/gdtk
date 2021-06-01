@@ -14,6 +14,8 @@ sg-sss = Structured grid steady state using the Newton-Krylov accelerator.
 
 sg-staged-prep = Structured grid with staged preparation.
 
+new-flow-format = Structured grid with Eilmer's new flow format (new as of 2021).
+
 udf = Structured grid with simple user-defined boundary conditions.
 
 usg-metis = Unstructured grid with METIS block partitioning.
