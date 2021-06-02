@@ -59,8 +59,10 @@ On completion of a simulation, the word `done` is written to that file.
 To use the e4monitor program in your batch scripts,
 start it just before using `mpirun` to start your simulation.
 
-  $ e4monitor --job=<jobName> ?--startup=<int>? ?--period=<int>?
+  $ e4monitor --job=<jobName> ?--startup=<int>? ?--period=<int>? &
 
+The trailing ampersand indicates that the `e4monitor` program has been started in
+the background.
 The default values for `startup` and `period` are 30 and 60 seconds respectively.
 With these values, the monitor program does not look at the progress file until
 30 seconds has elapsed.
