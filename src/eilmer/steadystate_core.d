@@ -931,6 +931,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     } else {
                         foreach(io; blk.block_io) {
                             auto fileName = make_file_name("CellData", io.tag, jobName, blk.id, nWrittenSnapshots, GlobalConfig.flowFileExt);
+                            if (io.do_save()) io.save_to_file(fileName, pseudoSimTime);
                         }
                     }
                 }
@@ -972,6 +973,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     } else {
                         foreach(io; blk.block_io) {
                             auto fileName = make_file_name("CellData", io.tag, jobName, blk.id, nTotalSnapshots, GlobalConfig.flowFileExt);
+                            if (io.do_save()) io.save_to_file(fileName, pseudoSimTime);
+
                         }
                     }
                 }
