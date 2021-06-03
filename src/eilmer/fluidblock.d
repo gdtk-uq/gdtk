@@ -891,7 +891,7 @@ public:
         } else {
             // [TODO] PJ 2021-05-17 Implicit update schemes should run with cfl > 1
             // but we don't have much experience to know how far the cfl can be pushed.
-            cfl_allow = 10.0;
+            cfl_allow = 500.0;
         }
         // for local time-stepping we limit the larger time-steps by a factor of the smallest timestep
         int local_time_stepping_limit_factor = myConfig.local_time_stepping_limit_factor;

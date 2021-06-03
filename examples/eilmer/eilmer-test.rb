@@ -1,5 +1,4 @@
-#
-#/usr/bin/env ruby
+#! /usr/bin/env ruby
 # eilmer-test.rb
 #
 # Smoke test the Eilmer4 code.
@@ -24,6 +23,7 @@ long_tests = false
 
 test_scripts = []
 test_scripts << "2D/sharp-cone-20-degrees/sg/cone20-test.rb"
+test_scripts << "2D/sharp-cone-20-degrees/sg-implicit/cone20-implicit-test.rb"
 test_scripts << "2D/sharp-cone-20-degrees/sg-mpi/cone20-mpi-test.rb"
 test_scripts << "2D/sharp-cone-20-degrees/usg/cone20-usg-test.rb"
 test_scripts << "2D/sharp-cone-20-degrees/usg-su2/cone20-usg-su2-test.rb"
