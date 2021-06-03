@@ -697,12 +697,16 @@ struct SteadyStateSolverOptions {
     int[] cfl_schedule_iter_list;
     // Options for start-up phase
     int nStartUpSteps = 5;
+    int LHSeval0 = 1;
+    int RHSeval0 = 1;
     double p0 = 0.75;
     double cfl0 = 1.0;
     double eta0 = 0.5;
     double tau0 = 0.1;
     double sigma0 = 1.0e-8;
     // Options for inexact Newton phase
+    int LHSeval1 = 2;
+    int RHSeval1 = 2;
     double p1 = 1.0;
     double cfl1 = 10.0;
     double tau1 = 0.1;
@@ -2230,6 +2234,10 @@ void read_control_file()
     GlobalConfig.sssOptions.residual_based_cfl_scheduling = getJSONbool(sssOptions, "residual_based_cfl_scheduling", GlobalConfig.sssOptions.residual_based_cfl_scheduling);
     GlobalConfig.sssOptions.cfl_max =
         getJSONdouble(sssOptions, "cfl_max", GlobalConfig.sssOptions.cfl_max);
+    GlobalConfig.sssOptions.LHSeval0 =
+        getJSONint(sssOptions, "LHSeval0", GlobalConfig.sssOptions.LHSeval0);
+    GlobalConfig.sssOptions.RHSeval0 =
+        getJSONint(sssOptions, "RHSeval0", GlobalConfig.sssOptions.RHSeval0);
     GlobalConfig.sssOptions.cfl0 =
         getJSONdouble(sssOptions, "cfl0", GlobalConfig.sssOptions.cfl0);
     GlobalConfig.sssOptions.eta0 =
@@ -2241,6 +2249,10 @@ void read_control_file()
     GlobalConfig.sssOptions.p0 =
         getJSONdouble(sssOptions, "p0", GlobalConfig.sssOptions.p0);
     // Setting for inexact Newton phase
+    GlobalConfig.sssOptions.LHSeval1 =
+        getJSONint(sssOptions, "LHSeval1", GlobalConfig.sssOptions.LHSeval1);
+    GlobalConfig.sssOptions.RHSeval1 =
+        getJSONint(sssOptions, "RHSeval1", GlobalConfig.sssOptions.RHSeval1);
     GlobalConfig.sssOptions.cfl1 =
         getJSONdouble(sssOptions, "cfl1", GlobalConfig.sssOptions.cfl1);
     GlobalConfig.sssOptions.tau1 =

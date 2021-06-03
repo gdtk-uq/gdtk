@@ -156,11 +156,15 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     bool residual_based_cfl_scheduling = GlobalConfig.sssOptions.residual_based_cfl_scheduling;
     int kmax = GlobalConfig.sssOptions.maxSubIterations;
     // Settings for start-up phase
+    int LHSeval0 = GlobalConfig.sssOptions.LHSeval0;
+    int RHSeval0 = GlobalConfig.sssOptions.RHSeval0;
     double cfl0 = GlobalConfig.sssOptions.cfl0;
     double tau0 = GlobalConfig.sssOptions.tau0;
     double eta0 = GlobalConfig.sssOptions.eta0;
     double sigma0 = GlobalConfig.sssOptions.sigma0;
     // Settings for inexact Newton phase
+    int LHSeval1 = GlobalConfig.sssOptions.LHSeval1;
+    int RHSeval1 = GlobalConfig.interpolation_order; // GlobalConfig.sssOptions.RHSeval1
     double cfl1 = GlobalConfig.sssOptions.cfl1;
     double tau1 = GlobalConfig.sssOptions.tau1;
     double sigma1 = GlobalConfig.sssOptions.sigma1;
@@ -270,13 +274,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             writeln("  Begin pre-steps to establish sensible max residual.");
             writeln("---------------------------------------------------------------");
         }
-        foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(1);
+        foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(RHSeval0);
         foreach ( preStep; -nPreSteps .. 0 ) {
             foreach (attempt; 0 .. maxNumberAttempts) {
                 try {
                     version(lu_sgs) { lusgs_solve(preStep, pseudoSimTime, dt, normOld, startStep); }
-                    else { rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, startStep); }
-
+                    else { rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, startStep, LHSeval0, RHSeval0); }
                 }
                 catch (FlowSolverException e) {
                     version(mpi_parallel) {
@@ -397,7 +400,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         }
 
         if (nPreSteps <= 0) {
-            foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(interpOrderSave);
+            foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(RHSeval1);
             // Take initial residual as max residual
             evalRHS(0.0, 0);
             max_residuals(maxResiduals);
@@ -622,6 +625,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     }
 
     // Begin Newton steps
+    int LHSeval;
+    int RHSeval;
     double eta;
     double tau;
     double sigma;
@@ -631,14 +636,18 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         }
         residualsUpToDate = false;
         if ( step <= nStartUpSteps ) {
-            foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(1);
+            LHSeval = LHSeval0;
+            RHSeval = RHSeval0;
+            foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(RHSeval);
             eta = eta0;
             tau = tau0;
             sigma = sigma0;
             usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
         }
         else {
-            foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(interpOrderSave);
+            LHSeval = LHSeval1;
+            RHSeval = RHSeval1;
+            foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(RHSeval);
             eta = eta1;
             tau = tau1;
             sigma = sigma1;
@@ -655,7 +664,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             failedAttempt = 0;
             try {
                 version(lu_sgs) { lusgs_solve(step, pseudoSimTime, dt, normNew, startStep); }
-                else { rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, startStep); }
+                else { rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, startStep, LHSeval, RHSeval); }
             }
             catch (FlowSolverException e) {
                 writefln("Failed when attempting GMRES solve in main steps.");
@@ -1296,16 +1305,17 @@ void evalRHS(double pseudoSimTime, int ftl)
     }
 }
 
-void evalJacobianVecProd(double pseudoSimTime, double sigma)
+void evalJacobianVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHSeval)
 {
     if (GlobalConfig.sssOptions.useComplexMatVecEval)
-        evalComplexMatVecProd(pseudoSimTime, sigma);
+        evalComplexMatVecProd(pseudoSimTime, sigma, LHSeval, RHSeval);
     else
-        evalRealMatVecProd(pseudoSimTime, sigma);
+        evalRealMatVecProd(pseudoSimTime, sigma, LHSeval, RHSeval);
 }
 
-void evalRealMatVecProd(double pseudoSimTime, double sigma)
+void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHSeval)
 {
+    foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(LHSeval); }
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
     size_t MASS = GlobalConfig.cqi.mass;
@@ -1383,11 +1393,13 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma)
             cellCount += nConserved;
         }
     }
+    foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(RHSeval); }
 }
 
-void evalComplexMatVecProd(double pseudoSimTime, double sigma)
+void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHSeval)
 {
     version(complex_numbers) {
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(LHSeval); }
         // Make a stack-local copy of conserved quantities info
         size_t nConserved = GlobalConfig.cqi.n;
         size_t MASS = GlobalConfig.cqi.mass;
@@ -1469,6 +1481,7 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma)
             }
             foreach(face; blk.faces) { face.fs.clear_imaginary_components(); }
         }
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(RHSeval); }
     } else {
         throw new Error("Oops. Steady-State Solver setting: useComplexMatVecEval is not compatible with real-number version of the code.");
     }
@@ -1607,7 +1620,7 @@ string lusgs_solve(string lhs_vec, string rhs_vec)
 }
 
 void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, double sigma, bool usePreconditioner,
-                    ref double residual, ref int nRestarts, int startStep)
+                    ref double residual, ref int nRestarts, int startStep, int LHSeval, int RHSeval)
 {
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
@@ -2029,7 +2042,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
 
             // Evaluate Jz and place in z
-            evalJacobianVecProd(pseudoSimTime, sigma);
+            evalJacobianVecProd(pseudoSimTime, sigma, LHSeval, RHSeval);
 
             // Now we can complete calculation of w
             foreach (blk; parallel(localFluidBlocks,1)) {

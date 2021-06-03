@@ -45,6 +45,8 @@ sssOptionsHidden = { -- hidden from user
 
    -- Options for start-up phase (first order interpolation applied during this phase)
    number_start_up_steps = 5,
+   LHSeval0 = 1,
+   RHSeval0 = 1,
    cfl0 = 1.0,
    eta0 = 0.5, -- to what level of relative residual drop will we converge an iteration
    tau0 = 0.1, -- relative residual at which the CFL will be ramped
@@ -54,6 +56,8 @@ sssOptionsHidden = { -- hidden from user
    -- Options for inexact Newton phase
    -- this phase will use second order interpolation, if selected
    -- settings are same as above
+   LHSeval1 = 2,
+   RHSeval1 = 2,
    cfl1 = 10.0,
    tau1 = 0.1,
    sigma1 = 1.0e-8,
