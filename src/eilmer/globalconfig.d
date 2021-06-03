@@ -1701,6 +1701,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_double("M_inf", "M_inf"));
     mixin(update_double("compression_tolerance", "compression_tolerance"));
     mixin(update_enum("shock_detector", "shock_detector", "shock_detector_from_name"));
+    mixin(update_bool("do_shock_detect", "do_shock_detect"));
     mixin(update_bool("strict_shock_detector", "strict_shock_detector"));
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_bool("artificial_compressibility", "artificial_compressibility"));
@@ -1757,6 +1758,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
         writeln("  interpolation_delay: ", GlobalConfig.interpolation_delay);
         writeln("  suppress_radial_reconstruction_at_xaxis: ", GlobalConfig.suppress_radial_reconstruction_at_xaxis);
+        writeln("  do_shock_detect: ", GlobalConfig.do_shock_detect);
         writeln("  strict_shock_detector: ", GlobalConfig.strict_shock_detector);
         writeln("  suppress_reconstruction_at_shocks: ", GlobalConfig.suppress_reconstruction_at_shocks);
         writeln("  suppress_reconstruction_at_boundaries: ", GlobalConfig.suppress_reconstruction_at_boundaries);

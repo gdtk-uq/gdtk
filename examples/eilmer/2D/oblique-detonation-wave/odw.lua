@@ -67,5 +67,7 @@ config.max_step = 300000
 config.dt_init = 1.0e-6
 config.dt_plot = config.max_time / 40
 config.dt_history = 10.0e-5
+config.compression_tolerance = -0.05
+config.do_shock_detect = true
 
 dofile("sketch-domain.lua")
