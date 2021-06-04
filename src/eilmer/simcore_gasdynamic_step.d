@@ -362,11 +362,8 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	if (!blk.active) continue;
 	int blklocal_ftl = ftl;
 	int blklocal_gtl = gtl;
-	bool blklocal_with_local_time_stepping = with_local_time_stepping;
-	double blklocal_dt_global = dt_global;
+	double dt = dt_global;
 	double blklocal_sim_time = SimState.time;
-        auto s = SimState.s_RKL;
-        int j = 1; // Kyle, could get rid of this, as noted below.
 	foreach (cell; blk.cells) {
 	    cell.add_inviscid_source_vector(blklocal_gtl, blk.omegaz);
 	    if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
@@ -375,35 +372,29 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	}
 	if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
         auto cqi = blk.myConfig.cqi;
+        // Coefficients for the j=1 stage update.
+        double s = SimState.s_RKL;
+        double muj_tilde;
+        if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || euler_step) {
+            // RKL1 (j=1)
+            muj_tilde = 2.0/(s*s+s);
+        } else {
+            // RKL2 (j=1)
+            muj_tilde = 4.0/(3.0*(s*s+s-2.0));
+        }
+        // The update itself.
 	foreach (cell; blk.cells) {
-            auto dt = blklocal_dt_global;
+            auto U0 = cell.U[0]; auto U1 = cell.U[1]; auto dUdt0 = cell.dUdt[0];
+            foreach (k; 0 .. cqi.n) {
+                U1.vec[k] = U0.vec[k] + muj_tilde*dt*dUdt0.vec[k];
+            }
 	    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || euler_step) {
                 // RKL1 (j=1)
-                auto U0 = cell.U[0];
-                auto U1 = cell.U[1];
-                auto dUdt0 = cell.dUdt[0];
-                // coefficients
-                double muj_tilde = (2.0*j-1)/j * 2.0/(s*s+s); // Kyle, just 2.0/(s*s+s) if we get rid of j variable above?
-                double muj = 1.0; // not used ?
-                double vuj = 0.0; // not used ?
-                // update
-                foreach (k; 0 .. cqi.n) {
-                    U1.vec[k] = U0.vec[k] + muj_tilde*dt*dUdt0.vec[k];
-                }
-                // shuffle time-levels
-                cell.U[0] = U0; // Kyle, is this not necessary here ???
-                cell.U[1] = U1;
+                // Nothing more to do.
             } else {
                 // RKL2 (j=1)
-                auto U0 = cell.U[0];
-                auto U1 = cell.U[1];
-                auto dUdt0 = cell.dUdt[0];
-                // coefficients
-                double muj_tilde = 4.0/(3.0*(s*s+s-2.0));
-                foreach (k; 0 .. cqi.n) {
-                    U1.vec[k] = U0.vec[k] + muj_tilde*dt*dUdt0.vec[k];
-                }
-                // make a copy of the initial conserved quantities
+                // Make a copy of the initial conserved quantities.
+                // It will be used in the j > 1 stages.
                 cell.U[3].copy_values_from(cell.U[0]);
             }
             cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
@@ -593,10 +584,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    if (!blk.active) continue;
 	    int blklocal_ftl = ftl;
 	    int blklocal_gtl = gtl;
-	    bool blklocal_with_local_time_stepping = with_local_time_stepping;
-	    double blklocal_dt_global = dt_global;
-            auto s = SimState.s_RKL;
-            auto blklocal_j = j; // Kyle, should use if the coefficients stay within the cells loops
+	    double dt = dt_global;
 	    foreach (cell; blk.cells) {
 		cell.add_inviscid_source_vector(blklocal_gtl, blk.omegaz);
 		if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
@@ -604,60 +592,56 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 		cell.time_derivatives(blklocal_gtl, blklocal_ftl);
 	    }
 	    if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
+            //
+            // Coefficients for the update, stage j.
+            double s = SimState.s_RKL;
+            double ajm1; double bj; double bjm1; double bjm2;
+            double muj; double vuj; double muj_tilde; double gam_tilde;
+            if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
+                // RKL1
+                muj_tilde = (2.0*j-1)/j * 2.0/(s*s+s);
+                muj = (2.0*j-1)/j;
+                vuj = (1.0-j)/j;
+            } else {
+                // RKL2
+                if (j == 2) {
+                    bj = 1.0/3.0;
+                    bjm1 = 1.0/3.0;
+                    bjm2 = 1.0/3.0;
+                } else if (j == 3) {
+                    bj = (j*j+j-2.0)/(2.0*j*(j+1.0));
+                    bjm1 = 1.0/3.0;
+                    bjm2 = 1.0/3.0;
+                } else if (j == 4) {
+                    bj = (j*j+j-2.0)/(2.0*j*(j+1.0));
+                    bjm1 = ((j-1.0)*(j-1.0)+(j-1.0)-2.0)/(2.0*(j-1.0)*((j-1.0)+1.0));
+                    bjm2 = 1.0/3.0;
+                } else {
+                    bj = (j*j+j-2.0)/(2.0*j*(j+1.0));
+                    bjm1 = ((j-1.0)*(j-1.0)+(j-1.0)-2.0)/(2.0*(j-1.0)*((j-1.0)+1.0));
+                    bjm2 = ((j-2.0)*(j-2.0)+(j-2.0)-2.0)/(2.0*(j-2.0)*((j-2.0)+1.0));
+                }
+                ajm1 = 1.0-bjm1;
+                muj_tilde = (4.0*(2.0*j-1.0))/(j*(s*s+s-2.0)) * (bj/bjm1);
+                gam_tilde = -ajm1*muj_tilde;
+                muj = (2*j-1.0)/(j) * (bj/bjm1);
+                vuj = -(j-1.0)/(j) * (bj/bjm2);
+            }
+            //
+            // The update itself.
             auto cqi = blk.myConfig.cqi;
-            auto dt = blklocal_dt_global;  // Redundant...
 	    foreach (cell; blk.cells) {
                 if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
                     // RKL1
-                    auto U0 = cell.U[0];
-                    auto U1 = cell.U[1];
-                    auto U2 = cell.U[2];
+                    auto U0 = cell.U[0]; auto U1 = cell.U[1]; auto U2 = cell.U[2];
                     auto dUdt0 = cell.dUdt[1];
-                    // coefficients
-                    double muj_tilde = (2.0*j-1)/j * 2.0/(s*s+s); // Kyle, should move these coefficients outside the cells loop.
-                    double muj = (2.0*j-1)/j;
-                    double vuj = (1.0-j)/j;
-                    //
                     foreach (k; 0 .. cqi.n) {
                         U2.vec[k] = muj*U1.vec[k] + vuj*U0.vec[k] + muj_tilde*dt*dUdt0.vec[k];
                     }
-                    // shuffle time-levels
-                    cell.U[0] = U0; // Kyle, are these needed?
-                    cell.U[1] = U1;
-                    cell.U[2] = U2;
                 } else {
                     // RKL2
-                    auto U0 = cell.U[0];
-                    auto U1 = cell.U[1];
-                    auto U2 = cell.U[2];
-                    auto U3 = cell.U[3];
-                    auto dUdt0 = cell.dUdt[1];
-                    auto dUdtO = cell.dUdt[0];
-                    // coefficients  Kyle, would like to move these outside of the cells loop.
-                    double ajm1; double bj; double bjm1, bjm2; double muj; double vuj; double muj_tilde; double gam_tilde;
-                    if (j == 2) {
-                        bj = 1.0/3.0;
-                        bjm1 = 1.0/3.0;
-                        bjm2 = 1.0/3.0;
-                    } else if (j == 3) {
-                        bj = (j*j+j-2.0)/(2.0*j*(j+1.0));
-                        bjm1 = 1.0/3.0;
-                        bjm2 = 1.0/3.0;
-                    } else if (j == 4) {
-                        bj = (j*j+j-2.0)/(2.0*j*(j+1.0));
-                        bjm1 = ((j-1.0)*(j-1.0)+(j-1.0)-2.0)/(2.0*(j-1.0)*((j-1.0)+1.0));
-                        bjm2 = 1.0/3.0;
-                    } else {
-                        bj = (j*j+j-2.0)/(2.0*j*(j+1.0));
-                        bjm1 = ((j-1.0)*(j-1.0)+(j-1.0)-2.0)/(2.0*(j-1.0)*((j-1.0)+1.0));
-                        bjm2 = ((j-2.0)*(j-2.0)+(j-2.0)-2.0)/(2.0*(j-2.0)*((j-2.0)+1.0));
-                    }
-                    ajm1 = 1.0-bjm1;
-                    muj_tilde = (4.0*(2.0*j-1.0))/(j*(s*s+s-2.0)) * (bj/bjm1);
-                    gam_tilde = -ajm1*muj_tilde;
-                    muj = (2*j-1.0)/(j) * (bj/bjm1);
-                    vuj = -(j-1.0)/(j) * (bj/bjm2);
-                    //
+                    auto U0 = cell.U[0]; auto U1 = cell.U[1]; auto U2 = cell.U[2]; auto U3 = cell.U[3];
+                    auto dUdt0 = cell.dUdt[1]; auto dUdtO = cell.dUdt[0]; // Note the subtly-different names.
                     foreach (k; 0 .. cqi.n) {
                         U2.vec[k] = muj*U1.vec[k] + vuj*U0.vec[k] + (1.0-muj-vuj)*U3.vec[k] +
                             muj_tilde*dt*dUdt0.vec[k] + gam_tilde*dt*dUdtO.vec[k];
