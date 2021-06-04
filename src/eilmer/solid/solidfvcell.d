@@ -3,7 +3,7 @@
  *
  * A solid finite-volume cell, to be held by SolidBlock objects.
  *
- * Author: Rowan G. and Peter J.
+ * Author: Rowan G. Kyle D. and Peter J.
  * Version: 2015-22-04
  */
 
@@ -49,7 +49,7 @@ public:
     number dTdy;
     number dTdz;
     bool is_ghost = true;
-    
+
 private:
     LocalConfig myConfig;
 
@@ -78,7 +78,7 @@ public:
         dTdz = other.dTdz;
         is_ghost = other.is_ghost;
     }
-    
+
     void scanValuesFromString(string buffer)
     {
         auto items = split(buffer);
@@ -100,7 +100,6 @@ public:
         sp.k31 = to!double(items.front); items.popFront();
         sp.k32 = to!double(items.front); items.popFront();
         sp.k33 = to!double(items.front); items.popFront();
-        
     }
 
     string writeValuesToString() const
@@ -130,7 +129,6 @@ public:
         // Cell volume (inverted).
         number volInv = 1.0 / volume;
         number integral;
-        
         // Sum up fluxes (of form q.n)
         integral = -IFe.flux * IFe.area - IFn.flux * IFn.area
             + IFw.flux * IFw.area + IFs.flux * IFs.area;
@@ -140,8 +138,7 @@ public:
         dedt[ftl] = volInv * integral + Q;
     }
 
-    
-    void stage1RKL1Update(double dt, int j, int s) 
+    void stage1RKL1Update(double dt, int j, int s)
     {
         number dedt0;
         number e0;
@@ -150,22 +147,19 @@ public:
         e0 = e[0];
         e1 = e[1];
         dedt0 = dedt[0];
-        
         // coefficients
         double muj; double vuj; double muj_tilde;
         muj_tilde = (2.0*j-1)/j * 2.0/(s*s+s);
         muj = 1.0;
         vuj = 0.0;
-        
         e1 = e0 + muj_tilde*dt*dedt0;
-
         // shuffle time-levels
         e[0] = e0;
         e[1] = e1;
         return;
-    } // end rkl1_stage_update_for_flow_on_fixed_grid1()
-    
-    void stage2RKL1Update(double dt, int j, int s) 
+    } // end stage1RKL1Update()
+
+    void stage2RKL1Update(double dt, int j, int s)
     {
         number dedt0;
         number e0;
@@ -175,22 +169,20 @@ public:
         e1 = e[1];
         e2 = e[2];
         dedt0 = dedt[1];
-        
         // coefficients
         double muj; double vuj; double muj_tilde;
         muj_tilde = (2.0*j-1)/j * 2.0/(s*s+s);
         muj = (2.0*j-1)/j;
         vuj = (1.0-j)/j;
-        
         e2 = muj*e1 + vuj*e0 + muj_tilde*dt*dedt0;
         // shuffle time-levels
         e[0] = e0;
         e[1] = e1;
         e[2] = e2;
         return;
-    } // end rkl1_stage_update_for_flow_on_fixed_grid2()
-    
-    void stage1RKL2Update(double dt, int j, int s) 
+    } // end stage2RKL1Update()
+
+    void stage1RKL2Update(double dt, int j, int s)
     {
         number dedt0;
         number e0;
@@ -199,22 +191,19 @@ public:
         e0 = e[0];
         e1 = e[1];
         dedt0 = dedt[0];
-        
         // coefficients
         double muj; double vuj; double muj_tilde;
-        muj_tilde = 4.0/(3.0*(s*s+s-2.0));	
-        
+        muj_tilde = 4.0/(3.0*(s*s+s-2.0));
         e1 = e0 + muj_tilde*dt*dedt0;
-
         // make a copy of the initial conserved quantities
         e[0] = e0;
         e[1] = e1;
         e[2] = e2;
         e[3] = e[0];
         return;
-    } // end rkl2_stage_update_for_flow_on_fixed_grid1()
-    
-    void stage2RKL2Update(double dt, int j, int s) 
+    } // end stage1RKL2Update()
+
+    void stage2RKL2Update(double dt, int j, int s)
     {
         number dedt0;
         number e0;
@@ -228,10 +217,8 @@ public:
         e3 = e[3];
         dedt0 = dedt[1];
         dedtO = dedt[0];
-        
         // coefficients
         double ajm1; double bj; double bjm1, bjm2; double muj; double vuj; double muj_tilde; double gam_tilde;
-
         if (j == 2) {
             bj = 1.0/3.0;
             bjm1 = 1.0/3.0;
@@ -254,41 +241,39 @@ public:
         gam_tilde = -ajm1*muj_tilde;
         muj = (2*j-1.0)/(j) * (bj/bjm1);
         vuj = -(j-1.0)/(j) * (bj/bjm2);
-
+        //
         e2 = muj*e1 + vuj*e0 + (1.0-muj-vuj)*e3 + muj_tilde*dt*dedt0 + gam_tilde*dt*dedtO;
         e[0] = e0;
         e[1] = e1;
         e[2] = e2;
 	return;
-    } // end rkl2_stage_update_for_flow_on_fixed_grid2()
+    } // end stage2RKL2Update()
 
     void eulerUpdate(double dt)
     {
-        double gamma1 = 1.0; // Assume Euler
-        e[1] = e[0] + dt*gamma1*dedt[0];
-   }
+        e[1] = e[0] + dt*dedt[0];
+    }
 
     void stage1Update(double dt)
     {
         double gamma1 = 1.0; // Assume Euler
-//      if (!force_euler) {
-            final switch (myConfig.gasdynamic_update_scheme) {
-            case GasdynamicUpdate.euler:
-            case GasdynamicUpdate.backward_euler:
-            case GasdynamicUpdate.implicit_rk1:
-            case GasdynamicUpdate.moving_grid_1_stage:
-            case GasdynamicUpdate.moving_grid_2_stage:
-            case GasdynamicUpdate.pc: gamma1 = 1.0; break;
-            case GasdynamicUpdate.midpoint: gamma1 = 0.5; break;
-            case GasdynamicUpdate.classic_rk3: gamma1 = 0.5; break;
-            case GasdynamicUpdate.tvd_rk3: gamma1 = 1.0; break;
-            case GasdynamicUpdate.denman_rk3: gamma1 = 8.0/15.0; break;
-            case GasdynamicUpdate.rkl1:
-            case GasdynamicUpdate.rkl2: assert(false, "invalid option");
-            }
-//    }
+        final switch (myConfig.gasdynamic_update_scheme) {
+        case GasdynamicUpdate.euler:
+        case GasdynamicUpdate.backward_euler:
+        case GasdynamicUpdate.implicit_rk1:
+        case GasdynamicUpdate.moving_grid_1_stage:
+        case GasdynamicUpdate.moving_grid_2_stage:
+        case GasdynamicUpdate.pc: gamma1 = 1.0; break;
+        case GasdynamicUpdate.midpoint: gamma1 = 0.5; break;
+        case GasdynamicUpdate.classic_rk3: gamma1 = 0.5; break;
+        case GasdynamicUpdate.tvd_rk3: gamma1 = 1.0; break;
+        case GasdynamicUpdate.denman_rk3: gamma1 = 8.0/15.0; break;
+        case GasdynamicUpdate.rkl1:
+        case GasdynamicUpdate.rkl2: assert(false, "invalid option");
+        }
         e[1] = e[0] + dt*gamma1*dedt[0];
-   }
+    }
+
     void stage2Update(double dt)
     {
         // Assuming predictor-corrector
@@ -310,7 +295,8 @@ public:
         }
         e[2] = e[0] + dt*(gamma1*dedt[0] + gamma2*dedt[1]);
     }
-        void stage3Update(double dt)
+
+    void stage3Update(double dt)
     {
         // Assuming TVD_RK3 scheme as done in flow update
         double gamma1 = 1.0/6.0; // presume TVD_RK3 scheme.
@@ -336,22 +322,21 @@ public:
     }
 
     version(complex_numbers) {
-    @nogc
-    void clear_imaginary_components()
-    // When performing the complex-step Frechet derivative in the Newton-Krylov accelerator,
-    // the flowstate values accumulate imaginary components, so we have to start with a clean slate, so to speak.
-    {
-        e[0].im = 0.0;
-        e[1].im = 0.0;
-        dedt[0].im = 0.0;
-        dedt[1].im = 0.0;
-        T.im = 0.0;
-        foreach (face; iface) {
-            face.T.im = 0.0;
-            face.e.im = 0.0;
-            face.flux.im = 0.0;
-        }
-    } // end clear_imaginary_components()
+        @nogc void clear_imaginary_components()
+        // When performing the complex-step Frechet derivative in the Newton-Krylov accelerator,
+        // the flowstate values accumulate imaginary components, so we have to start with a clean slate, so to speak.
+        {
+            e[0].im = 0.0;
+            e[1].im = 0.0;
+            dedt[0].im = 0.0;
+            dedt[1].im = 0.0;
+            T.im = 0.0;
+            foreach (face; iface) {
+                face.T.im = 0.0;
+                face.e.im = 0.0;
+                face.flux.im = 0.0;
+            }
+        } // end clear_imaginary_components()
     } // end version(complex)
 }
 
