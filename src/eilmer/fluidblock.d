@@ -1477,7 +1477,7 @@ public:
     }
 
 
-    void evalRU(int gtl, int ftl, FVCell c, bool do_reconstruction)
+    void evalRU(double t, int gtl, int ftl, FVCell c, bool do_reconstruction)
     {
         // This method evaluates the R(U) for a single cell.
         // It is used when constructing the numerical Jacobian.
@@ -1495,11 +1495,11 @@ public:
         //
         // Viscous flux update
         foreach(f; c.iface) {
-            if (f.is_on_boundary) { applyPostConvFluxAction(0.0, gtl, ftl, f); }
+            if (f.is_on_boundary) { applyPostConvFluxAction(t, gtl, ftl, f); }
         }
         if (myConfig.viscous) {
             foreach(f; c.iface) {
-                if (f.is_on_boundary) { applyPreSpatialDerivActionAtBndryFaces(0.0, gtl, ftl, f); }
+                if (f.is_on_boundary) { applyPreSpatialDerivActionAtBndryFaces(t, gtl, ftl, f); }
             }
             // Currently, only for least-squares at faces.
             // TODO: Kyle, generalise for all spatial gradient methods.
@@ -1515,7 +1515,7 @@ public:
             estimate_turbulence_viscosity(cell_list);
             viscous_flux(c.iface);
             foreach(f; c.iface) {
-                if (f.is_on_boundary) { applyPostDiffFluxAction(0.0, gtl, ftl, f); }
+                if (f.is_on_boundary) { applyPostDiffFluxAction(t, gtl, ftl, f); }
             }
         }
         c.add_inviscid_source_vector(gtl, omegaz);

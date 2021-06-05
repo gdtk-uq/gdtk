@@ -180,7 +180,8 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
                     auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
                     i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
                 }
-                getUDFSourceTermsForCell(blk.myL, cell, local_gtl, local_sim_time, blk.myConfig, blk.id, i_cell, j_cell, k_cell);
+                getUDFSourceTermsForCell(blk.myL, cell, local_gtl, local_sim_time,
+                                         blk.myConfig, blk.id, i_cell, j_cell, k_cell);
             }
         }
     }
@@ -761,7 +762,10 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     shared double t0 = SimState.time;
     shared bool with_local_time_stepping = GlobalConfig.with_local_time_stepping;
     shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
+    //
     // Set the time-step coefficients for the stages of the update scheme.
+    // These coefficients are used to increment the time variable for each stage of update.
+    // Later, each stage will set its own coefficients for the dependent variables.
     shared double c2 = 1.0; // default for predictor-corrector update
     shared double c3 = 1.0; // default for predictor-corrector update
     final switch ( GlobalConfig.gasdynamic_update_scheme ) {
@@ -795,7 +799,8 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
                     i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
                 }
-                getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time, blk.myConfig, blk.id, i_cell, j_cell, k_cell);
+                getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time,
+                                         blk.myConfig, blk.id, i_cell, j_cell, k_cell);
             }
         }
     }
@@ -832,7 +837,8 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             // We've put this detector step here because it needs the ghost-cell data
             // to be current, as it should be just after a call to apply_convective_bc().
             if ((GlobalConfig.do_shock_detect) &&
-                ((!GlobalConfig.frozen_shock_detector) || (GlobalConfig.shock_detector_freeze_step > SimState.step))) {
+                ((!GlobalConfig.frozen_shock_detector) ||
+                 (GlobalConfig.shock_detector_freeze_step > SimState.step))) {
                 detect_shocks(gtl, ftl);
             }
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -880,7 +886,8 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 exchange_ghost_cell_boundary_viscous_gradient_data(SimState.time, gtl, ftl);
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) {
-                        // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
+                        // we need to average cell-centered spatial (/viscous) gradients
+                        // to get approximations of the gradients
                         // at the cell interfaces before the viscous flux calculation.
                         if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
                             foreach(f; blk.faces) {
@@ -1180,7 +1187,8 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     case GasdynamicUpdate.euler:
                     case GasdynamicUpdate.backward_euler:
                     case GasdynamicUpdate.implicit_rk1:
-                    case GasdynamicUpdate.moving_grid_1_stage: assert(false, "invalid for 1-stage update.");
+                    case GasdynamicUpdate.moving_grid_1_stage:
+                        assert(false, "invalid option for multi-stage update.");
                     case GasdynamicUpdate.moving_grid_2_stage:
                     case GasdynamicUpdate.pc: gamma_1 = 0.5, gamma_2 = 0.5; break;
                     case GasdynamicUpdate.midpoint: gamma_1 = 0.0; gamma_2 = 1.0; break;
@@ -1429,11 +1437,17 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     case GasdynamicUpdate.moving_grid_2_stage:
                     case GasdynamicUpdate.pc:
                     case GasdynamicUpdate.midpoint:
-                        assert(false, "invalid for 2-stage update.");
-                    case GasdynamicUpdate.classic_rk3: gamma_1 = 1.0/6.0; gamma_2 = 4.0/6.0; gamma_3 = 1.0/6.0; break;
-                    case GasdynamicUpdate.tvd_rk3: gamma_1 = 1.0/6.0; gamma_2 = 1.0/6.0; gamma_3 = 4.0/6.0; break;
+                        assert(false, "invalid option for 3-stage update.");
+                    case GasdynamicUpdate.classic_rk3:
+                        gamma_1 = 1.0/6.0; gamma_2 = 4.0/6.0; gamma_3 = 1.0/6.0;
+                        break;
+                    case GasdynamicUpdate.tvd_rk3:
+                        gamma_1 = 1.0/6.0; gamma_2 = 1.0/6.0; gamma_3 = 4.0/6.0;
+                        break;
+                    case GasdynamicUpdate.denman_rk3:
                         // FIX-ME: Check that we have Andrew Denman's scheme ported correctly.
-                    case GasdynamicUpdate.denman_rk3: gamma_1 = 0.0; gamma_2 = -5.0/12.0; gamma_3 = 3.0/4.0; break;
+                        gamma_1 = 0.0; gamma_2 = -5.0/12.0; gamma_3 = 3.0/4.0;
+                        break;
                     case GasdynamicUpdate.rkl1:
                     case GasdynamicUpdate.rkl2: assert(false, "invalid option");
                     }
@@ -1602,7 +1616,8 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
                     i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
                 }
-                getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time, blk.myConfig, blk.id, i_cell, j_cell, k_cell);
+                getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time,
+                                         blk.myConfig, blk.id, i_cell, j_cell, k_cell);
             }
         }
     }
@@ -2118,7 +2133,8 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
                     i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
                 }
-                getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time, blk.myConfig, blk.id, i_cell, j_cell, k_cell);
+                getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time,
+                                         blk.myConfig, blk.id, i_cell, j_cell, k_cell);
             }
         }
     }
@@ -2180,6 +2196,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                 bool blklocal_allow_high_order_interpolation = allow_high_order_interpolation;
                 bool blklocal_with_local_time_stepping = with_local_time_stepping;
                 double blklocal_dt_global = SimState.dt_global;
+                double blklocal_t0 = SimState.time;
                 foreach (cell; blk.cells) {
                     double dt = (blklocal_with_local_time_stepping) ? cell.dt_local : blklocal_dt_global;
                     auto dUdt0 = cell.dUdt[0];
@@ -2191,7 +2208,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     blk.U0save.copy_values_from(U0);
                     cell.decode_conserved(blklocal_gtl, blklocal_ftl, blk.omegaz);
                     dUdt0.clear();
-                    blk.evalRU(blklocal_gtl, blklocal_ftl, cell, false);
+                    blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, false);
                     blk.RU0.copy_values_from(dUdt0);
                     foreach (j; 0 .. cqi.n) {
                         U0.copy_values_from(blk.U0save);
@@ -2206,7 +2223,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                             cell.decode_conserved(blklocal_gtl, blklocal_ftl, blk.omegaz);
                             // Get derivative vector.
                             dUdt0.clear();
-                            blk.evalRU(blklocal_gtl, blklocal_ftl, cell, false);
+                            blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, false);
                             foreach (k; 0 .. cqi.n) {
                                 blk.dRUdU[k] = (dUdt0.vec[k].im - blk.RU0.vec[k].im)/h;
                             }
@@ -2218,7 +2235,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                             cell.decode_conserved(blklocal_gtl, blklocal_ftl, blk.omegaz);
                             // Get derivative vector.
                             dUdt0.clear();
-                            blk.evalRU(blklocal_gtl, blklocal_ftl, cell, false);
+                            blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, false);
                             foreach (k; 0 .. cqi.n) {
                                 blk.dRUdU[k] = (dUdt0.vec[k] - blk.RU0.vec[k])/h;
                             }
@@ -2232,7 +2249,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     U0.copy_values_from(blk.U0save);
                     cell.decode_conserved(blklocal_gtl, blklocal_ftl, blk.omegaz);
                     dUdt0.clear();
-                    blk.evalRU(blklocal_gtl, blklocal_ftl, cell, blklocal_allow_high_order_interpolation);
+                    blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, blklocal_allow_high_order_interpolation);
                     foreach (k; 0 .. cqi.n) { blk.crhs._data[k][cqi.n] = dUdt0.vec[k].re; }
                     // Solve for dU and update U.
                     gaussJordanElimination!double(blk.crhs);
@@ -2283,7 +2300,6 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                         if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
                     }
                 }
-
                 foreach (sblk; parallel(localSolidBlocks, 1)) {
                     if (!sblk.active) continue;
                     sblk.averageTemperatures();
