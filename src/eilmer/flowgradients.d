@@ -78,12 +78,34 @@ private:
 public:
     this(ref LocalConfig myConfig)
     {
+        // Note that the gradient values are initialized to zero.
+        // This is because some of the updates (e.g. the point-implicit update)
+        // will pick up some gradient values before thay have been computed and
+        // add them to a tally for taking an average.
+        // On the first iteration, having initial Nan values would poison
+        // that average but zero values are tolerable.
+        // On later iterations, the gradient value from a previous iteration is fine.
         this.myConfig = myConfig;
+        foreach (i; 0 .. 3) {
+            foreach (j; 0 .. 3) { vel[i][j] = to!number(0.0); }
+            T[i] = to!number(0.0);
+        }
         version(multi_species_gas) {
             massf.length = myConfig.n_species;
+            foreach (i; 0 .. myConfig.n_species) {
+                foreach (j; 0 .. 3) { massf[i][j] = 0.0; }
+            }
         }
         version(multi_T_gas) {
             T_modes.length = myConfig.n_modes;
+            foreach (i; 0 .. myConfig.n_modes) {
+                foreach (j; 0 .. 3) { T_modes[i][j] = to!number(0.0); }
+            }
+        }
+        version(turbulence) {
+            foreach (i; 0 .. 2) { // Note that this dimension is fixed above.
+                foreach (j; 0 .. 3) { turb[i][j] = to!number(0.0); }
+            }
         }
     }
 

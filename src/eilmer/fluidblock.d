@@ -1492,34 +1492,78 @@ public:
         FVCell[1] cell_list = [c];
         convective_flux_phase0(do_reconstruction, gtl, cell_list, c.iface);
         convective_flux_phase1(do_reconstruction, gtl, cell_list, c.iface);
-        //
-        // Viscous flux update
         foreach(f; c.iface) {
             if (f.is_on_boundary) { applyPostConvFluxAction(t, gtl, ftl, f); }
         }
+        c.add_inviscid_source_vector(gtl, omegaz);
+        //
         if (myConfig.viscous) {
+            // Prepare spatial derivatives for viscous flux.
+            // Note that with the cell-by-cell calculation process
+            // that is associated with the point-implicit update,
+            // the "natural" place for evaluating the derivatives will be at the faces.
+            // If another location is selected, the values will still be needed at the faces
+            // in order to compute viscous fluxes.
+            // In such a case, nearby gradient values will be averaged to get an estimate
+            // at the face and some of the values being fed into the average will be old.
+            // For the initial step, they might even be zero.
             foreach(f; c.iface) {
                 if (f.is_on_boundary) { applyPreSpatialDerivActionAtBndryFaces(t, gtl, ftl, f); }
             }
-            // Currently, only for least-squares at faces.
-            // TODO: Kyle, generalise for all spatial gradient methods.
-            c.grad.gradients_leastsq(c.cloud_fs, c.cloud_pos, c.ws_grad); // flow_property_spatial_derivatives(0);
-            // We need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
-            // at the cell interfaces before the viscous flux calculation.
-            if (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
-                foreach(f; c.iface) {
-                    f.average_cell_deriv_values(gtl);
+            final switch (myConfig.spatial_deriv_locn) {
+            case SpatialDerivLocn.vertices:
+                foreach (vtx; c.vtx) {
+                    if (myConfig.dimensions == 2) {
+                        if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+                            vtx.grad.gradients_leastsq(vtx.cloud_fs, vtx.cloud_pos, vtx.ws_grad);
+                        } else {
+                            vtx.grad.gradients_xy_div(vtx.cloud_fs, vtx.cloud_pos);
+                        }
+                    } else {
+                        // Have only least-squares in 3D.
+                        vtx.grad.gradients_leastsq(vtx.cloud_fs, vtx.cloud_pos, vtx.ws_grad);
+                    }
+                } // end foreach vtx
+                // We've finished computing gradients at vertices, now copy them around if needed.
+                // Interfaces need them for reconstruction/viscous fluxes.
+                foreach (f; c.iface) { f.average_vertex_deriv_values(); }
+                // Turbulence models will need cell centered gradients (also for axisymmetric!)
+                if (myConfig.axisymmetric || (myConfig.turb_model.isTurbulent || myConfig.save_viscous_gradients)){
+                    c.average_vertex_deriv_values();
                 }
-                throw new Error("Do not think that this will work for point-implicit calculation.");
-            }
+                break;
+            case SpatialDerivLocn.faces:
+                foreach(f; c.iface) {
+                    if (myConfig.dimensions == 2) {
+                        if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+                            f.grad.gradients_leastsq(f.cloud_fs, f.cloud_pos, f.ws_grad);
+                        } else {
+                            f.grad.gradients_xy_div(f.cloud_fs, f.cloud_pos);
+                        }
+                    } else {
+                        // 3D has only least-squares available.
+                        f.grad.gradients_leastsq(f.cloud_fs, f.cloud_pos, f.ws_grad);
+                    } // end if (myConfig.dimensions)
+                } // end foreach f
+                // Finished computing gradients at faces, now copy them around if needed.
+                // Turbulence models and axisymmetric source terms need cell centered gradients
+                if (myConfig.axisymmetric || (myConfig.turb_model.isTurbulent || myConfig.save_viscous_gradients)){
+                    c.average_interface_deriv_values();
+                }
+                break;
+            case SpatialDerivLocn.cells:
+                c.grad.gradients_leastsq(c.cloud_fs, c.cloud_pos, c.ws_grad);
+                // We need to average cell-centered spatial (/viscous) gradients
+                // to get approximations of the gradients at the faces for the viscous flux.
+                foreach(f; c.iface) { f.average_cell_deriv_values(gtl); }
+            } // end switch spatial_deriv_locn
             estimate_turbulence_viscosity(cell_list);
             viscous_flux(c.iface);
             foreach(f; c.iface) {
                 if (f.is_on_boundary) { applyPostDiffFluxAction(t, gtl, ftl, f); }
             }
-        }
-        c.add_inviscid_source_vector(gtl, omegaz);
-        if (myConfig.viscous) { c.add_viscous_source_vector(); }
+            c.add_viscous_source_vector();
+        } // end if viscous
         if (myConfig.reacting) { c.add_thermochemical_source_vector(); }
         if (myConfig.udf_source_terms) { c.add_udf_source_vector(); }
         c.time_derivatives(gtl, ftl);
