@@ -3,6 +3,7 @@
 // and to terminate that job if progress is not being made.
 //
 // PJ 2019-09-19, first experiments.
+//    2021-06-07, quit after the first timeout and no text.
 //
 // From within your PBS batch script, start the monitor program
 // as a background process just before the main run command.
@@ -55,6 +56,11 @@ int main(string[] args)
     Thread.sleep(dur!("seconds")(startup));
     string content = chomp(readTextWithRetries(progressFile));
     writefln("monitor %d content \"%s\"", myCount, content);
+    if (content.length == 0) {
+        writeln("Quitting the monitor program; progress text is empty at the first timeout.");
+        stdout.flush();
+        return 0;
+    }
     bool simulationDone = canFind(content, "done");
     int oldStep = 0;
     int newStep = 0;
