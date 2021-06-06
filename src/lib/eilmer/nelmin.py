@@ -38,6 +38,7 @@ Version:
    2004-01-07 Python2 flavour for the cfcfd project.
    2020-06-22 Port to Python3 for the DGD project.
    2020-06-25 Concurrent evaluation of the candidate points.
+   2021-06-07 Dan Smith added option to read the initial simplex.
 
 Example transcript::
 
@@ -107,6 +108,9 @@ def minimize(f, x, dx=None, options={}):
         Kreflect: (default 1.0)
         Kextend: (default 2.0)
         Kcontract: (default 0.5) coefficients for locating the new vertex
+        initial_simplex_fname: Filename directing to json file with desired initial simplex.
+            Useful for restarting an optimisation calculation which was cut short for some reason.
+        print_messages: (default False) If True, print messages as we go.
 
     Returns a namedtuple consisting of:
         x, a list of coordinates for the best x location, corresponding to min(f(x)),
@@ -122,7 +126,9 @@ def minimize(f, x, dx=None, options={}):
     if dx is None: dx = numpy.array([0.1]*N)
     opts = {'tol':1.0e-6, 'maxfe':300, 'n_check':20, 'delta':0.001,
             'Kreflect':1.0, 'Kextend':2.0, 'Kcontract':0.5,
-            'P':1, 'n_workers': 1}
+            'P':1, 'n_workers': 1,
+            'initial_simplex_fname':None,
+            'print_messages':False}
     for k in options.keys():
         if k in opts.keys():
             opts[k] = options[k]
@@ -136,9 +142,19 @@ def minimize(f, x, dx=None, options={}):
     # Get to work.
     converged = False
     smplx = NelderMeadMinimizer(f, N, dx, opts['P'], opts['Kreflect'], opts['Kextend'], opts['Kcontract'])
-    smplx.build_initial_simplex(x)
+    if opts['initial_simplex_fname'] is None:
+        if opts['print_messages']: print('Build the initial simplex.')
+        smplx.build_initial_simplex(x)
+        # Save the initial version of the simplex in case something happens.
+        smplx.dump_simplex('initial_simplex.json')
+    else:
+        if opts['print_messages']: print('Load the initial simplex from file.')
+        smplx.load_simplex(opts['initial_simplex_fname'])
     while (not converged) and (smplx.nfe < opts['maxfe']):
+        if opts['print_messages']: print('Take some steps with the simplex.')
         smplx.take_steps(opts['n_check'])
+        # Save the latest version of the simplex in case something happens.
+        smplx.dump_simplex('latest_simplex.json')
         x_best = list(smplx.vertices[0].x.copy())
         f_best = smplx.vertices[0].f
         # Check the scatter of vertex values to see if we are
@@ -355,7 +371,7 @@ class NelderMeadMinimizer:
         """
         f_min = self.vertices[0].f
         assert i > (self.N-self.P), ("i=%d, seems not to be in the high points" % i)
-        x_high = self.vertices[i].x.copy()
+        x_high = numpy.array(self.vertices[i].x.copy())
         f_high = self.vertices[i].f
         # Centroid of simplex excluding point(s) that we are replacing.
         x_mid = self.centroid(self.N-self.P)
@@ -479,7 +495,7 @@ if __name__ == '__main__':
     print("  f(1.801, -1.842, -0.463, -1.205)=0.0009")
     start_time = time.time()
     result = minimize(test_fun_3, [1.0, 1.0, -0.5, -2.5], [0.1, 0.1, 0.1, 0.1],
-                      options={'tol':1.0e-9, 'maxfe':800})
+                      options={'tol':1.0e-9, 'maxfe':800, 'print_messages':True})
     print("  calculation time (with 0.1 sec sleeps)=", time.time()-start_time)
     pretty_print(result)
     #
