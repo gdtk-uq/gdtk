@@ -1,0 +1,88 @@
+# PITOT3_default_config.yaml: default config for PITOT3
+#
+# This is where the default program config is stored.
+# Other files may have their own config which would overwrite things in this file.
+
+# output filename
+output_filename : 'PITOT3_result'
+
+facilities_folder : '$PITOT3_DATA/facilities'
+preset_gas_models_folder : '$PITOT3_DATA/preset_gas_models'
+
+# generic set up stuff, 
+# most of this should be in the facility stuff too, but good to have defaults to work with
+secondary_driver : False
+nozzle : True
+
+# facility state names
+secondary_driver_fill_state_name : 'sd1' # this is the secondary driver gas
+secondary_driver_shocked_state_name : 'sd2' # shocked secondary driver gas
+secondary_driver_unsteadily_expanded_state_name : 'sd3' # unsteadily expanded driver gas when secondary driver is used
+shock_tube_fill_state_name : 's1' # this is the test gas
+shock_tube_shocked_state_name : 's2' # shocked test gas
+shock_tube_unsteadily_expanded_state_name : 's3' # unsteadily expanded driver gas or secondary driver gas
+acceleration_tube_fill_state_name : 's5' # this is the accelerator gas
+acceleration_tube_shocked_state_name : 's6' # shocked accelerator gas
+acceleration_tube_unsteadily_expanded_state_name : 's7' # unsteadily expanded test gas
+nozzle_exit_state_name : 's8' # nozzle exit / test section state (if nozzle is used)
+test_section_post_shock_state_name : 's10'
+
+# generic gas properties
+T_0 : 298.15 #K
+p_0 : 101325.0 #Pa
+
+# all of the diaphragms are ideal in the default case (i.e. they do nothing)
+# diaphragm default values
+# I didn't add Mr for the primary diaphragm here as that doesn't seem physical...
+primary_diaphragm_name : 'primary_diaphragm'
+primary_diaphragm_diaphragm_type : 'ideal'
+secondary_diaphragm_name : 'secondary_diaphragm'
+secondary_diaphragm_diaphragm_type : 'ideal'
+secondary_diaphragm_Mr : 'None'
+secondary_diaphragm_velocity_loss_factor : None
+tertiary_diaphragm_name : 'tertiary_diaphragm'
+tertiary_diaphragm_diaphragm_type : 'ideal'
+tertiary_diaphragm_Mr : 'None'
+tertiary_diaphragm_velocity_loss_factor : None
+
+# secondary driver tube default values
+secondary_driver_tube_name : 'secondary_driver'
+secondary_driver_expand_to : 'flow_behind_shock'
+secondary_driver_expansion_factor : 1.0
+secondary_driver_unsteady_expansion_steps : 100
+vsd_guess_1 : 4000.0 #m/s
+vsd_guess_2 : 5000.0 #m/s
+vsd_limits : [400.0, 20000.0] #m/s
+vsd_tolerance : 2.0e-5
+Tsd1 : 'T_0' # the code will set this to the T_0 value above...
+secondary_driver_gas_gas_model : 'CEAGas'
+secondary_driver_gas_name : 'he-with-ions'
+
+# shock tube default values
+shock_tube_tube_name : 'shock_tube'
+shock_tube_expand_to : 'flow_behind_shock'
+shock_tube_expansion_factor : 1.0
+shock_tube_unsteady_expansion_steps : 100
+vs1_guess_1 : 1000.0 #m/s
+vs1_guess_2 : 2000.0 #m/s
+vs1_limits : [400.0, 20000.0] # m/s
+vs1_tolerance : 1.0e-5
+T1 : 'T_0' # the code will set this to the T_0 value above...
+
+# acceleration tube default values
+acceleration_tube_tube_name : 'acceleration_tube'
+acceleration_tube_expand_to : 'flow_behind_shock'
+acceleration_tube_expansion_factor : 1.0
+acceleration_tube_unsteady_expansion_steps : 200
+vs2_guess_1 : 'vs1 + 2000.0' #m/s, the code is able to interpret this
+vs2_guess_2 : 'vs1 + 3000.0' #m/s, the code is able to interpret this
+vs2_limits : ['vs1', 25000.0] #m/s, the code is able to interpret this
+vs2_tolerance : 1.0e-5
+T5 : 'T_0' # the code will set this to the T_0 value above...
+accelerator_gas_gas_model : 'CEAGas'
+accelerator_gas_name : 'air13species'
+
+# nozzle default values
+nozzle_expansion_tolerance : 1.0e-4
+
+

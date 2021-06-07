@@ -1,0 +1,22 @@
+# X2's 100%He 2 mm driver condition
+# Values from 
+# Gildfind et al. (2015)
+# Free-piston driver performance characterisation using experimental shock speeds through helium
+# Table 3
+
+driver_condition_name : 'x2-lwp-2.0mm-100He-0'
+driver_condition_type : 'empirical'
+
+driver_gas_model : 'CEAGas'
+driver_fill_composition : {'He':1.0} 
+driver_speciesList : ['He']
+driver_inputUnits : 'moles' 
+driver_withIons : False
+
+p4 : 27.4e6 # Pa
+T4 : 2903.0 # K
+
+# M_throat is from the text of the paper...
+M_throat : 2.17
+
+

@@ -1,0 +1,27 @@
+# drummond_tunnel_Mach_7_nozzle.yaml: 
+# Drummond Tunnel with its Mach 7 nozzle RST config for PITOT3.
+#
+# Chris James (c.james4@uq.edu.au) - 03/01/21
+
+# Drummond geometry from David Gildfind's AERO4470 2020 Assignment 2
+
+facility_name : 'Drummond Tunnel'
+facility_type : 'reflected_shock_tunnel'
+secondary_driver : False
+nozzle : True
+
+# I have made the shock tube length the length to the flange where the subsonic contour
+# to the secondary diaphragm starts. Wasn't 100% sure what to do, but figured that the
+# extra 39 mm over 3 m was not a big deal either way...
+shock_tube_length : 3.013 # m
+shock_tube_diameter : 62.2e-3 # m
+shock_tube_sensors : ['st1','st2'] # these have no name so I have called them 'st1' and 'st2'
+
+# in fact this is an effective ara ratio given for the nozzle
+# this geometric area ratio is in fact 83.9**2.0/7.0**2.0 = 143.65
+# the assignment said to use 90 so I have put that here...
+nozzle_geometric_area_ratio : 90.0 
+
+sensor_locations : {'st1':2.728, 'st2':2.945}
+
+driver_conditions_folder : 'drummond_driver_conditions' #inside the facilities folder...

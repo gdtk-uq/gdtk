@@ -1,0 +1,19 @@
+# drummond-he-2.5-MPa.yaml:
+# Drummond 2.5 MPa cold driver condition.
+# Values from David Gildfind's AERO4470 2020 Assignment 2
+# this is what is called the 'low pressure driver condition' in that document
+
+driver_condition_name : 'drummond-he-2.5-MPa'
+driver_condition_type : 'cold-driven-ideal'
+
+driver_gas_model : 'CEAGas'
+driver_fill_composition : {'He':1.0} 
+driver_speciesList : ['He']
+driver_inputUnits : 'moles' 
+driver_withIons : False
+
+p4 : 2.5e6 # Pa
+
+M_throat : 0.0 # no defined area change at the shock tube
+
+
