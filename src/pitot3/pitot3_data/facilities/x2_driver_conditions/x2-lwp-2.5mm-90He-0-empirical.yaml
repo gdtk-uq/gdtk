@@ -1,0 +1,21 @@
+# X2's 90%He 2.5 mm driver condition with an empirical T4 value.
+# Values from Figure 6.8 in Gildfind (2012) 
+# Development of High Total Pressure Scramjet Flow Conditions using the X2 Expansion Tube
+# M_throat was calculated using the formula from Gildfind et al. (2015) 
+# Free-piston driver optimisation for simulation of high Mach number scramjet flow conditions 
+
+driver_condition_name : 'x2-lwp-2.5mm-90He-0-empirical'
+driver_condition_type : 'empirical'
+
+driver_gas_model : 'CEAGas'
+driver_fill_composition : {'He':0.9, 'Ar':0.1} 
+driver_speciesList : ['He','Ar']
+driver_inputUnits : 'moles' 
+driver_withIons : False
+
+p4 : 35.7e6 # Pa
+T4 : 3077.0 # K
+
+M_throat : 1.59
+
+

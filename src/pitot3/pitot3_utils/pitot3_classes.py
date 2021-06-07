@@ -11,10 +11,6 @@ Chris James (c.james4@uq.edu.au) 01/01/21
 import sys, os, math
 import yaml
 
-#sys.path.append(os.path.expandvars("$HOME/dgdinst/lib/"))
-#sys.path.append(os.path.expandvars("$HOME/dgd/src/gas/sample-data/"))
-#sys.path.append(os.path.expandvars("$HOME/e3bin"))
-
 from eilmer.gas import GasModel, GasState, GasFlow
 from eilmer.ideal_gas_flow import p0_p
 from eilmer.zero_solvers import secant
@@ -285,7 +281,7 @@ class Driver(object):
             self.p4 = float(cfg['p4'])
             self.T4 = T_0
 
-        elif self.driver_condition_type == 'isentropic-compression-p4':
+        elif self.driver_condition_type in ['isentropic-compression-p4', 'isentropic-compression-compression-ratio']:
             # do isentropic compression from the fill state to p4
             self.driver_p = float(cfg['driver_p'])
             if 'driver_T' in cfg:
@@ -294,8 +290,6 @@ class Driver(object):
                 print("Setting driver temperature to the default value of {0:.2f} K".format(T))
                 self.driver_T = T_0
 
-            self.p4 = float(cfg['p4'])
-
             # we call this state 4i
             state4i = GasState(self.gmodel)
             state4i.p = self.driver_p
@@ -303,6 +297,8 @@ class Driver(object):
 
             state4i.update_thermo_from_pT()
             state4i.update_sound_speed()
+
+            gamma = state4i.gamma
 
             # we assume that the state 4 driver is stationary
             v4i = 0.0
@@ -318,11 +314,23 @@ class Driver(object):
             # now make our facility driver object...
             self.state4i = Facility_State('s4i', state4i, v4i, reference_gas_state=reference_gas_state)
 
-            print ("Performing isentropic compression from the driver fill condition to {0:.2f} MPa.".format(self.p4/1.0e6))
+            if self.driver_condition_type == 'isentropic-compression-p4':
+                self.p4 = float(cfg['p4'])
 
-            gam = state4i.gamma
+                print ("Performing isentropic compression from the driver fill condition to {0:.2f} MPa.".format(self.p4/1.0e6))
 
-            self.T4 = state4i.T * (self.p4 / state4i.p) ** (1.0 - (1.0 / gam))  # K
+                self.T4 = state4i.T * (self.p4 / state4i.p) ** (1.0 - (1.0 / gamma))  # K
+
+            elif self.driver_condition_type == 'isentropic-compression-compression-ratio':
+
+                self.compression_ratio = cfg['compression_ratio']
+
+                print ("Performing isentropic compression from driver fill condition over compression ratio of {0}.".format(cfg['compression_ratio']))
+                pressure_ratio =  self.compression_ratio**gamma #pressure ratio is compression ratio to the power of gamma
+
+                self.p4 = state4i.p*pressure_ratio
+
+            self.T4 = state4i.T * (self.p4 / state4i.p) ** (1.0 - (1.0 / gamma))  # K
 
         state4 = GasState(self.gmodel)
         state4.p = self.p4
@@ -330,6 +338,8 @@ class Driver(object):
 
         state4.update_thermo_from_pT()
         state4.update_sound_speed()
+
+        print("s = {0}".format(state4.ceaSavedData))
 
         # we assume that the state 4 driver is stationary
         v4 = 0.0

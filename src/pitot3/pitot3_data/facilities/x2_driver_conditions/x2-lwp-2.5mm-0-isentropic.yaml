@@ -1,8 +1,6 @@
-# X2's 80%He 2.5 mm driver condition isentropic compression
-# Values from 
-# Gildfind et al. (2011)
-#Free-piston driver optimisation for simulation of high Mach number scramjet flow conditions
-# Table 3
+# X2's 80%He 2.5 mm driver condition with isentropic compression
+# Values from Table 3 of Gildfind et al. (2011)
+# Free-piston driver optimisation for simulation of high Mach number scramjet flow conditions
 
 driver_condition_name : 'x2-lwp-2.5mm-0-isentropic'
 driver_condition_type : 'isentropic-compression-p4'

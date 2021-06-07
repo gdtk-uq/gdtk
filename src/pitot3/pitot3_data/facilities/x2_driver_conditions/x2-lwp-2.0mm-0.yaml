@@ -1,8 +1,7 @@
 # X2's 80%He 2 mm driver condition
-# Values from 
+# Values from Table 2 of 
 # Gildfind et al. (2015)
 # Free-piston driver performance characterisation using experimental shock speeds through helium
-# Table 2
 
 driver_condition_name : 'x2-lwp-2.0mm-0'
 driver_condition_type : 'empirical'

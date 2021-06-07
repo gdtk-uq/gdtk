@@ -1,15 +1,15 @@
-# X2's 100%He 2.5 mm driver condition with isentropic compression
+# X2's 90%He 2.5 mm driver condition with isentropic compression
 # Values from Table 3 of Gildfind et al. (2011)
 # Free-piston driver optimisation for simulation of high Mach number scramjet flow conditions
-# M_throat for the 65 mm orifice plate is from the text of Gildfind et al. (2015) 
+# M_throat was calculated using the formula from Gildfind et al. (2015) 
 # Free-piston driver performance characterisation using experimental shock speeds through helium
 
-driver_condition_name : 'x2-lwp-2.5mm-100He-0-isentropic'
+driver_condition_name : 'x2-lwp-2.5mm-90He-0-isentropic'
 driver_condition_type : 'isentropic-compression-p4'
 
 driver_gas_model : 'CEAGas'
-driver_fill_composition : {'He':1.0} 
-driver_speciesList : ['He']
+driver_fill_composition : {'He':0.9,'Ar':0.1} 
+driver_speciesList : ['He','Ar']
 driver_inputUnits : 'moles' 
 driver_withIons : False
 
@@ -18,6 +18,6 @@ driver_T : 298.15 # driver fill temperature, K
 
 p4 : 35.7e6 # Pa
 
-M_throat : 2.17
+M_throat : 1.59
 
 
