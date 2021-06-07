@@ -285,6 +285,45 @@ class Driver(object):
             self.p4 = float(cfg['p4'])
             self.T4 = T_0
 
+        elif self.driver_condition_type == 'isentropic-compression-p4':
+            # do isentropic compression from the fill state to p4
+            self.driver_p = float(cfg['driver_p'])
+            if 'driver_T' in cfg:
+                self.driver_T = float(cfg['driver_T'])
+            else:
+                print("Setting driver temperature to the default value of {0:.2f} K".format(T))
+                self.driver_T = T_0
+
+            self.p4 = float(cfg['p4'])
+
+            # we call this state 4i
+            state4i = GasState(self.gmodel)
+            state4i.p = self.driver_p
+            state4i.T = self.driver_T
+
+            state4i.update_thermo_from_pT()
+            state4i.update_sound_speed()
+
+            # we assume that the state 4 driver is stationary
+            v4i = 0.0
+
+            # make a reference gas state here...
+            reference_gas_state = GasState(self.gmodel)
+            reference_gas_state.p = p_0
+            reference_gas_state.T = T_0
+
+            reference_gas_state.update_thermo_from_pT()
+            reference_gas_state.update_sound_speed()
+
+            # now make our facility driver object...
+            self.state4i = Facility_State('s4i', state4i, v4i, reference_gas_state=reference_gas_state)
+
+            print ("Performing isentropic compression from the driver fill condition to {0:.2f} MPa.".format(self.p4/1.0e6))
+
+            gam = state4i.gamma
+
+            self.T4 = state4i.T * (self.p4 / state4i.p) ** (1.0 - (1.0 / gam))  # K
+
         state4 = GasState(self.gmodel)
         state4.p = self.p4
         state4.T = self.T4
@@ -408,10 +447,17 @@ class Driver(object):
 
         """
 
+        facility_states = []
+
+        if hasattr(self, 'state4i'):
+            facility_states.append(self.state4i)
+
+        facility_states.append(self.state4)
+
         if hasattr(self, 'state3s'):
-            return [self.state4, self.state3s]
-        else:
-            return [self.state4]
+            facility_states.append(self.state3s)
+
+        return facility_states
 
 class Diaphragm(object):
     """

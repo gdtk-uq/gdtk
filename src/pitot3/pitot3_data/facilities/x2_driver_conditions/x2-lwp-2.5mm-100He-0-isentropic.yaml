@@ -1,0 +1,24 @@
+# X2's 100%He 2 mm driver condition
+# Values from 
+# Gildfind et al. (2015)
+# Free-piston driver performance characterisation using experimental shock speeds through helium
+# Table 3
+
+driver_condition_name : 'x2-lwp-2.5mm-100He-0-isentropic'
+driver_condition_type : 'isentropic-compression-p4'
+
+driver_gas_model : 'CEAGas'
+driver_fill_composition : {'He':1.0} 
+driver_speciesList : ['He']
+driver_inputUnits : 'moles' 
+driver_withIons : False
+
+driver_p : 77.2e3 # driver fill pressure, Pa
+driver_T : 298.15 # driver fill temperature, K
+
+p4 : 35.7e6 # Pa
+
+# M_throat is from the text of Gildfind et al 2015 for the 65 mm orifice plate
+M_throat : 2.17
+
+
