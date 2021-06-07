@@ -164,28 +164,6 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     shared bool with_local_time_stepping = GlobalConfig.with_local_time_stepping;
     shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
     //
-    shared int ftl = 0; // time-level within the overall convective-update
-    shared int gtl = 0; // grid time-level remains at zero for the non-moving grid
-    if (GlobalConfig.udf_source_terms) {
-        foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
-            if (!blk.active) continue;
-            int local_ftl = ftl;
-            int local_gtl = gtl;
-            double local_sim_time = SimState.time;
-            foreach (cell; blk.cells) {
-                size_t i_cell = cell.id; size_t j_cell = 0; size_t k_cell = 0;
-                if (blk.grid_type == Grid_t.structured_grid) {
-                    auto sblk = cast(SFluidBlock) blk;
-                    assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                    auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
-                    i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
-                }
-                getUDFSourceTermsForCell(blk.myL, cell, local_gtl, local_sim_time,
-                                         blk.myConfig, blk.id, i_cell, j_cell, k_cell);
-            }
-        }
-    }
-    //
     // compute number of super steps
     bool euler_step = false;
     double dt_global;
@@ -246,10 +224,29 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     // --------------------------------------------------
 
     // First-stage of gas-dynamic update.
-    ftl = 0; // time-level within the overall convective-update
-    gtl = 0; // grid time-level remains at zero for the non-moving grid
+    shared int ftl = 0; // time-level within the overall convective-update
+    shared int gtl = 0; // grid time-level remains at zero for the non-moving grid
 
     // Preparation for the inviscid gas-dynamic flow update.
+    if (GlobalConfig.udf_source_terms) {
+        foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
+            if (!blk.active) continue;
+            int local_ftl = ftl;
+            int local_gtl = gtl;
+            double local_sim_time = SimState.time;
+            foreach (cell; blk.cells) {
+                size_t i_cell = cell.id; size_t j_cell = 0; size_t k_cell = 0;
+                if (blk.grid_type == Grid_t.structured_grid) {
+                    auto sblk = cast(SFluidBlock) blk;
+                    assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                    auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
+                    i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
+                }
+                getUDFSourceTermsForCell(blk.myL, cell, local_gtl, local_sim_time,
+                                         blk.myConfig, blk.id, i_cell, j_cell, k_cell);
+            }
+        }
+    }
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	if (blk.active) {
 	    blk.clear_fluxes_of_conserved_quantities();
@@ -472,6 +469,25 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         ftl = 1;
 
         // Preparation for the inviscid gas-dynamic flow update.
+        if (GlobalConfig.udf_source_terms && GlobalConfig.eval_udf_source_terms_at_each_stage) {
+            foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
+                if (!blk.active) continue;
+                int blklocal_ftl = ftl;
+                int blklocal_gtl = gtl;
+                double blklocal_sim_time = SimState.time;
+                foreach (cell; blk.cells) {
+                    size_t i_cell = cell.id; size_t j_cell = 0; size_t k_cell = 0;
+                    if (blk.grid_type == Grid_t.structured_grid) {
+                        auto sblk = cast(SFluidBlock) blk;
+                        assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                        auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
+                        i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
+                    }
+                    getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time,
+                                             blk.myConfig, blk.id, i_cell, j_cell, k_cell);
+                }
+            }
+        }
 	foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	    if (blk.active) {
 		blk.clear_fluxes_of_conserved_quantities();
@@ -783,33 +799,33 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     case GasdynamicUpdate.moving_grid_2_stage: assert(false, "invalid option");
     }
     //
-    shared int ftl = 0; // time-level within the overall convective-update
-    shared int gtl = 0; // grid time-level remains at zero for the non-moving grid
-    if (GlobalConfig.udf_source_terms) {
-        foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
-            if (!blk.active) continue;
-            int blklocal_ftl = ftl;
-            int blklocal_gtl = gtl;
-            double blklocal_sim_time = SimState.time;
-            foreach (cell; blk.cells) {
-                size_t i_cell = cell.id; size_t j_cell = 0; size_t k_cell = 0;
-                if (blk.grid_type == Grid_t.structured_grid) {
-                    auto sblk = cast(SFluidBlock) blk;
-                    assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                    auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
-                    i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
-                }
-                getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time,
-                                         blk.myConfig, blk.id, i_cell, j_cell, k_cell);
-            }
-        }
-    }
     int attempt_number = 0;
     int step_failed = 0; // Use int because we want to reduce across MPI ranks.
     do {
         ++attempt_number;
         step_failed = 0;
         // Preparation for the predictor-stage of inviscid gas-dynamic flow update.
+        shared int ftl = 0; // time-level within the overall convective-update
+        shared int gtl = 0; // grid time-level remains at zero for the non-moving grid
+        if (GlobalConfig.udf_source_terms) {
+            foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
+                if (!blk.active) continue;
+                int blklocal_ftl = ftl;
+                int blklocal_gtl = gtl;
+                double blklocal_sim_time = SimState.time;
+                foreach (cell; blk.cells) {
+                    size_t i_cell = cell.id; size_t j_cell = 0; size_t k_cell = 0;
+                    if (blk.grid_type == Grid_t.structured_grid) {
+                        auto sblk = cast(SFluidBlock) blk;
+                        assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                        auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
+                        i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
+                    }
+                    getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time,
+                                             blk.myConfig, blk.id, i_cell, j_cell, k_cell);
+                }
+            }
+        }
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
                 blk.clear_fluxes_of_conserved_quantities();
@@ -1063,8 +1079,27 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         }
         //
         if (number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) >= 2) {
-            // Preparation for second-stage of gas-dynamic update.
             SimState.time = t0 + c2 * SimState.dt_global;
+            // Preparation for second-stage of gas-dynamic update.
+            if (GlobalConfig.udf_source_terms && GlobalConfig.eval_udf_source_terms_at_each_stage) {
+                foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
+                    if (!blk.active) continue;
+                    int blklocal_ftl = ftl;
+                    int blklocal_gtl = gtl;
+                    double blklocal_sim_time = SimState.time;
+                    foreach (cell; blk.cells) {
+                        size_t i_cell = cell.id; size_t j_cell = 0; size_t k_cell = 0;
+                        if (blk.grid_type == Grid_t.structured_grid) {
+                            auto sblk = cast(SFluidBlock) blk;
+                            assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                            auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
+                            i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
+                        }
+                        getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time,
+                                                 blk.myConfig, blk.id, i_cell, j_cell, k_cell);
+                    }
+                }
+            }
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) {
                     blk.clear_fluxes_of_conserved_quantities();
@@ -1307,8 +1342,27 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         } // end if number_of_stages_for_update_scheme >= 2
         //
         if (number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) >= 3) {
-            // Preparation for third stage of gasdynamic update.
             SimState.time = t0 + c3 * SimState.dt_global;
+            // Preparation for third stage of gasdynamic update.
+            if (GlobalConfig.udf_source_terms && GlobalConfig.eval_udf_source_terms_at_each_stage) {
+                foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
+                    if (!blk.active) continue;
+                    int blklocal_ftl = ftl;
+                    int blklocal_gtl = gtl;
+                    double blklocal_sim_time = SimState.time;
+                    foreach (cell; blk.cells) {
+                        size_t i_cell = cell.id; size_t j_cell = 0; size_t k_cell = 0;
+                        if (blk.grid_type == Grid_t.structured_grid) {
+                            auto sblk = cast(SFluidBlock) blk;
+                            assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+                            auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
+                            i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
+                        }
+                        getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time,
+                                                 blk.myConfig, blk.id, i_cell, j_cell, k_cell);
+                    }
+                }
+            }
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) {
                     blk.clear_fluxes_of_conserved_quantities();

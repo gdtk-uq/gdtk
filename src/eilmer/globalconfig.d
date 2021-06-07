@@ -782,6 +782,7 @@ final class GlobalConfig {
     //
     // Parameters controlling update
     shared static GasdynamicUpdate gasdynamic_update_scheme = GasdynamicUpdate.pc;
+    shared static bool eval_udf_source_terms_at_each_stage = false;
     shared static size_t n_flow_time_levels = 3;
     shared static bool residual_smoothing = false;
     shared static double residual_smoothing_weight = 0.2;
@@ -1618,6 +1619,7 @@ void set_config_for_core(JSONValue jsonData)
     //
     mixin(update_enum("gasdynamic_update_scheme", "gasdynamic_update_scheme", "update_scheme_from_name"));
     GlobalConfig.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
+    mixin(update_bool("eval_udf_source_terms_at_each_stage", "eval_udf_source_terms_at_each_stage"));
     // The CFL schedule arrives as a pair of tables that should have at least one entry each.
     int cfl_schedule_length = getJSONint(jsonData, "cfl_schedule_length", 1);
     double[] cfl_schedule_values_default;
@@ -1724,6 +1726,7 @@ void set_config_for_core(JSONValue jsonData)
 
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  gasdynamic_update_scheme: ", gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
+        writeln("  eval_udf_source_terms_at_each_stage: ", GlobalConfig.eval_udf_source_terms_at_each_stage);
         writeln("  cfl_schedule: ", GlobalConfig.cfl_schedule);
         writeln("  residual_smoothing: ", GlobalConfig.residual_smoothing);
         writeln("  with_local_time_stepping: ", GlobalConfig.with_local_time_stepping);
