@@ -2350,7 +2350,9 @@ void configCheckPoint2()
     }
     if (GlobalConfig.grid_motion != GridMotion.none) {
         if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
-            GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage) {
+            GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage ||
+            GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.backward_euler ||
+            GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.implicit_rk1) {
             // pass, we have a consistent selection.
         } else {
             string msg = "We have some grid_motion but not a valid GasdynamicUpdate scheme" ~
