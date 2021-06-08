@@ -28,11 +28,12 @@ class TestCyl_SF < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    assert((steps - 5185).abs < 100, "Failed to take correct number of steps.")
+    # 5257 is for the explicit update; 5387 is observed for the backward-euler, same cfl_value
+    assert((steps - 5257).abs < 200, "Failed to take correct number of steps.")
   end
 
   def test_2_post_shock_condition
-    # With this shock-fitting simulation, we take the first point 
+    # With this shock-fitting simulation, we take the first point
     # in the grid as (being close enough to) the position of the shock.
     # For a free stream Mach number of 7, Billig's correlation gives
     # delta/R = 0.4246.

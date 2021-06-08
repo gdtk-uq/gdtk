@@ -33,14 +33,15 @@ grid = StructuredGrid:new{psurface=psurf, niv=40, njv=40}
 
 -- We can leave east and south as slip-walls
 blk = FBArray:new{grid=grid, initialState=initial,
-		      bcList={west=InFlowBC_ShockFitting:new{flowState=inflow},
-			      north=OutFlowBC_Simple:new{}}, 
-		      nib=3, njb=3}
+                  bcList={west=InFlowBC_ShockFitting:new{flowState=inflow},
+                          north=OutFlowBC_Simple:new{}},
+                  nib=3, njb=3}
 identifyBlockConnections()
 
 -- Set a few more config options
 config.flux_calculator = "ausmdv"
-config.gasdynamic_update_scheme = "moving-grid-2-stage"
+-- config.gasdynamic_update_scheme = "moving-grid-2-stage"
+config.gasdynamic_update_scheme = "backward_euler"
 config.max_time = (radius*2)/u_inf * 20 -- 16 flow lengths
 config.max_step = 400000
 config.cfl_value = 0.5

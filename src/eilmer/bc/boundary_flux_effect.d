@@ -416,65 +416,69 @@ public:
     @nogc
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        throw new Error("BFE_ConstFlux.apply_for_interface_unstructured_grid() not yet implemented");
+        apply_to_single_face(f);
     }
 
     @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        throw new Error("BFE_ConstFlux.apply_unstructured_grid() not yet implemented");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) { apply_to_single_face(f); }
     }
 
     @nogc
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        throw new Error("BFE_ConstFlux.apply_for_interface_structured_grid() not yet implemented");
+        apply_to_single_face(f);
     }
 
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        auto blk = cast(SFluidBlock) this.blk;
-        auto cqi = blk.myConfig.cqi;
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
-        //
-        foreach (i, f; bc.faces) {
-            // for a moving grid we need vel relative to the interface
-            number _u_rel = _u - f.gvel.x;
-            number _v_rel = _v - f.gvel.y;
-            number massFlux = _rho * (_u_rel*f.n.x + _v_rel*f.n.y);
-            f.F.vec[cqi.mass] = massFlux;
-            /++ when the boundary is moving we use the relative velocity
-             + between the fluid and the boundary interface to determine
-             + the amount of mass flux across the cell face (above).
-             + Alternatively momentum is a fluid property hence we use the
-             + fluid velocity in determining the momentum flux -- this is
-             + akin to saying we know how much mass flux is crossing
-             + the cell face of which this mass has a momentum dependant
-             + on its velocity. Since we we want this momentum flux in global
-             + coordinates there is no need to rotate the velocity.
-             ++/
-            f.F.vec[cqi.xMom] = _p * f.n.x + _u*massFlux;
-            f.F.vec[cqi.yMom] = _p * f.n.y + _v*massFlux;
-            if (cqi.threeD) {
-                f.F.vec[cqi.zMom] = 0.0; // [TODO]: Kyle, think about z component.
-                assert(0, "[FIX-ME] Not yet implemented for 3D");
-            }
-            f.F.vec[cqi.totEnergy] = massFlux * (_e + 0.5*(_u*_u+_v*_v)) + _p*(_u*f.n.x+_v*f.n.y);
-            version(multi_species_gas) {
-                if (cqi.n_species > 1) {
-                    foreach (_isp; 0 .. _nsp){ f.F.vec[cqi.species+_isp] = massFlux * _massf[_isp]; }
-                }
-            }
-            version(multi_T_gas) {
-                foreach (n; 0 .. _nmodes){
-                    f.F.vec[cqi.modes+n] = massFlux * _ev[n];
-                }
+        foreach (i, f; bc.faces) { apply_to_single_face(f); }
+    }
+
+private:
+    @nogc
+    void apply_to_single_face(FVInterface f)
+    {
+        auto cqi = blk.myConfig.cqi;
+        // for a moving grid we need vel relative to the interface
+        number _u_rel = _u - f.gvel.x;
+        number _v_rel = _v - f.gvel.y;
+        number massFlux = _rho * (_u_rel*f.n.x + _v_rel*f.n.y);
+        f.F.vec[cqi.mass] = massFlux;
+        /++ when the boundary is moving we use the relative velocity
+         + between the fluid and the boundary interface to determine
+         + the amount of mass flux across the cell face (above).
+         + Alternatively momentum is a fluid property hence we use the
+         + fluid velocity in determining the momentum flux -- this is
+         + akin to saying we know how much mass flux is crossing
+         + the cell face of which this mass has a momentum dependant
+         + on its velocity. Since we we want this momentum flux in global
+         + coordinates there is no need to rotate the velocity.
+         ++/
+        f.F.vec[cqi.xMom] = _p * f.n.x + _u*massFlux;
+        f.F.vec[cqi.yMom] = _p * f.n.y + _v*massFlux;
+        if (cqi.threeD) {
+            f.F.vec[cqi.zMom] = 0.0; // [TODO]: Kyle, think about z component.
+            assert(0, "[FIX-ME] Not yet implemented for 3D");
+        }
+        f.F.vec[cqi.totEnergy] = massFlux * (_e + 0.5*(_u*_u+_v*_v)) + _p*(_u*f.n.x+_v*f.n.y);
+        version(multi_species_gas) {
+            if (cqi.n_species > 1) {
+                foreach (_isp; 0 .. _nsp){ f.F.vec[cqi.species+_isp] = massFlux * _massf[_isp]; }
             }
         }
-    }
-}
+        version(multi_T_gas) {
+            foreach (n; 0 .. _nmodes){
+                f.F.vec[cqi.modes+n] = massFlux * _ev[n];
+            }
+        }
+    } // end apply_to_single_face()
+
+} // end class BFE_ConstFlux
 
 class BFE_SimpleOutflowFlux : BoundaryFluxEffect {
 public:
