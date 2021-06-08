@@ -71,7 +71,7 @@ T1 : 'T_0' # the code will set this to the T_0 value above...
 
 # acceleration tube default values
 acceleration_tube_tube_name : 'acceleration_tube'
-acceleration_tube_expand_to : 'flow_behind_shock'
+acceleration_tube_expand_to : 'shock_speed'
 acceleration_tube_expansion_factor : 1.0
 acceleration_tube_unsteady_expansion_steps : 200
 vs2_guess_1 : 'vs1 + 2000.0' #m/s, the code is able to interpret this

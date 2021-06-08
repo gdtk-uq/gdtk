@@ -339,8 +339,6 @@ class Driver(object):
         state4.update_thermo_from_pT()
         state4.update_sound_speed()
 
-        print("s = {0}".format(state4.ceaSavedData))
-
         # we assume that the state 4 driver is stationary
         v4 = 0.0
 

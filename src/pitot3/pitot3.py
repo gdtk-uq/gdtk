@@ -16,7 +16,7 @@ import yaml
 from pitot3_utils.pitot3_classes import Facility, Driver, Diaphragm, Facility_State, Tube, Nozzle, Test_Section
 from pitot3_utils.pitot3_classes import eilmer4_CEAGas_input_file_creator, expansion_tube_test_time_calculator, state_output_for_final_output, pitot3_results_output
 
-VERSION_STRING = '07-Jun-2021'
+VERSION_STRING = '08-Jun-2021'
 
 #-----------------------------------------------------------------------------------
 
