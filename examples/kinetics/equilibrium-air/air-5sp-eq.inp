@@ -1,2 +1,0 @@
-model = 'thermally perfect gas equilibrium'
-species = {'N2', 'O2', 'N', 'O', 'NO'}

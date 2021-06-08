@@ -16,6 +16,7 @@ import gas.luagas_model;
 import kinetics.luathermochemical_reactor;
 import kinetics.luareaction_mechanism;
 import kinetics.luachemistry_update;
+import kinetics.luaequilibrium_calculator;
 import kinetics.luatwo_temperature_air_kinetics;
 import kinetics.luavib_specific_nitrogen_kinetics;
 version (with_dvode)
@@ -40,6 +41,7 @@ int main(string[] args) {
     registerThermochemicalReactor(L, LUA_GLOBALSINDEX);
     registerReactionMechanism(L, LUA_GLOBALSINDEX);
     registerChemistryUpdate(L, LUA_GLOBALSINDEX);
+    registerEquilibriumCalculator(L, LUA_GLOBALSINDEX);
     registerTwoTemperatureAirKinetics(L, LUA_GLOBALSINDEX);
     registerVibSpecNitrogenKinetics(L, LUA_GLOBALSINDEX);
     version(with_dvode) {

@@ -165,6 +165,8 @@ version(complex_numbers){
         return ceq.get_s(Q.T, Q.p, X0ptr, nsp, lewisptr, Mptr);
     }
 }
+    @nogc int n_species() const { return nsp; }
+    @nogc int n_elements() const { return nel; }
 
 private:
     int nel,nsp;
