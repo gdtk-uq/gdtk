@@ -703,6 +703,7 @@ number finite_wave_dv(const(GasState) state1, number V1,
     number dV = (V2_target - V1)/steps;
     number s1 = gm.entropy(state1);
     state2.copy_values_from(state1);
+    gm.update_thermo_from_pT(state2);
     gm.update_sound_speed(state2);
     foreach (i; 0 .. steps) {
         number rhoa = state2.rho * state2.a;
