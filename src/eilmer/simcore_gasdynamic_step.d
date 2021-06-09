@@ -2192,16 +2192,20 @@ void gasdynamic_implicit_increment()
             }
         }
     }
+    shared bool grid_is_moving;
     final switch(GlobalConfig.grid_motion) {
     case GridMotion.none:
         // Do nothing about the grid velocities.
+        grid_is_moving = false;
         break;
     case GridMotion.user_defined:
         // Rely on user to set vertex velocities.
         // Note that velocities remain unchanged if the user does nothing.
+        grid_is_moving = true;
         assign_vertex_velocities_via_udf(SimState.time, SimState.dt_global);
         break;
     case GridMotion.shock_fitting:
+        grid_is_moving = true;
         if (SimState.time > GlobalConfig.shock_fitting_delay) {
             foreach (i, fba; fluidBlockArrays) {
                 if (fba.shock_fitting) { compute_vtx_velocities_for_sf(fba); }
@@ -2227,7 +2231,7 @@ void gasdynamic_implicit_increment()
         int flagTooManyBadCells;
         try {
             ftl = 0; gtl = 0;
-            if (GlobalConfig.grid_motion != GridMotion.none) {
+            if (grid_is_moving) {
                 // Moving Grid - predict new vertex positions for moving grid
                 foreach (blk; localFluidBlocksBySize) {
                     if (!blk.active) continue;
@@ -2241,7 +2245,7 @@ void gasdynamic_implicit_increment()
                     // determine interface velocities using GCL for gtl = 1
                     set_gcl_interface_properties(sblk, gtl+1, SimState.dt_global);
                 }
-                gtl = 1; // update gtl now that grid has moved
+                gtl = 1;
             }
             // Attempt an update.
             exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
@@ -2282,13 +2286,14 @@ void gasdynamic_implicit_increment()
                 int blklocal_ftl = ftl;
                 assert(ftl == 0, "ftl is assumed zero but it is not.");
                 int blklocal_gtl = gtl;
-                if (GlobalConfig.grid_motion == GridMotion.none) {
-                    assert(gtl == 0, "Without grid motion, gtl is assumed zero but it is not.");
+                if (grid_is_moving) {
+                    assert(gtl == 1, "For moving grid, gtl is assumed one but it is not.");
                 } else {
-                    assert(gtl == 1, "With grid motion, gtl is assumed 1 but it is not.");
+                    assert(gtl == 0, "For fixed grid, gtl is assumed zero but it is not.");
                 }
                 bool blklocal_allow_high_order_interpolation = allow_high_order_interpolation;
                 bool blklocal_with_local_time_stepping = with_local_time_stepping;
+                bool blklocal_grid_is_moving = grid_is_moving;
                 double blklocal_dt_global = SimState.dt_global;
                 double blklocal_t0 = SimState.time;
                 foreach (cell; blk.cells) {
@@ -2348,7 +2353,7 @@ void gasdynamic_implicit_increment()
                     // Solve for dU and update U.
                     gaussJordanElimination!double(blk.crhs);
                     foreach (j; 0 .. cqi.n) { U1.vec[j] = U0.vec[j] + M*blk.crhs._data[j][cqi.n]; }
-                    if (GlobalConfig.grid_motion != GridMotion.none) {
+                    if (blklocal_grid_is_moving) {
                         number volume_ratio = cell.volume[0] / cell.volume[1];
                         foreach (j; 0 .. cqi.n) { U1.vec[j] *= volume_ratio; }
                     }
@@ -2469,16 +2474,16 @@ void gasdynamic_implicit_increment()
         } // end foreach sblk
     }
     //
-    if (GlobalConfig.grid_motion != GridMotion.none) {
+    if (grid_is_moving) {
         // Update the latest grid level to the new step grid level 0 and recalculate geometry.
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
-                foreach (cell; blk.cells) { cell.copy_grid_level_to_level(gtl, 0); }
+                foreach (cell; blk.cells) { cell.copy_grid_level_to_level(1, 0); }
                 blk.compute_primary_cell_geometric_data(0);
                 blk.compute_least_squares_setup(0);
             }
         }
-    } // end if grid_motion
+    }
     //
     // Finally, update the globally know simulation time for the whole step.
     SimState.time = t0 + SimState.dt_global;
