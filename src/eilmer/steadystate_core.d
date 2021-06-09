@@ -543,6 +543,14 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         }
         timesFile.close();
         nWrittenSnapshots--; // We don't count the initial solution as a written snapshot
+
+        // Where should we be in the CFL schedule list?
+        if (!residual_based_cfl_scheduling) {
+            while ((cfl_schedule_current_index < cfl_schedule_value_list.length) &&
+                    (times[snapshotStart].step > cfl_schedule_iter_list[cfl_schedule_current_index])) {
+                cfl_schedule_current_index++;
+            }
+        }
     }
 
     double wallClockElapsed;
