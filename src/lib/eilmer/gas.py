@@ -808,7 +808,7 @@ class GasFlow(object):
         beta = my_results[0]
         return beta
 
-    def theta_cone(self, state1, v1, beta, state_c, dtheta=-0.5*math.pi/180.0):
+    def theta_cone(self, state1, v1, beta, state_c, dtheta=-0.01*math.pi/180.0):
         my_results = ffi.new("double[]", [0.0, 0.0])
         flag = so.gasflow_theta_cone(state1.id, v1, beta,
                                      state_c.id, self.gmodel.id,
@@ -818,7 +818,7 @@ class GasFlow(object):
         v2_c = my_results[1]
         return theta_c, v2_c
 
-    def beta_cone(self, state1, v1, theta, dtheta=-0.5*math.pi/180.0):
+    def beta_cone(self, state1, v1, theta, dtheta=-0.01*math.pi/180.0):
         my_results = ffi.new("double[]", [0.0])
         flag = so.gasflow_beta_cone(state1.id, v1, theta,
                                     self.gmodel.id, dtheta, my_results)

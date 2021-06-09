@@ -1428,7 +1428,7 @@ number[5] taylor_maccoll_odes(number[5] z, number theta,
 }
 
 number[2] theta_cone(const(GasState) state1, number V1, number beta,
-                     GasState state_c, GasModel gm, double dtheta=-0.5*PI/180.0)
+                     GasState state_c, GasModel gm, double dtheta=-0.01*PI/180.0)
 /**
  * Compute the cone-surface angle and conditions given the shock wave angle.
  *
@@ -1499,7 +1499,7 @@ number[2] theta_cone(const(GasState) state1, number V1, number beta,
 
 
 number beta_cone(const(GasState) state1, number V1, number theta, GasModel gm,
-                 double dtheta=-0.5*PI/180.0)
+                 double dtheta=-0.01*PI/180.0)
 /**
  * Compute the conical shock wave angle given the cone-surface deflection angle.
  *
