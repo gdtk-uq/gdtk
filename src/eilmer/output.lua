@@ -210,6 +210,8 @@ function write_config_file(fileName)
    f:write(string.format('"flux_calculator": "%s",\n', config.flux_calculator))
    f:write(string.format('"interpolation_order": %d,\n', config.interpolation_order))
    f:write(string.format('"interpolation_delay": %.18e,\n', config.interpolation_delay))
+   f:write(string.format('"allow_interpolation_for_sensitivity_matrix": %s,\n',
+                         tostring(config.allow_interpolation_for_sensitivity_matrix)))
    f:write(string.format('"suppress_radial_reconstruction_at_xaxis": %s,\n',
                          tostring(config.suppress_radial_reconstruction_at_xaxis)))
    f:write(string.format('"suppress_reconstruction_at_shocks": %s,\n',

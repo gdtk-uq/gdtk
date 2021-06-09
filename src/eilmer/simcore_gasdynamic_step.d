@@ -2291,7 +2291,8 @@ void gasdynamic_implicit_increment()
                 } else {
                     assert(gtl == 0, "For fixed grid, gtl is assumed zero but it is not.");
                 }
-                bool blklocal_allow_high_order_interpolation = allow_high_order_interpolation;
+                bool allow_hoi_rhs = allow_high_order_interpolation;
+                bool allow_hoi_matrix = allow_high_order_interpolation && GlobalConfig.allow_interpolation_for_sensitivity_matrix;
                 bool blklocal_with_local_time_stepping = with_local_time_stepping;
                 bool blklocal_grid_is_moving = grid_is_moving;
                 double blklocal_dt_global = SimState.dt_global;
@@ -2307,7 +2308,7 @@ void gasdynamic_implicit_increment()
                     blk.U0save.copy_values_from(U0);
                     cell.decode_conserved(blklocal_gtl, blklocal_ftl, blk.omegaz);
                     dUdt0.clear();
-                    blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, false);
+                    blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, allow_hoi_matrix);
                     blk.RU0.copy_values_from(dUdt0);
                     foreach (j; 0 .. cqi.n) {
                         U0.copy_values_from(blk.U0save);
@@ -2322,7 +2323,7 @@ void gasdynamic_implicit_increment()
                             cell.decode_conserved(blklocal_gtl, blklocal_ftl, blk.omegaz);
                             // Get derivative vector.
                             dUdt0.clear();
-                            blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, false);
+                            blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, allow_hoi_matrix);
                             foreach (k; 0 .. cqi.n) {
                                 blk.dRUdU[k] = (dUdt0.vec[k].im - blk.RU0.vec[k].im)/h;
                             }
@@ -2334,7 +2335,7 @@ void gasdynamic_implicit_increment()
                             cell.decode_conserved(blklocal_gtl, blklocal_ftl, blk.omegaz);
                             // Get derivative vector.
                             dUdt0.clear();
-                            blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, false);
+                            blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, allow_hoi_matrix);
                             foreach (k; 0 .. cqi.n) {
                                 blk.dRUdU[k] = (dUdt0.vec[k] - blk.RU0.vec[k])/h;
                             }
@@ -2348,7 +2349,7 @@ void gasdynamic_implicit_increment()
                     U0.copy_values_from(blk.U0save);
                     cell.decode_conserved(blklocal_gtl, blklocal_ftl, blk.omegaz);
                     dUdt0.clear();
-                    blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, blklocal_allow_high_order_interpolation);
+                    blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, allow_hoi_rhs);
                     foreach (k; 0 .. cqi.n) { blk.crhs._data[k][cqi.n] = dUdt0.vec[k].re; }
                     // Solve for dU and update U.
                     gaussJordanElimination!double(blk.crhs);

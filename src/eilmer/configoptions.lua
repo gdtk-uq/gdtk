@@ -68,6 +68,7 @@ configOptionsHidden = { -- hidden from user
    flux_calculator = "adaptive_hanel_ausmdv",
    interpolation_order = 2,
    interpolation_delay = 0.0,
+   allow_interpolation_for_sensitivity_matrix = false,
    suppress_radial_reconstruction_at_xaxis = false,
    suppress_reconstruction_at_shocks = false,
    suppress_reconstruction_at_boundaries = false,

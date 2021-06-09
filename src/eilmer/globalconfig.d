@@ -881,6 +881,12 @@ final class GlobalConfig {
     // We have the option to start a calculation without high-order reconstruction
     // and later activate it, presumably once the difficult flow has passed.
     shared static double interpolation_delay = 0.0;
+    // For the implicit-update schemes (backward_euler, implicit_rk1), a quick and dirty
+    // calculation of the coefficients in the sensitivity matrix will suppress reconstruction
+    // for each call of evaluation of R(U).  This leads to some inconsistency, so the user
+    // may wish to pay the computational expense and do the reconstruction while assembling
+    // the matrix.
+    shared static bool allow_interpolation_for_sensitivity_matrix = false;
     // We may elect to suppress reconstruction in particular zones always.
     static BlockZone[] suppress_reconstruction_zones;
     // For structured-grid blocks in axisymmetric simulations,
@@ -1682,6 +1688,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_int("interpolation_order", "interpolation_order"));
     mixin(update_double("interpolation_delay", "interpolation_delay"));
+    mixin(update_bool("allow_interpolation_for_sensitivity_matrix", "allow_interpolation_for_sensitivity_matrix"));
     mixin(update_bool("suppress_radial_reconstruction_at_xaxis", "suppress_radial_reconstruction_at_xaxis"));
     mixin(update_bool("suppress_reconstruction_at_shocks", "suppress_reconstruction_at_shocks"));
     mixin(update_bool("suppress_reconstruction_at_captured_shocks", "suppress_reconstruction_at_shocks")); // old name
@@ -1760,6 +1767,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  flux_calculator: ", flux_calculator_name(GlobalConfig.flux_calculator));
         writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
         writeln("  interpolation_delay: ", GlobalConfig.interpolation_delay);
+        writeln("  allow_interpolation_for_sensitivity_matrix: ", GlobalConfig.allow_interpolation_for_sensitivity_matrix);
         writeln("  suppress_radial_reconstruction_at_xaxis: ", GlobalConfig.suppress_radial_reconstruction_at_xaxis);
         writeln("  do_shock_detect: ", GlobalConfig.do_shock_detect);
         writeln("  strict_shock_detector: ", GlobalConfig.strict_shock_detector);
