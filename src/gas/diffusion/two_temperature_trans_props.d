@@ -43,7 +43,9 @@ public:
         mMolMasses.length = mNSpecies;
         mParticleMass.length = mNSpecies;
         mMolef.length = mNSpecies;
+        mCharge.length = mNSpecies;
         allocateArraysForCollisionIntegrals();
+
         foreach (isp, spName; speciesNames) {
             if (spName == "e-") mElectronIdx = to!int(isp);
             lua_getglobal(L, "db");
@@ -51,6 +53,7 @@ public:
             double m = getDouble(L, -1, "M");
             mMolMasses[isp] = m;
             mParticleMass[isp] = 1000.0*m/Avogadro_number; // kg -> g
+            mCharge[isp] = getInt(L, -1, "charge");
             string type = getString(L, -1, "type");
             if (type == "molecule") {
                 mMolecularSpecies ~= to!int(isp);
@@ -105,6 +108,7 @@ public:
                 double numer = (1.0 - M_ratio)*(0.45 - 2.54*M_ratio);
                 double denom = (1.0 + M_ratio)^^2;
                 mAlpha[isp][jsp] = 1.0 + numer/denom;
+                mIsCoulombCollision[isp][jsp] = (mCharge[isp]!=0)&&(mCharge[jsp]!=0);
             }
         }
     }
@@ -123,6 +127,7 @@ public:
         mC_22.length = mNSpecies;
         mD_22.length = mNSpecies;
         mDelta_22.length = mNSpecies;
+        mIsCoulombCollision.length = mNSpecies;
         foreach (isp; 0 .. mNSpecies) {
             mMu[isp].length = mNSpecies;
             mAlpha[isp].length = mNSpecies;
@@ -136,6 +141,7 @@ public:
             mC_22[isp].length = isp+1;
             mD_22[isp].length = isp+1;
             mDelta_22[isp].length = mNSpecies;
+            mIsCoulombCollision[isp].length = mNSpecies;
         }
     }
     
@@ -245,32 +251,55 @@ public:
 
 
 private:
-    
     int mNSpecies;
     int mElectronIdx = -1;
     int[] mMolecularSpecies;
     double[] mMolMasses;
     double[] mParticleMass;
+    int[] mCharge;
     // working array space
     number[] mMolef;
     number[][] mA_11, mB_11, mC_11, mD_11, mDelta_11, mAlpha;
     number[][] mA_22, mB_22, mC_22, mD_22, mDelta_22, mMu;
+    bool[][] mIsCoulombCollision;
+
+    @nogc
+    number electronPressureCorrection(GasState gs)
+    {
+    /*
+        Compute a correction factor for the collision cross-sections of the charged species,
+        based on the electron pressure. This is required as per Gupta, 1989, as explained on
+        page 20.
+
+        Notes:
+         - Instead of computing p_em, the maximum allowed pressure, we just limit log(Lambda)
+           to a minimum of one, which is equivalent, but neater.
+         - This function becomes undefined for p_e==0.0, which can happen if no electrons are
+           present. Analytically, this would be fine because later on the result will get
+           multiplied by the electron mole fraction, which is also equal to zero. But numerically
+           the divide be zero causes problems. To fix this we just limit p_e. It should be
+           impossible for termTerm or logLambda to overflow as long as p_e is finite, so I chose
+           a really small limit.
+         - It would be nicer if we could solve this problem by switching to a series expansion
+           as p_e gets small, but it messes up the code because you need the expression in terms
+           of p_e*log(Lambda).
+
+        @author: Nick Gibbons
+    */
+        number p_e = fmax(1e-32, gs.p_e);
+        number p_e_atm = p_e/P_atm;
+        number tempTerm = gs.T/1000.0/pow(p_e_atm, 0.25);
+        number logLambda = 0.5*log(2.09e-2*pow(tempTerm, 4.0) + 1.52*pow(tempTerm, 8./3.));
+        logLambda = fmax(logLambda, 1.0); // Equivalent to limiting by p_em, from equation 23g
+        return logLambda;
+    }
 
     @nogc
     void computeDelta11(GasState gs)
     {
-        number crossSectionCorrection = 1.0;
-        if (mElectronIdx != -1) {
-            number p_em = 0.0975*pow(gs.T/1000.0, 4.0);
-            number p_e = gs.p_e/P_atm;
-            if (p_e > p_em) { // "unlikely for aerospace applications" p. 20 in Gupta)
-                crossSectionCorrection = 1.0;
-            }
-            else {
-                number tempTerm = gs.T/(1000.0*pow(p_e, 0.25));
-                crossSectionCorrection = 0.5*log(2.09e-2*pow(tempTerm, 4.0) + 1.52*pow(tempTerm, 8./3.));
-            }
-        }
+        number logLambda = 1.0;
+        if (mElectronIdx != -1) logLambda = electronPressureCorrection(gs);
+
         double kB = Boltzmann_constant;
         number T_CI;
         number log_T_CI;
@@ -288,7 +317,10 @@ private:
                     log_T_CI = log(T_CI);
                 }
                 number expnt = mA_11[isp][jsp]*(log_T_CI)^^2 + mB_11[isp][jsp]*log_T_CI + mC_11[isp][jsp];
-                number pi_Omega_11 = exp(mD_11[isp][jsp])*pow(T_CI, expnt) * crossSectionCorrection; 
+                number pi_Omega_11 = exp(mD_11[isp][jsp])*pow(T_CI, expnt);
+                if (mIsCoulombCollision[isp][jsp])
+                    pi_Omega_11 *= logLambda;
+
                 mDelta_11[isp][jsp] = (8.0/3)*1.546e-20*sqrt(2.0*mMu[isp][jsp]/(to!double(PI)*R_universal_cal*T_CI))*pi_Omega_11;
                 mDelta_11[jsp][isp] = mDelta_11[isp][jsp];
             }
@@ -298,19 +330,9 @@ private:
     @nogc
     void computeDelta22(GasState gs)
     {
-        number crossSectionCorrection = 1.0;
-        if (mElectronIdx != -1) {
-            number p_em = 0.0975*pow(gs.T/1000.0, 4.0);
-            number p_e = gs.p_e/P_atm;
-            if (p_e > p_em) { // "unlikely for aerospace applications" p. 20 in Gupta)
-                crossSectionCorrection = 1.0;
-            }
-            else {
-                number tempTerm = gs.T/(1000.0*pow(p_e, 0.25));
-                crossSectionCorrection = 0.5*log(2.09e-2*pow(tempTerm, 4.0) + 1.52*pow(tempTerm, 8./3.));
-            }
-        }
-        
+        number logLambda = 1.0;
+        if (mElectronIdx != -1) logLambda = electronPressureCorrection(gs);
+
         double kB = Boltzmann_constant;
         number T_CI;
         number log_T_CI;
@@ -328,13 +350,15 @@ private:
                     log_T_CI = log(T_CI);
                 }
                 number expnt = mA_22[isp][jsp]*(log_T_CI)^^2 + mB_22[isp][jsp]*log_T_CI + mC_22[isp][jsp];
-                number pi_Omega_22 = exp(mD_22[isp][jsp])*pow(T_CI, expnt) * crossSectionCorrection; 
+                number pi_Omega_22 = exp(mD_22[isp][jsp])*pow(T_CI, expnt);
+                if (mIsCoulombCollision[isp][jsp])
+                    pi_Omega_22 *= logLambda;
+
                 mDelta_22[isp][jsp] = (16./5)*1.546e-20*sqrt(2.0*mMu[isp][jsp]/(to!double(PI)*R_universal_cal*T_CI))*pi_Omega_22;
                 mDelta_22[jsp][isp] = mDelta_22[isp][jsp];
             }
         }
     }
-    
 }
 
 
@@ -370,5 +394,4 @@ version(two_temperature_trans_props_test)
 
         return 0;
     }
-    
 }
