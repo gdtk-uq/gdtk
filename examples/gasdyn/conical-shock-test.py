@@ -4,11 +4,11 @@
 # $ python3 conical-shock-test.py
 #
 # PJ, 2019-12-01
-# 
+#
 import math
 def approxEqual(a, b):
     result = math.isclose(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5)
-    # print("a=",a, "b=",b, "rel=",(a-b)/b, "abs=",a-b, "result=",result) 
+    # print("a=",a, "b=",b, "rel=",(a-b)/b, "abs=",a-b, "result=",result)
     return result
 from eilmer.gas import GasModel, GasState, GasFlow
 
@@ -37,4 +37,4 @@ print("  state_c: %s" % state_c)
 print("Conical shock angle from deflection.")
 beta2 = flow.beta_cone(state1, v1, theta_c)
 print("  beta2(degrees)=%g" % (beta2*180/math.pi))
-assert approxEqual(beta, beta2), "conical shock wave angle fail" 
+assert approxEqual(beta, beta2), "conical shock wave angle fail"

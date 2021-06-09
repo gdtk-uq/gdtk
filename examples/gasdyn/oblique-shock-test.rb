@@ -4,7 +4,7 @@
 # $ ruby oblique-shock-test.rb
 #
 # PJ, 2019-12-01
-# 
+#
 $LOAD_PATH << '~/dgdinst/lib'
 require 'eilmer/gas'
 

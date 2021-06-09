@@ -110,9 +110,9 @@ module Gas
                                    int gm_id, double* results)'
 
   extern 'int gasflow_theta_cone(int state1_id, double v1, double beta,
-                                 int state_c_id, int gm_id, double* results)'
+                                 int state_c_id, int gm_id, double dtheta, double* results)'
   extern 'int gasflow_beta_cone(int state1_id, double v1, double theta,
-                                int gm_id, double* results)'
+                                int gm_id, double dtheta, double* results)'
   PC_P_atm = 101.325e3
 end
 
@@ -817,19 +817,19 @@ class GasFlow
     return my_results[0, my_results.size].unpack("d")[0] # beta
   end
 
-  def theta_cone(state1, v1, beta, state_c)
+  def theta_cone(state1, v1, beta, state_c, dtheta=-0.5*Math::PI/180.0)
     my_results = [0.0, 0.0].pack("dd")
     flag = Gas.gasflow_theta_cone(state1.id, v1, beta, state_c.id, @gmodel.id,
-                                  my_results)
-    if flag < 0 then raise "failed to compute theta oblique." end
+                                  dtheta, my_results)
+    if flag < 0 then raise "failed to compute theta cone." end
     return my_results[0, my_results.size].unpack("dd") # [theta_c, v_c]
   end
 
-  def beta_cone(state1, v1, theta_c)
+  def beta_cone(state1, v1, theta_c, dtheta=-0.5*Math::PI/180.0)
     my_results = [0.0].pack("d")
     flag = Gas.gasflow_beta_cone(state1.id, v1, theta_c, @gmodel.id,
-                                 my_results)
-    if flag < 0 then raise "failed to compute beta oblique." end
+                                 dtheta, my_results)
+    if flag < 0 then raise "failed to compute beta cone." end
     return my_results[0, my_results.size].unpack("d")[0] # beta
   end
 end

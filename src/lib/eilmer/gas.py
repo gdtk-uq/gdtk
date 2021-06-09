@@ -8,6 +8,7 @@
 PC_P_atm = 101.325e3
 
 from cffi import FFI
+import math
 
 ffi = FFI()
 ffi.cdef("""
@@ -110,9 +111,9 @@ ffi.cdef("""
                              int gm_id, double* results);
 
     int gasflow_theta_cone(int state1_id, double v1, double beta,
-                           int state_c_id, int gm_id, double* results);
+                           int state_c_id, int gm_id, double dtheta, double* results);
     int gasflow_beta_cone(int state1_id, double v1, double theta,
-                          int gm_id, double* results);
+                          int gm_id, double dtheta, double* results);
 """)
 so = ffi.dlopen("libgas.so")
 so.cwrap_gas_init()
@@ -807,19 +808,20 @@ class GasFlow(object):
         beta = my_results[0]
         return beta
 
-    def theta_cone(self, state1, v1, beta, state_c):
+    def theta_cone(self, state1, v1, beta, state_c, dtheta=-0.5*math.pi/180.0):
         my_results = ffi.new("double[]", [0.0, 0.0])
         flag = so.gasflow_theta_cone(state1.id, v1, beta,
-                                     state_c.id, self.gmodel.id, my_results)
+                                     state_c.id, self.gmodel.id,
+                                     dtheta, my_results)
         if flag < 0: raise Exception("failed to compute theta cone.")
         theta_c = my_results[0]
         v2_c = my_results[1]
         return theta_c, v2_c
 
-    def beta_cone(self, state1, v1, theta):
+    def beta_cone(self, state1, v1, theta, dtheta=-0.5*math.pi/180.0):
         my_results = ffi.new("double[]", [0.0])
         flag = so.gasflow_beta_cone(state1.id, v1, theta,
-                                    self.gmodel.id, my_results)
+                                    self.gmodel.id, dtheta, my_results)
         if flag < 0: raise Exception("failed to compute beta cone.")
         beta = my_results[0]
         return beta

@@ -1428,7 +1428,7 @@ number[5] taylor_maccoll_odes(number[5] z, number theta,
 }
 
 number[2] theta_cone(const(GasState) state1, number V1, number beta,
-                     GasState state_c, GasModel gm)
+                     GasState state_c, GasModel gm, double dtheta=-0.5*PI/180.0)
 /**
  * Compute the cone-surface angle and conditions given the shock wave angle.
  *
@@ -1438,6 +1438,8 @@ number[2] theta_cone(const(GasState) state1, number V1, number beta,
  *   beta: shock wave angle wrt stream direction (in radians)
  *   state_c: reference to the gas state at the cone surface (to be computed)
  *   gm: reference to the current gas model
+ *   dtheta: angular step size for the integration process (in radians)
+ *   Note that dtheta needs to be negative.  We step from the shock to the surface.
  *
  * Returns: array of [theta_c, V_c]:
  *   theta_c is stream deflection angle in radians
@@ -1456,7 +1458,6 @@ number[2] theta_cone(const(GasState) state1, number V1, number beta,
     number theta_s = shock_results[0]; number V2 = shock_results[1];
     //
     // Initial conditions.
-    number dtheta = -0.5 * PI/180.0;  // fraction-of-a-degree steps
     number theta = beta;
     number V_r = V2 * cos(beta - theta_s);
     number V_theta = -V2 * sin(beta - theta_s);
@@ -1478,7 +1479,7 @@ number[2] theta_cone(const(GasState) state1, number V1, number beta,
         rho=z[0]; V_r=z[1]; V_theta=z[2]; u=z[3]; p=z[4];
         gas_state.rho = rho; gas_state.u = u;
         gm.update_thermo_from_rhou(gas_state);
-        assert(abs(gas_state.p - p)/p < 0.001, "pressure diverging");
+        if (abs(gas_state.p - p)/p > 0.001) { throw new GasFlowException("pressure diverging"); }
         z[4] = gas_state.p; // make consistent, so that we don't accumulate drift
     }
     // At this point, V_theta should have crossed zero so
@@ -1492,20 +1493,23 @@ number[2] theta_cone(const(GasState) state1, number V1, number beta,
     state_c.rho = rho; state_c.u = u;
     gm.update_thermo_from_rhou(state_c);
     gm.update_sound_speed(state_c);
-    assert(abs(V_theta) < 1.0e-6, "V_theta should be very small");
+    if (abs(V_theta) > 1.0e-6) { throw new GasFlowException("V_theta should be very small"); }
     return [theta_c, V_r];
 } // end theta_cone()
 
 
-number beta_cone(const(GasState) state1, number V1, number theta, GasModel gm)
+number beta_cone(const(GasState) state1, number V1, number theta, GasModel gm,
+                 double dtheta=-0.5*PI/180.0)
 /**
  * Compute the conical shock wave angle given the cone-surface deflection angle.
  *
  * Input:
- * state1: upstream gas condition
- * V1: speed of gas into shock
- * theta: stream deflection angle (in radians)
- * gm: reference to current gas model
+ *   state1: upstream gas condition
+ *   V1: speed of gas into shock
+ *   theta: stream deflection angle (in radians)
+ *   gm: reference to current gas model
+ *   dtheta: angular step size for the integration process (in radians)
+ *   Note that dtheta needs to be negative.  We step from the shock to the surface.
  *
  * Returns: shock wave angle wrt incoming stream direction (in radians)
  */
@@ -1516,7 +1520,7 @@ number beta_cone(const(GasState) state1, number V1, number theta, GasModel gm)
     number b1 = max(asin(1.0/M1), 1.1*theta); // to be stronger than a Mach wave
     number b2 = b1 * 1.05;
     auto error_in_theta = delegate(number beta_guess) {
-        number[2] shock_results = theta_cone(state1, V1, beta_guess, state2, gm);
+        number[2] shock_results = theta_cone(state1, V1, beta_guess, state2, gm, dtheta);
         number theta_guess = shock_results[0]; number V2 = shock_results[1];
         number error_value = theta_guess - theta;
         return error_value;

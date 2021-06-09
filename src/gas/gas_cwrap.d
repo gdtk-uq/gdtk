@@ -1123,11 +1123,11 @@ int gasflow_beta_oblique(int state1_id, double v1, double theta,
 
 extern(C)
 int gasflow_theta_cone(int state1_id, double v1, double beta,
-                       int state_c_id, int gm_id, double* results)
+                       int state_c_id, int gm_id, double dtheta, double* results)
 {
     try {
         double[2] my_results = theta_cone(gas_states[state1_id], v1, beta,
-                                          gas_states[state_c_id], gas_models[gm_id]);
+                                          gas_states[state_c_id], gas_models[gm_id], dtheta);
         results[0] = my_results[0]; // theta_c
         results[1] = my_results[1]; // v2_c
         return 0;
@@ -1139,10 +1139,10 @@ int gasflow_theta_cone(int state1_id, double v1, double beta,
 
 extern(C)
 int gasflow_beta_cone(int state1_id, double v1, double theta,
-                      int gm_id, double* results)
+                      int gm_id, double dtheta, double* results)
 {
     try {
-        double beta = beta_cone(gas_states[state1_id], v1, theta, gas_models[gm_id]);
+        double beta = beta_cone(gas_states[state1_id], v1, theta, gas_models[gm_id], dtheta);
         results[0] = beta;
         return 0;
     } catch (Exception e) {
