@@ -163,7 +163,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     double eta0 = GlobalConfig.sssOptions.eta0;
     double sigma0 = GlobalConfig.sssOptions.sigma0;
     // Settings for inexact Newton phase
-    int LHSeval1 = GlobalConfig.sssOptions.LHSeval1;
+    int LHSeval1;
+    if (GlobalConfig.interpolation_order < 2) { LHSeval1 = GlobalConfig.interpolation_order; }
+    else { LHSeval1 = GlobalConfig.sssOptions.LHSeval1; }
     int RHSeval1 = GlobalConfig.interpolation_order; // GlobalConfig.sssOptions.RHSeval1
     double cfl1 = GlobalConfig.sssOptions.cfl1;
     double tau1 = GlobalConfig.sssOptions.tau1;
