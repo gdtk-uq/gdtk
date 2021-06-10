@@ -9,6 +9,10 @@ config.turbulence_model = "spalart_allmaras"
 config.viscous = true
 config.flux_calculator = "ausmdv"
 config.interpolation_order = 2
+config.spatial_deriv_calc = "least_squares"
+config.spatial_deriv_locn = "cells"
+config.gasdynamic_update_scheme = "euler"
+config.viscous_signal_factor = 0.1
 
 -- Gas model and flow conditions to match ZPG case M=5, Tw/Tinf=5.450
 -- Shout out to this incredibly inconvenient problem description...
@@ -66,60 +70,17 @@ blk1 = FBArray:new{grid=grd1, initialState=inflow, nib=2, njb=2,
 
 identifyBlockConnections()
 
-for i=1,6 do
-     SBlock2UBlock(fluidBlocks[i])
-end
-
 -- loads settings
 config.boundary_groups_for_loads = "wall"
 config.write_loads = true
 config.freeze_limiter_on_step = 1400
 
--- Steady State Settings, to match Mabey example case
-config.spatial_deriv_calc = "least_squares"
-config.spatial_deriv_locn = "cells"
-config.diffuse_wall_bcs_on_init = true
-config.number_init_passes = 25
-
-SteadyStateSolver{
-   use_preconditioner = true,
-   precondition_matrix_type = "ilu",
-   ilu_fill = 0,
-   frozen_preconditioner_count = 25,
-   start_preconditioning = 1,
-   
-   use_scaling = true,
-   use_complex_matvec_eval = true,
-   
-   number_pre_steps = 10,
-   number_total_steps = 2000,
-   stop_on_relative_global_residual = 1.0e-13,
-
-   -- Settings for FGMRES iterative solver
-   max_outer_iterations = 30,
-   max_restarts = 10,
-
-   -- Settings for start-up phase
-   number_start_up_steps = 200,
-   cfl0 = 0.5,
-   eta0 = 0.1,
-   tau0 = 1.0,
-   sigma0 = 1.0e-30,
-   p0 = 0.5,
-
-   -- Settings for inexact Newton phase
-   cfl1 = 10.0,
-   tau1 = 1.0,
-   sigma1 = 1.0e-30,
-   eta1 = 0.01,
-   p1 = 1.0,
-   eta1_min = 0.01,
-   eta_ratio_per_step = 0.99,
-   eta_strategy = "geometric",
-
-   -- Settings control write-out
-   snapshots_count = 2000,
-   number_total_snapshots = 100,
-   write_diagnostics_count = 1,
-   write_loads_count = 10000,
-}
+-- Transient Solver Settings
+L = 1.0
+flowtime = L/u_inf
+config.max_time = 4.0*flowtime
+config.max_step = 3000000
+config.cfl_value = 0.5
+config.dt_plot = flowtime/4.0
+config.print_count=1000
+config.dt_init = 1e-12
