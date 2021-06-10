@@ -16,11 +16,11 @@ import yaml
 from pitot3_utils.pitot3_classes import Facility, Driver, Diaphragm, Facility_State, Tube, Nozzle, Test_Section
 from pitot3_utils.pitot3_classes import eilmer4_CEAGas_input_file_creator, expansion_tube_test_time_calculator, state_output_for_final_output, pitot3_results_output
 
-VERSION_STRING = '08-Jun-2021'
+VERSION_STRING = '10-Jun-2021'
 
 #-----------------------------------------------------------------------------------
 
-def run_pitot3(config_data = {}, config_filename = None, pitot3_data_folder = '$PITOT3_DATA'):
+def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$PITOT3_DATA'):
 
     print(sys.path)
 
@@ -47,21 +47,28 @@ def run_pitot3(config_data = {}, config_filename = None, pitot3_data_folder = '$
     # TO DO: eventually make using a config file optional, so they can add it from a dictionary directly...
     # but I guess it will mainly come from a file, so maybe it is fine like this?
 
-    user_config_yaml_filename = config_filename
+    if config_filename:
 
-    user_config_file = open(user_config_yaml_filename)
-    user_config_data = yaml.load(user_config_file, Loader=yaml.FullLoader)
+        user_config_yaml_filename = config_filename
 
-    for variable in user_config_data.keys():
-        if user_config_data[variable] == 'None':
-            user_config_data[variable] = None
+        user_config_file = open(user_config_yaml_filename)
+        user_config_data = yaml.load(user_config_file, Loader=yaml.FullLoader)
+
+        for variable in user_config_data.keys():
+            if user_config_data[variable] == 'None':
+                user_config_data[variable] = None
 
     # --------------------------------------------------------------------------------
-    # now merge the two config files above to get our overarching config
+    # now merge the two config files from the input file and/or the config_dict, with the default config to get our overarching config
     # (giving preference to any user values over default ones by adding the user config second)
+    # we also put the file config and the dictionary input config both here, with the dictionary updated last,
+    # so it will overwrite file values with dictionary ones if both user inputs are used.
 
+    config_data = {}
     config_data.update(default_config_data)
-    config_data.update(user_config_data)
+    if config_filename:
+        config_data.update(user_config_data)
+    config_data.update(config_dict)
 
     # we need to add the version string to the config dictionary for the final output
     config_data['VERSION_STRING'] = VERSION_STRING
@@ -578,7 +585,7 @@ def main():
     opt, args = op.parse_args()
     config_filename = opt.config_filename
 
-    run_pitot3(config_data={}, config_filename=config_filename)
+    run_pitot3(config_filename=config_filename)
 
 # ----------------------------------------------------------------------------
 
