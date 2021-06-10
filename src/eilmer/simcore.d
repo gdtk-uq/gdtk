@@ -960,14 +960,14 @@ int integrate_in_time(double target_time_as_requested)
         } else if (is_explicit_update_scheme(GlobalConfig.gasdynamic_update_scheme)) {
             gasdynamic_step = &gasdynamic_explicit_increment_with_fixed_grid;
         } else {
-            gasdynamic_step = &gasdynamic_implicit_increment;
+            gasdynamic_step = &gasdynamic_implicit_increment_with_fixed_grid;
         }
     } else {
         // Moving Grid
         if (is_explicit_update_scheme(GlobalConfig.gasdynamic_update_scheme)) {
             gasdynamic_step = &gasdynamic_explicit_increment_with_moving_grid;
         } else {
-            gasdynamic_step = &gasdynamic_implicit_increment;
+            gasdynamic_step = &gasdynamic_implicit_increment_with_moving_grid;
         }
     }
     if (!gasdynamic_step) {
