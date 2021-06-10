@@ -54,9 +54,9 @@ It uses ghost cells with appropriate velocity settings.
 
 === No-slip, fixed-temperature
 
-  WallBC_NoSlip_FixedT:new{Twall, label, group}
+  WallBC_NoSlip_FixedT:new{Twall, wall_function, catalytic_type, wall_massf_composition, label, group}
   or
-  WallBC_NoSlip_FixedT0:new{Twall, label, group}
+  WallBC_NoSlip_FixedT0:new{Twall, wall_function, catalytic_type, wall_massf_composition, label, group}
 
 is used where we want convective and viscous effects to impose a no-slip velocity
 condition and a fixed wall temperature.
@@ -66,22 +66,36 @@ We need to set `config.viscous=true` to make the temperature-setting part
 of this boundary condition effective.
 
 `Twall`::
-  The fixed wall temperature, in degrees K.
+  The fixed wall temperature, in degrees K. 
 
+`wall_function`::
+  an optional analytical model for the turbulent wall stress and heat transfer, allowing
+  the user to scrimp on small grid cells close to the wall. Suitable for use with the
+  k-omega turbulence model only.
 
-  WallBC_NoSlip_FixedT1:new{Twall, label, group}
+`catalytic_type`::
+  an optional boundary condition used for species transport equations in a reacting 
+  simulation. Options are: `none` which assumes no catalytic interaction with the
+  wall, `equilibrium` which assumes instantly completed reactions at the wall,
+  and `fixed_composition` which sets the mass fractions to a user-defined value.
+
+`catalytic_type`::
+  A table of species mass fractions required for `catalytic_type=fixed_composition`.
+
+  `WallBC_NoSlip_FixedT1`
 
 is variant of the boundary condition that does not use ghost cells and
 is suitable for moving-grid simulations.
 
 === No-slip, user-defined temperature
 
-  WallBC_NoSlip_UserDefinedT:new{Twall, label, group}
+  WallBC_NoSlip_UserDefinedT:new{Twall, wall_function, catalytic_type, wall_massf_composition, label, group}
 
 is similar to the fixed-temperature wall but allows an arbitrary temperature
 function to be specified via a lua script. This may be useful for simulating a
 heated experimental model, where some specific part of the model is heated by
-electrical resistance heating to a known elevatated temperature.
+electrical resistance heating to a known elevatated temperature. Optional
+arguments are the same as the fixed temperature case.
 
 `Twall`::
   The name of the lua file used to specify the wall temperature. Inside the code,
@@ -91,12 +105,13 @@ electrical resistance heating to a known elevatated temperature.
 
 === No-slip, adiabatic
 
-  WallBC_NoSlip_Adiabatic:new{label, group}
+  WallBC_NoSlip_Adiabatic:new{wall_function, catalytic_type, wall_massf_composition, label, group}
   or
-  WallBC_NoSlip_Adiabatic0:new{label, group}
+  WallBC_NoSlip_Adiabatic0:new{wall_function, catalytic_type, wall_massf_composition, label, group}
 
 is used where we want convective and viscous effects to impose no-slip at the wall
-but where there is no heat transfer.
+but where there is no heat transfer. Optional arguments are the same as the fixed
+temperature case.
 We need to set `config.viscous=true` to make this boundary condition effective.
 
 
