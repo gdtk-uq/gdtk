@@ -2171,13 +2171,13 @@ void gasdynamic_implicit_increment_with_fixed_grid()
     shared bool with_local_time_stepping = GlobalConfig.with_local_time_stepping;
     shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
     //
-    shared int ftl = 0; // time-level within the overall convective-update
-    shared int gtl = 0; // grid time-level remains at zero for the non-moving grid
+    immutable int ftl0 = 0;
+    immutable int ftl1 = 1;
+    immutable int gtl0 = 0; // grid time-level remains at zero for the non-moving grid
+    //
     if (GlobalConfig.udf_source_terms) {
         foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
             if (!blk.active) continue;
-            int blklocal_ftl = ftl;
-            int blklocal_gtl = gtl;
             double blklocal_sim_time = SimState.time;
             foreach (cell; blk.cells) {
                 size_t i_cell = cell.id; size_t j_cell = 0; size_t k_cell = 0;
@@ -2187,7 +2187,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
                     i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
                 }
-                getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time,
+                getUDFSourceTermsForCell(blk.myL, cell, gtl0, blklocal_sim_time,
                                          blk.myConfig, blk.id, i_cell, j_cell, k_cell);
             }
         }
@@ -2210,17 +2210,16 @@ void gasdynamic_implicit_increment_with_fixed_grid()
         }
         int flagTooManyBadCells;
         try {
-            ftl = 0; gtl = 0;
             // Attempt an update.
-            exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+            exchange_ghost_cell_boundary_data(SimState.time, gtl0, ftl0);
             exchange_ghost_cell_gas_solid_boundary_data();
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
+                    if (blk.active) { blk.applyPreReconAction(SimState.time, gtl0, ftl0); }
                 }
             } else {
                 foreach (blk; localFluidBlocksBySize) {
-                    if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
+                    if (blk.active) { blk.applyPreReconAction(SimState.time, gtl0, ftl0); }
                 }
             }
             // We've put this detector step here because it needs the ghost-cell data
@@ -2228,7 +2227,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
             if ((GlobalConfig.do_shock_detect) &&
                 ((!GlobalConfig.frozen_shock_detector) ||
                  (GlobalConfig.shock_detector_freeze_step > SimState.step))) {
-                detect_shocks(gtl, ftl);
+                detect_shocks(gtl0, ftl0);
             }
             foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
                 if (!blk.active) continue;
@@ -2247,8 +2246,6 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                 // Note that the only difference between the backward-Euler and the implicit-RK1 schemes
                 // is the factor of 2 that appears in 2 places.  We call this M.
                 double M = (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.implicit_rk1) ? 2.0 : 1.0;
-                int blklocal_ftl = ftl; assert(ftl == 0, "ftl is assumed zero but it is not.");
-                int blklocal_gtl = gtl; assert(gtl == 0, "For fixed grid, gtl is assumed zero but it is not.");
                 bool allow_hoi_rhs = allow_high_order_interpolation;
                 bool allow_hoi_matrix = allow_high_order_interpolation && GlobalConfig.allow_interpolation_for_sensitivity_matrix;
                 bool blklocal_with_local_time_stepping = with_local_time_stepping;
@@ -2263,9 +2260,9 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     // Set up the linear system by evaluating the sensitivity matrix.
                     // Do this without high-order interpolation, just to be cheap.
                     blk.U0save.copy_values_from(U0);
-                    cell.decode_conserved(blklocal_gtl, blklocal_ftl, blk.omegaz);
+                    cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                     dUdt0.clear();
-                    blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, allow_hoi_matrix);
+                    blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix);
                     blk.RU0.copy_values_from(dUdt0);
                     foreach (j; 0 .. cqi.n) {
                         U0.copy_values_from(blk.U0save);
@@ -2277,10 +2274,10 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                             number hc = Complex!double(0.0, h);
                             // Perturb one quantity.
                             U0.vec[j] += hc;
-                            cell.decode_conserved(blklocal_gtl, blklocal_ftl, blk.omegaz);
+                            cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                             // Get derivative vector.
                             dUdt0.clear();
-                            blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, allow_hoi_matrix);
+                            blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix);
                             foreach (k; 0 .. cqi.n) {
                                 blk.dRUdU[k] = (dUdt0.vec[k].im - blk.RU0.vec[k].im)/h;
                             }
@@ -2289,10 +2286,10 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                             double h = 1.0e-5*(fabs(U0.vec[j]) + 1.0);
                             // Perturb one quantity.
                             U0.vec[j] += h;
-                            cell.decode_conserved(blklocal_gtl, blklocal_ftl, blk.omegaz);
+                            cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                             // Get derivative vector.
                             dUdt0.clear();
-                            blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, allow_hoi_matrix);
+                            blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix);
                             foreach (k; 0 .. cqi.n) {
                                 blk.dRUdU[k] = (dUdt0.vec[k] - blk.RU0.vec[k])/h;
                             }
@@ -2304,9 +2301,9 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     }
                     // Evaluate the right-hand side of the linear system equations.
                     U0.copy_values_from(blk.U0save);
-                    cell.decode_conserved(blklocal_gtl, blklocal_ftl, blk.omegaz);
+                    cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                     dUdt0.clear();
-                    blk.evalRU(blklocal_t0, blklocal_gtl, blklocal_ftl, cell, allow_hoi_rhs);
+                    blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_rhs);
                     foreach (k; 0 .. cqi.n) { blk.crhs._data[k][cqi.n] = dUdt0.vec[k].re; }
                     // Solve for dU and update U.
                     gaussJordanElimination!double(blk.crhs);
@@ -2319,9 +2316,9 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                         }
                     }
                     // [TODO] PJ 2021-05-15 MHD bits
-                    cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
+                    cell.decode_conserved(gtl0, ftl1, blk.omegaz);
                 }
-                local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+                local_invalid_cell_count[i] = blk.count_invalid_cells(gtl0, ftl1);
             } // end foreach blk
             //
             flagTooManyBadCells = 0;
@@ -2344,24 +2341,24 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                 //exchange_ghost_cell_gas_solid_boundary_data();
                 if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (sblk; parallel(localSolidBlocks, 1)) {
-                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
+                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl0); }
                     }
                     foreach (sblk; parallel(localSolidBlocks, 1)) {
-                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
+                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl0); }
                     }
                 } else {
                     foreach (sblk; localSolidBlocks) {
-                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
+                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl0); }
                     }
                     foreach (sblk; localSolidBlocks) {
-                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
+                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl0); }
                     }
                 }
                 foreach (sblk; parallel(localSolidBlocks, 1)) {
                     if (!sblk.active) continue;
                     sblk.averageTemperatures();
                     sblk.clearSources();
-                    sblk.computeSpatialDerivatives(ftl);
+                    sblk.computeSpatialDerivatives(ftl0);
                 }
                 exchange_ghost_cell_solid_boundary_data();
                 foreach (sblk; parallel(localSolidBlocks, 1)) {
@@ -2370,11 +2367,11 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                 }
                 if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (sblk; parallel(localSolidBlocks, 1)) {
-                        if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
+                        if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl0); }
                     }
                 } else {
                     foreach (sblk; localSolidBlocks) {
-                        if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
+                        if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl0); }
                     }
                 }
                 // We need to synchronise before updating
@@ -2383,9 +2380,9 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                         if (GlobalConfig.udfSolidSourceTerms) {
                             addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
                         }
-                        scell.timeDerivatives(ftl, GlobalConfig.dimensions);
+                        scell.timeDerivatives(ftl0, GlobalConfig.dimensions);
                         scell.stage1Update(SimState.dt_global);
-                        scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
+                        scell.T = updateTemperature(scell.sp, scell.e[ftl1]);
                     } // end foreach scell
                 } // end foreach sblk
             } // end if tight solid domain coupling.
@@ -2415,6 +2412,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) {
             size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
+            assert (end_indx == 1, "Unexpected value for end_index.");
             foreach (cell; blk.cells) { swap(cell.U[0], cell.U[end_indx]); }
         }
     } // end foreach blk
