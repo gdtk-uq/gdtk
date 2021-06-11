@@ -16,13 +16,11 @@ import yaml
 from pitot3_utils.pitot3_classes import Facility, Driver, Diaphragm, Facility_State, Tube, Nozzle, Test_Section
 from pitot3_utils.pitot3_classes import eilmer4_CEAGas_input_file_creator, expansion_tube_test_time_calculator, state_output_for_final_output, pitot3_results_output
 
-VERSION_STRING = '10-Jun-2021'
+VERSION_STRING = '11-Jun-2021'
 
 #-----------------------------------------------------------------------------------
 
 def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$PITOT3_DATA'):
-
-    print(sys.path)
 
     print('-'*60)
     print ("Running PITOT3 version: {0}".format(VERSION_STRING))
@@ -571,7 +569,7 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
 
     pitot3_results_output(config_data, gas_path, object_dict)
 
-    return
+    return config_data, gas_path, object_dict
 
 
 # ----------------------------------------------------------------------------
