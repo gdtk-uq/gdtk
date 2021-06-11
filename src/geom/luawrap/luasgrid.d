@@ -253,7 +253,7 @@ extern(C) int newStructuredGrid(lua_State* L)
     }
     if (!checkAllowedNames(L, 1, ["path","psurface","pvolume","niv","njv","nkv",
                                   "cf","cfList","label","filename","fileName","fmt",
-				  "r_grid","s_grid"])) {
+				  "r_grid","s_grid","interpolation"])) {
         string errMsg = "Error in call to StructuredGrid:new{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -282,6 +282,7 @@ extern(C) int newStructuredGrid(lua_State* L)
     Path mypath;
     ParametricSurface psurface;
     ParametricVolume pvolume;
+    string interpolation = "tfi";
     int dimensions = 0;
     // First, look for a Path field, for a 1D grid.
     lua_getfield(L, 1, "path".toStringz);
@@ -317,6 +318,11 @@ extern(C) int newStructuredGrid(lua_State* L)
                 string errMsg = "Error in StructuredGrid:new{}. pvolume not a ParametricVolume.";
                 luaL_error(L, errMsg.toStringz);
             }
+        }
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "interpolation".toStringz);
+        if ( lua_isstring(L, -1) ) {
+            interpolation = to!string(lua_tostring(L, -1));
         }
         lua_pop(L, 1);
     }
@@ -414,7 +420,7 @@ extern(C) int newStructuredGrid(lua_State* L)
 	    new StructuredGrid(psurface, niv, njv, cfList, r_grid, s_grid)
             : new StructuredGrid(psurface, niv, njv, cfList);
 	break;
-    case 3: grid = new StructuredGrid(pvolume, niv, njv, nkv, cfList); break;
+    case 3: grid = new StructuredGrid(pvolume, niv, njv, nkv, cfList, interpolation); break;
     default: throw new GeometryException("invalid number of dimensions");
     }
     structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, grid);

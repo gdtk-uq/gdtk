@@ -94,18 +94,28 @@ public:
     {
         this(niv, njv, 1, label);
         // Any unspecified clustering functions default to the linear identity.
-        while (clusterf.length < 4) clusterf ~= new LinearFunction(0.0, 1.0);
+        while (clusterf.length < 4) { clusterf ~= new LinearFunction(0.0, 1.0); }
         make_grid_from_surface(surf, clusterf, r_grid, s_grid);
     }
 
     // 3D grid, built on ParametricVolume.
     this(const ParametricVolume pvolume, size_t niv, size_t njv, size_t nkv,
-         const(UnivariateFunction)[] clusterf, string label="")
+         const(UnivariateFunction)[] clusterf, string interpolation="tfi",
+         string label="")
     {
         this(niv, njv, nkv, label);
         // Any unspecified clustering functions default to the linear identity.
-        while (clusterf.length < 12) clusterf ~= new LinearFunction(0.0, 1.0);
-        make_grid_from_volume(pvolume, clusterf);
+        while (clusterf.length < 12) { clusterf ~= new LinearFunction(0.0, 1.0); }
+        switch (interpolation) {
+        case "tfi":
+            make_grid_from_volume_tfi(pvolume, clusterf);
+            break;
+        case "trilinear":
+            make_grid_from_volume_trilinear(pvolume, clusterf);
+            break;
+        default:
+            throw new Error(text("Unknown interpolation: ", interpolation));
+        }
     }
 
     // Imported grid.
@@ -587,8 +597,8 @@ public:
         }
     } // end make_grid_from_surface()
 
-    void make_grid_from_volume(const ParametricVolume pvolume,
-                               const(UnivariateFunction)[] clusterf)
+    void make_grid_from_volume_tfi(const ParametricVolume pvolume,
+                                   const(UnivariateFunction)[] clusterf)
     // Given a parametric volume, create the grid via TFI.
     //
     // The clustering information always comes from the 12 edges.
@@ -630,6 +640,55 @@ public:
             } // j
         } // k
     } // end make_grid_from_volume()
+
+    void make_grid_from_volume_trilinear(const ParametricVolume pvolume,
+                                         const(UnivariateFunction)[] clusterf)
+    // Given a parametric volume, create the grid via trilinear interpolation.
+    // Jens Kunze 2021-June.
+    //
+    // The clustering information always comes from the 12 edges.
+    {
+        // First, set up clustered parameter values along each edge.
+        double[] r01 = clusterf[0].distribute_parameter_values(niv);
+        double[] s12 = clusterf[1].distribute_parameter_values(njv);
+        double[] r32 = clusterf[2].distribute_parameter_values(niv);
+        double[] s03 = clusterf[3].distribute_parameter_values(njv);
+        //
+        double[] r45 = clusterf[4].distribute_parameter_values(niv);
+        double[] s56 = clusterf[5].distribute_parameter_values(njv);
+        double[] r76 = clusterf[6].distribute_parameter_values(niv);
+        double[] s47 = clusterf[7].distribute_parameter_values(njv);
+        //
+        double[] t04 = clusterf[8].distribute_parameter_values(nkv);
+        double[] t15 = clusterf[9].distribute_parameter_values(nkv);
+        double[] t26 = clusterf[10].distribute_parameter_values(nkv);
+        double[] t37 = clusterf[11].distribute_parameter_values(nkv);
+        //
+        // Now, work through the mesh, one point at a time,
+        // blending the stretched parameter values
+        // and creating the actual vertex coordinates in Cartesian space.
+        foreach (k; 0 .. nkv) {
+            foreach (j; 0 .. njv) {
+                foreach (i; 0 .. niv) {
+                    double rb = ((r32[i]-r01[i])*s03[j] + r01[i]) /
+                        (1.0 - (r32[i]-r01[i])*(s12[j]-s03[j]));
+                    double rt =  ((r76[i]-r45[i])*s47[j] + r45[i]) /
+                        (1.0 - (r76[i]-r45[i])*(s56[j]-s47[j]));
+                    double tw = ((t37[k]-t04[k])*s03[j] + t04[k]) /
+                        (1.0 - (t37[k]-t04[k])*(s47[j]-s03[j]));
+                    double te =  ((t26[k]-t15[k])*s12[j] + t15[k]) /
+                        (1.0 - (t26[k]-t15[k])*(s56[j]-s12[j]));
+                    double rdash = ((rt-rb)*tw + rb) / (1.0 - (rt-rb)*(te-tw));
+                    double tdash = (te-tw)*rdash + tw;
+                    double sb = (s12[j]-s03[j])*rb + s03[j];
+                    double st = (s56[j]-s47[j])*rt + s47[j];
+                    double sdash = (st-sb)*tdash + sb;
+                    Vector3 p = pvolume(rdash, sdash, tdash);
+                    this[i,j,k].set(p);
+                } // i
+            } // j
+        } // k
+    } // end make_grid_from_volume_trilinear()
 
     void read_from_text_file(string fileName, bool vtkHeader=true)
     {
