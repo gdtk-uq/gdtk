@@ -11,7 +11,8 @@
 --
 
 CIDBFileName = {
-   gupta = "gupta_etal_1990_CI_data.lua"
+   gupta = "gupta_etal_1990_CI_data.lua",
+   wright = "wright_etal_CI_data.lua"
 }
 
 
@@ -397,7 +398,9 @@ function write2TGas(f, species, db, optsTable)
    f:write("physical_model = 'two-temperature-gas'\n")
    f:write("db = {}\n")
    for _,sp in ipairs(species) do
+      print("sp= ", sp)
       f:write(string.format("db['%s'] = {}\n", sp))
+      print("type...", db[sp].type)
       f:write(string.format("db['%s'].type = '%s'\n", sp, db[sp].type))
       if db[sp].type == "molecule" then
          f:write(string.format("db['%s'].molecule_type = '%s'\n", sp, db[sp].molecule_type))
@@ -446,7 +449,7 @@ function write2TGas(f, species, db, optsTable)
       writeCeaThermoCoeffs(f, sp, db, optsTable)
    end
    -- Now a section for collision integrals.
-   cidb = "gupta"
+   cidb = optsTable.ci_database or "gupta"
    fname = CIDBFileName[cidb]
    if not fname then
       print("Collision integral database is not available: ", cidb)
