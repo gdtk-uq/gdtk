@@ -63,8 +63,8 @@ shock_tube_tube_name : 'shock_tube'
 shock_tube_expand_to : 'flow_behind_shock'
 shock_tube_expansion_factor : 1.0
 shock_tube_unsteady_expansion_steps : 100
-vs1_guess_1 : 1000.0 #m/s
-vs1_guess_2 : 2000.0 #m/s
+vs1_guess_1 : 2000.0 #m/s
+vs1_guess_2 : 3000.0 #m/s
 vs1_limits : [400.0, 20000.0] # m/s
 vs1_tolerance : 1.0e-5
 T1 : 'T_0' # the code will set this to the T_0 value above...
