@@ -9,14 +9,12 @@ Chris James (c.james4@uq.edu.au) - (01/01/21)
 import sys, os, math
 import yaml
 
-#sys.path.append(os.path.expandvars("$HOME/dgd/src/gas/sample-data/"))
-
 # I have put functions and classes on different lines here as it was getting too long
 # TO DO: the functions could even be put in a functions file...
 from pitot3_utils.pitot3_classes import Facility, Driver, Diaphragm, Facility_State, Tube, Nozzle, Test_Section
 from pitot3_utils.pitot3_classes import eilmer4_CEAGas_input_file_creator, expansion_tube_test_time_calculator, state_output_for_final_output, pitot3_results_output
 
-VERSION_STRING = '11-Jun-2021'
+VERSION_STRING = '12-Jun-2021'
 
 #-----------------------------------------------------------------------------------
 

@@ -805,6 +805,19 @@ class Facility_State(object):
             self.calculate_pitot_and_total_conditions()
             return self.pitot_state
 
+    def get_pitot_pressure(self):
+        """
+        Returns the pitot pressure (the pressure for the pitot condition). Will calculate it if it doesn't exist yet.
+        :return:
+        """
+
+        if hasattr(self, 'pitot_state'):
+            return self.pitot_state.p
+        else:
+            #print("Will calculate the pitot condition and then return it.")
+            self.calculate_pitot_and_total_conditions()
+            return self.pitot_state.p
+
     def get_total_condition(self):
         """
         Returns the total condition. Will calculate it if it doesn't exist yet.
@@ -814,9 +827,32 @@ class Facility_State(object):
         if hasattr(self, 'total_state'):
             return self.total_state
         else:
-            #print("Will calculate the total condition and then return it.")
             self.calculate_pitot_and_total_conditions()
             return self.total_state
+
+    def get_total_pressure(self):
+        """
+        Returns the total pressure (the pressure of the total condition). Will calculate it if it doesn't exist yet.
+        :return:
+        """
+
+        if hasattr(self, 'total_state'):
+            return self.total_state.p
+        else:
+            self.calculate_pitot_and_total_conditions()
+            return self.total_state.p
+
+    def get_total_temperature(self):
+        """
+        Returns the total temperature (the temperature of the total condition). Will calculate it if it doesn't exist yet.
+        :return:
+        """
+
+        if hasattr(self, 'total_state'):
+            return self.total_state.T
+        else:
+            self.calculate_pitot_and_total_conditions()
+            return self.total_state.T
 
     def set_reference_gas_state(self, reference_gas_state):
         """
@@ -851,9 +887,6 @@ class Facility_State(object):
 
         if not self.reference_gas_state:
             print("This FacilityState does not have a reference gas state which is required to calculate enthalpy.")
-            print("None will be returned.")
-
-            return None
 
         else:
             # we need get the total state to get the total enthalpy
@@ -910,6 +943,37 @@ class Facility_State(object):
             print("None will be returned.")
             return None
 
+    def calculate_flight_equivalent_velocity(self):
+        """
+        Function to calculate the flight equivalent velocity
+        :return:
+        """
+
+        if not self.reference_gas_state:
+            print("This FacilityState does not have a reference gas state which is required to calculate flight equivalent velocity.")
+
+        self.calculate_total_and_sensible_enthalpy()
+
+        self.flight_equivalent_velocity = math.sqrt(2.0 * self.total_enthalpy)
+
+        return
+
+    def get_flight_equivalent_velocity(self):
+        """
+        Function to return the flight equivalent velocity if we have it or can get it.
+        """
+
+        if hasattr(self, 'flight_equivalent_velocity'):
+            return self.flight_equivalent_velocity
+        elif self.reference_gas_state:
+            # just calculate the flight equivalent velocity and return it.
+            self.calculate_flight_equivalent_velocity()
+            return self.flight_equivalent_velocity
+        else:
+            print("This FacilityState does not have a reference gas state which is required to calculate the flight equivalent velocity.")
+            print("None will be returned.")
+            return None
+
     def get_gamma_and_R_string(self):
         """
         Returns a string with the processed gamma and R for printing. I found that I was printing them a lot together,
@@ -945,32 +1009,32 @@ class Facility_State(object):
             print("GasModel is not a CEAGas, so this function isn't useful. Will return None.")
             return None
 
-    def get_reduced_species_molef_dict(self):
-        """
-        If the gas is a CEAGas, it will go through the gas dictionary and remove any values which are empty,
-        which is very easy for printing things like fill states which probably only have 1-3 gases out of the full set of
-        high temperature possibilities.
-
-        Obviously not useful if the GasModel isn't a CEAGas...
-
-        This is the same as the function above but it converts to mole fractions while doing it...
-
-        """
-
-        if self.get_gas_state().gmodel.type_str == 'CEAGas':
-            # a fill state will not have many different species, so we should just the species which actually exist
-            species_massf_dict = self.get_gas_state().ceaSavedData['massf']
-
-            reduced_species_massf_dict = {}
-            for species in species_massf_dict.keys():
-                if species_massf_dict[species] > 0.0:
-                    reduced_species_massf_dict[species] = species_massf_dict[species]
-
-            return reduced_species_massf_dict
-
-        else:
-            print("GasModel is not a CEAGas, so this function isn't useful. Will return None.")
-            return None
+    # def get_reduced_species_molef_dict(self):
+    #     """
+    #     If the gas is a CEAGas, it will go through the gas dictionary and remove any values which are empty,
+    #     which is very easy for printing things like fill states which probably only have 1-3 gases out of the full set of
+    #     high temperature possibilities.
+    #
+    #     Obviously not useful if the GasModel isn't a CEAGas...
+    #
+    #     This is the same as the function above but it converts to mole fractions while doing it...
+    #
+    #     """
+    #
+    #     if self.get_gas_state().gmodel.type_str == 'CEAGas':
+    #         # a fill state will not have many different species, so we should just the species which actually exist
+    #         species_massf_dict = self.get_gas_state().ceaSavedData['massf']
+    #
+    #         reduced_species_massf_dict = {}
+    #         for species in species_massf_dict.keys():
+    #             if species_massf_dict[species] > 0.0:
+    #                 reduced_species_massf_dict[species] = species_massf_dict[species]
+    #
+    #         return reduced_species_massf_dict
+    #
+    #     else:
+    #         print("GasModel is not a CEAGas, so this function isn't useful. Will return None.")
+    #         return None
 
     def get_mu(self):
         """
@@ -1772,6 +1836,7 @@ class Test_Section(object):
 
         post_conical_shock_gas_state = GasState(test_section_state_gmodel)
 
+        print("Test section freestream state is:")
         print(self.test_section_state)
 
         # start by getting the shock angle (beta)
@@ -1824,6 +1889,9 @@ class Test_Section(object):
 
         print('-' * 60)
         print("Starting equilibrium wedge shock calculation with a wedge angle of {0} degrees.".format(self.wedge_angle_degrees))
+
+        print("Test section freestream state is:")
+        print(self.test_section_state)
 
         test_section_state_gmodel = self.test_section_state.get_gas_state().gmodel
         test_section_state_gas_flow_object = GasFlow(test_section_state_gmodel)
@@ -1907,8 +1975,8 @@ def state_output_for_final_output(facility_state):
     v = facility_state.get_v()
     M = facility_state.get_M()
     rho = gas_state.rho
-    pitot_p = facility_state.get_pitot_condition().p
-    p0 = facility_state.get_total_condition().p
+    pitot_p = facility_state.get_pitot_pressure()
+    p0 = facility_state.get_total_pressure()
     if facility_state.reference_gas_state:
         Ht = facility_state.get_total_enthalpy()
     else:
@@ -1950,8 +2018,10 @@ def state_output_for_final_output(facility_state):
         output_line += "{0:<8.0f}".format(pitot_p/1000.0)  # to get kPa
     if p0/1.0e6 < 1000.0:
         output_line += "{0:<7.2f}".format(p0/1.0e6) # to get MPa
-    else:
+    elif 1000.0 <= p0/1.0e6 < 10000.0:
         output_line += "{0:<7.1f}".format(p0 / 1.0e6)  # to get MPa
+    else:
+        output_line += "{0:<7.0f}".format(p0 / 1.0e6)  # to get MPa
     if Ht == '-':
         output_line += "{0:<6}".format(Ht)
     else:
@@ -2214,13 +2284,9 @@ def pitot3_results_output(config_data, gas_path, object_dict):
         freestream_state = test_section.get_entrance_state()
         test_section_post_normal_shock_state = test_section.get_post_normal_shock_state()
 
-        freestream_total_state = freestream_state.get_total_condition()
-        # total temperature is just the temperature of the total state...
-        freestream_total_temperature = freestream_total_state.T
+        freestream_total_temperature = freestream_state.get_total_temperature()
 
-        # flight equivalent velocity is a re-arranged 0.5*Ue**2.0 = Ht
-        freestream_total_enthalpy = freestream_state.get_total_enthalpy()
-        freestream_flight_equivalent_velocity = math.sqrt(2.0 * freestream_total_enthalpy)
+        freestream_flight_equivalent_velocity = freestream_state.get_flight_equivalent_velocity()
 
         print("The freestream ({0}) total temperature (Tt) is {1:.2f} K.".format(freestream_state.get_state_name(),
                                                                                  freestream_total_temperature),

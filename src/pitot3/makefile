@@ -5,8 +5,17 @@
 # Chris James (c.james4@uq.edu.au) - 07-Jun-2021
 
 INSTALL_DIR ?= $(DGD)
+
+GAS_DIR := ../gas
+include $(GAS_DIR)/gas_files.mk
+LIBGASF := $(GAS_DIR)/libgasf.a
+
+GASDYN_DIR := ../gasdyn
+include $(GASDYN_DIR)/gasdyn_files.mk
  
 install : $(INSTALL_DIR)
+	@echo installing gas library
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a
 	@echo Copying pitot3.py to $(INSTALL_DIR)/bin
 	cp -f pitot3.py $(INSTALL_DIR)/bin
 	@echo Copying pitot3_utils folder to $(INSTALL_DIR)/lib
@@ -18,6 +27,9 @@ install : $(INSTALL_DIR)
 	@echo -----------------------------------------
 	@echo pitot3 should now be installed.
 	@echo -----------------------------------------
+	
+clean : 
+	cd $(GAS_DIR); make clean; rm -f libgas.a
 	
 $(INSTALL_DIR):
 	- mkdir $(INSTALL_DIR)
