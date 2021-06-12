@@ -11,7 +11,7 @@ config.flux_calculator = "ausmdv"
 config.interpolation_order = 2
 config.spatial_deriv_calc = "least_squares"
 config.spatial_deriv_locn = "cells"
-config.gasdynamic_update_scheme = "euler"
+config.gasdynamic_update_scheme = "backward_euler"
 config.viscous_signal_factor = 0.1
 
 -- Gas model and flow conditions to match ZPG case M=5, Tw/Tinf=5.450
@@ -80,7 +80,10 @@ L = 1.0
 flowtime = L/u_inf
 config.max_time = 4.0*flowtime
 config.max_step = 3000000
-config.cfl_value = 0.5
+-- config.cfl_value = 0.5 -- for explicit update scheme
+-- For the backward-euler scheme, we can allow cfl > 1.
+config.cfl_schedule_values = {0.5, 1.0, 5.0, 50.0}
+config.cfl_schedule_times = {0.0, 10.0e-6, 0.1e-3, 0.2e-3}
 config.dt_plot = flowtime/4.0
-config.print_count=1000
+config.print_count=200
 config.dt_init = 1e-12

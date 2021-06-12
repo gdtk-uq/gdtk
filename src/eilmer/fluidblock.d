@@ -889,9 +889,10 @@ public:
                 cfl_allow *= 10.0;
             }
         } else {
-            // [TODO] PJ 2021-05-17 Implicit update schemes should run with cfl > 1
+            // [TODO] PJ 2021-05-17 Implicit update schemes should run with cfl >> 1
             // but we don't have much experience to know how far the cfl can be pushed.
-            cfl_allow = 500.0;
+            // 100.0 seems a little too far for the LaRC flat plate with turbulent Mach 5 flow.
+            cfl_allow = 60.0;
         }
         // for local time-stepping we limit the larger time-steps by a factor of the smallest timestep
         int local_time_stepping_limit_factor = myConfig.local_time_stepping_limit_factor;
@@ -935,9 +936,9 @@ public:
             }
         } // foreach cell
         if (myConfig.with_super_time_stepping == false && check_cfl && (cfl_max < 0.0 || cfl_max > cfl_allow)) {
-            debug { writefln("Bad cfl number encountered cfl_max=", cfl_max, " for FluidBlock ", id); }
-            // If cfl_max exceeds cfl_allow, simply reduce the
-            // cfl_max to cfl_adjust*cfl_allow. A value of 0.5 seems
+            debug { writeln("Bad cfl number encountered cfl_max=", cfl_max, " for FluidBlock ", id); }
+            // If cfl_max exceeds cfl_allow, simply reduce the cfl_max to cfl_adjust*cfl_allow.
+            // For the low-order explicit updating schemes, a value of 0.5 seems
             // to work robustly. Values to 0.7 also work, beyond this
             // and code begins to crash due to numerical instability.
             // Results in auto-limitation of the time step/cfl
