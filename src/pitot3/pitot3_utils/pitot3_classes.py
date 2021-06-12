@@ -878,15 +878,15 @@ class Facility_State(object):
 
         return
 
-    def calculate_total_and_sensible_enthalpy(self):
+    def calculate_total_enthalpy(self):
         """
-        If a reference gas state is available, it will calculate the total and sensible enthalpy.
+        If a reference gas state is available, this function will calculate the total enthalpy.
 
         :return:
         """
 
         if not self.reference_gas_state:
-            print("This FacilityState does not have a reference gas state which is required to calculate enthalpy.")
+            print("This FacilityState does not have a reference gas state which is required to calculate total enthalpy.")
 
         else:
             # we need get the total state to get the total enthalpy
@@ -900,13 +900,6 @@ class Facility_State(object):
 
             self.total_enthalpy = total_enthalpy
 
-            # then sensible enthalpy is just the sensible enthalpy of the gas state minus the reference state
-
-            gas_state = self.get_gas_state()
-            sensible_enthalpy = gas_state.enthalpy - reference_gas_state.enthalpy
-
-            self.sensible_enthalpy = sensible_enthalpy
-
         return
 
     def get_total_enthalpy(self):
@@ -919,16 +912,37 @@ class Facility_State(object):
             return self.total_enthalpy
         elif self.reference_gas_state:
             # just calculate the enthalpy and then return it...
-            self.calculate_total_and_sensible_enthalpy()
+            self.calculate_total_enthalpy()
             return self.total_enthalpy
         else:
             print("This FacilityState does not have a reference gas state which is required to calculate enthalpy.")
             print("None will be returned.")
             return None
 
+    def calculate_sensible_enthalpy(self):
+        """
+        If a reference gas state is available, this function will calculate the sensible enthalpy.
+
+        :return:
+        """
+
+        if not self.reference_gas_state:
+            print("This FacilityState does not have a reference gas state which is required to calculate sensible enthalpy.")
+
+        else:
+            reference_gas_state = self.get_reference_gas_state()
+
+            # then sensible enthalpy is just the sensible enthalpy of the gas state minus the reference state
+            gas_state = self.get_gas_state()
+            sensible_enthalpy = gas_state.enthalpy - reference_gas_state.enthalpy
+
+            self.sensible_enthalpy = sensible_enthalpy
+
+        return
+
     def get_sensible_enthalpy(self):
         """
-        Function to return the sensible enthalpy if we have it or can get it.
+        Function to return the sensible enthalpy if we have it or we can get it.
         """
 
         # TO DO: we could also just add variables like total_enthalpy to the class when we make it?
@@ -936,7 +950,7 @@ class Facility_State(object):
             return self.sensible_enthalpy
         elif self.reference_gas_state:
             # just calculate the enthalpy and then return it...
-            self.calculate_total_and_sensible_enthalpy()
+            self.calculate_sensible_enthalpy()
             return self.sensible_enthalpy
         else:
             print("This FacilityState does not have a reference gas state which is required to calculate enthalpy.")
@@ -952,7 +966,7 @@ class Facility_State(object):
         if not self.reference_gas_state:
             print("This FacilityState does not have a reference gas state which is required to calculate flight equivalent velocity.")
 
-        self.calculate_total_and_sensible_enthalpy()
+        self.calculate_total_enthalpy()
 
         self.flight_equivalent_velocity = math.sqrt(2.0 * self.total_enthalpy)
 
@@ -1975,16 +1989,26 @@ def state_output_for_final_output(facility_state):
     v = facility_state.get_v()
     M = facility_state.get_M()
     rho = gas_state.rho
-    pitot_p = facility_state.get_pitot_pressure()
-    p0 = facility_state.get_total_pressure()
-    if facility_state.reference_gas_state:
-        Ht = facility_state.get_total_enthalpy()
+    # don't try to get the pitot and total state if the gas isn't moving, as some CEA mixtures don't like that.
+    if v > 0.0:
+        pitot_p = facility_state.get_pitot_pressure()
+        p0 = facility_state.get_total_pressure()
     else:
-        Ht = '-'
+        pitot_p = p
+        p0 = p
+
+    # we get these out of order as Ht is just h if the gas isn't moving so we can use h if needed
     if facility_state.reference_gas_state:
         h = facility_state.get_sensible_enthalpy()
     else:
         h = '-'
+
+    if facility_state.reference_gas_state and v > 0.0:
+        Ht = facility_state.get_total_enthalpy()
+    elif facility_state.reference_gas_state and v == 0.0:
+        Ht = h
+    else:
+        Ht = '-'
 
     # now we go through and create the output line...
     # with some small changes for different variables in different situations...
