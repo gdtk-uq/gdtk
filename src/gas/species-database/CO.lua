@@ -1,5 +1,13 @@
 db.CO = {}
 db.CO.atomicConstituents = {C=1,O=1,}
+db.CO.type = "molecule"
+db.CO.molecule_type = "linear"
+db.CO.theta_v = {
+   value = 3122,
+   units = 'K',
+   description = 'characteristic vibrational temperature',
+   reference = 'Capitelli et al (2005), Table 11. omega_e in ground state converted to K'
+}
 db.CO.charge = 0
 db.CO.M = {
    value = 28.010100e-3,

@@ -1,5 +1,6 @@
 db.C = {}
 db.C.atomicConstituents = {C=1,}
+db.C.type = "atom"
 db.C.charge = 0
 db.C.M = { 
    value = 12.0107000e-3,
