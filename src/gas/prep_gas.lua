@@ -398,9 +398,7 @@ function write2TGas(f, species, db, optsTable)
    f:write("physical_model = 'two-temperature-gas'\n")
    f:write("db = {}\n")
    for _,sp in ipairs(species) do
-      print("sp= ", sp)
       f:write(string.format("db['%s'] = {}\n", sp))
-      print("type...", db[sp].type)
       f:write(string.format("db['%s'].type = '%s'\n", sp, db[sp].type))
       if db[sp].type == "molecule" then
          f:write(string.format("db['%s'].molecule_type = '%s'\n", sp, db[sp].molecule_type))
@@ -594,6 +592,7 @@ function prepareGasFile(inpFname, outFname)
       modelStr = modelStr .. "Equilibrium"
    end
    f:write(string.format("model = '%s'\n", modelStr))
+   options = options or {}
    gasModels[string.upper(model)].writeFn(f, species, db, options)
    f:close()
 end
