@@ -126,3 +126,32 @@ function SuppressReconstructionZone:new(o)
    o.p1.z = o.p1.z or 0.0
    return o
 end
+
+SuppressViscousStressesZone = {
+   p0 = nil,
+   p1 = nil,
+}
+
+function SuppressViscousStressesZone:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"p0", "p1"})
+   if not flag then
+      error("Invalid name for item supplied to SuppressViscousStressesZone constructor.", 2)
+   end
+   setmetatable(o, self)
+   self.__index = self
+   -- Make a record of the new zone, for later construction of the config file.
+   -- Note that we want zone id to start at zero for the D code.
+   o.id = #(suppressViscousStressesZones)
+   suppressViscousStressesZones[#(suppressViscousStressesZones)+1] = o
+   -- Must have corners
+   if not o.p0 then
+      error("You need to supply lower-left corner p0", 2)
+   end
+   if not o.p1 then
+      error("You need to supply upper-right corner p1", 2)
+   end
+   o.p0.z = o.p0.z or 0.0
+   o.p1.z = o.p1.z or 0.0
+   return o
+end

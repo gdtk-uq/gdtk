@@ -42,6 +42,7 @@ public:
     size_t i_bndry; // if the face is on a block boundary, store index into the array of faces attached to bc
     bool use_wall_function_shear_and_heat_flux = false; // for use in viscous_flux_calc()
     bool in_suppress_reconstruction_zone; // if true, we no do reconstruction at this face
+    bool in_suppress_viscous_stresses_zone; // if true, we have zero viscous stresses at this face
     //
     // Geometry
     Matrix!number T;       // For use with LU-SGS
@@ -558,7 +559,12 @@ public:
     void viscous_flux_calc()
     // Unified 2D and 3D viscous-flux calculation.
     // Note that the gradient values need to be in place before calling this procedure.
+    // Note, also, that the viscous fluxes are added to the flux-vector components.
     {
+        if (in_suppress_viscous_stresses_zone) {
+            // We wish to ignore the viscous fluxes here.
+            return;
+        }
         auto gmodel = myConfig.gmodel;
         uint n_species = myConfig.n_species;
         uint n_modes = myConfig.n_modes;

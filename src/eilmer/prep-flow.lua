@@ -57,6 +57,7 @@ ReactionZone = zones.ReactionZone
 IgnitionZone = zones.IgnitionZone
 TurbulentZone = zones.TurbulentZone
 SuppressReconstructionZone = zones.SuppressReconstructionZone
+SuppressViscousStressesZone = zones.SuppressViscousStressesZone
 
 require 'output'
 write_control_file = output.write_control_file
@@ -113,6 +114,7 @@ ignitionZones = {}
 reactionZones = {}
 turbulentZones = {}
 suppressReconstructionZones = {}
+suppressViscousStressesZones = {}
 
 gridConnections = {} -- Will be overwritten when the JSON data is parsed.
 

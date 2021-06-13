@@ -998,6 +998,8 @@ final class GlobalConfig {
     shared static SpatialDerivCalc spatial_deriv_calc = SpatialDerivCalc.divergence;
     shared static SpatialDerivLocn spatial_deriv_locn = SpatialDerivLocn.vertices;
     shared static bool include_ghost_cells_in_spatial_deriv_clouds = true;
+    // We may elect to suppress the calculation of gradients in particular zones.
+    static BlockZone[] suppress_viscous_stresses_zones;
     //
     // save the gradients used in the viscous calculations to file
     shared static bool save_viscous_gradients = false;
@@ -1242,6 +1244,7 @@ public:
     SpatialDerivCalc spatial_deriv_calc;
     SpatialDerivLocn spatial_deriv_locn;
     bool include_ghost_cells_in_spatial_deriv_clouds;
+    BlockZone[] suppress_viscous_stresses_zones;
     double viscous_factor;
     double shear_stress_relative_limit;
     bool apply_shear_stress_relative_limit;
@@ -1388,6 +1391,9 @@ public:
         spatial_deriv_locn = GlobalConfig.spatial_deriv_locn;
         include_ghost_cells_in_spatial_deriv_clouds =
             GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds;
+        foreach (bz; GlobalConfig.suppress_viscous_stresses_zones) {
+            suppress_viscous_stresses_zones ~= new BlockZone(bz);
+        }
         save_viscous_gradients = GlobalConfig.save_viscous_gradients;
         shear_stress_relative_limit = GlobalConfig.shear_stress_relative_limit;
         apply_shear_stress_relative_limit = GlobalConfig.apply_shear_stress_relative_limit;
@@ -1982,6 +1988,14 @@ void set_config_for_core(JSONValue jsonData)
         Vector3 p0 = Vector3(zone_data[0], zone_data[1], zone_data[2]);
         Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
         GlobalConfig.suppress_reconstruction_zones ~= new BlockZone(p0, p1);
+    }
+    int n_suppress_viscous_stresses_zones = getJSONint(jsonData, "n-suppress-viscous-stresses-zones", 0);
+    foreach (i; 0 .. n_suppress_viscous_stresses_zones) {
+        string jsonKey = format("suppress-viscous-stresses-zone-%d", i);
+        auto zone_data = getJSONdoublearray(jsonData, jsonKey, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+        Vector3 p0 = Vector3(zone_data[0], zone_data[1], zone_data[2]);
+        Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
+        GlobalConfig.suppress_viscous_stresses_zones ~= new BlockZone(p0, p1);
     }
 
     auto sdluOptions = jsonData["solid_domain_loose_update_options"];

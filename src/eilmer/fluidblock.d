@@ -233,8 +233,12 @@ public:
     abstract void read_new_underlying_grid(string fileName);
     abstract void write_underlying_grid(string fileName);
     @nogc abstract void propagate_inflow_data_west_to_east();
-    @nogc abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = []);
-    @nogc abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0, FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = []);
+    @nogc abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0,
+                                               FVCell[] cell_list = [], FVInterface[] iface_list = [],
+                                               FVVertex[] vertex_list = []);
+    @nogc abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0,
+                                               FVCell[] cell_list = [], FVInterface[] iface_list = [],
+                                               FVVertex[] vertex_list = []);
 
     @nogc
     void identify_reaction_zones(int gtl)
@@ -349,6 +353,41 @@ public:
             }
         }
     } // end identify_suppress_reconstruction_zones()
+
+    @nogc
+    void identify_suppress_viscous_stresses_zones()
+    // Adjust the in_suppress_reconstruction-zone flag for faces in this block.
+    {
+        foreach(f; faces) {
+            f.in_suppress_viscous_stresses_zone = false;
+            if (myConfig.suppress_viscous_stresses_zones.length > 0 ) {
+                foreach(svgz; myConfig.suppress_viscous_stresses_zones) {
+                    if (svgz.is_inside(f.pos, myConfig.dimensions)) {
+                        f.in_suppress_viscous_stresses_zone = true;
+                    }
+                } // foreach srz
+            }
+        } // foreach face
+        //
+        debug {
+            size_t total_faces_in_suppress_viscous_stresses_zones = 0;
+            size_t total_faces = 0;
+            foreach(f; faces) {
+                total_faces_in_suppress_viscous_stresses_zones += (f.in_suppress_viscous_stresses_zone ? 1: 0);
+                total_faces += 1;
+            } // foreach face
+            if (myConfig.verbosity_level >= 2) {
+                writeln("identify_suppress_viscous_stresses_zones(): block ", id,
+                        " faces inside zones = ", total_faces_in_suppress_viscous_stresses_zones,
+                        " out of ", total_faces);
+                if (myConfig.suppress_viscous_stresses_zones.length == 0) {
+                    writeln("Note that for no user-specified zones,",
+                            " nominally viscous stresses are allowed for the whole domain",
+                            " but may be suppressed at the boundaries and/or near the axis of symmetry.");
+                }
+            }
+        }
+    } // end identify_suppress_viscous_stresses_zones()
 
     @nogc
     void identify_turbulent_zones(int gtl)

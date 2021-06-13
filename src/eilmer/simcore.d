@@ -287,6 +287,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
         myblk.identify_reaction_zones(0);
         myblk.identify_turbulent_zones(0);
         myblk.identify_suppress_reconstruction_zones();
+        myblk.identify_suppress_viscous_stresses_zones();
         if (GlobalConfig.new_flow_format) {
             time_array[i] = myblk.read_solution(make_file_name("CellData", CellData.tag, job_name, myblk.id, SimState.current_tindx,
                                                             GlobalConfig.flowFileExt), false);

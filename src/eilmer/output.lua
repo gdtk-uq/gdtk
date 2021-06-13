@@ -385,6 +385,12 @@ function write_config_file(fileName)
 			    i-1, zone.p0.x, zone.p0.y, zone.p0.z,
 			    zone.p1.x, zone.p1.y, zone.p1.z))
    end
+   f:write(string.format('"n-suppress-viscous-stresses-zones": %d,\n', #suppressViscousStressesZones))
+   for i,zone in ipairs(suppressViscousStressesZones) do
+      f:write(string.format('"suppress-viscous-stresses-zone-%d": [%.18e, %.18e, %.18e, %.18e, %.18e, %.18e],\n',
+			    i-1, zone.p0.x, zone.p0.y, zone.p0.z,
+			    zone.p1.x, zone.p1.y, zone.p1.z))
+   end
    --
    f:write(string.format('"udf_solid_source_terms_file": "%s",\n', config.udf_solid_source_terms_file))
    f:write(string.format('"udf_solid_source_terms": %s,\n', tostring(config.udf_solid_source_terms)))
