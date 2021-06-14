@@ -735,28 +735,6 @@ class Facility_State(object):
 
         return text
 
-    def calculate_pitot_and_total_conditions(self):
-        """
-        Function to calculate the pitot and total conditions for the state, which can then be returned
-        using the related functions.
-
-        Remember that these states don't need the velocity object as they have been brought to rest.
-        :return:
-        """
-
-        # start by making a gas flow object which we can use...
-        gas_flow_object = GasFlow(self.gas_state.gmodel)
-
-        # TODO: add stuff to check that these actually worked, and not sure them if they didn't...
-
-        pitot_state = GasState(self.gas_state.gmodel)
-        gas_flow_object.pitot_condition(self.gas_state, self.v, pitot_state)
-        self.pitot_state = pitot_state
-
-        total_state = GasState(self.gas_state.gmodel)
-        gas_flow_object.total_condition(self.gas_state, self.v, total_state)
-        self.total_state = total_state
-
     def get_state_name(self):
         """
         Return just the state name.
@@ -792,17 +770,48 @@ class Facility_State(object):
 
         return self.gas_state, self.v
 
+    def calculate_pitot_condition(self):
+        """
+        Function to calculate the pitot condition for the facility state, which can then be returned using the related function.
+
+        Remember that this state doesn't need the velocity object as it has been brought to rest.
+        :return:
+        """
+
+        # start by making a gas flow object which we can use...
+        gas_flow_object = GasFlow(self.gas_state.gmodel)
+
+        # TODO: add stuff to check that this actually worked.
+
+        try:
+            pitot_state = GasState(self.gas_state.gmodel)
+            gas_flow_object.pitot_condition(self.gas_state, self.v, pitot_state)
+            self.pitot_state = pitot_state
+        except Exception as err:
+            print("Error: {0}".format(err))
+            print(
+                "pitot3_classes.Facility_State.calculate_pitot_condition() Failed to calculate pitot condition for state {0}".format(
+                    self.state_name))
+            print("self.pitot_state will be set to None.")
+            self.pitot_state = None
+
+        return
+
     def get_pitot_condition(self):
         """
         Returns the pitot condition. Will calculate it if it doesn't exist yet.
         :return:
         """
 
-        if hasattr(self, 'pitot_state'):
+        if hasattr(self, 'pitot_state') and self.pitot_state:
             return self.pitot_state
+        elif hasattr(self, 'pitot_state') and not self.pitot_state:
+            # means that it failed to calculate the Pitot state
+            print("Cannot return the pitot state as we have failed to calculate it in the past.")
+            print("Will return None.")
+            return None
         else:
-            #print("Will calculate the pitot condition and then return it.")
-            self.calculate_pitot_and_total_conditions()
+            self.calculate_pitot_condition()
             return self.pitot_state
 
     def get_pitot_pressure(self):
@@ -811,12 +820,41 @@ class Facility_State(object):
         :return:
         """
 
-        if hasattr(self, 'pitot_state'):
+        if hasattr(self, 'pitot_state') and self.pitot_state:
             return self.pitot_state.p
+        elif hasattr(self, 'pitot_state') and not self.pitot_state:
+            # means that it failed to calculate the Pitot state
+            print("Cannot return the pitot pressure as we have failed to calculate the pitot state in the past.")
+            print("Will return None.")
+            return None
         else:
-            #print("Will calculate the pitot condition and then return it.")
-            self.calculate_pitot_and_total_conditions()
+            self.calculate_pitot_condition()
             return self.pitot_state.p
+
+    def calculate_total_condition(self):
+        """
+        Function to calculate the total condition for the facility state, which can then be returned using the related function.
+
+        Remember that this state doesn't need the velocity object as it has been brought to rest.
+        :return:
+        """
+
+        # start by making a gas flow object which we can use...
+        gas_flow_object = GasFlow(self.gas_state.gmodel)
+
+        # TODO: add stuff to check that this actually worked.
+
+        try:
+            total_state = GasState(self.gas_state.gmodel)
+            gas_flow_object.total_condition(self.gas_state, self.v, total_state)
+            self.total_state = total_state
+        except Exception as err:
+            print("Error: {0}".format(err))
+            print("pitot3_classes.Facility_State.calculate_total_condition() Failed to calculate total condition for state {0}".format(self.state_name))
+            print("self.total_state will be set to None.")
+            self.total_state = None
+
+        return
 
     def get_total_condition(self):
         """
@@ -824,10 +862,15 @@ class Facility_State(object):
         :return:
         """
 
-        if hasattr(self, 'total_state'):
+        if hasattr(self, 'total_state') and self.total_state:
             return self.total_state
+        elif hasattr(self, 'total_state') and not self.total_state:
+            # means that it failed to calculate the total state
+            print("Cannot return the total state as we have failed to calculate the total state in the past.")
+            print("Will return None.")
+            return None
         else:
-            self.calculate_pitot_and_total_conditions()
+            self.calculate_total_condition()
             return self.total_state
 
     def get_total_pressure(self):
@@ -836,10 +879,15 @@ class Facility_State(object):
         :return:
         """
 
-        if hasattr(self, 'total_state'):
+        if hasattr(self, 'total_state') and self.total_state:
             return self.total_state.p
+        elif hasattr(self, 'total_state') and not self.total_state:
+            # means that it failed to calculate the total state
+            print("Cannot return the total pressure as we have failed to calculate the total state in the past.")
+            print("Will return None.")
+            return None
         else:
-            self.calculate_pitot_and_total_conditions()
+            self.calculate_total_condition()
             return self.total_state.p
 
     def get_total_temperature(self):
@@ -848,10 +896,15 @@ class Facility_State(object):
         :return:
         """
 
-        if hasattr(self, 'total_state'):
+        if hasattr(self, 'total_state') and self.total_state:
             return self.total_state.T
+        elif hasattr(self, 'total_state') and not self.total_state:
+            # means that it failed to calculate the total state
+            print("Cannot return the total temperature as we have failed to calculate the total state in the past.")
+            print("Will return None.")
+            return None
         else:
-            self.calculate_pitot_and_total_conditions()
+            self.calculate_total_condition()
             return self.total_state.T
 
     def set_reference_gas_state(self, reference_gas_state):
@@ -893,12 +946,17 @@ class Facility_State(object):
             # if we use this function it will return it if we already have it, or calculate it if we don't
             total_state = self.get_total_condition()
 
-            reference_gas_state = self.get_reference_gas_state()
+            if total_state:
 
-            # total enthalpy is the sensible enthalpy of the total condition - the sensible enthalpy of the reference state
-            total_enthalpy = total_state.enthalpy - reference_gas_state.enthalpy
+                reference_gas_state = self.get_reference_gas_state()
 
-            self.total_enthalpy = total_enthalpy
+                # total enthalpy is the sensible enthalpy of the total condition - the sensible enthalpy of the reference state
+                total_enthalpy = total_state.enthalpy - reference_gas_state.enthalpy
+
+                self.total_enthalpy = total_enthalpy
+            else:
+                print("Total state could not be calculated, so self.total_enthalpy will be set to None.")
+                self.total_enthalpy = None
 
         return
 
@@ -1355,8 +1413,11 @@ class Tube(object):
                 if facility_state.reference_gas_state:
                     total_enthalpy = facility_state.get_total_enthalpy()
 
-                    print ("The total enthalpy (Ht) at state {0} is {1:.2f} MJ/kg.".format(facility_state.get_state_name(),
-                                                                                           total_enthalpy/1.0e6))
+                    if total_enthalpy:
+                        print ("The total enthalpy (Ht) at state {0} is {1:.2f} MJ/kg.".format(facility_state.get_state_name(),
+                                                                                               total_enthalpy/1.0e6))
+                    else:
+                        print("Was unable to calculate the total enthalpy at state {0} so it cannot be printed".format(facility_state.get_state_name()))
             return
 
         else:
