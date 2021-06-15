@@ -251,10 +251,13 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
         y_plus = 0.0;
     }
     // store in file
-    auto writer = format("%20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %d %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e\n",
-                         iface.pos.x.re, iface.pos.y.re, iface.pos.z.re, nx.re, ny.re, nz.re, iface.area[0].re, cellWidthNormalToSurface.re, outsign,
-                         P.re, rho_wall.re, T_wall.re, u_wall.re, v_wall.re, w_wall.re, mu_wall.re, a_wall.re,
-                         Re_wall.re, y_plus.re,
+    auto writer = format("%20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %d %20.16e " ~
+                         "%20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e %20.16e " ~
+                         "%20.16e %20.16e %20.16e %20.16e %20.16e\n",
+                         iface.pos.x.re, iface.pos.y.re, iface.pos.z.re, nx.re, ny.re, nz.re,
+                         iface.area[0].re, cellWidthNormalToSurface.re, outsign,
+                         P.re, rho_wall.re, T_wall.re, u_wall.re, v_wall.re, w_wall.re,
+                         mu_wall.re, a_wall.re, Re_wall.re, y_plus.re,
                          tau_wall_x.re, tau_wall_y.re, tau_wall_z.re,
                          q_total.re, q_cond.re, q_diff.re);
     std.file.append(fname, writer);
@@ -343,12 +346,12 @@ void computeRunTimeLoads()
         else {
             foreach (grpIdx, group; runTimeLoads) {
                 // Place local values in groupedLoads on each process
-                groupedLoads[grpIdx*6+0] = group.resultantForce.x;
-                groupedLoads[grpIdx*6+1] = group.resultantForce.y;
-                groupedLoads[grpIdx*6+2] = group.resultantForce.z;
-                groupedLoads[grpIdx*6+3] = group.resultantMoment.x;
-                groupedLoads[grpIdx*6+4] = group.resultantMoment.y;
-                groupedLoads[grpIdx*6+5] = group.resultantMoment.z;
+                groupedLoads[grpIdx*6+0] = group.resultantForce.x.re;
+                groupedLoads[grpIdx*6+1] = group.resultantForce.y.re;
+                groupedLoads[grpIdx*6+2] = group.resultantForce.z.re;
+                groupedLoads[grpIdx*6+3] = group.resultantMoment.x.re;
+                groupedLoads[grpIdx*6+4] = group.resultantMoment.y.re;
+                groupedLoads[grpIdx*6+5] = group.resultantMoment.z.re;
             }
             // Make sure each process has updated its loads calculation complete
             // before going on.

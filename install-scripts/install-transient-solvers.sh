@@ -33,7 +33,7 @@ fi
 #
 # The build of the "fast" code will take longer.
 make clean
-if make DMD=ldc2 FLAVOUR=fast WITH_MPI=1 INSTALL_DIR=${INSTALL_DIR} install
+if make DMD=ldc2 FLAVOUR=fast WITH_COMPLEX_NUMBERS=1 WITH_MPI=1 INSTALL_DIR=${INSTALL_DIR} install
 then
     echo "Build and install successful for FLAVOUR=fast."
 else

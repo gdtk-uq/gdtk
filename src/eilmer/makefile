@@ -49,6 +49,14 @@ endif
 PROGRAMS := e4shared e4monitor
 SHARE_FILES :=
 
+ifeq ($(WITH_COMPLEX_NUMBERS),1)
+    PROGRAMS += e4zshared
+endif
+
+ifeq ($(WITH_DIAGNOSTICS), 1)
+	PROGRAMS += e4shared_diagnostic
+endif
+
 ifeq ($(WITH_NK),1)
     PROGRAMS += e4-nk-shared
 endif
@@ -66,6 +74,9 @@ endif
 
 ifeq ($(WITH_MPI),1)
     PROGRAMS += e4mpi e4loadbalance
+    ifeq ($(WITH_COMPLEX_NUMBERS), 1)
+        PROGRAMS += e4zmpi
+    endif
     ifeq ($(WITH_NK),1)
         PROGRAMS += e4-nk-dist
     endif
@@ -84,14 +95,6 @@ endif
 ifeq ($(WITH_CUDA_GPU_CHEM),1)
     PROGRAMS += eilmer-cuda-gpu-chem prep-cuda-gpu-chem-kernel.py
     SHARE_FILES += alpha_qss_kernel_cuda_tmplt.cu libcudakernel.so
-endif
-
-ifeq ($(WITH_COMPLEX_NUMBERS),1)
-    PROGRAMS += e4zshared
-endif
-
-ifeq ($(WITH_DIAGNOSTICS), 1)
-	PROGRAMS += e4shared_diagnostic
 endif
 
 EILMER_CORE_FILES := simcore.d simcore_gasdynamic_step.d simcore_solid_step.d \
@@ -446,8 +449,11 @@ clean:
 	- rm -f shape_sensitivity_calc_with_rev_string.d
 	- rm -f e4opt optdriver_with_rev_string.d
 	- rm -f mpi_main_with_rev_string.d
+	- rm -f mpi_main_complex_with_rev_string.d
 	- rm -f loadbalance_with_rev_string.d
-	- rm -f e4mpi e4loadbalance e4ssc e4zshared e4-nk-shared e4-nk-dist e4-lusgs-shared e4-lusgs-dist e4shared_diagnostic
+	- rm -f e4mpi e4zmpi e4loadbalance e4ssc e4zshared
+	- rm -f e4-nk-shared e4-nk-dist e4-lusgs-shared e4-lusgs-dist
+	- rm -f e4shared_diagnostic
 	- rm -f dgd-for-mech4480.tgz
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(LUA_DIR); make clean
@@ -564,6 +570,30 @@ e4mpi: main.d $(EILMER_FILES) \
 		$(DVERSION)mpi_parallel \
 		-I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		mpi_main_with_rev_string.d \
+		$(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
+		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(DLINKFLAGS) -L-lmpi
+
+e4zmpi: main.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	cd $(OPENMPI_DIR); gen/setup.sh
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		main.d > mpi_main_complex_with_rev_string.d
+	$(DMD) $(DFLAGS) $(OF)e4zmpi \
+		$(DVERSION)mpi_parallel \
+		-I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
+		$(DVERSION)complex_numbers \
+		mpi_main_complex_with_rev_string.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
