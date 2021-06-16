@@ -141,7 +141,8 @@ DFLAGS += -dip1008
 # ----------------------------------------------------------------------
 
 CIF_DIR := species-database/collision-integrals
-COLLISION_INTEGRAL_FILES := $(CIF_DIR)/gupta_etal_1990_CI_data.lua
+COLLISION_INTEGRAL_FILES := $(CIF_DIR)/gupta_etal_1990_CI_data.lua \
+	$(CIF_DIR)/wright_etal_CI_data.lua
 
 # prep-gas and its database is required by the Eilmer flow solver.
 build-prep-gas: prep_gas.lua species-database/species-database.lua \
