@@ -145,6 +145,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     bool withPTC = true;
     string jobName = GlobalConfig.base_file_name;
     int nsteps = GlobalConfig.sssOptions.nTotalSteps;
+    int nIters;
     int nRestarts;
     int maxNumberAttempts = GlobalConfig.sssOptions.maxNumberAttempts;
     double relGlobalResidReduction = GlobalConfig.sssOptions.stopOnRelGlobalResid;
@@ -281,7 +282,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             foreach (attempt; 0 .. maxNumberAttempts) {
                 try {
                     version(lu_sgs) { lusgs_solve(preStep, pseudoSimTime, dt, normOld, startStep); }
-                    else { rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, startStep, LHSeval0, RHSeval0); }
+                    else { rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, nIters, startStep, LHSeval0, RHSeval0); }
                 }
                 catch (FlowSolverException e) {
                     version(mpi_parallel) {
@@ -593,43 +594,44 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             fResid.writeln("#  4: CFL");
             fResid.writeln("#  5: eta");
             fResid.writeln("#  6: nRestarts");
-            fResid.writeln("#  7: nFnCalls");
-            fResid.writeln("#  8: wall-clock, s");
-            fResid.writeln("#  9: global-residual-abs");
-            fResid.writeln("# 10: global-residual-rel");
-            fResid.writefln("#  %02d: mass-abs", 11+2*MASS);
-            fResid.writefln("# %02d: mass-rel", 11+2*MASS+1);
-            fResid.writefln("# %02d: x-mom-abs", 11+2*X_MOM);
-            fResid.writefln("# %02d: x-mom-rel", 11+2*X_MOM+1);
-            fResid.writefln("# %02d: y-mom-abs", 11+2*Y_MOM);
-            fResid.writefln("# %02d: y-mom-rel", 11+2*Y_MOM+1);
+            fResid.writeln("#  7: nIters");
+            fResid.writeln("#  8: nFnCalls");
+            fResid.writeln("#  9: wall-clock, s");
+            fResid.writeln("#  10: global-residual-abs");
+            fResid.writeln("# 11: global-residual-rel");
+            fResid.writefln("#  %02d: mass-abs", 12+2*MASS);
+            fResid.writefln("# %02d: mass-rel", 12+2*MASS+1);
+            fResid.writefln("# %02d: x-mom-abs", 12+2*X_MOM);
+            fResid.writefln("# %02d: x-mom-rel", 12+2*X_MOM+1);
+            fResid.writefln("# %02d: y-mom-abs", 12+2*Y_MOM);
+            fResid.writefln("# %02d: y-mom-rel", 12+2*Y_MOM+1);
             if ( GlobalConfig.dimensions == 3 ) {
-                fResid.writefln("# %02d: z-mom-abs", 11+2*Z_MOM);
-                fResid.writefln("# %02d: z-mom-rel", 11+2*Z_MOM+1);
+                fResid.writefln("# %02d: z-mom-abs", 12+2*Z_MOM);
+                fResid.writefln("# %02d: z-mom-rel", 12+2*Z_MOM+1);
             }
-            fResid.writefln("# %02d: energy-abs", 11+2*TOT_ENERGY);
-            fResid.writefln("# %02d: energy-rel", 11+2*TOT_ENERGY+1);
+            fResid.writefln("# %02d: energy-abs", 12+2*TOT_ENERGY);
+            fResid.writefln("# %02d: energy-rel", 12+2*TOT_ENERGY+1);
             auto nt = GlobalConfig.turb_model.nturb;
             foreach(it; 0 .. nt) {
                 string tvname = GlobalConfig.turb_model.primitive_variable_name(it);
-                fResid.writefln("# %02d: %s-abs", 11+2*(TKE+it), tvname);
-                fResid.writefln("# %02d: %s-rel", 11+2*(TKE+it)+1, tvname);
+                fResid.writefln("# %02d: %s-abs", 12+2*(TKE+it), tvname);
+                fResid.writefln("# %02d: %s-rel", 12+2*(TKE+it)+1, tvname);
             }
             auto nsp = GlobalConfig.gmodel_master.n_species;
             if ( nsp > 1) {
                 foreach(sp; 0 .. nsp) {
                     string spname = GlobalConfig.gmodel_master.species_name(sp);
-                    fResid.writefln("# %02d: %s-abs", 11+2*(SPECIES+sp), spname);
-                    fResid.writefln("# %02d: %s-rel", 11+2*(SPECIES+sp)+1, spname);
+                    fResid.writefln("# %02d: %s-abs", 12+2*(SPECIES+sp), spname);
+                    fResid.writefln("# %02d: %s-rel", 12+2*(SPECIES+sp)+1, spname);
                 }
             }
             auto nmodes = GlobalConfig.gmodel_master.n_modes;
             foreach(imode; 0 .. nmodes) {
                 string modename = "T_MODES["~to!string(imode)~"]"; //GlobalConfig.gmodel_master.energy_mode_name(imode);
-                fResid.writefln("# %02d: %s-abs", 11+2*(MODES+imode), modename);
-                fResid.writefln("# %02d: %s-rel", 11+2*(MODES+imode)+1, modename);
+                fResid.writefln("# %02d: %s-abs", 12+2*(MODES+imode), modename);
+                fResid.writefln("# %02d: %s-rel", 12+2*(MODES+imode)+1, modename);
             }
-            fResid.writefln("# %02d: mass-balance", 11+2*(TKE+nt + SPECIES+nsp + MODES+nmodes));
+            fResid.writefln("# %02d: mass-balance", 12+2*(TKE+nt + SPECIES+nsp + MODES+nmodes));
             fResid.close();
         }
     }
@@ -674,7 +676,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             failedAttempt = 0;
             try {
                 version(lu_sgs) { lusgs_solve(step, pseudoSimTime, dt, normNew, startStep); }
-                else { rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, startStep, LHSeval, RHSeval); }
+                else { rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, nIters, startStep, LHSeval, RHSeval); }
             }
             catch (FlowSolverException e) {
                 writefln("Failed when attempting GMRES solve in main steps.");
@@ -830,8 +832,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             if (GlobalConfig.is_master_task) {
                 auto cqi = GlobalConfig.cqi;
                 fResid = File(residFname, "a");
-                fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %5d %.8f %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e ",
-                              step, pseudoSimTime, dt, cfl, eta, nRestarts, fnCount, wallClockElapsed,
+                fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %3d %5d %.8f %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e ",
+                              step, pseudoSimTime, dt, cfl, eta, nRestarts, nIters, fnCount, wallClockElapsed,
                               normNew, normNew/normRef,
                               currResiduals.vec[cqi.mass].re, currResiduals.vec[cqi.mass].re/maxResiduals.vec[cqi.mass].re,
                               currResiduals.vec[cqi.xMom].re, currResiduals.vec[cqi.xMom].re/maxResiduals.vec[cqi.xMom].re,
@@ -1630,7 +1632,7 @@ string lusgs_solve(string lhs_vec, string rhs_vec)
 }
 
 void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, double sigma, bool usePreconditioner,
-                    ref double residual, ref int nRestarts, int startStep, int LHSeval, int RHSeval)
+                    ref double residual, ref int nRestarts, ref int nIters, int startStep, int LHSeval, int RHSeval)
 {
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
@@ -2166,6 +2168,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 //      writefln("RANK %d: tolerance achieved on iteration: %d", GlobalConfig.mpi_rank_for_local_task, m);
                 break;
             }
+            nIters = to!int(iterCount);
         }
 
         if (iterCount == maxIters)
