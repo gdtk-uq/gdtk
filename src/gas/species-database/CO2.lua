@@ -3,13 +3,12 @@ db.CO2.atomicConstituents = {C=1, O=2}
 db.CO2.type = "molecule"
 db.CO2.molecule_type = "linear"
 db.CO2.theta_v = {
-   -- CO2 has 4 vibrational modes, let's average to give a characteristic vibrational temperature
-   -- This value is only picked up for Millikan-White if we don't overwrite with empirically derived parameters
-   -- (1992 + (2 x 960) + 3380) / 4
-   value = 1823,
+   -- CO2 has 4 vibrational modes, with characteristic vibrational temperatures: 960 (degeneracy 2), 1992, 3380
+   -- For theta_v, use lowest value (this is what Park et al [1993] seem to do)
+   value = 960,
    units = 'K',
    description = 'charateristic vibrational temperature',
-   reference = 'Capitelli et al (2005), Table 13. nu_1, nu_2 (with degeneracy 2), and nu_3 in ground state converted to K'
+   reference = 'Park et al (1993)'
 }
 db.CO2.charge = 0
 db.CO2.M = {
