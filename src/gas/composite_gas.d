@@ -171,6 +171,12 @@ public:
         mTransProps.updateTransProps(gs);
     }
 
+    @nogc override void binary_diffusion_coefficients(GasState Q, ref number[][] D)
+    {
+        debug{ assert(D.length==_n_species); }
+        mTransProps.binaryDiffusionCoefficients(Q, D);
+    }
+
 private:
     string mPhysicalModel;
     ThermodynamicModel mThermo;

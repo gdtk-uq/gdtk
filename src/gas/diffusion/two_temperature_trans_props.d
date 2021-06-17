@@ -233,7 +233,7 @@ public:
         gs.k_modes[0] = k_vib + k_E;
     }
 
-    void binaryDiffusionCoefficients(GasState gs, ref number[][] D)
+    @nogc void binaryDiffusionCoefficients(GasState gs, ref number[][] D)
     {
         // TODO: Think about "p" in this equation.
         // Should it be total pressure, or bath pressure of binary interactors only?

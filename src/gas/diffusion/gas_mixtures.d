@@ -58,6 +58,12 @@ public:
         mThermCond.update_thermal_conductivity(gs);
     }
 
+    @nogc void binaryDiffusionCoefficients(GasState gs, ref number[][] D)
+    {
+        // TODO: : )
+        throw new Error("GasMixtureTransProps has no binaryDiffusionCoefficients implemented.");
+    }
+
 private:
     WilkeMixingViscosity mVisc;
     WilkeMixingThermCond mThermCond;
