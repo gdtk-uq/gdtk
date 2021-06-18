@@ -781,7 +781,7 @@ protected:
         number l = nuhat*nuhat/kappa/kappa/d/d;
         number r;
 
-        if (Shat_by_nuhat*rlimit<l) {
+        if (Shat_by_nuhat*rlimit<=l) {
             r = rlimit;
         } else {
             r = l/Shat_by_nuhat;
