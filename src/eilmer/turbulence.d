@@ -593,9 +593,19 @@ class saTurbulenceModel : TurbulenceModel {
         number dissipation = cb2/sigma*rho*nuhat_gradient_squared;
 
         number T = production - destruction + dissipation;
+        if (!isFinite(T.re)) {
+            debug {
+                writeln("Turbulence source term is NaN.");
+                writeln("  r=", r, " fw=", fw, " rho=", rho, " cw1=", cw1, " cb1=", cb1);
+                writeln("  kappa=", kappa, " ft2=", ft2, " nuhat=", nuhat, " d=", d, " Shat_by_nuhat=", Shat_by_nuhat);
+                writeln("  production=", production, " destruction=", destruction, " dissipation=", dissipation);
+                writeln("  T=", T);
+            }
+            throw new Error("Turbulence source term is not finite.");
+        }
         source[0] = T;
-        return; 
-    }
+        return;
+    } // end source_terms()
 
     @nogc override number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number ybar, const number dwall) const {
         /*
@@ -757,7 +767,7 @@ protected:
     @nogc number
     compute_r(const number Shat_by_nuhat, const number nuhat, const number d) const pure {
         number r;
-        if (Shat_by_nuhat==0.0) {
+        if (fabs(Shat_by_nuhat) < 1.0e-16) {
             r = 10.0;
         } else {
             r =  fmin(nuhat*nuhat/Shat_by_nuhat/kappa/kappa/d/d, 10.0);
