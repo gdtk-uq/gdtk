@@ -579,9 +579,12 @@ class saTurbulenceModel : TurbulenceModel {
         number production = rho*cb1*(1.0 - ft2)*Shat_by_nuhat;
 
         number r = compute_r(Shat_by_nuhat, nuhat, d);
-        number g = r + cw2*(pow(r,6.0) - r);
-        number fw = (1.0 + cw3_to_the_sixth)/(pow(g,6.0) +  cw3_to_the_sixth);
-        fw = g*pow(fw, 1.0/6.0);
+        number fw = cw3; // Limit for |r| large.
+        if (fabs(r) < 100.0) {
+            number g = r + cw2*(pow(r,6.0) - r);
+            fw = (1.0 + cw3_to_the_sixth)/(pow(g,6.0) +  cw3_to_the_sixth);
+            fw = g*pow(fw, 1.0/6.0);
+        }
         number destruction = rho*(cw1*fw - cb1/kappa/kappa*ft2)*(nuhat*nuhat/d/d);
 
         //// No axisymmetric corrections terms in dS/dxi dS/dxi
