@@ -579,12 +579,9 @@ class saTurbulenceModel : TurbulenceModel {
         number production = rho*cb1*(1.0 - ft2)*Shat_by_nuhat;
 
         number r = compute_r(Shat_by_nuhat, nuhat, d);
-        number fw = cw3; // Limit for |r| large.
-        if (fabs(r) < 100.0) {
-            number g = r + cw2*(pow(r,6.0) - r);
-            fw = (1.0 + cw3_to_the_sixth)/(pow(g,6.0) +  cw3_to_the_sixth);
-            fw = g*pow(fw, 1.0/6.0);
-        }
+        number g = r + cw2*(pow(r,6.0) - r);
+        number fw = (1.0 + cw3_to_the_sixth)/(pow(g,6.0) +  cw3_to_the_sixth);
+        fw = g*pow(fw, 1.0/6.0);
         number destruction = rho*(cw1*fw - cb1/kappa/kappa*ft2)*(nuhat*nuhat/d/d);
 
         //// No axisymmetric corrections terms in dS/dxi dS/dxi
@@ -593,8 +590,8 @@ class saTurbulenceModel : TurbulenceModel {
         number dissipation = cb2/sigma*rho*nuhat_gradient_squared;
 
         number T = production - destruction + dissipation;
-        if (!isFinite(T.re)) {
-            debug {
+        debug {
+            if (!isFinite(T.re)) {
                 writeln("Turbulence source term is NaN.");
                 writeln("  r=", r, " fw=", fw, " rho=", rho, " cw1=", cw1, " cb1=", cb1);
                 writeln("  kappa=", kappa, " ft2=", ft2, " nuhat=", nuhat, " d=", d, " Shat_by_nuhat=", Shat_by_nuhat);
@@ -724,6 +721,7 @@ protected:
     immutable double ct2 = 2.0;
     immutable double ct3 = 1.2;
     immutable double ct4 = 0.5;
+    immutable double rlimit = 10.0;
 
     @nogc number
     compute_d(const number nut, const number nu, const number[3][3] velgrad,
@@ -766,11 +764,27 @@ protected:
 
     @nogc number
     compute_r(const number Shat_by_nuhat, const number nuhat, const number d) const pure {
+    /*
+        Notes: (21/06/18)
+        In a complex numbers calculation, it is possible to get a very small value of
+        Shat_by_nuhat that intermixes the real and complex components when calculating r.
+
+        This can result in a very large negative r, which is is both unphysical and likely
+        to overflow when computing fw. The correct behaviour is to set r = 10+0j as Shat
+        gets small. Finite negative values of Shat should never happen, but even
+        if they do we still want r = 10+0j, to keep fw in line. This could still malfunction
+        for very small real values of nuhat, but if anyone tries that they will have larger
+        problems than just this function.
+
+        @author: Nick Gibbons
+    */
+        number l = nuhat*nuhat/kappa/kappa/d/d;
         number r;
-        if (fabs(Shat_by_nuhat) < 1.0e-16) {
-            r = 10.0;
+
+        if (Shat_by_nuhat*rlimit<l) {
+            r = rlimit;
         } else {
-            r =  fmin(nuhat*nuhat/Shat_by_nuhat/kappa/kappa/d/d, 10.0);
+            r = l/Shat_by_nuhat;
         }
         return r;
     }
