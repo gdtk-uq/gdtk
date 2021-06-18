@@ -597,8 +597,8 @@ class saTurbulenceModel : TurbulenceModel {
                 writeln("  kappa=", kappa, " ft2=", ft2, " nuhat=", nuhat, " d=", d, " Shat_by_nuhat=", Shat_by_nuhat);
                 writeln("  production=", production, " destruction=", destruction, " dissipation=", dissipation);
                 writeln("  T=", T);
+                throw new Error("Turbulence source term is not finite.");
             }
-            throw new Error("Turbulence source term is not finite.");
         }
         source[0] = T;
         return;
