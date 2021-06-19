@@ -823,7 +823,10 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        throw new FlowSolverException("WallFunction_InterfaceEffect.apply_for_interface_structured_grid not implemented yet.");
+        f.use_wall_function_shear_and_heat_flux = true; // Do this every time; Should ask Wilson about it. PJ 2021-06-19
+        BoundaryCondition bc = blk.bc[which_boundary];
+        auto c = (bc.outsigns[f.i_bndry] == 1) ? f.left_cells[0] : f.right_cells[0];
+        wall_function(c, f);
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
