@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # script for calculating drag force acting on a flat plate
 # KD, 2019-12-17
 
@@ -19,7 +19,7 @@ print("computing drag at tindx: {}".format(tindx))
 
 # data structures
 loadsFile = "loads/t" + tindx + "/surface.data"
-p     =   [] # pressure (Pa) 
+p     =   [] # pressure (Pa)
 A     =   [] # surface element area (m^2)
 nx    =   [] # x-component of normal vector
 tau_w =   [] # wall shear stress (Pa)

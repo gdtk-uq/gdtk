@@ -5,7 +5,7 @@
 --  (Referenced from Fernholz & Finley (1977),
 --  AGARDograph No. 223, "A critical compilation of
 --  compressible turbulent boundary layer data.")
--- 
+--
 config.title = "Mabey Mach 4.5 flow over a flat plate (k-omega)"
 print(config.title)
 config.dimensions = 2
@@ -43,7 +43,7 @@ H = 0.40 * L
 --    flow=>    -\- |
 --        0         a ----> x
 --
-a = Vector3:new{x=L, y=0.0}; b = Vector3:new{x=L, y=H}; 
+a = Vector3:new{x=L, y=0.0}; b = Vector3:new{x=L, y=H};
 c = Vector3:new{x=0.0, y=H}; d = Vector3:new{x=0.0, y=3.0*H/4.0}
 patch = CoonsPatch:new{p00=d, p10=a, p11=b, p01=c}
 cfx = RobertsFunction:new{end0=true,end1=false,beta=1.05}
@@ -52,10 +52,10 @@ cflist = {north=cfx, east=RobertsFunction:new{end0=false,end1=true,beta=1.0014},
 grd = StructuredGrid:new{psurface=patch, niv=129/3, njv=97/3, cfList=cflist}
 
 blks = FBArray:new{grid=grd, nib=2, njb=2, fillCondition=inflow,
-		       bcList={north=WallBC_NoSlip_Adiabatic:new{wall_function=false, group="wall"},
-			       east=OutFlowBC_Simple:new{},
-			       south=InFlowBC_Supersonic:new{flowCondition=inflow},
-			       west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
+                   bcList={north=WallBC_NoSlip_Adiabatic:new{wall_function=false, group="wall"},
+                           east=OutFlowBC_Simple:new{},
+                           south=InFlowBC_Supersonic:new{flowCondition=inflow},
+                           west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
 
 identifyBlockConnections()
 
@@ -65,7 +65,7 @@ for i=1,4 do
 end
 
 -- loads settings
-config.boundary_groups_for_loads = "wall" 
+config.boundary_groups_for_loads = "wall"
 config.write_loads = true
 
 -- convective flux settings
