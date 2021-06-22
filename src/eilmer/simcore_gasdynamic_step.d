@@ -2261,6 +2261,12 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                     dUdt0.clear();
                     blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix);
+                    bool allFinite = true;
+                    foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k].re)) { allFinite = false; } }
+                    if (!allFinite) {
+                        debug { writeln("Unperturbed state U0=", U0, " dUdt0=", dUdt0); }
+                        throw new Error("While evaluating initial R(U), not all dUdt elements are finite.");
+                    }
                     blk.RU0.copy_values_from(dUdt0);
                     foreach (j; 0 .. cqi.n) {
                         U0.copy_values_from(blk.U0save);
@@ -2268,7 +2274,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                         version(complex_numbers) {
                             // Use a small enough perturbation such that the error
                             // in first derivative will be much smaller then machine precision.
-                            double h = 1.0e-16;
+                            double h = 1.0e-30;
                             number hc = Complex!double(0.0, h);
                             // Perturb one quantity.
                             U0.vec[j] += hc;
@@ -2276,6 +2282,11 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                             // Get derivative vector.
                             dUdt0.clear();
                             blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix);
+                            foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k].re)) { allFinite = false; } }
+                            if (!allFinite) {
+                                debug { writeln("Perturbation j=", j, " U0", U0, " dUdt0=", dUdt0); }
+                                throw new Error("While evaluating perturbed R(U), Not all dUdt elements are finite.");
+                            }
                             foreach (k; 0 .. cqi.n) {
                                 blk.dRUdU[k] = (dUdt0.vec[k].im - blk.RU0.vec[k].im)/h;
                             }
@@ -2288,6 +2299,11 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                             // Get derivative vector.
                             dUdt0.clear();
                             blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix);
+                            foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k])) { allFinite = false; } }
+                            if (!allFinite) {
+                                debug { writeln("Perturbation j=", j, " U0", U0, " dUdt0=", dUdt0); }
+                                throw new Error("While evaluating perturbed R(U), Not all dUdt elements are finite.");
+                            }
                             foreach (k; 0 .. cqi.n) {
                                 blk.dRUdU[k] = (dUdt0.vec[k] - blk.RU0.vec[k])/h;
                             }
