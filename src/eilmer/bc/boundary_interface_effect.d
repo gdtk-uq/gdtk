@@ -1391,8 +1391,8 @@ class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
     {
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
-            auto c = (bc.outsigns[i] == 1) ? f.left_cell : f.right_cell;
-            double outsign = bc.outsigns[i];
+            int outsign = bc.outsigns[i];
+            auto c = (outsign == 1) ? f.left_cell : f.right_cell;
             solve_for_wall_temperature_and_energy_flux(c, f, -outsign);
         }
     } // end apply_unstructured_grid()
@@ -1410,8 +1410,8 @@ class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
-            auto c = (bc.outsigns[i] == 1) ? f.left_cells[0] : f.right_cells[0];
-            double outsign = bc.outsigns[i];
+            int outsign = bc.outsigns[i];
+            auto c = (outsign == 1) ? f.left_cells[0] : f.right_cells[0];
             solve_for_wall_temperature_and_energy_flux(c, f, -outsign);
         }
     } // end apply_structured_grid()
@@ -1431,12 +1431,13 @@ protected:
     immutable double Qe = 1.60217662e-19;     // Elementary charge.           Units: C
 
     @nogc
-    void solve_for_wall_temperature_and_energy_flux(FVCell cell, FVInterface IFace, double sign)
+    void solve_for_wall_temperature_and_energy_flux(FVCell cell, FVInterface IFace, int outsign)
     {
     /*
         Set the temperature of the wall interface to satisfy the thermionic+radiative energy
-        balance equations. Note the the sign parameter is used to flip the faces normal
+        balance equations. Note the the outsign parameter is used to flip the faces normal
         vector to be pointing into the domain, if needed.
+        FIX-ME PJ 2021-06-23 outsign seems unused.
     */
         auto gmodel = blk.myConfig.gmodel;
         uint n_modes = blk.myConfig.n_modes;
@@ -1558,7 +1559,7 @@ class BIE_EquilibriumComposition : BoundaryInterfaceEffect {
             set_equilibrium_composition(f);
         }
     }
-    
+
 protected:
     EquilibriumCalculator eqcalc;
 

@@ -835,7 +835,7 @@ public:
                 double total = 1.0;
                 foreach (i, f; c.iface) {
                     total += eps;
-                    auto other_cell = (c.outsign[i] > 0.0) ? f.right_cell : f.left_cell;
+                    auto other_cell = (c.outsign[i] == 1) ? f.right_cell : f.left_cell;
                     if (other_cell && other_cell.contains_flow_data) {
                         c.dUdt[ftl].add(other_cell.dUdt_copy[0], eps);
                     }
@@ -850,7 +850,7 @@ public:
                     double n = 0;
                     c.dUdt_copy[1].copy_values_from(c.dUdt[ftl]);
                     foreach (i, f; c.iface) {
-                        auto other_cell = (c.outsign[i] > 0.0) ? f.right_cell : f.left_cell;
+                        auto other_cell = (c.outsign[i] == 1) ? f.right_cell : f.left_cell;
                         if (other_cell && other_cell.contains_flow_data) {
                             n += 1;
                             c.dUdt_copy[1].add(other_cell.dUdt_copy[0], eps);

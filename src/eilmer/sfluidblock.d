@@ -682,18 +682,18 @@ public:
                 foreach (i; 0 .. nic) {
                     auto c = get_cell(i,j,k);
                     c.iface.length = 0; c.outsign.length = 0;
-                    c.iface ~= get_ifj(i,j+1,k); c.outsign ~= 1.0; // north
-                    c.iface ~= get_ifi(i+1,j,k); c.outsign ~= 1.0; // east
-                    c.iface ~= get_ifj(i,j,k); c.outsign ~= -1.0; // south
-                    c.iface ~= get_ifi(i,j,k); c.outsign ~= -1.0; // west
+                    c.iface ~= get_ifj(i,j+1,k); c.outsign ~= 1; // north
+                    c.iface ~= get_ifi(i+1,j,k); c.outsign ~= 1; // east
+                    c.iface ~= get_ifj(i,j,k); c.outsign ~= -1; // south
+                    c.iface ~= get_ifi(i,j,k); c.outsign ~= -1; // west
                     c.vtx.length = 0;
                     c.vtx ~= get_vtx(i,j,k);
                     c.vtx ~= get_vtx(i+1,j,k);
                     c.vtx ~= get_vtx(i+1,j+1,k);
                     c.vtx ~= get_vtx(i,j+1,k);
                     if (myConfig.dimensions == 3) {
-                        c.iface ~= get_ifk(i,j,k+1); c.outsign ~= 1.0; // top
-                        c.iface ~= get_ifk(i,j,k); c.outsign ~= -1.0; // bottom
+                        c.iface ~= get_ifk(i,j,k+1); c.outsign ~= 1; // top
+                        c.iface ~= get_ifk(i,j,k); c.outsign ~= -1; // bottom
                         c.vtx ~= get_vtx(i,j,k+1);
                         c.vtx ~= get_vtx(i+1,j,k+1);
                         c.vtx ~= get_vtx(i+1,j+1,k+1);

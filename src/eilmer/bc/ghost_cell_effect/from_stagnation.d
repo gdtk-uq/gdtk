@@ -88,7 +88,7 @@ public:
     }
 
     @nogc
-    void set_velocity_components(ref Vector3 vel, number speed, ref FVInterface face, double outsign)
+    void set_velocity_components(ref Vector3 vel, number speed, ref FVInterface face, int outsign)
     {
         switch (direction_type) {
         case "uniform":
@@ -170,15 +170,11 @@ public:
         number pA = 0.0;
 
         foreach (i, face; bc.faces) {
-            if (bc.outsigns[i] == 1) {
-                cell = face.left_cell;
-            } else {
-                cell = face.right_cell;
-            }
+            int outsign = bc.outsigns[i];
+            cell = (outsign == 1) ? face.left_cell : face.right_cell;
             area += face.area[0];
             number local_rhoA = cell.fs.gas.rho * face.area[0];
             rhoA += local_rhoA;
-            double outsign = bc.outsigns[i];
             rhoUA -= outsign*(local_rhoA * dot(cell.fs.vel, face.n)); // mass flux
             rhovxA += local_rhoA * cell.fs.vel.x;
             rhovyA += local_rhoA * cell.fs.vel.y;
@@ -223,13 +219,9 @@ public:
         number enthalpy = stagnation_enthalpy - 0.5 * bulk_speed^^2;
         gmodel.update_thermo_from_hs(inflow_condition.gas, enthalpy, stagnation_entropy);
         // Now, apply the ghost-cell conditions to the particular interface
-        if (bc.outsigns[f.i_bndry] == 1) {
-	    ghost0 = f.right_cell;
-	} else {
-	    ghost0 = f.left_cell;
-	}
+        int outsign = bc.outsigns[f.i_bndry];
+        ghost0 = (outsign == 1) ? f.right_cell : f.left_cell;
         // Velocity components may vary with position on the block face.
-        double outsign = bc.outsigns[f.i_bndry];
         set_velocity_components(inflow_condition.vel, bulk_speed, f, outsign);
         ghost0.fs.copy_values_from(inflow_condition);
 
@@ -255,11 +247,11 @@ public:
         number pA = 0.0;
 
         foreach (i, face; bc.faces) {
-            auto cell = (bc.outsigns[i] == 1) ? face.left_cell : face.right_cell;
+            int outsign = bc.outsigns[i];
+            auto cell = (outsign == 1) ? face.left_cell : face.right_cell;
             area += face.area[0];
             number local_rhoA = cell.fs.gas.rho * face.area[0];
             rhoA += local_rhoA;
-            double outsign = bc.outsigns[i];
             rhoUA -= outsign*(local_rhoA * dot(cell.fs.vel, face.n)); // mass flux
             rhovxA += local_rhoA * cell.fs.vel.x;
             rhovyA += local_rhoA * cell.fs.vel.y;
@@ -298,9 +290,9 @@ public:
         gmodel.update_thermo_from_hs(inflow_condition.gas, enthalpy, stagnation_entropy);
         // Now, apply the ghost-cell conditions
         foreach (i, face; bc.faces) {
-            ghost0 = (bc.outsigns[i] == 1) ? face.right_cell : face.left_cell;
+            int outsign = bc.outsigns[i];
+            ghost0 = (outsign == 1) ? face.right_cell : face.left_cell;
             // Velocity components may vary with position on the block face.
-            double outsign = bc.outsigns[i];
             set_velocity_components(inflow_condition.vel, bulk_speed, face, outsign);
             ghost0.fs.copy_values_from(inflow_condition);
         }
@@ -334,11 +326,11 @@ public:
         number pA = 0.0;
 
         foreach (i, face; bc.faces) {
-            auto cell = (bc.outsigns[i] == 1) ? face.left_cells[0] : face.right_cells[0];
+            int outsign = bc.outsigns[i];
+            auto cell = (outsign == 1) ? face.left_cells[0] : face.right_cells[0];
             area += face.area[0];
             number local_rhoA = cell.fs.gas.rho * face.area[0];
             rhoA += local_rhoA;
-            double outsign = bc.outsigns[i];
             rhoUA -= outsign*(local_rhoA * dot(cell.fs.vel, face.n)); // mass flux
             rhovxA += local_rhoA * cell.fs.vel.x;
             rhovyA += local_rhoA * cell.fs.vel.y;
@@ -378,9 +370,9 @@ public:
         // Now, apply the ghost-cell conditions
         foreach (i, face; bc.faces) {
             foreach (n; 0 .. blk.n_ghost_cell_layers) {
-                auto ghost = (bc.outsigns[i] == 1) ? face.right_cells[n] : face.left_cells[n];
+                int outsign = bc.outsigns[i];
+                auto ghost = (outsign == 1) ? face.right_cells[n] : face.left_cells[n];
                 // Velocity components may vary with position on the block face.
-                double outsign = bc.outsigns[i];
                 set_velocity_components(inflow_condition.vel, bulk_speed, face, outsign);
                 ghost.fs.copy_values_from(inflow_condition);
             }

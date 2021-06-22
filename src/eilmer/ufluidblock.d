@@ -343,9 +343,9 @@ public:
             }
             foreach (j; 0 .. nf) {
                 auto my_face = faces[grid.cells[i].face_id_list[j]];
-                auto my_outsign = grid.cells[i].outsign_list[j];
+                int my_outsign = grid.cells[i].outsign_list[j];
                 c.iface ~= my_face;
-                c.outsign ~= to!double(my_outsign);
+                c.outsign ~= my_outsign;
                 if (my_outsign == 1) {
                     if (my_face.left_cell) {
                         string msg = format("Already have cell %d attached to left-of-face %d. Attempt to add cell %d.",
@@ -485,7 +485,7 @@ public:
                 if (is_on_boundary) {
                     // apply nearest-face neighbour
                     foreach (i, f; c.iface) {
-                        if (c.outsign[i] > 0.0) {
+                        if (c.outsign[i] == 1) {
                             if (f.right_cell && f.right_cell.contains_flow_data) {
                                 c.cell_cloud ~= f.right_cell;
                             }
@@ -512,7 +512,7 @@ public:
                 c.cell_cloud ~= c;
                 // Subsequent cells are the surrounding cells.
                 foreach (i, f; c.iface) {
-                    if (c.outsign[i] > 0.0) {
+                    if (c.outsign[i] == 1) {
                         if (f.right_cell && f.right_cell.contains_flow_data) {
                             c.cell_cloud ~= f.right_cell;
                         }

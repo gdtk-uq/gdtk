@@ -86,7 +86,7 @@ public:
     number L_max;   // maximum length scale for cell
     // Connections
     FVInterface[] iface;  // references to defining interfaces of cell
-    double[] outsign; // +1.0 if iface is outward-facing; -1.0 for an inward-facing iface
+    int[] outsign; // +1 if iface is outward-facing; -1 for an inward-facing iface
     FVVertex[] vtx;  // references to vertices for quad (2D) and hexahedral (3D) cells
     FVCell[] cell_cloud; // references to neighbouring cells
     // More geometry
@@ -372,7 +372,7 @@ public:
         repr ~= ", universe_blk_id=" ~ to!string(myConfig.universe_blk_id);
         repr ~= ", pos=" ~ to!string(pos);
         repr ~= ", iface_ids=["; foreach (f; iface) { repr ~= format("%d,", f.id); } repr ~= "]";
-        repr ~= ", outsigns=["; foreach (osgn; outsign) { repr ~= format("%.18e,", osgn); } repr ~= "]";
+        repr ~= ", outsigns=["; foreach (osgn; outsign) { repr ~= format("%d,", osgn); } repr ~= "]";
         repr ~= ", vtx_ids=["; foreach (v; vtx) { repr ~= format("%d,", v.id); } repr ~= "]";
         repr ~= ",\n... volume=" ~ to!string(volume);
         repr ~= ", areaxy=" ~ to!string(areaxy);
