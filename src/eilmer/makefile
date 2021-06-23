@@ -32,7 +32,11 @@ MULTI_SPECIES_GAS ?= 1
 MULTI_T_GAS ?= 1
 MHD ?= 1
 TURBULENCE ?= 1
+
+# For the ldc2 compiler, we can turn on some extra checking at run-time.
+# There will be a computational cost associated with these checks.
 WITH_THREAD_SANITIZER ?= 0
+WITH_ADDRESS_SANITIZER ?= 0
 
 TECPLOT_BIN_DIR ?= unavailable
 TECPLOT_BIN_VERSION_STR = tecplot_unavailable
@@ -308,9 +312,18 @@ ifeq ($(DMD), ldc2)
     ifeq ($(WITH_THREAD_SANITIZER), 1)
         DFLAGS := $(DFLAGS) -fsanitize=thread
     endif
+    ifeq ($(WITH_ADDRESS_SANITIZER), 1)
+        DFLAGS := $(DFLAGS) -fsanitize=address
+    endif
     OF := -of=
     DVERSION := -d-version=
     DLINKFLAGS :=
+    ifeq ($(WITH_THREAD_SANITIZER), 1)
+        DLINKFLAGS := $(DLINKFLAGS) -fsanitize=thread
+    endif
+    ifeq ($(WITH_ADDRESS_SANITIZER), 1)
+        DLINKFLAGS := $(DLINKFLAGS) -fsanitize=address
+    endif
     #ifeq ($(FLAVOUR), profile)
     #    DLINKFLAGS := $(DLINKFLAGS) -Wl,-fprofile-generate
     #endif
