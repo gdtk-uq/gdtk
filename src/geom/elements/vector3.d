@@ -123,6 +123,13 @@ struct Vector3 {
             _p[0] = x; _p[1] = y; _p[2] = z;
             return this;
         }
+
+        @nogc ref Vector3 clear_imaginary_components() return
+        // Convenience function for setting-to-zero the imaginary components of an existing object.
+        {
+            _p[0].im = 0.0; _p[1].im = 0.0; _p[2].im = 0.0;
+            return this;
+        }
     } // end version complex_numbers
 
     @nogc ref Vector3 clear() return

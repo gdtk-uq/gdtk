@@ -2257,6 +2257,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     //
                     // Set up the linear system by evaluating the sensitivity matrix.
                     // Do this without high-order interpolation, just to be cheap.
+                    version(complex_numbers) { U0.clear_imaginary_components(); }
                     blk.U0save.copy_values_from(U0);
                     cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                     dUdt0.clear();
@@ -2288,7 +2289,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                                 throw new Error("While evaluating perturbed R(U), Not all dUdt elements are finite.");
                             }
                             foreach (k; 0 .. cqi.n) {
-                                blk.dRUdU[k] = (dUdt0.vec[k].im - blk.RU0.vec[k].im)/h;
+                                blk.dRUdU[k] = dUdt0.vec[k].im / h;
                             }
                         } else {
                             // Scale the perturbation on the magnitude of the conserved quantity.
@@ -2497,6 +2498,9 @@ void gasdynamic_implicit_increment_with_moving_grid()
         assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
         // Move vertices.
         predict_vertex_positions(sblk, SimState.dt_global, gtl0);
+        foreach (vtx; blk.vertices) {
+            version(complex_numbers) { vtx.pos[1].clear_imaginary_components(); }
+        }
         // Recalculate cell geometry with new vertex positions.
         blk.compute_primary_cell_geometric_data(gtl1);
         blk.compute_least_squares_setup(gtl1);
@@ -2579,6 +2583,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
                     //
                     // Set up the linear system by evaluating the sensitivity matrix.
                     // Do this without high-order interpolation, just to be cheap.
+                    version(complex_numbers) { U0.clear_imaginary_components(); }
                     blk.U0save.copy_values_from(U0);
                     cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                     dUdt0.clear();
@@ -2596,6 +2601,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
                         version(complex_numbers) {
                             // Use a small enough perturbation such that the error
                             // in first derivative will be much smaller then machine precision.
+                            /+
                             double h = 1.0e-30;
                             number hc = Complex!double(0.0, h);
                             // Perturb one quantity.
@@ -2610,7 +2616,23 @@ void gasdynamic_implicit_increment_with_moving_grid()
                                 throw new Error("While evaluating perturbed R(U), Not all dUdt elements are finite.");
                             }
                             foreach (k; 0 .. cqi.n) {
-                                blk.dRUdU[k] = (dUdt0.vec[k].im - blk.RU0.vec[k].im)/h;
+                                blk.dRUdU[k] = dUdt0.vec[k].im / h;
+                            }
+                            +/
+                            double h = 1.0e-5*(fabs(U0.vec[j].re) + 1.0);
+                            // Perturb one quantity.
+                            U0.vec[j] += h;
+                            cell.decode_conserved(gtl0, ftl0, blk.omegaz);
+                            // Get derivative vector.
+                            dUdt0.clear();
+                            blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix);
+                            foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k].re)) { allFinite = false; } }
+                            if (!allFinite) {
+                                debug { writeln("Perturbation j=", j, " U0", U0, " dUdt0=", dUdt0); }
+                                throw new Error("While evaluating perturbed R(U), Not all dUdt elements are finite.");
+                            }
+                            foreach (k; 0 .. cqi.n) {
+                                blk.dRUdU[k] = (dUdt0.vec[k].re - blk.RU0.vec[k].re)/h;
                             }
                         } else {
                             // Scale the perturbation on the magnitude of the conserved quantity.
@@ -2644,8 +2666,8 @@ void gasdynamic_implicit_increment_with_moving_grid()
                     // Solve for dU and update U.
                     gaussJordanElimination!double(blk.crhs);
                     // We apply the GCL scaling, also.
-                    number vr = cell.volume[gtl0] / cell.volume[gtl1];
-                    foreach (k; 0 .. cqi.n) { U1.vec[k] = vr*(U0.vec[k] + M*blk.crhs._data[k][cqi.n]); }
+                    double vr = cell.volume[gtl0].re / cell.volume[gtl1].re;
+                    foreach (k; 0 .. cqi.n) { U1.vec[k] = to!number(vr*(U0.vec[k].re + M*blk.crhs._data[k][cqi.n])); }
                     //
                     version(turbulence) {
                         foreach(k; 0 .. cqi.n_turb){
