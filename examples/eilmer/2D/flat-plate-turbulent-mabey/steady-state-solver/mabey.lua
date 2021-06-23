@@ -77,7 +77,7 @@ config.freeze_limiter_on_step = 4000
 config.viscous = true
 config.spatial_deriv_locn = "cells"
 config.spatial_deriv_calc = "least_squares"
-config.diffuse_wall_bcs_on_init = true
+config.diffuse_wall_bcs_on_init = false
 config.number_init_passes = 25
 
 SteadyStateSolver{
@@ -85,36 +85,35 @@ SteadyStateSolver{
    precondition_matrix_type = "ilu",
    ilu_fill = 0,
    frozen_preconditioner_count = 25,
-   start_preconditioning = 1,
+   start_preconditioning = 0,
    
    use_scaling = true,
    use_complex_matvec_eval = true,
    
    number_pre_steps = 10,
    number_total_steps = 13000,
-   stop_on_relative_global_residual = 1.0e-14,
+   stop_on_relative_global_residual = 1.0e-12,
 
    -- Settings for FGMRES iterative solver
-   max_outer_iterations = 30,
-   max_restarts = 10,
+   max_outer_iterations = 50,
+   max_restarts = 0,
+
+   residual_based_cfl_scheduling = false,
+   cfl_max = 1e6,
+   cfl_schedule_length = 5,
+   cfl_schedule_value_list = {1,  1e1, 1e2, 1e3, 1e4},
+   cfl_schedule_iter_list =  {1,  10,  50,  75,  100},
 
    -- Settings for start-up phase
-   number_start_up_steps = 200,
-   cfl0 = 0.5,
-   eta0 = 0.1,
-   tau0 = 1.0,
-   sigma0 = 1.0e-30,
-   p0 = 0.5,
+   number_start_up_steps = 0,
+   cfl0 = 1,
+   eta0 = 0.5,
+   sigma0 = 1.0e-50,
 
    -- Settings for inexact Newton phase
-   cfl1 = 10.0,
-   tau1 = 1.0,
-   sigma1 = 1.0e-30,
-   eta1 = 0.01,
-   p1 = 1.0,
-   eta1_min = 0.01,
-   eta_ratio_per_step = 0.99,
-   eta_strategy = "geometric",
+   cfl1 = 1,
+   sigma1 = 1.0e-50,
+   eta1 = 0.5,
 
    -- Settings control write-out
    snapshots_count = 50,

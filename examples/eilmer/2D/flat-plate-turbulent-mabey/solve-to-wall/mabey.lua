@@ -15,7 +15,7 @@ config.turbulence_model = "k_omega"
 config.viscous = true
 config.spatial_deriv_locn = "cells"
 config.spatial_deriv_calc = "least_squares"
-config.diffuse_wall_bcs_on_init = true
+config.diffuse_wall_bcs_on_init = false
 config.number_init_passes = 25
 --
 config.gasdynamic_update_scheme = "backward_euler"
