@@ -31,7 +31,7 @@ class TestReactor < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    assert((steps - 201).abs < 3, "Failed to take correct number of steps.")
+    assert((steps - 20001).abs < 3, "Failed to take correct number of steps.")
   end
 
   def test_2_reaction_products

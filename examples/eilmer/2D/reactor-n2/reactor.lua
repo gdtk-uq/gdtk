@@ -30,7 +30,10 @@ setHistoryPoint{ib=0, i=0, j=0}
 -- Finish off config
 config.max_time = 2.0e-4
 config.max_step = 100000
-config.dt_init = 1.0e-6
+-- A time step of 1.0e-6 is good for the operator-split chemical update.
+-- The backward-euler updates for the chemistry need to take finer steps
+-- to get comparable accuracy.
+config.dt_init = 0.01e-6
 config.dt_history = 5.0e-6
 config.dt_plot = 50.0e-6
 config.fixed_time_step = true
