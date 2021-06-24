@@ -1030,6 +1030,7 @@ int integrate_in_time(double target_time_as_requested)
                 throw new Error("StrangSplitting.half_R_full_T_half_R and LTS aren't currently compatible");
             }
             if (GlobalConfig.reacting &&
+                GlobalConfig.chemistry_update == ChemistryUpdateMode.split &&
                 (GlobalConfig.strangSplitting == StrangSplittingMode.half_R_full_T_half_R) &&
                 (SimState.time > GlobalConfig.reaction_time_delay)) {
                 chemistry_step(0.5*SimState.dt_global);
@@ -1060,7 +1061,9 @@ int integrate_in_time(double target_time_as_requested)
             }
             //
             // 2.4 Chemistry step or 1/2 step (if appropriate).
-            if ( GlobalConfig.reacting && (SimState.time > GlobalConfig.reaction_time_delay)) {
+            if (GlobalConfig.reacting &&
+                GlobalConfig.chemistry_update == ChemistryUpdateMode.split &&
+                (SimState.time > GlobalConfig.reaction_time_delay)) {
                 double mydt = (GlobalConfig.strangSplitting == StrangSplittingMode.full_T_full_R) ?
                     SimState.dt_global : 0.5*SimState.dt_global;
                 chemistry_step(mydt);

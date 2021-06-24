@@ -160,6 +160,9 @@ void determine_time_step_size()
 
 void sts_gasdynamic_explicit_increment_with_fixed_grid()
 {
+    if (GlobalConfig.reacting && GlobalConfig.chemistry_update == ChemistryUpdateMode.integral) {
+        throw new Error("Not implemented: explicit gasdynamic update with integral chemistry update.");
+    }
     shared double t0 = SimState.time;
     shared bool with_local_time_stepping = GlobalConfig.with_local_time_stepping;
     shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
@@ -775,6 +778,9 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 
 void gasdynamic_explicit_increment_with_fixed_grid()
 {
+    if (GlobalConfig.reacting && GlobalConfig.chemistry_update == ChemistryUpdateMode.integral) {
+        throw new Error("Not implemented: explicit gasdynamic update with integral chemistry update.");
+    }
     shared double t0 = SimState.time;
     shared bool with_local_time_stepping = GlobalConfig.with_local_time_stepping;
     shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
@@ -1647,8 +1653,13 @@ void gasdynamic_explicit_increment_with_moving_grid()
 {
     // For moving grid simulations we move the grid on the first predictor step and then
     // leave it fixed in this position for the corrector steps.
+    if (GlobalConfig.reacting && GlobalConfig.chemistry_update == ChemistryUpdateMode.integral) {
+        throw new Error("Not implemented: explicit gasdynamic update with integral chemistry update.");
+    }
+    if (GlobalConfig.with_local_time_stepping) {
+        throw new Error("Not implemented: cell-local time step with moving grid.");
+    }
     shared double t0 = SimState.time;
-    assert (!GlobalConfig.with_local_time_stepping, "Cannot use cell-local time step with moving grid.");
     shared bool allow_high_order_interpolation = (SimState.time >= GlobalConfig.interpolation_delay);
     // Set the time-step coefficients for the stages of the update scheme.
     shared double c2 = 1.0; // same for 1-stage or 2-stage update

@@ -280,6 +280,7 @@ function write_config_file(fileName)
    f:write(string.format('"udf_source_terms_file": "%s",\n', config.udf_source_terms_file))
    f:write(string.format('"udf_source_terms": %s,\n', tostring(config.udf_source_terms)))
    --
+   f:write(string.format('"chemistry_update": "%s",\n', config.chemistry_update))
    f:write(string.format('"reacting": %s,\n', tostring(config.reacting)))
    f:write(string.format('"reactions_file": "%s",\n', config.reactions_file))
    f:write(string.format('"reaction_time_delay": %.18e,\n', config.reaction_time_delay))

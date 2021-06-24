@@ -129,6 +129,7 @@ configOptionsHidden = { -- hidden from user
    transient_mu_t_factor = 1.0,
    tci_model = "none",
    --
+   chemistry_update = "split", -- or "integral"
    reacting = false,
    reactions_file = "chemistry.lua",
    reaction_time_delay = 0.0,

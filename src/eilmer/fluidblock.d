@@ -1604,10 +1604,9 @@ public:
             }
             c.add_viscous_source_vector();
         } // end if viscous
-        // In the transient code, we do chemical source terms in a loosely-coupled arrangement,
-        // if (myConfig.reacting) { c.add_thermochemical_source_vector(); }
-        // Although, we don't presently run the reactions at this point, it may be good
-        // to have the option to allow the chemistry to be more tightly coupled.
+        if (myConfig.reacting && myConfig.chemistry_update == ChemistryUpdateMode.integral) {
+            c.add_thermochemical_source_vector();
+        }
         if (myConfig.udf_source_terms) { c.add_udf_source_vector(); }
         c.time_derivatives(gtl, ftl);
     } // end evalRU()

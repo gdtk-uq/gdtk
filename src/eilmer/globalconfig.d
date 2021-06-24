@@ -317,6 +317,29 @@ FluxCalculator flux_calculator_from_name(string name)
     }
 }
 
+// Symbolic names for mode of chemistry update in transient solver.
+enum ChemistryUpdateMode { split, integral }
+
+@nogc
+string chemistry_update_mode_name(ChemistryUpdateMode mode)
+{
+    final switch (mode) {
+    case ChemistryUpdateMode.split: return "split";
+    case ChemistryUpdateMode.integral: return "integral";
+    }
+}
+
+@nogc
+ChemistryUpdateMode chemistry_update_mode_from_name(string name)
+{
+    switch (name) {
+    case "split": return ChemistryUpdateMode.split;
+    case "integral": return ChemistryUpdateMode.integral;
+    default:
+        throw new FlowSolverException("Invalid chemistry-update mode.");
+    }
+}
+
 // Symbolic names for the flavours of spatial-derivative calculators.
 enum SpatialDerivCalc {
     least_squares,
@@ -1042,6 +1065,7 @@ final class GlobalConfig {
     // Turning on the reactions activates the chemical update function calls.
     // Chemical equilibrium simulations (via Look-Up Table) does not use this
     // chemical update function call.
+    shared static ChemistryUpdateMode chemistry_update = ChemistryUpdateMode.split; // or integral
     shared static bool reacting = false;
     shared static string reactions_file = "chemistry.lua";
     shared static double reaction_time_delay = 0.0;
@@ -1267,6 +1291,7 @@ public:
     //
     bool udf_source_terms;
     //
+    ChemistryUpdateMode chemistry_update;
     bool reacting;
     double reaction_time_delay;
     double T_frozen;
@@ -1416,6 +1441,7 @@ public:
         //
         udf_source_terms = GlobalConfig.udf_source_terms;
         //
+        chemistry_update = GlobalConfig.chemistry_update;
         reacting = GlobalConfig.reacting;
         reaction_time_delay = GlobalConfig.reaction_time_delay;
         T_frozen = GlobalConfig.T_frozen;
@@ -1868,6 +1894,7 @@ void set_config_for_core(JSONValue jsonData)
 
     // Parameters controlling thermochemistry
     //
+    mixin(update_enum("chemistry_update", "chemistry_update", "chemistry_update_mode_from_name"));
     mixin(update_bool("reacting", "reacting"));
     mixin(update_string("reactions_file", "reactions_file"));
     mixin(update_double("reaction_time_delay", "reaction_time_delay"));
@@ -1881,6 +1908,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_double("radiation_energy_dump_temperature_limit", "radiation_energy_dump_temperature_limit"));
 
     if (GlobalConfig.verbosity_level > 1) {
+        writeln("  chemistry_mode: ", chemistry_update_mode_name(GlobalConfig.chemistry_update));
         writeln("  reacting: ", GlobalConfig.reacting);
         writeln("  reactions_file: ", to!string(GlobalConfig.reactions_file));
         writeln("  reaction_time_delay: ", GlobalConfig.reaction_time_delay);
