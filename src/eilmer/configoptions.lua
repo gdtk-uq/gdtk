@@ -160,6 +160,7 @@ configOptionsHidden = { -- hidden from user
    -- we drop back to using the single cfl_value to construct the schedule.
    cfl_schedule_times = {},
    cfl_schedule_values = {},
+   cfl_scale_factor = 1.0,
    stringent_cfl = false,
    cfl_count = 10,
    fixed_time_step = false,

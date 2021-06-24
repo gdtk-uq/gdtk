@@ -1111,6 +1111,7 @@ final class GlobalConfig {
     // These will specify the target CFL number, interpolated from (time, value) pairs.
     shared static double cfl_value = 0.5;
     static Schedule cfl_schedule;
+    shared static cfl_scale_factor = 1.0; // You may edit this factor in the .control file to modulate cfl.
     shared static bool stringent_cfl = false;
     // If true, assume the worst with respect to cell geometry and wave speed.
     shared static double viscous_signal_factor = 1.0; // can reduce the viscous influence in CFL condition
@@ -2183,6 +2184,8 @@ void read_control_file()
     mixin(update_double("dt_init", "dt_init"));
     mixin(update_double("dt_max", "dt_max"));
     // 2021-05-21 PJ: We no longer read cfl_value from .control file.
+    // 2021-05-25 PJ: but we do allow a cfl scaling factor.
+    mixin(update_double("cfl_scale_factor", "cfl_scale_factor"));
     mixin(update_bool("stringent_cfl", "stringent_cfl"));
     mixin(update_double("viscous_signal_factor", "viscous_signal_factor"));
     mixin(update_double("turbulent_signal_factor", "turbulent_signal_factor"));
@@ -2207,6 +2210,7 @@ void read_control_file()
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  dt_init: ", GlobalConfig.dt_init);
         writeln("  dt_max: ", GlobalConfig.dt_max);
+        writeln("  cfl_scale_factor: ", GlobalConfig.cfl_scale_factor);
         writeln("  stringent_cfl: ", GlobalConfig.stringent_cfl);
         writeln("  viscous_signal_factor: ", GlobalConfig.viscous_signal_factor);
         writeln("  turbulent_signal_factor: ", GlobalConfig.turbulent_signal_factor);

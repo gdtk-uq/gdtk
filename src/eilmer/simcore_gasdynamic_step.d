@@ -75,6 +75,7 @@ void determine_time_step_size()
         // First, check what each block thinks should be the allowable step size.
         // Also, if we have done some steps, check the CFL limits.
         double cfl_value = GlobalConfig.cfl_schedule.interpolate_value(SimState.time);
+        cfl_value *= GlobalConfig.cfl_scale_factor;
         foreach (i, myblk; parallel(localFluidBlocksBySize,1)) {
             // Note 'i' is not necessarily the block id but
             // that is not important here, just need a unique spot to poke into local_dt_allow.
