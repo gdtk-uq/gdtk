@@ -3,6 +3,7 @@
 -- RG & PJ
 --   2015-03-10: ported from Eilmer3
 --   2018-04-14: refreshed
+--   2021-06-24: integral chemical update with the implicit gas-dynamic update
 --
 config.title = "Nitrogen reactor -- recombination driven."
 print(config.title)
@@ -11,6 +12,8 @@ config.dimensions = 2
 setGasModel('nitrogen-2sp.lua')
 config.reacting = true
 config.reactions_file = 'chem.lua'
+config.gasdynamic_update_scheme = 'backward_euler'
+config.chemistry_update = 'integral' -- other option is 'split'
 initial = FlowState:new{p=1.0e5, T=4000.0, massf={N2=0.8, N=0.2}}
 --
 -- Geometry is a square

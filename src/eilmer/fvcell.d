@@ -225,6 +225,22 @@ public:
         if (allocate_spatial_deriv_lsq_workspace) {
             ws_grad = new WLSQGradWorkspace();
         }
+        // Workspace for implicit updates of the thermochemistry.
+        version(multi_species_gas) {
+            if (myConfig.reacting && n_species > 1) {
+                thermochem_source.length = n_species;
+                thermochem_conc.length = n_species;
+                thermochem_rates.length = n_species;
+            }
+        }
+        version(multi_T_gas) {
+            if (n_modes > 0) {
+                thermochem_source.length += n_modes;
+                thermochem_conc.length += n_modes;
+                thermochem_rates.length += n_modes;
+            }
+        }
+        //
         version(nk_accelerator) {
             dRdU.length = ncq; // number of conserved variables
             foreach (ref a; dRdU) a.length = ncq;
@@ -240,20 +256,9 @@ public:
             // is on AND it only required initialisation once.
             savedGasState = new GasState(gmodel);
         }
-
+        //
         // some data structures used in the LU-SGS solver
         version(steady_state) {
-
-            if (myConfig.reacting) {
-                thermochem_source.length = n_species;
-                thermochem_conc.length = n_species;
-                thermochem_rates.length = n_species;
-            }
-            if (n_modes > 0) {
-                thermochem_source.length += n_modes;
-                thermochem_conc.length += n_modes;
-                thermochem_rates.length += n_modes;
-            }
             size_t nConserved = myConfig.cqi.n;
             scalar_diag_inv.length = nConserved;
             dFdU = new Matrix!number(nConserved,nConserved);
@@ -265,10 +270,10 @@ public:
             dUk[] = to!number(0.0);
             LU.length = nConserved;
         }
-
+        //
         DFT_local_real.length = myConfig.DFT_n_modes;
         DFT_local_imag.length = myConfig.DFT_n_modes;
-
+        //
         // generate auxiliary data items
         aux_cell_data = AuxCellData.get_aux_cell_data_items(myConfig);
     }
@@ -1174,8 +1179,9 @@ public:
         // 2021-05-11 PJ [TODO] Ask Rowan.
         auto cqi = myConfig.cqi;
         version(multi_species_gas) {
-            myConfig.thermochemUpdate.eval_source_terms(myConfig.gmodel, fs.gas, thermochem_conc, thermochem_rates, thermochem_source);
             if (cqi.n_species > 1) {
+                myConfig.thermochemUpdate.eval_source_terms(myConfig.gmodel, fs.gas, thermochem_conc,
+                                                            thermochem_rates, thermochem_source);
                 foreach(sp; 0 .. cqi.n_species) { Q.vec[cqi.species+sp] += thermochem_source[sp]; }
             }
         }
