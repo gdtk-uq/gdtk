@@ -1,0 +1,20 @@
+#%Module 1.0
+# Module file for Eilmer 4 D Gas Dynamics Code
+# Compiler: PUT_COMPILER_NAME_HERE
+# Build Date: PUT_BUILD_DATE_HERE
+# Commit: PUT_REVISION_STRING_HERE
+# Commit Age: PUT_REVISION_AGE_HERE
+# author: Nick Gibbons (n.gibbons@uq.edu.au)
+
+module-whatis "Setup environment variables for running Eilmer 4"
+
+set dgdrepo PUT_REPO_DIR_HERE
+set dgd PUT_INSTALL_DIR_HERE
+
+setenv DGD_REPO $dgdrepo
+setenv DGD $dgd
+append-path PATH $dgd/bin
+setenv DGD_LUA_PATH $dgd/lib/?.lua
+setenv DGD_LUA_CPATH $dgd/lib/?.so
+
+conflict dgd 

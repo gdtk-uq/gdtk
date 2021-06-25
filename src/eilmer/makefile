@@ -50,7 +50,7 @@ endif
 
 
 
-PROGRAMS := e4shared e4monitor
+PROGRAMS := e4shared e4monitor dgd-module
 SHARE_FILES :=
 
 ifeq ($(WITH_COMPLEX_NUMBERS),1)
@@ -249,8 +249,11 @@ INSTALL_DIR ?= $(HOME)/dgdinst
 
 # The build destination sits locally for present
 BUILD_DIR := ../../build
+BUILD_DATE := $(shell date)
 
 REVISION_STRING := $(shell git rev-parse --short HEAD)
+REVISION_AGE := $(shell git log -1 --format=%cd --date=relative)
+REPO_DIR := $(shell cd ../../; pwd)
 
 ifeq ($(DMD), dmd)
     ifeq ($(FLAVOUR), debug)
@@ -396,7 +399,7 @@ ifeq ($(TURBULENCE),1)
     DFLAGS += $(DVERSION)turbulence
 endif
 
-default: $(PROGRAMS) ugrid_partition
+default: $(PROGRAMS) ugrid_partition dgd-module
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "Eilmer4 simulation code built."
 
@@ -429,6 +432,7 @@ install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-grids.lua prep-flow.lua post.l
 	cp e4forces.py $(BUILD_DIR)/bin/e4forces
 	chmod +x $(BUILD_DIR)/bin/e4forces
 	cp ../grid_utils/ugrid_partition $(BUILD_DIR)/bin
+	cp dgd-module $(BUILD_DIR)/share
 ifneq "$(SHARE_FILES)" ""
 	cp $(SHARE_FILES) $(BUILD_DIR)/share
 endif
@@ -468,6 +472,7 @@ clean:
 	- rm -f e4-nk-shared e4-nk-dist e4-lusgs-shared e4-lusgs-dist
 	- rm -f e4shared_diagnostic
 	- rm -f dgd-for-mech4480.tgz
+	- rm -f dgd-module
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(LUA_DIR); make clean
 	- cd $(GEOM_DIR); make clean
@@ -500,6 +505,16 @@ $(LIBLUA):
 
 $(LIBCEQ):
 	cd $(CEQ_DIR); make
+
+dgd-module:
+	sed -e 's+PUT_REVISION_STRING_HERE+$(REVISION_STRING)+' \
+		-e 's+PUT_COMPILER_NAME_HERE+$(DMD)+' \
+		-e 's+PUT_INSTALL_DIR_HERE+$(INSTALL_DIR)+' \
+		-e 's+PUT_REPO_DIR_HERE+$(REPO_DIR)+' \
+		-e 's+PUT_BUILD_DATE_HERE+$(BUILD_DATE)+' \
+		-e 's+PUT_REVISION_AGE_HERE+$(REVISION_AGE)+' \
+		-e 's+PUT_REPO_DIR_HERE+$(REPO_DIR)+' \
+		dgd-module-template > dgd-module
 
 e4monitor: e4monitor.d
 	$(DMD) $(DFLAGS) $(OF)e4monitor e4monitor.d $(DLINKFLAGS)
