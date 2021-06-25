@@ -28,7 +28,7 @@ class TestSS3 < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    assert((steps - 11137).abs < 100, "Failed to take correct number of steps.")
+    assert((steps - 16729).abs < 100, "Failed to take correct number of steps.")
   end
 
   def test_2_shock_stand_off
