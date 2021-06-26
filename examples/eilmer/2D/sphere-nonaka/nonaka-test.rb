@@ -34,7 +34,7 @@ class TestNonaka < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    assert((steps - 4749).abs < 10000, "Failed to take correct number of steps.")
+    assert((steps - 4749).abs < 100, "Failed to take correct number of steps.")
   end
 
   def test_2_shock_stand_off
@@ -55,7 +55,7 @@ class TestNonaka < Test::Unit::TestCase
     end
     # Check that we are in the same place as before relative to the experimental data
     rms_ref = 0.011668210375449803
-    assert((rms - rms_ref).abs < 1.0e-5,
+    assert((rms - rms_ref).abs < 1.0e-4,
            "Failed to get correct shock position.")
   end
 end
