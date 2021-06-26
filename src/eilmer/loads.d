@@ -227,11 +227,7 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
         iface.viscous_flux_calc();
         tau_wall_x = iface.F.vec[cqi.xMom];
         tau_wall_y = iface.F.vec[cqi.yMom];
-        if (cqi.threeD) {
-            tau_wall_z = iface.F.vec[cqi.zMom];
-        } else {
-            tau_wall_z = 0.0;
-        }
+        tau_wall_z = (cqi.threeD) ? iface.F.vec[cqi.zMom] : to!number(0.0);
         number tau_wall = sqrt(tau_wall_x^^2 + tau_wall_y^^2 + tau_wall_z^^2);
         // compute y+
         nu_wall = mu_wall / rho_wall;

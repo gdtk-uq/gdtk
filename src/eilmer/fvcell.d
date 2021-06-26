@@ -1396,8 +1396,7 @@ public:
         U[1].vec[cqi.mass] += dUk[MASS];
         U[1].vec[cqi.xMom] += dUk[X_MOM];
         U[1].vec[cqi.yMom] += dUk[Y_MOM];
-        if (GlobalConfig.dimensions == 3 )
-            U[1].vec[cqi.zMom] += dUk[Z_MOM];
+        if (GlobalConfig.dimensions == 3) { U[1].vec[cqi.zMom] += dUk[Z_MOM]; }
         U[1].vec[cqi.totEnergy] += dUk[TOT_ENERGY];
         foreach(it; 0 .. nturb) {
             U[1].vec[cqi.rhoturb+it] += dUk[TKE+it];
@@ -1418,8 +1417,7 @@ public:
         dF[MASS]= rho*velx;
         dF[X_MOM] = p + rho*velx*velx;
         dF[Y_MOM] = rho*velx*vely;
-        if (myConfig.dimensions == 3)
-            dF[Z_MOM] = rho*velx*velz;
+        if (myConfig.dimensions == 3) { dF[Z_MOM] = rho*velx*velz; }
         dF[TOT_ENERGY] = (rho*e + rho*(velx^^2 + vely^^2 + velz^^2)/2.0 + p)*velx;
         foreach(it; 0 .. nturb) {
             dF[TKE+it] = rho*velx*fs.turb[it];
@@ -1440,8 +1438,7 @@ public:
         dF[MASS] -= rho*velx;
         dF[X_MOM] -= p + rho*velx*velx;
         dF[Y_MOM] -= rho*velx*vely;
-        if (myConfig.dimensions == 3)
-            dF[Z_MOM] -= rho*velx*velz;
+        if (myConfig.dimensions == 3) { dF[Z_MOM] -= rho*velx*velz; }
 
         number global_mom_x = dF[X_MOM]*f.n.x + dF[Y_MOM]*f.t1.x; // global-x
         number global_mom_y = dF[X_MOM]*f.n.y + dF[Y_MOM]*f.t1.y; // global-y
@@ -1453,8 +1450,7 @@ public:
         }
         dF[X_MOM] = global_mom_x;
         dF[Y_MOM] = global_mom_y;
-        if (myConfig.dimensions == 3)
-            dF[Z_MOM] = global_mom_z;
+        if (myConfig.dimensions == 3) { dF[Z_MOM] = global_mom_z; }
 
         dF[TOT_ENERGY] -= (rho*e + rho*(velx^^2 + vely^^2 + velz^^2)/2.0 + p)*velx;
         foreach(it; 0 .. nturb) {

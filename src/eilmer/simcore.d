@@ -1109,21 +1109,11 @@ int integrate_in_time(double target_time_as_requested)
                     auto cqi = GlobalConfig.cqi;
                     version(mpi_parallel) {
                         // Reduce residual values across MPI tasks.
-                        double my_local_value = Linf_residuals.vec[cqi.mass].re;
-                        MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                        Linf_residuals.vec[cqi.mass] = to!number(my_local_value);
-                        my_local_value = Linf_residuals.vec[cqi.xMom].re;
-                        MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                        Linf_residuals.vec[cqi.xMom] = to!number(my_local_value);
-                        my_local_value = Linf_residuals.vec[GlobalConfig.cqi.yMom].re;
-                        MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                        Linf_residuals.vec[cqi.yMom] = to!number(my_local_value);
-                        my_local_value = (cqi.threeD) ? Linf_residuals.vec[cqi.zMom].re : 0.0;
-                        MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                        Linf_residuals.vec[cqi.zMom] = to!number(my_local_value);
-                        my_local_value = Linf_residuals.vec[cqi.totEnergy].re;
-                        MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                        Linf_residuals.vec[cqi.totEnergy] = to!number(my_local_value);
+                        foreach (i; 0 .. cqi.n) {
+                            double my_local_value = Linf_residuals.vec[i].re;
+                            MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+                            Linf_residuals.vec[i] = to!number(my_local_value);
+                        }
                         my_local_value = mass_balance.re;
                         MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                         mass_balance.re = my_local_value;
@@ -1585,15 +1575,11 @@ void compute_Linf_residuals(ConservedQuantities Linf_residuals)
         blk.compute_Linf_residuals();
     }
     Linf_residuals.copy_values_from(localFluidBlocks[0].Linf_residuals);
+    auto cqi = GlobalConfig.cqi;
     foreach (blk; localFluidBlocksBySize) {
-        auto cqi = GlobalConfig.cqi;
-        Linf_residuals.vec[cqi.mass] = fmax(Linf_residuals.vec[cqi.mass], fabs(blk.Linf_residuals.vec[cqi.mass]));
-        Linf_residuals.vec[cqi.xMom] = fmax(Linf_residuals.vec[cqi.xMom], fabs(blk.Linf_residuals.vec[cqi.xMom]));
-        Linf_residuals.vec[cqi.yMom] = fmax(Linf_residuals.vec[cqi.yMom], fabs(blk.Linf_residuals.vec[cqi.yMom]));
-        Linf_residuals.vec[cqi.zMom] = (cqi.threeD) ?
-            fmax(Linf_residuals.vec[cqi.zMom], fabs(blk.Linf_residuals.vec[cqi.zMom])) : to!number(0.0);
-        Linf_residuals.vec[cqi.totEnergy] = fmax(Linf_residuals.vec[cqi.totEnergy], fabs(blk.Linf_residuals.vec[cqi.totEnergy]));
-
+        foreach (i; 0 .. cqi.n) {
+            Linf_residuals.vec[i] = fmax(Linf_residuals.vec[i], fabs(blk.Linf_residuals.vec[i]));
+        }
     }
 } // end compute_Linf_residuals()
 
@@ -1606,7 +1592,7 @@ void compute_L2_residual(ref number L2_residual)
     foreach (blk; localFluidBlocksBySize) {
         L2_residual += blk.L2_residual;
     }
-} // end compute_Linf_residuals()
+} // end compute_L2_residuals()
 
 void compute_mass_balance(ref number mass_balance)
 {
@@ -1617,7 +1603,7 @@ void compute_mass_balance(ref number mass_balance)
     foreach (blk; localFluidBlocksBySize) {
         mass_balance += blk.mass_balance;
     }
-} // end compute_Linf_residuals()
+} // end compute_mass_balance()
 
 
 void finalize_simulation()
