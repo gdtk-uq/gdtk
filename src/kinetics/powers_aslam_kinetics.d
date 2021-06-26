@@ -10,12 +10,14 @@
  * This kinetics file accompanies the gas model in gas/ideal_gas_ab.d
  *
  * Authors: Peter J. and Rowan G.
- * Version: 2017-01-07: initial cut.
+ * Version: 2017-01-07: Initial cut.
+ *          2021-06-26: Add eval_source_terms() code.
  */
 
 module kinetics.powers_aslam_kinetics;
 
 import std.math;
+import std.conv;
 import nm.complex;
 import nm.number;
 
@@ -25,7 +27,7 @@ import util.lua_service;
 import kinetics.thermochemical_reactor;
 
 final class UpdateAB : ThermochemicalReactor {
-    
+
     this(string fname, GasModel gmodel)
     {
         super(gmodel); // hang on to a reference to the gas model
@@ -40,9 +42,9 @@ final class UpdateAB : ThermochemicalReactor {
         lua_pop(L, 1); // dispose of the table
         lua_close(L);
     }
-    
+
     override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest, 
+                         ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
     {
         if (Q.T > _Ti) {
@@ -52,7 +54,8 @@ final class UpdateAB : ThermochemicalReactor {
             // This gas has a very simple reaction scheme that can be integrated explicitly.
             massfA = massfA*exp(-_alpha*tInterval);
             massfB = 1.0 - massfA;
-            Q.massf[0] = massfA; Q.massf[1] = massfB;
+            Q.massf[0] = massfA;
+            Q.massf[1] = massfB;
         } else {
             // do nothing, since we are below the ignition temperature
         }
@@ -60,12 +63,23 @@ final class UpdateAB : ThermochemicalReactor {
         // we need to evaluate the new temperature, pressure, etc.
         _gmodel.update_thermo_from_rhou(Q);
         _gmodel.update_sound_speed(Q);
-    }
+    } // end opCall()
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
-        string errMsg = "eval_source_terms not implemented for powers_aslam_kinetics.";
-        throw new ThermochemicalReactorUpdateException(errMsg);
-    }
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q,
+                                          ref number[] conc, ref number[] rates,
+                                          ref number[] source) {
+        if (Q.T > _Ti) {
+            // We are above the ignition point, proceed with reaction.
+            number massfA = Q.massf[0];
+            number dmassfB_dt = _alpha*massfA;
+            source[0] = -dmassfB_dt;
+            source[1] = dmassfB_dt;
+        } else {
+            // Zero reaction rates, since we are below the ignition temperature.
+            source[0] = to!number(0.0);
+            source[1] = to!number(0.0);
+        }
+    } // end eval_source_terms()
 
 private:
     // Reaction rate constant
