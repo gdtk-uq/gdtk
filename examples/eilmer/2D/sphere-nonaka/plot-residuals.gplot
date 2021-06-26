@@ -1,6 +1,6 @@
-set term pdfcairo size 15cm,10cm font "20,Courier"
+set term pdf size 15cm,10cm font ",20"
 set output 'residuals.pdf'
-set xlabel 'iteration count'
+set xlabel 'time in microseconds'
 set ylabel 'mass residual'
 set y2tics
 set y2label 'energy residual'
@@ -8,5 +8,5 @@ set logscale y
 set logscale y2
 set yrange [100:*]
 set y2range [1e9:*]
-plot 'config/nonaka-residuals.txt' u (column("step")):(column("mass")) t 'mass residual' w l, \
-     'config/nonaka-residuals.txt' u (column("step")):(column("energy")) axes x1y2 t 'energy residual' w l
+plot 'config/nonaka-residuals.txt' u (column("time")*1.0e6):(column("mass")) t 'mass residual' w l, \
+     'config/nonaka-residuals.txt' u (column("time")*1.0e6):(column("energy")) axes x1y2 t 'energy residual' w l
