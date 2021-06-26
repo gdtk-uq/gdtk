@@ -1,4 +1,4 @@
-set term pdf enhanced mono dashed font "Courier,25" size 25cm,15cm
+set term pdf enhanced mono dashed font ",25" size 25cm,15cm
 set title "Shock shape in front of a sphere fired in air\nR_n = 7.0mm, u_{/Symbol \245} = 3.49 km/s, p_{/Symbol \245} = 4850 Pa, {/Symbol r}_{/Symbol \245}R_n = 4.0e-4 kg/m^2"
 set output 'nonaka-2T-model-shock-shape.pdf'
 set size square
