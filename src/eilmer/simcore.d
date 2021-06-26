@@ -1109,8 +1109,9 @@ int integrate_in_time(double target_time_as_requested)
                     auto cqi = GlobalConfig.cqi;
                     version(mpi_parallel) {
                         // Reduce residual values across MPI tasks.
+                        double my_local_value;
                         foreach (i; 0 .. cqi.n) {
-                            double my_local_value = Linf_residuals.vec[i].re;
+                            my_local_value = Linf_residuals.vec[i].re;
                             MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
                             Linf_residuals.vec[i] = to!number(my_local_value);
                         }
