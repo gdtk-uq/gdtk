@@ -70,10 +70,10 @@ final class UpdateAB : ThermochemicalReactor {
                                           ref number[] source) {
         if (Q.T > _Ti) {
             // We are above the ignition point, proceed with reaction.
-            number massfA = Q.massf[0];
-            number dmassfB_dt = _alpha*massfA;
-            source[0] = -dmassfB_dt;
-            source[1] = dmassfB_dt;
+            number rhoA = Q.massf[0] * Q.rho;
+            number drhoB_dt = _alpha*rhoA;
+            source[0] = -drhoB_dt;
+            source[1] = drhoB_dt;
         } else {
             // Zero reaction rates, since we are below the ignition temperature.
             source[0] = to!number(0.0);
