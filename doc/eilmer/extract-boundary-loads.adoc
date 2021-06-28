@@ -1,0 +1,19 @@
+= Extract Boundary Loads
+
+Sometimes the primary objective for a fluid simulation is to calculate the loads on a particular boundary of the domain, for example, calculating
+the drag or heat load along the surface of a wing or reentry capsule. Eilmer allows users to easily access the boundary data on specified boundary
+conditions for post-processing. It is important to note that the configuration settings presented below must be set before a simulation, extracting
+the boundary loads data is a simulation run-time procedure.
+
+`config.write_loads` ::
+  _boolean_, default: `false` +
+  To extract boundary loads, set `config.write_loads=true`.
+
+`config.boundary_groups_for_loads` ::
+  _string_, default: `''` +
+  The `config.boundary_groups_for_loads` setting is used to select which boundaries will have their loads data written to disk. This string should
+  match the `groups` string set in the corresponding boundary condition. This can be a list of strings separated by a comma, e.g. `config.boundary_groups_for_loads='group1,group2'`.
+
+`config.dt_loads` ::
+  _float_, default: `1.0e-03` +
+  The boundary loads data will be written to disk repeatedly, each time this increment of simulation time has elapsed.

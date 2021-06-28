@@ -32,6 +32,7 @@ include::geom/grid/sgrid-user.adoc[]
 include::eilmer/running-a-simulation.adoc[]
 include::eilmer/restarting-from-a-snapshot.adoc[]
 include::eilmer/run-time-utilities.adoc[]
+include::eilmer/extract-boundary-loads.adoc[]
 
 :leveloffset: -1
 

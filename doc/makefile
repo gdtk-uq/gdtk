@@ -9,7 +9,8 @@ EILMER_DOC_FILES := $(LMR_DIR)/config-options-user.adoc \
 	$(LMR_DIR)/boundary-conditions.adoc \
 	$(LMR_DIR)/running-a-simulation.adoc \
 	$(LMR_DIR)/run-time-utilities.adoc \
-	$(LMR_DIR)/restarting-from-a-snapshot.adoc
+	$(LMR_DIR)/restarting-from-a-snapshot.adoc \
+	$(LMR_DIR)/extract-boundary-loads.adoc
 
 GEOM_DIR := geom
 GEOM_DOC_FILES := $(GEOM_DIR)/elements.adoc \

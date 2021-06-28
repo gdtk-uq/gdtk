@@ -133,6 +133,30 @@ In a typical input script, one might set 10-15 input variables.
   each time this increment of simulation time has elapsed.
   To obtain history data, you will also need to specify one or more history points.
 
+`config.with_local_time_stepping` ::
+  _boolean_, default: `false` +
+  If a steady-state solution is sought, then it is possible to accelerate the explicit time-stepping scheme by allowing each cell in the domain to integrate in time with their own time-step that satisfies only the local CFL condition. This is sometimes referred to as Local Time-Stepping (LTS). Setting `config.with_local_time_stepping=true` enables this mode of time-stepping. Note that this mode of time-stepping is only suitable for steady-state simulations.
+
+`config.local_time_stepping_limit_factor` ::
+  _int_, default: `10000` +
+  To improve the stability of simulations that enable `config.with_local_time_stepping`, users can limit the largest allowable local time-step as a function of the smallest global time-step. The allowable time-step for each cell is set to be the minimum of the cell's local time-step and the global minimum time-step multiplied by `config.local_time_stepping_limit_factor`. The `config.local_time_stepping_limit_factor` is typically set to a value between 500 and 10000.
+
+`config.residual_smoothing` ::
+  _boolean_, default: `false` +
+  Residual smoothing essentially applies an averaging filter on the residuals during the time-integration procedure. Residual smoothing has two advantages: (1) The averaging increases the allowable CFL for a particular explicit time-stepping scheme; and (2) The averaging ensures that the local time-step for two adjacent cells doesn't differ by a large magnitude when using `config.with_local_time_stepping`, this has a stabilising effect.
+
+`config.residual_smoothing_type` ::
+  _string_, default: `'explicit'` +
+  The options are: `'explicit'`, `'implicit'`.
+  When `config.residual_smoothing=true`, the residuals can either be smoothed via an explicit averaging method or an implicit averaging method. Explicit averaging has less computational expense, however, implicit averaging typically results in a larger stable time step.
+
+`config.residual_smoothing_weight` ::
+  _float_, default: `0.2` +
+  A weighting factor used in the residual averaging when `config.residual_smoothing=true`.
+
+`config.residual_smoothing_iterations` ::
+  _int_, default: `2` +
+  The number of Jacobi iterations used for the implicit residual averaging when `config.residual_smoothing=true` and `config.residual_smoothing_type='implicit'`.
 
 == Block marching
 
