@@ -38,6 +38,7 @@ my_grid:set_tags{north="my-special-tag"}
 my_usg = UnstructuredGrid:new{sgrid=my_grid}
 print("type=", my_usg:get_type(), "dimensions=", my_usg:get_dimensions())
 my_usg:write_to_vtk_file("test_grid.vtk")
+my_usg:write_to_stl_file("test_usgrid.stl", 25.0)
 my_usg:write_to_gzip_file("test_grid.gz")
 my_usg:write_to_su2_file("test_grid.su2")
 my_usg_2 = UnstructuredGrid:new{filename="test_grid.gz"}

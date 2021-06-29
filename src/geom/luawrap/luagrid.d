@@ -86,6 +86,21 @@ extern(C) int write_to_vtk_file(T, string MTname)(lua_State* L)
     return 0;
 }
 
+extern(C) int write_to_stl_file(T, string MTname)(lua_State* L)
+{
+    int narg = lua_gettop(L); // args: 1.grid-object, 2.fileName, 3.scale;
+    auto grid = checkObj!(T, MTname)(L, 1);
+    auto fileName = to!string(luaL_checkstring(L, 2));
+    double scale = 1.0;
+    if (narg >= 3) {
+        if (lua_isnumber(L, 3)) {
+            scale = to!double(lua_tonumber(L, 3));
+        }
+    }
+    grid.write_to_stl_file(fileName, scale);
+    return 0;
+}
+
 extern(C) int write_to_su2_file(T, string MTname)(lua_State* L)
 {
     int narg = lua_gettop(L); // assume narg == 2;

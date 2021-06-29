@@ -18,6 +18,7 @@ void main()
     writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
     auto usg = new UnstructuredGrid(my_grid);
     usg.write_to_vtk_file("test_grid.vtk");
+    usg.write_to_stl_file("test_grid.stl", 25.4); // inches to mm scale
 
     usg.write_to_gzip_file("test_grid.gz");
     auto usg2 = new UnstructuredGrid("test_grid.gz", "gziptext");

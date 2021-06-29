@@ -385,4 +385,51 @@ class Grid {
         }
     } // end find_nearest_cell_centre
 
+    void write_to_stl_file(string fileName, double scale=1.0)
+    // Write the grid (unstructured or structured) to a file in STL (ASCII) format.
+    // The coordinates can be scaled arbitrarily since the STL format does not carry units.
+    // Also, the STL file knows nothing about connectivity, so all facets are independent.
+    // PJ 2021-06-29
+    {
+        if (dimensions != 2) {
+            throw new Exception("write_to_stl_file is only for 2D grids.");
+        }
+        auto f = File(fileName, "w");
+        f.writefln("solid %s", label);
+        void write_STL_triangle(ref const(Vector3) p0, ref const(Vector3) p1, ref const(Vector3) p2)
+        {
+            Vector3 p01 = p1-p0; Vector3 p02 = p2-p0;
+            Vector3 n; cross(n, p01, p02); n.normalize();
+            f.writefln("facet normal %.6e %.6e %.6e", n.x, n.y, n.z);
+            f.writeln("  outer loop");
+            f.writefln("    vertex %.6e %.6e %.6e", p0.x*scale, p0.y*scale, p0.z*scale);
+            f.writefln("    vertex %.6e %.6e %.6e", p1.x*scale, p1.y*scale, p1.z*scale);
+            f.writefln("    vertex %.6e %.6e %.6e", p2.x*scale, p2.y*scale, p2.z*scale);
+            f.writeln("  endloop");
+            f.writeln("endfacet");
+        }
+        size_t[8] vtx_ids; size_t nvtx; // to suite copy_vtx_id_list_for_cell()
+        foreach (i; 0 .. ncells) {
+            copy_vtx_id_list_for_cell(vtx_ids, nvtx, i);
+            switch (nvtx) {
+            case 3:
+                // Single triangle.
+                write_STL_triangle(vertices[vtx_ids[0]], vertices[vtx_ids[1]], vertices[vtx_ids[2]]);
+                break;
+            case 4:
+                // Quad, split into 4 triangles.
+                Vector3 mid = cell_barycentre(i);
+                write_STL_triangle(vertices[vtx_ids[0]], vertices[vtx_ids[1]], mid);
+                write_STL_triangle(vertices[vtx_ids[1]], vertices[vtx_ids[2]], mid);
+                write_STL_triangle(vertices[vtx_ids[2]], vertices[vtx_ids[3]], mid);
+                write_STL_triangle(vertices[vtx_ids[3]], vertices[vtx_ids[0]], mid);
+                break;
+            default:
+                throw new Error(format("Unexpected number of vertices, nvtx=%d.", nvtx));
+            } // end switch nvtx
+        } // end foreach cell
+        f.writefln("endsolid %s", label);
+        f.close();
+    } // end write_to_STL_file()
+
 } // end class grid

@@ -733,6 +733,8 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "cellCentroid");
     lua_pushcfunction(L, &write_to_vtk_file!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "write_to_vtk_file");
+    lua_pushcfunction(L, &write_to_stl_file!(StructuredGrid, StructuredGridMT));
+    lua_setfield(L, -2, "write_to_stl_file");
     lua_pushcfunction(L, &write_to_gzip_file!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "write_to_gzip_file");
     lua_pushcfunction(L, &write_to_raw_binary_file!(StructuredGrid, StructuredGridMT));

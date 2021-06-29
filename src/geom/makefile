@@ -114,7 +114,7 @@ clean:
 	- rm -f *.obj elements/*.obj gpath/*.obj grid/*.obj luawrap/*.obj misc/*.obj surface/*.obj volume/*.obj
 	- rm -f $(DEMO_PROGRAMS)
 	- rm -f $(TEST_PROGRAMS)
-	- rm -f gpgrid*.vtk test*.vtk test*.gz test*.svg test*.su2 test*.bin
+	- rm -f gpgrid*.vtk test*.vtk test*.stl test*.gz test*.svg test*.su2 test*.bin
 	- rm -rf test_openFoam
 	- cd $(LUA_DIR); make clean
 

@@ -46,6 +46,7 @@ ni = grid:get_niv()
 nj = grid:get_njv()
 print("grid size=", ni, nj)
 print("upper-right corner=", grid:get_vtx(ni-1,nj-1))
+grid:write_to_stl_file("test_sgrid.stl", 25.0)
 --
 print("SlabGrid")
 grid3 = grid:makeSlabGrid{dz=0.2, symmetric=true, label="slab"}
