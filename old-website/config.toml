@@ -1,4 +1,5 @@
-baseURL = "http://cfcfd.mechmining.uq.edu.au/"
+baseURL = "http://cfcfd.mechmining.uq.edu.au/old-website/"
+canonifyURLs = true
 languageCode = "en-us"
 title = "GDTk"
 theme = "book"
