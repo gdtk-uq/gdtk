@@ -1,0 +1,14 @@
+---
+title: "Gas-dynamic library"
+description: "Gas-dynamic library reference manual"
+lead: ""
+date: 2021-07-01
+lastmod: 2021-07-01
+draft: false
+images: []
+menu:
+  docs:
+    parent: "python"
+weight: 40
+toc: true
+---

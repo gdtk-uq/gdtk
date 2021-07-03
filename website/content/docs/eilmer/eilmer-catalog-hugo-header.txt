@@ -1,0 +1,12 @@
+---
+title: "Catalogue of Examples"
+description: "Eilmer Catalogue of Examples"
+lead: ""
+draft: false
+images: []
+menu:
+  docs:
+    parent: "eilmer"
+weight: 40
+toc: true
+---

@@ -1,0 +1,207 @@
+---
+title: "NENZF1d Reference Manual"
+description: "NENZF1d"
+lead: ""
+date: 2021-05-26
+lastmod: 2021-05-26
+draft: false
+images: []
+menu:
+  docs:
+    parent: "nenzf1d"
+weight: 10
+toc: true
+---
+= NENZF1D Manual for Users
+Peter A. Jacobs; Rowan J. Gollan
+2020-11-09
+:toc: right
+:sectnums:
+:imagesdir: estcn
+
+:leveloffset: +1
+
+NENZF1D is a program for estimating flow conditions in reflected-shock tunnels,
+when the test gas reaches temperatures high enough for chemical reactions
+to occur and
+when nonequilibrium chemistry effects are expected to be important.
+The calculation proceeds in two parts.
+Assuming thermochemical-equilibrium, a state-to-state calculation is done
+for the shock-tunnel processing of the test gas
+until it reaches sonic conditions at the nozzle throat.
+Then a calculation with finite-rate chemical reactions is made
+of the supersonic flow of the gas through the nozzle expansion.
+
+
+= Getting started
+
+The `nenzf1d` program is built upon the core gas model and flow modules
+of our gas-dynamics tool kit.
+General getting started notes can be found at
+http://cfcfd.mechmining.uq.edu.au/docs/getting-started
+There, you will see how to get a copy of the source code,
+a list of what other software you will need to build and install the tool kit,
+and a collection of environment variables that need to be set.
+
+To install the `nenzf1d` program, move to its source directory
+and use the `make` utility.
+
+    cd dgd/src/nenzf1d
+    make install
+
+This will also install files associated with the gas models.
+Note that you will need a compiled version of the NASA Lewis `cea2` program
+installed in a location that the gas models module can find it.
+
+
+= Getting command help
+
+When run as an application, this program accepts
+a single command line argument that specifies an input file
+with the detailed calculation parameters.
+
+To see what other command-line options are available,
+start the program as:
+
+    nenzf1d --help
+
+
+= Example shock-tunnel calculation
+
+Let's consider shot 10559 for the T4 shock tunnel.
+This particular run of the wind tunnel was part of Wilson Chan's PhD studies
+and used air as the test gas, with the Mach 6 nozzle providing expansion
+of the air to test-flow conditions.
+
+To start, you are going to need a set of consistent gas model files
+in your working directory.
+There is a guide (http://cfcfd.mechmining.uq.edu.au/pdfs/gas-user-guide.pdf)
+to the gas-model module that is worth reading but, for the moment,
+let's set up a 5-species model of air by copying the gas-model files
+from the samples in the source code repository.
+
+----
+cp ${DGD_REPO}/src/gas/sample-data/cea-air5species-gas-model.lua .
+cp ${DGD_REPO}/examples/kinetics/air-chemistry-1T/air-5sp-1T.inp .
+cp ${DGD_REPO}/examples/kinetics/air-chemistry-1T/GuptaEtAl-air-reactions.lua .
+prep-gas air-5sp-1T.inp air-5sp-1T.lua
+prep-chem air-5sp-1T.lua GuptaEtAl-air-reactions.lua air-5sp-1T-reactions.lua
+----
+
+== Input file
+
+----
+# Sample input file for nenzf1d is a YAML 1.1 file.
+# t4m6-air.yaml
+# Data for T4 shot 10559 obtained from Wilson Chan's PhD thesis, Table D.1, page 158.
+# PJ 2020-10-17
+#
+title: "T4 shot 10559 with Mach 6 nozzle."    # Any string will do.
+
+species: ['N2', 'O2', 'N', 'O', 'NO']         # List
+molef: {'N2': 0.79, 'O2': 0.21}               # Map of nonzero values will suffice.
+# Gas model and reactions files need to be consistent with the species above.
+# Gas model 1 is usually a CEAGas model file.
+# Gas model 2 is a thermally-perfect gas model for the finite-rate chemistry.
+gas-model-1: cea-air5species-gas-model.lua
+gas-model-2: air-5sp-1T.lua
+reactions: air-5sp-1T-reactions.lua
+
+# Observed parameter values for shock-tube operation.
+T1: 300         # K
+p1: 130.0e3     # Pa
+Vs: 2434.0      # m/s
+pe: 34.07e6     # Pa
+ar: 127.0       # Mach 6 nozzle
+
+# Define the expanding part of the nozzle as a schedule of diameters with position.
+xi: [0.0, 0.150, 0.280, 0.468, 0.671,  0.984]  # axial-distance metres
+di: [1.0,   4.0, 6.232,  8.44,  9.92, 11.268]  # diameter (may be normalized)
+
+# Optionally, we can adjust the stepping parameters for the supersonic expansion.
+# x_end: 1.0
+# t_final: 1.0e-3
+# t_inc: 1.0e-10
+# t_inc_factor: 1.0001
+# t_inc_max: 1.0e-7
+----
+
+## Results
+
+Run `nenzf1d` with the command:
+
+----
+nenzf1d t4m6-air.yaml
+----
+
+to get the result
+
+----
+NENZF1D: shock-tunnel with nonequilibrium nozzle flow.
+  T4 shot 10559 with Mach 6 nozzle.
+Initial gas in shock tube (state 1).
+  pressure    130 kPa
+  density     1.5036 kg/m^3
+  temperature 300 K
+  H1          0.00187216 MJ/kg
+Incident-shock process to state 2.
+  V2          0.362529 km/s
+  Vg          2.07147 km/s
+  pressure    7711.1 kPa
+  density     10.0951 kg/m^3
+  temperature 2648.54 K
+Reflected-shock process to state 5.
+Isentropic relaxation to state 5s.
+  entropy     8483.2 J/kg/K
+  H5s         5.4437 MJ/kg
+  H5s-H1      5.44183 MJ/kg
+  pressure    34070 kPa
+  density     27.947 kg/m^3
+  temperature 4147.1 K
+Isentropic flow to throat to state 6 (Mach 1).
+  V6          1155.62 km/s
+  mflux6      20077.8
+  pressure    19158.3 kPa
+  density     17.374 kg/m^3
+  temperature 3775.48 K
+Isentropic expansion to nozzle exit of given area (state 7).
+  area_ratio  127
+  V7          3.15445 km/s
+  pressure    10.7819 kPa
+  density     0.050117 kg/m^3
+  temperature 746.49 K
+  mflux7      20077.7
+  pitot7      479.342 kPa
+End of part A: shock-tube and frozen/eq nozzle analysis.
+Begin part B: supersonic expansion with finite-rate chemistry.
+Throat condition:
+  velocity    1.1908 km/s
+  sound-speed 1.18961 km/s
+  (v-V6)/V6   0.0304407
+  pressure    19158.3 kPa
+  density     17.3739 kg/m^3
+  temperature 3775.48 K
+  massf[N2]   0.726242
+  massf[O2]   0.17141
+  massf[N]    2.27571e-05
+  massf[O]    0.014889
+  massf[NO]   0.0874362
+Exit condition:
+  x           0.98406 m
+  area-ratio  126.968
+  velocity    3.10966 km/s
+  Mach        6.04831
+  p_pitot     506.509 kPa
+  pressure    10.1286 kPa
+  density     0.0523794 kg/m^3
+  temperature 669.499 K
+  massf[N2]   0.732318
+  massf[O2]   0.190771
+  massf[N]    5.02429e-17
+  massf[O]    0.00244285
+  massf[NO]   0.0744683
+Expansion error-indicators:
+  relerr-mass 0.000390353
+  relerr-H    8.22724e-06
+End.
+----

@@ -1,0 +1,14 @@
+---
+title: "Numercal methods library"
+description: "Numercal methods library"
+lead: ""
+date: 2021-07-01
+lastmod: 2021-07-01
+draft: false
+images: []
+menu:
+  docs:
+    parent: "python"
+weight: 80
+toc: true
+---
