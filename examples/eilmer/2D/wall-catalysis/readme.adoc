@@ -1,6 +1,6 @@
 == 2D/wall-catalysis
 
-image::catalytic-wall-N2-field.png[caption="Molecular Nitrogen Mass Fraction for catalytic wall vs. noncatalytic wall at 2200K."]
+image::catalytic-wall-N2-field.png[width=100%,caption="Molecular Nitrogen Mass Fraction for catalytic wall vs. noncatalytic wall at 2200K."]
 
 This example exercises the mass fraction boundary conditions for a blunt wedge with an elevated temperature of 2200K, immersed in a hypersonic flow at 6 km/s.
 The left hand image shows the mass fraction of molecular nitrogen (N2), using a normal fixed temperature wall where the mass fraction gradients are set to zero.

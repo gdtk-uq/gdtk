@@ -1,7 +1,7 @@
 == 2D/oblique-detonation-wave
 :stem:
 
-image::odw-colourmaps.png[caption="Left: Pressure colourmap of oblique detonation wave with shocked cells highlighted. Right: Product mass fraction colourmap showing linear fit to shocked cells."]
+image::odw-colourmaps.png[width=100%,caption="Left: Pressure colourmap of oblique detonation wave with shocked cells highlighted. Right: Product mass fraction colourmap showing linear fit to shocked cells."]
 
 The flow in this example corresponds to an exact solution published by Powers and Aslam in 2006,
 in a paper calling for more widespread and rigorous verification of numerical codes used in aerospace research.

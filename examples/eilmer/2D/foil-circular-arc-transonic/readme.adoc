@@ -1,6 +1,6 @@
 == 2D/foil-circular-arc-transonic
 
-image::foil-zoom-flow-domain-mach.png[caption="Mach number field near a circular-arc airfoil."]
+image::foil-zoom-flow-domain-mach.png[width=100%,caption="Mach number field near a circular-arc airfoil."]
 
 This example shows the transonic flow around an airfoil with a circular-arc profile.
 It appears to be a standard example in the textbooks on Computational Fluid Dynamics,

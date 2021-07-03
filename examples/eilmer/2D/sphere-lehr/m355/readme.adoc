@@ -1,6 +1,6 @@
 == 2D/sphere-lehr/m355
 
-image::lehr-m355-mach-and-temp-animation.gif[caption="Shock-fitted flow domain developing over a sphere."]
+image::lehr-m355-mach-and-temp-animation.gif[width=100%,caption="Shock-fitted flow domain developing over a sphere."]
 
 This shock-fitting example shows the transient flow of a hydrogen/oxygen gas mixture 
 over a spherical projectile.

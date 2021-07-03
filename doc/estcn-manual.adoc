@@ -89,7 +89,7 @@ and subsequently by the reflected shock (to get to state 5).
 The incident shock sets the inflow conditions for the reflected shock
 but there is no further interaction.
 
-image::shock-tube-process-fig-from-stn-report.png[caption="Wave processing diagram"]
+image::shock-tube-process-fig-from-stn-report.png[width=100%,caption="Wave processing diagram"]
 
 This condition has an enthalpy of 5.43 MJ/kg.
 (Look for the label `(H5s-H1)` in the console output.)

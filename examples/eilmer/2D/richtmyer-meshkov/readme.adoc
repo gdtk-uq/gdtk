@@ -1,7 +1,7 @@
 == 2D/richtmyer-meshkov
 :stem:
 
-image::rmi_T_vortz_plain.svg[caption="Timelapse of the Richtmyer-Meshkov instability. Temperature and Z-vorticity colourmap."]
+image::rmi_T_vortz_plain.svg[width=100%,caption="Timelapse of the Richtmyer-Meshkov instability. Temperature and Z-vorticity colourmap."]
 
 This example consists of a curved interface between two fluids of different density that is processed by a shock passing left to right through the domain. The misaligned density gradient at the interface and pressure gradient at the shock induce a symmetric swirling motion of the interface, which is driven by the baroclinic production of vorticity during the impact. This vorticity is visualised in the colourmaps as blue for clockwise (negative) swirling motion and red for anti-clockwise (positive) motion, overlayed on a greyscale map describing the temperature. As the simulation progresses, the interface grows unstably into a complex structure consisting of a "spike" of cold fluid piercing leftward, and a "bubble" of hot fluid on the right. In the simulation these structures convect out of the domain within 200 ms, but with more time a turbulent interface would form, with both spike and bubble decaying into a random chaotic mess.
 
