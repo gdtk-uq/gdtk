@@ -65,7 +65,7 @@ alertText = "Like Doks? <a class=\"alert-link\" href=\"https://github.com/h-enk/
   lazySizes = true
   clipBoard = true
   instantPage = true
-  flexSearch = true
+  flexSearch = false
   darkMode = true
   bootStrapJs = true
   breadCrumb = false
