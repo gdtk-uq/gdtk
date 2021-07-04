@@ -13,7 +13,7 @@ weight: 10
 toc: true
 ---
 
-<img src="/images/ramp-in-3D-by-kad.png" style="width:100%" alt="scramjet flowpath">
+{{< figure src="/images/ramp-in-3D-by-kad.png" width="100%" alt="scramjet flowpath" caption="<em>Simulation of flow over a 24° compression corner as in the experiments performed by Holden (1970). The simulation is performed in 3D as this captures the spillage of gas over side of the ramp and results in a better comparison to experimental results for heat transfer.</em>" >}}
 
 ## What does Eilmer do?
 

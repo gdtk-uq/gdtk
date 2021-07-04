@@ -13,8 +13,8 @@ weight: 10
 toc: true
 ---
 
-<img src="/images/L1d_tube_analysis_plot_m10p0_plot_600dpi_xshift.png" style="width:100%" alt="space-time diagram for X2 expansion tube">
-Space-time diagram of wave processes in the X2 expansion tube for a Mach 10, high total-pressure operating condition. Simulation and figure preparation by David Gildfind, 2012.
+{{< figure src="/images/L1d_tube_analysis_plot_m10p0_plot_600dpi_xshift.png" width="100%" alt="space-time diagram for X2 expansion tube"
+  caption="<em>Space-time diagram of wave processes in the X2 expansion tube for a Mach 10, high total-pressure operating condition. Simulation and figure preparation by David Gildfind, 2012.</em>" >}}
 
 ## What does L1d do?
 
