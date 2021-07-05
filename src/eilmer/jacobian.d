@@ -81,7 +81,7 @@ public:
 
     } // end size_local_matrix()
 
-    void prepare_preconditioner(FVCell[] cells, double dt, size_t ncells, size_t nConserved, size_t fill_in_level = 0)
+    void prepare_ilu_preconditioner(FVCell[] cells, double dt, size_t ncells, size_t nConserved, size_t fill_in_level = 0)
     {
         /*
           This method prepares the flow Jacobian for use as a precondition matrix.
@@ -114,6 +114,56 @@ public:
         else { decompILU0(local); }
 
         scaleLU(local);
+
+    } // end prepare_preconditioner()
+
+    void prepare_sgs_preconditioner(FVCell[] cells, double dt, size_t ncells, size_t nConserved, size_t fill_in_level = 0)
+    {
+        /*
+          This method prepares the flow Jacobian for use as a precondition matrix.
+          It does this in 3 steps:
+
+          1. multiply Jacobian by -1 to match our mathematical formulation of the implicit problem
+          2. add 1/dt to the diagonal
+          3. perform an ILU decomposition
+
+          we also scale the LU decomposition needed for the transpose solve method
+          TODO: move this operation to a more appropriate location.
+         */
+
+        foreach ( ref entry; local.aa) { entry *= -1; }
+        number dtInv;
+        foreach (i; 0..ncells) {
+            foreach (j; 0..nConserved) {
+                if (GlobalConfig.with_local_time_stepping) {
+                    FVCell cell = cells[i];
+                    dtInv = 1.0/cell.dt_local;
+                } else {
+                    dtInv = 1.0/dt;
+                }        // TODO: local-time-stepping
+                ulong idx = i*nConserved + j;
+                local[idx,idx] = local[idx,idx] + dtInv;
+            }
+        }
+
+        auto D = new Matrix!number(nConserved,nConserved);
+        foreach (k; 0..ncells) {
+            foreach (i; 0..nConserved) {
+                int idx = to!int(k*nConserved + i);
+                foreach (j; 0..nConserved) {
+                    int jdx = to!int(k*nConserved + j);
+                    D[j,i] = local[idx,jdx]; // implicit transpose operation
+                }
+            }
+            auto Dinv = inverse(D);
+            foreach (i; 0..nConserved) {
+                int idx = to!int(k*nConserved + i);
+                foreach (j; 0..nConserved) {
+                    int jdx = to!int(k*nConserved + j);
+                    local[idx,jdx] = Dinv[i,j];
+                }
+            }
+        }
 
     } // end prepare_preconditioner()
 

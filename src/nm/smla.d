@@ -1,4 +1,4 @@
-/**
+ /**
  * A minimal sparse matrix linear algebra module.
  *
  * Author: Rowan J. Gollan
@@ -15,7 +15,7 @@ import std.conv;
 import std.math;
 import std.array;
 import core.memory;
-import std.algorithm : reduce;
+import std.algorithm : reduce, fill;
 import std.algorithm.sorting : sort;
 import std.typecons : Tuple;
 import nm.bbla;
@@ -398,6 +398,103 @@ void solve(T)(SMatrix!T LU, T[] b)
         }
         b[i] = sum/LU[i,i];
     }
+}
+
+void sgsr(T)(SMatrix!T A, T[] b, int block_size) {
+
+    int n = to!int(A.ia.length-1);
+    assert(b.length == n);
+    int nblocks = n/block_size;
+    //writeln(nblocks);
+    T[] z; z.length = n;
+    fill(z,to!number(0.0));
+    T[] x; x.length = n;
+    fill(x,to!number(0.0));
+    T[] xhalf; xhalf.length = n;
+    fill(xhalf,to!number(0.0));
+    T[] xnew; xnew.length = n;
+    fill(xnew,to!number(0.0));
+    T[] tmp; tmp.length = block_size;
+    fill(tmp,to!number(0.0));
+
+    foreach (k; 0..3) {
+
+        // relaxation step:  b* = b - U . x_k
+        xhalf = b.dup;
+        foreach (nb; 1..nblocks) {
+            foreach ( i; nb*block_size..nb*block_size+block_size ) {
+                foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
+                    // Only work up to the diagonal block
+                    if ( j >= nb*block_size )
+                        break;
+                    xhalf[j] -= A[i,j] * x[i];
+                }
+            }
+        }
+
+        // Forward sweep:  (L + D) . x_k+1/2 = b*
+        foreach (nb; 0..nblocks) {
+
+            foreach (i; 0..block_size) {
+                tmp[i] = to!number(0.0);
+                int idx = nb*block_size + i;
+                foreach (j; 0..block_size) {
+                    int jdx = nb*block_size + j;
+                    tmp[i] += A[idx,jdx]*xhalf[jdx];
+                }
+            }
+            xhalf[nb*block_size..nb*block_size+block_size] = tmp[];
+
+            foreach ( i; nb*block_size..nb*block_size+block_size ) {
+                z[i] = xhalf[i];
+                foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
+                    // only work on entries where j > diagonal block
+                    if ( j <= nb*block_size+block_size-1 )
+                        continue;
+                    xhalf[j] -= A[i,j]*z[i];
+                }
+            }
+        }
+
+        // relaxation step:  b* = b - L . x_k+1/2
+        xnew = b.dup;
+        for ( int nb = to!int(nblocks-2); nb >= 0; --nb ) {
+            foreach ( i; nb*block_size..nb*block_size+block_size ) {
+                foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
+                    // only work on entries where j > diagonal block
+                    if ( j <= nb*block_size+block_size-1 )
+                        continue;
+                    xnew[j] -= A[i,j] * xhalf[i];
+                }
+            }
+        }
+
+        // Backward sweep:  (U + D) . x_k+1 = b*
+        for ( int nb = to!int(nblocks-1); nb >= 0; --nb ) {
+
+            foreach (i; 0..block_size) {
+                tmp[i] = to!number(0.0);
+                int idx = nb*block_size + i;
+                foreach (j; 0..block_size) {
+                    int jdx = nb*block_size + j;
+                    tmp[i] += A[idx,jdx]*xnew[jdx];
+                }
+            }
+            xnew[nb*block_size..nb*block_size+block_size] = tmp[];
+
+            foreach ( i; nb*block_size..nb*block_size+block_size ) {
+                z[i] = xnew[i];
+                foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
+                    // only work on entries where j < i
+                    if ( j >= nb*block_size )
+                        break;
+                    xnew[j] -= A[i,j]*z[i];
+                }
+            }
+        }
+        fill(x,xnew);
+    }
+    fill(b,xnew);
 }
 
 /**

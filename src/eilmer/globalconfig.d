@@ -549,13 +549,14 @@ SolidDomainCoupling solidDomainCouplingFromName(string name)
     }
 }
 
-enum PreconditionMatrixType { block_diagonal, ilu, lu_sgs }
+enum PreconditionMatrixType { block_diagonal, ilu, sgs, lu_sgs }
 
 string preconditionMatrixTypeName(PreconditionMatrixType i)
 {
     final switch (i) {
     case PreconditionMatrixType.block_diagonal: return "block_diagonal";
     case PreconditionMatrixType.ilu: return "ilu";
+    case PreconditionMatrixType.sgs: return "sgs";
     case PreconditionMatrixType.lu_sgs: return "lu_sgs";
     }
 } // end preconditionMatrixTypeName()
@@ -565,6 +566,7 @@ PreconditionMatrixType preconditionMatrixTypeFromName(string name)
     switch (name) {
     case "block_diagonal": return PreconditionMatrixType.block_diagonal;
     case "ilu": return PreconditionMatrixType.ilu;
+    case "sgs": return PreconditionMatrixType.sgs;
     case "lu_sgs": return PreconditionMatrixType.lu_sgs;
     default:
         string errMsg = "The selected 'preconditioner' is unavailable.\n";
@@ -572,6 +574,7 @@ PreconditionMatrixType preconditionMatrixTypeFromName(string name)
         errMsg ~= "The available strategies are: \n";
         errMsg ~= "   'block_diagonal'\n";
         errMsg ~= "   'ilu'\n";
+        errMsg ~= "   'sgs'\n";
         errMsg ~= "   'lu_sgs'\n";
         errMsg ~= "Check your selection or its spelling in the input file.\n";
         throw new Error(errMsg);
