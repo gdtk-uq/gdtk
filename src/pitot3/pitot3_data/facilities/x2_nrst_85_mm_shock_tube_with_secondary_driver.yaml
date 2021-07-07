@@ -20,6 +20,7 @@ shock_tube_length : 5.687 # m
 shock_tube_diameter : 0.085 # m
 shock_tube_sensors : ['st1','st2','st3','at1','at2','at3','at4','at5','at6','at7','at8']
 
-sensor_locations : {'sd1':2.577,'sd2':2.810, 'sd3':3.043,'st1':4.231,'st2':4.746, 'st3':5.260, 'at1':6.437,'at2':6.615,'at3':6.796,'at4':7.590, 'at5':7.846,'at6':8.096,'at7': 8.157, 'at8':8.197}
+sensor_locations : {'sd1':2.577,'sd2':2.810, 'sd3':3.043,'st1':4.231,'st2':4.746, 'st3':5.260, 
+                    'at1':6.437,'at2':6.615,'at3':6.796,'at4':7.590, 'at5':7.846,'at6':8.096,'at7': 8.157, 'at8':8.197}
 
 driver_conditions_folder : 'x2_driver_conditions' #inside the facilities folder...

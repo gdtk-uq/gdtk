@@ -1,8 +1,12 @@
-#Configuration file for X2 facility with nozzle in Pitot 3
+# x2_nozzle.yaml
+# Configuration file for X2 facility with nozzle in Pitot 3
 #
 # Must conform to Yaml syntax, which is pretty forgiving, thankfully...
 # Chris James (c.james4@uq.edu.au) - 26/12/20
 # Lengths and sensor locations from Gildfind et al. (2014)
+# Production of High-Mach-Number Scramjet Flow Conditions in an Expansion Tube
+# AIAA Journal, Vol 52, No. 1, pp 162 - 177
+# Updated 07/07/21 to correct incorrect acceleration tube diameter - CMJ.
 
 facility_name : 'X2'
 facility_type : 'expansion_tube'
@@ -14,11 +18,12 @@ shock_tube_diameter : 0.085 # m
 shock_tube_sensors : ['sd1','sd2','sd3']
 
 acceleration_tube_length : 5.167 #m 
-acceleration_tube_diameter : 0.85 # m
+acceleration_tube_diameter : 0.085 # m
 acceleration_tube_sensors : ['st1','st2','st3','at1','at2','at3','at4','at5','at6','at7','at8']
 
 nozzle_geometric_area_ratio : 5.64
 
-sensor_locations : {'sd1':2.577,'sd2':2.810, 'sd3':3.043,'st1':4.231,'st2':4.746, 'st3':5.260, 'at1':6.437,'at2':6.615,'at3':6.796,'at4':7.590, 'at5':7.846,'at6':8.096,'at7': 8.157, 'at8':8.197}
+sensor_locations : {'sd1':2.577,'sd2':2.810, 'sd3':3.043,'st1':4.231,'st2':4.746, 'st3':5.260, 
+                    'at1':6.437,'at2':6.615,'at3':6.796,'at4':7.590, 'at5':7.846,'at6':8.096,'at7': 8.157, 'at8':8.197}
 
 driver_conditions_folder : 'x2_driver_conditions' #inside the facilities folder...
