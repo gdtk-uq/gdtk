@@ -12,10 +12,10 @@ all: $(REF_MANS) eilmer-catalog eilmer-faq presentations theses
 	hugo
 
 sync:
-	rsync --exclude=pdfs -zz -vrlt -p --chmod=Dg+s,ug+w,Fo-w,+X -g --groupmap=*:other public/ cfcfd:/opt/local/share/httpd/htdocs/
+	rsync --exclude=pdfs -zav public/ gdtk:/var/www/htdocs/
 
 sync-pdfs:
-	rsync -zz -vrlt -p --chmod=Dg+s,ug+w,Fo-w,+X -g --groupmap=*:other public/pdfs/ cfcfd:/opt/local/share/httpd/htdocs/pdfs/
+	rsync -zav public/pdfs/ gdtk:/var/www/htdocs/pdfs/
 
 clean:
 	- rm -rf $(EILMER_DIR)/eilmer-catalog-for-hugo/gallery

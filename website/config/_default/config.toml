@@ -1,4 +1,4 @@
-baseurl = "http://cfcfd.mechmining.uq.edu.au"
+baseurl = "https://gdtk.uqcloud.net"
 canonifyURLs = true
 disableAliases = true
 disableHugoGeneratorInject = true
