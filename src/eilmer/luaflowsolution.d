@@ -49,7 +49,7 @@ extern(C) int newFlowSolution(lua_State* L)
         errMsg ~= " A table is expected as first (and only) argument.";
         luaL_error(L, errMsg.toStringz);
     }
-    string[] allowedNames = ["jobName", "dir", "tindx", "gindx", "nBlocks", "flow_format", "tag"];
+    string[] allowedNames = ["jobName", "dir", "tindx", "gindx", "nBlocks", "flow_format", "tag", "make_kdtree"];
     if ( !checkAllowedNames(L, 1, allowedNames) ) {
         string errMsg = "Error in call to FlowSolution:new.";
         errMsg ~= " The table contains unexpected names.";
@@ -186,7 +186,21 @@ extern(C) int newFlowSolution(lua_State* L)
     }
     lua_pop(L, 1);
 
-    auto fsol = new FlowSolution(jobName, dir, tindx, nBlocks, gindx, flow_format, tag);
+    int make_kdtree;
+    lua_getfield(L, 1, "make_kdtree");
+    if ( lua_isnil(L, -1) ) {
+        make_kdtree = 0;
+    } else if ( lua_isnumber(L, -1) ) {
+        make_kdtree = to!int(luaL_checknumber(L, -1));
+    } else {
+        string errMsg = "Error in call to FlowSolution:new.";
+        errMsg ~= " A field for make_kdtree was found, but the content was not valid.";
+        errMsg ~= " The value should be given as an integer.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+
+    auto fsol = new FlowSolution(jobName, dir, tindx, nBlocks, gindx, flow_format, tag, make_kdtree);
     flowSolutionStore ~= pushObj!(FlowSolution, FlowSolutionMT)(L, fsol);
     return 1;
 } // end newFlowSolution()

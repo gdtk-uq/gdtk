@@ -50,6 +50,7 @@ import luaflowstate;
 import luaflowsolution;
 import luaidealgasflow;
 import luagasflow;
+import geom.misc.kdtree;
 
 
 class FlowSolution {
@@ -64,7 +65,7 @@ public:
     BlockFlow[] flowBlocks;
     Grid[] gridBlocks;
 
-    this(string jobName, string dir, int tindx, size_t nBlocks, int gindx=-1, string flow_format="", string tag="")
+    this(string jobName, string dir, int tindx, size_t nBlocks, int gindx=-1, string flow_format="", string tag="", int make_kdtree=0)
     {
         // Default action is to set gindx to tindx. The default action
         // is indicated by gindx = -1
@@ -141,6 +142,10 @@ public:
         this.jobName = jobName;
         this.nBlocks = nBlocks;
         sim_time = flowBlocks[0].sim_time;
+
+        if (make_kdtree!=0) {
+            construct_kdtree();
+        }
     } // end constructor
 
     // This method is used to free up memory. The object shell still remains,
@@ -172,15 +177,27 @@ public:
     size_t[] find_enclosing_cell(ref const(Vector3) p)
     {
         size_t[] cell_identity = [0, 0, 0]; // blk_id, i, found_flag
-        foreach (ib; 0 .. nBlocks) {
-            bool found = false;
-            size_t indx = 0;
-            gridBlocks[ib].find_enclosing_cell(p, indx, found);
-            if (found) {
-                cell_identity = [ib, indx, (found)?1:0];
-                break;
-            }
-        } // foreach ib
+
+        // If the user has opted into the fast, but memory intensive kdtree approach
+        if (kdtree_made) {
+            Node cellnode = {[p.x.re, p.y.re, p.z.re]};
+            const(Node)* found = null;
+            double bestDist = 0.0;
+            size_t nVisited = 0;
+            root.fast_nearest(cellnode, 0, found, bestDist, nVisited);
+            cell_identity = [found.blkid, found.cellid, 1];
+        }
+        else { // Otherwise we do the standard check for an enclosing cell in each block
+            foreach (ib; 0 .. nBlocks) {
+                bool found = false;
+                size_t indx = 0;
+                gridBlocks[ib].find_enclosing_cell(p, indx, found);
+                if (found) {
+                    cell_identity = [ib, indx, (found)?1:0];
+                    break;
+                }
+            } // foreach ib
+        }
         return cell_identity;
     } // end find_enclosing_cell()
 
@@ -371,6 +388,39 @@ public:
         finish_PVTU_file(pvtuFile);
         visitFile.close();
     } // end write_vtk_files()
+
+private:
+    bool kdtree_made = false;
+    Node[] nodes;
+    Node* root;
+
+    void construct_kdtree() {
+    /*
+        Assemble the cells in this flow solution into a kdtree for fast nearest neighbour matching.
+
+        @author: Nick Gibbons
+    */
+        // Avoid use of ~= by preallocating the nodes array, since it could get quite large.
+        size_t totalcells = 0;
+        foreach (ib; 0 .. nBlocks) totalcells += gridBlocks[ib].ncells;
+        nodes.length = totalcells;
+
+        size_t j = 0;
+        foreach (ib; 0 .. nBlocks) {
+            auto blk = gridBlocks[ib];
+            foreach (i; 0 .. blk.ncells) {
+                Vector3 p = blk.cell_barycentre(i);
+                nodes[j].x[0] = p.x.re;
+                nodes[j].x[1] = p.y.re;
+                nodes[j].x[2] = p.z.re;
+                nodes[j].blkid = ib;
+                nodes[j].cellid = i;
+                j += 1;
+            }
+        }
+        root = makeTree(nodes);
+        kdtree_made = true;
+    }
 
 } // end class FlowSolution
 

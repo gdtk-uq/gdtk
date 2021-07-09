@@ -11,6 +11,7 @@ import std.stdio, std.algorithm, std.math, std.random;
 struct Node {
     double[3] x;
     Node* left, right;
+    size_t blkid, cellid;
 }
 
 void quicksort(size_t idx)(Node[] nodes) pure nothrow @nogc {
@@ -163,6 +164,11 @@ unittest {
                      {[0.0, 4.0, 4.0]}, {[1.0, 4.0, 4.0]}, {[2.0, 4.0, 4.0]}, {[3.0, 4.0, 4.0]}, {[4.0, 4.0, 4.0]},
                      {[0.0, 4.0, 1.0]}, {[1.0, 4.0, 1.0]}, {[2.0, 4.0, 1.0]}, {[3.0, 4.0, 1.0]}, {[4.0, 4.0, 1.0]}];
 
+    foreach(i, ref node; nodes) {
+        node.blkid = 0;
+        node.cellid = i;
+    }
+
     auto root = makeTree(nodes);
     size_t ntests=100;
     auto rng = Random(19920829);
@@ -180,8 +186,8 @@ unittest {
         size_t nVisited = 0;
         root.fast_nearest(thisPt, 0, found, bestDist, nVisited);
 
-        writefln("point: %s, nearest: %s, dist = %g actual = %g",
-                 thisPt.x, found.x, sqrt(bestDist), actual_distance);
+        writefln("point: %s, nearest: %s, dist = %g actual = %g id = %d",
+                 thisPt.x, found.x, sqrt(bestDist), actual_distance, found.cellid);
         assert(isClose(sqrt(bestDist), actual_distance, 1e-12));
     }
 }
