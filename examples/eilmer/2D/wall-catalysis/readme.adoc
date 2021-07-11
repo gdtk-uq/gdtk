@@ -11,4 +11,4 @@ Note the layer of red against the wall of this image, demonstrating that the wal
 This effect can significantly increase the heat transferred to the surface from the fluid, as shown in the figure below. 
 The "q_diff" term represents the additional heat transfer from chemical activity at the surface, which is only present in the catalytic wall case.
 
-image::catalytic-wall-heat-transfer.png[caption="Comparison of heat transfer due to wall chemistry effects."]
+image::catalytic-wall-heat-transfer.png[width=100%,caption="Comparison of heat transfer due to wall chemistry effects."]
