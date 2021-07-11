@@ -23,7 +23,7 @@ Meet the principal developers of the simulation codes.
    </div>
    <div class="col-sm-12">
    <b>Rowan Gollan</b> is a Senior Lecturer in the School of Mechanical & Mining Engineering
-   at The University of Queensland. He is also a member of UQ's Center for Hypersonics.
+   at The University of Queensland. He is also a member of UQ's Centre for Hypersonics.
    Rowan was awarded a BE (Mechanical & Space) and PhD in Aerospace Engineering from
    The University of Queensland. His PhD thesis was on the modelling of high-temperature
    effects in hypersonic flows. He worked as a Research Scientist at the NASA Langley
@@ -39,7 +39,7 @@ Meet the principal developers of the simulation codes.
    development of compressible flow algorithms on novel architectures.
    
    
-   Rowan's involvement with the gdtk code development began in 2001 with an
+   Rowan's involvement with the GDTk code development began in 2001 with an
    undergraduate thesis on subsonic boundary conditions for the 2-D compressible
    flow solver, mb_cns. He now contributes to most aspects of the code base with
    a particular focus on the high-temperature/multi-temperature gas models,
@@ -51,26 +51,53 @@ Meet the principal developers of the simulation codes.
 
 <div class="row">
    <div class="col-sm-12">
-   <b>Nick Gibbons</b> an open-source programmer and numerical simulations expert currently employed as a postdoctoral research fellow at the University of Queensland.
-   He received a Bachelor of Mechanical and Aerospace Engineering in 2014, and was awarded a Doctor of Philosophy in 2019 for his work on high speed combustion.
-   His research interests include numerical simulation of compressible turbulence, high-temperature effects in re-entry flows, and the fluid dynamics of electrically charged plasmas.
-   Since 2019, he has worked on GDTk's turbulence modelling, chemical equilibrium calculator, and energy mode relaxation machinery, so if you experience any problems with these parts of the code you should probably send him an email.
-   You can follow him on Twitter (<a href="https://twitter.com/DrNickNGibbons">@DrNickNGibbons</a>) for posts about fluid mechanics, programming, and retweets of trendy web comics.
+   <b>Kyle Damm</b> is a Postdoctoral Research Fellow in the School of Mechanical & Mining Engineering at The University of Queensland,
+   and a member of UQ's Centre for Hypersonics.
+   Kyle was awarded a BE (Mechanical & Aerospace) and Ph.D. in Aerospace Engineering from The University of Queensland.
+   His Ph.D. thesis was on adjoint-based optimization in hypersonic flows.
+   During his Ph.D., Kyle enjoyed holding visiting research fellow positions in the Aerodynamic Design and Simulation Laboratory
+   at Seoul National University and the Hypersonics laboratory at the Korean Advanced Institute of Science and Technology.
+
+   Kyle's main research interests are in the development of novel algorithms for: (1) the simulation of compressible and reacting flows;
+   and (2) aerodynamic design optimization.
+   He also has interests in automatic differentiation of scientific codes;
+   applications of machine learning to computational fluid dynamics;
+   and high-performance parallel computing on CPU and GPU architectures.
+
+   Kyle’s involvement with the GDTk code development began in 2014 with an undergraduate thesis
+   on the application of GPUs to accelerate the calculation of reacting flow simulations for the compressible flow solver, Eilmer3.
+   He now develops and maintains the unstructured code base with a particular focus on the steady-state accelerators (e.g. Newton-Krylov),
+   and the adjoint solver.
    </div>
-   
    <div class="col-sm-4">
-   <img src="/images/nng-pfp-small.jpg" style="width:100%">
+   <img src="/images/kad-photo.jpeg" style="width:100%">
    </div>
-   
 </div>
 
 <br>
 
 <div class="row">
-
    <div class="col-sm-4">
-   <img src="/images/peterj-in-kelvin-grove-2016-downsampled.jpg" style="width:100%">
+   <img src="/images/nng-pfp-small.jpg" style="width:100%">
    </div>
+   
+   <div class="col-sm-12">
+   <b>Nick Gibbons</b> an open-source programmer and numerical simulations expert currently employed
+   as a postdoctoral research fellow at the University of Queensland.
+   He received a Bachelor of Mechanical and Aerospace Engineering in 2014,
+   and was awarded a Doctor of Philosophy in 2019 for his work on high speed combustion.
+   His research interests include numerical simulation of compressible turbulence,
+   high-temperature effects in re-entry flows, and the fluid dynamics of electrically charged plasmas.
+   Since 2019, he has worked on GDTk's turbulence modelling, chemical equilibrium calculator,
+   and energy mode relaxation machinery, so if you experience any problems with these parts of the code you should probably send him an email.
+   You can follow him on Twitter (<a href="https://twitter.com/DrNickNGibbons">@DrNickNGibbons</a>)
+   for posts about fluid mechanics, programming, and retweets of trendy web comics.
+   </div>
+</div>
+   
+<br>
+
+<div class="row">
 
    <div class="col-sm-12">
    <b>Peter Jacobs</b> is an Honorary Reader in the School of Mechanical and Mining Engineering
@@ -92,6 +119,11 @@ Meet the principal developers of the simulation codes.
    and as a Humboldt Fellow at the German Aerospace Research Center in Goettingen, Germany.
    In recent years, he has spent time at the Osney Thermofluids Laboratory at Oxford University
    and the EM2C research group within CNRS, at CentraleSupelec in Paris.
+   </div>
+   
+   <div class="col-sm-4">
+   <img src="/images/peterj-in-kelvin-grove-2016-downsampled.jpg" style="width:100%">
+   </div>
 
 </div>
 
