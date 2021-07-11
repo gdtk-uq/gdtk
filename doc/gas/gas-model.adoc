@@ -22,7 +22,7 @@ gmodel = GasModel:new{file_name}
   _string_, no default +
   Specifies the name of the detailed gas model configuration file.
   This is a Lua format file, constructed as described in the
-  http://cfcfd.mechmining.uq.edu.au/pdfs/gas-user-guide.pdf[Gas Models User Guide].
+  https://gdtk.uqcloud.net/pdfs/gas-user-guide.pdf[Gas Models User Guide].
 
 === Properties
 

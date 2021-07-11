@@ -1,7 +1,7 @@
 = Geometric elements
 
 These functions are the Python equivalent of the Lua functions found in the
-http://cfcfd.mechmining.uq.edu.au/pdfs/geometry-user-guide.pdf[Geometry User Guide].
+https://gdtk.uqcloud.net/pdfs/geometry-user-guide.pdf[Geometry User Guide].
 
 == Vector3
 This class defines geometric vector objects with three Cartesian components:

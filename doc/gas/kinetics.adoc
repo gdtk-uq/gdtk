@@ -6,7 +6,7 @@ you may be interested in allowing the thermochemical processes to change the gas
 an otherwise isolated blob of gas.
 
 Before trying the following functions, you should read the
-http://cfcfd.mechmining.uq.edu.au/pdfs/reacting-gas-guide.pdf[Reacting Gas Guide].
+https://gdtk.uqcloud.net/pdfs/reacting-gas-guide.pdf[Reacting Gas Guide].
 
 == ThermochemicalReactor objects
 

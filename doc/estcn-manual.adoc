@@ -20,7 +20,7 @@ The `estcn` program is built upon the core gas models and the Python library
 that is wrapped around that gas-model library.
 This is part of a larger gas-dynamics toolkit and
 general getting started notes can be found at
-http://cfcfd.mechmining.uq.edu.au/docs/getting-started
+https://gdtk.uqcloud.net/docs/getting-started/prerequisites .
 There, you will see how to get a copy of the source code,
 a list of what other software you will need to build and install the tool kit,
 and a collection of environment variables that need to be set.
@@ -48,7 +48,7 @@ To see what specific inputs are required, start the program as:
 
 To do a calculation, you are going to need a gas model file
 in your working directory.
-There is a guide (http://cfcfd.mechmining.uq.edu.au/pdfs/gas-user-guide.pdf)
+There is a guide (https://gdtk.uqcloud.net/pdfs/gas-user-guide.pdf)
 to the gas-model module that is worth reading but, for the moment,
 let's just copy a gas-model file from the samples in the source code
 repository.

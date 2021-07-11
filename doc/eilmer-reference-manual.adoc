@@ -18,7 +18,7 @@ thus allowing the flow to evolve subject to the applied boundary conditions.
 The following sections provide brief details on many items that
 might go into your input script.
 Note that this document is for reference, after you have read the guides at
-http://cfcfd.mechmining.uq.edu.au/docs/documentation/user-guides/
+https://gdtk.uqcloud.net/docs/eilmer/user-guide/ .
 
 include::eilmer/config-options-user.adoc[]
 include::eilmer/flow-state-user.adoc[]

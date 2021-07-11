@@ -63,14 +63,14 @@ print("    state2:"); printValues(state2)
 Note that there are small but significant differences in calling the functions
 from Lua, compared with Python3.
 If you have not yet read the
-http://cfcfd.mechmining.uq.edu.au/pdfs/gas-user-guide.pdf[Gas Models User Guide],
+https://gdtk.uqcloud.net/pdfs/gas-user-guide.pdf[Gas Models User Guide],
 this is a good time to do so.
 
 = Installing the library
 
 The gas models library for is part of a larger gas-dynamics toolkit and
 general getting started notes can be found at
-http://cfcfd.mechmining.uq.edu.au/docs/getting-started
+https://gdtk.uqcloud.net/docs/getting-started/prerequisites .
 There, you will see how to get a copy of the source code,
 and a list of what other software you will need to build and install the tool kit,
 and a collection of environment variables that need to be set.

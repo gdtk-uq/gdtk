@@ -25,7 +25,7 @@ of the supersonic flow of the gas through the nozzle expansion.
 The `nenzf1d` program is built upon the core gas model and flow modules
 of our gas-dynamics tool kit.
 General getting started notes can be found at
-http://cfcfd.mechmining.uq.edu.au/docs/getting-started
+https://gdtk.uqcloud.net/docs/getting-started/prerequisites .
 There, you will see how to get a copy of the source code,
 a list of what other software you will need to build and install the tool kit,
 and a collection of environment variables that need to be set.
@@ -62,7 +62,7 @@ of the air to test-flow conditions.
 
 To start, you are going to need a set of consistent gas model files
 in your working directory.
-There is a guide (http://cfcfd.mechmining.uq.edu.au/pdfs/gas-user-guide.pdf)
+There is a guide (https://gdtk.uqcloud.net/pdfs/gas-user-guide.pdf)
 to the gas-model module that is worth reading but, for the moment,
 let's set up a 5-species model of air by copying the gas-model files
 from the samples in the source code repository.
