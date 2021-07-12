@@ -117,7 +117,7 @@ public:
     //
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
-    FlowJacobianT flowJacobianT;
+    FlowJacobianT flowJacobian;
     immutable size_t MAX_PERTURBED_INTERFACES = 800;
     FVCell cellSave;
     FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
@@ -169,7 +169,7 @@ public:
     version(nk_accelerator)
     {
     // storage for a precondition matrix
-    FlowJacobianT flowJacobianT;
+    FlowJacobian flowJacobian;
 
     // Work-space for Newton-Krylov accelerator
     // These arrays and matrices are directly tied to using the
@@ -1043,10 +1043,10 @@ public:
 
     version(nk_accelerator) {
 
-    void initialize_transpose_jacobian(size_t spatial_order_of_jacobian)
+    void initialize_jacobian(size_t spatial_order_of_jacobian)
     {
         /*
-          This method initializes the transpose flow Jacobian matrix attached the FluidBlock object.
+          This method initializes the flow Jacobian matrix attached the FluidBlock object.
           We gather the cell/interface residual stencils for the interior and ghost cells at this point,
           since we need to know the number of expected entries in the Jacobian matrix to pre-size the
           sparse matrix arrays.
@@ -1060,7 +1060,7 @@ public:
         }
         shared size_t my_nConserved = GlobalConfig.cqi.n;
         size_t ncells = cells.length;
-        flowJacobianT = new FlowJacobianT(myConfig.dimensions, my_nConserved, spatial_order_of_jacobian, nentry, ncells);
+        flowJacobian = new FlowJacobian(myConfig.dimensions, my_nConserved, spatial_order_of_jacobian, nentry, ncells);
 
         // we will gather the ghost cell residual stencil lists
         // at this point as well for convenience, we need them
@@ -1079,34 +1079,68 @@ public:
                 ghost_cell.gather_residual_stencil_lists_for_ghost_cells(spatial_order_of_jacobian, cell.cell_cloud);
             }
         }
-    } // end initialize_transpose_jacobian()
 
-    void evaluate_transpose_jacobian()
+        jacobian_nonzero_pattern();
+    } // end initialize_jacobian()
+
+    void jacobian_nonzero_pattern() {
+        // we now populate the pre-sized sparse matrix representation of the flow Jacobian
+        auto cqi = myConfig.cqi; // was GlobalConfig.cqi;
+        auto nConserved = cqi.n;
+        //flowJacobian.prepare_crs_indexes();
+        // the first entry will always be filled, let's prepare for this entry
+        flowJacobian.local.ia[flowJacobian.ia_idx] = 0;
+        flowJacobian.ia_idx += 1;
+        foreach (pcell; cells) {
+            size_t jidx; // column index into the matrix
+            // loop through nConserved rows
+            for (size_t ip = 0; ip < nConserved; ++ip) {
+                // loop through cells that will have non-zero entries
+                foreach(cell; pcell.cell_list) {
+                    // loop through nConserved columns for each effected cell
+                    for ( size_t jp = 0; jp < nConserved; ++jp ) {
+                        assert(cell.id < ghost_cell_start_id, "Oops, we expect to not find a ghost cell at this point.");
+                        jidx = cell.id*nConserved + jp; // column index
+                        // populate entry with a place holder value
+                        flowJacobian.local.aa[flowJacobian.aa_idx] = to!number(0.0);
+                        // fill out the sparse matrix idexes ready for the next entry in the row
+                        flowJacobian.aa_idx += 1;
+                        flowJacobian.local.ja[flowJacobian.ja_idx] = jidx;
+                        flowJacobian.ja_idx += 1;
+                    }
+                }
+                // prepare the sparse matrix for a new row
+                flowJacobian.local.ia[flowJacobian.ia_idx] = flowJacobian.aa_idx;
+                flowJacobian.ia_idx += 1;
+            }
+        }
+    } // end jacobian_nonzero_pattern()
+
+    void evaluate_jacobian()
     {
         /*
-          Higher level method used to evaluate the transpose flow Jacobian attached to the FluidBlock object.
+          Higher level method used to evaluate the flow Jacobian attached to the FluidBlock object.
          */
 
         // temporarily change interpolation order
         shared int interpolation_order_save = GlobalConfig.interpolation_order;
-        myConfig.interpolation_order = to!int(flowJacobianT.spatial_order);
+        myConfig.interpolation_order = to!int(flowJacobian.spatial_order);
 
         // fill out the rows of the Jacobian for a cell
-        flowJacobianT.prepare_crs_indexes();
-        foreach(cell; cells) { evaluate_block_row_of_transpose_jacobian(cell); }
+        foreach(cell; cells) { evaluate_cell_contribution_to_jacobian(cell); }
 
         // add boundary condition corrections to boundary cells
-        apply_transpose_jacobian_bcs();
+        apply_jacobian_bcs();
 
         // return the interpolation order to its original state
         myConfig.interpolation_order = interpolation_order_save;
-    } // end evaluate_transpose_jacobian()
+    } // end evaluate_jacobian()
 
-    void evaluate_block_row_of_transpose_jacobian(FVCell pcell)
+    void evaluate_cell_contribution_to_jacobian(FVCell pcell)
     {
         auto cqi = myConfig.cqi; // was GlobalConfig.cqi;
         auto nConserved = cqi.n;
-        auto eps = flowJacobianT.eps;
+        auto eps = flowJacobian.eps;
         int ftl = 1; int gtl = 0;
         pcell.U[ftl].copy_values_from(pcell.U[0]);
 
@@ -1136,7 +1170,7 @@ public:
             evalRHS(gtl, ftl, pcell.cell_list, pcell.face_list);
         }
 
-        // we now populate the pre-sized sparse matrix representation of the transpose flow Jacobian
+        // we now populate the pre-sized sparse matrix representation of the flow Jacobian
         size_t jidx; // column index into the matrix
         // loop through nConserved rows
         for (size_t ip = 0; ip < nConserved; ++ip) {
@@ -1145,26 +1179,17 @@ public:
                 // loop through nConserved columns for each effected cell
                 for ( size_t jp = 0; jp < nConserved; ++jp ) {
                     assert(cell.id < ghost_cell_start_id, "Oops, we expect to not find a ghost cell at this point.");
-                    jidx = cell.id*nConserved + jp; // column index
-                    // note we are inherently performing a transpose operation on the next line,
-                    // we do this since it appeared more natural to build up the
-                    // global transpose flow Jacobian in compressed row storage format
-                    flowJacobianT.local.aa[flowJacobianT.aa_idx] = cell.dRdU[jp][ip];
-                    // fill out the sparse matrix idexes ready for the next entry in the row
-                    flowJacobianT.aa_idx += 1;
-                    flowJacobianT.local.ja[flowJacobianT.ja_idx] = jidx;
-                    flowJacobianT.ja_idx += 1;
+                    size_t I = cell.id*nConserved + ip;
+                    size_t J = pcell.id*nConserved + jp;
+                    flowJacobian.local[I,J] = cell.dRdU[ip][jp];
                 }
             }
-            // prepare the sparse matrix for a new row
-            flowJacobianT.local.ia[flowJacobianT.ia_idx] = flowJacobianT.aa_idx;
-            flowJacobianT.ia_idx += 1;
         }
-    } // end evaluate_block_row_of_transpose_jacobian()
+    } // end evaluate_cell_contribution_to_jacobian()
 
-    void apply_transpose_jacobian_bcs() {
+    void apply_jacobian_bcs() {
         /*
-          This method accounts for the boundary conditions for the boundary cell entries in the transpose flow Jacobian.
+          This method accounts for the boundary conditions for the boundary cell entries in the flow Jacobian.
 
           To calculate the boundary correction terms dR/dU:
 
@@ -1180,7 +1205,7 @@ public:
          */
         auto cqi = myConfig.cqi; // The block object has its own.
         auto nConserved = cqi.n;
-        number eps = flowJacobianT.eps;
+        number eps = flowJacobian.eps;
         int gtl = 0; int ftl = 1;
 
         foreach ( bndary; bc ) {
@@ -1210,7 +1235,7 @@ public:
                     // fill local Jacobian
                     ghost_cell.encode_conserved(gtl, ftl, 0.0);
                     foreach(jdx; 0..nConserved) {
-                        flowJacobianT.dudU[jdx][idx] = ghost_cell.U[ftl].vec[jdx].im/(eps.im);
+                        flowJacobian.dudU[jdx][idx] = ghost_cell.U[ftl].vec[jdx].im/(eps.im);
                     }
 
                     // return cells to original state
@@ -1257,14 +1282,14 @@ public:
                         for ( size_t j = 0; j < nConserved; ++j ) {
                             J = pcell.id*nConserved + j; // row index
                             for (size_t k = 0; k < nConserved; k++) {
-                                flowJacobianT.local[J,I] = flowJacobianT.local[J,I] + bcell.dRdU[i][k]*flowJacobianT.dudU[k][j];
+                                flowJacobian.local[I,J] = flowJacobian.local[I,J] + bcell.dRdU[i][k]*flowJacobian.dudU[k][j];
                             }
                         }
                     }
                 }
             } // foreach ( bi, bface; bndary.faces)
         } // foreach ( bndary; bc )
-    } // end apply_transpose_jacobian_bcs()
+    } // end apply_jacobian_bcs()
 
     void evalRHS(int gtl, int ftl, ref FVCell[] cell_list, FVInterface[] iface_list)
     /*
@@ -1277,7 +1302,7 @@ public:
         foreach(iface; iface_list) iface.F.clear();
         foreach(cell; cell_list) cell.clear_source_vector();
 
-        bool do_reconstruction = ( flowJacobianT.spatial_order > 1 );
+        bool do_reconstruction = ( flowJacobian.spatial_order > 1 );
 
         // convective flux update
         convective_flux_phase0(do_reconstruction, gtl, cell_list, iface_list);
@@ -1347,21 +1372,21 @@ public:
     } // end evalRHS()
 
     // The following two methods are used to verify the numerical Jacobian implementation.
-    void verify_transpose_jacobian()
+    void verify_jacobian()
     {
         // we perform a residual evaluation to ensure the ghost cells are filled with good data
         import steadystate_core;
         steadystate_core.evalRHS(0.0, 0);
 
         // calculate the numerical Jaacobian
-        initialize_transpose_jacobian(2);
-        evaluate_transpose_jacobian();
-        assert(flowJacobianT !is null, "Oops, we expect a flowJacobianT object to be attached to the fluidblock.");
+        initialize_jacobian(2);
+        evaluate_jacobian();
+        assert(flowJacobian !is null, "Oops, we expect a flowJacobian object to be attached to the fluidblock.");
         size_t nConserved = GlobalConfig.cqi.n;
 
         // temporarily change interpolation order
         shared int interpolation_order_save = GlobalConfig.interpolation_order;
-        myConfig.interpolation_order = to!int(flowJacobianT.spatial_order);
+        myConfig.interpolation_order = to!int(flowJacobian.spatial_order);
 
         // create an arbitrary unit vector
         number[] vec;
@@ -1381,12 +1406,7 @@ public:
         sol2.length = vec.length;
 
         // explicit multiplication of J*vec
-        foreach ( i; 0..vec.length) {
-            sol1[i] = 0.0;
-            foreach ( j; 0..vec.length) {
-                sol1[i] += flowJacobianT.local[j,i]*vec[j];
-            }
-        }
+        nm.smla.multiply(flowJacobian.local, vec, sol1);
 
         // Frechet derivative of J*vec
         steadystate_core.evalRHS(0.0, 0);
@@ -1406,7 +1426,7 @@ public:
         // stop the program at this point
         import core.runtime;
         Runtime.terminate();
-    } // end verify_transpose_jacobian
+    } // end verify_jacobian
 
     void evalConservativeJacobianVecProd(number[] vec, ref number[] sol) {
         size_t nConserved = GlobalConfig.cqi.n;
@@ -1418,7 +1438,7 @@ public:
         size_t TKE = GlobalConfig.cqi.rhoturb;
         size_t SPECIES = GlobalConfig.cqi.species;
         size_t MODES = GlobalConfig.cqi.modes;
-        double EPS = flowJacobianT.eps.im;
+        double EPS = flowJacobian.eps.im;
 
         // We perform a Frechet derivative to evaluate J*D^(-1)v
         size_t nturb = myConfig.turb_model.nturb;

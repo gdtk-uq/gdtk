@@ -1,6 +1,6 @@
 /* jacobian.d
  *
- * Numerical Jacobian transpose class
+ * Numerical Jacobian class
  *
  * Author: Kyle Damm
  * First code: 2020-11-03
@@ -20,7 +20,7 @@ import fvcell;
 import fvinterface;
 
 
-class FlowJacobianT {
+class FlowJacobian {
 
 public:
 
@@ -91,7 +91,6 @@ public:
           2. add 1/dt to the diagonal
           3. perform an ILU decomposition
 
-          we also scale the LU decomposition needed for the transpose solve method
           TODO: move this operation to a more appropriate location.
          */
 
@@ -112,8 +111,6 @@ public:
 
         if (fill_in_level > 0) { decompILUp(local, to!int(fill_in_level)); }
         else { decompILU0(local); }
-
-        scaleLU(local);
 
     } // end prepare_preconditioner()
 
@@ -167,4 +164,4 @@ public:
 
     } // end prepare_preconditioner()
 
-} // end class FlowJacobianT
+} // end class FlowJacobian

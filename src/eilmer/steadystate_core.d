@@ -241,8 +241,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     bool usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
     if (usePreconditioner) {
         // initialize the flow Jacobians used as local precondition matrices for GMRES
-        foreach (blk; localFluidBlocks) { blk.initialize_transpose_jacobian(0); }
-        //foreach (blk; localFluidBlocks) { blk.verify_transpose_jacobian(); }
+        foreach (blk; localFluidBlocks) {
+            blk.initialize_jacobian(0);
+            //blk.verify_jacobian();
+        }
     }
 
     // Set usePreconditioner to false for pre-steps AND first-order steps.
@@ -2021,11 +2023,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                                                          step == startStep ||
                                                          step == blk.myConfig.sssOptions.nStartUpSteps+1)) {
 
-                                    blk.evaluate_transpose_jacobian();
-                                    blk.flowJacobianT.prepare_ilu_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
+                                    blk.evaluate_jacobian();
+                                    blk.flowJacobian.prepare_ilu_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
                                 }
                                 blk.zed[] = blk.v[];
-                                nm.smla.transpose_solve(blk.flowJacobianT.local, blk.zed);
+                                nm.smla.solve(blk.flowJacobian.local, blk.zed);
                             }
                             break;
                         case PreconditionMatrixType.sgs:
@@ -2038,11 +2040,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                                                          step == startStep ||
                                                          step == blk.myConfig.sssOptions.nStartUpSteps+1)) {
 
-                                    blk.evaluate_transpose_jacobian();
-                                    blk.flowJacobianT.prepare_sgs_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
+                                    blk.evaluate_jacobian();
+                                    blk.flowJacobian.prepare_sgs_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
                                 }
                                 blk.zed[] = blk.v[];
-                                nm.smla.sgsr(blk.flowJacobianT.local, blk.zed, to!int(nConserved));
+                                nm.smla.sgsr(blk.flowJacobian.local, blk.zed, to!int(nConserved));
                             }
                             break;
                         case PreconditionMatrixType.lu_sgs:
@@ -2248,13 +2250,13 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 case PreconditionMatrixType.ilu:
                     foreach(blk; parallel(localFluidBlocks,1)) {
                         blk.dU[] = blk.zed[];
-                        nm.smla.transpose_solve(blk.flowJacobianT.local, blk.dU);
+                        nm.smla.solve(blk.flowJacobian.local, blk.dU);
                     }
                     break;
                 case PreconditionMatrixType.sgs:
                     foreach(blk; parallel(localFluidBlocks,1)) {
                         blk.dU[] = blk.zed[];
-                        nm.smla.sgsr(blk.flowJacobianT.local, blk.dU, to!int(nConserved));
+                        nm.smla.sgsr(blk.flowJacobian.local, blk.dU, to!int(nConserved));
                     }
                     break;
                 case PreconditionMatrixType.lu_sgs:
