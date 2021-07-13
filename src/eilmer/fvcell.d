@@ -1540,7 +1540,7 @@ public:
 
     } // end roeFluxJacobian()
 
-    void gather_residual_stencil_lists(size_t spatial_order_of_jacobian)
+    void gather_residual_stencil_lists(int spatial_order_of_jacobian)
     {
         /*
           This function gathers references to the interfaces and cells
@@ -1567,83 +1567,71 @@ public:
         // required. Note that we will still apply the viscous effects later when forming
         // the flow Jacobian, we are in effect just dropping some of the Jacobian entries
         // by reducing the stencil footprint.
-        bool nearest_neighbours_only = false;
-        if ( (spatial_order_of_jacobian == 1 && include_viscous_effects == false) ||
-             spatial_order_of_jacobian == 0) { nearest_neighbours_only = true; }
 
-        if (nearest_neighbours_only) {
-            // this first order stencil includes the cell and its nearest neighbours
+        // add this cell
+        size_t[] cell_ids;
+        unordered_cell_list ~= cell_cloud[0];
+        cell_pos_array[cell_cloud[0].id] = unordered_cell_list.length-1;
+        cell_ids ~= cell_cloud[0].id;
+        bool nearest_neighbours = false;
+        if ( spatial_order_of_jacobian >= 0) { nearest_neighbours = true; }
 
-            // gather cells
-            size_t[] cell_ids;
-            unordered_cell_list ~= cell_cloud[0];
-            cell_pos_array[cell_cloud[0].id] = unordered_cell_list.length-1;
-            cell_ids ~= cell_cloud[0].id;
+        if (nearest_neighbours) {
+            // this first order stencil adds the nearest neighbours
+
+            // gather additional cells
             foreach (cell; cell_cloud) {
                 bool cell_exists = cell_ids.canFind(cell.id);
                 if (!cell_exists && cell.id < 1_000_000_000 && is_interior_to_domain) {
-                    //if (!cell_exists && is_interior_to_domain) {
                     unordered_cell_list ~= cell;
                     cell_pos_array[cell.id] = unordered_cell_list.length-1;
                     cell_ids ~= cell.id;
                 }
             } // finished gathering cells
 
-            // now sort the cells
-            cell_ids.sort();
-            foreach (id; cell_ids) { cell_list ~= unordered_cell_list[cell_pos_array[id]]; }
+        }
 
-            // gather the interfaces of those cells
-            size_t[] face_ids;
-            foreach (cell; cell_list) {
-                foreach (face; cell.iface) {
-                    bool face_exists = face_ids.canFind(face.id);
-                    if (!face_exists) {
-                        face_list ~= face;
-                        face_ids ~= face.id;
-                    }
-                }
-            } // finished gathering faces
-        } else {
-            // second order (&/or viscous, or first order with viscous effects) stencil includes the cell
-            // and its nearest neighbours as well as the nearest neighbours of the nearest neighbours
+        bool extended_neighbours = false;
+        if ( nearest_neighbours &&
+             ( (spatial_order_of_jacobian >= 2) ||
+               (spatial_order_of_jacobian >= 1 && include_viscous_effects) ) ) { extended_neighbours = true; }
 
-            // gather cells
-            size_t[] cell_ids;
-            unordered_cell_list ~= cell_cloud[0];
-            cell_pos_array[cell_cloud[0].id] = unordered_cell_list.length-1;
-            cell_ids ~= cell_cloud[0].id;
+        if (extended_neighbours) {
+            // second order (&/or viscous, or first order with viscous effects)
+            // stencil adds the nearest neighbours of the nearest neighbours
+
+            // gather additional cells
             foreach (icell; 1 .. cell_cloud.length) {
                 foreach (cell; cell_cloud[icell].cell_cloud) {
                     bool cell_exists = cell_ids.canFind(cell.id);
                     if (!cell_exists && cell.id < 1_000_000_000 && is_interior_to_domain) {
-                        //if (!cell_exists && is_interior_to_domain) {
                         unordered_cell_list ~= cell;
                         cell_pos_array[cell.id] = unordered_cell_list.length-1;
                         cell_ids ~= cell.id;
                     }
                 }
             } // finished gathering cells
-
-            // now sort the cells
-            cell_ids.sort();
-            foreach (id; cell_ids) { cell_list ~= unordered_cell_list[cell_pos_array[id]]; }
-
-            // gather the interfaces of those cells
-            size_t[] face_ids;
-            foreach (cell; cell_list) {
-                foreach (face; cell.iface) {
-                    bool face_exists = face_ids.canFind(face.id);
-                    if (!face_exists) {
-                        face_list ~= face;
-                        face_ids ~= face.id;
-                    }
-                }
-            } // finished gathering faces
         }
+
+        // now sort the cells
+        cell_ids.sort();
+        foreach (id; cell_ids) { cell_list ~= unordered_cell_list[cell_pos_array[id]]; }
+
+        // gather the interfaces of those cells
+        size_t[] face_ids;
+        foreach (cell; cell_list) {
+            foreach (face; cell.iface) {
+                bool face_exists = face_ids.canFind(face.id);
+                if (!face_exists) {
+                    face_list ~= face;
+                    face_ids ~= face.id;
+                }
+            }
+        } // finished gathering faces
+
     } // end gather_residual_stencil_lists()
 
-    void gather_residual_stencil_lists_for_ghost_cells(size_t spatial_order_of_jacobian, FVCell[] neighbour_cell_cloud)
+    void gather_residual_stencil_lists_for_ghost_cells(int spatial_order_of_jacobian, FVCell[] neighbour_cell_cloud)
     {
         /*
           This function gathers references to the interfaces and cells
@@ -1665,21 +1653,14 @@ public:
         if ( (spatial_order_of_jacobian == 1 && include_viscous_effects == false) ||
              spatial_order_of_jacobian == 0) { nearest_neighbours_only = true; }
 
-        if (nearest_neighbours_only) {
-            // this first order stencil includes the ghost cells nearest neighbours
-            cell_list ~= neighbour_cell_cloud[0]; // this is the interior cell that shares an interface
-            // gather faces
-            size_t[] face_ids;
-            foreach (c; cell_list) {
-                foreach (face; c.iface) {
-                    bool face_exists = face_ids.canFind(face.id);
-                    if (!face_exists) {
-                        face_list ~= face;
-                        face_ids ~= face.id;
-                    }
-                }
-            } // finished gathering faces
-        } else {
+        // this first order stencil includes the ghost cells nearest neighbours
+        cell_list ~= neighbour_cell_cloud[0]; // this is the interior cell that shares an interface
+
+        bool extended_neighbours = false;
+        if ( (spatial_order_of_jacobian >= 2) ||
+             (spatial_order_of_jacobian >= 1 && include_viscous_effects) ) { extended_neighbours = true; }
+
+        if (extended_neighbours) {
             // second order (&/or viscous, or first order with viscous effects) stencil includes the cell
             // and its nearest neighbours as well as the nearest neighbours of the nearest neighbours
 
@@ -1689,19 +1670,20 @@ public:
                     cell_list ~= c;
                 }
             } // finished gathering cells
-
-            // gather faces
-            size_t[] face_ids;
-            foreach (c; cell_list) {
-                foreach (face; c.iface) {
-                    bool face_exists = face_ids.canFind(face.id);
-                    if (!face_exists) {
-                        face_list ~= face;
-                        face_ids ~= face.id;
-                    }
-                }
-            } // finished gathering faces
         }
+
+        // gather faces
+        size_t[] face_ids;
+        foreach (c; cell_list) {
+            foreach (face; c.iface) {
+                bool face_exists = face_ids.canFind(face.id);
+                if (!face_exists) {
+                    face_list ~= face;
+                    face_ids ~= face.id;
+                }
+            }
+        } // finished gathering faces
+
     } // end gather_residual_stencil_lists_for_ghost_cells()
 
 } // end class FVCell

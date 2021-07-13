@@ -1043,7 +1043,7 @@ public:
 
     version(nk_accelerator) {
 
-    void initialize_jacobian(size_t spatial_order_of_jacobian)
+    void initialize_jacobian(int spatial_order_of_jacobian)
     {
         /*
           This method initializes the flow Jacobian matrix attached the FluidBlock object.

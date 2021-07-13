@@ -241,10 +241,24 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     bool usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
     if (usePreconditioner) {
         // initialize the flow Jacobians used as local precondition matrices for GMRES
-        foreach (blk; localFluidBlocks) {
-            blk.initialize_jacobian(0);
-            //blk.verify_jacobian();
-        }
+        final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
+            case PreconditionMatrixType.jacobi:
+                foreach (blk; localFluidBlocks) { blk.initialize_jacobian(-1); }
+                break;
+            case PreconditionMatrixType.ilu:
+                foreach (blk; localFluidBlocks) { blk.initialize_jacobian(0); }
+                break;
+            case PreconditionMatrixType.sgs:
+                foreach (blk; localFluidBlocks) { blk.initialize_jacobian(0); }
+                break;
+            case PreconditionMatrixType.sgs_relax:
+                foreach (blk; localFluidBlocks) { blk.initialize_jacobian(0); }
+                break;
+            case PreconditionMatrixType.lu_sgs:
+                // do nothing
+                break;
+        } // end switch
+        //foreach (blk; localFluidBlocks) { blk.verify_jacobian(); }
     }
 
     // Set usePreconditioner to false for pre-steps AND first-order steps.
@@ -2006,23 +2020,29 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
             // apply preconditioning
             if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
+                int n = GlobalConfig.sssOptions.frozenPreconditionerCount;
+                // We compute the precondition matrix on the very first step after the start up steps
+                // We then only update the precondition matrix once per GMRES call on every nth flow solver step.
+                bool update_preconditioner = false;
+                if (r == 0 && j == 0 && (step == GlobalConfig.sssOptions.startPreconditioning || step%n == 0 || step == startStep || step == GlobalConfig.sssOptions.nStartUpSteps+1)) {
+                    update_preconditioner = true;
+                }
                 final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
-                        case PreconditionMatrixType.block_diagonal:
-                            writeln("Block diagonal precondition matrix not yet implemented");
+                        case PreconditionMatrixType.jacobi:
                             foreach (blk; parallel(localFluidBlocks,1)) {
-                                blk.zed[] = blk.v[];
+                                bool local_update_preconditioner = update_preconditioner;
+                                if (local_update_preconditioner) {
+                                    blk.evaluate_jacobian();
+                                    blk.flowJacobian.prepare_jacobi_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
+                                }
+                                blk.flowJacobian.x[] = blk.v[];
+                                nm.smla.multiply(blk.flowJacobian.local, blk.flowJacobian.x, blk.zed);
                             }
                             break;
                         case PreconditionMatrixType.ilu:
                             foreach (blk; parallel(localFluidBlocks,1)) {
-                                int n = blk.myConfig.sssOptions.frozenPreconditionerCount; //GlobalConfig.sssOptions.frozenPreconditionerCount;
-                                // We compute the precondition matrix on the very first step after the start up steps
-                                // We then only update the precondition matrix once per GMRES call on every nth flow solver step.
-                                if (r == 0 && j == 0 && (step == blk.myConfig.sssOptions.startPreconditioning ||
-                                                         step%n == 0 ||
-                                                         step == startStep ||
-                                                         step == blk.myConfig.sssOptions.nStartUpSteps+1)) {
-
+                                bool local_update_preconditioner = update_preconditioner;
+                                if (local_update_preconditioner) {
                                     blk.evaluate_jacobian();
                                     blk.flowJacobian.prepare_ilu_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
                                 }
@@ -2032,19 +2052,25 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                             break;
                         case PreconditionMatrixType.sgs:
                             foreach (blk; parallel(localFluidBlocks,1)) {
-                                int n = blk.myConfig.sssOptions.frozenPreconditionerCount; //GlobalConfig.sssOptions.frozenPreconditionerCount;
-                                // We compute the precondition matrix on the very first step after the start up steps
-                                // We then only update the precondition matrix once per GMRES call on every nth flow solver step.
-                                if (r == 0 && j == 0 && (step == blk.myConfig.sssOptions.startPreconditioning ||
-                                                         step%n == 0 ||
-                                                         step == startStep ||
-                                                         step == blk.myConfig.sssOptions.nStartUpSteps+1)) {
-
+                                bool local_update_preconditioner = update_preconditioner;
+                                if (local_update_preconditioner) {
                                     blk.evaluate_jacobian();
                                     blk.flowJacobian.prepare_sgs_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
                                 }
                                 blk.zed[] = blk.v[];
-                                nm.smla.sgsr(blk.flowJacobian.local, blk.zed, to!int(nConserved));
+                                nm.smla.sgs(blk.flowJacobian.local, blk.flowJacobian.diagonal, blk.zed, to!int(nConserved), blk.flowJacobian.D, blk.flowJacobian.Dinv);
+                            }
+                            break;
+                        case PreconditionMatrixType.sgs_relax:
+                            foreach (blk; parallel(localFluidBlocks,1)) {
+                                bool local_update_preconditioner = update_preconditioner;
+                                int local_kmax = GlobalConfig.sssOptions.maxSubIterations;
+                                if (local_update_preconditioner) {
+                                    blk.evaluate_jacobian();
+                                    blk.flowJacobian.prepare_sgsr_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
+                                }
+                                blk.zed[] = blk.v[];
+                                nm.smla.sgsr(blk.flowJacobian.local, blk.zed, blk.flowJacobian.x, to!int(nConserved), local_kmax, blk.flowJacobian.Dinv);
                             }
                             break;
                         case PreconditionMatrixType.lu_sgs:
@@ -2235,16 +2261,9 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         // apply preconditioning
         if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
             final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
-                case PreconditionMatrixType.block_diagonal:
+                case PreconditionMatrixType.jacobi:
                     foreach(blk; parallel(localFluidBlocks,1)) {
-                        int cellCount = 0;
-                        number[] tmp;
-                        tmp.length = nConserved;
-                        foreach (cell; blk.cells) {
-                            nm.bbla.dot(cell.dConservative, blk.zed[cellCount..cellCount+nConserved], tmp);
-                            blk.dU[cellCount..cellCount+nConserved] = tmp[];
-                            cellCount += nConserved;
-                        }
+                        nm.smla.multiply(blk.flowJacobian.local, blk.zed, blk.dU);
                     }
                     break;
                 case PreconditionMatrixType.ilu:
@@ -2256,7 +2275,14 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 case PreconditionMatrixType.sgs:
                     foreach(blk; parallel(localFluidBlocks,1)) {
                         blk.dU[] = blk.zed[];
-                        nm.smla.sgsr(blk.flowJacobian.local, blk.dU, to!int(nConserved));
+                        nm.smla.sgs(blk.flowJacobian.local, blk.flowJacobian.diagonal, blk.dU, to!int(nConserved), blk.flowJacobian.Dinv, blk.flowJacobian.Dinv);
+                    }
+                    break;
+                case PreconditionMatrixType.sgs_relax:
+                    int local_kmax = GlobalConfig.sssOptions.maxSubIterations;
+                    foreach(blk; parallel(localFluidBlocks,1)) {
+                        blk.dU[] = blk.zed[];
+                        nm.smla.sgsr(blk.flowJacobian.local, blk.dU, blk.flowJacobian.x, to!int(nConserved), local_kmax, blk.flowJacobian.Dinv);
                     }
                     break;
                 case PreconditionMatrixType.lu_sgs:
@@ -2264,7 +2290,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     break;
             } // end switch
         }
-
         else {
             foreach(blk; parallel(localFluidBlocks,1)) {
                 blk.dU[] = blk.zed[];

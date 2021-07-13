@@ -549,14 +549,15 @@ SolidDomainCoupling solidDomainCouplingFromName(string name)
     }
 }
 
-enum PreconditionMatrixType { block_diagonal, ilu, sgs, lu_sgs }
+enum PreconditionMatrixType { jacobi, ilu, sgs, sgs_relax, lu_sgs }
 
 string preconditionMatrixTypeName(PreconditionMatrixType i)
 {
     final switch (i) {
-    case PreconditionMatrixType.block_diagonal: return "block_diagonal";
+    case PreconditionMatrixType.jacobi: return "jacobi";
     case PreconditionMatrixType.ilu: return "ilu";
     case PreconditionMatrixType.sgs: return "sgs";
+    case PreconditionMatrixType.sgs_relax: return "sgs_relax";
     case PreconditionMatrixType.lu_sgs: return "lu_sgs";
     }
 } // end preconditionMatrixTypeName()
@@ -564,17 +565,19 @@ string preconditionMatrixTypeName(PreconditionMatrixType i)
 PreconditionMatrixType preconditionMatrixTypeFromName(string name)
 {
     switch (name) {
-    case "block_diagonal": return PreconditionMatrixType.block_diagonal;
+    case "jacobi": return PreconditionMatrixType.jacobi;
     case "ilu": return PreconditionMatrixType.ilu;
     case "sgs": return PreconditionMatrixType.sgs;
+    case "sgs_relax": return PreconditionMatrixType.sgs_relax;
     case "lu_sgs": return PreconditionMatrixType.lu_sgs;
     default:
         string errMsg = "The selected 'preconditioner' is unavailable.\n";
         errMsg ~= format("You selected: '%s'\n", name);
         errMsg ~= "The available strategies are: \n";
-        errMsg ~= "   'block_diagonal'\n";
+        errMsg ~= "   'jacobi'\n";
         errMsg ~= "   'ilu'\n";
         errMsg ~= "   'sgs'\n";
+        errMsg ~= "   'sgs_relax'\n";
         errMsg ~= "   'lu_sgs'\n";
         errMsg ~= "Check your selection or its spelling in the input file.\n";
         throw new Error(errMsg);
@@ -703,7 +706,7 @@ struct SteadyStateSolverOptions {
     int frozenPreconditionerCount = 1;
     int startPreconditioning = 1;
     int iluFill = 0;
-    PreconditionMatrixType preconditionMatrixType = PreconditionMatrixType.block_diagonal;
+    PreconditionMatrixType preconditionMatrixType = PreconditionMatrixType.jacobi;
     bool useScaling = true;
     bool useComplexMatVecEval = false;
     int nPreSteps = 10;

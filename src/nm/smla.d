@@ -229,66 +229,6 @@ do {
 }
 
 /**
- * Compute B = A^t for CSR matrix A, CSR matrix B (square matrices only)
- *
- * Based on scipy implementation (ported from C++)
- * https://github.com/scipy/scipy/blob/3b36a574dc657d1ca116f6e230be694f3de31afc/scipy/sparse/sparsetools/csr.h#L376
- *
- * Input Arguments:
- *   int    n_row         - number of rows in A
- *   int    n_col         - number of columns in A
- *   array  Ap[n_row+1]   - row pointer
- *   array  Aj[nnz(A)]    - column indices
- *   array  Ax[nnz(A)]    - nonzeros
- *
- * Output Arguments:
- *   array  Bp[n_col+1] - column pointer
- *   array  Bj[nnz(A)]  - row indices
- *   array  Bx[nnz(A)]  - nonzeros
- *
- */
-void transpose(T)(const size_t[] Aia, const size_t[] Aja, const T[] Aaa,
-                  size_t[] Bia, size_t[] Bja, T[] Baa)
-{
-    size_t n_row = Aia.length-1;
-    size_t n_col = Aia.length-1;
-    const size_t nnz = Aia[n_row];
-
-    // compute number of non-zero entries per column of A
-    Bia[0..$-1] = 0;
-
-    for (size_t n = 0; n < nnz; n++){
-        Bia[Aja[n]]++;
-    }
-
-    //cumsum the nnz per column to get Bia[]
-    for(size_t col = 0, cumsum = 0; col < n_col; col++){
-        size_t temp  = Bia[col];
-        Bia[col] = cumsum;
-        cumsum += temp;
-    }
-    Bia[n_col] = nnz;
-
-    for(size_t row = 0; row < n_row; row++){
-        for(size_t jj = Aia[row]; jj < Aia[row+1]; jj++){
-            size_t col  = Aja[jj];
-            size_t dest = Bia[col];
-
-            Bja[dest] = row;
-            Baa[dest] = Aaa[jj];
-
-            Bia[col]++;
-        }
-    }
-
-    for(size_t col = 0, last = 0; col <= n_col; col++){
-        size_t temp  = Bia[col];
-        Bia[col] = last;
-        last    = temp;
-    }
-}
-
-/**
  * An ILU(0) decomposition.
  *
  * This algorithm changes the matrix a in place leaving
@@ -400,166 +340,180 @@ void solve(T)(SMatrix!T LU, T[] b)
     }
 }
 
-void sgsr(T)(SMatrix!T A, T[] b, int block_size) {
+void invert_diagonal(T)(SMatrix!T A, int block_size, Matrix!T D, Matrix!T Dinv) {
+
+    int n = to!int(A.ia.length-1);
+    int nblocks = n/block_size;
+
+    foreach (k; 0..nblocks) {
+        foreach (i; 0..block_size) {
+            int idx = k*block_size + i;
+            foreach (j; 0..block_size) {
+                int jdx = k*block_size + j;
+                D[i,j] = A[idx,jdx];
+            }
+        }
+
+        Dinv = inverse(D);
+
+        foreach (i; 0..block_size) {
+            int idx = k*block_size + i;
+            foreach (j; 0..block_size) {
+                int jdx = k*block_size + j;
+                A[idx,jdx] = Dinv[i,j];
+            }
+        }
+    }
+
+} // end invert_diagonal()
+
+void sgs(T)(SMatrix!T A, T[] diagonal, T[] b, int block_size, Matrix!T D, Matrix!T Dinv) {
 
     int n = to!int(A.ia.length-1);
     assert(b.length == n);
     int nblocks = n/block_size;
-    //writeln(nblocks);
-    T[] z; z.length = n;
-    fill(z,to!number(0.0));
-    T[] x; x.length = n;
+    T[] tmp; tmp.length = block_size;
+
+    // Forward sweep:  (L + D) . x_k+1/2 = b
+    foreach (nb; 0..nblocks) {
+        foreach ( i; nb*block_size..nb*block_size+block_size ) {
+            foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
+                // only work on entries where j < diagonal block
+                if ( j >= nb*block_size )
+                    break;
+                b[i] -= A[i,j]*b[j];
+            }
+        }
+        // multiply by inverse diagonal block
+        foreach (i; 0..block_size) {
+            int idx = nb*block_size + i;
+            foreach (j; 0..block_size) {
+                int jdx = nb*block_size + j;
+                Dinv[i,j] = A[idx,jdx];
+            }
+        }
+        nm.bbla.dot(Dinv, b[nb*block_size..nb*block_size+block_size], tmp[]);
+        b[nb*block_size..nb*block_size+block_size] = tmp[];
+    }
+
+    // D . x_k+1/2
+    foreach (nb; 0..nblocks) {
+        foreach (i; 0..block_size) {
+            int idx = nb*block_size + i;
+            foreach (j; 0..block_size) {
+                int jdx = nb*block_size + j;
+                D[i,j] = diagonal[nb*block_size*block_size + i*block_size + j];
+            }
+        }
+        nm.bbla.dot(D, b[nb*block_size..nb*block_size+block_size], tmp[]);
+        b[nb*block_size..nb*block_size+block_size] = tmp[];
+    }
+
+    // Backward sweep:  (U + D) . x_k+1 = b
+    for ( int nb = to!int(nblocks-1); nb >= 0; --nb ) {
+        foreach ( i; nb*block_size..nb*block_size+block_size ) {
+            foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
+                // only work on entries where j > diagonal block
+                if ( j <= nb*block_size+block_size-1 )
+                    continue;
+                b[i] -= A[i,j]*b[j];
+            }
+        }
+
+        // multiply by inverse diagonal block
+        foreach (i; 0..block_size) {
+            int idx = nb*block_size + i;
+            foreach (j; 0..block_size) {
+                int jdx = nb*block_size + j;
+                Dinv[i,j] = A[idx,jdx];
+            }
+        }
+        nm.bbla.dot(Dinv, b[nb*block_size..nb*block_size+block_size], tmp[]);
+        b[nb*block_size..nb*block_size+block_size] = tmp[];
+    }
+
+} // end sgs()
+
+void sgsr(T)(SMatrix!T A, T[] b, T[] x, int block_size, int kmax, Matrix!T Dinv) {
+
+    int n = to!int(A.ia.length-1);
+    assert(b.length == n);
+    int nblocks = n/block_size;
     fill(x,to!number(0.0));
-    T[] xhalf; xhalf.length = n;
-    fill(xhalf,to!number(0.0));
     T[] xnew; xnew.length = n;
     fill(xnew,to!number(0.0));
     T[] tmp; tmp.length = block_size;
-    fill(tmp,to!number(0.0));
 
-    foreach (k; 0..3) {
+    foreach (k; 0..kmax) {
 
-        // relaxation step:  b* = b - U . x_k
-        xhalf = b.dup;
-        foreach (nb; 1..nblocks) {
-            foreach ( i; nb*block_size..nb*block_size+block_size ) {
-                foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
-                    // Only work up to the diagonal block
-                    if ( j >= nb*block_size )
-                        break;
-                    xhalf[j] -= A[i,j] * x[i];
-                }
-            }
-        }
-
-        // Forward sweep:  (L + D) . x_k+1/2 = b*
-        foreach (nb; 0..nblocks) {
-
-            foreach (i; 0..block_size) {
-                tmp[i] = to!number(0.0);
-                int idx = nb*block_size + i;
-                foreach (j; 0..block_size) {
-                    int jdx = nb*block_size + j;
-                    tmp[i] += A[idx,jdx]*xhalf[jdx];
-                }
-            }
-            xhalf[nb*block_size..nb*block_size+block_size] = tmp[];
-
-            foreach ( i; nb*block_size..nb*block_size+block_size ) {
-                z[i] = xhalf[i];
-                foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
-                    // only work on entries where j > diagonal block
-                    if ( j <= nb*block_size+block_size-1 )
-                        continue;
-                    xhalf[j] -= A[i,j]*z[i];
-                }
-            }
-        }
-
-        // relaxation step:  b* = b - L . x_k+1/2
+        // Forward sweep: (L + D) . x_k+1/2 = b - U . x_k
         xnew = b.dup;
-        for ( int nb = to!int(nblocks-2); nb >= 0; --nb ) {
+        foreach (nb; 0..nblocks) {
             foreach ( i; nb*block_size..nb*block_size+block_size ) {
+                // relaxation:  b* = b - U . x_k
                 foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
                     // only work on entries where j > diagonal block
                     if ( j <= nb*block_size+block_size-1 )
                         continue;
-                    xnew[j] -= A[i,j] * xhalf[i];
+                    xnew[i] -= A[i,j] * x[j];
                 }
-            }
-        }
-
-        // Backward sweep:  (U + D) . x_k+1 = b*
-        for ( int nb = to!int(nblocks-1); nb >= 0; --nb ) {
-
-            foreach (i; 0..block_size) {
-                tmp[i] = to!number(0.0);
-                int idx = nb*block_size + i;
-                foreach (j; 0..block_size) {
-                    int jdx = nb*block_size + j;
-                    tmp[i] += A[idx,jdx]*xnew[jdx];
-                }
-            }
-            xnew[nb*block_size..nb*block_size+block_size] = tmp[];
-
-            foreach ( i; nb*block_size..nb*block_size+block_size ) {
-                z[i] = xnew[i];
+                // lower triangluar matrix solve
                 foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
                     // only work on entries where j < i
                     if ( j >= nb*block_size )
                         break;
-                    xnew[j] -= A[i,j]*z[i];
+                    xnew[i] -= A[i,j] * xnew[j];
                 }
             }
+
+            // multiply by inverse diagonal block
+            foreach (i; 0..block_size) {
+                int idx = nb*block_size + i;
+                foreach (j; 0..block_size) {
+                    int jdx = nb*block_size + j;
+                    Dinv[i,j] = A[idx,jdx];
+                }
+            }
+            nm.bbla.dot(Dinv, xnew[nb*block_size..nb*block_size+block_size], tmp[]);
+            xnew[nb*block_size..nb*block_size+block_size] = tmp[];
+        }
+
+        // Backward sweep:  (U + D) . x_k+1 = b - L . x_k+1/2
+        fill(x,xnew);
+        fill(xnew,b);
+        for ( int nb = to!int(nblocks-1); nb >= 0; --nb ) {
+            foreach ( i; nb*block_size..nb*block_size+block_size ) {
+                // relaxation:  b* = b - U . x_k
+                foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
+                    // only work on entries where j < i
+                    if ( j >= nb*block_size )
+                        break;
+                    xnew[i] -= A[i,j] * x[j];
+                }
+                // upper triangluar matrix solve
+                foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
+                    // only work on entries where j > diagonal block
+                    if ( j <= nb*block_size+block_size-1 )
+                        continue;
+                    xnew[i] -= A[i,j] * xnew[j];
+                }
+            }
+
+            // multiply by inverse diagonal block
+            foreach (i; 0..block_size) {
+                int idx = nb*block_size + i;
+                foreach (j; 0..block_size) {
+                    int jdx = nb*block_size + j;
+                    Dinv[i,j] = A[idx,jdx];
+                }
+            }
+            nm.bbla.dot(Dinv, xnew[nb*block_size..nb*block_size+block_size], tmp[]);
+            xnew[nb*block_size..nb*block_size+block_size] = tmp[];
         }
         fill(x,xnew);
     }
-    fill(b,xnew);
-}
-
-/**
- * Solve the system (LU)^T.[x] = [b].
- *
- * This algorithm solves a transposed system without requiring
- * the explicit transposition of the system matrix.
- *
- * The algorithm is taken (with modifications) from pg.65 of,
- *     Templates for the Solution of Linear Systems:
- *          Building Block for Iterative Methods, Barret et al.
- *
- * NB. The LU decomposition of the transposed matrix should be
- * scaled using scaleLU before being passed to this routine.
- */
-
-void transpose_solve(T)(SMatrix!T LU, T[] b)
-{
-    int n = to!int(LU.ia.length-1);
-    assert(b.length == n);
-
-    T[] z; z.length = n;
-
-    foreach ( i; 0 .. n ) {
-	z[i] = b[i];
-        foreach ( j; LU.ja[LU.ia[i] .. LU.ia[i+1]] ) {
-	    // only work on entries where j > i
-	    if ( j <= i ) continue;
-	    T val = LU[i,j];
-	    b[j] -= val*z[i];
-	}
-    }
-
-    for ( int i = to!int(n-1); i >= 0; --i ) {
-	b[i] = (1.0/LU[i,i])*z[i];
-     	foreach ( j; LU.ja[LU.ia[i] .. LU.ia[i+1]] ) {
-	    // only work on entries where j < i
-	    if ( j >= i ) break;
-	    T val = LU[i,j];
-	    z[j] -= b[i]*val;
-	}
-    }
-}
-
-void scaleLU(T)(SMatrix!T LU)
-{
-    int n = to!int(LU.ia.length-1);
-
-    foreach(i; 0 .. n) {
-	foreach(j; LU.ja[LU.ia[i] .. LU.ia[i+1]]) {
-	    // only work on entries where j > i
-	    if ( j <= i ) continue;
-	    LU[j,i] = LU[j,i] * LU[i,i];
-	}
-    }
-
-    foreach(i; 0 .. n) {
-	foreach(j; LU.ja[LU.ia[i] .. LU.ia[i+1]]) {
-	    // only work on entries where j > i
-	    if ( j <= i ) continue;
-	    LU[i,j] = LU[i,j] / LU[i,i];
-	}
-    }
-}
-
+    fill(b,x);
+} // end sgsr()
 
 T[] gmres(T)(SMatrix!T A, T[] b, T[] x0, int m)
 in {
@@ -1071,21 +1025,6 @@ version(smla_test) {
             assert(approxEqualNumbers(B[i], B_exp[i]), failedUnitTest());
         }
 
-	// Now let's see if we can solve this problem using the transpose solve method
-	// transpose of e
-	auto k = new SMatrix!number();
-        k.addRow([to!number(2.), to!number(-1.)], [0, 1]);
-        k.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [0, 1, 2]);
-        k.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [1, 2, 3]);
-        k.addRow([to!number(-1.), to!number(2.)], [2, 3]);
-	decompILU0(k);
-	B = [to!number(1.), to!number(0.), to!number(0.), to!number(1.)];
-	scaleLU(k);
-	transpose_solve(k, B);
-	foreach ( i; 0 .. B.length ) {
-            assert(approxEqualNumbers(B[i], B_exp[i]), failedUnitTest());
-        }
-
         // Now let's see how we go at an approximate solve by using a non-triangular matrix.
         // This is example 2.2 from Gerard and Wheatley, 6th edition
         auto f = new SMatrix!number();
@@ -1100,49 +1039,6 @@ version(smla_test) {
         foreach ( i; 0 .. C.length ) {
             assert(approxEqualNumbers(C[i], C_exp[i]), failedUnitTest());
         }
-	// Again, let's now test the transpose solve on the previous example
-	auto t = new SMatrix!number();
-        t.addRow([to!number(3.), to!number(1.), to!number(2.), to!number(1.)], [0, 1, 2, 3]);
-        t.addRow([to!number(2.), to!number(4.), to!number(1.), to!number(1.)], [0, 1, 2, 3]);
-        t.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [0, 2, 3]);
-        t.addRow([to!number(2.), to!number(2.), to!number(-1.), to!number(3.)], [0, 1, 2, 3]);
-	decompILU0(t);
-	C = [to!number(2.), to!number(2.), to!number(0.), to!number(0.)];
-	scaleLU(t);
-	transpose_solve(t, C);
-	foreach ( i; 0 .. C.length ) {
-            assert(approxEqualNumbers(C[i], C_exp[i]), failedUnitTest());
-        }
-	// Finally, exercise transpose solve on a larger system
-	// original matrix
-	auto l = new SMatrix!number([to!number(1.), to!number(2.), to!number(-1.), to!number(3.), to!number(2.), to!number(-1.), to!number(-2.),
-				     to!number(2.), to!number(3.), to!number(-2.), to!number(-1.), to!number(2.), to!number(4.), to!number(2.),
-				     to!number(-2.), to!number(1.), to!number(5.), to!number(-1.), to!number(-1.), to!number(6.), to!number(-2.),
-				     to!number(-2.), to!number(3.), to!number(-1.), to!number(-1.), to!number(-5.), to!number(4.), to!number(3.),
-				     to!number(-2.), to!number(1.), to!number(2.), to!number(1.), to!number(-1.), to!number(3.), to!number(4.)],
-				    [0, 1, 5, 0, 1, 2, 6, 1, 2, 3, 7, 2, 3, 4, 8, 3, 4, 9, 0, 5, 1, 5, 6, 7, 2, 6, 7, 8, 3, 7, 8, 9, 4, 8, 9],
-				    [0, 3, 7, 11, 15, 18, 20, 24, 28, 32, 35]);
-	// transpose matrix
-	auto lt = new SMatrix!number();
-	lt.aa.length = l.aa.length;
-	lt.ja.length = l.ja.length;
-	lt.ia.length = l.ia.length;
-	transpose(l.ia, l.ja, l.aa, lt.ia, lt.ja, lt.aa);
-	number[] q = [to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.),
-		      to!number(6.), to!number(7.), to!number(8.), to!number(9.), to!number(10.)];
-	number[] Q_exp = [to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.),
-		      to!number(6.), to!number(7.), to!number(8.), to!number(9.), to!number(10.)];
-	// solution
-	decompILU0(l);
-	solve(l, Q_exp);
-	// transpose solution
-	decompILU0(lt);
-	scaleLU(lt);
-	transpose_solve(lt, q);
-	foreach (i; 0 .. q.length) {
-            assert(approxEqualNumbers(q[i], Q_exp[i]), failedUnitTest());
-        }
-
         // Let's test the ILU(p) method
         auto s = new SMatrix!number([to!number(1.), to!number(1.), to!number(4.), to!number(2.),
                                      to!number(4.), to!number(1.), to!number(2.), to!number(1.),
