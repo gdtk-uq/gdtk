@@ -360,6 +360,8 @@ SpatialDerivCalc spatial_deriv_calc_from_name(string name)
 {
     switch ( name ) {
     case "least_squares": return SpatialDerivCalc.least_squares;
+    case "least-squares": return SpatialDerivCalc.least_squares;
+    case "leastsquares": return SpatialDerivCalc.least_squares;
     case "divergence": return SpatialDerivCalc.divergence;
     default:
         throw new FlowSolverException("Invalid spatial-derivative calculator name");
@@ -1023,8 +1025,11 @@ final class GlobalConfig {
     // Eilmer3 was set up to use the cell-average values of transport coefficients
     // because a full gas state was not available at the cell interfaces.
     // Setting use_viscosity_from_cells to true should give Eilmer3-like behaviour.
-    shared static SpatialDerivCalc spatial_deriv_calc = SpatialDerivCalc.divergence;
-    shared static SpatialDerivLocn spatial_deriv_locn = SpatialDerivLocn.vertices;
+    shared static SpatialDerivCalc spatial_deriv_calc = SpatialDerivCalc.least_squares;
+    shared static SpatialDerivLocn spatial_deriv_locn = SpatialDerivLocn.cells;
+    // 2021-07-14, PJ, Change default settings for gradient calculations
+    // for viscous fluxes. The old, Eilmer3-compatible settings were
+    // SpatialDerivCalc.divergence and SpatialDerivLocn.vertices.
     shared static bool include_ghost_cells_in_spatial_deriv_clouds = true;
     // We may elect to suppress the calculation of gradients in particular zones.
     static BlockZone[] suppress_viscous_stresses_zones;
