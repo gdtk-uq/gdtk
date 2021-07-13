@@ -96,12 +96,6 @@ function perform_spatial_gradient_consistency_check()
          end
       end
    end
-   if not config.spatial_deriv_from_many_points then
-      if config.spatial_deriv_locn == "vertices" then
-         print("NOTE: config.spatial_deriv_location is being set to 'faces' for 2-point derivatives.")
-         config.spatial_deriv_locn = "faces"
-      end
-   end
 end
 
 function warn_if_blocks_not_connected()

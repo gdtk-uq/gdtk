@@ -94,7 +94,6 @@ identifyBlockConnections()
 
 --------------------- MPI Setup ---------------------
 mpiDistributeBlocks{ntasks=4, dist="load-balance"}
-config.spatial_deriv_from_many_points = false
 
 config.gasdynamic_update_scheme = "euler"
 config.flux_calculator = 'adaptive'

@@ -1,5 +1,5 @@
 -- lam_flat_plate_march.lua
--- Laminar flow over a flat plate 
+-- Laminar flow over a flat plate
 --
 -- This script creates and runs a simulation of a worked
 -- example (Example 5-11 on page 155) in Joseph Schetz's
@@ -7,21 +7,20 @@
 --
 -- The example involves a laminar Mach 4.0 flow over a
 -- 1.0 m long flat plate. The boundary layer will grow on
--- the NORTH boundary. Simulation results will be compared 
+-- the NORTH boundary. Simulation results will be compared
 -- with those from the CLBL code from Schetz's book.
 --
--- Peter Jacobs & Wilson Chan, 
+-- Peter Jacobs & Wilson Chan,
 -- 18 Jan 2010 Python version for eilmer3
--- 07 Jun 2015 Lua version for Eilmer4                           
+-- 07 Jun 2015 Lua version for Eilmer4
 
 config.title = "Schetz's Mach 4 laminar flow over a flat plate 3D"
 print(config.title)
 config.dimensions = 3
 config.viscous = true
-config.spatial_deriv_from_many_points = false -- Indeed, only 2-point difference.
 config.flux_calculator = "ausmdv"
 config.gasdynamic_update_scheme = "euler"
-config.max_time = 10.0e-3  -- will allow lots more than 3 flow lengths   
+config.max_time = 10.0e-3  -- will allow lots more than 3 flow lengths
 config.dt_plot =  config.max_time
 config.dt_history = 1.0e-5
 config.max_step = 300000
@@ -41,7 +40,7 @@ inflow = FlowState:new{p=p_inf, T=T_inf, velx=u_inf, vely=0.0}
 
 -- Geometry of plate and flow domain.
 -- Have set up the flat plate 0.1 m longer than the actual plate
--- so that we don't have to use the simulation profiles right on 
+-- so that we don't have to use the simulation profiles right on
 -- the boundary.
 L = 1.1       -- Length of flat plate (in metres)
 H = 0.4 * L   -- Height of flow domain (in metres)
@@ -55,7 +54,7 @@ dz = 0.010    -- depth in z-direction (also k-index direction)
 --          -\-     |
 --    flow=>    -\- |
 --        0        p10 ----> x
--- 
+--
 p000 = Vector3:new{x=0.0, y=3.0*H/4.0, z=0.0}
 p100 = Vector3:new{x=L,   y=0.0,       z=0.0}
 p110 = Vector3:new{x=L,   y=H,         z=0.0}

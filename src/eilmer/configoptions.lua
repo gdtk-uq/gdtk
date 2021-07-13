@@ -107,7 +107,6 @@ configOptionsHidden = { -- hidden from user
    --
    viscous = false,
    use_viscosity_from_cells = false,
-   spatial_deriv_from_many_points = true,
    spatial_deriv_calc = "divergence",
    spatial_deriv_locn = "vertices",
    include_ghost_cells_in_spatial_deriv_clouds = true,

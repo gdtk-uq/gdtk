@@ -1023,7 +1023,6 @@ final class GlobalConfig {
     // Eilmer3 was set up to use the cell-average values of transport coefficients
     // because a full gas state was not available at the cell interfaces.
     // Setting use_viscosity_from_cells to true should give Eilmer3-like behaviour.
-    shared static bool spatial_deriv_from_many_points = true;
     shared static SpatialDerivCalc spatial_deriv_calc = SpatialDerivCalc.divergence;
     shared static SpatialDerivLocn spatial_deriv_locn = SpatialDerivLocn.vertices;
     shared static bool include_ghost_cells_in_spatial_deriv_clouds = true;
@@ -1270,7 +1269,6 @@ public:
     //
     bool viscous;
     bool use_viscosity_from_cells;
-    bool spatial_deriv_from_many_points;
     bool save_viscous_gradients;
     SpatialDerivCalc spatial_deriv_calc;
     SpatialDerivLocn spatial_deriv_locn;
@@ -1418,7 +1416,6 @@ public:
         //
         viscous = GlobalConfig.viscous;
         use_viscosity_from_cells = GlobalConfig.use_viscosity_from_cells;
-        spatial_deriv_from_many_points = GlobalConfig.spatial_deriv_from_many_points;
         spatial_deriv_calc = GlobalConfig.spatial_deriv_calc;
         spatial_deriv_locn = GlobalConfig.spatial_deriv_locn;
         include_ghost_cells_in_spatial_deriv_clouds =
@@ -1842,7 +1839,6 @@ void set_config_for_core(JSONValue jsonData)
     //
     mixin(update_bool("viscous", "viscous"));
     mixin(update_bool("use_viscosity_from_cells", "use_viscosity_from_cells"));
-    mixin(update_bool("spatial_deriv_from_many_points", "spatial_deriv_from_many_points"));
     mixin(update_enum("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
     mixin(update_enum("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(update_bool("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
@@ -1863,7 +1859,6 @@ void set_config_for_core(JSONValue jsonData)
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  viscous: ", GlobalConfig.viscous);
         writeln("  use_viscosity_from_cells: ", GlobalConfig.use_viscosity_from_cells);
-        writeln("  spatial_deriv_from_many_points: ", GlobalConfig.spatial_deriv_from_many_points);
         writeln("  spatial_deriv_calc: ", spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc));
         writeln("  spatial_deriv_locn: ", spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn));
         writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
