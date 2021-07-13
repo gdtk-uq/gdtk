@@ -1153,7 +1153,7 @@ public:
             pcell.decode_conserved(gtl, ftl, 0.0);
 
             // evaluate perturbed residuals in local stencil
-            evalRHS(gtl, ftl, pcell.cell_list, pcell.face_list);
+            evalRHS(gtl, ftl, pcell.cell_list, pcell.face_list, pcell);
 
             // fill local Jacobians
             foreach (cell; pcell.cell_list) {
@@ -1167,7 +1167,7 @@ public:
             pcell.decode_conserved(gtl, ftl, 0.0);
 
             // evaluate original residuals in local stencil (clears imaginary components)
-            evalRHS(gtl, ftl, pcell.cell_list, pcell.face_list);
+            evalRHS(gtl, ftl, pcell.cell_list, pcell.face_list, pcell);
         }
 
         // we now populate the pre-sized sparse matrix representation of the flow Jacobian
@@ -1255,7 +1255,7 @@ public:
                     ghost_cell.decode_conserved(gtl, ftl, 0.0);
 
                     // evaluate perturbed residuals in local stencil
-                    evalRHS(gtl, ftl, ghost_cell.cell_list, ghost_cell.face_list);
+                    evalRHS(gtl, ftl, ghost_cell.cell_list, ghost_cell.face_list, ghost_cell);
 
                     // fill local Jacobians
                     foreach (cell; ghost_cell.cell_list) {
@@ -1269,7 +1269,7 @@ public:
                     ghost_cell.decode_conserved(gtl, ftl, 0.0);
 
                     // evaluate original residuals in local stencil (clears imaginary components)
-                    evalRHS(gtl, ftl, ghost_cell.cell_list, ghost_cell.face_list);
+                    evalRHS(gtl, ftl, ghost_cell.cell_list, ghost_cell.face_list, ghost_cell);
                 }
 
                 // Step 3. Calculate dR/dU and add corrections to Jacobian
@@ -1291,7 +1291,7 @@ public:
         } // foreach ( bndary; bc )
     } // end apply_jacobian_bcs()
 
-    void evalRHS(int gtl, int ftl, ref FVCell[] cell_list, FVInterface[] iface_list)
+    void evalRHS(int gtl, int ftl, ref FVCell[] cell_list, FVInterface[] iface_list, FVCell pcell)
     /*
      *  This method evaluates the RHS residual on a subset of cells for a given FluidBlock.
      *  It is used when constructing the numerical Jacobian.
@@ -1345,7 +1345,9 @@ public:
             if (myConfig.viscous) {
                 cell.add_viscous_source_vector();
             }
-            if (myConfig.reacting) {
+            if (myConfig.reacting && pcell.id == cell.id) {
+                // NOTE: we only need to evaluate the chemical source terms for the perturb cell
+                //       this saves us a lot of unnecessary computations
                 cell.add_thermochemical_source_vector();
             }
             if (myConfig.udf_source_terms) {
