@@ -115,6 +115,12 @@ public:
     double[] dRUdU;
     ConservedQuantities U0save, RU0;
     //
+    // Workspace for transient-solver implicit update and NK accelerator.
+    // source terms for finite-rate chemistry
+    number[] thermochem_conc;
+    number[] thermochem_rates;
+    number[] thermochem_source;
+    //
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
     FlowJacobianT flowJacobian;
@@ -204,10 +210,27 @@ public:
 
     void init_workspace()
     {
-        Linf_residuals = new ConservedQuantities(dedicatedConfig[id].cqi.n);
+        auto cqi = dedicatedConfig[id].cqi;
+        Linf_residuals = new ConservedQuantities(cqi.n);
         // Workspace for flux_calc method.
         Lft = new FlowState(dedicatedConfig[id].gmodel);
         Rght = new FlowState(dedicatedConfig[id].gmodel);
+        //
+        // Workspace for implicit updates of the thermochemistry.
+        version(multi_species_gas) {
+            if (myConfig.reacting && cqi.n_species > 1) {
+                thermochem_source.length = cqi.n_species;
+                thermochem_conc.length = cqi.n_species;
+                thermochem_rates.length = cqi.n_species;
+            }
+        }
+        version(multi_T_gas) {
+            if (cqi.n_modes > 0) {
+                thermochem_source.length += cqi.n_modes;
+                thermochem_conc.length += cqi.n_modes;
+                thermochem_rates.length += cqi.n_modes;
+            }
+        }
     }
 
     void add_IO()
@@ -1348,7 +1371,9 @@ public:
             if (myConfig.reacting && pcell.id == cell.id) {
                 // NOTE: we only need to evaluate the chemical source terms for the perturb cell
                 //       this saves us a lot of unnecessary computations
-                cell.add_thermochemical_source_vector();
+                cell.add_thermochemical_source_vector(thermochem_conc,
+                                                      thermochem_rates,
+                                                      thermochem_source);
             }
             if (myConfig.udf_source_terms) {
                 size_t i_cell = cell.id;
@@ -1627,7 +1652,7 @@ public:
             c.add_viscous_source_vector();
         } // end if viscous
         if (myConfig.reacting && myConfig.chemistry_update == ChemistryUpdateMode.integral) {
-            c.add_thermochemical_source_vector();
+            c.add_thermochemical_source_vector(thermochem_conc, thermochem_rates, thermochem_source);
         }
         if (myConfig.udf_source_terms) { c.add_udf_source_vector(); }
         c.time_derivatives(gtl, ftl);

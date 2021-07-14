@@ -1311,7 +1311,9 @@ void evalRHS(double pseudoSimTime, int ftl)
                 cell.add_viscous_source_vector();
             }
             if (blk.myConfig.reacting) {
-                cell.add_thermochemical_source_vector();
+                cell.add_thermochemical_source_vector(blk.thermochem_conc,
+                                                      blk.thermochem.rates,
+                                                      blk.thermochem_source);
             }
             if (blk.myConfig.udf_source_terms) {
                 size_t i_cell = cell.id;

@@ -135,12 +135,6 @@ public:
     // distance to nearest viscous wall (only computed if turb_model.needs_dwall)
     number dwall;
 
-    // source terms for finite-rate chemistr
-    number[] thermochem_conc;
-    number[] thermochem_rates;
-    number[] thermochem_source;
-    ReactionMechanism rmech;
-
     // For use with LU-SGS solver/preconditioner (note: we don't need complex numbers here)
     number[] LU;
     number[] dUk;
@@ -224,21 +218,6 @@ public:
         grad = new FlowGradients(myConfig);
         if (allocate_spatial_deriv_lsq_workspace) {
             ws_grad = new WLSQGradWorkspace();
-        }
-        // Workspace for implicit updates of the thermochemistry.
-        version(multi_species_gas) {
-            if (myConfig.reacting && n_species > 1) {
-                thermochem_source.length = n_species;
-                thermochem_conc.length = n_species;
-                thermochem_rates.length = n_species;
-            }
-        }
-        version(multi_T_gas) {
-            if (n_modes > 0) {
-                thermochem_source.length += n_modes;
-                thermochem_conc.length += n_modes;
-                thermochem_rates.length += n_modes;
-            }
         }
         //
         version(nk_accelerator) {
@@ -1172,7 +1151,9 @@ public:
     }
 
     @nogc
-    void add_thermochemical_source_vector()
+    void add_thermochemical_source_vector(number[] thermochem_conc,
+                                          number[] thermochem_rates,
+                                          number[] thermochem_source)
     {
         // It does not make a lot of sense to call this function for n_species == 1
         // Maybe we should just set chem_source[0] = 0.0.
