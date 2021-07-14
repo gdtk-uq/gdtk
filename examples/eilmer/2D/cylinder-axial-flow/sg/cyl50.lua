@@ -36,6 +36,8 @@ blks = FBArray:new{grid=grd, nib=2, njb=2,
 
 -- Do a little more setting of the simulation configuration data.
 config.viscous = true
+config.spatial_deriv_locn = "vertices"
+config.spatial_deriv_calc = "divergence"
 config.flux_calculator = "ausmdv"
 config.gasdynamic_update_scheme = "euler"
 config.max_time = 8.0e-3  -- seconds

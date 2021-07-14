@@ -704,7 +704,7 @@ public:
                     break;
                 case SpatialDerivCalc.divergence:
                     foreach(iface; faces) {
-                        assert(0, "divergence thereom not implemented for 3D");
+                        assert(0, "divergence thereom not implemented when computing gradients at faces in 3D");
                     }
                 } // end switch
             } // end if (myConfig.dimensions)
@@ -719,11 +719,20 @@ public:
             break;
 
         case SpatialDerivLocn.cells:
-            foreach(cell; cells) {
-                cell.grad.gradients_leastsq(cell.cloud_fs, cell.cloud_pos, cell.ws_grad);
-            }
+            final switch (myConfig.spatial_deriv_calc) {
+            case SpatialDerivCalc.least_squares:
+                foreach(cell; cells) {
+                    cell.grad.gradients_leastsq(cell.cloud_fs, cell.cloud_pos, cell.ws_grad);
+                }
+                break;
+            case SpatialDerivCalc.divergence:
+                foreach(iface; faces) {
+                    assert(0, "divergence thereom not implemented when computing gradients at cell centres.");
+                }
+            } // end switch
+            //
             // Cell centered gradients are transformed to interfaces in simcore.
-
+            //
         } // end switch (myConfig.spatial_deriv_locn)
     } // end flow_property_spatial_derivatives()
 
