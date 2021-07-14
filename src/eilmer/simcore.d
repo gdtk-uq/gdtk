@@ -70,6 +70,7 @@ import simcore_solid_step;
 import simcore_exchange;
 import simcore_io;
 import celldata;
+import util.time_utils;
 
 // The shared double[] flavour of GlobalConfig.userPad can give trouble,
 // so we need a normal array for the MPI task to work with.
@@ -78,7 +79,7 @@ double[] userPad_copy;
 //----------------------------------------------------------------------------
 
 int init_simulation(int tindx, int nextLoadsIndx,
-                    int maxCPUs, int threadsPerMPITask, int maxWallClock)
+                    int maxCPUs, int threadsPerMPITask, string maxWallClock)
 // Returns with fail_flag == 0 for a successful initialization.
 {
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
@@ -98,7 +99,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
         }
     }
     //
-    SimState.maxWallClockSeconds = maxWallClock;
+    SimState.maxWallClockSeconds = timeStringToSeconds(maxWallClock);
     SimState.wall_clock_start = Clock.currTime();
     JSONValue config_jsonData = read_config_file();  // most of the configuration is in here
     read_control_file(); // some of the configuration is in here
