@@ -402,13 +402,32 @@ string partitionDual(string fileName, int nparts) {
 
 } // end partitionDual
 
-string SU2toMetisMeshFormat(string fileName) {
+string SU2toMetisMeshFormat(string fileName, int ncommon) {
     // Preprocesses the mesh stored in SU2 format for use with Metis
     // input: SU2 mesh stored as a .su2 file
     // output: file storing mesh in Metis format
 
     writeln("-- Converting SU2 mesh to Metis mesh format");
     auto f = File(fileName, "r");
+
+    // Check that the nDim command line argument matches the file dimensionality (NNG 07/21)
+    // Users setting nDim incorrectly can result in some very strange (and sometimes silent) bugs.
+    int ndim=-1;
+    while (!f.eof) {
+        auto line = f.readln().strip();
+        if (canFind(line, "NDIME")) {
+            auto tokens = line.split("=");
+            ndim = to!int(tokens[1].strip());
+            break;
+        }
+    }
+    if (ndim==-1) throw new Error(format("NDIME field not found in .su2 file %s",  fileName));
+    if (ndim!=ncommon) {
+        string msg = format("ugrid_parition dimensionality %d does not match file %s with NDIME= %d",
+                             ncommon, fileName, ndim);
+        throw new Error(msg);
+    }
+
     size_t ncells;
     while (!f.eof) {
         auto line = f.readln().strip();
@@ -768,7 +787,7 @@ int main(string[] args){
     if (metisCheck() != 0)  throw new Error("Metis partition software cannot be found.");
 
     // convert the SU2 grid into the mesh format Metis is expecting
-    string metisFormatFile = SU2toMetisMeshFormat(inputMeshFile);
+    string metisFormatFile = SU2toMetisMeshFormat(inputMeshFile, ncommon);
 
     // convert the mesh into a dual graph using Metis
     string dualFormatFile = mesh2dual(metisFormatFile, ncommon);
