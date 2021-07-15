@@ -16,6 +16,12 @@ makes use of Node.js to do some of the build.
 $ cd dgd/website
 $ npm install
 
+4. Install asciidoctor and the rouge module
+
+After asciidoctor install, do:
+
+$ gem install rouge
+
 # Build
 
 The makefile controls the build process. You will need dgd-docs in place to do this.
