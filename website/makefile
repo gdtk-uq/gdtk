@@ -6,7 +6,13 @@ ESTCN_DIR := content/docs/estcn
 NENZF1D_DIR := content/docs/nenzf1d
 PYTHON_DIR := content/docs/python
 
-REF_MANS := eilmer-reference-manual l1d-reference-manual estcn-manual nenzf1d-manual gas-dynamic-manual
+REF_MANS := eilmer-reference-manual \
+	l1d-reference-manual \
+	estcn-manual \
+	nenzf1d-manual \
+	gas-dynamic-manual \
+	geometry-manual \
+	nm-manual
 
 all: $(REF_MANS) eilmer-catalog eilmer-faq presentations theses
 	hugo
@@ -27,6 +33,14 @@ clean:
 	- rm -rf static/pdfs
 	- rm -rf static/html
 	- rm -rf public
+	- rm $(EILMER_DIR)/eilmer-reference-manual-for-hugo.adoc
+	- rm $(ESTCN_DIR)/estcn-manual-for-hugo.adoc
+	- rm $(L1D_DIR)/l1d-reference-manual-for-hugo.adoc
+	- rm $(NENZF1D_DIR)/nenzf1d-manual-for-hugo.adoc
+	- rm $(PYTHON_DIR)/gd-manual-for-hugo.adoc
+	- rm $(PYTHON_DIR)/geometry-manual-for-hugo.adoc
+	- rm $(PYTHON_DIR)/nm-manual-for-hugo.adoc
+
 
 eilmer-catalog:
 	cp ../doc/eilmer-catalog-of-examples.adoc $(EILMER_DIR)/
@@ -69,7 +83,7 @@ nenzf1d-manual:
 	cat $(NENZF1D_DIR)/nenzf1d-manual-hugo-header.txt $(NENZF1D_DIR)/nenzf1d-manual.adoc > $(NENZF1D_DIR)/nenzf1d-manual-for-hugo.adoc
 	rm $(NENZF1D_DIR)/nenzf1d-manual.adoc
 
-gas-dynamic-manual:
+gas-dynamic-manual: geometry-manual nm-manual
 	cp -r ../doc/gas/ .
 	cp -r ../doc/flow/ .
 	cp ../doc/library-reference-manual.adoc $(PYTHON_DIR)/
