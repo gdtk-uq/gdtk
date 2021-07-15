@@ -1,0 +1,10 @@
+Fluidic-oscillator as a mixing-enhanced fuel injector.
+
+For background, see PJ workbook notes pages 29-32, Aug-2019.
+Used in PJ's CfH seminar 29-Aug-2019.
+
+The set-up of the simulation needs a bit of manual work because it
+involves the use of the gmsh program to make the unstructured grid.
+
+To make this example stand-alone, it includes the gmsh generated grid.
+
