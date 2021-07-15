@@ -1,6 +1,6 @@
 ---
-title: "Numercal methods library"
-description: "Numercal methods library"
+title: "Numerical methods library"
+description: "Numerical methods library"
 lead: ""
 date: 2021-07-01
 lastmod: 2021-07-01
