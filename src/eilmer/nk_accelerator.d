@@ -122,7 +122,7 @@ int main(string[] args)
     int snapshotStart = 0;
     int maxCPUs = totalCPUs;
     int threadsPerMPITask = 1;
-    int maxWallClock = 5*24*3600; // 5 days default
+    string maxWallClock = "432000"; // 5 days default
     bool helpWanted = false;
     try {
         getopt(args,
