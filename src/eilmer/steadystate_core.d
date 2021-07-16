@@ -949,13 +949,15 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             bool legacy = is_legacy_format(GlobalConfig.flow_format);
             nWrittenSnapshots++;
             if ( nWrittenSnapshots <= nTotalSnapshots ) {
-                if (legacy) {
-                    ensure_directory_is_present(make_path_name!"flow"(nWrittenSnapshots));
-                    ensure_directory_is_present(make_path_name!"solid"(nWrittenSnapshots));
-                } else {
-                    foreach(io; io_list) {
-                        string path = "CellData/"~io.tag;
-                        if (io.do_save()) ensure_directory_is_present(make_path_name(path, nWrittenSnapshots));
+                if (GlobalConfig.is_master_task){
+                    if (legacy) {
+                        ensure_directory_is_present(make_path_name!"flow"(nWrittenSnapshots));
+                        ensure_directory_is_present(make_path_name!"solid"(nWrittenSnapshots));
+                    } else {
+                        foreach(io; io_list) {
+                            string path = "CellData/"~io.tag;
+                            if (io.do_save()) ensure_directory_is_present(make_path_name(path, nWrittenSnapshots));
+                        }
                     }
                 }
                 version(mpi_parallel) {
