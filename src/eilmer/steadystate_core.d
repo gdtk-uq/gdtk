@@ -145,7 +145,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     bool withPTC = true;
     string jobName = GlobalConfig.base_file_name;
     int nsteps = GlobalConfig.sssOptions.nTotalSteps;
-    int nIters;
+    int nIters = 0;
     int nRestarts;
     int maxNumberAttempts = GlobalConfig.sssOptions.maxNumberAttempts;
     double relGlobalResidReduction = GlobalConfig.sssOptions.stopOnRelGlobalResid;
@@ -1987,6 +1987,40 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     // Compute tolerance
     auto outerTol = eta*beta;
 
+    // Compute precondition matrix
+    // if ( usePreconditioner && ( step == startStep || nIters > GlobalConfig.sssOptions.frozenPreconditionerCount) ) {
+    if ( usePreconditioner && ( step == startStep || step%GlobalConfig.sssOptions.frozenPreconditionerCount == 0 ) ) {
+        final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
+        case PreconditionMatrixType.jacobi:
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.evaluate_jacobian();
+                blk.flowJacobian.prepare_jacobi_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
+            }
+            break;
+        case PreconditionMatrixType.ilu:
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.evaluate_jacobian();
+                blk.flowJacobian.prepare_ilu_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
+            }
+            break;
+        case PreconditionMatrixType.sgs:
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.evaluate_jacobian();
+                blk.flowJacobian.prepare_sgs_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
+            }
+            break;
+        case PreconditionMatrixType.sgs_relax:
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.evaluate_jacobian();
+                blk.flowJacobian.prepare_sgsr_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
+            }
+            break;
+        case PreconditionMatrixType.lu_sgs:
+            // do nothing
+            break;
+        }
+    }
+
     // 2. Start outer-loop of restarted GMRES
     for ( r = 0; r < maxRestarts; r++ ) {
         // 2a. Begin iterations
@@ -2024,65 +2058,37 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
             // apply preconditioning
             if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
-                int n = GlobalConfig.sssOptions.frozenPreconditionerCount;
-                // We compute the precondition matrix on the very first step after the start up steps
-                // We then only update the precondition matrix once per GMRES call on every nth flow solver step.
-                bool update_preconditioner = false;
-                if (r == 0 && j == 0 && (step == GlobalConfig.sssOptions.startPreconditioning || step%n == 0 || step == startStep || step == GlobalConfig.sssOptions.nStartUpSteps+1)) {
-                    update_preconditioner = true;
-                }
                 final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
-                        case PreconditionMatrixType.jacobi:
-                            foreach (blk; parallel(localFluidBlocks,1)) {
-                                bool local_update_preconditioner = update_preconditioner;
-                                if (local_update_preconditioner) {
-                                    blk.evaluate_jacobian();
-                                    blk.flowJacobian.prepare_jacobi_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
-                                }
-                                blk.flowJacobian.x[] = blk.v[];
-                                nm.smla.multiply(blk.flowJacobian.local, blk.flowJacobian.x, blk.zed);
-                            }
-                            break;
-                        case PreconditionMatrixType.ilu:
-                            foreach (blk; parallel(localFluidBlocks,1)) {
-                                bool local_update_preconditioner = update_preconditioner;
-                                if (local_update_preconditioner) {
-                                    blk.evaluate_jacobian();
-                                    blk.flowJacobian.prepare_ilu_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
-                                }
-                                blk.zed[] = blk.v[];
-                                nm.smla.solve(blk.flowJacobian.local, blk.zed);
-                            }
-                            break;
-                        case PreconditionMatrixType.sgs:
-                            foreach (blk; parallel(localFluidBlocks,1)) {
-                                bool local_update_preconditioner = update_preconditioner;
-                                if (local_update_preconditioner) {
-                                    blk.evaluate_jacobian();
-                                    blk.flowJacobian.prepare_sgs_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
-                                }
-                                blk.zed[] = blk.v[];
-                                nm.smla.sgs(blk.flowJacobian.local, blk.flowJacobian.diagonal, blk.zed, to!int(nConserved), blk.flowJacobian.D, blk.flowJacobian.Dinv);
-                            }
-                            break;
-                        case PreconditionMatrixType.sgs_relax:
-                            foreach (blk; parallel(localFluidBlocks,1)) {
-                                bool local_update_preconditioner = update_preconditioner;
-                                int local_kmax = GlobalConfig.sssOptions.maxSubIterations;
-                                if (local_update_preconditioner) {
-                                    blk.evaluate_jacobian();
-                                    blk.flowJacobian.prepare_sgsr_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
-                                }
-                                blk.zed[] = blk.v[];
+                case PreconditionMatrixType.jacobi:
+                    foreach (blk; parallel(localFluidBlocks,1)) {
+                        blk.flowJacobian.x[] = blk.v[];
+                        nm.smla.multiply(blk.flowJacobian.local, blk.flowJacobian.x, blk.zed);
+                    }
+                    break;
+                case PreconditionMatrixType.ilu:
+                    foreach (blk; parallel(localFluidBlocks,1)) {
+                        blk.zed[] = blk.v[];
+                        nm.smla.solve(blk.flowJacobian.local, blk.zed);
+                    }
+                    break;
+                case PreconditionMatrixType.sgs:
+                    foreach (blk; parallel(localFluidBlocks,1)) {
+                        blk.zed[] = blk.v[];
+                        nm.smla.sgs(blk.flowJacobian.local, blk.flowJacobian.diagonal, blk.zed, to!int(nConserved), blk.flowJacobian.D, blk.flowJacobian.Dinv);
+                    }
+                    break;
+                case PreconditionMatrixType.sgs_relax:
+                    foreach (blk; parallel(localFluidBlocks,1)) {
+                        int local_kmax = GlobalConfig.sssOptions.maxSubIterations;
+                        blk.zed[] = blk.v[];
                                 nm.smla.sgsr(blk.flowJacobian.local, blk.zed, blk.flowJacobian.x, to!int(nConserved), local_kmax, blk.flowJacobian.Dinv);
-                            }
-                            break;
-                        case PreconditionMatrixType.lu_sgs:
-                            mixin(lusgs_solve("zed", "v"));
-                            break;
+                    }
+                    break;
+                case PreconditionMatrixType.lu_sgs:
+                    mixin(lusgs_solve("zed", "v"));
+                    break;
                 } // end switch
-            }
-            else {
+            } else {
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     blk.zed[] = blk.v[];
                 }
@@ -2210,6 +2216,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             resid = fabs(g1[j+1]);
             // DEBUG:
             //      writefln("OUTER: restart-count= %d iteration= %d, resid= %e", r, j, resid);
+            nIters = to!int(iterCount);
             if ( resid <= outerTol ) {
                 m = j+1;
                 // DEBUG:
@@ -2217,7 +2224,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 //      writefln("RANK %d: tolerance achieved on iteration: %d", GlobalConfig.mpi_rank_for_local_task, m);
                 break;
             }
-            nIters = to!int(iterCount);
         }
 
         if (iterCount == maxIters)
