@@ -1159,6 +1159,7 @@ public:
         // Maybe we should just set chem_source[0] = 0.0.
         // 2021-05-11 PJ [TODO] Ask Rowan.
         auto cqi = myConfig.cqi;
+        if (fs.gas.T <= myConfig.T_frozen) { return; }
         version(multi_species_gas) {
             if (cqi.n_species > 1) {
                 myConfig.thermochemUpdate.eval_source_terms(myConfig.gmodel, fs.gas, thermochem_conc,
