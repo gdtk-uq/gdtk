@@ -2430,7 +2430,7 @@ void configCheckPoint2()
     if (GlobalConfig.high_order_flux_calculator) {
         if (GlobalConfig.n_ghost_cell_layers < 3) {
             if (GlobalConfig.is_master_task) {
-                writeln("Increasing n_ghost_cell_layers to 3.");
+                writeln("NOTE: Increasing n_ghost_cell_layers to 3.");
             }
             GlobalConfig.n_ghost_cell_layers = 3;
         }
@@ -2458,7 +2458,7 @@ void configCheckPoint3()
             throw new FlowSolverException(msg);
         }
     }
-
+    //
     // Check the compatibility of update scheme and viscous flag.
     if (GlobalConfig.viscous == false &&
         (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 ||
@@ -2468,7 +2468,13 @@ void configCheckPoint3()
         msg ~= " is incompatible with an inviscid simulation.";
         throw new FlowSolverException(msg);
     }
-
+    // The super_time_stepping is associated with two particular update schemes:
+    // rkl1, rkl2.
+    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 ||
+        GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl2) {
+        GlobalConfig.with_super_time_stepping = true;
+    }
+    //
     // Check for compatbility between viscous flag and turbulence model
     if (GlobalConfig.turb_model && GlobalConfig.turb_model.isTurbulent &&
         (GlobalConfig.viscous==false)) {
@@ -2477,17 +2483,23 @@ void configCheckPoint3()
         msg ~= " is incompatible with an inviscid simulation.";
         throw new FlowSolverException(msg);
     }
-
     if (GlobalConfig.turb_model is null) {
         // PJ 2020-10-08 Have relaxed the Exception that was thrown here to just a warning.
         // This allows an essentially empty input script to be processed by e4shared --prep.
         writeln("Warning: GlobalConfig does not have a turbulence model.");
     }
-    // The super_time_stepping is associated with two particular update schemes:
-    // rkl1, rkl2.
-    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 ||
-        GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl2) {
-        GlobalConfig.with_super_time_stepping = true;
+    //
+    if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.divergence) {
+        // The divergence method is the old default for the type of gradient calculation
+        // while 'cells' is the new default for gradiaent location and together they are
+        // incomplete.  For least bother, let's alter the calculation type.
+        if (GlobalConfig.dimensions == 3 ||
+            GlobalConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
+            if (GlobalConfig.is_master_task) {
+                writeln("NOTE: Changing spatial_deriv_calc to least_squares.");
+            }
+            GlobalConfig.spatial_deriv_calc = SpatialDerivCalc.least_squares;
+        }
     }
     return;
 } // end configCheckPoint3()
