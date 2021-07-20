@@ -147,6 +147,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     int nsteps = GlobalConfig.sssOptions.nTotalSteps;
     int nIters = 0;
     int nRestarts;
+    double linSolResid = 0;
     int maxNumberAttempts = GlobalConfig.sssOptions.maxNumberAttempts;
     double relGlobalResidReduction = GlobalConfig.sssOptions.stopOnRelGlobalResid;
     double absGlobalResidReduction = GlobalConfig.sssOptions.stopOnAbsGlobalResid;
@@ -298,7 +299,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             foreach (attempt; 0 .. maxNumberAttempts) {
                 try {
                     version(lu_sgs) { lusgs_solve(preStep, pseudoSimTime, dt, normOld, startStep); }
-                    else { rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, nIters, startStep, LHSeval0, RHSeval0); }
+                    else { rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, nIters, linSolResid, startStep, LHSeval0, RHSeval0); }
                 }
                 catch (FlowSolverException e) {
                     version(mpi_parallel) {
@@ -647,7 +648,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 fResid.writefln("# %02d: %s-abs", 12+2*(MODES+imode), modename);
                 fResid.writefln("# %02d: %s-rel", 12+2*(MODES+imode)+1, modename);
             }
-            fResid.writefln("# %02d: mass-balance", 12+2*(TKE+nt + SPECIES+nsp + MODES+nmodes));
+            fResid.writefln("# %02d: mass-balance", 12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
+            fResid.writefln("# %02d: linear-solve-residual", 1+12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
             fResid.close();
         }
     }
@@ -692,7 +694,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             failedAttempt = 0;
             try {
                 version(lu_sgs) { lusgs_solve(step, pseudoSimTime, dt, normNew, startStep); }
-                else { rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, nIters, startStep, LHSeval, RHSeval); }
+                else { rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, nIters, linSolResid, startStep, LHSeval, RHSeval); }
             }
             catch (FlowSolverException e) {
                 writefln("Failed when attempting GMRES solve in main steps.");
@@ -877,6 +879,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 }
                 }
                 fResid.writef("%20.16e ", fabs(mass_balance.re));
+                fResid.writef("%20.16e ", linSolResid);
                 fResid.write("\n");
                 fResid.close();
             }
@@ -1652,7 +1655,7 @@ string lusgs_solve(string lhs_vec, string rhs_vec)
 }
 
 void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, double sigma, bool usePreconditioner,
-                    ref double residual, ref int nRestarts, ref int nIters, int startStep, int LHSeval, int RHSeval)
+                    ref double residual, ref int nRestarts, ref int nIters, ref double linSolResid, int startStep, int LHSeval, int RHSeval)
 {
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
@@ -2217,6 +2220,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             // DEBUG:
             //      writefln("OUTER: restart-count= %d iteration= %d, resid= %e", r, j, resid);
             nIters = to!int(iterCount);
+            linSolResid = (resid/beta).re;
             if ( resid <= outerTol ) {
                 m = j+1;
                 // DEBUG:
