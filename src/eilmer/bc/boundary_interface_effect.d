@@ -60,6 +60,10 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
         string fname = getJSONstring(jsonData, "filename", "");
         newBIE = new BIE_FlowStateCopyFromHistory(blk_id, boundary, fname);
         break;
+    case "synthesise_flow_state_to_interface":
+        string fname = getJSONstring(jsonData, "filename", "");
+        newBIE = new BIE_SynthesiseFlowState(blk_id, boundary, fname);
+        break;
     case "zero_velocity":
         newBIE = new BIE_ZeroVelocity(blk_id, boundary);
         break;
@@ -385,6 +389,56 @@ private:
     FlowHistory fhistory;
     FlowState fstate;
 } // end class BIE_FlowStateCopyFromHistory
+
+
+class BIE_SynthesiseFlowState : BoundaryInterfaceEffect {
+public:
+    this(int id, int boundary, string fileName)
+    {
+        super(id, boundary, "synthesiseFlowState");
+        sfs = new SyntheticFlowState(fileName);
+    }
+
+    override string toString() const
+    {
+        return format("synthesiseFlowState(filename=\"%s\")", sfs.fileName);
+    }
+
+    @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BIE_SynthesiseFlowState.apply_for_interface_unstructured_grid() not yet implemented");
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+        BoundaryCondition bc = blk.bc[which_boundary];
+        auto gmodel = blk.myConfig.gmodel;
+        foreach (i, f; bc.faces) {
+            sfs.set_flowstate(f.fs, t, f.pos.x, f.pos.y, f.pos.z, gmodel);
+        }
+    }
+
+    @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BIE_SynthesiseFlowState.apply_for_interface_structured_grid() not yet implemented");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        auto gmodel = blk.myConfig.gmodel;
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            sfs.set_flowstate(f.fs, t, f.pos.x, f.pos.y, f.pos.z, gmodel);
+        }
+    } // end apply_structured_grid()
+
+private:
+    SyntheticFlowState sfs;
+} // end class BIE_SynthesiseFlowState
 
 
 class BIE_ZeroVelocity : BoundaryInterfaceEffect {

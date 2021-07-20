@@ -416,7 +416,7 @@ version(complex_numbers) {
         k_t.im = 0.0;
     } // end clear_imaginary_components()
 } // end version(complex)
-    
+
 } // end class FlowState
 
 class FlowProfile {
@@ -652,6 +652,64 @@ public:
             fs.copy_values_from(fstate[$-1]);
         }
         return;
-    } // end get_flowstate()
+    } // end set_flowstate()
 
 } // end FlowHistory
+
+
+class SyntheticFlowState {
+    // For use in the classes that implement the InflowBC_Synthetic boundary condition.
+    // GhostCellSynthesiseFlowState, BIE_SynthesiseFlowState
+    //
+    // 2021-07-20 PJ
+    // This is a place-holder for Lachlan's synthetic boundary condition.
+    // For the moment, just leave the history code in place.
+
+public:
+    string fileName;
+
+    this (string fileName)
+    {
+        this.fileName = fileName;
+        // Open filename and read the defining data in JSON format.
+        auto gm = GlobalConfig.gmodel_master;
+        import std.json;
+        import json_helper;
+        JSONValue jsonData = readJSONfile(fileName);
+        //
+        // Lachlan, you may decide what you want to do here and below in set_flowstate().
+        //
+        auto baseFlow = jsonData["base"];
+        base_velx = getJSONdouble(baseFlow, "velx", 0.0);
+        base_vely = getJSONdouble(baseFlow, "vely", 0.0);
+        base_velz = getJSONdouble(baseFlow, "velz", 0.0);
+        base_p = getJSONdouble(baseFlow, "p", 1.0e5);
+        base_T = getJSONdouble(baseFlow, "T", 300.0);
+    } // end this()
+
+    @nogc
+    void set_flowstate(FlowState fs, double t, double x, double y, double z, GasModel gm)
+    {
+        fs.vel.refx = base_velx;
+        fs.vel.refy = base_vely;
+        fs.vel.refz = base_velz;
+        fs.gas.p = base_p;
+        fs.gas.T = base_T;
+        fs.gas.massf[0] = 1.0;
+        foreach (j; 1 .. gm.n_species) {
+            fs.gas.massf[j] = 0.0;
+        }
+        foreach (j; 0 .. gm.n_modes) {
+            fs.gas.T_modes[j] = base_T;
+        }
+        gm.update_thermo_from_pT(fs.gas);
+        return;
+    } // end set_flowstate()
+
+private:
+    double base_velx;
+    double base_vely;
+    double base_velz;
+    double base_p;
+    double base_T;
+} // end SyntheticFlow

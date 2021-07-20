@@ -1,6 +1,11 @@
-// flow_state_copy_from_history.d
+// synthesise_flow_state.d
+// 2021-07-20 PJ
+// This is Lachlan's boundary condition for a applying an inflow with synthetic disturbances.
+// There is a companion class BIE_SynthesiseFlowState in the module boundary_interface_effect.d
+// and the systhesis function is over in the SyntheticFlowState class in the flowstate.d module.
 
-module bc.ghost_cell_effect.flow_state_copy_from_history;
+
+module bc.ghost_cell_effect.synthesise_flow_state;
 
 import std.json;
 import std.string;
@@ -21,41 +26,39 @@ import gas;
 import bc;
 
 
-class GhostCellFlowStateCopyFromHistory : GhostCellEffect {
+class GhostCellSynthesiseFlowState : GhostCellEffect {
 public:
     this(int id, int boundary, string fileName)
     {
-        super(id, boundary, "flowStateCopyFromHistory");
-        fhistory = new FlowHistory(fileName);
-        my_fs = new FlowState(GlobalConfig.gmodel_master);
+        super(id, boundary, "synthesiseFlowState");
+        sfs = new SyntheticFlowState(fileName);
     }
 
     override string toString() const
     {
-        return format("flowStateCopyFromHistory(filename=\"%s\")", fhistory.fileName);
+        return format("synthesiseFlowState(filename=\"%s\")", sfs.fileName);
     }
 
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-	throw new Error("GhostCellFlowStateCopyFromHistory.apply_for_interface_unstructured_grid() not yet implemented");
+	throw new Error("GhostCellSynthesiseFlowState.apply_for_interface_unstructured_grid() not yet implemented");
     }
 
     // not @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        FVCell ghost0;
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
-        fhistory.set_flowstate(my_fs, t, gmodel);
         foreach (i, f; bc.faces) {
-            ghost0 = (bc.outsigns[i] == 1) ? f.right_cell : f.left_cell;
-            ghost0.fs.copy_values_from(my_fs);
+            auto ghost = (bc.outsigns[i] == 1) ? f.right_cell : f.left_cell;
+            auto pos = ghost.pos[0];
+            sfs.set_flowstate(ghost.fs, t, pos.x, pos.y, pos.z, gmodel);
         }
     } // end apply_unstructured_grid()
 
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-	throw new Error("GhostCellFlowStateCopyFromHistory.apply_for_interface_structured_grid() not yet implemented");
+	throw new Error("GhostCellSynthesiseFlowState.apply_for_interface_structured_grid() not yet implemented");
     }
 
     // not @nogc
@@ -63,16 +66,15 @@ public:
     {
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
-        fhistory.set_flowstate(my_fs, t, gmodel);
         foreach (i, f; bc.faces) {
             foreach (n; 0 .. blk.n_ghost_cell_layers) {
                 auto ghost = (bc.outsigns[i] == 1) ? f.right_cells[n] : f.left_cells[n];
-                ghost.fs.copy_values_from(my_fs);
+                auto pos = ghost.pos[0];
+                sfs.set_flowstate(ghost.fs, t, pos.x, pos.y, pos.z, gmodel);
             }
         }
     } // end apply_structured_grid()
 
 private:
-    FlowHistory fhistory;
-    FlowState my_fs;
-} // end class GhostCellFlowStateCopyFromHistory
+    SyntheticFlowState sfs;
+} // end class GhostCellSynthesiseFlowState

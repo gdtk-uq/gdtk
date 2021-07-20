@@ -95,6 +95,10 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
         string fname = getJSONstring(jsonData, "filename", "");
         newGCE = new GhostCellFlowStateCopyFromHistory(blk_id, boundary, fname);
         break;
+    case "synthesise_flowstate":
+        string fname = getJSONstring(jsonData, "filename", "");
+        newGCE = new GhostCellSynthesiseFlowState(blk_id, boundary, fname);
+        break;
     case "extrapolate_copy":
         int xOrder = getJSONint(jsonData, "x_order", 0);
         newGCE = new GhostCellExtrapolateCopy(blk_id, boundary, xOrder);

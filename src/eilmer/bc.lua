@@ -100,6 +100,15 @@ function FlowStateCopyFromHistory:tojson()
    return str
 end
 
+SynthesiseFlowState = GhostCellEffect:new{filename=nil}
+SynthesiseFlowState.type = "synthesise_flowstate"
+function SynthesiseFlowState:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "filename": "%s"', self.filename)
+   str = str .. '}'
+   return str
+end
+
 FromUpwindCopy = GhostCellEffect:new{flowState=nil}
 FromUpwindCopy.type = "from_upwind_copy"
 function FromUpwindCopy:tojson()
@@ -259,6 +268,15 @@ end
 FlowStateCopyFromHistoryToInterface = BoundaryInterfaceEffect:new{filename=nil}
 FlowStateCopyFromHistoryToInterface.type = "flow_state_copy_from_history_to_interface"
 function FlowStateCopyFromHistoryToInterface:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "filename": "%s"', self.filename)
+   str = str .. '}'
+   return str
+end
+
+SynthesiseFlowStateToInterface = BoundaryInterfaceEffect:new{filename=nil}
+SynthesiseFlowStateToInterface.type = "synthesise_flow_state_to_interface"
+function SynthesiseFlowStateToInterface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
    str = str .. string.format(' "filename": "%s"', self.filename)
    str = str .. '}'
@@ -1149,6 +1167,30 @@ function InFlowBC_Transient:new(o)
    o.preReconAction = { FlowStateCopyFromHistory:new{filename=o.filename} }
    o.preSpatialDerivActionAtBndryFaces = {
       FlowStateCopyFromHistoryToInterface:new{filename=o.filename}
+   }
+   o.is_configured = true
+   return o
+end
+
+InFlowBC_Synthetic = BoundaryCondition:new()
+InFlowBC_Synthetic.type = "inflow_synthetic"
+function InFlowBC_Synthetic:new(o)
+   local flag = type(self)=='table' and self.type=='inflow_synthetic'
+   if not flag then
+      error("Make sure that you are using InFlowBC_Synthetic:new{}"..
+               " and not InFlowBC_Synthetic.new{}", 2)
+   end
+   o = o or {}
+   flag = checkAllowedNames(o, {"filename", "fileName", "label", "group"})
+   if not flag then
+      error("Invalid name for item supplied to InFlowBC_Synthetic constructor.", 2)
+   end
+   o = BoundaryCondition.new(self, o)
+   o.is_wall_with_viscous_effects = false
+   o.filename = o.filename or o.fileName
+   o.preReconAction = { SynthesiseFlowState:new{filename=o.filename} }
+   o.preSpatialDerivActionAtBndryFaces = {
+      SynthesiseFlowStateToInterface:new{filename=o.filename}
    }
    o.is_configured = true
    return o
