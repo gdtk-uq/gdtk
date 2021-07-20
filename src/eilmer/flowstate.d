@@ -688,7 +688,7 @@ public:
     } // end this()
 
     @nogc
-    void set_flowstate(FlowState fs, double t, double x, double y, double z, GasModel gm)
+    void set_flowstate(FlowState fs, double t, ref Vector3 pos, GasModel gm)
     {
         fs.vel.refx = base_velx;
         fs.vel.refy = base_vely;

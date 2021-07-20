@@ -51,8 +51,7 @@ public:
         auto gmodel = blk.myConfig.gmodel;
         foreach (i, f; bc.faces) {
             auto ghost = (bc.outsigns[i] == 1) ? f.right_cell : f.left_cell;
-            auto pos = ghost.pos[0];
-            sfs.set_flowstate(ghost.fs, t, pos.x, pos.y, pos.z, gmodel);
+            sfs.set_flowstate(ghost.fs, t, ghost.pos[0], gmodel);
         }
     } // end apply_unstructured_grid()
 
@@ -69,8 +68,7 @@ public:
         foreach (i, f; bc.faces) {
             foreach (n; 0 .. blk.n_ghost_cell_layers) {
                 auto ghost = (bc.outsigns[i] == 1) ? f.right_cells[n] : f.left_cells[n];
-                auto pos = ghost.pos[0];
-                sfs.set_flowstate(ghost.fs, t, pos.x, pos.y, pos.z, gmodel);
+                sfs.set_flowstate(ghost.fs, t, ghost.pos[0], gmodel);
             }
         }
     } // end apply_structured_grid()

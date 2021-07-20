@@ -415,7 +415,7 @@ public:
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
         foreach (i, f; bc.faces) {
-            sfs.set_flowstate(f.fs, t, f.pos.x, f.pos.y, f.pos.z, gmodel);
+            sfs.set_flowstate(f.fs, t, f.pos, gmodel);
         }
     }
 
@@ -432,7 +432,7 @@ public:
         auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
-            sfs.set_flowstate(f.fs, t, f.pos.x, f.pos.y, f.pos.z, gmodel);
+            sfs.set_flowstate(f.fs, t, f.pos, gmodel);
         }
     } // end apply_structured_grid()
 
