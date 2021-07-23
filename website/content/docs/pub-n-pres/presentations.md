@@ -20,6 +20,10 @@ that the finer details of user input may change over time.
 These slides are not updated, but rather serve as historical record of activities.
 Instead, check the User Guide for the definitive user input.
 
+- [Simulating Re-entry Flows with Eilmer 4](/pdfs/nng-uqtum-seminar-07-2021.pdf), 21 July 2021.
+  NNG seminar on performing hypervelocity simulations of blunt bodies with Eilmer.
+  Focuses on the new steady state solver, using an example calculation from the Electron Transpiration Cooling project.
+
 - [An Introduction to Pitot3](/pdfs/cmj-cfh-talk-07-2021.pdf), 08 July 2021.  
   CMJ seminar on the Pitot3 code for estimating operating conditions in impulse facilities.
   Chris tells the story of the code development and describes how the code works.

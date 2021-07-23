@@ -127,6 +127,7 @@ presentations:
 	rsync -av $(DGD_DOC)/presentations/2021-05-cfh-seminar-kd/presentation.pdf static/pdfs/kad-cfh-seminar-05-2021.pdf
 	rsync -av $(DGD_DOC)/presentations/2021-05-cfh-seminar-nng/talk.pdf static/pdfs/nng-cfh-seminar-05-2021.pdf
 	rsync -av $(DGD_DOC)/presentations/2021-07-cfh-seminar-cmj/james-cfh-talk-2021.pdf static/pdfs/cmj-cfh-talk-07-2021.pdf
+	rsync -av $(DGD_DOC)/presentations/2021-07-uqtum-seminar-nng/talk.pdf static/pdfs/nng-uqtum-seminar-07-2021.pdf
 
 theses:
 	- mkdir -p static/pdfs
