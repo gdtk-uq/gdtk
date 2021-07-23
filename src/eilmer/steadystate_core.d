@@ -1979,6 +1979,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
     }
     beta = sqrt(beta);
+    number beta0 = beta;
     g0[0] = beta;
     foreach (blk; parallel(localFluidBlocks,1)) {
         foreach (k; 0 .. blk.nvars) {
@@ -2220,7 +2221,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             // DEBUG:
             //      writefln("OUTER: restart-count= %d iteration= %d, resid= %e", r, j, resid);
             nIters = to!int(iterCount);
-            linSolResid = (resid/beta).re;
+            linSolResid = (resid/beta0).re;
             if ( resid <= outerTol ) {
                 m = j+1;
                 // DEBUG:
@@ -2339,6 +2340,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             nm.bbla.dot(blk.V, blk.nvars, m+1, blk.g1, blk.r0);
         }
 
+        /*
         // apply scaling
         foreach (blk; parallel(localFluidBlocks,1)) {
             size_t nturb = blk.myConfig.turb_model.nturb;
@@ -2367,6 +2369,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 cellCount += nConserved;
             }
         }
+        */
 
         mixin(dot_over_blocks("beta", "r0", "r0"));
         version(mpi_parallel) {
