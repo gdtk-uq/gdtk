@@ -1,6 +1,7 @@
 -- Helium ported from Rowan's He.lua file in the cfcfd3 collection
 -- PJ, 2017-05-24
 db.He = {}
+db.He.type = "atom"
 db.He.atomicConstituents = {He=1,}
 db.He.charge = 0
 db.He.M = {
