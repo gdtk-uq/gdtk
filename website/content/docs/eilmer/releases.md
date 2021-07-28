@@ -13,36 +13,50 @@ weight: 15
 toc: true
 ---
 
-The Eilmer project uses a rolling release model.
-You can keep up with the latest features and bug fixes by tracking the development
-in the bitbucket repository.
-We recommend this for advanced users or those that require developmental and
-experimental feature sets.
+The Eilmer project is active and the code is under constant development.
+You can follow this cutting edge development work by checking out
+the master branch of the repository, and performing frequent updates with git pull.
+We try to ensure that the latest revisions are ready for general use.
+We recommend this mode of code updates for advanced users or those
+interested in the advanced new feature sets.
+This type of release mode is known as a rolling release, and we offer
+this as one way of using the toolkit.
 
-We also offer stable releases.
-Our model of a stable release is a social contract rather than a software engineering contract.
-That social contract is basically a list of the features we consider stable and well-tested for general use.
-More importantly, it is the list of features for which documentation is available
-and we are willing and ready to support with bug fixes.
+We also offer numbered "release versions".
+These are snapshots of the code's history that do not get altered over time.
+Each release comes with a list of officially supported features;
+those are shown on this webpage.
+Each feature in the list is an item that we consider to be well tested
+and has good supporting documentation.
+These are features we are happy to support in the long term.
+If you only require the capabilities on the supported list,
+you should consider using a numbered release version.
 
-Why do we have this model?
-Eilmer is a simulation code under constant development.
+
+## Why do we have this two-mode release model?
+
+Eilmer has a large collection of features, because, well, hypersonic flows have a large
+range of pertinent physics to model.
 Some features are bleeding-edge, some features are experimental, some features lack documentation,
 and some features are still buggy.
-If you want to use these experimental features, we request patience
-and understanding on the part of the users.
-It won't be possible for us to have complete, bug-free, documented code on
-all interesting features --- but we don't necessarily want to hold you back from using them.
-If you fall into this category, be sure to keep up with the repository code on a regular basis.
+This acknowledges that new model development needs time to mature and undergo real-world testing.
+On the other hand, we have pieces of the code that have been battle-hardened over 30 years.
+This leads to a spectrum of feature-readiness that covers a wide range of usability,
+with some features being extremely experimental (read: unstable) and others as reliable
+as they practicably could be.
 
-If you are new to the code or prefer to stick with a set of stable features,
-then this leads us to the concept of a "release version".
-For each release, there will be a set of features that we consider stable, well tested
-and well documented.
-We are confident about supporting users with these features and will try to jump on any
-identified bugs as quickly as possible.
+We need to convey this information about feature readiness to our users.
+We have decided to use numbered releases as that mechanism to convey the maturity
+of the releases.
+In particular, the list of features that accompanies each release are the officially
+supported features.
+You can expect these features to work and expect prompt bug fixes if any issues aries.
+The other features of the code are still available for use, but should be considered
+experimental.
+These come with a *caveat emptor*: bug fixes are lower priority in our development
+schedule and documentation may not be complete as the feature development is evolving.
 
-This page will document the set of features supported in each release.
+This page will document the set of features officially supported in each release.
 
 ## Version 4.0
 
