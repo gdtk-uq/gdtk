@@ -7,7 +7,10 @@ Date: 2021-07-04
 The website is built with Hugo using Doks theme. The Doks theme itself
 makes use of Node.js to do some of the build.
 
-1. Install hugo on your system.
+1. Install hugo on your system. You will need the "extended" version.
+   The package maintainers seem to include extended version by default.
+   If you are grabbing the release binaries, scroll far enough down
+   to grab the extended version.
 
 2. Install Node.js on your system.
 
