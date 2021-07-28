@@ -58,15 +58,25 @@ schedule and documentation may not be complete as the feature development is evo
 
 This page will document the set of features officially supported in each release.
 
-## Version 4.0
+## Version 4.0.0
 
-To checkout this version:
+**Release date: 2021-07-29**
 
-    TO COMPLETE WHEN TAGGED
+If you **do not** already have a copy of the repository, first clone it:
 
-  
+    git clone https://bitbucket.org/cfcfd/dgd-git dgd
 
-Capabilities/features supported in v4.0.
+If you **do** have a copy of the repository, get it up to date:
+
+    cd dgd
+    git pull 
+
+From **within** the `dgd` directory, checkout this verstion:
+
+    git checkout v4.0.0
+
+
+Capabilities/features supported in `v4.0.0`.
 
 + transient time-stepping
   + Euler
