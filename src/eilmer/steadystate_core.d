@@ -741,8 +741,13 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         cell.decode_conserved(0, 1, 0.0);
                     }
                     catch (FlowSolverException e) {
-                        writefln("Failed attempt %d: dt= %e", attempt, dt);
-                        writeln("pos: ", cell.pos[0].x, ", ", cell.pos[0].y, ", ", cell.pos[0].z);
+                        writeln("---- :: FAILED CELL :: ----");
+                        writefln("attempt: %d", attempt);
+                        writefln("id: %d    block: %d    dt: %e", cell.id, blk.id, dt.re);
+                        writefln("location: [%e, %e, %e]", cell.pos[0].x.re, cell.pos[0].y.re, cell.pos[0].z.re);
+                        writefln("linear system residual: %e", linSolResid.re);
+                        writefln("krylov searches: %d    restarts: %d", nIters, nRestarts);
+                        writeln("msg: ", e.message);
                         failedAttempt = 1;
                     }
                     cellCount += nConserved;
