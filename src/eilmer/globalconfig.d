@@ -955,6 +955,8 @@ final class GlobalConfig {
     // There are another couple of reconstruction-control parameters
     // further down in the viscous effects parameters.
     //
+    shared static int nsteps_of_chemistry_ramp = -1;
+    //
     // Set the tolerance to shear when applying the adaptive flux calculator.
     // We don't want EFM to be applied in situations of significant shear.
     // The shear value is computed as the tangential-velocity difference across an interface
@@ -1251,6 +1253,7 @@ public:
     int freeze_limiter_on_step;
     bool use_extended_stencil;
     double venkat_K_value;
+    int nsteps_of_chemistry_ramp;
     double shear_tolerance;
     double M_inf;
     double compression_tolerance;
@@ -1397,6 +1400,7 @@ public:
         freeze_limiter_on_step = GlobalConfig.freeze_limiter_on_step;
         use_extended_stencil = GlobalConfig.use_extended_stencil;
         venkat_K_value = GlobalConfig.venkat_K_value;
+        nsteps_of_chemistry_ramp = GlobalConfig.nsteps_of_chemistry_ramp;
         shear_tolerance = GlobalConfig.shear_tolerance;
         M_inf = GlobalConfig.M_inf;
         compression_tolerance = GlobalConfig.compression_tolerance;
@@ -1744,6 +1748,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_int("freeze_limiter_on_step", "freeze_limiter_on_step"));
     mixin(update_bool("use_extended_stencil", "use_extended_stencil"));
     mixin(update_double("venkat_K_value", "venkat_K_value"));
+    mixin(update_int("nsteps_of_chemistry_ramp", "nsteps_of_chemistry_ramp"));
     mixin(update_double("shear_tolerance", "shear_tolerance"));
     mixin(update_int("shock_detector_smoothing", "shock_detector_smoothing"));
     mixin(update_bool("frozen_shock_detector", "frozen_shock_detector"));
@@ -1822,6 +1827,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  freeze_limiter_on_step: ", GlobalConfig.freeze_limiter_on_step);
         writeln("  use_extended_stencil: ", GlobalConfig.use_extended_stencil);
         writeln("  venkat_K_value: ", GlobalConfig.venkat_K_value);
+        writeln("  nsteps_of_chemistry_ramp: ", GlobalConfig.nsteps_of_chemistry_ramp);
         writeln("  extrema_clipping: ", GlobalConfig.extrema_clipping);
         writeln("  interpolate_in_local_frame: ", GlobalConfig.interpolate_in_local_frame);
         writeln("  shear_tolerance: ", GlobalConfig.shear_tolerance);

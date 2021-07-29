@@ -661,6 +661,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     double tau;
     double sigma;
     foreach (step; startStep .. nsteps+1) {
+        SimState.step = step;
         if ( (step/GlobalConfig.control_count)*GlobalConfig.control_count == step ) {
             read_control_file(); // Reparse the time-step control parameters occasionally.
         }
@@ -1323,7 +1324,8 @@ void evalRHS(double pseudoSimTime, int ftl)
             if (blk.myConfig.reacting) {
                 cell.add_thermochemical_source_vector(blk.thermochem_conc,
                                                       blk.thermochem_rates,
-                                                      blk.thermochem_source);
+                                                      blk.thermochem_source,
+                                                      SimState.step);
             }
             if (blk.myConfig.udf_source_terms) {
                 size_t i_cell = cell.id;

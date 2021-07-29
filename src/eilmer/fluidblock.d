@@ -1382,7 +1382,8 @@ public:
                 //       this saves us a lot of unnecessary computations
                 cell.add_thermochemical_source_vector(thermochem_conc,
                                                       thermochem_rates,
-                                                      thermochem_source);
+                                                      thermochem_source,
+                                                      SimState.step);
             }
             if (myConfig.udf_source_terms) {
                 size_t i_cell = cell.id;
@@ -1661,7 +1662,7 @@ public:
             c.add_viscous_source_vector();
         } // end if viscous
         if (myConfig.reacting && myConfig.chemistry_update == ChemistryUpdateMode.integral) {
-            c.add_thermochemical_source_vector(thermochem_conc, thermochem_rates, thermochem_source);
+            c.add_thermochemical_source_vector(thermochem_conc, thermochem_rates, thermochem_source, SimState.step);
         }
         if (myConfig.udf_source_terms) { c.add_udf_source_vector(); }
         c.time_derivatives(gtl, ftl);
