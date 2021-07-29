@@ -49,7 +49,10 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
     switch ( bfeType ) {
     case "const_flux":
         auto flowstate = new FlowState(jsonData["flowstate"], gmodel);
-        newBFE = new BFE_ConstFlux(blk_id, boundary, flowstate);
+        double x0 = getJSONdouble(jsonData, "x0", 0.0);
+        double y0 = getJSONdouble(jsonData, "y0", 0.0);
+        double r = getJSONdouble(jsonData, "r", 0.0);
+        newBFE = new BFE_ConstFlux(blk_id, boundary, flowstate, x0, y0, r);
         break;
     case "simple_outflow_flux":
         newBFE = new BFE_SimpleOutflowFlux(blk_id, boundary);
@@ -370,18 +373,23 @@ public:
     FlowState fstate;
 
 private:
+    // [TODO] 2021-07-29 PJ sees no real use for the following private variables
+    // since they seem to be just copies of fstate, which we keep anyway.
     number[] _massf, _ev;
     number _e, _rho, _p, _u, _v;
     FlowState _fstate;
     int _nsp, _nmodes;
+public:
+    // The shock-fitting functions need to see the following parameters.
+    double x0, y0, r; // conical-flow parameters
 
 public:
-    this(int id, int boundary, in FlowState fstate)
+    this(int id, int boundary, in FlowState fstate, double x0, double y0, double r)
     {
         /+ We only need to gather the freestream values once at
          + the start of simulation since we are interested in
          + applying a constant flux as the incoming boundary condition.
-         + Note that, at this time, the gmodel held by the block is notavailable.
+         + Note that, at this time, the gmodel held by the block is not available.
         +/
         auto gmodel = GlobalConfig.gmodel_master;
         super(id, boundary, "Const_Flux");
@@ -406,6 +414,9 @@ public:
             }
         }
         this.fstate = fstate.dup();
+        this.x0 = x0;
+        this.y0 = y0;
+        this.r = r;
     }
 
     override string toString() const
@@ -444,10 +455,27 @@ private:
     void apply_to_single_face(FVInterface f)
     {
         auto cqi = blk.myConfig.cqi;
+        // Start by assuming uniform, parallel flow.
+        number u = _u;
+        number v = _v;
+        if (r > 0.0) {
+            // (Approximate) conical inflow.
+            number dx = f.pos.x - x0;
+            number dy = f.pos.y - y0;
+            // For a first-approximation to a comical flow,
+            // build the velocity components from the angular position of the face
+            // and the x-component of the nominal flowstate velocity.
+            number hypot = sqrt(dx*dx + dy*dy);
+            u = _u * dx/hypot;
+            v = _u * dy/hypot;
+            // Note that we don't adjust the other flow properties,
+            // assuming that the position of the face is close to the
+            // nominal radial profile position.
+        }
         // for a moving grid we need vel relative to the interface
-        number _u_rel = _u - f.gvel.x;
-        number _v_rel = _v - f.gvel.y;
-        number massFlux = _rho * (_u_rel*f.n.x + _v_rel*f.n.y);
+        number u_rel = u - f.gvel.x;
+        number v_rel = v - f.gvel.y;
+        number massFlux = _rho * (u_rel*f.n.x + v_rel*f.n.y);
         f.F.vec[cqi.mass] = massFlux;
         /++ when the boundary is moving we use the relative velocity
          + between the fluid and the boundary interface to determine
@@ -459,13 +487,13 @@ private:
          + on its velocity. Since we we want this momentum flux in global
          + coordinates there is no need to rotate the velocity.
          ++/
-        f.F.vec[cqi.xMom] = _p * f.n.x + _u*massFlux;
-        f.F.vec[cqi.yMom] = _p * f.n.y + _v*massFlux;
+        f.F.vec[cqi.xMom] = _p * f.n.x + u*massFlux;
+        f.F.vec[cqi.yMom] = _p * f.n.y + v*massFlux;
         if (cqi.threeD) {
             f.F.vec[cqi.zMom] = 0.0; // [TODO]: Kyle, think about z component.
             assert(0, "[FIX-ME] Not yet implemented for 3D");
         }
-        f.F.vec[cqi.totEnergy] = massFlux * (_e + 0.5*(_u*_u+_v*_v)) + _p*(_u*f.n.x+_v*f.n.y);
+        f.F.vec[cqi.totEnergy] = massFlux * (_e + 0.5*(u*u+v*v)) + _p*(u*f.n.x+v*f.n.y);
         version(multi_species_gas) {
             if (cqi.n_species > 1) {
                 foreach (_isp; 0 .. _nsp){ f.F.vec[cqi.species+_isp] = massFlux * _massf[_isp]; }

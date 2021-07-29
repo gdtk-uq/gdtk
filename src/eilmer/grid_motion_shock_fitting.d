@@ -65,7 +65,11 @@ void compute_vtx_velocities_for_sf(FBArray fba)
     auto blk = cast(SFluidBlock) globalBlocks[blkId];
     auto bc = cast(BFE_ConstFlux) blk.bc[Face.west].postConvFluxAction[0];
     if (!bc) { throw new Error("Did not find an appropriate boundary-face effect."); }
+    if (bc.r > 0.0 && GlobalConfig.dimensions == 3) {
+        throw new Error("Conical inflow for shock fitting is only for 2D flows, presently.");
+    }
     auto inflow = bc.fstate;
+    Vector3 inflow_vel = inflow.vel;
     bool allow_reconstruction = GlobalConfig.shock_fitting_allow_flow_reconstruction;
     // Work across all west-most blocks in the array, storing the wave speeds at face centres.
     foreach (jb; 0 .. fba.njb) {
@@ -79,6 +83,20 @@ void compute_vtx_velocities_for_sf(FBArray fba)
                 foreach (k; 0 .. blk.nkc) {
                     foreach (j; 0 .. blk.njc) {
                         auto f = blk.get_ifi(0,j,k);
+                        if (bc.r > 0.0) {
+                            // We want to adjust the inflow velocities to be conical.
+                            number dx = f.pos.x - bc.x0;
+                            number dy = f.pos.y - bc.y0;
+                            // For a first-approximation to a comical flow,
+                            // build the velocity components from the angular position of the face
+                            // and the x-component of the nominal flowstate velocity.
+                            number hypot = sqrt(dx*dx + dy*dy);
+                            inflow.vel.refx = inflow_vel.x * dx/hypot;
+                            inflow.vel.refy = inflow_vel.x * dy/hypot;
+                            // Note that we don't adjust the other flow properties,
+                            // assuming that the position of the face is close to the
+                            // nominal radial profile position.
+                        }
                         if (allow_reconstruction) {
                             // Reconstruct the flow state just behind the shock from
                             // the flow states in the first two cells.
