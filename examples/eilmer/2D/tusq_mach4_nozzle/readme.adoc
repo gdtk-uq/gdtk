@@ -1,0 +1,11 @@
+== 2D/tusq_mach4_nozzle
+
+This example shows the TUSQ Mach4 nozzle flow.
+This example is primarily demonstrating the gmsh python API
+capabilities and how to use these with eilmer.
+The left boundary is stagnation boundary condition.
+The right boundary is a fixed pressure out boundary condition.
+
+
+
+
