@@ -1208,16 +1208,21 @@ function InFlowBC_ConstFlux:new(o)
                " and not InFlowBC_ConstFlux.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
+   flag = checkAllowedNames(o, {"flowState", "flowCondition", "x0", "y0", "r", "label", "group"})
    if not flag then
       error("Invalid name for item supplied to InFlowBC_ConstFlux constructor.", 2)
    end
    if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name
+   -- Look for conical-flow parameters.
+   o.x0 = o.x0 or 0.0
+   o.y0 = o.y0 or 0.0
+   o.r = o.r or 0.0
+   -- Configure parameters and actions.
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.convective_flux_computed_in_bc = true
    o.ghost_cell_data_available = false
-   o.postConvFluxAction = { ConstFlux:new{flowState=o.flowState} }
+   o.postConvFluxAction = { ConstFlux:new{flowState=o.flowState, x0=o.x0, y0=o.y0, r=o.r} }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o
