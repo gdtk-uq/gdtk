@@ -722,12 +722,13 @@ class SourceFlow {
     // See PJ's workbook pages 24-27, 2021-07-29.
 
 public:
-    double r;
-    double p, rho, u, v;
-    double dfdrho, dfdu;
+    double r;  // Distance from virtual origin till nominal flow condition.
+    double p, rho, u, v; // Nominal flow condition.
+    double dfdrho, dfdu; // Sensitivities for EOS p = f(rho, u)
 
     this(GasModel gmodel, const(FlowState) fs, double r)
     {
+        this.r = r;
         // Keep a copy of the interesting parts of the nominal state.
         p = fs.gas.p.re;
         rho = fs.gas.rho.re;
@@ -736,6 +737,9 @@ public:
         // Derivatives of EOS that are needed when computing increments later.
         auto gs = new GasState(fs.gas);
         gmodel.update_thermo_from_rhou(gs);
+        if (fabs(gs.p.re - p)/p > 1.0e-5) {
+            throw new Error("Pressure mismatch in gas states that should be equal. What's up?");
+        }
         double drho = 1.001 * rho;
         gs.rho += drho;
         gmodel.update_thermo_from_rhou(gs);
@@ -751,15 +755,14 @@ public:
     {
         // Compute flow-state increments for a point at a slightly different distance
         // from the virtual origin.
-        double drho, dv, dp, du;
         double dAonA = 2.0*dr/r;
         double q1 = dfdrho*rho + dfdu*p/rho;
         double denom = rho*v*v - q1;
         double q2 = dAonA/denom;
-        drho = -rho*rho*v*v*q2;
-        dv = v*q1*q2;
-        dp = -rho*v*v*q1*q2;
-        du = -p*v*v*q2;
+        double drho = -rho*rho*v*v*q2;
+        double dv = v*q1*q2;
+        double dp = -rho*v*v*q1*q2;
+        double du = -p*v*v*q2;
         return [drho, dv, dp, du];
     }
 } // end SourceFlow
