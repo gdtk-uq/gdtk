@@ -713,3 +713,53 @@ private:
     double base_p;
     double base_T;
 } // end SyntheticFlow
+
+
+class SourceFlow {
+    // For computing flow state increments when sampling flow from a conical nozzle.
+    // We assume that the sample points are nearby the nominal distance from the
+    // virtual origin of the source flow.
+    // See PJ's workbook pages 24-27, 2021-07-29.
+
+public:
+    double r;
+    double p, rho, u, v;
+    double dfdrho, dfdu;
+
+    this(GasModel gmodel, const(FlowState) fs, double r)
+    {
+        // Keep a copy of the interesting parts of the nominal state.
+        p = fs.gas.p.re;
+        rho = fs.gas.rho.re;
+        u = gmodel.internal_energy(fs.gas).re;
+        v = fs.vel.x.re;
+        // Derivatives of EOS that are needed when computing increments later.
+        auto gs = new GasState(fs.gas);
+        gmodel.update_thermo_from_rhou(gs);
+        double drho = 1.001 * rho;
+        gs.rho += drho;
+        gmodel.update_thermo_from_rhou(gs);
+        dfdrho = (gs.p.re - p) / drho;
+        double du = 1.001 * u;
+        gs.rho = rho; gs.u += du;
+        gmodel.update_thermo_from_rhou(gs);
+        dfdu = (gs.p.re - p) / du;
+    }
+
+    @nogc
+    double[4] get_rho_v_p_u_increments(double dr)
+    {
+        // Compute flow-state increments for a point at a slightly different distance
+        // from the virtual origin.
+        double drho, dv, dp, du;
+        double dAonA = 2.0*dr/r;
+        double q1 = dfdrho*rho + dfdu*p/rho;
+        double denom = rho*v*v - q1;
+        double q2 = dAonA/denom;
+        drho = -rho*rho*v*v*q2;
+        dv = v*q1*q2;
+        dp = -rho*v*v*q1*q2;
+        du = -p*v*v*q2;
+        return [drho, dv, dp, du];
+    }
+} // end SourceFlow

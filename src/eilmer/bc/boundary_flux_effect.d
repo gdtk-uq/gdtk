@@ -5,6 +5,7 @@
  * Date: 2015-05-07
  * Author: KD added ConstFlux
  * Date: 2015-11-10
+ * 2021-07-29 PJ rework ConstFlux
  **/
 
 module bc.boundary_flux_effect;
@@ -371,52 +372,30 @@ public:
 class BFE_ConstFlux : BoundaryFluxEffect {
 public:
     FlowState fstate;
-
-private:
-    // [TODO] 2021-07-29 PJ sees no real use for the following private variables
-    // since they seem to be just copies of fstate, which we keep anyway.
-    number[] _massf, _ev;
-    number _e, _rho, _p, _u, _v;
-    FlowState _fstate;
-    int _nsp, _nmodes;
-public:
+    SourceFlow sflow;
     // The shock-fitting functions need to see the following parameters.
     double x0, y0, r; // conical-flow parameters
 
 public:
     this(int id, int boundary, in FlowState fstate, double x0, double y0, double r)
     {
+        super(id, boundary, "Const_Flux");
         /+ We only need to gather the freestream values once at
          + the start of simulation since we are interested in
          + applying a constant flux as the incoming boundary condition.
          + Note that, at this time, the gmodel held by the block is not available.
         +/
         auto gmodel = GlobalConfig.gmodel_master;
-        super(id, boundary, "Const_Flux");
-        _u = fstate.vel.x;
-        _v = fstate.vel.y;
-        // [TODO]: Kyle, think about z component.
-        _p = fstate.gas.p;
-        _rho = fstate.gas.rho;
-        _e = gmodel.internal_energy(fstate.gas);
-        _nsp = gmodel.n_species;
-        version(multi_species_gas) {
-            _massf.length = _nsp;
-            for (int _isp=0; _isp < _nsp; _isp++) {
-                _massf[_isp] = fstate.gas.massf[_isp];
-            }
-        }
-        _nmodes = gmodel.n_modes;
-        version(multi_T_gas) {
-            _ev.length = _nmodes;
-            for (int n=0; n<_nmodes; n++ ){
-                _ev[n] = fstate.gas.u_modes[n];
-            }
-        }
         this.fstate = fstate.dup();
         this.x0 = x0;
         this.y0 = y0;
         this.r = r;
+        sflow = new SourceFlow(gmodel, fstate, r);
+        //
+        auto myblk = cast(FluidBlock) globalBlocks[id];
+        if (myblk.omegaz != 0.0) {
+            throw new Error("BFE_ConstFlux not implemented for rotating frame.");
+        }
     }
 
     override string toString() const
@@ -456,26 +435,29 @@ private:
     {
         auto cqi = blk.myConfig.cqi;
         // Start by assuming uniform, parallel flow.
-        number u = _u;
-        number v = _v;
+        number p = fstate.gas.p;
+        number rho = fstate.gas.rho;
+        auto gmodel = blk.myConfig.gmodel;
+        number u = gmodel.internal_energy(fstate.gas);
+        number velx = fstate.vel.x;
+        number vely = fstate.vel.y;
         if (r > 0.0) {
             // (Approximate) conical inflow.
-            number dx = f.pos.x - x0;
-            number dy = f.pos.y - y0;
-            // For a first-approximation to a comical flow,
-            // build the velocity components from the angular position of the face
-            // and the x-component of the nominal flowstate velocity.
-            number hypot = sqrt(dx*dx + dy*dy);
-            u = _u * dx/hypot;
-            v = _u * dy/hypot;
-            // Note that we don't adjust the other flow properties,
-            // assuming that the position of the face is close to the
-            // nominal radial profile position.
+            double dx = f.pos.x.re - x0;
+            double dy = f.pos.y.re - y0;
+            double hypot = sqrt(dx*dx + dy*dy);
+            double[4] deltas = sflow.get_rho_v_p_u_increments(hypot-r);
+            rho += deltas[0];
+            double v = fstate.vel.x.re + deltas[1];
+            velx = v * dx/hypot;
+            vely = v * dy/hypot;
+            p += deltas[2];
+            u += deltas[3];
         }
         // for a moving grid we need vel relative to the interface
-        number u_rel = u - f.gvel.x;
-        number v_rel = v - f.gvel.y;
-        number massFlux = _rho * (u_rel*f.n.x + v_rel*f.n.y);
+        number velx_rel = velx - f.gvel.x;
+        number vely_rel = vely - f.gvel.y;
+        number massFlux = rho * (velx_rel*f.n.x + vely_rel*f.n.y);
         f.F.vec[cqi.mass] = massFlux;
         /++ when the boundary is moving we use the relative velocity
          + between the fluid and the boundary interface to determine
@@ -487,21 +469,21 @@ private:
          + on its velocity. Since we we want this momentum flux in global
          + coordinates there is no need to rotate the velocity.
          ++/
-        f.F.vec[cqi.xMom] = _p * f.n.x + u*massFlux;
-        f.F.vec[cqi.yMom] = _p * f.n.y + v*massFlux;
+        f.F.vec[cqi.xMom] = p*f.n.x + velx*massFlux;
+        f.F.vec[cqi.yMom] = p*f.n.y + vely*massFlux;
         if (cqi.threeD) {
             f.F.vec[cqi.zMom] = 0.0; // [TODO]: Kyle, think about z component.
             assert(0, "[FIX-ME] Not yet implemented for 3D");
         }
-        f.F.vec[cqi.totEnergy] = massFlux * (_e + 0.5*(u*u+v*v)) + _p*(u*f.n.x+v*f.n.y);
+        f.F.vec[cqi.totEnergy] = massFlux*(u + 0.5*(velx*velx+vely*vely)) + p*(velx*f.n.x+vely*f.n.y);
         version(multi_species_gas) {
             if (cqi.n_species > 1) {
-                foreach (_isp; 0 .. _nsp){ f.F.vec[cqi.species+_isp] = massFlux * _massf[_isp]; }
+                foreach (i; 0 .. cqi.n_species){ f.F.vec[cqi.species+i] = massFlux*fstate.gas.massf[i]; }
             }
         }
         version(multi_T_gas) {
-            foreach (n; 0 .. _nmodes){
-                f.F.vec[cqi.modes+n] = massFlux * _ev[n];
+            foreach (i; 0 .. cqi.n_modes){
+                f.F.vec[cqi.modes+i] = massFlux*fstate.gas.u_modes[i];
             }
         }
     } // end apply_to_single_face()
