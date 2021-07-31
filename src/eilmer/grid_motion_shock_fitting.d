@@ -61,16 +61,20 @@ void compute_vtx_velocities_for_sf(FBArray fba)
     //
     // Start by computing wave speeds and rail directions at all west-most faces.
     //
+    bool allow_reconstruction = GlobalConfig.shock_fitting_allow_flow_reconstruction;
     int blkId = fba.blockArray[0][0][0];
     auto blk = cast(SFluidBlock) globalBlocks[blkId];
     auto bc = cast(BFE_ConstFlux) blk.bc[Face.west].postConvFluxAction[0];
     if (!bc) { throw new Error("Did not find an appropriate boundary-face effect."); }
-    if (bc.r > 0.0 && GlobalConfig.dimensions == 3) {
-        throw new Error("Conical inflow for shock fitting is only for 2D flows, presently.");
+    auto nominal_inflow = bc.fstate;
+    auto inflow = bc.fstate.dup(); // Start with a copy that we will partially overwrite.
+    SourceFlow sourceFlow = bc.sflow;
+    if (bc.r > 0.0) {
+        if (GlobalConfig.dimensions == 3) {
+            throw new Error("Conical inflow for shock fitting is only for 2D axisymmetric flows.");
+        }
+        sourceFlow = bc.sflow;
     }
-    auto inflow = bc.fstate;
-    Vector3 inflow_vel = inflow.vel;
-    bool allow_reconstruction = GlobalConfig.shock_fitting_allow_flow_reconstruction;
     // Work across all west-most blocks in the array, storing the wave speeds at face centres.
     foreach (jb; 0 .. fba.njb) {
         int j0 = 0; if (jb > 0) { foreach(j; 0 .. jb) { j0 += fba.njcs[j]; } }
@@ -83,19 +87,26 @@ void compute_vtx_velocities_for_sf(FBArray fba)
                 foreach (k; 0 .. blk.nkc) {
                     foreach (j; 0 .. blk.njc) {
                         auto f = blk.get_ifi(0,j,k);
+                        inflow.gas.p = nominal_inflow.gas.p;
+                        inflow.gas.rho = nominal_inflow.gas.rho;
+                        inflow.gas.u = nominal_inflow.gas.u;
+                        inflow.vel.refx = nominal_inflow.vel.x;
+                        inflow.vel.refy = nominal_inflow.vel.y;
+                        inflow.vel.refz = nominal_inflow.vel.z;
                         if (bc.r > 0.0) {
                             // We want to adjust the inflow velocities to be conical.
-                            number dx = f.pos.x - bc.x0;
-                            number dy = f.pos.y - bc.y0;
-                            // For a first-approximation to a comical flow,
-                            // build the velocity components from the angular position of the face
-                            // and the x-component of the nominal flowstate velocity.
-                            number hypot = sqrt(dx*dx + dy*dy);
-                            inflow.vel.refx = inflow_vel.x * dx/hypot;
-                            inflow.vel.refy = inflow_vel.x * dy/hypot;
-                            // Note that we don't adjust the other flow properties,
-                            // assuming that the position of the face is close to the
-                            // nominal radial profile position.
+                            double dx = f.pos.x.re - bc.x0;
+                            double dy = f.pos.y.re - bc.y0;
+                            double dz = f.pos.z.re - bc.z0;
+                            double hypot = sqrt(dx*dx + dy*dy + dz*dz);
+                            double[4] deltas = sourceFlow.get_rho_v_p_u_increments(hypot-bc.r);
+                            inflow.gas.rho += deltas[0];
+                            double v = nominal_inflow.vel.x.re + deltas[1];
+                            inflow.vel.refx = v * dx/hypot;
+                            inflow.vel.refy = v * dy/hypot;
+                            inflow.vel.refz = v * dz/hypot;
+                            inflow.gas.p += deltas[2];
+                            inflow.gas.u += deltas[3];
                         }
                         if (allow_reconstruction) {
                             // Reconstruct the flow state just behind the shock from
@@ -250,7 +261,7 @@ void compute_vtx_velocities_for_sf(FBArray fba)
         Vector3 v = fba.vtx_dir[0][k]; v.scale(fba.face_ws[0][k]); fba.vtx_vel[0][k].set(v);
         // Do Ian's upwind weighting for vertices between faces.
         // I think that Ian used the post-shock flow properties but,
-        // for the moment, use the free-stream properties in the Mach number weights.
+        // for the moment, use the nominal free-stream properties in the Mach number weights.
         // Across the shock the tangential velocity will be unchanged,
         // however, we use the free-stream sound speed because it is readily
         // available whereas Ian used the post-shock sound speed.
@@ -258,10 +269,10 @@ void compute_vtx_velocities_for_sf(FBArray fba)
         // fused with the boundary.
         foreach (j; 1 .. fba.njv-1) {
             Vector3 tA = fba.vtx_pos[j][k]; tA -= fba.face_pos[j-1][k]; tA.normalize();
-            number MA = dot(inflow.vel, tA) / inflow.gas.a;
+            number MA = dot(nominal_inflow.vel, tA) / nominal_inflow.gas.a;
             number wA = Mach_weighting(MA);
             Vector3 tB = fba.vtx_pos[j][k]; tB -= fba.face_pos[j][k]; tB.normalize();
-            number MB = dot(inflow.vel, tB) / inflow.gas.a;
+            number MB = dot(nominal_inflow.vel, tB) / nominal_inflow.gas.a;
             number wB = Mach_weighting(MB);
             number ws;
             if (fabs(wA+wB) > 0.0) {

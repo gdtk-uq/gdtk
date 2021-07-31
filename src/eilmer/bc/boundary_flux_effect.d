@@ -52,8 +52,9 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
         auto flowstate = new FlowState(jsonData["flowstate"], gmodel);
         double x0 = getJSONdouble(jsonData, "x0", 0.0);
         double y0 = getJSONdouble(jsonData, "y0", 0.0);
+        double z0 = getJSONdouble(jsonData, "z0", 0.0);
         double r = getJSONdouble(jsonData, "r", 0.0);
-        newBFE = new BFE_ConstFlux(blk_id, boundary, flowstate, x0, y0, r);
+        newBFE = new BFE_ConstFlux(blk_id, boundary, flowstate, x0, y0, z0, r);
         break;
     case "simple_outflow_flux":
         newBFE = new BFE_SimpleOutflowFlux(blk_id, boundary);
@@ -130,7 +131,8 @@ public:
     abstract void apply_unstructured_grid(double t, int gtl, int ftl);
     abstract void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f);
     abstract void apply_structured_grid(double t, int gtl, int ftl);
-} // end class BoundaryFluxEffect()
+} // end class BoundaryFluxEffect
+
 
 class BFE_EnergyFluxFromAdjacentSolid : BoundaryFluxEffect {
 public:
@@ -367,17 +369,18 @@ public:
         }
     }
     */
-}
+} // end class BFE_EnergyFluxFromAdjacentSolid
+
 
 class BFE_ConstFlux : BoundaryFluxEffect {
 public:
     FlowState fstate;
     SourceFlow sflow;
     // The shock-fitting functions need to see the following parameters.
-    double x0, y0, r; // conical-flow parameters
+    double x0, y0, z0, r; // conical-flow parameters
 
 public:
-    this(int id, int boundary, in FlowState fstate, double x0, double y0, double r)
+    this(int id, int boundary, in FlowState fstate, double x0, double y0, double z0, double r)
     {
         super(id, boundary, "Const_Flux");
         /+ We only need to gather the freestream values once at
@@ -389,6 +392,7 @@ public:
         this.fstate = fstate.dup();
         this.x0 = x0;
         this.y0 = y0;
+        this.z0 = z0;
         this.r = r;
         sflow = new SourceFlow(gmodel, fstate, r);
         //
@@ -441,23 +445,27 @@ private:
         number u = gmodel.internal_energy(fstate.gas);
         number velx = fstate.vel.x;
         number vely = fstate.vel.y;
+        number velz = (cqi.threeD) ? fstate.vel.z : to!number(0.0);
         if (r > 0.0) {
             // (Approximate) conical inflow.
             double dx = f.pos.x.re - x0;
             double dy = f.pos.y.re - y0;
-            double hypot = sqrt(dx*dx + dy*dy);
+            double dz = (cqi.threeD) ? f.pos.z.re - z0 : 0.0;
+            double hypot = sqrt(dx*dx + dy*dy + dz*dz);
             double[4] deltas = sflow.get_rho_v_p_u_increments(hypot-r);
             rho += deltas[0];
             double v = fstate.vel.x.re + deltas[1];
             velx = v * dx/hypot;
             vely = v * dy/hypot;
+            velz = (cqi.threeD) ? v * dz/hypot : 0.0;
             p += deltas[2];
             u += deltas[3];
         }
-        // for a moving grid we need vel relative to the interface
+        // For a moving grid, we need gas velocity relative to the interface.
         number velx_rel = velx - f.gvel.x;
         number vely_rel = vely - f.gvel.y;
-        number massFlux = rho * (velx_rel*f.n.x + vely_rel*f.n.y);
+        number velz_rel = velz - f.gvel.z;
+        number massFlux = rho * (velx_rel*f.n.x + vely_rel*f.n.y + velz_rel*f.n.z);
         f.F.vec[cqi.mass] = massFlux;
         /++ when the boundary is moving we use the relative velocity
          + between the fluid and the boundary interface to determine
@@ -472,13 +480,15 @@ private:
         f.F.vec[cqi.xMom] = p*f.n.x + velx*massFlux;
         f.F.vec[cqi.yMom] = p*f.n.y + vely*massFlux;
         if (cqi.threeD) {
-            f.F.vec[cqi.zMom] = 0.0; // [TODO]: Kyle, think about z component.
-            assert(0, "[FIX-ME] Not yet implemented for 3D");
+            f.F.vec[cqi.zMom] = p*f.n.z + velz*massFlux;
         }
-        f.F.vec[cqi.totEnergy] = massFlux*(u + 0.5*(velx*velx+vely*vely)) + p*(velx*f.n.x+vely*f.n.y);
+        f.F.vec[cqi.totEnergy] = massFlux*(u + 0.5*(velx*velx + vely*vely + velz*velz)) +
+            p*(velx*f.n.x + vely*f.n.y + velz*f.n.z);
         version(multi_species_gas) {
             if (cqi.n_species > 1) {
-                foreach (i; 0 .. cqi.n_species){ f.F.vec[cqi.species+i] = massFlux*fstate.gas.massf[i]; }
+                foreach (i; 0 .. cqi.n_species) {
+                    f.F.vec[cqi.species+i] = massFlux*fstate.gas.massf[i];
+                }
             }
         }
         version(multi_T_gas) {
@@ -489,6 +499,7 @@ private:
     } // end apply_to_single_face()
 
 } // end class BFE_ConstFlux
+
 
 class BFE_SimpleOutflowFlux : BoundaryFluxEffect {
 public:
