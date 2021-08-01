@@ -1,5 +1,7 @@
 #!/bin/bash
 # plot_heat_transfer.sh
+# Plot the heat transfer, as computed from cell-centre data
+# that has been extracted from a flow soution.
 
 # Get the flow data around the surface of the sphere.
 # This runs up the east boundary face of all blocks.

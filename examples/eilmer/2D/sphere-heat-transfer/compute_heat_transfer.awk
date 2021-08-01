@@ -1,5 +1,7 @@
 # compute_heat_transfer.awk
-
+# Calculate heat transfer from cell-centre data
+# that has been extracted from a flow soution.
+#
 BEGIN {
     R_sphere = 6.6e-3; # Radius of hemisphere
     T_wall = 296.0
@@ -13,7 +15,7 @@ NR > 1 {
     dr = r - R_sphere
     theta = atan2(y, -x); # hemisphere centred on (0,0) nose in -x direction
     theta_degrees = theta *180.0/3.14159
-    p = $9; T = $20; mu = $11; k = $12;
+    p = $9; T = $18; mu = $11; k = $12;
     q = k_wall * (T - T_wall)/dr
     if (q_stag < 0.0) { q_stag = q }
     print theta_degrees, q, q/q_stag
