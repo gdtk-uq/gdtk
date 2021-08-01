@@ -29,7 +29,6 @@ config.spatial_deriv_calc = "divergence"
 config.spatial_deriv_locn = "vertices"
 config.viscous_signal_factor = 0.1
 config.viscous_delay = 2 * body_flow_time
-config.flux_calc = "ausmdv"
 config.gasdynamic_update_scheme = "moving_grid_2_stage"
 config.grid_motion = "shock_fitting"
 config.shock_fitting_delay = 3 * body_flow_time
