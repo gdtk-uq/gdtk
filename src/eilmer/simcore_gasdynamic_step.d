@@ -401,7 +401,15 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
             }
             cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
 	}
-	local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+        try {
+            local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+        }  catch (Exception e) {
+            debug {
+                writefln("Exception thrown in count_invalid_cells: %s", e.msg);
+                writefln("  mpi_rank=%d", GlobalConfig.mpi_rank_for_local_task);
+            }
+            local_invalid_cell_count[i] = to!int(blk.cells.length);
+        }
     } // end foreach blk
     //
     int flagTooManyBadCells = 0;
@@ -670,7 +678,15 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
                 }
 		cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
 	    }
-	    local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+            try {
+                local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+            }  catch (Exception e) {
+                debug {
+                    writefln("Exception thrown in count_invalid_cells: %s", e.msg);
+                    writefln("  mpi_rank=%d", GlobalConfig.mpi_rank_for_local_task);
+                }
+                local_invalid_cell_count[i] = to!int(blk.cells.length);
+            }
 	} // end foreach blk
 	//
 	flagTooManyBadCells = 0;
@@ -1002,7 +1018,15 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     }
                     cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
                 } // end foreach cell
-                local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+                try {
+                    local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+                }  catch (Exception e) {
+                    debug {
+                        writefln("Exception thrown in count_invalid_cells: %s", e.msg);
+                        writefln("  mpi_rank=%d", GlobalConfig.mpi_rank_for_local_task);
+                    }
+                    local_invalid_cell_count[i] = to!int(blk.cells.length);
+                }
             } // end foreach blk
             //
             flagTooManyBadCells = 0;
@@ -1264,7 +1288,15 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                         }
                         cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
                     } // end foreach cell
-                    local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+                    try {
+                        local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+                    }  catch (Exception e) {
+                        debug {
+                            writefln("Exception thrown in count_invalid_cells: %s", e.msg);
+                            writefln("  mpi_rank=%d", GlobalConfig.mpi_rank_for_local_task);
+                        }
+                        local_invalid_cell_count[i] = to!int(blk.cells.length);
+                    }
                 } // end foreach blk
                 //
                 flagTooManyBadCells = 0;
@@ -1537,7 +1569,15 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                         }
                         cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
                     } // end foreach cell
-                    local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+                    try {
+                        local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+                    }  catch (Exception e) {
+                        debug {
+                            writefln("Exception thrown in count_invalid_cells: %s", e.msg);
+                            writefln("  mpi_rank=%d", GlobalConfig.mpi_rank_for_local_task);
+                        }
+                        local_invalid_cell_count[i] = to!int(blk.cells.length);
+                    }
                 } // end foreach blk
                 //
                 flagTooManyBadCells = 0;
@@ -1864,7 +1904,15 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     }
                     cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
                 } // end foreach cell
-                local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+                try {
+                    local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+                }  catch (Exception e) {
+                    debug {
+                        writefln("Exception thrown in count_invalid_cells: %s", e.msg);
+                        writefln("  mpi_rank=%d", GlobalConfig.mpi_rank_for_local_task);
+                    }
+                    local_invalid_cell_count[i] = to!int(blk.cells.length);
+                }
             } // end foreach blk
             //
             flagTooManyBadCells = 0;
@@ -2085,7 +2133,15 @@ void gasdynamic_explicit_increment_with_moving_grid()
                         }
                         cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
                     } // end foreach cell
-                    local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+                    try {
+                        local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+                    }  catch (Exception e) {
+                        debug {
+                            writefln("Exception thrown in count_invalid_cells: %s", e.msg);
+                            writefln("  mpi_rank=%d", GlobalConfig.mpi_rank_for_local_task);
+                        }
+                        local_invalid_cell_count[i] = to!int(blk.cells.length);
+                    }
                 } // end foreach blk
                 //
                 flagTooManyBadCells = 0;
@@ -2126,7 +2182,10 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     } // end foreach cell
                 } // end foreach blk
             } catch (Exception e) {
-                debug { writefln("Exception thrown in second-stage of explicit update with moving grid: %s", e.msg); }
+                debug {
+                    writefln("Exception thrown in second-stage of explicit update with moving grid: %s", e.msg);
+                    writefln("  mpi_rank=%d", GlobalConfig.mpi_rank_for_local_task);
+                }
                 step_failed = 1;
             }
             version(mpi_parallel) {
@@ -2690,7 +2749,15 @@ void gasdynamic_implicit_increment_with_moving_grid()
                     // [TODO] PJ 2021-05-15 MHD bits
                     cell.decode_conserved(gtl1, ftl1, blk.omegaz);
                 }
-                local_invalid_cell_count[i] = blk.count_invalid_cells(gtl1, ftl1);
+                try {
+                    local_invalid_cell_count[i] = blk.count_invalid_cells(gtl1, ftl1);
+                }  catch (Exception e) {
+                    debug {
+                        writefln("Exception thrown in count_invalid_cells: %s", e.msg);
+                        writefln("  mpi_rank=%d", GlobalConfig.mpi_rank_for_local_task);
+                    }
+                    local_invalid_cell_count[i] = to!int(blk.cells.length);
+                }
             } // end foreach blk
             //
             flagTooManyBadCells = 0;
