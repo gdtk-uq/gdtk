@@ -402,7 +402,7 @@ public:
             xTx[0][3] = 1.0; xTx[0][4] = 0.0; xTx[0][5] = 0.0;
             xTx[1][3] = 0.0; xTx[1][4] = 1.0; xTx[1][5] = 0.0;
             xTx[2][3] = 0.0; xTx[2][4] = 0.0; xTx[2][5] = 1.0;
-            double very_small_value = 1.0e-16*(normInf!(3,3,6,number)(xTx).re)^^3;
+            double very_small_value = 1.0e-32*(normInf!(3,3,6,number)(xTx).re)^^3;
             if (0 != computeInverse!(3,3,6,number)(xTx, very_small_value)) {
                 string msg = "Failed to invert LSQ normal matrix";
                 debug {
@@ -437,7 +437,7 @@ public:
             xTx[1][0] = xy; xTx[1][1] = yy;
             xTx[0][2] = 1.0; xTx[0][3] = 0.0;
             xTx[1][2] = 0.0; xTx[1][3] = 1.0;
-            double very_small_value = 1.0e-16*(normInf!(2,2,4,number)(xTx).re)^^2;
+            double very_small_value = 1.0e-32*(normInf!(2,2,4,number)(xTx).re)^^2;
             if (0 != computeInverse!(2,2,4,number)(xTx, very_small_value)) {
                 string msg = "Failed to invert LSQ normal matrix";
                 debug {
