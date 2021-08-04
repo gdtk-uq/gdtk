@@ -1,0 +1,25 @@
+#Configuration file for X3 facility with Mach 10 nozzle in Pitot 3
+
+# Lewis Barltrop (l.barltrop@uq.net.au) - 28/06/21
+# Lengths and sensor locations from Gildfind et al., "Flow characterisation and modeling of the X2 and X3 expansion tubes" (2018)
+# Does not currently account for shortened acceleration tube
+# Whole shock tube bored to 200 mm as completed before recommisioning in 2020
+
+facility_name : 'X3'
+facility_type : 'expansion_tube'
+secondary_driver : False
+nozzle : True
+
+shock_tube_length : 22.237 # m
+shock_tube_diameter : 0.2 # m
+shock_tube_sensors : ['st1','st2','st3','st4''st5','st6','st7']
+
+acceleration_tube_length : 16.362 #m
+acceleration_tube_diameter : 0.1826 # m
+acceleration_tube_sensors : ['at1','at2','at3','at4','at5','at6','at7','at8']
+
+nozzle_geometric_area_ratio : 5.64
+
+sensor_locations : {'st1':1.649,'st2':6.504,'st3':7.955,'st4':9.519,'st5':16.123,'st6':19.217,'st7':20.715,'at1':24.307,'at2':26.336,'at3':28.365,'at4':32.430,'at5':34.894,'at6':36.494,'at7':38.095,'at8':38.524}
+
+driver_conditions_folder : 'x3_driver_conditions' #inside the facilities folder...

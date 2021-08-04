@@ -1,0 +1,20 @@
+# X3's lwp 100%He 2 mm driver condition with isentropic compression
+
+# Lewis Barltrop (l.barltrop@uq.net.au) - 28/06/21
+# Adapted from pitot2's pitot_input_utils
+
+driver_condition_name : 'lwp-2mm-andreas'
+driver_condition_type : 'isentropic-compression-p4'
+
+driver_gas_model : 'CEAGas'
+driver_fill_composition : {'He':1.0} 
+driver_speciesList : ['He']
+driver_inputUnits : 'moles' 
+driver_withIons : False
+
+driver_p : 49.0e3 # driver fill pressure, Pa
+driver_T : 298.15 # driver fill temperature, K
+
+p4 : 17.5e6 #primary driver burst pressure, Pa 
+
+M_throat : 3.08
