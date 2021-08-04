@@ -40,6 +40,7 @@ class FBArray {
     Vector3[][] p_east; // East-most point on rail.
     Vector3[][] p_west; // West-most point on rail.
     number[][] face_ws; // Wave speeds at face centres.
+    number[][] face_a;  // Sound-speed immediately after shock.
     Vector3[][] face_pos; // Positions of face centres.
     Vector3[][] vtx_vel; // Computed velocities for the vertices on the shock boundary.
     Vector3[][] vtx_dir; // Rail directions for the vertices on the shock boundary.
@@ -94,6 +95,7 @@ class FBArray {
                     (GlobalConfig.dimensions==3 && nkv==nkc+1)),
                    "Mismatch in cells and vertices at shock boundary.");
             face_ws.length = njc; foreach (j; 0 .. njc) { face_ws[j].length = nkc; }
+            face_a.length = njc; foreach (j; 0 .. njc) { face_a[j].length = nkc; }
             face_pos.length = njc; foreach (j; 0 .. njc) { face_pos[j].length = nkc; }
             vtx_vel.length = njv; foreach (j; 0 .. njv) { vtx_vel[j].length = nkv; }
             vtx_dir.length = njv; foreach (j; 0 .. njv) { vtx_dir[j].length = nkv; }
@@ -109,6 +111,8 @@ class FBArray {
                     }
                 }
                 this.buffer.length = n * 3;
+                // Note that the 3 represents the maximum number of items per point,
+                // to be sent in an MPI transfer.
             }
         }
     }

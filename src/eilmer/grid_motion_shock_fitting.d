@@ -43,6 +43,12 @@ void compute_vtx_velocities_for_sf(FBArray fba)
     // of the shock boundary.  The boundary may be composed of several blocks
     // which, for a shared memory simulation, will all be in local memory.
     //
+    // In an MPI context, it may be that the blocks are in different MPI tasks.
+    // The design is that all tasks keep a global copy of the FBArray data
+    // and use their local FluidBlocks to fill in the appropriate sections
+    // of the global arrays.  Messages are then passed between the MPI tasks
+    // to synchronize the content of the global arrays. The devil is in the details.
+    //
     // The general plan is to do the calculation in phases:
     // 1. Use the conservation equations to compute wave speed estimates
     //    at all faces on the shock boundary.
@@ -53,12 +59,6 @@ void compute_vtx_velocities_for_sf(FBArray fba)
     //    the magnitude of the velocity as the east-boundary of the FBArray
     //    is approached.
     //
-    // In an MPI context, it may be that the blocks are in different MPI tasks.
-    // The design is that all tasks keep a global copy of the FBArray data
-    // and use their local FluidBlocks to fill in the appropriate sections
-    // of the global arrays.  Messages are then passed between the MPI tasks
-    // to synchronize the content of the global arrays. The devil is in the details.
-    //
     // Start by computing wave speeds and rail directions at all west-most faces.
     //
     bool allow_reconstruction = GlobalConfig.shock_fitting_allow_flow_reconstruction;
@@ -68,10 +68,10 @@ void compute_vtx_velocities_for_sf(FBArray fba)
     if (!bc) { throw new Error("Did not find an appropriate boundary-face effect."); }
     auto nominal_inflow = bc.fstate;
     auto inflow = bc.fstate.dup(); // Start with a copy that we will partially overwrite.
-    SourceFlow sourceFlow = bc.sflow;
+    SourceFlow sourceFlow;
     if (bc.r > 0.0) {
-        if (GlobalConfig.dimensions == 3) {
-            throw new Error("Conical inflow for shock fitting is only for 2D axisymmetric flows.");
+        if (GlobalConfig.dimensions == 2 && !GlobalConfig.axisymmetric) {
+            throw new Error("In a 2D shock-fitted flow, conical inflow is only for axisymmetric flows.");
         }
         sourceFlow = bc.sflow;
     }
@@ -123,6 +123,7 @@ void compute_vtx_velocities_for_sf(FBArray fba)
                             fba.face_ws[j0+j][k0+k] = wave_speed(inflow, blk.get_cell(0,j,k).fs, f.n);
                         }
                         fba.face_pos[j0+j][k0+k] = f.pos;
+                        fba.face_a[j0+j][k0+k] = blk.get_cell(0,j,k).fs.gas.a;
                     }
                 }
                 // We need the vertex positions to do upwinding along the shock boundary.
@@ -147,30 +148,35 @@ void compute_vtx_velocities_for_sf(FBArray fba)
                 int src_task = GlobalConfig.mpi_rank_for_block[blkId];
                 int items;
                 //
-                // Broadcast the face velocities.
+                // Broadcast the face velocities and post-shock sound-speeds.
                 if (canFind(GlobalConfig.localFluidBlockIds, blkId)) {
-                    // Local task owns the block so we pack its data into the buffer.
+                    // Local MPI task owns the block so we pack its data into the buffer
+                    // for communication to all other MPI tasks.
                     assert(src_task == GlobalConfig.mpi_rank_for_local_task,
                            "Oops, source task should be local MPI task.");
                     items = 0;
                     foreach (k; 0 .. blk.nkc) {
                         foreach (j; 0 .. blk.njc) {
                             fba.buffer[items++] = fba.face_ws[j0+j][k0+k].re;
+                            fba.buffer[items++] = fba.face_a[j0+j][k0+k].re;
                         }
                     }
                 } else {
                     // Local task does not own this block,
                     // but we need to know how many items are broadcast.
-                    items = to!int(blk.nkc * blk.njc);
+                    items = to!int(blk.nkc * blk.njc * 2);
                 }
                 MPI_Bcast(fba.buffer.ptr, items, MPI_DOUBLE, src_task, fba.mpicomm);
                 if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
+                    // The local MPI task does not own this block so get the data
+                    // from the buffer and copy it into the local fba object.
                     assert(src_task != GlobalConfig.mpi_rank_for_local_task,
                            "Oops, source task should not be local task.");
                     items = 0;
                     foreach (k; 0 .. blk.nkc) {
                         foreach (j; 0 .. blk.njc) {
                             fba.face_ws[j0+j][k0+k] = fba.buffer[items++];
+                            fba.face_a[j0+j][k0+k] = fba.buffer[items++];
                         }
                     }
                 }
@@ -249,7 +255,7 @@ void compute_vtx_velocities_for_sf(FBArray fba)
     }
     //
     // Compute the shock-boundary vertex velocities with an upwind-weighting
-    // of the face-centre velocities, as described by Ian.
+    // of the face-centre velocities, as described by Ian Johnston in his thesis.
     // Note that we want the vertex velocities that are aligned with the rails
     // so we start with the rail-direction vector and scale that
     // with the wave-speed estimate to get the vertex velocity.
@@ -260,19 +266,14 @@ void compute_vtx_velocities_for_sf(FBArray fba)
         // First vertex has only one face, so just use that velocity.
         Vector3 v = fba.vtx_dir[0][k]; v.scale(fba.face_ws[0][k]); fba.vtx_vel[0][k].set(v);
         // Do Ian's upwind weighting for vertices between faces.
-        // I think that Ian used the post-shock flow properties but,
-        // for the moment, use the nominal free-stream properties in the Mach number weights.
-        // Across the shock the tangential velocity will be unchanged,
-        // however, we use the free-stream sound speed because it is readily
-        // available whereas Ian used the post-shock sound speed.
-        // Presumably, our Mach numbers will be higher once the shock has
-        // fused with the boundary.
+        // I think that Ian used the post-shock flow properties.
+        // Across the shock the tangential velocity will be unchanged, so we use that.
         foreach (j; 1 .. fba.njv-1) {
             Vector3 tA = fba.vtx_pos[j][k]; tA -= fba.face_pos[j-1][k]; tA.normalize();
-            number MA = dot(nominal_inflow.vel, tA) / nominal_inflow.gas.a;
+            number MA = dot(nominal_inflow.vel, tA) / fba.face_a[j-1][k];
             number wA = Mach_weighting(MA);
             Vector3 tB = fba.vtx_pos[j][k]; tB -= fba.face_pos[j][k]; tB.normalize();
-            number MB = dot(nominal_inflow.vel, tB) / nominal_inflow.gas.a;
+            number MB = dot(nominal_inflow.vel, tB) / fba.face_a[j][k];
             number wB = Mach_weighting(MB);
             number ws;
             if (fabs(wA+wB) > 0.0) {
