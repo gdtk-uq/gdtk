@@ -37,6 +37,8 @@ void quicksort(size_t idx)(Node[] nodes) pure nothrow @nogc {
       if (i >= j) break;
 
       swap(nodes[i].x, nodes[j].x);
+      swap(nodes[i].blkid, nodes[j].blkid);
+      swap(nodes[i].cellid, nodes[j].cellid);
   }
 
   quicksort!(idx)(nodes[0 .. i]);
