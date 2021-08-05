@@ -397,29 +397,27 @@ public:
     @nogc
     void average_cell_deriv_values(int gtl)
     {
-        // if the interface is along a boundary that doesn't have a mapping to
-        // a cell in a neighbouring block, i.e. the interface is along a domain
-        // boundary, then we just copy the gradient from the cell-center to the interface.
-        if (left_cell.is_interior_to_domain == false ||
-            right_cell.is_interior_to_domain == false) {
-            FVCell c;
-            if (left_cell.is_interior_to_domain == false) c = right_cell;
-            else c = left_cell;
+        if (!left_cell && !right_cell) {
+            throw new Exception("Oops! This face does not have at least one cell attached.");
+        }
+        if (!left_cell || !right_cell) {
+            // The interface has only one attached cell so it must be along a block boundary
+            // that doesn't have a mapping to a cell in a neighbouring block.
+            // This means that the interface is along a domain boundary.
+            // We just copy the gradient from the cell-center to the interface.
+            FVCell c = (right_cell && right_cell.is_interior_to_domain) ? right_cell : left_cell;
             // vel-x
             grad.vel[0][0] = c.grad.vel[0][0];
             grad.vel[0][1] = c.grad.vel[0][1];
             grad.vel[0][2] = c.grad.vel[0][2];
-
             // vel-y
             grad.vel[1][0] = c.grad.vel[1][0];
             grad.vel[1][1] = c.grad.vel[1][1];
             grad.vel[1][2] = c.grad.vel[1][2];
-
             // vel-z
             grad.vel[2][0] = c.grad.vel[2][0];
             grad.vel[2][1] = c.grad.vel[2][1];
             grad.vel[2][2] = c.grad.vel[2][2];
-
             // massf
             version(multi_species_gas) {
                 foreach (isp; 0 .. myConfig.n_species) {
@@ -428,12 +426,10 @@ public:
                     grad.massf[isp][2] = c.grad.massf[isp][2];
                 }
             }
-
             // T
             grad.T[0] = c.grad.T[0];
             grad.T[1] = c.grad.T[1];
             grad.T[2] = c.grad.T[2];
-
             // thermal modes
             version(multi_T_gas) {
                 uint n_modes = myConfig.n_modes;
@@ -443,7 +439,6 @@ public:
                     grad.T_modes[imode][2] = c.grad.T_modes[imode][2];
                 }
             }
-
             version(turbulence) {
                 foreach(i; 0 .. myConfig.turb_model.nturb) {
                     grad.turb[i][0] = c.grad.turb[i][0];
@@ -452,6 +447,8 @@ public:
                 }
             }
         } else {
+            // With two attached cells, we are at a face that is internal to the domain
+            // and so we can proceed to compute the average of the gradient values.
             number qL; number qR;
             FVCell cL0 = left_cell; // i
             FVCell cR0 = right_cell; // j
@@ -479,7 +476,6 @@ public:
             number ndotehat = nx*ehatx + ny*ehaty + nz*ehatz;
             number avgdotehat;
             number jump;
-
             // vel-x
             avgdotehat = 0.5*(cL0.grad.vel[0][0]+cR0.grad.vel[0][0])*ehatx +
                 0.5*(cL0.grad.vel[0][1]+cR0.grad.vel[0][1])*ehaty +
@@ -488,7 +484,6 @@ public:
             grad.vel[0][0] = 0.5*(cL0.grad.vel[0][0]+cR0.grad.vel[0][0]) - jump*(nx/ndotehat);
             grad.vel[0][1] = 0.5*(cL0.grad.vel[0][1]+cR0.grad.vel[0][1]) - jump*(ny/ndotehat);
             grad.vel[0][2] = 0.5*(cL0.grad.vel[0][2]+cR0.grad.vel[0][2]) - jump*(nz/ndotehat);
-
             // vel-y
             avgdotehat = 0.5*(cL0.grad.vel[1][0]+cR0.grad.vel[1][0])*ehatx +
                 0.5*(cL0.grad.vel[1][1]+cR0.grad.vel[1][1])*ehaty +
@@ -497,7 +492,6 @@ public:
             grad.vel[1][0] = 0.5*(cL0.grad.vel[1][0]+cR0.grad.vel[1][0]) - jump*(nx/ndotehat);
             grad.vel[1][1] = 0.5*(cL0.grad.vel[1][1]+cR0.grad.vel[1][1]) - jump*(ny/ndotehat);
             grad.vel[1][2] = 0.5*(cL0.grad.vel[1][2]+cR0.grad.vel[1][2]) - jump*(nz/ndotehat);
-
             // vel-z
             avgdotehat = 0.5*(cL0.grad.vel[2][0]+cR0.grad.vel[2][0])*ehatx +
                 0.5*(cL0.grad.vel[2][1]+cR0.grad.vel[2][1])*ehaty +
@@ -506,7 +500,6 @@ public:
             grad.vel[2][0] = 0.5*(cL0.grad.vel[2][0]+cR0.grad.vel[2][0]) - jump*(nx/ndotehat);
             grad.vel[2][1] = 0.5*(cL0.grad.vel[2][1]+cR0.grad.vel[2][1]) - jump*(ny/ndotehat);
             grad.vel[2][2] = 0.5*(cL0.grad.vel[2][2]+cR0.grad.vel[2][2]) - jump*(nz/ndotehat);
-
             // massf
             version(multi_species_gas) {
                 foreach (isp; 0 .. myConfig.n_species) {
@@ -519,7 +512,6 @@ public:
                     grad.massf[isp][2] = 0.5*(cL0.grad.massf[isp][2]+cR0.grad.massf[isp][2]) - jump*(nz/ndotehat);
                 }
             }
-
             // T
             avgdotehat = 0.5*(cL0.grad.T[0]+cR0.grad.T[0])*ehatx +
                 0.5*(cL0.grad.T[1]+cR0.grad.T[1])*ehaty +
@@ -540,7 +532,6 @@ public:
                     grad.T_modes[imode][2] = 0.5*(cL0.grad.T_modes[imode][2]+cR0.grad.T_modes[imode][2]) - jump*(nz/ndotehat);
                 }
             }
-
             version(turbulence) {
                 foreach(i; 0 .. myConfig.turb_model.nturb) {
                     avgdotehat = 0.5*(cL0.grad.turb[i][0]+cR0.grad.turb[i][0])*ehatx +
