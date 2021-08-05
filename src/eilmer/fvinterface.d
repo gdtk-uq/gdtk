@@ -400,11 +400,12 @@ public:
         if (!left_cell && !right_cell) {
             throw new Exception("Oops! This face does not have at least one cell attached.");
         }
-        if (!left_cell || !right_cell) {
-            // The interface has only one attached cell so it must be along a block boundary
+        if ((left_cell && !left_cell.is_interior_to_domain) ||
+            (right_cell && !right_cell.is_interior_to_domain)) {
+            // The interface has only one cell interior to the domain and
             // that doesn't have a mapping to a cell in a neighbouring block.
             // This means that the interface is along a domain boundary.
-            // We just copy the gradient from the cell-center to the interface.
+            // We just copy the gradient from the interior-cell to the interface.
             FVCell c = (right_cell && right_cell.is_interior_to_domain) ? right_cell : left_cell;
             // vel-x
             grad.vel[0][0] = c.grad.vel[0][0];
