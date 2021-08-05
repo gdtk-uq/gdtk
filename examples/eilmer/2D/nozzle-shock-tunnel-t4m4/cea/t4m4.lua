@@ -115,6 +115,8 @@ identifyBlockConnections()
 
 -- Set a few more config options
 config.viscous = true
+config.spatial_deriv_locn = "vertices"
+config.spatial_deriv_calc = "divergence"
 config.flux_calculator = "adaptive"
 config.max_time = 0.001 -- allow enough to reach steady state
 config.max_step = 800000
