@@ -28,9 +28,12 @@ class TestCyl50_USG < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    assert((steps - 187983).abs < 300, "Failed to take correct number of steps.")
+    # Revised 2021-08-06, PJ.
+    # For the transient code with explicit updates, expect 187980 steps.
+    # It is very much lower with the implicit update scheme.
+    assert((steps - 2011).abs < 30, "Failed to take correct number of steps.")
   end
-  
+
   def test_2_peak_T_in_boundary_layer
     ref = {'rho'=>3.47e-3, 'p'=>257.3, 'T'=>257.0, 'velx'=>300.0}
     cmd = 'e4shared --post --job=cyl50 --tindx-plot=last --add-vars="mach" --probe=0.917,0.00775,0.0'
