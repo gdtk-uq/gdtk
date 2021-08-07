@@ -1,54 +1,54 @@
--- sphere.lua -- Sphere in ideal air flow with shock fitting boundary
--- KD  2016-01-01
-
-job_title = "Sphere in ideal air flow."
-print(job_title)
-
+-- sphere.lua
+-- KD 2016-01-01
+-- PJ 2021-08-07 Make same conditions as for cylinder example.
+--
+config.title = "Sphere in ideal air flow with shock fitting boundary."
+print(config.title)
 config.dimensions = 2
-config.title = job_title
 config.axisymmetric = true
-setGasModel('ideal-air-gas-model.lua')
-p_inflow = 276.746 -- Pa
-T_inflow = 46.2227 -- K
-v_inflow = 1068.436 -- m/s
-initial = FlowState:new{p=p_inflow/3.0, T=T_inflow, velx=0.0, vely=0.0}
-inflow = FlowState:new{p=p_inflow, T=T_inflow, velx=v_inflow, vely=0.0}
-print("GasModel set nsp= ", nsp, " nmodes= ", nmodes)
+-- problem parameters
+u_inf = 2430.0  -- m/s
+radius = 1.0    -- m
+--
+nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
+initial = FlowState:new{p=100.0e3/3.0, T=200.0, velx=0.0, vely=0.0}
+inflow = FlowState:new{p=100.0e3, T=300.0, velx=u_inf, vely=0.0}
+--
 print "Building grid."
-R = 0.0508 -- m
-
-a = Vector3:new{x=-3*R,    y=0.0}
-b = Vector3:new{x=-1*R,    y=0.0}
-c = Vector3:new{x=0.0,     y=3*R}
-d = Vector3:new{x=0.0,     y=1*R}
-p = Vector3:new{x=0.0,     y=0.0}
-
-ac = Arc:new{p0=a, p1=c, centre=p}
-bd = Arc:new{p0=b, p1=d, centre=p}
-ab = Line:new{p0=a, p1=b}
-cd = Line:new{p0=c, p1=d}
-
-psurf = makePatch{north=cd, east=bd, south=ab, west=ac}
-grid = StructuredGrid:new{psurface=psurf, niv=100, njv=100}
-
+a = Vector3:new{x=0.0, y=0.0}
+b = Vector3:new{x=-radius, y=0.0}
+c = Vector3:new{x=0.0, y=radius}
+--
+d = Vector3:new{x=-1.5*radius, y=0}
+e = Vector3:new{x=-1.5*radius, y=radius}
+f = Vector3:new{x=-radius, y=2.0*radius}
+g = Vector3:new{x=0.0, y=3.0*radius}
+--
+psurf = makePatch{north=Line:new{p0=g, p1=c},
+		  east=Arc:new{p0=b, p1=c, centre=a},
+		  south=Line:new{p0=d, p1=b},
+		  west=Bezier:new{points={d, e, f, g}}}
+grid = StructuredGrid:new{psurface=psurf, niv=41, njv=41}
+--
 -- We can leave east and south as slip-walls
 blk = FBArray:new{grid=grid, initialState=initial,
-		      bcList={west=InFlowBC_ShockFitting:new{flowState=inflow},
-			      north=OutFlowBC_Simple:new{}},
-		      nib=1, njb=8}
+                  bcList={west=InFlowBC_ShockFitting:new{flowState=inflow},
+                          north=OutFlowBC_Simple:new{}},
+                  nib=4, njb=2}
 identifyBlockConnections()
-
+--
 -- Set a few more config options
-body_flow_time = 2*R/v_inflow
+body_flow_time = (radius*2)/u_inf
+print("body_flow_time=", body_flow_time)
 config.flux_calculator = "ausmdv"
-config.gasdynamic_update_scheme = "moving_grid_2_stage"
+config.gasdynamic_update_scheme = "backward_euler"
+config.max_time = 20*body_flow_time
 config.max_step = 400000
-config.dt_init = 1.0e-9
-config.cfl_value = 0.5 
+config.cfl_value = 0.5
+config.dt_init = 1.0e-7
 config.dt_plot = body_flow_time
-config.interpolation_order = 2
--- moving grid flag
-body_flow_time = 2*R/v_inflow
-config.shock_fitting_delay = 1*body_flow_time
 config.grid_motion = "shock_fitting"
-config.max_time = 25*body_flow_time
+config.shock_fitting_delay = 1*body_flow_time
+config.max_invalid_cells = 10
+config.adjust_invalid_cell_data = true
+config.report_invalid_cells = false
