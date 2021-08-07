@@ -17,7 +17,7 @@ class TestCyl_SF < Test::Unit::TestCase
   end
 
   def test_1_run
-    cmd = "mpirun -np 8 --oversubscribe e4mpi --run --job=cyl-sf-mpi --verbosity=1"
+    cmd = "mpirun -np 4 --oversubscribe e4mpi --run --job=cyl-sf-mpi --verbosity=1"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     steps = 0
@@ -28,8 +28,7 @@ class TestCyl_SF < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    # print(steps)
-    assert((steps - 5269).abs < 100, "Failed to take correct number of steps.")
+    assert((steps - 5517).abs < 100, "Failed to take correct number of steps.")
   end
 
   def test_2_post_shock_condition

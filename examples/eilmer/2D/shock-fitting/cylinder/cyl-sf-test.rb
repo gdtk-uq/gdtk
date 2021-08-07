@@ -28,8 +28,7 @@ class TestCyl_SF < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    # 5257 is for the explicit update; 5387 is observed for the backward-euler, same cfl_value
-    assert((steps - 5257).abs < 200, "Failed to take correct number of steps.")
+    assert((steps - 5517).abs < 100, "Failed to take correct number of steps.")
   end
 
   def test_2_post_shock_condition
