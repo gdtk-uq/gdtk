@@ -25,7 +25,7 @@ Instead, check the User Guide for the definitive user input.
   The talk briefly introduces the Newton-Krylov accelerator and demonstrates the solver's performance on some standard test cases.
   Two large-scale applications are also presented.
 
-- [Simulating Re-entry Flows with Eilmer 4](/pdfs/nng-uqtum-seminar-07-2021.pdf), 21 July 2021.
+- [Simulating Re-entry Flows with Eilmer 4](/pdfs/nng-uqtum-seminar-07-2021.pdf), 21 July 2021.  
   NNG seminar on performing hypervelocity simulations of blunt bodies with Eilmer.
   Focuses on the new steady state solver, using an example calculation from the Electron Transpiration Cooling project.
 
@@ -91,19 +91,19 @@ Instead, check the User Guide for the definitive user input.
   On the technical side, we look at the GasModel and ThermochemicalReactor classes in Eilmer4.
   Example based on the Powers and Aslam oblique detonation wave problem.
 
-- [A Matrix-free Steady-state Solver for Eilmer4](/pdfs/seseminar-2017-04-06.pdf), 06 April 2017.
+- [A Matrix-free Steady-state Solver for Eilmer4](/pdfs/seseminar-2017-04-06.pdf), 06 April 2017.  
   RJG seminar on the work-to-date on a Jacobian-free Newton-Krylov
  accelerator for steady-state flows.
  Demonstration cases include: Mach 1.5 flow over a 6-deg wedge; Mach 10 flow over; Mach 4 laminar flow over a flat plate; and 3D case of a manufactured solution.
  
 
 - [Eilmer4: the next step in the UQ simulation codes for high-enthalpy flows](/pdfs/eilmer4-talk-pj-dec-2016.pdf), December 2016.  
-  Presentation to the Osney Hypersonics Symposium of the Eilmer4 code development.
+  PAJ presentation to the Osney Hypersonics Symposium of the Eilmer4 code development.
   A little bit on shared-memory parallelism.
   Example of the sphere heat-transfer again.
   
 - [Eilmer4: A Computational Tool for High-Enthalpy Flow Simulation](/pdfs/eilmer4-talk-pj-sep-2016.pdf), September 2016.  
-  Presentation to the Franco-Australian Symposium in Paris.
+  PAJ presentation to the Franco-Australian Symposium in Paris.
   Example of stagnation-point heating of a sphere, with the shock-fitting procedure in action.
 
 - [Implementation of a compressible-flow simulation code in the D programming language](/pdfs/eilmer4-talk-pj-may-2016.pdf), May 2016.  
@@ -119,7 +119,7 @@ Instead, check the User Guide for the definitive user input.
   to support reproducible research when using Eilmer.
 
 - [Implementation of a compressible-flow simulation code in the D programming language](/pdfs/eilmer4-talk-nov-2015.pdf), November 2015.  
-  The 2nd Australasian Conference on Computational Mechanics, held at QUT,
+  PAJ talk at The 2nd Australasian Conference on Computational Mechanics, held at QUT,
   was the first real showing of the Eilmer4 code outside of the Centre for Hypersonics.
   A bit of history of the codes, finite-volume formulation, structure of the new code and a couple of examples.
   The Zucrow and Hoffman sharp-nosed projectile example is shown in reasonable detail
