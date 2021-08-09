@@ -4,7 +4,7 @@
 -- Adapted from eilmer3 example
 -- Authors: KAD, 22-Dec-2015 (reworked PJ 2021-08-09)
 --
-config.title = "Sod's Classic Shock tube with moving-shoc boundary"
+config.title = "Sod's Classic Shock tube with moving-shock boundary"
 nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
 -- Initial gas conditions.
 R = 287.1           -- J/kg.K
@@ -40,4 +40,6 @@ config.cfl_value = 0.25
 config.dt_plot = 10.0e-6
 config.grid_motion = "shock_fitting"
 -- Shock fitting starts immediately, by default.
-config.shock_fitting_allow_flow_reconstruction = false
+-- The default scale_factor is 0.5,
+-- but we want to be time-accurate with the grid motion.
+config.shock_fitting_scale_factor = 1.0
