@@ -20,6 +20,11 @@ that the finer details of user input may change over time.
 These slides are not updated, but rather serve as historical record of activities.
 Instead, check the User Guide for the definitive user input.
 
+- [A Newton-Krylov Algorithm for Hypersonic Flows: Performance Demonstration and Application](/pdfs/kd-uqtum-seminar-07-2021.pdf), 22 July 2021.  
+  KAD seminar on the Newton-Krylov accelerator.
+  The talk briefly introduces the Newton-Krylov accelerator and demonstrates the solver's performance on some standard test cases.
+  Two large-scale applications are also presented.
+
 - [Simulating Re-entry Flows with Eilmer 4](/pdfs/nng-uqtum-seminar-07-2021.pdf), 21 July 2021.
   NNG seminar on performing hypervelocity simulations of blunt bodies with Eilmer.
   Focuses on the new steady state solver, using an example calculation from the Electron Transpiration Cooling project.
