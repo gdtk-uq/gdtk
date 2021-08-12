@@ -102,7 +102,74 @@ Additional notes for developers:
   preferable to write directly to disk, unfortunately this would generate a
   proliferation of files due to the multiple blob structure, hence the zip
   format.
-- 
+
+flow format definition:
+- The output zip file contains a header file, a JSON data object which contains
+  metadata about the block (ncells, sim_time, etc) with a list of the recorded
+  quantities with some metadata about the type of each quantity, and one data
+  file for each recorded variable. Each data file is basically a data blob, a
+  series of numbers corresponding to the value of the quantity in each cell.
+- Information in the header file looks like the following where options are
+  given in [...]. See the functions save_to_file() and read_from_file() for
+  implementation details.
+
+    {
+        # version number of the file format
+        "version": "1.0",
+
+        # the format of the data held in the blobs
+        "data_type": ["string","binary"],
+
+        # delimiter that is used when writing to string
+        "delimiter": " ", 
+
+        # how many cells total
+        "n_cells": 44, 
+
+        # number of cells in i-index direction
+        # if it is unstructered then nic = n_cells and njc=nkc=0
+        "nic": 11, 
+
+        # number of cells in j-index direction
+        "njc": 4, 
+
+        # number of cells in k-index direction
+        "nkc": 1, 
+
+        # simulation time
+        "sim_time": 0, 
+
+        # structured or unstructured data
+        "structured": [true,false], 
+
+        # unique string identifier for this particular grouping of data
+        "tag": "field", 
+
+        # list of all data blobs in this zip file
+        "variables": { 
+
+            # the name of the data 
+            "B.x": { 
+
+                # the name of the data blob,
+                "data": "B.x.dat", 
+
+                # a text description of the data
+                "description": "[cell.fs.B._p[0].re]", 
+
+                # dimensionality of this particular data blob, the first dimension 
+                # corresponds to the linearised cell index. This allows for 1D arrays
+                # of data to be stored for each cell.
+                "dimension": [ 
+                    44,
+                    1
+                ]
+            },
+
+            ...
+
+        }
+    }
 
 */
 
@@ -548,63 +615,82 @@ double read_zip_solution(FluidBlock blk, string filename)
 
 void read_block_data_from_zip_file(BlockFlow blk, string filename, Grid_t gridType, string flow_format)
 {
-    size_t ncells;
+
+    // get the header and convert to string
+    ZipArchive zip = new ZipArchive(read(filename));
+
+    // parse the header
+    ArchiveMember hdr = zip.directory["header.txt"];
+    ubyte[] hdr_bytes = zip.expand(hdr);
+    char* hdr_cstr = cast(char*) hdr_bytes;
+    string hdr_str = cast(string) hdr_cstr[0..strlen(hdr_cstr)];
+
+    JSONValue header = parseJSON(hdr_str);
+
+    string version_str = header["version"].get!string;
+
+    // check the version
+    if (version_str != "1.0") { // <-- version should be a variable
+        string msg = text("File format version found: " ~ version_str);
+        throw new FlowSolverException(msg);
+    }
+    
+    // get the data type
+    const string data_type = header["data_type"].get!string;
+    bool is_binary = data_type!="string";
+
+    string delimiter = " ";
+    
+    if (!is_binary) delimiter = header["delimiter"].get!string;
+
+    // retrive the cell indexing
+    const int n_cells = header["n_cells"].get!int;
+    size_t[] cell_index = retrieve_data!size_t("cell_id", zip, n_cells, is_binary, delimiter);
+
+    blk.sim_time = header["sim_time"].get!double;
+    blk.nic = header["nic"].get!int;
+    blk.njc = header["njc"].get!int;
+    blk.nkc = header["nkc"].get!int;
+    blk.ncells = n_cells;
+    blk._data.length = n_cells;
+
     size_t count_names = 0;
-    foreach(i, io; get_fluid_block_io()) {
+    foreach (string varname, ref JSONValue data; header["variables"]) {
 
-        // maybe have a flag on our io object so that partial io is not included here
+        // get the dimensionality of the data (does it have multiple values for each cell?)
+        const JSONValue[] jdim = data["dimension"].get!(JSONValue[]);
+        const int n_per_cell = jdim[1].get!int;
+        const int n_total = jdim[0].get!int*n_per_cell;
 
-        JSONValue header = io.read_from_file(filename);
-        if (!io.success) continue;
-
-
-        // get the number of data items there are and their names
-        size_t[] dims;
-
-        foreach(j, varname; io.names) {
-            const JSONValue[] jdim = header["variables"][varname]["dimension"].get!(JSONValue[]);
-            const long k = jdim[1].integer;
-            dims ~= k;
-            if (k == 1) {
-                blk.variableNames ~= varname; 
-            } else {
-                foreach (idx; 0 .. k) {
-                    blk.variableNames ~= format("%s_%d",varname,idx); 
-                }
+        // names for the data in BlockFlow
+        if (n_per_cell == 1) {
+            blk.variableNames ~= varname; 
+        } else {
+            foreach (idx; 0 .. n_per_cell) {
+                blk.variableNames ~= format("%s_%d",varname,idx); 
             }
         }
 
-        // as we are continually adding to the blk object we need to
-        // ensure that the data we are adding is of consistent size
-        blk.sim_time = header["sim_time"].get!double;
-        blk.nic = header["nic"].get!int;
-        blk.njc = header["njc"].get!int;
-        blk.nkc = header["nkc"].get!int;
-        blk.ncells = header["n_cells"].get!int;
-        blk._data.length = blk.ncells;
-        ncells = blk.ncells;
-
-        // allocate the data array
-        foreach (j; 0 .. ncells) {
+        // allocate the data array, extending as necessary
+        // could do this upfront...
+        foreach (j; 0 .. n_cells) {
             blk._data[j].length = blk.variableNames.length;
         }
-        
-        foreach(idx, arch; io.archive_members) {
 
-            const size_t nitems = dims[idx];
+        // now read the data 
 
-            double[] dat = from_binary!double(arch.expandedData, ncells*nitems, io.binary, io.delimiter);
+        const string dat_name = data["data"].get!string;
+        double[] dat = retrieve_data!double(dat_name, zip, n_total, is_binary, delimiter);
 
-            foreach (k; 0 .. nitems) {
-                const size_t name_idx = count_names + k;
-                foreach (j; 0 .. ncells) {
-                    blk._data[j][name_idx] = dat[j*nitems + k];
-                }
-                blk.variableIndex[blk.variableNames[name_idx]] = name_idx;
+        foreach (k; 0 .. n_per_cell) {
+            const size_t name_idx = count_names + k;
+            foreach (j; cell_index) {
+                blk._data[j][name_idx] = dat[j*n_per_cell + k];
             }
-            
-            count_names += nitems;
+            blk.variableIndex[blk.variableNames[name_idx]] = name_idx;
         }
+
+        count_names += n_per_cell;
     }
 
     return;
