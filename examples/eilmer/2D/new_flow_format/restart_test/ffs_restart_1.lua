@@ -11,11 +11,7 @@ config.viscous = true
 
 -- new format
 config.new_flow_format = true
--- config.flow_format = "eilmer4text"
-config.flow_format = "eilmer4binary"
-config.do_temporal_DFT = true
-config.do_flow_average = true
-config.save_viscous_gradients = true
+config.flow_format = "eilmer4text"
 
 -- Gas model and flow conditions.
 nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
