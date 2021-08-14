@@ -1372,6 +1372,13 @@ public:
         }
 
         // source terms and flux integration
+        // the limit_factor is used to slowly increase the magnitude of the
+        // thermochemical source terms from 0 to 1 for problematic reacting flows
+        double limit_factor = 1.0;
+        if (myConfig.nsteps_of_chemistry_ramp > 0) {
+            double S = SimState.step/to!double(myConfig.nsteps_of_chemistry_ramp);
+            limit_factor = min(1.0, S);
+        }
         foreach (i, cell; cell_list) {
             cell.add_inviscid_source_vector(gtl, 0.0);
             if (myConfig.viscous) {
@@ -1383,7 +1390,7 @@ public:
                 cell.add_thermochemical_source_vector(thermochem_conc,
                                                       thermochem_rates,
                                                       thermochem_source,
-                                                      SimState.step);
+                                                      limit_factor);
             }
             if (myConfig.udf_source_terms) {
                 size_t i_cell = cell.id;
@@ -1663,7 +1670,7 @@ public:
         } // end if viscous
         if (myConfig.reacting && myConfig.chemistry_update == ChemistryUpdateMode.integral) {
             c.add_thermochemical_source_vector(thermochem_conc, thermochem_rates, thermochem_source,
-                                               SimState.step*reaction_fraction);
+                                               SimState.time*reaction_fraction);
         }
         if (myConfig.udf_source_terms) { c.add_udf_source_vector(); }
         c.time_derivatives(gtl, ftl);

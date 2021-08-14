@@ -1162,18 +1162,6 @@ public:
         auto cqi = myConfig.cqi;
         if (fs.gas.T <= myConfig.T_frozen) { return; }
         version(multi_species_gas) {
-            /+ [FIX-ME] PJ 2021-08-14
-             Kyle, hoist this code out into your SS solver.
-             I want to pass the factor in directly.
-
-            // the limit_factor is used to slowly increase the magnitude of the
-            // thermochemical source terms from 0 to 1 for problematic reacting flows
-            double limit_factor = 1.0;
-            if (myConfig.nsteps_of_chemistry_ramp > 0) {
-                double S = step/to!double(myConfig.nsteps_of_chemistry_ramp);
-                limit_factor = min(1.0, S);
-            }
-            +/
             if (cqi.n_species > 1) {
                 myConfig.thermochemUpdate.eval_source_terms(myConfig.gmodel, fs.gas, thermochem_conc,
                                                             thermochem_rates, thermochem_source);

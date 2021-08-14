@@ -1316,6 +1316,13 @@ void evalRHS(double pseudoSimTime, int ftl)
     }
 
     foreach (blk; parallel(localFluidBlocks,1)) {
+        // the limit_factor is used to slowly increase the magnitude of the
+        // thermochemical source terms from 0 to 1 for problematic reacting flows
+        double limit_factor = 1.0;
+        if (blk.myConfig.nsteps_of_chemistry_ramp > 0) {
+            double S = SimState.step/to!double(blk.myConfig.nsteps_of_chemistry_ramp);
+            limit_factor = min(1.0, S);
+        }
         foreach (i, cell; blk.cells) {
             cell.add_inviscid_source_vector(0, 0.0);
             if (blk.myConfig.viscous) {
@@ -1325,7 +1332,7 @@ void evalRHS(double pseudoSimTime, int ftl)
                 cell.add_thermochemical_source_vector(blk.thermochem_conc,
                                                       blk.thermochem_rates,
                                                       blk.thermochem_source,
-                                                      SimState.step);
+                                                      limit_factor);
             }
             if (blk.myConfig.udf_source_terms) {
                 size_t i_cell = cell.id;
