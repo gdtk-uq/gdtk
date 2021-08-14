@@ -19,8 +19,7 @@ config.spatial_deriv_calc = "least_squares"
 config.gasdynamic_update_scheme = "euler"
 config.cfl_value = 0.4
 -- config.gasdynamic_update_scheme = "backward_euler"
--- config.cfl_schedule_values = {0.4, 0.6, 0.6}
--- config.cfl_schedule_times = {0.0, 20.0e-6, 40.0e-6}
+-- config.cfl_schedule = {{0.0,0.4}, {20.0e-6,0.6}, {40.0e-6,0.6}}
 --
 config.max_time = 8.0e-3  -- About 4 flow lengths (L=1.4m, 1 flow length ~ 1.96 ms)
 config.dt_plot =  1.0e-3

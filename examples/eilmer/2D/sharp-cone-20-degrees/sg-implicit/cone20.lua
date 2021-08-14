@@ -58,8 +58,7 @@ setHistoryPoint{ib=1, i=math.floor(2*nx1/3), j=0}
 -- Do a little more setting of global data.
 config.max_time = 20.0e-3  -- seconds
 config.max_step = 3000
-config.cfl_schedule_times = {0.0, 0.5e-3, 2.0e-3,}
-config.cfl_schedule_values = {0.5, 1.0, 10.0,}
+config.cfl_schedule = {{0.0,0.5}, {0.5e-3,1.0}, {2.0e-3,10.0}}
 -- config.gasdynamic_update_scheme = 'implicit_rk1'
 config.gasdynamic_update_scheme = 'backward_euler'
 config.dt_plot = 1.5e-3

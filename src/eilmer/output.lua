@@ -146,27 +146,32 @@ function write_config_file(fileName)
    f:write(string.format('"with_local_time_stepping": %s,\n', tostring(config.with_local_time_stepping)))
    f:write(string.format('"local_time_stepping_limit_factor": %d,\n', tostring(config.local_time_stepping_limit_factor)))
    f:write(string.format('"with_super_time_stepping_flexible_stages": %s,\n', tostring(config.with_super_time_stepping_flexible_stages)))
-   if #config.cfl_schedule_values > 0 and #config.cfl_schedule_times > 0 then
-      -- We will presume that the tables have valid entries.
+   if #config.cfl_schedule > 0 then
+      -- The table already have some values.
+      -- We will presume that they are valid entries, however,
+      -- if enough people get it wrong, we'll put some check here.
    else
-      config.cfl_schedule_values = {config.cfl_value,}
-      config.cfl_schedule_times = {0.0,}
+      -- Fall back to making up a schedule from cfl_value.
+      config.cfl_schedule = {{0.0, config.cfl_value},}
    end
-   local cfl_schedule_length = #config.cfl_schedule_values
-   if #config.cfl_schedule_times < #config.cfl_schedule_values then
-      cfl_schedule_length = #config.cfl_schedule_times
-   end
+   local cfl_schedule_length = #config.cfl_schedule
    f:write(string.format('"cfl_schedule_length": %d,\n', cfl_schedule_length))
+   local cfl_values = {}
+   local cfl_times = {}
+   for i,cfl_pair in ipairs(config.cfl_schedule) do
+      cfl_times[#cfl_times+1] = cfl_pair[1]
+      cfl_values[#cfl_values+1] = cfl_pair[2]
+   end
    f:write('"cfl_schedule_values": [')
-   for i,e in ipairs(config.cfl_schedule_values) do
+   for i,e in ipairs(cfl_values) do
       f:write(string.format('%.18e', e))
-      if i < #config.cfl_schedule_values then f:write(', ') end
+      if i < #cfl_values then f:write(', ') end
    end
    f:write('],\n')
    f:write('"cfl_schedule_times": [')
-   for i,e in ipairs(config.cfl_schedule_times) do
+   for i,e in ipairs(cfl_times) do
       f:write(string.format('%.18e', e))
-      if i < #config.cfl_schedule_times then f:write(', ') end
+      if i < #cfl_times then f:write(', ') end
    end
    f:write('],\n')
    --

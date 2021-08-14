@@ -51,6 +51,5 @@ config.gasdynamic_update_scheme = "backward_euler"
 config.max_time = 8.0e-3  -- seconds
 config.max_step = 230000
 config.dt_init = 3.0e-8
-config.cfl_schedule_times = {0.0, 10.0e-6, 100.0e-6}
-config.cfl_schedule_values = {0.5, 5.0, 50.0}
+config.cfl_schedule = {{0.0,0.5}, {10.0e-6,5.0}, {100.0e-6,50.0}}
 config.dt_plot = 4.0e-3

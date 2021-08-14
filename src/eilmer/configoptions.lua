@@ -158,8 +158,8 @@ configOptionsHidden = { -- hidden from user
    cfl_value = 0.5,
    -- If the user does not set a schedule of cfl values,
    -- we drop back to using the single cfl_value to construct the schedule.
-   cfl_schedule_times = {},
-   cfl_schedule_values = {},
+   cfl_schedule = {},
+   cfl_schedule = {},
    cfl_scale_factor = 1.0,
    stringent_cfl = false,
    cfl_count = 10,

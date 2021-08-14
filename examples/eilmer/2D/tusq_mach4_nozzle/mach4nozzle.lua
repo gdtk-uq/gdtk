@@ -54,8 +54,7 @@ config.viscous_delay = 5.0e-3
 config.spatial_deriv_calc = "least_squares"
 config.spatial_deriv_locn = "cells"
 
-config.cfl_schedule_times = {0.0, 1.0e-3, 2.0e-3,}
-config.cfl_schedule_values = {0.5, 0.5, 0.8}
+config.cfl_schedule = {{0.0,0.5}, {1.0e-3,0.5}, {2.0e-3,0.8}}
 
 config.adjust_invalid_cell_data = true
 config.max_invalid_cells = 20
