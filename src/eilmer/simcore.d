@@ -1067,6 +1067,7 @@ int integrate_in_time(double target_time_as_requested)
                 (SimState.time > GlobalConfig.reaction_time_delay)) {
                 double mydt = (GlobalConfig.strangSplitting == StrangSplittingMode.full_T_full_R) ?
                     SimState.dt_global : 0.5*SimState.dt_global;
+                mydt *= GlobalConfig.reaction_fraction_schedule.interpolate_value(SimState.time);
                 chemistry_step(mydt);
             }
             //

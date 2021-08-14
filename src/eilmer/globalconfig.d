@@ -1081,6 +1081,7 @@ final class GlobalConfig {
     shared static bool reacting = false;
     shared static string reactions_file = "chemistry.lua";
     shared static double reaction_time_delay = 0.0;
+    static Schedule reaction_fraction_schedule;
     shared static double T_frozen = 300.0; // temperature (in K) below which reactions are frozen
     shared static double T_frozen_energy = 300.0; // temperature (in K) below which energy exchanges are skipped
     static BlockZone[] reaction_zones;
@@ -1911,6 +1912,17 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("reacting", "reacting"));
     mixin(update_string("reactions_file", "reactions_file"));
     mixin(update_double("reaction_time_delay", "reaction_time_delay"));
+    // The reaction_fractionschedule arrives as a pair of tables that should have at least one entry each.
+    int rf_schedule_length = getJSONint(jsonData, "reaction_fraction_schedule_length", 1);
+    double[] rf_schedule_values_default;
+    double[] rf_schedule_times_default;
+    foreach (i; 0 .. rf_schedule_length) {
+        rf_schedule_times_default ~= 0.0;
+        rf_schedule_values_default ~= 1.0;
+    }
+    double[] rf_schedule_times = getJSONdoublearray(jsonData, "reaction_fraction_schedule_times", rf_schedule_times_default);
+    double[] rf_schedule_values = getJSONdoublearray(jsonData, "reaction_fraction_schedule_values", rf_schedule_values_default);
+    GlobalConfig.reaction_fraction_schedule = new Schedule(rf_schedule_times, rf_schedule_values);
     mixin(update_double("T_frozen", "T_frozen"));
     mixin(update_double("T_frozen_energy", "T_frozen_energy"));
     mixin(update_enum("tci_model", "tci_model", "tci_model_from_name"));
@@ -1925,6 +1937,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  reacting: ", GlobalConfig.reacting);
         writeln("  reactions_file: ", to!string(GlobalConfig.reactions_file));
         writeln("  reaction_time_delay: ", GlobalConfig.reaction_time_delay);
+        writeln("  reaction_fraction_schedule: ", GlobalConfig.reaction_fraction_schedule);
         writeln("  T_frozen: ", GlobalConfig.T_frozen);
         writeln("  T_frozen_energy: ", GlobalConfig.T_frozen_energy);
         writeln("  tci_model: ", tci_model_name(GlobalConfig.tci_model));

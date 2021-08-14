@@ -290,6 +290,33 @@ function write_config_file(fileName)
    f:write(string.format('"reacting": %s,\n', tostring(config.reacting)))
    f:write(string.format('"reactions_file": "%s",\n', config.reactions_file))
    f:write(string.format('"reaction_time_delay": %.18e,\n', config.reaction_time_delay))
+   if #config.reaction_fraction_schedule > 0 then
+      -- The table already have some values.
+      -- We will presume that they are valid entries, however,
+      -- if enough people get it wrong, we'll put some check here.
+   else
+      -- Fall back to making up a schedule by assuming full time-step fraction.
+      config.reaction_fraction_schedule = {{0.0, 1.0},}
+   end
+   f:write(string.format('"reaction_fraction_schedule_length": %d,\n', #config.reaction_fraction_schedule))
+   local rf_values = {}
+   local rf_times = {}
+   for i,rf_pair in ipairs(config.reaction_fraction_schedule) do
+      rf_times[#rf_times+1] = rf_pair[1]
+      rf_values[#rf_values+1] = rf_pair[2]
+   end
+   f:write('"reaction_fraction_schedule_values": [')
+   for i,e in ipairs(rf_values) do
+      f:write(string.format('%.18e', e))
+      if i < #rf_values then f:write(', ') end
+   end
+   f:write('],\n')
+   f:write('"reaction_fraction_schedule_times": [')
+   for i,e in ipairs(rf_times) do
+      f:write(string.format('%.18e', e))
+      if i < #rf_times then f:write(', ') end
+   end
+   f:write('],\n')
    f:write(string.format('"T_frozen": %.18e,\n', config.T_frozen))
    f:write(string.format('"T_frozen_energy": %.18e,\n', config.T_frozen_energy))
    f:write(string.format('"tci_model": "%s",\n', string.lower(config.tci_model)))

@@ -1574,7 +1574,7 @@ public:
     }
 
 
-    void evalRU(double t, int gtl, int ftl, FVCell c, bool do_reconstruction)
+    void evalRU(double t, int gtl, int ftl, FVCell c, bool do_reconstruction, double reaction_fraction)
     {
         // This method evaluates the R(U) for a single cell.
         // It is used when constructing the numerical Jacobian.
@@ -1662,7 +1662,8 @@ public:
             c.add_viscous_source_vector();
         } // end if viscous
         if (myConfig.reacting && myConfig.chemistry_update == ChemistryUpdateMode.integral) {
-            c.add_thermochemical_source_vector(thermochem_conc, thermochem_rates, thermochem_source, SimState.step);
+            c.add_thermochemical_source_vector(thermochem_conc, thermochem_rates, thermochem_source,
+                                               SimState.step*reaction_fraction);
         }
         if (myConfig.udf_source_terms) { c.add_udf_source_vector(); }
         c.time_derivatives(gtl, ftl);

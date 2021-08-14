@@ -133,6 +133,7 @@ configOptionsHidden = { -- hidden from user
    reacting = false,
    reactions_file = "chemistry.lua",
    reaction_time_delay = 0.0,
+   reaction_fraction_schedule = {},
    T_frozen = 300.0,
    T_frozen_energy = 300.0,
    ignition_time_start = 0.0,
@@ -158,7 +159,6 @@ configOptionsHidden = { -- hidden from user
    cfl_value = 0.5,
    -- If the user does not set a schedule of cfl values,
    -- we drop back to using the single cfl_value to construct the schedule.
-   cfl_schedule = {},
    cfl_schedule = {},
    cfl_scale_factor = 1.0,
    stringent_cfl = false,

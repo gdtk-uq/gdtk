@@ -1154,7 +1154,7 @@ public:
     void add_thermochemical_source_vector(number[] thermochem_conc,
                                           number[] thermochem_rates,
                                           number[] thermochem_source,
-                                          int step)
+                                          double reaction_factor)
     {
         // It does not make a lot of sense to call this function for n_species == 1
         // Maybe we should just set chem_source[0] = 0.0.
@@ -1162,6 +1162,10 @@ public:
         auto cqi = myConfig.cqi;
         if (fs.gas.T <= myConfig.T_frozen) { return; }
         version(multi_species_gas) {
+            /+ [FIX-ME] PJ 2021-08-14
+             Kyle, hoist this code out into your SS solver.
+             I want to pass the factor in directly.
+
             // the limit_factor is used to slowly increase the magnitude of the
             // thermochemical source terms from 0 to 1 for problematic reacting flows
             double limit_factor = 1.0;
@@ -1169,15 +1173,16 @@ public:
                 double S = step/to!double(myConfig.nsteps_of_chemistry_ramp);
                 limit_factor = min(1.0, S);
             }
+            +/
             if (cqi.n_species > 1) {
                 myConfig.thermochemUpdate.eval_source_terms(myConfig.gmodel, fs.gas, thermochem_conc,
                                                             thermochem_rates, thermochem_source);
-                foreach(sp; 0 .. cqi.n_species) { Q.vec[cqi.species+sp] += limit_factor*thermochem_source[sp]; }
+                foreach(sp; 0 .. cqi.n_species) { Q.vec[cqi.species+sp] += reaction_factor*thermochem_source[sp]; }
             }
         }
         version(multi_T_gas) {
             foreach(imode; 0 .. cqi.n_modes) {
-                Q.vec[cqi.modes+imode] += thermochem_source[cqi.n_species+imode];
+                Q.vec[cqi.modes+imode] += reaction_factor*thermochem_source[cqi.n_species+imode];
             }
         }
     }

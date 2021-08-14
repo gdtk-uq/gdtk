@@ -2320,6 +2320,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                 bool blklocal_with_local_time_stepping = with_local_time_stepping;
                 double blklocal_dt_global = SimState.dt_global;
                 double blklocal_t0 = SimState.time;
+                double reaction_fraction = GlobalConfig.reaction_fraction_schedule.interpolate_value(SimState.time);
                 foreach (cell; blk.cells) {
                     double dt = (blklocal_with_local_time_stepping) ? cell.dt_local : blklocal_dt_global;
                     auto dUdt0 = cell.dUdt[0];
@@ -2332,7 +2333,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     blk.U0save.copy_values_from(U0);
                     cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                     dUdt0.clear();
-                    blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix);
+                    blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix, reaction_fraction);
                     bool allFinite = true;
                     foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k].re)) { allFinite = false; } }
                     if (!allFinite) {
@@ -2353,7 +2354,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                             cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                             // Get derivative vector.
                             dUdt0.clear();
-                            blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix);
+                            blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix, reaction_fraction);
                             foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k].re)) { allFinite = false; } }
                             if (!allFinite) {
                                 debug { writeln("Perturbation j=", j, " U0", U0, " dUdt0=", dUdt0); }
@@ -2370,7 +2371,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                             cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                             // Get derivative vector.
                             dUdt0.clear();
-                            blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix);
+                            blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix, reaction_fraction);
                             foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k])) { allFinite = false; } }
                             if (!allFinite) {
                                 debug { writeln("Perturbation j=", j, " U0", U0, " dUdt0=", dUdt0); }
@@ -2389,7 +2390,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     U0.copy_values_from(blk.U0save);
                     cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                     dUdt0.clear();
-                    blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_rhs);
+                    blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_rhs, reaction_fraction);
                     foreach (k; 0 .. cqi.n) { blk.crhs._data[k][cqi.n] = dUdt0.vec[k].re; }
                     // Solve for dU and update U.
                     gaussJordanElimination!double(blk.crhs);
@@ -2646,6 +2647,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
                 bool allow_hoi_rhs = allow_high_order_interpolation;
                 bool allow_hoi_matrix = allow_high_order_interpolation && GlobalConfig.allow_interpolation_for_sensitivity_matrix;
                 double dt = SimState.dt_global;
+                double reaction_fraction = GlobalConfig.reaction_fraction_schedule.interpolate_value(SimState.time);
                 double blklocal_t0 = SimState.time;
                 foreach (cell; blk.cells) {
                     auto dUdt0 = cell.dUdt[0];
@@ -2658,7 +2660,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
                     blk.U0save.copy_values_from(U0);
                     cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                     dUdt0.clear();
-                    blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix);
+                    blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix, reaction_fraction);
                     bool allFinite = true;
                     foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k].re)) { allFinite = false; } }
                     if (!allFinite) {
@@ -2696,7 +2698,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
                             cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                             // Get derivative vector.
                             dUdt0.clear();
-                            blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix);
+                            blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix, reaction_fraction);
                             foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k].re)) { allFinite = false; } }
                             if (!allFinite) {
                                 debug { writeln("Perturbation j=", j, " U0", U0, " dUdt0=", dUdt0); }
@@ -2713,7 +2715,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
                             cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                             // Get derivative vector.
                             dUdt0.clear();
-                            blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix);
+                            blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix, reaction_fraction);
                             foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k])) { allFinite = false; } }
                             if (!allFinite) {
                                 debug { writeln("Perturbation j=", j, " U0", U0, " dUdt0=", dUdt0); }
@@ -2732,7 +2734,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
                     U0.copy_values_from(blk.U0save);
                     cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                     dUdt0.clear();
-                    blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_rhs);
+                    blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_rhs, reaction_fraction);
                     foreach (k; 0 .. cqi.n) { blk.crhs._data[k][cqi.n] = dUdt0.vec[k].re; }
                     // Solve for dU and update U.
                     gaussJordanElimination!double(blk.crhs);
