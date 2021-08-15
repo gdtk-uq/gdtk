@@ -1669,8 +1669,7 @@ public:
             c.add_viscous_source_vector();
         } // end if viscous
         if (myConfig.reacting && myConfig.chemistry_update == ChemistryUpdateMode.integral) {
-            c.add_thermochemical_source_vector(thermochem_conc, thermochem_rates, thermochem_source,
-                                               SimState.time*reaction_fraction);
+            c.add_thermochemical_source_vector(thermochem_conc, thermochem_rates, thermochem_source, reaction_fraction);
         }
         if (myConfig.udf_source_terms) { c.add_udf_source_vector(); }
         c.time_derivatives(gtl, ftl);

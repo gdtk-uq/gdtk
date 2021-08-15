@@ -2262,6 +2262,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
         }
     }
     //
+    double reaction_fraction = GlobalConfig.reaction_fraction_schedule.interpolate_value(SimState.time);
     int attempt_number = 0;
     int step_failed = 0; // Use int because we want to reduce across MPI ranks.
     do {
@@ -2320,7 +2321,6 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                 bool blklocal_with_local_time_stepping = with_local_time_stepping;
                 double blklocal_dt_global = SimState.dt_global;
                 double blklocal_t0 = SimState.time;
-                double reaction_fraction = GlobalConfig.reaction_fraction_schedule.interpolate_value(SimState.time);
                 foreach (cell; blk.cells) {
                     double dt = (blklocal_with_local_time_stepping) ? cell.dt_local : blklocal_dt_global;
                     auto dUdt0 = cell.dUdt[0];
@@ -2591,6 +2591,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
     }
     //
     // Begin the gasdynamic update.
+    double reaction_fraction = GlobalConfig.reaction_fraction_schedule.interpolate_value(SimState.time);
     int attempt_number = 0;
     int step_failed = 0; // Use int because we want to reduce across MPI ranks.
     do {
@@ -2647,7 +2648,6 @@ void gasdynamic_implicit_increment_with_moving_grid()
                 bool allow_hoi_rhs = allow_high_order_interpolation;
                 bool allow_hoi_matrix = allow_high_order_interpolation && GlobalConfig.allow_interpolation_for_sensitivity_matrix;
                 double dt = SimState.dt_global;
-                double reaction_fraction = GlobalConfig.reaction_fraction_schedule.interpolate_value(SimState.time);
                 double blklocal_t0 = SimState.time;
                 foreach (cell; blk.cells) {
                     auto dUdt0 = cell.dUdt[0];

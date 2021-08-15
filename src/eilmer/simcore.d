@@ -1034,7 +1034,9 @@ int integrate_in_time(double target_time_as_requested)
                 GlobalConfig.chemistry_update == ChemistryUpdateMode.split &&
                 (GlobalConfig.strangSplitting == StrangSplittingMode.half_R_full_T_half_R) &&
                 (SimState.time > GlobalConfig.reaction_time_delay)) {
-                chemistry_step(0.5*SimState.dt_global);
+                double dt_chem = 0.5*SimState.dt_global;
+                dt_chem *= GlobalConfig.reaction_fraction_schedule.interpolate_value(SimState.time);
+                chemistry_step(dt_chem);
             }
             //
             // 2.2 Step the gasdynamic processes.
@@ -1065,10 +1067,10 @@ int integrate_in_time(double target_time_as_requested)
             if (GlobalConfig.reacting &&
                 GlobalConfig.chemistry_update == ChemistryUpdateMode.split &&
                 (SimState.time > GlobalConfig.reaction_time_delay)) {
-                double mydt = (GlobalConfig.strangSplitting == StrangSplittingMode.full_T_full_R) ?
+                double dt_chem = (GlobalConfig.strangSplitting == StrangSplittingMode.full_T_full_R) ?
                     SimState.dt_global : 0.5*SimState.dt_global;
-                mydt *= GlobalConfig.reaction_fraction_schedule.interpolate_value(SimState.time);
-                chemistry_step(mydt);
+                dt_chem *= GlobalConfig.reaction_fraction_schedule.interpolate_value(SimState.time);
+                chemistry_step(dt_chem);
             }
             //
             // 3.0 Update the time record and (occasionally) print status.
