@@ -29,6 +29,40 @@ In a typical input script, one might set 10-15 input variables.
 
 == Time-stepping
 
+`config.gasdynamic_update_scheme` ::
+  _string_, default: `'predictor-corrector'` +
+  The options are: `'euler'`, `'pc'`, `'predictor-corrector'`,
+  `'midpoint'`, `'classic-rk3'`, `'tvd-rk3'`, `'denman-rk3'`,
+  `'moving-grid-1-stage'`, `'moving-grid-2-stage'`,
+  `'backward_euler'`, `'implicit_rk1'`.
+  Most of the update schemes are explicit, except for the last two listed here.
+  Note that `'pc'` is equivalent to `'predictor-corrector'`.
+  If you want time-accurate solutions, use a two- or three-stage explicit stepping scheme,
+  otherwise, (explicit) Euler stepping has less computational expense
+  but you may get less accuracy and the code will not be as robust for the same CFL value.
+  For example the shock front in the Sod shock tube example is quite noisy for Euler
+  stepping at CFL=0.85 but is quite neat with any of the two- or three-stage stepping schemes
+  at the same value of CFL.
+  The explicit midpoint and predictor-corrector schemes produce a tidy shock up to CFL = 1.0
+  and the rk3 schemes still look tidy up to CFL = 1.2.
+  If you care mainly about the end result, you might be able to use an implicit scheme
+  with larger CFL number.
+  We have run the `'backward_euler'` scheme up to a CFL value of 50 for some of
+  the turbulent flat-plate examples.
+  The implicit schemes are more expensive than the low-order explicit schemes, per time-step
+  and, at large CFL numbers, will not be time accurate.
+  The trade-off will be something that you have to explore but, if you care only about
+  a steady state, the `'backward_euler'` scheme may get you there more quickly than any
+  of the explicit schemes.
+  Your mileage _will_ vary.
+  Note that you may use dashes or underscores when spelling the scheme names.
+
+`config.fixed_time_step` ::
+  _boolean_, default: `false` +
+  Normally, we allow the time step size to be determined from cell conditions and CFL number.
+  Setting `config.fixed_time_step=true` forces the time step size to be unchanged from
+  `config.dt_init`.
+
 `config.cfl_value` ::
   _float_, default: `0.5` +
   The CFL number is ratio of the time-step divided by the time
@@ -38,31 +72,17 @@ In a typical input script, one might set 10-15 input variables.
   If you are having trouble with a simulation that has lots of sudden flow field changes,
   decreasing the size of `cfl_value` may help.
 
-`config.gasdynamic_update_scheme` ::
-  _string_, default: `'predictor-corrector'` +
-  The options are: `'euler'`, `'pc'`, `'predictor-corrector'`,
-  `'midpoint'`, `'classic-rk3'`, `'tvd-rk3'`, `'denman-rk3'`,
-  `'moving-grid-1-stage'`, `'moving-grid-2-stage'`.
-  Note that `'pc'` is equivalent to `'predictor-corrector'`.
-  If you want time-accurate solutions, use a two- or three-stage stepping scheme,
-  otherwise, Euler stepping has less computational expense
-  but you may get less accuracy and the code will not be as robust for the same CFL value.
-  For example the shock front in the Sod shock tube example is quite noisy for Euler
-  stepping at CFL=0.85 but is quite neat with any of the two- or three-stage stepping schemes
-  at the same value of CFL.
-  The midpoint and predictor-corrector schemes produce a tidy shock up to CFL = 1.0
-  and the rk3 schemes still look tidy up to CFL = 1.2.
-  Note that you may use dashes or underscores when spelling the scheme names.
-
-`config.fixed_time_step` ::
-  _boolean_, default: `false` +
-  Normally, we allow the time step size to be determined from cell conditions and CFL number.
-  Setting `config.fixed_time_step=true` forces the time step size to be unchanged from
-  `config.dt_init`.
+`config.cfl_schedule` ::
+  _table of float pairs_, default `{{0.0, config.cfl_value},}` +
+  If you want to vary the `cfl_value` as the simulation proceeds,
+  possibly starting with small values and then increasing them as the flow field
+  settles to something not too difficult for the flow solver,
+  you can specify a table of `{time,cfl_value}` pairs that are interpolated by the solver.
+  Outside the specified range of times, the `cfl_value` will be the closest end-point value.
 
 `config.dt_init` ::
   _float_, default: `1.0e-3` +
-  Although the computation of the time step size is automatic,
+  Although the computation of the time step size is usually automatic,
   there might be cases where this process does not select a small enough value to get the
   simulation started stably.
   For the initial step, the user may override the computed value of time step by assigning
@@ -135,20 +155,38 @@ In a typical input script, one might set 10-15 input variables.
 
 `config.with_local_time_stepping` ::
   _boolean_, default: `false` +
-  If a steady-state solution is sought, then it is possible to accelerate the explicit time-stepping scheme by allowing each cell in the domain to integrate in time with their own time-step that satisfies only the local CFL condition. This is sometimes referred to as Local Time-Stepping (LTS). Setting `config.with_local_time_stepping=true` enables this mode of time-stepping. Note that this mode of time-stepping is only suitable for steady-state simulations.
+  If a steady-state solution is sought, then it is possible to accelerate
+  the explicit time-stepping scheme by allowing each cell in the domain
+  to integrate in time with their own time-step that satisfies only the local CFL condition.
+  This is sometimes referred to as Local Time-Stepping (LTS).
+  Setting `config.with_local_time_stepping=true` enables this mode of time-stepping.
+  Note that this mode of time-stepping is only suitable for steady-state simulations.
 
 `config.local_time_stepping_limit_factor` ::
   _int_, default: `10000` +
-  To improve the stability of simulations that enable `config.with_local_time_stepping`, users can limit the largest allowable local time-step as a function of the smallest global time-step. The allowable time-step for each cell is set to be the minimum of the cell's local time-step and the global minimum time-step multiplied by `config.local_time_stepping_limit_factor`. The `config.local_time_stepping_limit_factor` is typically set to a value between 500 and 10000.
+  To improve the stability of simulations that enable `config.with_local_time_stepping`,
+  users can limit the largest allowable local time-step as a function
+  of the smallest global time-step.
+  The allowable time-step for each cell is set to be the minimum of the cell's local time-step
+  and the global minimum time-step multiplied by `config.local_time_stepping_limit_factor`.
+  The `config.local_time_stepping_limit_factor` is typically set to a value between 500 and 10000.
 
 `config.residual_smoothing` ::
   _boolean_, default: `false` +
-  Residual smoothing essentially applies an averaging filter on the residuals during the time-integration procedure. Residual smoothing has two advantages: (1) The averaging increases the allowable CFL for a particular explicit time-stepping scheme; and (2) The averaging ensures that the local time-step for two adjacent cells doesn't differ by a large magnitude when using `config.with_local_time_stepping`, this has a stabilising effect.
+  Residual smoothing essentially applies an averaging filter on the residuals
+  during the time-integration procedure.
+  Residual smoothing has two advantages: (1) The averaging increases the allowable CFL
+  for a particular explicit time-stepping scheme; and (2) The averaging ensures that
+  the local time-step for two adjacent cells doesn't differ by a large magnitude
+  when using `config.with_local_time_stepping`, this has a stabilising effect.
 
 `config.residual_smoothing_type` ::
   _string_, default: `'explicit'` +
   The options are: `'explicit'`, `'implicit'`.
-  When `config.residual_smoothing=true`, the residuals can either be smoothed via an explicit averaging method or an implicit averaging method. Explicit averaging has less computational expense, however, implicit averaging typically results in a larger stable time step.
+  When `config.residual_smoothing=true`, the residuals can either be smoothed
+  via an explicit averaging method or an implicit averaging method.
+  Explicit averaging has less computational expense, however, implicit averaging
+  typically results in a larger stable time step.
 
 `config.residual_smoothing_weight` ::
   _float_, default: `0.2` +
@@ -156,7 +194,8 @@ In a typical input script, one might set 10-15 input variables.
 
 `config.residual_smoothing_iterations` ::
   _int_, default: `2` +
-  The number of Jacobi iterations used for the implicit residual averaging when `config.residual_smoothing=true` and `config.residual_smoothing_type='implicit'`.
+  The number of Jacobi iterations used for the implicit residual averaging
+  when `config.residual_smoothing=true` and `config.residual_smoothing_type='implicit'`.
 
 == Block marching
 
@@ -370,7 +409,7 @@ shocks and Hanel-Schwane-Seider flux calculator near shocks.
   _float_, default: `1.0`
 
 
-== Thermo-chemistry
+== Finite-rate thermo-chemistry
 
 `config.reacting` ::
   _boolean_, default: `false` +
@@ -384,6 +423,16 @@ shocks and Hanel-Schwane-Seider flux calculator near shocks.
   _float_, default: `0.0` +
   Time after which finite-rate reactions are allowed to start.
 
+`config.reaction_fraction_schedule` ::
+  _table of float pairs_, default `{{0.0, 1.0},}` +
+  If you want to vary the fraction of the reaction time step per gas-dynamic time step
+  as the simulation proceeds,
+  you can specify a table of `{time, fraction}` pairs that are interpolated by the solver.
+  If the initial flow is likely to have a harsh shock reflection with high temperatures
+  and correspondingly high reaction rates, it may be beneficial to discard time accuracy
+  and start with a small fraction, increasing it (to a maximum of 1.0) as the flow field settles.
+  Outside the specified range of times, the `fraction` will be the closest end-point value.
+
 `config.T_frozen` ::
   _float_, default: `300.0` +
   Temperature (in degrees K) below which reactions are frozen.
@@ -395,25 +444,25 @@ shocks and Hanel-Schwane-Seider flux calculator near shocks.
 
 `config.mass_diffusion_model` ::
   _string_, default: `'none'` +
-  Set the expression for laminar diffusion flux of species along concentration gradients. 
+  Set the expression for laminar diffusion flux of species along concentration gradients.
   Valid options are: `'none'` (no diffusion) and `'ficks_first_law'` (self explanatory).
   Note that this option is ignored in turbulent flow, where the turbulent diffusivity is
   used instead.
 
 `config.diffusion_coefficient_type` ::
   _string_, default: `'none'` +
-  Set the type of formula used to compute the species diffusion coefficients in a 
+  Set the type of formula used to compute the species diffusion coefficients in a
   diffusion enabled simulation.
   Valid options are: `'constant_lewis_number'` (works with any multi-species model),
   `'species_specific_lewis_numbers'` (requires specific gas models), and
   `'binary_diffusion'` (requires specific gas models).
-  Note that leaving this parameter as `'none'` in a simulation where 
+  Note that leaving this parameter as `'none'` in a simulation where
   `config.mass_diffusion_model='ficks_first_law'` will cause a run-time error.
 
 `config.lewis_number` ::
   _float_, default: `1.0` +
   Set the value for the Lewis number, which computes the species diffusion coefficients
-  based on the thermal conductivity, in a diffusion enabled simulation with    
+  based on the thermal conductivity, in a diffusion enabled simulation with
   `config.diffusion_coefficient_type=constant_lewis_number`.
 
 == Special initialisation
@@ -447,9 +496,6 @@ The blending operation is performed 20 times in this example:
  config.diffuse_wall_bcs_on_init = true
  config.number_init_passes = 20
  config.wall_temperature_on_init = 600.0
-
-In the collection of examples, the Mabey flat plate turbulent case makes use
-of this initialisation option. See: `dgd/examples/eilmer/2D/flat-plate-turbulent-mabey/steady-state-solver/mabey.lua`
 
 
 == Miscellaneous
@@ -513,12 +559,23 @@ of this initialisation option. See: `dgd/examples/eilmer/2D/flat-plate-turbulent
 
 `config.do_temporal_DFT` ::
   _boolean_, default: `false` +
-  Set to `true` to calculate the temporal Discrete Fourier Transform of the pressure on a cell-by-cell basis on-the-go. Useful for large jobs where storing the number of snapshots required for Fourier decomposition is prohibitive. Results written to file `DFT/jobName.DFT.bxxxx.tar.gz`, with a line containing the real and imaginary components of each Fourier mode i.e. Re(A0), Im(A0), Re(A1), Im(A1), ... Im(A_n). Requires setting of additional config options `config.DFT_n_modes` and `config.DFT_step_interval`. Use of `config.fixed_time_step` is also very strongly recommended, non-fixed time stepping will lead to erronous mode amplitudes and phases.
+  Set to `true` to calculate the temporal Discrete Fourier Transform of the pressure
+  on a cell-by-cell basis on-the-go.
+  Useful for large jobs where storing the number of snapshots required
+  for Fourier decomposition is prohibitive.
+  Results written to file `DFT/jobName.DFT.bxxxx.tar.gz`,
+  with a line containing the real and imaginary components of each Fourier mode
+  i.e. Re(A0), Im(A0), Re(A1), Im(A1), ... Im(A_n).
+  Requires setting of additional config options `config.DFT_n_modes` and `config.DFT_step_interval`.
+  Use of `config.fixed_time_step` is also very strongly recommended, non-fixed time stepping
+  will lead to erronous mode amplitudes and phases.
 
 `config.DFT_n_modes` ::
   _int_, default: `5` +
-  The number of Fourier modes to be computed in the temporal Discrete Fourier Transform. Should be equal to `config.max_steps / config.DFT_step_interval` (see next entry).
+  The number of Fourier modes to be computed in the temporal Discrete Fourier Transform.
+  Should be equal to `config.max_steps / config.DFT_step_interval` (see next entry).
 
 `config.DFT_step_interval` ::
   _int_, default: `10` +
-  The number of steps between each increment of the temporal Discrete Fourier Transform modes. Should be equal to `config.max_steps / config.DFT_n_modes`.
+  The number of steps between each increment of the temporal Discrete Fourier Transform modes.
+  Should be equal to `config.max_steps / config.DFT_n_modes`.

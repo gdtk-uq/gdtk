@@ -7,7 +7,7 @@ Rowan J. Gollan; Peter A. Jacobs
 
 :leveloffset: +1
 
-In a nutshell, Eilmer is a gas flow simulation code.
+In a nutshell, transient flow solvers `e4shared` and `e4mpi` are gas-flow simulation codes.
 The set up of a simulation involves writing an input script
 that defines the domain of the gas flow as one or more FluidBlock objects
 with initial gas flow states and prescribed boundary conditions.
