@@ -35,6 +35,7 @@ clean:
 	- rm -rf public
 	- rm $(EILMER_DIR)/eilmer-reference-manual-for-hugo.adoc
 	- rm $(ESTCN_DIR)/estcn-manual-for-hugo.adoc
+	- rm -rf $(ESTCN_DIR)/estcn-manual-for-hugo
 	- rm $(L1D_DIR)/l1d-reference-manual-for-hugo.adoc
 	- rm $(NENZF1D_DIR)/nenzf1d-manual-for-hugo.adoc
 	- rm $(PYTHON_DIR)/gd-manual-for-hugo.adoc
@@ -96,11 +97,13 @@ geometry-manual:
 	cp ../doc/geometry-reference-manual.adoc $(PYTHON_DIR)/
 	sed -i '/^:stylesheet:/d' $(PYTHON_DIR)/geometry-reference-manual.adoc
 	cat $(PYTHON_DIR)/geometry-manual-hugo-header.txt $(PYTHON_DIR)/geometry-reference-manual.adoc > $(PYTHON_DIR)/geometry-manual-for-hugo.adoc
+	rm $(PYTHON_DIR)/geometry-reference-manual.adoc
 
 nm-manual:
 	cp ../doc/nm-reference-manual.adoc $(PYTHON_DIR)/
 	sed -i '/^:stylesheet:/d' $(PYTHON_DIR)/nm-reference-manual.adoc
 	cat $(PYTHON_DIR)/nm-manual-hugo-header.txt $(PYTHON_DIR)/nm-reference-manual.adoc > $(PYTHON_DIR)/nm-manual-for-hugo.adoc
+	rm $(PYTHON_DIR)/nm-reference-manual.adoc
 
 presentations:
 	- mkdir -p static/pdfs
