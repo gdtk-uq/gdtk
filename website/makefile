@@ -14,7 +14,12 @@ REF_MANS := eilmer-reference-manual \
 	geometry-manual \
 	nm-manual
 
-all: $(REF_MANS) eilmer-catalog eilmer-faq presentations theses
+USER_GUIDES := eilmer-user-guide \
+	geometry-user-guide \
+	gas-user-guide \
+	reacting-gas-guide
+
+all: $(REF_MANS) eilmer-catalog eilmer-faq presentations theses $(USER_GUIDES)
 	hugo
 
 sync:
@@ -104,6 +109,26 @@ nm-manual:
 	sed -i '/^:stylesheet:/d' $(PYTHON_DIR)/nm-reference-manual.adoc
 	cat $(PYTHON_DIR)/nm-manual-hugo-header.txt $(PYTHON_DIR)/nm-reference-manual.adoc > $(PYTHON_DIR)/nm-manual-for-hugo.adoc
 	rm $(PYTHON_DIR)/nm-reference-manual.adoc
+
+eilmer-user-guide:
+	- mkdir -p static/pdfs
+	cd $(DGD_DOC)/eilmer/user-guide; make pdf
+	cp $(DGD_DOC)/eilmer/user-guide/eilmer-user-guide.pdf static/pdfs/
+
+geometry-user-guide:
+	- mkdir -p static/pdfs
+	cd $(DGD_DOC)/geometry/user-guide; make pdf
+	cp $(DGD_DOC)/geometry/user-guide/geometry-user-guide.pdf static/pdfs/
+
+gas-user-guide:
+	- mkdir -p static/pdfs
+	cd $(DGD_DOC)/gas/user-guide; make pdf
+	cp $(DGD_DOC)/gas/user-guide/gas-user-guide.pdf static/pdfs/
+
+reacting-gas-guide:
+	- mkdir -p static/pdfs
+	cd $(DGD_DOC)/gas/reacting-gas; make pdf
+	cp $(DGD_DOC)/gas/reacting-gas/reacting-gas-guide.pdf static/pdfs/
 
 presentations:
 	- mkdir -p static/pdfs
