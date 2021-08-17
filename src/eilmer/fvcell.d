@@ -1649,7 +1649,7 @@ public:
 
             // gather cells
             foreach (c; neighbour_cell_cloud) {
-                if ( c.id != id && c.is_interior_to_domain) {
+                if ( c.id != id && c.id != neighbour_cell_cloud[0].id && c.is_interior_to_domain) {
                     cell_list ~= c;
                 }
             } // finished gathering cells
