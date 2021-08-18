@@ -87,8 +87,8 @@ if blocking == 'single' then
    SBlock2UBlock(fluidBlocks[1])
 else
    blks = FBArray:new{grid=grid, fillCondition=initial, bcList=bcList,
-		      nib=4, njb=3, nkb=2, label="blk"}
-   for i=1,24 do
+		      nib=2, njb=2, nkb=2, label="blk"}
+   for i=1,8 do
       SBlock2UBlock(fluidBlocks[i])
    end
 end
@@ -110,7 +110,7 @@ config.print_count = 100
 SteadyStateSolver{
    use_preconditioner = true,
    precondition_matrix_type = "ilu",
-   frozen_preconditioner_count = 20,
+   frozen_preconditioner_count = 10,
    start_preconditioning = 1,
 
    use_scaling = true,
@@ -121,24 +121,24 @@ SteadyStateSolver{
    stop_on_relative_global_residual = 1.0e-10,
 
    -- Settings for FGMRES iterative solver
-   max_outer_iterations = 60,
+   max_outer_iterations = 20,
    max_restarts = 0,
 
    -- Settings for start-up phase
    number_start_up_steps = 0,
-   cfl0 = 100.0,
+   cfl0 = 1.0,
    eta0 = 0.1,
    tau0 = 1.0,
    sigma0 = 1.0e-30,
    p0 = 1.0,
 
    -- Settings for inexact Newton phase
-   cfl1 = 100.0,
+   cfl1 = 1.0,
    tau1 = 1.0,
    sigma1 = 1.0e-30,
    p1 = 1.0,
    eta1 = 0.1,
-   eta1_min = 0.05,
+   eta1_min = 0.1,
    eta_strategy = "geometric",
 
    -- Settings control write-out
