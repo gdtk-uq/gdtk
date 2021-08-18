@@ -241,25 +241,28 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     bool finalStep = false;
     bool usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
     if (usePreconditioner) {
+        evalRHS(0.0, 0);
         // initialize the flow Jacobians used as local precondition matrices for GMRES
+
         final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
             case PreconditionMatrixType.jacobi:
-                foreach (blk; localFluidBlocks) { blk.initialize_jacobian(-1); }
+                foreach (blk; localFluidBlocks) { blk.initialize_jacobian(-1, GlobalConfig.sssOptions.preconditionerSigma); }
                 break;
             case PreconditionMatrixType.ilu:
-                foreach (blk; localFluidBlocks) { blk.initialize_jacobian(0); }
+                foreach (blk; localFluidBlocks) { blk.initialize_jacobian(0, GlobalConfig.sssOptions.preconditionerSigma); }
                 break;
             case PreconditionMatrixType.sgs:
-                foreach (blk; localFluidBlocks) { blk.initialize_jacobian(0); }
+                foreach (blk; localFluidBlocks) { blk.initialize_jacobian(0, GlobalConfig.sssOptions.preconditionerSigma); }
                 break;
             case PreconditionMatrixType.sgs_relax:
-                foreach (blk; localFluidBlocks) { blk.initialize_jacobian(0); }
+                foreach (blk; localFluidBlocks) { blk.initialize_jacobian(0, GlobalConfig.sssOptions.preconditionerSigma); }
                 break;
             case PreconditionMatrixType.lu_sgs:
                 // do nothing
                 break;
         } // end switch
-        //foreach (blk; localFluidBlocks) { blk.verify_jacobian(); }
+
+        //foreach (blk; localFluidBlocks) { blk.verify_jacobian(GlobalConfig.sssOptions.preconditionerSigma); }
     }
 
     // Set usePreconditioner to false for pre-steps AND first-order steps.
@@ -2018,6 +2021,25 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         case PreconditionMatrixType.ilu:
             foreach (blk; parallel(localFluidBlocks,1)) {
                 blk.evaluate_jacobian();
+                /*
+                writeln("START ----");
+                int count = 0;
+                auto fileName = to!string(step)~".jacobian.dat";
+                auto outFile = File(fileName, "w");
+                outFile.close();
+                foreach (row; 0..blk.flowJacobian.local.ia.length-1) {
+                    // foreach (j; blk.flowJacobian.local.ia[row] .. blk.flowJacobian.local.ia[row+1]) {
+                    size_t a = blk.flowJacobian.local.ia[row];
+                    size_t b = blk.flowJacobian.local.ia[row+1];
+                    foreach (j; blk.flowJacobian.local.ja[a..b]) {
+                        outFile = File(fileName, "a");
+                        outFile.writef("%d %d %d %.10f \n", count, row, j, blk.flowJacobian.local[row,j].re);
+                        outFile.close();
+                        count += 1;
+                    }
+                }
+                writeln("END ----");
+                */
                 blk.flowJacobian.prepare_ilu_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
             }
             break;
@@ -2112,6 +2134,51 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 }
             }
 
+            if (!GlobalConfig.sssOptions.useComplexMatVecEval) {
+                // calculate sigma without scaling
+                number sumv = 0.0;
+                mixin(dot_over_blocks("sumv", "zed", "zed"));
+                version(mpi_parallel) {
+                    MPI_Allreduce(MPI_IN_PLACE, &(sumv.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                    version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(sumv.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
+                }
+
+                auto eps0 = GlobalConfig.sssOptions.sigma1;
+                number N = 0.0;
+                number sume = 0.0;
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    int cellCount = 0;
+                    foreach (cell; blk.cells) {
+                        foreach (val; cell.U[0].vec) {
+                            sume += eps0*abs(val) + eps0;
+                            N += 1;
+                        }
+                        cellCount += nConserved;
+                    }
+                }
+                version(mpi_parallel) {
+                    MPI_Allreduce(MPI_IN_PLACE, &(sume.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                    version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(sume.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
+                }
+                version(mpi_parallel) {
+                    MPI_Allreduce(MPI_IN_PLACE, &(N.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                    version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(N.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
+                }
+
+                sigma = (sume/(N*sqrt(sumv))).re;
+                //writeln("sigma : ", sigma, ", ", sume, ", ", sumv, ", ", N);
+            }
+
+
+    mixin(dot_over_blocks("beta", "r0", "r0"));
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
+    }
+    beta = sqrt(beta);
+
+
+            
             // Prepare 'w' with (I/dt)(P^-1)v term;
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (i, cell; blk.cells) {

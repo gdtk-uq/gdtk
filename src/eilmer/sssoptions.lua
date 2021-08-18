@@ -16,6 +16,7 @@ sssOptionsHidden = { -- hidden from user
    frozen_preconditioner_count = 1, -- how often the precondition matrix is updated
    start_preconditioning = 1, -- what iteration to start preconditioning on
    ilu_fill = 0, -- level of fill-in for ILU decomposition (use 0 for practical simulations)
+   preconditioner_sigma = 1.0e-30,
 
    use_scaling = true, -- always good to scale the linear system
    use_complex_matvec_eval = false,-- use complex variable Frechet derivative

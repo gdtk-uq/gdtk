@@ -709,6 +709,7 @@ struct SteadyStateSolverOptions {
     int startPreconditioning = 1;
     int iluFill = 0;
     PreconditionMatrixType preconditionMatrixType = PreconditionMatrixType.jacobi;
+    double preconditionerSigma = 1.0e-30;
     bool useScaling = true;
     bool useComplexMatVecEval = false;
     int nPreSteps = 10;
@@ -2272,6 +2273,7 @@ void read_control_file()
             GlobalConfig.sssOptions.preconditionMatrixType = mySaveValue;
         }
     }
+    GlobalConfig.sssOptions.preconditionerSigma = getJSONdouble(sssOptions, "preconditioner_sigma", GlobalConfig.sssOptions.preconditionerSigma);
     GlobalConfig.sssOptions.useScaling = getJSONbool(sssOptions, "use_scaling", GlobalConfig.sssOptions.useScaling);
     GlobalConfig.sssOptions.useComplexMatVecEval = getJSONbool(sssOptions, "use_complex_matvec_eval", GlobalConfig.sssOptions.useComplexMatVecEval);
     GlobalConfig.sssOptions.nPreSteps =

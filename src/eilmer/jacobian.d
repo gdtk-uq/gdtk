@@ -46,12 +46,11 @@ public:
     Matrix!number Dinv;
     Matrix!number LDinv;
     number[] x;
-    this (size_t dimensions, size_t nConserved, int spatial_order, size_t nentry, size_t ncells)
+    this (double sigma, size_t dimensions, size_t nConserved, int spatial_order, size_t nentry, size_t ncells)
     {
         this.spatial_order = (spatial_order > 1) ? 2 : 1;
         import std.stdio;
-        version(complex_numbers) { eps = complex(0.0, 1.0e-30); }
-        else { eps = 1.0e-10; }
+        eps = sigma;
 
         size_local_matrix(nConserved, nentry, ncells);
 

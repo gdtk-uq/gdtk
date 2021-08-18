@@ -63,6 +63,7 @@ endif
 
 ifeq ($(WITH_NK),1)
     PROGRAMS += e4-nk-shared
+    PROGRAMS += e4-nk-shared-real
 endif
 
 ifeq ($(WITH_LUSGS),1)
@@ -83,6 +84,7 @@ ifeq ($(WITH_MPI),1)
     endif
     ifeq ($(WITH_NK),1)
         PROGRAMS += e4-nk-dist
+        PROGRAMS += e4-nk-dist-real
     endif
     ifeq ($(WITH_LUSGS),1)
         PROGRAMS += e4-lusgs-dist
@@ -470,7 +472,7 @@ clean:
 	- rm -f mpi_main_complex_with_rev_string.d
 	- rm -f loadbalance_with_rev_string.d
 	- rm -f e4mpi e4zmpi e4loadbalance e4ssc e4zshared
-	- rm -f e4-nk-shared e4-nk-dist e4-lusgs-shared e4-lusgs-dist
+	- rm -f e4-nk-shared e4-nk-shared-real e4-nk-dist e4-nk-dist-real e4-lusgs-shared e4-lusgs-dist
 	- rm -f e4shared_diagnostic
 	- rm -f dgd-for-mech4480.tgz
 	- rm -f dgd-module
@@ -655,6 +657,28 @@ e4-nk-shared: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_upd
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS)
 
+e4-nk-shared-real: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_update.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		nk_accelerator.d > nk_accelerator_with_string_subst.d
+	$(DMD) $(DFLAGS) $(OF)$@ \
+		$(DVERSION)nk_accelerator \
+		$(DVERSION)steady_state \
+		nk_accelerator_with_string_subst.d steadystate_core.d solid/solid_loose_coupling_update.d \
+		$(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(DLINKFLAGS)
+
 e4-nk-dist: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_update.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
@@ -668,6 +692,30 @@ e4-nk-dist: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_updat
 	$(DMD) $(DFLAGS) $(OF)$@ \
 		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)complex_numbers \
+		$(DVERSION)nk_accelerator \
+		$(DVERSION)steady_state \
+		mpi_nk_accelerator_with_string_subst.d steadystate_core.d solid/solid_loose_coupling_update.d \
+		$(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(DLINKFLAGS) -L-lmpi
+
+e4-nk-dist-real: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_update.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	cd $(OPENMPI_DIR); gen/setup.sh
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		nk_accelerator.d > mpi_nk_accelerator_with_string_subst.d
+	$(DMD) $(DFLAGS) $(OF)$@ \
+		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
 		mpi_nk_accelerator_with_string_subst.d steadystate_core.d solid/solid_loose_coupling_update.d \

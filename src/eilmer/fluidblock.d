@@ -174,6 +174,8 @@ public:
 
     version(nk_accelerator)
     {
+
+    FlowState fs_save;
     // storage for a precondition matrix
     FlowJacobian flowJacobian;
 
@@ -1075,7 +1077,7 @@ public:
 
     version(nk_accelerator) {
 
-    void initialize_jacobian(int spatial_order_of_jacobian)
+    void initialize_jacobian(int spatial_order_of_jacobian, double sigma)
     {
         /*
           This method initializes the flow Jacobian matrix attached the FluidBlock object.
@@ -1085,6 +1087,10 @@ public:
          */
 
         size_t nentry = 0;
+        GasModel gmodel = cast(GasModel) myConfig.gmodel;
+        if (gmodel is null) { gmodel = GlobalConfig.gmodel_master; }
+        fs_save = new FlowState(gmodel);
+
         // gather the expected number of non-zero entries in the flow Jacobian
         foreach (cell; cells) {
             cell.gather_residual_stencil_lists(spatial_order_of_jacobian);
@@ -1092,7 +1098,7 @@ public:
         }
         shared size_t my_nConserved = GlobalConfig.cqi.n;
         size_t ncells = cells.length;
-        flowJacobian = new FlowJacobian(myConfig.dimensions, my_nConserved, spatial_order_of_jacobian, nentry, ncells);
+        flowJacobian = new FlowJacobian(sigma, myConfig.dimensions, my_nConserved, spatial_order_of_jacobian, nentry, ncells);
 
         // we will gather the ghost cell residual stencil lists
         // at this point as well for convenience, we need them
@@ -1158,7 +1164,15 @@ public:
         shared int interpolation_order_save = GlobalConfig.interpolation_order;
         myConfig.interpolation_order = to!int(flowJacobian.spatial_order);
 
+        version(complex_numbers) { } // do nothing
+        else {
+            if (myConfig.interpolation_order != interpolation_order_save) {
+                foreach(cell; cells) { evalRHS(0, 0, cell.cell_list, cell.face_list, cell); }
+            }
+        }
+
         // fill out the rows of the Jacobian for a cell
+        foreach(cell; cells) { cell.Q_save.copy_values_from(cell.Q); }
         foreach(cell; cells) { evaluate_cell_contribution_to_jacobian(cell); }
 
         // add boundary condition corrections to boundary cells
@@ -1172,15 +1186,22 @@ public:
     {
         auto cqi = myConfig.cqi; // was GlobalConfig.cqi;
         auto nConserved = cqi.n;
-        auto eps = flowJacobian.eps;
+        auto eps0 = flowJacobian.eps;
+        number eps;
         int ftl = 1; int gtl = 0;
+
+        // save a copy of the flowstate and copy conserved quantities
+        fs_save.copy_values_from(pcell.fs);
         pcell.U[ftl].copy_values_from(pcell.U[0]);
 
         // perturb the current cell's conserved quantities
         // and then evaluate the residuals for each cell in
         // the local domain of influence
         foreach(j; 0..nConserved) {
+
             // peturb conserved quantity
+            version(complex_numbers) { eps = complex(0.0, eps0.re); }
+            else { eps = eps0*fabs(pcell.U[ftl].vec[j]) + eps0; }
             pcell.U[ftl].vec[j] += eps;
             pcell.decode_conserved(gtl, ftl, 0.0);
 
@@ -1190,16 +1211,14 @@ public:
             // fill local Jacobians
             foreach (cell; pcell.cell_list) {
                 foreach(i; 0..nConserved) {
-                    cell.dRdU[i][j] = cell.dUdt[ftl].vec[i].im/eps.im;
+                    version(complex_numbers) { cell.dRdU[i][j] = cell.dUdt[ftl].vec[i].im/eps.im; }
+                    else { cell.dRdU[i][j] = (cell.dUdt[ftl].vec[i]-cell.dUdt[0].vec[i])/eps; }
                 }
             }
 
             // return cell to original state
-            pcell.U[ftl].vec[j] -= eps;
-            pcell.decode_conserved(gtl, ftl, 0.0);
-
-            // evaluate original residuals in local stencil (clears imaginary components)
-            evalRHS(gtl, ftl, pcell.cell_list, pcell.face_list, pcell);
+            pcell.U[ftl].copy_values_from(pcell.U[0]);
+            pcell.fs.copy_values_from(fs_save);
         }
 
         // we now populate the pre-sized sparse matrix representation of the flow Jacobian
@@ -1218,7 +1237,6 @@ public:
             }
         }
     } // end evaluate_cell_contribution_to_jacobian()
-
     void apply_jacobian_bcs() {
         /*
           This method accounts for the boundary conditions for the boundary cell entries in the flow Jacobian.
@@ -1237,7 +1255,8 @@ public:
          */
         auto cqi = myConfig.cqi; // The block object has its own.
         auto nConserved = cqi.n;
-        number eps = flowJacobian.eps;
+        auto eps0 = flowJacobian.eps;
+        number eps;
         int gtl = 0; int ftl = 1;
 
         foreach ( bndary; bc ) {
@@ -1251,38 +1270,56 @@ public:
                     pcell = bface.right_cell;
                     ghost_cell = bface.left_cell;
                 }
-                pcell.U[ftl].copy_values_from(pcell.U[0]);
 
                 // Step 1. Calculate du/dU
                 // u: ghost cell conserved quantities
                 // U: interior cell conserved quantities
+
+                // save a copy of the flowstate and copy conserved quantities
+                fs_save.copy_values_from(pcell.fs);
+                pcell.U[ftl].copy_values_from(pcell.U[0]);
+                ghost_cell.encode_conserved(gtl, 0, 0.0);
+
                 foreach(idx; 0..nConserved) {
+
                     // peturb conserved quantity
+                    version(complex_numbers) { eps = complex(0.0, eps0.re); }
+                    else { eps = eps0*fabs(pcell.U[ftl].vec[idx]) + eps0; }
                     pcell.U[ftl].vec[idx] += eps;
                     pcell.decode_conserved(gtl, ftl, 0.0);
 
                     // update (ghost cell) boundary conditions
                     if (bc[bface.bc_id].preReconAction.length > 0) { bc[bface.bc_id].applyPreReconAction(0.0, 0, 0, bface); }
+                    ghost_cell.encode_conserved(gtl, ftl, 0.0);
 
                     // fill local Jacobian
-                    ghost_cell.encode_conserved(gtl, ftl, 0.0);
                     foreach(jdx; 0..nConserved) {
-                        flowJacobian.dudU[jdx][idx] = ghost_cell.U[ftl].vec[jdx].im/(eps.im);
+                        version(complex_numbers) { flowJacobian.dudU[jdx][idx] = ghost_cell.U[ftl].vec[jdx].im/(eps.im); }
+                        else { flowJacobian.dudU[jdx][idx] = (ghost_cell.U[ftl].vec[jdx]-ghost_cell.U[0].vec[jdx])/eps; }
                     }
 
                     // return cells to original state
-                    foreach ( ref c; [pcell, ghost_cell] ) {
-                        c.fs.clear_imaginary_components();
-                        c.U[ftl].clear_imaginary_components();
-                        c.dUdt[ftl].clear_imaginary_components();
-                    }
+                    pcell.U[ftl].copy_values_from(pcell.U[0]);
+                    pcell.fs.copy_values_from(fs_save);
+
+                    // update (ghost cell) boundary conditions
+                    if (bc[bface.bc_id].preReconAction.length > 0) { bc[bface.bc_id].applyPreReconAction(0.0, 0, 0, bface); }
+                    ghost_cell.encode_conserved(gtl, ftl, 0.0);
                 }
 
                 // Step 2. Calculate dR/du
                 // R: residual of interior cells conserved quantities
                 // u: ghost cell conserved quantities
+
+                // save a copy of the flowstate and copy conserved quantities
+                fs_save.copy_values_from(ghost_cell.fs);
+                ghost_cell.U[ftl].copy_values_from(ghost_cell.U[0]);
+
                 foreach(idx; 0..nConserved) {
+
                     // peturb conserved quantity
+                    version(complex_numbers) { eps = complex(0.0, eps0.re); }
+                    else { eps = eps0*fabs(ghost_cell.U[ftl].vec[idx]) + eps0; }
                     ghost_cell.U[ftl].vec[idx] += eps;
                     ghost_cell.decode_conserved(gtl, ftl, 0.0);
 
@@ -1292,16 +1329,14 @@ public:
                     // fill local Jacobians
                     foreach (cell; ghost_cell.cell_list) {
                         foreach(jdx; 0..nConserved) {
-                            cell.dRdU[jdx][idx] = cell.dUdt[ftl].vec[jdx].im/eps.im;
+                            version(complex_numbers) { cell.dRdU[jdx][idx] = cell.dUdt[ftl].vec[jdx].im/eps.im; }
+                            else { cell.dRdU[jdx][idx] = (cell.dUdt[ftl].vec[jdx]-cell.dUdt[0].vec[jdx])/eps; }
                         }
                     }
 
                     // return cell to original state
-                    ghost_cell.U[ftl].vec[idx] -= eps;
-                    ghost_cell.decode_conserved(gtl, ftl, 0.0);
-
-                    // evaluate original residuals in local stencil (clears imaginary components)
-                    evalRHS(gtl, ftl, ghost_cell.cell_list, ghost_cell.face_list, ghost_cell);
+                    ghost_cell.U[ftl].copy_values_from(ghost_cell.U[0]);
+                    ghost_cell.fs.copy_values_from(fs_save);
                 }
 
                 // Step 3. Calculate dR/dU and add corrections to Jacobian
@@ -1384,13 +1419,17 @@ public:
             if (myConfig.viscous) {
                 cell.add_viscous_source_vector();
             }
-            if (myConfig.reacting && pcell.id == cell.id) {
+            if (myConfig.reacting) {
                 // NOTE: we only need to evaluate the chemical source terms for the perturb cell
                 //       this saves us a lot of unnecessary computations
-                cell.add_thermochemical_source_vector(thermochem_conc,
-                                                      thermochem_rates,
-                                                      thermochem_source,
-                                                      limit_factor);
+                if (cell.id == pcell.id) {
+                    cell.add_thermochemical_source_vector(thermochem_conc,
+                                                          thermochem_rates,
+                                                          thermochem_source,
+                                                          limit_factor);
+                } else {
+                    cell.Q.copy_values_from(cell.Q_save);
+                }
             }
             if (myConfig.udf_source_terms) {
                 size_t i_cell = cell.id;
@@ -1416,14 +1455,14 @@ public:
     } // end evalRHS()
 
     // The following two methods are used to verify the numerical Jacobian implementation.
-    void verify_jacobian()
+    void verify_jacobian(double sigma)
     {
         // we perform a residual evaluation to ensure the ghost cells are filled with good data
         import steadystate_core;
         steadystate_core.evalRHS(0.0, 0);
 
         // calculate the numerical Jaacobian
-        initialize_jacobian(2);
+        initialize_jacobian(1, sigma);
         evaluate_jacobian();
         assert(flowJacobian !is null, "Oops, we expect a flowJacobian object to be attached to the fluidblock.");
         size_t nConserved = GlobalConfig.cqi.n;
@@ -1482,7 +1521,7 @@ public:
         size_t TKE = GlobalConfig.cqi.rhoturb;
         size_t SPECIES = GlobalConfig.cqi.species;
         size_t MODES = GlobalConfig.cqi.modes;
-        double EPS = flowJacobian.eps.im;
+        auto EPS = flowJacobian.eps;
 
         // We perform a Frechet derivative to evaluate J*D^(-1)v
         size_t nturb = myConfig.turb_model.nturb;
@@ -1494,19 +1533,36 @@ public:
         int cellCount = 0;
         foreach (cell; cells) {
             cell.U[1].copy_values_from(cell.U[0]);
-            cell.U[1].vec[cqi.mass] += complex(0.0, EPS*vec[cellCount+MASS].re);
-            cell.U[1].vec[cqi.xMom] += complex(0.0, EPS*vec[cellCount+X_MOM].re);
-            cell.U[1].vec[cqi.yMom] += complex(0.0, EPS*vec[cellCount+Y_MOM].re);
-            if ( myConfig.dimensions == 3 ) { cell.U[1].vec[cqi.zMom] += complex(0.0, EPS*vec[cellCount+Z_MOM].re); }
-            cell.U[1].vec[cqi.totEnergy] += complex(0.0, EPS*vec[cellCount+TOT_ENERGY].re);
-            foreach(it; 0 .. nturb) { cell.U[1].vec[cqi.rhoturb+it] += complex(0.0, EPS*vec[cellCount+TKE+it].re); }
-            version(multi_species_gas){
-            if (myConfig.n_species > 1) {
-                foreach(sp; 0 .. nsp) { cell.U[1].vec[cqi.species+sp] += complex(0.0, EPS*vec[cellCount+SPECIES+sp].re); }
-            }
-            }
-            version(multi_T_gas){
-            foreach(imode; 0 .. nmodes) { cell.U[1].vec[cqi.modes+imode] += complex(0.0, EPS*vec[cellCount+MODES+imode].re); }
+            version(complex_numbers) {
+                cell.U[1].vec[cqi.mass] += complex(0.0, EPS.re*vec[cellCount+MASS].re);
+                cell.U[1].vec[cqi.xMom] += complex(0.0, EPS.re*vec[cellCount+X_MOM].re);
+                cell.U[1].vec[cqi.yMom] += complex(0.0, EPS.re*vec[cellCount+Y_MOM].re);
+                if ( myConfig.dimensions == 3 ) { cell.U[1].vec[cqi.zMom] += complex(0.0, EPS.re*vec[cellCount+Z_MOM].re); }
+                cell.U[1].vec[cqi.totEnergy] += complex(0.0, EPS.re*vec[cellCount+TOT_ENERGY].re);
+                foreach(it; 0 .. nturb) { cell.U[1].vec[cqi.rhoturb+it] += complex(0.0, EPS.re*vec[cellCount+TKE+it].re); }
+                version(multi_species_gas){
+                    if (myConfig.n_species > 1) {
+                        foreach(sp; 0 .. nsp) { cell.U[1].vec[cqi.species+sp] += complex(0.0, EPS.re*vec[cellCount+SPECIES+sp].re); }
+                    }
+                }
+                version(multi_T_gas){
+                    foreach(imode; 0 .. nmodes) { cell.U[1].vec[cqi.modes+imode] += complex(0.0, EPS.re*vec[cellCount+MODES+imode].re); }
+                }
+            } else {
+                cell.U[1].vec[cqi.mass] += (EPS*vec[cellCount+MASS]);
+                cell.U[1].vec[cqi.xMom] += (EPS*vec[cellCount+X_MOM]);
+                cell.U[1].vec[cqi.yMom] += (EPS*vec[cellCount+Y_MOM]);
+                if ( myConfig.dimensions == 3 ) { cell.U[1].vec[cqi.zMom] += (EPS*vec[cellCount+Z_MOM]); }
+                cell.U[1].vec[cqi.totEnergy] += (EPS*vec[cellCount+TOT_ENERGY]);
+                foreach(it; 0 .. nturb) { cell.U[1].vec[cqi.rhoturb+it] += (EPS*vec[cellCount+TKE+it]); }
+                version(multi_species_gas){
+                    if (myConfig.n_species > 1) {
+                        foreach(sp; 0 .. nsp) { cell.U[1].vec[cqi.species+sp] += (EPS*vec[cellCount+SPECIES+sp]); }
+                    }
+                }
+                version(multi_T_gas){
+                    foreach(imode; 0 .. nmodes) { cell.U[1].vec[cqi.modes+imode] += (EPS*vec[cellCount+MODES+imode]); }
+                }
             }
             cell.decode_conserved(0, 1, 0.0);
             cellCount += nConserved;
@@ -1516,19 +1572,36 @@ public:
         //evalRHS(cells, ifaces);
         cellCount = 0;
         foreach (cell; cells) {
-            sol[cellCount+MASS] = cell.dUdt[1].vec[cqi.mass].im/EPS;
-            sol[cellCount+X_MOM] = cell.dUdt[1].vec[cqi.xMom].im/EPS;
-            sol[cellCount+Y_MOM] = cell.dUdt[1].vec[cqi.yMom].im/EPS;
-            if ( myConfig.dimensions == 3 ) { sol[cellCount+Z_MOM] = cell.dUdt[1].vec[cqi.zMom].im/EPS; }
-            sol[cellCount+TOT_ENERGY] = cell.dUdt[1].vec[cqi.totEnergy].im/EPS;
-            foreach(it; 0 .. nturb) { sol[cellCount+TKE+it] = cell.dUdt[1].vec[cqi.rhoturb+it].im/EPS; }
-            version(multi_species_gas){
-            if (myConfig.n_species > 1) {
-                foreach(sp; 0 .. nsp) { sol[cellCount+SPECIES+sp] = cell.dUdt[1].vec[cqi.species+sp].im/EPS; }
-            }
-            }
-            version(multi_T_gas){
-            foreach(imode; 0 .. nmodes) { sol[cellCount+MODES+imode] = cell.dUdt[1].vec[cqi.modes+imode].im/EPS; }
+            version(complex_numbers) {
+                sol[cellCount+MASS] = cell.dUdt[1].vec[cqi.mass].im/EPS;
+                sol[cellCount+X_MOM] = cell.dUdt[1].vec[cqi.xMom].im/EPS;
+                sol[cellCount+Y_MOM] = cell.dUdt[1].vec[cqi.yMom].im/EPS;
+                if ( myConfig.dimensions == 3 ) { sol[cellCount+Z_MOM] = cell.dUdt[1].vec[cqi.zMom].im/EPS; }
+                sol[cellCount+TOT_ENERGY] = cell.dUdt[1].vec[cqi.totEnergy].im/EPS;
+                foreach(it; 0 .. nturb) { sol[cellCount+TKE+it] = cell.dUdt[1].vec[cqi.rhoturb+it].im/EPS; }
+                version(multi_species_gas){
+                    if (myConfig.n_species > 1) {
+                        foreach(sp; 0 .. nsp) { sol[cellCount+SPECIES+sp] = cell.dUdt[1].vec[cqi.species+sp].im/EPS; }
+                    }
+                }
+                version(multi_T_gas){
+                    foreach(imode; 0 .. nmodes) { sol[cellCount+MODES+imode] = cell.dUdt[1].vec[cqi.modes+imode].im/EPS; }
+                }
+            } else {
+                sol[cellCount+MASS] = (cell.dUdt[1].vec[cqi.mass]-cell.dUdt[0].vec[cqi.mass])/EPS;
+                sol[cellCount+X_MOM] = (cell.dUdt[1].vec[cqi.xMom]-cell.dUdt[0].vec[cqi.xMom])/EPS;
+                sol[cellCount+Y_MOM] = (cell.dUdt[1].vec[cqi.yMom]-cell.dUdt[0].vec[cqi.yMom])/EPS;
+                if ( myConfig.dimensions == 3 ) { sol[cellCount+Z_MOM] = (cell.dUdt[1].vec[cqi.zMom]-cell.dUdt[0].vec[cqi.zMom])/EPS; }
+                sol[cellCount+TOT_ENERGY] = (cell.dUdt[1].vec[cqi.totEnergy]-cell.dUdt[0].vec[cqi.totEnergy])/EPS;
+                foreach(it; 0 .. nturb) { sol[cellCount+TKE+it] = (cell.dUdt[1].vec[cqi.rhoturb+it]-cell.dUdt[0].vec[cqi.rhoturb+it])/EPS; }
+                version(multi_species_gas){
+                    if (myConfig.n_species > 1) {
+                        foreach(sp; 0 .. nsp) { sol[cellCount+SPECIES+sp] = (cell.dUdt[1].vec[cqi.species+sp]-cell.dUdt[0].vec[cqi.species+sp])/EPS; }
+                    }
+                }
+                version(multi_T_gas){
+                    foreach(imode; 0 .. nmodes) { sol[cellCount+MODES+imode] = (cell.dUdt[1].vec[cqi.modes+imode]-cell.dUdt[1].vec[cqi.modes+imode])/EPS; }
+                }
             }
 
             cellCount += nConserved;
