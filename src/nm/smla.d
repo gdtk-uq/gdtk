@@ -141,9 +141,9 @@ public:
     {
         // We need to search the given row to see if an entry
         // is present in the given column.
-        foreach (j; ia[row] .. ia[row+1]) {
-            if ( ja[j] == col )
-                return aa[j];
+        foreach (offset, j; ja[ia[row]..ia[row+1]]) {
+            if ( j == col )
+                return aa[ia[row]+offset];
         }
         // else search failed, so we have a 0.0 entry
         return to!T(0.0);
@@ -151,10 +151,10 @@ public:
 
     // We now allow assingment to zero entries.
     ref T opIndexAssign(T c, size_t row, size_t col) {
-        foreach ( j; ia[row] .. ia[row+1] ) {
-            if ( ja[j] == col ) {
-                aa[j] = c;
-                return aa[j];
+        foreach (offset, j; ja[ia[row]..ia[row+1]]) {
+            if ( j == col ) {
+                aa[ia[row]+offset] = c;
+                return aa[ia[row]+offset];
             }
         }
 
