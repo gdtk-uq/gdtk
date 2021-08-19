@@ -2169,16 +2169,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 //writeln("sigma : ", sigma, ", ", sume, ", ", sumv, ", ", N);
             }
 
-
-    mixin(dot_over_blocks("beta", "r0", "r0"));
-    version(mpi_parallel) {
-        MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
-    }
-    beta = sqrt(beta);
-
-
-            
             // Prepare 'w' with (I/dt)(P^-1)v term;
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (i, cell; blk.cells) {
