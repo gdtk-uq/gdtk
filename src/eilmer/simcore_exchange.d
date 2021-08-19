@@ -42,15 +42,24 @@ version(mpi_parallel) {
     import mpi.util;
 }
 
+void exchange_ghost_cell_geometry_data()
+/*
+    This routine copies the following cell geometric data from one block
+    into the neighbouring block's ghost cells:
+     - cell.pos.x
+     - cell.volume[j]
+     - cell.areaxy[j]
+     - cell.iLength
+     - cell.jLength
+     - cell.kLength
+     - cell.L_min
+     - cell.L_max
 
-void exchange_ghost_cell_boundary_data(double t, int gtl, int ftl)
-// We have hoisted the exchange of ghost-cell data out of the GhostCellEffect class
-// that used to live only inside the boundary condition attached to a block.
-// The motivation for allowing this leakage of abstraction is that the MPI
-// exchange of messages requires a coordination of actions that spans blocks.
-// Sigh...  2017-01-24 PJ
-// p.s. The data for that coordination is still buried in the FullFaceCopy class.
-// No need to have all its guts hanging out.
+     Notes: - This code was originally present in exchange_ghost_cell_boundary_data, but
+              was disintered into a separate routine for the geometry (this one) and the
+              flowstate (handled by the original routine).
+     @author: Nick Gibbons (19/08/21)
+*/
 {
     foreach (blk; localFluidBlocks) {
         foreach(bc; blk.bc) {
@@ -82,6 +91,18 @@ void exchange_ghost_cell_boundary_data(double t, int gtl, int ftl)
             }
         }
     }
+}
+
+
+void exchange_ghost_cell_boundary_data(double t, int gtl, int ftl)
+// We have hoisted the exchange of ghost-cell data out of the GhostCellEffect class
+// that used to live only inside the boundary condition attached to a block.
+// The motivation for allowing this leakage of abstraction is that the MPI
+// exchange of messages requires a coordination of actions that spans blocks.
+// Sigh...  2017-01-24 PJ
+// p.s. The data for that coordination is still buried in the FullFaceCopy class.
+// No need to have all its guts hanging out.
+{
     foreach (blk; localFluidBlocks) {
         foreach(bc; blk.bc) {
             foreach (gce; bc.preReconAction) {

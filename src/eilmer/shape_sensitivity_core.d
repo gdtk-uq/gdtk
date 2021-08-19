@@ -2168,6 +2168,7 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
             }
         }
 
+        //exchange_ghost_cell_geometry_data();
         //exchange_ghost_cell_boundary_data(0.0, 0, 0);
         
         foreach (myblk; parallel(localFluidBlocks,1)) {
@@ -2178,6 +2179,7 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
             //    foreach ( j; 0..face.cloud_pos.length) writef("%d    %.16f    %.16f \n", face.id, face.ws_grad.wx[j], face.ws_grad.wy[j]); 
         }
 
+        exchange_ghost_cell_geometry_data();
         exchange_ghost_cell_boundary_data(0.0, 0, 0);
         
         foreach (myblk; parallel(localFluidBlocks,1)) {
@@ -2627,6 +2629,7 @@ void evalRHS(double pseudoSimTime, int ftl, int gtl)
         foreach (cell; blk.cells) cell.clear_source_vector();
     }
     
+    exchange_ghost_cell_geometry_data();
     exchange_ghost_cell_boundary_data(pseudoSimTime, gtl, ftl);
     
     foreach (blk; localFluidBlocks) {
@@ -3758,6 +3761,7 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
             myblk.sync_vertices_from_underlying_grid(0);
         }
 
+        exchange_ghost_cell_geometry_data();
         exchange_ghost_cell_boundary_data(0.0, 0, 0);
         
         foreach (myblk; localFluidBlocks) {
@@ -3791,6 +3795,7 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
             }
         }
 
+        exchange_ghost_cell_geometry_data();
         exchange_ghost_cell_boundary_data(0.0, 0, 0);
                 
         foreach (myblk; localFluidBlocks) {
@@ -3798,6 +3803,7 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
             myblk.compute_least_squares_setup(0);
         }
 
+        exchange_ghost_cell_geometry_data();
         exchange_ghost_cell_boundary_data(0.0, 0, 0);
 
         foreach (myblk; localFluidBlocks) {

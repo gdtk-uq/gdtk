@@ -417,36 +417,12 @@ int init_simulation(int tindx, int nextLoadsIndx,
             }
         }
     }
-    foreach (myblk; localFluidBlocks) {
-        foreach (bc; myblk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy)gce;
-                if (mygce1) { mygce1.exchange_geometry_phase0(); }
-                auto mygce2 = cast(GhostCellFullFaceCopy)gce;
-                if (mygce2) { mygce2.exchange_geometry_phase0(); }
-            }
-        }
-    }
-    foreach (myblk; localFluidBlocks) {
-        foreach (bc; myblk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy)gce;
-                if (mygce1) { mygce1.exchange_geometry_phase1(); }
-                auto mygce2 = cast(GhostCellFullFaceCopy)gce;
-                if (mygce2) { mygce2.exchange_geometry_phase1(); }
-            }
-        }
-    }
-    foreach (myblk; localFluidBlocks) {
-        foreach (bc; myblk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy)gce;
-                if (mygce1) { mygce1.exchange_geometry_phase2(); }
-                auto mygce2 = cast(GhostCellFullFaceCopy)gce;
-                if (mygce2) { mygce2.exchange_geometry_phase2(); }
-            }
-        }
-    }
+    // Earlier, compute_primary_cell_geometric_data filled in approximate values for the ghost
+    // cells' volume, position, area etc. But for the internal ghost cells we really want the
+    // exact numbers. These are copied in here from the real cells in their corresponding
+    // neighbour blocks.
+    exchange_ghost_cell_geometry_data();
+
     //
     // Now that we know the ghost-cell locations, we can set up the least-squares subproblems for
     // 1. reconstruction prior to convective flux calculation for the unstructured-grid blocks

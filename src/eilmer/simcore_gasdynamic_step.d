@@ -1776,6 +1776,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 set_gcl_interface_properties(sblk, gtl+1, SimState.dt_global);
             }
             gtl = 1; // update gtl now that grid has moved
+            exchange_ghost_cell_geometry_data();
             exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -1994,6 +1995,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 ftl = 1;
                 gtl = 2;
                 // We are relying on exchanging boundary data as a pre-reconstruction activity.
+                exchange_ghost_cell_geometry_data();
                 exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
                 if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -2610,6 +2612,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
         int flagTooManyBadCells;
         try {
             // Attempt an update of the gasdynamic quantities.
+            exchange_ghost_cell_geometry_data();
             exchange_ghost_cell_boundary_data(SimState.time, gtl1, ftl0);
             exchange_ghost_cell_gas_solid_boundary_data();
             if (GlobalConfig.apply_bcs_in_parallel) {
