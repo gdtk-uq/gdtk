@@ -105,6 +105,8 @@ configOptionsHidden = { -- hidden from user
    shock_fitting_delay = 0.0,
    shock_fitting_allow_flow_reconstruction = true,
    shock_fitting_scale_factor = 0.5,
+   shock_fitting_filter_velocity_scale = 0.0,
+   shock_fitting_assume_symmetry_at_first_point = false,
    --
    viscous = false,
    use_viscosity_from_cells = false,

@@ -257,8 +257,13 @@ function write_config_file(fileName)
    f:write(string.format('"udf_grid_motion_file": "%s",\n', tostring(config.udf_grid_motion_file)))
    --
    f:write(string.format('"shock_fitting_delay": %.18e,\n', config.shock_fitting_delay))
-   f:write(string.format('"shock_fitting_allow_flow_reconstruction": %s,\n', tostring(config.shock_fitting_allow_flow_reconstruction)))
+   f:write(string.format('"shock_fitting_allow_flow_reconstruction": %s,\n',
+                         tostring(config.shock_fitting_allow_flow_reconstruction)))
    f:write(string.format('"shock_fitting_scale_factor": %.18e,\n', config.shock_fitting_scale_factor))
+   f:write(string.format('"shock_fitting_filter_velocity_scale": %.18e,\n',
+                         config.shock_fitting_filter_velocity_scale))
+   f:write(string.format('"shock_fitting_assume_symmetry_at_first_point": %s,\n',
+                         tostring(config.shock_fitting_assume_symmetry_at_first_point)))
    --
    f:write(string.format('"viscous": %s,\n', tostring(config.viscous)))
    f:write(string.format('"use_viscosity_from_cells": %s,\n', tostring(config.use_viscosity_from_cells)))

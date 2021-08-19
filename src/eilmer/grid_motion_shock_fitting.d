@@ -59,9 +59,9 @@ void compute_vtx_velocities_for_sf(FBArray fba)
     //    the magnitude of the velocity as the east-boundary of the FBArray
     //    is approached.
     //
-    // Start by computing wave speeds and rail directions at all west-most faces.
-    //
     bool allow_reconstruction = GlobalConfig.shock_fitting_allow_flow_reconstruction;
+    double filter_scale = GlobalConfig.shock_fitting_filter_velocity_scale;
+    bool assume_symmetry = GlobalConfig.shock_fitting_assume_symmetry_at_first_point;
     int blkId = fba.blockArray[0][0][0];
     auto blk = cast(SFluidBlock) globalBlocks[blkId];
     auto bc = cast(BFE_ConstFlux) blk.bc[Face.west].postConvFluxAction[0];
@@ -75,6 +75,9 @@ void compute_vtx_velocities_for_sf(FBArray fba)
         }
         sourceFlow = bc.sflow;
     }
+    //
+    // Start by computing wave speeds and rail directions at all west-most faces.
+    //
     // Work across all west-most blocks in the array, storing the wave speeds at face centres.
     foreach (jb; 0 .. fba.njb) {
         int j0 = 0; if (jb > 0) { foreach(j; 0 .. jb) { j0 += fba.njcs[j]; } }
@@ -126,7 +129,8 @@ void compute_vtx_velocities_for_sf(FBArray fba)
                         fba.face_a[j0+j][k0+k] = blk.get_cell(0,j,k).fs.gas.a;
                     }
                 }
-                // We need the vertex positions to do upwinding along the shock boundary.
+                // We need the vertex positions to do upwinding along the shock boundary
+                // and also to compute the counter-kink velocities.
                 foreach (k; 0 .. blk.nkv) {
                     foreach (j; 0 .. blk.njv) {
                         fba.vtx_pos[j0+j][k0+k] = blk.get_vtx(0,j,k).pos[0];
@@ -243,6 +247,9 @@ void compute_vtx_velocities_for_sf(FBArray fba)
     } // end version !mpi_parallel
     //
     // Compute rail directions for the vertices at the boundary.
+    // The rails point "in", toward the solid body that is presumed to be
+    // at the east face of the superblock.
+    //
     // The rails are presently (2021-02-16) fixed so there is lots of waste,
     // however, we expect to make the rails curve at a later date and so will
     // need to do these calculations based on the current boundary positions.
@@ -261,7 +268,7 @@ void compute_vtx_velocities_for_sf(FBArray fba)
     // with the wave-speed estimate to get the vertex velocity.
     //
     if (GlobalConfig.dimensions == 2) {
-        // The shock boundary is a line.
+        // The shock boundary is a line in 2D.
         int k = 0;
         // First vertex has only one face, so just use that velocity.
         Vector3 v = fba.vtx_dir[0][k]; v.scale(fba.face_ws[0][k]); fba.vtx_vel[0][k].set(v);
@@ -279,13 +286,68 @@ void compute_vtx_velocities_for_sf(FBArray fba)
             if (fabs(wA+wB) > 0.0) {
                 ws = (wA*fba.face_ws[j-1][k] + wB*fba.face_ws[j][k])/(wA+wB);
             } else {
+                // Would not expect to have both weightings zero but, just in case.
                 ws = 0.5*fba.face_ws[j-1][k] + 0.5*fba.face_ws[j][k];
             }
             v = fba.vtx_dir[j][k]; v.scale(ws); fba.vtx_vel[j][k].set(v);
         }
         v = fba.vtx_dir[$-1][k]; v.scale(fba.face_ws[$-1][k]); fba.vtx_vel[$-1][k].set(v);
+        if (filter_scale > 0.0) {
+            // Work along the shock and compute additional velocity components
+            // to counter kinks in the shock.
+            // We work with a stencil of 4 vertices at a time.
+            // For details, see PJ's workbook page 37, 2021-08-09.
+            foreach (j; 0 .. fba.njv-3) {
+                Vector3 p0 = fba.vtx_pos[j][k];
+                Vector3 p1 = fba.vtx_pos[j+1][k];
+                Vector3 p2 = fba.vtx_pos[j+2][k];
+                Vector3 p3 = fba.vtx_pos[j+3][k];
+                Vector3 pmid = p1; pmid.scale(0.5); pmid.add(p2, 0.5);
+                number L = distance_between(p1, p2);
+                //
+                // Compute displacements of the two interior points.
+                Vector3 dp1 = pmid; dp1.scale(2.0/3.0); dp1.add(p0, 1.0/3.0); dp1 -= p1;
+                Vector3 dp2 = pmid; dp2.scale(2.0/3.0); dp2.add(p3, 1.0/3.0); dp2 -= p2;
+                if (dot(dp1, dp2) < 0.0) {
+                    // Compute counter-kink velocity only for a corrugation,
+                    // not in a situation that would just flatten the shock.
+                    //
+                    // Start with rail direction and scale with local sound speed.
+                    Vector3 v_inc = fba.vtx_dir[j+1][k];
+                    v_inc.scale(dot(v_inc, dp1)*filter_scale*inflow.gas.a/L);
+                    fba.vtx_vel[j+1][k].add(v_inc);
+                    //
+                    v_inc = fba.vtx_dir[j+2][k];
+                    v_inc.scale(dot(v_inc, dp2)*filter_scale*inflow.gas.a/L);
+                    fba.vtx_vel[j+2][k].add(v_inc);
+                }
+            }
+            if (assume_symmetry) {
+                // Treat the symmetry vertex.
+                // Try to fit a quadratic curve to the first few points on the shock
+                // and use the x-location of that curve as the ideal point for the shock.
+                // For details, see PJ's workbook pages 34,35, 2021-08-05.
+                size_t N = 4;
+                number x0 = fba.vtx_pos[0][k].x; number y0 = fba.vtx_pos[0][k].y;
+                number Sx = 0.0; number Sxy2 = 0.0; number Sy2 = 0.0; number Sy4 = 0.0;
+                foreach (j; 1 .. N+1) {
+                    number x = fba.vtx_pos[j][k].x;
+                    number y = fba.vtx_pos[j][k].y;
+                    number y2 = (y-y0)^^2;
+                    Sx += x; Sxy2 += x * y2; Sy2 += y2; Sy4 += y2^^2;
+                }
+                number denom = Sy2^^2 - N*Sy4;
+                if (fabs(denom) > 0.0) {
+                    number xstar = (Sxy2*Sy2 - Sx*Sy4)/denom;
+                    number L = distance_between(fba.vtx_pos[0][k], fba.vtx_pos[1][k]);
+                    Vector3 v_inc = fba.vtx_dir[0][k];
+                    v_inc.scale((xstar - x0)*filter_scale*inflow.gas.a/L);
+                    fba.vtx_vel[0][k].add(v_inc);
+                } // else, we cannot solve for xstar so leave the velocity untouched.
+            }
+        }
     } else {
-        // The shock boundary is a surface.
+        // The shock boundary is a surface in 3D.
         throw new Error("Shock-velocity upwinding is not yet implemented in 3D.");
     }
     //

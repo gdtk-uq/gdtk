@@ -864,6 +864,9 @@ final class GlobalConfig {
     shared static bool shock_fitting_allow_flow_reconstruction = true;
     // Scaling factor applied to vertices in shock fitting simulations for stability.
     shared static double shock_fitting_scale_factor = 0.5;
+    // Shock-fitting corrugation/kink filter.
+    shared static double shock_fitting_filter_velocity_scale = 0.0; // default is none
+    shared static bool shock_fitting_assume_symmetry_at_first_point = false;
     //
     // Some of the user-defined functionality depends on having access to all blocks
     // from a single thread.  For safety, in those cases, do not use parallel loops.
@@ -1709,6 +1712,8 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_double("shock_fitting_delay", "shock_fitting_delay"));
     mixin(update_bool("shock_fitting_allow_flow_reconstruction", "shock_fitting_allow_flow_reconstruction"));
     mixin(update_double("shock_fitting_scale_factor", "shock_fitting_scale_factor"));
+    mixin(update_double("shock_fitting_filter_velocity_scale", "shock_fitting_filter_velocity_scale"));
+    mixin(update_bool("shock_fitting_assume_symmetry_at_first_point", "shock_fitting_assume_symmetry_at_first_point"));
 
     mixin(update_double("solid_domain_cfl", "solid_domain_cfl"));
     mixin(update_enum("coupling_with_solid_domains", "coupling_with_solid_domains", "solidDomainCouplingFromName"));
