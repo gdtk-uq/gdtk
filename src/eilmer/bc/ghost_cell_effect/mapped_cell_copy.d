@@ -838,6 +838,88 @@ public:
         }
     } // end exchange_flowstate_phase2()
 
+    void exchange_turbulent_transprops_phase0()
+    {
+        version(mpi_parallel) {
+            foreach (i; 0 .. n_incoming) {
+                size_t fs_size = 2;
+                size_t ne = incoming_ncells_list[i] * fs_size;
+                if (incoming_flowstate_buf_list[i].length < ne) { incoming_flowstate_buf_list[i].length = ne; }
+                // Post non-blocking receive for flowstate data that we expect to receive later
+                // from the src_blk MPI process.
+                MPI_Irecv(incoming_flowstate_buf_list[i].ptr, to!int(ne), MPI_DOUBLE, incoming_rank_list[i],
+                          incoming_flowstate_tag_list[i], MPI_COMM_WORLD, &incoming_flowstate_request_list[i]);
+            }
+        } else { // not mpi_parallel
+            // For a single process, nothing to be done because
+            // we know that we can just access the data directly
+            // in the final phase.
+        }
+    }
+
+    void exchange_turbulent_transprops_phase1()
+    {
+        version(mpi_parallel) {
+            foreach (i; 0 .. n_outgoing) {
+                size_t fs_size = 2;
+                size_t ne = outgoing_ncells_list[i] * fs_size;
+                if (outgoing_flowstate_buf_list[i].length < ne) { outgoing_flowstate_buf_list[i].length = ne; }
+                auto buf = outgoing_flowstate_buf_list[i];
+
+                size_t ii = 0;
+                foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
+                    auto c = blk.cells[cid];
+                    FlowState fs = c.fs;
+                    buf[ii++] = fs.mu_t.re; version(complex_numbers) { buf[ii++] = fs.mu_t.im; }
+                    buf[ii++] = fs.k_t.re; version(complex_numbers) { buf[ii++] = fs.k_t.im; }
+                }
+                version(mpi_timeouts) {
+                    MPI_Request send_request;
+                    MPI_Isend(buf.ptr, to!int(ne), MPI_DOUBLE, outgoing_rank_list[i],
+                              outgoing_flowstate_tag_list[i], MPI_COMM_WORLD, &send_request);
+                    MPI_Status send_status;
+                    MPI_Wait_a_while(&send_request, &send_status);
+                } else {
+                    MPI_Send(buf.ptr, to!int(ne), MPI_DOUBLE, outgoing_rank_list[i],
+                             outgoing_flowstate_tag_list[i], MPI_COMM_WORLD);
+                }
+            }
+        } else { // not mpi_parallel
+            // For a single process, nothing to be done because
+            // we know that we can just access the data directly
+            // in the final phase.
+        }
+    }
+
+    void exchange_turbulent_transprops_phase2()
+    {
+        version(mpi_parallel) {
+            foreach (i; 0 .. n_incoming) {
+                // Wait for non-blocking receive to complete.
+                // Once complete, copy the data back into the local context.
+                version(mpi_timeouts) {
+                    MPI_Wait_a_while(&incoming_flowstate_request_list[i], &incoming_flowstate_status_list[i]);
+                } else {
+                    MPI_Wait(&incoming_flowstate_request_list[i], &incoming_flowstate_status_list[i]);
+                }
+                auto buf = incoming_flowstate_buf_list[i];
+                size_t ii = 0;
+                foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
+                    auto c = ghost_cells[gi];
+                    FlowState fs = c.fs;
+                    fs.mu_t.re = buf[ii++]; version(complex_numbers) { fs.mu_t.im = buf[ii++]; }
+                    fs.k_t.re = buf[ii++]; version(complex_numbers) { fs.k_t.im = buf[ii++]; }
+                }
+            }
+        } else { // not mpi_parallel
+            // For a single process, just access the data directly.
+            foreach (i, mygc; ghost_cells) {
+                mygc.fs.mu_t = mapped_cells[i].fs.mu_t;
+                mygc.fs.k_t = mapped_cells[i].fs.k_t;
+            }
+        }
+    }
+
     @nogc
     size_t convective_gradient_buffer_entry_size(const LocalConfig myConfig)
     {

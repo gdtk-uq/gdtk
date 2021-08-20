@@ -1309,7 +1309,7 @@ void evalRHS(double pseudoSimTime, int ftl)
         // we exchange boundary data at this point to ensure the
         // ghost cells along block-block boundaries have the most
         // recent mu_t and k_t values.
-        exchange_ghost_cell_boundary_data(pseudoSimTime, gtl, ftl);
+        exchange_ghost_cell_turbulent_viscosity();
         foreach (blk; parallel(localFluidBlocks,1)) {
             blk.viscous_flux();
         }

@@ -343,7 +343,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         // we exchange boundary data at this point to ensure the
         // ghost cells along block-block boundaries have the most
         // recent mu_t and k_t values.
-        exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+        exchange_ghost_cell_turbulent_viscosity();
         exchange_ghost_cell_gas_solid_boundary_data();
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
@@ -592,7 +592,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
             // we exchange boundary data at this point to ensure the
             // ghost cells along block-block boundaries have the most
             // recent mu_t and k_t values.
-            exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+            exchange_ghost_cell_turbulent_viscosity();
             exchange_ghost_cell_gas_solid_boundary_data();
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) {
@@ -943,7 +943,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 // we exchange boundary data at this point to ensure the
                 // ghost cells along block-block boundaries have the most
                 // recent mu_t and k_t values.
-                exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+                exchange_ghost_cell_turbulent_viscosity();
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) {
                         blk.viscous_flux();
@@ -1217,7 +1217,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     // we exchange boundary data at this point to ensure the
                     // ghost cells along block-block boundaries have the most
                     // recent mu_t and k_t values.
-                    exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+                    exchange_ghost_cell_turbulent_viscosity();
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
                         if (blk.active) {
                             blk.viscous_flux();
@@ -1488,7 +1488,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     // we exchange boundary data at this point to ensure the
                     // ghost cells along block-block boundaries have the most
                     // recent mu_t and k_t values.
-                    exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+                    exchange_ghost_cell_turbulent_viscosity();
                     exchange_ghost_cell_gas_solid_boundary_data();
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
                         if (blk.active) {
@@ -1858,7 +1858,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 // we exchange boundary data at this point to ensure the
                 // ghost cells along block-block boundaries have the most
                 // recent mu_t and k_t values.
-                exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+                exchange_ghost_cell_turbulent_viscosity();
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) { blk.viscous_flux(); }
                 }
@@ -2080,7 +2080,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     // we exchange boundary data at this point to ensure the
                     // ghost cells along block-block boundaries have the most
                     // recent mu_t and k_t values.
-                    exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
+                    exchange_ghost_cell_turbulent_viscosity();
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
                         if (blk.active) {
                             blk.viscous_flux();

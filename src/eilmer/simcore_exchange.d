@@ -135,6 +135,53 @@ void exchange_ghost_cell_boundary_data(double t, int gtl, int ftl)
     }
 } // end exchange_ghost_cell_boundary_data()
 
+void exchange_ghost_cell_turbulent_viscosity()
+{
+    /*
+        Some turbulence models (such as k-w) require the viscous gradients to
+        compute mu_t and k_t. This means that we need to do a second exchange
+        in the middle of calculating the viscous terms, to make sure that the
+        ghost cell mu_t and k_t are up to date, or else we lose second order
+        convergence at the boundaries. Rather than exchange the whole
+        flowstate, this routine just does mu_t and k_t. It should be invoked
+        only when we are sure that it is needed, by asking the turbulence model.
+
+        @author: Nick Gibbons (20/08/21)
+    */
+    if (!GlobalConfig.turb_model.isTurbulent) return;
+
+    foreach (blk; localFluidBlocks) {
+        foreach(bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
+                if (mygce1) { mygce1.exchange_turbulent_transprops_phase0(); }
+                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
+                if (mygce2) { mygce2.exchange_turbulent_transprops_phase0(); }
+            }
+        }
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach(bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
+                if (mygce1) { mygce1.exchange_turbulent_transprops_phase1(); }
+                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
+                if (mygce2) { mygce2.exchange_turbulent_transprops_phase1(); }
+            }
+        }
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach(bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce1 = cast(GhostCellMappedCellCopy) gce;
+                if (mygce1) { mygce1.exchange_turbulent_transprops_phase2(); }
+                auto mygce2 = cast(GhostCellFullFaceCopy) gce;
+                if (mygce2) { mygce2.exchange_turbulent_transprops_phase2(); }
+            }
+        }
+    }
+} // end exchange_ghost_cell_boundary_data()
+
 
 void exchange_ghost_cell_shock_data(double t, int gtl, int ftl)
 // exchange shock detector data

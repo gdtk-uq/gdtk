@@ -1983,6 +1983,95 @@ public:
         // Done with copying from source cells.
     } // end exchange_flowstate_phase2()
 
+    void exchange_turbulent_transprops_phase0()
+    /*
+        Exchange only mu_t and k_t between blocks, using MPI if required.
+
+        @author: Nick Gibbons (20/08/21)
+    */
+    {
+        version(mpi_parallel) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
+                size_t fs_size = 2;
+                size_t ne = ghost_cells.length * fs_size;
+                version(complex_numbers) { ne *= 2; }
+
+                // We'll reuse the flowstate tags and buffers. This *should* be okay.
+                if (incoming_flowstate_buf.length < ne) { incoming_flowstate_buf.length = ne; }
+                incoming_flowstate_tag = make_mpi_tag(other_blk.id, other_face, 0);
+                MPI_Irecv(incoming_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                          incoming_flowstate_tag, MPI_COMM_WORLD, &incoming_flowstate_request);
+            } else {
+            }
+        } else {
+        }
+    }
+
+    void exchange_turbulent_transprops_phase1()
+    {
+        version(mpi_parallel) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
+                assert(outgoing_mapped_cells.length == ghost_cells.length,
+                       "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
+
+                const size_t fs_size = 2;
+                size_t ne = ghost_cells.length * fs_size;
+                version(complex_numbers) { ne *= 2; }
+                if (outgoing_flowstate_buf.length < ne) { outgoing_flowstate_buf.length = ne; }
+                outgoing_flowstate_tag = make_mpi_tag(blk.id, which_boundary, 0);
+                size_t ii = 0;
+                foreach (c; outgoing_mapped_cells) {
+                    outgoing_flowstate_buf[ii++] = c.fs.mu_t.re; version(complex_numbers) { outgoing_flowstate_buf[ii++] = c.fs.mu_t.im; }
+                    outgoing_flowstate_buf[ii++] = c.fs.k_t.re; version(complex_numbers) { outgoing_flowstate_buf[ii++] = c.fs.k_t.im; }
+                }
+                version(mpi_timeouts) {
+                    MPI_Request send_request;
+                    MPI_Isend(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                              outgoing_flowstate_tag, MPI_COMM_WORLD, &send_request);
+                    MPI_Status send_status;
+                    MPI_Wait_a_while(&send_request, &send_status);
+                } else {
+                    MPI_Send(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                             outgoing_flowstate_tag, MPI_COMM_WORLD);
+                }
+            } else {
+            }
+        } else {
+        }
+    }
+
+    void exchange_turbulent_transprops_phase2()
+    {
+        version(mpi_parallel) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
+                assert(outgoing_mapped_cells.length == ghost_cells.length,
+                       "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
+                version(mpi_timeouts) {
+                    MPI_Wait_a_while(&incoming_flowstate_request, &incoming_flowstate_status);
+                } else {
+                    MPI_Wait(&incoming_flowstate_request, &incoming_flowstate_status);
+                }
+                size_t ii = 0;
+                foreach (c; ghost_cells) {
+                    c.fs.mu_t.re = incoming_flowstate_buf[ii++]; version(complex_numbers) { c.fs.mu_t.im = incoming_flowstate_buf[ii++]; }
+                    c.fs.k_t.re = incoming_flowstate_buf[ii++]; version(complex_numbers) { c.fs.k_t.im = incoming_flowstate_buf[ii++]; }
+                }
+            } else {
+                foreach (i; 0 .. ghost_cells.length) {
+                    ghost_cells[i].fs.mu_t = mapped_cells[i].fs.mu_t;
+                    ghost_cells[i].fs.k_t = mapped_cells[i].fs.k_t;
+                }
+            }
+        } else { // not mpi_parallel
+            // For a single process,
+            // we know that we can just access the data directly.
+            foreach (i; 0 .. ghost_cells.length) {
+                ghost_cells[i].fs.mu_t = mapped_cells[i].fs.mu_t;
+                ghost_cells[i].fs.k_t = mapped_cells[i].fs.k_t;
+            }
+        }
+    }
+
 
     @nogc
     size_t viscous_gradient_buffer_entry_size(const LocalConfig myConfig){
