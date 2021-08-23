@@ -1,5 +1,6 @@
 -- psl.lua
 -- PJ 2021-08-20 Set up as an example.
+--    2021-08-23 Better selection of parameters.
 --
 config.title = "Periodic shear layer."
 print(config.title)
@@ -11,7 +12,10 @@ ymin = -20.0*H; ymax = 20.0*H
 xmin = -L; xmax = L
 domain = CoonsPatch:new{p00={x=xmin,y=ymin}, p10={x=xmax,y=ymin},
                         p01={x=xmin,y=ymax}, p11={x=xmax,y=ymax}}
-grid0 = StructuredGrid:new{psurface=domain, niv=61, njv=121}
+factor = 2
+niv = math.floor(60*factor)+1
+njv = math.floor(120*factor)+1
+grid0 = StructuredGrid:new{psurface=domain, niv=niv, njv=njv}
 
 nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
 
@@ -29,13 +33,14 @@ function initial_flow(x, y, z)
    end
    -- Add perturbation that is periodic west to east
    -- but gets smaller toward the north and south boundaries.
-   vely = 20.0 * math.sin(x/L*math.pi) * math.exp(-math.abs(y)/H)
+   vely = 10.0 * math.exp(-math.abs(y)/H) *
+      (math.cos(x/L*math.pi) + math.sin(2*x/L*math.pi))
    -- We use the FlowState object to conveniently set all of
    -- the relevant properties.
    return FlowState:new{p=p, velx=velx, vely=vely, T=T}
 end
 
-nib=2; njb = 2
+nib=2; njb = 3
 fba = FBArray:new{grid=grid0, initialState=initial_flow, nib=nib, njb=njb}
 -- We want the domain to be periodic in the x-direction.
 for j=1, njb do
@@ -44,8 +49,8 @@ end
 
 config.flux_calculator = "ausmdv"
 config.gasdynamic_update_scheme = "classic_rk3"
-config.max_time = 300.0e-3  -- seconds
+config.max_time = 10.0e-3  -- seconds
 config.max_step = 150000
 config.dt_init = 1.0e-6
 config.cfl_value = 0.8
-config.dt_plot = 1.0e-3
+config.dt_plot = 0.1e-3
