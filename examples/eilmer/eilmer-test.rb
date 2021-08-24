@@ -81,6 +81,7 @@ test_scripts << "2D/sphere-nonaka/nonaka-test.rb"
 test_scripts << "2D/nozzle-shock-tunnel-t4m4/cea/t4m4-test.rb"
 test_scripts << "2D/cylinder-axial-flow/sg/cyl50-sg-test.rb"
 test_scripts << "2D/cylinder-axial-flow/usg/cyl50-usg-test.rb"
+test_scripts << "2D/new_flow_format/flow-format-test.rb"
 if long_tests then
   puts "Do long tests as well as short tests..."
   # test_scripts << "2D/turb-flat-plate/turb_flat_plate.test"
