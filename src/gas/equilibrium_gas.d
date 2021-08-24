@@ -93,6 +93,16 @@ public:
         lua_close(L);
     } // end constructor
 
+    GasState savedGasState()
+    {
+        return tpgs;
+    }
+
+    ThermallyPerfectGasEquilibrium savedGasModel()
+    {
+        return tpGasEqModel;
+    }
+
     override string toString() const
     {
         char[] repr;

@@ -22,6 +22,8 @@ import nm.schedule;
 import gas;
 import gas.cea_gas;
 import gas.therm_perf_gas;
+import gas.equilibrium_gas;
+import gas.therm_perf_gas_equil;
 import kinetics;
 import gasflow;
 
@@ -329,15 +331,6 @@ Options:
     // ANALYSIS PART B, SUPERSONIC EXPANSION
     // -------------------------------------
     //
-    // We will continue with a non-equilibrium chemistry expansion
-    // only if we have the correct gas models in play.
-    auto gm_cea = cast(CEAGas) gm1;
-    if (gm_cea is null) {
-        writeln("Cannot continue with nonequilibrium expansion.");
-        writeln("  Gas model 1 is not of class CEAGas.");
-        exitFlag = 2;
-        return exitFlag;
-    }
     auto gm2 = init_gas_model(gm2_filename);
     auto reactor = init_thermochemical_reactor(gm2, reactions_filename, reactions_filename2);
     double[10] reactor_params; // An array that passes extra parameters to the reactor.
@@ -357,13 +350,92 @@ Options:
         }
     }
     //
-    if (state6e.ceaSavedData is null) {
-        exitFlag = 3;
+    GasState init_tp_state_from_cea(GasState state6e, GasState state6, GasModel gm2){
+        if (state6e.ceaSavedData is null) {
+            throw new Exception("Failed to find ceaSavedData in state6e");
+        }
+
+        if (verbosityLevel >= 1) {
+            writeln("Initializing gas state using CEA saved data");
+        }
+        if (verbosityLevel >= 2) {
+            writeln("Start part B state mass fractions from CEA.");
+            writeln("massf=", state6e.ceaSavedData.massf);
+        }
+
+        GasState gas0 = new GasState(gm2);
+        gas0.p = state6e.p; gas0.T = state6e.T;
+        foreach (ref Tmode; gas0.T_modes) { Tmode = state6e.T; }
+        foreach (name; species) {
+            gas0.massf[gm2.species_index(name)] = state6.ceaSavedData.massf[name];
+        }
+        // CEA2 should be good to 0.01 percent.
+        // If it is not, we probably have something significant wrong.
+        scale_mass_fractions(gas0.massf, 0.0, 0.0001);
+        gm2.update_thermo_from_pT(gas0);
+        gm2.update_sound_speed(gas0);
+        return gas0;
+    }
+    //
+    GasState init_tp_state_from_eqgas(GasState state6e, EquilibriumGas gm_eq, GasModel gm2){
+    /*
+        Although EquilibriumGas has officially one species, it keeps an internal 
+        thermally perfect gas model for doing calculations. Here, do an apparently
+        pointless update_thermo_from_pT on state 6e to set the internal gas state
+        mass fractions, and then copy them into the new GasState, based on gm2.
+
+        @author: Nick Gibbons
+    */
+        gm_eq.update_thermo_from_pT(state6e);
+        GasState tpgs = gm_eq.savedGasState;
+        ThermallyPerfectGasEquilibrium tpgm = gm_eq.savedGasModel;
+        if (verbosityLevel >= 1) {
+            writeln("Initializing gas state using equilibrium gas saved data");
+        }
+        if (verbosityLevel >= 2) {
+            writeln("Start part B state mass fractions from ceq.");
+            writeln("massf=", tpgs.massf);
+        }
+
+        GasState gas0 = new GasState(gm2);
+        gas0.p = tpgs.p; gas0.T = tpgs.T;
+        foreach (ref Tmode; gas0.T_modes) { Tmode = tpgs.T; }
+        // We're assuming that the species order is the same in both models,
+        // which could be a problem if the user doesn't keep them in order.
+        foreach (name; species) {
+            gas0.massf[gm2.species_index(name)] = tpgs.massf[tpgm.species_index(name)];
+        }
+        gm2.update_thermo_from_pT(gas0);
+        gm2.update_sound_speed(gas0);
+        return gas0;
+    }
+    //
+    // We will continue with a non-equilibrium chemistry expansion
+    // only if we have the correct gas models in play.
+    auto gm_cea = cast(CEAGas) gm1;
+    auto gm_eq = cast(EquilibriumGas) gm1;
+    GasState gas0;
+    if (gm_cea !is null){
+        try {
+            gas0 = init_tp_state_from_cea(state6e, state6, gm2);
+        } catch (Exception e) {
+            writeln("Error in initialising tp state from cea");
+            writeln(e.msg);
+            exitFlag=4;
+            return exitFlag;
+        }
+    } else if (gm_eq !is null) {
+        gas0 = init_tp_state_from_eqgas(state6e, gm_eq, gm2);
+    } else {
+        writeln("Cannot continue with nonequilibrium expansion.");
+        writeln("  Gas model 1 is not of class CEAGas or EquilibriumGas.");
+        exitFlag = 2;
         return exitFlag;
     }
     if (verbosityLevel >= 1) {
         writeln("Begin part B: continue supersonic expansion with finite-rate chemistry.");
     }
+
     //
     // Geometry of nozzle expansion.
     //
@@ -397,28 +469,6 @@ Options:
         writefln("  area-ratio  %g", area_at_start/area_at_throat);
     }
     //
-    if (verbosityLevel >= 2) {
-        writeln("Start part B state mass fractions from CEA.");
-        writeln("massf=", state6e.ceaSavedData.massf);
-    }
-    GasState gas0 = new GasState(gm2);
-    gas0.p = state6e.p; gas0.T = state6e.T;
-    foreach (ref Tmode; gas0.T_modes) { Tmode = state6e.T; }
-    try {
-        foreach (name; species) {
-            gas0.massf[gm2.species_index(name)] = state6.ceaSavedData.massf[name];
-        }
-        // CEA2 should be good to 0.01 percent.
-        // If it is not, we probably have something significant wrong.
-        scale_mass_fractions(gas0.massf, 0.0, 0.0001);
-    } catch (Exception e) {
-        writeln("Failed to transfer mass fractions to finite-rate-chemistry gas.");
-        writeln(e.msg);
-        exitFlag = 4;
-        return exitFlag;
-    }
-    gm2.update_thermo_from_pT(gas0);
-    gm2.update_sound_speed(gas0);
     //
     // Make sure that we start the supersonic expansion with a velocity
     // that is slightly higher than the speed of sound for the thermally-perfect gas.
