@@ -115,11 +115,12 @@ void compute_vtx_velocities_for_sf(FBArray fba)
                             // Reconstruct the flow state just behind the shock from
                             // the flow states in the first two cells.
                             // Note that the actual order of reconstruction will be
-                            // determined by GlocalConfig.interpolation_order.
+                            // determined by GlobalConfig.interpolation_order.
                             FVCell cR0 = blk.get_cell(0,j,k);
                             FVCell cR1 = blk.get_cell(1,j,k);
                             Rght.copy_values_from(cR0.fs);
-                            blk.one_d.interp_l0r2(f, cR0, cR1, cR0.iLength, cR1.iLength, Rght);
+                            // blk.one_d.interp_l0r2(f, cR0, cR1, cR0.iLength, cR1.iLength, Rght);
+                            blk.one_d.interp_l0r2(f, Rght, Rght); // note that Rght is used as a dummy variable here
                             fba.face_ws[j0+j][k0+k] = wave_speed(inflow, Rght, f.n);
                         } else {
                             // Using the first cell-centre state for R0 is first-order.

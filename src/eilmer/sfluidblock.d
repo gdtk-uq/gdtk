@@ -218,7 +218,20 @@ public:
     {
         super.init_workspace();
         // Workspace for flux_calc method.
-        one_d = new OneDInterpolator(dedicatedConfig[id]);
+
+        switch (dedicatedConfig[id].interpolation_scheme) {
+            case "legacy":
+                one_d = new LegacyOneDInterpolator(dedicatedConfig[id]);
+                break;
+            case "regular":
+                one_d = new RegularOneDInterpolator(dedicatedConfig[id]);
+                break;
+            case "irregular":
+                one_d = new IrregularOneDInterpolator(dedicatedConfig[id]);
+                break;
+            default:
+                throw new FlowSolverException("Unrecognised interpolation scheme");
+        }
     }
 
     @nogc override int get_interpolation_order()
@@ -2109,14 +2122,15 @@ public:
             if (myConfig.high_order_flux_calculator && f.is_on_boundary && !bc[f.bc_id].ghost_cell_data_available) {
                 throw new Error("ghost cell data missing");
             }
-
-            FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
-            FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
-            Lft.copy_values_from(cL0.fs);
-            Rght.copy_values_from(cR0.fs);
+            
             if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
                 !(myConfig.suppress_reconstruction_at_shocks && (f.fs.S == 1.0))) {
                 one_d.interp(f, Lft, Rght);
+            } else {
+                FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
+                FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
+                Lft.copy_values_from(cL0.fs);
+                Rght.copy_values_from(cR0.fs);
             }
             f.fs.copy_average_values_from(Lft, Rght);
             if (f.is_on_boundary && bc[f.bc_id].convective_flux_computed_in_bc) continue;

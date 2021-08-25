@@ -31,8 +31,8 @@ import nm.number;
 // Returns q if q is between the values A and B, else
 // it returns the closer limit of the range [min(A,B), max(A,B)].
 {
-    number lower_limit = (A <= B) ? A : B;
-    number upper_limit = (A > B) ? A : B;
-    number qclipped = (q > lower_limit) ? q : lower_limit;
+    const number lower_limit = (A <= B) ? A : B;
+    const number upper_limit = (A > B) ? A : B;
+    const number qclipped = (q > lower_limit) ? q : lower_limit;
     return (qclipped <= upper_limit) ? qclipped : upper_limit;
 }

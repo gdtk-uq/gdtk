@@ -1594,9 +1594,11 @@ public:
                         c.volume[j].re = incoming_geometry_buf[ii++]; version(complex_numbers) { c.volume[j].im = incoming_geometry_buf[ii++]; }
                         c.areaxy[j].re = incoming_geometry_buf[ii++]; version(complex_numbers) { c.areaxy[j].im = incoming_geometry_buf[ii++]; }
                     }
-                    c.iLength.re = incoming_geometry_buf[ii++]; version(complex_numbers) { c.iLength.im = incoming_geometry_buf[ii++]; }
-                    c.jLength.re = incoming_geometry_buf[ii++]; version(complex_numbers) { c.jLength.im = incoming_geometry_buf[ii++]; }
-                    c.kLength.re = incoming_geometry_buf[ii++]; version(complex_numbers) { c.kLength.im = incoming_geometry_buf[ii++]; }
+
+                    static foreach(li; 0 .. 3) {
+                        c.lengths[li].re = incoming_geometry_buf[ii++]; version(complex_numbers) { c.lengths[li].im = incoming_geometry_buf[ii++]; }
+                    }
+
                     c.L_min.re = incoming_geometry_buf[ii++]; version(complex_numbers) { c.L_min.im = incoming_geometry_buf[ii++]; }
                     c.L_max.re = incoming_geometry_buf[ii++]; version(complex_numbers) { c.L_max.im = incoming_geometry_buf[ii++]; }
                 }

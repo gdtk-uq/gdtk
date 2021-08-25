@@ -31,7 +31,7 @@ import globalconfig;
 import lsqinterp;
 import mass_diffusion;
 
-enum IndexDirection {none=0, i, j, k}; // Needed for StructuredGrid interpolation.
+enum IndexDirection {i=0, j, k, none=666}; // Needed for StructuredGrid interpolation.
 
 class FVInterface {
 public:

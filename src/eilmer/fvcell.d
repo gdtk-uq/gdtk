@@ -79,9 +79,7 @@ public:
     number base_qdot; // base-level of heat addition to cell, W/m**3
     // Geometry
     Vector3[] pos; // Centre x,y,z-coordinates for time-levels, m,m,m
-    number iLength; // length in the i-index direction
-    number jLength; // length in the j-index direction
-    number kLength; // length in the k-index direction
+    number[3] lengths; // length in i,j,k index direction
     number L_min;   // minimum length scale for cell
     number L_max;   // maximum length scale for cell
     // Connections
@@ -274,6 +272,18 @@ public:
         aux_cell_data = AuxCellData.get_aux_cell_data_items(myConfig);
     }
 
+    // length in the i-index direction
+    @property @nogc number iLength() const {return lengths[0];} 
+    @property @nogc number iLength(number l) {return lengths[0] = l;}
+
+    // length in the j-index direction
+    @property @nogc number jLength() const {return lengths[1];} 
+    @property @nogc number jLength(number l) {return lengths[1] = l;}
+
+    // length in the k-index direction
+    @property @nogc number kLength() const {return lengths[2];} 
+    @property @nogc number kLength(number l) {return lengths[2] = l;}
+
     @nogc
     void copy_values_from(FVCell other, int type_of_copy)
     {
@@ -389,16 +399,18 @@ public:
     void update_2D_geometric_data(size_t gtl, bool axisymmetric)
     {
         string msg = "FVCell.update_2D_geometric_data(): ";
-        number vol, xyplane_area;
+        number vol, xyplane_area, iL, jL;
         switch (vtx.length) {
         case 3:
             xyplane_triangle_cell_properties(vtx[0].pos[gtl], vtx[1].pos[gtl], vtx[2].pos[gtl],
-                                             pos[gtl], xyplane_area, iLength, jLength, L_min);
+                                             pos[gtl], xyplane_area, iL, jL, L_min);
+            iLength = iL; jLength = jL;
             break;
         case 4:
             xyplane_quad_cell_properties(vtx[0].pos[gtl], vtx[1].pos[gtl],
                                          vtx[2].pos[gtl], vtx[3].pos[gtl],
-                                         pos[gtl], xyplane_area, iLength, jLength, L_min);
+                                         pos[gtl], xyplane_area, iL, jL, L_min); 
+            iLength = iL; jLength = jL;
             break;
         default:
             debug { msg ~= format("Unhandled number of vertices: %d", vtx.length); }
@@ -424,7 +436,7 @@ public:
         }
         volume[gtl] = vol;
         areaxy[gtl] = xyplane_area;
-        kLength = 0.0;
+        kLength = to!number(0.0);
         L_max = fmax(iLength, jLength);
     } // end update_2D_geometric_data()
 
@@ -432,6 +444,7 @@ public:
     void update_3D_geometric_data(size_t gtl)
     {
         string msg = "FVCell.update_3D_geometric_data(): ";
+        number iL, jL, kL;
         switch (vtx.length) {
         case 4:
             tetrahedron_properties(vtx[0].pos[gtl], vtx[1].pos[gtl],
@@ -442,7 +455,8 @@ public:
         case 8:
             hex_cell_properties(vtx[0].pos[gtl], vtx[1].pos[gtl], vtx[2].pos[gtl], vtx[3].pos[gtl],
                                 vtx[4].pos[gtl], vtx[5].pos[gtl], vtx[6].pos[gtl], vtx[7].pos[gtl],
-                                pos[gtl], volume[gtl], iLength, jLength, kLength);
+                                pos[gtl], volume[gtl], iL, jL, kL);
+            iLength = iL; jLength = jL; kLength = kL;
             L_min = min(iLength, jLength, kLength);
             break;
         case 5:

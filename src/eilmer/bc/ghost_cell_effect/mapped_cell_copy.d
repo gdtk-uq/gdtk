@@ -607,9 +607,11 @@ public:
                         c.volume[j].re = buf[ii++]; version(complex_numbers) { c.volume[j].im = buf[ii++]; }
                         c.areaxy[j].re = buf[ii++]; version(complex_numbers) { c.areaxy[j].im = buf[ii++]; }
                     }
-                    c.iLength.re = buf[ii++]; version(complex_numbers) { c.iLength.im = buf[ii++]; }
-                    c.jLength.re = buf[ii++]; version(complex_numbers) { c.jLength.im = buf[ii++]; }
-                    c.kLength.re = buf[ii++]; version(complex_numbers) { c.kLength.im = buf[ii++]; }
+
+                    static foreach(li; 0 .. 3) {
+                        c.lengths[li].re = buf[ii++]; version(complex_numbers) { c.lengths[li].im = buf[ii++]; }
+                    }
+
                     c.L_min.re = buf[ii++]; version(complex_numbers) { c.L_min.im = buf[ii++]; }
                     c.L_max.re = buf[ii++]; version(complex_numbers) { c.L_max.im = buf[ii++]; }
                 }

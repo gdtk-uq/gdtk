@@ -10,6 +10,7 @@ import std.math;
 import std.stdio;
 import nm.complex;
 import nm.number;
+import std.conv;
 
 import gas;
 import globalconfig;
@@ -20,7 +21,1074 @@ import limiters;
 
 immutable double epsilon_van_albada = 1.0e-12;
 
-class OneDInterpolator {
+
+template GetCellVariable(string name, string location)
+{
+    const char[] GetCellVariable = 
+    "pragma(inline) @nogc void "~name~"(size_t n)(FVCell[] cells, number[] scalars)
+    {
+        static foreach(i; 0 .. n) {
+            scalars[i] = cells[i]."~location~";
+        }
+    }";
+}
+
+template GetCellArrayVariable(string name, string location)
+{
+    const char[] GetCellArrayVariable = 
+    "pragma(inline) @nogc void "~name~"(size_t n)(FVCell[] cells, size_t index, number[] scalars)
+    {
+        static foreach(i; 0 .. n) {
+            scalars[i] = cells[i]."~location~"[index];
+        }
+    }";
+}
+
+mixin(GetCellVariable!("GetVelX", "fs.vel.x"));
+mixin(GetCellVariable!("GetVelY", "fs.vel.y"));
+mixin(GetCellVariable!("GetVelZ", "fs.vel.z"));
+
+version(MHD) {
+mixin(GetCellVariable!("GetBx", "fs.B.x"));
+mixin(GetCellVariable!("GetBy", "fs.B.y"));
+mixin(GetCellVariable!("GetBz", "fs.B.z"));
+mixin(GetCellVariable!("GetPsi", "fs.psi"));
+}
+
+version(turbulence) {
+mixin(GetCellArrayVariable!("GetTurb", "fs.turb"));
+}
+
+version(multi_species_gas) {
+mixin(GetCellArrayVariable!("GetMassF", "fs.gas.massf"));
+}
+
+mixin(GetCellVariable!("GetP", "fs.gas.p"));
+mixin(GetCellVariable!("GetT", "fs.gas.T"));
+
+version(multi_T_gas) {
+mixin(GetCellArrayVariable!("GetTMode", "fs.gas.T_modes"));
+mixin(GetCellArrayVariable!("GetUMode", "fs.gas.u_modes"));
+}
+
+mixin(GetCellVariable!("GetRho", "fs.gas.rho"));
+mixin(GetCellVariable!("GetU", "fs.gas.u"));
+
+//------------------------------------------------------------------------------
+
+// Helper functions for code generation.
+// If an EOS call fails, fall back to just copying cell-centre data.
+// This does presume that the cell-centre data is valid.
+string codeForThermoUpdateLft2(string funname)
+{
+    string code = "
+        static if (numL > 0) {
+            try {
+                gmodel.update_thermo_from_"~funname~"(Lft.gas);
+            } catch (Exception e) {
+                debug { writeln(e.msg); }
+                Lft.copy_values_from(cL[0].fs);
+            }
+        }
+        ";
+    return code;
+}
+
+string codeForThermoUpdateRght2(string funname)
+{
+    string code = "
+        static if (numR > 0) {
+            try {
+                gmodel.update_thermo_from_"~funname~"(Rght.gas);
+            } catch (Exception e) {
+                debug { writeln(e.msg); }
+                Rght.copy_values_from(cR[0].fs);
+            }
+        }
+        ";
+    return code;
+}
+
+string codeForThermoUpdateBoth2(string funname)
+{
+    return codeForThermoUpdateLft2(funname) ~ codeForThermoUpdateRght2(funname);
+}
+
+
+@nogc void copy_flowstate(ref FVInterface f, ref FlowState Lft, ref FlowState Rght)
+{
+    FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
+    FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
+    Lft.copy_values_from(cL0.fs);
+    Rght.copy_values_from(cR0.fs);
+}
+
+@nogc number weight_scalar(number q0, number q1, number w0, number w1, bool extrema_clipping)
+{
+    // The weights for interpolation or extrapolation may be used.
+    number q = q0*w0 + q1*w1;
+    if (extrema_clipping) { q = clip_to_limits(q, q0, q1); }
+    return q;
+}
+
+//=============================================================================
+
+string codeForInterpolation()
+{
+
+    string code = "
+
+    FVCell[numL] cL;
+    FVCell[numR] cR;
+
+    static foreach (i; 0 .. numL) {
+        cL[i] = f.left_cells[i];
+    }
+
+    static foreach (i; 0 .. numR) {
+        cR[i] = f.right_cells[i];
+    }
+
+    number[numW] weight;
+    prep_calculate_scalar(f, cL, cR, weight);
+
+    auto gmodel = myConfig.gmodel;
+    uint nsp = myConfig.n_species;
+    auto nmodes = myConfig.n_modes;
+    // High-order reconstruction for some properties.
+    if (myConfig.interpolate_in_local_frame) {
+        // Paul Petrie-Repar and Jason Qin have noted that the velocity needs
+        // to be reconstructed in the interface-local frame of reference so that
+        // the normal velocities are not messed up for mirror-image at walls.
+        // PJ 21-feb-2012
+        static foreach (i; 0 .. numL) {
+            cL[i].fs.vel.transform_to_local_frame(f.n, f.t1, f.t2);
+        }
+        static foreach (i; 0 .. numR) {
+            cR[i].fs.vel.transform_to_local_frame(f.n, f.t1, f.t2);
+        }
+    }
+
+    number[numL] sL;
+    number[numR] sR;
+
+    GetVelX!(numL)(cL, sL); GetVelX!(numR)(cR, sR); calculate_scalar(Lft.vel.refx, Rght.vel.refx, sL, sR, weight);
+    GetVelY!(numL)(cL, sL); GetVelY!(numR)(cR, sR); calculate_scalar(Lft.vel.refy, Rght.vel.refy, sL, sR, weight);
+    GetVelZ!(numL)(cL, sL); GetVelZ!(numR)(cR, sR); calculate_scalar(Lft.vel.refz, Rght.vel.refz, sL, sR, weight);
+
+    version(MHD) {
+        if (myConfig.MHD) {
+            GetBx!(numL)(cL,sL); GetBx!(numR)(cR, sR); calculate_scalar(Lft.B.refx, Rght.B.refx, sL, sR, weight);
+            GetBy!(numL)(cL,sL); GetBy!(numR)(cR, sR); calculate_scalar(Lft.B.refy, Rght.B.refy, sL, sR, weight);
+            GetBz!(numL)(cL,sL); GetBz!(numR)(cR, sR); calculate_scalar(Lft.B.refz, Rght.B.refz, sL, sR, weight);
+            if (myConfig.divergence_cleaning) {
+                GetPsi!(numL)(cL,sL); GetPsi!(numR)(cR, sR); calculate_scalar(Lft.psi, Rght.psi, sL, sR, weight);
+            }
+        }
+    }
+    version(turbulence) {
+        foreach (it; 0 .. myConfig.turb_model.nturb){
+            GetTurb!(numL)(cL, it, sL); GetTurb!(numR)(cR, it, sR); 
+            calculate_scalar(Lft.turb[it], Rght.turb[it], sL, sR, weight);
+        }
+    }
+
+    version(multi_species_gas) {
+        if (nsp > 1) {
+            // Multiple species.
+            if (myConfig.allow_reconstruction_for_species) {
+                foreach (isp; 0 .. nsp) {
+                    GetMassF!(numL)(cL, isp, sL); GetMassF!(numR)(cR, isp, sR); 
+                    calculate_scalar(Lft.gas.massf[isp], Rght.gas.massf[isp], sL, sR, weight);
+
+                }
+                static if (numL > 0) {
+                    try {
+                        scale_mass_fractions(Lft.gas.massf);
+                    } catch(Exception e) {
+                        debug { writeln(e.msg); }
+                        Lft.gas.massf[] = cL[0].fs.gas.massf[];
+                    }
+                }
+                static if (numR > 0) {
+                    try {
+                        scale_mass_fractions(Rght.gas.massf);
+                    } catch(Exception e) {
+                        debug { writeln(e.msg); }
+                        Rght.gas.massf[] = cR[0].fs.gas.massf[];
+                    }
+                }
+            } else {
+                static if (numL > 0) {
+                    Lft.gas.massf[] = cL[0].fs.gas.massf[];
+                }
+                static if (numR > 0) {
+                    Rght.gas.massf[] = cR[0].fs.gas.massf[];
+                }
+            }
+        } else {
+            // Only one possible mass-fraction value for a single species.
+            static if (numL > 0) {
+                Lft.gas.massf[0] = 1.0;
+            }
+            static if (numR > 0) {
+                Rght.gas.massf[0] = 1.0;
+            }
+        }
+    }
+    // Interpolate on two of the thermodynamic quantities,
+    // and fill in the rest based on an EOS call.
+    final switch (myConfig.thermo_interpolator) {
+    case InterpolateOption.pt:
+        GetP!(numL)(cL,sL); GetP!(numR)(cR, sR); calculate_scalar(Lft.gas.p, Rght.gas.p, sL, sR, weight);
+        GetT!(numL)(cL,sL); GetT!(numR)(cR, sR); calculate_scalar(Lft.gas.T, Rght.gas.T, sL, sR, weight);
+
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (i; 0 .. nmodes) {
+                    GetTMode!(numL)(cL, i, sL); GetTMode!(numR)(cR, i, sR); 
+                    calculate_scalar(Lft.gas.T_modes[i], Rght.gas.T_modes[i], sL, sR, weight);
+                }
+            } else {
+                static if (numL > 0) {
+                    Lft.gas.T_modes[] = cL[0].fs.gas.T_modes[];
+                }
+                static if (numR > 0) {
+                    Rght.gas.T_modes[] = cR[0].fs.gas.T_modes[];
+                }
+            }
+        }
+        mixin(codeForThermoUpdateBoth2(\"pT\"));
+        break;
+    case InterpolateOption.rhou:
+        GetRho!(numL)(cL,sL); GetRho!(numR)(cR, sR); calculate_scalar(Lft.gas.rho, Rght.gas.rho, sL, sR, weight);
+        GetU!(numL)(cL,sL); GetU!(numR)(cR, sR); calculate_scalar(Lft.gas.u, Rght.gas.u, sL, sR, weight);
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (i; 0 .. nmodes) {
+                    GetUMode!(numL)(cL, i, sL); GetUMode!(numR)(cR, i, sR); 
+                    calculate_scalar(Lft.gas.u_modes[i], Rght.gas.u_modes[i], sL, sR, weight);
+                }
+            } else {
+                static if (numL > 0) {
+                    Lft.gas.u_modes[] = cL[0].fs.gas.u_modes[];
+                }
+                static if (numR > 0) {
+                    Rght.gas.u_modes[] = cR[0].fs.gas.u_modes[];
+                }
+            }
+        }
+        mixin(codeForThermoUpdateBoth2(\"rhou\"));
+        break;
+    case InterpolateOption.rhop:
+        GetRho!(numL)(cL,sL); GetRho!(numR)(cR, sR); calculate_scalar(Lft.gas.rho, Rght.gas.rho, sL, sR, weight);
+        GetP!(numL)(cL,sL); GetP!(numR)(cR, sR); calculate_scalar(Lft.gas.p, Rght.gas.p, sL, sR, weight);
+        mixin(codeForThermoUpdateBoth2(\"rhop\"));
+        break;
+    case InterpolateOption.rhot:
+        GetRho!(numL)(cL,sL); GetRho!(numR)(cR, sR); calculate_scalar(Lft.gas.rho, Rght.gas.rho, sL, sR, weight);
+        GetT!(numL)(cL,sL); GetT!(numR)(cR, sR); calculate_scalar(Lft.gas.T, Rght.gas.T, sL, sR, weight);
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (i; 0 .. nmodes) {
+                    GetTMode!(numL)(cL, i, sL); GetTMode!(numR)(cR, i, sR); 
+                    calculate_scalar(Lft.gas.T_modes[i], Rght.gas.T_modes[i], sL, sR, weight);
+                }
+            } else {
+                static if (numL > 0) {
+                    Lft.gas.T_modes[] = cL[0].fs.gas.T_modes[];
+                }
+                static if (numR > 0) {
+                    Rght.gas.T_modes[] = cR[0].fs.gas.T_modes[];
+                }
+            }
+        }
+        mixin(codeForThermoUpdateBoth2(\"rhoT\"));
+        break;
+    } // end switch thermo_interpolator
+    if (myConfig.interpolate_in_local_frame) {
+        // Undo the transformation made earlier. PJ 21-feb-2012
+        static foreach (i; 0 .. numL) {
+            cL[i].fs.vel.transform_to_global_frame(f.n, f.t1, f.t2);
+        }
+        static foreach (i; 0 .. numR) {
+            cR[i].fs.vel.transform_to_global_frame(f.n, f.t1, f.t2);
+        }
+
+        static if (numL > 0) {
+            Lft.vel.transform_to_global_frame(f.n, f.t1, f.t2);
+        }
+        static if (numR > 0) {
+            Rght.vel.transform_to_global_frame(f.n, f.t1, f.t2);
+        }
+
+    }";
+
+    return code;
+}
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+@nogc void reconstruct_L1R0_O1(ref FVInterface f, ref FlowState Lft, ref FlowState Rght)
+{
+    Lft.copy_values_from(f.left_cells[0].fs);
+    Rght.copy_values_from(f.left_cells[0].fs);
+
+}
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+@nogc void reconstruct_L0R1_O1(ref FVInterface f, ref FlowState Lft, ref FlowState Rght)
+{
+    Rght.copy_values_from(f.right_cells[0].fs);
+    Lft.copy_values_from(f.right_cells[0].fs);
+}
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+@nogc void reconstruct_L1R1_O1(ref FVInterface f, ref FlowState Lft, ref FlowState Rght)
+{
+    Rght.copy_values_from(f.right_cells[0].fs);
+    Lft.copy_values_from(f.left_cells[0].fs);
+}
+
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+@nogc void reconstruct_L0R2_O2(ref FVInterface f, ref FlowState Lft, ref FlowState Rght, LocalConfig myConfig)
+{
+
+    enum numL = 0;
+    enum numR = 2;
+    enum numW = 2;
+
+    pragma(inline) @nogc void prep_calculate_scalar(ref FVInterface f, ref FVCell[numL] cL, ref FVCell[numR] cR, ref number[numW] weight)
+    {
+
+        const number len0 = cR[0].lengths[f.idir];
+        const number len1 = cR[1].lengths[f.idir];
+
+        // Set up weights for a linear combination if q0 and q1
+        // assuming that we are extrapolating past q0 to the boundary len0/2 away.
+        weight[0] = (2.0*len0 + len1)/(len0+len1);
+        weight[1] = -len0/(len0+len1);
+    }
+
+    pragma(inline) @nogc void calculate_scalar(ref number Lft, ref number Rght, ref number[numL] sL, ref number[numR] sR, ref number[numW] w)
+    {
+        number q = sR[0]*w[0] + sR[1]*w[1];
+        if (myConfig.extrema_clipping) { q = clip_to_limits(q, sR[0], sR[1]); }
+        Rght = q;
+    }
+
+
+    copy_flowstate(f, Lft, Rght);
+
+    mixin(codeForInterpolation());
+
+} // end reconstruct_L0R2_O2
+
+@nogc void reconstruct_L0R2_O2_smooth(ref FVInterface f, ref FlowState Lft, ref FlowState Rght, LocalConfig myConfig)
+{
+
+    enum numL = 0;
+    enum numR = 2;
+    enum numW = 0;
+
+    pragma(inline) @nogc void prep_calculate_scalar(ref FVInterface f, ref FVCell[numL] cL, ref FVCell[numR] cR, ref number[numW] weight){}
+
+    pragma(inline) @nogc void calculate_scalar(ref number Lft, ref number Rght, ref number[numL] sL, ref number[numR] sR, ref number[numW] w)
+    {
+        number q = 1.5*(sR[0] - sR[1]);
+        if (myConfig.extrema_clipping) { q = clip_to_limits(q, sR[0], sR[1]); }
+        Rght = q;
+    }
+
+
+    copy_flowstate(f, Lft, Rght);
+
+    mixin(codeForInterpolation());
+
+} // end reconstruct_L0R2_O2_smooth
+
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+@nogc void reconstruct_L2R0_O2(ref FVInterface f, ref FlowState Lft, ref FlowState Rght, LocalConfig myConfig)
+{
+
+    enum numL = 2;
+    enum numR = 0;
+    enum numW = 2;
+
+    pragma(inline) @nogc void prep_calculate_scalar(ref FVInterface f, ref FVCell[numL] cL, ref FVCell[numR] cR, ref number[numW] weight)
+    {
+
+        const number len0 = cL[0].lengths[f.idir];
+        const number len1 = cL[1].lengths[f.idir];
+
+        // Set up weights for a linear combination if q0 and q1
+        // assuming that we are extrapolating past q0 to the boundary len0/2 away.
+        weight[0] = (2.0*len0 + len1)/(len0+len1);
+        weight[1] = -len0/(len0+len1);
+    }
+
+    pragma(inline) @nogc void calculate_scalar(ref number Lft, ref number Rght, ref number[numL] sL, ref number[numR] sR, ref number[numW] w)
+    {
+        number q = sL[0]*w[0] + sL[1]*w[1];
+        if (myConfig.extrema_clipping) { q = clip_to_limits(q, sL[0], sL[1]); }
+        Lft = q;
+    }
+
+
+    copy_flowstate(f, Lft, Rght);
+
+    mixin(codeForInterpolation());
+
+} // end reconstruct_L2R0_O2
+
+@nogc void reconstruct_L2R0_O2_smooth(ref FVInterface f, ref FlowState Lft, ref FlowState Rght, LocalConfig myConfig)
+{
+
+    enum numL = 2;
+    enum numR = 0;
+    enum numW = 0;
+
+    pragma(inline) @nogc void prep_calculate_scalar(ref FVInterface f, ref FVCell[numL] cL, ref FVCell[numR] cR, ref number[numW] weight){}
+
+    pragma(inline) @nogc void calculate_scalar(ref number Lft, ref number Rght, ref number[numL] sL, ref number[numR] sR, ref number[numW] w)
+    {
+        number q = 1.5*(sL[0] - sL[1]);
+        if (myConfig.extrema_clipping) { q = clip_to_limits(q, sL[0], sL[1]); }
+        Lft = q;
+    }
+
+
+    copy_flowstate(f, Lft, Rght);
+
+    mixin(codeForInterpolation());
+
+} // end reconstruct_L2R0_O2_smooth
+
+
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+@nogc void reconstruct_L1R2_O2(ref FVInterface f, ref FlowState Lft, ref FlowState Rght, LocalConfig myConfig)
+{
+
+    enum numL = 1;
+    enum numR = 2;
+    enum numW = 7;
+
+    pragma(inline) @nogc void prep_calculate_scalar(ref FVInterface f, ref FVCell[numL] cL, ref FVCell[numR] cR, ref number[numW] weight)
+    {
+        const number lenL0 = cL[0].lengths[f.idir];
+        const number lenR0 = cR[0].lengths[f.idir];
+        const number lenR1 = cR[1].lengths[f.idir];
+
+        weight[0] = lenR0/(lenL0+lenR0);
+        weight[1] = lenL0/(lenL0+lenR0);
+        weight[2] = 2.0 / (lenR0 + lenL0);
+        weight[3] = 2.0 / (lenR1 + lenR0);
+        weight[4] = (2.0*lenR0 + lenR1);
+        weight[5] = 0.5 * lenR0 / (lenL0 + 2.0*lenR0 + lenR1);
+        weight[6] = lenL0;
+
+
+    }
+
+    pragma(inline) @nogc void calculate_scalar(ref number Lft, ref number Rght, ref number[numL] sL, ref number[numR] sR, ref number[numW] weight)
+    {
+
+        number del = (sR[0] - sL[0]) * weight[2];
+        number delRplus = (sR[1] - sR[0]) * weight[3];
+        number slopeR = 1.0;
+        if (myConfig.apply_limiter) {
+            slopeR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) /
+                (del*del + delRplus*delRplus + epsilon_van_albada);
+        }
+        Rght = sR[0] - slopeR * weight[5] * (delRplus * weight[6] + del * weight[4]);
+
+        if (myConfig.apply_limiter && (delRplus*del < 0.0)) {
+            Lft = sL[0];
+        } else {
+            Lft = weight_scalar(sL[0], sR[0], weight[0], weight[1], myConfig.extrema_clipping);
+        }
+        if (myConfig.extrema_clipping) {
+            // Lft is already clipped inside weight_scalar().
+            Rght = clip_to_limits(Rght, sL[0], sR[0]);
+        }
+    }
+
+    copy_flowstate(f, Lft, Rght);
+
+    mixin(codeForInterpolation());
+
+} // end reconstruct_L1R2_O2
+
+@nogc void reconstruct_L1R2_O2_smooth(ref FVInterface f, ref FlowState Lft, ref FlowState Rght, LocalConfig myConfig)
+{
+
+    enum numL = 1;
+    enum numR = 2;
+    enum numW = 7;
+
+    pragma(inline) @nogc void prep_calculate_scalar(ref FVInterface f, ref FVCell[numL] cL, ref FVCell[numR] cR, ref number[numW] weight){}
+
+    pragma(inline) @nogc void calculate_scalar(ref number Lft, ref number Rght, ref number[numL] sL, ref number[numR] sR, ref number[numW] weight)
+    {
+
+        number del = sR[0] - sL[0];
+        number delRplus = sR[1] - sR[0];
+        number slopeR = 1.0;
+        if (myConfig.apply_limiter) {
+            slopeR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) /
+                (del*del + delRplus*delRplus + epsilon_van_albada);
+        }
+        Rght = sR[0] - slopeR * 0.125 * (delRplus + del * 3);
+
+        if (myConfig.apply_limiter && (delRplus*del < 0.0)) {
+            Lft = sL[0];
+        } else {
+            Lft = weight_scalar(sL[0], sR[0], to!number(0.5), to!number(0.5), myConfig.extrema_clipping);
+        }
+        if (myConfig.extrema_clipping) {
+            // Lft is already clipped inside weight_scalar().
+            Rght = clip_to_limits(Rght, sL[0], sR[0]);
+        }
+    }
+
+    copy_flowstate(f, Lft, Rght);
+
+    mixin(codeForInterpolation());
+
+} // end reconstruct_L1R2_O2_smooth
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+@nogc void reconstruct_L2R1_O2(ref FVInterface f, ref FlowState Lft, ref FlowState Rght, LocalConfig myConfig)
+{
+
+    enum numL = 2;
+    enum numR = 1;
+    enum numW = 7;
+
+
+    pragma(inline) @nogc void prep_calculate_scalar(ref FVInterface f, ref FVCell[numL] cL, ref FVCell[numR] cR, ref number[numW] weight)
+    {
+        const number lenL0 = cL[0].lengths[f.idir];
+        const number lenL1 = cL[1].lengths[f.idir];
+        const number lenR0 = cR[0].lengths[f.idir];
+
+        weight[0] = lenR0/(lenL0+lenR0);
+        weight[1] = lenL0/(lenL0+lenR0);
+        weight[2] = 2.0 / (lenL0 + lenL1);
+        weight[3] = 2.0 / (lenR0 + lenL0);
+        weight[4] = (2.0*lenL0 + lenL1);
+        weight[5] = 0.5 * lenL0 / (lenL1 + 2.0*lenL0 + lenR0);
+        weight[6] = lenR0;
+
+
+    } // end prep_calculate_scalar()
+
+    pragma(inline) @nogc void calculate_scalar(ref number Lft, ref number Rght, ref number[numL] sL, ref number[numR] sR, ref number[numW] weight)
+    {
+
+        number delLminus = (sL[0] - sL[1]) * weight[2];
+        number del = (sR[0] - sL[0]) * weight[3];
+        number slopeL = 1.0;
+        if (myConfig.apply_limiter) {
+            slopeL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) /
+                (delLminus*delLminus + del*del + epsilon_van_albada);
+        }
+        Lft = sL[0] + slopeL * weight[5] * (del * weight[4] + delLminus * weight[6]);
+        if (myConfig.apply_limiter && (delLminus*del < 0.0)) {
+            Rght = sR[0];
+        } else {
+            Rght = weight_scalar(sL[0], sR[0], weight[0], weight[1], myConfig.extrema_clipping);
+        }
+        if (myConfig.extrema_clipping) {
+            Lft = clip_to_limits(Lft, sL[0], sR[0]);
+            // Rght is already clipped inside weight_scalar().
+        }
+    } 
+
+    copy_flowstate(f, Lft, Rght);
+
+    mixin(codeForInterpolation());
+} // end reconstruct_L2R1_O2
+
+@nogc void reconstruct_L2R1_O2_smooth(ref FVInterface f, ref FlowState Lft, ref FlowState Rght, LocalConfig myConfig)
+{
+
+    enum numL = 2;
+    enum numR = 1;
+    enum numW = 7;
+
+
+    pragma(inline) @nogc void prep_calculate_scalar(ref FVInterface f, ref FVCell[numL] cL, ref FVCell[numR] cR, ref number[numW] weight){}
+
+    pragma(inline) @nogc void calculate_scalar(ref number Lft, ref number Rght, ref number[numL] sL, ref number[numR] sR, ref number[numW] weight)
+    {
+        number delLminus = sL[0] - sL[1];
+        number del = sR[0] - sL[0];
+        number slopeL = 1.0;
+        if (myConfig.apply_limiter) {
+            slopeL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) /
+                (delLminus*delLminus + del*del + epsilon_van_albada);
+        }
+        Lft = sL[0] + slopeL * 0.125 * (del * 3 + delLminus);
+        if (myConfig.apply_limiter && (delLminus*del < 0.0)) {
+            Rght = sR[0];
+        } else {
+            Rght = weight_scalar(sL[0], sR[0], to!number(0.5), to!number(0.5), myConfig.extrema_clipping);
+        }
+        if (myConfig.extrema_clipping) {
+            Lft = clip_to_limits(Lft, sL[0], sR[0]);
+            // Rght is already clipped inside weight_scalar().
+        }
+    } 
+
+    copy_flowstate(f, Lft, Rght);
+
+    mixin(codeForInterpolation());
+} // end reconstruct_L2R1_O2_smooth
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+@nogc void reconstruct_L2R2_O2(ref FVInterface f, ref FlowState Lft, ref FlowState Rght, LocalConfig myConfig)
+{
+
+    enum numL = 2;
+    enum numR = 2;
+    enum numW = 9;
+
+    pragma(inline) @nogc void prep_calculate_scalar(ref FVInterface f, ref FVCell[numL] cL, ref FVCell[numR] cR, ref number[numW] weight)
+    {
+        const number lenL0 = cL[0].lengths[f.idir];
+        const number lenL1 = cL[1].lengths[f.idir];
+        const number lenR0 = cR[0].lengths[f.idir];
+        const number lenR1 = cR[1].lengths[f.idir];
+
+        weight[0] = lenL0;
+        weight[1] = lenR0;
+        weight[2] = 0.5 * lenL0 / (lenL1 + 2.0*lenL0 + lenR0);
+        weight[3] = 0.5 * lenR0 / (lenL0 + 2.0*lenR0 + lenR1);
+        weight[4] = 2.0 / (lenL0 + lenL1);
+        weight[5] = 2.0 / (lenR0 + lenL0);
+        weight[6] = 2.0 / (lenR1 + lenR0);
+        weight[7] = (2.0*lenL0 + lenL1);
+        weight[8] = (2.0*lenR0 + lenR1);
+    }
+
+
+    pragma(inline) @nogc void calculate_scalar(ref number Lft, ref number Rght, ref number[numL] sL, ref number[numR] sR, ref number[numW] weight)
+    {
+
+        // Set up differences and limiter values.
+        number delLminus = (sL[0] - sL[1]) * weight[4];
+        number del = (sR[0] - sL[0]) * weight[5];
+        number delRplus = (sR[1] - sR[0]) * weight[6];
+        // Presume unlimited high-order reconstruction.
+        number slopeL = 1.0;
+        number slopeR = 1.0;
+        if (myConfig.apply_limiter) {
+            // val Albada limiter as per Ian Johnston's thesis.
+            slopeL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) /
+                (delLminus*delLminus + del*del + epsilon_van_albada);
+            slopeR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) /
+                (del*del + delRplus*delRplus + epsilon_van_albada);
+        }
+        // The actual high-order reconstruction, possibly limited.
+        Lft = sL[0] + slopeL * weight[2] * (del * weight[7] + delLminus * weight[1]);
+        Rght = sR[0] - slopeR * weight[3] * (delRplus * weight[0] + del * weight[8]);
+        if (myConfig.extrema_clipping) {
+            // An extra limiting filter to ensure that we do not compute new extreme values.
+            // This was introduced to deal with very sharp transitions in species.
+            Lft = clip_to_limits(Lft, sL[0], sR[0]);
+            Rght = clip_to_limits(Rght, sL[0], sR[0]);
+        }
+    }
+
+    copy_flowstate(f, Lft, Rght);
+
+    mixin(codeForInterpolation());
+} // end reconstruct_L2R2_O2
+
+@nogc void reconstruct_L2R2_O2_smooth(ref FVInterface f, ref FlowState Lft, ref FlowState Rght, LocalConfig myConfig)
+{
+
+    enum numL = 2;
+    enum numR = 2;
+    enum numW = 9;
+
+    pragma(inline) @nogc void prep_calculate_scalar(ref FVInterface f, ref FVCell[numL] cL, ref FVCell[numR] cR, ref number[numW] weight){}
+
+
+    pragma(inline) @nogc void calculate_scalar(ref number Lft, ref number Rght, ref number[numL] sL, ref number[numR] sR, ref number[numW] weight)
+    {
+        // Set up differences and limiter values.
+        number delLminus = sL[0] - sL[1];
+        number del = sR[0] - sL[0];
+        number delRplus = sR[1] - sR[0];
+        // Presume unlimited high-order reconstruction.
+        number slopeL = 1.0;
+        number slopeR = 1.0;
+        if (myConfig.apply_limiter) {
+            // val Albada limiter as per Ian Johnston's thesis.
+            slopeL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) /
+                (delLminus*delLminus + del*del + epsilon_van_albada);
+            slopeR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) /
+                (del*del + delRplus*delRplus + epsilon_van_albada);
+        }
+        // The actual high-order reconstruction, possibly limited.
+        Lft = sL[0] + slopeL * 0.125 * (del * 3 + delLminus);
+        Rght = sR[0] - slopeR * 0.125 * (delRplus + del * 3);
+        if (myConfig.extrema_clipping) {
+            // An extra limiting filter to ensure that we do not compute new extreme values.
+            // This was introduced to deal with very sharp transitions in species.
+            Lft = clip_to_limits(Lft, sL[0], sR[0]);
+            Rght = clip_to_limits(Rght, sL[0], sR[0]);
+        }
+    }
+
+    copy_flowstate(f, Lft, Rght);
+
+    mixin(codeForInterpolation());
+} // end reconstruct_L2R2_O2_smooth
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+@nogc void reconstruct_L3R3_O3(ref FVInterface f, ref FlowState Lft, ref FlowState Rght, LocalConfig myConfig)
+{
+
+    enum numL = 3;
+    enum numR = 3;
+    enum numW = 10;
+
+
+    pragma(inline) @nogc void prep_calculate_scalar(ref FVInterface f, ref FVCell[numL] cL, ref FVCell[numR] cR, ref number[numW] weight)
+    {
+        const number lenL0 = cL[0].lengths[f.idir];
+        const number lenL1 = cL[1].lengths[f.idir];
+        const number lenL2 = cL[2].lengths[f.idir];
+
+        const number lenR0 = cR[0].lengths[f.idir];
+        const number lenR1 = cR[1].lengths[f.idir];
+        const number lenR2 = cR[2].lengths[f.idir];
+
+        // Positions of the cell centres relative to interpolation point.
+        const number xL0 = -(0.5*lenL0);
+        const number xL1 = -(lenL0 + 0.5*lenL1);
+        const number xL2 = -(lenL0 + lenL1 + 0.5*lenL2);
+        const number xR0 = 0.5*lenR0;
+        const number xR1 = lenR0 + 0.5*lenR1;
+        const number xR2 = lenR0 + lenR1 + 0.5*lenR2;
+        // Weights for Lagrangian interpolation at x=0.
+        weight[0] = xL1*xL0*xR0*xR1/((xL2-xL1)*(xL2-xL0)*(xL2-xR0)*(xL2-xR1));
+        weight[1] = xL2*xL0*xR0*xR1/((xL1-xL2)*(xL1-xL0)*(xL1-xR0)*(xL1-xR1));
+        weight[2] = xL2*xL1*xR0*xR1/((xL0-xL2)*(xL0-xL1)*(xL0-xR0)*(xL0-xR1));
+        weight[3] = xL2*xL1*xL0*xR1/((xR0-xL2)*(xR0-xL1)*(xR0-xL0)*(xR0-xR1));
+        weight[4] = xL2*xL1*xL0*xR0/((xR1-xL2)*(xR1-xL1)*(xR1-xL0)*(xR1-xR0));
+        weight[5] = xL0*xR0*xR1*xR2/((xL1-xL0)*(xL1-xR0)*(xL1-xR1)*(xL1-xR2));
+        weight[6] = xL1*xR0*xR1*xR2/((xL0-xL1)*(xL0-xR0)*(xL0-xR1)*(xL0-xR2));
+        weight[7] = xL1*xL0*xR1*xR2/((xR0-xL1)*(xR0-xL0)*(xR0-xR1)*(xR0-xR2));
+        weight[8] = xL1*xL0*xR0*xR2/((xR1-xL1)*(xR1-xL0)*(xR1-xR0)*(xR1-xR2));
+        weight[9] = xL1*xL0*xR0*xR1/((xR2-xL1)*(xR2-xL0)*(xR2-xR0)*(xR2-xR1));
+
+    } // end l3r3_prepare()
+
+    pragma(inline) @nogc void calculate_scalar(ref number Lft, ref number Rght, ref number[numL] sL, ref number[numR] sR, ref number[numW] weight)
+    {
+
+        number qL0 = sL[0]; number qR0 = sR[0];
+        const number qL1 = sL[1]; const number qR1 = sL[1];
+        const number qL2 = sL[2]; const number qR2 = sL[2];
+
+        // Set up differences and limiter values.
+        number delLminus = (qL0 - qL1);
+        number del = (qR0 - qL0);
+        number delRplus = (qR1 - qR0);
+        // Presume unlimited high-order reconstruction.
+        number slopeL = 1.0;
+        number slopeR = 1.0;
+        if (myConfig.apply_limiter) {
+            // val Albada limiter as per Ian Johnston's thesis.
+            slopeL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) /
+                (delLminus*delLminus + del*del + epsilon_van_albada);
+            slopeR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) /
+                (del*del + delRplus*delRplus + epsilon_van_albada);
+        }
+        // The actual high-order reconstruction, possibly limited.
+        Lft = qL0 + slopeL * (weight[0]*qL2 + weight[1]*qL1 + (weight[2]-1.0)*qL0 + weight[3]*qR0 + weight[4]*qR1);
+        Rght = qR0 + slopeR * (weight[5]*qL1 + weight[6]*qL0 + (weight[7]-1.0)*qR0 + weight[8]*qR1 + weight[9]*qR2);
+        if (myConfig.extrema_clipping) {
+            // An extra limiting filter to ensure that we do not compute new extreme values.
+            // This was introduced to deal with very sharp transitions in species.
+            Lft = clip_to_limits(Lft, qL0, qR0);
+            Rght = clip_to_limits(Rght, qL0, qR0);
+        }
+    } // end of calculate_scalar()
+
+    copy_flowstate(f, Lft, Rght);
+
+    mixin(codeForInterpolation());
+
+}
+
+@nogc void reconstruct_L3R3_O3_smooth(ref FVInterface f, ref FlowState Lft, ref FlowState Rght, LocalConfig myConfig)
+{
+
+    enum numL = 3;
+    enum numR = 3;
+    enum numW = 10;
+
+
+    pragma(inline) @nogc void prep_calculate_scalar(ref FVInterface f, ref FVCell[numL] cL, ref FVCell[numR] cR, ref number[numW] weight){}
+
+    pragma(inline) @nogc void calculate_scalar(ref number Lft, ref number Rght, ref number[numL] sL, ref number[numR] sR, ref number[numW] weight)
+    {
+        const double wL_L2 =  0.0234375;
+        const double wL_L1 =  -0.15625;
+        const double wL_L0 =  0.703125;
+        const double wL_R0 =  0.46875;
+        const double wL_R1 =  -0.0390625;
+        const double wR_L1 =  -0.0390625;
+        const double wR_L0 =  0.46875;
+        const double wR_R0 =  0.703125;
+        const double wR_R1 =  -0.15625;
+        const double wR_R2 =  0.0234375;
+
+
+        number qL0 = sL[0]; number qR0 = sR[0];
+        const number qL1 = sL[1]; const number qR1 = sL[1];
+        const number qL2 = sL[2]; const number qR2 = sL[2];
+
+        // Set up differences and limiter values.
+        number delLminus = (qL0 - qL1);
+        number del = (qR0 - qL0);
+        number delRplus = (qR1 - qR0);
+        // Presume unlimited high-order reconstruction.
+        number slopeL = 1.0;
+        number slopeR = 1.0;
+        if (myConfig.apply_limiter) {
+            // val Albada limiter as per Ian Johnston's thesis.
+            slopeL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) /
+                (delLminus*delLminus + del*del + epsilon_van_albada);
+            slopeR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) /
+                (del*del + delRplus*delRplus + epsilon_van_albada);
+        }
+        // The actual high-order reconstruction, possibly limited.
+        Lft = qL0 + slopeL * (wL_L2*qL2 + wL_L1*qL1 + (wL_L0-1.0)*qL0 + wL_R0*qR0 + wL_R1*qR1);
+        Rght = qR0 + slopeR * (wR_L1*qL1 + wR_L0*qL0 + (wR_R0-1.0)*qR0 + wR_R1*qR1 + wR_R2*qR2);
+        if (myConfig.extrema_clipping) {
+            // An extra limiting filter to ensure that we do not compute new extreme values.
+            // This was introduced to deal with very sharp transitions in species.
+            Lft = clip_to_limits(Lft, qL0, qR0);
+            Rght = clip_to_limits(Rght, qL0, qR0);
+        }
+    } // end of calculate_scalar()
+
+    copy_flowstate(f, Lft, Rght);
+
+    mixin(codeForInterpolation());
+
+} // end reconstruct_L3R3_O3_smooth
+
+//=============================================================================
+
+/**
+ * base class for one dimensional reconstruction with adaptive cell counts
+ */
+ class OneDInterpolator {
+    public:
+    LocalConfig myConfig;
+    
+    this(){}
+    this(LocalConfig myConfig)
+    {
+        this.myConfig = myConfig;
+    }
+
+    @nogc int get_interpolation_order()
+    {
+        return myConfig.interpolation_order;
+    }
+
+    @nogc void set_interpolation_order(int order)
+    {
+        myConfig.interpolation_order = order;
+    }
+
+
+    @nogc abstract void interp(ref FVInterface f, ref FlowState Lft, ref FlowState Rght);
+
+    @nogc abstract void interp_l0r2(ref FVInterface f, ref FlowState Lft, ref FlowState Rght);
+
+
+} // end class OneDInterpolator
+
+class IrregularOneDInterpolator : OneDInterpolator {
+
+    public:
+
+    this(LocalConfig myConfig)
+    {
+        this.myConfig = myConfig;
+    }
+
+
+    @nogc final override void interp(ref FVInterface f, ref FlowState Lft, ref FlowState Rght)
+    {
+        const size_t nL = f.left_cells.length;
+        const size_t nR = f.right_cells.length;
+
+        if (nL >= 3) {
+            if (nR >= 3) {
+                reconstruct_L3R3_O3(f, Lft, Rght, myConfig);
+            } else if (nR == 2) {
+                reconstruct_L2R2_O2(f, Lft, Rght, myConfig);
+            } else if (nR == 1) {
+                reconstruct_L2R1_O2(f, Lft, Rght, myConfig);
+            } else {
+                reconstruct_L2R0_O2(f, Lft, Rght, myConfig);
+            }
+        } else if (nL == 2) {
+            if (nR >= 2) {
+                reconstruct_L2R2_O2(f, Lft, Rght, myConfig);
+            } else if (nR == 1) {
+                reconstruct_L2R1_O2(f, Lft, Rght, myConfig);
+            } else {
+                reconstruct_L2R0_O2(f, Lft, Rght, myConfig);
+            }
+        } else if (nL == 1) {
+            if (nR >= 2) {
+                reconstruct_L1R2_O2(f, Lft, Rght, myConfig);
+            } else if (nR == 1) {
+                reconstruct_L1R1_O1(f, Lft, Rght);
+            } else {
+                reconstruct_L1R0_O1(f, Lft, Rght);
+            }
+        } else if (nL == 0) {
+            if (nR >= 2) {
+                reconstruct_L0R2_O2(f, Lft, Rght, myConfig);
+            } else if (nR == 1) {
+                reconstruct_L0R1_O1(f, Lft, Rght);
+            } else {
+                throw new Error("Stencils not suitable for reconstruction.");
+            }
+        }
+    }
+
+    @nogc final override void interp_l0r2(ref FVInterface f, ref FlowState Lft, ref FlowState Rght)
+    {
+        reconstruct_L0R2_O2(f, Lft, Rght, myConfig);
+    }
+
+} // end class IrregularOneDInterpolator
+
+
+class RegularOneDInterpolator : OneDInterpolator {
+
+    public:
+
+    this(LocalConfig myConfig)
+    {
+        this.myConfig = myConfig;
+    }
+
+
+    @nogc final override void interp(ref FVInterface f, ref FlowState Lft, ref FlowState Rght)
+    {
+        const size_t nL = f.left_cells.length;
+        const size_t nR = f.right_cells.length;
+
+        if (nL >= 3) {
+            if (nR >= 3) {
+                reconstruct_L3R3_O3(f, Lft, Rght, myConfig);
+            } else if (nR == 2) {
+                reconstruct_L2R2_O2_smooth(f, Lft, Rght, myConfig);
+            } else if (nR == 1) {
+                reconstruct_L2R1_O2_smooth(f, Lft, Rght, myConfig);
+            } else {
+                reconstruct_L2R0_O2_smooth(f, Lft, Rght, myConfig);
+            }
+        } else if (nL == 2) {
+            if (nR >= 2) {
+                reconstruct_L2R2_O2_smooth(f, Lft, Rght, myConfig);
+            } else if (nR == 1) {
+                reconstruct_L2R1_O2_smooth(f, Lft, Rght, myConfig);
+            } else {
+                reconstruct_L2R0_O2_smooth(f, Lft, Rght, myConfig);
+            }
+        } else if (nL == 1) {
+            if (nR >= 2) {
+                reconstruct_L1R2_O2_smooth(f, Lft, Rght, myConfig);
+            } else if (nR == 1) {
+                reconstruct_L1R1_O1(f, Lft, Rght);
+            } else {
+                reconstruct_L1R0_O1(f, Lft, Rght);
+            }
+        } else if (nL == 0) {
+            if (nR >= 2) {
+                reconstruct_L0R2_O2_smooth(f, Lft, Rght, myConfig);
+            } else if (nR == 1) {
+                reconstruct_L0R1_O1(f, Lft, Rght);
+            } else {
+                throw new Error("Stencils not suitable for reconstruction.");
+            }
+        }
+    }
+
+    @nogc final override void interp_l0r2(ref FVInterface f, ref FlowState Lft, ref FlowState Rght)
+    {
+        reconstruct_L0R2_O2_smooth(f, Lft, Rght, myConfig);
+    }
+
+} // end class RegularOneDInterpolator
+
+
+//=============================================================================
+
+// Helper functions for code generation.
+// If an EOS call fails, fall back to just copying cell-centre data.
+// This does presume that the cell-centre data is valid.
+string codeForThermoUpdateLft(string funname)
+{
+    string code = "
+        try {
+            gmodel.update_thermo_from_"~funname~"(Lft.gas);
+        } catch (Exception e) {
+            debug { writeln(e.msg); }
+            Lft.copy_values_from(cL0.fs);
+        }
+        ";
+    return code;
+}
+
+string codeForThermoUpdateRght(string funname)
+{
+    string code = "
+        try {
+            gmodel.update_thermo_from_"~funname~"(Rght.gas);
+        } catch (Exception e) {
+            debug { writeln(e.msg); }
+            Rght.copy_values_from(cR0.fs);
+        }
+        ";
+    return code;
+}
+
+string codeForThermoUpdateBoth(string funname)
+{
+    return codeForThermoUpdateLft(funname) ~ codeForThermoUpdateRght(funname);
+}
+
+
+class LegacyOneDInterpolator  : OneDInterpolator {
 
 private:
     // The following variables must be set to appropriate values
@@ -45,21 +1113,15 @@ public:
         this.myConfig = myConfig;
     }
 
-    @nogc int get_interpolation_order()
-    {
-        return myConfig.interpolation_order;
-    }
-
-    @nogc void set_interpolation_order(int order)
-    {
-        myConfig.interpolation_order = order;
-    }
-
-
-    @nogc
-    void interp(ref FVInterface f, ref FlowState Lft, ref FlowState Rght)
+    @nogc override
+    void  interp(ref FVInterface f, ref FlowState Lft, ref FlowState Rght)
     // Top-level interpolation function delegates to the specific functions, below.
     {
+        FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
+        FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
+        Lft.copy_values_from(cL0.fs);
+        Rght.copy_values_from(cR0.fs);
+
         if (myConfig.interpolation_order == 3) {
             // A form of high-order flux calculation built on
             // reconstruction via Lagrangian interpolation across a 6-cell stencil.
@@ -67,8 +1129,8 @@ public:
             if (f.left_cells.length < 3 || f.right_cells.length < 3) {
                 throw new Error("Stencils not suitable for third-order interpolation.");
             }
-            auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1]; auto cL2 = f.left_cells[2];
-            auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1]; auto cR2 = f.right_cells[2];
+            cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1]; auto cL2 = f.left_cells[2];
+            cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1]; auto cR2 = f.right_cells[2];
             number lL0, lL1, lL2, lR0, lR1, lR2;
             final switch (f.idir) {
             case IndexDirection.i:
@@ -92,7 +1154,7 @@ public:
             // that attempts to do piecewise-parabolic reconstruction
             // if there are sufficient cells in the stencils.
             if (f.left_cells.length == 0 && f.right_cells.length >= 2) {
-                auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
+                cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
                 number lR0, lR1;
                 final switch (f.idir) {
                 case IndexDirection.i:
@@ -109,8 +1171,8 @@ public:
                 }
                 interp_l0r2(f, cR0, cR1, lR0, lR1, Rght);
             } else if (f.left_cells.length == 1 && f.right_cells.length >= 2) {
-                auto cL0 = f.left_cells[0];
-                auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
+                cL0 = f.left_cells[0];
+                cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
                 number lL0, lR0, lR1;
                 final switch (f.idir) {
                 case IndexDirection.i:
@@ -127,8 +1189,8 @@ public:
                 }
                 interp_l1r2(f, cL0, cR0, cR1, lL0, lR0, lR1, Lft, Rght);
             } else if (f.left_cells.length >= 2 && f.right_cells.length == 1) {
-                auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
-                auto cR0 = f.right_cells[0];
+                cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
+                cR0 = f.right_cells[0];
                 number lL0, lL1, lR0;
                 final switch (f.idir) {
                 case IndexDirection.i:
@@ -145,7 +1207,7 @@ public:
                 }
                 interp_l2r1(f, cL1, cL0, cR0, lL1, lL0, lR0, Lft, Rght);
             } else if (f.left_cells.length >= 2 && f.right_cells.length == 0) {
-                auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
+                cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
                 number lL0, lL1;
                 final switch (f.idir) {
                 case IndexDirection.i:
@@ -163,8 +1225,8 @@ public:
                 interp_l2r0(f, cL1, cL0, cL1.iLength, cL0.iLength, Lft);
             } else if (f.left_cells.length >= 2 && f.right_cells.length >= 2) {
                 // General symmetric reconstruction.
-                auto cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
-                auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
+                cL0 = f.left_cells[0]; auto cL1 = f.left_cells[1];
+                cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
                 number lL0, lL1, lR0, lR1;
                 final switch (f.idir) {
                 case IndexDirection.i:
@@ -1225,40 +2287,24 @@ public:
         }
     } // end interp_l0r2()
 
-} // end class OneDInterpolator
-
-//------------------------------------------------------------------------------
-
-// Helper functions for code generation.
-// If an EOS call fails, fall back to just copying cell-centre data.
-// This does presume that the cell-centre data is valid.
-string codeForThermoUpdateLft(string funname)
-{
-    string code = "
-        try {
-            gmodel.update_thermo_from_"~funname~"(Lft.gas);
-        } catch (Exception e) {
-            debug { writeln(e.msg); }
-            Lft.copy_values_from(cL0.fs);
+    @nogc final override void interp_l0r2(ref FVInterface f, ref FlowState Lft, ref FlowState Rght)
+    {
+        auto cR0 = f.right_cells[0]; auto cR1 = f.right_cells[1];
+        number lR0, lR1;
+        final switch (f.idir) {
+        case IndexDirection.i:
+            lR0 = cR0.iLength; lR1 = cR1.iLength;
+            break;
+        case IndexDirection.j:
+            lR0 = cR0.jLength; lR1 = cR1.jLength;
+            break;
+        case IndexDirection.k:
+            lR0 = cR0.kLength; lR1 = cR1.kLength;
+            break;
+        case IndexDirection.none:
+            throw new Error("Invalid index direction.");
         }
-        ";
-    return code;
-}
+        interp_l0r2(f, cR0, cR1, lR0, lR1, Rght);
+    }
 
-string codeForThermoUpdateRght(string funname)
-{
-    string code = "
-        try {
-            gmodel.update_thermo_from_"~funname~"(Rght.gas);
-        } catch (Exception e) {
-            debug { writeln(e.msg); }
-            Rght.copy_values_from(cR0.fs);
-        }
-        ";
-    return code;
-}
-
-string codeForThermoUpdateBoth(string funname)
-{
-    return codeForThermoUpdateLft(funname) ~ codeForThermoUpdateRght(funname);
-}
+} // end class LegacyOneDInterpolator

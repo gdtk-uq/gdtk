@@ -913,6 +913,12 @@ final class GlobalConfig {
     // 3. high-order reconstruction on structured-grids using Lagrangian interpolation
     //    across a 6-cell stencil.  Must be used with ghost-cell-based boundary conditions.
     shared static int interpolation_order = 2;
+    // Choose the style of interpolation that best suits the grid and flow regime
+    // options are "legacy", "irregular", "regular"
+    // "legacy" and "irregular" are the same scheme implemented in a different manner and 
+    // accommodate irregular grids in the reconstruction
+    // "regular" assumes grids within the stencil are of equal size
+    shared static string interpolation_scheme = "irregular";
     // We have the option to start a calculation without high-order reconstruction
     // and later activate it, presumably once the difficult flow has passed.
     shared static double interpolation_delay = 0.0;
@@ -1243,6 +1249,7 @@ public:
     bool high_order_flux_calculator;
     FluxCalculator flux_calculator;
     int interpolation_order;
+    string interpolation_scheme;
     double interpolation_delay;
     BlockZone[] suppress_reconstruction_zones;
     bool suppress_radial_reconstruction_at_xaxis;
@@ -1388,6 +1395,7 @@ public:
         high_order_flux_calculator = GlobalConfig.high_order_flux_calculator;
         flux_calculator = GlobalConfig.flux_calculator;
         interpolation_order = GlobalConfig.interpolation_order;
+        interpolation_scheme = GlobalConfig.interpolation_scheme;
         interpolation_delay = GlobalConfig.interpolation_delay;
         foreach (bz; GlobalConfig.suppress_reconstruction_zones) {
             suppress_reconstruction_zones ~= new BlockZone(bz);
@@ -1739,6 +1747,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("high_order_flux_calculator", "high_order_flux_calculator"));
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_int("interpolation_order", "interpolation_order"));
+    mixin(update_string("interpolation_scheme", "interpolation_scheme"));
     mixin(update_double("interpolation_delay", "interpolation_delay"));
     mixin(update_bool("allow_interpolation_for_sensitivity_matrix", "allow_interpolation_for_sensitivity_matrix"));
     mixin(update_bool("suppress_radial_reconstruction_at_xaxis", "suppress_radial_reconstruction_at_xaxis"));
@@ -1819,6 +1828,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  high_order_flux_calculator: ", GlobalConfig.high_order_flux_calculator);
         writeln("  flux_calculator: ", flux_calculator_name(GlobalConfig.flux_calculator));
         writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
+        writeln("  interpolation_scheme: ",GlobalConfig.interpolation_scheme);
         writeln("  interpolation_delay: ", GlobalConfig.interpolation_delay);
         writeln("  allow_interpolation_for_sensitivity_matrix: ", GlobalConfig.allow_interpolation_for_sensitivity_matrix);
         writeln("  suppress_radial_reconstruction_at_xaxis: ", GlobalConfig.suppress_radial_reconstruction_at_xaxis);
