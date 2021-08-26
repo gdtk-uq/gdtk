@@ -9,7 +9,7 @@ PJ, 2020-07-05
 import math
 from abc import ABC, abstractmethod
 from copy import copy
-from eilmer.geom.vector3 import Vector3
+from eilmer.geom.vector3 import Vector3, approxEqualVectors
 from eilmer.geom.path import Line
 
 
