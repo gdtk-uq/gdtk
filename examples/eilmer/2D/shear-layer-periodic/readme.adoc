@@ -1,0 +1,18 @@
+== 2D/shear-layer-periodic
+
+image::shear-layer-vorticity-animation.gif[width=100%,caption="Evolution of a perturbed, periodic shear layer."]
+
+This two-dimensional flow has a positive x-velocity in the upper half of the domain and
+a negative x-velocity in the lower half.
+A finite-width shear layer with a linear variation in x-velocity separates these high-speed regions.
+The y-velocity is initially perturbed, most strongly in the middle of the domain,
+diminishing toward the north and south boundaries, which are ideal flat walls that allow slip.
+The west and east boundaries are connected such that the flow is periodic in the x-direction.
+The flow is allowed to evolve, with the initial shear layer vorticity rolling into distinct cores
+that are distorted as the acoustic waves propagate between the slip-wall boundaries.
+The animation above uses a grid-refinement factor of 4 and the corresponding simulation run time
+is a bit less than an hour on a workstation with a few cores.
+The input script checked into the repository has a lower factor of 2, which requires only a few minutes to run.
+Note that the animation shows three periods of the computed flow field: the original plus two copies translated
+in the x-direction.
+
