@@ -144,10 +144,10 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
             soln.add_aux_variables(addVarsList, tag);
             if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
             string pvtuFileName = outName~format("-t%04d", tindx)~".pvtu";
-            add_time_stamp_to_PVD_file(pvdFile, soln.sim_time, pvtuFileName);
             File pvtuFile = begin_PVTU_file(plotDir~"/"~pvtuFileName, soln.flowBlocks[0].variableNames);
             foreach (jb; 0 .. soln.nBlocks) {
                 string vtuFileName = outName~format("-b%04d-t%04d.vtu", jb, tindx);
+                add_dataset_to_PVD_file(pvdFile, soln.sim_time, vtuFileName);
                 add_piece_to_PVTU_file(pvtuFile, vtuFileName);
                 visitFile.writef("%s\n", vtuFileName);
                 write_VTU_file(soln.flowBlocks[jb], soln.gridBlocks[jb], plotDir~"/"~vtuFileName, binary_format);
@@ -168,11 +168,11 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                 auto soln = new SolidSolution(jobName, ".", tindx, GlobalConfig.nSolidBlocks);
                 if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
                 string pvtuFileName = jobName~format("-solid-t%04d", tindx)~".pvtu";
-                add_time_stamp_to_PVD_file(pvdFile, soln.sim_time, pvtuFileName);
                 File pvtuFile = begin_PVTU_file(plotDir~"/"~pvtuFileName, soln.solidBlocks[0].variableNames, false);
                 foreach (jb; 0 .. soln.nBlocks) {
                     string vtuFileName = jobName~format("-solid-b%04d-t%04d.vtu", jb, tindx);
                     add_piece_to_PVTU_file(pvtuFile, vtuFileName);
+                    add_dataset_to_PVD_file(pvdFile, soln.sim_time, vtuFileName);
                     visitFile.writef("%s\n", vtuFileName);
                     write_VTU_file(soln.solidBlocks[jb], soln.gridBlocks[jb], plotDir~"/"~vtuFileName, binary_format);
                 }
@@ -424,7 +424,6 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
             auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks, -1, GlobalConfig.flow_format, tag);
             soln.add_aux_variables(addVarsList, tag);
             string pvtuFileName = surfaceCollectionName~format("-t%04d", tindx)~".pvtu";
-            add_time_stamp_to_PVD_file(pvdFile, soln.sim_time, pvtuFileName);
             File pvtuFile = begin_PVTU_file(plotDir~"/"~pvtuFileName, soln.flowBlocks[0].variableNames);
             foreach (surfaceStr; surfaceListStr.split(";")) {
                 auto itemStrings = surfaceStr.split(",");
@@ -463,6 +462,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                     }
                     auto surf_flow = new BlockFlow(soln.flowBlocks[blk_indx], surf_cells,
                                                    new_dimensions, new_nic, new_njc, new_nkc);
+                    add_dataset_to_PVD_file(pvdFile, soln.sim_time, vtuFileName);
                     add_piece_to_PVTU_file(pvtuFile, vtuFileName);
                     write_VTU_file(surf_flow, surf_grid, plotDir~"/"~vtuFileName, binary_format);
                 } else {

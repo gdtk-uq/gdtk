@@ -38,10 +38,10 @@ File begin_PVD_file(string fileName)
     return f;
 }
 
-void add_time_stamp_to_PVD_file(File f, double timeStamp, string pvtuFileName)
+void add_dataset_to_PVD_file(File f, double timeStamp, string vtuFileName)
 {
     f.writef("<DataSet timestep=\"%.18e\" group=\"\" part=\"0\" file=\"%s\"/>\n",
-             timeStamp, pvtuFileName);
+             timeStamp, vtuFileName);
 }
 
 void finish_PVD_file(File f)
