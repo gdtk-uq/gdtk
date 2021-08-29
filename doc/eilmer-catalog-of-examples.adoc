@@ -38,9 +38,11 @@ include::../examples/eilmer/2D/forward-facing-step/readme.adoc[]
 
 include::../examples/eilmer/2D/richtmyer-meshkov/readme.adoc[]
 
-= Jets
+= Jets and shear layers
 
 include::../examples/eilmer/2D/underexpanded-jet/readme.adoc[]
+
+include::../examples/eilmer/2D/shear-layer-periodic/readme.adoc[]
 
 = Laminar flows of perfect gases
 

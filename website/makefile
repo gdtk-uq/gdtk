@@ -39,6 +39,8 @@ clean:
 	- rm -rf static/html
 	- rm -rf public
 	- rm $(EILMER_DIR)/eilmer-reference-manual-for-hugo.adoc
+	- rm $(EILMER_DIR)/eilmer-catalog-for-hugo.adoc
+	- rm $(EILMER_DIR)/eilmer-faq-for-hugo.adoc
 	- rm $(ESTCN_DIR)/estcn-manual-for-hugo.adoc
 	- rm -rf $(ESTCN_DIR)/estcn-manual-for-hugo
 	- rm $(L1D_DIR)/l1d-reference-manual-for-hugo.adoc
