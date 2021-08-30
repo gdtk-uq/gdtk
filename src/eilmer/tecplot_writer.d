@@ -16,7 +16,7 @@ import std.conv;
 import std.string;
 
 version(with_tecplot_binary) {
-import tecio;
+    import tecio;
 }
 import geom;
 import flowsolution;
@@ -35,9 +35,9 @@ string[] zones =
      ];
 
 
-// Transform the vtk connectivity to be suitable to use all elements 
+// Transform the vtk connectivity to be suitable to use all elements
 // as quads/hexa in tecplot zones (where every single zone have single type)
-size_t[] transformCellConnectivity(size_t[] ptOrder, int cellType) 
+size_t[] transformCellConnectivity(size_t[] ptOrder, int cellType)
 {
     size_t[] conn;
     switch (cellType) {
@@ -77,7 +77,7 @@ size_t[] transformCellConnectivity(size_t[] ptOrder, int cellType)
  * Iterate through all the grid of a cell of a block and do the following:
  * determines whether the zone is only made of tetra/tria
  * if yes, return the unmodified list of of connectivity
- * if it is a mixed zone, or anything else, return a quad/hexa equivalent 
+ * if it is a mixed zone, or anything else, return a quad/hexa equivalent
  * list of connectivity, ie make tecplot believe everything is a quad hexa
  * Necessary because tecplot does not support mixed elements in the same zone.
  *
@@ -126,16 +126,16 @@ void prepareGridConnectivity(Grid grid, ref int zoneType, ref size_t[][] connLis
 } // end prepareGridConnectivity()
 
 version(with_tecplot_binary) {
-int writeTecplotBinaryHeader(string jobName, int tindx, string fileName, string[] varNames)
-{   
-    string varstr;
-    foreach (var; varNames) {
-        varstr ~= " ";
-        varstr ~= var;
-    }
-    auto title = format("%s-t%04d", jobName, tindx);
-    return dtecini142(title, varstr, fileName);
-} // end writeTecplotBinaryHeader()
+    int writeTecplotBinaryHeader(string jobName, int tindx, string fileName, string[] varNames)
+    {
+        string varstr;
+        foreach (var; varNames) {
+            varstr ~= " ";
+            varstr ~= var;
+        }
+        auto title = format("%s-t%04d", jobName, tindx);
+        return dtecini142(title, varstr, fileName);
+    } // end writeTecplotBinaryHeader()
 }
 
 File writeTecplotAsciiHeader(string jobName, int tindx, string fileName, string[] varNames)
@@ -152,31 +152,31 @@ File writeTecplotAsciiHeader(string jobName, int tindx, string fileName, string[
 } // end writeTecplotAsciiHeader()
 
 version(with_tecplot_binary) {
-int writeTecplotBinaryZoneHeader(BlockFlow flow, Grid grid, size_t idx,
-                                 string[] varNames, double timestamp, int zoneType)
-{
-    if (flow.ncells != grid.ncells) {
-        string msg = format("Mismatch between grid and flow: grid.ncells= %d flow.ncells= %d\n",
-                            grid.ncells, flow.ncells);
-        throw new FlowSolverException(msg);
-    }
-    int[] ValueLocation;
-    auto zonetitle = format("block-%d",idx);
-    foreach (var; varNames)
+    int writeTecplotBinaryZoneHeader(FluidBlockLite flow, Grid grid, size_t idx,
+                                     string[] varNames, double timestamp, int zoneType)
     {
-        if ( (var == "pos.x") || (var == "pos.y") || (var == "pos.z") )
-            ValueLocation ~= 1;
-        else
-            ValueLocation ~= 0;
-    }
-    //k=0 
-    //strandId=idx+1 allows tecplot to be timeaware
-    return dteczne142(zonetitle, zoneType, to!int(grid.nvertices), to!int(grid.ncells), 0,
-                      timestamp, to!int(idx+1), ValueLocation);
-} // end writeTecplotBinaryZoneHeader()
+        if (flow.ncells != grid.ncells) {
+            string msg = format("Mismatch between grid and flow: grid.ncells= %d flow.ncells= %d\n",
+                                grid.ncells, flow.ncells);
+            throw new FlowSolverException(msg);
+        }
+        int[] ValueLocation;
+        auto zonetitle = format("block-%d",idx);
+        foreach (var; varNames)
+            {
+                if ( (var == "pos.x") || (var == "pos.y") || (var == "pos.z") )
+                    ValueLocation ~= 1;
+                else
+                    ValueLocation ~= 0;
+            }
+        //k=0
+        //strandId=idx+1 allows tecplot to be timeaware
+        return dteczne142(zonetitle, zoneType, to!int(grid.nvertices), to!int(grid.ncells), 0,
+                          timestamp, to!int(idx+1), ValueLocation);
+    } // end writeTecplotBinaryZoneHeader()
 }
 
-void writeTecplotAsciiZoneHeader(BlockFlow flow, Grid grid, size_t idx, File fp,
+void writeTecplotAsciiZoneHeader(FluidBlockLite flow, Grid grid, size_t idx, File fp,
                                  string[] varNames, double timestamp, int zoneType)
 {
     size_t NumberOfPoints = grid.nvertices;
@@ -211,45 +211,45 @@ void writeTecplotAsciiZoneHeader(BlockFlow flow, Grid grid, size_t idx, File fp,
 } // end writeTecplotAsciiZoneHeader()
 
 version(with_tecplot_binary) {
-void writeTecplotBinaryZoneData(BlockFlow flow, Grid grid, string[] varNames, size_t[][] conn)
-{
-    //writing nodal information
-    double[] x, y, z;
-    foreach (i; 0 .. grid.nvertices) {
-        x ~= grid[i].x;
-        y ~= grid[i].y;
-        z ~= grid[i].z;
-    }
-    if (dtecdat142(x) != 0)
-        throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
-    if (dtecdat142(y) != 0)
-        throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
-    if (dtecdat142(z) != 0)    
-        throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
-
-    foreach (var; varNames) {
-        if ((var == "pos.x") || (var == "pos.y") || (var == "pos.z")) {
-            continue;
+    void writeTecplotBinaryZoneData(FluidBlockLite flow, Grid grid, string[] varNames, size_t[][] conn)
+    {
+        //writing nodal information
+        double[] x, y, z;
+        foreach (i; 0 .. grid.nvertices) {
+            x ~= grid[i].x;
+            y ~= grid[i].y;
+            z ~= grid[i].z;
         }
-        else {
-            double[] v;
-            foreach (i; 0 .. grid.ncells) v ~= flow[var,i];
-            if (dtecdat142(v) != 0) 
+        if (dtecdat142(x) != 0)
+            throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
+        if (dtecdat142(y) != 0)
+            throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
+        if (dtecdat142(z) != 0)
+            throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
+
+        foreach (var; varNames) {
+            if ((var == "pos.x") || (var == "pos.y") || (var == "pos.z")) {
+                continue;
+            }
+            else {
+                double[] v;
+                foreach (i; 0 .. grid.ncells) v ~= flow[var,i];
+                if (dtecdat142(v) != 0)
+                    throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
+            }
+        }
+        // Writing connectivity information
+        foreach (connElem; conn) {
+            size_t[] c;
+            c.length = connElem.length;
+            c[] = connElem[] + 1; // Tecplot indices are 1-based
+            if (dtecnode142(c) != 0)
                 throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
         }
-    }
-    // Writing connectivity information
-    foreach (connElem; conn) {
-        size_t[] c;
-        c.length = connElem.length;
-        c[] = connElem[] + 1; // Tecplot indices are 1-based
-        if (dtecnode142(c) != 0)
-            throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
-    }
-} // end writeTecplotBinaryZoneData()
+    } // end writeTecplotBinaryZoneData()
 }
 
-void writeTecplotAsciiZoneData(BlockFlow flow, Grid grid, File fp,
+void writeTecplotAsciiZoneData(FluidBlockLite flow, Grid grid, File fp,
                                string[] varNames, size_t[][] conn)
 {
     // Write the cell-centred flow data from a single block (index jb)
@@ -259,7 +259,7 @@ void writeTecplotAsciiZoneData(BlockFlow flow, Grid grid, File fp,
     //Tecplot default is SINGLE precision
     //If more precision is necessary, make sure you modify ZONE header accordingly
     string values_format = " %.8e";
-    // Writing nodal data for x,y,z 
+    // Writing nodal data for x,y,z
     foreach (i; 0 .. grid.nvertices) {
         fp.writef(values_format, uflowz(grid[i].x.re));
         j += 1;
@@ -318,8 +318,8 @@ void writeTecplotAsciiZoneData(BlockFlow flow, Grid grid, File fp,
 } // end writeTecplotAsciiZoneData()
 
 version(with_tecplot_binary) {
-int closeTecplotBinaryFile()
-{
-    return dtecend142();
-}
+    int closeTecplotBinaryFile()
+    {
+        return dtecend142();
+    }
 }

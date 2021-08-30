@@ -62,10 +62,11 @@ public:
     size_t nBlocks;
     string grid_format;
     GridMotion grid_motion;
-    BlockFlow[] flowBlocks;
+    FluidBlockLite[] flowBlocks;
     Grid[] gridBlocks;
 
-    this(string jobName, string dir, int tindx, size_t nBlocks, int gindx=-1, string flow_format="", string tag="", int make_kdtree=0)
+    this(string jobName, string dir, int tindx, size_t nBlocks, int gindx=-1,
+         string flow_format="", string tag="", int make_kdtree=0)
     {
         // Default action is to set gindx to tindx. The default action
         // is indicated by gindx = -1
@@ -135,9 +136,8 @@ public:
             } else {
                 fileName = make_file_name!"flow"(jobName, to!int(ib), tindx, flowFileExt);
             }
-            
             fileName = dir ~ "/" ~ fileName;
-            flowBlocks ~= new BlockFlow(fileName, ib, jsonData, gridType, flow_format);
+            flowBlocks ~= new FluidBlockLite(fileName, ib, jsonData, gridType, flow_format);
         } // end foreach ib
         this.jobName = jobName;
         this.nBlocks = nBlocks;
@@ -424,12 +424,12 @@ private:
 
 } // end class FlowSolution
 
-class BlockFlow {
+class FluidBlockLite {
     // Much like the Python library for postprocessing in Eilmer3,
     // we are going to handle the data as a big chunk of numbers,
     // with the label for each variable coming the top of the file.
     //
-    // Note that this class is like the SFluidBlock class but does not
+    // Note that this class is like the FluidBlock class but does not
     // have all of the data space needed for a simulation.
     // The intention is that it is "lighter weight" and so allow
     // postprocessing of workstations that may be considerably smaller
@@ -480,9 +480,9 @@ public:
         this.read_block_data_from_file(filename, gridType, flow_format);
     } // end constructor from file
 
-    this(ref const(BlockFlow) other, size_t[] cellList, size_t new_dimensions,
+    this(ref const(FluidBlockLite) other, size_t[] cellList, size_t new_dimensions,
          size_t new_nic, size_t new_njc, size_t new_nkc)
-    // Construct by extracting a subset of cells from another BlockFlow object.
+    // Construct by extracting a subset of cells from another FluidBlockLite object.
     // Note that the values for the nic, njc and nkc counts should be consistent with
     // cellList.length == new_nic * new_njc * new_nkc
     // For an unstructured grid, new_njc=1 and new_nkc=1 should be provided.
@@ -571,7 +571,7 @@ public:
             if (!canFind(variableNames, name)) { ok_to_proceed = false; }
         }
         if (!ok_to_proceed) {
-            writeln("BlockFlow.add_aux_variables(): Some essential variables not found.");
+            writeln("FluidBlockLite.add_aux_variables(): Some essential variables not found.");
             return;
         }
         bool add_nrf_velocities = canFind(addVarsList, "nrf"); // nonrotating-frame velocities
@@ -824,7 +824,7 @@ public:
         } // foreach i
     } // end subtract_ref_soln()
 
-    void subtract(BlockFlow other)
+    void subtract(FluidBlockLite other)
     {
         foreach (ivar; 0 .. variableNames.length) {
             if (other.variableNames.length > ivar && (other.variableNames[ivar] == variableNames[ivar])) {
@@ -840,4 +840,4 @@ public:
     // module, fluidblockio_old, we need to declare the following storage as public.
 public:
     double[][] _data;
-} // end class BlockFlow
+} // end class FluidBlockLite

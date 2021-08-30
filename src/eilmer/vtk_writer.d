@@ -88,7 +88,7 @@ void finish_PVTU_file(File f)
     f.close();
 }
 
-void write_VTU_file(BlockFlow flow, Grid grid, string fileName, bool binary_format)
+void write_VTU_file(FluidBlockLite flow, Grid grid, string fileName, bool binary_format)
 // Write the cell-centred flow data from a single block (index jb)
 // as an unstructured grid of finite-volume cells.
 {

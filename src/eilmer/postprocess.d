@@ -421,7 +421,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
         File pvdFile = begin_PVD_file(plotDir~"/"~surfaceCollectionName~".pvd");
         foreach (tindx; tindx_list_to_plot) {
             writeln("  tindx= ", tindx);
-            auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks, -1, GlobalConfig.flow_format, tag);
+            auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks, -1,
+                                         GlobalConfig.flow_format, tag);
             soln.add_aux_variables(addVarsList, tag);
             string pvtuFileName = surfaceCollectionName~format("-t%04d", tindx)~".pvtu";
             File pvtuFile = begin_PVTU_file(plotDir~"/"~pvtuFileName, soln.flowBlocks[0].variableNames);
@@ -460,8 +461,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                         new_nkc = 1;
                         break;
                     }
-                    auto surf_flow = new BlockFlow(soln.flowBlocks[blk_indx], surf_cells,
-                                                   new_dimensions, new_nic, new_njc, new_nkc);
+                    auto surf_flow = new FluidBlockLite(soln.flowBlocks[blk_indx], surf_cells,
+                                                        new_dimensions, new_nic, new_njc, new_nkc);
                     add_dataset_to_PVD_file(pvdFile, soln.sim_time, vtuFileName);
                     add_piece_to_PVTU_file(pvtuFile, vtuFileName);
                     write_VTU_file(surf_flow, surf_grid, plotDir~"/"~vtuFileName, binary_format);
@@ -499,7 +500,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
         double xNew, yNew, zNew;
         foreach (tindx; tindx_list_to_plot) {
             writeln("  tindx= ", tindx);
-            auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks, -1, GlobalConfig.flow_format, tag);
+            auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks, -1,
+                                         GlobalConfig.flow_format, tag);
             soln.add_aux_variables(addVarsList, tag);
             if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
             outFile.writeln("# xStreamPos ", "yStreamPos ", "zStreamPos ", "relDistance ",
@@ -587,7 +589,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
         double xInit, yInit, zInit;
         foreach (tindx; tindx_list_to_plot) {
             writeln("  tindx= ", tindx);
-            auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks, -1, GlobalConfig.flow_format, tag);
+            auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks, -1,
+                                         GlobalConfig.flow_format, tag);
             soln.add_aux_variables(addVarsList, tag);
             if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
             outFile.writeln("# xWavePos ", "yWavePos ", "zWavePos ", "relDistance ",
@@ -726,7 +729,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
         extractLineStr = extractLineStr.replaceAll(regex("\""), "");
         foreach (tindx; tindx_list_to_plot) {
             writeln("  tindx= ", tindx);
-            auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks, -1, GlobalConfig.flow_format, tag);
+            auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks, -1,
+                                         GlobalConfig.flow_format, tag);
             soln.add_aux_variables(addVarsList, tag);
             if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
             if (!header_written) {
@@ -833,8 +837,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                     size_t new_njc = max(surf_grid.njv-1, 1);
                     size_t new_nkc = max(surf_grid.nkv-1, 1);
                     assert(new_nic*new_njc*new_nkc == surf_cells.length, "mismatch is number of cells");
-                    auto surf_flow = new BlockFlow(soln.flowBlocks[blk_indx], surf_cells,
-                                                   new_dimensions, new_nic, new_njc, new_nkc);
+                    auto surf_flow = new FluidBlockLite(soln.flowBlocks[blk_indx], surf_cells,
+                                                        new_dimensions, new_nic, new_njc, new_nkc);
                     // At this stage we should have a surface flow structure, and a sufrace grid.
                 }
             }

@@ -59,7 +59,7 @@ double read_solution(FluidBlock blk, string filename, bool overwrite_geometry_da
     }
 }
 
-extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L) 
+extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
 {
     if (is_legacy_format(GlobalConfig.flow_format)) {
         return write_initial_sg_flow_legacy_file_from_lua(L);
@@ -77,7 +77,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
     }
 }
 
-void read_block_data_from_file(BlockFlow blk, string filename, Grid_t gridType, string flow_format)
+void read_block_data_from_file(FluidBlockLite blk, string filename, Grid_t gridType, string flow_format)
 {
     if (is_legacy_format(flow_format)) {
         return read_block_data_from_legacy_file(blk, filename, gridType, flow_format);

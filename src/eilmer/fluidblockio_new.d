@@ -121,46 +121,46 @@ flow format definition:
         "data_type": ["string","binary"],
 
         # delimiter that is used when writing to string
-        "delimiter": " ", 
+        "delimiter": " ",
 
         # how many cells total
-        "n_cells": 44, 
+        "n_cells": 44,
 
         # number of cells in i-index direction
-        # if it is unstructered then nic = n_cells and njc=nkc=0
-        "nic": 11, 
+        # if it is unstructured then nic = n_cells and njc=nkc=0
+        "nic": 11,
 
         # number of cells in j-index direction
-        "njc": 4, 
+        "njc": 4,
 
         # number of cells in k-index direction
-        "nkc": 1, 
+        "nkc": 1,
 
         # simulation time
-        "sim_time": 0, 
+        "sim_time": 0,
 
         # structured or unstructured data
-        "structured": [true,false], 
+        "structured": [true,false],
 
         # unique string identifier for this particular grouping of data
-        "tag": "field", 
+        "tag": "field",
 
         # list of all data blobs in this zip file
-        "variables": { 
+        "variables": {
 
-            # the name of the data 
-            "B.x": { 
+            # the name of the data
+            "B.x": {
 
                 # the name of the data blob,
-                "data": "B.x.dat", 
+                "data": "B.x.dat",
 
                 # a text description of the data
-                "description": "[cell.fs.B._p[0].re]", 
+                "description": "[cell.fs.B._p[0].re]",
 
-                # dimensionality of this particular data blob, the first dimension 
+                # dimensionality of this particular data blob, the first dimension
                 # corresponds to the linearised cell index. This allows for 1D arrays
                 # of data to be stored for each cell.
-                "dimension": [ 
+                "dimension": [
                     44,
                     1
                 ]
@@ -174,17 +174,15 @@ flow format definition:
 */
 
 
-ubyte[] bytes(T)(T num) if (isNumeric!T) 
+ubyte[] bytes(T)(T num) if (isNumeric!T)
 // convert any number to bytes
 {
     auto buf = new ubyte[T.sizeof];
-    
     (*cast(T*)(buf.ptr)) = num;
-    
     return buf;
 }
 
-T value(T)(ubyte[] buf) if (isNumeric!T) 
+T value(T)(ubyte[] buf) if (isNumeric!T)
 // convert bytes to number
 {
     return (*cast(T*)(buf.ptr));
@@ -192,9 +190,7 @@ T value(T)(ubyte[] buf) if (isNumeric!T)
 
 ubyte[] to_binary(T)(T[] buffer, const bool binary, const string delimiter=" ")
 {
-
     const int data_size = T.sizeof;
-
     if (binary) {
         ubyte[] bbuffer;
         bbuffer.length = buffer.length*data_size;
@@ -220,16 +216,13 @@ ubyte[] to_binary(T)(T[] buffer, const bool binary, const string delimiter=" ")
 // sub-function to package data for inclusion in a zip archive
 ArchiveMember archive_data(T)(const string name, T[] buffer, const bool binary, const string delimiter=" ")
 {
-
     const int data_size = T.sizeof;
-
     // add the data to the archive
     ArchiveMember dat = new ArchiveMember();
     dat.name = name;
     dat.time(Clock.currTime);
     dat.expandedData(to_binary(buffer, binary, delimiter));
     dat.compressionMethod = CompressionMethod.deflate;
-
     return dat;
 }
 
@@ -237,11 +230,8 @@ T[] from_binary(T)(ubyte[] dat_bytes, const size_t size, const bool binary, cons
 {
     T[] buffer;
     buffer.length = size;
-
     if (binary) {
-
         const size_t data_size = T.sizeof;
-
         foreach (idx, ref val; buffer) {
             val = dat_bytes[idx*data_size .. (idx+1)*data_size].value!T;
         }
@@ -249,16 +239,14 @@ T[] from_binary(T)(ubyte[] dat_bytes, const size_t size, const bool binary, cons
         char* dat_cstr = cast(char*) dat_bytes;
         string dat_str = cast(string) dat_cstr[0..strlen(dat_cstr)];
         auto dat_items = split(dat_str, delimiter);
-
         foreach (idx, ref val; buffer) {
             formattedRead(dat_items[idx], "%s", val);
         }
     }
-
     return buffer;
 }
 
-T[] retrieve_data(T)(const string name, ref ZipArchive zip, const int size, 
+T[] retrieve_data(T)(const string name, ref ZipArchive zip, const int size,
     const bool binary, const string delimiter=" ")
 {
     ArchiveMember dat = zip.directory[name];
@@ -268,7 +256,7 @@ T[] retrieve_data(T)(const string name, ref ZipArchive zip, const int size,
 }
 
 class FluidBlockIO {
-    // sits in-between the block and the file on disk 
+    // sits in-between the block and the file on disk
     // acts as buffer and communicator to get and set data in the block
     public:
 
@@ -293,7 +281,6 @@ class FluidBlockIO {
     void set_binary(bool is_binary=false)
     {
         binary = is_binary;
-
         // get the size in bytes of a single element of data
         if (binary) {
             data_element_size = double.sizeof;
@@ -308,20 +295,16 @@ class FluidBlockIO {
         accessors ~= accessor;
     }
 
-    void make_buffers(size_t n_cells) 
+    void make_buffers(size_t n_cells)
     {
-
         if (n_cells <= 0) return;
-
         foreach (i, accessor ; accessors) {
-
             auto arc = new ArchiveMember();
             arc.name = names[i]~data_ext;
             arc.compressionMethod = CompressionMethod.deflate;
             arc.setExpandedDataSize(accessor.num_return*n_cells*data_element_size);
             archive_members ~= arc;
         }
-
         initialized = true;
     }
 
@@ -333,15 +316,12 @@ class FluidBlockIO {
             size_t size = accessor.num_return;
             dat.length = size;
             dat = accessor.get(cell);
-
             // convert to binary
             size *= data_element_size;
             size_t start_idx = cell_count*size;
             // size_t stop_idx = (cell_count+1)*size;
-
             auto arc = archive_members[access_count];
             auto buffer = to_binary(dat, binary, delimiter);
-
             arc.expandedData(buffer, start_idx);
         }
     }
@@ -351,7 +331,6 @@ class FluidBlockIO {
         // set stuff in a cell
         double[] dat;
         ubyte[] buffer;
-
         foreach (access_count, accessor; accessors) {
             size_t size = accessor.num_return;
             dat.length = size;
@@ -359,16 +338,13 @@ class FluidBlockIO {
             size_t start_idx = cell_count*size*data_element_size;
             size_t stop_idx = (cell_count+1)*size*data_element_size;
             buffer = archive_members[access_count].expandedData()[start_idx .. stop_idx];
-
             dat = from_binary!double(buffer, size, binary, delimiter);
             accessor.set(cell, dat);
-
         }
     }
 
     void get_block_data()
     {
-
         foreach (cell_count, cell_idx; index) {
             FVCell cell = block.cells[cell_idx];
             get_cell_data(cell, cell_count);
@@ -383,64 +359,48 @@ class FluidBlockIO {
         }
     }
 
-    void save_to_file(const string fname, double time=0.0) 
+    void save_to_file(const string fname, double time=0.0)
     // utility function for writing block data
     // assumes data is already loaded into this object by get_block_data
     // any additional header data needs to be passed in through info
     // i.e. label, dimensions, etc
     {
-
         // harvest the data
         get_block_data();
-
         string delimiter = " ";
-        
         ZipArchive save = new ZipArchive();
-
         // header
         JSONValue header = block.get_header();
         header["version"] = "1.0";
         header["tag"] = tag;
         header["sim_time"] = time;
-        
         // the cell indexes held by this block of data
         size_t n_cells = index.length;
         header["n_cells"] = to!int(n_cells);
         save.addMember(archive_data("cell_id", index, binary, delimiter));
-
-
         // now all of the data
         JSONValue variables = [names[0]: "place holder"]; // need to initialise with something
-
         // add an entry to the header file, get the data and add it to the archive
-        foreach(i, ref member; archive_members) { 
+        foreach(i, ref member; archive_members) {
             string varname = names[i];
             VariableAccess accessor = accessors[i];
-
             const size_t size = accessor.num_return;
-
             // describe the data that is being saved
             JSONValue jj = ["data":varname~data_ext]; // where is the data
             jj.object["dimension"] = JSONValue([n_cells, size]); // how much data
             jj.object["description"] = JSONValue(accessor.description());
-
             // add the data to the archive
             member.time(Clock.currTime);
             save.addMember(member);
-            
             variables.object[varname] = jj;
-
         }
-
         header["variables"] = variables;
-
         if (binary) {
             header["data_type"] = JSONValue("binary");
         } else {
             header["data_type"] = JSONValue("string");
             header["delimiter"] = JSONValue(delimiter);
         }
-
         // add the header to the archive
         ArchiveMember hdr = new ArchiveMember();
         hdr.name = "header.txt";
@@ -448,84 +408,64 @@ class FluidBlockIO {
         hdr.expandedData(header.toPrettyString.dup.representation);
         hdr.compressionMethod = CompressionMethod.deflate;
         save.addMember(hdr);
-
         // write to file
         write(fname, save.build());
     }
 
-    JSONValue read_from_file(const string fname) 
+    JSONValue read_from_file(const string fname)
     // utility function for reading block data from zip file
     {
 
         // get the header and convert to string
         ZipArchive zip = new ZipArchive(read(fname));
-
         // parse the header
         ArchiveMember hdr = zip.directory["header.txt"];
         ubyte[] hdr_bytes = zip.expand(hdr);
         char* hdr_cstr = cast(char*) hdr_bytes;
         string hdr_str = cast(string) hdr_cstr[0..strlen(hdr_cstr)];
-
         JSONValue header = parseJSON(hdr_str);
-
         string version_str = header["version"].get!string;
-
         // check the version
         if (version_str != "1.0") {
             string msg = text("File format version found: " ~ version_str);
             throw new FlowSolverException(msg);
         }
-
-
         string tag_read = header["tag"].to!string;
         tag_read = tag_read.strip("\"");
-
         // check the tag
         if (tag != tag_read) {
             success = false;
             return header;
         }
-        
         // get the data type
         const string data_type = header["data_type"].get!string;
-
         if (data_type == "string") {
             delimiter = header["delimiter"].get!string;
-        } 
-
+        }
         // retrive the cell indexing
         int size = header["n_cells"].get!int;
         index = retrieve_data!size_t("cell_id", zip, size, data_type!="string", delimiter);
-
+        //
         if (!initialized)
             make_buffers(size);
-
+        //
         foreach (i, accessor ; accessors) {
-
             string varname = names[i];
-
             if (!(varname in header["variables"])) {
                 throw new Exception("Could not find variable: " ~ varname);
             }
-
             JSONValue data_hdr = header["variables"][varname];
-            
             const string dat_name = data_hdr["data"].get!string;
-
             JSONValue[] jdim = data_hdr["dimension"].get!(JSONValue[]);
-
             size = 1;
             int[2] dimension;
             foreach (size_t idx, dim; jdim) {
                 dimension[idx] = dim.get!int;
                 size *= dimension[idx];
             }
-
-
             archive_members[i] = zip.directory[dat_name];
             zip.expand(archive_members[i]);
         }
-
         success = true;
         return header;
     }
@@ -542,68 +482,50 @@ class FluidBlockIO {
 FluidBlockIO[] get_fluid_block_io(FluidBlock blk=null)
 {
     FluidBlockIO[] io_list;
-    
     if (!GlobalConfig.new_flow_format) return io_list;
-
     // output cell variables by default
     io_list ~= new CellVariablesIO(blk);
-
     if (GlobalConfig.do_flow_average) {
         io_list ~= new TimeAverageIO(blk);
     }
-
     if (GlobalConfig.viscous && GlobalConfig.save_viscous_gradients) {
         io_list ~= new CellGradIO(blk);
     }
-
     if (GlobalConfig.do_temporal_DFT) {
         io_list ~= new DFTIO(blk);
     }
-
     return io_list;
 }
 
 extern(C) int write_initial_sg_flow_zip_file_from_lua(lua_State* L)
 {
-
     auto fname = to!string(luaL_checkstring(L, 1));
-    
     SFluidBlock block = new SFluidBlock(L);
-
     foreach(io; block.block_io) {
         if (io.tag == CellData.tag)
             io.save_to_file(fname);
     }
-
     return 0;
 } // end write_initial_sg_flow_file_from_lua()
 
 extern(C) int write_initial_usg_flow_zip_file_from_lua(lua_State* L)
 {
     auto fname = to!string(luaL_checkstring(L, 1));
-    
     UFluidBlock block = new UFluidBlock(L);
-
     foreach(io; block.block_io) {
         if (io.tag == CellData.tag)
             io.save_to_file(fname);
     }
-
     return 0;
 } // end write_initial_usg_flow_file_from_lua()
 
 double read_zip_solution(FluidBlock blk, string filename)
 {
-
     double sim_time = -1;
     foreach(i, io; blk.block_io) {
-
         JSONValue header = io.read_from_file(filename);
-
         if (!io.success) continue;
-
         io.set_block_data();
-
         if (i == 0) {
             sim_time = header["sim_time"].get!double;
         } else {
@@ -613,75 +535,58 @@ double read_zip_solution(FluidBlock blk, string filename)
     return sim_time;
 }
 
-void read_block_data_from_zip_file(BlockFlow blk, string filename, Grid_t gridType, string flow_format)
+void read_block_data_from_zip_file(FluidBlockLite blk, string filename, Grid_t gridType, string flow_format)
 {
-
     // get the header and convert to string
     ZipArchive zip = new ZipArchive(read(filename));
-
     // parse the header
     ArchiveMember hdr = zip.directory["header.txt"];
     ubyte[] hdr_bytes = zip.expand(hdr);
     char* hdr_cstr = cast(char*) hdr_bytes;
     string hdr_str = cast(string) hdr_cstr[0..strlen(hdr_cstr)];
-
     JSONValue header = parseJSON(hdr_str);
-
     string version_str = header["version"].get!string;
-
     // check the version
     if (version_str != "1.0") { // <-- version should be a variable
         string msg = text("File format version found: " ~ version_str);
         throw new FlowSolverException(msg);
     }
-    
     // get the data type
     const string data_type = header["data_type"].get!string;
     bool is_binary = data_type!="string";
-
     string delimiter = " ";
-    
     if (!is_binary) delimiter = header["delimiter"].get!string;
-
     // retrive the cell indexing
     const int n_cells = header["n_cells"].get!int;
     size_t[] cell_index = retrieve_data!size_t("cell_id", zip, n_cells, is_binary, delimiter);
-
     blk.sim_time = header["sim_time"].get!double;
     blk.nic = header["nic"].get!int;
     blk.njc = header["njc"].get!int;
     blk.nkc = header["nkc"].get!int;
     blk.ncells = n_cells;
     blk._data.length = n_cells;
-
     size_t count_names = 0;
     foreach (string varname, ref JSONValue data; header["variables"]) {
-
         // get the dimensionality of the data (does it have multiple values for each cell?)
         const JSONValue[] jdim = data["dimension"].get!(JSONValue[]);
         const int n_per_cell = jdim[1].get!int;
         const int n_total = jdim[0].get!int*n_per_cell;
-
-        // names for the data in BlockFlow
+        // names for the data in FluidBlockLite
         if (n_per_cell == 1) {
-            blk.variableNames ~= varname; 
+            blk.variableNames ~= varname;
         } else {
             foreach (idx; 0 .. n_per_cell) {
-                blk.variableNames ~= format("%s_%d",varname,idx); 
+                blk.variableNames ~= format("%s_%d",varname,idx);
             }
         }
-
         // allocate the data array, extending as necessary
         // could do this upfront...
         foreach (j; 0 .. n_cells) {
             blk._data[j].length = blk.variableNames.length;
         }
-
-        // now read the data 
-
+        // now read the data
         const string dat_name = data["data"].get!string;
         double[] dat = retrieve_data!double(dat_name, zip, n_total, is_binary, delimiter);
-
         foreach (k; 0 .. n_per_cell) {
             const size_t name_idx = count_names + k;
             foreach (j; cell_index) {
@@ -689,10 +594,8 @@ void read_block_data_from_zip_file(BlockFlow blk, string filename, Grid_t gridTy
             }
             blk.variableIndex[blk.variableNames[name_idx]] = name_idx;
         }
-
         count_names += n_per_cell;
     }
-
     return;
 }
 
@@ -702,12 +605,9 @@ class CellVariablesIO : FluidBlockIO
 
     this(FluidBlock blk=null)
     {
-
         tag = CellData.tag;
-
         size_t n_cells = 0;
         LocalConfig myConfig;
-
         if (blk !is null) {
             block = blk;
             myConfig = block.myConfig;
@@ -716,22 +616,15 @@ class CellVariablesIO : FluidBlockIO
             myConfig = new LocalConfig(-1);
             myConfig.gmodel = GlobalConfig.gmodel_master;
         }
-        
-
         // get all of the cells data
         index = iota(0, n_cells).array();
-
         set_binary(myConfig.flow_format == "eilmer4binary");
-        
         // get the accessors
         foreach (key, acc ; CellData.get_accessors(myConfig)) {
             add_accessor(key, acc);
         }
-       
-
         make_buffers(n_cells);
     }
-
 }
 
 class TimeAverageIO : FluidBlockIO
@@ -740,12 +633,9 @@ class TimeAverageIO : FluidBlockIO
 
     this(FluidBlock blk)
     {
-
         tag = FlowAverage.tag;
-
         size_t n_cells = 0;
         LocalConfig myConfig;
-
         if (blk !is null) {
             block = blk;
             myConfig = block.myConfig;
@@ -754,17 +644,13 @@ class TimeAverageIO : FluidBlockIO
             myConfig = new LocalConfig(-1);
             myConfig.gmodel = GlobalConfig.gmodel_master;
         }
-
         // get all of the cells data
         index = iota(0, n_cells).array();
-
         set_binary(myConfig.flow_format == "eilmer4binary");
-
         // get the accessors
         foreach (key, acc ; FlowAverage.get_accessors(myConfig)) {
             add_accessor(key, acc);
         }
-
         make_buffers(n_cells);
     }
 }
@@ -775,12 +661,9 @@ class CellGradIO : FluidBlockIO
 
     this(FluidBlock blk=null)
     {
-
         tag = CellGradientData.tag;
-
         size_t n_cells = 0;
         LocalConfig myConfig;
-
         if (blk !is null) {
             block = blk;
             myConfig = block.myConfig;
@@ -789,22 +672,15 @@ class CellGradIO : FluidBlockIO
             myConfig = new LocalConfig(-1);
             myConfig.gmodel = GlobalConfig.gmodel_master;
         }
-        
-
         // get all of the cells data
         index = iota(0, n_cells).array();
-
         set_binary(myConfig.flow_format == "eilmer4binary");
-        
         // get the accessors
         foreach (key, acc ; CellGradientData.get_accessors(myConfig)) {
             add_accessor(key, acc);
         }
-       
-
         make_buffers(n_cells);
     }
-
 }
 
 class DFTIO : FluidBlockIO
@@ -813,33 +689,23 @@ class DFTIO : FluidBlockIO
 
     this(FluidBlock blk)
     {
-
         tag = GeneralDFT.tag;
-
         size_t n_cells = 0;
-
         if (blk !is null) {
             block = blk;
             n_cells = block.cells.length;
-        } 
-
-
+        }
         // get all of the cells data
         index = iota(0, n_cells).array();
-
         set_binary(GlobalConfig.flow_format == "eilmer4binary");
-
         foreach (key, acc ; GeneralDFT.get_accessors()) {
             add_accessor(key, acc);
         }
-
         make_buffers(n_cells);
-        
     }
 
     override bool do_save()
     {
-
         if (SimState.time >= SimState.target_time) { return true; }
         if (SimState.step >= GlobalConfig.max_step) { return true; }
         if (GlobalConfig.halt_now == 1) { return true; }
@@ -847,7 +713,6 @@ class DFTIO : FluidBlockIO
         if (SimState.maxWallClockSeconds > 0 && (wall_clock_elapsed > SimState.maxWallClockSeconds)) {
             return true;
         }
-
         return false;
     }
 }

@@ -275,7 +275,7 @@ double read_legacy_solution(SFluidBlock blk, string filename, bool overwrite_geo
 } // end read_solution() for structured-grid block
 
 double read_legacy_solution(UFluidBlock blk, string filename, bool overwrite_geometry_data)
-// Note that this function needs to be kept in sync with the BlockFlow class
+// Note that this function needs to be kept in sync with the FluidBlockLite class
 // over in flowsolution.d and with write_solution() below and with
 // write_initial_usg_flow_file_from_lua() in luaflowstate.d.
 // Returns sim_time from file.
@@ -1020,7 +1020,7 @@ extern(C) int write_initial_sg_flow_legacy_file_from_lua(lua_State* L)
         return 0;
     } // end if lua_isfunction
     lua_settop(L, 0); // clear stack
-    
+    //
     return -1;
 } // end write_initial_sg_flow_file_from_lua()
 
@@ -1172,7 +1172,7 @@ extern(C) int write_initial_usg_flow_legacy_file_from_lua(lua_State* L)
 
 
 
-void read_block_data_from_legacy_file(BlockFlow blk, string filename, Grid_t gridType, string flow_format)
+void read_block_data_from_legacy_file(FluidBlockLite blk, string filename, Grid_t gridType, string flow_format)
 {
     string myLabel;
     size_t nvariables;
@@ -1196,7 +1196,7 @@ void read_block_data_from_legacy_file(BlockFlow blk, string filename, Grid_t gri
         char[] found_header = new char[expected_header.length];
         fin.rawRead(found_header);
         if (found_header != expected_header) {
-            throw new FlowSolverException("BlockFlow constructor, read_solution from raw_binary_file: "
+            throw new FlowSolverException("FluidBlockLite constructor, read_solution from raw_binary_file: "
                                           ~ "unexpected header: " ~ to!string(found_header));
         }
         int[1] int1; fin.rawRead(int1);
@@ -1244,7 +1244,7 @@ void read_block_data_from_legacy_file(BlockFlow blk, string filename, Grid_t gri
             formattedRead(line, "unstructured_grid_flow %s", &format_version);
         }
         if (format_version != "1.0") {
-            string msg = text("BlockFlow.read_solution(): " ~
+            string msg = text("FluidBlockLite.read_solution(): " ~
                               "format version found: " ~ format_version);
             throw new FlowSolverException(msg);
         }
@@ -1292,7 +1292,7 @@ void read_block_data_from_legacy_file(BlockFlow blk, string filename, Grid_t gri
     foreach (i; 0 .. blk.variableNames.length) { blk.variableIndex[blk.variableNames[i]] = i; }
 } // end read_block_data_from_file()
 
-void read_extra_vars_from_file(BlockFlow blk, string filename, string[] extraVars)
+void read_extra_vars_from_file(FluidBlockLite blk, string filename, string[] extraVars)
 {
     string[] tokens;
     auto byLine = new GzipByLine(filename);
@@ -1307,7 +1307,7 @@ void read_extra_vars_from_file(BlockFlow blk, string filename, string[] extraVar
         formattedRead(line, "%s %s", &dummyName, &format_version);
     }
     if (format_version != "1.0") {
-        string msg = text("BlockFlow.read_extra_vars_from_file(): " ~
+        string msg = text("FluidBlockLite.read_extra_vars_from_file(): " ~
                           "format version found: " ~ format_version);
         throw new FlowSolverException(msg);
     }
@@ -1319,7 +1319,7 @@ void read_extra_vars_from_file(BlockFlow blk, string filename, string[] extraVar
     line = byLine.front; byLine.popFront();
     string[] varNames = line.strip().split();
     if (varNames.length != extraVars.length) {
-        string msg = text("BlockFlow.read_extra_vars_from_file(): " ~
+        string msg = text("FluidBlockLite.read_extra_vars_from_file(): " ~
                           "number of variables in file does not match user-supplied variables list.");
         throw new FlowSolverException(msg);
     }
@@ -1345,7 +1345,7 @@ void read_extra_vars_from_file(BlockFlow blk, string filename, string[] extraVar
         blk.nic = blk.ncells; blk.njc = 1; blk.nkc = 1;
     }
     if (blk._data.length != blk.ncells) {
-        string msg = text("BlockFlow.read_extra_vars_from_file(): " ~
+        string msg = text("FluidBlockLite.read_extra_vars_from_file(): " ~
                           "number of cells in file does not match number of existing cells in block.");
         throw new FlowSolverException(msg);
     }
