@@ -17,7 +17,8 @@ REF_MANS := eilmer-reference-manual \
 USER_GUIDES := eilmer-user-guide \
 	geometry-user-guide \
 	gas-user-guide \
-	reacting-gas-guide
+	reacting-gas-guide \
+	foammesh-user-guide
 
 all: $(REF_MANS) eilmer-catalog eilmer-faq presentations theses $(USER_GUIDES)
 	hugo
@@ -131,6 +132,12 @@ reacting-gas-guide:
 	- mkdir -p static/pdfs
 	cd $(DGD_DOC)/gas/reacting-gas; make pdf
 	cp $(DGD_DOC)/gas/reacting-gas/reacting-gas-guide.pdf static/pdfs/
+
+foammesh-user-guide:
+	- mkdir -p static/pdfs
+	cd $(DGD_DOC)/foammesh/user-guide; make pdf
+	cp $(DGD_DOC)/foammesh/user-guide/foammesh-user-guide.pdf static/pdfs/
+
 
 presentations:
 	- mkdir -p static/pdfs

@@ -47,10 +47,17 @@
   url = "/docs/python"
 
 [[docs]]
+  name = "Grid Utilities"
+  weight = 85
+  identifier = "grid-utilities"
+  url = "/docs/grid-utilities"
+
+[[docs]]
   name = "Publications/Presentations"
   weight = 90
   identifier = "pub-n-pres"
   url = "/docs/pub-n-pres"
+
 
 [[main]]
   name = "Docs"
