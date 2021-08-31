@@ -14,7 +14,7 @@ import yaml
 from pitot3_utils.pitot3_classes import Facility, Driver, Diaphragm, Facility_State, Tube, Nozzle, Test_Section
 from pitot3_utils.pitot3_classes import eilmer4_CEAGas_input_file_creator, expansion_tube_test_time_calculator, state_output_for_final_output, pitot3_results_output
 
-VERSION_STRING = '14-Jun-2021'
+VERSION_STRING = '31-Aug-2021'
 
 #-----------------------------------------------------------------------------------
 
@@ -83,7 +83,11 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
     print("Calculation mode is '{0}'.".format(mode))
 
     # facility set up stuff
-    facility_name = config_data['facility']
+    if 'facility' in config_data:
+        facility_name = config_data['facility']
+    else:
+        config_data['facility'] = None
+        facility_name = None
 
     driver_condition_name = config_data['driver_condition']
 

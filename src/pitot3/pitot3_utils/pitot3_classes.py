@@ -2381,7 +2381,7 @@ def pitot3_results_output(config_data, gas_path, object_dict):
             freestream_flight_equivalent_velocity),
               file=output_stream)
 
-        if acceleration_tube in locals():
+        if 'acceleration_tube' in locals():
             if acceleration_tube.tube_length:
                 basic_test_time = expansion_tube_test_time_calculator(acceleration_tube)
                 print("Basic test time = {0:.2f} microseconds.".format(basic_test_time * 1.0e6), file=output_stream)
