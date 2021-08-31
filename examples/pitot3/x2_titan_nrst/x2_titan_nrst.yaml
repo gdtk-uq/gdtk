@@ -1,0 +1,29 @@
+# x2_titan_nrst.yaml: 
+# This is a config file to run a fully theoretical
+# PITOT3 X2 NRST case.
+# This is not a real condition which we have fired 
+# before (as X2 has been extensively upgraded 
+# since the last time we did Titan NRST work)
+# I just picked a fill pressure from the last 
+# NASA EAST Titan paper:
+# Brandis and Cruden (2017)
+# Titan Atmospheric Entry Radiative Heating
+# 47th AIAA Thermophysics Conference
+# and picked a X2 driver condition to roughly match it
+# Chris James (c.james4@uq.edu.au) - 31/08/21
+
+# initial code set up
+mode : 'fully_theoretical'
+output_filename : 'x2_titan_nrst'
+
+# facility set up
+facility : 'x2_nrst_85_mm_shock_tube'
+driver_condition : 'x2-lwp-2.0mm-0'
+
+# shock tube
+test_gas_gas_model : 'CEAGas'
+test_gas_name :  'titan-with-ions'
+p1 : 13.3 # Pa (0.1 torr)
+
+vs1_guess_1 : 5000.0
+vs1_guess_2 : 6000.0

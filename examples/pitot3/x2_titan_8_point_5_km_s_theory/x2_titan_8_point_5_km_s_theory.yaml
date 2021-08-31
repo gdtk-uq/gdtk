@@ -1,0 +1,38 @@
+# x2_titan_8_point_5_km_s_theory.yaml: 
+# This is a config file to run a fully theoretical
+# PITOT3 case for the 8.5 km/s Titan entry condition from
+# Hadas Porat's PhD.
+# NOTE: I have used what I called the 'legacy' Titan
+# composition in this example, as that is what Hadas used.
+# I would not recommend using it for new experiments, as
+# NASA (and others) seem to have moved to compositions with
+# less CH4 and/or some Argon in it now.
+# The condition data can be found in Table 3.1 of that work:
+# Porat (2015)
+# Measurement of Radiative Heat Transfer in Simulated Titan and
+# Mars Atmospheres in Expansion Tubes
+# Chris James (c.james4@uq.edu.au) - 30/08/21
+
+# initial code set up
+mode : 'fully_theoretical'
+output_filename : 'x2_titan_8_point_5_km_s_theory'
+
+# facility set up
+facility : 'x2_nozzle'
+driver_condition : 'x2-lwp-2.0mm-0'
+
+# shock tube
+test_gas_gas_model : 'CEAGas'
+test_gas_name :  'titan-legacy-with-ions'
+p1 : 3200.0 # Pa
+
+# acceleration tube
+p5 : 10.0 # Pa
+acceleration_tube_expand_to : 'shock_speed'
+
+# nozzle area ratio
+area_ratio : 5.64
+
+# test section stuff
+cone_half_angle_degrees : 15.0 # degrees
+wedge_angle_degrees : 54.0 # degrees
