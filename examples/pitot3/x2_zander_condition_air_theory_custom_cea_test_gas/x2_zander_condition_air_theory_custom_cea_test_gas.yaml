@@ -1,0 +1,37 @@
+# x2_zander_condition_air_theory_custom_cea_test_gas.yaml
+#
+# This example is the same as the standard x2_zander_condition_air_theory
+# example, however, the test gas (which is the same as the other example)
+# is instead specified as a custom CEA test gas which is stored
+# in the same folder as the simulation.
+# Test condition is still the Zander condition which is a commonly 
+# used X2 air test condition which was first used
+# in Zander et al. (2013)
+# Hot-Wall Reentry Testing in Hypersonic Impulse Facilities
+# AIAA Journal, Vol. 51, No. 2, February 2013
+# After this, it has been used for most heated model work at UQ.
+# Chris James (c.james4@uq.edu.au) - 30/08/21
+
+# initial code set up
+mode : 'fully_theoretical'
+output_filename : 'x2_zander_condition_air_theory_custom_cea_test_gas'
+
+# facility set up
+facility : 'x2_nozzle'
+driver_condition : 'x2-lwp-2.0mm-0'
+
+# shock tube
+test_gas_gas_model : 'custom'
+test_gas_filename : 'cea-n2-o2-with-ions-gas-model.lua'
+p1 : 3000.0 # Pa
+
+# acceleration tube
+p5 : 10.0 # Pa
+acceleration_tube_expand_to : 'shock_speed'
+
+# nozzle area ratio
+area_ratio : 5.64
+
+# test section stuff
+cone_half_angle_degrees : 15.0 # degrees
+wedge_angle_degrees : 54.0 # degrees
