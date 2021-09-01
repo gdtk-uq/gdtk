@@ -160,6 +160,7 @@ public:
 	//size_t global_id;
         number[][] dRdU;
         ConservedQuantities Q_save;
+        FlowGradients grad_save;
         // stencil of effected cells & faces used in forming the flow Jacobian
         //FVCell[] jacobian_cell_stencil;
         //FVInterface[] jacobian_face_stencil;
@@ -220,6 +221,7 @@ public:
         }
         //
         version(nk_accelerator) {
+            grad_save = new FlowGradients(myConfig);
             Q_save = new ConservedQuantities(ncq);
             dRdU.length = ncq; // number of conserved variables
             foreach (ref a; dRdU) a.length = ncq;

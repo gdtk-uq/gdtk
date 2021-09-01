@@ -176,6 +176,7 @@ public:
     {
 
     FlowState fs_save;
+
     // storage for a precondition matrix
     FlowJacobian flowJacobian;
 
@@ -1172,6 +1173,9 @@ public:
         }
 
         // fill out the rows of the Jacobian for a cell
+        if (myConfig.viscous) {
+            foreach(cell; cells) { cell.grad_save.copy_values_from(cell.grad); }
+        }
         foreach(cell; cells) { cell.Q_save.copy_values_from(cell.Q); }
         foreach(cell; cells) { evaluate_cell_contribution_to_jacobian(cell); }
 
@@ -1219,6 +1223,9 @@ public:
             // return cell to original state
             pcell.U[ftl].copy_values_from(pcell.U[0]);
             pcell.fs.copy_values_from(fs_save);
+            if (myConfig.viscous) {
+                foreach (cell; pcell.cell_list) { cell.grad.copy_values_from(cell.grad_save); }
+            }
         }
 
         // we now populate the pre-sized sparse matrix representation of the flow Jacobian
@@ -1337,6 +1344,9 @@ public:
                     // return cell to original state
                     ghost_cell.U[ftl].copy_values_from(ghost_cell.U[0]);
                     ghost_cell.fs.copy_values_from(fs_save);
+                    if (myConfig.viscous) {
+                        foreach (cell; ghost_cell.cell_list) { cell.grad.copy_values_from(cell.grad_save); }
+                    }
                 }
 
                 // Step 3. Calculate dR/dU and add corrections to Jacobian
