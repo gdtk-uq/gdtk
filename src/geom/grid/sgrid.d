@@ -146,6 +146,7 @@ public:
     {
         this(other.niv, other.njv, nkv = other.nkv, other.label);
         foreach (i; 0 .. vertices.length) { vertices[i].set(other.vertices[i]); }
+        tags = other.tags.dup();
     }
 
     StructuredGrid dup() const

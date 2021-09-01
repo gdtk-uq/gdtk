@@ -89,6 +89,44 @@ extern(C) int set_vtx(lua_State* L)
     return 0;
 }
 
+extern(C) int get_corner_vtx(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
+    string corner_tag = to!string(lua_tostring(L, 2));
+    Vector3* vtx;
+    if (grid.dimensions == 2) {
+        switch (corner_tag) {
+        case "00": vtx = grid[0, 0]; break;
+        case "10": vtx = grid[grid.niv-1, 0]; break;
+        case "11": vtx = grid[grid.niv-1, grid.njv-1]; break;
+        case "01": vtx = grid[0, grid.njv-1]; break;
+        default: vtx = grid[0,0]; // [TODO] 2021-09-01 PJ Should throw an error here.
+        }
+    } else if (grid.dimensions == 3) {
+        switch (corner_tag) {
+        case "000": vtx = grid[0, 0, 0]; break;
+        case "100": vtx = grid[grid.niv-1, 0, 0]; break;
+        case "110": vtx = grid[grid.niv-1, grid.njv-1, 0]; break;
+        case "010": vtx = grid[0, grid.njv-1, 0]; break;
+        case "001": vtx = grid[0, 0, grid.nkv-1]; break;
+        case "101": vtx = grid[grid.niv-1, 0, grid.nkv-1]; break;
+        case "111": vtx = grid[grid.niv-1, grid.njv-1, grid.nkv-1]; break;
+        case "011": vtx = grid[0, grid.njv-1, grid.nkv-1]; break;
+        default: vtx = grid[0, 0, 0]; // [TODO] 2021-09-01 PJ Should throw an error here.
+        }
+    } else {
+        // Assume grid dimensions == 1.
+        // [TODO] 2021-09-01 PJ Should throw an error here if dimensions != 1.
+        switch (corner_tag) {
+        case "0": vtx = grid[0]; break;
+        case "1": vtx = grid[grid.niv-1]; break;
+        default: vtx = grid[0]; // [TODO] 2021-09-01 PJ Should throw an error here.
+        }
+    }
+    return pushVector3(L, *vtx);
+} // end get_corner_vtx()
+
 /*
  * Set one or more string tags for the boundaries.
  * my_sgrid:set_tags{north="my-north-tag", south="special-axis"}
@@ -721,6 +759,8 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "get_vtx");
     lua_pushcfunction(L, &set_vtx);
     lua_setfield(L, -2, "set_vtx");
+    lua_pushcfunction(L, &get_corner_vtx);
+    lua_setfield(L, -2, "get_corner_vtx");
     lua_pushcfunction(L, &set_boundary_tags);
     lua_setfield(L, -2, "set_tags");
     lua_pushcfunction(L, &subgrid);

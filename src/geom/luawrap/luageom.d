@@ -7,7 +7,7 @@
  * Reference:
  * Ierusalimschy, R. (2006)
  * Programming in Lua, 2nd Edition
- * Lua.org, Rio de Janeiro 
+ * Lua.org, Rio de Janeiro
  *
  * Authors: Rowan G. and Peter J.
  * Date: 2015-02-21

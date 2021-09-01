@@ -448,7 +448,8 @@ function FBArray:new(o)
    end
    if o.grid then
       -- We will take a single grid and divide it into an array of subgrids.
-      o.gridArray = {} -- will be a multi-dimensional array, indexed as [ib][jb][kb]
+      o.gridArray = {} -- will be a multi-dimensional array, indexed as [ib][jb][kb],
+                       -- with 1<=ib<=nib, 1<=jb<=njb, 1<=kb<=nkb
       if (not o.grid.get_type) or o.grid:get_type() ~= "structured_grid" then
          error("You need to supply a structured_grid to FBArray constructor.", 2)
       end
@@ -563,41 +564,106 @@ function FBArray:new(o)
    else
       -- We were not given a single grid,
       -- so we assume that we were given the array of subgrids.
-      --
-      -- [TODO] 2021-08-31 PJ
-      -- We need to check that the gridArray tables are regular and the individual grids align.
-      -- Maybe we should do that while assembling a single overall grid.
-      --
+      -- Join these into a single overall grid.
       o.nib = #(o.gridArray)
       o.njb = #(o.gridArray[1])
       if config.dimensions == 2 then
-         -- Make stacks of the original subgrids.
-         local stacksOfGrids = {}
+         -- Check that the numbers of vertices are compatible for all subgrids.
          for ib = 1, o.nib do
-            stacksOfGrids[ib] = StructuredGrid:clone(o.gridArray[ib][1]) -- [TODO] need this method
+            local niv_expected = o.gridArray[ib][1]:get_niv()
             for jb = 2, o.njb do
-               stacksOfGrids[ib].joinGrid(o.gridArray[ib][jb], "north")
+               local subgrid = o.gridArray[ib][jb]
+               if (subgrid:get_niv() ~= niv_expected) then
+                  error(string.format("Mismatch in niv for subgrid[%d][%d]: got %d, expected %d",
+                                      ib, jb, subgrid:get_niv(), niv_expected), 2)
+               end
+               local p10 = o.gridArray[ib][jb].get_corner_vtx("10")
+               local p11 = o.gridArray[ib][jb-1].get_corner_vtx("11")
+               local p00 = o.gridArray[ib][jb].get_corner_vtx("00")
+               local p01 = o.gridArray[ib][jb-1].get_corner_vtx("01")
+               if not closeEnough(p01, p00, 1.0e-5) then
+                  error(string.format("Mismatch for joining subgrid[%d][%d]: p01=%s p00=%s",
+                                      ib, jb, tostring(p01), tostring(p00)), 2)
+               end
+               if not closeEnough(p11, p11, 1.0e-5) then
+                  error(string.format("Mismatch for joining subgrid[%d][%d]: p11=%s p10=%s",
+                                      ib, jb, tostring(p11), tostring(p10)), 2)
+               end
             end
          end
-         o.grid = stacksOfGrids[1]
+         for jb = 1, o.njb do
+            local njv_expected = o.gridArray[1][jb]:get_njv()
+            for ib = 2, o.nib do
+               local subgrid = o.gridArray[ib][jb]
+               if (subgrid:get_njv() ~= njv_expected) then
+                  error(string.format("Mismatch in njv for subgrid[%d][%d]: got %d, expected %d",
+                                      ib, jb, subgrid:get_njv(), njv_expected), 2)
+               end
+               local p10 = o.gridArray[ib-1][jb].get_corner_vtx("10")
+               local p11 = o.gridArray[ib-1][jb].get_corner_vtx("11")
+               local p00 = o.gridArray[ib][jb].get_corner_vtx("00")
+               local p01 = o.gridArray[ib][jb].get_corner_vtx("01")
+               if not closeEnough(p10, p00, 1.0e-5) then
+                  error(string.format("Mismatch for joining subgrid[%d][%d]: p10=%s p00=%s",
+                                      ib, jb, tostring(p10), tostring(p00)), 2)
+               end
+               if not closeEnough(p11, p01, 1.0e-5) then
+                  error(string.format("Mismatch for joining subgrid[%d][%d]: p11=%s p01=%s",
+                                      ib, jb, tostring(p11), tostring(p01)), 2)
+               end
+            end
+         end
+         -- Make stacks of the original subgrids in the j-direction,
+         -- then join those stacks into the overall 2D grid.
+         o.nkb = 1
+         local jstack = {}
+         for ib = 1, o.nib do
+            jstack[ib] = o.gridArray[ib][1]:copy() -- need to retain the original subgrid
+            for jb = 2, o.njb do
+               jstack[ib].joinGrid(o.gridArray[ib][jb], "north")
+            end
+         end
+         o.grid = jstack[1]
          for ib = 2, o.nib do
-            o.grid.joinGrid(stacksOfGrids[ib], "east")
+            o.grid.joinGrid(jstack[ib], "east")
          end
       else
          -- For 3D
          o.nkb = #(o.gridArray[1][1])
-         error("[TODO] In 3D, we need to assemble a single grid from the gridArray")
          -- Make stacks of the original subgrids, starting in the k-index direction,
          -- then building slabs spanning the jk directions from those stacks and,
          -- finally, joining the slabs in the i-direction.
+         -- [TODO] 2021-09-01 PJ Put in checks on the numbers of vertices for adjacent subgrids.
+         local kstack = {}
+         for ib = 1, o.nib do
+            kstack[ib] = {}
+            for jb = 1, o.njb do
+               kstack[ib][jb] = o.gridArray[ib][jb][1]:copy() -- retain original subgrid
+               for kb = 2, o.nkb do
+                  kstack[ib][jb].joinGrid(o.gridArray[ib][jb][kb], "top")
+               end
+            end
+         end
+         local jkslab = {}
+         for ib = 1, o.nib do
+            jkslab[ib] = kstack[ib][1]
+            for jb = 2, o.njb do
+               jkslab[ib].joinGrid(kstack[ib][jb], "north")
+            end
+         end
+         o.grid = jkslab[1]
+         for ib = 2, o.nib do
+            o.grid.joinGrid(jkslab[ib], "east")
+         end
       end
-      -- Extract some information from the assembled StructuredGrid
+      -- Extract some information from the assembled grid, for later use.
       o.niv = o.grid:get_niv()
       o.njv = o.grid:get_njv()
       o.nkv = o.grid:get_nkv()
    end
    --
-   -- At this point, we have an array of grids so generate the array of FluidBlocks.
+   -- At this point, we have an array of grids and the overall grid.
+   -- It's time to generate the array of FluidBlocks.
    --
    o.blockArray = {} -- will be a multi-dimensional array, indexed as [ib][jb][kb],
                      -- with 1<=ib<=nib, 1<=jb<=njb, 1<=kb<=nkb
