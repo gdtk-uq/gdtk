@@ -400,8 +400,19 @@ public:
         if (!left_cell && !right_cell) {
             throw new Exception("Oops! This face does not have at least one cell attached.");
         }
-        if ((left_cell && !left_cell.is_interior_to_domain) ||
-            (right_cell && !right_cell.is_interior_to_domain)) {
+
+        bool one_interior_cell_exists = false;
+        if ( (left_cell && !right_cell) ||
+             (!left_cell && right_cell) ) {
+            one_interior_cell_exists = true;
+        } else { // both a left cell and right cell exists => check if they are interior cells
+            if ( (left_cell.is_interior_to_domain && !right_cell.is_interior_to_domain) ||
+                 (!left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) ) {
+                one_interior_cell_exists = true;
+            }
+        }
+
+        if (one_interior_cell_exists) {
             // The interface has only one cell interior to the domain and
             // that doesn't have a mapping to a cell in a neighbouring block.
             // This means that the interface is along a domain boundary.
