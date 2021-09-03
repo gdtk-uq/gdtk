@@ -568,8 +568,20 @@ function FBArray:new(o)
       -- We were not given a single grid,
       -- so we assume that we were given the array of subgrids.
       -- Join these into a single overall grid.
+      if not (type(o.gridArray) == "table") then
+         error("gridArray should be an array of grid objects.", 2)
+      end
       o.nib = #(o.gridArray)
+      if o.nib < 1 then
+         error("gridArray should have at least one row of grids.", 2)
+      end
+      if not (type(o.gridArray[1]) == "table") then
+         error("gridArray[1] should be and array of grids.", 2)
+      end
       o.njb = #(o.gridArray[1])
+      if o.njb < 1 then
+         error("gridArray[1] should contain at least one grid object.", 2)
+      end
       if config.dimensions == 2 then
          -- Check that the numbers of vertices are compatible for all subgrids.
          for ib = 1, o.nib do
@@ -580,10 +592,10 @@ function FBArray:new(o)
                   error(string.format("Mismatch in niv for subgrid[%d][%d]: got %d, expected %d",
                                       ib, jb, subgrid:get_niv(), niv_expected), 2)
                end
-               local p10 = o.gridArray[ib][jb].get_corner_vtx("10")
-               local p11 = o.gridArray[ib][jb-1].get_corner_vtx("11")
-               local p00 = o.gridArray[ib][jb].get_corner_vtx("00")
-               local p01 = o.gridArray[ib][jb-1].get_corner_vtx("01")
+               local p10 = o.gridArray[ib][jb]:get_corner_vtx("10")
+               local p11 = o.gridArray[ib][jb-1]:get_corner_vtx("11")
+               local p00 = o.gridArray[ib][jb]:get_corner_vtx("00")
+               local p01 = o.gridArray[ib][jb-1]:get_corner_vtx("01")
                if not closeEnough(p01, p00, 1.0e-5) then
                   error(string.format("Mismatch for joining subgrid[%d][%d]: p01=%s p00=%s",
                                       ib, jb, tostring(p01), tostring(p00)), 2)
@@ -602,10 +614,10 @@ function FBArray:new(o)
                   error(string.format("Mismatch in njv for subgrid[%d][%d]: got %d, expected %d",
                                       ib, jb, subgrid:get_njv(), njv_expected), 2)
                end
-               local p10 = o.gridArray[ib-1][jb].get_corner_vtx("10")
-               local p11 = o.gridArray[ib-1][jb].get_corner_vtx("11")
-               local p00 = o.gridArray[ib][jb].get_corner_vtx("00")
-               local p01 = o.gridArray[ib][jb].get_corner_vtx("01")
+               local p10 = o.gridArray[ib-1][jb]:get_corner_vtx("10")
+               local p11 = o.gridArray[ib-1][jb]:get_corner_vtx("11")
+               local p00 = o.gridArray[ib][jb]:get_corner_vtx("00")
+               local p01 = o.gridArray[ib][jb]:get_corner_vtx("01")
                if not closeEnough(p10, p00, 1.0e-5) then
                   error(string.format("Mismatch for joining subgrid[%d][%d]: p10=%s p00=%s",
                                       ib, jb, tostring(p10), tostring(p00)), 2)
@@ -623,12 +635,12 @@ function FBArray:new(o)
          for ib = 1, o.nib do
             jstack[ib] = o.gridArray[ib][1]:copy() -- need to retain the original subgrid
             for jb = 2, o.njb do
-               jstack[ib].joinGrid(o.gridArray[ib][jb], "north")
+               jstack[ib]:joinGrid(o.gridArray[ib][jb], "north")
             end
          end
          o.grid = jstack[1]
          for ib = 2, o.nib do
-            o.grid.joinGrid(jstack[ib], "east")
+            o.grid:joinGrid(jstack[ib], "east")
          end
       else
          -- For 3D
@@ -643,7 +655,7 @@ function FBArray:new(o)
             for jb = 1, o.njb do
                kstack[ib][jb] = o.gridArray[ib][jb][1]:copy() -- retain original subgrid
                for kb = 2, o.nkb do
-                  kstack[ib][jb].joinGrid(o.gridArray[ib][jb][kb], "top")
+                  kstack[ib][jb]:joinGrid(o.gridArray[ib][jb][kb], "top")
                end
             end
          end
@@ -651,12 +663,37 @@ function FBArray:new(o)
          for ib = 1, o.nib do
             jkslab[ib] = kstack[ib][1]
             for jb = 2, o.njb do
-               jkslab[ib].joinGrid(kstack[ib][jb], "north")
+               jkslab[ib]:joinGrid(kstack[ib][jb], "north")
             end
          end
          o.grid = jkslab[1]
          for ib = 2, o.nib do
-            o.grid.joinGrid(jkslab[ib], "east")
+            o.grid:joinGrid(jkslab[ib], "east")
+         end
+      end
+      -- Numbers of cells in each of the subgrids.  Needed later.
+      o.nics = {}
+      for ib =1, o.nib do
+         if config.dimensions == 2 then
+            o.nics[#o.nics+1] = o.gridArray[ib][1]:get_niv() - 1
+         else
+            o.nics[#o.nics+1] = o.gridArray[ib][1][1]:get_niv() - 1
+         end
+      end
+      o.njcs = {}
+      for jb =1, o.njb do
+         if config.dimensions == 2 then
+            o.njcs[#o.njcs+1] = o.gridArray[1][jb]:get_njv() - 1
+         else
+            o.njcs[#o.njcs+1] = o.gridArray[1][jb][1]:get_njv() - 1
+         end
+      end
+      o.nkcs = {}
+      if config.dimensions == 2 then
+         o.nkcs[1] = 1
+      else
+         for kb = 1, o.nkb do
+            o.nkcs[#o.nkcs+1] = o.gridArray[1][1][kb]:get_nkv() - 1
          end
       end
       -- Extract some information from the assembled grid, for later use.

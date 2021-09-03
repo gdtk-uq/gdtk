@@ -101,7 +101,10 @@ extern(C) int get_corner_vtx(lua_State* L)
         case "10": vtx = grid[grid.niv-1, 0]; break;
         case "11": vtx = grid[grid.niv-1, grid.njv-1]; break;
         case "01": vtx = grid[0, grid.njv-1]; break;
-        default: vtx = grid[0,0]; // [TODO] 2021-09-01 PJ Should throw an error here.
+        default:
+            string errMsg = format("Error in StructuredGrid:get_corner_vtx(). \"%s\" is not a valid corner name.",
+                                   corner_tag);
+            luaL_error(L, errMsg.toStringz);
         }
     } else if (grid.dimensions == 3) {
         switch (corner_tag) {
@@ -113,7 +116,10 @@ extern(C) int get_corner_vtx(lua_State* L)
         case "101": vtx = grid[grid.niv-1, 0, grid.nkv-1]; break;
         case "111": vtx = grid[grid.niv-1, grid.njv-1, grid.nkv-1]; break;
         case "011": vtx = grid[0, grid.njv-1, grid.nkv-1]; break;
-        default: vtx = grid[0, 0, 0]; // [TODO] 2021-09-01 PJ Should throw an error here.
+        default:
+            string errMsg = format("Error in StructuredGrid:get_corner_vtx(). \"%s\" is not a valid corner name.",
+                                   corner_tag);
+            luaL_error(L, errMsg.toStringz);
         }
     } else {
         // Assume grid dimensions == 1.
