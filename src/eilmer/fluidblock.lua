@@ -406,7 +406,7 @@ function FBArray:new(o)
    o = o or {}
    local flag = checkAllowedNames(o, {"grid", "gridArray", "initialState", "fillCondition",
 				      "active", "label", "omegaz", "may_be_turbulent",
-                                      "bcList", "nib", "njb", "nkb"})
+                                      "bcList", "nib", "njb", "nkb", "xforceList"})
    if not flag then
       error("Invalid name for item supplied to FBArray constructor.", 2)
    end
@@ -416,11 +416,6 @@ function FBArray:new(o)
    -- and we would like that identity to start from 0 for the D code.
    o.id = #(fluidBlockArrays)
    --
-   o.label = o.label or string.format("FluidBlockArray-%d", o.id)
-   if fluidBlockArraysDict[o.label] then
-      error('Have previously defined a FBArray with label "' .. o.label .. '"', 2)
-   end
-   fluidBlockArraysDict[o.label] = o.id
    if not o.initialState then
       -- try old name
       o.initialState = o.fillCondition
@@ -428,6 +423,14 @@ function FBArray:new(o)
    if not o.initialState then
       error("You need supply an initialState to FBArray constructor.", 2)
    end
+   if o.active == nil then
+      o.active = true
+   end
+   o.label = o.label or string.format("FBArray-%d", o.id)
+   if fluidBlockArraysDict[o.label] then
+      error('Have previously defined a FBArray with label "' .. o.label .. '"', 2)
+   end
+   fluidBlockArraysDict[o.label] = o.id
    o.omegaz = o.omegaz or 0.0
    if o.may_be_turbulent == nil then
       o.may_be_turbulent = true
@@ -690,8 +693,12 @@ function FBArray:new(o)
 	    if jb == o.njb then
 	       bcList['north'] = o.bcList['north']
 	    end
-	    local new_block = FluidBlock:new{grid=subgrid, omegaz=o.omegaz,
+            local label = o.label .. string.format("-blk-%d-%d", ib, jb);
+	    local new_block = FluidBlock:new{grid=subgrid,
                                              initialState=o.initialState,
+                                             active=o.active,
+                                             label=label,
+                                             omegaz=o.omegaz,
                                              may_be_turbulent=o.may_be_turbulent,
                                              bcList=bcList,
                                              fluidBlockArrayId=o.id}
@@ -724,8 +731,12 @@ function FBArray:new(o)
 	       if kb == o.nkb then
 		  bcList['top'] = o.bcList['top']
 	       end
-	       local new_block = FluidBlock:new{grid=subgrid, omegaz=o.omegaz,
+               local label = o.label .. string.format("-%d-%d-%d", ib, jb, kb);
+	       local new_block = FluidBlock:new{grid=subgrid,
                                                 initialState=o.initialState,
+                                                active=o.active,
+                                                label=label,
+                                                omegaz=o.omegaz,
                                                 may_be_turbulent=o.may_be_turbulent,
                                                 bcList=bcList,
                                                 fluidBlockArrayId=o.id,}
