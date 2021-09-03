@@ -8,6 +8,7 @@
 // 2020-09-26 Initial code built from Python prototype.
 // 2020-10-16 Ready for use with 1T thermally-perfect gas model, I believe.
 // 2020-12-09 Allow 2T gas models.
+// 2021-09-03 Refactor by NNG
 
 import std.stdio;
 import std.array;
@@ -27,10 +28,15 @@ import gas.therm_perf_gas_equil;
 import kinetics;
 import gasflow;
 
-
 int main(string[] args)
 {
+/*
+    Top level function for directly called nenzf1d, a quadi-one-dimensional calculator for
+    shock tunnel conditions.
+
+*/
     int exitFlag = 0; // Presume OK in the beginning.
+
     // Be careful with the usageMsg string; it has embedded newline characters.
     string usageMsg = "Usage: nenzf1d <input-file>
 Options:
@@ -84,65 +90,131 @@ Options:
         return exitFlag;
     }
     // Extract our job parameters from the YAML input file.
-    auto config = dyaml.Loader.fromFile(inputFile).load();
+    Node configdata = dyaml.Loader.fromFile(inputFile).load();
     if (verbosityLevel >= 1) {
-        writeln("  "~config["title"].as!string);
+        writeln("  "~configdata["title"].as!string);
     }
-    //
-    // The first gas model is for the shock-tube analysis,
-    // assuming frozen reactions or full equilibrium.
-    string gm1_filename = config["gas-model-1"].as!string;
-    auto gm1 = init_gas_model(gm1_filename);
+    // Convert raw configdata into primitive data types
+    Config config = process_config(configdata);
+    int exitCode = run(verbosityLevel, config);
+    return exitCode;
+}
+
+struct Config{
+/*
+    Store the output of a yaml configuration file in a struct of primitive variables.
+    This will help with calling nenzf1d from external programs, who may want to modify
+    these directly.
+
+    @author: Nick Gibbons
+*/
+    string gm1_filename;
+    string gm2_filename;
+    string reactions_filename;
+    string reactions_filename2="";
+    string[] species;
+    double[] molef;
+    double T1;
+    double p1;
+    double Vs;
+    double pe=0.0;
+    double meq_throat=1.0;
+    double ar=1.0;
+    double pp_ps=0.0;
+    double C=1.0;
+    double[] xi;
+    double[] di;
+    double x_end;
+    double t_final=100.0;  // fixme, this used to default to 2.0 * x_end / v
+    double t_inc=1.0e-10;
+    double t_inc_factor = 1.0001;
+    double t_inc_max= 1.0e-7;
+}
+
+Config process_config(Node configdata) {
+/*
+    Read the D-YAML Node data and convert it into primitive data types.
+    Note that some parameters have defaults, which are simply left in
+    place if they are not specified in the input file.
+
+    @author: Nick Gibbons
+*/
+    Config config;
+    config.gm1_filename = configdata["gas-model-1"].as!string;
     //
     // The second gas model is for the expansion process that has finite-rate 1T chemistry.
-    string gm2_filename = config["gas-model-2"].as!string;
-    string reactions_filename = config["reactions"].as!string;
-    string reactions_filename2 = "";
+    config.gm2_filename = configdata["gas-model-2"].as!string;
+    config.reactions_filename = configdata["reactions"].as!string;
     try {
-        reactions_filename2 = config["reactions-file2"].as!string;
+        config.reactions_filename2 = configdata["reactions-file2"].as!string;
     } catch (YAMLException e) {
         // We cannot set the second reactions file so assume 1T chemistry.
     }
     //
-    string[] species;
-    foreach(string name; config["species"]) { species ~= name; }
-    double[] molef;
-    foreach(name; species) {
+    foreach(string name; configdata["species"]) { config.species ~= name; }
+    foreach(name; config.species) {
         double mf = 0.0;
-        try { mf = to!double(config["molef"][name].as!string); } catch (YAMLException e) {}
-        molef ~= mf;
+        try { mf = to!double(configdata["molef"][name].as!string); } catch (YAMLException e) {}
+        config.molef ~= mf;
     }
     //
     // Initial gas state in shock tube.
-    double T1 = to!double(config["T1"].as!string);
-    double p1 = to!double(config["p1"].as!string);
-    double Vs = to!double(config["Vs"].as!string);
+    config.T1 = to!double(configdata["T1"].as!string);
+    config.p1 = to!double(configdata["p1"].as!string);
+    config.Vs = to!double(configdata["Vs"].as!string);
     // Observed relaxation pressure for reflected-shock, nozzle-supply region.
     // A value of 0.0 indicates that we should use the ideal shock-reflection pressure.
-    double pe = 0.0;
-    try { pe = to!double(config["pe"].as!string); } catch (YAMLException e) {}
+    try { config.pe = to!double(configdata["pe"].as!string); } catch (YAMLException e) {}
     // Mach number (in equilibrium gas) at nozzle throat.
-    double meq_throat = 1.0;
     // Nominally, it would be 1.0 for sonic flow.
     // It may be good to expand a little more so that,
     // on changing to the frozen-gas sound speed in the nonequilibrium gas model,
     // the flow remains slightly supersonic.
-    try { meq_throat = to!double(config["meq_throat"].as!string); } catch (YAMLException e) {}
+    try { config.meq_throat = to!double(configdata["meq_throat"].as!string); } catch (YAMLException e) {}
     // Nozzle-exit area ratio for terminating expansion.
-    double ar = 1.0;
-    try { ar = to!double(config["ar"].as!string); } catch (YAMLException e) {}
+    try { config.ar = to!double(configdata["ar"].as!string); } catch (YAMLException e) {}
     // Alternatively, we might stop on pPitot/pSupply becoming less than pp_ps.
-    double pp_ps = 0.0;
-    try { pp_ps = to!double(config["pp_ps"].as!string); } catch (YAMLException e) {}
+    try { config.pp_ps = to!double(configdata["pp_ps"].as!string); } catch (YAMLException e) {}
     // pPitot = C * rho*V^^2
     // A value of C=1.0 is a good default.
     // In a number of sphere simulations, for flows representative of T4 flow conditions,
     // values of pPitot/(rho*v^^2) appeared to be in the range 0.96 to 1.0.
-    double C = 1.0;
-    try { C = to!double(config["C"].as!string); } catch (YAMLException e) {}
+    try { config.C = to!double(configdata["C"].as!string); } catch (YAMLException e) {}
     // Nozzle x,diameter schedule.
-    double[] xi; foreach(string val; config["xi"]) { xi ~= to!double(val); }
-    double[] di; foreach(string val; config["di"]) { di ~= to!double(val); }
+    foreach(string val; configdata["xi"]) { config.xi ~= to!double(val); }
+    foreach(string val; configdata["di"]) { config.di ~= to!double(val); }
+
+    // Part 2 of config
+    config.x_end = config.xi[$-1];  // Nozzle-exit position for terminating expansion.
+    try { config.x_end = to!double(configdata["x_end"].as!string); } catch (YAMLException e) {}
+    try { config.t_final = to!double(configdata["t_final"].as!string); } catch (YAMLException e) {}
+    try { config.t_inc = to!double(configdata["t_inc"].as!string); } catch (YAMLException e) {}
+    try { config.t_inc_factor = to!double(configdata["t_inc_factor"].as!string); } catch (YAMLException e) {}
+    try { config.t_inc_max = to!double(configdata["t_inc_max"].as!string); } catch (YAMLException e) {}
+    return config;
+}
+
+int run(int verbosityLevel, Config config)
+{
+    int exitFlag = 0; // Presume OK in the beginning.
+    //
+    string gm1_filename = config.gm1_filename;
+    auto gm1 = init_gas_model(gm1_filename);
+    string gm2_filename = config.gm2_filename;
+    string reactions_filename = config.reactions_filename;
+    string reactions_filename2 = config.reactions_filename2;
+    string[] species = config.species;
+    double[] molef = config.molef;
+    double T1 = config.T1;
+    double p1 = config.p1;
+    double Vs = config.Vs;
+    double pe = config.pe;
+    double meq_throat = config.meq_throat;
+    double ar = config.ar;
+    double pp_ps = config.pp_ps;
+    double C = config.C;
+    double[] xi = config.xi;
+    double[] di = config.di;
     if (verbosityLevel >= 2) {
         writeln("Input data.");
         writeln("  gas-model-1= ", gm1_filename);
@@ -379,7 +451,7 @@ Options:
     //
     GasState init_tp_state_from_eqgas(GasState state6e, EquilibriumGas gm_eq, GasModel gm2){
     /*
-        Although EquilibriumGas has officially one species, it keeps an internal 
+        Although EquilibriumGas has officially one species, it keeps an internal
         thermally perfect gas model for doing calculations. Here, do an apparently
         pointless update_thermo_from_pT on state 6e to set the internal gas state
         mass fractions, and then copy them into the new GasState, based on gm2.
@@ -540,16 +612,11 @@ Options:
         writeln("Start reactions...");
     }
     double t = 0;  // time is in seconds
-    double x_end = xi[$-1];  // Nozzle-exit position for terminating expansion.
-    try { x_end = to!double(config["x_end"].as!string); } catch (YAMLException e) {}
-    double t_final = 2.0 * x_end / v;  // long enough to convect past exit
-    try { t_final = to!double(config["t_final"].as!string); } catch (YAMLException e) {}
-    double t_inc = 1.0e-10; // start small
-    try { t_inc = to!double(config["t_inc"].as!string); } catch (YAMLException e) {}
-    double t_inc_factor = 1.0001;
-    try { t_inc_factor = to!double(config["t_inc_factor"].as!string); } catch (YAMLException e) {}
-    double t_inc_max = 1.0e-7;
-    try { t_inc_max = to!double(config["t_inc_max"].as!string); } catch (YAMLException e) {}
+    double x_end = config.x_end;  // Nozzle-exit position for terminating expansion.
+    double t_final = config.t_final;
+    double t_inc = config.t_inc;
+    double t_inc_factor = config.t_inc_factor;
+    double t_inc_max = config.t_inc_max;
     if (verbosityLevel >= 2) {
         writeln("Stepping parameters:");
         writefln("  x_end= %g", x_end);
