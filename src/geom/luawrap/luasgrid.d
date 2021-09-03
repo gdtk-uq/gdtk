@@ -35,7 +35,7 @@ extern(C) int copyStructuredGrid(T, string MTname)(lua_State* L)
 {
     // Sometimes it's convenient to get a copy of a grid.
     auto grid = checkObj!(T, MTname)(L, 1);
-    structuredGridStore ~= pushObj!(T, MTname)(L, grid);
+    structuredGridStore ~= pushObj!(T, MTname)(L, grid.dup());
     return 1;
 }
 
@@ -123,11 +123,18 @@ extern(C) int get_corner_vtx(lua_State* L)
         }
     } else {
         // Assume grid dimensions == 1.
-        // [TODO] 2021-09-01 PJ Should throw an error here if dimensions != 1.
+        if (grid.dimensions != 1) {
+            string errMsg = format("Error in StructuredGrid:get_corner_vtx(). \"%d\" invalid number of dimensions.",
+                                   grid.dimensions);
+            luaL_error(L, errMsg.toStringz);
+        }
         switch (corner_tag) {
         case "0": vtx = grid[0]; break;
         case "1": vtx = grid[grid.niv-1]; break;
-        default: vtx = grid[0]; // [TODO] 2021-09-01 PJ Should throw an error here.
+        default:
+            string errMsg = format("Error in StructuredGrid:get_corner_vtx(). \"%s\" is not a valid corner name.",
+                                   corner_tag);
+            luaL_error(L, errMsg.toStringz);
         }
     }
     return pushVector3(L, *vtx);
