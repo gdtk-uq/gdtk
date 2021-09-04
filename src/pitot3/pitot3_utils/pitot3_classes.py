@@ -1693,7 +1693,7 @@ class Nozzle(object):
 
     """
 
-    def __init__(self, entrance_state_name, entrance_state, exit_state_name, area_ratio, nozzle_expansion_tolerance):
+    def __init__(self, entrance_state_name, entrance_state, exit_state_name, area_ratio, nozzle_expansion_tolerance, facility_type = None):
         """
 
         :param entrance_state_name:
@@ -1709,10 +1709,12 @@ class Nozzle(object):
 
         self.area_ratio = area_ratio
 
+        self.facility_type = facility_type
+
         # TO DO: maybe add some comments about what it is doing...
 
-        print ('-'*60)
-        print ("Starting steady expansion through the nozzle using an area ratio of {0}".format(self.area_ratio))
+        print('-'*60)
+        print("Starting steady expansion through the nozzle using an area ratio of {0}".format(self.area_ratio))
 
         # make the gas model object
 
@@ -1721,9 +1723,57 @@ class Nozzle(object):
 
         exit_gas_state = GasState(entrance_state_gmodel)
 
-        v_exit = entrance_state_gas_flow_object.steady_flow_with_area_change(self.entrance_state.get_gas_state(), self.entrance_state.get_v(),
-                                                                             self.area_ratio, exit_gas_state,
-                                                                             tol=nozzle_expansion_tolerance)
+        if facility_type == 'reflected_shock_tunnel':
+            print("Due to the fact that this is a reflected shock simulation, we must first expand to the throat condition (state 6).")
+
+            from eilmer.ideal_gas_flow import p0_p
+
+            state6 = GasState(entrance_state_gmodel)
+
+            entrance_gas_state = self.entrance_state.get_gas_state()
+
+            # setting it to 1.01 as we want it to be above 1 so it supersonic!
+            # (the p0/p is ideal gas).
+            # We also have some code to catch up if it ends up subsonic below too
+            v6 = entrance_state_gas_flow_object.expand_from_stagnation(entrance_gas_state,
+                                                                       1.0 / p0_p(1.01, entrance_gas_state.gamma),
+                                                                       state6)
+
+            M6 = v6 / state6.a
+
+            print ("M6 expected is 1.0 and M6 found is {0:.4f}.".format(M6))
+
+
+            if M6 < 1.0 and M6 >= 0.98:
+                print ("M6 is just below 1.0 so it is being set to 1.0 so the code can continue.")
+                # this must be above 1 to do the supersonic steady_flow_with_area_change...
+                import copy
+                old_velocity = copy.copy(v6)
+
+                while M6 < 1.0:
+                    v6 += 0.001
+                    M6 = v6 / state6.a
+                print ("The velocity has also been slightly adjusted from {0:.4f} m/s to {1:.4f} m/s.".format(old_velocity, v6))
+            elif M6 < 0.98:
+                raise Exception("pitot3_classes.Nozzle: M throat is too small, so there must be an issue here...")
+
+            # if the entrance state has a reference gas state, we can grab that as the exit state will have the same one.
+            if self.entrance_state.reference_gas_state:
+                reference_gas_state = self.entrance_state.get_reference_gas_state()
+            else:
+                reference_gas_state = None
+            self.state6 = Facility_State('s6', state6, v6,
+                                             reference_gas_state=reference_gas_state)
+
+            v_exit = entrance_state_gas_flow_object.steady_flow_with_area_change(self.state6.get_gas_state(),
+                                                                                 self.state6.get_v(),
+                                                                                 self.area_ratio, exit_gas_state,
+                                                                                 tol=nozzle_expansion_tolerance)
+
+        else:
+            v_exit = entrance_state_gas_flow_object.steady_flow_with_area_change(self.entrance_state.get_gas_state(), self.entrance_state.get_v(),
+                                                                                 self.area_ratio, exit_gas_state,
+                                                                                 tol=nozzle_expansion_tolerance)
 
         # if the entrance state has a reference gas state, we can grab that as the exit state will have the same one.
         if self.entrance_state.reference_gas_state:
@@ -1786,7 +1836,10 @@ class Nozzle(object):
 
         """
 
-        return [self.exit_state]
+        if self.facility_type == 'reflected_shock_tunnel':
+            return [self.state6, self.exit_state]
+        else:
+            return [self.exit_state]
 
 class Test_Section(object):
     """
