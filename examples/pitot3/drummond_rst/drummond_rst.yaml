@@ -1,0 +1,26 @@
+# drummond_rst.yaml: 
+# Fully theoretical input config for PITOT3 simulating the Drummond tunnel
+# The shock tube fill pressure and wedge angle
+# are from David Gildfind's AERO4470 2020 Assignment 2.
+# Chris James (c.james4@uq.edu.au) - 30/08/21
+
+# initial code set up
+mode : 'fully_theoretical'
+
+# facility set up
+facility : 'drummond_tunnel_Mach_7_nozzle'
+driver_condition : 'drummond-he-5-MPa'
+
+# shock tube
+test_gas_gas_model : 'CEAGas'
+test_gas_name : 'air13species'
+p1 : 40.0e3 # Pa
+
+# test section stuff
+wedge_angle_degrees : 30.0 # degrees
+
+vs1_guess_1 : 1000.0 #m/s
+vs1_guess_2 : 1200.0 #m/s
+
+
+
