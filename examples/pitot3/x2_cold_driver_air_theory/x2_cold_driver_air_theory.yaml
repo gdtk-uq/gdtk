@@ -1,0 +1,35 @@
+# x2_cold_driver_air_theory.yaml: 
+#
+# This is a simple config file to run a fully theoretical
+# PITOT3 case for a cold driven X2 condition from the work of
+# Matt Thompson.
+# This is condition 1 from Thompson et al. (2019)
+# Generating 5-km/s Low Density Hypersonic Test Flows 
+# in an Expansion Tube for Studying Ultraviolet Radiation
+# Proc. of the 32nd International Symposium on Shock Waves (ISSW32)
+#
+# Chris James (c.james4@uq.edu.au) - 06/09/21
+
+# initial code set up
+mode : 'fully_theoretical'
+output_filename : 'x2_cold_driver_air_theory'
+
+# facility set up
+facility : 'x2_nozzle'
+driver_condition : 'x2-cold-driver-pure-He-4.2-MPa'
+
+# shock tube
+test_gas_gas_model : 'CEAGas'
+test_gas_name : 'n2-o2-with-ions'
+p1 : 600.0 # Pa
+
+# acceleration tube
+p5 : 3.0 # Pa
+acceleration_tube_expand_to : 'shock_speed'
+
+# nozzle area ratio
+area_ratio : 5.64
+
+# test section stuff
+cone_half_angle_degrees : 15.0 # degrees
+wedge_angle_degrees : 54.0 # degrees
