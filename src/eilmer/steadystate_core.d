@@ -651,6 +651,13 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             }
             fResid.writefln("# %02d: mass-balance", 12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
             fResid.writefln("# %02d: linear-solve-residual", 1+12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
+            if (GlobalConfig.sssOptions.useLineSearch || GlobalConfig.sssOptions.usePhysicalityCheck) {
+                fResid.writefln("# %02d: omega", 2+12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
+            }
+            if (GlobalConfig.sssOptions.useLineSearch) {
+                fResid.writefln("# %02d: R0", 3+12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
+                fResid.writefln("# %02d: RU", 4+12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
+            }
             fResid.close();
         }
     }
