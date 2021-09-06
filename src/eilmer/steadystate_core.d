@@ -203,6 +203,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     ConservedQuantities maxResiduals = new ConservedQuantities(nConserved);
     ConservedQuantities currResiduals = new ConservedQuantities(nConserved);
     number mass_balance = 0.0;
+    number omega = 1.0;
+    number R0 = 0.0;
+    number RU = 0.0;
 
     double cfl, cflTrial;
     double dt;
@@ -655,8 +658,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 fResid.writefln("# %02d: omega", 2+12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
             }
             if (GlobalConfig.sssOptions.useLineSearch) {
-                fResid.writefln("# %02d: R0", 3+12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
-                fResid.writefln("# %02d: RU", 4+12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
+                fResid.writefln("# %02d: RU", 3+12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
             }
             fResid.close();
         }
@@ -721,7 +723,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
 
             // physicality check (currently we only check the conserved mass variable)
-            number omega = 1.0;
+            omega = 1.0;
             if (GlobalConfig.sssOptions.usePhysicalityCheck) {
                 number theta = 0.2;
                 foreach (blk; parallel(localFluidBlocks,1)) {
@@ -771,10 +773,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 } // end helper function
 
                 // calculate steady residual R0(Qn)
-                number R0 = 0.0;
+                R0 = 0.0;
                 evaluate_unsteady_residual(R0, to!number(0.0));
                 // calculate unsteady residual RU(Qn,dQn)
-                number RU = 0.0;
+                RU = 0.0;
                 evaluate_unsteady_residual(RU, omega);
 
                 // search along line until unsteady residual is reduced
@@ -967,6 +969,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 }
                 fResid.writef("%20.16e ", fabs(mass_balance.re));
                 fResid.writef("%20.16e ", linSolResid);
+                if (GlobalConfig.sssOptions.useLineSearch || GlobalConfig.sssOptions.usePhysicalityCheck) {
+                    fResid.writef("%20.16e ", omega.re);
+                }
+                if (GlobalConfig.sssOptions.useLineSearch) {
+                    fResid.writef("%20.16e ", RU.re);
+                }
                 fResid.write("\n");
                 fResid.close();
             }
