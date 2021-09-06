@@ -243,7 +243,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     if (usePreconditioner) {
         evalRHS(0.0, 0);
         // initialize the flow Jacobians used as local precondition matrices for GMRES
-
         final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
             case PreconditionMatrixType.jacobi:
                 foreach (blk; localFluidBlocks) { blk.initialize_jacobian(-1, GlobalConfig.sssOptions.preconditionerSigma); }
@@ -261,7 +260,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 // do nothing
                 break;
         } // end switch
-
         //foreach (blk; localFluidBlocks) { blk.verify_jacobian(GlobalConfig.sssOptions.preconditionerSigma); }
     }
 
@@ -713,6 +711,79 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
             }
             if (failedAttempt > 0) { continue; }
+
+
+            // physicality check (currently we only check the conserved mass variable)
+            number omega = 1.0;
+            if (GlobalConfig.sssOptions.usePhysicalityCheck) {
+                number theta = 0.2;
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    int cellCount = 0;
+                    auto cqi = blk.myConfig.cqi;
+                    foreach (cell; blk.cells) {
+                        number rel_diff_limit = fabs(blk.dU[cellCount+MASS]/(theta*cell.U[0].vec[cqi.mass]));
+                        omega = 1.0/(max(rel_diff_limit,1.0/omega));
+                        cellCount += nConserved;
+                    }
+                }
+                version(mpi_parallel) {
+                    MPI_Allreduce(MPI_IN_PLACE, &(omega.re), 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+                }
+                //writeln("omega_pc :: ", omega);
+            } // end physicality check
+
+            // line search
+            number theta_bt = 0.7;
+            if (GlobalConfig.sssOptions.useLineSearch) {
+                // helper function
+                pragma(inline) void evaluate_unsteady_residual(ref number R, number omega) {
+                    foreach (blk; parallel(localFluidBlocks,1)) {
+                        auto cqi = blk.myConfig.cqi;
+                        int cellCount = 0;
+                        foreach (cell; blk.cells) {
+                            cell.U[1].copy_values_from(cell.U[0]);
+                            foreach (i; 0 .. cqi.n) { cell.U[1].vec[i] = cell.U[0].vec[i] + omega*blk.dU[cellCount+i]; }
+                            cell.decode_conserved(0, 1, 0.0);
+                            cellCount += nConserved;
+                        }
+                    }
+                    evalRHS(pseudoSimTime, 1);
+                    foreach (blk; parallel(localFluidBlocks,1)) {
+                        auto cqi = blk.myConfig.cqi;
+                        int cellCount = 0;
+                        foreach (cell; blk.cells) {
+                            foreach (i; 0 .. cqi.n) { blk.FU[cellCount+i] = omega*(1.0/dt)*blk.dU[cellCount+i] - cell.dUdt[1].vec[i]; }
+                            cellCount += nConserved;
+                        }
+                    }
+                    mixin(dot_over_blocks("R", "FU", "FU"));
+                    version(mpi_parallel) {
+                        MPI_Allreduce(MPI_IN_PLACE, &(R), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                    }
+                    R = sqrt(R);
+                } // end helper function
+
+                // calculate steady residual R0(Qn)
+                number R0 = 0.0;
+                evaluate_unsteady_residual(R0, to!number(0.0));
+                // calculate unsteady residual RU(Qn,dQn)
+                number RU = 0.0;
+                evaluate_unsteady_residual(RU, omega);
+
+                // search along line until unsteady residual is reduced
+                while (RU > R0) {
+                    omega *= theta_bt;
+                    if ( omega < 0.01 ) {
+                        omega = 0.01;
+                        break;
+                    }
+                    RU = 0.0;
+                    evaluate_unsteady_residual(RU, omega);
+                }
+                //writeln("RU :: ", RU, ", R0 :: ", R0);
+                //writeln("omega_ls :: ", omega);
+            } // end line search
+
             foreach (blk; parallel(localFluidBlocks,1)) {
                 size_t nturb = blk.myConfig.turb_model.nturb;
                 size_t nsp = blk.myConfig.gmodel.n_species;
@@ -721,25 +792,25 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 auto cqi = blk.myConfig.cqi;
                 foreach (cell; blk.cells) {
                     cell.U[1].copy_values_from(cell.U[0]);
-                    cell.U[1].vec[cqi.mass] = cell.U[0].vec[cqi.mass] + blk.dU[cellCount+MASS];
-                    cell.U[1].vec[cqi.xMom] = cell.U[0].vec[cqi.xMom] + blk.dU[cellCount+X_MOM];
-                    cell.U[1].vec[cqi.yMom] = cell.U[0].vec[cqi.yMom] + blk.dU[cellCount+Y_MOM];
+                    cell.U[1].vec[cqi.mass] = cell.U[0].vec[cqi.mass] + omega*blk.dU[cellCount+MASS];
+                    cell.U[1].vec[cqi.xMom] = cell.U[0].vec[cqi.xMom] + omega*blk.dU[cellCount+X_MOM];
+                    cell.U[1].vec[cqi.yMom] = cell.U[0].vec[cqi.yMom] + omega*blk.dU[cellCount+Y_MOM];
                     if ( blk.myConfig.dimensions == 3 )
-                        cell.U[1].vec[cqi.zMom] = cell.U[0].vec[cqi.zMom] + blk.dU[cellCount+Z_MOM];
-                    cell.U[1].vec[cqi.totEnergy] = cell.U[0].vec[cqi.totEnergy] + blk.dU[cellCount+TOT_ENERGY];
+                        cell.U[1].vec[cqi.zMom] = cell.U[0].vec[cqi.zMom] + omega*blk.dU[cellCount+Z_MOM];
+                    cell.U[1].vec[cqi.totEnergy] = cell.U[0].vec[cqi.totEnergy] + omega*blk.dU[cellCount+TOT_ENERGY];
                     foreach(it; 0 .. nturb){
-                        cell.U[1].vec[cqi.rhoturb+it] = cell.U[0].vec[cqi.rhoturb+it] + blk.dU[cellCount+TKE+it];
+                        cell.U[1].vec[cqi.rhoturb+it] = cell.U[0].vec[cqi.rhoturb+it] + omega*blk.dU[cellCount+TKE+it];
                     }
                     version(multi_species_gas){
                     if (blk.myConfig.n_species > 1) {
-                        foreach(sp; 0 .. nsp) { cell.U[1].vec[cqi.species+sp] = cell.U[0].vec[cqi.species+sp] + blk.dU[cellCount+SPECIES+sp]; }
+                        foreach(sp; 0 .. nsp) { cell.U[1].vec[cqi.species+sp] = cell.U[0].vec[cqi.species+sp] + omega*blk.dU[cellCount+SPECIES+sp]; }
                     } else {
                         // enforce mass fraction of 1 for single species gas
                         cell.U[1].vec[cqi.species+0] = cell.U[1].vec[cqi.mass];
                     }
                     }
                     version(multi_T_gas){
-                        foreach(imode; 0 .. nmodes) { cell.U[1].vec[cqi.modes+imode] = cell.U[0].vec[cqi.modes+imode] + blk.dU[cellCount+MODES+imode]; }
+                        foreach(imode; 0 .. nmodes) { cell.U[1].vec[cqi.modes+imode] = cell.U[0].vec[cqi.modes+imode] + omega*blk.dU[cellCount+MODES+imode]; }
                     }
                     try {
                         cell.decode_conserved(0, 1, 0.0);
