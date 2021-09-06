@@ -1,0 +1,20 @@
+# X2's cold driven 4.2 MPa pure helium condition from 
+# the work of Matt Thompson
+# The condition can be found in the paper
+# Thompson et al. (2019)
+# Generating 5-km/s Low Density Hypersonic Test Flows 
+# in an Expansion Tube for Studying Ultraviolet Radiation
+# Proc. of the 32nd International Symposium on Shock Waves (ISSW32)
+# Chris James (c.james4@uq.edu.au) - 06/09/21
+
+driver_condition_name : 'x2-cold-driver-pure-He-4.2-MPa'
+driver_condition_type : 'cold-driven-ideal'
+
+driver_gas_model : 'ideal-preset'
+driver_fill_gas_name : 'he'
+
+p4 : 4.2e6 # Pa
+
+M_throat : 1.0 
+
+

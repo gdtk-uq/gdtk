@@ -1,13 +1,16 @@
-# X2's cold driven 6 MPa pure helium condition from the work of Matt Thompson.
+# X2's cold driven 6 MPa pure helium condition 
+# from the work of Matt Thompson.
+# I am not sure if this driver condition was
+# actually used but it is within the capabilities
+# of the driver and is already in the repository
+# so we may as well keep it there.
+# Chris James (c.james4@uq.edu.au) - 06/09/21
 
 driver_condition_name : 'x2-cold-driver-pure-He-6-MPa'
 driver_condition_type : 'cold-driven-ideal'
 
-driver_gas_model : 'CEAGas'
-driver_fill_composition : {'He':1.0} 
-driver_speciesList : ['He']
-driver_inputUnits : 'moles' 
-driver_withIons : False
+driver_gas_model : 'ideal-preset'
+driver_fill_gas_name : 'he'
 
 p4 : 6.0e6 # Pa
 

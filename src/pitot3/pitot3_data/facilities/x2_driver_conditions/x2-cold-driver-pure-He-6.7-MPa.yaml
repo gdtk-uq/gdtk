@@ -1,0 +1,17 @@
+# X2's cold driven 6.7 MPa pure helium condition 
+# from the work of Matt Thompson.
+# This driver has not been used in published work yet
+# but is planned for Matt's final thesis experiments
+# Chris James (c.james4@uq.edu.au) - 06/09/21
+
+driver_condition_name : 'x2-cold-driver-pure-He-6.7-MPa'
+driver_condition_type : 'cold-driven-ideal'
+
+driver_gas_model : 'ideal-preset'
+driver_fill_gas_name : 'he'
+
+p4 : 6.7e6 # Pa
+
+M_throat : 1.0 
+
+

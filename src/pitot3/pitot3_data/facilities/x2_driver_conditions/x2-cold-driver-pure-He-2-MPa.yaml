@@ -1,0 +1,19 @@
+# X2's cold driven 2 MPa pure helium condition from 
+# the work of Sangdi Gu
+# The driver condition can be found in Table 3.1 of Sangdi's thesis:
+# Gu (2017)
+# Mars Entry Afterbody Radiative Heating: An Experimental Study of
+# Nonequilibrium CO2 Expanding Flow
+# Chris James (c.james4@uq.edu.au) - 06/09/21
+
+driver_condition_name : 'x2-cold-driver-pure-He-2-MPa'
+driver_condition_type : 'cold-driven-ideal'
+
+driver_gas_model : 'ideal-preset'
+driver_fill_gas_name : 'he'
+
+p4 : 2.0e6 # Pa
+
+M_throat : 1.0 
+
+

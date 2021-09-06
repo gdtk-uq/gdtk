@@ -217,7 +217,7 @@ class Driver(object):
     Class to store and calculate facility driver information.
     """
 
-    def __init__(self, cfg, p_0 = None, T_0 = None):
+    def __init__(self, cfg, p_0 = None, T_0 = None, preset_gas_models_folder = None):
         """
 
         :param cfg: Python dictionary which contains configuration information which is loaded into the class,
@@ -249,7 +249,7 @@ class Driver(object):
 
         self.driver_gas_model = cfg['driver_gas_model']
 
-        # just doing the CEA model for now...
+        # the user specified CEA model for now...
         if self.driver_gas_model == 'CEAGas':
 
             self.driver_fill_composition = cfg['driver_fill_composition']
@@ -262,7 +262,29 @@ class Driver(object):
             eilmer4_CEAGas_input_file_creator('PITOT3_cea_driver_condition', 'driver_gas', self.driver_speciesList, self.driver_fill_composition,
                                               self.driver_inputUnits, self.driver_withIons)
 
-            self.gmodel = GasModel('PITOT3_cea_driver_condition.lua')
+            driver_gmodel_location = 'PITOT3_cea_driver_condition.lua'
+
+        elif self.driver_gas_model == 'CEAGas-preset':
+
+            self.driver_gas_model = 'CEAGas'
+            self.driver_fill_gas_name = cfg['driver_fill_gas_name']
+
+            driver_gmodel_location = '{0}/cea-{1}-gas-model.lua'.format(preset_gas_models_folder, self.driver_fill_gas_name)
+
+        elif self.driver_gas_model == 'ideal-preset':
+
+            self.driver_gas_model = 'ideal'
+            self.driver_fill_gas_name = cfg['driver_fill_gas_name']
+
+            driver_gmodel_location = '{0}/ideal-{1}-gas-model.lua'.format(preset_gas_models_folder, self.driver_fill_gas_name)
+
+        elif self.driver_gas_model == 'custom' and cfg['driver_fill_gas_filename']:
+
+            self.driver_fill_gas_filename = cfg['driver_fill_gas_filename']
+
+            driver_gmodel_location = self.driver_fill_gas_filename
+
+        self.gmodel = GasModel(os.path.expandvars(driver_gmodel_location))
 
         # now what we have to do now depends on the type of driver condition
         # we just have empirical for now, which is easy, as they just specify p4 and T4...
@@ -1485,6 +1507,8 @@ class Tube(object):
 
                     print ("The total enthalpy (Ht) at state {0} is {1:.2f} MJ/kg.".format(facility_state.get_state_name(),
                                                                                            total_enthalpy/1.0e6))
+
+
 
 
         else:

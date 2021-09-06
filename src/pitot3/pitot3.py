@@ -14,7 +14,7 @@ import yaml
 from pitot3_utils.pitot3_classes import Facility, Driver, Diaphragm, Facility_State, Tube, Nozzle, Test_Section
 from pitot3_utils.pitot3_classes import eilmer4_CEAGas_input_file_creator, expansion_tube_test_time_calculator, state_output_for_final_output, pitot3_results_output
 
-VERSION_STRING = '04-Sep-2021'
+VERSION_STRING = '06-Sep-2021'
 
 #-----------------------------------------------------------------------------------
 
@@ -169,7 +169,7 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
 
     # TO DO: I was thinking that it would be good to make this have lots of inputs, but it is almost too complicated
     # + it generally comes from a file...
-    driver = Driver(driver_condition_input_data, p_0=p_0, T_0=T_0)
+    driver = Driver(driver_condition_input_data, p_0=p_0, T_0=T_0, preset_gas_models_folder = preset_gas_models_folder)
 
     state4 = driver.get_driver_rupture_state()
     print("Driver gas model is {0}.".format(state4.get_gas_state().gmodel.type_str))
