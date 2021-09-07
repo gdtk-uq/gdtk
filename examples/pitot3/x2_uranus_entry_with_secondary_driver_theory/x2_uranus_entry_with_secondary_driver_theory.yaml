@@ -1,0 +1,38 @@
+# x2_uranus_entry_with_secondary_driver_theory.yaml: 
+# This is a simple config file to run a fully theoretical
+# PITOT3 Uranus entry case with a secondary driver.
+# This is the fastest condition ever tested on X2,
+# that is not a brag, just saying that it is a stressful case
+# for the code.
+# The condition is from James et al. (2020)
+# Experimentally Simulating Giant Planet Entry in an Expansion Tube
+# Journal of Spacecraft and Rockets, Vol. 57, No. 4
+# In that work, the condition is called X2-GG-UE-2.5 mm-SD
+# Chris James (c.james4@uq.edu.au) - 30/08/21
+
+# initial code set up
+mode : 'fully_theoretical'
+output_filename : 'x2_uranus_entry_with_secondary_driver_theory'
+
+# facility set up
+facility : 'x2_nozzle_with_secondary_driver'
+driver_condition : 'x2-lwp-2.5mm-100He-0-empirical'
+
+# secondary driver
+psd1 : 21.0e3 # Pa
+
+# shock tube
+test_gas_gas_model : 'CEAGas'
+test_gas_name : 'uranus'
+p1 : 2000.0 # Pa
+
+# acceleration tube
+p5 : 0.5 # Pa
+acceleration_tube_expand_to : 'shock_speed'
+
+# nozzle area ratio
+area_ratio : 5.64
+
+# test section stuff
+cone_half_angle_degrees : 15.0 # degrees
+wedge_angle_degrees : 54.0 # degrees

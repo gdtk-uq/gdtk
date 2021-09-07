@@ -1,0 +1,31 @@
+# x2_cold_driver_high_pressure_air_theoryyaml: 
+#
+# This is a simple config file to run a fully theoretical
+# PITOT3 case for a high pressure, cold driven X2 condition from 
+# the NUS project.
+# This is the condition from Cullen et al. (2021)
+# Infrared thermography on a biconic model in hypersonic
+# expansion tube flows
+# AIAA Scitech 2021 Forum
+#
+# Chris James (c.james4@uq.edu.au) - 07/09/21
+
+# initial code set up
+mode : 'fully_theoretical'
+output_filename : 'x2_cold_driver_high_pressure_air_theory'
+
+# facility set up
+facility : 'x2_without_nozzle'
+driver_condition : 'x2-cold-driver-pure-80-pc-He-20-pc-Ar-6.7-MPa'
+
+# shock tube
+test_gas_gas_model : 'CEAGas'
+test_gas_name : 'n2-o2-with-ions'
+p1 : 160.0e3 # Pa
+
+# acceleration tube
+p5 : 600.0 # Pa
+acceleration_tube_expand_to : 'flow_behind_shock' # as this is a very high pressure condition
+
+# test section stuff
+cone_half_angle_degrees : 40.0 # degrees
