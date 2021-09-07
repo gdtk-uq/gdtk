@@ -20,7 +20,9 @@ USER_GUIDES := eilmer-user-guide \
 	reacting-gas-guide \
 	foammesh-user-guide
 
-all: $(REF_MANS) eilmer-catalog eilmer-faq presentations theses $(USER_GUIDES)
+TECH_NOTES := hybrid-fluxes
+
+all: $(REF_MANS) eilmer-catalog eilmer-faq presentations theses $(USER_GUIDES) $(TECH_NOTES)
 	hugo
 
 sync:
@@ -42,6 +44,8 @@ clean:
 	- rm $(EILMER_DIR)/eilmer-reference-manual-for-hugo.adoc
 	- rm $(EILMER_DIR)/eilmer-catalog-for-hugo.adoc
 	- rm $(EILMER_DIR)/eilmer-faq-for-hugo.adoc
+	- rm $(EILMER_DIR)/technical-notes/hybrid-fluxes-for-hugo.adoc
+	- rm -rf $(EILMER_DIR)/technical-notes/hybrid-fluxes-for-hugo
 	- rm $(ESTCN_DIR)/estcn-manual-for-hugo.adoc
 	- rm -rf $(ESTCN_DIR)/estcn-manual-for-hugo
 	- rm $(L1D_DIR)/l1d-reference-manual-for-hugo.adoc
@@ -113,6 +117,20 @@ nm-manual:
 	cat $(PYTHON_DIR)/nm-manual-hugo-header.txt $(PYTHON_DIR)/nm-reference-manual.adoc > $(PYTHON_DIR)/nm-manual-for-hugo.adoc
 	rm $(PYTHON_DIR)/nm-reference-manual.adoc
 
+#--- Technical notes
+
+hybrid-fluxes:
+	cp -r ../doc/technical-notes/hybrid-fluxes.adoc $(EILMER_DIR)/technical-notes/
+	- mkdir -p $(EILMER_DIR)/technical-notes/hybrid-fluxes-for-hugo
+	cp -r ../doc/technical-notes/resources $(EILMER_DIR)/technical-notes/hybrid-fluxes-for-hugo
+	sed -i '/^:stylesheet:/d' $(EILMER_DIR)/technical-notes/hybrid-fluxes.adoc
+	cat $(EILMER_DIR)/technical-notes/hybrid-fluxes-hugo-header.txt $(EILMER_DIR)/technical-notes/hybrid-fluxes.adoc > $(EILMER_DIR)/technical-notes/hybrid-fluxes-for-hugo.adoc
+	rm $(EILMER_DIR)/technical-notes/hybrid-fluxes.adoc
+
+
+
+#--- User Guides
+
 eilmer-user-guide:
 	- mkdir -p static/pdfs
 	cd $(DGD_DOC)/eilmer/user-guide; make pdf
@@ -137,7 +155,6 @@ foammesh-user-guide:
 	- mkdir -p static/pdfs
 	cd $(DGD_DOC)/foammesh/user-guide; make pdf
 	cp $(DGD_DOC)/foammesh/user-guide/foammesh-user-guide.pdf static/pdfs/
-
 
 presentations:
 	- mkdir -p static/pdfs
