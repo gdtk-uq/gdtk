@@ -1,0 +1,31 @@
+# x2_without_nozzle_with_secondary_driver.yaml
+# Configuration file for X2 facility without the nozzle in PITOT3 but with the secondary driver.
+# I called this 'without nozzle' as we normally use the nozzle.
+#
+# Lengths and sensor locations from Gildfind et al. (2014)
+# Production of High-Mach-Number Scramjet Flow Conditions in an Expansion Tube
+# AIAA Journal, Vol 52, No. 1, pp 162 - 177
+#
+# Chris James (c.james4@uq.edu.au) - 07/09/21
+
+facility_name : 'X2'
+facility_type : 'expansion_tube'
+secondary_driver : True
+nozzle : False
+
+secondary_driver_length : 3.418 # m
+secondary_driver_diameter : 0.085 # m
+secondary_driver_sensors : ['sd1','sd2','sd3']
+
+shock_tube_length : 2.558 # m
+shock_tube_diameter : 0.085 # m
+shock_tube_sensors : ['st1','st2','st3']
+
+acceleration_tube_length : 2.609 #m 
+acceleration_tube_diameter : 0.085 # m
+acceleration_tube_sensors : ['at1','at2','at3','at4','at5','at6','at7','at8']
+
+sensor_locations : {'sd1':2.577,'sd2':2.810,'sd3':3.043,'st1':4.231,'st2':4.746,'st3':5.260,
+                    'at1':6.437,'at2':6.615,'at3':6.796,'at4':7.590,'at5':7.846,'at6':8.096,'at7': 8.157,'at8':8.197}
+
+driver_conditions_folder : 'x2_driver_conditions' #inside the facilities folder...

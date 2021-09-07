@@ -1,0 +1,21 @@
+# X2's cold driven 6.7 MPa 80%He/20%Ar (by volume) condition
+# which Richard Morgan and Matt Thompson designed for the NUS project
+# This driver condition is used in Cullen et al. (2021)
+# Infrared thermography on a biconic model in hypersonic
+# expansion tube flows
+# AIAA Scitech 2021 Forum
+# Chris James (c.james4@uq.edu.au) - 07/09/21
+
+driver_condition_name : 'x2-cold-driver-pure-80-pc-He-20-pc-Ar-6.7-MPa'
+driver_condition_type : 'cold-driven-ideal'
+
+driver_gas_model : 'thermally-perfect-preset'
+driver_fill_gas_name : 'he-ar'
+driver_fill_composition : {'He':0.8,'Ar':0.2} 
+driver_inputUnits : 'moles' 
+
+p4 : 6.7e6 # Pa
+
+M_throat : 1.0 
+
+

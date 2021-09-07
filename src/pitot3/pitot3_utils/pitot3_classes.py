@@ -278,6 +278,52 @@ class Driver(object):
 
             driver_gmodel_location = '{0}/ideal-{1}-gas-model.lua'.format(preset_gas_models_folder, self.driver_fill_gas_name)
 
+        elif self.driver_gas_model == 'thermally-perfect-preset':
+            self.driver_gas_model = 'thermally-perfect'
+            self.driver_fill_gas_name = cfg['driver_fill_gas_name']
+
+            # we need the composition for the thermally perfect gas as the gas model file does not store it (just the species)
+            self.driver_fill_composition = cfg['driver_fill_composition']
+            self.driver_inputUnits = cfg['driver_inputUnits']
+
+            driver_gmodel_location = '{0}/thermally-perfect-{1}-gas-model.lua'.format(preset_gas_models_folder,
+                                                                                      self.driver_fill_gas_name)
+
+            # the gas state input requires mass fractions, so if we inputted them great, if not, we need to calculate them...
+            if self.driver_inputUnits == 'massf':
+                self.driver_fill_composition_massf = self.driver_fill_composition
+            else:
+                # we need the molecular masses to get from mole fractions to mass fractions
+                # we will need to make a gas model to do that...
+
+                gmodel = GasModel(os.path.expandvars(driver_gmodel_location))
+
+                self.driver_speciesList = gmodel.species_names
+
+                molecular_mass_list = gmodel.mol_masses
+
+                molecular_mass_dict = {}
+
+                for species, molecular_mass in zip (self.driver_speciesList, molecular_mass_list):
+                    molecular_mass_dict[species] = molecular_mass
+
+                # now we need the total molecular mass for our calculation
+                total_molecular_mass = 0.0
+
+                for species in self.driver_speciesList:
+                    total_molecular_mass += molecular_mass_dict[species]*self.driver_fill_composition[species]
+
+                # which we can now use to turn out mole fractions into mass fractions:
+
+                self.driver_fill_composition_massf = {}
+
+                for species in self.driver_speciesList:
+                    self.driver_fill_composition_massf[species] = self.driver_fill_composition[species]*(molecular_mass_dict[species]/ total_molecular_mass)
+
+                print(self.driver_fill_composition_massf)
+
+                # TO DO: add making sure that the mass fractions add up to 1...
+
         elif self.driver_gas_model == 'custom' and cfg['driver_fill_gas_filename']:
 
             self.driver_fill_gas_filename = cfg['driver_fill_gas_filename']
@@ -317,6 +363,9 @@ class Driver(object):
             state4i.p = self.driver_p
             state4i.T = self.driver_T
 
+            if self.driver_gas_model == 'thermally-perfect':
+                state4i.massf = self.driver_fill_composition_massf
+
             state4i.update_thermo_from_pT()
             state4i.update_sound_speed()
 
@@ -329,6 +378,9 @@ class Driver(object):
             reference_gas_state = GasState(self.gmodel)
             reference_gas_state.p = p_0
             reference_gas_state.T = T_0
+
+            if self.driver_gas_model == 'thermally-perfect':
+                reference_gas_state.massf = self.driver_fill_composition_massf
 
             reference_gas_state.update_thermo_from_pT()
             reference_gas_state.update_sound_speed()
@@ -358,6 +410,9 @@ class Driver(object):
         state4.p = self.p4
         state4.T = self.T4
 
+        if self.driver_gas_model == 'thermally-perfect':
+            state4.massf = self.driver_fill_composition_massf
+
         state4.update_thermo_from_pT()
         state4.update_sound_speed()
 
@@ -368,6 +423,9 @@ class Driver(object):
         reference_gas_state = GasState(self.gmodel)
         reference_gas_state.p = p_0
         reference_gas_state.T = T_0
+
+        if self.driver_gas_model == 'thermally-perfect':
+            reference_gas_state.massf = self.driver_fill_composition_massf
 
         reference_gas_state.update_thermo_from_pT()
         reference_gas_state.update_sound_speed()
@@ -829,12 +887,17 @@ class Facility_State(object):
             return self.pitot_state
         elif hasattr(self, 'pitot_state') and not self.pitot_state:
             # means that it failed to calculate the Pitot state
-            print("Cannot return the pitot state as we have failed to calculate it in the past.")
+            print("Cannot return the pitot condition as PITOT3 failed to calculate it in the past.")
             print("Will return None.")
             return None
         else:
             self.calculate_pitot_condition()
-            return self.pitot_state
+            if not self.pitot_state:
+                print("Cannot return the pitot condition as PITOT3 failed to calculate it.")
+                print("Will return None.")
+                return None
+            else:
+                return self.pitot_state
 
     def get_pitot_pressure(self):
         """
@@ -846,12 +909,17 @@ class Facility_State(object):
             return self.pitot_state.p
         elif hasattr(self, 'pitot_state') and not self.pitot_state:
             # means that it failed to calculate the Pitot state
-            print("Cannot return the pitot pressure as we have failed to calculate the pitot state in the past.")
+            print("Cannot return the pitot pressure as PITOT3 failed to calculate the pitot condition in the past.")
             print("Will return None.")
             return None
         else:
             self.calculate_pitot_condition()
-            return self.pitot_state.p
+            if not self.pitot_state:
+                print("Cannot return the pitot pressure as PITOT3 failed to calculate it.")
+                print("Will return None.")
+                return None
+            else:
+                return self.pitot_state.p
 
     def calculate_total_condition(self):
         """
@@ -888,12 +956,17 @@ class Facility_State(object):
             return self.total_state
         elif hasattr(self, 'total_state') and not self.total_state:
             # means that it failed to calculate the total state
-            print("Cannot return the total state as we have failed to calculate the total state in the past.")
+            print("Cannot return the total condition as PITOT3 failed to calculate the total condition in the past.")
             print("Will return None.")
             return None
         else:
             self.calculate_total_condition()
-            return self.total_state
+            if not self.total_state:
+                print("Cannot return the total condition as PITOT3 failed to calculate it.")
+                print("Will return None.")
+                return None
+            else:
+                return self.total_state
 
     def get_total_pressure(self):
         """
@@ -905,12 +978,17 @@ class Facility_State(object):
             return self.total_state.p
         elif hasattr(self, 'total_state') and not self.total_state:
             # means that it failed to calculate the total state
-            print("Cannot return the total pressure as we have failed to calculate the total state in the past.")
+            print("Cannot return the total pressure as PITOT3 failed to calculate the total condition in the past.")
             print("Will return None.")
             return None
         else:
             self.calculate_total_condition()
-            return self.total_state.p
+            if not self.total_state:
+                print("Cannot return the total pressure as PITOT3 failed to calculate the total condition.")
+                print("Will return None.")
+                return None
+            else:
+                return self.total_state.p
 
     def get_total_temperature(self):
         """
@@ -922,12 +1000,17 @@ class Facility_State(object):
             return self.total_state.T
         elif hasattr(self, 'total_state') and not self.total_state:
             # means that it failed to calculate the total state
-            print("Cannot return the total temperature as we have failed to calculate the total state in the past.")
+            print("Cannot return the total temperature as PITOT3 failed to calculate the total condition in the past.")
             print("Will return None.")
             return None
         else:
             self.calculate_total_condition()
-            return self.total_state.T
+            if not self.total_state:
+                print("Cannot return the total temperature as PITOT3 failed to calculate the total condition.")
+                print("Will return None.")
+                return None
+            else:
+                return self.total_state.T
 
     def set_reference_gas_state(self, reference_gas_state):
         """
@@ -993,7 +1076,12 @@ class Facility_State(object):
         elif self.reference_gas_state:
             # just calculate the enthalpy and then return it...
             self.calculate_total_enthalpy()
-            return self.total_enthalpy
+            if not self.total_enthalpy:
+                print("Cannot return the total enthalpy as PITOT3 failed to calculate it.")
+                print("Will return None.")
+                return None
+            else:
+                return self.total_enthalpy
         else:
             print("This FacilityState does not have a reference gas state which is required to calculate enthalpy.")
             print("None will be returned.")
@@ -1048,7 +1136,12 @@ class Facility_State(object):
 
         self.calculate_total_enthalpy()
 
-        self.flight_equivalent_velocity = math.sqrt(2.0 * self.total_enthalpy)
+        if self.total_enthalpy:
+            self.flight_equivalent_velocity = math.sqrt(2.0 * self.total_enthalpy)
+        else:
+            print("Total enthalpy could not be calculated, so the flight equivalent velocity could not be calculated either.")
+            print("self.flight_equivalent_velocity will be set to None.")
+            self.flight_equivalent_velocity = None
 
         return
 
@@ -1062,7 +1155,12 @@ class Facility_State(object):
         elif self.reference_gas_state:
             # just calculate the flight equivalent velocity and return it.
             self.calculate_flight_equivalent_velocity()
-            return self.flight_equivalent_velocity
+            if not self.flight_equivalent_velocity:
+                print("Cannot return the flight equivalent velocity as PITOT3 failed to calculate it.")
+                print("Will return None.")
+                return None
+            else:
+                return self.flight_equivalent_velocity
         else:
             print("This FacilityState does not have a reference gas state which is required to calculate the flight equivalent velocity.")
             print("None will be returned.")
@@ -2174,11 +2272,17 @@ def state_output_for_final_output(facility_state):
         output_line += "{0:<9.2e}".format(rho)
     else:
         output_line += "{0:<9.5f}".format(rho)
-    if pitot_p/1000.0 < 10000.0:
+    if pitot_p == None:
+        # it failed...
+        output_line += "{0:<8}".format("failed")
+    elif pitot_p/1000.0 < 10000.0:
         output_line += "{0:<8.1f}".format(pitot_p/1000.0) # to get kPa
     else:
         output_line += "{0:<8.0f}".format(pitot_p/1000.0)  # to get kPa
-    if p0/1.0e6 < 1000.0:
+    if p0 == None:
+        # it failed...
+        output_line += "{0:<7}".format("failed")
+    elif p0/1.0e6 < 1000.0:
         output_line += "{0:<7.2f}".format(p0/1.0e6) # to get MPa
     elif 1000.0 <= p0/1.0e6 < 10000.0:
         output_line += "{0:<7.1f}".format(p0 / 1.0e6)  # to get MPa
@@ -2187,14 +2291,20 @@ def state_output_for_final_output(facility_state):
     if Ht == '-':
         output_line += "{0:<6}".format(Ht)
     else:
-        if Ht/1.0e6 < 100.0:
+        if Ht == None:
+            # it failed...
+            output_line += "{0:<7}".format("failed")
+        elif Ht/1.0e6 < 100.0:
             output_line += "{0:<7.2f}".format(Ht/1.0e6) # to get MJ/kg
         else:
             output_line += "{0:<7.1f}".format(Ht/1.0e6)  # to get MJ/kg
     if h == '-':
         output_line += "{0:<6}".format(h)
     else:
-        output_line += "{0:<5.2f}".format(h / 1.0e6)  # to get MJ/kg
+        if h == None:
+            output_line += "{0:<5}".format("failed")
+        else:
+            output_line += "{0:<5.2f}".format(h / 1.0e6)  # to get MJ/kg
 
     return output_line
 
@@ -2448,15 +2558,36 @@ def pitot3_results_output(config_data, gas_path, object_dict):
 
         freestream_total_temperature = freestream_state.get_total_temperature()
 
+        if not freestream_total_temperature:
+            # the nozzle expansion is isenthalpic, so if the freestream total enthalpy failed, we can try the nozzle inlet state...
+            if 'nozzle' in object_dict:
+                print("The freestream total temperature was not available so we will attempt to get it from the nozzle inlet state.")
+                nozzle = object_dict['nozzle']
+                nozzle_inlet_state = nozzle.get_entrance_state()
+
+                freestream_total_temperature = nozzle_inlet_state.get_total_temperature()
+
         freestream_flight_equivalent_velocity = freestream_state.get_flight_equivalent_velocity()
 
-        print("The freestream ({0}) total temperature (Tt) is {1:.2f} K.".format(freestream_state.get_state_name(),
-                                                                                 freestream_total_temperature),
-              file=output_stream)
-        print("The freestream ({0}) flight equivalent velocity (Ue) is {1:.2f} m/s.".format(
-            freestream_state.get_state_name(),
-            freestream_flight_equivalent_velocity),
-              file=output_stream)
+        if not freestream_flight_equivalent_velocity :
+            # the nozzle expansion is isenthalpic, so if the freestream total enthalpy failed, we can try the nozzle inlet state...
+            if 'nozzle' in object_dict:
+                print("The freestream flight equivalent velocity was not available so we will attempt to get it from the nozzle inlet state.")
+                nozzle = object_dict['nozzle']
+                nozzle_inlet_state = nozzle.get_entrance_state()
+
+                freestream_flight_equivalent_velocity = nozzle_inlet_state.get_flight_equivalent_velocity()
+
+        if freestream_total_temperature:
+            print("The freestream ({0}) total temperature (Tt) is {1:.2f} K.".format(freestream_state.get_state_name(),
+                                                                                     freestream_total_temperature),
+                  file=output_stream)
+
+        if freestream_flight_equivalent_velocity:
+            print("The freestream ({0}) flight equivalent velocity (Ue) is {1:.2f} m/s.".format(
+                freestream_state.get_state_name(),
+                freestream_flight_equivalent_velocity),
+                  file=output_stream)
 
         if 'acceleration_tube' in locals():
             if acceleration_tube.tube_length:
