@@ -846,6 +846,7 @@ public:
             foreach (i; 0 .. n_incoming) {
                 size_t fs_size = 2;
                 size_t ne = incoming_ncells_list[i] * fs_size;
+                version(complex_numbers) { ne *= 2; }
                 if (incoming_flowstate_buf_list[i].length < ne) { incoming_flowstate_buf_list[i].length = ne; }
                 // Post non-blocking receive for flowstate data that we expect to receive later
                 // from the src_blk MPI process.
@@ -865,6 +866,7 @@ public:
             foreach (i; 0 .. n_outgoing) {
                 size_t fs_size = 2;
                 size_t ne = outgoing_ncells_list[i] * fs_size;
+                version(complex_numbers) { ne *= 2; }
                 if (outgoing_flowstate_buf_list[i].length < ne) { outgoing_flowstate_buf_list[i].length = ne; }
                 auto buf = outgoing_flowstate_buf_list[i];
 
