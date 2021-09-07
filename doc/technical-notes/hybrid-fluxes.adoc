@@ -2,7 +2,7 @@
 Daryl M. Bond
 2021-09-07
 :toc: right
-:stylesheet: readthedocs.css
+:stylesheet: ../readthedocs.css
 :sectnums:
 :imagesdir: resources
 :stem: latexmath
@@ -45,7 +45,7 @@ shear tolerances are -0.1 and 1.0, respectively.
 
 .Shock detector and associated pressure field for the forward facing step example problem
 [#shock_detector]
-image::shock_detector.png[]
+image::shock_detector.png[width=100%]
 
 From this figure it is clear that we are mostly capturing the shocks, but are
 doing so in a manner that introduces sharp transitions between our selected flux
@@ -88,7 +88,7 @@ set S in each face to maximum of left and right cell
 
 .Shock detector with three smoothing iterations
 [#smooth_shock_detector]
-image::shock_detector_smooth.png[]
+image::shock_detector_smooth.png[width=100%]
 
 = Practical considerations
 
