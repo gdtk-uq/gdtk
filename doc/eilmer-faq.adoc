@@ -183,10 +183,6 @@ There is information on adding complete species and species data in:
 
 = Generic WTF?
 
-== What are time stamps?
-as asked by Katrina (2017-04-26) and the Singapore group.
-
-
 == What is `WC`, `WCtFT` and `WCtMS`? 
 _Wall Clock_, _Wall Clock till Final Time_ and
 _Wall Clock till Maximum allowed Steps_ estimated in seconds.
