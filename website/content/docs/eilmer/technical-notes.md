@@ -9,7 +9,7 @@ images: []
 menu:
   docs:
     parent: "eilmer"
-weight: 25
+weight: 55
 toc: false
 ---
 
@@ -18,10 +18,13 @@ notes of a detailed nature related to the Eilmer code.
 Topics include feature descriptions, examples of code application
 and specialist workflows.
 
+<br>
 
 <div class="row">
    <div class="col-sm-6">
+   <a href=hybrid-fluxes-for-hugo/>
    <img src="hybrid-fluxes-for-hugo/resources/shock_detector_smooth.png" style="width:100%">
+   </a>
    </div>
    <div class="col-sm-10">
    <a href=hybrid-fluxes-for-hugo/>
