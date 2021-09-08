@@ -323,6 +323,9 @@ In a typical input script, one might set 10-15 input variables.
 The default adaptive scheme is a good all-round scheme that uses AUSMDV away from
 shocks and Hanel-Schwane-Seider flux calculator near shocks.
 
+Any of the schemes with the prefix `'adaptive'` can be used in a blended mode
+if the <<shock_detector_smoothing,`shock_detector_smoothing`>> is enabled.
+
 `config.compression_tolerance` ::
   _float_, default: `-0.30` +
    The value of relative velocity change (normalised by local sound-speed)
@@ -352,11 +355,23 @@ shocks and Hanel-Schwane-Seider flux calculator near shocks.
   representative Mach number for the free stream.
    Used by the `ausm_plus_up` flux calculator.
 
-`config.shock_detector_smoothing`
+[#shock_detector_smoothing]
+`config.shock_detector_smoothing` ::
  _int_, default = `0` +
  How many iterations of shock detector averaging. Higher values spread the influence of the shock
  detector further from the shock, increasing numerical dissipation but providing a smoother
  transition between flux calculators in adaptive schemes.
+
+TIP: You can read more about this in the technical note
+https://gdtk.uqcloud.net/docs/eilmer/technical-notes/hybrid-fluxes-for-hugo/[Hybrid fluxes, shock detection and smoothing.]
+
+
+`config.strict_shock_detector` :: 
+  _boolean_, default: `true` +
+  If this is true then any face that is part 
+  of a cell with S>0 will have its own S value set to 1. This is to 
+  emulate legacy behaviour and thus defaults to true. For true 
+  blending of fluxes this should be set to false.
 
 `config.frozen_shock_detector` ::
  _boolean_, default: `false` +
