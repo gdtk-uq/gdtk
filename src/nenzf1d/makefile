@@ -69,6 +69,7 @@ ifeq ($(DMD), dmd)
     ifeq ($(FLAVOUR), fast)
         DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
     endif
+    PIC := -fPIC
     OF := -of
     DVERSION := -version=
     DLINKFLAGS :=
@@ -84,6 +85,7 @@ ifeq ($(DMD), ldmd2)
     ifeq ($(FLAVOUR), fast)
         DFLAGS := -w -g -O -release -inline -boundscheck=off -version=flavour_fast
     endif
+    PIC := -fPIC
     OF := -of
     DVERSION := -version=
     DLINKFLAGS :=
@@ -102,6 +104,7 @@ ifeq ($(DMD), ldc2)
     ifeq ($(FLAVOUR), fast)
         DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -d-version=flavour_fast -ffast-math -flto=full
     endif
+    PIC := --relocation-model=pic
     OF := -of=
     DVERSION := -d-version=
     DLINKFLAGS :=
@@ -182,6 +185,33 @@ nenzf1d: main.d $(NENZF1D_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS)
+
+libnenzf1d.so: cwrap.d $(NENZF1D_FILES) \
+	$(GEOM_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		main.d > main_with_rev_string.d
+	$(DMD) -c cwrap.d $(PIC) $(DFLAGS) -op main_with_rev_string.d \
+		$(NENZF1D_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
+		$(GEOM_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(DMD) $(OF)libnenzf1d.so cwrap.o $(PIC) $(DFLAGS) -op -shared main_with_rev_string.d \
+		$(NENZF1D_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
+		$(GEOM_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		-L-L=$(INSTALL_DIR)/lib $(DLINKFLAGS)
 
 prep-gas:
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas
