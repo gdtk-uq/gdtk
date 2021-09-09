@@ -58,6 +58,11 @@
   identifier = "pub-n-pres"
   url = "/docs/pub-n-pres"
 
+[[docs]]
+  name = "All the Docs by Type"
+  weight = 100
+  identifier = "all-the-docs"
+  url = "/docs/all-the-docs"
 
 [[main]]
   name = "Docs"
