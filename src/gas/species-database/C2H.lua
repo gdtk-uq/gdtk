@@ -26,6 +26,34 @@ db.C2H.epsilon = {
    description = 'Lennard-Jones potential well depth.',
    reference = ' '
 }
+db.C2H.ceaThermoCoeffs = {
+   notes = 'NASA/TP—2002-211556',
+   nsegments = 2,
+   T_break_points = {200.0, 1000.0, 6000.0},
+   T_blend_ranges = {400.0},
+   segment0 = {
+      1.343669487e+04,
+     -5.067970720e+02,
+      7.772107410e+00,
+     -6.512339820e-03,
+      1.030117855e-05,
+     -5.880147670e-09,
+      1.226901861e-12,
+      6.892269990e+04,
+     -1.871881626e+01
+   },
+   segment1 = {
+      3.922334570e+06,
+     -1.204751703e+04,
+      1.756172920e+01,
+     -3.655442940e-03,
+      6.987685430e-07,
+     -6.825162010e-11,
+      2.719262793e-15,
+      1.433266627e+05,
+     -9.561634380e+01
+   }
+}
 db.C2H.grimechThermoCoeffs = {
    notes = 'data from GRIMECH 3.0',
    nsegments = 2, 
