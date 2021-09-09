@@ -125,7 +125,7 @@ struct Config{
     double[] xi;
     double[] di;
     double x_end;
-    double t_final=100.0;  // fixme, this used to default to 2.0 * x_end / v
+    double t_final=1.0e-2;  // fixme, this used to default to 2.0 * x_end / v
     double t_inc=1.0e-10;
     double t_inc_factor = 1.0001;
     double t_inc_max= 1.0e-7;
