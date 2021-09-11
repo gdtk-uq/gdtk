@@ -30,7 +30,7 @@ function prepare_case_file(stageIdx)
    f:write(format("oldSoln_jobName = '%s'\n", jobName))
    f:write(format("oldSoln_dir = '../stage-%d'\n", stageIdx-1))
    -- Grab final tindx from previous simulation
-   os.execute("tail -1 stage-" .. stageIdx-1 .. "/" .. jobName .. ".times > tmp")
+   os.execute("tail -1 stage-" .. stageIdx-1 .. "/config/" .. jobName .. ".times > tmp")
    f1 = assert(io.open("tmp", "r"))
    final_tindx = f1:read("*number")
    f1:close()
