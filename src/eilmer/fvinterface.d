@@ -387,11 +387,48 @@ public:
     }
 
     @nogc
+    number upwind_weighting(number M)
+    {
+        // Weighting function defined on page 78 of Ian Johnston's thesis.
+        // M is Mach number in direction pointing toward the location
+        // at which we are evaluating the weighted sum.
+        if (M > 1.0) return to!number(1.0);
+        number Mp1 = M + 1.0;
+        return (Mp1 > 0.0) ? (0.25*Mp1^^2) : to!number(0.0);
+    }
+
+    @nogc
     void average_vertex_deriv_values()
     {
+        number[4] uwfs;
+        number uwf_sum = 0.0;
+        static if (false) {
+            // Equal weighting of the gradient values.
+            foreach (i; 0 .. vtx.length) {
+                uwfs[i] = 1.0;
+                uwf_sum += 1.0;
+            }
+        } else {
+            // Upwind weighting of the gradient values.
+            if (!left_cell && !right_cell) {
+                throw new Exception("Oops! This face does not have at least one cell attached.");
+            }
+            FVCell c = (right_cell && right_cell.is_interior_to_domain) ? right_cell : left_cell;
+            Vector3 tangent;
+            foreach (i; 0 .. vtx.length) {
+                tangent.set(pos); tangent -= vtx[i].pos[0]; tangent.normalize();
+                number M = c.fs.vel.dot(tangent)/c.fs.gas.a;
+                number uwf = upwind_weighting(M);
+                uwfs[i] = uwf;
+                uwf_sum += uwf;
+            }
+        }
         grad.copy_values_from(vtx[0].grad);
-        foreach (i; 1 .. vtx.length) grad.accumulate_values_from(vtx[i].grad);
-        grad.scale_values_by(to!number(1.0/vtx.length));
+        grad.scale_values_by(uwfs[0]);
+        foreach (i; 1 .. vtx.length) {
+            grad.accumulate_values_from(vtx[i].grad, uwfs[i]);
+        }
+        grad.scale_values_by(1.0/uwf_sum);
     } // end average_vertex_deriv_values()
 
     @nogc

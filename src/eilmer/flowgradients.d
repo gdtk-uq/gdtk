@@ -159,6 +159,30 @@ public:
     }
 
     @nogc
+    void accumulate_values_from(const FlowGradients other, number factor)
+    {
+        foreach (i; 0 .. 3) {
+            foreach (j; 0 .. 3) vel[i][j] += other.vel[i][j] * factor;
+        }
+        version(multi_species_gas) {
+            foreach (isp; 0 .. massf.length) {
+                foreach (j; 0 .. 3) massf[isp][j] += other.massf[isp][j] * factor;
+            }
+        }
+        foreach (j; 0 .. 3) T[j] += other.T[j] * factor;
+        version(multi_T_gas) {
+            foreach (imode; 0 .. T_modes.length) {
+                foreach (j; 0 .. 3) T_modes[imode][j] += other.T_modes[imode][j] * factor;
+            }
+        }
+        version(turbulence) {
+            foreach(i; 0 .. turb.length) {
+                foreach (j; 0 .. 3) turb[i][j] += other.turb[i][j] * factor;
+            }
+        }
+    }
+
+    @nogc
     void scale_values_by(number factor)
     {
         foreach (i; 0 .. 3) { vel[i][] *= factor; }
