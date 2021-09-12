@@ -10,7 +10,7 @@ the boundary loads data is a simulation run-time procedure.
   To extract boundary loads, set `config.write_loads=true`.
 
 `config.boundary_groups_for_loads` ::
-  _string_, default: `''` +
+  _string_, default: `'loads'` +
   The `config.boundary_groups_for_loads` setting is used to select which boundaries will have their loads data written to disk. This string should
   match the `groups` string set in the corresponding boundary condition. This can be a list of strings separated by a comma, e.g. `config.boundary_groups_for_loads='group1,group2'`.
 
