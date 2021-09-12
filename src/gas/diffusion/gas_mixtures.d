@@ -21,6 +21,7 @@ import gas.diffusion.viscosity;
 import gas.diffusion.therm_cond;
 import gas.diffusion.wilke_mixing_viscosity;
 import gas.diffusion.wilke_mixing_therm_cond;
+import gas.diffusion.rps_diffusion_coefficients;
 
 class GasMixtureTransProps : TransportPropertiesModel {
 public:
@@ -30,11 +31,15 @@ public:
         Viscosity[] vms;
         ThermalConductivity[] tcms;
         double[] molMasses;
+        double[] LJ_sigmas;
+        double[] LJ_epsilons;
         foreach (isp, spName; speciesNames) {
             lua_getglobal(L, "db");
             lua_getfield(L, -1, spName.toStringz);
 
             molMasses ~= getDouble(L, -1, "M");
+            LJ_sigmas ~= getDouble(L, -1, "sigma");
+            LJ_epsilons ~= getDouble(L, -1, "epsilon");
 
             lua_getfield(L, -1, "viscosity");
             vms ~= createViscosityModel(L);
@@ -49,6 +54,7 @@ public:
         }
         mVisc = new WilkeMixingViscosity(vms, molMasses);
         mThermCond = new WilkeMixingThermCond(tcms, molMasses);
+        mBDC = new RPSDiffusionCoefficients(molMasses, LJ_sigmas, LJ_epsilons);
     }
     
     @nogc
@@ -60,13 +66,13 @@ public:
 
     @nogc void binaryDiffusionCoefficients(GasState gs, ref number[][] D)
     {
-        // TODO: : )
-        throw new Error("GasMixtureTransProps has no binaryDiffusionCoefficients implemented.");
+        mBDC.compute_bdc(gs, D);
     }
 
 private:
     WilkeMixingViscosity mVisc;
     WilkeMixingThermCond mThermCond;
+    RPSDiffusionCoefficients mBDC;
 }
 
 
