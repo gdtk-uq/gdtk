@@ -31,7 +31,7 @@ class TestCyl50_SG < Test::Unit::TestCase
     # Revised 2021-07-15, PJ.
     # For the transient code with explicit updates, expect 190388 steps.
     # It is very much lower with the implicit update scheme.
-    assert((steps - 2026).abs < 30, "Failed to take correct number of steps.")
+    assert((steps - 1946).abs < 30, "Failed to take correct number of steps.")
   end
 
   def test_2_peak_T_in_boundary_layer
