@@ -44,7 +44,10 @@ class TestMMS_NS_DivTheorem < Test::Unit::TestCase
     assert_equal(s.success?, true)
     lines = o.split("\n")
     names = ['L1', 'L2', 'Linf']
-    refs = {'L1'=>1.471398727973e-03, 'L2'=>1.773676824915e-03, 'Linf'=>4.094873754700e-03}
+    # For symmetric weighting of gradients.
+    # refs = {'L1'=>1.471398727973e-03, 'L2'=>1.773676824915e-03, 'Linf'=>4.094873754700e-03}
+    # For upwind-weighting of gradients. PJ 2021-09-13
+    refs = {'L1'=>2.35902415e-03, 'L2'=>2.77157636e-03, 'Linf'=>5.68811201e-03}
     values = {'L1'=>0.0, 'L2'=>0.0, 'Linf'=>0.0}
     lines.each do |txt|
       if txt.match('Linf')

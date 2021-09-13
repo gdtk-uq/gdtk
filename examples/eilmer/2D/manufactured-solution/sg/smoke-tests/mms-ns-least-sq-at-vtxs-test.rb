@@ -44,9 +44,10 @@ class TestMMS_NS_LeastSqAtVtx < Test::Unit::TestCase
     assert_equal(s.success?, true)
     lines = o.split("\n")
     names = ['L1', 'L2', 'Linf']
-    refs = {'L1'=>1.462794804407063429e-03,
-            'L2'=>1.774724636678932108e-03,
-            'Linf'=>4.139574720295358112e-03}
+    # For symmetric weighting of vertex gradients.
+    # refs = {'L1'=>1.46279480e-03, 'L2'=>1.77472463e-03, 'Linf'=>4.13957472e-03}
+    # For upwind weighting of vertex gradients. PJ 2021-09-13
+    refs = {'L1'=>2.35516834e-03, 'L2'=>2.77413701e-03, 'Linf'=>5.71746417e-03}
     values = {'L1'=>0.0, 'L2'=>0.0, 'Linf'=>0.0}
     lines.each do |txt|
       if txt.match('Linf')

@@ -2535,7 +2535,7 @@ void configCheckPoint3()
     //
     if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.divergence) {
         // The divergence method is the old default for the type of gradient calculation
-        // while 'cells' is the new default for gradiaent location and together they are
+        // while 'cells' is the new default for gradient location and together they are
         // incomplete.  For least bother, let's alter the calculation type.
         if (GlobalConfig.dimensions == 3 ||
             GlobalConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
