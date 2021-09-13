@@ -72,11 +72,15 @@ function InternalCopyThenReflect:tojson()
    return str
 end
 
-FlowStateCopy = GhostCellEffect:new{flowState=nil}
+FlowStateCopy = GhostCellEffect:new{flowState=nil, x0=0.0, y0=0.0, z0=0.0, r=0.0}
 FlowStateCopy.type = "flowstate_copy"
 function FlowStateCopy:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "flowstate": %s', self.flowState:toJSONString())
+   str = str .. string.format(' "flowstate": %s,', self.flowState:toJSONString())
+   str = str .. string.format(' "x0": %.18e,', self.x0)
+   str = str .. string.format(' "y0": %.18e,', self.y0)
+   str = str .. string.format(' "z0": %.18e,', self.z0)
+   str = str .. string.format(' "r": %.18e', self.r)
    str = str .. '}'
    return str
 end
@@ -246,11 +250,15 @@ function CopyCellData:tojson()
    return str
 end
 
-FlowStateCopyToInterface = BoundaryInterfaceEffect:new{flowState=nil}
+FlowStateCopyToInterface = BoundaryInterfaceEffect:new{flowState=nil, x0=0.0, y0=0.0, z0=0.0, r=0.0}
 FlowStateCopyToInterface.type = "flow_state_copy_to_interface"
 function FlowStateCopyToInterface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "flowstate": %s', self.flowState:toJSONString())
+   str = str .. string.format(' "flowstate": %s,', self.flowState:toJSONString())
+   str = str .. string.format(' "x0": %.18e,', self.x0)
+   str = str .. string.format(' "y0": %.18e,', self.y0)
+   str = str .. string.format(' "z0": %.18e,', self.z0)
+   str = str .. string.format(' "r": %.18e', self.r)
    str = str .. '}'
    return str
 end
@@ -1114,15 +1122,25 @@ function InFlowBC_Supersonic:new(o)
                " and not InFlowBC_Supersonic.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
+   flag = checkAllowedNames(o, {"flowState", "flowCondition", "x0", "y0", "z0", "r", "label", "group"})
    if not flag then
       error("Invalid name for item supplied to InFlowBC_Supersonic constructor.", 2)
    end
    if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name
+   -- Look for conical-flow parameters.
+   o.x0 = o.x0 or 0.0
+   o.y0 = o.y0 or 0.0
+   o.z0 = o.z0 or 0.0
+   o.r = o.r or 0.0
+   -- Configure parameters and actions.
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
-   o.preReconAction = { FlowStateCopy:new{flowState=o.flowState} }
-   o.preSpatialDerivActionAtBndryFaces = { FlowStateCopyToInterface:new{flowState=o.flowState} }
+   o.preReconAction = {
+      FlowStateCopy:new{flowState=o.flowState, x0=o.x0, y0=o.y0, z0=o.z0, r=o.r}
+   }
+   o.preSpatialDerivActionAtBndryFaces = {
+      FlowStateCopyToInterface:new{flowState=o.flowState, x0=o.x0, y0=o.y0, z0=o.z0, r=o.r}
+   }
    o.is_configured = true
    return o
 end

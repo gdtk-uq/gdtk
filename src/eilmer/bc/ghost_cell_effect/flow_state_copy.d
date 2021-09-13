@@ -8,6 +8,7 @@ import std.conv;
 import std.stdio;
 import std.math;
 
+import nm.number;
 import geom;
 import globalconfig;
 import globaldata;
@@ -22,10 +23,22 @@ import bc;
 
 class GhostCellFlowStateCopy : GhostCellEffect {
 public:
-    this(int id, int boundary, in FlowState _fstate)
+    FlowState fstate;
+    SourceFlow sflow;
+    double x0, y0, z0, r; // conical-flow parameters
+
+    this(int id, int boundary, in FlowState fstate, double x0, double y0, double z0, double r)
     {
         super(id, boundary, "flowStateCopy");
-        fstate = new FlowState(_fstate);
+        // We only need to gather the freestream values once at the start of simulation.
+        // Note that, at this time, the gmodel held by the block is not available.
+        auto gmodel = GlobalConfig.gmodel_master;
+        this.fstate = fstate.dup();
+        this.x0 = x0;
+        this.y0 = y0;
+        this.z0 = z0;
+        this.r = r;
+        sflow = new SourceFlow(gmodel, fstate, r);
     }
 
     override string toString() const
@@ -38,7 +51,8 @@ public:
     {
         BoundaryCondition bc = blk.bc[which_boundary];
         auto ghost = (bc.outsigns[f.i_bndry] == 1) ? f.right_cell : f.left_cell;
-	ghost.fs.copy_values_from(fstate);
+        ghost.fs.copy_values_from(fstate);
+        if (r > 0.0) { compute_source_flow(ghost); }
         if (blk.omegaz != 0.0) {
             into_rotating_frame(ghost.fs.vel, ghost.pos[gtl], blk.omegaz);
         }
@@ -51,6 +65,7 @@ public:
         foreach (i, f; bc.faces) {
             auto ghost = (bc.outsigns[i] == 1) ? f.right_cell : f.left_cell;
             ghost.fs.copy_values_from(fstate);
+            if (r > 0.0) { compute_source_flow(ghost); }
             if (blk.omegaz != 0.0) {
                 into_rotating_frame(ghost.fs.vel, ghost.pos[gtl], blk.omegaz);
             }
@@ -66,6 +81,7 @@ public:
         foreach (n; 0 .. blk.n_ghost_cell_layers) {
             auto ghost = (bc.outsigns[f.i_bndry] == 1) ? f.right_cells[n] : f.left_cells[n];
             ghost.fs.copy_values_from(fstate);
+            if (r > 0.0) { compute_source_flow(ghost); }
             if (blk.omegaz != 0.0) {
                 into_rotating_frame(ghost.fs.vel, ghost.pos[gtl], blk.omegaz);
             }
@@ -82,6 +98,7 @@ public:
             foreach (n; 0 .. blk.n_ghost_cell_layers) {
                 auto ghost = (bc.outsigns[i] == 1) ? f.right_cells[n] : f.left_cells[n];
                 ghost.fs.copy_values_from(fstate);
+                if (r > 0.0) { compute_source_flow(ghost); }
                 if (blk.omegaz != 0.0) {
                     into_rotating_frame(ghost.fs.vel, ghost.pos[gtl], blk.omegaz);
                 }
@@ -90,6 +107,39 @@ public:
     } // end apply_structured_grid()
 
 private:
-    FlowState fstate;
+    @nogc
+    void compute_source_flow(FVCell c)
+    {
+        auto cqi = blk.myConfig.cqi;
+        // Start by assuming uniform, parallel flow.
+        number p = fstate.gas.p;
+        number rho = fstate.gas.rho;
+        auto gmodel = blk.myConfig.gmodel;
+        number u = gmodel.internal_energy(fstate.gas);
+        number velx = fstate.vel.x;
+        number vely = fstate.vel.y;
+        number velz = (cqi.threeD) ? fstate.vel.z : to!number(0.0);
+        // (Approximate) conical inflow by adding increments.
+        double dx = c.pos[0].x.re - x0;
+        double dy = c.pos[0].y.re - y0;
+        double dz = (cqi.threeD) ? c.pos[0].z.re - z0 : 0.0;
+        double hypot = sqrt(dx*dx + dy*dy + dz*dz);
+        double[4] deltas = sflow.get_rho_v_p_u_increments(hypot-r);
+        rho += deltas[0];
+        double v = fstate.vel.x.re + deltas[1];
+        velx = v * dx/hypot;
+        vely = v * dy/hypot;
+        velz = (cqi.threeD) ? v * dz/hypot : 0.0;
+        p += deltas[2];
+        u += deltas[3];
+        // Put into interface FlowState object.
+        auto fs = c.fs; // local reference
+        auto gas = fs.gas;
+        gas.p = p; // not really needed because we use rhou
+        gas.rho = rho;
+        gas.u = u;
+        gmodel.update_thermo_from_rhou(gas);
+        fs.vel.set(velx, vely, velz);
+    } // end apply_to_single_face()
 
 } // end class GhostCellFlowStateCopy

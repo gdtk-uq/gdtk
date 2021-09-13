@@ -49,7 +49,11 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
         break;
     case "flow_state_copy_to_interface":
         auto flowstate = new FlowState(jsonData["flowstate"], gmodel);
-        newBIE = new BIE_FlowStateCopy(blk_id, boundary, flowstate);
+        double x0 = getJSONdouble(jsonData, "x0", 0.0);
+        double y0 = getJSONdouble(jsonData, "y0", 0.0);
+        double z0 = getJSONdouble(jsonData, "z0", 0.0);
+        double r = getJSONdouble(jsonData, "r", 0.0);
+        newBIE = new BIE_FlowStateCopy(blk_id, boundary, flowstate, x0, y0, z0, r);
         break;
     case "flow_state_copy_from_profile_to_interface":
         string fname = getJSONstring(jsonData, "filename", "");
@@ -228,11 +232,23 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
 } // end class BIE_CopyCellData
 
 class BIE_FlowStateCopy : BoundaryInterfaceEffect {
+public:
+    FlowState fstate;
+    SourceFlow sflow;
+    double x0, y0, z0, r; // conical-flow parameters
 
-    this(int id, int boundary, in FlowState _fstate)
+    this(int id, int boundary, in FlowState fstate, double x0, double y0, double z0, double r)
     {
         super(id, boundary, "flowStateCopy");
-        fstate = new FlowState(_fstate);
+        // We only need to gather the freestream values once at the start of simulation.
+        // Note that, at this time, the gmodel held by the block is not available.
+        auto gmodel = GlobalConfig.gmodel_master;
+        this.fstate = fstate.dup();
+        this.x0 = x0;
+        this.y0 = y0;
+        this.z0 = z0;
+        this.r = r;
+        sflow = new SourceFlow(gmodel, fstate, r);
     }
 
     override string toString() const
@@ -243,7 +259,8 @@ class BIE_FlowStateCopy : BoundaryInterfaceEffect {
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
         BoundaryCondition bc = blk.bc[which_boundary];
-	f.fs.copy_values_from(fstate);
+        f.fs.copy_values_from(fstate);
+        if (r > 0.0) { compute_source_flow(f); }
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -251,6 +268,7 @@ class BIE_FlowStateCopy : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             f.fs.copy_values_from(fstate);
+            if (r > 0.0) { compute_source_flow(f); }
         }
     }
 
@@ -260,7 +278,8 @@ class BIE_FlowStateCopy : BoundaryInterfaceEffect {
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
-	f.fs.copy_values_from(fstate);
+        f.fs.copy_values_from(fstate);
+        if (r > 0.0) { compute_source_flow(f); }
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
@@ -271,11 +290,45 @@ class BIE_FlowStateCopy : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             f.fs.copy_values_from(fstate);
+            if (r > 0.0) { compute_source_flow(f); }
         }
     } // end apply_structured_grid()
 
 private:
-    FlowState fstate;
+    @nogc
+    void compute_source_flow(FVInterface f)
+    {
+        auto cqi = blk.myConfig.cqi;
+        // Start by assuming uniform, parallel flow.
+        number p = fstate.gas.p;
+        number rho = fstate.gas.rho;
+        auto gmodel = blk.myConfig.gmodel;
+        number u = gmodel.internal_energy(fstate.gas);
+        number velx = fstate.vel.x;
+        number vely = fstate.vel.y;
+        number velz = (cqi.threeD) ? fstate.vel.z : to!number(0.0);
+        // (Approximate) conical inflow by adding increments.
+        double dx = f.pos.x.re - x0;
+        double dy = f.pos.y.re - y0;
+        double dz = (cqi.threeD) ? f.pos.z.re - z0 : 0.0;
+        double hypot = sqrt(dx*dx + dy*dy + dz*dz);
+        double[4] deltas = sflow.get_rho_v_p_u_increments(hypot-r);
+        rho += deltas[0];
+        double v = fstate.vel.x.re + deltas[1];
+        velx = v * dx/hypot;
+        vely = v * dy/hypot;
+        velz = (cqi.threeD) ? v * dz/hypot : 0.0;
+        p += deltas[2];
+        u += deltas[3];
+        // Put into interface FlowState object.
+        auto fs = f.fs;
+        auto gas = fs.gas;
+        gas.p = p; // not really needed because we use rhou
+        gas.rho = rho;
+        gas.u = u;
+        gmodel.update_thermo_from_rhou(gas);
+        fs.vel.set(velx, vely, velz);
+    } // end compute_source_flow()
 
 } // end class BIE_FlowStateCopy
 
