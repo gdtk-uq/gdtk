@@ -148,7 +148,7 @@ install: $(PROGRAMS) prep-gas prep-chem chemkin2eilmer
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 clean:
-	- rm *.o
+	- rm *.o *.so
 	- rm $(PROGRAMS)
 	- rm -r $(BUILD_DIR)/*
 	- rm main_with_rev_string.d
@@ -195,7 +195,7 @@ libnenzf1d.so: cwrap.d $(NENZF1D_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		main.d > main_with_rev_string.d
-	$(DMD) -c cwrap.d $(PIC) $(DFLAGS) -op main_with_rev_string.d \
+	$(DMD) -c cwrap.d $(PIC) $(DFLAGS) -op main.d \
 		$(NENZF1D_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(GEOM_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
@@ -203,7 +203,7 @@ libnenzf1d.so: cwrap.d $(NENZF1D_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA)
-	$(DMD) $(OF)libnenzf1d.so cwrap.o $(PIC) $(DFLAGS) -op -shared main_with_rev_string.d \
+	$(DMD) $(OF)libnenzf1d.so cwrap.o $(PIC) $(DFLAGS) -op -shared main.d \
 		$(NENZF1D_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(GEOM_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \

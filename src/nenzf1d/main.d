@@ -10,6 +10,8 @@
 // 2020-12-09 Allow 2T gas models.
 // 2021-09-03 Refactor by NNG
 
+module nenzf1d;
+
 import std.stdio;
 import std.array;
 import std.string;

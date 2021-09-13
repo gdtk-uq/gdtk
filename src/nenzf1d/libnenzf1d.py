@@ -9,20 +9,15 @@ from numpy import linspace , array, int32, zeros
 
 ffi = FFI()
 ffi.cdef("""
-    int cwrap_run();
+    int cwrap_init();
     typedef struct PlainConfig PlainConfig;
     struct PlainConfig
     {
-        int n_gm1_filename;
         char* gm1_filename;
-        int n_gm2_filename;
         char* gm2_filename;
-        int n_reactions_filename;
         char* reactions_filename;
-        int n_reactions_filename2;
         char* reactions_filename2;
-        int nn_species;
-        int* n_species;
+        int n_species;
         char** species;
         int n_molef;
         double* molef;
@@ -44,10 +39,12 @@ ffi.cdef("""
         double t_inc_factor;
         double t_inc_max;
     };
-    void pass_a_struct(PlainConfig cfg);
+    void run(int verbosityLevel, PlainConfig cfg);
 """)
 lib = ffi.dlopen('libnenzf1d.so')
+lib.cwrap_init()
 
+# Conditions matching T4 shot 11742
 T1 = 300.0;
 molef = array([1.0, 0.0, 0.0])
 gm1_filename = "air-5sp-gm.lua"
@@ -79,26 +76,21 @@ config = ffi.new("struct PlainConfig *")
 
 # When working with FFI, it's very important that your objects created with ffi.new don't get
 # garbage collected while the underlying C code is working on them.
+# That's the reason there's so many definitions of thing_p = ffi.new(...) below.
 
-config.n_gm1_filename = len(gm1_filename)
 gm1_filename_p = ffi.new("char[]", bytes(gm1_filename, encoding="utf-8"))
 config.gm1_filename = gm1_filename_p
 
-config.n_gm2_filename = len(gm2_filename)
 gm2_filename_p = ffi.new("char[]", bytes(gm2_filename, encoding="utf-8"))
 config.gm2_filename = gm2_filename_p
 
-config.n_reactions_filename = len(reactions_filename)
 reactions_filename_p = ffi.new("char[]", bytes(reactions_filename, encoding="utf-8"))
 config.reactions_filename = reactions_filename_p
 
 species_p = [ffi.new("char[]", bytes(spname, encoding="utf-8")) for spname in species]
-n_species = array([len(spname) for spname in species], dtype=int32)
-n_species_p = ffi.from_buffer("int[]", n_species)
-nn_species = n_species.size
+n_species = len(species_p)
 species_pp = ffi.new("char *[]", species_p)
-config.nn_species = nn_species
-config.n_species = n_species_p
+config.n_species = n_species
 config.species = species_pp
 
 config.n_molef = molef.size;
@@ -121,5 +113,6 @@ config.n_di = di.size;
 di_p = ffi.from_buffer("double[]", di)
 config.di = di_p
 
-lib.pass_a_struct(config[0])
+verbosityLevel = 1
+lib.run(verbosityLevel, config[0])
 
