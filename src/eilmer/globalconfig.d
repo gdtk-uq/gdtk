@@ -713,6 +713,7 @@ struct SteadyStateSolverOptions {
     bool useAdaptivePreconditioner = false;
     bool usePhysicalityCheck = false;
     bool useLineSearch = false;
+    bool inviscidCFL = false;
     bool useScaling = true;
     bool useComplexMatVecEval = false;
     int nPreSteps = 10;
@@ -2295,6 +2296,7 @@ void read_control_file()
     GlobalConfig.sssOptions.useAdaptivePreconditioner = getJSONbool(sssOptions, "use_adaptive_preconditioner", GlobalConfig.sssOptions.useAdaptivePreconditioner);
     GlobalConfig.sssOptions.usePhysicalityCheck = getJSONbool(sssOptions, "use_physicality_check", GlobalConfig.sssOptions.usePhysicalityCheck);
     GlobalConfig.sssOptions.useLineSearch = getJSONbool(sssOptions, "use_line_search", GlobalConfig.sssOptions.useLineSearch);
+    GlobalConfig.sssOptions.inviscidCFL = getJSONbool(sssOptions, "inviscid_cfl", GlobalConfig.sssOptions.inviscidCFL);
     GlobalConfig.sssOptions.useScaling = getJSONbool(sssOptions, "use_scaling", GlobalConfig.sssOptions.useScaling);
     GlobalConfig.sssOptions.useComplexMatVecEval = getJSONbool(sssOptions, "use_complex_matvec_eval", GlobalConfig.sssOptions.useComplexMatVecEval);
     GlobalConfig.sssOptions.nPreSteps =

@@ -21,6 +21,7 @@ sssOptionsHidden = { -- hidden from user
    use_adaptive_preconditioner = false,
    use_physicality_check = false,
    use_line_search = false,
+   inviscid_cfl = false,
    use_scaling = true, -- always good to scale the linear system
    use_complex_matvec_eval = false,-- use complex variable Frechet derivative
 

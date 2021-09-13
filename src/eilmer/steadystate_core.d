@@ -1300,10 +1300,13 @@ double determine_dt(double cflInit)
 {
     double signal, dt;
     bool first = true;
-
     foreach (blk; localFluidBlocks) {
         foreach (cell; blk.cells) {
             signal = cell.signal_frequency();
+            if (blk.myConfig.sssOptions.inviscidCFL) {
+                // overwrite signal with inviscid signal
+                signal = cell.signal_hyp.re;
+            }
             cell.dt_local = cflInit / signal;
             if (first) {
                 dt = cell.dt_local;
