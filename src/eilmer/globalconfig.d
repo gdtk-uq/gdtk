@@ -710,6 +710,7 @@ struct SteadyStateSolverOptions {
     int iluFill = 0;
     PreconditionMatrixType preconditionMatrixType = PreconditionMatrixType.jacobi;
     double preconditionerSigma = 1.0e-30;
+    bool useAdaptivePreconditioner = false;
     bool usePhysicalityCheck = false;
     bool useLineSearch = false;
     bool useScaling = true;
@@ -2291,6 +2292,7 @@ void read_control_file()
         }
     }
     GlobalConfig.sssOptions.preconditionerSigma = getJSONdouble(sssOptions, "preconditioner_sigma", GlobalConfig.sssOptions.preconditionerSigma);
+    GlobalConfig.sssOptions.useAdaptivePreconditioner = getJSONbool(sssOptions, "use_adaptive_preconditioner", GlobalConfig.sssOptions.useAdaptivePreconditioner);
     GlobalConfig.sssOptions.usePhysicalityCheck = getJSONbool(sssOptions, "use_physicality_check", GlobalConfig.sssOptions.usePhysicalityCheck);
     GlobalConfig.sssOptions.useLineSearch = getJSONbool(sssOptions, "use_line_search", GlobalConfig.sssOptions.useLineSearch);
     GlobalConfig.sssOptions.useScaling = getJSONbool(sssOptions, "use_scaling", GlobalConfig.sssOptions.useScaling);

@@ -18,6 +18,7 @@ sssOptionsHidden = { -- hidden from user
    ilu_fill = 0, -- level of fill-in for ILU decomposition (use 0 for practical simulations)
    preconditioner_sigma = 1.0e-30,
 
+   use_adaptive_preconditioner = false,
    use_physicality_check = false,
    use_line_search = false,
    use_scaling = true, -- always good to scale the linear system

@@ -206,6 +206,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     number omega = 1.0;
     number R0 = 0.0;
     number RU = 0.0;
+    bool pc_matrix_evaluated = false;
 
     double cfl, cflTrial;
     double dt;
@@ -303,7 +304,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             foreach (attempt; 0 .. maxNumberAttempts) {
                 try {
                     version(lu_sgs) { lusgs_solve(preStep, pseudoSimTime, dt, normOld, startStep); }
-                    else { rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, nIters, linSolResid, startStep, LHSeval0, RHSeval0); }
+                    else { rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, nIters, linSolResid, startStep, LHSeval0, RHSeval0, pc_matrix_evaluated); }
                 }
                 catch (FlowSolverException e) {
                     version(mpi_parallel) {
@@ -660,6 +661,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             if (GlobalConfig.sssOptions.useLineSearch) {
                 fResid.writefln("# %02d: RU", 3+12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
             }
+            fResid.writefln("# %02d: PC", 4+12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
             fResid.close();
         }
     }
@@ -705,7 +707,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             failedAttempt = 0;
             try {
                 version(lu_sgs) { lusgs_solve(step, pseudoSimTime, dt, normNew, startStep); }
-                else { rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, nIters, linSolResid, startStep, LHSeval, RHSeval); }
+                else { rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, nIters, linSolResid, startStep, LHSeval, RHSeval, pc_matrix_evaluated); }
             }
             catch (FlowSolverException e) {
                 writefln("Failed when attempting GMRES solve in main steps.");
@@ -975,6 +977,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 if (GlobalConfig.sssOptions.useLineSearch) {
                     fResid.writef("%20.16e ", RU.re);
                 }
+                fResid.writef("%d ", pc_matrix_evaluated);
                 fResid.write("\n");
                 fResid.close();
             }
@@ -1758,7 +1761,7 @@ string lusgs_solve(string lhs_vec, string rhs_vec)
 }
 
 void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, double sigma, bool usePreconditioner,
-                    ref double residual, ref int nRestarts, ref int nIters, ref double linSolResid, int startStep, int LHSeval, int RHSeval)
+                    ref double residual, ref int nRestarts, ref int nIters, ref double linSolResid, int startStep, int LHSeval, int RHSeval, ref bool pc_matrix_evaluated)
 {
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
@@ -2096,7 +2099,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
     // Compute precondition matrix
     // if ( usePreconditioner && ( step == startStep || nIters > GlobalConfig.sssOptions.frozenPreconditionerCount) ) {
-    if ( usePreconditioner && ( step == startStep || step%GlobalConfig.sssOptions.frozenPreconditionerCount == 0 ) ) {
+    pc_matrix_evaluated = false;
+    if (usePreconditioner && ( (m == nIters && GlobalConfig.sssOptions.useAdaptivePreconditioner) ||
+                               (step == startStep) ||
+                               (step%GlobalConfig.sssOptions.frozenPreconditionerCount == 0) )) {
+        pc_matrix_evaluated = true;
         final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
         case PreconditionMatrixType.jacobi:
             foreach (blk; parallel(localFluidBlocks,1)) {
@@ -2107,25 +2114,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         case PreconditionMatrixType.ilu:
             foreach (blk; parallel(localFluidBlocks,1)) {
                 blk.evaluate_jacobian();
-                /*
-                writeln("START ----");
-                int count = 0;
-                auto fileName = to!string(step)~".jacobian.dat";
-                auto outFile = File(fileName, "w");
-                outFile.close();
-                foreach (row; 0..blk.flowJacobian.local.ia.length-1) {
-                    // foreach (j; blk.flowJacobian.local.ia[row] .. blk.flowJacobian.local.ia[row+1]) {
-                    size_t a = blk.flowJacobian.local.ia[row];
-                    size_t b = blk.flowJacobian.local.ia[row+1];
-                    foreach (j; blk.flowJacobian.local.ja[a..b]) {
-                        outFile = File(fileName, "a");
-                        outFile.writef("%d %d %d %.10f \n", count, row, j, blk.flowJacobian.local[row,j].re);
-                        outFile.close();
-                        count += 1;
-                    }
-                }
-                writeln("END ----");
-                */
                 blk.flowJacobian.prepare_ilu_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
             }
             break;
