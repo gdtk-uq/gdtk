@@ -1645,10 +1645,10 @@ void compute_wall_distances() {
         }
     }
     //
-    // Now pack their centroid positions into a special buffer
+    // Now pack their centroid positions and normal vectors into a special buffer
     double[] facepos;
     size_t ii=0;
-    facepos.length = nfaces*3;
+    facepos.length = nfaces*6;
     int this_rank = GlobalConfig.mpi_rank_for_local_task;
     //
     foreach(blk; localFluidBlocksBySize) {
@@ -1659,10 +1659,16 @@ void compute_wall_distances() {
                     facepos[ii++] = face.pos.x.re;
                     facepos[ii++] = face.pos.y.re;
                     facepos[ii++] = face.pos.z.re;
+                    facepos[ii++] = face.n.x.re;
+                    facepos[ii++] = face.n.y.re;
+                    facepos[ii++] = face.n.z.re;
                     } else {
                     facepos[ii++] = face.pos.x;
                     facepos[ii++] = face.pos.y;
                     facepos[ii++] = face.pos.z;
+                    facepos[ii++] = face.n.x;
+                    facepos[ii++] = face.n.y;
+                    facepos[ii++] = face.n.z;
                     }
                 }
             }
@@ -1697,7 +1703,7 @@ void compute_wall_distances() {
         // Now clean up by copying the globaldata back into facepos
         facepos.length = globalfacepos.length;
         foreach(i; 0 .. globalfacepos.length)  facepos[i] = globalfacepos[i];
-        nfaces = to!int(facepos.length)/3;
+        nfaces = to!int(facepos.length)/6;
     } // end version(mpi_parallel)
     //
     if (nfaces == 0) {
@@ -1707,7 +1713,8 @@ void compute_wall_distances() {
     size_t totalfaces = nfaces;
     Node[] nodes;
     foreach(i; 0 .. nfaces) {
-        Node node = {[facepos[3*i+0], facepos[3*i+1], facepos[3*i+2]]};
+        Node node = {[facepos[6*i+0], facepos[6*i+1], facepos[6*i+2]]};
+        node.cellid = i;
         nodes ~= node;
     }
     auto root = makeTree(nodes);
@@ -1720,8 +1727,17 @@ void compute_wall_distances() {
             double bestDist = 0.0;
             size_t nVisited = 0;
             root.fast_nearest(cellnode, 0, found, bestDist, nVisited);
-            double dist = sqrt(bestDist);
-            cell.dwall = dist;
+            //double dist = sqrt(bestDist); // This caused problems on distorted grid cells.
+
+            // Unpack face info into a point and a normal, and compute the normal distance to the resulting plane
+            double[3] n = [facepos[6*found.cellid+3],
+                           facepos[6*found.cellid+4],
+                           facepos[6*found.cellid+5]];
+            double[3] px = [cell.pos[0].x.re - found.x[0],
+                            cell.pos[0].y.re - found.x[1],
+                            cell.pos[0].z.re - found.x[2]];
+            double dnormal = fabs(px[0]*n[0] + px[1]*n[1] + px[2]*n[2]);
+            cell.dwall = dnormal;
         }
     }
 } // end compute_wall_distances()
