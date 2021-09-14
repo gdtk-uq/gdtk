@@ -98,8 +98,14 @@ Options:
     }
     // Convert raw configdata into primitive data types
     Config config = process_config(configdata);
-    int exitCode = run(verbosityLevel, config);
-    return exitCode;
+    try{
+        run(verbosityLevel, config);
+    } catch (Exception e) {
+        writeln("Exception thrown in nenzf1d.run!");
+        writefln("  Exception message: %s", e.msg);
+        exitFlag=3;
+    }
+    return exitFlag;
 }
 
 struct Config{
@@ -196,10 +202,8 @@ Config process_config(Node configdata) {
     return config;
 }
 
-int run(int verbosityLevel, Config config)
+void run(int verbosityLevel, Config config)
 {
-    int exitFlag = 0; // Presume OK in the beginning.
-    //
     string gm1_filename = config.gm1_filename;
     auto gm1 = init_gas_model(gm1_filename);
     string gm2_filename = config.gm2_filename;
@@ -312,9 +316,7 @@ int run(int verbosityLevel, Config config)
         x6 = nm.secant.solve!(error_at_throat, double)(0.95, 0.90, 1.0e-4);
     } catch (Exception e) {
         writeln("Failed to find throat conditions iteratively.");
-        writeln("  Exception message: %s", e.msg);
-        exitFlag = 2;
-        return exitFlag;
+        throw e;
     }
     auto state6 = new GasState(gm1);
     double V6 = expand_from_stagnation(state5s, x6, state6, gm1);
@@ -345,9 +347,7 @@ int run(int verbosityLevel, Config config)
         x6e = nm.secant.solve!(error_at_small_expansion, double)(0.95*x6, 0.90*x6, 1.0e-4);
     } catch (Exception e) {
         writeln("Failed to find slightly-expanded conditions iteratively.");
-        writeln("  Exception message: %s", e.msg);
-        exitFlag = 2;
-        return exitFlag;
+        throw e;
     }
     auto state6e = new GasState(gm1);
     double V6e = expand_from_stagnation(state5s, x6e, state6e, gm1);
@@ -381,7 +381,7 @@ int run(int verbosityLevel, Config config)
     try {
         x7 = nm.secant.solve!(error_at_exit, double)(0.001*x6, 0.00005*x6, 1.0e-4, 1.0/state5s.p, 1.0);
     } catch (Exception e) {
-        writeln("Failed to find exit conditions iteratively.");
+        writeln("Failed to find exit conditions iteratively. Proceeding with expansion...");
         // Note that we have the throat conditions and may proceed
         // with a nonequilibrium expansion calculation.
         x7 = x6;
@@ -494,17 +494,13 @@ int run(int verbosityLevel, Config config)
             gas0 = init_tp_state_from_cea(state6e, state6, gm2);
         } catch (Exception e) {
             writeln("Error in initialising tp state from cea");
-            writeln(e.msg);
-            exitFlag=4;
-            return exitFlag;
+            throw e;
         }
     } else if (gm_eq !is null) {
         gas0 = init_tp_state_from_eqgas(state6e, gm_eq, gm2);
     } else {
         writeln("Cannot continue with nonequilibrium expansion.");
-        writeln("  Gas model 1 is not of class CEAGas or EquilibriumGas.");
-        exitFlag = 2;
-        return exitFlag;
+        throw new Exception("  Gas model 1 is not of class CEAGas or EquilibriumGas.");
     }
     if (verbosityLevel >= 1) {
         writeln("Begin part B: continue supersonic expansion with finite-rate chemistry.");
@@ -532,7 +528,7 @@ int run(int verbosityLevel, Config config)
     try {
         xstart = nm.secant.solve!(error_in_area_ratio, double)(xi[0], xi[1], 1.0e-9, xi[0], xi[$-1]);
     } catch (Exception e) {
-        writeln("Failed to find starting position iteratively.");
+        writeln("Failed to find starting position iteratively. Defaulting to xi[0]...");
         xstart = xi[0];
     }
     d = diameter_schedule.interpolate_value(xstart);
@@ -741,5 +737,5 @@ int run(int verbosityLevel, Config config)
     }
     //
     if (verbosityLevel >= 1) { writeln("End."); }
-    return exitFlag;
+    return;
 } // end main
