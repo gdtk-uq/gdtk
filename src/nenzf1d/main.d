@@ -98,8 +98,38 @@ Options:
     }
     // Convert raw configdata into primitive data types
     Config config = process_config(configdata);
+
+    // Run nenzf1d simulation and output results
     try{
-        run(verbosityLevel, config);
+        auto result = run(verbosityLevel, config);
+        writeln("Exit condition:");
+        writefln("  x           %g m", result.x);
+        writefln("  area-ratio  %g", result.area_ratio);
+        writefln("  velocity    %g km/s", result.velocity/1000.0);
+        writefln("  Mach        %g", result.Mach_number);
+        writefln("  p_pitot     %g kPa (C.rho.V^2)", result.p_pitot/1000);
+        if (result.rayleigh_pitot > 0.0)
+            writefln("  p_pitot     %g kPa (Rayleigh-Pitot, frozen)", result.rayleigh_pitot/1000);
+        writefln("  pressure    %g kPa", result.pressure/1000.0);
+        writefln("  density     %g kg/m^3", result.density);
+        writefln("  temperature %g K", result.temperature);
+        foreach (i; 0 .. result.T_modes.length) {
+            string label = format("T_modes[%d]", i);
+            writefln("%s%-12s%g K", "  ", label, result.T_modes[i]);
+        }
+        foreach (i, name; config.species) {
+            string label = format("massf[%s]", name);
+            writefln("%s%-12s%g", "  ", label, result.massf[i]);
+        }
+        writefln("  viscosity   %g Pa.s", result.mu);
+        //
+        writeln("Expansion error-indicators:");
+        writefln("  relerr-mass %g", result.massflux_rel_err);
+        writefln("  relerr-H    %g", result.enthalpy_rel_err);
+        if (result.rayleigh_pitot > 0.0) {
+            writefln("  relerr-pitot %g", result.pitot_rel_err);
+        }
+
     } catch (Exception e) {
         writeln("Exception thrown in nenzf1d.run!");
         writefln("  Exception message: %s", e.msg);
@@ -202,7 +232,25 @@ Config process_config(Node configdata) {
     return config;
 }
 
-void run(int verbosityLevel, Config config)
+struct Result{
+/*
+    Store the calculated gas state at the end of the facility nozzle as a packaged struct of numbers.
+
+    @author: Nick Gibbons
+*/
+    double x;
+    double area_ratio;
+    double velocity;
+    double Mach_number;
+    double p_pitot;
+    double rayleigh_pitot;
+    double pressure, density, temperature, mu;
+    double[] T_modes;
+    double[] massf;
+    double massflux_rel_err, enthalpy_rel_err, pitot_rel_err;
+}
+
+Result run(int verbosityLevel, Config config)
 {
     string gm1_filename = config.gm1_filename;
     auto gm1 = init_gas_model(gm1_filename);
@@ -707,13 +755,15 @@ void run(int verbosityLevel, Config config)
         p_pitot = C * gas0.rho*v*v;
         t_inc = fmin(t_inc*t_inc_factor, t_inc_max);
     } // end while
-    //
-    writeln("Exit condition:");
-    writefln("  x           %g m", x);
-    writefln("  area-ratio  %g", area/area_at_throat);
-    writefln("  velocity    %g km/s", v/1000.0);
-    writefln("  Mach        %g", v/gas0.a);
-    writefln("  p_pitot     %g kPa (C.rho.V^2)", p_pitot/1000);
+
+    // Build a structure of the computed data for printing upstairs in "main"
+    Result result;
+    result.x = x;
+    result.area_ratio = area/area_at_throat;
+    result.velocity = v;
+    result.Mach_number = v/gas0.a;
+    result.p_pitot = p_pitot;
+
     double rayleigh_pitot = 0.0;
     try {
         // We need the gas model to be able to compute entropy in order
@@ -721,21 +771,24 @@ void run(int verbosityLevel, Config config)
         GasState gs_pitot = new GasState(gas0);
         pitot_condition(gas0, v, gs_pitot, gm2);
         rayleigh_pitot = gs_pitot.p;
-        writefln("  p_pitot     %g kPa (Rayleigh-Pitot, frozen)", rayleigh_pitot/1000);
     } catch (Exception e) { /* Do nothing. */ }
-    write_tp_state(gas0);
+    result.rayleigh_pitot = rayleigh_pitot;
+    result.pressure = gas0.p;
+    result.density = gas0.rho;
+    result.temperature = gas0.T;
+    foreach (Tmode; gas0.T_modes) result.T_modes ~= Tmode;
+    foreach (name; species) result.massf ~= gas0.massf[gm2.species_index(name)];
     gm2.update_trans_coeffs(gas0);
-    writefln("  viscosity   %g Pa.s", gas0.mu);
-    //
-    writeln("Expansion error-indicators:");
+    result.mu = gas0.mu;
+
     double massflux = area * gas0.rho * v;
-    writefln("  relerr-mass %g", fabs(massflux - massflux_at_start)/massflux_at_start);
+    result.massflux_rel_err = fabs(massflux - massflux_at_start)/massflux_at_start;
     double H = gm2.enthalpy(gas0) + 0.5*v*v;
-    writefln("  relerr-H    %g", fabs(H - H_at_start)/H_at_start);
-    if (rayleigh_pitot > 0.0) {
-        writefln("  relerr-pitot %g", fabs(p_pitot - rayleigh_pitot)/p_pitot);
+    result.enthalpy_rel_err = fabs(H - H_at_start)/H_at_start;
+    if (result.rayleigh_pitot > 0.0) {
+        result.pitot_rel_err = fabs(p_pitot - result.rayleigh_pitot)/p_pitot;
     }
     //
     if (verbosityLevel >= 1) { writeln("End."); }
-    return;
+    return result;
 } // end main
