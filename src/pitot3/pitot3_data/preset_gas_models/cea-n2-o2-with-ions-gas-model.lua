@@ -5,12 +5,13 @@
 -- Composition is 21%O2+-0.5% with an N2 balance.
 -- I got the species list from intuition and various old PITOT runs with this composition.
 -- Chris James (c.james4@uq.edu.au) - 12/06/21
+-- updated 14/09/21 when I realised that I was mising NO+ in the species list... CMJ
 
 model = "CEAGas"
 
 CEAGas = {
   mixtureName = 'n2-o2-with-ions',
-  speciesList = {'N2','O2','NO','N2O','N2O','N','O','N2+','O2+','N+','N-','O+','O-','e-'},
+  speciesList = {'N2','O2','NO','N2O','NO2','N','O','NO+','N2+','O2+','N+','N-','O+','O-','e-'},
   reactants = {N2=0.79,O2=0.21},
   inputUnits = "moles",
   withIons = true,
