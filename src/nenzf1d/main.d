@@ -121,7 +121,7 @@ Options:
             string label = format("massf[%s]", name);
             writefln("%s%-12s%g", "  ", label, result.massf[i]);
         }
-        writefln("  viscosity   %g Pa.s", result.mu);
+        writefln("  viscosity   %g Pa.s", result.viscosity);
         //
         writeln("Expansion error-indicators:");
         writefln("  relerr-mass %g", result.massflux_rel_err);
@@ -244,7 +244,7 @@ struct Result{
     double Mach_number;
     double p_pitot;
     double rayleigh_pitot;
-    double pressure, density, temperature, mu;
+    double pressure, density, temperature, viscosity;
     double[] T_modes;
     double[] massf;
     double massflux_rel_err, enthalpy_rel_err, pitot_rel_err;
@@ -779,7 +779,7 @@ Result run(int verbosityLevel, Config config)
     foreach (Tmode; gas0.T_modes) result.T_modes ~= Tmode;
     foreach (name; species) result.massf ~= gas0.massf[gm2.species_index(name)];
     gm2.update_trans_coeffs(gas0);
-    result.mu = gas0.mu;
+    result.viscosity = gas0.mu;
 
     double massflux = area * gas0.rho * v;
     result.massflux_rel_err = fabs(massflux - massflux_at_start)/massflux_at_start;

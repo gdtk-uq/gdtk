@@ -1,9 +1,11 @@
-// cwrap.d
-//
-// Module for interfacing with foreign function libraries, specifically python's ffi
-//
-// @author: NNG
-//
+/*
+Wrapper functions for interfacing nenzf1d with python, using the ffi library.
+
+Notes:
+ - This file is compiled when invoking the target $ make libnenzf1d.so
+
+@author: NNG
+*/
 
 import core.runtime;
 import core.stdc.string;
@@ -17,9 +19,7 @@ Result result;
 
 extern (C) int cwrap_init()
 {
-    writeln("Hello from d!");
     Runtime.initialize();
-    writeln("Initialized!");
     return 0;
 }
 
@@ -116,7 +116,7 @@ struct PlainResult{
     double Mach_number;
     double p_pitot;
     double rayleigh_pitot;
-    double pressure, density, temperature, mu;
+    double pressure, density, temperature, viscosity;
     int n_T_modes;
     double* T_modes;
     int n_massf;
@@ -136,14 +136,14 @@ PlainResult d_result_to_c(ref Result result){
     rst.x = result.x;
     rst.area_ratio = result.area_ratio;
     rst.velocity = result.velocity;
-    rst.Mach_number = result.velocity;
+    rst.Mach_number = result.Mach_number;
 
     rst.p_pitot = result.p_pitot;
     rst.rayleigh_pitot = result.rayleigh_pitot;
     rst.pressure = result.pressure;
     rst.density = result.density;
     rst.temperature = result.temperature;
-    rst.mu = result.mu;
+    rst.viscosity = result.viscosity;
 
     rst.n_T_modes = to!int(result.T_modes.length);
     rst.T_modes = result.T_modes.ptr;
