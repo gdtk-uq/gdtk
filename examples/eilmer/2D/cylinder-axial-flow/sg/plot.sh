@@ -15,7 +15,7 @@ set xlabel "Temperature, K"
 set yrange [0:25]
 set xrange [200:270]
 set style line 1 linetype 1 linewidth 4.0
-plot "profile-x0p917.data" using (\$20):(\$2-0.005)*1000 title "50x50 grid" with points pt 4, \
+plot "profile-x0p917.data" using (\$18):(\$2-0.005)*1000 title "50x50 grid" with points pt 4, \
      "../icase/cyl50_dimensional.dat" using (\$2):(\$1-0.005)*1000.0 title "spectral" with lines ls 1
 EOF
 
