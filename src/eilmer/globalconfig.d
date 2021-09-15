@@ -920,7 +920,7 @@ final class GlobalConfig {
     shared static int interpolation_order = 2;
     // Choose the style of interpolation that best suits the grid and flow regime
     // options are "legacy", "irregular", "regular"
-    // "legacy" and "irregular" are the same scheme implemented in a different manner and 
+    // "legacy" and "irregular" are the same scheme implemented in a different manner and
     // accommodate irregular grids in the reconstruction
     // "regular" assumes grids within the stencil are of equal size
     shared static string interpolation_scheme = "irregular";
@@ -1048,6 +1048,7 @@ final class GlobalConfig {
     // for viscous fluxes. The old, Eilmer3-compatible settings were
     // SpatialDerivCalc.divergence and SpatialDerivLocn.vertices.
     shared static bool include_ghost_cells_in_spatial_deriv_clouds = true;
+    shared static bool upwind_vertex_gradients = true;
     // We may elect to suppress the calculation of gradients in particular zones.
     static BlockZone[] suppress_viscous_stresses_zones;
     //
@@ -1298,6 +1299,7 @@ public:
     SpatialDerivCalc spatial_deriv_calc;
     SpatialDerivLocn spatial_deriv_locn;
     bool include_ghost_cells_in_spatial_deriv_clouds;
+    bool upwind_vertex_gradients;
     BlockZone[] suppress_viscous_stresses_zones;
     double viscous_factor;
     double shear_stress_relative_limit;
@@ -1447,6 +1449,7 @@ public:
         spatial_deriv_locn = GlobalConfig.spatial_deriv_locn;
         include_ghost_cells_in_spatial_deriv_clouds =
             GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds;
+        upwind_vertex_gradients = GlobalConfig.upwind_vertex_gradients;
         foreach (bz; GlobalConfig.suppress_viscous_stresses_zones) {
             suppress_viscous_stresses_zones ~= new BlockZone(bz);
         }
@@ -1877,6 +1880,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_enum("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
     mixin(update_enum("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(update_bool("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
+    mixin(update_bool("upwind_vertex_gradients", "upwind_vertex_gradients"));
     mixin(update_bool("save_viscous_gradients", "save_viscous_gradients"));
     mixin(update_double("viscous_delay", "viscous_delay"));
     mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
@@ -1897,6 +1901,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  spatial_deriv_calc: ", spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc));
         writeln("  spatial_deriv_locn: ", spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn));
         writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
+        writeln("  upwind_vertex_gradients: ", GlobalConfig.upwind_vertex_gradients);
         writeln("  save_viscous_gradients: ", GlobalConfig.save_viscous_gradients);
         writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
         writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);

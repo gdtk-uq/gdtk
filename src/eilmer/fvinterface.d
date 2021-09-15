@@ -402,13 +402,7 @@ public:
     {
         number[4] uwfs;
         number uwf_sum = 0.0;
-        static if (false) {
-            // Equal weighting of the gradient values.
-            foreach (i; 0 .. vtx.length) {
-                uwfs[i] = 1.0;
-                uwf_sum += 1.0;
-            }
-        } else {
+        if (myConfig.upwind_vertex_gradients) {
             // Upwind weighting of the gradient values.
             if (!left_cell && !right_cell) {
                 throw new Exception("Oops! This face does not have at least one cell attached.");
@@ -421,6 +415,12 @@ public:
                 number uwf = upwind_weighting(M);
                 uwfs[i] = uwf;
                 uwf_sum += uwf;
+            }
+        } else {
+            // Equal weighting of the gradient values.
+            foreach (i; 0 .. vtx.length) {
+                uwfs[i] = 1.0;
+                uwf_sum += 1.0;
             }
         }
         grad.copy_values_from(vtx[0].grad);

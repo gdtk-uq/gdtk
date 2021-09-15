@@ -115,6 +115,7 @@ configOptionsHidden = { -- hidden from user
    spatial_deriv_calc = "least_squares",
    spatial_deriv_locn = "cells",
    include_ghost_cells_in_spatial_deriv_clouds = true,
+   upwind_vertex_gradients = true,
    save_viscous_gradients = false,
    viscous_factor_increment = 0.01,
    viscous_delay = 0.0,
