@@ -39,7 +39,23 @@ ffi.cdef("""
         double t_inc_factor;
         double t_inc_max;
     };
-    void run(int verbosityLevel, PlainConfig cfg);
+    typedef struct PlainResult PlainResult;
+    struct PlainResult
+    {
+        double x;
+        double area_ratio;
+        double velocity;
+        double Mach_number;
+        double p_pitot;
+        double rayleigh_pitot;
+        double pressure, density, temperature, mu;
+        int n_T_modes;
+        double* T_modes;
+        int n_massf;
+        double* massf;
+        double massflux_rel_err, enthalpy_rel_err, pitot_rel_err;
+    };
+    PlainResult run(int verbosityLevel, PlainConfig cfg);
 """)
 lib = ffi.dlopen('libnenzf1d.so')
 lib.cwrap_init()
@@ -114,5 +130,9 @@ di_p = ffi.from_buffer("double[]", di)
 config.di = di_p
 
 verbosityLevel = 1
-lib.run(verbosityLevel, config[0])
+result = lib.run(verbosityLevel, config[0])
+print("Got result: ", result.x)
+
+massf = ffi.unpack(result.massf, result.n_massf)
+print("massf: ", massf)
 

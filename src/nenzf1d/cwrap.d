@@ -12,6 +12,9 @@ import std.stdio;
 import std.conv;
 import nenzf1d;
 
+Config config;
+Result result;
+
 extern (C) int cwrap_init()
 {
     writeln("Hello from d!");
@@ -101,38 +104,79 @@ extern (C)
     extern PlainConfig cfg;
 }
 
-extern (C) int run(int verbosityLevel, PlainConfig cfg)
+struct PlainResult{
+/*
+    Store the calculated gas state at the end of the facility nozzle as a packaged struct of numbers.
+
+    @author: Nick Gibbons
+*/
+    double x;
+    double area_ratio;
+    double velocity;
+    double Mach_number;
+    double p_pitot;
+    double rayleigh_pitot;
+    double pressure, density, temperature, mu;
+    int n_T_modes;
+    double* T_modes;
+    int n_massf;
+    double* massf;
+    double massflux_rel_err, enthalpy_rel_err, pitot_rel_err;
+}
+
+PlainResult d_result_to_c(ref Result result){
+/*
+    Take the D style struct returned from nenzf1d and convert into a plain C one
+    that we can pass back out to python.
+
+    @author: Nick Gibbons
+*/
+    PlainResult rst;
+
+    rst.x = result.x;
+    rst.area_ratio = result.area_ratio;
+    rst.velocity = result.velocity;
+    rst.Mach_number = result.velocity;
+
+    rst.p_pitot = result.p_pitot;
+    rst.rayleigh_pitot = result.rayleigh_pitot;
+    rst.pressure = result.pressure;
+    rst.density = result.density;
+    rst.temperature = result.temperature;
+    rst.mu = result.mu;
+
+    rst.n_T_modes = to!int(result.T_modes.length);
+    rst.T_modes = result.T_modes.ptr;
+
+    rst.n_massf = to!int(result.massf.length);
+    rst.massf = result.massf.ptr;
+
+    rst.massflux_rel_err = result.massflux_rel_err;
+    rst.enthalpy_rel_err = result.enthalpy_rel_err;
+    rst.pitot_rel_err    = result.pitot_rel_err;
+
+    return rst;
+}
+
+extern (C) PlainResult run(int verbosityLevel, PlainConfig cfg)
 
 {
-    Config config = plain_to_fancy(cfg);
-    //writeln("Produced fancy config parameters:");
-    //writeln("  gas-model-1= ", config.gm1_filename);
-    //writeln("  gas-model-2= ", config.gm2_filename);
-    //writeln("  reactions-file= ", config.reactions_filename);
-    //writeln("  reactions_file2= ", config.reactions_filename2);
-    //writeln("  species= ", config.species);
-    //writeln("  molef= ", config.molef);
-    //writeln("  T1= ", config.T1);
-    //writeln("  p1= ", config.p1);
-    //writeln("  Vs= ", config.Vs);
-    //writeln("  pe= ", config.pe);
-    //writeln("  meq_throat= ", config.meq_throat);
-    //writeln("  ar= ", config.ar);
-    //writeln("  pp_ps= ", config.pp_ps);
-    //writeln("  C= ", config.C);
-    //writeln("  xi= ", config.xi);
-    //writeln("  di= ", config.di);
-    //writeln("  x_end= ", config.x_end);
-    //writeln("  t_final= ", config.t_final);
-    int exitCode=0;
+    int exitCode = 0;
+    config = plain_to_fancy(cfg);
+
+    PlainResult rst;
     try{
-        exitCode = nenzf1d.run(verbosityLevel, config);
+        result = nenzf1d.run(verbosityLevel, config);
+        rst = d_result_to_c(result);
     }
     catch(Exception e) {
         writeln("Caught exception in cwrap.run, message was:");
         writeln(e.msg);
         exitCode = 1;
     }
-    return exitCode;
+
+    // Set the thing exitCodePointer is pointing at to be equal to exitCode
+    //*exitCodePointer = exitCode;
+    return rst;
 }
 
