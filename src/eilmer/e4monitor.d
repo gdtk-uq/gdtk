@@ -4,12 +4,22 @@
 //
 // PJ 2019-09-19, first experiments.
 //    2021-06-07, quit after the first timeout and no text.
+//    2021-09-16, Let the monitor program run in foreground.
 //
-// From within your PBS batch script, start the monitor program
-// as a background process just before the main run command.
-// For example:
-// e4monitor --job=cone20 --startup=2 --period=1 &
-// mpirun -np 8 e4mpi --run --job=cone20 --verbosity=1
+// Option 1:
+//   From within your PBS batch script, start the monitor program
+//   as a background process just before the main run command.
+//   For example, in the 2D/sharp-cone-20-degrees/sg-mpi/ example:
+//   $ e4monitor --job=cone20 --startup=2 --period=1 &
+//   $ mpirun -np 8 --oversubscribe e4mpi --run --job=cone20 --verbosity=1
+//
+// Option 2:
+//   From within your batch script, let the montior program run
+//   as a foreground process and start the main run command as a subprocess.
+//   For example:
+//   $ e4monitor --job=cone20 --startup=1 --period=1 \
+//               --command="mpirun -np 8 --oversubscribe e4mpi --run --job=cone20"
+//
 
 import std.conv;
 import std.stdio;
@@ -26,10 +36,12 @@ int main(string[] args)
     string jobName = "";
     int startup = 30;
     int period = 60;
+    string cmdStr = "";
     //
     string usageMsg = "Usage: e4monitor --job=<string>"
         ~ " [--startup=<int>]"
-        ~ " [--period=<int>]";
+        ~ " [--period=<int>]"
+        ~ " [--command=<string>]";
     if (args.length < 2) {
         writeln("Too few arguments.  Need at least --job=<string>.");
         writeln(usageMsg);
@@ -37,7 +49,7 @@ int main(string[] args)
         return 1;
     }
     try {
-        getopt(args, "job", &jobName, "startup", &startup, "period", &period);
+        getopt(args, "job", &jobName, "startup", &startup, "period", &period, "command", &cmdStr);
     } catch (Exception e) {
         writeln("Problem parsing command-line options.");
         writeln("Arguments not processed: ");
@@ -48,10 +60,20 @@ int main(string[] args)
         return 1;
     }
     //
-    writefln("monitor begin, job=\"%s\" startup=%d period=%d",
-             jobName, startup, period);
+    writefln("monitor begin, job=\"%s\" startup=%d period=%d command=\"%s\"",
+             jobName, startup, period, cmdStr);
     string progressFile = format("config/%s-progress.txt", jobName);
     writefln("monitor file=\"%s\"", progressFile);
+    //
+    // We may have decided to run the main command in a sub-shell.
+    Pid cmdPid;
+    if (cmdStr.length > 0) {
+        writeln("Starting the main run command as a sub-shell.");
+        cmdPid = spawnShell(cmdStr);
+        scope(exit) { wait(cmdPid); }
+    }
+    //
+    // Start the monitoring activities.
     int myCount = 0;
     Thread.sleep(dur!("seconds")(startup));
     string content = chomp(readTextWithRetries(progressFile));
