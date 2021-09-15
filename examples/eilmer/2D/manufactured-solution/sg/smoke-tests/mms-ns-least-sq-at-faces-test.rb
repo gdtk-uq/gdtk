@@ -1,5 +1,5 @@
 #! /usr/bin/env ruby
-# mms-ns-least-sq-at-vtxs-test.rb
+# mms-ns-least-sq-at-faces-test.rb
 # Run the method of manufactured solutions test case to exercise
 # various options in the code. These cases are all run on a single
 # grid. Our tests involve checking the density norms against
@@ -44,9 +44,7 @@ class TestMMS_NS_LeastSqAtFaces < Test::Unit::TestCase
     assert_equal(s.success?, true)
     lines = o.split("\n")
     names = ['L1', 'L2', 'Linf']
-    refs = {'L1'=>1.462794804407120675e-03,
-            'L2'=>1.774724636678979162e-03,
-            'Linf'=>4.139574720295358112e-03}
+    refs = {'L1'=>1.47556813e-03, 'L2'=>1.99118181e-03, 'Linf'=>5.62119505e-03}
     values = {'L1'=>0.0, 'L2'=>0.0, 'Linf'=>0.0}
     lines.each do |txt|
       if txt.match('Linf')

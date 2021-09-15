@@ -95,7 +95,6 @@ else
    config.dt_init = 1.0e-7
    config.max_time = 150.0e-3
    config.viscous_signal_factor = 0.1
-   config.spatial_deriv_locn = "vertices"
 end
 config.dt_plot = config.max_time/20.0
 config.max_step = 3000000
