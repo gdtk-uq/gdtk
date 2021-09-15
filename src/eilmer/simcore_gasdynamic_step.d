@@ -1659,7 +1659,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 continue;
             }
         } // end if number_of_stages_for_update_scheme >= 3
-    } while (step_failed && (attempt_number < 3));
+    } while (step_failed && (attempt_number < GlobalConfig.max_attempts_for_step));
     //
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
@@ -2200,7 +2200,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 continue;
             }
         } // end if number_of_stages_for_update_scheme >= 2
-    } while (step_failed && (attempt_number < 3));
+    } while (step_failed && (attempt_number < GlobalConfig.max_attempts_for_step));
     //
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
@@ -2488,7 +2488,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
             SimState.dt_global = SimState.dt_global * 0.2;
             continue;
         }
-    } while (step_failed && (attempt_number < 3));
+    } while (step_failed && (attempt_number < GlobalConfig.max_attempts_for_step));
     //
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
@@ -2843,7 +2843,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
             SimState.dt_global = SimState.dt_global * 0.2;
             continue;
         }
-    } while (step_failed && (attempt_number < 3));
+    } while (step_failed && (attempt_number < GlobalConfig.max_attempts_for_step));
     //
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);

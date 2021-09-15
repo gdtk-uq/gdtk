@@ -151,6 +151,7 @@ function write_config_file(fileName)
    f:write(string.format('"with_local_time_stepping": %s,\n', tostring(config.with_local_time_stepping)))
    f:write(string.format('"local_time_stepping_limit_factor": %d,\n', tostring(config.local_time_stepping_limit_factor)))
    f:write(string.format('"with_super_time_stepping_flexible_stages": %s,\n', tostring(config.with_super_time_stepping_flexible_stages)))
+   f:write(string.format('"max_attempts_for_step": %d,\n', config.max_attempts_for_step))
    if #config.cfl_schedule > 0 then
       -- The table already have some values.
       -- We will presume that they are valid entries, however,

@@ -828,6 +828,7 @@ final class GlobalConfig {
     shared static int local_time_stepping_limit_factor = 10000;
     shared static bool with_super_time_stepping = false;
     shared static bool with_super_time_stepping_flexible_stages = false;
+    shared static int max_attempts_for_step = 3; // 3 for resilience, 1 for early fail
     //
     // Parameter controlling Strang-splitting mode when simulating reacting flows
     shared static StrangSplittingMode strangSplitting = StrangSplittingMode.full_T_full_R;
@@ -1705,6 +1706,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_int("local_time_stepping_limit_factor", "local_time_stepping_limit_factor"));
     mixin(update_bool("with_super_time_stepping", "with_super_time_stepping"));
     mixin(update_bool("with_super_time_stepping_flexible_stages", "with_super_time_stepping_flexible_stages"));
+    mixin(update_int("max_attempts_for_step", "max_attempts_for_step"));
     mixin(update_enum("grid_motion", "grid_motion", "grid_motion_from_name"));
     if (GlobalConfig.grid_motion == GridMotion.none) {
         GlobalConfig.n_grid_time_levels = 1;
@@ -1806,6 +1808,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  local_time_stepping_limit_factor: ", GlobalConfig.local_time_stepping_limit_factor);
 	writeln("  with_super_time_stepping: ", GlobalConfig.with_super_time_stepping);
         writeln("  with_super_time_stepping_flexible_stages: ", GlobalConfig.with_super_time_stepping_flexible_stages);
+        writeln("  max_attempts_for_step: ", GlobalConfig.max_attempts_for_step);
 	writeln("  grid_motion: ", grid_motion_name(GlobalConfig.grid_motion));
         writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
         writeln("  udf_grid_motion_file: ", to!string(GlobalConfig.udf_grid_motion_file));
