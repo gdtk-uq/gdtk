@@ -1,0 +1,27 @@
+# X2's 100%He 1.2 mm thick diaphragm driver condition 
+# with isentropic compression to the rupture pressure
+# from Gildfind et al. (2011)
+# Free-piston driver optimisation for simulation of high Mach
+# number scramjet flow conditions
+# Shock Waves, Vol 21, pages 559–572
+# https://doi.org/10.1007/s00193-011-0336-9
+#
+# Chris James (c.james4@uq.edu.au) - 17/09/21
+
+driver_condition_name : 'x2-lwp-1.2mm-100He-0-isentropic'
+driver_condition_type : 'isentropic-compression-p4'
+
+driver_gas_model : 'CEAGas'
+driver_fill_composition : {'He':1.0} 
+driver_speciesList : ['He']
+driver_inputUnits : 'moles' 
+driver_withIons : False
+
+driver_p : 110.3e3 # driver fill pressure, Pa
+driver_T : 298.15 # driver fill temperature, K
+
+p4 : 15.5e6 # Pa
+
+M_throat : 2.17
+
+

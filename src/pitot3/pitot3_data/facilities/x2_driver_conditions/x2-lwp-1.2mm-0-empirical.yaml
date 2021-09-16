@@ -1,0 +1,21 @@
+# X2's 80%He/20%Ar 1.2 mm thick diaphragm driver condition 
+# with empirical T4 and p4 values which I got from David Gildfind.
+# this is what we called 'lwp-1.2mm-dave-mhd' in PITOT2
+#
+# Chris James (c.james4@uq.edu.au) - 17/09/21
+
+driver_condition_name : 'x2-lwp-1.2mm-0-empirical'
+driver_condition_type : 'empirical'
+
+driver_gas_model : 'CEAGas'
+driver_fill_composition : {'He':0.8,'Ar':0.2} 
+driver_speciesList : ['He','Ar']
+driver_inputUnits : 'moles' 
+driver_withIons : False
+
+p4 : 8.89e6 # Pa
+T4 : 1726.0 # K
+
+M_throat : 1.0
+
+
