@@ -183,6 +183,7 @@ presentations:
 	rsync -av $(DGD_DOC)/presentations/2021-07-cfh-seminar-cmj/james-cfh-talk-2021.pdf static/pdfs/cmj-cfh-talk-07-2021.pdf
 	rsync -av $(DGD_DOC)/presentations/2021-07-uqtum-seminar-nng/talk.pdf static/pdfs/nng-uqtum-seminar-07-2021.pdf
 	rsync -av $(DGD_DOC)/presentations/2021-07-uqtum-seminar-kd/talk.pdf static/pdfs/kd-uqtum-seminar-07-2021.pdf
+	rsync -av $(DGD_DOC)/presentations/2021-09-cfh-seminar-viv-bone-andrew-lock/main.pdf static/pdfs/viv-bone-andrew-lock-cfh-seminar-09-2021.pdf
 
 theses:
 	- mkdir -p static/pdfs

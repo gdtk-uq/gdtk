@@ -3,7 +3,7 @@ title: "Presentations"
 description: "Presentations"
 lead: ""
 date: 2021-05-26
-lastmod: 2021-05-26
+lastmod: 2021-09-17
 draft: false
 images: []
 menu:
@@ -14,11 +14,21 @@ toc: false
 ---
 
 Over the years, we have presented various aspects on the formulation,
-physical models, applications and use of Eilmer. Presentation slides
+physical models, applications and use of our CFD codes. Presentation slides
 are available for download. Some slides contain user input tips, but please note
 that the finer details of user input may change over time.
 These slides are not updated, but rather serve as historical record of activities.
-Instead, check the User Guide for the definitive user input.
+Instead, check the User Guides and Reference Manuals for the definitive user input.
+
+- [q1dcfd: A fast dynamic simulation framework for axially-dominated thermofluid systems](/pdfs/viv-bone-andrew-lock-cfh-seminar-09-2021.pdf), 16 September 2021.
+  Viv Bone and Andrew Lock presented their quasi-one-dimensional flow simulation
+  code and provide an example of modelling the dynamics of a supercritical CO2
+  Brayton cycle responding to large changes in load.  They also discuss their
+  approach to identifying features for the heat-transfer correlations that are
+  used within the simulation code.  This approach, which involves of a systematic
+  application of the Buckingham pi theorem and a sparse regression technique
+  (LASSO), could also be used to develop accurate and interpretable correlations
+  for other physical processes (not only heat transfer).
 
 - [A Newton-Krylov Algorithm for Hypersonic Flows: Performance Demonstration and Application](/pdfs/kd-uqtum-seminar-07-2021.pdf), 22 July 2021.  
   KAD seminar on the Newton-Krylov accelerator.
