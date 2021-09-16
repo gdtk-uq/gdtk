@@ -966,7 +966,8 @@ public:
             // [TODO] PJ 2021-05-17 Implicit update schemes should run with cfl >> 1
             // but we don't have much experience to know how far the cfl can be pushed.
             // 100.0 seems a little too far for the LaRC flat plate with turbulent Mach 5 flow.
-            cfl_allow = 60.0;
+            // 2021-09-17 It has been reported that 500.0 is ok for a nozzle flow.
+            cfl_allow = 600.0;
         }
         // for local time-stepping we limit the larger time-steps by a factor of the smallest timestep
         int local_time_stepping_limit_factor = myConfig.local_time_stepping_limit_factor;
