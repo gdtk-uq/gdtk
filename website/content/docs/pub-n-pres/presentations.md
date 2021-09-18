@@ -20,7 +20,7 @@ that the finer details of user input may change over time.
 These slides are not updated, but rather serve as historical record of activities.
 Instead, check the User Guides and Reference Manuals for the definitive user input.
 
-- [q1dcfd: A fast dynamic simulation framework for axially-dominated thermofluid systems](/pdfs/viv-bone-andrew-lock-cfh-seminar-09-2021.pdf), 16 September 2021.
+- [q1dcfd: A fast dynamic simulation framework for axially-dominated thermofluid systems](/pdfs/viv-bone-andrew-lock-cfh-seminar-09-2021.pdf), 16 September 2021.  
   Viv Bone and Andrew Lock presented their quasi-one-dimensional flow simulation
   code and provide an example of modelling the dynamics of a supercritical CO2
   Brayton cycle responding to large changes in load.  They also discuss their
