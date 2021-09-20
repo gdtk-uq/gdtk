@@ -1519,6 +1519,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     }
                     if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
                     //
+
                     double gamma_1 = 1.0/6.0; // presume TVD_RK3 scheme.
                     double gamma_2 = 1.0/6.0;
                     double gamma_3 = 4.0/6.0;
@@ -1665,7 +1666,9 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
     }
     if (step_failed) {
-        throw new FlowSolverException("Explicit update failed after 3 attempts; giving up.");
+        string msg = format("Explicit update failed after %d attempts; giving up.",
+                            GlobalConfig.max_attempts_for_step);
+        throw new FlowSolverException(msg);
     }
     //
     // Get the end conserved data into U[0] for next step.
@@ -2206,7 +2209,9 @@ void gasdynamic_explicit_increment_with_moving_grid()
         MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
     }
     if (step_failed) {
-        throw new FlowSolverException("Explicit update with moving grid failed after 3 attempts; giving up.");
+        string msg = format("Explicit update failed after %d attempts; giving up.",
+                            GlobalConfig.max_attempts_for_step);
+        throw new FlowSolverException(msg);
     }
     //
     // Get the end conserved data into U[0] for next step.
@@ -2494,7 +2499,9 @@ void gasdynamic_implicit_increment_with_fixed_grid()
         MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
     }
     if (step_failed) {
-        throw new FlowSolverException("Implicit update failed after 3 attempts; giving up.");
+        string msg = format("Explicit update failed after %d attempts; giving up.",
+                            GlobalConfig.max_attempts_for_step);
+        throw new FlowSolverException(msg);
     }
     //
     // Get the end conserved data into U[0] for next step.
@@ -2777,7 +2784,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
                 MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
             }
             if (flagTooManyBadCells > 0) {
-                throw new FlowSolverException("Too many bad cells following first-stage gasdynamic update.");
+                throw new FlowSolverException("Too many bad cells following implicit gasdynamic update.");
             }
             //
             if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
@@ -2849,7 +2856,9 @@ void gasdynamic_implicit_increment_with_moving_grid()
         MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
     }
     if (step_failed) {
-        throw new FlowSolverException("Implicit update failed after 3 attempts; giving up.");
+        string msg = format("Implicit update failed after %d attempts; giving up.",
+                            GlobalConfig.max_attempts_for_step);
+        throw new FlowSolverException(msg);
     }
     //
     // Get the end conserved data into U[0] for next step and
