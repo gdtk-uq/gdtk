@@ -1251,9 +1251,17 @@ int integrate_in_time(double target_time_as_requested)
         }
         version(mpi_parallel) {
             // If one task is finished time-stepping, all tasks have to finish.
+            debug {
+                writefln("DEBUG At end of main loop in integrate_in_time, before reduce, MPI task=%d, caught_exception=%s",
+                         GlobalConfig.mpi_rank_for_local_task, finished_time_stepping);
+            }
             int localFinishFlag = to!int(finished_time_stepping);
             MPI_Allreduce(MPI_IN_PLACE, &localFinishFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
             finished_time_stepping = to!bool(localFinishFlag);
+            debug {
+                writefln("DEBUG At end of main loop in integrate_in_time, after reduce, MPI task=%d, caught_exception=%s",
+                         GlobalConfig.mpi_rank_for_local_task, finished_time_stepping);
+            }
         }
         if(finished_time_stepping && GlobalConfig.verbosity_level >= 1 && GlobalConfig.is_master_task) {
             // Make an announcement about why we are finishing time-stepping.
@@ -1282,6 +1290,10 @@ int integrate_in_time(double target_time_as_requested)
     // We use a strange mix of exception handling and error flags
     // because we could not think of an easier way to deal with
     // the MPI issues of shutting down cleanly.
+    debug {
+        writefln("DEBUG At end of integrate_in_time, MPI task=%d, caught_exception=%s",
+                 GlobalConfig.mpi_rank_for_local_task, caughtException);
+    }
     if (caughtException) {
         return -1; // failed integration
     } else {
