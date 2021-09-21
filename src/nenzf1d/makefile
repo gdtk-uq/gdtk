@@ -144,6 +144,8 @@ install: $(PROGRAMS) prep-gas prep-chem chemkin2eilmer
 	cp $(LUA_DIR)/bin/* $(BUILD_DIR)/bin
 	cp -r ../lib/* $(BUILD_DIR)/lib
 	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
+	cp nenzf1d.py $(BUILD_DIR)/lib
+	cp libnenzf1d.so $(BUILD_DIR)/lib 2>/dev/null || :
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
@@ -156,6 +158,8 @@ clean:
 	- cd $(GAS_DIR); make clean; rm libgas.a
 	- cd $(KINETICS_DIR); make clean
 	- cd $(CEQ_DIR); make clean
+	- cd $(DYAML_DIR); rm -rf *.o
+	- cd $(TINYENDIAN_DIR); rm -rf *.o
 
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local

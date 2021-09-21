@@ -6,6 +6,7 @@ Python wrapper for nenzf1d.
 
 from cffi import FFI
 from numpy import array, zeros
+from os import environ, path
 
 ffi = FFI()
 ffi.cdef("""
@@ -84,7 +85,11 @@ class Nenzf1d(object):
         self.t_inc_factor   = t_inc_factor
         self.t_inc_max      = t_inc_max
 
-        self.lib = ffi.dlopen('libnenzf1d.so')
+        dgdpath = environ.get('DGD')
+        if dgdpath==None: raise Exception("DGD install not found!")
+        libpath = path.join(dgdpath, 'lib', 'libnenzf1d.so')
+        print("got libpath: ", libpath)
+        self.lib = ffi.dlopen(libpath)
         self.lib.cwrap_init()
         return
 
@@ -111,7 +116,7 @@ class Nenzf1d(object):
         config.n_species = n_species
         config.species = species_pp
         
-        config.n_molef = molef.size;
+        config.n_molef = self.molef.size;
         molef_p = ffi.from_buffer("double[]", self.molef)
         config.molef = molef_p
         
