@@ -16,5 +16,6 @@ setenv DGD $dgd
 append-path PATH $dgd/bin
 setenv DGD_LUA_PATH $dgd/lib/?.lua
 setenv DGD_LUA_CPATH $dgd/lib/?.so
+append-path PYTHONPATH $dgd/lib
 
 conflict dgd 
