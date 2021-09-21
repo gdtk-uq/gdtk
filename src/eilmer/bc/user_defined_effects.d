@@ -473,6 +473,9 @@ private:
             fs.k_t = getDouble(L, tblIdx, "k_t");
         }
 
+        gmodel.update_thermo_from_pT(fs.gas);
+        gmodel.update_trans_coeffs(fs.gas);
+
         lua_pop(L, 1);
     } // end putFlowStateIntoInterface()
 
