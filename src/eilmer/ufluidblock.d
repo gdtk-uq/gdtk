@@ -751,8 +751,8 @@ public:
                         case UnstructuredLimiter.barth:
                             c.gradients.barth_limit(c.cell_cloud, c.ws, myConfig);
                             break;
-                        case UnstructuredLimiter.heuristic_van_albada:
-                            c.gradients.heuristic_van_albada_limit(c.cell_cloud, c.ws, myConfig);
+                        case UnstructuredLimiter.heuristic_minmod:
+                            c.gradients.heuristic_minmod_limit(c.cell_cloud, c.ws, myConfig);
                             break;
                         case UnstructuredLimiter.venkat:
                             c.gradients.venkat_limit(c.cell_cloud, c.ws, myConfig, gtl);

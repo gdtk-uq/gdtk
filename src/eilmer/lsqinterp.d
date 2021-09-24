@@ -244,35 +244,41 @@ public:
     @nogc
     void barth_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
     {
-        size_t dimensions = myConfig.dimensions;
+        // Limiter of Barth and Jespersen
+        //     Barth TJ, Jespersen DC.
+        //     The design and application of upwind schemes on unstructured meshes.
+        //     AIAA Paper 89-0366; 1989
+        //
+        // Implementation details from
+        //     Blazek J.
+        //     CFD principles and applications
+        //     Third edition, 2007
+
         number a, b, U, phi;
         immutable double w = 1.0e-12;
-        // The following function to be used at compile time.
-        string codeForLimits(string qname, string gname, string limFactorname,
+        string codeForLimits(string qname, string gname,
+                             string limFactorname,
                              string qMaxname, string qMinname)
         {
             string code = "{
             U = cell_cloud[0].fs."~qname~";
             phi = 1.0;
-            if (fabs("~gname~"[0]) > ESSENTIALLY_ZERO ||
-                fabs("~gname~"[1]) > ESSENTIALLY_ZERO ||
-                fabs("~gname~"[2]) > ESSENTIALLY_ZERO) {
             foreach (i, f; cell_cloud[0].iface) {
-                number dx = f.pos.x - cell_cloud[0].pos[0].x; 
-                number dy = f.pos.y - cell_cloud[0].pos[0].y; 
+                number dx = f.pos.x - cell_cloud[0].pos[0].x;
+                number dy = f.pos.y - cell_cloud[0].pos[0].y;
                 number dz = f.pos.z - cell_cloud[0].pos[0].z;
                 b = "~gname~"[0] * dx + "~gname~"[1] * dy;
-                if (myConfig.dimensions == 3) b += "~gname~"[2] * dz; 
+                if (myConfig.dimensions == 3) { b += "~gname~"[2] * dz; }
                 b = copysign(((fabs(b) + w)), b);
-                if (b >  ESSENTIALLY_ZERO) {
+                if (b > 0.0) {
                     a = "~qMaxname~" - U;
                     phi = fmin(phi, a/b);
-                }
-                else if (b <  ESSENTIALLY_ZERO) {
+                } else if (b < 0.0) {
                     a = "~qMinname~" - U;
                     phi = fmin(phi, a/b);
+                } else {
+                    phi = fmin(phi, 1.0);
                 }
-            }
             }
             "~limFactorname~" = phi;
             }
@@ -311,11 +317,11 @@ public:
                 massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
             }
         }
-        // Interpolate on two of the thermodynamic quantities, 
-        // and fill in the rest based on an EOS call. 
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
         auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
-        case InterpolateOption.pt: 
+        case InterpolateOption.pt:
             mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
             mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
             version(multi_T_gas) {
@@ -339,7 +345,7 @@ public:
             mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
             mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
             break;
-        case InterpolateOption.rhot: 
+        case InterpolateOption.rhot:
             mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
             mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
             version(multi_T_gas) {
@@ -568,39 +574,44 @@ public:
     void venkat_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
                       ref LocalConfig myConfig, size_t gtl=0)
     {
-        // Reference: V. Venkatakrishnan
-        // Convergence to steady state solutions of the Euler equations
-        // on unstructured grids with limiters.
-        // Journal of Computational Physics vol.118 pp120-130 (1995)
-        size_t dimensions = myConfig.dimensions;
+        // Venkatakrishnan's limiter
+        //     Venkatakrishnan V.
+        //     Convergence to steady state solutions of the Euler equations on unstructured grids with limiters.
+        //     Journal of Computational Physics vol.118 pp120-130 (1995)
+        //
+        // Implementation details from
+        //     Blazek J.
+        //     CFD principles and applications
+        //     Third edition, 2007
+
         number a, b, U, phi, h, s;
         immutable double w = 1.0e-12;
-        double K = myConfig.venkat_K_value;
+        immutable double K = myConfig.venkat_K_value;
         if (myConfig.dimensions == 3) {
-            h = cell_cloud[0].volume[gtl]^^(1.0/3.0); // cbrt  
+            h = cell_cloud[0].volume[gtl]^^(1.0/3.0);
         } else {
             h = sqrt(cell_cloud[0].volume[gtl]);
         }
         number eps = (K*h) * (K*h) * (K*h);
-        // The following function to be used at compile time.
+
         string codeForLimits(string qname, string gname, string limFactorname,
                              string qMaxname, string qMinname)
         {
             string code = "{
             U = cell_cloud[0].fs."~qname~";
             phi = 1.0;
-            if (fabs("~gname~"[0]) > ESSENTIALLY_ZERO ||
-                fabs("~gname~"[1]) > ESSENTIALLY_ZERO ||
-                fabs("~gname~"[2]) > ESSENTIALLY_ZERO) {
-                foreach (i, f; cell_cloud[0].iface) {
-                    number dx = f.pos.x - cell_cloud[0].pos[gtl].x; 
-                    number dy = f.pos.y - cell_cloud[0].pos[gtl].y; 
-                    number dz = f.pos.z - cell_cloud[0].pos[gtl].z;
-                    b = "~gname~"[0] * dx + "~gname~"[1] * dy;
-                    if (myConfig.dimensions == 3) { b += "~gname~"[2] * dz; }
-                    b = copysign(((fabs(b) + w)), b); 
+            foreach (i, f; cell_cloud[0].iface) {
+                number dx = f.pos.x - cell_cloud[0].pos[gtl].x;
+                number dy = f.pos.y - cell_cloud[0].pos[gtl].y;
+                number dz = f.pos.z - cell_cloud[0].pos[gtl].z;
+                b = "~gname~"[0] * dx + "~gname~"[1] * dy;
+                if (myConfig.dimensions == 3) { b += "~gname~"[2] * dz; }
+                b = copysign(((fabs(b) + w)), b);
+                if ( b == 0.0 ) {
+                    phi = fmin(phi, 1.0);
+                } else {
                     a = (b > 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
-                    s = (a*a + 2.0*b*a + eps)/(a*a + 2.0*b*b + a*b + eps);                    
+                    s = (a*a + 2.0*b*a + eps)/(a*a + 2.0*b*b + a*b + eps);
                     phi = fmin(phi, s);
                 }
             }
@@ -641,11 +652,11 @@ public:
                 massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
             }
         }
-        // Interpolate on two of the thermodynamic quantities, 
-        // and fill in the rest based on an EOS call. 
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
         auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
-        case InterpolateOption.pt: 
+        case InterpolateOption.pt:
             mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
             mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
             version(multi_T_gas) {
@@ -669,7 +680,7 @@ public:
             mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
             mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
             break;
-        case InterpolateOption.rhot: 
+        case InterpolateOption.rhot:
             mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
             mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
             version(multi_T_gas) {
@@ -683,71 +694,38 @@ public:
     } // end compute_lsq_gradients()
 
     @nogc
-    void heuristic_van_albada_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
+    void heuristic_minmod_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
                                     ref LocalConfig myConfig, size_t gtl=0)
     {
-        size_t dimensions = myConfig.dimensions;
-        number phi, s, a, b;
-        number h, dP, dPx, dPy, dPz, dx1, dy1, dz1, dx2, dy2, dz2;
-        immutable double eps = 1.0e-12;
-        // The following function to be used at compile time.
+        // Pressure-based heuristic MINMOD limiter
+        // Implementation details from
+        //     Drayna T. W.
+        //     Design and Optimization of Hypersoni Inward-Turning Inlets
+        //     Thesis @ Univsersity of Minnesota, 2011
+
+        number phi, g, r, s, beta;
+        immutable number eps = 1.0e-12;
+        FVCell ncell;
         string codeForLimits(string qname, string gname, string limFactorname,
                              string qMaxname, string qMinname)
         {
             string code = "{
             phi = 1.0;
-            if (fabs("~gname~"[0]) > ESSENTIALLY_ZERO ||
-                fabs("~gname~"[1]) > ESSENTIALLY_ZERO ||
-                fabs("~gname~"[2]) > ESSENTIALLY_ZERO) {
-                foreach (i, f; cell_cloud[0].iface) {
-                    // heuristic pressure limiter value
-                    if (f.left_cell && f.right_cell && f.left_cell.contains_flow_data && f.right_cell.contains_flow_data) {
-                        dx1 = f.pos.x - f.left_cell.pos[gtl].x; 
-                        dy1 = f.pos.y - f.left_cell.pos[gtl].y; 
-                        dz1 = f.pos.z - f.left_cell.pos[gtl].z;
-                        dx2 = f.pos.x - f.right_cell.pos[gtl].x; 
-                        dy2 = f.pos.y - f.right_cell.pos[gtl].y; 
-                        dz2 = f.pos.z - f.right_cell.pos[gtl].z;
-                        dPx = dx1*f.left_cell.gradients.p[0] - dx2*f.right_cell.gradients.p[0];
-                        dPy = dy1*f.left_cell.gradients.p[1] - dy2*f.right_cell.gradients.p[1];
-                        dPz = dz1*f.left_cell.gradients.p[2] - dz2*f.right_cell.gradients.p[2];
-                        dP = sqrt(dPx*dPx + dPy*dPy + dPz*dPz);
-                        h = 1.0 - tanh(dP/fmin(f.left_cell.fs.gas.p, f.right_cell.fs.gas.p));
-                    } else if (f.left_cell && f.left_cell.contains_flow_data) {
-                        dx1 = f.pos.x - f.left_cell.pos[gtl].x; 
-                        dy1 = f.pos.y - f.left_cell.pos[gtl].y; 
-                        dz1 = f.pos.z - f.left_cell.pos[gtl].z;
-                        dPx = dx1*f.left_cell.gradients.p[0];
-                        dPy = dy1*f.left_cell.gradients.p[1];
-                        dPz = dz1*f.left_cell.gradients.p[2];
-                        dP = sqrt(dPx*dPx + dPy*dPy + dPz*dPz);
-                        h = 1.0 - tanh(dP/f.left_cell.fs.gas.p);
-                    } else if (f.right_cell && f.right_cell.contains_flow_data) {
-                        dx1 = f.pos.x - f.right_cell.pos[gtl].x; 
-                        dy1 = f.pos.y - f.right_cell.pos[gtl].y; 
-                        dz1 = f.pos.z - f.right_cell.pos[gtl].z;
-                        dPx = dx1*f.right_cell.gradients.p[0];
-                        dPy = dy1*f.right_cell.gradients.p[1];
-                        dPz = dz1*f.right_cell.gradients.p[2];
-                        dP = sqrt(dPx*dPx + dPy*dPy + dPz*dPz);
-                        h = 1.0 - tanh(dP/f.right_cell.fs.gas.p);
-                    }
-                    // Van Albada limiter value
-                    if (f.left_cell && f.right_cell && f.left_cell.contains_flow_data && f.right_cell.contains_flow_data) {
-                        a = sqrt(f.left_cell.gradients."~gname~"[0]^^2 + 
-                                 f.left_cell.gradients."~gname~"[1]^^2 + 
-                                 f.left_cell.gradients."~gname~"[2]^^2);
-                        b = sqrt(f.right_cell.gradients."~gname~"[0]^^2 + 
-                                 f.right_cell.gradients."~gname~"[1]^^2 + 
-                                 f.right_cell.gradients."~gname~"[2]^^2);
-                        s = h * (a*b + fabs(a*b))/(a*a + b*b + eps);
-                    } else if (f.left_cell && f.left_cell.contains_flow_data) {
-                        s = h * 1.0;
-                    } else if (f.right_cell && f.right_cell.contains_flow_data) {
-                        s = h * 1.0;  
-                    }
-                    phi = fmin(phi, s);
-               }
+            foreach (i, f; cell_cloud[0].iface) {
+                // MINMOD limiter value
+                if (f.left_cell.id == cell_cloud[0].id) { ncell = f.right_cell; }
+                else { ncell = f.left_cell; }
+                number dx = ncell.pos[gtl].x - cell_cloud[0].pos[gtl].x;
+                number dy = ncell.pos[gtl].y - cell_cloud[0].pos[gtl].y;
+                number dz = ncell.pos[gtl].z - cell_cloud[0].pos[gtl].z;
+                g = "~gname~"[0] * dx + "~gname~"[1] * dy;
+                if (myConfig.dimensions == 3) { g += "~gname~"[2] * dz; }
+                r = (2.0*g)/(ncell.fs."~qname~" - cell_cloud[0].fs."~qname~" + eps) - 1.0;
+                s = max(to!number(0.0), min(to!number(1.0),r));
+                // Pressure-based smoothing limiter value
+                beta = 1.0/(1.0 + ((pMax - pMin)/pMin)^^4);
+                s *= beta;
+                phi = min(phi, s);
             }
             "~limFactorname~" = phi;
             }
@@ -1025,7 +1003,7 @@ public:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.barth:
                         goto case UnstructuredLimiter.venkat;
-                    case UnstructuredLimiter.heuristic_van_albada:
+                    case UnstructuredLimiter.heuristic_minmod:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.venkat:
                         mygradL[0] *= cL0.gradients."~lname~";
@@ -1217,7 +1195,7 @@ public:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.barth:
                         goto case UnstructuredLimiter.venkat;
-                    case UnstructuredLimiter.heuristic_van_albada:
+                    case UnstructuredLimiter.heuristic_minmod:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.venkat:
                         mygradR[0] *= cR0.gradients."~lname~";
@@ -1383,7 +1361,7 @@ public:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.barth:
                         goto case UnstructuredLimiter.venkat;
-                    case UnstructuredLimiter.heuristic_van_albada:
+                    case UnstructuredLimiter.heuristic_minmod:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.venkat:
                         mygradL[0] *= cL0.gradients."~lname~";
