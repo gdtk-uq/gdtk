@@ -1318,6 +1318,28 @@ void registerSurfaces(lua_State* L)
     lua_setglobal(L, SpherePatchMT.toStringz);
     lua_getglobal(L, SpherePatchMT.toStringz); lua_setglobal(L, "SphereSurface"); // alias
 
+    // Register the CubePatch object
+    luaL_newmetatable(L, CubePatchMT.toStringz);
+
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newCubePatch);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallSurface!(CubePatch, CubePatchMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallSurface!(CubePatch, CubePatchMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(CubePatch, CubePatchMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &areaOfSurface!(CubePatch, CubePatchMT));
+    lua_setfield(L, -2, "area");
+
+    lua_setglobal(L, CubePatchMT.toStringz);
+    lua_getglobal(L, CubePatchMT.toStringz); lua_setglobal(L, "CubeSurface"); // alias
+
     // Register the MeshPatch object
     luaL_newmetatable(L, MeshPatchMT.toStringz);
 
