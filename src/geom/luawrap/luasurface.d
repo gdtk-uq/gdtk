@@ -29,6 +29,7 @@ immutable string ChannelPatchMT = "ChannelPatch";
 immutable string NozzleExpansionPatchMT = "NozzleExpansionPatch";
 immutable string SweptPathPatchMT = "SweptPathPatch";
 immutable string SpherePatchMT = "SpherePatch";
+immutable string CubePatchMT = "CubePatch";
 immutable string MeshPatchMT = "MeshPatch";
 immutable string LuaFnSurfaceMT = "LuaFnSurface";
 immutable string SubRangedSurfaceMT = "SubRangedSurface";
@@ -52,6 +53,8 @@ ParametricSurface checkSurface(lua_State* L, int index) {
         return checkObj!(SweptPathPatch, SweptPathPatchMT)(L, index);
     if ( isObjType(L, index, SpherePatchMT) )
         return checkObj!(SpherePatch, SpherePatchMT)(L, index);
+    if ( isObjType(L, index, CubePatchMT) )
+        return checkObj!(CubePatch, CubePatchMT)(L, index);
     if ( isObjType(L, index, MeshPatchMT ) )
         return checkObj!(MeshPatch, MeshPatchMT)(L, index);
     if ( isObjType(L, index, LuaFnSurfaceMT ) )
@@ -560,6 +563,68 @@ extern(C) int newSpherePatch(lua_State* L)
     surfaceStore ~= pushObj!(SpherePatch, SpherePatchMT)(L, spatch);
     return 1;
 } // end newSpherePatch()
+
+
+/**
+ * This is the constructor for a CubePatch to be used from the Lua interface.
+ *
+ * The model is a cube -1,1 remapped to a cube of edge length 2a and center C.
+ * The surface starts as a single, named face of the unit cube. Names are the
+ * usual north, east, south, west, top, bottom.
+ * By default, you will get a full face.  You can request a half face
+ * by specifying a name for the adjoining cube face and you can requast
+ * a quadrant by specifying the pair of names for the adjoining cube faces.
+ *
+ * Supported constructions are:
+ * -------------------------
+ * patch0 = CubePatch:new{a=a, centre=C, face_name="east"}
+ * patch1 = CubePatch:new{a=a, centre=C, face_name="east", which_part="top"}
+ * patch1 = CubePatch:new{a=a, centre=C, face_name="east", which_part="top-south"}
+ * --------------------------
+ *
+ * At successful completion of this function, a new CubePatch object
+ * is pushed onto the Lua stack.
+ */
+
+extern(C) int newCubePatch(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected CubePatch:new{}; ";
+        errMsg ~= "maybe you tried CubePatch.new{}.";
+        luaL_error(L, errMsg.toStringz);
+        return 0;
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in constructor CubePatch:new{}. " ~
+            "A table with input parameters is expected as the first argument.";
+        luaL_error(L, errMsg.toStringz);
+        return 0;
+    }
+    if (!checkAllowedNames(L, 1, ["a","centre","face_name","which_part"])) {
+        string errMsg = "Error in call to CubePatch:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+        return 0;
+    }
+    // Now, get our table entries.
+    // Table is at index 1
+    double a = getDouble(L, 1, "a");
+    string face_name = getString(L, 1, "face_name");
+    string which_part = getStringWithDefault(L, 1, "which_part", "");
+    lua_getfield(L, 1, "centre");
+    if (lua_isnil(L, -1)) {
+        string errMsg = "Error in call to CubePatch:new{}. No centre entry found.";
+        luaL_error(L, errMsg.toStringz());
+    }
+    auto centre = toVector3(L, -1);
+    lua_pop(L, 1);
+    //
+    auto spatch = new CubePatch(to!number(a), centre, face_name, which_part);
+    surfaceStore ~= pushObj!(CubePatch, CubePatchMT)(L, spatch);
+    return 1;
+} // end newCubePatch()
 
 
 /**

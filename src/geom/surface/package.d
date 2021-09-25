@@ -12,3 +12,4 @@ public import geom.surface.bezierpatch;
 public import geom.surface.beziertrianglepatch;
 public import geom.surface.nozzleexpansionpatch;
 public import geom.surface.spherepatch;
+public import geom.surface.cubepatch;
