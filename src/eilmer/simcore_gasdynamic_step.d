@@ -1708,8 +1708,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
                 }
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, 0); }
-                    // FIX-ME PJ 2018-07-25 Should this be gtl rather than 0?
+                    if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, 0); } // note 0 rather then gtl
                 }
 
                 // for unstructured blocks we need to transfer the convective gradients before the flux calc
@@ -1718,8 +1717,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 }
 
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, 0); }
-                    // FIX-ME PJ 2018-07-25 Should this be gtl rather than 0?
+                    if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, 0); } // note 0 rather then gtl
                 }
                 if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
