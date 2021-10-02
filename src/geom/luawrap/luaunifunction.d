@@ -265,7 +265,7 @@ extern(C) int newGeometricFunction(lua_State* L)
     string errMsgTmpltNumber = "Error in call to GeometricFunction:new{}. ";
     errMsgTmpltNumber ~= "A valid value for '%s' was not found in list of arguments. ";
     errMsgTmpltNumber ~= "The value, if present, should be a number.";
-    string errMsgTmpltBool = "Error in call to RobertsFunction:new{}. ";
+    string errMsgTmpltBool = "Error in call to GeometricFunction:new{}. ";
     errMsgTmpltBool ~= "A valid value for '%s' was not found in list of arguments. ";
     errMsgTmpltBool ~= "The value, if present, should be boolean (true or false).";
     string errMsgTmpltInt = "Error in call to GeometricFunction:new{}. ";
