@@ -444,13 +444,13 @@ function write_config_file(fileName)
    f:write(string.format('"nsolidblock": %d,\n', #solidBlocks))
    --
    for i = 1, #fluidBlockArrays do
-      f:write(fluidBlockArrays[i]:tojson())
+      f:write(fluidBlockArrays[i]:tojson() .. ",\n")
    end
    for i = 1, #fluidBlocks do
-      f:write(fluidBlocks[i]:tojson())
+      f:write(fluidBlocks[i]:tojson() .. ",\n")
    end
    for i = 1, #solidBlocks do
-      f:write(solidBlocks[i]:tojson())
+      f:write(solidBlocks[i]:tojson() .. ",\n")
    end
    --
    f:write('"dummy_entry_without_trailing_comma": 0\n') -- no comma on last entry

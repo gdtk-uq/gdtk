@@ -178,7 +178,7 @@ function FluidBlock:new(o)
       end
    end
    return o
-end
+end -- FluidBlock:new(o)
 
 function FluidBlock:tojson()
    local str = string.format('"block_%d": {\n', self.id)
@@ -247,9 +247,9 @@ function FluidBlock:tojson()
       end
    end
    str = str .. '    "dummy_entry_without_trailing_comma": 0\n'
-   str = str .. '},\n'
+   str = str .. '}'
    return str
-end
+end -- FluidBlock:tojson()
 
 -- ---------------------------------------------------------------------------
 function SBlock2UBlock(blk)
@@ -284,7 +284,7 @@ function SBlock2UBlock(blk)
    -- remove the latest dictionary entry, since the ublk no longer has that label.
    table.remove(fluidBlocks, newId+1)
    fluidBlocksDict[newLabel] = nil
-end
+end -- SBlock2UBlock()
 
 function connectBlocks(blkA, faceA, blkB, faceB, orientation)
    -- Make a "full-face" connection between a pair of Block objects.
@@ -330,7 +330,7 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
                                                            otherFace=faceA,
                                                            orientation=orientation}
    end
-end
+end -- connectBlocks()
 
 function identifyBlockConnections(blockList, excludeList, tolerance)
    -- Identify block connections by trying to match corner points.
@@ -391,4 +391,4 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
 	 end -- if (A ~= B...
       end -- for _,B
    end -- for _,A
-end -- identifyBlockConnections
+end -- identifyBlockConnections()

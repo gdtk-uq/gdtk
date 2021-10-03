@@ -294,6 +294,8 @@ function registerGridArray(o)
    -- Returns:
    -- the gridArray table so that the user may use the interior pieces later in their script..
    --
+   -- [TODO] 2021-10-04 PJ, Refactor and delegate the grid subdivision work to GridArray constructor.
+   --
    if false then -- debug
       print("Begin registerGridArray.")
    end

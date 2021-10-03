@@ -118,9 +118,9 @@ function SolidBlock:tojson()
 	 self.bcList[face]:tojson() .. ',\n'
    end
    str = str .. '    "dummy_entry_without_trailing_comma": 0\n'
-   str = str .. '},\n'
+   str = str .. '}'
    return str
-end
+end -- SolidBlock:tojson()
 
 function SolidBlockArray(t)
    -- Expect one table as argument, with named fields.
