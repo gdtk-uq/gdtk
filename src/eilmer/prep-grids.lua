@@ -30,6 +30,9 @@ applyGridproConnectivity = gridpro.applyGridproConnectivity
 applyGridproBoundaryConditions = gridpro.applyGridproBoundaryConditions
 to_eilmer_axis_map = gridpro.to_eilmer_axis_map
 
+require 'gridarray'
+GridArray = gridarray.GridArray
+
 -------------------------------------------------------------------------
 
 gridsList = {}
@@ -461,12 +464,6 @@ function registerGridArray(o)
    --
    return o.id
 end -- registerGridArray
-
-
-function gridArrayAsJSON(o)
-   str = "[TODO] implement gridArrayAsJSON"
-   return str
-end
 
 
 --

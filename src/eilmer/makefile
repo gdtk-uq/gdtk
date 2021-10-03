@@ -167,8 +167,10 @@ LUA_MODULES := configoptions.lua \
 	blk_conn.lua \
 	bc.lua \
 	gridpro.lua \
+	gridarray.lua \
 	flowstate.lua \
 	fluidblock.lua \
+	fbarray.lua \
 	solidblock.lua \
 	mpi.lua \
 	history.lua \

@@ -33,6 +33,9 @@ applyGridproConnectivity = gridpro.applyGridproConnectivity
 applyGridproBoundaryConditions = gridpro.applyGridproBoundaryConditions
 to_eilmer_axis_map = gridpro.to_eilmer_axis_map
 
+require 'gridarray'
+GridArray = gridarray.GridArray
+
 require 'flowstate'
 FlowState = flowstate.FlowState
 makeFlowStateFn = flowstate.makeFlowStateFn
@@ -42,8 +45,10 @@ FluidBlock = fluidblock.FluidBlock
 SBlock2UBlock = fluidblock.SBlock2UBlock
 connectBlocks = fluidblock.connectBlocks
 identifyBlockConnections = fluidblock.identifyBlockConnections
-FBArray = fluidblock.FBArray
-FluidBlockArray = fluidblock.FluidBlockArray
+
+require 'fbarray'
+FBArray = fbarray.FBArray
+FluidBlockArray = fbarray.FluidBlockArray
 
 require 'solidblock'
 SolidBlock = solidblock.SolidBlock
@@ -92,7 +97,8 @@ check_DFT_settings = prep_check.check_DFT_settings
 -- The block ids start at 0 to be like the indexing inside the D code.
 -- Yes, this is confusing...
 fluidBlocks = {}
--- Storage for later definitions of FluidBlockArray objects.
+-- Storage for later definitions of GridArray and FBArray objects.
+gridArraysList = {}
 fluidBlockArrays = {}
 -- We may want to look up the blocks via labels rather than numerical id
 -- in user-defined procedures.

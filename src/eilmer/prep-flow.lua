@@ -28,6 +28,9 @@ end
 require 'configoptions'
 config = configoptions.config
 
+require 'gridarray'
+GridArray = gridarray.GridArray
+
 require 'flowstate'
 FlowState = flowstate.FlowState
 makeFlowStateFn = flowstate.makeFlowStateFn
@@ -37,8 +40,10 @@ FluidBlock = fluidblock.FluidBlock
 SBlock2UBlock = fluidblock.SBlock2UBlock
 connectBlocks = fluidblock.connectBlocks
 identifyBlockConnections = fluidblock.identifyBlockConnections
-FBArray = fluidblock.FBArray
-FluidBlockArray = fluidblock.FluidBlockArray
+
+require 'fbarray'
+FBArray = fbarray.FBArray
+FluidBlockArray = fbarray.FluidBlockArray
 
 require 'solidblock'
 SolidBlock = solidblock.SolidBlock
@@ -90,7 +95,8 @@ json = require 'json'
 -- Yes, this is confusing...
 gridsList = {}
 fluidBlocks = {}
--- Storage for later definitions of FluidBlockArray objects.
+-- Storage for later definitions of GridArray and FBArray objects.
+gridArraysList = {}
 fluidBlockArrays = {}
 -- We may want to look up the blocks via labels rather than numerical id
 -- in user-defined procedures.
