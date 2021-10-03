@@ -79,10 +79,15 @@ function FBArray:new(o)
       -- We were not given a single grid,
       -- so we assume that we were given the array of subgrids.
       -- Join these into a single overall grid.
-      if not (type(o.gridArray) == "table") then
-         error("gridArray should be an array of grid objects.", 2)
+      if o.gridArray.myType and o.gridArray.myType == "GridArray" then
+         -- The GridArray object is already constructed, so we leave it as is.
+      else
+         if type(o.gridArray) == "table" then
+            o.gridArray = GridArray:new{gridArray=o.gridArray}
+         else
+            error("gridArray should be an array of grid objects.", 2)
+         end
       end
-      o.gridArray = GridArray:new{gridArray=o.gridArray}
       o.nib = o.gridArray.nib
       o.njb = o.gridArray.njb
       o.nkb = o.gridArray.nkb
