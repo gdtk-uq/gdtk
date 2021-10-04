@@ -236,6 +236,8 @@ LUA_DIR := ../../extern/lua-5.1.4
 LIBLUA := $(LUA_DIR)/lib/liblua.a
 LIBLUAPATH := $(LUA_DIR)/lib
 
+LUNAJSON := ../../extern/lunajson
+
 MPL_DIR := ../extern/matplotlib.d/source
 MPL_FILES := $(MPL_DIR)/matplotlibd/pyplot.d \
 	$(MPL_DIR)/matplotlibd/core/pycall.d \
@@ -422,6 +424,7 @@ install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-grids.lua prep-flow.lua post.l
 	cp prep-flow.lua $(BUILD_DIR)/bin
 	cp post.lua $(BUILD_DIR)/bin
 	cp $(LUA_MODULES) $(BUILD_DIR)/lib
+	cp -r $(LUNAJSON)/src/* $(BUILD_DIR)/lib
 	cp -r ../lib/* $(BUILD_DIR)/lib
 	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
 	cp e4console.tcl $(BUILD_DIR)/bin
