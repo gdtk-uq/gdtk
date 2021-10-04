@@ -35,13 +35,17 @@ GridArray = gridarray.GridArray
 
 -------------------------------------------------------------------------
 
-gridsList = {}
+gridsList = {} -- to hold RegisteredGrid objects
 gridsDict = {}
 
 --
 -- We will store a table of information on each grid that is registered.
 --
-function registerGrid(o)
+RegisteredGrid = {
+   myType = "RegisteredGrid"
+}
+
+function RegisteredGrid:new(o)
    -- Input:
    -- A single table with named items.
    -- grid: a StructuredGrid or UnstructuredGrid object that has been generated
@@ -52,20 +56,21 @@ function registerGrid(o)
    -- bcTags: a table of strings that will be used to attach boundary conditions
    --    from a dictionary when the FluidBlock is later constructed.
    -- gridArrayId: needs to be supplied only if the grid is part of a larger array.
-   --
-   -- Returns:
-   -- the grid id number so that we may assign it and use it when making connections.
-   --
+   local flag = type(self)=='table' and self.myType=='RegisteredGrid'
+   if not flag then
+      error("Make sure that you are using RegisteredGrid:new{} and not RegisteredGrid.new{}", 2)
+   end
    local flag = type(o)=='table'
    if not flag then
-      error("registerGrid expects a single table with named items.", 2)
+      error("RegisteredGrid constructor expects a single table with named items.", 2)
    end
-   o = o or {}
    flag = checkAllowedNames(o, {"grid", "tag", "fsTag", "bcTags", "gridArrayId"})
    if not flag then
-      error("Invalid name for item supplied to registerGrid.", 2)
+      error("Invalid name for item supplied to RegisteredGrid constructor.", 2)
    end
-   -- Make a record of the new grid, for later use.
+   setmetatable(o, self)
+   self.__index = self
+   -- Make a record of the new object, for later use.
    -- Note that we want id to start at zero for the D code.
    o.id = #gridsList
    gridsList[#gridsList+1] = o
@@ -134,54 +139,74 @@ function registerGrid(o)
          o.bcTags[i] = o.grid:get_boundaryset_tag(i)
       end
    end
-   return o.id
-end -- function registerGrid
+   return o
+end -- RegisteredGrid:new
 
-function gridMetadataAsJSON(g)
+function RegisteredGrid:tojson()
    str = '{\n'
-   str = str .. string.format('  "tag": "%s",\n', g.tag)
-   str = str .. string.format('  "fsTag": "%s",\n', g.fsTag)
-   str = str .. string.format('  "type": "%s",\n', g.type)
-   if g.type == "structured_grid" then
-      str = str .. string.format('  "dimensions": %d,\n', g.grid:get_dimensions())
-      str = str .. string.format('  "niv": %d,\n', g.grid:get_niv())
-      str = str .. string.format('  "njv": %d,\n', g.grid:get_njv())
-      str = str .. string.format('  "nkv": %d,\n', g.grid:get_nkv())
-      str = str .. string.format('  "nic": %d,\n', g.nic)
-      str = str .. string.format('  "njc": %d,\n', g.njc)
-      str = str .. string.format('  "nkc": %d,\n', g.nkc)
+   str = str .. string.format('  "tag": "%s",\n', self.tag)
+   str = str .. string.format('  "fsTag": "%s",\n', self.fsTag)
+   str = str .. string.format('  "type": "%s",\n', self.type)
+   if self.type == "structured_grid" then
+      str = str .. string.format('  "dimensions": %d,\n', self.grid:get_dimensions())
+      str = str .. string.format('  "niv": %d,\n', self.grid:get_niv())
+      str = str .. string.format('  "njv": %d,\n', self.grid:get_njv())
+      str = str .. string.format('  "nkv": %d,\n', self.grid:get_nkv())
+      str = str .. string.format('  "nic": %d,\n', self.nic)
+      str = str .. string.format('  "njc": %d,\n', self.njc)
+      str = str .. string.format('  "nkc": %d,\n', self.nkc)
       local fmt = '  "p%d": {"x":%.18e, "y":%.18e, "z":%.18e},\n'
       for i=0, 3 do
-         str = str .. string.format(fmt, i, g.p[i].x, g.p[i].y, g.p[i].z)
+         str = str .. string.format(fmt, i, self.p[i].x, self.p[i].y, self.p[i].z)
       end
       if config.dimensions == 3 then
          for i=4, 7 do
-            str = str .. string.format(fmt, i, g.p[i].x, g.p[i].y, g.p[i].z)
+            str = str .. string.format(fmt, i, self.p[i].x, self.p[i].y, self.p[i].z)
          end
       end
    else -- unstructured-grid
-      str = str .. string.format('  "dimensions": %d,\n', g.grid:get_dimensions())
-      str = str .. string.format('  "nvertices": %d,\n', g.grid:get_nvertices())
-      str = str .. string.format('  "ncells": %d,\n', g.grid:get_ncells())
-      str = str .. string.format('  "nfaces": %d,\n', g.grid:get_nfaces())
-      str = str .. string.format('  "nboundaries": %d,\n', g.grid:get_nboundaries())
+      str = str .. string.format('  "dimensions": %d,\n', self.grid:get_dimensions())
+      str = str .. string.format('  "nvertices": %d,\n', self.grid:get_nvertices())
+      str = str .. string.format('  "ncells": %d,\n', self.grid:get_ncells())
+      str = str .. string.format('  "nfaces": %d,\n', self.grid:get_nfaces())
+      str = str .. string.format('  "nboundaries": %d,\n', self.grid:get_nboundaries())
    end
    str = str .. '  "bcTags": {\n'
-   if g.type == "structured_grid" then
-      for k, v in pairs(g.bcTags) do
+   if self.type == "structured_grid" then
+      for k, v in pairs(self.bcTags) do
          str = str .. string.format('    "%s": "%s",\n', k, v) -- Expect named boundaries
       end
    else -- unstructured_grid
-      for j, v in ipairs(g.bcTags) do
+      for j, v in ipairs(self.bcTags) do
          str = str .. string.format('    "%d": "%s",\n', j-1, v) -- Dlang index will start at zero.
       end
    end
    str = str .. '    "dummy": "xxxx"\n'
    str = str .. '  },\n'
-   str = str .. string.format('  "gridArrayId": %d\n', g.gridArrayId) -- last item, no comma
+   str = str .. string.format('  "gridArrayId": %d\n', self.gridArrayId) -- last item, no comma
    str = str .. '}\n'
    return str
-end
+end -- end RegisteredGrid:tojson()
+
+
+function registerGrid(o)
+   -- Input:
+   -- A single table with named items.
+   -- grid: a StructuredGrid or UnstructuredGrid object that has been generated
+   --    or imported.
+   -- tag: a string to identify the grid later in the user's script
+   -- fsTag: a string that will be used to select the initial flow condition from
+   --    a dictionary when the FluidBlock is later constructed.
+   -- bcTags: a table of strings that will be used to attach boundary conditions
+   --    from a dictionary when the FluidBlock is later constructed.
+   -- gridArrayId: needs to be supplied only if the grid is part of a larger array.
+   --
+   -- Returns:
+   -- the grid id number so that we may assign it and use it when making connections.
+   --
+   local rgrid = RegisteredGrid:new(o)
+   return rgrid.id
+end -- function registerGrid
 
 --
 -- Structured grids may be connected full face to full face.
@@ -278,39 +303,44 @@ end -- identifyGridConnections
 
 --
 -- A GridArray will be a single, structured grid split into a number of sub-grids.
+-- RegisteredGridArray objects hold a GridArray object and some metadata that is needed
+-- for the staged preparation.
 --
-gridArraysList = {}
+gridArraysList = {} -- to hold RegisteredGridArray objects
 
-function registerGridArray(o)
+RegisteredGridArray = {
+   myType = "RegisteredGridArray"
+}
+
+function RegisteredGridArray:new(o)
    -- Input:
    -- A single table with named items.
    -- grid: a StructuredGrid object that has been generated or imported.
+   -- gridArray: a GridArray object or array of StructuredGrid objects
    -- tag: a string to identify the gridArray later in the user's script
    -- fsTag: a string that will be used to select the initial flow condition from
    --    a dictionary when the FluidBlocks are later constructed.
    -- bcTags: a table of strings that will be used to attach boundary conditions
    --    from a dictionary when the FluidBlocks are later constructed.
    --
-   -- Returns:
-   -- the gridArray table so that the user may use the interior pieces later in their script..
-   --
-   -- [TODO] 2021-10-04 PJ, Refactor and delegate the grid subdivision work to GridArray constructor.
-   --
-   if false then -- debug
-      print("Begin registerGridArray.")
+   local flag = type(self)=='table' and self.myType=='RegisteredGridArray'
+   if not flag then
+      error("Make sure that you are using RegisteredGridArray:new{} and not RegisteredGridArray.new{}", 2)
    end
    local flag = type(o)=='table'
    if not flag then
-      error("registerGridArray expected to receive a single table with named entries", 2)
+      error("RegisterGridArray expected to receive a single table with named entries", 2)
    end
-   o = o or {}
    local flag = checkAllowedNames(o, {"grid", "gridArray", "tag", "fsTag", "bcTags", "nib", "njb", "nkb"})
    if not flag then
-      error("Invalid name for item supplied to registerGridArray.", 2)
+      error("Invalid name for item supplied to RegisteredGridArray constructor.", 2)
    end
-   -- We will embed the GridArray identity in the individual grids
-   -- and we would like that identity to start from 0 for the D code.
-   local id = #(gridArraysList)
+   setmetatable(o, self)
+   self.__index = self
+   -- Make a record of the new object, for later use.
+   -- Note that we want id to start at zero for the D code.
+   o.id = #gridArraysList
+   gridArraysList[#gridArraysList+1] = o
    --
    o.tag = o.tag or ""
    o.fsTag = o.fsTag or ""
@@ -361,8 +391,8 @@ function registerGridArray(o)
 	    if ib == o.gridArray.nib then bcTags['east'] = o.bcTags['east'] end
 	    if jb == 1 then bcTags['south'] = o.bcTags['south'] end
 	    if jb == o.gridArray.njb then bcTags['north'] = o.bcTags['north'] end
-	    local new_grid_id = registerGrid{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=id}
-	    gridCollection[#gridCollection+1] = gridsList[new_grid_id+1]
+	    local rgrid = RegisteredGrid:new{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=id}
+	    gridCollection[#gridCollection+1] = rgrid
 	 else
 	    -- 3D flow, need one more level in the array
 	    for kb = 1, o.nkb do
@@ -374,8 +404,8 @@ function registerGridArray(o)
 	       if jb == o.gridArray.njb then bcTags['north'] = o.bcTags['north'] end
 	       if kb == 1 then bcTags['bottom'] = o.bcTags['bottom'] end
 	       if kb == o.gridArray.nkb then bcTags['top'] = o.bctags['top'] end
-	       local new_grid_id = registerGrid{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=id}
-	       gridCollection[#gridCollection+1] = gridsList[new_grid_id+1]
+	       local rgrid = RegisteredGrid:new{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=id}
+	       gridCollection[#gridCollection+1] = rgrid
 	    end -- kb loop
 	 end -- dimensions
       end -- jb loop
@@ -385,14 +415,35 @@ function registerGridArray(o)
       identifyGridConnections(gridCollection)
    end
    --
-   -- Retain a reference to the newly registered gridArray
-   -- for use later in the user-defined functions, during simulation.
-   -- Note that the index of this array starts at 1 (in the Lua way).
-   gridArraysList[#gridArraysList+1] = o.gridArray
-   --
-   return id
-end -- registerGridArray
+   return o
+end -- RegisteredGridArray:new()
 
+function RegisteredGridArray:tojson()
+   -- [TODO] PJ 2021-10-04 finish this function.
+   str = '{\n'
+   str = str .. string.format('  "tag": "%s",\n', self.tag)
+   str = str .. string.format('  "fsTag": "%s",\n', self.fsTag)
+   str = str .. string.format('  "type": "%s",\n', self.type)
+   str = str .. '}\n'
+   return str
+end -- end RegisteredGridArray:tojson()
+
+
+function registerGridArray(o)
+   -- Input:
+   -- A single table with named items.
+   -- grid: a StructuredGrid object that has been generated or imported.
+   -- tag: a string to identify the gridArray later in the user's script
+   -- fsTag: a string that will be used to select the initial flow condition from
+   --    a dictionary when the FluidBlocks are later constructed.
+   -- bcTags: a table of strings that will be used to attach boundary conditions
+   --    from a dictionary when the FluidBlocks are later constructed.
+   --
+   -- Returns:
+   -- the id of RegisteredGridArray object so that the user may use the interior pieces later in their script.
+   local rga = RegisteredGridArray:new(o)
+   return rga.id
+end -- registerGridArray
 
 --
 -- IO functions to write the grid and connection files.
@@ -432,8 +483,10 @@ function writeGridFiles(jobName)
       -- Write the grid metadata.
       local fileName = "grid/" .. jobName .. string.format(".grid.b%04d.metadata", g.id)
       local f = assert(io.open(fileName, "w"))
-      f:write(gridMetadataAsJSON(g) .. '\n')
+      f:write(g:tojson() .. '\n')
       f:close()
    end
    print(string.format("  #grids %d", #gridsList))
+   --
+   -- [TODO] PJ 2021-10-04, write RegisteredGridArrays data.
 end
