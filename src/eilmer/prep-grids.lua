@@ -304,167 +304,93 @@ function registerGridArray(o)
       error("registerGridArray expected to receive a single table with named entries", 2)
    end
    o = o or {}
-   local flag = checkAllowedNames(o, {"grid", "tag", "fsTag", "bcTags", "nib", "njb", "nkb"})
+   local flag = checkAllowedNames(o, {"grid", "gridArray", "tag", "fsTag", "bcTags", "nib", "njb", "nkb"})
    if not flag then
       error("Invalid name for item supplied to registerGridArray.", 2)
    end
-   -- We will embed the FBArray identity in the individual blocks
+   -- We will embed the GridArray identity in the individual grids
    -- and we would like that identity to start from 0 for the D code.
-   o.id = #(gridArraysList)
+   local id = #(gridArraysList)
    --
    o.tag = o.tag or ""
-   if not o.grid then
-      error("You need to supply a grid to registerGridArray.", 2)
-   end
-   if (not o.grid.get_type) or o.grid:get_type() ~= "structured_grid" then
-      error("You need to supply a structured_grid to registerGrisdrray.", 2)
-   end
    o.fsTag = o.fsTag or ""
    o.bcTags = o.bcTags or {} -- for boundary conditions to be applied to the FluidBlocks
    for _,face in ipairs(faceList(config.dimensions)) do
       o.bcTags[face] = o.bcTags[face] or ""
    end
-   -- Numbers of subgrids in each coordinate direction
-   o.nib = o.nib or 1
-   o.njb = o.njb or 1
-   o.nkb = o.nkb or 1
-   if config.dimensions == 2 then
-      o.nkb = 1
+   if (not o.grid) and (not o.gridArray) then
+      error("You need to supply a grid or gridArray to registergridArray.", 2)
    end
-   -- Extract some information from the underlying StructuredGrid
-   o.niv = o.grid:get_niv()
-   o.njv = o.grid:get_njv()
-   o.nkv = o.grid:get_nkv()
-   -- Subdivide the block based on numbers of cells.
-   -- Note 0-based indexing for vertices and cells in the D-domain.
-   local nic_total = o.niv - 1
-   local dnic = math.floor(nic_total/o.nib)
-   local njc_total = o.njv - 1
-   local dnjc = math.floor(njc_total/o.njb)
-   local nkc_total = o.nkv - 1
-   local dnkc = math.floor(nkc_total/o.nkb)
-   if config.dimensions == 2 then
-      nkc_total = 1
-      dnkc = 1
-   end
-   o.gridArray = {} -- will be a multi-dimensional array, indexed as [ib][jb][kb],
-                    -- with 1<=ib<=nib, 1<=jb<=njb, 1<=kb<=nkb
-   o.gridCollection = {} -- will be a single-dimensional array, also starting at 1
-   -- Work along each index direction and work out numbers of cells in sub-blocks.
-   o.nics = {} -- numbers of cells in each sub-block
-   local nic_remaining = nic_total
-   for ib = 1, o.nib do
-      local nic = math.floor(nic_remaining/(o.nib-ib+1))
-      if (ib == o.nib) then
-         -- On last block, just use what's left
-         nic = nic_remaining
+   if o.grid then
+      -- We will take a single grid and divide it into an array of subgrids.
+      if (not o.grid.get_type) or o.grid:get_type() ~= "structured_grid" then
+         error("You need to supply a structured_grid to registerGridArray.", 2)
       end
-      o.nics[#o.nics+1] = nic
-      nic_remaining = nic_remaining - nic
-   end
-   o.njcs = {}
-   local njc_remaining = njc_total
-   for jb = 1, o.njb do
-      local njc = math.floor(njc_remaining/(o.njb-jb+1))
-      if (jb == o.njb) then
-         njc = njc_remaining
+      -- Numbers of subblocks in each coordinate direction
+      local nib = o.nib or 1
+      local njb = o.njb or 1
+      local nkb = o.nkb or 1
+      if config.dimensions == 2 then
+         nkb = 1
       end
-      o.njcs[#o.njcs+1] = njc
-      njc_remaining = njc_remaining - njc
-   end
-   o.nkcs = {}
-   if config.dimensions == 2 then
-      o.nkcs[1] = 1
+      o.gridArray = GridArray:new{grid=o.grid, nib=nib, njb=njb, nkb=nkb}
    else
-      local nkc_remaining = nkc_total
-      for kb = 1, o.nkb do
-         local nkc = math.floor(nkc_remaining/(o.nkb-kb+1))
-         if (kb == o.nkb) then
-            nkc = nkc_remaining
+      -- We were not given a single grid,
+      -- so we assume that we were given the array of subgrids.
+      -- Join these into a single overall grid.
+      if o.gridArray.myType and o.gridArray.myType == "GridArray" then
+         -- The GridArray object is already constructed, so we leave it as is.
+      else
+         if type(o.gridArray) == "table" then
+            o.gridArray = GridArray:new{gridArray=o.gridArray}
+         else
+            error("gridArray should be an array of grid objects.", 2)
          end
-         o.nkcs[#o.nkcs+1] = nkc
-         nkc_remaining = nkc_remaining - nkc
       end
    end
-   -- Now, generate the subgrids.
-   local i0 = 0
+   --
+   -- At this point, we have an array of grids and the overall grid.
+   local gridCollection = {}
    for ib = 1, o.nib do
-      o.gridArray[ib] = {}
-      local nic = o.nics[ib]
-      local j0 = 0
       for jb = 1, o.njb do
-         local njc = o.njcs[jb]
 	 if config.dimensions == 2 then
 	    -- 2D flow
-            if false then
-               -- May activate print statements for debug.
-               print("ib=", ib, "jb= ", jb)
-               print("i0= ", i0, " nic= ", nic, " j0= ", j0, " njc= ", njc)
-            end
-            if nic < 1 then
-               error(string.format("Invalid nic=%d while making subgrid ib=%d, jb=%d", nic, ib, jb), 2)
-            end
-            if njc < 1 then
-               error(string.format("Invalid njc=%d while making subgrid ib=%d, jb=%d", njc, ib, jb), 2)
-            end
-	    local subgrid = o.grid:subgrid(i0,nic+1,j0,njc+1)
+	    local subgrid = o.gridArray.grids[ib][jb]
 	    local bcTags = {north="", east="", south="", west=""}
 	    if ib == 1 then bcTags['west'] = o.bcTags['west'] end
-	    if ib == o.nib then bcTags['east'] = o.bcTags['east'] end
+	    if ib == o.gridArray.nib then bcTags['east'] = o.bcTags['east'] end
 	    if jb == 1 then bcTags['south'] = o.bcTags['south'] end
-	    if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
-	    local new_grid_id = registerGrid{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=o.id}
-            local new_grid = gridsList[new_grid_id+1]
-	    o.gridArray[ib][jb] = new_grid
-	    o.gridCollection[#o.gridCollection+1] = new_grid
+	    if jb == o.gridArray.njb then bcTags['north'] = o.bcTags['north'] end
+	    local new_grid_id = registerGrid{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=id}
+	    gridCollection[#gridCollection+1] = gridsList[new_grid_id+1]
 	 else
 	    -- 3D flow, need one more level in the array
-	    o.gridArray[ib][jb] = {}
-            local k0 = 0
 	    for kb = 1, o.nkb do
-               local nkc = o.nkcs[kb]
-               if nic < 1 then
-                  error(string.format("Invalid nic=%d while making subgrid ib=%d, jb=%d, kb=%d", nic, ib, jb, kb), 2)
-               end
-               if njc < 1 then
-                  error(string.format("Invalid njc=%d while making subgrid ib=%d, jb=%d, kb=%d", njc, ib, jb, kb), 2)
-               end
-               if nkc < 1 then
-                  error(string.format("Invalid nkc=%d while making subgrid ib=%d, jb=%d, kb=%d", nkc, ib, jb, kb), 2)
-               end
-	       local subgrid = o.grid:subgrid(i0,nic+1,j0,njc+1,k0,nkc+1)
+	       local subgrid = o.gridArray.grids[ib][jb][kb]
 	       local bcTags = {north="", east="", south="", west="", top="", bottom=""}
 	       if ib == 1 then bcTags['west'] = o.bcTags['west'] end
-	       if ib == o.nib then bcTags['east'] = o.bcTags['east'] end
+	       if ib == o.gridArray.nib then bcTags['east'] = o.bcTags['east'] end
 	       if jb == 1 then bcTags['south'] = o.bcTags['south'] end
-	       if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
+	       if jb == o.gridArray.njb then bcTags['north'] = o.bcTags['north'] end
 	       if kb == 1 then bcTags['bottom'] = o.bcTags['bottom'] end
-	       if kb == o.nkb then bcTags['top'] = o.bctags['top'] end
-	       local new_grid_id = registerGrid{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=o.id}
-               local new_grid = gridsList[new_grid_id+1]
-	       o.gridArray[ib][jb][kb] = new_grid
-	       o.gridCollection[#o.gridCollection+1] = new_grid
-               -- Prepare k0 at end of loop, ready for next iteration
-               k0 = k0 + nkc
+	       if kb == o.gridArray.nkb then bcTags['top'] = o.bctags['top'] end
+	       local new_grid_id = registerGrid{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=id}
+	       gridCollection[#gridCollection+1] = gridsList[new_grid_id+1]
 	    end -- kb loop
 	 end -- dimensions
-         -- Prepare j0 at end of loop, ready for next iteration
-         j0 = j0 + njc
       end -- jb loop
-      -- Prepare i0 at end of loop, ready for next iteration
-      i0 = i0 + nic
    end -- ib loop
    -- Make the inter-subblock connections
-   if #o.gridCollection > 1 then
-      identifyGridConnections(o.gridCollection)
+   if #gridCollection > 1 then
+      identifyGridConnections(gridCollection)
    end
    --
-   -- Retain meta-information about the new gridArray
+   -- Retain a reference to the newly registered gridArray
    -- for use later in the user-defined functions, during simulation.
    -- Note that the index of this array starts at 1 (in the Lua way).
-   gridArraysList[#gridArraysList+1] = o
+   gridArraysList[#gridArraysList+1] = o.gridArray
    --
-   return o.id
+   return id
 end -- registerGridArray
 
 
