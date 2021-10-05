@@ -235,7 +235,7 @@ function identifyGridConnections(includeList, excludeList, tolerance)
                for vtxPairs,connection in pairs(connections3D) do
 		  if verticesAreCoincident(A, B, vtxPairs, tolerance) then
 		     local faceA, faceB, orientation = unpack(connection)
-		     connectBlocks(A.id, faceA, B.id, faceB, orientation)
+		     connectGrids(A.id, faceA, B.id, faceB, orientation)
 		     connectionCount = connectionCount + 1
 		  end
 	       end

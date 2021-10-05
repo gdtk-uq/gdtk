@@ -341,6 +341,7 @@ function GridArray:new(o)
             o.myGrids[ib][jb] = g
 	 else
 	    -- 3D flow, need one more level in the array
+            o.myGrids[ib][jb] = {}
 	    for kb = 1, o.nkb do
 	       local subgrid = o.grids[ib][jb][kb]
 	       local bcTags = {north="", east="", south="", west="", top="", bottom=""}
@@ -349,7 +350,7 @@ function GridArray:new(o)
 	       if jb == 1 then bcTags['south'] = o.bcTags['south'] end
 	       if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
 	       if kb == 1 then bcTags['bottom'] = o.bcTags['bottom'] end
-	       if kb == o.nkb then bcTags['top'] = o.bctags['top'] end
+	       if kb == o.nkb then bcTags['top'] = o.bcTags['top'] end
 	       local g = Grid:new{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=o.id}
 	       gridCollection[#gridCollection+1] = g
                o.myGrids[ib][jb][kb] = g
