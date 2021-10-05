@@ -317,7 +317,8 @@ function buildFlowFiles(jobName)
             error(errMsg)
          end
          -- Otherwise succesful.
-         str = string.format("Initialised FluidBlock id= %d with existing flow solution: \n\t%s", id, existingFlowFile)
+         str = string.format("Initialised FluidBlock id= %d with existing flow solution: \n\t%s",
+                             id, existingFlowFile)
          print(str)
       else
 	 error("Unexpected type for initial flow state in block.")
@@ -327,7 +328,6 @@ function buildFlowFiles(jobName)
          local grid = fluidBlocks[idx].grid
          local omegaz = fluidBlocks[idx].omegaz
          if grid:get_type() == "structured_grid" then
-             print("here")
             write_initial_sg_flow_file(fileName, grid, ifs, config.start_time, omegaz)
          else
             write_initial_usg_flow_file(fileName, grid, ifs, config.start_time, omegaz)
