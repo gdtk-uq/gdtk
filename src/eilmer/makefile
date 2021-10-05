@@ -167,6 +167,7 @@ LUA_MODULES := configoptions.lua \
 	blk_conn.lua \
 	bc.lua \
 	gridpro.lua \
+	grid.lua \
 	gridarray.lua \
 	flowstate.lua \
 	fluidblock.lua \

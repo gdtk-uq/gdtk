@@ -8,8 +8,13 @@
  * implementations between structured and unstructured grids.
  * The following templates will generate specific functions at
  * compile time for Unstructured and Structured Grids.
- * These specific functions can be then registered into 
+ * These specific functions can be then registered into
  * the appropriate table of the Lua interpreter at run time.
+ *
+ * Note that the Grid class in the Lua domain is a pure Lua class
+ * that holds a reference to one of these wrapped StructuredGrid
+ * or UnstructuredGrid objects.
+ *
  */
 
 module geom.luawrap.luagrid;
