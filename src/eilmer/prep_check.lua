@@ -67,10 +67,11 @@ function perform_spatial_gradient_consistency_check()
 	 break
       end
    end
-   if gridsList then
-      -- only found in prep-flow.lua
+   -- In prep.lua, we don't actually make proper use of the Grid objects
+   -- so guard the following tests.
+   if gridsList and #gridsList > 1 then
       for _,gridMetadata in ipairs(gridsList) do
-         if config.dimensions ~= gridMetadata.dimensions then
+         if gridMetadata.dimensions and config.dimensions ~= gridMetadata.dimensions then
             local msg = string.format("Mismatch in dimensions, config %d grid %d.",
                                       config.dimensions, gridMetadata.dimensions)
             error(msg)

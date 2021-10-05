@@ -33,6 +33,12 @@ applyGridproConnectivity = gridpro.applyGridproConnectivity
 applyGridproBoundaryConditions = gridpro.applyGridproBoundaryConditions
 to_eilmer_axis_map = gridpro.to_eilmer_axis_map
 
+require 'grid'
+Grid = grid.Grid
+connectGrids = grid.connectGrids
+connectionAsJSON = grid.connectionAsJSON
+identifyGridConnections = grid.identifyGridConnections
+
 require 'gridarray'
 GridArray = gridarray.GridArray
 
@@ -92,17 +98,20 @@ check_DFT_settings = prep_check.check_DFT_settings
 
 -- ---------------------------------------------------------------------------------------
 
--- Storage for later definitions of FluidBlock objects.
+-- Storage for later definitions of FluidBlock and, possibly, Grid objects.
 -- Note that the index for this array starts at 1, in the Lua way.
 -- The block ids start at 0 to be like the indexing inside the D code.
 -- Yes, this is confusing...
 fluidBlocks = {}
+gridsList = {}
+connectionList = {}
 -- Storage for later definitions of GridArray and FBArray objects.
 gridArraysList = {}
 fluidBlockArrays = {}
 -- We may want to look up the blocks via labels rather than numerical id
 -- in user-defined procedures.
 -- The following dictionaries store the connections.
+gridsDict = {}
 fluidBlocksDict = {}
 fluidBlockArraysDict = {}
 

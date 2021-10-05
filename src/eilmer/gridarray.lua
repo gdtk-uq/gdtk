@@ -22,24 +22,36 @@ function GridArray:new(o)
    -- If we are given an array of grids initially, the overall grid will be constructed
    -- by joining the subgrids.
    --
+   -- We are also going to accept tags for the flowstate and boundary conditions.
+   --
    local flag = type(self)=='table' and self.myType=='GridArray'
    if not flag then
       error("Make sure that you are using GridArray:new{} and not GridArray.new{}", 2)
    end
-   o = o or {}
-   if o.myType and o.myType == 'GridArray' then
-      print("This is already a GridArray object, just returning it.")
-      return o
+   local flag = type(o)=='table'
+   if not flag then
+      error("GridArray constructor expected to receive a single table with named entries", 2)
    end
-   local flag = checkAllowedNames(o, {"grid", "gridArray", "nib", "njb", "nkb"})
+   local flag = checkAllowedNames(o, {"tag", "fsTag", "bcTags",
+                                      "grid", "gridArray", "nib", "njb", "nkb"})
    if not flag then
       error("Invalid name for item supplied to GridArray constructor.", 2)
    end
    setmetatable(o, self)
    self.__index = self
-   -- We will embed the GridArray identity in the individual grids
-   -- and we would like that identity to start from 0 for the D code.
-   o.id = #(gridArraysList)
+   -- Make a record of the new object, for later use.
+   -- Also, we will embed the GridArray identity in the individual Grid objects
+   -- Note that we want id to start at zero for the D code.
+   o.id = #gridArraysList
+   gridArraysList[#gridArraysList+1] = o
+   --
+   o.tag = o.tag or ""
+   o.fsTag = o.fsTag or ""
+   o.bcTags = o.bcTags or {} -- for boundary conditions to be applied to the FluidBlocks
+   for _,face in ipairs(faceList(config.dimensions)) do
+      o.bcTags[face] = o.bcTags[face] or ""
+   end
+   --
    if o.grid then
       -- We will take a single grid and divide it into an array of subgrids.
       o.grids = {} -- will be a multi-dimensional array, indexed as [ib][jb][kb],
@@ -160,7 +172,7 @@ function GridArray:new(o)
       -- so we assume that we were given the array of subgrids.
       -- Join these into a single overall grid.
       if not (type(o.gridArray) == "table") then
-         error("gridArray should be an array of grid objects.", 2)
+         error("gridArray should be an array of StructuredGrid objects.", 2)
       end
       o.nib = #(o.gridArray)
       if o.nib < 1 then
@@ -308,21 +320,67 @@ function GridArray:new(o)
       o.nkv = o.grid:get_nkv()
    end
    --
+   -- At this point, we have an array of StructuredGrid objects and
+   -- the overall StructuredGrid.
+   --
+   local gridCollection = {}
+   o.myGrids = {}
+   for ib = 1, o.nib do
+      o.myGrids[ib] = {}
+      for jb = 1, o.njb do
+	 if config.dimensions == 2 then
+	    -- 2D flow
+	    local subgrid = o.grids[ib][jb]
+	    local bcTags = {north="", east="", south="", west=""}
+	    if ib == 1 then bcTags['west'] = o.bcTags['west'] end
+	    if ib == o.nib then bcTags['east'] = o.bcTags['east'] end
+	    if jb == 1 then bcTags['south'] = o.bcTags['south'] end
+	    if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
+	    local g = Grid:new{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=o.id}
+	    gridCollection[#gridCollection+1] = g
+            o.myGrids[ib][jb] = g
+	 else
+	    -- 3D flow, need one more level in the array
+	    for kb = 1, o.nkb do
+	       local subgrid = o.grids[ib][jb][kb]
+	       local bcTags = {north="", east="", south="", west="", top="", bottom=""}
+	       if ib == 1 then bcTags['west'] = o.bcTags['west'] end
+	       if ib == o.nib then bcTags['east'] = o.bcTags['east'] end
+	       if jb == 1 then bcTags['south'] = o.bcTags['south'] end
+	       if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
+	       if kb == 1 then bcTags['bottom'] = o.bcTags['bottom'] end
+	       if kb == o.nkb then bcTags['top'] = o.bctags['top'] end
+	       local g = Grid:new{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=o.id}
+	       gridCollection[#gridCollection+1] = g
+               o.myGrids[ib][jb][kb] = g
+	    end -- kb loop
+	 end -- dimensions
+      end -- jb loop
+   end -- ib loop
+   -- Make the inter-subblock connections
+   if #gridCollection > 1 then
+      identifyGridConnections(gridCollection)
+   end
+   --
    return o
 end -- GridArray:new
 
 function GridArray:tojson(o)
-   local str = string.format('"grid_array_%d": {\n', self.id) -- [FIX-ME] do we really want this label?
+   local str = '{\n'
+   str = str .. string.format('  "tag": "%s",\n', self.tag)
+   str = str .. string.format('  "fsTag": "%s",\n', self.fsTag)
+   str = str .. string.format('  "type": "%s",\n', self.myType)
    str = str .. '    "ids": ['
    for ib = 1, self.nib do
       str = str .. '['
       for jb = 1, self.njb do
          if config.dimensions == 2 then
-            str = str .. string.format("%d", 0) -- [FIX-ME] need self.grids[ib][jb].id)
+            str = str .. string.format("%d", self.myGrids[ib][jb].id)
          else
+            -- 3D has an extra level
             str = str .. '['
             for kb = 1, self.nkb do
-               str = str .. string.format("%d", 0) -- [FIX-ME] need self.grids[ib][jb][kb].id)
+               str = str .. string.format("%d", self.myGrids[ib][jb][kb].id)
                if kb < self.nkb then str = str .. ',' end
             end
             str = str .. ']'

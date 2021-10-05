@@ -155,3 +155,96 @@ function Grid:tojson()
    str = str .. '}\n'
    return str
 end -- end Grid:tojson()
+
+-------------------------------------------------------------------------
+--
+-- Structured grids may be connected full face to full face.
+--
+-- needs storage: connectionList = {}
+
+function connectGrids(idA, faceA, idB, faceB, orientation)
+   if false then -- debug
+      print(string.format('connectGrids(idA=%d, faceA="%s", idB=%d, faceB="%s", orientation=%d)',
+                          idA, faceA, idB, faceB, orientation))
+   end
+   local gridA = gridsList[idA+1] -- Note that the id values start at zero.
+   local gridB = gridsList[idB+1]
+   if gridA.grid:get_type() ~= "structured_grid" or gridB.grid:get_type() ~= "structured_grid" then
+      error("connectGrids() Works only for structured grids.", 2)
+   end
+   connectionList[#connectionList+1] = {idA=idA, faceA=faceA, idB=idB, faceB=faceB, orientation=orientation}
+end
+
+function connectionAsJSON(c)
+   str = string.format('{"idA": %d, "faceA": "%s", "idB": %d, "faceB": "%s", "orientation": %d}',
+                       c.idA, c.faceA, c.idB, c.faceB, c.orientation)
+   return str
+end
+
+
+function identifyGridConnections(includeList, excludeList, tolerance)
+   -- Identify grid connections by trying to match corner points.
+   -- Parameters (all optional):
+   -- includeList: the list of structured grid objects to be included in the search.
+   --    If nil, the whole collection is searched.
+   -- excludeList: list of pairs of structured grid objects that should not be
+   --    included in the search for connections.
+   -- tolerance: spatial tolerance for the colocation of vertices
+   --
+   local myGridList = {}
+   if includeList then
+      -- The caller has provided a list of grids to bound the search.
+      for _,v in ipairs(includeList) do myGridList[#myGridList+1] = v end
+   else
+      -- The caller has not provided a list; use the global grids list.
+      for _,v in ipairs(gridsList) do myGridList[#myGridList+1] = v end
+   end
+   excludeList = excludeList or {}
+   -- Put unstructured grid objects into the exclude list because they don't
+   -- have a simple topology that can always be matched to a structured grid.
+   for _,A in ipairs(myGridList) do
+      if A.grid:get_type() == "unstructured_grid" then excludeList[#excludeList+1] = A end
+   end
+   if false then -- debug
+      print('myGridList=[')
+      for _,A in ipairs(myGridList) do print('  ', A.id, ',') end
+      print(']')
+   end
+   tolerance = tolerance or 1.0e-6
+   --
+   for _,A in ipairs(myGridList) do
+      for _,B in ipairs(myGridList) do
+	 if (A ~= B) and (not isPairInList({A, B}, excludeList)) then
+	    -- print("Proceed with test for coincident vertices.") -- DEBUG
+	    local connectionCount = 0
+	    if config.dimensions == 2 then
+	       -- print("2D test A.id=", A.id, " B.id=", B.id) -- DEBUG
+	       for vtxPairs,connection in pairs(connections2D) do
+                  if false then -- debug
+                     print("vtxPairs=", tostringVtxPairList(vtxPairs),
+                           "connection=", tostringConnection(connection))
+                  end
+                  if verticesAreCoincident(A, B, vtxPairs, tolerance) then
+		     local faceA, faceB, orientation = unpack(connection)
+		     connectGrids(A.id, faceA, B.id, faceB, 0)
+		     connectionCount = connectionCount + 1
+		  end
+	       end
+	    else
+	       -- print("   3D test")
+               for vtxPairs,connection in pairs(connections3D) do
+		  if verticesAreCoincident(A, B, vtxPairs, tolerance) then
+		     local faceA, faceB, orientation = unpack(connection)
+		     connectBlocks(A.id, faceA, B.id, faceB, orientation)
+		     connectionCount = connectionCount + 1
+		  end
+	       end
+	    end
+	    if connectionCount > 0 then
+	       -- So we don't double-up on connections.
+	       excludeList[#excludeList+1] = {A,B}
+	    end
+	 end -- if (A ~= B...
+      end -- for _,B
+   end -- for _,A
+end -- identifyGridConnections
