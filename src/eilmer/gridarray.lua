@@ -312,7 +312,28 @@ function GridArray:new(o)
 end -- GridArray:new
 
 function GridArray:tojson(o)
-   local str = string.format('"grid_array_%d": {\n', self.id)
+   local str = string.format('"grid_array_%d": {\n', self.id) -- [FIX-ME] do we really want this label?
+   str = str .. '    "ids": ['
+   for ib = 1, self.nib do
+      str = str .. '['
+      for jb = 1, self.njb do
+         if config.dimensions == 2 then
+            str = str .. string.format("%d", 0) -- [FIX-ME] need self.grids[ib][jb].id)
+         else
+            str = str .. '['
+            for kb = 1, self.nkb do
+               str = str .. string.format("%d", 0) -- [FIX-ME] need self.grids[ib][jb][kb].id)
+               if kb < self.nkb then str = str .. ',' end
+            end
+            str = str .. ']'
+         end
+         if jb < self.njb then str = str .. ',' end
+      end
+      str = str .. ']'
+      if ib < self.nib then str = str .. ',' end
+      str = str .. '\n'
+   end
+   str = str .. '    ],\n' -- end of ids array
    str = str .. string.format('    "nib": %d,\n', self.nib)
    str = str .. string.format('    "njb": %d,\n', self.njb)
    str = str .. string.format('    "nkb": %d,\n', self.nkb)
@@ -336,7 +357,7 @@ function GridArray:tojson(o)
    for i=1,#(self.nkcs)-1 do
       str = str .. string.format('%d, ', self.nkcs[i])
    end
-   str = str .. string.format('%d ]\n', self.nkcs[#self.nkcs])
+   str = str .. string.format('%d ]\n', self.nkcs[#self.nkcs]) -- Note last item with no comma.
    --
    str = str .. '}'
    return str

@@ -423,7 +423,8 @@ function RegisteredGridArray:tojson()
    str = '{\n'
    str = str .. string.format('  "tag": "%s",\n', self.tag)
    str = str .. string.format('  "fsTag": "%s",\n', self.fsTag)
-   str = str .. string.format('  "type": "%s",\n', self.type)
+   str = str .. string.format('  "type": "%s",\n', self.myType)
+   str = str .. '  ' .. self.gridArray:tojson()
    str = str .. '}\n'
    return str
 end -- end RegisteredGridArray:tojson()
@@ -456,12 +457,22 @@ function writeGridFiles(jobName)
    local f = assert(io.open(fileName, "w"))
    f:write('{\n')
    f:write(string.format('  "ngrids": %d,\n', #gridsList))
+   f:write(string.format('  "ngridarrays": %d,\n', #gridArraysList))
+   if #gridArraysList > 0 then
+      f:write('  "gridarrays": [')
+      for i,ga in ipairs(gridArraysList) do
+         f:write('    ' .. ga:tojson())
+         if i < #gridArraysList then f:write(',') end
+         f:write('\n')
+      end
+      f:write('  ],\n')
+   end
    f:write('  "grid-connections": [\n')
    for i, c in ipairs(connectionList) do
       f:write('    ' .. connectionAsJSON(c))
       if i < #connectionList then f:write(',\n') else f:write('\n') end
    end
-   f:write('  ]\n')
+   f:write('  ]\n') -- Note last item has no comma.
    f:write('}\n')
    f:close()
    print(string.format("  #connections: %d", #connectionList))
