@@ -658,10 +658,13 @@ public:
             if (cqi.turb) {
                 if (allow_k_omega_update) {
                     foreach(i; 0 .. myConfig.turb_model.nturb) {
+                        if (isNaN(myU.vec[cqi.rhoturb+i]))
+                            throw new FlowSolverException("Turbulent quantity is Not A Number.");
                         // for stability, we enforce tke and omega to be positive.
                         // This approach is referred to as clipping in Chisholm's (2007) thesis:
                         // A fully coupled Newton-Krylov solver with a one-equation turbulence model.
                         // to prevent division by 0.0 set variables to a very small positive value.
+                        // FIXME: Has anyone asked this clipping thing "What would you say you do here?" lately (NNG)
                         fs.turb[i] = myU.vec[cqi.rhoturb+i] * dinv;
                         if (fs.turb[i] < 0.0) fs.turb[i] = 1.0e-10;
                     }
