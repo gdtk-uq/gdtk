@@ -1500,7 +1500,7 @@ class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
         foreach (i, f; bc.faces) {
             int outsign = bc.outsigns[i];
             auto c = (outsign == 1) ? f.left_cell : f.right_cell;
-            solve_for_wall_temperature_and_energy_flux(c, f, -outsign);
+            solve_for_wall_temperature_and_energy_flux(c, f, outsign);
         }
     } // end apply_unstructured_grid()
 
@@ -1510,7 +1510,7 @@ class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
         int outsign = bc.outsigns[f.i_bndry];
         auto c = (outsign == 1) ? f.left_cells[0] : f.right_cells[0];
-        solve_for_wall_temperature_and_energy_flux(c, f, -outsign);
+        solve_for_wall_temperature_and_energy_flux(c, f, outsign);
     }
 
     @nogc
@@ -1522,7 +1522,7 @@ class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
         foreach (i, f; bc.faces) {
             int outsign = bc.outsigns[i];
             auto c = (outsign == 1) ? f.left_cells[0] : f.right_cells[0];
-            solve_for_wall_temperature_and_energy_flux(c, f, -outsign);
+            solve_for_wall_temperature_and_energy_flux(c, f, outsign);
         }
     } // end apply_structured_grid()
 
@@ -1547,7 +1547,6 @@ protected:
         Set the temperature of the wall interface to satisfy the thermionic+radiative energy
         balance equations. Note the the outsign parameter is used to flip the faces normal
         vector to be pointing into the domain, if needed.
-        FIX-ME PJ 2021-06-23 outsign seems unused.
     */
         auto gmodel = blk.myConfig.gmodel;
         uint n_modes = blk.myConfig.n_modes;
@@ -1566,8 +1565,8 @@ protected:
         number f, dfdT,df;
         number diff_T;
         while (error>tolerance) {
-            f = ThermionicRadiativeEnergyBalance(gmodel, cell, IFace, n_modes, Twall);
-            df= ThermionicRadiativeEnergyBalance(gmodel, cell, IFace, n_modes, Twall+eta);
+            f = ThermionicRadiativeEnergyBalance(gmodel, cell, IFace, n_modes, outsign, Twall);
+            df= ThermionicRadiativeEnergyBalance(gmodel, cell, IFace, n_modes, outsign, Twall+eta);
             dfdT = (df-f)/eta;
 
             error = sqrt(f*f);
@@ -1582,17 +1581,19 @@ protected:
         if (eqcalc) eqcalc.set_massf_from_pT(IFace.fs.gas);
         gmodel.update_thermo_from_pT(IFace.fs.gas);
         gmodel.update_trans_coeffs(IFace.fs.gas);
-
+        
         return;
 
     } // end solve_for_wall_temperature_and_energy_flux()
 
     @nogc
     number ThermionicRadiativeEnergyBalance(GasModel gmodel, FVCell cell, FVInterface IFace,
-                                            uint n_modes, number Twall){
+                                            uint n_modes, int outsign, number Twall){
     /*
         Energy flux balance at the wall, from Alkandry, 2014 equations 6 and 10.
-        This version uses the viscous_flux_calc routines directly, avoiding code duplication
+        This version uses a hardcoded gradients_leastsq call, because the viscous flux
+        routine was causing weird side effects. You will have to FIXME for catalytic walls.
+        @author: Nick Gibbons
     */
         IFace.fs.gas.T = Twall;
         version(multi_T_gas) { foreach (imode; 0 .. n_modes) IFace.fs.gas.T_modes[imode] = Twall; }
@@ -1602,18 +1603,28 @@ protected:
 
         cell.grad.gradients_leastsq(cell.cloud_fs, cell.cloud_pos, cell.ws_grad);
         IFace.grad.copy_values_from(cell.grad);
+        number qx = IFace.fs.gas.k*cell.grad.T[0];
+        number qy = IFace.fs.gas.k*cell.grad.T[1];
+        number qz = IFace.fs.gas.k*cell.grad.T[2];
+        version(multi_T_gas) {
+            qx += IFace.fs.gas.k_modes[0]*cell.grad.T_modes[0][0];
+            qy += IFace.fs.gas.k_modes[0]*cell.grad.T_modes[0][1];
+            qz += IFace.fs.gas.k_modes[0]*cell.grad.T_modes[0][2];
+        }
+        // Negative sign is because heat flows along temperature gradient from hot to cold
+        number q_conduction = -1.0*(IFace.n.x*qx + IFace.n.y*qy + IFace.n.z*qz);
 
-        IFace.F.clear();
-        IFace.viscous_flux_calc();
-        auto cqi = blk.myConfig.cqi;
-        number q_conduction = IFace.F.vec[cqi.totEnergy];
-        IFace.F.clear();
+        // We then correct for the direction of IFace.n using outsign
+        q_conduction *= outsign;
 
         number q_rad = emissivity*SB_sigma*Twall*Twall;
         number q_thermionic = to!number(0.0);
         if (ThermionicEmissionActive == 1) {
             q_thermionic = Ar/Qe*exp(-phi/kb/Twall)*(phi + 2*kb*Twall);
         }
+
+        // We actually solve for the energy divided by T^2 to reduce the size of the numbers
+        // and reduce floating point round off error.
         return q_rad + q_thermionic - q_conduction/Twall/Twall;
     }
 } // end class BIE_ThermionicRadiativeEquilibrium
