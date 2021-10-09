@@ -740,11 +740,11 @@ public:
         if (fabs(gs.p.re - p)/p > 1.0e-5) {
             throw new Error("Pressure mismatch in gas states that should be equal. What's up?");
         }
-        double drho = 1.001 * rho;
+        double drho = 0.001 * rho;
         gs.rho += drho;
         gmodel.update_thermo_from_rhou(gs);
         dfdrho = (gs.p.re - p) / drho;
-        double du = 1.001 * u;
+        double du = 0.001 * fabs(u) + 100.0;  // It is possible that u might be zero.
         gs.rho = rho; gs.u += du;
         gmodel.update_thermo_from_rhou(gs);
         dfdu = (gs.p.re - p) / du;
