@@ -83,6 +83,10 @@ int main(string[] args)
         writeln("Eilmer compressible-flow simulation code -- using Newton-Krylov accelerator.");
         writeln("Revision: PUT_REVISION_STRING_HERE");
         writeln("Compiler-name: PUT_COMPILER_NAME_HERE");
+        write("Build-flavour: ");
+        version(flavour_debug) { writeln("debug"); }
+        version(flavour_profile) { writeln("profile"); }
+        version(flavour_fast) { writeln("fast"); }
     }
 
     string msg;
