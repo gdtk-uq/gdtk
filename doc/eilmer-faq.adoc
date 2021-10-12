@@ -132,6 +132,18 @@ Yes, there are several scripts available to help you. Take a look in `dgd/instal
 
 = Problems on cluster computers
 
+= Units of input/output
+
+== In axisymmetric simulations, the outputs include areas and volumes. How are these defined?
+
+When using axisymmetric mode, a useful mental model is to think of the simulation domain as a sector of a circle
+because this is the assumption we have applied in the implementation.
+The included angle in the sector is one radian.
+
+So that answers the question. The areas and volumes are defined per radian. If you need the effective area
+over the full (axisymmetric) geometry, multiply by 2$\pi$.
+
+
 = Thermochemistry questions
 
 == When preparing a thermally perfect gas model for use, I get a warning about missing CEA coefficients for viscosity and thermal conductivity for some species. Should I be worried? Why does this happen?
