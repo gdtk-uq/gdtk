@@ -1,5 +1,5 @@
 ---
-title: "About Eilmer"
+title: "Eilmer"
 description: "About Eilmer"
 lead: ""
 date: 2020-10-06T08:48:57+00:00
@@ -12,6 +12,10 @@ menu:
 weight: 10
 toc: true
 ---
+
+<span style="font-size:larger;">
+<i>(pronounced: /&#603;lm&#601;/)</i>
+</span>
 
 {{< figure src="/images/ramp-in-3D-by-kad.png" width="100%" alt="scramjet flowpath" caption="<em>Simulation of flow over a 24° compression corner as in the experiments performed by Holden (1970). The simulation is performed in 3D as this captures the spillage of gas over side of the ramp and results in a better comparison to experimental results for heat transfer.</em>" >}}
 
