@@ -475,6 +475,7 @@ private:
 
         gmodel.update_thermo_from_pT(fs.gas);
         gmodel.update_trans_coeffs(fs.gas);
+        gmodel.update_sound_speed(fs.gas);
 
         lua_pop(L, 1);
     } // end putFlowStateIntoInterface()
