@@ -458,7 +458,7 @@ function write2TGas(f, species, db, optsTable)
    dir = DGD.."/data/"
    dbName = dir..fname
    dofile(dbName)
-   print("Collision integral database loaded from: ", dbName)
+   print("Collision integral database loaded from: ", dbName, "\n")
    
    f:write("db.CIs = {}\n")
    for isp,p in ipairs(species) do
@@ -471,9 +471,15 @@ function write2TGas(f, species, db, optsTable)
             key = q .. ":" .. p
             ci = cis[key]
             if not ci then
-               print(string.format("Collision integral data for colliding pair --  %s:%s -- could not be found in database.\n", p, q))
-               print("Bailing out!")
-               os.exit(1)
+               print(string.format("Collision integral data for colliding pair --  %s:%s -- could not be found in database.", p, q))
+               if optsTable.CI_default then
+                  ci = cis[optsTable.CI_default]
+                  print(string.format("Substituting with default: %s.\n", optsTable.CI_default))
+               else
+                  print("No default selection provided.\n")
+                  print("Bailing out!")
+                  os.exit(1)
+               end
             end
          end
          f:write(string.format("db.CIs['%s'] = {\n", key))
