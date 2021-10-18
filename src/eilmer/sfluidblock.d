@@ -2123,18 +2123,26 @@ public:
                 throw new Error("ghost cell data missing");
             }
             
-            if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
-                !(myConfig.suppress_reconstruction_at_shocks && (f.fs.S == 1.0))) {
-                one_d.interp(f, Lft, Rght);
+            
+            // The high-order ASF flux calculator is a flux reconstruction scheme, so the expensive interpolation process can be bypassed if it's pure ASF flux.
+            // If we're using the hybrid flux calculator, we don't need the interpolation process if the 'shock' value is 0.
+            if ((myConfig.flux_calculator == FluxCalculator.asf) || ((myConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf) & (f.fs.S == 0))) {
+                ASF_242(f, myConfig);
             } else {
-                FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
-                FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
-                Lft.copy_values_from(cL0.fs);
-                Rght.copy_values_from(cR0.fs);
+            // Typical code path, with interpolation for the flowstates to the left and right of the interface.
+                if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
+                    !(myConfig.suppress_reconstruction_at_shocks && (f.fs.S == 1.0))) {
+                    one_d.interp(f, Lft, Rght);
+                } else {
+                    FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
+                    FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
+                    Lft.copy_values_from(cL0.fs);
+                    Rght.copy_values_from(cR0.fs);
+                }
+                f.fs.copy_average_values_from(Lft, Rght);
+                if (f.is_on_boundary && bc[f.bc_id].convective_flux_computed_in_bc) continue;
+                compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
             }
-            f.fs.copy_average_values_from(Lft, Rght);
-            if (f.is_on_boundary && bc[f.bc_id].convective_flux_computed_in_bc) continue;
-            compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
         }
         return;
     } // end convective_flux_phase0()

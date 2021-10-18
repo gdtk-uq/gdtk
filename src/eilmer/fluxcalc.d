@@ -109,7 +109,7 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
         roe(Lft, Rght, IFace, myConfig);
         break;
     case FluxCalculator.asf:
-        ASF_242(Lft, Rght, IFace, myConfig);
+        ASF_242(IFace, myConfig);
         break;
     case FluxCalculator.adaptive_ausmdv_asf:
         adaptive_ausmdv_asf(Lft, Rght, IFace, myConfig);
@@ -1772,7 +1772,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
 } // end roe()
 
 @nogc
-void ASF_242(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0) {
+void ASF_242(ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0) {
     // Start by substracting interface velocities and transforming to local frame;
     // it is unlikely we will be using moving grids with this solver, but no harm in including this.
     auto gmodel = myConfig.gmodel;
@@ -1840,31 +1840,44 @@ void ASF_242(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loc
            (1.0 - alpha_ke) * f_e[6] + alpha_ke * f_c[7] + (1.0 - alpha_ke) * f_e[7]) + alpha_p * f_c[8] + (1.0 - alpha_p) * f_e[8]);
     //
     // remaining fluxes (copied from Roe flux)
+    // Here we will base these extended properties based on the left and right cell average properties rather than some reconstructed values.
     if (mass_flux >= 0.0) {
         /* Wind is blowing from the left */
         version(turbulence) {
-            foreach(i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] += mass_flux*Lft.turb[i]; }
+            foreach(i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] += mass_flux*IFace.left_cells[0].fs.turb[i]; }
         }
         version(multi_species_gas) {
             if (cqi.n_species > 1) {
-                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += mass_flux*Lft.gas.massf[i]; }
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += mass_flux*IFace.left_cells[0].fs.gas.massf[i]; }
             }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] += mass_flux*Lft.gas.u_modes[i]; }
+            foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] += mass_flux*IFace.left_cells[0].fs.gas.u_modes[i]; }
         }
     } else {
         /* Wind is blowing from the right */
         version(turbulence) {
-            foreach(i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] += mass_flux*Rght.turb[i]; }
+            foreach(i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] += mass_flux*IFace.right_cells[0].fs.turb[i]; }
         }
         version(multi_species_gas) {
             if (cqi.n_species > 1) {
-                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += mass_flux*Rght.gas.massf[i]; }
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += mass_flux*IFace.right_cells[0].fs.gas.massf[i]; }
             }
         }
         version(multi_T_gas) {
-            foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] += mass_flux*Rght.gas.u_modes[i]; }
+            foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] += mass_flux*IFace.right_cells[0].fs.gas.u_modes[i]; }
+        }
+    }
+
+    // If we're doing pure high-order flux, we bypass the normal convective flux program path so need to transform the fluxes to the global frame here
+
+    if (factor == 1.0) {
+        if (cqi.threeD) {
+            F.vec[cqi.zMom] += IFace.gvel.z * F.vec[cqi.mass];
+            transform_to_global_frame(F.vec[cqi.xMom], F.vec[cqi.yMom], F.vec[cqi.zMom], IFace.n, IFace.t1, IFace.t2);
+        } else {
+            number zDummy = to!number(0.0);
+            transform_to_global_frame(F.vec[cqi.xMom], F.vec[cqi.yMom], zDummy, IFace.n, IFace.t1, IFace.t2);
         }
     }
 } // end ASF_242()
@@ -1881,7 +1894,7 @@ void adaptive_ausmdv_asf(in FlowState Lft, in FlowState Rght, ref FVInterface IF
         ausmdv(Lft, Rght, IFace, myConfig, alpha);
     }
     if (alpha < 1.0) {
-        ASF_242(Lft, Rght, IFace, myConfig, 1.0-alpha);
+        ASF_242(IFace, myConfig, 1.0-alpha);
     }
     return;
 }
