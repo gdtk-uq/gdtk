@@ -62,7 +62,7 @@ void moveFileToBackup(string fileName)
 
 int main(string[] args)
 {
-    version(diagnostics) {ProfilerStart();}
+    version(diagnostics) { ProfilerStart(); }
 
     int exitFlag = 0; // Presume OK in the beginning.
     version(mpi_parallel) {
@@ -286,13 +286,17 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
     if (verbosityLevel > 0) {
         if (GlobalConfig.is_master_task) {
             writeln("Eilmer 4.0 compressible-flow simulation code.");
-            writeln("Revision: PUT_REVISION_STRING_HERE");
+            writeln("Revision-id: PUT_REVISION_STRING_HERE");
+            writeln("Revision-date: PUT_REVISION_DATE_HERE");
             writeln("Compiler-name: PUT_COMPILER_NAME_HERE");
+            writeln("Build-date: PUT_BUILD_DATE_HERE");
             //
             write("Build-flavour: ");
             version(flavour_debug) { writeln("debug"); }
             version(flavour_profile) { writeln("profile"); }
             version(flavour_fast) { writeln("fast"); }
+            write("Profiling: ");
+            version(diagnostics) { writeln("included"); } else { writeln("omitted"); }
             //
             write("Capabilities:");
             version(multi_species_gas) {

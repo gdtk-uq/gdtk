@@ -261,6 +261,7 @@ BUILD_DATE := $(shell date)
 
 REVISION_STRING := $(shell git rev-parse --short HEAD)
 REVISION_AGE := $(shell git log -1 --format=%cd --date=relative)
+REVISION_DATE := $(shell git log -1 --format=%cd)
 REPO_DIR := $(shell cd ../../; pwd)
 
 ifeq ($(DMD), dmd)
@@ -535,7 +536,9 @@ e4shared: main.d $(EILMER_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > main_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4shared \
 		$(DVERSION)$(TECPLOT_BIN_VERSION_STR) \
@@ -556,7 +559,9 @@ e4shared_diagnostic: main.d $(EILMER_FILES) \
 	$(NM_FILES) $(UTIL_FILES) $(MPL_FILES) $(GPERF_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > main_with_rev_string.d
 	python3 $(MPL_DIR)/../python/prebuild.py $(MPL_DIR)/..
 	$(DMD) $(DFLAGS) -J$(MPL_DIR)/../views $(OF)e4shared_diagnostic \
@@ -578,7 +583,9 @@ e4zshared: main.d $(EILMER_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > main_complex_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4zshared \
 		$(DVERSION)complex_numbers \
@@ -601,7 +608,9 @@ e4mpi: main.d $(EILMER_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
 	cd $(OPENMPI_DIR); gen/setup.sh
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > mpi_main_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4mpi \
 		$(DVERSION)mpi_parallel \
@@ -624,7 +633,9 @@ e4zmpi: main.d $(EILMER_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
 	cd $(OPENMPI_DIR); gen/setup.sh
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > mpi_main_complex_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4zmpi \
 		$(DVERSION)mpi_parallel \
