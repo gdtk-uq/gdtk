@@ -1683,10 +1683,10 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  dimensions: ", GlobalConfig.dimensions);
         writeln("  axisymmetric: ", GlobalConfig.axisymmetric);
     }
-
+    //
     // Parameter controlling Strang splitting mode
     mixin(update_enum("strang_splitting", "strangSplitting", "strangSplittingModeFromName"));
-
+    //
     // Parameters controlling convective update and size of storage arrays
     //
     mixin(update_enum("gasdynamic_update_scheme", "gasdynamic_update_scheme", "update_scheme_from_name"));
@@ -1731,7 +1731,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_double("shock_fitting_scale_factor", "shock_fitting_scale_factor"));
     mixin(update_double("shock_fitting_filter_velocity_scale", "shock_fitting_filter_velocity_scale"));
     mixin(update_bool("shock_fitting_assume_symmetry_at_first_point", "shock_fitting_assume_symmetry_at_first_point"));
-
+    //
     mixin(update_double("solid_domain_cfl", "solid_domain_cfl"));
     mixin(update_enum("coupling_with_solid_domains", "coupling_with_solid_domains", "solidDomainCouplingFromName"));
     mixin(update_bool("solid_has_isotropic_properties", "solid_has_isotropic_properties"));
@@ -1796,12 +1796,12 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("MHD_resistive", "MHD_resistive"));
     mixin(update_bool("divergence_cleaning", "divergence_cleaning"));
     mixin(update_double("divB_damping_length", "divB_damping_length"));
-
+    //
     // Checking of constraints.
     // The following checks/overrides must happen after the relevant config elements
     // have been set.  This is the first such check.  For details, see the function below.
     configCheckPoint1();
-
+    //
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  gasdynamic_update_scheme: ", gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
         writeln("  eval_udf_source_terms_at_each_stage: ", GlobalConfig.eval_udf_source_terms_at_each_stage);
@@ -1872,7 +1872,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  divB_damping_length: ", GlobalConfig.divB_damping_length);
     }
     configCheckPoint2();
-
+    //
     // Parameters controlling viscous/molecular transport
     //
     mixin(update_bool("viscous", "viscous"));
@@ -1917,9 +1917,9 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  transient_mu_t_factor: ", GlobalConfig.transient_mu_t_factor);
         writeln("  nturb equations: ", GlobalConfig.turb_model.nturb);
     }
-
+    //
     configCheckPoint3();
-
+    //
     if (GlobalConfig.mass_diffusion_model != MassDiffusionModel.none) {
         GlobalConfig.massDiffusion = initMassDiffusion(GlobalConfig.gmodel_master,
                                                        GlobalConfig.diffusion_coefficient_type,
@@ -1933,7 +1933,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  udf_source_terms: ", GlobalConfig.udf_source_terms);
         writeln("  udf_source_terms_file: ", to!string(GlobalConfig.udf_source_terms_file));
     }
-
+    //
     // Parameters controlling thermochemistry
     //
     mixin(update_enum("chemistry_update", "chemistry_update", "chemistry_update_mode_from_name"));
@@ -1959,7 +1959,6 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_string("energy_exchange_file", "energy_exchange_file"));
     mixin(update_bool("radiation_energy_dump_allowed", "radiation_energy_dump_allowed"));
     mixin(update_double("radiation_energy_dump_temperature_limit", "radiation_energy_dump_temperature_limit"));
-
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  chemistry_mode: ", chemistry_update_mode_name(GlobalConfig.chemistry_update));
         writeln("  reacting: ", GlobalConfig.reacting);
@@ -1975,7 +1974,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  radiation_energy_dump_allowed: ", GlobalConfig.radiation_energy_dump_allowed);
         writeln("  radiation_energy_dump_temperature_limit: ", GlobalConfig.radiation_energy_dump_temperature_limit);
     }
-
+    //
     // Parameters controlling other simulation options
     //
     mixin(update_bool("diffuse_wall_bcs_on_init", "diffuseWallBCsOnInit"));
@@ -2021,9 +2020,9 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  DFT_step_interval: ", GlobalConfig.DFT_step_interval);
         writeln("  do_flow_average: ", GlobalConfig.do_flow_average);
     }
-
+    //
     configCheckPoint4();
-
+    //
     int nhcell = getJSONint(jsonData, "nhcell", 0);
     foreach (i; 0 .. nhcell) {
         string jsonKey = format("history-cell-%d", i);
@@ -2036,7 +2035,6 @@ void set_config_for_core(JSONValue jsonData)
         auto hcell = getJSONintarray(jsonData, jsonKey, [0, 0]);
         GlobalConfig.solid_hcells ~= tuple(cast(size_t) hcell[0], cast(size_t) hcell[1]);
     }
-
     int n_reaction_zones = getJSONint(jsonData, "n-reaction-zones", 0);
     foreach (i; 0 .. n_reaction_zones) {
         string jsonKey = format("reaction-zone-%d", i);
@@ -2045,7 +2043,6 @@ void set_config_for_core(JSONValue jsonData)
         Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
         GlobalConfig.reaction_zones ~= new BlockZone(p0, p1);
     }
-
     int n_ignition_zones = getJSONint(jsonData, "n-ignition-zones", 0);
     foreach (i; 0 .. n_ignition_zones) {
         string jsonKey = format("ignition-zone-%d", i);
@@ -2079,53 +2076,36 @@ void set_config_for_core(JSONValue jsonData)
         Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
         GlobalConfig.suppress_viscous_stresses_zones ~= new BlockZone(p0, p1);
     }
-
+    //
     auto sdluOptions = jsonData["solid_domain_loose_update_options"];
-    GlobalConfig.sdluOptions.maxNewtonIterations =
-        getJSONint(sdluOptions, "max_newton_iterations", GlobalConfig.sdluOptions.maxNewtonIterations);
-    GlobalConfig.sdluOptions.toleranceNewtonUpdate =
-        getJSONdouble(sdluOptions, "tolerance_newton_update", GlobalConfig.sdluOptions.toleranceNewtonUpdate);
-    GlobalConfig.sdluOptions.maxGMRESIterations =
-        getJSONint(sdluOptions, "max_gmres_iterations", GlobalConfig.sdluOptions.maxGMRESIterations);
-    GlobalConfig.sdluOptions.toleranceGMRESSolve =
-        getJSONdouble(sdluOptions, "tolerance_gmres_solve", GlobalConfig.sdluOptions.toleranceGMRESSolve);
-    GlobalConfig.sdluOptions.perturbationSize =
-        getJSONdouble(sdluOptions, "perturbation_size", GlobalConfig.sdluOptions.perturbationSize);
-
+    GlobalConfig.sdluOptions.maxNewtonIterations = getJSONint(sdluOptions, "max_newton_iterations", GlobalConfig.sdluOptions.maxNewtonIterations);
+    GlobalConfig.sdluOptions.toleranceNewtonUpdate = getJSONdouble(sdluOptions, "tolerance_newton_update", GlobalConfig.sdluOptions.toleranceNewtonUpdate);
+    GlobalConfig.sdluOptions.maxGMRESIterations = getJSONint(sdluOptions, "max_gmres_iterations", GlobalConfig.sdluOptions.maxGMRESIterations);
+    GlobalConfig.sdluOptions.toleranceGMRESSolve = getJSONdouble(sdluOptions, "tolerance_gmres_solve", GlobalConfig.sdluOptions.toleranceGMRESSolve);
+    GlobalConfig.sdluOptions.perturbationSize = getJSONdouble(sdluOptions, "perturbation_size", GlobalConfig.sdluOptions.perturbationSize);
+    //
     version (shape_sensitivity) {
-    auto sscOptions = jsonData["shape_sensitivity_calculator_options"];
-    GlobalConfig.sscOptions.pseudotime =
-        getJSONbool(sscOptions, "pseudotime", GlobalConfig.sscOptions.pseudotime);
-    GlobalConfig.sscOptions.pseudotime_lhs_jacobian_order =
-        getJSONint(sscOptions, "pseudotime_lhs_jacobian_order", GlobalConfig.sscOptions.pseudotime_lhs_jacobian_order);
-    GlobalConfig.sscOptions.adjoint_precondition_matrix_order =
-        getJSONint(sscOptions, "adjoint_precondition_matrix_order", GlobalConfig.sscOptions.adjoint_precondition_matrix_order);
-    GlobalConfig.sscOptions.read_frozen_limiter_values_from_file =
-        getJSONbool(sscOptions, "read_frozen_limiter_values_from_file", GlobalConfig.sscOptions.read_frozen_limiter_values_from_file);
-    GlobalConfig.sscOptions.epsilon =
-        getJSONdouble(sscOptions, "epsilon", GlobalConfig.sscOptions.epsilon);
-    GlobalConfig.sscOptions.maxOuterIterations =
-        getJSONint(sscOptions, "maxOuterIterations", GlobalConfig.sscOptions.maxOuterIterations);
-    GlobalConfig.sscOptions.maxRestarts =
-        getJSONint(sscOptions, "maxRestarts", GlobalConfig.sscOptions.maxRestarts);
-    GlobalConfig.sscOptions.cfl0 =
-        getJSONdouble(sscOptions, "cfl0", GlobalConfig.sscOptions.cfl0);
-    GlobalConfig.sscOptions.eta =
-        getJSONdouble(sscOptions, "eta", GlobalConfig.sscOptions.eta);
-    GlobalConfig.sscOptions.stopOnRelativeGlobalResidual =
-        getJSONdouble(sscOptions, "stop_on_relative_global_residual", GlobalConfig.sscOptions.stopOnRelativeGlobalResidual);
-    GlobalConfig.sscOptions.tolBezierCurveFit =
-        getJSONdouble(sscOptions, "tol_bezier_curve_fit", GlobalConfig.sscOptions.tolBezierCurveFit);
-    GlobalConfig.sscOptions.maxStepsBezierCurveFit =
-        getJSONint(sscOptions, "max_steps_bezier_curve_fit", GlobalConfig.sscOptions.maxStepsBezierCurveFit);
-    GlobalConfig.sscOptions.userDefinedObjectiveFile = sscOptions["user_defined_objective_file"].str;
+        auto sscOptions = jsonData["shape_sensitivity_calculator_options"];
+        GlobalConfig.sscOptions.pseudotime = getJSONbool(sscOptions, "pseudotime", GlobalConfig.sscOptions.pseudotime);
+        GlobalConfig.sscOptions.pseudotime_lhs_jacobian_order = getJSONint(sscOptions, "pseudotime_lhs_jacobian_order", GlobalConfig.sscOptions.pseudotime_lhs_jacobian_order);
+        GlobalConfig.sscOptions.adjoint_precondition_matrix_order = getJSONint(sscOptions, "adjoint_precondition_matrix_order", GlobalConfig.sscOptions.adjoint_precondition_matrix_order);
+        GlobalConfig.sscOptions.read_frozen_limiter_values_from_file = getJSONbool(sscOptions, "read_frozen_limiter_values_from_file", GlobalConfig.sscOptions.read_frozen_limiter_values_from_file);
+        GlobalConfig.sscOptions.epsilon = getJSONdouble(sscOptions, "epsilon", GlobalConfig.sscOptions.epsilon);
+        GlobalConfig.sscOptions.maxOuterIterations = getJSONint(sscOptions, "maxOuterIterations", GlobalConfig.sscOptions.maxOuterIterations);
+        GlobalConfig.sscOptions.maxRestarts = getJSONint(sscOptions, "maxRestarts", GlobalConfig.sscOptions.maxRestarts);
+        GlobalConfig.sscOptions.cfl0 = getJSONdouble(sscOptions, "cfl0", GlobalConfig.sscOptions.cfl0);
+        GlobalConfig.sscOptions.eta = getJSONdouble(sscOptions, "eta", GlobalConfig.sscOptions.eta);
+        GlobalConfig.sscOptions.stopOnRelativeGlobalResidual = getJSONdouble(sscOptions, "stop_on_relative_global_residual", GlobalConfig.sscOptions.stopOnRelativeGlobalResidual);
+        GlobalConfig.sscOptions.tolBezierCurveFit = getJSONdouble(sscOptions, "tol_bezier_curve_fit", GlobalConfig.sscOptions.tolBezierCurveFit);
+        GlobalConfig.sscOptions.maxStepsBezierCurveFit = getJSONint(sscOptions, "max_steps_bezier_curve_fit", GlobalConfig.sscOptions.maxStepsBezierCurveFit);
+        GlobalConfig.sscOptions.userDefinedObjectiveFile = sscOptions["user_defined_objective_file"].str;
     }
-
+    //
     // Enough configuration should be known, such we can build a list of variable names
     // for which data will be written into the flow data files.
     // This list needs to be built before the block-local config is copied.
     foreach (vname; build_flow_variable_list()) { GlobalConfig.flow_variable_list ~= vname; }
-
+    //
     // We have enough information here to create the ConservedQuantitiesIndices struct.
     GlobalConfig.cqi = new ConservedQuantitiesIndices(GlobalConfig.dimensions,
                                                       GlobalConfig.turb_model.nturb,
@@ -2139,7 +2119,7 @@ void set_config_for_blocks(JSONValue jsonData)
     // Now, configure blocks that make up the flow domain.
     //
     // This is done in phases.  The blocks need valid references to LocalConfig objects
-    // and the boundary conditions need valid references to Sblock objects.
+    // and the boundary conditions need valid references to FluidBlock objects.
     mixin(update_int("nfluidblock", "nFluidBlocks"));
     mixin(update_int("nfluidblockarrays", "nFluidBlockArrays"));
     foreach (i; 0 .. GlobalConfig.nFluidBlockArrays) {
@@ -2153,7 +2133,7 @@ void set_config_for_blocks(JSONValue jsonData)
             writefln("  fluid_block_array_%d: %s", i, fba);
         }
     }
-
+    //
     // Set up dedicated copies of the configuration parameters for the threads.
     foreach (i; 0 .. GlobalConfig.nFluidBlocks) {
         dedicatedConfig ~= new LocalConfig(i);
@@ -2205,7 +2185,7 @@ void set_config_for_blocks(JSONValue jsonData)
         assert(sblk !is null, "Oops, this should be a SolidBlock object.");
         sblk.initLuaGlobals();
         sblk.initBoundaryConditions(jsonData["solid_block_" ~ to!string(sblk.id)]);
-        if ( GlobalConfig.udfSolidSourceTerms ) {
+        if (GlobalConfig.udfSolidSourceTerms) {
             initUDFSolidSourceTerms(sblk.myL, GlobalConfig.udfSolidSourceTermsFile);
         }
     }
@@ -2257,7 +2237,7 @@ void read_control_file()
     mixin(update_int("write_flow_solution_at_step", "write_flow_solution_at_step"));
     mixin(update_int("snapshot_count", "snapshotCount"));
     mixin(update_int("number_total_snapshots", "nTotalSnapshots"));
-
+    //
     mixin(update_int("halt_now", "halt_now"));
     //
     if (GlobalConfig.verbosity_level > 1) {
@@ -2286,139 +2266,97 @@ void read_control_file()
     }
 
     version(nk_accelerator) {
-    auto sssOptions = jsonData["steady_state_solver_options"];
-    GlobalConfig.sssOptions.usePreconditioner = getJSONbool(sssOptions, "use_preconditioner", GlobalConfig.sssOptions.usePreconditioner);
-    GlobalConfig.sssOptions.frozenPreconditionerCount = getJSONint(sssOptions, "frozen_preconditioner_count", GlobalConfig.sssOptions.frozenPreconditionerCount);
-    GlobalConfig.sssOptions.startPreconditioning = getJSONint(sssOptions, "start_preconditioning", GlobalConfig.sssOptions.startPreconditioning);
-    GlobalConfig.sssOptions.iluFill = getJSONint(sssOptions, "ilu_fill", GlobalConfig.sssOptions.iluFill);
-    {
-        auto mySaveValue = GlobalConfig.sssOptions.preconditionMatrixType;
+        auto sssOptions = jsonData["steady_state_solver_options"];
+        GlobalConfig.sssOptions.usePreconditioner = getJSONbool(sssOptions, "use_preconditioner", GlobalConfig.sssOptions.usePreconditioner);
+        GlobalConfig.sssOptions.frozenPreconditionerCount = getJSONint(sssOptions, "frozen_preconditioner_count", GlobalConfig.sssOptions.frozenPreconditionerCount);
+        GlobalConfig.sssOptions.startPreconditioning = getJSONint(sssOptions, "start_preconditioning", GlobalConfig.sssOptions.startPreconditioning);
+        GlobalConfig.sssOptions.iluFill = getJSONint(sssOptions, "ilu_fill", GlobalConfig.sssOptions.iluFill);
+        auto mySaveValue1 = GlobalConfig.sssOptions.preconditionMatrixType;
         try {
             string name = sssOptions["precondition_matrix_type"].str;
             GlobalConfig.sssOptions.preconditionMatrixType = preconditionMatrixTypeFromName(name);
         } catch (Exception e) {
-            GlobalConfig.sssOptions.preconditionMatrixType = mySaveValue;
+            GlobalConfig.sssOptions.preconditionMatrixType = mySaveValue1;
         }
-    }
-    GlobalConfig.sssOptions.preconditionerSigma = getJSONdouble(sssOptions, "preconditioner_sigma", GlobalConfig.sssOptions.preconditionerSigma);
-    GlobalConfig.sssOptions.useAdaptivePreconditioner = getJSONbool(sssOptions, "use_adaptive_preconditioner", GlobalConfig.sssOptions.useAdaptivePreconditioner);
-    GlobalConfig.sssOptions.usePhysicalityCheck = getJSONbool(sssOptions, "use_physicality_check", GlobalConfig.sssOptions.usePhysicalityCheck);
-    GlobalConfig.sssOptions.useLineSearch = getJSONbool(sssOptions, "use_line_search", GlobalConfig.sssOptions.useLineSearch);
-    GlobalConfig.sssOptions.inviscidCFL = getJSONbool(sssOptions, "inviscid_cfl", GlobalConfig.sssOptions.inviscidCFL);
-    GlobalConfig.sssOptions.useScaling = getJSONbool(sssOptions, "use_scaling", GlobalConfig.sssOptions.useScaling);
-    GlobalConfig.sssOptions.useComplexMatVecEval = getJSONbool(sssOptions, "use_complex_matvec_eval", GlobalConfig.sssOptions.useComplexMatVecEval);
-    GlobalConfig.sssOptions.nPreSteps =
-        getJSONint(sssOptions, "number_pre_steps", GlobalConfig.sssOptions.nPreSteps);
-    GlobalConfig.sssOptions.nTotalSteps =
-        getJSONint(sssOptions, "number_total_steps", GlobalConfig.sssOptions.nTotalSteps);
-    GlobalConfig.sssOptions.maxNumberAttempts =
-        getJSONint(sssOptions, "max_number_attempts", GlobalConfig.sssOptions.maxNumberAttempts);
-    GlobalConfig.sssOptions.stopOnRelGlobalResid =
-        getJSONdouble(sssOptions, "stop_on_relative_global_residual", GlobalConfig.sssOptions.stopOnRelGlobalResid);
-    GlobalConfig.sssOptions.stopOnAbsGlobalResid =
-        getJSONdouble(sssOptions, "stop_on_absolute_global_residual", GlobalConfig.sssOptions.stopOnAbsGlobalResid);
-    GlobalConfig.sssOptions.maxSubIterations =
-        getJSONint(sssOptions, "max_sub_iterations", GlobalConfig.sssOptions.maxSubIterations);
-    GlobalConfig.sssOptions.maxOuterIterations =
-        getJSONint(sssOptions, "max_outer_iterations", GlobalConfig.sssOptions.maxOuterIterations);
-    GlobalConfig.sssOptions.maxRestarts =
-        getJSONint(sssOptions, "max_restarts", GlobalConfig.sssOptions.maxRestarts);
-    GlobalConfig.sssOptions.nInnerIterations =
-        getJSONint(sssOptions, "number_inner_iterations", GlobalConfig.sssOptions.nInnerIterations);
-    // Settings for start-up phase
-    GlobalConfig.sssOptions.nStartUpSteps =
-        getJSONint(sssOptions, "number_start_up_steps", GlobalConfig.sssOptions.nStartUpSteps);
-
-    GlobalConfig.sssOptions.cfl_schedule_length =
-        getJSONint(sssOptions, "cfl_schedule_length", GlobalConfig.sssOptions.cfl_schedule_length);
-
-    double[] default_cfl_schedule_value_data;
-    foreach (i; 0 .. GlobalConfig.sssOptions.cfl_schedule_length) { default_cfl_schedule_value_data ~= 0.0; }
-    auto cfl_schedule_value_data = getJSONdoublearray(sssOptions, "cfl_schedule_value_list", default_cfl_schedule_value_data);
-    GlobalConfig.sssOptions.cfl_schedule_value_list.length = GlobalConfig.sssOptions.cfl_schedule_length;
-    foreach (i; 0 .. GlobalConfig.sssOptions.cfl_schedule_length) {
-        GlobalConfig.sssOptions.cfl_schedule_value_list[i] = (i < cfl_schedule_value_data.length) ? cfl_schedule_value_data[i] : default_cfl_schedule_value_data[i];
-    }
-
-    int[] default_cfl_schedule_iter_data;
-    foreach (i; 0 .. GlobalConfig.sssOptions.cfl_schedule_length) { default_cfl_schedule_iter_data ~= 0; }
-    auto cfl_schedule_iter_data = getJSONintarray(sssOptions, "cfl_schedule_iter_list", default_cfl_schedule_iter_data);
-    GlobalConfig.sssOptions.cfl_schedule_iter_list.length = GlobalConfig.sssOptions.cfl_schedule_length;
-    foreach (i; 0 .. GlobalConfig.sssOptions.cfl_schedule_length) {
-        GlobalConfig.sssOptions.cfl_schedule_iter_list[i] = (i < cfl_schedule_iter_data.length) ? cfl_schedule_iter_data[i] : default_cfl_schedule_iter_data[i];
-    }
-
-    GlobalConfig.sssOptions.residual_based_cfl_scheduling = getJSONbool(sssOptions, "residual_based_cfl_scheduling", GlobalConfig.sssOptions.residual_based_cfl_scheduling);
-    GlobalConfig.sssOptions.cfl_max =
-        getJSONdouble(sssOptions, "cfl_max", GlobalConfig.sssOptions.cfl_max);
-    GlobalConfig.sssOptions.LHSeval0 =
-        getJSONint(sssOptions, "LHSeval0", GlobalConfig.sssOptions.LHSeval0);
-    GlobalConfig.sssOptions.RHSeval0 =
-        getJSONint(sssOptions, "RHSeval0", GlobalConfig.sssOptions.RHSeval0);
-    GlobalConfig.sssOptions.cfl0 =
-        getJSONdouble(sssOptions, "cfl0", GlobalConfig.sssOptions.cfl0);
-    GlobalConfig.sssOptions.eta0 =
-        getJSONdouble(sssOptions, "eta0", GlobalConfig.sssOptions.eta0);
-    GlobalConfig.sssOptions.tau0 =
-        getJSONdouble(sssOptions, "tau0", GlobalConfig.sssOptions.tau0);
-    GlobalConfig.sssOptions.sigma0 =
-        getJSONdouble(sssOptions, "sigma0", GlobalConfig.sssOptions.sigma0);
-    GlobalConfig.sssOptions.p0 =
-        getJSONdouble(sssOptions, "p0", GlobalConfig.sssOptions.p0);
-    // Setting for inexact Newton phase
-    GlobalConfig.sssOptions.LHSeval1 =
-        getJSONint(sssOptions, "LHSeval1", GlobalConfig.sssOptions.LHSeval1);
-    GlobalConfig.sssOptions.RHSeval1 =
-        getJSONint(sssOptions, "RHSeval1", GlobalConfig.sssOptions.RHSeval1);
-    GlobalConfig.sssOptions.cfl1 =
-        getJSONdouble(sssOptions, "cfl1", GlobalConfig.sssOptions.cfl1);
-    GlobalConfig.sssOptions.tau1 =
-        getJSONdouble(sssOptions, "tau1", GlobalConfig.sssOptions.tau1);
-    GlobalConfig.sssOptions.sigma1 =
-        getJSONdouble(sssOptions, "sigma1", GlobalConfig.sssOptions.sigma1);
-    GlobalConfig.sssOptions.p1 =
-        getJSONdouble(sssOptions, "p1", GlobalConfig.sssOptions.p1);
-    {
-        auto mySaveValue = GlobalConfig.sssOptions.etaStrategy;
+        GlobalConfig.sssOptions.preconditionerSigma = getJSONdouble(sssOptions, "preconditioner_sigma", GlobalConfig.sssOptions.preconditionerSigma);
+        GlobalConfig.sssOptions.useAdaptivePreconditioner = getJSONbool(sssOptions, "use_adaptive_preconditioner", GlobalConfig.sssOptions.useAdaptivePreconditioner);
+        GlobalConfig.sssOptions.usePhysicalityCheck = getJSONbool(sssOptions, "use_physicality_check", GlobalConfig.sssOptions.usePhysicalityCheck);
+        GlobalConfig.sssOptions.useLineSearch = getJSONbool(sssOptions, "use_line_search", GlobalConfig.sssOptions.useLineSearch);
+        GlobalConfig.sssOptions.inviscidCFL = getJSONbool(sssOptions, "inviscid_cfl", GlobalConfig.sssOptions.inviscidCFL);
+        GlobalConfig.sssOptions.useScaling = getJSONbool(sssOptions, "use_scaling", GlobalConfig.sssOptions.useScaling);
+        GlobalConfig.sssOptions.useComplexMatVecEval = getJSONbool(sssOptions, "use_complex_matvec_eval", GlobalConfig.sssOptions.useComplexMatVecEval);
+        GlobalConfig.sssOptions.nPreSteps = getJSONint(sssOptions, "number_pre_steps", GlobalConfig.sssOptions.nPreSteps);
+        GlobalConfig.sssOptions.nTotalSteps = getJSONint(sssOptions, "number_total_steps", GlobalConfig.sssOptions.nTotalSteps);
+        GlobalConfig.sssOptions.maxNumberAttempts = getJSONint(sssOptions, "max_number_attempts", GlobalConfig.sssOptions.maxNumberAttempts);
+        GlobalConfig.sssOptions.stopOnRelGlobalResid = getJSONdouble(sssOptions, "stop_on_relative_global_residual", GlobalConfig.sssOptions.stopOnRelGlobalResid);
+        GlobalConfig.sssOptions.stopOnAbsGlobalResid = getJSONdouble(sssOptions, "stop_on_absolute_global_residual", GlobalConfig.sssOptions.stopOnAbsGlobalResid);
+        GlobalConfig.sssOptions.maxSubIterations = getJSONint(sssOptions, "max_sub_iterations", GlobalConfig.sssOptions.maxSubIterations);
+        GlobalConfig.sssOptions.maxOuterIterations = getJSONint(sssOptions, "max_outer_iterations", GlobalConfig.sssOptions.maxOuterIterations);
+        GlobalConfig.sssOptions.maxRestarts = getJSONint(sssOptions, "max_restarts", GlobalConfig.sssOptions.maxRestarts);
+        GlobalConfig.sssOptions.nInnerIterations = getJSONint(sssOptions, "number_inner_iterations", GlobalConfig.sssOptions.nInnerIterations);
+        // Settings for start-up phase
+        GlobalConfig.sssOptions.nStartUpSteps = getJSONint(sssOptions, "number_start_up_steps", GlobalConfig.sssOptions.nStartUpSteps);
+        //
+        GlobalConfig.sssOptions.cfl_schedule_length = getJSONint(sssOptions, "cfl_schedule_length", GlobalConfig.sssOptions.cfl_schedule_length);
+        //
+        double[] default_cfl_schedule_value_data;
+        foreach (i; 0 .. GlobalConfig.sssOptions.cfl_schedule_length) { default_cfl_schedule_value_data ~= 0.0; }
+        auto cfl_schedule_value_data = getJSONdoublearray(sssOptions, "cfl_schedule_value_list", default_cfl_schedule_value_data);
+        GlobalConfig.sssOptions.cfl_schedule_value_list.length = GlobalConfig.sssOptions.cfl_schedule_length;
+        foreach (i; 0 .. GlobalConfig.sssOptions.cfl_schedule_length) {
+            GlobalConfig.sssOptions.cfl_schedule_value_list[i] = (i < cfl_schedule_value_data.length) ? cfl_schedule_value_data[i] : default_cfl_schedule_value_data[i];
+        }
+        //
+        int[] default_cfl_schedule_iter_data;
+        foreach (i; 0 .. GlobalConfig.sssOptions.cfl_schedule_length) { default_cfl_schedule_iter_data ~= 0; }
+        auto cfl_schedule_iter_data = getJSONintarray(sssOptions, "cfl_schedule_iter_list", default_cfl_schedule_iter_data);
+        GlobalConfig.sssOptions.cfl_schedule_iter_list.length = GlobalConfig.sssOptions.cfl_schedule_length;
+        foreach (i; 0 .. GlobalConfig.sssOptions.cfl_schedule_length) {
+            GlobalConfig.sssOptions.cfl_schedule_iter_list[i] = (i < cfl_schedule_iter_data.length) ? cfl_schedule_iter_data[i] : default_cfl_schedule_iter_data[i];
+        }
+        //
+        GlobalConfig.sssOptions.residual_based_cfl_scheduling = getJSONbool(sssOptions, "residual_based_cfl_scheduling", GlobalConfig.sssOptions.residual_based_cfl_scheduling);
+        GlobalConfig.sssOptions.cfl_max = getJSONdouble(sssOptions, "cfl_max", GlobalConfig.sssOptions.cfl_max);
+        GlobalConfig.sssOptions.LHSeval0 = getJSONint(sssOptions, "LHSeval0", GlobalConfig.sssOptions.LHSeval0);
+        GlobalConfig.sssOptions.RHSeval0 = getJSONint(sssOptions, "RHSeval0", GlobalConfig.sssOptions.RHSeval0);
+        GlobalConfig.sssOptions.cfl0 = getJSONdouble(sssOptions, "cfl0", GlobalConfig.sssOptions.cfl0);
+        GlobalConfig.sssOptions.eta0 = getJSONdouble(sssOptions, "eta0", GlobalConfig.sssOptions.eta0);
+        GlobalConfig.sssOptions.tau0 = getJSONdouble(sssOptions, "tau0", GlobalConfig.sssOptions.tau0);
+        GlobalConfig.sssOptions.sigma0 = getJSONdouble(sssOptions, "sigma0", GlobalConfig.sssOptions.sigma0);
+        GlobalConfig.sssOptions.p0 = getJSONdouble(sssOptions, "p0", GlobalConfig.sssOptions.p0);
+        // Setting for inexact Newton phase
+        GlobalConfig.sssOptions.LHSeval1 = getJSONint(sssOptions, "LHSeval1", GlobalConfig.sssOptions.LHSeval1);
+        GlobalConfig.sssOptions.RHSeval1 = getJSONint(sssOptions, "RHSeval1", GlobalConfig.sssOptions.RHSeval1);
+        GlobalConfig.sssOptions.cfl1 = getJSONdouble(sssOptions, "cfl1", GlobalConfig.sssOptions.cfl1);
+        GlobalConfig.sssOptions.tau1 = getJSONdouble(sssOptions, "tau1", GlobalConfig.sssOptions.tau1);
+        GlobalConfig.sssOptions.sigma1 = getJSONdouble(sssOptions, "sigma1", GlobalConfig.sssOptions.sigma1);
+        GlobalConfig.sssOptions.p1 = getJSONdouble(sssOptions, "p1", GlobalConfig.sssOptions.p1);
+        auto mySaveValue2 = GlobalConfig.sssOptions.etaStrategy;
         try {
             string name = sssOptions["eta_strategy"].str;
             GlobalConfig.sssOptions.etaStrategy = etaStrategyFromName(name);
         } catch (Exception e) {
-            GlobalConfig.sssOptions.etaStrategy = mySaveValue;
+            GlobalConfig.sssOptions.etaStrategy = mySaveValue2;
         }
-    }
-    GlobalConfig.sssOptions.eta1 =
-        getJSONdouble(sssOptions, "eta1", GlobalConfig.sssOptions.eta1);
-    GlobalConfig.sssOptions.eta1_max =
-        getJSONdouble(sssOptions, "eta1_max", GlobalConfig.sssOptions.eta1_max);
-    GlobalConfig.sssOptions.eta1_min =
-        getJSONdouble(sssOptions, "eta1_min", GlobalConfig.sssOptions.eta1_min);
-    GlobalConfig.sssOptions.etaRatioPerStep =
-        getJSONdouble(sssOptions, "eta_ratio_per_step", GlobalConfig.sssOptions.etaRatioPerStep);
-    GlobalConfig.sssOptions.gamma =
-        getJSONdouble(sssOptions, "gamma", GlobalConfig.sssOptions.gamma);
-    GlobalConfig.sssOptions.alpha =
-        getJSONdouble(sssOptions, "alpha", GlobalConfig.sssOptions.alpha);
-    GlobalConfig.sssOptions.limiterFreezingResidReduction =
-        getJSONdouble(sssOptions, "limiter_freezing_residual_reduction", GlobalConfig.sssOptions.limiterFreezingResidReduction);
-    GlobalConfig.sssOptions.limiterFreezingCount =
-        getJSONint(sssOptions, "limiter_freezing_count", GlobalConfig.sssOptions.limiterFreezingCount);
-    // Settings for writing out snapshots and diagnostics
-    GlobalConfig.sssOptions.snapshotsCount =
-        getJSONint(sssOptions, "snapshots_count", GlobalConfig.sssOptions.snapshotsCount);
-    GlobalConfig.sssOptions.nTotalSnapshots =
-        getJSONint(sssOptions, "number_total_snapshots", GlobalConfig.sssOptions.nTotalSnapshots);
-    GlobalConfig.sssOptions.writeDiagnosticsCount =
-        getJSONint(sssOptions, "write_diagnostics_count", GlobalConfig.sssOptions.writeDiagnosticsCount);
-    GlobalConfig.sssOptions.writeLoadsCount =
-        getJSONint(sssOptions, "write_loads_count", GlobalConfig.sssOptions.writeLoadsCount);
-    }
-
+        GlobalConfig.sssOptions.eta1 = getJSONdouble(sssOptions, "eta1", GlobalConfig.sssOptions.eta1);
+        GlobalConfig.sssOptions.eta1_max = getJSONdouble(sssOptions, "eta1_max", GlobalConfig.sssOptions.eta1_max);
+        GlobalConfig.sssOptions.eta1_min = getJSONdouble(sssOptions, "eta1_min", GlobalConfig.sssOptions.eta1_min);
+        GlobalConfig.sssOptions.etaRatioPerStep = getJSONdouble(sssOptions, "eta_ratio_per_step", GlobalConfig.sssOptions.etaRatioPerStep);
+        GlobalConfig.sssOptions.gamma = getJSONdouble(sssOptions, "gamma", GlobalConfig.sssOptions.gamma);
+        GlobalConfig.sssOptions.alpha = getJSONdouble(sssOptions, "alpha", GlobalConfig.sssOptions.alpha);
+        GlobalConfig.sssOptions.limiterFreezingResidReduction = getJSONdouble(sssOptions, "limiter_freezing_residual_reduction", GlobalConfig.sssOptions.limiterFreezingResidReduction);
+        GlobalConfig.sssOptions.limiterFreezingCount = getJSONint(sssOptions, "limiter_freezing_count", GlobalConfig.sssOptions.limiterFreezingCount);
+        // Settings for writing out snapshots and diagnostics
+        GlobalConfig.sssOptions.snapshotsCount = getJSONint(sssOptions, "snapshots_count", GlobalConfig.sssOptions.snapshotsCount);
+        GlobalConfig.sssOptions.nTotalSnapshots = getJSONint(sssOptions, "number_total_snapshots", GlobalConfig.sssOptions.nTotalSnapshots);
+        GlobalConfig.sssOptions.writeDiagnosticsCount = getJSONint(sssOptions, "write_diagnostics_count", GlobalConfig.sssOptions.writeDiagnosticsCount);
+        GlobalConfig.sssOptions.writeLoadsCount = getJSONint(sssOptions, "write_loads_count", GlobalConfig.sssOptions.writeLoadsCount);
+    } // end version(nk_accelerator)
+    //
     // Propagate new values to the local copies of config.
     foreach (localConfig; dedicatedConfig) {
         localConfig.update_control_parameters();
     }
-
 } // end read_control_file()
 
 //
@@ -2591,12 +2529,9 @@ void init_master_lua_State()
     // There is no convenient C API expression to do the equivalent of "require"
     luaL_dostring(L, "require 'lua_helper'");
     // Set some globally available constants for the Lua state.
-    lua_pushnumber(L, GlobalConfig.nFluidBlocks);
-    lua_setglobal(L, "nFluidBlocks");
-    lua_pushnumber(L, GlobalConfig.n_ghost_cell_layers);
-    lua_setglobal(L, "n_ghost_cell_layers"); // interpreters for blocks use this name
-    lua_pushnumber(L, GlobalConfig.n_ghost_cell_layers);
-    lua_setglobal(L, "nGhostCellLayers"); // keep both names
+    lua_pushnumber(L, GlobalConfig.nFluidBlocks); lua_setglobal(L, "nFluidBlocks");
+    lua_pushnumber(L, GlobalConfig.n_ghost_cell_layers); lua_setglobal(L, "n_ghost_cell_layers"); // interpreters for blocks use this name
+    lua_pushnumber(L, GlobalConfig.n_ghost_cell_layers); lua_setglobal(L, "nGhostCellLayers"); // keep both names
     // Give the user a table that holds information about
     // all of the blocks in the full simulation.
     // Note that not all of these blocks may be fully present
@@ -2606,31 +2541,20 @@ void init_master_lua_State()
         auto fluidblk = cast(FluidBlock) globalBlocks[i];
         assert(fluidblk !is null, "Oops, this should be a FluidBlock object.");
         lua_newtable(L);
-        lua_pushnumber(L, fluidblk.cells.length);
-        lua_setfield(L, -2, "nCells");
-        lua_pushnumber(L, fluidblk.vertices.length);
-        lua_setfield(L, -2, "nVertices");
-        if ( fluidblk.grid_type == Grid_t.structured_grid ) {
+        lua_pushnumber(L, fluidblk.cells.length); lua_setfield(L, -2, "nCells");
+        lua_pushnumber(L, fluidblk.vertices.length); lua_setfield(L, -2, "nVertices");
+        if (fluidblk.grid_type == Grid_t.structured_grid) {
             auto sblk = cast(SFluidBlock) fluidblk;
             assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-            lua_pushnumber(L, sblk.nic);
-            lua_setfield(L, -2, "niCells");
-            lua_pushnumber(L, sblk.njc);
-            lua_setfield(L, -2, "njCells");
-            lua_pushnumber(L, sblk.nkc);
-            lua_setfield(L, -2, "nkCells");
-            lua_pushnumber(L, 0);
-            lua_setfield(L, -2, "vtxImin");
-            lua_pushnumber(L, sblk.nic);
-            lua_setfield(L, -2, "vtxImax");
-            lua_pushnumber(L, 0);
-            lua_setfield(L, -2, "vtxJmin");
-            lua_pushnumber(L, sblk.njc);
-            lua_setfield(L, -2, "vtxJmax");
-            lua_pushnumber(L, 0);
-            lua_setfield(L, -2, "vtxKmin");
-            lua_pushnumber(L, sblk.nkc);
-            lua_setfield(L, -2, "vtxKmax");
+            lua_pushnumber(L, sblk.nic); lua_setfield(L, -2, "niCells");
+            lua_pushnumber(L, sblk.njc); lua_setfield(L, -2, "njCells");
+            lua_pushnumber(L, sblk.nkc); lua_setfield(L, -2, "nkCells");
+            lua_pushnumber(L, 0); lua_setfield(L, -2, "vtxImin");
+            lua_pushnumber(L, sblk.nic); lua_setfield(L, -2, "vtxImax");
+            lua_pushnumber(L, 0); lua_setfield(L, -2, "vtxJmin");
+            lua_pushnumber(L, sblk.njc); lua_setfield(L, -2, "vtxJmax");
+            lua_pushnumber(L, 0); lua_setfield(L, -2, "vtxKmin");
+            lua_pushnumber(L, sblk.nkc); lua_setfield(L, -2, "vtxKmax");
         }
         lua_rawseti(L, -2, to!int(i));
     }
