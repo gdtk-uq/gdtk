@@ -3,6 +3,7 @@
 -- PJ & RG
 -- 2015-02-24 -- adapted from the Python version of cone20
 -- 2018-01-26 -- 4-blocks to test MPI flavour of code.
+-- 2019-06-25 -- 8-blocks because that is the number of CPUs on my workstation.
 
 -- We can set individual attributes of the global data object.
 config.title = "Mach 1.5 flow over a 20 degree cone."
