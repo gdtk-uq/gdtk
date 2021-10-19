@@ -19,6 +19,7 @@ If you have some linux chops, the install process is quite straightforward:
 
   + Download the latest stable release from:
   <https://github.com/ldc-developers/ldc/releases>
+  (Look under Assets and grab the `linux-x86_64` build.)
   + Unpack in an area of your choosing.
   + Set your `PATH` variable so that it can find the binaries in the `bin/` subdirectory
     of what you just unpacked.
@@ -31,6 +32,7 @@ your environment to use the loadable library.
 
 For this example, I will install version `ldc-1.26.0`.
 You may find a newer stable release when you visit the ldc relesease webpage.
+You will need to look under the Assets drop-down and choose the architecture: `linux-x86_64`.
 You should download that newest release.
 For most of this you will work in a terminal.
 The first step involves the browser to find a package to download.

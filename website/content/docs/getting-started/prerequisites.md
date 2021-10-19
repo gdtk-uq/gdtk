@@ -31,6 +31,9 @@ You may build these executable programs from the source code, as described below
 
 The main requirement is a D language compiler.
 We recommend using the latest stable release of the LLVM D compiler.
+*Do not install the LLVM D compiler that is bundled in your package manager.*
+These are typically quite stale and will fail to build the code.
+Instead, follow our [install-by-hand guide.]({{<relref install-d-compiler>}})
 
 To build Eilmer and other programs in the toolkit, you will require:
 
