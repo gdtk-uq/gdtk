@@ -43,7 +43,7 @@ int main(string[] args)
     string usageMsg = "Usage: nenzf1d <input-file>
 Options:
    --verbosity=<int>   0 == very terse output
-                       1 == key results printed
+                       1 == key results printed (default)
                        2 == echo input as well as printing more detailed results
                        3 == debug printing as well
    --help              Print this help message.";
@@ -72,11 +72,11 @@ Options:
         return exitFlag;
     }
     if (verbosityLevel >= 1) {
-        writeln("NENZF1D 2021-02-05: shock-tunnel with nonequilibrium nozzle flow.");
-    }
-    if (verbosityLevel >= 2) {
-        writeln("Revision: PUT_REVISION_STRING_HERE");
-        writeln("Compiler-name: PUT_COMPILER_NAME_HERE");
+        writeln("NENZF1D: 1D analysis of shock-tunnel with nonequilibrium nozzle flow.");
+        writeln("  Revision-id: PUT_REVISION_STRING_HERE");
+        writeln("  Revision-date: PUT_REVISION_DATE_HERE");
+        writeln("  Compiler-name: PUT_COMPILER_NAME_HERE");
+        writeln("  Build-date: PUT_BUILD_DATE_HERE");
     }
     if (helpWanted) {
         writeln(usageMsg);

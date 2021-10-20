@@ -56,7 +56,8 @@ INSTALL_DIR ?= $(HOME)/dgdinst
 
 # The build destination sits locally for present
 BUILD_DIR := ../../build
-
+BUILD_DATE := $(shell date)
+REVISION_DATE := $(shell git log -1 --format=%cd)
 REVISION_STRING := $(shell git rev-parse --short HEAD)
 
 ifeq ($(DMD), dmd)
@@ -177,7 +178,9 @@ nenzf1d: main.d $(NENZF1D_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > main_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)nenzf1d \
 		main_with_rev_string.d \
