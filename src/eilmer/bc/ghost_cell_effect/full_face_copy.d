@@ -1928,6 +1928,7 @@ public:
 
                 const size_t fs_size = 1;
                 size_t ne = ghost_cells.length * fs_size;
+                version(complex_numbers) { ne *= 2; }
                 if (outgoing_flowstate_buf.length < ne) { outgoing_flowstate_buf.length = ne; }
                 outgoing_flowstate_tag = make_mpi_tag(blk.id, which_boundary, 0);
                 size_t ii = 0;
