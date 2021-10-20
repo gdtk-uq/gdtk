@@ -66,13 +66,11 @@ Config plain_to_fancy(PlainConfig cfg){
 
     // There should be more defensive programming here.
     if (cfg.reactions_filename2 !is null){
-        writeln("Found default for reactions_filename2");
         config.reactions_filename2 = to!string(cfg.reactions_filename2);
     }
 
     foreach(i; 0 .. cfg.n_species){
         string speciesname = to!string(cfg.species[i]);
-        writeln("Got speciesname: ", speciesname);
         config.species ~= speciesname;
     }
 

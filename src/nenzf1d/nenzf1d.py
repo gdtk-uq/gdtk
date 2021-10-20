@@ -93,7 +93,7 @@ class Nenzf1d(object):
         self.lib.cwrap_init()
         return
 
-    def run(self):
+    def run(self, verbosityLevel=1):
         config = ffi.new("struct PlainConfig *")
         
         # When working with FFI, it's very important that your objects created with ffi.new don't get
@@ -136,7 +136,6 @@ class Nenzf1d(object):
         di_p = ffi.from_buffer("double[]", self.di)
         config.di = di_p
         
-        verbosityLevel = 1
         result = self.lib.run(verbosityLevel, config[0])
         self.x = result.x
         self.area_ratio = result.area_ratio
