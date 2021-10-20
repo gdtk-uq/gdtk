@@ -403,6 +403,7 @@ enum UnstructuredLimiter {
     mlp,
     barth,
     heuristic_minmod,
+    hvenkat,
     venkat
 }
 
@@ -415,6 +416,7 @@ string unstructured_limiter_name(UnstructuredLimiter ul)
     case UnstructuredLimiter.mlp: return "mlp";
     case UnstructuredLimiter.barth: return "barth";
     case UnstructuredLimiter.heuristic_minmod: return "heuristic_minmod";
+    case UnstructuredLimiter.hvenkat: return "hvenkat";
     case UnstructuredLimiter.venkat: return "venkat";
     }
 }
@@ -428,6 +430,7 @@ UnstructuredLimiter unstructured_limiter_from_name(string name)
     case "mlp": return UnstructuredLimiter.mlp;
     case "barth": return UnstructuredLimiter.barth;
     case "heuristic_minmod": return UnstructuredLimiter.heuristic_minmod;
+    case "hvenkat": return UnstructuredLimiter.hvenkat;
     case "venkat": return UnstructuredLimiter.venkat;
     default:
         throw new FlowSolverException("Invalid unstructured limiter name");

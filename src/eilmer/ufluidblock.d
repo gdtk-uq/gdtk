@@ -754,8 +754,11 @@ public:
                         case UnstructuredLimiter.heuristic_minmod:
                             c.gradients.heuristic_minmod_limit(c.cell_cloud, c.ws, myConfig);
                             break;
+                        case UnstructuredLimiter.hvenkat:
+                            c.gradients.venkat_limit(c.cell_cloud, c.ws, true, myConfig, gtl);
+                            break;
                         case UnstructuredLimiter.venkat:
-                            c.gradients.venkat_limit(c.cell_cloud, c.ws, myConfig, gtl);
+                            c.gradients.venkat_limit(c.cell_cloud, c.ws, false, myConfig, gtl);
                             break;
                     } // end switch
                 } // end foreach c

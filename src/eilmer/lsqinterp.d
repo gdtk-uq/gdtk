@@ -572,7 +572,7 @@ public:
 
     @nogc
     void venkat_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
-                      ref LocalConfig myConfig, size_t gtl=0)
+                      bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig, size_t gtl=0)
     {
         // Venkatakrishnan's limiter
         //     Venkatakrishnan V.
@@ -593,6 +593,21 @@ public:
             h = sqrt(cell_cloud[0].volume[gtl]);
         }
         number eps = (K*h) * (K*h) * (K*h);
+
+        // Pressure-based smoothing function taken from pg. 33 of N. Gibbons thesis
+        number phi_hp = 1.0;
+        if (apply_heuristic_pressure_limiter) {
+            number pMax = cell_cloud[0].fs.gas.p;
+            number pMin = cell_cloud[0].fs.gas.p;
+            foreach (c; cell_cloud) {
+                if (c.is_interior_to_domain) {
+                    pMax = max(pMax, c.fs.gas.p);
+                    pMin = min(pMin, c.fs.gas.p);
+                }
+            }
+            number alpha = fabs(pMax - pMin)/pMin;
+            phi_hp = 0.5/(1.0 + alpha*alpha*alpha*alpha);
+        }
 
         string codeForLimits(string qname, string gname, string limFactorname,
                              string qMaxname, string qMinname)
@@ -615,7 +630,7 @@ public:
                     phi = fmin(phi, s);
                 }
             }
-            "~limFactorname~" = phi;
+            "~limFactorname~" = phi*phi_hp;
             }
             ";
             return code;
@@ -1005,6 +1020,8 @@ public:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.heuristic_minmod:
                         goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.hvenkat:
+                        goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.venkat:
                         mygradL[0] *= cL0.gradients."~lname~";
                         mygradL[1] *= cL0.gradients."~lname~";
@@ -1197,6 +1214,8 @@ public:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.heuristic_minmod:
                         goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.hvenkat:
+                        goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.venkat:
                         mygradR[0] *= cR0.gradients."~lname~";
                         mygradR[1] *= cR0.gradients."~lname~";
@@ -1362,6 +1381,8 @@ public:
                     case UnstructuredLimiter.barth:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.heuristic_minmod:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.hvenkat:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.venkat:
                         mygradL[0] *= cL0.gradients."~lname~";
