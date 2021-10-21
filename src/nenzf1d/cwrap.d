@@ -173,6 +173,7 @@ extern (C) PlainResult run(int verbosityLevel, PlainConfig cfg)
         exitCode = 1;
     }
 
+    stdout.flush();
     // Set the thing exitCodePointer is pointing at to be equal to exitCode
     //*exitCodePointer = exitCode;
     return rst;
