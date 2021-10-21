@@ -86,7 +86,7 @@ class TestNENZF1D < Test::Unit::TestCase
     assert((massf_NO - 0.068366).abs < 0.001, "Failed to compute correct mass-fraction of NO.")
   end
 
-  def test_1_t4m7_air_2T
+  def test_2_t4m7_air_2T
     cmd = "nenzf1d t4m7-air-2T.yaml"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
@@ -132,5 +132,49 @@ class TestNENZF1D < Test::Unit::TestCase
     assert((pressure - 2.83504).abs < 0.01, "Failed to compute correct pressure.")
     assert((massf_NO - 0.00972494).abs < 0.001, "Failed to compute correct mass-fraction of NO.")
     assert((tvib - 1316.84).abs < 0.1, "Failed to compute correct vibrational temperature.")
+  end
+
+  def test_3_t4m8_11742_python
+    cmd = "python3 py-t4m8-11742.py"
+    o, e, s = Open3.capture3(*cmd.split)
+    assert_equal(s.success?, true)
+    found_exit_condition = false
+    enthalpy = 0.0; mach = 0.0; temperature = 0.0; pressure = 0.0
+    massf_NO = 0.0
+    # puts o
+    lines = o.split("\n")
+    lines.each do |txt|
+      if txt.match('Exit condition') then
+        found_exit_condition = true
+      end
+      if txt.match('H5s-H1') then
+        items = txt.split(' ')
+        enthalpy = items[1].to_f
+      end
+      if found_exit_condition then
+        if txt.match('Mach') then
+          items = txt.split(' ')
+          mach = items[1].to_f
+        end
+        if txt.match('temperature') then
+          items = txt.split(' ')
+          temperature = items[1].to_f
+        end
+        if txt.match('pressure') then
+          items = txt.split(' ')
+          pressure = items[1].to_f
+        end
+        if txt.match('massf\[NO\]') then
+          items = txt.split(' ')
+          massf_NO = items[1].to_f
+        end
+      end
+    end
+    assert((enthalpy - 4.79689).abs < 0.01, "Failed to compute correct enthalpy.")
+    assert(found_exit_condition, "Failed to find exit condition in output.")
+    assert((mach - 7.15261).abs < 0.01, "Failed to compute correct Mach number.")
+    assert((temperature - 432.096).abs < 0.1, "Failed to compute correct temperature.")
+    assert((pressure - 4.69785).abs < 0.01, "Failed to compute correct pressure.")
+    assert((massf_NO - 0.068366).abs < 0.001, "Failed to compute correct mass-fraction of NO.")
   end
 end
