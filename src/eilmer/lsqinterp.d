@@ -709,17 +709,16 @@ public:
     } // end compute_lsq_gradients()
 
     @nogc
-    void heuristic_minmod_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
-                                    ref LocalConfig myConfig, size_t gtl=0)
+    void park_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
+                    ref LocalConfig myConfig, size_t gtl=0)
     {
-        // Pressure-based heuristic MINMOD limiter
+        // Pressure-based heuristic limiter
         // Implementation details from
-        //     Drayna T. W.
-        //     Design and Optimization of Hypersoni Inward-Turning Inlets
-        //     Thesis @ Univsersity of Minnesota, 2011
+        //     M. A. Park
+        //     Anisotropic Output-Based Adaptation with Tetrahedral Cut Cells for Compressible Flows
+        //     Thesis @ Massachusetts Institute of Technology, 2008
 
-        number phi, g, r, s, beta;
-        immutable number eps = 1.0e-12;
+        number phi;
         FVCell ncell;
         string codeForLimits(string qname, string gname, string limFactorname,
                              string qMaxname, string qMinname)
@@ -727,20 +726,27 @@ public:
             string code = "{
             phi = 1.0;
             foreach (i, f; cell_cloud[0].iface) {
-                // MINMOD limiter value
                 if (f.left_cell.id == cell_cloud[0].id) { ncell = f.right_cell; }
                 else { ncell = f.left_cell; }
-                number dx = ncell.pos[gtl].x - cell_cloud[0].pos[gtl].x;
-                number dy = ncell.pos[gtl].y - cell_cloud[0].pos[gtl].y;
-                number dz = ncell.pos[gtl].z - cell_cloud[0].pos[gtl].z;
-                g = "~gname~"[0] * dx + "~gname~"[1] * dy;
-                if (myConfig.dimensions == 3) { g += "~gname~"[2] * dz; }
-                r = (2.0*g)/(ncell.fs."~qname~" - cell_cloud[0].fs."~qname~" + eps) - 1.0;
-                s = max(to!number(0.0), min(to!number(1.0),r));
-                // Pressure-based smoothing limiter value
-                beta = 1.0/(1.0 + ((pMax - pMin)/pMin)^^4);
-                s *= beta;
+                number dx1 = f.pos.x - cell_cloud[0].pos[gtl].x;
+                number dy1 = f.pos.y - cell_cloud[0].pos[gtl].y;
+                number dz1 = f.pos.z - cell_cloud[0].pos[gtl].z;
+                number dx2 = f.pos.x - ncell.pos[gtl].x;
+                number dy2 = f.pos.y - ncell.pos[gtl].y;
+                number dz2 = f.pos.z - ncell.pos[gtl].z;
+                //number dpx = dx1*cell_cloud[0].gradients.p[0] - dx2*ncell.gradients.p[0];
+                //number dpy = dy1*cell_cloud[0].gradients.p[1] - dy2*ncell.gradients.p[1];
+                //number dpz = dz1*cell_cloud[0].gradients.p[2] - dz2*ncell.gradients.p[2];
+                // this step is a modification on the original algorithm since we don't have cell gradients from neighbouring blocks at this point
+                number dpx = dx1*cell_cloud[0].gradients.p[0] - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
+                number dpy = dy1*cell_cloud[0].gradients.p[1] - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
+                number dpz = dz1*cell_cloud[0].gradients.p[2] - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
+                number dp = dpx*dpx + dpy*dpy;
+                if (myConfig.dimensions == 3) { dp += dpz*dpz; }
+                dp = sqrt(dp);
+                number s = 1-tanh((dp)/(fmin(cell_cloud[0].fs.gas.p, ncell.fs.gas.p)));
                 phi = min(phi, s);
+                phi = max(phi, to!number(0.0));
             }
             "~limFactorname~" = phi;
             }
@@ -1018,7 +1024,7 @@ public:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.barth:
                         goto case UnstructuredLimiter.venkat;
-                    case UnstructuredLimiter.heuristic_minmod:
+                    case UnstructuredLimiter.park:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.hvenkat:
                         goto case UnstructuredLimiter.venkat;
@@ -1212,7 +1218,7 @@ public:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.barth:
                         goto case UnstructuredLimiter.venkat;
-                    case UnstructuredLimiter.heuristic_minmod:
+                    case UnstructuredLimiter.park:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.hvenkat:
                         goto case UnstructuredLimiter.venkat;
@@ -1380,7 +1386,7 @@ public:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.barth:
                         goto case UnstructuredLimiter.venkat;
-                    case UnstructuredLimiter.heuristic_minmod:
+                    case UnstructuredLimiter.park:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.hvenkat:
                         goto case UnstructuredLimiter.venkat;
