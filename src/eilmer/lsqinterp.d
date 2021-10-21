@@ -611,6 +611,7 @@ public:
         number a, b, U, phi, h, s;
         immutable double w = 1.0e-12;
         immutable double K = myConfig.venkat_K_value;
+        immutable double rel_dif = myConfig.venkat_trigger_value;
         if (myConfig.dimensions == 3) {
             h = cell_cloud[0].volume[gtl]^^(1.0/3.0);
         } else {
@@ -646,7 +647,9 @@ public:
                 b = "~gname~"[0] * dx + "~gname~"[1] * dy;
                 if (myConfig.dimensions == 3) { b += "~gname~"[2] * dz; }
                 b = copysign(((fabs(b) + w)), b);
-                if ( b == 0.0 ) {
+                // modification on original algorithm which attempts to prevent
+                // the limiter triggering in regions of very little variation
+                if ( fabs(b/U) < rel_dif ) {
                     phi = fmin(phi, 1.0);
                 } else {
                     a = (b > 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;

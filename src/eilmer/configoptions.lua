@@ -85,6 +85,7 @@ configOptionsHidden = { -- hidden from user
    freeze_limiter_on_step = 1000000000,
    use_extended_stencil = false,
    venkat_K_value = 0.3,
+   venkat_trigger_value = 0.0,
    nsteps_of_chemistry_ramp = -1,
    shear_tolerance = 0.20,
    M_inf = 0.01,
