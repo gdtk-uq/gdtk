@@ -26,6 +26,7 @@ TEST_PROGRAMS := vector3_test vector3_complex_test \
 	sweptsurfacevolume_test sweptsurfacevolume_complex_test \
 	wedgevolume_test wedgevolume_complex_test \
 	slabvolume_test slabvolume_complex_test \
+	nurbsvolume_test \
 	twosurfacevolume_test twosurfacevolume_complex_test \
 	sgrid_test sgrid_complex_test \
 	usgrid_test usgrid_complex_test \
@@ -283,6 +284,10 @@ slabvolume_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_servi
 
 slabvolume_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -dip1008 -debug -g -w -version=slabvolume_test -version=complex_numbers \
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
+
+nurbsvolume_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 sgrid_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d

@@ -44,6 +44,7 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/volume/twosurfacevolume.d \
 	$(GEOM_DIR)/volume/meshvolume.d \
 	$(GEOM_DIR)/volume/subrangedvolume.d \
+	$(GEOM_DIR)/volume/nurbsvolume.d \
 	$(GEOM_DIR)/grid/package.d \
 	$(GEOM_DIR)/grid/grid.d \
 	$(GEOM_DIR)/grid/sgrid.d \
