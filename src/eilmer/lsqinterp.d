@@ -171,6 +171,30 @@ public:
             T_modesMin.length = nmodes;
             u_modesMin.length = nmodes;
         }
+
+        // The user has the option to postprocess the limiter values for visualisation,
+        // so we initialize these values to -1.0.
+        // We need to do this because:
+        // (1) we do not calculate a limiter value for every thermodynamic variable
+        // and
+        // (2) old versions of Paraview throw a segfault error when plotting NaNs
+        //
+        velxPhi = -1.0; velyPhi = -1.0; velzPhi = -1.0;
+        version(MHD) {
+            BxPhi = -1.0; ByPhi = -1.0; BzPhi = -1.0; psiPhi = -1.0;
+        }
+        version(turbulence) {
+            turbPhi[0] = -1.0; turbPhi[1] = -1.0;
+        }
+        version(multi_species_gas) {
+            foreach (ref val; massfPhi) { val = -1.0; }
+        }
+        rhoPhi = -1.0; pPhi = -1.0;
+        TPhi = -1.0; uPhi = -1.0;
+        version(multi_T_gas) {
+            foreach (ref val; u_modesPhi) { val = -1.0; }
+            foreach (ref val; T_modesPhi) { val = -1.0; }
+        }
     }
 
     this(ref const(LSQInterpGradients) other)

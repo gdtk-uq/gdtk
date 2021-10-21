@@ -992,3 +992,73 @@ class GeneralDFT : AuxCellData
         return acc;
     }
 }
+
+//=============================================================================
+// Cell Limiter Values
+//=============================================================================
+
+mixin(GenCellVariableAccess!("AccessVelxPhi", "gradients.velxPhi"));
+mixin(GenCellVariableAccess!("AccessVelyPhi", "gradients.velyPhi"));
+mixin(GenCellVariableAccess!("AccessVelzPhi", "gradients.velzPhi"));
+mixin(GenCellVariableAccess!("AccessRhoPhi", "gradients.rhoPhi"));
+mixin(GenCellVariableAccess!("AccessPPhi", "gradients.pPhi"));
+mixin(GenCellVariableAccess!("AccessTPhi", "gradients.TPhi"));
+mixin(GenCellVariableAccess!("AccessUPhi", "gradients.uPhi"));
+version(multi_species_gas) {
+    mixin(GenCellArrayVariableAccess!("AccessMassfPhi", "gradients.massfPhi"));
+}
+version(multi_T_gas) {
+    mixin(GenCellArrayVariableAccess!("AccessUModesPhi", "gradients.u_modesPhi"));
+    mixin(GenCellArrayVariableAccess!("AccessTModesPhi", "gradients.T_modesPhi"));
+}
+version(turbulence) {
+    mixin(GenCellArrayVariableAccess!("AccessTurbPhi", "gradients.turbPhi"));
+}
+
+class CellLimiterData : AuxCellData
+// An empty auxiliary data item that acts as a pass-through for accessing
+// the unstructured grid limiters
+{
+    public:
+
+    static tag = "limiter";
+
+    this(){
+        index = AuxCellData.get_order(tag);
+    }
+
+    override void init(LocalConfig myConfig){}
+
+    override @nogc void update(FVCell cell, double dt, double time, size_t step){}
+
+    static VariableAccess[string] get_accessors(LocalConfig myConfig)
+    {
+        VariableAccess[string] acc;
+
+        acc["phi_velx"] = new AccessVelxPhi();
+        acc["phi_vely"] = new AccessVelyPhi();
+        if (myConfig.dimensions == 3) { acc["phi_velz"] = new AccessVelzPhi(); }
+        acc["phi_rho"] = new AccessRhoPhi();
+        acc["phi_p"] = new AccessPPhi();
+        acc["phi_T"] = new AccessTPhi();
+        acc["phi_u"] = new AccessUPhi();
+        version(multi_species_gas) {
+            foreach(sp; 0 .. myConfig.gmodel.n_species) {
+                acc["phi_"~massfName(myConfig.gmodel, sp)] = new AccessMassfPhi(sp);
+            }
+        }
+        version(multi_T_gas) {
+            foreach(mode; 0 .. myConfig.gmodel.n_modes) {
+                acc["phi_"~u_modesName(mode)] = new AccessUModesPhi(mode);
+                acc["phi_"~T_modesName(mode)] = new AccessTModesPhi(mode);
+            }
+        }
+        version(turbulence) {
+            foreach(it; 0 .. myConfig.turb_model.nturb) {
+                acc["phi_"~myConfig.turb_model.primitive_variable_name(it)] = new AccessTurbPhi(it);
+            }
+        }
+
+        return acc;
+    }
+}
