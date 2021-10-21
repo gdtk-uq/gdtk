@@ -631,7 +631,7 @@ public:
                 }
             }
             number alpha = fabs(pMax - pMin)/pMin;
-            phi_hp = 0.5/(1.0 + alpha*alpha*alpha*alpha);
+            phi_hp = 1.0/(1.0 + alpha*alpha*alpha*alpha);
         }
 
         string codeForLimits(string qname, string gname, string limFactorname,
