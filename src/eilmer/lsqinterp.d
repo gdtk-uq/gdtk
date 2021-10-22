@@ -175,9 +175,13 @@ public:
         // The user has the option to postprocess the limiter values for visualisation,
         // so we initialize these values to -1.0.
         // We need to do this because:
-        // (1) we do not calculate a limiter value for every thermodynamic variable
+        // (1) in a simulation, we do not calculate a limiter value for every thermodynamic variable,
+        //     (note that this means if a variable has limiter values of -1.0 in a solution, then we did
+        //     not calculate or use that particular limiter value in that simulation)
         // and
         // (2) old versions of Paraview throw a segfault error when plotting NaNs
+        //
+        // KAD 22-10-2022
         //
         velxPhi = -1.0; velyPhi = -1.0; velzPhi = -1.0;
         version(MHD) {
