@@ -10,7 +10,7 @@ PLATFORM ?= linux
 
 PROGRAMS := nenzf1d
 
-NENZF1D_FILES :=
+NENZF1D_FILES := configuration.d shock_tube_nozzle.d
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
@@ -132,11 +132,11 @@ ifeq ($(WITH_DVODE),1)
     DLINKFLAGS += -L-lgfortran
 endif
 
-default: $(PROGRAMS)
+default: $(PROGRAMS) libnenzf1d.so $(NENZF1D_FILES)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "nenzf1d code built."
 
-install: $(PROGRAMS) prep-gas prep-chem chemkin2eilmer
+install: $(PROGRAMS) libnenzf1d.so prep-gas prep-chem chemkin2eilmer
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
@@ -199,7 +199,7 @@ libnenzf1d.so: cwrap.d $(NENZF1D_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
-	$(DMD) -c cwrap.d $(PIC) $(DFLAGS) -op main.d \
+	$(DMD) -c cwrap.d $(PIC) $(DFLAGS) -op \
 		$(NENZF1D_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(GEOM_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
@@ -207,7 +207,7 @@ libnenzf1d.so: cwrap.d $(NENZF1D_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA)
-	$(DMD) $(OF)libnenzf1d.so cwrap.o $(PIC) $(DFLAGS) -op -shared main.d \
+	$(DMD) $(OF)libnenzf1d.so cwrap.o $(PIC) $(DFLAGS) -op -shared \
 		$(NENZF1D_FILES) $(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(GEOM_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \

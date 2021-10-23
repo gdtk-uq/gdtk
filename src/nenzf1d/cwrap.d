@@ -12,7 +12,8 @@ import core.stdc.string;
 import std.string;
 import std.stdio;
 import std.conv;
-import nenzf1d;
+import configuration;
+import shock_tube_nozzle;
 
 Config config;
 Result result;
@@ -55,7 +56,7 @@ struct PlainConfig
 Config plain_to_fancy(PlainConfig cfg){
 /*
     Take a C style struct that is readable from python and convert it to a D-style
-    config struct, of the kind that nenzf1d is expecting. 
+    config struct, of the kind that nenzf1d is expecting.
 
     @author: Nick Gibbons
 */
@@ -164,7 +165,7 @@ extern (C) PlainResult run(int verbosityLevel, PlainConfig cfg)
 
     PlainResult rst;
     try{
-        result = nenzf1d.run(verbosityLevel, config);
+        result = shock_tube_nozzle.analyse(verbosityLevel, config);
         rst = d_result_to_c(result);
     }
     catch(Exception e) {
