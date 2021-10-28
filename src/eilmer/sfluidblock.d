@@ -2098,6 +2098,20 @@ public:
     } // end propagate_inflow_data_west_to_east()
 
     @nogc
+    override void set_face_flowstates_to_averages_from_cells()
+    {
+        // It turns out that some shock-detectors need flow derivatives before the
+        // convective-flux calculation is done.  That used to be the only place
+        // that the face FlowState was filled in and it was done as a side-effect,
+        // which has confused just about everyone at some time in their work on the code.
+        foreach (f; faces) {
+            FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
+            FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
+            f.fs.copy_average_values_from(cL0.fs, cR0.fs);
+        }
+    }
+
+    @nogc
     override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0,
                                          FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
     // Compute the flux from flow-field data on either-side of the interface.
@@ -2109,27 +2123,27 @@ public:
         // (3) Apply the flux calculator to the Lft,Rght flow states.
         //
         bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
-
         if (iface_list.length == 0) { iface_list = faces; }
-
         //
         // Low-order reconstruction just copies data from adjacent FV_Cell.
         // Note that ,even for high-order reconstruction, we depend upon this copy for
         // the viscous-transport and diffusion coefficients.
         //
         foreach (f; iface_list) {
-
             if (myConfig.high_order_flux_calculator && f.is_on_boundary && !bc[f.bc_id].ghost_cell_data_available) {
                 throw new Error("ghost cell data missing");
             }
-            
-            
-            // The high-order ASF flux calculator is a flux reconstruction scheme, so the expensive interpolation process can be bypassed if it's pure ASF flux.
-            // If we're using the hybrid flux calculator, we don't need the interpolation process if the 'shock' value is 0.
-            if ((myConfig.flux_calculator == FluxCalculator.asf) || ((myConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf) & (f.fs.S == 0))) {
+            if ((myConfig.flux_calculator == FluxCalculator.asf)
+                || ((myConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf) && (f.fs.S == 0))) {
+                // [FIX_ME] 2021-10-28 PJ changed the bitwise and to logical and. Also, is S a floating-point number these days?
+                // The high-order ASF flux calculator is a flux reconstruction scheme,
+                // so the expensive interpolation process can be bypassed if it's pure ASF flux.
+                // If we're using the hybrid flux calculator,
+                // we don't need the interpolation process if the 'shock' value is 0.
+                // This short-cut provides a significant speed-up for Lachlan's simulations.
                 ASF_242(f, myConfig);
             } else {
-            // Typical code path, with interpolation for the flowstates to the left and right of the interface.
+                // Typical code path, with interpolation for the flowstates to the left and right of the interface.
                 if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
                     !(myConfig.suppress_reconstruction_at_shocks && (f.fs.S == 1.0))) {
                     one_d.interp(f, Lft, Rght);

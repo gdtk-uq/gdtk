@@ -271,6 +271,9 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
 	}
     }
+    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+        if (blk.active) { blk.set_face_flowstates_to_averages_from_cells(); }
+    }
     // And we'll do a first pass on solid domain bc's too in case we need up-to-date info.
     foreach (sblk; parallel(localSolidBlocks, 1)) {
 	if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
@@ -520,13 +523,16 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 		if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
 	    }
 	}
+        foreach (blk; parallel(localFluidBlocksBySize,1)) {
+            if (blk.active) { blk.set_face_flowstates_to_averages_from_cells(); }
+        }
 	// And we'll do a first pass on solid domain bc's too in case we need up-to-date info.
 	foreach (sblk; parallel(localSolidBlocks, 1)) {
 	    if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
 	}
 	// We've put this detector step here because it needs the ghost-cell data
 	// to be current, as it should be just after a call to apply_convective_bc().
-    if (GlobalConfig.do_shock_detect) detect_shocks(gtl, ftl);
+        if (GlobalConfig.do_shock_detect) detect_shocks(gtl, ftl);
 
 	foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	    if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
@@ -898,6 +904,9 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     foreach (blk; localFluidBlocksBySize) {
                         if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
                     }
+                }
+                foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                    if (blk.active) { blk.set_face_flowstates_to_averages_from_cells(); }
                 }
             } catch (Exception e) {
                 debug { writefln("Exception thrown in phase 03 of stage %d of explicit update: %s", stage, e.msg); }
@@ -1509,6 +1518,9 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 foreach (blk; localFluidBlocksBySize) {
                     if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
                 }
+            }
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) { blk.set_face_flowstates_to_averages_from_cells(); }
             }
             // And we'll do a first pass on solid domain bc's too in case we need up-to-date info.
             foreach (sblk; localSolidBlocks) {
@@ -2632,6 +2644,9 @@ void gasdynamic_implicit_increment_with_moving_grid()
                 foreach (blk; localFluidBlocksBySize) {
                     if (blk.active) { blk.applyPreReconAction(SimState.time, gtl0, ftl0); }
                 }
+            }
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) { blk.set_face_flowstates_to_averages_from_cells(); }
             }
         } catch (Exception e) {
             debug { writefln("Exception thrown in phase 05 of implicit update with moving grid: %s", e.msg); }
