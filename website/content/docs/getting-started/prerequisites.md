@@ -41,8 +41,9 @@ To build Eilmer and other programs in the toolkit, you will require:
       + Binary releases for the latest stable release of the LLVM D compiler (`ldc2` and `ldmd2`)
         may be found at: <https://github.com/ldc-developers/ldc/releases> .
         An install guide for the LLVM D compiler is available [here]({{< relref install-d-compiler >}}).
-  + A C compiler
+  + Make and a C compiler
       + GNU compiler is a good option and comes standard on most systems.
+      + On Debian/Ubuntu/Mint, install the package `build-essential`.
   + The gfortran compiler (and 32-bit libraries)
       + gfortran and gfortran-multilib on Debian/Ubuntu/Mint
       + gcc-gfortran on RedHat/CentOS/Fedora
