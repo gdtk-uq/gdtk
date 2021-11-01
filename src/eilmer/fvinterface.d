@@ -334,11 +334,13 @@ public:
             triangle_properties(vtx[0].pos[gtl], vtx[1].pos[gtl],
                                 vtx[2].pos[gtl],
                                 pos, n, t1, t2, area[gtl]);
+            length = sqrt(area[gtl]);
             break;
         case 4:
             quad_properties(vtx[0].pos[gtl], vtx[1].pos[gtl],
                             vtx[2].pos[gtl], vtx[3].pos[gtl],
                             pos, n, t1, t2, area[gtl]);
+            length = sqrt(area[gtl]);
             break;
         default:
             string msg = "FVInterface.update_3D_geometric_data(): Unhandled number of vertices: ";

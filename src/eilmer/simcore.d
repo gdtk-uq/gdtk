@@ -1645,10 +1645,10 @@ void compute_wall_distances() {
         }
     }
     //
-    // Now pack their centroid positions and normal vectors into a special buffer
+    // Now pack their centroid positions and normal vectors and lengths into a special buffer
     double[] facepos;
     size_t ii=0;
-    facepos.length = nfaces*6;
+    facepos.length = nfaces*7;
     int this_rank = GlobalConfig.mpi_rank_for_local_task;
     //
     foreach(blk; localFluidBlocksBySize) {
@@ -1662,6 +1662,7 @@ void compute_wall_distances() {
                     facepos[ii++] = face.n.x.re;
                     facepos[ii++] = face.n.y.re;
                     facepos[ii++] = face.n.z.re;
+                    facepos[ii++] = face.length.re;
                     } else {
                     facepos[ii++] = face.pos.x;
                     facepos[ii++] = face.pos.y;
@@ -1669,6 +1670,7 @@ void compute_wall_distances() {
                     facepos[ii++] = face.n.x;
                     facepos[ii++] = face.n.y;
                     facepos[ii++] = face.n.z;
+                    facepos[ii++] = face.length;
                     }
                 }
             }
@@ -1703,7 +1705,7 @@ void compute_wall_distances() {
         // Now clean up by copying the globaldata back into facepos
         facepos.length = globalfacepos.length;
         foreach(i; 0 .. globalfacepos.length)  facepos[i] = globalfacepos[i];
-        nfaces = to!int(facepos.length)/6;
+        nfaces = to!int(facepos.length)/7;
     } // end version(mpi_parallel)
     //
     if (nfaces == 0) {
@@ -1713,7 +1715,7 @@ void compute_wall_distances() {
     size_t totalfaces = nfaces;
     Node[] nodes;
     foreach(i; 0 .. nfaces) {
-        Node node = {[facepos[6*i+0], facepos[6*i+1], facepos[6*i+2]]};
+        Node node = {[facepos[7*i+0], facepos[7*i+1], facepos[7*i+2]]};
         node.cellid = i;
         nodes ~= node;
     }
@@ -1730,14 +1732,21 @@ void compute_wall_distances() {
             //double dist = sqrt(bestDist); // This caused problems on distorted grid cells.
 
             // Unpack face info into a point and a normal, and compute the normal distance to the resulting plane
-            double[3] n = [facepos[6*found.cellid+3],
-                           facepos[6*found.cellid+4],
-                           facepos[6*found.cellid+5]];
+            double[3] n = [facepos[7*found.cellid+3],
+                           facepos[7*found.cellid+4],
+                           facepos[7*found.cellid+5]];
             double[3] px = [cell.pos[0].x.re - found.x[0],
                             cell.pos[0].y.re - found.x[1],
                             cell.pos[0].z.re - found.x[2]];
             double dnormal = fabs(px[0]*n[0] + px[1]*n[1] + px[2]*n[2]);
-            cell.dwall = dnormal;
+            // We also care about the parallel direction, since we could be far from a wall but still close to its
+            // infinite plane. See derivation 28/10/21 by NNG for the new correction factor offwalldistance.
+            double celllength = facepos[7*found.cellid+6];
+            double dpx_squared = px[0]*px[0]  + px[1]*px[1]  + px[2]*px[2];
+            double dparallel = sqrt(dpx_squared - dnormal*dnormal);
+            double offwalldistance = fmax(dparallel - celllength/2, 0.0);
+            double dwall = sqrt(dnormal*dnormal + offwalldistance*offwalldistance);
+            cell.dwall = dwall;
         }
     }
 } // end compute_wall_distances()
