@@ -750,7 +750,6 @@ public:
         number qx = k_eff * grad.T[0];
         number qy = k_eff * grad.T[1];
         number qz = k_eff * grad.T[2];
-        q_conduction = (qx*n.x + qy*n.y + qz*n.z);
         version(multi_T_gas) {
             foreach (imode; 0 .. n_modes) {
                 qx += viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][0];
@@ -758,6 +757,7 @@ public:
                 qz += viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][2];
             }
         }
+        q_conduction = (qx*n.x + qy*n.y + qz*n.z);
         version(multi_species_gas) {
             if (myConfig.turb_model.isTurbulent ||
                 myConfig.mass_diffusion_model != MassDiffusionModel.none ) {
