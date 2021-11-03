@@ -16,6 +16,7 @@ import std.conv;
 import fvcell;
 import fvinterface;
 import geom;
+import nm.number;
 import fieldconductivity;
 import bc.boundary_condition;
 import bc.ghost_cell_effect.full_face_copy;
@@ -31,10 +32,10 @@ class FixedField_Test : FieldBC{
     }
 
     final void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio){
-        double S = face.length;
+        double S = face.length.re;
         double d = distance_between(face.pos, cell.pos[0]);
         double sigma = conductivity_model(face.fs, face.pos);
-        double phi = test_field(face.pos.x, face.pos.y);
+        double phi = test_field(face.pos.x.re, face.pos.y.re);
 
         bk  = -1.0*phi*S/d*sigma;
         Akk = -1.0*S/d*sigma;
@@ -54,12 +55,13 @@ class FixedGradient_Test : FieldBC{
         this.conductivity_model = create_conductivity_model(conductivity_model_name);
     }
     final void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio){
-        double S = face.length;
+        double S = face.length.re;
         double d = distance_between(face.pos, cell.pos[0]);
         double sigma = conductivity_model(face.fs, face.pos);
-        Vector3 phigrad = test_field_gradient(face.pos.x, face.pos.y);
+        Vector3 phigrad = test_field_gradient(face.pos.x.re, face.pos.y.re);
 
-        bk  = -sign*phigrad.dot(face.n)*S*sigma;
+        number phigrad_dot_n = phigrad.dot(face.n);
+        bk  = -sign*phigrad_dot_n.re*S*sigma;
         Akk = 0.0;
         Ako = 0.0;
         Aio = -1;
@@ -115,7 +117,7 @@ class SharedField : FieldBC{
             ghost_cell_position = face.left_cell.pos[0];
         }
 
-        double S = face.length;
+        double S = face.length.re;
         double sigma = conductivity_model(face.fs, face.pos);
         double d = distance_between(ghost_cell_position, cell.pos[0]);
 
@@ -192,7 +194,7 @@ class MPISharedField : FieldBC{
             ghost_cell_position = face.left_cell.pos[0];
         }
 
-        double S = face.length;
+        double S = face.length.re;
         double sigma = conductivity_model(face.fs, face.pos);
         double d = distance_between(ghost_cell_position, cell.pos[0]);
 

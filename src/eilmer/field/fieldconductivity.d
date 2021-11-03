@@ -23,7 +23,7 @@ interface ConductivityModel{
 class TestConductivity : ConductivityModel{
     this() {}
     final const double opCall(const FlowState fs, const Vector3 pos){
-        return -1.0*exp(pos.x)*cos(pos.y);
+        return -1.0*exp(pos.x.re)*cos(pos.y.re);
     }
 }
 

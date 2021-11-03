@@ -92,7 +92,7 @@ class ElectricField {
                         other = face.left_cell;
                         if (other==cell) other = face.right_cell;
 
-                        double S = face.length;
+                        double S = face.length.re;
                         double sigmaF = conductivity(face.fs, face.pos);
                         double d = distance_between(other.pos[0], cell.pos[0]);
                         Ai[k*nbands + iio] = other.id + block_offsets[blkid];
