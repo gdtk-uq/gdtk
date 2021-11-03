@@ -118,6 +118,15 @@ The following papers have made use, in one way or another, of the flow-simulatio
 
 
 ### Bluff-body and reacting compressible flows
+1. Gildfind, D. E., Smith, D., Lefevre, A., Jacobs, P. A. and McIntyre, T. J. (2021) Magnetohydrodynamic Aerobraking Shock Stand-Off Measurements with Flight Representative Electrodynamic Boundary Conditions, AIAA Journal, article in advance, <https://arc.aiaa.org/doi/10.2514/1.J060466>
+
+1. Gu, S., Morgan, R. G., McIntyre, T. J. and Brandis, A. M. (2021) An Experimental Study of CO2 Thermochemical Nonequilibrium, AIAA Journal, article in advance, <https://arc.aiaa.org/doi/full/10.2514/1.J061037>
+
+1. Fahy, E. J., Buttsworth, D. R., Gollan, R. J., Jacobs, P. A., Morgan, R. G. and James, C. J. (2021) Experimental and Computational Fluid Dynamics Study of Hayabusa Reentry Peak Heating, AIAA Journal of Spacecraft and Rockets, article in advance, <https://doi.org/10.2514/1.A34863>
+
+1. Lefevre, A., Gildfind, D. E., Gollan, R. J., Jacobs, P. A., McIntyre, T. J. and James, C. M. (2021) Expansion Tube Experiments of Magnetohydrodynamic Aerobraking for Superorbital Earth Reentry, AIAA Journal, Vol. 59, No. 8, pp. 3228--3240, <https://doi.org/10.2514/1.J060253>
+
+
 
 1. Yosheph Yang, Ikhyun Kim and Gisu Park (2020) Evaluation of blunt body velocity gradient at the shock tube end-wall. Acta Astronautica, 170 (2020) pages 570–576.
 
@@ -172,6 +181,8 @@ The following papers have made use, in one way or another, of the flow-simulatio
 
 
 ### Transient ducted flows
+
+
 
 1. Xin Kang, Rowan J. Gollan, Peter A. Jacobs and Ananthanarayanan Veeraragavan (2017)  Numerical study of the effect of wall temperature profiles on the premixed methane–air flame dynamics in a narrow channel.  RSC Advances, Volume 7 Issue 63 pages 39940-39954.  DOI:10.1039/C7RA07265A
 
@@ -233,7 +244,9 @@ The following papers have made use, in one way or another, of the flow-simulatio
 
 
 
-### Other hypersonic reacting flows (steps, cavities, cones...)
+### Other supersonic/hypersonic flows (steps, cavities, cones...)
+
+1. Hornung, H. G., Gollan, R. J., Jacobs, P. A. (2021) Unsteadiness boundaries in supersonic flow over double cones, Journal of Fluid Mechanics, Vol. 916, A5, <https://doi.org/10.1017/jfm.2021.203>
 
 1. Jokic MD, Buttsworth DR, Balage S (2015) An Aerolance System for Hypersonic Flight. 7th Asia-Pacific International Symposium on Aerospace Technology, 25–27 November 2015, Cairns.
 
@@ -282,6 +295,8 @@ The following papers have made use, in one way or another, of the flow-simulatio
 
 
 ### Analysis of expansion-tube facilities
+
+1. Schwartz, T., Girard, J., Finch, P. M., Yu, W., Lawson, J. M., Strand, C. L., Austin, J. M., Hornung, H. G. and Hanson, R. K. (2021) Characterization of the Caltech Hypervelocity Expansion Tube via Tunable Diode Laser Absorption Spectroscopy, AIAA Paper 2021-3524, <https://doi.org/10.2514/6.2021-3524>
 
 1. DE Gildfind, PA Jacobs, RG Morgan, WYK Chan and RJ Gollan (2017) Scramjet test flow reconstruction for a large-scale expansion tube, Part 1: quasi-one-dimensional modeling. Shock Waves, Online First, https://doi.org/10.1007/s00193-017-0785-x
 
@@ -412,6 +427,8 @@ The following papers have made use, in one way or another, of the flow-simulatio
 
 
 ### Analysis of shock tubes, reflected-shock tunnels and gun tunnels
+
+1. Girard, J. J., Finch, P. M., Schwartz, T., Strand, C. L., Hanson, R. K., Yu, W. M., Austin, J. M. and Hornung, H. G. (2021) Characterization of the T5 reflected shock tunnel freestream temperature, velocity, and composition using laser absorption spectroscopy, AIAA Paper 2021-3525, <https://doi.org/10.2514/6.2021-3525>
 
 1. Seong-Hyeon Park and Gisu Park (2020) Separation process of multi-spheres in hypersonic flow. Advances in Space Research, Vol. 65 (2020) pages 392–406.
 
