@@ -49,7 +49,7 @@ class ElectricField {
         foreach(i, block; localFluidBlocks){
             field_bcs[i].length = block.bc.length;
             foreach(j, bc; block.bc){
-                field_bcs[i][j] = create_field_bc(bc.field_bc_name, bc, block_offsets, field_conductivity_model, N);
+                field_bcs[i][j] = create_field_bc(bc.field_bc, bc, block_offsets, field_conductivity_model, N);
             }
         }
 

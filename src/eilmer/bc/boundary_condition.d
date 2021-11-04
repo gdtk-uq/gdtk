@@ -40,7 +40,6 @@ import lua_helper;
 import grid_motion;
 import grid_motion_udf;
 import mass_diffusion;
-import fieldbc;
 
 BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -74,7 +73,7 @@ BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary
     foreach ( jsonObj; postDiffFluxActions ) {
         newBC.postDiffFluxAction ~= make_BFE_from_json(jsonObj, blk_id, boundary);
     }
-    newBC.field_bc_name = getJSONstring(jsonData, "field_bc", "unspecified");
+    newBC.field_bc = jsonData["field_bc"].toString.parseJSON; // Deep copy the field_bc data by parsing it again.
     return newBC;
 } // end make_BC_from_json()
 
@@ -131,8 +130,9 @@ public:
     SolidFVCell[] solidCells;
     FVInterface[] ifaces;
 
-    // Leave a label for recording what kind of boundary we want for the electric field.
-    string field_bc_name;
+    // We're going to store the JSONdata for the field boundaries, rather then the boundary objects themselves
+    // TODO: In the future, rethink if this is a good idea. (NNG)
+    JSONValue field_bc;
 private:
     // Working storage for boundary flux derivatives
     FlowState _Lft, _Rght;

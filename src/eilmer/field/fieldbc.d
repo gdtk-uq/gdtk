@@ -12,10 +12,12 @@ import std.stdio;
 import std.math;
 import std.format;
 import std.conv;
+import std.json;
 
 import fvcell;
 import fvinterface;
 import geom;
+import json_helper;
 import nm.number;
 import fieldconductivity;
 import bc.boundary_condition;
@@ -210,8 +212,15 @@ private:
 } // end class MPISharedField
 } // end version(mpi_parallel)
 
-FieldBC create_field_bc(string name, const BoundaryCondition bc, const int[] block_offsets, string conductivity_model_name, int ncells){
+FieldBC create_field_bc(JSONValue field_bc_json, const BoundaryCondition bc, const int[] block_offsets, string conductivity_model_name, int ncells){
+/*
+    Create a field_bc object that will be used later for setting matrix entries near boundaries.
+    Currently the data specifying each bc is storied in bc.field_bc as a JSON table.
+
+*/
+    string name = getJSONstring(field_bc_json, "name", "not_found");
     FieldBC field_bc;
+
     switch (name) {
     case "FixedGradient_Test":
         field_bc = new FixedGradient_Test(conductivity_model_name);

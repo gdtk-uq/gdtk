@@ -562,7 +562,7 @@ function BoundaryCondition:tojson()
                               tostring(self.is_design_surface))
    str = str .. string.format('        "num_cntrl_pts": %s, \n',
                               tostring(self.num_cntrl_pts))
-   str = str .. string.format('        "field_bc": "%s",\n', self.field_bc)
+   str = str .. string.format('        "field_bc": %s,\n', self.field_bc:tojson())
    str = str .. '        "pre_recon_action": [\n'
    for i,effect in ipairs(self.preReconAction) do
       str = str .. effect:tojson()
@@ -1871,5 +1871,34 @@ function SolidFullFaceCopyBoundaryBC:new(o)
    o.preSpatialDerivActionAtBndryCells = { SolidGCE_SolidGhostCellFullFaceCopy:new{otherBlock=o.otherBlock,
                                                                                    otherFace=o.otherFace,
                                                                                    orientation=o.orientation} }
+   return o
+end
+
+FieldBoundary = {
+   name = "",
+}
+function FieldBoundary:new(o)
+   o = o or {}
+   setmetatable(o, self)
+   self.__index = self
+   return o
+end
+function FieldBoundary:tojson()
+   local str = '{'
+   str = str .. string.format('"name": "%s"', self.name)
+   str = str .. '}'
+   return str
+end
+
+FixedGradient_Test = FieldBoundary:new()
+FixedGradient_Test.name = "FixedGradient_Test"
+function FixedGradient_Test:new(o)
+   o = FieldBoundary.new(self, o)
+   return o
+end
+FixedField_Test = FieldBoundary:new()
+FixedField_Test.name = "FixedField_Test"
+function FixedField_Test:new(o)
+   o = FieldBoundary.new(self, o)
    return o
 end
