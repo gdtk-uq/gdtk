@@ -1037,6 +1037,7 @@ final class GlobalConfig {
     shared static double divB_damping_length = 1.0;
     // Activate the electric field solver by Nick Gibbons
     shared static bool solve_electric_field = false;
+    shared static string field_conductivity_model = "none";
 
     // Parameters controlling viscous/molecular transport
     //
@@ -1302,6 +1303,7 @@ public:
     double c_h;
     double divB_damping_length;
     bool solve_electric_field;
+    string field_conductivity_model;
 
     bool viscous;
     bool use_viscosity_from_cells;
@@ -1456,6 +1458,7 @@ public:
         c_h = cfg.c_h;
         divB_damping_length = cfg.divB_damping_length;
         solve_electric_field = cfg.solve_electric_field;
+        field_conductivity_model = cfg.field_conductivity_model;
         //
         viscous = cfg.viscous;
         use_viscosity_from_cells = cfg.use_viscosity_from_cells;
@@ -1806,6 +1809,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("divergence_cleaning", "divergence_cleaning"));
     mixin(update_double("divB_damping_length", "divB_damping_length"));
     mixin(update_bool("solve_electric_field", "solve_electric_field"));
+    mixin(update_string("field_conductivity_model", "field_conductivity_model"));
 
     // Checking of constraints.
     // The following checks/overrides must happen after the relevant config elements
@@ -1882,6 +1886,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  divergence_cleaning: ", cfg.divergence_cleaning);
         writeln("  divB_damping_length: ", cfg.divB_damping_length);
         writeln("  solve_electric_field: ", cfg.solve_electric_field);
+        writeln("  field_conductivity_model: ", cfg.field_conductivity_model);
     }
     configCheckPoint2();
     //

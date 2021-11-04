@@ -27,7 +27,7 @@ import fieldconductivity;
 import fieldexchange;
 
 class ElectricField {
-    this(const FluidBlock[] localFluidBlocks) {
+    this(const FluidBlock[] localFluidBlocks, const string field_conductivity_model) {
         N = 0;
         foreach(block; localFluidBlocks){
             block_offsets ~= N;
@@ -40,8 +40,7 @@ class ElectricField {
         phi.length = N;
         phi0.length = N;
 
-        string conductivity_model_name = "test";
-        conductivity = create_conductivity_model(conductivity_model_name); // TODO: Config variable?
+        conductivity = create_conductivity_model(field_conductivity_model);
 
         // I don't want random bits of the field module hanging off the boundary conditions.
         // Doing it this way is bad encapsulation, but it makes sure that other people only break my code
@@ -50,7 +49,7 @@ class ElectricField {
         foreach(i, block; localFluidBlocks){
             field_bcs[i].length = block.bc.length;
             foreach(j, bc; block.bc){
-                field_bcs[i][j] = create_field_bc(bc.field_bc_name, bc, block_offsets, conductivity_model_name, N);
+                field_bcs[i][j] = create_field_bc(bc.field_bc_name, bc, block_offsets, field_conductivity_model, N);
             }
         }
 

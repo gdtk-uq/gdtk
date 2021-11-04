@@ -733,8 +733,8 @@ int init_simulation(int tindx, int nextLoadsIndx,
     //
 
     if (GlobalConfig.solve_electric_field){
-        eField = new ElectricField(localFluidBlocks); // efield is a global object stored in globaldata.d
-        eField.solve_efield(localFluidBlocks); // Assuming the flow field is set up, solve here too
+        eField = new ElectricField(localFluidBlocks, GlobalConfig.field_conductivity_model);
+        eField.solve_efield(localFluidBlocks); // Assuming the flow field is set up, solve the field right away
     }
     // Keep our memory foot-print small.
     GC.collect();

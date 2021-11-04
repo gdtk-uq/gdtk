@@ -31,6 +31,7 @@ configOptionsHidden = { -- hidden from user
    c_h = 0.0,
    divB_damping_length = 1.0,
    solve_electric_field = false,
+   field_conductivity_model="none",
    --
    strang_splitting = "full_T_full_R",
    gasdynamic_update_scheme = "predictor_corrector",
