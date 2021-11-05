@@ -54,8 +54,7 @@ def ref_function(x1, y1, z1, t):
 
 if __name__ == "__main__":
     pt = {x:0.5, y:0.5}
-    print 'rho=', rho.subs(pt).evalf(), \
+    print('rho=', rho.subs(pt).evalf(), \
         'u=', u.subs(pt).evalf(), \
         'v=', v.subs(pt).evalf(), \
-        'p=', p.subs(pt).evalf()
-        
+        'p=', p.subs(pt).evalf())

@@ -16,6 +16,7 @@
 # Date: Jun-2015
 # Place: Tucson, Arizona
 
+from __future__ import print_function
 import os
 import shutil
 from math import log
@@ -76,7 +77,7 @@ def prepareCases(ncellsList, fluxCalc, derivCalc, derivLcn, blocking, threading)
 def runCases(ncellsList):
     cwd = os.getcwd()
     for ncells in ncellsList:
-        print "========= Working on grid: %dx%d ===========" % (ncells, ncells)
+        print("========= Working on grid: %dx%d ===========" % (ncells, ncells))
         subDir = "%dx%d" % (ncells, ncells)
         os.chdir(subDir)
         cmd = "sh run.sh"
@@ -160,7 +161,7 @@ def gatherResults(ncellsList):
 if __name__ == "__main__":
     import sys
     caseOptFile = sys.argv[1]
-    execfile(caseOptFile)
+    exec(open(caseOptFile).read())
     prepareCases(ncellsList, fluxCalc, derivCalc, derivLcn, blocking, threading)
     runCases(ncellsList)
     gatherResults(ncellsList)

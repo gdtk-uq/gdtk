@@ -69,6 +69,7 @@ if __name__ == '__main__':
     # some lines and tidy others
     lines = f_code.split('\n')
     lines[:] = [l.lstrip() for l in lines if ( not l.startswith('REAL*8') and
+                                               not l.startswith('INTEGER*4') and
                                                not l.startswith('implicit') and
                                                not l.startswith('end')) ]
     # Now reassemble but collect the split lines into a large line

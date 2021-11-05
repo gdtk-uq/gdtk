@@ -35,6 +35,7 @@ local exp = math.exp
 local pi = math.pi
 local max = math.max
 local sqrt = math.sqrt
+local min = math.min
 
 function sourceTerms(t, cell)
    src = {}
