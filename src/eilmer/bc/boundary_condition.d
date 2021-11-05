@@ -73,7 +73,12 @@ BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary
     foreach ( jsonObj; postDiffFluxActions ) {
         newBC.postDiffFluxAction ~= make_BFE_from_json(jsonObj, blk_id, boundary);
     }
-    newBC.field_bc = jsonData["field_bc"].toString.parseJSON; // Deep copy the field_bc data by parsing it again.
+
+    // In case we're reading an old config file with no field_bc, just continue, silently.
+    try {
+        newBC.field_bc = jsonData["field_bc"].toString.parseJSON; // Deep copy the field_bc data by parsing it again.
+    } catch (JSONException e) {}
+
     return newBC;
 } // end make_BC_from_json()
 

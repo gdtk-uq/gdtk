@@ -506,6 +506,36 @@ function ThermionicElectronFlux:tojson()
    return str
 end
 
+-- Data for field boundaries (NNG)
+FieldBoundary = {
+   name = "unspecified",
+}
+function FieldBoundary:new(o)
+   o = o or {}
+   setmetatable(o, self)
+   self.__index = self
+   return o
+end
+function FieldBoundary:tojson()
+   local str = '{'
+   str = str .. string.format('"name": "%s"', self.name)
+   str = str .. '}'
+   return str
+end
+
+FixedGradient_Test = FieldBoundary:new()
+FixedGradient_Test.name = "FixedGradient_Test"
+function FixedGradient_Test:new(o)
+   o = FieldBoundary.new(self, o)
+   return o
+end
+FixedField_Test = FieldBoundary:new()
+FixedField_Test.name = "FixedField_Test"
+function FixedField_Test:new(o)
+   o = FieldBoundary.new(self, o)
+   return o
+end
+
 -- Class for (complete) BoundaryCondition
 --
 -- BoundaryConditions consist of lists of actions to be done
@@ -526,7 +556,7 @@ BoundaryCondition = {
    convective_flux_computed_in_bc = false,
    is_design_surface = false,
    num_cntrl_pts = 0,
-   field_bc = "unspecified",
+   field_bc = FieldBoundary:new{},
    preReconAction = {},
    postConvFluxAction = {},
    preSpatialDerivActionAtBndryFaces = {},
@@ -1874,31 +1904,3 @@ function SolidFullFaceCopyBoundaryBC:new(o)
    return o
 end
 
-FieldBoundary = {
-   name = "",
-}
-function FieldBoundary:new(o)
-   o = o or {}
-   setmetatable(o, self)
-   self.__index = self
-   return o
-end
-function FieldBoundary:tojson()
-   local str = '{'
-   str = str .. string.format('"name": "%s"', self.name)
-   str = str .. '}'
-   return str
-end
-
-FixedGradient_Test = FieldBoundary:new()
-FixedGradient_Test.name = "FixedGradient_Test"
-function FixedGradient_Test:new(o)
-   o = FieldBoundary.new(self, o)
-   return o
-end
-FixedField_Test = FieldBoundary:new()
-FixedField_Test.name = "FixedField_Test"
-function FixedField_Test:new(o)
-   o = FieldBoundary.new(self, o)
-   return o
-end
