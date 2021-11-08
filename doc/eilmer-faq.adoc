@@ -17,6 +17,16 @@ In our biased opinion, Eilmer v4.0 is all-round better than Eilmer3 so there sho
 
 The list of supported features in Eilmer v4.0 is hosted at: https://gdtk.uqcloud.net/docs/eilmer/releases/#version-400
 
+== I really want to use Eilmer3.  Where do I find it?
+
+Eilmer3 is still available in the Mercurial repository https://source.eait.uq.edu.au/hg/cfcfd3
+
+When working on this website, we had an accident with the old CFCFD website and lost the copy that was being served.
+The source is all in the mercurial repository so you can still get to all of the instructions.
+For example, the "getting started" page is at
+https://source.eait.uq.edu.au/hg/cfcfd3/file/tip/doc/sphinx/getting-started.rst
+
+
 = Build and install process
 
 == What do these terms mean: update, clean, build, compile, install?
