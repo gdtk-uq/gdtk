@@ -9,6 +9,14 @@ The Eilmer code gardeners
 
 :leveloffset: +1
 
+= Meta-level: why this toolkit?
+
+== Should I use Eilmer4 or Eilmer3?
+
+In our biased opinion, Eilmer v4.0 is all-round better than Eilmer3 so there should be some benefit to updating your input scripts if you were an Eilmer3 user.
+
+The list of supported features in Eilmer v4.0 is hosted at: https://gdtk.uqcloud.net/docs/eilmer/releases/#version-400
+
 = Build and install process
 
 == What do these terms mean: update, clean, build, compile, install?
