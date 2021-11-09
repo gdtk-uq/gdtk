@@ -80,9 +80,11 @@ int main(string[] args)
     }
 
     if (GlobalConfig.is_master_task) {
-        writeln("Eilmer compressible-flow simulation code -- using Newton-Krylov accelerator.");
-        writeln("Revision: PUT_REVISION_STRING_HERE");
+        writeln("Eilmer 4.0 compressible-flow simulation code -- using Newton-Krylov accelerator.");
+        writeln("Revision-id: PUT_REVISION_STRING_HERE");
+        writeln("Revision-date: PUT_REVISION_DATE_HERE");
         writeln("Compiler-name: PUT_COMPILER_NAME_HERE");
+        writeln("Build-date: PUT_BUILD_DATE_HERE");
         write("Build-flavour: ");
         version(flavour_debug) { writeln("debug"); }
         version(flavour_profile) { writeln("profile"); }
