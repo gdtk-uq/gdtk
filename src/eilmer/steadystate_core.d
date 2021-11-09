@@ -224,6 +224,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     int nPreSteps = GlobalConfig.sssOptions.nPreSteps;
     int nStartUpSteps = GlobalConfig.sssOptions.nStartUpSteps;
     bool inexactNewtonPhase = false;
+    bool dangerousExceptionsAreFatal = GlobalConfig.dangerous_exceptions_are_fatal;
 
     // No need to have more task threads than blocks
     int extraThreadsInPool;
@@ -712,6 +713,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             catch (FlowSolverException e) {
                 writefln("Failed when attempting GMRES solve in main steps.");
                 writefln("attempt %d: dt= %e", attempt, dt);
+                if (dangerousExceptionsAreFatal) exit(1);
                 failedAttempt = 1;
                 cfl = 0.1*cfl;
                 dt = determine_dt(cfl);
@@ -834,6 +836,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         writefln("linear system residual: %e", linSolResid.re);
                         writefln("krylov searches: %d    restarts: %d", nIters, nRestarts);
                         writeln("msg: ", e.message);
+                        if (dangerousExceptionsAreFatal) exit(1);
                         failedAttempt = 1;
                     }
                     cellCount += nConserved;

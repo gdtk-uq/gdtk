@@ -62,6 +62,7 @@ configOptionsHidden = { -- hidden from user
    --
    ignore_low_T_thermo_update_failure = true,
    suggested_low_T_value = 200.0,
+   dangerous_exceptions_are_fatal = false,
    adjust_invalid_cell_data = false,
    report_invalid_cells = true,
    max_invalid_cells = 0,
