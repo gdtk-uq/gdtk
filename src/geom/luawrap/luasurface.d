@@ -26,6 +26,7 @@ import geom.luawrap.luasgrid;
 immutable string CoonsPatchMT = "CoonsPatch";
 immutable string AOPatchMT = "AOPatch";
 immutable string ChannelPatchMT = "ChannelPatch";
+immutable string RuledSurfaceMT = "RuledSurface";
 immutable string NozzleExpansionPatchMT = "NozzleExpansionPatch";
 immutable string SweptPathPatchMT = "SweptPathPatch";
 immutable string SpherePatchMT = "SpherePatch";
@@ -47,6 +48,8 @@ ParametricSurface checkSurface(lua_State* L, int index) {
         return checkObj!(AOPatch, AOPatchMT)(L, index);
     if ( isObjType(L, index, ChannelPatchMT ) )
         return checkObj!(ChannelPatch, ChannelPatchMT)(L, index);
+    if ( isObjType(L, index, RuledSurfaceMT ) )
+        return checkObj!(RuledSurface, RuledSurfaceMT)(L, index);
     if ( isObjType(L, index, NozzleExpansionPatchMT ) )
         return checkObj!(NozzleExpansionPatch, NozzleExpansionPatchMT)(L, index);
     if ( isObjType(L, index, SweptPathPatchMT ) )
@@ -382,6 +385,69 @@ extern(C) int make_bridging_path_ChannelPatch(lua_State* L)
     }
     return 1;
 } // end make_bridging_path_ChannelPatch()
+
+
+/**
+ * This is the constructor for a RuledSurface to be used from the Lua interface.
+ *
+ * At successful completion of this function, a new RuledSurface object
+ * is pushed onto the Lua stack.
+ *
+ * Supported constructions are:
+ * -------------------------
+ * patch0 = RuledSurface:new{edge0=sPath, edge1=nPath}
+ * patch1 = RuledSurface:new{edge0=sPath, edge1=nPath, ruled_direction='s', pure2D=false}
+ * patch2 = RuledSurface:new{edge0=wPath, edge1=ePath, ruled_direction='r'}
+ * For the ruled_direction string, 's' acts the same as 'j' and 'r' acts the same as 'i'.
+ * --------------------------
+ */
+
+extern(C) int newRuledSurface(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if (!(narg == 2 && lua_istable(L, 1))) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected RuledSurface:new{}; ";
+        errMsg ~= "maybe you tried RuledSurface.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if (!lua_istable(L, 1)) {
+        string errMsg = "Error in constructor RuledSurface:new{}. " ~
+            "A table with input parameters is expected as the first argument.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["edge0","edge1","ruled_direction","pure2D"])) {
+        string errMsg = "Error in call to RuledSurface:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    // Look for edge0 and edge1 paths.
+    lua_getfield(L, 1, "edge0");
+    auto edge0 = checkPath(L, -1);
+    if (edge0 is null) {
+        string errMsg = "Error in constructor RuledSurface:new{}. Couldn't find edge0 Path.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    lua_getfield(L, 1, "edge1");
+    auto edge1 = checkPath(L, -1);
+    if (edge1 is null) {
+        string errMsg = "Error in constructor RuledSurface:new{}. Couldn't find edge1 Path.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    // Optional parameters
+    string ruled_direction = getStringWithDefault(L, 1, "ruled_direction", "s");
+    string errMsgTmpltBool = "Error in call to RuledSurface:new{}. " ~
+        "A valid value for '%s' was not found in list of arguments. " ~
+        "The value, if present, should be boolean (true or false).";
+    bool pure2D = getBooleanFromTable(L, 1, "pure2D", false, false, true, format(errMsgTmpltBool, "pure2D"));
+    // Construct the actual surface.
+    auto cpatch = new RuledSurface(edge0, edge1, ruled_direction, pure2D);
+    surfaceStore ~= pushObj!(RuledSurface, RuledSurfaceMT)(L, cpatch);
+    return 1;
+} // end newRuledSurface()
+
 
 /**
  * This is the constructor for a NozzleExpansionPatch to be used from the Lua interface.
@@ -1256,7 +1322,29 @@ void registerSurfaces(lua_State* L)
     lua_setglobal(L, ChannelPatchMT.toStringz);
     lua_getglobal(L, ChannelPatchMT.toStringz); lua_setglobal(L, "ChannelSurface"); // alias
 
-    // Register the Nozzleexpansionpatch object
+    // Register the RuledSurface object
+    luaL_newmetatable(L, RuledSurfaceMT.toStringz);
+
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newRuledSurface);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallSurface!(RuledSurface, RuledSurfaceMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallSurface!(RuledSurface, RuledSurfaceMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(RuledSurface, RuledSurfaceMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &areaOfSurface!(RuledSurface, RuledSurfaceMT));
+    lua_setfield(L, -2, "area");
+
+    lua_setglobal(L, RuledSurfaceMT.toStringz);
+    lua_getglobal(L, RuledSurfaceMT.toStringz);
+
+    // Register the NozzleExpansionpatch object
     luaL_newmetatable(L, NozzleExpansionPatchMT.toStringz);
 
     /* metatable.__index = metatable */

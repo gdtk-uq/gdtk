@@ -69,6 +69,13 @@ print("chanp(0.5,0.5)= ", chanp(0.5, 0.5))
 bpath = chanp:make_bridging_path(0.0)
 print("bpath=", bpath)
 --
+print("RuledSurface")
+cA = Line:new{p0=Vector3:new{x=0.0,y=0.0}, p1=Vector3:new{x=1.0,y=0.0}}
+cB = Line:new{p0=Vector3:new{x=0.0,y=0.25}, p1=Vector3:new{x=1.0,y=1.0}}
+ruledp = RuledSurface:new{edge0=cA, edge1=cB, ruled_direction="s"}
+print("ruledp= ", ruledp)
+print("ruledp(0.5,0.5)= ", ruledp(0.5, 0.5))
+--
 print("SweptPathPatch demo")
 cA = Line:new{p0=Vector3:new{x=0.0,y=0.0,z=0.0}, p1=Vector3:new{x=0.0,y=1.0,z=0.0}}
 cB = Line:new{p0=Vector3:new{x=1.0,y=0.25,z=0.0}, p1=Vector3:new{x=2.0,y=0.25,z=0.0}}

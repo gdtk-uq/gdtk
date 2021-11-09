@@ -26,6 +26,7 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/surface/aopatch.d \
 	$(GEOM_DIR)/surface/gmopatch.d \
 	$(GEOM_DIR)/surface/channelpatch.d \
+	$(GEOM_DIR)/surface/ruledsurface.d \
 	$(GEOM_DIR)/surface/nozzleexpansionpatch.d \
 	$(GEOM_DIR)/surface/sweptpathpatch.d \
 	$(GEOM_DIR)/surface/meshpatch.d \
