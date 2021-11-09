@@ -651,7 +651,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     // We can apply a special initialisation to the flow field, if requested.
     // This will take viscous boundary conditions and diffuse them into the
     // nearby domain.
-    if (GlobalConfig.diffuseWallBCsOnInit) {
+    if (GlobalConfig.diffuseWallBCsOnInit && (SimState.time == 0.0)) {
         writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
         writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
         foreach (myblk; parallel(localFluidBlocks,1)) {
