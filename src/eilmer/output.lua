@@ -351,8 +351,6 @@ function write_config_file(fileName)
    f:write(string.format('"number_init_passes": %d,\n', config.number_init_passes))
    f:write(string.format('"wall_temperature_on_init": %.18e,\n', config.wall_temperature_on_init));
    --
-   f:write(string.format('"thermionic_emission_bc_time_delay": %.18e,\n', config.thermionic_emission_bc_time_delay))
-   --
    f:write(string.format('"do_temporal_DFT": %s,\n', tostring(config.do_temporal_DFT)))
    f:write(string.format('"DFT_n_modes": %d,\n', config.DFT_n_modes))
    f:write(string.format('"DFT_step_interval": %d,\n', config.DFT_step_interval))

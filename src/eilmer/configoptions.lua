@@ -198,8 +198,6 @@ configOptionsHidden = { -- hidden from user
    udf_solid_source_terms_file = "dummy-solid-source-terms.txt",
    udf_solid_source_terms = false,
    --
-   thermionic_emission_bc_time_delay = 0.0,
-   --
    do_temporal_DFT = false,
    DFT_n_modes = 5,
    DFT_step_interval = 10,

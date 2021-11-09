@@ -1197,9 +1197,6 @@ final class GlobalConfig {
     shared static bool udfSolidSourceTerms = false;
     shared static string udfSolidSourceTermsFile = "dummy-solid-source-terms.txt";
     //
-    // Delay activation of Thermionic Emission BC
-    shared static double thermionic_emission_bc_time_delay = 0.0;
-    //
     // Parameters for the on-the-go DFT
     shared static bool do_temporal_DFT = false;
     shared static int DFT_n_modes = 5;
@@ -1359,8 +1356,6 @@ public:
     bool include_quality;
     ThermochemicalReactor thermochemUpdate;
     //
-    double thermionic_emission_bc_time_delay;
-    //
     int verbosity_level;
     //
     bool do_temporal_DFT;
@@ -1507,8 +1502,6 @@ public:
         ignition_time_stop = cfg.ignition_time_stop;
         ignition_zone_active = cfg.ignition_zone_active;
         foreach (iz; cfg.ignition_zones) { ignition_zones ~= new IgnitionZone(iz); }
-        //
-        thermionic_emission_bc_time_delay = cfg.thermionic_emission_bc_time_delay;
         //
         verbosity_level = cfg.verbosity_level;
         //
@@ -2012,7 +2005,6 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("write_loads", "write_loads"));
     mixin(update_bool("compute_run_time_loads", "compute_run_time_loads"));
     mixin(update_int("run_time_loads_count", "run_time_loads_count"));
-    mixin(update_double("thermionic_emission_bc_time_delay", "thermionic_emission_bc_time_delay"));
     mixin(update_bool("do_temporal_DFT", "do_temporal_DFT"));
     mixin(update_int("DFT_n_modes", "DFT_n_modes"));
     mixin(update_int("DFT_step_interval", "DFT_step_interval"));
@@ -2031,7 +2023,6 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  boundary_groups_for_loads: ", cfg.boundary_groups_for_loads);
         writeln("  group_names_for_loads: ", cfg.group_names_for_loads);
         writeln("  write_loads: ", cfg.write_loads);
-        writeln("  thermionic_emission_bc_time_delay: ", cfg.thermionic_emission_bc_time_delay);
         writeln("  do_temporal_DFT: ", cfg.do_temporal_DFT);
         writeln("  DFT_n_modes: ", cfg.DFT_n_modes);
         writeln("  DFT_step_interval: ", cfg.DFT_step_interval);
