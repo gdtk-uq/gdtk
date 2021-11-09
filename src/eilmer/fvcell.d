@@ -741,6 +741,7 @@ public:
                     throw err;
                 }
             }
+            if (fs.gas.T<=0.0) throw new FlowSolverException("update_thermo returned negative temperature.");
             gmodel.update_sound_speed(fs.gas);
             if (myConfig.viscous) gmodel.update_trans_coeffs(fs.gas);
         } catch (GasModelException err) {
