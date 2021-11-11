@@ -37,15 +37,16 @@ int main(string[] args) {
     }
     auto L = luaL_newstate();
     luaL_openlibs(L);
-    registerGasModel(L, LUA_GLOBALSINDEX);
-    registerThermochemicalReactor(L, LUA_GLOBALSINDEX);
-    registerReactionMechanism(L, LUA_GLOBALSINDEX);
-    registerChemistryUpdate(L, LUA_GLOBALSINDEX);
-    registerEquilibriumCalculator(L, LUA_GLOBALSINDEX);
-    registerTwoTemperatureAirKinetics(L, LUA_GLOBALSINDEX);
-    registerVibSpecNitrogenKinetics(L, LUA_GLOBALSINDEX);
+    lua_pushglobaltable(L);
+    registerGasModel(L, -1);
+    registerThermochemicalReactor(L, -1);
+    registerReactionMechanism(L, -1);
+    registerChemistryUpdate(L, -1);
+    registerEquilibriumCalculator(L, -1);
+    registerTwoTemperatureAirKinetics(L, -1);
+    registerVibSpecNitrogenKinetics(L, -1);
     version(with_dvode) {
-        registerPseudoSpeciesKinetics(L, LUA_GLOBALSINDEX);
+        registerPseudoSpeciesKinetics(L, -1);
     }
     registeridealgasflowFunctions(L);
     registergasflowFunctions(L);

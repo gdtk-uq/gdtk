@@ -243,9 +243,9 @@ CUDA_FILES := $(CUDA_DIR)/cublas_api.d \
 OPENMPI_DIR := ../extern/OpenMPI/
 OPENMPI_FILES := $(OPENMPI_DIR)/source/mpi/package.d $(OPENMPI_DIR)/source/mpi/util.d
 
-LUA_DIR := ../../extern/lua-5.1.4
-LIBLUA := $(LUA_DIR)/lib/liblua.a
-LIBLUAPATH := $(LUA_DIR)/lib
+LUA_DIR := ../../extern/lua-5.4.3
+LIBLUA := $(LUA_DIR)/install/lib/liblua.a
+LIBLUAPATH := $(LUA_DIR)/install/lib
 
 LUNAJSON := ../../extern/lunajson
 
@@ -418,7 +418,7 @@ install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-grids.lua prep-flow.lua post.l
 	- mkdir -p $(BUILD_DIR)/lib
 	- mkdir -p $(BUILD_DIR)/share
 	cp $(PROGRAMS) $(BUILD_DIR)/bin
-	cp $(LUA_DIR)/bin/* $(BUILD_DIR)/bin
+	cp $(LUA_DIR)/install/bin/* $(BUILD_DIR)/bin
 	cp prep.lua $(BUILD_DIR)/bin
 	cp prep-grids.lua $(BUILD_DIR)/bin
 	cp prep-flow.lua $(BUILD_DIR)/bin

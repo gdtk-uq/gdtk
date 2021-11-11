@@ -1,6 +1,6 @@
 PLATFORM ?= linux
-LUA := ../../extern/lua-5.1.4
-LIBLUA := $(LUA)/lib/liblua.a
+LUA := ../../extern/lua-5.4.3
+LIBLUA := $(LUA)/install/lib/liblua.a
 LIBLUAPATH := $(LUA)/lib
 LUAD_DIR := ../extern/LuaD
 LUAD_FILES := $(LUAD_DIR)/luad/*.d \

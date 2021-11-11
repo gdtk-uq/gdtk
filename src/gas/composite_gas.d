@@ -38,7 +38,7 @@ public:
         /* There are some top-level GasModel services that require us to fill in data
          * at this point.
          */
-        getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", _species_names);
+        getArrayOfStrings(L, "species", _species_names);
         _n_species = cast(uint) _species_names.length;
         create_species_reverse_lookup();
         if (canFind(_species_names, "e-") || canFind(_species_names, "eminus")) {
@@ -57,7 +57,7 @@ public:
             lua_pop(L, 1);
         }
 
-        mPhysicalModel = getString(L, LUA_GLOBALSINDEX, "physical_model");
+        mPhysicalModel = getString(L, "physical_model");
 
         switch (mPhysicalModel) {
         case "thermally-perfect-gas":

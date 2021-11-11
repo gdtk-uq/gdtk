@@ -377,7 +377,7 @@ version(two_temperature_trans_props_test)
         auto L = init_lua_State();
         doLuaFile(L, "sample-data/N2-N.lua");
         string[] speciesNames;
-        getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", speciesNames);
+        getArrayOfStrings(L, "species", speciesNames);
         auto ttp = new TwoTemperatureTransProps(L, speciesNames);
         lua_close(L);
         auto gs = new GasState(2, 1);

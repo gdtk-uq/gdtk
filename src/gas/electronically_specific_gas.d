@@ -34,8 +34,8 @@ public:
     this(lua_State *L)
     {
         type_str = "ElectronicallySpecificGas";
-        auto electronicCompFilename = getString(L,LUA_GLOBALSINDEX, "electronic_species_filename");
-        auto macroSpeciesFilename = getString(L,LUA_GLOBALSINDEX, "macro_species_filename");
+        auto electronicCompFilename = getString(L,"electronic_species_filename");
+        auto macroSpeciesFilename = getString(L,"macro_species_filename");
 
         //define some things for the macro species
         //Macrostate species will always appear in this order:
@@ -43,7 +43,7 @@ public:
         //0, 1, 2,  3,  4,  5,  6,  7,   8,   9,   10
         auto L_macro = init_lua_State();
         doLuaFile(L_macro, macroSpeciesFilename);
-        getArrayOfStrings(L_macro, LUA_GLOBALSINDEX, "species", _macro_species_names);
+        getArrayOfStrings(L_macro, "species", _macro_species_names);
 
 
         _n_macro_species = to!int(_macro_species_names.length);
@@ -133,11 +133,11 @@ public:
         //define some things for the electronic species
         auto L_elec = init_lua_State();
         doLuaFile(L_elec, electronicCompFilename);
-        _n_N_species = getInt(L_elec, LUA_GLOBALSINDEX, "number_N_species");
-        _n_O_species = getInt(L_elec, LUA_GLOBALSINDEX, "number_O_species");
+        _n_N_species = getInt(L_elec, "number_N_species");
+        _n_O_species = getInt(L_elec, "number_O_species");
         _n_elec_species = _n_N_species + _n_O_species;
 
-        lua_getfield(L_elec, LUA_GLOBALSINDEX, "electronic_species");
+        lua_getglobal(L_elec, "electronic_species");
         foreach (isp; 0 .. _n_elec_species) {
             lua_rawgeti(L_elec, -1, isp);
             if (lua_isnil(L_elec, -1)) {
@@ -1004,18 +1004,18 @@ class ElectronicallySpecificGas : GasModel {
 public:
     this(lua_State *L)
     {
-        auto nElecSpecies = getInt(L, LUA_GLOBALSINDEX, "number_electronic_species");
+        auto nElecSpecies = getInt(L, "number_electronic_species");
         _n_species = cast(uint) nElecSpecies;
 
         _n_modes = 1;
         _species_names.length = _n_species;
         _numden.length = _n_species;
 
-        _s1 = getDouble(L, LUA_GLOBALSINDEX, "s1");
-        _T1 = getDouble(L, LUA_GLOBALSINDEX, "T1");
-        _p1 = getDouble(L, LUA_GLOBALSINDEX, "p1");
+        _s1 = getDouble(L, "s1");
+        _T1 = getDouble(L, "T1");
+        _p1 = getDouble(L, "p1");
 
-        lua_getfield(L, LUA_GLOBALSINDEX, "electronic_species");
+        lua_getfield(L, "electronic_species");
         foreach (isp; 0 .. _n_species) {
             lua_rawgeti(L, -1, isp);
             if (lua_isnil(L, -1)) {

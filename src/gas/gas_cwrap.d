@@ -53,7 +53,7 @@ shared static ~this()
 
 //---------------------------------------------------------------------------
 
-extern (C) int gas_model_new(char* file_name)
+extern (C) int gas_model_new(const char* file_name)
 {
     try {
         GasModel gm = init_gas_model(to!string(file_name));
@@ -71,7 +71,7 @@ extern (C) int gas_model_type_str(int gm_i, char* dest_str, int n)
     // The gas model's type string will be copied into char* array.
     // It is presumed that sufficient space (n chars, including \0) was allocated previously.
     try {
-        char* src_str = cast(char*) gas_models[gm_i].type_str.toStringz;
+        const char* src_str = cast(const char*) gas_models[gm_i].type_str.toStringz;
         strncpy(dest_str, src_str, n);
         return 0;
     } catch (Exception e) {
@@ -102,13 +102,15 @@ extern (C) int gas_model_n_modes(int gm_i)
     }
 }
 
-extern (C) int gas_model_species_name(int gm_i, int isp, char* dest_name, int n)
+extern (C) int gas_model_species_name(int gm_i, int isp, char* dest_name, int* n)
 {
     // The isp-th species name will be copied into char* array.
     // It is presumed that sufficient space (n chars, including \0) was allocated previously.
     try {
-        char* src_name = cast(char*) gas_models[gm_i].species_name(isp).toStringz;
-        strncpy(dest_name, src_name, n);
+        string sname = gas_models[gm_i].species_name(isp);
+        const char* src_name = cast(const char*) sname.toStringz;
+        strncpy(dest_name, src_name, sname.length);
+        *n = cast(int) sname.length;
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -148,7 +150,7 @@ extern (C) int gas_state_new(int gm_i)
     }
 }
 
-extern (C) int gas_state_set_scalar_field(int gs_i, char* field_name, double value)
+extern (C) int gas_state_set_scalar_field(int gs_i, const char* field_name, double value)
 {
     try {
         GasState gs = gas_states[gs_i];
@@ -177,7 +179,7 @@ extern (C) int gas_state_set_scalar_field(int gs_i, char* field_name, double val
     }
 }
 
-extern (C) int gas_state_get_scalar_field(int gs_i, char* field_name, double* value)
+extern (C) int gas_state_get_scalar_field(int gs_i, const char* field_name, double* value)
 {
     try {
         GasState gs = gas_states[gs_i];
@@ -216,7 +218,7 @@ extern (C) int gas_state_get_scalar_field(int gs_i, char* field_name, double* va
     }
 }
 
-extern (C) int gas_state_set_array_field(int gs_i, char* field_name, double* values, int n)
+extern (C) int gas_state_set_array_field(int gs_i, const char* field_name, double* values, int n)
 {
     try {
         GasState gs = gas_states[gs_i];
@@ -242,7 +244,7 @@ extern (C) int gas_state_set_array_field(int gs_i, char* field_name, double* val
     }
 }
 
-extern (C) int gas_state_get_array_field(int gs_i, char* field_name, double* values, int n)
+extern (C) int gas_state_get_array_field(int gs_i, const char* field_name, double* values, int n)
 {
     try {
         GasState gs = gas_states[gs_i];
@@ -271,7 +273,7 @@ extern (C) int gas_state_get_array_field(int gs_i, char* field_name, double* val
     }
 }
 
-extern (C) int gas_state_get_ceaSavedData_field(int gs_i, char* field_name, double* value)
+extern (C) int gas_state_get_ceaSavedData_field(int gs_i, const char* field_name, double* value)
 {
     try {
         GasState gs = gas_states[gs_i];
@@ -331,7 +333,7 @@ extern (C) int gas_state_get_ceaSavedData_field(int gs_i, char* field_name, doub
     }
 }
 
-extern (C) int gas_state_get_ceaSavedData_massf(int gs_i, char* species_name, double* value)
+extern (C) int gas_state_get_ceaSavedData_massf(int gs_i, const char* species_name, double* value)
 {
     try {
         GasState gs = gas_states[gs_i];
@@ -770,7 +772,7 @@ extern (C) int gas_model_gas_state_get_conc(int gm_i, int gs_i, double* conc)
 
 //---------------------------------------------------------------------------
 
-extern (C) int thermochemical_reactor_new(int gm_i, char* filename1, char* filename2)
+extern (C) int thermochemical_reactor_new(int gm_i, const char* filename1, const char* filename2)
 {
     try {
         auto cr = init_thermochemical_reactor(gas_models[gm_i], to!string(filename1),
@@ -961,7 +963,7 @@ int gasflow_steady_flow_with_area_change(int state1_id, double v1, double a2_ove
 }
 
 extern(C)
-int gasflow_finite_wave_dp(int state1_id, double v1, char* characteristic, double p2,
+int gasflow_finite_wave_dp(int state1_id, double v1, const char* characteristic, double p2,
                            int state2_id, int gm_id, int steps, double* results)
 {
     try {
@@ -976,7 +978,7 @@ int gasflow_finite_wave_dp(int state1_id, double v1, char* characteristic, doubl
 }
 
 extern(C)
-int gasflow_finite_wave_dv(int state1_id, double v1, char* characteristic, double v2_target,
+int gasflow_finite_wave_dv(int state1_id, double v1, const char* characteristic, double v2_target,
                            int state2_id, int gm_id, int steps, double Tmin, double* results)
 {
     try {

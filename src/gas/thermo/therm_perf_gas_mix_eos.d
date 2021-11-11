@@ -163,7 +163,7 @@ ThermallyPerfectGasMixEOS createThermallyPerfectGasMixEOS(string[] species, lua_
     double[] R = new double[species.length];
     CEAThermoCurve[] curves;
     foreach ( isp, s; species ) {
-        lua_getfield(L, LUA_GLOBALSINDEX, s.toStringz);
+        lua_getglobal(L, s.toStringz);
         double M = getDouble(L, -1, "M");
         R[isp] = R_universal/M;
         lua_getfield(L, -1, "cea_thermo");
@@ -181,7 +181,7 @@ version(therm_perf_gas_mix_eos_test) {
         auto L = init_lua_State();
         doLuaFile(L, "sample-data/O2-N2-H2.lua");
         string[] species;
-        getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", species);
+        getArrayOfStrings(L, "species", species);
         ThermallyPerfectGasMixEOS tpgm = createThermallyPerfectGasMixEOS(species, L);
         auto Q = new GasState(3, 1);
         Q.massf[0] = 0.2; Q.massf[1] = 0.7; Q.massf[2] = 0.1;

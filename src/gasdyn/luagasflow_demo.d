@@ -19,7 +19,8 @@ void main()
     writeln("Begin demo of gasflow module for use in Lua.");
     auto L = luaL_newstate();
     luaL_openlibs(L);
-    registerGasModel(L, LUA_GLOBALSINDEX);
+    lua_pushglobaltable(L);
+    registerGasModel(L, -1);
     registeridealgasflowFunctions(L);
     registergasflowFunctions(L);
     string test_code = `

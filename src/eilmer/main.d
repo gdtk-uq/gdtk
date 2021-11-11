@@ -410,7 +410,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             registerUnstructuredGrid(L);
             registerSketch(L);
             registerSolidProps(L);
-            registerGasModel(L, LUA_GLOBALSINDEX);
+            registerGasModel(L, -1);
             registeridealgasflowFunctions(L);
             registergasflowFunctions(L);
             registerBBLA(L);
@@ -574,6 +574,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             if (verbosityLevel > 1) { writeln("Start lua connection."); }
             auto L = luaL_newstate();
             luaL_openlibs(L);
+            lua_pushglobaltable(L);
             registerVector3(L);
             registerGlobalConfig(L);
             registerFlowSolution(L);
@@ -587,7 +588,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             registerUnstructuredGrid(L);
             registerSketch(L);
             registerSolidProps(L);
-            registerGasModel(L, LUA_GLOBALSINDEX);
+            registerGasModel(L, -1);
             registeridealgasflowFunctions(L);
             registergasflowFunctions(L);
             registerBBLA(L);
@@ -829,6 +830,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             if (verbosityLevel > 1) { writeln("Start lua connection."); }
             auto L = luaL_newstate();
             luaL_openlibs(L);
+            lua_pushglobaltable(L);
             registerVector3(L);
             registerGlobalConfig(L);
             registerFlowSolution(L);
@@ -842,11 +844,11 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             registerUnstructuredGrid(L);
             registerSketch(L);
             registerSolidProps(L);
-            registerGasModel(L, LUA_GLOBALSINDEX);
-            registerThermochemicalReactor(L, LUA_GLOBALSINDEX);
-            registerReactionMechanism(L, LUA_GLOBALSINDEX);
-            registerChemistryUpdate(L, LUA_GLOBALSINDEX);
-            registerElectronicallySpecificKinetics(L, LUA_GLOBALSINDEX);
+            registerGasModel(L, -1);
+            registerThermochemicalReactor(L, -1);
+            registerReactionMechanism(L, -1);
+            registerChemistryUpdate(L, -1);
+            registerElectronicallySpecificKinetics(L, -1);
             registeridealgasflowFunctions(L);
             registergasflowFunctions(L);
             registerBBLA(L);

@@ -41,8 +41,8 @@ include $(CEQ_DIR)/ceq_files.mk
 GZIP_DIR := ../extern/gzip
 GZIP_FILES := $(GZIP_DIR)/gzip.d
 
-LUA_DIR := ../../extern/lua-5.1.4
-LIBLUA := $(LUA_DIR)/lib/liblua.a
+LUA_DIR := ../../extern/lua-5.4.3
+LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 LIBLUAPATH := $(LUA_DIR)/lib
 
 DYAML_DIR := $(DGD_REPO)/src/extern/D-YAML/source/dyaml

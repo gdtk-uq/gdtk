@@ -479,7 +479,7 @@ version(two_temperature_gas_test) {
         auto L = init_lua_State();
         doLuaFile(L, "sample-data/five-species-air.lua");
         string[] speciesNames;
-        getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", speciesNames);
+        getArrayOfStrings(L, "species", speciesNames);
         auto tm = new TwoTemperatureGasMixture(L, speciesNames);
         lua_close(L);
         auto gs = new GasState(5, 1);

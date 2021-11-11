@@ -51,9 +51,9 @@ public:
     {
         auto L = init_lua_State();
         doLuaFile(L, rates_file);
-        chem_name = getString(L,LUA_GLOBALSINDEX, "gas");
-        n_bins = getInt(L,LUA_GLOBALSINDEX, "number_of_bins");
-        ion_bin = getBool(L,LUA_GLOBALSINDEX, "ionised_bin");
+        chem_name = getString(L, "gas");
+        n_bins = getInt(L, "number_of_bins");
+        ion_bin = getBool(L, "ionised_bin");
         n_species = n_bins;
 
         first_bin_index = index_location[0];
@@ -67,7 +67,8 @@ public:
             n_reactions += i;
         }
 
-        lua_getfield(L,LUA_GLOBALSINDEX, "bins");
+
+        lua_getglobal(L,"bins");
         foreach (isp; 0 .. n_species) {
             lua_rawgeti(L, -1, isp);
             bins ~= new ElectronicBin(L);
@@ -81,7 +82,7 @@ public:
             index_range ~= index_location[1];
         }
 
-        lua_getfield(L,LUA_GLOBALSINDEX, "reactions");
+        lua_getglobal(L, "reactions");
         foreach (isp; 0 .. n_reactions) {
             lua_rawgeti(L, -1, isp);
             reactions ~= new ElectronicReaction(L, index_range);

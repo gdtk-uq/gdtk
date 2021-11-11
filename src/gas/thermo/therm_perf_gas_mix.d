@@ -458,7 +458,7 @@ version(therm_perf_gas_mix_test) {
         auto L = init_lua_State();
         doLuaFile(L, "sample-data/therm-perf-5-species-air.lua");
         string[] speciesNames;
-        getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", speciesNames);
+        getArrayOfStrings(L, "species", speciesNames);
         auto tm = new ThermPerfGasMixture(L, speciesNames);
         lua_close(L);
         auto gs = new GasState(5, 0);

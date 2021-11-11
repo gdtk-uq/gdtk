@@ -21,8 +21,8 @@ include $(UTIL_DIR)/util_files.mk
 NM_DIR := ../nm
 include $(NM_DIR)/nm_files.mk
 
-LUA_DIR := ../../extern/lua-5.1.4
-LIBLUA := $(LUA_DIR)/lib/liblua.a
+LUA_DIR := ../../extern/lua-5.4.3
+LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 LIBLUAPATH := $(LUA_DIR)/lib
 
 CEQ_DIR := ../extern/ceq/source

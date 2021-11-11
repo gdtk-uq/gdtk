@@ -31,8 +31,8 @@ TEST_PROGRAMS := chemkin_therm_cond_test chemkin_viscosity_test cea_therm_cond_t
 	electronically_specific_gas_test \
 	two_temperature_gasgiant_test
 
-LUA := ../../extern/lua-5.1.4
-LIBLUA := $(LUA)/lib/liblua.a
+LUA := ../../extern/lua-5.4.3
+LIBLUA := $(LUA)/install/lib/liblua.a
 LIBLUAPATH := $(LUA)/lib
 
 CEQ_DIR := ../extern/ceq/source

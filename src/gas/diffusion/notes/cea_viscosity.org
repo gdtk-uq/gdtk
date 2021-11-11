@@ -97,7 +97,7 @@ UTIL_DIR := ../../../util
 UTIL_FILES := $(UTIL_DIR)/lua_service.d
 
 LUA := ../../../../extern/lua-5.1.4
-LIBLUA := $(LUA)/lib/liblua.a
+LIBLUA := $(LUA)/install/lib/liblua.a
 LIBLUAPATH := $(LUA)/lib
 LUAD_DIR := ../../../extern/LuaD
 LUAD_FILES := $(LUAD_DIR)/luad/*.d \

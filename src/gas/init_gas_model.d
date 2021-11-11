@@ -64,7 +64,7 @@ GasModel init_gas_model(string file_name="gas-model.lua")
     }
     string gas_model_name;
     try {
-        gas_model_name = getString(L, LUA_GLOBALSINDEX, "model");
+        gas_model_name = getString(L, "model");
     } catch (Exception e) {
         string msg = "In function init_gas_model() in gas_model.d, ";
         msg ~= "there was a problem reading the 'model' name";

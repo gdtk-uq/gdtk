@@ -64,6 +64,19 @@ string getString(lua_State* L, int tblIdx, string key)
     return val;
 }
 
+string getString(lua_State* L, string key)
+{
+    lua_getglobal(L, key.toStringz);
+    if ( !lua_isstring(L, -1) ) {
+        string errMsg = format("A string was expected in field: %s", key);
+        lua_pop(L, 1);
+        throw new LuaInputException(errMsg);
+    }
+    string val = to!string(lua_tostring(L, -1));
+    lua_pop(L, 1);
+    return val;
+}
+
 string getStringWithDefault(lua_State* L, int tblIdx, string key, string defaultValue)
 {
     string val = defaultValue;
@@ -86,6 +99,19 @@ double getDouble(lua_State* L, int tblIdx, string key)
         throw new Error(errMsg);
     }
     lua_getfield(L, tblIdx, key.toStringz);
+    if ( !lua_isnumber(L, -1) ) {
+        string errMsg = format("A double was expected in field: %s", key);
+        lua_pop(L, 1);
+        throw new Error(errMsg);
+    }
+    double val = lua_tonumber(L, -1);
+    lua_pop(L, 1);
+    return val;
+}
+
+double getDouble(lua_State* L, string key)
+{
+    lua_getglobal(L, key.toStringz);
     if ( !lua_isnumber(L, -1) ) {
         string errMsg = format("A double was expected in field: %s", key);
         lua_pop(L, 1);
@@ -128,6 +154,19 @@ int getInt(lua_State* L, int tblIdx, string key)
     return val;
 }
 
+int getInt(lua_State* L, string key)
+{
+    lua_getglobal(L, key.toStringz);
+    if ( !lua_isnumber(L, -1) ) {
+        string errMsg = format("An integer was expected in field: %s", key);
+        lua_pop(L, 1);
+        throw new Error(errMsg);
+    }
+    int val = to!int(lua_tointeger(L, -1));
+    lua_pop(L, 1);
+    return val;
+}
+
 int getIntWithDefault(lua_State* L, int tblIdx, string key, int defaultValue)
 {
     if (!lua_istable(L, tblIdx)) {
@@ -150,6 +189,19 @@ bool getBool(lua_State* L, int tblIdx, string key)
         throw new Error(errMsg);
     }
     lua_getfield(L, tblIdx, key.toStringz);
+    if ( !lua_isboolean(L, -1) ) {
+        string errMsg = format("A boolean value was expected in field: %s", key);
+        lua_pop(L, 1);
+        throw new Error(errMsg);
+    }
+    bool val = to!bool(lua_toboolean(L, -1));
+    lua_pop(L, 1);
+    return val;
+}
+
+bool getBool(lua_State* L, string key)
+{
+    lua_getglobal(L, key.toStringz);
     if ( !lua_isboolean(L, -1) ) {
         string errMsg = format("A boolean value was expected in field: %s", key);
         lua_pop(L, 1);
@@ -183,6 +235,25 @@ void getArrayOfStrings(lua_State* L, int tblIdx, string key, out string[] values
     }
     values.length = 0;
     lua_getfield(L, tblIdx, key.toStringz);
+    if ( !lua_istable(L, -1) ) {
+        string errMsg = format("A table of strings was expected in field: %s", key);
+        lua_pop(L, 1);
+        throw new Error(errMsg);
+    }
+    auto n = to!int(lua_objlen(L, -1));
+    foreach ( i; 1..n+1 ) {
+        lua_rawgeti(L, -1, i);
+        if ( lua_isstring(L, -1) ) values ~= to!string(lua_tostring(L, -1));
+        // Silently ignore anything that isn't a string value.
+        lua_pop(L, 1);
+    }
+    lua_pop(L, 1);
+}
+
+void getArrayOfStrings(lua_State* L, string key, out string[] values)
+{
+    values.length = 0;
+    lua_getglobal(L, key.toStringz);
     if ( !lua_istable(L, -1) ) {
         string errMsg = format("A table of strings was expected in field: %s", key);
         lua_pop(L, 1);

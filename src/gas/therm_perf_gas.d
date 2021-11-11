@@ -44,7 +44,7 @@ public:
     // Construct the model from parameters that are contained in a Lua interpreter.
     {
         type_str = "ThermallyPerfectGas";
-        getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", _species_names);
+        getArrayOfStrings(L, "species", _species_names);
         _n_species = cast(uint) _species_names.length;
         _n_modes = 0; // Single temperature gas
         if (canFind(_species_names, "e-") || canFind(_species_names, "eminus")) {
@@ -131,7 +131,7 @@ public:
                 errMsg ~= "The correct order is: H2, H, H+, He, He+, e-\n";
                 throw new Error(errMsg);
             }
-            string dbOption = getString(L, LUA_GLOBALSINDEX, "gas_giant_visc_db");
+            string dbOption = getString(L, "gas_giant_visc_db");
             _viscModel = new GasGiantViscosity(dbOption);
         }
         else {
@@ -168,8 +168,8 @@ public:
         }
         // 5. Set the thermal conductivity model
         if (useGasGiantTransProps) {
-            string dbOption = getString(L, LUA_GLOBALSINDEX, "gas_giant_tc_db");
-            string modelOption = getString(L, LUA_GLOBALSINDEX, "gas_giant_tc_model");
+            string dbOption = getString(L, "gas_giant_tc_db");
+            string modelOption = getString(L, "gas_giant_tc_model");
             _thermCondModel = new  GasGiantThermalConductivity(dbOption, modelOption);
         }
         else {

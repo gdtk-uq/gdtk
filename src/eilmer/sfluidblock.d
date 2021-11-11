@@ -248,7 +248,8 @@ public:
     {
         // Lua interpreter for the block.
         // It will be available for computing user-defined source terms.
-        registerGasModel(myL, LUA_GLOBALSINDEX);
+        lua_pushglobaltable(myL);
+        registerGasModel(myL, -1);
         pushObj!(GasModel, GasModelMT)(myL, dedicatedConfig[id].gmodel);
         lua_setglobal(myL, "gmodel");
         lua_pushinteger(myL, dedicatedConfig[id].n_species);

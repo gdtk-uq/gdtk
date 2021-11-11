@@ -17,7 +17,8 @@ void main()
     writeln("Begin demonstration of lua connection to the gas module.");
     auto L = luaL_newstate();
     luaL_openlibs(L);
-    registerGasModel(L, LUA_GLOBALSINDEX);
+    lua_pushglobaltable(L);
+    registerGasModel(L, -1);
     
     string test_code = `
 -- Initialise an ideal gas model

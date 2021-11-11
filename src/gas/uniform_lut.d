@@ -45,11 +45,11 @@ public:
     this(lua_State *L) {
         this();    // Call the default constructor
         try {
-            with_entropy = getInt(L, LUA_GLOBALSINDEX, "with_entropy");
+            with_entropy = getInt(L, "with_entropy");
             assert(with_entropy == 1);
-            _p1 = getDouble(L, LUA_GLOBALSINDEX, "p1");
-            _T1 = getDouble(L, LUA_GLOBALSINDEX, "T1");
-            _s1 = getDouble(L, LUA_GLOBALSINDEX, "s1");
+            _p1 = getDouble(L, "p1");
+            _T1 = getDouble(L, "T1");
+            _s1 = getDouble(L, "s1");
         }
         catch (Exception e) {
             writeln(e.msg);
@@ -57,12 +57,12 @@ public:
             writeln("Look_up_table(): No entropy data available");
         }
 
-        _iesteps = getInt(L, LUA_GLOBALSINDEX, "iesteps");
-        _irsteps = getInt(L, LUA_GLOBALSINDEX, "irsteps");
-        _emin = getDouble(L, LUA_GLOBALSINDEX, "emin");
-        _de = getDouble(L, LUA_GLOBALSINDEX, "de");
-        _lrmin = getDouble(L, LUA_GLOBALSINDEX, "lrmin");
-        _dlr = getDouble(L, LUA_GLOBALSINDEX, "dlr");
+        _iesteps = getInt(L, "iesteps");
+        _irsteps = getInt(L, "irsteps");
+        _emin = getDouble(L, "emin");
+        _de = getDouble(L, "de");
+        _lrmin = getDouble(L, "lrmin");
+        _dlr = getDouble(L, "dlr");
 
         _emax = _emin + _de * _iesteps;
         _lrmax = _lrmin + _dlr * _irsteps;

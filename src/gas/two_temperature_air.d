@@ -55,7 +55,7 @@ public:
     this(lua_State* L)
     {
         type_str = "TwoTemperatureAir";
-        getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", _species_names);
+        getArrayOfStrings(L, "species", _species_names);
         _n_species = to!uint(_species_names.length);
         _n_modes = 1;
         _energy_mode_names.length = 1;

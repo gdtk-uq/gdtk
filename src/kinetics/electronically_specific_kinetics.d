@@ -50,14 +50,14 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
         auto L_filenames = init_lua_State();
         doLuaFile(L_filenames,listOfFiles);
 
-        auto energyExchFile = getString(L_filenames, LUA_GLOBALSINDEX, "energyExchFile");
-        auto chemFile = getString(L_filenames,LUA_GLOBALSINDEX, "chemFile");
-        auto twotemperaturegmodel = getString(L_filenames,LUA_GLOBALSINDEX,"macro_species_filename");
-        auto ESK_N_Filename = getString(L_filenames,LUA_GLOBALSINDEX, "ESK_N_Filename");
-        auto ESK_O_Filename = getString(L_filenames,LUA_GLOBALSINDEX, "ESK_O_Filename");
+        auto energyExchFile = getString(L_filenames, "energyExchFile");
+        auto chemFile = getString(L_filenames,"chemFile");
+        auto twotemperaturegmodel = getString(L_filenames,"macro_species_filename");
+        auto ESK_N_Filename = getString(L_filenames,"ESK_N_Filename");
+        auto ESK_O_Filename = getString(L_filenames,"ESK_O_Filename");
 
-        _n_N_species = getInt(L_filenames,LUA_GLOBALSINDEX,"number_N_species");
-        _n_O_species = getInt(L_filenames,LUA_GLOBALSINDEX,"number_O_species");
+        _n_N_species = getInt(L_filenames, "number_N_species");
+        _n_O_species = getInt(L_filenames, "number_O_species");
         _n_elec_species = _n_N_species + _n_O_species;
 
         auto L_TT = init_lua_State();

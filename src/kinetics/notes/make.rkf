@@ -6,8 +6,8 @@ LIBGAS := ${GAS_DIR}/libgas.a
 
 LIBKINETICS := ../libkinetics.a
 
-LUA_DIR := ../../../extern/lua-5.1.4
-LIBLUA := ${LUA_DIR}/lib/liblua.a
+LUA_DIR := ../../../extern/lua-5.4.3
+LIBLUA := ${LUA_DIR}/install/lib/liblua.a
 LIBLUAPATH := ${LUA_DIR}/lib
 LUAD_DIR := ../../extern/LuaD
 LUAD_FILES := ${LUAD_DIR}/luad/*.d \

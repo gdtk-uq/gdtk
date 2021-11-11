@@ -85,8 +85,8 @@ of temperature in increments of 100K over the range 500K to 11000K.
 UTIL_DIR := ../../../util
 UTIL_FILES := $(UTIL_DIR)/lua_service.d
 
-LUA := ../../../../extern/lua-5.1.4
-LIBLUA := $(LUA)/lib/liblua.a
+LUA := ../../../../extern/lua-5.4.3
+LIBLUA := $(LUA)/install/lib/liblua.a
 LIBLUAPATH := $(LUA)/lib
 LUAD_DIR := ../../../extern/LuaD
 LUAD_FILES := $(LUAD_DIR)/luad/*.d \

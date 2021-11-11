@@ -49,11 +49,11 @@ public:
     {
         this();    // Call the default constructor
         string interp_method;
-        _interp_method = getString(L, LUA_GLOBALSINDEX, "interpolation_method");
-        _emin = getDouble(L, LUA_GLOBALSINDEX, "emin");
-        _emax = getDouble(L, LUA_GLOBALSINDEX, "emax");
-        _log_rho_min = getDouble(L, LUA_GLOBALSINDEX, "log_rho_min");
-        _log_rho_max = getDouble(L, LUA_GLOBALSINDEX, "log_rho_max");
+        _interp_method = getString(L, "interpolation_method");
+        _emin = getDouble(L, "emin");
+        _emax = getDouble(L, "emax");
+        _log_rho_min = getDouble(L, "log_rho_min");
+        _log_rho_max = getDouble(L, "log_rho_max");
 
         lua_getglobal(L, "data_tree");
         if ( !lua_istable(L, -1) ) {
@@ -242,11 +242,11 @@ public:
         Patch._dlr_global = Patch._lr_hi_global - Patch._lr_lo_global;
 
         // Read entropy reference conditions
-        with_entropy = getInt(L, LUA_GLOBALSINDEX, "with_entropy");
+        with_entropy = getInt(L, "with_entropy");
         assert(with_entropy == 1, "Error in adaptive lut file");
-        _p1 = getDouble(L, LUA_GLOBALSINDEX, "p1");
-        _T1 = getDouble(L, LUA_GLOBALSINDEX, "T1");
-        _s1 = getDouble(L, LUA_GLOBALSINDEX, "s1");
+        _p1 = getDouble(L, "p1");
+        _T1 = getDouble(L, "T1");
+        _s1 = getDouble(L, "s1");
 
         lua_pop(L, 1); // Finish reading the table
     }

@@ -157,7 +157,7 @@ StateSpecificReactionMechanism createSSRMechanism(lua_State *L, GasModel gmodel)
 {
     StateSpecificReaction[] reactions;
 
-    int nReactions = getInt(L, LUA_GLOBALSINDEX, "number_of_reactions");
+    int nReactions = getInt(L, "number_of_reactions");
 
     lua_getglobal(L, "reaction");
     foreach (i; 0 .. nReactions) {

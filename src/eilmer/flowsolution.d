@@ -270,6 +270,7 @@ public:
     {
         lua_State* L = luaL_newstate();
         luaL_openlibs(L);
+        lua_pushglobaltable(L);
         registerVector3(L);
         registerGlobalConfig(L);
         registerFlowSolution(L);
@@ -281,7 +282,7 @@ public:
         registerUnivariateFunctions(L);
         registerStructuredGrid(L);
         registerUnstructuredGrid(L);
-        registerGasModel(L, LUA_GLOBALSINDEX);
+        registerGasModel(L, -1);
         registeridealgasflowFunctions(L);
         registergasflowFunctions(L);
         if ( luaL_dofile(L, toStringz(fileName)) != 0 ) {

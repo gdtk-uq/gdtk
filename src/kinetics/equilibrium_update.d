@@ -79,7 +79,7 @@ class EquilibriumCalculator {
         auto L = init_lua_State();
         doLuaFile(L, fname);
 
-        getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", species_names);
+        getArrayOfStrings(L, "species", species_names);
         nsp = to!int(species_names.length);
 
         // Build arrays to mimic pyeq memory management

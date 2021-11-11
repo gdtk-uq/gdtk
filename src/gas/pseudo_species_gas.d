@@ -43,22 +43,22 @@ public:
     this(lua_State *L)
     {
         type_str = "PseudoSpeciesGas";
-        auto nPseudoSpecies = getInt(L, LUA_GLOBALSINDEX, "number_pseudo_species");
+        auto nPseudoSpecies = getInt(L, "number_pseudo_species");
         _n_species = cast(uint) nPseudoSpecies;
         _n_modes = 0;
         _species_names.length = _n_species;
-        auto nParents = getInt(L, LUA_GLOBALSINDEX, "number_parents_species");
+        auto nParents = getInt(L, "number_parents_species");
         _n_parents = cast(uint) nParents;
         _parents_names.length = _n_parents;
 
         // Create Parents Species
-        lua_getfield(L, LUA_GLOBALSINDEX, "db");
+        lua_getglobal(L, "db");
         _parentSpecies = new ParentsSpecies(L);
         _parentsQ = new GasState(_parentSpecies);
         lua_pop(L, 1);
 
         // Create Pseudo Species
-        lua_getfield(L, LUA_GLOBALSINDEX, "pseudo_species");
+        lua_getglobal(L, "pseudo_species");
         foreach (isp; 0 .. _n_species) {
             lua_rawgeti(L, -1, isp);
             if (lua_isnil(L, -1)) {
@@ -232,7 +232,7 @@ public:
     this(lua_State* L)
     // Construct the model from parameters that are contained in a Lua interpreter.
     {
-        getArrayOfStrings(L, LUA_GLOBALSINDEX, "parents", _species_names);
+        getArrayOfStrings(L, "parents", _species_names);
         _n_species = cast(uint) _species_names.length;
 
         // 0. Initialise private work arrays

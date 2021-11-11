@@ -35,8 +35,8 @@ TEST_PROGRAMS := bbla_test bbla_complex_test \
 	nelmin_test nelmin_complex_test \
 	schedule_test
 
-LUA := ../../extern/lua-5.1.4
-LIBLUA := $(LUA)/lib/liblua.a
+LUA := ../../extern/lua-5.4.3
+LIBLUA := $(LUA)/install/lib/liblua.a
 LIBLUAPATH := $(LUA)/lib
 ifeq ($(DMD), dmd)
     # DFLAGS := -w

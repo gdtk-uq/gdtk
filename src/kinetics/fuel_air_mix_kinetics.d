@@ -40,7 +40,7 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
         doLuaFile(L, fname); //reading the reaction file here
         _n_species = gmodel.n_species;
         lua_getglobal(L, "speciesType");
-        getArrayOfStrings(L, LUA_GLOBALSINDEX, "speciesType", _species_type);
+        getArrayOfStrings(L, "speciesType", _species_type);
         lua_pop(L, 1); // dispose of the table
         foreach(isp;0.._n_species){
             if(_species_type[isp]=="fuel"){_n_fuel=_n_fuel+1;}
