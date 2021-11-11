@@ -32,6 +32,7 @@ MULTI_SPECIES_GAS ?= 1
 MULTI_T_GAS ?= 1
 MHD ?= 1
 TURBULENCE ?= 1
+WITH_E4DEBUG ?= 0
 
 # For the ldc2 compiler, we can turn on some extra checking at run-time.
 # There will be a computational cost associated with these checks.
@@ -101,6 +102,10 @@ endif
 ifeq ($(WITH_CUDA_GPU_CHEM),1)
     PROGRAMS += eilmer-cuda-gpu-chem prep-cuda-gpu-chem-kernel.py
     SHARE_FILES += alpha_qss_kernel_cuda_tmplt.cu libcudakernel.so
+endif
+
+ifeq ($(WITH_E4DEBUG),1)
+    PROGRAMS += e4shared-debug
 endif
 
 EILMER_CORE_FILES := simcore.d simcore_gasdynamic_step.d simcore_solid_step.d \
@@ -269,19 +274,15 @@ REVISION_AGE := $(shell git log -1 --format=%cd --date=relative)
 REVISION_DATE := $(shell git log -1 --format=%cd)
 REPO_DIR := $(shell cd ../../; pwd)
 
+DFLAGS :=
+DLINKFLAGS :=
+
 ifeq ($(DMD), dmd)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug -version=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -g -O -release -boundscheck=off -version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
-    endif
+    DEBUG_DFLAGS := -w -g -debug -version=flavour_debug
+    PROFILE_DFLAGS := -profile -w -g -O -release -boundscheck=off -version=flavour_profile
+    FAST_DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
     OF := -of
     DVERSION := -version=
-    DLINKFLAGS :=
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
@@ -292,18 +293,11 @@ ifeq ($(DMD), dmd)
     endif
 endif
 ifeq ($(DMD), ldmd2)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -debug -version=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        DFLAGS := -profile -w -O2 -release -inline -boundscheck=off -version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O2 -release -inline -boundscheck=off -version=flavour_fast
-    endif
+    DEBUG_DFLAGS := -w -g -debug -version=flavour_debug
+    PROFILE_DFLAGS := -profile -w -O2 -release -inline -boundscheck=off -version=flavour_profile
+    FAST_DFLAGS := -w -g -O2 -release -inline -boundscheck=off -version=flavour_fast
     OF := -of
     DVERSION := -version=
-    DLINKFLAGS :=
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
@@ -314,18 +308,12 @@ ifeq ($(DMD), ldmd2)
     endif
 endif
 ifeq ($(DMD), ldc2)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -w -g -d-debug -d-version=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        # -fprofile-generate will result in profraw files being written
-        # that may be viewed, showing the top 10 functions with internal block counts
-        # llvm-profdata show -text -topn=10 <profraw-file>
-        DFLAGS := -fprofile-generate -g -w -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_fast -flto=full
-    endif
+    # -fprofile-generate will result in profraw files being written
+    # that may be viewed, showing the top 10 functions with internal block counts
+    # llvm-profdata show -text -topn=10 <profraw-file>
+    DEBUG_DFLAGS := -w -g -d-debug -d-version=flavour_debug
+    PROFILE_DFLAGS := -fprofile-generate -g -w -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_profile
+    FAST_DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_fast -flto=full
     ifeq ($(WITH_THREAD_SANITIZER), 1)
         DFLAGS := $(DFLAGS) -fsanitize=thread
     endif
@@ -354,18 +342,11 @@ ifeq ($(DMD), ldc2)
     endif
 endif
 ifeq ($(DMD), gdc-8)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -Wall -Og -g -fversion=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_fast
-    endif
+    DEBUG_DFLAGS := -Wall -Og -g -fversion=flavour_debug
+    PROFILE_DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_profile
+    FAST_DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_fast
     OF := -o
     DVERSION := -fversion=
-    DLINKFLAGS :=
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -lplot
@@ -375,6 +356,18 @@ ifeq ($(DMD), gdc-8)
         DLINKFLAGS += $(TECPLOT_BIN_DIR)/libtecio.so $(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
 endif
+
+# Set the flavour to be compiler correct flags
+ifeq ($(FLAVOUR), debug)
+    FLAVOUR_FLAGS := $(DEBUG_DFLAGS)
+endif
+ifeq ($(FLAVOUR), profile)
+    FLAVOUR_FLAGS := $(PROFILE_DFLAGS)
+endif
+ifeq ($(FLAVOUR), fast)
+    FLAVOUR_FLAGS := $(FAST_DFLAGS)
+endif
+
 # DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
 # This rules out the use of gdc for compiling the code.
 # gdc-8 built on 2.069.2 with updates to 2016-01-15
@@ -486,6 +479,7 @@ clean:
 	- rm -f e4mpi e4zmpi e4loadbalance e4ssc e4zshared
 	- rm -f e4-nk-shared e4-nk-shared-real e4-nk-dist e4-nk-dist-real e4-lusgs-shared e4-lusgs-dist
 	- rm -f e4shared_diagnostic
+	- rm -f e4shared-debug
 	- rm -f dgd-for-mech4480.tgz
 	- rm -f dgd-module
 	- cd $(OPENMPI_DIR); make clean
@@ -532,7 +526,7 @@ dgd-module:
 		dgd-module-template > dgd-module
 
 e4monitor: e4monitor.d
-	$(DMD) $(DFLAGS) $(OF)e4monitor e4monitor.d $(DLINKFLAGS)
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)e4monitor e4monitor.d $(DLINKFLAGS)
 
 e4shared: main.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
@@ -545,7 +539,30 @@ e4shared: main.d $(EILMER_FILES) \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > main_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)e4shared \
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)e4shared \
+		$(DVERSION)$(TECPLOT_BIN_VERSION_STR) \
+		main_with_rev_string.d \
+		$(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(DLINKFLAGS)
+
+e4shared-debug: main.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
+		main.d > main_with_rev_string.d
+	$(DMD) $(DEBUG_DFLAGS)$(DFLAGS) $(OF)e4shared-debug \
 		$(DVERSION)$(TECPLOT_BIN_VERSION_STR) \
 		main_with_rev_string.d \
 		$(EILMER_FILES) \
@@ -569,7 +586,7 @@ e4shared_diagnostic: main.d $(EILMER_FILES) \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > main_with_rev_string.d
 	python3 $(MPL_DIR)/../python/prebuild.py $(MPL_DIR)/..
-	$(DMD) $(DFLAGS) -J$(MPL_DIR)/../views $(OF)e4shared_diagnostic \
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) -J$(MPL_DIR)/../views $(OF)e4shared_diagnostic \
 		$(DVERSION)diagnostics \
 		main_with_rev_string.d \
 		$(EILMER_FILES) \
@@ -592,7 +609,7 @@ e4zshared: main.d $(EILMER_FILES) \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > main_complex_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)e4zshared \
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)e4zshared \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)$(TECPLOT_BIN_VERSION_STR) \
 		main_complex_with_rev_string.d \
@@ -617,7 +634,7 @@ e4mpi: main.d $(EILMER_FILES) \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > mpi_main_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)e4mpi \
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)e4mpi \
 		$(DVERSION)mpi_parallel \
 		-I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		mpi_main_with_rev_string.d \
@@ -642,7 +659,7 @@ e4zmpi: main.d $(EILMER_FILES) \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > mpi_main_complex_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)e4zmpi \
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)e4zmpi \
 		$(DVERSION)mpi_parallel \
 		-I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)complex_numbers \
@@ -667,7 +684,7 @@ e4-nk-shared: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_upd
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > nk_accelerator_with_string_subst.d
-	$(DMD) $(DFLAGS) $(OF)$@ \
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)$@ \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
@@ -692,7 +709,7 @@ e4-nk-shared-real: nk_accelerator.d steadystate_core.d solid/solid_loose_couplin
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > nk_accelerator_with_string_subst.d
-	$(DMD) $(DFLAGS) $(OF)$@ \
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)$@ \
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
 		nk_accelerator_with_string_subst.d steadystate_core.d solid/solid_loose_coupling_update.d \
@@ -717,7 +734,7 @@ e4-nk-dist: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_updat
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > mpi_nk_accelerator_with_string_subst.d
-	$(DMD) $(DFLAGS) $(OF)$@ \
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)$@ \
 		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)nk_accelerator \
@@ -744,7 +761,7 @@ e4-nk-dist-real: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > mpi_nk_accelerator_with_string_subst.d
-	$(DMD) $(DFLAGS) $(OF)$@ \
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)$@ \
 		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
@@ -769,7 +786,7 @@ e4-lusgs-shared: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > nk_accelerator_with_string_subst.d
-	$(DMD) $(DFLAGS) $(OF)$@ \
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)$@ \
 		$(DVERSION)lu_sgs \
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
@@ -796,7 +813,7 @@ e4-lusgs-dist: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EI
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > mpi_nk_accelerator_with_string_subst.d
-	$(DMD) $(DFLAGS) $(OF)$@ \
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)$@ \
 		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)lu_sgs \
 		$(DVERSION)nk_accelerator \
@@ -820,7 +837,7 @@ e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d soli
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		shape_sensitivity_calc.d > shape_sensitivity_calc_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)e4ssc \
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)e4ssc \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)shape_sensitivity \
 		$(DVERSION)nk_accelerator \
@@ -848,7 +865,7 @@ e4loadbalance: loadbalance.d $(EILMER_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		loadbalance.d > loadbalance_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)e4loadbalance \
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)e4loadbalance \
 		loadbalance_with_rev_string.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
@@ -865,7 +882,7 @@ eilmer-opencl-gpu-chem: main.d opencl_gpu_chem.d $(EILMER_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		main.d > main_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)eilmer-opencl-gpu-chem \
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)eilmer-opencl-gpu-chem \
 		$(DVERSION)gpu_chem $(DVERSION)opencl_gpu_chem \
 		main_with_rev_string.d $(EILMER_FILES) opencl_gpu_chem.d \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
@@ -885,7 +902,7 @@ eilmer-cuda-gpu-chem: main.d cuda_gpu_chem.d alpha_qss_kernel_cuda_tmplt.cu $(EI
 		main.d > main_with_rev_string.d
 	$(NVCC) --shared -o libcudakernel.so alpha_qss_kernel_cuda_tmplt.cu \
 		--compiler-options '-fPIC'
-	$(DMD) $(DFLAGS) $(OF)eilmer-cuda-gpu-chem \
+	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)eilmer-cuda-gpu-chem \
 		$(DVERSION)gpu_chem $(DVERSION)cuda_gpu_chem \
 		main_with_rev_string.d $(EILMER_FILES) cuda_gpu_chem.d \
 		$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
