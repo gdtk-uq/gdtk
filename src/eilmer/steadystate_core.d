@@ -1547,6 +1547,10 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int 
 {
     version(complex_numbers) {
         foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(LHSeval); }
+        bool frozen_limiter_save = GlobalConfig.frozen_limiter;
+        if (GlobalConfig.sssOptions.frozenLimiterOnLHS) {
+            foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = true; }
+        }
         // Make a stack-local copy of conserved quantities info
         size_t nConserved = GlobalConfig.cqi.n;
         size_t MASS = GlobalConfig.cqi.mass;
@@ -1629,6 +1633,9 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int 
             foreach(face; blk.faces) { face.fs.clear_imaginary_components(); }
         }
         foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(RHSeval); }
+        if (GlobalConfig.sssOptions.frozenLimiterOnLHS) {
+            foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = frozen_limiter_save; }
+        }
     } else {
         throw new Error("Oops. Steady-State Solver setting: useComplexMatVecEval is not compatible with real-number version of the code.");
     }

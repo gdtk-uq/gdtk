@@ -713,6 +713,7 @@ struct SteadyStateSolverOptions {
     int iluFill = 0;
     PreconditionMatrixType preconditionMatrixType = PreconditionMatrixType.jacobi;
     double preconditionerSigma = 1.0e-30;
+    bool frozenLimiterOnLHS = false;
     bool useAdaptivePreconditioner = false;
     bool usePhysicalityCheck = false;
     bool useLineSearch = false;
@@ -2294,6 +2295,7 @@ void read_control_file()
             ssso.preconditionMatrixType = mySaveValue1;
         }
         ssso.preconditionerSigma = getJSONdouble(sssOptions, "preconditioner_sigma", ssso.preconditionerSigma);
+        ssso.frozenLimiterOnLHS = getJSONbool(sssOptions, "frozen_limiter_on_lhs", ssso.frozenLimiterOnLHS);
         ssso.useAdaptivePreconditioner = getJSONbool(sssOptions, "use_adaptive_preconditioner", ssso.useAdaptivePreconditioner);
         ssso.usePhysicalityCheck = getJSONbool(sssOptions, "use_physicality_check", ssso.usePhysicalityCheck);
         ssso.useLineSearch = getJSONbool(sssOptions, "use_line_search", ssso.useLineSearch);
