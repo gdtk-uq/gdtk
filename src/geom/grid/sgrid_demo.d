@@ -14,7 +14,7 @@ void main()
     auto my_patch = new AOPatch(p00, p10, p11, p01);
     auto cf = [new LinearFunction(), new LinearFunction(),
                new LinearFunction(), new LinearFunction()];
-    auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
+    auto my_grid = new StructuredGrid(my_patch, 11, 21, cf, "linear");
     writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
     my_grid.write_to_vtk_file("test_grid-2D.vtk");
     writeln("badness=", my_grid.measure_of_badness());

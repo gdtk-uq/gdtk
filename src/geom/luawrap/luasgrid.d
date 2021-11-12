@@ -275,10 +275,12 @@ extern(C) int find_nearest_cell_centre_sg(lua_State *L)
  * grid1D = StructuredGrid:new{path=somePath, niv=10, cf=my_cf01}
  * grid2D = StructuredGrid:new{psurface=someParametricSurface, niv=10, njv=10,
  *                             cfList={north=cfn, east=cfe, south=cfs, west=cfw},
+ *                             interpolation="linear",
  *                             label="A-2D-Grid"}
  * grid3D = StructuredGrid:new{pvolume=someParametricVolume,
  *                             niv=11, njv=21, nkv=11,
  *                             cfList={edge01=cf01, edge32=cf32, edge45=cf45, edge76=cf76},
+ *                             interpolation="linear",
  *                             label="A-3D-Grid"}
  *
  * importedGrid = StructuredGrid:new{file="myFileName.dat", fmt="vtk"}
@@ -333,7 +335,6 @@ extern(C) int newStructuredGrid(lua_State* L)
     Path mypath;
     ParametricSurface psurface;
     ParametricVolume pvolume;
-    string interpolation = "tfi";
     int dimensions = 0;
     // First, look for a Path field, for a 1D grid.
     lua_getfield(L, 1, "path".toStringz);
@@ -371,17 +372,12 @@ extern(C) int newStructuredGrid(lua_State* L)
             }
         }
         lua_pop(L, 1);
-        lua_getfield(L, 1, "interpolation".toStringz);
-        if ( lua_isstring(L, -1) ) {
-            interpolation = to!string(lua_tostring(L, -1));
-        }
-        lua_pop(L, 1);
     }
     if (dimensions == 0) {
         string errMsg = "Error in StructuredGrid:new{}. no path, psurface or pvolume found.";
         luaL_error(L, errMsg.toStringz);
     }
-
+    //
     // Get clustering functions, filling in nil or invalid entries with LinearFunction.
     UnivariateFunction cf;
     UnivariateFunction[] cfList;
@@ -435,7 +431,14 @@ extern(C) int newStructuredGrid(lua_State* L)
         }
         lua_pop(L, 1);
     }
-
+    //
+    string interpolation = "simple";
+    lua_getfield(L, 1, "interpolation".toStringz);
+    if ( lua_isstring(L, -1) ) {
+        interpolation = to!string(lua_tostring(L, -1));
+    }
+    lua_pop(L, 1);
+    //
     string errMsgTmplt = "Error in StructuredGrid:new{}. " ~
         "A valid value for '%s' was not found in list of arguments. " ~
         "The value, if present, should be a number.";
@@ -448,7 +451,7 @@ extern(C) int newStructuredGrid(lua_State* L)
     if (dimensions == 3) {
         nkv = getIntegerFromTable(L, 1, "nkv", true, 0, true, format(errMsgTmplt, "nkv"));
     }
-
+    //
     // Look for an r_grid and s_grid. If present, call special construction.
     bool useSpecial2DConstructor = false;
     double[4][4] r_grid, s_grid;
@@ -458,18 +461,18 @@ extern(C) int newStructuredGrid(lua_State* L)
         getMatrixOfDoubles!(4)(L, -1, r_grid);
     }
     lua_pop(L, 1);
-
+    //
     lua_getfield(L, 1, "s_grid");
     if (!lua_isnil(L, -1)) { getMatrixOfDoubles!(4)(L, -1, s_grid); }
     lua_pop(L, 1);
-
+    //
     StructuredGrid grid;
     switch (dimensions) {
     case 1: grid = new StructuredGrid(mypath, niv, cf); break;
     case 2:
 	grid = useSpecial2DConstructor ?
 	    new StructuredGrid(psurface, niv, njv, cfList, r_grid, s_grid)
-            : new StructuredGrid(psurface, niv, njv, cfList);
+            : new StructuredGrid(psurface, niv, njv, cfList, interpolation);
 	break;
     case 3: grid = new StructuredGrid(pvolume, niv, njv, nkv, cfList, interpolation); break;
     default: throw new GeometryException("invalid number of dimensions");

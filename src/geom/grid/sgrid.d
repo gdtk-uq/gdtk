@@ -78,12 +78,24 @@ public:
 
     // 2D grid, built on Parametric surface.
     this(const ParametricSurface surf, size_t niv, size_t njv,
-         const(UnivariateFunction)[] clusterf, string label="")
+         const(UnivariateFunction)[] clusterf,
+         string interpolation="simple",
+         string label="")
     {
         this(niv, njv, 1, label);
         // Any unspecified clustering functions default to the linear identity.
         while (clusterf.length < 4) clusterf ~= new LinearFunction(0.0, 1.0);
-        make_grid_from_surface(surf, clusterf);
+        switch (interpolation) {
+        case "simple":
+            make_grid_from_surface(surf, clusterf);
+            break;
+        case "linear":
+        case "bilinear":
+            make_grid_from_surface_bilinear(surf, clusterf);
+            break;
+        default:
+            throw new Error(text("Unknown parameter interpolation: ", interpolation));
+        }
     }
 
     // 2D grid, with redistribution of parameters, built on Parametric surface.
@@ -100,21 +112,24 @@ public:
 
     // 3D grid, built on ParametricVolume.
     this(const ParametricVolume pvolume, size_t niv, size_t njv, size_t nkv,
-         const(UnivariateFunction)[] clusterf, string interpolation="tfi",
+         const(UnivariateFunction)[] clusterf,
+         string interpolation="simple",
          string label="")
     {
         this(niv, njv, nkv, label);
         // Any unspecified clustering functions default to the linear identity.
         while (clusterf.length < 12) { clusterf ~= new LinearFunction(0.0, 1.0); }
         switch (interpolation) {
-        case "tfi":
-            make_grid_from_volume_tfi(pvolume, clusterf);
+        case "simple":
+        case "tfi": // keep original name
+            make_grid_from_volume(pvolume, clusterf);
             break;
+        case "linear":
         case "trilinear":
             make_grid_from_volume_trilinear(pvolume, clusterf);
             break;
         default:
-            throw new Error(text("Unknown interpolation: ", interpolation));
+            throw new Error(text("Unknown parameter interpolation: ", interpolation));
         }
     }
 
@@ -530,7 +545,7 @@ public:
         }
     } // end make_grid_from_path()
 
-    // Simple grid generation with no redistribution of r,s parameters.
+    // Grid generation with simple interpolation of r,s parameters.
     void make_grid_from_surface(const ParametricSurface surf,
                                 const(UnivariateFunction)[] clusterf)
     {
@@ -554,6 +569,34 @@ public:
             }
         }
     } // end make_grid_from_surface()
+
+    // Grid generation with bilinear interpolation of r,s parameters.
+    void make_grid_from_surface_bilinear(const ParametricSurface surf,
+                                         const(UnivariateFunction)[] clusterf)
+    {
+        // First, set up clustered parameter values along each edge.
+        double[] rNorth = clusterf[0].distribute_parameter_values(niv);
+        double[] sEast = clusterf[1].distribute_parameter_values(njv);
+        double[] rSouth = clusterf[2].distribute_parameter_values(niv);
+        double[] sWest = clusterf[3].distribute_parameter_values(njv);
+        // Now, work through the mesh, one point at a time,
+        // linearly interpolating the stretched parameter values from edge values
+        // and creating the actual vertex coordinates in Cartesian space.
+        // See PJ's workbook page 71,72 2021-11-11.
+        size_t k = 0;
+        foreach (j; 0 .. njv) {
+            double s03 = sWest[j];
+            double s12 = sEast[j];
+            foreach (i; 0 .. niv) {
+                double r01 = rSouth[i];
+                double r32 = rNorth[i];
+                double eta = (r01 + (r32-r01)*s03)/(1.0+(r32-r01)*(s03-s12));
+                double sdash = (1.0-eta)*s03 + eta*s12;
+                Vector3 p = surf(eta, sdash);
+                this[i,j,k].set(p);
+            }
+        }
+    } // end make_grid_from_surface_bilinear()
 
     // This flavour of the function has internal redistribution of the r,s parameters.
     void make_grid_from_surface(const ParametricSurface surf,
@@ -598,8 +641,8 @@ public:
         }
     } // end make_grid_from_surface()
 
-    void make_grid_from_volume_tfi(const ParametricVolume pvolume,
-                                   const(UnivariateFunction)[] clusterf)
+    void make_grid_from_volume(const ParametricVolume pvolume,
+                               const(UnivariateFunction)[] clusterf)
     // Given a parametric volume, create the grid via TFI.
     //
     // The clustering information always comes from the 12 edges.
@@ -621,7 +664,7 @@ public:
         double[] t37 = clusterf[11].distribute_parameter_values(nkv);
         //
         // Now, work through the mesh, one point at a time,
-        // blending the stretched parameter values
+        // blending the stretched parameter values with a simple area-weighted interpolation
         // and creating the actual vertex coordinates in Cartesian space.
         foreach (k; 0 .. nkv) {
             double t = to!double(k) / (nkv - 1);

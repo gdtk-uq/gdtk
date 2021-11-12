@@ -39,7 +39,7 @@ print("CoonsPatch representation: ", surf)
 print("surf(0.5,0.5)= ", surf(0.5, 0.5))
 --
 myrf = RobertsFunction:new{end0=true, end1=false, beta=1.01}
-grid = StructuredGrid:new{psurface=surf, niv=10, njv=20}
+grid = StructuredGrid:new{psurface=surf, niv=10, njv=20, interpolation="linear"}
 grid:set_tags{north="my-special-tag"}
 print("type=", grid:get_type(), "dimensions=", grid:get_dimensions())
 ni = grid:get_niv()
