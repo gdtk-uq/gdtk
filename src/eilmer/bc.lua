@@ -523,12 +523,33 @@ function FieldBoundary:tojson()
    return str
 end
 
+ZeroNormalGradient = FieldBoundary:new()
+ZeroNormalGradient.name = "ZeroNormalGradient"
+function ZeroNormalGradient:new(o)
+   o = FieldBoundary.new(self, o)
+   return o
+end
+
+FixedField = FieldBoundary:new{value=0.0}
+FixedField.name = "FixedField"
+function FixedField:new(o)
+   o = FieldBoundary.new(self, o)
+   return o
+end
+function FixedField:tojson()
+   local str = string.format(' {"name": "%s", ', self.name)
+   str = str .. string.format('"value": %.18e', self.value)
+   str = str .. '}'
+   return str
+end
+
 FixedGradient_Test = FieldBoundary:new()
 FixedGradient_Test.name = "FixedGradient_Test"
 function FixedGradient_Test:new(o)
    o = FieldBoundary.new(self, o)
    return o
 end
+
 FixedField_Test = FieldBoundary:new()
 FixedField_Test.name = "FixedField_Test"
 function FixedField_Test:new(o)
@@ -663,7 +684,7 @@ function WallBC_WithSlip1:new(o)
                " and not WallBC_WithSlip1.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
+   flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts", "field_bc"})
    if not flag then
       error("Invalid name for item supplied to WallBC_WithSlip1 constructor.", 2)
    end
@@ -689,7 +710,7 @@ function WallBC_WithSlip2:new(o)
                " and not WallBC_WithSlip2.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
+   flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts", "field_bc"})
    if not flag then
       error("Invalid name for item supplied to WallBC_WithSlip2 constructor.", 2)
    end
@@ -719,7 +740,7 @@ function WallBC_NoSlip_FixedT0:new(o)
                " and not WallBC_NoSlip_FixedT0.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"Twall", "wall_function",
+   flag = checkAllowedNames(o, {"Twall", "wall_function", "field_bc",
                                 "catalytic_type", "wall_massf_composition",
                                 "label", "group", "is_design_surface", "num_cntrl_pts",
                                 "thermionic_emission"})
@@ -769,7 +790,7 @@ function WallBC_NoSlip_FixedT1:new(o)
                " and not WallBC_NoSlip_FixedT1.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"Twall", "wall_function",
+   flag = checkAllowedNames(o, {"Twall", "wall_function","field_bc",
                                 "catalytic_type", "wall_massf_composition",
                                 "label", "group", "is_design_surface", "num_cntrl_pts"})
    if not flag then
@@ -816,7 +837,7 @@ function WallBC_NoSlip_UserDefinedT:new(o)
                " and not WallBC_NoSlip_UserDefinedT.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"Twall", "wall_function",
+   flag = checkAllowedNames(o, {"Twall", "wall_function","field_bc",
                                 "catalytic_type", "wall_massf_composition",
                                 "label", "group", "is_design_surface", "num_cntrl_pts",
                                 "thermionic_emission"})
@@ -868,7 +889,7 @@ function WallBC_ThermionicEmission:new(o)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"emissivity", "Ar", "phi", "ThermionicEmissionActive",
-                                "catalytic_type", "wall_massf_composition",
+                                "catalytic_type", "wall_massf_composition","field_bc",
                                 "label", "group", "is_design_surface", "num_cntrl_pts"})
    if not flag then
       error("Invalid name for item supplied to WallBC_ThermionicEmission constructor.", 2)
@@ -897,7 +918,7 @@ function WallBC_NoSlip_Adiabatic0:new(o)
                " and not WallBC_NoSlip_Adiabatic0.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"wall_function",
+   flag = checkAllowedNames(o, {"wall_function","field_bc",
                                 "catalytic_type", "wall_massf_composition",
                                 "label", "group", "is_design_surface", "num_cntrl_pts"})
    if not flag then
@@ -944,7 +965,7 @@ function WallBC_NoSlip_Adiabatic1:new(o)
                " and not WallBC_NoSlip_Adiabatic1.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"wall_function",
+   flag = checkAllowedNames(o, {"wall_function","field_bc",
                                 "catalytic_type", "wall_massf_composition",
                                 "label", "group", "is_design_surface", "num_cntrl_pts"})
    if not flag then
@@ -994,7 +1015,7 @@ function WallBC_TranslatingSurface_FixedT:new(o)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"v_trans", "Twall", "label", "group", "is_design_surface",
-                                "num_cntrl_pts"})
+                                "num_cntrl_pts","field_bc"})
    if not flag then
       error("Invalid name for item supplied to WallBC_TranslatingSurface_FixedT constructor.", 2)
    end
@@ -1030,7 +1051,7 @@ function WallBC_TranslatingSurface_Adiabatic:new(o)
                " and not WallBC_TranslatingSurface_Adiabatic.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"v_trans", "label", "group", "is_design_surface", "num_cntrl_pts"})
+   flag = checkAllowedNames(o, {"v_trans", "label", "group", "is_design_surface", "num_cntrl_pts","field_bc"})
    if not flag then
       error("Invalid name for item supplied to WallBC_TranslatingSurface_Adiabatic constructor.", 2)
    end
@@ -1065,7 +1086,7 @@ function WallBC_RotatingSurface_FixedT:new(o)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"r_omega", "centre", "Twall", "label", "group",
-                                "is_design_surface", "num_cntrl_pts"})
+                                "is_design_surface", "num_cntrl_pts","field_bc"})
    if not flag then
       error("Invalid name for item supplied to WallBC_RotatingSurface_FixedT constructor.", 2)
    end
@@ -1111,7 +1132,7 @@ function WallBC_RotatingSurface_Adiabatic:new(o)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"r_omega", "centre", "label", "group",
-                                "is_design_surface", "num_cntrl_pts"})
+                                "is_design_surface", "num_cntrl_pts","field_bc"})
    if not flag then
       error("Invalid name for item supplied to WallBC_RotatingSurface_Adiabatic constructor.", 2)
    end
@@ -1154,7 +1175,7 @@ function InFlowBC_Supersonic:new(o)
                " and not InFlowBC_Supersonic.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"flowState", "flowCondition", "x0", "y0", "z0", "r", "label", "group"})
+   flag = checkAllowedNames(o, {"flowState", "flowCondition", "x0", "y0", "z0", "r", "label", "group","field_bc"})
    if not flag then
       error("Invalid name for item supplied to InFlowBC_Supersonic constructor.", 2)
    end
@@ -1186,7 +1207,7 @@ function InFlowBC_StaticProfile:new(o)
                " and not InFlowBC_StaticProfile.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"filename", "fileName", "match", "label", "group"})
+   flag = checkAllowedNames(o, {"filename", "fileName", "match", "label", "group","field_bc"})
    if not flag then
       error("Invalid name for item supplied to InFlowBC_StaticProfile constructor.", 2)
    end
@@ -1211,7 +1232,7 @@ function InFlowBC_Transient:new(o)
                " and not InFlowBC_Transient.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"filename", "fileName", "label", "group"})
+   flag = checkAllowedNames(o, {"filename", "fileName", "label", "group","field_bc"})
    if not flag then
       error("Invalid name for item supplied to InFlowBC_Transient constructor.", 2)
    end
@@ -1235,7 +1256,7 @@ function InFlowBC_Synthetic:new(o)
                " and not InFlowBC_Synthetic.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"filename", "fileName", "label", "group"})
+   flag = checkAllowedNames(o, {"filename", "fileName", "label", "group","field_bc"})
    if not flag then
       error("Invalid name for item supplied to InFlowBC_Synthetic constructor.", 2)
    end
@@ -1259,7 +1280,7 @@ function InFlowBC_ConstFlux:new(o)
                " and not InFlowBC_ConstFlux.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"flowState", "flowCondition", "x0", "y0", "z0", "r", "label", "group"})
+   flag = checkAllowedNames(o, {"flowState", "flowCondition", "x0", "y0", "z0", "r", "label", "group","field_bc"})
    if not flag then
       error("Invalid name for item supplied to InFlowBC_ConstFlux constructor.", 2)
    end
@@ -1289,7 +1310,7 @@ function InFlowBC_ShockFitting:new(o)
                " and not InFlowBC_ShockFitting.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"flowState", "flowCondition", "x0", "y0", "z0", "r", "label", "group"})
+   flag = checkAllowedNames(o, {"flowState", "flowCondition", "x0", "y0", "z0", "r", "label", "group","field_bc"})
    if not flag then
       error("Invalid name for item supplied to InFlowBC_ShockFitting constructor.", 2)
    end
@@ -1321,7 +1342,7 @@ function InFlowBC_FromStagnation:new(o)
    o = o or {}
    flag = checkAllowedNames(o, {"stagnationState", "stagCondition", "fileName", "filename",
                                 "direction_type", "direction_x", "direction_y", "direction_z",
-                                "alpha", "mass_flux", "relax_factor",
+                                "alpha", "mass_flux", "relax_factor","field_bc",
                                 "label", "group"})
    if not flag then
       error("Invalid name for item supplied to InFlowBC_FromStagnation constructor.", 2)
@@ -1353,7 +1374,7 @@ function InOutFlowBC_Ambient:new(o)
                " and not InOutFlowBC_Ambient.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
+   flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group","field_bc"})
    if not flag then
       error("Invalid name for item supplied to InOutFlowBC_Ambient constructor.", 2)
    end
@@ -1375,7 +1396,7 @@ function OutFlowBC_SimpleExtrapolate:new(o)
                " and not OutFlowBC_SimpleExtrapolate.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"xOrder", "label", "group"})
+   flag = checkAllowedNames(o, {"xOrder", "label", "group","field_bc"})
    if not flag then
       error("Invalid name for item supplied to OutFlowBC_SimpleExtrapolate constructor.", 2)
    end
@@ -1396,7 +1417,7 @@ function OutFlowBC_SimpleFlux:new(o)
                " and not OutFlowBC_SimpleFlux.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"label", "group"})
+   flag = checkAllowedNames(o, {"label", "group","field_bc"})
    if not flag then
       error("Invalid name for item supplied to OutFlowBC_SimpleFlux constructor.", 2)
    end
@@ -1422,7 +1443,7 @@ function OutFlowBC_FixedP:new(o)
                " and not OutFlowBC_FixedP.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"xOrder", "p_outside", "label", "group"})
+   flag = checkAllowedNames(o, {"xOrder", "p_outside", "label", "group","field_bc"})
    if not flag then
       error("Invalid name for item supplied to OutFlowBC_FixedP constructor.", 2)
    end
@@ -1445,7 +1466,7 @@ function OutFlowBC_FixedPT:new(o)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"xOrder", "p_outside", "T_outside",
-                                "label", "group"})
+                                "label", "group","field_bc"})
    if not flag then
       error("Invalid name for item supplied to OutFlowBC_FixedPT constructor.", 2)
    end
@@ -1559,7 +1580,7 @@ function UserDefinedGhostCellBC:new(o)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"fileName", "filename", "label", "group",
-                                "is_design_surface", "num_cntrl_pts"})
+                                "is_design_surface", "num_cntrl_pts","field_bc"})
    if not flag then
       error("Invalid name for item supplied to UserDefinedGhostCellBC constructor.", 2)
    end
@@ -1586,7 +1607,7 @@ function UserDefinedFluxBC:new(o)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"fileName", "filename", "funcName", "funcname",
-                                "label", "group", "is_design_surface", "num_cntrl_pts"})
+                                "label", "group", "is_design_surface", "num_cntrl_pts","field_bc"})
    if not flag then
       error("Invalid name for item supplied to UserDefinedFluxBC constructor.", 2)
    end
@@ -1611,7 +1632,7 @@ function WallBC_AdjacentToSolid:new(o)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"otherBlock", "otherFace", "orientation",
-                                "label", "group", "is_design_surface", "num_cntrl_pts"})
+                                "label", "group", "is_design_surface", "num_cntrl_pts","field_bc"})
    if not flag then
       error("Invalid name for item supplied to WallBC_AdjacentToSolid constructor.", 2)
    end

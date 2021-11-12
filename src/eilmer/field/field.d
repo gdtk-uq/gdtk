@@ -36,7 +36,7 @@ class ElectricField {
         A.length = N*nbands;
         Ai.length = N*nbands;
         b.length = N;
-        max_iter = 100; // eventually you need to do something about this.
+        max_iter = N; // eventually you need to do something about this.
         phi.length = N;
         phi0.length = N;
 

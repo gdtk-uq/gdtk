@@ -23,12 +23,45 @@ import fieldconductivity;
 import bc.boundary_condition;
 import bc.ghost_cell_effect.full_face_copy;
 
-interface FieldBC{
+interface FieldBC {
     void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio);
 }
 
+class ZeroNormalGradient : FieldBC {
+    this() {}
 
-class FixedField_Test : FieldBC{
+    final void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio){
+        bk  = 0.0;
+        Akk = 0.0;
+        Ako = 0.0;
+        Aio = -1;
+    }
+}
+
+class FixedField : FieldBC {
+    this(double value, string conductivity_model_name) {
+        this.value = value;
+        this.conductivity_model = create_conductivity_model(conductivity_model_name);
+    }
+
+    final void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio){
+        double S = face.length.re;
+        double d = distance_between(face.pos, cell.pos[0]);
+        double sigma = conductivity_model(face.fs, face.pos);
+        double phi = value;
+
+        bk  = -1.0*phi*S/d*sigma;
+        Akk = -1.0*S/d*sigma;
+        Ako = 0.0;
+        Aio = -1;
+    }
+private:
+    double value;
+    ConductivityModel conductivity_model;
+}
+
+
+class FixedField_Test : FieldBC {
     this(string conductivity_model_name) {
         this.conductivity_model = create_conductivity_model(conductivity_model_name);
     }
@@ -52,7 +85,7 @@ private:
     }
 }
 
-class FixedGradient_Test : FieldBC{
+class FixedGradient_Test : FieldBC {
     this(string conductivity_model_name) {
         this.conductivity_model = create_conductivity_model(conductivity_model_name);
     }
@@ -77,7 +110,7 @@ private:
     }
 }
 
-class SharedField : FieldBC{
+class SharedField : FieldBC {
     this(string conductivity_model_name, const BoundaryCondition bc, const int[] block_offsets) {
         this.conductivity_model = create_conductivity_model(conductivity_model_name);
 
@@ -136,7 +169,7 @@ private:
 }
 
 version(mpi_parallel){
-class MPISharedField : FieldBC{
+class MPISharedField : FieldBC {
     static int nExtraCells=0;
     static MPISharedField[] instances;
     int other_blk_rank;
@@ -222,6 +255,13 @@ FieldBC create_field_bc(JSONValue field_bc_json, const BoundaryCondition bc, con
     FieldBC field_bc;
 
     switch (name) {
+    case "ZeroNormalGradient":
+        field_bc = new ZeroNormalGradient();
+        break;
+    case "FixedField":
+        double value = getJSONdouble(field_bc_json, "value", 0.0);
+        field_bc = new FixedField(value, conductivity_model_name);
+        break;
     case "FixedGradient_Test":
         field_bc = new FixedGradient_Test(conductivity_model_name);
         break;
