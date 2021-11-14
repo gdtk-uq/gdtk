@@ -539,7 +539,7 @@ e4shared: main.d $(EILMER_FILES) \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > main_with_rev_string.d
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)e4shared \
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)e4shared \
 		$(DVERSION)$(TECPLOT_BIN_VERSION_STR) \
 		main_with_rev_string.d \
 		$(EILMER_FILES) \
@@ -562,7 +562,7 @@ e4shared-debug: main.d $(EILMER_FILES) \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > main_with_rev_string.d
-	$(DMD) $(DEBUG_DFLAGS)$(DFLAGS) $(OF)e4shared-debug \
+	$(DMD) $(DEBUG_DFLAGS) $(DFLAGS) $(OF)e4shared-debug \
 		$(DVERSION)$(TECPLOT_BIN_VERSION_STR) \
 		main_with_rev_string.d \
 		$(EILMER_FILES) \
@@ -586,7 +586,7 @@ e4shared_diagnostic: main.d $(EILMER_FILES) \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > main_with_rev_string.d
 	python3 $(MPL_DIR)/../python/prebuild.py $(MPL_DIR)/..
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) -J$(MPL_DIR)/../views $(OF)e4shared_diagnostic \
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) -J$(MPL_DIR)/../views $(OF)e4shared_diagnostic \
 		$(DVERSION)diagnostics \
 		main_with_rev_string.d \
 		$(EILMER_FILES) \
@@ -609,7 +609,7 @@ e4zshared: main.d $(EILMER_FILES) \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > main_complex_with_rev_string.d
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)e4zshared \
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)e4zshared \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)$(TECPLOT_BIN_VERSION_STR) \
 		main_complex_with_rev_string.d \
@@ -634,7 +634,7 @@ e4mpi: main.d $(EILMER_FILES) \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > mpi_main_with_rev_string.d
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)e4mpi \
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)e4mpi \
 		$(DVERSION)mpi_parallel \
 		-I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		mpi_main_with_rev_string.d \
@@ -659,7 +659,7 @@ e4zmpi: main.d $(EILMER_FILES) \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > mpi_main_complex_with_rev_string.d
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)e4zmpi \
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)e4zmpi \
 		$(DVERSION)mpi_parallel \
 		-I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)complex_numbers \
@@ -684,7 +684,7 @@ e4-nk-shared: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_upd
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > nk_accelerator_with_string_subst.d
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)$@ \
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
@@ -709,7 +709,7 @@ e4-nk-shared-real: nk_accelerator.d steadystate_core.d solid/solid_loose_couplin
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > nk_accelerator_with_string_subst.d
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)$@ \
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
 		nk_accelerator_with_string_subst.d steadystate_core.d solid/solid_loose_coupling_update.d \
@@ -734,7 +734,7 @@ e4-nk-dist: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_updat
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > mpi_nk_accelerator_with_string_subst.d
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)$@ \
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
 		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)nk_accelerator \
@@ -761,7 +761,7 @@ e4-nk-dist-real: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > mpi_nk_accelerator_with_string_subst.d
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)$@ \
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
 		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
@@ -786,7 +786,7 @@ e4-lusgs-shared: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > nk_accelerator_with_string_subst.d
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)$@ \
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
 		$(DVERSION)lu_sgs \
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
@@ -813,7 +813,7 @@ e4-lusgs-dist: nk_accelerator.d steadystate_core.d shape_sensitivity_core.d $(EI
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > mpi_nk_accelerator_with_string_subst.d
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)$@ \
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
 		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)lu_sgs \
 		$(DVERSION)nk_accelerator \
@@ -837,7 +837,7 @@ e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d soli
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		shape_sensitivity_calc.d > shape_sensitivity_calc_with_rev_string.d
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)e4ssc \
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)e4ssc \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)shape_sensitivity \
 		$(DVERSION)nk_accelerator \
@@ -865,7 +865,7 @@ e4loadbalance: loadbalance.d $(EILMER_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		loadbalance.d > loadbalance_with_rev_string.d
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)e4loadbalance \
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)e4loadbalance \
 		loadbalance_with_rev_string.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
@@ -882,7 +882,7 @@ eilmer-opencl-gpu-chem: main.d opencl_gpu_chem.d $(EILMER_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		main.d > main_with_rev_string.d
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)eilmer-opencl-gpu-chem \
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)eilmer-opencl-gpu-chem \
 		$(DVERSION)gpu_chem $(DVERSION)opencl_gpu_chem \
 		main_with_rev_string.d $(EILMER_FILES) opencl_gpu_chem.d \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
@@ -902,7 +902,7 @@ eilmer-cuda-gpu-chem: main.d cuda_gpu_chem.d alpha_qss_kernel_cuda_tmplt.cu $(EI
 		main.d > main_with_rev_string.d
 	$(NVCC) --shared -o libcudakernel.so alpha_qss_kernel_cuda_tmplt.cu \
 		--compiler-options '-fPIC'
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)eilmer-cuda-gpu-chem \
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)eilmer-cuda-gpu-chem \
 		$(DVERSION)gpu_chem $(DVERSION)cuda_gpu_chem \
 		main_with_rev_string.d $(EILMER_FILES) cuda_gpu_chem.d \
 		$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
