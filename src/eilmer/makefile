@@ -526,7 +526,7 @@ dgd-module:
 		dgd-module-template > dgd-module
 
 e4monitor: e4monitor.d
-	$(DMD) $(FLAVOUR_FLAGS)$(DFLAGS) $(OF)e4monitor e4monitor.d $(DLINKFLAGS)
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)e4monitor e4monitor.d $(DLINKFLAGS)
 
 e4shared: main.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
