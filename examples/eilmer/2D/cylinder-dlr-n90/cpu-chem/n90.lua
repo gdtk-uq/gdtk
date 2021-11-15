@@ -15,7 +15,7 @@ print("Minf=", Minf)
 config.reacting = true
 config.reactions_file = 'e4-chem.lua'
 
-require "billig_patch"
+local billig_patch = require "billig_patch"
 R = 0.045 -- m
 bp = billig_patch.make_patch{Minf=Minf, R=R, xc=R, scale=0.95}
 cf = RobertsFunction:new{end0=true, end1=false, beta=1.1}
