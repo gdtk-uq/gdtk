@@ -2,11 +2,10 @@
 -- A convenience function for bluff-body simulations.
 -- PJ 2019-05-25
 
-module(..., package.seeall)
+local billig = require 'billig' 
+local billig_patch = {}
 
-require 'billig'
-
-function make_patch(t)
+function billig_patch.make_patch(t)
    -- Construct a surface patch for use in a bluff-body simulation
    -- using arguments found in the supplied table.
    if not type(t) == "table" then
@@ -60,3 +59,5 @@ function make_patch(t)
    local patch = CoonsPatch:new{south=xaxis, north=outlet, west=shock, east=body}
    return {patch=patch, points={a=a, b=b, c=c, d=d}}
 end
+
+return billig_patch

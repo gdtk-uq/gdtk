@@ -16,9 +16,9 @@
 -- version of lua provided during install: dgd-lua
 --
 
-module(..., package.seeall)
+local billig = {}
 
-function delta_over_R(M, axisymmetric)
+function billig.delta_over_R(M, axisymmetric)
    -- Calculates the normalised stand-off distance.
    -- Assume cylindrical nose
    local d_R = 0.386 * math.exp(4.67/(M*M))
@@ -29,7 +29,7 @@ function delta_over_R(M, axisymmetric)
    return d_R
 end
 
-function Rc_over_R(M, axisymmetric)
+function billig.Rc_over_R(M, axisymmetric)
    -- Calculates the normalised radius of curvature of the shock.
    -- Assume cylindrical nose
    local Rc_R = 1.386 * math.exp(1.8/math.pow(M-1, 0.75))
@@ -40,7 +40,7 @@ function Rc_over_R(M, axisymmetric)
    return Rc_R
 end
 
-function x_from_y(y, M, theta, axisymmetric, R_nose)
+function billig.x_from_y(y, M, theta, axisymmetric, R_nose)
    -- Determine the x-coordinate of a point on the shock wave.
    --
    -- y: y-coordinate of the point on the shock wave
@@ -60,8 +60,8 @@ function x_from_y(y, M, theta, axisymmetric, R_nose)
    --
    R_nose = R_nose or 1.0
    theta = theta or 0.0
-   local Rc = R_nose * Rc_over_R(M, axisymmetric)
-   local d = R_nose * delta_over_R(M, axisymmetric)
+   local Rc = R_nose * billig.Rc_over_R(M, axisymmetric)
+   local d = R_nose * billig.delta_over_R(M, axisymmetric)
    local beta
    if axisymmetric then
       -- Use shock angle on a cone
@@ -76,7 +76,7 @@ function x_from_y(y, M, theta, axisymmetric, R_nose)
    return x
 end
 
-function y_from_x(x, M, theta, axisymmetric, R_nose)
+function billig.y_from_x(x, M, theta, axisymmetric, R_nose)
    -- Determine the y-coordinate of a point on the shock wave.
    --
    -- x: x-coordinate of the point on the shock wave
@@ -104,3 +104,5 @@ function y_from_x(x, M, theta, axisymmetric, R_nose)
    local y = math.sqrt( ((tmpA^2 - 1) * Rc^2) / (tan_beta^2) )
    return y
 end
+
+return billig
