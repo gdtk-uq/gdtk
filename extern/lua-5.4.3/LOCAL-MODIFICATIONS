@@ -1,0 +1,15 @@
+Author: Rowan J. Gollan
+Date: 2021-11-15
+
+This note documents changes in the local source so that we can incorporate
+the lua source code as a library in the gdtk tools.
+
+1. Edit top-level Makefile to:
+   + change names of executables: dgd-lua and dgd-luac
+
+2. Add lpeg library to top-level area. Added version: lpeg-1.0.2
+
+3. Edit src/loadlib.c to change environment variables: LUA_PATH, LUA_CPATH
+
+4. Edit src/Makefile to make changes:
+   + add lpeg.so target
