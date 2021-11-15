@@ -29,10 +29,10 @@ local function round(num)
 end
 
 local function round2(num,prec)
-    -- Return rounded value to given precision 
+    -- Return rounded value to given precision
     -- of a given number and delete trailing zeros
     num = math.floor(num / (10^prec) + 0.5)
-    return num * 10^prec 
+    return num * 10^prec
 end
 
 local function max(table)
@@ -76,7 +76,7 @@ end
 
 local function lin_interp(x_0,x_1,y_0,y_1,x)
     -- Linear interpolation
-    y = y_0 + (y_1 - y_0) / (x_1 - x_0) * (x - x_0)
+    local y = y_0 + (y_1 - y_0) / (x_1 - x_0) * (x - x_0)
 
     return y
 end
@@ -92,7 +92,7 @@ local function mov_avg(tab,width)
     end
 
     if  width_m == width / 2 then
-        width_p = width_m + 1
+        width_p = width_m - 1
     else
         width_p = width_m
     end
@@ -121,7 +121,7 @@ end
 local function factorial(number)
     -- factorial of a given number
     local factorial = 0
-    while number > 0 do
+    while number > 1 do
         factorial = factorial * number
         number = number - 1
     end
@@ -135,15 +135,112 @@ local function self_sum(number)
     return self_sum
 end
 
-return {mean = mean, 
-    sum = sum, 
-    round = round, 
+local function sleep(seconds)
+    -- takes number of seconds as an input and sleeps for the given time
+    local sleep_time = os.clock() + seconds
+    repeat until os.clock() >= sleep_time
+    return 0
+end
+
+local function scal_prod(vec1,vec2)
+    -- calculates scalar product or dot product of two vectors
+    local sp = vec1[1] * vec2[1] + vec1[2] * vec2[2] + vec1[3] * vec2[3]
+    return sp
+end
+
+local function vec_ang(vec1,vec2)
+    -- calculates angle in between two vectors
+    local sp = scal_prod(vec1,vec2)
+    local l1 = scal_prod(vec1,vec1)
+    local l2 = scal_prod(vec2,vec2)
+    local ang = math.acos(sp/math.sqrt(l1*l2))
+    return ang
+end
+
+
+local function bilin_interp(x, y, val, ip)
+    -- bilinear interpolation
+    -- x1 < x2, y1 < y2
+    -- val1 @ x1y1, val2 @ x2y1, val3 @ x1y2, val4 @ x2y2
+    -- ip := interpolation point (x,y)
+    local mx1 = (x[2] - ip[1]) / (x[2] - x[1])
+    local mx2 = (ip[1] - x[1]) / (x[2] - x[1])
+    local my1 = (y[2] - ip[2]) / (y[2] - y[1])
+    local my2 = (ip[2] - y[1]) / (y[2] - y[1])
+    local res = my1 * (mx1 * val[1] + mx2 * val[2]) + my2 * (mx1 * val[3] + mx2 * val[4])
+    return res
+end
+
+local function multilin_interp(x, y, val, ip)
+    -- multilin interpolation for arbitrary points
+    -- weighted average of the given number of points
+    -- x= (x1, .. ,xn)
+    -- y= (y1, .. ,yn)
+    -- val= (val1, .. ,valn)
+    -- d1-dn := distance from interpolation point to points 1-n
+    local d = {}
+    local dt = 0
+    for i=1, #x do
+        d[#d+1] = math.sqrt((y[i] - ip[2])^2 + (x[i] - ip[1])^2)^(-1)
+        dt = dt + d[#d]
+    end
+    local valp = 0
+    for i=1, #x do
+        valp = valp + val[i] * d[i] / dt
+    end
+    return valp
+end
+
+local function three_point_plane(p1,p2,p3)
+    -- create plane through three points
+    -- returns normal vector of plane
+    vec1 = {p1[1]-p2[1],p1[2]-p2[2],p1[3]-p2[3]}
+    vec2 = {p3[1]-p2[1],p3[2]-p2[2],p3[3]-p2[3]}
+    local n = vec_prod(vec1,vec2)
+    return n
+end
+
+local function rms(table)
+    -- root mean square of the elements of an array
+    -- square each value first
+    local sq = {}
+    for i=1, #table do
+        sq[i] = table[i]^2
+    end
+
+    -- calculate rms
+    local res = math.sqrt(sum(sq) / #sq)
+    return res
+end
+
+local function sort_by_x(t1,t2)
+    -- Two tables are sorted according to their x-value
+    -- when used with table.sort
+    -- Syntax: table.sort(table, sort_by_x)
+    local a = t1.x
+    local b = t2.x
+    return a < b
+end
+
+return {mean = mean,
+    sum = sum,
+    round = round,
     round2 = round2,
-    max = max, 
-    extreme = extreme, 
-    min = min, 
-    lin_interp = lin_interp, 
-    mov_avg = mov_avg, 
+    max = max,
+    extreme = extreme,
+    min = min,
+    lin_interp = lin_interp,
+    mov_avg = mov_avg,
     vec_prod = vec_prod,
     factorial = factorial,
-    self_sum = self_sum}
+    self_sum = self_sum,
+    sleep = sleep,
+    scal_prod = scal_prod,
+    vec_ang = vec_ang,
+    copy_table = copy_table,
+    bilin_interp = bilin_interp,
+    multilin_interp = multilin_interp,
+    three_point_plane = three_point_plane,
+    rms = rms,
+    sort_by_x = sort_by_x
+    }
