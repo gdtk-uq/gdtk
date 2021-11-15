@@ -33,7 +33,7 @@ inflow = FlowState:new{p=p_inf, T=T_inf, velx=vx_inf}
 initial = FlowState:new{p=0.3*p_inf, T=T_inf}
 
 print("Building grid.")
-require "billig_patch"
+local billig_patch = require "billig_patch"
 R = 31.8e-3  -- radius of sphere, in metres
 M_inf = vx_inf/inflow.a
 print("M_inf=", M_inf)
