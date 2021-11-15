@@ -7,9 +7,7 @@
 -- PJ, 2021-10-05 pulled out of prep-grids.lua
 --
 
-module(..., package.seeall)
-
-Grid = {
+local Grid = {
    myType = "Grid"
 }
 
@@ -162,7 +160,7 @@ end -- end Grid:tojson()
 --
 -- needs storage: connectionList = {}
 
-function connectGrids(idA, faceA, idB, faceB, orientation)
+local function connectGrids(idA, faceA, idB, faceB, orientation)
    if false then -- debug
       print(string.format('connectGrids(idA=%d, faceA="%s", idB=%d, faceB="%s", orientation=%d)',
                           idA, faceA, idB, faceB, orientation))
@@ -175,14 +173,14 @@ function connectGrids(idA, faceA, idB, faceB, orientation)
    connectionList[#connectionList+1] = {idA=idA, faceA=faceA, idB=idB, faceB=faceB, orientation=orientation}
 end
 
-function connectionAsJSON(c)
+local function connectionAsJSON(c)
    str = string.format('{"idA": %d, "faceA": "%s", "idB": %d, "faceB": "%s", "orientation": %d}',
                        c.idA, c.faceA, c.idB, c.faceB, c.orientation)
    return str
 end
 
 
-function identifyGridConnections(includeList, excludeList, tolerance)
+local function identifyGridConnections(includeList, excludeList, tolerance)
    -- Identify grid connections by trying to match corner points.
    -- Parameters (all optional):
    -- includeList: the list of structured grid objects to be included in the search.
@@ -248,3 +246,10 @@ function identifyGridConnections(includeList, excludeList, tolerance)
       end -- for _,B
    end -- for _,A
 end -- identifyGridConnections
+
+return {
+   Grid = Grid,
+   connectGrids = connectGrids,
+   connectionAsJSON = connectionAsJSON,
+   identifyGridConnections = identifyGridConnections
+}

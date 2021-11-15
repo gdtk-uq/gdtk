@@ -349,7 +349,7 @@ public:
         // Top-level, generic data.
         lua_pushinteger(myL, blk.id); lua_setglobal(myL, "blkId");
         lua_pushglobaltable(myL);
-        registerGasModel(myL, -1);
+        registerGasModel(myL);
         registerBBLA(myL);
         luaL_dostring(myL, "require 'lua_helper'");
         pushObj!(GasModel, GasModelMT)(myL, blk.myConfig.gmodel);

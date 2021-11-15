@@ -5,8 +5,6 @@
 -- Date: 2015-10-01
 --          Extracted from prep.lua
 
-module(..., package.seeall)
-
 -- Symbolic names for identifying boundaries.
 -- Although we no longer use these names in our Lua code,
 -- there may be user-written scripts that do use these definitions.
@@ -59,7 +57,7 @@ function cmpVtxPair(a, b)
 end
 
 -- Table unpacking function from Section 5.1 in Programming in Lua
-local function unpack(t, i, n)
+function unpack(t, i, n)
    i = i or 1
    n = n or #t
    if i <= n then

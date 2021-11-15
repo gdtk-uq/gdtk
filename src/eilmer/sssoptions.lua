@@ -3,8 +3,6 @@
 -- Authors: RJG and Kyle D.
 --
 
-module(..., package.seeall)
-
 -- Storage for steady-state solver settings
 sssOptionsHidden = { -- hidden from user
    -- set defaults here
@@ -172,3 +170,6 @@ sdluOptionsHidden = { -- hidden from user
 
 SolidDomainLooseUpdate = {}
 setmetatable(SolidDomainLooseUpdate, sdluOptionsHidden)
+
+
+  

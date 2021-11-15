@@ -115,7 +115,7 @@ extern(C) int updateTwoTempAirState(lua_State *L)
     return 2;
 }
 
-void registerTwoTemperatureAirKinetics(lua_State* L, int tblIdx)
+void registerTwoTemperatureAirKinetics(lua_State* L)
 {
     luaL_newmetatable(L, TwoTemperatureAirKineticsMT.toStringz);
     
@@ -131,5 +131,5 @@ void registerTwoTemperatureAirKinetics(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "__call");
 
     // Make class visible.
-    lua_setfield(L, tblIdx, TwoTemperatureAirKineticsMT.toStringz);
+    lua_setglobal(L, TwoTemperatureAirKineticsMT.toStringz);
 }

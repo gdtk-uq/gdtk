@@ -93,7 +93,7 @@ extern(C) int updatePseudoSpeciesState(lua_State *L)
     return 2;
 }
 
-void registerPseudoSpeciesKinetics(lua_State* L, int tblIdx)
+void registerPseudoSpeciesKinetics(lua_State* L)
 {
     luaL_newmetatable(L, PseudoSpeciesKineticsMT.toStringz);
 
@@ -109,5 +109,5 @@ void registerPseudoSpeciesKinetics(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "__call");
 
     // Make class visible.
-    lua_setfield(L, tblIdx, PseudoSpeciesKineticsMT.toStringz);
+    lua_setglobal(L, PseudoSpeciesKineticsMT.toStringz);
 }

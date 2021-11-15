@@ -43,7 +43,7 @@ extern(C) int get_niv(lua_State* L)
 {
     int narg = lua_gettop(L); // assume narg == 1; This is a getter
     auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
-    lua_pushnumber(L, grid.niv);
+    lua_pushinteger(L, grid.niv);
     return 1;
 }
 
@@ -51,7 +51,7 @@ extern(C) int get_njv(lua_State* L)
 {
     int narg = lua_gettop(L); // assume narg == 1; This is a getter
     auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
-    lua_pushnumber(L, grid.njv);
+    lua_pushinteger(L, grid.njv);
     return 1;
 }
 
@@ -59,7 +59,7 @@ extern(C) int get_nkv(lua_State* L)
 {
     int narg = lua_gettop(L); // assume narg == 1; This is a getter
     auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
-    lua_pushnumber(L, grid.nkv);
+    lua_pushinteger(L, grid.nkv);
     return 1;
 }
 

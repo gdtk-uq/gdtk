@@ -144,7 +144,7 @@ int getInt(lua_State* L, int tblIdx, string key)
         throw new Error(errMsg);
     }
     lua_getfield(L, tblIdx, key.toStringz);
-    if ( !lua_isnumber(L, -1) ) {
+    if ( !lua_isinteger(L, -1) ) {
         string errMsg = format("An integer was expected in field: %s", key);
         lua_pop(L, 1);
         throw new Error(errMsg);
@@ -157,7 +157,7 @@ int getInt(lua_State* L, int tblIdx, string key)
 int getInt(lua_State* L, string key)
 {
     lua_getglobal(L, key.toStringz);
-    if ( !lua_isnumber(L, -1) ) {
+    if ( !lua_isinteger(L, -1) ) {
         string errMsg = format("An integer was expected in field: %s", key);
         lua_pop(L, 1);
         throw new Error(errMsg);
@@ -175,7 +175,7 @@ int getIntWithDefault(lua_State* L, int tblIdx, string key, int defaultValue)
     }
     int val = defaultValue;
     lua_getfield(L, tblIdx, key.toStringz);
-    if (lua_isnumber(L, -1)) {
+    if (lua_isinteger(L, -1)) {
         val = to!int(lua_tointeger(L, -1));
     }
     lua_pop(L, 1);
@@ -339,7 +339,7 @@ void getArrayOfInts(lua_State* L, int tblIdx, string key, out int[] values)
     auto n = to!int(lua_objlen(L, -1));
     foreach ( i; 1..n+1 ) {
         lua_rawgeti(L, -1, i);
-        if ( lua_isnumber(L, -1) ) values ~= to!int(lua_tointeger(L, -1));
+        if ( lua_isinteger(L, -1) ) values ~= to!int(lua_tointeger(L, -1));
         // Silently ignore anything that isn't a value.
         lua_pop(L, 1);
     }
@@ -576,7 +576,7 @@ int getIntegerFromTable(lua_State* L, int index, string field,
     }
     // Presumably then we have something to look at.
     if ( lua_isnumber(L, -1) ) {
-        auto val = to!int(lua_tointeger(L, -1));
+        auto val = to!int(lua_tonumber(L, -1));
         lua_pop(L, 1);
         return val;
     }

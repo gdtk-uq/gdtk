@@ -8,74 +8,63 @@
 print("Loading prep.lua...")
 
 require 'lua_helper'
-deepclone = lua_helper.deepclone
-checkAllowedNames = lua_helper.checkAllowedNames
-
 require 'blk_conn'
--- Let's pull the symbols out of the blk_conn module
--- and make them global in this namespace
-for k,v in pairs(blk_conn) do
-   _G[k] = v
-end
-
 require 'bc'
-for k,v in pairs(bc) do
-   _G[k] = v
-end
 
-require 'configoptions'
+
+local configoptions = require 'configoptions'
 config = configoptions.config
 
-require 'gridpro'
+local gridpro = require 'gridpro'
 -- Make these functions global so that users may call them
 -- in the configuration script
 applyGridproConnectivity = gridpro.applyGridproConnectivity
 applyGridproBoundaryConditions = gridpro.applyGridproBoundaryConditions
 to_eilmer_axis_map = gridpro.to_eilmer_axis_map
 
-require 'grid'
+local grid = require 'grid'
 Grid = grid.Grid
 connectGrids = grid.connectGrids
 connectionAsJSON = grid.connectionAsJSON
 identifyGridConnections = grid.identifyGridConnections
 
-require 'gridarray'
+local gridarray = require 'gridarray'
 GridArray = gridarray.GridArray
 
-require 'flowstate'
+local flowstate = require 'flowstate'
 FlowState = flowstate.FlowState
 makeFlowStateFn = flowstate.makeFlowStateFn
 
-require 'fluidblock'
+local fluidblock = require 'fluidblock'
 FluidBlock = fluidblock.FluidBlock
 SBlock2UBlock = fluidblock.SBlock2UBlock
 connectBlocks = fluidblock.connectBlocks
 identifyBlockConnections = fluidblock.identifyBlockConnections
 
-require 'fbarray'
+local fbarray = require 'fbarray'
 FBArray = fbarray.FBArray
 FluidBlockArray = fbarray.FluidBlockArray
 
-require 'solidblock'
+local solidblock = require 'solidblock'
 SolidBlock = solidblock.SolidBlock
 SolidBlockArray = solidblock.SolidBlockArray
 
-require 'mpi'
+local mpi = require 'mpi'
 mpiDistributeBlocks = mpi.mpiDistributeBlocks
 mpiDistributeFBArray = mpi.mpiDistributeFBArray
 
-require 'history'
+local history = require 'history'
 setHistoryPoint = history.setHistoryPoint
 setSolidHistoryPoint = history.setSolidHistoryPoint
 
-require 'zones'
+local zones = require 'zones'
 ReactionZone = zones.ReactionZone
 IgnitionZone = zones.IgnitionZone
 TurbulentZone = zones.TurbulentZone
 SuppressReconstructionZone = zones.SuppressReconstructionZone
 SuppressViscousStressesZone = zones.SuppressViscousStressesZone
 
-require 'output'
+local output = require 'output'
 write_control_file = output.write_control_file
 write_config_file = output.write_config_file
 write_times_file = output.write_times_file
@@ -85,11 +74,8 @@ write_fluidBlockArrays_file = output.write_fluidBlockArrays_file
 write_shock_fitting_helper_files = output.write_shock_fitting_helper_files
 
 require 'sssoptions'
-SteadyStateSolver = sssoptions.SteadyStateSolver
-ShapeSensitivityCalculator = sssoptions.ShapeSensitivityCalculator
-SolidDomainLooseUpdate = sssoptions.SolidDomainLooseUpdate
 
-require 'prep_check'
+local prep_check = require 'prep_check'
 initTurbulence = prep_check.initTurbulence
 checkCellVolumes = prep_check.checkCellVolumes
 perform_spatial_gradient_consistency_check = prep_check.perform_spatial_gradient_consistency_check

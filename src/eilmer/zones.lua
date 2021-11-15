@@ -3,11 +3,9 @@
 -- Authors: PJ and RJG
 --
 
-module(..., package.seeall)
-
 -- Classes for construction of zones.
 
-ReactionZone = {
+local ReactionZone = {
    p0 = nil,
    p1 = nil
 }
@@ -36,7 +34,7 @@ function ReactionZone:new(o)
    return o
 end
 
-IgnitionZone = {
+local IgnitionZone = {
    p0 = nil,
    p1 = nil,
    T = nil -- degrees K
@@ -69,7 +67,7 @@ function IgnitionZone:new(o)
    return o
 end
 
-TurbulentZone = {
+local TurbulentZone = {
    p0 = nil,
    p1 = nil,
 }
@@ -98,7 +96,7 @@ function TurbulentZone:new(o)
    return o
 end
 
-SuppressReconstructionZone = {
+local SuppressReconstructionZone = {
    p0 = nil,
    p1 = nil,
 }
@@ -127,7 +125,7 @@ function SuppressReconstructionZone:new(o)
    return o
 end
 
-SuppressViscousStressesZone = {
+local SuppressViscousStressesZone = {
    p0 = nil,
    p1 = nil,
 }
@@ -155,3 +153,11 @@ function SuppressViscousStressesZone:new(o)
    o.p1.z = o.p1.z or 0.0
    return o
 end
+
+return {
+   ReactionZone = ReactionZone,
+   IgnitionZone = IgnitionZone,
+   TurbulentZone = TurbulentZone,
+   SuppressReconstructionZone = SuppressReconstructionZone,
+   SuppressViscousStressesZone = SuppressViscousStressesZone
+}

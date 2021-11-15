@@ -4,10 +4,10 @@
 --
 -- 2021-04-17: extracted from prep.lua
 
-module(..., package.seeall)
+local prep_check = {}
 
 
-function initTurbulence(fs, turbulence_model_name)
+function prep_check.initTurbulence(fs, turbulence_model_name)
     -- Setup dynamic turbulent primitive array and check user inputs
     if turbulence_model_name == "none" then
         -- Check to ensure the user hasn't tried defining any turbulence stuff
@@ -28,7 +28,7 @@ function initTurbulence(fs, turbulence_model_name)
     return turb
 end
 
-function checkCellVolumes(t)
+function prep_check.checkCellVolumes(t)
    if not t then
       t = {}
    end
@@ -56,7 +56,7 @@ function checkCellVolumes(t)
    end
 end
 
-function perform_spatial_gradient_consistency_check()
+function prep_check.perform_spatial_gradient_consistency_check()
    -- Not all spatial gradient options are available, depending on the type of grid.
    -- First, search for any unstructured grids, since these are the most restricted.
    unstructuredGridsPresent = false
@@ -99,7 +99,7 @@ function perform_spatial_gradient_consistency_check()
    end
 end
 
-function warn_if_blocks_not_connected()
+function prep_check.warn_if_blocks_not_connected()
    -- It would be very unusual to have defined multiple FluidBlocks
    -- and not have any connections between them.
    -- Such an arrangement would be unintended, almost certainly.
@@ -119,7 +119,7 @@ function warn_if_blocks_not_connected()
    end
 end
 
-function check_DFT_settings()
+function prep_check.check_DFT_settings()
     -- Check to see that the DFT has been correctly configured.
 
     if not ((config.DFT_n_modes * config.DFT_step_interval) == config.max_step) then
@@ -129,3 +129,5 @@ function check_DFT_settings()
         print("WARNING: should turn config.fixed_time_step on when computing the DFT")
     end
 end
+
+return prep_check

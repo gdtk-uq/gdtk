@@ -124,7 +124,7 @@ extern(C) int updateState(lua_State* L)
 
 // --------- end: exposed methods ----------------- //
 
-void registerChemistryUpdate(lua_State* L, int tblIdx)
+void registerChemistryUpdate(lua_State* L)
 {
     luaL_newmetatable(L, ChemistryUpdateMT.toStringz);
 
@@ -140,5 +140,5 @@ void registerChemistryUpdate(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "__call");
 
     // Make class visisble
-    lua_setfield(L, tblIdx, ChemistryUpdateMT.toStringz);
+    lua_setglobal(L, ChemistryUpdateMT.toStringz);
 }

@@ -5,8 +5,6 @@
 --       Extracted from prep.lua (to be imported into prep.lua via require)
 --
 
-module(..., package.seeall)
-
 local MASSF_ERROR_TOL = 1.0e-6
 
 function convertSpeciesTableToArray(massfTable)

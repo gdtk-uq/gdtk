@@ -3,11 +3,9 @@
 -- Authors: PJ and RJG
 --
 
-module(..., package.seeall)
-
 -- A class to build FlowState objects as Lua tables.
 
-FlowState_defaults = {
+local FlowState_defaults = {
    p = 100.0e3, -- pressure, Pa
    T = 300.0, -- static (trans-rotational) temperature, K
    p_e = 0.0, -- electron pressure
@@ -38,7 +36,7 @@ FlowState_defaults = {
 }
 
 -- Prototype for the FlowState class.
-FlowState = {
+local FlowState = {
    myType = "FlowState",
 }
 
@@ -196,7 +194,7 @@ function FlowState:__tostring()
    return str
 end
 
-function makeFlowStateFn(flowSol)
+local function makeFlowStateFn(flowSol)
    function flowFn(x, y, z)
       -- We try to find an enclosing cell.
       local cell = flowSol:find_enclosing_cell{x=x, y=y, z=z}
@@ -211,3 +209,8 @@ function makeFlowStateFn(flowSol)
    end
    return flowFn
 end
+
+return {
+   FlowState = FlowState,
+   makeFlowStateFn = makeFlowStateFn
+}

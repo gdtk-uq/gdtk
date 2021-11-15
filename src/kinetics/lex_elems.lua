@@ -4,48 +4,66 @@
 -- 
 -- History:
 --   15-Feb-2013 : extracted common elements from reac.lua and exch.lua
-module(..., package.seeall)
+
+local lpeg = require 'lpeg'
 
 local S = lpeg.S
 local R = lpeg.R
 local C = lpeg.C
 local P = lpeg.P
 
-Digit = R("09")
-Integer = (S("+-") ^ -1) * (Digit^1)
-Fractional = (P(".")   ) * (Digit^1)
-Decimal = 
+local Digit = R("09")
+local Integer = (S("+-") ^ -1) * (Digit^1)
+local Fractional = (P(".")   ) * (Digit^1)
+local Decimal = 
      (Integer *              -- Integer
      (Fractional ^ -1)) +    -- Fractional
      (S("+-")^0 * Fractional)  -- Completely fractional number
-Scientific = 
+local Scientific = 
      Decimal * -- Decimal number
      S("Ee") * -- E or e
      Integer   -- Exponent
-Number = Scientific + Decimal
+local Number = Scientific + Decimal
 
-Space = S(" \n\t")^0
-Underscore = S("_")
-Element = ((R("AZ") * R("az")^0) + P("e"))
-S_letter = P("S")
-Star = P("*")
-ElecLevel = (R("az", "AZ", "09"))^-3 -- ^-3 says to match at most 3 occurrences
-PM = S("+-")
-Species = C( ((R("ad","fz") * P("-")^0)^0 * (Element * Digit^0)^1)^1 * (PM + (Underscore * (S_letter + ElecLevel)))^0)
-Tilde = P("~")
-Dash = P("-") * Space
-Comma = Space * P(",") * Space
-Slash = Space * P("/") * Space
-Colon = P(":") * Space
-Open = "(" * Space
-Close = Space * ")" * Space
-FArrow = C(P("=>")) * Space
-FRArrow = C(P("<=>") + P("=")) * Space
-Equals = C(P("=")) * Space
-Plus = P("+") * Space
-AllColliders = C(P("*all"))
-MolcColliders = C(P("*molcs"))
-IonColliders = C(P("*ions"))
-HeavyColliders = C(P("*heavy"))
-DoubleTilde = Space * P("~~") * Space
+local Space = S(" \n\t")^0
+local Underscore = S("_")
+local Element = ((R("AZ") * R("az")^0) + P("e"))
+local S_letter = P("S")
+local Star = P("*")
+local ElecLevel = (R("az", "AZ", "09"))^-3 -- ^-3 says to match at most 3 occurrences
+local PM = S("+-")
+local Species = C( ((R("ad","fz") * P("-")^0)^0 * (Element * Digit^0)^1)^1 * (PM + (Underscore * (S_letter + ElecLevel)))^0)
+local Tilde = P("~")
+local Dash = P("-") * Space
+local Comma = Space * P(",") * Space
+local Slash = Space * P("/") * Space
+local Colon = P(":") * Space
+local Open = "(" * Space
+local Close = Space * ")" * Space
+local FArrow = C(P("=>")) * Space
+local FRArrow = C(P("<=>") + P("=")) * Space
+local Equals = C(P("=")) * Space
+local Plus = P("+") * Space
+local AllColliders = C(P("*all"))
+local MolcColliders = C(P("*molcs"))
+local IonColliders = C(P("*ions"))
+local HeavyColliders = C(P("*heavy"))
+local DoubleTilde = Space * P("~~") * Space
 
+-- return whatever is needed externally
+return {
+   Space = Space,
+   Open = Open,
+   Close = Close,
+   Plus = Plus,
+   FRArrow = FRArrow,
+   FArrow = FArrow,
+   Number = Number,
+   Species = Species,
+   DoubleTilde = DoubleTilde,
+   Comma = Comma,
+   MolcColliders = MolcColliders,
+   AllColliders = AllColliders,
+   IonColliders = IonColliders,
+   HeavyColliders = HeavyColliders
+}

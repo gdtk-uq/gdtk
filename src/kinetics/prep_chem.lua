@@ -27,7 +27,7 @@
 -- The D code works in SI, so these inputs are transformed at this stage.
 --
 
-require 'reaction'
+local reaction = require 'reaction'
 
 -- We have stored some useful functions in the 'reation' module
 -- Let's unpack them for use here.

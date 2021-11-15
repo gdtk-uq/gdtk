@@ -22,8 +22,6 @@ Last Modified: 17/05/2017
 2021-03-16: PAJ added sleep and checkAllowedNames
 --]]
 
-module(..., package.seeall)
-
 --// The Save Function
 function table.save( tbl, filename )
   local charS,charE = "   ","\n"

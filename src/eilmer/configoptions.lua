@@ -4,7 +4,7 @@
 -- Authors: PAJ, RJG, Kyle D, Nick G, Daryl B and others.
 --
 
-module(..., package.seeall)
+local configoptions = {}
 
 configOptionsHidden = { -- hidden from user
    -- set defaults here
@@ -222,5 +222,7 @@ configOptionsHidden = { -- hidden from user
    end
 } -- end table configOptionsHidden
 
-config = {}
-setmetatable(config, configOptionsHidden)
+configoptions.config = {}
+setmetatable(configoptions.config, configOptionsHidden)
+
+return configoptions

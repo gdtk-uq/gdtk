@@ -1181,7 +1181,7 @@ extern(C) int copyValues(lua_State* L)
     return 0;
 }
 
-void registerGasModel(lua_State* L, int tblIdx)
+void registerGasModel(lua_State* L)
 {
     luaL_newmetatable(L, GasModelMT.toStringz);
 
@@ -1261,7 +1261,7 @@ void registerGasModel(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "binary_diffusion_coefficients");
 
     // Make class visible
-    lua_setfield(L, tblIdx, GasModelMT.toStringz);
+    lua_setglobal(L, GasModelMT.toStringz);
 
     // Make initialisation of GasState table look like a class constructor
     luaL_newmetatable(L, "GasState");
@@ -1274,7 +1274,7 @@ void registerGasModel(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "new");
 
     // Make GasState constructor visible
-    lua_setfield(L, tblIdx, "GasState");
+    lua_setglobal(L, "GasState");
 
     // Set a global function to print values in GasState
     lua_pushcfunction(L, &printValues);

@@ -3,9 +3,11 @@
 -- Authors: PJ, RJG, Kyle D. and Nick G.
 --
 
-module(..., package.seeall)
+local output = {}
 
-function write_control_file(fileName)
+require 'sssoptions'
+
+function output.write_control_file(fileName)
    local f = assert(io.open(fileName, "w"))
    f:write("{\n")
    f:write(string.format('"dt_init": %.18e,\n', config.dt_init))
@@ -114,7 +116,7 @@ function write_control_file(fileName)
    f:close()
 end
 
-function write_config_file(fileName)
+function output.write_config_file(fileName)
    local f = assert(io.open(fileName, "w"))
    f:write("{\n")
    f:write(string.format('"title": "%s",\n', config.title))
@@ -463,14 +465,14 @@ function write_config_file(fileName)
    f:close()
 end
 
-function write_times_file(fileName)
+function output.write_times_file(fileName)
    local f = assert(io.open(fileName, "w"))
    f:write("# tindx sim_time dt_global\n");
    f:write(string.format("%04d %.18e %.18e\n", 0, config.start_time, config.dt_init))
    f:close()
 end
 
-function write_block_list_file(fileName)
+function output.write_block_list_file(fileName)
    local f = assert(io.open(fileName, "w"))
    f:write("# indx type label ncells\n")
    for i = 1, #(fluidBlocks) do
@@ -486,7 +488,7 @@ function write_block_list_file(fileName)
    f:close()
 end
 
-function write_mpimap_file(fileName)
+function output.write_mpimap_file(fileName)
    if not mpiTasks then
       -- The user's input script has not set up mpiTasks, so we need to do it now.
       if config.block_marching then
@@ -510,7 +512,7 @@ function write_mpimap_file(fileName)
    f:close()
 end
 
-function write_fluidBlockArrays_file(fileName)
+function output.write_fluidBlockArrays_file(fileName)
    local f = assert(io.open(fileName, "w"))
    f:write("-- A description of the fluidBlockArrays in Lua code.\n")
    f:write("-- Use dofile() to get the content into your interpreter.\n")
@@ -627,7 +629,7 @@ end
    f:close()
 end -- function write_fluidBlockArrays_file
 
-function write_shock_fitting_helper_files(job)
+function output.write_shock_fitting_helper_files(job)
    print("For shock-fitting, write rails and weights files.")
    for i = 1, #(fluidBlockArrays) do
       local fba = fluidBlockArrays[i]
@@ -658,3 +660,5 @@ function write_shock_fitting_helper_files(job)
       end
    end
 end -- function write_shock_fitting_helper_files
+
+return output

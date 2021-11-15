@@ -410,7 +410,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             registerUnstructuredGrid(L);
             registerSketch(L);
             registerSolidProps(L);
-            registerGasModel(L, -1);
+            registerGasModel(L);
             registeridealgasflowFunctions(L);
             registergasflowFunctions(L);
             registerBBLA(L);
@@ -588,7 +588,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             registerUnstructuredGrid(L);
             registerSketch(L);
             registerSolidProps(L);
-            registerGasModel(L, -1);
+            registerGasModel(L);
             registeridealgasflowFunctions(L);
             registergasflowFunctions(L);
             registerBBLA(L);
@@ -844,11 +844,11 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             registerUnstructuredGrid(L);
             registerSketch(L);
             registerSolidProps(L);
-            registerGasModel(L, -1);
-            registerThermochemicalReactor(L, -1);
-            registerReactionMechanism(L, -1);
-            registerChemistryUpdate(L, -1);
-            registerElectronicallySpecificKinetics(L, -1);
+            registerGasModel(L);
+            registerThermochemicalReactor(L);
+            registerReactionMechanism(L);
+            registerChemistryUpdate(L);
+            registerElectronicallySpecificKinetics(L);
             registeridealgasflowFunctions(L);
             registergasflowFunctions(L);
             registerBBLA(L);

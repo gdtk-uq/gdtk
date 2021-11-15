@@ -4,7 +4,7 @@
 -- Date: 2021-04-08
 --
 
-require 'mechanism'
+local mechanism = require 'mechanism'
 
 userMechs = {}
 userCCMechs = {}

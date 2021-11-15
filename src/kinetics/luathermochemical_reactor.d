@@ -126,7 +126,7 @@ extern(C) int updateThermochemicalState(lua_State* L)
 
 // --------- end: exposed methods ----------------- //
 
-void registerThermochemicalReactor(lua_State* L, int tblIdx)
+void registerThermochemicalReactor(lua_State* L)
 {
     luaL_newmetatable(L, ThermochemicalReactorMT.toStringz);
 
@@ -142,5 +142,5 @@ void registerThermochemicalReactor(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "__call");
 
     // Make class visisble
-    lua_setfield(L, tblIdx, ThermochemicalReactorMT.toStringz);
+    lua_setglobal(L, ThermochemicalReactorMT.toStringz);
 }

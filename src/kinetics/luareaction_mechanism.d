@@ -178,7 +178,7 @@ extern(C) int rate(lua_State* L)
 
 // --------- end: exposed methods ----------------- //
 
-void registerReactionMechanism(lua_State* L, int tblIdx)
+void registerReactionMechanism(lua_State* L)
 {
     luaL_newmetatable(L, ReactionMechanismMT.toStringz);
 
@@ -202,5 +202,5 @@ void registerReactionMechanism(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "rate");
 
     // Make class visible
-    lua_setfield(L, tblIdx, ReactionMechanismMT.toStringz);
+    lua_setglobal(L, ReactionMechanismMT.toStringz);
 }

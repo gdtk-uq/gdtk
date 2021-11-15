@@ -5,11 +5,11 @@
 -- Date: 2015-10-01
 --
 
-module(..., package.seeall)
+local gridpro = {}
 
 -- Keep the following consistent with ws_ptymap.eilmer
 -- The master copy of this is in examples/eilmer/3D/gridpro-import
-gproBCMap = {
+local gproBCMap = {
   [4] = "WALL_SLIP",
   [5] = "WALL_ADIABATIC",
   [6] = "WALL_FIXED_T",
@@ -52,7 +52,7 @@ local function to_eilmer_axis_map(gridpro_ijk)
    return eilmer_ijk
 end
 
-function applyGridproConnectivity(fname, blks)
+function gridpro.applyGridproConnectivity(fname, blks)
    print("Applying block connections from GridPro connectivity file: ", fname)
    local f = assert(io.open(fname, 'r'))
    local line
@@ -128,7 +128,7 @@ function applyGridproConnectivity(fname, blks)
 
 end
 
-function applyGridproBoundaryConditions(fname, blks, bcMap, dim)
+function gridpro.applyGridproBoundaryConditions(fname, blks, bcMap, dim)
    local dim = dim or 3
    f = assert(io.open(fname, "r"))
    local line = f:read("*line")
@@ -206,7 +206,7 @@ function applyGridproBoundaryConditions(fname, blks, bcMap, dim)
 end
 
 
-function to_eilmer_axis_map(gridpro_ijk)
+function gridpro.to_eilmer_axis_map(gridpro_ijk)
    -- Convert from GridPro axis_map string to Eilmer3 axis_map string.
    -- From GridPro manual, Section 7.3.2 Connectivity Information.
    -- Example, 123 --> '+i+j+k'
@@ -223,3 +223,5 @@ function to_eilmer_axis_map(gridpro_ijk)
       axis_map[tonumber(string.sub(gridpro_ijk, 3, 3))]
    return eilmer_ijk
 end
+
+return gridpro

@@ -4,11 +4,8 @@
 -- PJ, 2021-10-04
 --
 
-module(..., package.seeall)
-
-
 -- Class for GridArray objects.
-GridArray = {
+local GridArray = {
    myType = "GridArray"
 }
 
@@ -73,11 +70,11 @@ function GridArray:new(o)
       -- Subdivide the single grid based on numbers of cells.
       -- Note 0-based indexing for vertices and cells in the D-domain.
       local nic_total = o.niv - 1
-      local dnic = math.floor(nic_total/o.nib)
+      local dnic = nic_total // o.nib
       local njc_total = o.njv - 1
-      local dnjc = math.floor(njc_total/o.njb)
+      local dnjc = njc_total // o.njb
       local nkc_total = o.nkv - 1
-      local dnkc = math.floor(nkc_total/o.nkb)
+      local dnkc = nkc_total // o.nkb
       if config.dimensions == 2 then
          nkc_total = 1
          dnkc = 1
@@ -86,7 +83,7 @@ function GridArray:new(o)
       o.nics = {} -- numbers of cells in each subgrid
       local nic_remaining = nic_total
       for ib = 1, o.nib do
-         local nic = math.floor(nic_remaining/(o.nib-ib+1))
+         local nic = nic_remaining // (o.nib-ib+1)
          if (ib == o.nib) then
             -- On last subgrid, just use what's left
             nic = nic_remaining
@@ -97,7 +94,7 @@ function GridArray:new(o)
       o.njcs = {}
       local njc_remaining = njc_total
       for jb = 1, o.njb do
-         local njc = math.floor(njc_remaining/(o.njb-jb+1))
+         local njc = njc_remaining // (o.njb-jb+1)
          if (jb == o.njb) then
             njc = njc_remaining
          end
@@ -110,7 +107,7 @@ function GridArray:new(o)
       else
          local nkc_remaining = nkc_total
          for kb = 1, o.nkb do
-            local nkc = math.floor(nkc_remaining/(o.nkb-kb+1))
+            local nkc = nkc_remaining // (o.nkb-kb+1)
             if (kb == o.nkb) then
                nkc = nkc_remaining
             end
@@ -421,3 +418,7 @@ function GridArray:tojson(o)
    str = str .. '}'
    return str
 end -- GridArray:tojson()
+
+return {
+   GridArray = GridArray
+}

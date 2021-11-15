@@ -2,14 +2,15 @@
 -- Date: 2021-04-08
 --
 
-module(..., package.seeall)
+local mechanism = {}
 
 local pow = math.pow
 local sqrt = math.sqrt
 
-require 'lex_elems'
+local lpeg = require 'lpeg'
+local lex_elems = require 'lex_elems'
 
-function transformRelaxationTime(rt, p, q, db)
+local function transformRelaxationTime(rt, p, q, db)
    local t = {}
    t.model = rt[1]
    if t.model == "Millikan-White" then
@@ -55,7 +56,7 @@ function transformRelaxationTime(rt, p, q, db)
    return t
 end
 
-function calculateDissociationEnergy(dissociating_species, db)
+local function calculateDissociationEnergy(dissociating_species, db)
    -- Calculate the dissociation energy by assuming the species splits
    -- completely into its atomic components. This may require some scrunity
    -- for polyatomic molecules, e.g. CO2
@@ -72,7 +73,7 @@ function calculateDissociationEnergy(dissociating_species, db)
    return D
 end
 
-function buildChemistryCouplingModel(m, dissociating_species, db)
+local function buildChemistryCouplingModel(m, dissociating_species, db)
    -- Coupling models for chemistry vibrational coupling need their parameters
    -- assembled into a table. We do that here, computing any things that they need.
    --
@@ -91,7 +92,7 @@ function buildChemistryCouplingModel(m, dissociating_species, db)
    return ccm
 end
 
-function relaxationTimeToLuaStr(rt)
+local function relaxationTimeToLuaStr(rt)
    local str = ""
    if rt.model == "Millikan-White" then
       str = string.format("{model='Millikan-White', a=%.3f, b=%.6f}", rt.a, rt.b)
@@ -111,7 +112,7 @@ function relaxationTimeToLuaStr(rt)
    return str
 end
 
-function chemistryCouplingTypeToLuaStr(ct)
+local function chemistryCouplingTypeToLuaStr(ct)
    local str = ""
    if ct.model == "ImpartialDissociation" then
       str = string.format("{model='ImpartialDissociation', D=%f, Thetav=%f}", ct.D, ct.Thetav)
@@ -122,7 +123,7 @@ function chemistryCouplingTypeToLuaStr(ct)
    return str
 end
 
-function tableToString(o)
+local function tableToString(o)
    -- Recursively evaluate a table to produce a lua-readable string
    --
    -- Notes: This function assumes that you don't have any "bad" key names
@@ -165,7 +166,7 @@ function tableToString(o)
    end
 end
 
-function mechanismToLuaStr(index, m)
+function mechanism.mechanismToLuaStr(index, m)
    local typeStr
    local argStr
    if m.type == "V-T" then
@@ -212,12 +213,12 @@ G = lpeg.P{ Mechanism,
 
 G = Space * G * Space * -1
 
-function parseMechString(s)
+local function parseMechString(s)
    t = lpeg.match(G, s)
    return t
 end
 
-function validateMechanism(m, i)
+function mechanism.validateMechanism(m, i)
    if type(m[1]) ~= 'string' then
       print("There was an error when parsing mechanism number: ", i)
       print("The first entry should be a string denoting the involved colliders.")
@@ -237,7 +238,7 @@ function validateMechanism(m, i)
    return true
 end
 
-function expandKeywords(keyword, species, db)
+local function expandKeywords(keyword, species, db)
    -- Sometimes we don't want to specify every species in a list. This function defines some handy
    -- aliases for large groups of species, but will also return a table if given a valid species.
    --
@@ -283,7 +284,7 @@ function expandKeywords(keyword, species, db)
    return e
 end
 
-function expandColliders(t, species, db)
+local function expandColliders(t, species, db)
    -- Process the mechanism string to produce a valid table of species specified in the mechanism
    --
    -- Examples:
@@ -307,7 +308,7 @@ function expandColliders(t, species, db)
    return ps
 end
 
-function addUserMechToTable(index, m, mechanisms, species, db)
+function mechanism.addUserMechToTable(index, m, mechanisms, species, db)
    t = parseMechString(m[1])
    ps = expandColliders(t[1], species, db)
    qs = expandColliders(t[2], species, db)
@@ -330,7 +331,7 @@ function addUserMechToTable(index, m, mechanisms, species, db)
    return index
 end
 
-function seekEntriesWithLabel(table, keyname, keyvalue)
+local function seekEntriesWithLabel(table, keyname, keyvalue)
    -- Search through a table of tables, compiling any that have a key named
    -- "keyname" with a value equal to "keyvalue".
    -- 
@@ -348,7 +349,7 @@ function seekEntriesWithLabel(table, keyname, keyvalue)
    return entries
 end
 
-function concatenateTables(t1, t2)
+local function concatenateTables(t1, t2)
    -- Take two tables and stick them together, throwing away key information.
    -- 
    -- Example:
@@ -370,7 +371,7 @@ function concatenateTables(t1, t2)
    return newtable
 end
 
-function addUserChemMechToTable(index, m, mechanisms, species, db, reaction)
+function mechanism.addUserChemMechToTable(index, m, mechanisms, species, db, reaction)
    -- Look through the surface definitions for Chemistry/Vibration coupling
    -- mechanisms. We loop through the reaction_labels table and look for
    -- reactions with matching labels, creating a deep definition of the 
@@ -452,3 +453,5 @@ for _,tStr in ipairs(testStrings) do
    for k,v in pairs(t[2]) do print(k, v) end
 end
 --]=]
+
+return mechanism

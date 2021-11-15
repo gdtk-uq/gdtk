@@ -3,10 +3,8 @@
 -- Authors: RJG and Kyle D.
 --
 
-module(..., package.seeall)
-
 -- Class for SolidBlock construction
-SolidBlock = {
+local SolidBlock = {
    myType = "SolidBlock",
 } -- end SSolidBlock
 
@@ -122,7 +120,7 @@ function SolidBlock:tojson()
    return str
 end -- SolidBlock:tojson()
 
-function SolidBlockArray(t)
+local function SolidBlockArray(t)
    -- Expect one table as argument, with named fields.
    -- Returns an array of blocks defined over a single region.
    local flag = checkAllowedNames(t, {"grid", "initTemperature", "active",
@@ -263,3 +261,8 @@ function SolidBlockArray(t)
    end
    return blockArray
 end -- SolidBlockArray
+
+return {
+   SolidBlock = SolidBlock,
+   SolidBlockArray = SolidBlockArray
+}

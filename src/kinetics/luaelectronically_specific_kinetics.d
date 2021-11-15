@@ -103,7 +103,7 @@ extern(C) int updateElectronicStates(lua_State *L)
     return 0;
 }
 
-void registerElectronicallySpecificKinetics(lua_State* L, int tblIdx)
+void registerElectronicallySpecificKinetics(lua_State* L)
 {
     luaL_newmetatable(L, ElectronicallySpecificKineticsMT.toStringz);
     
@@ -119,5 +119,5 @@ void registerElectronicallySpecificKinetics(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "__call");
 
     // Make class visible.
-    lua_setfield(L, tblIdx, ElectronicallySpecificKineticsMT.toStringz);
+    lua_setglobal(L, ElectronicallySpecificKineticsMT.toStringz);
 }

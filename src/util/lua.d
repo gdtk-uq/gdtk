@@ -72,6 +72,7 @@ int lua_setmetatable(lua_State* L, int idx);
 int lua_next(lua_State *L, int idx);
 
 int lua_isnumber(lua_State* L, int idx);
+int lua_isinteger(lua_State* L, int idx);
 int lua_isstring(lua_State* L, int idx);
 int lua_isuserdata(lua_State* L, int idx);
 int lua_type(lua_State* L, int idx) nothrow;

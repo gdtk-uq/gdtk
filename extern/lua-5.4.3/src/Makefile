@@ -225,7 +225,3 @@ lzio.o: lzio.c lprefix.h lua.h luaconf.h llimits.h lmem.h lstate.h \
 
 # (end of Makefile)
 
-# RJG, 2021-11-15
-# local addition to include lpeg
-lpeg.so : 
-	cd lpeg-1.0.2; make linux

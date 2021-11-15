@@ -282,7 +282,7 @@ public:
         registerUnivariateFunctions(L);
         registerStructuredGrid(L);
         registerUnstructuredGrid(L);
-        registerGasModel(L, -1);
+        registerGasModel(L);
         registeridealgasflowFunctions(L);
         registergasflowFunctions(L);
         if ( luaL_dofile(L, toStringz(fileName)) != 0 ) {

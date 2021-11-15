@@ -14,11 +14,12 @@
 --                  and charge balance
 --]]
 
-module(..., package.seeall)
+local reaction = {}
 
-require 'lex_elems'
+local lpeg = require 'lpeg'
+local lex_elems = require 'lex_elems'
 
-function transformRateConstant(t, coeffs, anonymousCollider, energyModes)
+local function transformRateConstant(t, coeffs, anonymousCollider, energyModes)
    local nc = 0
    for _,c in ipairs(coeffs) do
       nc = nc + c
@@ -97,7 +98,7 @@ function transformRateConstant(t, coeffs, anonymousCollider, energyModes)
    return m
 end
 
-function rateConstantToLuaStr(rc)
+local function rateConstantToLuaStr(rc)
    local str = ""
    if rc.model == 'Arrhenius' then
       str = string.format("{model='Arrhenius', A=%16.12e, n=%f, C=%16.12e, rctIndex=%d}", rc.A, rc.n, rc.C, rc.rctIndex)
@@ -135,74 +136,12 @@ function rateConstantToLuaStr(rc)
    return str
 end
 
-function ecModelToLuaStr(ec)
+local function ecModelToLuaStr(ec)
    return "{}"
 end
 
--- lexical elements for parsing the whole reaction string
--- get common elements from lex_elems.lua
-for k,v in pairs(lex_elems) do
-   _G[k] = v
-   end
--- module-specific elements
-local PressureDependent = Open * Plus * "M" * Space * Close
-local function pdstring() return "pressure dependent" end
 
--- Grammar
-local Participant = lpeg.V"Participant"
-local Reaction = lpeg.V"Reaction"
-local Mechanism = lpeg.V"Mechanism"
-
-G = lpeg.P{ Mechanism,
-	    Mechanism = lpeg.Ct(Reaction * ( FRArrow + FArrow ) * Reaction),
-	    Reaction = lpeg.Ct(Participant * (Plus * Participant)^0 * (PressureDependent / pdstring)^0 ) * Space,
-	    Participant = lpeg.Ct(lpeg.C(Number^0) * Space * Species * Space)
-	 }
-
-G = Space * G * -1
-
-SpeciesG = lpeg.P{ Species }
-
-function parseReactionString(s)
-   t = lpeg.match(G, s)
-   return t
-end
-
-function validateReaction(t)
-   if type(t[1]) ~= 'string' then
-      print("There was an error when parsing reaction number: ", #reactions+1)
-      print("The first entry should be a string denoting the reaction mechanism.")
-      print("Bailing out!")
-      os.exit(1)
-   end
-
-   reac = parseReactionString(t[1])
-   if reac == nil then
-      print("There was an error parsing the reaction string for reaction number: ", #reactions+1)
-      print("It seems the string is badly formed.  The given string is: ")
-      print(t[1])
-      print("Bailing out!")
-      os.exit(1)
-   end
-
-   mass, charge = checkEquationBalances(reac, #reactions+1)
-	    
-   if not mass then
-      print("The mass does not balance.")
-      print("Bailing out!")
-      os.exit(1)
-   end
-
-   if not charge then
-      print("The charge does not balance.")
-      print("Bailing out!")
-      os.exit(1)
-   end
-
-   return true
-end
-
-function checkEquationBalances(r, rnumber)
+local function checkEquationBalances(r, rnumber)
    -- Checks both mass and charge balance
    local elems = {}
    local charge = 0
@@ -268,6 +207,70 @@ function checkEquationBalances(r, rnumber)
 
 end
 
+
+-- lexical elements for parsing the whole reaction string
+-- get common elements from lex_elems.lua
+for k,v in pairs(lex_elems) do
+   _G[k] = v
+   end
+-- module-specific elements
+local PressureDependent = Open * Plus * "M" * Space * Close
+local function pdstring() return "pressure dependent" end
+
+-- Grammar
+local Participant = lpeg.V"Participant"
+local Reaction = lpeg.V"Reaction"
+local Mechanism = lpeg.V"Mechanism"
+
+G = lpeg.P{ Mechanism,
+	    Mechanism = lpeg.Ct(Reaction * ( FRArrow + FArrow ) * Reaction),
+	    Reaction = lpeg.Ct(Participant * (Plus * Participant)^0 * (PressureDependent / pdstring)^0 ) * Space,
+	    Participant = lpeg.Ct(lpeg.C(Number^0) * Space * Species * Space)
+	 }
+
+G = Space * G * -1
+
+SpeciesG = lpeg.P{ Species }
+
+local function parseReactionString(s)
+   t = lpeg.match(G, s)
+   return t
+end
+
+function reaction.validateReaction(t)
+   if type(t[1]) ~= 'string' then
+      print("There was an error when parsing reaction number: ", #reactions+1)
+      print("The first entry should be a string denoting the reaction mechanism.")
+      print("Bailing out!")
+      os.exit(1)
+   end
+
+   reac = parseReactionString(t[1])
+   if reac == nil then
+      print("There was an error parsing the reaction string for reaction number: ", #reactions+1)
+      print("It seems the string is badly formed.  The given string is: ")
+      print(t[1])
+      print("Bailing out!")
+      os.exit(1)
+   end
+
+   mass, charge = checkEquationBalances(reac, #reactions+1)
+	    
+   if not mass then
+      print("The mass does not balance.")
+      print("Bailing out!")
+      os.exit(1)
+   end
+
+   if not charge then
+      print("The charge does not balance.")
+      print("Bailing out!")
+      os.exit(1)
+   end
+
+   return true
+end
+
 -- This function transforms the user's Lua input
 -- into a more verbose form for picking up in D.
 --
@@ -291,7 +294,7 @@ end
 --          efficiencies = {}
 -- }
 --
-function transformReaction(t, species, energyModes, suppressWarnings)
+function reaction.transformReaction(t, species, energyModes, suppressWarnings)
    r = {}
    r.equation = t[1]
    r.type = "elementary"
@@ -443,7 +446,7 @@ function transformReaction(t, species, energyModes, suppressWarnings)
    return r
 end
 
-function arrayIntsToStr(array)
+local function arrayIntsToStr(array)
    local str = "{"
    for _,val in ipairs(array) do
       str = str..string.format(" %d,", val)
@@ -452,7 +455,7 @@ function arrayIntsToStr(array)
    return str
 end
 
-function arrayNumbersToStr(array)
+local function arrayNumbersToStr(array)
    local str = "{"
    for _,val in ipairs(array) do
       str = str..string.format(" %12.6e,", val)
@@ -462,7 +465,7 @@ function arrayNumbersToStr(array)
 end
 
 
-function reacToLuaStr(r, i)
+function reaction.reacToLuaStr(r, i)
    local rstr = string.format("reaction[%d] = {\n", i)
    rstr = rstr .. string.format("  equation = \"%s\",\n", r.equation)
    rstr = rstr .. string.format("  type = \"%s\",\n", r.type)
@@ -497,7 +500,7 @@ function reacToLuaStr(r, i)
    return rstr
 end
 
-function reacToStoichMatrix(spIdx, coeffs, nsp)
+function reaction.reacToStoichMatrix(spIdx, coeffs, nsp)
    -- Combine spIdx and coeffs into single table
    local stoichTab = {}
    for i=1,#spIdx do
@@ -514,7 +517,7 @@ function reacToStoichMatrix(spIdx, coeffs, nsp)
    return str
 end
 
-function effToStr(reac, nsp)
+function reaction.effToStr(reac, nsp)
    local str = ""
    if not reac.anonymousCollider then
       str = str.."0"
@@ -530,3 +533,5 @@ function effToStr(reac, nsp)
    end
    return str
 end
+
+return reaction

@@ -179,7 +179,7 @@ extern(C) int get_entropy(lua_State* L)
 
 // --------- end: exposed methods ----------------- //
 
-void registerEquilibriumCalculator(lua_State* L, int tblIdx)
+void registerEquilibriumCalculator(lua_State* L)
 {
     luaL_newmetatable(L, EquilibriumCalculatorMT.toStringz);
 
@@ -201,5 +201,5 @@ void registerEquilibriumCalculator(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "get_entropy");
 
     // Make class visisble
-    lua_setfield(L, tblIdx, EquilibriumCalculatorMT.toStringz);
+    lua_setglobal(L, EquilibriumCalculatorMT.toStringz);
 }

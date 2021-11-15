@@ -3,10 +3,10 @@
 -- Authors: PJ and RJG
 --
 
-module(..., package.seeall)
+require 'blk_conn'
 
 -- Class for gas dynamics FluidBlock construction.
-FluidBlock = {
+local FluidBlock = {
    myType = "FluidBlock",
 } -- end FluidBlock
 
@@ -252,7 +252,7 @@ function FluidBlock:tojson()
 end -- FluidBlock:tojson()
 
 -- ---------------------------------------------------------------------------
-function SBlock2UBlock(blk)
+local function SBlock2UBlock(blk)
    local origId = blk.id
    local origLabel = blk.label
    -- Let's swap out any exchange_over_full_face BCs and replace
@@ -286,7 +286,7 @@ function SBlock2UBlock(blk)
    fluidBlocksDict[newLabel] = nil
 end -- SBlock2UBlock()
 
-function connectBlocks(blkA, faceA, blkB, faceB, orientation)
+local function connectBlocks(blkA, faceA, blkB, faceB, orientation)
    -- Make a "full-face" connection between a pair of Block objects.
    -- The connection is made by attaching boundary conditions
    -- to each block that reference the other block.
@@ -332,7 +332,7 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
    end
 end -- connectBlocks()
 
-function identifyBlockConnections(blockList, excludeList, tolerance)
+local function identifyBlockConnections(blockList, excludeList, tolerance)
    -- Identify block connections by trying to match corner points.
    -- Parameters (all optional):
    -- blockList: the list of SFluidBlock objects to be included in the search.
@@ -392,3 +392,10 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
       end -- for _,B
    end -- for _,A
 end -- identifyBlockConnections()
+
+return {
+   FluidBlock = FluidBlock,
+   SBlock2UBlock = SBlock2UBlock,
+   connectBlocks = connectBlocks,
+   identifyBlockConnections = identifyBlockConnections
+}

@@ -69,6 +69,8 @@ uninstall:
 
 local:
 	$(MAKE) install INSTALL_TOP=../install
+	cd lpeg-1.0.2; make linux
+	cp lpeg-1.0.2/lpeg.so install/lib/ 
 
 # make may get confused with install/ if it does not support .PHONY.
 dummy:

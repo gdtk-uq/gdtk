@@ -4,10 +4,11 @@
 -- Authors: PJ and RJG
 --
 
-module(..., package.seeall)
+local gridarray = require 'gridarray'
+local GridArray = gridarray.GridArray
 
 -- Class for FluidBlock-Array objects.
-FBArray = {
+local FBArray = {
    myType = "FBArray"
 }
 
@@ -231,7 +232,7 @@ function FBArray:new(o)
 end -- FBArray:new
 
 -- Retain the original behaviour.
-function FluidBlockArray(t)
+local function FluidBlockArray(t)
    print("NOTE: You have called FluidBlockArray{}; prefer FBArray:new{}.")
    o = FBArray:new(t)
    return o.blockArray
@@ -273,3 +274,8 @@ function FBArray:tojson()
    str = str .. '}'
    return str
 end
+
+return {
+   FBArray = FBArray,
+   FluidBlockArray = FluidBlockArray
+}

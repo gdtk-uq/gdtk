@@ -3,9 +3,9 @@
 -- Authors: PJ, RJG and Kyle D.
 --
 
-module(..., package.seeall)
+local history = {}
 
-function setHistoryPoint(args)
+function history.setHistoryPoint(args)
    -- Accepts a variety of arguments:
    --  1. x, y, z coordinates
    --  setHistoryPoint{x=7.9, y=8.2, z=0.0}
@@ -86,7 +86,7 @@ function setHistoryPoint(args)
    return
 end
 
-function setSolidHistoryPoint(args)
+function history.setSolidHistoryPoint(args)
    -- Accepts a variety of arguments:
    --  1. x, y, z coordinates
    --  setSolidHistoryPoint{x=7.9, y=8.2, z=0.0}
@@ -152,3 +152,5 @@ function setSolidHistoryPoint(args)
                        n, ib, i, pos.x, pos.y, pos.z))
    return
 end
+
+return history

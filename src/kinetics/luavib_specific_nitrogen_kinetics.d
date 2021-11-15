@@ -91,7 +91,7 @@ extern(C) int updateNitrogenStates(lua_State *L)
     return 0;
 }
 
-void registerVibSpecNitrogenKinetics(lua_State* L, int tblIdx)
+void registerVibSpecNitrogenKinetics(lua_State* L)
 {
     luaL_newmetatable(L, VibSpecNitrogenKineticsMT.toStringz);
     
@@ -107,5 +107,5 @@ void registerVibSpecNitrogenKinetics(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "__call");
 
     // Make class visible.
-    lua_setfield(L, tblIdx, VibSpecNitrogenKineticsMT.toStringz);
+    lua_setglobal(L, VibSpecNitrogenKineticsMT.toStringz);
 }

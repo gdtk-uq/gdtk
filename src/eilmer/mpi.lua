@@ -3,9 +3,9 @@
 -- Authors: PJ and RJG
 --
 
-module(..., package.seeall)
+local mpi = {}
 
-function mpiDistributeBlocks(args)
+function mpi.mpiDistributeBlocks(args)
    -- Assign blocks to MPI tasks,
    -- keeping a record of the MPI rank (or task) for every block.
    -- This record is stored in the global variable mpiTasks.
@@ -129,7 +129,7 @@ function mpiDistributeBlocks(args)
    return mpiTaskList
 end
 
-function mpiDistributeFBArray(args)
+function mpi.mpiDistributeFBArray(args)
    -- For block-marching mode, assign blocks within a FBArray object to MPI tasks,
    -- keeping a record of the MPI rank (or task) for every block.
    -- This record is stored in the global variable mpiTasks.
@@ -190,3 +190,5 @@ function mpiDistributeFBArray(args)
    -- however, we expect that the caller will ignore this return value.
    return mpiTaskList
 end
+
+return mpi
