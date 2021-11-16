@@ -36,7 +36,7 @@ config.max_step = 80000
 config.dt_init = 1.0e-9
 config.dt_plot = config.max_time/10
 
-require "billig_patch"
+local billig_patch = require "billig_patch"
 bp = billig_patch.make_patch{Minf=M_inf, R=Rc, scale=0.9}
 cf_circum = RobertsFunction:new{end0=true, end1=false, beta=1.1}
 grd = StructuredGrid:new{psurface=bp.patch, niv=61, njv=61,

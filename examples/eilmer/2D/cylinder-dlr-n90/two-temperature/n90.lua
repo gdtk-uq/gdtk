@@ -17,7 +17,7 @@ config.reacting = true
 config.reactions_file = '2T-dissociating-N2.lua'
 config.energy_exchange_file = 'energy-exchange.lua'
 
-require "billig_patch"
+local billig_patch = require "billig_patch"
 R = 0.045 -- m
 bp = billig_patch.make_patch{Minf=Minf, R=R, xc=R, scale=0.95}
 cf = RobertsFunction:new{end0=true, end1=false, beta=1.1}
@@ -27,7 +27,7 @@ grid = StructuredGrid:new{psurface=bp.patch, niv=61, njv=41,
 -- We can leave east and south as slip-walls.
 blk0 = FBArray:new{grid=grid, initialState=initial, label="blk",
 		       bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
-			       north=OutFlowBC_Simple:new{}}, 
+			       north=OutFlowBC_Simple:new{}},
 		       nib=1, njb=4}
 
 -- Set a few more config options.

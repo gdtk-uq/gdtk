@@ -40,7 +40,7 @@ config.reactions_file = 'air-eq.lua'
 config.reacting = true
 
 print("Building grid.")
-require "billig_patch"
+local billig_patch = require "billig_patch"
 R = 31.8e-3  -- radius of sphere, in metres
 M_inf = vx_inf/inflow.a
 print("M_inf=", M_inf)
@@ -50,7 +50,7 @@ grid = StructuredGrid:new{psurface=bp.patch, niv=61, njv=61,
 			  cfList={west=cf_circum, east=cf_circum}}
 blk0 = FBArray:new{grid=grid, initialState=initial, label="blk",
 		       bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
-			       north=OutFlowBC_Simple:new{}}, 
+			       north=OutFlowBC_Simple:new{}},
 		       nib=2, njb=2}
 -- We have left east and south as (default) slip-walls
 
