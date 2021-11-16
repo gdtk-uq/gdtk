@@ -113,7 +113,7 @@ function mpi.mpiDistributeBlocks(args)
       local mpiProcessors = math.max(unpack(mpiTaskList)) + 1
       print("Load balancing - Distribute blocks to CPUs")
       print(string.format("Number of processors   \t \t = %d", mpiProcessors))
-      print(string.format("Ideal cell partitioning   \t = %d cells/proc", totalCells/mpiProcessors))
+      print(string.format("Ideal cell partitioning   \t = %d cells/proc", totalCells//mpiProcessors))
       print(string.format("Smallest partition factor \t = %.3f", minmpiLoads/(totalCells/mpiProcessors)))
       print(string.format("Largest partition factor  \t = %.3f", maxmpiLoads/(totalCells/mpiProcessors)))
       print(string.format("Largest processor load    \t = %.0f cells", maxmpiLoads))
