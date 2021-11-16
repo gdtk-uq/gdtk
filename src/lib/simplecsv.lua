@@ -37,7 +37,7 @@ tonum: whether to convert fields to numbers if possible. Optional. Defaults to t
 null: what value should null fields get. Optional. defaults to ''
 ]]
 
-module(..., package.seeall)
+local scsv = {}
 
 ---------------------------------------------------------------------
 function string:split(sSeparator, nMax, bRegexp)
@@ -71,7 +71,7 @@ function string:split(sSeparator, nMax, bRegexp)
 end
 
 ---------------------------------------------------------------------
-function read(path, sep, tonum, null)
+function scsv.read(path, sep, tonum, null)
     tonum = tonum or true
     sep = sep or ','
     null = null or ''
@@ -95,7 +95,7 @@ function read(path, sep, tonum, null)
 end
 
 ---------------------------------------------------------------------
-function write(path, data, sep)
+function scsv.write(path, data, sep)
     sep = sep or ','
     local file = assert(io.open(path, "w"))
     for i=1,#data do
@@ -109,3 +109,5 @@ function write(path, data, sep)
 end
 
 ---------------------------------------------------------------------
+
+return scsv
