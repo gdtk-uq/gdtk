@@ -102,7 +102,7 @@ extern (C) int gas_model_n_modes(int gm_i)
     }
 }
 
-extern (C) int gas_model_species_name(int gm_i, int isp, char* dest_name, int* n)
+extern (C) int gas_model_species_name_and_length(int gm_i, int isp, char* dest_name, int* n)
 {
     // The isp-th species name will be copied into char* array.
     // It is presumed that sufficient space (n chars, including \0) was allocated previously.
@@ -111,6 +111,20 @@ extern (C) int gas_model_species_name(int gm_i, int isp, char* dest_name, int* n
         const char* src_name = cast(const char*) sname.toStringz;
         strncpy(dest_name, src_name, sname.length);
         *n = cast(int) sname.length;
+        return 0;
+    } catch (Exception e) {
+        stderr.writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_model_species_name(int gm_i, int isp, char* dest_name, int n)
+{
+    // The isp-th species name will be copied into char* array.
+    // It is presumed that sufficient space (n chars, including \0) was allocated previously.
+    try {
+        char* src_name = cast(char*) gas_models[gm_i].species_name(isp).toStringz;
+        strncpy(dest_name, src_name, n);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
