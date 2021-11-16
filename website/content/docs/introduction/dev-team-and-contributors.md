@@ -82,7 +82,7 @@ Meet the principal developers of the simulation codes.
    </div>
    
    <div class="col-sm-12">
-   <b>Nick Gibbons</b> an open-source programmer and numerical simulations expert currently employed
+   <b>Nick Gibbons</b> is a hypersonics expert and open-source programmer currently employed
    as a postdoctoral research fellow at the University of Queensland.
    He received a Bachelor of Mechanical and Aerospace Engineering in 2014,
    and was awarded a Doctor of Philosophy in 2019 for his work on high speed combustion.
