@@ -13,8 +13,9 @@
 --    chem-scheme.lua : the output Lua file for use in eilmer
 --
 
-require 'lex_elems'
-require 'reaction'
+local lex_elems = require 'lex_elems'
+local reaction = require 'reaction'
+local lpeg = require 'lpeg'
 
 local R_U_Cal = 1.9872
 

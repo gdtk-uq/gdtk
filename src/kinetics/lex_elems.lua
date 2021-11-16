@@ -55,6 +55,7 @@ return {
    Space = Space,
    Open = Open,
    Close = Close,
+   Equals = Equals,
    Plus = Plus,
    FRArrow = FRArrow,
    FArrow = FArrow,
