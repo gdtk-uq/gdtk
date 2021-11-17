@@ -16,82 +16,20 @@
 # PJ, 2011-01-11 Eilmer3 version
 #     2015-10-22 Port to Eilmer4
 #     2019-05-16 Ruby version.
+#     2021-11-17 refactored to work with a file of test names.
 
 require 'date'
 
-long_tests = false
-
-test_scripts = []
-test_scripts << "2D/sharp-cone-20-degrees/sg/cone20-test.rb"
-test_scripts << "2D/sharp-cone-20-degrees/sg-implicit/cone20-implicit-test.rb"
-test_scripts << "2D/sharp-cone-20-degrees/sg-mpi/cone20-mpi-test.rb"
-test_scripts << "2D/sharp-cone-20-degrees/usg/cone20-usg-test.rb"
-test_scripts << "2D/sharp-cone-20-degrees/usg-su2/cone20-usg-su2-test.rb"
-test_scripts << "2D/sharp-cone-20-degrees/new-flow-format/cone20-nff-test.rb"
 gpmetis_exe = `which gpmetis`
-if gpmetis_exe.length > 0 then
-  puts "Found gpmetis"
-  test_scripts << "2D/sharp-cone-20-degrees/usg-metis/cone20-usg-metis-test.rb"
-end
-test_scripts << "2D/moving-grid/piston-w-const-vel/simple/piston-test.rb"
-test_scripts << "2D/moving-grid/piston-w-const-vel/simple-2/piston-test.rb"
-test_scripts << "2D/moving-grid/piston-w-const-vel/simple-reverse/piston-test.rb"
-test_scripts << "2D/moving-grid/piston-in-tube/piston-1-block/pit1-test.rb"
-test_scripts << "2D/moving-grid/piston-in-tube/piston-2-block/pit2-test.rb"
-test_scripts << "2D/flat-plate-turbulent-mabey/steady-state-solver/mabey-test.rb"
-# 2021-05-13 PJ Remove adjoint test while Kyle refactors the code.
-# test_scripts << "2D/compression-corner-adjoint/compression-corner-adjoint-test.rb"
-test_scripts << "2D/flat-plate-turbulent-larc/nk-5.45Tw-sa/larc-sa-test.rb"
-test_scripts << "3D/sod-shock-tube/sg/sod-test.rb"
-test_scripts << "3D/sod-shock-tube/usg/sod-usg-test.rb"
-test_scripts << "3D/sod-shock-tube/ideal-air-eq-air/sod-test.rb"
-test_scripts << "3D/connection-test/connection-shared-memory-test.rb"
-test_scripts << "2D/vortex-supersonic/vtx-test.rb"
-test_scripts << "2D/vortex-subsonic/vtx-subsonic-test.rb"
-test_scripts << "2D/reactor-n2/reactor-test.rb"
-test_scripts << "2D/sphere-sawada/fixed-grid/ss3-test.rb"
-test_scripts << "2D/nozzle-conical-back/back-test.rb"
-test_scripts << "2D/channel-with-bump/bump-test.rb"
-test_scripts << "2D/solid/plate/plate-test.rb"
-test_scripts << "2D/manufactured-solution/sg/smoke-tests/mms-euler-test.rb"
-test_scripts << "2D/manufactured-solution/sg/smoke-tests/mms-ns-div-theorem-test.rb"
-test_scripts << "2D/manufactured-solution/sg/smoke-tests/mms-ns-least-sq-at-vtxs-test.rb"
-test_scripts << "2D/manufactured-solution/sg/smoke-tests/mms-ns-least-sq-at-faces-test.rb"
-test_scripts << "2D/manufactured-solution/usg/mms-euler-test.rb"
-test_scripts << "2D/manufactured-solution/steady-state/euler/smoke-test/mms-euler-test.rb"
-test_scripts << "2D/manufactured-solution/steady-state/ns/smoke-test/mms-ns-test.rb"
-test_scripts << "2D/manufactured-solution/steady-state/rans/smoke-test/mms-rans-test.rb"
-test_scripts << "3D/manufactured-solution/steady-state/euler/smoke-test/mms-euler-test.rb"
-test_scripts << "3D/manufactured-solution/steady-state/ns/smoke-test/mms-ns-test.rb"
-test_scripts << "3D/manufactured-solution/steady-state/rans/smoke-test/mms-rans-test.rb"
-test_scripts << "3D/manufactured-solution/steady-state/Spalart-Allmaras/smoke-test/mms-SA-test.rb"
-test_scripts << "2D/cht-manufactured-solution/spatial-verification/smoke-tests/single-thread-test.rb"
-test_scripts << "2D/efield-solver/mes-single/elec-field-test.rb"
-test_scripts << "2D/shock-fitting/shock-tube/sodsf-test.rb"
-test_scripts << "2D/shock-fitting/cylinder/cyl-sf-test.rb"
-test_scripts << "2D/shock-fitting/cylinder-mpi/cyl-sf-mpi-test.rb"
-test_scripts << "2D/oblique-detonation-wave/odw-test.rb"
-test_scripts << "2D/duct-hydrogen-combustion/bittker-test.rb"
-test_scripts << "2D/cylinder-giordano/two-temperature/inf_cyl-test.rb"
-test_scripts << "3D/simple-ramp/sg/ramp-test.rb"
-test_scripts << "2D/cylinder-dlr-n90/cpu-chem/n90-test.rb"
-test_scripts << "2D/cylinder-dlr-n90/cpu-chem/n90-chemkin-test.rb"
-test_scripts << "2D/diffusion/binary-diffusion/bd-test.rb"
-test_scripts << "2D/sphere-lobb/smoke-test/lobb-test.rb"
-test_scripts << "2D/sphere-nonaka/nonaka-test.rb"
-# test_scripts << "2D/radiating-cylinder/Argon/MC/cyl.test"
-test_scripts << "2D/nozzle-shock-tunnel-t4m4/cea/t4m4-test.rb"
-test_scripts << "2D/nozzle-shock-tunnel-t4m4/ceq/t4m4-test.rb"
-test_scripts << "2D/cylinder-axial-flow/sg/cyl50-sg-test.rb"
-test_scripts << "2D/cylinder-axial-flow/usg/cyl50-usg-test.rb"
-test_scripts << "2D/new_flow_format/flow-format-test.rb"
-if long_tests then
-  puts "Do long tests as well as short tests..."
-  # test_scripts << "2D/turb-flat-plate/turb_flat_plate.test"
-  # test_scripts << "2D/nenzfr-Mach4-nozzle-noneq/nozzle-noneq.test"
-  # test_scripts << "2D/Rutowski-hemisphere/Ms_12.70/Rutowski-short.test"
-else
-  puts "Do short tests only..."
+found_gpmetis = gpmetis_exe.length > 0
+
+f = File.new('test-names.txt', 'r')
+lines = f.readlines()
+f.close
+test_scripts = []
+lines.each do |txt|
+  name = txt.chomp
+  test_scripts << name if ((not name.include?("metis")) or found_gpmetis)
 end
 
 time_start = DateTime.now
