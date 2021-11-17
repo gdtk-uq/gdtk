@@ -204,6 +204,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     ConservedQuantities currResiduals = new ConservedQuantities(nConserved);
     number mass_balance = 0.0;
     number omega = 1.0;
+    number theta = GlobalConfig.sssOptions.physicalityCheckTheta;
     number R0 = 0.0;
     number RU = 0.0;
     bool pc_matrix_evaluated = false;
@@ -728,8 +729,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
             // physicality check (currently we only check the conserved mass variable)
             omega = 1.0;
-            if (GlobalConfig.sssOptions.usePhysicalityCheck) {
-                number theta = 0.2;
+            if (GlobalConfig.sssOptions.usePhysicalityCheck) {                
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     int cellCount = 0;
                     auto cqi = blk.myConfig.cqi;

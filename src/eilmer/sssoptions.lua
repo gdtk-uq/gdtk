@@ -19,6 +19,7 @@ sssOptionsHidden = { -- hidden from user
    frozen_limiter_on_lhs = false,
    use_adaptive_preconditioner = false,
    use_physicality_check = false,
+   physicality_check_theta = 0.2,
    use_line_search = false,
    inviscid_cfl = false,
    use_scaling = true, -- always good to scale the linear system

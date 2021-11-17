@@ -716,6 +716,7 @@ struct SteadyStateSolverOptions {
     bool frozenLimiterOnLHS = false;
     bool useAdaptivePreconditioner = false;
     bool usePhysicalityCheck = false;
+    double physicalityCheckTheta = 0.2;
     bool useLineSearch = false;
     bool inviscidCFL = false;
     bool useScaling = true;
@@ -2298,6 +2299,7 @@ void read_control_file()
         ssso.frozenLimiterOnLHS = getJSONbool(sssOptions, "frozen_limiter_on_lhs", ssso.frozenLimiterOnLHS);
         ssso.useAdaptivePreconditioner = getJSONbool(sssOptions, "use_adaptive_preconditioner", ssso.useAdaptivePreconditioner);
         ssso.usePhysicalityCheck = getJSONbool(sssOptions, "use_physicality_check", ssso.usePhysicalityCheck);
+        ssso.physicalityCheckTheta = getJSONdouble(sssOptions, "physicality_check_theta", ssso.physicalityCheckTheta);
         ssso.useLineSearch = getJSONbool(sssOptions, "use_line_search", ssso.useLineSearch);
         ssso.inviscidCFL = getJSONbool(sssOptions, "inviscid_cfl", ssso.inviscidCFL);
         ssso.useScaling = getJSONbool(sssOptions, "use_scaling", ssso.useScaling);
