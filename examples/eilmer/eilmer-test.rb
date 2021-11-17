@@ -64,7 +64,7 @@ test_scripts << "2D/manufactured-solution/steady-state/rans/smoke-test/mms-rans-
 test_scripts << "3D/manufactured-solution/steady-state/euler/smoke-test/mms-euler-test.rb"
 test_scripts << "3D/manufactured-solution/steady-state/ns/smoke-test/mms-ns-test.rb"
 test_scripts << "3D/manufactured-solution/steady-state/rans/smoke-test/mms-rans-test.rb"
-test_scripts << "3D/manufactured-solution/steady-state/Spalart-Allmaras/smoke-test/mms-rans-test.rb"
+test_scripts << "3D/manufactured-solution/steady-state/Spalart-Allmaras/smoke-test/mms-SA-test.rb"
 test_scripts << "2D/cht-manufactured-solution/spatial-verification/smoke-tests/single-thread-test.rb"
 test_scripts << "2D/efield-solver/mes-single/elec-field-test.rb"
 test_scripts << "2D/shock-fitting/shock-tube/sodsf-test.rb"
