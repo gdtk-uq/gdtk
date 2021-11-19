@@ -133,7 +133,8 @@ install: $(PROGRAMS) prep-gas prep-chem chemkin2eilmer libgas
 	- mkdir -p $(BUILD_DIR)/lib
 	- mkdir -p $(BUILD_DIR)/share
 	cp $(PROGRAMS) $(BUILD_DIR)/bin
-	cp $(LUA_DIR)/bin/* $(BUILD_DIR)/bin
+	cp $(LUA_DIR)/install/bin/* $(BUILD_DIR)/bin
+	cp $(LUA_DIR)/install/lib/lpeg.so $(BUILD_DIR)/lib
 	cp -r ../lib/* $(BUILD_DIR)/lib
 	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
 	@echo "Installing to $(INSTALL_DIR)"
@@ -144,7 +145,8 @@ clean:
 	- rm $(PROGRAMS)
 	- rm -r $(BUILD_DIR)/*
 	- rm main_with_rev_string.d
-	- cd $(LUA_DIR); make clean
+	- cd $(LUA_DIR); make clean; rm -r install
+	- cd $(LUA_DIR)/lpeg-1.0.2; rm *.o *.so
 	- cd $(GAS_DIR); make clean; rm libgas.a
 	- cd $(KINETICS_DIR); make clean
 	- cd $(CEQ_DIR); make clean

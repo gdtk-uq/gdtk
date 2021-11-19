@@ -200,7 +200,8 @@ clean:
 	- rm -f ./diffusion/*.o ./diffusion/*.obj
 	- rm -f ./thermo/*.o ./thermo/*.obj
 	- rm -f $(GASDYN_DIR)/*.o $(GASDYN_DIR)/*.obj
-	- cd $(LUA); make clean
+	- cd $(LUA); make clean; rm -r install
+	- cd $(LUA_DIR)/lpeg-1.0.2; rm *.o *.so
 	- cd $(CEQ_DIR); make clean
 	- cd $(UTIL_DIR); make clean
 	- cd $(GEOM_DIR); make clean
