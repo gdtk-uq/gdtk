@@ -2243,6 +2243,13 @@ void gasdynamic_implicit_increment_with_fixed_grid()
         // Phase 02 (maybe) MPI
         exchange_ghost_cell_boundary_data(SimState.time, gtl0, ftl0);
         exchange_ghost_cell_gas_solid_boundary_data();
+        if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
+            exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl0, ftl0);
+        }
+        if (GlobalConfig.viscous) {
+            exchange_ghost_cell_boundary_viscous_gradient_data(SimState.time, to!int(gtl0), to!int(ftl0));
+        }
+
         // Phase 03 LOCAL
         try {
             if (GlobalConfig.apply_bcs_in_parallel) {
@@ -2634,6 +2641,13 @@ void gasdynamic_implicit_increment_with_moving_grid()
         exchange_ghost_cell_geometry_data();
         exchange_ghost_cell_boundary_data(SimState.time, gtl1, ftl0);
         exchange_ghost_cell_gas_solid_boundary_data();
+        if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
+            exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl0, ftl0);
+        }
+        if (GlobalConfig.viscous) {
+            exchange_ghost_cell_boundary_viscous_gradient_data(SimState.time, to!int(gtl0), to!int(ftl0));
+        }
+
         // Phase 05 LOCAL
         try {
             if (GlobalConfig.apply_bcs_in_parallel) {
