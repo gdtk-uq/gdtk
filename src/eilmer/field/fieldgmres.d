@@ -183,9 +183,12 @@ class GMResFieldSolver {
         foreach(i; 0 .. matrix_size) q[i] = r[i]/rnorm;
     
         int niters = nmax_iter;
+        int nprint = nmax_iter/40;
         double residual = 1e99;
+        bool success = true;
         int k;
     
+        write("Called fieldgmres.solve(): ");
         for(k=0; k<niters; k++){
             // Perform Arnoldi Iteration to generate basis vectors
             double[] qk = q[k*matrix_size .. (k+1)*matrix_size];
@@ -257,15 +260,18 @@ class GMResFieldSolver {
             residual = vector_norm(xdiff, n);
             xold[] = xnew[];
     
-            writeln("iter: ", k);
-            //writeln("xnew");
-            //writeln(xnew);
-            writeln("residual: ", residual);
-            writeln("");
+            if (k%nprint==0) write(".");
+            //writeln("iter: ", k);
+            //writeln("residual: ", residual);
+            //writeln("");
     
             if (residual<tol) break;
         }
-        if (residual>=tol) throw new Error("BGMRes failed to converge!");
+        writeln("");
+        if (residual>=tol) success=false;
+        writefln("    Solve Complete: status=%s  iters=%d/%d  residual=%e/%e", success, k, nmax_iter, residual, tol);
+        if (success==false) throw new Error("BGMRes failed to converge!");
+
         xf[] = xnew[];
         return;
     }

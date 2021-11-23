@@ -28,6 +28,7 @@ import fieldexchange;
 
 class ElectricField {
     this(const FluidBlock[] localFluidBlocks, const string field_conductivity_model) {
+        writeln("Initialising Electric Field Solver...");
         N = 0;
         foreach(block; localFluidBlocks){
             block_offsets ~= N;
@@ -60,6 +61,7 @@ class ElectricField {
             gmres = new GMResFieldSolver();
         }
 
+        writeln("    Done.");
         return;
     }
 
@@ -125,6 +127,7 @@ class ElectricField {
                 i += 1;
             }
         }
+
     }
 private:
     immutable int nbands = 5; // 5 for a 2D structured grid

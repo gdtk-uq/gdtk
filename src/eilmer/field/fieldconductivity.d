@@ -29,18 +29,28 @@ class TestConductivity : ConductivityModel{
 
 class ConstantConductivity : ConductivityModel{
 /*
-    Interestingly, as far as the electric potential cares its the gradient of the
-    conductivity that matters, not the conductivity value itself. What this means
-    is that if we want to solve a constant conductivity problem, we can just say
-    that it is equal to one, and get the same answer as any other value.
-
-    For the *current* though, things are different. At that stage we really do need
-    the actual values; but for the moment calculating currents is a post processing
-    thing only.
+    Test with a just constant conductivity.
 */
     this() {}
     final const double opCall(const FlowState fs, const Vector3 pos){
         return 1.0;
+    }
+}
+
+class RaizerConductivity : ConductivityModel{
+/*
+    Test with the formula from: Y. P. Razier, Gas Discharge Physics (Springer-Verlag, 1991)
+     - Valid for air, nitrogen and argon when weakly ionised.
+*/
+    this() {}
+    final const double opCall(const FlowState fs, const Vector3 pos){
+        version(multi_T_gas) {
+            double Tref = fs.gas.T_modes[0].re; // Hmmm. This will crash in single temp
+        } else {
+            double Tref = fs.gas.T.re;
+        }
+        double sigma = 8300.0*exp(-36000.0/Tref);
+        return sigma;
     }
 }
 
@@ -53,6 +63,9 @@ ConductivityModel create_conductivity_model(string name){
         break;
     case "constant":
         conductivity_model = new ConstantConductivity();
+        break;
+    case "raizer":
+        conductivity_model = new RaizerConductivity();
         break;
     case "none":
         throw new Error("User has asked for solve_electric_field but failed to specify a conductivity model.");
