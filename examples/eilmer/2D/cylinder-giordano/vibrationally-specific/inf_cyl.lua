@@ -4,7 +4,7 @@
 --
 -- This is a port of the Eilmer3 example in:
 -- cfcfd3/examples/eilmer3/2D/giordano
--- 
+--
 -- -----------------------------
 -- Some notes from original file
 -- -----------------------------
@@ -39,28 +39,8 @@ p_inf = 50.0 -- Pa, low pressure case
 inflow_gas = FlowState:new{p=p_inf, T=T_inf, T_modes=T_inf}
 velx_inf = M_inf*inflow_gas.a
 
--- Compute populations in number density for first 10 vibrational levels,
--- then convert to mass fractions.
-massf_inf = {}
---anharmonicity constants
-w_e = 235857
-we_xe = 1432.4
-we_ye = -0.226   
---physical parameters  
-h = 6.626*10^(-34) --m^2 kg /s
-c = 2.998*10^8     --m/s
-kb = 1.38*10^(-23) --J/K
-
-Zsum = 0
-
-for i=0,nsp-1 do
-   E_vib = h*c*(w_e*(i-0.5)-we_xe*(i-0.5)^2+we_ye*(i-0.5)^3)
-   Zsum = Zsum + math.exp(-E_vib/(kb*T_inf))
-end
-for i=0,nsp-1 do
-   E_vib = h*c*(w_e*(i-0.5)-we_xe*(i-0.5)^2+we_ye*(i-0.5)^3)
-   massf_inf["N2-vib-"..i] = math.exp(-E_vib/(kb*T_inf))/Zsum
-end
+vsn2 = require 'vib_specific_nitrogen'
+massf_inf = vsn2.massf(nsp, T_inf)
 
 inflow = FlowState:new{p=p_inf, T=T_inf, T_modes=T_inf, velx=velx_inf, massf=massf_inf}
 initial = FlowState:new{p=p_inf/3, T=T_inf, T_modes=T_inf, massf=massf_inf}
