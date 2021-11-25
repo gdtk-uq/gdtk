@@ -20,6 +20,11 @@ that the finer details of user input may change over time.
 These slides are not updated, but rather serve as historical record of activities.
 Instead, check the User Guides and Reference Manuals for the definitive user input.
 
+- [Modelling of multi-physics hypersonic flows with Eilmer](/pdfs/third-franco-oz-hyp-symp-2021-11-25-rjg.pdf), 25 November, 2021.  
+  RJG's 7-minute presentation at the 3rd Franco-Australian Symposium on High Enthalpy and Reacting Flows.
+  This talk covered some recent happenings in Eilmer development and application.
+  As highlights, the talk focused on the super-time-stepping for accelerating CHT simulations,
+  and the work on quantifying electron transpiration cooling effectiveness on a velocity-altitude flight map.
 - [Aerodynamically Driven Moving Mesh Simulations](/pdfs/fabs-flying-cubes-eilmer-meetup-2021-11-25.pdf), 25 November 2021.  
   Fabian Zander's presentation on using Eilmer to simulate a flying cube in the TUSQ light, isentropic compression tunnel.
   This example shows how to couple the rigid-body motion of the cube with the impinging gas flow.
