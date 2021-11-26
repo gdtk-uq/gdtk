@@ -69,7 +69,7 @@ int main(string[] args)
         GlobalConfig.mpi_rank_for_local_task = rank;
         MPI_Comm_size(MPI_COMM_WORLD, &size);
         GlobalConfig.mpi_size = size;
-        scope(exit) { MPI_Finalize(); }
+        scope(success) { MPI_Finalize(); }
         // Make note that we are in the context of an MPI task, presumably, one of many.
         GlobalConfig.in_mpi_context = true;
         GlobalConfig.is_master_task = (GlobalConfig.mpi_rank_for_local_task == 0);
