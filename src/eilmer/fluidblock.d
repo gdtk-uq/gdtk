@@ -1167,18 +1167,18 @@ public:
         shared int interpolation_order_save = GlobalConfig.interpolation_order;
         myConfig.interpolation_order = to!int(flowJacobian.spatial_order);
 
-        version(complex_numbers) { } // do nothing
-        else {
-            if (myConfig.interpolation_order != interpolation_order_save) {
-                foreach(cell; cells) { evalRHS(0, 0, cell.cell_list, cell.face_list, cell); }
-            }
-        }
-
         // fill out the rows of the Jacobian for a cell
         if (myConfig.viscous) {
             foreach(cell; cells) { cell.grad_save.copy_values_from(cell.grad); }
         }
         foreach(cell; cells) { cell.Q_save.copy_values_from(cell.Q); }
+
+        version(complex_numbers) { } // do nothing
+        else {
+            // the real-valued finite difference needs a base residual (R0)
+            foreach(cell; cells) { evalRHS(0, 0, cell.cell_list, cell.face_list, cell); }
+        }
+
         foreach(cell; cells) { evaluate_cell_contribution_to_jacobian(cell); }
 
         // add boundary condition corrections to boundary cells
