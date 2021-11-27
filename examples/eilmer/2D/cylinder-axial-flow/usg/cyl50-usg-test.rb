@@ -28,10 +28,11 @@ class TestCyl50_USG < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    # Revised 2021-08-06, PJ.
+    # Revised 2021-08-06, 2021-11-27 PJ.
     # For the transient code with explicit updates, expect 187980 steps.
-    # It is very much lower with the implicit update scheme.
-    assert((steps - 2011).abs < 30, "Failed to take correct number of steps.")
+    # It is very much lower with the implicit update scheme and slightly
+    # sensitive to the model of the boundary condition.
+    assert((steps - 2044).abs < 50, "Failed to take correct number of steps.")
   end
 
   def test_2_peak_T_in_boundary_layer
