@@ -1107,7 +1107,8 @@ public:
         // at this point as well for convenience, we need them
         // when we apply the boundary condition corrections later
         foreach ( bndary; bc ) {
-            if ( bndary.type == "exchange_using_mapped_cells" || bndary.type == "exchange_over_full_face") { continue; }
+            if (!bndary.ghost_cell_data_available) { continue; }
+            if (bndary.type == "exchange_using_mapped_cells" || bndary.type == "exchange_over_full_face") { continue; }
             foreach ( iface, face; bndary.faces) {
                 FVCell ghost_cell; FVCell cell;
                 if (bndary.outsigns[iface] == 1) {
@@ -1269,6 +1270,7 @@ public:
         int gtl = 0; int ftl = 1;
 
         foreach ( bndary; bc ) {
+            if (!bndary.ghost_cell_data_available) { continue; }
             if ( bndary.type == "exchange_using_mapped_cells" || bndary.type == "exchange_over_full_face") { continue; }
             foreach ( bi, bface; bndary.faces) {
                 FVCell ghost_cell; FVCell pcell;
