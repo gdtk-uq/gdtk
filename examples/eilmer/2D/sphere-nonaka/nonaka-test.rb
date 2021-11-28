@@ -34,7 +34,7 @@ class TestNonaka < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    assert((steps - 4749).abs < 100, "Failed to take correct number of steps.")
+    assert((steps - 4713).abs < 100, "Failed to take correct number of steps.")
   end
 
   def test_2_shock_stand_off
