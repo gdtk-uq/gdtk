@@ -4,7 +4,8 @@ import std.json;
 import std.string;
 import std.conv;
 
-import std.range : iota;
+import std.range : iota, enumerate;
+import std.algorithm.iteration : splitter;
 import std.array;
 import std.traits : isNumeric;
 import std.file: write, read;
@@ -236,11 +237,9 @@ T[] from_binary(T)(ubyte[] dat_bytes, const size_t size, const bool binary, cons
             val = dat_bytes[idx*data_size .. (idx+1)*data_size].value!T;
         }
     } else {
-        char* dat_cstr = cast(char*) dat_bytes;
-        string dat_str = cast(string) dat_cstr[0..strlen(dat_cstr)];
-        auto dat_items = split(dat_str, delimiter);
-        foreach (idx, ref val; buffer) {
-            formattedRead(dat_items[idx], "%s", val);
+        string dat_str = cast(string) dat_bytes;
+        foreach (idx, data; dat_str.splitter().enumerate() ) {
+            formattedRead(data, "%s", buffer[idx]);
         }
     }
     return buffer;
