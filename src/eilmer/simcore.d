@@ -1057,6 +1057,7 @@ int integrate_in_time(double target_time_as_requested)
             // 2.5 Update electric field solution (if needed)
             if (GlobalConfig.solve_electric_field){
                 eField.solve_efield(localFluidBlocks);
+                eField.compute_boundary_current(localFluidBlocks);
             }
 
             // 3.0 Update the time record and (occasionally) print status.

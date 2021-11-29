@@ -129,6 +129,40 @@ class ElectricField {
         }
 
     }
+    void compute_boundary_current(FluidBlock[] localFluidBlocks) {
+    /*
+        Loop over the boundaries of the domain and compute the total electrical current flowing in and out.
+        We put the contributions of each face into different buckets depending on their sign, negative means
+        current flow in and positive out.
+
+        Notes:
+         - TODO: MPI
+
+        @author: Nick Gibbons
+    */
+        double Iin = 0.0;
+        double Iout = 0.0;
+
+        writeln("Called field.compute_boundary_current() ...");
+        foreach(blkid, block; localFluidBlocks){
+            foreach(cell; block.cells){
+                foreach(io, face; cell.iface){
+                    if (face.is_on_boundary) {
+                        double sign = cell.outsign[io];
+                        auto field_bc = field_bcs[blkid][face.bc_id];
+                        double I = field_bc.compute_current(sign, face, cell);
+                        if (I<0.0) {
+                            Iin -= I;
+                        } else if (I>0.0) {
+                            Iout += I;
+                        }
+                    }
+                }
+            }
+        }
+        writefln("    Current in:  %f (A/m)", Iin);
+        writefln("    Current out: %f (A/m)", Iout);
+	}
 private:
     immutable int nbands = 5; // 5 for a 2D structured grid
     immutable bool precondition = true;

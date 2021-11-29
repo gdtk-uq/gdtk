@@ -25,6 +25,7 @@ import bc.ghost_cell_effect.full_face_copy;
 
 interface FieldBC {
     void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio);
+    double compute_current(const double sign, const FVInterface face, const FVCell cell);
 }
 
 class ZeroNormalGradient : FieldBC {
@@ -35,6 +36,9 @@ class ZeroNormalGradient : FieldBC {
         Akk = 0.0;
         Ako = 0.0;
         Aio = -1;
+    }
+    final double compute_current(const double sign, const FVInterface face, const FVCell cell){
+        return 0.0;
     }
 }
 
@@ -54,6 +58,14 @@ class FixedField : FieldBC {
         Akk = -1.0*S/d*sigma;
         Ako = 0.0;
         Aio = -1;
+    }
+    final double compute_current(const double sign, const FVInterface face, const FVCell cell){
+        double S = face.length.re;
+        double d = distance_between(face.pos, cell.pos[0]);
+        double phigrad = (value - cell.electric_potential)/d; // This implicitly points out of the domain.
+        double sigma = conductivity_model(face.fs, face.pos);
+        double I = sigma*phigrad*S; // convert from current density vector j to current I
+        return I;
     }
 private:
     double value;
@@ -76,6 +88,15 @@ class FixedField_Test : FieldBC {
         Akk = -1.0*S/d*sigma;
         Ako = 0.0;
         Aio = -1;
+    }
+    final double compute_current(const double sign, const FVInterface face, const FVCell cell){
+        double S = face.length.re;
+        double d = distance_between(face.pos, cell.pos[0]);
+        double phi = test_field(face.pos.x.re, face.pos.y.re);
+        double phigrad = (phi - cell.electric_potential)/d; // This implicitly points out of the domain.
+        double sigma = conductivity_model(face.fs, face.pos);
+        double I = sigma*phigrad*S;
+        return I;
     }
 private:
     ConductivityModel conductivity_model;
@@ -100,6 +121,14 @@ class FixedGradient_Test : FieldBC {
         Akk = 0.0;
         Ako = 0.0;
         Aio = -1;
+    }
+    final double compute_current(const double sign, const FVInterface face, const FVCell cell){
+        double S = face.length.re;
+        Vector3 phigrad = test_field_gradient(face.pos.x.re, face.pos.y.re);
+        number phigrad_dot_n = sign*phigrad.dot(face.n); // TODO: Should this be negative sign?
+        double sigma = conductivity_model(face.fs, face.pos);
+        double I = sigma*phigrad_dot_n.re*S;
+        return I;
     }
 private:
     ConductivityModel conductivity_model;
@@ -160,6 +189,9 @@ class SharedField : FieldBC {
         Ako =  1.0*S/d*sigma;
         Akk = -1.0*S/d*sigma;
         bk = 0.0;
+    }
+    final double compute_current(const double sign, const FVInterface face, const FVCell cell){
+        return 0.0;
     }
 private:
     ConductivityModel conductivity_model;
@@ -237,6 +269,9 @@ class MPISharedField : FieldBC {
         Ako =  1.0*S/d*sigma;
         Akk = -1.0*S/d*sigma;
         bk = 0.0;
+    }
+    final double compute_current(const double sign, const FVInterface face, const FVCell cell){
+        return 0.0;
     }
 private:
     ConductivityModel conductivity_model;

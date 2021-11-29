@@ -150,7 +150,7 @@ public:
     AuxCellData[] aux_cell_data;
 
     // Electromagnetic Field Variables
-    number electric_potential;
+    double electric_potential;
 
     // Shape sensitivity calculator workspace
     FVCell[] cell_list;            // list of cells in the residual stencil
