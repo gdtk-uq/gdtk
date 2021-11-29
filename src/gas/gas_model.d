@@ -301,7 +301,7 @@ public:
         }
     }
     @nogc
-    void binary_diffusion_coefficients(GasState Q, ref number[][] D)
+    void binary_diffusion_coefficients(const GasState Q, ref number[][] D)
     {
         // Calling this (optional) method without overriding it should be an error
         // But the report to the user should depend on what they are trying to do

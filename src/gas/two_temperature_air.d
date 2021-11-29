@@ -590,7 +590,7 @@ public:
         return e_ve;
     }
     @nogc
-    override void binary_diffusion_coefficients(GasState Q, ref number[][] D)
+    override void binary_diffusion_coefficients(const GasState Q, ref number[][] D)
     {
         debug{ assert(D.length==_n_species); }
 

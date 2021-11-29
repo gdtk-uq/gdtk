@@ -233,7 +233,7 @@ public:
         gs.k_modes[0] = k_vib + k_E;
     }
 
-    @nogc void binaryDiffusionCoefficients(GasState gs, ref number[][] D)
+    @nogc void binaryDiffusionCoefficients(const GasState gs, ref number[][] D)
     {
         // TODO: Think about "p" in this equation.
         // Should it be total pressure, or bath pressure of binary interactors only?
@@ -264,7 +264,7 @@ private:
     bool[][] mIsCoulombCollision;
 
     @nogc
-    number electronPressureCorrection(GasState gs)
+    number electronPressureCorrection(const GasState gs)
     {
     /*
         Compute a correction factor for the collision cross-sections of the charged species,
@@ -295,7 +295,7 @@ private:
     }
 
     @nogc
-    void computeDelta11(GasState gs)
+    void computeDelta11(const GasState gs)
     {
         number logLambda = 1.0;
         if (mElectronIdx != -1) logLambda = electronPressureCorrection(gs);
@@ -328,7 +328,7 @@ private:
     }
 
     @nogc
-    void computeDelta22(GasState gs)
+    void computeDelta22(const GasState gs)
     {
         number logLambda = 1.0;
         if (mElectronIdx != -1) logLambda = electronPressureCorrection(gs);

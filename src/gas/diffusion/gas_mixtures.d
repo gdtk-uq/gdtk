@@ -64,7 +64,7 @@ public:
         mThermCond.update_thermal_conductivity(gs);
     }
 
-    @nogc void binaryDiffusionCoefficients(GasState gs, ref number[][] D)
+    @nogc void binaryDiffusionCoefficients(const GasState gs, ref number[][] D)
     {
         mBDC.compute_bdc(gs, D);
     }

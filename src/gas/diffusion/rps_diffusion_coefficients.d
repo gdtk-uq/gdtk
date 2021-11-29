@@ -50,7 +50,7 @@ public:
         }
     }
 
-    void compute_bdc(GasState Q, ref number[][] D)
+    void compute_bdc(const GasState Q, ref number[][] D)
     {
         // Parameters from Neufeld et al. expression.
         // See eqn (4.67) in RJG PhD thesis.

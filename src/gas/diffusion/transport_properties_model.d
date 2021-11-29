@@ -14,6 +14,6 @@ import gas : GasState;
 interface TransportPropertiesModel {
 public:
     @nogc void updateTransProps(GasState gs);
-    @nogc void binaryDiffusionCoefficients(GasState gs, ref number[][] D);
+    @nogc void binaryDiffusionCoefficients(const GasState gs, ref number[][] D);
 }
 
