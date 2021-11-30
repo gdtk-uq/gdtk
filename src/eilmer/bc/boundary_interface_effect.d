@@ -71,6 +71,9 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
     case "zero_velocity":
         newBIE = new BIE_ZeroVelocity(blk_id, boundary);
         break;
+    case "zero_slip_wall_velocity":
+        newBIE = new BIE_ZeroSlipWallVelocity(blk_id, boundary);
+        break;
     case "translating_surface":
         Vector3 v_trans = getJSONVector3(jsonData, "v_trans", Vector3(0.0,0.0,0.0));
         newBIE = new BIE_TranslatingSurface(blk_id, boundary, v_trans);
@@ -541,6 +544,57 @@ class BIE_ZeroVelocity : BoundaryInterfaceEffect {
         }
     } // end apply_structured_grid()
 } // end class BIE_ZeroVelocity
+
+
+class BIE_ZeroSlipWallVelocity : BoundaryInterfaceEffect {
+    // This boundary interface effect should work for both moving and fixed grids
+    // because the grid velocity at the face should be already set appropriately.
+    this(int id, int boundary)
+    {
+        super(id, boundary, "ZeroSlipWallVelocity");
+    }
+
+    override string toString() const
+    {
+        return "ZeroSlipWallVelocity()";
+    }
+
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto gmodel = blk.myConfig.gmodel;
+        BoundaryCondition bc = blk.bc[which_boundary];
+	FlowState fs = f.fs;
+	fs.vel.set(f.gvel);
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+        auto gmodel = blk.myConfig.gmodel;
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            FlowState fs = f.fs;
+            fs.vel.set(f.gvel);
+        } // end foreach face
+    }
+
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        f.fs.vel.set(f.gvel);
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            f.fs.vel.set(f.gvel);
+        }
+    } // end apply_structured_grid()
+} // end class BIE_ZeroSlipWallVelocity
 
 
 class BIE_TranslatingSurface : BoundaryInterfaceEffect {

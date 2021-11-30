@@ -296,6 +296,13 @@ function ZeroVelocity:tojson()
    return str
 end
 
+ZeroSlipWallVelocity = BoundaryInterfaceEffect:new()
+ZeroSlipWallVelocity.type = "zero_slip_wall_velocity"
+function ZeroSlipWallVelocity:tojson()
+   local str = string.format('          {"type" : "%s"}', self.type)
+   return str
+end
+
 TranslatingSurface = BoundaryInterfaceEffect:new{v_trans=nil}
 -- Note that we are expecting v_trans as a table of 3 floats, or a Vector3 object.
 TranslatingSurface.type = "translating_surface"
@@ -749,7 +756,7 @@ function WallBC_NoSlip_FixedT0:new(o)
    o.ghost_cell_data_available = true
    o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroSlipWallVelocity:new(),
 					   FixedT:new{Twall=o.Twall}}
 
    if o.catalytic_type == "fixed_composition" then
@@ -798,7 +805,7 @@ function WallBC_NoSlip_FixedT1:new(o)
    o.ghost_cell_data_available = false
    o.is_wall_with_viscous_effects = true
    o.preReconAction = {}
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroSlipWallVelocity:new(),
 					   FixedT:new{Twall=o.Twall}}
 
    if o.catalytic_type == "fixed_composition" then
@@ -846,7 +853,7 @@ function WallBC_NoSlip_UserDefinedT:new(o)
    o.ghost_cell_data_available = true
    o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroSlipWallVelocity:new(),
                                            UserDefinedInterface:new{fileName=o.Twall}}
 
    if o.catalytic_type == "fixed_composition" then
@@ -896,7 +903,7 @@ function WallBC_ThermionicEmission:new(o)
    o.ghost_cell_data_available = true
    o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroSlipWallVelocity:new(),
       ThermionicRadiativeEquilibrium:new{emissivity=o.emissivity, Ar=o.Ar, phi=o.phi,
                                   ThermionicEmissionActive=o.ThermionicEmissionActive,
                                   catalytic_type=o.catalytic_type}}
@@ -926,7 +933,7 @@ function WallBC_NoSlip_Adiabatic0:new(o)
    o.ghost_cell_data_available = true
    o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroSlipWallVelocity:new() }
 
    -- For the adiabatic wall we only need an UpdateThermoTransCoeffs if catalytic effects are present
    if o.catalytic_type == "fixed_composition" then
@@ -973,7 +980,7 @@ function WallBC_NoSlip_Adiabatic1:new(o)
    o.ghost_cell_data_available = false
    o.is_wall_with_viscous_effects = true
    o.preReconAction = {}
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroSlipWallVelocity:new() }
 
    -- For the adiabatic wall we only need an UpdateThermoTransCoeffs if catalytic effects are present
    if o.catalytic_type == "fixed_composition" then
@@ -1642,7 +1649,7 @@ function WallBC_AdjacentToSolid:new(o)
                                                  orientation=o.orientation},
                         InternalCopyThenReflect:new() }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(),
-                                           ZeroVelocity:new(),
+                                           ZeroSlipWallVelocity:new(),
                                            TemperatureFromGasSolidInterface:new{otherBlock=o.otherBlock,
                                                                                 otherFace=o.otherFace,
                                                                                 orientation=o.orientation},
