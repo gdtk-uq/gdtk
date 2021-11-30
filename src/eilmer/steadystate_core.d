@@ -1347,6 +1347,7 @@ double determine_min_cfl(double dt)
 void evalRHS(double pseudoSimTime, int ftl)
 {
     fnCount++;
+    int gtl = 0;
 
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.clear_fluxes_of_conserved_quantities();
@@ -1356,13 +1357,26 @@ void evalRHS(double pseudoSimTime, int ftl)
     foreach (blk; localFluidBlocks) {
         blk.applyPreReconAction(pseudoSimTime, 0, ftl);
     }
-    
+
     // We don't want to switch between flux calculator application while
     // doing the Frechet derivative, so we'll only search for shock points
     // at ftl = 0, which is when the F(U) evaluation is made.
     if (ftl == 0 && GlobalConfig.do_shock_detect) { detect_shocks(0, ftl); }
 
-    int gtl = 0;
+    // We need to apply the copy_cell_data BIE at this point to allow propagation of
+    // "shocked" cell information (fs.S) to the boundary interface BEFORE the convective
+    // fluxes are evaluated. This is important for a real-valued Frechet derivative
+    // with adaptive fluxes, to ensure that each interface along the boundary uses a consistent flux
+    // calculator for both the baseline residual R(U) and perturbed residual R(U+dU) evaluations.
+    // [TODO] KD 2021-11-30 This is a temporary fix until a more formal solution has been decided upon.
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        foreach(boundary; blk.bc) {
+            if (boundary.preSpatialDerivActionAtBndryFaces[0].desc == "CopyCellData") {
+                boundary.preSpatialDerivActionAtBndryFaces[0].apply(pseudoSimTime, gtl, ftl);
+            }
+        }
+    }
+
     bool allow_high_order_interpolation = true;
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.convective_flux_phase0(allow_high_order_interpolation, gtl);
