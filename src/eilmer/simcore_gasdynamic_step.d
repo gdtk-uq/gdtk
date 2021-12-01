@@ -2349,7 +2349,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                             }
                         } else {
                             // Scale the perturbation on the magnitude of the conserved quantity.
-                            double h = 1.0e-5*(fabs(U0.vec[j]) + 1.0);
+                            double h = 1.0e-6*(fabs(U0.vec[j]) + 1.0);
                             // Perturb one quantity.
                             U0.vec[j] += h;
                             cell.decode_conserved(gtl0, ftl0, blk.omegaz);
