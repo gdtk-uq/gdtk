@@ -1583,10 +1583,11 @@ string update_enum(string key, string field, string enum_from_name)
 {
     return "{ // start new block scope
     auto mySaveValue = GlobalConfig."~field~";
+    string name = jsonData[\""~key~"\"].str;
     try {
-        string name = jsonData[\""~key~"\"].str;
         GlobalConfig."~field~" = "~enum_from_name~"(name);
     } catch (Exception e) {
+        writeln(\"Warning, invalid name for config."~field~": \"~name);
         GlobalConfig."~field~" = mySaveValue;
     }
     }";
