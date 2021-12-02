@@ -357,6 +357,7 @@ static int getfirst (TTree *tree, const Charset *follow, Charset *firstset) {
         cs_complement(firstset);
         return 1;
       }
+      __attribute__ ((fallthrough)); // Supress warning from -Wimplicit-fallthrough
       /* else go through */
     }
     case TBehind: {  /* instruction gives no new information */
