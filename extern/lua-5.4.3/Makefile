@@ -51,8 +51,13 @@ R= $V.3
 # Targets start here.
 all:	$(PLAT)
 
-$(PLATS) help test clean:
+$(PLATS) help test:
 	@cd src && $(MAKE) $@
+
+clean:
+	@cd src && $(MAKE) clean
+	@cd lpeg-1.0.2 && $(MAKE) clean
+	rm -rf install
 
 install: dummy
 	cd src && $(MKDIR) $(INSTALL_BIN) $(INSTALL_INC) $(INSTALL_LIB) $(INSTALL_MAN) $(INSTALL_LMOD) $(INSTALL_CMOD)
