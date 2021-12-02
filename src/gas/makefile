@@ -31,9 +31,9 @@ TEST_PROGRAMS := chemkin_therm_cond_test chemkin_viscosity_test cea_therm_cond_t
 	electronically_specific_gas_test \
 	two_temperature_gasgiant_test
 
-LUA := ../../extern/lua-5.4.3
-LIBLUA := $(LUA)/install/lib/liblua.a
-LIBLUAPATH := $(LUA)/lib
+LUA_DIR := ../../extern/lua-5.4.3
+LIBLUA := $(LUA_DIR)/install/lib/liblua.a
+LIBLUAPATH := $(LUA_DIR)/lib
 
 CEQ_DIR := ../extern/ceq/source
 LIBCEQ := $(CEQ_DIR)/libceq.a
@@ -200,8 +200,7 @@ clean:
 	- rm -f ./diffusion/*.o ./diffusion/*.obj
 	- rm -f ./thermo/*.o ./thermo/*.obj
 	- rm -f $(GASDYN_DIR)/*.o $(GASDYN_DIR)/*.obj
-	- cd $(LUA); make clean; rm -r install
-	- cd $(LUA_DIR)/lpeg-1.0.2; rm *.o *.so
+	- cd $(LUA_DIR); make clean
 	- cd $(CEQ_DIR); make clean
 	- cd $(UTIL_DIR); make clean
 	- cd $(GEOM_DIR); make clean
@@ -238,7 +237,7 @@ libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(KINETICS_FILES) \
 		-L-L=$(INSTALL_DIR)/lib $(DLINKFLAGS)
 
 $(LIBLUA):
-	cd $(LUA); make $(PLATFORM) local
+	cd $(LUA_DIR); make $(PLATFORM) local
 
 $(LIBCEQ):
 	cd $(CEQ_DIR); make

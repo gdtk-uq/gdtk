@@ -145,8 +145,7 @@ clean:
 	- rm $(PROGRAMS)
 	- rm -r $(BUILD_DIR)/*
 	- rm main_with_rev_string.d
-	- cd $(LUA_DIR); make clean; rm -r install
-	- cd $(LUA_DIR)/lpeg-1.0.2; rm *.o *.so
+	- cd $(LUA_DIR); make clean;
 	- cd $(GAS_DIR); make clean; rm libgas.a
 	- cd $(KINETICS_DIR); make clean
 	- cd $(CEQ_DIR); make clean

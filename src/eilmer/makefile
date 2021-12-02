@@ -484,8 +484,7 @@ clean:
 	- rm -f dgd-for-mech4480.tgz
 	- rm -f dgd-module
 	- cd $(OPENMPI_DIR); make clean
-	- cd $(LUA_DIR); make clean; rm -r install
-	- cd $(LUA_DIR)/lpeg-1.0.2; rm *.o *.so
+	- cd $(LUA_DIR); make clean
 	- cd $(GEOM_DIR); make clean
 	- cd $(GZIP_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm -f libgas.a
