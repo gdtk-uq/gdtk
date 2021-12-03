@@ -39,7 +39,7 @@ class TestLobb < Test::Unit::TestCase
       end
     end
     # steps observed for simulation with backward-euler update at 2021-11-28
-    assert((steps - 15530).abs < 100, "Failed to take correct number of steps.")
+    assert((steps - 15530).abs < 140, "Failed to take correct number of steps.")
   end
 
   def test_2_shock_stand_off
