@@ -733,7 +733,7 @@ function WallBC_WithSlip2:new(o)
 end
 
 -- Select the default slip-wall boundary condition flavour.
-WallBC_WithSlip = WallBC_WithSlip1
+WallBC_WithSlip = WallBC_WithSlip0
 
 
 WallBC_NoSlip_FixedT0 = BoundaryCondition:new()
@@ -831,7 +831,7 @@ function WallBC_NoSlip_FixedT1:new(o)
    return o
 end
 
-WallBC_NoSlip_FixedT = WallBC_NoSlip_FixedT1
+WallBC_NoSlip_FixedT = WallBC_NoSlip_FixedT0
 
 WallBC_NoSlip_UserDefinedT = BoundaryCondition:new()
 WallBC_NoSlip_UserDefinedT.type = "wall_no_slip_user_defined_t"
@@ -1008,7 +1008,7 @@ function WallBC_NoSlip_Adiabatic1:new(o)
    return o
 end
 
-WallBC_NoSlip_Adiabatic = WallBC_NoSlip_Adiabatic1
+WallBC_NoSlip_Adiabatic = WallBC_NoSlip_Adiabatic0
 
 WallBC_TranslatingSurface_FixedT = BoundaryCondition:new()
 WallBC_TranslatingSurface_FixedT.type = "wall_translating_surface_fixed_t"
