@@ -32,11 +32,11 @@ function vsn2.massf(nsp, T)
    Zsum = 0
    --
    for i=0,nsp-1 do
-      E_vib = h*c*(w_e*(i-0.5)-we_xe*(i-0.5)^2+we_ye*(i-0.5)^3)
+      E_vib = h*c*(w_e*(i+0.5)-we_xe*(i+0.5)^2+we_ye*(i+0.5)^3)
       Zsum = Zsum + math.exp(-E_vib/(kb*T))
    end
    for i=0,nsp-1 do
-      E_vib = h*c*(w_e*(i-0.5)-we_xe*(i-0.5)^2+we_ye*(i-0.5)^3)
+      E_vib = h*c*(w_e*(i+0.5)-we_xe*(i+0.5)^2+we_ye*(i+0.5)^3)
       massf["N2-vib-"..i] = math.exp(-E_vib/(kb*T))/Zsum
    end
    return massf

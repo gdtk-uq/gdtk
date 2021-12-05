@@ -31,12 +31,14 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
     // Keep a reference to the specific gas model
     // so that we can dip into it for specialized data.
     VibSpecificNitrogen gm;
+    number[] dRhoDt; // Time derivative of the species densities, kg/s/m^^3.
 
     this(string fname, GasModel gmodel)
     {
         super(gmodel); // hang on to a reference to the gas model
         gm = cast(VibSpecificNitrogen) gmodel;
-        assert(gm, "Oops, wrong gas model; should have been VibSpecificNitrogen.");
+        if (!gm) { throw new Error("Oops, wrong gas model; should have been VibSpecificNitrogen."); }
+        dRhoDt.length = gm.numVibLevels;
     }
 
     @nogc
@@ -46,82 +48,82 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
     {
         int nsteps = 10;
         double dt = tInterval/nsteps;
+        //
+        foreach(step; 0 .. nsteps) {
+            number rhoErr = computeDrhoDt(Q, dRhoDt);
+            foreach (i; 0 .. gm.numVibLevels) { Q.massf[i] += dRhoDt[i]/Q.rho * dt; }
+            scale_mass_fractions(Q.massf, 1.0e-6, 1.0e-3);
+            _gmodel.update_thermo_from_rhou(Q);
+            _gmodel.update_sound_speed(Q);
+        }
+    } // end opCall
+
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source)
+    {
+        number rhoErr = computeDrhoDt(Q, source);
+    }
+
+    @nogc number computeDrhoDt(GasState Q, ref number[] drhodt)
+    // Computes the array of time derivatives for the species densities.
+    // Returns the sum of those derivatives as a measure of error.
+    {
         number vvRepRate;            // V-V Replenishing rate
 	number vvDepRate;            // V-V Depletion Rate
 	number vtRhoDot0, vvRhoDot0; // First level density time derivatives
-	number vtRhoDotL, vvRhoDotL; //Last level density time derivatives
-	number vtRhoDot, vvRhoDot;   //Intermediate level density time derivatives
-	number rho_i, rho_0, rho_l;  //Total density time derivatives
+	number vtRhoDotL, vvRhoDotL; // Last level density time derivatives
+	number vtRhoDot, vvRhoDot;   // Intermediate level density time derivatives
         //
         number rho2M = Q.rho*Q.rho/gm._M_N2;
-        foreach(step; 0 .. nsteps) {
-            // Replenishing and depleting equations
-            foreach(imode; 1 .. numVibLevels-1) {
-                vtRhoDot = rho2M *
-                    (BCoeff(imode,Q.T)*Q.massf[imode-1] -
-                     (FCoeff(imode,Q.T) + BCoeff(imode+1,Q.T)) * Q.massf[imode] +
-                     FCoeff(imode+1,Q.T)*Q.massf[imode+1]);
-                //V-V Exchange Reaction velocities
-                vvRepRate = 0.0;
-                vvDepRate = 0.0;
-                foreach (jmode; 2 .. numVibLevels) {
-                    vvRepRate += rho2M *
-                        (vvFCoeff(imode+1,jmode,Q.T)*Q.massf[imode+1]*Q.massf[jmode-1] -
-                         vvBCoeff(imode+1,jmode,Q.T)*Q.massf[imode]*Q.massf[jmode]);
-
-                    vvDepRate += rho2M *
-                        (vvFCoeff(imode,jmode,Q.T)*Q.massf[imode]*Q.massf[jmode-1] -
-                         vvBCoeff(imode,jmode,Q.T)*Q.massf[imode-1]*Q.massf[jmode]);
-                }
-                vvRhoDot = vvRepRate - vvDepRate;
-                rho_i = ((vtRhoDot + vvRhoDot) * dt) + Q.massf[imode]*Q.rho;
-                Q.massf[imode] = rho_i / Q.rho;
-            }
-            // Ground state and upper-most state treated specially.
-            vtRhoDot0 = rho2M *
-                ((-BCoeff(1,Q.T)*Q.massf[0]) + (FCoeff(1,Q.T)*Q.massf[1]));
+        int L = gm.numVibLevels;
+        // Replenishing and depleting equations
+        foreach(i; 1 .. L-1) {
+            vtRhoDot = rho2M * (BCoeff(i,Q.T)*Q.massf[i-1]
+                                - (FCoeff(i,Q.T) + BCoeff(i+1,Q.T)) * Q.massf[i]
+                                + FCoeff(i+1,Q.T)*Q.massf[i+1]);
+            //V-V Exchange Reaction velocities
             vvRepRate = 0.0;
-            foreach (jmode; 2 .. numVibLevels) {
-                vvRepRate += rho2M *
-                    (vvFCoeff(1,jmode,Q.T)*Q.massf[1]*Q.massf[jmode-1] -
-                     vvBCoeff(1,jmode,Q.T)*Q.massf[0]*Q.massf[jmode]);
-            }
-            vvRhoDot0 = vvRepRate;
-            rho_0 = ((vtRhoDot0 + vvRhoDot0) * dt) + Q.massf[0]*Q.rho;
-            Q.massf[0] = rho_0 / Q.rho;
-            vtRhoDotL = rho2M *
-                (BCoeff(numVibLevels-1,Q.T)*Q.massf[numVibLevels-2] +
-                 (-FCoeff(numVibLevels-1,Q.T))*Q.massf[numVibLevels-1]);
             vvDepRate = 0.0;
-            foreach (jmode; 2 .. numVibLevels) {
-                vvDepRate += rho2M *
-                    (vvFCoeff(numVibLevels-1,jmode,Q.T)*Q.massf[numVibLevels-1]*Q.massf[jmode-1] -
-                     vvBCoeff(numVibLevels-1,jmode,Q.T)*Q.massf[numVibLevels-2]*Q.massf[jmode]);
+            foreach (j; 2 .. L) {
+                vvRepRate += rho2M * (vvFCoeff(i+1,j,Q.T)*Q.massf[i+1]*Q.massf[j-1]
+                                      - vvBCoeff(i+1,j,Q.T)*Q.massf[i]*Q.massf[j]);
+                //
+                vvDepRate += rho2M * (vvFCoeff(i,j,Q.T)*Q.massf[i]*Q.massf[j-1]
+                                      - vvBCoeff(i,j,Q.T)*Q.massf[i-1]*Q.massf[j]);
             }
-            vvRhoDotL = -vvDepRate;
-            rho_l = ((vtRhoDotL + vvRhoDotL) * dt) + Q.massf[numVibLevels-1]*Q.rho;
-            Q.massf[numVibLevels-1] = rho_l / Q.rho;
-            scale_mass_fractions(Q.massf, 1.0e-6, 1.0e-3);
+            vvRhoDot = vvRepRate - vvDepRate;
+            drhodt[i] = vtRhoDot + vvRhoDot;
         }
-        // [TODO] RJG, CC: Think about the following thermo update.
-        // I think it should be a rhou update.
-        _gmodel.update_thermo_from_pT(Q);
-        _gmodel.update_sound_speed(Q);
-    } // end opCall
+        // Ground state and upper-most state treated specially.
+        vtRhoDot0 = rho2M * ((-BCoeff(1,Q.T)*Q.massf[0]) + (FCoeff(1,Q.T)*Q.massf[1]));
+        vvRepRate = 0.0;
+        foreach (j; 1 .. L) {
+            vvRepRate += rho2M * (vvFCoeff(1,j,Q.T)*Q.massf[1]*Q.massf[j-1]
+                                  - vvBCoeff(1,j,Q.T)*Q.massf[0]*Q.massf[j]);
+        }
+        vvRhoDot0 = vvRepRate;
+        drhodt[0] = vtRhoDot0 + vvRhoDot0;
+        //
+        vtRhoDotL = rho2M * (BCoeff(L-1,Q.T)*Q.massf[L-2] + (-FCoeff(L-1,Q.T))*Q.massf[L-1]);
+        vvDepRate = 0.0;
+        foreach (j; 1 .. L) {
+            vvDepRate += rho2M * (vvFCoeff(L-1,j,Q.T)*Q.massf[L-1]*Q.massf[j-1]
+                                  - vvBCoeff(L-1,j,Q.T)*Q.massf[L-2]*Q.massf[j]);
+        }
+        vvRhoDotL = -vvDepRate;
+        drhodt[L-1] = vtRhoDotL + vvRhoDotL;
+        //
+        // As a measure of error, return the sum of the density derivatives.
+        // For a good calculation, it should be zero.
+        number err = 0.0; foreach (dr; drhodt) { err += dr; }
+        return err;
+    } // end computeDrhoDt()
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
-        string errMsg = "eval_source_terms not implemented for vib_specific_nitrogen_kinetics.";
-        throw new ThermochemicalReactorUpdateException(errMsg);
-    }
-
-    // [TODO] Indices need checking
     @nogc
     number FCoeff(int i, number T) const
     {
-        double I = i + 1;
         number ft = 1e-6 * Avogadro_number * exp(-3.24093 - (140.69597/T^^0.2));
         number delta_t = 0.26679 - (6.99237e-5 * T) + (4.70073e-9 * T^^2);
-        number f = (I-1) * ft * exp((I-2)*delta_t);
+        number f = i * ft * exp((i-1)*delta_t);
         return f;
     }
 
@@ -129,7 +131,7 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
     number vvFCoeff(int i, int j, number T) const
     {
         number vvdelta_t = exp((-6.8/sqrt(T))*abs(i-j));
-	number f = 2.5e-20*Avogadro_number*(i-1)*(j-1)*(T/300.0)^^(3.0/2.0)
+	number f = 2.5e-20*Avogadro_number*i*j*(T/300.0)^^(3.0/2.0)
             *vvdelta_t*(1.5-0.5*vvdelta_t);
 	return f;
     }
@@ -138,7 +140,6 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
     number BCoeff(int i, number T) const
     {
         number B = FCoeff(i,T) * exp(-(gm._vib_energy[i] - gm._vib_energy[i-1]) / (gm.kB * T));
-        // F_coeff already uses i+1
         return B;
     }
 

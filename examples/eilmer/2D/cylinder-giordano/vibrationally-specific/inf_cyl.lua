@@ -77,7 +77,7 @@ config.gasdynamic_update_scheme = 'euler'
 config.max_time = 15.0e-3 -- s
 config.max_step = 30000
 config.cfl_value = 0.4
-config.dt_init = 1.0e-8
+config.dt_init = 1.0e-6
 config.dt_plot = config.max_time/50.0
 config.dt_history = 1.0e-5
 
