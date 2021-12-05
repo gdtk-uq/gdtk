@@ -75,7 +75,8 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
         //
         number rho2M = Q.rho*Q.rho/gm._M_N2;
         int L = gm.numVibLevels;
-        // Replenishing and depleting equations
+        //
+        // Replenishing and depleting equations for all but the first and last species.
         foreach(i; 1 .. L-1) {
             vtRhoDot = rho2M * (BCoeff(i,Q.T)*Q.massf[i-1]
                                 - (FCoeff(i,Q.T) + BCoeff(i+1,Q.T)) * Q.massf[i]
@@ -83,7 +84,7 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
             //V-V Exchange Reaction velocities
             vvRepRate = 0.0;
             vvDepRate = 0.0;
-            foreach (j; 2 .. L) {
+            foreach (j; 1 .. L) {
                 vvRepRate += rho2M * (vvFCoeff(i+1,j,Q.T)*Q.massf[i+1]*Q.massf[j-1]
                                       - vvBCoeff(i+1,j,Q.T)*Q.massf[i]*Q.massf[j]);
                 //
@@ -135,6 +136,9 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
             *vvdelta_t*(1.5-0.5*vvdelta_t);
 	return f;
     }
+
+    // [TODO] It might be good to inline these functions because these functions
+    // will be repeating the forward-reaction coefficient evaluation.
 
     @nogc
     number BCoeff(int i, number T) const

@@ -6,7 +6,7 @@ set yrange [0:12]
 T_inf = 300.0
 plot 'giordano_50Pa_T.data' t 'Giordano et al. (1997)' w lines ls 1 lw 2 lc rgb "black", \
      'giordano_50Pa_Tvib.data' notitle w lines ls 1 lw 2 lc rgb "black", \
-     'stag-prof-50Pa-vib-specific.data' u 1:($40/T_inf) t 'fit to Blackman data' w linespoints pt 4 lc rgb "green"
+     'stag-prof-50Pa-vib-specific.data' u 1:($29/T_inf) t 'fit to Blackman data' w linespoints pt 4 lc rgb "green"
 
 # Add effective Tvib when post-processing mode exists
 
