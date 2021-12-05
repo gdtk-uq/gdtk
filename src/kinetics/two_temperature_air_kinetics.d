@@ -67,6 +67,8 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
         //_Qinit = new GasState(gmodel.n_species, gmodel.n_modes);
         _conc0.length = gmodel.n_species;
         _concOut.length = gmodel.n_species;
+        _conc_for_source_terms.length = gmodel.n_species + gmodel.n_modes;
+        _rates_for_source_terms.length = gmodel.n_species + gmodel.n_modes;
 
         // Configure other parameters via Lua state.
         auto L = init_lua_State();
@@ -359,7 +361,7 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
         dtSuggest = dtSave;
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for two_temperature_air_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }
@@ -369,6 +371,8 @@ private:
     //GasState _Qinit;
     number[] _conc0;
     number[] _concOut;
+    number[] _conc_for_source_terms;
+    number[] _rates_for_source_terms;
 
     TwoTemperatureAir _airModel;
     GasState _Qinit, _Q0;

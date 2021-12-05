@@ -80,7 +80,7 @@ public:
     Vector3 momentum;      // momentum/unit volume
     number total_energy;   // total energy
     version(multi_species_gas) {
-        number[] massf;    // mass fractions of species
+        number[] massf;    // densities of each chemical species
     }
     version(multi_T_gas) {
         number[] energies; // modal energies

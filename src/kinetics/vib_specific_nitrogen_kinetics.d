@@ -109,7 +109,7 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     } // end opCall
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for vib_specific_nitrogen_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }

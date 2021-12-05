@@ -64,7 +64,7 @@ final class VibRelaxNitrogen : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for two_temperature_nitrogen_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }

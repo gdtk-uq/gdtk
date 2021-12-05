@@ -117,8 +117,6 @@ public:
     //
     // Workspace for transient-solver implicit update and NK accelerator.
     // source terms for finite-rate chemistry
-    number[] thermochem_conc;
-    number[] thermochem_rates;
     number[] thermochem_source;
     //
     // Shape sensitivity calculator workspace.
@@ -223,15 +221,11 @@ public:
         version(multi_species_gas) {
             if (myConfig.reacting && cqi.n_species > 1) {
                 thermochem_source.length = cqi.n_species;
-                thermochem_conc.length = cqi.n_species;
-                thermochem_rates.length = cqi.n_species;
             }
         }
         version(multi_T_gas) {
             if (cqi.n_modes > 0) {
                 thermochem_source.length += cqi.n_modes;
-                thermochem_conc.length += cqi.n_modes;
-                thermochem_rates.length += cqi.n_modes;
             }
         }
     }
@@ -1437,10 +1431,7 @@ public:
                 // NOTE: we only need to evaluate the chemical source terms for the perturb cell
                 //       this saves us a lot of unnecessary computations
                 if (cell.id == pcell.id) {
-                    cell.add_thermochemical_source_vector(thermochem_conc,
-                                                          thermochem_rates,
-                                                          thermochem_source,
-                                                          limit_factor);
+                    cell.add_thermochemical_source_vector(thermochem_source, limit_factor);
                 } else {
                     cell.Q.copy_values_from(cell.Q_save);
                 }
@@ -1756,7 +1747,7 @@ public:
             c.add_viscous_source_vector();
         } // end if viscous
         if (myConfig.reacting && myConfig.chemistry_update == ChemistryUpdateMode.integral) {
-            c.add_thermochemical_source_vector(thermochem_conc, thermochem_rates, thermochem_source, reaction_fraction);
+            c.add_thermochemical_source_vector(thermochem_source, reaction_fraction);
         }
         if (myConfig.udf_source_terms) { c.add_udf_source_vector(); }
         c.time_derivatives(gtl, ftl);

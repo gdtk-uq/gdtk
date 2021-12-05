@@ -35,7 +35,7 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
         // Although they exist in the GasModel object, they are private.
         //lua_State *L;
         auto L = init_lua_State();
-        
+        //
         // get details about type of species: fuel, ox, prod or inert
         doLuaFile(L, fname); //reading the reaction file here
         _n_species = gmodel.n_species;
@@ -60,7 +60,7 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
         _laminar_limit = getBool(L, -1, "lamLimit");
         lua_pop(L, 1); // dispose of the table
         //writeln(_laminar_limit);
-
+        //
         // if true we want to limit the reaction rate with the "no-model" one
         // in that case we initialize the ReactionMechanism object
         if (_laminar_limit) {
@@ -74,13 +74,13 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
             lua_pop(L, 1);
             lua_pop(L, 1);
             lua_pop(L, 1);
-            lua_getglobal(L, "reaction");       
+            lua_getglobal(L, "reaction");
             rmech = createReactionMechanism(L, gmodel, T_lower_limit, T_upper_limit);
             lua_rawgeti(L, -1, 1); //only 1 reaction called reaction[1]
             lua_pop(L, 1);
         }
-
-        lua_getglobal(L, "reaction");   
+        //
+        lua_getglobal(L, "reaction");
         lua_rawgeti(L, -1, 1); //only 1 reaction called reaction[1]
         int[] reacCoeffs; // required to set stochiometric mass ratio
         getArrayOfInts(L, -1, "reacCoeffs", reacCoeffs);
@@ -91,10 +91,10 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
             getArrayOfInts(L, -1, "prodCoeffs", prodCoeffs);
             foreach(isp; 0 .. _n_fuel+_n_ox) {
                 writeln(isp);
-                _nu_W[isp]= 1.0 * reacCoeffs[isp]*gmodel.mol_masses[isp]; 
+                _nu_W[isp]= 1.0 * reacCoeffs[isp]*gmodel.mol_masses[isp];
             }
             foreach(isp; 0 .. _n_prod) {
-                _nu_W[_n_fuel+_n_ox+isp]= -1.0 * prodCoeffs[isp]*gmodel.mol_masses[isp+_n_fuel+_n_ox]; 
+                _nu_W[_n_fuel+_n_ox+isp]= -1.0 * prodCoeffs[isp]*gmodel.mol_masses[isp+_n_fuel+_n_ox];
             }
             lua_pop(L, 1);
         } // else we don't need _nu_W in further computations
@@ -107,8 +107,8 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
 
     @nogc
     void set_stochiometricRatio(int[] stochCoeff, double[] mol_masses)
-    {   
-        double num=0.0,denom=0.0;       
+    {
+        double num=0.0,denom=0.0;
         foreach (isp; 0 .. _n_fuel) {
             denom = denom + mol_masses[isp]*stochCoeff[isp];
         }
@@ -180,10 +180,10 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
             _omega_dot_F = get_omegaDotF(omega,_Y_s);
             if(_laminar_limit){
                 number[dim_species] conc;
-                rmech.eval_rate_constants(Q);  
+                rmech.eval_rate_constants(Q);
                 _gmodel.massf2conc(Q,conc);
                 debug { writeln("concentration ",conc); }
-                rmech.eval_rates(conc,rates); 
+                rmech.eval_rates(conc,rates);
                 debug { writeln("laminar RR (1/s)= ",rates); }
                 number[dim_species] lamRR; //in kg/(m^3 . s)
                 number sumLamRR=0.0;
@@ -196,7 +196,7 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
                     writeln("sum of laminar RR (1/s) = ",sumLamRR);
                     writeln("Fuel RR (1/s) before lam eval= ",_omega_dot_F);
                 }
-                _omega_dot_F=-1.0*(fmin(fabs(_omega_dot_F),fabs(rates[0]))); 
+                _omega_dot_F=-1.0*(fmin(fabs(_omega_dot_F),fabs(rates[0])));
             }
             debug { writeln("Fuel RR (1/s)= ",_omega_dot_F); }
             foreach (isp; 0 .. _n_reacting) { //don't account for inert species
@@ -204,20 +204,20 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
             }
             //number sum=0.0;
             //foreach(isp;0.._n_species){
-                //sum=sum+Q.massf[isp];                                 
+                //sum=sum+Q.massf[isp];
             //}
             //writeln("sum of species = ",sum);
         } else {
             _Y_s[0]=Q.massf[0];
             _Y_s[1]=Q.massf[1];
             _Y_s[2]=Q.massf[2];
-            _omega_dot_F = get_omegaDotF(omega,_Y_s);   // units 1/s in here 
+            _omega_dot_F = get_omegaDotF(omega,_Y_s);   // units 1/s in here
             if(_laminar_limit) {
                 number[dim_species] conc;
-                rmech.eval_rate_constants(Q);  
+                rmech.eval_rate_constants(Q);
                 _gmodel.massf2conc(Q,conc);
                 debug { writeln("concentration ",conc); }
-                rmech.eval_rates(conc,rates); 
+                rmech.eval_rates(conc,rates);
                 debug { writeln("laminar RR (1/s)= ",rates); }
                 number[dim_species] lamRR; //in kg/(m^3 . s)
                 number sumLamRR=0.0;
@@ -230,29 +230,29 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
                     writeln("sum of laminar RR (1/s) = ",sumLamRR);
                     writeln("Fuel RR (1/s) before lam eval= ",_omega_dot_F);
                 }
-                _omega_dot_F=-1.0*(fmin(fabs(_omega_dot_F),fabs(rates[0]))); // units are same 
+                _omega_dot_F=-1.0*(fmin(fabs(_omega_dot_F),fabs(rates[0]))); // units are same
                 // NOTE: when fuel/ox almost zero the laminar RR will give positive values for
-                //       these reaction rates BUT the EDM one is much smaller and dominates     
+                //       these reaction rates BUT the EDM one is much smaller and dominates
                 //               only reason for laminar is to avoid reaction where T too low and not enough
-                //               mixing occurs.                 
+                //               mixing occurs.
             } // end if /else
             omega_dot_O = _sRatio * _omega_dot_F;
             omega_dot_P = - (1.0+_sRatio) *_omega_dot_F;
             Q.massf[0]=_Y_s[0] + local_dt_global * _omega_dot_F;
             // following is actually still correct for laminar RR
             Q.massf[1]=_Y_s[1] + local_dt_global * _sRatio*_omega_dot_F;
-            Q.massf[2]=_Y_s[2] + local_dt_global * - (1.0+_sRatio) *_omega_dot_F;               
+            Q.massf[2]=_Y_s[2] + local_dt_global * - (1.0+_sRatio) *_omega_dot_F;
         } //end if/ else
     } //end function opCall
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for fuel_air_mix_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }
 
 private:
     // EDM model constants
-    double _A_edm=4.0; 
+    double _A_edm=4.0;
     double _B_edm=0.5;
     number _tau_edm;
     // boolean for use of laminar reaction rate limit

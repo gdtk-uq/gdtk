@@ -85,6 +85,7 @@ public:
 
     void initialiseWorkSpace()
     {
+        therm_rates.length = mNSpecies;
         mConc0.length = mNSpecies;
         mConc.length = mNSpecies;
         m_dCdt.length = mNSpecies;
@@ -262,19 +263,17 @@ public:
 
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
         // species source terms
-        auto chem_conc = conc[0..$-1]; // these are actually references not copies
-        auto chem_rates = rates[0..$-1];
-        auto chem_source = source[0..$-1];
-        mRmech.eval_source_terms(gmodel, Q, chem_conc, chem_rates, chem_source);
+        auto chem_source = source[0..$-1]; // these are actually references not copies
+        mRmech.eval_source_terms(gmodel, Q, chem_source);
         // energy modes source terms
-        auto therm_rates = rates[$-1..source.length];
         auto therm_source = source[$-1..source.length];
         mEES.eval_source_terms(mRmech, Q, therm_rates, therm_source);
     }
 
 private:
+    number[] therm_rates;
     int mNSpecies;
     int mMaxSubcycles=10000;
     int mMaxAttempts=4;

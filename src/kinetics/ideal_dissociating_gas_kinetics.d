@@ -8,7 +8,7 @@
  *
  * Authors: Peter J., Katrina Sklavos and Rowan G.
  * Version: 2017-04-22: initial shell copied from powers-aslam-gas module.
- *          2017-04-11: Filled in IDG thermo details as noted in 
+ *          2017-04-11: Filled in IDG thermo details as noted in
  *                      PJ's workbooks 2017-04-22 through 2017-05-11
  *          2017-07-27: Finished reactor function and eliminated bugs in workbook.
  */
@@ -25,7 +25,7 @@ import util.lua_service;
 import kinetics.thermochemical_reactor;
 
 final class UpdateIDG : ThermochemicalReactor {
-    
+
     this(string fname, GasModel gmodel)
     {
         super(gmodel); // hang on to a reference to the gas model
@@ -39,16 +39,16 @@ final class UpdateIDG : ThermochemicalReactor {
         _T_d = getDouble(L, -1, "T_d"); // characteristic dissociation temperature, K
         _rho_d = getDouble(L, -1, "rho_d"); // characteristic density, g/cm^3
         // Rate constants follow.
-        _C1 = getDouble(L, -1, "C1"); 
+        _C1 = getDouble(L, -1, "C1");
         _n1 = getDouble(L, -1, "n1");
         _C2 = getDouble(L, -1, "C2");
         _n2 = getDouble(L, -1, "n2");
         lua_pop(L, 1); // dispose of the table
         lua_close(L);
     }
-    
+
     override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest, 
+                         ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
     {
         // In the isolated reactor, density and internal energy remain constant.
@@ -112,7 +112,7 @@ final class UpdateIDG : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     } // end opCall
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for ideal_dissociating_gas_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }

@@ -171,7 +171,7 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
 
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for electronically_specific_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }

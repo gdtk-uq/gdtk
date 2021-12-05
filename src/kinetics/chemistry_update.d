@@ -83,7 +83,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
         lua_pop(L, 1);
         lua_pop(L, 1);
 
-        lua_getglobal(L, "reaction");   
+        lua_getglobal(L, "reaction");
         rmech = createReactionMechanism(L, gmodel, T_lower_limit, T_upper_limit);
         lua_pop(L, 1);
 
@@ -145,7 +145,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
         _gmodel.massf2conc(Q, _conc0);
         number uTotal = _gmodel.internal_energy(Q);
 
-        // 0. Evaluate the rate constants. 
+        // 0. Evaluate the rate constants.
         //    It helps to have these computed before doing other setup work.
         rmech.eval_rate_constants(Q);
         // 1. Sort out the time step for possible subcycling.
@@ -158,7 +158,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
             h = rmech.estimateStepSize(_conc0);
         else
             h = dtChemSuggest;
-        
+        //
         // 2. Now do the interesting stuff, increment species change
         int cycle = 0;
         int attempt = 0;
@@ -327,8 +327,8 @@ final class ChemistryUpdate : ThermochemicalReactor {
         dtChemSuggest = dtSave;
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
-        rmech.eval_source_terms(gmodel, Q, conc, rates, source);
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+        rmech.eval_source_terms(gmodel, Q, source);
     }
 
 private:
