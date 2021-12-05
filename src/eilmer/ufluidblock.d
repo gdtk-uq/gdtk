@@ -70,7 +70,8 @@ public:
     } // end constructor from json
 
     this(lua_State* L)
-    // Construct from a Lua state.
+    // Construct from a Lua interpreter state.
+    // This particular constructor is only used in the prep stage.
     // Note that we assume the FlowState fs to be in a nonrotating frame.
     {
         auto grid = checkUnstructuredGrid(L, 2);
