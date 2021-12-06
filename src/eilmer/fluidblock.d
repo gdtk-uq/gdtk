@@ -1526,7 +1526,7 @@ public:
         size_t TKE = GlobalConfig.cqi.rhoturb;
         size_t SPECIES = GlobalConfig.cqi.species;
         size_t MODES = GlobalConfig.cqi.modes;
-        auto EPS = flowJacobian.eps;
+        auto EPS = GlobalConfig.sssOptions.sigma0;
 
         // We perform a Frechet derivative to evaluate J*D^(-1)v
         size_t nturb = myConfig.turb_model.nturb;
@@ -1605,7 +1605,7 @@ public:
                     }
                 }
                 version(multi_T_gas){
-                    foreach(imode; 0 .. nmodes) { sol[cellCount+MODES+imode] = (cell.dUdt[1].vec[cqi.modes+imode]-cell.dUdt[1].vec[cqi.modes+imode])/EPS; }
+                    foreach(imode; 0 .. nmodes) { sol[cellCount+MODES+imode] = (cell.dUdt[1].vec[cqi.modes+imode]-cell.dUdt[0].vec[cqi.modes+imode])/EPS; }
                 }
             }
 
