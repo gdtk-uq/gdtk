@@ -773,8 +773,7 @@ public:
                 }
                 Q.p = p; Q.rho = rho; Q.T = T;
                 gmodel2.update_thermo_from_pT(Q);
-                // [TODO] 2018-09-15: Rowan, should we set Tvib to zero if massf[1] is essentially zero?
-                number Tvib = gmodel2.compute_Tvib(Q, to!number(T), to!number(T+100.0), 0.1);
+                number Tvib = gmodel2.compute_Tvib(Q, to!number(T));
                 _data[i] ~= Tvib.re;
             }
         } // foreach i

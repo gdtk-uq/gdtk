@@ -168,11 +168,11 @@ public:
 
     // Keep the following function as public
     // because the postprocessor will use it.
-    number compute_Tvib(GasState Q, number x0, number x1, double tol) const
+    number compute_Tvib(GasState Q, number Tguess, double tol=1.0e-6) const
     {
-        // Use secant method to compute Tf1
-        number init_x0 = x0;
-        number init_x1 = x1;
+        // Use secant method to compute T.
+        number x0 = Tguess;
+        number x1 = x0 + 100.0;
         number fx0 = boltzmann_eq_species0(x0) - Q.massf[0];
         number fx1 = boltzmann_eq_species0(x1) - Q.massf[0];
         int max_it = 100;
