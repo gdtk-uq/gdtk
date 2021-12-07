@@ -1162,18 +1162,25 @@ public:
         shared int interpolation_order_save = GlobalConfig.interpolation_order;
         myConfig.interpolation_order = to!int(flowJacobian.spatial_order);
 
-        // fill out the rows of the Jacobian for a cell
+        // copy some data for later use
         if (myConfig.viscous) {
             foreach(cell; cells) { cell.grad_save.copy_values_from(cell.grad); }
         }
-        foreach(cell; cells) { cell.Q_save.copy_values_from(cell.Q); }
+        if (myConfig.reacting) {
+            foreach(cell; cells) {
+                cell.clear_source_vector();
+                cell.add_thermochemical_source_vector(thermochem_source, 1.0);
+                cell.Q_save.copy_values_from(cell.Q);
+            }
+        }
 
+        // the real-valued finite difference needs a base residual (R0)
         version(complex_numbers) { } // do nothing
         else {
-            // the real-valued finite difference needs a base residual (R0)
             foreach(cell; cells) { evalRHS(0, 0, cell.cell_list, cell.face_list, cell); }
         }
 
+        // fill out the rows of the Jacobian for a cell
         foreach(cell; cells) { evaluate_cell_contribution_to_jacobian(cell); }
 
         // add boundary condition corrections to boundary cells
@@ -1433,7 +1440,7 @@ public:
                 if (cell.id == pcell.id) {
                     cell.add_thermochemical_source_vector(thermochem_source, limit_factor);
                 } else {
-                    cell.Q.copy_values_from(cell.Q_save);
+                    foreach (j; 0 .. myConfig.cqi.n) { cell.Q.vec[j] += cell.Q_save.vec[j]; }
                 }
             }
             if (myConfig.udf_source_terms) {
