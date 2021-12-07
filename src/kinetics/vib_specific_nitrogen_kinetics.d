@@ -48,13 +48,13 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
     {
         // First, set a time step size that does not cause too large a change in species.
         number rhoErr = computeDrhoDt(Q, dRhoDt);
-        double bigDrhoDt = 0.0;
+        number bigDrhoDt = 0.0;
         foreach (rd; dRhoDt) {
             if (fabs(rd) > bigDrhoDt) { bigDrhoDt = fabs(rd); }
         }
         double dt = (dtChemSuggest > 0.0) ? dtChemSuggest : tInterval;
         if (bigDrhoDt > 0.0) {
-            dt = 0.001 * Q.rho/bigDrhoDt;
+            dt = 0.001 * Q.rho.re/bigDrhoDt.re;
         }
         int nsteps = cast(int)(ceil(tInterval/dt));
         dt = tInterval/nsteps;

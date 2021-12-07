@@ -365,6 +365,9 @@ void scale_mass_fractions(ref number[] massf, double tolerance=0.0,
                     msg ~= format(": fabs(massf_sum - 1.0) = %s \n", fabs(massf_sum - 1.0));
                     msg ~= format("  assert_error_tolerance = %s \n", assert_error_tolerance);
                     msg ~= format("  tolerance = %s \n", tolerance);
+                    msg ~= "  massf = [";
+                    foreach (mf; massf) {msg ~= format(" %e", mf); }
+                    msg ~= "]\n";
                 }
                 throw new GasModelException(msg);
             }
