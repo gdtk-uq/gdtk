@@ -38,7 +38,12 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
         super(gmodel); // hang on to a reference to the gas model
         gm = cast(VibSpecificNitrogen) gmodel;
         if (!gm) { throw new Error("Oops, wrong gas model; should have been VibSpecificNitrogen."); }
-        dRhoDt.length = gm.numVibLevels;
+        int L = gm.numVibLevels;
+        dRhoDt.length = L;
+        vtF.length = L;
+        vtB.length = L;
+        vvF.length = L; foreach (i; 0 .. L) { vvF[i].length = L; }
+        vvB.length = L; foreach (i; 0 .. L) { vvB[i].length = L; }
     }
 
     @nogc
@@ -81,52 +86,79 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
     @nogc number computeDrhoDt(GasState Q, ref number[] drhodt)
     // Computes the array of time derivatives for the species densities.
     // Returns the sum of those derivatives as a measure of error.
+    // [TODO] Instead of passing in Q, pass minumum data required T, rho, massf.
     {
-        number vvRepRate;            // V-V Replenishing rate
-	number vvDepRate;            // V-V Depletion Rate
-	number vtRhoDot0, vvRhoDot0; // First level density time derivatives
-	number vtRhoDotL, vvRhoDotL; // Last level density time derivatives
-	number vtRhoDot, vvRhoDot;   // Intermediate level density time derivatives
-        //
         number rho2M = Q.rho*Q.rho/gm._M_N2;
         int L = gm.numVibLevels;
+        number T = Q.T;
         //
-        // Replenishing and depleting equations for all but the first and last species.
+        // V-T exchange reactions.
+        //
+        // Start by computing the arrays of forward and backward coefficients.
+        foreach (i; 1 .. L) {
+            // Forward rate coefficient from level i to level i-1, equation 29
+            number ft = 1e-6 * Avogadro_number * exp(-3.24093 - (140.69597/T^^0.2));
+            number delta_t = 0.26679 - (6.99237e-5 * T) + (4.70073e-9 * T^^2);
+            vtF[i] = i * ft * exp((i-1)*delta_t);
+        }
+        foreach (i; 1 .. L) {
+            // Backward rate coefficient from level i-1 to level i, equation 28.
+            vtB[i] = vtF[i] * exp(-(gm._vib_energy[i] - gm._vib_energy[i-1]) / (gm.kB * T));
+        }
+        // V-T reaction velocities, equations 26 and 27.
         foreach(i; 1 .. L-1) {
-            vtRhoDot = rho2M * (BCoeff(i,Q.T)*Q.massf[i-1]
-                                - (FCoeff(i,Q.T) + BCoeff(i+1,Q.T)) * Q.massf[i]
-                                + FCoeff(i+1,Q.T)*Q.massf[i+1]);
-            //V-V Exchange Reaction velocities
+            drhodt[i] = rho2M * (vtB[i]*Q.massf[i-1]
+                                - (vtF[i] + vtB[i+1])*Q.massf[i]
+                                + vtF[i+1]*Q.massf[i+1]);
+        }
+        // Ground state and upper-most state treated specially.
+        drhodt[0] = rho2M * (-vtB[1]*Q.massf[0] + vtF[1]*Q.massf[1]);
+        drhodt[L-1] = rho2M * (vtB[L-1]*Q.massf[L-2] - vtF[L-1]*Q.massf[L-1]);
+        //
+        // V-V exchange reactions.
+        //
+        foreach (i; 1 .. L) {
+            foreach (j; 1 .. L) {
+                // F^(j-1,j)_(i,i-1) Forward rate coefficient, equation 41.
+                number vvdelta_t = exp((-6.8/sqrt(T))*abs(i-j));
+                vvF[i][j] = 2.5e-20*Avogadro_number*(i-1)*(j-1)
+                    * (T/300.0)^^(3.0/2.0) * vvdelta_t * (1.5-0.5*vvdelta_t);
+            }
+        }
+        foreach (i; 1 .. L) {
+            foreach (j; 1 .. L) {
+                // B^(j,j-1)_(i-1,i) Backward rate coefficient, equation 40.
+                vvB[i][j] = vvF[i][j]
+                    * exp(-1.0*(gm._vib_energy[i] - gm._vib_energy[i-1] +
+                                gm._vib_energy[j-1] - gm._vib_energy[j])/(gm.kB*T));
+            }
+        }
+        //
+        // V-V Exchange Reaction velocities
+        //
+        number vvRepRate; // V-V Replenishing rate
+	number vvDepRate; // V-V Depletion Rate
+        //
+        foreach(i; 1 .. L-1) {
             vvRepRate = 0.0;
             vvDepRate = 0.0;
             foreach (j; 1 .. L) {
-                vvRepRate += rho2M * (vvFCoeff(i+1,j,Q.T)*Q.massf[i+1]*Q.massf[j-1]
-                                      - vvBCoeff(i+1,j,Q.T)*Q.massf[i]*Q.massf[j]);
-                //
-                vvDepRate += rho2M * (vvFCoeff(i,j,Q.T)*Q.massf[i]*Q.massf[j-1]
-                                      - vvBCoeff(i,j,Q.T)*Q.massf[i-1]*Q.massf[j]);
+                vvRepRate += vvF[i+1][j]*Q.massf[i+1]*Q.massf[j-1] - vvB[i+1][j]*Q.massf[i]*Q.massf[j];
+                vvDepRate += vvF[i][j]*Q.massf[i]*Q.massf[j-1] - vvB[i][j]*Q.massf[i-1]*Q.massf[j];
             }
-            vvRhoDot = vvRepRate - vvDepRate;
-            drhodt[i] = vtRhoDot + vvRhoDot;
+            drhodt[i] += rho2M * (vvRepRate - vvDepRate);
         }
-        // Ground state and upper-most state treated specially.
-        vtRhoDot0 = rho2M * ((-BCoeff(1,Q.T)*Q.massf[0]) + (FCoeff(1,Q.T)*Q.massf[1]));
         vvRepRate = 0.0;
         foreach (j; 1 .. L) {
-            vvRepRate += rho2M * (vvFCoeff(1,j,Q.T)*Q.massf[1]*Q.massf[j-1]
-                                  - vvBCoeff(1,j,Q.T)*Q.massf[0]*Q.massf[j]);
+            vvRepRate += vvF[1][j]*Q.massf[1]*Q.massf[j-1] - vvB[1][j]*Q.massf[0]*Q.massf[j];
         }
-        vvRhoDot0 = vvRepRate;
-        drhodt[0] = vtRhoDot0 + vvRhoDot0;
+        drhodt[0] += rho2M * vvRepRate;
         //
-        vtRhoDotL = rho2M * (BCoeff(L-1,Q.T)*Q.massf[L-2] + (-FCoeff(L-1,Q.T))*Q.massf[L-1]);
         vvDepRate = 0.0;
         foreach (j; 1 .. L) {
-            vvDepRate += rho2M * (vvFCoeff(L-1,j,Q.T)*Q.massf[L-1]*Q.massf[j-1]
-                                  - vvBCoeff(L-1,j,Q.T)*Q.massf[L-2]*Q.massf[j]);
+            vvDepRate += vvF[L-1][j]*Q.massf[L-1]*Q.massf[j-1] - vvB[L-1][j]*Q.massf[L-2]*Q.massf[j];
         }
-        vvRhoDotL = -vvDepRate;
-        drhodt[L-1] = vtRhoDotL + vvRhoDotL;
+        drhodt[L-1] -= rho2M * vvDepRate;
         //
         // As a measure of error, return the sum of the density derivatives.
         // For a good calculation, it should be zero.
@@ -134,40 +166,8 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
         return err;
     } // end computeDrhoDt()
 
-    @nogc
-    number FCoeff(int i, number T) const
-    {
-        number ft = 1e-6 * Avogadro_number * exp(-3.24093 - (140.69597/T^^0.2));
-        number delta_t = 0.26679 - (6.99237e-5 * T) + (4.70073e-9 * T^^2);
-        number f = i * ft * exp((i-1)*delta_t);
-        return f;
-    }
-
-    @nogc
-    number vvFCoeff(int i, int j, number T) const
-    {
-        number vvdelta_t = exp((-6.8/sqrt(T))*abs(i-j));
-	number f = 2.5e-20*Avogadro_number*i*j*(T/300.0)^^(3.0/2.0)
-            *vvdelta_t*(1.5-0.5*vvdelta_t);
-	return f;
-    }
-
-    // [TODO] It might be good to inline these functions because these functions
-    // will be repeating the forward-reaction coefficient evaluation.
-
-    @nogc
-    number BCoeff(int i, number T) const
-    {
-        number B = FCoeff(i,T) * exp(-(gm._vib_energy[i] - gm._vib_energy[i-1]) / (gm.kB * T));
-        return B;
-    }
-
-    @nogc
-    number vvBCoeff(int i, int j, number T) const
-    {
-        number B = vvFCoeff(i,j,T)*exp(-1.0*(gm._vib_energy[i] - gm._vib_energy[i-1] +
-                                             gm._vib_energy[j-1] - gm._vib_energy[j])/(gm.kB*T));
-	return B;
-    }
+private:
+    number[] vtF, vtB; // Coefficients for the vibrational-translation exchanges.
+    number[][] vvF, vvB; // Coefficients for the vib-vib exchanges.
 
 } // end class
