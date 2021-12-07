@@ -42,13 +42,20 @@ public:
     double _M_N2 = 0.0280134; // kg/mole
     double _gamma = 7.0/5.0; // ratio of specific heats for vibrationally-frozen gas.
     double kB = Boltzmann_constant;
-    int numVibLevels = 10;
+    int numVibLevels = 10; // default value
     double[] _vib_energy; // quantum level energies
     double[] _vib_energy_perkg;
 
-    this()
+    this(lua_State *L)
     {
         type_str = "VibSpecificNitrogen";
+        // Bring table to TOS
+        lua_getglobal(L, "VibSpecificNitrogen");
+        if (lua_istable(L, -1)) {
+            numVibLevels = getInt(L, -1, "numVibLevels");
+        } else {
+            // If there is not a table leave the default value for numVibLevels.
+        }
         // In this model the nitrogen molecules with differing vibrational levels
         // are considered pseudo-chemical-species.
         _n_species = numVibLevels;
@@ -70,7 +77,7 @@ public:
     override string toString() const
     {
         char[] repr;
-        repr ~= "VibSpecificNitrogen=()";
+        repr ~= format("VibSpecificNitrogen=(numVibLevels=%d)", numVibLevels);
         return to!string(repr);
     }
 

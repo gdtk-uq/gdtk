@@ -146,7 +146,7 @@ public:
         // For single-species, single temperature gas a default implementation is:
         return internal_energy(Q);
     }
-        
+    //
     @nogc abstract number enthalpy(in GasState Q);
     @nogc number enthalpy(in GasState Q, int isp)
     {
@@ -167,7 +167,7 @@ public:
         // but we need to be careful to override this for multi-component gases.
         return entropy(Q);
     }
-
+    //
     @nogc number gibbs_free_energy(GasState Q, int isp)
     {
         number h = enthalpy(Q, isp);
@@ -175,7 +175,7 @@ public:
         number g = h - Q.T*s;
         return g;
     }
-
+    //
     @nogc final number Cv(in GasState Q) { return dudT_const_v(Q); }
     @nogc final number Cp(in GasState Q) { return dhdT_const_p(Q); }
     @nogc number Cp(in GasState Q, int isp)
@@ -196,7 +196,7 @@ public:
     do {
         return mixture_molecular_mass(Q.massf, _mol_masses);
     }
-
+    //
     @nogc
     final void massf2molef(const(GasState) Q, number[] molef) const
     in {
@@ -206,7 +206,7 @@ public:
     do {
         gas.gas_model.massf2molef(Q.massf, _mol_masses, molef);
     }
-
+    //
     @nogc
     final void molef2massf(const(number[]) molef, GasState Q) const
     in {
@@ -216,7 +216,7 @@ public:
     do {
         gas.gas_model.molef2massf(molef, _mol_masses, Q.massf);
     }
-
+    //
     @nogc
     final void massf2conc(GasState Q, number[] conc) const
     in {
@@ -234,7 +234,7 @@ public:
             if ( conc[i] < MIN_MOLES ) conc[i] = 0.0;
         }
     }
-
+    //
     @nogc
     final void conc2massf(const(number[]) conc, GasState Q) const
     in {
@@ -252,7 +252,7 @@ public:
             if ( Q.massf[i] < MIN_MASS_FRACTION ) Q.massf[i] = 0.0;
         }
     }
-
+    //
     @nogc
     final void rates2source(number[] rates, number[] source) const
     do {
@@ -260,7 +260,7 @@ public:
             source[i] = rates[i]*_mol_masses[i];
         }
     }
-
+    //
     @nogc
     final void massf2numden(const(GasState) Q, number[] numden) const
     in {
@@ -272,7 +272,7 @@ public:
             numden[i] = Avogadro_number*Q.massf[i]*Q.rho / _mol_masses[i];
         }
     }
-
+    //
     @nogc
     final void numden2massf(const(number[]) numden, GasState Q) const
     in {
@@ -285,7 +285,7 @@ public:
             if ( Q.massf[i] < MIN_MASS_FRACTION ) Q.massf[i] = 0.0;
         }
     }
-
+    //
     @nogc
     void balance_charge(GasState Q)
     {

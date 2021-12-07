@@ -46,16 +46,31 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
     {
-        int nsteps = 10;
-        double dt = tInterval/nsteps;
-        //
+        // First, set a time step size that does not cause too large a change in species.
+        number rhoErr = computeDrhoDt(Q, dRhoDt);
+        double bigDrhoDt = 0.0;
+        foreach (rd; dRhoDt) {
+            if (fabs(rd) > bigDrhoDt) { bigDrhoDt = fabs(rd); }
+        }
+        double dt = (dtChemSuggest > 0.0) ? dtChemSuggest : tInterval;
+        if (bigDrhoDt > 0.0) {
+            dt = 0.001 * Q.rho/bigDrhoDt;
+        }
+        int nsteps = cast(int)(ceil(tInterval/dt));
+        dt = tInterval/nsteps;
+        // Now, do the time integration.
+        // [TODO] We should upgrade the integration step to have better order of error.
         foreach(step; 0 .. nsteps) {
-            number rhoErr = computeDrhoDt(Q, dRhoDt);
             foreach (i; 0 .. gm.numVibLevels) { Q.massf[i] += dRhoDt[i]/Q.rho * dt; }
             scale_mass_fractions(Q.massf, 1.0e-6, 1.0e-3);
             _gmodel.update_thermo_from_rhou(Q);
             _gmodel.update_sound_speed(Q);
+            if (step < nsteps-1) {
+                // For the next step, if there is one.
+                rhoErr = computeDrhoDt(Q, dRhoDt);
+            }
         }
+        dtChemSuggest = dt;
     } // end opCall
 
     @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source)
