@@ -20,6 +20,7 @@
 module kinetics.vib_specific_nitrogen_kinetics;
 
 import std.math;
+import std.algorithm;
 import nm.complex;
 import nm.number;
 
@@ -51,28 +52,46 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
     {
-        // First, set a time step size that does not cause too large a change in species.
-        number rhoErr = computeDrhoDt(Q, dRhoDt);
-        number bigDrhoDt = 0.0;
-        foreach (rd; dRhoDt) {
-            if (fabs(rd) > bigDrhoDt) { bigDrhoDt = fabs(rd); }
-        }
+        // First, set a time step size.
+        number rhoErr = computeDrhoDt(Q.rho, Q.T, Q.massf, dRhoDt);
         double dt = (dtChemSuggest > 0.0) ? dtChemSuggest : tInterval;
-        if (bigDrhoDt > 0.0) {
-            dt = 0.001 * Q.rho.re/bigDrhoDt.re;
+        // Limit the stepsize to allow only small changes in mass fractions per step.
+        foreach (i; 0 .. dRhoDt.length) {
+            // Species with mass fractions in the noise are not consulted.
+            if (Q.massf[i] < 1.0e-6) { continue; }
+            // Species with small fractions are allowed to grow relatively quickly.
+            if ((Q.massf[i] < 1.0e-3) && (dRhoDt[i].re >= 0.0)) { continue; }
+            // Significant species should be limited in rate of change.
+            double dt_allow = 0.01 * Q.rho.re*Q.massf[i].re / (fabs(dRhoDt[i].re) + 1.0e-50);
+            dt = min(dt, dt_allow);
         }
+        debug { //////////////////////////////////////////////////////////////////////
+            // [TODO] Fix the reaction rates so that we don't need this debug.
+            if (dt < 1.0e-12) {
+                import std.stdio;
+                writefln("dt_chem=%e", dt);
+                writefln("rho=%s T=%s", Q.rho, Q.T);
+                writefln("massf=%s", Q.massf);
+                writefln("dRhoDt=%s", dRhoDt);
+            }
+        }
+        dt = max(dt, 1.0e-12);
         int nsteps = cast(int)(ceil(tInterval/dt));
         dt = tInterval/nsteps;
         // Now, do the time integration.
         // [TODO] We should upgrade the integration step to have better order of error.
+        // This might allow us to take bigger steps and save some computational effort.
         foreach(step; 0 .. nsteps) {
-            foreach (i; 0 .. gm.numVibLevels) { Q.massf[i] += dRhoDt[i]/Q.rho * dt; }
+            foreach (i; 0 .. gm.numVibLevels) {
+                Q.massf[i] += dRhoDt[i]/Q.rho * dt;
+                if (Q.massf[i] < 0.0) { Q.massf[i] = 0.0; }
+            }
             scale_mass_fractions(Q.massf, 1.0e-6, 1.0e-3);
             _gmodel.update_thermo_from_rhou(Q);
             _gmodel.update_sound_speed(Q);
             if (step < nsteps-1) {
                 // For the next step, if there is one.
-                rhoErr = computeDrhoDt(Q, dRhoDt);
+                rhoErr = computeDrhoDt(Q.rho, Q.T, Q.massf, dRhoDt);
             }
         }
         dtChemSuggest = dt;
@@ -80,40 +99,38 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
 
     @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source)
     {
-        number rhoErr = computeDrhoDt(Q, source);
+        number rhoErr = computeDrhoDt(Q.rho, Q.T, Q.massf, source);
     }
 
-    @nogc number computeDrhoDt(GasState Q, ref number[] drhodt)
+    @nogc number computeDrhoDt(number rho, number T, number[] massf, ref number[] drhodt)
     // Computes the array of time derivatives for the species densities.
     // Returns the sum of those derivatives as a measure of error.
-    // [TODO] Instead of passing in Q, pass minumum data required T, rho, massf.
     {
-        number rho2M = Q.rho*Q.rho/gm._M_N2;
+        number rho2M = rho*rho/gm._M_N2;
         int L = gm.numVibLevels;
-        number T = Q.T;
         //
         // V-T exchange reactions.
         //
         // Start by computing the arrays of forward and backward coefficients.
         foreach (i; 1 .. L) {
-            // Forward rate coefficient from level i to level i-1, equation 29
+            // Forward rate coefficient for reaction level i to level i-1, equation 29
             number ft = 1e-6 * Avogadro_number * exp(-3.24093 - (140.69597/T^^0.2));
             number delta_t = 0.26679 - (6.99237e-5 * T) + (4.70073e-9 * T^^2);
             vtF[i] = i * ft * exp((i-1)*delta_t);
         }
         foreach (i; 1 .. L) {
-            // Backward rate coefficient from level i-1 to level i, equation 28.
+            // Backward rate coefficient for reaction level i-1 to level i, equation 28.
             vtB[i] = vtF[i] * exp(-(gm._vib_energy[i] - gm._vib_energy[i-1]) / (gm.kB * T));
         }
         // V-T reaction velocities, equations 26 and 27.
         foreach(i; 1 .. L-1) {
-            drhodt[i] = rho2M * (vtB[i]*Q.massf[i-1]
-                                - (vtF[i] + vtB[i+1])*Q.massf[i]
-                                + vtF[i+1]*Q.massf[i+1]);
+            drhodt[i] = rho2M * (vtB[i]*massf[i-1]
+                                - (vtF[i] + vtB[i+1])*massf[i]
+                                + vtF[i+1]*massf[i+1]);
         }
         // Ground state and upper-most state treated specially.
-        drhodt[0] = rho2M * (-vtB[1]*Q.massf[0] + vtF[1]*Q.massf[1]);
-        drhodt[L-1] = rho2M * (vtB[L-1]*Q.massf[L-2] - vtF[L-1]*Q.massf[L-1]);
+        drhodt[0] = rho2M * (-vtB[1]*massf[0] + vtF[1]*massf[1]);
+        drhodt[L-1] = rho2M * (vtB[L-1]*massf[L-2] - vtF[L-1]*massf[L-1]);
         //
         // V-V exchange reactions.
         //
@@ -143,26 +160,32 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
             vvRepRate = 0.0;
             vvDepRate = 0.0;
             foreach (j; 1 .. L) {
-                vvRepRate += vvF[i+1][j]*Q.massf[i+1]*Q.massf[j-1] - vvB[i+1][j]*Q.massf[i]*Q.massf[j];
-                vvDepRate += vvF[i][j]*Q.massf[i]*Q.massf[j-1] - vvB[i][j]*Q.massf[i-1]*Q.massf[j];
+                vvRepRate += vvF[i+1][j]*massf[i+1]*massf[j-1] - vvB[i+1][j]*massf[i]*massf[j];
+                vvDepRate += vvF[i][j]*massf[i]*massf[j-1] - vvB[i][j]*massf[i-1]*massf[j];
             }
             drhodt[i] += rho2M * (vvRepRate - vvDepRate);
         }
         vvRepRate = 0.0;
         foreach (j; 1 .. L) {
-            vvRepRate += vvF[1][j]*Q.massf[1]*Q.massf[j-1] - vvB[1][j]*Q.massf[0]*Q.massf[j];
+            vvRepRate += vvF[1][j]*massf[1]*massf[j-1] - vvB[1][j]*massf[0]*massf[j];
         }
         drhodt[0] += rho2M * vvRepRate;
         //
         vvDepRate = 0.0;
         foreach (j; 1 .. L) {
-            vvDepRate += vvF[L-1][j]*Q.massf[L-1]*Q.massf[j-1] - vvB[L-1][j]*Q.massf[L-2]*Q.massf[j];
+            vvDepRate += vvF[L-1][j]*massf[L-1]*massf[j-1] - vvB[L-1][j]*massf[L-2]*massf[j];
         }
         drhodt[L-1] -= rho2M * vvDepRate;
         //
         // As a measure of error, return the sum of the density derivatives.
         // For a good calculation, it should be zero.
         number err = 0.0; foreach (dr; drhodt) { err += dr; }
+        debug {
+            import std.stdio;
+            if (err > 1.0e-9) {
+                writefln("err=%e, rho=%e T=%e massf=%s drhodt=%s", err, rho, T, massf, drhodt);
+            }
+        }
         return err;
     } // end computeDrhoDt()
 
