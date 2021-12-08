@@ -53,29 +53,19 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
                          ref number[maxParams] params)
     {
         // First, set a time step size.
+        // Note that, presently, we ignore dtChemSuggest, dtThermSuggest.
         number rhoErr = computeDrhoDt(Q.rho, Q.T, Q.massf, dRhoDt);
-        double dt = (dtChemSuggest > 0.0) ? dtChemSuggest : tInterval;
-        // Limit the stepsize to allow only small changes in mass fractions per step.
-        foreach (i; 0 .. dRhoDt.length) {
-            // Species with mass fractions in the noise are not consulted.
-            if (Q.massf[i] < 1.0e-6) { continue; }
-            // Species with small fractions are allowed to grow relatively quickly.
-            if ((Q.massf[i] < 1.0e-3) && (dRhoDt[i].re >= 0.0)) { continue; }
-            // Significant species should be limited in rate of change.
-            double dt_allow = 0.01 * Q.rho.re*Q.massf[i].re / (fabs(dRhoDt[i].re) + 1.0e-50);
-            dt = min(dt, dt_allow);
+        // Limit the stepsize to allow only small changes in mass fractions per step
+        // by looking at just the ground-state population with the largest reaction rate.
+        // This might avoid the minor species from driving the time step to tiny values.
+        double dt = tInterval;
+        number bigDrhoDt = 0.0;
+        foreach (rd; dRhoDt) {
+            if (fabs(rd) > bigDrhoDt) { bigDrhoDt = fabs(rd); }
         }
-        debug { //////////////////////////////////////////////////////////////////////
-            // [TODO] Fix the reaction rates so that we don't need this debug.
-            if (dt < 1.0e-12) {
-                import std.stdio;
-                writefln("dt_chem=%e", dt);
-                writefln("rho=%s T=%s", Q.rho, Q.T);
-                writefln("massf=%s", Q.massf);
-                writefln("dRhoDt=%s", dRhoDt);
-            }
+        if (bigDrhoDt > 0.0) {
+            dt = min(0.001*Q.rho.re*Q.massf[0].re/bigDrhoDt.re, tInterval);
         }
-        dt = max(dt, 1.0e-12);
         int nsteps = cast(int)(ceil(tInterval/dt));
         dt = tInterval/nsteps;
         // Now, do the time integration.
