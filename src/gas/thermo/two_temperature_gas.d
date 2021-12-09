@@ -85,6 +85,7 @@ public:
         updateDensity(gs);
         gs.u = transRotEnergyMixture(gs);
         gs.u_modes[0] = vibElecEnergyMixture(gs, gs.T_modes[0]);
+        if (mElectronIdx != -1) gs.p_e = gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[0];
     }
 
     @nogc
@@ -127,6 +128,7 @@ public:
         updateTemperatureFromRhoP(gs);
         gs.u = transRotEnergyMixture(gs);
         gs.u_modes[0] = vibElecEnergyMixture(gs, gs.T_modes[0]);
+        if (mElectronIdx != -1) gs.p_e = gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[0];
     }
 
     @nogc
