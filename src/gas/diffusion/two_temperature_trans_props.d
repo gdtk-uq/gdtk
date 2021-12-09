@@ -235,16 +235,30 @@ public:
 
     @nogc void binaryDiffusionCoefficients(const GasState gs, ref number[][] D)
     {
-        // TODO: Think about "p" in this equation.
-        // Should it be total pressure, or bath pressure of binary interactors only?
+    /*
+        Compute the binary diffusion coefficients using the Omega_11 collisions
+        integrals and equations 42a from Gupta et al. 1990.
+
+        Notes:
+         - Prior to December 2021, this routine was returning diffusion coefficients
+           that were 100 times too small. This was due to a unit conversion error
+           related to Delta_11, which is in cm-s, not m-s. (NNG)
+
+         - TODO: Think about "p" in this equation. Should it be total pressure, or
+           bath pressure of binary interactors only? (RJG)
+    */
         massf2molef(gs.massf, mMolMasses, mMolef);
         computeDelta11(gs);
-        double kB = Boltzmann_constant;
+        immutable double kB_erg = 1.38066e-16; // erg/K
+        double p_cgs = gs.p*10.0; // CGS pressure in Baryes (?!)
+
         foreach (isp; 0 .. mNSpecies) {
             foreach (jsp; 0 .. isp+1) {
                 number T = (isp == mElectronIdx || jsp == mElectronIdx) ? gs.T_modes[0] : gs.T;
-                D[isp][jsp] = (kB * T)/(gs.p * mDelta_11[isp][jsp]);
-                D[jsp][isp] = D[isp][jsp];
+                number Dij = (kB_erg * T)/(p_cgs * mDelta_11[isp][jsp]); // cm^2/s
+                Dij /= (100*100); // cm2/s -> m2/s
+                D[isp][jsp] = Dij;
+                D[jsp][isp] = Dij;
             }
         }
     }
