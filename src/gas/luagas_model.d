@@ -103,6 +103,17 @@ extern(C) int molMasses(lua_State* L)
     return 1;
 }
 
+extern(C) int charge(lua_State* L)
+{
+    auto gm = checkGasModel(L, 1);
+    lua_newtable(L);
+    foreach (isp, mCharge; gm.charge ) {
+        lua_pushnumber(L, mCharge);
+        lua_setfield(L, -2, toStringz(gm.species_name(isp)));
+    }
+    return 1;
+}
+
 extern(C) int speciesName(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
@@ -1199,6 +1210,8 @@ void registerGasModel(lua_State* L)
     lua_setfield(L, -2, "nModes");
     lua_pushcfunction(L, &molMasses);
     lua_setfield(L, -2, "molMasses");
+    lua_pushcfunction(L, &charge);
+    lua_setfield(L, -2, "charge");
     lua_pushcfunction(L, &speciesName);
     lua_setfield(L, -2, "speciesName");
     lua_pushcfunction(L, &speciesIndex);
