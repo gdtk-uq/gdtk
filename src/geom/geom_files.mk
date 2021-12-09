@@ -36,6 +36,7 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/surface/nurbssurface.d \
 	$(GEOM_DIR)/surface/spherepatch.d \
 	$(GEOM_DIR)/surface/cubepatch.d \
+	$(GEOM_DIR)/surface/controlpointpatch.d \
 	$(GEOM_DIR)/volume/package.d \
 	$(GEOM_DIR)/volume/parametricvolume.d \
 	$(GEOM_DIR)/volume/tfivolume.d \
