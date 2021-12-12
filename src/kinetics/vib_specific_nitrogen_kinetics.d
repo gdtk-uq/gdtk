@@ -83,10 +83,11 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
                 // Sensitivity coefficients computed via finite-differences.
                 rhoErr = computeDrhoDt(Q.rho, Q.T, mf1, dRhoDt1);
                 foreach (j; 0 .. L) {
-                    crhs._data[i][j] = ((i == j) ? 1.0/dt : 0.0) - (dRhoDt1[j]-dRhoDt0[j])/Q.rho/h;
+                    number dFdy = (dRhoDt1[j]-dRhoDt0[j])/Q.rho/h;
+                    crhs._data[i][j] = ((i == j) ? 1.0/dt : 0.0) - dFdy.re;
                 }
                 // Right-hand side vector is also packed into the augmented matrix.
-                crhs._data[i][L] = dRhoDt0[i]/Q.rho;
+                crhs._data[i][L] = dRhoDt0[i].re/Q.rho.re;
             }
             gaussJordanElimination!double(crhs);
             foreach (i; 0 .. L) {
