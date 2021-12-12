@@ -23,16 +23,13 @@ import std.math;
 import std.algorithm;
 import nm.complex;
 import nm.number;
+import nm.bbla;
 
 import gas;
 import gas.vib_specific_nitrogen;
 import kinetics.thermochemical_reactor;
 
 final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
-    // Keep a reference to the specific gas model
-    // so that we can dip into it for specialized data.
-    VibSpecificNitrogen gm;
-    number[] dRhoDt; // Time derivative of the species densities, kg/s/m^^3.
 
     this(string fname, GasModel gmodel)
     {
@@ -40,9 +37,10 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
         gm = cast(VibSpecificNitrogen) gmodel;
         if (!gm) { throw new Error("Oops, wrong gas model; should have been VibSpecificNitrogen."); }
         int L = gm.numVibLevels;
-        dRhoDt.length = L;
-        vtF.length = L;
-        vtB.length = L;
+        dRhoDt0.length = L; dRhoDt1.length = L;
+        mf0.length = L; mf1.length = L;
+        crhs = new Matrix!(double)(L, L+1);
+        vtF.length = L; vtB.length = L;
         vvF.length = L; foreach (i; 0 .. L) { vvF[i].length = L; }
         vvB.length = L; foreach (i; 0 .. L) { vvB[i].length = L; }
     }
@@ -52,15 +50,17 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params)
     {
-        // First, set a time step size.
+        int L = gm.numVibLevels;
+        foreach (i; 0 .. L) { mf0[i] = Q.massf[i]; }
+        // Set a time step size.
         // Note that, presently, we ignore dtChemSuggest, dtThermSuggest.
-        number rhoErr = computeDrhoDt(Q.rho, Q.T, Q.massf, dRhoDt);
+        number rhoErr = computeDrhoDt(Q.rho, Q.T, mf0, dRhoDt0);
         // Limit the stepsize to allow only small changes in mass fractions per step
         // by looking at just the ground-state population with the largest reaction rate.
         // This might avoid the minor species from driving the time step to tiny values.
         double dt = tInterval;
         number bigDrhoDt = 0.0;
-        foreach (rd; dRhoDt) {
+        foreach (rd; dRhoDt0) {
             if (fabs(rd) > bigDrhoDt) { bigDrhoDt = fabs(rd); }
         }
         if (bigDrhoDt > 0.0) {
@@ -72,16 +72,36 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
         // [TODO] We should upgrade the integration step to have better order of error.
         // This might allow us to take bigger steps and save some computational effort.
         foreach(step; 0 .. nsteps) {
-            foreach (i; 0 .. gm.numVibLevels) {
-                Q.massf[i] += dRhoDt[i]/Q.rho * dt;
-                if (Q.massf[i] < 0.0) { Q.massf[i] = 0.0; }
+            // Do an implicit (backward-Euler) update of the mass-fraction vector.
+            //
+            // Assemble the linear system for computing the mass-fraction increments,
+            // solve for the mass-fraction increments and add them.
+            double h = 1.0e-6;
+            foreach (i; 0 .. L) {
+                // Perturbed state vector, changing one element for this pass..
+                foreach (j; 0 .. L) { mf1[j] = mf0[j]; if (i == j) { mf1[j] += h; } }
+                // Sensitivity coefficients computed via finite-differences.
+                rhoErr = computeDrhoDt(Q.rho, Q.T, mf1, dRhoDt1);
+                foreach (j; 0 .. L) {
+                    crhs._data[i][j] = ((i == j) ? 1.0/dt : 0.0) - (dRhoDt1[j]-dRhoDt0[j])/Q.rho/h;
+                }
+                // Right-hand side vector is also packed into the augmented matrix.
+                crhs._data[i][L] = dRhoDt0[i]/Q.rho;
             }
-            scale_mass_fractions(Q.massf, 1.0e-6, 1.0e-3);
+            gaussJordanElimination!double(crhs);
+            foreach (i; 0 .. L) {
+                mf1[i] = mf0[i] + crhs._data[i][L]; if (mf1[i] < 0.0) { mf1[i] = 0.0; }
+            }
+            scale_mass_fractions(mf1, 1.0e-6, 1.0e-3);
+            //
+            foreach (i; 0 .. L) { Q.massf[i] = mf1[i]; }
             _gmodel.update_thermo_from_rhou(Q);
             _gmodel.update_sound_speed(Q);
+            //
             if (step < nsteps-1) {
                 // For the next step, if there is one.
-                rhoErr = computeDrhoDt(Q.rho, Q.T, Q.massf, dRhoDt);
+                foreach (i; 0 .. L) { mf0[i] = mf1[i]; }
+                rhoErr = computeDrhoDt(Q.rho, Q.T, mf0, dRhoDt0);
             }
         }
         dtChemSuggest = dt;
@@ -180,7 +200,10 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
     } // end computeDrhoDt()
 
 private:
-    number[] vtF, vtB; // Coefficients for the vibrational-translation exchanges.
-    number[][] vvF, vvB; // Coefficients for the vib-vib exchanges.
-
+    VibSpecificNitrogen gm;  // Keep a reference to the specific gas model.
+    number[] mf0, mf1;  // Mass-fraction arrays
+    number[] dRhoDt0, dRhoDt1;  // Time derivatives of the species densities, kg/s/m^^3.
+    Matrix!double crhs;  // Augmented matrix for the linear solve in the implicit-update.
+    number[] vtF, vtB;  // Coefficients for the vibrational-translation exchanges.
+    number[][] vvF, vvB;  // Coefficients for the vib-vib exchanges.
 } // end class
