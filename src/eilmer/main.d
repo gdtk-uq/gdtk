@@ -29,6 +29,7 @@ import kinetics.luareaction_mechanism;
 import kinetics.luachemistry_update;
 import kinetics.luatwo_temperature_air_kinetics;
 import kinetics.luaelectronically_specific_kinetics;
+import kinetics.luaequilibrium_calculator;
 import nm.luabbla;
 import globalconfig;
 import simcore;
@@ -414,6 +415,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             registeridealgasflowFunctions(L);
             registergasflowFunctions(L);
             registerBBLA(L);
+            registerEquilibriumCalculator(L);
             // Determine which fluidBlocks we need to process.
             int[] blockIdList;
             blocksForPrep = blocksForPrep.strip();
