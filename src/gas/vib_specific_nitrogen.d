@@ -175,13 +175,13 @@ public:
 
     // Keep the following function as public
     // because the postprocessor will use it.
-    number compute_Tvib(GasState Q, number Tguess, double tol=1.0e-6) const
+    number compute_Tvib(GasState Q, number Tguess, double tol=1.0e-9) const
     {
         // Use secant method to compute T.
         number x0 = Tguess;
         number x1 = x0 + 100.0;
-        number fx0 = boltzmann_eq_species0(x0) - Q.massf[0];
-        number fx1 = boltzmann_eq_species0(x1) - Q.massf[0];
+        number fx0 = boltzmann_eq_species(0,x0) - Q.massf[0];
+        number fx1 = boltzmann_eq_species(0,x1) - Q.massf[0];
         int max_it = 100;
         foreach(n; 0 .. max_it) {
             if (abs(fx1) < tol) {return x1;}
@@ -189,19 +189,18 @@ public:
             x0 = x1;
             x1 = x2;
             fx0 = fx1;
-            fx1 = boltzmann_eq_species0(x2) - Q.massf[0];
+            fx1 = boltzmann_eq_species(0,x2) - Q.massf[0];
         } //end foreach
         return x1;
     } // end compute_Tvib()
 
-    number boltzmann_eq_species0(number T) const
-    // Returns the equilibrium population fraction for the ground state, given temperature.
+    number boltzmann_eq_species(int i, number T) const
+    // Returns the equilibrium population fraction for quantum-level i, given temperature.
+    // i==0 is the ground state
     {
         number summ = 0;
         foreach(ej; 0 .. numVibLevels) { summ += exp(-_vib_energy[ej] / (kB*T)); }
-        number ei = _vib_energy[0];
-        number temp_func = (exp(-ei/(kB*T)) / summ);
-        return temp_func;
+        return (i < numVibLevels) ? exp(-_vib_energy[i]/(kB*T)) / summ : to!number(0.0);
     }
 } // end class VibSpecificNitrogen
 
@@ -210,11 +209,15 @@ version(vib_specific_nitrogen_test) {
     import util.msg_service;
 
     int main() {
-        auto gm = new VibSpecificNitrogen();
-        auto Q = new GasState(numVibLevels, 0);
+        lua_State* L = init_lua_State();
+        doLuaFile(L, "sample-data/vib-specific-N2-gas.lua");
+        auto gm = new VibSpecificNitrogen(L);
+        lua_close(L);
+        auto Q = new GasState(gm.numVibLevels, 0);
         Q.p = 1.0e5;
         Q.T = 300.0;
-        Q.massf[] = 1.0/10;
+        // Set up the species mass fractions assuming equilibrium.
+        foreach (i; 0 .. gm.numVibLevels) { Q.massf[i] = gm.boltzmann_eq_species(i, Q.T); }
 
         double R_N2 = 296.805; // gas constant for N2
         double M_N2 = 0.0280134; // kg/mole
@@ -225,10 +228,13 @@ version(vib_specific_nitrogen_test) {
         assert(isClose(Q.rho, my_rho, 1.0e-6), failedUnitTest());
 
         double my_u = 2.5 * R_N2 * 300.0;
-        foreach (i; 0 .. numVibLevels) {
+        foreach (i; 0 .. gm.numVibLevels) {
             my_u += (Avogadro_number/M_N2) * gm.vib_energy(i) * Q.massf[i];
         }
         assert(isClose(Q.u, my_u, 1.0e-6), failedUnitTest());
+
+        double Tvib = gm.compute_Tvib(Q, 400.0);
+        assert(isClose(Tvib, Q.T, 1.0e-3));
 
         gm.update_trans_coeffs(Q);
         assert(isClose(Q.mu, 0.0, 1.0e-6), failedUnitTest());

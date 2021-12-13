@@ -193,6 +193,7 @@ clean:
 	- rm -f trans.inp trans.lib trans.out
 	- rm -f tmp.inp tmp.out tmp.plt
 	- rm -f air-eq-1.lua air-eq.inp air-eq.lua
+	- rm -f air-5sp-1T.inp air-5sp-1T.lua air-5sp-eq.lua
 	- rm -f ./ideal-air-gas-model.lua ./cea-lut-air-version-test.lua
 	- rm -f ./uniform-lut-plus-ideal-air-gas-model.lua
 	- rm -f ./two-temperature-reacting-argon-model.lua
