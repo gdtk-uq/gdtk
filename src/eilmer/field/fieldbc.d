@@ -43,15 +43,14 @@ class ZeroNormalGradient : FieldBC {
 }
 
 class FixedField : FieldBC {
-    this(double value, string conductivity_model_name) {
+    this(double value) {
         this.value = value;
-        this.conductivity_model = create_conductivity_model(conductivity_model_name);
     }
 
     final void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio){
         double S = face.length.re;
         double d = distance_between(face.pos, cell.pos[0]);
-        double sigma = conductivity_model(face.fs, face.pos);
+        double sigma = face.fs.gas.sigma.re;
         double phi = value;
 
         bk  = -1.0*phi*S/d*sigma;
@@ -63,25 +62,23 @@ class FixedField : FieldBC {
         double S = face.length.re;
         double d = distance_between(face.pos, cell.pos[0]);
         double phigrad = (value - cell.electric_potential)/d; // This implicitly points out of the domain.
-        double sigma = conductivity_model(face.fs, face.pos);
+        double sigma = face.fs.gas.sigma.re;
         double I = sigma*phigrad*S; // convert from current density vector j to current I
         return I;
     }
 private:
     double value;
-    ConductivityModel conductivity_model;
 }
 
 
 class FixedField_Test : FieldBC {
-    this(string conductivity_model_name) {
-        this.conductivity_model = create_conductivity_model(conductivity_model_name);
+    this() {
     }
 
     final void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio){
         double S = face.length.re;
         double d = distance_between(face.pos, cell.pos[0]);
-        double sigma = conductivity_model(face.fs, face.pos);
+        double sigma = face.fs.gas.sigma.re;
         double phi = test_field(face.pos.x.re, face.pos.y.re);
 
         bk  = -1.0*phi*S/d*sigma;
@@ -94,12 +91,11 @@ class FixedField_Test : FieldBC {
         double d = distance_between(face.pos, cell.pos[0]);
         double phi = test_field(face.pos.x.re, face.pos.y.re);
         double phigrad = (phi - cell.electric_potential)/d; // This implicitly points out of the domain.
-        double sigma = conductivity_model(face.fs, face.pos);
+        double sigma = face.fs.gas.sigma.re;
         double I = sigma*phigrad*S;
         return I;
     }
 private:
-    ConductivityModel conductivity_model;
 
     double test_field(double x, double y){
         return exp(x)*sin(y);
@@ -107,13 +103,13 @@ private:
 }
 
 class FixedGradient_Test : FieldBC {
-    this(string conductivity_model_name) {
-        this.conductivity_model = create_conductivity_model(conductivity_model_name);
+    this() {
     }
+
     final void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio){
         double S = face.length.re;
         double d = distance_between(face.pos, cell.pos[0]);
-        double sigma = conductivity_model(face.fs, face.pos);
+        double sigma = face.fs.gas.sigma.re;
         Vector3 phigrad = test_field_gradient(face.pos.x.re, face.pos.y.re);
 
         number phigrad_dot_n = phigrad.dot(face.n);
@@ -126,12 +122,11 @@ class FixedGradient_Test : FieldBC {
         double S = face.length.re;
         Vector3 phigrad = test_field_gradient(face.pos.x.re, face.pos.y.re);
         number phigrad_dot_n = sign*phigrad.dot(face.n); // TODO: Should this be negative sign?
-        double sigma = conductivity_model(face.fs, face.pos);
+        double sigma = face.fs.gas.sigma.re;
         double I = sigma*phigrad_dot_n.re*S;
         return I;
     }
 private:
-    ConductivityModel conductivity_model;
 
     Vector3 test_field_gradient(double x, double y){
         Vector3 phigrad = Vector3(exp(x)*sin(y), exp(x)*cos(y), 0.0);
@@ -140,9 +135,7 @@ private:
 }
 
 class SharedField : FieldBC {
-    this(string conductivity_model_name, const BoundaryCondition bc, const int[] block_offsets) {
-        this.conductivity_model = create_conductivity_model(conductivity_model_name);
-
+    this(const BoundaryCondition bc, const int[] block_offsets) {
         GhostCellFullFaceCopy gc;
         foreach(action; bc.preReconAction){
             gc = cast(GhostCellFullFaceCopy) action;
@@ -182,7 +175,7 @@ class SharedField : FieldBC {
         }
 
         double S = face.length.re;
-        double sigma = conductivity_model(face.fs, face.pos);
+        double sigma = face.fs.gas.sigma.re;
         double d = distance_between(ghost_cell_position, cell.pos[0]);
 
         Aio = other_cell_ids[face.i_bndry] + other_block_offset; // CHECKME
@@ -194,7 +187,6 @@ class SharedField : FieldBC {
         return 0.0;
     }
 private:
-    ConductivityModel conductivity_model;
     int other_blk_id;
     int other_block_offset;
     int[] other_cell_ids;
@@ -209,8 +201,7 @@ class MPISharedField : FieldBC {
     int other_blk_id;
     int[] other_cell_ids;
 
-    this(string conductivity_model_name, const BoundaryCondition bc, const int ncells) {
-        this.conductivity_model = create_conductivity_model(conductivity_model_name);
+    this(const BoundaryCondition bc, const int ncells) {
 
         GhostCellFullFaceCopy gc;
         foreach(action; bc.preReconAction){
@@ -262,7 +253,7 @@ class MPISharedField : FieldBC {
         }
 
         double S = face.length.re;
-        double sigma = conductivity_model(face.fs, face.pos);
+        double sigma = face.fs.gas.sigma.re;
         double d = distance_between(ghost_cell_position, cell.pos[0]);
 
         Aio = external_cell_idxs[face.i_bndry];
@@ -274,7 +265,6 @@ class MPISharedField : FieldBC {
         return 0.0;
     }
 private:
-    ConductivityModel conductivity_model;
     int[] external_cell_idxs;
     int my_offset;
 } // end class MPISharedField
@@ -295,19 +285,19 @@ FieldBC create_field_bc(JSONValue field_bc_json, const BoundaryCondition bc, con
         break;
     case "FixedField":
         double value = getJSONdouble(field_bc_json, "value", 0.0);
-        field_bc = new FixedField(value, conductivity_model_name);
+        field_bc = new FixedField(value);
         break;
     case "FixedGradient_Test":
-        field_bc = new FixedGradient_Test(conductivity_model_name);
+        field_bc = new FixedGradient_Test();
         break;
     case "FixedField_Test":
-        field_bc = new FixedField_Test(conductivity_model_name);
+        field_bc = new FixedField_Test();
         break;
     case "unspecified":
         version(mpi_parallel){
-            field_bc = new MPISharedField(conductivity_model_name, bc, ncells);
+            field_bc = new MPISharedField(bc, ncells);
         } else {
-            field_bc = new SharedField(conductivity_model_name, bc, block_offsets);
+            field_bc = new SharedField(bc, block_offsets);
         }
         break;
     default:

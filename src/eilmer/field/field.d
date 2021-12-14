@@ -40,8 +40,8 @@ class ElectricField {
         max_iter = N; // eventually you need to do something about this.
         phi.length = N;
         phi0.length = N;
-
-        conductivity = create_conductivity_model(field_conductivity_model);
+        auto gmodel = GlobalConfig.gmodel_master;
+        conductivity = create_conductivity_model(field_conductivity_model, gmodel);
 
         // I don't want random bits of the field module hanging off the boundary conditions.
         // Doing it this way is bad encapsulation, but it makes sure that other people only break my code
@@ -72,6 +72,7 @@ class ElectricField {
     
         FVCell other;
         foreach(blkid, block; localFluidBlocks){
+            auto gmodel = block.myConfig.gmodel;
             foreach(cell; block.cells){
                 int k = cell.id + block_offsets[blkid];
                 Ai[nbands*k + 2] = k;
@@ -79,6 +80,7 @@ class ElectricField {
                 foreach(io, face; cell.iface){
                     int iio = (io>1) ? to!int(io+1) : to!int(io); // -> [0,1,3,4] since 2 is the entry for "cell" 
                     double sign = cell.outsign[io];
+                    face.fs.gas.sigma = conductivity(face.fs.gas, face.pos, gmodel); // TODO: Redundant work.
         
                     if (face.is_on_boundary) {
                         int Aio;
@@ -94,7 +96,7 @@ class ElectricField {
                         if (other==cell) other = face.right_cell;
 
                         double S = face.length.re;
-                        double sigmaF = conductivity(face.fs, face.pos);
+                        double sigmaF = face.fs.gas.sigma.re;
                         double d = distance_between(other.pos[0], cell.pos[0]);
                         Ai[k*nbands + iio] = other.id + block_offsets[blkid];
                         A[k*nbands + iio]+=  1.0*S/d*sigmaF;
@@ -145,9 +147,11 @@ class ElectricField {
 
         writeln("Called field.compute_boundary_current() ...");
         foreach(blkid, block; localFluidBlocks){
+            auto gmodel = block.myConfig.gmodel;
             foreach(cell; block.cells){
                 foreach(io, face; cell.iface){
                     if (face.is_on_boundary) {
+                        face.fs.gas.sigma = conductivity(face.fs.gas, face.pos, gmodel);
                         double sign = cell.outsign[io];
                         auto field_bc = field_bcs[blkid][face.bc_id];
                         double I = field_bc.compute_current(sign, face, cell);
