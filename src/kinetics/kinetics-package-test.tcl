@@ -40,10 +40,6 @@ test two-temperature-gasgiant-kinetics-test {Testing Daisy's two-temperature Gas
     exec ./two_temperature_gasgiant_kinetics_test
 } -result {} -returnCodes {0}
 
-test electronically-specific-kinetics-test {Testing Brad Semple's electronically specific state to state gas model} -body {
-    exec ./electronically_specific_kinetics_test
-} -result {} -returnCodes {0}
-
 puts ""
 puts "==========================================  SUMMARY  =========================================="
 cleanupTests
