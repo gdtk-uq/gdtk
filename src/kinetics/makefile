@@ -36,7 +36,7 @@ LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := ${LUA_DIR}/install/lib/liblua.a
 LIBLUAPATH := ${LUA_DIR}/lib
 
-DLINKFLAGS :=  -w -L-L${LIBLUAPATH} -L-llua -L-ldl
+DLINKFLAGS :=  -w -L-ldl
 
 ifeq ($(WITH_DVODE),1)
     DFLAGS += -version=with_dvode
