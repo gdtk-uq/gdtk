@@ -117,8 +117,6 @@ public:
     //
     // Workspace for transient-solver implicit update and NK accelerator.
     // source terms for finite-rate chemistry
-    number[] thermochem_conc;
-    number[] thermochem_rates;
     number[] thermochem_source;
     //
     // Shape sensitivity calculator workspace.
@@ -223,15 +221,11 @@ public:
         version(multi_species_gas) {
             if (myConfig.reacting && cqi.n_species > 1) {
                 thermochem_source.length = cqi.n_species;
-                thermochem_conc.length = cqi.n_species;
-                thermochem_rates.length = cqi.n_species;
             }
         }
         version(multi_T_gas) {
             if (cqi.n_modes > 0) {
                 thermochem_source.length += cqi.n_modes;
-                thermochem_conc.length += cqi.n_modes;
-                thermochem_rates.length += cqi.n_modes;
             }
         }
     }
@@ -1107,7 +1101,8 @@ public:
         // at this point as well for convenience, we need them
         // when we apply the boundary condition corrections later
         foreach ( bndary; bc ) {
-            if ( bndary.type == "exchange_using_mapped_cells" || bndary.type == "exchange_over_full_face") { continue; }
+            if (!bndary.ghost_cell_data_available) { continue; }
+            if (bndary.type == "exchange_using_mapped_cells" || bndary.type == "exchange_over_full_face") { continue; }
             foreach ( iface, face; bndary.faces) {
                 FVCell ghost_cell; FVCell cell;
                 if (bndary.outsigns[iface] == 1) {
@@ -1167,18 +1162,25 @@ public:
         shared int interpolation_order_save = GlobalConfig.interpolation_order;
         myConfig.interpolation_order = to!int(flowJacobian.spatial_order);
 
-        version(complex_numbers) { } // do nothing
-        else {
-            if (myConfig.interpolation_order != interpolation_order_save) {
-                foreach(cell; cells) { evalRHS(0, 0, cell.cell_list, cell.face_list, cell); }
-            }
-        }
-
-        // fill out the rows of the Jacobian for a cell
+        // copy some data for later use
         if (myConfig.viscous) {
             foreach(cell; cells) { cell.grad_save.copy_values_from(cell.grad); }
         }
-        foreach(cell; cells) { cell.Q_save.copy_values_from(cell.Q); }
+        if (myConfig.reacting) {
+            foreach(cell; cells) {
+                cell.clear_source_vector();
+                cell.add_thermochemical_source_vector(thermochem_source, 1.0);
+                cell.Q_save.copy_values_from(cell.Q);
+            }
+        }
+
+        // the real-valued finite difference needs a base residual (R0)
+        version(complex_numbers) { } // do nothing
+        else {
+            foreach(cell; cells) { evalRHS(0, 0, cell.cell_list, cell.face_list, cell); }
+        }
+
+        // fill out the rows of the Jacobian for a cell
         foreach(cell; cells) { evaluate_cell_contribution_to_jacobian(cell); }
 
         // add boundary condition corrections to boundary cells
@@ -1269,6 +1271,7 @@ public:
         int gtl = 0; int ftl = 1;
 
         foreach ( bndary; bc ) {
+            if (!bndary.ghost_cell_data_available) { continue; }
             if ( bndary.type == "exchange_using_mapped_cells" || bndary.type == "exchange_over_full_face") { continue; }
             foreach ( bi, bface; bndary.faces) {
                 FVCell ghost_cell; FVCell pcell;
@@ -1435,12 +1438,9 @@ public:
                 // NOTE: we only need to evaluate the chemical source terms for the perturb cell
                 //       this saves us a lot of unnecessary computations
                 if (cell.id == pcell.id) {
-                    cell.add_thermochemical_source_vector(thermochem_conc,
-                                                          thermochem_rates,
-                                                          thermochem_source,
-                                                          limit_factor);
+                    cell.add_thermochemical_source_vector(thermochem_source, limit_factor);
                 } else {
-                    cell.Q.copy_values_from(cell.Q_save);
+                    foreach (j; 0 .. myConfig.cqi.n) { cell.Q.vec[j] += cell.Q_save.vec[j]; }
                 }
             }
             if (myConfig.udf_source_terms) {
@@ -1533,7 +1533,7 @@ public:
         size_t TKE = GlobalConfig.cqi.rhoturb;
         size_t SPECIES = GlobalConfig.cqi.species;
         size_t MODES = GlobalConfig.cqi.modes;
-        auto EPS = flowJacobian.eps;
+        auto EPS = GlobalConfig.sssOptions.sigma0;
 
         // We perform a Frechet derivative to evaluate J*D^(-1)v
         size_t nturb = myConfig.turb_model.nturb;
@@ -1612,7 +1612,7 @@ public:
                     }
                 }
                 version(multi_T_gas){
-                    foreach(imode; 0 .. nmodes) { sol[cellCount+MODES+imode] = (cell.dUdt[1].vec[cqi.modes+imode]-cell.dUdt[1].vec[cqi.modes+imode])/EPS; }
+                    foreach(imode; 0 .. nmodes) { sol[cellCount+MODES+imode] = (cell.dUdt[1].vec[cqi.modes+imode]-cell.dUdt[0].vec[cqi.modes+imode])/EPS; }
                 }
             }
 
@@ -1754,7 +1754,7 @@ public:
             c.add_viscous_source_vector();
         } // end if viscous
         if (myConfig.reacting && myConfig.chemistry_update == ChemistryUpdateMode.integral) {
-            c.add_thermochemical_source_vector(thermochem_conc, thermochem_rates, thermochem_source, reaction_fraction);
+            c.add_thermochemical_source_vector(thermochem_source, reaction_fraction);
         }
         if (myConfig.udf_source_terms) { c.add_udf_source_vector(); }
         c.time_derivatives(gtl, ftl);

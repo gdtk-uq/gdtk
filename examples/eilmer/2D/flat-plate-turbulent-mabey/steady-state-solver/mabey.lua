@@ -52,7 +52,7 @@ cflist = {north=cfx, east=RobertsFunction:new{end0=false,end1=true,beta=1.0014},
 grd = StructuredGrid:new{psurface=patch, niv=129/3, njv=97/3, cfList=cflist}
 
 blks = FBArray:new{grid=grd, nib=2, njb=2, fillCondition=inflow,
-                   bcList={north=WallBC_NoSlip_Adiabatic:new{wall_function=false, group="wall"},
+                   bcList={north=WallBC_NoSlip_Adiabatic0:new{wall_function=false, group="wall"},
                            east=OutFlowBC_Simple:new{},
                            south=InFlowBC_Supersonic:new{flowCondition=inflow},
                            west=InFlowBC_Supersonic:new{flowCondition=inflow}}}

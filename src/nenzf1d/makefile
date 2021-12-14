@@ -142,7 +142,8 @@ install: $(PROGRAMS) libnenzf1d.so prep-gas prep-chem chemkin2eilmer
 	- mkdir -p $(BUILD_DIR)/lib
 	- mkdir -p $(BUILD_DIR)/share
 	cp $(PROGRAMS) $(BUILD_DIR)/bin
-	cp $(LUA_DIR)/bin/* $(BUILD_DIR)/bin
+	cp $(LUA_DIR)/install/bin/* $(BUILD_DIR)/bin
+	cp $(LUA_DIR)/install/lib/lpeg.so $(BUILD_DIR)/lib
 	cp -r ../lib/* $(BUILD_DIR)/lib
 	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
 	cp nenzf1d.py $(BUILD_DIR)/lib

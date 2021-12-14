@@ -36,6 +36,7 @@ config.dt_plot = config.max_time/no_flow_times
 grids = importGridproGrid(gproGrid, 1.0)
 blk = FBArray:new{grid=grids[1], initialState=inflow, label='blk',
                   bcList={west=InFlowBC_ShockFitting:new{flowState=inflow},
+                          east=WallBC_WithSlip0:new{},
                           north=OutFlowBC_Simple:new{}},
                   nib=1, njb=njb}
 

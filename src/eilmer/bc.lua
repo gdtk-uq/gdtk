@@ -296,6 +296,13 @@ function ZeroVelocity:tojson()
    return str
 end
 
+ZeroSlipWallVelocity = BoundaryInterfaceEffect:new()
+ZeroSlipWallVelocity.type = "zero_slip_wall_velocity"
+function ZeroSlipWallVelocity:tojson()
+   local str = string.format('          {"type" : "%s"}', self.type)
+   return str
+end
+
 TranslatingSurface = BoundaryInterfaceEffect:new{v_trans=nil}
 -- Note that we are expecting v_trans as a table of 3 floats, or a Vector3 object.
 TranslatingSurface.type = "translating_surface"
@@ -386,8 +393,8 @@ function TemperatureFromGasSolidInterface:tojson()
    return str
 end
 
-ThermionicRadiativeEquilibrium = BoundaryInterfaceEffect:new{emissivity=nil, Ar=nil, phi=nil,
-                          ThermionicEmissionActive=1,catalytic_type="none"}
+ThermionicRadiativeEquilibrium = BoundaryInterfaceEffect:new{emissivity=1.0, Ar=0.0, phi=0.0,
+                          ThermionicEmissionActive=0,catalytic_type="none", wall_massf_composition={}}
 ThermionicRadiativeEquilibrium.type = "thermionic_radiative_equilibrium"
 function ThermionicRadiativeEquilibrium:tojson()
    local str = string.format('          {"type": "%s",', self.type)
@@ -396,6 +403,20 @@ function ThermionicRadiativeEquilibrium:tojson()
    str = str .. string.format(' "phi": %.18e,', self.phi)
    str = str .. string.format(' "ThermionicEmissionActive": %d,', self.ThermionicEmissionActive)
    str = str .. string.format(' "catalytic_type": "%s"', self.catalytic_type)
+   if self.catalytic_type == "fixed_composition" then
+       if next(self.wall_massf_composition) == nil then
+           error("catalytic_type='fixed_composition' requires a wall_massf_composition table")
+       end
+
+       local gm = getGasModel()
+       local nsp = gm:nSpecies()
+       local mymf = convertSpeciesTableToArray(self.wall_massf_composition)
+       str = str .. ', "wall_massf_composition": [ '
+       for isp=0,nsp-2 do
+          str = str .. string.format("%.18e, ", mymf[isp])
+       end
+       str = str .. string.format("%.18e ]", mymf[nsp-1])
+   end
    str = str .. '}'
    return str
 end
@@ -749,7 +770,7 @@ function WallBC_NoSlip_FixedT0:new(o)
    o.ghost_cell_data_available = true
    o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroSlipWallVelocity:new(),
 					   FixedT:new{Twall=o.Twall}}
 
    if o.catalytic_type == "fixed_composition" then
@@ -798,7 +819,7 @@ function WallBC_NoSlip_FixedT1:new(o)
    o.ghost_cell_data_available = false
    o.is_wall_with_viscous_effects = true
    o.preReconAction = {}
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroSlipWallVelocity:new(),
 					   FixedT:new{Twall=o.Twall}}
 
    if o.catalytic_type == "fixed_composition" then
@@ -846,7 +867,7 @@ function WallBC_NoSlip_UserDefinedT:new(o)
    o.ghost_cell_data_available = true
    o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroSlipWallVelocity:new(),
                                            UserDefinedInterface:new{fileName=o.Twall}}
 
    if o.catalytic_type == "fixed_composition" then
@@ -887,7 +908,7 @@ function WallBC_ThermionicEmission:new(o)
    end
    o = o or {}
    flag = checkAllowedNames(o, {"emissivity", "Ar", "phi", "ThermionicEmissionActive",
-                                "catalytic_type", "wall_massf_composition","field_bc",
+                                "catalytic_type", "wall_massf_composition", "field_bc",
                                 "label", "group", "is_design_surface", "num_cntrl_pts"})
    if not flag then
       error("Invalid name for item supplied to WallBC_ThermionicEmission constructor.", 2)
@@ -896,10 +917,11 @@ function WallBC_ThermionicEmission:new(o)
    o.ghost_cell_data_available = true
    o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroSlipWallVelocity:new(),
       ThermionicRadiativeEquilibrium:new{emissivity=o.emissivity, Ar=o.Ar, phi=o.phi,
                                   ThermionicEmissionActive=o.ThermionicEmissionActive,
-                                  catalytic_type=o.catalytic_type}}
+                                  catalytic_type=o.catalytic_type,
+                                  wall_massf_composition=o.wall_massf_composition}}
 
    -- ThermionicRadiativeEquilibrium handles setting the thermostate and transprops
    -- at the boundaries. It needs access to these routines anyway, so it might as well.
@@ -926,7 +948,7 @@ function WallBC_NoSlip_Adiabatic0:new(o)
    o.ghost_cell_data_available = true
    o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroSlipWallVelocity:new() }
 
    -- For the adiabatic wall we only need an UpdateThermoTransCoeffs if catalytic effects are present
    if o.catalytic_type == "fixed_composition" then
@@ -973,7 +995,7 @@ function WallBC_NoSlip_Adiabatic1:new(o)
    o.ghost_cell_data_available = false
    o.is_wall_with_viscous_effects = true
    o.preReconAction = {}
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroSlipWallVelocity:new() }
 
    -- For the adiabatic wall we only need an UpdateThermoTransCoeffs if catalytic effects are present
    if o.catalytic_type == "fixed_composition" then
@@ -1642,7 +1664,7 @@ function WallBC_AdjacentToSolid:new(o)
                                                  orientation=o.orientation},
                         InternalCopyThenReflect:new() }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(),
-                                           ZeroVelocity:new(),
+                                           ZeroSlipWallVelocity:new(),
                                            TemperatureFromGasSolidInterface:new{otherBlock=o.otherBlock,
                                                                                 otherFace=o.otherFace,
                                                                                 orientation=o.orientation},

@@ -33,6 +33,7 @@ import solidfvcell;
 import solidfvinterface;
 import gas_solid_interface;
 import kinetics.equilibrium_update;
+import mass_diffusion;
 
 BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -70,6 +71,9 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
         break;
     case "zero_velocity":
         newBIE = new BIE_ZeroVelocity(blk_id, boundary);
+        break;
+    case "zero_slip_wall_velocity":
+        newBIE = new BIE_ZeroSlipWallVelocity(blk_id, boundary);
         break;
     case "translating_surface":
         Vector3 v_trans = getJSONVector3(jsonData, "v_trans", Vector3(0.0,0.0,0.0));
@@ -113,9 +117,11 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
         double Ar = getJSONdouble(jsonData, "Ar", 0.0);
         double phi = getJSONdouble(jsonData, "phi", 0.0);
         int ThermionicEmissionActive = getJSONint(jsonData, "ThermionicEmissionActive", 1);
+        size_t nsp = GlobalConfig.gmodel_master.n_species;
         string catalytic_type = getJSONstring(jsonData, "catalytic_type", "none");
+        double[] massfAtWall = getJSONdoublearray(jsonData, "wall_massf_composition", []);
         newBIE = new BIE_ThermionicRadiativeEquilibrium(blk_id, boundary, emissivity, Ar, phi,
-                                 ThermionicEmissionActive, GlobalConfig.gas_model_file, catalytic_type);
+                             ThermionicEmissionActive, nsp, GlobalConfig.gas_model_file, catalytic_type, massfAtWall);
         break;
     case "equilibrium_composition":
         newBIE = new BIE_EquilibriumComposition(blk_id, boundary, GlobalConfig.gas_model_file);
@@ -541,6 +547,57 @@ class BIE_ZeroVelocity : BoundaryInterfaceEffect {
         }
     } // end apply_structured_grid()
 } // end class BIE_ZeroVelocity
+
+
+class BIE_ZeroSlipWallVelocity : BoundaryInterfaceEffect {
+    // This boundary interface effect should work for both moving and fixed grids
+    // because the grid velocity at the face should be already set appropriately.
+    this(int id, int boundary)
+    {
+        super(id, boundary, "ZeroSlipWallVelocity");
+    }
+
+    override string toString() const
+    {
+        return "ZeroSlipWallVelocity()";
+    }
+
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto gmodel = blk.myConfig.gmodel;
+        BoundaryCondition bc = blk.bc[which_boundary];
+	FlowState fs = f.fs;
+	fs.vel.set(f.gvel);
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+        auto gmodel = blk.myConfig.gmodel;
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            FlowState fs = f.fs;
+            fs.vel.set(f.gvel);
+        } // end foreach face
+    }
+
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        f.fs.vel.set(f.gvel);
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        foreach (i, f; bc.faces) {
+            f.fs.vel.set(f.gvel);
+        }
+    } // end apply_structured_grid()
+} // end class BIE_ZeroSlipWallVelocity
 
 
 class BIE_TranslatingSurface : BoundaryInterfaceEffect {
@@ -1458,23 +1515,41 @@ public:
 } // end class BIE_TemperatureFromGasSolidInterface
 
 class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
-    this(int id, int boundary, double emissivity, double Ar, double phi, int ThermionicEmissionActive,
-         const string gas_file_name, const string catalytic_type)
+    this(int id, int boundary, double emissivity, double Ar, double phi, int ThermionicEmissionActive, size_t nsp,
+         const string gas_file_name, const string catalytic_type, double[] massfAtWall)
     {
         super(id, boundary, "ThermionicRadiativeEquilibrium");
         this.emissivity = emissivity;
         this.Ar = Ar;
         this.phi = phi*Qe;  // Convert phi from input 'eV' to 'J'
         this.ThermionicEmissionActive = ThermionicEmissionActive;
+        this.nsp = nsp;
         switch(catalytic_type){
             case "none":
                 break;
             case "equilibrium":
                 eqcalc = new EquilibriumCalculator(gas_file_name);
+                catalytic = true;
+                break;
+            case "fixed_composition":
+                if (massfAtWall.length!=nsp)
+                    throw new Error("massfAtWall.length does not match gmodel.n_species");
+                fmassf = massfAtWall;
+                setmassf = true;
+                catalytic = true;
                 break;
             default:
                 throw new Error("TRE Boundary Condition does not support catalytic type: " ~ catalytic_type);
         }
+
+        if (catalytic) {
+            jx.length = nsp;
+            jy.length = nsp;
+            jz.length = nsp;
+        }
+
+        if ((catalytic) && (GlobalConfig.mass_diffusion_model == MassDiffusionModel.none))
+            throw new Error("Catalytic Wall requires a mass diffusion model.");
     }
 
     override string toString() const
@@ -1533,6 +1608,12 @@ protected:
     double phi;         // Work function, material dependent. Input units in eV,
                         // this gets converted to Joules by multiplying by Elementary charge, Qe
     int ThermionicEmissionActive;  // Whether or not Thermionic Emission is active. Default is 'on'
+
+    // Pieces needed for catalytic heat transfer
+    number[] jx, jy, jz;
+    double[] fmassf;
+    bool setmassf, catalytic;
+    size_t nsp;
     EquilibriumCalculator eqcalc;
 
     // Constants used in analysis
@@ -1553,6 +1634,7 @@ protected:
         double viscous_factor = blk.myConfig.viscous_factor;
 
         IFace.fs.gas.p = cell.fs.gas.p;
+        if (setmassf) foreach (isp; 0 .. nsp) IFace.fs.gas.massf[isp] = fmassf[isp];
         number Twall;
         number T0 = IFace.fs.gas.T;
 
@@ -1581,7 +1663,6 @@ protected:
         if (eqcalc) eqcalc.set_massf_from_pT(IFace.fs.gas);
         gmodel.update_thermo_from_pT(IFace.fs.gas);
         gmodel.update_trans_coeffs(IFace.fs.gas);
-        
         return;
 
     } // end solve_for_wall_temperature_and_energy_flux()
@@ -1613,9 +1694,25 @@ protected:
         }
         // Negative sign is because heat flows along temperature gradient from hot to cold
         number q_conduction = -1.0*(IFace.n.x*qx + IFace.n.y*qy + IFace.n.z*qz);
-
         // We then correct for the direction of IFace.n using outsign
         q_conduction *= outsign;
+
+        // Species diffusion has the opposite sign, for some reason.
+        number q_diffusion = to!number(0.0);
+        if (catalytic){
+            blk.myConfig.massDiffusion.update_mass_fluxes(IFace.fs, cell.grad, jx, jy, jz);
+            foreach (isp; 0 .. nsp) {
+                number h = gmodel.enthalpy(IFace.fs.gas, cast(int)isp);
+                q_diffusion += (jx[isp]*h*IFace.n.x + jy[isp]*h*IFace.n.y + jz[isp]*h*IFace.n.z);
+                version(multi_T_gas){
+                foreach (imode; 0 .. n_modes) {
+                    number hMode = gmodel.enthalpyPerSpeciesInMode(IFace.fs.gas, cast(int)isp, cast(int)imode);
+                    q_diffusion += (jx[isp]*hMode*IFace.n.x + jy[isp]*hMode*IFace.n.y + jz[isp]*hMode*IFace.n.z);
+                }
+                }
+            }
+        }
+        q_diffusion *= outsign;
 
         number q_rad = emissivity*SB_sigma*Twall*Twall;
         number q_thermionic = to!number(0.0);
@@ -1625,7 +1722,7 @@ protected:
 
         // We actually solve for the energy divided by T^2 to reduce the size of the numbers
         // and reduce floating point round off error.
-        return q_rad + q_thermionic - q_conduction/Twall/Twall;
+        return q_rad + q_thermionic - q_conduction/Twall/Twall - q_diffusion/Twall/Twall;
     }
 } // end class BIE_ThermionicRadiativeEquilibrium
 

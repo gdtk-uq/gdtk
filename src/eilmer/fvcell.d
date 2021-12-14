@@ -278,16 +278,16 @@ public:
     }
 
     // length in the i-index direction
-    @property @nogc number iLength() const {return lengths[0];} 
-    @property @nogc number iLength(number l) {return lengths[0] = l;}
+    @property @nogc number iLength() const { return lengths[0]; }
+    @property @nogc number iLength(number l) { return lengths[0] = l; }
 
     // length in the j-index direction
-    @property @nogc number jLength() const {return lengths[1];} 
-    @property @nogc number jLength(number l) {return lengths[1] = l;}
+    @property @nogc number jLength() const { return lengths[1]; }
+    @property @nogc number jLength(number l) { return lengths[1] = l; }
 
     // length in the k-index direction
-    @property @nogc number kLength() const {return lengths[2];} 
-    @property @nogc number kLength(number l) {return lengths[2] = l;}
+    @property @nogc number kLength() const { return lengths[2]; }
+    @property @nogc number kLength(number l) { return lengths[2] = l; }
 
     @nogc
     void copy_values_from(FVCell other, int type_of_copy)
@@ -1176,10 +1176,7 @@ public:
     }
 
     @nogc
-    void add_thermochemical_source_vector(number[] thermochem_conc,
-                                          number[] thermochem_rates,
-                                          number[] thermochem_source,
-                                          double reaction_factor)
+    void add_thermochemical_source_vector(number[] thermochem_source, double reaction_factor)
     {
         // It does not make a lot of sense to call this function for n_species == 1
         // Maybe we should just set chem_source[0] = 0.0.
@@ -1188,8 +1185,7 @@ public:
         if (fs.gas.T <= myConfig.T_frozen) { return; }
         version(multi_species_gas) {
             if (cqi.n_species > 1) {
-                myConfig.thermochemUpdate.eval_source_terms(myConfig.gmodel, fs.gas, thermochem_conc,
-                                                            thermochem_rates, thermochem_source);
+                myConfig.thermochemUpdate.eval_source_terms(myConfig.gmodel, fs.gas, thermochem_source);
                 foreach(sp; 0 .. cqi.n_species) { Q.vec[cqi.species+sp] += reaction_factor*thermochem_source[sp]; }
             }
         }

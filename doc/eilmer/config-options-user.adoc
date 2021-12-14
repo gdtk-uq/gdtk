@@ -366,11 +366,11 @@ TIP: You can read more about this in the technical note
 https://gdtk.uqcloud.net/docs/eilmer/technical-notes/hybrid-fluxes-for-hugo/[Hybrid fluxes, shock detection and smoothing.]
 
 
-`config.strict_shock_detector` :: 
+`config.strict_shock_detector` ::
   _boolean_, default: `true` +
-  If this is true then any face that is part 
-  of a cell with S>0 will have its own S value set to 1. This is to 
-  emulate legacy behaviour and thus defaults to true. For true 
+  If this is true then any face that is part
+  of a cell with S>0 will have its own S value set to 1. This is to
+  emulate legacy behaviour and thus defaults to true. For true
   blending of fluxes this should be set to false.
 
 `config.frozen_shock_detector` ::
@@ -594,3 +594,48 @@ The blending operation is performed 20 times in this example:
   _int_, default: `10` +
   The number of steps between each increment of the temporal Discrete Fourier Transform modes.
   Should be equal to `config.max_steps / config.DFT_n_modes`.
+
+
+== Special Zones
+
+Sometimes you may wish to apply specific configuration only for a limited region.
+There are special zones that can be constructed for turbulence, reactions and ignition
+and order of reconstruction.
+The region of application is defined by a pair of diagonally-opposing points
+that specify the minimum and maximum coordinate values.
+
+  TurbulentZone:new{p0={x=x0, y=y0}, p1={x=x1, y=y1}}
+
+The turbulence model is active throughout the flow
+but its effect on the flow field is masked outside of any defined turbulent zones.
+This is achieved by the code setting the turbulence viscosity and conductivity to zero
+for finite-volume cells that fall outside of all regions defined as a TurbulentZone.
+If there are no such defined regions, the whole flow field is allowed to have nonzero turbulence viscosity.
+
+  ReactionZone:new{p0={x=x0, y=y0}, p1={x=x1, y=y1}}
+
+In a flow with an active reaction scheme, this type of zone makes it possible to selectively allow
+reactions to proceed, or not.
+If the centre of a cell lies within the reaction zone, the finite-rate chemistry is allowed to proceed,
+else the species fractions are maintained constant.
+If no reaction zones are specified and a reaction scheme is active,
+then reactions are permitted for the entire flow field.
+
+  IgnitionZone:new{p0={x=x0, y=y0}, p1={x=x1, y=y1}, T=Tig}
+
+`Tig` controls the reaction rate used for chemical reactions,
+without effecting the gas temperature in the flow field.
+The rate-controlling temperature is used to evaluate the chemical reaction rates
+only within the physical extents of the ignition zone.
+The effect of this zone can be limited in time by specifying a nonzero values for
+`config.ignition_time_start` and `config.ignition_time_stop`.
+While the zone is active, the reaction rates within the zone are altered.
+The rate-controlling temperature is typically set to an artificially inflated
+value to promote ignition.
+
+  SuppressReconstructionZone:new{p0={x=x0, y=y0}, p1={x=x1, y=y1}}
+
+Inside such a zone, high-order reconstruction of the flow properties is suppressed.
+This can sometimes help with difficult flow features, such as an expansion around a sharp corner.
+
+

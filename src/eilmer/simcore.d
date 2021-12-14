@@ -299,6 +299,8 @@ int init_simulation(int tindx, int nextLoadsIndx,
         }
 
         if (myblk.myConfig.verbosity_level >= 2) { writefln("Cold start cells in block %d", myblk.id); }
+        // Note that, even for grid_motion==none simulations, we use the grid velocities for setting
+        // the gas velocities at boundary faces.  These will need to be set to zero for correct viscous simulation.
         foreach (iface; myblk.faces) { iface.gvel.clear(); }
         foreach (cell; myblk.cells) {
             cell.encode_conserved(0, 0, myblk.omegaz);

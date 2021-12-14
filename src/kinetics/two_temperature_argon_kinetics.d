@@ -221,7 +221,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         } // end if Q.T > _T_min_for_reaction
     } // end opCall()
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for two_temperature_argon_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }

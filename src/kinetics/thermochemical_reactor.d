@@ -34,7 +34,7 @@ public:
         // to update the GasState data at a later time.
         _gmodel = gmodel;
     }
-
+    //
     // All the work happens when calling the concrete object
     // which updates the GasState over the (small) time, tInterval.
     //
@@ -45,10 +45,15 @@ public:
     abstract void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[maxParams] params);
-
-    // for the (fully-coupled) implicit solver we need public access to source terms
-    @nogc abstract void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source);
-
+    //
+    // For the (fully-coupled) implicit solver we need public access to source terms.
+    // The elements of this source-term array represent the rates of change of
+    // the conserved quantities for the flow-solver.
+    // For a multi-species gas, there will be first n_species elements for the chemical species
+    // followed by n_modes of energies for a multi-temperature gas.
+    @nogc
+    abstract void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source);
+    //
     // We will need to access this referenced model from the Lua functions
     // so it needs to be public.
     GasModel _gmodel;

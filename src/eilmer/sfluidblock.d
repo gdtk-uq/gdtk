@@ -117,7 +117,8 @@ public:
     } // end constructor from json
 
     this(lua_State* L)
-    // generate a new block and fill it with information from a lua state
+    // Generate a new block and fill it with information from a Lua interpreter state.
+    // This particular constructor is only used in the prep stage.
     {
         auto grid = checkStructuredGrid(L, 2);
         double omegaz = luaL_checknumber(L, 5);

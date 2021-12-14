@@ -44,6 +44,7 @@ configOptionsHidden = { -- hidden from user
    local_time_stepping_limit_factor = 10000,
    with_super_time_stepping_flexible_stages = false,
    max_attempts_for_step = 3,
+   perturbation_for_real_differences = 1.0e-6,
    --
    solid_domain_cfl = 0.85,
    coupling_with_solid_domains = "tight",

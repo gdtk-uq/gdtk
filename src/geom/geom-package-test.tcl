@@ -23,6 +23,7 @@ set module_names [list vector3 vector3_complex \
                       aopatch aopatch_complex \
                       gmopatch gmopatch_complex \
                       bezierpatch bezierpatch_complex \
+                      controlpointpatch \
                       beziertrianglepatch \
 		      spherepatch spherepatch_complex \
 		      cubepatch cubepatch_complex \

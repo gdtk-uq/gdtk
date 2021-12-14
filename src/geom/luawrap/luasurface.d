@@ -35,7 +35,9 @@ immutable string MeshPatchMT = "MeshPatch";
 immutable string LuaFnSurfaceMT = "LuaFnSurface";
 immutable string SubRangedSurfaceMT = "SubRangedSurface";
 immutable string BezierPatchMT = "BezierPatch";
+immutable string ControlPointPatchMT = "ControlPointPatch";
 immutable string BezierTrianglePatchMT = "BezierTrianglePatch";
+
 
 static const(ParametricSurface)[] surfaceStore;
 static const(BezierTrianglePatch)[] triPatchStore;
@@ -66,6 +68,8 @@ ParametricSurface checkSurface(lua_State* L, int index) {
         return checkObj!(SubRangedSurface, SubRangedSurfaceMT)(L, index);
     if ( isObjType(L, index, BezierPatchMT) )
         return checkObj!(BezierPatch, BezierPatchMT)(L, index);
+    if ( isObjType(L, index, ControlPointPatchMT) )
+        return checkObj!(ControlPointPatch, ControlPointPatchMT)(L, index);
     // if no match found then
     return null;
 }
@@ -1007,6 +1011,86 @@ extern(C) int luaWriteCtrlPtsAsVtkXml(lua_State *L)
     return 0;
 }
 
+/**
+ * This is the constructor for a ControlPointPatch to be used from the Lua interface.
+ *
+ * At successful completion of this function, a new ControlPointPatch object
+ * is pushed onto the Lua stack.
+ *
+ * Construction is:
+ * -------------------------
+ * patch = ControlPointBezierPatch:new{north=nPath, east=ePath, south=sPath, west=wPath, control_points=C}
+ * --------------------------
+ *
+ * paths   : see CoonsPatch (above)
+ * control_points  : an array of points C[N][M]
+ *
+ * @author: Rowan J. Gollan
+ * 
+ */
+
+extern(C) int newControlPointPatch(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 2)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected ControlPointPatch:new{}; ";
+        errMsg ~= "maybe you tried ControlPointPatch.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in constructor ControlPointPatch:new{}. " ~
+            "A table with input parameters is expected as the first argument.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["north", "east", "south", "west", "control_points"])) {
+        string errMsg = "Error in call to ControlPointPatch:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+
+    Path[string] paths;
+    getPaths(L, "ControlPointPatch", paths);
+    
+    lua_getfield(L, 1, "control_points");
+    if (!lua_istable(L, -1)) {
+        string errMsg = "There's a problem in call to ControlPointsPatch:new{}. " ~
+            "An array of arrays for 'control_points' is expected.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    int N = to!int(lua_objlen(L, -1));
+    int M;
+    Vector3[][] C;
+    C.length = N;
+    foreach (i; 0 .. N) {
+        lua_rawgeti(L, -1, i+1); // +1 for Lua offset
+        if (i == 0) {
+            M = to!int(lua_objlen(L, -1));
+        }
+        else {
+            if (M != lua_objlen(L, -1)) {
+                string errMsg = "There's a problem in call to ControlPointPatch:new{}. " ~
+                    "Inconsistent numbers of points in array of 'control_points'.";
+                luaL_error(L, errMsg.toStringz);
+            }
+        }
+        C[i].length = M;
+        foreach (j; 0 .. M) {
+            lua_rawgeti(L, -1, j+1);
+            auto p = toVector3(L, -1);
+            C[i][j].set(p);
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
+    }
+    lua_pop(L, 1);
+    // Try to construct object.
+    auto ctrlPtPatch = new ControlPointPatch(paths["south"], paths["north"], paths["west"], paths["east"], C);
+    surfaceStore ~= pushObj!(ControlPointPatch, ControlPointPatchMT)(L, ctrlPtPatch);
+    return 1;
+} // end newControlPointPatch()
+
+
 
 /* ---------- convenience functions -------------- */
 
@@ -1515,6 +1599,28 @@ void registerSurfaces(lua_State* L)
     // Register function to write Bezier control points.
     lua_pushcfunction(L, &luaWriteCtrlPtsAsVtkXml); lua_setglobal(L, "writeCtrlPtsAsVtkXml");
 
+    // Register the ControlPointPatch object
+    luaL_newmetatable(L, ControlPointPatchMT.toStringz);
+
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newControlPointPatch);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallSurface!(ControlPointPatch, ControlPointPatchMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallSurface!(ControlPointPatch, ControlPointPatchMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(ControlPointPatch, ControlPointPatchMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &areaOfSurface!(ControlPointPatch, ControlPointPatchMT));
+    lua_setfield(L, -2, "area");
+
+    lua_setglobal(L, ControlPointPatchMT.toStringz);
+    lua_getglobal(L, ControlPointPatchMT.toStringz); lua_setglobal(L, "ControlPointSurface"); // alias
+    
     // Register utility functions.
     lua_pushcfunction(L, &isSurface); lua_setglobal(L, "isSurface");
     lua_pushcfunction(L, &makePatch); lua_setglobal(L, "makePatch");

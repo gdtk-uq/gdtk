@@ -834,6 +834,7 @@ final class GlobalConfig {
     shared static bool with_super_time_stepping = false;
     shared static bool with_super_time_stepping_flexible_stages = false;
     shared static int max_attempts_for_step = 3; // 3 for resilience, 1 for early fail
+    shared static double perturbation_for_real_differences = 1.0e-6; // When forming the Jacobian with real finite differences.
     //
     // Parameter controlling Strang-splitting mode when simulating reacting flows
     shared static StrangSplittingMode strangSplitting = StrangSplittingMode.full_T_full_R;
@@ -1245,6 +1246,7 @@ public:
     bool residual_smoothing;
     bool with_local_time_stepping;
     int local_time_stepping_limit_factor;
+    double perturbation_for_real_differences;
     bool with_super_time_stepping;
     bool with_super_time_stepping_flexible_stages;
     GridMotion grid_motion;
@@ -1396,6 +1398,7 @@ public:
         residual_smoothing = cfg.residual_smoothing;
         with_local_time_stepping = cfg.with_local_time_stepping;
         local_time_stepping_limit_factor = cfg.local_time_stepping_limit_factor;
+        perturbation_for_real_differences = cfg.perturbation_for_real_differences;
 	with_super_time_stepping = cfg.with_super_time_stepping;
         with_super_time_stepping_flexible_stages = cfg.with_super_time_stepping_flexible_stages;
         grid_motion = cfg.grid_motion;
@@ -1580,10 +1583,11 @@ string update_enum(string key, string field, string enum_from_name)
 {
     return "{ // start new block scope
     auto mySaveValue = GlobalConfig."~field~";
+    string name = jsonData[\""~key~"\"].str;
     try {
-        string name = jsonData[\""~key~"\"].str;
         GlobalConfig."~field~" = "~enum_from_name~"(name);
     } catch (Exception e) {
+        writeln(\"Warning, invalid name for config."~field~": \"~name);
         GlobalConfig."~field~" = mySaveValue;
     }
     }";
@@ -1721,6 +1725,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("with_super_time_stepping", "with_super_time_stepping"));
     mixin(update_bool("with_super_time_stepping_flexible_stages", "with_super_time_stepping_flexible_stages"));
     mixin(update_int("max_attempts_for_step", "max_attempts_for_step"));
+    mixin(update_double("perturbation_for_real_differences", "perturbation_for_real_differences"));
     mixin(update_enum("grid_motion", "grid_motion", "grid_motion_from_name"));
     if (cfg.grid_motion == GridMotion.none) {
         cfg.n_grid_time_levels = 1;
@@ -1827,6 +1832,7 @@ void set_config_for_core(JSONValue jsonData)
 	writeln("  with_super_time_stepping: ", cfg.with_super_time_stepping);
         writeln("  with_super_time_stepping_flexible_stages: ", cfg.with_super_time_stepping_flexible_stages);
         writeln("  max_attempts_for_step: ", cfg.max_attempts_for_step);
+        writeln("  perturbation_for_real_differences: ", cfg.perturbation_for_real_differences);
 	writeln("  grid_motion: ", grid_motion_name(cfg.grid_motion));
         writeln("  write_vertex_velocities: ", cfg.write_vertex_velocities);
         writeln("  udf_grid_motion_file: ", to!string(cfg.udf_grid_motion_file));

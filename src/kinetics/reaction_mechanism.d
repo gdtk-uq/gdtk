@@ -33,6 +33,8 @@ public:
         if (!_work_arrays_initialised) {
             _q.length = n_species;
             _L.length = n_species;
+            _conc_for_source_terms.length = n_species;
+            _rates_for_source_terms.length = n_species;
             _work_arrays_initialised = true;
         }
         _T_lower_limit = T_lower_limit;
@@ -81,12 +83,12 @@ public:
     }
 
     @nogc
-    final void eval_source_terms(GasModel gmodel, GasState Q, ref number[] conc, ref number[] rates, ref number[] source)
+    final void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source)
     {
-        gmodel.massf2conc(Q, conc);
+        gmodel.massf2conc(Q, _conc_for_source_terms);
         eval_rate_constants(Q);
-        eval_rates(conc, rates);
-        gmodel.rates2source(rates, source);
+        eval_rates(_conc_for_source_terms, _rates_for_source_terms);
+        gmodel.rates2source(_rates_for_source_terms, source);
     }
 
     @nogc
@@ -191,6 +193,8 @@ private:
     Reaction[] _reactions;
     // Working array space
     bool _work_arrays_initialised = false;
+    number[] _conc_for_source_terms;
+    number[] _rates_for_source_terms;
     number[] _q;
     number[] _L;
     double _T_lower_limit;
