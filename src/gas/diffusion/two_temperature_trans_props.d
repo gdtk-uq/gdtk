@@ -250,7 +250,7 @@ public:
         massf2molef(gs.massf, mMolMasses, mMolef);
         computeDelta11(gs);
         immutable double kB_erg = 1.38066e-16; // erg/K
-        double p_cgs = gs.p*10.0; // CGS pressure in Baryes (?!)
+        number p_cgs = gs.p*10.0; // CGS pressure in Baryes (?!)
 
         foreach (isp; 0 .. mNSpecies) {
             foreach (jsp; 0 .. isp+1) {
