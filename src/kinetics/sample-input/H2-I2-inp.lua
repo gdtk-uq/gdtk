@@ -1,3 +1,5 @@
+species = {[0]='H2', [1]='I2', [2]='HI', }
+
 config = {
   maxSubcycles = 50,
   maxAttempts = 2,

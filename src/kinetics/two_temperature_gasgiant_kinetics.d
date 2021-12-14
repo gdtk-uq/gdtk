@@ -54,21 +54,27 @@ version(two_temperature_gasgiant_kinetics_test) {
     import gas.two_temperature_gasgiant;
     void main() {
         auto gm = new TwoTemperatureGasGiant();
-        auto gd = new GasState(5, 1);
+        auto gd = new GasState(6, 1);
         gd.p = 1.0e5;
         gd.T = 310.0;
         gd.T_modes[0] = 310;
-        gd.massf[0] = 1.0; gd.massf[1] = 0.0; gd.massf[2] = 0.0; gd.massf[3] = 0.0; gd.massf[4] = 0.0;
+        gd.massf[Species.H2] = 1.0;
+        gd.massf[Species.H] = 0.0;
+        gd.massf[Species.Hplus] = 0.0;
+        gd.massf[Species.eminus] = 0.0;
+        gd.massf[Species.He] = 0.0;
+        gd.massf[Species.Heplus] = 0.0;
         assert(isClose(gm.R(gd), 4124.506, 1.0e-4), failedUnitTest());
         assert(gm.n_modes == 1, failedUnitTest());
-        assert(gm.n_species == 5, failedUnitTest());
+        assert(gm.n_species == 6, failedUnitTest());
         assert(isClose(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
         assert(isClose(gd.T, 310.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[1], 0.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[2], 0.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[3], 0.0, 1.0e-6), failedUnitTest());
-        assert(isClose(gd.massf[4], 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[Species.H2], 1.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[Species.H], 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[Species.Hplus], 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[Species.eminus], 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[Species.He], 0.0, 1.0e-6), failedUnitTest());
+        assert(isClose(gd.massf[Species.Heplus], 0.0, 1.0e-6), failedUnitTest());
 
         gm.update_thermo_from_pT(gd);
         double my_rho = 1.0e5 / (4124.506 * 310.0);
