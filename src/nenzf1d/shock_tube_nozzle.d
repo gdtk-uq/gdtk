@@ -113,8 +113,8 @@ Result analyse(int verbosityLevel, Config config)
     double V2 = velocities[0];
     double Vg = velocities[1];
     if (verbosityLevel >= 1) {
-        writefln("  V2          %g km/s", V2/1000.0);
-        writefln("  Vg          %g km/s", Vg/1000.0);
+        writefln("  V2          %g m/s", V2);
+        writefln("  Vg          %g m/s", Vg);
         write_cea_state(state2);
         if (verbosityLevel >= 3) { writeln("  state2: ", state2); }
     }
@@ -164,7 +164,7 @@ Result analyse(int verbosityLevel, Config config)
     double V6 = expand_from_stagnation(state5s, x6, state6, gm1);
     double mflux6 = state6.rho * V6;  // mass flux per unit area, at throat
     if (verbosityLevel >= 1) {
-        writefln("  V6          %g km/s", V6);
+        writefln("  V6          %g m/s", V6);
         writefln("  mflux6      %g", mflux6);
         write_cea_state(state6);
         if (verbosityLevel >= 3) { writeln("  state6= ", state6); }
@@ -197,7 +197,7 @@ Result analyse(int verbosityLevel, Config config)
     // Compute the area-ratio at this slightly-expanded state.
     double ar6e = mflux6 / mflux6e;
     if (verbosityLevel >= 1) {
-        writefln("  V6e         %g km/s", V6e);
+        writefln("  V6e         %g m/s", V6e);
         writefln("  mflux6e     %g", mflux6e);
         writefln("  ar6e        %g", ar6e);
         write_cea_state(state6e);
@@ -235,7 +235,7 @@ Result analyse(int verbosityLevel, Config config)
     pitot_condition(state7, V7, state7_pitot, gm1);
     if (verbosityLevel >= 1) {
         writefln("  area_ratio  %g", ar);
-        writefln("  V7          %g km/s", V7/1000.0);
+        writefln("  V7          %g m/s", V7);
         write_cea_state(state7);
         writefln("  mflux7      %g", mflux7);
         writefln("  pitot7      %g kPa", state7_pitot.p/1000.0);
@@ -382,8 +382,8 @@ Result analyse(int verbosityLevel, Config config)
     double v = fmax(V6e, 1.001*gas0.a);
     if (verbosityLevel >= 1) {
         writeln("Start condition:");
-        writefln("  velocity    %g km/s", v/1000.0);
-        writefln("  sound-speed %g km/s", gas0.a/1000.0);
+        writefln("  velocity    %g m/s", v);
+        writefln("  sound-speed %g m/s", gas0.a);
         writefln("  (v-V6e)/V6e %g", (v-V6e)/V6e);
         write_tp_state(gas0);
         if (verbosityLevel >= 3) { writeln("gas0=", gas0); }

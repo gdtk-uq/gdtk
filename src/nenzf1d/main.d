@@ -81,7 +81,7 @@ Options:
         writeln("Exit condition:");
         writefln("  x           %g m", result.x);
         writefln("  area-ratio  %g", result.area_ratio);
-        writefln("  velocity    %g km/s", result.velocity/1000.0);
+        writefln("  velocity    %g m/s", result.velocity);
         writefln("  Mach        %g", result.Mach_number);
         writefln("  p_pitot     %g kPa (C.rho.V^2)", result.p_pitot/1000);
         if (result.rayleigh_pitot > 0.0)
