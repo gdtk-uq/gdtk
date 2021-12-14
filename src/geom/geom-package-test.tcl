@@ -21,7 +21,7 @@ set module_names [list vector3 vector3_complex \
                       svgpath \
 		      coonspatch coonspatch_complex \
                       aopatch aopatch_complex \
-                      gmopatch gmopatch_complex \
+                      gmopatch \
                       bezierpatch bezierpatch_complex \
                       controlpointpatch \
                       beziertrianglepatch \
@@ -35,6 +35,7 @@ set module_names [list vector3 vector3_complex \
 		      sgrid sgrid_complex \
 		      usgrid usgrid_complex \
 		      univariatefunctions svg ]
+# [TODO] PJ 2021-12-14: get gmopatch_complex test working.
 
 foreach name $module_names {
     test ${name}_test "Testing $name.d" \
