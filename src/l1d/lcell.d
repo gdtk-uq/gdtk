@@ -209,20 +209,19 @@ public:
         // The gas-dynamic time step may become smaller than dt_chem, dt_therm
         // and that may cause trouble for Rowan's chemistry.
         dt_chem = (dt_chem <= dt) ? dt_chem : dt;
-        dt_therm = (dt_therm <= dt) ? dt_therm : dt;
         debug {
             // Keep a copy for reporting, if there is a failure.
             double dt_chem_save = dt_chem;
             gas_save.copy_values_from(gas);
         }
         try {
-            reactor(gas, dt, dt_chem, dt_therm, params);
+            reactor(gas, dt, dt_chem, params);
         } catch(ThermochemicalReactorUpdateException err) {
             // It's probably worth one more try but setting dt_chem = -1.0 to give
             // the ODE solver a fresh chance to find a good timestep.
-            dt_chem = -1.0; dt_therm = -1.0;
+            dt_chem = -1.0;
             try {
-                 reactor(gas, dt, dt_chem, dt_therm, params);
+                 reactor(gas, dt, dt_chem, params);
             } catch(ThermochemicalReactorUpdateException err) {
                 string msg = "chemical_increment() failed.";
                 debug {

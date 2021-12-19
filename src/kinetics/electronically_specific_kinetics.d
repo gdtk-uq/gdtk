@@ -98,19 +98,17 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
                          ref number[maxParams] params)
     {
         // This section is the macro species updates
         //First, create test macro species gas state, _macro_Q from given state Q
         Update_Macro_State(_macro_Q, Q);
 
-        double dummyDouble;
         number uTotal = _macro_Q.u + _macro_Q.u_modes[0];
         // 1. Perform chemistry update.
 
-        _macro_chemUpdate(_macro_Q, tInterval, dtChemSuggest, dummyDouble, params);
+        _macro_chemUpdate(_macro_Q, tInterval, dtChemSuggest, params);
 
         debug {
             // writeln("--- 1 ---");
@@ -146,7 +144,7 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
         _macroAirModel.massf2molef(_macro_Q, _macro_molef);
         _macroAirModel.massf2numden(_macro_Q, _macro_numden);
         try {
-            energyUpdate(_macro_Q, tInterval, dtThermSuggest);
+            energyUpdate(_macro_Q, tInterval, dtChemSuggest);
             debug {
                 // writeln("--- 3 ---");
                 // writeln(_macro_Q);
@@ -726,19 +724,18 @@ version(electronically_specific_kinetics_test) {
         // writeln(gd);
         double _dt = 1e-9;
         double dtChemSuggest = 1e-10;
-        double dtThermSuggest = 1e-10;
         number[maxParams] params;
 
-        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
-        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
-        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
-        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
-        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
-        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
-        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
-        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
-        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
-        esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
+        esk(gd, _dt, dtChemSuggest, params);
+        esk(gd, _dt, dtChemSuggest, params);
+        esk(gd, _dt, dtChemSuggest, params);
+        esk(gd, _dt, dtChemSuggest, params);
+        esk(gd, _dt, dtChemSuggest, params);
+        esk(gd, _dt, dtChemSuggest, params);
+        esk(gd, _dt, dtChemSuggest, params);
+        esk(gd, _dt, dtChemSuggest, params);
+        esk(gd, _dt, dtChemSuggest, params);
+        esk(gd, _dt, dtChemSuggest, params);
         // writeln("The final gas state after the kinetics steps is: ");
         // writeln(gd);
 
@@ -795,8 +792,7 @@ public:
         kinetics.electronic_state_solver.Init(full_rate_fit, [NInum,OInum]);
     }
 
-    override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
                          ref number[maxParams] params)
     {
 
@@ -1096,10 +1092,9 @@ version(electronically_specific_kinetics_test)
         ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics("sample-input/ESK-N.txt","sample-input/ESK-O.txt",gm);
 
         double dtChemSuggest = 1e-9;
-        double dtThermSuggest = -1.0;
         number[maxParams] params;
         while (_t < _duration+_dt) {
-            esk(gd, _dt, dtChemSuggest, dtThermSuggest, params);
+            esk(gd, _dt, dtChemSuggest, params);
             _t+=_dt;
         }
         double massfsum=0.0;

@@ -49,8 +49,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
                          ref number[maxParams] params)
     {
         if (dtChemSuggest < 0.0) {
@@ -490,12 +489,11 @@ version(two_temperature_argon_kinetics_test) {
         //
         auto argonChemUpdate = new UpdateArgonFrac(modelFileName, gm);
         double[maxParams] params; // ignore
-        double dtThermSuggest; // ignore
         double dtChemSuggest = dt; // To give 100 steps per integration interval.
         //
         foreach (i; 1 .. maxsteps) {
             // Perform the chemistry update
-            argonChemUpdate(gs, dt, dtChemSuggest, dtThermSuggest, params);
+            argonChemUpdate(gs, dt, dtChemSuggest, params);
             // New ionisation fraction
             alpha = (gs.massf[2]/_mol_masses[2]) /
                 ((gs.massf[2]/_mol_masses[2])+(gs.massf[0]/_mol_masses[0]));

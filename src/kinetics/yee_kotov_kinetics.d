@@ -11,7 +11,7 @@
  * Computational challenges for simulations related to the NASA
  * electric arc shock tube (EAST) experiments.
  * Journal of Computational Physics, 269:pp. 215--233
- * 
+ *
  * This kinetics file accompanies the gas model in gas/ideal_gas_ab.d
  *
  * Authors: Rowan G., Jamie B. and Peter J.
@@ -43,7 +43,7 @@ immutable double H_MIN = 1.0e-15; // Minimum allowable step size
 enum ResultOfStep { success, failure };
 
 final class UpdateAB_YeeKotov : ThermochemicalReactor {
-    
+
     this(string fname, GasModel gmodel)
     {
         super(gmodel); // hang on to a reference to the gas model
@@ -68,8 +68,7 @@ final class UpdateAB_YeeKotov : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest, 
+    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
                          ref number[maxParams] params)
     {
         try {
@@ -144,7 +143,7 @@ private:
                      * We'll also balk if the ODE step wants to reduce
                      * the stepsize on a successful step. This is because
                      * if the step was successful there shouldn't be any
-                     * need (stability wise or accuracy related) to warrant 
+                     * need (stability wise or accuracy related) to warrant
                      * a reduction. Thus if the step is successful and
                      * the dtSuggest comes back lower, let's just set
                      * h as the original value for the successful step.
@@ -168,7 +167,7 @@ private:
                     break;
                 }
                 else { // in the case of failure...
-                    /* We now need to make some decision about 
+                    /* We now need to make some decision about
                      * what timestep to attempt next.
                      */
                     h /= DT_REDUCTION_FACTOR;
@@ -291,6 +290,6 @@ private:
         hSuggest = scale*h;
         return ResultOfStep.failure;
     }
-    
+
 } // end class UpdateAB_YeeKotov
 

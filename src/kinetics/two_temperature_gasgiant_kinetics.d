@@ -25,8 +25,7 @@ final class UpdateGasGiant : ThermochemicalReactor {
         super(gmodel); // hang on to a reference to the gas model
     }
 
-    override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
                          ref number[maxParams] params)
     {
         // Do something to update the state of the gas over time interval tInterval.

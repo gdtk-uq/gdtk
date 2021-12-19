@@ -73,7 +73,7 @@ extern(C) int newTwoTemperatureAirKinetics(lua_State* L)
         luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
-    
+
     auto myTwoTemperatureAirKinetics = new TwoTemperatureAirKinetics(chemFile, energyExchFile, gmodel);
     TwoTemperatureAirKineticsStore ~= pushObj!(TwoTemperatureAirKinetics, TwoTemperatureAirKineticsMT)(L, myTwoTemperatureAirKinetics);
     return 1;
@@ -91,15 +91,13 @@ extern(C) int updateTwoTempAirState(lua_State *L)
     double tInterval = luaL_checknumber(L, 3);
     // arg 4 is dtChemSuggest
     double dtChemSuggest = luaL_checknumber(L, 4);
-    // arg 5 is dtThermSuggest
-    double dtThermSuggest = luaL_checknumber(L, 5);
-   
+    //
     // We need a dummy array of empty extra params
     // for the function signature
     number[maxParams] params;
 
     try {
-        twoTempAirKinetics(Q, tInterval, dtChemSuggest, dtThermSuggest, params);
+        twoTempAirKinetics(Q, tInterval, dtChemSuggest, params);
     }
     catch (ThermochemicalReactorUpdateException e) {
         string errMsg = "Error in call to two temperature air kinetics update. " ~
@@ -109,16 +107,15 @@ extern(C) int updateTwoTempAirState(lua_State *L)
     // Update gas table.
     setGasStateInTable(L, gm, 2, Q);
 
-    // Return both new dtChemSuggest and dtThermSuggest
+    // Return both new suggested dt.
     lua_pushnumber(L, dtChemSuggest);
-    lua_pushnumber(L, dtThermSuggest);
     return 2;
 }
 
 void registerTwoTemperatureAirKinetics(lua_State* L)
 {
     luaL_newmetatable(L, TwoTemperatureAirKineticsMT.toStringz);
-    
+
     // metatable.__index = metatable
     lua_pushvalue(L, -1);
     lua_setfield(L, -2, "__index");

@@ -53,7 +53,7 @@ extern(C) int newVibSpecNitrogenKinetics(lua_State* L)
         luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
-    
+
     auto myVibSpecNitrogenKinetics = new VibSpecificNitrogenRelaxation("", gmodel);
     VibSpecNitrogenKineticsStore ~= pushObj!(VibSpecificNitrogenRelaxation, VibSpecNitrogenKineticsMT)(L, myVibSpecNitrogenKinetics);
     return 1;
@@ -69,16 +69,15 @@ extern(C) int updateNitrogenStates(lua_State *L)
     getGasStateFromTable(L, gm, 2, Q);
     // arg 3 is tInterval
     double tInterval = luaL_checknumber(L, 3);
-   
+
     // We need a dummy array of empty extra params
     // for the function signature
     number[maxParams] params;
-    // and dummy dtChemSuggest and dtThermSuggest
+    // and dummy dtChemSuggest
     double dtChemSuggest = 0.0;
-    double dtThermSuggest = 0.0;
 
     try {
-        vibSpecN2Kinetics(Q, tInterval, dtChemSuggest, dtThermSuggest, params);
+        vibSpecN2Kinetics(Q, tInterval, dtChemSuggest, params);
     }
     catch (ThermochemicalReactorUpdateException e) {
         string errMsg = "Error in call to two temperature air kinetics update. " ~
@@ -94,7 +93,7 @@ extern(C) int updateNitrogenStates(lua_State *L)
 void registerVibSpecNitrogenKinetics(lua_State* L)
 {
     luaL_newmetatable(L, VibSpecNitrogenKineticsMT.toStringz);
-    
+
     // metatable.__index = metatable
     lua_pushvalue(L, -1);
     lua_setfield(L, -2, "__index");

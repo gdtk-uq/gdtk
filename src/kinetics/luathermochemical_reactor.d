@@ -39,7 +39,7 @@ ThermochemicalReactor checkThermochemicalReactor(lua_State* L, int index)
  * This function implements the constructor for a ThermochemicalReactor
  * from the Lua interface.
  *
- * Construction of a ThermochemicalReactor is from a previously-constructed 
+ * Construction of a ThermochemicalReactor is from a previously-constructed
  * GasModel and, maybe, one or two other Lua files.
  * The number of files needed and their content depends on the specific gas model.
  * ----------------------------------------------------------------------
@@ -82,7 +82,7 @@ extern(C) int newThermochemicalReactor(lua_State* L)
     lua_getfield(L, 1, "filename2");
     if (lua_isstring(L, -1)) { fileName2 = to!string(luaL_checkstring(L, -1)); }
     lua_pop(L, 1);
-    
+
     auto myReactor = init_thermochemical_reactor(gmodel, fileName1, fileName2);
     ThermochemicalReactorStore ~= pushObj!(ThermochemicalReactor, ThermochemicalReactorMT)(L, myReactor);
     return 1;
@@ -108,8 +108,7 @@ extern(C) int updateThermochemicalState(lua_State* L)
     number[maxParams] params;
 
     try {
-        double dummyDouble;
-        myReactor(Q, tInterval, dtChemSuggest, dummyDouble, params);
+        myReactor(Q, tInterval, dtChemSuggest, params);
     }
     catch (ThermochemicalReactorUpdateException e) {
         string errMsg = "Error in call to thermochemical state advance. " ~
@@ -118,8 +117,8 @@ extern(C) int updateThermochemicalState(lua_State* L)
     }
     // Update gas table
     setGasStateInTable(L, gm, 2, Q);
-    
-    // Return new dtChemSuggest
+
+    // Return new suggestd dt.
     lua_pushnumber(L, dtChemSuggest);
     return 1;
 }

@@ -159,8 +159,7 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
                          ref number[maxParams] params)
     {
         double local_dt_global=tInterval;
@@ -266,4 +265,3 @@ private:
     double _nuF_WF; // stochiometric coeff fuel x molar mass fuel
     double[] _nu_W; // the above for every species
 } // end class MixingLimitedUpdate
-

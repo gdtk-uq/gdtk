@@ -42,8 +42,7 @@ public:
     // For example, the mixing-limited combustion model by JJ Hoste needs
     // some information about the local flow state beyond the usual gas state.
     @nogc
-    abstract void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest,
+    abstract void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
                          ref number[maxParams] params);
     //
     // For the (fully-coupled) implicit solver we need public access to source terms.

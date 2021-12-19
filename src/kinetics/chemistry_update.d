@@ -137,8 +137,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
                          ref number[maxParams] params)
     {
         _Qinit.copy_values_from(Q);
@@ -198,7 +197,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
                      * We'll also balk if the ODE step wants to reduce
                      * the stepsize on a successful step. This is because
                      * if the step was successful there shouldn't be any
-                     * need (stability wise or accuracy related) to warrant 
+                     * need (stability wise or accuracy related) to warrant
                      * a reduction. Thus if the step is successful and
                      * the dtChemSuggest comes back lower, let's just set
                      * h as the original value for the successful step.
@@ -222,7 +221,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
                     break;
                 }
                 else { // in the case of failure...
-                    /* We now need to make some decision about 
+                    /* We now need to make some decision about
                      * what timestep to attempt next. We follow
                      * David Mott's suggestion in his thesis (on p. 51)
                      * and reduce the timestep by a factor of 2 or 3.
@@ -255,7 +254,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
              * temperature is computationally expensive, however, it usually
              * suffices to reevaluate the temperature assuming that total internal
              * energy of the system has not changed but has been redistributed
-             * among chemical states. Since the chemistry has not altered much, 
+             * among chemical states. Since the chemistry has not altered much,
              * the iteration for temperature should converge in one or two
              * iterations.
              *
@@ -414,7 +413,7 @@ public:
             a61=1631./55296., a62=175./512., a63=575./13824., a64=44275./110592., a65=253./4096.;
         immutable double b51=37./378., b53=250./621., b54=125./594., b56=512./1771.,
             b41=2825./27648., b43=18575./48384., b44=13525./55296., b45=277./14336., b46=1.0/4.0;
-        
+
         // 1. Apply the formula to evaluate intermediate points
         _rmech.eval_rates(y0, _k1);
         foreach (i; 0 .. _yTmp.length) { _yTmp[i] = y0[i] + h*(a21*_k1[i]); }
@@ -432,7 +431,7 @@ public:
         foreach (i; 0 .. _yTmp.length) { _yTmp[i] = y0[i] + h*(a61*_k1[i] + a62*_k2[i] + a63*_k3[i] + a64*_k4[i] + a65*_k5[i]); }
 
         _rmech.eval_rates(_yTmp, _k6);
-        
+
         // 2. Compute new value and error esimate
         foreach (i; 0 .. yOut.length) { yOut[i] = y0[i] + h*(b51*_k1[i] + b53*_k3[i] + b54*_k4[i] + b56*_k6[i]); }
         foreach (i; 0 .. _yErr.length) { _yErr[i] = yOut[i] - (y0[i] + h*(b41*_k1[i] + b43*_k3[i] + b44*_k4[i] + b45*_k5[i] + b46*_k6[i])); }
@@ -488,7 +487,7 @@ private:
 /++
  + The Alpha-QSS method, specialised to work
  + with a chemical kinetic ODE.
- + 
+ +
  + author: K.Damm 2015
  + adapted from R.Gollan's eilmer3 implementation
  +
@@ -556,7 +555,7 @@ public:
 
             // actual corrector step
             update_conc(_yc, y0, _qtilda, _pbar, _alphabar, h);
-            
+
             bool converged = test_converged(_yc, _yp0, h);
 
             if ( converged ) {
@@ -592,7 +591,7 @@ private:
     // Private functions.
     @nogc
     void p_on_y(number[] L, number[] y, number[] p_y) {
-        foreach( i; 0.._ndim) 
+        foreach( i; 0.._ndim)
             p_y[i] = L[i] / (y[i] + _ZERO_EPS);
         return;
     }
@@ -600,7 +599,7 @@ private:
     @nogc
     void alpha_compute(number[] p, number[] alpha, double h) {
         foreach ( i; 0.._ndim ) {
-            number r = 1.0/(p[i]*h+_ZERO_EPS);  // ZERO_EPS prevents division by 0 
+            number r = 1.0/(p[i]*h+_ZERO_EPS);  // ZERO_EPS prevents division by 0
             alpha[i] = (180.0*r*r*r+60.0*r*r+11.0*r+1.0)/(360.0*r*r*r+60.0*r*r+12.0*r+1.0);
         }
     }
@@ -747,10 +746,9 @@ version(chemistry_update_test) {
          */
 
         double dtChemSuggest = 200.0;
-        double dtThermSuggest = 0.0;
         auto chemUpdate = new ChemistryUpdate("sample-input/H2-I2-inp.lua", gmodel);
         double[maxParams] params;
-        chemUpdate(gd, tInterval, dtChemSuggest, dtThermSuggest, params);
+        chemUpdate(gd, tInterval, dtChemSuggest, params);
         double[] conc;
         conc.length = 3;
         gmodel.massf2conc(gd, conc);
@@ -759,5 +757,3 @@ version(chemistry_update_test) {
         return 0;
     }
 }
-
-

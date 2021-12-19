@@ -48,7 +48,7 @@ extern(C) int newElectronicallySpecificKinetics(lua_State* L)
     }
     auto listOfFiles = to!string(luaL_checkstring(L, -1));
     lua_pop(L, 1);
-    
+
     // Expect to find a 'gasModel' entry
     lua_getfield(L, 1, "gasModel");
     if ( lua_isnil(L, -1) ) {
@@ -64,7 +64,7 @@ extern(C) int newElectronicallySpecificKinetics(lua_State* L)
         luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
-    
+
     auto myESK = new ElectronicallySpecificKinetics(listOfFiles,gmodel);
     ESKStore ~= pushObj!(ElectronicallySpecificKinetics, ElectronicallySpecificKineticsMT)(L, myESK);
     return 1;
@@ -80,16 +80,14 @@ extern(C) int updateElectronicStates(lua_State *L)
     getGasStateFromTable(L, gm, 2, Q);
     // arg 3 is tInterval
     double tInterval = luaL_checknumber(L, 3);
-   
+
     // We need a dummy array of empty extra params
     // for the function signature
     number[maxParams] params;
-    // and dummy dtChemSuggest and dtThermSuggest
+    // and dummy dtChemSuggest
     double dtChemSuggest = luaL_checknumber(L, 4);
-    double dtThermSuggest = 0.0;
-
     try {
-        myESK(Q, tInterval, dtChemSuggest, dtThermSuggest, params);
+        myESK(Q, tInterval, dtChemSuggest, params);
     }
     catch (ThermochemicalReactorUpdateException e) {
         string errMsg = "Error in call to electronically-specific kinetics update. " ~
@@ -106,7 +104,7 @@ extern(C) int updateElectronicStates(lua_State *L)
 void registerElectronicallySpecificKinetics(lua_State* L)
 {
     luaL_newmetatable(L, ElectronicallySpecificKineticsMT.toStringz);
-    
+
     // metatable.__index = metatable
     lua_pushvalue(L, -1);
     lua_setfield(L, -2, "__index");

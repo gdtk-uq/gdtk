@@ -49,8 +49,7 @@ final class UpdateArgonFracWithIdeal : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
                          ref number[maxParams] params)
     {
         bool with_ideal = Q.massf[0] > massf_tiny;
@@ -67,7 +66,7 @@ final class UpdateArgonFracWithIdeal : ThermochemicalReactor {
             Q_argon.massf[1] = Q.massf[2]/argon_massf;
             Q_argon.massf[2] = Q.massf[3]/argon_massf;
             argon_gas.update_thermo_from_rhoT(Q_argon);
-            argon_reactor(Q_argon, tInterval, dtChemSuggest, dtThermSuggest, params);
+            argon_reactor(Q_argon, tInterval, dtChemSuggest, params);
             // Bring the updated argon species back into the composite model
             Q.massf[1] = Q_argon.massf[0]*argon_massf;
             Q.massf[2] = Q_argon.massf[1]*argon_massf;

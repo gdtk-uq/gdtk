@@ -77,7 +77,7 @@ extern(C) int newChemistryUpdate(lua_State* L)
         luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
-    
+
     auto myChemUpdate = new ChemistryUpdate(fname, gmodel);
     ChemistryUpdateStore ~= pushObj!(ChemistryUpdate, ChemistryUpdateMT)(L, myChemUpdate);
     return 1;
@@ -106,8 +106,7 @@ extern(C) int updateState(lua_State* L)
     number[maxParams] params;
 
     try {
-        double dummyDouble;
-        chemUpdate(Q, tInterval, dtChemSuggest, dummyDouble, params);
+        chemUpdate(Q, tInterval, dtChemSuggest, params);
     }
     catch (ThermochemicalReactorUpdateException e) {
         string errMsg = "Error in call to chemistry update. " ~
@@ -116,7 +115,7 @@ extern(C) int updateState(lua_State* L)
     }
     // Update gas table
     setGasStateInTable(L, gm, 2, Q);
-    
+
     // Return new dtChemSuggest
     lua_pushnumber(L, dtChemSuggest);
     return 1;

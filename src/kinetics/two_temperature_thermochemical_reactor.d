@@ -101,10 +101,9 @@ public:
         m_k5.length = mNSpecies + 1;
         m_k6.length = mNSpecies + 1;
     }
-    
+
     @nogc
-    override void opCall(GasState gs, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest,
+    override void opCall(GasState gs, double tInterval, ref double dtChemSuggest,
                          ref number[maxParams] params)
     {
         mGsInit.copy_values_from(gs);
@@ -114,7 +113,7 @@ public:
         // Evaluate temperature dependent rate parameters
         mRmech.eval_rate_constants(gs);
         mEES.evalRelaxationTimes(gs);
-        
+
         // Sort out stepsize for possible subcycling.
         double t = 0.0;
         double h;
@@ -128,7 +127,7 @@ public:
         else {
             h = dtChemSuggest;
         }
-        
+
         // Now the interesting stuff: increment change to species composition and energy
         int cycle = 0;
         int attempt = 0;
@@ -153,7 +152,7 @@ public:
                 ResultOfStep result = step(gs, m_y0, h, m_yOut, dtChemSuggest);
                 // Unpack m_yOut
                 foreach (isp; 0 .. mNSpecies) mConc0[isp] = m_yOut[isp];
-                
+
                 // Now check step is alright.
                 bool passedMassFractionTest = true;
                 if (result == ResultOfStep.success) {
@@ -179,7 +178,7 @@ public:
                      * We'll also balk if the ODE step wants to reduce
                      * the stepsize on a successful step. This is because
                      * if the step was successful there shouldn't be any
-                     * need (stability wise or accuracy related) to warrant 
+                     * need (stability wise or accuracy related) to warrant
                      * a reduction. Thus if the step is successful and
                      * the dtChemSuggest comes back lower, let's just set
                      * h as the original value for the successful step.
@@ -203,7 +202,7 @@ public:
                     break;
                 }
                 else { // in the case of failure
-                    /* We now need to make some decision about 
+                    /* We now need to make some decision about
                      * what timestep to attempt next. We follow
                      * David Mott's suggestion in his thesis (on p. 51)
                      * and reduce the timestep by a factor of 2 or 3.
@@ -304,7 +303,7 @@ private:
         mConc[] = y[0 .. $-1];
         mRmech.eval_rates(mConc, m_dCdt);
         rates[0 .. $-1] = m_dCdt[];
-        
+
         gs.u_modes[0] = y[$-1];
         gs.u = m_uTotal - gs.u_modes[0];
         mEES.evalRates(gs, mRmech, m_duvedt);
@@ -323,11 +322,11 @@ private:
             a61=1631./55296., a62=175./512., a63=575./13824., a64=44275./110592., a65=253./4096.;
         immutable double b51=37./378., b53=250./621., b54=125./594., b56=512./1771.,
             b41=2825./27648., b43=18575./48384., b44=13525./55296., b45=277./14336., b46=1.0/4.0;
-        
+
         // 1. Apply the formula to evaluate intermediate points
         evalRates(gs, y0, m_k1);
         foreach (i; 0 .. y0.length) m_yTmp[i] = y0[i] + h*a21*m_k1[i];
-        
+
         evalRates(gs, m_yTmp, m_k2);
         foreach (i; 0 .. y0.length) m_yTmp[i] = y0[i] + h*(a31*m_k1[i] + a32*m_k2[i]);
 
@@ -341,7 +340,7 @@ private:
         foreach (i; 0 .. y0.length) m_yTmp[i] = y0[i] + h*(a61*m_k1[i] + a62*m_k2[i] + a63*m_k3[i] + a64*m_k4[i] + a65*m_k5[i]);
 
         evalRates(gs, m_yTmp, m_k6);
-        
+
         // 2. Compute new value and error esimate
         foreach (i; 0 .. y0.length) yOut[i] = y0[i] + h*(b51*m_k1[i] + b53*m_k3[i] + b54*m_k4[i] + b56*m_k6[i]);
         foreach (i; 0 .. y0.length) m_yErr[i] = yOut[i] - (y0[i] + h*(b41*m_k1[i] + b43*m_k3[i] + b44*m_k4[i] + b45*m_k5[i] + b46*m_k6[i]));
@@ -387,5 +386,5 @@ private:
         hSuggest = scale*h;
         return ResultOfStep.failure;
     }
-    
+
 }

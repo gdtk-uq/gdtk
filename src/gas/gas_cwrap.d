@@ -805,12 +805,10 @@ extern (C) int thermochemical_reactor_gas_state_update(int cr_i, int gs_i,
                                                        double* dt_suggest)
 {
     try {
-        double dummyDouble;
         // Extra parameters are not considered, presently. PJ 2017-04-22, 2019-11-26
         double[maxParams] params;
         double my_dt_suggest = *dt_suggest;
-        thermochemical_reactors[cr_i](gas_states[gs_i], t_interval, my_dt_suggest,
-                                      dummyDouble, params);
+        thermochemical_reactors[cr_i](gas_states[gs_i], t_interval, my_dt_suggest, params);
         *dt_suggest = my_dt_suggest;
         return 0;
     } catch (Exception e) {

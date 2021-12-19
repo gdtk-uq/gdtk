@@ -836,7 +836,7 @@ public:
         }
 
         try {
-            myConfig.thermochemUpdate(fs.gas, dt, dt_chem, dt_therm, params);
+            myConfig.thermochemUpdate(fs.gas, dt, dt_chem, params);
             if (myConfig.ignition_zone_active) {
                 // Restore actual gas temperature
                 fs.gas.T = T_save;
@@ -846,7 +846,7 @@ public:
             // the ODE solver a fresh chance to find a good timestep.
             dt_chem = -1.0;
             try {
-                 myConfig.thermochemUpdate(fs.gas, dt, dt_chem, dt_therm, params);
+                 myConfig.thermochemUpdate(fs.gas, dt, dt_chem, params);
                  if (myConfig.ignition_zone_active) {
                      // Restore actual gas temperature
                      fs.gas.T = T_save;

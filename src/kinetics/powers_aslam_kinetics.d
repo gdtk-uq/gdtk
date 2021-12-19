@@ -43,8 +43,7 @@ final class UpdateAB : ThermochemicalReactor {
         lua_close(L);
     }
 
-    override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
                          ref number[maxParams] params)
     {
         if (Q.T > _Ti) {
@@ -85,4 +84,3 @@ private:
     // Ignition temperature
     double _Ti; // degrees K
 } // end class UpdateAB
-

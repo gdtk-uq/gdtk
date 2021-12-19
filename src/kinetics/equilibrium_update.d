@@ -36,8 +36,7 @@ final class EquilibriumUpdate : ThermochemicalReactor {
         eqcalc = new EquilibriumCalculator(fname);
     }
 
-    override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
                          ref number[maxParams] params)
     {
         // Since the internal energy and density in the (isolated) reactor is fixed,
@@ -327,10 +326,9 @@ version(equilibrium_update_test) {
         gs2.T = 2000.0; // ceq doesn't guess temperature anymore
         double tInterval = 0.0;
         double dtChemSuggest = 0.0;
-        double dtThermSuggest = 0.0;
         double[maxParams] params;
 
-        reactor(gs2, tInterval, dtChemSuggest, dtThermSuggest, params);
+        reactor(gs2, tInterval, dtChemSuggest, params);
         // writeln("T: ", gs2.T);
         assert(isClose(0.7321963 , gs2.massf[0], 1.0e-6));
         assert(isClose(0.23281198, gs2.massf[1], 1.0e-6));

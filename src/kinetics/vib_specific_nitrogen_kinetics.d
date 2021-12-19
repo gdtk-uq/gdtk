@@ -46,14 +46,13 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval,
-                         ref double dtChemSuggest, ref double dtThermSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
                          ref number[maxParams] params)
     {
         int L = gm.numVibLevels;
         foreach (i; 0 .. L) { mf0[i] = Q.massf[i]; }
         // Set a time step size.
-        // Note that, presently, we ignore dtChemSuggest, dtThermSuggest.
+        // Note that, presently, we ignore dtChemSuggest.
         number rhoErr = computeDrhoDt(Q.rho, Q.T, mf0, dRhoDt0);
         // Limit the stepsize to allow only small changes in mass fractions per step
         // by looking at just the ground-state population with the largest reaction rate.
