@@ -2,7 +2,7 @@
 Daryl M. Bond
 2021-09-07
 :toc: right
-:stylesheet: ../readthedocs.css
+:stylesheet: ../../readthedocs.css
 :sectnums:
 :imagesdir: resources
 :stem: latexmath
