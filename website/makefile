@@ -120,12 +120,12 @@ nm-manual:
 #--- Technical notes
 
 hybrid-fluxes:
-	cp -r ../doc/technical-notes/hybrid-fluxes.adoc $(EILMER_DIR)/technical-notes/
-	- mkdir -p $(EILMER_DIR)/technical-notes/hybrid-fluxes-for-hugo
-	cp -r ../doc/technical-notes/resources $(EILMER_DIR)/technical-notes/hybrid-fluxes-for-hugo
-	sed -i '/^:stylesheet:/d' $(EILMER_DIR)/technical-notes/hybrid-fluxes.adoc
-	cat $(EILMER_DIR)/technical-notes/hybrid-fluxes-hugo-header.txt $(EILMER_DIR)/technical-notes/hybrid-fluxes.adoc > $(EILMER_DIR)/technical-notes/hybrid-fluxes-for-hugo.adoc
-	rm $(EILMER_DIR)/technical-notes/hybrid-fluxes.adoc
+	cp -r ../doc/technical-notes/hybrid-fluxes/hybrid-fluxes.adoc $(EILMER_DIR)/technical-notes/tmp.adoc
+	- mkdir -p $(EILMER_DIR)/technical-notes/hybrid-fluxes
+	cp -r ../doc/technical-notes/hybrid-fluxes/resources $(EILMER_DIR)/technical-notes/hybrid-fluxes
+	sed -i '/^:stylesheet:/d' $(EILMER_DIR)/technical-notes/tmp.adoc
+	cat $(EILMER_DIR)/technical-notes/hybrid-fluxes-hugo-header.txt $(EILMER_DIR)/technical-notes/tmp.adoc > $(EILMER_DIR)/technical-notes/hybrid-fluxes.adoc
+	rm $(EILMER_DIR)/technical-notes/tmp.adoc
 
 
 

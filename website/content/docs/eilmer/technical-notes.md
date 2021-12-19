@@ -22,12 +22,12 @@ and specialist workflows.
 
 <div class="row">
    <div class="col-sm-6">
-   <a href=hybrid-fluxes-for-hugo/>
-   <img src="hybrid-fluxes-for-hugo/resources/shock_detector_smooth.png" style="width:100%">
+   <a href=hybrid-fluxes/>
+   <img src="hybrid-fluxes/resources/shock_detector_smooth.png" style="width:100%">
    </a>
    </div>
    <div class="col-sm-10">
-   <a href=hybrid-fluxes-for-hugo/>
+   <a href=hybrid-fluxes/>
    <b>Hybrid fluxes, shock detection and smoothing</b>
    </a>
    <br>
