@@ -363,7 +363,7 @@ if the <<shock_detector_smoothing,`shock_detector_smoothing`>> is enabled.
  transition between flux calculators in adaptive schemes.
 
 TIP: You can read more about this in the technical note
-https://gdtk.uqcloud.net/docs/eilmer/technical-notes/hybrid-fluxes-for-hugo/[Hybrid fluxes, shock detection and smoothing.]
+https://gdtk.uqcloud.net/docs/eilmer/technical-notes/hybrid-fluxes/[Hybrid fluxes, shock detection and smoothing.]
 
 
 `config.strict_shock_detector` ::
