@@ -36,3 +36,22 @@ and specialist workflows.
 </div>
 
 <br>
+
+<div class="row">
+   <div class="col-sm-6">
+   <a href=control-point-grid-gen/>
+   <img src="control-point-grid-gen/resources/duct_grid.png" style="width:80%">
+   </a>
+   </div>
+   <div class="col-sm-10">
+   <a href=control-point-grid-gen/>
+   <b>Control Point Form grid generation</b>
+   </a>
+   <br>
+   Caiyu (Carrie) Xie and Rowan J. Gollan, 2021-12-19
+   </div>
+
+</div>
+
+
+<br>

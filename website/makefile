@@ -20,7 +20,9 @@ USER_GUIDES := eilmer-user-guide \
 	reacting-gas-guide \
 	foammesh-user-guide
 
-TECH_NOTES := hybrid-fluxes
+TECH_NOTES := hybrid-fluxes \
+	control-point-grid-gen
+
 
 all: $(REF_MANS) eilmer-catalog eilmer-faq presentations theses $(USER_GUIDES) $(TECH_NOTES)
 	hugo
@@ -125,6 +127,14 @@ hybrid-fluxes:
 	cp -r ../doc/technical-notes/hybrid-fluxes/resources $(EILMER_DIR)/technical-notes/hybrid-fluxes
 	sed -i '/^:stylesheet:/d' $(EILMER_DIR)/technical-notes/tmp.adoc
 	cat $(EILMER_DIR)/technical-notes/hybrid-fluxes-hugo-header.txt $(EILMER_DIR)/technical-notes/tmp.adoc > $(EILMER_DIR)/technical-notes/hybrid-fluxes.adoc
+	rm $(EILMER_DIR)/technical-notes/tmp.adoc
+
+control-point-grid-gen:
+	cp -r ../doc/technical-notes/control-point-grid-gen/control-point-grid-gen.adoc $(EILMER_DIR)/technical-notes/tmp.adoc
+	- mkdir -p $(EILMER_DIR)/technical-notes/control-point-grid-gen
+	cp -r ../doc/technical-notes/control-point-grid-gen/resources $(EILMER_DIR)/technical-notes/control-point-grid-gen
+	sed -i '/^:stylesheet:/d' $(EILMER_DIR)/technical-notes/tmp.adoc
+	cat $(EILMER_DIR)/technical-notes/control-point-hugo-header.txt $(EILMER_DIR)/technical-notes/tmp.adoc > $(EILMER_DIR)/technical-notes/control-point-grid-gen.adoc
 	rm $(EILMER_DIR)/technical-notes/tmp.adoc
 
 
