@@ -47,7 +47,7 @@ final class UpdateIDG : ThermochemicalReactor {
         lua_close(L);
     }
 
-    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         // In the isolated reactor, density and internal energy remain constant.

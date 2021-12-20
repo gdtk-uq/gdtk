@@ -160,7 +160,7 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         _Qinit.copy_values_from(Q);
@@ -175,13 +175,12 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
         double t = 0.0;
         double h;
         double dtSave;
-        double dtSuggest = dtChemSuggest;
-        if ( dtChemSuggest > tInterval )
+        if ( dtSuggest > tInterval )
             h = tInterval;
-        else if ( dtChemSuggest <= 0.0 )
+        else if ( dtSuggest <= 0.0 )
             h = rmech.estimateStepSize(_conc0);
         else
-            h = dtChemSuggest;
+            h = dtSuggest;
 
         // 2. Now do the interesting stuff, increment species change
         int cycle = 0;
@@ -193,17 +192,16 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
              * want to store the fractional step of (tInterval - t)
              * that is taken as the last step.
              */
-            dtSave = dtChemSuggest;
+            dtSave = dtSuggest;
             h = min(h, tInterval - t);
             attempt= 0;
             for ( ; attempt < maxAttempts; ++attempt ) {
-                ResultOfStep result1 = cstep(_conc0, h, _concOut, dtChemSuggest);
+                ResultOfStep result1 = cstep(_conc0, h, _concOut, dtSuggest);
                 ResultOfStep result2 = EnergyStep(Q, h, dtSuggest);
                 ResultOfStep result = ResultOfStep.failure;
                 if (result1==ResultOfStep.success && result2==ResultOfStep.success){
                     result = ResultOfStep.success;
                 }
-                dtChemSuggest = fmin(dtChemSuggest, dtSuggest);
 
                 bool passesMassFractionTest = true;
                 if ( result  == ResultOfStep.success ) {
@@ -231,12 +229,12 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
                      * if the step was successful there shouldn't be any
                      * need (stability wise or accuracy related) to warrant
                      * a reduction. Thus if the step is successful and
-                     * the dtChemSuggest comes back lower, let's just set
+                     * the dtSuggest comes back lower, let's just set
                      * h as the original value for the successful step.
                      */
                     double hMax = h*(1.0 + DT_INCREASE_PERCENT/100.0);
-                    if (dtChemSuggest > h) {
-                        /* It's possible that dtChemSuggest is less than h.
+                    if (dtSuggest > h) {
+                        /* It's possible that dtSuggest is less than h.
                          * When that occurs, we've made the decision to ignore
                          * the new timestep suggestion supplied by the ODE step.
                          * Our reasoning is that we'd like push for an aggressive
@@ -248,7 +246,7 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
                          * is much larger than what we just used. For that
                          * case, we cap it at hMax. That's the following line.
                          */
-                        h = min(dtChemSuggest, hMax);
+                        h = min(dtSuggest, hMax);
                     }
                     break;
                 }
@@ -304,10 +302,10 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
 
             if ( t >= tInterval ) { // We've done enough work.
                 // If we've only take one cycle, then we would like to use
-                // dtChemSuggest rather than using the dtChemSuggest from the
+                // dtSuggest rather than using the dtSuggest from the
                 // penultimate step.
                 if (cycle == 0) {
-                    dtSave = dtChemSuggest;
+                    dtSave = dtSuggest;
                 }
                 break;
             }
@@ -356,7 +354,6 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
             }
         }
         */
-        dtChemSuggest = dtSave;
         dtSuggest = dtSave;
     }
 

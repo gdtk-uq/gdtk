@@ -49,13 +49,13 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
-        if (dtChemSuggest < 0.0) {
+        if (dtSuggest < 0.0) {
             // A negative value indicated that the flow solver did not have
             // a suggested time-step size.
-            dtChemSuggest = tInterval/_n_step_suggest;
+            dtSuggest = tInterval/_n_step_suggest;
         }
         // There are changes only if the gas is hot enough.
         if (Q.T > _T_min_for_reaction) {
@@ -88,7 +88,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             number initial_translational_energy = Q.u;
             //
             // Start with the suggested time step size.
-            int NumberSteps = cast(int) fmax(floor(tInterval/dtChemSuggest), 1.0);
+            int NumberSteps = cast(int) fmax(floor(tInterval/dtSuggest), 1.0);
             number[2] y;
             int integration_attempt = 0;
             bool finished_integration = false;
@@ -216,7 +216,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             _gmodel.update_sound_speed(Q);
             //
             // Remember the size of the successful time step for the next call.
-            dtChemSuggest = _chem_dt;
+            dtSuggest = _chem_dt;
         } // end if Q.T > _T_min_for_reaction
     } // end opCall()
 
@@ -388,7 +388,7 @@ private:
     double _T_min_for_reaction; // degrees K
     double _Te_default;
     double _ion_tol;
-    int _n_step_suggest; // number of substeps to take if dtChemSuggest<0.0
+    int _n_step_suggest; // number of substeps to take if dtSuggest<0.0
     double _Newton_Raphson_tol;
     int _max_iter_newton; // limit the number of Newton iterations for backard Euler
     double _argon_argon_rate_multiplier; // increases the argon-argon rate constant by this factor
@@ -489,11 +489,11 @@ version(two_temperature_argon_kinetics_test) {
         //
         auto argonChemUpdate = new UpdateArgonFrac(modelFileName, gm);
         double[maxParams] params; // ignore
-        double dtChemSuggest = dt; // To give 100 steps per integration interval.
+        double dtSuggest = dt; // To give 100 steps per integration interval.
         //
         foreach (i; 1 .. maxsteps) {
             // Perform the chemistry update
-            argonChemUpdate(gs, dt, dtChemSuggest, params);
+            argonChemUpdate(gs, dt, dtSuggest, params);
             // New ionisation fraction
             alpha = (gs.massf[2]/_mol_masses[2]) /
                 ((gs.massf[2]/_mol_masses[2])+(gs.massf[0]/_mol_masses[0]));

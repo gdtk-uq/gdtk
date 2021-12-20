@@ -103,7 +103,7 @@ public:
     }
 
     @nogc
-    override void opCall(GasState gs, double tInterval, ref double dtChemSuggest,
+    override void opCall(GasState gs, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         mGsInit.copy_values_from(gs);
@@ -118,14 +118,14 @@ public:
         double t = 0.0;
         double h;
         double dtSave;
-        if (dtChemSuggest > tInterval) {
+        if (dtSuggest > tInterval) {
             h = tInterval;
         }
-        else if (dtChemSuggest <= 0.0) {
+        else if (dtSuggest <= 0.0) {
             h = mRmech.estimateStepSize(mConc0);
         }
         else {
-            h = dtChemSuggest;
+            h = dtSuggest;
         }
 
         // Now the interesting stuff: increment change to species composition and energy
@@ -145,11 +145,11 @@ public:
              * want to store the fractional step of (tInterval - t)
              * that is taken as the last step.
              */
-            dtSave = dtChemSuggest;
+            dtSave = dtSuggest;
             h = min(h, tInterval - t);
             attempt = 0;
             for ( ; attempt < mMaxAttempts; ++attempt) {
-                ResultOfStep result = step(gs, m_y0, h, m_yOut, dtChemSuggest);
+                ResultOfStep result = step(gs, m_y0, h, m_yOut, dtSuggest);
                 // Unpack m_yOut
                 foreach (isp; 0 .. mNSpecies) mConc0[isp] = m_yOut[isp];
 
@@ -180,12 +180,12 @@ public:
                      * if the step was successful there shouldn't be any
                      * need (stability wise or accuracy related) to warrant
                      * a reduction. Thus if the step is successful and
-                     * the dtChemSuggest comes back lower, let's just set
+                     * the dtSuggest comes back lower, let's just set
                      * h as the original value for the successful step.
                      */
                     double hMax = h*(1.0 + DT_INCREASE_PERCENT/100.0);
-                    if (dtChemSuggest > h) {
-                        /* It's possible that dtChemSuggest is less than h.
+                    if (dtSuggest > h) {
+                        /* It's possible that dtSuggest is less than h.
                          * When that occurs, we've made the decision to ignore
                          * the new timestep suggestion supplied by the ODE step.
                          * Our reasoning is that we'd like push for an aggressive
@@ -197,7 +197,7 @@ public:
                          * is much larger than what we just used. For that
                          * case, we cap it at hMax. That's the following line.
                          */
-                        h = min(dtChemSuggest, hMax);
+                        h = min(dtSuggest, hMax);
                     }
                     break;
                 }
@@ -237,10 +237,10 @@ public:
 
             if (t >= tInterval) { // We've done enough cycling.
                 // If we've only taken one cycle, then we would like to use
-                // the this new suggested dtChemSuggest rather than the one from
+                // the this new suggested dtSuggest rather than the one from
                 // the penultimate step.
                 if (cycle == 0) {
-                    dtSave = dtChemSuggest;
+                    dtSave = dtSuggest;
                 }
                 break;
             }
@@ -258,7 +258,7 @@ public:
         auto massfTotal = sum(gs.massf);
         foreach (ref mf; gs.massf) mf /= massfTotal;
 
-        dtChemSuggest = dtSave;
+        dtSuggest = dtSave;
 
     }
 

@@ -52,12 +52,12 @@ final class TwoTemperatureDissociatingNitrogenKinetics : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         number uTotal = Q.u + Q.u_modes[0];
         // 1. Perform chemistry update.
-        _chemUpdate(Q, tInterval, dtChemSuggest, params);
+        _chemUpdate(Q, tInterval, dtSuggest, params);
         // Changing mass fractions does not change the temperature
         // of the temperatures associated with internal structure.
         // Now we can adjust the transrotational energy, given that
@@ -81,7 +81,7 @@ final class TwoTemperatureDissociatingNitrogenKinetics : ThermochemicalReactor {
         _gmodel.massf2molef(Q, _molef);
         _gmodel.massf2numden(Q, _numden);
         try {
-            energyUpdate(Q, tInterval, dtChemSuggest);
+            energyUpdate(Q, tInterval, dtSuggest);
         }
         catch (GasModelException err) {
             string msg = "The energy update in the two temperature air kinetics module failed.\n";

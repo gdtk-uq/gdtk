@@ -89,15 +89,15 @@ extern(C) int updateTwoTempAirState(lua_State *L)
     getGasStateFromTable(L, gm, 2, Q);
     // arg 3 is tInterval
     double tInterval = luaL_checknumber(L, 3);
-    // arg 4 is dtChemSuggest
-    double dtChemSuggest = luaL_checknumber(L, 4);
+    // arg 4 is dtSuggest
+    double dtSuggest = luaL_checknumber(L, 4);
     //
     // We need a dummy array of empty extra params
     // for the function signature
     number[maxParams] params;
 
     try {
-        twoTempAirKinetics(Q, tInterval, dtChemSuggest, params);
+        twoTempAirKinetics(Q, tInterval, dtSuggest, params);
     }
     catch (ThermochemicalReactorUpdateException e) {
         string errMsg = "Error in call to two temperature air kinetics update. " ~
@@ -107,8 +107,8 @@ extern(C) int updateTwoTempAirState(lua_State *L)
     // Update gas table.
     setGasStateInTable(L, gm, 2, Q);
 
-    // Return both new suggested dt.
-    lua_pushnumber(L, dtChemSuggest);
+    // Return newly suggested dt.
+    lua_pushnumber(L, dtSuggest);
     return 2;
 }
 

@@ -68,11 +68,11 @@ final class UpdateAB_YeeKotov : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         try {
-            massfUpdate(Q, tInterval, dtChemSuggest);
+            massfUpdate(Q, tInterval, dtSuggest);
         }
         catch (GasModelException err) {
             string msg = "The mass fraction update in the Yee-Kotov kinetics module failed.\n";

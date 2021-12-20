@@ -102,13 +102,13 @@ extern(C) int updateThermochemicalState(lua_State* L)
     // Arg 3 is tInterval
     double tInterval = luaL_checknumber(L, 3);
     // Arg 4 is dtSuggest
-    double dtChemSuggest = luaL_checknumber(L, 4);
+    double dtSuggest = luaL_checknumber(L, 4);
     // Extra parameters are not considered, presently. PJ 2017-04-22
     // Need to use these for JJ's fuel-air mix kinetics scheme.
     number[maxParams] params;
 
     try {
-        myReactor(Q, tInterval, dtChemSuggest, params);
+        myReactor(Q, tInterval, dtSuggest, params);
     }
     catch (ThermochemicalReactorUpdateException e) {
         string errMsg = "Error in call to thermochemical state advance. " ~
@@ -118,8 +118,8 @@ extern(C) int updateThermochemicalState(lua_State* L)
     // Update gas table
     setGasStateInTable(L, gm, 2, Q);
 
-    // Return new suggestd dt.
-    lua_pushnumber(L, dtChemSuggest);
+    // Return newly suggested dt.
+    lua_pushnumber(L, dtSuggest);
     return 1;
 }
 

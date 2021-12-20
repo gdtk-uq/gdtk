@@ -71,13 +71,13 @@ extern(C) int updatePseudoSpeciesState(lua_State *L)
     double tInterval = luaL_checknumber(L, 3);
 
     // Some dummy parameters to keep method signature happy.
-    double dtChemSuggest;
+    double dtSuggest;
     // We need a dummy array of empty extra params
     // for the function signature
     number[maxParams] params;
 
     try {
-        pseudoSpeciesKinetics(Q, tInterval, dtChemSuggest, params);
+        pseudoSpeciesKinetics(Q, tInterval, dtSuggest, params);
     }
     catch (ThermochemicalReactorUpdateException e) {
         string errMsg = "Error in call to pseudo species kinetics update. " ~
@@ -88,7 +88,7 @@ extern(C) int updatePseudoSpeciesState(lua_State *L)
     setGasStateInTable(L, gm, 2, Q);
 
     // Return new suggested time step size.
-    lua_pushnumber(L, dtChemSuggest);
+    lua_pushnumber(L, dtSuggest);
     return 2;
 }
 

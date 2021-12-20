@@ -98,7 +98,7 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         // This section is the macro species updates
@@ -108,7 +108,7 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
         number uTotal = _macro_Q.u + _macro_Q.u_modes[0];
         // 1. Perform chemistry update.
 
-        _macro_chemUpdate(_macro_Q, tInterval, dtChemSuggest, params);
+        _macro_chemUpdate(_macro_Q, tInterval, dtSuggest, params);
 
         debug {
             // writeln("--- 1 ---");
@@ -144,7 +144,7 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
         _macroAirModel.massf2molef(_macro_Q, _macro_molef);
         _macroAirModel.massf2numden(_macro_Q, _macro_numden);
         try {
-            energyUpdate(_macro_Q, tInterval, dtChemSuggest);
+            energyUpdate(_macro_Q, tInterval, dtSuggest);
             debug {
                 // writeln("--- 3 ---");
                 // writeln(_macro_Q);
@@ -723,19 +723,19 @@ version(electronically_specific_kinetics_test) {
         gm.update_thermo_from_pT(gd);
         // writeln(gd);
         double _dt = 1e-9;
-        double dtChemSuggest = 1e-10;
+        double dtSuggest = 1e-10;
         number[maxParams] params;
 
-        esk(gd, _dt, dtChemSuggest, params);
-        esk(gd, _dt, dtChemSuggest, params);
-        esk(gd, _dt, dtChemSuggest, params);
-        esk(gd, _dt, dtChemSuggest, params);
-        esk(gd, _dt, dtChemSuggest, params);
-        esk(gd, _dt, dtChemSuggest, params);
-        esk(gd, _dt, dtChemSuggest, params);
-        esk(gd, _dt, dtChemSuggest, params);
-        esk(gd, _dt, dtChemSuggest, params);
-        esk(gd, _dt, dtChemSuggest, params);
+        esk(gd, _dt, dtSuggest, params);
+        esk(gd, _dt, dtSuggest, params);
+        esk(gd, _dt, dtSuggest, params);
+        esk(gd, _dt, dtSuggest, params);
+        esk(gd, _dt, dtSuggest, params);
+        esk(gd, _dt, dtSuggest, params);
+        esk(gd, _dt, dtSuggest, params);
+        esk(gd, _dt, dtSuggest, params);
+        esk(gd, _dt, dtSuggest, params);
+        esk(gd, _dt, dtSuggest, params);
         // writeln("The final gas state after the kinetics steps is: ");
         // writeln(gd);
 
@@ -792,14 +792,14 @@ public:
         kinetics.electronic_state_solver.Init(full_rate_fit, [NInum,OInum]);
     }
 
-    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
 
         //  Process for kinetics update is as follows
         //  1. Calculate initial energy in higher electronic states
         //  2. Pass mass fraction to number density vector and convert to #/cm^3 for the solver
-        //  3. Solve for the updated electronic states over a time of tInterval (use dtChemSuggest in solver)
+        //  3. Solve for the updated electronic states over a time of tInterval (use dtSuggest in solver)
         //  4. Convert number density vector to mol/cm^3 for the chemistry dissociation
         //  5. Call molecule update with state Q --> updates numden vector
         //  6. Convert number density vector to #/m^3 and pass back to Q.massf
@@ -819,7 +819,7 @@ public:
         }
 
         // 3.
-        Electronic_Solve(_numden_input, _numden_output, Q.T_modes[0], tInterval, dtChemSuggest);
+        Electronic_Solve(_numden_input, _numden_output, Q.T_modes[0], tInterval, dtSuggest);
         // 4.
         foreach (int i; 0 .. _gmodel.n_species - 2) {//convert back to number density in #/m^3
             _numden[i] = _numden_output[i] * 1e6;
@@ -1091,10 +1091,10 @@ version(electronically_specific_kinetics_test)
 
         ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics("sample-input/ESK-N.txt","sample-input/ESK-O.txt",gm);
 
-        double dtChemSuggest = 1e-9;
+        double dtSuggest = 1e-9;
         number[maxParams] params;
         while (_t < _duration+_dt) {
-            esk(gd, _dt, dtChemSuggest, params);
+            esk(gd, _dt, dtSuggest, params);
             _t+=_dt;
         }
         double massfsum=0.0;

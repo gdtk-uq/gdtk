@@ -84,10 +84,10 @@ extern(C) int updateElectronicStates(lua_State *L)
     // We need a dummy array of empty extra params
     // for the function signature
     number[maxParams] params;
-    // and dummy dtChemSuggest
-    double dtChemSuggest = luaL_checknumber(L, 4);
+    // and dtSuggest
+    double dtSuggest = luaL_checknumber(L, 4);
     try {
-        myESK(Q, tInterval, dtChemSuggest, params);
+        myESK(Q, tInterval, dtSuggest, params);
     }
     catch (ThermochemicalReactorUpdateException e) {
         string errMsg = "Error in call to electronically-specific kinetics update. " ~
@@ -96,8 +96,8 @@ extern(C) int updateElectronicStates(lua_State *L)
     }
     // Update gas table.
     setGasStateInTable(L, gm, 2, Q);
-    // Return new dtChemSuggest
-    lua_pushnumber(L, dtChemSuggest);
+    // Return new dtSuggest
+    lua_pushnumber(L, dtSuggest);
     return 0;
 }
 

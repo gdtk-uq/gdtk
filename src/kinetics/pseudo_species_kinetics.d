@@ -43,7 +43,7 @@ public:
         _conc0.length = gmodel.n_species;
     }
 
-    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         _psGmodel.massf2conc(Q, _conc0);
@@ -624,10 +624,10 @@ version(pseudo_species_kinetics_test) {
         writeln("Gas state BEFORE update: ", gd);
 
         double tInterval = 1.0e-6;
-        double dtChemSuggest = -1.0;
+        double dtSuggest = -1.0;
         number[] params;
 
-        psk(gd, 1.0e-6, dtChemSuggest, params);
+        psk(gd, 1.0e-6, dtSuggest, params);
 
         writeln("Gas state AFTER update: ", gd);
         // Apply thermo constraint.

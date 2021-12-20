@@ -43,7 +43,7 @@ final class UpdateAB : ThermochemicalReactor {
         lua_close(L);
     }
 
-    override void opCall(GasState Q, double tInterval, ref double dtChemSuggest,
+    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         if (Q.T > _Ti) {

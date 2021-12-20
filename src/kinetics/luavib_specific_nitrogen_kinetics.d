@@ -73,11 +73,11 @@ extern(C) int updateNitrogenStates(lua_State *L)
     // We need a dummy array of empty extra params
     // for the function signature
     number[maxParams] params;
-    // and dummy dtChemSuggest
-    double dtChemSuggest = 0.0;
+    // and dummy dtSuggest
+    double dtSuggest = -1.0;
 
     try {
-        vibSpecN2Kinetics(Q, tInterval, dtChemSuggest, params);
+        vibSpecN2Kinetics(Q, tInterval, dtSuggest, params);
     }
     catch (ThermochemicalReactorUpdateException e) {
         string errMsg = "Error in call to two temperature air kinetics update. " ~
