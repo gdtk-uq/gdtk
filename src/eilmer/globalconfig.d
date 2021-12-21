@@ -264,6 +264,7 @@ enum FluxCalculator {
     ausm_plus_up, // Liou's 2006 all-speed flux calculator
     adaptive_efm_ausmdv, // EFM near shocks, AUSMDV otherwise
     adaptive_hanel_ausmdv, // Hanel near shocks, AUSMDV otherwise
+    adaptive_hanel_ausm_plus_up, // Hanel near shocks, AUSM+up otherwise
     adaptive_hanel_hllc, // Hanel near shocks, HLLC otherwise
     adaptive_hlle_roe, // HLLE near shocks, Roe otherwise
     hlle, // MHD HLLE approximate Riemann solver
@@ -284,6 +285,7 @@ string flux_calculator_name(FluxCalculator fcalc)
     case FluxCalculator.ausm_plus_up: return "ausm_plus_up";
     case FluxCalculator.adaptive_efm_ausmdv: return "adaptive_efm_ausmdv";
     case FluxCalculator.adaptive_hanel_ausmdv: return "adaptive_hanel_ausmdv";
+    case FluxCalculator.adaptive_hanel_ausm_plus_up: return "adaptive_hanel_ausm_plus_up";
     case FluxCalculator.adaptive_hanel_hllc: return "adaptive_hanel_hllc";
     case FluxCalculator.adaptive_hlle_roe: return "adaptive_hlle_roe";
     case FluxCalculator.hlle: return "hlle";
@@ -305,6 +307,7 @@ FluxCalculator flux_calculator_from_name(string name)
     case "ausm_plus_up": return FluxCalculator.ausm_plus_up;
     case "adaptive_efm_ausmdv": return FluxCalculator.adaptive_efm_ausmdv;
     case "adaptive_hanel_ausmdv": return FluxCalculator.adaptive_hanel_ausmdv;
+    case "adaptive_hanel_ausm_plus_up": return FluxCalculator.adaptive_hanel_ausm_plus_up;
     case "adaptive_hanel_hllc": return FluxCalculator.adaptive_hanel_hllc;
     case "adaptive": return FluxCalculator.adaptive_efm_ausmdv;
     case "adaptive_hlle_roe": return FluxCalculator.adaptive_hlle_roe;
@@ -972,6 +975,10 @@ final class GlobalConfig {
     shared static UnstructuredLimiter unstructured_limiter = UnstructuredLimiter.venkat;
     shared static int freeze_limiter_on_step = 1_000_000_000;
     shared static bool frozen_limiter = false;
+    // Allow the AUSMDV entropy fix to be switched off
+    // Note: this is an experimental feature that will probably be removed in a later revision [KAD 20-12-2021]
+    shared static bool apply_entropy_fix = true;
+
     // Allow the least-squares cloud of points (used to compute a cell-center gradient for
     // reconstruction in the unstructured solver) to grow.
     shared static bool use_extended_stencil = false;
@@ -1281,6 +1288,7 @@ public:
     bool apply_limiter;
     bool extrema_clipping;
     bool interpolate_in_local_frame;
+    bool apply_entropy_fix;
     UnstructuredLimiter unstructured_limiter;
     int freeze_limiter_on_step;
     bool use_extended_stencil;
@@ -1435,6 +1443,7 @@ public:
         apply_limiter = cfg.apply_limiter;
         extrema_clipping = cfg.extrema_clipping;
         interpolate_in_local_frame = cfg.interpolate_in_local_frame;
+        apply_entropy_fix = cfg.apply_entropy_fix;
         unstructured_limiter = cfg.unstructured_limiter;
         freeze_limiter_on_step = cfg.freeze_limiter_on_step;
         use_extended_stencil = cfg.use_extended_stencil;
@@ -1786,6 +1795,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("apply_limiter", "apply_limiter"));
     mixin(update_bool("extrema_clipping", "extrema_clipping"));
     mixin(update_bool("interpolate_in_local_frame", "interpolate_in_local_frame"));
+    mixin(update_bool("apply_entropy_fix", "apply_entropy_fix"));
     mixin(update_enum("unstructured_limiter", "unstructured_limiter", "unstructured_limiter_from_name"));
     mixin(update_int("freeze_limiter_on_step", "freeze_limiter_on_step"));
     mixin(update_bool("use_extended_stencil", "use_extended_stencil"));
@@ -1872,6 +1882,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  allow_reconstruction_for_species: ", cfg.allow_reconstruction_for_species);
         writeln("  allow_reconstruction_for_energy_modes: ", cfg.allow_reconstruction_for_energy_modes);
         writeln("  apply_limiter: ", cfg.apply_limiter);
+        writeln("  apply_entropy_fix: ", cfg.apply_entropy_fix);
         writeln("  unstructured_limiter: ", unstructured_limiter_name(cfg.unstructured_limiter));
         writeln("  freeze_limiter_on_step: ", cfg.freeze_limiter_on_step);
         writeln("  use_extended_stencil: ", cfg.use_extended_stencil);
@@ -2399,6 +2410,7 @@ void configCheckPoint1()
         cfg.do_shock_detect = true;
     }
     if (cfg.flux_calculator == FluxCalculator.adaptive_hanel_ausmdv ||
+        cfg.flux_calculator == FluxCalculator.adaptive_hanel_ausm_plus_up ||
         cfg.flux_calculator == FluxCalculator.adaptive_hanel_hllc ||
         cfg.flux_calculator == FluxCalculator.adaptive_hlle_roe ||
         cfg.flux_calculator == FluxCalculator.adaptive_efm_ausmdv ||

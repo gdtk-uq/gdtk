@@ -93,6 +93,9 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
     case FluxCalculator.adaptive_hanel_ausmdv:
         adaptive_hanel_ausmdv(Lft, Rght, IFace, myConfig);
         break;
+    case FluxCalculator.adaptive_hanel_ausm_plus_up:
+        adaptive_hanel_ausm_plus_up(Lft, Rght, IFace, myConfig);
+        break;
     case FluxCalculator.adaptive_hanel_hllc:
         adaptive_hanel_hllc(Lft, Rght, IFace, myConfig);
         break;
@@ -100,7 +103,7 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
         adaptive_hlle_roe(Lft, Rght, IFace, myConfig);
         break;
     case FluxCalculator.ausm_plus_up:
-        ausm_plus_up(Lft, Rght, IFace, myConfig.M_inf, myConfig);
+        ausm_plus_up(Lft, Rght, IFace, myConfig);
         break;
     case FluxCalculator.hlle:
         hlle(Lft, Rght, IFace, myConfig);
@@ -586,38 +589,40 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     }
     //
     // Apply entropy fix (section 3.5 in Wada and Liou's paper)
-    const double C_EFIX = 0.125;
-    bool caseA = ((uL - aL) < 0.0) && ((uR - aR) > 0.0);
-    bool caseB = ((uL + aL) < 0.0) && ((uR + aR) > 0.0);
-    //
-    number d_ua = 0.0;
-    if (caseA && !caseB) { d_ua = C_EFIX * ((uR - aR) - (uL - aL)); }
-    if (caseB && !caseA) { d_ua = C_EFIX * ((uR + aR) - (uL + aL)); }
-    //
-    if (d_ua != 0.0) {
-        F.vec[cqi.mass] -= factor*d_ua*(rR - rL);
-        F.vec[cqi.xMom] -= factor*d_ua*(rR*uR - rL*uL);
-        F.vec[cqi.yMom] -= factor*d_ua*(rR*vR - rL*vL);
-        if (cqi.threeD) { F.vec[cqi.zMom] -= factor*d_ua*(rR*wR - rL*wL); }
-        F.vec[cqi.totEnergy] -= factor*d_ua*(rR*HR - rL*HL);
-        version(turbulence) {
-            foreach(i; 0 .. myConfig.turb_model.nturb) {
-                F.vec[cqi.rhoturb+i] -= factor*d_ua*(rR*Rght.turb[i] - rL*Lft.turb[i]);
-            }
-        }
-        version(multi_species_gas) {
-            if (cqi.n_species > 1) {
-                foreach (i; 0 .. cqi.n_species) {
-                    F.vec[cqi.species+i] -= factor*d_ua*(rR*Rght.gas.massf[i] - rL*Lft.gas.massf[i]);
+    if (myConfig.apply_entropy_fix) {
+        const double C_EFIX = 0.125;
+        bool caseA = ((uL - aL) < 0.0) && ((uR - aR) > 0.0);
+        bool caseB = ((uL + aL) < 0.0) && ((uR + aR) > 0.0);
+        //
+        number d_ua = 0.0;
+        if (caseA && !caseB) { d_ua = C_EFIX * ((uR - aR) - (uL - aL)); }
+        if (caseB && !caseA) { d_ua = C_EFIX * ((uR + aR) - (uL + aL)); }
+        //
+        if (d_ua != 0.0) {
+            F.vec[cqi.mass] -= factor*d_ua*(rR - rL);
+            F.vec[cqi.xMom] -= factor*d_ua*(rR*uR - rL*uL);
+            F.vec[cqi.yMom] -= factor*d_ua*(rR*vR - rL*vL);
+            if (cqi.threeD) { F.vec[cqi.zMom] -= factor*d_ua*(rR*wR - rL*wL); }
+            F.vec[cqi.totEnergy] -= factor*d_ua*(rR*HR - rL*HL);
+            version(turbulence) {
+                foreach(i; 0 .. myConfig.turb_model.nturb) {
+                    F.vec[cqi.rhoturb+i] -= factor*d_ua*(rR*Rght.turb[i] - rL*Lft.turb[i]);
                 }
             }
-        }
-        version(multi_T_gas) {
-            foreach (i; 0 .. cqi.n_modes) {
-                F.vec[cqi.modes+i] -= factor*d_ua*(rR*Rght.gas.u_modes[i] - rL*Lft.gas.u_modes[i]);
+            version(multi_species_gas) {
+                if (cqi.n_species > 1) {
+                    foreach (i; 0 .. cqi.n_species) {
+                        F.vec[cqi.species+i] -= factor*d_ua*(rR*Rght.gas.massf[i] - rL*Lft.gas.massf[i]);
+                    }
+                }
             }
-        }
-    } // end of entropy fix (d_ua != 0)
+            version(multi_T_gas) {
+                foreach (i; 0 .. cqi.n_modes) {
+                    F.vec[cqi.modes+i] -= factor*d_ua*(rR*Rght.gas.u_modes[i] - rL*Lft.gas.u_modes[i]);
+                }
+            }
+        } // end of entropy fix (d_ua != 0)
+    }
 } // end ausmdv()
 
 @nogc
@@ -1190,6 +1195,22 @@ void adaptive_hanel_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface 
 }
 
 @nogc
+void adaptive_hanel_ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+// This adaptive flux calculator uses the Hanel flux calculator
+// near shocks and AUSM+up away from shocks.
+//
+// The actual work is passed off to the original flux calculation functions.
+{
+    number alpha = IFace.fs.S;
+    if (alpha > 0.0) {
+        hanel(Lft, Rght, IFace, myConfig, alpha);
+    }
+    if (alpha < 1.0) {
+        ausm_plus_up(Lft, Rght, IFace, myConfig, 1.0-alpha);
+    }
+}
+
+@nogc
 void adaptive_hanel_hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
 // This adaptive flux calculator uses the Hanel flux calculator
 // near shocks and HLLC away from shocks.
@@ -1223,7 +1244,7 @@ void adaptive_hlle_roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFac
 
 @nogc
 void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
-                  double M_inf, ref LocalConfig myConfig, number factor=1.0)
+                  ref LocalConfig myConfig, number factor=1.0)
 // Liou's 2006 AUSM+up flux calculator
 //
 // A new version of the AUSM-family schemes, based
@@ -1287,6 +1308,8 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
     }
     // Unpack the flow-state vectors for either side of the interface.
     // Store in work vectors, those quantities that will be neede later.
+    double M_inf = myConfig.M_inf;
+
     number rL = Lft.gas.rho;
     number pL = Lft.gas.p;
     number uL = Lft.vel.x;

@@ -85,6 +85,7 @@ configOptionsHidden = { -- hidden from user
    apply_limiter = true,
    extrema_clipping = true,
    interpolate_in_local_frame = true,
+   apply_entropy_fix = true,
    unstructured_limiter = "venkat",
    freeze_limiter_on_step = 1000000000,
    use_extended_stencil = false,
