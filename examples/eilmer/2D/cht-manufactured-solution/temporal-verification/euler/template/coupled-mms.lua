@@ -57,6 +57,7 @@ identifyBlockConnections()
 config.interpolation_order = 2
 config.gasdynamic_update_scheme = 'euler'
 config.flux_calculator = 'ausm_plus_up'
+config.M_inf = 0.1
 config.viscous = true
 config.spatial_deriv_calc = 'divergence'
 config.max_time = 0.001 - 1.0e-8 -- to allow for round-off when trying to hit 0.001

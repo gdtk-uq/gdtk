@@ -1344,7 +1344,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
     // Mean local Mach number (eqn 70).
     number MbarSq = (uL*uL + uR*uR) / (2.0 * a_half *a_half);
     // Reference Mach number (eqn 71).
-    number M0Sq = fmin(1.0, fmax(MbarSq, M_inf));
+    number M0Sq = fmin(1.0, fmax(MbarSq, M_inf*M_inf));
      // Some additional parameters.
     number fa = sqrt(M0Sq) * (2.0 - sqrt(M0Sq));   // eqn 72
     number alpha = 0.1875 * (-4.0 + 5 * fa * fa);  // eqn 76
