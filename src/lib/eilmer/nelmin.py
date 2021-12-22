@@ -102,6 +102,9 @@ def minimize(f, x, dx=None, options={}):
         P: (default 1) number of points to replace in parallel, each step.
         n_workers: (default 1) number of concurrent threads or processes in pool
         maxfe: (default 300) maximum number of function evaluations that we will allow
+            Note that this is a soft limit that will likely be exceeded by about 3N
+            because N+1 evaluations are needed to initialize the simplex and then
+            2N are required in the convergence check after taking a number of steps.
         n_check: (default 20) number of steps between convergence checks
         delta: (default 0.001) magnitude of the perturbations for checking a local minimum
             and for the scale reduction when restarting
@@ -124,16 +127,21 @@ def minimize(f, x, dx=None, options={}):
     assert callable(f), "A function was expected for f."
     N = len(x)
     if dx is None: dx = numpy.array([0.1]*N)
+    # Default values for options.
     opts = {'tol':1.0e-6, 'maxfe':300, 'n_check':20, 'delta':0.001,
             'Kreflect':1.0, 'Kextend':2.0, 'Kcontract':0.5,
-            'P':1, 'n_workers': 1,
+            'P':1, 'n_workers':1,
             'initial_simplex_fname':None,
             'print_messages':False}
+    # Overwrite default values.
     for k in options.keys():
         if k in opts.keys():
             opts[k] = options[k]
         else:
             raise RuntimeError(f'option {k} is not available')
+    # Check that we have a consistent value for the number of steps between checks.
+    opts['n_check'] = min(int(opts['maxfe']/opts['P']), opts['n_check'])
+    # Start working.
     global workers
     if opts['n_workers'] > 1:
         workers = concurrent.futures.ThreadPoolExecutor(max_workers=opts['n_workers'])
@@ -164,6 +172,7 @@ def minimize(f, x, dx=None, options={}):
             # All of the points are close together but we need to test more carefully.
             converged = smplx.test_for_minimum(opts['delta'])
             if not converged: smplx.rescale(opts['delta'])
+        # print("smplx.nfe=", smplx.nfe) # for debug
     #
     if workers:
         workers.shutdown()

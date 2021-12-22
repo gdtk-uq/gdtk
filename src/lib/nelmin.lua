@@ -226,7 +226,7 @@ function NMSimplex:contract_about_one_point(i_con)
    end
    --
 end
-   
+
 function NMSimplex:test_for_minimum(i_min, delta)
    -- Perturb the minimum vertex and check that it is a local minimum.
    local is_minimum = true -- Assume minimum and test for failure
