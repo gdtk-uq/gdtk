@@ -15,15 +15,20 @@ import sys, os
 DGDINST = os.path.expandvars("$HOME/dgdinst")
 sys.path.append(DGDINST)
 
-import shutil, shlex, subprocess, string, math
-from eilmer.nelmin import minimize, NelderMeadMinimizer
+import shutil, shlex, subprocess, queue
+import string, math
 import time
+from eilmer.nelmin import minimize, NelderMeadMinimizer
 
 start_time = time.time()
 progress_file = open("progress.txt", 'w')
 progress_file.write("# job wall_clock params[0] params[1] params[2] params[3] thrustx\n")
 progress_file.flush()
-obj_eval_number = 0
+# Each of the Eilmer simulations will be run in its own directory, identified by job number,
+# so that it can be run independently of all other simulations.
+# We will use a queue to regulate the specification of this job number.
+obj_eval_queue = queue.Queue()
+obj_eval_queue.put(0)
 
 def run_command(cmdText, jobDir, logFile=None):
     """
@@ -122,19 +127,20 @@ def objective(params, *args):
     Given a list of parameter values, run a simulation and compute the thrust.
     Since the thrust is in the negative x-direction, large negative values are good.
     The minimizer will drive toward good values.
-
-    [TODO] make this function thread-safe.
-    Presently it is reliable for n_workers=1, only.
     """
-    global start_time, progress_file, obj_eval_number
+    global start_time # Immutable.
+    global progress_file # Shared output stream, hopefully not too messed up.
+    global obj_eval_queue # Thread-safe.
+    job_number = obj_eval_queue.get()
+    job_number += 1
+    obj_eval_queue.put(job_number)
+    print("Start job number:", job_number)
     pdict = {"theta_init":params[0], "alpha":params[1],
              "beta":params[2], "theta_cone":params[3]}
-    obj_eval_number += 1
-    print("Start job number:", obj_eval_number)
-    jobDir = 'job-%04d' % obj_eval_number
+    jobDir = 'job-%04d' % job_number
     run_simulation(pdict, jobDir)
-    # Note that, if we run several simulations, there will be several
-    # loads files, indexed in order of creation.
+    # Note that, if we run an Eilmer simulation several times,
+    # there may be several loads files, indexed in order of creation.
     # We want the most recent, if we are in the optimization process.
     f = open(jobDir+'/loads/nozzle-loads.times', 'r')
     tindx = 0
@@ -145,7 +151,7 @@ def objective(params, *args):
         tindx = int(items[0])
     thrustx = neg_thrust(tindx, jobDir)
     progress_file.write("%d %.1f %.4f %.4f %.4f %.4f %.2f\n" %
-                        (obj_eval_number, time.time()-start_time, params[0],
+                        (job_number, time.time()-start_time, params[0],
                          params[1], params[2], params[3], thrustx))
     progress_file.flush() # so that we can see the results as simulations run
     return thrustx
@@ -173,7 +179,7 @@ def main():
         print("Let the optimizer take control and run the numerical experiment.")
         x0 = [30.0, 0.0, 0.0, 30.0] # [theta_init, alpha, beta, theta_cone] degrees
         result = minimize(objective, x0, [2.0, 2.0, 2.0, 2.0],
-                          options={'tol':1.0e-4, 'P':2, 'maxfe':60, 'n_workers':1})
+                          options={'tol':1.0e-4, 'P':2, 'maxfe':60, 'n_workers':2})
         print('optimized result:')
         print('  x=', result.x)
         print('  fx=', result.fun)

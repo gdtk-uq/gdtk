@@ -100,7 +100,11 @@ def minimize(f, x, dx=None, options={}):
         tol: (default 1.0e-6) the terminating limit for the standard-deviation
             of the simplex function values.
         P: (default 1) number of points to replace in parallel, each step.
-        n_workers: (default 1) number of concurrent threads or processes in pool
+        n_workers: (default 1) number of concurrent threads in pool
+            We are using thread pool to do the concurrent evaluation of the objective
+            function because typical use will involve running the Eilmer flow simulation
+            code as a subprocess.  This will look like slow IO and we will get
+            the benefit of running on multiple cores.
         maxfe: (default 300) maximum number of function evaluations that we will allow
             Note that this is a soft limit that will likely be exceeded by about 3N
             because N+1 evaluations are needed to initialize the simplex and then
