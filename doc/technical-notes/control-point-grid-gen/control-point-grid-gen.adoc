@@ -275,5 +275,5 @@ image::duct_grid.png[width=80%]
 [bibliography]
 = Reference
 
-* [[[label,1]]] Eiseman, Peter R. (1988). A control point form of algebraic grid generation. _International Journal for Numberical Methods in Fluids_, vol 8, pp 1165--1181. https://doi.org/10.1002/fld.1650081005
+* [[[label,1]]] Eiseman, Peter R. (1988). A control point form of algebraic grid generation. _International Journal for Numerical Methods in Fluids_, vol 8, pp 1165--1181. https://doi.org/10.1002/fld.1650081005
 
