@@ -46,7 +46,7 @@ that they achieved maximum thrust in the axial direction.
 
 In 2017, the students were allowed to decide the particular experimental procedure
 for determining good values of the design parameters.
-This report shows how to use the Nelder-Mead nonlinear simplex method^<<bib2,2>>^^<<bib3,3>>^
+This report shows how to use the Nelder-Mead nonlinear simplex method^<<bib2,2>>,<<bib3,3>>^
 in an automated process for deciding what values of the nozzle shape parameters to set.
 
 
