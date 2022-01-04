@@ -50,8 +50,26 @@ and specialist workflows.
    <br>
    Caiyu (Carrie) Xie and Rowan J. Gollan, 2021-12-19
    </div>
-
 </div>
+
+<br>
+
+<div class="row">
+   <div class="col-sm-6">
+   <a href=nozzle-optimize-bell/>
+   <img src="nozzle-optimize-bell/resources/nozzle-pressure-and-mach-field-tc-39-experiment-3.png" style="width:80%">
+   </a>
+   </div>
+   <div class="col-sm-10">
+   <a href=nozzle-optimize-bell/>
+   <b>Design Optimization of a Thrust Nozzle</b>
+   </a>
+   <br>
+   Peter Jacobs, 2021-12-29
+   </div>
+</div>
+
+
 
 
 <br>

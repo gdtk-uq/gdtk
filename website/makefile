@@ -21,7 +21,8 @@ USER_GUIDES := eilmer-user-guide \
 	foammesh-user-guide
 
 TECH_NOTES := hybrid-fluxes \
-	control-point-grid-gen
+	control-point-grid-gen \
+	nozzle-optimize-bell
 
 
 all: $(REF_MANS) eilmer-catalog eilmer-faq presentations theses $(USER_GUIDES) $(TECH_NOTES)
@@ -135,6 +136,14 @@ control-point-grid-gen:
 	cp -r ../doc/technical-notes/control-point-grid-gen/resources $(EILMER_DIR)/technical-notes/control-point-grid-gen
 	sed -i '/^:stylesheet:/d' $(EILMER_DIR)/technical-notes/tmp.adoc
 	cat $(EILMER_DIR)/technical-notes/control-point-hugo-header.txt $(EILMER_DIR)/technical-notes/tmp.adoc > $(EILMER_DIR)/technical-notes/control-point-grid-gen.adoc
+	rm $(EILMER_DIR)/technical-notes/tmp.adoc
+
+nozzle-optimize-bell:
+	cp -r ../doc/technical-notes/nozzle-optimize-bell/nozzle-optimize-bell.adoc $(EILMER_DIR)/technical-notes/tmp.adoc
+	- mkdir -p $(EILMER_DIR)/technical-notes/nozzle-optimize-bell
+	cp -r ../doc/technical-notes/nozzle-optimize-bell/resources $(EILMER_DIR)/technical-notes/nozzle-optimize-bell
+	sed -i '/^:stylesheet:/d' $(EILMER_DIR)/technical-notes/tmp.adoc
+	cat $(EILMER_DIR)/technical-notes/nozzle-optimize-bell-hugo-header.txt $(EILMER_DIR)/technical-notes/tmp.adoc > $(EILMER_DIR)/technical-notes/nozzle-optimize-bell.adoc
 	rm $(EILMER_DIR)/technical-notes/tmp.adoc
 
 
