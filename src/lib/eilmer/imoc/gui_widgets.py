@@ -18,6 +18,7 @@ Version: 0.2, 2020-Apr-19."""
 
 import sys
 import math
+import collections
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
@@ -99,7 +100,9 @@ def world_y(canvas_y):
 cfg['node_indx'] = {}
 cfg['object_id'] = {}
 cfg['display_dialog_for_coincident_nodes'] = True
-cfg['pick_action'] = "select_node" # others select_corner_1, pick_corner_2
+# Make something like an enum for use with the pick_action state variable.
+PickAction = collections.namedtuple('_', 'node corner_1 corner_2')(*range(3))
+cfg['pick_action'] = PickAction.node
 cfg['selected_nodes'] = []
 
 def init_widgets():
@@ -222,7 +225,7 @@ def init_widgets():
     #
     # For the convenience of the user, leave the focus in the canvas widget
     c.focus()
-    cfg['pick_action'] = 'select_node'
+    cfg['pick_action'] = PickAction.node
     showStatusMsg("Ready.")
     return
 
@@ -289,17 +292,17 @@ def pickSomething(event):
     c = cfg['canvas']
     cx = c.canvasx(event.x); cy = c.canvasy(event.y)
     x = world_x(cx); y = world_y(cy)
-    if cfg['pick_action'] == 'select_node':
+    if cfg['pick_action'] == PickAction.node:
         showStatusMsg("Try to select node at x=%.3g y=%.3g" % (x, y))
         selectNode(c, cx, cy)
-    elif cfg['pick_action'] == 'pick_corner_1':
+    elif cfg['pick_action'] == PickAction.corner_1:
         showStatusMsg("Lower-left corner for zoom x=%.3g y=%.3g" % (x, y))
         cfg['zoom_x1'] = x; cfg['zoom_y1'] = y
-        cfg['pick_action'] = 'pick_corner_2'
-    elif cfg['pick_action'] == 'pick_corner_2':
+        cfg['pick_action'] = PickAction.corner_2
+    elif cfg['pick_action'] == PickAction.corner_2:
         showStatusMsg("Upper-right corner for zoom x=%.3g y=%.3g" % (x, y))
         set_xy_ranges(cfg['zoom_x1'], cfg['zoom_y1'], x, y)
-        cfg['pick_action'] = 'select_node' # Return to default pick action.
+        cfg['pick_action'] = PickAction.node # Return to default pick action.
         eraseCursors()
         refreshDisplay()
         showStatusMsg("Zoom to selected range x=[%.3g, %.3g] y=[%.3g, %.3g]" %
@@ -333,7 +336,7 @@ def clearSelectedNodesList(event=None):
     return
 
 def startZoom():
-    cfg['pick_action'] = 'pick_corner_1'
+    cfg['pick_action'] = PickAction.corner_1
     return
 
 def displayCoords(event):
@@ -351,11 +354,11 @@ def displayCoords(event):
     c_y_min = c.canvasy(canvas_y(cfg['y_min']))
     c_x_max = c.canvasx(canvas_x(cfg['x_max']))
     c_y_max = c.canvasy(canvas_y(cfg['y_max']))
-    if cfg['pick_action'] == 'pick_corner_1':
+    if cfg['pick_action'] == PickAction.corner_1:
         c.delete("cursor1")
         c.create_line(cx, c_y_min, cx, c_y_max, fill='red', tags='cursor1')
         c.create_line(c_x_min, cy, c_x_max, cy, fill='red', tags='cursor1')
-    if cfg['pick_action'] == 'pick_corner_2':
+    if cfg['pick_action'] == PickAction.corner_2:
         c.delete("cursor2")
         c.create_line(cx, c_y_min, cx, c_y_max, fill='red', tags='cursor2')
         c.create_line(c_x_min, cy, c_x_max, cy, fill='red', tags='cursor2')
