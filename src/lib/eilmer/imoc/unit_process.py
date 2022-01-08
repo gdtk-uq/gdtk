@@ -145,7 +145,7 @@ def interior(node1, node2, node4):
         n4 = kernel.Node()
         node4 = n4.indx
     else:
-        n4 = nodes[node4]
+        n4 = kernel.nodes[node4]
     m4 = igf.PM2(pm4, kernel.g)
     n4.x = x4; n4.y = y4; n4.nu = pm4; n4.theta = th4; n4.mach = m4
     # We assume that the principal flow direction
@@ -163,15 +163,15 @@ def interior(node1, node2, node4):
 
 def insert(node1, node2, node4, alpha):
     """
-    Returns the node inserted between two initial points.
+    Returns the node (4) inserted between two existing points (1,2).
 
-    node1: index of initial point
-    node2: index of initial point
+    node1: index of existing point 1
+    node2: index of existing point 2
     node4: index of inserted point (may have a value of -1)
     alpha: fraction that node4 is like node2;
            n4.value = alpha n2.value + (1-alpha) n1.value
     If -1 is specified as the index for node4, a new node will be
-    created for the inserted point.
+    created for the inserted node.
     If node1 and node2 are adjacent nodes along a characteristic line,
     node4 will be connected in between.
     """
@@ -183,7 +183,7 @@ def insert(node1, node2, node4, alpha):
         n4 = kernel.Node()
         node4 = n4.indx
     else:
-        n4 = nodes[node4]
+        n4 = kernel.nodes[node4]
     # Enforce a 0.0..1.0 range for alpha
     alpha = max(min(alpha, 1.0), 0.0)
     # Linearly interpolate node properties.
@@ -193,8 +193,8 @@ def insert(node1, node2, node4, alpha):
     n4.theta = (1-alpha)*n1.theta + alpha*n2.theta
     n4.mach = igf.PM2(n4.nu, kernel.g)
     # Connect into the mesh only if nodes 1 and 2 are adjacent.
-    print("node1=", node1, "n1.cminus_down=", n1.cminus_down,
-          "node2=", node2, "n2.cminus_up=", n2.cminus_up)
+    # print("node1=", node1, "n1.cminus_down=", n1.cminus_down,
+    #       "node2=", node2, "n2.cminus_up=", n2.cminus_up)
     if (n1.cplus_down == node2) and (n2.cplus_up == node1) and (n1.cplus_down != -1):
         n4.cplus_up = node1; n1.cplus_down = node4
         n2.cplus_up = node4; n4.cplus_down = node2
@@ -304,7 +304,7 @@ def cminus_wall(wall, node1, node4):
         n4 = kernel.Node()
         node4 = n4.indx
     else:
-        n4 = nodes[node4]
+        n4 = kernel.nodes[node4]
     m4 = igf.PM2(pm4, kernel.g)
     n4.x = x4; n4.y = y4; n4.nu = pm4; n4.theta = th4; n4.mach = m4
     # We assume that the principal flow direction
@@ -388,7 +388,7 @@ def cplus_wall(wall, node2, node4):
         n4 = kernel.Node()
         node4 = n4.indx
     else:
-        n4 = nodes[node4]
+        n4 = kernel.nodes[node4]
     m4 = igf.PM2(pm4, kernel.g)
     n4.x = x4; n4.y = y4; n4.nu = pm4; n4.theta = th4; n4.mach = m4
     # We assume that the principal flow direction
@@ -492,7 +492,7 @@ def cplus_free(node0, node2, node4):
         n4 = kernel.Node()
         node4 = n4.indx
     else:
-        n4 = nodes[node4]
+        n4 = kernel.nodes[node4]
     m4 = igf.PM2(pm4, kernel.g)
     n4.x = x4; n4.y = y4; n4.nu = pm4; n4.theta = th4; n4.mach = m4
     # We assume that the principal flow direction
@@ -600,7 +600,7 @@ def cminus_free(node0, node1, node4):
         n4 = kernel.Node()
         node4 = n4.indx
     else:
-        n4 = nodes[node4]
+        n4 = kernel.nodes[node4]
     m4 = igf.PM2(pm4, kernel.g)
     n4.x = x4; n4.y = y4; n4.nu = pm4; n4.theta = th4; n4.mach = m4
     # We assume that the principal flow direction
@@ -613,6 +613,91 @@ def cminus_free(node0, node1, node4):
         n4.cminus_up = node1; n1.cminus_down = node4
     else:
         n4.cminus_down = node1; n1.cminus_up = node4
+    return n4
+
+
+def streamline_intersection_weights(node0, node1, node2):
+    """
+    Returns the weights of the intersection point of the extended streamline
+    from node0 to the line between two existing points node1 and node2.
+
+    node0: index of a point on the streamline
+    node1: index of another existing point
+    node2: index of a third existing point
+    """
+    if node0 == node1:
+        raise RuntimeError("Same index given for node0 and node1.")
+    if node0 == node2:
+        raise RuntimeError("Same index given for node0 and node2.")
+    if node1 == node2:
+        raise RuntimeError("Same index given for node1 and node2.")
+    n0 = kernel.nodes[node0]
+    n1 = kernel.nodes[node1]
+    n2 = kernel.nodes[node2]
+    # Make copies of some of the node data.
+    x0 = n0.x; y0 = n0.y; th0 = n0.theta
+    x1 = n1.x; y1 = n1.y; th1 = n1.theta
+    x2 = n2.x; y2 = n2.y; th2 = n2.theta
+    # Guess at some of the intersection point properties and then iterate.
+    x4  = 0.5*(x1+x2)
+    y4  = 0.5*(y1+y2)
+    th4 = 0.5*(th1+th2)
+    converged = False
+    iteration_count =0
+    while (not converged) and (iteration_count < max_iteration):
+        x4_old = x4; y4_old = y4
+        # Locate solution point by assuming straight-line segments.
+        dx12 = x2 - x1;
+        dy12 = y2 - y1;
+        sinCzero = 0.5*(sin(th0) + sin(th4))
+        cosCzero = 0.5*(cos(th0) + cos(th4))
+        numerator = (x0-x1)*sinCzero - (y0-y1)*cosCzero
+        denominator = dx12*sinCzero - dy12*cosCzero
+        if abs(denominator) <= 1.0e-12:
+            raise RuntimeError("streamline_intersection_weights: "+
+                               "streamline and n1-to-n2-line are parallel.")
+        lambda12 = numerator / denominator
+        x4 = x1 + lambda12 * dx12
+        y4 = y1 + lambda12 * dy12
+        dx = x4 - x4_old; dy = y4 - y4_old
+        change_in_position = sqrt(dx*dx + dy*dy)
+        # Update the sthreamline angle at the estimated intersection point.
+        th4 = (1.0-lambda12)*th1 + lambda12*th2
+        #
+        iteration_count += 1
+        converged = change_in_position < position_tolerance
+    # At this point, we do not restrict the weights to the range 0.0 to 1.0
+    # for an intersection that lies between points 1 and 2.
+    return [1.0-lambda12, lambda12]
+
+
+def add_stream_node(node0, node1, node2, node4):
+    """
+    Returns a new streamline point (node4) by extending the streamline
+    from node0 to the line between points 1 and 2.
+    The new point will be integrated into the characteristic mesh.
+
+    If the intersection point is not between the points 1 and 2,
+    an exception is raised.
+    """
+    alpha1, alpha2 = streamline_intersection_weights(node0, node1, node2)
+    if 0.0 <= alpha2 <= 1.0:
+        # The new point lies between the nodes 1 and 2
+        # so let's put it in place.
+        if node4 == -1:
+            n4 = kernel.Node()
+            node4 = n4.indx
+        else:
+            n4 = kernel.nodes[node4]
+        insert(node1, node2, node4, alpha2)
+        # Connect it into the streamline.
+        n0 = kernel.nodes[node0]
+        if n4.x > n0.x:
+            n4.czero_up = node0; n0.czero_down = node4
+        else:
+            n4.czero_down = node0; n0.czero_up = node4
+    else:
+        raise RuntimeError("Intersection point is not between nodes 1 and 2.")
     return n4
 
 
