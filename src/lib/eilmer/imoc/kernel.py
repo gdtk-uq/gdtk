@@ -22,7 +22,7 @@ T0 = 1.0 # Nondimensional total temperature for flow
 axisymmetric = False
 
 nodes = [] # Storage for the Node objects.
-mesh_nodes = [] # Nodes that have been added to the characteristics mesh.
+mesh_indices = [] # Indices of the nodes that have been added to the characteristics mesh.
 
 walls = [] # Storage for the user-defined functions that specify the walls.
 
@@ -44,6 +44,9 @@ class Node(object):
 
         We store the new Node in the nodes list at indx.
         If indx is not supplied, the new Node is appended to nodes.
+
+        Note that we depend upon the index within the nodes storage list
+        being the same as the values of the indx attribute.
         """
         if indx is None: indx = len(nodes)
         self.indx = indx

@@ -246,9 +246,9 @@ def saveDataFile():
     for node in kernel.nodes:
         f.write("%s\n" % str(node))
     f.write("mesh_indx_list=[\n")
-    n = len(kernel.mesh_nodes)
+    n = len(kernel.mesh_indices)
     for i in range(n):
-        f.write("%d" % kernel.mesh_nodes[i].indx)
+        f.write("%d" % kernel.mesh_indices[i])
         if i+1 < n:
             f.write(",")
             ws = "\n" if (i+1) % 10 == 0 else " "
@@ -436,7 +436,8 @@ def plotMesh():
     r = 15 if show_node_numbers else 3
     node_indx = {}
     object_id = {}
-    for node in kernel.mesh_nodes:
+    for i in kernel.mesh_indices:
+        node = kernel.nodes[i]
         x = canvas_x(node.x); y = canvas_y(node.y)
         myid = c.create_oval(x-r, y-r, x+r, y+r, outline='black',
                              fill='gray', tags='nodes')

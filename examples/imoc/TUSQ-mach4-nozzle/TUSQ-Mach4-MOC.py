@@ -48,7 +48,7 @@ while kernel.nodes[-1].y < 0.15 and top_node_count >= 2:
         unit.interior(i+1, i, -1)
     top_node_count -= 1
 # Create our graphical mesh by adding all kernel nodes to mesh
-[kernel.mesh_nodes.append(node) for node in kernel.nodes]
+[kernel.mesh_indices.append(node.indx) for node in kernel.nodes]
 # Now, we know our Mach cone starts at node 27, we use this to calculate the
 # node which represents our nozzle exit. From this we can then use streamlines
 # to define our wall profile
@@ -71,7 +71,7 @@ nozz_wall_nodes.append(nozz_exit_node) # Start at nozzle exit node.
 while kernel.nodes[nozz_wall_nodes[-1]].x > 0.01:
     new_idx = unit.step_stream_node(nozz_wall_nodes[-1], -1, dL)
     nozz_wall_nodes.append(new_idx)
-    kernel.mesh_nodes.append(kernel.nodes[new_idx])
+    kernel.mesh_indices.append(new_idx)
 nozz_wall_nodes.reverse()
 # Now, we can do a check of the throat radius and see that this matches what
 # we are expecting from our analytical solution, it should be ~20mm.
@@ -85,8 +85,8 @@ print(f"The throat radius is approximately "
 def f0(x): return 0.0
 # And the create the upper (nozzle) wall as a closure around
 # the arrays of xs and ys.
-xs = np.array([kernel.mesh_nodes[i].x for i in nozz_wall_nodes])
-ys = np.array([kernel.mesh_nodes[i].y for i in nozz_wall_nodes])
+xs = np.array([kernel.nodes[i].x for i in nozz_wall_nodes])
+ys = np.array([kernel.nodes[i].y for i in nozz_wall_nodes])
 def f1(x, wall_x=xs, wall_y=ys):
     import numpy as np
     return np.interp(x, wall_x, wall_y)

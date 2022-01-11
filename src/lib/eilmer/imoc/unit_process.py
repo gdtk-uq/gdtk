@@ -43,7 +43,7 @@ position_tolerance = 1.0e-5
 
 def interior(node1, node2, node4):
     """
-    Returns an interior point computed from two initial points.
+    Returns the index of an interior point computed from two initial points.
 
     node1: index of initial point along C- characteristic
     node2: index of initial point along C+ characteristic
@@ -158,12 +158,12 @@ def interior(node1, node2, node4):
         n4.cminus_up = node1; n1.cminus_down = node4
     else:
         n4.cminus_down = node1; n1.cminus_up = node4
-    return n4
+    return n4.indx
 
 
 def insert(node1, node2, node4, alpha):
     """
-    Returns the node (4) inserted between two existing points (1,2).
+    Returns the index of a node (4) inserted between two existing points (1,2).
 
     node1: index of existing point 1
     node2: index of existing point 2
@@ -214,7 +214,7 @@ def insert(node1, node2, node4, alpha):
         n4.czero_up = node2; n2.czero_down = node4
         n1.czero_up = node4; n4.czero_down  = node1
     # Assuming success...
-    return n4
+    return n4.indx
 
 
 def wall_position(f, x0, y0, cosx, cosy):
@@ -234,7 +234,7 @@ def wall_position(f, x0, y0, cosx, cosy):
 
 def cminus_wall(wall, node1, node4):
     """
-    Returns a point on the wall, computed from one initial point.
+    Returns the index of a node on the wall, computed from one initial node.
 
     fn_wall: user-supplied Wall object defining wall y=f(x)
     node1: index of initial point along C- characteristic
@@ -313,12 +313,12 @@ def cminus_wall(wall, node1, node4):
         n4.cminus_up = node1; n1.cminus_down = node4
     else:
         n4.cminus_down = node1; n1.cminus_up = node4
-    return n4
+    return n4.indx
 
 
 def cplus_wall(wall, node2, node4):
     """
-    Returns a point on the wall, computed from one initial point.
+    Returns the index of a node on the wall, computed from one initial node.
 
     wall: user-supplied Wall object defining wall y=f(x)
     node2: index of initial point along C+ characteristic
@@ -397,12 +397,13 @@ def cplus_wall(wall, node2, node4):
         n4.cplus_up = node2; n2.cplus_down = node4
     else:
         n4.cplus_down = node2; n2.cplus_up = node4
-    return n4
+    return n4.indx
+
 
 def cplus_free(node0, node2, node4):
     """
-    Returns a free-boundary point computed from one streamline point
-    already on the free boundary and one interior point on a C+ characteristic.
+    Returns the index of a free-boundary node computed from one streamline node
+    already on the free boundary and one interior node on a C+ characteristic.
 
     node0: index of the point on the free-boundary streamline
     node2: index of initial point along C+ characteristic
@@ -505,12 +506,13 @@ def cplus_free(node0, node2, node4):
         n4.cplus_up = node2; n2.cplus_down = node4
     else:
         n4.cplus_down = node2; n2.cplus_up = node4
-    return n4
+    return n4.indx
+
 
 def cminus_free(node0, node1, node4):
     """
-    Returns a free-boundary point computed from one streamline point
-    already on the free boundary and one interior point on a C- characteristic.
+    Returns the index of a free-boundary node computed from one streamline node
+    already on the free boundary and one interior node on a C- characteristic.
 
     node0: index of the point on the free-boundary streamline
     node1: index of initial point along C- characteristic
@@ -613,7 +615,7 @@ def cminus_free(node0, node1, node4):
         n4.cminus_up = node1; n1.cminus_down = node4
     else:
         n4.cminus_down = node1; n1.cminus_up = node4
-    return n4
+    return n4.indx
 
 
 def streamline_intersection_weights(node0, node1, node2):
@@ -673,12 +675,12 @@ def streamline_intersection_weights(node0, node1, node2):
 
 def add_stream_node(node0, node1, node2, node4):
     """
-    Returns a new streamline point (node4) by extending the streamline
+    Returns the index of a new streamline point (node4) by extending the streamline
     from node0 to the line between points 1 and 2.
-    The new point will be integrated into the characteristic mesh.
+    The new point will be integrated into the characteristic mesh
+    if nodes 1 and 2 are connected directly.
 
-    If the intersection point is not between the points 1 and 2,
-    an exception is raised.
+    Raises and exception if the intersection point is not between the points 1 and 2.
     """
     alpha1, alpha2 = streamline_intersection_weights(node0, node1, node2)
     if 0.0 <= alpha2 <= 1.0:
@@ -698,7 +700,7 @@ def add_stream_node(node0, node1, node2, node4):
             n4.czero_down = node0; n0.czero_up = node4
     else:
         raise RuntimeError("Intersection point is not between nodes 1 and 2.")
-    return n4
+    return n4.indx
 
 
 def step_stream_node(node0, node4, dL):
@@ -711,7 +713,7 @@ def step_stream_node(node0, node4, dL):
             dL    - length the move along the streamline. A positive value will
                     step downstream while a negative value will step upstream.
     OUTPUT:
-            node4 - index of solution node
+            node4 - index of solution node or -1, if no nearby nodes were found.
     """
     n0 = kernel.nodes[node0]
     # Start by estimating the node4 data based on node0
@@ -724,9 +726,7 @@ def step_stream_node(node0, node4, dL):
     mu = 2.0 # Smoothing parameter for Shepard interpolation
     # Find the near nodes
     near_nodes = kernel.find_nodes_near(x4, y4, tol=R)
-    if len(near_nodes) == 0:
-        raise RuntimeError(f"No nearby nodes were found for node idx {node0}" \
-                           f" using a {dL:.5f}m length move")
+    if len(near_nodes) == 0: return -1
     # Using PJs format for data handling
     x = np.zeros_like(near_nodes, dtype=np.float)
     y = np.zeros_like(near_nodes, dtype=np.float)
@@ -774,3 +774,61 @@ def step_stream_node(node0, node4, dL):
         n4.czero_down = node0
         n0.czero_up = node4
     return node4
+
+#------------------------------------------------------------------------
+# Part B: some compound processes
+
+def march_along_cminus(old_first, new_first, direction):
+    """
+    Input:
+    old_start: index of the starting node on the old characteristic line
+    new_start: index of the starting node on the new characteristic line
+    direction: 'up' or 'down'
+
+    Returns a list of new node indices (along the new characteristic).
+    """
+    new_nodes = [new_first]
+    node1 = new_first
+    node2 = old_first
+    while True:
+        node4 = interior(node1, node2, -1)
+        new_nodes.append(node4)
+        node1 = node4
+        n2 = kernel.nodes[node2]
+        if direction == 'up':
+            node2 = n2.cminus_up
+        elif direction == 'down':
+            node2 = n2.cminus_down
+        else:
+            raise RuntimeError(f"Invalid direction for marching along Cminus: {direction}")
+        if node2 == -1: break
+    #
+    return new_nodes
+
+
+def march_along_cplus(old_first, new_first, direction):
+    """
+    Input:
+    old_start: index of the starting node on the old characteristic line
+    new_start: index of the starting node on the new characteristic line
+    direction: 'up' or 'down'
+
+    Returns a list of new node indices (along the new characteristic).
+    """
+    new_nodes = [new_first]
+    node1 = old_first
+    node2 = new_first
+    while True:
+        node4 = interior(node1, node2, -1)
+        new_nodes.append(node4)
+        node2 = node4
+        n1 = kernel.nodes[node1]
+        if direction == 'up':
+            node1 = n1.cplus_up
+        elif direction == 'down':
+            node1 = n1.cplus_down
+        else:
+            raise RuntimeError(f"Invalid direction for marching along Cplus: {direction}")
+        if node1 == -1: break
+    #
+    return new_nodes
