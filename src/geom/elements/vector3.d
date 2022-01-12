@@ -214,41 +214,31 @@ struct Vector3 {
     Vector3 opUnary(string op)()
         if (op == "+")
     {
-        Vector3 result;
-        result.x = x; result.y = y; result.z = z;
-        return result;
+        return Vector3(x, y, z);
     }
 
     Vector3 opUnary(string op)()
         if (op == "-")
     {
-        Vector3 result;
-        result.x = -x; result.y = -y; result.z = -z;
-        return result;
+        return Vector3(-x, -y, -z);
     }
 
     Vector3 opBinary(string op)(in Vector3 rhs) const
         if (op == "+")
     {
-        Vector3 result;
-        result.x = x + rhs.x; result.y = y + rhs.y; result.z = z + rhs.z;
-        return result;
+        return Vector3(x+rhs.x, y+rhs.y, z+rhs.z);
     }
 
     Vector3 opBinary(string op)(in Vector3 rhs) const
         if (op == "-")
     {
-        Vector3 result;
-        result.x = x - rhs.x; result.y = y - rhs.y; result.z = z - rhs.z;
-        return result;
+        return Vector3(x-rhs.x, y-rhs.y, z-rhs.z);
     }
 
     Vector3 opBinary(string op)(in number rhs) const
         if (op == "*")
     {
-        Vector3 result;
-        result.x = x * rhs; result.y = y * rhs; result.z = z * rhs;
-        return result;
+        return Vector3(x*rhs, y*rhs, z*rhs);
     }
 
     version(complex_numbers) {
@@ -256,18 +246,14 @@ struct Vector3 {
         Vector3 opBinary(string op)(in double rhs) const
             if (op == "*")
         {
-            Vector3 result;
-            result.x = x * rhs; result.y = y * rhs; result.z = z * rhs;
-            return result;
+            return Vector3(x*rhs, y*rhs, z*rhs);
         }
     } // end version complex_numbers
 
     Vector3 opBinaryRight(string op)(in number lhs) const
         if (op == "*")
     {
-        Vector3 result;
-        result.x = x * lhs; result.y = y * lhs; result.z = z * lhs;
-        return result;
+        return Vector3(x*lhs, y*lhs, z*lhs);
     }
 
     version(complex_numbers) {
@@ -275,18 +261,14 @@ struct Vector3 {
         Vector3 opBinaryRight(string op)(in double lhs) const
             if (op == "*")
         {
-            Vector3 result;
-            result.x = x * lhs; result.y = y * lhs; result.z = z * lhs;
-            return result;
+            return Vector3(x*lhs, y*lhs, z*lhs);
         }
     } // end version complex_numbers
 
     Vector3 opBinary(string op)(in number rhs) const
         if (op == "/")
     {
-        Vector3 result;
-        result.x = x / rhs; result.y = y / rhs; result.z = z / rhs;
-        return result;
+        return Vector3(x/rhs, y/rhs, z/rhs);
     }
 
     version(complex_numbers) {
@@ -294,9 +276,7 @@ struct Vector3 {
         Vector3 opBinary(string op)(in double rhs) const
             if (op == "/")
         {
-            Vector3 result;
-            result.x = x / rhs; result.y = y / rhs; result.z = z / rhs;
-            return result;
+            return Vector3(x/rhs, y/rhs, z/rhs);
         }
     } // end version complex_numbers
 
