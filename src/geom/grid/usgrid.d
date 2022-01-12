@@ -511,7 +511,7 @@ public:
     {
         double[][] boundary_points;
         foreach(p; boundary){
-            boundary_points ~= [p._p[0].re, p._p[1].re, p._p[2].re];
+            boundary_points ~= [p.x.re, p.y.re, p.z.re];
         }
         PavedGrid grid = new PavedGrid(boundary_points);
         super(Grid_t.unstructured_grid, grid.dimensions,

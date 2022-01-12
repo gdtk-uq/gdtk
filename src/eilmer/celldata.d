@@ -19,9 +19,9 @@ import fluidblockio_old;
 
 
 class VariableAccess
-// VariableAccess gives access to members of FVCell in a way that allows list 
+// VariableAccess gives access to members of FVCell in a way that allows list
 // based access patterns. This means we can generate a list of VariableAccess
-// objects and then iterate over them to access FVCell data in a specified 
+// objects and then iterate over them to access FVCell data in a specified
 // order.
 {
     public:
@@ -29,7 +29,6 @@ class VariableAccess
     size_t idx;
     size_t num_return = 1;
     double[] buffer;
-    
 
     this(){buffer.length = num_return;}
 
@@ -41,15 +40,15 @@ class VariableAccess
 }
 
 class AuxCellData
-// If some data could be added to FVCell, but it isn't a core flow value, it 
-// belongs in one of these. This class provides indexing support such that 
+// If some data could be added to FVCell, but it isn't a core flow value, it
+// belongs in one of these. This class provides indexing support such that
 // we always know where to find data of a specific type.
 {
     public:
     size_t index;
 
     this(){}
-    
+
     abstract void init(LocalConfig myConfig);
     abstract @nogc void update(FVCell cell, double dt, double time, size_t step);
 
@@ -128,14 +127,14 @@ class AuxCellData
 
 template GenCellVariableAccess(string name, string location)
 {
-    const char[] GenCellVariableAccess = 
+    const char[] GenCellVariableAccess =
     "class "~name~" : VariableAccess
     {
         public:
         @nogc override final double[] get(FVCell cell) {
             buffer[0] = cell."~location~".re; return buffer;
         }
-        @nogc override final void set(FVCell cell, const double[] value) { 
+        @nogc override final void set(FVCell cell, const double[] value) {
             cell."~location~".re = value[0];
         }
         @nogc override final string description(){
@@ -146,19 +145,19 @@ template GenCellVariableAccess(string name, string location)
 
 template GenCellArrayVariableAccess(string name, string location)
 {
-    const char[] GenCellArrayVariableAccess = 
+    const char[] GenCellArrayVariableAccess =
     "class "~name~" : VariableAccess
     {
         public:
         this(const size_t idx){
-            buffer.length = num_return; 
+            buffer.length = num_return;
             this.idx = idx;
         }
         @nogc override final double[] get(FVCell cell) {
-            buffer[0] = cell."~location~"[idx].re; 
+            buffer[0] = cell."~location~"[idx].re;
             return buffer;
         }
-        @nogc override final void set(FVCell cell, const double[] value) {  
+        @nogc override final void set(FVCell cell, const double[] value) {
             cell."~location~"[idx].re = value[0];
         }
         @nogc override final string description(){
@@ -169,21 +168,21 @@ template GenCellArrayVariableAccess(string name, string location)
     }";
 }
 
-mixin(GenCellVariableAccess!("AccessPosX", "pos[0]._p[0]"));
-mixin(GenCellVariableAccess!("AccessPosY", "pos[0]._p[1]"));
-mixin(GenCellVariableAccess!("AccessPosZ", "pos[0]._p[2]"));
+mixin(GenCellVariableAccess!("AccessPosX", "pos[0].x"));
+mixin(GenCellVariableAccess!("AccessPosY", "pos[0].y"));
+mixin(GenCellVariableAccess!("AccessPosZ", "pos[0].z"));
 mixin(GenCellVariableAccess!("AccessVolume", "volume[0]"));
 
-mixin(GenCellVariableAccess!("AccessVelX", "fs.vel._p[0]"));
-mixin(GenCellVariableAccess!("AccessVelY", "fs.vel._p[1]"));
-mixin(GenCellVariableAccess!("AccessVelZ", "fs.vel._p[2]"));
+mixin(GenCellVariableAccess!("AccessVelX", "fs.vel.x"));
+mixin(GenCellVariableAccess!("AccessVelY", "fs.vel.y"));
+mixin(GenCellVariableAccess!("AccessVelZ", "fs.vel.z"));
 mixin(GenCellVariableAccess!("AccessMuT", "fs.mu_t"));
 mixin(GenCellVariableAccess!("AccessKT", "fs.k_t"));
 mixin(GenCellVariableAccess!("AccessS", "fs.S"));
 version(MHD) {
-    mixin(GenCellVariableAccess!("AccessMagX", "fs.B._p[0]"));
-    mixin(GenCellVariableAccess!("AccessMagY", "fs.B._p[1]"));
-    mixin(GenCellVariableAccess!("AccessMagZ", "fs.B._p[2]"));
+    mixin(GenCellVariableAccess!("AccessMagX", "fs.B.x"));
+    mixin(GenCellVariableAccess!("AccessMagY", "fs.B.y"));
+    mixin(GenCellVariableAccess!("AccessMagZ", "fs.B.z"));
     mixin(GenCellVariableAccess!("AccessDivB", "fs.divB"));
     mixin(GenCellVariableAccess!("AccessPsi", "fs.psi"));
 }
@@ -206,21 +205,21 @@ mixin(GenCellVariableAccess!("AccessDtLocal", "dt_local"));
 version(multi_T_gas) {
     mixin(GenCellVariableAccess!("AccessDtTherm", "dt_therm"));
     mixin(GenCellArrayVariableAccess!("AccessKModes", "fs.gas.k_modes"));
-    mixin(GenCellArrayVariableAccess!("AccessUModes", "fs.gas.u_modes"));  
-    mixin(GenCellArrayVariableAccess!("AccessTModes", "fs.gas.T_modes")); 
+    mixin(GenCellArrayVariableAccess!("AccessUModes", "fs.gas.u_modes"));
+    mixin(GenCellArrayVariableAccess!("AccessTModes", "fs.gas.T_modes"));
 }
 version(multi_species_gas) {
     mixin(GenCellVariableAccess!("AccessDtChem", "dt_chem"));
-    mixin(GenCellArrayVariableAccess!("AccessMassF", "fs.gas.massf"));  
+    mixin(GenCellArrayVariableAccess!("AccessMassF", "fs.gas.massf"));
 }
 
 version(turbulence) {
-    mixin(GenCellArrayVariableAccess!("AccessTurb", "fs.turb"));  
+    mixin(GenCellArrayVariableAccess!("AccessTurb", "fs.turb"));
 }
 
 class CellData : AuxCellData
 // An empty auxiliary data item that acts as a pass-through to allow access
-// to all of the legacy flow variables while maintaining the same access 
+// to all of the legacy flow variables while maintaining the same access
 // patterns as all the other I/O
 {
     public:
@@ -259,7 +258,7 @@ class CellData : AuxCellData
             }
         }
 
-        if (myConfig.include_quality) { 
+        if (myConfig.include_quality) {
         acc["quality"] = new AccessQuality();
         }
         acc["p"] = new AccessP();
@@ -296,7 +295,7 @@ class CellData : AuxCellData
         }
 
         version(multi_species_gas) {
-        if (myConfig.gmodel.n_species > 1) { 
+        if (myConfig.gmodel.n_species > 1) {
             acc["dt_chem"] = new AccessDtChem();
         }
         }
@@ -310,13 +309,13 @@ class CellData : AuxCellData
                 acc[T_modesName(it)] = new AccessTModes(it);
             }
         }
-        
+
         version(multi_T_gas) {
         if (myConfig.gmodel.n_modes > 0) {
             acc["dt_therm"] = new AccessDtTherm();
         }
         }
-        
+
         if (myConfig.with_local_time_stepping) {
         acc["dt_local"] = new AccessDtLocal();
         }
@@ -334,20 +333,20 @@ class CellData : AuxCellData
 
 template GenFlowAverageAccess(string name, string location)
 {
-    const char[] GenFlowAverageAccess = 
+    const char[] GenFlowAverageAccess =
     "class "~name~" : VariableAccess
     {
         public:
         this(const size_t idx){
-            buffer.length = num_return; 
+            buffer.length = num_return;
             aux_idx = idx;
         }
         @nogc override final double[] get(FVCell cell) {
             FlowAverage fa = cast(FlowAverage) cell.aux_cell_data[aux_idx];
-            buffer[0] = fa."~location~".re; 
+            buffer[0] = fa."~location~".re;
             return buffer;
         }
-        @nogc override final void set(FVCell cell, const double[] value) { 
+        @nogc override final void set(FVCell cell, const double[] value) {
             FlowAverage fa = cast(FlowAverage) cell.aux_cell_data[aux_idx];
             fa."~location~".re = value[0];
         }
@@ -361,18 +360,18 @@ template GenFlowAverageAccess(string name, string location)
 
 template GenFlowAverageArrayAccess(string name, string location)
 {
-    const char[] GenFlowAverageArrayAccess = 
+    const char[] GenFlowAverageArrayAccess =
     "class "~name~" : VariableAccess
     {
         public:
         this(const size_t aux_idx, const size_t arr_idx){
-            buffer.length = num_return; 
-            this.aux_idx = aux_idx; 
+            buffer.length = num_return;
+            this.aux_idx = aux_idx;
             this.arr_idx=arr_idx;
         }
         @nogc override final double[] get(FVCell cell) {
             FlowAverage fa = cast(FlowAverage) cell.aux_cell_data[aux_idx];
-            buffer[0] = fa."~location~"[arr_idx].re; 
+            buffer[0] = fa."~location~"[arr_idx].re;
             return buffer;
         }
         @nogc override final void set(FVCell cell, const double[] value) {
@@ -386,16 +385,16 @@ template GenFlowAverageArrayAccess(string name, string location)
     }";
 }
 
-mixin(GenFlowAverageAccess!("AverageAccessVelX", "vel._p[0]"));
-mixin(GenFlowAverageAccess!("AverageAccessVelY", "vel._p[1]"));
-mixin(GenFlowAverageAccess!("AverageAccessVelZ", "vel._p[2]"));
+mixin(GenFlowAverageAccess!("AverageAccessVelX", "vel.x"));
+mixin(GenFlowAverageAccess!("AverageAccessVelY", "vel.y"));
+mixin(GenFlowAverageAccess!("AverageAccessVelZ", "vel.z"));
 mixin(GenFlowAverageAccess!("AverageAccessMuT", "mu_t"));
 mixin(GenFlowAverageAccess!("AverageAccessKT", "k_t"));
 mixin(GenFlowAverageAccess!("AverageAccessS", "S"));
 version(MHD) {
-    mixin(GenFlowAverageAccess!("AverageAccessMagX", "B._p[0]"));
-    mixin(GenFlowAverageAccess!("AverageAccessMagY", "B._p[1]"));
-    mixin(GenFlowAverageAccess!("AverageAccessMagZ", "B._p[2]"));
+    mixin(GenFlowAverageAccess!("AverageAccessMagX", "B.x"));
+    mixin(GenFlowAverageAccess!("AverageAccessMagY", "B.y"));
+    mixin(GenFlowAverageAccess!("AverageAccessMagZ", "B.z"));
     mixin(GenFlowAverageAccess!("AverageAccessDivB", "divB"));
     mixin(GenFlowAverageAccess!("AverageAccessPsi", "psi"));
 }
@@ -418,16 +417,16 @@ mixin(GenFlowAverageAccess!("AverageAccessDtLocal", "dt_local"));
 version(multi_T_gas) {
     mixin(GenFlowAverageAccess!("AverageAccessDtTherm", "dt_therm"));
     mixin(GenFlowAverageArrayAccess!("AverageAccessKModes", "k_modes"));
-    mixin(GenFlowAverageArrayAccess!("AverageAccessUModes", "u_modes"));  
-    mixin(GenFlowAverageArrayAccess!("AverageAccessTModes", "T_modes")); 
+    mixin(GenFlowAverageArrayAccess!("AverageAccessUModes", "u_modes"));
+    mixin(GenFlowAverageArrayAccess!("AverageAccessTModes", "T_modes"));
 }
 version(multi_species_gas) {
     mixin(GenFlowAverageAccess!("AverageAccessDtChem", "dt_chem"));
-    mixin(GenFlowAverageArrayAccess!("AverageAccessMassF", "massf"));  
+    mixin(GenFlowAverageArrayAccess!("AverageAccessMassF", "massf"));
 }
 
 version(turbulence) {
-    mixin(GenFlowAverageArrayAccess!("AverageAccessTurb", "turb"));  
+    mixin(GenFlowAverageArrayAccess!("AverageAccessTurb", "turb"));
 }
 
 class FlowAverage : AuxCellData
@@ -440,7 +439,7 @@ class FlowAverage : AuxCellData
 
     double rho;
     Vector3 vel;
-    
+
     version(MHD) {
         Vector3 B;
         double divB;
@@ -482,11 +481,11 @@ class FlowAverage : AuxCellData
         double[] u_modes;
         double[] T_modes;
     }
-    
+
     version(multi_T_gas) {
         double dt_therm;
     }
-    
+
     double dt_local;
 
     this(){
@@ -516,7 +515,7 @@ class FlowAverage : AuxCellData
 
         rho = 0.0;
         vel.clear();
-    
+
         version(MHD) {
             B.clear();
             divB = 0.0;
@@ -558,34 +557,34 @@ class FlowAverage : AuxCellData
             fill(u_modes,0.0);
             fill(T_modes,0.0);
         }
-        
+
         version(multi_T_gas) {
             dt_therm = 0.0;
         }
-        
+
         dt_local = 0.0;
-    
+
     }
 
     override @nogc void update(FVCell cell, double dt, double time, size_t step)
     {
 
         rho += dt*cell.fs.gas.rho.re;
-        vel._p[0] += dt*cell.fs.vel.x;
-        vel._p[1] += dt*cell.fs.vel.y;
-        vel._p[2] += dt*cell.fs.vel.z;
+        vel.x += dt*cell.fs.vel.x;
+        vel.y += dt*cell.fs.vel.y;
+        vel.z += dt*cell.fs.vel.z;
 
         version(MHD) {
-            B._p[0] += dt*cell.fs.B.x;
-            B._p[1] += dt*cell.fs.B.y;
-            B._p[2] += dt*cell.fs.B.z;
+            B.x += dt*cell.fs.B.x;
+            B.y += dt*cell.fs.B.y;
+            B.z += dt*cell.fs.B.z;
             divB += dt*cell.fs.divB.re;
             if (cell.myConfig.MHD && cell.myConfig.divergence_cleaning) {
                 psi += dt*cell.fs.psi.re;
             }
         }
 
-        if (cell.myConfig.include_quality) { 
+        if (cell.myConfig.include_quality) {
             quality += dt*cell.fs.gas.quality.re;
         }
 
@@ -623,7 +622,7 @@ class FlowAverage : AuxCellData
         }
 
         version(multi_species_gas) {
-        if (cell.myConfig.gmodel.n_species > 1) { 
+        if (cell.myConfig.gmodel.n_species > 1) {
 
             dt_chem += dt*cell.dt_chem;
         }
@@ -638,13 +637,13 @@ class FlowAverage : AuxCellData
                 T_modes[it] += dt*cell.fs.gas.T_modes[it].re;
             }
         }
-        
+
         version(multi_T_gas) {
         if (cell.myConfig.gmodel.n_modes > 0) {
             dt_therm += dt*cell.dt_therm;
         }
         }
-        
+
         if (cell.myConfig.with_local_time_stepping) {
         dt_local += dt*cell.dt_local;
         }
@@ -672,7 +671,7 @@ class FlowAverage : AuxCellData
             }
         }
 
-        if (myConfig.include_quality) { 
+        if (myConfig.include_quality) {
             acc["quality"] = new AverageAccessQuality(idx);
         }
         acc["p"] = new AverageAccessP(idx);
@@ -709,7 +708,7 @@ class FlowAverage : AuxCellData
         }
 
         version(multi_species_gas) {
-        if (myConfig.gmodel.n_species > 1) { 
+        if (myConfig.gmodel.n_species > 1) {
             acc["dt_chem"] = new AverageAccessDtChem(idx);
         }
         }
@@ -723,13 +722,13 @@ class FlowAverage : AuxCellData
                 acc[T_modesName(it)] = new AverageAccessTModes(idx,it);
             }
         }
-        
+
         version(multi_T_gas) {
         if (myConfig.gmodel.n_modes > 0) {
             acc["dt_therm"] = new AverageAccessDtTherm(idx);
         }
         }
-        
+
         if (myConfig.with_local_time_stepping) {
         acc["dt_local"] = new AverageAccessDtLocal(idx);
         }
@@ -746,19 +745,19 @@ class FlowAverage : AuxCellData
 // as the order of indices is [id][x,y,z] instead of [x,y,z][id]
 template GenGradArrayAccess(string name, string location, string d)
 {
-    const char[] GenGradArrayAccess = 
+    const char[] GenGradArrayAccess =
     "class "~name~" : VariableAccess
     {
         public:
         this(const size_t idx){
-            buffer.length = num_return; 
+            buffer.length = num_return;
             this.idx = idx;
         }
         @nogc override final double[] get(FVCell cell) {
-            buffer[0] = cell."~location~"[idx]["~d~"].re; 
+            buffer[0] = cell."~location~"[idx]["~d~"].re;
             return buffer;
         }
-        @nogc override final void set(FVCell cell, const double[] value) {  
+        @nogc override final void set(FVCell cell, const double[] value) {
             cell."~location~"[idx]["~d~"].re = value[0];
         }
         @nogc override final string description(){
@@ -884,8 +883,8 @@ class DFTAccess : VariableAccess
         num_return = 2*size;
         buffer.length = num_return;
     }
-    
-    @nogc override final double[] get(FVCell cell) 
+
+    @nogc override final double[] get(FVCell cell)
     {
 
         GeneralDFT dft = cast(GeneralDFT) cell.aux_cell_data[aux_idx];
@@ -899,8 +898,8 @@ class DFTAccess : VariableAccess
         return buffer;
     }
 
-    @nogc override final void set(FVCell cell, const double[] value) 
-    { 
+    @nogc override final void set(FVCell cell, const double[] value)
+    {
         assert(value.length == num_return);
 
         GeneralDFT dft = cast(GeneralDFT) cell.aux_cell_data[aux_idx];
@@ -964,7 +963,7 @@ class GeneralDFT : AuxCellData
             DFT_local_imag[i].length = myConfig.DFT_n_modes;
             fill(DFT_local_real[i], 0.0);
             fill(DFT_local_imag[i], 0.0);
-        }   
+        }
 
     }
 
@@ -984,7 +983,6 @@ class GeneralDFT : AuxCellData
             }
         }
 
-        
     }
 
     static VariableAccess[string] get_accessors()

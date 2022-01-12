@@ -156,7 +156,7 @@ flow format definition:
                 "data": "B.x.dat",
 
                 # a text description of the data
-                "description": "[cell.fs.B._p[0].re]",
+                "description": "[cell.fs.B.x.re]",
 
                 # dimensionality of this particular data blob, the first dimension
                 # corresponds to the linearised cell index. This allows for 1D arrays
