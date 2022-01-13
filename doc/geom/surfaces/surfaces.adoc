@@ -24,7 +24,7 @@ Three example geometries, covering a modest range of use cases, have been chosen
 == Coons patch
 
 There are two constructors available for a Coons patch.
-One accepts four `Path` objects, the other accepts four corner points (`Vector3`s).
+One accepts four `Path` objects, the other accepts four corner points ( `Vector3` s).
 ----
 CoonsPatch:new{north, south, east, west}
 ----
