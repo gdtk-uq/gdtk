@@ -1,0 +1,16 @@
+Structured Grid examples
+------------------------
+Rowan J. Gollan, 2022-01-13
+
+This directory contains some scripts to generate structured grid examples.
+The idea is to show the effect of different patch types on some common domains.
+
+Dependencies
+------------
++ GDTk with eilmer installed
++ Paraview
++ ImageMagick
+
+
+
+
