@@ -256,7 +256,7 @@ e4 = ctrl_pts[N][M]
 east = Bezier:new{points={e0,e1,e2,e3,e4}}
 
 --south straight line boundary
-south =  Line:new{p0=ctrl_Fpts[1][1],p1=ctrl_pts[N][1]}
+south =  Line:new{p0=ctrl_pts[1][1],p1=ctrl_pts[N][1]}
 
 ctrlPtPatch = ControlPointPatch:new{north=north, east=east, west=west, south=south, control_points=ctrl_pts}
 
