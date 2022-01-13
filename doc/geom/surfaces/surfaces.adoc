@@ -1,0 +1,73 @@
+= Surfaces (Patches)
+:imagesdir: geom/surface/images
+
+Surfaces or patches are elements that are parameterised in with two
+coordinates.
+In our definition, those coordinates are `r` and `s`, and
+the range for each is from `0.0` to `1.0`.
+The surface itself can be two-dimensional or three-dimensional.
+Two-dimensional surfaces are often used in structured grid generation
+for 2D simulations.
+For this use case, we often refer to these entities are patches.
+Three-dimensional surfaces can be used to represent faces
+on 3D volumes, so they often turn up in 3D grid generation.
+
+In the following, the syntax for various surface types is given
+and described.
+We have also produced some grids from the various surface types
+to give you some idea of the effect of surface type choice.
+Three example geometries, covering a modest range of use cases, have been chosen for the demonstration:
+
+. a blunt-body grid
+. a converging-diverging nozzle grid
+. a duct-like grid
+
+== Coons patch
+
+There are two constructors available for a Coons patch.
+One accepts four `Path` objects, the other accepts four corner points (`Vector3`s).
+----
+CoonsPatch:new{north, south, east, west}
+----
+----
+CoonsPatch:new{p00, p10, p11, p01}
+----
+
+Example grids generated with a Coons patch are shown here.
+
+image::fire2-coons-patch-grid.png[width=20%,align=center]
+image::nozzle-coons-patch-grid.png[width=50%,align=center]
+image::duct-coons-patch-grid.png[width=50%,align=center]
+
+== Area-orthogonal patch
+
+The area-orthogonal patch attempts to equalise the areas
+of cells and maintain orthogonality at the edges.
+The constructor is:
+----
+AOPatch:new{north, south, east, west, nx=10, ny=10}
+----
+
+The `nx` and `ny` parameters control the background grid
+used to build an aera-orthoganal patch.
+The defaults are shown here: 10 in each direction.
+
+Example grids using the default `AOPatch` settings
+are shown here.
+
+image::fire2-AO-patch-grid.png[width=20%,align=center]
+image::nozzle-AO-patch-grid.png[width=50%,align=center]
+image::duct-AO-patch-grid.png[width=50%,align=center]
+
+Note that with default settings the blunt-body grid
+results in negative cells near the shoulder
+and the nozzle grid has cut the corner of the boundary.
+This behaviour can be improved if some care is take
+in selecting the background grid.
+The next example, for the nozzle, increased the
+background grid in the x-direction to `nx=40`
+to give a better representation of the change
+in geometry in the streamwise direction.
+This is show here.
+
+image::nozzle-AO-patch-grid-2.png[width=50%,align=center]

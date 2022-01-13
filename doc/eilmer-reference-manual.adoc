@@ -27,6 +27,9 @@ include::eilmer/boundary-conditions.adoc[]
 include::eilmer/flowsolution_user.adoc[]
 
 include::geom/elements-lua.adoc[]
+:leveloffset: +1
+include::geom/surfaces/surfaces.adoc[]
+:leveloffset: -1
 include::geom/grid/grid-user.adoc[]
 include::geom/grid/sgrid-user.adoc[]
 
