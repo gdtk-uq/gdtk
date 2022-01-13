@@ -1,5 +1,6 @@
 all: fire2-examples \
-	nozzle-examples
+	nozzle-examples \
+	duct-examples
 
 fire2-examples: fire2-coons-patch-grid.png \
 	fire2-AO-patch-grid.png \
@@ -15,6 +16,11 @@ nozzle-examples: nozzle-coons-patch-grid.png \
 	nozzle-ruled-surface-grid.png \
 	nozzle-ctrl-pt-patch-grid.png \
 	nozzle-ctrl-pt-patch-grid-p-pts.png
+
+duct-examples: duct-coons-patch-grid.png \
+	duct-AO-patch-grid.png \
+	duct-ctrl-pt-patch-grid.png \
+	duct-ctrl-pt-patch-grid-p-pts.png
 
 fire2-coons-patch-grid.png : fire2-coons-patch-grid.vtk
 	pvbatch create-fire2-grid.py fire2-coons-patch-grid.vtk fire2-coons-patch-grid.png
@@ -104,3 +110,28 @@ nozzle-ctrl-pt-patch-grid.vtk : nozzle-examples.lua
 nozzle-ctrl-pt-patch-grid-p-pts.png : nozzle-ctrl-pt-patch-grid.vtk nozzle-ctrl-pts.vtk
 	pvbatch create-nozzle-ctrl-pt-grid-image.py nozzle-ctrl-pt-patch-grid.vtk nozzle-ctrl-pts.vtk nozzle-ctrl-pt-patch-grid-p-pts.png
 	mogrify -trim nozzle-ctrl-pt-patch-grid-p-pts.png
+
+duct-coons-patch-grid.png : duct-coons-patch-grid.vtk
+	pvbatch create-duct-grid-image.py duct-coons-patch-grid.vtk duct-coons-patch-grid.png
+	mogrify -trim duct-coons-patch-grid.png
+
+duct-coons-patch-grid.vtk : duct-examples.lua
+	e4shared --custom-script --script-file=duct-examples.lua
+
+duct-AO-patch-grid.png : duct-AO-patch-grid.vtk
+	pvbatch create-duct-grid-image.py duct-AO-patch-grid.vtk duct-AO-patch-grid.png
+	mogrify -trim duct-AO-patch-grid.png
+
+duct-AO-patch-grid.vtk : duct-examples.lua
+	e4shared --custom-script --script-file=duct-examples.lua
+
+duct-ctrl-pt-patch-grid.png : duct-ctrl-pt-patch-grid.vtk
+	pvbatch create-duct-grid-image.py duct-ctrl-pt-patch-grid.vtk duct-ctrl-pt-patch-grid.png
+	mogrify -trim duct-ctrl-pt-patch-grid.png
+
+duct-ctrl-pt-patch-grid.vtk : duct-examples.lua
+	e4shared --custom-script --script-file=duct-examples.lua
+
+duct-ctrl-pt-patch-grid-p-pts.png : duct-ctrl-pt-patch-grid.vtk duct-ctrl-pts.vtk
+	pvbatch create-duct-ctrl-pt-grid-image.py duct-ctrl-pt-patch-grid.vtk duct-ctrl-pts.vtk duct-ctrl-pt-patch-grid-p-pts.png
+	mogrify -trim duct-ctrl-pt-patch-grid-p-pts.png
