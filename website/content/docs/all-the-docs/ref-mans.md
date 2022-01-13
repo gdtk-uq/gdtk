@@ -15,7 +15,7 @@ toc: false
 
 Here is the collection of reference manuals.
 
-+ [Eilmer Reference Manual]({{< relref "docs/eilmer/eilmer-reference-manual-for-hugo" >}})
++ [Eilmer Reference Manual]({{< relref "docs/eilmer/eilmer-reference-manual" >}})
 + [L1d Reference Manual]({{< relref "docs/l1d/l1d-reference-manual-for-hugo" >}} )
 + [ESTCN Reference Manual]({{< relref "docs/estcn/estcn-manual-for-hugo" >}})
 + [NENZF1d Reference Manual]({{< relref "docs/nenzf1d/nenzf1d-manual-for-hugo" >}})

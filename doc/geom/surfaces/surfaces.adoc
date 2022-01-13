@@ -1,5 +1,4 @@
 = Surfaces (Patches)
-:imagesdir: geom/surface/images
 
 Surfaces or patches are elements that are parameterised in with two
 coordinates.

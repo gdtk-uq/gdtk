@@ -69,10 +69,12 @@ eilmer-catalog:
 eilmer-reference-manual:
 	cp -r ../doc/eilmer/ .
 	cp -r ../doc/geom/ .
-	cp ../doc/eilmer-reference-manual.adoc $(EILMER_DIR)/
-	sed -i '/^:stylesheet:/d' $(EILMER_DIR)/eilmer-reference-manual.adoc
-	cat $(EILMER_DIR)/eilmer-reference-manual-hugo-header.txt $(EILMER_DIR)/eilmer-reference-manual.adoc > $(EILMER_DIR)/eilmer-reference-manual-for-hugo.adoc
-	rm $(EILMER_DIR)/eilmer-reference-manual.adoc
+	mkdir -p $(EILMER_DIR)/eilmer-reference-manual
+	cp -r ../doc/geom/surfaces/images $(EILMER_DIR)/eilmer-reference-manual/
+	cp ../doc/eilmer-reference-manual.adoc $(EILMER_DIR)/tmp.adoc
+	sed -i '/^:stylesheet:/d' $(EILMER_DIR)/tmp.adoc
+	cat $(EILMER_DIR)/eilmer-reference-manual-hugo-header.txt $(EILMER_DIR)/tmp.adoc > $(EILMER_DIR)/eilmer-reference-manual.adoc
+	rm $(EILMER_DIR)/tmp.adoc
 
 eilmer-faq:
 	cp ../doc/eilmer-faq.adoc $(EILMER_DIR)/

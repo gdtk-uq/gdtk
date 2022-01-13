@@ -4,6 +4,7 @@ Rowan J. Gollan; Peter A. Jacobs
 :toc: right
 :stylesheet: readthedocs.css
 :sectnums:
+:imagesdir: images
 
 :leveloffset: +1
 
@@ -28,7 +29,7 @@ include::eilmer/flowsolution_user.adoc[]
 
 include::geom/elements-lua.adoc[]
 :leveloffset: +1
-include::geom/surface/surfaces.adoc[]
+include::geom/surfaces/surfaces.adoc[]
 :leveloffset: -1
 include::geom/grid/grid-user.adoc[]
 include::geom/grid/sgrid-user.adoc[]
