@@ -48,8 +48,10 @@ AOPatch:new{north, south, east, west, nx=10, ny=10}
 ----
 
 The `nx` and `ny` parameters control the background grid
-used to build an aera-orthoganal patch.
-The defaults are shown here: 10 in each direction.
+used to build an area-orthogonal patch.
+The default is 10 background-cells in each direction.
+If you have boundaries that have sections high curvature
+you may need to increase the number of background cells.
 
 Example grids using the default `AOPatch` settings
 are shown here.
