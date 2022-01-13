@@ -82,9 +82,9 @@ public:
     void scanValuesFromString(string buffer)
     {
         auto items = split(buffer);
-        pos.refx = to!double(items.front); items.popFront();
-        pos.refy = to!double(items.front); items.popFront();
-        pos.refz = to!double(items.front); items.popFront();
+        pos.x = to!double(items.front); items.popFront();
+        pos.y = to!double(items.front); items.popFront();
+        pos.z = to!double(items.front); items.popFront();
         volume = to!double(items.front); items.popFront();
         e[0] = to!double(items.front); items.popFront();
         T = to!double(items.front); items.popFront();

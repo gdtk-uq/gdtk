@@ -211,7 +211,7 @@ version(projection_test) {
 
             // Complex Step
             number hIm = complex(0.0, 1.0e-20); // complex step-size
-            qr.refz += hIm; // perturb in complex plane
+            qr.z += hIm; // perturb in complex plane
             flag =  project_onto_plane(q, qr, a, b, c);
             double[3] qDerivCmplx;
             qDerivCmplx[0] = q.x.im/hIm.im;
@@ -224,7 +224,7 @@ version(projection_test) {
 
             // Real Step
             double hRe = 1.0e-06; // real step-size
-            qr.refz += hRe; // perturb in real plane
+            qr.z += hRe; // perturb in real plane
             flag =  project_onto_plane(q, qr, a, b, c);
             double[3] qDerivReal;
             qDerivReal[0] = (q.x.re-q0.x.re)/hRe;
@@ -251,7 +251,7 @@ version(projection_test) {
             myp = Vector3(1.0, 1.0, 1.0); // start point
 
             // Complex Step
-            myp.refz += hIm; // perturb in complex plane, reuse hIm
+            myp.z += hIm; // perturb in complex plane, reuse hIm
             map_neutral_plane_to_cylinder(myp, to!number(1.0));
             qDerivCmplx[0] = myp.x.im/hIm.im;
             qDerivCmplx[1] = myp.y.im/hIm.im;
@@ -261,7 +261,7 @@ version(projection_test) {
             myp = Vector3(1.0, 1.0, 1.0); // start point
 
             // Real Step
-            myp.refz += hRe; // perturb in real plane, reuse hRe
+            myp.z += hRe; // perturb in real plane, reuse hRe
             map_neutral_plane_to_cylinder(myp, to!number(1.0));
             qDerivReal[0] = (myp.x.re-myp0.x.re)/hRe;
             qDerivReal[1] = (myp.y.re-myp0.y.re)/hRe;

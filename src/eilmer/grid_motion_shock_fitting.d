@@ -93,9 +93,9 @@ void compute_vtx_velocities_for_sf(FBArray fba)
                         inflow.gas.p = nominal_inflow.gas.p;
                         inflow.gas.rho = nominal_inflow.gas.rho;
                         inflow.gas.u = nominal_inflow.gas.u;
-                        inflow.vel.refx = nominal_inflow.vel.x;
-                        inflow.vel.refy = nominal_inflow.vel.y;
-                        inflow.vel.refz = nominal_inflow.vel.z;
+                        inflow.vel.x = nominal_inflow.vel.x;
+                        inflow.vel.y = nominal_inflow.vel.y;
+                        inflow.vel.z = nominal_inflow.vel.z;
                         if (bc.r > 0.0) {
                             // We want to adjust the inflow velocities to be conical.
                             double dx = f.pos.x.re - bc.x0;
@@ -105,9 +105,9 @@ void compute_vtx_velocities_for_sf(FBArray fba)
                             double[4] deltas = sourceFlow.get_rho_v_p_u_increments(hypot-bc.r);
                             inflow.gas.rho += deltas[0];
                             double v = nominal_inflow.vel.x.re + deltas[1];
-                            inflow.vel.refx = v * dx/hypot;
-                            inflow.vel.refy = v * dy/hypot;
-                            inflow.vel.refz = v * dz/hypot;
+                            inflow.vel.x = v * dx/hypot;
+                            inflow.vel.y = v * dy/hypot;
+                            inflow.vel.z = v * dz/hypot;
                             inflow.gas.p += deltas[2];
                             inflow.gas.u += deltas[3];
                         }

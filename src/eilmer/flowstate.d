@@ -32,8 +32,8 @@ void into_rotating_frame(ref Vector3 v, ref const(Vector3) pos, double omegaz)
 // Velocity vector becomes relative to the rotating frame of the block
 // by subtracting the entrainment velocity (-y*omegaz i + x*omegaz j).
 {
-    v.refx += pos.y * omegaz;
-    v.refy -= pos.x * omegaz;
+    v.x += pos.y * omegaz;
+    v.y -= pos.x * omegaz;
 }
 
 @nogc
@@ -41,8 +41,8 @@ void into_nonrotating_frame(ref Vector3 v, ref const(Vector3) pos, double omegaz
 // Velocity vector becomes relative to a nonrotating frame
 // by adding the entrainment velocity (-y*omegaz i + x*omegaz j).
 {
-    v.refx -= pos.y * omegaz;
-    v.refy += pos.x * omegaz;
+    v.x -= pos.y * omegaz;
+    v.y += pos.x * omegaz;
 }
 
 
@@ -259,9 +259,9 @@ public:
         k_t = 0.0;
         S = 0; // Remember that shock detector is an integer flag.
         foreach(other; others) {
-            vel.refx += other.vel.x; vel.refy += other.vel.y; vel.refz += other.vel.z;
+            vel.x += other.vel.x; vel.y += other.vel.y; vel.z += other.vel.z;
             version(MHD) {
-                B.refx += other.B.x; B.refy += other.B.y; B.refz += other.B.z;
+                B.x += other.B.x; B.y += other.B.y; B.z += other.B.z;
                 psi += other.psi;
                 divB += other.divB;
             }
@@ -399,13 +399,13 @@ version(complex_numbers) {
     // the flowstate values accumulate imaginary components, so we have to start with a clean slate, so to speak.
     {
         gas.clear_imaginary_components();
-        vel.refx.im = 0.0;
-        vel.refy.im = 0.0;
-        vel.refz.im = 0.0;
+        vel.x.im = 0.0;
+        vel.y.im = 0.0;
+        vel.z.im = 0.0;
         version(MHD) {
-            B.refx.im = 0.0;
-            B.refy.im = 0.0;
-            B.refz.im = 0.0;
+            B.x.im = 0.0;
+            B.y.im = 0.0;
+            B.z.im = 0.0;
             psi.im = 0.0;
             divB.im = 0.0;
         }
@@ -563,8 +563,8 @@ public:
             double r = sqrt(my_pos.y.re^^2 + my_pos.z.re^^2);
             double vel_yz = sqrt(fs.vel.y.re^^2 + fs.vel.z.re^^2);
             double vely_sign = (fs.vel.y < 0.0) ? -1.0 : 1.0;
-            fs.vel.refy = vely_sign * vel_yz * my_pos.y.re / r;
-            fs.vel.refz = vely_sign * vel_yz * my_pos.z.re / r;
+            fs.vel.y = vely_sign * vel_yz * my_pos.y.re / r;
+            fs.vel.z = vely_sign * vel_yz * my_pos.z.re / r;
             break;
         default:
             throw new FlowSolverException("Invalid match option.");
@@ -633,9 +633,9 @@ public:
         if (i < nt-1 && t <= times[$-1]) {
             // Linearly interpolate between states i, i+1
             double frac = (t-times[i])/(times[i+1]-times[i]);
-            fs.vel.refx = fstate[i].vel.x*(1.0-frac) + fstate[i+1].vel.x*frac;
-            fs.vel.refy = fstate[i].vel.y*(1.0-frac) + fstate[i+1].vel.y*frac;
-            fs.vel.refz = fstate[i].vel.z*(1.0-frac) + fstate[i+1].vel.z*frac;
+            fs.vel.x = fstate[i].vel.x*(1.0-frac) + fstate[i+1].vel.x*frac;
+            fs.vel.y = fstate[i].vel.y*(1.0-frac) + fstate[i+1].vel.y*frac;
+            fs.vel.z = fstate[i].vel.z*(1.0-frac) + fstate[i+1].vel.z*frac;
             fs.gas.p = fstate[i].gas.p*(1.0-frac) + fstate[i+1].gas.p*frac;
             fs.gas.T = fstate[i].gas.T*(1.0-frac) + fstate[i+1].gas.T*frac;
             foreach (j; 0 .. gm.n_species) {
@@ -690,9 +690,9 @@ public:
     @nogc
     void set_flowstate(FlowState fs, double t, ref Vector3 pos, GasModel gm)
     {
-        fs.vel.refx = base_velx;
-        fs.vel.refy = base_vely;
-        fs.vel.refz = base_velz;
+        fs.vel.x = base_velx;
+        fs.vel.y = base_vely;
+        fs.vel.z = base_velz;
         fs.gas.p = base_p;
         fs.gas.T = base_T;
         fs.gas.massf[0] = 1.0;

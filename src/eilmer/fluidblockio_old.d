@@ -1678,19 +1678,19 @@ void scan_cell_data_from_fixed_order_string
     version(complex_numbers) {
         // For complex_numbers, we presently set only the real parts.
         // [TODO] Maybe we should read full complex numbers.
-        pos.refx = Complex!double(items.front); items.popFront();
-        pos.refy = Complex!double(items.front); items.popFront();
-        pos.refz = Complex!double(items.front); items.popFront();
+        pos.x = Complex!double(items.front); items.popFront();
+        pos.y = Complex!double(items.front); items.popFront();
+        pos.z = Complex!double(items.front); items.popFront();
         volume = Complex!double(items.front); items.popFront();
         fs.gas.rho = Complex!double(items.front); items.popFront();
-        fs.vel.refx = Complex!double(items.front); items.popFront();
-        fs.vel.refy = Complex!double(items.front); items.popFront();
-        fs.vel.refz = Complex!double(items.front); items.popFront();
+        fs.vel.x = Complex!double(items.front); items.popFront();
+        fs.vel.y = Complex!double(items.front); items.popFront();
+        fs.vel.z = Complex!double(items.front); items.popFront();
         version(MHD) {
             if (MHDflag) {
-                fs.B.refx = Complex!double(items.front); items.popFront();
-                fs.B.refy = Complex!double(items.front); items.popFront();
-                fs.B.refz = Complex!double(items.front); items.popFront();
+                fs.B.x = Complex!double(items.front); items.popFront();
+                fs.B.y = Complex!double(items.front); items.popFront();
+                fs.B.z = Complex!double(items.front); items.popFront();
                 fs.divB = Complex!double(items.front); items.popFront();
                 if (divergence_cleaning) {
                     fs.psi = Complex!double(items.front); items.popFront();
@@ -1754,19 +1754,19 @@ void scan_cell_data_from_fixed_order_string
         if (with_local_time_stepping) { dt_local = to!double(items.front); items.popFront(); }
     } else {
         // version double_numbers
-        pos.refx = to!double(items.front); items.popFront();
-        pos.refy = to!double(items.front); items.popFront();
-        pos.refz = to!double(items.front); items.popFront();
+        pos.x = to!double(items.front); items.popFront();
+        pos.y = to!double(items.front); items.popFront();
+        pos.z = to!double(items.front); items.popFront();
         volume = to!double(items.front); items.popFront();
         fs.gas.rho = to!double(items.front); items.popFront();
-        fs.vel.refx = to!double(items.front); items.popFront();
-        fs.vel.refy = to!double(items.front); items.popFront();
-        fs.vel.refz = to!double(items.front); items.popFront();
+        fs.vel.x = to!double(items.front); items.popFront();
+        fs.vel.y = to!double(items.front); items.popFront();
+        fs.vel.z = to!double(items.front); items.popFront();
         version(MHD) {
             if (MHDflag) {
-                fs.B.refx = to!double(items.front); items.popFront();
-                fs.B.refy = to!double(items.front); items.popFront();
-                fs.B.refz = to!double(items.front); items.popFront();
+                fs.B.x = to!double(items.front); items.popFront();
+                fs.B.y = to!double(items.front); items.popFront();
+                fs.B.z = to!double(items.front); items.popFront();
                 fs.divB = to!double(items.front); items.popFront();
                 if (divergence_cleaning) {
                     fs.psi = to!double(items.front); items.popFront();
@@ -1848,19 +1848,19 @@ void scan_cell_data_from_variable_order_string
         double[] values;
         foreach (item; buffer.strip().split()) { values ~= to!double(item); }
     }
-    pos.refx = values[countUntil(varNameList, flowVarName(FlowVar.pos_x))];
-    pos.refy = values[countUntil(varNameList, flowVarName(FlowVar.pos_y))];
-    pos.refz = values[countUntil(varNameList, flowVarName(FlowVar.pos_z))];
+    pos.x = values[countUntil(varNameList, flowVarName(FlowVar.pos_x))];
+    pos.y = values[countUntil(varNameList, flowVarName(FlowVar.pos_y))];
+    pos.z = values[countUntil(varNameList, flowVarName(FlowVar.pos_z))];
     volume = values[countUntil(varNameList, flowVarName(FlowVar.volume))];
     fs.gas.rho = values[countUntil(varNameList, flowVarName(FlowVar.rho))];
-    fs.vel.refx = values[countUntil(varNameList, flowVarName(FlowVar.vel_x))];
-    fs.vel.refy = values[countUntil(varNameList, flowVarName(FlowVar.vel_y))];
-    fs.vel.refz = values[countUntil(varNameList, flowVarName(FlowVar.vel_z))];
+    fs.vel.x = values[countUntil(varNameList, flowVarName(FlowVar.vel_x))];
+    fs.vel.y = values[countUntil(varNameList, flowVarName(FlowVar.vel_y))];
+    fs.vel.z = values[countUntil(varNameList, flowVarName(FlowVar.vel_z))];
     version(MHD) {
         if (MHDflag) {
-            fs.B.refx = values[countUntil(varNameList, flowVarName(FlowVar.B_x))];
-            fs.B.refy = values[countUntil(varNameList, flowVarName(FlowVar.B_y))];
-            fs.B.refz = values[countUntil(varNameList, flowVarName(FlowVar.B_z))];
+            fs.B.x = values[countUntil(varNameList, flowVarName(FlowVar.B_x))];
+            fs.B.y = values[countUntil(varNameList, flowVarName(FlowVar.B_y))];
+            fs.B.z = values[countUntil(varNameList, flowVarName(FlowVar.B_z))];
             fs.divB = values[countUntil(varNameList, flowVarName(FlowVar.divB))];
             if (divergence_cleaning) {
                 fs.psi = values[countUntil(varNameList, flowVarName(FlowVar.psi))];

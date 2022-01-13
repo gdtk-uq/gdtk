@@ -29,8 +29,8 @@ void inverse_distance_weighting(FluidBlock myblk,
                "Inverse Distance Weighting: initial positions array length does not equal new positions array length");
         foreach ( i; 0..nBndaryVtx) {
             Vector3 ds;
-            ds.refx = bndaryVtxNewPos[i].x - bndaryVtxInitPos[i].x;
-            ds.refy = bndaryVtxNewPos[i].y - bndaryVtxInitPos[i].y;
+            ds.x = bndaryVtxNewPos[i].x - bndaryVtxInitPos[i].x;
+            ds.y = bndaryVtxNewPos[i].y - bndaryVtxInitPos[i].y;
             number r; number w;
             number dx = vtxi.pos[0].x - bndaryVtxInitPos[i].x; 
             number dy = vtxi.pos[0].y - bndaryVtxInitPos[i].y; 
@@ -41,8 +41,8 @@ void inverse_distance_weighting(FluidBlock myblk,
         }
         // update vertex positions
         if (myblk.boundaryVtxIndexList.canFind(vtxi.id) == false) {
-            vtxi.pos[gtl].refx = vtxi.pos[0].x + (numer_sum[0]/denom_sum);
-            vtxi.pos[gtl].refy = vtxi.pos[0].y + (numer_sum[1]/denom_sum);
+            vtxi.pos[gtl].x = vtxi.pos[0].x + (numer_sum[0]/denom_sum);
+            vtxi.pos[gtl].y = vtxi.pos[0].y + (numer_sum[1]/denom_sum);
         }
     }
 } // end inverse_distance_weighting()

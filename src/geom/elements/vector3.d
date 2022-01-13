@@ -63,12 +63,6 @@ struct Vector3 {
         x = other.x; y = other.y; z = other.z;
     }
 
-    // Note that the following three properties hand out references
-    // to the elements, so that we may change their values.
-    @nogc @property ref number refx() return { return x; }
-    @nogc @property ref number refy() return { return y; }
-    @nogc @property ref number refz() return { return z; }
-
     @property Vector3 dup() const
     {
         return Vector3(this);
@@ -670,10 +664,10 @@ version(vector3_test) {
         c = a - b;
         assert(c.y == a.y-b.y, failedUnitTest());
         Vector3 d = a.dup;
-        a.refy = 99.0;
+        a.y = 99.0;
         assert(a.y == 99.0 && d.y == 2.2, failedUnitTest());
         Vector3 d2 = a;
-        a.refy = 3.3;
+        a.y = 3.3;
         assert(a.y == 3.3 && d2.y == 99.0, failedUnitTest());
 
         Vector3 e = a * 2.0;
@@ -735,9 +729,9 @@ Vector3 getJSONVector3(JSONValue jsonData, string key, Vector3 defaultValue)
         auto json_values = jsonData[key].array;
         foreach (i, json_val; json_values) {
             switch (i) {
-            case 0: value.refx = to!double(json_val.floating); break;
-            case 1: value.refy = to!double(json_val.floating); break;
-            case 2: value.refz = to!double(json_val.floating); break;
+            case 0: value.x = to!double(json_val.floating); break;
+            case 1: value.y = to!double(json_val.floating); break;
+            case 2: value.z = to!double(json_val.floating); break;
             default:
             }
         }

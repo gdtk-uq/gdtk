@@ -959,9 +959,9 @@ public:
                 }
                 size_t ii = 0;
                 foreach (c; myBC.gasCells) {
-                    c.pos[0].refx.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.pos[0].refx.im = incoming_fluidstate_buf[ii++]; }
-                    c.pos[0].refy.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.pos[0].refy.im = incoming_fluidstate_buf[ii++]; }
-                    c.pos[0].refz.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.pos[0].refz.im = incoming_fluidstate_buf[ii++]; }
+                    c.pos[0].x.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.pos[0].x.im = incoming_fluidstate_buf[ii++]; }
+                    c.pos[0].y.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.pos[0].y.im = incoming_fluidstate_buf[ii++]; }
+                    c.pos[0].z.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.pos[0].z.im = incoming_fluidstate_buf[ii++]; }
                     c.fs.gas.T.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.fs.gas.T.im = incoming_fluidstate_buf[ii++]; }
                     c.fs.gas.k.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.fs.gas.k.im = incoming_fluidstate_buf[ii++]; }
                 }

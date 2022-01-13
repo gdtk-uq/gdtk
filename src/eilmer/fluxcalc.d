@@ -57,8 +57,8 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
     // Transform to interface frame of reference.
     // Firstly, subtract interface velocity, in the case where the grid is moving
     // we want the velocity of the flow relative to the interface.
-    Lft.vel.refx -= IFace.gvel.x; Lft.vel.refy -= IFace.gvel.y; Lft.vel.refz -= IFace.gvel.z;
-    Rght.vel.refx -= IFace.gvel.x; Rght.vel.refy -= IFace.gvel.y; Rght.vel.refz -= IFace.gvel.z;
+    Lft.vel.x -= IFace.gvel.x; Lft.vel.y -= IFace.gvel.y; Lft.vel.z -= IFace.gvel.z;
+    Rght.vel.x -= IFace.gvel.x; Rght.vel.y -= IFace.gvel.y; Rght.vel.z -= IFace.gvel.z;
 
     IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     Lft.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
@@ -414,7 +414,7 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
     number vx = fs.vel.x; number vy = fs.vel.y; number vz = fs.vel.z;
     // Transform to interface frame of reference.
     // Beware: fs.vel is changed here and restored below.
-    fs.vel.refx -= IFace.gvel.x; fs.vel.refy -= IFace.gvel.y; fs.vel.refz -= IFace.gvel.z;
+    fs.vel.x -= IFace.gvel.x; fs.vel.y -= IFace.gvel.y; fs.vel.z -= IFace.gvel.z;
     IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     version(MHD) {
@@ -1807,9 +1807,9 @@ void ASF_242(ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
     FlowState[4] stencil = [IFace.left_cells[1].fs,  IFace.left_cells[0].fs,
                             IFace.right_cells[0].fs, IFace.right_cells[1].fs];
     foreach (cell; stencil) {
-        cell.vel.refx -= IFace.gvel.x;
-        cell.vel.refy -= IFace.gvel.y;
-        cell.vel.refz -= IFace.gvel.z;
+        cell.vel.x -= IFace.gvel.x;
+        cell.vel.y -= IFace.gvel.y;
+        cell.vel.z -= IFace.gvel.z;
         cell.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     }
     // Define the v,w functions as prescribed by White et al. 2012 for the simple convective fluxes
@@ -1839,9 +1839,9 @@ void ASF_242(ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
     // convert back
     foreach (cell; stencil) {
         cell.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
-        cell.vel.refx += IFace.gvel.x;
-        cell.vel.refy += IFace.gvel.y;
-        cell.vel.refz += IFace.gvel.z;
+        cell.vel.x += IFace.gvel.x;
+        cell.vel.y += IFace.gvel.y;
+        cell.vel.z += IFace.gvel.z;
     }
     // Prepare the conservative and product rule fluxes arrays
     number[10] f_c, f_e;

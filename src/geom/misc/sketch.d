@@ -2,11 +2,11 @@
  * sketch.d  Sketch geometric elements using a selected renderer.
  *
  * These are the user-callable functions for sketching geometric elements
- * while preparing the data for a flow simulation.  They are modelled on 
+ * while preparing the data for a flow simulation.  They are modelled on
  * the capabilities of the SVG renderer but work in the geometric space
- * of the flow simulation, where the units of lengths are metres.  
- * The "canvas" referred to below is a virtual canvas, where the units 
- * of lengths are millimetres. 
+ * of the flow simulation, where the units of lengths are metres.
+ * The "canvas" referred to below is a virtual canvas, where the units
+ * of lengths are millimetres.
  *
  * Author(s):
  *     Peter J.
@@ -46,7 +46,7 @@ struct Extents{
         this.x1 = x1; this.y1 = y1;
         width = x1 - x0;
         height = y1 - y0;
-    } 
+    }
 }
 
 enum Renderer {svg, xplot}
@@ -71,7 +71,7 @@ public:
     string title;
     string description;
     // Rendering canvas and viewport into user-space
-    // 
+    //
     //     (x0,y1)---------(x1,y1)
     //        |               |
     //        |               |
@@ -182,7 +182,7 @@ public:
             }
         }
     }
-    
+
     override string toString()
     {
         string str = "Sketch(";
@@ -212,7 +212,7 @@ public:
         }
         foreach (i; 0 .. 4) { vec[i] = result[i]; }
     }
-    
+
     void apply_transform(string transform_name, ref Vector3 p, ref double w)
     {
         double[4] ph; // homogeneous coordinate representation
@@ -233,7 +233,7 @@ public:
     void look_at(const Vector3 eye, const Vector3 centre, const Vector3 up)
     // Set the view matrix so that we have a new view of the 3D model.
     // In the new coordinates, we are looking back along the znew-axis,
-    // with ynew up and xnew toward the right. 
+    // with ynew up and xnew toward the right.
     {
         this.eye = eye;
         this.centre = centre;
@@ -249,7 +249,7 @@ public:
         view_mat[2][3] = -(dot(centre,znew).re);
         view_mat[3][0] = 0.0; view_mat[3][1] = 0.0; view_mat[3][2] = 0.0; view_mat[3][3] = 1.0;
     } // end look_at()
-    
+
     void start(string file_name="sketch.svg")
     {
         final switch(myRenderer) {
@@ -448,7 +448,7 @@ public:
         foreach (i; 0 .. ptmp.length) {
             apply_transform("view", ptmp[i], wtmp[i]);
             apply_transform("projection", ptmp[i], wtmp[i]);
-        }           
+        }
         double[] xlist, ylist;
         foreach(p; ptmp) {
             xlist ~= toCanvasX(p.x.re); ylist ~= toCanvasY(p.y.re);
@@ -483,7 +483,7 @@ public:
         foreach (i; 0 .. ptmp.length) {
             apply_transform("view", ptmp[i], wtmp[i]);
             apply_transform("projection", ptmp[i], wtmp[i]);
-        }           
+        }
         double[] xlist, ylist;
         foreach(p; ptmp) {
             xlist ~= toCanvasX(p.x.re); ylist ~= toCanvasY(p.y.re);
@@ -662,7 +662,7 @@ public:
         return;
     } // end text()
 
-    void dotlabel(const Vector3 p, string label="", 
+    void dotlabel(const Vector3 p, string label="",
                   string anchor="middle", double dotSize=2.0,
                   int fontSize=10, string colour="black", string fontFamily="sanserif")
     // dotSize is already in virtual-canvas mm
@@ -704,11 +704,11 @@ public:
         }
         return;
     } // end dotlabel()
-    
+
     // ----------------------------------------------------------------------
     // The following methods should be independent of the particular renderer.
     // ----------------------------------------------------------------------
-    
+
     void rule(string direction, double vmin, double vmax, double vtic, Vector3 anchorPoint,
               double ticMarkSize, string numberFormat, double textOffset, double textAngle, int fontSize)
     // direction: one of "x", "y", "z"
@@ -725,7 +725,7 @@ public:
         Vector3 p1 = Vector3(anchorPoint);
         Vector3 dp = Vector3(0.0,0.0,0.0);
         Vector3 dpTic = Vector3(0.0,0.0,0.0);
-        int n = to!int(1.000001*(vmax - vmin)/vtic); // be sure to get final tic mark 
+        int n = to!int(1.000001*(vmax - vmin)/vtic); // be sure to get final tic mark
         if (n > 50) {
             writeln("You have asked for a lot of tic marks: ", n);
         }
@@ -733,21 +733,21 @@ public:
         string textAnchor;
         switch(direction) {
         case "x":
-            p0.refx = vmin; p1.refx = vmax; dp.refx = vtic;
-            dpTic.refy = -ticMarkSize; // tic marks go in -y direction
-            dpText.refy = -textOffset;
+            p0.x = vmin; p1.x = vmax; dp.x = vtic;
+            dpTic.y = -ticMarkSize; // tic marks go in -y direction
+            dpText.y = -textOffset;
             textAnchor = "middle";
             break;
         case "y":
-            p0.refy = vmin; p1.refy = vmax; dp.refy = vtic;
-            dpTic.refx = -ticMarkSize; // tic marks go in -x direction
-            dpText.refx = -textOffset;
+            p0.y = vmin; p1.y = vmax; dp.y = vtic;
+            dpTic.x = -ticMarkSize; // tic marks go in -x direction
+            dpText.x = -textOffset;
             textAnchor = "end";
             break;
         case "z":
-            p0.refz = vmin; p1.refz = vmax; dp.refz = vtic;
-            dpTic.refx = -ticMarkSize; // tic marks go in -x direction
-            dpText.refx = -textOffset;
+            p0.z = vmin; p1.z = vmax; dp.z = vtic;
+            dpTic.x = -ticMarkSize; // tic marks go in -x direction
+            dpText.x = -textOffset;
             textAnchor = "end";
             break;
         default:
@@ -770,7 +770,7 @@ public:
             text(p3, myText, textAngle, textAnchor, fontSize);
         }
     } // end rule()
-    
+
     // Render functions for our geometric entities used in the flow simulation.
     void render(const Path pth, bool dashed=false, size_t n=30)
     {
@@ -960,5 +960,5 @@ public:
             end_group();
         }
     } // end render (ParametricVolume)
-    
- } // end class Sketch
+
+} // end class Sketch

@@ -192,7 +192,7 @@ version(bezier_test) {
                 // compute analytical derivative
                 dPt_dP_analytic = cubic_bezier_analytic_derivative(t, idx);
                 // compute complex step derivative
-                P[idx].refx += ih;
+                P[idx].x += ih;
                 myNewBez = new Bezier([P[0], P[1], P[2], P[3]]); // perturbed Bezier curve
                 dPt_dP_complex_x = myNewBez(t).x.im/ih.im;
                 dPt_dP_complex_y = myNewBez(t).y.im/ih.im;
@@ -202,7 +202,7 @@ version(bezier_test) {
                 assert(std.math.isClose(0.0, dPt_dP_complex_y), failedUnitTest());
                 assert(std.math.isClose(0.0, dPt_dP_complex_z), failedUnitTest());
                 // restore point to original position
-                P[idx].refx = Po[idx].x;
+                P[idx].x = Po[idx].x;
             }
         }
         return 0;

@@ -20,7 +20,7 @@ void main()
     Vector3 c = a + b;
     writeln("c = a + b = ", c);
     Vector3 d = a;
-    a.refy = 99.0;
+    a.y = 99.0;
     writeln("a = ", a, ", d = ", d);
     Vector3 e = a * 2.0;
     Vector3 f = 3 * d; // int promoted to double OK

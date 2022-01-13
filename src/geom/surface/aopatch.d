@@ -203,12 +203,12 @@ private:
                     double numer = Ax + g22 * dEta2 * (_bgmesh[ix+1][iy].x.re + _bgmesh[ix-1][iy].x.re) +
                         g11 * dXi2 * (_bgmesh[ix][iy+1].x.re + _bgmesh[ix][iy-1].x.re);
                     double denom = 2.0 * (g22 * dEta2 + g11 * dXi2);
-                    _bgmesh[ix][iy].refx = numer / denom;
+                    _bgmesh[ix][iy].x = numer / denom;
 
                     numer = Ay + g22 * dEta2 * (_bgmesh[ix+1][iy].y.re + _bgmesh[ix-1][iy].y.re) +
                         g11 * dXi2 * (_bgmesh[ix][iy+1].y.re + _bgmesh[ix][iy-1].y.re);
                     denom = 2.0 * (g22 * dEta2 + g11 * dXi2);
-                    _bgmesh[ix][iy].refy = numer / denom;
+                    _bgmesh[ix][iy].y = numer / denom;
                     double dx = fabs(_bgmesh[ix][iy].x - x_old).re;
                     double dy = fabs(_bgmesh[ix][iy].y - y_old).re;
                     if (dx > largest_x_move) largest_x_move = dx;

@@ -849,7 +849,7 @@ void main(string[] args) {
                 tmp[5][0] = cell.fs.turb[1].im/EPS.im;
                     
                 cell.U[1].copy_values_from(cell.U[0]);
-                cell.U[1].momentum.refx += EPS;
+                cell.U[1].momentum.x += EPS;
                 cell.decode_conserved(0, 1, 0.0);
                 tmp[0][1] = cell.fs.gas.rho.im/EPS.im;
                 tmp[1][1] = cell.fs.vel.x.im/EPS.im;
@@ -859,7 +859,7 @@ void main(string[] args) {
                 tmp[5][1] = cell.fs.turb[1].im/EPS.im;
                 
                 cell.U[1].copy_values_from(cell.U[0]);
-                cell.U[1].momentum.refy += EPS;
+                cell.U[1].momentum.y += EPS;
                 cell.decode_conserved(0, 1, 0.0);
                 tmp[0][2] = cell.fs.gas.rho.im/EPS.im;
                 tmp[1][2] = cell.fs.vel.x.im/EPS.im;

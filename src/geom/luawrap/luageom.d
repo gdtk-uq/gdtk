@@ -58,13 +58,13 @@ Vector3 toVector3(lua_State *L, int index)
     }
     // Have table, now look for named fields containing coordinate values.
     lua_getfield(L, index, "x");
-    if (lua_isnumber(L, -1)) { vec.refx = lua_tonumber(L, -1); }
+    if (lua_isnumber(L, -1)) { vec.x = lua_tonumber(L, -1); }
     lua_pop(L, 1);
     lua_getfield(L, index, "y");
-    if (lua_isnumber(L, -1)) { vec.refy = lua_tonumber(L, -1); }
+    if (lua_isnumber(L, -1)) { vec.y = lua_tonumber(L, -1); }
     lua_pop(L, 1);
     lua_getfield(L, index, "z");
-    if (lua_isnumber(L, -1)) { vec.refz = lua_tonumber(L, -1); }
+    if (lua_isnumber(L, -1)) { vec.z = lua_tonumber(L, -1); }
     lua_pop(L, 1);
     return vec;
 } // end toVector3
@@ -116,13 +116,13 @@ extern(C) int newVector3(lua_State *L)
             } else {
                 // Look for named fields containing coordinate values.
                 lua_getfield(L, 1, "x");
-                if ( lua_isnumber(L, -1) ) vec.refx = lua_tonumber(L, -1);
+                if ( lua_isnumber(L, -1) ) vec.x = lua_tonumber(L, -1);
                 lua_pop(L, 1);
                 lua_getfield(L, 1, "y");
-                if ( lua_isnumber(L, -1) ) vec.refy = lua_tonumber(L, -1);
+                if ( lua_isnumber(L, -1) ) vec.y = lua_tonumber(L, -1);
                 lua_pop(L, 1);
                 lua_getfield(L, 1, "z");
-                if ( lua_isnumber(L, -1) ) vec.refz = lua_tonumber(L, -1);
+                if ( lua_isnumber(L, -1) ) vec.z = lua_tonumber(L, -1);
                 lua_pop(L, 1);
             }
         } else {
@@ -170,15 +170,15 @@ extern(C) int newindexVector3(lua_State* L)
     double val = luaL_checknumber(L, 3);
     // If we find an "x", "y" or "z", get value and return
     if ( key == "x" ) {
-        a.refx = val;
+        a.x = val;
         return 0;
     }
     if ( key == "y" ) {
-        a.refy = val;
+        a.y = val;
         return 0;
     }
     if ( key == "z") {
-        a.refz = val;
+        a.z = val;
         return 0;
     }
     // else just ignore the setter

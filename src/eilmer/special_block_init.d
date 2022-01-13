@@ -1,5 +1,5 @@
 /** special_block_init.d
- * 
+ *
  * This module houses functions that do some special initialisation
  * of blocks at runtime.
  *
@@ -33,7 +33,7 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
             noSlipWalls[bcId] = true;
         }
     }
-    
+
     // Determine which cells are against a no-slip wall.
     foreach (bcId; noSlipWalls.byKey()) {
         foreach (i, face; blk.bc[bcId].faces) {
@@ -77,10 +77,10 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
                 blk.myConfig.gmodel.update_thermo_from_pT(cell.fs.gas);
                 cell.encode_conserved(0, 0, 0.0);
                 cell.decode_conserved(0, 0, 0.0);
-            } 
+            }
         }
     }
-    
+
     // Gather the cells adjacent to the wall cells
     // as the first layer in the diffusion zone.
     foreach (cell; cellsAlongWalls) {
@@ -157,9 +157,9 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
             }
             // Place the averaged value in cell.
             cell.fs.gas.T = T_avg / nNbrCells;
-            cell.fs.vel.refx = velx_avg / nNbrCells;
-            cell.fs.vel.refy = vely_avg / nNbrCells;
-            cell.fs.vel.refz = velz_avg / nNbrCells;
+            cell.fs.vel.x = velx_avg / nNbrCells;
+            cell.fs.vel.y = vely_avg / nNbrCells;
+            cell.fs.vel.z = velz_avg / nNbrCells;
             if (cell.in_turbulent_zone) {
                 version(turbulence) {
                     foreach(i; 0 .. blk.myConfig.turb_model.nturb) cell.fs.turb[i] = turb_avg[i]/nNbrCells;

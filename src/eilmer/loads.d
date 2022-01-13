@@ -354,12 +354,12 @@ void computeRunTimeLoads()
             MPI_Barrier(MPI_COMM_WORLD);
             MPI_Allreduce(MPI_IN_PLACE, groupedLoads.ptr, to!int(groupedLoads.length), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
             foreach (grpIdx, ref group; runTimeLoads) {
-                group.resultantForce.refx = groupedLoads[grpIdx*6+0];
-                group.resultantForce.refy = groupedLoads[grpIdx*6+1];
-                group.resultantForce.refz = groupedLoads[grpIdx*6+2];
-                group.resultantMoment.refx = groupedLoads[grpIdx*6+3];
-                group.resultantMoment.refy = groupedLoads[grpIdx*6+4];
-                group.resultantMoment.refz = groupedLoads[grpIdx*6+5];
+                group.resultantForce.x = groupedLoads[grpIdx*6+0];
+                group.resultantForce.y = groupedLoads[grpIdx*6+1];
+                group.resultantForce.z = groupedLoads[grpIdx*6+2];
+                group.resultantMoment.x = groupedLoads[grpIdx*6+3];
+                group.resultantMoment.y = groupedLoads[grpIdx*6+4];
+                group.resultantMoment.z = groupedLoads[grpIdx*6+5];
             }
         } // END version(!nk_accelerator)
     } // end version(mpi_parallel)

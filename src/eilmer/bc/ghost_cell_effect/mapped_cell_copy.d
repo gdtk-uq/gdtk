@@ -601,9 +601,9 @@ public:
                 foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
                     auto c = ghost_cells[gi];
                     foreach (j; 0 .. blk.myConfig.n_grid_time_levels) {
-                        c.pos[j].refx.re = buf[ii++]; version(complex_numbers) { c.pos[j].refx.im = buf[ii++]; }
-                        c.pos[j].refy.re = buf[ii++]; version(complex_numbers) { c.pos[j].refy.im = buf[ii++]; }
-                        c.pos[j].refz.re = buf[ii++]; version(complex_numbers) { c.pos[j].refz.im = buf[ii++]; }
+                        c.pos[j].x.re = buf[ii++]; version(complex_numbers) { c.pos[j].x.im = buf[ii++]; }
+                        c.pos[j].y.re = buf[ii++]; version(complex_numbers) { c.pos[j].y.im = buf[ii++]; }
+                        c.pos[j].z.re = buf[ii++]; version(complex_numbers) { c.pos[j].z.im = buf[ii++]; }
                         c.volume[j].re = buf[ii++]; version(complex_numbers) { c.volume[j].im = buf[ii++]; }
                         c.areaxy[j].re = buf[ii++]; version(complex_numbers) { c.areaxy[j].im = buf[ii++]; }
                     }
@@ -808,13 +808,13 @@ public:
                         foreach (j; 0 .. nspecies) { gs.massf[j].re = buf[ii++]; version(complex_numbers) { gs.massf[j].im = buf[ii++]; } }
                     }
                     gs.quality.re = buf[ii++]; version(complex_numbers) { gs.quality.im = buf[ii++]; }
-                    fs.vel.refx.re = buf[ii++]; version(complex_numbers) { fs.vel.refx.im = buf[ii++]; }
-                    fs.vel.refy.re = buf[ii++]; version(complex_numbers) { fs.vel.refy.im = buf[ii++]; }
-                    fs.vel.refz.re = buf[ii++]; version(complex_numbers) { fs.vel.refz.im = buf[ii++]; }
+                    fs.vel.x.re = buf[ii++]; version(complex_numbers) { fs.vel.x.im = buf[ii++]; }
+                    fs.vel.y.re = buf[ii++]; version(complex_numbers) { fs.vel.y.im = buf[ii++]; }
+                    fs.vel.z.re = buf[ii++]; version(complex_numbers) { fs.vel.z.im = buf[ii++]; }
                     version(MHD) {
-                        fs.B.refx.re = buf[ii++]; version(complex_numbers) { fs.B.refx.im = buf[ii++]; }
-                        fs.B.refy.re = buf[ii++]; version(complex_numbers) { fs.B.refy.im = buf[ii++]; }
-                        fs.B.refz.re = buf[ii++]; version(complex_numbers) { fs.B.refz.im = buf[ii++]; }
+                        fs.B.x.re = buf[ii++]; version(complex_numbers) { fs.B.x.im = buf[ii++]; }
+                        fs.B.y.re = buf[ii++]; version(complex_numbers) { fs.B.y.im = buf[ii++]; }
+                        fs.B.z.re = buf[ii++]; version(complex_numbers) { fs.B.z.im = buf[ii++]; }
                         fs.psi.re = buf[ii++]; version(complex_numbers) { fs.psi.im = buf[ii++]; }
                         fs.divB.re  = buf[ii++]; version(complex_numbers) { fs.divB.im = buf[ii++]; }
                     }

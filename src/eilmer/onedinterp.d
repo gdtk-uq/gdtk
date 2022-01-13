@@ -172,15 +172,15 @@ string codeForInterpolation()
     number[numL] sL;
     number[numR] sR;
 
-    GetVelX!(numL)(cL, sL); GetVelX!(numR)(cR, sR); calculate_scalar(Lft.vel.refx, Rght.vel.refx, sL, sR, weight);
-    GetVelY!(numL)(cL, sL); GetVelY!(numR)(cR, sR); calculate_scalar(Lft.vel.refy, Rght.vel.refy, sL, sR, weight);
-    GetVelZ!(numL)(cL, sL); GetVelZ!(numR)(cR, sR); calculate_scalar(Lft.vel.refz, Rght.vel.refz, sL, sR, weight);
+    GetVelX!(numL)(cL, sL); GetVelX!(numR)(cR, sR); calculate_scalar(Lft.vel.x, Rght.vel.x, sL, sR, weight);
+    GetVelY!(numL)(cL, sL); GetVelY!(numR)(cR, sR); calculate_scalar(Lft.vel.y, Rght.vel.y, sL, sR, weight);
+    GetVelZ!(numL)(cL, sL); GetVelZ!(numR)(cR, sR); calculate_scalar(Lft.vel.z, Rght.vel.z, sL, sR, weight);
 
     version(MHD) {
         if (myConfig.MHD) {
-            GetBx!(numL)(cL,sL); GetBx!(numR)(cR, sR); calculate_scalar(Lft.B.refx, Rght.B.refx, sL, sR, weight);
-            GetBy!(numL)(cL,sL); GetBy!(numR)(cR, sR); calculate_scalar(Lft.B.refy, Rght.B.refy, sL, sR, weight);
-            GetBz!(numL)(cL,sL); GetBz!(numR)(cR, sR); calculate_scalar(Lft.B.refz, Rght.B.refz, sL, sR, weight);
+            GetBx!(numL)(cL,sL); GetBx!(numR)(cR, sR); calculate_scalar(Lft.B.x, Rght.B.x, sL, sR, weight);
+            GetBy!(numL)(cL,sL); GetBy!(numR)(cR, sR); calculate_scalar(Lft.B.y, Rght.B.y, sL, sR, weight);
+            GetBz!(numL)(cL,sL); GetBz!(numR)(cR, sR); calculate_scalar(Lft.B.z, Rght.B.z, sL, sR, weight);
             if (myConfig.divergence_cleaning) {
                 GetPsi!(numL)(cL,sL); GetPsi!(numR)(cR, sR); calculate_scalar(Lft.psi, Rght.psi, sL, sR, weight);
             }
@@ -1478,24 +1478,24 @@ public:
         l3r3_prepare(cL2Length, cL1Length, cL0Length, cR0Length, cR1Length, cR2Length);
         interp_l3r3_scalar(cL2.fs.vel.x, cL1.fs.vel.x, cL0.fs.vel.x,
                            cR0.fs.vel.x, cR1.fs.vel.x, cR2.fs.vel.x,
-                           Lft.vel.refx, Rght.vel.refx);
+                           Lft.vel.x, Rght.vel.x);
         interp_l3r3_scalar(cL2.fs.vel.y, cL1.fs.vel.y, cL0.fs.vel.y,
                            cR0.fs.vel.y, cR1.fs.vel.y, cR2.fs.vel.y,
-                           Lft.vel.refy, Rght.vel.refy);
+                           Lft.vel.y, Rght.vel.y);
         interp_l3r3_scalar(cL2.fs.vel.z, cL1.fs.vel.z, cL0.fs.vel.z,
                            cR0.fs.vel.z, cR1.fs.vel.z, cR2.fs.vel.z,
-                           Lft.vel.refz, Rght.vel.refz);
+                           Lft.vel.z, Rght.vel.z);
         version(MHD) {
             if (myConfig.MHD) {
                 interp_l3r3_scalar(cL2.fs.B.x, cL1.fs.B.x, cL0.fs.B.x,
                                    cR0.fs.B.x, cR1.fs.B.x, cR2.fs.B.x,
-                                   Lft.B.refx, Rght.B.refx);
+                                   Lft.B.x, Rght.B.x);
                 interp_l3r3_scalar(cL2.fs.B.y, cL1.fs.B.y, cL0.fs.B.y,
                                    cR0.fs.B.y, cR1.fs.B.y, cR2.fs.B.y,
-                                   Lft.B.refy, Rght.B.refy);
+                                   Lft.B.y, Rght.B.y);
                 interp_l3r3_scalar(cL2.fs.B.z, cL1.fs.B.z, cL0.fs.B.z,
                                    cR0.fs.B.z, cR1.fs.B.z, cR2.fs.B.z,
-                                   Lft.B.refz, Rght.B.refz);
+                                   Lft.B.z, Rght.B.z);
                 if (myConfig.divergence_cleaning) {
                     interp_l3r3_scalar(cL2.fs.psi, cL1.fs.psi, cL0.fs.psi,
                                        cR0.fs.psi, cR1.fs.psi, cR2.fs.psi,
@@ -1645,19 +1645,19 @@ public:
         }
         l2r2_prepare(cL1Length, cL0Length, cR0Length, cR1Length);
         interp_l2r2_scalar(cL1.fs.vel.x, cL0.fs.vel.x, cR0.fs.vel.x, cR1.fs.vel.x,
-                           Lft.vel.refx, Rght.vel.refx);
+                           Lft.vel.x, Rght.vel.x);
         interp_l2r2_scalar(cL1.fs.vel.y, cL0.fs.vel.y, cR0.fs.vel.y, cR1.fs.vel.y,
-                           Lft.vel.refy, Rght.vel.refy);
+                           Lft.vel.y, Rght.vel.y);
         interp_l2r2_scalar(cL1.fs.vel.z, cL0.fs.vel.z, cR0.fs.vel.z, cR1.fs.vel.z,
-                           Lft.vel.refz, Rght.vel.refz);
+                           Lft.vel.z, Rght.vel.z);
         version(MHD) {
             if (myConfig.MHD) {
                 interp_l2r2_scalar(cL1.fs.B.x, cL0.fs.B.x, cR0.fs.B.x, cR1.fs.B.x,
-                                   Lft.B.refx, Rght.B.refx);
+                                   Lft.B.x, Rght.B.x);
                 interp_l2r2_scalar(cL1.fs.B.y, cL0.fs.B.y, cR0.fs.B.y, cR1.fs.B.y,
-                                   Lft.B.refy, Rght.B.refy);
+                                   Lft.B.y, Rght.B.y);
                 interp_l2r2_scalar(cL1.fs.B.z, cL0.fs.B.z, cR0.fs.B.z, cR1.fs.B.z,
-                                   Lft.B.refz, Rght.B.refz);
+                                   Lft.B.z, Rght.B.z);
                 if (myConfig.divergence_cleaning) {
                     interp_l2r2_scalar(cL1.fs.psi, cL0.fs.psi, cR0.fs.psi, cR1.fs.psi,
                                        Lft.psi, Rght.psi);
@@ -1789,14 +1789,14 @@ public:
             cR0.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
         }
         l2r1_prepare(cL1Length, cL0Length, cR0Length);
-        interp_l2r1_scalar(cL1.fs.vel.x, cL0.fs.vel.x, cR0.fs.vel.x, Lft.vel.refx, Rght.vel.refx);
-        interp_l2r1_scalar(cL1.fs.vel.y, cL0.fs.vel.y, cR0.fs.vel.y, Lft.vel.refy, Rght.vel.refy);
-        interp_l2r1_scalar(cL1.fs.vel.z, cL0.fs.vel.z, cR0.fs.vel.z, Lft.vel.refz, Rght.vel.refz);
+        interp_l2r1_scalar(cL1.fs.vel.x, cL0.fs.vel.x, cR0.fs.vel.x, Lft.vel.x, Rght.vel.x);
+        interp_l2r1_scalar(cL1.fs.vel.y, cL0.fs.vel.y, cR0.fs.vel.y, Lft.vel.y, Rght.vel.y);
+        interp_l2r1_scalar(cL1.fs.vel.z, cL0.fs.vel.z, cR0.fs.vel.z, Lft.vel.z, Rght.vel.z);
         version(MHD) {
             if (myConfig.MHD) {
-                interp_l2r1_scalar(cL1.fs.B.x, cL0.fs.B.x, cR0.fs.B.x, Lft.B.refx, Rght.B.refx);
-                interp_l2r1_scalar(cL1.fs.B.y, cL0.fs.B.y, cR0.fs.B.y, Lft.B.refy, Rght.B.refy);
-                interp_l2r1_scalar(cL1.fs.B.z, cL0.fs.B.z, cR0.fs.B.z, Lft.B.refz, Rght.B.refz);
+                interp_l2r1_scalar(cL1.fs.B.x, cL0.fs.B.x, cR0.fs.B.x, Lft.B.x, Rght.B.x);
+                interp_l2r1_scalar(cL1.fs.B.y, cL0.fs.B.y, cR0.fs.B.y, Lft.B.y, Rght.B.y);
+                interp_l2r1_scalar(cL1.fs.B.z, cL0.fs.B.z, cR0.fs.B.z, Lft.B.z, Rght.B.z);
                 if (myConfig.divergence_cleaning) {
                     interp_l2r1_scalar(cL1.fs.psi, cL0.fs.psi, cR0.fs.psi, Lft.psi, Rght.psi);
                 }
@@ -1927,14 +1927,14 @@ public:
             cR1.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
         }
         l1r2_prepare(cL0Length, cR0Length, cR1Length);
-        interp_l1r2_scalar(cL0.fs.vel.x, cR0.fs.vel.x, cR1.fs.vel.x, Lft.vel.refx, Rght.vel.refx);
-        interp_l1r2_scalar(cL0.fs.vel.y, cR0.fs.vel.y, cR1.fs.vel.y, Lft.vel.refy, Rght.vel.refy);
-        interp_l1r2_scalar(cL0.fs.vel.z, cR0.fs.vel.z, cR1.fs.vel.z, Lft.vel.refz, Rght.vel.refz);
+        interp_l1r2_scalar(cL0.fs.vel.x, cR0.fs.vel.x, cR1.fs.vel.x, Lft.vel.x, Rght.vel.x);
+        interp_l1r2_scalar(cL0.fs.vel.y, cR0.fs.vel.y, cR1.fs.vel.y, Lft.vel.y, Rght.vel.y);
+        interp_l1r2_scalar(cL0.fs.vel.z, cR0.fs.vel.z, cR1.fs.vel.z, Lft.vel.z, Rght.vel.z);
         version(MHD) {
             if (myConfig.MHD) {
-                interp_l1r2_scalar(cL0.fs.B.x, cR0.fs.B.x, cR1.fs.B.x, Lft.B.refx, Rght.B.refx);
-                interp_l1r2_scalar(cL0.fs.B.y, cR0.fs.B.y, cR1.fs.B.y, Lft.B.refy, Rght.B.refy);
-                interp_l1r2_scalar(cL0.fs.B.z, cR0.fs.B.z, cR1.fs.B.z, Lft.B.refz, Rght.B.refz);
+                interp_l1r2_scalar(cL0.fs.B.x, cR0.fs.B.x, cR1.fs.B.x, Lft.B.x, Rght.B.x);
+                interp_l1r2_scalar(cL0.fs.B.y, cR0.fs.B.y, cR1.fs.B.y, Lft.B.y, Rght.B.y);
+                interp_l1r2_scalar(cL0.fs.B.z, cR0.fs.B.z, cR1.fs.B.z, Lft.B.z, Rght.B.z);
                 if (myConfig.divergence_cleaning) {
                     interp_l1r2_scalar(cL0.fs.psi, cR0.fs.psi, cR1.fs.psi, Lft.psi, Rght.psi);
                 }
@@ -2066,14 +2066,14 @@ public:
             cL0.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
         }
         linear_extrap_prepare(cL0Length, cL1Length);
-        Lft.vel.refx = weight_scalar(cL0.fs.vel.x, cL1.fs.vel.x);
-        Lft.vel.refy = weight_scalar(cL0.fs.vel.y, cL1.fs.vel.y);
-        Lft.vel.refz = weight_scalar(cL0.fs.vel.z, cL1.fs.vel.z);
+        Lft.vel.x = weight_scalar(cL0.fs.vel.x, cL1.fs.vel.x);
+        Lft.vel.y = weight_scalar(cL0.fs.vel.y, cL1.fs.vel.y);
+        Lft.vel.z = weight_scalar(cL0.fs.vel.z, cL1.fs.vel.z);
         version(MHD) {
             if (myConfig.MHD) {
-                Lft.B.refx = weight_scalar(cL0.fs.B.x, cL1.fs.B.x);
-                Lft.B.refy = weight_scalar(cL0.fs.B.y, cL1.fs.B.y);
-                Lft.B.refz = weight_scalar(cL0.fs.B.z, cL1.fs.B.z);
+                Lft.B.x = weight_scalar(cL0.fs.B.x, cL1.fs.B.x);
+                Lft.B.y = weight_scalar(cL0.fs.B.y, cL1.fs.B.y);
+                Lft.B.z = weight_scalar(cL0.fs.B.z, cL1.fs.B.z);
                 if (myConfig.divergence_cleaning) {
                     Lft.psi = weight_scalar(cL0.fs.psi, cL1.fs.psi);
                 }
@@ -2188,14 +2188,14 @@ public:
             cR1.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
         }
         linear_extrap_prepare(cR0Length, cR1Length);
-        Rght.vel.refx = weight_scalar(cR0.fs.vel.x, cR1.fs.vel.x);
-        Rght.vel.refy = weight_scalar(cR0.fs.vel.y, cR1.fs.vel.y);
-        Rght.vel.refz = weight_scalar(cR0.fs.vel.z, cR1.fs.vel.z);
+        Rght.vel.x = weight_scalar(cR0.fs.vel.x, cR1.fs.vel.x);
+        Rght.vel.y = weight_scalar(cR0.fs.vel.y, cR1.fs.vel.y);
+        Rght.vel.z = weight_scalar(cR0.fs.vel.z, cR1.fs.vel.z);
         version(MHD) {
             if (myConfig.MHD) {
-                Rght.B.refx = weight_scalar(cR0.fs.B.x, cR1.fs.B.x);
-                Rght.B.refy = weight_scalar(cR0.fs.B.y, cR1.fs.B.y);
-                Rght.B.refz = weight_scalar(cR0.fs.B.z, cR1.fs.B.z);
+                Rght.B.x = weight_scalar(cR0.fs.B.x, cR1.fs.B.x);
+                Rght.B.y = weight_scalar(cR0.fs.B.y, cR1.fs.B.y);
+                Rght.B.z = weight_scalar(cR0.fs.B.z, cR1.fs.B.z);
                 if (myConfig.divergence_cleaning) {
                     Rght.psi = weight_scalar(cR0.fs.psi, cR1.fs.psi);
                 }

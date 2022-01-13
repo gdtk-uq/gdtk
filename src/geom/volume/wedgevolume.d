@@ -101,7 +101,7 @@ version(wedgevolume_test) {
         version(complex_numbers) {
             // Complex Step
             number hIm = complex(0.0, 1.0e-20); // complex step-size
-            p[1].refy += hIm; // perturb point in complex plane
+            p[1].y += hIm; // perturb point in complex plane
             ParametricSurface my_perturbed_face = new CoonsPatch(p[0], p[1], p[2], p[3]);
             auto my_perturbed_box = new WedgeVolume(my_perturbed_face, to!number(0.1));
             double derivCmplx = my_perturbed_box.p[5].y.im/hIm.im;
@@ -111,7 +111,7 @@ version(wedgevolume_test) {
 
             // Real Step
             double hRe = 1.0e-04; // real step-size
-            p[1].refy += hRe; // perturb point in real plane
+            p[1].y += hRe; // perturb point in real plane
             my_perturbed_face = new CoonsPatch(p[0], p[1], p[2], p[3]);
             my_perturbed_box = new WedgeVolume(my_perturbed_face, to!number(0.1));
             double derivReal = (my_perturbed_box.p[5].y.re-my_box.p[5].y.re)/hRe;

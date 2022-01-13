@@ -90,11 +90,11 @@ void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v,
     int cellCount = 0;
     foreach (cell; blk.cells) {
         cell.fs.gas.rho += EPS*v[cellCount+blk.MASS];
-        cell.fs.vel.refx += EPS*v[cellCount+blk.X_MOM];
-        cell.fs.vel.refy += EPS*v[cellCount+blk.Y_MOM];
+        cell.fs.vel.x += EPS*v[cellCount+blk.X_MOM];
+        cell.fs.vel.y += EPS*v[cellCount+blk.Y_MOM];
         cell.fs.gas.p += EPS*v[cellCount+blk.TOT_ENERGY];
         if ( blk.myConfig.dimensions == 3 )
-            cell.fs.vel.refz += EPS*v[cellCount+blk.Z_MOM];
+            cell.fs.vel.z += EPS*v[cellCount+blk.Z_MOM];
         foreach(it; 0 .. nturb){
             cell.fs.turb[it] += EPS*v[cellCount+blk.TKE+it];
         }
@@ -666,11 +666,11 @@ void fill_boundary_conditions(FluidBlock blk, size_t np, size_t orderOfJacobian,
                 // 0th perturbation: rho
                 mixin(computeGhostCellDerivatives("gas.rho", "blk.MASS", true));
                 // 1st perturbation: u
-                mixin(computeGhostCellDerivatives("vel.refx", "blk.X_MOM", false));
+                mixin(computeGhostCellDerivatives("vel.x", "blk.X_MOM", false));
                 // 2nd perturbation: v
-                mixin(computeGhostCellDerivatives("vel.refy", "blk.Y_MOM", false));
+                mixin(computeGhostCellDerivatives("vel.y", "blk.Y_MOM", false));
                 if ( blk.myConfig.dimensions == 3 )
-                    mixin(computeGhostCellDerivatives("vel.refz", "blk.Z_MOM", false));
+                    mixin(computeGhostCellDerivatives("vel.z", "blk.Z_MOM", false));
                 // 3rd perturbation: P
                 mixin(computeGhostCellDerivatives("gas.p", "blk.TOT_ENERGY", true));
                 foreach(ii; 0 .. blk.myConfig.turb_model.nturb) {
@@ -725,11 +725,11 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                 // 0th perturbation: rho
                 mixin(computeGhostCellDerivatives("gas.rho", "blk.MASS", true));
                 // 1st perturbation: u
-                mixin(computeGhostCellDerivatives("vel.refx", "blk.X_MOM", false));
+                mixin(computeGhostCellDerivatives("vel.x", "blk.X_MOM", false));
                 // 2nd perturbation: v
-                mixin(computeGhostCellDerivatives("vel.refy", "blk.Y_MOM", false));
+                mixin(computeGhostCellDerivatives("vel.y", "blk.Y_MOM", false));
                 if ( blk.myConfig.dimensions == 3 )
-                    mixin(computeGhostCellDerivatives("vel.refz", "blk.Z_MOM", false));
+                    mixin(computeGhostCellDerivatives("vel.z", "blk.Z_MOM", false));
                 // 3rd perturbation: P
                 mixin(computeGhostCellDerivatives("gas.p", "blk.TOT_ENERGY", true));
                 foreach(ii; 0 .. blk.myConfig.turb_model.nturb){
@@ -813,11 +813,11 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                 // 0th perturbation: rho
                 mixin(computeFluxDerivativesAroundCell("gas.rho", "blk.MASS", true));
                 // 1st perturbation: u
-                mixin(computeFluxDerivativesAroundCell("vel.refx", "blk.X_MOM", false));
+                mixin(computeFluxDerivativesAroundCell("vel.x", "blk.X_MOM", false));
                 // 2nd perturbation: v
-                mixin(computeFluxDerivativesAroundCell("vel.refy", "blk.Y_MOM", false));
+                mixin(computeFluxDerivativesAroundCell("vel.y", "blk.Y_MOM", false));
                 if ( blk.myConfig.dimensions == 3 )
-                    mixin(computeFluxDerivativesAroundCell("vel.refz", "blk.Z_MOM", false));
+                    mixin(computeFluxDerivativesAroundCell("vel.z", "blk.Z_MOM", false));
                 // 3rd perturbation: P
                 mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
                 foreach(ii; 0 .. blk.myConfig.turb_model.nturb){
@@ -1330,11 +1330,11 @@ void form_external_flow_jacobian_block_phase3(ref SMatrix!number A, FluidBlock b
                         // 0th perturbation: rho
                         mixin(computeFluxDerivativesAroundCell("gas.rho", "blk.MASS", true));
                         // 1st perturbation: u
-                        mixin(computeFluxDerivativesAroundCell("vel.refx", "blk.X_MOM", false));
+                        mixin(computeFluxDerivativesAroundCell("vel.x", "blk.X_MOM", false));
                         // 2nd perturbation: v
-                        mixin(computeFluxDerivativesAroundCell("vel.refy", "blk.Y_MOM", false));
+                        mixin(computeFluxDerivativesAroundCell("vel.y", "blk.Y_MOM", false));
                         if ( blk.myConfig.dimensions == 3 )
-                            mixin(computeFluxDerivativesAroundCell("vel.refz", "blk.Z_MOM", false));
+                            mixin(computeFluxDerivativesAroundCell("vel.z", "blk.Z_MOM", false));
                         // 3rd perturbation: P
                         mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
                         foreach(ii; 0 .. blk.myConfig.turb_model.nturb){
@@ -1406,10 +1406,10 @@ void construct_flow_jacobian_for_boundary_cells(FVCell pcell, FVCell icell, Flui
     // perturb flowstate & compute interface flux sensitivities
     auto cqi = blk.myConfig.cqi;
     mixin(computeFluxDerivativesAroundCell("gas.rho", "blk.MASS", true));
-    mixin(computeFluxDerivativesAroundCell("vel.refx", "blk.X_MOM", false));
-    mixin(computeFluxDerivativesAroundCell("vel.refy", "blk.Y_MOM", false));
+    mixin(computeFluxDerivativesAroundCell("vel.x", "blk.X_MOM", false));
+    mixin(computeFluxDerivativesAroundCell("vel.y", "blk.Y_MOM", false));
     if ( blk.myConfig.dimensions == 3 )
-        mixin(computeFluxDerivativesAroundCell("vel.refz", "blk.Z_MOM", false));
+        mixin(computeFluxDerivativesAroundCell("vel.z", "blk.Z_MOM", false));
     mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
     foreach(ii; 0 .. blk.myConfig.turb_model.nturb){
         mixin(computeFluxDerivativesAroundCell("turb[ii]", "blk.TKE+ii", false));
@@ -1723,11 +1723,11 @@ void compute_flow_jacobian_rows_for_cell(ref SMatrix!number A, ref size_t aa_idx
     // 0th perturbation: rho
     mixin(computeFluxDerivativesAroundCell("gas.rho", "blk.MASS", true));
     // 1st perturbation: u
-    mixin(computeFluxDerivativesAroundCell("vel.refx", "blk.X_MOM", false));
+    mixin(computeFluxDerivativesAroundCell("vel.x", "blk.X_MOM", false));
     // 2nd perturbation: v
-    mixin(computeFluxDerivativesAroundCell("vel.refy", "blk.Y_MOM", false));
+    mixin(computeFluxDerivativesAroundCell("vel.y", "blk.Y_MOM", false));
     if ( blk.myConfig.dimensions == 3 )
-        mixin(computeFluxDerivativesAroundCell("vel.refz", "blk.Z_MOM", false));
+        mixin(computeFluxDerivativesAroundCell("vel.z", "blk.Z_MOM", false));
     // 3rd perturbation: P
     mixin(computeFluxDerivativesAroundCell("gas.p", "blk.TOT_ENERGY", true));
     foreach(ii; 0 .. blk.myConfig.turb_model.nturb) {
@@ -2156,15 +2156,15 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
         
         // perturb design variable in complex plan
         P0 = design_variables[i].y; 
-        design_variables[i].refy = P0 + EPS;
+        design_variables[i].y = P0 + EPS;
         
         // perturb grid
         gridUpdate(design_variables, 1);
 
         foreach (myblk; parallel(localFluidBlocks,1)) {
             foreach(j, vtx; myblk.vertices) {
-                vtx.pos[0].refx = vtx.pos[1].x;
-                vtx.pos[0].refy = vtx.pos[1].y;
+                vtx.pos[0].x = vtx.pos[1].x;
+                vtx.pos[0].y = vtx.pos[1].y;
             }
         }
 
@@ -2215,7 +2215,7 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
         }
         
         // restore design variable
-        design_variables[i].refy = P0;
+        design_variables[i].y = P0;
     }
 }
 
@@ -2356,23 +2356,23 @@ void form_objective_function_sensitivity(FluidBlock blk, size_t np, number EPS, 
         
         // perturb vel-x
         origValue = cell.fs.vel.x;
-        cell.fs.vel.refx = origValue + EPS;
+        cell.fs.vel.x = origValue + EPS;
         blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
         blk.myConfig.gmodel.update_trans_coeffs(cell.fs.gas);
         blk.myConfig.gmodel.update_sound_speed(cell.fs.gas);
         ObjFcnP = objective_function_evaluation();
         blk.f[cell.id*np + 1] = (ObjFcnP.im)/(EPS.im);
-        cell.fs.vel.refx = origValue;
+        cell.fs.vel.x = origValue;
         
         // perturb vel-y
         origValue = cell.fs.vel.y;
-        cell.fs.vel.refy = origValue + EPS;
+        cell.fs.vel.y = origValue + EPS;
         blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
         blk.myConfig.gmodel.update_trans_coeffs(cell.fs.gas);
         blk.myConfig.gmodel.update_sound_speed(cell.fs.gas);
         ObjFcnP = objective_function_evaluation();
         blk.f[cell.id*np + 2] = (ObjFcnP.im)/(EPS.im);
-        cell.fs.vel.refy = origValue;
+        cell.fs.vel.y = origValue;
         
         // perturb pressure
         origValue = cell.fs.gas.p;
@@ -2471,8 +2471,8 @@ void gridUpdate(Vector3[] designVars, size_t gtl, bool gridUpdate = false, strin
     
     foreach (myblk; parallel(localFluidBlocks,1)) {
         foreach(j, vtx; myblk.vertices) {
-            vtx.pos[gtl].refx = vtx.pos[0].x;
-            vtx.pos[gtl].refy = vtx.pos[0].y;
+            vtx.pos[gtl].x = vtx.pos[0].x;
+            vtx.pos[gtl].y = vtx.pos[0].y;
         }
     }
 
@@ -2508,16 +2508,16 @@ void gridUpdate(Vector3[] designVars, size_t gtl, bool gridUpdate = false, strin
                 if (bndary.is_design_surface) {
                     foreach ( i; 1..bndary.bezier.B.length-1) {
                         // y-variable
-                        bndary.bezier.B[i].refy = designVars[i-1].y;
+                        bndary.bezier.B[i].y = designVars[i-1].y;
                     }
                     
                     foreach(j, vtx; bndary.vertices) {
                         if (gridUpdate) {
-                            vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
-                            vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
+                            vtx.pos[gtl].x = bndary.bezier(bndary.ts[j]).x;
+                            vtx.pos[gtl].y = bndary.bezier(bndary.ts[j]).y;
                         } else {
-                            version(complex_numbers) vtx.pos[gtl].refx = complex(vtx.pos[gtl].x.re, bndary.bezier(bndary.ts[j]).x.im);
-                            version(complex_numbers) vtx.pos[gtl].refy = complex(vtx.pos[gtl].y.re, bndary.bezier(bndary.ts[j]).y.im);
+                            version(complex_numbers) vtx.pos[gtl].x = complex(vtx.pos[gtl].x.re, bndary.bezier(bndary.ts[j]).x.im);
+                            version(complex_numbers) vtx.pos[gtl].y = complex(vtx.pos[gtl].y.re, bndary.bezier(bndary.ts[j]).y.im);
                         }
                     }
                 }
@@ -2561,8 +2561,8 @@ void gridUpdate(Vector3[] designVars, size_t gtl, bool gridUpdate = false, strin
     if (gridUpdate) {
         foreach (myblk; localFluidBlocks) {
             foreach(j, vtx; myblk.vertices) {
-                vtx.pos[0].refx = vtx.pos[gtl].x;
-                vtx.pos[0].refy = vtx.pos[gtl].y;
+                vtx.pos[0].x = vtx.pos[gtl].x;
+                vtx.pos[0].y = vtx.pos[gtl].y;
             }
             
             // write out grid
@@ -3530,7 +3530,7 @@ void readBezierDataFromFile(ref Vector3[] designVars)
                     auto line = fR.readln().strip();
                     auto tokens = line.split();
                     Vector3 pt;
-                    pt.refx = to!number(tokens[0]); pt.refy = to!number(tokens[1]); pt.refz = to!number(tokens[2]);
+                    pt.x = to!number(tokens[0]); pt.y = to!number(tokens[1]); pt.z = to!number(tokens[2]);
                     bezPts ~= pt;
                 }
                 bndary.bezier = new Bezier(bezPts);
@@ -3544,8 +3544,8 @@ void readBezierDataFromFile(ref Vector3[] designVars)
                 if (designVars.length < 1) {
                     foreach ( i; 1..bndary.bezier.B.length-1) {
                         Vector3 dvar;
-                        dvar.refx = bndary.bezier.B[i].x;
-                        dvar.refy = bndary.bezier.B[i].y;
+                        dvar.x = bndary.bezier.B[i].x;
+                        dvar.y = bndary.bezier.B[i].y;
                         designVars ~= dvar;
                     }
                 }
@@ -3610,19 +3610,19 @@ void readDesignVarsFromDakotaFile(ref Vector3[] design_variables)
 	// x-variable
         line = f.readln().strip;
         tokens = line.split();
-        design_variables[i].refx = to!double(tokens[0]);
+        design_variables[i].x = to!double(tokens[0]);
         // y-variable
         line = f.readln().strip;
         tokens = line.split();
-        design_variables[i].refy = to!double(tokens[0]);
+        design_variables[i].y = to!double(tokens[0]);
     }
     // assign design variables to bezier curve
     foreach ( myblk; localFluidBlocks) {
 	foreach ( bndary; myblk.bc) {
 	    if ( bndary.is_design_surface) {
 		foreach ( i; 1..bndary.bezier.B.length-1) {
-		    bndary.bezier.B[i].refx = design_variables[i-1].x;
-		    bndary.bezier.B[i].refy = design_variables[i-1].y;
+		    bndary.bezier.B[i].x = design_variables[i-1].x;
+		    bndary.bezier.B[i].y = design_variables[i-1].y;
 		} // end foreach i
 	    } // end if
 	} // end foreach bndary
@@ -3783,15 +3783,15 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
 
         // perturb design variable in complex plane
         P0 = design_variables[i].y; 
-        design_variables[i].refy = P0 + EPS;
+        design_variables[i].y = P0 + EPS;
         
         // perturb grid
         gridUpdate(design_variables, 1); // gtl = 1
 
         foreach (myblk; parallel(localFluidBlocks,1)) {
             foreach(j, vtx; myblk.vertices) {
-                vtx.pos[0].refx = vtx.pos[1].x;
-                vtx.pos[0].refy = vtx.pos[1].y;
+                vtx.pos[0].x = vtx.pos[1].x;
+                vtx.pos[0].y = vtx.pos[1].y;
             }
         }
 
@@ -3889,14 +3889,14 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         objFcnP = objective_function_evaluation();
         
         // return value to original state
-        design_variables[i].refy = P0;
+        design_variables[i].y = P0;
         
         // compute objective function gradient
         objFcnM = objective_function_evaluation();
         gradients ~= (objFcnP.im)/(EPS.im);
         
         // return value to original state
-        design_variables[i].refy = P0;
+        design_variables[i].y = P0;
     }
     foreach ( i; 0..nDesignVars) {
         writef("gradient for variable %d: %.16e \n", i, gradients[i]);
@@ -3940,15 +3940,15 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         
         // perturb design variable in complex plane
         P0 = design_variables[i].y; 
-        design_variables[i].refy = P0 + EPS.im;
+        design_variables[i].y = P0 + EPS.im;
         
         // perturb grid
         gridUpdate(design_variables, 1); // gtl = 1
 
         foreach (myblk; parallel(localFluidBlocks,1)) {
             foreach(j, vtx; myblk.vertices) {
-                vtx.pos[0].refx = vtx.pos[1].x;
-                vtx.pos[0].refy = vtx.pos[1].y;
+                vtx.pos[0].x = vtx.pos[1].x;
+                vtx.pos[0].y = vtx.pos[1].y;
             }
         }
         
@@ -3981,7 +3981,7 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         objFcnP = objective_function_evaluation();
                 
         // return value to original state
-        design_variables[i].refy = P0;
+        design_variables[i].y = P0;
 
 
         foreach (myblk; localFluidBlocks) {
@@ -4007,15 +4007,15 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         
         // perturb design variable in complex plane
         P0 = design_variables[i].y; 
-        design_variables[i].refy = P0 - EPS.im;
+        design_variables[i].y = P0 - EPS.im;
         
         // perturb grid
         gridUpdate(design_variables, 1); // gtl = 1
 
         foreach (myblk; parallel(localFluidBlocks,1)) {
             foreach(j, vtx; myblk.vertices) {
-                vtx.pos[0].refx = vtx.pos[1].x;
-                vtx.pos[0].refy = vtx.pos[1].y;
+                vtx.pos[0].x = vtx.pos[1].x;
+                vtx.pos[0].y = vtx.pos[1].y;
             }
         }
         
@@ -4043,7 +4043,7 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         gradients ~= (objFcnP.re-objFcnM.re)/(2.0*EPS.im);
         
         // return value to original state
-        design_variables[i].refy = P0;
+        design_variables[i].y = P0;
     }
     foreach ( i; 0..nDesignVars) {
         writef("gradient for variable %d: %.16e \n", i, gradients[i]);
@@ -4168,9 +4168,9 @@ void block_diagonal_preconditioner(FluidBlock blk, size_t np, double dt, size_t 
         // 0th perturbation: rho
         mixin(computeFluxDerivativesAroundCell("gas.rho", "0", true));
         // 1st perturbation: u
-        mixin(computeFluxDerivativesAroundCell("vel.refx", "1", false));
+        mixin(computeFluxDerivativesAroundCell("vel.x", "1", false));
         // 2nd perturbation: v
-        mixin(computeFluxDerivativesAroundCell("vel.refy", "2", false));
+        mixin(computeFluxDerivativesAroundCell("vel.y", "2", false));
         // 3rd perturbation: P
         mixin(computeFluxDerivativesAroundCell("gas.p", "3", true));
 
@@ -4293,9 +4293,9 @@ void apply_boundary_conditions_for_sss_preconditioner(FluidBlock blk, size_t np,
                 // 0th perturbation: rho
                 mixin(computeGhostCellDerivatives("gas.rho", "0", true));
                 // 1st perturbation: u
-                mixin(computeGhostCellDerivatives("vel.refx", "1", false));
+                mixin(computeGhostCellDerivatives("vel.x", "1", false));
                 // 2nd perturbation: v
-                mixin(computeGhostCellDerivatives("vel.refy", "2", false));
+                mixin(computeGhostCellDerivatives("vel.y", "2", false));
                 // 3rd perturbation: P
                 mixin(computeGhostCellDerivatives("gas.p", "3", true));
 
@@ -4314,9 +4314,9 @@ void apply_boundary_conditions_for_sss_preconditioner(FluidBlock blk, size_t np,
                 // 0th perturbation: rho
                 mixin(computeFluxDerivativesAroundCell("gas.rho", "0", true));
                 // 1st perturbation: u
-                mixin(computeFluxDerivativesAroundCell("vel.refx", "1", false));
+                mixin(computeFluxDerivativesAroundCell("vel.x", "1", false));
                 // 2nd perturbation: v
-                mixin(computeFluxDerivativesAroundCell("vel.refy", "2", false));
+                mixin(computeFluxDerivativesAroundCell("vel.y", "2", false));
                 // 3rd perturbation: P
                 mixin(computeFluxDerivativesAroundCell("gas.p", "3", true));
                 

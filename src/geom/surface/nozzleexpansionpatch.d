@@ -53,19 +53,19 @@ public:
     override Vector3 opCall(double r, double s) const
     {
         Vector3 p;
-        p.refz = 0.0;
+        p.z = 0.0;
         if (r == 0.0) {
             // East edge
-            p.refx = cNorth(0.0).x;
-            p.refy = s*cNorth(0.0).y;
+            p.x = cNorth(0.0).x;
+            p.y = s*cNorth(0.0).y;
         } else if (r == 1.0) {
             // West edge
-            p.refx = cNorth(1.0).x;
-            p.refy = s*cNorth(1.0).y;
+            p.x = cNorth(1.0).x;
+            p.y = s*cNorth(1.0).y;
         } else if (s == 1.0) {
             // North edge
-            p.refx = cNorth(r).x;
-            p.refy = cNorth(r).y;
+            p.x = cNorth(r).x;
+            p.y = cNorth(r).y;
         } else {
             // Any other point, including the south edge.
             //
@@ -116,12 +116,12 @@ public:
             auto axis_pt_x = mid_pt_x;
             auto axis_pt_y = 0.0;
             if (s == 0.0) {
-                p.refx = axis_pt_x;
-                p.refy = axis_pt_y;
+                p.x = axis_pt_x;
+                p.y = axis_pt_y;
             } else {
                 // Generate point on quadratic Bezier curve.
-                p.refx = (1-s)*(1-s)*axis_pt_x + 2*s*(1-s)*mid_pt_x + s*s*wall_pt_x;
-                p.refy = (1-s)*(1-s)*axis_pt_y + 2*s*(1-s)*mid_pt_y + s*s*wall_pt_y;
+                p.x = (1-s)*(1-s)*axis_pt_x + 2*s*(1-s)*mid_pt_x + s*s*wall_pt_x;
+                p.y = (1-s)*(1-s)*axis_pt_y + 2*s*(1-s)*mid_pt_y + s*s*wall_pt_y;
             }
         }
         return p;

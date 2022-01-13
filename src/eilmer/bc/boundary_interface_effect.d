@@ -516,7 +516,7 @@ class BIE_ZeroVelocity : BoundaryInterfaceEffect {
         auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
 	FlowState fs = f.fs;
-	fs.vel.refx = 0.0; fs.vel.refy = 0.0; fs.vel.refz = 0.0;
+	fs.vel.x = 0.0; fs.vel.y = 0.0; fs.vel.z = 0.0;
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -525,7 +525,7 @@ class BIE_ZeroVelocity : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             FlowState fs = f.fs;
-            fs.vel.refx = 0.0; fs.vel.refy = 0.0; fs.vel.refz = 0.0;
+            fs.vel.x = 0.0; fs.vel.y = 0.0; fs.vel.z = 0.0;
         } // end foreach face
     }
 

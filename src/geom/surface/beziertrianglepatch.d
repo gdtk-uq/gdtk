@@ -117,9 +117,9 @@ public:
                     auto wIdx = toSingleIndex!()(i, j, k+1);
                     // Do Vector3 operation component-wise to
                     // avoid allocation of temporaries.
-                    _b[r][idx].refx = u*_b[r-1][uIdx].x + v*_b[r-1][vIdx].x + w*_b[r-1][wIdx].x;
-                    _b[r][idx].refy = u*_b[r-1][uIdx].y + v*_b[r-1][vIdx].y + w*_b[r-1][wIdx].y;
-                    _b[r][idx].refz = u*_b[r-1][uIdx].z + v*_b[r-1][vIdx].z + w*_b[r-1][wIdx].z;
+                    _b[r][idx].x = u*_b[r-1][uIdx].x + v*_b[r-1][vIdx].x + w*_b[r-1][wIdx].x;
+                    _b[r][idx].y = u*_b[r-1][uIdx].y + v*_b[r-1][vIdx].y + w*_b[r-1][wIdx].y;
+                    _b[r][idx].z = u*_b[r-1][uIdx].z + v*_b[r-1][vIdx].z + w*_b[r-1][wIdx].z;
                 }
             }
         }
@@ -427,9 +427,9 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Vector3 p0, V
                 // Skip corner points
                 if (i == n || j == n || k == n) continue;
                 auto idx = toSingleIndex!()(i,j,k);
-                myBezTriPatch.B[idx].refx = d[pos]; pos++;
-                myBezTriPatch.B[idx].refy = d[pos]; pos++;
-                myBezTriPatch.B[idx].refz = d[pos]; pos++;
+                myBezTriPatch.B[idx].x = d[pos]; pos++;
+                myBezTriPatch.B[idx].y = d[pos]; pos++;
+                myBezTriPatch.B[idx].z = d[pos]; pos++;
             }
         }
         // Remember to update working space after changing control
@@ -465,9 +465,9 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Vector3 p0, V
                 // Skip corner points
                 if (i == n || j == n || k == n) continue;
                 auto idx = toSingleIndex!()(i,j,k);
-                myBezTriPatch.B[idx].refx = d[pos]; pos++;
-                myBezTriPatch.B[idx].refy = d[pos]; pos++;
-                myBezTriPatch.B[idx].refz = d[pos]; pos++;
+                myBezTriPatch.B[idx].x = d[pos]; pos++;
+                myBezTriPatch.B[idx].y = d[pos]; pos++;
+                myBezTriPatch.B[idx].z = d[pos]; pos++;
             }
         }
         // Remember to update working space after changing control
@@ -606,9 +606,9 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
                 auto idx = toSingleIndex!()(i,j,k);
                 //writeln("i= ", i, " j= ", j, " k= ", k);
                 //writeln("idx= ", idx);
-                myBezTriPatch.B[idx].refx = d[pos]; pos++;
-                myBezTriPatch.B[idx].refy = d[pos]; pos++;
-                myBezTriPatch.B[idx].refz = d[pos]; pos++;
+                myBezTriPatch.B[idx].x = d[pos]; pos++;
+                myBezTriPatch.B[idx].y = d[pos]; pos++;
+                myBezTriPatch.B[idx].z = d[pos]; pos++;
             }
         }
         // Remember to update working space after changing control
@@ -651,9 +651,9 @@ BezierTrianglePatch bezierTriangleFromPointCloud(Vector3[] points, Bezier b0, Be
             // Skip edge points
             if (i == 0 || j == 0 || k == 0) continue;
             auto idx = toSingleIndex!()(i,j,k);
-            myBezTriPatch.B[idx].refx = d[pos]; pos++;
-            myBezTriPatch.B[idx].refy = d[pos]; pos++;
-            myBezTriPatch.B[idx].refz = d[pos]; pos++;
+            myBezTriPatch.B[idx].x = d[pos]; pos++;
+            myBezTriPatch.B[idx].y = d[pos]; pos++;
+            myBezTriPatch.B[idx].z = d[pos]; pos++;
         }
     }
     // Remember to update working space after changing control
@@ -705,9 +705,9 @@ version(beziertrianglepatch_test) {
         auto p1 = Vector3(0, 6, 0);
         auto p2 = Vector3(0, 0, 0);
         // Let's perturb the points a little as an initial guess.
-        B[1].refx = 3.1; B[1].refy = 2.9; B[1].refz = 6.2;
-        B[2].refx = 2.8; B[2].refy = 0.15; B[2].refz = -0.05;
-        B[4].refx = -0.3; B[4].refy = 2.85; B[4].refz = -0.1;
+        B[1].x = 3.1; B[1].y = 2.9; B[1].z = 6.2;
+        B[2].x = 2.8; B[2].y = 0.15; B[2].z = -0.05;
+        B[4].x = -0.3; B[4].y = 2.85; B[4].z = -0.1;
         auto guess = new BezierTrianglePatch(B, 2);
         auto testPatch = bezierTriangleFromPointCloud(points, p0, p1, p2, 2, guess);
 

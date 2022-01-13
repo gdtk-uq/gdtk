@@ -39,7 +39,7 @@ void reflect_normal_velocity(ref FlowState fs, in FVInterface IFace)
 // rotate back to the global frame.
 {
     fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-    fs.vel.refx = -(fs.vel.x);
+    fs.vel.x = -(fs.vel.x);
     fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
 }
 
@@ -52,8 +52,8 @@ void reverse_tangential_velocity(ref FlowState fs, in FVInterface IFace)
 // rotate back to the global frame.
 {
     fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-    fs.vel.refy = -(fs.vel.y);
-    fs.vel.refz = -(fs.vel.z);
+    fs.vel.y = -(fs.vel.y);
+    fs.vel.z = -(fs.vel.z);
     fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
 }
 
@@ -62,11 +62,11 @@ void reflect_normal_magnetic_field(ref FlowState fs, in FVInterface IFace)
 {
     version(MHD) {
         fs.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-        fs.B.refx = -(fs.B.x);
+        fs.B.x = -(fs.B.x);
         fs.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
         // Used for different boundary conditions in the divergence cleaning- not currently active
         /*if (GlobalConfig.divergence_cleaning) {
-                fs.psi = fs.psi + GlobalConfig.c_h * (fs.B.refx - fs.B.x);
+                fs.psi = fs.psi + GlobalConfig.c_h * (fs.B.x - fs.B.x);
         }*/
     }
 }

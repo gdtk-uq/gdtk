@@ -489,34 +489,34 @@ extern(C) int fromTable(lua_State* L)
     // Look for velocity components: "velx", "vely", "velz"
     lua_getfield(L, 2, "velx");
     if ( !lua_isnil(L, -1 ) ) {
-        fs.vel.refx = luaL_checknumber(L, -1);
+        fs.vel.x = luaL_checknumber(L, -1);
     }
     lua_pop(L, 1);
     lua_getfield(L, 2, "vely");
     if ( !lua_isnil(L, -1 ) ) {
-        fs.vel.refy = luaL_checknumber(L, -1);
+        fs.vel.y = luaL_checknumber(L, -1);
     }
     lua_pop(L, 1);
     lua_getfield(L, 2, "velz");
     if ( !lua_isnil(L, -1 ) ) {
-        fs.vel.refz = luaL_checknumber(L, -1);
+        fs.vel.z = luaL_checknumber(L, -1);
     }
     lua_pop(L, 1);
     version(MHD) {
         // Look for B components: "Bx", "By", "Bz"
         lua_getfield(L, 2, "Bx");
         if ( !lua_isnil(L, -1 ) ) {
-            fs.B.refx = luaL_checknumber(L, -1);
+            fs.B.x = luaL_checknumber(L, -1);
         }
         lua_pop(L, 1);
         lua_getfield(L, 2, "By");
         if ( !lua_isnil(L, -1 ) ) {
-            fs.B.refy = luaL_checknumber(L, -1);
+            fs.B.y = luaL_checknumber(L, -1);
         }
         lua_pop(L, 1);
         lua_getfield(L, 2, "Bz");
         if ( !lua_isnil(L, -1 ) ) {
-            fs.B.refz = luaL_checknumber(L, -1);
+            fs.B.z = luaL_checknumber(L, -1);
         }
         lua_pop(L, 1);
 

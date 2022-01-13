@@ -1086,14 +1086,14 @@ public:
                 ";
                 return code;
             }
-            mixin(codeForReconstruction("vel.x", "velx", "vel.refx", "velxPhi"));
-            mixin(codeForReconstruction("vel.y", "vely", "vel.refy", "velyPhi"));
-            mixin(codeForReconstruction("vel.z", "velz", "vel.refz", "velzPhi"));
+            mixin(codeForReconstruction("vel.x", "velx", "vel.x", "velxPhi"));
+            mixin(codeForReconstruction("vel.y", "vely", "vel.y", "velyPhi"));
+            mixin(codeForReconstruction("vel.z", "velz", "vel.z", "velzPhi"));
             version(MHD) {
                 if (myConfig.MHD) {
-                    mixin(codeForReconstruction("B.x", "Bx", "B.refx", "BxPhi"));
-                    mixin(codeForReconstruction("B.y", "By", "B.refy", "ByPhi"));
-                    mixin(codeForReconstruction("B.z", "Bz", "B.refz", "BxPhi"));
+                    mixin(codeForReconstruction("B.x", "Bx", "B.x", "BxPhi"));
+                    mixin(codeForReconstruction("B.y", "By", "B.y", "ByPhi"));
+                    mixin(codeForReconstruction("B.z", "Bz", "B.z", "BxPhi"));
                     if (myConfig.divergence_cleaning) {
                         mixin(codeForReconstruction("psi", "psi", "psi", "psiPhi"));
                     }
@@ -1267,14 +1267,14 @@ public:
                 ";
                 return code;
             }
-            mixin(codeForReconstruction("vel.x", "velx", "vel.refx", "velxPhi"));
-            mixin(codeForReconstruction("vel.y", "vely", "vel.refy", "velyPhi"));
-            mixin(codeForReconstruction("vel.z", "velz", "vel.refz", "velzPhi"));
+            mixin(codeForReconstruction("vel.x", "velx", "vel.x", "velxPhi"));
+            mixin(codeForReconstruction("vel.y", "vely", "vel.y", "velyPhi"));
+            mixin(codeForReconstruction("vel.z", "velz", "vel.z", "velzPhi"));
             version(MHD) {
                 if (myConfig.MHD) {
-                    mixin(codeForReconstruction("B.x", "Bx", "B.refx", "BxPhi"));
-                    mixin(codeForReconstruction("B.y", "By", "B.refy", "ByPhi"));
-                    mixin(codeForReconstruction("B.z", "Bz", "B.refz", "BxPhi"));
+                    mixin(codeForReconstruction("B.x", "Bx", "B.x", "BxPhi"));
+                    mixin(codeForReconstruction("B.y", "By", "B.y", "ByPhi"));
+                    mixin(codeForReconstruction("B.z", "Bz", "B.z", "BxPhi"));
                     if (myConfig.divergence_cleaning) {
                         mixin(codeForReconstruction("psi", "psi", "psi", "psiPhi"));
                     }
@@ -1435,14 +1435,14 @@ public:
                 ";
                 return code;
             }
-            mixin(codeForReconstruction("vel.x", "velx", "vel.refx", "velxPhi"));
-            mixin(codeForReconstruction("vel.y", "vely", "vel.refy", "velyPhi"));
-            mixin(codeForReconstruction("vel.z", "velz", "vel.refz", "velzPhi"));
+            mixin(codeForReconstruction("vel.x", "velx", "vel.x", "velxPhi"));
+            mixin(codeForReconstruction("vel.y", "vely", "vel.y", "velyPhi"));
+            mixin(codeForReconstruction("vel.z", "velz", "vel.z", "velzPhi"));
             version(MHD) {
                 if (myConfig.MHD) {
-                    mixin(codeForReconstruction("B.x", "Bx", "B.refx", "BxPhi"));
-                    mixin(codeForReconstruction("B.y", "By", "B.refy", "ByPhi"));
-                    mixin(codeForReconstruction("B.z", "Bz", "B.refz", "BxPhi"));
+                    mixin(codeForReconstruction("B.x", "Bx", "B.x", "BxPhi"));
+                    mixin(codeForReconstruction("B.y", "By", "B.y", "ByPhi"));
+                    mixin(codeForReconstruction("B.z", "Bz", "B.z", "BxPhi"));
                     if (myConfig.divergence_cleaning) {
                         mixin(codeForReconstruction("psi", "psi", "psi", "psiPhi"));
                     }

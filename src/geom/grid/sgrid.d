@@ -1490,14 +1490,14 @@ StructuredGrid[] importPlot3DGrid(string fileName, int dim, double scale=1.0)
         foreach (k; 0 .. g.nkv) {
             foreach (j; 0 .. g.njv) {
                 foreach (i; 0 .. g.niv) {
-                    g[i,j,k].refx = coords[ic]; ic++;
+                    g[i,j,k].x = coords[ic]; ic++;
                 }
             }
         }
         foreach (k; 0 .. g.nkv) {
             foreach (j; 0 .. g.njv) {
                 foreach (i; 0 .. g.niv) {
-                    g[i,j,k].refy = coords[ic]; ic++;
+                    g[i,j,k].y = coords[ic]; ic++;
                 }
             }
         }
@@ -1505,7 +1505,7 @@ StructuredGrid[] importPlot3DGrid(string fileName, int dim, double scale=1.0)
             foreach (k; 0 .. g.nkv) {
                 foreach (j; 0 .. g.njv) {
                     foreach (i; 0 .. g.niv) {
-                        g[i,j,k].refz = coords[ic]; ic++;
+                        g[i,j,k].z = coords[ic]; ic++;
                     }
                 }
             }
@@ -1514,7 +1514,7 @@ StructuredGrid[] importPlot3DGrid(string fileName, int dim, double scale=1.0)
             foreach (k; 0 .. g.nkv) {
                 foreach (j; 0 .. g.njv) {
                     foreach (i; 0 .. g.niv) {
-                        g[i,j,k].refz = 0.0;
+                        g[i,j,k].z = 0.0;
                     }
                 }
             }

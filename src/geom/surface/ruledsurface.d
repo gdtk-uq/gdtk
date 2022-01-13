@@ -76,7 +76,7 @@ public:
         default:
             throw new Exception("Invalid string for ruled_direction: " ~ ruled_direction);
         }
-        if (pure2D) { p.refz = 0.0; }
+        if (pure2D) { p.z = 0.0; }
         return p;
     }
 

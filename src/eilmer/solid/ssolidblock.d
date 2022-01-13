@@ -301,9 +301,9 @@ public:
                     for ( size_t i = imin; i <= imax+1; ++i ) {
                         auto src_vtx = grid[i-imin,j-jmin,k-kmin];
                         auto vtx = getVtx(i,j,k);
-                        vtx.pos.refx = src_vtx.x;
-                        vtx.pos.refy = src_vtx.y;
-                        vtx.pos.refz = src_vtx.z;
+                        vtx.pos.x = src_vtx.x;
+                        vtx.pos.y = src_vtx.y;
+                        vtx.pos.z = src_vtx.z;
                     } // for i
                 } // for j
             } // for k
@@ -317,9 +317,9 @@ public:
                 for ( size_t i = imin; i <= imax+1; ++i ) {
                     auto vtx = getVtx(i,j);
                     auto src_vtx = grid[i-imin,j-jmin];
-                    vtx.pos.refx = src_vtx.x;
-                    vtx.pos.refy = src_vtx.y;
-                    vtx.pos.refz = 0.0;
+                    vtx.pos.x = src_vtx.x;
+                    vtx.pos.y = src_vtx.y;
+                    vtx.pos.z = 0.0;
                 } // for i
             } // for j
         }
@@ -341,9 +341,9 @@ public:
                 for ( size_t i = imin; i <= imax+1; ++i ) {
                     auto vtx = getVtx(i,j,k);
                     auto dest_vtx = grid[i-imin,j-jmin,k-kmin];
-                    dest_vtx.refx = vtx.pos.x;
-                    dest_vtx.refy = vtx.pos.y;
-                    dest_vtx.refz = vtx.pos.z;
+                    dest_vtx.x = vtx.pos.x;
+                    dest_vtx.y = vtx.pos.y;
+                    dest_vtx.z = vtx.pos.z;
                 } // for i
             } // for j
         } // for k
@@ -460,17 +460,17 @@ public:
                 xyarea = 0.5 * ((xB + xA) * (yB - yA) + (xC + xB) * (yC - yB) +
                                 (xD + xC) * (yD - yC) + (xA + xD) * (yA - yD));
                 // Cell Centroid.
-                cell.pos.refx = 1.0 / (xyarea * 6.0) *
+                cell.pos.x = 1.0 / (xyarea * 6.0) *
                     ((yB - yA) * (xA * xA + xA * xB + xB * xB) +
                      (yC - yB) * (xB * xB + xB * xC + xC * xC) +
                      (yD - yC) * (xC * xC + xC * xD + xD * xD) +
                      (yA - yD) * (xD * xD + xD * xA + xA * xA));
-                cell.pos.refy = -1.0 / (xyarea * 6.0) *
+                cell.pos.y = -1.0 / (xyarea * 6.0) *
                     ((xB - xA) * (yA * yA + yA * yB + yB * yB) +
                      (xC - xB) * (yB * yB + yB * yC + yC * yC) +
                      (xD - xC) * (yC * yC + yC * yD + yD * yD) +
                      (xA - xD) * (yD * yD + yD * yA + yA * yA));
-                cell.pos.refz = 0.0;
+                cell.pos.z = 0.0;
                 // Cell Volume.
                 if ( myConfig.axisymmetric ) {
                     // Volume per radian = centroid y-ordinate * cell area
@@ -512,9 +512,9 @@ public:
                     writefln("Zero length ifi[%d,%d]: %e", i, j, LAB);
                 }
                 // Direction cosines for the unit normal.
-                iface.n.refx = (yB - yA) / LAB;
-                iface.n.refy = -(xB - xA) / LAB;
-                iface.n.refz = 0.0;  // 2D plane
+                iface.n.x = (yB - yA) / LAB;
+                iface.n.y = -(xB - xA) / LAB;
+                iface.n.z = 0.0;  // 2D plane
                 iface.t2 = Vector3(0.0, 0.0, 1.0);
                 iface.t1 = cross(iface.n, iface.t2);
                 // Length in the XY-plane.
@@ -546,9 +546,9 @@ public:
                     writefln("Zero length ifj[%d,%d]: %e", i, j, LBC);
                 }
                 // Direction cosines for the unit normal.
-                iface.n.refx = (yC - yB) / LBC;
-                iface.n.refy = -(xC - xB) / LBC;
-                iface.n.refz = 0.0;  // 2D plane
+                iface.n.x = (yC - yB) / LBC;
+                iface.n.y = -(xC - xB) / LBC;
+                iface.n.z = 0.0;  // 2D plane
                 iface.t2 = Vector3(0.0, 0.0, 1.0);
                 iface.t1 = cross(iface.n, iface.t2);
                 // Length in the XY-plane.
@@ -676,15 +676,15 @@ public:
                     quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
 
                     // set properties.
-                    iface.n.refx = n.x;
-                    iface.n.refy = n.y;
-                    iface.n.refz = n.z;
-                    iface.t2.refx = t2.x;
-                    iface.t2.refy = t2.y;
-                    iface.t2.refz = t2.z;
-                    iface.t1.refx = t1.x;
-                    iface.t1.refy = t1.y;
-                    iface.t1.refz = t1.z;
+                    iface.n.x = n.x;
+                    iface.n.y = n.y;
+                    iface.n.z = n.z;
+                    iface.t2.x = t2.x;
+                    iface.t2.y = t2.y;
+                    iface.t2.z = t2.z;
+                    iface.t1.x = t1.x;
+                    iface.t1.y = t1.y;
+                    iface.t1.z = t1.z;
                     iface.area = area;
                     iface.pos = (p0 + p1 + p2 + p3)/4.0;
                 } // j loop
@@ -703,15 +703,15 @@ public:
                     quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
 
                     // set properties.
-                    iface.n.refx = n.x;
-                    iface.n.refy = n.y;
-                    iface.n.refz = n.z;
-                    iface.t2.refx = t2.x;
-                    iface.t2.refy = t2.y;
-                    iface.t2.refz = t2.z;
-                    iface.t1.refx = t1.x;
-                    iface.t1.refy = t1.y;
-                    iface.t1.refz = t1.z;
+                    iface.n.x = n.x;
+                    iface.n.y = n.y;
+                    iface.n.z = n.z;
+                    iface.t2.x = t2.x;
+                    iface.t2.y = t2.y;
+                    iface.t2.z = t2.z;
+                    iface.t1.x = t1.x;
+                    iface.t1.y = t1.y;
+                    iface.t1.z = t1.z;
                     iface.area = area;
                     iface.pos = (p0 + p1 + p2 + p3)/4.0;
                 } // j loop
@@ -730,15 +730,15 @@ public:
                     quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
 
                     // set properties.
-                    iface.n.refx = n.x;
-                    iface.n.refy = n.y;
-                    iface.n.refz = n.z;
-                    iface.t2.refx = t2.x;
-                    iface.t2.refy = t2.y;
-                    iface.t2.refz = t2.z;
-                    iface.t1.refx = t1.x;
-                    iface.t1.refy = t1.y;
-                    iface.t1.refz = t1.z;
+                    iface.n.x = n.x;
+                    iface.n.y = n.y;
+                    iface.n.z = n.z;
+                    iface.t2.x = t2.x;
+                    iface.t2.y = t2.y;
+                    iface.t2.z = t2.z;
+                    iface.t1.x = t1.x;
+                    iface.t1.y = t1.y;
+                    iface.t1.z = t1.z;
                     iface.area = area;
                     iface.pos = (p0 + p1 + p2 + p3)/4.0;
                 } // j loop

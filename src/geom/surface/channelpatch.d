@@ -51,7 +51,7 @@ public:
     {
         auto bridge_path = make_bridging_path(r);
         Vector3 p = bridge_path(s);
-        if (pure2D) { p.refz = 0.0; }
+        if (pure2D) { p.z = 0.0; }
         return p;
     }
 
@@ -79,7 +79,7 @@ public:
     {
         Vector3 pA = cSouth(r);
         Vector3 pB = cNorth(r);
-        if (pure2D) { pA.refz = 0.0; pB.refz = 0.0; }
+        if (pure2D) { pA.z = 0.0; pB.z = 0.0; }
         if (ruled) {
             // Bridge with a straight line for a ruled surface.
             return new Line(pA, pB);
@@ -98,7 +98,7 @@ public:
             // Intermediate control points for the cubic Bezier.
             Vector3 p1 = pA + L/3.0*nA;
             Vector3 p2 = pB + L/3.0*nB;
-            if (pure2D) { p1.refz = 0.0; p2.refz = 0.0; }
+            if (pure2D) { p1.z = 0.0; p2.z = 0.0; }
             return new Bezier([pA, p1, p2, pB]);
         }
     } // end make_bridging_path()

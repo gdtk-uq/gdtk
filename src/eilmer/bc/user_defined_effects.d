@@ -200,9 +200,9 @@ private:
         // For UserDefinedGhostCellBC, the following call to update_trans_coeffs() is done
         // a little later via an action in the preSpatialDerivActionAtBndryFaces list.
         // gmodel.update_trans_coeffs(ghostCell.fs.gas);
-        ghostCell.fs.vel.refx = getNumberFromTable(L, tblIdx, "velx", false, 0.0);
-        ghostCell.fs.vel.refy = getNumberFromTable(L, tblIdx, "vely", false, 0.0);
-        ghostCell.fs.vel.refz = getNumberFromTable(L, tblIdx, "velz", false, 0.0);
+        ghostCell.fs.vel.x = getNumberFromTable(L, tblIdx, "velx", false, 0.0);
+        ghostCell.fs.vel.y = getNumberFromTable(L, tblIdx, "vely", false, 0.0);
+        ghostCell.fs.vel.z = getNumberFromTable(L, tblIdx, "velz", false, 0.0);
 
         version(turbulence) {
             foreach(it; 0 .. blk.myConfig.turb_model.nturb){
@@ -439,19 +439,19 @@ private:
 
         lua_getfield(L, tblIdx, "velx");
         if ( !lua_isnil(L, -1) ) {
-            fs.vel.refx = getDouble(L, tblIdx, "velx");
+            fs.vel.x = getDouble(L, tblIdx, "velx");
         }
         lua_pop(L, 1);
 
         lua_getfield(L, tblIdx, "vely");
         if ( !lua_isnil(L, -1) ) {
-            fs.vel.refy = getDouble(L, tblIdx, "vely");
+            fs.vel.y = getDouble(L, tblIdx, "vely");
         }
         lua_pop(L, 1);
 
         lua_getfield(L, tblIdx, "velz");
         if ( !lua_isnil(L, -1) ) {
-            fs.vel.refz = getDouble(L, tblIdx, "velz");
+            fs.vel.z = getDouble(L, tblIdx, "velz");
         }
         lua_pop(L, 1);
 

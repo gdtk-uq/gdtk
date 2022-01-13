@@ -1063,9 +1063,9 @@ public:
                     }
                     c.volume.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.volume.im = incoming_solidstate_buf[ii++]; }
                     c.areaxy.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.areaxy.im = incoming_solidstate_buf[ii++]; }
-                    c.pos.refx.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.pos.refx.im = incoming_solidstate_buf[ii++]; }
-                    c.pos.refy.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.pos.refy.im = incoming_solidstate_buf[ii++]; }
-                    c.pos.refz.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.pos.refz.im = incoming_solidstate_buf[ii++]; }
+                    c.pos.x.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.pos.x.im = incoming_solidstate_buf[ii++]; }
+                    c.pos.y.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.pos.y.im = incoming_solidstate_buf[ii++]; }
+                    c.pos.z.re = incoming_solidstate_buf[ii++]; version(complex_numbers) { c.pos.z.im = incoming_solidstate_buf[ii++]; }
                     c.sp.rho.re = incoming_solidstate_buf[ii++];
                     c.sp.k.re = incoming_solidstate_buf[ii++];
                     c.sp.Cp.re = incoming_solidstate_buf[ii++];

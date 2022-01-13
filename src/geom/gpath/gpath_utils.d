@@ -122,13 +122,13 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, Bezier initGuess, re
         // Adjust Bezier points based on supplied design values 'd'
         foreach (i; 1 .. nCtrlPts-1) {
             if (dim == 2) {
-                myBez.B[i].refx = d[2*i - 2];
-                myBez.B[i].refy = d[2*i - 1];
+                myBez.B[i].x = d[2*i - 2];
+                myBez.B[i].y = d[2*i - 1];
             }
             else {
-                myBez.B[i].refx = d[3*i - 3];
-                myBez.B[i].refy = d[3*i - 2];
-                myBez.B[i].refz = d[3*i - 1];
+                myBez.B[i].x = d[3*i - 3];
+                myBez.B[i].y = d[3*i - 2];
+                myBez.B[i].z = d[3*i - 1];
             }
         }
         // Evaluate error between data points and Bezier curve
@@ -153,13 +153,13 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, Bezier initGuess, re
     success = nm.nelmin.minimize!(funMin,number)(d, f_min, n_fe, n_restart, dx, tol, 1, max_steps);
     foreach (i; 1 .. nCtrlPts-1) {
         if (dim == 2) {
-            myBez.B[i].refx = d[2*i - 2];
-            myBez.B[i].refy = d[2*i - 1];
+            myBez.B[i].x = d[2*i - 2];
+            myBez.B[i].y = d[2*i - 1];
         }
         else {
-            myBez.B[i].refx = d[3*i - 3];
-            myBez.B[i].refy = d[3*i - 2];
-            myBez.B[i].refz = d[3*i - 1];
+            myBez.B[i].x = d[3*i - 3];
+            myBez.B[i].y = d[3*i - 2];
+            myBez.B[i].z = d[3*i - 1];
         }
     }
     // Populate ts vector with all the t-values associated with the data points.
@@ -252,13 +252,13 @@ Bezier optimiseBezierPoints2(Vector3[] points, int nCtrlPts, Bezier initGuess, V
         // Adjust Bezier points based on supplied design values 'd'
         foreach (i; 2 .. nCtrlPts-2) {
             if (dim == 2) {
-                myBez.B[i].refx = d[2*i - 2];
-                myBez.B[i].refy = d[2*i - 1];
+                myBez.B[i].x = d[2*i - 2];
+                myBez.B[i].y = d[2*i - 1];
             }
             else {
-                myBez.B[i].refx = d[3*i - 3];
-                myBez.B[i].refy = d[3*i - 2];
-                myBez.B[i].refz = d[3*i - 1];
+                myBez.B[i].x = d[3*i - 3];
+                myBez.B[i].y = d[3*i - 2];
+                myBez.B[i].z = d[3*i - 1];
             }
         }
         // Then set y and z coordinates of first points in from ends based on slope.
@@ -288,13 +288,13 @@ Bezier optimiseBezierPoints2(Vector3[] points, int nCtrlPts, Bezier initGuess, V
     success = nm.nelmin.minimize!(funMin,number)(d, f_min, n_fe, n_restart, dx, tol, 1, max_steps);
     foreach (i; 2 .. nCtrlPts-2) {
         if (dim == 2) {
-            myBez.B[i].refx = d[2*i - 2];
-            myBez.B[i].refy = d[2*i - 1];
+            myBez.B[i].x = d[2*i - 2];
+            myBez.B[i].y = d[2*i - 1];
         }
         else {
-            myBez.B[i].refx = d[3*i - 3];
-            myBez.B[i].refy = d[3*i - 2];
-            myBez.B[i].refz = d[3*i - 1];
+            myBez.B[i].x = d[3*i - 3];
+            myBez.B[i].y = d[3*i - 2];
+            myBez.B[i].z = d[3*i - 1];
         }
     }
     // Then set y and z coordinates of first points in from ends based on slope.
