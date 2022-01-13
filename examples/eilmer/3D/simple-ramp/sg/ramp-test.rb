@@ -62,8 +62,8 @@ class TestRamp < Test::Unit::TestCase
     lines.each do |txt|
       if txt.match('force=') then
         # expected line looks like
-        # force=	Vector3([2217, 3.92703e-14, -12573.3])	Newtons
-        str = txt.match(/\[(.+)\]/)[1]
+        # force=	Vector3(2214.56, 3.93211e-14, -12559.4)	Newtons
+        str = txt.match(/\((.+)\)/)[1]
         items = str.split(',')
         f_x = items[0].to_f; f_y = items[1].to_f; f_z = items[2].to_f
       end
