@@ -661,8 +661,26 @@ public:
         number shear_stress_limit = myConfig.shear_stress_relative_limit * local_pressure;
         number heat_transfer_limit = (mu_eff > 0.0) ? k_eff/mu_eff*shear_stress_limit : to!number(0.0);
 
-        // We separate diffusion based on laminar or turbulent
-        // and treat the differently.
+        // Species diffusion: Changed by NNG on 22/01/18.
+        // We now apply both laminar and turbulent diffusion additively, to prevent artificially low
+        // diffusion in areas with a small turbulent viscosity.
+        version(multi_species_gas) {
+            if (myConfig.mass_diffusion_model != MassDiffusionModel.none) {
+                myConfig.massDiffusion.update_mass_fluxes(fs, grad, jx, jy, jz);
+                foreach (isp; 0 .. n_species) {
+                    jx[isp] *= viscous_factor;
+                    jy[isp] *= viscous_factor;
+                    jz[isp] *= viscous_factor;
+                }
+            } else if (myConfig.turb_model.isTurbulent) { // Turbulent but no mass diffusion model
+                foreach (isp; 0 .. n_species) {
+                    jx[isp] = to!number(0.0);
+                    jy[isp] = to!number(0.0);
+                    jz[isp] = to!number(0.0);
+                }
+            }
+        }
+
         if (myConfig.turb_model.isTurbulent) {
             double Sc_t = myConfig.turbulence_schmidt_number;
             number D_t; // = fs.mu_t / (fs.gas.rho * Sc_t)
@@ -679,21 +697,9 @@ public:
             }
             version(multi_species_gas) {
                 foreach (isp; 0 .. n_species) {
-                    jx[isp] = -fs.gas.rho * D_t * grad.massf[isp][0];
-                    jy[isp] = -fs.gas.rho * D_t * grad.massf[isp][1];
-                    jz[isp] = -fs.gas.rho * D_t * grad.massf[isp][2];
-                }
-            }
-        }
-        else { // apply molecular diffusion instead of turbulence in laminar flows
-            version(multi_species_gas) {
-                if (myConfig.mass_diffusion_model != MassDiffusionModel.none) {
-                    myConfig.massDiffusion.update_mass_fluxes(fs, grad, jx, jy, jz);
-                    foreach (isp; 0 .. n_species) {
-                        jx[isp] *= viscous_factor;
-                        jy[isp] *= viscous_factor;
-                        jz[isp] *= viscous_factor;
-                    }
+                    jx[isp] -= fs.gas.rho * D_t * grad.massf[isp][0];
+                    jy[isp] -= fs.gas.rho * D_t * grad.massf[isp][1];
+                    jz[isp] -= fs.gas.rho * D_t * grad.massf[isp][2];
                 }
             }
         }
