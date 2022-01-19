@@ -16,11 +16,15 @@ config.interpolate_in_local_frame = true
   -- viscous flux
 config.viscous = true
   -- printing
-config.print_count = 20
+config.print_count = 1
 config.dt_init = 1.0e-12
   -- steady state solver
 SteadyStateSolver{
-   use_preconditioning = false,
+   precondition_matrix_type = "ilu",
+   frozen_preconditioner_count = 100,
+   use_complex_matvec_eval = true,
+   stop_on_relative_global_residual = 1e-9,
+
    -- sigma = 1.0e-6, -- presently it's computed internally
    number_pre_steps = 10,
    number_total_steps = 2000,
