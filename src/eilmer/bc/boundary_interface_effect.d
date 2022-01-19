@@ -679,7 +679,7 @@ class BIE_RotatingSurface : BoundaryInterfaceEffect {
 
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        throw new Error("BIE_RotatingSurface.apply_for_interface_structured_grid() not implemented yet");
+        f.fs.vel = cross(r_omega, f.pos-centre);
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
