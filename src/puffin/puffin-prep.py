@@ -73,7 +73,7 @@ class GlobalConfig(object):
                 'reaction_file_1', 'reaction_file_2', 'reactor', 'reacting', 'T_frozen', \
                 'dx', 'cfl', 'cfl_count', \
                 'print_count', 'plot_count', \
-                'max_x', 'max_step', 'x_order'
+                'max_x', 'max_step', 'x_order', 'nb'
 
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -97,11 +97,12 @@ class GlobalConfig(object):
         self.max_x = 1.0
         self.max_step = 10
         self.x_order = 2
+        self.nb = 101
         #
         GlobalConfig.count += 1
         return
 
-    def write(self, fp):
+    def write(self):
         """
         Writes the configuration data to the specified file in JSON format.
 
@@ -109,7 +110,8 @@ class GlobalConfig(object):
         """
         global config, streamTubeList
         #
-        fp.write('"config": {\n')
+        fp = open(config.job_name+'/config.json', 'w')
+        fp.write('{\n')
         fp.write('  "title": "%s",\n' % self.title)
         fp.write('  "gas_model_file": %s,\n' % self.gas_model_file)
         fp.write('  "reaction_file_1": %s,\n' % self.reaction_file_1)
@@ -124,10 +126,18 @@ class GlobalConfig(object):
         fp.write('  "print_count": %d,\n' % self.print_count)
         fp.write('  "plot_count": %d,\n' % self.plot_count)
         fp.write('  "x_order": %d,\n' % self.x_order)
+        fp.write('  "nb": %d,\n' % self.nb)
         #
-        fp.write('  "nstreams": %d\n' % len(streamTubeList))
+        fp.write('  "nstreams": %d,\n' % len(streamTubeList))
+        for st in streamTubeList:
+            # Assemble a dictionary defining the flowstate.
+            fs = {'p':st.gas.p, 'T':st.gas.T, 'massf':st.gas.massf,
+                  'velx':st.velx, 'vely':st.vely}
+            fp.write('  "inflow_%d": %s,\n' % (st.indx, json.dumps(fs)))
         # Note, no comma after last item inside JSON dict
-        fp.write('},\n') # comma here because not the last item in file
+        fp.write('  "dummy_item": 0\n')
+        fp.write('}\n')
+        fp.close()
         return
 
 # We will create just one GlobalConfig object that the user can alter.
@@ -144,14 +154,12 @@ def init_gas_model(fileName, reaction_file_1="", reaction_file_2=""):
     This second thermochemistry file is needed for only a few of the multi-T models.
     """
     global config
+    if config.gmodel:
+        raise RuntimeError("Already have a gas model initialized.")
     if not os.path.exists(fileName):
         raise Exception("Gas model file not found: " + fileName)
-    gmodel = GasModel(fileName)
-    gmodel_id = len(config.gmodels)
-    config.gmodel = gmodel
+    config.gmodel = GasModel(fileName)
     config.gas_model_file = fileName
-    nsp = gmodel.n_species
-    nmodes = gmodel.n_modes
     #
     # ThermochemicalReactor is always associated with a particular GasModel.
     if reaction_file_1:
@@ -165,8 +173,7 @@ def init_gas_model(fileName, reaction_file_1="", reaction_file_2=""):
     config.reactor = reactor
     config.reaction_file_1 = reaction_file_1
     config.reaction_file_2 = reaction_file_2
-    #
-    return gmodel_id
+    return
 
 
 # --------------------------------------------------------------------
@@ -188,23 +195,50 @@ class StreamTube():
     """
 
     __slots__ = 'indx', 'label', \
-                'gas', 'velx', 'vely', \
-                'ncells', 'y0', 'y1'
+                'gas', 'velx', 'vely', 'ncells', \
+                'y0', 'y1', 'bc0', 'bc1', \
+                'xs', 'y0s', 'y1s', 'bc0s', 'bc1s'
 
     def __init__(self, gas=None, velx=1000.0, vely=0.0,
-                 y0=None, y1=None, ncells=10, label="",):
+                 y0=None, y1=None, bc0=None, bc1=None,
+                 ncells=10, label="",):
         """
         Creates an outline of a streamtube with user-specified boundaries.
 
-        gas : inflow gas state
-        velx : inflow x-velocity
-        vely : inflow y-velocity
-        y0 : lower boundary y as a function of x
-        y1 : upper boundary y as a function of x
+        gas    : inflow gas state
+        velx   : inflow x-velocity
+        vely   : inflow y-velocity
+        y0     : lower boundary y as a function of x
+                 The boundaries extend from x=0.0 to x=config.max_x.
+        y1     : upper boundary y as a function of x
+        bc0    : lower boundary condition as an integer function of x
+                 if bc0(x) == 0, this stream exchanges data with lower stream
+                 if bc0(x) == 1, this stream exchanges data with upper stream
+        bc1    : upper boundary condition as an integer function of x
         ncells : number of cells between lower and upper boundary
-        label : optional label for postprocessing
+        label  : optional label for postprocessing
         """
         global config
+        self.gas = GasState(config.gmodel)
+        self.gas.copy_values(gas)
+        self.velx = velx
+        self.vely = vely
+        if callable(y0):
+            self.y0 = y0
+        else:
+            raise RuntimeError("Was expecting a function for y0")
+        if callable(y1):
+            self.y1 = y1
+        else:
+            raise RuntimeError("Was expecting a function for y1")
+        if callable(bc0):
+            self.bc0 = bc0
+        else:
+            raise RuntimeError("Was expecting a function for bc0")
+        if callable(bc1):
+            self.bc1 = bc1
+        else:
+            raise RuntimeError("Was expecting a function for bc1")
         #
         # The StreamTube objects need an identity that can be
         # transferred to the main calculation program.
@@ -214,13 +248,23 @@ class StreamTube():
         #
         return
 
-    def write(fp):
-        return
+    def construct_and_write_boundaries(self):
+        """
+        Constructs lower and upper boundary paths.
 
-    def construct_boundaries():
+        Note that some of the information is in the global config.
         """
-        Constructs inflow gas data, lower and upper boundary paths.
-        """
+        global config
+        xs = np.linspace(0.0, config.max_x, config.nb)
+        y0s = [self.y0(x) for x in xs]
+        y1s = [self.y1(x) for x in xs]
+        bc0s = [self.bc0(x) for x in xs]
+        bc1s = [self.bc1(x) for x in xs]
+        fileName = config.job_name + ('/streamtube-%d.data' % self.indx)
+        with open(fileName, 'w') as fp:
+            fp.write('x  y0  y1  bc0  bc1\n')
+            for i in range(len(xs)):
+                fp.write('%g %g %g %g %g\n' % (xs[i], y0s[i], y1s[i], bc0s[i], bc1s[i]))
         return
 
 # --------------------------------------------------------------------
@@ -235,20 +279,9 @@ def write_initial_files():
     print("Begin write initial files.")
     if not os.path.exists(config.job_name):
         os.mkdir(config.job_name)
-    #
-    with open(config.job_name+'/config.json', 'w') as fp:
-        fp.write("{\n")
-        config.write(fp)
-        # Previous entries all presume that they are not the last.
-        fp.write('"dummy_item": 0\n')
-        fp.write('}\n')
-    #
+    config.write()
     for st in streamTubeList:
-        st.construct_boundaries()
-        fileName = config.job_name + ('/streamtube-%04d.data' % st.indx)
-        with open(fileName, 'w') as fp:
-            st.write(fp)
-    #
+        st.construct_and_write_boundaries()
     print("End write initial files.")
     return
 

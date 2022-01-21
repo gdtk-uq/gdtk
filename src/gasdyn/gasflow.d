@@ -738,7 +738,7 @@ number[5] osher_riemann(const(GasState) stateL, const(GasState) stateR,
                         GasState stateLstar, GasState stateRstar, GasState stateX0,
                         GasModel gm)
 /**
- * Osher-type solution to the Riemann problem.
+ * Osher-type solution to the Riemann problem for one-dimensional flow.
  *
  * Input:
  *   stateL: reference to Left initial Gas state (given)
@@ -906,6 +906,9 @@ number[5] osher_riemann(const(GasState) stateL, const(GasState) stateR,
 
 number[3] osher_flux(const(GasState) stateL, const(GasState) stateR,
                      number velL, number velR, GasModel gm)
+/**
+ * Flux calculation for a one-dimensional flow.
+ */
 {
     GasState stateLstar = new GasState(gm);
     GasState stateRstar = new GasState(gm);
@@ -918,10 +921,13 @@ number[3] osher_flux(const(GasState) stateL, const(GasState) stateR,
     // Fluxes:     mass      x-momentum       energy
     number[3] F = [rho*velx, rho*velx*velx+p, rho*velx*(u+p/rho+0.5*velx*velx)];
     return F;
-}
+} // end osher_flux()
 
 number[3] roe_flux(const(GasState) stateL, const(GasState) stateR,
                    number velL, number velR, GasModel gm)
+/**
+ * Flux calculation for a one-dimensional flow.
+ */
 {
     // Model on the description of the original Roe flux calculator
     // given in Toro's book chapter 11, Christine's C code and Kyle's D code.
@@ -993,7 +999,7 @@ number[3] roe_flux(const(GasState) stateL, const(GasState) stateR,
         0.5*(alpha1*L1*(H_hat-vel_hat*a_hat) + alpha2*L2*0.5*vel_hat*vel_hat + alpha5*L5*(H_hat+vel_hat*a_hat));
     //
     return [F_mass, F_momentum, F_energy];
-}
+} // end roe_flux()
 
 // The following two function solvers are used in lrivp (below)
 // to get approximate estimates of the intermediate pressure
