@@ -23,17 +23,28 @@ import config;
 import flow;
 import cell;
 
+
+enum BCCode {wall=0, exchange=1}; // To decide what to do at the lower and upper boundary.
+
+
 class StreamTube {
 public:
     GasModel gmodel;
     GasState gs;
+    Vector3 vel;
     int ncells;
-    int n_bc;
-    double dx_bc;
-    double[] xs, y0s, y1s;
-    int[] bc0s, bc1s;
+    //
     Schedule!double y_lower, y_upper;
     Schedule!int bc_lower, bc_upper;
+    //
+    Vector3[] vertices_west;
+    Vector3[] vertices_east;
+    Face2D[] ifaces_west;
+    Face2D[] ifaces_east;
+    Face2D[] jfaces;
+    Cell2D[] cells;
+    //
+    FlowState2D[] flowstates_west;
 
     this(int indx, JSONValue configData)
     {
@@ -48,7 +59,14 @@ public:
         gs = new GasState(gmodel);
         gs.p = p; gs.T = T; gs.massf[] = massf[];
         gmodel.update_thermo_from_pT(gs);
+        double velx = getJSONdouble(inflowData, "velx", 0.0);
+        double vely = getJSONdouble(inflowData, "vely", 0.0);
+        vel.set(velx, vely);
         //
+        int n_bc;
+        double dx_bc;
+        double[] xs, y0s, y1s;
+        int[] bc0s, bc1s;
         string fileName = format("%s/streamtube-%d.data", Config.job_name, indx);
         auto lines = File(fileName, "r").byLine();
         foreach (line; lines) {
@@ -83,13 +101,120 @@ public:
         bc_upper = new Schedule!int(xs, bc1s);
     } // end constructor
 
+
     override string toString()
     {
         string repr = "StreamTube(";
         repr ~= format("gmodel=%s, gs=%s", gmodel, gs);
         repr ~= format(", ncells=%d", ncells);
-        repr ~= format(", n_bc=%d, dx_bc=%g", n_bc, dx_bc);
+        repr ~= format(", y_lower=%s, y_upper=%s", y_lower, y_upper);
+        repr ~= format(", bc_lower=%s, bc_upper=%s", bc_lower, bc_upper);
         repr ~= ")";
         return repr;
+    }
+
+
+    int set_up_data_storage()
+    // Set up the storage and make connections to the vertices.
+    {
+        foreach (j; 0 .. ncells+1) {
+            vertices_west ~= Vector3();
+            vertices_east ~= Vector3();
+        }
+        foreach (j; 0 .. ncells) {
+            ifaces_west ~= new Face2D();
+            ifaces_east ~= new Face2D();
+        }
+        foreach (j; 0 .. ncells+1) {
+            jfaces ~= new Face2D();
+        }
+        foreach (j; 0 .. ncells) {
+            cells ~= new Cell2D(gmodel);
+            flowstates_west ~= new FlowState2D(gmodel);
+        }
+        foreach (j; 0 .. ncells) {
+            ifaces_west[j].p0 = &(vertices_west[j]);
+            ifaces_west[j].p1 = &(vertices_west[j+1]);
+            ifaces_east[j].p0 = &(vertices_east[j]);
+            ifaces_east[j].p1 = &(vertices_east[j+1]);
+        }
+        foreach (j; 0 .. ncells+1) {
+            jfaces[j].p0 = &(vertices_east[j]);
+            jfaces[j].p1 = &(vertices_west[j]);
+        }
+        foreach (j; 0 .. ncells) {
+            auto c = cells[j];
+            c.p00 = &(vertices_west[j]);
+            c.p10 = &(vertices_east[j]);
+            c.p11 = &(vertices_east[j+1]);
+            c.p01 = &(vertices_west[j+1]);
+        }
+        return 0;
+    } // end set_up_data_storage()
+
+
+    int set_up_inflow_boundary()
+    {
+        // Compute the vertex positions.
+        double x = 0.0;
+        double y0 = y_lower.interpolate_value(x);
+        double y1 = y_upper.interpolate_value(x);
+        foreach (j; 0 .. ncells+1) {
+            auto frac = to!double(j)/to!double(ncells);
+            double y = (1.0-frac)*y0 + frac*y1;
+            vertices_west[j].set(x, y);
+        }
+        // Geometry of faces.
+        foreach (j; 0 .. ncells) {
+            ifaces_west[j].compute_geometry();
+        }
+        // Inflow states
+        foreach (j; 0 .. ncells) {
+            auto fs = flowstates_west[j];
+            fs.gas.copy_values_from(gs);
+            fs.vel.set(vel);
+        }
+        return 0;
+    } // end set_up_inflow_boundary()
+
+
+    int set_up_slice(double x)
+    {
+        // Locations for the east vertices.
+        double y0 = y_lower.interpolate_value(x);
+        double y1 = y_upper.interpolate_value(x);
+        foreach (j; 0 .. ncells+1) {
+            auto frac = to!double(j)/to!double(ncells);
+            double y = (1.0-frac)*y0 + frac*y1;
+            vertices_east[j].set(x, y);
+        }
+        // Compute the face and cell geometric properties.
+        foreach (j; 0 .. ncells) {
+            ifaces_east[j].compute_geometry();
+            cells[j].compute_geometry();
+        }
+        foreach (j; 0 .. ncells+1) {
+            jfaces[j].compute_geometry();
+        }
+        // Finally, initialize the flow by propagating from the west.
+        foreach (j; 0 .. ncells) {
+            cells[j].fs.copy_values_from(flowstates_west[j]);
+        }
+        return 0;
+    } // end set_up_slice()
+
+
+    int shuffle_data_west()
+    {
+        foreach (j; 0 .. ncells+1) {
+            vertices_west[j].set(vertices_east[j]);
+        }
+        foreach (j; 0 .. ncells) {
+            ifaces_west[j].compute_geometry();
+        }
+        foreach (j; 0 .. ncells) {
+            flowstates_west[j].copy_values_from(cells[j].fs);
+        }
+        return 0;
     }
 } // end class StreamTube

@@ -27,6 +27,7 @@ public:
     static string reaction_file_2;
     shared static bool reacting = false;
     shared static double T_frozen;
+    shared static bool axisymmetric;
     shared static double max_x;
     shared static int max_step;
     shared static double dx;

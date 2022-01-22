@@ -7,6 +7,8 @@ gas = GasState(config.gmodel)
 gas.p = 100.0e3
 gas.T = 300.0
 
+config.axisymmetric = True
+
 def lower_y(x):
     return math.tan(math.radians(20.0))*(x-0.2) if x > 0.2 else 0.0
 def upper_y(x): return 1.0

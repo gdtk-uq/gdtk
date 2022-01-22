@@ -37,6 +37,13 @@ public:
         repr ~= ")";
         return repr;
     }
+
+    @nogc
+    void copy_values_from(ref const(FlowState2D) other)
+    {
+        gas.copy_values_from(other.gas);
+        vel.set(other.vel);
+    }
 } // end class FlowState
 
 

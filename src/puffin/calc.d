@@ -42,6 +42,7 @@ int init_calculation()
     Config.reaction_file_2 = getJSONstring(configData, "reaction_file_2", "");
     Config.reacting = getJSONbool(configData, "reacting", false);
     Config.T_frozen = getJSONdouble(configData, "T_frozen", 300.0);
+    Config.axisymmetric = getJSONbool(configData, "axisymmetric", false);
     Config.max_x = getJSONdouble(configData, "max_x", 0.0);
     Config.max_step = getJSONint(configData, "max_step", 0);
     Config.dx = getJSONdouble(configData, "dx", 0.0);
@@ -59,6 +60,7 @@ int init_calculation()
         writeln("  reaction_files_2= ", Config.reaction_file_2);
         writeln("  reacting= ", Config.reacting);
         writeln("  T_frozen= ", Config.T_frozen);
+        writeln("  axisymmetric= ", Config.axisymmetric);
         writeln("  max_x= ", Config.max_x);
         writeln("  max_step= ", Config.max_step);
         writeln("  dx= ", Config.dx);
@@ -80,6 +82,22 @@ int init_calculation()
 
 int do_calculation()
 {
-    writeln("TODO do_calculation");
+    foreach (st; streams) {
+        st.set_up_data_storage();
+        st.set_up_inflow_boundary();
+    }
+    progress.step = 0;
+    progress.x = 0.0;
+    bool finished = false;
+    while (!finished) {
+        progress.step += 1;
+        progress.x += Config.dx;
+        foreach (st; streams) { st.set_up_slice(progress.x); }
+        writeln("[TODO] compute to steady state.");
+        writeln("[TODO] write flow data occasionally.");
+        foreach (st; streams) { st.shuffle_data_west(); }
+        finished = (progress.x > Config.max_x) || (progress.step >= Config.max_step);
+    }
+    writeln("TODO do_calculation properly");
     return 0;
 }
