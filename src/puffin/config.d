@@ -1,6 +1,9 @@
-// config.d
+// config.d -- Part of the Puffin steady-flow calculator.
+//
 // A place to keep the configuration details.
-
+// PA Jacobs
+// 2022-01-21
+//
 module config;
 
 import std.conv;

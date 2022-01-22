@@ -141,7 +141,7 @@ public:
         n_turb = nturb;
         if (nturb > 0) {
             turb = true;
-            rhoturb = n;
+            rhoturb = n; // Start of turbulence elements.
             n += nturb;
         } else {
             turb = false;
@@ -157,7 +157,7 @@ public:
         }
         n_species = nspecies;
         if (nspecies > 1) {
-            species = n;
+            species = n; // Start of species elements.
             n += nspecies;
             // Note that we only carry species in the conserved-quantities vector
             // if we have a multi-species gas model.
@@ -166,7 +166,7 @@ public:
         }
         n_modes = nmodes;
         if (nmodes > 0) {
-            modes = n;
+            modes = n; // Start of modes elements.
             n += nmodes;
         }
     } // end constructor

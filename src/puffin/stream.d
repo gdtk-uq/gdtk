@@ -1,4 +1,4 @@
-// stream.d
+// stream.d -- Part of the Puffin steady-flow calculator.
 //
 // PA Jacobs
 // 2022-01-22
@@ -19,6 +19,8 @@ import geom;
 import gas;
 import kinetics;
 import config;
+import flow;
+import cell;
 
 class StreamTube {
 public:
@@ -43,9 +45,9 @@ public:
 
     override string toString()
     {
-        string txt = "StreamTube(";
-        txt ~= format("gmodel=%s, gs=%s", gmodel, gs);
-        txt ~= ")";
-        return txt;
+        string repr = "StreamTube(";
+        repr ~= format("gmodel=%s, gs=%s", gmodel, gs);
+        repr ~= ")";
+        return repr;
     }
 } // end class StreamTube
