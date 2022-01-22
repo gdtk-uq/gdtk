@@ -8,7 +8,7 @@ import std.format;
 import nm.schedule;
 
 
-final class PuffinConfig {
+final class Config {
 public:
     shared static int verbosity_level = 1;
     // Messages have a hierarchy:
@@ -19,17 +19,18 @@ public:
     //
     shared static string job_name = "job"; // Change this to suit at run time.
     shared static string title = "";
-    static string[] gas_model_files;
-    static string[] reaction_files_1;
-    static string[] reaction_files_2;
+    static string gas_model_file;
+    static string reaction_file_1;
+    static string reaction_file_2;
     shared static bool reacting = false;
     shared static double T_frozen;
     shared static double max_x;
     shared static int max_step;
     shared static double dx;
+    shared static double cfl;
     shared static int cfl_count;
     shared static int print_count;
     shared static int plot_count;
     shared static int x_order;
-    shared static int nstreams;
+    shared static int n_streams;
 }

@@ -13,6 +13,8 @@ import std.getopt;
 import std.conv;
 
 import config;
+import calc;
+import stream;
 
 int main(string[] args)
 {
@@ -115,14 +117,17 @@ Parameters:
         exitFlag = 1;
         return exitFlag;
     }
-    PuffinConfig.job_name = jobName;
-    PuffinConfig.verbosity_level = verbosityLevel;
+    Config.job_name = jobName;
+    Config.verbosity_level = verbosityLevel;
 
     // Get to work to do one task...
     if (runCalculation) {
         writeln("Do a simulation.");
+        init_calculation();
+        do_calculation();
     } else if (writeVTK) {
         writeln("Write a VTK data file");
+        writeln("TODO");
     } else {
         writeln("You did not ask for anything to be done.");
     }

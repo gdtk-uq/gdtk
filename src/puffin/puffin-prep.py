@@ -97,7 +97,7 @@ class GlobalConfig(object):
         self.max_x = 1.0
         self.max_step = 10
         self.x_order = 2
-        self.nb = 101
+        self.nb = 101  # TODO -- shift to the boundary data
         #
         GlobalConfig.count += 1
         return
@@ -113,9 +113,9 @@ class GlobalConfig(object):
         fp = open(config.job_name+'/config.json', 'w')
         fp.write('{\n')
         fp.write('  "title": "%s",\n' % self.title)
-        fp.write('  "gas_model_file": %s,\n' % self.gas_model_file)
-        fp.write('  "reaction_file_1": %s,\n' % self.reaction_file_1)
-        fp.write('  "reaction_file_2": %s,\n' % self.reaction_file_2)
+        fp.write('  "gas_model_file": "%s",\n' % self.gas_model_file)
+        fp.write('  "reaction_file_1": "%s",\n' % self.reaction_file_1)
+        fp.write('  "reaction_file_2": "%s",\n' % self.reaction_file_2)
         fp.write('  "reacting": %s,\n' % json.dumps(self.reacting))
         fp.write('  "T_frozen": %e,\n' % self.T_frozen)
         fp.write('  "max_x": %e,\n' % self.max_x)
@@ -128,7 +128,7 @@ class GlobalConfig(object):
         fp.write('  "x_order": %d,\n' % self.x_order)
         fp.write('  "nb": %d,\n' % self.nb)
         #
-        fp.write('  "nstreams": %d,\n' % len(streamTubeList))
+        fp.write('  "n_streams": %d,\n' % len(streamTubeList))
         for st in streamTubeList:
             # Assemble a dictionary defining the flowstate.
             fs = {'p':st.gas.p, 'T':st.gas.T, 'massf':st.gas.massf,
