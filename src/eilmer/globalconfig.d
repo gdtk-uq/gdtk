@@ -1119,7 +1119,7 @@ final class GlobalConfig {
     shared static bool reacting = false;
     shared static string reactions_file = "chemistry.lua";
     shared static double reaction_time_delay = 0.0;
-    static Schedule reaction_fraction_schedule;
+    static Schedule!double reaction_fraction_schedule;
     shared static double T_frozen = 300.0; // temperature (in K) below which reactions are frozen
     shared static double T_frozen_energy = 300.0; // temperature (in K) below which energy exchanges are skipped
     static BlockZone[] reaction_zones;
@@ -1161,7 +1161,7 @@ final class GlobalConfig {
     // Either spec will be written into the JSON .config file as a pair of tables.
     // These will specify the target CFL number, interpolated from (time, value) pairs.
     shared static double cfl_value = 0.5;
-    static Schedule cfl_schedule;
+    static Schedule!double cfl_schedule;
     shared static cfl_scale_factor = 1.0; // You may edit this factor in the .control file to modulate cfl.
     shared static bool stringent_cfl = false;
     // If true, assume the worst with respect to cell geometry and wave speed.
@@ -1726,7 +1726,7 @@ void set_config_for_core(JSONValue jsonData)
     }
     double[] cfl_schedule_times = getJSONdoublearray(jsonData, "cfl_schedule_times", cfl_schedule_times_default);
     double[] cfl_schedule_values = getJSONdoublearray(jsonData, "cfl_schedule_values", cfl_schedule_values_default);
-    cfg.cfl_schedule = new Schedule(cfl_schedule_times, cfl_schedule_values);
+    cfg.cfl_schedule = new Schedule!double(cfl_schedule_times, cfl_schedule_values);
     //
     mixin(update_bool("residual_smoothing", "residual_smoothing"));
     mixin(update_bool("with_local_time_stepping", "with_local_time_stepping"));
@@ -1986,7 +1986,7 @@ void set_config_for_core(JSONValue jsonData)
     }
     double[] rf_schedule_times = getJSONdoublearray(jsonData, "reaction_fraction_schedule_times", rf_schedule_times_default);
     double[] rf_schedule_values = getJSONdoublearray(jsonData, "reaction_fraction_schedule_values", rf_schedule_values_default);
-    cfg.reaction_fraction_schedule = new Schedule(rf_schedule_times, rf_schedule_values);
+    cfg.reaction_fraction_schedule = new Schedule!double(rf_schedule_times, rf_schedule_values);
     mixin(update_double("T_frozen", "T_frozen"));
     mixin(update_double("T_frozen_energy", "T_frozen_energy"));
     mixin(update_enum("tci_model", "tci_model", "tci_model_from_name"));

@@ -21,7 +21,7 @@ public:
     size_t indx;
     string label = "";
     double x;
-    Schedule fopen_schedule;
+    Schedule!double fopen_schedule;
 
     this(size_t indx, JSONValue jsonData)
     {
@@ -35,7 +35,7 @@ public:
         double[] times_values = getJSONdoublearray(jsonData, "times", dummy_times);
         double[] dummy_fopen = [1.0,];
         double[] fopen_values = getJSONdoublearray(jsonData, "fopen", dummy_fopen);
-        fopen_schedule = new Schedule(times_values, fopen_values);
+        fopen_schedule = new Schedule!double(times_values, fopen_values);
         if (L1dConfig.verbosity_level >= 1) {
             writeln("Valve[", indx, "]:");
             writeln("  x= ", x);

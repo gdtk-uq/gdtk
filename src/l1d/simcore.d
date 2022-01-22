@@ -108,7 +108,7 @@ void init_simulation(int tindx_start)
     double[] dummy; foreach (i; 0 .. n_cfl) { dummy ~= 0.0; }
     double[] cfl_times = getJSONdoublearray(configData, "cfl_times", dummy);
     double[] cfl_values = getJSONdoublearray(configData, "cfl_values", dummy);
-    L1dConfig.cfl_schedule = new Schedule(cfl_times, cfl_values);
+    L1dConfig.cfl_schedule = new Schedule!double(cfl_times, cfl_values);
     L1dConfig.cfl_count = getJSONint(configData, "cfl_count", 10);
     L1dConfig.print_count = getJSONint(configData, "print_count", 50);
     L1dConfig.x_order = getJSONint(configData, "x_order", 0);
@@ -117,9 +117,9 @@ void init_simulation(int tindx_start)
     dummy.length = n_dt_plot; foreach (ref v; dummy) { v = 0.0; }
     double[] t_changes = getJSONdoublearray(configData, "t_change", dummy);
     double[] values = getJSONdoublearray(configData, "dt_plot", dummy);
-    L1dConfig.dt_plot = new Schedule(t_changes, values);
+    L1dConfig.dt_plot = new Schedule!double(t_changes, values);
     values[] = getJSONdoublearray(configData, "dt_hist", dummy);
-    L1dConfig.dt_hist = new Schedule(t_changes, values);
+    L1dConfig.dt_hist = new Schedule!double(t_changes, values);
     L1dConfig.hloc_n = getJSONint(configData, "hloc_n", 0);
     L1dConfig.hloc_x.length = L1dConfig.hloc_n;
     dummy.length = L1dConfig.hloc_n; foreach (ref v; dummy) { v = 0.0; }

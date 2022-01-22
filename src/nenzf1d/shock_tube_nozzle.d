@@ -344,7 +344,7 @@ Result analyse(int verbosityLevel, Config config)
     //
     // Geometry of nozzle expansion.
     //
-    auto diameter_schedule = new Schedule(xi, di);
+    auto diameter_schedule = new Schedule!double(xi, di);
     double x = xi[0];
     double d = diameter_schedule.interpolate_value(x);
     double area_at_throat = 0.25*d*d*std.math.PI; // for later normalizing the exit area

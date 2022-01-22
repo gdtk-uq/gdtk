@@ -27,13 +27,13 @@ public:
     shared static double max_time;
     shared static int max_step;
     shared static double dt_init;
-    static Schedule cfl_schedule;
+    static Schedule!double cfl_schedule;
     shared static int cfl_count;
     shared static int print_count;
     shared static int x_order;
     shared static int t_order;
-    static Schedule dt_plot;
-    static Schedule dt_hist;
+    static Schedule!double dt_plot;
+    static Schedule!double dt_hist;
     shared static int hloc_n;
     shared static double[] hloc_x;
     shared static int nslugs;

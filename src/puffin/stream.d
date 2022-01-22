@@ -14,6 +14,7 @@ import std.range;
 import std.math;
 import std.algorithm;
 
+import nm.schedule;
 import json_helper;
 import geom;
 import gas;
@@ -31,6 +32,8 @@ public:
     double dx_bc;
     double[] xs, y0s, y1s;
     int[] bc0s, bc1s;
+    Schedule!double y_lower, y_upper;
+    Schedule!int bc_lower, bc_upper;
 
     this(int indx, JSONValue configData)
     {
@@ -74,7 +77,11 @@ public:
         if ((xs[1]-xs[0]-dx_bc)/dx_bc > 1.0e-9) {
             writeln("WARNING: dx=", xs[1]-xs[0], " dx_bc=", dx_bc);
         }
-    }
+        y_lower = new Schedule!double(xs, y0s);
+        y_upper = new Schedule!double(xs, y1s);
+        bc_lower = new Schedule!int(xs, bc0s);
+        bc_upper = new Schedule!int(xs, bc1s);
+    } // end constructor
 
     override string toString()
     {

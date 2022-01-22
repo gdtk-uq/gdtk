@@ -42,17 +42,17 @@ ifeq ($(DMD), dmd)
     # DFLAGS := -w
     DFLAGS := -w -O -release -inline -boundscheck=off
     OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
+    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-ldl
 endif
 ifeq ($(DMD), ldmd2)
     DFLAGS := -w -O -release -inline -boundscheck=off
     OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
+    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-ldl
 endif
 ifeq ($(DMD), gdc)
     DFLAGS := -Wall -O2 -frelease -fno-debug
     OF := -o
-    DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -ldl
+    DLINKFLAGS := -L$(LIBLUAPATH) -ldl
 endif
 
 # ----------------------------------------------------------------------
@@ -173,7 +173,7 @@ rsla_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 luabbla_test: luabbla.d bbla.d complex.d number.d $(UTIL_FILES) $(LIBLUA) $(UTIL_FILES)
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		luabbla.d bbla.d complex.d number.d $(UTIL_FILES) $(DLINKFLAGS)
+		luabbla.d bbla.d complex.d number.d $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
 
 complex_number_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -version=complex_number_test -version=complex_numbers \
