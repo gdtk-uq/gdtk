@@ -97,7 +97,6 @@ class GlobalConfig(object):
         self.max_x = 1.0
         self.max_step = 10
         self.x_order = 2
-        self.nb = 101  # TODO -- shift to the boundary data
         #
         GlobalConfig.count += 1
         return
@@ -126,7 +125,6 @@ class GlobalConfig(object):
         fp.write('  "print_count": %d,\n' % self.print_count)
         fp.write('  "plot_count": %d,\n' % self.plot_count)
         fp.write('  "x_order": %d,\n' % self.x_order)
-        fp.write('  "nb": %d,\n' % self.nb)
         #
         fp.write('  "n_streams": %d,\n' % len(streamTubeList))
         for st in streamTubeList:
@@ -134,6 +132,7 @@ class GlobalConfig(object):
             fs = {'p':st.gas.p, 'T':st.gas.T, 'massf':st.gas.massf,
                   'velx':st.velx, 'vely':st.vely}
             fp.write('  "inflow_%d": %s,\n' % (st.indx, json.dumps(fs)))
+            fp.write('  "ncells_%d": %d,\n' % (st.indx, st.ncells))
         # Note, no comma after last item inside JSON dict
         fp.write('  "dummy_item": 0\n')
         fp.write('}\n')
@@ -197,11 +196,11 @@ class StreamTube():
     __slots__ = 'indx', 'label', \
                 'gas', 'velx', 'vely', 'ncells', \
                 'y0', 'y1', 'bc0', 'bc1', \
-                'xs', 'y0s', 'y1s', 'bc0s', 'bc1s'
+                'xs', 'y0s', 'y1s', 'bc0s', 'bc1s', 'nbc'
 
     def __init__(self, gas=None, velx=1000.0, vely=0.0,
                  y0=None, y1=None, bc0=None, bc1=None,
-                 ncells=10, label="",):
+                 ncells=10, nbc=101, label="",):
         """
         Creates an outline of a streamtube with user-specified boundaries.
 
@@ -216,6 +215,7 @@ class StreamTube():
                  if bc0(x) == 1, this stream exchanges data with upper stream
         bc1    : upper boundary condition as an integer function of x
         ncells : number of cells between lower and upper boundary
+        nbc    : number of points in the boundary definitions
         label  : optional label for postprocessing
         """
         global config
@@ -239,6 +239,8 @@ class StreamTube():
             self.bc1 = bc1
         else:
             raise RuntimeError("Was expecting a function for bc1")
+        self.ncells = ncells
+        self.nbc = nbc
         #
         # The StreamTube objects need an identity that can be
         # transferred to the main calculation program.
@@ -255,14 +257,16 @@ class StreamTube():
         Note that some of the information is in the global config.
         """
         global config
-        xs = np.linspace(0.0, config.max_x, config.nb)
+        xs = np.linspace(0.0, config.max_x, self.nbc)
         y0s = [self.y0(x) for x in xs]
         y1s = [self.y1(x) for x in xs]
         bc0s = [self.bc0(x) for x in xs]
         bc1s = [self.bc1(x) for x in xs]
         fileName = config.job_name + ('/streamtube-%d.data' % self.indx)
         with open(fileName, 'w') as fp:
-            fp.write('x  y0  y1  bc0  bc1\n')
+            fp.write('# x  y0  y1  bc0  bc1\n')
+            fp.write('# n_bc=%d\n' % self.nbc)
+            fp.write('# dx_bc=%g\n' % (xs[1]-xs[0]))
             for i in range(len(xs)):
                 fp.write('%g %g %g %g %g\n' % (xs[i], y0s[i], y1s[i], bc0s[i], bc1s[i]))
         return
