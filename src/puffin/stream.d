@@ -29,6 +29,7 @@ enum BCCode {wall=0, exchange=1}; // To decide what to do at the lower and upper
 
 class StreamTube {
 public:
+    int indx;
     GasModel gmodel;
     GasState gs;
     Vector3 vel;
@@ -48,6 +49,7 @@ public:
 
     this(int indx, JSONValue configData)
     {
+        this.indx = indx;
         ncells = getJSONint(configData, format("ncells_%d", indx), 0);
         gmodel = init_gas_model(Config.gas_model_file);
         auto inflowData = configData[format("inflow_%d", indx)];
@@ -59,6 +61,7 @@ public:
         gs = new GasState(gmodel);
         gs.p = p; gs.T = T; gs.massf[] = massf[];
         gmodel.update_thermo_from_pT(gs);
+        gmodel.update_sound_speed(gs);
         double velx = getJSONdouble(inflowData, "velx", 0.0);
         double vely = getJSONdouble(inflowData, "vely", 0.0);
         vel.set(velx, vely);
@@ -105,7 +108,8 @@ public:
     override string toString()
     {
         string repr = "StreamTube(";
-        repr ~= format("gmodel=%s, gs=%s", gmodel, gs);
+        repr ~= format("indx=%d", indx);
+        repr ~= format(", gmodel=%s, gs=%s", gmodel, gs);
         repr ~= format(", ncells=%d", ncells);
         repr ~= format(", y_lower=%s, y_upper=%s", y_lower, y_upper);
         repr ~= format(", bc_lower=%s, bc_upper=%s", bc_lower, bc_upper);
@@ -215,6 +219,36 @@ public:
         foreach (j; 0 .. ncells) {
             flowstates_west[j].copy_values_from(cells[j].fs);
         }
+        return 0;
+    }
+
+
+    int write_flow_data(bool write_header)
+    {
+        int nsp = gmodel.n_species;
+        int nmodes = gmodel.n_modes;
+        File fp;
+        string fileName = format("%s/flow-%d.data", Config.job_name, indx);
+        if (write_header) {
+            fp = File(fileName, "w");
+            fp.write("# x  y  velx vely rho  p  T  u  a");
+            foreach (i; 0 .. nsp) { fp.write(format(" massf-%d", i)); }
+            foreach (i; 0 .. nmodes) { fp.write(format(" T_modes-%d u_modes-%d", i, i)); }
+            fp.write("\n");
+        } else {
+            fp = File(fileName, "a");
+        }
+        foreach (j; 0 .. ncells) {
+            auto face = ifaces_west[j];
+            auto fs = flowstates_west[j];
+            auto g = fs.gas;
+            fp.write(format("%e %e %e %e", face.pos.x, face.pos.y, fs.vel.x, fs.vel.y));
+            fp.write(format(" %e %e %e %e %e", g.rho, g.p, g.T, g.u, g.a));
+            foreach (i; 0 .. nsp) { fp.write(format(" %e", g.massf[i])); }
+            foreach (i; 0 .. nmodes) { fp.write(format(" %e %e", g.T_modes[i], g.u_modes[i])); }
+            fp.write("\n");
+        }
+        fp.close();
         return 0;
     }
 } // end class StreamTube

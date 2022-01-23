@@ -26,6 +26,8 @@ __gshared static StreamTube[] streams;
 struct ProgressData {
     int step = 0;
     double x = 0.0;
+    double dx = 0.0;
+    double plot_at_x = 0.0;
     int steps_since_last_plot_write = 0;
     SysTime wall_clock_start;
 }
@@ -49,7 +51,7 @@ int init_calculation()
     Config.cfl = getJSONdouble(configData, "cfl", 0.5);
     Config.cfl_count = getJSONint(configData, "cfl_count", 10);
     Config.print_count = getJSONint(configData, "print_count", 50);
-    Config.plot_count = getJSONint(configData, "plot_count", 10);
+    Config.plot_dx = getJSONdouble(configData, "plot_dx", 1.0e-2);
     Config.x_order = getJSONint(configData, "x_order", 2);
     Config.n_streams = getJSONint(configData, "n_streams", 1);
     if (Config.verbosity_level >= 1) {
@@ -67,7 +69,7 @@ int init_calculation()
         writeln("  cfl= ", Config.cfl);
         writeln("  cfl_count= ", Config.cfl_count);
         writeln("  print_count= ", Config.print_count);
-        writeln("  plot_count= ", Config.plot_count);
+        writeln("  plot_dx= ", Config.plot_dx);
         writeln("  x_order= ", Config.x_order);
         writeln("  n_streams= ", Config.n_streams);
     }
@@ -77,27 +79,80 @@ int init_calculation()
             writefln("  stream[%d]= %s", i, streams[i]);
         }
     }
+    //
+    foreach (st; streams) {
+        st.set_up_data_storage();
+        st.set_up_inflow_boundary();
+        st.write_flow_data(true);
+    }
+    progress.step = 0;
+    progress.x = 0.0;
+    progress.dx = Config.dx;
+    progress.plot_at_x = Config.plot_dx;
+    progress.steps_since_last_plot_write = 0;
     return 0;
 }
 
 int do_calculation()
 {
-    foreach (st; streams) {
-        st.set_up_data_storage();
-        st.set_up_inflow_boundary();
-    }
-    progress.step = 0;
-    progress.x = 0.0;
-    bool finished = false;
-    while (!finished) {
-        progress.step += 1;
-        progress.x += Config.dx;
-        foreach (st; streams) { st.set_up_slice(progress.x); }
-        writeln("[TODO] compute to steady state.");
-        writeln("[TODO] write flow data occasionally.");
+    progress.wall_clock_start = Clock.currTime();
+    while (progress.x < Config.max_x || progress.step < Config.max_step) {
+        // 1. Set size of space step.
+        if (progress.dx < Config.dx) { progress.dx *= 1.2; }
+        progress.dx = min(Config.dx, progress.dx);
+        // 2. Take a step.
+        int attempt_number = 0;
+        bool step_failed;
+        do {
+            ++attempt_number;
+            step_failed = false;
+            try {
+                foreach (st; streams) { st.set_up_slice(progress.x+progress.dx); }
+                //
+                writeln("[TODO] compute to steady state.");
+            } catch (Exception e) {
+                writefln("Step failed e.msg=%s", e.msg);
+                step_failed = true;
+                progress.dx *= 0.2;
+            }
+        } while (step_failed && (attempt_number <= 3));
+        if (step_failed) {
+            throw new Exception("Step failed after 3 attempts.");
+        }
+        //
+        // 3. Prepare for next step.
         foreach (st; streams) { st.shuffle_data_west(); }
-        finished = (progress.x > Config.max_x) || (progress.step >= Config.max_step);
+        progress.x += progress.dx;
+        progress.step++;
+        //
+        // 4. Occasional console output.
+        if (Config.verbosity_level >= 1 &&
+            ((progress.step % Config.print_count) == 0)) {
+            // For reporting wall-clock time, convert with precision of milliseconds.
+            auto elapsed_ms = (Clock.currTime() - progress.wall_clock_start).total!"msecs"();
+            double elapsed_s = to!double(elapsed_ms)/1000;
+            double WCtFT = ((progress.x > 0.0) && (progress.step > 0)) ?
+                elapsed_s*(Config.max_x-progress.x)/progress.dx/progress.step : 0.0;
+            double WCtMS = (progress.step > 0) ?
+                (elapsed_s*(Config.max_step-progress.step))/progress.step : 0.0;
+            writefln("Step=%d x=%.3e dx=%.3e WC=%.1f WCtFT=%.1f WCtMS=%.1f",
+                     progress.step, progress.x, progress.dx, elapsed_s, WCtFT, WCtMS);
+            stdout.flush();
+        }
+        //
+        // 5. Write a flow slice (maybe).
+        if (progress.x >= progress.plot_at_x) {
+            foreach (st; streams) { st.write_flow_data(false); }
+            progress.steps_since_last_plot_write = 0;
+            progress.plot_at_x += Config.plot_dx;
+        } else {
+            progress.steps_since_last_plot_write++;
+        }
+    } // end while
+    //
+    // Write the final slice, maybe.
+    if (progress.steps_since_last_plot_write > 0) {
+        foreach (st; streams) { st.write_flow_data(false); }
     }
-    writeln("TODO do_calculation properly");
     return 0;
-}
+} // end do_calculation()

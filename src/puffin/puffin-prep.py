@@ -72,7 +72,7 @@ class GlobalConfig(object):
                 'gas_model_file', 'gmodel', \
                 'reaction_file_1', 'reaction_file_2', 'reactor', 'reacting', 'T_frozen', \
                 'axisymmetric', 'dx', 'cfl', 'cfl_count', \
-                'print_count', 'plot_count', \
+                'print_count', 'plot_dx', \
                 'max_x', 'max_step', 'x_order', 'nb'
 
     def __init__(self):
@@ -92,9 +92,9 @@ class GlobalConfig(object):
         self.axisymmetric = False
         self.dx = 1.0e-3
         self.cfl = 0.5
-        self.cfl_count = 10;
-        self.print_count = 50;
-        self.plot_count = 10;
+        self.cfl_count = 10
+        self.print_count = 50
+        self.plot_dx = 1.0e-2
         self.max_x = 1.0
         self.max_step = 10
         self.x_order = 2
@@ -125,7 +125,7 @@ class GlobalConfig(object):
         fp.write('  "cfl": %e,\n' % self.cfl)
         fp.write('  "cfl_count": %d,\n' % self.cfl_count)
         fp.write('  "print_count": %d,\n' % self.print_count)
-        fp.write('  "plot_count": %d,\n' % self.plot_count)
+        fp.write('  "plot_dx": %e,\n' % self.plot_dx)
         fp.write('  "x_order": %d,\n' % self.x_order)
         #
         fp.write('  "n_streams": %d,\n' % len(streamTubeList))
