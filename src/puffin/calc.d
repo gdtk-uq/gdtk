@@ -34,7 +34,7 @@ struct ProgressData {
 
 __gshared static ProgressData progress;
 
-int init_calculation()
+void init_calculation()
 {
     string dirName = Config.job_name;
     JSONValue configData = readJSONfile(dirName~"/config.json");
@@ -90,10 +90,10 @@ int init_calculation()
     progress.dx = Config.dx;
     progress.plot_at_x = Config.plot_dx;
     progress.steps_since_last_plot_write = 0;
-    return 0;
+    return;
 }
 
-int do_calculation()
+void do_calculation()
 {
     progress.wall_clock_start = Clock.currTime();
     while (progress.x < Config.max_x || progress.step < Config.max_step) {
@@ -154,5 +154,5 @@ int do_calculation()
     if (progress.steps_since_last_plot_write > 0) {
         foreach (st; streams) { st.write_flow_data(false); }
     }
-    return 0;
+    return;
 } // end do_calculation()

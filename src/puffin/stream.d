@@ -31,6 +31,7 @@ class StreamTube {
 public:
     int indx;
     GasModel gmodel;
+    CQIndex cqi;
     GasState gs;
     Vector3 vel;
     int ncells;
@@ -43,7 +44,10 @@ public:
     Face2D[] ifaces_west;
     Face2D[] ifaces_east;
     Face2D[] jfaces;
+    //
     Cell2D[] cells;
+    Cell2D[] ghost_cells_left;
+    Cell2D[] ghost_cells_right;
     //
     FlowState2D[] flowstates_west;
 
@@ -51,7 +55,10 @@ public:
     {
         this.indx = indx;
         ncells = getJSONint(configData, format("ncells_%d", indx), 0);
+        //
         gmodel = init_gas_model(Config.gas_model_file);
+        cqi = new CQIndex(gmodel.n_species, gmodel.n_modes);
+        //
         auto inflowData = configData[format("inflow_%d", indx)];
         double p = getJSONdouble(inflowData, "p", 100.0e3);
         double T = getJSONdouble(inflowData, "T", 300.0);
@@ -62,6 +69,7 @@ public:
         gs.p = p; gs.T = T; gs.massf[] = massf[];
         gmodel.update_thermo_from_pT(gs);
         gmodel.update_sound_speed(gs);
+        //
         double velx = getJSONdouble(inflowData, "velx", 0.0);
         double vely = getJSONdouble(inflowData, "vely", 0.0);
         vel.set(velx, vely);
@@ -110,6 +118,7 @@ public:
         string repr = "StreamTube(";
         repr ~= format("indx=%d", indx);
         repr ~= format(", gmodel=%s, gs=%s", gmodel, gs);
+        repr ~= format(", cqi=%s", cqi);
         repr ~= format(", ncells=%d", ncells);
         repr ~= format(", y_lower=%s, y_upper=%s", y_lower, y_upper);
         repr ~= format(", bc_lower=%s, bc_upper=%s", bc_lower, bc_upper);
@@ -118,7 +127,7 @@ public:
     }
 
 
-    int set_up_data_storage()
+    void set_up_data_storage()
     // Set up the storage and make connections to the vertices.
     {
         foreach (j; 0 .. ncells+1) {
@@ -126,25 +135,57 @@ public:
             vertices_east ~= Vector3();
         }
         foreach (j; 0 .. ncells) {
-            ifaces_west ~= new Face2D();
-            ifaces_east ~= new Face2D();
+            ifaces_west ~= new Face2D(cqi.n);
+            ifaces_east ~= new Face2D(cqi.n);
         }
         foreach (j; 0 .. ncells+1) {
-            jfaces ~= new Face2D();
+            jfaces ~= new Face2D(cqi.n);
         }
         foreach (j; 0 .. ncells) {
-            cells ~= new Cell2D(gmodel);
+            cells ~= new Cell2D(gmodel, cqi);
             flowstates_west ~= new FlowState2D(gmodel);
+        }
+        foreach (j; 0 .. 2) {
+            ghost_cells_left ~= new Cell2D(gmodel, cqi);
+            ghost_cells_right ~= new Cell2D(gmodel, cqi);
         }
         foreach (j; 0 .. ncells) {
             ifaces_west[j].p0 = &(vertices_west[j]);
             ifaces_west[j].p1 = &(vertices_west[j+1]);
+            //
             ifaces_east[j].p0 = &(vertices_east[j]);
             ifaces_east[j].p1 = &(vertices_east[j+1]);
         }
         foreach (j; 0 .. ncells+1) {
-            jfaces[j].p0 = &(vertices_east[j]);
-            jfaces[j].p1 = &(vertices_west[j]);
+            auto f = jfaces[j];
+            f.p0 = &(vertices_east[j]);
+            f.p1 = &(vertices_west[j]);
+            if (j == 0) {
+                f.left_cells[1] = ghost_cells_left[1];
+                f.left_cells[0] = ghost_cells_left[0];
+                f.right_cells[0] = cells[j];
+                f.right_cells[1] = cells[j+1];
+            } else if (j == 1) {
+                f.left_cells[1] = ghost_cells_left[0];
+                f.left_cells[0] = cells[j-1];
+                f.right_cells[0] = cells[j];
+                f.right_cells[1] = cells[j+1];
+            } else if (j == ncells-1) {
+                f.left_cells[1] = cells[j-2];
+                f.left_cells[0] = cells[j-1];
+                f.right_cells[0] = cells[j];
+                f.right_cells[1] = ghost_cells_right[0];
+            } else if (j == ncells) {
+                f.left_cells[1] = cells[j-2];
+                f.left_cells[0] = cells[j-1];
+                f.right_cells[0] = ghost_cells_right[0];
+                f.right_cells[1] = ghost_cells_right[1];
+            } else {
+                f.left_cells[1] = cells[j-2];
+                f.left_cells[0] = cells[j-1];
+                f.right_cells[0] = cells[j];
+                f.right_cells[1] = cells[j+1];
+            }
         }
         foreach (j; 0 .. ncells) {
             auto c = cells[j];
@@ -152,12 +193,17 @@ public:
             c.p10 = &(vertices_east[j]);
             c.p11 = &(vertices_east[j+1]);
             c.p01 = &(vertices_west[j+1]);
+            //
+            c.faces[Compass.north] = jfaces[j+1];
+            c.faces[Compass.east] = ifaces_east[j];
+            c.faces[Compass.south] = jfaces[j];
+            c.faces[Compass.west] = ifaces_west[j];
         }
-        return 0;
+        return;
     } // end set_up_data_storage()
 
 
-    int set_up_inflow_boundary()
+    void set_up_inflow_boundary()
     {
         // Compute the vertex positions.
         double x = 0.0;
@@ -178,11 +224,11 @@ public:
             fs.gas.copy_values_from(gs);
             fs.vel.set(vel);
         }
-        return 0;
+        return;
     } // end set_up_inflow_boundary()
 
 
-    int set_up_slice(double x)
+    void set_up_slice(double x)
     {
         // Locations for the east vertices.
         double y0 = y_lower.interpolate_value(x);
@@ -204,11 +250,11 @@ public:
         foreach (j; 0 .. ncells) {
             cells[j].fs.copy_values_from(flowstates_west[j]);
         }
-        return 0;
+        return;
     } // end set_up_slice()
 
 
-    int shuffle_data_west()
+    void shuffle_data_west()
     {
         foreach (j; 0 .. ncells+1) {
             vertices_west[j].set(vertices_east[j]);
@@ -219,11 +265,11 @@ public:
         foreach (j; 0 .. ncells) {
             flowstates_west[j].copy_values_from(cells[j].fs);
         }
-        return 0;
+        return;
     }
 
 
-    int write_flow_data(bool write_header)
+    void write_flow_data(bool write_header)
     {
         int nsp = gmodel.n_species;
         int nmodes = gmodel.n_modes;
@@ -249,6 +295,6 @@ public:
             fp.write("\n");
         }
         fp.close();
-        return 0;
+        return;
     }
 } // end class StreamTube
