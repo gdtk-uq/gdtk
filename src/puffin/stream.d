@@ -35,6 +35,7 @@ public:
     GasState gs;
     Vector3 vel;
     int ncells;
+    bool axiFlag;
     //
     Schedule!double y_lower, y_upper;
     Schedule!int bc_lower, bc_upper;
@@ -50,6 +51,10 @@ public:
     Cell2D[] ghost_cells_right;
     //
     FlowState2D[] flowstates_west;
+    //
+    // Scratch space for taking a gas-dynamic step.
+    FlowState2D fsL, fsR;
+
 
     this(int indx, JSONValue configData)
     {
@@ -58,6 +63,7 @@ public:
         //
         gmodel = init_gas_model(Config.gas_model_file);
         cqi = new CQIndex(gmodel.n_species, gmodel.n_modes);
+        axiFlag = Config.axisymmetric;
         //
         auto inflowData = configData[format("inflow_%d", indx)];
         double p = getJSONdouble(inflowData, "p", 100.0e3);
@@ -110,8 +116,11 @@ public:
         y_upper = new Schedule!double(xs, y1s);
         bc_lower = new Schedule!int(xs, bc0s);
         bc_upper = new Schedule!int(xs, bc1s);
+        //
+        // Scratch space
+        fsL = new FlowState2D(gmodel);
+        fsR = new FlowState2D(gmodel);
     } // end constructor
-
 
     override string toString()
     {
@@ -125,7 +134,6 @@ public:
         repr ~= ")";
         return repr;
     }
-
 
     void set_up_data_storage()
     // Set up the storage and make connections to the vertices.
@@ -194,15 +202,15 @@ public:
             c.p11 = &(vertices_east[j+1]);
             c.p01 = &(vertices_west[j+1]);
             //
-            c.faces[Compass.north] = jfaces[j+1];
-            c.faces[Compass.east] = ifaces_east[j];
-            c.faces[Compass.south] = jfaces[j];
-            c.faces[Compass.west] = ifaces_west[j];
+            c.faceN = jfaces[j+1];
+            c.faceE = ifaces_east[j];
+            c.faceS = jfaces[j];
+            c.faceW = ifaces_west[j];
         }
         return;
     } // end set_up_data_storage()
 
-
+    @nogc
     void set_up_inflow_boundary()
     {
         // Compute the vertex positions.
@@ -227,7 +235,7 @@ public:
         return;
     } // end set_up_inflow_boundary()
 
-
+    @nogc
     void set_up_slice(double x)
     {
         // Locations for the east vertices.
@@ -253,7 +261,7 @@ public:
         return;
     } // end set_up_slice()
 
-
+    @nogc
     void shuffle_data_west()
     {
         foreach (j; 0 .. ncells+1) {
@@ -266,8 +274,7 @@ public:
             flowstates_west[j].copy_values_from(cells[j].fs);
         }
         return;
-    }
-
+    } // end shuffle_data_west()
 
     void write_flow_data(bool write_header)
     {
@@ -295,6 +302,55 @@ public:
             fp.write("\n");
         }
         fp.close();
+        return;
+    } // end  write_flow_data()
+
+    @nogc
+    void predictor_step()
+    {
+        foreach (c; cells) { c.estimate_local_dt(); }
+        foreach (j; 0 .. ncells) {
+            ifaces_west[j].simple_flux(flowstates_west[j], gmodel);
+            ifaces_east[j].simple_flux(cells[j].fs, gmodel);
+        }
+        foreach (j; 0 .. ncells+1) {
+            auto f = jfaces[j];
+            fsL.copy_values_from(f.left_cells[0].fs);
+            fsR.copy_values_from(f.right_cells[0].fs);
+            f.calculate_flux(fsL, fsR, gmodel);
+        }
+        foreach (c; cells) {
+            c.eval_dUdt(0, axiFlag);
+            c.U[1][] = c.U[0][] + c.dt*c.dUdt[0][];
+            c.decode_conserved(1, gmodel);
+        }
+        return;
+    } // end predictor_step()
+
+    @nogc
+    void corrector_step()
+    {
+        foreach (j; 0 .. ncells) {
+            ifaces_east[j].simple_flux(cells[j].fs, gmodel);
+        }
+        foreach (j; 0 .. ncells+1) {
+            auto f = jfaces[j];
+            fsL.copy_values_from(f.left_cells[0].fs);
+            fsR.copy_values_from(f.right_cells[0].fs);
+            f.calculate_flux(fsL, fsR, gmodel);
+        }
+        foreach (c; cells) {
+            c.eval_dUdt(1, axiFlag);
+            c.U[2][] = c.U[0][] + 0.5*c.dt*(c.dUdt[0][] + c.dUdt[1][]);
+            c.decode_conserved(2, gmodel);
+        }
+        return;
+    } // end corrector_step()
+
+    @nogc
+    void transfer_conserved_quantities(size_t from, size_t dest)
+    {
+        foreach (c; cells) { c.U[dest][] = c.U[from][]; }
         return;
     }
 } // end class StreamTube

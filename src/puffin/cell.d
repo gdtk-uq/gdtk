@@ -12,27 +12,27 @@ import gas;
 import config;
 import flow;
 
-enum Compass {north=0, east=1,    south=2, west=3};
-// alias      upper    downstream lower    upstream
 
 class Cell2D {
 public:
     CQIndex cqi;
     Vector3 pos;
     Vector3* p00, p10, p11, p01;
-    Face2D[4] faces;
+    Face2D faceN, faceE, faceS, faceW;
     double volume, xyplane_area;
     double iLen, jLen, kLen; // distances across the cell
     //
     FlowState2D fs;
-    double[][2] U; // Conserved quantities at time levels.
+    double[][3] U; // Conserved quantities at time levels.
     double[][2] dUdt; // Time-derivatives of conserved quantities.
+    //
+    double dt; // Local time-step size.
 
-    this(GasModel gm, CQIndex cqi)
+    this(GasModel gmodel, CQIndex cqi)
     {
         this.cqi = new CQIndex(cqi);
         pos = Vector3();
-        fs = new FlowState2D(gm);
+        fs = new FlowState2D(gmodel);
         foreach (i; 0 .. U.length) { U[i].length = cqi.n; }
     }
 
@@ -148,20 +148,25 @@ public:
         double vol_inv = 1.0 / volume;
         foreach (i; 0 .. cqi.n) {
             // Integrate the fluxes across the interfaces that bound the cell.
-            double si = 0.0;
-            auto fN = faces[Compass.north]; si -= fN.area * fN.F[i];
-            auto fE = faces[Compass.east]; si -= fE.area * fE.F[i];
-            auto fS = faces[Compass.south]; si += fS.area * fS.F[i];
-            auto fW = faces[Compass.west]; si += fW.area * fW.F[i];
+            double surface_integral = faceS.area*faceS.F[i] + faceW.area*faceW.F[i]
+                - faceN.area*faceN.F[i] - faceE.area*faceE.F[i];
             // Then evaluate the derivatives of conserved quantity.
             // Note that conserved quantities are stored per-unit-volume.
-            my_dUdt[i] = vol_inv * si;
+            my_dUdt[i] = vol_inv * surface_integral;
         }
         if (axisymmetric) {
             my_dUdt[cqi.yMom] += fs.gas.p * xyplane_area * vol_inv;
         }
         return;
     } // end eval_dUdt()
+
+    @nogc
+    void estimate_local_dt()
+    {
+        dt = 1.0e-6;
+        debug { import std.stdio; writeln("[TODO] Cell2D.estimate_local_dt"); }
+        return;
+    }
 
 } // end class Cell2D
 
@@ -214,4 +219,23 @@ public:
         if (Config.axisymmetric) { area *= pos.y; }
         return;
     }
+
+    @nogc
+    void calculate_flux(FlowState2D fsL, FlowState2D fsR, GasModel gmodel)
+    // Compute the face's flux vector from left and right flow states.
+    // The core of this calculation is a ond-dimensional Riemann solver.
+    {
+        debug { import std.stdio; writeln("[TODO] Face2D.calculate_flux"); }
+        return;
+    }
+
+    @nogc
+    void simple_flux(FlowState2D fs, GasModel gmodel)
+    // Computes the face's flux vector from a single flow state.
+    // Supersonic flow is assumed.
+    {
+        debug { import std.stdio; writeln("[TODO] Face2D.simple_flux"); }
+        return;
+    }
+
 } // end class Face2D

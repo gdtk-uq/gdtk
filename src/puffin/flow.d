@@ -17,9 +17,9 @@ public:
     GasState gas;
     Vector3 vel;
 
-    this(GasModel gm)
+    this(GasModel gmodel)
     {
-        gas = new GasState(gm);
+        gas = new GasState(gmodel);
         vel.set(0.0, 0.0);
     }
 

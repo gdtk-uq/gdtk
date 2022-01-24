@@ -29,8 +29,7 @@ Top-level arguments include the following.
 Argument:                            Comment:
 --------------------------------------------------------------------------------
 Actions:
-  --run-calculation                  run the calculation
-  --vtk-xml                          write a VTK file of the flow field
+  Running a space-marching calculation is the only real action.
   --help                             writes this help message
 
 Parameters:
@@ -42,7 +41,7 @@ Parameters:
 --------------------------------------------------------------------------------
 ";
     //
-    if ( args.length < 2 ) {
+    if ( args.length < 1 ) {
         writeln("Too few arguments.");
         writeln(usageMsg);
         stdout.flush();
@@ -51,15 +50,11 @@ Parameters:
     }
     //
     string jobName = "";
-    bool runCalculation = false;
-    bool writeVTK = false;
     int verbosityLevel = 1; // default to commenting on major steps
     bool helpWanted = false;
     try {
         getopt(args,
                "job", &jobName,
-               "run-calculation", &runCalculation,
-               "write-vtk", &writeVTK,
                "verbosity", &verbosityLevel,
                "help", &helpWanted
                );
@@ -119,18 +114,11 @@ Parameters:
     }
     Config.job_name = jobName;
     Config.verbosity_level = verbosityLevel;
-
-    // Get to work to do one task...
-    if (runCalculation) {
-        writeln("Do a simulation.");
-        init_calculation();
-        do_calculation();
-    } else if (writeVTK) {
-        writeln("Write a VTK data file");
-        writeln("TODO");
-    } else {
-        writeln("You did not ask for anything to be done.");
-    }
+    //
+    if (verbosityLevel > 0) { writeln("Do a Calculation."); }
+    init_calculation();
+    do_space_marching_calculation();
     if (verbosityLevel > 0) { writeln("Done."); }
+    //
     return exitFlag;
 } // end main

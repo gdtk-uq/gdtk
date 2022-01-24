@@ -93,7 +93,7 @@ void init_calculation()
     return;
 }
 
-void do_calculation()
+void do_space_marching_calculation()
 {
     progress.wall_clock_start = Clock.currTime();
     while (progress.x < Config.max_x || progress.step < Config.max_step) {
@@ -107,9 +107,8 @@ void do_calculation()
             ++attempt_number;
             step_failed = false;
             try {
-                foreach (st; streams) { st.set_up_slice(progress.x+progress.dx); }
-                //
-                writeln("[TODO] compute to steady state.");
+                foreach (st; streams) { st.set_up_slice(progress.x + progress.dx); }
+                relax_slice_to_steady_flow(progress.x + 0.5*progress.dx);
             } catch (Exception e) {
                 writefln("Step failed e.msg=%s", e.msg);
                 step_failed = true;
@@ -155,4 +154,23 @@ void do_calculation()
         foreach (st; streams) { st.write_flow_data(false); }
     }
     return;
-} // end do_calculation()
+} // end do_space_marching_calculation()
+
+@nogc
+void relax_slice_to_steady_flow(double xmid)
+{
+    debug { import std.stdio; writeln("[TODO] relax_to_steady_state."); }
+    foreach (k; 0 .. 20) {
+        foreach (i, st; streams) {
+            // look up boundary conditions at xmid
+            // apply boundary conditions
+        }
+        foreach (st; streams) {
+            // take a gas-dynamic step
+            // predictor alone or predictor and corrector
+        }
+        // measure residuals overall
+        // break, is residuals are small enough
+    }
+    return;
+} // end relax_to_steady_flow()
