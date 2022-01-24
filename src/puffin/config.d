@@ -32,7 +32,6 @@ public:
     shared static int max_step;
     shared static double dx;
     shared static double cfl;
-    shared static int cfl_count;
     shared static int print_count;
     shared static double plot_dx;
     shared static int x_order;

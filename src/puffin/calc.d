@@ -49,7 +49,6 @@ void init_calculation()
     Config.max_step = getJSONint(configData, "max_step", 0);
     Config.dx = getJSONdouble(configData, "dx", 0.0);
     Config.cfl = getJSONdouble(configData, "cfl", 0.5);
-    Config.cfl_count = getJSONint(configData, "cfl_count", 10);
     Config.print_count = getJSONint(configData, "print_count", 50);
     Config.plot_dx = getJSONdouble(configData, "plot_dx", 1.0e-2);
     Config.x_order = getJSONint(configData, "x_order", 2);
@@ -67,7 +66,6 @@ void init_calculation()
         writeln("  max_step= ", Config.max_step);
         writeln("  dx= ", Config.dx);
         writeln("  cfl= ", Config.cfl);
-        writeln("  cfl_count= ", Config.cfl_count);
         writeln("  print_count= ", Config.print_count);
         writeln("  plot_dx= ", Config.plot_dx);
         writeln("  x_order= ", Config.x_order);

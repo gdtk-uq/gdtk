@@ -36,6 +36,7 @@ public:
     Vector3 vel;
     int ncells;
     bool axiFlag;
+    double cfl;
     //
     Schedule!double y_lower, y_upper;
     Schedule!int bc_lower, bc_upper;
@@ -64,6 +65,7 @@ public:
         gmodel = init_gas_model(Config.gas_model_file);
         cqi = new CQIndex(gmodel.n_species, gmodel.n_modes);
         axiFlag = Config.axisymmetric;
+        cfl = Config.cfl;
         //
         auto inflowData = configData[format("inflow_%d", indx)];
         double p = getJSONdouble(inflowData, "p", 100.0e3);
@@ -171,26 +173,20 @@ public:
             if (j == 0) {
                 f.left_cells[1] = ghost_cells_left[1];
                 f.left_cells[0] = ghost_cells_left[0];
-                f.right_cells[0] = cells[j];
-                f.right_cells[1] = cells[j+1];
             } else if (j == 1) {
                 f.left_cells[1] = ghost_cells_left[0];
                 f.left_cells[0] = cells[j-1];
-                f.right_cells[0] = cells[j];
-                f.right_cells[1] = cells[j+1];
-            } else if (j == ncells-1) {
-                f.left_cells[1] = cells[j-2];
-                f.left_cells[0] = cells[j-1];
-                f.right_cells[0] = cells[j];
-                f.right_cells[1] = ghost_cells_right[0];
-            } else if (j == ncells) {
-                f.left_cells[1] = cells[j-2];
-                f.left_cells[0] = cells[j-1];
-                f.right_cells[0] = ghost_cells_right[0];
-                f.right_cells[1] = ghost_cells_right[1];
             } else {
                 f.left_cells[1] = cells[j-2];
                 f.left_cells[0] = cells[j-1];
+            }
+            if (j == ncells-1) {
+                f.right_cells[0] = cells[j];
+                f.right_cells[1] = ghost_cells_right[0];
+            } else if (j ==  ncells) {
+                f.right_cells[0] = ghost_cells_right[0];
+                f.right_cells[1] = ghost_cells_right[1];
+            } else {
                 f.right_cells[0] = cells[j];
                 f.right_cells[1] = cells[j+1];
             }
@@ -308,7 +304,7 @@ public:
     @nogc
     void predictor_step()
     {
-        foreach (c; cells) { c.estimate_local_dt(); }
+        foreach (c; cells) { c.estimate_local_dt(cfl); }
         foreach (j; 0 .. ncells) {
             ifaces_west[j].simple_flux(flowstates_west[j], gmodel);
             ifaces_east[j].simple_flux(cells[j].fs, gmodel);

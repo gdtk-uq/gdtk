@@ -6,6 +6,7 @@
 module cell;
 
 import std.format;
+import std.math;
 
 import geom;
 import gas;
@@ -161,10 +162,10 @@ public:
     } // end eval_dUdt()
 
     @nogc
-    void estimate_local_dt()
+    void estimate_local_dt(double cfl)
     {
-        dt = 1.0e-6;
-        debug { import std.stdio; writeln("[TODO] Cell2D.estimate_local_dt"); }
+        // We assume that the cells are (roughly) aligned with the xy directions.
+        dt = cfl * fmin(iLen/(fabs(fs.vel.x)+fs.gas.a), jLen/(fabs(fs.vel.y)+fs.gas.a));
         return;
     }
 
