@@ -405,6 +405,28 @@ struct Vector3 {
         number v_z = x*n.z + y*t1.z + z*t2.z; // global-z
         x = v_x; y = v_y; z = v_z;
     }
+
+    // 2D flavour for change of coordinate system functions.
+
+    @nogc void transform_to_local_frame(ref const(Vector3) n,
+                                        ref const(Vector3) t1)
+    {
+        number v_x = x*n.x + y*n.y;   // normal component
+        number v_y = x*t1.x + y*t1.y; // tangential component 1
+        x = v_x; y = v_y; z = 0.0;
+    }
+
+    /**
+     * Rotate v back into the global (xy) coordinate system.
+     */
+    @nogc void transform_to_global_frame(ref const(Vector3) n,
+                                         ref const(Vector3) t1)
+    {
+        number v_x = x*n.x + y*t1.x; // global-x
+        number v_y = x*n.y + y*t1.y; // global-y
+        x = v_x; y = v_y; z = 0.0;
+    }
+
     // Change of coordinate system; rotation with translation.
 
     // Transform coordinates from global frame to local (dash) frame.
@@ -709,6 +731,17 @@ version(vector3_test) {
         assert(approxEqualVectors(h, Vector3(sqrt(1.0/2.0), -sqrt(1.0/2.0), 1.0)),
                failedUnitTest());
         h.transform_to_global_frame(n, t1, t2);
+        assert(approxEqualVectors(h, h_ref), failedUnitTest());
+        //
+        // 2D variants, starting with fresh values.
+        n.set(1.0,1.0); n = unit(n);
+        t1.set(-1.0,1.0); t1 = unit(t1);
+        h_ref.set(1.0,0.0);
+        h.set(h_ref);
+        h.transform_to_local_frame(n, t1);
+        assert(approxEqualVectors(h, Vector3(sqrt(1.0/2.0), -sqrt(1.0/2.0))),
+               failedUnitTest());
+        h.transform_to_global_frame(n, t1);
         assert(approxEqualVectors(h, h_ref), failedUnitTest());
 
         Vector3 a45 = Vector3(cos(to!number(PI)/4),sin(to!number(PI)/4));
