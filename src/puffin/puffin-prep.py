@@ -71,9 +71,9 @@ class GlobalConfig(object):
     __slots__ = 'job_name', 'title', \
                 'gas_model_file', 'gmodel', \
                 'reaction_file_1', 'reaction_file_2', 'reactor', 'reacting', 'T_frozen', \
-                'axisymmetric', 'dx', 'cfl', \
-                'print_count', 'plot_dx', \
-                'max_x', 'max_step', 'x_order', 'nb'
+                'axisymmetric', \
+                'dx', 'print_count', 'plot_dx', 'max_x', 'max_step', \
+                'cfl', 'max_step_relax', 'x_order', 't_order'
 
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -91,12 +91,14 @@ class GlobalConfig(object):
         self.T_frozen = 300.0
         self.axisymmetric = False
         self.dx = 1.0e-3
-        self.cfl = 0.5
         self.print_count = 50
         self.plot_dx = 1.0e-2
         self.max_x = 1.0
         self.max_step = 10
+        self.cfl = 0.5
+        self.max_step_relax = 20
         self.x_order = 2
+        self.t_order = 2
         #
         GlobalConfig.count += 1
         return
@@ -118,13 +120,15 @@ class GlobalConfig(object):
         fp.write('  "reacting": %s,\n' % json.dumps(self.reacting))
         fp.write('  "T_frozen": %e,\n' % self.T_frozen)
         fp.write('  "axisymmetric": %s,\n' % json.dumps(self.axisymmetric))
-        fp.write('  "max_x": %e,\n' % self.max_x)
-        fp.write('  "max_step": %d,\n' % self.max_step)
         fp.write('  "dx": %e,\n' % self.dx)
-        fp.write('  "cfl": %e,\n' % self.cfl)
         fp.write('  "print_count": %d,\n' % self.print_count)
         fp.write('  "plot_dx": %e,\n' % self.plot_dx)
+        fp.write('  "max_x": %e,\n' % self.max_x)
+        fp.write('  "max_step": %d,\n' % self.max_step)
+        fp.write('  "cfl": %e,\n' % self.cfl)
+        fp.write('  "max_step_relax": %d,\n' % self.max_step_relax)
         fp.write('  "x_order": %d,\n' % self.x_order)
+        fp.write('  "t_order": %d,\n' % self.t_order)
         #
         fp.write('  "n_streams": %d,\n' % len(streamTubeList))
         for st in streamTubeList:

@@ -48,10 +48,12 @@ void init_calculation()
     Config.max_x = getJSONdouble(configData, "max_x", 0.0);
     Config.max_step = getJSONint(configData, "max_step", 0);
     Config.dx = getJSONdouble(configData, "dx", 0.0);
+    Config.max_step_relax = getJSONint(configData, "max_step_relax", 20);
     Config.cfl = getJSONdouble(configData, "cfl", 0.5);
     Config.print_count = getJSONint(configData, "print_count", 50);
     Config.plot_dx = getJSONdouble(configData, "plot_dx", 1.0e-2);
     Config.x_order = getJSONint(configData, "x_order", 2);
+    Config.t_order = getJSONint(configData, "t_order", 2);
     Config.n_streams = getJSONint(configData, "n_streams", 1);
     if (Config.verbosity_level >= 1) {
         writeln("Config:");
@@ -65,10 +67,12 @@ void init_calculation()
         writeln("  max_x= ", Config.max_x);
         writeln("  max_step= ", Config.max_step);
         writeln("  dx= ", Config.dx);
+        writeln("  max_step_relax= ", Config.max_step_relax);
         writeln("  cfl= ", Config.cfl);
         writeln("  print_count= ", Config.print_count);
         writeln("  plot_dx= ", Config.plot_dx);
         writeln("  x_order= ", Config.x_order);
+        writeln("  t_order= ", Config.t_order);
         writeln("  n_streams= ", Config.n_streams);
     }
     foreach (i; 0 .. Config.n_streams) {
@@ -89,7 +93,7 @@ void init_calculation()
     progress.plot_at_x = Config.plot_dx;
     progress.steps_since_last_plot_write = 0;
     return;
-}
+} // end init_calculation()
 
 void do_space_marching_calculation()
 {
@@ -156,19 +160,91 @@ void do_space_marching_calculation()
 
 @nogc
 void relax_slice_to_steady_flow(double xmid)
+// We are operating on a slice with its mid-point being at x=xmid.
+// There may be more than one StreamTube in the slice and any exchange
+// boundary condition will necessarily involve two StreamTubes.
 {
-    debug { import std.stdio; writeln("[TODO] relax_to_steady_state."); }
-    foreach (k; 0 .. 20) {
-        foreach (i, st; streams) {
-            // look up boundary conditions at xmid
-            // apply boundary conditions
+    foreach (k; 0 .. Config.max_step_relax) {
+        // 1. Predictor (Euler) step..
+        apply_boundary_conditions(xmid);
+        foreach (st; streams) { st.predictor_step(); }
+        if (Config.t_order > 1) {
+            apply_boundary_conditions(xmid);
+            foreach (st; streams) {
+                st.corrector_step();
+                st.transfer_conserved_quantities(2, 0);
+            }
+        } else {
+            // Clean-up after Euler step.
+            foreach (st; streams) {
+                st.transfer_conserved_quantities(1, 0);
+            }
         }
-        foreach (st; streams) {
-            // take a gas-dynamic step
-            // predictor alone or predictor and corrector
-        }
-        // measure residuals overall
-        // break, is residuals are small enough
+        // 3. [TODO] measure residuals overall
+        // break early, if residuals are small enough
     }
     return;
-} // end relax_to_steady_flow()
+} // end relax_slice_to_steady_flow()
+
+@nogc
+void apply_boundary_conditions(double xmid)
+// Look up boundary conditions at xmid and apply boundary conditions.
+// Application of the boundary conditions is essentially filling the
+// ghost-cell flow states with suitable data.
+{
+    foreach (i, st; streams) {
+        int bc0 = st.bc_lower.get_value(xmid);
+        switch (bc0) {
+        case BCCode.wall:
+            // The slip-wall condition is implemented by filling the ghost cells
+            // with reflected-velocity flow.
+            auto fstate = st.ghost_cells_left[0].fs;
+            auto face = st.jfaces[0];
+            fstate.copy_values_from(st.cells[0].fs);
+            fstate.vel.transform_to_local_frame(face.n, face.t1);
+            fstate.vel.x = -(fstate.vel.x);
+            fstate.vel.transform_to_global_frame(face.n, face.t1);
+            //
+            fstate = st.ghost_cells_left[1].fs;
+            fstate.copy_values_from(st.cells[1].fs);
+            fstate.vel.transform_to_local_frame(face.n, face.t1);
+            fstate.vel.x = -(fstate.vel.x);
+            fstate.vel.transform_to_global_frame(face.n, face.t1);
+            break;
+        case BCCode.exchange:
+            // We fill the ghost-cells with data drom the neighbour streamtube.
+            auto nst = streams[i-1];
+            st.ghost_cells_left[0].fs.copy_values_from(nst.cells[nst.ncells-1].fs);
+            st.ghost_cells_left[1].fs.copy_values_from(nst.cells[nst.ncells-2].fs);
+            break;
+        default:
+            throw new Exception("Unknown BCCode.");
+        }
+        int bc1 = st.bc_upper.get_value(xmid);
+        switch (bc1) {
+        case BCCode.wall:
+            auto fstate = st.ghost_cells_right[0].fs;
+            auto face = st.jfaces[st.ncells];
+            fstate.copy_values_from(st.cells[st.ncells-1].fs);
+            fstate.vel.transform_to_local_frame(face.n, face.t1);
+            fstate.vel.x = -(fstate.vel.x);
+            fstate.vel.transform_to_global_frame(face.n, face.t1);
+            //
+            fstate = st.ghost_cells_right[1].fs;
+            fstate.copy_values_from(st.cells[st.ncells-2].fs);
+            fstate.vel.transform_to_local_frame(face.n, face.t1);
+            fstate.vel.x = -(fstate.vel.x);
+            fstate.vel.transform_to_global_frame(face.n, face.t1);
+            break;
+        case BCCode.exchange:
+            // We fill the ghost-cells with data drom the neighbour streamtube.
+            auto nst = streams[i+1];
+            st.ghost_cells_right[0].fs.copy_values_from(nst.cells[0].fs);
+            st.ghost_cells_right[1].fs.copy_values_from(nst.cells[1].fs);
+            break;
+        default:
+            throw new Exception("Unknown BCCode.");
+        }
+    } // end foreach st
+    return;
+} // end apply_boundary_conditions()

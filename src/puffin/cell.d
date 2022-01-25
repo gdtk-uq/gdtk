@@ -35,13 +35,19 @@ public:
         pos = Vector3();
         fs = new FlowState2D(gmodel);
         foreach (i; 0 .. U.length) { U[i].length = cqi.n; }
+        foreach (i; 0 .. dUdt.length) { dUdt[i].length = cqi.n; }
     }
 
     this(ref const(Cell2D) other)
     {
+        cqi = new CQIndex(other.cqi);
         pos = Vector3(other.pos);
         fs = new FlowState2D(other.fs);
         foreach (i; 0 .. U.length) { U[i] = other.U[i].dup; }
+        foreach (i; 0 .. dUdt.length) { dUdt[i] = other.dUdt[i].dup; }
+        // We do not bother copying all of the other references
+        // because they will be mostly useless in a newly copied cell.
+        // They will need to be set up manually, later.
     }
 
     override
@@ -174,6 +180,7 @@ public:
 
 class Face2D {
 public:
+    CQIndex cqi;
     Vector3 pos;
     Vector3* p0, p1; // pointers to vertices at each end of face
     Vector3 n; // unit normal (to right when looking from p0 to p1)
@@ -187,14 +194,16 @@ public:
     Cell2D[2] left_cells; // References to cells on the left, starting with closest.
     Cell2D[2] right_cells; // References to cells on the right, starting with closest.
 
-    this(size_t n)
+    this(CQIndex cqi)
     {
+        this.cqi = new CQIndex(cqi);
         pos = Vector3();
-        F.length = n;
+        F.length = cqi.n;
     }
 
     this(ref const(Face2D) other)
     {
+        cqi = new CQIndex(other.cqi);
         pos = Vector3(other.pos);
         F = other.F.dup;
     }
@@ -227,6 +236,7 @@ public:
     // The core of this calculation is a ond-dimensional Riemann solver.
     {
         debug { import std.stdio; writeln("[TODO] Face2D.calculate_flux"); }
+        foreach (k; 0 .. cqi.n) { F[k] = 0.0; }
         return;
     }
 
@@ -236,6 +246,7 @@ public:
     // Supersonic flow is assumed.
     {
         debug { import std.stdio; writeln("[TODO] Face2D.simple_flux"); }
+        foreach (k; 0 .. cqi.n) { F[k] = 0.0; }
         return;
     }
 
