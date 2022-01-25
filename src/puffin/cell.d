@@ -10,6 +10,7 @@ import std.math;
 
 import geom;
 import gas;
+import gasflow;
 import config;
 import flow;
 
@@ -193,12 +194,19 @@ public:
     //
     Cell2D[2] left_cells; // References to cells on the left, starting with closest.
     Cell2D[2] right_cells; // References to cells on the right, starting with closest.
+    //
+    // Workspace for the Osher-type flux calculator.
+    GasState stateLstar, stateRstar, stateX0;
 
-    this(CQIndex cqi)
+    this(GasModel gmodel, CQIndex cqi)
     {
         this.cqi = new CQIndex(cqi);
         pos = Vector3();
         F.length = cqi.n;
+        // Workspace for Osher-type flux calculator.
+        stateLstar = new GasState(gmodel);
+        stateRstar = new GasState(gmodel);
+        stateX0 = new GasState(gmodel);
     }
 
     this(ref const(Face2D) other)
@@ -206,6 +214,9 @@ public:
         cqi = new CQIndex(other.cqi);
         pos = Vector3(other.pos);
         F = other.F.dup;
+        stateLstar = new GasState(other.stateLstar);
+        stateRstar = new GasState(other.stateRstar);
+        stateX0 = new GasState(other.stateX0);
     }
 
     override
@@ -233,21 +244,64 @@ public:
     @nogc
     void calculate_flux(FlowState2D fsL, FlowState2D fsR, GasModel gmodel)
     // Compute the face's flux vector from left and right flow states.
-    // The core of this calculation is a ond-dimensional Riemann solver.
+    // The core of this calculation is the one-dimensional Riemann solver
+    // from the gasflow module.
     {
-        debug { import std.stdio; writeln("[TODO] Face2D.calculate_flux"); }
-        foreach (k; 0 .. cqi.n) { F[k] = 0.0; }
+        Vector3 velL = Vector3(fsL.vel);
+        Vector3 velR = Vector3(fsR.vel);
+        velL.transform_to_local_frame(n, t1);
+        velR.transform_to_local_frame(n, t1);
+        double[5] rsol = osher_riemann(fsL.gas, fsR.gas, velL.x, velR.x,
+                                       stateLstar, stateRstar, stateX0, gmodel);
+        double rho = stateX0.rho;
+        double p = stateX0.p;
+        double u = gmodel.internal_energy(stateX0);
+        double velx = rsol[4];
+        double vely = (velx < 0.0) ? velL.x : velR.x;
+        double massFlux = rho*velx;
+        Vector3 momentum = Vector3(massFlux*velx+p, massFlux*vely);
+        momentum.transform_to_global_frame(n, t1);
+        F[cqi.mass] = massFlux;
+        F[cqi.xMom] = momentum.x;
+        F[cqi.yMom] = momentum.y;
+        F[cqi.totEnergy] = massFlux*(u+p/rho+0.5*(velx*velx+vely*vely));
+        if (cqi.n_species > 1) {
+            foreach (i; 0 .. cqi.n_species) {
+                F[cqi.species+i] = massFlux * ((velx < 0.0) ? fsL.gas.massf[i] : fsR.gas.massf[i]);
+            }
+        }
+        foreach (i; 0 .. cqi.n_modes) {
+            F[cqi.modes+i] = massFlux * ((velx < 0.0) ? fsL.gas.u_modes[i] : fsR.gas.u_modes[i]);
+        }
         return;
-    }
+    } // end calculate_flux()
 
     @nogc
     void simple_flux(FlowState2D fs, GasModel gmodel)
     // Computes the face's flux vector from a single flow state.
     // Supersonic flow is assumed.
     {
-        debug { import std.stdio; writeln("[TODO] Face2D.simple_flux"); }
-        foreach (k; 0 .. cqi.n) { F[k] = 0.0; }
+        Vector3 vel = Vector3(fs.vel);
+        vel.transform_to_local_frame(n, t1);
+        double rho = fs.gas.rho;
+        double p = fs.gas.p;
+        double u = gmodel.internal_energy(fs.gas);
+        double massFlux = rho * vel.x;
+        Vector3 momentum = Vector3(massFlux*vel.x+p, massFlux*vel.y);
+        momentum.transform_to_global_frame(n, t1);
+        F[cqi.mass] = massFlux;
+        F[cqi.xMom] = momentum.x;
+        F[cqi.yMom] = momentum.y;
+        F[cqi.totEnergy] = massFlux * (u+p/rho+0.5*(vel.x*vel.x+vel.y*vel.y));
+        if (cqi.n_species > 1) {
+            foreach (i; 0 .. cqi.n_species) {
+                F[cqi.species+i] = massFlux * fs.gas.massf[i];
+            }
+        }
+        foreach (i; 0 .. cqi.n_modes) {
+            F[cqi.modes+i] = massFlux * fs.gas.u_modes[i];
+        }
         return;
-    }
+    } // end simple_flux()
 
 } // end class Face2D

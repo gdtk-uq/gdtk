@@ -145,11 +145,11 @@ public:
             vertices_east ~= Vector3();
         }
         foreach (j; 0 .. ncells) {
-            ifaces_west ~= new Face2D(cqi);
-            ifaces_east ~= new Face2D(cqi);
+            ifaces_west ~= new Face2D(gmodel, cqi);
+            ifaces_east ~= new Face2D(gmodel, cqi);
         }
         foreach (j; 0 .. ncells+1) {
-            jfaces ~= new Face2D(cqi);
+            jfaces ~= new Face2D(gmodel, cqi);
         }
         foreach (j; 0 .. ncells) {
             cells ~= new Cell2D(gmodel, cqi);

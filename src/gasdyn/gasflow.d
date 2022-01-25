@@ -732,7 +732,7 @@ number finite_wave_dv(const(GasState) state1, number V1,
 
 immutable double near_zero_pressure = 1.0e-6; // in Pascals
 
-
+@nogc
 number[5] osher_riemann(const(GasState) stateL, const(GasState) stateR,
                         number velL, number velR,
                         GasState stateLstar, GasState stateRstar, GasState stateX0,
