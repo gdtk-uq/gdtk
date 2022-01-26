@@ -121,7 +121,7 @@ void do_space_marching_calculation()
             throw new Exception("Step failed after 3 attempts.");
         }
         //
-        // 3. Prepare for next step.
+        // 3. Prepare for next spatial step.
         foreach (st; streams) { st.shuffle_data_west(); }
         progress.x += progress.dx;
         progress.step++;
@@ -199,7 +199,7 @@ void apply_boundary_conditions(double xmid)
         switch (bc0) {
         case BCCode.wall:
             // The slip-wall condition is implemented by filling the ghost cells
-            // with reflected-velocity flow.
+            // with reflected-normal-velocity flow.
             auto fstate = st.ghost_cells_left[0].fs;
             auto face = st.jfaces[0];
             fstate.copy_values_from(st.cells[0].fs);

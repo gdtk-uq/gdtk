@@ -128,7 +128,7 @@ public:
     {
         string repr = "StreamTube(";
         repr ~= format("indx=%d", indx);
-        repr ~= format(", gmodel=%s, gs=%s", gmodel, gs);
+        repr ~= format(", gmodel=%s, gs=%s, vel=%s", gmodel, gs, vel);
         repr ~= format(", cqi=%s", cqi);
         repr ~= format(", ncells=%d", ncells);
         repr ~= format(", y_lower=%s, y_upper=%s", y_lower, y_upper);
@@ -220,7 +220,7 @@ public:
         }
         // Geometry of faces.
         foreach (j; 0 .. ncells) {
-            ifaces_west[j].compute_geometry();
+            ifaces_west[j].compute_geometry(axiFlag);
         }
         // Inflow states
         foreach (j; 0 .. ncells) {
@@ -244,11 +244,11 @@ public:
         }
         // Compute the face and cell geometric properties.
         foreach (j; 0 .. ncells) {
-            ifaces_east[j].compute_geometry();
-            cells[j].compute_geometry();
+            ifaces_east[j].compute_geometry(axiFlag);
+            cells[j].compute_geometry(axiFlag);
         }
         foreach (j; 0 .. ncells+1) {
-            jfaces[j].compute_geometry();
+            jfaces[j].compute_geometry(axiFlag);
         }
         // Finally, initialize the flow by propagating from the west.
         foreach (j; 0 .. ncells) {
@@ -259,12 +259,15 @@ public:
 
     @nogc
     void shuffle_data_west()
+    // At the end of relaxation process (and reaching steady-state),
+    // we copy the geometry and flow states over to the west side
+    // of the slice.  We need to do this before setting up a new slice.
     {
         foreach (j; 0 .. ncells+1) {
             vertices_west[j].set(vertices_east[j]);
         }
         foreach (j; 0 .. ncells) {
-            ifaces_west[j].compute_geometry();
+            ifaces_west[j].compute_geometry(axiFlag);
         }
         foreach (j; 0 .. ncells) {
             flowstates_west[j].copy_values_from(cells[j].fs);
@@ -280,7 +283,7 @@ public:
         string fileName = format("%s/flow-%d.data", Config.job_name, indx);
         if (write_header) {
             fp = File(fileName, "w");
-            fp.write("# x  y  velx vely rho  p  T  u  a");
+            fp.write("# x  y  velx vely  M  rho  p  T  u  a");
             foreach (i; 0 .. nsp) { fp.write(format(" massf-%d", i)); }
             foreach (i; 0 .. nmodes) { fp.write(format(" T_modes-%d u_modes-%d", i, i)); }
             fp.write("\n");
@@ -291,7 +294,10 @@ public:
             auto face = ifaces_west[j];
             auto fs = flowstates_west[j];
             auto g = fs.gas;
-            fp.write(format("%e %e %e %e", face.pos.x, face.pos.y, fs.vel.x, fs.vel.y));
+            double Vx = fs.vel.x;
+            double Vy = fs.vel.y;
+            double M = sqrt(Vx*Vx+Vy*Vy)/g.a;
+            fp.write(format("%e %e %e %e %e", face.pos.x, face.pos.y, Vx, Vy, M));
             fp.write(format(" %e %e %e %e %e", g.rho, g.p, g.T, g.u, g.a));
             foreach (i; 0 .. nsp) { fp.write(format(" %e", g.massf[i])); }
             foreach (i; 0 .. nmodes) { fp.write(format(" %e %e", g.T_modes[i], g.u_modes[i])); }

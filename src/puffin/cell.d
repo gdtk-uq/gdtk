@@ -67,12 +67,13 @@ public:
     }
 
     @nogc
-    void compute_geometry()
+    void compute_geometry(bool axiFlag)
     // Update the geometric properties from vertex data.
     {
         xyplane_quad_cell_properties(*p00, *p10, *p11, *p01, pos, xyplane_area,
                                      iLen, jLen, kLen);
-        volume = xyplane_area * ((Config.axisymmetric) ? pos.y : 1.0);
+        volume = xyplane_area;
+        if (axiFlag) { volume *= pos.y; }
         if (volume < 0.0 || xyplane_area < 0.0) {
             throw new Exception("volume or xyplane_area negative.");
         }
@@ -163,7 +164,7 @@ public:
     } // end decode_conserved()
 
     @nogc
-    void eval_dUdt(size_t ftl, bool axisymmetric)
+    void eval_dUdt(size_t ftl, bool axiFlag)
     // These are the spatial (RHS) terms in the semi-discrete governing equations.
     // ftl : (flow-time-level) specifies where computed derivatives are to be stored.
     //       0: predictor update.
@@ -179,7 +180,7 @@ public:
             // Note that conserved quantities are stored per-unit-volume.
             my_dUdt[i] = vol_inv * surface_integral;
         }
-        if (axisymmetric) {
+        if (axiFlag) {
             my_dUdt[cqi.yMom] += fs.gas.p * xyplane_area * vol_inv;
         }
         return;
@@ -247,7 +248,7 @@ public:
     }
 
     @nogc
-    void compute_geometry()
+    void compute_geometry(bool axiFlag)
     // Update the geometric properties from vertex data.
     {
         t1 = *p1; t1 -= *p0; t1.normalize();
@@ -255,7 +256,7 @@ public:
         cross(n, t1, t2); n.normalize();
         area = distance_between(*p1, *p0);
         pos = *p0; pos += *p1; pos *= 0.5;
-        if (Config.axisymmetric) { area *= pos.y; }
+        if (axiFlag) { area *= pos.y; }
         return;
     }
 
@@ -275,7 +276,7 @@ public:
         double p = stateX0.p;
         double u = gmodel.internal_energy(stateX0);
         double velx = rsol[4];
-        double vely = (velx < 0.0) ? velL.x : velR.x;
+        double vely = (velx < 0.0) ? velL.y : velR.y;
         double massFlux = rho*velx;
         Vector3 momentum = Vector3(massFlux*velx+p, massFlux*vely);
         momentum.transform_to_global_frame(n, t1);
