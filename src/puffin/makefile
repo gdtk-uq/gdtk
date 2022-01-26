@@ -8,7 +8,7 @@ DMD ?= ldc2
 FLAVOUR ?= debug
 PLATFORM ?= linux
 
-PROGRAMS := puffin puffin-prep
+PROGRAMS := puffin puffin-prep puffin-post
 
 PUFFIN_FILES := config.d calc.d stream.d cell.d flow.d
 
@@ -181,6 +181,10 @@ puffin: main.d $(PUFFIN_FILES) \
 puffin-prep: puffin-prep.py
 	cp puffin-prep.py puffin-prep
 	chmod +x puffin-prep
+
+puffin-post: puffin-post.py
+	cp puffin-post.py puffin-post
+	chmod +x puffin-post
 
 prep-gas:
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas
