@@ -48,7 +48,7 @@ void init_calculation()
     Config.max_x = getJSONdouble(configData, "max_x", 0.0);
     Config.max_step = getJSONint(configData, "max_step", 0);
     Config.dx = getJSONdouble(configData, "dx", 0.0);
-    Config.max_step_relax = getJSONint(configData, "max_step_relax", 20);
+    Config.max_step_relax = getJSONint(configData, "max_step_relax", 100);
     Config.cfl = getJSONdouble(configData, "cfl", 0.5);
     Config.print_count = getJSONint(configData, "print_count", 50);
     Config.plot_dx = getJSONdouble(configData, "plot_dx", 1.0e-2);
@@ -164,6 +164,8 @@ void relax_slice_to_steady_flow(double xmid)
 // There may be more than one StreamTube in the slice and any exchange
 // boundary condition will necessarily involve two StreamTubes.
 {
+    foreach (st; streams) { st.encode_conserved(0); }
+    //
     foreach (k; 0 .. Config.max_step_relax) {
         // 1. Predictor (Euler) step..
         apply_boundary_conditions(xmid);

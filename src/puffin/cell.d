@@ -60,6 +60,8 @@ public:
         repr ~= format(", iLen=%g, jLen=%g", iLen, jLen);
         repr ~= format(", fs=%s", fs);
         foreach (i; 0 .. U.length) { repr ~= format(", U[%d]=%s", i, U[i]); }
+        foreach (i; 0 .. dUdt.length) { repr ~= format(", dUdt[%d]=%s", i, dUdt[i]); }
+        repr ~= format(", dt=%g", dt);
         repr ~= ")";
         return repr;
     }
@@ -112,6 +114,12 @@ public:
     // Returns nonzero if the flowstate is bad.
     {
         auto myU = U[ftl];
+        bool allFinite = true;
+        foreach (e; myU) { if (!isFinite(e)) { allFinite = false; } }
+        if (!allFinite) {
+            debug { import std.stdio;  writeln("ftl=", ftl, " cell=", this); }
+            throw new Exception("At least one conserved quantity is not finite.");
+        }
         // Mass per unit volume.
         auto rho = myU[cqi.mass];
         if (rho <= 0.0) {
@@ -129,9 +137,8 @@ public:
         double ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y);
         u -= ke;
         // Other energies, if any.
-        double u_other = 0.0;
         foreach(i; 0 .. cqi.n_modes) { fs.gas.u_modes[i] = myU[cqi.modes+i] * dinv; }
-        foreach(ei; fs.gas.u_modes) { u_other += ei; }
+        double u_other = 0.0; foreach(ei; fs.gas.u_modes) { u_other += ei; }
         fs.gas.u = u - u_other;
         // Thermochemical species, if appropriate.
         if (cqi.n_species > 1) {
@@ -140,8 +147,18 @@ public:
         } else {
             fs.gas.massf[0] = 1.0;
         }
-        gmodel.update_thermo_from_rhou(fs.gas);
-        gmodel.update_sound_speed(fs.gas);
+        try {
+            gmodel.update_thermo_from_rhou(fs.gas);
+            gmodel.update_sound_speed(fs.gas);
+        } catch (Exception e) {
+            debug {
+                import std.stdio;
+                writeln("decode_conserved: cell=", this);
+                writeln("rho=", rho, " dinv=", dinv, " rE=", rE, " u=", u,
+                        " ke=", ke, " u_other=", u_other);
+            }
+            throw new Exception("decode_conserved: update thermo failed.");
+        }
         return;
     } // end decode_conserved()
 
@@ -223,7 +240,8 @@ public:
     string toString() const
     {
         string repr = "Face2D(";
-        repr ~= format("pos=%s", pos);
+        repr ~= format("pos=%s, n=%s, t1=%s, area=%g", pos, n, t1, area);
+        repr ~= format(", F=%s", F);
         repr ~= ")";
         return repr;
     }
@@ -232,9 +250,9 @@ public:
     void compute_geometry()
     // Update the geometric properties from vertex data.
     {
-        n = *p1; n -= *p0; n.normalize();
+        t1 = *p1; t1 -= *p0; t1.normalize();
         Vector3 t2 = Vector3(0.0, 0.0, 1.0);
-        cross(t1, n, t2);
+        cross(n, t1, t2); n.normalize();
         area = distance_between(*p1, *p0);
         pos = *p0; pos += *p1; pos *= 0.5;
         if (Config.axisymmetric) { area *= pos.y; }
@@ -273,6 +291,12 @@ public:
         foreach (i; 0 .. cqi.n_modes) {
             F[cqi.modes+i] = massFlux * ((velx < 0.0) ? fsL.gas.u_modes[i] : fsR.gas.u_modes[i]);
         }
+        bool allFinite = true;
+        foreach (e; F) { if (!isFinite(e)) { allFinite = false; } }
+        if (!allFinite) {
+            debug { import std.stdio;  writeln("face=", this); }
+            throw new Exception("At least one flux quantity is not finite.");
+        }
         return;
     } // end calculate_flux()
 
@@ -300,6 +324,12 @@ public:
         }
         foreach (i; 0 .. cqi.n_modes) {
             F[cqi.modes+i] = massFlux * fs.gas.u_modes[i];
+        }
+        bool allFinite = true;
+        foreach (e; F) { if (!isFinite(e)) { allFinite = false; } }
+        if (!allFinite) {
+            debug { import std.stdio;  writeln("face=", this); }
+            throw new Exception("At least one flux quantity is not finite.");
         }
         return;
     } // end simple_flux()

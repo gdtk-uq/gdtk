@@ -69,13 +69,23 @@ public:
         yMom = 2;
         totEnergy = 3;
         //
-        species = n; // Start of species elements.
         n_species = nspecies;
-        n += nspecies;
+        if (nspecies > 1) {
+            species = n; // Start of species elements.
+            n += nspecies;
+        } else {
+            // For a single-species gas, the flow-solver ignores
+            // the transport equation for the one species.
+            species = 0;
+        }
         //
-        modes = n; // Start of modes elements.
         n_modes = nmodes;
-        n += nmodes;
+        if (nmodes > 0) {
+            modes = n; // Start of modes elements.
+            n += nmodes;
+        } else {
+            modes = 0;
+        }
     }
 
     this(ref const(CQIndex) other)

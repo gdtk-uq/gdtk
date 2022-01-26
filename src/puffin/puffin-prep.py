@@ -96,7 +96,7 @@ class GlobalConfig(object):
         self.max_x = 1.0
         self.max_step = 10
         self.cfl = 0.5
-        self.max_step_relax = 20
+        self.max_step_relax = 100
         self.x_order = 2
         self.t_order = 2
         #

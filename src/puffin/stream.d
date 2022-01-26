@@ -302,6 +302,13 @@ public:
     } // end  write_flow_data()
 
     @nogc
+    void encode_conserved(size_t ftl)
+    {
+        foreach (c; cells) { c.encode_conserved(ftl, gmodel); }
+        return;
+    }
+
+    @nogc
     void predictor_step()
     {
         foreach (c; cells) { c.estimate_local_dt(cfl); }
