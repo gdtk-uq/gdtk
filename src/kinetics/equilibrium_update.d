@@ -201,25 +201,64 @@ private:
 
             lua_getglobal(L, "db");
             lua_getfield(L, -1, species.toStringz);
+            double Mi = getDouble(L, -1, "M");
+
             lua_getfield(L, -1, "thermoCoeffs");
             auto nseg = getInt(L, -1, "nsegments");
-            if (nseg<3) {
+            if (nseg<2) {
                 throw new Error(format("Species %s wrong number of thermo segments: (%d)",species, nseg));
             }
 
-            // TODO: ceq assumes fixed thermo tables with three segments in them.
-            // if a species with more segments is present it only uses the first 3
-            foreach (i; 0 .. 3) {
+            foreach (i; 0 .. 2) {
                 auto key = format("segment%d", i);
                 getArrayOfDoubles(L, -1, key, coeffs);
                 lewis_s ~= coeffs;
             }
+            if (nseg==2) {
+                lewis_s ~= fix_missing_thermo_segment(species, lewis_s, Mi);
+            } else {
+                auto key = format("segment%d", 2);
+                getArrayOfDoubles(L, -1, key, coeffs);
+                lewis_s ~= coeffs;
+            }
+
             lua_pop(L, 1);
             lua_pop(L, 1);
             lua_pop(L, 1);
             _lewis ~= lewis_s;
         }
         return;
+    }
+
+    double[] fix_missing_thermo_segment(string species, double[] lewis_s, double Mi){
+    /*
+        ceq's thermodynamic routines assume a fixed layout of curve-fit data with 3 sections
+        for each species. Since some species in the Lewis database only have 2 segments,
+        this routine can be used to make a make a fake segment that assumes constant Cp above
+        6000 K.
+    */
+        if (lewis_s.length!=18)
+            throw new Error(format("Cannot fix missing thermo segment of species (%s", species));
+
+        double[27] lspa;
+        foreach(i, li; lewis_s) lspa[i] = li;
+
+        // We need to call the thermo machinery with the half-built lspa table
+        int nsp = 1;
+        double T = 5999.99999;
+        double Ru = 8.3144621;
+        double[1] X = [1.0];
+        double[1] M = [Mi];
+
+        double cp = ceq.get_cp(T, X.ptr, nsp, lspa.ptr, M.ptr);
+        double h  = ceq.get_h(T, X.ptr, nsp, lspa.ptr, M.ptr);
+        double s0 = ceq.get_s0(T, X.ptr, nsp, lspa.ptr, M.ptr);
+
+        double a2 = cp*Mi/Ru;
+        double b1 = h*Mi/Ru - a2*T;
+        double b2 = s0*Mi/Ru - a2*log(T);
+        double[] lsp2 = [0.0, 0.0, a2, 0.0, 0.0, 0.0, 0.0, b1, b2];
+        return lsp2;
     }
 
     void compile_element_map(lua_State* L, ref double[string][] _element_map){
