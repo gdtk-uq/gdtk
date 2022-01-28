@@ -438,7 +438,6 @@ Result analyse(int verbosityLevel, Config config)
     double p_pitot = C * gas0.rho*v*v;
     //
     double dt_suggest = 1.0e-12;  // suggested starting time-step for chemistry
-    double dt_therm = dt_suggest;
     if (verbosityLevel >= 2) {
         writeln(sample_header);
         writeln(sample_data(xi[0], area, v, gas0, dt_suggest));
@@ -470,7 +469,7 @@ Result analyse(int verbosityLevel, Config config)
         // Do the chemical increment.
         auto gas1 = new GasState(gm2); // we need an update state
         gas1.copy_values_from(gas0);
-        reactor(gas1, t_inc, dt_suggest, dt_therm, reactor_params);
+        reactor(gas1, t_inc, dt_suggest, reactor_params);
         gm2.update_thermo_from_rhou(gas1);
         //
         double du_chem = gm2.internal_energy(gas1) - u;
