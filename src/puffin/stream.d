@@ -315,7 +315,15 @@ public:
     }
 
     @nogc
-    void predictor_step()
+    double estimate_allowable_dt()
+    {
+        double dt = cells[0].estimate_local_dt(cfl);
+        foreach (j; 1 .. ncells-1) { dt = fmin(dt, cells[j].estimate_local_dt(cfl)); }
+        return dt;
+    }
+
+    @nogc
+    void predictor_step(double dt)
     {
         foreach (c; cells) { c.estimate_local_dt(cfl); }
         foreach (j; 0 .. ncells) {
@@ -330,14 +338,14 @@ public:
         }
         foreach (c; cells) {
             c.eval_dUdt(0, axiFlag);
-            c.U[1][] = c.U[0][] + c.dt*c.dUdt[0][];
+            c.U[1][] = c.U[0][] + dt*c.dUdt[0][];
             c.decode_conserved(1, gmodel);
         }
         return;
     } // end predictor_step()
 
     @nogc
-    void corrector_step()
+    void corrector_step(double dt)
     {
         foreach (j; 0 .. ncells) {
             ifaces_east[j].simple_flux(cells[j].fs, gmodel);
@@ -350,7 +358,7 @@ public:
         }
         foreach (c; cells) {
             c.eval_dUdt(1, axiFlag);
-            c.U[2][] = c.U[0][] + 0.5*c.dt*(c.dUdt[0][] + c.dUdt[1][]);
+            c.U[2][] = c.U[0][] + 0.5*dt*(c.dUdt[0][] + c.dUdt[1][]);
             c.decode_conserved(2, gmodel);
         }
         return;

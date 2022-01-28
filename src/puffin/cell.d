@@ -27,8 +27,6 @@ public:
     FlowState2D fs;
     double[][3] U; // Conserved quantities at time levels.
     double[][2] dUdt; // Time-derivatives of conserved quantities.
-    //
-    double dt; // Local time-step size.
 
     this(GasModel gmodel, CQIndex cqi)
     {
@@ -61,7 +59,6 @@ public:
         repr ~= format(", fs=%s", fs);
         foreach (i; 0 .. U.length) { repr ~= format(", U[%d]=%s", i, U[i]); }
         foreach (i; 0 .. dUdt.length) { repr ~= format(", dUdt[%d]=%s", i, dUdt[i]); }
-        repr ~= format(", dt=%g", dt);
         repr ~= ")";
         return repr;
     }
@@ -187,11 +184,10 @@ public:
     } // end eval_dUdt()
 
     @nogc
-    void estimate_local_dt(double cfl)
+    double estimate_local_dt(double cfl)
     {
         // We assume that the cells are (roughly) aligned with the xy directions.
-        dt = cfl * fmin(iLen/(fabs(fs.vel.x)+fs.gas.a), jLen/(fabs(fs.vel.y)+fs.gas.a));
-        return;
+        return cfl * fmin(iLen/(fabs(fs.vel.x)+fs.gas.a), jLen/(fabs(fs.vel.y)+fs.gas.a));
     }
 
 } // end class Cell2D

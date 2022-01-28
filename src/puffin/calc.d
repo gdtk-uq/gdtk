@@ -21,6 +21,8 @@ import geom;
 import config;
 import stream;
 
+// We use __gshared so that several threads may access
+// the following array concurrently.
 __gshared static StreamTube[] streams;
 
 struct ProgressData {
@@ -28,6 +30,7 @@ struct ProgressData {
     double x = 0.0;
     double dx = 0.0;
     double plot_at_x = 0.0;
+    double[] dt_values;
     int steps_since_last_plot_write = 0;
     SysTime wall_clock_start;
 }
@@ -92,6 +95,7 @@ void init_calculation()
     progress.dx = Config.dx;
     progress.plot_at_x = Config.plot_dx;
     progress.steps_since_last_plot_write = 0;
+    progress.dt_values.length = streams.length;
     return;
 } // end init_calculation()
 
@@ -164,16 +168,23 @@ void relax_slice_to_steady_flow(double xmid)
 // There may be more than one StreamTube in the slice and any exchange
 // boundary condition will necessarily involve two StreamTubes.
 {
-    foreach (st; streams) { st.encode_conserved(0); }
+    foreach (j, st; streams) {
+        st.encode_conserved(0);
+        progress.dt_values[j] = st.estimate_allowable_dt();
+    }
+    double dt = progress.dt_values[0];
+    foreach (j; 1 .. progress.dt_values.length) {
+        dt = fmin(dt, progress.dt_values[j]);
+    }
     //
     foreach (k; 0 .. Config.max_step_relax) {
         // 1. Predictor (Euler) step..
         apply_boundary_conditions(xmid);
-        foreach (st; streams) { st.predictor_step(); }
+        foreach (st; streams) { st.predictor_step(dt); }
         if (Config.t_order > 1) {
             apply_boundary_conditions(xmid);
             foreach (st; streams) {
-                st.corrector_step();
+                st.corrector_step(dt);
                 st.transfer_conserved_quantities(2, 0);
             }
         } else {
