@@ -130,6 +130,7 @@ public:
         repr ~= format("indx=%d", indx);
         repr ~= format(", gmodel=%s, gs=%s, vel=%s", gmodel, gs, vel);
         repr ~= format(", cqi=%s", cqi);
+        repr ~= format(", axiFlag=%s", axiFlag);
         repr ~= format(", ncells=%d", ncells);
         repr ~= format(", y_lower=%s, y_upper=%s", y_lower, y_upper);
         repr ~= format(", bc_lower=%s, bc_upper=%s", bc_lower, bc_upper);
@@ -318,7 +319,7 @@ public:
     double estimate_allowable_dt()
     {
         double dt = cells[0].estimate_local_dt(cfl);
-        foreach (j; 1 .. ncells-1) { dt = fmin(dt, cells[j].estimate_local_dt(cfl)); }
+        foreach (j; 1 .. ncells) { dt = fmin(dt, cells[j].estimate_local_dt(cfl)); }
         return dt;
     }
 

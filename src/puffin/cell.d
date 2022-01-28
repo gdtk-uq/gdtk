@@ -22,7 +22,7 @@ public:
     Vector3* p00, p10, p11, p01;
     Face2D faceN, faceE, faceS, faceW;
     double volume, xyplane_area;
-    double iLen, jLen, kLen; // distances across the cell
+    double iLen, jLen; // distances across the cell
     //
     FlowState2D fs;
     double[][3] U; // Conserved quantities at time levels.
@@ -67,8 +67,9 @@ public:
     void compute_geometry(bool axiFlag)
     // Update the geometric properties from vertex data.
     {
+        double dummy;
         xyplane_quad_cell_properties(*p00, *p10, *p11, *p01, pos, xyplane_area,
-                                     iLen, jLen, kLen);
+                                     iLen, jLen, dummy);
         volume = xyplane_area;
         if (axiFlag) { volume *= pos.y; }
         if (volume < 0.0 || xyplane_area < 0.0) {
