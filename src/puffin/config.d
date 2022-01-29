@@ -10,6 +10,8 @@ import std.conv;
 import std.format;
 import nm.schedule;
 
+enum FluxCalcCode {hanel=0, riemann=1}; // To choose a flux calculator.
+
 
 final class Config {
 public:
@@ -37,5 +39,6 @@ public:
     shared static double plot_dx;
     shared static int x_order;
     shared static int t_order;
+    shared static FluxCalcCode flux_calc = FluxCalcCode.hanel;
     shared static int n_streams;
 }

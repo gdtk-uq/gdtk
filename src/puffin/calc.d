@@ -57,6 +57,7 @@ void init_calculation()
     Config.plot_dx = getJSONdouble(configData, "plot_dx", 1.0e-2);
     Config.x_order = getJSONint(configData, "x_order", 2);
     Config.t_order = getJSONint(configData, "t_order", 2);
+    Config.flux_calc = to!FluxCalcCode(getJSONint(configData, "flux_calc", 0));
     Config.n_streams = getJSONint(configData, "n_streams", 1);
     if (Config.verbosity_level >= 1) {
         writeln("Config:");

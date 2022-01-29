@@ -35,8 +35,9 @@ public:
     GasState gs;
     Vector3 vel;
     int ncells;
-    bool axiFlag;
-    double cfl;
+    bool axiFlag = false;
+    double cfl = 0.5;
+    FluxCalcCode flux_calc = FluxCalcCode.hanel;
     //
     Schedule!double y_lower, y_upper;
     Schedule!int bc_lower, bc_upper;
@@ -66,6 +67,7 @@ public:
         cqi = new CQIndex(gmodel.n_species, gmodel.n_modes);
         axiFlag = Config.axisymmetric;
         cfl = Config.cfl;
+        flux_calc = Config.flux_calc;
         //
         auto inflowData = configData[format("inflow_%d", indx)];
         double p = getJSONdouble(inflowData, "p", 100.0e3);
@@ -131,6 +133,7 @@ public:
         repr ~= format(", gmodel=%s, gs=%s, vel=%s", gmodel, gs, vel);
         repr ~= format(", cqi=%s", cqi);
         repr ~= format(", axiFlag=%s", axiFlag);
+        repr ~= format(", flux_calc=%s", to!string(flux_calc));
         repr ~= format(", ncells=%d", ncells);
         repr ~= format(", y_lower=%s, y_upper=%s", y_lower, y_upper);
         repr ~= format(", bc_lower=%s, bc_upper=%s", bc_lower, bc_upper);
@@ -335,7 +338,7 @@ public:
             auto f = jfaces[j];
             fsL.copy_values_from(f.left_cells[0].fs);
             fsR.copy_values_from(f.right_cells[0].fs);
-            f.calculate_flux(fsL, fsR, gmodel);
+            f.calculate_flux(fsL, fsR, gmodel, flux_calc);
         }
         foreach (c; cells) {
             c.eval_dUdt(0, axiFlag);
@@ -355,7 +358,7 @@ public:
             auto f = jfaces[j];
             fsL.copy_values_from(f.left_cells[0].fs);
             fsR.copy_values_from(f.right_cells[0].fs);
-            f.calculate_flux(fsL, fsR, gmodel);
+            f.calculate_flux(fsL, fsR, gmodel, flux_calc);
         }
         foreach (c; cells) {
             c.eval_dUdt(1, axiFlag);

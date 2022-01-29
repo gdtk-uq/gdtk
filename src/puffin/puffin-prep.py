@@ -33,6 +33,7 @@ Versions:
 #
 import sys
 import os
+import collections
 from getopt import getopt
 import math
 import numpy as np
@@ -55,6 +56,8 @@ def printUsage():
 #----------------------------------------------------------------------
 # This is where we store the core data for the simulation.
 
+FluxCalc = collections.namedtuple('_', 'hanel riemann')(*range(2))
+
 class GlobalConfig(object):
     """
     Contains the calculation control parameters.
@@ -73,7 +76,7 @@ class GlobalConfig(object):
                 'reaction_file_1', 'reaction_file_2', 'reactor', 'reacting', 'T_frozen', \
                 'axisymmetric', \
                 'dx', 'print_count', 'plot_dx', 'max_x', 'max_step', \
-                'cfl', 'max_step_relax', 'x_order', 't_order'
+                'cfl', 'max_step_relax', 'x_order', 't_order', 'flux_calc'
 
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -99,6 +102,7 @@ class GlobalConfig(object):
         self.max_step_relax = 100
         self.x_order = 2
         self.t_order = 2
+        self.flux_calc = FluxCalc.hanel
         #
         GlobalConfig.count += 1
         return
@@ -129,6 +133,7 @@ class GlobalConfig(object):
         fp.write('  "max_step_relax": %d,\n' % self.max_step_relax)
         fp.write('  "x_order": %d,\n' % self.x_order)
         fp.write('  "t_order": %d,\n' % self.t_order)
+        fp.write('  "flux_calc": %d,\n' % self.flux_calc)
         #
         fp.write('  "n_streams": %d,\n' % len(streamTubeList))
         for st in streamTubeList:
