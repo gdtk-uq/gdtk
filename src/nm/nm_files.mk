@@ -20,6 +20,7 @@ NM_FILES := $(NM_DIR)/package.d \
 	$(NM_DIR)/smla.d \
 	$(NM_DIR)/stmatrix.d \
 	$(NM_DIR)/tree_patch.d \
-	$(NM_DIR)/univariate_lut.d
+	$(NM_DIR)/univariate_lut.d \
+	$(NM_DIR)/limiters.d
 
 NM_LUA_FILES := $(NM_DIR)/luabbla.d

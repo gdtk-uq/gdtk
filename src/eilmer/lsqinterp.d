@@ -11,6 +11,7 @@ import std.conv;
 import nm.complex;
 import nm.number;
 import nm.rsla;
+import nm.limiters;
 
 import geom;
 import gas;
@@ -18,7 +19,6 @@ import globalconfig;
 import flowstate;
 import fvinterface;
 import fvcell;
-import limiters;
 
 immutable size_t cloud_nmax = 12;
 immutable double ESSENTIALLY_ZERO = 1.0e-50;

@@ -1,6 +1,6 @@
 // limiters.d
 
-module limiters;
+module nm.limiters;
 
 import std.math;
 import nm.complex;
