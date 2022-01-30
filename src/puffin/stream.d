@@ -35,10 +35,12 @@ public:
     GasState gs;
     Vector3 vel;
     int ncells;
-    bool axiFlag = false;
-    double cfl = 0.5;
-    FluxCalcCode flux_calc = FluxCalcCode.hanel;
-    int x_order = 2;
+    bool axiFlag;
+    double cfl;
+    FluxCalcCode flux_calc;
+    int x_order;
+    double compression_tol;
+    double shear_tol;
     //
     Schedule!double y_lower, y_upper;
     Schedule!int bc_lower, bc_upper;
@@ -68,8 +70,10 @@ public:
         cqi = new CQIndex(gmodel.n_species, gmodel.n_modes);
         axiFlag = Config.axisymmetric;
         cfl = Config.cfl;
-        flux_calc = Config.flux_calc;
         x_order = Config.x_order;
+        flux_calc = Config.flux_calc;
+        compression_tol = Config.compression_tol;
+        shear_tol = Config.shear_tol;
         //
         auto inflowData = configData[format("inflow_%d", indx)];
         double p = getJSONdouble(inflowData, "p", 100.0e3);
@@ -136,6 +140,7 @@ public:
         repr ~= format(", cqi=%s", cqi);
         repr ~= format(", axiFlag=%s", axiFlag);
         repr ~= format(", flux_calc=%s", to!string(flux_calc));
+        repr ~= format(", compression_tol=%g, shear_tol=%g", compression_tol, shear_tol);
         repr ~= format(", x_order=%d", x_order);
         repr ~= format(", ncells=%d", ncells);
         repr ~= format(", y_lower=%s, y_upper=%s", y_lower, y_upper);
@@ -290,7 +295,7 @@ public:
         string fileName = format("%s/flow-%d.data", Config.job_name, indx);
         if (write_header) {
             fp = File(fileName, "w");
-            fp.write("# x  y  velx vely  M  rho  p  T  u  a");
+            fp.write("# x  y  velx vely  M  rho  p  T  u  a  shock");
             foreach (i; 0 .. nsp) { fp.write(format(" massf-%d", i)); }
             foreach (i; 0 .. nmodes) { fp.write(format(" T_modes-%d u_modes-%d", i, i)); }
             fp.write("\n");
@@ -304,8 +309,9 @@ public:
             double Vx = fs.vel.x;
             double Vy = fs.vel.y;
             double M = sqrt(Vx*Vx+Vy*Vy)/g.a;
+            double shock = (cells[j].shock_flag) ? 1.0 : 0.0;
             fp.write(format("%e %e %e %e %e", face.pos.x, face.pos.y, Vx, Vy, M));
-            fp.write(format(" %e %e %e %e %e", g.rho, g.p, g.T, g.u, g.a));
+            fp.write(format(" %e %e %e %e %e %f", g.rho, g.p, g.T, g.u, g.a, shock));
             foreach (i; 0 .. nsp) { fp.write(format(" %e", g.massf[i])); }
             foreach (i; 0 .. nmodes) { fp.write(format(" %e %e", g.T_modes[i], g.u_modes[i])); }
             fp.write("\n");
@@ -327,6 +333,21 @@ public:
         double dt = cells[0].estimate_local_dt(cfl);
         foreach (j; 1 .. ncells) { dt = fmin(dt, cells[j].estimate_local_dt(cfl)); }
         return dt;
+    }
+
+    @nogc
+    void mark_shock_cells()
+    {
+        foreach (c; cells) { c.shock_flag = false; }
+        foreach (c; ghost_cells_left) { c.shock_flag = false; }
+        foreach (c; ghost_cells_right) { c.shock_flag = false; }
+        foreach (f; jfaces) {
+            if (f.is_shock(compression_tol, shear_tol)) {
+                f.left_cells[0].shock_flag = true;
+                f.right_cells[0].shock_flag = true;
+            }
+        }
+        return;
     }
 
     @nogc

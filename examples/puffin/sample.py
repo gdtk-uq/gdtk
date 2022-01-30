@@ -26,6 +26,7 @@ print("Expected pcone=", pcone)
 config.axisymmetric = True
 config.max_step_relax = 40
 # config.flux_calc = FluxCalc.riemann
+config.compression_tol = -0.01
 
 def lower_y(x):
     return math.tan(math.radians(10.0))*(x-0.2) if x > 0.2 else 0.0

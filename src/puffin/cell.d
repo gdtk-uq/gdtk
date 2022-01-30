@@ -25,6 +25,7 @@ public:
     double iLen, jLen; // distances across the cell
     //
     FlowState2D fs;
+    bool shock_flag;
     double[][3] U; // Conserved quantities at time levels.
     double[][2] dUdt; // Time-derivatives of conserved quantities.
 
@@ -57,6 +58,7 @@ public:
         repr ~= format(", volume=%g, xyplane_area=%g", volume, xyplane_area);
         repr ~= format(", iLen=%g, jLen=%g", iLen, jLen);
         repr ~= format(", fs=%s", fs);
+        repr ~= format(", shock_flag=%s", shock_flag);
         foreach (i; 0 .. U.length) { repr ~= format(", U[%d]=%s", i, U[i]); }
         foreach (i; 0 .. dUdt.length) { repr ~= format(", dUdt[%d]=%s", i, dUdt[i]); }
         repr ~= ")";
@@ -256,10 +258,41 @@ public:
     }
 
     @nogc
+    bool is_shock(double compression_tol=-0.01, double shear_tol=0.20)
+    // A compression in the normal velocity field will have
+    // a decrease in normal velocity in the direction of the face normal.
+    // If the shear velocity is too high, we will suppress the shock value.
+    // compression_tol: a value of -0.30 is default for Eilmer, however,
+    //   we expect somewhat weak shocks in our space-marching solution.
+    // shear_tol: a value of 0.20 is default for Eilmer.
+    {
+        auto fsL = left_cells[0].fs;
+        auto fsR = right_cells[0].fs;
+        // We have two cells interacting.
+        // Compare the relative gas velocities normal to the face.
+        double velxL = geom.dot(fsL.vel, n);
+        double velxR = geom.dot(fsR.vel, n);
+        double aL = fsL.gas.a;
+        double aR = fsR.gas.a;
+        double a_min = (aL < aR) ? aL : aR;
+        double comp = (velxR-velxL)/a_min;
+        //
+        double velyL = geom.dot(fsL.vel, t1);
+        double velyR = geom.dot(fsR.vel, t1);
+        double sound_speed = 0.5*(aL+aR);
+        double shear = fabs(velyL-velyR)/sound_speed;
+        //
+        return ((shear < shear_tol) && (comp < compression_tol));
+    } // end is_shock()
+
+    @nogc
     void calculate_flux(FlowState2D fsL, FlowState2D fsR, GasModel gmodel, FluxCalcCode flux_calc)
     // Compute the face's flux vector from left and right flow states.
     {
         final switch (flux_calc) {
+        case FluxCalcCode.adaptive:
+            calculate_flux_adaptive(fsL, fsR, gmodel);
+            break;
         case FluxCalcCode.hanel:
             calculate_flux_hanel(fsL, fsR, gmodel);
             break;
@@ -267,6 +300,20 @@ public:
             calculate_flux_riemann(fsL, fsR, gmodel);
             break;
         }
+    }
+
+    @nogc
+    void calculate_flux_adaptive(FlowState2D fsL, FlowState2D fsR, GasModel gmodel)
+    // Compute the face's flux vector from left and right flow states.
+    // we actually delegate the detailed calculation to one of the other calculators
+    // depending on the shock indicator.
+    {
+        if (left_cells[0].shock_flag || right_cells[0].shock_flag) {
+            calculate_flux_hanel(fsL, fsR, gmodel);
+        } else {
+            calculate_flux_riemann(fsL, fsR, gmodel);
+        }
+        return;
     }
 
     @nogc

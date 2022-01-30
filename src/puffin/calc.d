@@ -58,6 +58,8 @@ void init_calculation()
     Config.x_order = getJSONint(configData, "x_order", 2);
     Config.t_order = getJSONint(configData, "t_order", 2);
     Config.flux_calc = to!FluxCalcCode(getJSONint(configData, "flux_calc", 0));
+    Config.compression_tol = getJSONdouble(configData, "compression_tol", -0.3);
+    Config.shear_tol = getJSONdouble(configData, "shear_tol", 0.2);
     Config.n_streams = getJSONint(configData, "n_streams", 1);
     if (Config.verbosity_level >= 1) {
         writeln("Config:");
@@ -77,6 +79,9 @@ void init_calculation()
         writeln("  plot_dx= ", Config.plot_dx);
         writeln("  x_order= ", Config.x_order);
         writeln("  t_order= ", Config.t_order);
+        writeln("  flux_calc= ", Config.flux_calc);
+        writeln("  compression_tol= ", Config.compression_tol);
+        writeln("  shear_tol= ", Config.shear_tol);
         writeln("  n_streams= ", Config.n_streams);
     }
     foreach (i; 0 .. Config.n_streams) {
@@ -179,6 +184,7 @@ void relax_slice_to_steady_flow(double xmid)
     foreach (k; 0 .. Config.max_step_relax) {
         // 1. Predictor (Euler) step..
         apply_boundary_conditions(xmid);
+        foreach (st; streams) { st.mark_shock_cells(); }
         foreach (st; streams) { st.predictor_step(dt); }
         if (Config.t_order > 1) {
             apply_boundary_conditions(xmid);
