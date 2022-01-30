@@ -22,9 +22,17 @@ import nm.number;
 // A smooth slope limiter.
 {
     immutable double eps = 1.0e-12;
-    number s = (a*b + fabs(a*b))/(a*a + b*b + eps);
+    number s = (a*b + fabs(a*b) + eps)/(a*a + b*b + eps);
     a *= s;
     b *= s;
+}
+
+@nogc number van_albada_limit1(number a, number b)
+// A smooth slope limiter.
+{
+    immutable double eps = 1.0e-12;
+    number s = (a*b + fabs(a*b) + eps)/(a*a + b*b + eps);
+    return s;
 }
 
 @nogc number clip_to_limits(number q, number A, number B)

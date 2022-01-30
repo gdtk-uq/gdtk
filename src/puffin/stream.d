@@ -38,6 +38,7 @@ public:
     bool axiFlag = false;
     double cfl = 0.5;
     FluxCalcCode flux_calc = FluxCalcCode.hanel;
+    int x_order = 2;
     //
     Schedule!double y_lower, y_upper;
     Schedule!int bc_lower, bc_upper;
@@ -68,6 +69,7 @@ public:
         axiFlag = Config.axisymmetric;
         cfl = Config.cfl;
         flux_calc = Config.flux_calc;
+        x_order = Config.x_order;
         //
         auto inflowData = configData[format("inflow_%d", indx)];
         double p = getJSONdouble(inflowData, "p", 100.0e3);
@@ -134,6 +136,7 @@ public:
         repr ~= format(", cqi=%s", cqi);
         repr ~= format(", axiFlag=%s", axiFlag);
         repr ~= format(", flux_calc=%s", to!string(flux_calc));
+        repr ~= format(", x_order=%d", x_order);
         repr ~= format(", ncells=%d", ncells);
         repr ~= format(", y_lower=%s, y_upper=%s", y_lower, y_upper);
         repr ~= format(", bc_lower=%s, bc_upper=%s", bc_lower, bc_upper);
@@ -336,8 +339,14 @@ public:
         }
         foreach (j; 0 .. ncells+1) {
             auto f = jfaces[j];
-            fsL.copy_values_from(f.left_cells[0].fs);
-            fsR.copy_values_from(f.right_cells[0].fs);
+            if (x_order == 1) {
+                // Low-order reconstruction is just copy the nearest cell-centre flowstate.
+                fsL.copy_values_from(f.left_cells[0].fs);
+                fsR.copy_values_from(f.right_cells[0].fs);
+            } else {
+                // High-order reconstruction from the left_cells and right_cells stencil.
+                f.interp_l2r2(fsL, fsR, gmodel, false);
+            }
             f.calculate_flux(fsL, fsR, gmodel, flux_calc);
         }
         foreach (c; cells) {
@@ -356,8 +365,14 @@ public:
         }
         foreach (j; 0 .. ncells+1) {
             auto f = jfaces[j];
-            fsL.copy_values_from(f.left_cells[0].fs);
-            fsR.copy_values_from(f.right_cells[0].fs);
+            if (x_order == 1) {
+                // Low-order reconstruction is just copy the nearest cell-centre flowstate.
+                fsL.copy_values_from(f.left_cells[0].fs);
+                fsR.copy_values_from(f.right_cells[0].fs);
+            } else {
+                // High-order reconstruction from the left_cells and right_cells stencil.
+                f.interp_l2r2(fsL, fsR, gmodel, false);
+            }
             f.calculate_flux(fsL, fsR, gmodel, flux_calc);
         }
         foreach (c; cells) {

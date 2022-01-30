@@ -139,10 +139,8 @@ void do_space_marching_calculation()
             double elapsed_s = to!double(elapsed_ms)/1000;
             double WCtFT = ((progress.x > 0.0) && (progress.step > 0)) ?
                 elapsed_s*(Config.max_x-progress.x)/progress.dx/progress.step : 0.0;
-            double WCtMS = (progress.step > 0) ?
-                (elapsed_s*(Config.max_step-progress.step))/progress.step : 0.0;
-            writefln("Step=%d x=%.3e dx=%.3e WC=%.1f WCtFT=%.1f WCtMS=%.1f",
-                     progress.step, progress.x, progress.dx, elapsed_s, WCtFT, WCtMS);
+            writefln("Step=%d x=%.3e dx=%.3e WC=%.1f WCtFT=%.1f",
+                     progress.step, progress.x, progress.dx, elapsed_s, WCtFT);
             stdout.flush();
         }
         //
