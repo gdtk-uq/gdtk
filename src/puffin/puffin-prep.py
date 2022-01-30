@@ -56,7 +56,8 @@ def printUsage():
 #----------------------------------------------------------------------
 # This is where we store the core data for the simulation.
 
-FluxCalc = collections.namedtuple('_', 'adaptive hanel riemann')(*range(3))
+FCNames = 'ausmdv hanel riemann ausmdv_plus_hanel riemann_plus_hanel'
+FluxCalc = collections.namedtuple('_', FCNames)(*range(5))
 
 class GlobalConfig(object):
     """
@@ -103,7 +104,7 @@ class GlobalConfig(object):
         self.max_step_relax = 100
         self.x_order = 2
         self.t_order = 2
-        self.flux_calc = FluxCalc.adaptive
+        self.flux_calc = FluxCalc.ausmdv
         self.compression_tol = -0.01
         self.shear_tol = 0.2
         #

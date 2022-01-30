@@ -10,7 +10,8 @@ import std.conv;
 import std.format;
 import nm.schedule;
 
-enum FluxCalcCode {adaptive=0, hanel=1, riemann=2}; // To choose a flux calculator.
+// To choose a flux calculator.
+enum FluxCalcCode {ausmdv=0, hanel=1, riemann=2, ausmdv_plus_hanel=3, riemann_plus_hanel=4};
 
 
 final class Config {

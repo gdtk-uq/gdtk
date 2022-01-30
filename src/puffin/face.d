@@ -110,8 +110,8 @@ public:
     // Compute the face's flux vector from left and right flow states.
     {
         final switch (flux_calc) {
-        case FluxCalcCode.adaptive:
-            calculate_flux_adaptive(fsL, fsR, gmodel);
+        case FluxCalcCode.ausmdv:
+            calculate_flux_ausmdv(fsL, fsR, gmodel);
             break;
         case FluxCalcCode.hanel:
             calculate_flux_hanel(fsL, fsR, gmodel);
@@ -119,13 +119,33 @@ public:
         case FluxCalcCode.riemann:
             calculate_flux_riemann(fsL, fsR, gmodel);
             break;
+        case FluxCalcCode.ausmdv_plus_hanel:
+            calculate_flux_ausmdv_plus_hanel(fsL, fsR, gmodel);
+            break;
+        case FluxCalcCode.riemann_plus_hanel:
+            calculate_flux_riemann_plus_hanel(fsL, fsR, gmodel);
+            break;
         }
+    } // end calculate_flux()
+
+    @nogc
+    void calculate_flux_ausmdv_plus_hanel(FlowState2D fsL, FlowState2D fsR, GasModel gmodel)
+    // Compute the face's flux vector from left and right flow states.
+    // We actually delegate the detailed calculation to one of the other calculators
+    // depending on the shock indicator.
+    {
+        if (left_cells[0].shock_flag || right_cells[0].shock_flag) {
+            calculate_flux_hanel(fsL, fsR, gmodel);
+        } else {
+            calculate_flux_ausmdv(fsL, fsR, gmodel);
+        }
+        return;
     }
 
     @nogc
-    void calculate_flux_adaptive(FlowState2D fsL, FlowState2D fsR, GasModel gmodel)
+    void calculate_flux_riemann_plus_hanel(FlowState2D fsL, FlowState2D fsR, GasModel gmodel)
     // Compute the face's flux vector from left and right flow states.
-    // we actually delegate the detailed calculation to one of the other calculators
+    // We actually delegate the detailed calculation to one of the other calculators
     // depending on the shock indicator.
     {
         if (left_cells[0].shock_flag || right_cells[0].shock_flag) {
@@ -176,6 +196,119 @@ public:
         }
         return;
     } // end calculate_flux()
+
+    @nogc
+    void calculate_flux_ausmdv(FlowState2D fsL, FlowState2D fsR, GasModel gmodel)
+    // Compute the face's flux vector from left and right flow states.
+    // Wada and Liou's flux calculator, implemented from details in their AIAA paper,
+    // with hints from Ian Johnston.
+    // Y. Wada and M. -S. Liou (1994)
+    // A flux splitting scheme with high-resolution and robustness for discontinuities.
+    // AIAA-94-0083.
+    {
+        Vector3 velL = Vector3(fsL.vel);
+        Vector3 velR = Vector3(fsR.vel);
+        velL.transform_to_local_frame(n, t1);
+        velR.transform_to_local_frame(n, t1);
+        //
+        double rhoL = fsL.gas.rho;
+        double pL = fsL.gas.p;
+        double pLrL = pL/rhoL;
+        double velxL = velL.x;
+        double velyL = velL.y;
+        double uL = gmodel.internal_energy(fsL.gas);
+        double aL = fsL.gas.a;
+        double keL = 0.5*(velxL*velxL + velyL*velyL);
+        double HL = uL + pLrL + keL;
+        //
+        double rhoR = fsR.gas.rho;
+        double pR = fsR.gas.p;
+        double pRrR = pR/rhoR;
+        double velxR = velR.x;
+        double velyR = velR.y;
+        double uR = gmodel.internal_energy(fsR.gas);
+        double aR = fsR.gas.a;
+        double keR = 0.5*(velxR*velxR + velyR*velyR);
+        double HR = uR + pR/rhoR + keR;
+        //
+        // This is the main part of the flux calculator.
+        //
+        // Weighting parameters (eqn 32) for velocity splitting.
+        double alphaL = 2.0*pLrL/(pLrL+pRrR);
+        double alphaR = 2.0*pRrR/(pLrL+pRrR);
+        // Common sound speed (eqn 33) and Mach numbers.
+        double am = fmax(aL, aR);
+        double ML = velxL/am;
+        double MR = velxR/am;
+        // Left state:
+        // pressure splitting (eqn 34)
+        // and velocity splitting (eqn 30)
+        double pLplus, velxLplus;
+        double dvelxL = 0.5 * (velxL + fabs(velxL));
+        if (fabs(ML) <= 1.0) {
+            pLplus = pL*(ML+1.0)*(ML+1.0)*(2.0-ML)*0.25;
+            velxLplus = alphaL*((velxL+am)*(velxL+am)/(4.0*am) - dvelxL) + dvelxL;
+        } else {
+            pLplus = pL * dvelxL / velxL;
+            velxLplus = dvelxL;
+        }
+        // Right state:
+        // pressure splitting (eqn 34)
+        // and velocity splitting (eqn 31)
+        double pRminus, velxRminus;
+        double dvelxR = 0.5*(velxR-fabs(velxR));
+        if (fabs(MR) <= 1.0) {
+            pRminus = pR*(MR-1.0)*(MR-1.0)*(2.0+MR)*0.25;
+            velxRminus = alphaR*(-(velxR-am)*(velxR-am)/(4.0*am) - dvelxR) + dvelxR;
+        } else {
+            pRminus = pR * dvelxR / velxR;
+            velxRminus = dvelxR;
+        }
+        // The mass flux. (eqn 29)
+        double massL = velxLplus*rhoL;
+        double massR = velxRminus*rhoR;
+        double mass_half = massL+massR;
+        // Pressure flux (eqn 34)
+        double p_half = pLplus + pRminus;
+        // Momentum flux: normal direction
+        // Compute blending parameter s (eqn 37),
+        // the momentum flux for AUSMV (eqn 21) and AUSMD (eqn 21)
+        // and blend (eqn 36).
+        double dp = pL - pR;
+        const double K_SWITCH = 10.0;
+        dp = K_SWITCH * fabs(dp) / fmin(pL, pR);
+        double s = 0.5 * fmin(1.0, dp);
+        double rvel2_AUSMV = massL*velxL + massR*velxR;
+        double rvel2_AUSMD = 0.5*(mass_half*(velxL+velxR) - fabs(mass_half)*(velxR-velxL));
+        double rvel2_half = (0.5+s)*rvel2_AUSMV + (0.5-s)*rvel2_AUSMD;
+        // Assemble components of the flux vector (eqn 36).
+        F[cqi.mass] = mass_half;
+        double vely = (mass_half >= 0.0) ? velyL : velyR;
+        Vector3 momentum = Vector3(rvel2_half+p_half, mass_half*vely);
+        momentum.transform_to_global_frame(n, t1);
+        F[cqi.xMom] = momentum.x;
+        F[cqi.yMom] = momentum.y;
+        double H = (mass_half >= 0.0) ? HL : HR;
+        F[cqi.totEnergy] = mass_half*H;
+        if (cqi.n_species > 1) {
+            foreach (i; 0 .. cqi.n_species) {
+                double massf = (mass_half >= 0.0) ? fsL.gas.massf[i] : fsR.gas.massf[i];
+                F[cqi.species+i] = mass_half*massf;
+            }
+        }
+        foreach (i; 0 .. cqi.n_modes) {
+            double u_mode = (mass_half >= 0.0) ? fsL.gas.u_modes[i] : fsR.gas.u_modes[i];
+            F[cqi.modes+i] = mass_half*u_mode;
+        }
+        //
+        bool allFinite = true;
+        foreach (e; F) { if (!isFinite(e)) { allFinite = false; } }
+        if (!allFinite) {
+            debug { import std.stdio;  writeln("face=", this); }
+            throw new Exception("At least one flux quantity is not finite.");
+        }
+        return;
+    } // end calculate_flux_ausmdv()
 
     @nogc
     void calculate_flux_hanel(FlowState2D fsL, FlowState2D fsR, GasModel gmodel)
@@ -239,7 +372,6 @@ public:
         double massL = velxLplus * rhoL;
         double massR = velxRminus * rhoR;
         double mass_half = massL + massR;
-        // double rvelx2_half = velxLplus * rL * velxL + velxRminus * rR * velxR;
         // Pressure flux (eqn 8)
         double p_half = pLplus + pRminus;
         // Assemble components of the flux vector (eqn 36).
