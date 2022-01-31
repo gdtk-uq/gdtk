@@ -742,6 +742,11 @@ public:
                 }
             }
             if (fs.gas.T<=0.0) throw new FlowSolverException("update_thermo returned negative temperature.");
+            version(multi_T_gas) {
+                foreach(i; 0 .. gmodel.n_modes) {
+                    if (fs.gas.T_modes[i]<=0.0) throw new FlowSolverException("update_thermo returned negative T_modes.");
+                }
+            }
             gmodel.update_sound_speed(fs.gas);
             if (myConfig.viscous) gmodel.update_trans_coeffs(fs.gas);
         } catch (GasModelException err) {
