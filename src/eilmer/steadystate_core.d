@@ -734,15 +734,35 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     int cellCount = 0;
                     auto cqi = blk.myConfig.cqi;
                     foreach (cell; blk.cells) {
+                        // limit the change in the conserved mass by some user defined amount (theta)
                         number rel_diff_limit = fabs(blk.dU[cellCount+MASS]/(theta*cell.U[0].vec[cqi.mass]));
                         omega = 1.0/(max(rel_diff_limit,1.0/omega));
+                        // ensure thermodynamic state variables are positive
+                        bool failed_decode = true;
+                        while (failed_decode) {
+                            failed_decode = false;
+                            cell.U[1].copy_values_from(cell.U[0]);
+                            foreach (j; 0 .. cqi.n) {
+                                cell.U[1].vec[j] = cell.U[0].vec[j] + omega*blk.dU[cellCount+j];
+                            }
+                            try {
+                                cell.decode_conserved(0, 1, 0.0);
+                            }
+                            catch (FlowSolverException e) {
+                                failed_decode = true;
+                            }
+                            // reduce relaxation factor if appropriate
+                            if (failed_decode) omega *= 0.7;
+                            // return cell to original state
+                            cell.decode_conserved(0, 0, 0.0);
+                        }
                         cellCount += nConserved;
                     }
                 }
+                // communicate minimum omega to all threads
                 version(mpi_parallel) {
                     MPI_Allreduce(MPI_IN_PLACE, &(omega.re), 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
                 }
-                //writeln("omega_pc :: ", omega);
             } // end physicality check
 
             // line search
