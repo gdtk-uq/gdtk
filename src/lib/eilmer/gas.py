@@ -504,7 +504,7 @@ class GasState(object):
 
     @property
     def k_modes(self):
-        n = self.gmodel.k_modes
+        n = self.gmodel.n_modes
         if n == 0: return []
         km = ffi.new("double[]", [0.0]*n)
         flag = so.gas_state_get_array_field(self.id, b"k_modes", km, n)
