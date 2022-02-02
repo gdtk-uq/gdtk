@@ -14,6 +14,7 @@ import gasflow;
 import config;
 import flow;
 import face;
+import flux;
 
 
 class Cell2D {

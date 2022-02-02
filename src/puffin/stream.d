@@ -23,6 +23,8 @@ import config;
 import flow;
 import cell;
 import face;
+import flux;
+import interp;
 
 
 enum BCCode {wall=0, exchange=1}; // To decide what to do at the lower and upper boundary.
