@@ -100,7 +100,7 @@ Argument:                            Comment:
   --help                             writes a longer help message
 --------------------------------------------------------------------------------
 For a more detailed help message, use --help or view the online help at
-http://cfcfd.mechmining.uq.edu.au/html/eilmer-reference-manual.html";
+https://gdtk.uqcloud.net/docs/eilmer/eilmer-reference-manual";
     string longUsageMsg = "Usage: e4shared/e4mpi/... [OPTION]...
 Argument:                            Comment:
 --------------------------------------------------------------------------------
