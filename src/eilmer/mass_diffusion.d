@@ -212,6 +212,7 @@ private:
     size_t electron_idx;
     size_t[] ion_idxs;
     bool with_ambipolar_diffusion = false;
+    immutable double epsilon = 1e-6;
 
     @nogc
     void computeAmbipolarDiffusion(GasState Q, ref number[] D_avg) {
@@ -225,16 +226,16 @@ private:
         */
 
         number DiZi = 0.0;
-        version(multi_species_gas){
-            number theta = Q.T_modes[0]/Q.T;
-        } else {
-            number theta = 1.0;
+        number theta = 1.0;
+        version(multi_T_gas){
+            if (Q.T_modes.length>0) theta = Q.T_modes[0]/Q.T;
         }
 
-        if (molef[electron_idx]<SMALL_MOLE_FRACTION) return;
-
+        // The following modified definition of Z was designed to handle
+        // numerical problems that occur when you have very tiny amounts of
+        // ionisation.  See NNG notes from 22/02/01 for the derivation.
         foreach (isp; ion_idxs) {
-            number Zi = molef[isp]/molef[electron_idx];
+            number Zi = (molef[isp]+epsilon/ion_idxs.length)/(molef[electron_idx]+epsilon);
             DiZi += D_avg[isp]*Zi;
         }
         number Da = DiZi*(1.0+theta)/(DiZi*theta/D_avg[electron_idx] + 1.0);
