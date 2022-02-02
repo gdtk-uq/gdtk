@@ -774,14 +774,8 @@ public:
                     qy -= jy[isp] * h;
                     qz -= jz[isp] * h;
                     q_diffusion -= (jx[isp]*h*n.x + jy[isp]*h*n.y + jz[isp]*h*n.z);
-                    version(multi_T_gas) {
-                        foreach (imode; 0 .. n_modes) {
-                            number hMode = gmodel.enthalpyPerSpeciesInMode(fs.gas, cast(int)isp, cast(int)imode);
-                            q_diffusion -= (jx[isp]*hMode*n.x + jy[isp]*hMode*n.y + jz[isp]*hMode*n.z);
-                        }
-                    } // end multi_T_gas
                 }
-            } // multi_species_gas
+            }
         }
         version(turbulence) {
             if ( myConfig.turb_model.isTurbulent &&
@@ -851,6 +845,18 @@ public:
                 F.vec[cqi.modes+imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][0] * nx;
                 F.vec[cqi.modes+imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][1] * ny;
                 F.vec[cqi.modes+imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][2] * nz;
+                // Species diffusion contribution to the energy modes (added by NNG, 2022/01/26)
+                version(multi_species_gas) {
+                    if (myConfig.turb_model.isTurbulent || (myConfig.mass_diffusion_model != MassDiffusionModel.none)) {
+                        foreach (isp; 0 .. n_species) {
+                            number hMode = gmodel.enthalpyPerSpeciesInMode(fs.gas, cast(int)isp, cast(int)imode);
+                            // The sign here needs to be opposite to the thermal conduction, hence +=
+                            F.vec[cqi.modes+imode] += viscous_factor * hMode *(jx[isp]*n.x
+                                                                             + jy[isp]*n.y
+                                                                             + jz[isp]*n.z);
+                        }
+                    }
+                }
             }
         }
         version(turbulence) {
