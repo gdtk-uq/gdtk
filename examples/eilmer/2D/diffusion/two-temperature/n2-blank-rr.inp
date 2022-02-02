@@ -1,0 +1,28 @@
+-- Author: Rowan J. Gollan
+-- Date: 2019-09-22
+--
+-- Reference:
+-- Park (1993)
+-- Review of chemical-kinetic problems for future NASA missions, I: Earth entries
+-- Journal of Thermophysics and Heat Transfer, 7(3): 385--398
+
+Config{
+   tempLimits = {lower=300.0, upper=30000.0},
+   odeStep = {method='rkf', errTol=1.000000e-09},
+   tightTempCoupling = true,
+}
+
+--Reaction{
+--   'N2 + N2 <=> N2 + N2',
+--   fr={'Park', A=0.0,  n=-1.6, C=113200.0, s=0.5},
+--   br={'Arrhenius', A=0.0, n=-0.5, C=0.0},
+--   label='r1'
+--}
+--
+--Reaction{
+--   'e- + e- <=> e- + e-',
+--   fr={'Park', A=0.0,  n=-1.6, C=113200.0, s=0.5},
+--   br={'Arrhenius', A=0.0, n=-1.5, C=0.0},
+--   label='r2'
+--}
+
