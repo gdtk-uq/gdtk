@@ -13,8 +13,8 @@ import std.getopt;
 import std.conv;
 
 import config;
-import calc;
-import stream;
+import marching_calc;
+import streamtube;
 
 int main(string[] args)
 {

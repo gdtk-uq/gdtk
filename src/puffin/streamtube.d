@@ -1,9 +1,9 @@
-// stream.d -- Part of the Puffin steady-flow calculator.
+// streamtube.d -- Part of the Puffin steady-flow calculator.
 //
 // PA Jacobs
 // 2022-01-22
 //
-module stream;
+module streamtube;
 
 import std.conv;
 import std.stdio;

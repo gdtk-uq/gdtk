@@ -10,7 +10,8 @@ PLATFORM ?= linux
 
 PROGRAMS := puffin puffin-prep puffin-post
 
-PUFFIN_FILES := config.d calc.d stream.d cell.d face.d flow.d flux.d interp.d
+PUFFIN_FILES := config.d marching_calc.d streamtube.d \
+	cell.d face.d flow.d flux.d interp.d
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk

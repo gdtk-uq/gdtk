@@ -1,9 +1,9 @@
-// calc.d
+// marching_calc.d
 //
 // PA Jacobs
 // 2022-01-22
 //
-module calc;
+module marching_calc;
 
 import std.conv;
 import std.stdio;
@@ -19,7 +19,7 @@ import std.algorithm;
 import json_helper;
 import geom;
 import config;
-import stream;
+import streamtube;
 
 // We use __gshared so that several threads may access
 // the following array concurrently.
