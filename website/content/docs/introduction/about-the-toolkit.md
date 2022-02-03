@@ -66,9 +66,12 @@ and reliable; we cannot make it trivial.
 ## How to get started
 The complete repository is available on bitbucket: <https://bitbucket.org/cfcfd/dgd-git>
 
-If you are reasonably proficient with linux (or Mac) at the command line,
+If you are reasonably proficient with Linux (or Mac) at the command line,
 then try the [Quick Start guide]({{< relref "quick-start" >}}).
 
+Otherwise check out the [Prerequisite Software]({{< relref "docs/getting-started/prerequisites" >}})
+and [Linux Install Guide]({{< relref "docs/getting-started/installation-locally" >}}) for more detailed
+instructions.
 
 ## License
 The codes and documentation in the this toolkit are freely available.
