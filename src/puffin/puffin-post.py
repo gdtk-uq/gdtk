@@ -2,15 +2,10 @@
 """
 Python program to reformat the flow data produced by the steady-state 2D flow solver.
 
-Usage:
-  $ puffin-post --job=<jobName> --output=<plotFormat>
-
-Presently, only the legacy VTK format is implemented.
-Eventually, we will want profiles and summaries.
-
 PA Jacobs
 
 2022-01-26: First code, now that we have some solutions to look at.
+2022-02-04: Refactor to introduce stream line writer.
 """
 
 # ----------------------------------------------------------------------
@@ -23,52 +18,61 @@ import numpy as np
 import json
 
 
-shortOptions = "hf:o"
-longOptions = ["help", "job=", "output="]
+shortOptions = "hf:o:s:c:x:"
+longOptions = ["help", "job=", "output=", "stream-index=", "cell-index=", "x-location="]
 
 def printUsage():
     print("")
-    print("Usage: puffin-prep" + \
-          " [--help | -h]" + \
-          " [--job=<jobName> | -f <jobName>]" + \
+    print("Usage: puffin-post [--help | -h] [--job=<jobName> | -f <jobName>]" + \
           " [--output=<plotFormat>] | -o <plotFormat>]")
+    print("   where plotFormat is one of vtk|stream|cross")
+    print("   For plotFormat==stream, also specify --stream-index=<i> | -s <i> and --cell-index=<j> | -c <j>")
+    print("   For plotFormat==cross, also specify --x-location=<x> | -x <x>")
     print("")
     return
 
 # ----------------------------------------------------------------------
 #
-def writeVTKfiles(jobName):
-    if not (os.path.exists(jobName) and os.path.isdir(jobName)):
-        print("Could not find directory for job.")
-        return
-    startDir = os.getcwd()
-    os.chdir(jobName)
-    config = json.loads(open("config.json", "r").read())
-    n_streams = config["n_streams"]
-    ncells_all = [config["ncells_%d" % i] for i in range(n_streams)]
-    print("n_streams=", n_streams)
+def readStreamFlowFile(fileName, ncells):
+    """
+    Read the flow data for a single streamtube.
+    """
+    dataFile = open(fileName, "r")
+    txt = dataFile.readline()
+    if txt.startswith('#'):
+        variableNames = txt.strip('# ').split()
+        print('variableNames=', variableNames)
+        streamData = []
+        while True:
+            sliceData = []
+            for j in range(ncells):
+                txt = dataFile.readline()
+                if txt:
+                    items = [float(item) for item in txt.strip().split()]
+                    if len(items) > 0: sliceData.append(items)
+                else:
+                    break
+            # At this point, we have the data for a full slice of cells
+            # and/or we have arrived at the end of the file.
+            if len(sliceData) == 0: break
+            streamData.append(sliceData)
+        # At this point, we have the full stream data.
+    else:
+        print("First line of stream flow file did not start with #")
+        streamData = None
+        variableNames = None
+    dataFile.close()
+    return streamData, variableNames
+
+
+def writeVTKfiles(jobName, n_streams, ncells_all):
+    """
+    Write a VTK-format file for the flow data in each stream tube.
+    """
     for i in range(n_streams):
-        dataFile = open("flow-%d.data" % i, "r")
-        txt = dataFile.readline()
-        if txt.startswith('#'):
-            variableNames = txt.strip('# ').split()
-            print('variableNames=', variableNames)
-            ncells = ncells_all[i]
-            streamData = []
-            while True:
-                sliceData = []
-                for j in range(ncells):
-                    txt = dataFile.readline()
-                    if txt:
-                        items = [float(item) for item in txt.strip().split()]
-                        if len(items) > 0: sliceData.append(items)
-                    else:
-                        break
-                # At this point, we have the data for a full slice of cells
-                # and/or we have arrived at the end of the file.
-                if len(sliceData) == 0: break
-                streamData.append(sliceData)
-            # At this point, we have the full stream data.
+        ncells = ncells_all[i]
+        streamData, variableNames = readStreamFlowFile("flow-%d.data" % i, ncells)
+        if streamData:
             nxs = len(streamData)
             print("nxs=", nxs, "ncells=", ncells)
             plotFile = open("%s-flow-%d.vtk" % (jobName, i), "w")
@@ -89,16 +93,42 @@ def writeVTKfiles(jobName):
                     for j in range(ncells):
                         plotFile.write("%g\n" % (streamData[ix][j][iv],))
             plotFile.close()
-        else:
-            print("First line of stream flow file did not start with #")
+    return
+
+
+def writeStreamLineFile(jobName, streamIndex, ncells, cellIndex):
+    """
+    Write the data for a particular line of points along a stream tube.
+    """
+    ncells = ncells_all[streamIndex]
+    streamData, variableNames = readStreamFlowFile("flow-%d.data" % streamIndex, ncells)
+    if streamData:
+        nxs = len(streamData)
+        print("nxs=", nxs, "ncells=", ncells)
+        dataFile = open("%s-streamline-%d-cell-%d.data" % (jobName, streamIndex, cellIndex), "w")
+        dataFile.write("#")
+        for name in variableNames: dataFile.write(" %s" % name)
+        dataFile.write('\n')
+        for ix in range(nxs):
+            for iv in range(len(variableNames)):
+                fmtStr = "%g" if iv == 0 else " %g"
+                dataFile.write(fmtStr % streamData[ix][cellIndex][iv])
+            dataFile.write('\n')
         dataFile.close()
-    os.chdir(startDir)
+    return
+
+
+def writeCrossFile(jobName, n_streams, ncells_all, xLocation):
+    """
+    Write the data for a line of points across all stream tubes.
+    """
+    raise RuntimeError("Not yet implemented.")
     return
 
 # ----------------------------------------------------------------------
 #
 if __name__ == '__main__':
-    print("Begin puffin-prep...")
+    print("Begin puffin-post...")
 
     userOptions = getopt(sys.argv[1:], shortOptions, longOptions)
     uoDict = dict(userOptions[0])
@@ -124,6 +154,42 @@ if __name__ == '__main__':
             raise Exception("Plot format is not specified.")
         print("plotFormat=", plotFormat)
         #
-        if (plotFormat == "vtk"): writeVTKfiles(jobName)
-    print("Done.")
+        # Let's try to do some work in the job directory.
+        #
+        if not (os.path.exists(jobName) and os.path.isdir(jobName)):
+            print("Could not find directory for job.")
+        else:
+            startDir = os.getcwd()
+            os.chdir(jobName)
+            config = json.loads(open("config.json", "r").read())
+            n_streams = config["n_streams"]
+            ncells_all = [config["ncells_%d" % i] for i in range(n_streams)]
+            print("n_streams=", n_streams)
+            if (plotFormat == "vtk"):
+                writeVTKfiles(jobName, n_streams, ncells_all)
+            elif (plotFormat == "stream"):
+                if "--stream-index" in uoDict:
+                    streamIndex = int(uoDict.get("--stream-index", ""))
+                elif "-s" in uoDict:
+                    streamIndex = int(uoDict.get("-s", ""))
+                else:
+                    raise Exception("Stream index is not specified.")
+                print("streamIndex=", streamIndex)
+                if "--cell-index" in uoDict:
+                    cellIndexStr = uoDict.get("--cell-index", "")
+                elif "-s" in uoDict:
+                    cellIndexStr = uoDict.get("-s", "")
+                else:
+                    raise Exception("Cell index is not specified.")
+                if (cellIndexStr == "$"):
+                    cellIndex = ncells_all[streamIndex] - 1
+                else:
+                    cellIndex = int(cellindexStr)
+                print("cellIndex=", cellIndex)
+                writeStreamLineFile(jobName, streamIndex, ncells_all[streamIndex], cellIndex)
+            else:
+                writeCrossFile(jobName, n_streams, ncells_all, xLocation)
+            os.chdir(startDir)
+        #
+        print("Done.")
     sys.exit(0)

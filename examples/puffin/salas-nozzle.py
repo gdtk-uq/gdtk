@@ -11,7 +11,6 @@ M1 = 2.0
 V1 = M1 * gas1.a
 print("V1=", V1)
 
-config.axisymmetric = True
 config.max_step_relax = 40
 
 import csv
