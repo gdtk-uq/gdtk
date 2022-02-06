@@ -1,3 +1,5 @@
+:bezier: B&eacute;zier
+
 = Surfaces (Patches)
 
 Surfaces or patches are elements that are parameterised in with two
@@ -21,6 +23,8 @@ Three example geometries, covering a modest range of use cases, have been chosen
 . a converging-diverging nozzle grid
 . a duct-like grid
 
+The examples appear at the end of this section.
+
 == Coons patch
 
 There are two constructors available for a Coons patch.
@@ -31,12 +35,6 @@ CoonsPatch:new{north, south, east, west}
 ----
 CoonsPatch:new{p00, p10, p11, p01}
 ----
-
-Example grids generated with a Coons patch are shown here.
-
-image::fire2-coons-patch-grid.png[width=20%,align=center]
-image::nozzle-coons-patch-grid.png[width=50%,align=center]
-image::duct-coons-patch-grid.png[width=50%,align=center]
 
 == Area-orthogonal patch
 
@@ -53,12 +51,6 @@ The default is 10 background-cells in each direction.
 If you have boundaries that have sections high curvature
 you may need to increase the number of background cells.
 
-Example grids using the default `AOPatch` settings
-are shown here.
-
-image::fire2-AO-patch-grid.png[width=20%,align=center]
-image::nozzle-AO-patch-grid.png[width=50%,align=center]
-image::duct-AO-patch-grid.png[width=50%,align=center]
 
 Note that with default settings the blunt-body grid
 results in negative cells near the shoulder
@@ -71,4 +63,171 @@ to give a better representation of the change
 in geometry in the streamwise direction.
 This is show here.
 
-image::nozzle-AO-patch-grid-2.png[width=50%,align=center]
+== Channel patch
+
+The channel patch constructor is:
+----
+ChannelPatch:new{north, south, ruled=false, pure2D=false}
+----
+
+The channel patch builds an interpolated surface between
+two bounding paths.
+Those bounding paths are specified as `north` and `south`.
+Bridging paths are built between the bounding paths.
+By default, the cubic {bezier} curves are used as the bridging paths.
+This choice provides good orthoganality of grid lines departing
+the bounding paths.
+
+If `ruled=true` is set, then the bridging curves are straight-line segments.
+
+If `pure2D=true` is set, then all z-ordinates are set to 0.0.
+This might be useful for purely two-dimensional constructions.
+
+== Ruled surface
+The constructor for a ruled surface is:
+----
+RuledSurface:new{edge0, edge1, ruled_direction='s', pured2D=false}
+----
+
+The ruled surface is used to build a surface connecting to
+opposing paths with straight-line segments.
+For example, a ruled surface based on south path (`sPath`)
+and a north path (`nPath`) could be constructed as:
+----
+mySurf1 = RuledSurface:new{edge0=sPath, edge1=nPath}
+----
+In this case, the default `ruled_direction='s'` is appropriate.
+
+For using west and east paths as the edge paths, the constructor is:
+----
+mySurf2 = RuledSurface:new{edge0=wPath, edge1=ePath, ruled_direction='r'}
+----
+
+The constructor also accepts `i` and `j` as direction designators
+in place of `r` and `s`.
+
+If `pure2D=true` is set, then all z-ordinates are set to 0.0.
+This might be useful for purely two-dimensional constructions.
+
+== Control point patch
+The control point patch is an algebraic surface type with
+interior control of grid lines by means of control points.
+The constructor is:
+----
+ControlPointPatch:new{north, south, east, west, control_points}
+----
+
+The control points are listed as a table of tables such
+that the points are given as a 2D array.
+
+More information about the control point patch is
+available in the technical note
+https://gdtk.uqcloud.net/docs/eilmer/technical-notes/control-point-grid-gen/[Control Point Form Grid Generation].
+
+== Patch examples for 2D grid generation
+
+These examples show how the various patch types work
+on a common set of bounding geometries.
+
+=== A blunt body grid (FireII)
+
+[cols="1a,1a,1a"]
+|===
+|image::fire2-coons-patch-grid.png[width=70%]
+|image::fire2-AO-patch-grid.png[width=70%]
+|image::fire2-channel-patch-grid.png[width=70%]
+
+|(a) Coons patch
+|(b) Area-orthogonal patch
+|(c) Channel patch
+
+|image::fire2-ruled-surface-grid.png[width=70%]
+|image::fire2-ctrl-pt-patch-grid.png[width=70%]
+|image::fire2-ctrl-pt-patch-grid-p-pts.png[width=70%]
+
+|(d) Ruled surface
+|(e) Control point patch
+|(f) Control point patch with control points
+|===
+
+Note that with default settings the blunt-body grid
+generated with the Area-orthogonal patch results
+in negative cells near the shoulder.
+To remedy this, increase the `ny` value for number
+of points in the background grid to get better
+resolution of the geometry change around the shoulder.
+
+=== A nozzle grid
+
+[cols="1a,1a"]
+|===
+|image::nozzle-coons-patch-grid.png[width=100%]
+|image::nozzle-AO-patch-grid.png[width=100%]
+
+|(a) Coons patch
+|(b) Area-orthogonal patch
+
+|image::nozzle-channel-patch-grid.png[width=100%]
+|image::nozzle-ruled-surface-grid.png[width=100%]
+
+|(c) Channel patch
+|(d) Ruled surface
+
+|image::nozzle-ctrl-pt-patch-grid.png[width=100%]
+|image::nozzle-ctrl-pt-patch-grid-p-pts.png[width=100%]
+
+|(e) Control point patch
+|(f) Control point patch with control points
+|===
+
+
+Here the Area-orthogonal patch with default settings
+as cut the corner of the boundary on the nozzle domain.
+This behaviour can be improved if some care is take
+in selecting the background grid.
+We show this here by  increasing the
+background grid in the x-direction to `nx=40`
+to give a better representation of the change
+in geometry in the streamwise direction.
+
+image::nozzle-AO-patch-grid-2.png[width=100%]
+
+=== A duct grid
+
+This duct grid mimics the example in Eiseman (1988)
+A control point form of algebraic grid generation.
+The channel patch and ruled surface are not appropriate
+for this domain because the curved boundaries on both
+the north and east edges.
+As such, they are not generated for this example.
+
+[cols="1a,1a"]
+|===
+|image::duct-coons-patch-grid.png[width=100%]
+|image::duct-AO-patch-grid.png[width=100%]
+
+|(a) Coons patch
+|(b) Area-orthogonal patch
+
+|image::duct-ctrl-pt-patch-grid.png[width=100%]
+|image::duct-ctrl-pt-patch-grid-p-pts.png[width=100%]
+
+|(c) Control point patch
+|(d) Control point patch with control points
+|===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
