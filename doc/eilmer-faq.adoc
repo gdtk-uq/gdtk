@@ -96,7 +96,7 @@ cases.
 
 High-level options are:
 
-`DMD`:: selection of D compiler. Default is `dmd`, other option is `ldc2`.
+`DMD`:: selection of D compiler. Default is `ldc2`, other option is `dmd`.
 `FLAVOUR`:: Options are `debug` (default) for a debug build, or `fast` for an optimised build.
 `PLATFORM`:: Options are `linux` (default) or `macosx`.
 `INSTALL_DIR`:: Location for installation files (default: `$HOME/dgdinst`)
@@ -147,6 +147,31 @@ by doing:
 == This is overwhemling. Isn't there a script that would just take care of this build and install process for me?
 
 Yes, there are several scripts available to help you. Take a look in `dgd/install-scripts`. The script names are self-describing.
+
+== I'm using a RHEL 8 system and the packaged OpenMPI doesn't seem to work with the Eilmer build. What can I do?
+
+You might need to experiment with a different version of OpenMPI compared to that maintained in the RHEL repositories.
+We've had reports that opempi-4.0.3 works.
+You can install it using a src rpm.
+The following instructions were provided by Jeremy Moran.
+
+. Download https://download.open-mpi.org/release/open-mpi/v4.0/openmpi-4.0.3-1.src.rpm[openmpi-4.0.3] as a src rpm.
+. Build
++
+    $ rpmbuild --rebuild openmpi-4.0.3-1.src.rpm
++    
+. Install
++
+    $ sudo yum localinstall openmpi-4.0.3-1_x86_64.rpm
++
+
+
+== The recommendation is for the latest D compiler, but that doesn't play nicely with glibc on the system. What can I do?
+
+While we typically recommend the latest D compiler, you can use other fairly recent versions to build our code.
+
+For example, a user reported success with ldc2 v1.26.0 on CentOS 7.4 system. (For UQ people, that system is tinaroo.)
+
 
 = Problems on cluster computers
 
