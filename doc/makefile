@@ -1,6 +1,7 @@
 # makefile for building the HTML Reference Manuals
 
 LMR_DIR := eilmer
+GEOM_DIR := geom
 EXAMPLES_DIR := ../examples/eilmer
 EILMER_DOC_FILES := $(LMR_DIR)/config-options-user.adoc \
 	$(LMR_DIR)/flowsolution_user.adoc \
@@ -10,9 +11,10 @@ EILMER_DOC_FILES := $(LMR_DIR)/config-options-user.adoc \
 	$(LMR_DIR)/running-a-simulation.adoc \
 	$(LMR_DIR)/run-time-utilities.adoc \
 	$(LMR_DIR)/restarting-from-a-snapshot.adoc \
-	$(LMR_DIR)/extract-boundary-loads.adoc
+	$(LMR_DIR)/extract-boundary-loads.adoc \
+	$(GEOM_DIR)/surfaces/surfaces.adoc
 
-GEOM_DIR := geom
+
 GEOM_DOC_FILES := $(GEOM_DIR)/elements.adoc \
 	$(GEOM_DIR)/sgrid.adoc
 
