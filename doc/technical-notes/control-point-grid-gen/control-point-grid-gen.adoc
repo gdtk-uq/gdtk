@@ -42,7 +42,7 @@ F_{i}(s)=C_{i,1}+\displaystyle\sum_{{\beta}=1}^{M-1} H_{\beta}(s)(C_{i,{\beta}+1
 
 Having either latexmath:[$E_{j}(r)$] or latexmath:[$F_{i}(s)$] function, the tensor product form can be produced:
 
-[latexmath]
+[latexmath,reftext{counter:eqs}]
 ++++
 \begin{equation}
 T(r,s)=E_{1}(r)+\displaystyle\sum_{{\beta}=1}^{M-1} H_{\beta}(s)(E_{\beta+1}(r)-E_{\beta}(r))
@@ -51,7 +51,7 @@ T(r,s)=E_{1}(r)+\displaystyle\sum_{{\beta}=1}^{M-1} H_{\beta}(s)(E_{\beta+1}(r)-
 
 or
 
-[latexmath]
+[latexmath,reftext{counter:eqs}]
 ++++
 \begin{equation}
 T(r,s)=F_{1}(s)+\displaystyle\sum_{{\alpha}=1}^{N-1} G_{\alpha}(r)(F_{\alpha+1}(s)-F_{\alpha}(s)) .
@@ -59,9 +59,9 @@ T(r,s)=F_{1}(s)+\displaystyle\sum_{{\alpha}=1}^{N-1} G_{\alpha}(r)(F_{\alpha+1}(
 ++++
 
 To ensure the grid conforms precisely to prescribed boundaries, the Boolean sum is used. P(1,s), P(N-1,s),
-P(r,1) and P(r,M-1) in Equation \eqref{myeq5} are the west, east, south and north boundary, respectively.
+P(r,1) and P(r,M-1) in Equation <<Qrs>> are the west, east, south and north boundary, respectively.
 
-[latexmath]
+[latexmath#Qrs,reftext={counter:eqs}]
 ++++
 \begin{equation}
 \begin{aligned}
