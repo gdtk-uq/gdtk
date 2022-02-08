@@ -63,12 +63,9 @@ NM_FILES := $(NM_DIR)/ridder.d \
 	$(NM_DIR)/number.d
 
 LUA_DIR := ../../extern/lua-5.4.3
-LIBLUA := $(LUA_DIR)/lib/liblua.a
-LIBLUAPATH := $(LUA_DIR)/lib
-LUAD_DIR := ../extern/LuaD
-LUAD_FILES := $(wildcard $(LUAD_DIR)/luad/*.d) \
-	$(wildcard $(LUAD_DIR)/luad/c/*.d) \
-	$(wildcard $(LUAD_DIR)/luad/conversions/*.d)
+LIBLUA := $(LUA_DIR)/install/lib/liblua.a
+LIBLUAPATH := $(LUA_DIR)/install/lib
+
 
 DFLAGS := -w -debug -dip1008 -g -I..
 OF := -of
@@ -79,11 +76,9 @@ ifeq ($(findstring libplot,$(LIBPLOT_VERSION_STR)), libplot)
 endif
 DLINKFLAGS := $(DLINKFLAGS) -L-ldl
 
-DFLAGS_LUA := -w -dip1008 -g -I.. -I$(LUAD_DIR)
-DLINKFLAGS_LUA := -L-L$(LIBLUAPATH) -L-llua $(DLINKFLAGS)
+DFLAGS_LUA := -w -dip1008 -g -I.. 
 ifeq ($(findstring libplot,$(LIBPLOT_VERSION_STR)), libplot)
     DFLAGS_LUA := $(DFLAGS_LUA) -version=$(LIBPLOT_VERSION_STR)
-    DLINKFLAGS_LUA := $(DLINKFLAGS_LUA) -L-lplot
 endif
 
 # ----------------------------------------------------------------------
@@ -135,7 +130,7 @@ foamMesh: foamMesh.d $(LIBLUA) $(GEOM_FILES) $(GEOM_LUA_FILES) $(GZIP_FILES) $(N
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' foamMesh.d > foamMesh_with_rev_string.d
 
 	$(DMD) $(DFLAGS_LUA) foamMesh_with_rev_string.d $(OF)foamMesh \
-	$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
+	$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
 
 # The test artefacts.
 
