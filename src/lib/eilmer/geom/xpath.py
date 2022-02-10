@@ -4,6 +4,8 @@ Class to collect functions to act as segments for a path (x, y(x)).
 
 Peter J.
 2022-02-01 : initially built for the Puffin flow calculator.
+2022-02-03 : moveto and lineto methods
+2022-02-10 : bezier2to and bezier3to methods
 """
 
 from copy import copy
@@ -80,6 +82,60 @@ class XPath(object):
         self.fs.append(fn)
         return self
 
+    def bezier2to(self, x1, y1, x2, y2):
+        """
+        Appends a quadratic Bezier segment, given the Bezier control points.
+        Returns the object so that we may chain methods.
+        """
+        assert len(self.xs) > 0, "No starting point to which we can append."
+        x0 = self.xs[-1]; y0 = self.ys[-1]
+        def xbez(t): return x0*(1-t)**2 + 2*x1*(1-t)*t + x2*t**2
+        def dxdt(t): return 2*((x1-x0)*(1-t) + (x2-x1)*t)
+        def ybez(t): return y0*(1-t)**2 + 2*y1*(1-t)*t + y2*t**2
+        def fn(x):
+            # Initial guess for t assumes linear distribution.
+            t = (x-x0)/(x2-x0)
+            def g(t): return xbez(t)-x
+            dt = -g(t)/dxdt(t) # Newton-Raphson increment
+            count = 0
+            while abs(dt) > 1.0e-11 and count < 20:
+                t += dt
+                dt = -g(t)/dxdt(t)
+                count += 1
+            # At this point we should have t that corresponds to x.
+            return ybez(t)
+        self.xs.append(x2)
+        self.ys.append(y2)
+        self.fs.append(fn)
+        return self
+
+    def bezier3to(self, x1, y1, x2, y2, x3, y3):
+        """
+        Appends a cubic Bezier segment, given the Bezier control points.
+        Returns the object so that we may chain methods.
+        """
+        assert len(self.xs) > 0, "No starting point to which we can append."
+        x0 = self.xs[-1]; y0 = self.ys[-1]
+        def xbez(t): return x0*(1-t)**3 + 3*x1*(1-t)**2*t + 3*x2*(1-t)*t**2 + x3*t**3
+        def dxdt(t): return 3*((x1-x0)*(1-t)**2 + 2*(x2-x1)*(1-t)*t + (x3-x2)*t**2)
+        def ybez(t): return y0*(1-t)**3 + 3*y1*(1-t)**2*t + 3*y2*(1-t)*t**2 + y3*t**3
+        def fn(x):
+            # Initial guess for t assumes linear distribution.
+            t = (x-x0)/(x3-x0)
+            def g(t): return xbez(t)-x
+            dt = -g(t)/dxdt(t) # Newton-Raphson increment
+            count = 0
+            while abs(dt) > 1.0e-11 and count < 20:
+                t += dt
+                dt = -g(t)/dxdt(t)
+                count += 1
+            # At this point we should have t that corresponds to x.
+            return ybez(t)
+        self.xs.append(x3)
+        self.ys.append(y3)
+        self.fs.append(fn)
+        return self
+
     # end class XPath
 
 if __name__ == '__main__':
@@ -94,5 +150,18 @@ if __name__ == '__main__':
     #
     xp.moveto(0.0, 3.0).lineto(1.0, 3.5).lineto(2.0, 4.0)
     ytest = [xp(x) for x in xtest]
+    print("xtest=", xtest)
+    print("ytest=", ytest)
+    #
+    xp2 = XPath().moveto(0.0,0.0).bezier2to(0.5,1.0, 1.0,0.0)
+    xtest = [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0]
+    ytest = [xp2(x) for x in xtest]
+    print("xtest=", xtest)
+    print("ytest=", ytest)
+    #
+    # Unequally-spaced x locations
+    xp3 = XPath().moveto(0.0,0.0).bezier3to(1.0/4,1.0, 3.0/4,-1.0, 1.0,0.0)
+    xtest = [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0]
+    ytest = [xp3(x) for x in xtest]
     print("xtest=", xtest)
     print("ytest=", ytest)
