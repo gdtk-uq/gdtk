@@ -6,6 +6,7 @@ Peter J.
 2022-02-01 : initially built for the Puffin flow calculator.
 2022-02-03 : moveto and lineto methods
 2022-02-10 : bezier2to and bezier3to methods
+2022-02-11 : XBezier
 """
 
 from copy import copy
@@ -46,7 +47,7 @@ class XPath(object):
     def __call__(self, x):
         """
         Returns y(x).
-        Note that outside the range is xs values, we extrapolate
+        Note that outside the range of xs values, we extrapolate
         with the function for the nearest available segment.
         """
         nseg = len(self.fs)
@@ -138,8 +139,73 @@ class XPath(object):
 
     # end class XPath
 
+
+class XBezier(object):
+    """
+    Computes y(x) based on parametric Bezier polynomials x=x(t) y=y(t).
+    """
+    __slots__ = ['xbs', 'ybs', 'dxbs']
+
+    def __init__(self, xbs=None, ybs=None):
+        """
+        Construct from a sequence of x-coordinates and a sequence of y-coordinates
+        for the Bezier control points.
+
+        We assume that the x coordinates are in order of increasing value
+        and close to being equally distributed.
+        """
+        assert len(xbs) > 1, "Too few defining points."
+        assert len(xbs) == len(ybs), "Unequal sequences of coordinates."
+        self.xbs = [float(x) for x in xbs]
+        self.ybs = [float(y) for y in ybs]
+        # Retain differences for later calculation of the derivative dxdt(x).
+        self.dxbs = [self.xbs[i+1]-self.xbs[i] for i in range(len(self.xbs)-1)]
+        return
+
+    def __repr__(self):
+        return "XBezier(xbs={}, ybs={})".format(self.xbs, self.ybs)
+
+    def bez(self, b_array, t):
+        """
+        Generic Bezier evaluation given a specific array of control points.
+        """
+        B = [b for b in b_array]
+        while len(B) > 1:
+            B = [B[i]*(1-t) + B[i+1]*t for i in range(len(B)-1)]
+        return B[0]
+
+    def xbez(self, t): return self.bez(self.xbs, t)
+
+    def ybez(self, t): return self.bez(self.ybs, t)
+
+    def dxdt(self, t): return len(self.dxbs)*self.bez(self.dxbs, t)
+
+    def __call__(self, x):
+        """
+        Returns y(x).
+
+        Note that, for x outside the range of xbs values,
+        we return the nearest end-point value.
+        """
+        if x <= self.xbs[0]: return self.ybs[0]
+        if x >= self.xbs[-1]: return self.ybs[-1]
+        # Initial guess for t assumes linear distribution.
+        t = (x-self.xbs[0])/(self.xbs[-1]-self.xbs[0])
+        def g(t): return self.xbez(t)-x
+        dt = -g(t)/self.dxdt(t) # Newton-Raphson increment
+        count = 0
+        while abs(dt) > 1.0e-11 and count < 20:
+            t += dt
+            dt = -g(t)/self.dxdt(t)
+            count += 1
+        # At this point we should have t that corresponds to x.
+        return self.ybez(t)
+
+    # end class XBezier
+
+
 if __name__ == '__main__':
-    print("Try out XPath")
+    print("Try out XPath class.")
     def f0(x): return -1.0
     def f1(x): return 2.0
     xp = XPath([0.0, 1.0, 2.0], [f0, f1])
@@ -148,20 +214,29 @@ if __name__ == '__main__':
     print("xtest=", xtest)
     print("ytest=", ytest)
     #
+    print("Exercise moveto, lineto.")
     xp.moveto(0.0, 3.0).lineto(1.0, 3.5).lineto(2.0, 4.0)
     ytest = [xp(x) for x in xtest]
     print("xtest=", xtest)
     print("ytest=", ytest)
     #
+    print("bezier2to: Equally-spaced x locations.")
     xp2 = XPath().moveto(0.0,0.0).bezier2to(0.5,1.0, 1.0,0.0)
     xtest = [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0]
     ytest = [xp2(x) for x in xtest]
     print("xtest=", xtest)
     print("ytest=", ytest)
     #
-    # Unequally-spaced x locations
+    print("bezier3to: Unequally-spaced x locations")
     xp3 = XPath().moveto(0.0,0.0).bezier3to(1.0/4,1.0, 3.0/4,-1.0, 1.0,0.0)
     xtest = [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0]
     ytest = [xp3(x) for x in xtest]
+    print("xtest=", xtest)
+    print("ytest=", ytest)
+    #
+    print("XBezier: Unequally-spaced x locations.")
+    xp4 = XBezier([0.0,1.0/4,3.0/4,1.0],[0.0,1.0,-1.0,0.0])
+    xtest = [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0]
+    ytest = [xp4(x) for x in xtest]
     print("xtest=", xtest)
     print("ytest=", ytest)
