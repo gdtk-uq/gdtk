@@ -6,4 +6,4 @@ set xlabel 'Objective evaluations'
 set xrange [0:80]
 set yrange [70:90]
 set nokey
-plot 'progress.txt' using ($1):($8*-1.0) with points pointtype 6 pointsize 2 linewidth 2
+plot 'progress.txt' using ($1):($7*-1.0) with points pointtype 6 pointsize 2 linewidth 2

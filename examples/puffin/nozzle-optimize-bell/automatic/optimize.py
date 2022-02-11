@@ -11,6 +11,7 @@
 #     2021-12-22, update to accommodate loads-file changes, use nelmin
 #                 and run jobs in their own directories
 #     2022-02-09, Puffin implmentation for CfH seminar.
+#     2022-02-11, Return to the Bezier representation of the bell profile.
 
 import sys, os
 DGDINST = os.path.expandvars("$HOME/dgdinst")
@@ -127,14 +128,13 @@ def objective(params, *args):
     job_number += 1
     obj_eval_queue.put(job_number)
     print("Start job number:", job_number)
-    pdict = {"theta_init":params[0], "theta_cone":params[1],
-             "deltas_0":params[2], "deltas_1":params[3], "deltas_2":params[4]}
+    pdict = {"theta_init":params[0], "theta_cone":params[1], "alpha":params[2], "beta":params[3]}
     jobDir = 'job-%04d' % job_number
     run_simulation(pdict, jobDir)
     thrustx = neg_thrust(jobDir)
-    progress_file.write("%d %.1f %.4f %.4f %.4f %.4f %.4f %.2f\n" %
+    progress_file.write("%d %.1f %.4f %.4f %.4f %.4f %.2f\n" %
                         (job_number, time.time()-start_time, params[0],
-                         params[1], params[2], params[3], params[4], thrustx))
+                         params[1], params[2], params[3], thrustx))
     progress_file.flush() # so that we can see the results as simulations run
     return thrustx
 
@@ -146,21 +146,21 @@ def main():
     """
     if 0:
         print("Let's run a simulation.")
-        pdict = {"theta_init":30.0, "deltas_0":0.0, "deltas_1":0.0, "deltas_2":0.0, "theta_cone":30.0}
+        pdict = {"theta_init":30.0, "theta_cone":30.0, "alpha":0.0, "beta":0.0}
         run_simulation(pdict, "job-0000")
     if 0:
         print("Compute thrust from previously run simulation.")
         print("thrust=", neg_thrust('job-0000'))
     if 0:
         print("Evaluate objective function.")
-        params = [30.0, 30.0, 0.0, 0.0, 0.0] # [theta_init, theta_cone, deltas_0, _1, _2]
+        params = [30.0, 30.0, 0.0, 0.0] # [theta_init, theta_cone, alpha, beta]
         obj_eval_number = 1
         objv = objective(params)
         print("objective value=", objv)
     if 1:
         print("Let the optimizer take control and run the numerical experiment.")
-        x0 = [30.0, 30.0, 0.0, 0.0, 0.0] # [theta_init, theta_cone, deltas_0, _1, _2] angles in degrees
-        result = minimize(objective, x0, [2.0, 2.0, 0.01, 0.01, 0.01],
+        x0 = [30.0, 30.0, 0.0, 0.0] # [theta_init, theta_cone, alpha, beta] angles in degrees
+        result = minimize(objective, x0, [2.0, 2.0, 2.0, 2.0],
                           options={'tol':1.0e-4, 'P':2, 'maxfe':60, 'n_workers':2})
         print('optimized result:')
         print('  x=', result.x)

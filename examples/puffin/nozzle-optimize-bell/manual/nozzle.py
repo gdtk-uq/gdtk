@@ -30,22 +30,22 @@ height = R_throat + R_curve
 import math
 theta_cone = math.radians(30.0) # nominal straight-cone angle
 theta_init = math.radians(30.0) # starting angle for thrust nozzle
-deltas = [0.0, 0.0, 0.0]
+alpha = math.radians(0.0) # angle for setting b2(p42) in Bezier curve
+beta = math.radians(0.0) # angle for setting b3(p43) in Bezier curve
 
 # Derived points at start and end of spline.
 p4x = R_curve*math.sin(theta_init)
 p4y = height - R_curve*math.cos(theta_init)
+L_cone = L_nozzle - p4x
 p5x = L_nozzle
-p5y = p4y + (L_nozzle-p4x)*math.tan(theta_cone)
-# Linearly distribute the interior points.
-xs = [p4x,]; ys = [p4y,]
-for i in range(3):
-    frac = (i+1)*0.25
-    xs.append(p4x*(1.0-frac) + p5x*frac)
-    ys.append(p4y*(1.0-frac) + p5y*frac + deltas[i])
-xs.append(p5x); ys.append(p5y)
-from eilmer.spline import CubicSpline
-bell = CubicSpline(xs, ys)
+p5y = p4y + L_cone*math.tan(theta_cone)
+# Interior points of the Bezier curve.
+p41x = p4x + 0.2*L_cone; p41y = p4y + 0.2*L_cone*math.tan(theta_init)
+p42x = p4x + 0.4*L_cone; p42y = p4y + 0.4*L_cone*math.tan(theta_init+alpha)
+p43x = p5x - 0.3*L_cone; p43y = p5y - 0.3*L_cone*math.tan(theta_init-beta)
+#
+from eilmer.geom.xpath import XBezier
+bell = XBezier([p4x,p41x,p42x,p43x,p5x], [p4y,p41y,p42y,p43y,p5y])
 
 # Circular arc profile from throat to start of spline.
 def arc(x):
