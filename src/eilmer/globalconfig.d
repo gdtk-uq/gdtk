@@ -258,16 +258,19 @@ InterpolateOption thermo_interpolator_from_name(string name)
 enum FluxCalculator {
     ausmdv, // Wada and Liou's flux calculator AIAA Paper 94-0083
     hllc,  // HLLC approximate Riemann solver (Details from Toro's textbook on Riemann solvers)
-    ldfss,  // A Low-diffusion flux-splitting scheme (Details in Edward's Computers & Fluids paper 1997)
+    ldfss0,  // A Low-diffusion flux-splitting scheme (Details in Edward's Computers & Fluids paper 1997)
+    ldfss2,  // A Low-diffusion flux-splitting scheme (Details in Edward's Computers & Fluids paper 1997)
     hanel, // Hanel's flux calculator (details in Wada & Lious's 1997 SIAM paper)
     efm, // Mike Macrossan's EFM flux calculation
     ausm_plus_up, // Liou's 2006 all-speed flux calculator
     adaptive_efm_ausmdv, // EFM near shocks, AUSMDV otherwise
     adaptive_hanel_ausmdv, // Hanel near shocks, AUSMDV otherwise
     adaptive_hanel_ausm_plus_up, // Hanel near shocks, AUSM+up otherwise
-    adaptive_hanel_hllc, // Hanel near shocks, HLLC otherwise
+    adaptive_ldfss0_ldfss2, // LDFSS0 near shocks, LDFSS2 otherwise
+    adaptive_hlle_hllc, // Standard HLLE near shocks, HLLC otherwise
     adaptive_hlle_roe, // HLLE near shocks, Roe otherwise
     hlle, // MHD HLLE approximate Riemann solver
+    hlle2, // Standard HLLE approximate Riemann solver
     roe, // Roe approximate Riemann solver
     asf, // what does this stand for???
     adaptive_ausmdv_asf // AUSMDV near shocks, asf otherwise
@@ -279,16 +282,19 @@ string flux_calculator_name(FluxCalculator fcalc)
     final switch ( fcalc ) {
     case FluxCalculator.ausmdv: return "ausmdv";
     case FluxCalculator.hllc: return "hllc";
-    case FluxCalculator.ldfss: return "ldfss";
+    case FluxCalculator.ldfss0: return "ldfss0";
+    case FluxCalculator.ldfss2: return "ldfss2";
     case FluxCalculator.hanel: return "hanel";
     case FluxCalculator.efm: return "efm";
     case FluxCalculator.ausm_plus_up: return "ausm_plus_up";
     case FluxCalculator.adaptive_efm_ausmdv: return "adaptive_efm_ausmdv";
     case FluxCalculator.adaptive_hanel_ausmdv: return "adaptive_hanel_ausmdv";
     case FluxCalculator.adaptive_hanel_ausm_plus_up: return "adaptive_hanel_ausm_plus_up";
-    case FluxCalculator.adaptive_hanel_hllc: return "adaptive_hanel_hllc";
+    case FluxCalculator.adaptive_ldfss0_ldfss2: return "adaptive_ldfss0_ldfss2";
+    case FluxCalculator.adaptive_hlle_hllc: return "adaptive_hlle_hllc";
     case FluxCalculator.adaptive_hlle_roe: return "adaptive_hlle_roe";
     case FluxCalculator.hlle: return "hlle";
+    case FluxCalculator.hlle2: return "hlle2";
     case FluxCalculator.roe: return "roe";
     case FluxCalculator.asf: return "asf";
     case FluxCalculator.adaptive_ausmdv_asf: return "adaptive_ausmdv_asf";
@@ -301,17 +307,20 @@ FluxCalculator flux_calculator_from_name(string name)
     switch ( name ) {
     case "ausmdv": return FluxCalculator.ausmdv;
     case "hllc": return FluxCalculator.hllc;
-    case "ldfss": return FluxCalculator.ldfss;
+    case "ldfss0": return FluxCalculator.ldfss0;
+    case "ldfss2": return FluxCalculator.ldfss2;
     case "hanel": return FluxCalculator.hanel;
     case "efm": return FluxCalculator.efm;
     case "ausm_plus_up": return FluxCalculator.ausm_plus_up;
     case "adaptive_efm_ausmdv": return FluxCalculator.adaptive_efm_ausmdv;
     case "adaptive_hanel_ausmdv": return FluxCalculator.adaptive_hanel_ausmdv;
     case "adaptive_hanel_ausm_plus_up": return FluxCalculator.adaptive_hanel_ausm_plus_up;
-    case "adaptive_hanel_hllc": return FluxCalculator.adaptive_hanel_hllc;
+    case "adaptive_ldfss0_ldfss2": return FluxCalculator.adaptive_ldfss0_ldfss2;
+    case "adaptive_hlle_hllc": return FluxCalculator.adaptive_hlle_hllc;
     case "adaptive": return FluxCalculator.adaptive_efm_ausmdv;
     case "adaptive_hlle_roe": return FluxCalculator.adaptive_hlle_roe;
     case "hlle": return FluxCalculator.hlle;
+    case "hlle2": return FluxCalculator.hlle2;
     case "roe": return FluxCalculator.roe;
     case "asf": return FluxCalculator.asf;
     case "adaptive_ausmdv_asf" : return FluxCalculator.adaptive_ausmdv_asf;
@@ -2411,7 +2420,8 @@ void configCheckPoint1()
     }
     if (cfg.flux_calculator == FluxCalculator.adaptive_hanel_ausmdv ||
         cfg.flux_calculator == FluxCalculator.adaptive_hanel_ausm_plus_up ||
-        cfg.flux_calculator == FluxCalculator.adaptive_hanel_hllc ||
+        cfg.flux_calculator == FluxCalculator.adaptive_ldfss0_ldfss2 ||
+        cfg.flux_calculator == FluxCalculator.adaptive_hlle_hllc ||
         cfg.flux_calculator == FluxCalculator.adaptive_hlle_roe ||
         cfg.flux_calculator == FluxCalculator.adaptive_efm_ausmdv ||
         cfg.flux_calculator == FluxCalculator.adaptive_ausmdv_asf) {

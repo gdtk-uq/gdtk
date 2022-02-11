@@ -81,8 +81,11 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
     case FluxCalculator.hllc:
         hllc(Lft, Rght, IFace, myConfig);
         break;
-    case FluxCalculator.ldfss:
-        ldfss(Lft, Rght, IFace, myConfig);
+    case FluxCalculator.ldfss0:
+        ldfss0(Lft, Rght, IFace, myConfig);
+        break;
+    case FluxCalculator.ldfss2:
+        ldfss2(Lft, Rght, IFace, myConfig);
         break;
     case FluxCalculator.hanel:
         hanel(Lft, Rght, IFace, myConfig);
@@ -96,8 +99,11 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
     case FluxCalculator.adaptive_hanel_ausm_plus_up:
         adaptive_hanel_ausm_plus_up(Lft, Rght, IFace, myConfig);
         break;
-    case FluxCalculator.adaptive_hanel_hllc:
-        adaptive_hanel_hllc(Lft, Rght, IFace, myConfig);
+    case FluxCalculator.adaptive_ldfss0_ldfss2:
+        adaptive_ldfss0_ldfss2(Lft, Rght, IFace, myConfig);
+        break;
+    case FluxCalculator.adaptive_hlle_hllc:
+        adaptive_hlle_hllc(Lft, Rght, IFace, myConfig);
         break;
     case FluxCalculator.adaptive_hlle_roe:
         adaptive_hlle_roe(Lft, Rght, IFace, myConfig);
@@ -107,6 +113,9 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
         break;
     case FluxCalculator.hlle:
         hlle(Lft, Rght, IFace, myConfig);
+        break;
+    case FluxCalculator.hlle2:
+        hlle2(Lft, Rght, IFace, myConfig);
         break;
     case FluxCalculator.roe:
         roe(Lft, Rght, IFace, myConfig);
@@ -627,12 +636,17 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
 
 @nogc
 void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
-// HLLC flux calculator (variant 1).
+// HLLC flux calculator.
 //
 // Implemented from details in
-// Toro (2009)
-// Riemann solvers and numerical methods for fluid dynamics,
-// textbook on pg. 331-332.
+//     Toro (2009)
+//     Riemann solvers and numerical methods for fluid dynamics,
+//     textbook on pg. 331-332.
+// and
+//     E. F. Toro, M. Spruce, and W. Speares
+//     Restoration of the contact surface in the HLL-Riemann solver
+//     Shock Waves (1994)
+//
 {
     auto gmodel = myConfig.gmodel;
     // Unpack the flow-state vectors for either side of the interface.
@@ -647,7 +661,11 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
     number aL = Lft.gas.a;
     number keL = 0.5*(uL*uL + vL*vL + wL*wL);
     number EL = rL*eL + rL*keL;
-    version(turbulence) { EL += rL*myConfig.turb_model.turbulent_kinetic_energy(Lft); }
+    number HL = eL + pL/rL + keL;
+    version(turbulence) {
+        EL += rL*myConfig.turb_model.turbulent_kinetic_energy(Lft);
+        HL += rL*myConfig.turb_model.turbulent_kinetic_energy(Lft);
+    }
     //
     number gR = gmodel.gamma(Rght.gas);
     number rR = Rght.gas.rho;
@@ -660,38 +678,31 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
     number aR = Rght.gas.a;
     number keR = 0.5*(uR*uR + vR*vR + wR*wR);
     number ER = rR*eR + rR*keR;
-    version(turbulence) { ER += rR*myConfig.turb_model.turbulent_kinetic_energy(Rght); }
+    number HR = eR + pR/rR + keR;
+    version(turbulence) {
+        ER += rR*myConfig.turb_model.turbulent_kinetic_energy(Rght);
+        HR += rR*myConfig.turb_model.turbulent_kinetic_energy(Rght);
+    }
     //
 
-    // Step I: pressure estimate (compute estimate for the pressure p_star in the Star Region)
-    number rbar = 0.5*(rL + rR);
-    number abar = 0.5*(aL + aR);
-    number p_pvrs = 0.5*(pL + pR) - 0.5*(uR - uL)*rbar*abar;
-    number p_star = fmax(0.0, p_pvrs);
+    // compute Roe-average state
+    number uhat = (sqrt(rL)*uL+sqrt(rR)*uR) / (sqrt(rL) + sqrt(rR));
+    number vhat = (sqrt(rL)*vL+sqrt(rR)*vR) / (sqrt(rL) + sqrt(rR));
+    number what = (sqrt(rL)*wL+sqrt(rR)*wR) / (sqrt(rL) + sqrt(rR));
+    number Hhat = (sqrt(rL)*HL+sqrt(rR)*HR) / (sqrt(rL) + sqrt(rR));
+    number kehat = 0.5*(uhat*uhat+vhat*vhat+what*what);
+    number ghat = (sqrt(rL)*gL+sqrt(rR)*gR) / (sqrt(rL) + sqrt(rR));
+    number ahat2 = (ghat-1.0)*(Hhat-kehat);
+    number ahat = sqrt(ahat2);
 
-    // Step II: wave speed estimates (compute the wave speed estimates for SL, SR, and S_star)
-    number qL;
-    if (p_star <= pL) {
-        qL = 1.0;
-    } else {
-        qL = sqrt(1.0 + ((gL + 1.0)/(2.0*gL))*(p_star/pL - 1.0));
-    }
-    number SL = uL - aL*qL;
-
-    number qR;
-    if (p_star <= pR) {
-        qR = 1.0;
-    } else {
-        qR = sqrt(1.0 + ((gR + 1.0)/(2.0*gR))*(p_star/pR - 1.0));
-    }
-    number SR = uR + aR*qR;
-
+    // compute wave estimates
+    number SL = fmin(uhat-ahat, uL-aL);
+    number SR = fmax(uhat+ahat, uR+aR);
     number S_star = (pR - pL + rL*uL*(SL - uL) - rR*uR*(SR - uR))/(rL*(SL - uL) - rR*(SR - uR));
-
-    // Step III: HLLC flux (compute the HLLC flux)
+    
+    // compute HLLC flux
     ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
-
     // a helper function that evaluates the HLLC fluxes used to reduce repeated code
     void hllc_flux_function(bool star_region, number coeff, number r, number p, number u, number v, number w, number E, in FlowState state, number S) {
         // mass
@@ -763,29 +774,129 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
     }
 
     // evaluate HLLC fluxes
-    if (0.0 <= SL) {
-        number coeffL = 0.0;
-        hllc_flux_function(false, coeffL, rL, pL, uL, vL, wL, EL, Lft, SL);
-    } else if (SL <= 0.0 && 0.0 <= S_star) {
-        number coeffL = rL*(SL-uL)/(SL-S_star);
-        hllc_flux_function(true, coeffL, rL, pL, uL, vL, wL, EL, Lft, SL);
-    } else if (S_star <= 0.0 && 0.0 <= SR) {
-        number coeffR = rR*(SR-uR)/(SR-S_star);
-        hllc_flux_function(true, coeffR, rR, pR, uR, vR, wR, ER, Rght, SR);
-    } else { //if (0.0 >= SR) {
-        number coeffR = 0.0;
-        hllc_flux_function(false, coeffR, rR, pR, uR, vR, wR, ER, Rght, SR);
+    if (S_star > 0.0) {
+        if (SL > 0.0) {
+            // compute Left Flux
+            number coeffL = 0.0;
+            hllc_flux_function(false, coeffL, rL, pL, uL, vL, wL, EL, Lft, SL);
+        } else {
+            // compute Flux Left Star from Left Star State
+            number coeffL = rL*(SL-uL)/(SL-S_star);
+            hllc_flux_function(true, coeffL, rL, pL, uL, vL, wL, EL, Lft, SL);
+        }
+    } else {
+        if (SR < 0.0) {
+            // compute Right Flux
+            number coeffR = 0.0;
+            hllc_flux_function(false, coeffR, rR, pR, uR, vR, wR, ER, Rght, SR);
+        } else {
+            // compute Flux Right Star from Right Star State
+            number coeffR = rR*(SR-uR)/(SR-S_star);
+            hllc_flux_function(true, coeffR, rR, pR, uR, vR, wR, ER, Rght, SR);
+        }
     }
 } // end hllc()
 
 @nogc
-void ldfss(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+void ldfss0(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+// Jack Edwards' LDFSS (variant 0) flux calculator.
+//
+// Implemented from details in
+//     Jack R. Edwards (1997)
+//     A low-diffusion flux-splitting scheme for Navier-Stokes calculations.
+//     Computers & Fluids paper.
+//
+{
+    auto gmodel = myConfig.gmodel;
+    // Unpack the flow-state vectors for either side of the interface.
+    // Store in work vectors, those quantities that will be neede later.
+    number rL = Lft.gas.rho;
+    number pL = Lft.gas.p;
+    number pLrL = pL / rL;
+    number uL = Lft.vel.x;
+    number vL = Lft.vel.y;
+    number wL = Lft.vel.z;
+    number eL = gmodel.internal_energy(Lft.gas);
+    number aL = Lft.gas.a;
+    number keL = 0.5*(uL*uL + vL*vL + wL*wL);
+    number HL = eL + pLrL + keL;
+    version(turbulence) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
+    //
+    number rR = Rght.gas.rho;
+    number pR = Rght.gas.p;
+    number pRrR = pR / rR;
+    number uR = Rght.vel.x;
+    number vR = Rght.vel.y;
+    number wR = Rght.vel.z;
+    number eR = gmodel.internal_energy(Rght.gas);
+    number aR = Rght.gas.a;
+    number keR = 0.5*(uR*uR + vR*vR + wR*wR);
+    number HR = eR + pRrR + keR;
+    version(turbulence) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
+    //
+    // Split Mach number (eqn 15)
+    number ML = uL / aL;
+    number MR = uR / aR;
+    number MpL = 0.25*(ML + 1.0)^^2;
+    number MmR = -0.25*(MR - 1.0)^^2;
+    // Parameters to provide correct sonic-point transition behaviour
+    // equation 16
+    number alphaL = 0.5*(1.0 + sgn(ML.re));
+    number alphaR = 0.5*(1.0 - sgn(MR.re));
+    // equation 17
+    number betaL = -fmax(0.0, 1.0-floor(fabs(ML.re)));
+    number betaR = -fmax(0.0, 1.0-floor(fabs(MR.re)));
+    // subsonic pressure splitting (eqn 12)
+    number PL = 0.25*(ML+1.0)^^2*(2.0-ML);
+    number PR = 0.25*(MR-1.0)^^2*(2.0+MR);
+    // D parameter (eqn 11)
+    number DL = alphaL*(1.0+betaL) - betaL*PL;
+    number DR = alphaR*(1.0+betaR) - betaR*PR;
+    // M_1/2 parameters for LDFSS (0) (eqn 20)
+    number Mhalf = 0.25*betaL*betaR*(sqrt(0.5*(ML^^2+MR^^2))-1.0)^^2;
+    // C parameter for LDFSS (0) (en 13 & en 14 & eqn 18 & eqn 19)
+    number CL = alphaL*(1.0+betaL)*ML - betaL*MpL - Mhalf;
+    number CR = alphaR*(1.0+betaR)*MR - betaR*MmR + Mhalf;
+    //
+    // Assemble components of the flux vector.
+    ConservedQuantities F = IFace.F;
+    auto cqi = myConfig.cqi;
+    number ru_half = aL*rL*CL + aR*rR*CR;
+    number ru2_half = aL*rL*CL*uL + aR*rR*CR*uR;
+    number p_half = DL*pL + DR*pR;
+    F.vec[cqi.mass] += factor*ru_half;
+    F.vec[cqi.xMom] += factor*(ru2_half+p_half);
+    F.vec[cqi.yMom] += factor*(aL*rL*CL*vL + aR*rR*CR*vR);
+    if (cqi.threeD) { F.vec[cqi.zMom] += factor*(aL*rL*CL*wL + aR*rR*CR*wR); }
+    F.vec[cqi.totEnergy] += factor*(aL*rL*CL*HL + aR*rR*CR*HR);
+    version(turbulence) {
+        foreach(i; 0 .. myConfig.turb_model.nturb) {
+            F.vec[cqi.rhoturb+i] += factor*(aL*rL*CL*Lft.turb[i] + aR*rR*CR*Rght.turb[i]);
+        }
+    }
+    version(multi_species_gas) {
+        if (cqi.n_species > 1) {
+            foreach (i; 0 .. cqi.n_species) {
+                F.vec[cqi.species+i] += factor*(aL*rL*CL*Lft.gas.massf[i] + aR*rR*CR*Rght.gas.massf[i]);
+            }
+        }
+    }
+    version(multi_T_gas) {
+        foreach (i; 0 .. cqi.n_modes) {
+            F.vec[cqi.modes+i] +=  factor*(aL*rL*CL*Lft.gas.u_modes[i] + aR*rR*CR*Rght.gas.u_modes[i]);
+        }
+    }
+} // end ldfss0()
+
+@nogc
+void ldfss2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
 // Jack Edwards' LDFSS (variant 2) flux calculator.
 //
 // Implemented from details in
-// Jack R. Edwards (1997)
-// A low-diffusion flux-splitting scheme for Navier-Stokes calculations.
-// Computers & Fluids paper.
+//     Jack R. Edwards (1997)
+//     A low-diffusion flux-splitting scheme for Navier-Stokes calculations.
+//     Computers & Fluids paper.
+//
 {
     auto gmodel = myConfig.gmodel;
     // Unpack the flow-state vectors for either side of the interface.
@@ -835,7 +946,7 @@ void ldfss(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     number DL = alphaL*(1.0+betaL) - betaL*PL;
     number DR = alphaR*(1.0+betaR) - betaR*PR;
     // M_1/2 parameters for LDFSS (1,2) (eqn 20 & eqn 28 & eqn 29)
-    number delta = 10.0; // weighting parameter to suppress 'carbuncle' phenomena
+    number delta = 1.0; // weighting parameter to suppress 'carbuncle' phenomena
                         // while preserving the beneficial traits of the scheme
                         // in the capturing of discontinuities. Choice of delta
                         // is not obvious. Higher values are better at 'carbuncle'
@@ -876,19 +987,19 @@ void ldfss(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
             F.vec[cqi.modes+i] +=  factor*(am*rL*CL*Lft.gas.u_modes[i] + am*rR*CR*Rght.gas.u_modes[i]);
         }
     }
-} // end ldfss()
+} // end ldfss2()
 
 @nogc
 void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
 // Hanel's flux calculator.
 //
 // Implemented from Y. Wada and M. S. Liou details in their AIAA paper
-// Y. Wada and M. -S. Liou (1997)
-// An accurate and robust flux splitting scheme for shock and contact discontinuities.
+//     Y. Wada and M. -S. Liou (1997)
+//     An accurate and robust flux splitting scheme for shock and contact discontinuities.
 // with reference to....
-// Hanel, Schwane, & Seider's 1987 paper
-// On the accuracy of upwind schemes for the solution of the Navier-Stokes equations
-
+//    Hanel, Schwane, & Seider's 1987 paper
+//    On the accuracy of upwind schemes for the solution of the Navier-Stokes equations
+//
 {
     auto gmodel = myConfig.gmodel;
     // Unpack the flow-state vectors for either side of the interface.
@@ -1211,15 +1322,31 @@ void adaptive_hanel_ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInte
 }
 
 @nogc
-void adaptive_hanel_hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+void adaptive_ldfss0_ldfss2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
 // This adaptive flux calculator uses the Hanel flux calculator
+// near shocks and AUSMDV away from shocks.
+//
+// The actual work is passed off to the original flux calculation functions.
+{
+    number alpha = IFace.fs.S;
+    if (alpha > 0.0) {
+        ldfss0(Lft, Rght, IFace, myConfig, alpha);
+    }
+    if (alpha < 1.0) {
+        ldfss2(Lft, Rght, IFace, myConfig, 1.0-alpha);
+    }
+}
+
+@nogc
+void adaptive_hlle_hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+// This adaptive flux calculator uses the standard HLLE flux calculator
 // near shocks and HLLC away from shocks.
 //
 // The actual work is passed off to the original flux calculation functions.
 {
     number alpha = IFace.fs.S;
     if (alpha > 0.0) {
-        hanel(Lft, Rght, IFace, myConfig, alpha);
+        hlle2(Lft, Rght, IFace, myConfig, alpha);
     }
     if (alpha < 1.0) {
         hllc(Lft, Rght, IFace, myConfig, 1.0-alpha);
@@ -1228,14 +1355,14 @@ void adaptive_hanel_hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IF
 
 @nogc
 void adaptive_hlle_roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
-// This adaptive flux calculator uses uses the HLLE flux calculator
+// This adaptive flux calculator uses uses the standard HLLE flux calculator
 // near shocks and Roe away from shocks.
 //
 // The actual work is passed off to the original flux calculation functions.
 {
     number alpha = IFace.fs.S;
     if (alpha > 0.0) {
-        hlle(Lft, Rght, IFace, myConfig, alpha);
+        hlle2(Lft, Rght, IFace, myConfig, alpha);
     }
     if (alpha < 1.0) {
         roe(Lft, Rght, IFace, myConfig, 1.0-alpha);
@@ -1599,6 +1726,138 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
         assert(0, "HLLE not implemented for normal gas dynamics");
     }
 } // end hlle()
+
+@nogc
+void hlle2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+// Einfedlt's HLLE flux calculator.
+//
+// Implemented from details in
+//     B. Einfeldt, C. D. Munz, P. L. Roe, and B. Sjogreen
+//     On Godunov-Type Methods near Low Densities
+//     Journal of Computational Physics (1991)
+// and
+//     B. Einfeldt
+//     On Godunov-Type Methods for Gas Dynamics
+//     SIAM Journal Numerical Analysis (1988)
+//
+{
+    auto gmodel = myConfig.gmodel;
+    // Unpack the flow-state vectors for either side of the interface.
+    // Store in work vectors, those quantities that will be needed later.
+    number gL = gmodel.gamma(Lft.gas);
+    number rL = Lft.gas.rho;
+    number pL = Lft.gas.p;
+    number pLrL = pL / rL;
+    number uL = Lft.vel.x;
+    number vL = Lft.vel.y;
+    number wL = Lft.vel.z;
+    number eL = gmodel.internal_energy(Lft.gas);
+    number aL = Lft.gas.a;
+    number keL = 0.5*(uL*uL + vL*vL + wL*wL);
+    number HL = eL + pLrL + keL;
+    version(turbulence) { HL += myConfig.turb_model.turbulent_kinetic_energy(Lft); }
+    //
+    number gR = gmodel.gamma(Rght.gas);
+    number rR = Rght.gas.rho;
+    number pR = Rght.gas.p;
+    number pRrR = pR / rR;
+    number uR = Rght.vel.x;
+    number vR = Rght.vel.y;
+    number wR = Rght.vel.z;
+    number eR = gmodel.internal_energy(Rght.gas);
+    number aR = Rght.gas.a;
+    number keR = 0.5*(uR*uR + vR*vR + wR*wR);
+    number HR = eR + pRrR + keR;
+    version(turbulence) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
+    //
+
+    // compute Roe-average state
+    number uhat = (sqrt(rL)*uL+sqrt(rR)*uR) / (sqrt(rL) + sqrt(rR));
+    number ghat = (sqrt(rL)*gL+sqrt(rR)*gR) / (sqrt(rL) + sqrt(rR));    
+    number ahat2 = ((sqrt(rL)*aL*aL+sqrt(rR)*aR*aR) / (sqrt(rL) + sqrt(rR))) + 0.5*(ghat-1.0)*((sqrt(rL)+sqrt(rR)) / sqrt((sqrt(rL) + sqrt(rR))))*(uR-uL)*(uR-uL);
+    number ahat = sqrt(ahat2);
+
+    // compute wave speed estimates
+    number SLm = fmin(uL-aL, uhat-ahat);
+    number SRp = fmax(uR+aR, uhat+ahat);
+
+    // compute HLLE flux
+    ConservedQuantities F = IFace.F;
+    auto cqi = myConfig.cqi;
+    if (SLm >= 0) {
+        //Right-going supersonic flow
+        F.vec[cqi.mass] += factor*(rL*uL);
+        F.vec[cqi.xMom] += factor*(rL*uL*uL+pL);
+        F.vec[cqi.yMom] += factor*(rL*uL*vL);
+        if (cqi.threeD) { F.vec[cqi.zMom] += factor*(rL*uL*wL); }
+        F.vec[cqi.totEnergy] += factor*(rL*uL*HL);
+        version(turbulence) {
+            foreach(i; 0 .. myConfig.turb_model.nturb) {
+                F.vec[cqi.rhoturb+i] += factor*(rL*uL*Lft.turb[i]);
+            }
+        }
+        version(multi_species_gas) {
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) {
+                    F.vec[cqi.species+i] += factor*(rL*uL*Lft.gas.massf[i]);
+                }
+            }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. cqi.n_modes) {
+                F.vec[cqi.modes+i] += factor*(rL*uL*Lft.gas.u_modes[i]);
+            }
+        }
+    } else if (SRp <= 0) {
+        // Left-going supersonic flow
+        F.vec[cqi.mass] += factor*(rR*uR);
+        F.vec[cqi.xMom] += factor*(rR*uR*uR+pR);
+        F.vec[cqi.yMom] += factor*(rR*uR*vR);
+        if (cqi.threeD) { F.vec[cqi.zMom] += factor*(rR*uR*wR); }
+        F.vec[cqi.totEnergy] += factor*(rR*uR*HR);
+        version(turbulence) {
+            foreach(i; 0 .. myConfig.turb_model.nturb) {
+                F.vec[cqi.rhoturb+i] += factor*(rR*uR*Rght.turb[i]);
+            }
+        }
+        version(multi_species_gas) {
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) {
+                    F.vec[cqi.species+i] += factor*(rR*uR*Rght.gas.massf[i]);
+                }
+            }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. cqi.n_modes) {
+                F.vec[cqi.modes+i] += factor*(rR*uR*Rght.gas.u_modes[i]);
+            }
+        }
+    } else  {
+        // subsonic flow
+        F.vec[cqi.mass] += factor*(( SRp*rL*uL - SLm*rR*uR + SLm*SRp*(rR-rL) )/(SRp-SLm));
+        F.vec[cqi.xMom] += factor*(( SRp*(rL*uL*uL+pL) - SLm*(rR*uR*uR+pR) + SLm*SRp*(rR*uR-rL*uL) )/(SRp-SLm));
+        F.vec[cqi.yMom] += factor*(( SRp*(rL*uL*vL) - SLm*(rR*uR*vR) + SLm*SRp*(rR*vR-rL*vL) )/(SRp-SLm));
+        if (cqi.threeD) { F.vec[cqi.yMom] += factor*(( SRp*(rL*uL*wL) - SLm*(rR*uR*wR) + SLm*SRp*(rR*wR-rL*wL) )/(SRp-SLm)); }
+        F.vec[cqi.totEnergy] += factor*(( SRp*(rL*uL*HL) - SLm*(rR*uR*HR) + SLm*SRp*(rR*HR-rL*HL) )/(SRp-SLm)); 
+        version(turbulence) {
+            foreach(i; 0 .. myConfig.turb_model.nturb) {
+                F.vec[cqi.rhoturb+i] += factor*(( SRp*(rL*uL*Lft.turb[i]) - SLm*(rR*uR*Rght.turb[i]) + SLm*SRp*(rR*Rght.turb[i]-rL*Lft.turb[i]) )/(SRp-SLm));
+            }
+        }
+        version(multi_species_gas) {
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) {
+                    F.vec[cqi.species+i] += factor*(( SRp*(rL*uL*Lft.gas.massf[i]) - SLm*(rR*uR*Rght.gas.massf[i]) + SLm*SRp*(rR*Rght.gas.massf[i]-rL*Lft.gas.massf[i]) )/(SRp-SLm));
+                }
+            }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. cqi.n_modes) {
+                F.vec[cqi.modes+i] += factor*(( SRp*(rL*uL*Lft.gas.u_modes[i]) - SLm*(rR*uR*Rght.gas.u_modes[i]) + SLm*SRp*(rR*Rght.gas.u_modes[i]-rL*Lft.gas.u_modes[i]) )/(SRp-SLm));
+            }
+        }
+    }
+} // end hlle2()
 
 @nogc
 void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
