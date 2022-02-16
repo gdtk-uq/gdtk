@@ -2,7 +2,7 @@
 # prep.sh
 
 # Start by copying the gas model files from the source-code repository.
-DGD_REPO=${DGD_REPO:=${HOME}/dgd}
+DGD_REPO=${DGD_REPO:=${HOME}/gdtk}
 cp ${DGD_REPO}/src/gas/sample-data/cea-lut-air-version-test.lua ./cea-lut-air.lua
 cp ${DGD_REPO}/src/gas/sample-data/air-13sp-eq-gas-model.lua .
 prep-gas air-13sp.inp air-13sp-gas-model.lua

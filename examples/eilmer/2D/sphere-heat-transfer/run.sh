@@ -1,6 +1,6 @@
 #!/bin/bash
 # run.sh
-DGD_REPO=${DGD_REPO:=${HOME}/dgd}
+DGD_REPO=${DGD_REPO:=${HOME}/gdtk}
 cp ${DGD_REPO}/src/gas/sample-data/cea-lut-air-version-test.lua cea-lut-air.lua
 e4shared --prep --job=sphere
 e4shared --run --job=sphere --verbosity=1 --max-cpus=4
