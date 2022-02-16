@@ -8,7 +8,7 @@ FLAVOUR ?= debug
 
 PLATFORM ?= linux
 WITH_DVODE ?= 0
-INSTALL_DIR ?= $(HOME)/dgdinst
+INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR := ../../build
 
 DEMO_PROGRAMS := gas_model_demo ideal_gas_demo luagas_model_demo

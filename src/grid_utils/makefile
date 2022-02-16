@@ -4,7 +4,7 @@
 # when invoking this makefile.  Can also ask for gdc.
 DMD ?= ldc2
 PLATFORM ?= linux
-INSTALL_DIR ?= $(HOME)/dgdinst
+INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR ?= ../../build
 
 ifeq ($(DMD), dmd)

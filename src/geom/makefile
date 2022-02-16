@@ -3,7 +3,7 @@
 
 DMD ?= ldmd2
 PLATFORM ?= linux
-INSTALL_DIR ?= $(HOME)/dgdinst
+INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR := ../../build
 REVISION_STRING := $(shell git rev-parse --short HEAD)
 

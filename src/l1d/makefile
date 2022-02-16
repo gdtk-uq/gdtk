@@ -47,7 +47,7 @@ LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 LIBLUAPATH := $(LUA_DIR)/lib
 
 # The install destination.
-INSTALL_DIR ?= $(HOME)/dgdinst
+INSTALL_DIR ?= $(HOME)/gdtkinst
 
 # The build destination sits locally for present
 BUILD_DIR := ../../build

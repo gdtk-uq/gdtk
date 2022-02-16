@@ -263,7 +263,7 @@ GPERF_FILES := $(GPERF_DIR)/heap_profiler.d \
 	$(GPERF_DIR)/tcmalloc.d \
 
 # The install destination.
-INSTALL_DIR ?= $(HOME)/dgdinst
+INSTALL_DIR ?= $(HOME)/gdtkinst
 
 # The build destination sits locally for present
 BUILD_DIR := ../../build

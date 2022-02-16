@@ -5,7 +5,7 @@
 #
 # PJ 2020-07-30
 
-INSTALL_DIR ?= $(HOME)/dgdinst
+INSTALL_DIR ?= $(HOME)/gdtkinst
 
 install: onedval.py prop_avg.py cell.py
 	cp onedval.py $(INSTALL_DIR)/bin/onedval

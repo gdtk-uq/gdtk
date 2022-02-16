@@ -3,7 +3,7 @@
 # Now installs the gas library, CEA, and PITOT3.
 # Chris James (c.james4@uq.edu.au) - 12-Jun-2021
 
-INSTALL_DIR ?= $(HOME)/dgdinst
+INSTALL_DIR ?= $(HOME)/gdtkinst
 
 GAS_DIR := ../gas
 CEA_DIR := ../../extern/cea2
@@ -26,10 +26,10 @@ install : $(INSTALL_DIR)
 	@echo -----------------------------------------
 	@echo pitot3 should now be installed.
 	@echo -----------------------------------------
-	
+
 clean : 
 	cd $(GAS_DIR); make clean
 	cd $(CEA_DIR); make clean
-	
+
 $(INSTALL_DIR):
 	- mkdir $(INSTALL_DIR)

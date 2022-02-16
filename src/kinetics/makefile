@@ -3,7 +3,7 @@
 # and build stand-alone programs.
 PLATFORM ?= linux
 WITH_DVODE ?= 0
-INSTALL_DIR ?= $(HOME)/dgdinst
+INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR ?= ../../build
 
 TEST_PROGRAMS := chemistry_update_test \
