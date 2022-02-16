@@ -133,18 +133,18 @@ can be found in a public repository on [bitbucket](https://bitbucket.org/cfcfd/d
 To get your own copy, use the git revision control client to clone the repository
 with something like the following command:
 
-    git clone https://bitbucket.org/cfcfd/dgd-git dgd
+    git clone https://github.com/gdtk-uq/gdtk.git gdtk 
 
 and within a couple of minutes, depending on the speed of your network connection,
 you should have your own copy of the full source tree and the complete repository history.
 
 ### Installing Eilmer
 
-The default installation directory is `$HOME/dgdinst`.
+The default installation directory is `$HOME/gdtkinst`.
 To compile and install *Eilmer*, move into the eilmer source
 area and use `make` to coordinate the compiling and installing:
 
-    cd dgd/src/eilmer
+    cd gdtk/src/eilmer
     make install
 
 If you are on a Mac, you'll need to give the `make` command an
@@ -155,7 +155,7 @@ extra hint:
 
 ### Configure environment
 
-We'll assume you are happy using the default install area `$HOME/dgdinst`.
+We'll assume you are happy using the default install area `$HOME/gdtkinst`.
 The next step is to configure your environment to use Eilmer.
 You will need to set the `DGD` variable to point to the top of the installation tree,
 and the `DGD_REPO` variable to point to the top of the repository tree.
@@ -164,7 +164,7 @@ You then also need to set `$PATH`, `$DGD_LUA_PATH` and `$DGD_LUA_CPATH`
 to point to the appropriate places.
 Some example lines from a `.bashrc` file are:
 
-    export DGD=$HOME/dgdinst
+    export DGD=$HOME/gdtkinst
     export DGD_REPO=$HOME/dgd
     export PATH=$PATH:$DGD/bin
     export DGD_LUA_PATH=$DGD/lib/?.lua
