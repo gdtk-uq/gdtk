@@ -16,7 +16,7 @@ makes use of Node.js to do some of the build.
 
 3. Install support modules in website area.
 
-$ cd dgd/website
+$ cd gdtk/website
 $ npm install
 
 4. Install asciidoctor and the rouge module
