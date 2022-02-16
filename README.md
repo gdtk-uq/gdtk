@@ -165,7 +165,7 @@ to point to the appropriate places.
 Some example lines from a `.bashrc` file are:
 
     export DGD=$HOME/gdtkinst
-    export DGD_REPO=$HOME/dgd
+    export DGD_REPO=$HOME/gdtk
     export PATH=$PATH:$DGD/bin
     export DGD_LUA_PATH=$DGD/lib/?.lua
     export DGD_LUA_CPATH=$DGD/lib/?.so
@@ -179,7 +179,7 @@ To test that everything has worked, you can exercise the flow
 solver to simulate the supersonic flow over a 20-deg cone.
 
     cd ~
-    cd dgd/examples/eilmer/2D/sharp-cone-20-degrees/sg
+    cd gdtk/examples/eilmer/2D/sharp-cone-20-degrees/sg
     prep-gas ideal-air.inp ideal-air-gas-model.lua
     e4shared --prep --job=cone20
     e4shared --run --job=cone20
