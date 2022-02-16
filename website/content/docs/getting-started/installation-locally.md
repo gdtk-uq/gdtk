@@ -19,11 +19,11 @@ toc: true
 ## Getting the source code
 
 The full source code for the toolkit programs, including a set of examples,
-can be found in a public repository on [bitbucket](https://bitbucket.org/cfcfd/dgd-git).
+can be found in a public repository on [github](https://github.com/gdtk-uq/gdtk).
 To get your own copy, use the git revision control client to clone the repository
 with something like the following command:
 
-    git clone https://bitbucket.org/cfcfd/dgd-git dgd
+    git clone https://github.com/gdtk-uq/gdtk.git gdtk
 
 and within a couple of minutes, depending on the speed of your network connection,
 you should have your own copy of the full source tree and the complete repository history.
@@ -31,11 +31,11 @@ you should have your own copy of the full source tree and the complete repositor
 
 ## Installing Eilmer
 
-The default installation directory is `$HOME/dgdinst`.
+The default installation directory is `$HOME/gdtkinst`.
 To compile and install Eilmer, move into the eilmer source
 area and use `make` to coordinate the compiling and installing:
 
-    cd dgd/src/eilmer
+    cd gdtk/src/eilmer
     make install
 
 If you are on a Mac, you'll need to give the `make` command an
@@ -55,7 +55,7 @@ a Python or Ruby interpreter.
 To compile and install the library and its supporting wrappers,
 move to the gas source directory and use `make` again.
 
-    cd dgd/src/gas
+    cd gdtk/src/gas
     make install
 
 Note that the loadable library needs to be built with the DMD64 compiler
@@ -71,13 +71,13 @@ is in a different location.
 To compile and install L1d, move into its source area and, again,
 use `make` to coordinate the compiling and installing:
 
-    cd dgd/src/l1d
+    cd gdtk/src/l1d
     make install
 
 
 ## Setting environment variables
 
-We'll assume you are happy using the default install area `$HOME/dgdinst`.
+We'll assume you are happy using the default install area `$HOME/gdtkinst`.
 The next step is to configure your environment to use Eilmer.
 You will need to set the
 `DGD` variable to point to the top of the installation tree, and
@@ -86,8 +86,8 @@ Note that the installation tree and repository tree are separate. You then
 also need to set `$PATH`, `$DGD_LUA_PATH` and `$DGD_LUA_CPATH` to point to
 the appropriate places. Some example lines from a .bashrc file are:
 
-    export DGD=$HOME/dgdinst
-    export DGD_REPO=$HOME/dgd
+    export DGD=$HOME/gdtkinst
+    export DGD_REPO=$HOME/gdtk
     export PATH=$PATH:$DGD/bin
     export DGD_LUA_PATH=$DGD/lib/?.lua
     export DGD_LUA_CPATH=$DGD/lib/?.so

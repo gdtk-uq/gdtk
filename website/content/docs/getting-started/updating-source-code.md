@@ -19,7 +19,7 @@ and additions to the source code and the examples.
 To update your copy of the repository,
 move into any directory within the working tree and pull any new revisions into your local copy.
 
-    cd dgd/src/eilmer
+    cd gdtk/src/eilmer
     make clean
     git pull -v
 

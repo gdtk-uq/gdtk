@@ -186,7 +186,7 @@ to load the openmpi module to both build and run `e4mpi`.
 To compile:
 
     module load mpi/openmpi-x86_64
-    cd dgd/src/eilmer
+    cd gdtk/src/eilmer
     make FLAVOUR=fast WITH_MPI=1 install
 
 To complete the install, remember to set your environment variables
@@ -254,7 +254,7 @@ To compile Eilmer4 with MPI enabled on tinaroo, do:
     module purge
     module load gnu
     module load openmpi2_ib/2.1.6
-    cd dgd/install-scripts
+    cd gdtk/install-scripts
     ./install-transient-solvers.sh
 
 To complete the install, remember to set your environment variables
@@ -343,7 +343,7 @@ I have had success with the 4.0.2 version.
 As described for other systems, use the `install-transient-solvers.sh` script to
 get an optimised build of the distributed-memory (MPI) transient solver.
 
-    cd dgd/install-scripts
+    cd gdtk/install-scripts
     ./install-transient-solvers.sh
 
 To complete the install, remember to set your environment variables
@@ -354,7 +354,7 @@ Here, I include what I have added to the end of my `.bash_profile` file on Gadi.
 It sets my environment up to compile and run Eilmer.
 Note also that I configure access to a locally installed version of the ldc2 compiler.
 
-    export DGD=${HOME}/dgdinst
+    export DGD=${HOME}/gdtkinst
     append_path PATH ${DGD}/bin
     append_path PATH ${HOME}/opt/ldc2/bin
     append_path PYTHONPATH ${DGD}/lib

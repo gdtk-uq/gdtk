@@ -41,7 +41,7 @@ Programs built upon the loadable library:
 To use the library, it first needs to be built and installed from within
 the source code directory for the gas models.
 
-    cd dgd/src/gas
+    cd gdtk/src/gas
     make install
 
 Note that this command will also install the Python application programs

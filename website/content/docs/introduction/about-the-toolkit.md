@@ -64,7 +64,7 @@ With the Toolkit code, we try to make the analysis of compressible, reacting flo
 and reliable; we cannot make it trivial.
 
 ## How to get started
-The complete repository is available on bitbucket: <https://bitbucket.org/cfcfd/dgd-git>
+The complete repository is available on githubt: <https://github.com/gdtk-uq/gdtk>
 
 If you are reasonably proficient with Linux (or Mac) at the command line,
 then try the [Quick Start guide]({{< relref "quick-start" >}}).
