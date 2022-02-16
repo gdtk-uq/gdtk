@@ -129,9 +129,9 @@ The source code of the Lua interpreter is included in the source code repository
 ### Getting the source code
 
 The full source code for the toolkit programs, including a set of examples,
-can be found in a public repository on [bitbucket](https://bitbucket.org/cfcfd/dgd-git).
+can be found in a public repository on [github](https://github.com/gdtk-uq/gdtk).
 To get your own copy, use the git revision control client to clone the repository
-with something like the following command:
+with the following command:
 
     git clone https://github.com/gdtk-uq/gdtk.git gdtk 
 
