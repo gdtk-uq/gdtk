@@ -51,7 +51,7 @@ endif
 
 
 
-PROGRAMS := e4shared e4monitor dgd-module
+PROGRAMS := e4shared e4monitor gdtk-module
 SHARE_FILES :=
 
 ifeq ($(WITH_COMPLEX_NUMBERS),1)
@@ -406,7 +406,7 @@ ifeq ($(TURBULENCE),1)
     DFLAGS += $(DVERSION)turbulence
 endif
 
-default: $(PROGRAMS) ugrid_partition dgd-module
+default: $(PROGRAMS) ugrid_partition gdtk-module
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "Eilmer4 simulation code built."
 
@@ -441,7 +441,7 @@ install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-grids.lua prep-flow.lua post.l
 	cp e4forces.py $(BUILD_DIR)/bin/e4forces
 	chmod +x $(BUILD_DIR)/bin/e4forces
 	cp ../grid_utils/ugrid_partition $(BUILD_DIR)/bin
-	cp dgd-module $(BUILD_DIR)/share
+	cp gdtk-module $(BUILD_DIR)/share
 ifneq "$(SHARE_FILES)" ""
 	cp $(SHARE_FILES) $(BUILD_DIR)/share
 endif
@@ -482,7 +482,7 @@ clean:
 	- rm -f e4shared_diagnostic
 	- rm -f e4shared-debug
 	- rm -f dgd-for-mech4480.tgz
-	- rm -f dgd-module
+	- rm -f gdtk-module
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(LUA_DIR); make clean
 	- cd $(GEOM_DIR); make clean
@@ -516,7 +516,7 @@ $(LIBLUA):
 $(LIBCEQ):
 	cd $(CEQ_DIR); make
 
-dgd-module:
+gdtk-module:
 	sed -e 's+PUT_REVISION_STRING_HERE+$(REVISION_STRING)+' \
 		-e 's+PUT_COMPILER_NAME_HERE+$(DMD)+' \
 		-e 's+PUT_INSTALL_DIR_HERE+$(INSTALL_DIR)+' \
@@ -524,7 +524,7 @@ dgd-module:
 		-e 's+PUT_BUILD_DATE_HERE+$(BUILD_DATE)+' \
 		-e 's+PUT_REVISION_AGE_HERE+$(REVISION_AGE)+' \
 		-e 's+PUT_REPO_DIR_HERE+$(REPO_DIR)+' \
-		dgd-module-template > dgd-module
+		gdtk-module-template > gdtk-module
 
 e4monitor: e4monitor.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)e4monitor e4monitor.d $(DLINKFLAGS)
