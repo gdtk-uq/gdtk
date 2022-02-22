@@ -4,8 +4,8 @@
 # build and install a fast flavour of the transient solver,
 # shared-memory and MPI variants.
 #
-# Look for a "-i /my/install/dir" if not standard $HOME/dgdinst
-INSTALL_DIR=${HOME}/dgdinst
+# Look for a "-i /my/install/dir" if not standard $HOME/gdtkinst
+INSTALL_DIR=${HOME}/gdtkinst
 while getopts i: option
 do
 case "${option}"
