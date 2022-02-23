@@ -276,13 +276,15 @@ Optional parameters `x0`, `y0`, `z0` and `r` are used to set a conical inflow.
 
 === Shock-fitting
 
-  InFlowBC_ShockFitting:new{flowState}
+  InFlowBC_ShockFitting:new{flowState, x0=0.0, y0=0.0, z0=0.0, r=0.0}
 
 is used where we want to have the inflow boundary be the location of a bow shock.
 The fluxes across the boundary are computed from the supplied flow condition and the boundary
 velocities are set to follow the shock.
 Note that we need to set `config.moving_grid=true` and select
 an appropriate gas-dynamic update scheme for the moving grid.
+
+Optional parameters `x0`, `y0`, `z0` and `r` are used to set a conical inflow.
 
 === Isentropic from stagnation
 
