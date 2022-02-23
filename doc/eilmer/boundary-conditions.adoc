@@ -212,7 +212,7 @@ We need to set `config.viscous=true` to make this boundary condition fully effec
 
 === Simple supersonic
 
-  InFlowBC_Supersonic:new{flowState}
+  InFlowBC_Supersonic:new{flowState, x0=0.0, y0=0.0, z0=0.0, r=0.0}
 
 is used where we want to specify a fixed (supersonic) in-flow condition
 that gets copied into the ghost cells each time step.
@@ -220,6 +220,7 @@ that gets copied into the ghost cells each time step.
 `flowState`::
   <<FlowState,_FlowState_>> object that has been constructed earlier in your script.
 
+Optional parameters `x0`, `y0`, `z0` and `r` are used to set a conical inflow.
 
 === Static profile
 
@@ -263,11 +264,14 @@ Each data line will have the following space-delimited items:
 
 === Constant flux
 
-  InFlowBC_ConstFlux:new{flowState}
+  InFlowBC_ConstFlux:new{flowState, x0=0.0, y0=0.0, z0=0.0, r=0.0}
 
 is used where we want to specify directly the fluxes of mass, momentum and energy
 across the boundary faces.
 The fluxes are computed from the supplied <<FlowState,_FlowState_>>.
+
+Optional parameters `x0`, `y0`, `z0` and `r` are used to set a conical inflow.
+
 
 
 === Shock-fitting
