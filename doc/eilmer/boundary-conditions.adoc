@@ -220,7 +220,10 @@ that gets copied into the ghost cells each time step.
 `flowState`::
   <<FlowState,_FlowState_>> object that has been constructed earlier in your script.
 
-Optional parameters `x0`, `y0`, `z0` and `r` are used to set a conical inflow.
+Optional parameters `x0`, `y0`, `z0` and `r` are used to set a virtual source flow.
+This is intended to model the flow from a conical nozzle, where the nominal flow state
+is at distance `r` from the virtual source located at `x0`, `y0` and `z0`.
+The actual flow state on the inflow faces is computed as a perturbation to this nominal flow state.
 
 === Static profile
 
@@ -270,7 +273,10 @@ is used where we want to specify directly the fluxes of mass, momentum and energ
 across the boundary faces.
 The fluxes are computed from the supplied <<FlowState,_FlowState_>>.
 
-Optional parameters `x0`, `y0`, `z0` and `r` are used to set a conical inflow.
+Optional parameters `x0`, `y0`, `z0` and `r` are used to set a virtual source flow.
+This is intended to model the flow from a conical nozzle, where the nominal flow state
+is at distance `r` from the virtual source located at `x0`, `y0` and `z0`.
+The actual flow state on the inflow faces is computed as a perturbation to this nominal flow state.
 
 
 
@@ -284,7 +290,11 @@ velocities are set to follow the shock.
 Note that we need to set `config.moving_grid=true` and select
 an appropriate gas-dynamic update scheme for the moving grid.
 
-Optional parameters `x0`, `y0`, `z0` and `r` are used to set a conical inflow.
+Optional parameters `x0`, `y0`, `z0` and `r` are used to set a virtual source flow.
+This is intended to model the flow from a conical nozzle, where the nominal flow state
+is at distance `r` from the virtual source located at `x0`, `y0` and `z0`.
+The actual flow state on the inflow faces is computed as a perturbation to this nominal flow state.
+
 
 === Isentropic from stagnation
 
