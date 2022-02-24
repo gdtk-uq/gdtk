@@ -2102,25 +2102,25 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         blk.x0[] = to!number(0.0);
         int cellCount = 0;
         foreach (cell; blk.cells) {
-            blk.r0[cellCount+MASS] = (1./blk.maxRate.vec[cqi.mass])*blk.FU[cellCount+MASS]*(1.0/cell.volume[0]);
-            blk.r0[cellCount+X_MOM] = (1./blk.maxRate.vec[cqi.xMom])*blk.FU[cellCount+X_MOM]*(1.0/cell.volume[0]);
-            blk.r0[cellCount+Y_MOM] = (1./blk.maxRate.vec[cqi.yMom])*blk.FU[cellCount+Y_MOM]*(1.0/cell.volume[0]);
+            blk.r0[cellCount+MASS] = (1./blk.maxRate.vec[cqi.mass])*blk.FU[cellCount+MASS];
+            blk.r0[cellCount+X_MOM] = (1./blk.maxRate.vec[cqi.xMom])*blk.FU[cellCount+X_MOM];
+            blk.r0[cellCount+Y_MOM] = (1./blk.maxRate.vec[cqi.yMom])*blk.FU[cellCount+Y_MOM];
             if ( blk.myConfig.dimensions == 3 )
-                blk.r0[cellCount+Z_MOM] = (1./blk.maxRate.vec[cqi.zMom])*blk.FU[cellCount+Z_MOM]*(1.0/cell.volume[0]);
-            blk.r0[cellCount+TOT_ENERGY] = (1./blk.maxRate.vec[cqi.totEnergy])*blk.FU[cellCount+TOT_ENERGY]*(1.0/cell.volume[0]);
+                blk.r0[cellCount+Z_MOM] = (1./blk.maxRate.vec[cqi.zMom])*blk.FU[cellCount+Z_MOM];
+            blk.r0[cellCount+TOT_ENERGY] = (1./blk.maxRate.vec[cqi.totEnergy])*blk.FU[cellCount+TOT_ENERGY];
             foreach(it; 0 .. nturb){
-                blk.r0[cellCount+TKE+it] = (1./blk.maxRate.vec[cqi.rhoturb+it])*blk.FU[cellCount+TKE+it]*(1.0/cell.volume[0]);
+                blk.r0[cellCount+TKE+it] = (1./blk.maxRate.vec[cqi.rhoturb+it])*blk.FU[cellCount+TKE+it];
             }
             version(multi_species_gas){
             if ( nsp > 1 ) {
                 foreach(sp; 0 .. nsp){
-                    blk.r0[cellCount+SPECIES+sp] = (1./blk.maxRate.vec[cqi.species+sp])*blk.FU[cellCount+SPECIES+sp]*(1.0/cell.volume[0]);
+                    blk.r0[cellCount+SPECIES+sp] = (1./blk.maxRate.vec[cqi.species+sp])*blk.FU[cellCount+SPECIES+sp];
                 }
             }
             }
             version(multi_T_gas){
             foreach(imode; 0 .. nmodes){
-                blk.r0[cellCount+MODES+imode] = (1./blk.maxRate.vec[cqi.modes+imode])*blk.FU[cellCount+MODES+imode]*(1.0/cell.volume[0]);
+                blk.r0[cellCount+MODES+imode] = (1./blk.maxRate.vec[cqi.modes+imode])*blk.FU[cellCount+MODES+imode];
             }
             }
 
@@ -2200,22 +2200,22 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 auto cqi = blk.myConfig.cqi;
                 int cellCount = 0;
                 foreach (cell; blk.cells) {
-                    blk.v[cellCount+MASS] *= (blk.maxRate.vec[cqi.mass]*(cell.volume[0]));
-                    blk.v[cellCount+X_MOM] *= (blk.maxRate.vec[cqi.xMom]*(cell.volume[0]));
-                    blk.v[cellCount+Y_MOM] *= (blk.maxRate.vec[cqi.yMom]*(cell.volume[0]));
+                    blk.v[cellCount+MASS] *= (blk.maxRate.vec[cqi.mass]);
+                    blk.v[cellCount+X_MOM] *= (blk.maxRate.vec[cqi.xMom]);
+                    blk.v[cellCount+Y_MOM] *= (blk.maxRate.vec[cqi.yMom]);
                     if ( blk.myConfig.dimensions == 3 )
-                        blk.v[cellCount+Z_MOM] *= (blk.maxRate.vec[cqi.zMom]*(cell.volume[0]));
-                    blk.v[cellCount+TOT_ENERGY] *= (blk.maxRate.vec[cqi.totEnergy]*(cell.volume[0]));
+                        blk.v[cellCount+Z_MOM] *= (blk.maxRate.vec[cqi.zMom]);
+                    blk.v[cellCount+TOT_ENERGY] *= (blk.maxRate.vec[cqi.totEnergy]);
                     foreach(it; 0 .. nturb){
-                        blk.v[cellCount+TKE+it] *= (blk.maxRate.vec[cqi.rhoturb+it]*(cell.volume[0]));
+                        blk.v[cellCount+TKE+it] *= (blk.maxRate.vec[cqi.rhoturb+it]);
                     }
                     version(multi_species_gas){
                     if ( nsp > 1 ) {
-                        foreach(sp; 0 .. nsp){ blk.v[cellCount+SPECIES+sp] *= (blk.maxRate.vec[cqi.species+sp]*(cell.volume[0])); }
+                        foreach(sp; 0 .. nsp){ blk.v[cellCount+SPECIES+sp] *= (blk.maxRate.vec[cqi.species+sp]); }
                     }
                     }
                     version(multi_T_gas){
-                    foreach(imode; 0 .. nmodes){ blk.v[cellCount+MODES+imode] *= (blk.maxRate.vec[cqi.modes+imode]*(cell.volume[0])); }
+                    foreach(imode; 0 .. nmodes){ blk.v[cellCount+MODES+imode] *= (blk.maxRate.vec[cqi.modes+imode]); }
                     }
                     cellCount += nConserved;
                 }
@@ -2324,22 +2324,22 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 auto cqi = blk.myConfig.cqi;
                 int cellCount = 0;
                 foreach (cell; blk.cells) {
-                    blk.w[cellCount+MASS] *= (1./blk.maxRate.vec[cqi.mass])*(1.0/cell.volume[0]);
-                    blk.w[cellCount+X_MOM] *= (1./blk.maxRate.vec[cqi.xMom])*(1.0/cell.volume[0]);
-                    blk.w[cellCount+Y_MOM] *= (1./blk.maxRate.vec[cqi.yMom])*(1.0/cell.volume[0]);
+                    blk.w[cellCount+MASS] *= (1./blk.maxRate.vec[cqi.mass]);
+                    blk.w[cellCount+X_MOM] *= (1./blk.maxRate.vec[cqi.xMom]);
+                    blk.w[cellCount+Y_MOM] *= (1./blk.maxRate.vec[cqi.yMom]);
                     if ( blk.myConfig.dimensions == 3 )
-                        blk.w[cellCount+Z_MOM] *= (1./blk.maxRate.vec[cqi.zMom])*(1.0/cell.volume[0]);
-                    blk.w[cellCount+TOT_ENERGY] *= (1./blk.maxRate.vec[cqi.totEnergy])*(1.0/cell.volume[0]);
+                        blk.w[cellCount+Z_MOM] *= (1./blk.maxRate.vec[cqi.zMom]);
+                    blk.w[cellCount+TOT_ENERGY] *= (1./blk.maxRate.vec[cqi.totEnergy]);
                     foreach(it; 0 .. nturb){
-                        blk.w[cellCount+TKE+it] *= (1./blk.maxRate.vec[cqi.rhoturb+it])*(1.0/cell.volume[0]);
+                        blk.w[cellCount+TKE+it] *= (1./blk.maxRate.vec[cqi.rhoturb+it]);
                     }
                     version(multi_species_gas){
                     if ( nsp > 1 ) {
-                        foreach(sp; 0 .. nsp){ blk.w[cellCount+SPECIES+sp] *= (1./blk.maxRate.vec[cqi.species+sp])*(1.0/cell.volume[0]); }
+                        foreach(sp; 0 .. nsp){ blk.w[cellCount+SPECIES+sp] *= (1./blk.maxRate.vec[cqi.species+sp]); }
                     }
                     }
                     version(multi_T_gas){
-                    foreach(imode; 0 .. nmodes){ blk.w[cellCount+MODES+imode] *= (1./blk.maxRate.vec[cqi.modes+imode])*(1.0/cell.volume[0]); }
+                    foreach(imode; 0 .. nmodes){ blk.w[cellCount+MODES+imode] *= (1./blk.maxRate.vec[cqi.modes+imode]); }
                     }
                     cellCount += nConserved;
                 }
@@ -2447,22 +2447,22 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (cell; blk.cells) {
-                blk.zed[cellCount+MASS] *= (blk.maxRate.vec[cqi.mass]*(cell.volume[0]));
-                blk.zed[cellCount+X_MOM] *= (blk.maxRate.vec[cqi.xMom]*(cell.volume[0]));
-                blk.zed[cellCount+Y_MOM] *= (blk.maxRate.vec[cqi.yMom]*(cell.volume[0]));
+                blk.zed[cellCount+MASS] *= (blk.maxRate.vec[cqi.mass]);
+                blk.zed[cellCount+X_MOM] *= (blk.maxRate.vec[cqi.xMom]);
+                blk.zed[cellCount+Y_MOM] *= (blk.maxRate.vec[cqi.yMom]);
                 if ( blk.myConfig.dimensions == 3 )
-                    blk.zed[cellCount+Z_MOM] *= (blk.maxRate.vec[cqi.zMom]*(cell.volume[0]));
-                blk.zed[cellCount+TOT_ENERGY] *= (blk.maxRate.vec[cqi.totEnergy]*(cell.volume[0]));
+                    blk.zed[cellCount+Z_MOM] *= (blk.maxRate.vec[cqi.zMom]);
+                blk.zed[cellCount+TOT_ENERGY] *= (blk.maxRate.vec[cqi.totEnergy]);
                 foreach(it; 0 .. nturb){
-                    blk.zed[cellCount+TKE+it] *= (blk.maxRate.vec[cqi.rhoturb+it]*(cell.volume[0]));
+                    blk.zed[cellCount+TKE+it] *= (blk.maxRate.vec[cqi.rhoturb+it]);
                 }
                 version(multi_species_gas){
                 if ( nsp > 1 ) {
-                    foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] *= (blk.maxRate.vec[cqi.species+sp]*(cell.volume[0])); }
+                    foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] *= (blk.maxRate.vec[cqi.species+sp]); }
                 }
                 }
                 version(multi_T_gas){
-                foreach(imode; 0 .. nmodes){ blk.zed[cellCount+MODES+imode] *= (blk.maxRate.vec[cqi.modes+imode]*(cell.volume[0])); }
+                foreach(imode; 0 .. nmodes){ blk.zed[cellCount+MODES+imode] *= (blk.maxRate.vec[cqi.modes+imode]); }
                 }
 
                 cellCount += nConserved;
