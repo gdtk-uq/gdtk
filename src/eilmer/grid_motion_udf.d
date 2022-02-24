@@ -44,6 +44,8 @@ void setGridMotionHelperFunctions(lua_State *L)
     lua_setglobal(L, "setVtxVelocitiesForBlockXYZ");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesForRotatingBlock);
     lua_setglobal(L, "setVtxVelocitiesForRotatingBlock");
+    lua_pushcfunction(L, &luafn_setVtxVelocitiesForRigidBlock);
+    lua_setglobal(L, "setVtxVelocitiesForRigidBlock");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesByCorners);
     lua_setglobal(L, "setVtxVelocitiesByCorners");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesByQuad);
@@ -320,6 +322,49 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
     lua_settop(L, 0);
     return 0;
 } // end luafn_setVtxVelocitiesForRotatingBlock()
+
+/**
+ * Sets the velocity of an entire block,
+ * for the case that the block is rotating about an axis,
+ * through an instantaneous centre, and that centre may translating.
+ *
+ * setVtxVelocitiesForRigidBlock(blkId, omega, centre, v_trans)
+ */
+extern(C) int luafn_setVtxVelocitiesForRigidBlock(lua_State* L)
+{
+    // Expect four arguments:
+    //   1. a block id
+    //   2. angular velocity, Vector3/table with x,y.z fields
+    //   3. instantaneous centre, Vector3/table with x,y,z fields
+    //   4. translation velocity of the centre point, Vector3/table with x,y,z fields
+    int narg = lua_gettop(L);
+    auto blkId = lua_tointeger(L, 1);
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
+    if (narg >= 4) {
+        Vector3 omega = toVector3(L, 2);
+        Vector3 centre = toVector3(L, 3);
+        Vector3 v_trans = toVector3(L, 4);
+        auto blk = cast(FluidBlock) globalBlocks[blkId];
+        assert(blk !is null, "Oops, this should be a FluidBlock object.");
+        foreach (vtx; blk.vertices) {
+            Vector3 r = vtx.pos[0]; r -= centre;
+            Vector3 vpoint; cross(vpoint, omega, r); // rotational part of velocity
+            vpoint += v_trans; // translational part of velocity
+            vtx.vel[0].set(vpoint);
+        }
+    } else {
+        string errMsg = "ERROR: Too few arguments passed to luafn: setVtxVelocitiesForRigidBlock()\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    // In case, the user gave use more return values than
+    // we used, just set the lua stack to empty and let
+    // the lua garbage collector do its thing.
+    lua_settop(L, 0);
+    return 0;
+} // end luafn_setVtxVelocitiesForRigidBlock()
 
 /**
  * Sets the velocity of vertices in a block based on
