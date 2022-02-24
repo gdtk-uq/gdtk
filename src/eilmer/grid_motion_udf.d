@@ -163,6 +163,7 @@ extern(C) int luafn_getVtxPositionVector3(lua_State *L)
 
 extern(C) int luafn_setVtxVelocitiesForDomain(lua_State* L)
 {
+    // Sets a single velocity value for every vertex in every FluidBlock.
     // Expect a single argument: a Vector3 object or table with x,y,z fields.
     auto vel = toVector3(L, 1);
 
@@ -185,13 +186,14 @@ extern(C) int luafn_setVtxVelocitiesForDomain(lua_State* L)
 
 extern(C) int luafn_setVtxVelocitiesForDomainXYZ(lua_State* L)
 {
-    // Expect three velocity components.
+    // Sets a single velocity value for every vertex in every FluidBlock.
+    // Expect the three velocity components as arguments.
     double velx = lua_tonumber(L, 1);
     double vely = lua_tonumber(L, 2);
     double velz = lua_tonumber(L, 3);
 
-    foreach ( blk; localFluidBlocks ) {
-        foreach ( vtx; blk.vertices ) {
+    foreach (blk; localFluidBlocks) {
+        foreach (vtx; blk.vertices) {
             /* We assume that we'll only update grid positions
                at the start of the increment. This should work
                well except in the most critical cases of time
@@ -209,6 +211,7 @@ extern(C) int luafn_setVtxVelocitiesForDomainXYZ(lua_State* L)
 
 extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
 {
+    // Sets a single velocity value for every vertex in a particular FluidBlock.
     // Expect two arguments: 1. a block id
     //                       2. a Vector3 object or table with x,y,z fields.
     auto blkId = lua_tointeger(L, 1);
@@ -220,7 +223,7 @@ extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
 
     auto blk = cast(FluidBlock) globalBlocks[blkId];
     assert(blk !is null, "Oops, this should be a FluidBlock object.");
-    foreach ( vtx; blk.vertices ) {
+    foreach (vtx; blk.vertices) {
         /* We assume that we'll only update grid positions
            at the start of the increment. This should work
            well except in the most critical cases of time
@@ -237,6 +240,7 @@ extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
 
 extern(C) int luafn_setVtxVelocitiesForBlockXYZ(lua_State* L)
 {
+    // Sets a single velocity value for every vertex in a particular FluidBlock.
     // Expect four arguments: 1. a block id
     //                        2. x velocity
     //                        3. y velocity
@@ -252,7 +256,7 @@ extern(C) int luafn_setVtxVelocitiesForBlockXYZ(lua_State* L)
 
     auto blk = cast(FluidBlock) globalBlocks[blkId];
     assert(blk !is null, "Oops, this should be a FluidBlock object.");
-    foreach ( vtx; blk.vertices ) {
+    foreach (vtx; blk.vertices) {
         /* We assume that we'll only update grid positions
            at the start of the increment. This should work
            well except in the most critical cases of time
@@ -268,9 +272,9 @@ extern(C) int luafn_setVtxVelocitiesForBlockXYZ(lua_State* L)
 }
 
 /**
- * Sets the velocity of an entire block, for the case
- * that the block is rotating about an axis with direction
- * (0 0 1) located at a point defined by vector (x y 0).
+ * Sets the velocity of every vertex in a particular block,
+ * for the case that the block is rotating about an axis
+ * with direction (0 0 1) located at a point defined by vector (x y 0).
  *
  * setVtxVelocitiesForRotatingBlock(blkId, omega, vector3)
  *      Sets rotational speed omega (rad/s) for rotation about
@@ -282,8 +286,8 @@ extern(C) int luafn_setVtxVelocitiesForBlockXYZ(lua_State* L)
  */
 extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
 {
-    // Expect two/three arguments: 1. a block id
-    //                             2. a float object
+    // Expect two/three arguments: 1. a block id (integer)
+    //                             2. angular speed, omega, a float object
     //                             3. a Vector3/table with x,y,z fields (optional)
     int narg = lua_gettop(L);
     auto blkId = lua_tointeger(L, 1);
@@ -296,23 +300,21 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
 
     auto blk = cast(FluidBlock) globalBlocks[blkId];
     assert(blk !is null, "Oops, this should be a FluidBlock object.");
-    if ( narg == 2 ) {
+    if (narg == 2) {
         // assume rotation about Z-axis
         foreach ( vtx; blk.vertices ) {
             velx = - omega * vtx.pos[0].y.re;
             vely =   omega * vtx.pos[0].x.re;
             vtx.vel[0].set(velx, vely, 0.0);
         }
-    }
-    else if ( narg == 3 ) {
+    } else if (narg == 3) {
         auto axis = toVector3(L, 3);
         foreach ( vtx; blk.vertices ) {
             velx = - omega * (vtx.pos[0].y.re - axis.y.re);
             vely =   omega * (vtx.pos[0].x.re - axis.x.re);
             vtx.vel[0].set(velx, vely, 0.0);
         }
-    }
-    else {
+    } else {
         string errMsg = "ERROR: Too few arguments passed to luafn: setVtxVelocitiesForRotatingBlock()\n";
         luaL_error(L, errMsg.toStringz);
     }
@@ -324,7 +326,7 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
 } // end luafn_setVtxVelocitiesForRotatingBlock()
 
 /**
- * Sets the velocity of an entire block,
+ * Sets the velocity of every vertex in a particular block,
  * for the case that the block is rotating about an axis,
  * through an instantaneous centre, and that centre may translating.
  *
@@ -334,7 +336,7 @@ extern(C) int luafn_setVtxVelocitiesForRigidBlock(lua_State* L)
 {
     // Expect four arguments:
     //   1. a block id
-    //   2. angular velocity, Vector3/table with x,y.z fields
+    //   2. angular velocity, omega, Vector3/table with x,y.z fields
     //   3. instantaneous centre, Vector3/table with x,y,z fields
     //   4. translation velocity of the centre point, Vector3/table with x,y,z fields
     int narg = lua_gettop(L);
@@ -343,12 +345,12 @@ extern(C) int luafn_setVtxVelocitiesForRigidBlock(lua_State* L)
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }
+    auto blk = cast(FluidBlock) globalBlocks[blkId];
+    assert(blk !is null, "Oops, this should be a FluidBlock object.");
     if (narg >= 4) {
         Vector3 omega = toVector3(L, 2);
         Vector3 centre = toVector3(L, 3);
         Vector3 v_trans = toVector3(L, 4);
-        auto blk = cast(FluidBlock) globalBlocks[blkId];
-        assert(blk !is null, "Oops, this should be a FluidBlock object.");
         foreach (vtx; blk.vertices) {
             Vector3 r = vtx.pos[0]; r -= centre;
             Vector3 vpoint; cross(vpoint, omega, r); // rotational part of velocity
@@ -610,7 +612,7 @@ extern(C) int luafn_setVtxVelocitiesByQuad(lua_State* L)
 } // end luafn_setVtxVelocitiesByQuad()
 
 /**
- * Sets the velocity of vertices in a block based on
+ * Sets the velocity of vertices for a particular block based on
  * specified corner velocities. The velocity of any cell
  * is estimated using interpolation based on cell indices.
  * This should only be used for blocks with regular spacing.
