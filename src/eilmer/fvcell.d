@@ -591,7 +591,8 @@ public:
     } // end encode_conserved()
 
     @nogc
-    int decode_conserved(int gtl, int ftl, double omegaz)
+    int decode_conserved(int gtl, int ftl, double omegaz,
+                         double tolerance=0.0, double assert_error_tolerance=0.1)
     {
         auto cqi = myConfig.cqi;
         auto gmodel = myConfig.gmodel;
@@ -689,6 +690,32 @@ public:
         }
         // Thermochemical species, if appropriate.
         version(multi_species_gas) {
+            // scale the species densities such that they sum to the total density (this ensures mass fractions sum to 1)
+            if (myConfig.n_species > 1) {
+                number rhos_sum = 0.0;
+                foreach(isp; 0 .. cqi.n_species) {
+                    // impose positivity on the species densities
+                    if (myU.vec[cqi.species+isp] < 0.0) myU.vec[cqi.species+isp] = to!number(0.0);
+                    rhos_sum += myU.vec[cqi.species+isp];
+                }
+                version(nk_accelerator) {} // we don't mind if the two values deviate on the way to steady-state for the NK-solver
+                else {
+                    if (fabs(rhos_sum - rho) > assert_error_tolerance) {
+                        string msg = "Sum of species densities far from total density";
+                        debug {
+                            msg ~= format(": fabs(rhos_sum - rho) = %s \n", fabs(rhos_sum - rho));
+                            msg ~= format("  assert_error_tolerance = %s \n", assert_error_tolerance);
+                            msg ~= format("  tolerance = %s \n", tolerance);
+                            msg ~= "]\n";
+                        }
+                        throw new FlowSolverException(msg);
+                    }
+                }
+                if ( fabs(rhos_sum - rho) > tolerance ) {
+                    number scale_factor = rho/rhos_sum;
+                    foreach(isp; 0 .. cqi.n_species) { myU.vec[cqi.species+isp] *= scale_factor; }
+                }
+            }
             try {
                 if (cqi.n_species > 1) {
                     foreach(isp; 0 .. cqi.n_species) { fs.gas.massf[isp] = myU.vec[cqi.species+isp] * dinv; }
@@ -696,7 +723,6 @@ public:
                     fs.gas.massf[0] = 1.0;
                 }
 		if (myConfig.sticky_electrons) { gmodel.balance_charge(fs.gas); }
-		if (myConfig.n_species > 1) { scale_mass_fractions(fs.gas.massf); }
 	    } catch (GasModelException err) {
 		if (myConfig.adjust_invalid_cell_data) {
 		    data_is_bad = true;
