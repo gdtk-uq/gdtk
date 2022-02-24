@@ -52,6 +52,17 @@ void push_array_to_Lua(T)(lua_State *L, ref T array_in_dlang, string name_in_Lua
     lua_pop(L, 1); // dismiss the table
 }
 
+void get_array_from_Lua_table_at_TOS(T)(lua_State *L, ref T array_in_dlang)
+{
+    assert(lua_istable(L, -1), "Did not find Lua table at TOS");
+    foreach (i; 0 .. array_in_dlang.length) {
+        lua_rawgeti(L, -1, to!int(i+1)); // get an item to top of stack
+        array_in_dlang[i] = (lua_isnumber(L, -1)) ? to!double(lua_tonumber(L, -1)) : 0.0;
+        lua_pop(L, 1); // discard item
+    }
+    // We leave the table sitting at the top of stack.
+}
+
 void get_array_from_Lua(T)(lua_State *L, ref T array_in_dlang, string name_in_Lua)
 {
     lua_getglobal(L, name_in_Lua.toStringz);
