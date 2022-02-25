@@ -142,13 +142,11 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
 void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITask)
 {
     auto wallClockStart = Clock.currTime();
-    bool withPTC = true;
     string jobName = GlobalConfig.base_file_name;
     int nsteps = GlobalConfig.sssOptions.nTotalSteps;
     int nIters = 0;
     int nRestarts;
     double linSolResid = 0;
-    int maxNumberAttempts = GlobalConfig.sssOptions.maxNumberAttempts;
     double relGlobalResidReduction = GlobalConfig.sssOptions.stopOnRelGlobalResid;
     double absGlobalResidReduction = GlobalConfig.sssOptions.stopOnAbsGlobalResid;
     double cfl_max = GlobalConfig.sssOptions.cfl_max;
@@ -183,11 +181,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     int limiterFreezingCount = GlobalConfig.sssOptions.limiterFreezingCount;
     int countsBeforeFreezing = 0;
     bool limiterFreezingCondition = false;
-
     int interpOrderSave = GlobalConfig.interpolation_order;
-
-    int n_species = GlobalConfig.gmodel_master.n_species();
-    int n_modes = GlobalConfig.gmodel_master.n_modes();
 
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
@@ -205,14 +199,11 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     number mass_balance = 0.0;
     number omega = 1.0;
     number theta = GlobalConfig.sssOptions.physicalityCheckTheta;
-    number R0 = 0.0;
-    number RU = 0.0;
     bool pc_matrix_evaluated = false;
 
     double cfl, cflTrial;
     double dt;
     double etaTrial;
-    int failedAttempt = 0;
     double pseudoSimTime = 0.0;
     double normOld, normNew;
     int snapshotsCount = GlobalConfig.sssOptions.snapshotsCount;
@@ -222,7 +213,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     int writeLoadsCount = GlobalConfig.sssOptions.writeLoadsCount;
 
     int startStep;
-    int nPreSteps = GlobalConfig.sssOptions.nPreSteps;
     int nStartUpSteps = GlobalConfig.sssOptions.nStartUpSteps;
     bool inexactNewtonPhase = false;
     bool dangerousExceptionsAreFatal = GlobalConfig.dangerous_exceptions_are_fatal;
@@ -272,169 +262,14 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     // Set usePreconditioner to false for pre-steps AND first-order steps.
     usePreconditioner = false;
 
-    // the LU-SGS solver/preconditioner needs a rotation matrix
-    // we construct these here to escape the @nogc constraints of the update_2D/3D_geometric_data() routines
-    //foreach (blk; localFluidBlocks) {
-    //    foreach (f; blk.faces) { f.construct_rotation_matrix(); }
-    //}
-
-    // We only do a pre-step phase if we are starting from scratch.
+    // We need to calculate the initial residual if we are starting from scratch.
     if ( snapshotStart == 0 ) {
-        cfl = cfl0;
-        dt = determine_dt(cfl);
-        version(mpi_parallel) {
-            MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-        }
-        // The initial residual is usually a poor choice for basing decisions about how the
-        // residual is dropping, particularly when a constant initial condition is given.
-        // A constant initial condition gives a zero residual everywhere in the interior
-        // of the domain. Therefore, the only residual can come from boundary condition influences.
-        // What we do here is use some early steps (I've called them "pre"-steps) to
-        // allow the boundary conditions to exert some influence into the interior.
-        // We'll find the max residual in that start-up process and use that as our initial value
-        // for the "max" residual. Our relative residuals will then be based on that.
-        // We can use a fixed timestep (typically small) and low-order reconstruction in this
-        // pre-step phase.
-
-        if (GlobalConfig.is_master_task) {
-            writeln("---------------------------------------------------------------");
-            writeln("  Begin pre-steps to establish sensible max residual.");
-            writeln("---------------------------------------------------------------");
-        }
-        foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(RHSeval0);
-        foreach ( preStep; -nPreSteps .. 0 ) {
-            foreach (attempt; 0 .. maxNumberAttempts) {
-                try {
-                    version(lu_sgs) { lusgs_solve(preStep, pseudoSimTime, dt, normOld, startStep); }
-                    else { rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts, nIters, linSolResid, startStep, LHSeval0, RHSeval0, pc_matrix_evaluated); }
-                }
-                catch (FlowSolverException e) {
-                    version(mpi_parallel) {
-                        writefln("Failed when attempting GMRES solve in pre-steps on task %d.", GlobalConfig.mpi_rank_for_local_task);
-                    }
-                    else {
-                        writeln("Failed when attempting GMRES solve in pre-steps.");
-                    }
-                    writefln("attempt %d: dt= %e", attempt, dt);
-                    failedAttempt = 1;
-                    cfl = 0.1*cfl;
-                    dt = determine_dt(cfl);
-                }
-                // Coordinate MPI tasks after try-catch statement in case one or more of the tasks encountered an exception.
-                version(mpi_parallel) {
-                    MPI_Allreduce(MPI_IN_PLACE, &failedAttempt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-                    MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-                }
-                if (failedAttempt > 0) { break; }
-                // end: coordination of MPI tasks
-                foreach (blk; parallel(localFluidBlocks,1)) {
-                    size_t nturb = blk.myConfig.turb_model.nturb;
-                    size_t nsp = blk.myConfig.gmodel.n_species;
-                    size_t nmodes = blk.myConfig.gmodel.n_modes;
-                    int cellCount = 0;
-                    auto cqi = blk.myConfig.cqi;
-                    foreach (cell; blk.cells) {
-                        cell.U[1].copy_values_from(cell.U[0]);
-                        cell.U[1].vec[cqi.mass] = cell.U[0].vec[cqi.mass] + blk.dU[cellCount+MASS];
-                        cell.U[1].vec[cqi.xMom] = cell.U[0].vec[cqi.xMom] + blk.dU[cellCount+X_MOM];
-                        cell.U[1].vec[cqi.yMom] = cell.U[0].vec[cqi.yMom] + blk.dU[cellCount+Y_MOM];
-                        if ( blk.myConfig.dimensions == 3 )
-                            cell.U[1].vec[cqi.zMom] = cell.U[0].vec[cqi.zMom] + blk.dU[cellCount+Z_MOM];
-                        cell.U[1].vec[cqi.totEnergy] = cell.U[0].vec[cqi.totEnergy] + blk.dU[cellCount+TOT_ENERGY];
-                        foreach(it; 0 .. nturb) {
-                            cell.U[1].vec[cqi.rhoturb+it] = cell.U[0].vec[cqi.rhoturb+it] + blk.dU[cellCount+TKE+it];
-                        }
-                        version(multi_species_gas){
-                        if (blk.myConfig.n_species > 1) {
-                            foreach(sp; 0 .. nsp) { cell.U[1].vec[cqi.species+sp] = cell.U[0].vec[cqi.species+sp] + blk.dU[cellCount+SPECIES+sp]; }
-                        } else {
-                            // enforce mass fraction of 1 for single species gas
-                            cell.U[1].vec[cqi.species+0] = cell.U[1].vec[cqi.mass];
-                        }
-                        }
-                        version(multi_T_gas){
-                        foreach(imode; 0 .. nmodes) { cell.U[1].vec[cqi.modes+imode] = cell.U[0].vec[cqi.modes+imode] + blk.dU[cellCount+MODES+imode]; }
-                        }
-                        try {
-                            cell.decode_conserved(0, 1, 0.0);
-                        }
-                        catch (FlowSolverException e) {
-                            version(mpi_parallel) {
-                                writefln("Failed to provide sensible update on task %d.", GlobalConfig.mpi_rank_for_local_task);
-                            }
-                            else {
-                                writeln("Failed to provide sensible update.");
-                            }
-                            writefln("attempt %d: dt= %e", attempt, dt);
-                            writeln("pos: ", cell.pos[0].x, ", ", cell.pos[0].y, ", ", cell.pos[0].z);
-                            failedAttempt = 1;
-                        }
-                        cellCount += nConserved;
-                    }
-                }
-                // Coordinate MPI tasks if one of them had a failed attempt.
-                version(mpi_parallel) {
-                    MPI_Allreduce(MPI_IN_PLACE, &failedAttempt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-                }
-
-                if (failedAttempt > 0) {
-                    // reduce CFL
-                    cfl = 0.1*cfl;
-                    dt = determine_dt(cfl);
-                    version(mpi_parallel) {
-                        MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-                    }
-
-                    // return cell flow-states to their original state
-                    foreach (blk; parallel(localFluidBlocks,1)) {
-                        int cellCount = 0;
-                        foreach (cell; blk.cells) {
-                            cell.decode_conserved(0, 0, 0.0);
-                        }
-                    }
-                    continue;
-		}
-
-                // If we get here, things are good. Put flow state into U[0]
-                // ready for next iteration.
-                foreach (blk; parallel(localFluidBlocks,1)) {
-                    foreach (cell; blk.cells) {
-                        swap(cell.U[0], cell.U[1]);
-                    }
-                }
-                // If we got here, we can break the attempts loop.
-                break;
-            }
-
-            if (failedAttempt > 0) {
-                if (GlobalConfig.is_master_task) {
-                    writefln("Pre-step failed: %d", SimState.step);
-                    writeln("Bailing out!");
-                }
-                exit(1);
-            }
-            if (GlobalConfig.is_master_task) {
-                writefln("PRE-STEP  %d  ::  dt= %.3e  global-norm= %.12e", preStep, dt, normOld);
-            }
-            if ( normOld > normRef ) {
-                normRef = normOld;
-                max_residuals(maxResiduals);
-            }
-        }
-
-        if (GlobalConfig.is_master_task) {
-            writeln("Pre-step phase complete.");
-        }
-
-        if (nPreSteps <= 0) {
-            foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(RHSeval1);
-            // Take initial residual as max residual
-            evalRHS(0.0, 0);
-            max_residuals(maxResiduals);
-            foreach (blk; parallel(localFluidBlocks, 1)) {
-                size_t nturb = blk.myConfig.turb_model.nturb;
-                size_t nsp = blk.myConfig.gmodel.n_species;
-                size_t nmodes = blk.myConfig.gmodel.n_modes;
+        evalRHS(0.0, 0);
+        max_residuals(maxResiduals);
+        foreach (blk; parallel(localFluidBlocks, 1)) {
+            size_t nturb = blk.myConfig.turb_model.nturb;
+            size_t nsp = blk.myConfig.gmodel.n_species;
+            size_t nmodes = blk.myConfig.gmodel.n_modes;
                 auto cqi = blk.myConfig.cqi;
                 int cellCount = 0;
                 foreach (cell; blk.cells) {
@@ -448,85 +283,87 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         blk.FU[cellCount+TKE+it] = -cell.dUdt[0].vec[cqi.rhoturb+it];
                     }
                     version(multi_species_gas){
-                    if ( nsp > 1 ) {
-                        foreach(sp; 0 .. nsp) { blk.FU[cellCount+SPECIES+sp] = -cell.dUdt[0].vec[cqi.species+sp]; }
-                    }
+                        if ( nsp > 1 ) {
+                            foreach(sp; 0 .. nsp) { blk.FU[cellCount+SPECIES+sp] = -cell.dUdt[0].vec[cqi.species+sp]; }
+                        }
                     }
                     version(multi_T_gas){
-                    foreach(imode; 0 .. nmodes) { blk.FU[cellCount+MODES+imode] = -cell.dUdt[0].vec[cqi.modes+imode]; }
+                        foreach(imode; 0 .. nmodes) { blk.FU[cellCount+MODES+imode] = -cell.dUdt[0].vec[cqi.modes+imode]; }
                     }
                     cellCount += nConserved;
                 }
-            }
-            mixin(dot_over_blocks("normRef", "FU", "FU"));
-            version(mpi_parallel) {
-                MPI_Allreduce(MPI_IN_PLACE, &(normRef), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            }
-            normRef = sqrt(normRef);
         }
-        if (GlobalConfig.is_master_task) {
-            auto cqi = GlobalConfig.cqi;
-            writeln("Reference residuals are established as:");
-            writefln("GLOBAL:         %.12e", normRef);
-            writefln("MASS:           %.12e", maxResiduals.vec[cqi.mass].re);
-            writefln("X-MOMENTUM:     %.12e", maxResiduals.vec[cqi.xMom].re);
-            writefln("Y-MOMENTUM:     %.12e", maxResiduals.vec[cqi.yMom].re);
-            if ( GlobalConfig.dimensions == 3 )
-                writefln("Z-MOMENTUM:     %.12e", maxResiduals.vec[cqi.zMom].re);
-            writefln("ENERGY:         %.12e", maxResiduals.vec[cqi.totEnergy].re);
-            foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
-                string tvname = capitalize(GlobalConfig.turb_model.primitive_variable_name(it));
-                writefln("%s:            %.12e",tvname, maxResiduals.vec[cqi.rhoturb+it].re);
-            }
-            version(multi_species_gas){
+        mixin(dot_over_blocks("normRef", "FU", "FU"));
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &(normRef), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        }
+        normRef = sqrt(normRef);
+    }
+
+    if (GlobalConfig.is_master_task) {
+        // report the initial residuals
+        auto cqi = GlobalConfig.cqi;
+        writeln("Reference residuals are established as:");
+        writefln("GLOBAL:         %.12e", normRef);
+        writefln("MASS:           %.12e", maxResiduals.vec[cqi.mass].re);
+        writefln("X-MOMENTUM:     %.12e", maxResiduals.vec[cqi.xMom].re);
+        writefln("Y-MOMENTUM:     %.12e", maxResiduals.vec[cqi.yMom].re);
+        if ( GlobalConfig.dimensions == 3 )
+            writefln("Z-MOMENTUM:     %.12e", maxResiduals.vec[cqi.zMom].re);
+        writefln("ENERGY:         %.12e", maxResiduals.vec[cqi.totEnergy].re);
+        foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
+            string tvname = capitalize(GlobalConfig.turb_model.primitive_variable_name(it));
+            writefln("%s:            %.12e",tvname, maxResiduals.vec[cqi.rhoturb+it].re);
+        }
+        version(multi_species_gas){
             if ( GlobalConfig.gmodel_master.n_species > 1 ) {
                 foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
                     string spname = capitalize(GlobalConfig.gmodel_master.species_name(sp));
                     writefln("%s:            %.12e",spname, maxResiduals.vec[cqi.species+sp].re);
                 }
             }
-            }
-            version(multi_T_gas){
+        }
+        version(multi_T_gas){
             foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes) {
                 string modename = "T_MODES["~to!string(imode)~"]"; //capitalize(GlobalConfig.gmodel_master.energy_mode_name(imode));
                 writefln("%s:            %.12e",modename, maxResiduals.vec[cqi.modes+imode].re);
             }
-            }
-            string refResidFname = jobName ~ "-ref-residuals.saved";
-            auto refResid = File(refResidFname, "w");
-            if ( GlobalConfig.dimensions == 2 ) {
-                refResid.writef("%.18e %.18e %.18e %.18e %.18e",
-                                normRef, maxResiduals.vec[cqi.mass].re, maxResiduals.vec[cqi.xMom].re,
-                                maxResiduals.vec[cqi.yMom].re, maxResiduals.vec[cqi.totEnergy].re);
-            }
-            else {
-                refResid.writef("%.18e %.18e %.18e %.18e %.18e %.18e",
-                                normRef, maxResiduals.vec[cqi.mass].re, maxResiduals.vec[cqi.xMom].re,
-                                maxResiduals.vec[cqi.yMom].re, maxResiduals.vec[cqi.zMom].re,
-                                maxResiduals.vec[cqi.totEnergy].re);
-            }
-            foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
-                refResid.writef(" %.18e", maxResiduals.vec[cqi.rhoturb+it].re);
-            }
-            version(multi_species_gas){
+        }
+        // store the initial residuals
+        string refResidFname = jobName ~ "-ref-residuals.saved";
+        auto refResid = File(refResidFname, "w");
+        if ( GlobalConfig.dimensions == 2 ) {
+            refResid.writef("%.18e %.18e %.18e %.18e %.18e",
+                            normRef, maxResiduals.vec[cqi.mass].re, maxResiduals.vec[cqi.xMom].re,
+                            maxResiduals.vec[cqi.yMom].re, maxResiduals.vec[cqi.totEnergy].re);
+        }
+        else {
+            refResid.writef("%.18e %.18e %.18e %.18e %.18e %.18e",
+                            normRef, maxResiduals.vec[cqi.mass].re, maxResiduals.vec[cqi.xMom].re,
+                            maxResiduals.vec[cqi.yMom].re, maxResiduals.vec[cqi.zMom].re,
+                            maxResiduals.vec[cqi.totEnergy].re);
+        }
+        foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
+            refResid.writef(" %.18e", maxResiduals.vec[cqi.rhoturb+it].re);
+        }
+        version(multi_species_gas){
             if ( GlobalConfig.gmodel_master.n_species > 1 ) {
                 foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
                     refResid.writef(" %.18e", maxResiduals.vec[cqi.species+sp].re);
                 }
             }
-            }
-            version(multi_T_gas){
+        }
+        version(multi_T_gas){
             foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes) {
                 refResid.writef(" %.18e", maxResiduals.vec[cqi.modes+imode].re);
             }
-            }
-            refResid.write("\n");
-            refResid.close();
         }
+        refResid.write("\n");
+        refResid.close();
     }
 
+    // if we are restarting a simulation we need read the initial residuals from a file
     RestartInfo[] times;
-
     if (snapshotStart > 0) { // && GlobalConfig.is_master_task) {
         extractRestartInfoFromTimesFile(jobName, times);
         normOld = times[snapshotStart].globalResidual;
@@ -547,16 +384,16 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             maxResiduals.vec[cqi.rhoturb+it] = to!double(tokens[1+TKE+it]);
         }
         version(multi_species_gas){
-        if ( GlobalConfig.gmodel_master.n_species > 1 ) {
-            foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
-                maxResiduals.vec[cqi.species+sp] = to!double(tokens[1+SPECIES+sp]);
+            if ( GlobalConfig.gmodel_master.n_species > 1 ) {
+                foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
+                    maxResiduals.vec[cqi.species+sp] = to!double(tokens[1+SPECIES+sp]);
+                }
             }
         }
-        }
         version(multi_T_gas){
-        foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes) {
-            maxResiduals.vec[cqi.modes+imode] = to!double(tokens[1+MODES+imode]);
-        }
+            foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes) {
+                maxResiduals.vec[cqi.modes+imode] = to!double(tokens[1+MODES+imode]);
+            }
         }
 
         // We also need to determine how many snapshots have already been written
@@ -574,7 +411,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         // Where should we be in the CFL schedule list?
         if (!residual_based_cfl_scheduling) {
             while ((cfl_schedule_current_index < cfl_schedule_value_list.length) &&
-                    (times[snapshotStart].step > cfl_schedule_iter_list[cfl_schedule_current_index])) {
+                   (times[snapshotStart].step > cfl_schedule_iter_list[cfl_schedule_current_index])) {
                 cfl_schedule_current_index++;
             }
         }
@@ -582,7 +419,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
     double wallClockElapsed;
     RestartInfo restartInfo;
-
     // We need to do some configuration based on whether we are starting from scratch,
     // or attempting to restart from an earlier snapshot.
     if ( snapshotStart == 0 ) {
@@ -606,6 +442,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         }
     }
 
+    // setup the diagnostics file
     auto residFname = "e4-nk.diagnostics.dat";
     File fResid;
     if (GlobalConfig.is_master_task) {
@@ -660,12 +497,16 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             if (GlobalConfig.sssOptions.useLineSearch || GlobalConfig.sssOptions.usePhysicalityCheck) {
                 fResid.writefln("# %02d: omega", 2+12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
             }
-            if (GlobalConfig.sssOptions.useLineSearch) {
-                fResid.writefln("# %02d: RU", 3+12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
-            }
-            fResid.writefln("# %02d: PC", 4+12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
+            fResid.writefln("# %02d: PC", 3+12+2*(max(TOT_ENERGY+1, TKE+nt,SPECIES+nsp,MODES+nmodes)));
             fResid.close();
         }
+    }
+
+    // calculate an initial timestep
+    cfl = cfl0;
+    dt = determine_dt(cfl);
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
     }
 
     // Begin Newton steps
@@ -705,203 +546,121 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 }
             }
         }
-        foreach (attempt; 0 .. maxNumberAttempts) {
-            failedAttempt = 0;
-            try {
-                version(lu_sgs) { lusgs_solve(step, pseudoSimTime, dt, normNew, startStep); }
-                else { rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, nIters, linSolResid, startStep, LHSeval, RHSeval, pc_matrix_evaluated); }
-            }
-            catch (FlowSolverException e) {
-                writefln("Failed when attempting GMRES solve in main steps.");
-                writefln("attempt %d: dt= %e", attempt, dt);
-                if (dangerousExceptionsAreFatal) exit(1);
-                failedAttempt = 1;
-                cfl = 0.1*cfl;
-                dt = determine_dt(cfl);
-            }
-            // Coordinate MPI tasks after try-catch statement in case one or more of the tasks encountered an exception.
-            version(mpi_parallel) {
-                MPI_Allreduce(MPI_IN_PLACE, &failedAttempt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-                MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-            }
-            if (failedAttempt > 0) { continue; }
 
+        // solve linear system
+        version(lu_sgs) { lusgs_solve(step, pseudoSimTime, dt, normNew, startStep); }
+        else { rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, nIters, linSolResid, startStep, LHSeval, RHSeval, pc_matrix_evaluated); }
 
-            // physicality check (currently we only check the conserved mass variable)
-            omega = 1.0;
-            if (GlobalConfig.sssOptions.usePhysicalityCheck) {                
-                foreach (blk; parallel(localFluidBlocks,1)) {
-                    int cellCount = 0;
-                    auto cqi = blk.myConfig.cqi;
-                    foreach (cell; blk.cells) {
-                        // limit the change in the conserved mass by some user defined amount (theta)
-                        number rel_diff_limit = fabs(blk.dU[cellCount+MASS]/(theta*cell.U[0].vec[cqi.mass]));
-                        omega = 1.0/(max(rel_diff_limit,1.0/omega));
-                        // ensure thermodynamic state variables are positive
-                        bool failed_decode = true;
-                        while (failed_decode) {
-                            failed_decode = false;
-                            cell.U[1].copy_values_from(cell.U[0]);
-                            foreach (j; 0 .. cqi.n) {
-                                cell.U[1].vec[j] = cell.U[0].vec[j] + omega*blk.dU[cellCount+j];
-                            }
-                            try {
-                                cell.decode_conserved(0, 1, 0.0);
-                            }
-                            catch (FlowSolverException e) {
-                                failed_decode = true;
-                            }
-                            // reduce relaxation factor if appropriate
-                            if (failed_decode) omega *= 0.7;
-                            // return cell to original state
-                            cell.decode_conserved(0, 0, 0.0);
-                        }
-                        cellCount += nConserved;
-                    }
-                }
-                // communicate minimum omega to all threads
-                version(mpi_parallel) {
-                    MPI_Allreduce(MPI_IN_PLACE, &(omega.re), 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-                }
-            } // end physicality check
-
-            // line search
-            number theta_bt = 0.7;
-            if (GlobalConfig.sssOptions.useLineSearch) {
-                // helper function
-                pragma(inline) void evaluate_unsteady_residual(ref number R, number omega) {
-                    foreach (blk; parallel(localFluidBlocks,1)) {
-                        auto cqi = blk.myConfig.cqi;
-                        int cellCount = 0;
-                        foreach (cell; blk.cells) {
-                            cell.U[1].copy_values_from(cell.U[0]);
-                            foreach (i; 0 .. cqi.n) { cell.U[1].vec[i] = cell.U[0].vec[i] + omega*blk.dU[cellCount+i]; }
-                            cell.decode_conserved(0, 1, 0.0);
-                            cellCount += nConserved;
-                        }
-                    }
-                    evalRHS(pseudoSimTime, 1);
-                    foreach (blk; parallel(localFluidBlocks,1)) {
-                        auto cqi = blk.myConfig.cqi;
-                        int cellCount = 0;
-                        foreach (cell; blk.cells) {
-                            foreach (i; 0 .. cqi.n) { blk.FU[cellCount+i] = omega*(1.0/dt)*blk.dU[cellCount+i] - cell.dUdt[1].vec[i]; }
-                            cellCount += nConserved;
-                        }
-                    }
-                    mixin(dot_over_blocks("R", "FU", "FU"));
-                    version(mpi_parallel) {
-                        MPI_Allreduce(MPI_IN_PLACE, &(R), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    }
-                    R = sqrt(R);
-                } // end helper function
-
-                // calculate steady residual R0(Qn)
-                R0 = 0.0;
-                evaluate_unsteady_residual(R0, to!number(0.0));
-                // calculate unsteady residual RU(Qn,dQn)
-                RU = 0.0;
-                evaluate_unsteady_residual(RU, omega);
-
-                // search along line until unsteady residual is reduced
-                while (RU > R0) {
-                    omega *= theta_bt;
-                    if ( omega < 0.01 ) {
-                        omega = 0.01;
-                        break;
-                    }
-                    RU = 0.0;
-                    evaluate_unsteady_residual(RU, omega);
-                }
-                //writeln("RU :: ", RU, ", R0 :: ", R0);
-                //writeln("omega_ls :: ", omega);
-            } // end line search
-
+        // calculate a relaxation factor for the nonlinear update via a physicality check
+        omega = 1.0;
+        if (GlobalConfig.sssOptions.usePhysicalityCheck) {
             foreach (blk; parallel(localFluidBlocks,1)) {
-                size_t nturb = blk.myConfig.turb_model.nturb;
-                size_t nsp = blk.myConfig.gmodel.n_species;
-                size_t nmodes = blk.myConfig.gmodel.n_modes;
                 int cellCount = 0;
                 auto cqi = blk.myConfig.cqi;
                 foreach (cell; blk.cells) {
-                    cell.U[1].copy_values_from(cell.U[0]);
-                    cell.U[1].vec[cqi.mass] = cell.U[0].vec[cqi.mass] + omega*blk.dU[cellCount+MASS];
-                    cell.U[1].vec[cqi.xMom] = cell.U[0].vec[cqi.xMom] + omega*blk.dU[cellCount+X_MOM];
-                    cell.U[1].vec[cqi.yMom] = cell.U[0].vec[cqi.yMom] + omega*blk.dU[cellCount+Y_MOM];
-                    if ( blk.myConfig.dimensions == 3 )
-                        cell.U[1].vec[cqi.zMom] = cell.U[0].vec[cqi.zMom] + omega*blk.dU[cellCount+Z_MOM];
-                    cell.U[1].vec[cqi.totEnergy] = cell.U[0].vec[cqi.totEnergy] + omega*blk.dU[cellCount+TOT_ENERGY];
-                    foreach(it; 0 .. nturb){
-                        cell.U[1].vec[cqi.rhoturb+it] = cell.U[0].vec[cqi.rhoturb+it] + omega*blk.dU[cellCount+TKE+it];
+                    // limit the change in the conserved mass by some user defined amount (theta)
+                    number rel_diff_limit = fabs(blk.dU[cellCount+MASS]/(theta*cell.U[0].vec[cqi.mass]));
+                    omega = 1.0/(max(rel_diff_limit,1.0/omega));
+                    // ensure thermodynamic state variables are positive
+                    bool failed_decode = true;
+                    while (failed_decode) {
+                        failed_decode = false;
+                        cell.U[1].copy_values_from(cell.U[0]);
+                        foreach (j; 0 .. cqi.n) {
+                            cell.U[1].vec[j] = cell.U[0].vec[j] + omega*blk.dU[cellCount+j];
+                        }
+                        try {
+                            cell.decode_conserved(0, 1, 0.0);
+                        }
+                        catch (FlowSolverException e) {
+                            failed_decode = true;
+                        }
+                        // reduce relaxation factor if appropriate (0.7 seems like a resonable reduction factor)
+                        if (failed_decode) omega *= 0.7;
+                        // return cell to original state
+                        cell.decode_conserved(0, 0, 0.0);
                     }
-                    version(multi_species_gas){
+                    cellCount += nConserved;
+                }
+            }
+            // communicate minimum omega to all threads
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &(omega.re), 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            }
+        } // end physicality check
+
+        if (omega < 0.01)  {
+            if ( GlobalConfig.is_master_task ) {
+                writefln("WARNING: nonlinear update relaxation factor too small for step= %d", step);
+            }
+
+            // update isn't good, reduce CFL and try again (a reduction factor of 0.5 is aggressie, could lower it)
+            cfl = 0.5*cfl;
+            dt = determine_dt(cfl);
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            }
+
+            // return cell flow-states to their original state
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                int cellCount = 0;
+                foreach (cell; blk.cells) {
+                    cell.decode_conserved(0, 0, 0.0);
+                }
+            }
+
+            if (dangerousExceptionsAreFatal) {
+                writefln("         dangerousExceptionsAreFatal set to true, bailing out!");
+                exit(1);
+            } else {
+                if ( GlobalConfig.is_master_task ) {
+                    writefln("         Taking nonlinear step again with the CFL reduced by a factor of 0.5");
+                }
+            }
+
+            // we don't procede with the nonlinear update for this step
+            continue;
+        }
+
+        // If we get here, things are good
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            size_t nturb = blk.myConfig.turb_model.nturb;
+            size_t nsp = blk.myConfig.gmodel.n_species;
+            size_t nmodes = blk.myConfig.gmodel.n_modes;
+            int cellCount = 0;
+            auto cqi = blk.myConfig.cqi;
+            foreach (cell; blk.cells) {
+                cell.U[1].copy_values_from(cell.U[0]);
+                cell.U[1].vec[cqi.mass] = cell.U[0].vec[cqi.mass] + omega*blk.dU[cellCount+MASS];
+                cell.U[1].vec[cqi.xMom] = cell.U[0].vec[cqi.xMom] + omega*blk.dU[cellCount+X_MOM];
+                cell.U[1].vec[cqi.yMom] = cell.U[0].vec[cqi.yMom] + omega*blk.dU[cellCount+Y_MOM];
+                if ( blk.myConfig.dimensions == 3 )
+                    cell.U[1].vec[cqi.zMom] = cell.U[0].vec[cqi.zMom] + omega*blk.dU[cellCount+Z_MOM];
+                cell.U[1].vec[cqi.totEnergy] = cell.U[0].vec[cqi.totEnergy] + omega*blk.dU[cellCount+TOT_ENERGY];
+                foreach(it; 0 .. nturb){
+                    cell.U[1].vec[cqi.rhoturb+it] = cell.U[0].vec[cqi.rhoturb+it] + omega*blk.dU[cellCount+TKE+it];
+                }
+                version(multi_species_gas){
                     if (blk.myConfig.n_species > 1) {
                         foreach(sp; 0 .. nsp) { cell.U[1].vec[cqi.species+sp] = cell.U[0].vec[cqi.species+sp] + omega*blk.dU[cellCount+SPECIES+sp]; }
                     } else {
                         // enforce mass fraction of 1 for single species gas
                         cell.U[1].vec[cqi.species+0] = cell.U[1].vec[cqi.mass];
                     }
-                    }
-                    version(multi_T_gas){
-                        foreach(imode; 0 .. nmodes) { cell.U[1].vec[cqi.modes+imode] = cell.U[0].vec[cqi.modes+imode] + omega*blk.dU[cellCount+MODES+imode]; }
-                    }
-                    try {
-                        cell.decode_conserved(0, 1, 0.0);
-                    }
-                    catch (FlowSolverException e) {
-                        writeln("---- :: FAILED CELL :: ----");
-                        writefln("attempt: %d", attempt);
-                        writefln("id: %d    block: %d    dt: %e", cell.id, blk.id, dt.re);
-                        writefln("location: [%e, %e, %e]", cell.pos[0].x.re, cell.pos[0].y.re, cell.pos[0].z.re);
-                        writefln("linear system residual: %e", linSolResid.re);
-                        writefln("krylov searches: %d    restarts: %d", nIters, nRestarts);
-                        writeln("msg: ", e.message);
-                        if (dangerousExceptionsAreFatal) exit(1);
-                        failedAttempt = 1;
-                    }
-                    cellCount += nConserved;
                 }
-            }
-
-            // Coordinate MPI tasks after try-catch statement in case one or more of the tasks encountered an exception.
-            version(mpi_parallel) {
-                MPI_Allreduce(MPI_IN_PLACE, &failedAttempt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-            }
-            // end: coordination of MPI tasks
-            if (failedAttempt > 0) {
-                // Reduce CFL
-                cfl = 0.1*cfl;
-                dt = determine_dt(cfl);
-                version(mpi_parallel) {
-                    MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+                version(multi_T_gas){
+                    foreach(imode; 0 .. nmodes) { cell.U[1].vec[cqi.modes+imode] = cell.U[0].vec[cqi.modes+imode] + omega*blk.dU[cellCount+MODES+imode]; }
                 }
-
-                // return cell flow-states to their original state
-		foreach (blk; parallel(localFluidBlocks,1)) {
-		    int cellCount = 0;
-		    foreach (cell; blk.cells) {
-			cell.decode_conserved(0, 0, 0.0);
-                    }
-		}
-                continue;
-	    }
-
-            // If we get here, things are good. Put flow state into U[0]
-            // ready for next iteration.
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                foreach (cell; blk.cells) {
-                    swap(cell.U[0], cell.U[1]);
-                }
+                cell.decode_conserved(0, 1, 0.0);
+                cellCount += nConserved;
             }
-            // If we got here, we can break the attempts loop.
-            break;
         }
-        if (failedAttempt > 0) {
-            if (GlobalConfig.is_master_task) {
-                writefln("Step failed: %d", step);
-                writeln("Bailing out!");
+
+        // Put flow state into U[0] ready for next iteration.
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            foreach (cell; blk.cells) {
+                swap(cell.U[0], cell.U[1]);
             }
-            exit(1);
         }
 
         // after a successful fluid domain update, proceed to perform a solid domain update
@@ -996,9 +755,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 fResid.writef("%20.16e ", linSolResid);
                 if (GlobalConfig.sssOptions.useLineSearch || GlobalConfig.sssOptions.usePhysicalityCheck) {
                     fResid.writef("%20.16e ", omega.re);
-                }
-                if (GlobalConfig.sssOptions.useLineSearch) {
-                    fResid.writef("%20.16e ", RU.re);
                 }
                 fResid.writef("%d ", pc_matrix_evaluated);
                 fResid.write("\n");
@@ -1177,22 +933,24 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         auto normRatio = normOld/normNew;
         if (residual_based_cfl_scheduling) { 
             if (inexactNewtonPhase) {
-                if (step < nStartUpSteps) {
-                    // Let's assume we're still letting the shock settle
-                    // when doing low order steps, so we use a power of 0.75 as a default
-                    double p0 =  GlobalConfig.sssOptions.p0;
-                    cflTrial = cfl*pow(normOld/normNew, p0);
+                if (omega >= 0.1) {
+                    if (step < nStartUpSteps) {
+                        // Let's assume we're still letting the shock settle
+                        // when doing low order steps, so we use a power of 0.75 as a default
+                        double p0 =  GlobalConfig.sssOptions.p0;
+                        cflTrial = cfl*pow(normOld/normNew, p0);
+                    }
+                    else {
+                        // We use a power of 1.0 as a default
+                        double p1 =  GlobalConfig.sssOptions.p1;
+                        cflTrial = cfl*pow(normOld/normNew, p1);
+                    }
+                    // Apply safeguards to dt
+                    cflTrial = fmin(cflTrial, 2.0*cfl);
+                    cflTrial = fmax(cflTrial, 0.1*cfl);
+                    cfl = cflTrial;
+                    cfl = fmin(cflTrial, cfl_max);
                 }
-                else {
-                    // We use a power of 1.0 as a default
-                    double p1 =  GlobalConfig.sssOptions.p1;
-                    cflTrial = cfl*pow(normOld/normNew, p1);
-                }
-                // Apply safeguards to dt
-                cflTrial = fmin(cflTrial, 2.0*cfl);
-                cflTrial = fmax(cflTrial, 0.1*cfl);
-                cfl = cflTrial;
-                cfl = fmin(cflTrial, cfl_max);
             }
         } else { // user defined CFL growth
             if (cfl_schedule_iter_list.canFind(step)) {
