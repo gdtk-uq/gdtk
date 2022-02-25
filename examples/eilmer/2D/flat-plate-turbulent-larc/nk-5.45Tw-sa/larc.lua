@@ -103,7 +103,7 @@ SteadyStateSolver{
    number_start_up_steps = 200,
    cfl0 = 0.5,
    eta0 = 0.1,
-   tau0 = 1.0,
+   tau0 = 0.5,
    sigma0 = 1.0e-30,
    p0 = 0.5,
 

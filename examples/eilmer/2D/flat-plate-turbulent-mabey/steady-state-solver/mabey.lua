@@ -102,7 +102,7 @@ SteadyStateSolver{
    cfl_max = 1e6,
    cfl_schedule_length = 5,
    cfl_schedule_value_list = {1,  1e1, 1e2, 1e3, 1e4},
-   cfl_schedule_iter_list =  {1,  10,  50,  75,  100},
+   cfl_schedule_iter_list =  {1,  20,  60,  85,  110},
 
    -- Settings for start-up phase
    number_start_up_steps = 0,
