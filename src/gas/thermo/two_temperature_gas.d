@@ -395,10 +395,7 @@ private:
     @nogc
     number vibElecTemperature(GasState gs)
     {
-        int MAX_ITERATIONS = 20;
-        // We'll keep adjusting our temperature estimate
-        // until it is less than TOL.
-        double TOL = 1.0e-6;
+        int MAX_ITERATIONS = 40;
 
         // Take the supplied T_modes[0] as the initial guess.
         number T_guess = gs.T_modes[0];
@@ -407,7 +404,7 @@ private:
 
         // Before iterating, check if the supplied guess is
         // good enough. Define good enough as 1/100th of a Joule.
-        double E_TOL = 0.01;
+        double E_TOL = 1e-5;
         if (fabs(f_guess) < E_TOL) {
 
             version(complex_numbers) {
@@ -427,16 +424,19 @@ private:
             */
                 number Cvv = vibElecCvMixture(gs, T_guess);
                 // Cap Cvv to prevent T_modes[0].im from getting too large
-                Cvv = fmax(Cvv, 1e-6);
+                Cvv = fmax(Cvv, 1e-12);
 
                 // The analytical derivatives involve Cvv and the species energies
                 double T_guess_im = gs.u_modes[0].im/Cvv.re;
                 foreach(i, massfi; gs.massf) T_guess_im -=  massfi.im*vibElecEnergyPerSpecies(T_guess, cast(int) i).re/Cvv.re;
                 gs.T_modes[0].im = T_guess_im;
             }
-
             return gs.T_modes[0];
         }
+
+        // We'll keep adjusting our temperature estimate
+        // until it is less than TOL.
+        double TOL = 1.0e-9;
 
         // Begin iterating.
         int count = 0;
@@ -452,7 +452,7 @@ private:
             count++;
         }
 
-        if (count == MAX_ITERATIONS) {
+        if ((count == MAX_ITERATIONS)&&(fabs(dT)>1e-3)) {
             string msg = "The 'vibTemperature' function failed to converge.\n";
             debug {
                 msg ~= format("The final value for Tvib was: %12.6f\n", T_guess);
@@ -461,7 +461,6 @@ private:
             }
             throw new GasModelException(msg);
         }
-
         return T_guess;
     }
 }
