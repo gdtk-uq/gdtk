@@ -46,6 +46,8 @@ void setGridMotionHelperFunctions(lua_State *L)
     lua_setglobal(L, "setVtxVelocitiesForRotatingBlock");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesForRigidBlock);
     lua_setglobal(L, "setVtxVelocitiesForRigidBlock");
+    lua_pushcfunction(L, &luafn_setVtxVelocitiesForBlockBoundary);
+    lua_setglobal(L, "setVtxVelocitiesForBlockBoundary");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesByCorners);
     lua_setglobal(L, "setVtxVelocitiesByCorners");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesByQuad);
@@ -367,6 +369,106 @@ extern(C) int luafn_setVtxVelocitiesForRigidBlock(lua_State* L)
     lua_settop(L, 0);
     return 0;
 } // end luafn_setVtxVelocitiesForRigidBlock()
+
+/**
+ * Sets the velocity of every vertex on one boundary of a particular block.
+ * The velocity components are provided in arrays/tables with the index order
+ * being specific to the particular boundary.
+ * The velocities for all other vertices in the block are interpolated,
+ * assuming that the velocities of the vertices on the opposing boundary are zero.
+ * Look at the function body to see the details.
+ *
+ * Example:
+ * setVtxVelocitiesForBlockBoundary(blkId, "south", {}, {0.0,1.0,0.0,}, {})
+ */
+extern(C) int luafn_setVtxVelocitiesForBlockBoundary(lua_State* L)
+{
+    // Expect five arguments:
+    //   1. a block id
+    //   2. boundary name
+    //   3. table/array of x-component velocity values, one for each vertex
+    //      If there are insufficient values for the number of vertices,
+    //      the remaining vertices will get a value of zero.
+    //      An empty table will result in all zero values being assigned.
+    //   4. table/array of y-component velocity values, one for each vertex
+    //   5. table/array of z-component velocity values, one for each vertex
+    int narg = lua_gettop(L);
+    auto blkId = lua_tointeger(L, 1);
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
+    auto blk = cast(SFluidBlock) globalBlocks[blkId];
+    assert(blk !is null, "Oops, this should be a SFluidBlock object (with structured grid).");
+    if (narg >= 5) {
+        string boundary = to!string(lua_tostring(L, 2));
+        assert(lua_istable(L, 3), "Did not find Lua table for x-components of velocities at argument 3");
+        assert(lua_istable(L, 4), "Did not find Lua table for y-components of velocities at argument 4");
+        assert(lua_istable(L, 5), "Did not find Lua table for z-components of velocities at argument 5");
+        auto niv = blk.grid.niv;
+        auto njv = blk.grid.njv;
+        auto nkv = blk.grid.nkv;
+        double[] velx, vely, velz;
+        switch (boundary) {
+        case "north":
+            size_t nv = niv * nkv;
+            velx.length = nv; fill_array_from_Lua_table_at_locn(L, velx, 3);
+            vely.length = nv; fill_array_from_Lua_table_at_locn(L, vely, 4);
+            velz.length = nv; fill_array_from_Lua_table_at_locn(L, velz, 5);
+            foreach (k; 0 .. blk.nkv) {
+                foreach (i; 0 .. blk.niv) {
+                    auto pos0 = blk.get_vtx(i,0,k).pos[0];
+                    auto pos1 = blk.get_vtx(i,blk.njv-1,k).pos[0];
+                    foreach (j; 0 .. blk.njv) {
+                        // Linear distribution of the velocity components,
+                        // such that the velocity goes to zero at the opposite boundary.
+                        auto vtx = blk.get_vtx(i,j,k);
+                        auto pos = vtx.pos[0];
+                        auto d1 = distance_between(pos1, pos);
+                        auto d0 = distance_between(pos, pos0);
+                        auto frac = d0/(d0+d1);
+                        auto indx = k*blk.niv + i;
+                        vtx.vel[0].set(velx[indx]*frac, vely[indx]*frac, velz[indx]*frac);
+                    } // end loop j
+                } // end loop i
+            } // end loop k
+            break;
+        case "south":
+            size_t nv = niv * nkv;
+            velx.length = nv; fill_array_from_Lua_table_at_locn(L, velx, 3);
+            vely.length = nv; fill_array_from_Lua_table_at_locn(L, vely, 4);
+            velz.length = nv; fill_array_from_Lua_table_at_locn(L, velz, 5);
+            foreach (k; 0 .. blk.nkv) {
+                foreach (i; 0 .. blk.niv) {
+                    auto pos0 = blk.get_vtx(i,0,k).pos[0];
+                    auto pos1 = blk.get_vtx(i,blk.njv-1,k).pos[0];
+                    foreach (j; 0 .. blk.njv) {
+                        // Linear distribution of the velocity components,
+                        // such that the velocity goes to zero at the opposite boundary.
+                        auto vtx = blk.get_vtx(i,j,k);
+                        auto pos = vtx.pos[0];
+                        auto d1 = distance_between(pos1, pos);
+                        auto d0 = distance_between(pos, pos0);
+                        auto frac = d1/(d0+d1);
+                        auto indx = k*blk.niv + i;
+                        vtx.vel[0].set(velx[indx]*frac, vely[indx]*frac, velz[indx]*frac);
+                    } // end loop j
+                } // end loop i
+            } // end loop k
+            break;
+        default:
+            throw new Exception(format("Set vertex velocities not implemented for %s boundary.", boundary));
+        }
+    } else {
+        string errMsg = "ERROR: Too few arguments passed to luafn: setVtxVelocitiesForBlockBoundary()\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    // In case, the user gave use more return values than
+    // we used, just set the lua stack to empty and let
+    // the lua garbage collector do its thing.
+    lua_settop(L, 0);
+    return 0;
+} // end luafn_setVtxVelocitiesForBlockBoundary()
 
 /**
  * Sets the velocity of vertices in a block based on

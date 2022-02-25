@@ -1398,7 +1398,7 @@ void call_UDF_at_timestep_start()
         lua_pop(L, 1); // dispose dt_override item
         //
         if (GlobalConfig.user_pad_length > 0) {
-            get_array_from_Lua(L, GlobalConfig.userPad, "userPad");
+            fill_array_from_Lua(L, GlobalConfig.userPad, "userPad");
         }
     }
     lua_settop(L, 0); // clear stack
@@ -1459,7 +1459,7 @@ void call_UDF_at_timestep_end()
             throw new FlowSolverException(errMsg);
         }
         if (GlobalConfig.user_pad_length > 0) {
-            get_array_from_Lua(L, GlobalConfig.userPad, "userPad");
+            fill_array_from_Lua(L, GlobalConfig.userPad, "userPad");
         }
     }
     lua_settop(L, 0); // clear stack
@@ -1495,7 +1495,7 @@ void call_UDF_at_write_to_file()
             throw new FlowSolverException(errMsg);
         }
         if (GlobalConfig.user_pad_length > 0) {
-            get_array_from_Lua(L, GlobalConfig.userPad, "userPad");
+            fill_array_from_Lua(L, GlobalConfig.userPad, "userPad");
         }
     }
     lua_settop(L, 0); // clear stack

@@ -34,7 +34,7 @@ import fluidblock;
 // -----------------------------------------------------
 // Functions to synchronise an array in the Dlang domain with a table in Lua
 
-void push_array_to_Lua(T)(lua_State *L, ref T array_in_dlang, string name_in_Lua)
+void push_array_to_Lua(T)(lua_State *L, const(T[]) array_in_dlang, string name_in_Lua)
 {
     lua_getglobal(L, name_in_Lua.toStringz);
     if (!lua_istable(L, -1)) {
@@ -52,26 +52,22 @@ void push_array_to_Lua(T)(lua_State *L, ref T array_in_dlang, string name_in_Lua
     lua_pop(L, 1); // dismiss the table
 }
 
-void get_array_from_Lua_table_at_TOS(T)(lua_State *L, ref T array_in_dlang)
+void fill_array_from_Lua_table_at_locn(T)(lua_State *L, T[] array_in_dlang, int locn)
 {
-    assert(lua_istable(L, -1), "Did not find Lua table at TOS");
+    assert(lua_istable(L, locn), "Did not find Lua table at stack location %d");
     foreach (i; 0 .. array_in_dlang.length) {
-        lua_rawgeti(L, -1, to!int(i+1)); // get an item to top of stack
+        lua_rawgeti(L, locn, to!int(i+1)); // get an item to top of stack
         array_in_dlang[i] = (lua_isnumber(L, -1)) ? to!double(lua_tonumber(L, -1)) : 0.0;
         lua_pop(L, 1); // discard item
     }
-    // We leave the table sitting at the top of stack.
+    // We leave the table sitting at its original location on the stack.
 }
 
-void get_array_from_Lua(T)(lua_State *L, ref T array_in_dlang, string name_in_Lua)
+void fill_array_from_Lua(T)(lua_State *L, T[] array_in_dlang, string name_in_Lua)
 {
     lua_getglobal(L, name_in_Lua.toStringz);
     assert(lua_istable(L, -1), format("Did not find Lua table %s", name_in_Lua));
-    foreach (i; 0 .. array_in_dlang.length) {
-        lua_rawgeti(L, -1, to!int(i+1)); // get an item to top of stack
-        array_in_dlang[i] = (lua_isnumber(L, -1)) ? to!double(lua_tonumber(L, -1)) : 0.0;
-        lua_pop(L, 1); // discard item
-    }
+    fill_array_from_Lua_table_at_locn(L, array_in_dlang, -1);
     lua_pop(L, 1); // dismiss the table
 }
 
