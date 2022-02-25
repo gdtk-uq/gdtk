@@ -39,7 +39,7 @@ d = Vector3:new{x=5, z="9", y=78.6, label="some crap"}
 print("d= ", d)
 e = Vector3:new{x=1.0, y=0.0}
 print("e= ", e)
-function bad_fn() 
+function bad_fn()
    f = Vector3:new{true}
 end
 if pcall(bad_fn) then
@@ -56,10 +56,15 @@ assert(g.x == -f.x); assert(g.y == -f.y); assert(g.z == -f.z)
 h = a + b
 assert(h.x == a.x + b.x); assert(h.y == a.y + b.y); assert(h.z == a.z + b.z)
 i = unit(h)
+print("i=", i)
 h:normalize()
 print("After normalizing, h=", h)
+print("Check components")
 assert(h.x == i.x); assert(h.y == i.y); assert(h.z == i.z)
-assert(vabs(i) == 1.0)
+print("Check magnitude")
+print("vabs(i)=", vabs(i))
+assert(math.abs(vabs(i)-1.0) < 1.0e-9)
+print("Exercise dot product")
 j = dot(g, f)
 print("j= ", j)
 k = cross(g, f)
@@ -70,6 +75,19 @@ print("rotated m=", m, "expected Vector3([0.0, 1.0, 0.0])")
 n = Vector3:new{x=1.0,y=0.0,z=0.0}
 n:mirrorImage(Vector3:new{x=2.0}, Vector3:new{x=1.0})
 print("mirror-image n=", n, "expected Vector3([3.0, 0.0, 0.0])")
+--
+print("Transform from one frame to another.")
+n = Vector3:new{x=1.0,y=1.0,z=0.0}; n = unit(n)
+t1 = Vector3:new{x=-1.0,y=1.0,z=0.0}; t1 = unit(t1)
+t2 = cross(n, t1)
+h = Vector3:new{x=1.0,y=0.0,z=1.0}
+h_ref = Vector3:new{x=h.x,y=h.y,z=h.z}
+print("original h = ", h)
+h:transformToLocalFrame(n, t1, t2)
+print("in local frame h = ", h)
+h:transformToGlobalFrame(n, t1, t2)
+print("back to global frame h = ", h)
+--
 print("Try calling cell geometry calculation functions.")
 -- 2019-07-07 Allow tables as well as Vector3 objects for the following tests.
 t = quadProperties{p0={x=0.0, y=0.0}, p1={x=1.0, y=0.0},

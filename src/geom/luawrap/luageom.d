@@ -364,6 +364,34 @@ extern(C) int crossVector3(lua_State* L)
 }
 
 /**
+ * Transforms a Vector3 object into a local frame defined by three unit vectors n,t1,t2.
+ * Exposes geom.Vector3.transform_to_local_frame(n, t1, t2)
+ */
+extern(C) int transformToLocalFrameVector3(lua_State* L)
+{
+    auto a = checkVector3(L, 1);
+    auto n = checkVector3(L, 2);
+    auto t1 = checkVector3(L, 3);
+    auto t2 = checkVector3(L, 4);
+    a.transform_to_local_frame(*n, *t1, *t2);
+    return 0;
+}
+
+/**
+ * Transforms a Vector3 object from local frame n,t1,t2 to global frame.
+ * Exposes geom.Vector3.transform_to_global_frame(n, t1, t2)
+ */
+extern(C) int transformToGlobalFrameVector3(lua_State* L)
+{
+    auto a = checkVector3(L, 1);
+    auto n = checkVector3(L, 2);
+    auto t1 = checkVector3(L, 3);
+    auto t2 = checkVector3(L, 4);
+    a.transform_to_global_frame(*n, *t1, *t2);
+    return 0;
+}
+
+/**
  * Returns a table containing the named properties.
  * Expects a table of names corners.
  */
@@ -524,6 +552,10 @@ void registerVector3(lua_State* L)
     lua_setfield(L, -2, "rotateAboutZAxis");
     lua_pushcfunction(L, &mirrorImageVector3);
     lua_setfield(L, -2, "mirrorImage");
+    lua_pushcfunction(L, &transformToLocalFrameVector3);
+    lua_setfield(L, -2, "transformToLocalFrame");
+    lua_pushcfunction(L, &transformToGlobalFrameVector3);
+    lua_setfield(L, -2, "transformToGlobalFrame");
 
     lua_setglobal(L, Vector3MT.toStringz);
 

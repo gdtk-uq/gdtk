@@ -64,7 +64,7 @@ NM_FILES := $(NM_DIR)/ridder.d \
 
 LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
-LIBLUAPATH := $(LUA_DIR)/install/lib
+LIBLUAPATH := $(LUA_DIR)/lib
 
 
 DFLAGS := -w -debug -dip1008 -g -I..
@@ -76,7 +76,7 @@ ifeq ($(findstring libplot,$(LIBPLOT_VERSION_STR)), libplot)
 endif
 DLINKFLAGS := $(DLINKFLAGS) -L-ldl
 
-DFLAGS_LUA := -w -dip1008 -g -I.. 
+DFLAGS_LUA := -w -dip1008 -g -I..
 ifeq ($(findstring libplot,$(LIBPLOT_VERSION_STR)), libplot)
     DFLAGS_LUA := $(DFLAGS_LUA) -version=$(LIBPLOT_VERSION_STR)
 endif
@@ -379,38 +379,38 @@ usgrid_demo: grid/usgrid_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 luageom_demo: luawrap/luageom_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	$(DMD) $(DFLAGS_LUA) luawrap/luageom_demo.d $(OF)luageom_demo \
 		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) \
-		$(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
 
 luagpath_demo: luawrap/luagpath_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	$(DMD) $(DFLAGS_LUA) luawrap/luagpath_demo.d $(OF)luagpath_demo \
 		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) \
-		$(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
 
 luasurface_demo: luawrap/luasurface_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	$(DMD) $(DFLAGS_LUA) luawrap/luasurface_demo.d $(OF)luasurface_demo \
-		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
 
 luasketch_demo: luawrap/luasketch_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	$(DMD) $(DFLAGS_LUA) luawrap/luasketch_demo.d $(OF)luasketch_demo \
-		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
 
 luavolume_demo: luawrap/luavolume_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	$(DMD) $(DFLAGS_LUA) luawrap/luavolume_demo.d $(OF)luavolume_demo \
-		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
 
 luaunifunction_demo: luawrap/luaunifunction_demo.d luawrap/luaunifunction.d \
 	misc/univariatefunctions.d $(UTIL_FILES) $(LIBLUA)
 	$(DMD) $(DFLAGS_LUA) luawrap/luaunifunction_demo.d $(OF)luaunifunction_demo \
 		luawrap/luaunifunction.d misc/univariatefunctions.d \
-		$(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
 
 luasgrid_demo: luawrap/luasgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES)
 	$(DMD) $(DFLAGS_LUA) luawrap/luasgrid_demo.d $(OF)luasgrid_demo \
-		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
 
 luausgrid_demo: luawrap/luausgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES)
 	$(DMD) $(DFLAGS_LUA) luawrap/luausgrid_demo.d $(OF)luausgrid_demo \
-		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
 
 paver_demo: grid/paver_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 	$(DMD) $(DFLAGS) grid/paver_demo.d $(OF)paver_demo \
