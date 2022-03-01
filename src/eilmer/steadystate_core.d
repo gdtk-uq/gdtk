@@ -259,9 +259,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         //foreach (blk; localFluidBlocks) { blk.verify_jacobian(GlobalConfig.sssOptions.preconditionerSigma); }
     }
 
-    // Set usePreconditioner to false for pre-steps AND first-order steps.
-    usePreconditioner = false;
-
     // We need to calculate the initial residual if we are starting from scratch.
     if ( snapshotStart == 0 ) {
         evalRHS(0.0, 0);
@@ -298,6 +295,61 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             MPI_Allreduce(MPI_IN_PLACE, &(normRef), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         }
         normRef = sqrt(normRef);
+    }
+
+    // if we are restarting a simulation we need read the initial residuals from a file
+    RestartInfo[] times;
+    if (snapshotStart > 0) { // && GlobalConfig.is_master_task) {
+        extractRestartInfoFromTimesFile(jobName, times);
+        normOld = times[snapshotStart].globalResidual;
+        // We need to read in the reference residual values from a file.
+        string refResidFname = jobName ~ "-ref-residuals.saved";
+        auto refResid = File(refResidFname, "r");
+        auto line = refResid.readln().strip();
+        auto tokens = line.split();
+        normRef = to!double(tokens[0]);
+        auto cqi = GlobalConfig.cqi;
+        maxResiduals.vec[cqi.mass] = to!double(tokens[1+MASS]);
+        maxResiduals.vec[cqi.xMom] = to!double(tokens[1+X_MOM]);
+        maxResiduals.vec[cqi.yMom] = to!double(tokens[1+Y_MOM]);
+        if ( GlobalConfig.dimensions == 3 )
+            maxResiduals.vec[cqi.zMom] = to!double(tokens[1+Z_MOM]);
+        maxResiduals.vec[cqi.totEnergy] = to!double(tokens[1+TOT_ENERGY]);
+        foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
+            maxResiduals.vec[cqi.rhoturb+it] = to!double(tokens[1+TKE+it]);
+        }
+        version(multi_species_gas){
+            if ( GlobalConfig.gmodel_master.n_species > 1 ) {
+                foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
+                    maxResiduals.vec[cqi.species+sp] = to!double(tokens[1+SPECIES+sp]);
+                }
+            }
+        }
+        version(multi_T_gas){
+            foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes) {
+                maxResiduals.vec[cqi.modes+imode] = to!double(tokens[1+MODES+imode]);
+            }
+        }
+
+        // We also need to determine how many snapshots have already been written
+        auto timesFile = File("./config/" ~ jobName ~ ".times");
+        line = timesFile.readln().strip();
+        while (line.length > 0) {
+            if (line[0] != '#') {
+                nWrittenSnapshots++;
+            }
+            line = timesFile.readln().strip();
+        }
+        timesFile.close();
+        nWrittenSnapshots--; // We don't count the initial solution as a written snapshot
+
+        // Where should we be in the CFL schedule list?
+        if (!residual_based_cfl_scheduling) {
+            while ((cfl_schedule_current_index < cfl_schedule_value_list.length) &&
+                   (times[snapshotStart].step > cfl_schedule_iter_list[cfl_schedule_current_index])) {
+                cfl_schedule_current_index++;
+            }
+        }
     }
 
     if (GlobalConfig.is_master_task) {
@@ -360,61 +412,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         }
         refResid.write("\n");
         refResid.close();
-    }
-
-    // if we are restarting a simulation we need read the initial residuals from a file
-    RestartInfo[] times;
-    if (snapshotStart > 0) { // && GlobalConfig.is_master_task) {
-        extractRestartInfoFromTimesFile(jobName, times);
-        normOld = times[snapshotStart].globalResidual;
-        // We need to read in the reference residual values from a file.
-        string refResidFname = jobName ~ "-ref-residuals.saved";
-        auto refResid = File(refResidFname, "r");
-        auto line = refResid.readln().strip();
-        auto tokens = line.split();
-        normRef = to!double(tokens[0]);
-        auto cqi = GlobalConfig.cqi;
-        maxResiduals.vec[cqi.mass] = to!double(tokens[1+MASS]);
-        maxResiduals.vec[cqi.xMom] = to!double(tokens[1+X_MOM]);
-        maxResiduals.vec[cqi.yMom] = to!double(tokens[1+Y_MOM]);
-        if ( GlobalConfig.dimensions == 3 )
-            maxResiduals.vec[cqi.zMom] = to!double(tokens[1+Z_MOM]);
-        maxResiduals.vec[cqi.totEnergy] = to!double(tokens[1+TOT_ENERGY]);
-        foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
-            maxResiduals.vec[cqi.rhoturb+it] = to!double(tokens[1+TKE+it]);
-        }
-        version(multi_species_gas){
-            if ( GlobalConfig.gmodel_master.n_species > 1 ) {
-                foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
-                    maxResiduals.vec[cqi.species+sp] = to!double(tokens[1+SPECIES+sp]);
-                }
-            }
-        }
-        version(multi_T_gas){
-            foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes) {
-                maxResiduals.vec[cqi.modes+imode] = to!double(tokens[1+MODES+imode]);
-            }
-        }
-
-        // We also need to determine how many snapshots have already been written
-        auto timesFile = File("./config/" ~ jobName ~ ".times");
-        line = timesFile.readln().strip();
-        while (line.length > 0) {
-            if (line[0] != '#') {
-                nWrittenSnapshots++;
-            }
-            line = timesFile.readln().strip();
-        }
-        timesFile.close();
-        nWrittenSnapshots--; // We don't count the initial solution as a written snapshot
-
-        // Where should we be in the CFL schedule list?
-        if (!residual_based_cfl_scheduling) {
-            while ((cfl_schedule_current_index < cfl_schedule_value_list.length) &&
-                   (times[snapshotStart].step > cfl_schedule_iter_list[cfl_schedule_current_index])) {
-                cfl_schedule_current_index++;
-            }
-        }
     }
 
     double wallClockElapsed;
