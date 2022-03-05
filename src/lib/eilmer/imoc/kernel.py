@@ -13,6 +13,7 @@ Version:
 """
 
 import numpy as np
+from scipy import spatial
 
 debugLevel = 0
 
@@ -23,6 +24,7 @@ axisymmetric = False
 
 nodes = [] # Storage for the Node objects.
 mesh_indices = [] # Indices of the nodes that have been added to the characteristics mesh.
+node_locs = []
 
 walls = [] # Storage for the user-defined functions that specify the walls.
 
@@ -72,7 +74,11 @@ class Node(object):
         strng += ", czero_up=%d, czero_down=%d)" % (self.czero_up, self.czero_down)
         return strng
 
-def find_nodes_near(x, y, tol=0.0, max_count=30):
+def create_kd_tree():
+    kdtree = spatial.KDTree(np.array([(node.x, node.y) for node in nodes]))
+    return kdtree
+
+def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
     """
     An attempt to replicate PJs C code to find the nodes near a given
     x, y position. If tol is <= 0.0 then only a single node is returned,
@@ -81,28 +87,37 @@ def find_nodes_near(x, y, tol=0.0, max_count=30):
             x, y      - position of interest
             tol       - radius of interest
             max_count - maximum number of nodes to collect
+            kdtree    - if a kdtree object has been created this can be
+                        used for much, much faster searching
     OUTPUT:
             idx_near  - a list of node indices nearby
     """
     idx_near = []
-    if tol <= 0.0:
-        # Find the nearest node
-        idx_near.append(-1)
-        dist_near = 1.0e6 # Arbitrarily large
-        for idx, node in enumerate(nodes):
-            node_dist = np.sqrt((x - node.x)**2 + (y - node.y)**2)
-            if node_dist < dist_near:
-                dist_near = node_dist
-                idx_near[-1] = idx
+    if kdtree is None:
+        if tol <= 0.0:
+            # Find the nearest node
+            idx_near.append(-1)
+            dist_near = 1.0e6 # Arbitrarily large
+            for idx, node in enumerate(nodes):
+                node_dist = np.sqrt((x - node.x)**2 + (y - node.y)**2)
+                if node_dist < dist_near:
+                    dist_near = node_dist
+                    idx_near[-1] = idx
+        else:
+            # Collect an array of the closest nodes
+            # NOTE: There doesn't seem to be any mechanisms of ensuring they are
+            # the closest nodes, just the first ones within the radius of interest
+            for idx, node in enumerate(nodes):
+                node_dist = np.sqrt((x - node.x)**2 + (y - node.y)**2)
+                if node_dist < tol:
+                    idx_near.append(idx)
+                if len(idx_near) >= max_count: break
     else:
-        # Collect an array of the closest nodes
-        # NOTE: There doesn't seem to be any mechanisms of ensuring they are
-        # the closest nodes, just the first ones within the radius of interest
-        for idx, node in enumerate(nodes):
-            node_dist = np.sqrt((x - node.x)**2 + (y - node.y)**2)
-            if node_dist < tol:
-                idx_near.append(idx)
-            if len(idx_near) >= max_count: break
+        dist, pnts = kdtree.query((x, y), max_count, distance_upper_bound=tol)
+        if tol <= 0.0:
+            idx_near = [pnts[0]]
+        else:
+            idx_near = pnts
     return idx_near
 
 

@@ -703,7 +703,7 @@ def add_stream_node(node0, node1, node2, node4):
     return n4.indx
 
 
-def step_stream_node(node0, node4, dL):
+def step_stream_node(node0, node4, dL, kdtree=None):
     """
     Replicating PJs C code
     This function calculates the next node along a streamline by the length dL
@@ -722,10 +722,13 @@ def step_stream_node(node0, node4, dL):
     th4 = n0.theta
     pm4 = n0.nu
     #
-    R = 0.9 * dL # Radius of influence for finding nodes
+    R = 0.9 * abs(dL) # Radius of influence for finding nodes
     mu = 2.0 # Smoothing parameter for Shepard interpolation
     # Find the near nodes
-    near_nodes = kernel.find_nodes_near(x4, y4, tol=R)
+    if kdtree is None:
+        near_nodes = kernel.find_nodes_near(x4, y4, tol=R, max_count=10)
+    else:
+        near_nodes = kernel.find_nodes_near(x4, y4, tol=R, max_count=10, kdtree=kdtree)
     if len(near_nodes) == 0: return -1
     # Using PJs format for data handling
     x = np.zeros_like(near_nodes, dtype=np.float)
