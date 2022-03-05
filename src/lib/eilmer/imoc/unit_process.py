@@ -520,7 +520,7 @@ def cminus_free(node0, node1, node4):
     If -1 is specified as the index for node4, a new node will be
     created for the solution point.
     """
-    if node1 == node2:
+    if node0 == node1:
         raise RuntimeError("Same index given for node0 and node1.")
     n0 = kernel.nodes[node0]
     n1 = kernel.nodes[node1]
