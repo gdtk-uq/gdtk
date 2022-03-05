@@ -2136,8 +2136,8 @@ public:
                 throw new Error("ghost cell data missing");
             }
             if ((myConfig.flux_calculator == FluxCalculator.asf)
-                || ((myConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf) && (f.fs.S == 0))) {
-                // [FIX_ME] 2021-10-28 PJ changed the bitwise and to logical and. Also, is S a floating-point number these days?
+                || ((myConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf) && (f.fs.S < ESSENTIALLY_ZERO))) {
+                // [FIX_ME] 2021-10-28 PJ changed the bitwise and to logical and.
                 // The high-order ASF flux calculator is a flux reconstruction scheme,
                 // so the expensive interpolation process can be bypassed if it's pure ASF flux.
                 // If we're using the hybrid flux calculator,
@@ -2147,7 +2147,7 @@ public:
             } else {
                 // Typical code path, with interpolation for the flowstates to the left and right of the interface.
                 if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
-                    !(myConfig.suppress_reconstruction_at_shocks && (f.fs.S == 1.0))) {
+                    !(myConfig.suppress_reconstruction_at_shocks && (f.fs.S == (1.0 - ESSENTIALLY_ZERO)))) {
                     one_d.interp(f, Lft, Rght);
                 } else {
                     FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
