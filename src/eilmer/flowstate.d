@@ -60,7 +60,7 @@ public:
     }
     number mu_t;   // turbulence viscosity
     number k_t;    // turbulence thermal-conductivity
-    number S;         // shock indicator, [0,1]
+    number S;         // shock indicator
 
     this(GasModel gm,
          in double p_init,
@@ -73,7 +73,7 @@ public:
          in double psi_init=0.0, in double divB_init=1.0,
          in double[2] turb_init=[0.0, 1.0],
          in double mu_t_init=0.0, in double k_t_init=0.0,
-         in int S_init=0)
+         in double S_init=0.0)
     {
         gas = new GasState(gm, p_init, T_init, T_modes_init,
                            massf_init, quality_init);
@@ -142,7 +142,7 @@ public:
         }
         mu_t = 0.0;
         k_t = 0.0;
-        S = 0;
+        S = 0.0;
     }
 
     this(in JSONValue json_data, GasModel gm)
@@ -179,7 +179,7 @@ public:
         }
         mu_t = getJSONdouble(json_data, "mu_t", 0.0);
         k_t = getJSONdouble(json_data, "k_t", 0.0);
-        S = getJSONint(json_data, "S", 0);
+        S = getJSONdouble(json_data, "S", 0.0);
     }
 
     this() {} // makes no sense to define the data in the absence of a model
@@ -257,7 +257,7 @@ public:
         }
         mu_t = 0.0;
         k_t = 0.0;
-        S = 0; // Remember that shock detector is an integer flag.
+        S = 0.0; // Shock detector is no longer necessarily an integer flag.
         foreach(other; others) {
             vel.x += other.vel.x; vel.y += other.vel.y; vel.z += other.vel.z;
             version(MHD) {
@@ -284,7 +284,7 @@ public:
         }
         mu_t *= scale;
         k_t *= scale;
-        S = (S > 0) ? 1 : 0;
+        S = S;
     } // end copy_average_values_from()
 
     override string toString() const

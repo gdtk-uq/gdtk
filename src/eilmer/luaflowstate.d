@@ -271,7 +271,7 @@ The value should be a number.`;
     double k_t = getNumberFromTable(L, tblindx, "k_t", false, 0.0, true, format(errMsgTmplt, "k_t"));
 
     // Shock detector value.
-    int S = getIntegerFromTable(L, tblindx, "S", false, 0, true, format(errMsgTmplt, "S"));
+    double S = getNumberFromTable(L, tblindx, "S", false, 0.0, true, format(errMsgTmplt, "S"));
 
     auto fs = new FlowState(managedGasModel, p, T, T_modes, vel, massf, quality, B,
                             psi, divB, turb, mu_t, k_t, S);
