@@ -24,7 +24,6 @@ axisymmetric = False
 
 nodes = [] # Storage for the Node objects.
 mesh_indices = [] # Indices of the nodes that have been added to the characteristics mesh.
-node_locs = []
 
 walls = [] # Storage for the user-defined functions that specify the walls.
 
