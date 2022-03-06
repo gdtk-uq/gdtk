@@ -861,8 +861,8 @@ final class GlobalConfig {
     // Parameters related to possible motion of the grid.
     shared static grid_motion = GridMotion.none;
     shared static bool write_vertex_velocities = false;
-    shared static string udf_grid_motion_file = "dummy-grid-motion-file.txt";
-    static lua_State* master_lua_State;
+    shared static string udf_grid_motion_file; // empty to start
+    static lua_State* master_lua_State; // null to start
     shared static size_t n_grid_time_levels = 1;
     //
     // The number of ghost-cell layers is adjustable for structured-grid blocks.
@@ -1116,7 +1116,7 @@ final class GlobalConfig {
     static BlockZone[] turbulent_zones;
     //
     // Indicate presence of user-defined source terms
-    shared static string udf_source_terms_file = "dummy-source-terms.txt";
+    shared static string udf_source_terms_file; // empty to start
     shared static bool udf_source_terms = false;
     //
     // Parameters controlling thermochemistry
@@ -1126,7 +1126,7 @@ final class GlobalConfig {
     // chemical update function call.
     shared static ChemistryUpdateMode chemistry_update = ChemistryUpdateMode.split; // or integral
     shared static bool reacting = false;
-    shared static string reactions_file = "chemistry.lua";
+    shared static string reactions_file; // empty to start
     shared static double reaction_time_delay = 0.0;
     static Schedule!double reaction_fraction_schedule;
     shared static double T_frozen = 300.0; // temperature (in K) below which reactions are frozen
@@ -1136,7 +1136,7 @@ final class GlobalConfig {
     shared static double ignition_time_stop = 0.0;
     static IgnitionZone[] ignition_zones;
     shared static bool ignition_zone_active = false;
-    shared static string energy_exchange_file = "energy-exchange.lua";
+    shared static string energy_exchange_file; // empty to start
     // JJ Hoste's Turbulence-Chemistry Interaction model
     shared static TCIModel tci_model = TCIModel.none;
     shared static bool radiation_energy_dump_allowed = false;

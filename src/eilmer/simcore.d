@@ -693,26 +693,21 @@ int init_simulation(int tindx, int nextLoadsIndx,
     // this value may get revised on the very first step.
     SimState.dt_global = GlobalConfig.dt_init;
     //
-    // If we are using Lua supervisory script, fill in some more global
-    // information for the interpreter.
-    if (GlobalConfig.udf_supervisor_file.length > 0) {
-        auto L = GlobalConfig.master_lua_State;
-        lua_pushboolean(L, GlobalConfig.in_mpi_context);
-        lua_setglobal(L, "in_mpi_context");
-        lua_pushnumber(L, GlobalConfig.mpi_size);
-        lua_setglobal(L, "mpi_size");
-        lua_pushnumber(L, GlobalConfig.mpi_rank_for_local_task);
-        lua_setglobal(L, "mpi_rank_for_local_task");
-        lua_pushboolean(L, GlobalConfig.is_master_task);
-        lua_setglobal(L, "is_master_task");
-        push_array_to_Lua(L, GlobalConfig.localFluidBlockIds, "localFluidBlockIds");
-        if (GlobalConfig.user_pad_length > 0) {
-            push_array_to_Lua(L, GlobalConfig.userPad, "userPad");
-        }
-    }
+    // Fill in some more global information for the master interpreter.
+    auto L = GlobalConfig.master_lua_State;
+    lua_pushboolean(L, GlobalConfig.in_mpi_context);
+    lua_setglobal(L, "in_mpi_context");
+    lua_pushnumber(L, GlobalConfig.mpi_size);
+    lua_setglobal(L, "mpi_size");
+    lua_pushnumber(L, GlobalConfig.mpi_rank_for_local_task);
+    lua_setglobal(L, "mpi_rank_for_local_task");
+    lua_pushboolean(L, GlobalConfig.is_master_task);
+    lua_setglobal(L, "is_master_task");
+    push_array_to_Lua(L, GlobalConfig.localFluidBlockIds, "localFluidBlockIds");
     if (GlobalConfig.user_pad_length > 0) {
         // At this point, userPad has been initialized with values
         // from the job.config file, even if there are no supervisory functions.
+        push_array_to_Lua(L, GlobalConfig.userPad, "userPad");
         // All MPI tasks should see the same data and all interpreters
         // associated with blocks should get a copy of the data.
         broadcast_master_userPad();
