@@ -14,6 +14,7 @@ set gdtk PUT_INSTALL_DIR_HERE
 setenv DGD_REPO $gdtkrepo
 setenv DGD $gdtk
 append-path PATH $gdtk/bin
+append-path LD_LIBRARY_PATH $gdtk/lib
 setenv DGD_LUA_PATH $gdtk/lib/?.lua
 setenv DGD_LUA_CPATH $gdtk/lib/?.so
 append-path PYTHONPATH $gdtk/lib
