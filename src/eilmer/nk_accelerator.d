@@ -231,15 +231,6 @@ int main(string[] args)
         sblk.allocate_GMRES_workspace();
     }
 
-    if (GlobalConfig.extrema_clipping && GlobalConfig.is_master_task) {
-        writeln("WARNING:");
-        writeln("   extrema_clipping is set to true.");
-        writeln("   This is not recommended when using the steady-state solver.");
-        writeln("   Its use will likely delay or stall convergence.");
-        writeln("   Continuing with simulation anyway.");
-        writeln("END WARNING.");
-    }
-
     /* Check that items are implemented. */
     bool goodToProceed = true;
     /*
