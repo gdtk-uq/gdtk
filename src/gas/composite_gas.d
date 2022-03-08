@@ -179,6 +179,21 @@ public:
         mTransProps.binaryDiffusionCoefficients(Q, D);
     }
 
+    @nogc override void minimum_mixture_energy(GasState Q)
+    {
+        Q.p = P_atm;
+        Q.T = T_MIN;
+        foreach (ref T; Q.T_modes) T = T_MIN;
+        auto uTot = mThermo.internalEnergy(Q);
+        foreach (imode; 0 .. _n_modes) {
+            Q.u_modes[imode] = 0.0;
+            foreach (isp; 0 .. _n_species) {
+                Q.u_modes[imode] += Q.massf[isp] * mThermo.energyPerSpeciesInMode(Q, isp, imode);
+            }
+        }
+        Q.u = uTot - sum(Q.u_modes);
+    }
+
 private:
     string mPhysicalModel;
     ThermodynamicModel mThermo;

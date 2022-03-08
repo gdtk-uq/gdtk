@@ -311,7 +311,20 @@ public:
             throw new Error("Gas model has no binary diffusion implementation.");
         }
     }
-
+    @nogc
+    void minimum_mixture_energy(GasState Q)
+    {
+        // NOTE: This method changes the state in Q and puts the minimum
+        //       energy values in u and u_modes.
+        // Assumption: perfect gas behaviour.
+        // Here we set pressure to an arbitrary value. This assumes that
+        // pressure has no part in the caloric equation of state.
+        // In other words, we assume no real gas effects.
+        Q.p = P_atm;
+        Q.T = T_MIN;
+        foreach (ref T; Q.T_modes) T = T_MIN;
+        update_thermo_from_pT(Q);
+    }
 
 protected:
     // Default to non-plasma gas model, where all species are treated alike.
