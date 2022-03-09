@@ -56,8 +56,8 @@ void interp_l2r2_scalar(double qL1, double qL0, double qR0, double qR1,
     double sL = van_albada_limit1(delLminus, del);
     double sR = van_albada_limit1(del, delRplus);
     // The actual high-order reconstruction, possibly limited.
-    qL = qL0 + sL * 0.125 * (del + delLminus);
-    qR = qR0 - sR * 0.125 * (delRplus + del);
+    qL = qL0 + sL * 0.125 * (3.0*del + delLminus);
+    qR = qR0 - sR * 0.125 * (delRplus + 3.0*del);
     if (clipFlag) {
         // An extra limiting filter to ensure that we do not compute new extreme values.
         // This was introduced to deal with very sharp transitions in species.
