@@ -864,8 +864,5 @@ def get_nodes_along_characteristic(node0, direction):
             if node1.cplus_up == -1: break
             else: node_indices.append(node1.cplus_up)
         else:
-            raise RuntimeError(f"Invalid argument given for characteristic direction: {direction}")
+            raise RuntimeError(f"Invalid characteristic direction: {direction}")
     return node_indices
-
-# Temporary alias until we adjust example scripts.
-return_nodes_along_characteristic = get_nodes_along_characteristic
