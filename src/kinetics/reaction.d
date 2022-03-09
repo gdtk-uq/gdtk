@@ -21,6 +21,7 @@ import util.lua_service;
 import gas;
 import util.msg_service;
 import kinetics.rate_constant;
+import globalconfig: FlowSolverException;
 
 @nogc
 number compute_equilibrium_constant(GasModel gmodel, GasState Q,
@@ -35,6 +36,12 @@ number compute_equilibrium_constant(GasModel gmodel, GasState Q,
     }
     number K_p = exp(-dG/(R_universal*Q.T));
     number K_c = K_p*pow(P_atm/(R_universal*Q.T), nuSum);
+    debug{
+    if (K_c==0.0) {
+        string msg=format("Bad equilibrium constant %e detected in reaction %s", K_c, participants);
+        throw new FlowSolverException(msg);
+    }
+    }
     return K_c;
 }
 
@@ -78,8 +85,6 @@ public:
 
     @nogc final void eval_rate_constants(in GasState Q)
     {
-        immutable double EPS = 1.0e-16; // To prevent divide by zero
-                                        // if K_eq is very very small.
         if ( _compute_kf_then_kb ) {
             _k_f = eval_forward_rate_constant(Q);
             if ( _backward is null ) { // we need the equilibrium constant
@@ -91,10 +96,10 @@ public:
                     _Qw.T = Q.T;
                     _Qw.T_modes[] = Q.T;
                     number kf_eq = eval_forward_rate_constant(_Qw);
-                    _k_b = kf_eq/(_K_eq + EPS);
+                    _k_b = kf_eq/_K_eq;
                 }
                 else {
-                    _k_b = _k_f/(_K_eq + EPS);
+                    _k_b = _k_f/_K_eq;
                 }
             }
             else {
