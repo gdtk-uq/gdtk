@@ -790,12 +790,12 @@ def march_along_cminus(old_first, new_first, direction):
 
     Returns a list of new node indices (along the new characteristic).
     """
-    new_nodes = [new_first]
+    new_node_indices = [new_first]
     node1 = new_first
     node2 = old_first
     while True:
         node4 = interior(node1, node2, -1)
-        new_nodes.append(node4)
+        new_node_indices.append(node4)
         node1 = node4
         n2 = kernel.nodes[node2]
         if direction == 'up':
@@ -806,7 +806,7 @@ def march_along_cminus(old_first, new_first, direction):
             raise RuntimeError(f"Invalid direction for marching along Cminus: {direction}")
         if node2 == -1: break
     #
-    return new_nodes
+    return new_node_indices
 
 
 def march_along_cplus(old_first, new_first, direction):
@@ -818,12 +818,12 @@ def march_along_cplus(old_first, new_first, direction):
 
     Returns a list of new node indices (along the new characteristic).
     """
-    new_nodes = [new_first]
+    new_node_indices = [new_first]
     node1 = old_first
     node2 = new_first
     while True:
         node4 = interior(node1, node2, -1)
-        new_nodes.append(node4)
+        new_node_indices.append(node4)
         node2 = node4
         n1 = kernel.nodes[node1]
         if direction == 'up':
@@ -834,35 +834,38 @@ def march_along_cplus(old_first, new_first, direction):
             raise RuntimeError(f"Invalid direction for marching along Cplus: {direction}")
         if node1 == -1: break
     #
-    return new_nodes
+    return new_node_indices
 
-def return_nodes_along_characteristic(node0, direction):
+def get_nodes_along_characteristic(node0, direction):
     """
     Input:
     node0     - index of starting node
     direction - direction of travel to return nodes
                 must be one of 'cminus_down', 'cminus_up',
                 'cplus_down', 'cplus_up'
-    
-    Returns a list of nodes travelling along the characteristic in the 
-    desired direction
+
+    Returns a list of node indices,
+    travelling along the characteristic in the desired direction
     """
-    node_list = []
-    node_list.append(node0)
+    node_indices = []
+    node_indices.append(node0)
     while True:
-        node1 = kernel.nodes[node_list[-1]]
+        node1 = kernel.nodes[node_indices[-1]]
         if direction == 'cminus_down':
             if node1.cminus_down == -1: break
-            else: node_list.append(node1.cminus_down)
+            else: node_indices.append(node1.cminus_down)
         elif direction == 'cminus_up':
             if node1.cminus_up == -1: break
-            else: node_list.append(node1.cminus_up)
+            else: node_indices.append(node1.cminus_up)
         elif direction == 'cplus_down':
             if node1.cplus_down == -1: break
-            else: node_list.append(node1.cplus_down)
+            else: node_indices.append(node1.cplus_down)
         elif direction == 'cplus_up':
             if node1.cplus_up == -1: break
-            else: node_list.append(node1.cplus_up)
+            else: node_indices.append(node1.cplus_up)
         else:
             raise RuntimeError(f"Invalid argument given for characteristic direction: {direction}")
-    return node_list
+    return node_indices
+
+# Temporary alias until we adjust example scripts.
+return_nodes_along_characteristic = get_nodes_along_characteristic
