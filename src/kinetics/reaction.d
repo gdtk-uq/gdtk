@@ -21,7 +21,6 @@ import util.lua_service;
 import gas;
 import util.msg_service;
 import kinetics.rate_constant;
-import globalconfig: FlowSolverException;
 
 @nogc
 number compute_equilibrium_constant(GasModel gmodel, GasState Q,
@@ -39,7 +38,7 @@ number compute_equilibrium_constant(GasModel gmodel, GasState Q,
     debug{
     if (K_c==0.0) {
         string msg=format("Bad equilibrium constant %e detected in reaction %s", K_c, participants);
-        throw new FlowSolverException(msg);
+        throw new Exception(msg);
     }
     }
     return K_c;
