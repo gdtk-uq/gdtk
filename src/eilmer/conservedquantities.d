@@ -124,50 +124,103 @@ public:
     size_t modes;
 
     this(int dimensions, size_t nturb, bool MHD, size_t nspecies, size_t nmodes) {
-        mass = 0;
-        xMom = 1;
-        yMom = 2;
-        if (dimensions == 3) {
-            threeD = true;
-            zMom = 3;
-            totEnergy = 4;
-            n = 5;
-        } else {
-            // Do not carry z-momentum for 2D simulations.
-            threeD = false;
-            totEnergy = 3;
-            n = 4;
+
+        bool put_mass_in_last_position = false;
+        version (nk_accelerator) {
+            // we will drop the mass continuity equation if we are running a multi-species calculation with
+            // the steady-state solver, note that we still need an entry in the conserved quantities vector
+            // for the mass (some parts of the code expect it), so we will place it in the last position
+            if (nspecies > 1) { put_mass_in_last_position = true; }
         }
-        n_turb = nturb;
-        if (nturb > 0) {
-            turb = true;
-            rhoturb = n; // Start of turbulence elements.
-            n += nturb;
-        } else {
-            turb = false;
-        }
-        this.MHD = MHD;
-        if (MHD) {
-            xB = n;
-            yB = n+1;
-            zB = n+2;
-            psi = n+3;
-            divB = n+4;
-            n += 5;
-        }
-        n_species = nspecies;
-        if (nspecies > 1) {
+
+        if (put_mass_in_last_position) {
+            xMom = 0;
+            yMom = 1;
+            if (dimensions == 3) {
+                threeD = true;
+                zMom = 2;
+                totEnergy = 3;
+                n = 4;
+            } else {
+                // Do not carry z-momentum for 2D simulations.
+                threeD = false;
+                totEnergy = 2;
+                n = 3;
+            }
+            n_turb = nturb;
+            if (nturb > 0) {
+                turb = true;
+                rhoturb = n; // Start of turbulence elements.
+                n += nturb;
+            } else {
+                turb = false;
+            }
+            this.MHD = MHD;
+            if (MHD) {
+                xB = n;
+                yB = n+1;
+                zB = n+2;
+                psi = n+3;
+                divB = n+4;
+                n += 5;
+            }
+            n_species = nspecies;
             species = n; // Start of species elements.
             n += nspecies;
-            // Note that we only carry species in the conserved-quantities vector
-            // if we have a multi-species gas model.
-            // A single-species gas model assumes a species fraction on 1.0
-            // throughout the flow solver code.
-        }
-        n_modes = nmodes;
-        if (nmodes > 0) {
-            modes = n; // Start of modes elements.
-            n += nmodes;
+            n_modes = nmodes;
+            if (nmodes > 0) {
+                modes = n; // Start of modes elements.
+                n += nmodes;
+            }
+            // we still need the mass in the conserved quantities vector in some places of the code
+            mass = n;
+            n += 1;
+        } else { // fill out the array using our standard ordering
+            mass = 0;
+            xMom = 1;
+            yMom = 2;
+            if (dimensions == 3) {
+                threeD = true;
+                zMom = 3;
+                totEnergy = 4;
+                n = 5;
+            } else {
+                // Do not carry z-momentum for 2D simulations.
+                threeD = false;
+                totEnergy = 3;
+                n = 4;
+            }
+            n_turb = nturb;
+            if (nturb > 0) {
+                turb = true;
+                rhoturb = n; // Start of turbulence elements.
+                n += nturb;
+            } else {
+                turb = false;
+            }
+            this.MHD = MHD;
+            if (MHD) {
+                xB = n;
+                yB = n+1;
+                zB = n+2;
+                psi = n+3;
+                divB = n+4;
+                n += 5;
+            }
+            n_species = nspecies;
+            if (nspecies > 1) {
+                species = n; // Start of species elements.
+                n += nspecies;
+                // Note that we only carry species in the conserved-quantities vector
+                // if we have a multi-species gas model.
+                // A single-species gas model assumes a species fraction on 1.0
+                // throughout the flow solver code.
+            }
+            n_modes = nmodes;
+            if (nmodes > 0) {
+                modes = n; // Start of modes elements.
+                n += nmodes;
+            }
         }
     } // end constructor
 

@@ -599,7 +599,19 @@ public:
         ConservedQuantities myU = U[ftl];
         // The conserved quantities are carried as quantity per unit volume.
         // mass / unit volume = density
-        if (!(myU.vec[cqi.mass] > 0.0)) {
+        number rho = 0.0;
+        if (cqi.mass == 0) {
+            rho = myU.vec[cqi.mass];
+        } else {
+            // if cqi.mass \= 0, then we assume that we have dropped the mass continuity equation from the solver,
+            // in that case, the total density is a sum of the species densities
+            foreach(isp; 0 .. cqi.n_species) {
+                // impose positivity on the species densities here
+                if (myU.vec[cqi.species+isp] < 0.0) myU.vec[cqi.species+isp] = to!number(0.0);
+                rho += myU.vec[cqi.species+isp];
+            }
+        }
+        if (!(rho.re > 0.0)) {
             if (myConfig.adjust_invalid_cell_data) {
                 data_is_bad = true;
                 // We can do nothing more with the present data but the caller may
@@ -620,9 +632,9 @@ public:
                 throw new FlowSolverException("Bad cell with negative mass.");
             }
         } // end if mass is not positive
-        number rho = myU.vec[cqi.mass];
         fs.gas.rho = rho; // This is limited to nonnegative and finite values.
         number dinv = 1.0 / rho;
+
         // Velocities from momenta.
         number zMom = (cqi.threeD) ? myU.vec[cqi.zMom] : to!number(0.0);
         fs.vel.set(myU.vec[cqi.xMom]*dinv, myU.vec[cqi.yMom]*dinv, zMom*dinv);
@@ -690,32 +702,30 @@ public:
         }
         // Thermochemical species, if appropriate.
         version(multi_species_gas) {
-            // scale the species densities such that they sum to the total density (this ensures mass fractions sum to 1)
-            if (myConfig.n_species > 1) {
+            // scale the species densities such that they sum to the total density (this ensures massfs sum to 1)
+            // if cqi.mass \= 0, then we have dropped the mass continuity equation, so this step would be redundant
+            if (myConfig.n_species > 1 && cqi.mass == 0) {
                 number rhos_sum = 0.0;
                 foreach(isp; 0 .. cqi.n_species) {
                     // impose positivity on the species densities
                     if (myU.vec[cqi.species+isp] < 0.0) myU.vec[cqi.species+isp] = to!number(0.0);
                     rhos_sum += myU.vec[cqi.species+isp];
                 }
-                version(nk_accelerator) {} // we don't mind if the two values deviate on the way to steady-state for the NK-solver
-                else {
-                    if (fabs(rhos_sum - rho) > assert_error_tolerance) {
-                        string msg = "Sum of species densities far from total density";
-                        debug {
-                            msg ~= format(": fabs(rhos_sum - rho) = %s \n", fabs(rhos_sum - rho));
-                            msg ~= format("  assert_error_tolerance = %s \n", assert_error_tolerance);
-                            msg ~= format("  tolerance = %s \n", tolerance);
-                            msg ~= "]\n";
-                        }
-                        throw new FlowSolverException(msg);
+                if (fabs(rhos_sum - rho) > assert_error_tolerance) {
+                    string msg = "Sum of species densities far from total density";
+                    debug {
+                        msg ~= format(": fabs(rhos_sum - rho) = %s \n", fabs(rhos_sum - rho));
+                        msg ~= format("  assert_error_tolerance = %s \n", assert_error_tolerance);
+                        msg ~= format("  tolerance = %s \n", tolerance);
+                        msg ~= "]\n";
                     }
+                    throw new FlowSolverException(msg);
                 }
                 if ( fabs(rhos_sum - rho) > tolerance ) {
                     number scale_factor = rho/rhos_sum;
                     foreach(isp; 0 .. cqi.n_species) { myU.vec[cqi.species+isp] *= scale_factor; }
                 }
-            }
+            } // end if (myConfig.n_species > 1 && cqi.mass == 0)
             try {
                 if (cqi.n_species > 1) {
                     foreach(isp; 0 .. cqi.n_species) { fs.gas.massf[isp] = myU.vec[cqi.species+isp] * dinv; }

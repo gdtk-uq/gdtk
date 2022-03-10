@@ -86,6 +86,8 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
 {
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
+    // remove the conserved mass variable for multi-species gas
+    if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
     size_t MASS = GlobalConfig.cqi.mass;
     size_t X_MOM = GlobalConfig.cqi.xMom;
     size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -111,7 +113,7 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
             restartInfo.cfl = to!double(tokens[3]);
             restartInfo.step = to!int(tokens[4]);
             restartInfo.globalResidual = to!double(tokens[5]);
-            restartInfo.residuals.vec[cqi.mass] = to!double(tokens[6+MASS]);
+            if ( GlobalConfig.gmodel_master.n_species == 1 ) { restartInfo.residuals.vec[cqi.mass] = to!double(tokens[6+MASS]); }
             restartInfo.residuals.vec[cqi.xMom] = to!double(tokens[6+X_MOM]);
             restartInfo.residuals.vec[cqi.yMom] = to!double(tokens[6+Y_MOM]);
             if ( GlobalConfig.dimensions == 3 )
@@ -185,6 +187,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
+    // remove the conserved mass variable for multi-species gas
+    if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
     size_t MASS = GlobalConfig.cqi.mass;
     size_t X_MOM = GlobalConfig.cqi.xMom;
     size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -270,7 +274,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 auto cqi = blk.myConfig.cqi;
                 int cellCount = 0;
                 foreach (cell; blk.cells) {
-                    blk.FU[cellCount+MASS] = -cell.dUdt[0].vec[cqi.mass];
+                    if ( nsp == 1 ) { blk.FU[cellCount+MASS] = -cell.dUdt[0].vec[cqi.mass]; }
                     blk.FU[cellCount+X_MOM] = -cell.dUdt[0].vec[cqi.xMom];
                     blk.FU[cellCount+Y_MOM] = -cell.dUdt[0].vec[cqi.yMom];
                     if ( GlobalConfig.dimensions == 3 )
@@ -309,7 +313,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         auto tokens = line.split();
         normRef = to!double(tokens[0]);
         auto cqi = GlobalConfig.cqi;
-        maxResiduals.vec[cqi.mass] = to!double(tokens[1+MASS]);
+        if ( GlobalConfig.gmodel_master.n_species == 1 ) { maxResiduals.vec[cqi.mass] = to!double(tokens[1+MASS]); }
         maxResiduals.vec[cqi.xMom] = to!double(tokens[1+X_MOM]);
         maxResiduals.vec[cqi.yMom] = to!double(tokens[1+Y_MOM]);
         if ( GlobalConfig.dimensions == 3 )
@@ -357,7 +361,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         auto cqi = GlobalConfig.cqi;
         writeln("Reference residuals are established as:");
         writefln("GLOBAL:         %.12e", normRef);
-        writefln("MASS:           %.12e", maxResiduals.vec[cqi.mass].re);
+        if ( GlobalConfig.gmodel_master.n_species == 1 ) { writefln("MASS:           %.12e", maxResiduals.vec[cqi.mass].re); }
         writefln("X-MOMENTUM:     %.12e", maxResiduals.vec[cqi.xMom].re);
         writefln("Y-MOMENTUM:     %.12e", maxResiduals.vec[cqi.yMom].re);
         if ( GlobalConfig.dimensions == 3 )
@@ -385,15 +389,27 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         string refResidFname = jobName ~ "-ref-residuals.saved";
         auto refResid = File(refResidFname, "w");
         if ( GlobalConfig.dimensions == 2 ) {
-            refResid.writef("%.18e %.18e %.18e %.18e %.18e",
-                            normRef, maxResiduals.vec[cqi.mass].re, maxResiduals.vec[cqi.xMom].re,
-                            maxResiduals.vec[cqi.yMom].re, maxResiduals.vec[cqi.totEnergy].re);
-        }
-        else {
-            refResid.writef("%.18e %.18e %.18e %.18e %.18e %.18e",
-                            normRef, maxResiduals.vec[cqi.mass].re, maxResiduals.vec[cqi.xMom].re,
-                            maxResiduals.vec[cqi.yMom].re, maxResiduals.vec[cqi.zMom].re,
-                            maxResiduals.vec[cqi.totEnergy].re);
+            if ( GlobalConfig.gmodel_master.n_species == 1 ) {
+                refResid.writef("%.18e %.18e %.18e %.18e %.18e",
+                                normRef, maxResiduals.vec[cqi.mass].re, maxResiduals.vec[cqi.xMom].re,
+                                maxResiduals.vec[cqi.yMom].re, maxResiduals.vec[cqi.totEnergy].re);
+            } else {
+                refResid.writef("%.18e %.18e %.18e %.18e",
+                                normRef, maxResiduals.vec[cqi.xMom].re,
+                                maxResiduals.vec[cqi.yMom].re, maxResiduals.vec[cqi.totEnergy].re);
+            }
+        } else {
+            if ( GlobalConfig.gmodel_master.n_species == 1 ) {
+                refResid.writef("%.18e %.18e %.18e %.18e %.18e %.18e",
+                                normRef, maxResiduals.vec[cqi.mass].re, maxResiduals.vec[cqi.xMom].re,
+                                maxResiduals.vec[cqi.yMom].re, maxResiduals.vec[cqi.zMom].re,
+                                maxResiduals.vec[cqi.totEnergy].re);
+            } else {
+                refResid.writef("%.18e %.18e %.18e %.18e %.18e",
+                                normRef, maxResiduals.vec[cqi.xMom].re,
+                                maxResiduals.vec[cqi.yMom].re, maxResiduals.vec[cqi.zMom].re,
+                                maxResiduals.vec[cqi.totEnergy].re);
+            }
         }
         foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
             refResid.writef(" %.18e", maxResiduals.vec[cqi.rhoturb+it].re);
@@ -457,8 +473,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             fResid.writeln("#  9: wall-clock, s");
             fResid.writeln("#  10: global-residual-abs");
             fResid.writeln("# 11: global-residual-rel");
-            fResid.writefln("#  %02d: mass-abs", 12+2*MASS);
-            fResid.writefln("# %02d: mass-rel", 12+2*MASS+1);
+            if ( GlobalConfig.gmodel_master.n_species == 1 ) {
+                fResid.writefln("#  %02d: mass-abs", 12+2*MASS);
+                fResid.writefln("# %02d: mass-rel", 12+2*MASS+1);
+            }
             fResid.writefln("# %02d: x-mom-abs", 12+2*X_MOM);
             fResid.writefln("# %02d: x-mom-rel", 12+2*X_MOM+1);
             fResid.writefln("# %02d: y-mom-abs", 12+2*Y_MOM);
@@ -556,7 +574,17 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 auto cqi = blk.myConfig.cqi;
                 foreach (cell; blk.cells) {
                     // limit the change in the conserved mass by some user defined amount (theta)
-                    number rel_diff_limit = fabs(blk.dU[cellCount+MASS]/(theta*cell.U[0].vec[cqi.mass]));
+                    number rel_diff_limit;
+                    if (cqi.n_species == 1) { rel_diff_limit = fabs(blk.dU[cellCount+MASS]/(theta*cell.U[0].vec[cqi.mass])); }
+                    else {
+                        number mass = 0.0;
+                        number dmass = 0.0;
+                        foreach(isp; 0 .. cqi.n_species) {
+                            mass += cell.U[0].vec[cqi.species+isp];
+                            dmass += blk.dU[cellCount+SPECIES+isp];
+                        }
+                        rel_diff_limit = fabs(dmass/(theta*mass));
+                    }
                     omega = 1.0/(max(rel_diff_limit,1.0/omega));
                     // ensure thermodynamic state variables are positive
                     bool failed_decode = true;
@@ -628,7 +656,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             auto cqi = blk.myConfig.cqi;
             foreach (cell; blk.cells) {
                 cell.U[1].copy_values_from(cell.U[0]);
-                cell.U[1].vec[cqi.mass] = cell.U[0].vec[cqi.mass] + omega*blk.dU[cellCount+MASS];
+                if (blk.myConfig.n_species == 1) { cell.U[1].vec[cqi.mass] = cell.U[0].vec[cqi.mass] + omega*blk.dU[cellCount+MASS]; }
                 cell.U[1].vec[cqi.xMom] = cell.U[0].vec[cqi.xMom] + omega*blk.dU[cellCount+X_MOM];
                 cell.U[1].vec[cqi.yMom] = cell.U[0].vec[cqi.yMom] + omega*blk.dU[cellCount+Y_MOM];
                 if ( blk.myConfig.dimensions == 3 )
@@ -720,12 +748,20 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             if (GlobalConfig.is_master_task) {
                 auto cqi = GlobalConfig.cqi;
                 fResid = File(residFname, "a");
-                fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %3d %5d %.8f %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e ",
-                              step, pseudoSimTime, dt, cfl, eta, nRestarts, nIters, fnCount, wallClockElapsed,
-                              normNew, normNew/normRef,
-                              currResiduals.vec[cqi.mass].re, currResiduals.vec[cqi.mass].re/maxResiduals.vec[cqi.mass].re,
-                              currResiduals.vec[cqi.xMom].re, currResiduals.vec[cqi.xMom].re/maxResiduals.vec[cqi.xMom].re,
-                              currResiduals.vec[cqi.yMom].re, currResiduals.vec[cqi.yMom].re/maxResiduals.vec[cqi.yMom].re);
+                if ( GlobalConfig.gmodel_master.n_species == 1 ) {
+                    fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %3d %5d %.8f %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e ",
+                                  step, pseudoSimTime, dt, cfl, eta, nRestarts, nIters, fnCount, wallClockElapsed,
+                                  normNew, normNew/normRef,
+                                  currResiduals.vec[cqi.mass].re, currResiduals.vec[cqi.mass].re/maxResiduals.vec[cqi.mass].re,
+                                  currResiduals.vec[cqi.xMom].re, currResiduals.vec[cqi.xMom].re/maxResiduals.vec[cqi.xMom].re,
+                                  currResiduals.vec[cqi.yMom].re, currResiduals.vec[cqi.yMom].re/maxResiduals.vec[cqi.yMom].re);
+                } else {
+                    fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %3d %5d %.8f %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e ",
+                                  step, pseudoSimTime, dt, cfl, eta, nRestarts, nIters, fnCount, wallClockElapsed,
+                                  normNew, normNew/normRef,
+                                  currResiduals.vec[cqi.xMom].re, currResiduals.vec[cqi.xMom].re/maxResiduals.vec[cqi.xMom].re,
+                                  currResiduals.vec[cqi.yMom].re, currResiduals.vec[cqi.yMom].re/maxResiduals.vec[cqi.yMom].re);
+                }
                 if ( GlobalConfig.dimensions == 3 )
                     fResid.writef("%20.16e  %20.16e  ", currResiduals.vec[cqi.zMom].re, currResiduals.vec[cqi.zMom].re/maxResiduals.vec[cqi.zMom].re);
                 fResid.writef("%20.16e  %20.16e  ",
@@ -783,7 +819,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 formattedWrite(writer, "STEP= %7d  pseudo-time=%10.3e dt=%10.3e cfl=%10.3e  WC=%.1f \n", step, pseudoSimTime, dt, cfl, wallClockElapsed);
                 formattedWrite(writer, "RESIDUALS        absolute        relative\n");
                 formattedWrite(writer, "  global         %10.6e    %10.6e\n", normNew, normNew/normRef);
-                formattedWrite(writer, "  mass           %10.6e    %10.6e\n", currResiduals.vec[cqi.mass].re, currResiduals.vec[cqi.mass].re/maxResiduals.vec[cqi.mass].re);
+                if ( GlobalConfig.gmodel_master.n_species == 1 ) {
+                    formattedWrite(writer, "  mass           %10.6e    %10.6e\n", currResiduals.vec[cqi.mass].re, currResiduals.vec[cqi.mass].re/maxResiduals.vec[cqi.mass].re);
+                }
                 formattedWrite(writer, "  x-mom          %10.6e    %10.6e\n", currResiduals.vec[cqi.xMom].re, currResiduals.vec[cqi.xMom].re/maxResiduals.vec[cqi.xMom].re);
                 formattedWrite(writer, "  y-mom          %10.6e    %10.6e\n", currResiduals.vec[cqi.yMom].re, currResiduals.vec[cqi.yMom].re/maxResiduals.vec[cqi.yMom].re);
                 if ( GlobalConfig.dimensions == 3 )
@@ -1255,6 +1293,8 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
     }
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
+    // remove the conserved mass variable for multi-species gas
+    if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
     size_t MASS = GlobalConfig.cqi.mass;
     size_t X_MOM = GlobalConfig.cqi.xMom;
     size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -1275,7 +1315,7 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
         int cellCount = 0;
         foreach (cell; blk.cells) {
             cell.U[1].copy_values_from(cell.U[0]);
-            cell.U[1].vec[cqi.mass] += sigma*blk.zed[cellCount+MASS];
+            if ( nsp == 1 ) { cell.U[1].vec[cqi.mass] += sigma*blk.zed[cellCount+MASS]; }
             cell.U[1].vec[cqi.xMom] += sigma*blk.zed[cellCount+X_MOM];
             cell.U[1].vec[cqi.yMom] += sigma*blk.zed[cellCount+Y_MOM];
             if ( blk.myConfig.dimensions == 3 )
@@ -1309,7 +1349,7 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
         auto cqi = blk.myConfig.cqi;
         int cellCount = 0;
         foreach (cell; blk.cells) {
-            blk.zed[cellCount+MASS] = (cell.dUdt[1].vec[cqi.mass] - blk.FU[cellCount+MASS])/(sigma);
+            if ( nsp == 1 ) { blk.zed[cellCount+MASS] = (cell.dUdt[1].vec[cqi.mass] - blk.FU[cellCount+MASS])/(sigma); }
             blk.zed[cellCount+X_MOM] = (cell.dUdt[1].vec[cqi.xMom] - blk.FU[cellCount+X_MOM])/(sigma);
             blk.zed[cellCount+Y_MOM] = (cell.dUdt[1].vec[cqi.yMom] - blk.FU[cellCount+Y_MOM])/(sigma);
             if ( blk.myConfig.dimensions == 3 )
@@ -1346,6 +1386,8 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int 
         }
         // Make a stack-local copy of conserved quantities info
         size_t nConserved = GlobalConfig.cqi.n;
+        // remove the conserved mass variable for multi-species gas
+        if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
         size_t MASS = GlobalConfig.cqi.mass;
         size_t X_MOM = GlobalConfig.cqi.xMom;
         size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -1367,7 +1409,7 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int 
             int cellCount = 0;
             foreach (cell; blk.cells) {
                 cell.U[1].copy_values_from(cell.U[0]);
-                cell.U[1].vec[cqi.mass] += complex(0.0, sigma*blk.zed[cellCount+MASS].re);
+                if ( nsp == 1 ) { cell.U[1].vec[cqi.mass] += complex(0.0, sigma*blk.zed[cellCount+MASS].re); }
                 cell.U[1].vec[cqi.xMom] += complex(0.0, sigma*blk.zed[cellCount+X_MOM].re);
                 cell.U[1].vec[cqi.yMom] += complex(0.0, sigma*blk.zed[cellCount+Y_MOM].re);
                 if ( blk.myConfig.dimensions == 3 )
@@ -1399,7 +1441,7 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int 
             auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (cell; blk.cells) {
-                blk.zed[cellCount+MASS] = cell.dUdt[1].vec[cqi.mass].im/(sigma);
+                if ( nsp == 1 ) { blk.zed[cellCount+MASS] = cell.dUdt[1].vec[cqi.mass].im/(sigma); }
                 blk.zed[cellCount+X_MOM] = cell.dUdt[1].vec[cqi.xMom].im/(sigma);
                 blk.zed[cellCount+Y_MOM] = cell.dUdt[1].vec[cqi.yMom].im/(sigma);
                 if ( blk.myConfig.dimensions == 3 )
@@ -1571,6 +1613,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 {
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
+    // remove the conserved mass variable for multi-species gas
+    if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
     size_t MASS = GlobalConfig.cqi.mass;
     size_t X_MOM = GlobalConfig.cqi.xMom;
     size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -1610,7 +1654,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         size_t nmodes = blk.myConfig.gmodel.n_modes;
         auto cqi = blk.myConfig.cqi;
         int cellCount = 0;
-        blk.maxRate.vec[cqi.mass] = 0.0;
+        if ( nsp == 1 ) { blk.maxRate.vec[cqi.mass] = 0.0; }
         blk.maxRate.vec[cqi.xMom] = 0.0;
         blk.maxRate.vec[cqi.yMom] = 0.0;
         if ( blk.myConfig.dimensions == 3 )
@@ -1628,7 +1672,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         foreach(imode; 0 .. nmodes){ blk.maxRate.vec[cqi.modes+imode] = 0.0; }
         }
         foreach (i, cell; blk.cells) {
-            blk.FU[cellCount+MASS] = cell.dUdt[0].vec[cqi.mass];
+            if ( nsp == 1 ) { blk.FU[cellCount+MASS] = cell.dUdt[0].vec[cqi.mass]; }
             blk.FU[cellCount+X_MOM] = cell.dUdt[0].vec[cqi.xMom];
             blk.FU[cellCount+Y_MOM] = cell.dUdt[0].vec[cqi.yMom];
             if ( blk.myConfig.dimensions == 3 )
@@ -1651,7 +1695,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 writefln("i= %d, dUdt.mass= %e", i, cell.dUdt[0].vec[cqi.mass].re);
             }
             */
-            blk.maxRate.vec[cqi.mass] = fmax(blk.maxRate.vec[cqi.mass], fabs(cell.dUdt[0].vec[cqi.mass]));
+            if ( nsp == 1 ) { blk.maxRate.vec[cqi.mass] = fmax(blk.maxRate.vec[cqi.mass], fabs(cell.dUdt[0].vec[cqi.mass])); }
             /*
             if (blk.id == 0) {
                 writefln("i= %d, maxRate.vec[cqi.mass]= %e", i, blk.maxRate.vec[cqi.mass].re);
@@ -1691,7 +1735,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
     foreach (blk; localFluidBlocks) {
         auto cqi = blk.myConfig.cqi;
-        maxMass = fmax(maxMass, blk.maxRate.vec[cqi.mass]);
+        if ( blk.myConfig.gmodel.n_species == 1 ) { maxMass = fmax(maxMass, blk.maxRate.vec[cqi.mass]); }
         maxMomX = fmax(maxMomX, blk.maxRate.vec[cqi.xMom]);
         maxMomY = fmax(maxMomY, blk.maxRate.vec[cqi.yMom]);
         if ( blk.myConfig.dimensions == 3 )
@@ -1715,7 +1759,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     }
     // In distributed memory, reduce the max values and ensure everyone has a copy
     version(mpi_parallel) {
-        MPI_Allreduce(MPI_IN_PLACE, &(maxMass.re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        if ( GlobalConfig.gmodel_master.n_species == 1 ) { MPI_Allreduce(MPI_IN_PLACE, &(maxMass.re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD); }
         MPI_Allreduce(MPI_IN_PLACE, &(maxMomX.re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE, &(maxMomY.re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
         if (GlobalConfig.dimensions == 3) { MPI_Allreduce(MPI_IN_PLACE, &(maxMomZ.re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD); }
@@ -1735,7 +1779,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         }
     }
     // Place some guards when time-rate-of-changes are very small.
-    maxMass = fmax(maxMass, minNonDimVal);
+    if ( GlobalConfig.gmodel_master.n_species == 1 ) { maxMass = fmax(maxMass, minNonDimVal); }
     maxMomX = fmax(maxMomX, minNonDimVal);
     maxMomY = fmax(maxMomY, minNonDimVal);
     if ( GlobalConfig.dimensions == 3 )
@@ -1756,7 +1800,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     foreach (blk; parallel(localFluidBlocks,1)) {
         auto cqi = blk.myConfig.cqi;
         if (blk.myConfig.sssOptions.useScaling) {
-            blk.maxRate.vec[cqi.mass] = maxMass;
+            if ( blk.myConfig.gmodel.n_species == 1 ) { blk.maxRate.vec[cqi.mass] = maxMass; }
             blk.maxRate.vec[cqi.xMom] = maxMomX;
             blk.maxRate.vec[cqi.yMom] = maxMomY;
             if ( blk.myConfig.dimensions == 3 )
@@ -1779,7 +1823,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             }
         }
         else { // just scale by 1
-            blk.maxRate.vec[cqi.mass] = 1.0;
+            if ( blk.myConfig.gmodel.n_species == 1 ) { blk.maxRate.vec[cqi.mass] = 1.0; }
             blk.maxRate.vec[cqi.xMom] = 1.0;
             blk.maxRate.vec[cqi.yMom] = 1.0;
             if ( blk.myConfig.dimensions == 3 )
@@ -1857,7 +1901,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         blk.x0[] = to!number(0.0);
         int cellCount = 0;
         foreach (cell; blk.cells) {
-            blk.r0[cellCount+MASS] = (1./blk.maxRate.vec[cqi.mass])*blk.FU[cellCount+MASS];
+            if ( nsp == 1 ) { blk.r0[cellCount+MASS] = (1./blk.maxRate.vec[cqi.mass])*blk.FU[cellCount+MASS]; }
             blk.r0[cellCount+X_MOM] = (1./blk.maxRate.vec[cqi.xMom])*blk.FU[cellCount+X_MOM];
             blk.r0[cellCount+Y_MOM] = (1./blk.maxRate.vec[cqi.yMom])*blk.FU[cellCount+Y_MOM];
             if ( blk.myConfig.dimensions == 3 )
@@ -1955,7 +1999,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 auto cqi = blk.myConfig.cqi;
                 int cellCount = 0;
                 foreach (cell; blk.cells) {
-                    blk.v[cellCount+MASS] *= (blk.maxRate.vec[cqi.mass]);
+                    if ( nsp == 1 ) { blk.v[cellCount+MASS] *= (blk.maxRate.vec[cqi.mass]); }
                     blk.v[cellCount+X_MOM] *= (blk.maxRate.vec[cqi.xMom]);
                     blk.v[cellCount+Y_MOM] *= (blk.maxRate.vec[cqi.yMom]);
                     if ( blk.myConfig.dimensions == 3 )
@@ -2079,7 +2123,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 auto cqi = blk.myConfig.cqi;
                 int cellCount = 0;
                 foreach (cell; blk.cells) {
-                    blk.w[cellCount+MASS] *= (1./blk.maxRate.vec[cqi.mass]);
+                    if ( nsp == 1 ) { blk.w[cellCount+MASS] *= (1./blk.maxRate.vec[cqi.mass]); }
                     blk.w[cellCount+X_MOM] *= (1./blk.maxRate.vec[cqi.xMom]);
                     blk.w[cellCount+Y_MOM] *= (1./blk.maxRate.vec[cqi.yMom]);
                     if ( blk.myConfig.dimensions == 3 )
@@ -2202,7 +2246,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (cell; blk.cells) {
-                blk.zed[cellCount+MASS] *= (blk.maxRate.vec[cqi.mass]);
+                if ( nsp == 1 ) { blk.zed[cellCount+MASS] *= (blk.maxRate.vec[cqi.mass]); }
                 blk.zed[cellCount+X_MOM] *= (blk.maxRate.vec[cqi.xMom]);
                 blk.zed[cellCount+Y_MOM] *= (blk.maxRate.vec[cqi.yMom]);
                 if ( blk.myConfig.dimensions == 3 )
@@ -2354,6 +2398,8 @@ void max_residuals(ConservedQuantities residuals)
 {
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
+    // remove the conserved mass variable for multi-species gas
+    if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
 
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
@@ -2361,7 +2407,7 @@ void max_residuals(ConservedQuantities residuals)
         size_t nmodes = blk.myConfig.gmodel.n_modes;
         auto cqi = blk.myConfig.cqi;
         blk.residuals.copy_values_from(blk.cells[0].dUdt[0]);
-        blk.residuals.vec[cqi.mass] = fabs(blk.residuals.vec[cqi.mass]);
+        if ( nsp == 1 ) { blk.residuals.vec[cqi.mass] = fabs(blk.residuals.vec[cqi.mass]); }
         blk.residuals.vec[cqi.xMom] = fabs(blk.residuals.vec[cqi.xMom]);
         blk.residuals.vec[cqi.yMom] = fabs(blk.residuals.vec[cqi.yMom]);
         if ( blk.myConfig.dimensions == 3 )
@@ -2386,7 +2432,7 @@ void max_residuals(ConservedQuantities residuals)
         number[2] modesLocal;
 
         foreach (cell; blk.cells) {
-            massLocal = cell.dUdt[0].vec[cqi.mass];
+            if ( nsp == 1 ) { massLocal = cell.dUdt[0].vec[cqi.mass]; }
             xMomLocal = cell.dUdt[0].vec[cqi.xMom];
             yMomLocal = cell.dUdt[0].vec[cqi.yMom];
             zMomLocal = cell.dUdt[0].vec[cqi.zMom];
@@ -2400,7 +2446,7 @@ void max_residuals(ConservedQuantities residuals)
             version(multi_T_gas){
             foreach(imode; 0 .. nmodes){ modesLocal[imode] = cell.dUdt[0].vec[cqi.modes+imode]; }
             }
-            blk.residuals.vec[cqi.mass] = fmax(blk.residuals.vec[cqi.mass], massLocal);
+            if ( nsp == 1 ) { blk.residuals.vec[cqi.mass] = fmax(blk.residuals.vec[cqi.mass], massLocal); }
             blk.residuals.vec[cqi.xMom] = fmax(blk.residuals.vec[cqi.xMom], xMomLocal);
             blk.residuals.vec[cqi.yMom] = fmax(blk.residuals.vec[cqi.yMom], yMomLocal);
             if ( blk.myConfig.dimensions == 3 )
@@ -2422,7 +2468,7 @@ void max_residuals(ConservedQuantities residuals)
     residuals.copy_values_from(localFluidBlocks[0].residuals);
     foreach (blk; localFluidBlocks) {
         auto cqi = blk.myConfig.cqi;
-        residuals.vec[cqi.mass] = fmax(residuals.vec[cqi.mass], blk.residuals.vec[cqi.mass]);
+        if ( blk.myConfig.gmodel.n_species == 1 ) { residuals.vec[cqi.mass] = fmax(residuals.vec[cqi.mass], blk.residuals.vec[cqi.mass]); }
         residuals.vec[cqi.xMom] = fmax(residuals.vec[cqi.xMom], blk.residuals.vec[cqi.xMom]);
         residuals.vec[cqi.yMom] = fmax(residuals.vec[cqi.yMom], blk.residuals.vec[cqi.yMom]);
         if ( blk.myConfig.dimensions == 3 )
@@ -2449,8 +2495,10 @@ void max_residuals(ConservedQuantities residuals)
         // In MPI context, only the master task (rank 0) has collated the residuals
         double maxResid;
         auto cqi = GlobalConfig.cqi;
-        MPI_Reduce(&(residuals.vec[cqi.mass].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-        if (GlobalConfig.is_master_task) { residuals.vec[cqi.mass].re = maxResid; }
+        if ( GlobalConfig.gmodel_master.n_species == 1 ) {
+            MPI_Reduce(&(residuals.vec[cqi.mass].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+            if (GlobalConfig.is_master_task) { residuals.vec[cqi.mass].re = maxResid; }
+        }
         MPI_Reduce(&(residuals.vec[cqi.xMom].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
         if (GlobalConfig.is_master_task) { residuals.vec[cqi.xMom] = to!number(maxResid); }
         MPI_Reduce(&(residuals.vec[cqi.yMom].re), &maxResid, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
@@ -2490,18 +2538,34 @@ void rewrite_times_file(RestartInfo[] times)
     auto cqi = GlobalConfig.cqi;
     foreach (i, rInfo; times) {
         if ( GlobalConfig.dimensions == 2 ) {
-            f.writef("%04d %.18e %.18e %.18e %d %.18e %.18e %.18e %.18e %.18e",
-                     i, rInfo.pseudoSimTime.re, rInfo.dt.re, rInfo.cfl.re, rInfo.step,
-                     rInfo.globalResidual.re, rInfo.residuals.vec[cqi.mass].re,
-                     rInfo.residuals.vec[cqi.xMom].re, rInfo.residuals.vec[cqi.yMom].re,
-                     rInfo.residuals.vec[cqi.totEnergy].re);
+            if ( GlobalConfig.gmodel_master.n_species == 1 ) {
+                f.writef("%04d %.18e %.18e %.18e %d %.18e %.18e %.18e %.18e %.18e",
+                         i, rInfo.pseudoSimTime.re, rInfo.dt.re, rInfo.cfl.re, rInfo.step,
+                         rInfo.globalResidual.re, rInfo.residuals.vec[cqi.mass].re,
+                         rInfo.residuals.vec[cqi.xMom].re, rInfo.residuals.vec[cqi.yMom].re,
+                         rInfo.residuals.vec[cqi.totEnergy].re);
+            } else {
+                f.writef("%04d %.18e %.18e %.18e %d %.18e %.18e %.18e %.18e",
+                         i, rInfo.pseudoSimTime.re, rInfo.dt.re, rInfo.cfl.re, rInfo.step,
+                         rInfo.globalResidual.re,
+                         rInfo.residuals.vec[cqi.xMom].re, rInfo.residuals.vec[cqi.yMom].re,
+                         rInfo.residuals.vec[cqi.totEnergy].re);
+            }
         }
         else {
-            f.writef("%04d %.18e %.18e %.18e %d %.18e %.18e %.18e %.18e %.18e %.18e",
-                     i, rInfo.pseudoSimTime.re, rInfo.dt.re, rInfo.cfl.re, rInfo.step,
-                     rInfo.globalResidual.re, rInfo.residuals.vec[cqi.mass].re,
-                     rInfo.residuals.vec[cqi.xMom].re, rInfo.residuals.vec[cqi.yMom].re, rInfo.residuals.vec[cqi.zMom].re,
-                     rInfo.residuals.vec[cqi.totEnergy].re);
+            if ( GlobalConfig.gmodel_master.n_species == 1 ) {
+                f.writef("%04d %.18e %.18e %.18e %d %.18e %.18e %.18e %.18e %.18e %.18e",
+                         i, rInfo.pseudoSimTime.re, rInfo.dt.re, rInfo.cfl.re, rInfo.step,
+                         rInfo.globalResidual.re, rInfo.residuals.vec[cqi.mass].re,
+                         rInfo.residuals.vec[cqi.xMom].re, rInfo.residuals.vec[cqi.yMom].re, rInfo.residuals.vec[cqi.zMom].re,
+                         rInfo.residuals.vec[cqi.totEnergy].re);
+            } else {
+                f.writef("%04d %.18e %.18e %.18e %d %.18e %.18e %.18e %.18e %.18e",
+                         i, rInfo.pseudoSimTime.re, rInfo.dt.re, rInfo.cfl.re, rInfo.step,
+                         rInfo.globalResidual.re,
+                         rInfo.residuals.vec[cqi.xMom].re, rInfo.residuals.vec[cqi.yMom].re, rInfo.residuals.vec[cqi.zMom].re,
+                         rInfo.residuals.vec[cqi.totEnergy].re);
+            }
         }
         foreach(it; 0 .. GlobalConfig.turb_model.nturb){
             f.writef(" %.18e", rInfo.residuals.vec[cqi.rhoturb+it].re);

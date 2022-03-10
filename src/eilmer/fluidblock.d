@@ -1093,7 +1093,10 @@ public:
             cell.gather_residual_stencil_lists(spatial_order_of_jacobian);
             nentry += cell.cell_list.length;
         }
-        shared size_t my_nConserved = GlobalConfig.cqi.n;
+
+        shared size_t my_nConserved = myConfig.cqi.n;
+        // remove the conserved mass variable for multi-species gas
+        if (GlobalConfig.cqi.n_species > 1) { my_nConserved = my_nConserved - 1; }
         size_t ncells = cells.length;
         flowJacobian = new FlowJacobian(sigma, myConfig.dimensions, my_nConserved, spatial_order_of_jacobian, nentry, ncells);
 
@@ -1123,6 +1126,8 @@ public:
         // we now populate the pre-sized sparse matrix representation of the flow Jacobian
         auto cqi = myConfig.cqi; // was GlobalConfig.cqi;
         auto nConserved = cqi.n;
+        // remove the conserved mass variable for multi-species gas
+        if (cqi.n_species > 1) { nConserved -= 1; }
         //flowJacobian.prepare_crs_indexes();
         // the first entry will always be filled, let's prepare for this entry
         flowJacobian.local.ia[flowJacobian.ia_idx] = 0;
@@ -1194,6 +1199,8 @@ public:
     {
         auto cqi = myConfig.cqi; // was GlobalConfig.cqi;
         auto nConserved = cqi.n;
+        // remove the conserved mass variable for multi-species gas
+        if (cqi.n_species > 1) { nConserved -= 1; }
         auto eps0 = flowJacobian.eps;
         number eps;
         int ftl = 1; int gtl = 0;
@@ -1266,6 +1273,8 @@ public:
          */
         auto cqi = myConfig.cqi; // The block object has its own.
         auto nConserved = cqi.n;
+        // remove the conserved mass variable for multi-species gas
+        if (cqi.n_species > 1) { nConserved -= 1; }
         auto eps0 = flowJacobian.eps;
         number eps;
         int gtl = 0; int ftl = 1;
@@ -1478,6 +1487,8 @@ public:
         evaluate_jacobian();
         assert(flowJacobian !is null, "Oops, we expect a flowJacobian object to be attached to the fluidblock.");
         size_t nConserved = GlobalConfig.cqi.n;
+        // remove the conserved mass variable for multi-species gas
+        if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
 
         // temporarily change interpolation order
         shared int interpolation_order_save = GlobalConfig.interpolation_order;
@@ -1525,6 +1536,8 @@ public:
 
     void evalConservativeJacobianVecProd(number[] vec, ref number[] sol) {
         size_t nConserved = GlobalConfig.cqi.n;
+        // remove the conserved mass variable for multi-species gas
+        if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
         size_t MASS = GlobalConfig.cqi.mass;
         size_t X_MOM = GlobalConfig.cqi.xMom;
         size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -1625,6 +1638,8 @@ public:
     void allocate_GMRES_workspace()
     {
         size_t nConserved = GlobalConfig.cqi.n;
+        // remove the conserved mass variable for multi-species gas
+        if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
         int n_species = GlobalConfig.gmodel_master.n_species();
         int n_modes = GlobalConfig.gmodel_master.n_modes();
         maxRate = new ConservedQuantities(nConserved);
