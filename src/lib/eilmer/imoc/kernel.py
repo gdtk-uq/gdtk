@@ -112,11 +112,17 @@ def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
                     idx_near.append(idx)
                 if len(idx_near) >= max_count: break
     else:
-        dist, pnts = kdtree.query((x, y), max_count, distance_upper_bound=tol)
+        _, pnts = kdtree.query((x, y), max_count, distance_upper_bound=tol)
         if tol <= 0.0:
             idx_near = [pnts[0]]
         else:
+            # Query seems to do something I don't like whereby the list is filled
+            # to the length of the max_count with the value of the length of nodes
+            # Going to manually remove any values which equal the number of nodes
+            # (this means the final node cannot be used)
             idx_near = pnts
+            idx_near = np.delete(idx_near, np.where(idx_near == len(nodes)))
+            idx_near = np.unique(idx_near)
     return idx_near
 
 
