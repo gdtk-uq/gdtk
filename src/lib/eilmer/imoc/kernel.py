@@ -121,7 +121,7 @@ def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
             # Going to manually remove any values which equal the number of nodes
             # (this means the final node cannot be used)
             idx_near = pnts
-            idx_near = np.delete(idx_near, np.where(idx_near == len(nodes)))
+            idx_near = np.delete(idx_near, np.where(idx_near == kdtree.n))
             idx_near = np.unique(idx_near)
     return idx_near
 
