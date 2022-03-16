@@ -790,6 +790,7 @@ class Facility_State(object):
         :param gas_state: eilmer gas object for the state
         :param v: velocity related to the object. Mach number will be found from this and the gas state too.
         :param reference_gas_state: a reference gas state which we can use to get the stagnation enthalpy of the object...
+
         """
 
         self.state_name = state_name
@@ -1298,17 +1299,40 @@ class Tube(object):
 
         if self.fill_gas_model == 'CEAGas' and self.fill_gas_name:
             fill_gmodel_location = '{0}/cea-{1}-gas-model.lua'.format(preset_gas_models_folder, self.fill_gas_name)
+            # we create this link and then use if it exists...
+            fill_room_temperature_only_gmodel_location = '{0}/cea-{1}-room-temperature-only-gas-model.lua'.format(preset_gas_models_folder, self.fill_gas_name)
         elif self.fill_gas_model == 'custom' and self.fill_gas_filename:
             fill_gmodel_location = self.fill_gas_filename
 
         fill_gmodel = GasModel(os.path.expandvars(fill_gmodel_location))
 
-        fill_state_gas_object = GasState(fill_gmodel)
-        fill_state_gas_object.p = self.fill_pressure
-        fill_state_gas_object.T = self.fill_temperature
+        if os.path.exists(os.path.expandvars(fill_room_temperature_only_gmodel_location)):
 
-        fill_state_gas_object.update_thermo_from_pT()
-        fill_state_gas_object.update_sound_speed()
+            # if there is a room temperature only object we "trick" the fill state gas model to use that when it sets the gas
+            # state and then replace the correct gas state after. This seemed to be the best / cleanest way to do it.
+
+            fill_room_temperature_only_gmodel = GasModel(os.path.expandvars(fill_room_temperature_only_gmodel_location))
+
+            fill_state_gas_object = GasState(fill_gmodel)
+
+            fill_state_gas_object.gmodel = fill_room_temperature_only_gmodel
+
+            fill_state_gas_object.p = self.fill_pressure
+            fill_state_gas_object.T = self.fill_temperature
+
+            fill_state_gas_object.update_thermo_from_pT()
+            fill_state_gas_object.update_sound_speed()
+
+            fill_state_gas_object.gmodel = fill_gmodel
+
+        else:
+            fill_state_gas_object = GasState(fill_gmodel)
+
+            fill_state_gas_object.p = self.fill_pressure
+            fill_state_gas_object.T = self.fill_temperature
+
+            fill_state_gas_object.update_thermo_from_pT()
+            fill_state_gas_object.update_sound_speed()
 
         # fill state isn't moving...
         fill_state_v = 0.0 #m/s
