@@ -1,0 +1,38 @@
+# x2_cold_driver_co2_theory.yaml: 
+#
+# This is a simple config file to run a fully theoretical
+# PITOT3 case for a cold driven CO2 X2 condition from the work of
+# Sangdi Gu.
+# This is the condition from Gu et al. (2021)
+# An Experimental Study of CO2 Thermochemical Nonequilibrium
+# AIAA Journal 
+# https://doi.org/10.2514/1.J061037
+# NOTE: as I pushed this, as the nozzle calculation
+# is failing for this condition. I hope to be able to fix this soon...
+#
+# Chris James (c.james4@uq.edu.au) - 16/03/22
+
+# initial code set up
+mode : 'fully_theoretical'
+output_filename : 'x2_cold_driver_co2_theory'
+
+# facility set up
+facility : 'x2_nozzle'
+driver_condition : 'x2-cold-driver-pure-He-2-MPa'
+
+# shock tube
+test_gas_gas_model : 'CEAGas'
+#test_gas_name : 'co2-no-ions'
+test_gas_name : mars-c02-n2-with-ions
+p1 : 600.0 # Pa
+
+# acceleration tube
+p5 : 10.0 # Pa
+acceleration_tube_expand_to : 'shock_speed'
+
+# nozzle area ratio
+area_ratio : 5.64
+
+# test section stuff
+cone_half_angle_degrees : 15.0 # degrees
+wedge_angle_degrees : 54.0 # degrees
