@@ -24,6 +24,7 @@ fan = []
 for i in range(7):
     nu_value = math.radians(0.375 + i*3.0)
     new_node = kernel.Node(x=0.0, y=0.1, nu=nu_value, mach=PM2(nu_value), theta=nu_value)
+    kernel.register_node_in_mesh(new_node)
     fan.append(new_node.indx)
 
 print("Compute the first wall node radiating from the fan.")
@@ -56,6 +57,7 @@ old = new_nodes[-1]
 old_edge = axis_node
 for i in range(1,11):
     new_edge_node = kernel.Node(x=x_cone+i*dx, y=i*dy, nu=PM1(M_cone), mach=M_cone, theta=0.0)
+    kernel.register_node_in_mesh(new_edge_node)
     new_edge_node.cplus_up = old_edge
     kernel.nodes[old_edge].cplus_down = new_edge_node.indx
     new_nodes = unit.march_along_cminus(old, new_edge_node.indx, 'up')
@@ -63,16 +65,14 @@ for i in range(1,11):
     old_edge = new_edge_node.indx
 
 print("Start at the last node on the fan and step along a streamline.")
-# We continue until either (1) we cross the characteristic defining
-# the start of the uniform flow region or (2) the interpolation fails.
-streamline = [fan[-1]]
-while True:
-    indx = unit.step_stream_node(streamline[-1], -1, 0.05)
-    if indx == -1: break
-    streamline.append(indx)
-    node = kernel.nodes[indx]
-    y_cone = (node.x - x_cone)*dy/dx
-    if node.y <= y_cone: break
-
-# Create our graphical mesh by adding all kernel nodes to mesh
-[kernel.mesh_indices.append(node.indx) for node in kernel.nodes]
+# We continue until either
+# (1) the interpolation fails, or
+# (2) we cross the characteristic defining the start of the uniform flow region.
+indx = fan[-1]
+kernel.register_streamline_start(indx)
+while indx >= 0:
+    indx = unit.step_stream_node(indx, -1, 0.05)
+    if indx >= 0:
+        node = kernel.nodes[indx]
+        y_cone = (node.x - x_cone)*dy/dx
+        if node.y <= y_cone: break

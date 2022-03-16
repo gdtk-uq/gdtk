@@ -158,6 +158,7 @@ def interior(node1, node2, node4):
         n4.cminus_up = node1; n1.cminus_down = node4
     else:
         n4.cminus_down = node1; n1.cminus_up = node4
+    kernel.char_mesh.append(n4.indx)
     return n4.indx
 
 
@@ -214,6 +215,7 @@ def insert(node1, node2, node4, alpha):
         n4.czero_up = node2; n2.czero_down = node4
         n1.czero_up = node4; n4.czero_down  = node1
     # Assuming success...
+    kernel.char_mesh.append(n4.indx)
     return n4.indx
 
 
@@ -313,6 +315,7 @@ def cminus_wall(wall, node1, node4):
         n4.cminus_up = node1; n1.cminus_down = node4
     else:
         n4.cminus_down = node1; n1.cminus_up = node4
+    kernel.char_mesh.append(n4.indx)
     return n4.indx
 
 
@@ -397,6 +400,7 @@ def cplus_wall(wall, node2, node4):
         n4.cplus_up = node2; n2.cplus_down = node4
     else:
         n4.cplus_down = node2; n2.cplus_up = node4
+    kernel.char_mesh.append(n4.indx)
     return n4.indx
 
 
@@ -506,6 +510,7 @@ def cplus_free(node0, node2, node4):
         n4.cplus_up = node2; n2.cplus_down = node4
     else:
         n4.cplus_down = node2; n2.cplus_up = node4
+    kernel.char_mesh.append(n4.indx)
     return n4.indx
 
 
@@ -615,6 +620,7 @@ def cminus_free(node0, node1, node4):
         n4.cminus_up = node1; n1.cminus_down = node4
     else:
         n4.cminus_down = node1; n1.cminus_up = node4
+    kernel.char_mesh.append(n4.indx)
     return n4.indx
 
 

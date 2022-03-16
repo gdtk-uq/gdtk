@@ -245,10 +245,10 @@ def saveDataFile():
     f = open(filename, 'w')
     for node in kernel.nodes:
         f.write("%s\n" % str(node))
-    f.write("mesh_indx_list=[\n")
-    n = len(kernel.mesh_indices)
+    f.write("char_mesh=[\n")
+    n = len(kernel.char_mesh)
     for i in range(n):
-        f.write("%d" % kernel.mesh_indices[i])
+        f.write("%d" % kernel.char_mesh[i])
         if i+1 < n:
             f.write(",")
             ws = "\n" if (i+1) % 10 == 0 else " "
@@ -436,16 +436,16 @@ def plotMesh():
     r = 15 if show_node_numbers else 3
     node_indx = {}
     object_id = {}
-    for i in kernel.mesh_indices:
-        node = kernel.nodes[i]
-        x = canvas_x(node.x); y = canvas_y(node.y)
-        myid = c.create_oval(x-r, y-r, x+r, y+r, outline='black',
-                             fill='gray', tags='nodes')
-        object_id[node.indx] = myid
-        node_indx[myid] = node.indx
-        if show_node_numbers:
-            c.create_text(x, y, text="%d" % node.indx, anchor='center', tags='nodeids')
-        if show_char_mesh:
+    if show_char_mesh:
+        for i in kernel.char_mesh:
+            node = kernel.nodes[i]
+            x = canvas_x(node.x); y = canvas_y(node.y)
+            myid = c.create_oval(x-r, y-r, x+r, y+r, outline='black',
+                                 fill='gray', tags='nodes')
+            object_id[node.indx] = myid
+            node_indx[myid] = node.indx
+            if show_node_numbers:
+                c.create_text(x, y, text="%d" % node.indx, anchor='center', tags='nodeids')
             if node.cplus_up >= 0:
                 nb = kernel.nodes[node.cplus_up]
                 xb = canvas_x(nb.x); yb = canvas_y(nb.y)
@@ -466,7 +466,18 @@ def plotMesh():
                 xb = canvas_x(nb.x); yb = canvas_y(nb.y)
                 line_seg = c.create_line(x, y, xb, yb, fill='green', width=2, tags='mesh')
                 c.lower(line_seg)
-        if show_streamlines:
+    if show_streamlines:
+        # Collect the node indices for each streamline starting point.
+        streamline_nodes = []
+        for i in kernel.streamlines:
+            streamline_nodes += kernel.get_streamline_nodes(i)
+        for i in streamline_nodes:
+            node = kernel.nodes[i]
+            x = canvas_x(node.x); y = canvas_y(node.y)
+            myid = c.create_oval(x-r, y-r, x+r, y+r, outline='black',
+                                 fill='gray', tags='nodes')
+            object_id[node.indx] = myid
+            node_indx[myid] = node.indx
             if node.czero_up >= 0:
                 nb = kernel.nodes[node.czero_up]
                 xb = canvas_x(nb.x); yb = canvas_y(nb.y)

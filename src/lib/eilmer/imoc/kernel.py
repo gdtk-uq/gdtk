@@ -4,9 +4,9 @@ Kernel data and functions for the Isentropic Method-Of-Characteristics.
 This is a regrowth of the old IMOC code that was implemented in C+Tcl/Tk.
 
 Author(s):
-  Peter J.
-  Centre for Hypersonics,
-  School of Mechanical Engineering, U of Q.
+  Peter J. (1) and Fabian Zander (2)
+  1. Centre for Hypersonics, School of Mechanical Engineering, UofQ.
+  2. Institute for Advanced Engineering and Space Sciences, USQ
 
 Version:
   2019-12-28: Let's start coding in Python and see how it develops...
@@ -22,10 +22,19 @@ p0 = 1.0 # Nondimensional total pressure for flow
 T0 = 1.0 # Nondimensional total temperature for flow
 axisymmetric = False
 
-nodes = [] # Storage for the Node objects.
-mesh_indices = [] # Indices of the nodes that have been added to the characteristics mesh.
+# Storage for all the Node objects.
+nodes = []
+# The indices that are used to link nodes into a characteristic mesh
+# and into streamlines are the locations of the nodes in this list.
+# Once a node is constructed and added to this list, it is important
+# not to remove it, else our simple linking will not work.
 
-walls = [] # Storage for the user-defined functions that specify the walls.
+# Indices of the nodes that have been added to the characteristics mesh.
+char_mesh = []
+# Indices of the starting nodes on the streamlines.
+streamlines = []
+# Storage for the user-defined functions that specify the walls.
+walls = []
 
 class Node(object):
     __slots__ = ['indx', 'x', 'y',
@@ -47,12 +56,16 @@ class Node(object):
         If indx is not supplied, the new Node is appended to nodes.
 
         Note that we depend upon the index within the nodes storage list
-        being the same as the values of the indx attribute.
+        being the same as the value of the indx attribute.
         """
         if indx is None: indx = len(nodes)
         self.indx = indx
         self.x = x; self.y = y
         self.theta = theta; self.nu = nu; self.mach = mach
+        # Indices for linking nodes.
+        # A negative value (i.e. -1) indicates no link.
+        # This is a carry-over from the old C code.
+        # Maybe we should Python None values instead.
         self.cplus_up = cplus_up; self.cplus_down = cplus_down
         self.cminus_up = cminus_up; self.cminus_down = cminus_down
         self.czero_up = czero_up; self.czero_down = czero_down
@@ -72,6 +85,7 @@ class Node(object):
         strng += ", cminus_up=%d, cminus_down=%d" % (self.cminus_up, self.cminus_down)
         strng += ", czero_up=%d, czero_down=%d)" % (self.czero_up, self.czero_down)
         return strng
+
 
 def create_kd_tree():
     kdtree = spatial.KDTree(np.array([(node.x, node.y) for node in nodes]))
@@ -124,6 +138,46 @@ def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
             idx_near = np.delete(idx_near, np.where(idx_near == kdtree.n))
             idx_near = np.unique(idx_near)
     return idx_near
+
+def register_node_in_mesh(i):
+    """
+    Add nodes[i] to the characteristic mesh.
+    """
+    if isinstance(i, int):
+        char_mesh.append(i)
+    elif isinstance(i, Node):
+        char_mesh.append(i.indx)
+    else:
+        raise RuntimeError("Not an index nor a Node")
+    return len(char_mesh)
+
+def register_streamline_start(i):
+    """
+    Register nodes[i] as the starting node for a streamline.
+    """
+    if isinstance(i, int):
+        streamlines.append(i)
+    elif isinstance(i, Node):
+        streamlines.append(i.indx)
+    else:
+        raise RuntimeError("Not an index nor a Node")
+    return len(streamlines)
+
+def get_streamline_nodes(i):
+    """
+    Returns the indices of the streamline nodes,
+    for the streamline going through nodes[i].
+    """
+    indices = []
+    j = nodes[i].czero_down
+    while j >= 0:
+        indices.append(j)
+        j = nodes[j].czero_down
+    j = nodes[i].czero_up
+    while j >= 0:
+        indices.insert(0, j)
+        j = nodes[j].czero_up
+    return indices
 
 
 class Wall(object):

@@ -47,9 +47,9 @@ assert (n10.cminus_up == n3.indx) and (n3.cminus_down == n10.indx), \
     "interior node, cminus connection"
 assert (n10.cplus_up == n9.indx) and (n9.cplus_down == n10.indx), \
     "interior node, cplus connection"
-kernel.mesh_indices.append(n3.indx)
-kernel.mesh_indices.append(n9.indx)
-kernel.mesh_indices.append(n10.indx)
+kernel.char_mesh.append(n3.indx)
+kernel.char_mesh.append(n9.indx)
+kernel.char_mesh.append(n10.indx)
 
 print("Make a new wall-node along a C- characteristic.")
 def f0(x): return 0.0
@@ -65,7 +65,7 @@ assert approxEqual(n16.x, 0.101234), "cminus wall node, x position"
 assert approxEqual(n16.y, 0.0), "cminus wall node, y position"
 assert (n16.cminus_up == n10.indx) and (n10.cminus_down == n16.indx), \
     "cminus wall node, cminus connection"
-kernel.mesh_indices.append(n16.indx)
+kernel.char_mesh.append(n16.indx)
 
 print("Insert a node on that C- characteristic.")
 nXXindx = unit.insert(n10.indx, n16.indx, -1, 0.5)
@@ -77,7 +77,7 @@ assert (nXX.cminus_up == n10.indx) and (n10.cminus_down == nXX.indx), \
     "insert node on C- char, cminus connection A"
 assert (n16.cminus_up == nXX.indx) and (nXX.cminus_down == n16.indx), \
     "insert node on C- char, cminus connection B"
-kernel.mesh_indices.append(nXX.indx)
+kernel.char_mesh.append(nXX.indx)
 
 print("Extend a streamline.")
 # Put a new point in a place where it is sure that the streamline will intersect
@@ -85,12 +85,12 @@ print("Extend a streamline.")
 # The flow angle is somewhat arbitrary.
 # We just want to see that the new point gets put onto the characteristic line.
 n999 = kernel.Node(x=0.051787, y=0.035, nu=PM1(1.321), mach=1.321, theta=0.10472/2)
-kernel.mesh_indices.append(n999.indx)
+kernel.char_mesh.append(n999.indx)
 alpha1, alpha2 = unit.streamline_intersection_weights(n999.indx, n3.indx, n10.indx)
 print("alpha1=", alpha1, "alpha2=", alpha2)
 n1000indx = unit.add_stream_node(n999.indx, n3.indx, n10.indx, -1)
 n1000 = kernel.nodes[n1000indx]
-kernel.mesh_indices.append(n1000.indx)
+kernel.char_mesh.append(n1000.indx)
 
 print("Make a new wall-node along a C+ characteristic.")
 def f1(x): return 0.267949*x+0.111638
@@ -107,8 +107,8 @@ assert approxEqual(n57.x, 0.220358), "cplus wall node, x position"
 assert approxEqual(n57.y, 0.170683), "cplus wall node, y position"
 assert (n57.cplus_up == n49.indx) and (n49.cplus_down == n57.indx), \
     "cplus wall node, cplus connection"
-kernel.mesh_indices.append(n49.indx)
-kernel.mesh_indices.append(n57.indx)
+kernel.char_mesh.append(n49.indx)
+kernel.char_mesh.append(n57.indx)
 
 kernel.walls = [wall0, wall1]
 
