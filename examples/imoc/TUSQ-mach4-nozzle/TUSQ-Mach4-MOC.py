@@ -36,8 +36,8 @@ kernel.axisymmetric = True
 kernel.g = 1.4
 # First create and add all the centreline nodes
 for i in range(len(cl_x)):
-    kernel.Node(x=cl_x[i], y=0.0, nu=PM1(cl_mach[i]),
-                mach=cl_mach[i], theta=0.0)
+    n = kernel.Node(x=cl_x[i], y=0.0, nu=PM1(cl_mach[i]), mach=cl_mach[i], theta=0.0)
+    kernel.register_node_in_mesh(n)
 # Now add the interior nodes. As we are working up from the centreline at each
 # step up we lose one node (two nodes 'merge' into one). The max height of
 # 150mm was iteratively chosen to ensure the computed mesh covered the entire
@@ -47,8 +47,6 @@ while kernel.nodes[-1].y < 0.15 and top_node_count >= 2:
     for i in range(len(kernel.nodes) - top_node_count, len(kernel.nodes) - 1):
         unit.interior(i+1, i, -1)
     top_node_count -= 1
-# Create our graphical mesh by adding all kernel nodes to mesh
-[kernel.register_node_in_mesh(node.indx) for node in kernel.nodes]
 # Now, we know our Mach cone starts at node 27, we use this to calculate the
 # node which represents our nozzle exit. From this we can then use streamlines
 # to define our wall profile
@@ -62,18 +60,16 @@ print(f"The nozzle exit node (node {nozz_exit_node}) has a Mach number of "
       + f"{kernel.nodes[nozz_exit_node].mach} and a theta of "
       + f"{kernel.nodes[nozz_exit_node].theta:.5f}")
 # Now, we are going to create our nozzle wall by following the streamline
-# upstream from the nozzle exit point.
-# We are going to step upstream in 5mm increments.
-kdtree = kernel.create_kd_tree()
-dL = -8.0e-3
-nozz_wall_nodes = [] # Store for later reference.
-nozz_wall_nodes.append(nozz_exit_node) # Start at nozzle exit node.
-# March upstream, until we reach the throat.
-kernel.register_streamline_start(nozz_exit_node)
+# upstream from the nozzle exit point, until we reach the throat.
+nozz_wall_nodes = [nozz_exit_node] # Start at nozzle exit node.
+dL = -8.0e-3 # Negative increment steps upstream.
+kdt = kernel.create_kd_tree() # Use kdtree for a fast search.
 while kernel.nodes[nozz_wall_nodes[-1]].x > 0.01:
-    new_idx = unit.step_stream_node(nozz_wall_nodes[-1], -1, dL, kdtree=kdtree)
+    new_idx = unit.step_stream_node(nozz_wall_nodes[-1], -1, dL, kdtree=kdt)
+    if new_idx < 0: break
     nozz_wall_nodes.append(new_idx)
 nozz_wall_nodes.reverse()
+kernel.register_streamline_start(nozz_wall_nodes[0])
 # Now, we can do a check of the throat radius and see that this matches what
 # we are expecting from our analytical solution, it should be ~20mm.
 # The value will probably be slightly higher due to the way we defined the end
