@@ -48,7 +48,7 @@ while kernel.nodes[-1].y < 0.15 and top_node_count >= 2:
         unit.interior(i+1, i, -1)
     top_node_count -= 1
 # Create our graphical mesh by adding all kernel nodes to mesh
-[kernel.mesh_indices.append(node.indx) for node in kernel.nodes]
+[kernel.register_node_in_mesh(node.indx) for node in kernel.nodes]
 # Now, we know our Mach cone starts at node 27, we use this to calculate the
 # node which represents our nozzle exit. From this we can then use streamlines
 # to define our wall profile
@@ -64,14 +64,15 @@ print(f"The nozzle exit node (node {nozz_exit_node}) has a Mach number of "
 # Now, we are going to create our nozzle wall by following the streamline
 # upstream from the nozzle exit point.
 # We are going to step upstream in 5mm increments.
-dL = -5.0e-3
+kdtree = kernel.create_kd_tree()
+dL = -8.0e-3
 nozz_wall_nodes = [] # Store for later reference.
 nozz_wall_nodes.append(nozz_exit_node) # Start at nozzle exit node.
 # March upstream, until we reach the throat.
+kernel.register_streamline_start(nozz_exit_node)
 while kernel.nodes[nozz_wall_nodes[-1]].x > 0.01:
-    new_idx = unit.step_stream_node(nozz_wall_nodes[-1], -1, dL)
+    new_idx = unit.step_stream_node(nozz_wall_nodes[-1], -1, dL, kdtree=kdtree)
     nozz_wall_nodes.append(new_idx)
-    kernel.mesh_indices.append(new_idx)
 nozz_wall_nodes.reverse()
 # Now, we can do a check of the throat radius and see that this matches what
 # we are expecting from our analytical solution, it should be ~20mm.
