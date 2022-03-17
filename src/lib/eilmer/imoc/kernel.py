@@ -113,7 +113,7 @@ def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
             dist_near = sys.float_info.max
             for idx, node in enumerate(nodes):
                 dist = np.sqrt((x - node.x)**2 + (y - node.y)**2)
-                if node_dist < dist_near:
+                if dist < dist_near:
                     dist_near = dist
                     idx_near[0] = idx
             if idx_near[0] < 0:
