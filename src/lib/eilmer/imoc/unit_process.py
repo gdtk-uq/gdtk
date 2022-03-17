@@ -709,15 +709,20 @@ def add_stream_node(node0, node1, node2, node4):
     return n4.indx
 
 
-def step_stream_node(node0, node4, dL, kdtree=None):
+def step_stream_node(node0, node4, dL, dR=0.9, kdtree=None):
     """
     Replicating PJs C code
     This function calculates the next node along a streamline by the length dL
     INPUTS:
-            node0 - index of starting node
-            node4 - index of solution point, specify -1 for new node
-            dL    - length the move along the streamline. A positive value will
-                    step downstream while a negative value will step upstream.
+            node0  - index of starting node
+            node4  - index of solution point, specify -1 for new node
+            dL     - length to move along the streamline. A positive value will
+                     step downstream while a negative value will step upstream.
+            dR     - The search radius as a multiple of dL. Historically 0.9
+                     was used to avoid picking up the previous streamline point,
+                     however this is no longer required.
+            kdtree - provide a scipy.spatial.kdtree object to use much faster
+                     searching algorithms
     OUTPUT:
             node4 - index of solution node or -1, if no nearby nodes were found.
     """
@@ -728,13 +733,14 @@ def step_stream_node(node0, node4, dL, kdtree=None):
     th4 = n0.theta
     pm4 = n0.nu
     #
-    R = 0.9 * abs(dL) # Radius of influence for finding nodes
+    R = dR * abs(dL) # Radius of influence for finding nodes
     mu = 2.0 # Smoothing parameter for Shepard interpolation
     # Find the near nodes
     if kdtree is None:
         near_nodes = kernel.find_nodes_near(x4, y4, tol=R, max_count=10)
     else:
-        near_nodes = kernel.find_nodes_near(x4, y4, tol=R, max_count=10, kdtree=kdtree)
+        near_nodes = kernel.find_nodes_near(x4, y4, tol=R, max_count=10,
+                                                                kdtree=kdtree)
     if len(near_nodes) == 0: return -1
     # Using PJs format for data handling
     x = np.zeros_like(near_nodes, dtype=np.float)
