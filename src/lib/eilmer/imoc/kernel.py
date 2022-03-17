@@ -102,29 +102,33 @@ def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
             kdtree    - if a kdtree object has been created this can be
                         used for much, much faster searching
     OUTPUT:
-            idx_near  - a list of node indices nearby
+            idx_near  - a list of node indices for nearby nodes
     """
     idx_near = []
     if kdtree is None:
+        # Just do a slow search.
         if tol <= 0.0:
-            # Find the nearest node
+            # Find the nearest node.
             idx_near.append(-1) # This single value should be overwritten.
             dist_near = sys.float_info.max
             for idx, node in enumerate(nodes):
-                node_dist = np.sqrt((x - node.x)**2 + (y - node.y)**2)
+                dist = np.sqrt((x - node.x)**2 + (y - node.y)**2)
                 if node_dist < dist_near:
-                    dist_near = node_dist
+                    dist_near = dist
                     idx_near[0] = idx
+            if idx_near[0] < 0:
+                raise RuntimeError("No nearest node found.")
         else:
-            # Collect an array of the closest nodes
-            # NOTE: There doesn't seem to be any mechanisms of ensuring they are
-            # the closest nodes, just the first ones within the radius of interest
+            # Collect an array of the closest nodes as tuples of distance and index.
+            close_nodes = []
             for idx, node in enumerate(nodes):
-                node_dist = np.sqrt((x - node.x)**2 + (y - node.y)**2)
-                if node_dist < tol:
-                    idx_near.append(idx)
-                if len(idx_near) >= max_count: break
+                dist = np.sqrt((x - node.x)**2 + (y - node.y)**2)
+                if dist < tol: close_nodes.append((dist,idx))
+            close_nodes.sort(key=lambda t: t[0]) # Sort on distance.
+            idx_near = [t[1] for t in close_nodes] # Keep just the indices.
+            if len(idx_near) > max_count: idx_near = idx_near[0:max_count]
     else:
+        # Use the kdtree to do a fast search.
         _, pnts = kdtree.query((x, y), max_count, distance_upper_bound=tol)
         if tol <= 0.0:
             idx_near = [pnts[0]]
