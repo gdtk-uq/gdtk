@@ -446,22 +446,22 @@ def plotMesh():
             node_indx[myid] = node.indx
             if show_node_numbers:
                 c.create_text(x, y, text="%d" % node.indx, anchor='center', tags='nodeids')
-            if node.cplus_up >= 0:
+            if node.cplus_up is not None:
                 nb = kernel.nodes[node.cplus_up]
                 xb = canvas_x(nb.x); yb = canvas_y(nb.y)
                 line_seg = c.create_line(x, y, xb, yb, fill='green', width=2, tags='mesh')
                 c.lower(line_seg)
-            if node.cminus_up >= 0:
+            if node.cminus_up is not None:
                 nb = kernel.nodes[node.cminus_up]
                 xb = canvas_x(nb.x); yb = canvas_y(nb.y)
                 line_seg = c.create_line(x, y, xb, yb, fill='green', width=2, tags='mesh')
                 c.lower(line_seg)
-            if node.cplus_down >= 0:
+            if node.cplus_down is not None:
                 nb = kernel.nodes[node.cplus_down]
                 xb = canvas_x(nb.x); yb = canvas_y(nb.y)
                 line_seg = c.create_line(x, y, xb, yb, fill='green', width=2, tags='mesh')
                 c.lower(line_seg)
-            if node.cminus_down >= 0:
+            if node.cminus_down is not None:
                 nb = kernel.nodes[node.cminus_down]
                 xb = canvas_x(nb.x); yb = canvas_y(nb.y)
                 line_seg = c.create_line(x, y, xb, yb, fill='green', width=2, tags='mesh')
@@ -478,12 +478,12 @@ def plotMesh():
                                  fill='gray', tags='nodes')
             object_id[node.indx] = myid
             node_indx[myid] = node.indx
-            if node.czero_up >= 0:
+            if node.czero_up is not None:
                 nb = kernel.nodes[node.czero_up]
                 xb = canvas_x(nb.x); yb = canvas_y(nb.y)
                 line_seg = c.create_line(x, y, xb, yb, fill='green', width=2, tags='stream')
                 c.lower(line_seg)
-            if node.czero_down >= 0:
+            if node.czero_down is not None:
                 nb = kernel.nodes[node.czero_down]
                 xb = canvas_x(nb.x); yb = canvas_y(nb.y)
                 line_seg = c.create_line(x, y, xb, yb, fill='green', width=2, tags='stream')

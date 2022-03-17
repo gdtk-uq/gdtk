@@ -33,7 +33,7 @@ print("n3=", n3)
 print("n9=", n9)
 
 print("Make a new interior-node.")
-n10indx = unit.interior(n3.indx, n9.indx, -1)
+n10indx = unit.interior(n3.indx, n9.indx)
 n10 = kernel.nodes[n10indx]
 print("n3=", n3)
 print("n9=", n9)
@@ -54,7 +54,7 @@ kernel.char_mesh.append(n10.indx)
 print("Make a new wall-node along a C- characteristic.")
 def f0(x): return 0.0
 wall0 = kernel.Wall(f0, 0.0, 1.0)
-n16indx = unit.cminus_wall(wall0, n10.indx, -1)
+n16indx = unit.cminus_wall(wall0, n10.indx)
 n16 = kernel.nodes[n16indx]
 print("n16=", n16)
 print("n10=", n10)
@@ -68,7 +68,7 @@ assert (n16.cminus_up == n10.indx) and (n10.cminus_down == n16.indx), \
 kernel.char_mesh.append(n16.indx)
 
 print("Insert a node on that C- characteristic.")
-nXXindx = unit.insert(n10.indx, n16.indx, -1, 0.5)
+nXXindx = unit.insert(n10.indx, n16.indx, None, 0.5)
 nXX = kernel.nodes[nXXindx]
 print("nXX=", nXX)
 print("n16=", n16)
@@ -88,7 +88,7 @@ n999 = kernel.Node(x=0.051787, y=0.035, nu=PM1(1.321), mach=1.321, theta=0.10472
 kernel.char_mesh.append(n999.indx)
 alpha1, alpha2 = unit.streamline_intersection_weights(n999.indx, n3.indx, n10.indx)
 print("alpha1=", alpha1, "alpha2=", alpha2)
-n1000indx = unit.add_stream_node(n999.indx, n3.indx, n10.indx, -1)
+n1000indx = unit.add_stream_node(n999.indx, n3.indx, n10.indx)
 n1000 = kernel.nodes[n1000indx]
 kernel.char_mesh.append(n1000.indx)
 
@@ -96,7 +96,7 @@ print("Make a new wall-node along a C+ characteristic.")
 def f1(x): return 0.267949*x+0.111638
 wall1 = kernel.Wall(f1, 0.0, 1.0)
 n49 = kernel.Node(x=0.194488, y=0.142442, nu=PM1(1.83558), mach=1.83558, theta=0.261799)
-n57indx = unit.cplus_wall(wall1, n49.indx, -1)
+n57indx = unit.cplus_wall(wall1, n49.indx)
 n57 = kernel.nodes[n57indx]
 print("n49=", n49)
 print("n57=", n57)

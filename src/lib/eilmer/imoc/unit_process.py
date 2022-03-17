@@ -41,13 +41,13 @@ max_iteration = 15
 position_tolerance = 1.0e-5
 
 
-def interior(node1, node2, node4):
+def interior(node1, node2, node4=None):
     """
     Returns the index of an interior point computed from two initial points.
 
     node1: index of initial point along C- characteristic
     node2: index of initial point along C+ characteristic
-    node4: index of solution point (may have a value of -1)
+    node4: index of solution point (may have a value of -1 or None)
     If -1 is specified as the index for node4, a new node will be
     created for the solution point.
     """
@@ -141,7 +141,7 @@ def interior(node1, node2, node4):
         converged = change_in_position < position_tolerance
     # Save the solution-point properties and connect the
     # node into the characteristic mesh.
-    if node4 == -1:
+    if (node4 is None) or (node4 == -1):
         n4 = kernel.Node()
         node4 = n4.indx
     else:
@@ -162,16 +162,16 @@ def interior(node1, node2, node4):
     return n4.indx
 
 
-def insert(node1, node2, node4, alpha):
+def insert(node1, node2, node4=None, alpha=0.5):
     """
     Returns the index of a node (4) inserted between two existing points (1,2).
 
     node1: index of existing point 1
     node2: index of existing point 2
-    node4: index of inserted point (may have a value of -1)
+    node4: index of inserted point (may have a value of -1 or None)
     alpha: fraction that node4 is like node2;
            n4.value = alpha n2.value + (1-alpha) n1.value
-    If -1 is specified as the index for node4, a new node will be
+    If -1 (or None) is specified as the index for node4, a new node will be
     created for the inserted node.
     If node1 and node2 are adjacent nodes along a characteristic line,
     node4 will be connected in between.
@@ -180,7 +180,7 @@ def insert(node1, node2, node4, alpha):
         raise RuntimeError("Same index given for node1 and node2.")
     n1 = kernel.nodes[node1]
     n2 = kernel.nodes[node2]
-    if node4 == -1:
+    if (node4 is None) or (node4 == -1):
         n4 = kernel.Node()
         node4 = n4.indx
     else:
@@ -234,14 +234,14 @@ def wall_position(f, x0, y0, cosx, cosy):
     return x0+dL*cosx, y0+dL*cosy
 
 
-def cminus_wall(wall, node1, node4):
+def cminus_wall(wall, node1, node4=None):
     """
     Returns the index of a node on the wall, computed from one initial node.
 
     fn_wall: user-supplied Wall object defining wall y=f(x)
     node1: index of initial point along C- characteristic
-    node4: index of solution point (may have a value of -1)
-    If -1 is specified as the index for node4, a new node will be
+    node4: index of solution point (may have a value of -1 or None)
+    If -1 (or None) is specified as the index for node4, a new node will be
     created for the solution point.
     """
     if wall.__class__ != kernel.Wall:
@@ -302,7 +302,7 @@ def cminus_wall(wall, node1, node4):
         converged = change_in_position < position_tolerance
     # Save the solution-point properties and connect the
     # node into the characteristic mesh.
-    if node4 == -1:
+    if (node4 is None) or (node4 == -1):
         n4 = kernel.Node()
         node4 = n4.indx
     else:
@@ -319,13 +319,13 @@ def cminus_wall(wall, node1, node4):
     return n4.indx
 
 
-def cplus_wall(wall, node2, node4):
+def cplus_wall(wall, node2, node4=None):
     """
     Returns the index of a node on the wall, computed from one initial node.
 
     wall: user-supplied Wall object defining wall y=f(x)
     node2: index of initial point along C+ characteristic
-    node4: index of solution point (may have a value of -1)
+    node4: index of solution point (may have a value of -1 or None)
     If -1 is specified as the index for node4, a new node will be
     created for the solution point.
     """
@@ -387,7 +387,7 @@ def cplus_wall(wall, node2, node4):
         converged = change_in_position < position_tolerance
     # Save the solution-point properties and connect the
     # node into the characteristic mesh.
-    if node4 == -1:
+    if (node4 is None) or (node4 == -1):
         n4 = kernel.Node()
         node4 = n4.indx
     else:
@@ -404,14 +404,14 @@ def cplus_wall(wall, node2, node4):
     return n4.indx
 
 
-def cplus_free(node0, node2, node4):
+def cplus_free(node0, node2, node4=None):
     """
     Returns the index of a free-boundary node computed from one streamline node
     already on the free boundary and one interior node on a C+ characteristic.
 
     node0: index of the point on the free-boundary streamline
     node2: index of initial point along C+ characteristic
-    node4: index of solution point (may have a value of -1)
+    node4: index of solution point (may have a value of -1 or None)
     If -1 is specified as the index for node4, a new node will be
     created for the solution point.
     """
@@ -493,7 +493,7 @@ def cplus_free(node0, node2, node4):
         converged = change_in_position < position_tolerance
     # Save the solution-point properties and connect the
     # node into the characteristic mesh.
-    if node4 == -1:
+    if (node4 is None) or (node4 == -1):
         n4 = kernel.Node()
         node4 = n4.indx
     else:
@@ -514,14 +514,14 @@ def cplus_free(node0, node2, node4):
     return n4.indx
 
 
-def cminus_free(node0, node1, node4):
+def cminus_free(node0, node1, node4=None):
     """
     Returns the index of a free-boundary node computed from one streamline node
     already on the free boundary and one interior node on a C- characteristic.
 
     node0: index of the point on the free-boundary streamline
     node1: index of initial point along C- characteristic
-    node4: index of solution point (may have a value of -1)
+    node4: index of solution point (may have a value of -1 or None)
     If -1 is specified as the index for node4, a new node will be
     created for the solution point.
     """
@@ -603,7 +603,7 @@ def cminus_free(node0, node1, node4):
         converged = change_in_position < position_tolerance
     # Save the solution-point properties and connect the
     # node into the characteristic mesh.
-    if node4 == -1:
+    if (node4 is None) or (node4 == -1):
         n4 = kernel.Node()
         node4 = n4.indx
     else:
@@ -679,7 +679,7 @@ def streamline_intersection_weights(node0, node1, node2):
     return [1.0-lambda12, lambda12]
 
 
-def add_stream_node(node0, node1, node2, node4):
+def add_stream_node(node0, node1, node2, node4=None):
     """
     Returns the index of a new streamline point (node4) by extending the streamline
     from node0 to the line between points 1 and 2.
@@ -692,7 +692,7 @@ def add_stream_node(node0, node1, node2, node4):
     if 0.0 <= alpha2 <= 1.0:
         # The new point lies between the nodes 1 and 2
         # so let's put it in place.
-        if node4 == -1:
+        if (node4 is None) or (node4 == -1):
             n4 = kernel.Node()
             node4 = n4.indx
         else:
@@ -709,21 +709,21 @@ def add_stream_node(node0, node1, node2, node4):
     return n4.indx
 
 
-def step_stream_node(node0, node4, dL, dR=0.9, kdtree=None):
+def step_stream_node(node0, dL, node4=None, dR=0.9, kdtree=None):
     """
     This function calculates the next node along a streamline by the length dL
     INPUTS:
             node0  - index of starting node
-            node4  - index of solution point, specify -1 for new node
             dL     - length to move along the streamline. A positive value will
                      step downstream while a negative value will step upstream.
+            node4  - index of solution point, specify -1 or None for new node
             dR     - Ratio, search radius divided by dL.
                      Historically 0.9 was used to avoid picking up the previous
                      streamline point, however, this is no longer required.
             kdtree - provide a scipy.spatial.kdtree object to use much faster
                      searching algorithms
     OUTPUT:
-            node4 - index of solution node or -1, if no nearby nodes were found.
+            node4 - index of solution node or None, if no nearby nodes were found.
     """
     n0 = kernel.nodes[node0]
     # Start by estimating the node4 data based on node0
@@ -735,7 +735,7 @@ def step_stream_node(node0, node4, dL, dR=0.9, kdtree=None):
     R = dR * abs(dL) # Radius of influence for finding nodes
     mu = 2.0 # Smoothing parameter for Shepard interpolation
     near_nodes = kernel.find_nodes_near(x4, y4, tol=R, max_count=10, kdtree=kdtree)
-    if len(near_nodes) == 0: return -1
+    if len(near_nodes) == 0: return None
     # Using PJs format for data handling
     x = np.zeros_like(near_nodes, dtype=np.float)
     y = np.zeros_like(near_nodes, dtype=np.float)
@@ -769,7 +769,7 @@ def step_stream_node(node0, node4, dL, dR=0.9, kdtree=None):
         converged = change_in_position < position_tolerance
     # Save the solution-point properties and
     # connect the node into the streamline.
-    if node4 == -1:
+    if (node4 is None) or (node4 == -1):
         n4 = kernel.Node()
         node4 = n4.indx
     else:
@@ -800,7 +800,7 @@ def march_along_cminus(old_first, new_first, direction):
     node1 = new_first
     node2 = old_first
     while True:
-        node4 = interior(node1, node2, -1)
+        node4 = interior(node1, node2)
         new_node_indices.append(node4)
         node1 = node4
         n2 = kernel.nodes[node2]
@@ -810,7 +810,7 @@ def march_along_cminus(old_first, new_first, direction):
             node2 = n2.cminus_down
         else:
             raise RuntimeError(f"Invalid direction for marching along Cminus: {direction}")
-        if node2 == -1: break
+        if node2 is None: break
     #
     return new_node_indices
 
@@ -828,7 +828,7 @@ def march_along_cplus(old_first, new_first, direction):
     node1 = old_first
     node2 = new_first
     while True:
-        node4 = interior(node1, node2, -1)
+        node4 = interior(node1, node2)
         new_node_indices.append(node4)
         node2 = node4
         n1 = kernel.nodes[node1]
@@ -838,7 +838,7 @@ def march_along_cplus(old_first, new_first, direction):
             node1 = n1.cplus_down
         else:
             raise RuntimeError(f"Invalid direction for marching along Cplus: {direction}")
-        if node1 == -1: break
+        if node1 is None: break
     #
     return new_node_indices
 
@@ -858,16 +858,16 @@ def get_nodes_along_characteristic(node0, direction):
     while True:
         node1 = kernel.nodes[node_indices[-1]]
         if direction == 'cminus_down':
-            if node1.cminus_down == -1: break
+            if node1.cminus_down is None: break
             else: node_indices.append(node1.cminus_down)
         elif direction == 'cminus_up':
-            if node1.cminus_up == -1: break
+            if node1.cminus_up is None: break
             else: node_indices.append(node1.cminus_up)
         elif direction == 'cplus_down':
-            if node1.cplus_down == -1: break
+            if node1.cplus_down is None: break
             else: node_indices.append(node1.cplus_down)
         elif direction == 'cplus_up':
-            if node1.cplus_up == -1: break
+            if node1.cplus_up is None: break
             else: node_indices.append(node1.cplus_up)
         else:
             raise RuntimeError(f"Invalid characteristic direction: {direction}")

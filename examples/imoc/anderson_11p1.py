@@ -28,12 +28,12 @@ for i in range(7):
     fan.append(new_node.indx)
 
 print("Compute the first wall node radiating from the fan.")
-old_first = unit.cminus_wall(wall0, fan[0], -1)
+old_first = unit.cminus_wall(wall0, fan[0])
 
 print("Compute the rest of the fan radiating down to the wall.")
 for i in range(1,7):
     new_nodes = unit.march_along_cminus(old_first, fan[i], 'down')
-    axis_node = unit.cminus_wall(wall0, new_nodes[-1], -1)
+    axis_node = unit.cminus_wall(wall0, new_nodes[-1])
     # Note that for the next line we start marching with the second node on the recent line.
     old_first = new_nodes[1]
 
@@ -70,9 +70,11 @@ print("Start at the last node on the fan and step along a streamline.")
 # (2) we cross the characteristic defining the start of the uniform flow region.
 indx = fan[-1]
 kernel.register_streamline_start(indx)
-while indx >= 0:
-    indx = unit.step_stream_node(indx, -1, 0.05)
-    if indx >= 0:
+while True:
+    indx = unit.step_stream_node(indx, 0.05)
+    if indx is None:
+        break
+    else:
         node = kernel.nodes[indx]
         y_cone = (node.x - x_cone)*dy/dx
         if node.y <= y_cone: break

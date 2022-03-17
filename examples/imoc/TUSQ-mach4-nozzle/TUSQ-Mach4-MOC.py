@@ -45,7 +45,7 @@ for i in range(len(cl_x)):
 top_node_count = len(cl_mach)
 while kernel.nodes[-1].y < 0.15 and top_node_count >= 2:
     for i in range(len(kernel.nodes) - top_node_count, len(kernel.nodes) - 1):
-        unit.interior(i+1, i, -1)
+        unit.interior(i+1, i)
     top_node_count -= 1
 # Now, we know our Mach cone starts at node 27, we use this to calculate the
 # node which represents our nozzle exit. From this we can then use streamlines
@@ -65,8 +65,8 @@ nozz_wall_nodes = [nozz_exit_node] # Start at nozzle exit node.
 dL = -8.0e-3 # Negative increment steps upstream.
 kdt = kernel.create_kd_tree() # Use kdtree for a fast search.
 while kernel.nodes[nozz_wall_nodes[-1]].x > 0.01:
-    new_idx = unit.step_stream_node(nozz_wall_nodes[-1], -1, dL, kdtree=kdt)
-    if new_idx < 0: break
+    new_idx = unit.step_stream_node(nozz_wall_nodes[-1], dL, kdtree=kdt)
+    if new_idx is None: break
     nozz_wall_nodes.append(new_idx)
 nozz_wall_nodes.reverse()
 kernel.register_streamline_start(nozz_wall_nodes[0])

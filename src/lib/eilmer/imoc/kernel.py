@@ -12,6 +12,7 @@ Version:
   2019-12-28: Let's start coding in Python and see how it develops...
 """
 
+import sys
 import numpy as np
 from scipy import spatial
 
@@ -45,9 +46,9 @@ class Node(object):
 
     def __init__(self, indx=None, x=0.0, y=0.0,
                  theta=0.0, nu=0.0, mach=0.0,
-                 cplus_up=-1, cplus_down=-1,
-                 cminus_up=-1, cminus_down=-1,
-                 czero_up=-1, czero_down=-1):
+                 cplus_up=None, cplus_down=None,
+                 cminus_up=None, cminus_down=None,
+                 czero_up=None, czero_down=None):
         """
         Initialize a Node.
         The default state will be empty and unconnected.
@@ -63,9 +64,7 @@ class Node(object):
         self.x = x; self.y = y
         self.theta = theta; self.nu = nu; self.mach = mach
         # Indices for linking nodes.
-        # A negative value (i.e. -1) indicates no link.
-        # This is a carry-over from the old C code.
-        # Maybe we should Python None values instead.
+        # A value of None indicates no link.
         self.cplus_up = cplus_up; self.cplus_down = cplus_down
         self.cminus_up = cminus_up; self.cminus_down = cminus_down
         self.czero_up = czero_up; self.czero_down = czero_down
@@ -81,9 +80,9 @@ class Node(object):
         """
         strng = "Node(indx=%d, x=%g, y=%g" % (self.indx, self.x, self.y)
         strng += ", theta=%g, nu=%g, mach=%g" % (self.theta, self.nu, self.mach)
-        strng += ", cplus_up=%d, cplus_down=%d" % (self.cplus_up, self.cplus_down)
-        strng += ", cminus_up=%d, cminus_down=%d" % (self.cminus_up, self.cminus_down)
-        strng += ", czero_up=%d, czero_down=%d)" % (self.czero_up, self.czero_down)
+        strng += ", cplus_up=%s, cplus_down=%s" % (self.cplus_up, self.cplus_down)
+        strng += ", cminus_up=%s, cminus_down=%s" % (self.cminus_up, self.cminus_down)
+        strng += ", czero_up=%s, czero_down=%s)" % (self.czero_up, self.czero_down)
         return strng
 
 
@@ -109,13 +108,13 @@ def find_nodes_near(x, y, tol=0.0, max_count=30, kdtree=None):
     if kdtree is None:
         if tol <= 0.0:
             # Find the nearest node
-            idx_near.append(-1)
-            dist_near = 1.0e6 # Arbitrarily large
+            idx_near.append(-1) # This single value should be overwritten.
+            dist_near = sys.float_info.max
             for idx, node in enumerate(nodes):
                 node_dist = np.sqrt((x - node.x)**2 + (y - node.y)**2)
                 if node_dist < dist_near:
                     dist_near = node_dist
-                    idx_near[-1] = idx
+                    idx_near[0] = idx
         else:
             # Collect an array of the closest nodes
             # NOTE: There doesn't seem to be any mechanisms of ensuring they are
@@ -170,11 +169,11 @@ def get_streamline_nodes(i):
     """
     indices = []
     j = nodes[i].czero_down
-    while j >= 0:
+    while j is not None:
         indices.append(j)
         j = nodes[j].czero_down
     j = nodes[i].czero_up
-    while j >= 0:
+    while j is not None:
         indices.insert(0, j)
         j = nodes[j].czero_up
     return indices
