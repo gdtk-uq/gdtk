@@ -171,7 +171,7 @@ def get_streamline_nodes(i):
     Returns the indices of the streamline nodes,
     for the streamline going through nodes[i].
     """
-    indices = []
+    indices = [i,]
     j = nodes[i].czero_down
     while j is not None:
         indices.append(j)

@@ -466,6 +466,18 @@ def plotMesh():
                 xb = canvas_x(nb.x); yb = canvas_y(nb.y)
                 line_seg = c.create_line(x, y, xb, yb, fill='green', width=2, tags='mesh')
                 c.lower(line_seg)
+            # It may be that the node is also part of a streamline, for example,
+            # a free-boundary node.
+            if node.czero_up is not None:
+                nb = kernel.nodes[node.czero_up]
+                xb = canvas_x(nb.x); yb = canvas_y(nb.y)
+                line_seg = c.create_line(x, y, xb, yb, fill='brown', width=2, tags='stream')
+                c.lower(line_seg)
+            if node.czero_down is not None:
+                nb = kernel.nodes[node.czero_down]
+                xb = canvas_x(nb.x); yb = canvas_y(nb.y)
+                line_seg = c.create_line(x, y, xb, yb, fill='brown', width=2, tags='stream')
+                c.lower(line_seg)
     if show_streamlines:
         # Collect the node indices for each streamline starting point.
         streamline_nodes = []
@@ -478,15 +490,17 @@ def plotMesh():
                                  fill='gray', tags='nodes')
             object_id[node.indx] = myid
             node_indx[myid] = node.indx
+            if show_node_numbers:
+                c.create_text(x, y, text="%d" % node.indx, anchor='center', tags='nodeids')
             if node.czero_up is not None:
                 nb = kernel.nodes[node.czero_up]
                 xb = canvas_x(nb.x); yb = canvas_y(nb.y)
-                line_seg = c.create_line(x, y, xb, yb, fill='green', width=2, tags='stream')
+                line_seg = c.create_line(x, y, xb, yb, fill='brown', width=2, tags='stream')
                 c.lower(line_seg)
             if node.czero_down is not None:
                 nb = kernel.nodes[node.czero_down]
                 xb = canvas_x(nb.x); yb = canvas_y(nb.y)
-                line_seg = c.create_line(x, y, xb, yb, fill='green', width=2, tags='stream')
+                line_seg = c.create_line(x, y, xb, yb, fill='brown', width=2, tags='stream')
                 c.lower(line_seg)
     # We want to retain the connection between node indx and canvas object id
     # for use with selecting nodes.
