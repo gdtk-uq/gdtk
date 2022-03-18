@@ -1655,7 +1655,15 @@ protected:
             diff_T = -f/dfdT;
             Twall += diff_T;
             iterations += 1;
-            if (iterations>100) throw new Exception("Convergence failure in ThermionicRadiative boundary condition.");
+            if (iterations>100) {
+                string msg = "Convergence failure in ThermionicRadiative boundary condition.";
+                debug{
+                    msg ~= format("\ndiff T %f Twall %f error %f f %f\n", diff_T, Twall, error, f);
+                    msg ~= format("Face.fs.gas: %s\n", IFace.fs.gas);
+                    msg ~= format("Face.id: %s Face.pos %s", IFace.id, IFace.pos);
+                }
+                throw new Exception(msg);
+            }
         }
 
         IFace.fs.gas.T = Twall;
@@ -1704,12 +1712,6 @@ protected:
             foreach (isp; 0 .. nsp) {
                 number h = gmodel.enthalpy(IFace.fs.gas, cast(int)isp);
                 q_diffusion += (jx[isp]*h*IFace.n.x + jy[isp]*h*IFace.n.y + jz[isp]*h*IFace.n.z);
-                version(multi_T_gas){
-                foreach (imode; 0 .. n_modes) {
-                    number hMode = gmodel.enthalpyPerSpeciesInMode(IFace.fs.gas, cast(int)isp, cast(int)imode);
-                    q_diffusion += (jx[isp]*hMode*IFace.n.x + jy[isp]*hMode*IFace.n.y + jz[isp]*hMode*IFace.n.z);
-                }
-                }
             }
         }
         q_diffusion *= outsign;
