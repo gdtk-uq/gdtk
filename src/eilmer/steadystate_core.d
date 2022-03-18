@@ -591,7 +591,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     while (failed_decode) {
                         failed_decode = false;
                         cell.U[1].copy_values_from(cell.U[0]);
-                        foreach (j; 0 .. cqi.n) {
+                        foreach (j; 0 .. nConserved) {
                             cell.U[1].vec[j] = cell.U[0].vec[j] + omega*blk.dU[cellCount+j];
                         }
                         try {
