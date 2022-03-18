@@ -1136,10 +1136,19 @@ double determine_dt(double cflInit)
     bool first = true;
     foreach (blk; localFluidBlocks) {
         foreach (cell; blk.cells) {
-            signal = cell.signal_frequency();
             if (blk.myConfig.sssOptions.inviscidCFL) {
-                // overwrite signal with inviscid signal
-                signal = cell.signal_hyp.re;
+                // calculate the signal using the maximum inviscid wave speed
+                // ref. Computational Fluid Dynamics: Principles and Applications, J. Blazek, 2015, pg. 175
+                signal = 0.0;
+                foreach (f; cell.iface) {
+                    number dx = cell.volume[0]/f.area[0]; // approximate cell width
+                    number un = fabs(f.fs.vel.dot(f.n));
+                    number signal_f = (un+f.fs.gas.a)/dx;
+                    signal += signal_f.re;
+                }
+            } else {
+                // use the default signal frequency routine from the time-accurate code path
+                signal = cell.signal_frequency();
             }
             cell.dt_local = cflInit / signal;
             if (first) {
