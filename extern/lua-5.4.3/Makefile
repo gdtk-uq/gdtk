@@ -72,9 +72,11 @@ uninstall:
 	cd src && cd $(INSTALL_LIB) && $(RM) $(TO_LIB)
 	cd doc && cd $(INSTALL_MAN) && $(RM) $(TO_MAN)
 
+# Note that, when making the lpeg library, we have to specify
+# the PLATFORM variable that has come from the Eilmer makefile.
 local:
 	$(MAKE) install INSTALL_TOP=../install
-	cd lpeg-1.0.2; make linux
+	cd lpeg-1.0.2; $(MAKE) $(PLATFORM)
 	cp lpeg-1.0.2/lpeg.so install/lib/ 
 
 # make may get confused with install/ if it does not support .PHONY.

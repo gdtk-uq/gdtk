@@ -16,7 +16,9 @@ GPP ?= g++
 # The 'fast' option requests production mode and to include optimisations.
 FLAVOUR ?= debug
 
+# PLATFORM options are linux, macosx
 PLATFORM ?= linux
+
 WITH_MPI ?= 0
 WITH_NK ?= 0
 WITH_LUSGS ?= 0
