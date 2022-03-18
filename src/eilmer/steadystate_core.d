@@ -202,6 +202,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     ConservedQuantities currResiduals = new ConservedQuantities(nConserved);
     number mass_balance = 0.0;
     number omega = 1.0;
+    GasState Qmin = new GasState(GlobalConfig.gmodel_master);
     number theta = GlobalConfig.sssOptions.physicalityCheckTheta;
     bool pc_matrix_evaluated = false;
 
@@ -569,42 +570,67 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         // calculate a relaxation factor for the nonlinear update via a physicality check
         omega = 1.0;
         if (GlobalConfig.sssOptions.usePhysicalityCheck) {
-            foreach (blk; parallel(localFluidBlocks,1)) {
+            foreach (blk; localFluidBlocks) {
                 int cellCount = 0;
                 auto cqi = blk.myConfig.cqi;
                 foreach (cell; blk.cells) {
-                    // limit the change in the conserved mass by some user defined amount (theta)
-                    number rel_diff_limit;
-                    if (cqi.n_species == 1) { rel_diff_limit = fabs(blk.dU[cellCount+MASS]/(theta*cell.U[0].vec[cqi.mass])); }
-                    else {
-                        number mass = 0.0;
-                        number dmass = 0.0;
+                    bool failed_decode = false;
+                    number rel_diff_limit, U, dU;
+                    // MASS
+                    if (cqi.n_species == 1) {
+                        U = cell.U[0].vec[cqi.mass];
+                        dU = blk.dU[cellCount+MASS];
+                    } else {
+                        U = 0.0;
+                        dU = 0.0;
                         foreach(isp; 0 .. cqi.n_species) {
-                            mass += cell.U[0].vec[cqi.species+isp];
-                            dmass += blk.dU[cellCount+SPECIES+isp];
+                            U += cell.U[0].vec[cqi.species+isp];
+                            dU += blk.dU[cellCount+SPECIES+isp];
                         }
-                        rel_diff_limit = fabs(dmass/(theta*mass));
                     }
+                    rel_diff_limit = fabs(dU/(theta*U));
                     omega = 1.0/(max(rel_diff_limit,1.0/omega));
-                    // ensure thermodynamic state variables are positive
-                    bool failed_decode = true;
-                    while (failed_decode) {
-                        failed_decode = false;
-                        cell.U[1].copy_values_from(cell.U[0]);
-                        foreach (j; 0 .. nConserved) {
-                            cell.U[1].vec[j] = cell.U[0].vec[j] + omega*blk.dU[cellCount+j];
-                        }
-                        try {
-                            cell.decode_conserved(0, 1, 0.0);
-                        }
-                        catch (FlowSolverException e) {
-                            failed_decode = true;
-                        }
-                        // reduce relaxation factor if appropriate (0.7 seems like a resonable reduction factor)
-                        if (failed_decode) omega *= 0.7;
-                        // return cell to original state
-                        cell.decode_conserved(0, 0, 0.0);
+
+                    // check positivity of thermodynamic variables
+                    cell.U[1].copy_values_from(cell.U[0]);
+                    foreach (j; 0 .. nConserved) {
+                        cell.U[1].vec[j] = cell.U[0].vec[j] + omega*blk.dU[cellCount+j];
                     }
+                    try {
+                        cell.decode_conserved(0, 1, 0.0);
+                    }
+                    catch (FlowSolverException e) {
+                        failed_decode = true;
+                    }
+
+                    // return cell to original state
+                    cell.decode_conserved(0, 0, 0.0);
+
+                    // if the relaxation factor isn't sufficient, then limit the change in total energy (and modal energy)
+                    if (failed_decode) {
+                        // TOTAL ENERGY
+                        Qmin.copy_values_from(cell.fs.gas);
+                        blk.myConfig.gmodel.minimum_mixture_energy(Qmin);
+                        number ke = 0.5*(cell.fs.vel.x*cell.fs.vel.x + cell.fs.vel.y*cell.fs.vel.y+cell.fs.vel.z*cell.fs.vel.z);
+                        number Emin = cell.fs.gas.rho*(Qmin.u + ke);
+                        version(turbulence) { Emin += cell.fs.gas.rho * blk.myConfig.turb_model.turbulent_kinetic_energy(cell.fs); }
+                        U = fabs(cell.U[0].vec[cqi.totEnergy] - Emin);
+                        dU = blk.dU[cellCount+cqi.totEnergy];
+                        rel_diff_limit = fabs(dU/(theta*U));
+                        omega = 1.0/(max(rel_diff_limit,1.0/omega));
+
+                        // MODAL ENERGY
+                        version(multi_T_gas){
+                            foreach(imode; 0 .. cqi.n_modes) {
+                                Emin = cell.fs.gas.rho*Qmin.u_modes[imode];
+                                U = fabs(cell.U[0].vec[cqi.modes+imode] - Emin);
+                                dU = blk.dU[cellCount+cqi.modes+imode];
+                                rel_diff_limit = fabs(dU/(theta*U));
+                                omega = 1.0/(max(rel_diff_limit,1.0/omega));
+                            }
+                        }
+                    }
+
                     cellCount += nConserved;
                 }
             }
@@ -624,14 +650,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             dt = determine_dt(cfl);
             version(mpi_parallel) {
                 MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-            }
-
-            // return cell flow-states to their original state
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                int cellCount = 0;
-                foreach (cell; blk.cells) {
-                    cell.decode_conserved(0, 0, 0.0);
-                }
             }
 
             if (dangerousExceptionsAreFatal) {
