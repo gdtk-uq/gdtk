@@ -534,7 +534,7 @@ void pitot_condition(const(GasState) state1, number V1,
 
 number steady_flow_with_area_change(const(GasState)state1, number V1, number A2_over_A1,
                                     GasState state2, GasModel gm, double tol=1.0e-4,
-                                    number p2p1_min=0.0001)
+                                    double p2p1_min=0.0001)
 /**
  * Given station 1 condition, velocity and area-ratio A2/A1,
  * compute the steady, isentropic condition at station 2.
@@ -603,7 +603,7 @@ number steady_flow_with_area_change(const(GasState)state1, number V1, number A2_
         number mdot_error = (mdot2 - mdot1)/abs(mdot1);
         return mdot_error;
     };
-    if (bracket!(error_in_mass_flux,number)(p2p1_guess1, p2p1_guess2, p2p1_min, p2p1_max) < 0) {
+    if (bracket!(error_in_mass_flux,number)(p2p1_guess1, p2p1_guess2, to!number(p2p1_min), p2p1_max) < 0) {
         throw new GasFlowException("steady_flow_with_area_change() could not bracket" ~
                                    " the pressure ratio.");
     }
