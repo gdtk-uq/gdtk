@@ -81,7 +81,7 @@ module Gas
   extern 'int gasflow_total_condition(int state1_id, double v1, int state0_id, int gm_id)'
   extern 'int gasflow_pitot_condition(int state1_id, double v1, int state2pitot_id, int gm_id)'
   extern 'int gasflow_steady_flow_with_area_change(int state1_id, double v1, double a2_over_a1,
-                                                   int state2_id, int gm_id, double tol,
+                                                   int state2_id, int gm_id, double tol, double p2p1_min,
                                                    double* results)'
 
   extern 'int gasflow_finite_wave_dp(int state1_id, double v1, char* characteristic, double p2,
@@ -722,11 +722,11 @@ class GasFlow
   end
 
   def steady_flow_with_area_change(state1, v1, area2_over_area1, state2,
-                                   tol=1.0e-4)
+                                   tol=1.0e-4, p2p1_min=0.0001)
     my_results = [0.0].pack("d")
     flag = Gas.gasflow_steady_flow_with_area_change(state1.id, v1, area2_over_area1,
                                                     state2.id, @gmodel.id, tol,
-                                                    my_results)
+                                                    p2p1_min, my_results)
     if flag < 0 then raise "failed to compute steady flow with area change." end
     return my_results[0, my_results.size].unpack("d")[0] # v2
   end

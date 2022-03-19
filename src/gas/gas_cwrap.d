@@ -959,13 +959,13 @@ int gasflow_pitot_condition(int state1_id, double v1, int state2pitot_id, int gm
 
 extern(C)
 int gasflow_steady_flow_with_area_change(int state1_id, double v1, double a2_over_a1,
-                                         int state2_id, int gm_id, double tol,
+                                         int state2_id, int gm_id, double tol, double p2p1_min,
                                          double* results)
 {
     try {
         double v2 = steady_flow_with_area_change(gas_states[state1_id], v1, a2_over_a1,
                                                  gas_states[state2_id], gas_models[gm_id],
-                                                 tol);
+                                                 tol, p2p1_min);
         results[0] = v2;
         return 0;
     } catch (Exception e) {

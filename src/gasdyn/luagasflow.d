@@ -408,9 +408,14 @@ extern(C) int gasflow_steady_flow_with_area_change(lua_State* L)
     if (lua_isnumber(L, 4)) {
         tol = to!double(luaL_checknumber(L, 4));
     }
+    double p2p1_min=1.0e-4; // default value
+    if (lua_isnumber(L, 5)) {
+        tol = to!double(luaL_checknumber(L, 5));
+    }
     //
     try {
-        number V2 = steady_flow_with_area_change(state1, V1, A2_over_A1, state2, gm, tol);
+        number V2 = steady_flow_with_area_change(state1, V1, A2_over_A1, state2,
+                                                 gm, tol, p2p1_min);
         //
         lua_settop(L, 0); // clear the stack, in preparation for pushing results
         pushNewGasTable(L, state2, gm);

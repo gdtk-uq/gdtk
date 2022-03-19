@@ -533,17 +533,22 @@ void pitot_condition(const(GasState) state1, number V1,
 
 
 number steady_flow_with_area_change(const(GasState)state1, number V1, number A2_over_A1,
-                                    GasState state2, GasModel gm, double tol = 1.0e-4)
+                                    GasState state2, GasModel gm, double tol=1.0e-4,
+                                    number p2p1_min=0.0001)
 /**
  * Given station 1 condition, velocity and area-ratio A2/A1,
  * compute the steady, isentropic condition at station 2.
  *
  * Input:
- *   state1: Gas object specifying condition at station 1 (given)
- *   V1: velocity at station 1, m/s (given)
+ *   state1:     Gas object specifying condition at station 1 (given)
+ *   V1:         velocity at station 1, m/s (given)
  *   A2_over_A1: area ratio between stations A2/A1 (given)
- *   state2: reference to GasState object for condition 2 (to be computed)
- *   tol: tolerance for function solver to find condition 2
+ *   state2:     reference to GasState object for condition 2 (to be computed)
+ *   tol:        tolerance for function solver to find condition 2
+ *   p2p1_min:   a somewhat arbitrary limit to the strength of the expansion.
+ *     Chris James has found that the CO2 expansions in the expansion tunnel
+ *     calculations need this limit set to 0.01 rather than the much smaller
+ *     value set as default above.
  *
  * Returns: velocity at station 2, m/s
  */
@@ -558,7 +563,6 @@ number steady_flow_with_area_change(const(GasState)state1, number V1, number A2_
     GasState total_cond = new GasState(state1);
     total_condition(state1, V1, total_cond, gm);
     number p2p1_max = total_cond.p/state1.p;
-    number p2p1_min = 0.0001;
     // Establish a suitable bracket for the pressure ratio.
     // [TODO] When setting up the initial guess for pressure ratio,
     // we could probably do better with the ideal relation between M and A/Astar.
