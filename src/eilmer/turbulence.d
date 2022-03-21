@@ -455,7 +455,7 @@ private:
     immutable bool axisymmetric;
     immutable int dimensions;
     immutable number max_mu_t_factor;
-    immutable number[2] _gmres_scaling_factor = [1.0, 1000.0];
+    immutable number[2] _gmres_scaling_factor = [1.0, 1.0];
     immutable string[2] _varnames = ["tke", "omega"];
     immutable number[2] _varlimits = [0.0, 1.0];
     immutable number[2] _sigmas = [0.6, 0.5];
