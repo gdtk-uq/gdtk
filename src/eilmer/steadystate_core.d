@@ -151,6 +151,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     double linSolResid = 0;
     double relGlobalResidReduction = GlobalConfig.sssOptions.stopOnRelGlobalResid;
     double absGlobalResidReduction = GlobalConfig.sssOptions.stopOnAbsGlobalResid;
+    double massBalanceReduction = GlobalConfig.sssOptions.stopOnMassBalance;
     double cfl_max = GlobalConfig.sssOptions.cfl_max;
     int cfl_schedule_current_index = 0;
     auto cfl_schedule_value_list = GlobalConfig.sssOptions.cfl_schedule_value_list;
@@ -757,6 +758,13 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             compute_mass_balance(mass_balance);
             version(mpi_parallel) {
                 MPI_Allreduce(MPI_IN_PLACE, &(mass_balance.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            }
+            if ( fabs(mass_balance).re <= massBalanceReduction) {
+                if (GlobalConfig.is_master_task) {
+                    writeln("STOPPING: The global mass balance is below target value.");
+                    writefln("          current value= %.12e   target value= %.12e", fabs(mass_balance).re, massBalanceReduction);
+                }
+                finalStep = true;
             }
             // Write out residuals
             if ( !residualsUpToDate ) {
