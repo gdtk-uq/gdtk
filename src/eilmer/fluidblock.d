@@ -1482,17 +1482,13 @@ public:
         import steadystate_core;
         steadystate_core.evalRHS(0.0, 0);
 
-        // calculate the numerical Jaacobian
-        initialize_jacobian(1, sigma);
+        // calculate the numerical Jacobian
+        initialize_jacobian(GlobalConfig.interpolation_order, sigma);
         evaluate_jacobian();
         assert(flowJacobian !is null, "Oops, we expect a flowJacobian object to be attached to the fluidblock.");
         size_t nConserved = GlobalConfig.cqi.n;
         // remove the conserved mass variable for multi-species gas
         if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
-
-        // temporarily change interpolation order
-        shared int interpolation_order_save = GlobalConfig.interpolation_order;
-        myConfig.interpolation_order = to!int(flowJacobian.spatial_order);
 
         // create an arbitrary unit vector
         number[] vec;
@@ -1525,9 +1521,6 @@ public:
             size_t id = i/nConserved;
             outFile.writef("%d    %d    %.16e    %.16e    %.16f    %.16f \n", i, id, fabs((sol1[i]-sol2[i])/sol1[i]).re, fabs(sol1[i]-sol2[i]).re, sol1[i].re, sol2[i].re);
         }
-
-        // return the interpolation order to its original state
-        myConfig.interpolation_order = interpolation_order_save;
 
         // stop the program at this point
         import core.runtime;
