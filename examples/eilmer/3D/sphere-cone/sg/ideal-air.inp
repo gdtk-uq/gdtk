@@ -1,0 +1,3 @@
+
+model = "IdealGas"
+species = {'air'}
