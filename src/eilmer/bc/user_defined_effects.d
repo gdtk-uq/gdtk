@@ -144,7 +144,7 @@ public:
             }
             break;
         case Face.bottom:
-            size_t k = blk.nkc;
+            size_t k = 0;
             foreach (i; 0 .. blk.nic) {
                 foreach (j; 0 .. blk.njc) {
                     auto f = blk.get_ifk(i,j,k);
