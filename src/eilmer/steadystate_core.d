@@ -537,6 +537,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     // or attempting to restart from an earlier snapshot.
     if ( snapshotStart == 0 ) {
         startStep = 1;
+        cfl = (nStartUpSteps==0) ? cfl1 : cfl0;
         restartInfo.pseudoSimTime = 0.0;
         restartInfo.dt = dt;
         restartInfo.cfl = cfl;
@@ -619,7 +620,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     }
 
     // calculate an initial timestep
-    cfl = cfl0;
     dt = determine_dt(cfl);
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
