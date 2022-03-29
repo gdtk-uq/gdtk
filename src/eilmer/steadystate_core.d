@@ -140,6 +140,132 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
     return;
 }
 
+double extractReferenceResidualsFromFile(string jobName, ref ConservedQuantities maxResiduals)
+{
+/*
+    When restarting in the middle of a calculation, we need to read in the reference
+    residuals from where they were saved from the original startup. This function
+    does the, slightly sketchy, double duty of also setting normRef via its return
+    argument.
+
+    @author: Nick Gibbons
+*/
+    // Make a stack-local copy of conserved quantities info
+    size_t MASS = GlobalConfig.cqi.mass;
+    size_t X_MOM = GlobalConfig.cqi.xMom;
+    size_t Y_MOM = GlobalConfig.cqi.yMom;
+    size_t Z_MOM = GlobalConfig.cqi.zMom;
+    size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
+    size_t TKE = GlobalConfig.cqi.rhoturb;
+    size_t SPECIES = GlobalConfig.cqi.species;
+    size_t MODES = GlobalConfig.cqi.modes;
+    auto cqi = GlobalConfig.cqi;
+
+    // We need to read in the reference residual values from a file.
+    string refResidFname = jobName ~ "-ref-residuals.saved";
+    auto refResid = File(refResidFname, "r");
+    auto line = refResid.readln().strip();
+    auto tokens = line.split();
+    if (tokens.length==0) throw new Error(format("Error reading %s, no entries found!", refResidFname));
+
+    double normRef = to!double(tokens[0]);
+    if ( GlobalConfig.gmodel_master.n_species == 1 ) { maxResiduals.vec[cqi.mass] = to!double(tokens[1+MASS]); }
+    maxResiduals.vec[cqi.xMom] = to!double(tokens[1+X_MOM]);
+    maxResiduals.vec[cqi.yMom] = to!double(tokens[1+Y_MOM]);
+    if ( GlobalConfig.dimensions == 3 )
+        maxResiduals.vec[cqi.zMom] = to!double(tokens[1+Z_MOM]);
+    maxResiduals.vec[cqi.totEnergy] = to!double(tokens[1+TOT_ENERGY]);
+    foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
+        maxResiduals.vec[cqi.rhoturb+it] = to!double(tokens[1+TKE+it]);
+    }
+    version(multi_species_gas){
+        if ( GlobalConfig.gmodel_master.n_species > 1 ) {
+            foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
+                maxResiduals.vec[cqi.species+sp] = to!double(tokens[1+SPECIES+sp]);
+            }
+        }
+    }
+    version(multi_T_gas){
+        foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes) {
+            maxResiduals.vec[cqi.modes+imode] = to!double(tokens[1+MODES+imode]);
+        }
+    }
+    return normRef;
+}
+
+version(mpi_parallel){
+
+void broadcastResiduals(ConservedQuantities residuals){
+/*
+    Helper function for sending around a conserved quantities object.
+
+    Notes: Note that ConservedQuantities is an object, which means it is a
+    reference type, and does not need a "ref" in the above argument.
+
+    @author: Nick Gibbons
+*/
+    double[] buffer;
+
+    int size = to!int(residuals.vec.length);
+    version(complex_numbers){ size *= 2; }
+    buffer.length = size;
+
+    size_t i=0;
+    foreach(f; residuals.vec){
+        buffer[i] = f.re;
+        i++;
+        version(complex_numbers){
+            buffer[i] = f.im;
+            i++;
+        }
+    }
+
+    MPI_Bcast(buffer.ptr, size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    i=0;
+    foreach(j; 0 .. residuals.vec.length){
+        residuals.vec[j].re = buffer[i];
+        i++;
+        version(complex_numbers){
+            residuals.vec[j].im = buffer[i];
+            i++;
+        }
+    }
+    return;
+}
+
+void broadcastRestartInfo(ref RestartInfo[] times){
+/*
+    Helper function for sending around a collection of RestartInfo objects
+
+    Notes: For some reason, this function does need a ref in its argument,
+    even though dynamic arrays are supposed to be reference types...
+
+    @author: Nick Gibbons
+*/
+    // The main issue here is that the non-master processes do not actually know
+    // how many of these things there are. First we need sort that out.
+    // FIXME: Note that this could cause problems if this function is reused.
+    int ntimes = to!int(times.length);
+    MPI_Bcast(&ntimes, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    if (!GlobalConfig.is_master_task) {
+        foreach(i; 0 .. ntimes){
+            times ~= RestartInfo(GlobalConfig.cqi.n);
+        }
+    }
+
+    // Now that we have them allocated, we can fill them out
+    foreach(n; 0 .. ntimes){
+        MPI_Bcast(&(times[n].pseudoSimTime), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&(times[n].dt), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&(times[n].cfl), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&(times[n].step), 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&(times[n].globalResidual), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        broadcastResiduals(times[n].residuals);
+    }
+}
+
+} // end version(mpi_parallel)
 
 void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITask)
 {
@@ -305,49 +431,22 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
     // if we are restarting a simulation we need read the initial residuals from a file
     RestartInfo[] times;
-    if (snapshotStart > 0) { // && GlobalConfig.is_master_task) {
-        extractRestartInfoFromTimesFile(jobName, times);
+    if (snapshotStart > 0) {
+        if (GlobalConfig.is_master_task){
+            extractRestartInfoFromTimesFile(jobName, times);
+            normRef = extractReferenceResidualsFromFile(jobName, maxResiduals);
+        }
+        // Only the master task reads from disk, in MPI we need to send the info around
+        version(mpi_parallel){
+            MPI_Bcast(&normRef, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            broadcastRestartInfo(times);
+            broadcastResiduals(maxResiduals);
+        }
         normOld = times[snapshotStart].globalResidual;
-        // We need to read in the reference residual values from a file.
-        string refResidFname = jobName ~ "-ref-residuals.saved";
-        auto refResid = File(refResidFname, "r");
-        auto line = refResid.readln().strip();
-        auto tokens = line.split();
-        normRef = to!double(tokens[0]);
-        auto cqi = GlobalConfig.cqi;
-        if ( GlobalConfig.gmodel_master.n_species == 1 ) { maxResiduals.vec[cqi.mass] = to!double(tokens[1+MASS]); }
-        maxResiduals.vec[cqi.xMom] = to!double(tokens[1+X_MOM]);
-        maxResiduals.vec[cqi.yMom] = to!double(tokens[1+Y_MOM]);
-        if ( GlobalConfig.dimensions == 3 )
-            maxResiduals.vec[cqi.zMom] = to!double(tokens[1+Z_MOM]);
-        maxResiduals.vec[cqi.totEnergy] = to!double(tokens[1+TOT_ENERGY]);
-        foreach(it; 0 .. GlobalConfig.turb_model.nturb) {
-            maxResiduals.vec[cqi.rhoturb+it] = to!double(tokens[1+TKE+it]);
-        }
-        version(multi_species_gas){
-            if ( GlobalConfig.gmodel_master.n_species > 1 ) {
-                foreach(sp; 0 .. GlobalConfig.gmodel_master.n_species) {
-                    maxResiduals.vec[cqi.species+sp] = to!double(tokens[1+SPECIES+sp]);
-                }
-            }
-        }
-        version(multi_T_gas){
-            foreach(imode; 0 .. GlobalConfig.gmodel_master.n_modes) {
-                maxResiduals.vec[cqi.modes+imode] = to!double(tokens[1+MODES+imode]);
-            }
-        }
 
         // We also need to determine how many snapshots have already been written
-        auto timesFile = File("./config/" ~ jobName ~ ".times");
-        line = timesFile.readln().strip();
-        while (line.length > 0) {
-            if (line[0] != '#') {
-                nWrittenSnapshots++;
-            }
-            line = timesFile.readln().strip();
-        }
-        timesFile.close();
-        nWrittenSnapshots--; // We don't count the initial solution as a written snapshot
+        // We don't count the initial solution as a written snapshot
+        nWrittenSnapshots = to!int(times.length) - 1;
 
         // Where should we be in the CFL schedule list?
         if (!residual_based_cfl_scheduling) {
