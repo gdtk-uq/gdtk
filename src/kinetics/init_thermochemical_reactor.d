@@ -27,6 +27,7 @@ import gas.fuel_air_mix;
 import gas.two_temperature_nitrogen;
 import gas.two_temperature_dissociating_nitrogen;
 import gas.vib_specific_nitrogen;
+import gas.vib_specific_co;
 import gas.two_temperature_air;
 import gas.pseudo_species_gas;
 import gas.electronically_specific_gas;
@@ -44,6 +45,7 @@ import kinetics.two_temperature_nitrogen_kinetics;
 import kinetics.two_temperature_dissociating_nitrogen_kinetics;
 import kinetics.two_temperature_argon_with_ideal_gas;
 import kinetics.vib_specific_nitrogen_kinetics;
+import kinetics.vib_specific_co_kinetics;
 import kinetics.two_temperature_air_kinetics;
 import kinetics.electronically_specific_kinetics;
 version (with_dvode)
@@ -122,6 +124,9 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     }
     if ((cast(VibSpecificNitrogen) gmodel) !is null) {
         reactor = new VibSpecificNitrogenRelaxation(fileName1, gmodel);
+    }
+    if ((cast(VibSpecificCO) gmodel) !is null) {
+        reactor = new VibSpecificCORelaxation(fileName1, gmodel);
     }
     if ((cast(TwoTemperatureAir) gmodel) !is null) {
         reactor = new TwoTemperatureAirKinetics(fileName1, fileName2, gmodel);

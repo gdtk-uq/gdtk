@@ -28,6 +28,7 @@ GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/two_temperature_nitrogen.d \
 	$(GAS_DIR)/two_temperature_dissociating_nitrogen.d \
 	$(GAS_DIR)/vib_specific_nitrogen.d \
+	$(GAS_DIR)/vib_specific_co.d \
 	$(GAS_DIR)/fuel_air_mix.d \
 	$(GAS_DIR)/equilibrium_gas.d \
 	$(GAS_DIR)/pseudo_species_gas.d \

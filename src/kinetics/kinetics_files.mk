@@ -25,6 +25,7 @@ KINETICS_FILES := $(KINETICS_DIR)/package.d \
 	$(KINETICS_DIR)/two_temperature_nitrogen_kinetics.d \
 	$(KINETICS_DIR)/two_temperature_dissociating_nitrogen_kinetics.d \
 	$(KINETICS_DIR)/vib_specific_nitrogen_kinetics.d \
+	$(KINETICS_DIR)/vib_specific_co_kinetics.d \
 	$(KINETICS_DIR)/two_temperature_gasgiant_kinetics.d
 
 ifeq ($(WITH_DVODE),1)

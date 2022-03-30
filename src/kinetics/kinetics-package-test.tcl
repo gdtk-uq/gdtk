@@ -32,6 +32,10 @@ test two-temperature-argon-kinetics-test {Testing Daniel Smith's two-temperature
     exec ./two_temperature_argon_kinetics_test
 } -result {} -returnCodes {0}
 
+test vib-specific-CO-kientics-test {Testing Nick Gibbons implementation of a state-specific carbon monoxide model.} -body {
+    exec ./two_temperature_argon_kinetics_test
+} -result {} -returnCodes {0}
+
 test two-temperature-argon-with-ideal-gas-test {Testing Daniel Smith's two-temperature argon reaction mechanism with ideal-gas present.} -body {
     exec ./two_temperature_argon_with_ideal_gas_test
 } -result {} -returnCodes {0}

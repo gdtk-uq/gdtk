@@ -33,6 +33,7 @@ import gas.two_temperature_air;
 import gas.two_temperature_nitrogen;
 import gas.two_temperature_dissociating_nitrogen : TwoTemperatureDissociatingNitrogen;
 import gas.vib_specific_nitrogen;
+import gas.vib_specific_co;
 import gas.fuel_air_mix;
 import gas.equilibrium_gas;
 import gas.electronically_specific_gas: ElectronicallySpecificGas;
@@ -143,6 +144,9 @@ GasModel init_gas_model(string file_name="gas-model.lua")
             break;
         case "VibSpecificNitrogen":
             gm = new VibSpecificNitrogen(L);
+            break;
+        case "VibSpecificCO":
+            gm = new VibSpecificCO(L);
             break;
         case "FuelAirMix":
             gm = new FuelAirMix(L);

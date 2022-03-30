@@ -27,7 +27,7 @@ TEST_PROGRAMS := chemkin_therm_cond_test chemkin_viscosity_test cea_therm_cond_t
 	adaptive_lut_CEA_test ideal_air_proxy_test \
         two_temperature_reacting_argon_test two_temperature_argon_plus_ideal_test \
 	init_gas_model_complex_test ideal_gas_complex_test cea_thermo_curves_complex_test \
-	pseudo_species_gas_test vib_specific_nitrogen_test \
+	pseudo_species_gas_test vib_specific_nitrogen_test vib_specific_co_test \
 	electronically_specific_gas_test \
 	two_temperature_gasgiant_test
 
@@ -484,6 +484,12 @@ ideal_gas_ab_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES)
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
 
 vib_specific_nitrogen_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+
+vib_specific_co_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
 	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
