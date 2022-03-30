@@ -22,6 +22,11 @@ Last Modified: 17/05/2017
 2021-03-16: PAJ added sleep and checkAllowedNames
 --]]
 
+--// returns a "Lua" portable version of the string
+local function exportstring( s )
+   return string.format("%q", s)
+end
+
 --// The Save Function
 function table.save( tbl, filename )
   local charS,charE = "   ","\n"
@@ -94,12 +99,6 @@ function table.save( tbl, filename )
   end
   file:write( "}" )
   file:close()
-end
-
-
---// returns a "Lua" portable version of the string
-local function exportstring( s )
-   return string.format("%q", s)
 end
 
 --// The Load Function
