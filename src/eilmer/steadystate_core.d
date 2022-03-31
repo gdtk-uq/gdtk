@@ -670,17 +670,18 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         // calculate a relaxation factor for the nonlinear update via a physicality check
         omega = 1.0;
         if (GlobalConfig.sssOptions.usePhysicalityCheck) {
+
+            // we start by considering the change in the conserved mass
             foreach (blk; localFluidBlocks) {
                 int cellCount = 0;
                 auto cqi = blk.myConfig.cqi;
                 foreach (cell; blk.cells) {
-                    bool failed_decode = false;
                     number rel_diff_limit, U, dU;
                     // MASS
                     if (cqi.n_species == 1) {
                         U = cell.U[0].vec[cqi.mass];
                         dU = blk.dU[cellCount+MASS];
-                    } else {
+                    } else { // sum up the species densities
                         U = 0.0;
                         dU = 0.0;
                         foreach(isp; 0 .. cqi.n_species) {
@@ -689,9 +690,27 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         }
                     }
                     rel_diff_limit = fabs(dU/(theta*U));
-                    omega = 1.0/(max(rel_diff_limit,1.0/omega));
+                    omega = 1.0/(fmax(rel_diff_limit,1.0/omega));
+                    cellCount += nConserved;
+                }
+            }
 
-                    // check positivity of thermodynamic variables
+            // communicate minimum omega based on MASS to all threads
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &(omega.re), 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            }
+
+            // we now check if the current relaxation factor is sufficient by decoding the conserved
+            // quantities into the primitive variables, if the decode action fails, we will calculate a
+            // more severe relaxation factor based on the conserved energy
+            foreach (blk; localFluidBlocks) {
+                int cellCount = 0;
+                auto cqi = blk.myConfig.cqi;
+                foreach (cell; blk.cells) {
+                    bool failed_decode = false;
+                    number rel_diff_limit, U, dU;
+
+                    // check positivity of primitive variables
                     cell.U[1].copy_values_from(cell.U[0]);
                     foreach (j; 0 .. nConserved) {
                         cell.U[1].vec[j] = cell.U[0].vec[j] + omega*blk.dU[cellCount+j];
@@ -706,18 +725,18 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     // return cell to original state
                     cell.decode_conserved(0, 0, 0.0);
 
-                    // if the relaxation factor isn't sufficient, then limit the change in total energy (and modal energy)
+                    // if the relaxation factor isn't sufficient, limit the change in conserved energy
                     if (failed_decode) {
                         // TOTAL ENERGY
                         Qmin.copy_values_from(cell.fs.gas);
                         blk.myConfig.gmodel.minimum_mixture_energy(Qmin);
-                        number ke = 0.5*(cell.fs.vel.x*cell.fs.vel.x + cell.fs.vel.y*cell.fs.vel.y+cell.fs.vel.z*cell.fs.vel.z);
+                        number ke = 0.5*(cell.fs.vel.x*cell.fs.vel.x + cell.fs.vel.y*cell.fs.vel.y + cell.fs.vel.z*cell.fs.vel.z);
                         number Emin = cell.fs.gas.rho*(Qmin.u + ke);
                         version(turbulence) { Emin += cell.fs.gas.rho * blk.myConfig.turb_model.turbulent_kinetic_energy(cell.fs); }
                         U = fabs(cell.U[0].vec[cqi.totEnergy] - Emin);
                         dU = blk.dU[cellCount+cqi.totEnergy];
                         rel_diff_limit = fabs(dU/(theta*U));
-                        omega = 1.0/(max(rel_diff_limit,1.0/omega));
+                        omega = 1.0/(fmax(rel_diff_limit,1.0/omega));
 
                         // MODAL ENERGY
                         version(multi_T_gas){
@@ -726,18 +745,19 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                                 U = fabs(cell.U[0].vec[cqi.modes+imode] - Emin);
                                 dU = blk.dU[cellCount+cqi.modes+imode];
                                 rel_diff_limit = fabs(dU/(theta*U));
-                                omega = 1.0/(max(rel_diff_limit,1.0/omega));
+                                omega = 1.0/(fmax(rel_diff_limit,1.0/omega));
                             }
                         }
                     }
-
                     cellCount += nConserved;
                 }
             }
-            // communicate minimum omega to all threads
+
+            // the relaxation factor may have been updated, so communicate minimum omega to all threads again
             version(mpi_parallel) {
                 MPI_Allreduce(MPI_IN_PLACE, &(omega.re), 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
             }
+
         } // end physicality check
 
         if (omega < 0.01)  {
