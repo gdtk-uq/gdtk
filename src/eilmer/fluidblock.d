@@ -1094,12 +1094,6 @@ public:
             nentry += cell.cell_list.length;
         }
 
-        shared size_t my_nConserved = myConfig.cqi.n;
-        // remove the conserved mass variable for multi-species gas
-        if (GlobalConfig.cqi.n_species > 1) { my_nConserved = my_nConserved - 1; }
-        size_t ncells = cells.length;
-        flowJacobian = new FlowJacobian(sigma, myConfig.dimensions, my_nConserved, spatial_order_of_jacobian, nentry, ncells);
-
         // we will gather the ghost cell residual stencil lists
         // at this point as well for convenience, we need them
         // when we apply the boundary condition corrections later
@@ -1119,32 +1113,93 @@ public:
             }
         }
 
-        jacobian_nonzero_pattern();
+        jacobian_nonzero_pattern(spatial_order_of_jacobian, nentry, cells.length, sigma);
     } // end initialize_jacobian()
 
-    void jacobian_nonzero_pattern() {
-        // we now populate the pre-sized sparse matrix representation of the flow Jacobian
-        auto cqi = myConfig.cqi; // was GlobalConfig.cqi;
+    void jacobian_nonzero_pattern(int spatial_order_of_jacobian, size_t nentry, size_t ncells, double sigma) {
+        /*
+          This routine will fill out the sparse matrix with the appropriate non-zero structure
+        */
+
+        // We first construct a temporary sparse matrix to store the point structure of the system
+        // i.e. each nConserved x nConserved block is represented by a single entry
+        FlowJacobian ptJac = new FlowJacobian(0.0, myConfig.dimensions, 1, spatial_order_of_jacobian, nentry, ncells);
+        ptJac.local.ia[ptJac.ia_idx] = 0; // the first entry will always be filled
+        ptJac.ia_idx += 1;
+        foreach (pcell; cells) {
+            // loop through cells that will have non-zero entries
+            foreach(cell; pcell.cell_list) {
+                assert(cell.id < ghost_cell_start_id, "Oops, we expect to not find a ghost cell at this point.");
+                size_t jidx = cell.id; // column index
+                // populate entry with a place holder value
+                ptJac.local.aa[ptJac.aa_idx] = to!number(1.0);
+                // fill out the sparse matrix ready for the next entry in the row
+                ptJac.aa_idx += 1;
+                ptJac.local.ja[ptJac.ja_idx] = jidx;
+                ptJac.ja_idx += 1;
+            }
+            // prepare the sparse matrix for a new row
+            ptJac.local.ia[ptJac.ia_idx] = ptJac.aa_idx;
+            ptJac.ia_idx += 1;
+        }
+
+        // For ILU(p>0) we need to modify the sparsity pattern
+        if (myConfig.sssOptions.iluFill > 0) {
+
+            // [TODO] think about making the lev matrix sparse as well KAD 2022-03-31
+            // construct a level matrix
+            int p = GlobalConfig.sssOptions.iluFill;
+            int n = to!int(ptJac.local.ia.length)-1;
+            int[][] lev; // fill levels
+            lev.length = n;
+            foreach ( i; 0..n) lev[i].length = n;
+            // assign initial fill levels
+            foreach ( i; 0 .. n ) {
+                foreach ( j; 0 .. n ) {
+                    if (ptJac.local[i,j] < 1.0) lev[i][j] = n-1;
+                    else lev[i][j] = 0;
+                }
+            }
+
+            // apply symbolic phase algorithm
+            foreach ( i; 1 .. n ) { // Begin from 2nd row
+                foreach ( k; 0 .. i ) {
+                    if (lev[i][k] <= p) {
+                        foreach ( j ; k+1..n) {
+                            lev[i][j] = min(lev[i][j], lev[i][k]+lev[k][j]+1);
+                        }
+                    }
+                }
+            }
+
+            // modify the sparse matrix non-zero pattern based on the level matrix
+            foreach ( i; 0..n) {
+                foreach ( j; 0..n) {
+                    // add new entry
+                    if (lev[i][j] <= p) { ptJac.local[i,j] = to!number(1.0); }
+                }
+            }
+        }
+
+        // we now construct the full sparse matrix by replacing each entry with an nConserved x nConserved block
+        auto cqi = myConfig.cqi;
         auto nConserved = cqi.n;
         // remove the conserved mass variable for multi-species gas
         if (cqi.n_species > 1) { nConserved -= 1; }
-        //flowJacobian.prepare_crs_indexes();
-        // the first entry will always be filled, let's prepare for this entry
+
+        flowJacobian = new FlowJacobian(sigma, myConfig.dimensions, nConserved, spatial_order_of_jacobian, ptJac.local.aa.length, ncells);
         flowJacobian.local.ia[flowJacobian.ia_idx] = 0;
         flowJacobian.ia_idx += 1;
-        foreach (pcell; cells) {
-            size_t jidx; // column index into the matrix
+        size_t n = ptJac.local.ia.length-1;
+        foreach ( rowi; 0 .. n ) { // foreach row in the point sparse matrix
             // loop through nConserved rows
             for (size_t ip = 0; ip < nConserved; ++ip) {
-                // loop through cells that will have non-zero entries
-                foreach(cell; pcell.cell_list) {
-                    // loop through nConserved columns for each effected cell
-                    for ( size_t jp = 0; jp < nConserved; ++jp ) {
-                        assert(cell.id < ghost_cell_start_id, "Oops, we expect to not find a ghost cell at this point.");
-                        jidx = cell.id*nConserved + jp; // column index
+                foreach (colj; ptJac.local.ja[ptJac.local.ia[rowi] .. ptJac.local.ia[rowi+1]] ) { // foreach non-zero col in the point sparse matrix
+                    for (size_t jp = 0; jp < nConserved; ++jp) {
+                        size_t jidx = colj*nConserved + jp; // column index
                         // populate entry with a place holder value
-                        flowJacobian.local.aa[flowJacobian.aa_idx] = to!number(0.0);
-                        // fill out the sparse matrix idexes ready for the next entry in the row
+                        flowJacobian.local.aa[flowJacobian.aa_idx] = to!number(1.0);
+                        // fill out the sparse matrix ready for the next entry in the row
                         flowJacobian.aa_idx += 1;
                         flowJacobian.local.ja[flowJacobian.ja_idx] = jidx;
                         flowJacobian.ja_idx += 1;
@@ -1155,6 +1210,44 @@ public:
                 flowJacobian.ia_idx += 1;
             }
         }
+
+        /*
+        // Output some handy debugging information about the sparse matrices
+        writef("blk[%d] has %d entries in the sparse matrix \n", id, ptJac.local.aa.length);
+        writef("blk[%d] has %d entries in the block sparse matrix \n", id, flowJacobian.local.aa.length);
+
+        // point sparse matrix
+        string filename = "b" ~ to!string(id) ~ "_ilu.dat";
+        File outFile;
+        outFile = File(filename, "w");
+        foreach(val; ptJac.local.aa) {
+            outFile.writef("%.16f    ", val.re);
+        }
+        outFile.writef("\n");
+        foreach(val; ptJac.local.ja) {
+            outFile.writef("%d    ", val);
+        }
+        outFile.writef("\n");
+        foreach(val; ptJac.local.ia) {
+            outFile.writef("%d    ", val);
+        }
+
+        // full sparse matrix
+        filename = "b" ~ to!string(id) ~ "_bfilu.dat";
+        File outFile2;
+        outFile2 = File(filename, "w");
+        foreach(val; flowJacobian.local.aa) {
+            outFile2.writef("%.16f    ", val.re);
+        }
+        outFile2.writef("\n");
+        foreach(val; flowJacobian.local.ja) {
+            outFile2.writef("%d    ", val);
+        }
+        outFile2.writef("\n");
+        foreach(val; flowJacobian.local.ia) {
+            outFile2.writef("%d    ", val);
+        }
+        */
     } // end jacobian_nonzero_pattern()
 
     void evaluate_jacobian()
@@ -1162,6 +1255,9 @@ public:
         /*
           Higher level method used to evaluate the flow Jacobian attached to the FluidBlock object.
          */
+
+        // zero entries
+        flowJacobian.local.aa[] = to!number(0.0);
 
         // temporarily change interpolation order
         shared int interpolation_order_save = GlobalConfig.interpolation_order;

@@ -149,8 +149,8 @@ public:
             }
         }
 
-        if (fill_in_level > 0) { decompILUp(local, to!int(fill_in_level)); }
-        else { decompILU0(local); }
+        // apply ILU0 decomposition regardless of fill-in level
+        decompILU0(local);
 
     } // end prepare_preconditioner()
 
