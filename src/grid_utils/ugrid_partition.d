@@ -337,6 +337,22 @@ bool binarySearch(string x, ref string[] container) {
     return false;                               // x is not there
 } // end binarySearch
 
+void insertion_sort(int[][] arr, int n) {
+    // a helper function that applies insertion sort to a
+    // list of tuples, the sorting is based on the first index
+    int[2] key;
+    int j;
+    foreach (i; 1..n) {
+        key = arr[i];
+        j = i - 1;
+        while (j >= 0 && arr[j][1] > key[1]) {
+            arr[j + 1] = arr[j];
+            j = j - 1;
+        }
+        arr[j + 1] = key.dup;
+    }
+}
+
 
 string makeFaceTag(const size_t[] node_id_list) {
     // We make a tag for this face out of the vertex id numbers
@@ -546,7 +562,7 @@ void readSU2grid(string meshFile, ref Domain grid) {
     return;
 }
 
-void constructGridBlocks(string meshFile, string mappedCellsFilename, string partitionFile, string dualFile, ref Domain grid, ref Block[] gridBlocks) {
+void constructGridBlocks(bool reorder, string meshFile, string mappedCellsFilename, string partitionFile, string dualFile, ref Domain grid, ref Block[] gridBlocks) {
     // Construct the partitioned grid blocks
     // input: Domain grid, Metis output files, empty grid blocks
     // output: grid block data filled
@@ -609,7 +625,88 @@ void constructGridBlocks(string meshFile, string mappedCellsFilename, string par
                 gridBlocks[blk_id].global2local_node_transform[node_id] = gridBlocks[blk_id].nodes.length - 1;
             }
         }
+    }
 
+    // we pause the construction of the blocks here to apply an optional local reordering of the cells
+    if (reorder) {
+        writeln("-- -- -- applying RCM reordering");
+
+        // we apply the reverse Cuthill-McKee (RCM) reordering from pg. 66 of
+        //     A. George, J. Liu, E. Ng
+        //     Computer Solution of Sparse Linear Systems
+        //     Oak Ridge National Laboratory (1994)
+
+        foreach (blk; gridBlocks) {
+
+            // find a starting cell (we want this cell to be a minimum degree node)
+            int seed_id = to!int(blk.cells[0].id);
+            int min_degree = int.max;
+            foreach (cell; blk.cells) {
+                int degree = 0;
+                // calculate the degree of the current cell (i.e. sum up it's local connections)
+                foreach (ncell_id; cell.cell_cloud_ids) {
+                    Cell ncell = grid.cells[ncell_id];
+                    if (ncell.block_id == cell.block_id) { degree += 1; }
+                }
+                // check if it has a smaller degree than the current seed cell
+                if (degree < min_degree) {
+                    seed_id = to!int(cell.id);
+                    min_degree = degree;
+                }
+            }
+
+            // apply the Cuthill-McKee algorithm to determine the new ordering of the local cells
+            int[] ordered_cell_ids; // note that the stored cells ids are the unique global cell ids
+            int[] visited;
+            ordered_cell_ids ~= to!int(seed_id); // begin with the starting node we found above
+            size_t n = blk.cells.length;
+            while (ordered_cell_ids.length < n) {
+                foreach (cell_id; ordered_cell_ids) {
+                    Cell cell = grid.cells[cell_id];
+                    if (!visited.canFind(cell_id)) {
+                        int[][] id_degree; // a list of cell ids and their corresponding degree
+                        foreach (ncell_id; cell.cell_cloud_ids) {
+                            Cell ncell = grid.cells[ncell_id];
+                            if (ncell.block_id == cell.block_id && !ordered_cell_ids.canFind(ncell_id)) { // we only proceed with local cells that haven't been already added
+                                int degree = 0;
+                                // calculate the degree of ncell by looping through the neighbours of ncell and adding +1 for each cell in the same block
+                                foreach(nncell_id; ncell.cell_cloud_ids) {
+                                    Cell nncell = grid.cells[nncell_id]; // neighbour cell of ncell
+                                    if (nncell.block_id == ncell.block_id) { degree += 1; }
+                                }
+                                id_degree ~= [to!int(ncell_id), degree];
+                            }
+                        }
+                        // sort the list in order of ascending degree
+                        insertion_sort(id_degree, to!int(id_degree.length));
+                        // add the ids in the correct order
+                        if (id_degree.length > 0) {
+                            foreach (dat; id_degree) { ordered_cell_ids ~= dat[0]; }
+                        }
+                        visited ~= cell_id;
+                    }
+                }
+            } // end while()
+
+            // create temporary array with the new ordering
+            Cell[] reordered;
+            foreach (idx; ordered_cell_ids) { reordered ~= grid.cells[idx]; }
+
+            // overwrite the cell array with the reverse order (since we apply reverse Cuthill-McKee)
+            gridBlocks[blk.id].cells = [];
+            int id = 0;
+            foreach_reverse (cell; reordered) {
+                gridBlocks[blk.id].global2local_cell_transform[cell.id] = to!int(id);
+                id += 1;
+                gridBlocks[blk.id].cells ~= cell;
+            }
+
+        } // end foreach (blk; gridBlocks)
+    } // end if (reorder)
+
+    // continue contructing the blocks...
+    foreach(cid, ref cell; grid.cells) {
+        size_t blk_id = cell.block_id;
         // Attach the cell faces to the METIS_INTERIOR boundary if applicable
         foreach(adj_cid; cell.cell_cloud_ids) {
             Cell adj_cell = grid.cells[adj_cid]; // adjacent cell
@@ -761,21 +858,30 @@ void writeGridBlockFiles(string meshFile, string mappedCellsFilename, Block[] gr
 
 int main(string[] args){
 
-    if (args.length != 5) {
-        writeln("Wrong number of command line arguments.");
-        printHelp();
-        return 1;
+    string inputMeshFile; string mappedCellsFilename; int nparts; int ncommon; bool reorder;
+    // we will accept either 5 or 6 command line arguments
+    if (args.length != 6) {
+        if (args.length != 5) {
+            writeln("Wrong number of command line arguments.");
+            printHelp();
+            return 1;
+        } else {
+            // we assume the user does not want the grid reordered if they didn't specify a 6th argument
+            args ~= "false";
+        }
     }
 
     // assign command line arguments to variable names
-    string inputMeshFile; string mappedCellsFilename; int nparts; int ncommon;
     inputMeshFile = args[1];
     mappedCellsFilename = args[2];
     nparts = to!int(args[3]);
     ncommon = to!int(args[4]);
-    Domain grid = new Domain(nparts, ncommon);
+    reorder = to!bool(args[5]);
 
     writeln("Begin partitioning................");
+    // import entire SU2 grid file
+    Domain grid = new Domain(nparts, ncommon);
+    readSU2grid(inputMeshFile, grid);
 
     // Let's check the user doesn't have any previous partitioned su2 files in the directory
     // since this will upset the code if the user intends on partitioning more than one su2 file
@@ -793,14 +899,22 @@ int main(string[] args){
     string dualFormatFile = mesh2dual(metisFormatFile, ncommon);
 
     // partition the dual graph using Metis
-    string partitionFile = partitionDual(dualFormatFile, nparts);
-
-    // import entire SU2 grid file
-    readSU2grid(inputMeshFile, grid);
+    string partitionFile;
+    if (nparts > 1) {
+        partitionFile = partitionDual(dualFormatFile, nparts);
+    } else {
+        // we need to construct our own partition file in cases when the user wants to reorder a grid without partitioning it
+        partitionFile = dualFormatFile ~ ".part." ~ to!string(nparts);
+        File outFile;
+        outFile = File(partitionFile, "w");
+        foreach(cell; 0 .. grid.cells.length) {
+            outFile.writef("0 \n");
+        }
+    }
 
     // divide grid into N grid blocks
     Block[] gridBlocks;
-    constructGridBlocks(inputMeshFile, mappedCellsFilename, partitionFile, dualFormatFile, grid, gridBlocks);
+    constructGridBlocks(reorder, inputMeshFile, mappedCellsFilename, partitionFile, dualFormatFile, grid, gridBlocks);
 
     // write the grid blocks out to file in SU2 format
     writeGridBlockFiles(inputMeshFile, mappedCellsFilename, gridBlocks, grid.dimensions);
