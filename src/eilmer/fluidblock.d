@@ -834,6 +834,16 @@ public:
                     L2_residual += fabs(cell.dUdt[0].vec[cqi.rhoturb+it])^^2;
                 }
 	    }
+            version(multi_species_gas) {
+                foreach(isp; 0 .. myConfig.gmodel.n_species){
+                    L2_residual += fabs(cell.dUdt[0].vec[cqi.species+isp])^^2;
+                }
+	    }
+            version(multi_T_gas) {
+                foreach(imode; 0 .. myConfig.gmodel.n_modes){
+                    L2_residual += fabs(cell.dUdt[0].vec[cqi.modes+imode])^^2;
+                }
+	    }
         }
     } // end compute_L2_residual()
 
