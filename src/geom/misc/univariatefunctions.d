@@ -64,6 +64,47 @@ public:
     }
 } // end class LinearFunction
 
+class QuadraticFunction : UnivariateFunction {
+/*
+   A cluster function based on a quadratic. This function is designed for
+   linearly increasing or decreasing cell sizes. It's only parameter is
+   "ratio" which is the ratio of the largest cell sizes at the end to the
+   smallest cell sizes at the beginning.
+
+   @author: Nick Gibbons
+*/
+    this(double ratio, bool reverse)
+    {
+        this.ratio = ratio;
+        this.reverse = reverse;
+        this.a = (ratio-1.0)/(ratio+1.0);
+        this.b = 2/(ratio+1.0);
+    }
+    this(const QuadraticFunction other)
+    {
+        ratio = other.ratio;
+        reverse = other.reverse;
+    }
+    QuadraticFunction dup() const
+    {
+        return new QuadraticFunction (this);
+    }
+    override double opCall(double t) const
+    {
+        if (reverse) t = 1.0 - t;
+        double y = a*t*t + b*t;
+        if (reverse) y = 1.0 - y;
+        return y;
+    }
+    override string toString() const
+    {
+        return "QuadraticFunction(ratio=" ~ to!string(ratio) ~ ", t1=" ~ to!string(reverse) ~ ")";
+    }
+private:
+    double a,b,ratio;
+    bool reverse;
+} // end class QuadraticFunction
+
 class RobertsFunction : UnivariateFunction {
 public:
     // Stretching parameters for original Robert's transform.

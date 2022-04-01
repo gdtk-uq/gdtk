@@ -16,6 +16,7 @@ import geom.misc.univariatefunctions;
 
 // Name of metatables
 immutable string LinearFunctionMT = "LinearFunction";
+immutable string QuadraticFunctionMT = "QuadraticFunction";
 immutable string RobertsFunctionMT = "RobertsFunction";
 immutable string LuaFnClusteringMT = "LuaFnClustering";
 immutable string GeometricFunctionMT = "GeometricFunction";
@@ -27,6 +28,9 @@ static const(UnivariateFunction)[] functionStore;
 UnivariateFunction checkUnivariateFunction(lua_State* L, int index) {
     if ( isObjType(L, index, LinearFunctionMT) ) {
         return checkObj!(LinearFunction, LinearFunctionMT)(L, index);
+    }
+    if ( isObjType(L, index, QuadraticFunctionMT) ) {
+        return checkObj!(QuadraticFunction, QuadraticFunctionMT)(L, index);
     }
     if ( isObjType(L, index, RobertsFunctionMT) ) {
         return checkObj!(RobertsFunction, RobertsFunctionMT)(L, index);
@@ -100,6 +104,49 @@ extern(C) int newLinearFunction(lua_State* L)
     double t1 = getNumberFromTable(L, 1, "t1", false, 1.0, true, format(errMsgTmplt, "t1"));
     auto f = new LinearFunction(t0, t1);
     functionStore ~= pushObj!(LinearFunction, LinearFunctionMT)(L, f);
+    return 1;
+}
+
+/* ----------------- QuadraticFunction specific functions --------------- */
+
+/**
+ * The Lua constructor for a QuadraticFunction.
+ *
+ * Example construction in Lua:
+ * --------------------------------------
+ * f = QuadraticFunction:new{ratio=2.0, reverse=false}
+ * --------------------------------------
+ */
+extern(C) int newQuadraticFunction(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected QuadraticFunction:new{}; ";
+        errMsg ~= "maybe you tried QuadraticFunction.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in call to QuadraticFunction:new{}.; ";
+        errMsg ~= "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["ratio", "reverse"])) {
+        string errMsg = "Error in call to QuadraticFunction:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    //
+    string errMsgTmplt1 = "Error in call to QuadraticFunction:new{}. ";
+    errMsgTmplt1 ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmplt1 ~= "The value, if present, should be a number.";
+    double ratio = getNumberFromTable(L, 1, "ratio", false, 1.0, true, format(errMsgTmplt1, "ratio"));
+    string errMsgTmplt2 = "Error in call to QuadraticFunction:new{}. ";
+    errMsgTmplt2 ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmplt2 ~= "The value, if present, should be true or false.";
+    bool reverse = getBooleanFromTable(L, 1, "reverse", false, false, true, format(errMsgTmplt2, "reverse"));
+    auto f = new QuadraticFunction(ratio, reverse);
+    functionStore ~= pushObj!(QuadraticFunction, QuadraticFunctionMT)(L, f);
     return 1;
 }
 
@@ -391,6 +438,29 @@ void registerUnivariateFunctions(lua_State* L)
     lua_setfield(L, -2, "copy");
 
     lua_setglobal(L, LinearFunctionMT.toStringz);
+
+
+    // Register the QuadraticFunction object
+    luaL_newmetatable(L, QuadraticFunctionMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newQuadraticFunction);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallUnivariateFunction!(QuadraticFunction, QuadraticFunctionMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallUnivariateFunction!(QuadraticFunction, QuadraticFunctionMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(QuadraticFunction, QuadraticFunctionMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &copyUnivariateFunction!(QuadraticFunction, QuadraticFunctionMT));
+    lua_setfield(L, -2, "copy");
+
+    lua_setglobal(L, QuadraticFunctionMT.toStringz);
+
 
     // Register the RobertsFunction object
     luaL_newmetatable(L, RobertsFunctionMT.toStringz);
