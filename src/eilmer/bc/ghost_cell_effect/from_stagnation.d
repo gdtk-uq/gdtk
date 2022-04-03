@@ -67,6 +67,10 @@ public:
         // because T0 will be held fixed and p0 adjusted within the following bounds.
         p0_min = 0.1 * stagnation_condition.gas.p;
         p0_max = 10.0 * stagnation_condition.gas.p;
+        version(complex_numbers) {
+            this.stagnation_condition.clear_imaginary_components();
+            inflow_condition.clear_imaginary_components();
+        }
     }
 
     override void post_bc_construction()
@@ -118,6 +122,71 @@ public:
     } // end set_velocity_components()
 
     // not @nogc
+    void determine_stagnation_condition(double t, bool is_structured_grid)
+    {
+        BoundaryCondition bc = blk.bc[which_boundary];
+        auto gmodel = blk.myConfig.gmodel;
+        if (mass_flux > 0.0) {
+            // Adjust the stagnation pressure to better achieve the specified mass flux.
+            // Note that we only do this adjustment once, at the start of a
+            // multi-level gas-dynamic update.
+            //
+            // First, estimate the current bulk inflow condition.
+            number area = 0.0;
+            number rhoUA = 0.0; // current mass_flux through boundary
+            number rhovxA = 0.0; // mass-weighted x-velocity
+            number rhovyA = 0.0;
+            number rhovzA = 0.0;
+            number rhoA = 0.0;
+            number pA = 0.0;
+            FVCell cell;
+            //
+            foreach (i, face; bc.faces) {
+                int outsign = bc.outsigns[i];
+                if (is_structured_grid) {
+                    cell = (outsign == 1) ? face.left_cells[0] : face.right_cells[0];
+                } else {
+                    cell = (outsign == 1) ? face.left_cell : face.right_cell;
+                }
+                area += face.area[0];
+                number local_rhoA = cell.fs.gas.rho * face.area[0];
+                rhoA += local_rhoA;
+                rhoUA -= outsign*(local_rhoA * dot(cell.fs.vel, face.n)); // mass flux
+                rhovxA += local_rhoA * cell.fs.vel.x;
+                rhovyA += local_rhoA * cell.fs.vel.y;
+                rhovzA += local_rhoA * cell.fs.vel.z;
+                pA += cell.fs.gas.p * face.area[0];
+            }
+            //
+            // Now, make the adjustment.
+            number p = pA / area;
+            number dp_over_p = relax_factor * 0.5 / (rhoA/area) *
+                (mass_flux*mass_flux - rhoUA*fabs(rhoUA)/(area*area)) / p;
+            number new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
+            new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
+            stagnation_condition.gas.p = new_p0;
+            gmodel.update_thermo_from_pT(stagnation_condition.gas);
+            stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
+            stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
+        } else if (luaFileName.length > 0) {
+            // Call out to the user's function to get the current stagnation condition.
+            number new_p0 = stagnation_condition.gas.p;
+            number new_T0 = stagnation_condition.gas.T;
+            // [FIXME] dt_global=0.0 step=0
+            callUDFstagnationPT(t, 0.0, 0, 0, 0, new_p0, new_T0);
+            stagnation_condition.gas.p = new_p0;
+            stagnation_condition.gas.T = new_T0;
+            gmodel.update_thermo_from_pT(stagnation_condition.gas);
+            stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
+            stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
+        }
+        version(complex_numbers) {
+            stagnation_condition.clear_imaginary_components();
+        }
+        return;
+    } // end determine_stagnation_condition()
+
+    // not @nogc
     void callUDFstagnationPT(double t, double dt_global, int step, int gtl, int ftl,
                              ref number new_p0, ref number new_T0)
     {
@@ -146,160 +215,60 @@ public:
         new_T0 = to!double(luaL_checknumber(L, -1));
         // 4. Clear stack
         lua_settop(L, 0);
-    }
+    } // end callUDFstagnationPT()
 
-    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    void determine_inflow_condition_at_face(FVInterface face, FVCell cell, int outsign, GasModel gmodel)
     {
-        //throw new Error("GhostCellFromStagnation.apply_for_interface_unstructured_grid() not yet implemented");
+        number inflow_speed = -outsign * dot(cell.fs.vel, face.n);
+        // Block any outflow with stagnation condition.
+        if (inflow_speed < 0.0) { inflow_speed = 0.0; }
+        // Assume an isentropic process from a known total enthalpy.
+        number enthalpy = stagnation_enthalpy - 0.5 * inflow_speed^^2;
+        gmodel.update_thermo_from_hs(inflow_condition.gas, enthalpy, stagnation_entropy);
+        // Velocity components may vary with position on the block face.
+        set_velocity_components(inflow_condition.vel, inflow_speed, face, outsign);
+        version(complex_numbers) {
+            inflow_condition.clear_imaginary_components();
+        }
+        return;
+    } // end determine_inflow_condition_at_face()
 
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface face)
+    {
         // TODO: debug below code. KD 13-10-2020
         // Below is the first hack at extending this boundary condition to be applied on a per interface basis.
         // Currently there is something not quite right in this implementation, it fails to work with the numerical
         // Jacobian code to form an ILU preconditioner.
         BoundaryCondition bc = blk.bc[which_boundary];
-        FVCell ghost0; FVCell cell;
         auto gmodel = blk.myConfig.gmodel;
-
-        // First, estimate the current bulk inflow condition.
-        number area = 0.0;
-        number rhoUA = 0.0; // current mass_flux through boundary
-        number rhovxA = 0.0; // mass-weighted x-velocity
-        number rhovyA = 0.0;
-        number rhovzA = 0.0;
-        number rhoA = 0.0;
-        number pA = 0.0;
-
-        foreach (i, face; bc.faces) {
-            int outsign = bc.outsigns[i];
-            cell = (outsign == 1) ? face.left_cell : face.right_cell;
-            area += face.area[0];
-            number local_rhoA = cell.fs.gas.rho * face.area[0];
-            rhoA += local_rhoA;
-            rhoUA -= outsign*(local_rhoA * dot(cell.fs.vel, face.n)); // mass flux
-            rhovxA += local_rhoA * cell.fs.vel.x;
-            rhovyA += local_rhoA * cell.fs.vel.y;
-            rhovzA += local_rhoA * cell.fs.vel.z;
-            pA += cell.fs.gas.p * face.area[0];
-        }
-
+        // The condition is restricted to the fixed stagnation inflow condition and cannot be used with
+        // the specified-mass-flux condition nor the user-defined changeable condition.
         if (mass_flux > 0.0 && ftl == 0) {
-
             throw new Error("GhostCellFromStagnation.apply_for_interface_unstructured_grid() with fixed mass_flux not yet implemented");
-            /*
-            // Adjust the stagnation pressure to better achieve the specified mass flux.
-            // Note that we only do this adjustment once, at the start of a
-            // multi-level gas-dynamic update.
-            number p = pA / area;
-            number dp_over_p = relax_factor * 0.5 / (rhoA/area) *
-                (mass_flux*mass_flux - rhoUA*fabs(rhoUA)/(area*area)) / p;
-            number new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
-            new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
-            stagnation_condition.gas.p = new_p0;
-            gmodel.update_thermo_from_pT(stagnation_condition.gas);
-            stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
-            stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
-            */
         } else if (luaFileName.length > 0) {
             throw new Error("GhostCellFromStagnation.apply_for_interface_unstructured_grid() with lua UDF not yet implemented");
-            /*
-            number new_p0 = stagnation_condition.gas.p;
-            number new_T0 = stagnation_condition.gas.T;
-            // [FIXME] dt_global=0.0 step=0
-            callUDFstagnationPT(t, 0.0, 0, gtl, ftl, new_p0, new_T0);
-            stagnation_condition.gas.p = new_p0;
-            stagnation_condition.gas.T = new_T0;
-            gmodel.update_thermo_from_pT(stagnation_condition.gas);
-            stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
-            stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
-            */
         }
-        number bulk_speed = sqrt((rhovxA/rhoA)^^2 + (rhovyA/rhoA)^^2 + (rhovzA/rhoA)^^2);
-        if (rhoUA < 0.0) { bulk_speed = 0.0; } // Block any outflow with stagnation condition.
-        // Assume an isentropic process from a known total enthalpy.
-        number enthalpy = stagnation_enthalpy - 0.5 * bulk_speed^^2;
-        gmodel.update_thermo_from_hs(inflow_condition.gas, enthalpy, stagnation_entropy);
-        // Now, apply the ghost-cell conditions to the particular interface
-        int outsign = bc.outsigns[f.i_bndry];
-        ghost0 = (outsign == 1) ? f.right_cell : f.left_cell;
-        // Velocity components may vary with position on the block face.
-        set_velocity_components(inflow_condition.vel, bulk_speed, f, outsign);
+        int outsign = bc.outsigns[face.i_bndry];
+        FVCell cell = (outsign == 1) ? face.left_cell : face.right_cell;
+        FVCell ghost0 = (outsign == 1) ? face.right_cell : face.left_cell;
+        determine_inflow_condition_at_face(face, cell, outsign, gmodel);
         ghost0.fs.copy_values_from(inflow_condition);
-
-        version(complex_numbers) {
-            stagnation_condition.clear_imaginary_components();
-            inflow_condition.clear_imaginary_components();
-        }
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         BoundaryCondition bc = blk.bc[which_boundary];
-        FVCell ghost0; // FVCell cell;
         auto gmodel = blk.myConfig.gmodel;
-
-        // First, estimate the current bulk inflow condition.
-        number area = 0.0;
-        number rhoUA = 0.0; // current mass_flux through boundary
-        number rhovxA = 0.0; // mass-weighted x-velocity
-        number rhovyA = 0.0;
-        number rhovzA = 0.0;
-        number rhoA = 0.0;
-        number pA = 0.0;
-
-        foreach (i, face; bc.faces) {
-            int outsign = bc.outsigns[i];
-            auto cell = (outsign == 1) ? face.left_cell : face.right_cell;
-            area += face.area[0];
-            number local_rhoA = cell.fs.gas.rho * face.area[0];
-            rhoA += local_rhoA;
-            rhoUA -= outsign*(local_rhoA * dot(cell.fs.vel, face.n)); // mass flux
-            rhovxA += local_rhoA * cell.fs.vel.x;
-            rhovyA += local_rhoA * cell.fs.vel.y;
-            rhovzA += local_rhoA * cell.fs.vel.z;
-            pA += cell.fs.gas.p * face.area[0];
+        if (ftl == 0) {
+            determine_stagnation_condition(t, false);
         }
-
-        if (mass_flux > 0.0 && ftl == 0) {
-            // Adjust the stagnation pressure to better achieve the specified mass flux.
-            // Note that we only do this adjustment once, at the start of a
-            // multi-level gas-dynamic update.
-            number p = pA / area;
-            number dp_over_p = relax_factor * 0.5 / (rhoA/area) *
-                (mass_flux*mass_flux - rhoUA*fabs(rhoUA)/(area*area)) / p;
-            number new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
-            new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
-            stagnation_condition.gas.p = new_p0;
-            gmodel.update_thermo_from_pT(stagnation_condition.gas);
-            stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
-            stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
-        } else if (luaFileName.length > 0) {
-            number new_p0 = stagnation_condition.gas.p;
-            number new_T0 = stagnation_condition.gas.T;
-            // [FIXME] dt_global=0.0 step=0
-            callUDFstagnationPT(t, 0.0, 0, gtl, ftl, new_p0, new_T0);
-            stagnation_condition.gas.p = new_p0;
-            stagnation_condition.gas.T = new_T0;
-            gmodel.update_thermo_from_pT(stagnation_condition.gas);
-            stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
-            stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
-        }
-        number bulk_speed = sqrt((rhovxA/rhoA)^^2 + (rhovyA/rhoA)^^2 + (rhovzA/rhoA)^^2);
-        if (rhoUA < 0.0) { bulk_speed = 0.0; } // Block any outflow with stagnation condition.
-        // Assume an isentropic process from a known total enthalpy.
-        number enthalpy = stagnation_enthalpy - 0.5 * bulk_speed^^2;
-        gmodel.update_thermo_from_hs(inflow_condition.gas, enthalpy, stagnation_entropy);
         // Now, apply the ghost-cell conditions
         foreach (i, face; bc.faces) {
             int outsign = bc.outsigns[i];
-            ghost0 = (outsign == 1) ? face.right_cell : face.left_cell;
-            // Velocity components may vary with position on the block face.
-            set_velocity_components(inflow_condition.vel, bulk_speed, face, outsign);
+            FVCell cell = (outsign == 1) ? face.left_cell : face.right_cell;
+            FVCell ghost0 = (outsign == 1) ? face.right_cell : face.left_cell;
+            determine_inflow_condition_at_face(face, cell, outsign, gmodel);
             ghost0.fs.copy_values_from(inflow_condition);
-        }
-        //
-        version(complex_numbers) {
-            stagnation_condition.clear_imaginary_components();
-            inflow_condition.clear_imaginary_components();
         }
     } // end apply_unstructured_grid()
 
@@ -315,72 +284,17 @@ public:
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
-
-        // First, estimate the current bulk inflow condition.
-        number area = 0.0;
-        number rhoUA = 0.0; // current mass_flux through boundary
-        number rhovxA = 0.0; // mass-weighted x-velocity
-        number rhovyA = 0.0;
-        number rhovzA = 0.0;
-        number rhoA = 0.0;
-        number pA = 0.0;
-
+        if (ftl == 0) {
+            determine_stagnation_condition(t, true);
+        }
         foreach (i, face; bc.faces) {
             int outsign = bc.outsigns[i];
-            auto cell = (outsign == 1) ? face.left_cells[0] : face.right_cells[0];
-            area += face.area[0];
-            number local_rhoA = cell.fs.gas.rho * face.area[0];
-            rhoA += local_rhoA;
-            rhoUA -= outsign*(local_rhoA * dot(cell.fs.vel, face.n)); // mass flux
-            rhovxA += local_rhoA * cell.fs.vel.x;
-            rhovyA += local_rhoA * cell.fs.vel.y;
-            rhovzA += local_rhoA * cell.fs.vel.z;
-            pA += cell.fs.gas.p * face.area[0];
-        }
-
-        if (mass_flux > 0.0 && ftl == 0) {
-            // Adjust the stagnation pressure to better achieve the specified mass flux.
-            // Note that we only do this adjustment once, at the start of a
-            // multi-level gas-dynamic update.
-            number p = pA / area;
-            number dp_over_p = relax_factor * 0.5 / (rhoA/area) *
-                (mass_flux*mass_flux - rhoUA*fabs(rhoUA)/(area*area)) / p;
-            number new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
-            new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
-            stagnation_condition.gas.p = new_p0;
-            gmodel.update_thermo_from_pT(stagnation_condition.gas);
-            stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
-            stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
-        } else if (luaFileName.length > 0) {
-            number new_p0 = stagnation_condition.gas.p;
-            number new_T0 = stagnation_condition.gas.T;
-            // [FIXME] dt_global=0.0 step=0
-            callUDFstagnationPT(t, 0.0, 0, gtl, ftl, new_p0, new_T0);
-            stagnation_condition.gas.p = new_p0;
-            stagnation_condition.gas.T = new_T0;
-            gmodel.update_thermo_from_pT(stagnation_condition.gas);
-            stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
-            stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
-        }
-        number bulk_speed = sqrt((rhovxA/rhoA)^^2 + (rhovyA/rhoA)^^2 + (rhovzA/rhoA)^^2);
-        if (rhoUA < 0.0) { bulk_speed = 0.0; } // Block any outflow with stagnation condition.
-        // Assume an isentropic process from a known total enthalpy.
-        number enthalpy = stagnation_enthalpy - 0.5 * bulk_speed^^2;
-        gmodel.update_thermo_from_hs(inflow_condition.gas, enthalpy, stagnation_entropy);
-        // Now, apply the ghost-cell conditions
-        foreach (i, face; bc.faces) {
+            FVCell cell = (outsign == 1) ? face.left_cells[0] : face.right_cells[0];
+            determine_inflow_condition_at_face(face, cell, outsign, gmodel);
             foreach (n; 0 .. blk.n_ghost_cell_layers) {
-                int outsign = bc.outsigns[i];
-                auto ghost = (outsign == 1) ? face.right_cells[n] : face.left_cells[n];
-                // Velocity components may vary with position on the block face.
-                set_velocity_components(inflow_condition.vel, bulk_speed, face, outsign);
+                FVCell ghost = (outsign == 1) ? face.right_cells[n] : face.left_cells[n];
                 ghost.fs.copy_values_from(inflow_condition);
             }
-        }
-        //
-        version(complex_numbers) {
-            stagnation_condition.clear_imaginary_components();
-            inflow_condition.clear_imaginary_components();
         }
     } // end apply_structured_grid()
 } // end class GhostCellFixedStagnationPT

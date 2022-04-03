@@ -65,8 +65,8 @@ class TestBack < Test::Unit::TestCase
       end
     end
     # The following values were extracted from the solution
-    # as it was computed on PJ's computer 03-Mar-2014.
-    ref = {'rho'=>5.743503e+00, 'p'=>4.927381e+05, 'T'=>2.988554e+02, 'M'=>1.384033e-01}
+    # as it was computed on PJ's computer 2022-04-03.
+    ref = {'rho'=>5.7355e+00, 'p'=>4.9157e+05, 'T'=>2.9852e+02, 'M'=>1.5176e-01}
     assert((values['rho'] - ref['rho']).abs/ref['rho'] < 0.01, "Failed to see correct density.")
     assert((values['p'] - ref['p']).abs/ref['p'] < 0.01, "Failed to see correct pressure.")
     assert((values['T'] - ref['T']).abs/ref['T'] < 0.01, "Failed to see correct temperature.")
@@ -99,8 +99,8 @@ class TestBack < Test::Unit::TestCase
       end
     end
     # The following values were extracted from the solution
-    # as it was computed on PJ's computer 03-Mar-2014.
-    ref = {'rho'=>3.904117e-01, 'p'=>1.142634e+04, 'T'=>1.019545e+02, 'M'=>3.116296e+00}
+    # as it was computed on PJ's computer 2022-04-03.
+    ref = {'rho'=>3.8999e-01, 'p'=>1.1434e+04, 'T'=>1.0212e+02, 'M'=>3.1149e+00}
     assert((values['rho'] - ref['rho']).abs/ref['rho'] < 0.05, "Failed to see correct density.")
     assert((values['p'] - ref['p']).abs/ref['p'] < 0.05, "Failed to see correct pressure.")
     assert((values['T'] - ref['T']).abs/ref['T'] < 0.02, "Failed to see correct temperature.")
