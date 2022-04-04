@@ -254,17 +254,14 @@ class GMResFieldSolver {
             for(int p=0; p<n; p++) B[p] = rnorm*QT[p*(nmax_iter+1) + 0];
             qr_lsq_backward_substitution(n, nmax_iter, R, B, Y);
             transpose_and_matrix_multiply(n, matrix_size, q, Y, xnew);
-            for(int p=0; p<n; p++) xnew[p] += x0[p];
+            for(int p=0; p<matrix_size; p++) xnew[p] += x0[p];
 
-            for(int p=0; p<n; p++) xdiff[p] = (xnew[p] - xold[p]);
-            residual = vector_norm(xdiff, n);
+            for(int p=0; p<matrix_size; p++) xdiff[p] = (xnew[p] - xold[p]);
+            residual = vector_norm(xdiff, matrix_size);
             xold[] = xnew[];
     
             if (k%nprint==0) write(".");
-            //writeln("iter: ", k);
-            //writeln("residual: ", residual);
-            //writeln("");
-    
+            //writefln("iter: %d residual %e hkp1k %e", k, residual, hkp1k);
             if (residual<tol) break;
         }
         writeln("");
