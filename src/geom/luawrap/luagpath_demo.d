@@ -157,6 +157,16 @@ circle2 = Spline2:new{filename="sample-data/test-spline2.dat"}
 print("circle2=", circle2)
 print("circle2(5.0/8)=", circle2(5.0/8))
 --
+print("XSpline")
+cspline = XSpline:new{xs={1,2,3,4}, ys={1.5,2.5,1.5,2.5}}
+print("cspline=", cspline)
+print("cspline(0.5)=", cspline(0.5))
+--
+print("XSpline2")
+cspline2 = XSpline2:new{filename="sample-data/test-xspline2.dat"}
+print("cspline2=", cspline2)
+print("cspline2(0.5)=", cspline2(0.5))
+--
 print("TranslatedPath")
 a = Vector3:new{x=2.0, y=0.0}
 b = Vector3:new{x=0.0, y=2.0}
