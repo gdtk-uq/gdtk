@@ -70,6 +70,41 @@ private:
     double value;
 }
 
+class MixedField : FieldBC {
+    this(double differential, double xinsulator, double xcollector) {
+        this.nose = new FixedField(1.0);
+        this.insulator = new ZeroNormalGradient();
+        this.collector = new FixedField(1.0+differential);
+        this.xinsulator = xinsulator;
+        this.xcollector = xcollector;
+    }
+
+    final void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio){
+        if (face.pos.x<xinsulator){
+            nose(sign, face, cell, Akk, bk, Ako, Aio);
+        } else if (face.pos.x<xcollector) {
+            insulator(sign, face, cell, Akk, bk, Ako, Aio);
+        } else {
+            collector(sign, face, cell, Akk, bk, Ako, Aio);
+        }
+    }
+
+    final double compute_current(const double sign, const FVInterface face, const FVCell cell){
+        double I;
+        if (face.pos.x<xinsulator){
+            I = nose.compute_current(sign, face, cell);
+        } else if (face.pos.x<xcollector) {
+            I = insulator.compute_current(sign, face, cell);
+        } else {
+            I = collector.compute_current(sign, face, cell);
+        }
+        return I;
+    }
+private:
+    double xinsulator, xcollector;
+    FixedField nose, collector;
+    ZeroNormalGradient insulator;
+}
 
 class FixedField_Test : FieldBC {
     this() {
@@ -286,6 +321,12 @@ FieldBC create_field_bc(JSONValue field_bc_json, const BoundaryCondition bc, con
     case "FixedField":
         double value = getJSONdouble(field_bc_json, "value", 0.0);
         field_bc = new FixedField(value);
+        break;
+    case "MixedField":
+        double differential = getJSONdouble(field_bc_json, "differential", 1.0);
+        double xinsulator = getJSONdouble(field_bc_json, "xinsulator", 0.0);
+        double xcollector = getJSONdouble(field_bc_json, "xcollector", 0.0);
+        field_bc = new MixedField(differential, xinsulator, xcollector);
         break;
     case "FixedGradient_Test":
         field_bc = new FixedGradient_Test();

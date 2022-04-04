@@ -562,6 +562,21 @@ function FixedField:tojson()
    return str
 end
 
+MixedField = FieldBoundary:new{differential=1.0, xinsulator=0.0, xcollector=0.0}
+MixedField.name = "MixedField"
+function MixedField:new(o)
+   o = FieldBoundary.new(self, o)
+   return o
+end
+function MixedField:tojson()
+   local str = string.format(' {"name": "%s", ', self.name)
+   str = str .. string.format('"differential": %.18e, ', self.differential)
+   str = str .. string.format('"xinsulator": %.18e, ', self.xinsulator)
+   str = str .. string.format('"xcollector": %.18e', self.xcollector)
+   str = str .. '}'
+   return str
+end
+
 FixedGradient_Test = FieldBoundary:new()
 FixedGradient_Test.name = "FixedGradient_Test"
 function FixedGradient_Test:new(o)
