@@ -34,7 +34,8 @@ TEST_PROGRAMS := bbla_test bbla_complex_test \
 	stmatrix_test \
 	nelmin_test nelmin_complex_test \
 	schedule_test \
-	spline_test
+	spline_test \
+	splinelsq_test
 
 LUA := ../../extern/lua-5.4.3
 LIBLUA := $(LUA)/install/lib/liblua.a
@@ -201,6 +202,10 @@ nelmin_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 spline_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
+splinelsq_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 

@@ -22,6 +22,7 @@ NM_FILES := $(NM_DIR)/package.d \
 	$(NM_DIR)/tree_patch.d \
 	$(NM_DIR)/univariate_lut.d \
 	$(NM_DIR)/limiters.d \
-	$(NM_DIR)/spline.d
+	$(NM_DIR)/spline.d \
+	$(NM_DIR)/splinelsq.d
 
 NM_LUA_FILES := $(NM_DIR)/luabbla.d

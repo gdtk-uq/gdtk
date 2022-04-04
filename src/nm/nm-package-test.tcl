@@ -24,7 +24,8 @@ set module_names [list bbla bbla_complex luabbla \
                       newton newton_complex \
                       nelmin nelmin_complex \
                       schedule \
-                      spline ]
+                      spline \
+                      splinelsq ]
 
 
 foreach name $module_names {
