@@ -33,7 +33,8 @@ TEST_PROGRAMS := bbla_test bbla_complex_test \
 	newton_test newton_complex_test \
 	stmatrix_test \
 	nelmin_test nelmin_complex_test \
-	schedule_test
+	schedule_test \
+	spline_test
 
 LUA := ../../extern/lua-5.4.3
 LIBLUA := $(LUA)/install/lib/liblua.a
@@ -100,7 +101,7 @@ gaussquad_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 gaussquad_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -debug -g -w -version=gaussquad_test -version=complex_numbers \
+	$(DMD) -of$@ -debug -g -w -dip1008 -version=gaussquad_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 linesearch_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
@@ -176,7 +177,7 @@ luabbla_test: luabbla.d bbla.d complex.d number.d $(UTIL_FILES) $(LIBLUA) $(UTIL
 		luabbla.d bbla.d complex.d number.d $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
 
 complex_number_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	$(DMD) -of$@ -debug -g -w -version=complex_number_test -version=complex_numbers \
+	$(DMD) -of$@ -debug -g -w -dip1008 -version=complex_number_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 newton_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
@@ -197,6 +198,10 @@ nelmin_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 nelmin_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=nelmin_test -version=complex_numbers \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
+spline_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 # Some demo targets. These are left over from the early days of development.
