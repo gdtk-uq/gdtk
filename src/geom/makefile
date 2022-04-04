@@ -16,6 +16,7 @@ TEST_PROGRAMS := vector3_test vector3_complex_test \
 	helix_test helix_complex_test \
 	nurbs_test \
 	polyline_test polyline_complex_test \
+	xspline_test \
 	svgpath_test \
 	coonspatch_test coonspatch_complex_test \
 	aopatch_test aopatch_complex_test \
@@ -58,6 +59,8 @@ NM_DIR := ../nm
 NM_FILES := $(NM_DIR)/ridder.d \
 	$(NM_DIR)/bbla.d \
 	$(NM_DIR)/linesearch.d \
+	$(NM_DIR)/spline.d \
+	$(NM_DIR)/splinelsq.d \
 	$(NM_DIR)/nelmin.d \
 	$(NM_DIR)/complex.d \
 	$(NM_DIR)/number.d
@@ -200,6 +203,10 @@ polyline_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service
 
 polyline_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -dip1008 -debug -g -w -version=polyline_test -version=complex_numbers \
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
+
+xspline_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 svgpath_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d

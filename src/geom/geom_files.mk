@@ -17,6 +17,7 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/gpath/nurbs.d \
 	$(GEOM_DIR)/gpath/polynomial.d \
 	$(GEOM_DIR)/gpath/polyline.d \
+	$(GEOM_DIR)/gpath/xspline.d \
 	$(GEOM_DIR)/gpath/svgpath.d \
 	$(GEOM_DIR)/gpath/modifiedpath.d \
 	$(GEOM_DIR)/gpath/gpath_utils.d \

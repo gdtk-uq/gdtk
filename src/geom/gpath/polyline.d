@@ -1,4 +1,7 @@
 // polyline.d
+// Build Paths out of segments.
+// This includes the building of splines with Bezier3 segments.
+//
 // Peter J. 2017-11-29: Split out of the original path module.
 
 module geom.gpath.polyline;
@@ -108,7 +111,7 @@ public:
     this(string fileName, bool isClosed=false)
     {
         // This function takes a filename and processes it assuming that each
-        // line contains (x,y,z) triples (space-delimited).  If any values are
+        // line contains (x,y,z) triples (space-delimited).  If any y- or z-values are
         // missing on a given line, they are assumed to be 0.0.  The x,y,z-triples
         // are gathered and used to create the Spline.
         // Ported Python code Spline2 from libgeom2.i 2015-10-05 by PJ

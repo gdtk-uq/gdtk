@@ -17,6 +17,8 @@ class CubicSpline {
     // Interpolatory cubic spline, storing coefficients for the polynomial pieces.
 
 public:
+    double[] x, y; // Interpolation points of the spline.
+
     this(const double[] xi, const double[] yi)
     // Sets up the interpolatory cubic spline through the xi, yi points.
     //   xi : sequence of x-coordinates
@@ -63,7 +65,7 @@ public:
         this(other.x, other.y);
     }
 
-    double opCall(double xx)
+    double opCall(double xx) const
     // Evaluates the spline at point x by first searching for the
     // relevant segment and then evaluating the local polynomial piece.
     {
@@ -79,9 +81,13 @@ public:
         return ((a[i]*dx + b[i])*dx + c[i])*dx + y[i];
     }
 
+    double xmin() const { return x[0]; }
+
+    double xmax() const { return x[$-1]; }
+
 private:
     size_t n;
-    double[] x, y, a, b, c;
+    double[] a, b, c;
 } // end class CubicSpline
 
 

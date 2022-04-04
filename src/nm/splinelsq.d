@@ -81,10 +81,20 @@ public:
         spl = new CubicSpline(xs, ys);
     }
 
-    double opCall(double x)
+    double opCall(double x) const
     // Evaluates the underlying spline at point x.
     {
         return spl(x);
+    }
+
+    double xmin() const
+    {
+        return spl.xmin();
+    }
+
+    double xmax() const
+    {
+        return spl.xmax();
     }
 
 private:
