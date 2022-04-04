@@ -1565,7 +1565,10 @@ class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
     @nogc
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        throw new Error("BIE_ThermionicRadiativeEquilibrium.apply_for_interface_unstructured_grid() not yet implemented");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        int outsign = bc.outsigns[f.i_bndry];
+        auto c = (outsign == 1) ? f.left_cell : f.right_cell;
+        solve_for_wall_temperature_and_energy_flux(c, f, outsign);
     }
 
     @nogc
