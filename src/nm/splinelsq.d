@@ -17,7 +17,12 @@ class CubicSplineLsq {
     // A CubicSpline that has been fitted to the original data in a least-squares error sense.
 
 public:
-    this(double[] xd, double[] yd, double[] wd, double[] xs, int nseg)
+    double[] xd, yd; // Copy of the original data.
+    double[] wd; // Weights for the data points.
+    double[] xs; // x-coordinates of the spline knots
+    int nseg; // Number of segments in the underlying spline.
+
+    this(const double[] xd, const double[] yd, const double[] wd, const double[] xs, int nseg)
     // Construct a spline of nseg segments to approximate the xd, yd points.
     // wd is the array of weights for the data points,
     // for use when computing the sum-square error.
@@ -25,30 +30,35 @@ public:
     // If it is supplied, it's length has to be nseg+1.
     {
         // Check for reasonable arrays coming in.
+        this.xd = xd.dup();
         size_t nd = xd.length;
         assert(nd > nseg+1, "Too few data points.");
-        assert(yd.length == nd, "yd array not same length as xd.");
-        if (wd.length == 0) {
-            wd.length = nd;
-            foreach (i; 0 .. nd) { wd[i] = 1.0; }
+        this.yd = yd.dup();
+        assert(this.yd.length == nd, "yd array not same length as xd.");
+        this.wd = wd.dup();
+        if (this.wd.length == 0) {
+            this.wd.length = nd;
+            foreach (i; 0 .. nd) { this.wd[i] = 1.0; }
+        } else {
+            assert(this.wd.length == nd, "Inconsistent length for wd.");
         }
-        assert(wd.length == nd, "Inconsistent length for wd.");
         if (xs.length > 0) {
             assert(xs.length == nseg+1, "Inconsistent length for xs.");
         }
+        this.xs = xs.dup();
         assert(nseg > 1, "Too few segments.");
         //
         // Set up an initial guess for the spline as a straight line.
         double[] ys;
-        if (xs.length == 0) {
+        if (this.xs.length == 0) {
             foreach (i; 0 .. nseg+1) {
                 double frac = to!double(i)/nseg;
-                xs ~= xd[0]*(1.0-frac) + xd[$-1]*frac;
+                this.xs ~= xd[0]*(1.0-frac) + xd[$-1]*frac;
                 ys ~= yd[0]*(1.0-frac) + yd[$-1]*frac;
             }
         } else {
             foreach (i; 0 .. nseg+1) {
-                double frac = (xs[i]-xd[0])/(xd[$-1]-xd[0]);
+                double frac = (this.xs[i]-xd[0])/(xd[$-1]-xd[0]);
                 ys ~= yd[0]*(1.0-frac) + yd[$-1]*frac;
             }
         }
@@ -58,12 +68,12 @@ public:
         // Set up the residual function.
         double sse(double[] ps) {
             // The parameter vector is the vector of y-values for the spline knots.
-            assert(ps.length == xs.length, "Unexpected length for parameter vector.");
-            spl = new CubicSpline(xs, ps);
+            assert(ps.length == this.xs.length, "Unexpected length for parameter vector.");
+            spl = new CubicSpline(this.xs, ps);
             double sumerr = 0.0;
             foreach (j; 0 .. xd.length) {
                 double e = yd[j] - spl(xd[j]);
-                sumerr += wd[j]*e*e;
+                sumerr += this.wd[j]*e*e;
             }
             return sumerr;
         }
@@ -78,7 +88,17 @@ public:
         // writeln("convergence-flag= ", conv_flag);
         // writeln("number-of-fn-evaluations= ", nfe);
         // writeln("number-of-restarts= ", nres);
-        spl = new CubicSpline(xs, ys);
+        spl = new CubicSpline(this.xs, ys);
+    }
+
+    this(const(CubicSplineLsq) other)
+    {
+        spl = new CubicSpline(other.spl);
+        nseg = other.nseg;
+        xs = other.xs.dup();
+        xd = other.xd.dup();
+        yd = other.yd.dup();
+        wd = other.wd.dup();
     }
 
     double opCall(double x) const
@@ -99,9 +119,6 @@ public:
 
 private:
     CubicSpline spl; // The underlying spline model.
-    int nseg; // Number of segments in the underlying spline.
-    double[] xd, yd; // Copy of the original data.
-    double wd; // Weights for the data points.
 } // end class CubicSplineLsq
 
 

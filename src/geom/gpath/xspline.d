@@ -1,5 +1,5 @@
 // xspline.d
-// A Path based the cubic-spline y(x).
+// A Path based on the cubic-spline y(x).
 //
 // Peter J.
 // 2022-04-04 : first code, making use of nm.spline and nm.splinelsq.
@@ -32,7 +32,7 @@ public:
     }
 
     this(string fileName)
-    // Contructs a spline from a file containing x(,y(,z)) coordinates.
+    // Contructs a spline from a file containing x(,y) coordinates.
     {
         // This function takes a filename and processes it assuming that each
         // line contains (x,y) tuples (space-delimited).  If any y-values are
@@ -70,7 +70,7 @@ public:
 
     override string toString() const
     {
-        return "XSpline(xs=" ~ to!string(spl.x) ~ ", ys=" ~ to!string(spl.y) ~ ")";
+        return "XSpline(xs=" ~ to!string(spl.xs) ~ ", ys=" ~ to!string(spl.ys) ~ ")";
     }
 
     override string classString() const

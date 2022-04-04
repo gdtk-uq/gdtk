@@ -17,6 +17,7 @@ TEST_PROGRAMS := vector3_test vector3_complex_test \
 	nurbs_test \
 	polyline_test polyline_complex_test \
 	xspline_test \
+	xsplinelsq_test \
 	svgpath_test \
 	coonspatch_test coonspatch_complex_test \
 	aopatch_test aopatch_complex_test \
@@ -206,6 +207,10 @@ polyline_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 xspline_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
+
+xsplinelsq_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 

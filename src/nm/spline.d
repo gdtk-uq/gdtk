@@ -17,25 +17,25 @@ class CubicSpline {
     // Interpolatory cubic spline, storing coefficients for the polynomial pieces.
 
 public:
-    double[] x, y; // Interpolation points of the spline.
+    double[] xs, ys; // Interpolation points of the spline.
 
-    this(const double[] xi, const double[] yi)
+    this(const double[] xs, const double[] ys)
     // Sets up the interpolatory cubic spline through the xi, yi points.
-    //   xi : sequence of x-coordinates
-    //   yi : sequence of y-coordinates
+    //   xs : sequence of x-coordinates
+    //   ys : sequence of y-coordinates
     //
     // There will be n+1 knots, n segments and n-1 interior knots.
     {
-        n = xi.length - 1;  // number of segments
-        assert(yi.length == n+1, "Unequal xi, yi lengths.");
-        x = xi.dup();
-        y = yi.dup();
+        n = xs.length - 1;  // number of segments
+        assert(ys.length == n+1, "Unequal xs, ys lengths.");
+        this.xs = xs.dup();
+        this.ys = ys.dup();
         a.length = n;
         b.length = n;
         c.length = n;
         // for d, just use the y array
         double[] h; h.length = n;
-        foreach (i; 0 .. n) { h[i] = x[i+1] - x[i]; }
+        foreach (i; 0 .. n) { h[i] = xs[i+1] - xs[i]; }
         // Solve for the second-derivative at the interior knots.
         // The sigma[i], i=1...n-1 (inclusive) are the unknowns since
         // the natural end conditions are sigma[0]=sigma[n]=0.0
@@ -46,7 +46,7 @@ public:
             if (k > 0) { A[k,k-1] = h[i-1]; }
             A[k,k] = 2.0*(h[i-1]+h[i]);
             if (k < m-1) { A[k,k+1] = h[i]; }
-            A[k,m] = 6.0*((yi[i+1]-yi[i])/h[i] - (yi[i]-yi[i-1])/h[i-1]); // RHS elements
+            A[k,m] = 6.0*((ys[i+1]-ys[i])/h[i] - (ys[i]-ys[i-1])/h[i-1]); // RHS elements
         }
         gaussJordanElimination!double(A);
         // Put sigma values in place in the full array.
@@ -56,34 +56,34 @@ public:
         foreach (i; 0 .. n) {
             a[i] = (sigma[i+1]-sigma[i])/(6.0*h[i]);
             b[i] = sigma[i]/2.0;
-            c[i] = (yi[i+1]-yi[i])/h[i] - (2.0*sigma[i] + sigma[i+1])*h[i]/6.0;
+            c[i] = (ys[i+1]-ys[i])/h[i] - (2.0*sigma[i] + sigma[i+1])*h[i]/6.0;
         }
     } // end constructor
 
     this(ref const(CubicSpline) other)
     {
-        this(other.x, other.y);
+        this(other.xs, other.ys);
     }
 
-    double opCall(double xx) const
+    double opCall(double x) const
     // Evaluates the spline at point x by first searching for the
     // relevant segment and then evaluating the local polynomial piece.
     {
         int i = 0;
-        if (xx < x[0]) {
+        if (x < xs[0]) {
             i = 0; // The point is off range to the left.
         } else {
             i = cast(int)n - 1; // Start search from the right-hand end.
-            while ((xx < x[i]) && (i > 0)) { i -= 1; }
+            while ((x < xs[i]) && (i > 0)) { i -= 1; }
         }
         // Now that we found the relevant segment, evaluate locally.
-        double dx = xx - x[i];
-        return ((a[i]*dx + b[i])*dx + c[i])*dx + y[i];
+        double dx = x - xs[i];
+        return ((a[i]*dx + b[i])*dx + c[i])*dx + ys[i];
     }
 
-    double xmin() const { return x[0]; }
+    double xmin() const { return xs[0]; }
 
-    double xmax() const { return x[$-1]; }
+    double xmax() const { return xs[$-1]; }
 
 private:
     size_t n;

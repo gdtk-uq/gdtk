@@ -19,6 +19,7 @@ set module_names [list vector3 vector3_complex \
                       helix helix_complex \
                       polyline polyline_complex \
                       xspline \
+                      xsplinelsq \
                       svgpath \
 		      coonspatch coonspatch_complex \
                       aopatch aopatch_complex \
