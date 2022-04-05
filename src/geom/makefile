@@ -391,38 +391,38 @@ usgrid_demo: grid/usgrid_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 luageom_demo: luawrap/luageom_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	$(DMD) $(DFLAGS_LUA) luawrap/luageom_demo.d $(OF)luageom_demo \
 		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) \
-		$(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
+		$(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
 
 luagpath_demo: luawrap/luagpath_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	$(DMD) $(DFLAGS_LUA) luawrap/luagpath_demo.d $(OF)luagpath_demo \
 		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) \
-		$(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
+		$(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
 
 luasurface_demo: luawrap/luasurface_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	$(DMD) $(DFLAGS_LUA) luawrap/luasurface_demo.d $(OF)luasurface_demo \
-		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
 
 luasketch_demo: luawrap/luasketch_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	$(DMD) $(DFLAGS_LUA) luawrap/luasketch_demo.d $(OF)luasketch_demo \
-		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
 
 luavolume_demo: luawrap/luavolume_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	$(DMD) $(DFLAGS_LUA) luawrap/luavolume_demo.d $(OF)luavolume_demo \
-		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
 
 luaunifunction_demo: luawrap/luaunifunction_demo.d luawrap/luaunifunction.d \
 	misc/univariatefunctions.d $(UTIL_FILES) $(LIBLUA)
 	$(DMD) $(DFLAGS_LUA) luawrap/luaunifunction_demo.d $(OF)luaunifunction_demo \
 		luawrap/luaunifunction.d misc/univariatefunctions.d \
-		$(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
+		$(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
 
 luasgrid_demo: luawrap/luasgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES)
 	$(DMD) $(DFLAGS_LUA) luawrap/luasgrid_demo.d $(OF)luasgrid_demo \
-		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
 
 luausgrid_demo: luawrap/luausgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES)
 	$(DMD) $(DFLAGS_LUA) luawrap/luausgrid_demo.d $(OF)luausgrid_demo \
-		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
 
 paver_demo: grid/paver_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 	$(DMD) $(DFLAGS) grid/paver_demo.d $(OF)paver_demo \
