@@ -46,7 +46,8 @@ public:
             assert(xs.length == nseg+1, "Inconsistent length for xs.");
         }
         this.xs = xs.dup();
-        assert(nseg > 1, "Too few segments.");
+        this.nseg = nseg;
+        assert(this.nseg > 1, "Too few segments.");
         //
         // Set up an initial guess for the spline as a straight line.
         double[] ys;

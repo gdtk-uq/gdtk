@@ -167,6 +167,23 @@ cspline2 = XSpline2:new{filename="sample-data/test-xspline2.dat"}
 print("cspline2=", cspline2)
 print("cspline2(0.5)=", cspline2(0.5))
 --
+print("XSplineLsq")
+xd = {}; yd = {}
+for i=0,100 do
+   x = 2.0*math.pi*i/100.0
+   y = math.sin(x)
+   xd[#xd+1] = x
+   yd[#yd+1] = y
+end
+cspline3 = XSplineLsq:new{xd=xd, yd=yd, nseg=10}
+print("cspline3=", cspline3)
+print("cspline3(0.5)=", cspline3(0.5))
+--
+print("XSplineLsq2")
+cspline4 = XSplineLsq2:new{filename="sample-data/test-xsplinelsq.dat", nseg=10}
+print("cspline4=", cspline4)
+print("cspline4(0.5)=", cspline4(0.5))
+--
 print("TranslatedPath")
 a = Vector3:new{x=2.0, y=0.0}
 b = Vector3:new{x=0.0, y=2.0}

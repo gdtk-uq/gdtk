@@ -51,15 +51,15 @@ public:
             xd ~= x; yd ~= y; wd ~= w;
         }
         assert (nseg > 2, "Too few segments specified.");
-        double[] ys;
         if (xs.length > 0) {
+            // Already have xs locations.
             assert(xs.length == nseg+1, "Incorrect number of knots specified.");
         } else {
+            // Distribute xs locations uniformly over data range.
             xs.length = nseg+1;
             foreach (i; 0 .. nseg+1) {
                 double t = to!double(i)/nseg;
                 xs[i] = xd[0]*(1.0-t) + xd[$-1]*t;
-                ys[i] = yd[0]*(1.0-t) + yd[$-1]*t;
             }
         }
         spl = new CubicSplineLsq(xd, yd, wd, xs, nseg);

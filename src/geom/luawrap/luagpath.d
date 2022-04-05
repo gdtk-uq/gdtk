@@ -27,6 +27,8 @@ immutable string SplineMT = "Spline";
 immutable string Spline2MT = "Spline2";
 immutable string XSplineMT = "XSpline";
 immutable string XSpline2MT = "XSpline2";
+immutable string XSplineLsqMT = "XSplineLsq";
+immutable string XSplineLsq2MT = "XSplineLsq2";
 immutable string SVGPathMT = "SVGPath";
 immutable string LuaFnPathMT = "LuaFnPath";
 immutable string ArcLengthParameterizedPathMT = "ArcLengthParameterizedPath";
@@ -61,6 +63,12 @@ Path checkPath(lua_State* L, int index) {
     }
     if ( isObjType(L, index, PolylineMT) ) {
         return checkObj!(Polyline, PolylineMT)(L, index);
+    }
+    if ( isObjType(L, index, XSplineMT) ) {
+        return checkObj!(XSpline, XSplineMT)(L, index);
+    }
+    if ( isObjType(L, index, XSplineLsqMT) ) {
+        return checkObj!(XSplineLsq, XSplineLsqMT)(L, index);
     }
     if ( isObjType(L, index, SVGPathMT) ) {
         return checkObj!(SVGPath, SVGPathMT)(L, index);
@@ -842,6 +850,7 @@ extern(C) int newSpline2(lua_State* L)
     return 1;
 } // end newSpline2()
 
+
 /**
  * The Lua constructor for XSpline (CubicSpline function y(x)).
  *
@@ -892,11 +901,11 @@ extern(C) int newXSpline(lua_State* L)
         ++position;
     }
     lua_pop(L, 1); // dispose of xs table
-    //
     if ( xs.length == 0 ) {
         string errMsg = "Error in call to XSpline:new{}. No valid numbers found for xs.";
         luaL_error(L, errMsg.toStringz());
     }
+    //
     lua_getfield(L, 1, "ys".toStringz());
     if ( lua_isnil(L, -1) ) {
         string errMsg = "Error in call to XSpline:new{}. No ys entry found.";
@@ -968,6 +977,200 @@ extern(C) int newXSpline2(lua_State* L)
     pathStore ~= pushObj!(XSpline, XSplineMT)(L, spline);
     return 1;
 } // end newXSpline2()
+
+
+/**
+ * The Lua constructor for XSplineLsq (CubicSplineLsq function y(x)).
+ *
+ * Example construction in Lua:
+ * ---------------------------------
+ * -- For an arbitrary number of points.
+ * spl = XSplineLsq:new{xd={...}, yd={...}, wd={...}, xs={...}, nseg}
+ * ---------------------------------
+ */
+extern(C) int newXSplineLsq(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected XSplineLsq:new{...}; ";
+        errMsg ~= "maybe you tried XSplineLsq.new{...}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in call to XSplineLsq:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["xd", "yd", "wd", "xs", "nseg"])) {
+        string errMsg = "Error in call to XSplineLsq:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_getfield(L, 1, "xd".toStringz());
+    if ( lua_isnil(L, -1) ) {
+        string errMsg = "Error in call to XSplineLsq:new{}. No xd entry found.";
+        luaL_error(L, errMsg.toStringz());
+    }
+    if ( !lua_istable(L, -1) ) {
+        string errMsg = "Error in call to XSplineLsq:new{}.; " ~
+            "A table containing numbers for xd is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    // Expect numbers at array positions.
+    double[] xd;
+    int position = 1;
+    while ( true ) {
+        lua_rawgeti(L, -1, position);
+        if ( lua_isnil(L, -1) ) { lua_pop(L, 1); break; }
+        double a = to!double(lua_tonumber(L, -1));
+        lua_pop(L, 1);
+        xd ~= a;
+        ++position;
+    }
+    lua_pop(L, 1); // dispose of xd table
+    if ( xd.length == 0 ) {
+        string errMsg = "Error in call to XSplineLsq:new{}. No valid numbers found for xd.";
+        luaL_error(L, errMsg.toStringz());
+    }
+    //
+    lua_getfield(L, 1, "yd".toStringz());
+    if ( lua_isnil(L, -1) ) {
+        string errMsg = "Error in call to XSplineLsq:new{}. No yd entry found.";
+        luaL_error(L, errMsg.toStringz());
+    }
+    if ( !lua_istable(L, -1) ) {
+        string errMsg = "Error in call to XSplineLsq:new{}.; " ~
+            "A table containing numbers is expected for yd, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    double[] yd;
+    position = 1;
+    while ( true ) {
+        lua_rawgeti(L, -1, position);
+        if ( lua_isnil(L, -1) ) { lua_pop(L, 1); break; }
+        double a = to!double(lua_tonumber(L, -1));
+        lua_pop(L, 1);
+        yd ~= a;
+        ++position;
+    }
+    lua_pop(L, 1); // dispose of yd table
+    if ( yd.length == 0 ) {
+        string errMsg = "Error in call to XSpline:new{}. No valid numbers found for yd.";
+        luaL_error(L, errMsg.toStringz());
+    }
+    //
+    double[] wd;
+    lua_getfield(L, 1, "wd".toStringz());
+    if ( lua_istable(L, -1) ) {
+        position = 1;
+        while ( true ) {
+            lua_rawgeti(L, -1, position);
+            if ( lua_isnil(L, -1) ) { lua_pop(L, 1); break; }
+            double a = to!double(lua_tonumber(L, -1));
+            lua_pop(L, 1);
+            wd ~= a;
+            ++position;
+        }
+    }
+    lua_pop(L, 1); // dispose of wd item (maybe nil)
+    // It is ok to have no elements in wd.
+    //
+    double[] xs;
+    lua_getfield(L, 1, "xs".toStringz());
+    if ( lua_istable(L, -1) ) {
+        position = 1;
+        while ( true ) {
+            lua_rawgeti(L, -1, position);
+            if ( lua_isnil(L, -1) ) { lua_pop(L, 1); break; }
+            double a = to!double(lua_tonumber(L, -1));
+            lua_pop(L, 1);
+            xs ~= a;
+            ++position;
+        }
+    }
+    lua_pop(L, 1); // dispose of xs item (maybe nil)
+    // It is ok to have no elements in xs.
+    //
+    lua_getfield(L, 1, "nseg".toStringz());
+    if ( lua_isnil(L, -1) ) {
+        string errMsg = "Error in call to XSplineLsq:new{}. No nseg entry found.";
+        luaL_error(L, errMsg.toStringz());
+    }
+    int nseg = to!int(lua_tointeger(L, -1));
+    lua_pop(L, 1); // dispose of nseg item
+    //
+    auto spline = new XSplineLsq(xd, yd, wd, xs, nseg);
+    pathStore ~= pushObj!(XSplineLsq, XSplineLsqMT)(L, spline);
+    return 1;
+} // end newXSplineLsq()
+
+
+/**
+ * The Lua constructor for XSplineLsq2 (CubicSplineLsq function y(x)).
+ *
+ * Example construction in Lua:
+ * ---------------------------------
+ * spl = XSplineLsq2:new{filename="something.dat", xs={...}, nseg=3}
+ * -- Expecting 3 numbers per line (x, y, weight), space-separated.
+ * ---------------------------------
+ */
+extern(C) int newXSplineLsq2(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected XSpline2:new{filename=\"something.dat\"}; ";
+        errMsg ~= "maybe you tried XSpline2.new{filename=\"something.dat\"}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in call to XSpline2:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["filename", "xs", "nseg"])) {
+        string errMsg = "Error in call to XSpline2:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_getfield(L, 1, "filename".toStringz());
+    if ( !lua_isstring(L, -1) ) {
+        string errMsg = "Error in call to XSpline2:new{}.; " ~
+            "A string containing the file name is expected, but no string was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    auto fileName = to!string(lua_tostring(L, -1));
+    lua_pop(L, 1); // dispose of filename string
+    //
+    double[] xs;
+    lua_getfield(L, 1, "xs".toStringz());
+    if ( lua_istable(L, -1) ) {
+        int position = 1;
+        while ( true ) {
+            lua_rawgeti(L, -1, position);
+            if ( lua_isnil(L, -1) ) { lua_pop(L, 1); break; }
+            double a = to!double(lua_tonumber(L, -1));
+            lua_pop(L, 1);
+            xs ~= a;
+            ++position;
+        }
+    }
+    lua_pop(L, 1); // dispose of xs item (maybe nil)
+    // It is ok to have no elements in xs.
+    //
+    lua_getfield(L, 1, "nseg".toStringz());
+    if ( lua_isnil(L, -1) ) {
+        string errMsg = "Error in call to XSplineLsq2:new{}. No nseg entry found.";
+        luaL_error(L, errMsg.toStringz());
+    }
+    int nseg = to!int(lua_tointeger(L, -1));
+    lua_pop(L, 1); // dispose of nseg item
+    //
+    auto spline = new XSplineLsq(fileName, xs, nseg);
+    pathStore ~= pushObj!(XSplineLsq, XSplineLsqMT)(L, spline);
+    return 1;
+} // end newXSplineLsq2()
 
 
 /**
@@ -1806,6 +2009,51 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, XSpline2MT.toStringz);
+
+
+    // Register the XSplineLsq object.
+    luaL_newmetatable(L, XSplineLsqMT.toStringz);
+
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    lua_pushcfunction(L, &newXSplineLsq);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallPath!(XSplineLsq, XSplineLsqMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallPath!(XSplineLsq, XSplineLsqMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(XSplineLsq, XSplineLsqMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &copyPath!(XSplineLsq, XSplineLsqMT));
+    lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &pathIntersect2D!(XSplineLsq, XSplineLsqMT));
+    lua_setfield(L, -2, "intersect2D");
+
+    lua_setglobal(L, XSplineLsqMT.toStringz);
+
+    // Register the XSplineLsq2 object which is actually a XSplineLsq object in D.
+    luaL_newmetatable(L, XSplineLsq2MT.toStringz);
+
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    lua_pushcfunction(L, &newXSplineLsq2);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallPath!(XSplineLsq, XSplineLsq2MT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallPath!(XSplineLsq, XSplineLsq2MT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(XSplineLsq, XSplineLsq2MT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &copyPath!(XSplineLsq, XSplineLsq2MT));
+    lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &pathIntersect2D!(XSplineLsq, XSplineLsq2MT));
+    lua_setfield(L, -2, "intersect2D");
+
+    lua_setglobal(L, XSplineLsq2MT.toStringz);
 
     // Register the SVGPath object which is a subclass of Polyline in Dlang.
     luaL_newmetatable(L, SVGPathMT.toStringz);
