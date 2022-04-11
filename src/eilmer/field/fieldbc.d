@@ -3,7 +3,7 @@
  * Machinery for applying boundary conditions to electromagnetic fields
  *
  * Author: Nick Gibbons
- * Version: 2021-05-24: Prototyping
+ * Started: 2021-05-24
  */
 
 module fieldbc;
@@ -24,21 +24,91 @@ import bc.boundary_condition;
 import bc.ghost_cell_effect.full_face_copy;
 
 interface FieldBC {
-    void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio);
+    void opCall(const double sign, const FVInterface face, const FVCell cell, int k, int nbands, size_t io, ref double[] A, ref double[] b, ref int[] Ai);
     double compute_current(const double sign, const FVInterface face, const FVCell cell);
 }
 
 class ZeroNormalGradient : FieldBC {
     this() {}
 
-    final void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio){
-        bk  = 0.0;
-        Akk = 0.0;
-        Ako = 0.0;
-        Aio = -1;
+    final void opCall(const double sign, const FVInterface face, const FVCell cell, int k, int nbands, size_t io, ref double[] A, ref double[] b, ref int[] Ai){
+    /*
+        This boundary condition is tricky. The gradient normal to the wall is
+        zero, but the parallel direction is whatever. This means we have to
+        couple in some sideways influence of the nearby cells.
+        Initially I had ignored this, which lead to major issues with even
+        slightly skewed cells. This version seems to work pretty well.
+
+        See 04/05/22 derivation
+    */
+        double S = face.length.re;
+        Vector3 dvec = face.pos - cell.pos[0];
+        double d = dvec.abs().re;
+        double sigma = face.fs.gas.sigma.re;
+
+        // e is the vector from the normal face intercept (w) to the middle of the face
+        Vector3 nvec = sign*face.n;
+        Vector3 wvec = dvec.dot(nvec).re*nvec;
+        Vector3 evec = dvec - wvec; // This should be parallel to face.t1
+        dvec.normalize;
+
+        // We have this problem where if e is zero the sign function doesn't work
+        // So we take the t1-ward cell if that happens
+        Vector3 tvec = face.t1;
+        if ((evec.dot(tvec).re)<0.0) tvec *= -1.0;
+
+        // Select one of the wall parallel cells to get the wall parallel gradient
+        size_t oio = get_sideways_cell_index(cell, tvec);
+        const FVInterface rface = cell.iface[oio];
+
+        Vector3 opos;
+        if (cell==rface.left_cell) {
+            opos = rface.right_cell.pos[0];
+        } else {
+            opos = rface.left_cell.pos[0];
+        }
+        Vector3 rvec = opos - cell.pos[0];
+
+        double ddotn = dvec.dot(nvec).re;
+        double r = rvec.dot(tvec).re;
+        double e = evec.abs().re;
+        double C = sigma*S*e/d/r*ddotn;
+        
+        int oiio = (oio>1) ? to!int(oio+1) : to!int(oio);
+        A[k*nbands + oiio] += C;
+        A[k*nbands + 2] += -C;
+        return;
     }
+
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         return 0.0;
+    }
+private:
+    @nogc size_t get_sideways_cell_index(const FVCell cell, const Vector3 tvec){
+    /*
+        Loop over the faces attached to cell and pick the one in the
+        tvec direction, unless that face is a boundary, in which case
+        we take the one on the other side.
+    */
+        Vector3 rvec;
+        double rmax = -1e99;
+        double rmin = 1e99;
+        size_t rio = 999;
+        size_t lio = 999;
+        foreach(ioo, oface; cell.iface){
+            rvec = oface.pos - cell.pos[0];
+            double rdist = rvec.dot(tvec).re;
+            if (rdist>rmax) {
+                rio = ioo;
+                rmax = rdist;
+            }
+            if (rdist<rmin) {
+                lio = ioo;
+                rmin = rdist;
+            }
+        }
+        size_t oio = (cell.iface[rio].is_on_boundary) ? lio : rio;
+        return oio;
     }
 }
 
@@ -47,17 +117,19 @@ class FixedField : FieldBC {
         this.value = value;
     }
 
-    final void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio){
+    final void opCall(const double sign, const FVInterface face, const FVCell cell, int k, int nbands, size_t io, ref double[] A, ref double[] b, ref int[] Ai){
         double S = face.length.re;
-        double d = distance_between(face.pos, cell.pos[0]);
+        Vector3 dvec = face.pos - cell.pos[0];
+        double d = dvec.abs().re;
+        dvec.normalize;
+        double ddotn = sign*dvec.dot(face.n).re;
         double sigma = face.fs.gas.sigma.re;
         double phi = value;
 
-        bk  = -1.0*phi*S/d*sigma;
-        Akk = -1.0*S/d*sigma;
-        Ako = 0.0;
-        Aio = -1;
+        b[k] += -1.0*phi*S/d*sigma*ddotn;
+        A[k*nbands + 2] += -1.0*S/d*sigma*ddotn;
     }
+
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         double S = face.length.re;
         double d = distance_between(face.pos, cell.pos[0]);
@@ -79,13 +151,13 @@ class MixedField : FieldBC {
         this.xcollector = xcollector;
     }
 
-    final void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio){
+    final void opCall(const double sign, const FVInterface face, const FVCell cell, int k, int nbands, size_t io, ref double[] A, ref double[] b, ref int[] Ai){
         if (face.pos.x<xinsulator){
-            nose(sign, face, cell, Akk, bk, Ako, Aio);
+            nose(sign, face, cell, k, nbands, io, A, b, Ai);
         } else if (face.pos.x<xcollector) {
-            insulator(sign, face, cell, Akk, bk, Ako, Aio);
+            insulator(sign, face, cell, k, nbands, io, A, b, Ai);
         } else {
-            collector(sign, face, cell, Akk, bk, Ako, Aio);
+            collector(sign, face, cell, k, nbands, io, A, b, Ai);
         }
     }
 
@@ -107,20 +179,21 @@ private:
 }
 
 class FixedField_Test : FieldBC {
-    this() {
-    }
+    this() {}
 
-    final void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio){
+    final void opCall(const double sign, const FVInterface face, const FVCell cell, int k, int nbands, size_t io, ref double[] A, ref double[] b, ref int[] Ai){
         double S = face.length.re;
-        double d = distance_between(face.pos, cell.pos[0]);
+        Vector3 dvec = face.pos - cell.pos[0];
+        double d = dvec.abs().re;
+        dvec.normalize;
+        double ddotn = sign*dvec.dot(face.n).re;
         double sigma = face.fs.gas.sigma.re;
         double phi = test_field(face.pos.x.re, face.pos.y.re);
 
-        bk  = -1.0*phi*S/d*sigma;
-        Akk = -1.0*S/d*sigma;
-        Ako = 0.0;
-        Aio = -1;
+        A[k*nbands + 2] += -1.0*S/d*sigma*ddotn;
+        b[k] += -1.0*phi*S/d*sigma*ddotn;
     }
+
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         double S = face.length.re;
         double d = distance_between(face.pos, cell.pos[0]);
@@ -141,18 +214,16 @@ class FixedGradient_Test : FieldBC {
     this() {
     }
 
-    final void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio){
+    final void opCall(const double sign, const FVInterface face, const FVCell cell, int k, int nbands, size_t io, ref double[] A, ref double[] b, ref int[] Ai){
         double S = face.length.re;
         double d = distance_between(face.pos, cell.pos[0]);
         double sigma = face.fs.gas.sigma.re;
         Vector3 phigrad = test_field_gradient(face.pos.x.re, face.pos.y.re);
 
         number phigrad_dot_n = phigrad.dot(face.n);
-        bk  = -sign*phigrad_dot_n.re*S*sigma;
-        Akk = 0.0;
-        Ako = 0.0;
-        Aio = -1;
+        b[k] -= sign*phigrad_dot_n.re*S*sigma;
     }
+
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         double S = face.length.re;
         Vector3 phigrad = test_field_gradient(face.pos.x.re, face.pos.y.re);
@@ -179,7 +250,7 @@ class SharedField : FieldBC {
             }
         }
         if (gc is null){
-            throw new Error("Boundary is missing full_face_copy. Possibly check all outer boundaires are assigned.");
+            throw new Error("Boundary is missing full_face_copy. Possibly check all outer boundaries are assigned.");
         }
 
         // We keep our own copies of data related to the shared boundary
@@ -200,7 +271,7 @@ class SharedField : FieldBC {
         return;
     }
 
-    final void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio){
+    final void opCall(const double sign, const FVInterface face, const FVCell cell, int k, int nbands, size_t io, ref double[] A, ref double[] b, ref int[] Ai){
         Vector3 ghost_cell_position;
 
         if (cell==face.left_cell){
@@ -211,16 +282,20 @@ class SharedField : FieldBC {
 
         double S = face.length.re;
         double sigma = face.fs.gas.sigma.re;
-        double d = distance_between(ghost_cell_position, cell.pos[0]);
+        Vector3 dvec = ghost_cell_position - cell.pos[0];
+        double d = dvec.abs().re;
+        dvec.normalize();
+        double ddotn = sign*dvec.dot(face.n).re;
 
-        Aio = other_cell_ids[face.i_bndry] + other_block_offset; // CHECKME
-        Ako =  1.0*S/d*sigma;
-        Akk = -1.0*S/d*sigma;
-        bk = 0.0;
+        int iio = (io>1) ? to!int(io+1) : to!int(io); // -> [0,1,3,4] since 2 is the entry for "cell" 
+        Ai[k*nbands + iio] = other_cell_ids[face.i_bndry] + other_block_offset;
+        A[k*nbands + iio] += 1.0*S/d*sigma*ddotn;
+        A[k*nbands + 2] -= 1.0*S/d*sigma*ddotn;
     }
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         return 0.0;
     }
+
 private:
     int other_blk_id;
     int other_block_offset;
@@ -278,7 +353,7 @@ class MPISharedField : FieldBC {
         return;
     }
 
-    final void opCall(const double sign, const FVInterface face, const FVCell cell, ref double Akk, ref double bk, ref double Ako, ref int Aio){
+    final void opCall(const double sign, const FVInterface face, const FVCell cell, int k, int nbands, size_t io, ref double[] A, ref double[] b, ref int[] Ai){
         Vector3 ghost_cell_position;
 
         if (cell==face.left_cell){
@@ -289,16 +364,21 @@ class MPISharedField : FieldBC {
 
         double S = face.length.re;
         double sigma = face.fs.gas.sigma.re;
-        double d = distance_between(ghost_cell_position, cell.pos[0]);
+        Vector3 dvec = ghost_cell_position - cell.pos[0];
+        double d = dvec.abs().re;
+        dvec.normalize();
+        double ddotn = sign*dvec.dot(face.n).re;
 
-        Aio = external_cell_idxs[face.i_bndry];
-        Ako =  1.0*S/d*sigma;
-        Akk = -1.0*S/d*sigma;
-        bk = 0.0;
+        int iio = (io>1) ? to!int(io+1) : to!int(io); // -> [0,1,3,4] since 2 is the entry for "cell" 
+        Ai[k*nbands + iio] = external_cell_idxs[face.i_bndry];
+        A[k*nbands + iio] += 1.0*S/d*sigma*ddotn;
+        A[k*nbands + 2] -= 1.0*S/d*sigma*ddotn;
     }
+
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         return 0.0;
     }
+
 private:
     int[] external_cell_idxs;
     int my_offset;

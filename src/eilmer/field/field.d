@@ -83,24 +83,26 @@ class ElectricField {
                     face.fs.gas.sigma = conductivity(face.fs.gas, face.pos, gmodel); // TODO: Redundant work.
         
                     if (face.is_on_boundary) {
-                        int Aio;
-                        double Akk, Ako, bk;
+                        //double Akk, Ako, bk;
                         auto field_bc = field_bcs[blkid][face.bc_id];
-                        field_bc(sign, face, cell, Akk, bk, Ako, Aio);
-                        Ai[k*nbands + iio] = Aio;
-                        A[k*nbands + iio] += Ako;
-                        A[k*nbands + 2] += Akk;
-                        b[k] += bk;
+                        field_bc(sign, face, cell, k, nbands, io, A, b, Ai);
+                        //Ai[k*nbands + iio] = Aio;
+                        //A[k*nbands + iio] += Ako;
+                        //A[k*nbands + 2] += Akk;
+                        //b[k] += bk;
                     } else {
                         other = face.left_cell;
                         if (other==cell) other = face.right_cell;
 
                         double S = face.length.re;
                         double sigmaF = face.fs.gas.sigma.re;
-                        double d = distance_between(other.pos[0], cell.pos[0]);
+                        Vector3 dvec = other.pos[0] - cell.pos[0];
+                        double d = dvec.abs().re;
+                        dvec.normalize();
+                        double ddotn = sign*dvec.dot(face.n).re;
                         Ai[k*nbands + iio] = other.id + block_offsets[blkid];
-                        A[k*nbands + iio]+=  1.0*S/d*sigmaF;
-                        A[k*nbands + 2] += -1.0*S/d*sigmaF;
+                        A[k*nbands + iio]+=  1.0*S/d*sigmaF*ddotn;
+                        A[k*nbands + 2] += -1.0*S/d*sigmaF*ddotn;
                     }
                 }
             }
