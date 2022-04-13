@@ -1839,7 +1839,8 @@ class Nozzle(object):
 
     """
 
-    def __init__(self, entrance_state_name, entrance_state, exit_state_name, area_ratio, nozzle_expansion_tolerance, facility_type = None):
+    def __init__(self, entrance_state_name, entrance_state, exit_state_name, area_ratio, nozzle_expansion_tolerance,
+                 facility_type = None, expansion_tube_nozzle_expansion_minimum_p2_over_p1 = None):
         """
 
         :param entrance_state_name:
@@ -1917,15 +1918,18 @@ class Nozzle(object):
                                                                                  tol=nozzle_expansion_tolerance)
 
 
-        elif facility_type == 'expansion_tube':
+        elif facility_type == 'expansion_tube' and expansion_tube_nozzle_expansion_minimum_p2_over_p1:
 
-            # for expansion tube cases, I set the p2p1_min to 0.01 as most expansion tube nozzles do not have large area ratios.
+            # for expansion tube cases, I reduced the default p2p1_min to 0.01 as most expansion tube nozzles do not have large area ratios.
+            # 0.01 was a value which should work with large nozzles such as the X3 Mach 12 nozzle
+            # (this now stored in the default config so the user can change it if they want).
+            # the main case that fails is CO2 cases, everything else seems to be able to cope with it.
 
             v_exit = entrance_state_gas_flow_object.steady_flow_with_area_change(self.entrance_state.get_gas_state(),
                                                                                  self.entrance_state.get_v(),
                                                                                  self.area_ratio, exit_gas_state,
                                                                                  tol=nozzle_expansion_tolerance,
-                                                                                 p2p1_min=0.01)
+                                                                                 p2p1_min=expansion_tube_nozzle_expansion_minimum_p2_over_p1)
 
         else:
             v_exit = entrance_state_gas_flow_object.steady_flow_with_area_change(self.entrance_state.get_gas_state(), self.entrance_state.get_v(),

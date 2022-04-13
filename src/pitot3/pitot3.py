@@ -14,7 +14,7 @@ import yaml
 from pitot3_utils.pitot3_classes import Facility, Driver, Diaphragm, Facility_State, Tube, Nozzle, Test_Section
 from pitot3_utils.pitot3_classes import eilmer4_CEAGas_input_file_creator, expansion_tube_test_time_calculator, state_output_for_final_output, pitot3_results_output
 
-VERSION_STRING = '21-Mar-2022'
+VERSION_STRING = '13-Apr-2022'
 
 #-----------------------------------------------------------------------------------
 
@@ -533,13 +533,19 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
     if nozzle_flag:
 
         nozzle_expansion_tolerance = config_data['nozzle_expansion_tolerance']
+        if facility_type == 'expansion_tube':
+            expansion_tube_nozzle_expansion_minimum_p2_over_p1 = config_data['expansion_tube_nozzle_expansion_minimum_p2_over_p1']
+        else:
+            expansion_tube_nozzle_expansion_minimum_p2_over_p1 = None
+
         nozzle_exit_state_name = config_data['nozzle_exit_state_name']
 
         nozzle = Nozzle(entrance_state_name=gas_path[-1].get_exit_state_name(),
                         entrance_state=gas_path[-1].get_exit_state(),
                         exit_state_name=nozzle_exit_state_name, area_ratio=area_ratio,
                         nozzle_expansion_tolerance=nozzle_expansion_tolerance,
-                        facility_type = facility_type)
+                        facility_type = facility_type,
+                        expansion_tube_nozzle_expansion_minimum_p2_over_p1 = expansion_tube_nozzle_expansion_minimum_p2_over_p1)
 
         gas_path.append(nozzle)
         object_dict['nozzle'] = nozzle

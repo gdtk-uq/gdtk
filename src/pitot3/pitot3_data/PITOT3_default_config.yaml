@@ -84,5 +84,6 @@ accelerator_gas_name : 'air13species'
 
 # nozzle default values
 nozzle_expansion_tolerance : 1.0e-4
+expansion_tube_nozzle_expansion_minimum_p2_over_p1 : 0.01
 
 
