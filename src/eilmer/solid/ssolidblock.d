@@ -19,6 +19,7 @@ import std.json;
 import util.lua;
 import nm.rsla;
 import json_helper;
+import lua_helper;
 import gzip;
 import geom;
 import globalconfig;
@@ -108,6 +109,13 @@ public:
         lua_pushinteger(myL, Face.west); lua_setglobal(myL, "west");
         lua_pushinteger(myL, Face.top); lua_setglobal(myL, "top");
         lua_pushinteger(myL, Face.bottom); lua_setglobal(myL, "bottom");
+        // Although we make the helper functions available within
+        // the block-specific Lua interpreter, we should use
+        // those functions only in the context of the master thread.
+        setSampleHelperFunctions(myL);
+        // Generally, the sampleFluidCell function can be expected to work only in serial mode.
+        // Once it is called from a thread, other than the main thread, it may not
+        // have access to properly initialized data for any other block.
     }
 
     void copy_values_from(SolidFVCell other) {

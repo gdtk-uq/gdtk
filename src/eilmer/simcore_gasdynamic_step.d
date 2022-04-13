@@ -457,7 +457,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	foreach (sblk; parallel(localSolidBlocks, 1)) {
 	    foreach (scell; sblk.activeCells) {
 		if (GlobalConfig.udfSolidSourceTerms) {
-		    addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
+		    addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
 		}
 		scell.timeDerivatives(ftl, GlobalConfig.dimensions);
                 if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || euler_step) {
@@ -736,7 +736,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    foreach (sblk; parallel(localSolidBlocks, 1)) {
 		foreach (scell; sblk.activeCells) {
 		    if (GlobalConfig.udfSolidSourceTerms) {
-			addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
+			addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
 		    }
 		    scell.timeDerivatives(ftl, GlobalConfig.dimensions);
                     if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || euler_step) {
@@ -1334,7 +1334,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     foreach (sblk; parallel(localSolidBlocks, 1)) {
                         foreach (scell; sblk.activeCells) {
                             if (GlobalConfig.udfSolidSourceTerms) {
-                                addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
+                                addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
                             }
                             scell.timeDerivatives(ftl, GlobalConfig.dimensions);
                             switch (stage) {
@@ -1790,7 +1790,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 sblk.applyPostFluxAction(SimState.time, ftl);
                 foreach (scell; sblk.activeCells) {
                     if (GlobalConfig.udfSolidSourceTerms) {
-                        addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
+                        addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
                     }
                     scell.timeDerivatives(ftl, GlobalConfig.dimensions);
                     scell.stage1Update(SimState.dt_global);
@@ -2125,7 +2125,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     sblk.applyPostFluxAction(SimState.time, ftl);
                     foreach (scell; sblk.activeCells) {
                         if (GlobalConfig.udfSolidSourceTerms) {
-                            addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
+                            addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
                         }
                         scell.timeDerivatives(ftl, GlobalConfig.dimensions);
                         scell.stage2Update(SimState.dt_global);
@@ -2478,7 +2478,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                 foreach (sblk; parallel(localSolidBlocks, 1)) {
                     foreach (scell; sblk.activeCells) {
                         if (GlobalConfig.udfSolidSourceTerms) {
-                            addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
+                            addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
                         }
                         scell.timeDerivatives(ftl0, GlobalConfig.dimensions);
                         scell.stage1Update(SimState.dt_global);
@@ -2879,7 +2879,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
                 foreach (sblk; parallel(localSolidBlocks, 1)) {
                     foreach (scell; sblk.activeCells) {
                         if (GlobalConfig.udfSolidSourceTerms) {
-                            addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
+                            addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
                         }
                         scell.timeDerivatives(ftl0, GlobalConfig.dimensions);
                         scell.stage1Update(SimState.dt_global);

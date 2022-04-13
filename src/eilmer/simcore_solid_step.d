@@ -119,7 +119,7 @@ void solid_step(double dt_solid)
     foreach (sblk; parallel(localSolidBlocks, 1)) {
         foreach (scell; sblk.activeCells) {
             if (GlobalConfig.udfSolidSourceTerms) {
-                addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time);
+                addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
             }
             scell.timeDerivatives(ftl, GlobalConfig.dimensions);
             scell.eulerUpdate(dt_solid);

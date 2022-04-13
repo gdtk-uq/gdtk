@@ -7,6 +7,7 @@
 // Lua script.
 //
 // RG & PJ 2015-03-17 -- First hack (with Guiness in hand)
+// 2022-04-13 -- Here, hold my beer while I add stuff for the SolidCell.
 
 import std.stdio;
 import std.conv;
@@ -88,6 +89,11 @@ void setSampleHelperFunctions(lua_State *L)
     lua_setglobal(L, "sampleFlow"); // alias for sampleFluidCell; [TODO] remove eventually
     lua_pushcfunction(L, &luafn_runTimeLoads);
     lua_setglobal(L, "getRunTimeLoads");
+    //
+    lua_pushcfunction(L, &luafn_infoSolidBlock);
+    lua_setglobal(L, "infoSolidBlock");
+    lua_pushcfunction(L, &luafn_sampleSolidCell);
+    lua_setglobal(L, "sampleSolidCell");
 }
 
 extern(C) int luafn_infoFluidBlock(lua_State *L)
@@ -155,7 +161,7 @@ extern(C) int luafn_sampleFluidCell(lua_State *L)
         try {
             cell = sblk.get_cell(i, j, k);
         } catch (Exception e) {
-            string msg = format("Failed to locate vertex[%d,%d,%d] in block %d.", i, j, k, blkId);
+            string msg = format("Failed to locate cell[%d,%d,%d] in block %d.", i, j, k, blkId);
             luaL_error(L, msg.toStringz);
         }
     } else {
@@ -245,7 +251,8 @@ extern(C) int luafn_runTimeLoads(lua_State *L)
     lua_setfield(L, tblIdx, "z");
 
     return 2;
-}
+} // end luafn_runTimeLoads()
+
 
 // -----------------------------------------------------
 // D code functions
@@ -292,6 +299,32 @@ void pushFluidFaceToTable(lua_State* L, int tblIdx, ref const(FVInterface) face,
 
 // ----------------------------------------------------------------------
 // Functions related to solid domains
+
+extern(C) int luafn_infoSolidBlock(lua_State *L)
+{
+    // Expect SSolidBlock index on the lua_stack.
+    auto blkId = lua_tointeger(L, 1);
+    auto blk = cast(SSolidBlock) globalBlocks[blkId];
+    assert(blk !is null, "Oops, this should be a SSolidBlock object.");
+    // Return the interesting bits as a table.
+    lua_newtable(L);
+    int tblIdx = lua_gettop(L);
+    lua_pushinteger(L, GlobalConfig.dimensions); lua_setfield(L, tblIdx, "dimensions");
+    lua_pushstring(L, blk.label.toStringz); lua_setfield(L, tblIdx, "label");
+    // Always a structured_grid
+    lua_pushinteger(L, blk.nicell); lua_setfield(L, tblIdx, "nicell");
+    lua_pushinteger(L, blk.njcell); lua_setfield(L, tblIdx, "njcell");
+    lua_pushinteger(L, blk.nkcell); lua_setfield(L, tblIdx, "nkcell");
+    lua_pushinteger(L, blk.imin); lua_setfield(L, tblIdx, "imin");
+    lua_pushinteger(L, blk.jmin); lua_setfield(L, tblIdx, "jmin");
+    lua_pushinteger(L, blk.kmin); lua_setfield(L, tblIdx, "kmin");
+    lua_pushinteger(L, blk.imax); lua_setfield(L, tblIdx, "imax");
+    lua_pushinteger(L, blk.jmax); lua_setfield(L, tblIdx, "jmax");
+    lua_pushinteger(L, blk.kmax); lua_setfield(L, tblIdx, "kmax");
+    lua_pushinteger(L, blk.cells.length); lua_setfield(L, tblIdx, "ncells");
+    return 1;
+} // end luafn_infoSolidBlock()
+
 extern(C) int luafn_sampleSolidCell(lua_State *L)
 {
     // Get arguments from lua_stack
@@ -300,15 +333,32 @@ extern(C) int luafn_sampleSolidCell(lua_State *L)
         string msg = format("Block id %d is not local to process.", blkId);
         luaL_error(L, msg.toStringz);
     }
-    auto i = lua_tointeger(L, 2);
-    auto j = lua_tointeger(L, 3);
-    auto k = lua_tointeger(L, 4);
-
-    // Grab the appropriate cell
     auto blk = cast(SSolidBlock) globalBlocks[blkId];
     assert(blk !is null, "Oops, this should be a SSolidBlock object.");
-    auto cell = blk.getCell(i, j, k);
-
+    auto i = lua_tointeger(L, 2);
+    assert(i < blk.nicell, "i-index out of range.");
+    auto j = lua_tointeger(L, 3);
+    assert(j < blk.njcell, "j-index out of range.");
+    size_t k = 0;
+    if (GlobalConfig.dimensions == 3) {
+        k = lua_tointeger(L, 4);
+        assert(k < blk.nkcell, "k-index out of range.");
+    }
+    //
+    // Grab the appropriate cell.
+    // Note that we want the indexing in the Lua domain to look like that for SFluidBlocks.
+    SolidFVCell cell;
+    try {
+        if (GlobalConfig.dimensions == 3) {
+            cell = blk.getCell(i+blk.imin, j+blk.jmin, k+blk.kmin);
+        } else {
+            cell = blk.getCell(i+blk.imin, j+blk.jmin);
+        }
+    } catch (Exception e) {
+        string msg = format("Failed to locate cell[%d,%d,%d] in block %d.", i, j, k, blkId);
+        luaL_error(L, msg.toStringz);
+    }
+    //
     // Return the interesting bits as a table.
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
