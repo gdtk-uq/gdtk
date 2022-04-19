@@ -1266,13 +1266,14 @@ double determine_dt(double cflInit)
             if (blk.myConfig.sssOptions.inviscidCFL) {
                 // calculate the signal using the maximum inviscid wave speed
                 // ref. Computational Fluid Dynamics: Principles and Applications, J. Blazek, 2015, pg. 175
+                // Note: this approximates cell width dx as the cell volume divided by face area
                 signal = 0.0;
                 foreach (f; cell.iface) {
-                    number dx = cell.volume[0]/f.area[0]; // approximate cell width
                     number un = fabs(f.fs.vel.dot(f.n));
-                    number signal_f = (un+f.fs.gas.a)/dx;
+                    number signal_f = (un+f.fs.gas.a)*f.area[0];
                     signal += signal_f.re;
                 }
+                signal *= (1.0/cell.volume[0].re);
             } else {
                 // use the default signal frequency routine from the time-accurate code path
                 signal = cell.signal_frequency();
