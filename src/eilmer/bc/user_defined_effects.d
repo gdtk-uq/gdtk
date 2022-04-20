@@ -31,6 +31,7 @@ import flowstate;
 import fvcell;
 import fvinterface;
 import sfluidblock: SFluidBlock;
+import sfluidblock : cell_index_to_logical_coordinates;
 import globalconfig;
 import globaldata;
 import luaflowstate;
@@ -88,7 +89,19 @@ public:
 
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        throw new Error("UserDefinedGhostCellEffect.apply_for_interface_structured_grid() not yet implemented");
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        size_t[3] ijk;
+        if (bc.outsigns[f.i_bndry] == 1) {
+            // Indices passed in are for the cell just inside the boundary.
+            ijk = cell_index_to_logical_coordinates(f.left_cells[0].id, blk.nic, blk.njc);
+            callGhostCellUDF(t, gtl, ftl, ijk[0], ijk[1], ijk[2], f, f.right_cells);
+	} else {
+            // Indices passed in are for the cell just inside the boundary.
+            ijk = cell_index_to_logical_coordinates(f.right_cells[0].id, blk.nic, blk.njc);
+            callGhostCellUDF(t, gtl, ftl, ijk[0], ijk[1], ijk[2], f, f.left_cells);
+	}
     }  // end apply_for_interface_structured_grid()
 
     override void apply_structured_grid(double t, int gtl, int ftl)
