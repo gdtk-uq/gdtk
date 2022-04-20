@@ -586,10 +586,21 @@ public:
         lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }  // end apply_unstructured_grid()
 
-    @nogc
+    //@nogc
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        throw new Error("BFE_UserDefinedFluxEffect.apply_for_interface_structured_grid() not yet implemented");
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        BoundaryCondition bc = blk.bc[which_boundary];
+        size_t[3] ijk;
+        if (bc.outsigns[f.i_bndry] == 1) {
+            // Indices passed in are for the cell just inside the boundary.
+            ijk = cell_index_to_logical_coordinates(f.left_cells[0].id, blk.nic, blk.njc);
+	} else {
+            // Indices passed in are for the cell just inside the boundary.
+            ijk = cell_index_to_logical_coordinates(f.right_cells[0].id, blk.nic, blk.njc);
+	}
+        callFluxUDF(t, gtl, ftl, ijk[0], ijk[1], ijk[2], f);
     }
 
     // not @nogc
