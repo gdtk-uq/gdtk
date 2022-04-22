@@ -864,6 +864,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             }
             finalStep = true;
         }
+
+        if ((SimState.maxWallClockSeconds > 0) && (wallClockElapsed > SimState.maxWallClockSeconds)) {
+            writefln("Reached maximum wall-clock time with elapsed time %s.", to!string(wallClockElapsed));
+            finalStep = true;
+        }
+
 	if (GlobalConfig.halt_now == 1) {
             if (GlobalConfig.is_master_task) {
                 writeln("STOPPING: Halt set in control file.");
