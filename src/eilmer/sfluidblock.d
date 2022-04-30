@@ -2144,6 +2144,16 @@ public:
                 // we don't need the interpolation process if the 'shock' value is 0.
                 // This short-cut provides a significant speed-up for Lachlan's simulations.
                 ASF_242(f, myConfig);
+
+                // The viscous fluxes use the interface values, so despite them not being required for the convective
+                // flux calculation with the ASF method, we do need them later on. Maybe I re-fold the ASF method back
+                // into the general convective flux path, as its unlikely the method will ever be used without viscous
+                // effects?
+                if (myConfig.viscous) {
+                    one_d.interp(f, Lft, Rght);
+                    f.fs.copy_average_values_from(Lft, Rght);
+                }
+
             } else {
                 // Typical code path, with interpolation for the flowstates to the left and right of the interface.
                 if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
