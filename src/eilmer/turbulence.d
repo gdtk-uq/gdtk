@@ -739,15 +739,7 @@ protected:
     compute_Shat_mulitplied_by_nuhat(const FlowGradients grad, const number nuhat, const number nu,
                  const number d, const number fv1, const number fv2) const pure {
         // No axisymmetric corrections since W is antisymmetric
-        number Omega = 0.0;
-        number Wij;
-        foreach(i; 0 .. 3) {
-            foreach(j; 0 .. 3) {
-                 Wij = 0.5*(grad.vel[i][j] - grad.vel[j][i]);
-                 Omega += Wij*Wij;
-            }
-        }
-        Omega = sqrt(2.0*Omega);
+        number Omega = compute_Omega(grad);
 
         // Clipping Equation: NNG 2.37, Allmaras (11/12)
         number Sbar = nuhat/kappa/kappa/d/d*fv2;
@@ -789,6 +781,20 @@ protected:
         return r;
     }
 
+    @nogc number
+    compute_Omega(const FlowGradients grad) const pure{
+        number Omega = 0.0;
+        number Wij;
+        foreach(i; 0 .. 3) {
+            foreach(j; 0 .. 3) {
+                 Wij = 0.5*(grad.vel[i][j] - grad.vel[j][i]);
+                 Omega += Wij*Wij;
+            }
+        }
+        Omega = sqrt(2.0*Omega);
+        return Omega;
+    }
+
     @nogc final bool is_nuhat_valid(const number nuhat) const {
         if (!isFinite(nuhat.re)) {
             debug { writeln("Turbulence nuhat invalid number ", nuhat); }
@@ -800,6 +806,97 @@ protected:
         }
         return true;
     }
+}
+/*
+    Spalart-Allmaras `BCM' variant for transitional flows:
+
+    "A Revised One-Equation Transitional Model for External Aerodynamics",
+    Cakmakcioglu, S. C., Bas, O., Mura, R., and Kaynak, U.
+    AIAA Paper 2020-2706, June 2020, (10.2514/6.2020-2706)
+
+    @author: Yu Chen and Nick Gibbons
+*/
+class sabcmTurbulenceModel : saTurbulenceModel {
+    this (){
+        number Pr_t = GlobalConfig.turbulence_prandtl_number;
+        this(Pr_t);
+    }
+
+    this (const JSONValue config){
+        number Pr_t = getJSONdouble(config, "turbulence_prandtl_number", 0.89);
+        this(Pr_t);
+    }
+
+    this (sabcmTurbulenceModel other){
+        this(other.Pr_t);
+    }
+
+    this (number Pr_t) {
+        super(Pr_t);
+    }
+
+    @nogc override string modelName() const {return "spalart_allmaras_bcm";}
+
+    override sabcmTurbulenceModel dup() {
+        return new sabcmTurbulenceModel(this);
+    }
+
+    @nogc override
+    void source_terms(const FlowState fs,const FlowGradients grad, const number ybar,
+                      const number dwall, const number L_min, const number L_max,
+                      ref number[] source) const {
+        /*
+        Spalart Allmaras Source Terms:
+        Notes:
+           - SA production term modified by Yu Chen
+             See: https://turbmodels.larc.nasa.gov/sa-bc_1eqn.html
+        */
+
+        number nuhat = fs.turb[0];
+        number rho = fs.gas.rho;
+        number nu = fs.gas.mu/rho;
+        number chi = nuhat/nu;
+        number chi_cubed = chi*chi*chi;
+        number fv1 = chi_cubed/(chi_cubed + cv1_cubed);
+        number fv2 = 1.0 - chi/(1.0 + chi*fv1);
+        number ft2 = 0.0;  // no ft2 in sa-bcm
+        number nut = nuhat*fv1;
+
+        //additional parmeters for sa-bcm
+        number mu = fs.gas.mu;
+        number t_u_inf = 4.0; //turbulence intensity in percent (%)
+        number re_theta_c = 803.73*pow((t_u_inf+0.6067),-1.027);
+        number chi1 = 0.002;
+        number chi2 = 0.02;
+        number Omega = compute_Omega(grad);
+
+        number d = compute_d(nut,nu,grad.vel,dwall,L_min,L_max,fv1,fv2,ft2);
+        number Shat_by_nuhat = compute_Shat_mulitplied_by_nuhat(grad, nuhat, nu, d, fv1, fv2);
+
+        //additional parmeters for sa-bcm
+        number re_nu = rho*d*d/mu*Omega;  //omega needs to be defined
+        number re_theta = re_nu/2.193;
+        number mu_t = turbulent_viscosity(fs, grad, ybar, dwall);
+        number term1 = fmax(re_theta - re_theta_c, 0.0)/(chi1 * re_theta_c);
+        number term2 = fmax(mu_t/(chi2*mu), 0.0);  //mu_t needs to be defined
+        number gamma_bc = 1.0 - exp(-sqrt(term1)-sqrt(term2));
+        number production = gamma_bc*rho*cb1*Shat_by_nuhat;  // Different terms to sa mdoel
+
+        number r = compute_r(Shat_by_nuhat, nuhat, d);
+        number g = r + cw2*(pow(r,6.0) - r);
+        number fw = (1.0 + cw3_to_the_sixth)/(pow(g,6.0) +  cw3_to_the_sixth);
+        fw = g*pow(fw, 1.0/6.0);
+        number destruction = rho*cw1*fw*nuhat*nuhat/d/d;
+
+        //// No axisymmetric corrections terms in dS/dxi dS/dxi
+        number nuhat_gradient_squared = 0.0;
+        foreach(i; 0 .. 3) nuhat_gradient_squared+=grad.turb[0][i]*grad.turb[0][i];
+        number dissipation = cb2/sigma*rho*nuhat_gradient_squared;
+
+        number T = production - destruction + dissipation;
+        source[0] = T;
+        return;
+    } // end source_terms()
 }
 
 /*
@@ -1031,6 +1128,9 @@ version(turbulence){
     case "spalart_allmaras":
         turbulence_model = new saTurbulenceModel(config);
         break;
+    case "spalart_allmaras_bcm":
+        turbulence_model = new sabcmTurbulenceModel(config);
+        break;
     case "spalart_allmaras_dwall_const":
         turbulence_model = new sadTurbulenceModel(config);
         break;
@@ -1068,6 +1168,9 @@ version(turbulence){
         break;
     case "spalart_allmaras":
         turbulence_model = new saTurbulenceModel();
+        break;
+    case "spalart_allmaras_bcm":
+        turbulence_model = new sabcmTurbulenceModel();
         break;
     case "spalart_allmaras_dwall_const":
         turbulence_model = new sadTurbulenceModel();
