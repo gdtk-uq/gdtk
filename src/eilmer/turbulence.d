@@ -819,19 +819,22 @@ protected:
 class sabcmTurbulenceModel : saTurbulenceModel {
     this (){
         number Pr_t = GlobalConfig.turbulence_prandtl_number;
-        this(Pr_t);
+        double Tu_inf = GlobalConfig.freestream_turbulent_intensity;
+        this(Pr_t, Tu_inf);
     }
 
     this (const JSONValue config){
         number Pr_t = getJSONdouble(config, "turbulence_prandtl_number", 0.89);
-        this(Pr_t);
+        double Tu_inf = getJSONdouble(config, "freestream_turbulent_intensity", 0.01);
+        this(Pr_t, Tu_inf);
     }
 
     this (sabcmTurbulenceModel other){
-        this(other.Pr_t);
+        this(other.Pr_t, other.Tu_inf);
     }
 
-    this (number Pr_t) {
+    this (number Pr_t, double Tu_inf) {
+        this.Tu_inf = Tu_inf;
         super(Pr_t);
     }
 
@@ -864,8 +867,7 @@ class sabcmTurbulenceModel : saTurbulenceModel {
 
         //additional parmeters for sa-bcm
         number mu = fs.gas.mu;
-        number t_u_inf = 4.0; //turbulence intensity in percent (%)
-        number re_theta_c = 803.73*pow((t_u_inf+0.6067),-1.027);
+        number re_theta_c = 803.73*pow((Tu_inf*100.0+0.6067),-1.027);
         number chi1 = 0.002;
         number chi2 = 0.02;
         number Omega = compute_Omega(grad);
@@ -897,6 +899,8 @@ class sabcmTurbulenceModel : saTurbulenceModel {
         source[0] = T;
         return;
     } // end source_terms()
+private:
+    double Tu_inf; // freestream turbulence intensity
 }
 
 /*

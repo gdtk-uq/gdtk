@@ -1113,6 +1113,7 @@ final class GlobalConfig {
     shared static double turbulence_schmidt_number = 0.75;
     shared static double max_mu_t_factor = 300.0;
     shared static double transient_mu_t_factor = 1.0;
+    shared static double freestream_turbulent_intensity = 0.01;
     static TurbulenceModel turb_model;
     static BlockZone[] turbulent_zones;
     //
@@ -1354,6 +1355,7 @@ public:
     double turbulence_schmidt_number;
     double max_mu_t_factor;
     double transient_mu_t_factor;
+    double freestream_turbulent_intensity;
     TurbulenceModel turb_model;
     BlockZone[] turbulent_zones;
     //
@@ -1512,6 +1514,7 @@ public:
         turbulence_schmidt_number = cfg.turbulence_schmidt_number;
         max_mu_t_factor = cfg.max_mu_t_factor;
         transient_mu_t_factor = cfg.transient_mu_t_factor;
+        freestream_turbulent_intensity = cfg.freestream_turbulent_intensity;
         turb_model = cfg.turb_model.dup;
         foreach (bz; cfg.turbulent_zones) { turbulent_zones ~= new BlockZone(bz); }
         //
@@ -1941,6 +1944,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_double("turbulence_schmidt_number", "turbulence_schmidt_number"));
     mixin(update_double("max_mu_t_factor", "max_mu_t_factor"));
     mixin(update_double("transient_mu_t_factor", "transient_mu_t_factor"));
+    mixin(update_double("freestream_turbulent_intensity", "freestream_turbulent_intensity"));
     cfg.turb_model = init_turbulence_model(cfg.turbulence_model_name, jsonData);
     if (cfg.verbosity_level > 1) {
         writeln("  viscous: ", cfg.viscous);
@@ -1964,6 +1968,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  max_mu_t_factor: ", cfg.max_mu_t_factor);
         writeln("  transient_mu_t_factor: ", cfg.transient_mu_t_factor);
         writeln("  nturb equations: ", cfg.turb_model.nturb);
+        writeln("  freestream_turbulent_intensity: ", cfg.freestream_turbulent_intensity);
     }
     //
     configCheckPoint3();

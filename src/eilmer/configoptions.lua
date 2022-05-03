@@ -139,6 +139,7 @@ configOptionsHidden = { -- hidden from user
    turbulence_schmidt_number = 0.75,
    max_mu_t_factor = 300.0,
    transient_mu_t_factor = 1.0,
+   freestream_turbulent_intensity = 1.0,
    tci_model = "none",
    --
    chemistry_update = "split", -- or "integral"
