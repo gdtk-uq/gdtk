@@ -49,6 +49,6 @@ class TestSABCM < Test::Unit::TestCase
         location = items[2].to_f
       end
     end
-    assert((location - 0.2578125).abs < 1.0e-03, "Failed to compute correct drag force.")
+    assert((location - 0.2578125).abs < 1.0e-03, "Failed to compute correct transition location.")
   end
 end
