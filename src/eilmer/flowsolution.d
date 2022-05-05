@@ -721,14 +721,23 @@ public:
             if (add_total_h) {
                 double e0 = _data[i][variableIndex["u"]];
                 double tke;
+		double e_int = 0.0;
                 if (canFind(variableNames, "tke")) {
                     tke = _data[i][variableIndex["tke"]];
                 } else {
                     tke = 0.0;
                 }
-                // Sum up the bits of energy,
-                // forgetting the multiple energy modes, for the moment.
-                double total_h = p/rho + e0 + 0.5*w*w + tke;
+		// We need to be greedy: search for as many u_modes as you can find.
+		// And tally into e_int.
+		int imode = 0;
+		string u_mode_str = "u_modes[0]";
+		while (canFind(variableNames, u_mode_str)) {
+		    e_int += _data[i][variableIndex[u_mode_str]];
+		    imode++;
+		    u_mode_str = format("u_modes[%d]", imode);
+		}
+		// Sum up the bits of energy.
+                double total_h = p/rho + e0 + e_int + 0.5*w*w + tke;
                 _data[i] ~= total_h;
             }
             if (add_total_T) {
