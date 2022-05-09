@@ -124,6 +124,7 @@ configOptionsHidden = { -- hidden from user
    upwind_vertex_gradients = true,
    save_viscous_gradients = false,
    save_limiter_values = false,
+   save_residual_values = false,
    viscous_factor_increment = 0.01,
    viscous_delay = 0.0,
    shear_stress_relative_limit = 1.0,

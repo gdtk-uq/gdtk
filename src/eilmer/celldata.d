@@ -73,6 +73,16 @@ class AuxCellData
             if (name == GeneralDFT.tag) return counter;
         }
 
+        if (GlobalConfig.save_limiter_values) {
+            counter += 1;
+            if (name == CellLimiterData.tag) return counter;
+        }
+
+        if (GlobalConfig.save_residual_values) {
+            counter += 1;
+            if (name == CellResidualData.tag) return counter;
+        }
+
         if (GlobalConfig.solve_electric_field) {
             counter += 1;
             if (name == FieldData.tag) return counter;
@@ -105,6 +115,12 @@ class AuxCellData
 
         i = get_order(GeneralDFT.tag);
         if (i >= 0) aux_data[i] = new GeneralDFT();
+
+        i = get_order(CellLimiterData.tag);
+        if (i >= 0) aux_data[i] = new CellLimiterData();
+
+        i = get_order(CellResidualData.tag);
+        if (i >= 0) aux_data[i] = new CellResidualData();
 
         i = get_order(FieldData.tag);
         if (i >= 0) aux_data[i] = new FieldData();
@@ -1063,6 +1079,71 @@ class CellLimiterData : AuxCellData
         version(turbulence) {
             foreach(it; 0 .. myConfig.turb_model.nturb) {
                 acc["phi_"~myConfig.turb_model.primitive_variable_name(it)] = new AccessTurbPhi(it);
+            }
+        }
+
+        return acc;
+    }
+}
+
+//=============================================================================
+// Cell Residual Values
+//=============================================================================
+
+mixin(GenCellArrayVariableAccess!("AccessMass", "dUdt[0].vec"));
+mixin(GenCellArrayVariableAccess!("AccessMomx", "dUdt[0].vec"));
+mixin(GenCellArrayVariableAccess!("AccessMomy", "dUdt[0].vec"));
+mixin(GenCellArrayVariableAccess!("AccessMomz", "dUdt[0].vec"));
+mixin(GenCellArrayVariableAccess!("AccessTotEnergy", "dUdt[0].vec"));
+version(multi_species_gas) {
+    mixin(GenCellArrayVariableAccess!("AccessRhoMassf", "dUdt[0].vec"));
+}
+version(multi_T_gas) {
+    mixin(GenCellArrayVariableAccess!("AccessRhoUmodes", "dUdt[0].vec"));
+}
+version(turbulence) {
+    mixin(GenCellArrayVariableAccess!("AccessRhoTurb", "dUdt[0].vec"));
+}
+
+class CellResidualData : AuxCellData
+// An empty auxiliary data item that acts as a pass-through for accessing
+// the cell residual values
+{
+    public:
+
+    static tag = "residual";
+
+    this(){
+        index = AuxCellData.get_order(tag);
+    }
+
+    override void init(LocalConfig myConfig){}
+
+    override @nogc void update(FVCell cell, double dt, double time, size_t step){}
+
+    static VariableAccess[string] get_accessors(LocalConfig myConfig)
+    {
+        VariableAccess[string] acc;
+
+        auto cqi = myConfig.cqi;
+        acc["mass"] = new AccessMomx(cqi.mass);
+        acc["momentum_x"] = new AccessMomx(cqi.xMom);
+        acc["momentum_y"] = new AccessMomy(cqi.yMom);
+        if (myConfig.dimensions == 3) { acc["momentum_z"] = new AccessMomy(cqi.zMom); }
+        acc["total_energy"] = new AccessTotEnergy(cqi.totEnergy);
+        version(multi_species_gas) {
+            foreach(sp; 0 .. myConfig.gmodel.n_species) {
+                acc["rho_massf_"~massfName(myConfig.gmodel, sp)] = new AccessRhoMassf(cqi.species+sp);
+            }
+        }
+        version(multi_T_gas) {
+            foreach(mode; 0 .. myConfig.gmodel.n_modes) {
+                acc["rho_umodes_"~u_modesName(mode)] = new AccessRhoUmodes(cqi.modes+mode);
+            }
+        }
+        version(turbulence) {
+            foreach(it; 0 .. myConfig.turb_model.nturb) {
+                acc["rho_turb_"~myConfig.turb_model.primitive_variable_name(it)] = new AccessRhoTurb(cqi.rhoturb+it);
             }
         }
 

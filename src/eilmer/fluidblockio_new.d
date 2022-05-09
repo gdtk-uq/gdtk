@@ -496,6 +496,9 @@ FluidBlockIO[] get_fluid_block_io(FluidBlock blk=null)
     if (GlobalConfig.save_limiter_values) {
         io_list ~= new CellLimiterIO(blk);
     }
+    if (GlobalConfig.save_residual_values) {
+        io_list ~= new CellResidualIO(blk);
+    }
     if (GlobalConfig.solve_electric_field) {
         io_list ~= new FieldIO(blk);
     }
@@ -745,6 +748,34 @@ class CellLimiterIO : FluidBlockIO
         set_binary(myConfig.flow_format == "eilmer4binary");
         // get the accessors
         foreach (key, acc ; CellLimiterData.get_accessors(myConfig)) {
+            add_accessor(key, acc);
+        }
+        make_buffers(n_cells);
+    }
+}
+
+class CellResidualIO : FluidBlockIO
+{
+    public:
+
+    this(FluidBlock blk=null)
+    {
+        tag = CellResidualData.tag;
+        size_t n_cells = 0;
+        LocalConfig myConfig;
+        if (blk !is null) {
+            block = blk;
+            myConfig = block.myConfig;
+            n_cells = block.cells.length;
+        } else {
+            myConfig = new LocalConfig(-1);
+            myConfig.gmodel = GlobalConfig.gmodel_master;
+        }
+        // get all of the cells data
+        index = iota(0, n_cells).array();
+        set_binary(myConfig.flow_format == "eilmer4binary");
+        // get the accessors
+        foreach (key, acc ; CellResidualData.get_accessors(myConfig)) {
             add_accessor(key, acc);
         }
         make_buffers(n_cells);

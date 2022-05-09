@@ -826,6 +826,19 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             }
         }
 
+        // the user may choose to save the cell residuals for visulation, if so, we must transfer the block array data into cell array data
+        if (GlobalConfig.save_residual_values) {
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                int cellCount = 0;
+                foreach (cell; blk.cells) {
+                    foreach (j; 0 .. nConserved) {
+                        cell.dUdt[0].vec[j] = blk.dU[cellCount+j];
+                    }
+                    cellCount += nConserved;
+                }
+            }
+        }
+
         // after a successful fluid domain update, proceed to perform a solid domain update
         if (localSolidBlocks.length > 0) { solid_update(step, pseudoSimTime, cfl, eta, sigma); }
 
