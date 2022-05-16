@@ -57,8 +57,8 @@ function atTimestepStart(sim_time, steps, delta_t)
   downstreamForce, downstreamMoment = getRunTimeLoads("pistonDownstream")
   -- solve momentum equation to get acceleration of the piston 
   xdotdot = ((upstreamForce.x + downstreamForce.x)*2*math.pi) / pMass -- 3.63N friction force
-  x       = x + xdot * delta_t --+ 0.5 * xdotdot * delta_t * delta_t
   xdot    = xdot + xdotdot * delta_t
+  x       = x + xdot * delta_t --+ 0.5 * xdotdot * delta_t * delta_t
   -- save data to userPad for vtxSpeed Assignment in grid-motion
   userPad[1] = x
   userPad[2] = xdot

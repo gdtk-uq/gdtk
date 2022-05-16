@@ -12,9 +12,9 @@ function atTimestepStart(sim_time, steps, dt)
    local upstreamForce, upstreamMoment = getRunTimeLoads("pistonUpstream")
    -- Acceleration of the piston.
    local xdotdot = upstreamForce.x*2*math.pi / pMass
-   -- Update piston state using simple Euler update.
-   x    = x + xdot * dt
+   -- Update piston state using semi-implicit Euler update.
    xdot = xdot + xdotdot * dt
+   x    = x + xdot * dt
    -- Save data to userPad for vtxSpeed Assignment in grid-motion.
    userPad[1] = x
    userPad[2] = xdot
@@ -29,11 +29,11 @@ function atWriteToFile(sim_time, steps)
    if not f then
       -- File does not already exist, so we can write header line.
       f = io.open(pFileName, "w")
-      f:write("#         time(s)                  x(m)                  v(m/s)\n")   
+      f:write("#         time(s)                  x(m)                  v(m/s)\n")
       f:close()
    end
    f = io.open(pFileName, "a")
-   f:write(string.format('%.18e %.18e %.18e \n', sim_time, userPad[1], userPad[2]) )   
+   f:write(string.format('%.18e %.18e %.18e \n', sim_time, userPad[1], userPad[2]) )
    f:close()
    return
 end

@@ -16,7 +16,6 @@ dofile('sim-config.lua')
 
 maxTime = 50e-3
 
---config.udf_supervisor_file='udf-process.lua'   -- manages calculation of force acting on projectile and acceleration
 config.interpolation_order = 2
 config.dt_init = 1.0e-8
 config.fixed_time_step = false

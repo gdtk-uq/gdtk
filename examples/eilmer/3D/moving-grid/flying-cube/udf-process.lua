@@ -36,21 +36,22 @@ function atTimestepStart(sim_time, steps, delta_t)
   -- Grab the forces using getRunTimeLoads
   cubeForce, cubeMoment = getRunTimeLoads("walls")
 
-  -- Solve momentum equation to get acceleration of the cube in both axes
+  -- Solve momentum equation to get acceleration of the cube in both axes.
+  -- Update velocity and position with semi-implicit Euler method.
   -- This is just for our data recording, in the simulation, we are only
   -- going to rotate the cube
   alphadotdot = cubeMoment.z / cubeI
-  alpha   = alpha + alphadot * delta_t
   alphadot = alphadot + alphadotdot * delta_t
+  alpha   = alpha + alphadot * delta_t
   xdotdot = cubeForce.x / cubeMass
-  x       = x + xdot * delta_t
   xdot    = xdot + xdotdot * delta_t
+  x       = x + xdot * delta_t
   ydotdot = (cubeForce.y) / cubeMass
-  y       = y + ydot * delta_t
   ydot    = ydot + ydotdot * delta_t
+  y       = y + ydot * delta_t
   zdotdot = (cubeForce.z) / cubeMass - 9.81
-  z       = z + zdot * delta_t
   zdot    = zdot + zdotdot * delta_t
+  z       = z + zdot * delta_t
 
   -- save data to userPad for vtxSpeed Assignment in grid-motion
   userPad[1] = alpha
