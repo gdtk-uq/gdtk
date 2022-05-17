@@ -316,7 +316,9 @@ private:
     {
         // This assumes the T_modes[0] is known, and we're only trying to determine T
         number pHeavy = gs.p;
-        pHeavy -= gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[0];
+        if (mElectronIdx != -1) {
+            pHeavy -= gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[0];
+        }
         number denom = 0.0;
         foreach (isp; 0 .. mNSpecies) {
             if (isp == mElectronIdx) continue;
