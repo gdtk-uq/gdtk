@@ -283,6 +283,21 @@ string codeForInterpolation()
     case InterpolateOption.rhop:
         GetRho!(numL)(cL,sL); GetRho!(numR)(cR, sR); calculate_scalar(Lft.gas.rho, Rght.gas.rho, sL, sR, weight);
         GetP!(numL)(cL,sL); GetP!(numR)(cR, sR); calculate_scalar(Lft.gas.p, Rght.gas.p, sL, sR, weight);
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (i; 0 .. nmodes) {
+                    GetUMode!(numL)(cL, i, sL); GetUMode!(numR)(cR, i, sR);
+                    calculate_scalar(Lft.gas.u_modes[i], Rght.gas.u_modes[i], sL, sR, weight);
+                }
+            } else {
+                static if (numL > 0) {
+                    Lft.gas.u_modes[] = cL[0].fs.gas.u_modes[];
+                }
+                static if (numR > 0) {
+                    Rght.gas.u_modes[] = cR[0].fs.gas.u_modes[];
+                }
+            }
+        }
         mixin(codeForThermoUpdateBoth2(\"rhop\"));
         break;
     case InterpolateOption.rhot:
@@ -1587,6 +1602,18 @@ public:
         case InterpolateOption.rhop:
             interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, Lft.gas.rho, Rght.gas.rho);
             interp_l3r3_scalar(gL2.p, gL1.p, gL0.p, gR0.p, gR1.p, gR2.p, Lft.gas.p, Rght.gas.p);
+            version(multi_T_gas) {
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        interp_l3r3_scalar(gL2.u_modes[i], gL1.u_modes[i], gL0.u_modes[i],
+                                           gR0.u_modes[i], gR1.u_modes[i], gR2.u_modes[i],
+                                           Lft.gas.u_modes[i], Rght.gas.u_modes[i]);
+                    }
+                } else {
+                    Lft.gas.u_modes[] = gL0.u_modes[];
+                    Rght.gas.u_modes[] = gR0.u_modes[];
+                }
+            }
             mixin(codeForThermoUpdateBoth("rhop"));
             break;
         case InterpolateOption.rhot:
@@ -1742,6 +1769,17 @@ public:
         case InterpolateOption.rhop:
             interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
             interp_l2r2_scalar(gL1.p, gL0.p, gR0.p, gR1.p, Lft.gas.p, Rght.gas.p);
+            version(multi_T_gas) {
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        interp_l2r2_scalar(gL1.u_modes[i], gL0.u_modes[i], gR0.u_modes[i],
+                                           gR1.u_modes[i], Lft.gas.u_modes[i], Rght.gas.u_modes[i]);
+                    }
+                } else {
+                    Lft.gas.u_modes[] = gL0.u_modes[];
+                    Rght.gas.u_modes[] = gR0.u_modes[];
+                }
+            }
             mixin(codeForThermoUpdateBoth("rhop"));
             break;
         case InterpolateOption.rhot:
@@ -1877,6 +1915,17 @@ public:
         case InterpolateOption.rhop:
             interp_l2r1_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho, Rght.gas.rho);
             interp_l2r1_scalar(gL1.p, gL0.p, gR0.p, Lft.gas.p, Rght.gas.p);
+            version(multi_T_gas) {
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        interp_l2r1_scalar(gL1.u_modes[i], gL0.u_modes[i], gR0.u_modes[i],
+                                           Lft.gas.u_modes[i], Rght.gas.u_modes[i]);
+                    }
+                } else {
+                    Lft.gas.u_modes[] = gL0.u_modes[];
+                    Rght.gas.u_modes[] = gR0.u_modes[];
+                }
+            }
             mixin(codeForThermoUpdateBoth("rhop"));
             break;
         case InterpolateOption.rhot:
@@ -2015,6 +2064,17 @@ public:
         case InterpolateOption.rhop:
             interp_l1r2_scalar(gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
             interp_l1r2_scalar(gL0.p, gR0.p, gR1.p, Lft.gas.p, Rght.gas.p);
+            version(multi_T_gas) {
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        interp_l1r2_scalar(gL0.u_modes[i], gR0.u_modes[i], gR1.u_modes[i],
+                                           Lft.gas.u_modes[i], Rght.gas.u_modes[i]);
+                    }
+                } else {
+                    Lft.gas.u_modes[] = gL0.u_modes[];
+                    Rght.gas.u_modes[] = gR0.u_modes[];
+                }
+            }
             mixin(codeForThermoUpdateBoth("rhop"));
             break;
         case InterpolateOption.rhot:
@@ -2140,6 +2200,15 @@ public:
         case InterpolateOption.rhop:
             Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
             Lft.gas.p = weight_scalar(gL0.p, gL1.p);
+            version(multi_T_gas) {
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        Lft.gas.u_modes[i] = weight_scalar(gL0.u_modes[i], gL1.u_modes[i]);
+                    }
+                } else {
+                    Lft.gas.u_modes[] = gL0.u_modes[];
+                }
+            }
             mixin(codeForThermoUpdateLft("rhop"));
             break;
         case InterpolateOption.rhot:
@@ -2262,6 +2331,15 @@ public:
         case InterpolateOption.rhop:
             Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
             Rght.gas.p = weight_scalar(gR0.p, gR1.p);
+            version(multi_T_gas) {
+                if (myConfig.allow_reconstruction_for_energy_modes) {
+                    foreach (i; 0 .. nmodes) {
+                        Rght.gas.u_modes[i] = weight_scalar(gR0.u_modes[i], gR1.u_modes[i]);
+                    }
+                } else {
+                    Rght.gas.u_modes[] = gR0.u_modes[];
+                }
+            }
             mixin(codeForThermoUpdateRght("rhop"));
             break;
         case InterpolateOption.rhot:
