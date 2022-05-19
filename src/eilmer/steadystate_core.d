@@ -1805,33 +1805,56 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                                // then we'll avoid non-dimensionalising by
                                // values close to zero.
 
+
     // 1. Evaluate r0, beta, v1
+
+    // compute RHS residual
     evalRHS(pseudoSimTime, 0);
 
-    // Store dUdt[0] as F(U)
+    // compute approximate Jacobian matrix for preconditioning
+    pc_matrix_evaluated = false;
+    if (usePreconditioner && ( (m == nIters && GlobalConfig.sssOptions.useAdaptivePreconditioner) ||
+                               (step == startStep) ||
+                               (step%GlobalConfig.sssOptions.frozenPreconditionerCount == 0) )) {
+        pc_matrix_evaluated = true;
+        final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
+        case PreconditionMatrixType.jacobi:
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.evaluate_jacobian();
+                blk.flowJacobian.prepare_jacobi_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
+            }
+            break;
+        case PreconditionMatrixType.ilu:
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.evaluate_jacobian();
+                blk.flowJacobian.prepare_ilu_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
+            }
+            break;
+        case PreconditionMatrixType.sgs:
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.evaluate_jacobian();
+                blk.flowJacobian.prepare_sgs_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
+            }
+            break;
+        case PreconditionMatrixType.sgs_relax:
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.evaluate_jacobian();
+                blk.flowJacobian.prepare_sgsr_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
+            }
+            break;
+        case PreconditionMatrixType.lu_sgs:
+            // do nothing
+            break;
+        }
+    }
+
+    // store dUdt[0] as F(U)
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
         size_t nsp = blk.myConfig.gmodel.n_species;
         size_t nmodes = blk.myConfig.gmodel.n_modes;
         auto cqi = blk.myConfig.cqi;
         int cellCount = 0;
-        if ( nsp == 1 ) { blk.maxRate.vec[cqi.mass] = 0.0; }
-        blk.maxRate.vec[cqi.xMom] = 0.0;
-        blk.maxRate.vec[cqi.yMom] = 0.0;
-        if ( blk.myConfig.dimensions == 3 )
-            blk.maxRate.vec[cqi.zMom] = 0.0;
-        blk.maxRate.vec[cqi.totEnergy] = 0.0;
-        foreach(it; 0 .. nturb){
-            blk.maxRate.vec[cqi.rhoturb+it] = 0.0;
-        }
-        version(multi_species_gas){
-        if ( nsp > 1 ) {
-            foreach(sp; 0 .. nsp){ blk.maxRate.vec[cqi.species+sp] = 0.0; }
-        }
-        }
-        version(multi_T_gas){
-        foreach(imode; 0 .. nmodes){ blk.maxRate.vec[cqi.modes+imode] = 0.0; }
-        }
         foreach (i, cell; blk.cells) {
             if ( nsp == 1 ) { blk.FU[cellCount+MASS] = cell.dUdt[0].vec[cqi.mass]; }
             blk.FU[cellCount+X_MOM] = cell.dUdt[0].vec[cqi.xMom];
@@ -1851,36 +1874,108 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             foreach(imode; 0 .. nmodes){ blk.FU[cellCount+MODES+imode] = cell.dUdt[0].vec[cqi.modes+imode]; }
             }
             cellCount += nConserved;
-            /*
-            if (blk.id == 0) {
-                writefln("i= %d, dUdt.mass= %e", i, cell.dUdt[0].vec[cqi.mass].re);
+        }
+    }
+
+    // apply residual smoothing to RHS if requested
+    // ref. A Residual Smoothing Strategy for Accelerating Newton Method Continuation, D. J. Mavriplis, Computers & Fluids, 2021
+    if (GlobalConfig.residual_smoothing) {
+        // compute approximate solution via dU = P^{-1}*F(U)
+        // note that we make temporary use of the x0 array
+        final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
+        case PreconditionMatrixType.jacobi:
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.flowJacobian.x[] = blk.FU[];
+                nm.smla.multiply(blk.flowJacobian.local, blk.flowJacobian.x, blk.x0[]);
             }
-            */
-            if ( nsp == 1 ) { blk.maxRate.vec[cqi.mass] = fmax(blk.maxRate.vec[cqi.mass], fabs(cell.dUdt[0].vec[cqi.mass])); }
-            /*
-            if (blk.id == 0) {
-                writefln("i= %d, maxRate.vec[cqi.mass]= %e", i, blk.maxRate.vec[cqi.mass].re);
+            break;
+        case PreconditionMatrixType.ilu:
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.x0[] = blk.FU[];
+                nm.smla.solve(blk.flowJacobian.local, blk.x0);
             }
-            */
-            blk.maxRate.vec[cqi.xMom] = fmax(blk.maxRate.vec[cqi.xMom], fabs(cell.dUdt[0].vec[cqi.xMom]));
-            blk.maxRate.vec[cqi.yMom] = fmax(blk.maxRate.vec[cqi.yMom], fabs(cell.dUdt[0].vec[cqi.yMom]));
+            break;
+        case PreconditionMatrixType.sgs:
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.x0[] = blk.FU[];
+                nm.smla.sgs(blk.flowJacobian.local, blk.flowJacobian.diagonal, blk.x0, to!int(nConserved), blk.flowJacobian.D, blk.flowJacobian.Dinv);
+            }
+            break;
+        case PreconditionMatrixType.sgs_relax:
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                int local_kmax = GlobalConfig.sssOptions.maxSubIterations;
+                blk.x0[] = blk.FU[];
+                nm.smla.sgsr(blk.flowJacobian.local, blk.x0, blk.flowJacobian.x, to!int(nConserved), local_kmax, blk.flowJacobian.Dinv);
+            }
+            break;
+        case PreconditionMatrixType.lu_sgs:
+            mixin(lusgs_solve("x0", "FU"));
+            break;
+        } // end switch
+
+        // add smoothing source term to RHS
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            int cellCount = 0;
+            foreach (cell; blk.cells) {
+                number dtInv;
+                if (blk.myConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
+                else { dtInv = 1.0/dt; }
+                foreach (k; 0 .. nConserved) {
+                    blk.FU[cellCount+k] += dtInv*blk.x0[cellCount+k];
+                }
+                cellCount += nConserved;
+            }
+        }
+    }
+
+    // determine max rates in F(U) for scaling the linear system
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        size_t nturb = blk.myConfig.turb_model.nturb;
+        size_t nsp = blk.myConfig.gmodel.n_species;
+        size_t nmodes = blk.myConfig.gmodel.n_modes;
+        auto cqi = blk.myConfig.cqi;
+        int cellCount = 0;
+        // set max rates to 0.0
+        if ( nsp == 1 ) { blk.maxRate.vec[cqi.mass] = 0.0; }
+        blk.maxRate.vec[cqi.xMom] = 0.0;
+        blk.maxRate.vec[cqi.yMom] = 0.0;
+        if ( blk.myConfig.dimensions == 3 )
+            blk.maxRate.vec[cqi.zMom] = 0.0;
+        blk.maxRate.vec[cqi.totEnergy] = 0.0;
+        foreach(it; 0 .. nturb){
+            blk.maxRate.vec[cqi.rhoturb+it] = 0.0;
+        }
+        version(multi_species_gas){
+        if ( nsp > 1 ) {
+            foreach(sp; 0 .. nsp){ blk.maxRate.vec[cqi.species+sp] = 0.0; }
+        }
+        }
+        version(multi_T_gas){
+        foreach(imode; 0 .. nmodes){ blk.maxRate.vec[cqi.modes+imode] = 0.0; }
+        }
+        // determine max rates
+        foreach (i, cell; blk.cells) {
+            if ( nsp == 1 ) { blk.maxRate.vec[cqi.mass] = fmax(blk.maxRate.vec[cqi.mass], fabs(blk.FU[cellCount+MASS])); }
+            blk.maxRate.vec[cqi.xMom] = fmax(blk.maxRate.vec[cqi.xMom], fabs(blk.FU[cellCount+X_MOM]));
+            blk.maxRate.vec[cqi.yMom] = fmax(blk.maxRate.vec[cqi.yMom], fabs(blk.FU[cellCount+Y_MOM]));
             if ( blk.myConfig.dimensions == 3 )
-                blk.maxRate.vec[cqi.zMom] = fmax(blk.maxRate.vec[cqi.zMom], fabs(cell.dUdt[0].vec[cqi.zMom]));
-            blk.maxRate.vec[cqi.totEnergy] = fmax(blk.maxRate.vec[cqi.totEnergy], fabs(cell.dUdt[0].vec[cqi.totEnergy]));
+                blk.maxRate.vec[cqi.zMom] = fmax(blk.maxRate.vec[cqi.zMom], fabs(blk.FU[cellCount+Z_MOM]));
+            blk.maxRate.vec[cqi.totEnergy] = fmax(blk.maxRate.vec[cqi.totEnergy], fabs(blk.FU[cellCount+TOT_ENERGY]));
             foreach(it; 0 .. nturb){
-                blk.maxRate.vec[cqi.rhoturb+it] = fmax(blk.maxRate.vec[cqi.rhoturb+it], fabs(cell.dUdt[0].vec[cqi.rhoturb+it]));
+                blk.maxRate.vec[cqi.rhoturb+it] = fmax(blk.maxRate.vec[cqi.rhoturb+it], fabs(blk.FU[cellCount+TKE+it]));
             }
             version(multi_species_gas){
             if ( nsp > 1 ) {
-                foreach(sp; 0 .. nsp){ blk.maxRate.vec[cqi.species+sp] = fmax(blk.maxRate.vec[cqi.species+sp], fabs(cell.dUdt[0].vec[cqi.species+sp])); }
+                foreach(sp; 0 .. nsp){ blk.maxRate.vec[cqi.species+sp] = fmax(blk.maxRate.vec[cqi.species+sp], fabs(blk.FU[cellCount+SPECIES+sp])); }
             }
             }
             version(multi_T_gas){
-            foreach(imode; 0 .. nmodes){ blk.maxRate.vec[cqi.modes+imode] = fmax(blk.maxRate.vec[cqi.modes+imode], fabs(cell.dUdt[0].vec[cqi.modes+imode])); }
+            foreach(imode; 0 .. nmodes){ blk.maxRate.vec[cqi.modes+imode] = fmax(blk.maxRate.vec[cqi.modes+imode], fabs(blk.FU[cellCount+MODES+imode])); }
             }
-
+            cellCount += nConserved;
         }
     }
+
 
     number maxMass = 0.0;
     number maxMomX = 0.0;
@@ -2107,44 +2202,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
     // Compute tolerance
     auto outerTol = eta*beta;
-
-    // Compute precondition matrix
-    // if ( usePreconditioner && ( step == startStep || nIters > GlobalConfig.sssOptions.frozenPreconditionerCount) ) {
-    pc_matrix_evaluated = false;
-    if (usePreconditioner && ( (m == nIters && GlobalConfig.sssOptions.useAdaptivePreconditioner) ||
-                               (step == startStep) ||
-                               (step%GlobalConfig.sssOptions.frozenPreconditionerCount == 0) )) {
-        pc_matrix_evaluated = true;
-        final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
-        case PreconditionMatrixType.jacobi:
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                blk.evaluate_jacobian();
-                blk.flowJacobian.prepare_jacobi_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
-            }
-            break;
-        case PreconditionMatrixType.ilu:
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                blk.evaluate_jacobian();
-                blk.flowJacobian.prepare_ilu_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
-            }
-            break;
-        case PreconditionMatrixType.sgs:
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                blk.evaluate_jacobian();
-                blk.flowJacobian.prepare_sgs_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
-            }
-            break;
-        case PreconditionMatrixType.sgs_relax:
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                blk.evaluate_jacobian();
-                blk.flowJacobian.prepare_sgsr_preconditioner(blk.cells, dt, blk.cells.length, nConserved);
-            }
-            break;
-        case PreconditionMatrixType.lu_sgs:
-            // do nothing
-            break;
-        }
-    }
 
     // 2. Start outer-loop of restarted GMRES
     for ( r = 0; r < maxRestarts; r++ ) {
