@@ -48,7 +48,7 @@ T[][] allocate_rk45_workspace(T)(uint n)
  *     the final value of the dependent variable
  */
 T rkf45_step(alias f, T)(T t0, T h, T[] y0, ref T[] y1, ref T[] err,
-                              ref T[][] work_arrays)
+                         ref T[][] work_arrays)
     if (is(typeof(f(0.0, [0.0,])) == double[]) ||
         is(typeof(f(0.0, [0.0,])) == float[]) ||
         is(typeof(f(Complex!double(0.0), [Complex!double(0.0),Complex!double(0.0)]))
@@ -61,7 +61,7 @@ T rkf45_step(alias f, T)(T t0, T h, T[] y0, ref T[] y1, ref T[] err,
         throw new Exception("Array lengths don't match the workspace and.");
     }
     T[] k2 = work_arrays[2];
-    T[] k3 = work_arrays[3]; 
+    T[] k3 = work_arrays[3];
     T[] k4 = work_arrays[4];
     T[] k5 = work_arrays[5];
     T[] k6 = work_arrays[6];
@@ -75,25 +75,25 @@ T rkf45_step(alias f, T)(T t0, T h, T[] y0, ref T[] y1, ref T[] err,
     foreach (i; 0 .. n) { ytmp[i] = y0[i] + 3.0*h*k1[i]/32.0 + 9.0*h*k2[i]/32.0; }
     k3[] = f(t0 + 3.0*h/8.0, ytmp);
     foreach (i; 0 .. n) {
-        ytmp[i] = y0[i] + 1932.0*h*k1[i]/2197.0 - 7200.0*h*k2[i]/2197.0 + 
+        ytmp[i] = y0[i] + 1932.0*h*k1[i]/2197.0 - 7200.0*h*k2[i]/2197.0 +
             7296.0*h*k3[i]/2197.0;
     }
     k4[] = f(t0 + 12.0*h/13.0, ytmp);
     foreach (i; 0 .. n) {
-        ytmp[i] = y0[i] + 439.0*h*k1[i]/216.0 - 8.0*h*k2[i] + 
+        ytmp[i] = y0[i] + 439.0*h*k1[i]/216.0 - 8.0*h*k2[i] +
             3680.0*h*k3[i]/513.0 - 845.0*h*k4[i]/4104.0;
     }
     k5[] = f(t0 + h, ytmp);
     foreach (i; 0 .. n) {
-        ytmp[i] = y0[i] - 8.0*h*k1[i]/27.0 + 2.0*h*k2[i] - 
+        ytmp[i] = y0[i] - 8.0*h*k1[i]/27.0 + 2.0*h*k2[i] -
             3544.0*h*k3[i]/2565.0 + 1859.0*h*k4[i]/4104.0 - 11.0*h*k5[i]/40.0;
     }
     k6[] = f(t0 + h/2.0, ytmp);
     // Now, do the integration as a weighting of the sampled data.
     foreach (i; 0 .. n) {
-        y1[i] = y0[i] + 16.0*h*k1[i]/135.0 + 6656.0*h*k3[i]/12825.0 + 
+        y1[i] = y0[i] + 16.0*h*k1[i]/135.0 + 6656.0*h*k3[i]/12825.0 +
             28561.0*h*k4[i]/56430.0 - 9.0*h*k5[i]/50.0 + 2.0*h*k6[i]/55.0;
-        err[i] = h*k1[i]/360.0 - 128.0*h*k3[i]/4275.0 - 2197.0*h*k4[i]/75240.0 + 
+        err[i] = h*k1[i]/360.0 - 128.0*h*k3[i]/4275.0 - 2197.0*h*k4[i]/75240.0 +
             h*k5[i]/50.0 + 2.0*h*k6[i]/55.0;
     }
     foreach(ref e; err) { e = abs(e); }

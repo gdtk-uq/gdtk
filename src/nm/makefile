@@ -68,12 +68,18 @@ test: ${TEST_PROGRAMS}
 	tclsh nm-package-test.tcl
 
 demo: ${DEMO_PROGRAMS}
-	echo "Demo codes built."
+	@echo "Demo codes built."
+
+bench: rungekutta_bench_d
+	@echo "Start benchmark programs"
+	./rungekutta_bench_d
+	@echo "Finished benchmark programs"
 
 clean:
 	- rm -f *.o *.obj
 	- rm -f ${DEMO_PROGRAMS}
 	- rm -f ${TEST_PROGRAMS}
+	- rm -f ./rungekutta_bench_d
 	- cd $(LUA); make clean
 
 # Specific targets, for individual artefacts.
@@ -236,3 +242,9 @@ gaussquad_demo: gaussquad_demo.d gaussquad.d complex.d
 
 bbla_demo: bbla_demo.d bbla.d complex.d
 	$(DMD) -g -dip1008 bbla_demo.d bbla.d complex.d
+
+# Rules for building the benchmark programs
+
+rungekutta_bench_d: rungekutta_bench.d
+	$(DMD) -of$@ -g -O -boundscheck=off rungekutta_bench.d
+
