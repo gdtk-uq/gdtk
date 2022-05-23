@@ -120,8 +120,8 @@ func main() {
         for j := 0; j < 3; j++ { x0[j] = x1[j] }
         t0 = t1
     }
-    elapsed_time := time.Now().Sub(start_time).Milliseconds()
-    fmt.Println("  elapsed_time=", elapsed_time, " ms")
+    elapsed_time := time.Now().Sub(start_time).Microseconds()
+    fmt.Println("  elapsed_time=", elapsed_time, " us")
     fmt.Println("  x1 = ", x1)
     fmt.Println("  exact = ", solution1(t1))
 
