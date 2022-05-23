@@ -70,9 +70,10 @@ test: ${TEST_PROGRAMS}
 demo: ${DEMO_PROGRAMS}
 	@echo "Demo codes built."
 
-bench: rungekutta_bench_d
+bench: rungekutta_bench_d rungekutta_bench.go
 	@echo "Start benchmark programs"
 	./rungekutta_bench_d
+	go run rungekutta_bench.go
 	@echo "Finished benchmark programs"
 
 clean:
