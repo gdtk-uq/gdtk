@@ -24,8 +24,9 @@ import (
  *
  * Params:
  *     f is a callable function that returns the derivative of y wrt t
- *        The signature of this function is f(t, y) where
- *        t is a float value, y is an array of number values.
+ *        The signature of this function is f(t, y, dydt) where
+ *        t is a float value, y is an array of number values
+ *        and dydt is the array to hold the computed derivatives.
  *     t0: is the starting value of the independent variable
  *     h: the requested step size
  *     y0: an array of starting values for the dependent variables
@@ -39,7 +40,7 @@ import (
  */
 
 func rkf45_step(
-    f func(float64, []float64) []float64,
+    f func(float64, []float64, []float64),
     t0 float64, h float64,
     y0 []float64, y1 []float64, err []float64,
     work_arrays [7][]float64) float64 {
@@ -55,20 +56,20 @@ func rkf45_step(
     // Build up the sample point information as per the text book descriptions.
     // We assign the result of intermediate array expressions to ytmp
     // because that's needed for D.
-    k1 = f(t0, y0)
+    f(t0, y0, k1)
     for j := 0; j < n; j++ { ytmp[j] = y0[j] + 0.25*h*k1[j] }
-    k2 = f(t0 + h/4.0, ytmp)
+    f(t0 + h/4.0, ytmp, k2)
     for j := 0; j < n; j++ { ytmp[j] = y0[j] + 3.0*h*k1[j]/32.0 + 9.0*h*k2[j]/32.0 }
-    k3 = f(t0 + 3.0*h/8.0, ytmp)
+    f(t0 + 3.0*h/8.0, ytmp, k3)
     for j := 0; j < n; j++ { ytmp[j] = y0[j] + 1932.0*h*k1[j]/2197.0 - 7200.0*h*k2[j]/2197.0 + 7296.0*h*k3[j]/2197.0 }
-    k4 = f(t0 + 12.0*h/13.0, ytmp)
+    f(t0 + 12.0*h/13.0, ytmp, k4)
     for j := 0; j < n; j++ { ytmp[j] = y0[j] + 439.0*h*k1[j]/216.0 - 8.0*h*k2[j] + 3680.0*h*k3[j]/513.0 - 845.0*h*k4[j]/4104.0 }
-    k5 = f(t0 + h, ytmp)
+    f(t0 + h, ytmp, k5)
     for j := 0; j < n; j++ {
         ytmp[j] = y0[j] - 8.0*h*k1[j]/27.0 + 2.0*h*k2[j] -
             3544.0*h*k3[j]/2565.0 + 1859.0*h*k4[j]/4104.0 - 11.0*h*k5[j]/40.0
     }
-    k6 = f(t0 + h/2.0, ytmp)
+    f(t0 + h/2.0, ytmp, k6)
     // Now, do the integration as a weighting of the sampled data.
     for j := 0; j < n; j++ {
         y1[j] = y0[j] + 16.0*h*k1[j]/135.0 + 6656.0*h*k3[j]/12825.0 +
@@ -86,11 +87,10 @@ func rkf45_step(
  * Except for the zero-based indexing, the notation is
  * chosen to match that in the text.
  */
-func testSystem1(t float64, x []float64) []float64 {
-    dx0dt :=  -8.0/3.0*x[0] -  4.0/3.0*x[1] +     x[2] + 12.0
-    dx1dt := -17.0/3.0*x[0] -  4.0/3.0*x[1] +     x[2] + 29.0
-    dx2dt := -35.0/3.0*x[0] + 14.0/3.0*x[1] - 2.0*x[2] + 48.0
-    return []float64{dx0dt, dx1dt, dx2dt}
+func testSystem1(t float64, x []float64, dxdt []float64) {
+    dxdt[0] =  -8.0/3.0*x[0] -  4.0/3.0*x[1] +     x[2] + 12.0
+    dxdt[1] = -17.0/3.0*x[0] -  4.0/3.0*x[1] +     x[2] + 29.0
+    dxdt[2] = -35.0/3.0*x[0] + 14.0/3.0*x[1] - 2.0*x[2] + 48.0
 }
 
 func solution1(t float64) []float64 {

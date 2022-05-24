@@ -19,8 +19,9 @@ require "math"
 #
 # Params:
 #     f is a callable function that returns the derivative of y wrt t
-#        The signature of this function is f(t, y) where
-#        t is a float value, y is an array of number values.
+#        The signature of this function is f(t, y, dydt) where
+#        t is a float value, y is an array of number values,
+#        dydt is the array with the computed derivatives.
 #     t0: is the starting value of the independent variable
 #     h: the requested step size
 #     y0: an array of starting values for the dependent variables
