@@ -36,7 +36,7 @@ void getUDFSourceTermsForCell(lua_State* L, FVCell cell, size_t gtl,
     // Push cell data into an args table and onto TOS
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
-    pushFluidCellToTable(L, tblIdx, cell, gtl, gmodel);
+    pushFluidCellToTable(L, tblIdx, cell, gtl, myConfig);
     lua_pushinteger(L, blkId); lua_setfield(L, tblIdx, "blkId");
     lua_pushinteger(L, i); lua_setfield(L, tblIdx, "i");
     lua_pushinteger(L, j); lua_setfield(L, tblIdx, "j");

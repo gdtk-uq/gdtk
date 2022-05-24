@@ -175,7 +175,7 @@ extern(C) int luafn_sampleFluidCell(lua_State *L)
     int tblIdx = lua_gettop(L);
     auto blk = cast(FluidBlock) globalBlocks[blkId];
     assert(blk !is null, "Oops, this should be a FluidBlock object.");
-    pushFluidCellToTable(L, tblIdx, cell, 0, blk.myConfig.gmodel);
+    pushFluidCellToTable(L, tblIdx, cell, 0, blk.myConfig);
     return 1;
 } // end luafn_sampleFluidCell()
 
@@ -262,7 +262,7 @@ extern(C) int luafn_runTimeLoads(lua_State *L)
  *
  */
 void pushFluidCellToTable(lua_State* L, int tblIdx, ref const(FVCell) cell,
-                          size_t gtl, GasModel gmodel)
+                          size_t gtl, LocalConfig myConfig)
 {
     lua_pushnumber(L, cell.pos[gtl].x); lua_setfield(L, tblIdx, "x");
     lua_pushnumber(L, cell.pos[gtl].y); lua_setfield(L, tblIdx, "y");
@@ -271,10 +271,10 @@ void pushFluidCellToTable(lua_State* L, int tblIdx, ref const(FVCell) cell,
     lua_pushnumber(L, cell.iLength); lua_setfield(L, tblIdx, "iLength");
     lua_pushnumber(L, cell.jLength); lua_setfield(L, tblIdx, "jLength");
     lua_pushnumber(L, cell.kLength); lua_setfield(L, tblIdx, "kLength");
-    pushFlowStateToTable(L, tblIdx, cell.fs, gmodel);
+    pushFlowStateToTable(L, tblIdx, cell.fs, myConfig.gmodel);
     // For Carrie Xie 2022-05-24, we want access to the user-defined energy source term
     // when we sample the Fluid cell during the UDF evaluation for the corresponding solid cell.
-    auto cqi = GlobalConfig.cqi;
+    auto cqi = myConfig.cqi;
     lua_pushnumber(L, cell.Qudf.vec[cqi.totEnergy]); lua_setfield(L, tblIdx, "Qudf_totEnergy");
 } // end pushFluidCellToTable()
 
