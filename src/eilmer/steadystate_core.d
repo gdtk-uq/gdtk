@@ -7,6 +7,7 @@
 
 module steadystate_core;
 
+import core.memory;
 import core.stdc.stdlib : exit;
 import std.stdio;
 import std.file;
@@ -1187,6 +1188,11 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 times[$-1] = restartInfo;
                 if (GlobalConfig.is_master_task) { rewrite_times_file(times); }
             }
+            // Writing to file produces a large amount of temporary storage that needs to be cleaned up.
+            // Forcing the Garbage Collector to go off here prevents this freeable memory from
+            // accumulating over time, which can upset the queueing systems in HPC Jobs.
+            // 24/05/22 (NNG)
+            GC.collect();
         }
 
         if (finalStep) break;
