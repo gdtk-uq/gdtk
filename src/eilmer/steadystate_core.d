@@ -1880,36 +1880,35 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     // apply residual smoothing to RHS if requested
     // ref. A Residual Smoothing Strategy for Accelerating Newton Method Continuation, D. J. Mavriplis, Computers & Fluids, 2021
     if (GlobalConfig.residual_smoothing) {
-        // compute approximate solution via dU = P^{-1}*F(U)
-        // note that we make temporary use of the x0 array
+        // compute approximate solution via dU = D^{-1}*F(U) where we set D = precondition matrix
         final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
         case PreconditionMatrixType.jacobi:
             foreach (blk; parallel(localFluidBlocks,1)) {
                 blk.flowJacobian.x[] = blk.FU[];
-                nm.smla.multiply(blk.flowJacobian.local, blk.flowJacobian.x, blk.x0[]);
+                nm.smla.multiply(blk.flowJacobian.local, blk.flowJacobian.x, blk.DinvR[]);
             }
             break;
         case PreconditionMatrixType.ilu:
             foreach (blk; parallel(localFluidBlocks,1)) {
-                blk.x0[] = blk.FU[];
-                nm.smla.solve(blk.flowJacobian.local, blk.x0);
+                blk.DinvR[] = blk.FU[];
+                nm.smla.solve(blk.flowJacobian.local, blk.DinvR);
             }
             break;
         case PreconditionMatrixType.sgs:
             foreach (blk; parallel(localFluidBlocks,1)) {
-                blk.x0[] = blk.FU[];
-                nm.smla.sgs(blk.flowJacobian.local, blk.flowJacobian.diagonal, blk.x0, to!int(nConserved), blk.flowJacobian.D, blk.flowJacobian.Dinv);
+                blk.DinvR[] = blk.FU[];
+                nm.smla.sgs(blk.flowJacobian.local, blk.flowJacobian.diagonal, blk.DinvR, to!int(nConserved), blk.flowJacobian.D, blk.flowJacobian.Dinv);
             }
             break;
         case PreconditionMatrixType.sgs_relax:
             foreach (blk; parallel(localFluidBlocks,1)) {
                 int local_kmax = GlobalConfig.sssOptions.maxSubIterations;
-                blk.x0[] = blk.FU[];
-                nm.smla.sgsr(blk.flowJacobian.local, blk.x0, blk.flowJacobian.x, to!int(nConserved), local_kmax, blk.flowJacobian.Dinv);
+                blk.DinvR[] = blk.FU[];
+                nm.smla.sgsr(blk.flowJacobian.local, blk.DinvR, blk.flowJacobian.x, to!int(nConserved), local_kmax, blk.flowJacobian.Dinv);
             }
             break;
         case PreconditionMatrixType.lu_sgs:
-            mixin(lusgs_solve("x0", "FU"));
+            mixin(lusgs_solve("DinvR", "FU"));
             break;
         } // end switch
 
@@ -1921,7 +1920,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 if (blk.myConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
                 else { dtInv = 1.0/dt; }
                 foreach (k; 0 .. nConserved) {
-                    blk.FU[cellCount+k] += dtInv*blk.x0[cellCount+k];
+                    blk.FU[cellCount+k] += dtInv*blk.DinvR[cellCount+k];
                 }
                 cellCount += nConserved;
             }
