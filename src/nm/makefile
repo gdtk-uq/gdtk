@@ -70,17 +70,18 @@ test: ${TEST_PROGRAMS}
 demo: ${DEMO_PROGRAMS}
 	@echo "Demo codes built."
 
-bench: rungekutta_bench_d rungekutta_bench.go
+bench: rungekutta_bench_d rungekutta_bench.go rungekutta_bench_cr
 	@echo "Start benchmark programs"
 	./rungekutta_bench_d
 	go run rungekutta_bench.go
+	./rungekutta_bench_cr
 	@echo "Finished benchmark programs"
 
 clean:
 	- rm -f *.o *.obj
 	- rm -f ${DEMO_PROGRAMS}
 	- rm -f ${TEST_PROGRAMS}
-	- rm -f ./rungekutta_bench_d
+	- rm -f ./rungekutta_bench_d ./rungekutta_bench_cr
 	- cd $(LUA); make clean
 
 # Specific targets, for individual artefacts.
@@ -248,4 +249,7 @@ bbla_demo: bbla_demo.d bbla.d complex.d
 
 rungekutta_bench_d: rungekutta_bench.d
 	$(DMD) -of$@ -g -O -boundscheck=off rungekutta_bench.d
+
+rungekutta_bench_cr: rungekutta_bench.cr
+	crystal build -o$@ --release rungekutta_bench.cr
 
