@@ -760,6 +760,87 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
         } // end physicality check
 
+        // ensure the relaxation factor is sufficient enough to reduce the unsteady residual
+        // this is done via a simple backtracking line search algorithm
+        bool failed_line_search = false;
+        if (GlobalConfig.sssOptions.useLineSearch) {
+            // residual at current state
+            auto RU0 = normNew;
+            // unsteady residual at updated state (we will fill this later)
+            number RUn = 0.0;
+
+            //  find omega such that the unsteady residual is reduced
+            bool reduce_omega = true;
+            while (reduce_omega) {
+
+                // 1. compute unsteady term
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    int cellCount = 0;
+                    foreach (cell; blk.cells) {
+                        number dtInv;
+                        if (blk.myConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
+                        else { dtInv = 1.0/dt; }
+                        foreach (j; 0 .. nConserved) {
+                            blk.FU[cellCount+j] = -dtInv*omega*blk.dU[cellCount+j];
+                        }
+                        cellCount += nConserved;
+                    }
+                }
+
+                // 2. compute residual at updated state term
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    int cellCount = 0;
+                    foreach (cell; blk.cells) {
+                        cell.U[1].copy_values_from(cell.U[0]);
+                        foreach (j; 0 .. nConserved) {
+                            cell.U[1].vec[j] = cell.U[0].vec[j] + omega*blk.dU[cellCount+j];
+                        }
+                        cellCount += nConserved;
+                    }
+                }
+                evalRHS(0.0, 1);
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    int cellCount = 0;
+                    foreach (cell; blk.cells) {
+                        foreach (j; 0 .. nConserved) {
+                            blk.FU[cellCount+j] += cell.dUdt[1].vec[j];
+                        }
+                        cellCount += nConserved;
+                    }
+                }
+
+                // 3. add smoothing source term
+                if (GlobalConfig.residual_smoothing) {
+                    foreach (blk; parallel(localFluidBlocks,1)) {
+                        int cellCount = 0;
+                        foreach (cell; blk.cells) {
+                            number dtInv;
+                            if (blk.myConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
+                            else { dtInv = 1.0/dt; }
+                            foreach (k; 0 .. nConserved) {
+                                blk.FU[cellCount+k] += dtInv*blk.DinvR[cellCount+k];
+                            }
+                            cellCount += nConserved;
+                        }
+                    }
+                }
+
+                // compute norm of unsteady residual
+                mixin(dot_over_blocks("RUn", "FU", "FU"));
+                version(mpi_parallel) {
+                    MPI_Allreduce(MPI_IN_PLACE, &RUn, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                }
+                RUn = sqrt(RUn);
+
+                // check if unsteady residual is reduced
+                if (RUn < RU0 || omega < 0.01) {
+                    reduce_omega = false;
+                } else {
+                    omega *= 0.7;
+                }
+            }
+        } // end line search
+
         if (omega < 0.01)  {
             if ( GlobalConfig.is_master_task ) {
                 writefln("WARNING: nonlinear update relaxation factor too small for step= %d", step);
