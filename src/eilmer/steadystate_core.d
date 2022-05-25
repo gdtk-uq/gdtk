@@ -2190,20 +2190,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         }
     }
 
-    // scale turbulence variables before calculating norm
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        size_t nturb = blk.myConfig.turb_model.nturb;
-        blk.x0[] = to!number(0.0);
-        int cellCount = 0;
-        foreach (cell; blk.cells) {
-            foreach(it; 0 .. nturb){
-                number fac = blk.myConfig.turb_model.gmres_scaling_factor(it);
-                blk.FU[cellCount+TKE+it] = 1.0/fac*blk.FU[cellCount+TKE+it];
-            }
-            cellCount += nConserved;
-        }
-    }
-
     double unscaledNorm2;
     mixin(dot_over_blocks("unscaledNorm2", "FU", "FU"));
     version(mpi_parallel) {
@@ -2211,19 +2197,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     }
     unscaledNorm2 = sqrt(unscaledNorm2);
 
-    // unscale turbulence variables after calculating norm
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        size_t nturb = blk.myConfig.turb_model.nturb;
-        blk.x0[] = to!number(0.0);
-        int cellCount = 0;
-        foreach (cell; blk.cells) {
-            foreach(it; 0 .. nturb){
-                number fac = blk.myConfig.turb_model.gmres_scaling_factor(it);
-                blk.FU[cellCount+TKE+it] = fac*blk.FU[cellCount+TKE+it];
-            }
-            cellCount += nConserved;
-        }
-    }
 
     // Initialise some arrays and matrices that have already been allocated
     g0[] = to!number(0.0);
