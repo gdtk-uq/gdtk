@@ -272,6 +272,7 @@ enum FluxCalculator {
     hlle, // MHD HLLE approximate Riemann solver
     hlle2, // Standard HLLE approximate Riemann solver
     roe, // Roe approximate Riemann solver
+    osher, // Osher approximate Riemann solver
     asf, // what does this stand for???
     adaptive_ausmdv_asf // AUSMDV near shocks, asf otherwise
 }
@@ -296,6 +297,7 @@ string flux_calculator_name(FluxCalculator fcalc)
     case FluxCalculator.hlle: return "hlle";
     case FluxCalculator.hlle2: return "hlle2";
     case FluxCalculator.roe: return "roe";
+    case FluxCalculator.osher: return "osher";
     case FluxCalculator.asf: return "asf";
     case FluxCalculator.adaptive_ausmdv_asf: return "adaptive_ausmdv_asf";
     }
@@ -322,6 +324,7 @@ FluxCalculator flux_calculator_from_name(string name)
     case "hlle": return FluxCalculator.hlle;
     case "hlle2": return FluxCalculator.hlle2;
     case "roe": return FluxCalculator.roe;
+    case "osher": return FluxCalculator.osher;
     case "asf": return FluxCalculator.asf;
     case "adaptive_ausmdv_asf" : return FluxCalculator.adaptive_ausmdv_asf;
     default:

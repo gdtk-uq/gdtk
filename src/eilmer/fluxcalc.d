@@ -17,6 +17,7 @@ import nm.number;
 import geom;
 import gas;
 import flowstate;
+import gasflow: osher_riemann;
 import conservedquantities;
 import fvinterface;
 import globalconfig;
@@ -119,6 +120,9 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
         break;
     case FluxCalculator.roe:
         roe(Lft, Rght, IFace, myConfig);
+        break;
+    case FluxCalculator.osher:
+        osher(Lft, Rght, IFace, myConfig);
         break;
     case FluxCalculator.asf:
         ASF_242(IFace, myConfig);
@@ -699,7 +703,7 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
     number SL = fmin(uhat-ahat, uL-aL);
     number SR = fmax(uhat+ahat, uR+aR);
     number S_star = (pR - pL + rL*uL*(SL - uL) - rR*uR*(SR - uR))/(rL*(SL - uL) - rR*(SR - uR));
-    
+
     // compute HLLC flux
     ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
@@ -1773,8 +1777,9 @@ void hlle2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
 
     // compute Roe-average state
     number uhat = (sqrt(rL)*uL+sqrt(rR)*uR) / (sqrt(rL) + sqrt(rR));
-    number ghat = (sqrt(rL)*gL+sqrt(rR)*gR) / (sqrt(rL) + sqrt(rR));    
-    number ahat2 = ((sqrt(rL)*aL*aL+sqrt(rR)*aR*aR) / (sqrt(rL) + sqrt(rR))) + 0.5*(ghat-1.0)*((sqrt(rL)+sqrt(rR)) / sqrt((sqrt(rL) + sqrt(rR))))*(uR-uL)*(uR-uL);
+    number ghat = (sqrt(rL)*gL+sqrt(rR)*gR) / (sqrt(rL) + sqrt(rR));
+    number ahat2 = ((sqrt(rL)*aL*aL+sqrt(rR)*aR*aR) / (sqrt(rL) + sqrt(rR))) +
+        0.5*(ghat-1.0)*((sqrt(rL)+sqrt(rR)) / sqrt((sqrt(rL) + sqrt(rR))))*(uR-uL)*(uR-uL);
     number ahat = sqrt(ahat2);
 
     // compute wave speed estimates
@@ -1838,22 +1843,27 @@ void hlle2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
         F.vec[cqi.xMom] += factor*(( SRp*(rL*uL*uL+pL) - SLm*(rR*uR*uR+pR) + SLm*SRp*(rR*uR-rL*uL) )/(SRp-SLm));
         F.vec[cqi.yMom] += factor*(( SRp*(rL*uL*vL) - SLm*(rR*uR*vR) + SLm*SRp*(rR*vR-rL*vL) )/(SRp-SLm));
         if (cqi.threeD) { F.vec[cqi.yMom] += factor*(( SRp*(rL*uL*wL) - SLm*(rR*uR*wR) + SLm*SRp*(rR*wR-rL*wL) )/(SRp-SLm)); }
-        F.vec[cqi.totEnergy] += factor*(( SRp*(rL*uL*HL) - SLm*(rR*uR*HR) + SLm*SRp*(rR*HR-rL*HL) )/(SRp-SLm)); 
+        F.vec[cqi.totEnergy] += factor*(( SRp*(rL*uL*HL) - SLm*(rR*uR*HR) + SLm*SRp*(rR*HR-rL*HL) )/(SRp-SLm));
         version(turbulence) {
             foreach(i; 0 .. myConfig.turb_model.nturb) {
-                F.vec[cqi.rhoturb+i] += factor*(( SRp*(rL*uL*Lft.turb[i]) - SLm*(rR*uR*Rght.turb[i]) + SLm*SRp*(rR*Rght.turb[i]-rL*Lft.turb[i]) )/(SRp-SLm));
+                F.vec[cqi.rhoturb+i] += factor*(( SRp*(rL*uL*Lft.turb[i]) - SLm*(rR*uR*Rght.turb[i]) +
+                                                  SLm*SRp*(rR*Rght.turb[i]-rL*Lft.turb[i]) )/(SRp-SLm));
             }
         }
         version(multi_species_gas) {
             if (cqi.n_species > 1) {
                 foreach (i; 0 .. cqi.n_species) {
-                    F.vec[cqi.species+i] += factor*(( SRp*(rL*uL*Lft.gas.massf[i]) - SLm*(rR*uR*Rght.gas.massf[i]) + SLm*SRp*(rR*Rght.gas.massf[i]-rL*Lft.gas.massf[i]) )/(SRp-SLm));
+                    F.vec[cqi.species+i] += factor*(( SRp*(rL*uL*Lft.gas.massf[i]) -
+                                                      SLm*(rR*uR*Rght.gas.massf[i]) +
+                                                      SLm*SRp*(rR*Rght.gas.massf[i]-rL*Lft.gas.massf[i]) )/(SRp-SLm));
                 }
             }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. cqi.n_modes) {
-                F.vec[cqi.modes+i] += factor*(( SRp*(rL*uL*Lft.gas.u_modes[i]) - SLm*(rR*uR*Rght.gas.u_modes[i]) + SLm*SRp*(rR*Rght.gas.u_modes[i]-rL*Lft.gas.u_modes[i]) )/(SRp-SLm));
+                F.vec[cqi.modes+i] += factor*(( SRp*(rL*uL*Lft.gas.u_modes[i]) -
+                                                SLm*(rR*uR*Rght.gas.u_modes[i]) +
+                                                SLm*SRp*(rR*Rght.gas.u_modes[i]-rL*Lft.gas.u_modes[i]) )/(SRp-SLm));
             }
         }
     }
@@ -2052,6 +2062,86 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
         }
     }
 } // end roe()
+
+
+@nogc
+void osher(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+// An implementation of what PJ calls the Osher Riemann-solver flux calculator.
+// It is not intended for general use but, rather, to produce reference data for Christine Mittler's thesis work.
+// This implementation lifted from the Puffin program, 2022-05-27.
+// Note that it will only work in a debug build because we have hidden the memory allocations in a debug block.
+{
+    auto gmodel = myConfig.gmodel;
+    GasState stateLstar, stateRstar, stateX0;
+    debug {
+        // This cheat will run horribly slowly but we are intending only to do small test problems.
+        stateLstar = new GasState(gmodel);
+        stateRstar = new GasState(gmodel);
+        stateX0 = new GasState(gmodel);
+    } else {
+        throw new Error("The osher flux calculator is only usable in the debug flavour of build.");
+    }
+    //
+    number tkeL = 0.0;
+    number tkeR = 0.0;
+    version(turbulence) {
+        tkeL = myConfig.turb_model.turbulent_kinetic_energy(Lft);
+        tkeR = myConfig.turb_model.turbulent_kinetic_energy(Rght);
+    }
+    //
+    number[5] rsol = osher_riemann(Lft.gas, Rght.gas, Lft.vel.x, Rght.vel.x,
+                                   stateLstar, stateRstar, stateX0, gmodel);
+    number rho = stateX0.rho;
+    number p = stateX0.p;
+    number u = gmodel.internal_energy(stateX0);
+    number velx = rsol[4];
+    number vely = (velx < 0.0) ? Lft.vel.y : Rght.vel.y;
+    number velz = (velx < 0.0) ? Lft.vel.z : Rght.vel.z;
+    number tke = (velx < 0.0) ? tkeL : tkeR;
+    //
+    number massFlux = factor*rho*velx;
+    //
+    ConservedQuantities F = IFace.F;
+    auto cqi = myConfig.cqi;
+    F.vec[cqi.mass] += massFlux;
+    F.vec[cqi.xMom] += massFlux*velx + p;
+    F.vec[cqi.yMom] += massFlux*vely;
+    if (cqi.threeD) { F.vec[cqi.zMom] += massFlux*velz; }
+    F.vec[cqi.totEnergy] += massFlux*(u + p/rho + 0.5*(velx*velx+vely*vely+velz*velz) + tke);
+    //
+    // Species mass flux and individual energies.
+    // Presently, this is implemented by assuming that
+    // the wind is blowing one way or the other and then
+    // picking the appropriate side for the species fractions.
+    if (massFlux > 0.0) {
+        version(turbulence) {
+            foreach(i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] += massFlux * Lft.turb[i]; }
+        }
+        version(multi_species_gas) {
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += massFlux * Lft.gas.massf[i]; }
+            }
+        }
+        version(multi_T_gas) {
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] += massFlux * Lft.gas.u_modes[i]; }
+            }
+        }
+    } else {
+        version(turbulence) {
+            foreach(i; 0 .. myConfig.turb_model.nturb) { F.vec[cqi.rhoturb+i] +=  massFlux * Rght.turb[i]; }
+        }
+        version(multi_species_gas) {
+            if (cqi.n_species > 1) {
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += massFlux * Rght.gas.massf[i]; }
+            }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. cqi.n_modes) { F.vec[cqi.modes+i] += massFlux * Rght.gas.u_modes[i]; }
+        }
+    }
+} // end osher()
+
 
 @nogc
 void ASF_242(ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0) {
