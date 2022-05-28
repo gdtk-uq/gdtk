@@ -2078,7 +2078,8 @@ void osher(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
         stateLstar = new GasState(gmodel);
         stateRstar = new GasState(gmodel);
         stateX0 = new GasState(gmodel);
-    } else {
+    }
+    if (!stateX0 || !stateRstar || !stateLstar) {
         throw new Error("The osher flux calculator is only usable in the debug flavour of build.");
     }
     //
