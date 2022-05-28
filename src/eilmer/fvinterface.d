@@ -256,7 +256,7 @@ public:
         char[] repr;
         repr ~= "FVInterface(";
         repr ~= "id=" ~ to!string(id);
-        repr ~= "idir=" ~ to!string(idir);
+        repr ~= ", idir=" ~ to!string(idir);
         repr ~= ", universe_blk_id=" ~ to!string(myConfig.universe_blk_id);
         repr ~= ", pos=" ~ to!string(pos);
         repr ~= ", vtx_ids=[";

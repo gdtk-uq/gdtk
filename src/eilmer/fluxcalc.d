@@ -2095,9 +2095,9 @@ void osher(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     number p = stateX0.p;
     number u = gmodel.internal_energy(stateX0);
     number velx = rsol[4];
-    number vely = (velx < 0.0) ? Lft.vel.y : Rght.vel.y;
-    number velz = (velx < 0.0) ? Lft.vel.z : Rght.vel.z;
-    number tke = (velx < 0.0) ? tkeL : tkeR;
+    number vely = (velx > 0.0) ? Lft.vel.y : Rght.vel.y;
+    number velz = (velx > 0.0) ? Lft.vel.z : Rght.vel.z;
+    number tke = (velx > 0.0) ? tkeL : tkeR;
     //
     number massFlux = factor*rho*velx;
     //
