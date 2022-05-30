@@ -113,7 +113,7 @@ void calculate_flux_riemann(Face2D f, FlowState2D fsL, FlowState2D fsR, GasModel
     double p = f.stateX0.p;
     double u = gmodel.internal_energy(f.stateX0);
     double velx = rsol[4];
-    double vely = (velx < 0.0) ? velL.y : velR.y;
+    double vely = (velx > 0.0) ? velL.y : velR.y;
     double massFlux = rho*velx;
     Vector3 momentum = Vector3(massFlux*velx+p, massFlux*vely);
     momentum.transform_to_global_frame(f.n, f.t1);
