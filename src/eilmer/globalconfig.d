@@ -273,7 +273,7 @@ enum FluxCalculator {
     hlle2, // Standard HLLE approximate Riemann solver
     roe, // Roe approximate Riemann solver
     osher, // Osher approximate Riemann solver
-    asf, // what does this stand for???
+    asf, // Alpha-split Flux, high-order central difference. See Fisher et al. "Discete Conservative Finite-Difference Formulations..." 2012.
     adaptive_ausmdv_asf // AUSMDV near shocks, asf otherwise
 }
 
