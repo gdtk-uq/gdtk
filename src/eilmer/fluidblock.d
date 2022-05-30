@@ -214,8 +214,8 @@ public:
         auto cqi = dedicatedConfig[id].cqi;
         Linf_residuals = new ConservedQuantities(cqi.n);
         // Workspace for flux_calc method.
-        Lft = new FlowState(dedicatedConfig[id].gmodel);
-        Rght = new FlowState(dedicatedConfig[id].gmodel);
+        Lft = new FlowState(dedicatedConfig[id].gmodel, dedicatedConfig[id].turb_model.nturb);
+        Rght = new FlowState(dedicatedConfig[id].gmodel, dedicatedConfig[id].turb_model.nturb);
         //
         // Workspace for implicit updates of the thermochemistry.
         version(multi_species_gas) {
@@ -1096,7 +1096,7 @@ public:
         size_t nentry = 0;
         GasModel gmodel = cast(GasModel) myConfig.gmodel;
         if (gmodel is null) { gmodel = GlobalConfig.gmodel_master; }
-        fs_save = new FlowState(gmodel);
+        fs_save = new FlowState(gmodel, myConfig.turb_model.nturb);
 
         // gather the expected number of non-zero entries in the flow Jacobian
         foreach (cell; cells) {

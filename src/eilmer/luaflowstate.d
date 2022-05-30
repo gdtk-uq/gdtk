@@ -92,7 +92,8 @@ Be sure to call setGasModel(fname) before using a FlowState object.`;
     int narg = lua_gettop(L);
     if (narg == 0) {
         // Make an empty FlowState
-        fs = new FlowState(managedGasModel);
+        size_t nturb = 2; // TODO: Does this ever get called? What is it for? (NNG)
+        fs = new FlowState(managedGasModel, nturb);
         flowStateStore ~= pushObj!(FlowState, FlowStateMT)(L, fs);
         return 1;
     }
@@ -243,38 +244,33 @@ The value should be a number.`;
     double psi = getNumberFromTable(L, tblindx, "psi", false, 0.0, true, format(errMsgTmplt, "psi"));
 
     // Values related to turbulence modelling.
-    double[] turb_init;
+    double[] turb;
     lua_getfield(L, tblindx, "turb");
     if (lua_isnil(L, -1)) {
         auto tm = GlobalConfig.turb_model;
         foreach(it; 0 .. tm.nturb){
             string tvname = tm.primitive_variable_name(it);
             double tv = getNumberFromTable(L, tblindx, tvname, false, 0.0, true, format(errMsgTmplt, tvname));
-            turb_init ~= tv;
-        }
-        foreach(it; tm.nturb .. 2){
-            turb_init ~= 0.0;
+            turb ~= tv;
         }
     } else if (lua_istable(L, -1)) {
         // TODO: Consider making LUA always store tvariables by name
         lua_pop(L, 1); // get turb off the stack, getArrayOfDoubles will make its own copy
-        getArrayOfDoubles(L, tblindx, "turb", turb_init);
+        getArrayOfDoubles(L, tblindx, "turb", turb);
     } else {
         lua_pop(L, 1);
         errMsg = "Error in call to makeFlowStateFromTable.\n";
         errMsg ~= "turb field not valid";
         throw new LuaInputException(errMsg);
     }
-    if (turb_init.length != 2) throw new Error("Error in lua turb_init");
-    double[2] turb = turb_init;
     double mu_t = getNumberFromTable(L, tblindx, "mu_t", false, 0.0, true, format(errMsgTmplt, "mu_t"));
     double k_t = getNumberFromTable(L, tblindx, "k_t", false, 0.0, true, format(errMsgTmplt, "k_t"));
 
     // Shock detector value.
     double S = getNumberFromTable(L, tblindx, "S", false, 0.0, true, format(errMsgTmplt, "S"));
 
-    auto fs = new FlowState(managedGasModel, p, T, T_modes, vel, massf, quality, B,
-                            psi, divB, turb, mu_t, k_t, S);
+    auto fs = new FlowState(managedGasModel, p, T, T_modes, vel, turb, massf, quality, B,
+                            psi, divB, mu_t, k_t, S);
     return fs;
 } // end makeFlowStateFromTable()
 

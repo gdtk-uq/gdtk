@@ -304,7 +304,7 @@ public:
         foreach (i, v; grid.vertices) {
             auto new_vtx = new FVVertex(myConfig, lsq_workspace_at_vertices, to!int(i));
             if (myConfig.unstructured_limiter == UnstructuredLimiter.mlp)
-                new_vtx.gradients = new LSQInterpGradients(nsp, myConfig.n_modes);
+                new_vtx.gradients = new LSQInterpGradients(nsp, myConfig.n_modes, myConfig.turb_model.nturb);
             new_vtx.pos[0] = v;
             vertices ~= new_vtx;
         }
@@ -475,6 +475,7 @@ public:
         // of cell faces.
         // (Will be used for the convective fluxes).
         auto nmodes = myConfig.n_modes;
+        auto nturb = myConfig.turb_model.nturb;
         if (myConfig.use_extended_stencil) {
             foreach (c; cells) {
                 // First cell in the cloud is the cell itself.  Differences are taken about it.
@@ -506,7 +507,7 @@ public:
                     }
                 }
                 c.ws = new LSQInterpWorkspace();
-                c.gradients = new LSQInterpGradients(nsp, nmodes);
+                c.gradients = new LSQInterpGradients(nsp, nmodes, nturb);
             } // end foreach cell
         } else {
             foreach (c; cells) {
@@ -525,7 +526,7 @@ public:
                     }
                 } // end foreach face
                 c.ws = new LSQInterpWorkspace();
-                c.gradients = new LSQInterpGradients(nsp, nmodes);
+                c.gradients = new LSQInterpGradients(nsp, nmodes, nturb);
             } // end foreach cell
         } // end else
         // We will also need derivative storage in ghostcells because the
@@ -538,7 +539,7 @@ public:
         foreach (bci; bc) {
             if (bci.ghost_cell_data_available) {
                 foreach (c; bci.ghostcells) {
-                    c.gradients = new LSQInterpGradients(nsp, nmodes);
+                    c.gradients = new LSQInterpGradients(nsp, nmodes, nturb);
                 }
             }
         }

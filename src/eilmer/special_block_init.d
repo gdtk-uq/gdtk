@@ -65,6 +65,7 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
                     foreach (ref T; cell.fs.gas.T_modes) T = face.fs.gas.T;
                 }
                 cell.fs.vel.set(face.fs.vel);
+                // FIXME: This causes problems with the SA turbulence model (NNG)
                 if (cell.in_turbulent_zone) {
                     version(turbulence) {
                         foreach(it; 0 .. blk.myConfig.turb_model.nturb){
@@ -117,7 +118,8 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
             number vely_avg = 0.0;
             number velz_avg = 0.0;
             version(turbulence) {
-                number[2] turb_avg;
+                number[] turb_avg;
+                turb_avg.length = blk.myConfig.turb_model.nturb;
                 foreach(ref t; turb_avg) t=0.0;
             }
             number mu_t_avg = 0.0;

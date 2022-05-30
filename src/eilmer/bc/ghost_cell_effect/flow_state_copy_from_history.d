@@ -27,7 +27,7 @@ public:
     {
         super(id, boundary, "flowStateCopyFromHistory");
         fhistory = new FlowHistory(fileName);
-        my_fs = new FlowState(GlobalConfig.gmodel_master);
+        my_fs = new FlowState(GlobalConfig.gmodel_master, GlobalConfig.turb_model.nturb);
     }
 
     override string toString() const

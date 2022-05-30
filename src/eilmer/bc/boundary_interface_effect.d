@@ -404,7 +404,7 @@ public:
     {
         super(id, boundary, "flowStateCopyFromHistory");
         fhistory = new FlowHistory(fileName);
-        fstate = new FlowState(GlobalConfig.gmodel_master);
+        fstate = new FlowState(GlobalConfig.gmodel_master, GlobalConfig.turb_model.nturb);
     }
 
     override string toString() const

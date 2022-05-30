@@ -70,7 +70,7 @@ public:
         number[3][] T_modes;
     }
     version(turbulence) {
-        number[3][2] turb; // turbulence primitive variables
+        number[3][] turb; // turbulence primitive variables
     }
 private:
     LocalConfig myConfig;
@@ -103,7 +103,8 @@ public:
             }
         }
         version(turbulence) {
-            foreach (i; 0 .. 2) { // Note that this dimension is fixed above.
+            turb.length = myConfig.turb_model.nturb;
+            foreach (i; 0 .. myConfig.turb_model.nturb) { // Note that this dimension is fixed above.
                 foreach (j; 0 .. 3) { turb[i][j] = to!number(0.0); }
             }
         }
@@ -122,6 +123,7 @@ public:
             foreach (imode; 0 .. other.T_modes.length) { T_modes[imode][] = other.T_modes[imode][]; }
         }
         version(turbulence) {
+            turb.length = other.turb.length;
             foreach(i; 0 .. turb.length) turb[i][] = other.turb[i][];
         }
     }

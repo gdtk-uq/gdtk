@@ -149,10 +149,6 @@ class noTurbulenceModel : TurbulenceModel {
             Set the interface value of each turbulent primitive,
             given the nearest cell above it inside the flow domain
         */
-        version(turbulence){ //TODO: ugly pls fix
-            fs.turb[1] = cell.fs.turb[1];
-            fs.turb[0] = cell.fs.turb[0];
-        }
         return;
     }
 }
@@ -695,7 +691,6 @@ class saTurbulenceModel : TurbulenceModel {
         nuhat is set to zero at no slip walls in accord with Allmaras (2012), eqn 7
         */
         fs.turb[0] = 0.0;
-        fs.turb[1] = 0.0;
         fs.mu_t = 0.0;
         fs.k_t = 0.0;
         return;

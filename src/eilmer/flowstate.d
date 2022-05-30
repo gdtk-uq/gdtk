@@ -56,7 +56,7 @@ public:
         number divB;   // divergence of the magnetic field
     }
     version(turbulence) {
-        number[2] turb; // turbulence primitives (presently k, omega only)
+        number[] turb; // turbulence primitives
     }
     number mu_t;   // turbulence viscosity
     number k_t;    // turbulence thermal-conductivity
@@ -67,11 +67,11 @@ public:
          in double T_init,
          in double[] T_modes_init,
          in Vector3 vel_init,
+         in double[] turb_init,
          in double[] massf_init=[1.0,],
          in double quality_init=1.0,
          in Vector3 B_init=Vector3(0.0,0.0,0.0),
          in double psi_init=0.0, in double divB_init=1.0,
-         in double[2] turb_init=[0.0, 1.0],
          in double mu_t_init=0.0, in double k_t_init=0.0,
          in double S_init=0.0)
     {
@@ -84,6 +84,7 @@ public:
             divB = divB_init;
         }
         version(turbulence) {
+            turb.length = turb_init.length;
             foreach (i; 0 .. turb.length) turb[i] = turb_init[i];
         }
         mu_t = mu_t_init;
@@ -102,6 +103,7 @@ public:
             divB = other.divB;
         }
         version(turbulence) {
+            turb.length = other.turb.length;
             foreach (i; 0 .. turb.length) turb[i] = other.turb[i];
         }
         mu_t = other.mu_t;
@@ -121,6 +123,7 @@ public:
             divB = other.divB;
         }
         version(turbulence) {
+            turb.length = other.turb.length;
             foreach (i; 0 .. turb.length) turb[i] = other.turb[i];
         }
         mu_t = other.mu_t;
@@ -128,7 +131,7 @@ public:
         S = other.S;
     }
 
-    this(GasModel gm)
+    this(GasModel gm, size_t nturb)
     {
         gas = new GasState(gm, 100.0e3, 300.0, [1.0,], 1.0);
         vel.set(0.0,0.0,0.0);
@@ -138,6 +141,7 @@ public:
             divB = 0.0;
         }
         version(turbulence) {
+            turb.length = nturb;
             foreach (i; 0 .. turb.length) turb[i] = 0.0;
         }
         mu_t = 0.0;
@@ -175,6 +179,7 @@ public:
         version(turbulence) {
             double[] turb_in;
             turb_in = getJSONdoublearray(json_data, "turb", []);
+            turb.length = turb_in.length;
             foreach (i; 0 .. turb.length) turb[i] = turb_in[i];
         }
         mu_t = getJSONdouble(json_data, "mu_t", 0.0);
@@ -449,7 +454,7 @@ public:
             string txt = to!string(line);
             if (!canFind(txt, "#") && !canFind(txt, "pos.x")) {
                 // Assume that we have a line of data rather than variable names.
-                fstate ~= new FlowState(GlobalConfig.gmodel_master);
+                fstate ~= new FlowState(GlobalConfig.gmodel_master, GlobalConfig.turb_model.nturb);
                 pos ~= Vector3();
                 number volume, Q_rad_org, f_rad_org, Q_rE_rad;
                 double dt_chem, dt_therm, dt_local;
@@ -584,6 +589,9 @@ public:
 
     this (string fileName)
     {
+        if (GlobalConfig.turb_model.isTurbulent)
+            throw new Error("FlowHistory expects laminar inflow but a turbulence model is active.");
+
         this.fileName = fileName;
         // Open filename and read all time and flow data.
         auto gm = GlobalConfig.gmodel_master;
@@ -596,7 +604,7 @@ public:
                 // Assume that we have a line of data rather than variable names.
                 // item: 0 1     2     3     4 5 6       ...
                 // name: t vel.x vel.y vel.z p T massf[0]...
-                auto fs= new FlowState(gm);
+                auto fs= new FlowState(gm, GlobalConfig.turb_model.nturb);
                 double tme;
                 auto items = txt.split();
                 if (items.length < 6+gm.n_species+gm.n_modes) {

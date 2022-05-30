@@ -184,8 +184,9 @@ public:
         ghost_cell_data_available = ghostCellDataAvailable;
         emissivity = _emissivity;
         auto gm = GlobalConfig.gmodel_master;
-        _Lft = new FlowState(gm);
-        _Rght = new FlowState(gm);
+        auto nturb = GlobalConfig.turb_model.nturb;
+        _Lft = new FlowState(gm, nturb);
+        _Rght = new FlowState(gm, nturb);
     }
 
     void finalize()

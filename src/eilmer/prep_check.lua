@@ -14,14 +14,14 @@ function prep_check.initTurbulence(fs, turbulence_model_name)
         if fs.tke~=0.0 then error(string.format("Turbulence model is none but tke set: %.18e", fs.tke)) end
         if fs.omega~=1.0 then error(string.format("Turbulence model is none but omega set: %.18e", fs.omega)) end
         if fs.nuhat~=0.0 then error(string.format("Turbulence model is none but nuhat set: %.18e", fs.nuhat)) end
-        turb = {0.0, 1.0}
+        turb = {}
     elseif turbulence_model_name == "k_omega" then
         if fs.nuhat~=0.0 then error(string.format("Turbulence model is k_omega but nuhat set: %.18e", fs.nuhat)) end
         turb = {fs.tke, fs.omega}
     elseif string.find(turbulence_model_name , "spalart_allmaras") then
         if fs.tke~=0.0 then error(string.format("Turbulence model is spalart_allmaras but tke set: %.18e", fs.tke)) end
         if fs.omega~=1.0 then error(string.format("Turbulence model is spalart_allmaras but omega set: %.18e", fs.omega)) end
-        turb = {fs.nuhat, 0.0}
+        turb = {fs.nuhat}
     else
         error(string.format("Unsupported turbulence model: %s", turbulence_model_name))
     end

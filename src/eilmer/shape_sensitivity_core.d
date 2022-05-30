@@ -332,7 +332,8 @@ void ghost_cell_connectivity_for_gradients(ref FluidBlock blk) {
 			    new_cell.in_turbulent_zone = cell.in_turbulent_zone;
 			    auto nsp = blk.myConfig.n_species;
 			    auto nmodes = blk.myConfig.n_modes;
-			    new_cell.gradients = new LSQInterpGradients(nsp, nmodes);
+			    auto nturb = blk.myConfig.turb_model.nturb;
+			    new_cell.gradients = new LSQInterpGradients(nsp, nmodes, nturb);
 			    new_cell.gradients.copy_values_from(cell.gradients);
 			    new_cell.dqdQ = cell.dqdQ;
 			    // add the new cell to the boundary ghostcell list
@@ -506,7 +507,8 @@ void ghost_cell_connectivity_for_gradients(ref FluidBlock blk) {
 		if(ghost_cell.cell_cloud.length < 1) { // otherwise duplicates will collect each cell twice
 		    auto nsp = blk.myConfig.n_species;
 		    auto nmodes = blk.myConfig.n_modes;
-		    ghost_cell.gradients = new LSQInterpGradients(nsp, nmodes);
+		    auto nturb = blk.myConfig.turb_model.nturb;
+		    ghost_cell.gradients = new LSQInterpGradients(nsp, nmodes, nturb);
 		    ghost_cell.ws = new LSQInterpWorkspace();
 		    ghost_cell.cell_cloud ~= ghost_cell;
 		    foreach(face; ghost_cell.iface) {

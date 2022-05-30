@@ -23,6 +23,8 @@ import fvcell;
 immutable size_t cloud_nmax = 12;
 immutable double ESSENTIALLY_ZERO = 1.0e-50;
 
+
+// TODO: These objects violate RAII. Is there a good reason for it? (NNG 30/05/22)
 class LSQInterpWorkspace {
 public:
     // A place to hold the intermediate results for computing
@@ -126,10 +128,10 @@ public:
         number BxMin, ByMin, BzMin, psiMin;
     }
     version(turbulence) {
-        number[3][2] turb;
-        number[2] turbPhi;
-        number[2] turbMax;
-        number[2] turbMin;
+        number[3][] turb;
+        number[] turbPhi;
+        number[] turbMax;
+        number[] turbMin;
     }
     version(multi_species_gas) {
         number[3][] massf;
@@ -153,7 +155,7 @@ public:
     }
 
 
-    this(size_t nsp, size_t nmodes)
+    this(size_t nsp, size_t nmodes, size_t nturb)
     {
         version(multi_species_gas) {
             massf.length = nsp;
@@ -170,6 +172,12 @@ public:
             u_modesMax.length = nmodes;
             T_modesMin.length = nmodes;
             u_modesMin.length = nmodes;
+        }
+        version(turbulence) {
+            turb.length = nturb;
+            turbPhi.length = nturb;
+            turbMax.length = nturb;
+            turbMin.length = nturb;
         }
 
         // The user has the option to postprocess the limiter values for visualisation,
@@ -188,7 +196,7 @@ public:
             BxPhi = -1.0; ByPhi = -1.0; BzPhi = -1.0; psiPhi = -1.0;
         }
         version(turbulence) {
-            turbPhi[0] = -1.0; turbPhi[1] = -1.0;
+            foreach (ref val; turbPhi) { val = -1.0; }
         }
         version(multi_species_gas) {
             foreach (ref val; massfPhi) { val = -1.0; }
@@ -203,6 +211,7 @@ public:
 
     this(ref const(LSQInterpGradients) other)
     {
+        // TODO: Copy constructor doesn't set array sizes correctly. (NNG 30/05/22)
         this.copy_values_from(other);
     }
 
@@ -220,6 +229,7 @@ public:
             BxMin = other.BxMin; ByMin = other.ByMin; BzMin = other.BzMin; psiMin = other.psiMin;
         }
         version(turbulence) {
+            assert(turb.length == other.turb.length, "Mismatch in turb length");
             foreach(i; 0 .. turb.length){
                 turb[i][] = other.turb[i][];
                 turbPhi[i] = other.turbPhi[i];
