@@ -2257,6 +2257,7 @@ public:
                 new_boundaries ~= new BoundaryFaceSet(b.tag, new_face_id_list, new_outsign_list);
             }
         }
+        boundaries = new_boundaries;
 
         //
         // Merge the other boundary sets into the master collection.
