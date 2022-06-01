@@ -2237,7 +2237,10 @@ public:
         //
         // Sift through the original boundary sets and eliminate faces
         // that have become "internal" (i.e. have non-null left_cell and right_cell).
+        // Note: Modified June/2022 by NNG to remove empty FaceSets
         //
+        
+        BoundaryFaceSet[] new_boundaries;
         foreach (i, b; boundaries) {
             size_t[] new_face_id_list;
             int[] new_outsign_list;
@@ -2250,9 +2253,11 @@ public:
                     new_outsign_list ~= b.outsign_list[j];
                 }
             }
-            b.face_id_list = new_face_id_list;
-            b.outsign_list = new_outsign_list;
+            if (new_face_id_list.length!=0) {
+                new_boundaries ~= new BoundaryFaceSet(b.tag, new_face_id_list, new_outsign_list);
+            }
         }
+
         //
         // Merge the other boundary sets into the master collection.
         //
@@ -2275,7 +2280,9 @@ public:
                     }
                 }
             }
-            boundaries ~= new BoundaryFaceSet(b.tag, new_face_id_list, new_outsign_list);
+            if (new_face_id_list.length!=0){
+                boundaries ~= new BoundaryFaceSet(b.tag, new_face_id_list, new_outsign_list);
+            }
         }
         // Need to update nboundaries after adding new boundaries
         nboundaries = boundaries.length;
