@@ -569,36 +569,36 @@ SolidDomainCoupling solidDomainCouplingFromName(string name)
     }
 }
 
-enum PreconditionMatrixType { jacobi, ilu, sgs, sgs_relax, lu_sgs }
+enum PreconditionMatrixType { lusgs, diagonal, jacobi, sgs, ilu }
 
 string preconditionMatrixTypeName(PreconditionMatrixType i)
 {
     final switch (i) {
+    case PreconditionMatrixType.lusgs: return "lusgs";
+    case PreconditionMatrixType.diagonal: return "diagonal";
     case PreconditionMatrixType.jacobi: return "jacobi";
-    case PreconditionMatrixType.ilu: return "ilu";
     case PreconditionMatrixType.sgs: return "sgs";
-    case PreconditionMatrixType.sgs_relax: return "sgs_relax";
-    case PreconditionMatrixType.lu_sgs: return "lu_sgs";
+    case PreconditionMatrixType.ilu: return "ilu";
     }
 } // end preconditionMatrixTypeName()
 
 PreconditionMatrixType preconditionMatrixTypeFromName(string name)
 {
     switch (name) {
+    case "lusgs": return PreconditionMatrixType.lusgs;
+    case "diagonal": return PreconditionMatrixType.diagonal;
     case "jacobi": return PreconditionMatrixType.jacobi;
-    case "ilu": return PreconditionMatrixType.ilu;
     case "sgs": return PreconditionMatrixType.sgs;
-    case "sgs_relax": return PreconditionMatrixType.sgs_relax;
-    case "lu_sgs": return PreconditionMatrixType.lu_sgs;
+    case "ilu": return PreconditionMatrixType.ilu;
     default:
         string errMsg = "The selected 'preconditioner' is unavailable.\n";
         errMsg ~= format("You selected: '%s'\n", name);
         errMsg ~= "The available strategies are: \n";
-        errMsg ~= "   'jacobi'\n";
-        errMsg ~= "   'ilu'\n";
-        errMsg ~= "   'sgs'\n";
-        errMsg ~= "   'sgs_relax'\n";
         errMsg ~= "   'lu_sgs'\n";
+        errMsg ~= "   'diagonal'\n";
+        errMsg ~= "   'jacobi'\n";
+        errMsg ~= "   'sgs'\n";
+        errMsg ~= "   'ilu'\n";
         errMsg ~= "Check your selection or its spelling in the input file.\n";
         throw new Error(errMsg);
     }

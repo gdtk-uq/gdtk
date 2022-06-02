@@ -186,7 +186,7 @@ public:
     double normAcc, dotAcc;
     size_t nvars;
     Matrix!number Minv;
-    number[] FU, dU, DinvR, r0, x0;
+    number[] FU, dU, DinvR, r0, x0, rhs;
     number[] v, w, zed;
     number[] g0, g1;
     Matrix!number Q1;
@@ -1754,6 +1754,7 @@ public:
         r0.length = n;
         x0.length = n;
         DinvR.length = n;
+        rhs.length = n;
         v.length = n;
         w.length = n;
         zed.length = n;

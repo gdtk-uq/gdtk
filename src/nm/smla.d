@@ -340,180 +340,212 @@ void solve(T)(SMatrix!T LU, T[] b)
     }
 }
 
-void invert_diagonal(T)(SMatrix!T A, int block_size, Matrix!T D, Matrix!T Dinv) {
+/**
+ * This algorithm inverts the diagonal blocks of the sparse matrix A
+ * the inverted blocks are stored in place, i.e. A = L + D^(-1) U
+ * this can be useful for some of the iterative linear solvers such as Jacobi and Gauss-Seidel
+ **/
+void invert_block_diagonal(T)(SMatrix!T A, Matrix!T D, Matrix!T Dinv, size_t nblks, size_t blk_size) {
 
-    int n = to!int(A.ia.length-1);
-    int nblocks = n/block_size;
-
-    foreach (k; 0..nblocks) {
-        foreach (i; 0..block_size) {
-            int idx = k*block_size + i;
-            foreach (j; 0..block_size) {
-                int jdx = k*block_size + j;
+    foreach (k; 0..nblks) {
+        // grab the current diagonal block
+        foreach (i; 0..blk_size) {
+            size_t idx = k*blk_size + i;
+            foreach (j; 0..blk_size) {
+                size_t jdx = k*blk_size + j;
                 D[i,j] = A[idx,jdx];
             }
         }
-
+        // invert the block matrix
         Dinv = inverse(D);
-
-        foreach (i; 0..block_size) {
-            int idx = k*block_size + i;
-            foreach (j; 0..block_size) {
-                int jdx = k*block_size + j;
+        // replace the diagonal block in the sparse matrix with its inverse
+        foreach (i; 0..blk_size) {
+            size_t idx = k*blk_size + i;
+            foreach (j; 0..blk_size) {
+                size_t jdx = k*blk_size + j;
                 A[idx,jdx] = Dinv[i,j];
             }
         }
     }
 
-} // end invert_diagonal()
+} // end invert_block_diagonal()
 
-void sgs(T)(SMatrix!T A, T[] diagonal, T[] b, int block_size, Matrix!T D, Matrix!T Dinv) {
-
-    int n = to!int(A.ia.length-1);
-    assert(b.length == n);
-    int nblocks = n/block_size;
-    T[] tmp; tmp.length = block_size;
-
-    // Forward sweep:  (L + D) . x_k+1/2 = b
-    foreach (nb; 0..nblocks) {
-        foreach ( i; nb*block_size..nb*block_size+block_size ) {
-            foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
-                // only work on entries where j < diagonal block
-                if ( j >= nb*block_size )
-                    break;
-                b[i] -= A[i,j]*b[j];
-            }
-        }
-        // multiply by inverse diagonal block
-        foreach (i; 0..block_size) {
-            int idx = nb*block_size + i;
-            foreach (j; 0..block_size) {
-                int jdx = nb*block_size + j;
-                Dinv[i,j] = A[idx,jdx];
-            }
-        }
-        nm.bbla.dot(Dinv, b[nb*block_size..nb*block_size+block_size], tmp[]);
-        b[nb*block_size..nb*block_size+block_size] = tmp[];
-    }
-
-    // D . x_k+1/2
-    foreach (nb; 0..nblocks) {
-        foreach (i; 0..block_size) {
-            int idx = nb*block_size + i;
-            foreach (j; 0..block_size) {
-                int jdx = nb*block_size + j;
-                D[i,j] = diagonal[nb*block_size*block_size + i*block_size + j];
-            }
-        }
-        nm.bbla.dot(D, b[nb*block_size..nb*block_size+block_size], tmp[]);
-        b[nb*block_size..nb*block_size+block_size] = tmp[];
-    }
-
-    // Backward sweep:  (U + D) . x_k+1 = b
-    for ( int nb = to!int(nblocks-1); nb >= 0; --nb ) {
-        foreach ( i; nb*block_size..nb*block_size+block_size ) {
-            foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
-                // only work on entries where j > diagonal block
-                if ( j <= nb*block_size+block_size-1 )
+/**
+ * This algorithm multiplies only the block diagonal portion of the
+ * sparse matrix (A) with a vector (b) and stores the result in (c)
+ * this can be useful for some of the iterative linear solvers such as Jacobi and Gauss-Seidel
+ **/
+void multiply_block_diagonal(T)(SMatrix!T a, T[] b, T[] c, size_t nblks, size_t blk_size)
+in {
+    assert(a.ia.length-1 == c.length);
+    // Some faith is given that the user provides an appropriate length
+    // input vector b, since in CRS we cannot easily determine the number of columns.
+}
+do {
+    size_t i0, i1, j0, j1;
+    foreach (nb; 0..nblks) {
+        i0 = nb*blk_size;
+        i1 = nb*blk_size+blk_size;
+        foreach ( i; i0..i1 ) {
+            j0 = a.ia[i];
+            j1 = a.ia[i+1];
+            foreach ( j; a.ja[j0 .. j1] ) {
+                // only work on entries that are in the diagonal block
+                if ( j < i0 )
                     continue;
-                b[i] -= A[i,j]*b[j];
+                if ( j > i1-1 )
+                    break;
+                c[i] += a[i,j] * b[j];
             }
         }
-
-        // multiply by inverse diagonal block
-        foreach (i; 0..block_size) {
-            int idx = nb*block_size + i;
-            foreach (j; 0..block_size) {
-                int jdx = nb*block_size + j;
-                Dinv[i,j] = A[idx,jdx];
-            }
-        }
-        nm.bbla.dot(Dinv, b[nb*block_size..nb*block_size+block_size], tmp[]);
-        b[nb*block_size..nb*block_size+block_size] = tmp[];
     }
+ } // end multiply_block_diagonal()
 
-} // end sgs()
-
-void sgsr(T)(SMatrix!T A, T[] b, T[] x, int block_size, int kmax, Matrix!T Dinv) {
-
-    int n = to!int(A.ia.length-1);
-    assert(b.length == n);
-    int nblocks = n/block_size;
-    fill(x,to!number(0.0));
-    T[] xnew; xnew.length = n;
-    fill(xnew,to!number(0.0));
-    T[] tmp; tmp.length = block_size;
-
-    foreach (k; 0..kmax) {
-
-        // Forward sweep: (L + D) . x_k+1/2 = b - U . x_k
-        xnew = b.dup;
-        foreach (nb; 0..nblocks) {
-            foreach ( i; nb*block_size..nb*block_size+block_size ) {
-                // relaxation:  b* = b - U . x_k
-                foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
-                    // only work on entries where j > diagonal block
-                    if ( j <= nb*block_size+block_size-1 )
-                        continue;
-                    xnew[i] -= A[i,j] * x[j];
-                }
-                // lower triangluar matrix solve
-                foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
-                    // only work on entries where j < i
-                    if ( j >= nb*block_size )
-                        break;
-                    xnew[i] -= A[i,j] * xnew[j];
-                }
+/**
+ * This algorithm multiplies only the block lower triangular portion of the
+ * sparse matrix (A) with a vector (b) and stores the result in (c)
+ * this is useful for some of the iterative linear solvers such as Jacobi and Gauss-Seidel
+ **/
+void multiply_block_lower_triangular(T)(SMatrix!T a, T[] b, T[] c, size_t nblks, size_t blk_size)
+in {
+    assert(a.ia.length-1 == c.length);
+    // Some faith is given that the user provides an appropriate length
+    // input vector b, since in CRS we cannot easily determine the number of columns.
+}
+do {
+    size_t i0, i1, j0, j1;
+    foreach (nb; 0..nblks) {
+        i0 = nb*blk_size;
+        i1 = nb*blk_size+blk_size;
+        foreach ( i; i0..i1 ) {
+            j0 = a.ia[i];
+            j1 = a.ia[i+1];
+            foreach ( j; a.ja[j0 .. j1] ) {
+                // only work on entries where j < diagonal block
+                if ( j >= i0 )
+                    break;
+                c[i] += a[i,j] * b[j];
             }
-
-            // multiply by inverse diagonal block
-            foreach (i; 0..block_size) {
-                int idx = nb*block_size + i;
-                foreach (j; 0..block_size) {
-                    int jdx = nb*block_size + j;
-                    Dinv[i,j] = A[idx,jdx];
-                }
-            }
-            nm.bbla.dot(Dinv, xnew[nb*block_size..nb*block_size+block_size], tmp[]);
-            xnew[nb*block_size..nb*block_size+block_size] = tmp[];
         }
-
-        // Backward sweep:  (U + D) . x_k+1 = b - L . x_k+1/2
-        fill(x,xnew);
-        fill(xnew,b);
-        for ( int nb = to!int(nblocks-1); nb >= 0; --nb ) {
-            foreach ( i; nb*block_size..nb*block_size+block_size ) {
-                // relaxation:  b* = b - U . x_k
-                foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
-                    // only work on entries where j < i
-                    if ( j >= nb*block_size )
-                        break;
-                    xnew[i] -= A[i,j] * x[j];
-                }
-                // upper triangluar matrix solve
-                foreach ( j; A.ja[A.ia[i] .. A.ia[i+1]] ) {
-                    // only work on entries where j > diagonal block
-                    if ( j <= nb*block_size+block_size-1 )
-                        continue;
-                    xnew[i] -= A[i,j] * xnew[j];
-                }
-            }
-
-            // multiply by inverse diagonal block
-            foreach (i; 0..block_size) {
-                int idx = nb*block_size + i;
-                foreach (j; 0..block_size) {
-                    int jdx = nb*block_size + j;
-                    Dinv[i,j] = A[idx,jdx];
-                }
-            }
-            nm.bbla.dot(Dinv, xnew[nb*block_size..nb*block_size+block_size], tmp[]);
-            xnew[nb*block_size..nb*block_size+block_size] = tmp[];
-        }
-        fill(x,xnew);
     }
-    fill(b,x);
-} // end sgsr()
+ } // end multiply_block_lower_triangular()
+
+/**
+ * This algorithm performs a block lower triangular solve
+ * the routine assumes that the sparse matrix is in the form A = L + D^(-1) + U
+ * this method can be used for iterative solvers such as Gauss-Seidel
+ **/
+void block_lower_triangular_solve(T)(SMatrix!T a, T[] b, T[] c, size_t nblks, size_t blk_size)
+in {
+    assert(a.ia.length-1 == c.length);
+    // Some faith is given that the user provides an appropriate length
+    // input vector b, since in CRS we cannot easily determine the number of columns.
+}
+do {
+    size_t i0, i1, j0, j1;
+    foreach (nb; 0..nblks) {
+        i0 = nb*blk_size;
+        i1 = nb*blk_size+blk_size;
+        // move the up to date entries to the right hand side
+        foreach ( i; i0..i1 ) {
+            j0 = a.ia[i];
+            j1 = a.ia[i+1];
+            foreach ( j; a.ja[j0 .. j1] ) {
+                // only work on entries where j < diagonal block
+                if ( j >= i0 )
+                    break;
+                b[i] -= a[i,j] * c[j];
+            }
+        }
+        // multiply by inverted diagonal block
+        foreach ( i; i0..i1 ) {
+            c[i] = 0.0;
+            j0 = a.ia[i];
+            j1 = a.ia[i+1];
+            foreach ( j; a.ja[j0 .. j1] ) {
+                // only work on entries that are in the diagonal block
+                if ( j < i0 )
+                    continue;
+                if ( j > i1-1 )
+                    break;
+                c[i] += a[i,j] * b[j];
+            }
+        }
+    }
+ } // end block_lower_triangular_solve()
+
+/**
+ * This algorithm multiplies only the block upper triangular portion of the
+ * sparse matrix (A) with a vector (b) and stores the result in (c)
+ * this is useful for some of the iterative linear solvers such as Jacobi and Gauss-Seidel
+ **/
+void multiply_block_upper_triangular(T)(SMatrix!T a, T[] b, T[] c, size_t nblks, size_t blk_size)
+in {
+    assert(a.ia.length-1 == c.length);
+    // Some faith is given that the user provides an appropriate length
+    // input vector b, since in CRS we cannot easily determine the number of columns.
+}
+do {
+    size_t i0, i1, j0, j1;
+    foreach (nb; 0..nblks) {
+        i0 = nb*blk_size;
+        i1 = nb*blk_size+blk_size;
+        foreach ( i; i0..i1 ) {
+            j0 = a.ia[i];
+            j1 = a.ia[i+1];
+            foreach ( j; a.ja[j0 .. j1] ) {
+                // only work on entries where j > diagonal block
+                if ( j <= i1-1 )
+                    continue;
+                c[i] += a[i,j] * b[j];
+            }
+        }
+    }
+ } // multiply_block_upper_triangular()
+
+/**
+ * This algorithm performs a block upper triangular solve
+ * the routine assumes that the sparse matrix is in the form A = L + D^(-1) + U
+ * this method can be used for iterative solvers such as Gauss-Seidel
+ **/
+void block_upper_triangular_solve(T)(SMatrix!T a, T[] b, T[] c, size_t nblks, size_t blk_size)
+in {
+    assert(a.ia.length-1 == c.length);
+    // Some faith is given that the user provides an appropriate length
+    // input vector b, since in CRS we cannot easily determine the number of columns.
+}
+do {
+    size_t i0, i1, j0, j1;
+    for ( int nb = to!int(nblks)-1; nb >= 0; --nb ) {
+        i0 = to!size_t(nb)*blk_size;
+        i1 = to!size_t(nb)*blk_size+blk_size;
+        // move the up to date entries to the right hand side
+        foreach ( i; i0..i1 ) {
+            j0 = a.ia[i];
+            j1 = a.ia[i+1];
+            foreach ( j; a.ja[j0 .. j1] ) {
+                // only work on entries where j > diagonal block
+                if ( j <= i1-1 )
+                    continue;
+                b[i] -= a[i,j] * c[j];
+            }
+        }
+        // multiply by inverted diagonal block
+        foreach ( i; i0..i1 ) {
+            c[i] = 0.0;
+            j0 = a.ia[i];
+            j1 = a.ia[i+1];
+            foreach ( j; a.ja[j0 .. j1] ) {
+                // only work on entries that are in the diagonal block
+                if ( j < i0 )
+                    continue;
+                if ( j > i1-1 )
+                    break;
+                c[i] += a[i,j] * b[j];
+            }
+        }
+    }
+ } // end block_upper_triangular_solve()
 
 T[] gmres(T)(SMatrix!T A, T[] b, T[] x0, int m)
 in {
@@ -1144,6 +1176,104 @@ version(smla_test) {
         auto testMat = new SMatrix!double(matrix);
         assert(approxEqualNumbers(testMat[4,0], -0.03599942, 1.0e-7), failedUnitTest());
         assert(approxEqualNumbers(testMat[6,6], 1.0, 1.0e-7), failedUnitTest());
+
+        // We will test the suite of block sparse matrix methods by solving a linear system using two common iterative solution methods
+        size_t blk_size = 2;
+        size_t nblks = 5;
+        auto A = new SMatrix!number([to!number(10.), to!number(2.),  to!number(-1.),
+                                     to!number(3.),  to!number(20.), to!number(-1.), to!number(-2.),
+                                     to!number(2.),  to!number(30.), to!number(-2.), to!number(-1.),
+                                     to!number(2.),  to!number(40.), to!number(2.),  to!number(-2.),
+                                     to!number(1.),  to!number(50.), to!number(-1.),
+                                     to!number(-1.), to!number(60.),
+                                     to!number(-2.), to!number(-2.), to!number(30.), to!number(-1.),
+                                     to!number(-1.), to!number(-5.), to!number(40.), to!number(3.),
+                                     to!number(-2.), to!number(1.),  to!number(20.), to!number(1.),
+                                     to!number(-1.), to!number(3.),  to!number(40.),],
+                                    [0, 1, 5, 0, 1, 2, 6, 1, 2, 3, 7, 2, 3, 4, 8, 3, 4, 9, 0, 5, 1, 5, 6, 7, 2, 6, 7, 8, 3, 7, 8, 9, 4, 8, 9],
+                                    [0, 3, 7, 11, 15, 18, 20, 24, 28, 32, 35]);
+        number[] R = [to!number(1.), to!number(2.0), to!number(3.0), to!number(4.0), to!number(5.0), to!number(6.0), to!number(7.0), to!number(8.0), to!number(9.0), to!number(10.0)];
+        number[] sol = [to!number(0.0865856), to!number(0.117794), to!number(0.106302), to!number(0.111582), to!number(0.102159),
+                        to!number(0.101443), to!number(0.254665), to!number(0.201483), to!number(0.440107), to!number(0.219546)];
+
+        // test multiplying only the block diagonal of a sparse matrix by a vector
+        number[] DdotR;
+        DdotR.length = R.length;
+        DdotR[] = to!number(0.0);
+        multiply_block_diagonal(A, R, DdotR, nblks, blk_size);
+        number[] s0 = [to!number(14.0), to!number(43.0), to!number(82.0), to!number(166.0), to!number(250.0),
+                         to!number(360.0), to!number(202.0), to!number(285.0), to!number(190.0), to!number(427.0)];
+        foreach (i; 0 .. s0.length) {
+            assert(approxEqualNumbers(DdotR[i], s0[i]), failedUnitTest());
+        }
+
+        // test multiplying only the block lower triangular portion of a sparse matrix by a vector
+        number[] LdotR;
+        LdotR.length = R.length;
+        LdotR[] = to!number(0.0);
+        nm.smla.multiply_block_lower_triangular(A, R, LdotR, nblks, blk_size);
+        number[] s1 = [to!number(0.0), to!number(0.0), to!number(4.0), to!number(0.0), to!number(4.0),
+                         to!number(-1.0), to!number(-16.0), to!number(-3.0), to!number(0.0), to!number(-5.0)];
+        foreach (i; 0 .. s1.length) {
+            assert(approxEqualNumbers(LdotR[i], s1[i]), failedUnitTest());
+        }
+
+        // test multiplying only the block upper triangular portion of a sparse matrix by a vector
+        number[] UdotR;
+        UdotR.length = R.length;
+        UdotR[] = to!number(0.0);
+        nm.smla.multiply_block_upper_triangular(A, R, UdotR, nblks, blk_size);
+        number[] s2 = [to!number(-6.0), to!number(-17.0), to!number(-8.0), to!number(-8.0), to!number(-10.0),
+                         to!number(0.0), to!number(0.0), to!number(27.0), to!number(0.0), to!number(0.0)];
+        foreach (i; 0 .. s2.length) {
+            assert(approxEqualNumbers(UdotR[i], s2[i]), failedUnitTest());
+        }
+
+        // invert block diagonal in place => A = L + D^(-1) + U
+        Matrix!number D; Matrix!number Dinv;
+        D = new Matrix!number(blk_size,blk_size);
+        Dinv = new Matrix!number(blk_size,blk_size);
+        invert_block_diagonal(A, D, Dinv, nblks, blk_size,);
+
+        // initialise data arrays
+        number[] rhs;
+        rhs.length = R.length;
+        number[] x_curr;
+        x_curr.length = R.length;
+        x_curr[] = to!number(0.0);
+
+        // perform 8 iterations of the Jacobi method
+        x_curr[] = to!number(0.0);
+        foreach (k; 0..8) {
+            rhs[] = to!number(0.0);
+            multiply_block_upper_triangular(A, x_curr, rhs, nblks, blk_size);
+            multiply_block_lower_triangular(A, x_curr, rhs, nblks, blk_size);
+            rhs[] = R[] - rhs[];
+            x_curr[] = to!number(0.0);
+            multiply_block_diagonal(A, rhs, x_curr, nblks, blk_size);
+        }
+        foreach (i; 0 .. sol.length) {
+            assert(approxEqualNumbers(x_curr[i], sol[i]), failedUnitTest());
+        }
+
+        // perform 4 iterations of the Symmetric Gauss-Seidel method
+        x_curr[] = to!number(0.0);
+        foreach (k; 0..4) {
+            // forward sweep
+            rhs[] = to!number(0.0);
+            multiply_block_upper_triangular(A, x_curr, rhs, nblks, blk_size);
+            rhs[] = R[] - rhs[];
+            block_lower_triangular_solve(A, rhs, x_curr, nblks, blk_size);
+
+            // backward sweep
+            rhs[] = to!number(0.0);
+            multiply_block_lower_triangular(A, x_curr, rhs, nblks, blk_size);
+            rhs[] = R[] - rhs[];
+            block_upper_triangular_solve(A, rhs, x_curr, nblks, blk_size);
+        }
+        foreach (i; 0 .. sol.length) {
+            assert(approxEqualNumbers(x_curr[i], sol[i]), failedUnitTest());
+        }
 
         return 0;
     }
