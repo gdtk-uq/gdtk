@@ -1460,7 +1460,7 @@ string write_DFT_to_string(FVCell c)
 } // end write_DFT_to_string
 
 
-string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(FlowState) fs,
+string cell_data_as_string(const(Vector3) pos, number volume, ref const(FlowState) fs,
                            number Q_rad_org, number f_rad_org, number Q_rE_rad,
                            bool with_local_time_stepping, double dt_local, double dt_chem, double dt_therm,
                            bool include_quality,
