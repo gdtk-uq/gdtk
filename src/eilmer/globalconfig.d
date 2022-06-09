@@ -193,7 +193,8 @@ GasdynamicUpdate update_scheme_from_name(string name)
     case "backward_euler": return GasdynamicUpdate.backward_euler;
     case "implicit_rk1": return GasdynamicUpdate.implicit_rk1;
     default:
-        throw new FlowSolverException("Invalid gasdynamic update scheme name");
+        string msg = format("Invalid gasdynamic update scheme '%s' selected.", name);
+        throw new Error(msg);
     }
 }  // end scheme_from_name()
 
@@ -303,7 +304,6 @@ string flux_calculator_name(FluxCalculator fcalc)
     }
 }
 
-@nogc
 FluxCalculator flux_calculator_from_name(string name)
 {
     switch ( name ) {
@@ -328,7 +328,8 @@ FluxCalculator flux_calculator_from_name(string name)
     case "asf": return FluxCalculator.asf;
     case "adaptive_ausmdv_asf" : return FluxCalculator.adaptive_ausmdv_asf;
     default:
-        throw new FlowSolverException("Invalid flux calculator name");
+        string msg = format("Invalid flux calculator '%s' selected.", name);
+        throw new Error(msg);
     }
 }
 
@@ -1610,15 +1611,12 @@ string update_double(string key, string field)
 }
 string update_enum(string key, string field, string enum_from_name)
 {
-    return "{ // start new block scope
-    auto mySaveValue = GlobalConfig."~field~";
-    string name = jsonData[\""~key~"\"].str;
+    return "
     try {
+        string name = jsonData[\""~key~"\"].str;
         GlobalConfig."~field~" = "~enum_from_name~"(name);
-    } catch (Exception e) {
-        writeln(\"Warning, invalid name for config."~field~": \"~name);
-        GlobalConfig."~field~" = mySaveValue;
-    }
+    } catch (JSONException e) {
+        writeln(\"WARNING! Missing config variable: '"~field~"'.\");
     }";
 }
 
