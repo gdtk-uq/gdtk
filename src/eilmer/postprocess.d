@@ -168,7 +168,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                 auto soln = new SolidSolution(jobName, ".", tindx, GlobalConfig.nSolidBlocks);
                 if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
                 string pvtuFileName = jobName~format("-solid-t%04d", tindx)~".pvtu";
-                File pvtuFile = begin_PVTU_file(plotDir~"/"~pvtuFileName, soln.solidBlocks[0].variableNames, false);
+                File pvtuFile = begin_PVTU_file(plotDir~"/"~pvtuFileName, soln.solidBlocks[0].variableNames);
                 foreach (jb; 0 .. soln.nBlocks) {
                     string vtuFileName = jobName~format("-solid-b%04d-t%04d.vtu", jb, tindx);
                     add_piece_to_PVTU_file(pvtuFile, vtuFileName);
