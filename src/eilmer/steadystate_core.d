@@ -329,8 +329,11 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     ConservedQuantities maxResiduals = new ConservedQuantities(nConserved);
     ConservedQuantities currResiduals = new ConservedQuantities(nConserved);
     number mass_balance = 0.0;
-    number omega = 1.0;
-    GasState Qmin = new GasState(GlobalConfig.gmodel_master);
+    number omega = 1.0;                  // nonlinear update relaxation factor
+    number omega_allow_cfl_growth = 0.1; // we freeze the CFL for a relaxation factor below this value
+    number omega_min = 0.01;             // minimum allowable relaxation factor to accept an update
+    number omega_reduction_factor = 0.7; // factor by which the relaxation factor is reduced during
+                                         // the physicality check and line search
     number theta = GlobalConfig.sssOptions.physicalityCheckTheta;
     bool pc_matrix_evaluated = false;
 
@@ -664,21 +667,20 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             }
         }
 
-        // solve linear system
+        // solve linear system for dU
         version(pir) { point_implicit_relaxation_solve(step, pseudoSimTime, dt, normNew, linSolResid, startStep); }
         else { rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, nIters, linSolResid, startStep, LHSeval, RHSeval, pc_matrix_evaluated); }
 
         // calculate a relaxation factor for the nonlinear update via a physicality check
-        omega = 1.0;
+        omega = 1.0; // start by allowing a full update
         if (GlobalConfig.sssOptions.usePhysicalityCheck) {
 
-            // we start by considering the change in the conserved mass
+            // we first limit the change in the conserved mass
             foreach (blk; localFluidBlocks) {
-                int cellCount = 0;
                 auto cqi = blk.myConfig.cqi;
+                int cellCount = 0;
+                number rel_diff_limit, U, dU;
                 foreach (cell; blk.cells) {
-                    number rel_diff_limit, U, dU;
-                    // MASS
                     if (cqi.n_species == 1) {
                         U = cell.U[0].vec[cqi.mass];
                         dU = blk.dU[cellCount+MASS];
@@ -696,65 +698,46 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 }
             }
 
-            // communicate minimum omega based on MASS to all threads
+            // communicate minimum relaxation factor based on conserved mass to all processes
             version(mpi_parallel) {
                 MPI_Allreduce(MPI_IN_PLACE, &(omega.re), 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
             }
 
-            // we now check if the current relaxation factor is sufficient by decoding the conserved
-            // quantities into the primitive variables, if the decode action fails, we will calculate a
-            // more severe relaxation factor based on the conserved energy
+            // we now check if the current relaxation factor is sufficient enough to produce realizable primitive variables
+            // if it isn't, we reduce the relaxation factor by some prescribed factor and then try again
             foreach (blk; localFluidBlocks) {
                 int cellCount = 0;
-                auto cqi = blk.myConfig.cqi;
                 foreach (cell; blk.cells) {
                     bool failed_decode = false;
-                    number rel_diff_limit, U, dU;
+                    while (omega >= omega_min) {
+                        // check positivity of primitive variables
+                        cell.U[1].copy_values_from(cell.U[0]);
+                        foreach (j; 0 .. nConserved) {
+                            cell.U[1].vec[j] = cell.U[0].vec[j] + omega*blk.dU[cellCount+j];
+                        }
+                        try {
+                            cell.decode_conserved(0, 1, 0.0);
+                        }
+                        catch (FlowSolverException e) {
+                            failed_decode = true;
+                        }
 
-                    // check positivity of primitive variables
-                    cell.U[1].copy_values_from(cell.U[0]);
-                    foreach (j; 0 .. nConserved) {
-                        cell.U[1].vec[j] = cell.U[0].vec[j] + omega*blk.dU[cellCount+j];
-                    }
-                    try {
-                        cell.decode_conserved(0, 1, 0.0);
-                    }
-                    catch (FlowSolverException e) {
-                        failed_decode = true;
-                    }
+                        // return cell to original state
+                        cell.decode_conserved(0, 0, 0.0);
 
-                    // return cell to original state
-                    cell.decode_conserved(0, 0, 0.0);
-
-                    // if the relaxation factor isn't sufficient, limit the change in conserved energy
-                    if (failed_decode) {
-                        // TOTAL ENERGY
-                        Qmin.copy_values_from(cell.fs.gas);
-                        blk.myConfig.gmodel.minimum_mixture_energy(Qmin);
-                        number ke = 0.5*(cell.fs.vel.x*cell.fs.vel.x + cell.fs.vel.y*cell.fs.vel.y + cell.fs.vel.z*cell.fs.vel.z);
-                        number Emin = cell.fs.gas.rho*(Qmin.u + ke);
-                        version(turbulence) { Emin += cell.fs.gas.rho * blk.myConfig.turb_model.turbulent_kinetic_energy(cell.fs); }
-                        U = fabs(cell.U[0].vec[cqi.totEnergy] - Emin);
-                        dU = blk.dU[cellCount+cqi.totEnergy];
-                        rel_diff_limit = fabs(dU/(theta*U));
-                        omega = 1.0/(fmax(rel_diff_limit,1.0/omega));
-
-                        // MODAL ENERGY
-                        version(multi_T_gas){
-                            foreach(imode; 0 .. cqi.n_modes) {
-                                Emin = cell.fs.gas.rho*Qmin.u_modes[imode];
-                                U = fabs(cell.U[0].vec[cqi.modes+imode] - Emin);
-                                dU = blk.dU[cellCount+cqi.modes+imode];
-                                rel_diff_limit = fabs(dU/(theta*U));
-                                omega = 1.0/(fmax(rel_diff_limit,1.0/omega));
-                            }
+                        if (failed_decode) {
+                            omega *= omega_reduction_factor;
+                            failed_decode = false;
+                        } else {
+                            // if we reach here we have a suitable relaxation factor for this cell
+                            break;
                         }
                     }
                     cellCount += nConserved;
                 }
             }
 
-            // the relaxation factor may have been updated, so communicate minimum omega to all threads again
+            // the relaxation factor may have been updated, so communicate minimum omega to all processes again
             version(mpi_parallel) {
                 MPI_Allreduce(MPI_IN_PLACE, &(omega.re), 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
             }
@@ -764,7 +747,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         // ensure the relaxation factor is sufficient enough to reduce the unsteady residual
         // this is done via a simple backtracking line search algorithm
         bool failed_line_search = false;
-        if (GlobalConfig.sssOptions.useLineSearch) {
+        if ( (omega > omega_min) && GlobalConfig.sssOptions.useLineSearch) {
             // residual at current state
             auto RU0 = normNew;
             // unsteady residual at updated state (we will fill this later)
@@ -834,15 +817,15 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 RUn = sqrt(RUn);
 
                 // check if unsteady residual is reduced
-                if (RUn < RU0 || omega < 0.01) {
+                if (RUn < RU0 || omega < omega_min) {
                     reduce_omega = false;
                 } else {
-                    omega *= 0.7;
+                    omega *= omega_reduction_factor;
                 }
             }
         } // end line search
 
-        if (omega < 0.01)  {
+        if (omega < omega_min)  {
             if ( GlobalConfig.is_master_task ) {
                 writefln("WARNING: nonlinear update relaxation factor too small for step= %d", step);
             }
@@ -1206,7 +1189,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         auto normRatio = normOld/normNew;
         if (residual_based_cfl_scheduling) { 
             if (inexactNewtonPhase) {
-                if (omega >= 0.1) {
+                if (omega >= omega_allow_cfl_growth) {
                     if (step < nStartUpSteps) {
                         // Let's assume we're still letting the shock settle
                         // when doing low order steps, so we use a power of 0.75 as a default
