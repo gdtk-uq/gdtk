@@ -352,7 +352,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     int startStep;
     int nStartUpSteps = GlobalConfig.sssOptions.nStartUpSteps;
     bool inexactNewtonPhase = false;
-    bool dangerousExceptionsAreFatal = GlobalConfig.dangerous_exceptions_are_fatal;
 
     // No need to have more task threads than blocks
     int extraThreadsInPool;
@@ -829,28 +828,19 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             }
         } // end line search
 
-        if (omega < omega_min)  {
-            if ( GlobalConfig.is_master_task ) {
-                writefln("WARNING: nonlinear update relaxation factor too small for step= %d", step);
-            }
-
-            // update isn't good, reduce CFL and try again (a reduction factor of 0.5 is aggressie, could lower it)
+        if ( (omega < omega_min) && residual_based_cfl_scheduling)  {
+            // the update isn't good, reduce the CFL and try again
             cfl = 0.5*cfl;
             dt = determine_dt(cfl);
             version(mpi_parallel) {
                 MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
             }
-
-            if (dangerousExceptionsAreFatal) {
-                writefln("         dangerousExceptionsAreFatal set to true, bailing out!");
-                exit(1);
-            } else {
-                if ( GlobalConfig.is_master_task ) {
-                    writefln("         Taking nonlinear step again with the CFL reduced by a factor of 0.5");
-                }
+            if ( GlobalConfig.is_master_task ) {
+                writefln("WARNING: nonlinear update relaxation factor too small for step= %d", step);
+                writefln("         Taking nonlinear step again with the CFL reduced by a factor of 0.5");
             }
 
-            // we don't procede with the nonlinear update for this step
+            // we don't proceed with the nonlinear update for this step
             continue;
         }
 
@@ -913,9 +903,15 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             }
 	}
         // Check on some stopping criteria
-        if ( cfl < cfl_min ) {
+        if ( (omega < omega_min) && !residual_based_cfl_scheduling ) {
             if (GlobalConfig.is_master_task) {
-                writefln("WARNING: the simulation is stopping because the CFL (%.3e) is below the minimum allowable CFL value (%.3e)", cfl, cfl_min);
+                writefln("WARNING: The simulation is stopping because the nonlinear update relaxation factor is below the minimum allowable value.");
+            }
+            finalStep = true;
+        }
+        if ( (cfl < cfl_min) && residual_based_cfl_scheduling ) {
+            if (GlobalConfig.is_master_task) {
+                writefln("WARNING: The simulation is stopping because the CFL (%.3e) is below the minimum allowable CFL value (%.3e)", cfl, cfl_min);
             }
             finalStep = true;
         }
