@@ -45,6 +45,7 @@ sssOptionsHidden = { -- hidden from user
    -- CFL ramp settings
    residual_based_cfl_scheduling = true,
    cfl_max = 1.0e8,
+   cfl_min = 1.0e-02,
    cfl_schedule_length = 0,
    cfl_schedule_value_list = {},
    cfl_schedule_iter_list = {},

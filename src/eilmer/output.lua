@@ -85,6 +85,7 @@ function output.write_control_file(fileName)
    f:write('],\n')
    --
    f:write(string.format('   "cfl_max": %.18e,\n', SteadyStateSolver.cfl_max))
+   f:write(string.format('   "cfl_min": %.18e,\n', SteadyStateSolver.cfl_min))
    f:write(string.format('   "LHSeval0": %d,\n', SteadyStateSolver.LHSeval0))
    f:write(string.format('   "RHSeval0": %d,\n', SteadyStateSolver.RHSeval0))
    f:write(string.format('   "cfl0": %.18e,\n', SteadyStateSolver.cfl0))

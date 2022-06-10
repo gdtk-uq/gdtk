@@ -280,6 +280,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     double absGlobalResidReduction = GlobalConfig.sssOptions.stopOnAbsGlobalResid;
     double massBalanceReduction = GlobalConfig.sssOptions.stopOnMassBalance;
     double cfl_max = GlobalConfig.sssOptions.cfl_max;
+    double cfl_min = GlobalConfig.sssOptions.cfl_min;
     int cfl_schedule_current_index = 0;
     auto cfl_schedule_value_list = GlobalConfig.sssOptions.cfl_schedule_value_list;
     auto cfl_schedule_iter_list = GlobalConfig.sssOptions.cfl_schedule_iter_list;
@@ -912,6 +913,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             }
 	}
         // Check on some stopping criteria
+        if ( cfl < cfl_min ) {
+            if (GlobalConfig.is_master_task) {
+                writefln("WARNING: the simulation is stopping because the CFL (%.3e) is below the minimum allowable CFL value (%.3e)", cfl, cfl_min);
+            }
+            finalStep = true;
+        }
         if ( step == nsteps ) {
             if (GlobalConfig.is_master_task) {
                 writeln("STOPPING: Reached maximum number of steps.");

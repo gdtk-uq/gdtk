@@ -749,6 +749,7 @@ struct SteadyStateSolverOptions {
     int maxRestarts = 10;
     int nInnerIterations = 5;
     double cfl_max = 1e8;
+    double cfl_min = 1e-02;
     bool residual_based_cfl_scheduling = true;
     int cfl_schedule_length = 0;
     double[] cfl_schedule_value_list;
@@ -2376,6 +2377,7 @@ void read_control_file()
         //
         ssso.residual_based_cfl_scheduling = getJSONbool(sssOptions, "residual_based_cfl_scheduling", ssso.residual_based_cfl_scheduling);
         ssso.cfl_max = getJSONdouble(sssOptions, "cfl_max", ssso.cfl_max);
+        ssso.cfl_min = getJSONdouble(sssOptions, "cfl_min", ssso.cfl_min);
         ssso.LHSeval0 = getJSONint(sssOptions, "LHSeval0", ssso.LHSeval0);
         ssso.RHSeval0 = getJSONint(sssOptions, "RHSeval0", ssso.RHSeval0);
         ssso.cfl0 = getJSONdouble(sssOptions, "cfl0", ssso.cfl0);
