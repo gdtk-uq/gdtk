@@ -779,6 +779,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         foreach (j; 0 .. nConserved) {
                             cell.U[1].vec[j] = cell.U[0].vec[j] + omega*blk.dU[cellCount+j];
                         }
+                        cell.decode_conserved(0, 1, 0.0);
                         cellCount += nConserved;
                     }
                 }
@@ -789,6 +790,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         foreach (j; 0 .. nConserved) {
                             blk.FU[cellCount+j] += cell.dUdt[1].vec[j];
                         }
+                        // return cell to original state
+                        cell.decode_conserved(0, 0, 0.0);
                         cellCount += nConserved;
                     }
                 }
