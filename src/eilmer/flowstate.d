@@ -671,6 +671,13 @@ public:
                     fstate[i+1].gas.T_modes[j]*frac;
             }
             gm.update_thermo_from_pT(fs.gas);
+            version(turbulence) {
+                foreach(j; 0 .. GlobalConfig.turb_model.nturb) {
+                    fs.turb[j] = fstate[i].turb[j]*(1.0-frac) + fstate[i+1].turb[j]*frac;
+                }
+            }
+            fs.mu_t = 0.0;
+            fs.k_t = 0.0;
         } else {
             // Keep condition constant beyond the largest time.
             fs.copy_values_from(fstate[$-1]);
