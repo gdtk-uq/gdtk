@@ -588,28 +588,35 @@ public:
     double[] times;
 
     this (string fileName)
+    // Construct a FlowHistory object from a file of data values.
+    //
+    // The file may start with comment lines (that begin with #) and
+    // then have a line that gives the column names (with one called vel.x, at least).
+    //
+    // Each data line with have space-delimited values arranges in the following order.
+    // item: 0 1     2     3     4 5 6
+    // name: t vel.x vel.y vel.z p T massf[0]... T_modes[0]... turb[0]...
+    // For the array quantities, starting at item[6], there will be:
+    //   n_species>=1 mass-fraction values (there is at least one mass fraction)
+    //   n_modes>=0 T_modes values (there may be no extra energy modes)
+    //   nturb>=0 turbulence values (there may be no turbulence quantities)
     {
-        if (GlobalConfig.turb_model.isTurbulent)
-            throw new Error("FlowHistory expects laminar inflow but a turbulence model is active.");
-
         this.fileName = fileName;
         // Open filename and read all time and flow data.
         auto gm = GlobalConfig.gmodel_master;
+        auto nturb = GlobalConfig.turb_model.nturb;
         auto f = new File(fileName);
         auto range = f.byLine();
         auto line = range.front;
         while (!line.empty) {
             string txt = to!string(line).chomp();
             if (txt.length > 0 && !canFind(txt, "#") && !canFind(txt, "vel.x")) {
-                // Assume that we have a line of data rather than variable names.
-                // item: 0 1     2     3     4 5 6       ...
-                // name: t vel.x vel.y vel.z p T massf[0]...
-                auto fs= new FlowState(gm, GlobalConfig.turb_model.nturb);
+                // Assume that we have a line of data values rather than variable names.
+                auto fs= new FlowState(gm, nturb);
                 double tme;
                 auto items = txt.split();
-                if (items.length < 6+gm.n_species+gm.n_modes) {
-                    string msg = text("Did not find enough data on the line: \"",
-                                      txt, "\"");
+                if (items.length < 6+gm.n_species+gm.n_modes+nturb) {
+                    string msg = text("Did not find enough data on the line: \"", txt, "\"");
                     throw new Error(msg);
                 }
                 tme = to!double(items[0]);
@@ -619,6 +626,15 @@ public:
                 foreach (i; 0 .. gm.n_species) { fs.gas.massf[i] = to!double(items[6+i]); }
                 foreach (i; 0 .. gm.n_modes) { fs.gas.T_modes[i] = to!double(items[6+gm.n_species+i]); }
                 gm.update_thermo_from_pT(fs.gas);
+                version(turbulence) {
+                    foreach(i; 0 .. nturb) { fs.turb[i] = to!double(items[6+gm.n_species+gm.n_modes+i]); }
+                }
+                // Note that we do not have enough information for computing mu_t and k_t
+                // because we don't have local values of gradients that go into their calculation.
+                // See, for example, function turbulent_viscosity() in the turbulence.d module.
+                fs.mu_t = 0.0;
+                fs.k_t = 0.0;
+                //
                 times ~= tme;
                 fstate ~= fs;
             }
