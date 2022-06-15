@@ -1153,20 +1153,25 @@ public:
             version(multi_species_gas) {
                 if (nsp > 1) {
                     // Multiple species.
-                    foreach (isp; 0 .. nsp) {
-                        mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]",
-                                                    "gas.massf[isp]", "massfPhi[isp]"));
-                    }
-                    try {
-                        scale_mass_fractions(Lft.gas.massf); 
-                    } catch (Exception e) {
-                        debug { writeln(e.msg); }
+                    if (myConfig.allow_reconstruction_for_species) {
+                        foreach (isp; 0 .. nsp) {
+                            mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]",
+                                                        "gas.massf[isp]", "massfPhi[isp]"));
+                        }
+                        try {
+                            scale_mass_fractions(Lft.gas.massf);
+                        } catch (Exception e) {
+                            debug { writeln(e.msg); }
+                            Lft.gas.massf[] = IFace.left_cell.fs.gas.massf[];
+                        }
+                        try {
+                            scale_mass_fractions(Rght.gas.massf);
+                        } catch (Exception e) {
+                            debug { writeln(e.msg); }
+                            Rght.gas.massf[] = IFace.right_cell.fs.gas.massf[];
+                        }
+                    } else {
                         Lft.gas.massf[] = IFace.left_cell.fs.gas.massf[];
-                    }
-                    try {
-                        scale_mass_fractions(Rght.gas.massf);
-                    } catch (Exception e) {
-                        debug { writeln(e.msg); }
                         Rght.gas.massf[] = IFace.right_cell.fs.gas.massf[];
                     }
                 } else {
@@ -1202,9 +1207,14 @@ public:
                 mixin(codeForReconstruction("gas.p", "p", "gas.p", "pPhi"));
                 mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
                 version(multi_T_gas) {
-                    foreach (imode; 0 .. nmodes) {
-                        mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
-                                                    "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                    if (myConfig.allow_reconstruction_for_energy_modes) {
+                        foreach (imode; 0 .. nmodes) {
+                            mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
+                                                        "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                        }
+                    } else {
+                        Lft.gas.T_modes[] = IFace.left_cell.fs.gas.T_modes[];
+                        Rght.gas.T_modes[] = IFace.right_cell.fs.gas.T_modes[];
                     }
                 }
                 mixin(codeForThermoUpdate("pT"));
@@ -1213,9 +1223,14 @@ public:
                 mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
                 mixin(codeForReconstruction("gas.u", "u", "gas.u", "uPhi"));
                 version(multi_T_gas) {
-                    foreach (imode; 0 .. nmodes) {
-                        mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
-                                                    "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                    if (myConfig.allow_reconstruction_for_energy_modes) {
+                        foreach (imode; 0 .. nmodes) {
+                            mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
+                                                        "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                        }
+                    } else {
+                        Lft.gas.u_modes[] = IFace.left_cell.fs.gas.u_modes[];
+                        Rght.gas.u_modes[] = IFace.right_cell.fs.gas.u_modes[];
                     }
                 }
                 mixin(codeForThermoUpdate("rhou"));
@@ -1224,9 +1239,14 @@ public:
                 mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
                 mixin(codeForReconstruction("gas.p", "p", "gas.p", "pPhi"));
                 version(multi_T_gas) {
-                    foreach (imode; 0 .. nmodes) {
-                        mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
-                                                    "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                    if (myConfig.allow_reconstruction_for_energy_modes) {
+                        foreach (imode; 0 .. nmodes) {
+                            mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
+                                                        "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                        }
+                    } else {
+                        Lft.gas.u_modes[] = IFace.left_cell.fs.gas.u_modes[];
+                        Rght.gas.u_modes[] = IFace.right_cell.fs.gas.u_modes[];
                     }
                 }
                 mixin(codeForThermoUpdate("rhop"));
@@ -1235,9 +1255,14 @@ public:
                 mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
                 mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
                 version(multi_T_gas) {
-                    foreach (imode; 0 .. nmodes) {
-                        mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
-                                                    "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                    if (myConfig.allow_reconstruction_for_energy_modes) {
+                        foreach (imode; 0 .. nmodes) {
+                            mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
+                                                        "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                        }
+                    } else {
+                        Lft.gas.T_modes[] = IFace.left_cell.fs.gas.T_modes[];
+                        Rght.gas.T_modes[] = IFace.right_cell.fs.gas.T_modes[];
                     }
                 }
                 mixin(codeForThermoUpdate("rhoT"));
@@ -1340,14 +1365,18 @@ public:
             version(multi_species_gas) {
                 if (nsp > 1) {
                     // Multiple species.
-                    foreach (isp; 0 .. nsp) {
-                        mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]",
-                                                    "gas.massf[isp]", "massfPhi[isp]"));
-                    }
-                    try {
-                        scale_mass_fractions(Rght.gas.massf);
-                    } catch (Exception e) {
-                        debug { writeln(e.msg); }
+                    if (myConfig.allow_reconstruction_for_species) {
+                        foreach (isp; 0 .. nsp) {
+                            mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]",
+                                                        "gas.massf[isp]", "massfPhi[isp]"));
+                        }
+                        try {
+                            scale_mass_fractions(Rght.gas.massf);
+                        } catch (Exception e) {
+                            debug { writeln(e.msg); }
+                            Rght.gas.massf[] = IFace.right_cell.fs.gas.massf[];
+                        }
+                    } else {
                         Rght.gas.massf[] = IFace.right_cell.fs.gas.massf[];
                     }
                 } else {
@@ -1376,9 +1405,13 @@ public:
                 mixin(codeForReconstruction("gas.p", "p", "gas.p", "pPhi"));
                 mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
                 version(multi_T_gas) {
-                    foreach (imode; 0 .. nmodes) {
-                        mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
-                                                    "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                    if (myConfig.allow_reconstruction_for_energy_modes) {
+                        foreach (imode; 0 .. nmodes) {
+                            mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
+                                                        "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                        }
+                    } else {
+                        Rght.gas.T_modes[] = IFace.right_cell.fs.gas.T_modes[];
                     }
                 }
                 mixin(codeForThermoUpdate("pT"));
@@ -1387,9 +1420,13 @@ public:
                 mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
                 mixin(codeForReconstruction("gas.u", "u", "gas.u", "uPhi"));
                 version(multi_T_gas) {
-                    foreach (imode; 0 .. nmodes) {
-                        mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
-                                                    "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                    if (myConfig.allow_reconstruction_for_energy_modes) {
+                        foreach (imode; 0 .. nmodes) {
+                            mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
+                                                        "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                        }
+                    } else {
+                        Rght.gas.u_modes[] = IFace.right_cell.fs.gas.u_modes[];
                     }
                 }
                 mixin(codeForThermoUpdate("rhou"));
@@ -1398,9 +1435,13 @@ public:
                 mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
                 mixin(codeForReconstruction("gas.p", "p", "gas.p", "pPhi"));
                 version(multi_T_gas) {
-                    foreach (imode; 0 .. nmodes) {
-                        mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
-                                                    "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                    if (myConfig.allow_reconstruction_for_energy_modes) {
+                        foreach (imode; 0 .. nmodes) {
+                            mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
+                                                        "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                        }
+                    } else {
+                        Rght.gas.u_modes[] = IFace.right_cell.fs.gas.u_modes[];
                     }
                 }
                 mixin(codeForThermoUpdate("rhop"));
@@ -1409,9 +1450,13 @@ public:
                 mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
                 mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
                 version(multi_T_gas) {
-                    foreach (imode; 0 .. nmodes) {
-                        mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
-                                                    "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                    if (myConfig.allow_reconstruction_for_energy_modes) {
+                        foreach (imode; 0 .. nmodes) {
+                            mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
+                                                        "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                        }
+                    } else {
+                        Rght.gas.T_modes[] = IFace.right_cell.fs.gas.T_modes[];
                     }
                 }
                 mixin(codeForThermoUpdate("rhoT"));
@@ -1514,14 +1559,18 @@ public:
             version(multi_species_gas) {
                 if (nsp > 1) {
                     // Multiple species.
-                    foreach (isp; 0 .. nsp) {
-                        mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]",
-                                                    "gas.massf[isp]", "massfPhi[isp]"));
-                    }
-                    try {
-                        scale_mass_fractions(Lft.gas.massf); 
-                    } catch (Exception e) {
-                        debug { writeln(e.msg); }
+                    if (myConfig.allow_reconstruction_for_species) {
+                        foreach (isp; 0 .. nsp) {
+                            mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]",
+                                                        "gas.massf[isp]", "massfPhi[isp]"));
+                        }
+                        try {
+                            scale_mass_fractions(Lft.gas.massf);
+                        } catch (Exception e) {
+                            debug { writeln(e.msg); }
+                            Lft.gas.massf[] = IFace.left_cell.fs.gas.massf[];
+                        }
+                    } else {
                         Lft.gas.massf[] = IFace.left_cell.fs.gas.massf[];
                     }
                 } else {
@@ -1550,9 +1599,13 @@ public:
                 mixin(codeForReconstruction("gas.p", "p", "gas.p", "pPhi"));
                 mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
                 version(multi_T_gas) {
-                    foreach (imode; 0 .. nmodes) {
-                        mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
-                                                    "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                    if (myConfig.allow_reconstruction_for_energy_modes) {
+                        foreach (imode; 0 .. nmodes) {
+                            mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
+                                                        "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                        }
+                    } else {
+                        Lft.gas.T_modes[] = IFace.left_cell.fs.gas.T_modes[];
                     }
                 }
                 mixin(codeForThermoUpdate("pT"));
@@ -1561,9 +1614,13 @@ public:
                 mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
                 mixin(codeForReconstruction("gas.u", "u", "gas.u", "uPhi"));
                 version(multi_T_gas) {
-                    foreach (imode; 0 .. nmodes) {
-                        mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
-                                                    "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                    if (myConfig.allow_reconstruction_for_energy_modes) {
+                        foreach (imode; 0 .. nmodes) {
+                            mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
+                                                        "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                        }
+                    } else {
+                        Lft.gas.u_modes[] = IFace.left_cell.fs.gas.u_modes[];
                     }
                 }
                 mixin(codeForThermoUpdate("rhou"));
@@ -1572,9 +1629,13 @@ public:
                 mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
                 mixin(codeForReconstruction("gas.p", "p", "gas.p", "pPhi"));
                 version(multi_T_gas) {
-                    foreach (imode; 0 .. nmodes) {
-                        mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
-                                                    "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                    if (myConfig.allow_reconstruction_for_energy_modes) {
+                        foreach (imode; 0 .. nmodes) {
+                            mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
+                                                        "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                        }
+                    } else {
+                        Lft.gas.u_modes[] = IFace.left_cell.fs.gas.u_modes[];
                     }
                 }
                 mixin(codeForThermoUpdate("rhop"));
@@ -1583,9 +1644,13 @@ public:
                 mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
                 mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
                 version(multi_T_gas) {
-                    foreach (imode; 0 .. nmodes) {
-                        mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
-                                                    "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                    if (myConfig.allow_reconstruction_for_energy_modes) {
+                        foreach (imode; 0 .. nmodes) {
+                            mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
+                                                        "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                        }
+                    } else {
+                        Lft.gas.T_modes[] = IFace.left_cell.fs.gas.T_modes[];
                     }
                 }
                 mixin(codeForThermoUpdate("rhoT"));
