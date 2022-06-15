@@ -217,7 +217,6 @@ function output.write_config_file(fileName)
    f:write(string.format('"flowstate_limits_min_temp": %.18e,\n', config.flowstate_limits_min_temp))
    f:write(string.format('"flowstate_limits_min_pressure": %.18e,\n', config.flowstate_limits_min_pressure))
    f:write(string.format('"max_invalid_cells": %d,\n', config.max_invalid_cells))
-   f:write(string.format('"dangerous_exceptions_are_fatal": %s,\n', tostring(config.dangerous_exceptions_are_fatal)))
    f:write(string.format('"adjust_invalid_cell_data": %s,\n', tostring(config.adjust_invalid_cell_data)))
    f:write(string.format('"report_invalid_cells": %s,\n', tostring(config.report_invalid_cells)))
 

@@ -910,9 +910,6 @@ final class GlobalConfig {
     shared static bool ignore_low_T_thermo_update_failure = true;
     shared static double suggested_low_T_value = 200.0;
     //
-    // Disable certain kinds of Exception catching if the user is concerned about deadlocks
-    shared static bool dangerous_exceptions_are_fatal = false;
-    //
     /// If the cell still has invalid data and adjust_invalid_cell_data == true,
     /// the cell data are adjusted to make them reasonable.
     shared static bool adjust_invalid_cell_data = false;
@@ -1286,7 +1283,6 @@ public:
     //
     bool ignore_low_T_thermo_update_failure;
     double suggested_low_T_value;
-    bool dangerous_exceptions_are_fatal;
     bool adjust_invalid_cell_data;
     bool report_invalid_cells;
     FlowStateLimits flowstate_limits;
@@ -1441,7 +1437,6 @@ public:
         //
         ignore_low_T_thermo_update_failure = cfg.ignore_low_T_thermo_update_failure;
         suggested_low_T_value = cfg.suggested_low_T_value;
-        dangerous_exceptions_are_fatal = cfg.dangerous_exceptions_are_fatal;
         adjust_invalid_cell_data = cfg.adjust_invalid_cell_data;
         report_invalid_cells = cfg.report_invalid_cells;
         flowstate_limits = cfg.flowstate_limits;
@@ -1792,7 +1787,6 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_double("flowstate_limits_min_pressure", "flowstate_limits.min_pressure"));
     mixin(update_bool("ignore_low_T_thermo_update_failure", "ignore_low_T_thermo_update_failure"));
     mixin(update_double("suggested_low_T_value", "suggested_low_T_value"));
-    mixin(update_bool("dangerous_exceptions_are_fatal", "dangerous_exceptions_are_fatal"));
     mixin(update_bool("adjust_invalid_cell_data", "adjust_invalid_cell_data"));
     mixin(update_bool("report_invalid_cells", "report_invalid_cells"));
     mixin(update_int("max_invalid_cells", "max_invalid_cells"));
@@ -1880,7 +1874,6 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  flowstate_limits_min_temp: ", cfg.flowstate_limits.min_temp);
         writeln("  ignore_low_T_thermo_update_failure: ", cfg.ignore_low_T_thermo_update_failure);
         writeln("  suggested_low_T_value: ", cfg.suggested_low_T_value);
-        writeln("  dangerous_exceptions_are_fatal: ", cfg.dangerous_exceptions_are_fatal);
         writeln("  adjust_invalid_cell_data: ", cfg.adjust_invalid_cell_data);
         writeln("  report_invalid_cells: ", cfg.report_invalid_cells);
         writeln("  max_invalid_cells: ", cfg.max_invalid_cells);
