@@ -356,34 +356,38 @@ pragma(inline, true) @nogc
 void scale_mass_fractions(ref number[] massf, double tolerance=0.0,
                           double assert_error_tolerance=0.1)
 {
-    auto my_nsp = massf.length;
-    if (my_nsp == 1) {
-        // Single species, always expect massf[0]==1.0, so we can take a short-cut.
-        if (fabs(massf[0] - 1.0) > assert_error_tolerance) {
-            throw new GasModelException("Single species mass fraction far from 1.0.");
-        }
-        massf[0] = 1.0;
+    version(nk_accelerator) {
+        // we do not want to scale the mass fractions for the Newton-Krylov solver.
     } else {
-        // Multiple species, do the full job.
-        number massf_sum = 0.0;
-        foreach(isp; 0 .. my_nsp) {
-            massf[isp] = massf[isp] >= 0.0 ? massf[isp] : to!number(0.0);
-            massf_sum += massf[isp];
-        }
-        if (fabs(massf_sum - 1.0) > assert_error_tolerance) {
-            string msg = "Sum of species mass fractions far from 1.0";
-            debug {
-                msg ~= format(": fabs(massf_sum - 1.0) = %s \n", fabs(massf_sum - 1.0));
-                msg ~= format("  assert_error_tolerance = %s \n", assert_error_tolerance);
-                msg ~= format("  tolerance = %s \n", tolerance);
-                msg ~= "  massf = [";
-                foreach (mf; massf) {msg ~= format(" %e", mf); }
-                msg ~= "]\n";
+        auto my_nsp = massf.length;
+        if (my_nsp == 1) {
+            // Single species, always expect massf[0]==1.0, so we can take a short-cut.
+            if (fabs(massf[0] - 1.0) > assert_error_tolerance) {
+                throw new GasModelException("Single species mass fraction far from 1.0.");
             }
-            throw new GasModelException(msg);
-        }
-        if ( fabs(massf_sum - 1.0) > tolerance ) {
-            foreach(isp; 0 .. my_nsp) massf[isp] /= massf_sum;
+            massf[0] = 1.0;
+        } else {
+            // Multiple species, do the full job.
+            number massf_sum = 0.0;
+            foreach(isp; 0 .. my_nsp) {
+                massf[isp] = massf[isp] >= 0.0 ? massf[isp] : to!number(0.0);
+                massf_sum += massf[isp];
+            }
+            if (fabs(massf_sum - 1.0) > assert_error_tolerance) {
+                string msg = "Sum of species mass fractions far from 1.0";
+                debug {
+                    msg ~= format(": fabs(massf_sum - 1.0) = %s \n", fabs(massf_sum - 1.0));
+                    msg ~= format("  assert_error_tolerance = %s \n", assert_error_tolerance);
+                    msg ~= format("  tolerance = %s \n", tolerance);
+                    msg ~= "  massf = [";
+                    foreach (mf; massf) {msg ~= format(" %e", mf); }
+                    msg ~= "]\n";
+                }
+                throw new GasModelException(msg);
+            }
+            if ( fabs(massf_sum - 1.0) > tolerance ) {
+                foreach(isp; 0 .. my_nsp) massf[isp] /= massf_sum;
+            }
         }
     }
     return;
