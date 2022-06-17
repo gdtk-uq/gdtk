@@ -31,7 +31,7 @@ sssOptionsHidden = { -- hidden from user
    max_number_attempts = 3,
    stop_on_relative_global_residual = 1.0e-99,
    stop_on_absolute_global_residual = 1.0e-99,
-   stop_on_mass_balance = 1.0e-99,
+   stop_on_mass_balance = -1.0,
 
    -- DPLU-SGS max number of subiterations (e.g. kmax)
    max_sub_iterations = 1,

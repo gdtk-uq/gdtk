@@ -742,7 +742,7 @@ struct SteadyStateSolverOptions {
     int maxNumberAttempts = 3; // at taking a Newton step.
     double stopOnRelGlobalResid = 1.0e-99;
     double stopOnAbsGlobalResid = 1.0e-99;
-    double stopOnMassBalance = 1.0e-99;
+    double stopOnMassBalance = -1.0;
     // Restarted preconditioned FGMRES settings
     int maxSubIterations = 1;
     int maxOuterIterations = 10;
