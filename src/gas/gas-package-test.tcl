@@ -95,6 +95,15 @@ test vib-specific-nitrogen-test {Testing vib_specific_nitrogen.d} -body {
     exec ./vib_specific_nitrogen_test
 } -result {} -returnCodes {0}
 
+test vib-specific-co-test {Testing vib-specific-co.d} -body {
+    exec ./vib_specific_co_test
+} -result {} -returnCodes {0}
+
+test vib-specific-co-mixture-test {Testing vib-specific-co.d} -body {
+    exec ./vib_specific_co_mixture_test
+} -result {} -returnCodes {0}
+
+
 test ideal-dissociating-gas-test {Testing ideal_dissociating_gas.d} -body {
     exec ./ideal_dissociating_gas_test
 } -result {} -returnCodes {0}

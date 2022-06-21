@@ -92,6 +92,13 @@ public:
         }
     }
 
+    this(string gas_file_name){
+        lua_State* L = init_lua_State();
+        doLuaFile(L, gas_file_name);
+        this(L);
+        lua_close(L);
+    }
+
     // Service methods related to thermodynamics
     // Updates to GasState
     @nogc override void update_thermo_from_pT(GasState gs)

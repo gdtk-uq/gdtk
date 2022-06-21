@@ -148,6 +148,9 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         case "VibSpecificCO":
             gm = new VibSpecificCO(L);
             break;
+        case "VibSpecificCOMixture":
+            gm = new VibSpecificCOMixture(L);
+            break;
         case "FuelAirMix":
             gm = new FuelAirMix(L);
             break;
