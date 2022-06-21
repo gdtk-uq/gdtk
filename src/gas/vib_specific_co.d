@@ -384,7 +384,7 @@ private:
                 // The analytical derivatives involve Cv and the species energies
                 double T_guess_im = gs.u.im;
                 foreach(i; 0 .. _n_vibe_states) T_guess_im -= gs.massf[i].im*(_cv*T_guess.re + _vib_energy_per_kg[i]);
-                foreach(i; 0 .. n_others)       T_guess_im -= gs.massf[i+_n_vibe_states].im*cgm.internal_energy(cgs, i).re;
+                foreach(i; 0 .. n_others)       T_guess_im -= gs.massf[i+_n_vibe_states].im*cgm.energyPerSpeciesInMode(cgs, i, 0).re;
                 T_guess_im /= Cv.re;
                 T_guess.im = T_guess_im;
             }
