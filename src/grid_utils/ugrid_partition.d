@@ -45,6 +45,7 @@ import std.format;
 import std.math;
 import std.process;
 import std.getopt;
+import std.path;
 
 void printHelp()
 {
@@ -463,7 +464,10 @@ string SU2toMetisMeshFormat(string fileName, int ncommon) {
         foreach(j; 1 .. tokens.length-1) { vtxids ~= format("%d \t", to!int(tokens[j])+1); }
         cells[idx] = vtxids.join();
     }
-    string outputFileName = "metisFormat_"~fileName;
+
+    // Strip out just the filename, it may be in another directory. (NNG 22/06/22)
+    string baseFileName = baseName(fileName);
+    string outputFileName = "metisFormat_"~baseFileName;
     File outFile;
     outFile = File(outputFileName, "w");
     outFile.writeln(ncells);
@@ -769,6 +773,8 @@ void writeGridBlockFiles(string meshFile, string mappedCellsFilename, Block[] gr
         nCurrentBlocks = to!int(splitLines(output[1])[0]);
     }
 
+    // Strip out the filename. The file itself may be in another directory (NNG 22/06/22)
+    string meshFileName = baseName(meshFile);
     // We are ready to construct those partition files!
     foreach(i;0..gridBlocks.length) {
         writeln("-- Writing out block: #", i+nCurrentBlocks);
@@ -786,7 +792,7 @@ void writeGridBlockFiles(string meshFile, string mappedCellsFilename, Block[] gr
             outFile_mappedcells.writef("%d \n", secondary_cell_local_id);
         }
 
-        string outputFileName = "block_" ~ to!string(i+nCurrentBlocks) ~ "_" ~ meshFile;
+        string outputFileName = "block_" ~ to!string(i+nCurrentBlocks) ~ "_" ~ meshFileName;
         File outFile;
         outFile = File(outputFileName, "w");
         outFile.writeln("%");
