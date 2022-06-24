@@ -1,0 +1,2 @@
+[parameters]
+number_of_processors=1,2,4,8,12,16
