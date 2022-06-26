@@ -129,13 +129,13 @@ public:
     }
 
     override string toString() const
-    { 
+    {
         string str = "MappedCellCopy(" ~
             "cell_mapping_from_file=" ~ to!string(cell_mapping_from_file) ~
             ", mapped_cells_filename=" ~ to!string(mapped_cells_filename) ~
             ", transform_position=" ~ to!string(transform_position) ~
-            ", c0=" ~ to!string(c0) ~ 
-            ", n=" ~ to!string(n) ~ 
+            ", c0=" ~ to!string(c0) ~
+            ", n=" ~ to!string(n) ~
             ", alpha=" ~ to!string(alpha) ~
             ", delta=" ~ to!string(delta) ~
             ", list_mapped_cells=" ~ to!string(list_mapped_cells) ~
@@ -327,13 +327,11 @@ public:
                 outgoing_convective_gradient_buf_list.length = n_outgoing;
                 outgoing_viscous_gradient_buf_list.length = n_outgoing;
                 //
-                
-                //
             } else { // not mpi_parallel
                 // For the shared-memory code, get references to the mapped (source) cells
                 // that need to be accessed for the current (destination) block.
                 final switch (blk.grid_type) {
-                case Grid_t.unstructured_grid: 
+                case Grid_t.unstructured_grid:
                     BoundaryCondition bc = blk.bc[which_boundary];
                     foreach (i, face; bc.faces) {
                         size_t[] my_vtx_list; foreach(vtx; face.vtx) { my_vtx_list ~= vtx.id; }

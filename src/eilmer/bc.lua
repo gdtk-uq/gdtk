@@ -120,6 +120,18 @@ function FromUpwindCopy:tojson()
    return str
 end
 
+FromUpwindCopyDualState = GhostCellEffect:new{flowState1=nil, flowState2=nil, p=nil, n=nil}
+FromUpwindCopy.type = "from_upwind_copy_dual_state"
+function FromUpwindCopyDualState:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "flowstate1": %s,', self.flowState1:toJSONString())
+   str = str .. string.format(' "flowstate2": %s,', self.flowState2:toJSONString())
+   str = str .. string.format('"p": [%.18e, %.18e, %.18e], ', self.p.x, self.p.y, self.p.z)
+   str = str .. string.format('"n": [%.18e, %.18e, %.18e] ', self.n.x, self.n.y, self.n.z)
+   str = str .. '}'
+   return str
+end
+
 ExtrapolateCopy = GhostCellEffect:new{xOrder=0}
 ExtrapolateCopy.type = "extrapolate_copy"
 function ExtrapolateCopy:tojson()
@@ -1417,6 +1429,39 @@ function InOutFlowBC_Ambient:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.preReconAction = { FromUpwindCopy:new{flowState=o.flowState} }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
+   o.is_configured = true
+   return o
+end
+
+InOutFlowBC_DualState = BoundaryCondition:new()
+InOutFlowBC_DualState.type = "inoutflow_dualstate"
+function InOutFlowBC_DualState:new(o)
+   local flag = type(self)=='table' and self.type=='inoutflow_dualstate'
+   if not flag then
+      error("Make sure that you are using InOutFlowBC_DualState:new{}"..
+               " and not InOutFlowBC_DualState.new{}", 2)
+   end
+   o = o or {}
+   flag = checkAllowedNames(o, {"flowState1", "flowState2", "p", "n", "label", "group", "field_bc"})
+   if not flag then
+      error("Invalid name for item supplied to InOutFlowBC_DualState constructor.", 2)
+   end
+   if o.flowState1 == nil then
+      error("Need to supply flowState1 for InOutFlowBC_DualState:new{}", 2)
+   end
+   if o.flowState2 == nil then
+      error("Need to supply flowState2 for InOutFlowBC_DualState:new{}", 2)
+   end
+   if o.p == nil then
+      error("Need to supply point p as a Vector3 or simple table for InOutFlowBC_DualState:new{}", 2)
+   end
+   if o.n == nil then
+      error("Need to supply direction vector n as a Vector3 or simple table for InOutFlowBC_DualState:new{}", 2)
+   end
+   o = BoundaryCondition.new(self, o)
+   o.is_wall_with_viscous_effects = false
+   o.preReconAction = { FromUpwindCopyDualState:new{flowState1=o.flowState1, flowState2=o.flowState2, p=p, n=n} }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o

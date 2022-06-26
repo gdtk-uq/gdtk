@@ -111,6 +111,13 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
         auto flowstate = new FlowState(jsonData["flowstate"], gmodel);
         newGCE = new GhostCellFromUpwindCopy(blk_id, boundary, flowstate);
         break;
+    case "from_upwind_copy_dual_state":
+        auto flowstate1 = new FlowState(jsonData["flowstate1"], gmodel);
+        auto flowstate2 = new FlowState(jsonData["flowstate2"], gmodel);
+        Vector3 p = getJSONVector3(jsonData, "p", Vector3(0.0,0.0,0.0));
+        Vector3 n = getJSONVector3(jsonData, "n", Vector3(0.0,1.0,0.0));
+        newGCE = new GhostCellFromUpwindCopyDualState(blk_id, boundary, flowstate1, flowstate2, p, n);
+        break;
     case "fixed_pressure":
         double p_outside = getJSONdouble(jsonData, "p_outside", 1.0e5);
         newGCE = new GhostCellFixedP(blk_id, boundary, p_outside);
