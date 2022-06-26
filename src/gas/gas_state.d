@@ -136,23 +136,24 @@ public:
         quality = other.quality;
     }
 
-    @nogc void copy_average_values_from(ref const(GasState) gs0, ref const(GasState) gs1)
+    @nogc void copy_average_values_from(ref const(GasState) gs0, ref const(GasState) gs1, double w0=0.5)
     // Avoids memory allocation, it's all in place.
     {
-        rho = 0.5 * (gs0.rho + gs1.rho);
-        p = 0.5 * (gs0.p + gs1.p);
-        T = 0.5 * (gs0.T + gs1.T);
-        u = 0.5 * (gs0.u + gs1.u);
-        p_e = 0.5 * (gs0.p_e + gs1.p_e);
-        a = 0.5 * (gs0.a + gs1.a);
-        foreach(i; 0 .. u_modes.length) { u_modes[i] = 0.5 * (gs0.u_modes[i] + gs1.u_modes[i]); }
-        foreach(i; 0 .. T_modes.length) { T_modes[i] = 0.5 * (gs0.T_modes[i] + gs1.T_modes[i]); }
-        mu = 0.5 * (gs0.mu + gs1.mu);
-        k = 0.5 * (gs0.k + gs1.k);
-        foreach(i; 0 .. k_modes.length) { k_modes[i] = 0.5 * (gs0.k_modes[i] + gs1.k_modes[i]); }
-        sigma = 0.5 * (gs0.sigma + gs1.sigma);
-        foreach(i; 0 .. massf.length) massf[i] = 0.5 * (gs0.massf[i] + gs1.massf[i]);
-        quality = 0.5 * (gs0.quality + gs1.quality);
+        double w1 = 1.0 - w0;
+        rho = w0*gs0.rho + w1*gs1.rho;
+        p = w0*gs0.p + w1*gs1.p;
+        T = w0*gs0.T + w1*gs1.T;
+        u = w0*gs0.u + w1*gs1.u;
+        p_e = w0*gs0.p_e + w1*gs1.p_e;
+        a = w0*gs0.a + w1*gs1.a;
+        foreach(i; 0 .. u_modes.length) { u_modes[i] = w0*gs0.u_modes[i] + w1*gs1.u_modes[i]; }
+        foreach(i; 0 .. T_modes.length) { T_modes[i] = w0*gs0.T_modes[i] + w1*gs1.T_modes[i]; }
+        mu = w0*gs0.mu + w1*gs1.mu;
+        k = w0*gs0.k + w1*gs1.k;
+        foreach(i; 0 .. k_modes.length) { k_modes[i] = w0*gs0.k_modes[i] + w1*gs1.k_modes[i]; }
+        sigma = w0*gs0.sigma + w1*gs1.sigma;
+        foreach(i; 0 .. massf.length) { massf[i] = w0*gs0.massf[i] + w1*gs1.massf[i]; }
+        quality = w0*gs0.quality + w1*gs1.quality;
     }
 
     void copy_average_values_from(in GasState[] others, GasModel gm)

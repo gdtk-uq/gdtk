@@ -213,25 +213,22 @@ public:
     }
 
     @nogc
-    void copy_average_values_from(in FlowState fs0, in FlowState fs1)
+    void copy_average_values_from(in FlowState fs0, in FlowState fs1, double w0=0.5)
     // Avoids memory allocation, it's all in place.
     {
-        gas.copy_average_values_from(fs0.gas, fs1.gas);
-        vel.set(0.5*(fs0.vel.x + fs1.vel.x),
-                0.5*(fs0.vel.y + fs1.vel.y),
-                0.5*(fs0.vel.z + fs1.vel.z));
+        double w1 = 1.0 - w0;
+        gas.copy_average_values_from(fs0.gas, fs1.gas, w0);
+        vel.set(w0*fs0.vel.x + w1*fs1.vel.x, w0*fs0.vel.y + w1*fs1.vel.y, w0*fs0.vel.z + w1*fs1.vel.z);
         version(MHD) {
-            B.set(0.5*(fs0.B.x + fs1.B.x),
-                  0.5*(fs0.B.y + fs1.B.y),
-                  0.5*(fs0.B.z + fs1.B.z));
-            psi = 0.5 * (fs0.psi + fs1.psi);
-            divB = 0.5 * (fs0.divB + fs1.divB);
+            B.set(w0*fs0.B.x + w1*fs1.B.x, w0*fs0.B.y + w1*fs1.B.y, w0*fs0.B.z + w1*fs1.B.z);
+            psi = w0*fs0.psi + w1*fs1.psi;
+            divB = w0*fs0.divB + w1*fs1.divB;
         }
         version(turbulence) {
-            foreach (i; 0 .. turb.length) turb[i] =  0.5 * (fs0.turb[i] + fs1.turb[i]);
+            foreach (i; 0 .. turb.length) { turb[i] =  w0*fs0.turb[i] + w1*fs1.turb[i]; }
         }
-        mu_t = 0.5 * (fs0.mu_t + fs1.mu_t);
-        k_t = 0.5 * (fs0.k_t + fs1.k_t);
+        mu_t = w0*fs0.mu_t + w1*fs1.mu_t;
+        k_t = w0*fs0.k_t + w1*fs1.k_t;
     } // end copy_average_values_from()
 
     void copy_average_values_from(in FlowState[] others, GasModel gm)
