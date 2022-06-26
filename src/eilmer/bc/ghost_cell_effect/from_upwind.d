@@ -12,6 +12,8 @@ import std.string;
 import std.conv;
 import std.stdio;
 import std.math;
+import nm.complex;
+import nm.number;
 
 import geom;
 import globalconfig;
@@ -122,6 +124,7 @@ public:
         super(id, boundary, "fromUpwindCopyDualState");
         this.fstate1 = new FlowState(fstate1);
         this.fstate2 = new FlowState(fstate2);
+        this.blended_fstate = new FlowState(fstate1);
         this.p = Vector3(p);
         this.n = Vector3(n);
     }
@@ -210,13 +213,29 @@ public:
     } // end apply_structured_grid()
 
 private:
-    FlowState fstate1, fstate2, blended_fstate;
-    Vector3 p, n;
-
     @nogc
     void compute_blended_flow_state(FVInterface f)
     {
-        blended_fstate.copy_values_from(fstate1);  // FIX-ME for the details of the DualState flavour
+        auto nvtx = f.vtx.length;
+        int count1 = 0;
+        foreach (i; 0 .. nvtx) {
+            // Compute a sample point on the face between the vertex and the midpoint.
+            Vector3 psample = Vector3(f.vtx[i].pos[0]);
+            psample += f.pos;
+            psample.scale(0.5);
+            // Decide which side of the plane it lies.
+            psample -= p;
+            number d = n.dot(psample);
+            if (d > 0.0) { count1++; }
+        }
+        double w1 = (cast(double)count1)/nvtx;
+        blended_fstate.copy_average_values_from(fstate1, fstate2, w1);
     }
+
+    FlowState fstate1; // On the side of the plane in the normal direction.
+    FlowState fstate2; // On the side of the plane opposite to the normal direction.
+    FlowState blended_fstate;
+    Vector3 p;  // Point on the plane separating the states.
+    Vector3 n;  // Normal to the plane separating the states.
 
 } // end class GhostCellFromUpwindCopyDualState

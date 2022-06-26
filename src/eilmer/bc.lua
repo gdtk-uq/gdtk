@@ -121,7 +121,7 @@ function FromUpwindCopy:tojson()
 end
 
 FromUpwindCopyDualState = GhostCellEffect:new{flowState1=nil, flowState2=nil, p=nil, n=nil}
-FromUpwindCopy.type = "from_upwind_copy_dual_state"
+FromUpwindCopyDualState.type = "from_upwind_copy_dual_state"
 function FromUpwindCopyDualState:tojson()
    local str = string.format('          {"type": "%s",', self.type)
    str = str .. string.format(' "flowstate1": %s,', self.flowState1:toJSONString())
@@ -1456,12 +1456,18 @@ function InOutFlowBC_DualState:new(o)
    if o.p == nil then
       error("Need to supply point p as a Vector3 or simple table for InOutFlowBC_DualState:new{}", 2)
    end
+   o.p.x = o.p.x or 0.0
+   o.p.y = o.p.y or 0.0
+   o.p.z = o.p.z or 0.0
    if o.n == nil then
       error("Need to supply direction vector n as a Vector3 or simple table for InOutFlowBC_DualState:new{}", 2)
    end
+   o.n.x = o.n.x or 0.0
+   o.n.y = o.n.y or 1.0
+   o.n.z = o.n.z or 0.0
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
-   o.preReconAction = { FromUpwindCopyDualState:new{flowState1=o.flowState1, flowState2=o.flowState2, p=p, n=n} }
+   o.preReconAction = { FromUpwindCopyDualState:new{flowState1=o.flowState1, flowState2=o.flowState2, p=o.p, n=o.n} }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o

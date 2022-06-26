@@ -57,7 +57,7 @@ public:
     Vector3 n;             // Direction cosines for unit normal
     Vector3 t1;            // tangent vector 1 (aka p)
     Vector3 t2;            // tangent vector 2 (aka q)
-    FVVertex[] vtx;        // references to vertices for line (2D) and quadrilateral (3D) faces
+    FVVertex[] vtx;        // references to vertices for line (2D), quadrilateral and triangular (3D) faces
     //
     // Adjoining cells.
     // These are references to either active cells or ghost cells.
