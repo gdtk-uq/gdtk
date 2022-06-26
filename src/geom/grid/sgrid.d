@@ -1146,11 +1146,11 @@ public:
         return makeSlabGrid(Vector3(0,0,dz), symmetric, label);
     }
 
-    StructuredGrid makeWedgeGrid(double dtheta, bool symmetric=true, string label="")
+    StructuredGrid makeWedgeGrid(double dtheta, bool symmetric=true, string label="", int nkv_new = 2)
     {
         assert(nkv == 1, "makeWedgeGrid expected only 2D grid");
         string newlabel = (label.length > 0) ? label : this.label;
-        StructuredGrid newg = new StructuredGrid(niv, njv, 2, newlabel);
+        StructuredGrid newg = new StructuredGrid(niv, njv, nkv_new, newlabel);
         foreach (j; 0 ..njv) {
             foreach (i; 0 .. niv) {
                 Vector3* p0 = this[i,j,0];
@@ -1159,15 +1159,17 @@ public:
                 // Refer to PJ's workbook page 36, 2017-07-01
                 double r = sqrt((p0.y)^^2 + (p0.z)^^2).re;
                 double theta0 = atan2(p0.z, p0.y).re;
+                double theta_slice = dtheta / (nkv_new - 1);
                 if (symmetric) {
                     double theta1 = theta0-0.5*dtheta;
-                    newg[i,j,0].set(p0.x.re, r*cos(theta1), r*sin(theta1));
-                    theta1 = theta0+0.5*dtheta;
-                    newg[i,j,1].set(p0.x.re, r*cos(theta1), r*sin(theta1));
+                    foreach (k; 0 .. nkv_new) {
+                        newg[i, j, k].set(p0.x.re, r*cos(theta1 + k * theta_slice), r*sin(theta1 + k * theta_slice));
+                    }
                 } else {
                     *(newg[i,j,0]) = *p0;
-                    double theta1 = theta0+dtheta;
-                    newg[i,j,1].set(p0.x.re, r*cos(theta1), r*sin(theta1));
+                    foreach (k; 1 .. nkv_new) {
+                        newg[i, j, k].set(p0.x.re, r*cos(theta0 + k * theta_slice), r*sin(theta0 + k * theta_slice));
+                    }
                 }
             }
         }

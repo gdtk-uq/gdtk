@@ -600,7 +600,7 @@ extern(C) int makeWedgeGrid(lua_State* L)
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
     }
-    if (!checkAllowedNames(L, 2, ["dtheta","symmetric","label"])) {
+    if (!checkAllowedNames(L, 2, ["dtheta","symmetric","label","nkv_new"])) {
         string errMsg = "Error in call to StructuredGrid:makeWedgeGrid{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -626,9 +626,15 @@ extern(C) int makeWedgeGrid(lua_State* L)
         label = to!string(lua_tostring(L, -1));
     }
     lua_pop(L, 1);
+    int nkv_new = 2;
+    lua_getfield(L, 2, "nkv_new");
+    if (!lua_isnil(L, -1)) {
+        nkv_new = luaL_checkint(L, -1);
+    }
+    lua_pop(L, 1);
     //
     lua_settop(L, 0); // clear stack
-    auto grid3D = grid2D.makeWedgeGrid(dtheta, symmetric, label);
+    auto grid3D = grid2D.makeWedgeGrid(dtheta, symmetric, label, nkv_new);
     structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, grid3D);
     return 1;
 } // end makeWedgeGrid()
