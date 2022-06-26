@@ -1,0 +1,49 @@
+= Notes on generating and using air with Helium trace
+Rowan J. Gollan
+2022-06-26
+
+== Preparation
+There are preparation scripts available in this directory, one for each version (1T or 2T).
+There is an assumption that the scripts will be executed in this directory;
+they copy files from nearby directories for the chemistry and kinetics inputs.
+
+To prepare file for 1-T work:
+
+    $ ./prep-1T-version.sh
+
+or for 2-T work:
+
+    $ ./prep-2T-version.sh
+
+
+== Usage
+After preparation, you can copy the generated files for use in Eilmer/nenzf1d/etc to your simulation
+working directory.
+The tables below show which files are required.
+
+.For 1-T work
+|===
+| File type          | name
+
+| Gas model file     | `air-5sp-He-1T.gas`
+
+| Chemistry file     | `GuptaEtAl-air-reactions.chem`
+
+|===
+
+
+.For 2-T work
+|===
+| File type          | name
+
+| Gas model file     | `air-5sp-He-2T.gas`
+
+| Chemistry file     | `GuptaEtAl-air-reactions-2T.chem`
+
+| Kinetics file      | `air-energy-exchange.kin`
+
+|===
+
+
+
+
