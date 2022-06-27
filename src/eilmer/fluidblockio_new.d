@@ -3,6 +3,7 @@ module fluidblockio_new;
 import std.json;
 import std.string;
 import std.conv;
+import std.math;
 
 import std.range : iota, enumerate;
 import std.algorithm.iteration : splitter;
@@ -626,7 +627,7 @@ class CellVariablesIO : FluidBlockIO
             myConfig.gmodel = GlobalConfig.gmodel_master;
         }
         // get all of the cells data
-        index = iota(0, n_cells).array();
+        index = blk.get_cell_write_indices();
         set_binary(myConfig.flow_format == "eilmer4binary");
         // get the accessors
         foreach (key, acc ; CellData.get_accessors(myConfig)) {
@@ -654,7 +655,7 @@ class TimeAverageIO : FluidBlockIO
             myConfig.gmodel = GlobalConfig.gmodel_master;
         }
         // get all of the cells data
-        index = iota(0, n_cells).array();
+        index = blk.get_cell_write_indices();
         set_binary(myConfig.flow_format == "eilmer4binary");
         // get the accessors
         foreach (key, acc ; FlowAverage.get_accessors(myConfig)) {
@@ -682,7 +683,7 @@ class CellGradIO : FluidBlockIO
             myConfig.gmodel = GlobalConfig.gmodel_master;
         }
         // get all of the cells data
-        index = iota(0, n_cells).array();
+        index = blk.get_cell_write_indices();
         set_binary(myConfig.flow_format == "eilmer4binary");
         // get the accessors
         foreach (key, acc ; CellGradientData.get_accessors(myConfig)) {
@@ -705,7 +706,7 @@ class DFTIO : FluidBlockIO
             n_cells = block.cells.length;
         }
         // get all of the cells data
-        index = iota(0, n_cells).array();
+        index = blk.get_cell_write_indices();
         set_binary(GlobalConfig.flow_format == "eilmer4binary");
         foreach (key, acc ; GeneralDFT.get_accessors()) {
             add_accessor(key, acc);
@@ -744,7 +745,7 @@ class CellLimiterIO : FluidBlockIO
             myConfig.gmodel = GlobalConfig.gmodel_master;
         }
         // get all of the cells data
-        index = iota(0, n_cells).array();
+        index = blk.get_cell_write_indices();
         set_binary(myConfig.flow_format == "eilmer4binary");
         // get the accessors
         foreach (key, acc ; CellLimiterData.get_accessors(myConfig)) {
@@ -772,7 +773,7 @@ class CellResidualIO : FluidBlockIO
             myConfig.gmodel = GlobalConfig.gmodel_master;
         }
         // get all of the cells data
-        index = iota(0, n_cells).array();
+        index = blk.get_cell_write_indices();
         set_binary(myConfig.flow_format == "eilmer4binary");
         // get the accessors
         foreach (key, acc ; CellResidualData.get_accessors(myConfig)) {
@@ -803,7 +804,7 @@ class FieldIO : FluidBlockIO
         }
 
         // get all of the cells data
-        index = iota(0, n_cells).array();
+        index = blk.get_cell_write_indices();
 
         set_binary(myConfig.flow_format == "eilmer4binary");
 

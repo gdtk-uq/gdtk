@@ -13,6 +13,7 @@ import std.string;
 import std.array;
 import std.math;
 import std.algorithm;
+import std.range;
 
 import util.lua;
 import util.lua_service;
@@ -845,4 +846,9 @@ public:
         } // end foreach face
     } // end convective_flux-phase1()
 
+    override size_t[] get_cell_write_indices() {
+        size_t[] index;
+        index = iota(0, ncells, myConfig.nic_write).array();
+        return index;
+    }
 } // end class UFluidBlock

@@ -1090,6 +1090,10 @@ final class GlobalConfig {
     shared static bool save_limiter_values = false;
     // save the cell residual values to file
     shared static bool save_residual_values = false;
+    // how often in space to save the state to disk
+    shared static int nic_write = 1;
+    shared static int njc_write = 1;
+    shared static int nkc_write = 1;
     //
     // A factor to scale the viscosity in order to achieve a soft start.
     // The soft-start for viscous effects may be handy for impulsively-started flows.
@@ -1337,6 +1341,11 @@ public:
     bool save_viscous_gradients;
     bool save_limiter_values;
     bool save_residual_values;
+    
+    int nic_write;
+    int njc_write;
+    int nkc_write;
+
     SpatialDerivCalc spatial_deriv_calc;
     SpatialDerivLocn spatial_deriv_locn;
     bool include_ghost_cells_in_spatial_deriv_clouds;
@@ -1502,6 +1511,9 @@ public:
         save_viscous_gradients = cfg.save_viscous_gradients;
         save_limiter_values = cfg.save_limiter_values;
         save_residual_values = cfg.save_residual_values;
+        nic_write = cfg.nic_write;
+        njc_write = cfg.njc_write;
+        nkc_write = cfg.nkc_write;
         shear_stress_relative_limit = cfg.shear_stress_relative_limit;
         apply_shear_stress_relative_limit = cfg.apply_shear_stress_relative_limit;
         viscous_factor = cfg.viscous_factor;
@@ -1932,6 +1944,9 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("save_viscous_gradients", "save_viscous_gradients"));
     mixin(update_bool("save_limiter_values", "save_limiter_values"));
     mixin(update_bool("save_residual_values", "save_residual_values"));
+    mixin(update_int("nic_write", "nic_write"));
+    mixin(update_int("njc_write", "njc_write"));
+    mixin(update_int("nkc_write", "nkc_write"));
     mixin(update_double("viscous_delay", "viscous_delay"));
     mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
     mixin(update_double("shear_stress_relative_limit", "shear_stress_relative_limit"));

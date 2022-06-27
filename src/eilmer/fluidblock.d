@@ -260,6 +260,7 @@ public:
     @nogc abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0,
                                                FVCell[] cell_list = [], FVInterface[] iface_list = [],
                                                FVVertex[] vertex_list = []);
+    abstract size_t[] get_cell_write_indices();
 
     @nogc
     void identify_reaction_zones(int gtl)

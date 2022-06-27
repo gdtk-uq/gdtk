@@ -16,6 +16,7 @@ import std.string;
 import std.array;
 import std.algorithm;
 import std.math;
+import std.range;
 import nm.complex;
 import nm.number;
 
@@ -2259,6 +2260,19 @@ public:
         foreach(ref double cc; corner_coords) { cc = double.infinity; }
     }
 
+    override size_t[] get_cell_write_indices() {
+        size_t[] index;
+        if ((myConfig.nic_write == 1) && (myConfig.njc_write == 1) && (myConfig.nkc_write == 1)) {
+            index = iota(0, nic * njc * nkc).array();
+        } else {
+            foreach (indx; 0 .. (nic * njc * nkc)) {
+                if ((fmod(indx, myConfig.nic_write) == 0) && (fmod(cast(int) (indx / nic), myConfig.njc_write) == 0)) {
+                    index ~= indx;
+                }
+            }
+        }
+        return index;
+    }
 } // end class SFluidBlock
 
 
