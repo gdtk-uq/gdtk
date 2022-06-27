@@ -218,17 +218,25 @@ private:
     {
         auto nvtx = f.vtx.length;
         int count1 = 0;
+        // Check the centre of the face.
+        Vector3 psample = Vector3(f.pos);
+        // Decide which side of the plane it lies.
+        psample -= p;
+        if (n.dot(psample) > 0.0) { count1++; }
         foreach (i; 0 .. nvtx) {
+            // Check the vertex to see which side of the plane it lies.
+            psample.set(f.vtx[i].pos[0]);
+            psample -= p;
+            if (n.dot(psample) > 0.0) { count1++; }
             // Compute a sample point on the face between the vertex and the midpoint.
-            Vector3 psample = Vector3(f.vtx[i].pos[0]);
+            psample.set(f.vtx[i].pos[0]);
             psample += f.pos;
             psample.scale(0.5);
             // Decide which side of the plane it lies.
             psample -= p;
-            number d = n.dot(psample);
-            if (d > 0.0) { count1++; }
+            if (n.dot(psample) > 0.0) { count1++; }
         }
-        double w1 = (cast(double)count1)/nvtx;
+        double w1 = (cast(double)count1)/(1+2*nvtx);
         blended_fstate.copy_average_values_from(fstate1, fstate2, w1);
     }
 
