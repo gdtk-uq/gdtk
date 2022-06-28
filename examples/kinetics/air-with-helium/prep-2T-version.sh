@@ -14,6 +14,6 @@ sed -i "s/^WITH_ELECTRONS.*/WITH_ELECTRONS = false/" air-energy-exchange.lua
 
 # Then prep gas, chemistry and energy exchange in the usual manner
 prep-gas air-5sp-He-2T.lua air-5sp-He-2T.gas
-prep-chem air-5sp-He-2T.gas GuptaEtAl-air-2T.lua GuptaEtAl-air-2T.chem
+prep-chem air-5sp-He-2T.gas GuptaEtAl-air-reactions-2T.lua GuptaEtAl-air-reactions-2T.chem
 prep-kinetics air-5sp-He-2T.gas air-energy-exchange.lua air-energy-exchange.kin
 
