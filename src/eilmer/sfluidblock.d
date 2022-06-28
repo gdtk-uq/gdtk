@@ -2262,11 +2262,21 @@ public:
 
     override size_t[] get_cell_write_indices() {
         size_t[] index;
+        size_t[3] ijk;
+        bool in_row, in_column, in_page;
+
         if ((myConfig.nic_write == 1) && (myConfig.njc_write == 1) && (myConfig.nkc_write == 1)) {
             index = iota(0, nic * njc * nkc).array();
         } else {
             foreach (indx; 0 .. (nic * njc * nkc)) {
-                if ((fmod(indx, myConfig.nic_write) == 0) && (fmod(cast(int) (indx / nic), myConfig.njc_write) == 0)) {
+                ijk = to_ijk_indices_for_cell(indx);
+                // Lengthy conditional check here- spread it over a few lines
+                // Either the cell falls on the specified indices, or is the last one in a specific row/column/page
+                in_row = (ijk[0] % myConfig.nic_write) == 0;
+                in_column = (ijk[1] % myConfig.njc_write) == 0;
+                in_page = (ijk[2] % myConfig.nkc_write) == 0;
+                if ((in_row && in_column && in_page) || // The specific indices condition, now for the end of row/column/page condition
+                    (in_column && in_page && (ijk[0] == (nic - 1))) || (in_column && in_page && (ijk[1] == (njc - 1))) || (in_row && in_column && (ijk[0] == (nkc - 1)))) {
                     index ~= indx;
                 }
             }
