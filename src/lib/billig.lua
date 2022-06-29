@@ -7,7 +7,7 @@
 -- PJ 2016-10-16 adapted from Python module
 --
 -- RJG 2019-03-06 Re-packaged as module.
---                
+--
 -- NOTE on use as a module.
 -- ------------------------
 -- This module will not work stand-alone since it is dependent on having
