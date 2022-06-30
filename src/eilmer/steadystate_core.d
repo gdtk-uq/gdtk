@@ -1102,7 +1102,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 }
                 foreach (blk; localFluidBlocks) {
                     if (legacy) {
-                        auto fileName = make_file_name!"flow"(jobName, blk.id, nWrittenSnapshots, "gz");
+                        auto fileName = make_file_name!"flow"(jobName, blk.id, nWrittenSnapshots, GlobalConfig.flowFileExt);
                         blk.write_solution(fileName, pseudoSimTime);
                     } else {
                         foreach(io; blk.block_io) {
