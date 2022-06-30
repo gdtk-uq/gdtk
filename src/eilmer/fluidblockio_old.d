@@ -1976,7 +1976,6 @@ void raw_binary_to_cell_data(ref File fin,
         } else {
             Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
         }
-        fin.rawRead(dbl2); // tke, omega
         version(turbulence) {
             foreach(i; 0 .. nturb){
                 fin.rawRead(dbl1); fs.turb[i] = dbl1[0];
