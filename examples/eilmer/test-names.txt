@@ -13,6 +13,7 @@
 2D/flat-plate-turbulent-mabey/steady-state-solver/mabey-test.rb
 2D/flat-plate-turbulent-larc/nk-5.45Tw-sa/larc-sa-test.rb
 2D/flat-plate-transitional-sabcm/sabcm-test.rb
+2D/swbli/restart-test/swbli-restart-test.rb
 3D/sod-shock-tube/sg/sod-test.rb
 3D/sod-shock-tube/usg/sod-usg-test.rb
 3D/sod-shock-tube/ideal-air-eq-air/sod-test.rb

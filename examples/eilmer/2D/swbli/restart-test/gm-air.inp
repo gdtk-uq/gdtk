@@ -1,0 +1,2 @@
+model = "ThermallyPerfectGas"
+species = {'air'}
