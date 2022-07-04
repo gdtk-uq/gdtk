@@ -1,8 +1,10 @@
 -- billig_patch.lua
 -- A convenience function for bluff-body simulations.
--- PJ 2019-05-25, 2022-06-29 introduce quadrant==3 option
+-- PJ 2019-05-25
+--    2022-06-29 introduce quadrant==3 option
+--    2022-07-04, Allow different x and y scales
 
-local billig = require 'billig' 
+local billig = require 'billig'
 local billig_patch = {}
 
 function billig_patch.make_patch(t)
@@ -51,7 +53,18 @@ function billig_patch.make_patch(t)
    local yc = t.yc or 0.0
    -- Scale for accommodating thermochemical variation
    -- away from ideal low-Temperature air.
-   local scale = t.scale or 1.0
+   -- Set the scales using the most specific information available,
+   -- eventually defaulting to a scale of 1.0 if nothing is specified.
+   local x_scale = nil
+   local y_scale = nil
+   if t.x_scale then x_scale = t.x_scale end
+   if t.y_scale then y_scale = t.y_scale end
+   if t.scale then
+      x_scale = x_scale or t.scale
+      y_scale = y_scale or t.scale
+   end
+   x_scale = x_scale or 1.0
+   y_scale = y_scale or 1.0
    -- Assume 2D cylinder (axisymmetric=true for a sphere).
    local axisymmetric = t.axisymmetric or false
    -- Angle of aft-body with respect to freestream direction.
@@ -89,7 +102,7 @@ function billig_patch.make_patch(t)
    if quadrant == 2 then
       for i, xy in ipairs(xys) do
          -- the outer boundary should be a little further than the shock itself
-         d[#d+1] = Vector3:new{x=-scale*xy.x+xc, y=scale*xy.y+yc}
+         d[#d+1] = Vector3:new{x=-x_scale*xy.x+xc, y=y_scale*xy.y+yc}
       end
       shock = ArcLengthParameterizedPath:new{underlying_path=Spline:new{points=d}}
       --
@@ -102,7 +115,7 @@ function billig_patch.make_patch(t)
       for i=1,#xys do
          -- the outer boundary should be a little further than the shock itself
          local xy = xys[#xys-i+1]
-         d[#d+1] = Vector3:new{x=-scale*xy.x+xc, y=-scale*xy.y+yc}
+         d[#d+1] = Vector3:new{x=-x_scale*xy.x+xc, y=-y_scale*xy.y+yc}
       end
       shock = ArcLengthParameterizedPath:new{underlying_path=Spline:new{points=d}}
       --
