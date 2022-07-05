@@ -492,6 +492,19 @@ public:
             }
             break;
         }
+
+        // Set the outflow interfaces to be shocked for high-order simulations with boundary layers
+        // Drops back to the more robust flux calculators at the outflow to help prevent numerical noise
+        // propagating back upstream
+        if (myConfig.damped_outflow) {
+            foreach (bndry; bc) {
+                if (bndry.type == "outflow_simple_extrapolate") {
+                    foreach (face; bndry.faces) {
+                        face.fs.S = 1;
+                    }
+                }
+            }
+        }
     } // end detect_shock_points()
 
     @nogc

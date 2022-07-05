@@ -966,6 +966,7 @@ final class GlobalConfig {
     shared static bool suppress_radial_reconstruction_at_xaxis = false;
     // We will activate the shock detector if selected features need it.
     shared static bool do_shock_detect = false;
+    shared static bool damped_outflow = false;
     // enforce strict usage of the shock detector, if either the interface or
     // a touching cell is marked assume need for only diffusive flux
     shared static bool strict_shock_detector = true;
@@ -1321,6 +1322,7 @@ public:
     int shock_detector_freeze_step;
     ShockDetector shock_detector;
     bool do_shock_detect;
+    bool damped_outflow;
     bool strict_shock_detector;
     bool artificial_compressibility;
     double ac_alpha;
@@ -1482,6 +1484,7 @@ public:
         frozen_shock_detector = cfg.frozen_shock_detector;
         shock_detector_freeze_step = cfg.shock_detector_freeze_step;
         do_shock_detect = cfg.do_shock_detect;
+        damped_outflow = cfg.damped_outflow;
         strict_shock_detector = cfg.strict_shock_detector;
         //
         artificial_compressibility = cfg.artificial_compressibility;
@@ -1835,6 +1838,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_double("compression_tolerance", "compression_tolerance"));
     mixin(update_enum("shock_detector", "shock_detector", "shock_detector_from_name"));
     mixin(update_bool("do_shock_detect", "do_shock_detect"));
+    mixin(update_bool("damped_outflow", "damped_outflow"));
     mixin(update_bool("strict_shock_detector", "strict_shock_detector"));
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_bool("artificial_compressibility", "artificial_compressibility"));
@@ -1899,6 +1903,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  allow_interpolation_for_sensitivity_matrix: ", cfg.allow_interpolation_for_sensitivity_matrix);
         writeln("  suppress_radial_reconstruction_at_xaxis: ", cfg.suppress_radial_reconstruction_at_xaxis);
         writeln("  do_shock_detect: ", cfg.do_shock_detect);
+        writeln("  damped_outflow: ", cfg.damped_outflow);
         writeln("  strict_shock_detector: ", cfg.strict_shock_detector);
         writeln("  suppress_reconstruction_at_shocks: ", cfg.suppress_reconstruction_at_shocks);
         writeln("  suppress_reconstruction_at_boundaries: ", cfg.suppress_reconstruction_at_boundaries);

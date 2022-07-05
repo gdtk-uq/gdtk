@@ -97,7 +97,7 @@ config.interpolation_order = 2
 config.print_count = 1
 config.flux_calculator = "adaptive"
 SteadyStateSolver{
-   use_preconditioning = false,
+   use_preconditioner = false,
    -- sigma = 1.0e-6, -- presently it's computed internally
    number_pre_steps = 3,
    number_total_steps = 30,
