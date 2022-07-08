@@ -22,11 +22,15 @@ import nm.complex;
 import nm.number;
 import nm.bbla;
 
+import util.lua;
+import util.lua_service;
+
 import gas;
 import gas.vib_specific_co;
 import kinetics.thermochemical_reactor;
+import kinetics.relaxation_time;
 
-final class VibSpecificCORelaxation : ThermochemicalReactor {
+class VibSpecificCORelaxation : ThermochemicalReactor {
 
     this(string fname, GasModel gmodel)
     {
@@ -54,10 +58,12 @@ final class VibSpecificCORelaxation : ThermochemicalReactor {
 
     @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source)
     {
-        number rhoErr = computeDrhoDt(Q.rho, Q.T, Q.massf, source);
+        source[] = to!number(0.0);
+        foreach(v; 0 .. gm.n_vibe_states) c[v] = Q.massf[v]*Q.rho/_M;
+        compute_COCO_pseudoreactions(Q.T, c, source);
     }
 
-    @nogc number computeDrhoDt(number rho, number T, number[] massf, ref number[] drhodt)
+    @nogc final void compute_COCO_pseudoreactions(number T, number[] c, ref number[] drhodt)
     /*
         Compute the "reaction" source terms that drive changes in the CO vibrational population.
         This is essentially equation (2.1) but converted to mole concentration instead of
@@ -77,15 +83,12 @@ final class VibSpecificCORelaxation : ThermochemicalReactor {
         foreach(ref d; dcd) d= 0.0;
 
         number cCO = 0.0;
-        foreach(v; 0 .. vm){
-            c[v] = massf[v]*rho/_M;
-            cCO += c[v];
-        }
+        foreach(v; 0 .. vm) cCO += c[v];
 
         number Z11 = compute_CO_CO_collision_frequency(T);
 
-        // Molecules can't go lower than the ground state
-        Pvvm1[0] = 0.0;
+        // First compute state-to-state transition probabilities
+        Pvvm1[0] = 0.0; // Molecules can't go lower than the ground state
         foreach(w; 0 .. vm) Pvvm1_wm1w[0][w] = 0.0;
 
         for(int v=0; v<vm; v++){
@@ -97,14 +100,14 @@ final class VibSpecificCORelaxation : ThermochemicalReactor {
             }
         }
 
-        // Now we loop over the levels and compute each ones rate from the nearby jumps
+        // Now we loop over the levels and compute each one's actual rate from the nearby jumps
         foreach(v; 1 .. vm){
             number dcvdt = 0.0;
             number cv = c[v]; number cvm1 = c[v-1];
             double Ev = E[v]; double Evm1 = E[v-1];
 
             // T-V transfers from collisions
-            number tv = Pvvm1[v]*cCO*(cv   - exp(-(Ev - Evm1)/kb/T)*cvm1);
+            number tv = Pvvm1[v]*cCO*(cv - exp(-(Ev - Evm1)/kb/T)*cvm1);
             dcd[v] -= tv;
             dcu[v-1] += tv;
 
@@ -123,14 +126,13 @@ final class VibSpecificCORelaxation : ThermochemicalReactor {
             }
         }
         foreach(v; 0 .. vm){
-            drhodt[v] = (dcu[v]+dcd[v])*_M;
+            drhodt[v] += (dcu[v]+dcd[v])*_M;
         }
 
         // The ODE intregration I inherited from vib_specific_nitrogen needs a measure of error
-        // so I do what they did. Shouldn't this be zero? No, there's actually a fair bit of
-        // rounding error.
-        number err = 0.0; foreach (dr; drhodt) { err += dr; }
+        // which is where this came from. It's not precisely zero because of truncation error.
         debug {
+            number err = 0.0; foreach (dr; drhodt) { err += dr; }
             if (fabs(err) > 1.0e-6) {
                 writeln("\n     dcu      dcd");
                 number dsum = 0.0;
@@ -138,12 +140,34 @@ final class VibSpecificCORelaxation : ThermochemicalReactor {
                     dsum+= dcu[v] - dcd[v];
                     writefln(" %e %e (%e) + %e", dcu[v], dcd[v], dcu[v] + dcd[v], drhodt[v]);
                 }
-                writefln("err=%e, rho=%e T=%e massf=%s drhodt=%s", err, rho, T, massf, drhodt);
+                writefln("err=%e T=%e c=%s drhodt=%s", err, T, c, drhodt);
                 throw new Error("Bad mass conservation");
             }
         }
-        return err;
+        return;
     }
+
+protected:
+    VibSpecificCO gm;  // Keep a reference to the specific gas model.
+    immutable double _M = 0.0280101;
+    // Constants from table 1
+    immutable double E01 = 4.31e-13*1e-7; // erg -> J Ground state energy (FIXME: Is this E1? A typo???)
+    immutable double d   = 0.00598;       //          CO Anharmonicity
+    immutable double P11 = 1.77e-4;
+    immutable double Q11 = 3.70e-6;
+    immutable double theta_dash11 = 4.45e6; // degrees, presumably Kelvin
+    immutable double sigma11 = 3.75e-8/100.0; // cm -> m
+    immutable double m11 = 2.3236e-23/1000.0; // g -> kg
+    immutable double pi = 3.14159265359;
+
+    immutable double kb = Boltzmann_constant;
+    immutable double half_to_3_halves = pow(0.5, 1.5);
+
+    // Allocatable workspace
+    double[] E;
+    number[] dcu, dcd;
+    number[] c, Pvvm1;
+    number[][] Pvvm1_wm1w;
 
     @nogc const double vibe_energy(int v)
     // Returns the quantum level energy for species i.
@@ -158,7 +182,7 @@ final class VibSpecificCORelaxation : ThermochemicalReactor {
            in the paper, so that we can work in mole concentrations and
            have smaller numbers with less round off error
         */
-        return 4.0*Avogadro_number*sigma11*sigma11*sqrt(pi*kb*T/2.0/m11);
+        return 4.0*Avogadro_number*sigma11*sigma11*sqrt(pi*kb*T/2.0/m11); // FIXME: Absorb into kb?
     }
 
     @nogc const number x_v_vm1(number T, int v){
@@ -190,27 +214,123 @@ final class VibSpecificCORelaxation : ThermochemicalReactor {
         return P;
     }
 
+
+} // end class
+
+final class VibSpecificCOMixtureRelaxation : VibSpecificCORelaxation {
+
+    this(string chem_file_name, string kinetics_file_name, GasModel gmodel)
+    {
+        super(chem_file_name, gmodel); // hang on to a reference to the gas model
+        gm = cast(VibSpecificCOMixture) gmodel;
+        if (!gm) { throw new Error("Oops, wrong gas model; should have been VibSpecificCOMixture."); }
+
+        // fname contains some regular vibrational relaxation mechanisms. Read and store them
+        int mode = 0;
+        auto L = init_lua_State();
+        doLuaFile(L, kinetics_file_name);
+
+        // Load in relaxation times from a normal energy exchange file
+        lua_getglobal(L, "mechanism");
+        lua_pushnil(L); // dummy first key
+        while (lua_next(L, -2) != 0) { // -1 is the dummy key, -2 is the mechanism table
+            string rateModel = getString(L, -1, "rate");
+            if (rateModel!="Landau-Teller") throw new Error("Supplied Energy Exchange Mechanism is of the wrong type!");
+
+            string pspecies = getString(L, -1, "p");
+            string qspecies = getString(L, -1, "q");
+            int p = -1;                          // p should be CO, always
+            int q = gm.species_index(qspecies);  // q is the other species
+
+            lua_getfield(L, -1, "relaxation_time");
+            relaxation_times ~= createRelaxationTime(L, p, q, gm);
+            lua_pop(L, 1); // Pop relaxation_time table
+            lua_pop(L, 1); // discard value but keep key so that lua_next can remove it (?!)
+        }
+        lua_pop(L, 1); // remove mechanisms table
+        lua_close(L);
+
+        molef.length = gm.n_species;
+        numden.length = gm.n_species;
+
+        foreach(j; 0 .. gm.n_others){
+            double Mj = gm.cgm.mol_masses[j];
+            double MuCOj = 1.0/(1.0/_M + 1.0/Mj); // Note this is kg/mole, not per particle!
+
+            // The formula in Flament 1992 uses mu as the per particle reduced mass, divided by kb
+            // Equivalently, we use the per mole Mu and divide by R_universal
+            double ThetaCOj = 16.0*pi*pi*pi*pi*MuCOj*weCO*weCO*speed_of_light*speed_of_light*l*l/R_universal;
+            Theta_COj ~= ThetaCOj;
+        }
+    }
+
+    @nogc final override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source)
+    {
+        source[] = to!number(0.0);
+        foreach(v; 0 .. gm.n_vibe_states) c[v] = Q.massf[v]*Q.rho/_M;
+        compute_COCO_pseudoreactions(Q.T, c, source);
+        compute_COMixture_pseudoreactions(gmodel, Q, c, source);
+    }
+
+    @nogc final void compute_COMixture_pseudoreactions(GasModel gmodel, GasState Q, number[] c, ref number[] source)
+    {
+        size_t vm = gm.n_vibe_states;
+        number Mmix = gm.molecular_mass(Q);
+        foreach(j; vm .. gm.n_species){
+            molef[j] = Q.massf[j]*Mmix/gm.mol_masses[j];
+            // numden should be unused, but we need it in place for the eval call below.
+        }
+        foreach(ref d; dcu) d= 0.0;
+        foreach(ref d; dcd) d= 0.0;
+
+        // As in the parent class, we work in molar concentration instead of number density
+        // This introduces an Avogadro number into the equations, which combines with a kb inside
+        // of the definition of P0_COj to turn into an R_universal
+        foreach(j; 0 .. gm.n_others){
+            number cj = Q.massf[vm+j]*Q.rho/gm.mol_masses[vm+j];
+
+            number tauCOj_times_pj = relaxation_times[j].eval(Q, molef, numden);
+            number Lambda10 = lambda_vvm1_COj(1, j, Q.T);
+            number F10 = F(Lambda10);
+            number P0_COj = (1.0-d)*R_universal*Q.T/tauCOj_times_pj/F10/(1.0 - exp(-Theta_CO/Q.T));
+
+            // Similar structure to the TV transfers from CO only
+            for (int v=1; v<vm; v++){
+
+                double dE1= -E01*(1.0 - 2.0*d*v); // Hardcoded formula for deltaE_vvm1_CO
+                number Lambda_vvm1 = lambda_vvm1_COj(v, j, Q.T);
+                number Fvvm1 = F(Lambda_vvm1);
+                number Pvvm1 = P0_COj*v/(1-d*v)*Fvvm1;
+
+                number cv = c[v]; number cvm1 = c[v-1];
+                number tv = Pvvm1*cj*(cv - exp(dE1/kb/Q.T)*cvm1);
+                dcd[v] -= tv;
+                dcu[v-1] += tv;
+            }
+        }
+
+        foreach(v; 0 .. vm){
+            source[v] += (dcu[v]+dcd[v])*_M;
+        }
+    }
+
 private:
-    VibSpecificCO gm;  // Keep a reference to the specific gas model.
-    immutable double _M = 0.0280101;
-    // Constants from table 1
-    immutable double E01 = 4.31e-13*1e-7; // erg -> J Ground state energy (FIXME: Is this E1? A typo???)
-    immutable double d   = 0.00598;       //          CO Anharmonicity
-    immutable double P11 = 1.77e-4;
-    immutable double Q11 = 3.70e-6;
-    immutable double theta_dash11 = 4.45e6; // degrees, presumably Kelvin
-    immutable double sigma11 = 3.75e-8/100.0; // cm -> m
-    immutable double m11 = 2.3236e-23/1000.0; // g -> kg
-    immutable double pi = 3.14159265359;
+    // Expressions for the non-CO rates come from a collection of papers compiled by David Petty
+    immutable double weCO = 2169.81358*100.0;  // cm-1 -> m-1 Note that E01 = h*c*weCO
+    //immutable double xeCO = 0.006124171;     // Note that this is equivalent to Rich's d
+    immutable double Theta_CO = Plancks_constant*speed_of_light*weCO/Boltzmann_constant;
+    immutable double l = 0.2e-10;              // Range parameter in m (Whatever this is...)
+    double[] Theta_COj;                        // Binary characteristic temperaures
 
-    immutable double kb = Boltzmann_constant;
-    immutable double half_to_3_halves = pow(0.5, 1.5);
+    number[] molef, numden;
+    VibSpecificCOMixture gm;  // Keep a reference to the specific gas model.
+    RelaxationTime[] relaxation_times;
 
-    // Allocatable workspace
-    double[] E;
-    number[] dcu, dcd;
-    number[] c, Pvvm1;
-    number[][] Pvvm1_wm1w;
+    @nogc const pure
+    number lambda_vvm1_COj(size_t v, size_t j, number T){
+        double dE1= fabs(-E01*(1.0 - 2.0*d*v)); // Hardcoded formula for deltaE_vvm1_CO
+        return sqrt(dE1*dE1/kb/kb/8.0/T*Theta_COj[j]/Theta_CO/Theta_CO);
+    }
 
 } // end class
 
@@ -242,8 +362,9 @@ version(vib_specific_co_kinetics_test) {
         auto Q = new GasState(gm.n_species, 0);
         Q.p = 26.7;  // Pa
         Q.T = 175.0; // K
+        number Tvib = to!number(1500.0);
         // Set up the species mass fractions assuming vibrational equilibrium.
-        foreach (v; 0 .. gm.n_vibe_states) { Q.massf[v] = gm.boltzmann_eq_population_fraction(v, Q.T); }
+        foreach (v; 0 .. gm.n_vibe_states) { Q.massf[v] = gm.boltzmann_eq_population_fraction(v, Tvib); }
         gm.update_thermo_from_pT(Q);
 
         immutable double _M = 0.0280101;
@@ -268,5 +389,91 @@ version(vib_specific_co_kinetics_test) {
             assert(isClose(Pvvm1_times_c, Pvvm1_times_c_target, 5.0e-3), failedUnitTest());
             assert(isClose(Pvvm1_wwp1_times_c, Pvvm1_wwp1_times_c_target, 5.0e-3), failedUnitTest());
         }
+
+        // Check the total mass is being conserved
+        number[] source;
+        source.length = gm.n_species;
+        reactor.eval_source_terms(gm, Q, source);
+
+        number sum = 0.0; number total = 0.0;
+        foreach(v; 0 .. gm.n_species){
+            sum += source[v];
+            total += fabs(source[v]);
+            //writefln("v %02d Y %e source %e", v, Q.massf[v], source[v]);
+        }
+        //writefln("sum %e total %e error %e", sum, total, fabs(sum)/total);
+        assert((fabs(sum)/total<1e-12), failedUnitTest());
+    }
+}
+
+version(vib_specific_co_mixture_kinetics_test) {
+    import std.stdio;
+    import util.msg_service;
+    import std.math : isClose;
+    import gas.vib_specific_co;
+    void main() {
+        // Set up a CO only gas state with some vibrational nonequilibrium
+        auto gm = new VibSpecificCO("../gas/sample-data/vib-specific-CO-gas.lua");
+        auto Q = new GasState(gm.n_species, 0);
+        Q.p = 26.7;  // Pa
+        Q.T = 175.0; // K
+        number Tvib = to!number(1500.0);
+        // Set up the species mass fractions assuming vibrational equilibrium.
+        foreach (v; 0 .. gm.n_vibe_states) { Q.massf[v] = gm.boltzmann_eq_population_fraction(v, Tvib); }
+        gm.update_thermo_from_pT(Q);
+
+        auto reactor = new VibSpecificCORelaxation("", gm);
+        number[] source;
+        source.length = gm.n_species;
+        reactor.eval_source_terms(gm, Q, source);
+
+
+        // Now build an identical state using the mixture machinery
+        auto gmmix = new VibSpecificCOMixture("sample-input/vib-specific-CO-mixture.lua");
+        auto Qmix = new GasState(gmmix.n_species, 0);
+        Qmix.p = 26.7;  // Pa
+        Qmix.T = 175.0; // K
+        // Set up the species mass fractions assuming vibrational equilibrium.
+        foreach (v; 0 .. gmmix.n_vibe_states) { Qmix.massf[v] = gmmix.boltzmann_eq_population_fraction(v, Tvib); }
+        Qmix.massf[gm.n_vibe_states] = 0.0;
+        gmmix.update_thermo_from_pT(Qmix);
+
+        auto reactormix = new VibSpecificCOMixtureRelaxation("", "sample-input/ee-n2-co.lua", gmmix);
+        number[] sourcemix;
+        sourcemix.length = gmmix.n_species;
+        reactormix.eval_source_terms(gmmix, Qmix, sourcemix);
+
+        foreach(v; 0 .. gm.n_vibe_states){
+            //writefln("state %d source %e sourcemix %e", v, source[v], sourcemix[v]);
+            assert(isClose(source[v], sourcemix[v], 1.0e-6), failedUnitTest());
+        }
+        assert(isClose(sourcemix[gmmix.n_species-1], 0.0, 1.0e-12), failedUnitTest());
+
+
+        // Now we need to test the N2/CO relaxation
+        // Now build an identical state using the mixture machinery
+        auto gmn2 = new VibSpecificCOMixture("sample-input/vib-specific-CO-mixture.lua");
+        auto Qn2 = new GasState(gmn2.n_species, 0);
+        Qn2.p = 53.4;  // Pa
+        Qn2.T = 175.0; // K
+        // Set up the species mass fractions assuming vibrational equilibrium.
+        foreach (v; 0 .. gmn2.n_vibe_states) { Qn2.massf[v] = 0.5*gmn2.boltzmann_eq_population_fraction(v, Tvib); }
+        Qn2.massf[gmn2.n_vibe_states] = 0.5;
+        gmn2.update_thermo_from_pT(Qn2);
+
+        // Check the total mass is being conserved
+        auto reactorn2 = new VibSpecificCOMixtureRelaxation("", "sample-input/ee-n2-co.lua", gmn2);
+        number[] sourcen2;
+        sourcen2.length = gmn2.n_species;
+        reactorn2.eval_source_terms(gmn2, Qn2, sourcen2);
+
+        number sum = 0.0; number total = 0.0;
+        foreach(v; 0 .. gm.n_species){
+            sum += sourcen2[v];
+            total += fabs(sourcen2[v]);
+            //writefln("v %02d Y %e source %e", v, Qn2.massf[v], sourcen2[v]);
+        }
+        //writefln("sum %e total %e error %e", sum, total, fabs(sum)/total);
+        assert((fabs(sum)/total<1e-12), failedUnitTest());
     }
 }

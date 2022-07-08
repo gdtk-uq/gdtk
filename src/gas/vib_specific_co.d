@@ -217,6 +217,11 @@ protected:
 } // end class VibSpecificCO
 
 class VibSpecificCOMixture: VibSpecificCO {
+    // Public class specific properties that the kinetics model needs
+    uint n_others;
+    GasState cgs;
+    CompositeGas cgm;
+
     this(lua_State *L)
     {
         super(L);
@@ -437,11 +442,6 @@ private:
             cgs.massf[i] = gs.massf[_n_vibe_states+i];
         }
     }
-
-    // Mixture of other species
-    uint n_others;
-    GasState cgs;
-    CompositeGas cgm;
 }
 
 version(vib_specific_co_test) {

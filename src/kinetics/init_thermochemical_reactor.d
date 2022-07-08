@@ -125,8 +125,11 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     if ((cast(VibSpecificNitrogen) gmodel) !is null) {
         reactor = new VibSpecificNitrogenRelaxation(fileName1, gmodel);
     }
-    if ((cast(VibSpecificCO) gmodel) !is null) {
+    if (typeid(gmodel) is typeid(VibSpecificCO)) {
         reactor = new VibSpecificCORelaxation(fileName1, gmodel);
+    }
+    if (typeid(gmodel) is typeid(VibSpecificCOMixture)) {
+        reactor = new VibSpecificCOMixtureRelaxation(fileName1, fileName2, gmodel);
     }
     if ((cast(TwoTemperatureAir) gmodel) !is null) {
         reactor = new TwoTemperatureAirKinetics(fileName1, fileName2, gmodel);

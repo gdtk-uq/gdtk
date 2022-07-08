@@ -13,6 +13,7 @@ TEST_PROGRAMS := chemistry_update_test \
 		reaction_mechanism_test \
 		two_temperature_argon_kinetics_test \
 		vib_specific_co_kinetics_test \
+		vib_specific_co_mixture_kinetics_test \
 		two_temperature_argon_with_ideal_gas_test \
 		electronically_specific_kinetics_test \
 		two_temperature_gasgiant_kinetics_test
@@ -122,6 +123,12 @@ two_temperature_argon_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_F
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
 
 vib_specific_co_kinetics_test: $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
+	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	dmd -of$@ -debug -g -dip1008 -version=$@ \
+		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+
+vib_specific_co_mixture_kinetics_test: $(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
 	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
 	dmd -of$@ -debug -g -dip1008 -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(UTIL_FILES) $(NM_FILES) \
