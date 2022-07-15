@@ -15,7 +15,6 @@ import nm.complex;
 import nm.number;
 version(mpi_parallel) {
     import mpi;
-    import mpi.util;
 }
 
 import globalconfig;

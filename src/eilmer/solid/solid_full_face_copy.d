@@ -12,7 +12,6 @@ import std.algorithm;
 import std.datetime;
 version(mpi_parallel) {
     import mpi;
-    import mpi.util;
 }
 
 import simcore;

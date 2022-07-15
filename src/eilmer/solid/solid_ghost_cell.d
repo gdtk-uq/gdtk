@@ -11,7 +11,6 @@ import std.file;
 import std.algorithm;
 version(mpi_parallel) {
     import mpi;
-    import mpi.util;
 }
 
 import simcore;

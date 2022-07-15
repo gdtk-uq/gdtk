@@ -44,7 +44,6 @@ import grid_motion_udf;
 import grid_motion_shock_fitting;
 version(mpi_parallel) {
     import mpi;
-    import mpi.util;
 }
 
 // Keep a record of simulation time and dt for snapshots

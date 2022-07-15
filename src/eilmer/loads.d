@@ -44,7 +44,6 @@ import mass_diffusion;
 
 version(mpi_parallel) {
     import mpi;
-    import mpi.util;
 }
 
 string loadsDir = "loads";

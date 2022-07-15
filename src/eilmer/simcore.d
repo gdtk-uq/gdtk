@@ -64,7 +64,6 @@ version (cuda_gpu_chem) {
 }
 version(mpi_parallel) {
     import mpi;
-    import mpi.util;
 }
 import simcore_gasdynamic_step;
 import simcore_solid_step;
