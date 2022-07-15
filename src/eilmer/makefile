@@ -51,7 +51,11 @@ ifneq ($(TECPLOT_BIN_DIR), unavailable)
     TECPLOT_FILES += tecio.d
 endif
 
+OPENMPI_DIR := ../extern/OpenMPI
+OPENMPI_FILES := $(OPENMPI_DIR)/source/mpi/package.d
 
+MPICH_DIR := ../extern/cray-mpich
+MPICH_FILES := $(MPICH_DIR)/mpi.d
 
 PROGRAMS := e4shared e4monitor gdtk-module
 SHARE_FILES :=
@@ -94,6 +98,26 @@ ifeq ($(WITH_MPI),1)
     endif
     MPI_LIBRARY_DIRS = $(shell mpicc --showme:libdirs)
     MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L-L$d)
+    MPI_DIR = $(OPENMPI_DIR)
+    MPI_FILES = $(OPENMPI_FILES)
+endif
+
+ifeq ($(WITH_MPICH),1)
+    PROGRAMS += e4mpi e4loadbalance
+    ifeq ($(WITH_COMPLEX_NUMBERS), 1)
+        PROGRAMS += e4zmpi
+    endif
+    ifeq ($(WITH_NK),1)
+        PROGRAMS += e4-nk-dist
+        PROGRAMS += e4-nk-dist-real
+    endif
+    ifeq ($(WITH_PIR),1)
+        PROGRAMS += e4-pir-dist
+    endif
+    MPI_LIBRARY_DIRS = $(shell mpicc -link_info | cut -d' ' -f 3)
+    MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L$d)
+    MPI_DIR = $(MPICH_DIR)
+    MPI_FILES = $(MPICH_FILES)
 endif
 
 ifeq ($(WITH_OPENCL_GPU_CHEM),1)
@@ -241,9 +265,6 @@ CUDA_FILES := $(CUDA_DIR)/cublas_api.d \
 	$(CUDA_DIR)/cublas_v2.d \
 	$(CUDA_DIR)/cuda.d \
 	$(CUDA_DIR)/cuda_runtime_api.d
-
-OPENMPI_DIR := ../extern/OpenMPI/
-OPENMPI_FILES := $(OPENMPI_DIR)/source/mpi/package.d $(OPENMPI_DIR)/source/mpi/util.d
 
 LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
@@ -486,6 +507,7 @@ clean:
 	- rm -f dgd-for-mech4480.tgz
 	- rm -f gdtk-module
 	- cd $(OPENMPI_DIR); make clean
+	- cd $(MPICH_DIR); make clean
 	- cd $(LUA_DIR); make clean
 	- cd $(GEOM_DIR); make clean
 	- cd $(GZIP_DIR); make clean
@@ -631,7 +653,7 @@ e4mpi: main.d $(EILMER_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
-	cd $(OPENMPI_DIR); gen/setup.sh
+	cd $(MPI_DIR); make
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
@@ -639,14 +661,14 @@ e4mpi: main.d $(EILMER_FILES) \
 		main.d > mpi_main_with_rev_string.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)e4mpi \
 		$(DVERSION)mpi_parallel \
-		-I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
+		$(MPI_LIB_DIRS_SEARCH) \
 		mpi_main_with_rev_string.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
 		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(MPI_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS) -L-lmpi
 
@@ -656,7 +678,7 @@ e4zmpi: main.d $(EILMER_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
-	cd $(OPENMPI_DIR); gen/setup.sh
+	cd $(MPI_DIR); make
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
@@ -664,7 +686,7 @@ e4zmpi: main.d $(EILMER_FILES) \
 		main.d > mpi_main_complex_with_rev_string.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)e4zmpi \
 		$(DVERSION)mpi_parallel \
-		-I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
+		$(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)complex_numbers \
 		mpi_main_complex_with_rev_string.d \
 		$(EILMER_FILES) \
@@ -672,7 +694,7 @@ e4zmpi: main.d $(EILMER_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
 		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(MPI_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS) -L-lmpi
 
@@ -731,14 +753,14 @@ e4-nk-dist: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_updat
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
-	cd $(OPENMPI_DIR); gen/setup.sh
+	cd $(MPI_DIR); make
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > mpi_nk_accelerator_with_string_subst.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
-		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
+		$(DVERSION)mpi_parallel $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
@@ -748,7 +770,7 @@ e4-nk-dist: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_updat
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(MPI_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS) -L-lmpi
 
@@ -758,14 +780,14 @@ e4-nk-dist-real: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
-	cd $(OPENMPI_DIR); gen/setup.sh
+	cd $(MPI_DIR); make
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > mpi_nk_accelerator_with_string_subst.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
-		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
+		$(DVERSION)mpi_parallel $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
 		mpi_nk_accelerator_with_string_subst.d steadystate_core.d solid/solid_loose_coupling_update.d \
@@ -774,7 +796,7 @@ e4-nk-dist-real: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(MPI_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS) -L-lmpi
 
@@ -835,14 +857,14 @@ e4-pir-dist: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_upda
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
-	cd $(OPENMPI_DIR); gen/setup.sh
+	cd $(MPI_DIR); make
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > mpi_nk_accelerator_with_string_subst.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
-		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
+		$(DVERSION)mpi_parallel $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)pir \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)nk_accelerator \
@@ -853,7 +875,7 @@ e4-pir-dist: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_upda
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(MPI_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS) -L-lmpi
 
@@ -863,14 +885,14 @@ e4-pir-dist-real: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
-	cd $(OPENMPI_DIR); gen/setup.sh
+	cd $(MPI_DIR); make
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		nk_accelerator.d > mpi_nk_accelerator_with_string_subst.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
-		$(DVERSION)mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
+		$(DVERSION)mpi_parallel $(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)pir \
                 $(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
@@ -880,7 +902,7 @@ e4-pir-dist-real: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(MPI_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS) -L-lmpi
 

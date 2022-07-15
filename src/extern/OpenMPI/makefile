@@ -1,6 +1,9 @@
 # makefile for cleaning out OpenMPI package
 # PJ 2017-06-05
 
+setup:
+	bash gen/setup.sh
+
 dummy:
 	echo "do nothing"
 
