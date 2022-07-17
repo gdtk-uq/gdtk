@@ -12,6 +12,7 @@ Versions:
    16-May-2004: Python equivalent adapted from the Xplore version.
    27-Feb-2012: Use relative import in cfpylib
    29-Dec-2019: Port to the Eilmer4 collection, update to Python3.
+   17-jul-2022: Bring in Maciej's additions (theta_cone_flowfield).
 
 Contents:
 
@@ -456,7 +457,7 @@ def taylor_maccoll_odes(z, theta, g=1.4):
     dzdtheta = numpy.linalg.solve(A,b)
     return dzdtheta
 
-def theta_cone(V1, p1, T1, beta, R=287.1, g=1.4):
+def theta_cone(V1, p1, T1, beta, R=287.1, g=1.4, dtheta=-1.0e-5):
     """
     Compute the cone-surface angle and conditions given the shock wave angle.
 
@@ -466,6 +467,8 @@ def theta_cone(V1, p1, T1, beta, R=287.1, g=1.4):
     beta: shock wave angle wrt stream direction (in radians)
     R: gas constant
     g: ratio of specific heats
+    dtheta: angular increment for integration to the cone surface (in radians)
+
     Returns: tuple of theta_c, V_c, p_c, T_c:
       theta_c is stream deflection angle in radians
       V_c is the cone-surface speed of gas in m/s
@@ -480,6 +483,7 @@ def theta_cone(V1, p1, T1, beta, R=287.1, g=1.4):
     08-Mar-2012: This ideal-gas version adapted from the cea2_gas_flow version.
     24-Jun-2012: RJG added checks to catch the limiting case when beta < mu and
       a linear interpolation when beta is only slightly larger than mu (1% larger)
+    June 2022: Pass in the angular increment.
     """
     # When beta is only this fraction larger than mu,
     # we'll apply a linear interpolation
@@ -519,14 +523,13 @@ def theta_cone(V1, p1, T1, beta, R=287.1, g=1.4):
     p2 = p1 * p2_p1_obl(M1, beta, g)
     T2 = T1 * T2_T1_obl(M1, beta, g)
     h2 = T2 * C_p
-    #
-    # Initial conditions for Taylor-Maccoll integration.
-    dtheta = -0.05 * pi / 180.0  # fraction-of-a-degree steps
     theta = beta
     V_r = V2 * cos(beta - theta_s)
     V_theta = -V2 * sin(beta - theta_s)
+    #
     # For integrating across the shock layer, the state vector is:
     z = numpy.array([rho2, V_r, V_theta, h2, p2])
+    #
     while V_theta < 0.0:
         # Keep a copy for linear interpolation at the end.
         z_old = z.copy(); theta_old = theta
@@ -535,6 +538,7 @@ def theta_cone(V1, p1, T1, beta, R=287.1, g=1.4):
         z += dtheta * dzdtheta; theta += dtheta
         rho, V_r, V_theta, h, p = z
         if False: print("DEBUG theta=", theta, "V_r=", V_r, "V_theta=", V_theta)
+    #
     # At this point, V_theta should have crossed zero so
     # we can linearly-interpolate the cone-surface conditions.
     V_theta_old = z_old[2]
@@ -548,7 +552,7 @@ def theta_cone(V1, p1, T1, beta, R=287.1, g=1.4):
     #
     return theta_c, V_r, p, T
 
-def beta_cone(V1, p1, T1, theta, R=287.1, g=1.4):
+def beta_cone(V1, p1, T1, theta, R=287.1, g=1.4, tol=1.0e-8, dtheta=-1.0e-5):
     """
     Compute the conical shock wave angle given the cone-surface deflection angle.
 
@@ -558,6 +562,9 @@ def beta_cone(V1, p1, T1, theta, R=287.1, g=1.4):
     theta: stream deflection angle (in radians)
     R: gas constant
     g: ratio of specific heats
+    tol: tolerance on the computed angle of the cone surface (in radians)
+    dtheta: angular increment for integration to the cone surface (in radians)
+
     Returns: shock wave angle wrt incoming stream direction (in radians)
 
     This ideal-gas version adapted from the cea2_gas_flow version, 08-Mar-2012.
@@ -573,11 +580,11 @@ def beta_cone(V1, p1, T1, theta, R=287.1, g=1.4):
     b1 = asin(1.0 / M1) * 1.01 # to be stronger than a Mach wave
     b2 = b1 * 1.05
     def error_in_theta(beta_guess):
-        theta_guess, V_c, p_c, T_c = theta_cone(V1, p1, T1, beta_guess, R, g)
+        theta_guess, V_c, p_c, T_c = theta_cone(V1, p1, T1, beta_guess, R, g, dtheta)
         return theta_guess - theta
-    return solve(error_in_theta, b1, b2, tol=1.0e-4, limits=[asin(1.0/M1), pi/2.0])
+    return solve(error_in_theta, b1, b2, tol=tol, limits=[asin(1.0/M1), pi/2.0])
 
-def beta_cone2(M1, theta, R=287.1, g=1.4):
+def beta_cone2(M1, theta, R=287.1, g=1.4, tol=1.0e-8, dtheta=-1e-5):
     """
     Compute the conical shock wave angle given the cone-surface deflection angle and
     free stream Mach number.
@@ -586,6 +593,9 @@ def beta_cone2(M1, theta, R=287.1, g=1.4):
     theta: stream deflection angle (in radians)
     R: gas constant
     g: ratio of specific heats
+    tol: tolerance on the computed angle of the cone surface (in radians)
+    dtheta: angular increment for integration to the cone surface (in radians)
+
     Returns: shock wave angle wrt incoming stream direction (in radians)
 
     This version basically delegates work to beta_cone().
@@ -597,6 +607,89 @@ def beta_cone2(M1, theta, R=287.1, g=1.4):
     # Set free stream pressure to unit value
     p1 = 1.0
     # Now ready to call beta_cone()
-    return beta_cone(V1, p1, T1, theta, R, g)
+    return beta_cone(V1, p1, T1, theta, R, g, tol, dtheta)
+
+def theta_cone_flowfield(V1, p1, T1, beta, theta_cone, rays_num,
+                         R=287.1, g=1.4, dtheta=-1.0e-5):
+    """
+    Returns the flowfield properties for a collection of rays
+    through the conical shock layer.
+
+    Maciej Grybko, University of Southern Queensland, 2022
+    """
+    # Free-stream properties and gas model.
+    a1 = sqrt(g*R*T1)
+    M1 = V1 / a1
+    C_p = R * g / (g-1)
+    h1 = C_p * T1
+    rho1 = p1 / (R * T1)
+    #
+    # Start at the point just downstream the oblique shock.
+    theta_s = theta_obl(M1, beta, g)
+    M2 = M2_obl(M1, beta, theta_s, g)
+    assert M2 > 1.0
+    rho2 = rho1 * r2_r1_obl(M1, beta, g)
+    V2 = V1 * v2_v1_obl(M1, beta, g)
+    p2 = p1 * p2_p1_obl(M1, beta, g)
+    T2 = T1 * T2_T1_obl(M1, beta, g)
+    h2 = T2 * C_p
+    theta = beta
+    V_r = V2 * cos(beta - theta_s)
+    V_theta = -V2 * sin(beta - theta_s)
+    #
+    # For integrating across the shock layer, the state vector is:
+    z = numpy.array([rho2, V_r, V_theta, h2, p2])
+    #
+    # Save Mach number and flow direction for a number of rays
+    M = [M2]
+    flow_dir = [beta + atan(V_theta/V_r)] # flow direction
+    theta_vec = [beta]                    # polar coordinate
+    mu = [asin(1/M2)]                     # mach wave angle
+    #
+    S = beta - theta_cone                  # sum of all theta increments
+    n = rays_num - 2
+    q = 1 + 2.0/rays_num + 500/rays_num**2 # multiplier (for non-uniform theta)
+    i = 0
+    theta_series = beta - S*(1-q)/(1-q**n)*q**i
+    #
+    while V_theta < 0.0:
+        # Keep a copy for linear interpolation at the end.
+        z_old = z.copy(); theta_old = theta
+        # Do the update using a low-order method (Euler) for the moment.
+        dzdtheta = taylor_maccoll_odes(z, theta, g)
+        z += dtheta * dzdtheta; theta += dtheta
+        rho, V_r, V_theta, h, p = z
+        if False: print("DEBUG theta=", theta, "V_r=", V_r, "V_theta=", V_theta)
+        #
+        if theta < theta_series: # save flow properties for desired thetas
+            i += 1
+            theta_series -= S*(1-q)/(1-q**n)*q**i
+            V = sqrt(V_r**2 + V_theta**2)
+            T = h / C_p
+            a = sqrt(g*R*T)
+            M.append(V/a)
+            flow_dir.append(theta + atan(V_theta/V_r))
+            theta_vec.append(theta)
+            mu.append(asin(1/M[-1]))
+    #
+    # At this point, V_theta should have crossed zero so
+    # we can linearly-interpolate the cone-surface conditions.
+    V_theta_old = z_old[2]
+    frac = (0.0 - V_theta_old)/(V_theta - V_theta_old)
+    z_c = z_old*(1.0-frac) + z*frac
+    theta_c = theta_old*(1.0-frac) + theta*frac
+    # At the cone surface...
+    rho, V_r, V_theta, h, p = z_c
+    V = sqrt(V_r**2 + V_theta**2)
+    T = h / C_p
+    a = sqrt(g*R*T)
+    M.append(V/a)
+    flow_dir.append(theta + atan(V_theta/V_r))
+    theta_vec.append(theta_c)
+    mu.append(asin(1/M[-1]))
+    #
+    assert abs(V_theta) < 1.0e-6
+    #
+    return M, flow_dir, theta_vec, mu
 
 # ------------------------------- end ----------------------------------
