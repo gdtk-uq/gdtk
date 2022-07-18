@@ -174,12 +174,14 @@ int main(string[] args)
         char[256] processor_name;
         int len;
         MPI_Get_processor_name(processor_name.ptr, &len);
-        writefln("MPI-parallel, start task %d on processor %s",
-                 GlobalConfig.mpi_rank_for_local_task,
-                 to!string(processor_name[0..len]));
-        stdout.flush();
-        Thread.sleep(dur!("msecs")(100));
-        MPI_Barrier(MPI_COMM_WORLD);
+        if (verbosityLevel>1){
+            writefln("MPI-parallel, start task %d on processor %s",
+                     GlobalConfig.mpi_rank_for_local_task,
+                     to!string(processor_name[0..len]));
+            stdout.flush();
+            Thread.sleep(dur!("msecs")(100));
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
     } else {
         writeln("Parallelism: Shared memory");
     }

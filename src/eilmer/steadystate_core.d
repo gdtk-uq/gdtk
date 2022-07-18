@@ -362,8 +362,11 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         extraThreadsInPool = min(maxCPUs-1, nBlocksInThreadParallel-1);
     }
     defaultPoolThreads(extraThreadsInPool);
+
     version(mpi_parallel) {
-        writefln("MPI-task %d : running with %d threads.", GlobalConfig.mpi_rank_for_local_task, extraThreadsInPool+1);
+        if (GlobalConfig.verbosity_level>1){
+            writefln("MPI-task %d : running with %d threads.", GlobalConfig.mpi_rank_for_local_task, extraThreadsInPool+1);
+        }
     }
     else {
         writefln("Single process running with %d threads.", extraThreadsInPool+1); // +1 for main thread.
