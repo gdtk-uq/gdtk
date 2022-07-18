@@ -19,7 +19,7 @@ endif
 PROGRAMS := ugrid_partition
 
 ugrid_partition: ugrid_partition.d
-	$(DMD) $(DFLAGS) ugrid_partition.d
+	$(DMD) $(DFLAGS) ugrid_partition.d $(DLINKFLAGS)
 
 clean:
 	- rm -f *.o
