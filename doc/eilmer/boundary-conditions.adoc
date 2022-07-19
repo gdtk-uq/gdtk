@@ -402,6 +402,65 @@ a fixed pressure in the ghost cells.
 is like `OutFlowBC_FixedP`, above, but also sets the temperature in the ghost cells.
 
 
+== In-flow and Out-flow
+
+These boundary conditions can be used on a boundary that allows inflow and outflow.
+
+=== Ambient
+
+  InOutFlowBC_Ambient:new{flowState}
+
+is used where we want to allow the flow to go in or out across the boundary and you are
+assuming an ambient flow state outside of the domain.
+If the velocity of the cell just inside the boundary is directed outward across the boundary face,
+then the interior flow properties are copied into the ghost-cells.
+If the cell's flow velocity is directed inward, then the specified (ambient) flow state is copied
+into the ghost cells.
+
+`flowState`::
+  <<FlowState,_FlowState_>> object that has been constructed earlier in your script.
+
+=== DualState
+
+  InOutFlowBC_DualState:new{flowState1, flowState2, p, n}
+
+is used where we want to allow the flow to go in or out across the boundary and you are
+assuming two flow states are present outside of the domain.
+Outside the flow domain, the flow states exist either side of a plane defined by 
+the point `p` and the normal vector `n`.
+`flowState1` exists on the side of the plane in the direction of `n`, while `flowState2` 
+is on the other side of that plane.
+
+An example of use is in a domain that has an oblique shock processing the nominal free-stream flow.
+The flow before the shock would be `flowState1` and after the shock `flowState2`, with the oblique shock
+being coincident with the plane.
+
+If the velocity of the cell just inside the boundary is directed outward across the boundary face,
+then the interior flow properties are copied into the ghost-cells.
+If the cell's flow velocity is directed inward, then relevant flow state is copied
+into the ghost cells.
+The relevant flow state is selected based on the location of a few smaple points of the boundary face.
+If the face sits across the plane, a blending of the flow states is used.
+
+`flowState1`::
+  <<FlowState,_FlowState_>> object that has been constructed earlier in your script.
+  On side of plane in the direction of `n`.
+
+`flowState2`::
+  <<FlowState,_FlowState_>> object that has been constructed earlier in your script.
+  On side of plane in opposite to the direction of `n`.
+
+`p`::
+  _Vector3_, default: {x=0.0, y=0.0, z=0.0} +
+  A point on the plane that separates the flow states.
+  The value may be specified as a table of three named (x,y,z) components.
+
+`n`::
+  _Vector3_, default: {x=0.0, y=1.0, z=0.0} +
+  Normal vector to the plane.
+  The value may be specified as a table of three named (x,y,z) components.
+
+
 == Inter-block Exchange
 
 === Full block-face
