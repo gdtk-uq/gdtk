@@ -1752,6 +1752,8 @@ void point_implicit_relaxation_solve(int step, double pseudoSimTime, double dt, 
 {
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
+    // remove the conserved mass variable for multi-species gas
+    if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
 
     // we start with a guess of dU = 0
     foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = to!number(0.0); }
