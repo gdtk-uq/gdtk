@@ -1,7 +1,7 @@
 == 2D/flat-plate-turbulent-larc/nk-5.45Tw-sa
 :stem:
 
-image::larc-5.45Tw-sa.png[width=100%,caption="Turbulent flow over a flat plate at Mach 5, computed using the Spalart-Allmaras turbulence model."]
+image::larc-5.45Tw-sa.png[width=100%,title="Turbulent flow over a flat plate at Mach 5, computed using the Spalart-Allmaras turbulence model."]
 
 This example considers the solution of a high speed flow over a flat plate, using the Spalart-Allmaras one equation model to account for turbulence in the boundary layer. The grid and flow conditions are taken from https://turbmodels.larc.nasa.gov/ZPGflatplateSS_val.html[NASA Langley's Turbulence Modeling Resource website], specifically the 2DZPH high Mach number validation case, solved for a freestream Mach number of 5 and a ratio of wall temperature to freestream temperature of 5.450. 8500 iterations of the steady state solver were used to converge the solution, using a https://turbmodels.larc.nasa.gov/flatplate_grids.html[fine grid with 544x384 cells].
 

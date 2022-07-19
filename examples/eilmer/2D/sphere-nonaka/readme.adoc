@@ -1,6 +1,6 @@
 == 2D/sphere-nonaka
 
-image::nonaka-temperature-contours.png[width=100%,caption="Temperature fields in the shock layer in front of a sphere fired in air."]
+image::nonaka-temperature-contours.png[width=100%,title="Temperature fields in the shock layer in front of a sphere fired in air."]
 
 This example simulates the flow of air over a sphere.
 It is an example of using the two-temperature air model for high-speed flow.
@@ -19,7 +19,7 @@ The conditions of this case are:
 
 A comparison of the computed shock shape to the experiment is shown here.
 
-image::nonaka-2T-model-shock-shape.png[width=100%,caption="Comparison of Eilmer solution to experimental measurement of shock shape."]
+image::nonaka-2T-model-shock-shape.png[width=100%,title="Comparison of Eilmer solution to experimental measurement of shock shape."]
 
 Reference:
 

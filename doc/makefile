@@ -25,12 +25,22 @@ LIBRARY_DOC_FILES := flow/gas-flow.adoc \
 	geom/elements.adoc \
 	geom/sgrid.adoc
 
-EILMER_CATALOG_ENTRIES := $(EXAMPLES_DIR)/2D/forward-facing-step/readme.adoc \
-	$(EXAMPLES_DIR)/2D/sphere-nonaka/readme.adoc \
+EILMER_CATALOG_ENTRIES := \
 	$(EXAMPLES_DIR)/2D/foil-circular-arc-transonic/readme.adoc \
+	$(EXAMPLES_DIR)/2D/sphere-lehr/m355/readme.adoc \
+	$(EXAMPLES_DIR)/2D/nozzle-conical-back/readme.adoc \
+    $(EXAMPLES_DIR)/2D/forward-facing-step/readme.adoc \
+    $(EXAMPLES_DIR)/2D/richtmyer-meshkov/readme.adoc \
+    $(EXAMPLES_DIR)/2D/underexpanded-jet/readme.adoc \
+    $(EXAMPLES_DIR)/2D/shear-layer-periodic/readme.adoc \
 	$(EXAMPLES_DIR)/2D/flat-plate-hakkinen-swbli/readme.adoc \
 	$(EXAMPLES_DIR)/2D/cylinder-type-iv-shock/readme.adoc \
-	$(EXAMPLES_DIR)/2D/nozzle-conical-back/readme.adoc
+	$(EXAMPLES_DIR)/2D/flat-plate-turbulent-larc/nk-5.45Tw-sa/readme.adoc \
+	$(EXAMPLES_DIR)/2D/oblique-detonation-wave/readme.adoc \
+	$(EXAMPLES_DIR)/2D/moving-grid/piston-w-const-vel/simple/readme.adoc \
+	$(EXAMPLES_DIR)/2D/sphere-nonaka/readme.adoc \
+	$(EXAMPLES_DIR)/2D/wall-catalysis/readme.adoc \
+	$(EXAMPLES_DIR)/2D/solid/hollow-cylinder/readme.adoc
 
 
 all: eilmer-reference-manual.html \

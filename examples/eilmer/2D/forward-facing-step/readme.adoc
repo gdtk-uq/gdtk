@@ -1,6 +1,6 @@
 == 2D/forward-facing-step
 
-image::ffs-density-5ms-dx-2p5mm.png[width=100%,caption="Density field a few milliseconds after impulsive start."]
+image::ffs-density-5ms-dx-2p5mm.png[width=100%,title="Density field a few milliseconds after impulsive start."]
 
 This example shows the flow of gas at Mach 3 over a forward-facing step in a duct.
 The test case was first proposed by Emery (1968) and is described as a two-dimensional step.

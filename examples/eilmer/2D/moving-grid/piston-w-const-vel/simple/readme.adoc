@@ -1,6 +1,6 @@
 == 2D/moving-grid/piston-w-const-vel/simple
 
-image::piston-w-const-vel-animation.gif[width=100%,caption="Piston with constant velocity driving a shock in ideal air."]
+image::piston-w-const-vel-animation.gif[width=100%,title="Piston with constant velocity driving a shock in ideal air."]
 
 This example simulates the motion of a piston, at constant velocity, driving into ideal air.
 It is an example that shows the use of the moving grid capability in Eilmer.

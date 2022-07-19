@@ -1,6 +1,6 @@
 == 2D/shear-layer-periodic
 
-image::shear-layer-vorticity-animation.gif[width=100%,caption="Evolution of a perturbed, periodic shear layer."]
+image::shear-layer-vorticity-animation.gif[width=100%,title="Evolution of a perturbed, periodic shear layer."]
 
 This two-dimensional flow has a positive x-velocity in the upper half of the domain and
 a negative x-velocity in the lower half.
