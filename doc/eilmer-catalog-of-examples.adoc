@@ -6,6 +6,7 @@ The Eilmer code gardeners
 :imagesdir: gallery
 :sectnums:
 :examplesdir: ../examples
+:figure-caption!:
 
 :leveloffset: +1
 
