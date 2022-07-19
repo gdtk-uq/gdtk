@@ -414,9 +414,11 @@ SpatialDerivLocn spatial_deriv_locn_from_name(string name)
 
 // Symbolic names for the flavours of unstructured limiters.
 enum UnstructuredLimiter {
-    van_albada,
+    van_albada2,
     min_mod,
     mlp,
+    hvan_albada,
+    van_albada,
     barth,
     park,
     hvenkat,
@@ -427,9 +429,11 @@ enum UnstructuredLimiter {
 string unstructured_limiter_name(UnstructuredLimiter ul)
 {
     final switch ( ul ) {
-    case UnstructuredLimiter.van_albada: return "van_albada";
+    case UnstructuredLimiter.van_albada2: return "van_albada2";
     case UnstructuredLimiter.min_mod: return "min_mod";
     case UnstructuredLimiter.mlp: return "mlp";
+    case UnstructuredLimiter.hvan_albada: return "hvan_albada";
+    case UnstructuredLimiter.van_albada: return "van_albada";
     case UnstructuredLimiter.barth: return "barth";
     case UnstructuredLimiter.park: return "park";
     case UnstructuredLimiter.hvenkat: return "hvenkat";
@@ -441,9 +445,11 @@ string unstructured_limiter_name(UnstructuredLimiter ul)
 UnstructuredLimiter unstructured_limiter_from_name(string name)
 {
     switch ( name ) {
-    case "van_albada": return UnstructuredLimiter.van_albada;
+    case "van_albada2": return UnstructuredLimiter.van_albada2;
     case "min_mod": return UnstructuredLimiter.min_mod;
     case "mlp": return UnstructuredLimiter.mlp;
+    case "hvan_albada": return UnstructuredLimiter.hvan_albada;
+    case "van_albada": return UnstructuredLimiter.van_albada;
     case "barth": return UnstructuredLimiter.barth;
     case "park": return UnstructuredLimiter.park;
     case "hvenkat": return UnstructuredLimiter.hvenkat;

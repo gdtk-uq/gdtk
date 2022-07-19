@@ -292,8 +292,8 @@ public:
         //     CFD principles and applications
         //     Third edition, 2007
 
-        number a, b, U, phi;
-        immutable double w = 1.0e-12;
+        number delp, delm, U, phi;
+        immutable double eps = 1.0e-25;
         string codeForLimits(string qname, string gname,
                              string limFactorname,
                              string qMaxname, string qMinname)
@@ -305,18 +305,15 @@ public:
                 number dx = f.pos.x - cell_cloud[0].pos[0].x;
                 number dy = f.pos.y - cell_cloud[0].pos[0].y;
                 number dz = f.pos.z - cell_cloud[0].pos[0].z;
-                b = "~gname~"[0] * dx + "~gname~"[1] * dy;
-                if (myConfig.dimensions == 3) { b += "~gname~"[2] * dz; }
-                b = copysign(((fabs(b) + w)), b);
-                if (b > 0.0) {
-                    a = "~qMaxname~" - U;
-                    phi = fmin(phi, a/b);
-                } else if (b < 0.0) {
-                    a = "~qMinname~" - U;
-                    phi = fmin(phi, a/b);
+                delm = "~gname~"[0] * dx + "~gname~"[1] * dy;
+                if (myConfig.dimensions == 3) { delm += "~gname~"[2] * dz; }
+                delm += eps;
+                if (delm >= 0.0) {
+                    delp = "~qMaxname~" - U;
                 } else {
-                    phi = fmin(phi, 1.0);
+                    delp = "~qMinname~" - U;
                 }
+                phi = fmin(phi, delp/delm);
             }
             "~limFactorname~" = phi;
             }
@@ -400,7 +397,7 @@ public:
             }
             break;
         } // end switch thermo_interpolator
-    } // end compute_lsq_gradients()
+    } // end barth_limit()
 
     @nogc
     void mlp_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
@@ -522,7 +519,7 @@ public:
             }
             break;
         } // end switch thermo_interpolator
-    } // end compute_lsq_gradients()
+    } // end mlp_limit()
 
     @nogc
     void store_max_min_values_for_mlp_limiter(FVCell[] cell_cloud, ref LocalConfig myConfig)
@@ -624,7 +621,136 @@ public:
             }
             break;
         } // end switch thermo_interpolator
-    } // end compute_lsq_gradients()
+    } // end store_max_min_values_for_mlp_limiter()
+
+    @nogc
+    void van_albada_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
+                          bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig, size_t gtl=0)
+    {
+        // This is the classic Van Albada limiter from ref. [1] implemented in the unstructured grid
+        // format detailed in ref. [2]. The original limiter function returned the limited slope directly,
+        // ref. [3] presents the limiter form as eq. B.11, which returns a value between 0 and 1.
+        //
+        // references:
+        // [1] G. D. van Albada, B. van Leer and W. W. Roberts
+        //     A Comparative Study of Computational Methods in Cosmic Gas Dynamics
+        //     Astron. Astrophys., Vol. 108, No. 1, 1982, pp. 76–84
+        // [2] J. A. White, R. A. Baurle, B. J. Pase, S. C. Spiegel and H. Nishikawa
+        //     Geometrically flexible and efficient flow analysis of high speed vehicles via domain decomposition
+        //     2017 JANNAF paper
+        // [3] H. Nishikawa
+        //     New Unstructured-Grid Limiter Functions
+        //     2022 AIAA SciTech forum
+        //
+        number delp, delm, U, phi, h, s;
+        immutable double eps = myConfig.venkat_K_value; // TODO: we should think about renaming this variable to smooth_limiter_coeff. [KAD 19-07-2022]
+
+        // Park heuristic pressure limiter
+        number phi_hp = 1.0;
+        if (apply_heuristic_pressure_limiter) {
+            park_limit(cell_cloud, ws, myConfig);
+            phi_hp = velxPhi; // we could choose any of the variables here
+        }
+
+        string codeForLimits(string qname, string gname, string limFactorname,
+                             string qMaxname, string qMinname)
+        {
+            string code = "{
+            U = cell_cloud[0].fs."~qname~";
+            phi = 1.0;
+            foreach (i, f; cell_cloud[0].iface) {
+                number dx = f.pos.x - cell_cloud[0].pos[gtl].x;
+                number dy = f.pos.y - cell_cloud[0].pos[gtl].y;
+                number dz = f.pos.z - cell_cloud[0].pos[gtl].z;
+                delm = "~gname~"[0] * dx + "~gname~"[1] * dy;
+                if (myConfig.dimensions == 3) { delm += "~gname~"[2] * dz; }
+                delp = (delm >= 0.0) ? 0.5*("~qMaxname~" - U): 0.5*("~qMinname~" - U);
+                s = (2.0*(delm*delp+eps*eps))/(delp*delp+delm*delm+2.0*eps*eps);
+                phi = fmin(phi, s);
+            }
+            "~limFactorname~" = phi*phi_hp;
+            }
+            ";
+            return code;
+        }
+        // x-velocity
+        mixin(codeForLimits("vel.x", "velx", "velxPhi", "velxMax", "velxMin"));
+        mixin(codeForLimits("vel.y", "vely", "velyPhi", "velyMax", "velyMin"));
+        mixin(codeForLimits("vel.z", "velz", "velzPhi", "velzMax", "velzMin"));
+        version(MHD) {
+            if (myConfig.MHD) {
+                mixin(codeForLimits("B.x", "Bx", "BxPhi", "BxMax", "BxMin"));
+                mixin(codeForLimits("B.y", "By", "ByPhi", "ByMax", "ByMin"));
+                mixin(codeForLimits("B.z", "Bz", "BzPhi", "BzMax", "BzMin"));
+                if (myConfig.divergence_cleaning) {
+                    mixin(codeForLimits("psi", "psi", "psiPhi", "psiMax", "psiMin"));
+                }
+            }
+        }
+        version(turbulence) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) {
+                mixin(codeForLimits("turb[it]","turb[it]","turbPhi[it]","turbMax[it]","turbMin[it]"));
+            }
+        }
+        version(multi_species_gas) {
+            auto nsp = myConfig.n_species;
+            if (nsp > 1) {
+                // Multiple species.
+                foreach (isp; 0 .. nsp) {
+                    mixin(codeForLimits("gas.massf[isp]", "massf[isp]", "massfPhi[isp]",
+                                        "massfMax[isp]", "massfMin[isp]"));
+                }
+            } else {
+                // Only one possible gradient value for a single species.
+                massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+            }
+        }
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
+        auto nmodes = myConfig.n_modes;
+        final switch (myConfig.thermo_interpolator) {
+        case InterpolateOption.pt:
+            mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
+            mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
+                                        "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhou:
+            mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
+            mixin(codeForLimits("gas.u", "u", "uPhi", "uMax", "uMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
+                                        "u_modesMax[imode]", "u_modesMin[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhop:
+            mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
+            mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
+                                        "u_modesMax[imode]", "u_modesMin[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhot:
+            mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
+            mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
+                                        "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
+            }
+            break;
+        } // end switch thermo_interpolator
+    } // end van_albada_limit()
 
     @nogc
     void venkat_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
@@ -640,8 +766,7 @@ public:
         //     CFD principles and applications
         //     Third edition, 2007
 
-        number a, b, U, phi, h, s;
-        immutable double w = 1.0e-12;
+        number delp, delm, U, phi, h, s;
         immutable double K = myConfig.venkat_K_value;
         immutable double rel_dif = myConfig.venkat_trigger_value;
         if (myConfig.dimensions == 3) {
@@ -649,21 +774,13 @@ public:
         } else {
             h = sqrt(cell_cloud[0].volume[gtl]);
         }
-        number eps = (K*h) * (K*h) * (K*h);
+        number eps2 = (K*h) * (K*h) * (K*h);
 
-        // Pressure-based smoothing function taken from pg. 33 of N. Gibbons thesis
+        // Park heuristic pressure limiter
         number phi_hp = 1.0;
         if (apply_heuristic_pressure_limiter) {
-            number pMax = cell_cloud[0].fs.gas.p;
-            number pMin = cell_cloud[0].fs.gas.p;
-            foreach (c; cell_cloud) {
-                if (c.is_interior_to_domain) {
-                    pMax = max(pMax, c.fs.gas.p);
-                    pMin = min(pMin, c.fs.gas.p);
-                }
-            }
-            number alpha = fabs(pMax - pMin)/pMin;
-            phi_hp = 1.0/(1.0 + alpha*alpha*alpha*alpha);
+            park_limit(cell_cloud, ws, myConfig);
+            phi_hp = velxPhi; // we could choose any of the variables here
         }
 
         string codeForLimits(string qname, string gname, string limFactorname,
@@ -676,16 +793,15 @@ public:
                 number dx = f.pos.x - cell_cloud[0].pos[gtl].x;
                 number dy = f.pos.y - cell_cloud[0].pos[gtl].y;
                 number dz = f.pos.z - cell_cloud[0].pos[gtl].z;
-                b = "~gname~"[0] * dx + "~gname~"[1] * dy;
-                if (myConfig.dimensions == 3) { b += "~gname~"[2] * dz; }
-                b = copysign(((fabs(b) + w)), b);
+                delm = "~gname~"[0] * dx + "~gname~"[1] * dy;
+                if (myConfig.dimensions == 3) { delm += "~gname~"[2] * dz; }
                 // modification on original algorithm which attempts to prevent
                 // the limiter triggering in regions of very little variation
-                if ( fabs(b/U) < rel_dif ) {
+                if ( fabs((delm+U)/U) < rel_dif ) {
                     phi = fmin(phi, 1.0);
                 } else {
-                    a = (b > 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
-                    s = (a*a + 2.0*b*a + eps)/(a*a + 2.0*b*b + a*b + eps);
+                    delp = (delm >= 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
+                    s = (delp*delp + 2.0*delp*delm + eps2)/(delp*delp + 2.0*delm*delm + delp*delm + eps2);
                     phi = fmin(phi, s);
                 }
             }
@@ -771,7 +887,7 @@ public:
             }
             break;
         } // end switch thermo_interpolator
-    } // end compute_lsq_gradients()
+    } // end venkat_limit()
 
     @nogc
     void park_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
@@ -783,7 +899,7 @@ public:
         //     Anisotropic Output-Based Adaptation with Tetrahedral Cut Cells for Compressible Flows
         //     Thesis @ Massachusetts Institute of Technology, 2008
 
-        number phi;
+        number phi, pmin;
         FVCell ncell;
         string codeForLimits(string qname, string gname, string limFactorname,
                              string qMaxname, string qMinname)
@@ -809,9 +925,9 @@ public:
                 number dp = dpx*dpx + dpy*dpy;
                 if (myConfig.dimensions == 3) { dp += dpz*dpz; }
                 dp = sqrt(dp);
-                number s = 1-tanh((dp)/(fmin(cell_cloud[0].fs.gas.p, ncell.fs.gas.p)));
-                phi = min(phi, s);
-                phi = max(phi, to!number(0.0));
+                pmin = fmin(cell_cloud[0].fs.gas.p, ncell.fs.gas.p);
+                number s = 1-tanh(dp/pmin);
+                phi = fmin(phi, s);
             }
             "~limFactorname~" = phi;
             }
@@ -896,7 +1012,7 @@ public:
             break;
         } // end switch thermo_interpolator
         return;
-    } // end compute_lsq_gradients()
+    } // end park_limit()
 
     @nogc
     void compute_lsq_values(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
@@ -1087,7 +1203,7 @@ public:
                 mygradR[2] = cR0.gradients."~gname~"[2];
                 if (myConfig.apply_limiter) {
                     final switch (myConfig.unstructured_limiter) {
-                    case UnstructuredLimiter.van_albada:
+                    case UnstructuredLimiter.van_albada2:
                         van_albada_limit(mygradL[0], mygradR[0]);
                         van_albada_limit(mygradL[1], mygradR[1]);
                         van_albada_limit(mygradL[2], mygradR[2]);
@@ -1098,6 +1214,10 @@ public:
                         min_mod_limit(mygradL[2], mygradR[2]);
                         break;
                     case UnstructuredLimiter.mlp:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.hvan_albada:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.van_albada:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.barth:
                         goto case UnstructuredLimiter.venkat;
@@ -1318,11 +1438,15 @@ public:
                 mygradR[2] = cR0.gradients."~gname~"[2];
                 if (myConfig.apply_limiter && myConfig.extrema_clipping) {
                     final switch (myConfig.unstructured_limiter) {
-                    case UnstructuredLimiter.van_albada:
+                    case UnstructuredLimiter.van_albada2:
                         break;
                     case UnstructuredLimiter.min_mod:
                         break;
                     case UnstructuredLimiter.mlp:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.hvan_albada:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.van_albada:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.barth:
                         goto case UnstructuredLimiter.venkat;
@@ -1512,11 +1636,15 @@ public:
                 mygradL[2] = cL0.gradients."~gname~"[2];
                 if (myConfig.apply_limiter && myConfig.extrema_clipping) {
                     final switch (myConfig.unstructured_limiter) {
-                    case UnstructuredLimiter.van_albada:
+                    case UnstructuredLimiter.van_albada2:
                         break;
                     case UnstructuredLimiter.min_mod:
                         break;
                     case UnstructuredLimiter.mlp:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.hvan_albada:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.van_albada:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.barth:
                         goto case UnstructuredLimiter.venkat;

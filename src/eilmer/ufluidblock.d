@@ -763,7 +763,7 @@ public:
                 foreach (c; cell_list) {
                     // It is more efficient to determine limiting factor here for some usg limiters.
                     final switch (myConfig.unstructured_limiter) {
-                        case UnstructuredLimiter.van_albada:
+                        case UnstructuredLimiter.van_albada2:
                             // do nothing now
                             break;
                         case UnstructuredLimiter.min_mod:
@@ -771,6 +771,12 @@ public:
                             break;
                         case UnstructuredLimiter.mlp:
                             c.gradients.mlp_limit(c.cell_cloud, c.ws, myConfig);
+                            break;
+                        case UnstructuredLimiter.hvan_albada:
+                            c.gradients.van_albada_limit(c.cell_cloud, c.ws, true, myConfig);
+                            break;
+                        case UnstructuredLimiter.van_albada:
+                            c.gradients.van_albada_limit(c.cell_cloud, c.ws, false, myConfig);
                             break;
                         case UnstructuredLimiter.barth:
                             c.gradients.barth_limit(c.cell_cloud, c.ws, myConfig);
