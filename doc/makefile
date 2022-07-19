@@ -29,6 +29,7 @@ EILMER_CATALOG_ENTRIES := $(EXAMPLES_DIR)/2D/forward-facing-step/readme.adoc \
 	$(EXAMPLES_DIR)/2D/sphere-nonaka/readme.adoc \
 	$(EXAMPLES_DIR)/2D/foil-circular-arc-transonic/readme.adoc \
 	$(EXAMPLES_DIR)/2D/flat-plate-hakkinen-swbli/readme.adoc \
+	$(EXAMPLES_DIR)/2D/cylinder-type-iv-shock/readme.adoc \
 	$(EXAMPLES_DIR)/2D/nozzle-conical-back/readme.adoc
 
 

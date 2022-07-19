@@ -1,0 +1,24 @@
+== 2D/cylinder-type-iv-shock
+:stem:
+
+image::cylinder-type-iv-shock-interference-1.svg[width=100%,caption="Mach 10 flow over a cylinder with interference from an oblique shock."]
+
+The peak impingement pressure and heat-transfer to a cylinder can be amplified by more than an order of magnitude by having an oblique shock interact with the bow shock over the cylinder.  This example models the flow discussed in Glass [1] and Moss et al. [2] and the experiment of Pot et al. [3].  The position of the oblique shock has been set to produce a Type IV pattern of interference, which results in the impingement of a hot jet on the cylinder surface at about 30 degrees below the horizontal axis.
+
+image::cylinder-type-iv-shock-interference-2.svg[width=100%,caption="Upper profiles show the surface pressure and heat transfer for the cylinder in the flow with shock interference.  The lower profiles show the corresponding surface pressure and heat-transfer for the same cylinder without the interfering oblique shock."]
+
+References:
+
+1.  *C. E. Glass* (1999), +
+    _Numerical Simulation of Low-Density Shock-Wave Interactions_, +
+    NASA/TM-1999-209358.
+
+2.  *J. N. Moss, T. Pot, B. Chanetz and M. Lefebre* (1999), +
+    _DSMC Simulation of Shock/Shock Interactions: Emphasis on Type IV Interactions_, +
+    https://ntrs.nasa.gov/citations/20040086965
+
+3.  *T. Pot, B. Chanetz, M. Lefebre and P. Bouchardy* (1999), +
+    _Fundamental Study of Shock/Shock Interference in Low Density Flow: Flowfield Measurements by DLCARS._, +
+    Proceedings of the 21st International Symposium on Rarefied Gas Dynamics, +
+    Marseille, 26-31 July 1998. Volume 2, pages 545-552.
+

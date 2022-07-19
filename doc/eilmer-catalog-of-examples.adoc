@@ -49,6 +49,8 @@ include::{examplesdir}/eilmer/2D/shear-layer-periodic/readme.adoc[]
 
 include::{examplesdir}/eilmer/2D/flat-plate-hakkinen-swbli/readme.adoc[]
 
+include::{examplesdir}/eilmer/2D/cylinder-type-iv-shock/readme.adoc[]
+
 = Turbulent flows of perfect gases
 
 include::{examplesdir}/eilmer/2D/flat-plate-turbulent-larc/nk-5.45Tw-sa/readme.adoc[]
