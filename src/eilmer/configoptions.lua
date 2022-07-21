@@ -23,6 +23,7 @@ configOptionsHidden = { -- hidden from user
    nFluidBlocks = 0,
    dimensions = 2,
    axisymmetric = false,
+   gravity = {x=0.0, y=0.0, z=0.0},
    --
    MHD = false,
    MHD_static_field = false,

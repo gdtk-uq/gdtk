@@ -90,6 +90,12 @@ struct Vector3 {
         return this;
     }
 
+    @nogc ref Vector3 set(number[] xyz) return
+    {
+        this.x = xyz[0]; this.y = xyz[1]; this.z = xyz[2];
+        return this;
+    }
+
     version(complex_numbers) {
         // We want to retain the flavour with double numbers.
         @nogc ref Vector3 set(double x, double y, double z=0.0) return
@@ -97,6 +103,12 @@ struct Vector3 {
         // Note that we may supply just the x,y coordinates.
         {
             this.x = x; this.y = y; this.z = z;
+            return this;
+        }
+
+        @nogc ref Vector3 set(double[] xyz) return
+        {
+            this.x = xyz[0]; this.y = xyz[1]; this.z = xyz[2];
             return this;
         }
 

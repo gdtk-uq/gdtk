@@ -1142,6 +1142,15 @@ public:
             // pressure contribution from the Front and Back (radial) interfaces.
             Q.vec[cqi.yMom] += fs.gas.p * areaxy[gtl] / volume[gtl];
         }
+        if (myConfig.gravity_non_zero) {
+            number rho = fs.gas.rho;
+            // Force per unit volume.
+            Q.vec[cqi.xMom] += myConfig.gravity.x * rho;
+            Q.vec[cqi.yMom] += myConfig.gravity.y * rho;
+            Q.vec[cqi.zMom] += myConfig.gravity.z * rho;
+            // Work done per unit volume.
+            Q.vec[cqi.totEnergy] += rho * dot(myConfig.gravity, fs.vel);
+        }
         // Species production (other than chemistry).
         // For the chemistry and other-internal energy exchange,
         // see thermochemical_increment().

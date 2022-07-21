@@ -842,6 +842,8 @@ final class GlobalConfig {
     shared static int nSolidBlocks = 0; // Number of solid blocks in the overall simulation.
     shared static int dimensions = 2; // default is 2, other valid option is 3
     shared static bool axisymmetric = false;
+    shared static bool gravity_non_zero = false;
+    shared static double gravity_x = 0.0, gravity_y = 0.0, gravity_z = 0.0; // N/kg
     static ConservedQuantitiesIndices cqi;
     shared static int nFluidBlockArrays = 0;
     //
@@ -1273,6 +1275,8 @@ public:
     //
     int dimensions;
     bool axisymmetric;
+    bool gravity_non_zero;
+    Vector3 gravity;
     ConservedQuantitiesIndices cqi;
     GasdynamicUpdate gasdynamic_update_scheme;
     size_t n_flow_time_levels;
@@ -1343,17 +1347,17 @@ public:
     double divB_damping_length;
     bool solve_electric_field;
     string field_conductivity_model;
-
+    //
     bool viscous;
     bool use_viscosity_from_cells;
     bool save_viscous_gradients;
     bool save_limiter_values;
     bool save_residual_values;
-    
+    //
     int nic_write;
     int njc_write;
     int nkc_write;
-
+    //
     SpatialDerivCalc spatial_deriv_calc;
     SpatialDerivLocn spatial_deriv_locn;
     bool include_ghost_cells_in_spatial_deriv_clouds;
@@ -1431,6 +1435,8 @@ public:
         new_flow_format = cfg.new_flow_format;
         dimensions = cfg.dimensions;
         axisymmetric = cfg.axisymmetric;
+        gravity_non_zero = cfg.gravity_non_zero;
+        if (gravity_non_zero) { gravity.set(cfg.gravity_x, cfg.gravity_y, cfg.gravity_z); }
         // Sometimes this constructor is called and GlobalConfig will not have been completely initialized.
         // Presumably these times, not all of the GlobalConfig is needed, so press on doing what can be done.
         if (cfg.cqi) { cqi = new ConservedQuantitiesIndices(cfg.cqi); }
@@ -1728,6 +1734,10 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("include_quality", "include_quality"));
     mixin(update_int("dimensions", "dimensions"));
     mixin(update_bool("axisymmetric", "axisymmetric"));
+    double[] components_default = [0.0, 0.0, 0.0];
+    double[] components = getJSONdoublearray(jsonData, "gravity", components_default);
+    cfg.gravity_x = components[0]; cfg.gravity_y = components[1]; cfg.gravity_z = components[2];
+    cfg.gravity_non_zero = !((cfg.gravity_x == 0.0) && (cfg.gravity_y == 0.0) && (cfg.gravity_z == 0.0));
     if (cfg.verbosity_level > 1) {
         writeln("  grid_format: ", to!string(cfg.grid_format));
         writeln("  flow_format: ", to!string(cfg.flow_format));
@@ -1741,6 +1751,8 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  include_quality: ", cfg.include_quality);
         writeln("  dimensions: ", cfg.dimensions);
         writeln("  axisymmetric: ", cfg.axisymmetric);
+        writeln("  gravity_non_zero: ", cfg.gravity_non_zero);
+        writeln(format("  gravity: [%e, %e, %e]", cfg.gravity_x, cfg.gravity_y, cfg.gravity_z));
     }
     //
     // Parameter controlling Strang splitting mode
