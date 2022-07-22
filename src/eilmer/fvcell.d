@@ -1147,7 +1147,7 @@ public:
             // Force per unit volume.
             Q.vec[cqi.xMom] += myConfig.gravity.x * rho;
             Q.vec[cqi.yMom] += myConfig.gravity.y * rho;
-            Q.vec[cqi.zMom] += myConfig.gravity.z * rho;
+            if (cqi.threeD) { Q.vec[cqi.zMom] += myConfig.gravity.z * rho; }
             // Work done per unit volume.
             Q.vec[cqi.totEnergy] += rho * dot(myConfig.gravity, fs.vel);
         }
