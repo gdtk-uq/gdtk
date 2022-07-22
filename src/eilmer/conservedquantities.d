@@ -74,26 +74,6 @@ public:
         }
     } // end version(complex_numbers)
 
-
-    /+ Retain the old named items code, just for reference as we make the changes.
-    number mass;           // density, kg/m**3
-    Vector3 momentum;      // momentum/unit volume
-    number total_energy;   // total energy
-    version(multi_species_gas) {
-        number[] massf;    // densities of each chemical species
-    }
-    version(multi_T_gas) {
-        number[] energies; // modal energies
-    }
-    version(MHD) {
-        Vector3 B;         // magnetic field, Tesla
-        number psi;        // divergence cleaning parameter for MHD
-        number divB;       // divergence of the magnetic field
-    }
-    version(turbulence) {
-        number[2] rhoturb;    // turbulent conserved
-    }
-    +/
 } // end class ConservedQuantities
 
 
@@ -175,7 +155,8 @@ public:
             // we still need the mass in the conserved quantities vector in some places of the code
             mass = n;
             n += 1;
-        } else { // fill out the array using our standard ordering
+        } else {
+            // fill out the array using our standard ordering (for the transient code)
             mass = 0;
             xMom = 1;
             yMom = 2;
