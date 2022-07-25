@@ -691,17 +691,14 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
 
     // compute Roe-average state
     number uhat = (sqrt(rL)*uL+sqrt(rR)*uR) / (sqrt(rL) + sqrt(rR));
-    number vhat = (sqrt(rL)*vL+sqrt(rR)*vR) / (sqrt(rL) + sqrt(rR));
-    number what = (sqrt(rL)*wL+sqrt(rR)*wR) / (sqrt(rL) + sqrt(rR));
-    number Hhat = (sqrt(rL)*HL+sqrt(rR)*HR) / (sqrt(rL) + sqrt(rR));
-    number kehat = 0.5*(uhat*uhat+vhat*vhat+what*what);
     number ghat = (sqrt(rL)*gL+sqrt(rR)*gR) / (sqrt(rL) + sqrt(rR));
-    number ahat2 = (ghat-1.0)*(Hhat-kehat);
+    number ahat2 = ((sqrt(rL)*aL*aL+sqrt(rR)*aR*aR) / (sqrt(rL) + sqrt(rR))) +
+        0.5*(ghat-1.0)*((sqrt(rL)+sqrt(rR)) / sqrt((sqrt(rL) + sqrt(rR))))*(uR-uL)*(uR-uL);
     number ahat = sqrt(ahat2);
 
-    // compute wave estimates
-    number SL = fmin(uhat-ahat, uL-aL);
-    number SR = fmax(uhat+ahat, uR+aR);
+    // compute wave speed estimates
+    number SL = fmin(uL-aL, uhat-ahat);
+    number SR = fmax(uR+aR, uhat+ahat);
     number S_star = (pR - pL + rL*uL*(SL - uL) - rR*uR*(SR - uR))/(rL*(SL - uL) - rR*(SR - uR));
 
     // compute HLLC flux
