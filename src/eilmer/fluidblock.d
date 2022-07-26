@@ -515,9 +515,9 @@ public:
         // detector value into faces so we have static data to work from.
         foreach (face; faces) {
             if (face.fs.S == 1.0) continue;
-            if (!face.left_cell.is_interior_to_domain) {
+            if (!face.left_cell || !face.left_cell.is_interior_to_domain) {
                 face.fs.S = face.right_cell.fs.S;
-            } else if (!face.right_cell.is_interior_to_domain) {
+            } else if (!face.right_cell || !face.right_cell.is_interior_to_domain) {
                 face.fs.S = face.left_cell.fs.S;
             } else {
                 face.fs.S = fmax(face.left_cell.fs.S, face.right_cell.fs.S);
@@ -539,10 +539,18 @@ public:
     @nogc
     void shock_cells_to_faces()
     // Mark faces as shocked if either attached cell is shocked
-    //
+    // Note: Changed 26/07/22 by NNG to add guards for missing ghost cells.
+    //       Consider revising for efficiency, by preallocating a list of left onlies
+    //       and a list of right onlies, and a list of faces with both.
     {
-        foreach(face; faces) {
-            face.fs.S = fmax(face.left_cell.fs.S, face.right_cell.fs.S);
+        foreach (face; faces) {
+            if (!face.left_cell || !face.left_cell.is_interior_to_domain) {
+                face.fs.S = face.right_cell.fs.S;
+            } else if (!face.right_cell || !face.right_cell.is_interior_to_domain) {
+                face.fs.S = face.left_cell.fs.S;
+            } else {
+                face.fs.S = fmax(face.left_cell.fs.S, face.right_cell.fs.S);
+            }
         }
     } // end shock_cells_to_faces()
 
