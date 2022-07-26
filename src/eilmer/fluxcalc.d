@@ -474,11 +474,19 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
 void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
 // Wada and Liou's flux calculator.
 //
-// Implemented from details in their AIAA paper
-// with hints from Ian Johnston.
-// Y. Wada and M. -S. Liou (1994)
-// A flux splitting scheme with high-resolution and robustness for discontinuities.
-// AIAA-94-0083.
+// Implemented from details in their AIAA paper (ref. [1]) with hints from Ian Johnston.
+// Note that we don't calculate the complete numerical flux via eqn 12 and eqn 17 from ref. [1],
+// instead the mass flux is calculated as per ref. [1] and then the remaining conserved quantities are
+// upwinded via the mass flux direction, similar to the description from ref. [2] (eqn 39 and eqn 40).
+//
+// references:
+// [1] Y. Wada and M. S. Liou (1994)
+//     A flux splitting scheme with high-resolution and robustness for discontinuities.
+//     AIAA-94-0083.
+// [2] M. Liou
+//     Low-diffusion flux-splitting methods for real fluid flows with phase transitions
+//     AIAA Journal, Vol. 38, No. 9, September 2000
+//
 {
     auto gmodel = myConfig.gmodel;
     // Unpack the flow-state vectors for either side of the interface.
@@ -640,16 +648,19 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
 
 @nogc
 void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
-// HLLC flux calculator.
+// The HLLC approximate Riemann solver from ref. [1] with Einfeldt's wave speed estimates (HLLE) from
+// ref. [2]. The actual implementation is based on the details from ref. [3] as noted.
 //
-// Implemented from details in
-//     Toro (2009)
-//     Riemann solvers and numerical methods for fluid dynamics,
-//     textbook on pg. 331-332.
-// and
-//     E. F. Toro, M. Spruce, and W. Speares
+// references:
+// [1] E. F. Toro, M. Spruce, and W. Speares
 //     Restoration of the contact surface in the HLL-Riemann solver
-//     Shock Waves (1994)
+//     Shock Waves, Vol. 4, 1994
+// [2] B. Einfeldt
+//     On Godunov-Type Methods for Gas Dynamics
+//     SIAM Journal Numerical Analysis, Vol. 25, No. 2, April 1988
+// [3] E. F. Toro
+//     Riemann Solvers and Numerical Methods for Fluid Dynamics
+//     Springer, 2009
 //
 {
     auto gmodel = myConfig.gmodel;
@@ -689,19 +700,20 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
     }
     //
 
-    // compute Roe-average state
+    // compute Roe-average state (eqn 10.50, 10.53, and 10.54 from ref. [3])
     number uhat = (sqrt(rL)*uL+sqrt(rR)*uR) / (sqrt(rL) + sqrt(rR));
     number ghat = (sqrt(rL)*gL+sqrt(rR)*gR) / (sqrt(rL) + sqrt(rR));
     number ahat2 = ((sqrt(rL)*aL*aL+sqrt(rR)*aR*aR) / (sqrt(rL) + sqrt(rR))) +
         0.5*(ghat-1.0)*((sqrt(rL)+sqrt(rR)) / sqrt((sqrt(rL) + sqrt(rR))))*(uR-uL)*(uR-uL);
     number ahat = sqrt(ahat2);
 
-    // compute wave speed estimates
+    // compute wave speed estimates (eqn 10.52 from ref. [3])
     number SL = fmin(uL-aL, uhat-ahat);
     number SR = fmax(uR+aR, uhat+ahat);
+    // The middle or star state wave speed estimate is computer using eqn 10.37 from ref. [3]
     number S_star = (pR - pL + rL*uL*(SL - uL) - rR*uR*(SR - uR))/(rL*(SL - uL) - rR*(SR - uR));
 
-    // compute HLLC flux
+    // compute HLLC flux using eqn 10.71, 10.72, and 10.73 from ref. [3]
     ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
     // a helper function that evaluates the HLLC fluxes used to reduce repeated code
@@ -800,12 +812,11 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
 
 @nogc
 void ldfss0(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
-// Jack Edwards' LDFSS (variant 0) flux calculator.
+// Jack Edwards' LDFSS (variant 0) flux calculator, implementation details are taken from ref. [1].
 //
-// Implemented from details in
-//     Jack R. Edwards (1997)
+// [1] Jack R. Edwards
 //     A low-diffusion flux-splitting scheme for Navier-Stokes calculations.
-//     Computers & Fluids paper.
+//     Computers & Fluids, Vol. 26, No. 6, pp. 635-659, 1997
 //
 {
     auto gmodel = myConfig.gmodel;
@@ -891,12 +902,15 @@ void ldfss0(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
 
 @nogc
 void ldfss2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
-// Jack Edwards' LDFSS (variant 2) flux calculator.
+// Jack Edwards' LDFSS (variant 2) flux calculator, implementation details are mostly taken from ref. [1],
+// with some details taken from ref. [2] where noted.
 //
-// Implemented from details in
-//     Jack R. Edwards (1997)
+// [1] Jack R. Edwards
 //     A low-diffusion flux-splitting scheme for Navier-Stokes calculations.
-//     Computers & Fluids paper.
+//     Computers & Fluids, Vol. 26, No. 6, pp. 635-659, 1997
+// [2] Christopher John Roy
+//     A computational study of turbulent reacting flowfields for scramjet applications
+//     North Carolina State University, 1998
 //
 {
     auto gmodel = myConfig.gmodel;
@@ -954,6 +968,7 @@ void ldfss2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
                         // supression (favourable for blunt-body flows), but can also
                         // cause smearing of oblique shocks.
     number Mhalf = 0.25*betaL*betaR*(sqrt(0.5*(ML^^2+MR^^2))-1.0)^^2;
+    // here we opt to use the more recent MhalfL and MhalfR equations (eqn 4.79 and eqn 4.80 from ref. [2])
     number MhalfL = Mhalf * (1.0 - ((pL-pR)/(pL+pR) + delta*(fabs(pL-pR)/pL)));
     number MhalfR = Mhalf * (1.0 + ((pL-pR)/(pL+pR) - delta*(fabs(pL-pR)/pR)));
     // C parameter for LDFSS (2) (eqn 13 & eqn 14 & eqn 26 & eqn 27)
@@ -992,14 +1007,16 @@ void ldfss2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
 
 @nogc
 void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
-// Hanel's flux calculator.
+// Hanel, Schwane, and Seider's FVS flux calculator introduced in ref. [2].
+// The algorithm is implemented from details taken from ref. [1].
 //
-// Implemented from Y. Wada and M. S. Liou details in their AIAA paper
-//     Y. Wada and M. -S. Liou (1997)
+// references:
+// [1] Y. Wada and M. S. Liou
 //     An accurate and robust flux splitting scheme for shock and contact discontinuities.
-// with reference to....
-//    Hanel, Schwane, & Seider's 1987 paper
-//    On the accuracy of upwind schemes for the solution of the Navier-Stokes equations
+//     SIAM J. SCI. COMPUT. Vol. 18, No. 3, pp. 633–657, May 1997
+// [2] Hanel, Schwane, and Seider
+//     On the accuracy of upwind schemes for the solution of the Navier-Stokes equations
+//     8th Computational Fluid Dynamics Conference, June 1987
 //
 {
     auto gmodel = myConfig.gmodel;
@@ -1054,7 +1071,7 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
         uRminus = 0.5*(uR-fabs(uR));
         pRminus = pR*uRminus * (1.0/uR);
     }
-    // The mass flux is relative to the moving interface.
+    // The mass flux
     number ru_half = uLplus * rL + uRminus * rR;
     number ru2_half = uLplus * rL * uL + uRminus * rR * uR;
     // Pressure flux (eqn 8)
@@ -1730,16 +1747,22 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
 
 @nogc
 void hlle2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
-// Einfedlt's HLLE flux calculator.
+// The Harten-Lax-van Leer Riemann solver (HLL) from ref. [1] with Einfeldt's wave speed estimates (HLLE) from
+// ref. [2]. The actual implementation is based on the details from ref. [3] and ref. [4] as noted.
 //
-// Implemented from details in
-//     B. Einfeldt, C. D. Munz, P. L. Roe, and B. Sjogreen
-//     On Godunov-Type Methods near Low Densities
-//     Journal of Computational Physics (1991)
-// and
-//     B. Einfeldt
+// references:
+// [1] A. Harten, P. D. Lax, and B. van Leer
+//     On upstream differencing and Godunov-type schemes for hyperbolic conservation laws
+//     SIAM Review, Vol. 25, No. 1, January 1983
+// [2] B. Einfeldt
 //     On Godunov-Type Methods for Gas Dynamics
-//     SIAM Journal Numerical Analysis (1988)
+//     SIAM Journal Numerical Analysis, Vol. 25, No. 2, April 1988
+// [3] E. F. Toro, M. Spruce, and W. Speares
+//     Restoration of the contact surface in the HLL-Riemann solver
+//     Shock Waves, Vol. 4, 1994
+// [4] E. F. Toro
+//     Riemann Solvers and Numerical Methods for Fluid Dynamics
+//     Springer, 2009
 //
 {
     auto gmodel = myConfig.gmodel;
@@ -1772,18 +1795,18 @@ void hlle2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     version(turbulence) { HR += myConfig.turb_model.turbulent_kinetic_energy(Rght); }
     //
 
-    // compute Roe-average state
+    // compute Roe-average state (eqn 10.50, 10.53, and 10.54 from ref. [4])
     number uhat = (sqrt(rL)*uL+sqrt(rR)*uR) / (sqrt(rL) + sqrt(rR));
     number ghat = (sqrt(rL)*gL+sqrt(rR)*gR) / (sqrt(rL) + sqrt(rR));
     number ahat2 = ((sqrt(rL)*aL*aL+sqrt(rR)*aR*aR) / (sqrt(rL) + sqrt(rR))) +
         0.5*(ghat-1.0)*((sqrt(rL)+sqrt(rR)) / sqrt((sqrt(rL) + sqrt(rR))))*(uR-uL)*(uR-uL);
     number ahat = sqrt(ahat2);
 
-    // compute wave speed estimates
+    // compute wave speed estimates (eqn 10.52 from ref. [4])
     number SLm = fmin(uL-aL, uhat-ahat);
     number SRp = fmax(uR+aR, uhat+ahat);
 
-    // compute HLLE flux
+    // compute HLLE flux (eqn 9 from ref. [3])
     ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
     if (SLm >= 0) {
