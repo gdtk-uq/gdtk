@@ -947,15 +947,15 @@ void ldfss2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     number DL = alphaL*(1.0+betaL) - betaL*PL;
     number DR = alphaR*(1.0+betaR) - betaR*PR;
     // M_1/2 parameters for LDFSS (1,2) (eqn 20 & eqn 28 & eqn 29)
-    number delta = 1.0; // weighting parameter to suppress 'carbuncle' phenomena
+    number delta = 2.0; // weighting parameter to suppress 'carbuncle' phenomena
                         // while preserving the beneficial traits of the scheme
                         // in the capturing of discontinuities. Choice of delta
                         // is not obvious. Higher values are better at 'carbuncle'
                         // supression (favourable for blunt-body flows), but can also
                         // cause smearing of oblique shocks.
     number Mhalf = 0.25*betaL*betaR*(sqrt(0.5*(ML^^2+MR^^2))-1.0)^^2;
-    number MhalfL = Mhalf * (2*pR/(pL+pR) - delta*(fabs(pL-pR)/pL));
-    number MhalfR = Mhalf * (2*pL/(pL+pR) - delta*(fabs(pL-pR)/pR));
+    number MhalfL = Mhalf * (1.0 - ((pL-pR)/(pL+pR) + delta*(fabs(pL-pR)/pL)));
+    number MhalfR = Mhalf * (1.0 + ((pL-pR)/(pL+pR) - delta*(fabs(pL-pR)/pR)));
     // C parameter for LDFSS (2) (eqn 13 & eqn 14 & eqn 26 & eqn 27)
     number CL = alphaL*(1.0+betaL)*ML - betaL*MpL - MhalfL;
     number CR = alphaR*(1.0+betaR)*MR - betaR*MmR + MhalfR;
