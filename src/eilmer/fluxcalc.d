@@ -651,6 +651,8 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
 // The HLLC approximate Riemann solver from ref. [1] with Einfeldt's wave speed estimates (HLLE) from
 // ref. [2]. The actual implementation is based on the details from ref. [3] as noted.
 //
+// Note: to preserve mass fraction positivity we evaluate the species mass fractions as per ref. [4].
+//
 // references:
 // [1] E. F. Toro, M. Spruce, and W. Speares
 //     Restoration of the contact surface in the HLL-Riemann solver
@@ -661,6 +663,9 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
 // [3] E. F. Toro
 //     Riemann Solvers and Numerical Methods for Fluid Dynamics
 //     Springer, 2009
+// [4] B. Larrouturou
+//     How to Preserve the Mass Fractions Positivity when Computing Compressible Multi-component Flows
+//     Journal of Computational Physics, Vol 95, pp 59-84
 //
 {
     auto gmodel = myConfig.gmodel;
@@ -722,8 +727,10 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
         number F_mass = r*u;
         number U_mass = r;
         number U_star_mass = coeff;
-        if (star_region) { F.vec[cqi.mass] += factor*(F_mass + S*(U_star_mass - U_mass)); }
-        else { F.vec[cqi.mass] += factor*(F_mass); }
+        number ru_half; // we need this value later for species densities
+        if (star_region) { ru_half = F_mass + S*(U_star_mass - U_mass); }
+        else { ru_half = F_mass; }
+        F.vec[cqi.mass] += factor*ru_half;
         // momentum
         // x
         number F_momx = r*u*u + p;
@@ -765,12 +772,10 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
         // multi-species
         version(multi_species_gas) {
             if (cqi.n_species > 1) {
-                foreach (i; 0 .. cqi.n_species) {
-                    number F_massf = r*u*state.gas.massf[i];
-                    number U_massf = r*state.gas.massf[i];
-                    number U_star_massf = coeff*state.gas.massf[i];
-                    if (star_region) { F.vec[cqi.species+i] += factor*(F_massf + S*(U_star_massf - U_massf)); }
-                    else { F.vec[cqi.species+i] += factor*(F_massf); }
+                if (ru_half >= 0.0) {
+                    foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += factor*(ru_half*Lft.gas.massf[i]); }
+                } else {
+                    foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += factor*(ru_half*Rght.gas.massf[i]); }
                 }
             }
         }
@@ -814,9 +819,15 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
 void ldfss0(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
 // Jack Edwards' LDFSS (variant 0) flux calculator, implementation details are taken from ref. [1].
 //
+// Note: to preserve mass fraction positivity we evaluate the species mass fractions as per ref. [2].
+//
 // [1] Jack R. Edwards
 //     A low-diffusion flux-splitting scheme for Navier-Stokes calculations.
 //     Computers & Fluids, Vol. 26, No. 6, pp. 635-659, 1997
+//     North Carolina State University, 1998
+// [2] B. Larrouturou
+//     How to Preserve the Mass Fractions Positivity when Computing Compressible Multi-component Flows
+//     Journal of Computational Physics, Vol 95, pp 59-84
 //
 {
     auto gmodel = myConfig.gmodel;
@@ -888,8 +899,10 @@ void ldfss0(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     }
     version(multi_species_gas) {
         if (cqi.n_species > 1) {
-            foreach (i; 0 .. cqi.n_species) {
-                F.vec[cqi.species+i] += factor*(aL*rL*CL*Lft.gas.massf[i] + aR*rR*CR*Rght.gas.massf[i]);
+            if (ru_half >= 0.0) {
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += factor*(ru_half*Lft.gas.massf[i]); }
+            } else {
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += factor*(ru_half*Rght.gas.massf[i]); }
             }
         }
     }
@@ -905,13 +918,17 @@ void ldfss2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
 // Jack Edwards' LDFSS (variant 2) flux calculator, implementation details are mostly taken from ref. [1],
 // with some details taken from ref. [2] where noted.
 //
+// Note: to preserve mass fraction positivity we evaluate the species mass fractions as per ref. [3].
+//
 // [1] Jack R. Edwards
 //     A low-diffusion flux-splitting scheme for Navier-Stokes calculations.
 //     Computers & Fluids, Vol. 26, No. 6, pp. 635-659, 1997
 // [2] Christopher John Roy
 //     A computational study of turbulent reacting flowfields for scramjet applications
 //     North Carolina State University, 1998
-//
+// [3] B. Larrouturou
+//     How to Preserve the Mass Fractions Positivity when Computing Compressible Multi-component Flows
+//     Journal of Computational Physics, Vol 95, pp 59-84
 {
     auto gmodel = myConfig.gmodel;
     // Unpack the flow-state vectors for either side of the interface.
@@ -993,8 +1010,10 @@ void ldfss2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     }
     version(multi_species_gas) {
         if (cqi.n_species > 1) {
-            foreach (i; 0 .. cqi.n_species) {
-                F.vec[cqi.species+i] += factor*(am*rL*CL*Lft.gas.massf[i] + am*rR*CR*Rght.gas.massf[i]);
+            if (ru_half >= 0.0) {
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += factor*(ru_half*Lft.gas.massf[i]); }
+            } else {
+                foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += factor*(ru_half*Rght.gas.massf[i]); }
             }
         }
     }
@@ -1010,6 +1029,8 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
 // Hanel, Schwane, and Seider's FVS flux calculator introduced in ref. [2].
 // The algorithm is implemented from details taken from ref. [1].
 //
+// Note: as discussed in ref. [3], van Leer schemes (of which this scheme is a member of) do not need any special treatment to preserve mass fraction positivity.
+//
 // references:
 // [1] Y. Wada and M. S. Liou
 //     An accurate and robust flux splitting scheme for shock and contact discontinuities.
@@ -1017,6 +1038,9 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
 // [2] Hanel, Schwane, and Seider
 //     On the accuracy of upwind schemes for the solution of the Navier-Stokes equations
 //     8th Computational Fluid Dynamics Conference, June 1987
+// [3] B. Larrouturou
+//     How to Preserve the Mass Fractions Positivity when Computing Compressible Multi-component Flows
+//     Journal of Computational Physics, Vol 95, pp 59-84
 //
 {
     auto gmodel = myConfig.gmodel;
@@ -1750,6 +1774,8 @@ void hlle2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
 // The Harten-Lax-van Leer Riemann solver (HLL) from ref. [1] with Einfeldt's wave speed estimates (HLLE) from
 // ref. [2]. The actual implementation is based on the details from ref. [3] and ref. [4] as noted.
 //
+// Note: to preserve mass fraction positivity we evaluate the species mass fractions as per ref. [5].
+//
 // references:
 // [1] A. Harten, P. D. Lax, and B. van Leer
 //     On upstream differencing and Godunov-type schemes for hyperbolic conservation laws
@@ -1763,6 +1789,9 @@ void hlle2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
 // [4] E. F. Toro
 //     Riemann Solvers and Numerical Methods for Fluid Dynamics
 //     Springer, 2009
+// [5] B. Larrouturou
+//     How to Preserve the Mass Fractions Positivity when Computing Compressible Multi-component Flows
+//     Journal of Computational Physics, Vol 95, pp 59-84
 //
 {
     auto gmodel = myConfig.gmodel;
@@ -1859,7 +1888,8 @@ void hlle2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
         }
     } else  {
         // subsonic flow
-        F.vec[cqi.mass] += factor*(( SRp*rL*uL - SLm*rR*uR + SLm*SRp*(rR-rL) )/(SRp-SLm));
+        number ru_half = ( SRp*rL*uL - SLm*rR*uR + SLm*SRp*(rR-rL) )/(SRp-SLm);  // we need this value later for species densities
+        F.vec[cqi.mass] += factor*ru_half;
         F.vec[cqi.xMom] += factor*(( SRp*(rL*uL*uL+pL) - SLm*(rR*uR*uR+pR) + SLm*SRp*(rR*uR-rL*uL) )/(SRp-SLm));
         F.vec[cqi.yMom] += factor*(( SRp*(rL*uL*vL) - SLm*(rR*uR*vR) + SLm*SRp*(rR*vR-rL*vL) )/(SRp-SLm));
         if (cqi.threeD) { F.vec[cqi.yMom] += factor*(( SRp*(rL*uL*wL) - SLm*(rR*uR*wR) + SLm*SRp*(rR*wR-rL*wL) )/(SRp-SLm)); }
@@ -1872,10 +1902,10 @@ void hlle2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
         }
         version(multi_species_gas) {
             if (cqi.n_species > 1) {
-                foreach (i; 0 .. cqi.n_species) {
-                    F.vec[cqi.species+i] += factor*(( SRp*(rL*uL*Lft.gas.massf[i]) -
-                                                      SLm*(rR*uR*Rght.gas.massf[i]) +
-                                                      SLm*SRp*(rR*Rght.gas.massf[i]-rL*Lft.gas.massf[i]) )/(SRp-SLm));
+                if (ru_half >= 0.0) {
+                    foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += factor*(ru_half*Lft.gas.massf[i]); }
+                } else {
+                    foreach (i; 0 .. cqi.n_species) { F.vec[cqi.species+i] += factor*(ru_half*Rght.gas.massf[i]); }
                 }
             }
         }
