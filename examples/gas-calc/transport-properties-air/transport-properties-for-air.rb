@@ -9,7 +9,7 @@
 # $ ruby transport-properties-for-air.rb
 #
 $LOAD_PATH << '~/dgdinst/lib'
-require 'eilmer/gas'
+require 'gdtk/gas'
 
 gasModelFile = 'thermally-perfect-N2-O2.lua'
 gmodel = GasModel.new(gasModelFile)

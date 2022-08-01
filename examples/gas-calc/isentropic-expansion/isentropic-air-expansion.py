@@ -5,9 +5,9 @@
 # $ python3 isentropic-air-expansion.py
 #
 # Python port, PJ, 2019-11-21
-# 
+#
 import math
-from eilmer.gas import GasModel, GasState
+from gdtk.gas import GasModel, GasState
 
 gmodel = GasModel('ideal-air-gas-model.lua')
 gs = GasState(gmodel)

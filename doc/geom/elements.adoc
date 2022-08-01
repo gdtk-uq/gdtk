@@ -8,7 +8,7 @@ This class defines geometric vector objects with three Cartesian components:
 `x`, `y` and `z`.
 The constructor accepts values for these components in a number of ways.
 ----
-from eilmer.geom.vector3 import Vector3
+from gdtk.geom.vector3 import Vector3
 p0 = Vector3(x=1.0, y=2.0, z=3.0)          # named arguments
 p1 = Vector3(1.0, 2.0, 3.0)                # positional arguments x, y, z
 p2 = Vector3([1.0, 2.0, 3.0])              # list of numbers
@@ -23,13 +23,13 @@ A number of methods have been defined so that you can write arithmetic expressio
 that involve Vector3 objects.
 To see the embedded doc strings, you can use the Python help function.
 ----
-from eilmer.geom.vector3 import Vector3
+from gdtk.geom.vector3 import Vector3
 help(Vector3)
 ----
 
 Sample expressions include:
 ----
-from eilmer.geom.vector3 import Vector3
+from gdtk.geom.vector3 import Vector3
 p0 = Vector3(x=1.0, y=2.0, z=3.0)
 p1 = Vector3(1.0, 2.0, 3.0)
 p2 = +p0       # positive copy --> Vector3(x=1.0, y=2.0, z=3.0)
@@ -53,7 +53,7 @@ p2 = p0.unit() # new unit vector --> Vector3(x=0.267261, y=0.534522, z=0.801783)
 There are also a pair of transformations, so that you change
 change into and out of a local coordinate system.
 ----
-from eilmer.geom.vector3 import Vector3
+from gdtk.geom.vector3 import Vector3
 p0 = Vector3(x=1.0, y=2.0, z=3.0)
 c = Vector3(0.0, 1.0, 2.0)
 n = Vector3(-1.0, 0.0, 0.0)
@@ -65,7 +65,7 @@ p2 = p1.transform_to_global_frame(n, t1, t2, c) # --> Vector3(x=1.0, y=2.0, z=3.
 
 Remember that the Python assignment operator binds names to objects.
 ----
-from eilmer.geom.vector3 import Vector3
+from gdtk.geom.vector3 import Vector3
 p0 = Vector3(x=1.0, y=2.0, z=3.0)
 p1 = Vector3(1.0, 2.0, 3.0)
 p2 = p1        # assignment binds new name p2 to same object as p1
@@ -118,7 +118,7 @@ The other functions in module `eilmer.geom.vector3` include:
 
 
 == Path elements
-The module `eilmer.geom.path` includes classes for making `Path` objects.
+The module `gdtk.geom.path` includes classes for making `Path` objects.
 A Path object may be called to evaluate a point on the path at parameter `t`,
 where the parametric range is `0.0` to `1.0`.
 
@@ -152,7 +152,7 @@ The constructors for Path objects include:
 
 
 == ParametricSurface elements
-The module `eilmer.geom.surface` includes classes for making `ParametricSurface` objects.
+The module `gdtk.geom.surface` includes classes for making `ParametricSurface` objects.
 These objects may be called two parameters `r`, and `s` to evaluate a point on the surface.
 Presently, only one class of `ParametricSurface` is implemented in the Python module.
 
@@ -167,7 +167,7 @@ Presently, only one class of `ParametricSurface` is implemented in the Python mo
 
 
 == Cluster functions
-The module `eilmer.geom.cluster` includes classes for constructing various
+The module `gdtk.geom.cluster` includes classes for constructing various
 `ClusterFunction` objects.
 These objects have a `distribute_parameter_values(nv)` method that returns
 a sequence of `nv` values spread over the parameter range `0.0` to `1.0`, inclusive.
@@ -175,7 +175,7 @@ a sequence of `nv` values spread over the parameter range `0.0` to `1.0`, inclus
 
 === Linear
 ----
-from eilmer.geom.cluster import *
+from gdtk.geom.cluster import *
 cf = LinearFunction()
 values = cf.distribute_parameter_values(11)
 ----

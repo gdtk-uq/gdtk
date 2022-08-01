@@ -27,7 +27,7 @@
 print("# Nenzfr2 proof-of-concept script, with Wilson's T4 shot 10572.")
 print("# Part A. State-to-state calculation of the shock tube processes.")
 import math
-from eilmer.gas import GasModel, GasState, GasFlow
+from gdtk.gas import GasModel, GasState, GasFlow
 debug = False
 
 gmodel = GasModel('cea-air5species-gas-model.lua')
@@ -77,7 +77,7 @@ print("#   state7: %s" % state7)
 #------------------------------------------------------------------
 
 print("# Part B. Nonequilibrium nozzle flow.")
-from eilmer.gas import ThermochemicalReactor
+from gdtk.gas import ThermochemicalReactor
 
 # Approximation of the T4 Mach 6 nozzle profile as straight segments.
 # The following are the transition points, derived from Wilson's nenzf file.

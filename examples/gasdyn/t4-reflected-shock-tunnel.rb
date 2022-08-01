@@ -6,9 +6,9 @@
 # $ ruby t4-reflected-shock-tunnel.rb
 #
 # PJ, 2019-11-30
-# 
+#
 $LOAD_PATH << '~/dgdinst/lib'
-require 'eilmer/gas'
+require 'gdtk/gas'
 
 gmodel = GasModel.new('cea-air13species-gas-model.lua')
 state1 = GasState.new(gmodel)

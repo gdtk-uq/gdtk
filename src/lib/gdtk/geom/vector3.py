@@ -24,7 +24,7 @@ class Vector3(object):
         a dictionary of named numbers, or as individual numbers.
 
         For example:
-        >>> from eilmer.geom.vector3 import Vector3
+        >>> from gdtk.geom.vector3 import Vector3
         >>> p0 = Vector3(x=1.0, y=2.0, z=3.0)
         >>> p1 = Vector3(1.0, 2.0, 3.0)
         >>> p2 = Vector3([1.0, 2.0, 3.0])

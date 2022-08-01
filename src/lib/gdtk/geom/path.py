@@ -8,7 +8,7 @@ PJ, 2020-02-05
 """
 import math
 from abc import ABC, abstractmethod
-from eilmer.geom.vector3 import Vector3, cross
+from gdtk.geom.vector3 import Vector3, cross
 
 class Path(ABC):
     """

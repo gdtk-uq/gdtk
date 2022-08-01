@@ -6,13 +6,13 @@
 # $ python3 t4-reflected-shock-tunnel.py
 #
 # PJ, 2019-11-30
-# 
+#
 import math
 def approxEqual(a, b):
     result = math.isclose(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5)
-    # print("a=",a, "b=",b, "rel=",(a-b)/b, "abs=",a-b, "result=",result) 
+    # print("a=",a, "b=",b, "rel=",(a-b)/b, "abs=",a-b, "result=",result)
     return result
-from eilmer.gas import GasModel, GasState, GasFlow
+from gdtk.gas import GasModel, GasState, GasFlow
 
 gmodel = GasModel('cea-air13species-gas-model.lua')
 state1 = GasState(gmodel)

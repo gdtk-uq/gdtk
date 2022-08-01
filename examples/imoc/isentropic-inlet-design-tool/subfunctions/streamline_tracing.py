@@ -17,8 +17,8 @@
 
 
 
-import eilmer.imoc.kernel as kernel
-import eilmer.imoc.unit_process as unit
+import gdtk.imoc.kernel as kernel
+import gdtk.imoc.unit_process as unit
 import numpy as np
 
 

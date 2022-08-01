@@ -10,7 +10,7 @@ DGDINST = os.path.expandvars("$HOME/dgdinst")
 sys.path.append(DGDINST)
 
 import shlex, subprocess, string, math
-from eilmer.nelmin import minimize
+from gdtk.numeric.nelmin import minimize
 import numpy
 import logging
 logging.basicConfig(

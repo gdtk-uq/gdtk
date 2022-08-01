@@ -16,7 +16,7 @@
 #
 #------------------------------------------------------------------
 import math
-from eilmer.gas import GasModel, GasState, ThermochemicalReactor
+from gdtk.gas import GasModel, GasState, ThermochemicalReactor
 
 def duct_area(x):
     if x < 0:

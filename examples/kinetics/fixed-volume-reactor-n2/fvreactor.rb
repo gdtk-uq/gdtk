@@ -9,7 +9,7 @@
 # To run:
 #   $ ruby fvreactor.py
 $LOAD_PATH << '~/dgdinst/lib'
-require 'eilmer/gas'
+require 'gdtk/gas'
 
 gm = GasModel.new("nitrogen-2sp.lua")
 reactor = ThermochemicalReactor.new(gm, "chem.lua")

@@ -16,7 +16,7 @@ V1y = V1 * sin(radians(8.0))
 
 config.max_step_relax = 40
 
-from eilmer.geom.xpath import XPath
+from gdtk.geom.xpath import XPath
 path_0 = XPath().moveto(0,0).lineto(1,0).lineto(2,0)
 path_0.lineto(3,0).lineto(4,0.02).lineto(5,0.1)
 path_0.lineto(6,0.244).lineto(7,0.425).lineto(8,0.625).lineto(9,0.825)

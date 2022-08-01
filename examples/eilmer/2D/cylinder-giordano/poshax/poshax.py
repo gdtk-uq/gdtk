@@ -10,7 +10,7 @@
 # $ python3 poshax.py
 #
 #------------------------------------------------------------------
-from eilmer.gas import GasModel, GasState, GasFlow, ThermochemicalReactor
+from gdtk.gas import GasModel, GasState, GasFlow, ThermochemicalReactor
 debug = False
 
 print("Initialise a gas model.")

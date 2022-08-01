@@ -10,7 +10,7 @@
 # PJ 2019-07-24 direct use of FFI
 #    2019-07-25 using Pythonic wrapper
 #
-from eilmer.gas import GasModel, GasState
+from gdtk.gas import GasModel, GasState
 
 gmodel = GasModel("ideal-air-gas-model.lua")
 print("gmodel=", gmodel)

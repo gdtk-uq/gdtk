@@ -9,7 +9,7 @@
 # To run:
 #   $ python3 fvreactor.py
 
-from eilmer.gas import GasModel, GasState, ThermochemicalReactor
+from gdtk.gas import GasModel, GasState, ThermochemicalReactor
 
 gm = GasModel("nitrogen-2sp.lua")
 reactor = ThermochemicalReactor(gm, "chem.lua")

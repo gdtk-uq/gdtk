@@ -43,7 +43,7 @@ def arc(x):
 def straight_line(x):
     return p1y + (x-p1x)*math.tan(theta)
 
-from eilmer.geom.xpath import XPath
+from gdtk.geom.xpath import XPath
 upper_y = XPath([0.0, p1x, p2x], [arc, straight_line])
 def lower_y(x): return 0.0
 def lower_bc(x): return 0

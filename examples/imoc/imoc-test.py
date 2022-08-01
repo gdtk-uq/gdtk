@@ -8,9 +8,9 @@
 #     2020-01-09, unit process for interior node
 #     2022-01-11, unit processes return indices
 #
-import eilmer.imoc.kernel as kernel
-import eilmer.imoc.unit_process as unit
-from eilmer.ideal_gas_flow import PM1
+import gdtk.imoc.kernel as kernel
+import gdtk.imoc.unit_process as unit
+from gdtk.ideal_gas_flow import PM1
 
 import math
 

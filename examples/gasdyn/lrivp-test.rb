@@ -4,9 +4,9 @@
 # $ ruby lrivp-test.rb
 #
 # PJ, 2020-03-30 adpated from osher-riemann-test.rb
-# 
+#
 $LOAD_PATH << '~/dgdinst/lib'
-require 'eilmer/gas'
+require 'gdtk/gas'
 
 # Set up something like Sod's shock tube.
 gmodel = GasModel.new('ideal-air-gas-model.lua')

@@ -7,7 +7,7 @@
 #     2021-04-28 flux calculation
 #
 $LOAD_PATH << '~/dgdinst/lib'
-require 'eilmer/gas'
+require 'gdtk/gas'
 
 # Set up something like Sod's shock tube.
 gmodel = GasModel.new('ideal-air-gas-model.lua')

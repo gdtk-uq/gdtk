@@ -3,7 +3,7 @@
 # PJ, 2019-12-29, Ported from the cfpylib collection.
 
 import math
-import eilmer.ideal_gas_flow as igf
+import gdtk.ideal_gas_flow as igf
 
 def approxEqual(a, b):
     result = math.isclose(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5)

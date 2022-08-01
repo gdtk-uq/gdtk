@@ -10,7 +10,7 @@ def approxEqual(a, b):
     result = math.isclose(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5)
     print("a=",a, "b=",b, "rel=",(a-b)/b, "abs=",a-b, "result=",result)
     return result
-from eilmer.gas import GasModel, GasState, GasFlow
+from gdtk.gas import GasModel, GasState, GasFlow
 
 # Set up something like Sod's shock tube.
 gmodel = GasModel('ideal-air-gas-model.lua')

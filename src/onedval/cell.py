@@ -2,7 +2,7 @@
 # Place: UQ, Brisbane, Queensland, Australia
 # Date: 25-Jun-2012
 
-from eilmer.geom.vector3 import *
+from gdtk.geom.vector3 import *
 
 def tri_centroid(p0, p1, p2):
     """

@@ -34,7 +34,7 @@ Two-dimensional flows:
 
 from math import *
 import numpy
-from eilmer.zero_solvers import secant as solve
+from gdtk.numeric.zero_solvers import secant as solve
 
 # ---------------------------------------------------------------
 # Isentropic flow

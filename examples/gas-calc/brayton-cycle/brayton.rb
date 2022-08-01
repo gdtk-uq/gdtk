@@ -10,10 +10,10 @@
 #
 # Peter J and Rowan G. 2019-11-21
 $LOAD_PATH << '~/dgdinst/lib'
-require 'eilmer/gas'
+require 'gdtk/gas'
 
 gasModelFile = "thermal-air-gas-model.lua"
-# gasModelFile = "ideal-air-gas-model.lua" # Alternative 
+# gasModelFile = "ideal-air-gas-model.lua" # Alternative
 gmodel = GasModel.new(gasModelFile)
 if gmodel.n_species == 1 then
   puts "Ideal air gas model."

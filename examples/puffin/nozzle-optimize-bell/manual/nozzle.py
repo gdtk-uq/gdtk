@@ -44,7 +44,7 @@ p41x = p4x + 0.2*L_cone; p41y = p4y + 0.2*L_cone*math.tan(theta_init)
 p42x = p4x + 0.4*L_cone; p42y = p4y + 0.4*L_cone*math.tan(theta_init+alpha)
 p43x = p5x - 0.3*L_cone; p43y = p5y - 0.3*L_cone*math.tan(theta_init-beta)
 #
-from eilmer.geom.xpath import XBezier
+from gdtk.geom.xpath import XBezier
 bell = XBezier([p4x,p41x,p42x,p43x,p5x], [p4y,p41y,p42y,p43y,p5y])
 
 # Circular arc profile from throat to start of spline.
@@ -52,7 +52,7 @@ def arc(x):
     theta = math.asin(x/R_curve)
     return height - R_curve*math.cos(theta)
 
-from eilmer.geom.xpath import XPath
+from gdtk.geom.xpath import XPath
 upper_y = XPath([0.0, p4x, p5x], [arc, bell])
 def lower_y(x): return 0.0
 def lower_bc(x): return 0

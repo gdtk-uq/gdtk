@@ -24,8 +24,8 @@ from tkinter import ttk
 from tkinter import filedialog
 from tkinter import messagebox
 
-import eilmer.imoc.kernel as kernel
-import eilmer.imoc.unit_process as unit
+import gdtk.imoc.kernel as kernel
+import gdtk.imoc.unit_process as unit
 
 cfg = {}
 cfg['node_file'] = ""

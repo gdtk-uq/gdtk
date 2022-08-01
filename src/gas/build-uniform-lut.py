@@ -12,7 +12,7 @@ Versions:
 """
 
 import sys, numpy, math, time
-from eilmer.gas import GasModel, GasState
+from gdtk.gas import GasModel, GasState
 
 #-----------------------------------------------------------------------------
 

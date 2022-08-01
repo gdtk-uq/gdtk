@@ -10,7 +10,7 @@ PJ, 2020-07-06
 
 from abc import ABC, abstractmethod
 import numpy as np
-from eilmer.roberts import distribute_points_1
+from gdtk.numeric.roberts import distribute_points_1
 
 
 class ClusterFunction(ABC):

@@ -4,10 +4,10 @@
 The constructor for a structured-grid object accepts all of its arguments via keywords.
 For example:
 ----
-from eilmer.geom.vector3 import Vector3
-from eilmer.geom.surface import CoonsPatch
-from eilmer.geom.sgrid import StructuredGrid
-from eilmer.geom.cluster import RobertsFunction
+from gdtk.geom.vector3 import Vector3
+from gdtk.geom.surface import CoonsPatch
+from gdtk.geom.sgrid import StructuredGrid
+from gdtk.geom.cluster import RobertsFunction
 
 my_patch = CoonsPatch(p01=Vector3(0.1, 0.9), p11=Vector3(1.0, 1.0),
                       p00=Vector3(0.0, 0.0), p10=Vector3(0.9, 0.1))

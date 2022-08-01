@@ -19,8 +19,8 @@ from within your Python script and then evaluate the midpoint on that line,
 you might try the following:
 
 ----
-from eilmer.geom.vector3 import Vector3
-from eilmer.geom.path import *
+from gdtk.geom.vector3 import Vector3
+from gdtk.geom.path import *
 
 a = Vector3(0.0, 2.0)
 b = Vector3(2.0, 0.0)

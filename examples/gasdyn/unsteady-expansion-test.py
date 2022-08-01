@@ -4,13 +4,13 @@
 # $ python3 unsteady-expansion-test.py
 #
 # PJ, 2019-12-01
-# 
+#
 import math
 def approxEqual(a, b):
     result = math.isclose(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5)
-    # print("a=",a, "b=",b, "rel=",(a-b)/b, "abs=",a-b, "result=",result) 
+    # print("a=",a, "b=",b, "rel=",(a-b)/b, "abs=",a-b, "result=",result)
     return result
-from eilmer.gas import GasModel, GasState, GasFlow
+from gdtk.gas import GasModel, GasState, GasFlow
 
 print("Unsteady expansion.")
 gmodel = GasModel('cea-air13species-gas-model.lua')

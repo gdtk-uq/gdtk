@@ -4,9 +4,9 @@
 # $ ruby ideal-shock-test.rb
 #
 # PJ, 2019-11-28
-# 
+#
 $LOAD_PATH << '~/dgdinst/lib'
-require 'eilmer/gas'
+require 'gdtk/gas'
 
 gmodel = GasModel.new('ideal-air-gas-model.lua')
 state1 = GasState.new(gmodel)

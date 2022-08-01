@@ -3,8 +3,8 @@
 #
 # PJ, 2020-06-14, adapted from analytic_he_n2.py script.
 
-from eilmer.gas import GasModel, GasState, GasFlow
-from eilmer.zero_solvers import secant
+from gdtk.gas import GasModel, GasState, GasFlow
+from gdtk.numeric.zero_solvers import secant
 
 print("Compute the flow conditions expected in shock tube.")
 #

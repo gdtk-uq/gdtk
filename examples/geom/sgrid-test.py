@@ -3,11 +3,11 @@
 # PJ, 2020-07-05
 
 import math
-from eilmer.geom.vector3 import Vector3, approxEqualVectors
-from eilmer.geom.path import *
-from eilmer.geom.surface import *
-from eilmer.geom.sgrid import StructuredGrid
-from eilmer.geom.cluster import RobertsFunction
+from gdtk.geom.vector3 import Vector3, approxEqualVectors
+from gdtk.geom.path import *
+from gdtk.geom.surface import *
+from gdtk.geom.sgrid import StructuredGrid
+from gdtk.geom.cluster import RobertsFunction
 
 print("Begin test of ParametricSurface classes...")
 p00 = Vector3([0.0, 0.1, 3.0])

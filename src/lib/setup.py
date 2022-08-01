@@ -1,9 +1,9 @@
 import setuptools
 
 setuptools.setup(
-    name="gdtk_geometry",
+    name="gdtk",
     version="0.1.0",
-    author="Peter Jacobs",
+    author="The Gas Dynamic Toolkit developers",
     license="gpl-3.0",
     project_urls={
         "Source Code": "https://github.com/gdtk-uq/gdtk/tree/master/src/lib",

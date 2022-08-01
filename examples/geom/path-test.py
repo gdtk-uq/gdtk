@@ -3,8 +3,8 @@
 # PJ, 2020-02-05
 
 import math
-from eilmer.geom.vector3 import Vector3
-from eilmer.geom.path import *
+from gdtk.geom.vector3 import Vector3
+from gdtk.geom.path import *
 import numpy
 
 def approxEqual(a, b):

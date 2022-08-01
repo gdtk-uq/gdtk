@@ -22,9 +22,9 @@
 # Tuesday 14th April, 2020
 # Covid Isolation, Boshammer St, Rangeville
 #
-import eilmer.imoc.kernel as kernel
-import eilmer.imoc.unit_process as unit
-from eilmer.ideal_gas_flow import PM1
+import gdtk.imoc.kernel as kernel
+import gdtk.imoc.unit_process as unit
+from gdtk.ideal_gas_flow import PM1
 import numpy as np
 import matplotlib.pyplot as mplt
 # Import the centreline data, two columns with x and Mach

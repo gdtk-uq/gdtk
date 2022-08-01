@@ -9,10 +9,10 @@
 # $ python3 brayton.rb
 #
 # Peter J and Rowan G. 2019-11-21
-from eilmer.gas import GasModel, GasState
+from gdtk.gas import GasModel, GasState
 
 gasModelFile = "thermal-air-gas-model.lua"
-# gasModelFile = "ideal-air-gas-model.lua" # Alternative 
+# gasModelFile = "ideal-air-gas-model.lua" # Alternative
 gmodel = GasModel(gasModelFile)
 if gmodel.n_species == 1:
     print("Ideal air gas model.")

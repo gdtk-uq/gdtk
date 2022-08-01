@@ -5,8 +5,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from math import atan, degrees
-from eilmer.geom.vector3 import Vector3
-from eilmer.geom.path import Bezier
+from gdtk.geom.vector3 import Vector3
+from gdtk.geom.path import Bezier
 
 if __name__ == "__main__":
     print("Plot the contours")

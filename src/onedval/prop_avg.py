@@ -10,9 +10,9 @@
 import sys
 
 from math import sqrt, pow
-from eilmer.geom.vector3 import Vector3, dot
-from eilmer.gas import GasModel, GasState, PC_P_atm
-from eilmer.zero_solvers import secant
+from gdtk.geom.vector3 import Vector3, dot
+from gdtk.gas import GasModel, GasState, PC_P_atm
+from gdtk.numeric.zero_solvers import secant
 from scipy.optimize import minimize, brute
 from numpy import median
 from copy import copy

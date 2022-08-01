@@ -70,8 +70,8 @@ Versions
 VERSION_STRING = "11-Jun-2020"
 
 import sys, os, math
-from eilmer.gas import GasModel, GasState, GasFlow
-from eilmer.reflected_shock_tunnel import calculate_states
+from gdtk.gas import GasModel, GasState, GasFlow
+from gdtk.reflected_shock_tunnel import calculate_states
 
 
 def str_with_units(gs, lead_str='  '):

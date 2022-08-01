@@ -4,14 +4,14 @@
 # $ python3 lrivp-test.py
 #
 # PJ, 2020-03-30 adapted from osher_riemann-test.py
-# 
+#
 import math
 def approxEqual(a, b):
     result = math.isclose(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5)
-    print("a=",a, "b=",b, "rel=",(a-b)/b, "abs=",a-b, "result=",result) 
+    print("a=",a, "b=",b, "rel=",(a-b)/b, "abs=",a-b, "result=",result)
     return result
-from eilmer.gas import GasModel, GasState, GasFlow
-from eilmer.zero_solvers import secant
+from gdtk.gas import GasModel, GasState, GasFlow
+from gdtk.numeric.zero_solvers import secant
 
 # Set up something like Sod's shock tube.
 gmodel = GasModel('ideal-air-gas-model.lua')

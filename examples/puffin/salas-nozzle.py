@@ -22,7 +22,7 @@ with open('salas-nozzle-path.tsv', 'r') as tsvf:
         xs.append(float(row[0]))
         ys.append(float(row[1]))
 
-from eilmer.spline import CubicSpline
+from gdtk.numeric.spline import CubicSpline
 upper_y = CubicSpline(xs, ys)
 def lower_y(x): return 0.0
 def lower_bc(x): return 0

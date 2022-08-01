@@ -6,7 +6,7 @@
 # PJ, 2019-12-01
 #
 $LOAD_PATH << '~/dgdinst/lib'
-require 'eilmer/gas'
+require 'gdtk/gas'
 
 puts "Unsteady expansion."
 gmodel = GasModel.new('cea-air13species-gas-model.lua')

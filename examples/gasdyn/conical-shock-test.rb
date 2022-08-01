@@ -4,9 +4,9 @@
 # $ ruby conical-shock-test.rb
 #
 # PJ, 2019-12-01
-# 
+#
 $LOAD_PATH << '~/dgdinst/lib'
-require 'eilmer/gas'
+require 'gdtk/gas'
 
 m1 = 1.5
 puts "Conical-shock demo for m1=%g" % [m1]

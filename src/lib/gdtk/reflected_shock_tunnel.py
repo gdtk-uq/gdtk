@@ -30,8 +30,8 @@ Versions
 """
 
 
-from eilmer.gas import GasModel, GasState, GasFlow
-from eilmer.zero_solvers import secant
+from gdtk.gas import GasModel, GasState, GasFlow
+from gdtk.numeric.zero_solvers import secant
 
 
 def calculate_states(gasModel, flow, p1, T1, massf, Vs, pe, pp_on_pe, area_ratio,

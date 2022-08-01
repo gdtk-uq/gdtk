@@ -6,8 +6,8 @@
 #
 # PJ, 2021-08-09 adapted from classic-shock-tube.py
 
-from eilmer.gas import GasModel, GasState, GasFlow
-from eilmer.zero_solvers import secant
+from gdtk.gas import GasModel, GasState, GasFlow
+from gdtk.zero_solvers import secant
 
 print("Compute the flow conditions expected in the Sod shock tube.")
 #

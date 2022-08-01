@@ -18,7 +18,7 @@ sys.path.append(DGDINST)
 import shutil, shlex, subprocess, queue
 import string, math
 import time
-from eilmer.nelmin import minimize, NelderMeadMinimizer
+from gdtk.numeric.nelmin import minimize, NelderMeadMinimizer
 
 start_time = time.time()
 progress_file = open("progress.txt", 'w')

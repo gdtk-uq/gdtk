@@ -4,9 +4,9 @@
 # $ python3 ideal-shock-test.py
 #
 # PJ, 2019-11-28
-# 
+#
 import math
-from eilmer.gas import GasModel, GasState, GasFlow
+from gdtk.gas import GasModel, GasState, GasFlow
 
 gmodel = GasModel('ideal-air-gas-model.lua')
 state1 = GasState(gmodel)

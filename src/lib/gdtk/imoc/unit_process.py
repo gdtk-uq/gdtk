@@ -16,10 +16,10 @@ Version:
     functions needed for computing a nozzle profile.
 """
 
-import eilmer.imoc.kernel as kernel
-import eilmer.ideal_gas_flow as igf
+import gdtk.imoc.kernel as kernel
+import gdtk.ideal_gas_flow as igf
 from math import sin, cos, sqrt, asin, atan, pow
-from eilmer.zero_solvers import secant as solve
+from gdtk.numeric.zero_solvers import secant as solve
 import numpy as np
 
 

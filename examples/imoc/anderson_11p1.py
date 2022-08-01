@@ -7,9 +7,9 @@
 # PJ 2022-01-11
 #
 import math
-import eilmer.imoc.kernel as kernel
-import eilmer.imoc.unit_process as unit
-from eilmer.ideal_gas_flow import PM1, PM2
+import gdtk.imoc.kernel as kernel
+import gdtk.imoc.unit_process as unit
+from gdtk.ideal_gas_flow import PM1, PM2
 
 print("Exercise 11.1: Minimum-length 2D nozzle")
 kernel.axisymmetric = False

@@ -43,8 +43,8 @@ from getopt import getopt
 import math
 import numpy as np
 import json
-from eilmer.gas import GasModel, GasState, ThermochemicalReactor
-from eilmer import roberts
+from gdtk.gas import GasModel, GasState, ThermochemicalReactor
+from gdtk.numeric import roberts
 
 sys.path.append("") # so that we can find user's scripts in current directory
 

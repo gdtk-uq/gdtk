@@ -7,9 +7,9 @@
 # $ python3 t1d.py
 #
 # PJ, 2020-02-12
-# 
+#
 import math
-from eilmer.gas import GasModel, GasState, GasFlow
+from gdtk.gas import GasModel, GasState, GasFlow
 from t1d_classes import Cell, Face
 
 gmodel = GasModel('ideal-air-gas-model.lua')

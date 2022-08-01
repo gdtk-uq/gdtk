@@ -2,7 +2,7 @@
 #
 # Combustion in a supersonic stream of constant cross-section.
 # This is set up to approximate the Bittker-Scullin case 3,
-# as used by Fabian Zander in the hydrogen-combustion test case. 
+# as used by Fabian Zander in the hydrogen-combustion test case.
 #
 # PJ 2011-06-21 first version written for Eilmer3 test case
 #    2016-03-19 adapted to Lua from reacting-pipe-flow.py for Eilmer3
@@ -16,7 +16,7 @@
 #
 #------------------------------------------------------------------
 $LOAD_PATH << '~/dgdinst/lib'
-require 'eilmer/gas'
+require 'gdtk/gas'
 
 # Things that we'll make use of shortly.
 sample_header = "# x(m) rho(kg/m**3) p(Pa) T(degK) e(J/kg) v(m/s) "

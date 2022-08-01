@@ -7,7 +7,7 @@
 # $ prep-gas O2.inp O2-gas-model.lua
 # $ python3 thermo-curves-for-O2.py
 #
-from eilmer.gas import GasModel, GasState
+from gdtk.gas import GasModel, GasState
 
 gasModelFile = 'O2-gas-model.lua'
 gmodel = GasModel(gasModelFile)

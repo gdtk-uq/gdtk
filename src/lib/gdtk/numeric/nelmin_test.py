@@ -1,7 +1,7 @@
 # nelmin_test.py
 # Derived from the self-test code in nelmin.py
 
-from eilmer.nelmin import minimize, NelderMeadMinimizer
+from gdtk.numeric.nelmin import minimize, NelderMeadMinimizer
 import time
 
 def test_fun_1(x):

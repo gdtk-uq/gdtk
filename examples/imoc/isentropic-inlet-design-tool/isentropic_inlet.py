@@ -16,13 +16,13 @@
 
 
 
-from eilmer.ideal_gas_flow import PM1, PM2, beta_cone2, theta_cone_flowfield
+from gdtk.ideal_gas_flow import PM1, PM2, beta_cone2, theta_cone_flowfield
 from subfunctions.plot_nodes import plotNodes
 from subfunctions.streamline_tracing import streamline_tracing
 import numpy as np
 import matplotlib.pyplot as plt
-import eilmer.imoc.kernel as kernel
-import eilmer.imoc.unit_process as unit
+import gdtk.imoc.kernel as kernel
+import gdtk.imoc.unit_process as unit
 
 
 

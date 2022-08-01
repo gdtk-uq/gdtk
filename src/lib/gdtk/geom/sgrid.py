@@ -10,10 +10,10 @@ import math
 from abc import ABC, abstractmethod
 from copy import copy
 import gzip
-from eilmer.geom.vector3 import Vector3
-from eilmer.geom.path import Path
-from eilmer.geom.surface import ParametricSurface
-from eilmer.geom.cluster import *
+from gdtk.geom.vector3 import Vector3
+from gdtk.geom.path import Path
+from gdtk.geom.surface import ParametricSurface
+from gdtk.geom.cluster import *
 
 class StructuredGrid():
     """

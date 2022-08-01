@@ -1,6 +1,6 @@
 # n2-n-eq-check.py
 # Usage: python3 n2-n-eq-check.py
-from eilmer.gas import GasModel, GasState
+from gdtk.gas import GasModel, GasState
 gmodel = GasModel('cea-n2-gas-model.lua')
 gs = GasState(gmodel)
 gs.p = 1.455e+05

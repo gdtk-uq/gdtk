@@ -8,7 +8,7 @@
 # $ prep-gas thermally-perfect-N2-O2.inp thermally-perfect-N2-O2.lua
 # $ python3 transport-properties-for-air.py
 #
-from eilmer.gas import GasModel, GasState
+from gdtk.gas import GasModel, GasState
 
 gasModelFile = 'thermally-perfect-N2-O2.lua'
 gmodel = GasModel(gasModelFile)

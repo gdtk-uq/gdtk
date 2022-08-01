@@ -15,7 +15,7 @@ For example:
 [source,python]
 ----
 # Python
-import eilmer.ideal_gas_flow as igf
+import gdtk.ideal_gas_flow as igf
 M = 2.0
 print("Normal shock jump...")
 print("Computed: M=%g: M2=%g, T2/T1=%g, p2/p1=%g, r2/r1=%g" %

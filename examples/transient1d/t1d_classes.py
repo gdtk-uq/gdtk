@@ -4,7 +4,7 @@
 #
 # PJ, 2020-02-12
 #
-from eilmer.gas import GasModel, GasState
+from gdtk.gas import GasModel, GasState
 
 class Cell(object):
     __slots__ = ['x', 'vol', 'gas', 'vel', 'mass', 'momentum', 'energy']

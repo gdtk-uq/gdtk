@@ -17,7 +17,7 @@ the 2D surface based on the methods selected by the user.
 
 import sys
 from math import *
-from eilmer.gas import GasModel, GasState
+from gdtk.gas import GasModel, GasState
 from cell import create_cells_from_slice, create_cells_from_line, area
 from prop_avg import *
 from copy import copy

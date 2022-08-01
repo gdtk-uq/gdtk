@@ -7,7 +7,7 @@
 # Ruby port, PJ, 2019-11-21
 #
 $LOAD_PATH << '~/dgdinst/lib'
-require 'eilmer/gas'
+require 'gdtk/gas'
 
 gmodel = GasModel.new('ideal-air-gas-model.lua')
 gs = GasState.new(gmodel)

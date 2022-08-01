@@ -21,7 +21,7 @@ From within your Python script, you might try the following:
 [source,python]
 ----
 # Python
-from eilmer.gas import GasModel, GasState, GasFlow
+from gdtk.gas import GasModel, GasState, GasFlow
 
 gmodel = GasModel('cea-air5species-gas-model.lua')
 state1 = GasState(gmodel)

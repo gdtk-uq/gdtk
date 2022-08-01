@@ -7,8 +7,8 @@
 # PJ, 2020-02-10 adapted from the Lua and Python scripts
 
 $LOAD_PATH << '~/dgdinst/lib'
-require 'eilmer/gas'
-require 'eilmer/zero_solvers'
+require 'gdtk/gas'
+require 'gdtk/numeric/zero_solvers'
 include ZeroSolvers
 
 puts "Compute the flow conditions expected in the Sod shock tube."

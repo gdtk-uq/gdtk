@@ -16,7 +16,7 @@
 # $ python3 co2_scheme_validation.py
 #
 #------------------------------------------------------------------
-from eilmer.gas import GasModel, GasState, GasFlow, ThermochemicalReactor
+from gdtk.gas import GasModel, GasState, GasFlow, ThermochemicalReactor
 debug = False
 
 print("Initialise a gas model.")
@@ -25,7 +25,7 @@ gmodel = GasModel("mars-atm-with-ions.lua")
 nsp = gmodel.n_species
 nmodes = gmodel.n_modes
 if debug: print("nsp=", nsp, " nmodes=", nmodes, " gmodel=", gmodel)
-reactor = ThermochemicalReactor(gmodel, "mars-atm-with-ions-chemistry.lua") 
+reactor = ThermochemicalReactor(gmodel, "mars-atm-with-ions-chemistry.lua")
 # The example here matches the case on p.17 of Park's publication
 v1 = 8000
 state1 = GasState(gmodel)
@@ -143,7 +143,7 @@ for j in range(1, nsteps+1):
     dp_gda = -(du_chem*dfdu*rho*rho*v*v - dfdr*dp_chem*rho*rho -
                dfdu*dp_chem*p) / denom
     du_gda = -(du_chem*rho*rho*v*v - du_chem*dfdr*rho*rho - dp_chem*p) / denom
-    if debug: 
+    if debug:
         print("# drho=", drho, "dv=", dv, "dp_gda=", dp_gda, "du_gda=", du_gda)
         print("# residuals=", v*drho + rho*dv, rho*v*dv + dp_gda + dp_chem,
               v*etot*drho + (rho*etot+p)*dv + rho*v*du_gda + rho*v*du_chem,
@@ -156,7 +156,7 @@ for j in range(1, nsteps+1):
     gas1.update_thermo_from_rhou()
     if debug:
         print("# At new point for step ", j, ": gas1.p=", gas1.p,
-              "p1_check=", p1_check, 
+              "p1_check=", p1_check,
               "rel_error=", abs(gas1.p-p1_check)/p1_check)
     # Have now finished the chemical and gas-dynamic update.
     t = t + t_inc

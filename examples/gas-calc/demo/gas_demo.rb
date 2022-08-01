@@ -11,7 +11,7 @@
 #    2019-07-27 using Ruby wrapper
 #
 $LOAD_PATH << '~/dgdinst/lib'
-require 'eilmer/gas'
+require 'gdtk/gas'
 
 gmodel = GasModel.new("ideal-air-gas-model.lua")
 puts "gmodel= #{gmodel}"

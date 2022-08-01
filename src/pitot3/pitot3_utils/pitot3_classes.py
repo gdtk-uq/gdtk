@@ -11,9 +11,9 @@ Chris James (c.james4@uq.edu.au) 01/01/21
 import sys, os, math
 import yaml
 
-from eilmer.gas import GasModel, GasState, GasFlow
-from eilmer.ideal_gas_flow import p0_p
-from eilmer.zero_solvers import secant
+from gdtk.gas import GasModel, GasState, GasFlow
+from gdtk.ideal_gas_flow import p0_p
+from gdtk.numeric.zero_solvers import secant
 
 def eilmer4_CEAGas_input_file_creator(output_filename, mixtureName, speciesList, reactants,
                                       inputUnits, withIons, trace = 1.0e-6):
@@ -1873,7 +1873,7 @@ class Nozzle(object):
         if facility_type == 'reflected_shock_tunnel':
             print("Due to the fact that this is a reflected shock simulation, we must first expand to the throat condition (state 6).")
 
-            from eilmer.ideal_gas_flow import p0_p
+            from gdtk.ideal_gas_flow import p0_p
 
             state6 = GasState(entrance_state_gmodel)
 
