@@ -9,34 +9,27 @@ if false then -- debug
    print("Begin loading prep-grids.lua.")
 end
 
-require 'configoptions'
+require 'lua_helper'
+require 'blk_conn'
+
+local configoptions = require 'configoptions'
 config = configoptions.config
 
-require 'lua_helper'
-deepclone = lua_helper.deepclone
-checkAllowedNames = lua_helper.checkAllowedNames
 
-require 'blk_conn'
--- Let's pull the symbols out of the blk_conn module
--- and make them global in this namespace
-for k,v in pairs(blk_conn) do
-   _G[k] = v
-end
-
-require 'gridpro'
+local gridpro = require 'gridpro'
 -- Make these functions global so that users may call them
 -- in the configuration script
 applyGridproConnectivity = gridpro.applyGridproConnectivity
 applyGridproBoundaryConditions = gridpro.applyGridproBoundaryConditions
 to_eilmer_axis_map = gridpro.to_eilmer_axis_map
 
-require 'grid'
+local grid = require 'grid'
 Grid = grid.Grid
 connectGrids = grid.connectGrids
 connectionAsJSON = grid.connectionAsJSON
 identifyGridConnections = grid.identifyGridConnections
 
-require 'gridarray'
+local gridarray = require 'gridarray'
 GridArray = gridarray.GridArray
 
 -------------------------------------------------------------------------
