@@ -203,10 +203,13 @@ class FixedField_Test : FieldBC {
         double I = sigma*phigrad*S;
         return I;
     }
-private:
-
     double test_field(double x, double y){
         return exp(x)*sin(y);
+    }
+    void test_field_gradient(double x, double y, ref double dphidx, ref double dphidy){
+        dphidx = exp(x)*sin(y);
+        dphidy = exp(x)*cos(y);
+        return;
     }
 }
 
