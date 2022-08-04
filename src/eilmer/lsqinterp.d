@@ -1096,6 +1096,12 @@ public:
                                            "u_modesMax[imode]", "u_modesMin[imode]"));
                 }
             }
+            // the Park limiter needs the pressure gradient
+            if (myConfig.unstructured_limiter == UnstructuredLimiter.park ||
+                myConfig.unstructured_limiter == UnstructuredLimiter.hvan_albada ||
+                myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat){
+                mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
+            }
             break;
         case InterpolateOption.rhop:
             mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
@@ -1115,6 +1121,12 @@ public:
                     mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]",
                                            "T_modesMax[imode]", "T_modesMin[imode]"));
                 }
+            }
+            // the Park limiter needs the pressure gradient
+            if (myConfig.unstructured_limiter == UnstructuredLimiter.park ||
+                myConfig.unstructured_limiter == UnstructuredLimiter.hvan_albada ||
+                myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat){
+                mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
             }
             break;
         } // end switch thermo_interpolator
