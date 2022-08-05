@@ -9,7 +9,7 @@ Peter A. Jacobs; Rowan J. Gollan
 
 This library provides access to various numerical methods that we have found useful
 for the construction of our gas-dynamics tools.
-Because of the history of development, the library comes in the `eilmer` package.
+The import library sits in the `gdtk.numeric` package.
 
 = Installing the library
 

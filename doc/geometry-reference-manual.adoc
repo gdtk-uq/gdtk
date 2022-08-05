@@ -12,8 +12,8 @@ The loadable library is accessible from Python and Ruby.
 It provides access to geometry functions for the construction of paths and surfaces
 compatible with those available in the Eilmer flow solver.
 
-This is the reference manual for the Python flavour of the library and,
-because of the history of development, the library comes in the `eilmer` package.
+This is the reference manual for the Python flavour of the library
+which sits in the `gdtk.geom` package.
 For example, to construct a simple linear path element
 from within your Python script and then evaluate the midpoint on that line,
 you might try the following:
