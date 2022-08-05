@@ -649,7 +649,7 @@ public:
         number phi_hp = 1.0;
         if (apply_heuristic_pressure_limiter) {
             park_limit(cell_cloud, ws, myConfig);
-            phi_hp = velxPhi; // we could choose any of the variables here
+            phi_hp = pPhi;
         }
 
         string codeForLimits(string qname, string gname, string limFactorname,
@@ -780,7 +780,7 @@ public:
         number phi_hp = 1.0;
         if (apply_heuristic_pressure_limiter) {
             park_limit(cell_cloud, ws, myConfig);
-            phi_hp = velxPhi; // we could choose any of the variables here
+            phi_hp = pPhi;
         }
 
         string codeForLimits(string qname, string gname, string limFactorname,
@@ -899,118 +899,86 @@ public:
         //     Anisotropic Output-Based Adaptation with Tetrahedral Cut Cells for Compressible Flows
         //     Thesis @ Massachusetts Institute of Technology, 2008
 
-        number phi, pmin;
         FVCell ncell;
-        string codeForLimits(string qname, string gname, string limFactorname,
-                             string qMaxname, string qMinname)
-        {
-            string code = "{
-            phi = 1.0;
-            foreach (i, f; cell_cloud[0].iface) {
-                if (f.left_cell.id == cell_cloud[0].id) { ncell = f.right_cell; }
-                else { ncell = f.left_cell; }
-                number dx1 = f.pos.x - cell_cloud[0].pos[gtl].x;
-                number dy1 = f.pos.y - cell_cloud[0].pos[gtl].y;
-                number dz1 = f.pos.z - cell_cloud[0].pos[gtl].z;
-                number dx2 = f.pos.x - ncell.pos[gtl].x;
-                number dy2 = f.pos.y - ncell.pos[gtl].y;
-                number dz2 = f.pos.z - ncell.pos[gtl].z;
-                //number dpx = dx1*cell_cloud[0].gradients.p[0] - dx2*ncell.gradients.p[0];
-                //number dpy = dy1*cell_cloud[0].gradients.p[1] - dy2*ncell.gradients.p[1];
-                //number dpz = dz1*cell_cloud[0].gradients.p[2] - dz2*ncell.gradients.p[2];
-                // this step is a modification on the original algorithm since we don't have cell gradients from neighbouring blocks at this point
-                number dpx = dx1*cell_cloud[0].gradients.p[0] - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
-                number dpy = dy1*cell_cloud[0].gradients.p[1] - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
-                number dpz = dz1*cell_cloud[0].gradients.p[2] - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
-                number dp = dpx*dpx + dpy*dpy;
-                if (myConfig.dimensions == 3) { dp += dpz*dpz; }
-                dp = sqrt(dp);
-                pmin = fmin(cell_cloud[0].fs.gas.p, ncell.fs.gas.p);
-                number s = 1-tanh(dp/pmin);
-                phi = fmin(phi, s);
-            }
-            "~limFactorname~" = phi;
-            }
-            ";
-            return code;
+        number pmin;
+        number phi = 1.0;
+        foreach (i, f; cell_cloud[0].iface) {
+            if (f.left_cell.id == cell_cloud[0].id) { ncell = f.right_cell; }
+            else { ncell = f.left_cell; }
+            number dx1 = f.pos.x - cell_cloud[0].pos[gtl].x;
+            number dy1 = f.pos.y - cell_cloud[0].pos[gtl].y;
+            number dz1 = f.pos.z - cell_cloud[0].pos[gtl].z;
+            //number dx2 = f.pos.x - ncell.pos[gtl].x;
+            //number dy2 = f.pos.y - ncell.pos[gtl].y;
+            //number dz2 = f.pos.z - ncell.pos[gtl].z;
+            //number dpx = dx1*cell_cloud[0].gradients.p[0] - dx2*ncell.gradients.p[0];
+            //number dpy = dy1*cell_cloud[0].gradients.p[1] - dy2*ncell.gradients.p[1];
+            //number dpz = dz1*cell_cloud[0].gradients.p[2] - dz2*ncell.gradients.p[2];
+            // this step is a modification on the original algorithm since we don't have cell gradients from neighbouring blocks at this point
+            number dpx = dx1*cell_cloud[0].gradients.p[0] - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
+            number dpy = dy1*cell_cloud[0].gradients.p[1] - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
+            number dpz = dz1*cell_cloud[0].gradients.p[2] - (0.5*(cell_cloud[0].fs.gas.p + ncell.fs.gas.p) - ncell.fs.gas.p);
+            number dp = dpx*dpx + dpy*dpy;
+            if (myConfig.dimensions == 3) { dp += dpz*dpz; }
+            dp = sqrt(dp);
+            pmin = fmin(cell_cloud[0].fs.gas.p, ncell.fs.gas.p);
+            number s = 1-tanh(dp/pmin);
+            phi = fmin(phi, s);
         }
-        // x-velocity
-        mixin(codeForLimits("vel.x", "velx", "velxPhi", "velxMax", "velxMin"));
-        mixin(codeForLimits("vel.y", "vely", "velyPhi", "velyMax", "velyMin"));
-        mixin(codeForLimits("vel.z", "velz", "velzPhi", "velzMax", "velzMin"));
+
+        // the limiter value for each variable is set to the pressure-based value
+        velxPhi = phi; velyPhi = phi; velzPhi = phi;
         version(MHD) {
             if (myConfig.MHD) {
-                mixin(codeForLimits("B.x", "Bx", "BxPhi", "BxMax", "BxMin"));
-                mixin(codeForLimits("B.y", "By", "ByPhi", "ByMax", "ByMin"));
-                mixin(codeForLimits("B.z", "Bz", "BzPhi", "BzMax", "BzMin"));
-                if (myConfig.divergence_cleaning) {
-                    mixin(codeForLimits("psi", "psi", "psiPhi", "psiMax", "psiMin"));
-                }
+                BxPhi = phi; ByPhi = phi; BzPhi = phi;
+                if (myConfig.divergence_cleaning) { psiPhi = phi; }
             }
         }
         version(turbulence) {
-            foreach (it; 0 .. myConfig.turb_model.nturb) {
-                mixin(codeForLimits("turb[it]","turb[it]","turbPhi[it]","turbMax[it]","turbMin[it]"));
-            }
+            foreach (it; 0 .. myConfig.turb_model.nturb) { turbPhi[it] = phi; }
         }
         version(multi_species_gas) {
             auto nsp = myConfig.n_species;
             if (nsp > 1) {
                 // Multiple species.
-                foreach (isp; 0 .. nsp) {
-                    mixin(codeForLimits("gas.massf[isp]", "massf[isp]", "massfPhi[isp]",
-                                        "massfMax[isp]", "massfMin[isp]"));
-                }
+                foreach (isp; 0 .. nsp) { massfPhi[isp] = phi; }
             } else {
                 // Only one possible gradient value for a single species.
                 massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
             }
         }
+
         // Interpolate on two of the thermodynamic quantities, 
         // and fill in the rest based on an EOS call. 
         auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
         case InterpolateOption.pt: 
-            mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
-            mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
+            pPhi = phi; TPhi = phi;
             version(multi_T_gas) {
-                foreach (imode; 0 .. nmodes) {
-                    mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
-                                        "T_modesMax[imode]", "T_modesMin[imode]"));
-                }
+                foreach (imode; 0 .. nmodes) { T_modesPhi[imode] = phi; }
             }
             break;
         case InterpolateOption.rhou:
-            mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
-            mixin(codeForLimits("gas.u", "u", "uPhi", "uMax", "uMin"));
+            rhoPhi = phi; uPhi = phi;
             version(multi_T_gas) {
-                foreach (imode; 0 .. nmodes) {
-                    mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
-                                        "u_modesMax[imode]", "u_modesMin[imode]"));
-                }
+                foreach (imode; 0 .. nmodes) { u_modesPhi[imode] = phi; }
             }
             break;
         case InterpolateOption.rhop:
-            mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
-            mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
+            rhoPhi = phi; pPhi = phi;
             version(multi_T_gas) {
-                foreach (imode; 0 .. nmodes) {
-                    mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
-                                        "u_modesMax[imode]", "u_modesMin[imode]"));
-                }
+                foreach (imode; 0 .. nmodes) { u_modesPhi[imode] = phi; }
             }
             break;
-        case InterpolateOption.rhot: 
-            mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
-            mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
+        case InterpolateOption.rhot:
+            rhoPhi = phi; TPhi = phi;
             version(multi_T_gas) {
-                foreach (imode; 0 .. nmodes) {
-                    mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
-                                        "T_modesMax[imode]", "T_modesMin[imode]"));
+                foreach (imode; 0 .. nmodes) { T_modesPhi[imode] = phi;
                 }
             }
             break;
         } // end switch thermo_interpolator
+
         return;
     } // end park_limit()
 
