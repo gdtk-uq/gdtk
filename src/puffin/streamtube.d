@@ -24,7 +24,6 @@ import flow;
 import cell;
 import face;
 import flux;
-import interp;
 
 
 enum BCCode {wall=0, exchange=1}; // To decide what to do at the lower and upper boundary.
@@ -362,16 +361,7 @@ public:
             ifaces_east[j].simple_flux(cells[j].fs, gmodel);
         }
         foreach (j; 0 .. ncells+1) {
-            auto f = jfaces[j];
-            if (x_order == 1) {
-                // Low-order reconstruction is just copy the nearest cell-centre flowstate.
-                fsL.copy_values_from(f.left_cells[0].fs);
-                fsR.copy_values_from(f.right_cells[0].fs);
-            } else {
-                // High-order reconstruction from the left_cells and right_cells stencil.
-                f.interp_l2r2(fsL, fsR, gmodel, false);
-            }
-            f.calculate_flux(fsL, fsR, gmodel, flux_calc);
+            jfaces[j].calculate_flux(fsL, fsR, gmodel, flux_calc, x_order);
         }
         foreach (c; cells) {
             c.eval_dUdt(0, axiFlag);
@@ -388,16 +378,7 @@ public:
             ifaces_east[j].simple_flux(cells[j].fs, gmodel);
         }
         foreach (j; 0 .. ncells+1) {
-            auto f = jfaces[j];
-            if (x_order == 1) {
-                // Low-order reconstruction is just copy the nearest cell-centre flowstate.
-                fsL.copy_values_from(f.left_cells[0].fs);
-                fsR.copy_values_from(f.right_cells[0].fs);
-            } else {
-                // High-order reconstruction from the left_cells and right_cells stencil.
-                f.interp_l2r2(fsL, fsR, gmodel, false);
-            }
-            f.calculate_flux(fsL, fsR, gmodel, flux_calc);
+            jfaces[j].calculate_flux(fsL, fsR, gmodel, flux_calc, x_order);
         }
         foreach (c; cells) {
             c.eval_dUdt(1, axiFlag);

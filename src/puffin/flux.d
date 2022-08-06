@@ -15,6 +15,7 @@ import config;
 import flow;
 import face;
 import cell;
+import interp;
 
 
 @nogc
@@ -47,9 +48,18 @@ bool is_shock(Face2D f, double compression_tol=-0.01, double shear_tol=0.20)
 
 @nogc
 void calculate_flux(Face2D f, FlowState2D fsL, FlowState2D fsR,
-                    GasModel gmodel, FluxCalcCode flux_calc)
+                    GasModel gmodel, FluxCalcCode flux_calc, int x_order)
 // Compute the face's flux vector from left and right flow states.
+// If requested, high-order reconstruction is applied.
 {
+    if (x_order == 1) {
+        // Low-order reconstruction is just copy the nearest cell-centre flowstate.
+        fsL.copy_values_from(f.left_cells[0].fs);
+        fsR.copy_values_from(f.right_cells[0].fs);
+    } else {
+        // High-order reconstruction from the left_cells and right_cells stencil.
+        f.interp_l2r2(fsL, fsR, gmodel, false);
+    }
     final switch (flux_calc) {
     case FluxCalcCode.ausmdv:
         calculate_flux_ausmdv(f, fsL, fsR, gmodel);
