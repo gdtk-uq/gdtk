@@ -898,10 +898,15 @@ public:
         //     M. A. Park
         //     Anisotropic Output-Based Adaptation with Tetrahedral Cut Cells for Compressible Flows
         //     Thesis @ Massachusetts Institute of Technology, 2008
+        // Modified by NNG to use the harmonic mean of the s value computed at each face,
+        // instead of just the minimum s value. This smooths out the limiter spatially and
+        // removes a source of noise in the reconstruction process, while still prioritising
+        // small values of s in the averaging process. (09/08/22)
 
         FVCell ncell;
         number pmin;
-        number phi = 1.0;
+        number phi = 0.0;
+        number n = 0.0;
         foreach (i, f; cell_cloud[0].iface) {
             if (f.left_cell.id == cell_cloud[0].id) { ncell = f.right_cell; }
             else { ncell = f.left_cell; }
@@ -922,9 +927,11 @@ public:
             if (myConfig.dimensions == 3) { dp += dpz*dpz; }
             dp = sqrt(dp);
             pmin = fmin(cell_cloud[0].fs.gas.p, ncell.fs.gas.p);
-            number s = 1-tanh(dp/pmin);
-            phi = fmin(phi, s);
+            number s = 1.0-tanh(dp/pmin);
+            phi += 1.0/fmax(s, 1e-16);
+            n += 1.0;
         }
+        phi = n/phi;
 
         // the limiter value for each variable is set to the pressure-based value
         velxPhi = phi; velyPhi = phi; velzPhi = phi;
