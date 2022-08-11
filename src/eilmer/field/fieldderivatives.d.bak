@@ -251,91 +251,6 @@ double d2fdxdy_2d(double xi, double xN, double xS, double xE, double xW,
 
     return (_Ixy*Pi + _Nxy*PN + _Sxy*PS + _Exy*PE + _Wxy*PW)/D;
 }
-/*
-   More testing, let's try solving for d2dx2 and d2dxy separately 
-*/
-
-const string R_D = "((dxE*dxN^^2-dxE^^2*dxN)*dyS+(dxE^^2*dxS-dxE*dxS^^2)*dyN
-                          +(dxN*dxS^^2-dxN^^2*dxS)*dyE)
- *dyW^^2
- +((dxE^^2*dxN-dxE*dxN^^2)*dyS^^2+(dxE*dxS^^2-dxE^^2*dxS)*dyN^^2
-                              +(dxN^^2*dxS-dxN*dxS^^2)*dyE^^2)
-  *dyW+((dxE*dxW^^2-dxE^^2*dxW)*dyN+(dxN^^2*dxW-dxN*dxW^^2)*dyE)*dyS^^2
- +((dxE^^2*dxW-dxE*dxW^^2)*dyN^^2+(dxN*dxW^^2-dxN^^2*dxW)*dyE^^2)*dyS
- +(dxS*dxW^^2-dxS^^2*dxW)*dyE*dyN^^2+(dxS^^2*dxW-dxS*dxW^^2)*dyE^^2*dyN";
-
-
-const string R_Nx = "-((dxE^^2*dyS-dxS^^2*dyE)*dyW^^2+(dxS^^2*dyE^^2-dxE^^2*dyS^^2)*dyW+dxW^^2*dyE*dyS^^2
-                             -dxW^^2*dyE^^2*dyS)";
-
-const string R_Sx = "((dxE^^2*dyN-dxN^^2*dyE)*dyW^^2+(dxN^^2*dyE^^2-dxE^^2*dyN^^2)*dyW+dxW^^2*dyE*dyN^^2
-                            -dxW^^2*dyE^^2*dyN)";
-
-const string R_Ex = "((dxN^^2*dyS-dxS^^2*dyN)*dyW^^2+(dxS^^2*dyN^^2-dxN^^2*dyS^^2)*dyW+dxW^^2*dyN*dyS^^2
-                            -dxW^^2*dyN^^2*dyS)";
-
-const string R_Wx = "-((dxE^^2*dyN-dxN^^2*dyE)*dyS^^2+(dxN^^2*dyE^^2-dxE^^2*dyN^^2)*dyS+dxS^^2*dyE*dyN^^2
-                             -dxS^^2*dyE^^2*dyN)";
-
-const string R_Ix = "-(((dxN^^2-dxE^^2)*dyS+(dxE^^2-dxS^^2)*dyN+(dxS^^2-dxN^^2)*dyE)*dyW^^2
- +((dxE^^2-dxN^^2)*dyS^^2+(dxS^^2-dxE^^2)*dyN^^2+(dxN^^2-dxS^^2)*dyE^^2)*dyW
- +((dxW^^2-dxE^^2)*dyN+(dxN^^2-dxW^^2)*dyE)*dyS^^2
- +((dxE^^2-dxW^^2)*dyN^^2+(dxW^^2-dxN^^2)*dyE^^2)*dyS+(dxW^^2-dxS^^2)*dyE*dyN^^2
- +(dxS^^2-dxW^^2)*dyE^^2*dyN)";
-
-const string R_Ny = "-((dxE*dxS^^2-dxE^^2*dxS)*dyW^^2+(dxE^^2*dxW-dxE*dxW^^2)*dyS^^2
-                             +(dxS*dxW^^2-dxS^^2*dxW)*dyE^^2)";
-
-const string R_Sy = "((dxE*dxN^^2-dxE^^2*dxN)*dyW^^2+(dxE^^2*dxW-dxE*dxW^^2)*dyN^^2
-                            +(dxN*dxW^^2-dxN^^2*dxW)*dyE^^2)";
-
-const string R_Ey = "((dxN*dxS^^2-dxN^^2*dxS)*dyW^^2+(dxN^^2*dxW-dxN*dxW^^2)*dyS^^2
-                            +(dxS*dxW^^2-dxS^^2*dxW)*dyN^^2)";
-
-const string R_Wy = "-((dxE*dxN^^2-dxE^^2*dxN)*dyS^^2+(dxE^^2*dxS-dxE*dxS^^2)*dyN^^2
-                             +(dxN*dxS^^2-dxN^^2*dxS)*dyE^^2)";
-
-const string R_Iy = "-(((dxN-dxE)*dxS^^2+(dxE^^2-dxN^^2)*dxS+dxE*dxN^^2-dxE^^2*dxN)*dyW^^2
- +((dxE-dxN)*dxW^^2+(dxN^^2-dxE^^2)*dxW-dxE*dxN^^2+dxE^^2*dxN)*dyS^^2
- +((dxS-dxE)*dxW^^2+(dxE^^2-dxS^^2)*dxW+dxE*dxS^^2-dxE^^2*dxS)*dyN^^2
- +((dxN-dxS)*dxW^^2+(dxS^^2-dxN^^2)*dxW-dxN*dxS^^2+dxN^^2*dxS)*dyE^^2)";
-
-const string R_Nxx = "((2*dxE*dyS-2*dxS*dyE)*dyW^^2+(2*dxS*dyE^^2-2*dxE*dyS^^2)*dyW+2*dxW*dyE*dyS^^2
-                            -2*dxW*dyE^^2*dyS)";
-
-const string R_Sxx = "-((2*dxE*dyN-2*dxN*dyE)*dyW^^2+(2*dxN*dyE^^2-2*dxE*dyN^^2)*dyW+2*dxW*dyE*dyN^^2
-                             -2*dxW*dyE^^2*dyN)";
-
-const string R_Exx = "-((2*dxN*dyS-2*dxS*dyN)*dyW^^2+(2*dxS*dyN^^2-2*dxN*dyS^^2)*dyW+2*dxW*dyN*dyS^^2
-                             -2*dxW*dyN^^2*dyS)";
-
-const string R_Wxx = "((2*dxE*dyN-2*dxN*dyE)*dyS^^2+(2*dxN*dyE^^2-2*dxE*dyN^^2)*dyS+2*dxS*dyE*dyN^^2
-                            -2*dxS*dyE^^2*dyN)";
-
-const string R_Ixx = "(((2*dxN-2*dxE)*dyS+(2*dxE-2*dxS)*dyN+(2*dxS-2*dxN)*dyE)*dyW^^2
- +((2*dxE-2*dxN)*dyS^^2+(2*dxS-2*dxE)*dyN^^2+(2*dxN-2*dxS)*dyE^^2)*dyW
- +((2*dxW-2*dxE)*dyN+(2*dxN-2*dxW)*dyE)*dyS^^2
- +((2*dxE-2*dxW)*dyN^^2+(2*dxW-2*dxN)*dyE^^2)*dyS+(2*dxW-2*dxS)*dyE*dyN^^2
- +(2*dxS-2*dxW)*dyE^^2*dyN)";
-
-const string R_Nyy = "((2*dxE*dxS^^2-2*dxE^^2*dxS)*dyW+(2*dxE^^2*dxW-2*dxE*dxW^^2)*dyS
-                              +(2*dxS*dxW^^2-2*dxS^^2*dxW)*dyE)";
-
-const string R_Syy = "-((2*dxE*dxN^^2-2*dxE^^2*dxN)*dyW+(2*dxE^^2*dxW-2*dxE*dxW^^2)*dyN
-                               +(2*dxN*dxW^^2-2*dxN^^2*dxW)*dyE)";
-
-const string R_Eyy = "-((2*dxN*dxS^^2-2*dxN^^2*dxS)*dyW+(2*dxN^^2*dxW-2*dxN*dxW^^2)*dyS
-                               +(2*dxS*dxW^^2-2*dxS^^2*dxW)*dyN)";
-
-const string R_Wyy = "((2*dxE*dxN^^2-2*dxE^^2*dxN)*dyS+(2*dxE^^2*dxS-2*dxE*dxS^^2)*dyN
-                              +(2*dxN*dxS^^2-2*dxN^^2*dxS)*dyE)";
-
-const string R_Iyy = "(((2*dxN-2*dxE)*dxS^^2+(2*dxE^^2-2*dxN^^2)*dxS+2*dxE*dxN^^2-2*dxE^^2*dxN)*dyW
- +((2*dxE-2*dxN)*dxW^^2+(2*dxN^^2-2*dxE^^2)*dxW-2*dxE*dxN^^2+2*dxE^^2*dxN)*dyS
- +((2*dxS-2*dxE)*dxW^^2+(2*dxE^^2-2*dxS^^2)*dxW+2*dxE*dxS^^2-2*dxE^^2*dxS)*dyN
- +((2*dxN-2*dxS)*dxW^^2+(2*dxS^^2-2*dxN^^2)*dxW-2*dxN*dxS^^2+2*dxN^^2*dxS)*dyE)";
-
-
 
 /*
     This section of field derivatives is for cases with only three finite difference points,
@@ -343,7 +258,6 @@ const string R_Iyy = "(((2*dxN-2*dxE)*dxS^^2+(2*dxE^^2-2*dxN^^2)*dxS+2*dxE*dxN^^
     an insulating wall on the east side of the cell.
     
 */
-
 
 const string ZGE_Nx = "-((dxS*dyS*dyW^^2+(dxS^^2*dxW-dxW*dyS^^2)*dyW-dxS*dxW^^2*dyS)*nyE)";
 

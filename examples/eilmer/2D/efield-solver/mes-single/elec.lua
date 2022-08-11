@@ -18,9 +18,10 @@ initial = FlowState:new{p=101.35e3, T=300.0, velx=0.0}
 -- Set up two quadrilaterals in the (x,y)-plane by first defining
 -- the corner nodes, then the lines between those corners.
 a = Vector3:new{x=0.0, y=0.0}
+--b = Vector3:new{x=1.0, y=-0.01}
 b = Vector3:new{x=1.0, y=0.0}
-c = Vector3:new{x=0.0, y=1.0}
-d = Vector3:new{x=1.0, y=1.0}
+c = Vector3:new{x=0.08, y=1.01}
+d = Vector3:new{x=1.08, y=1.0}
 ab = Line:new{p0=a, p1=b}
 bd = Line:new{p0=b, p1=d}
 ac = Line:new{p0=a, p1=c}
@@ -32,7 +33,7 @@ nx = 16; ny = 16;
 grid = StructuredGrid:new{psurface=quad, niv=nx+1, njv=ny+1}
 blk = FluidBlock:new{grid=grid,
                      initialState=initial,
-                     bcList={north = WallBC_WithSlip:new{field_bc=FixedGradient_Test:new{}},
+                     bcList={north = WallBC_WithSlip:new{field_bc=FixedField_Test:new{}},
                              east  = WallBC_WithSlip:new{field_bc=FixedField_Test:new{}},
                              south = WallBC_WithSlip:new{field_bc=FixedField_Test:new{}},
                              west  = WallBC_WithSlip:new{field_bc=FixedField_Test:new{}},

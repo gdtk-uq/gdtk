@@ -81,8 +81,9 @@ class ElectricField {
                 Ai[nbands*k + 2] = k;
 
                 // We need the distances to the unknown phi locations, which may be faces or cells
-                double[4] dx, dy, phi; // TODO: phi is just for testing purposes
+                double[4] dx, dy, nx, ny;
                 foreach(io, face; cell.iface){
+                    double sign = cell.outsign[io];
                     Vector3 pos;
                     if (face.is_on_boundary) {
                         pos = face.pos;
@@ -94,11 +95,11 @@ class ElectricField {
                         int iio = (io>1) ? to!int(io+1) : to!int(io); // -> [0,1,3,4] since 2 is the entry for "cell"
                         Ai[k*nbands + iio] = other.id + block_offsets[blkid];
                     }
+                    nx[io] = sign*face.n.x.re;
+                    ny[io] = sign*face.n.y.re;
                     dx[io] = pos.x.re - cell.pos[0].x.re;
                     dy[io] = pos.y.re - cell.pos[0].y.re;
-                    phi[io] = exp(pos.x.re)*sin(pos.y.re);
                 }
-                double phii = exp(cell.pos[0].x.re)*sin(cell.pos[0].y.re);
 
                 // TODO: Use Face enums?
                 //double dxN = fmax(dx[0], 1e-12); double dyN = dy[0];
@@ -107,33 +108,99 @@ class ElectricField {
                 double dxS = dx[2]; double dyS = dy[2];
                 double dxW = dx[3]; double dyW = dy[3];
 
-                double D = denominator(dxN, dxS, dxE, dxW, dyN, dyS, dyE, dyW);
+                double nxN = nx[0]; double nyN = ny[0];
+                double nxE = nx[1]; double nyE = ny[1];
+                double nxS = nx[2]; double nyS = ny[2];
+                double nxW = nx[3]; double nyW = ny[3];
 
                 double[4] fdx, fdy, fdxx, fdxy;
-                fdx[0] = mixin(Nx);
-                fdx[1] = mixin(Ex);
-                fdx[2] = mixin(Sx);
-                fdx[3] = mixin(Wx);
-                double _Ix    = mixin(Ix);
+                double _Ix, _Iy, _Ixx, _Ixy, D;
 
-                fdy[0] = mixin(Ny);
-                fdy[1] = mixin(Ey);
-                fdy[2] = mixin(Sy);
-                fdy[3] = mixin(Wy);
-                double _Iy    = mixin(Iy);
+                //if (cell.iface[1].is_on_boundary) {
+                //    fdx[0] = mixin(ZGE_Nx);
+                //    fdx[1] = mixin(ZGE_Ex);
+                //    fdx[2] = mixin(ZGE_Sx);
+                //    fdx[3] = mixin(ZGE_Wx);
+                //    _Ix    = mixin(ZGE_Ix);
 
-                fdxx[0] = mixin(Nxx);
-                fdxx[1] = mixin(Exx);
-                fdxx[2] = mixin(Sxx);
-                fdxx[3] = mixin(Wxx);
-                double _Ixx    = mixin(Ixx);
+                //    fdy[0] = mixin(ZGE_Ny);
+                //    fdy[1] = mixin(ZGE_Ey);
+                //    fdy[2] = mixin(ZGE_Sy);
+                //    fdy[3] = mixin(ZGE_Wy);
+                //    _Iy    = mixin(ZGE_Iy);
 
-                fdxy[0] = mixin(Nxy);
-                fdxy[1] = mixin(Exy);
-                fdxy[2] = mixin(Sxy);
-                fdxy[3] = mixin(Wxy);
-                double _Ixy    = mixin(Ixy);
+                //    fdxx[0] = mixin(ZGE_Nxx);
+                //    fdxx[1] = mixin(ZGE_Exx);
+                //    fdxx[2] = mixin(ZGE_Sxx);
+                //    fdxx[3] = mixin(ZGE_Wxx);
+                //    _Ixx    = mixin(ZGE_Ixx);
 
+                //    fdxy[0] = mixin(ZGE_Nxy);
+                //    fdxy[1] = mixin(ZGE_Exy);
+                //    fdxy[2] = mixin(ZGE_Sxy);
+                //    fdxy[3] = mixin(ZGE_Wxy);
+                //    _Ixy    = mixin(ZGE_Ixy);
+                //    D = mixin(ZGE_D);
+                //} else if (cell.iface[3].is_on_boundary) {
+                //    fdx[0] = mixin(ZGW_Nx);
+                //    fdx[1] = mixin(ZGW_Ex);
+                //    fdx[2] = mixin(ZGW_Sx);
+                //    fdx[3] = mixin(ZGW_Wx);
+                //    _Ix    = mixin(ZGW_Ix);
+
+                //    fdy[0] = mixin(ZGW_Ny);
+                //    fdy[1] = mixin(ZGW_Ey);
+                //    fdy[2] = mixin(ZGW_Sy);
+                //    fdy[3] = mixin(ZGW_Wy);
+                //    _Iy    = mixin(ZGW_Iy);
+
+                //    fdxx[0] = mixin(ZGW_Nxx);
+                //    fdxx[1] = mixin(ZGW_Exx);
+                //    fdxx[2] = mixin(ZGW_Sxx);
+                //    fdxx[3] = mixin(ZGW_Wxx);
+                //    _Ixx    = mixin(ZGW_Ixx);
+
+                //    fdxy[0] = mixin(ZGW_Nxy);
+                //    fdxy[1] = mixin(ZGW_Exy);
+                //    fdxy[2] = mixin(ZGW_Sxy);
+                //    fdxy[3] = mixin(ZGW_Wxy);
+                //    _Ixy    = mixin(ZGW_Ixy);
+                //    D = mixin(ZGW_D);
+                //} else {
+                    D = denominator(dxN, dxS, dxE, dxW, dyN, dyS, dyE, dyW);
+                    fdx[0] = mixin(Nx);
+                    fdx[1] = mixin(Ex);
+                    fdx[2] = mixin(Sx);
+                    fdx[3] = mixin(Wx);
+                    _Ix    = mixin(Ix);
+
+                    fdy[0] = mixin(Ny);
+                    fdy[1] = mixin(Ey);
+                    fdy[2] = mixin(Sy);
+                    fdy[3] = mixin(Wy);
+                    _Iy    = mixin(Iy);
+
+                    fdxx[0] = mixin(Nxx);
+                    fdxx[1] = mixin(Exx);
+                    fdxx[2] = mixin(Sxx);
+                    fdxx[3] = mixin(Wxx);
+                    _Ixx    = mixin(Ixx);
+
+                    fdxy[0] = mixin(Nxy);
+                    fdxy[1] = mixin(Exy);
+                    fdxy[2] = mixin(Sxy);
+                    fdxy[3] = mixin(Wxy);
+                    _Ixy    = mixin(Ixy);
+                //}
+
+                writef("Cell boundaries: ");
+                foreach(io, face; cell.iface){
+                    if (face.is_on_boundary) {
+                        auto field_bc = field_bcs[blkid][face.bc_id];
+                        writef("%s - %s, ", face_name[io], field_bc);
+                    }
+                }
+                writefln("");
                 foreach(io, face; cell.iface){
                     face.fs.gas.sigma = conductivity(face.fs.gas, face.pos, gmodel); // TODO: Redundant work.
                     double sign = cell.outsign[io];
@@ -141,52 +208,30 @@ class ElectricField {
                     double sigmaF = face.fs.gas.sigma.re;
                     double dxF = face.pos.x.re - cell.pos[0].x.re;
                     double dyF = face.pos.y.re - cell.pos[0].y.re;
-                    double nx = sign*face.n.x;
-                    double ny = sign*face.n.y;
-                    double dphidx_face_target = exp(face.pos.x)*sin(face.pos.y);
-                    double dphidy_face_target = exp(face.pos.x)*cos(face.pos.y);
-
-                    double dphidx_face = (_Ix + _Ixx*dxF + _Ixy*dyF)*phii;
-                    double dphidy_face = (_Iy + _Ixy*dxF - _Ixx*dyF)*phii;
+                    double nxF = sign*face.n.x;
+                    double nyF = sign*face.n.y;
 
                     // cell k's contribution to the flux:
-                    A[k*nbands + 2] +=  S/D*sigmaF*(nx*(_Ix + _Ixx*dxF + _Ixy*dyF) + ny*(_Iy + _Ixy*dxF - _Ixx*dyF));
-                    // What about when iface is a boundary? At this stage it doesn't matter
+                    A[k*nbands + 2] +=  S/D*sigmaF*(nxF*(_Ix + _Ixx*dxF + _Ixy*dyF) + nyF*(_Iy + _Ixy*dxF - _Ixx*dyF));
+                    writefln("Cell %d[%d] contribution (sigmaF=%e) %e*(nx*%e + ny*%e)=%e", k, io, sigmaF, S/D*sigmaF, (_Ix + _Ixx*dxF + _Ixy*dyF), (_Iy + _Ixy*dxF - _Ixx*dyF), S/D*sigmaF*(nxF*(_Ix + _Ixx*dxF + _Ixy*dyF) + nyF*(_Iy + _Ixy*dxF - _Ixx*dyF)));
 
                     // Each jface makes a contribution to the flux through "face"
                     foreach(jo, jface; cell.iface){
                         if (jface.is_on_boundary) {
-                            auto field_bc = cast(FixedField_Test) field_bcs[blkid][jface.bc_id];
-                            assert(field_bc !is null, "Oops, this should be a FixedField_Test object.");
-                            // Note that we could set dphi_f manually
-                            double phif = field_bc.test_field(jface.pos.x.re, jface.pos.y.re);
-                            b[k] -= S/D*sigmaF*(nx*(fdx[jo] + fdxx[jo]*dxF + fdxy[jo]*dyF)
-                                            + ny*(fdy[jo] + fdxy[jo]*dxF - fdxx[jo]*dyF))*phif;
-
-                            dphidx_face += (fdx[jo] + fdxx[jo]*dxF + fdxy[jo]*dyF)*phif;
-                            dphidy_face += (fdy[jo] + fdxy[jo]*dxF - fdxx[jo]*dyF)*phif;
+                            auto field_bc = field_bcs[blkid][jface.bc_id];
+                            double phif = field_bc.phif(jface); // ZG will return zero here, which cancels out the below
+                            b[k] -= S/D*sigmaF*(nxF*(fdx[jo] + fdxx[jo]*dxF + fdxy[jo]*dyF)
+                                            + nyF*(fdy[jo] + fdxy[jo]*dxF - fdxx[jo]*dyF))*phif;
+                            writefln("    RHS  %d contribution %e*(nx*%e + ny*%e)*%e", jo, S/D*sigmaF, (fdx[jo] + fdxx[jo]*dxF + fdxy[jo]*dyF), (fdy[jo] + fdxy[jo]*dxF - fdxx[jo]*dyF), phif);
                         } else {
-                            dphidx_face += (fdx[jo] + fdxx[jo]*dxF + fdxy[jo]*dyF)*phi[jo];
-                            dphidy_face += (fdy[jo] + fdxy[jo]*dxF - fdxx[jo]*dyF)*phi[jo];
-
                             int jjo = (jo>1) ? to!int(jo+1) : to!int(jo); // -> [0,1,3,4] since 2 is the entry for "cell"
-                            A[k*nbands + jjo] += S/D*sigmaF*(nx*(fdx[jo] + fdxx[jo]*dxF + fdxy[jo]*dyF)
-                                                         + ny*(fdy[jo] + fdxy[jo]*dxF - fdxx[jo]*dyF));
+                            A[k*nbands + jjo] += S/D*sigmaF*(nxF*(fdx[jo] + fdxx[jo]*dxF + fdxy[jo]*dyF)
+                                                         + nyF*(fdy[jo] + fdxy[jo]*dxF - fdxx[jo]*dyF));
+                            writefln("    Face %d contribution %e*(nx*%e + ny*%e)", jo, S/D*sigmaF, (fdx[jo] + fdxx[jo]*dxF + fdxy[jo]*dyF), (fdy[jo] + fdxy[jo]*dxF - fdxx[jo]*dyF));
                         }
                     }
-                    dphidx_face /= D;
-                    dphidy_face /= D;
-                    //writefln("cell %d face %d phidx %e (%e) phidy %e (%e) - edge? %s", k, io, dphidx_face, dphidx_face_target, dphidy_face, dphidy_face_target, face.is_on_boundary);
                 }
-                double refB = 0.0;
-                refB += A[k*nbands + 2]*phii;
-                bool edge = false;
-                foreach(io, face; cell.iface){
-                    int iio = (io>1) ? to!int(io+1) : to!int(io); // -> [0,1,3,4] since 2 is the entry for "cell"
-                    refB+= A[k*nbands + iio]*phi[io];
-                    if (face.is_on_boundary) edge=true;
-                }
-                writefln("k %d refB: %e (%e) edge? %s", k, b[k], refB, edge);
+                writefln(" A[i,2]=[%e] b=[%e]", A[k*nbands+2], b[k]);
             }
         }
 

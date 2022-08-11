@@ -25,6 +25,7 @@ import bc.ghost_cell_effect.full_face_copy;
 
 interface FieldBC {
     void opCall(const double sign, const FVInterface face, const FVCell cell, int k, int nbands, size_t io, ref double[] A, ref double[] b, ref int[] Ai);
+    double phif(const FVInterface face);
     double compute_current(const double sign, const FVInterface face, const FVCell cell);
 }
 
@@ -80,8 +81,14 @@ class ZeroNormalGradient : FieldBC {
         return;
     }
 
+    final double phif(const FVInterface face) { return 0.0;}
+
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         return 0.0;
+    }
+    override string toString() const
+    {
+        return "ZeroGradient()";
     }
 private:
     @nogc size_t get_sideways_cell_index(const FVCell cell, const Vector3 tvec){
@@ -130,6 +137,8 @@ class FixedField : FieldBC {
         A[k*nbands + 2] += -1.0*S/d*sigma*ddotn;
     }
 
+    final double phif(const FVInterface face) { return value;}
+
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         double S = face.length.re;
         double d = distance_between(face.pos, cell.pos[0]);
@@ -137,6 +146,14 @@ class FixedField : FieldBC {
         double sigma = face.fs.gas.sigma.re;
         double I = sigma*phigrad*S; // convert from current density vector j to current I
         return I;
+    }
+    override string toString() const
+    {
+        char[] repr;
+        repr ~= "FixedValue(";
+        repr ~= "value=" ~ to!string(value);
+        repr ~= ")";
+        return to!string(repr);
     }
 private:
     double value;
@@ -160,6 +177,8 @@ class MixedField : FieldBC {
             collector(sign, face, cell, k, nbands, io, A, b, Ai);
         }
     }
+
+    final double phif(const FVInterface face) { return 0.0;}
 
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         double I;
@@ -194,6 +213,8 @@ class FixedField_Test : FieldBC {
         b[k] += -1.0*phi*S/d*sigma*ddotn;
     }
 
+    final double phif(const FVInterface face) { return exp(face.pos.x.re)*sin(face.pos.y.re);}
+
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         double S = face.length.re;
         double d = distance_between(face.pos, cell.pos[0]);
@@ -226,6 +247,8 @@ class FixedGradient_Test : FieldBC {
         number phigrad_dot_n = phigrad.dot(face.n);
         b[k] -= sign*phigrad_dot_n.re*S*sigma;
     }
+
+    final double phif(const FVInterface face) { return exp(face.pos.x.re)*sin(face.pos.y.re);}
 
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         double S = face.length.re;
@@ -295,6 +318,8 @@ class SharedField : FieldBC {
         A[k*nbands + iio] += 1.0*S/d*sigma*ddotn;
         A[k*nbands + 2] -= 1.0*S/d*sigma*ddotn;
     }
+
+    final double phif(const FVInterface face) { return 0.0;}
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         return 0.0;
     }
@@ -377,6 +402,8 @@ class MPISharedField : FieldBC {
         A[k*nbands + iio] += 1.0*S/d*sigma*ddotn;
         A[k*nbands + 2] -= 1.0*S/d*sigma*ddotn;
     }
+
+    final double phif(const FVInterface face) { return 0.0;}
 
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         return 0.0;
