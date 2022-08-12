@@ -786,7 +786,6 @@ public:
         //
         number delp, delm, U, phi, h, phi_f, nondim;
         immutable double K = myConfig.venkat_K_value;
-        immutable double rel_dif = myConfig.venkat_trigger_value;
         if (myConfig.dimensions == 3) {
             h = cell_cloud[0].volume[gtl]^^(1.0/3.0);
         } else {
