@@ -282,16 +282,16 @@ public:
     @nogc
     void barth_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
     {
-        // Limiter of Barth and Jespersen
-        //     Barth TJ, Jespersen DC.
+        // This is the classic Barth and Jespersen limiter from ref. [1], refer to ref. [2] for implementation details.
+        //
+        // references:
+        // [1] Barth TJ, Jespersen DC.
         //     The design and application of upwind schemes on unstructured meshes.
         //     AIAA Paper 89-0366; 1989
-        //
-        // Implementation details from
-        //     Blazek J.
+        // [2] Blazek J.
         //     CFD principles and applications
-        //     Third edition, 2007
-
+        //     pg. 156, Third edition, 2007
+        //
         number delp, delm, U, phi;
         immutable double eps = 1.0e-25;
         string codeForLimits(string qname, string gname,
@@ -631,6 +631,9 @@ public:
         // format detailed in ref. [2]. The original limiter function returned the limited slope directly,
         // ref. [3] presents the limiter form as eq. B.11, which returns a value between 0 and 1.
         //
+        // Note that we use non-dimensional quantities in the limiter function for proper application of the
+        // effect of the smoothing parameter.
+        //
         // references:
         // [1] G. D. van Albada, B. van Leer and W. W. Roberts
         //     A Comparative Study of Computational Methods in Cosmic Gas Dynamics
@@ -642,7 +645,7 @@ public:
         //     New Unstructured-Grid Limiter Functions
         //     2022 AIAA SciTech forum
         //
-        number delp, delm, U, phi, h, s;
+        number delp, delm, U, phi, phi_f, h, nondim;
         immutable double eps = myConfig.venkat_K_value; // TODO: we should think about renaming this variable to smooth_limiter_coeff. [KAD 19-07-2022]
 
         // Park heuristic pressure limiter
@@ -655,7 +658,17 @@ public:
         string codeForLimits(string qname, string gname, string limFactorname,
                              string qMaxname, string qMinname)
         {
-            string code = "{
+            string code = "{ ";
+            if ( qname == "vel.x" || qname == "vel.y" || qname == "vel.z" ) {
+                code ~= "number velMax = sqrt(velxMax*velxMax+velyMax*velyMax+velzMax*velzMax);
+                         number velMin = sqrt(velxMin*velxMin+velyMin*velyMin+velzMin*velzMin);
+                         nondim = 0.5*fabs(velMax+velMin) + 1.0e-25;";
+            } else if ( qname == "gas.massf[isp]" ) {
+                code ~= "nondim = 1.0;";
+            } else {
+                code ~= "nondim = 0.5*fabs("~qMaxname~" + "~qMinname~") + 1.0e-25;";
+            }
+            code ~= "
             U = cell_cloud[0].fs."~qname~";
             phi = 1.0;
             foreach (i, f; cell_cloud[0].iface) {
@@ -665,8 +678,10 @@ public:
                 delm = "~gname~"[0] * dx + "~gname~"[1] * dy;
                 if (myConfig.dimensions == 3) { delm += "~gname~"[2] * dz; }
                 delp = (delm >= 0.0) ? 0.5*("~qMaxname~" - U): 0.5*("~qMinname~" - U);
-                s = (2.0*(delm*delp+eps*eps))/(delp*delp+delm*delm+2.0*eps*eps);
-                phi = fmin(phi, s);
+                delp /= nondim;
+                delm /= nondim;
+                phi_f = (2.0*(delm*delp+eps*eps))/(delp*delp+delm*delm+2.0*eps*eps);
+                phi = fmin(phi, phi_f);
             }
             "~limFactorname~" = phi*phi_hp;
             }
@@ -756,17 +771,20 @@ public:
     void venkat_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
                       bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig, size_t gtl=0)
     {
-        // Venkatakrishnan's limiter
-        //     Venkatakrishnan V.
+        // This is the classic Venkatakrishnan limiter from ref. [1], refer to ref. [2] for implementation details.
+        //
+        // Note that we use non-dimensional quantities in the limiter function to improve the
+        // effect of the smoothing parameter.
+        //
+        // references:
+        // [1] V. Venkatakrishnan
         //     Convergence to steady state solutions of the Euler equations on unstructured grids with limiters.
         //     Journal of Computational Physics vol.118 pp120-130 (1995)
-        //
-        // Implementation details from
-        //     Blazek J.
+        // [2] Blazek J.
         //     CFD principles and applications
-        //     Third edition, 2007
-
-        number delp, delm, U, phi, h, s;
+        //     pg. 156, Third edition, 2007
+        //
+        number delp, delm, U, phi, h, phi_f, nondim;
         immutable double K = myConfig.venkat_K_value;
         immutable double rel_dif = myConfig.venkat_trigger_value;
         if (myConfig.dimensions == 3) {
@@ -786,7 +804,17 @@ public:
         string codeForLimits(string qname, string gname, string limFactorname,
                              string qMaxname, string qMinname)
         {
-            string code = "{
+            string code = "{ ";
+            if ( qname == "vel.x" || qname == "vel.y" || qname == "vel.z" ) {
+                code ~= "number velMax = sqrt(velxMax*velxMax+velyMax*velyMax+velzMax*velzMax);
+                         number velMin = sqrt(velxMin*velxMin+velyMin*velyMin+velzMin*velzMin);
+                         nondim = 0.5*fabs(velMax+velMin) + 1.0e-25;";
+            } else if ( qname == "gas.massf[isp]" ) {
+                code ~= "nondim = 1.0;";
+            } else {
+                code ~= "nondim = 0.5*fabs("~qMaxname~" + "~qMinname~") + 1.0e-25;";
+            }
+            code ~= "
             U = cell_cloud[0].fs."~qname~";
             phi = 1.0;
             foreach (i, f; cell_cloud[0].iface) {
@@ -795,15 +823,11 @@ public:
                 number dz = f.pos.z - cell_cloud[0].pos[gtl].z;
                 delm = "~gname~"[0] * dx + "~gname~"[1] * dy;
                 if (myConfig.dimensions == 3) { delm += "~gname~"[2] * dz; }
-                // modification on original algorithm which attempts to prevent
-                // the limiter triggering in regions of very little variation
-                if ( fabs((delm+U)/U) < rel_dif ) {
-                    phi = fmin(phi, 1.0);
-                } else {
-                    delp = (delm >= 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
-                    s = (delp*delp + 2.0*delp*delm + eps2)/(delp*delp + 2.0*delm*delm + delp*delm + eps2);
-                    phi = fmin(phi, s);
-                }
+                delp = (delm >= 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
+                delp /= nondim;
+                delm /= nondim;
+                phi_f = (delp*delp + 2.0*delp*delm + eps2)/(delp*delp + 2.0*delm*delm + delp*delm + eps2);
+                phi = fmin(phi, phi_f);
             }
             "~limFactorname~" = phi*phi_hp;
             }
