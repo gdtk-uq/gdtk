@@ -646,7 +646,7 @@ public:
         //     2022 AIAA SciTech forum
         //
         number delp, delm, U, phi, phi_f, h, nondim;
-        immutable double eps = myConfig.venkat_K_value; // TODO: we should think about renaming this variable to smooth_limiter_coeff. [KAD 19-07-2022]
+        immutable double eps = myConfig.smooth_limiter_coeff;
 
         // Park heuristic pressure limiter
         number phi_hp = 1.0;
@@ -785,7 +785,7 @@ public:
         //     pg. 156, Third edition, 2007
         //
         number delp, delm, U, phi, h, phi_f, nondim;
-        immutable double K = myConfig.venkat_K_value;
+        immutable double K = myConfig.smooth_limiter_coeff;
         if (myConfig.dimensions == 3) {
             h = cell_cloud[0].volume[gtl]^^(1.0/3.0);
         } else {

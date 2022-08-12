@@ -97,7 +97,7 @@ config.extrema_clipping = false
 config.interpolation_order = 2
 config.thermo_interpolator = "rhop"
 config.unstructured_limiter = "venkat"
-config.venkat_K_value = 0.1
+config.smooth_limiter_coeff = 0.1
 config.freeze_limiter_on_step = 2300
 
 -- viscous flux settings

@@ -98,7 +98,7 @@ config.interpolation_order = 2
 config.print_count = 1
 config.flux_calculator = "ausmdv"
 config.unstructured_limiter = "venkat"
-config.venkat_K_value = 0.3
+config.smooth_limiter_coeff = 0.3
 config.extrema_clipping = false
 SteadyStateSolver{
    use_preconditioner = true,

@@ -74,7 +74,7 @@ config.interpolation_order = 2
 config.apply_limiter = true
 config.extrema_clipping = false
 config.unstructured_limiter = "venkat"
-config.venkat_K_value = 0.3
+config.smooth_limiter_coeff = 0.3
 config.freeze_limiter_on_step = 1000
 config.thermo_interpolator = "rhop"
 

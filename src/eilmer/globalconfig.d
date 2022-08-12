@@ -1003,7 +1003,7 @@ final class GlobalConfig {
     // Allow the least-squares cloud of points (used to compute a cell-center gradient for
     // reconstruction in the unstructured solver) to grow.
     shared static bool use_extended_stencil = false;
-    shared static double venkat_K_value = 0.3;
+    shared static double smooth_limiter_coeff = 0.3;
     // There are another couple of reconstruction-control parameters
     // further down in the viscous effects parameters.
     //
@@ -1320,7 +1320,7 @@ public:
     UnstructuredLimiter unstructured_limiter;
     int freeze_limiter_on_step;
     bool use_extended_stencil;
-    double venkat_K_value;
+    double smooth_limiter_coeff;
     int nsteps_of_chemistry_ramp;
     double shear_tolerance;
     double M_inf;
@@ -1483,7 +1483,7 @@ public:
         unstructured_limiter = cfg.unstructured_limiter;
         freeze_limiter_on_step = cfg.freeze_limiter_on_step;
         use_extended_stencil = cfg.use_extended_stencil;
-        venkat_K_value = cfg.venkat_K_value;
+        smooth_limiter_coeff = cfg.smooth_limiter_coeff;
         nsteps_of_chemistry_ramp = cfg.nsteps_of_chemistry_ramp;
         shear_tolerance = cfg.shear_tolerance;
         M_inf = cfg.M_inf;
@@ -1842,7 +1842,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_enum("unstructured_limiter", "unstructured_limiter", "unstructured_limiter_from_name"));
     mixin(update_int("freeze_limiter_on_step", "freeze_limiter_on_step"));
     mixin(update_bool("use_extended_stencil", "use_extended_stencil"));
-    mixin(update_double("venkat_K_value", "venkat_K_value"));
+    mixin(update_double("smooth_limiter_coeff", "smooth_limiter_coeff"));
     mixin(update_int("nsteps_of_chemistry_ramp", "nsteps_of_chemistry_ramp"));
     mixin(update_double("shear_tolerance", "shear_tolerance"));
     mixin(update_int("shock_detector_smoothing", "shock_detector_smoothing"));
@@ -1929,7 +1929,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  unstructured_limiter: ", unstructured_limiter_name(cfg.unstructured_limiter));
         writeln("  freeze_limiter_on_step: ", cfg.freeze_limiter_on_step);
         writeln("  use_extended_stencil: ", cfg.use_extended_stencil);
-        writeln("  venkat_K_value: ", cfg.venkat_K_value);
+        writeln("  smooth_limiter_coeff: ", cfg.smooth_limiter_coeff);
         writeln("  nsteps_of_chemistry_ramp: ", cfg.nsteps_of_chemistry_ramp);
         writeln("  extrema_clipping: ", cfg.extrema_clipping);
         writeln("  interpolate_in_local_frame: ", cfg.interpolate_in_local_frame);
