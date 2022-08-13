@@ -2122,14 +2122,19 @@ void osher(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
 // Note that it will only work in a debug build because we have hidden the memory allocations in a debug block.
 {
     auto gmodel = myConfig.gmodel;
+    bool have_intermediate_states;
     GasState stateLstar, stateRstar, stateX0;
     debug {
-        // This cheat will run horribly slowly but we are intending only to do small test problems.
-        stateLstar = new GasState(gmodel);
-        stateRstar = new GasState(gmodel);
-        stateX0 = new GasState(gmodel);
+        // This cheat to hide the allocation from the @nogc
+        // will run horribly slowly but we are intending only to do small test problems.
+        stateLstar = GasState(gmodel);
+        stateRstar = GasState(gmodel);
+        stateX0 = GasState(gmodel);
+        have_intermediate_states = true;
+    } else {
+        have_intermediate_states = false;
     }
-    if (!stateX0 || !stateRstar || !stateLstar) {
+    if (!have_intermediate_states) {
         throw new Error("The osher flux calculator is only usable in the debug flavour of build.");
     }
     //

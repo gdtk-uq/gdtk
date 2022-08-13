@@ -126,7 +126,7 @@ extern(C) int thermoPT(lua_State* L)
 {
     try {
         auto gm = checkGasModel(L, 1);
-        auto Q = new GasState(gm);
+        auto Q = GasState(gm);
         getGasStateFromTable(L, gm, 2, Q);
         if ( Q.p <= 0.0 || isNaN(Q.p) ) {
             string errMsg = "ERROR: when calling 'updateThermoFromPT'\n";
@@ -158,7 +158,7 @@ extern(C) int thermoPT(lua_State* L)
 extern(C) int thermoRHOU(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     if ( Q.rho <= 0.0 || isNaN(Q.rho) ) {
         string errMsg = "ERROR: when calling 'updateThermoFromRHOU'\n";
@@ -187,7 +187,7 @@ extern(C) int thermoRHOU(lua_State* L)
 extern(C) int thermoRHOT(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     if ( Q.rho <= 0.0 || isNaN(Q.rho) ) {
         string errMsg = "ERROR: when calling 'updateThermoFromRHOT'\n";
@@ -216,7 +216,7 @@ extern(C) int thermoRHOT(lua_State* L)
 extern(C) int thermoRHOP(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     if ( Q.rho <= 0.0 || isNaN(Q.rho) ) {
         string errMsg = "ERROR: when calling 'updateThermoFromRHOP'\n";
@@ -245,7 +245,7 @@ extern(C) int thermoRHOP(lua_State* L)
 extern(C) int thermoPS(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     if ( Q.p <= 0.0 || isNaN(Q.p) ) {
         string errMsg = "ERROR: when calling 'updateThermoFromPS'\n";
@@ -266,7 +266,7 @@ extern(C) int thermoPS(lua_State* L)
 extern(C) int thermoHS(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     number h = lua_tonumber(L, 3);
     number s = lua_tonumber(L, 4);
@@ -279,7 +279,7 @@ extern(C) int thermoHS(lua_State* L)
 extern(C) int soundSpeed(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     if ( Q.T <= 0.0 || isNaN(Q.T) ) {
         string errMsg = "ERROR: when calling 'updateSoundSpeed'\n";
@@ -299,7 +299,7 @@ extern(C) int soundSpeed(lua_State* L)
 extern(C) int transCoeffs(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     if ( Q.T <= 0.0 || isNaN(Q.T) ) {
         string errMsg = "ERROR: when calling 'updateTransCoeffs'\n";
@@ -322,7 +322,7 @@ extern(C) int transCoeffs(lua_State* L)
 extern(C) int dpdrhoConstT(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     if ( Q.T <= 0.0 || isNaN(Q.T) ) {
         string errMsg = "ERROR: when calling 'dpdrhoConstT'\n";
@@ -343,7 +343,7 @@ extern(C) int dpdrhoConstT(lua_State* L)
 extern(C) int intEnergy(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     if ( Q.T <= 0.0 || isNaN(Q.T) ) {
         string errMsg = "ERROR: when calling 'intEnergy'\n";
@@ -364,7 +364,7 @@ extern(C) int intEnergy(lua_State* L)
 extern(C) int enthalpy(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     if ( Q.T <= 0.0 || isNaN(Q.T) ) {
         string errMsg = "ERROR: when calling 'enthalpy'\n";
@@ -391,7 +391,7 @@ extern(C) int enthalpy(lua_State* L)
 extern(C) int entropy(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     if ( Q.T <= 0.0 || isNaN(Q.T) ) {
         string errMsg = "ERROR: when calling 'entropy'\n";
@@ -418,7 +418,7 @@ extern(C) int entropy(lua_State* L)
 extern(C) int gibbsFreeEnergy(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     if ( Q.T <= 0.0 || isNaN(Q.T) ) {
         string errMsg = "ERROR: when calling 'gibbsFreeEnergy'\n";
@@ -441,7 +441,7 @@ extern(C) int gibbsFreeEnergy(lua_State* L)
 extern(C) int Cv(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     if ( Q.T <= 0.0 || isNaN(Q.T) ) {
         string errMsg = "ERROR: when calling 'Cv'\n";
@@ -460,7 +460,7 @@ extern(C) int Cv(lua_State* L)
 extern(C) int Cp(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     if ( Q.T <= 0.0 || isNaN(Q.T) ) {
         string errMsg = "ERROR: when calling 'Cp'\n";
@@ -479,7 +479,7 @@ extern(C) int Cp(lua_State* L)
 extern(C) int R(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     if ( Q.T <= 0.0 || isNaN(Q.T) ) {
         string errMsg = "ERROR: when calling 'R'\n";
@@ -498,7 +498,7 @@ extern(C) int R(lua_State* L)
 extern(C) int gamma(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     if ( Q.T <= 0.0 || isNaN(Q.T) ) {
         string errMsg = "ERROR: when calling 'gamma'\n";
@@ -517,7 +517,7 @@ extern(C) int gamma(lua_State* L)
 extern(C) int molMass(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     auto molMass = gm.molecular_mass(Q);
     lua_pushnumber(L, molMass);
@@ -527,7 +527,7 @@ extern(C) int molMass(lua_State* L)
 extern(C) int massf2molef(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     number[] molef; molef.length = gm.n_species;
     gm.massf2molef(Q, molef);
@@ -555,7 +555,7 @@ extern(C) int molef2massf(lua_State* L)
         lua_pop(L, 1);
         throw new Error(errMsg);
     }
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     if ( narg == 3 ) {
         getGasStateFromTable(L, gm, 3, Q);
     }
@@ -586,7 +586,7 @@ extern(C) int molef2massf(lua_State* L)
 extern(C) int massf2conc(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     number[] conc; conc.length = gm.n_species;
     int nargs = lua_gettop(L);
     if ( nargs == 2 ) { // Support for option 1.
@@ -622,7 +622,7 @@ extern(C) int conc2massf(lua_State* L)
         lua_pop(L, 1);
         throw new Error(errMsg);
     }
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 3, Q);
     gm.conc2massf(conc, Q);
     // Update table with new mass fractions
@@ -644,7 +644,7 @@ extern(C) int binary_diffusion_coefficients(lua_State* L)
     D.length = nsp;
     foreach(ref Di; D) Di.length=nsp;
 
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     gm.binary_diffusion_coefficients(Q, D);
 
@@ -726,7 +726,7 @@ void checkAndScaleMassFractions(number[] massf, double tol)
     massf[] /= massfSum;
 }
 
-void pushNewGasTable(lua_State* L, const(GasState) Q, GasModel gm)
+void pushNewGasTable(lua_State* L, ref const(GasState) Q, GasModel gm)
 {
     lua_newtable(L);
     int idx = lua_gettop(L);
@@ -739,7 +739,7 @@ void pushNewGasTable(lua_State* L, const(GasState) Q, GasModel gm)
 
 GasState makeNewGasState(GasModel gm)
 {
-    GasState Q = new GasState(gm);
+    GasState Q = GasState(gm);
     // For the special case of n_species = 1, it's quite likely
     // that the user might never consider the massf array.
     // In which case, we'll just set that value to 1.0.
@@ -774,7 +774,7 @@ extern(C) int newTableForGasState(lua_State* L)
     return 1;
 }
 
-void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
+void getGasStateFromTable(lua_State* L, GasModel gm, int idx, ref GasState Q)
 {
     lua_getfield(L, idx, "rho");
     if ( lua_isnumber(L, -1) ) {
@@ -1169,7 +1169,7 @@ extern(C) int printValues(lua_State* L)
     lua_getfield(L, 1, "gasmodel");
     auto gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    auto Q = new GasState(gm);
+    auto Q = GasState(gm);
     getGasStateFromTable(L, gm, 1, Q);
     writeln(Q.toString);
     return 0;
@@ -1182,7 +1182,7 @@ extern(C) int copyValues(lua_State* L)
     lua_pop(L, 1);
 
     // Source GasState table
-    auto Q0 = new GasState(gm);
+    auto Q0 = GasState(gm);
     getGasStateFromTable(L, gm, 1, Q0);
 
     // Target GasState table

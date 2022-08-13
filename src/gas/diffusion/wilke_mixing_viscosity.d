@@ -113,7 +113,7 @@ version(wilke_mixing_viscosity_test) {
         auto vm_O2 = new SutherlandViscosity(273.0, 1.919e-5, 139.0);
         auto vm = new WilkeMixingViscosity([vm_N2, vm_O2], [28.0e-3, 32.0e-3]);
 
-        auto gd = new GasState(2, 0);
+        auto gd = GasState(2, 0);
         gd.T = T;
         gd.massf[0] = 0.8;
         gd.massf[1] = 0.2;

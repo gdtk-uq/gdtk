@@ -241,7 +241,7 @@ public:
             // The savedGasState is a module-level variable.
             // It only needs to be initialised when debug_chem mode
             // is on AND it only required initialisation once.
-            savedGasState = new GasState(gmodel);
+            savedGasState = GasState(gmodel);
         }
         //
         // some data structures used in the LU-SGS solver

@@ -37,7 +37,7 @@ public:
         _mol_masses ~= 28.96e-3; // kg/mol, use dummy value for air
         // [FIX-ME] to use gas constant to compute a better value some time.
         create_species_reverse_lookup();
-        Q_temp = new GasState(_n_species, _n_modes); // for use later in dpdrho_const_T
+        Q_temp = GasState(_n_species, _n_modes); // for use later in dpdrho_const_T
         version(complex_numbers) {
             throw new Error("Do not use with complex numbers.");
         }
@@ -296,7 +296,7 @@ public:
         return node;
     }
 
-    override void update_thermo_from_rhou(GasState Q) {
+    override void update_thermo_from_rhou(ref GasState Q) {
         double Cv_eff, R_eff, g_eff;
         double lr = log10(Q.rho.re);
         const(Patch)* node = this.search_tree(lr, Q.u.re);
@@ -313,7 +313,7 @@ public:
         if ( Q.a < 0.0 ) Q.a = 0.0;
     }
 
-    override void update_sound_speed(GasState Q){
+    override void update_sound_speed(ref GasState Q){
         if (isNaN(Q.rho) || isNaN(Q.u)) {
             string err = "update_sound_speed() method for LUT requires e and rho to be defined.";
             debug { err ~= format("\nPresently rho = %.5s, e = .8s", Q.rho, Q.u); }
@@ -327,7 +327,7 @@ public:
         Q.a = sqrt(g_eff*R_eff*Q.T);
     }
 
-    override void update_trans_coeffs(GasState Q) const
+    override void update_trans_coeffs(ref GasState Q) const
     {
         double lr = log10(Q.rho.re);
         const(Patch)* node = this.search_tree(lr, Q.u.re);
@@ -335,23 +335,23 @@ public:
         Q.k = node.interpolate(lr, Q.u.re, "k");
     }
 
-    override void update_thermo_from_pT(GasState Q) {
+    override void update_thermo_from_pT(ref GasState Q) {
         update_thermo_state_pT(this, Q);
     }
 
-    override void update_thermo_from_rhoT(GasState Q) {
+    override void update_thermo_from_rhoT(ref GasState Q) {
         update_thermo_state_rhoT(this, Q);
     }
 
-    override void update_thermo_from_rhop(GasState Q) {
+    override void update_thermo_from_rhop(ref GasState Q) {
         update_thermo_state_rhop(this, Q);
     }
 
-    override void update_thermo_from_ps(GasState Q, number s) {
+    override void update_thermo_from_ps(ref GasState Q, number s) {
         update_thermo_state_ps(this, Q, s);
     }
 
-    override void update_thermo_from_hs(GasState Q, number h, number s) {
+    override void update_thermo_from_hs(ref GasState Q, number h, number s) {
         update_thermo_state_hs(this, Q, h, s);
     }
 
@@ -752,7 +752,7 @@ version(adaptive_lut_CEA_test)
         double Cv_given = e_given / T_given; // J/(kg.K)
 
 
-        auto Q = new GasState(gm, p_given, T_given);
+        auto Q = GasState(gm, p_given, T_given);
         // Return values not stored in the GasState
         // The constructor of the gas state will call update_thermo_from_pT
         // which itself calls update_thermo_from_rhou, so we are testing both
@@ -791,7 +791,7 @@ version(adaptive_lut_CEA_test)
             throw new Exception(msg);
         }
 
-        Q = new GasState(gm, p_given, T_given);
+        Q = GasState(gm, p_given, T_given);
 
         // Note that the unit tests are to a higher error tolerance
         // because the look-up table was generated higher error allowed

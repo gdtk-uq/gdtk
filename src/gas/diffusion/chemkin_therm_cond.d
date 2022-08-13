@@ -155,7 +155,7 @@ version(chemkin_therm_cond_test) {
         lua_getglobal(L, "chemkin");
         auto co2Chemkin = createChemkinThermalConductivity(L);
         lua_close(L);
-        auto Q = new GasState(1, 1);
+        auto Q = GasState(1, 1);
         // Q.T = 3500.0;
         assert(isClose(0.185719655303, co2Chemkin.eval(Q, 3500.0), 1.0e-6), failedUnitTest());
         */

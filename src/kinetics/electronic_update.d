@@ -105,7 +105,7 @@ public:
         _numden.length = _AirModel.n_species;
     }
 
-    @nogc final void Update(GasState Q, double duration)
+    @nogc final void Update(ref GasState Q, double duration)
     {   
         
         endtime = duration;

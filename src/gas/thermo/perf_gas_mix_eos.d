@@ -101,7 +101,7 @@ version(perf_gas_mix_eos_test) {
     int main() {
         double[] R = [297.0, 260.0]; // N2, O2
         auto pg = new PerfectGasMixEOS(R, false, -1, -1);
-        auto gd = new GasState(2, 1);
+        auto gd = GasState(2, 1);
         gd.T = 300.0;
         gd.rho = 1.2;
         gd.massf[0] = 0.78;

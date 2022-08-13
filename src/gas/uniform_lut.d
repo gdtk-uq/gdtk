@@ -164,7 +164,7 @@ public:
 
         _mol_masses ~= s_molecular_weight(0).re;
 
-        Q_temp = new GasState(this); // For use in dpdrho_const_T()
+        Q_temp = GasState(this); // For use in dpdrho_const_T()
     } // End constructor
 
 
@@ -191,7 +191,7 @@ public:
     }
 
     @nogc
-    void determine_interpolants(const GasState Q, ref int ir, ref int ie,
+    void determine_interpolants(ref const(GasState) Q, ref int ir, ref int ie,
                                 ref number lrfrac, ref number efrac) const
     {
         if ( Q.rho <= 0.0) {
@@ -230,7 +230,7 @@ public:
         efrac = min(efrac, 1.0+EXTRAP_MARGIN);
     }
 
-    override void update_thermo_from_rhou(GasState Q) const
+    override void update_thermo_from_rhou(ref GasState Q) const
     {
         number efrac, lrfrac, Cv_eff, R_eff, g_eff;
         int    ir, ie;
@@ -278,7 +278,7 @@ public:
         if ( Q.a < 0.0 ) Q.a = 0.0;
     }
 
-    override void update_trans_coeffs(GasState Q) const
+    override void update_trans_coeffs(ref GasState Q) const
     {
         number efrac, lrfrac;
         number mu_eff, k_eff;
@@ -492,7 +492,7 @@ public:
         return M;
     }
 
-    override void update_sound_speed(GasState Q) const
+    override void update_sound_speed(ref GasState Q) const
     {
         number efrac, lrfrac, Cv_eff, R_eff, g_eff;
         int    ir, ie;
@@ -526,23 +526,23 @@ public:
     }
 
     // Remaining functions must call numerical method solution defined in gas_model.d
-    override void update_thermo_from_pT(GasState Q)
+    override void update_thermo_from_pT(ref GasState Q)
     {
         update_thermo_state_pT(this, Q);
     }
-    override void update_thermo_from_rhoT(GasState Q)
+    override void update_thermo_from_rhoT(ref GasState Q)
     {
         update_thermo_state_rhoT(this, Q);
     }
-    override void update_thermo_from_rhop(GasState Q)
+    override void update_thermo_from_rhop(ref GasState Q)
     {
         update_thermo_state_rhop(this, Q);
     }
-    override void update_thermo_from_ps(GasState Q, number s)
+    override void update_thermo_from_ps(ref GasState Q, number s)
     {
         update_thermo_state_ps(this, Q, s);
     }
-    override void update_thermo_from_hs(GasState Q, number h, number s)
+    override void update_thermo_from_hs(ref GasState Q, number h, number s)
     {
         update_thermo_state_hs(this, Q, h, s);
     }
@@ -633,7 +633,7 @@ version(uniform_lut_test)
         number k_given = 0.0662; // W/(m.K)
         number Cv_given = e_given / T_given; // J/(kg.K)
 
-        auto Q = new GasState(gm, p_given, T_given);
+        auto Q = GasState(gm, p_given, T_given);
         // Return values not stored in the GasState
         number Cv = gm.dudT_const_v(Q);
         number Cp = gm.dhdT_const_p(Q);

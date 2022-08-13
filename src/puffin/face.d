@@ -39,9 +39,9 @@ public:
         pos = Vector3();
         F.length = cqi.n;
         // Workspace for Osher-type flux calculator.
-        stateLstar = new GasState(gmodel);
-        stateRstar = new GasState(gmodel);
-        stateX0 = new GasState(gmodel);
+        stateLstar = GasState(gmodel);
+        stateRstar = GasState(gmodel);
+        stateX0 = GasState(gmodel);
     }
 
     this(ref const(Face2D) other)
@@ -49,9 +49,9 @@ public:
         cqi = new CQIndex(other.cqi);
         pos = Vector3(other.pos);
         F = other.F.dup;
-        stateLstar = new GasState(other.stateLstar);
-        stateRstar = new GasState(other.stateRstar);
-        stateX0 = new GasState(other.stateX0);
+        stateLstar = GasState(other.stateLstar);
+        stateRstar = GasState(other.stateRstar);
+        stateX0 = GasState(other.stateX0);
     }
 
     override

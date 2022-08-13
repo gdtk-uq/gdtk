@@ -53,8 +53,8 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
             errMsg ~= "The supplied gas model must be a TwoTemperatureAir model.\n";
             throw new ThermochemicalReactorUpdateException(errMsg);
         }
-        _Qinit = new GasState(gmodel);
-        _Q0 = new GasState(gmodel);
+        _Qinit = GasState(gmodel);
+        _Q0 = GasState(gmodel);
         chemupdate_constructor(chemFile, gmodel);
         _molef.length = _airModel.n_species;
         _numden.length = _airModel.n_species;
@@ -64,7 +64,7 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
     void chemupdate_constructor(string fname, GasModel gmodel)
     {
         // Allocate memory
-        //_Qinit = new GasState(gmodel.n_species, gmodel.n_modes);
+        //_Qinit = GasState(gmodel.n_species, gmodel.n_modes);
         _conc0.length = gmodel.n_species;
         _concOut.length = gmodel.n_species;
         _conc_for_source_terms.length = gmodel.n_species + gmodel.n_modes;
@@ -160,7 +160,7 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         _Qinit.copy_values_from(Q);
@@ -357,7 +357,7 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
         dtSuggest = dtSave;
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for two_temperature_air_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }
@@ -484,7 +484,7 @@ private:
     }
 
     @nogc
-    number evalRelaxationTime(GasState Q, int isp)
+    number evalRelaxationTime(ref GasState Q, int isp)
     {
 
         number totalND = 0.0;
@@ -530,7 +530,7 @@ private:
     }
 
     @nogc
-    number evalRate(GasState Q)
+    number evalRate(ref GasState Q)
     {
         _gmodel.massf2molef(Q, _molef);
         _gmodel.massf2numden(Q, _numden);
@@ -549,7 +549,7 @@ private:
     }
 
     @nogc
-    number ElectronEnergyExchangeRate(GasState Q)
+    number ElectronEnergyExchangeRate(ref GasState Q)
     {
         /*
         Appleton-Bray electron-translational energy exchange expression. Taken from Gnoffo, 1989
@@ -593,7 +593,7 @@ private:
     }
 
     @nogc
-    number EnergyReactiveSourceTerm(GasState Q)
+    number EnergyReactiveSourceTerm(ref GasState Q)
     {
         /*
         Since the different species have different amounts of vibronic energy, chemical reactions
@@ -622,7 +622,7 @@ private:
     }
 
     @nogc
-    ResultOfStep EnergyStep(GasState Q, double h, ref double hSuggest)
+    ResultOfStep EnergyStep(ref GasState Q, double h, ref double hSuggest)
     {
         _Q0.copy_values_from(Q);
         immutable double a21=1./5., a31=3./40., a32=9./40.,

@@ -25,7 +25,7 @@ final class UpdateGasGiant : ThermochemicalReactor {
         super(gmodel); // hang on to a reference to the gas model
     }
 
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         // Do something to update the state of the gas over time interval tInterval.
@@ -36,7 +36,7 @@ final class UpdateGasGiant : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for two_temperature_gasgiant_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }
@@ -53,7 +53,7 @@ version(two_temperature_gasgiant_kinetics_test) {
     import gas.two_temperature_gasgiant;
     void main() {
         auto gm = new TwoTemperatureGasGiant();
-        auto gd = new GasState(6, 1);
+        auto gd = GasState(6, 1);
         gd.p = 1.0e5;
         gd.T = 310.0;
         gd.T_modes[0] = 310;

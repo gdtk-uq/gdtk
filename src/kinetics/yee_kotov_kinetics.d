@@ -53,8 +53,8 @@ final class UpdateAB_YeeKotov : ThermochemicalReactor {
             errMsg ~= "The supplied gas model must be an IdealGasAB model.\n";
             throw new ThermochemicalReactorUpdateException(errMsg);
         }
-        _Qinit = new GasState(gmodel);
-        _Q0 = new GasState(gmodel);
+        _Qinit = GasState(gmodel);
+        _Q0 = GasState(gmodel);
         // We need to pick a number of pieces out of the gas-model file, again.
         // Although they exist in the GasModel object, they are private.
         auto L = init_lua_State();
@@ -68,7 +68,7 @@ final class UpdateAB_YeeKotov : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         try {
@@ -83,7 +83,7 @@ final class UpdateAB_YeeKotov : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for yee_kotov_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }
@@ -101,7 +101,7 @@ private:
     int _maxAttempts = 3;
 
     @nogc
-    void massfUpdate(GasState Q, double tInterval, ref double dtSuggest)
+    void massfUpdate(ref GasState Q, double tInterval, ref double dtSuggest)
     {
         // We borrow the algorithm from ChemistryUpdate.opCall()
         // Take a copy of what's passed in, in case something goes wrong
@@ -212,13 +212,13 @@ private:
     }
 
     @nogc
-    number evalRate(GasState Q)
+    number evalRate(ref GasState Q)
     {
         return -_K_0 * exp(-_T_ign/Q.T) * Q.massf[0];
     }
 
     @nogc
-    ResultOfStep updateStep(GasState Q, double h, ref double hSuggest)
+    ResultOfStep updateStep(ref GasState Q, double h, ref double hSuggest)
     {
         _Q0.copy_values_from(Q);
         immutable double a21=1./5., a31=3./40., a32=9./40.,

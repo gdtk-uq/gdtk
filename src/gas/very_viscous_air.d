@@ -84,40 +84,40 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q) const
+    override void update_thermo_from_pT(ref GasState Q) const
     {
         Q.rho = Q.p/(Q.T*_Rgas);
         Q.u = _Cv*Q.T;
     }
-    override void update_thermo_from_rhou(GasState Q) const
+    override void update_thermo_from_rhou(ref GasState Q) const
     {
         Q.T = Q.u/_Cv;
         Q.p = Q.rho*_Rgas*Q.T;
     }
-    override void update_thermo_from_rhoT(GasState Q) const
+    override void update_thermo_from_rhoT(ref GasState Q) const
     {
         Q.p = Q.rho*_Rgas*Q.T;
         Q.u = _Cv*Q.T;
     }
-    override void update_thermo_from_rhop(GasState Q) const
+    override void update_thermo_from_rhop(ref GasState Q) const
     {
         Q.T = Q.p/(Q.rho*_Rgas);
         Q.u = _Cv*Q.T;
     }
 
-    override void update_thermo_from_ps(GasState Q, number s) const
+    override void update_thermo_from_ps(ref GasState Q, number s) const
     {
         throw new Exception("Not implemented.");
     }
-    override void update_thermo_from_hs(GasState Q, number h, number s) const
+    override void update_thermo_from_hs(ref GasState Q, number h, number s) const
     {
         throw new Exception("Not implemented.");
     }
-    override void update_sound_speed(GasState Q) const
+    override void update_sound_speed(ref GasState Q) const
     {
         Q.a = sqrt(_gamma*_Rgas*Q.T);
     }
-    override void update_trans_coeffs(GasState Q) const
+    override void update_trans_coeffs(ref GasState Q) const
     {
         Q.mu = _mu;
         Q.k = _k;
@@ -176,7 +176,7 @@ private:
 version(very_viscous_air_test) {
     int main() {
         auto gm = new VeryViscousAir();
-        auto gs = new GasState(gm, 100.0e3, 300.0);
+        auto gs = GasState(gm, 100.0e3, 300.0);
         assert(isClose(gm.R(gs), 287.0, 1.0e-6), failedUnitTest());
 
         gm.update_thermo_from_pT(gs);

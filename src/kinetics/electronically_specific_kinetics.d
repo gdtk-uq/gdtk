@@ -82,9 +82,9 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
 
         _n_macro_species = _macroAirModel.n_species;
 
-        _macro_Q = new GasState(macro_gmodel);
-        _macro_Qinit = new GasState(macro_gmodel);
-        _macro_Q0 = new GasState(macro_gmodel);
+        _macro_Q = GasState(macro_gmodel);
+        _macro_Qinit = GasState(macro_gmodel);
+        _macro_Q0 = GasState(macro_gmodel);
         _macro_chemUpdate = new ChemistryUpdate(chemFile, macro_gmodel);
         _macro_molef.length = _n_macro_species;
         _macro_numden.length = _macroAirModel.n_species;
@@ -98,7 +98,7 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         // This section is the macro species updates
@@ -169,7 +169,7 @@ final class ElectronicallySpecificKinetics : ThermochemicalReactor {
 
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for electronically_specific_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }
@@ -287,7 +287,7 @@ private:
     }
 
     @nogc
-    void energyUpdate(GasState Q, double tInterval, ref double dtSuggest) //only pass macro Q
+    void energyUpdate(ref GasState Q, double tInterval, ref double dtSuggest) //only pass macro Q
     {
         _uTotal = Q.u + Q.u_modes[0];
         // We borrow the algorithm from ChemistryUpdate.opCall()
@@ -408,7 +408,7 @@ private:
     }
 
     @nogc
-    number evalRelaxationTime(GasState Q, int isp)
+    number evalRelaxationTime(ref GasState Q, int isp)
     {
         number totalND = 0.0;
         number sum = 0.0;
@@ -450,7 +450,7 @@ private:
     }
 
     @nogc
-    number evalRate(GasState Q)
+    number evalRate(ref GasState Q)
     {
         number rate = 0.0;
         foreach (isp; _macroAirModel.molecularSpecies) {
@@ -472,7 +472,7 @@ private:
     }
 
     @nogc
-    ResultOfStep RKFStep(GasState Q, double h, ref double hSuggest)
+    ResultOfStep RKFStep(ref GasState Q, double h, ref double hSuggest)
     {
         _macro_Q0.copy_values_from(Q);
         immutable double a21=1./5., a31=3./40., a32=9./40.,
@@ -589,13 +589,13 @@ private:
 
 
     @nogc
-    number energyInNoneq(GasState Q)
+    number energyInNoneq(ref GasState Q)
     {
         return to!number(0);
     }
 
     @nogc
-    void Update_Macro_State(GasState macro_state, in GasState Q)
+    void Update_Macro_State(ref GasState macro_state, in GasState Q)
     {
         macro_state.rho = Q.rho;
         macro_state.p = Q.p;
@@ -629,7 +629,7 @@ private:
     }
 
     @nogc
-    void Update_Electronic_State(GasState Q, GasState macro_state)
+    void Update_Electronic_State(ref GasState Q, ref GasState macro_state)
     {
         Q.rho = macro_state.rho;
         Q.p = macro_state.p;
@@ -706,7 +706,7 @@ version(electronically_specific_kinetics_test) {
         string filename = "../gas/sample-data/electronic-and-macro-species.lua";
         doLuaFile(L, filename);
         auto gm = new ElectronicallySpecificGas(L);
-        auto gd = new GasState(gm.n_species,1);
+        auto gd = GasState(gm.n_species,1);
         lua_close(L);
         //writeln("----------Initialised Gas model and state-----------");
         ElectronicallySpecificKinetics esk = new ElectronicallySpecificKinetics("sample-input/ES_files.lua",gm);
@@ -792,7 +792,7 @@ public:
         kinetics.electronic_state_solver.Init(full_rate_fit, [NInum,OInum]);
     }
 
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
 
@@ -895,7 +895,7 @@ private:
                             [25.0, 3.010e+15, -0.50, 0.0]];
 
     @nogc
-    number N2_fr(GasState Q) //must only be called when in conc mol/cm^3, not massf
+    number N2_fr(ref GasState Q) //must only be called when in conc mol/cm^3, not massf
     {
         number rate_coef(int i){
             return ArrN2_fr[i][0]*ArrN2_fr[i][1]*(Q.T^^ArrN2_fr[i][2])*exp(-ArrN2_fr[i][3]/Q.T);
@@ -914,7 +914,7 @@ private:
                 rate_coef(2)*_numden[N2ind]*_numden[O2ind] + rate_coef(3)*_numden[N2ind]*O_sum;
     }
     @nogc
-    number N2_br(GasState Q) //must only be called when in conc mol/cm^3, not massff
+    number N2_br(ref GasState Q) //must only be called when in conc mol/cm^3, not massff
     {
         number rate_coef(int i){
             return ArrN2_br[i][0]*ArrN2_br[i][1]*(Q.T^^ArrN2_br[i][2])*exp(-ArrN2_br[i][3]/Q.T);
@@ -933,7 +933,7 @@ private:
                 rate_coef(2)*N_sum*N_sum*_numden[O2ind] + rate_coef(3)*N_sum*N_sum*O_sum;
     }
     @nogc
-    number O2_fr(GasState Q) //must only be called when in conc mol/cm^3, not massf
+    number O2_fr(ref GasState Q) //must only be called when in conc mol/cm^3, not massf
     {
         number rate_coef(int i){
             return ArrO2_fr[i][0]*ArrO2_fr[i][1]*(Q.T^^ArrO2_fr[i][2])*exp(-ArrO2_fr[i][3]/Q.T);
@@ -952,7 +952,7 @@ private:
                 rate_coef(2)*_numden[O2ind]*_numden[O2ind] + rate_coef(3)*_numden[O2ind]*O_sum;
     }
     @nogc
-    number O2_br(GasState Q) //must only be called when in conc mol/cm^3, not massf
+    number O2_br(ref GasState Q) //must only be called when in conc mol/cm^3, not massf
     {
         number rate_coef(int i){
             return ArrO2_br[i][0]*ArrO2_br[i][1]*(Q.T^^ArrO2_br[i][2])*exp(-ArrO2_br[i][3]/Q.T);
@@ -971,17 +971,17 @@ private:
                 rate_coef(2)*O_sum*O_sum*_numden[O2ind] + rate_coef(3)*O_sum*O_sum*O_sum;
     }
     @nogc
-    number N2_rate(GasState Q)
+    number N2_rate(ref GasState Q)
     {
         return N2_fr(Q) - N2_br(Q);
     }
     @nogc
-    number O2_rate(GasState Q)
+    number O2_rate(ref GasState Q)
     {
         return O2_fr(Q) - O2_br(Q);
     }
     @nogc
-    void Molecule_Update(GasState Q, double tInterval)
+    void Molecule_Update(ref GasState Q, double tInterval)
     {
         double _dt = tInterval/100.0;
         foreach(int i; 0 .. 100){
@@ -994,7 +994,7 @@ private:
         }
     }
 
-    @nogc number energyInNoneq(const GasState Q)
+    @nogc number energyInNoneq(ref const(GasState) Q)
     {
         number uNoneq = 0.0;
         foreach (int isp; 0 .. _gmodel.n_species) {
@@ -1059,7 +1059,7 @@ version(electronically_specific_kinetics_test)
         string filename = "../gas/sample-data/electronic_composition.lua";
         doLuaFile(L, filename);
         auto gm = new ElectronicallySpecificGas(L);
-        auto gd = new GasState(gm.n_species,1);
+        auto gd = GasState(gm.n_species,1);
 
         number initial_uNoneq=0.0;
 

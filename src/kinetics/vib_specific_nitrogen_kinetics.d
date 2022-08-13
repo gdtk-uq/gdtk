@@ -46,7 +46,7 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         int L = gm.numVibLevels;
@@ -107,7 +107,7 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
         dtSuggest = dt;
     } // end opCall
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source)
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source)
     {
         number rhoErr = computeDrhoDt(Q.rho, Q.T, Q.massf, source);
     }

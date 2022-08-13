@@ -187,7 +187,7 @@ version(init_gas_model_test) {
 
         // Methods for testing gas state class
         import gas.gas_state;
-        auto gd = new GasState(2, 1);
+        auto gd = GasState(2, 1);
         gd.massf[0] = 0.8;
         gd.massf[1] = 0.2;
         number[] phi = [to!number(9.0), to!number(16.0)];
@@ -208,7 +208,7 @@ version(init_gas_model_test) {
             throw new Exception(msg);
         }
 
-        gd = new GasState(gm, 100.0e3, 300.0);
+        gd = GasState(gm, 100.0e3, 300.0);
         assert(approxEqualNumbers(gm.R(gd), to!number(287.086), 1.0e-4), "gas constant");
         assert(gm.n_modes == 0, "number of energy modes");
         assert(gm.n_species == 1, "number of species");
@@ -229,7 +229,7 @@ version(init_gas_model_test) {
         // variables that are thermodynamically consistent
         number e_given = 1.0e7;
         number rho_given = 2.0;
-        auto Q = new GasState(gm);
+        auto Q = GasState(gm);
         Q.u = e_given;
         Q.rho = rho_given;
         gm.update_thermo_from_rhou(Q);

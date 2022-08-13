@@ -59,7 +59,7 @@ class VibSpecificCO: GasModel {
         }
 
         // TODO: Viscous stuff
-        //gs = new GasState(1, 0); // Fake gas state for interfacing with transport properties.
+        //gs = GasState(1, 0); // Fake gas state for interfacing with transport properties.
         //mTransProps = new GasMixtureTransProps(L, ["CO"]);
     }
 
@@ -77,12 +77,12 @@ class VibSpecificCO: GasModel {
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q)
+    override void update_thermo_from_pT(ref GasState Q)
     {
         Q.rho = Q.p/(_R*Q.T);
         Q.u = internal_energy(Q);
     }
-    override void update_thermo_from_rhou(GasState Q)
+    override void update_thermo_from_rhou(ref GasState Q)
     {
         // From internal energy, remove vibrational energy before computing trans-rotational temperature.
         number u = Q.u;
@@ -90,19 +90,19 @@ class VibSpecificCO: GasModel {
         Q.T = (0.4/_R)*u;
         Q.p = Q.rho*_R*Q.T;
     }
-    override void update_thermo_from_rhoT(GasState Q)
+    override void update_thermo_from_rhoT(ref GasState Q)
     {
         Q.p = Q.rho*_R*Q.T;
         // Start with trans-rotational component of internal energy and add vibrational energy.
         Q.u = internal_energy(Q);
     }
-    override void update_thermo_from_rhop(GasState Q)
+    override void update_thermo_from_rhop(ref GasState Q)
     {
         Q.T = Q.p/(Q.rho*_R);
         // Start with trans-rotational component of internal energy and add vibrational energy.
         Q.u = internal_energy(Q);
     }
-    override void update_thermo_from_ps(GasState Q, number s)
+    override void update_thermo_from_ps(ref GasState Q, number s)
     {
         number sum=0.0;
         foreach(v; 0 .. _n_vibe_states) sum += Q.massf[v]*log(Q.massf[v]);
@@ -110,15 +110,15 @@ class VibSpecificCO: GasModel {
         Q.rho = Q.p/(_R*Q.T);
         Q.u = internal_energy(Q);
     }
-    override void update_thermo_from_hs(GasState Q, number h, number s) const
+    override void update_thermo_from_hs(ref GasState Q, number h, number s) const
     {
         throw new Error("VibSpecificCO:update_thermo_from_hs NOT IMPLEMENTED.");
     }
-    override void update_sound_speed(GasState Q)
+    override void update_sound_speed(ref GasState Q)
     {
         Q.a = sqrt(_gamma*_R*Q.T);
     }
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         // FIXME: Put the fake gas state stuff here
         //mTransProps.updateTransProps(gs);
@@ -200,7 +200,7 @@ protected:
     immutable double _cp = _Cp/_M;
     immutable double _gamma = _cp/_cv;
 
-    // State Specific Constants 
+    // State Specific Constants
     immutable double E01 = 4.31e-13*1e-7; // erg -> J Ground state energy (FIXME: Is this E1? A typo???)
     immutable double d   = 0.00598;       //          CO Anharmonicity
 
@@ -231,7 +231,7 @@ class VibSpecificCOMixture: VibSpecificCO {
         string otherSpeciesFile = getString(L, "other_species");
         cgm = new CompositeGas(otherSpeciesFile);
         n_others = cgm.n_species;
-        cgs = new GasState(cgm);
+        cgs = GasState(cgm);
 
         // Set up the species names array
         _n_species = _n_vibe_states + n_others;
@@ -255,52 +255,52 @@ class VibSpecificCOMixture: VibSpecificCO {
         lua_close(L);
     }
 
-    override void update_thermo_from_pT(GasState Q)
+    override void update_thermo_from_pT(ref GasState Q)
     {
         number R = gas_constant(Q);
         Q.rho = Q.p/R/Q.T;
         Q.u = internal_energy(Q);
     }
 
-    override void update_thermo_from_rhou(GasState Q)
+    override void update_thermo_from_rhou(ref GasState Q)
     {
         Q.T = temperature_from_energy(Q);
         number R = gas_constant(Q);
         Q.p = Q.rho*R*Q.T;
     }
 
-    override void update_thermo_from_rhoT(GasState Q)
+    override void update_thermo_from_rhoT(ref GasState Q)
     {
         number R = gas_constant(Q);
         Q.p = Q.rho*R*Q.T;
         Q.u = internal_energy(Q);
     }
 
-    override void update_thermo_from_rhop(GasState Q)
+    override void update_thermo_from_rhop(ref GasState Q)
     {
         number R = gas_constant(Q);
         Q.T = Q.p/R/Q.rho;
         Q.u = internal_energy(Q);
     }
 
-    override void update_thermo_from_ps(GasState Q, number s) const
+    override void update_thermo_from_ps(ref GasState Q, number s) const
     {
         throw new Error("VibSpecificCOMixture:update_thermo_from_ps NOT IMPLEMENTED.");
     }
 
-    override void update_thermo_from_hs(GasState Q, number h, number s) const
+    override void update_thermo_from_hs(ref GasState Q, number h, number s) const
     {
         throw new Error("VibSpecificCOMixture:update_thermo_from_hs NOT IMPLEMENTED.");
     }
 
-    override void update_sound_speed(GasState Q)
+    override void update_sound_speed(ref GasState Q)
     {
         number R = gas_constant(Q);
         number gamma = dhdT_const_p(Q)/dudT_const_v(Q);
         Q.a = sqrt(gamma*R*Q.T);
     }
 
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         // FIXME: This is going to be really nasty
         Q.mu = 0.0; Q.k = 0.0;
@@ -362,7 +362,7 @@ class VibSpecificCOMixture: VibSpecificCO {
 
 private:
     @nogc
-    number temperature_from_energy(GasState gs)
+    number temperature_from_energy(ref GasState gs)
     {
         /*
             Newton's method that is very similar to the one in gas/thermo/two_temperature_gas.d
@@ -454,7 +454,7 @@ version(vib_specific_co_test) {
         //auto gm = new VibSpecificCO(L);
         //lua_close(L);
         auto gm = new VibSpecificCO("sample-data/vib-specific-CO-gas.lua");
-        auto Q = new GasState(gm.n_species, 0);
+        auto Q = GasState(gm.n_species, 0);
 
         // Practice problem to match the data in table II
         Q.p = 26.7;  // Pa
@@ -494,7 +494,7 @@ version(vib_specific_co_mixture_test) {
 
     int main() {
         auto gm = new VibSpecificCOMixture("sample-data/vib-specific-CO-mixture.lua");
-        auto Q = new GasState(gm.n_species, 0);
+        auto Q = GasState(gm.n_species, 0);
 
         // Practice problem to match the data in table II
         Q.p = 26.7;  // Pa
@@ -533,7 +533,7 @@ version(vib_specific_co_mixture_test) {
         // ---------------------------------------------------------------------------
         // Now check that we match the N2 model when only N2 is present
         auto cgm = new CompositeGas("sample-data/thermally-perfect-n2.lua");
-        auto cgs = new GasState(cgm);
+        auto cgs = GasState(cgm);
         cgs.p = 26.7;  // Pa
         cgs.T = 175.0; // K
         cgs.massf[0] = 1.0;

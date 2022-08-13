@@ -15,7 +15,7 @@ import nm.number;
 import gas.gas_model;
 import gas.cea_gas;
 
-class GasState {
+struct GasState {
 public:
     /// Thermodynamic properties.
     number rho;  /// density, kg/m**3
@@ -241,7 +241,7 @@ public:
         return is_data_valid;
     } // end check_values()
 
-    override string toString() const
+    string toString() const
     {
         char[] repr;
         repr ~= "GasState(";

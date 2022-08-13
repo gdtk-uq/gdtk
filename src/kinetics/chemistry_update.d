@@ -43,7 +43,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
     {
         super(gmodel);
         // Allocate memory
-        _Qinit = new GasState(gmodel.n_species, gmodel.n_modes);
+        _Qinit = GasState(gmodel.n_species, gmodel.n_modes);
         _conc0.length = gmodel.n_species;
         _concOut.length = gmodel.n_species;
 
@@ -137,7 +137,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         _Qinit.copy_values_from(Q);
@@ -326,7 +326,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
         dtSuggest = dtSave;
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         rmech.eval_source_terms(gmodel, Q, source);
     }
 
@@ -685,7 +685,7 @@ version(chemistry_update_test) {
         auto gmodel = new ThermallyPerfectGas("sample-input/H2-I2-HI.lua");
         auto rmech = createReactionMechanism("sample-input/H2-I2-inp.lua", gmodel, 100.0, 10000.0);
 
-        auto gd = new GasState(3, 1);
+        auto gd = GasState(3, 1);
         gd.T = 700.0;
         double c0 = 4.54;
         double[] conc0 = [c0, c0, 0.0];

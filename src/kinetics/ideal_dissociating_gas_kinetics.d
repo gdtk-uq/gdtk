@@ -47,7 +47,7 @@ final class UpdateIDG : ThermochemicalReactor {
         lua_close(L);
     }
 
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         // In the isolated reactor, density and internal energy remain constant.
@@ -111,7 +111,7 @@ final class UpdateIDG : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     } // end opCall
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for ideal_dissociating_gas_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }

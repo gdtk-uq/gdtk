@@ -87,7 +87,7 @@ Result analyse(int verbosityLevel, Config config)
     // ANALYSIS PART A, SHOCK TUBE
     // ---------------------------
     //
-    void write_cea_state(GasState gs, string fill="  ")
+    void write_cea_state(ref GasState gs, string fill="  ")
     {
         writefln("%spressure    %g kPa", fill, gs.p/1000.0);
         writefln("%sdensity     %g kg/m^3", fill, gs.rho);
@@ -96,7 +96,7 @@ Result analyse(int verbosityLevel, Config config)
     // Set up equilibrium-gas flow analysis of shock tube.
     // Let's assume a cea2 gas model.
     if (verbosityLevel >= 1) { writeln("Initial gas in shock tube (state 1)."); }
-    auto state1 = new GasState(gm1);
+    auto state1 = GasState(gm1);
     state1.p = p1; state1.T = T1; state1.massf = [1.0,];
     gm1.update_thermo_from_pT(state1);
     gm1.update_sound_speed(state1);
@@ -108,7 +108,7 @@ Result analyse(int verbosityLevel, Config config)
     }
     //
     if (verbosityLevel >= 1) { writeln("Incident-shock process to state 2."); }
-    auto state2 = new GasState(gm1);
+    auto state2 = GasState(gm1);
     double[2] velocities = normal_shock(state1, Vs, state2, gm1);
     double V2 = velocities[0];
     double Vg = velocities[1];
@@ -120,11 +120,11 @@ Result analyse(int verbosityLevel, Config config)
     }
     //
     if (verbosityLevel >= 1) { writeln("Reflected-shock process to state 5."); }
-    GasState state5 = new GasState(gm1);
+    GasState state5 = GasState(gm1);
     double Vr = reflected_shock(state2, Vg, state5, gm1);
     //
     if (verbosityLevel >= 1) { writeln("Isentropic relaxation to state 5s."); }
-    auto state5s = new GasState(gm1);
+    auto state5s = GasState(gm1);
     state5s.copy_values_from(state5);
     // Entropy is set, then pressure is relaxed via an isentropic process.
     state5s.p = (pe > 0.0) ? pe : state5.p;
@@ -145,7 +145,7 @@ Result analyse(int verbosityLevel, Config config)
     double error_at_throat(double x)
     {
         // Returns Mach number error as pressure is changed.
-        GasState state = new GasState(gm1);
+        GasState state = GasState(gm1);
         double V = expand_from_stagnation(state5s, x, state, gm1);
         gm1.update_sound_speed(state);
         double err = (V/state.a) - 1.0;
@@ -160,7 +160,7 @@ Result analyse(int verbosityLevel, Config config)
         writeln("Failed to find throat conditions iteratively.");
         throw e;
     }
-    auto state6 = new GasState(gm1);
+    auto state6 = GasState(gm1);
     double V6 = expand_from_stagnation(state5s, x6, state6, gm1);
     double mflux6 = state6.rho * V6;  // mass flux per unit area, at throat
     if (verbosityLevel >= 1) {
@@ -176,7 +176,7 @@ Result analyse(int verbosityLevel, Config config)
     double error_at_small_expansion(double x)
     {
         // Returns Mach number error as pressure is changed.
-        GasState state = new GasState(gm1);
+        GasState state = GasState(gm1);
         double V = expand_from_stagnation(state5s, x, state, gm1);
         gm1.update_sound_speed(state);
         double err = (V/state.a) - meq_throat;
@@ -191,7 +191,7 @@ Result analyse(int verbosityLevel, Config config)
         writeln("Failed to find slightly-expanded conditions iteratively.");
         throw e;
     }
-    auto state6e = new GasState(gm1);
+    auto state6e = GasState(gm1);
     double V6e = expand_from_stagnation(state5s, x6e, state6e, gm1);
     double mflux6e = state6e.rho * V6e;  // mass flux per unit area, at slightly-expanded state
     // Compute the area-ratio at this slightly-expanded state.
@@ -212,7 +212,7 @@ Result analyse(int verbosityLevel, Config config)
     double error_at_exit(double x)
     {
         // Returns mass_flux error as for a given exit pressure."
-        auto state = new GasState(gm1);
+        auto state = GasState(gm1);
         double V = expand_from_stagnation(state5s, x, state, gm1);
         double mflux = state.rho * V * ar;
         return (mflux-mflux6)/mflux6;
@@ -228,10 +228,10 @@ Result analyse(int verbosityLevel, Config config)
         // with a nonequilibrium expansion calculation.
         x7 = x6;
     }
-    auto state7 = new GasState(gm1);
+    auto state7 = GasState(gm1);
     double V7 = expand_from_stagnation(state5s, x7, state7, gm1);
     double mflux7 = state7.rho * V7 * ar;
-    auto state7_pitot = new GasState(gm1);
+    auto state7_pitot = GasState(gm1);
     pitot_condition(state7, V7, state7_pitot, gm1);
     if (verbosityLevel >= 1) {
         writefln("  area_ratio  %g", ar);
@@ -251,7 +251,7 @@ Result analyse(int verbosityLevel, Config config)
     auto reactor = init_thermochemical_reactor(gm2, reactions_filename, reactions_filename2);
     double[10] reactor_params; // An array that passes extra parameters to the reactor.
     //
-    void write_tp_state(GasState gs, string fill="  ")
+    void write_tp_state(ref GasState gs, string fill="  ")
     {
         writefln("%spressure    %g kPa", fill, gs.p/1000.0);
         writefln("%sdensity     %g kg/m^3", fill, gs.rho);
@@ -266,7 +266,7 @@ Result analyse(int verbosityLevel, Config config)
         }
     }
     //
-    GasState init_tp_state_from_cea(GasState state6e, GasState state6, GasModel gm2){
+    GasState init_tp_state_from_cea(ref GasState state6e, ref GasState state6, GasModel gm2){
         if (state6e.ceaSavedData is null) {
             throw new Exception("Failed to find ceaSavedData in state6e");
         }
@@ -277,7 +277,7 @@ Result analyse(int verbosityLevel, Config config)
             writeln("Start part B state mass fractions from CEA.");
             writeln("massf=", state6e.ceaSavedData.massf);
         }
-        GasState gas0 = new GasState(gm2);
+        GasState gas0 = GasState(gm2);
         gas0.p = state6e.p; gas0.T = state6e.T;
         foreach (ref Tmode; gas0.T_modes) { Tmode = state6e.T; }
         foreach (name; species) {
@@ -291,7 +291,7 @@ Result analyse(int verbosityLevel, Config config)
         return gas0;
     }
     //
-    GasState init_tp_state_from_eqgas(GasState state6e, EquilibriumGas gm_eq, GasModel gm2){
+    GasState init_tp_state_from_eqgas(ref GasState state6e, EquilibriumGas gm_eq, GasModel gm2){
         // Although EquilibriumGas has officially one species, it keeps an internal
         // thermally perfect gas model for doing calculations. Here, do an apparently
         // pointless update_thermo_from_pT on state 6e to set the internal gas state
@@ -307,7 +307,7 @@ Result analyse(int verbosityLevel, Config config)
             writeln("Start part B state mass fractions from ceq.");
             writeln("massf=", tpgs.massf);
         }
-        GasState gas0 = new GasState(gm2);
+        GasState gas0 = GasState(gm2);
         gas0.p = tpgs.p; gas0.T = tpgs.T;
         foreach (ref Tmode; gas0.T_modes) { Tmode = tpgs.T; }
         // We're assuming that the species order is the same in both models,
@@ -396,7 +396,7 @@ Result analyse(int verbosityLevel, Config config)
     foreach (name; species) { sample_header ~= format(" massf_%s", name); }
     sample_header ~= " v(m/s) dt_suggest(s) mdot(kg/s)";
     //
-    string sample_data(double x, double area, double v, GasState gas, double dt_suggest)
+    string sample_data(double x, double area, double v, ref GasState gas, double dt_suggest)
     {
         string txt = format("%g %g %g %g %g", x, area, gas.rho, gas.p, gas.T);
         foreach (i; 0 .. gas.T_modes.length) { txt ~= format(" %g", gas.T_modes[i]); }
@@ -414,7 +414,7 @@ Result analyse(int verbosityLevel, Config config)
         // other internal energy modes being left unperturbed.
         double p0 = gas0.p; double rho0 = gas0.rho; double u0 = gas0.u;
         //
-        auto gas1 = new GasState(gm2);
+        auto gas1 = GasState(gm2);
         gas1.copy_values_from(gas0);
         double drho = rho0 * tol; gas1.rho = rho0 + drho;
         gm2.update_thermo_from_rhou(gas1);
@@ -467,7 +467,7 @@ Result analyse(int verbosityLevel, Config config)
         double u = gm2.internal_energy(gas0);
         //
         // Do the chemical increment.
-        auto gas1 = new GasState(gm2); // we need an update state
+        auto gas1 = GasState(gm2); // we need an update state
         gas1.copy_values_from(gas0);
         reactor(gas1, t_inc, dt_suggest, reactor_params);
         gm2.update_thermo_from_rhou(gas1);
@@ -554,7 +554,7 @@ Result analyse(int verbosityLevel, Config config)
     try {
         // We need the gas model to be able to compute entropy in order
         // to apply the Rayleigh-Pitot formula.
-        GasState gs_pitot = new GasState(gas0);
+        GasState gs_pitot = GasState(gas0);
         pitot_condition(gas0, v, gs_pitot, gm2);
         rayleigh_pitot = gs_pitot.p;
     } catch (Exception e) { /* Do nothing. */ }

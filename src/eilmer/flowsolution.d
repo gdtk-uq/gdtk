@@ -554,7 +554,7 @@ public:
     {
         if (tag != "field") return;
         GasModel gmodel = GlobalConfig.gmodel_master;
-        GasState Q = new GasState(gmodel);
+        GasState Q = GasState(gmodel);
         // Gather massf species names in a list for later use as keys.
         string[] massf_names;
         foreach (isp; 0 .. gmodel.n_species) {

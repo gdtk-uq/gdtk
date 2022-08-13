@@ -127,9 +127,9 @@ public:
 
     this(GasModel gm)
     {
-        gas = new GasState(gm);
-        gas_ref = new GasState(gm);
-        debug { gas_save = new GasState(gm); }
+        gas = GasState(gm);
+        gas_ref = GasState(gm);
+        debug { gas_save = GasState(gm); }
     }
 
     @nogc

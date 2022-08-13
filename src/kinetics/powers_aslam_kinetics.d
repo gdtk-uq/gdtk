@@ -43,7 +43,7 @@ final class UpdateAB : ThermochemicalReactor {
         lua_close(L);
     }
 
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         if (Q.T > _Ti) {
@@ -64,7 +64,7 @@ final class UpdateAB : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     } // end opCall()
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         if (Q.T > _Ti) {
             // We are above the ignition point, proceed with reaction.
             number rhoA = Q.massf[0] * Q.rho;

@@ -45,31 +45,31 @@ public:
     }
 
     @nogc
-    override void updateFromPT(GasState gs)
+    override void updateFromPT(ref GasState gs)
     {
         update_density(gs);
         update_energy(gs);
     }
     @nogc
-    override void updateFromRhoU(GasState gs)
+    override void updateFromRhoU(ref GasState gs)
     {
         update_temperature_from_energy(gs);
         update_pressure(gs);
     }
     @nogc
-    override void updateFromRhoT(GasState gs)
+    override void updateFromRhoT(ref GasState gs)
     {
         update_energy(gs);
         update_pressure(gs);
     }
     @nogc
-    override void updateFromRhoP(GasState gs)
+    override void updateFromRhoP(ref GasState gs)
     {
         update_temperature_from_rhop(gs);
         update_energy(gs);
     }
     @nogc
-    override void updateFromPS(GasState gs, number s)
+    override void updateFromPS(ref GasState gs, number s)
     {
         double TOL = 1.0e-6;
         number delT = 100.0;
@@ -119,7 +119,7 @@ public:
     }
 
     @nogc
-    override void updateFromHS(GasState gs, number h, number s)
+    override void updateFromHS(ref GasState gs, number h, number s)
     {
         // We do this in two stages.
         // First, from enthalpy we compute temperature.
@@ -214,9 +214,9 @@ public:
         update_energy(gs);
         update_density(gs);
     }
-     
+
     @nogc
-    override void updateSoundSpeed(GasState gs)
+    override void updateSoundSpeed(ref GasState gs)
     {
         // Reference:
         // Cengel and Boles (1998)
@@ -319,48 +319,46 @@ public:
         return mCurves[isp].eval_s(gs.T) - mR[isp]*log(gs.p/P_atm);
     }
 
-    
-    
 private:
     double[] mR;
     CEAThermoCurve[] mCurves;
     number[] mVals; // a private work array
 
     @nogc
-    number gamma(GasState gs)
+    number gamma(ref GasState gs)
     {
         return dhdTConstP(gs)/dudTConstV(gs);
     }
-    
+
     @nogc
-    void update_pressure(GasState gs)
+    void update_pressure(ref GasState gs)
     {
         number Rmix = gasConstant(gs);
         gs.p = gs.rho*Rmix*gs.T;
     }
 
     @nogc
-    void update_density(GasState gs)
+    void update_density(ref GasState gs)
     {
         number Rmix = gasConstant(gs);
         gs.rho = gs.p/(Rmix*gs.T);
     }
 
     @nogc
-    void update_temperature_from_rhop(GasState gs)
+    void update_temperature_from_rhop(ref GasState gs)
     {
         number Rmix = gasConstant(gs);
         gs.T = gs.p/(Rmix*gs.rho);
     }
-    
+
     @nogc
-    void update_energy(GasState gs)
+    void update_energy(ref GasState gs)
     {
         gs.u = internalEnergy(gs);
     }
 
     @nogc
-    void update_temperature_from_energy(GasState gs)
+    void update_temperature_from_energy(ref GasState gs)
     {
         number Tsave = gs.T; // Keep a copy for diagnostics purpose.
         double TOL = 1.0e-6;
@@ -405,7 +403,7 @@ private:
             */
             return e_tgt - gs.u;
         }
-        
+
         number dzdT(number T)
         {
             // We evaluate Cv. And return the negative.
@@ -461,7 +459,7 @@ version(therm_perf_gas_mix_test) {
         getArrayOfStrings(L, "species", speciesNames);
         auto tm = new ThermPerfGasMixture(L, speciesNames);
         lua_close(L);
-        auto gs = new GasState(5, 0);
+        auto gs = GasState(5, 0);
 
         gs.p = 1.0e6;
         gs.T = 2000.0;

@@ -42,7 +42,7 @@ OF := -of
 DLINKFLAGS := -L-ldl -L-lgfortran
 
 DFLAGS_LUA := -w -debug -g -dip1008 -I.. -I$(LUAD_DIR)
-DLINKFLAGS_LUA := -L-L$(LIBLUAPATH) -L-llua $(DLINKFLAGS)
+DLINKFLAGS_LUA := -L-L$(LIBLUAPATH) $(DLINKFLAGS)
 
 demo: $(DEMO_PROGRAMS)
 	@echo "Demo codes built."
@@ -72,21 +72,21 @@ idealgasflow_demo: idealgasflow_demo.d idealgasflow.d $(NM_FILES) $(LIBLUA) \
 	$(UTIL_FILES)
 	dmd $(DFLAGS) $(OF)idealgasflow_demo \
 		idealgasflow_demo.d idealgasflow.d gasflowexception.d \
-		$(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(NM_FILES) $(LIBLUA) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
 luaidealgasflow_demo: luaidealgasflow_demo.d $(NM_FILES) $(LIBLUA) \
 	$(UTIL_FILES) idealgasflow.d luaidealgasflow.d
 	dmd $(DFLAGS_LUA) $(OF)luaidealgasflow_demo \
 		luaidealgasflow_demo.d idealgasflow.d luaidealgasflow.d \
 		gasflowexception.d \
-		$(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(NM_FILES) $(LIBLUA) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
 gasflow_demo: gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES)
 	dmd $(DFLAGS) $(OF)gasflow_demo \
 		gasflow_demo.d gasflow.d idealgasflow.d gasflowexception.d \
 		$(NM_FILES) $(UTIL_FILES) \
-		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(LIBCEQ) $(LIBGASF) $(DLINKFLAGS_LUA)
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS_LUA)
 
 luagasflow_demo: luagasflow_demo.d luagasflow.d luaidealgasflow.d \
 	gasflow.d idealgasflow.d \
@@ -97,4 +97,4 @@ luagasflow_demo: luagasflow_demo.d luagasflow.d luaidealgasflow.d \
 		luagasflow_demo.d luagasflow.d luaidealgasflow.d \
 		gasflow.d idealgasflow.d gasflowexception.d \$(NM_FILES) $(UTIL_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(DLINKFLAGS_LUA)
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS_LUA)

@@ -24,7 +24,7 @@ final class VibRelaxNitrogen : ThermochemicalReactor {
     this(string fname, GasModel gmodel)
     {
         super(gmodel);
-        _Q_eq = new GasState(gmodel);
+        _Q_eq = GasState(gmodel);
         // Read parameters from file.
         auto L = init_lua_State();
         doLuaFile(L, fname);
@@ -44,7 +44,7 @@ final class VibRelaxNitrogen : ThermochemicalReactor {
     } // end constructor
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         number tau = _relaxTimeCalc(Q.T, Q.p);
@@ -63,7 +63,7 @@ final class VibRelaxNitrogen : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for two_temperature_nitrogen_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }

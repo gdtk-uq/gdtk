@@ -43,7 +43,7 @@ import gasflowexception;
 import idealgasflow;
 
 
-number[] shock_ideal(const(GasState) state1, number Vs, GasState state2, GasModel gm)
+number[] shock_ideal(ref const(GasState) state1, number Vs, ref GasState state2, GasModel gm)
 /**
  * Computes post-shock conditions in the shock frame, assuming ideal gas.
  *
@@ -84,7 +84,7 @@ number[] shock_ideal(const(GasState) state1, number Vs, GasState state2, GasMode
     return [V2, Vg];
 } // end shock_ideal()
 
-number[] normal_shock(const(GasState) state1, number Vs, GasState state2,
+number[] normal_shock(ref const(GasState) state1, number Vs, ref GasState state2,
                       GasModel gm, double rho_tol=1.0e-6, double T_tol = 0.1)
 /**
  * Computes post-shock conditions in a shock-stationary frame.
@@ -185,7 +185,7 @@ number[] normal_shock(const(GasState) state1, number Vs, GasState state2,
 } // end normal_shock()
 
 
-number[] normal_shock_1(const(GasState) state1, number Vs, GasState state2,
+number[] normal_shock_1(ref const(GasState) state1, number Vs, ref GasState state2,
                         GasModel gm, double p_tol=0.5, double T_tol = 0.1)
 /**
  * Computes post-shock conditions in a shock-stationary frame.
@@ -284,8 +284,8 @@ number[] normal_shock_1(const(GasState) state1, number Vs, GasState state2,
 } // end normal_shock_1()
 
 
-number[] normal_shock_p2p1(const(GasState) state1, number p2p1,
-                           GasState state2, GasModel gm)
+number[] normal_shock_p2p1(ref const(GasState) state1, number p2p1,
+                           ref GasState state2, GasModel gm)
 /**
  * Computes post-shock conditions, using high-temperature gas properties
  * and a shock-stationary frame.
@@ -326,8 +326,8 @@ number[] normal_shock_p2p1(const(GasState) state1, number p2p1,
 } // end normal_shock_p2p1()
 
 
-number reflected_shock(const(GasState) state2, number Vg,
-                       GasState state5, GasModel gm)
+number reflected_shock(ref const(GasState) state2, number Vg,
+                       ref GasState state5, GasModel gm)
 /**
  * Computes state5 which has brought the gas to rest at the end of the shock tube.
  *
@@ -390,8 +390,8 @@ number reflected_shock(const(GasState) state2, number Vg,
 } // end reflected_shock()
 
 
-number expand_from_stagnation(const(GasState) state0, number p_over_p0,
-                              GasState state1, GasModel gm)
+number expand_from_stagnation(ref const(GasState) state0, number p_over_p0,
+                              ref GasState state1, GasModel gm)
 /**
  * Given a stagnation condition state0, expand to a new pressure.
  *
@@ -425,7 +425,7 @@ number expand_from_stagnation(const(GasState) state0, number p_over_p0,
 } // end expand_from_stagnation()
 
 
-number expand_to_mach(const(GasState) state0, number mach,
+number expand_to_mach(ref const(GasState) state0, number mach,
                       GasState state1, GasModel gm)
 /**
  * Given a stagnation condition state0, expand to a given Mach number.
@@ -469,8 +469,8 @@ number expand_to_mach(const(GasState) state0, number mach,
 } // end expand_to_mach()
 
 
-void total_condition(const(GasState) state1, number V1,
-                     GasState state0, GasModel gm)
+void total_condition(ref const(GasState) state1, number V1,
+                     ref GasState state0, GasModel gm)
 /**
  * Given a free-stream condition and velocity,
  * compute the corresponding stagnant condition
@@ -506,8 +506,8 @@ void total_condition(const(GasState) state1, number V1,
 } // end total_condition()
 
 
-void pitot_condition(const(GasState) state1, number V1,
-                     GasState state2pitot, GasModel gm)
+void pitot_condition(ref const(GasState) state1, number V1,
+                     ref GasState state2pitot, GasModel gm)
 /**
  * Given a free-stream condition, compute the corresponding Pitot condition
  * at which the gas is brought to rest, possibly through a shock.
@@ -521,7 +521,7 @@ void pitot_condition(const(GasState) state1, number V1,
 {
     if (V1 > state1.a) {
         // Supersonic free-stream; process through a shock first.
-        GasState state2 = new GasState(state1);
+        GasState state2 = GasState(state1);
         number[] velocities = normal_shock(state1, V1, state2, gm);
         number V2 = velocities[0];
         total_condition(state2, V2, state2pitot, gm);
@@ -532,8 +532,8 @@ void pitot_condition(const(GasState) state1, number V1,
 } // end pitot_condition()
 
 
-number steady_flow_with_area_change(const(GasState)state1, number V1, number A2_over_A1,
-                                    GasState state2, GasModel gm, double tol=1.0e-4,
+number steady_flow_with_area_change(ref const(GasState)state1, number V1, number A2_over_A1,
+                                    ref GasState state2, GasModel gm, double tol=1.0e-4,
                                     double p2p1_min=0.0001)
 /**
  * Given station 1 condition, velocity and area-ratio A2/A1,
@@ -560,7 +560,7 @@ number steady_flow_with_area_change(const(GasState)state1, number V1, number A2_
     number V2 = V1;
     if (abs(A2_over_A1 - 1.0) < 1.0e-6) { return V2; } // essentially no change
     //
-    GasState total_cond = new GasState(state1);
+    GasState total_cond = GasState(state1);
     total_condition(state1, V1, total_cond, gm);
     number p2p1_max = total_cond.p/state1.p;
     // Establish a suitable bracket for the pressure ratio.
@@ -620,9 +620,9 @@ number steady_flow_with_area_change(const(GasState)state1, number V1, number A2_
 //------------------------------------------------------------------------
 // Finite-strength waves along characteristic lines.
 
-number finite_wave_dp(const(GasState) state1, number V1,
+number finite_wave_dp(ref const(GasState) state1, number V1,
                       string characteristic, number p2,
-                      GasState state2, GasModel gm, int steps=100)
+                      ref GasState state2, GasModel gm, int steps=100)
 /**
  * Process the gas isentropically, following a characteristic line.
  *
@@ -680,9 +680,9 @@ number finite_wave_dp(const(GasState) state1, number V1,
 } // end finite_wave_dp()
 
 
-number finite_wave_dv(const(GasState) state1, number V1,
+number finite_wave_dv(ref const(GasState) state1, number V1,
                       string characteristic, number V2_target,
-                      GasState state2, GasModel gm,
+                      ref GasState state2, GasModel gm,
                       int steps=100, double Tmin=200.0)
 /**
  * Process the gas isentropically, following a characteristic line.
@@ -737,9 +737,9 @@ number finite_wave_dv(const(GasState) state1, number V1,
 immutable double near_zero_pressure = 1.0e-6; // in Pascals
 
 @nogc
-number[5] osher_riemann(const(GasState) stateL, const(GasState) stateR,
+number[5] osher_riemann(ref const(GasState) stateL, ref const(GasState) stateR,
                         number velL, number velR,
-                        GasState stateLstar, GasState stateRstar, GasState stateX0,
+                        ref GasState stateLstar, ref GasState stateRstar, ref GasState stateX0,
                         GasModel gm)
 /**
  * Osher-type solution to the Riemann problem for one-dimensional flow.
@@ -908,15 +908,15 @@ number[5] osher_riemann(const(GasState) stateL, const(GasState) stateR,
     return [pstar, wstar, wL, wR, velX0];
 } // end osher_riemann()
 
-number[3] osher_flux(const(GasState) stateL, const(GasState) stateR,
+number[3] osher_flux(ref const(GasState) stateL, ref const(GasState) stateR,
                      number velL, number velR, GasModel gm)
 /**
  * Flux calculation for a one-dimensional flow.
  */
 {
-    GasState stateLstar = new GasState(gm);
-    GasState stateRstar = new GasState(gm);
-    GasState stateX0 = new GasState(gm);
+    GasState stateLstar = GasState(gm);
+    GasState stateRstar = GasState(gm);
+    GasState stateX0 = GasState(gm);
     number[5] rsol = osher_riemann(stateL, stateR, velL, velR, stateLstar, stateRstar, stateX0, gm);
     number rho = stateX0.rho;
     number p = stateX0.p;
@@ -927,7 +927,7 @@ number[3] osher_flux(const(GasState) stateL, const(GasState) stateR,
     return F;
 } // end osher_flux()
 
-number[3] roe_flux(const(GasState) stateL, const(GasState) stateR,
+number[3] roe_flux(ref const(GasState) stateL, ref const(GasState) stateR,
                    number velL, number velR, GasModel gm)
 /**
  * Flux calculation for a one-dimensional flow.
@@ -1050,7 +1050,7 @@ number bisect_iterate(alias f)(number p0, number p1)
 }
 
 @nogc
-void lrivp(const(GasState) stateL, const(GasState) stateR,
+void lrivp(ref const(GasState) stateL, ref const(GasState) stateR,
            number velL, number velR, GasModel gmodelL, GasModel gmodelR,
            ref number wstar, ref number pstar)
 /**
@@ -1206,7 +1206,7 @@ void lrivp(const(GasState) stateL, const(GasState) stateR,
 } // end lrivp()
 
 @nogc
-void piston_at_left(const(GasState) stateR, number velR, GasModel gm,
+void piston_at_left(ref const(GasState) stateR, number velR, GasModel gm,
                     number wstar, ref number pstar)
 /**
  * Compute pressure at piston face with processing of the gas
@@ -1255,7 +1255,7 @@ void piston_at_left(const(GasState) stateR, number velR, GasModel gm,
 } // end piston_at_left()
 
 @nogc
-void piston_at_right(const(GasState) stateL, number velL, GasModel gm,
+void piston_at_right(ref const(GasState) stateL, number velL, GasModel gm,
                      number wstar, ref number pstar)
 /**
  * Compute pressure at piston face with processing of the gas
@@ -1307,8 +1307,8 @@ void piston_at_right(const(GasState) stateL, number velL, GasModel gm,
 //------------------------------------------------------------------------
 // Oblique shock relations
 
-number[] theta_oblique(const(GasState) state1, number V1, number beta,
-                       GasState state2, GasModel gm)
+number[] theta_oblique(ref const(GasState) state1, number V1, number beta,
+                       ref GasState state2, GasModel gm)
 /**
  * Compute the deflection angle and post-shock conditions given the shock wave angle.
  *
@@ -1341,7 +1341,7 @@ number[] theta_oblique(const(GasState) state1, number V1, number beta,
 } // end theta_oblique()
 
 
-number beta_oblique(const(GasState) state1, number V1, number theta,
+number beta_oblique(ref const(GasState) state1, number V1, number theta,
                     GasModel gm)
 /**
  * Compute the oblique shock wave angle given the deflection angle.
@@ -1355,7 +1355,7 @@ number beta_oblique(const(GasState) state1, number V1, number theta,
  * Returns: shock wave angle wrt incoming stream direction (in radians)
  */
 {
-    GasState state2 = new GasState(state1);
+    GasState state2 = GasState(state1);
     gm.update_sound_speed(state2);
     number M1 = V1 / state2.a;
     number b1 = max(asin(1.0/M1), 1.1*theta);
@@ -1376,7 +1376,7 @@ number beta_oblique(const(GasState) state1, number V1, number theta,
 //------------------------------------------------------------------------
 // Taylor-Maccoll cone flow.
 
-number[2] EOS_derivatives(const(GasState) state_0, GasModel gm)
+number[2] EOS_derivatives(ref const(GasState) state_0, GasModel gm)
 /**
  * Compute equation-of-state derivatives at the specified state.
  *
@@ -1399,7 +1399,7 @@ number[2] EOS_derivatives(const(GasState) state_0, GasModel gm)
     number Cv = gm.dudT_const_v(state_0);
     number dT = du/Cv;
     // Use finite-differences to get the partial derivative.
-    GasState state_new = new GasState(state_0);
+    GasState state_new = GasState(state_0);
     state_new.p = state_0.p + dp;
     gm.update_thermo_from_pT(state_new);
     number drhodp = (state_new.rho - rho_0) / dp;
@@ -1415,7 +1415,7 @@ number[2] EOS_derivatives(const(GasState) state_0, GasModel gm)
 
 
 number[5] taylor_maccoll_odes(number[5] z, number theta,
-                              const(GasState) gas_state, GasModel gm)
+                              ref const(GasState) gas_state, GasModel gm)
 {
     /**
     The ODEs from the Taylor-Maccoll formulation.
@@ -1442,8 +1442,8 @@ number[5] taylor_maccoll_odes(number[5] z, number theta,
     return dzdtheta;
 }
 
-number[2] theta_cone(const(GasState) state1, number V1, number beta,
-                     GasState state_c, GasModel gm, double dtheta=-0.01*PI/180.0)
+number[2] theta_cone(ref const(GasState) state1, number V1, number beta,
+                     ref GasState state_c, GasModel gm, double dtheta=-0.01*PI/180.0)
 /**
  * Compute the cone-surface angle and conditions given the shock wave angle.
  *
@@ -1468,7 +1468,7 @@ number[2] theta_cone(const(GasState) state1, number V1, number beta,
     // [TODO] Implement Rowan's linear interpolation for weak shocks.
     //
     // Start at the point just downstream the oblique shock.
-    GasState state2 = new GasState(state1);
+    GasState state2 = GasState(state1);
     number[] shock_results = theta_oblique(state1, V1, beta, state2, gm);
     number theta_s = shock_results[0]; number V2 = shock_results[1];
     //
@@ -1478,7 +1478,7 @@ number[2] theta_cone(const(GasState) state1, number V1, number beta,
     number V_theta = -V2 * sin(beta - theta_s);
     number rho = state2.rho; number u = state2.u; number p = state2.p;
     //
-    GasState gas_state = new GasState(state2);
+    GasState gas_state = GasState(state2);
     gas_state.rho = rho; gas_state.u = u;
     gm.update_thermo_from_rhou(gas_state);
     // For integrating across the shock layer, the state vector is:
@@ -1513,7 +1513,7 @@ number[2] theta_cone(const(GasState) state1, number V1, number beta,
 } // end theta_cone()
 
 
-number beta_cone(const(GasState) state1, number V1, number theta, GasModel gm,
+number beta_cone(ref const(GasState) state1, number V1, number theta, GasModel gm,
                  double dtheta=-0.01*PI/180.0)
 /**
  * Compute the conical shock wave angle given the cone-surface deflection angle.
@@ -1529,7 +1529,7 @@ number beta_cone(const(GasState) state1, number V1, number theta, GasModel gm,
  * Returns: shock wave angle wrt incoming stream direction (in radians)
  */
 {
-    GasState state2 = new GasState(state1);
+    GasState state2 = GasState(state1);
     gm.update_sound_speed(state2);
     number M1 = V1 / state2.a;
     number b1 = max(asin(1.0/M1), 1.1*theta); // to be stronger than a Mach wave

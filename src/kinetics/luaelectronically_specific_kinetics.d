@@ -76,7 +76,7 @@ extern(C) int updateElectronicStates(lua_State *L)
     auto myESK = checkElectronicallySpecificKinetics(L, 1);
     GasModel gm = myESK._gmodel;
     // arg 2 is GasState
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
     // arg 3 is tInterval
     double tInterval = luaL_checknumber(L, 3);

@@ -123,7 +123,7 @@ extern(C) int evalRateConstants(lua_State* L)
     lua_getfield(L, 2, "gasmodel");
     auto gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
     rmech.eval_rate_constants(Q);
     return 0;
@@ -135,7 +135,7 @@ extern(C) int evalRates(lua_State* L)
     lua_getfield(L, 2, "gasmodel");
     auto gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
     number[] conc;
     conc.length = gm.n_species;

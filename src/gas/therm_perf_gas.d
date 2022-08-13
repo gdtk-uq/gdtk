@@ -227,27 +227,27 @@ public:
         return "ThermallyPerfectGas(species=[TODO])";
     }
 
-    override void update_thermo_from_pT(GasState Q)
+    override void update_thermo_from_pT(ref GasState Q)
     {
         _pgMixEOS.update_density(Q);
         _tpgMixEOS.update_energy(Q);
     }
-    override void update_thermo_from_rhou(GasState Q)
+    override void update_thermo_from_rhou(ref GasState Q)
     {
         _tpgMixEOS.update_temperature(Q);
         _pgMixEOS.update_pressure(Q);
     }
-    override void update_thermo_from_rhoT(GasState Q)
+    override void update_thermo_from_rhoT(ref GasState Q)
     {
         _tpgMixEOS.update_energy(Q);
         _pgMixEOS.update_pressure(Q);
     }
-    override void update_thermo_from_rhop(GasState Q)
+    override void update_thermo_from_rhop(ref GasState Q)
     {
         _pgMixEOS.update_temperature(Q);
         _tpgMixEOS.update_energy(Q);
     }
-    override void update_thermo_from_ps(GasState Q, number s)
+    override void update_thermo_from_ps(ref GasState Q, number s)
     {
         double TOL = 1.0e-6;
         number delT = 100.0;
@@ -296,7 +296,7 @@ public:
         _tpgMixEOS.update_energy(Q);
         _pgMixEOS.update_density(Q);
     }
-    override void update_thermo_from_hs(GasState Q, number h, number s)
+    override void update_thermo_from_hs(ref GasState Q, number h, number s)
     {
         // We do this in two stages.
         // First, from enthalpy we compute temperature.
@@ -391,7 +391,7 @@ public:
         _tpgMixEOS.update_energy(Q);
         _pgMixEOS.update_density(Q);
     }
-    override void update_sound_speed(GasState Q)
+    override void update_sound_speed(ref GasState Q)
     {
         // Reference:
         // Cengel and Boles (1998)
@@ -402,7 +402,7 @@ public:
         // "frozen" sound speed
         Q.a = sqrt(gamma(Q)*dpdrho_const_T(Q));
     }
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         _viscModel.update_viscosity(Q);
         _thermCondModel.update_thermal_conductivity(Q);
@@ -474,7 +474,7 @@ public:
         return _curves[isp].eval_Cp(Q.T);
     }
 
-    override void balance_charge(GasState Q)
+    override void balance_charge(ref GasState Q)
     {
         if (_is_plasma) {
             massf2molef(Q, _molef);
@@ -490,7 +490,7 @@ public:
         }
     }
     @nogc
-    override void binary_diffusion_coefficients(const GasState Q, ref number[][] D)
+    override void binary_diffusion_coefficients(ref const(GasState) Q, ref number[][] D)
     {
         // Expression from:
         // Reid et al.
@@ -559,7 +559,7 @@ version(therm_perf_gas_test) {
         fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
         //
         auto gm = new ThermallyPerfectGas("sample-data/therm-perf-5-species-air.lua");
-        auto gd = new GasState(5, 0);
+        auto gd = GasState(5, 0);
         assert(isClose(3.621, gm.LJ_sigmas[0]), failedUnitTest());
         assert(isClose(97.530, gm.LJ_epsilons[0]), failedUnitTest());
 

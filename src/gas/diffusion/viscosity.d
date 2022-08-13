@@ -21,7 +21,7 @@ import gas.diffusion.chemkin_viscosity;
 
 interface Viscosity {
     Viscosity dup() const;
-    @nogc final void update_viscosity(GasState Q)
+    @nogc final void update_viscosity(ref GasState Q)
     {
         Q.mu = eval(Q);
     }

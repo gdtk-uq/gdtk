@@ -75,7 +75,7 @@ class FicksFirstLaw : MassDiffusion {
     {
         _withMassFluxCorrection = withMassFluxCorrection;
         diffusion_coefficient = initDiffusionCoefficient(gmodel, diffusion_coefficient_type, Lewis);
-        
+        //
         _gmodel = gmodel;
         _nsp = gmodel.n_species;
         _D_avg.length = gmodel.n_species;
@@ -93,7 +93,7 @@ class FicksFirstLaw : MassDiffusion {
                 jz[isp] = -fs.gas.rho * _D_avg[isp] * grad.massf[isp][2];
             }
             if (_withMassFluxCorrection) {
-                // Correction as suggested by Sutton and Gnoffo, 1998  
+                // Correction as suggested by Sutton and Gnoffo, 1998
                 number sum_x = 0.0;
                 number sum_y = 0.0;
                 number sum_z = 0.0;
@@ -121,7 +121,7 @@ private:
 
 interface DiffusionCoefficient {
     @nogc
-    void computeAvgDiffCoeffs(GasState Q, GasModel gm, ref number[] D_avg);
+    void computeAvgDiffCoeffs(ref GasState Q, GasModel gm, ref number[] D_avg);
 }
 
 class ConstantLewisNumber : DiffusionCoefficient {
@@ -130,7 +130,7 @@ class ConstantLewisNumber : DiffusionCoefficient {
         this.nsp = nsp;
     }
     @nogc
-    void computeAvgDiffCoeffs(GasState Q, GasModel gmodel, ref number[] D_avg) {
+    void computeAvgDiffCoeffs(ref const(GasState) Q, GasModel gmodel, ref number[] D_avg) {
         number Cp = gmodel.Cp(Q);
         number alpha = Q.k/(Q.rho*Cp);
         foreach (isp; 0 .. nsp) D_avg[isp] = alpha/Le;
@@ -147,8 +147,8 @@ class SpeciesSpecificLewisNumbers : DiffusionCoefficient {
         this.nsp = nsp;
     }
     @nogc
-    void computeAvgDiffCoeffs(GasState Q, GasModel gmodel, ref number[] D_avg) {
-        gmodel.update_trans_coeffs(Q); // This feels bad. Shouldn't this be set already???
+    void computeAvgDiffCoeffs(ref const(GasState) Q, GasModel gmodel, ref number[] D_avg) {
+        // [FIX-ME] gmodel.update_trans_coeffs(Q); // This feels bad. Shouldn't this be set already???
         number Prandtl = gmodel.Prandtl(Q);
         foreach (isp; 0 .. gmodel.n_species) {
             D_avg[isp] = Q.mu / (Q.rho * Prandtl * LeS[isp]); 
@@ -175,7 +175,7 @@ class BinaryDiffusion : DiffusionCoefficient {
         }
     }
     @nogc
-    void computeAvgDiffCoeffs(GasState Q, GasModel gmodel, ref number[] D_avg) {
+    void computeAvgDiffCoeffs(ref const(GasState) Q, GasModel gmodel, ref number[] D_avg) {
         gmodel.massf2molef(Q, molef);
         gmodel.binary_diffusion_coefficients(Q, D);
         foreach (isp; 0 .. nsp) {
@@ -215,7 +215,7 @@ private:
     immutable double epsilon = 1e-6;
 
     @nogc
-    void computeAmbipolarDiffusion(GasState Q, ref number[] D_avg) {
+    void computeAmbipolarDiffusion(ref const(GasState) Q, ref number[] D_avg) {
         /*
         Ambipolar diffusion is a correction to the diffusion process for charged particles that
         contrains electrons and ions to diffuse at the same rate, thus preserving charge neutrality.

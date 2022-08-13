@@ -766,7 +766,7 @@ version(gasgiant_transport_properties_test) {
     int main()
     {
         GasGiantViscosity ggv = new GasGiantViscosity();
-        auto Q = new GasState(1, 1);
+        auto Q = GasState(1, 1);
         auto f = File("gasgiant-visc-test.dat", "w");
         f.writeln("# T(K)   mu-He  mu-H2  mu-H");
         double T = 300.0;

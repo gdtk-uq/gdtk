@@ -54,7 +54,7 @@ public:
         // Create Parents Species
         lua_getglobal(L, "db");
         _parentSpecies = new ParentsSpecies(L);
-        _parentsQ = new GasState(_parentSpecies);
+        _parentsQ = GasState(_parentSpecies);
         lua_pop(L, 1);
 
         // Create Pseudo Species
@@ -85,7 +85,7 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q)
+    override void update_thermo_from_pT(ref GasState Q)
     {
         auto R_mix = gas_constant(Q);
         Q.rho = Q.p/(R_mix*Q.T);
@@ -95,7 +95,7 @@ public:
         Q.u = Cv_mix*Q.T + uNoneq;
     }
 
-    override void update_thermo_from_rhou(GasState Q)
+    override void update_thermo_from_rhou(ref GasState Q)
     {
         auto uNoneq = energyInNoneq(Q);
         auto Cv_mix = Cv(Q);
@@ -104,7 +104,7 @@ public:
         Q.p = Q.rho*R_mix*Q.T;
     }
 
-    override void update_thermo_from_rhoT(GasState Q)
+    override void update_thermo_from_rhoT(ref GasState Q)
     {
         auto R_mix = gas_constant(Q);
         Q.p = Q.rho*R_mix*Q.T;
@@ -113,7 +113,7 @@ public:
         Q.u = Cv_mix*Q.T + uNoneq;
     }
 
-    override void update_thermo_from_rhop(GasState Q)
+    override void update_thermo_from_rhop(ref GasState Q)
     {
         auto R_mix = gas_constant(Q);
         Q.T = Q.p/(Q.rho*R_mix);
@@ -122,17 +122,17 @@ public:
         Q.u = Cv_mix*Q.T + uNoneq;
     }
 
-    override void update_thermo_from_ps(GasState Q, number s)
+    override void update_thermo_from_ps(ref GasState Q, number s)
     {
         throw new Error("ERROR: PseudoSpeciesGas:update_thermo_from_ps NOT IMPLEMENTED.");
     }
 
-    override void update_thermo_from_hs(GasState Q, number h, number s)
+    override void update_thermo_from_hs(ref GasState Q, number h, number s)
     {
         throw new Error("ERROR: PseudoSpeciesGas:update_thermo_from_hs NOT IMPLEMENTED.");
     }
 
-    override void update_sound_speed(GasState Q)
+    override void update_sound_speed(ref GasState Q)
     {
         auto R_mix = gas_constant(Q);
         auto Cv_mix = Cv(Q);
@@ -140,7 +140,7 @@ public:
         Q.a = sqrt(gamma_mix*R_mix*Q.T);
     }
 
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         // Q is the GasState for the set of pseudo-species
         // Determine the parentsGasState from Q
@@ -190,7 +190,7 @@ public:
         throw new Error("ERROR: PseudoSpeciesGas:entropy NOT IMPLEMENTED.");
     }
 
-    @nogc void updateParentsGastate(GasState Q, ref GasState parentsQ)
+    @nogc void updateParentsGastate(ref const(GasState) Q, ref GasState parentsQ)
     {
       // Update translational temperature
       parentsQ.T = Q.T;
@@ -213,7 +213,7 @@ private:
     ParentsSpecies _parentSpecies;
     GasState _parentsQ;
 
-    @nogc number energyInNoneq(GasState Q) const {
+    @nogc number energyInNoneq(ref GasState Q) const {
         number uNoneq = 0.0;
         foreach (isp; 0 .. _n_species) {
             uNoneq += Q.massf[isp] * _pseudoSpecies[isp].energy(Q);
@@ -322,31 +322,31 @@ public:
         }
     } // end constructor using Lua interpreter
 
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         _viscModel.update_viscosity(Q);
         _thermCondModel.update_thermal_conductivity(Q);
     }
 
-    override void update_thermo_from_pT(GasState Q)
+    override void update_thermo_from_pT(ref GasState Q)
     {
     }
-    override void update_thermo_from_rhou(GasState Q)
+    override void update_thermo_from_rhou(ref GasState Q)
     {
     }
-    override void update_thermo_from_rhoT(GasState Q)
+    override void update_thermo_from_rhoT(ref GasState Q)
     {
     }
-    override void update_thermo_from_rhop(GasState Q)
+    override void update_thermo_from_rhop(ref GasState Q)
     {
     }
-    override void update_thermo_from_ps(GasState Q, number s)
+    override void update_thermo_from_ps(ref GasState Q, number s)
     {
     }
-    override void update_thermo_from_hs(GasState Q, number h, number s)
+    override void update_thermo_from_hs(ref GasState Q, number h, number s)
     {
     }
-    override void update_sound_speed(GasState Q)
+    override void update_sound_speed(ref GasState Q)
     {
     }
     override number dudT_const_v(in GasState Q)
@@ -413,7 +413,7 @@ version(pseudo_species_gas_test) {
         // writeln("gm._n_parents = ", gm._n_parents);
         assert(gm._n_parents == 2, failedUnitTest());
 
-        auto gd = new GasState(gm);
+        auto gd = GasState(gm);
         // writeln("gd.massf.length = ", gd.massf.length);
         assert(gd.massf.length == 49, failedUnitTest());
         gd.massf[] = 0.0;

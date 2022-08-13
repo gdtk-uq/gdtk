@@ -65,7 +65,7 @@ extern(C) int updateNitrogenStates(lua_State *L)
     auto vibSpecN2Kinetics = checkVibSpecNitrogenKinetics(L, 1);
     GasModel gm = vibSpecN2Kinetics._gmodel;
     // arg 2 is GasState
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
     // arg 3 is tInterval
     double tInterval = luaL_checknumber(L, 3);

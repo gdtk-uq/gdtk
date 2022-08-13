@@ -96,7 +96,7 @@ extern(C) int updateState(lua_State* L)
     // auto gm = checkGasModel(L, 5);
     GasModel gm = chemUpdate._gmodel;
     // Arg 2 is GasState
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
     // Arg 3 is tInterval
     double tInterval = luaL_checknumber(L, 3);

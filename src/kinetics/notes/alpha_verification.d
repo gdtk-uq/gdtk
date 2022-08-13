@@ -50,7 +50,7 @@ void main()
     auto rmech = createReactionMechanism("../sample-input/H2-I2-inp.lua", gm);
     auto alphaStep = new AlphaQssStep(gm, rmech);
 
-    auto gd = new GasState(3, 1);
+    auto gd = GasState(3, 1);
     gd.T[0] = 700.0;
     double c0 = 4.54;
     gd.p = 2.0*c0*R_universal*gd.T[0];

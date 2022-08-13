@@ -37,7 +37,7 @@ EquilibriumCalculator checkEquilibriumCalculator(lua_State* L, int index)
  *
  * Construction of a EquilibriumCalculator requires a thermally perfect
  * gasmodel file.
- * 
+ *
  * ----------------------------------------------------------------------
  * EquilibriumCalculator:new{filename='gmodelname'}
  * ----------------------------------------------------------------------
@@ -62,7 +62,7 @@ extern(C) int newEquilibriumCalculator(lua_State* L)
     }
     auto fname = to!string(luaL_checkstring(L, -1));
     lua_pop(L, 1);
-    
+
     auto myEquilibriumCalculator = new EquilibriumCalculator(fname);
     EquilibriumCalculatorStore ~= pushObj!(EquilibriumCalculator, EquilibriumCalculatorMT)(L, myEquilibriumCalculator);
     return 1;
@@ -78,7 +78,7 @@ extern(C) int set_massf_from_pT(lua_State* L)
     // Arg 3 is a GasModel
     auto gm = checkGasModel(L, 3);
     // Arg 2 is GasState
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
 
     try {
@@ -100,7 +100,7 @@ extern(C) int set_massf_and_T_from_rhou(lua_State* L)
     // Arg 3 is a GasModel
     auto gm = checkGasModel(L, 3);
     // Arg 2 is GasState
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
 
     try {
@@ -122,9 +122,9 @@ extern(C) int set_massf_and_T_from_ps(lua_State* L)
     // Arg 4 is a GasModel
     auto gm = checkGasModel(L, 4);
     // Arg 2 is GasState
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
-    // Arg 3 is the entropy 
+    // Arg 3 is the entropy
     double s = luaL_checknumber(L, 3);
 
     try {
@@ -146,7 +146,7 @@ extern(C) int set_massf_from_rhoT(lua_State* L)
     // Arg 3 is a GasModel
     auto gm = checkGasModel(L, 3);
     // Arg 2 is GasState
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
 
     try {
@@ -168,7 +168,7 @@ extern(C) int get_entropy(lua_State* L)
     // Arg 3 is a GasModel
     auto gm = checkGasModel(L, 3);
     // Arg 2 is GasState
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
 
     double s = eqCalc.get_s(Q);

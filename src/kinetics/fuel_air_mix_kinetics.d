@@ -121,7 +121,7 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
     }
 
     @nogc
-    void get_massf(GasState gas, ref number[3] Ys)
+    void get_massf(ref GasState gas, ref number[3] Ys)
     {
         // pass Ys by ref required to fill local variable
         // initialization required in case of cumulative sum below
@@ -159,7 +159,7 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         double local_dt_global=tInterval;
@@ -244,7 +244,7 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
         } //end if/ else
     } //end function opCall
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for fuel_air_mix_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }

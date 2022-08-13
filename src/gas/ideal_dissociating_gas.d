@@ -86,39 +86,39 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q) const
+    override void update_thermo_from_pT(ref GasState Q) const
     {
         number alpha = Q.massf[1];
         Q.rho = Q.p/(Q.T*_Rnn*(1+alpha));
         Q.u = _Rnn*alpha*_T_d + _Rnn*3*Q.T;
     }
-    override void update_thermo_from_rhou(GasState Q) const
+    override void update_thermo_from_rhou(ref GasState Q) const
     {
         number alpha = Q.massf[1];
         Q.T = (Q.u - _Rnn*alpha*_T_d)/(_Rnn*3);
         Q.p = Q.rho*(1+alpha)*_Rnn*Q.T;
     }
-    override void update_thermo_from_rhoT(GasState Q) const
+    override void update_thermo_from_rhoT(ref GasState Q) const
     {
         number alpha = Q.massf[1];
         Q.p = Q.rho*(1+alpha)*_Rnn*Q.T;
         Q.u = _Rnn*alpha*_T_d + _Rnn*3*Q.T;
     }
-    override void update_thermo_from_rhop(GasState Q) const
+    override void update_thermo_from_rhop(ref GasState Q) const
     {
         number alpha = Q.massf[1];
         Q.T = Q.p/(Q.rho*(1+alpha)*_Rnn*Q.T);
         Q.u = _Rnn*alpha*_T_d + _Rnn*3*Q.T;
     }
 
-    override void update_thermo_from_ps(GasState Q, number s) const
+    override void update_thermo_from_ps(ref GasState Q, number s) const
     {
         // For frozen composition.
         number alpha = Q.massf[1];
         Q.T = _Tref * exp((1.0/((4+alpha)*_Rnn))*(s+(1+alpha)*_Rnn*log(Q.p/_pref)));
         update_thermo_from_pT(Q);
     }
-    override void update_thermo_from_hs(GasState Q, number h, number s) const
+    override void update_thermo_from_hs(ref GasState Q, number h, number s) const
     {
         // For frozen composition.
         number alpha = Q.massf[1];
@@ -126,7 +126,7 @@ public:
         Q.p = _pref * exp(((4+alpha)*_Rnn*log(Q.T/_Tref)-s)/((4+alpha)*_Rnn));
         update_thermo_from_pT(Q);
     }
-    override void update_sound_speed(GasState Q) const
+    override void update_sound_speed(ref GasState Q) const
     {
         // For frozen composition.
         number alpha = Q.massf[1];
@@ -134,7 +134,7 @@ public:
         number Rgas = (1+alpha)*_Rnn;
         Q.a = sqrt(gamma*Rgas*Q.T);
     }
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         // The gas is inviscid.
         Q.mu = 0.0;
@@ -200,7 +200,7 @@ version(ideal_dissociating_gas_test) {
         doLuaFile(L, "sample-data/idg-nitrogen.lua");
         auto gm = new IdealDissociatingGas(L);
         lua_close(L);
-        auto gd = new GasState(2, 0);
+        auto gd = GasState(2, 0);
         gd.p = 1.0e5;
         gd.T = 300.0;
         gd.massf[0] = 1.0; gd.massf[1] = 0.0;

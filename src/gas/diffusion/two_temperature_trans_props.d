@@ -144,9 +144,9 @@ public:
             mIsCoulombCollision[isp].length = mNSpecies;
         }
     }
-    
+
     @nogc
-    override void updateTransProps(GasState gs)
+    override void updateTransProps(ref GasState gs)
     {
         massf2molef(gs.massf, mMolMasses, mMolef);
         // Computation of transport coefficients via collision integrals.
@@ -176,7 +176,7 @@ public:
 
         }
         gs.mu = sumA * (1.0e-3/1.0e-2); // convert g/(cm.s) -> kg/(m.s)
-        
+
         // Compute component thermal conductivities
         // k in transrotational = k_tr + k_rot
         // k in vibroelectronic = k_ve + k_E
@@ -233,7 +233,7 @@ public:
         gs.k_modes[0] = k_vib + k_E;
     }
 
-    @nogc void binaryDiffusionCoefficients(const GasState gs, ref number[][] D)
+    @nogc void binaryDiffusionCoefficients(ref const(GasState) gs, ref number[][] D)
     {
     /*
         Compute the binary diffusion coefficients using the Omega_11 collisions
@@ -278,7 +278,7 @@ private:
     bool[][] mIsCoulombCollision;
 
     @nogc
-    number electronPressureCorrection(const GasState gs)
+    number electronPressureCorrection(ref const(GasState) gs)
     {
     /*
         Compute a correction factor for the collision cross-sections of the charged species,
@@ -309,7 +309,7 @@ private:
     }
 
     @nogc
-    void computeDelta11(const GasState gs)
+    void computeDelta11(ref const(GasState) gs)
     {
         number logLambda = 1.0;
         if (mElectronIdx != -1) logLambda = electronPressureCorrection(gs);
@@ -342,7 +342,7 @@ private:
     }
 
     @nogc
-    void computeDelta22(const GasState gs)
+    void computeDelta22(ref const(GasState) gs)
     {
         number logLambda = 1.0;
         if (mElectronIdx != -1) logLambda = electronPressureCorrection(gs);
@@ -394,7 +394,7 @@ version(two_temperature_trans_props_test)
         getArrayOfStrings(L, "species", speciesNames);
         auto ttp = new TwoTemperatureTransProps(L, speciesNames);
         lua_close(L);
-        auto gs = new GasState(2, 1);
+        auto gs = GasState(2, 1);
         gs.p = 1.0e5;
         gs.T = 2000.0;
         gs.T_modes[0] = 3000.0;

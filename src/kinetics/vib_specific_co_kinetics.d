@@ -50,13 +50,13 @@ class VibSpecificCORelaxation : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         throw new Error("Substepping does not work for vibe_specific_co!");
     } // end opCall
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source)
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source)
     {
         source[] = to!number(0.0);
         foreach(v; 0 .. gm.n_vibe_states) c[v] = Q.massf[v]*Q.rho/_M;
@@ -264,7 +264,7 @@ final class VibSpecificCOMixtureRelaxation : VibSpecificCORelaxation {
         }
     }
 
-    @nogc final override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source)
+    @nogc final override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source)
     {
         source[] = to!number(0.0);
         foreach(v; 0 .. gm.n_vibe_states) c[v] = Q.massf[v]*Q.rho/_M;
@@ -272,7 +272,7 @@ final class VibSpecificCOMixtureRelaxation : VibSpecificCORelaxation {
         compute_COMixture_pseudoreactions(gmodel, Q, c, source);
     }
 
-    @nogc final void compute_COMixture_pseudoreactions(GasModel gmodel, GasState Q, number[] c, ref number[] source)
+    @nogc final void compute_COMixture_pseudoreactions(GasModel gmodel, ref GasState Q, number[] c, ref number[] source)
     {
         size_t vm = gm.n_vibe_states;
         number Mmix = gm.molecular_mass(Q);
@@ -359,7 +359,7 @@ version(vib_specific_co_kinetics_test) {
 
         // Set up gas state to match the data in table II
         auto gm = new VibSpecificCO("../gas/sample-data/vib-specific-CO-gas.lua");
-        auto Q = new GasState(gm.n_species, 0);
+        auto Q = GasState(gm.n_species, 0);
         Q.p = 26.7;  // Pa
         Q.T = 175.0; // K
         number Tvib = to!number(1500.0);
@@ -414,7 +414,7 @@ version(vib_specific_co_mixture_kinetics_test) {
     void main() {
         // Set up a CO only gas state with some vibrational nonequilibrium
         auto gm = new VibSpecificCO("../gas/sample-data/vib-specific-CO-gas.lua");
-        auto Q = new GasState(gm.n_species, 0);
+        auto Q = GasState(gm.n_species, 0);
         Q.p = 26.7;  // Pa
         Q.T = 175.0; // K
         number Tvib = to!number(1500.0);
@@ -430,7 +430,7 @@ version(vib_specific_co_mixture_kinetics_test) {
 
         // Now build an identical state using the mixture machinery
         auto gmmix = new VibSpecificCOMixture("sample-input/vib-specific-CO-mixture.lua");
-        auto Qmix = new GasState(gmmix.n_species, 0);
+        auto Qmix = GasState(gmmix.n_species, 0);
         Qmix.p = 26.7;  // Pa
         Qmix.T = 175.0; // K
         // Set up the species mass fractions assuming vibrational equilibrium.
@@ -453,7 +453,7 @@ version(vib_specific_co_mixture_kinetics_test) {
         // Now we need to test the N2/CO relaxation
         // Now build an identical state using the mixture machinery
         auto gmn2 = new VibSpecificCOMixture("sample-input/vib-specific-CO-mixture.lua");
-        auto Qn2 = new GasState(gmn2.n_species, 0);
+        auto Qn2 = GasState(gmn2.n_species, 0);
         Qn2.p = 53.4;  // Pa
         Qn2.T = 175.0; // K
         // Set up the species mass fractions assuming vibrational equilibrium.

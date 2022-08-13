@@ -77,7 +77,7 @@ public:
         // For each of the cases, 5-, 7- and 11-species, we know which species
         // must be supplied, however, we don't know what order the user will
         // hand them to us. So we do a little dance below in which we check
-        // that the species handed to us are correct and then set the 
+        // that the species handed to us are correct and then set the
         // appropriate properties.
         switch (model) {
         case "5-species":
@@ -172,7 +172,7 @@ public:
             lua_pop(L, 1);
             lua_pop(L, 1);
         }
-        
+
         if (model == "5-species") {
             _pgMixEOS = new PerfectGasMixEOS(_R, false, -1, -1);
         }
@@ -227,7 +227,7 @@ public:
             // The following are NOT ragged arrays, unlike above.
             _Delta_11[isp].length = _n_species;
             _Delta_22[isp].length = _n_species;
-            _alpha[isp].length = _n_species; 
+            _alpha[isp].length = _n_species;
             foreach (jsp; 0 .. isp+1) {
                 string key = _species_names[isp] ~ ":" ~ _species_names[jsp];
                 if (!(key in A_11)) {
@@ -262,16 +262,16 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q)
+    override void update_thermo_from_pT(ref GasState Q)
     {
         _pgMixEOS.update_density(Q);
         Q.u = transRotEnergy(Q);
         Q.u_modes[0] = vibElecEnergy(Q, Q.T_modes[0]);
     }
 
-    override void update_thermo_from_rhou(GasState Q)
+    override void update_thermo_from_rhou(ref GasState Q)
     {
-        // We can compute T by direct inversion since the Cp in 
+        // We can compute T by direct inversion since the Cp in
         // in translation and rotation are fully excited,
         // and, as such, constant.
         number sumA = 0.0;
@@ -291,14 +291,14 @@ public:
         _pgMixEOS.update_pressure(Q);
     }
 
-    override void update_thermo_from_rhoT(GasState Q)
+    override void update_thermo_from_rhoT(ref GasState Q)
     {
         _pgMixEOS.update_pressure(Q);
-        Q.u = transRotEnergy(Q); 
+        Q.u = transRotEnergy(Q);
         Q.u_modes[0] = vibElecEnergy(Q, Q.T_modes[0]);
     }
-    
-    override void update_thermo_from_rhop(GasState Q)
+
+    override void update_thermo_from_rhop(ref GasState Q)
     {
         // In this function, we assume that T_modes is set correctly
         // in addition to density and pressure.
@@ -307,24 +307,24 @@ public:
         Q.u_modes[0] = vibElecEnergy(Q, Q.T_modes[0]);
     }
 
-    override void update_thermo_from_ps(GasState Q, number s)
+    override void update_thermo_from_ps(ref GasState Q, number s)
     {
         throw new GasModelException("update_thermo_from_ps not implemented in TwoTemperatureAir.");
     }
 
-    override void update_thermo_from_hs(GasState Q, number h, number s)
+    override void update_thermo_from_hs(ref GasState Q, number h, number s)
     {
         throw new GasModelException("update_thermo_from_hs not implemented in TwoTemperatureAir.");
     }
 
-    override void update_sound_speed(GasState Q)
+    override void update_sound_speed(ref GasState Q)
     {
         // We compute the frozen sound speed based on an effective gamma
         number R = gas_constant(Q);
         Q.a = sqrt(gamma(Q)*R*Q.T);
     }
 
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         massf2molef(Q, _molef);
         // Computation of transport coefficients via collision integrals.
@@ -338,7 +338,7 @@ public:
             foreach (isp; 0 .. _n_species) {
                 foreach (jsp; 0 .. isp+1) {
                     number expnt = _A_22[isp][jsp]*(mylogT)^^2 + _B_22[isp][jsp]*mylogT + _C_22[isp][jsp];
-                    number pi_Omega_22 = exp(_D_22[isp][jsp])*pow(T, expnt); 
+                    number pi_Omega_22 = exp(_D_22[isp][jsp])*pow(T, expnt);
                     _Delta_22[isp][jsp] = (16./5)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_22;
                     _Delta_22[jsp][isp] = _Delta_22[isp][jsp];
                 }
@@ -351,7 +351,7 @@ public:
             foreach (isp; 0 .. _n_species-1) {
                 foreach (jsp; 0 .. isp+1) {
                     number expnt = _A_22[isp][jsp]*(mylogT)^^2 + _B_22[isp][jsp]*mylogT + _C_22[isp][jsp];
-                    number pi_Omega_22 = exp(_D_22[isp][jsp])*pow(T, expnt); 
+                    number pi_Omega_22 = exp(_D_22[isp][jsp])*pow(T, expnt);
                     _Delta_22[isp][jsp] = (16./5)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_22;
                     _Delta_22[jsp][isp] = _Delta_22[isp][jsp];
                 }
@@ -359,7 +359,7 @@ public:
             auto isp = _n_species - 1;
             foreach (jsp; 0 .. _n_species) {
                 number expnt = _A_22[isp][jsp]*(mylogTe)^^2 + _B_22[isp][jsp]*mylogTe + _C_22[isp][jsp];
-                number pi_Omega_22 = exp(_D_22[isp][jsp])*pow(Te, expnt); 
+                number pi_Omega_22 = exp(_D_22[isp][jsp])*pow(Te, expnt);
                 _Delta_22[isp][jsp] = (16./5)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*Te))*pi_Omega_22;
                 _Delta_22[jsp][isp] = _Delta_22[isp][jsp];
             }
@@ -431,7 +431,7 @@ public:
             foreach (isp; 0 .. _n_species) {
                 foreach (jsp; 0 .. isp+1) {
                     number expnt = _A_11[isp][jsp]*(mylogT)^^2 + _B_11[isp][jsp]*mylogT + _C_11[isp][jsp];
-                    number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt); 
+                    number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt);
                     _Delta_11[isp][jsp] = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_11;
                     _Delta_11[jsp][isp] = _Delta_11[isp][jsp];
                 }
@@ -444,7 +444,7 @@ public:
             foreach (isp; 0 .. _n_species-1) {
                 foreach (jsp; 0 .. isp+1) {
                     number expnt = _A_11[isp][jsp]*(mylogT)^^2 + _B_11[isp][jsp]*mylogT + _C_11[isp][jsp];
-                    number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt); 
+                    number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt);
                     _Delta_11[isp][jsp] = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_11;
                     _Delta_11[jsp][isp] = _Delta_11[isp][jsp];
                 }
@@ -452,7 +452,7 @@ public:
             auto isp = _n_species - 1;
             foreach (jsp; 0 .. _n_species) {
                 number expnt = _A_11[isp][jsp]*(mylogTe)^^2 + _B_11[isp][jsp]*mylogTe + _C_11[isp][jsp];
-                number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(Te, expnt); 
+                number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(Te, expnt);
                 _Delta_11[isp][jsp] = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*Te))*pi_Omega_11;
                 _Delta_11[jsp][isp] = _Delta_11[isp][jsp];
             }
@@ -507,7 +507,7 @@ public:
             Cv_tr_rot = transRotSpecHeatConstV(isp);
             Cv_vib = vibElecSpecHeatConstV(Q.T_modes[0], isp);
             Cv += Q.massf[isp] * (Cv_tr_rot + Cv_vib);
-        } 
+        }
         return Cv;
     }
     override number dhdT_const_p(in GasState Q)
@@ -563,7 +563,7 @@ public:
         return _curves[isp].eval_s(Q.T);
     }
 
-    override void balance_charge(GasState Q) const
+    override void balance_charge(ref GasState Q) const
     {
         if (_is_plasma) {
             throw new Error("[FIX-ME] Not yet implemented.");
@@ -590,7 +590,7 @@ public:
         return e_ve;
     }
     @nogc
-    override void binary_diffusion_coefficients(const GasState Q, ref number[][] D)
+    override void binary_diffusion_coefficients(ref const(GasState) Q, ref number[][] D)
     {
         debug{ assert(D.length==_n_species); }
 
@@ -607,7 +607,7 @@ public:
         foreach (isp; 0 .. ilim) {
             foreach (jsp; 0 .. isp+1) {
                 number expnt = _A_11[isp][jsp]*(mylogT)^^2 + _B_11[isp][jsp]*mylogT + _C_11[isp][jsp];
-                number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt); 
+                number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt);
                 number Delta_11ij = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_11;
 
                 // Binary Diffusion coefficient from eqn. 42a
@@ -622,7 +622,7 @@ public:
             auto isp = _n_species - 1;
             foreach (jsp; 0 .. _n_species) {
                 number expnt = _A_11[isp][jsp]*(mylogTe)^^2 + _B_11[isp][jsp]*mylogTe + _C_11[isp][jsp];
-                number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(Te, expnt); 
+                number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(Te, expnt);
                 number Delta_11ij = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*Te))*pi_Omega_11;
 
                 // Binary Diffusion coefficient from eqn. 42a
@@ -633,7 +633,7 @@ public:
             }
         }
     }
-    
+
 private:
     PerfectGasMixEOS _pgMixEOS;
     double _R_U_cal = 1.987; // cal/(mole.K)
@@ -680,9 +680,9 @@ private:
 
     @nogc number transRotSpecHeatConstV(int isp)
     {
-        if (_species_ids[isp] == Species.eminus) 
+        if (_species_ids[isp] == Species.eminus)
             return to!number(0.0);
-        else 
+        else
             return to!number(_Cp_tr_rot[isp] - _R[isp]);
     }
 
@@ -701,7 +701,7 @@ private:
         // We'll keep adjusting our temperature estimate
         // until it is less than TOL.
         double TOL = 1.0e-6;
-        
+
         // Take the supplied T_modes[0] as the initial guess.
         number T_guess = Q.T_modes[0];
         number f_guess = vibElecEnergy(Q, T_guess) - Q.u_modes[0];
@@ -726,7 +726,7 @@ private:
             f_guess = vibElecEnergy(Q, T_guess) - Q.u_modes[0];
             count++;
         }
-        
+
         if (count == MAX_ITERATIONS) {
             string msg = "The 'vibTemperature' function failed to converge.\n";
             debug {
@@ -747,8 +747,8 @@ version(two_temperature_air_test) {
     {
         /*
         auto gm = new TwoTemperatureAir("5-species", ["N2", "O2", "N", "O", "NO"]);
-        auto Q = new GasState(5, 1);
-        
+        auto Q = GasState(5, 1);
+
         Q.p = 666.0;
         Q.T = 293;
         Q.T_modes[0] = 293;
@@ -758,12 +758,10 @@ version(two_temperature_air_test) {
         writeln(Q);
 
         gm.update_thermo_from_rhou(Q);
-        
+
         writeln(Q);
         */
         return 0;
-
-                                        
     }
 }
 
@@ -813,19 +811,19 @@ static this()
     // Parameters for collision integrals
     // Collision cross-section Omega_11
     A_11["N2:N2"]   =  0.0;    B_11["N2:N2"]   = -0.0112; C_11["N2:N2"]   =  -0.1182; D_11["N2:N2"]   =    4.8464;
-    A_11["O2:N2"]   =  0.0;    B_11["O2:N2"]   = -0.0465; C_11["O2:N2"]   =   0.5729; D_11["O2:N2"]   =    1.6185; 
+    A_11["O2:N2"]   =  0.0;    B_11["O2:N2"]   = -0.0465; C_11["O2:N2"]   =   0.5729; D_11["O2:N2"]   =    1.6185;
     A_11["O2:O2"]   =  0.0;    B_11["O2:O2"]   = -0.0410; C_11["O2:O2"]   =   0.4977; D_11["O2:O2"]   =    1.8302;
-    A_11["N:N2"]    =  0.0;    B_11["N:N2"]    = -0.0194; C_11["N:N2"]    =   0.0119; D_11["N:N2"]    =    4.1055; 
-    A_11["N:O2"]    =  0.0;    B_11["N:O2"]    = -0.0179; C_11["N:O2"]    =   0.0152; D_11["N:O2"]    =    3.9996; 
+    A_11["N:N2"]    =  0.0;    B_11["N:N2"]    = -0.0194; C_11["N:N2"]    =   0.0119; D_11["N:N2"]    =    4.1055;
+    A_11["N:O2"]    =  0.0;    B_11["N:O2"]    = -0.0179; C_11["N:O2"]    =   0.0152; D_11["N:O2"]    =    3.9996;
     A_11["N:N"]     =  0.0;    B_11["N:N"]     = -0.0033; C_11["N:N"]     =  -0.0572; D_11["N:N"]     =    5.0452;
     A_11["O:N2"]    =  0.0;    B_11["O:N2"]    = -0.0139; C_11["O:N2"]    =  -0.0825; D_11["O:N2"]    =    4.5785;
     A_11["O:O2"]    =  0.0;    B_11["O:O2"]    = -0.0226; C_11["O:O2"]    =   0.1300; D_11["O:O2"]    =    3.3363;
     A_11["O:N"]     =  0.0;    B_11["O:N"]     =  0.0048; C_11["O:N"]     =  -0.4195; D_11["O:N"]     =    5.7774;
     A_11["O:O"]     =  0.0;    B_11["O:O"]     = -0.0034; C_11["O:O"]     =  -0.0572; D_11["O:O"]     =    4.9901;
-    A_11["NO:N2"]   =  0.0;    B_11["NO:N2"]   = -0.0291; C_11["NO:N2"]   =   0.2324; D_11["NO:N2"]   =    3.2082; 
+    A_11["NO:N2"]   =  0.0;    B_11["NO:N2"]   = -0.0291; C_11["NO:N2"]   =   0.2324; D_11["NO:N2"]   =    3.2082;
     A_11["NO:O2"]   =  0.0;    B_11["NO:O2"]   = -0.0438; C_11["NO:O2"]   =   0.5352; D_11["NO:O2"]   =    1.7252;
     A_11["NO:N"]    =  0.0;    B_11["NO:N"]    = -0.0185; C_11["NO:N"]    =   0.0118; D_11["NO:N"]    =    4.0590;
-    A_11["NO:O"]    =  0.0;    B_11["NO:O"]    = -0.0179; C_11["NO:O"]    =   0.0152; D_11["NO:O"]    =    3.9996; 
+    A_11["NO:O"]    =  0.0;    B_11["NO:O"]    = -0.0179; C_11["NO:O"]    =   0.0152; D_11["NO:O"]    =    3.9996;
     A_11["NO:NO"]   =  0.0;    B_11["NO:NO"]   = -0.0364; C_11["NO:NO"]   =   0.3825; D_11["NO:NO"]   =    2.4718;
     A_11["NO+:N2"]  =  0.0;    B_11["NO+:N2"]  =     0.0; C_11["NO+:N2"]  =  -0.4000; D_11["NO+:N2"]  =    6.8543;
     A_11["NO+:O2"]  =  0.0;    B_11["NO+:O2"]  =     0.0; C_11["NO+:O2"]  =  -0.4000; D_11["NO+:O2"]  =    6.8543;
@@ -839,7 +837,7 @@ static this()
     A_11["e-:O"]    =  0.0164; B_11["e-:O"]    = -0.2431; C_11["e-:O"]    =   1.1231; D_11["e-:O"]    =   -1.5561;
     A_11["e-:NO"]   = -0.2202; B_11["e-:NO"]   =  5.2265; C_11["e-:NO"]   = -40.5659; D_11["e-:NO"]   =  104.7126;
     A_11["e-:NO+"]  =  0.0;    B_11["e-:NO+"]  =     0.0; C_11["e-:NO+"]  =  -2.0000; D_11["e-:NO+"]  =   23.8237;
-    A_11["e-:e-"]   =  0.0;    B_11["e-:e-"]   =     0.0; C_11["e-:e-"]   =  -2.0000; D_11["e-:e-"]   =   23.8237;    
+    A_11["e-:e-"]   =  0.0;    B_11["e-:e-"]   =     0.0; C_11["e-:e-"]   =  -2.0000; D_11["e-:e-"]   =   23.8237;
     A_11["N+:N2"]   =  0.0;    B_11["N+:N2"]   =     0.0; C_11["N+:N2"]   =  -0.4000; D_11["N+:N2"]   =    6.8543;
     A_11["N+:O2"]   =  0.0;    B_11["N+:O2"]   =     0.0; C_11["N+:O2"]   =  -0.4000; D_11["N+:O2"]   =    6.8543;
     A_11["N+:N"]    =  0.0;    B_11["N+:N"]    = -0.0033; C_11["N+:N"]    =  -0.0572; D_11["N+:N"]    =    5.0452;
@@ -864,9 +862,9 @@ static this()
     A_11["N2+:NO"]  =  0.0;    B_11["N2+:NO"]  =     0.0; C_11["N2+:NO"]  =  -0.4000; D_11["N2+:NO"]  =    6.8543;
     A_11["N2+:NO+"] =  0.0;    B_11["N2+:NO+"] =     0.0; C_11["N2+:NO+"] =  -2.0000; D_11["N2+:NO+"] =   23.8237;
     A_11["N2+:e-"]  =  0.0;    B_11["N2+:e-"]  =     0.0; C_11["N2+:e-"]  =  -2.0000; D_11["N2+:e-"]  =   23.8237;
-    A_11["N2+:N+"]  =  0.0;    B_11["N2+:N+"]  =     0.0; C_11["N2+:N+"]  =  -2.0000; D_11["N2+:N+"]  =   23.8237;    
+    A_11["N2+:N+"]  =  0.0;    B_11["N2+:N+"]  =     0.0; C_11["N2+:N+"]  =  -2.0000; D_11["N2+:N+"]  =   23.8237;
     A_11["N2+:O+"]  =  0.0;    B_11["N2+:O+"]  =     0.0; C_11["N2+:O+"]  =  -2.0000; D_11["N2+:O+"]  =   23.8237;
-    A_11["N2+:N2+"] =  0.0;    B_11["N2+:N2+"] =     0.0; C_11["N2+:N2+"] =  -2.0000; D_11["N2+:N2+"] =   23.8237;    
+    A_11["N2+:N2+"] =  0.0;    B_11["N2+:N2+"] =     0.0; C_11["N2+:N2+"] =  -2.0000; D_11["N2+:N2+"] =   23.8237;
     A_11["O2+:N2"]  =  0.0;    B_11["O2+:N2"]  =     0.0; C_11["O2+:N2"]  =  -0.4000; D_11["O2+:N2"]  =    6.8543;
     A_11["O2+:O2"]  =  0.0;    B_11["O2+:O2"]  =     0.0; C_11["O2+:O2"]  =  -0.4000; D_11["O2+:O2"]  =    6.8543;
     A_11["O2+:N"]   =  0.0;    B_11["O2+:N"]   =     0.0; C_11["O2+:N"]   =  -0.4000; D_11["O2+:N"]   =    6.8543;
@@ -874,16 +872,16 @@ static this()
     A_11["O2+:NO"]  =  0.0;    B_11["O2+:NO"]  =     0.0; C_11["O2+:NO"]  =  -0.4000; D_11["O2+:NO"]  =    6.8543;
     A_11["O2+:NO+"] =  0.0;    B_11["O2+:NO+"] =     0.0; C_11["O2+:NO+"] =  -2.0000; D_11["O2+:NO+"] =   23.8237;
     A_11["O2+:e-"]  =  0.0;    B_11["O2+:e-"]  =     0.0; C_11["O2+:e-"]  =  -2.0000; D_11["O2+:e-"]  =   23.8237;
-    A_11["O2+:N+"]  =  0.0;    B_11["O2+:N+"]  =     0.0; C_11["O2+:N+"]  =  -2.0000; D_11["O2+:N+"]  =   23.8237;    
+    A_11["O2+:N+"]  =  0.0;    B_11["O2+:N+"]  =     0.0; C_11["O2+:N+"]  =  -2.0000; D_11["O2+:N+"]  =   23.8237;
     A_11["O2+:O+"]  =  0.0;    B_11["O2+:O+"]  =     0.0; C_11["O2+:O+"]  =  -2.0000; D_11["O2+:O+"]  =   23.8237;
-    A_11["O2+:N2+"] =  0.0;    B_11["O2+:N2+"] =     0.0; C_11["O2+:N2+"] =  -2.0000; D_11["O2+:N2+"] =   23.8237;    
-    A_11["O2+:O2+"] =  0.0;    B_11["O2+:O2+"] =     0.0; C_11["O2+:O2+"] =  -2.0000; D_11["O2+:O2+"] =   23.8237;    
+    A_11["O2+:N2+"] =  0.0;    B_11["O2+:N2+"] =     0.0; C_11["O2+:N2+"] =  -2.0000; D_11["O2+:N2+"] =   23.8237;
+    A_11["O2+:O2+"] =  0.0;    B_11["O2+:O2+"] =     0.0; C_11["O2+:O2+"] =  -2.0000; D_11["O2+:O2+"] =   23.8237;
 
     // Collision cross-section Omega_22
     A_22["N2:N2"]   =  0.0;    B_22["N2:N2"]   = -0.0203; C_22["N2:N2"]   =   0.0683; D_22["N2:N2"]   =   4.0900;
     A_22["O2:N2"]   =  0.0;    B_22["O2:N2"]   = -0.0558; C_22["O2:N2"]   =   0.7590; D_22["O2:N2"]   =   0.8955;
     A_22["O2:O2"]   =  0.0;    B_22["O2:O2"]   = -0.0485; C_22["O2:O2"]   =   0.6475; D_22["O2:O2"]   =   1.2607;
-    A_22["N:N2"]    =  0.0;    B_22["N:N2"]    = -0.0190; C_22["N:N2"]    =   0.0239; D_22["N:N2"]    =   4.1782; 
+    A_22["N:N2"]    =  0.0;    B_22["N:N2"]    = -0.0190; C_22["N:N2"]    =   0.0239; D_22["N:N2"]    =   4.1782;
     A_22["N:O2"]    =  0.0;    B_22["N:O2"]    = -0.0203; C_22["N:O2"]    =   0.0703; D_22["N:O2"]    =   3.8818;
     A_22["N:N"]     =  0.0;    B_22["N:N"]     = -0.0118; C_22["N:N"]     =  -0.0960; D_22["N:N"]     =   4.3252;
     A_22["O:N2"]    =  0.0;    B_22["O:N2"]    = -0.0169; C_22["O:N2"]    =  -0.0143; D_22["O:N2"]    =   4.4195;
@@ -948,5 +946,3 @@ static this()
     A_22["O2+:O2+"] =  0.0;    B_22["O2+:O2+"] =     0.0; C_22["O2+:O2+"] =  -2.0000; D_22["O2+:O2+"]  =  24.3602;
 
 }
-
-

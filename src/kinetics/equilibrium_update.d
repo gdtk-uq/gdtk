@@ -36,7 +36,7 @@ final class EquilibriumUpdate : ThermochemicalReactor {
         eqcalc = new EquilibriumCalculator(fname);
     }
 
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         // Since the internal energy and density in the (isolated) reactor is fixed,
@@ -50,7 +50,7 @@ final class EquilibriumUpdate : ThermochemicalReactor {
         _gmodel.update_sound_speed(Q);
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for equilibrium_update.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }
@@ -100,33 +100,33 @@ class EquilibriumCalculator {
 
 version(complex_numbers){
 
-    @nogc void set_massf_from_pT(GasState Q)
+    @nogc void set_massf_from_pT(ref GasState Q)
     {
         throw new Error("Do not use with complex numbers.");
     }
 
-    @nogc void set_massf_and_T_from_rhou(GasState Q)
+    @nogc void set_massf_and_T_from_rhou(ref GasState Q)
     {
         throw new Error("Do not use with complex numbers.");
     }
 
-    @nogc void set_massf_and_T_from_ps(GasState Q, double s)
+    @nogc void set_massf_and_T_from_ps(ref GasState Q, double s)
     {
         throw new Error("Do not use with complex numbers.");
     }
 
-    @nogc void set_massf_from_rhoT(GasState Q)
+    @nogc void set_massf_from_rhoT(ref GasState Q)
     {
         throw new Error("Do not use with complex numbers.");
     }
 
-    @nogc double get_s(GasState Q)
+    @nogc double get_s(ref GasState Q)
     {
         throw new Error("Do not use with complex numbers.");
     }
 
 } else {
-    @nogc void set_massf_from_pT(GasState Q)
+    @nogc void set_massf_from_pT(ref GasState Q)
     {
         massf2molef(Q.massf, M, X0);
         int error = ceq.pt(Q.p,Q.T,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,0);
@@ -134,7 +134,7 @@ version(complex_numbers){
         molef2massf(X1, M, Q.massf);
     }
 
-    @nogc void set_massf_and_T_from_rhou(GasState Q)
+    @nogc void set_massf_and_T_from_rhou(ref GasState Q)
     {
         massf2molef(Q.massf, M, X0);
         int error = ceq.rhou(Q.rho,Q.u,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T,0);
@@ -142,7 +142,7 @@ version(complex_numbers){
         molef2massf(X1, M, Q.massf);
     }
 
-    @nogc void set_massf_and_T_from_ps(GasState Q, double s)
+    @nogc void set_massf_and_T_from_ps(ref GasState Q, double s)
     {
         massf2molef(Q.massf, M, X0);
         int error = ceq.ps(Q.p,s,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,&Q.T,0);
@@ -150,7 +150,7 @@ version(complex_numbers){
         molef2massf(X1, M, Q.massf);
     }
 
-    @nogc void set_massf_from_rhoT(GasState Q)
+    @nogc void set_massf_from_rhoT(ref GasState Q)
     {
         massf2molef(Q.massf, M, X0);
         int error = ceq.rhot(Q.rho,Q.T,X0ptr,nsp,nel,lewisptr,Mptr,aptr,X1ptr,0);
@@ -158,7 +158,7 @@ version(complex_numbers){
         molef2massf(X1, M, Q.massf);
     }
 
-    @nogc double get_s(GasState Q)
+    @nogc double get_s(ref GasState Q)
     {
         massf2molef(Q.massf, M, X0);
         return ceq.get_s(Q.T, Q.p, X0ptr, nsp, lewisptr, Mptr);
@@ -355,7 +355,7 @@ version(equilibrium_update_test) {
         auto gm = new ThermallyPerfectGasEquilibrium("../gas/sample-data/therm-perf-equil-5-species-air.lua");
         auto reactor = new EquilibriumUpdate("../gas/sample-data/therm-perf-equil-5-species-air.lua", gm);
 
-        auto gs2 = new GasState(5, 0);
+        auto gs2 = GasState(5, 0);
         double rho_target = 0.0139638507337;
         double u_target = 2131154.032665843;
         double T_target = 2500.0;

@@ -49,7 +49,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         if (dtSuggest < 0.0) {
@@ -220,14 +220,14 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         } // end if Q.T > _T_min_for_reaction
     } // end opCall()
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for two_temperature_argon_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }
 
     private:
     @nogc
-    number[2] F(ref const(number[2]) y, GasState Q)
+    number[2] F(ref const(number[2]) y, ref GasState Q)
     // Compute the rate of change of the state vector for the ionisation reactions.
     // It also has the side effect of keeping the GasState up to date with y vector.
     {
@@ -320,7 +320,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     } // end F()
 
     @nogc
-    number[2] BackEuler_F(ref const(number[2]) y, ref const(number[2]) y_prev, GasState Q)
+    number[2] BackEuler_F(ref const(number[2]) y, ref const(number[2]) y_prev, ref GasState Q)
     {
         // When the value of y satisfies the backward Euler-update formula,
         // the output vector will have zero for each element.
@@ -332,7 +332,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 
     @nogc
     number[2][2] Jacobian(ref const(number[2]) y, ref const(number[2]) y_prev,
-                          ref const(number[2]) h, GasState Q)
+                          ref const(number[2]) h, ref GasState Q)
     {
         // Compute dG/dy, where G is the backward Euler update function (above).
         number[2] myF0 = BackEuler_F(y, y_prev, Q);
@@ -419,7 +419,7 @@ version(two_temperature_argon_kinetics_test) {
         doLuaFile(L, modelFileName);
         auto gm = new TwoTemperatureReactingArgon(L);
         lua_close(L);
-        auto gd = new GasState(3, 1);
+        auto gd = GasState(3, 1);
         gd.p = 1.0e5;
         gd.T = 300.0;
         gd.T_modes[0] = 300.0;
@@ -450,7 +450,7 @@ version(two_temperature_argon_kinetics_test) {
         double M1 = 18.91;
         //
         // Inital gas properties, immediate post-shock
-        auto gs = new GasState(3, 1);
+        auto gs = GasState(3, 1);
         gs.p = p1 * 446.735124;
         gs.T = T1 * 112.620756;
         gs.T_modes[0] = T1; // presume that the electron temperature has not jumped

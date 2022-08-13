@@ -43,8 +43,8 @@ final class TwoTemperatureDissociatingNitrogenKinetics : ThermochemicalReactor {
             errMsg ~= "The supplied gas model must be a TwoTemperatureDissociatingNitrogen model.\n";
             throw new ThermochemicalReactorUpdateException(errMsg);
         }
-        _Qinit = new GasState(gmodel);
-        _Q0 = new GasState(gmodel);
+        _Qinit = GasState(gmodel);
+        _Q0 = GasState(gmodel);
         _chemUpdate = new ChemistryUpdate(chemFile, gmodel);
         _molef.length = 2;
         _numden.length = 2;
@@ -52,7 +52,7 @@ final class TwoTemperatureDissociatingNitrogenKinetics : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         number uTotal = Q.u + Q.u_modes[0];
@@ -90,7 +90,7 @@ final class TwoTemperatureDissociatingNitrogenKinetics : ThermochemicalReactor {
         }
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for two_temperature_dissociating_nitrogen_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }
@@ -184,7 +184,7 @@ private:
     }
 
     @nogc
-    void energyUpdate(GasState Q, double tInterval, ref double dtSuggest)
+    void energyUpdate(ref GasState Q, double tInterval, ref double dtSuggest)
     {
         _uTotal = Q.u + Q.u_modes[0];
         // We borrow the algorithm from ChemistryUpdate.opCall()
@@ -306,7 +306,7 @@ private:
     }
 
     @nogc
-    number evalRelaxationTime(GasState Q)
+    number evalRelaxationTime(ref GasState Q)
     {
         int isp =  Species.N2;
 
@@ -327,7 +327,7 @@ private:
     }
 
     @nogc
-    number evalRate(GasState Q)
+    number evalRate(ref GasState Q)
     {
         number rate = 0.0;
         int isp = Species.N2;
@@ -350,7 +350,7 @@ private:
     }
 
     @nogc
-    ResultOfStep RKFStep(GasState Q, double h, ref double hSuggest)
+    ResultOfStep RKFStep(ref GasState Q, double h, ref double hSuggest)
     {
         _Q0.copy_values_from(Q);
         immutable double a21=1./5., a31=3./40., a32=9./40.,

@@ -80,8 +80,8 @@ public:
         foreach (i; 0 .. ncells) { cells ~= new LCell(gmodel); }
         //
         // Private workspace for quadratic reconstruction of flow data.
-        gsL = new GasState(gmodel);
-        gsR = new GasState(gmodel);
+        gsL = GasState(gmodel);
+        gsR = GasState(gmodel);
     } // end constructor
 
     void read_face_data(File fp, int tindx)

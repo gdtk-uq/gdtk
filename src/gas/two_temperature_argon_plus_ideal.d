@@ -63,8 +63,8 @@ public:
         _mol_masses[Species.e_minus] = argon_gas._mol_masses[2];
         _e_mass_over_ion_mass = _mol_masses[Species.e_minus] / _mol_masses[Species.Ar_plus];
         create_species_reverse_lookup();
-        Q_ideal = new GasState(ideal_gas);
-        Q_argon = new GasState(argon_gas);
+        Q_ideal = GasState(ideal_gas);
+        Q_argon = GasState(argon_gas);
     }
 
     override string toString() const
@@ -77,10 +77,10 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q)
+    override void update_thermo_from_pT(ref GasState Q)
     {
         if (Q.T <= 0.0 || Q.p <= 0.0 || Q.T_modes[0] <= 0.0) {
-            string msg = "Temperature and/or pressure was negative for update_thermo_from_pT."; 
+            string msg = "Temperature and/or pressure was negative for update_thermo_from_pT.";
             throw new GasModelException(msg);
         }
         bool with_ideal = Q.massf[0] > massf_tiny;
@@ -134,10 +134,10 @@ public:
             Q.u_modes[0] = to!number(0.0);
         }
     }
-    override void update_thermo_from_rhou(GasState Q)
+    override void update_thermo_from_rhou(ref GasState Q)
     {
         if (Q.u <= 0.0 || Q.rho <= 0.0 || Q.u_modes[0] < 0.0) {
-            string msg = "Internal energy and/or density was negative for update_thermo_from_rhou."; 
+            string msg = "Internal energy and/or density was negative for update_thermo_from_rhou.";
             throw new GasModelException(msg);
         }
         bool with_ideal = Q.massf[0] > massf_tiny;
@@ -201,10 +201,10 @@ public:
             Q.T = Q_ideal.T;
         }
     }
-    override void update_thermo_from_rhoT(GasState Q)
+    override void update_thermo_from_rhoT(ref GasState Q)
     {
         if (Q.T <= 0.0 || Q.rho <= 0.0 || Q.T_modes[0] <= 0.0) {
-            string msg = "Temperature and/or density was negative for update_thermo_from_rhoT."; 
+            string msg = "Temperature and/or density was negative for update_thermo_from_rhoT.";
             throw new GasModelException(msg);
         }
         bool with_ideal = Q.massf[0] > massf_tiny;
@@ -239,10 +239,10 @@ public:
             Q.u_modes[0] = to!number(0.0);
         }
     }
-    override void update_thermo_from_rhop(GasState Q)
+    override void update_thermo_from_rhop(ref GasState Q)
     {
         if (Q.p <= 0.0 || Q.rho <= 0.0) {
-            string msg = "Pressure and/or density was negative for update_thermo_from_rhop."; 
+            string msg = "Pressure and/or density was negative for update_thermo_from_rhop.";
             throw new GasModelException(msg);
         }
         // Assume Q.T_modes[0] remains fixed.
@@ -299,7 +299,7 @@ public:
         }
     }
 
-    override void update_thermo_from_ps(GasState Q, number s)
+    override void update_thermo_from_ps(ref GasState Q, number s)
     {
         bool with_ideal = Q.massf[0] > massf_tiny;
         number argon_massf = Q.massf[1]+Q.massf[2]+Q.massf[3];
@@ -316,7 +316,7 @@ public:
             Q.rho = Q_ideal.rho;
         }
     }
-    override void update_thermo_from_hs(GasState Q, number h, number s)
+    override void update_thermo_from_hs(ref GasState Q, number h, number s)
     {
         bool with_ideal = Q.massf[0] > massf_tiny;
         number argon_massf = Q.massf[1]+Q.massf[2]+Q.massf[3];
@@ -333,7 +333,7 @@ public:
             Q.rho = Q_ideal.rho;
         }
     }
-    override void update_sound_speed(GasState Q)
+    override void update_sound_speed(ref GasState Q)
     {
         if (Q.T <= 0.0) {
             string msg = "Temperature was negative for update_sound_speed.";
@@ -366,7 +366,7 @@ public:
             Q.a = Q_ideal.a;
         }
     }
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         bool with_ideal = Q.massf[0] > massf_tiny;
         number argon_massf = Q.massf[1]+Q.massf[2]+Q.massf[3];
@@ -551,7 +551,7 @@ public:
         return result;
     }
 
-    override void balance_charge(GasState Q) const
+    override void balance_charge(ref GasState Q) const
     {
         Q.massf[Species.e_minus] = Q.massf[Species.Ar_plus] * _e_mass_over_ion_mass;
     }
@@ -585,7 +585,7 @@ version(two_temperature_argon_plus_ideal_test) {
         doLuaFile(L, "two-temperature-argon-plus-ideal-air-gas-model.lua");
         auto gm = new TwoTemperatureArgonPlusIdealGas(L);
         lua_close(L);
-        auto gd = new GasState(4, 1);
+        auto gd = GasState(4, 1);
 
         // (1) Try pure ideal air.
         gd.p = 1.0e5;

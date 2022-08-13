@@ -408,7 +408,7 @@ version(rate_constant_test) {
     int main() {
         // Test 1. Rate constant for H2 + I2 reaction.
         auto rc = new ArrheniusRateConstant(1.94e14*1e-6, 0.0, 20620.0);
-        auto gd = new GasState(1, 1);
+        auto gd = GasState(1, 1);
         gd.T = 700.0;
         // debug { import std.stdio;  writeln("rc=", rc.eval(gd)); } // rc=3.12412e-05
         assert(isClose(3.10850956e-5, rc.eval(gd), 1.0e-2), failedUnitTest());

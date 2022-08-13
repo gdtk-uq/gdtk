@@ -39,9 +39,9 @@ final class UpdateArgonFracWithIdeal : ThermochemicalReactor {
         if (mygm !is null) {
             massf_tiny = mygm.massf_tiny;
             ideal_gas = mygm.ideal_gas;
-            Q_ideal = new GasState(ideal_gas);
+            Q_ideal = GasState(ideal_gas);
             argon_gas = mygm.argon_gas;
-            Q_argon = new GasState(argon_gas);
+            Q_argon = GasState(argon_gas);
             argon_reactor = new UpdateArgonFrac(fname, argon_gas);
         } else {
             throw new ThermochemicalReactorUpdateException("Need a 2T argon gas but did not get one.");
@@ -49,7 +49,7 @@ final class UpdateArgonFracWithIdeal : ThermochemicalReactor {
     }
 
     @nogc
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         bool with_ideal = Q.massf[0] > massf_tiny;
@@ -84,7 +84,7 @@ final class UpdateArgonFracWithIdeal : ThermochemicalReactor {
         return;
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for two_temperature_argon_with_ideal_gas.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }

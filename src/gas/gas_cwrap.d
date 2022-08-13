@@ -29,7 +29,7 @@ import gasflow;
 // We will accumulate GasModel and GasState objects in these arrays
 // and use the indices as handles in the scripting language.
 GasModel[] gas_models;
-GasState[] gas_states;
+GasState*[] gas_states;
 ThermochemicalReactor[] thermochemical_reactors;
 
 extern (C) int cwrap_gas_init()
@@ -150,7 +150,7 @@ extern (C) int gas_state_new(int gm_i)
 {
     try {
         GasModel gm = gas_models[gm_i];
-        GasState gs = new GasState(gm);
+        GasState* gs = new GasState(gm);
         // For a single-species gas, the user often ignores the mass-fraction array.
         // Let's set the single mass fraction to 1,
         // so that we do not have to NaN being printed.
@@ -167,7 +167,7 @@ extern (C) int gas_state_new(int gm_i)
 extern (C) int gas_state_set_scalar_field(int gs_i, const char* field_name, double value)
 {
     try {
-        GasState gs = gas_states[gs_i];
+        GasState* gs = gas_states[gs_i];
         string name = to!string(field_name);
         switch (name) {
         case "rho":
@@ -196,7 +196,7 @@ extern (C) int gas_state_set_scalar_field(int gs_i, const char* field_name, doub
 extern (C) int gas_state_get_scalar_field(int gs_i, const char* field_name, double* value)
 {
     try {
-        GasState gs = gas_states[gs_i];
+        GasState* gs = gas_states[gs_i];
         string name = to!string(field_name);
         *value = 0.0;
         switch (name) {
@@ -235,7 +235,7 @@ extern (C) int gas_state_get_scalar_field(int gs_i, const char* field_name, doub
 extern (C) int gas_state_set_array_field(int gs_i, const char* field_name, double* values, int n)
 {
     try {
-        GasState gs = gas_states[gs_i];
+        GasState* gs = gas_states[gs_i];
         string name = to!string(field_name);
         switch (name) {
         case "massf":
@@ -261,7 +261,7 @@ extern (C) int gas_state_set_array_field(int gs_i, const char* field_name, doubl
 extern (C) int gas_state_get_array_field(int gs_i, const char* field_name, double* values, int n)
 {
     try {
-        GasState gs = gas_states[gs_i];
+        GasState* gs = gas_states[gs_i];
         string name = to!string(field_name);
         switch (name) {
         case "massf":
@@ -290,7 +290,7 @@ extern (C) int gas_state_get_array_field(int gs_i, const char* field_name, doubl
 extern (C) int gas_state_get_ceaSavedData_field(int gs_i, const char* field_name, double* value)
 {
     try {
-        GasState gs = gas_states[gs_i];
+        GasState* gs = gas_states[gs_i];
         if (gs.ceaSavedData is null) {
             throw new Exception("No available ceaSavedData.");
         }
@@ -350,7 +350,7 @@ extern (C) int gas_state_get_ceaSavedData_field(int gs_i, const char* field_name
 extern (C) int gas_state_get_ceaSavedData_massf(int gs_i, const char* species_name, double* value)
 {
     try {
-        GasState gs = gas_states[gs_i];
+        GasState* gs = gas_states[gs_i];
         string name = to!string(species_name);
         *value = gs.ceaSavedData.massf[name];
         return 0;
@@ -377,7 +377,7 @@ extern (C) int gas_state_get_ceaSavedData_species_names(int gs_i, char* dest_str
 extern (C) int gas_state_copy_values(int gs_to_i, int gs_from_i)
 {
     try {
-        gas_states[gs_to_i].copy_values_from(gas_states[gs_from_i]);
+        gas_states[gs_to_i].copy_values_from(*gas_states[gs_from_i]);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -391,7 +391,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_pT(int gm_i, int gs_i)
 {
     try {
         GasModel gm = gas_models[gm_i];
-        GasState gs = gas_states[gs_i];
+        GasState* gs = gas_states[gs_i];
         bool valid = true;
         if (!isFinite(gs.p)) { valid = false; }
         if (!isFinite(gs.T)) { valid = false; }
@@ -404,7 +404,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_pT(int gm_i, int gs_i)
             }
         }
         if (!valid) { throw new Exception("Gas state is not valid for pT update."); }
-        gm.update_thermo_from_pT(gs);
+        gm.update_thermo_from_pT(*gs);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -416,7 +416,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_rhou(int gm_i, int gs_i)
 {
     try {
         GasModel gm = gas_models[gm_i];
-        GasState gs = gas_states[gs_i];
+        GasState* gs = gas_states[gs_i];
         bool valid = true;
         if (!isFinite(gs.rho)) { valid = false; }
         if (!isFinite(gs.u)) { valid = false; }
@@ -429,7 +429,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_rhou(int gm_i, int gs_i)
             }
         }
         if (!valid) { throw new Exception("Gas state is not valid for rhou update."); }
-        gm.update_thermo_from_rhou(gs);
+        gm.update_thermo_from_rhou(*gs);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -441,7 +441,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_rhoT(int gm_i, int gs_i)
 {
     try {
         GasModel gm = gas_models[gm_i];
-        GasState gs = gas_states[gs_i];
+        GasState* gs = gas_states[gs_i];
         bool valid = true;
         if (!isFinite(gs.rho)) { valid = false; }
         if (!isFinite(gs.T)) { valid = false; }
@@ -454,7 +454,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_rhoT(int gm_i, int gs_i)
             }
         }
         if (!valid) { throw new Exception("Gas state is not valid for rhoT update."); }
-        gm.update_thermo_from_rhoT(gs);
+        gm.update_thermo_from_rhoT(*gs);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -466,7 +466,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_rhop(int gm_i, int gs_i)
 {
     try {
         GasModel gm = gas_models[gm_i];
-        GasState gs = gas_states[gs_i];
+        GasState* gs = gas_states[gs_i];
         bool valid = true;
         if (!isFinite(gs.rho)) { valid = false; }
         if (!isFinite(gs.p)) { valid = false; }
@@ -476,7 +476,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_rhop(int gm_i, int gs_i)
             }
         }
         if (!valid) { throw new Exception("Gas state is not valid for rhop update."); }
-        gm.update_thermo_from_rhop(gs);
+        gm.update_thermo_from_rhop(*gs);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -488,7 +488,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_ps(int gm_i, int gs_i, dou
 {
     try {
         GasModel gm = gas_models[gm_i];
-        GasState gs = gas_states[gs_i];
+        GasState* gs = gas_states[gs_i];
         bool valid = true;
         if (!isFinite(s)) { valid = false; }
         if (!isFinite(gs.p)) { valid = false; }
@@ -498,7 +498,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_ps(int gm_i, int gs_i, dou
             }
         }
         if (!valid) { throw new Exception("Gas state is not valid for ps update."); }
-        gm.update_thermo_from_ps(gs, s);
+        gm.update_thermo_from_ps(*gs, s);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -510,7 +510,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_hs(int gm_i, int gs_i, dou
 {
     try {
         GasModel gm = gas_models[gm_i];
-        GasState gs = gas_states[gs_i];
+        GasState* gs = gas_states[gs_i];
         bool valid = true;
         if (!isFinite(s)) { valid = false; }
         if (!isFinite(h)) { valid = false; }
@@ -520,7 +520,7 @@ extern (C) int gas_model_gas_state_update_thermo_from_hs(int gm_i, int gs_i, dou
             }
         }
         if (!valid) { throw new Exception("Gas state is not valid for hs update."); }
-        gm.update_thermo_from_hs(gs, h, s);
+        gm.update_thermo_from_hs(*gs, h, s);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -532,7 +532,7 @@ extern (C) int gas_model_gas_state_update_sound_speed(int gm_i, int gs_i)
 {
     try {
         GasModel gm = gas_models[gm_i];
-        GasState gs = gas_states[gs_i];
+        GasState* gs = gas_states[gs_i];
         bool valid = true;
         if (!isFinite(gs.rho)) { valid = false; }
         if (!isFinite(gs.p)) { valid = false; }
@@ -543,7 +543,7 @@ extern (C) int gas_model_gas_state_update_sound_speed(int gm_i, int gs_i)
             }
         }
         if (!valid) { throw new Exception("Gas state is not valid for sound_speed update."); }
-        gm.update_sound_speed(gs);
+        gm.update_sound_speed(*gs);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -555,7 +555,7 @@ extern (C) int gas_model_gas_state_update_trans_coeffs(int gm_i, int gs_i)
 {
     try {
         GasModel gm = gas_models[gm_i];
-        GasState gs = gas_states[gs_i];
+        GasState* gs = gas_states[gs_i];
         bool valid = true;
         if (!isFinite(gs.rho)) { valid = false; }
         if (!isFinite(gs.p)) { valid = false; }
@@ -566,7 +566,7 @@ extern (C) int gas_model_gas_state_update_trans_coeffs(int gm_i, int gs_i)
             }
         }
         if (!valid) { throw new Exception("Gas state is not valid for trans_coeffs update."); }
-        gm.update_trans_coeffs(gs);
+        gm.update_trans_coeffs(*gs);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -577,7 +577,7 @@ extern (C) int gas_model_gas_state_update_trans_coeffs(int gm_i, int gs_i)
 extern (C) int gas_model_gas_state_Cv(int gm_i, int gs_i, double* result)
 {
     try {
-        *result = gas_models[gm_i].Cv(gas_states[gs_i]);
+        *result = gas_models[gm_i].Cv(*gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -588,7 +588,7 @@ extern (C) int gas_model_gas_state_Cv(int gm_i, int gs_i, double* result)
 extern (C) int gas_model_gas_state_Cp(int gm_i, int gs_i, double* result)
 {
     try {
-        *result = gas_models[gm_i].Cp(gas_states[gs_i]);
+        *result = gas_models[gm_i].Cp(*gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -599,7 +599,7 @@ extern (C) int gas_model_gas_state_Cp(int gm_i, int gs_i, double* result)
 extern (C) int gas_model_gas_state_dpdrho_const_T(int gm_i, int gs_i, double* result)
 {
     try {
-        *result = gas_models[gm_i].dpdrho_const_T(gas_states[gs_i]);
+        *result = gas_models[gm_i].dpdrho_const_T(*gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -610,7 +610,7 @@ extern (C) int gas_model_gas_state_dpdrho_const_T(int gm_i, int gs_i, double* re
 extern (C) int gas_model_gas_state_R(int gm_i, int gs_i, double* result)
 {
     try {
-        *result = gas_models[gm_i].R(gas_states[gs_i]);
+        *result = gas_models[gm_i].R(*gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -621,7 +621,7 @@ extern (C) int gas_model_gas_state_R(int gm_i, int gs_i, double* result)
 extern (C) int gas_model_gas_state_gamma(int gm_i, int gs_i, double* result)
 {
     try {
-        *result = gas_models[gm_i].gamma(gas_states[gs_i]);
+        *result = gas_models[gm_i].gamma(*gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -632,7 +632,7 @@ extern (C) int gas_model_gas_state_gamma(int gm_i, int gs_i, double* result)
 extern (C) int gas_model_gas_state_Prandtl(int gm_i, int gs_i, double* result)
 {
     try {
-        *result = gas_models[gm_i].Prandtl(gas_states[gs_i]);
+        *result = gas_models[gm_i].Prandtl(*gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -643,7 +643,7 @@ extern (C) int gas_model_gas_state_Prandtl(int gm_i, int gs_i, double* result)
 extern (C) int gas_model_gas_state_internal_energy(int gm_i, int gs_i, double* result)
 {
     try {
-        *result = gas_models[gm_i].internal_energy(gas_states[gs_i]);
+        *result = gas_models[gm_i].internal_energy(*gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -654,7 +654,7 @@ extern (C) int gas_model_gas_state_internal_energy(int gm_i, int gs_i, double* r
 extern (C) int gas_model_gas_state_enthalpy(int gm_i, int gs_i, double* result)
 {
     try {
-        *result = gas_models[gm_i].enthalpy(gas_states[gs_i]);
+        *result = gas_models[gm_i].enthalpy(*gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -665,7 +665,7 @@ extern (C) int gas_model_gas_state_enthalpy(int gm_i, int gs_i, double* result)
 extern (C) int gas_model_gas_state_entropy(int gm_i, int gs_i, double* result)
 {
     try {
-        *result = gas_models[gm_i].entropy(gas_states[gs_i]);
+        *result = gas_models[gm_i].entropy(*gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -676,7 +676,7 @@ extern (C) int gas_model_gas_state_entropy(int gm_i, int gs_i, double* result)
 extern (C) int gas_model_gas_state_molecular_mass(int gm_i, int gs_i, double* result)
 {
     try {
-        *result = gas_models[gm_i].molecular_mass(gas_states[gs_i]);
+        *result = gas_models[gm_i].molecular_mass(*gas_states[gs_i]);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -688,7 +688,7 @@ extern (C) int gas_model_gas_state_enthalpy_isp(int gm_i, int gs_i, int isp,
                                                 double* result)
 {
     try {
-        *result = gas_models[gm_i].enthalpy(gas_states[gs_i], isp);
+        *result = gas_models[gm_i].enthalpy(*gas_states[gs_i], isp);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -700,7 +700,7 @@ extern (C) int gas_model_gas_state_entropy_isp(int gm_i, int gs_i, int isp,
                                                double* result)
 {
     try {
-        *result = gas_models[gm_i].entropy(gas_states[gs_i], isp);
+        *result = gas_models[gm_i].entropy(*gas_states[gs_i], isp);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -712,7 +712,7 @@ extern (C) int gas_model_gas_state_gibbs_free_energy_isp(int gm_i, int gs_i, int
                                                          double* result)
 {
     try {
-        *result = gas_models[gm_i].gibbs_free_energy(gas_states[gs_i], isp);
+        *result = gas_models[gm_i].gibbs_free_energy(*gas_states[gs_i], isp);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -775,7 +775,7 @@ extern (C) int gas_model_gas_state_get_conc(int gm_i, int gs_i, double* conc)
         double[] my_conc;
         auto nsp = gas_models[gm_i].n_species;
         my_conc.length = nsp;
-        gas_models[gm_i].massf2conc(gas_states[gs_i], my_conc);
+        gas_models[gm_i].massf2conc(*gas_states[gs_i], my_conc);
         foreach (i; 0 .. nsp) { conc[i] = my_conc[i]; }
         return 0;
     } catch (Exception e) {
@@ -808,7 +808,7 @@ extern (C) int thermochemical_reactor_gas_state_update(int cr_i, int gs_i,
         // Extra parameters are not considered, presently. PJ 2017-04-22, 2019-11-26
         double[maxParams] params;
         double my_dt_suggest = *dt_suggest;
-        thermochemical_reactors[cr_i](gas_states[gs_i], t_interval, my_dt_suggest, params);
+        thermochemical_reactors[cr_i](*gas_states[gs_i], t_interval, my_dt_suggest, params);
         *dt_suggest = my_dt_suggest;
         return 0;
     } catch (Exception e) {
@@ -824,8 +824,8 @@ int gasflow_shock_ideal(int state1_id, double vs, int state2_id, int gm_id,
                         double* results)
 {
     try {
-        double[] my_results = shock_ideal(gas_states[state1_id], vs,
-                                          gas_states[state2_id], gas_models[gm_id]);
+        double[] my_results = shock_ideal(*gas_states[state1_id], vs,
+                                          *gas_states[state2_id], gas_models[gm_id]);
         results[0] = my_results[0]; // v2
         results[1] = my_results[1]; // vg
         return 0;
@@ -840,8 +840,8 @@ int gasflow_normal_shock(int state1_id, double vs, int state2_id, int gm_id,
                          double* results, double rho_tol, double T_tol)
 {
     try {
-        double[] my_results = normal_shock(gas_states[state1_id], vs,
-                                           gas_states[state2_id], gas_models[gm_id],
+        double[] my_results = normal_shock(*gas_states[state1_id], vs,
+                                           *gas_states[state2_id], gas_models[gm_id],
                                            rho_tol, T_tol);
         results[0] = my_results[0]; // v2
         results[1] = my_results[1]; // vg
@@ -857,8 +857,8 @@ int gasflow_normal_shock_1(int state1_id, double vs, int state2_id, int gm_id,
                            double* results, double p_tol, double T_tol)
 {
     try {
-        double[] my_results = normal_shock_1(gas_states[state1_id], vs,
-                                             gas_states[state2_id], gas_models[gm_id],
+        double[] my_results = normal_shock_1(*gas_states[state1_id], vs,
+                                             *gas_states[state2_id], gas_models[gm_id],
                                              p_tol, T_tol);
         results[0] = my_results[0]; // v2
         results[1] = my_results[1]; // vg
@@ -874,8 +874,8 @@ int gasflow_normal_shock_p2p1(int state1_id, double p2p1, int state2_id, int gm_
                               double* results)
 {
     try {
-        double[] my_results = normal_shock_p2p1(gas_states[state1_id], p2p1,
-                                                gas_states[state2_id], gas_models[gm_id]);
+        double[] my_results = normal_shock_p2p1(*gas_states[state1_id], p2p1,
+                                                *gas_states[state2_id], gas_models[gm_id]);
         results[0] = my_results[0]; // v1
         results[1] = my_results[1]; // v2
         results[2] = my_results[2]; // vg
@@ -891,8 +891,8 @@ int gasflow_reflected_shock(int state2_id, double vg, int state5_id, int gm_id,
                             double* results)
 {
     try {
-        double vr_b = reflected_shock(gas_states[state2_id], vg,
-                                      gas_states[state5_id], gas_models[gm_id]);
+        double vr_b = reflected_shock(*gas_states[state2_id], vg,
+                                      *gas_states[state5_id], gas_models[gm_id]);
         results[0] = vr_b;
         return 0;
     } catch (Exception e) {
@@ -906,8 +906,8 @@ int gasflow_expand_from_stagnation(int state0_id, double p_over_p0, int state1_i
                                    int gm_id, double* results)
 {
     try {
-        double v = expand_from_stagnation(gas_states[state0_id], p_over_p0,
-                                          gas_states[state1_id], gas_models[gm_id]);
+        double v = expand_from_stagnation(*gas_states[state0_id], p_over_p0,
+                                          *gas_states[state1_id], gas_models[gm_id]);
         results[0] = v;
         return 0;
     } catch (Exception e) {
@@ -921,8 +921,8 @@ int gasflow_expand_to_mach(int state0_id, double mach, int state1_id,
                            int gm_id, double* results)
 {
     try {
-        double v = expand_to_mach(gas_states[state0_id], mach,
-                                  gas_states[state1_id], gas_models[gm_id]);
+        double v = expand_to_mach(*gas_states[state0_id], mach,
+                                  *gas_states[state1_id], gas_models[gm_id]);
         results[0] = v;
         return 0;
     } catch (Exception e) {
@@ -935,8 +935,8 @@ extern(C)
 int gasflow_total_condition(int state1_id, double v1, int state0_id, int gm_id)
 {
     try {
-        total_condition(gas_states[state1_id], v1,
-                        gas_states[state0_id], gas_models[gm_id]);
+        total_condition(*gas_states[state1_id], v1,
+                        *gas_states[state0_id], gas_models[gm_id]);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -948,8 +948,8 @@ extern(C)
 int gasflow_pitot_condition(int state1_id, double v1, int state2pitot_id, int gm_id)
 {
     try {
-        pitot_condition(gas_states[state1_id], v1,
-                        gas_states[state2pitot_id], gas_models[gm_id]);
+        pitot_condition(*gas_states[state1_id], v1,
+                        *gas_states[state2pitot_id], gas_models[gm_id]);
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);
@@ -963,8 +963,8 @@ int gasflow_steady_flow_with_area_change(int state1_id, double v1, double a2_ove
                                          double* results)
 {
     try {
-        double v2 = steady_flow_with_area_change(gas_states[state1_id], v1, a2_over_a1,
-                                                 gas_states[state2_id], gas_models[gm_id],
+        double v2 = steady_flow_with_area_change(*gas_states[state1_id], v1, a2_over_a1,
+                                                 *gas_states[state2_id], gas_models[gm_id],
                                                  tol, p2p1_min);
         results[0] = v2;
         return 0;
@@ -979,8 +979,8 @@ int gasflow_finite_wave_dp(int state1_id, double v1, const char* characteristic,
                            int state2_id, int gm_id, int steps, double* results)
 {
     try {
-        double v2 = finite_wave_dp(gas_states[state1_id], v1, to!string(characteristic), p2,
-                                   gas_states[state2_id], gas_models[gm_id], steps);
+        double v2 = finite_wave_dp(*gas_states[state1_id], v1, to!string(characteristic), p2,
+                                   *gas_states[state2_id], gas_models[gm_id], steps);
         results[0] = v2;
         return 0;
     } catch (Exception e) {
@@ -994,8 +994,8 @@ int gasflow_finite_wave_dv(int state1_id, double v1, const char* characteristic,
                            int state2_id, int gm_id, int steps, double Tmin, double* results)
 {
     try {
-        double v2 = finite_wave_dv(gas_states[state1_id], v1, to!string(characteristic), v2_target,
-                                   gas_states[state2_id], gas_models[gm_id], steps, Tmin);
+        double v2 = finite_wave_dv(*gas_states[state1_id], v1, to!string(characteristic), v2_target,
+                                   *gas_states[state2_id], gas_models[gm_id], steps, Tmin);
         results[0] = v2;
         return 0;
     } catch (Exception e) {
@@ -1010,9 +1010,9 @@ int gasflow_osher_riemann(int stateL_id, int stateR_id, double velL, double velR
                           int stateX0_id, int gm_id, double* results)
 {
     try {
-        double[5] my_results = osher_riemann(gas_states[stateL_id], gas_states[stateR_id], velL, velR,
-                                             gas_states[stateLstar_id], gas_states[stateRstar_id],
-                                             gas_states[stateX0_id], gas_models[gm_id]);
+        double[5] my_results = osher_riemann(*gas_states[stateL_id], *gas_states[stateR_id], velL, velR,
+                                             *gas_states[stateLstar_id], *gas_states[stateRstar_id],
+                                             *gas_states[stateX0_id], gas_models[gm_id]);
         results[0] = my_results[0]; // pstar
         results[1] = my_results[1]; // wstar
         results[2] = my_results[2]; // wL
@@ -1030,7 +1030,7 @@ int gasflow_osher_flux(int stateL_id, int stateR_id, double velL, double velR,
                        int gm_id, double* results)
 {
     try {
-        double[3] F = osher_flux(gas_states[stateL_id], gas_states[stateR_id], velL, velR, gas_models[gm_id]);
+        double[3] F = osher_flux(*gas_states[stateL_id], *gas_states[stateR_id], velL, velR, gas_models[gm_id]);
         results[0] = F[0]; // mass
         results[1] = F[1]; // x-momentum
         results[2] = F[2]; // energy
@@ -1046,7 +1046,7 @@ int gasflow_roe_flux(int stateL_id, int stateR_id, double velL, double velR,
                      int gm_id, double* results)
 {
     try {
-        double[3] F = roe_flux(gas_states[stateL_id], gas_states[stateR_id], velL, velR, gas_models[gm_id]);
+        double[3] F = roe_flux(*gas_states[stateL_id], *gas_states[stateR_id], velL, velR, gas_models[gm_id]);
         results[0] = F[0]; // mass
         results[1] = F[1]; // x-momentum
         results[2] = F[2]; // energy
@@ -1064,7 +1064,7 @@ int gasflow_lrivp(int stateL_id, int stateR_id, double velL, double velR,
     try {
         double my_wstar = *wstar;
         double my_pstar = *pstar;
-        lrivp(gas_states[stateL_id], gas_states[stateR_id], velL, velR,
+        lrivp(*gas_states[stateL_id], *gas_states[stateR_id], velL, velR,
               gas_models[gmL_id], gas_models[gmR_id], my_wstar, my_pstar);
         *wstar = my_wstar;
         *pstar = my_pstar;
@@ -1081,7 +1081,7 @@ int gasflow_piston_at_left(int stateR_id, double velR, int gm_id,
 {
     try {
         double my_pstar = *pstar;
-        piston_at_left(gas_states[stateR_id], velR, gas_models[gm_id], wstar, my_pstar);
+        piston_at_left(*gas_states[stateR_id], velR, gas_models[gm_id], wstar, my_pstar);
         *pstar = my_pstar;
         return 0;
     } catch (Exception e) {
@@ -1096,7 +1096,7 @@ int gasflow_piston_at_right(int stateL_id, double velL, int gm_id,
 {
     try {
         double my_pstar = *pstar;
-        piston_at_right(gas_states[stateL_id], velL, gas_models[gm_id], wstar, my_pstar);
+        piston_at_right(*gas_states[stateL_id], velL, gas_models[gm_id], wstar, my_pstar);
         *pstar = my_pstar;
         return 0;
     } catch (Exception e) {
@@ -1110,8 +1110,8 @@ int gasflow_theta_oblique(int state1_id, double v1, double beta,
                           int state2_id, int gm_id, double* results)
 {
     try {
-        double[] my_results = theta_oblique(gas_states[state1_id], v1, beta,
-                                            gas_states[state2_id], gas_models[gm_id]);
+        double[] my_results = theta_oblique(*gas_states[state1_id], v1, beta,
+                                            *gas_states[state2_id], gas_models[gm_id]);
         results[0] = my_results[0]; // theta
         results[1] = my_results[1]; // v2
         return 0;
@@ -1126,7 +1126,7 @@ int gasflow_beta_oblique(int state1_id, double v1, double theta,
                           int gm_id, double* results)
 {
     try {
-        double beta = beta_oblique(gas_states[state1_id], v1, theta, gas_models[gm_id]);
+        double beta = beta_oblique(*gas_states[state1_id], v1, theta, gas_models[gm_id]);
         results[0] = beta;
         return 0;
     } catch (Exception e) {
@@ -1140,8 +1140,8 @@ int gasflow_theta_cone(int state1_id, double v1, double beta,
                        int state_c_id, int gm_id, double dtheta, double* results)
 {
     try {
-        double[2] my_results = theta_cone(gas_states[state1_id], v1, beta,
-                                          gas_states[state_c_id], gas_models[gm_id], dtheta);
+        double[2] my_results = theta_cone(*gas_states[state1_id], v1, beta,
+                                          *gas_states[state_c_id], gas_models[gm_id], dtheta);
         results[0] = my_results[0]; // theta_c
         results[1] = my_results[1]; // v2_c
         return 0;
@@ -1156,7 +1156,7 @@ int gasflow_beta_cone(int state1_id, double v1, double theta,
                       int gm_id, double dtheta, double* results)
 {
     try {
-        double beta = beta_cone(gas_states[state1_id], v1, theta, gas_models[gm_id], dtheta);
+        double beta = beta_cone(*gas_states[state1_id], v1, theta, gas_models[gm_id], dtheta);
         results[0] = beta;
         return 0;
     } catch (Exception e) {

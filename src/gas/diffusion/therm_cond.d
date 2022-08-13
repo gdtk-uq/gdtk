@@ -22,7 +22,7 @@ import gas.diffusion.chemkin_therm_cond;
 
 interface ThermalConductivity {
     ThermalConductivity dup() const;
-    @nogc final void update_thermal_conductivity(GasState Q)
+    @nogc final void update_thermal_conductivity(ref GasState Q)
     {
         Q.k = eval(Q, -1);
         for ( auto imode = 0; imode < Q.T_modes.length; ++imode) {

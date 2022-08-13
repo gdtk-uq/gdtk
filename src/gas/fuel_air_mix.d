@@ -81,7 +81,7 @@ version(fuel_air_mix_test) {
         doLuaFile(L, "sample-data/fuel-air-mix-model.lua");
         auto gm = new FuelAirMix(L);
         lua_close(L);
-        auto gd = new GasState(2, 0);
+        auto gd = GasState(2, 0);
         gd.p = 1.0e5;
         gd.T = 300.0;
         gd.massf[0] = 0.75; gd.massf[1] = 0.25;

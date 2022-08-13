@@ -53,7 +53,7 @@ public:
         // Underlying thermally-perfect gas model and equilibrium reactor.
         string tpGasEqFile = getString(L, -1, "tpGasEqFile");
         tpGasEqModel = new ThermallyPerfectGasEquilibrium(tpGasEqFile);
-        tpgs = new GasState(tpGasEqModel);
+        tpgs = GasState(tpGasEqModel);
         tpEqCalc = new EquilibriumCalculator(tpGasEqFile);
         //
         // For the amounts of the reactants, we are expecting
@@ -114,7 +114,7 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q)
+    override void update_thermo_from_pT(ref GasState Q)
     {
         copy_gas_state_except_massf(Q, tpgs);
         tpgs.massf[] = reactants_massf[];
@@ -127,7 +127,7 @@ public:
         version(complex_numbers) {_mol_masses[0] = Mmix.re;}
         else {_mol_masses[0] = Mmix;}
     }
-    override void update_thermo_from_rhou(GasState Q)
+    override void update_thermo_from_rhou(ref GasState Q)
     {
         copy_gas_state_except_massf(Q, tpgs);
         tpgs.massf[] = reactants_massf[];
@@ -140,7 +140,7 @@ public:
         version(complex_numbers) {_mol_masses[0] = Mmix.re;}
         else {_mol_masses[0] = Mmix;}
     }
-    override void update_thermo_from_rhoT(GasState Q)
+    override void update_thermo_from_rhoT(ref GasState Q)
     {
         copy_gas_state_except_massf(Q, tpgs);
         tpgs.massf[] = reactants_massf[];
@@ -153,12 +153,12 @@ public:
         version(complex_numbers) {_mol_masses[0] = Mmix.re;}
         else {_mol_masses[0] = Mmix;}
     }
-    override void update_thermo_from_rhop(GasState Q)
+    override void update_thermo_from_rhop(ref GasState Q)
     {
         //tpGasEqModel.update_thermo_from_rhop(tpgs); // [TODO]
         throw new Error("Not Implemented Error (equilibrium_gas): update_thermo_from_rhop");
     }
-    override void update_thermo_from_ps(GasState Q, number s)
+    override void update_thermo_from_ps(ref GasState Q, number s)
     {
         copy_gas_state_except_massf(Q, tpgs);
         tpgs.massf[] = reactants_massf[];
@@ -173,19 +173,19 @@ public:
         version(complex_numbers) {_mol_masses[0] = Mmix.re;}
         else {_mol_masses[0] = Mmix;}
     }
-    override void update_thermo_from_hs(GasState Q, number h, number s)
+    override void update_thermo_from_hs(ref GasState Q, number h, number s)
     {
         //tpGasEqModel.update_thermo_from_hs(tpgs, h, s);
         throw new Error("Not Implemented Error (equilibrium_gas): update_thermo_from_hs");
     }
 
-    override void update_sound_speed(GasState Q)
+    override void update_sound_speed(ref GasState Q)
     {
         set_tpgs_from_external_gasstate(Q);
         tpGasEqModel.update_sound_speed(tpgs);
         Q.a = tpgs.a;
     }
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         set_tpgs_from_external_gasstate(Q);
         tpGasEqModel.update_trans_coeffs(tpgs);
@@ -240,7 +240,7 @@ private:
     GasState tpgs;
 
     @nogc
-    void copy_gas_state_except_massf(const GasState Q2, GasState Q1){
+    void copy_gas_state_except_massf(ref const(GasState) Q2, ref GasState Q1){
         Q1.rho = Q2.rho;
         Q1.p = Q2.p;
         Q1.p_e = Q2.p_e;
@@ -253,7 +253,7 @@ private:
         Q1.quality = Q2.quality;
     }
 
-    @nogc void set_tpgs_from_external_gasstate(const GasState Q){
+    @nogc void set_tpgs_from_external_gasstate(ref const(GasState) Q){
         /*
             This is a bandaid to deal with the fact that we have no storage for the
             mass fractions. Instead we use this routine to frantically recalculate them
@@ -287,7 +287,7 @@ version(equilibrium_gas_test) {
         auto gm = new EquilibriumGas("air-5sp-eq.lua");
         // writeln("gm=", gm); // Can see that the reactants_massf and _molef set.
 
-        auto gd = new GasState(1, 0);
+        auto gd = GasState(1, 0);
         gd.rho = 0.0139284858607; // Fixed example to use reactants = {N2=0.79, O2=0.21} in moles
         gd.u = 2122510.049202302; //
 

@@ -41,7 +41,7 @@ public:
         // Hard code N2-N system to get going.
         mGmodel = gmodel;
         mNSpecies = mGmodel.n_species;
-        mGsInit = new GasState(gmodel);
+        mGsInit = GasState(gmodel);
 
         auto L = init_lua_State();
         doLuaFile(L, fname1);
@@ -103,7 +103,7 @@ public:
     }
 
     @nogc
-    override void opCall(GasState gs, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState gs, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         mGsInit.copy_values_from(gs);
@@ -262,7 +262,7 @@ public:
 
     }
 
-    @nogc override void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         // species source terms
         auto chem_source = source[0..$-1]; // these are actually references not copies
         mRmech.eval_source_terms(gmodel, Q, chem_source);
@@ -299,7 +299,7 @@ private:
     number[] m_k6;
 
     @nogc
-    void evalRates(GasState gs, number[] y, ref number[] rates) {
+    void evalRates(ref GasState gs, number[] y, ref number[] rates) {
         mConc[] = y[0 .. $-1];
         mRmech.eval_rates(mConc, m_dCdt);
         rates[0 .. $-1] = m_dCdt[];
@@ -311,7 +311,7 @@ private:
     }
 
     @nogc
-    ResultOfStep step(GasState gs, number[] y0, double h, ref number[] yOut, ref double hSuggest)
+    ResultOfStep step(ref GasState gs, number[] y0, double h, ref number[] yOut, ref double hSuggest)
     {
         // 0. Set up the constants associated with the update formula
         // We place them in here for visibility reasons... no one else

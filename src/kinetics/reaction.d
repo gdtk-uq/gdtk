@@ -23,7 +23,7 @@ import util.msg_service;
 import kinetics.rate_constant;
 
 @nogc
-number compute_equilibrium_constant(GasModel gmodel, GasState Q,
+number compute_equilibrium_constant(GasModel gmodel, ref GasState Q,
                                     in int[] participants, in double[] nu)
 {
     Q.p = P_atm; // need to evaluate Gibbs energy at standard state.
@@ -59,7 +59,7 @@ public:
     this(RateConstant forward, RateConstant backward, GasModel gmodel)
     {
         _gmodel = gmodel;
-        _Qw = new GasState(gmodel);
+        _Qw = GasState(gmodel);
 
         if ( forward is null ) {
             _compute_kf_then_kb = false;
@@ -488,7 +488,7 @@ version(reaction_test) {
         // Find rate of forward production for H2 + I2 reaction at 700 K.
         double[] conc = [4.54, 4.54, 0.0];
         auto rc = new ArrheniusRateConstant(1.94e14, 0.0, 20620.0);
-        auto gd = new GasState(3, 1);
+        auto gd = GasState(3, 1);
         gd.T = 700.0;
         auto reaction = new ElementaryReaction(rc, rc, gm, [0, 1], [1.0, 1.0],
                                                [2], [2.0], 3);

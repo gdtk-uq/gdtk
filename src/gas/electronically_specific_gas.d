@@ -48,7 +48,7 @@ public:
 
         _n_macro_species = to!int(_macro_species_names.length);
         _macro_molef.length = _n_macro_species;
-        macro_Q = new GasState(_n_macro_species,1);
+        macro_Q = GasState(_n_macro_species,1);
         _macro_particleMass.length = _n_macro_species;
         foreach (isp; 0 .. _n_macro_species) {
             _macro_particleMass[isp] = _macro_mol_masses[isp]/Avogadro_number;
@@ -172,7 +172,7 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q)
+    override void update_thermo_from_pT(ref GasState Q)
     {
         Update_Macro_State(macro_Q, Q);
 
@@ -182,7 +182,7 @@ public:
         Update_Electronic_State(Q, macro_Q);
     }
 
-    override void update_thermo_from_rhou(GasState Q)
+    override void update_thermo_from_rhou(ref GasState Q)
     {
         Update_Macro_State(macro_Q, Q);
         // We can compute T by direct inversion since the Cp in
@@ -205,7 +205,7 @@ public:
         Update_Electronic_State(Q, macro_Q);
     }
 
-    override void update_thermo_from_rhoT(GasState Q)
+    override void update_thermo_from_rhoT(ref GasState Q)
     {
         Update_Macro_State(macro_Q, Q);
         _pgMixEOS.update_pressure(macro_Q);
@@ -214,7 +214,7 @@ public:
         Update_Electronic_State(Q, macro_Q);
     }
 
-    override void update_thermo_from_rhop(GasState Q)
+    override void update_thermo_from_rhop(ref GasState Q)
     {
         Update_Macro_State(macro_Q, Q);
         // In this function, we assume that T_modes is set correctly
@@ -225,17 +225,17 @@ public:
         Update_Electronic_State(Q, macro_Q);
     }
 
-    override void update_thermo_from_ps(GasState Q, number s)
+    override void update_thermo_from_ps(ref GasState Q, number s)
     {
         throw new GasModelException("update_thermo_from_ps not implemented in ElectronicallySpecificGas.");
     }
 
-    override void update_thermo_from_hs(GasState Q, number h, number s)
+    override void update_thermo_from_hs(ref GasState Q, number h, number s)
     {
         throw new GasModelException("update_thermo_from_hs not implemented in ElectronicallySpecificGas.");
     }
 
-    override void update_sound_speed(GasState Q)
+    override void update_sound_speed(ref GasState Q)
     {
         Update_Macro_State(macro_Q, Q);
         // We compute the frozen sound speed based on an effective gamma
@@ -244,7 +244,7 @@ public:
         Update_Electronic_State(Q, macro_Q);
     }
 
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         Update_Macro_State(macro_Q, Q);
         massf2molef(macro_Q, _macro_molef);
@@ -419,7 +419,7 @@ private:
     number[][] _A_22, _B_22, _C_22, _D_22, _Delta_22, _mu;
 
     @nogc
-    void Update_Macro_State(GasState macro_state, in GasState Q)
+    void Update_Macro_State(ref GasState macro_state, in GasState Q)
     {
         macro_state.rho = Q.rho;
         macro_state.p = Q.p;
@@ -453,7 +453,7 @@ private:
     }
 
     @nogc
-    void Update_Electronic_State(GasState Q, in GasState macro_state)
+    void Update_Electronic_State(ref GasState Q, in GasState macro_state)
     {
         Q.rho = macro_state.rho;
         Q.p = macro_state.p;
@@ -713,7 +713,7 @@ version(electronically_specific_gas_test) {
         doLuaFile(L,"sample-data/electronic-and-macro-species.lua");
 
         auto gm = new ElectronicallySpecificGas(L);
-        auto gd = new GasState(gm.n_species,1);
+        auto gd = GasState(gm.n_species,1);
 
         gd.p=666.0;
         gd.T = 293;
@@ -1044,7 +1044,7 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q)
+    override void update_thermo_from_pT(ref GasState Q)
     {
         auto R_mix = gas_constant(Q);
         Q.rho = Q.p/(R_mix*Q.T);
@@ -1054,7 +1054,7 @@ public:
         Q.u_modes[0]=Cv_electron*Q.T_modes[0];
     }
 
-    override void update_thermo_from_rhou(GasState Q)
+    override void update_thermo_from_rhou(ref GasState Q)
     {
         auto Cv_heavy = heavy_Cv(Q);
         Q.T = (Q.u)/Cv_heavy;
@@ -1064,7 +1064,7 @@ public:
         Q.p = Q.rho*R_mix*Q.T;
     }
 
-    override void update_thermo_from_rhoT(GasState Q)
+    override void update_thermo_from_rhoT(ref GasState Q)
     {
         auto R_mix = gas_constant(Q);
         Q.p = Q.rho*R_mix*Q.T;
@@ -1074,7 +1074,7 @@ public:
         Q.u_modes[0] = Cv_electron*Q.T_modes[0];
     }
 
-    override void update_thermo_from_rhop(GasState Q)
+    override void update_thermo_from_rhop(ref GasState Q)
     {
         auto R_mix = gas_constant(Q);
         Q.T = Q.p/(Q.rho*R_mix);
@@ -1084,20 +1084,20 @@ public:
         Q.u_modes[0] = Cv_electron*Q.T_modes[0];
     }
 
-    override void update_thermo_from_ps(GasState Q, number s)
+    override void update_thermo_from_ps(ref GasState Q, number s)
     {
         Q.T = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
         update_thermo_from_pT(Q);
     }
 
-    override void update_thermo_from_hs(GasState Q, number h, number s)
+    override void update_thermo_from_hs(ref GasState Q, number h, number s)
     {
         Q.T = h / _Cp;
         Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.T/_T1)));
         update_thermo_from_pT(Q);
     }
 
-    override void update_sound_speed(GasState Q)
+    override void update_sound_speed(ref GasState Q)
     {
         auto R_mix = gas_constant(Q);
         auto Cv_mix = Cv(Q);
@@ -1105,7 +1105,7 @@ public:
         Q.a = sqrt(gamma_mix*R_mix*Q.T);
     }
 
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         Q.mu = 0.0;
         Q.k = 0.0;
@@ -1191,7 +1191,7 @@ private:
     number _Osum;
     number _sumterm;
 
-    @nogc number energyInNoneq(const GasState Q) const
+    @nogc number energyInNoneq(ref const(GasState) Q) const
     {
         number uNoneq = 0.0;
         foreach (isp; 0 .. _n_species) {
@@ -1200,7 +1200,7 @@ private:
         return uNoneq;
     }
 
-    @nogc number heavy_Cv(GasState Q)
+    @nogc number heavy_Cv(ref GasState Q)
     {
         _Cv1 = 0.0;
         foreach (isp; 0 .. _n_species-3){
@@ -1212,7 +1212,7 @@ private:
         return _Cv1;
     }
 
-    @nogc number electron_Cv(GasState Q)
+    @nogc number electron_Cv(ref GasState Q)
     {
         number elec_cv = Q.massf[_n_species-3]*(_dof[_n_species-3]/2.0) * _R[_n_species-3];
         return elec_cv;
@@ -1220,11 +1220,11 @@ private:
 
 
 
-    @nogc number electronMassf(GasState Q) {
+    @nogc number electronMassf(ref GasState Q) {
         return Q.massf[_n_species-3];
     }
 
-    @nogc number heavyMassf(GasState Q) {
+    @nogc number heavyMassf(ref GasState Q) {
         return 1.0 - electronMassf(Q);
     }
 }
@@ -1240,7 +1240,7 @@ version(electronically_specific_gas_test) {
         auto L = init_lua_State();
         doLuaFile(L, relativePath(filename));
         auto gm = new ElectronicallySpecificGas(L);
-        auto gd = new GasState(gm.n_species,1);
+        auto gd = GasState(gm.n_species,1);
 
         // gd.massf[] = 0.0;
         // gd.massf[0] = 0.037041674288877; //initialises massf of NI

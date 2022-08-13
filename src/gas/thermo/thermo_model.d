@@ -15,13 +15,13 @@ import gas : GasState;
 interface ThermodynamicModel {
 public:
     // Methods related to computing thermo state.
-    @nogc void updateFromPT(GasState gs);
-    @nogc void updateFromRhoU(GasState gs);
-    @nogc void updateFromRhoT(GasState gs);
-    @nogc void updateFromRhoP(GasState gs);
-    @nogc void updateFromPS(GasState gs, number s);
-    @nogc void updateFromHS(GasState gs, number h, number s);
-    @nogc void updateSoundSpeed(GasState gs);
+    @nogc void updateFromPT(ref GasState gs);
+    @nogc void updateFromRhoU(ref GasState gs);
+    @nogc void updateFromRhoT(ref GasState gs);
+    @nogc void updateFromRhoP(ref GasState gs);
+    @nogc void updateFromPS(ref GasState gs, number s);
+    @nogc void updateFromHS(ref GasState gs, number h, number s);
+    @nogc void updateSoundSpeed(ref GasState gs);
     // Methods related to computing thermo derivatives.
     @nogc number dudTConstV(in GasState gs);
     @nogc number dhdTConstP(in GasState gs);

@@ -13,11 +13,11 @@ void main(){
     writeln("Begin gasflow demo (reflected-shock tunnel calculation)");
     GasModel gm = init_gas_model("../gas/sample-data/cea-lut-air-version-test.lua");
     // GasModel gm = init_gas_model("../gas/sample-data/cea-air5species-gas-model.lua");
-    GasState s1 = new GasState(gm, 125.0e3, 300.0);
+    GasState s1 = GasState(gm, 125.0e3, 300.0);
     writeln("    s1: ", s1);
     //
     writeln("Incident shock (ideal gas)");
-    GasState s2 = new GasState(s1);
+    GasState s2 = GasState(s1);
     double[] velocities = shock_ideal(s1, 2414.0, s2, gm);
     double V2 = velocities[0]; double Vg = velocities[1];
     writeln("    V2=", V2, " Vg=", Vg);
@@ -43,46 +43,46 @@ void main(){
     writeln("    s2: ", s2);
     //
     writeln("Reflected shock");
-    GasState s5 = new GasState(s1);
+    GasState s5 = GasState(s1);
     double Vr_b = reflected_shock(s2, Vg, s5, gm);
     writeln("    Vr_b=", Vr_b);
     writeln("    s5:", s5);
     //
     writeln("Expand from stagnation (with ratio of pressure to match observation)");
-    GasState s5s = new GasState(s5);
+    GasState s5s = GasState(s5);
     double V5s = expand_from_stagnation(s5, 34.37/59.47, s5s, gm);
     writeln("    V5s=", V5s, " Mach=", V5s/s5s.a);
     writeln("    s5s:", s5s);
     writeln("    (h5s-h1)=", gm.enthalpy(s5s) - gm.enthalpy(s1));
     //
     writeln("Expand to throat conditions (Mach 1.0001)");
-    GasState s6 = new GasState(s5s);
+    GasState s6 = GasState(s5s);
     double V6 = expand_to_mach(s5s, 1.0001, s6, gm);
     writeln("    V6=", V6, " Mach=", V6/s6.a);
     writeln("    s6:", s6);
     //
     writeln("Something like a Mach 4 nozzle.");
-    GasState s7 = new GasState(s6);
+    GasState s7 = GasState(s6);
     double V7 = steady_flow_with_area_change(s6, V6, 27.0, s7, gm);
     writeln("    V7=", V7, " Mach=", V7/s7.a);
     writeln("    s7:", s7);
     //
     writeln("Total condition");
-    GasState s8 = new GasState(s7);
+    GasState s8 = GasState(s7);
     total_condition(s7, V7, s8, gm);
     writeln("    s8:", s8);
     //
     writeln("Pitot condition from state 7");
-    GasState s9 = new GasState(s7);
+    GasState s9 = GasState(s7);
     pitot_condition(s7, V7, s9, gm);
     writeln("    pitot-p/total-p=", s9.p/s8.p);
     writeln("    s9:", s9);
     //
     writeln("\nSteady, isentropic flow with area change. (more checks)");
-    GasState s10a = new GasState(gm, 1.0e5, 320.0); // ideal air, not high T
+    GasState s10a = GasState(gm, 1.0e5, 320.0); // ideal air, not high T
     gm.update_sound_speed(s10a);
     double V10a = 1.001 * s10a.a;
-    GasState s10b = new GasState(s10a);
+    GasState s10b = GasState(s10a);
     writeln("something like M4 nozzle with ideal air");
     double V10b = steady_flow_with_area_change(s10a, V10a, 10.72, s10b, gm);
     writeln("    M=", V10b/s10b.a, " expected 4");
@@ -151,7 +151,7 @@ void main(){
     writeln("for M1=1.5, beta=49deg, expect theta=20deg from NACA1135.");
     V1 = M1 * s1.a;
     beta = 49.0 * PI/180.0;
-    GasState state_c = new GasState(s1);
+    GasState state_c = GasState(s1);
     double[2] cone_results = theta_cone(s1, V1, beta, state_c, gm);
     double theta_c = cone_results[0]; double V_c = cone_results[1];
     writeln("    theta_c(deg)=", theta_c*180.0/PI);

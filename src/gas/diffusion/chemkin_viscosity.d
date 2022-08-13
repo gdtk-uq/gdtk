@@ -156,7 +156,7 @@ version(chemkin_viscosity_test) {
         lua_getglobal(L, "chemkin");
         auto o2Chemkin = createChemkinViscosity(L);
         lua_close(L);
-        auto Q = new GasState(1, 1);
+        auto Q = GasState(1, 1);
         Q.T = 1500.0;
         assert(isClose(6.238853e-05, o2chemkin.eval(Q), 1.0e-6), failedUnitTest());
         */

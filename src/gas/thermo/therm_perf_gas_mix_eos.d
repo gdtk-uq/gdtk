@@ -183,7 +183,7 @@ version(therm_perf_gas_mix_eos_test) {
         string[] species;
         getArrayOfStrings(L, "species", species);
         ThermallyPerfectGasMixEOS tpgm = createThermallyPerfectGasMixEOS(species, L);
-        auto Q = new GasState(3, 1);
+        auto Q = GasState(3, 1);
         Q.massf[0] = 0.2; Q.massf[1] = 0.7; Q.massf[2] = 0.1;
         Q.T = 1000.0;
         tpgm.update_energy(Q);

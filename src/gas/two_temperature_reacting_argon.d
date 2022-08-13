@@ -74,7 +74,7 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q) const
+    override void update_thermo_from_pT(ref GasState Q) const
     {
         number alpha = ionisation_fraction_from_mass_fractions(Q);
         if (Q.T <= 0.0 || Q.p <= 0.0 || Q.T_modes[0] <= 0.0) {
@@ -87,7 +87,7 @@ public:
         Q.u = 3.0/2.0*_Rgas*Q.T; // thermal energy of the heavy particles
         Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Te + alpha*_Rgas*_theta_ion; // electron energy
     }
-    override void update_thermo_from_rhou(GasState Q) const
+    override void update_thermo_from_rhou(ref GasState Q) const
     {
         number alpha = ionisation_fraction_from_mass_fractions(Q);
         if (Q.u <= 0.0 || Q.rho <= 0.0 || Q.u_modes[0] < 0.0) {
@@ -105,7 +105,7 @@ public:
         Q.p = Q.rho*_Rgas*(Q.T+alpha*Te);
         Q.T_modes[0] = Te;
     }
-    override void update_thermo_from_rhoT(GasState Q) const
+    override void update_thermo_from_rhoT(ref GasState Q) const
     {
         number alpha = ionisation_fraction_from_mass_fractions(Q);
         if (Q.T <= 0.0 || Q.rho <= 0.0 || Q.T_modes[0] <= 0.0) {
@@ -118,7 +118,7 @@ public:
         Q.u = 3.0/2.0*_Rgas*Q.T;
         Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Te + alpha*_Rgas*_theta_ion;
     }
-    override void update_thermo_from_rhop(GasState Q) const
+    override void update_thermo_from_rhop(ref GasState Q) const
     {
         // Assume Q.T_modes[0] remains fixed.
         number alpha = ionisation_fraction_from_mass_fractions(Q);
@@ -131,15 +131,15 @@ public:
         Q.u = 3.0/2.0*_Rgas*Q.T;
         Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
     }
-    override void update_thermo_from_ps(GasState Q, number s) const
+    override void update_thermo_from_ps(ref GasState Q, number s) const
     {
         throw new GasModelException("update_thermo_from_ps not implemented.");
     }
-    override void update_thermo_from_hs(GasState Q, number h, number s) const
+    override void update_thermo_from_hs(ref GasState Q, number h, number s) const
     {
         throw new GasModelException("update_thermo_from_hs not implemented.");
     }
-    override void update_sound_speed(GasState Q) const
+    override void update_sound_speed(ref GasState Q) const
     {
         if (Q.T <= 0.0 || Q.T_modes[0] < 0.0) {
             string msg = "Temperature was negative for update_sound_speed.";
@@ -149,7 +149,7 @@ public:
         number alpha = ionisation_fraction_from_mass_fractions(Q);
         Q.a = sqrt(5./3.*_Rgas*(Q.T + alpha*Q.T_modes[0]));
     }
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         // Assume the properties of argon atoms, ignoring the ionisation.
         // Use power-law from
@@ -193,12 +193,12 @@ public:
         throw new GasModelException("entropy not implemented in TwoTemperatureReactingArgon.");
     }
 
-    override void balance_charge(GasState Q) const
+    override void balance_charge(ref GasState Q) const
     {
         Q.massf[Species.e_minus] = Q.massf[Species.Ar_plus] * _e_mass_over_ion_mass;
     }
 
-    @nogc number ionisation_fraction_from_mass_fractions(const(GasState) Q) const
+    @nogc number ionisation_fraction_from_mass_fractions(ref const(GasState) Q) const
     {
         number ions = Q.massf[Species.Ar_plus] / _mol_masses[Species.Ar_plus];
         number atoms = Q.massf[Species.Ar] / _mol_masses[Species.Ar];
@@ -228,7 +228,7 @@ version(two_temperature_reacting_argon_test) {
         doLuaFile(L, "sample-data/two-temperature-reacting-argon-model.lua");
         auto gm = new TwoTemperatureReactingArgon(L);
         lua_close(L);
-        auto gd = new GasState(3, 1);
+        auto gd = GasState(3, 1);
         gd.p = 1.0e5;
         gd.T = 300.0;
         gd.T_modes[0] = 300.0;

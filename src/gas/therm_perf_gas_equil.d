@@ -1,8 +1,8 @@
 // therm_perf_gas_equil.d
 
 /*
-    This is a totally identical subclass of ThermallyPerfectGas designed to invoke 
-    the EquilibriumUpdate reactor class present in the kinetics folder. Since reactors 
+    This is a totally identical subclass of ThermallyPerfectGas designed to invoke
+    the EquilibriumUpdate reactor class present in the kinetics folder. Since reactors
     in eilmer 4 are tied to different gas models, we need a different gas model even
     though ThermallyPerfectGas would work just fine with EquilibriumUpdate.
 
@@ -55,7 +55,7 @@ version(therm_perf_gas_equil_test) {
         //
         auto gm = new ThermallyPerfectGasEquilibrium("sample-data/therm-perf-equil-5-species-air.lua");
 
-        auto gd = new GasState(5, 0);
+        auto gd = GasState(5, 0);
         assert(isClose(3.621, gm.LJ_sigmas[0]), failedUnitTest());
         assert(isClose(97.530, gm.LJ_epsilons[0]), failedUnitTest());
 

@@ -81,7 +81,7 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q) const
+    override void update_thermo_from_pT(ref GasState Q) const
     {
         Q.rho = Q.p / (_R_N2*Q.T);
         // For full internal energy, start with trans-rotational mode
@@ -89,7 +89,7 @@ public:
         Q.u = 2.5 * _R_N2 * Q.T;
         foreach (i; 0 .. numVibLevels) { Q.u += Q.massf[i]*_vib_energy_perkg[i]; }
     }
-    override void update_thermo_from_rhou(GasState Q) const
+    override void update_thermo_from_rhou(ref GasState Q) const
     {
         // From internal energy, remove vibrational energy before computing trans-rotational temperature.
         number u = Q.u;
@@ -97,33 +97,33 @@ public:
         Q.T = (0.4/_R_N2) * u;
         Q.p = Q.rho * _R_N2 * Q.T;
     }
-    override void update_thermo_from_rhoT(GasState Q) const
+    override void update_thermo_from_rhoT(ref GasState Q) const
     {
         Q.p = Q.rho * _R_N2 * Q.T;
         // Start with trans-rotational component of internal energy and add vibrational energy.
         Q.u = 2.5 * _R_N2 * Q.T;
         foreach (i; 0 .. numVibLevels) { Q.u += Q.massf[i]*_vib_energy_perkg[i]; }
     }
-    override void update_thermo_from_rhop(GasState Q) const
+    override void update_thermo_from_rhop(ref GasState Q) const
     {
         Q.T = Q.p / (Q.rho * _R_N2);
         // Start with trans-rotational component of internal energy and add vibrational energy.
         Q.u = 2.5 * _R_N2 * Q.T;
         foreach (i; 0 .. numVibLevels) { Q.u += Q.massf[i]*_vib_energy_perkg[i]; }
     }
-    override void update_thermo_from_ps(GasState Q, number s) const
+    override void update_thermo_from_ps(ref GasState Q, number s) const
     {
         throw new Error("VibSpecificNitrogen:update_thermo_from_ps NOT IMPLEMENTED.");
     }
-    override void update_thermo_from_hs(GasState Q, number h, number s) const
+    override void update_thermo_from_hs(ref GasState Q, number h, number s) const
     {
         throw new Error("VibSpecificNitrogen:update_thermo_from_hs NOT IMPLEMENTED.");
     }
-    override void update_sound_speed(GasState Q) const
+    override void update_sound_speed(ref GasState Q) const
     {
         Q.a = sqrt(_gamma * _R_N2 * Q.T);
     }
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         // The gas is inviscid.
         // [TODO] Add nitrogen model.
@@ -175,7 +175,7 @@ public:
 
     // Keep the following function as public
     // because the postprocessor will use it.
-    number compute_Tvib(GasState Q, number Tguess, double tol=1.0e-9) const
+    number compute_Tvib(ref GasState Q, number Tguess, double tol=1.0e-9) const
     {
         // Use secant method to compute T.
         number x0 = Tguess;
@@ -213,7 +213,7 @@ version(vib_specific_nitrogen_test) {
         doLuaFile(L, "sample-data/vib-specific-N2-gas.lua");
         auto gm = new VibSpecificNitrogen(L);
         lua_close(L);
-        auto Q = new GasState(gm.numVibLevels, 0);
+        auto Q = GasState(gm.numVibLevels, 0);
         Q.p = 1.0e5;
         Q.T = 300.0;
         // Set up the species mass fractions assuming equilibrium.

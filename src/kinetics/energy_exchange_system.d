@@ -27,7 +27,7 @@ import kinetics.reaction_mechanism;
 interface EnergyExchangeSystem {
     @nogc void evalRelaxationTimes(in GasState gs);
     @nogc void evalRates(in GasState gs, in ReactionMechanism, ref number[] rates);
-    @nogc void eval_source_terms(in ReactionMechanism rmech, GasState Q, ref number[] rates, ref number[] source);
+    @nogc void eval_source_terms(in ReactionMechanism rmech, ref GasState Q, ref number[] rates, ref number[] source);
 }
 
 class TwoTemperatureEnergyExchange : EnergyExchangeSystem {
@@ -37,11 +37,11 @@ public:
         // For 2-T model, one entry in T_modes, so index is 0.
         int mode = 0;
         mGmodel = gmodel;
-        mGsEq = new GasState(gmodel);
+        mGsEq = GasState(gmodel);
         mMolef.length = gmodel.n_species;
         mNumden.length = gmodel.n_species;
 
-        // Load in table of energy exchange mechanisms from the verbose lua file 
+        // Load in table of energy exchange mechanisms from the verbose lua file
         auto L = init_lua_State();
         doLuaFile(L, fname);
 
@@ -81,7 +81,7 @@ public:
     }
 
     @nogc
-    void eval_source_terms(in ReactionMechanism rmech, in GasState Q, ref number[] rates, ref number[] source)
+    void eval_source_terms(in ReactionMechanism rmech, ref GasState Q, ref number[] rates, ref number[] source)
     {
         evalRelaxationTimes(Q);
         evalRates(Q, rmech, rates);

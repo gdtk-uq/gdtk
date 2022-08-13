@@ -8,7 +8,7 @@
  * Reid, Prausnitz and Sherwood (1977)
  * The Properties of Gases and Liquids, 3rd edition.
  * McGraw-Hill, New York.
- * 
+ *
  * Neufeld, Janzen and Aziz (1972)
  * Empirical equations to calculate 16 of the transport collision integrals
  * $\Omega^{(l,s)*}$ for the Lennard-Jones (12-6) potential.
@@ -50,7 +50,7 @@ public:
         }
     }
 
-    void compute_bdc(const GasState Q, ref number[][] D)
+    void compute_bdc(ref const(GasState) Q, ref number[][] D)
     {
         // Parameters from Neufeld et al. expression.
         // See eqn (4.67) in RJG PhD thesis.
@@ -74,7 +74,7 @@ public:
                 Omega += C/(exp(d*T_star));
                 Omega += E/(exp(F*T_star));
                 Omega += G/(exp(H*T_star));
-                
+
                 number numer = 0.00266*sqrt(T*T*T);
                 numer *= 1.0e-4; // cm^2/s --> m^2/s
                 number denom = p/P_atm;

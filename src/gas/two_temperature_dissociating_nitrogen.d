@@ -76,11 +76,11 @@ public:
         foreach (isp; 0 .. _n_species) {
             _del_hf[isp] = _curves[isp].eval_h(to!number(298.15));
         }
-	
+
         _Cp_tr_rot.length = _n_species;
         _Cp_tr_rot[Species.N2] = (7./2.)*_R[Species.N2];
         _Cp_tr_rot[Species.N] = (5./2.)*_R[Species.N];
-        
+
         // Setup storage of parameters for collision integrals.
 	initialiseParameters();
         _A_11.length = _n_species;
@@ -108,7 +108,7 @@ public:
             // The following are NOT ragged arrays, unlike above.
             _Delta_11[isp].length = _n_species;
             _Delta_22[isp].length = _n_species;
-            _alpha[isp].length = _n_species; 
+            _alpha[isp].length = _n_species;
             foreach (jsp; 0 .. isp+1) {
                 string key = _species_names[isp] ~ ":" ~ _species_names[jsp];
                 if (!(key in A_11)) {
@@ -143,16 +143,16 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q)
+    override void update_thermo_from_pT(ref GasState Q)
     {
         _pgMixEOS.update_density(Q);
         Q.u = transRotEnergy(Q);
         Q.u_modes[0] = vibEnergy(Q, Q.T_modes[0]);
     }
 
-    override void update_thermo_from_rhou(GasState Q)
+    override void update_thermo_from_rhou(ref GasState Q)
     {
-        // We can compute T by direct inversion since the Cp in 
+        // We can compute T by direct inversion since the Cp in
         // in translation and rotation are fully excited,
         // and, as such, constant.
         number sumA = 0.0;
@@ -171,14 +171,14 @@ public:
         _pgMixEOS.update_pressure(Q);
     }
 
-    override void update_thermo_from_rhoT(GasState Q)
+    override void update_thermo_from_rhoT(ref GasState Q)
     {
         _pgMixEOS.update_pressure(Q);
-        Q.u = transRotEnergy(Q); 
+        Q.u = transRotEnergy(Q);
         Q.u_modes[0] = vibEnergy(Q, Q.T_modes[0]);
     }
-    
-    override void update_thermo_from_rhop(GasState Q)
+
+    override void update_thermo_from_rhop(ref GasState Q)
     {
         // In this function, we assume that T_modes is set correctly
         // in addition to density and pressure.
@@ -187,24 +187,24 @@ public:
         Q.u_modes[0] = vibEnergy(Q, Q.T_modes[0]);
     }
 
-    override void update_thermo_from_ps(GasState Q, number s)
+    override void update_thermo_from_ps(ref GasState Q, number s)
     {
         throw new GasModelException("update_thermo_from_ps not implemented in TwoTemperatureDissociatingNitrogen.");
     }
 
-    override void update_thermo_from_hs(GasState Q, number h, number s)
+    override void update_thermo_from_hs(ref GasState Q, number h, number s)
     {
         throw new GasModelException("update_thermo_from_hs not implemented in TwoTemperatureDissociatingNitrogen.");
     }
 
-    override void update_sound_speed(GasState Q)
+    override void update_sound_speed(ref GasState Q)
     {
         // We compute the frozen sound speed based on an effective gamma
         number R = gas_constant(Q);
         Q.a = sqrt(gamma(Q)*R*Q.T);
     }
 
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         massf2molef(Q, _molef);
         // Computation of transport coefficients via collision integrals.
@@ -215,7 +215,7 @@ public:
         foreach (isp; 0 .. _n_species) {
             foreach (jsp; 0 .. isp+1) {
                 number expnt = _A_22[isp][jsp]*(mylogT)^^2 + _B_22[isp][jsp]*mylogT + _C_22[isp][jsp];
-                number pi_Omega_22 = exp(_D_22[isp][jsp])*pow(T, expnt); 
+                number pi_Omega_22 = exp(_D_22[isp][jsp])*pow(T, expnt);
                 _Delta_22[isp][jsp] = (16./5)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_22;
                 _Delta_22[jsp][isp] = _Delta_22[isp][jsp];
             }
@@ -230,7 +230,7 @@ public:
             sumA += _particleMass[isp]*_molef[isp]/sumB;
         }
         Q.mu = sumA * (1.0e-3/1.0e-2); // convert g/(cm.s) -> kg/(m.s)
-        
+
         // k = k_tr + k_rot
         sumA = 0.0;
         foreach (isp; 0 .. _n_species) {
@@ -247,7 +247,7 @@ public:
         foreach (isp; 0 .. _n_species) {
             foreach (jsp; 0 .. isp+1) {
                 number expnt = _A_11[isp][jsp]*(mylogT)^^2 + _B_11[isp][jsp]*mylogT + _C_11[isp][jsp];
-                number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt); 
+                number pi_Omega_11 = exp(_D_11[isp][jsp])*pow(T, expnt);
                 _Delta_11[isp][jsp] = (8.0/3)*1.546e-20*sqrt(2.0*_mu[isp][jsp]/(to!double(PI)*_R_U_cal*T))*pi_Omega_11;
                 _Delta_11[jsp][isp] = _Delta_11[isp][jsp];
             }
@@ -262,7 +262,7 @@ public:
         k_rot += _molef[Species.N2]/sumB;
         number Cp_vib = vibSpecHeatConstV(Q.T_modes[0], Species.N2);
         k_vib += (Cp_vib*_mol_masses[Species.N2]/R_universal)*_molef[Species.N2]/sumB;
-        
+
         k_rot *= 2.3901e-8*kB_erg;
         k_rot *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
         Q.k = k_tr + k_rot;
@@ -323,7 +323,7 @@ public:
         number h_ve = h_at_Tve - _Cp_tr_rot[isp]*(Q.T_modes[0] - T_REF) - _del_hf[isp];
 	return h_tr_rot + h_ve;
     }
-    
+
     override number enthalpyPerSpeciesInMode(in GasState Q, int isp, int imode)
     {
         return vibEnergy(Q.T_modes[imode], isp);
@@ -341,7 +341,7 @@ public:
         return _curves[isp].eval_s(Q.T) - _R[isp]*log(Q.p/P_atm);
     }
 
-    override void balance_charge(GasState Q) const
+    override void balance_charge(ref GasState Q) const
     {
         // Do nothing: no charge to balance.
         return;
@@ -362,7 +362,7 @@ public:
         }
         return e_ve;
     }
-    
+
 private:
     PerfectGasMixEOS _pgMixEOS;
     double _R_U_cal = 1.987; // cal/(mole.K)
@@ -420,7 +420,7 @@ private:
         // We'll keep adjusting our temperature estimate
         // until it is less than TOL.
         double TOL = 1.0e-6;
-        
+
         // Take the supplied T_modes[0] as the initial guess.
         number T_guess = Q.T_modes[0];
         number f_guess = vibEnergy(Q, T_guess) - Q.u_modes[0];
@@ -445,7 +445,7 @@ private:
             f_guess = vibEnergy(Q, T_guess) - Q.u_modes[0];
             count++;
         }
-        
+
         if (count == MAX_ITERATIONS) {
             string msg = "The 'vibTemperature' function failed to converge.\n";
             debug {
@@ -476,11 +476,11 @@ void initialiseParameters()
     // Parameters for collision integrals
     // Collision cross-section Omega_11
     A_11["N2:N2"]   =  0.0;    B_11["N2:N2"]   = -0.0112; C_11["N2:N2"]   =  -0.1182; D_11["N2:N2"]   =    4.8464;
-    A_11["N:N2"]    =  0.0;    B_11["N:N2"]    = -0.0194; C_11["N:N2"]    =   0.0119; D_11["N:N2"]    =    4.1055; 
+    A_11["N:N2"]    =  0.0;    B_11["N:N2"]    = -0.0194; C_11["N:N2"]    =   0.0119; D_11["N:N2"]    =    4.1055;
     A_11["N:N"]     =  0.0;    B_11["N:N"]     = -0.0033; C_11["N:N"]     =  -0.0572; D_11["N:N"]     =    5.0452;
 
     // Collision cross-section Omega_22
     A_22["N2:N2"]   =  0.0;    B_22["N2:N2"]   = -0.0203; C_22["N2:N2"]   =   0.0683; D_22["N2:N2"]   =   4.0900;
-    A_22["N:N2"]    =  0.0;    B_22["N:N2"]    = -0.0190; C_22["N:N2"]    =   0.0239; D_22["N:N2"]    =   4.1782; 
+    A_22["N:N2"]    =  0.0;    B_22["N:N2"]    = -0.0190; C_22["N:N2"]    =   0.0239; D_22["N:N2"]    =   4.1782;
     A_22["N:N"]     =  0.0;    B_22["N:N"]     = -0.0118; C_22["N:N"]     =  -0.0960; D_22["N:N"]     =   4.3252;
 }

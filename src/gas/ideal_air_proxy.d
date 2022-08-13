@@ -76,7 +76,7 @@ public:
         repr ~= "name=\"" ~ _species_names[0] ~"\"";
         repr ~= ", Mmass=" ~ to!string(_mol_masses[0]);
         // Should delegate the following to the Fortran domain
-        // when we work out how to send strings. 
+        // when we work out how to send strings.
         // repr ~= ", gamma=" ~ to!string(_gamma);
         // repr ~= ", s1=" ~ to!string(_s1);
         // repr ~= ", T1=" ~ to!string(_T1);
@@ -88,7 +88,7 @@ public:
     }
 
     version(complex_numbers) {
-        override void update_thermo_from_pT(GasState Q) const 
+        override void update_thermo_from_pT(ref GasState Q) const
         {
             double p = Q.p.re;
             double T = Q.T.re;
@@ -102,31 +102,31 @@ public:
             Q.u = to!number(u);
             Q.massf[0] = to!number(massf[0]);
         }
-        override void update_thermo_from_rhou(GasState Q) const
+        override void update_thermo_from_rhou(ref GasState Q) const
         {
             // [TODO] iaf_update_thermo_from_rhou(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
         }
-        override void update_thermo_from_rhoT(GasState Q) const
+        override void update_thermo_from_rhoT(ref GasState Q) const
         {
             // [TODO] iaf_update_thermo_from_rhoT(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
         }
-        override void update_thermo_from_rhop(GasState Q) const
+        override void update_thermo_from_rhop(ref GasState Q) const
         {
             // [TODO] iaf_update_thermo_from_rhop(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
         }
-        override void update_thermo_from_ps(GasState Q, number s) const
+        override void update_thermo_from_ps(ref GasState Q, number s) const
         {
             // [TODO] iaf_update_thermo_from_ps(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &s);
         }
-        override void update_thermo_from_hs(GasState Q, number h, number s) const
+        override void update_thermo_from_hs(ref GasState Q, number h, number s) const
         {
             // [TODO] iaf_update_thermo_from_hs(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &h, &s);
         }
-        override void update_sound_speed(GasState Q) const
+        override void update_sound_speed(ref GasState Q) const
         {
             // [TODO] iaf_update_sound_speed(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &(Q.a));
         }
-        override void update_trans_coeffs(GasState Q)
+        override void update_trans_coeffs(ref GasState Q)
         {
             // [TODO] iaf_update_trans_coeffs(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &(Q.mu), &(Q.k));
         }
@@ -162,35 +162,35 @@ public:
             return to!number(iaf_entropy(&p, &T));
         }
     } else {
-        override void update_thermo_from_pT(GasState Q) const 
+        override void update_thermo_from_pT(ref GasState Q) const
         {
             iaf_update_thermo_from_pT(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
         }
-        override void update_thermo_from_rhou(GasState Q) const
+        override void update_thermo_from_rhou(ref GasState Q) const
         {
             iaf_update_thermo_from_rhou(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
         }
-        override void update_thermo_from_rhoT(GasState Q) const
+        override void update_thermo_from_rhoT(ref GasState Q) const
         {
             iaf_update_thermo_from_rhoT(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
         }
-        override void update_thermo_from_rhop(GasState Q) const
+        override void update_thermo_from_rhop(ref GasState Q) const
         {
             iaf_update_thermo_from_rhop(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
         }
-        override void update_thermo_from_ps(GasState Q, double s) const
+        override void update_thermo_from_ps(ref GasState Q, double s) const
         {
             iaf_update_thermo_from_ps(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &s);
         }
-        override void update_thermo_from_hs(GasState Q, double h, double s) const
+        override void update_thermo_from_hs(ref GasState Q, double h, double s) const
         {
             iaf_update_thermo_from_hs(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &h, &s);
         }
-        override void update_sound_speed(GasState Q) const
+        override void update_sound_speed(ref GasState Q) const
         {
             iaf_update_sound_speed(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &(Q.a));
         }
-        override void update_trans_coeffs(GasState Q)
+        override void update_trans_coeffs(ref GasState Q)
         {
             iaf_update_trans_coeffs(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &(Q.mu), &(Q.k));
         }
@@ -234,7 +234,7 @@ version(ideal_air_proxy_test) {
 
     int main() {
         auto gm = new IdealAirProxy();
-        auto gd = new GasState(1, 0);
+        auto gd = GasState(1, 0);
         gd.p = 1.0e5;
         gd.T = 300.0;
         gd.massf[0] = 1.0;

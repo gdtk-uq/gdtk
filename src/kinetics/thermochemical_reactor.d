@@ -42,7 +42,7 @@ public:
     // For example, the mixing-limited combustion model by JJ Hoste needs
     // some information about the local flow state beyond the usual gas state.
     @nogc
-    abstract void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    abstract void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params);
     //
     // For the (fully-coupled) implicit solver we need public access to source terms.
@@ -51,7 +51,7 @@ public:
     // For a multi-species gas, there will be first n_species elements for the chemical species
     // followed by n_modes of energies for a multi-temperature gas.
     @nogc
-    abstract void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source);
+    abstract void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source);
     //
     // We will need to access this referenced model from the Lua functions
     // so it needs to be public.

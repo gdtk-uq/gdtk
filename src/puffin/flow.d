@@ -19,13 +19,13 @@ public:
 
     this(GasModel gmodel)
     {
-        gas = new GasState(gmodel);
+        gas = GasState(gmodel);
         vel.set(0.0, 0.0);
     }
 
     this(ref const(FlowState2D) other)
     {
-        gas = new GasState(other.gas);
+        gas = GasState(other.gas);
         vel.set(other.vel);
     }
 

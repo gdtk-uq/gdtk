@@ -21,13 +21,13 @@ import gas.gas_model;
 import gas.physical_constants;
 
 interface ConductivityModel{
-    @nogc number opCall(GasState gs, const Vector3 pos, GasModel gm);
+    @nogc number opCall(ref const(GasState) gs, const Vector3 pos, GasModel gm);
 }
 
 
 class TestConductivity : ConductivityModel{
     this() {}
-    final const number opCall(GasState gs, const Vector3 pos, GasModel gm){
+    final const number opCall(ref const(GasState) gs, const Vector3 pos, GasModel gm){
         double sigma = -1.0*exp(pos.x.re)*cos(pos.y.re);
         return to!number(sigma);
     }
@@ -38,7 +38,7 @@ class ConstantConductivity : ConductivityModel{
     Test with a just constant conductivity.
 */
     this() {}
-    @nogc final number opCall(GasState gs, const Vector3 pos, GasModel gm){
+    @nogc final number opCall(ref const(GasState) gs, const Vector3 pos, GasModel gm){
         return to!number(1.0);
     }
 }
@@ -49,7 +49,7 @@ class RaizerConductivity : ConductivityModel{
      - Valid for air, nitrogen and argon when weakly ionised.
 */
     this() {}
-    @nogc final number opCall(GasState gs, const Vector3 pos, GasModel gm){
+    @nogc final number opCall(ref const(GasState) gs, const Vector3 pos, GasModel gm){
         version(multi_T_gas) {
             double Tref = gs.T_modes[0].re; // Hmmm. This will crash in single temp
         } else {
@@ -82,7 +82,7 @@ class DiffusionConductivity : ConductivityModel{
         bd = new BinaryDiffusion(nsp, false, gm.charge);
     }
 
-    @nogc final number opCall(GasState gs, const Vector3 pos, GasModel gm){
+    @nogc final number opCall(ref const(GasState) gs, const Vector3 pos, GasModel gm){
     /*
         We assume that the Einstein relations are valid for a multicomponent plasma.
           - Also assume no applied magnetic field and weak species gradients.

@@ -41,7 +41,7 @@ extern(C) int gasflow_normal_shock(lua_State* L)
     lua_getfield(L, 1, "gasmodel");
     GasModel gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    GasState state1 = new GasState(gm);
+    GasState state1 = GasState(gm);
     getGasStateFromTable(L, gm, 1, state1);
     // The CEAgas model is a bit special in that some of the state data
     // are stored in a table within the GasModel object.
@@ -49,7 +49,7 @@ extern(C) int gasflow_normal_shock(lua_State* L)
     // up-to-date.
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
     // Same values into state2, for now.
-    GasState state2 =  new GasState(gm);
+    GasState state2 =  GasState(gm);
     getGasStateFromTable(L, gm, 1, state2);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     //
@@ -95,7 +95,7 @@ extern(C) int gasflow_normal_shock_1(lua_State* L)
     lua_getfield(L, 1, "gasmodel");
     GasModel gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    GasState state1 = new GasState(gm);
+    GasState state1 = GasState(gm);
     getGasStateFromTable(L, gm, 1, state1);
     // The CEAgas model is a bit special in that some of the state data
     // are stored in a table within the GasModel object.
@@ -103,7 +103,7 @@ extern(C) int gasflow_normal_shock_1(lua_State* L)
     // up-to-date.
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
     // Same values into state2, for now.
-    GasState state2 =  new GasState(gm);
+    GasState state2 =  GasState(gm);
     getGasStateFromTable(L, gm, 1, state2);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     //
@@ -147,11 +147,11 @@ extern(C) int gasflow_normal_shock_p2p1(lua_State* L)
     lua_getfield(L, 1, "gasmodel");
     GasModel gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    GasState state1 = new GasState(gm);
+    GasState state1 = GasState(gm);
     getGasStateFromTable(L, gm, 1, state1);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
     // Same values into state2, for now.
-    GasState state2 =  new GasState(gm);
+    GasState state2 =  GasState(gm);
     getGasStateFromTable(L, gm, 1, state2);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     //
@@ -188,11 +188,11 @@ extern(C) int gasflow_reflected_shock(lua_State* L)
     lua_getfield(L, 1, "gasmodel");
     GasModel gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    GasState state2 = new GasState(gm);
+    GasState state2 = GasState(gm);
     getGasStateFromTable(L, gm, 1, state2);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     // Same values into state5, for now.
-    GasState state5 =  new GasState(gm);
+    GasState state5 =  GasState(gm);
     getGasStateFromTable(L, gm, 1, state5);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state5); }
     //
@@ -228,11 +228,11 @@ extern(C) int gasflow_expand_from_stagnation(lua_State* L)
     lua_getfield(L, 1, "gasmodel");
     GasModel gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    GasState state0 = new GasState(gm);
+    GasState state0 = GasState(gm);
     getGasStateFromTable(L, gm, 1, state0);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state0); }
     // Same values into state1, for now.
-    GasState state1 =  new GasState(gm);
+    GasState state1 =  GasState(gm);
     getGasStateFromTable(L, gm, 1, state1);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
     //
@@ -268,11 +268,11 @@ extern(C) int gasflow_expand_to_mach(lua_State* L)
     lua_getfield(L, 1, "gasmodel");
     GasModel gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    GasState state0 = new GasState(gm);
+    GasState state0 = GasState(gm);
     getGasStateFromTable(L, gm, 1, state0);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state0); }
     // Same values into state1, for now.
-    GasState state1 =  new GasState(gm);
+    GasState state1 =  GasState(gm);
     getGasStateFromTable(L, gm, 1, state1);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
     //
@@ -307,11 +307,11 @@ extern(C) int gasflow_total_condition(lua_State* L)
     lua_getfield(L, 1, "gasmodel");
     GasModel gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    GasState state1 = new GasState(gm);
+    GasState state1 = GasState(gm);
     getGasStateFromTable(L, gm, 1, state1);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
     // Same values into state0, for now.
-    GasState state0 =  new GasState(gm);
+    GasState state0 =  GasState(gm);
     getGasStateFromTable(L, gm, 1, state0);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state0); }
     //
@@ -345,11 +345,11 @@ extern(C) int gasflow_pitot_condition(lua_State* L)
     lua_getfield(L, 1, "gasmodel");
     GasModel gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    GasState state1 = new GasState(gm);
+    GasState state1 = GasState(gm);
     getGasStateFromTable(L, gm, 1, state1);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
     // Same values into state2pitot, for now.
-    GasState state2pitot =  new GasState(gm);
+    GasState state2pitot =  GasState(gm);
     getGasStateFromTable(L, gm, 1, state2pitot);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2pitot); }
     //
@@ -386,11 +386,11 @@ extern(C) int gasflow_steady_flow_with_area_change(lua_State* L)
     lua_getfield(L, 1, "gasmodel");
     GasModel gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    GasState state1 = new GasState(gm);
+    GasState state1 = GasState(gm);
     getGasStateFromTable(L, gm, 1, state1);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
     // Same values into state2, for now.
-    GasState state2 =  new GasState(gm);
+    GasState state2 =  GasState(gm);
     getGasStateFromTable(L, gm, 1, state2);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     //
@@ -443,11 +443,11 @@ extern(C) int gasflow_finite_wave_dp(lua_State* L)
     lua_getfield(L, 1, "gasmodel");
     GasModel gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    GasState state1 = new GasState(gm);
+    GasState state1 = GasState(gm);
     getGasStateFromTable(L, gm, 1, state1);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
     // Same values into state2, for now.
-    GasState state2 =  new GasState(gm);
+    GasState state2 =  GasState(gm);
     getGasStateFromTable(L, gm, 1, state2);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     //
@@ -502,11 +502,11 @@ extern(C) int gasflow_finite_wave_dv(lua_State* L)
     lua_getfield(L, 1, "gasmodel");
     GasModel gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    GasState state1 = new GasState(gm);
+    GasState state1 = GasState(gm);
     getGasStateFromTable(L, gm, 1, state1);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
     // Same values into state2, for now.
-    GasState state2 =  new GasState(gm);
+    GasState state2 =  GasState(gm);
     getGasStateFromTable(L, gm, 1, state2);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     //
@@ -563,11 +563,11 @@ extern(C) int gasflow_theta_oblique(lua_State* L)
     lua_getfield(L, 1, "gasmodel");
     GasModel gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    GasState state1 = new GasState(gm);
+    GasState state1 = GasState(gm);
     getGasStateFromTable(L, gm, 1, state1);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
     // Same values into state2, for now.
-    GasState state2 =  new GasState(gm);
+    GasState state2 =  GasState(gm);
     getGasStateFromTable(L, gm, 1, state2);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     //
@@ -609,11 +609,11 @@ extern(C) int gasflow_beta_oblique(lua_State* L)
     lua_getfield(L, 1, "gasmodel");
     GasModel gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    GasState state1 = new GasState(gm);
+    GasState state1 = GasState(gm);
     getGasStateFromTable(L, gm, 1, state1);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
     // Same values into state2, for now.
-    GasState state2 =  new GasState(gm);
+    GasState state2 =  GasState(gm);
     getGasStateFromTable(L, gm, 1, state2);
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     //

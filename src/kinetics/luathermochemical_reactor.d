@@ -97,7 +97,7 @@ extern(C) int updateThermochemicalState(lua_State* L)
     auto myReactor = checkThermochemicalReactor(L, 1);
     GasModel gm = myReactor._gmodel;
     // Arg 2 is GasState
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
     // Arg 3 is tInterval
     double tInterval = luaL_checknumber(L, 3);

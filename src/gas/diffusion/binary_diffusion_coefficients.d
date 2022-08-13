@@ -10,6 +10,6 @@ import nm.complex;
 import nm.number;
 
 interface BinaryDiffusionCoefficients {
-    @nogc void compute_bdc(GasState Q, ref number[][] D);
+    @nogc void compute_bdc(ref const(GasState) Q, ref number[][] D);
 }
 

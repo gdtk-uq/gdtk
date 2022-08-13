@@ -75,8 +75,7 @@ public:
          in double mu_t_init=0.0, in double k_t_init=0.0,
          in double S_init=0.0)
     {
-        gas = new GasState(gm, p_init, T_init, T_modes_init,
-                           massf_init, quality_init);
+        gas = GasState(gm, p_init, T_init, T_modes_init, massf_init, quality_init);
         vel = vel_init;
         version(MHD) {
             B = B_init;
@@ -94,7 +93,7 @@ public:
 
     this(in FlowState other, GasModel gm)
     {
-        gas = new GasState(gm);
+        gas = GasState(gm);
         gas.copy_values_from(other.gas);
         vel = other.vel;
         version(MHD) {
@@ -113,8 +112,7 @@ public:
 
     this(in FlowState other)
     {
-        gas = new GasState(to!int(other.gas.massf.length),
-                           to!int(other.gas.T_modes.length));
+        gas = GasState(to!int(other.gas.massf.length), to!int(other.gas.T_modes.length));
         gas.copy_values_from(other.gas);
         vel.set(other.vel);
         version(MHD) {
@@ -133,7 +131,7 @@ public:
 
     this(GasModel gm, size_t nturb)
     {
-        gas = new GasState(gm, 100.0e3, 300.0, [1.0,], 1.0);
+        gas = GasState(gm, 100.0e3, 300.0, [1.0,], 1.0);
         vel.set(0.0,0.0,0.0);
         version(MHD) {
             B.set(0.0,0.0,0.0);
@@ -163,7 +161,7 @@ public:
             massf = getJSONdoublearray(json_data, "massf", [1.0,]);
         }
         double quality = getJSONdouble(json_data, "quality", 1.0);
-        gas = new GasState(gm, p, T, T_modes, massf, quality);
+        gas = GasState(gm, p, T, T_modes, massf, quality);
         double velx = getJSONdouble(json_data, "velx", 0.0);
         double vely = getJSONdouble(json_data, "vely", 0.0);
         double velz = getJSONdouble(json_data, "velz", 0.0);
@@ -763,7 +761,7 @@ public:
         u = gmodel.internal_energy(fs.gas).re;
         v = fs.vel.x.re;
         // Derivatives of EOS that are needed when computing increments later.
-        auto gs = new GasState(fs.gas);
+        auto gs = GasState(fs.gas);
         gmodel.update_thermo_from_rhou(gs);
         if (fabs(gs.p.re - p)/p > 1.0e-5) {
             throw new Error("Pressure mismatch in gas states that should be equal. What's up?");

@@ -155,14 +155,14 @@ public:
         return "TwoTemperatureGasGiant()";
     }
 
-    override void update_thermo_from_pT(GasState Q)
+    override void update_thermo_from_pT(ref GasState Q)
     {
         _pgMixEOS.update_density(Q); // rho = P/Rg/T
         Q.u = transRotEnergy(Q);     // Cp(T-Tref)+h_ref-RT
         Q.u_modes[0] = vibElecEnergy(Q, Q.T_modes[0]);
     }
 
-    override void update_thermo_from_rhou(GasState Q)
+    override void update_thermo_from_rhou(ref GasState Q)
     {
         // We can compute T by direct inversion since the Cp in
         // in translation and rotation are fully excited,
@@ -184,14 +184,14 @@ public:
         _pgMixEOS.update_pressure(Q);
     }
 
-    override void update_thermo_from_rhoT(GasState Q)
+    override void update_thermo_from_rhoT(ref GasState Q)
     {
         _pgMixEOS.update_pressure(Q);
         Q.u = transRotEnergy(Q);
         Q.u_modes[0] = vibElecEnergy(Q, Q.T_modes[0]);
     }
 
-    override void update_thermo_from_rhop(GasState Q)
+    override void update_thermo_from_rhop(ref GasState Q)
     {
         // In this function, we assume that T_modes is set correctly
         // in addition to density and pressure.
@@ -200,24 +200,24 @@ public:
         Q.u_modes[0] = vibElecEnergy(Q, Q.T_modes[0]);
     }
 
-    override void update_thermo_from_ps(GasState Q, number s)
+    override void update_thermo_from_ps(ref GasState Q, number s)
     {
         throw new GasModelException("update_thermo_from_ps not implemented in TwoTemperatureGasGiant.");
     }
 
-    override void update_thermo_from_hs(GasState Q, number h, number s)
+    override void update_thermo_from_hs(ref GasState Q, number h, number s)
     {
         throw new GasModelException("update_thermo_from_hs not implemented in TwoTemperatureGasGiant.");
     }
 
-    override void update_sound_speed(GasState Q) //not used
+    override void update_sound_speed(ref GasState Q) //not used
     {
         // We compute the frozen sound speed based on an effective gamma
         number R = gas_constant(Q);
         Q.a = sqrt(gamma(Q)*R*Q.T);
     }
 
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         massf2molef(Q, _molef);
         // Computation of transport coefficients via collision integrals.
@@ -292,7 +292,7 @@ public:
             Cv_tr_rot = transRotSpecHeatConstV(isp);
             Cv_vib = vibElecSpecHeatConstV(Q.T_modes[0], isp);
             Cv += Q.massf[isp] * (Cv_tr_rot + Cv_vib);
-        } 
+        }
         return Cv;
     }
     override number dhdT_const_p(in GasState Q)
@@ -684,7 +684,7 @@ version(two_temperature_gasgiant_test) {
         // writeln("Beginning the unit test...");
         // writeln("Testing the gas state functions...");
         auto gm = new TwoTemperatureGasGiant();
-        auto gd = new GasState(6, 1);
+        auto gd = GasState(6, 1);
         gd.p = 1.0e5;
         gd.T = 300.0;
         gd.T_modes[0] = 1000.0;

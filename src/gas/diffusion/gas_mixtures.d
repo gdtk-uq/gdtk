@@ -56,15 +56,15 @@ public:
         mThermCond = new WilkeMixingThermCond(tcms, molMasses);
         mBDC = new RPSDiffusionCoefficients(molMasses, LJ_sigmas, LJ_epsilons);
     }
-    
+
     @nogc
-    override void updateTransProps(GasState gs)
+    override void updateTransProps(ref GasState gs)
     {
         mVisc.update_viscosity(gs);
         mThermCond.update_thermal_conductivity(gs);
     }
 
-    @nogc void binaryDiffusionCoefficients(const GasState gs, ref number[][] D)
+    @nogc void binaryDiffusionCoefficients(ref const(GasState) gs, ref number[][] D)
     {
         mBDC.compute_bdc(gs, D);
     }
@@ -93,7 +93,7 @@ version(gas_mixtures_test) {
         auto tp = new GasMixtureTransProps(L, speciesNames);
         lua_close(L);
 
-        auto gs = new GasState(5, 0);
+        auto gs = GasState(5, 0);
         gs.p = 1.0e6;
         gs.T = 4000.0;
         gs.massf = [to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2), to!number(0.2)];

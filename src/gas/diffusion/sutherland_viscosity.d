@@ -100,7 +100,7 @@ version(sutherland_viscosity_test) {
         assert(isClose(sutherland_viscosity(T, T_ref, mu_ref, S), 1.84691e-05, 1.0e-3), failedUnitTest());
 
         auto vm = new SutherlandViscosity(T_ref, mu_ref, S);
-        auto gd = new GasState(1, 1);
+        auto gd = GasState(1, 1);
         gd.T = 300.0;
         vm.update_viscosity(gd);
         assert(approxEqualNumbers(gd.mu, to!number(1.84691e-05), 1.0e-5), failedUnitTest());

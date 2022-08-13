@@ -83,7 +83,7 @@ public:
         double[] default_massf = [1.0, ];
         foreach (i; 1 .. gmodel.n_species) { default_massf ~= 0.0; }
         double[] massf = getJSONdoublearray(inflowData, "massf", default_massf);
-        gs = new GasState(gmodel);
+        gs = GasState(gmodel);
         gs.p = p; gs.T = T; gs.massf[] = massf[];
         gmodel.update_thermo_from_pT(gs);
         gmodel.update_sound_speed(gs);

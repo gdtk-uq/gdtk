@@ -85,7 +85,7 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q) const
+    override void update_thermo_from_pT(ref GasState Q) const
     {
         if (Q.T <= 0.0 || Q.p <= 0.0) {
             string msg = "Temperature and/or pressure was negative for update_thermo_from_pT.";
@@ -94,7 +94,7 @@ public:
         Q.rho = Q.p/(Q.T*_Rgas);
         Q.u = _Cv*Q.T;
     }
-    override void update_thermo_from_rhou(GasState Q) const
+    override void update_thermo_from_rhou(ref GasState Q) const
     {
         if (Q.u <= 0.0 || Q.rho <= 0.0) {
             string msg = "Internal energy and/or density was negative for update_thermo_from_rhou.";
@@ -103,7 +103,7 @@ public:
         Q.T = Q.u/_Cv;
         Q.p = Q.rho*_Rgas*Q.T;
     }
-    override void update_thermo_from_rhoT(GasState Q) const
+    override void update_thermo_from_rhoT(ref GasState Q) const
     {
         if (Q.T <= 0.0 || Q.rho <= 0.0) {
             string msg = "Temperature and/or density was negative for update_thermo_from_rhoT.";
@@ -112,7 +112,7 @@ public:
         Q.p = Q.rho*_Rgas*Q.T;
         Q.u = _Cv*Q.T;
     }
-    override void update_thermo_from_rhop(GasState Q) const
+    override void update_thermo_from_rhop(ref GasState Q) const
     {
         if (Q.p <= 0.0 || Q.rho <= 0.0) {
             string msg = "Pressure and/or density was negative for update_thermo_from_rhop.";
@@ -122,18 +122,18 @@ public:
         Q.u = _Cv*Q.T;
     }
 
-    override void update_thermo_from_ps(GasState Q, number s) const
+    override void update_thermo_from_ps(ref GasState Q, number s) const
     {
         Q.T = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
         update_thermo_from_pT(Q);
     }
-    override void update_thermo_from_hs(GasState Q, number h, number s) const
+    override void update_thermo_from_hs(ref GasState Q, number h, number s) const
     {
         Q.T = h / _Cp;
         Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.T/_T1)));
         update_thermo_from_pT(Q);
     }
-    override void update_sound_speed(GasState Q) const
+    override void update_sound_speed(ref GasState Q) const
     {
         if (Q.T <= 0.0) {
             string msg = "Temperature was negative for update_sound_speed.";
@@ -141,7 +141,7 @@ public:
         }
         Q.a = sqrt(_gamma*_Rgas*Q.T);
     }
-    override void update_trans_coeffs(GasState Q)
+    override void update_trans_coeffs(ref GasState Q)
     {
         _viscModel.update_viscosity(Q);
         if ( _constPrandtl ) {
@@ -217,7 +217,7 @@ version(cubic_gas_test) {
         doLuaFile(L, "sample-data/cubic-gas-model.lua");
         auto gm = new CubicGas(L);
         lua_close(L);
-        auto gd = new GasState(1, 0);
+        auto gd = GasState(1, 0);
         gd.p = 1.0e5;
         gd.T = 300.0;
         gd.massf[0] = 1.0;

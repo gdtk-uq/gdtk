@@ -157,7 +157,7 @@ version(cea_viscosity_test) {
         lua_getglobal(L, "cea");
         auto o2CEA = createCEAViscosity(L);
         lua_close(L);
-        auto Q = new GasState(1, 1);
+        auto Q = GasState(1, 1);
         Q.T = 1500.0;
         assert(isClose(6.407851e-05, o2CEA.eval(Q), 1.0e-3), failedUnitTest());
 

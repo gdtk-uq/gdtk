@@ -18,15 +18,15 @@ void main()
     auto L = luaL_newstate();
     luaL_openlibs(L);
     lua_pushglobaltable(L);
-    registerGasModel(L, -1);
-    
+    registerGasModel(L);
+
     string test_code = `
 -- Initialise an ideal gas model
 gm = GasModel:new{'./sample-data/ideal-air-gas-model.lua'}
 -- Try out some of the service functions
 print("number of species= ", gm:nSpecies())
 print("number of modes= ", gm:nModes())
-print("speciesName(1)= ", gm:speciesName(1))
+print("speciesName(1)= ", gm:speciesName(0))
 print("list of mol masses:")
 for i, m in ipairs(gm:molMasses()) do
    print("i, mMass= ", i, m)

@@ -43,7 +43,7 @@ public:
         _conc0.length = gmodel.n_species;
     }
 
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(ref GasState Q, double tInterval, ref double dtSuggest,
                          ref number[maxParams] params)
     {
         _psGmodel.massf2conc(Q, _conc0);
@@ -63,7 +63,7 @@ public:
 
     }
 
-    @nogc override eval_source_terms(GasModel gmodel, GasState Q, ref number[] source) {
+    @nogc override eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         string errMsg = "eval_source_terms not implemented for pseudo_species_kinetics.";
         throw new ThermochemicalReactorUpdateException(errMsg);
     }
@@ -93,7 +93,7 @@ public:
         }
     }
 
-    void evalRateConstants(GasState Q)
+    void evalRateConstants(ref GasState Q)
     {
         foreach (ref reac; _reactions) {
             reac.evalRateConstants(Q);
@@ -195,7 +195,7 @@ class StateSpecificReaction {
 
     abstract StateSpecificReaction dup();
 
-    void evalRateConstants(GasState Q)
+    void evalRateConstants(ref GasState Q)
     {
         _k_f = _forwardRateConstant.eval(Q);
         _k_b = _backwardRateConstant.eval(Q);
@@ -606,7 +606,7 @@ version(pseudo_species_kinetics_test) {
         auto L = init_lua_State();
         doLuaFile(L, "../gas/sample-data/pseudo-species-3-components.lua");
         auto gm = new PseudoSpeciesGas(L);
-        auto gd = new GasState(2, 0);
+        auto gd = GasState(2, 0);
         gd.massf[0] = 0.2;
         gd.massf[1] = 0.8;
         gd.p = 1.0e5;

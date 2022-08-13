@@ -113,14 +113,14 @@ public:
     // GasModel object in a formal sense, they are not marked const.
     // The reason for this non-const-ness is that some GasModel classes
     // have private workspace that needs to be alterable.
-    @nogc abstract void update_thermo_from_pT(GasState Q);
-    @nogc abstract void update_thermo_from_rhou(GasState Q);
-    @nogc abstract void update_thermo_from_rhoT(GasState Q);
-    @nogc abstract void update_thermo_from_rhop(GasState Q);
-    @nogc abstract void update_thermo_from_ps(GasState Q, number s);
-    @nogc abstract void update_thermo_from_hs(GasState Q, number h, number s);
-    @nogc abstract void update_sound_speed(GasState Q);
-    @nogc abstract void update_trans_coeffs(GasState Q);
+    @nogc abstract void update_thermo_from_pT(ref GasState Q);
+    @nogc abstract void update_thermo_from_rhou(ref GasState Q);
+    @nogc abstract void update_thermo_from_rhoT(ref GasState Q);
+    @nogc abstract void update_thermo_from_rhop(ref GasState Q);
+    @nogc abstract void update_thermo_from_ps(ref GasState Q, number s);
+    @nogc abstract void update_thermo_from_hs(ref GasState Q, number h, number s);
+    @nogc abstract void update_sound_speed(ref GasState Q);
+    @nogc abstract void update_trans_coeffs(ref GasState Q);
     // const void update_diff_coeffs(ref GasState Q) {}
 
     // Methods to be overridden.
@@ -168,7 +168,7 @@ public:
         return entropy(Q);
     }
     //
-    @nogc number gibbs_free_energy(GasState Q, int isp)
+    @nogc number gibbs_free_energy(ref GasState Q, int isp)
     {
         number h = enthalpy(Q, isp);
         number s = entropy(Q, isp);
@@ -188,7 +188,7 @@ public:
     @nogc final number gamma(in GasState Q) { return Cp(Q)/Cv(Q); }
     @nogc final number Prandtl(in GasState Q) { return Cp(Q)*Q.mu/Q.k; }
     @nogc
-    final number molecular_mass(const(GasState) Q) const
+    final number molecular_mass(ref const(GasState) Q) const
     in {
         debug { assert(Q.massf.length == _mol_masses.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -198,7 +198,7 @@ public:
     }
     //
     @nogc
-    final void massf2molef(const(GasState) Q, number[] molef) const
+    final void massf2molef(ref const(GasState) Q, number[] molef) const
     in {
         debug { assert(Q.massf.length == molef.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -208,7 +208,7 @@ public:
     }
     //
     @nogc
-    final void molef2massf(const(number[]) molef, GasState Q) const
+    final void molef2massf(const(number[]) molef, ref GasState Q) const
     in {
         debug { assert(Q.massf.length == molef.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -218,7 +218,7 @@ public:
     }
     //
     @nogc
-    final void massf2conc(GasState Q, number[] conc) const
+    final void massf2conc(ref GasState Q, number[] conc) const
     in {
         debug {
             assert(Q.massf.length == conc.length,
@@ -236,7 +236,7 @@ public:
     }
     //
     @nogc
-    final void conc2massf(const(number[]) conc, GasState Q) const
+    final void conc2massf(const(number[]) conc, ref GasState Q) const
     in {
         debug {
             assert(Q.massf.length == conc.length,
@@ -262,7 +262,7 @@ public:
     }
     //
     @nogc
-    final void massf2numden(const(GasState) Q, number[] numden) const
+    final void massf2numden(ref const(GasState) Q, number[] numden) const
     in {
         debug { assert(Q.massf.length == numden.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -274,7 +274,7 @@ public:
     }
     //
     @nogc
-    final void numden2massf(const(number[]) numden, GasState Q) const
+    final void numden2massf(const(number[]) numden, ref GasState Q) const
     in {
         debug { assert(Q.massf.length == numden.length,
                        brokenPreCondition("Inconsistent array lengths.")); }
@@ -287,7 +287,7 @@ public:
     }
     //
     @nogc
-    void balance_charge(GasState Q)
+    void balance_charge(ref GasState Q)
     {
         // The flow solver may call upon this function for plasmas,
         // when it wants the electron fraction updated so that it
@@ -301,7 +301,7 @@ public:
         }
     }
     @nogc
-    void binary_diffusion_coefficients(const GasState Q, ref number[][] D)
+    void binary_diffusion_coefficients(ref const(GasState) Q, ref number[][] D)
     {
         // Calling this (optional) method without overriding it should be an error
         // But the report to the user should depend on what they are trying to do
@@ -312,7 +312,7 @@ public:
         }
     }
     @nogc
-    void minimum_mixture_energy(GasState Q)
+    void minimum_mixture_energy(ref GasState Q)
     {
         // NOTE: This method changes the state in Q and puts the minimum
         //       energy values in u and u_modes.
@@ -492,7 +492,7 @@ do {
 immutable MAX_RELATIVE_STEP = 0.1;
 immutable MAX_STEPS = 30;
 
-@nogc void update_thermo_state_pT(GasModel gmodel, GasState Q)
+@nogc void update_thermo_state_pT(GasModel gmodel, ref GasState Q)
 {
     number drho, rho_old, rho_new, e_old, e_new, de;
     number drho_sign, de_sign;
@@ -665,7 +665,7 @@ immutable MAX_STEPS = 30;
     }
 } // end update_thermo_state_pT()
 
-@nogc void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
+@nogc void update_thermo_state_rhoT(GasModel gmodel, ref GasState Q)
 {
     // This method can be applied to single-species models only
     number e_old, e_new, de, tmp, de_sign;
@@ -813,7 +813,7 @@ immutable MAX_STEPS = 30;
     }
 } // end update_thermo_state_rhoT()
 
-@nogc void update_thermo_state_rhop(GasModel gmodel, GasState Q)
+@nogc void update_thermo_state_rhop(GasModel gmodel, ref GasState Q)
 {
     number e_old, e_new, de, dedp, tmp, de_sign;
     number p_old;
@@ -961,7 +961,7 @@ immutable MAX_STEPS = 30;
     }
 } // end update_thermo_state_rhop()
 
-@nogc void update_thermo_state_ps(GasModel gmodel, GasState Q, number s)
+@nogc void update_thermo_state_ps(GasModel gmodel, ref GasState Q, number s)
 {
     number T_old, T_new, dT, tmp, dT_sign;
     number dfs_dT, fs_old, fs_new;
@@ -1078,7 +1078,7 @@ immutable MAX_STEPS = 30;
     }
 } // end update_thermo_state_ps()
 
-@nogc void update_thermo_state_hs(GasModel gmodel, GasState Q, number h, number s)
+@nogc void update_thermo_state_hs(GasModel gmodel, ref GasState Q, number h, number s)
 {
     number dp, p_old, p_new, T_old, T_new, dT;
     number dp_sign, dT_sign;

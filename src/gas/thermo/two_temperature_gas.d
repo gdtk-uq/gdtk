@@ -72,7 +72,6 @@ public:
             default:
                 string msg = "TwoTemperatureGas: error trying to match particle type.\n";
                 throw new Error(msg);
-                
             }
             lua_pop(L, 1);
             lua_pop(L, 1);
@@ -80,7 +79,7 @@ public:
     }
 
     @nogc
-    override void updateFromPT(GasState gs)
+    override void updateFromPT(ref GasState gs)
     {
         updateDensity(gs);
         gs.u = transRotEnergyMixture(gs);
@@ -89,9 +88,9 @@ public:
     }
 
     @nogc
-    override void updateFromRhoU(GasState gs)
+    override void updateFromRhoU(ref GasState gs)
     {
-        // We can compute T by direct inversion since the Cp in 
+        // We can compute T by direct inversion since the Cp in
         // in translation and rotation are fully excited,
         // and, as such, constant.
         number sumA = 0.0;
@@ -113,7 +112,7 @@ public:
     }
 
     @nogc
-    override void updateFromRhoT(GasState gs)
+    override void updateFromRhoT(ref GasState gs)
     {
         updatePressure(gs);
         gs.u = transRotEnergyMixture(gs);
@@ -121,7 +120,7 @@ public:
     }
 
     @nogc
-    override void updateFromRhoP(GasState gs)
+    override void updateFromRhoP(ref GasState gs)
     {
         // In this method, we assume that u_modes[0] is set correctly
         // in addition to density and pressure.
@@ -132,19 +131,19 @@ public:
     }
 
     @nogc
-    override void updateFromPS(GasState gs, number s)
+    override void updateFromPS(ref GasState gs, number s)
     {
         throw new GasModelException("TwoTemperatureGas: updateFromPS() not implemented.");
     }
 
     @nogc
-    override void updateFromHS(GasState gs, number h, number s)
+    override void updateFromHS(ref GasState gs, number h, number s)
     {
         throw new GasModelException("TwoTemperatureGas: updateFromHS() not implemented.");
     }
 
     @nogc
-    override void updateSoundSpeed(GasState gs)
+    override void updateSoundSpeed(ref GasState gs)
     {
         // We compute the frozen sound speed
         number gamma = dhdTConstP(gs)/dudTConstV(gs);
@@ -160,7 +159,7 @@ public:
             Cv_tr_rot = transRotCvPerSpecies(isp);
             Cv_vib = vibElecCvPerSpecies(gs.T_modes[0], isp);
             Cv += gs.massf[isp] * (Cv_tr_rot + Cv_vib);
-        } 
+        }
         return Cv;
     }
 
@@ -184,7 +183,7 @@ public:
         number sum = 0.0;
         foreach (isp; 0 .. mNSpecies) {
             number T = (isp == mElectronIdx) ? gs.T_modes[0] : gs.T;
-            sum += gs.massf[isp] * mR[isp] * T; 
+            sum += gs.massf[isp] * mR[isp] * T;
         }
         return sum;
     }
@@ -212,7 +211,6 @@ public:
         return transRotEnergyPerSpecies(gs.T, isp);
     }
 
-    
     @nogc
     override number enthalpy(in GasState gs)
     {
@@ -251,7 +249,6 @@ public:
     {
         return mCurves[isp].eval_s(gs.T);
     }
-    
 
     @nogc
     number vibElecEnergyPerSpecies(number Tve, int isp)
@@ -275,8 +272,7 @@ public:
         }
         return e_ve;
     }
-    
-    
+
 private:
     double[] mR;
     number[] ms;
@@ -287,7 +283,7 @@ private:
     int mElectronIdx = -1; // Set to this in case never set in neutrals-only simulations
 
     @nogc
-    void updateDensity(GasState gs)
+    void updateDensity(ref GasState gs)
     {
         number denom = 0.0;
         foreach (isp; 0 .. mNSpecies) {
@@ -298,7 +294,7 @@ private:
     }
 
     @nogc
-    void updatePressure(GasState gs)
+    void updatePressure(ref GasState gs)
     {
         gs.p = 0.0;
         foreach (isp; 0 .. mNSpecies) {
@@ -312,7 +308,7 @@ private:
     }
 
     @nogc
-    void updateTemperatureFromRhoP(GasState gs)
+    void updateTemperatureFromRhoP(ref GasState gs)
     {
         // This assumes the T_modes[0] is known, and we're only trying to determine T
         number pHeavy = gs.p;
@@ -335,7 +331,7 @@ private:
         number e = h - mR[isp]*T;
         return e;
     }
-    
+
     @nogc
     number transRotEnergyMixture(in GasState gs)
     {
@@ -395,7 +391,7 @@ private:
     }
 
     @nogc
-    number vibElecTemperature(GasState gs)
+    number vibElecTemperature(ref GasState gs)
     {
         int MAX_ITERATIONS = 40;
 
@@ -483,7 +479,7 @@ version(two_temperature_gas_test) {
         getArrayOfStrings(L, "species", speciesNames);
         auto tm = new TwoTemperatureGasMixture(L, speciesNames);
         lua_close(L);
-        auto gs = new GasState(5, 1);
+        auto gs = GasState(5, 1);
 
         gs.p = 1.0e6;
         gs.T = 2000.0;
@@ -496,5 +492,3 @@ version(two_temperature_gas_test) {
         return 0;
     }
 }
-
-    

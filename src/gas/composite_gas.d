@@ -101,31 +101,31 @@ public:
 
     // Service methods related to thermodynamics
     // Updates to GasState
-    @nogc override void update_thermo_from_pT(GasState gs)
+    @nogc override void update_thermo_from_pT(ref GasState gs)
     {
         mThermo.updateFromPT(gs);
     }
-    @nogc override void update_thermo_from_rhou(GasState gs)
+    @nogc override void update_thermo_from_rhou(ref GasState gs)
     {
         mThermo.updateFromRhoU(gs);
     }
-    @nogc override void update_thermo_from_rhoT(GasState gs)
+    @nogc override void update_thermo_from_rhoT(ref GasState gs)
     {
         mThermo.updateFromRhoT(gs);
     }
-    @nogc override void update_thermo_from_rhop(GasState gs)
+    @nogc override void update_thermo_from_rhop(ref GasState gs)
     {
         mThermo.updateFromRhoP(gs);
     }
-    @nogc override void update_thermo_from_ps(GasState gs, number s)
+    @nogc override void update_thermo_from_ps(ref GasState gs, number s)
     {
         mThermo.updateFromPS(gs, s);
     }
-    @nogc override void update_thermo_from_hs(GasState gs, number h, number s)
+    @nogc override void update_thermo_from_hs(ref GasState gs, number h, number s)
     {
         mThermo.updateFromHS(gs, h, s);
     }
-    @nogc override void update_sound_speed(GasState gs)
+    @nogc override void update_sound_speed(ref GasState gs)
     {
         mThermo.updateSoundSpeed(gs);
     }
@@ -175,18 +175,18 @@ public:
         return mThermo.entropyPerSpecies(gs, isp);
     }
 
-    @nogc override void update_trans_coeffs(GasState gs)
+    @nogc override void update_trans_coeffs(ref GasState gs)
     {
         mTransProps.updateTransProps(gs);
     }
 
-    @nogc override void binary_diffusion_coefficients(const GasState Q, ref number[][] D)
+    @nogc override void binary_diffusion_coefficients(ref const(GasState) Q, ref number[][] D)
     {
         debug{ assert(D.length==_n_species); }
         mTransProps.binaryDiffusionCoefficients(Q, D);
     }
 
-    @nogc override void minimum_mixture_energy(GasState Q)
+    @nogc override void minimum_mixture_energy(ref GasState Q)
     {
         Q.p = P_atm;
         Q.T = T_MIN;
@@ -223,7 +223,7 @@ version(composite_gas_test) {
         doLuaFile(L, "sample-data/therm-perf-5-species-air.lua");
         auto gm = new CompositeGas(L);
         lua_close(L);
-        auto gs = new GasState(5, 0);
+        auto gs = GasState(5, 0);
         assert(isClose(3.621, gm.LJ_sigmas[0]), failedUnitTest());
         assert(isClose(97.530, gm.LJ_epsilons[0]), failedUnitTest());
 

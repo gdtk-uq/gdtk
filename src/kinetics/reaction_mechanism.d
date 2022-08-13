@@ -46,7 +46,7 @@ public:
     }
 
     @nogc
-    final void eval_rate_constants(GasState Q)
+    final void eval_rate_constants(ref GasState Q)
     {
         number T_save = Q.T;
         if ( Q.T < _T_lower_limit ) { Q.T = _T_lower_limit; }
@@ -83,7 +83,7 @@ public:
     }
 
     @nogc
-    final void eval_source_terms(GasModel gmodel, GasState Q, ref number[] source)
+    final void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source)
     {
         gmodel.massf2conc(Q, _conc_for_source_terms);
         eval_rate_constants(Q);
@@ -242,7 +242,7 @@ version(reaction_mechanism_test) {
         // condition for the H2 + I2 reaction system.
         double[] conc = [4.54, 4.54, 0.0];
         auto rc = new ArrheniusRateConstant(1.94e14, 0.0, 20620.0);
-        auto gd = new GasState(3, 1);
+        auto gd = GasState(3, 1);
         gd.T = 700.0;
         auto reaction = new ElementaryReaction(rc, rc, gmodel, [0, 1], [1, 1],
                                                [2], [2], 3);

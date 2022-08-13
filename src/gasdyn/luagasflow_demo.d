@@ -20,7 +20,7 @@ void main()
     auto L = luaL_newstate();
     luaL_openlibs(L);
     lua_pushglobaltable(L);
-    registerGasModel(L, -1);
+    registerGasModel(L);
     registeridealgasflowFunctions(L);
     registergasflowFunctions(L);
     string test_code = `

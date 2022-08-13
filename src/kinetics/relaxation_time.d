@@ -54,7 +54,7 @@ public:
     {
         return new MillikanWhiteVT(m_q, m_a, m_b);
     }
-    
+
     @nogc
     override number eval(in GasState gs, number[] molef, number[] numden)
     {
@@ -148,7 +148,7 @@ protected:
     GasModel m_gmodel;
 
     @nogc
-    number compute_cross_section(const GasState gs) {
+    number compute_cross_section(ref const(GasState) gs) {
         return to!number(m_sigma);
     }
 }
@@ -175,7 +175,7 @@ class ParkHTC2VT : ParkHTCVT {
 
 protected:
     @nogc
-    override number compute_cross_section(const GasState gs) {
+    override number compute_cross_section(ref const(GasState) gs) {
         return m_sigma*(50e3/gs.T)*(50e3/gs.T);
     }
 }
@@ -206,7 +206,7 @@ protected:
     double m_exponent;
 
     @nogc
-    override number compute_cross_section(const GasState gs) {
+    override number compute_cross_section(ref const(GasState) gs) {
         return m_sigma*pow(gs.T, m_exponent);
     }
 }
