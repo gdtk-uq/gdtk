@@ -31,20 +31,20 @@ public:
     double[][3] U; // Conserved quantities at time levels.
     double[][2] dUdt; // Time-derivatives of conserved quantities.
 
-    this(GasModel gmodel, CQIndex cqi)
+    this(GasModel gmodel, in CQIndex cqi)
     {
-        this.cqi = new CQIndex(cqi);
+        this.cqi = CQIndex(cqi);
         pos = Vector3();
-        fs = new FlowState2D(gmodel);
+        fs = FlowState2D(gmodel);
         foreach (i; 0 .. U.length) { U[i].length = cqi.n; }
         foreach (i; 0 .. dUdt.length) { dUdt[i].length = cqi.n; }
     }
 
     this(ref const(Cell2D) other)
     {
-        cqi = new CQIndex(other.cqi);
+        cqi = CQIndex(other.cqi);
         pos = Vector3(other.pos);
-        fs = new FlowState2D(other.fs);
+        fs = FlowState2D(other.fs);
         foreach (i; 0 .. U.length) { U[i] = other.U[i].dup; }
         foreach (i; 0 .. dUdt.length) { dUdt[i] = other.dUdt[i].dup; }
         // We do not bother copying all of the other references

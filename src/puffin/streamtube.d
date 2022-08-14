@@ -69,7 +69,7 @@ public:
         ncells = getJSONint(configData, format("ncells_%d", indx), 0);
         //
         gmodel = init_gas_model(Config.gas_model_file);
-        cqi = new CQIndex(gmodel.n_species, gmodel.n_modes);
+        cqi = CQIndex(gmodel.n_species, gmodel.n_modes);
         axiFlag = Config.axisymmetric;
         cfl = Config.cfl;
         x_order = Config.x_order;
@@ -130,8 +130,8 @@ public:
         bc_upper = new Schedule!int(xs, bc1s);
         //
         // Scratch space
-        fsL = new FlowState2D(gmodel);
-        fsR = new FlowState2D(gmodel);
+        fsL = FlowState2D(gmodel);
+        fsR = FlowState2D(gmodel);
     } // end constructor
 
     override string toString()
@@ -167,7 +167,7 @@ public:
         }
         foreach (j; 0 .. ncells) {
             cells ~= new Cell2D(gmodel, cqi);
-            flowstates_west ~= new FlowState2D(gmodel);
+            flowstates_west ~= FlowState2D(gmodel);
         }
         foreach (j; 0 .. 2) {
             ghost_cells_left ~= new Cell2D(gmodel, cqi);
@@ -238,7 +238,7 @@ public:
         }
         // Inflow states
         foreach (j; 0 .. ncells) {
-            auto fs = flowstates_west[j];
+            auto fs = &(flowstates_west[j]);
             fs.gas.copy_values_from(gs);
             fs.vel.set(vel);
         }
@@ -357,11 +357,11 @@ public:
     {
         foreach (c; cells) { c.estimate_local_dt(cfl); }
         foreach (j; 0 .. ncells) {
-            ifaces_west[j].simple_flux(flowstates_west[j], gmodel);
-            ifaces_east[j].simple_flux(cells[j].fs, gmodel);
+            ifaces_west[j].simple_flux(flowstates_west[j], gmodel, cqi);
+            ifaces_east[j].simple_flux(cells[j].fs, gmodel, cqi);
         }
         foreach (j; 0 .. ncells+1) {
-            jfaces[j].calculate_flux(fsL, fsR, gmodel, flux_calc, x_order);
+            jfaces[j].calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
         }
         foreach (c; cells) {
             c.eval_dUdt(0, axiFlag);
@@ -375,10 +375,10 @@ public:
     void corrector_step(double dt)
     {
         foreach (j; 0 .. ncells) {
-            ifaces_east[j].simple_flux(cells[j].fs, gmodel);
+            ifaces_east[j].simple_flux(cells[j].fs, gmodel, cqi);
         }
         foreach (j; 0 .. ncells+1) {
-            jfaces[j].calculate_flux(fsL, fsR, gmodel, flux_calc, x_order);
+            jfaces[j].calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
         }
         foreach (c; cells) {
             c.eval_dUdt(1, axiFlag);

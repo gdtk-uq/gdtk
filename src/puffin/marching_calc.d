@@ -216,14 +216,14 @@ void apply_boundary_conditions(double xmid)
         case BCCode.wall:
             // The slip-wall condition is implemented by filling the ghost cells
             // with reflected-normal-velocity flow.
-            auto fstate = st.ghost_cells_left[0].fs;
+            auto fstate = &(st.ghost_cells_left[0].fs);
             auto face = st.jfaces[0];
             fstate.copy_values_from(st.cells[0].fs);
             fstate.vel.transform_to_local_frame(face.n, face.t1);
             fstate.vel.x = -(fstate.vel.x);
             fstate.vel.transform_to_global_frame(face.n, face.t1);
             //
-            fstate = st.ghost_cells_left[1].fs;
+            fstate = &(st.ghost_cells_left[1].fs);
             fstate.copy_values_from(st.cells[1].fs);
             fstate.vel.transform_to_local_frame(face.n, face.t1);
             fstate.vel.x = -(fstate.vel.x);
@@ -241,14 +241,14 @@ void apply_boundary_conditions(double xmid)
         int bc1 = st.bc_upper.get_value(xmid);
         switch (bc1) {
         case BCCode.wall:
-            auto fstate = st.ghost_cells_right[0].fs;
+            auto fstate = &(st.ghost_cells_right[0].fs);
             auto face = st.jfaces[st.ncells];
             fstate.copy_values_from(st.cells[st.ncells-1].fs);
             fstate.vel.transform_to_local_frame(face.n, face.t1);
             fstate.vel.x = -(fstate.vel.x);
             fstate.vel.transform_to_global_frame(face.n, face.t1);
             //
-            fstate = st.ghost_cells_right[1].fs;
+            fstate = &(st.ghost_cells_right[1].fs);
             fstate.copy_values_from(st.cells[st.ncells-2].fs);
             fstate.vel.transform_to_local_frame(face.n, face.t1);
             fstate.vel.x = -(fstate.vel.x);

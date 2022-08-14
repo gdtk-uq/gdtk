@@ -27,8 +27,8 @@ bool is_shock(Face2D f, double compression_tol=-0.01, double shear_tol=0.20)
 //   we expect somewhat weak shocks in our space-marching solution.
 // shear_tol: a value of 0.20 is default for Eilmer.
 {
-    auto fsL = f.left_cells[0].fs;
-    auto fsR = f.right_cells[0].fs;
+    auto fsL = &(f.left_cells[0].fs);
+    auto fsR = &(f.right_cells[0].fs);
     // We have two cells interacting.
     // Compare the relative gas velocities normal to the face.
     double velxL = geom.dot(fsL.vel, f.n);
@@ -47,8 +47,8 @@ bool is_shock(Face2D f, double compression_tol=-0.01, double shear_tol=0.20)
 } // end is_shock()
 
 @nogc
-void calculate_flux(Face2D f, FlowState2D fsL, FlowState2D fsR,
-                    GasModel gmodel, FluxCalcCode flux_calc, int x_order)
+void calculate_flux(Face2D f, ref FlowState2D fsL, ref FlowState2D fsR,
+                    GasModel gmodel, FluxCalcCode flux_calc, int x_order, in CQIndex cqi)
 // Compute the face's flux vector from left and right flow states.
 // If requested, high-order reconstruction is applied.
 {
@@ -62,53 +62,56 @@ void calculate_flux(Face2D f, FlowState2D fsL, FlowState2D fsR,
     }
     final switch (flux_calc) {
     case FluxCalcCode.ausmdv:
-        calculate_flux_ausmdv(f, fsL, fsR, gmodel);
+        calculate_flux_ausmdv(f, fsL, fsR, gmodel, cqi);
         break;
     case FluxCalcCode.hanel:
-        calculate_flux_hanel(f, fsL, fsR, gmodel);
+        calculate_flux_hanel(f, fsL, fsR, gmodel, cqi);
         break;
     case FluxCalcCode.riemann:
-        calculate_flux_riemann(f, fsL, fsR, gmodel);
+        calculate_flux_riemann(f, fsL, fsR, gmodel, cqi);
         break;
     case FluxCalcCode.ausmdv_plus_hanel:
-        calculate_flux_ausmdv_plus_hanel(f, fsL, fsR, gmodel);
+        calculate_flux_ausmdv_plus_hanel(f, fsL, fsR, gmodel, cqi);
         break;
     case FluxCalcCode.riemann_plus_hanel:
-        calculate_flux_riemann_plus_hanel(f, fsL, fsR, gmodel);
+        calculate_flux_riemann_plus_hanel(f, fsL, fsR, gmodel, cqi);
         break;
     }
 } // end calculate_flux()
 
 @nogc
-void calculate_flux_ausmdv_plus_hanel(Face2D f, FlowState2D fsL, FlowState2D fsR, GasModel gmodel)
+void calculate_flux_ausmdv_plus_hanel(Face2D f, in FlowState2D fsL, in FlowState2D fsR,
+                                      GasModel gmodel, in CQIndex cqi)
 // Compute the face's flux vector from left and right flow states.
 // We actually delegate the detailed calculation to one of the other calculators
 // depending on the shock indicator.
 {
     if (f.left_cells[0].shock_flag || f.right_cells[0].shock_flag) {
-        calculate_flux_hanel(f, fsL, fsR, gmodel);
+        calculate_flux_hanel(f, fsL, fsR, gmodel, cqi);
     } else {
-        calculate_flux_ausmdv(f, fsL, fsR, gmodel);
+        calculate_flux_ausmdv(f, fsL, fsR, gmodel, cqi);
     }
     return;
 }
 
 @nogc
-void calculate_flux_riemann_plus_hanel(Face2D f, FlowState2D fsL, FlowState2D fsR, GasModel gmodel)
+void calculate_flux_riemann_plus_hanel(Face2D f, in FlowState2D fsL, in FlowState2D fsR,
+                                       GasModel gmodel, in CQIndex cqi)
 // Compute the face's flux vector from left and right flow states.
 // We actually delegate the detailed calculation to one of the other calculators
 // depending on the shock indicator.
 {
     if (f.left_cells[0].shock_flag || f.right_cells[0].shock_flag) {
-        calculate_flux_hanel(f, fsL, fsR, gmodel);
+        calculate_flux_hanel(f, fsL, fsR, gmodel, cqi);
     } else {
-        calculate_flux_riemann(f, fsL, fsR, gmodel);
+        calculate_flux_riemann(f, fsL, fsR, gmodel, cqi);
     }
     return;
 }
 
 @nogc
-void calculate_flux_riemann(Face2D f, FlowState2D fsL, FlowState2D fsR, GasModel gmodel)
+void calculate_flux_riemann(Face2D f, in FlowState2D fsL, in FlowState2D fsR,
+                            GasModel gmodel, in CQIndex cqi)
 // Compute the face's flux vector from left and right flow states.
 // The core of this calculation is the one-dimensional Riemann solver
 // from the gasflow module.
@@ -127,7 +130,6 @@ void calculate_flux_riemann(Face2D f, FlowState2D fsL, FlowState2D fsR, GasModel
     double massFlux = rho*velx;
     Vector3 momentum = Vector3(massFlux*velx+p, massFlux*vely);
     momentum.transform_to_global_frame(f.n, f.t1);
-    auto cqi = f.cqi;
     f.F[cqi.mass] = massFlux;
     f.F[cqi.xMom] = momentum.x;
     f.F[cqi.yMom] = momentum.y;
@@ -150,7 +152,8 @@ void calculate_flux_riemann(Face2D f, FlowState2D fsL, FlowState2D fsR, GasModel
 } // end calculate_flux()
 
 @nogc
-void calculate_flux_ausmdv(Face2D f, FlowState2D fsL, FlowState2D fsR, GasModel gmodel)
+void calculate_flux_ausmdv(Face2D f, in FlowState2D fsL, in FlowState2D fsR,
+                           GasModel gmodel, in CQIndex cqi)
 // Compute the face's flux vector from left and right flow states.
 // Wada and Liou's flux calculator, implemented from details in their AIAA paper,
 // with hints from Ian Johnston.
@@ -234,7 +237,6 @@ void calculate_flux_ausmdv(Face2D f, FlowState2D fsL, FlowState2D fsR, GasModel 
     double rvel2_AUSMD = 0.5*(mass_half*(velxL+velxR) - fabs(mass_half)*(velxR-velxL));
     double rvel2_half = (0.5+s)*rvel2_AUSMV + (0.5-s)*rvel2_AUSMD;
     // Assemble components of the flux vector (eqn 36).
-    auto cqi = f.cqi;
     f.F[cqi.mass] = mass_half;
     double vely = (mass_half >= 0.0) ? velyL : velyR;
     Vector3 momentum = Vector3(rvel2_half+p_half, mass_half*vely);
@@ -264,7 +266,8 @@ void calculate_flux_ausmdv(Face2D f, FlowState2D fsL, FlowState2D fsR, GasModel 
 } // end calculate_flux_ausmdv()
 
 @nogc
-void calculate_flux_hanel(Face2D f, FlowState2D fsL, FlowState2D fsR, GasModel gmodel)
+void calculate_flux_hanel(Face2D f, in FlowState2D fsL, in FlowState2D fsR,
+                          GasModel gmodel, in CQIndex cqi)
 // Compute the face's flux vector from left and right flow states.
 // Implemented from Y. Wada and M. S. Liou details in their AIAA paper
 // Y. Wada and M. -S. Liou (1997)
@@ -328,7 +331,6 @@ void calculate_flux_hanel(Face2D f, FlowState2D fsL, FlowState2D fsR, GasModel g
     // Pressure flux (eqn 8)
     double p_half = pLplus + pRminus;
     // Assemble components of the flux vector (eqn 36).
-    auto cqi = f.cqi;
     f.F[cqi.mass] = massL + massR;
     Vector3 momentum = Vector3(massL*velxL + massR*velxR + p_half, massL*velyL + massR*velyR);
     momentum.transform_to_global_frame(f.n, f.t1);
@@ -354,7 +356,7 @@ void calculate_flux_hanel(Face2D f, FlowState2D fsL, FlowState2D fsR, GasModel g
 } // end calculate_flux_hanel()
 
 @nogc
-void simple_flux(Face2D f, FlowState2D fs, GasModel gmodel)
+void simple_flux(Face2D f, in FlowState2D fs, GasModel gmodel, in CQIndex cqi)
 // Computes the face's flux vector from a single flow state.
 // Supersonic flow is assumed.
 {
@@ -366,7 +368,6 @@ void simple_flux(Face2D f, FlowState2D fs, GasModel gmodel)
     double massFlux = rho * vel.x;
     Vector3 momentum = Vector3(massFlux*vel.x+p, massFlux*vel.y);
     momentum.transform_to_global_frame(f.n, f.t1);
-    auto cqi = f.cqi;
     f.F[cqi.mass] = massFlux;
     f.F[cqi.xMom] = momentum.x;
     f.F[cqi.yMom] = momentum.y;

@@ -33,9 +33,9 @@ public:
     // Workspace for the Osher-type flux calculator.
     GasState stateLstar, stateRstar, stateX0;
 
-    this(GasModel gmodel, CQIndex cqi)
+    this(GasModel gmodel, in CQIndex cqi)
     {
-        this.cqi = new CQIndex(cqi);
+        this.cqi = CQIndex(cqi);
         pos = Vector3();
         F.length = cqi.n;
         // Workspace for Osher-type flux calculator.
@@ -46,7 +46,7 @@ public:
 
     this(ref const(Face2D) other)
     {
-        cqi = new CQIndex(other.cqi);
+        cqi = CQIndex(other.cqi);
         pos = Vector3(other.pos);
         F = other.F.dup;
         stateLstar = GasState(other.stateLstar);

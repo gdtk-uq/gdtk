@@ -11,7 +11,7 @@ import geom;
 import gas;
 
 
-class FlowState2D {
+struct FlowState2D {
     // FlowSate2D objects are passed to our interpolation functions and flux calculator.
 public:
     GasState gas;
@@ -23,13 +23,12 @@ public:
         vel.set(0.0, 0.0);
     }
 
-    this(ref const(FlowState2D) other)
+    this(in FlowState2D other)
     {
         gas = GasState(other.gas);
         vel.set(other.vel);
     }
 
-    override
     string toString() const
     {
         string repr = "FlowState2D(";
@@ -44,10 +43,10 @@ public:
         gas.copy_values_from(other.gas);
         vel.set(other.vel);
     }
-} // end class FlowState
+} // end struct FlowState2D
 
 
-class CQIndex {
+struct CQIndex {
     // Indices into the vector of conserved quantities.
 public:
     size_t n;
@@ -88,7 +87,7 @@ public:
         }
     }
 
-    this(ref const(CQIndex) other)
+    this(in CQIndex other)
     {
         n = other.n;
         //
@@ -104,7 +103,6 @@ public:
         n_modes = other.n_modes;
     }
 
-    override
     string toString() const
     {
         string repr = "CQIndex(";
@@ -114,4 +112,4 @@ public:
         repr ~= format(", species=%d, modes=%d)", species, modes);
         return repr;
     }
-} // end class CQIndex
+} // end struct CQIndex

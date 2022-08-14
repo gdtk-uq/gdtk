@@ -22,8 +22,8 @@ void interp_l2r2(Face2D f, ref FlowState2D fsL, ref FlowState2D fsR,
                  GasModel gmodel, bool clipFlag=false)
 // Reconstruct flow states fsL,fsR, at the middle interface for a stencil of 4 cell-centred values.
 {
-    auto fsL1 = f.left_cells[1].fs; auto fsL0 = f.left_cells[0].fs;
-    auto fsR0 = f.right_cells[0].fs; auto fsR1 = f.right_cells[1].fs;
+    auto fsL1 = &(f.left_cells[1].fs); auto fsL0 = &(f.left_cells[0].fs);
+    auto fsR0 = &(f.right_cells[0].fs); auto fsR1 = &(f.right_cells[1].fs);
     auto gasL1 = &(fsL1.gas); auto gasL0 = &(fsL0.gas);
     auto gasR0 = &(fsR0.gas); auto gasR1 = &(fsR1.gas);
     auto gasL = &(fsL.gas); auto gasR = &(fsR.gas);
