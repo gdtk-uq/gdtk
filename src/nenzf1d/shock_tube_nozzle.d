@@ -87,7 +87,7 @@ Result analyse(int verbosityLevel, Config config)
     // ANALYSIS PART A, SHOCK TUBE
     // ---------------------------
     //
-    void write_cea_state(ref GasState gs, string fill="  ")
+    void write_cea_state(ref const(GasState) gs, string fill="  ")
     {
         writefln("%spressure    %g kPa", fill, gs.p/1000.0);
         writefln("%sdensity     %g kg/m^3", fill, gs.rho);
@@ -396,7 +396,7 @@ Result analyse(int verbosityLevel, Config config)
     foreach (name; species) { sample_header ~= format(" massf_%s", name); }
     sample_header ~= " v(m/s) dt_suggest(s) mdot(kg/s)";
     //
-    string sample_data(double x, double area, double v, ref GasState gas, double dt_suggest)
+    string sample_data(double x, double area, double v, ref const(GasState) gas, double dt_suggest)
     {
         string txt = format("%g %g %g %g %g", x, area, gas.rho, gas.p, gas.T);
         foreach (i; 0 .. gas.T_modes.length) { txt ~= format(" %g", gas.T_modes[i]); }
@@ -407,7 +407,7 @@ Result analyse(int verbosityLevel, Config config)
         return txt;
     }
     //
-    double[2] eos_derivatives(ref GasState gas0, double tol=0.0001)
+    double[2] eos_derivatives(ref const(GasState) gas0, double tol=0.0001)
     {
         // Finite difference evaluation, assuming that gas0 is valid state already.
         // Only the trans-rotational internal energy will be perturbed with any

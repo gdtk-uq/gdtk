@@ -57,6 +57,10 @@ ifeq ($(DMD), gdc)
     DLINKFLAGS := -L$(LIBLUAPATH) -ldl
 endif
 
+# DIP1008 allows throwing of exceptions in @nogc code.
+# See notes in src/eilmer/makefile.
+DFLAGS += -dip1008 -preview=in
+
 # ----------------------------------------------------------------------
 # Here begins the list of targets, starting with the top-level actions.
 #

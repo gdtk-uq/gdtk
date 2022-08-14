@@ -328,11 +328,10 @@ private:
         u += deltas[3];
         // Put into interface FlowState object.
         auto fs = f.fs;
-        auto gas = fs.gas;
-        gas.p = p; // not really needed because we use rhou
-        gas.rho = rho;
-        gas.u = u;
-        gmodel.update_thermo_from_rhou(gas);
+        fs.gas.p = p; // not really needed because we use rhou
+        fs.gas.rho = rho;
+        fs.gas.u = u;
+        gmodel.update_thermo_from_rhou(fs.gas);
         fs.vel.set(velx, vely, velz);
     } // end compute_source_flow()
 

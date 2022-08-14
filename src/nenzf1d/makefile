@@ -120,7 +120,7 @@ endif
 # gdc-9 built on 2.076.0 which appeared 2017-09-01
 # gdc-10 will back-port static foreach, which we also use.
 # Expect gdc-10 to be out in May 2020.
-DFLAGS += -dip1008
+DFLAGS += -dip1008 -preview=in
 DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
 
 ifeq ($(WITH_FPE),1)

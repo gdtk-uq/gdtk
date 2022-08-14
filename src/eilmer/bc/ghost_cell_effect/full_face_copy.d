@@ -1749,7 +1749,7 @@ public:
                 size_t ii = 0;
                 foreach (c; outgoing_mapped_cells) {
                     FlowState fs = c.fs;
-                    GasState gs = fs.gas;
+                    GasState* gs = &(fs.gas);
                     outgoing_flowstate_buf[ii++] = gs.rho.re; version(complex_numbers) { outgoing_flowstate_buf[ii++] = gs.rho.im; }
                     outgoing_flowstate_buf[ii++] = gs.p.re; version(complex_numbers) { outgoing_flowstate_buf[ii++] = gs.p.im; }
                     outgoing_flowstate_buf[ii++] = gs.T.re; version(complex_numbers) { outgoing_flowstate_buf[ii++] = gs.T.im; }
@@ -1836,7 +1836,7 @@ public:
                 foreach (c; ghost_cells) {
                     c.is_interior_to_domain = true;
                     FlowState fs = c.fs;
-                    GasState gs = fs.gas;
+                    GasState* gs = &(fs.gas);
                     gs.rho.re = incoming_flowstate_buf[ii++]; version(complex_numbers) { gs.rho.im = incoming_flowstate_buf[ii++]; }
                     gs.p.re = incoming_flowstate_buf[ii++]; version(complex_numbers) { gs.p.im = incoming_flowstate_buf[ii++]; }
                     gs.T.re = incoming_flowstate_buf[ii++]; version(complex_numbers) { gs.T.im = incoming_flowstate_buf[ii++]; }

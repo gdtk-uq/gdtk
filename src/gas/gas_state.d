@@ -156,13 +156,13 @@ public:
         quality = w0*gs0.quality + w1*gs1.quality;
     }
 
-    void copy_average_values_from(in GasState[] others, GasModel gm)
+    void copy_average_values_from(in GasState*[] others, GasModel gm)
     // Note that we must not send the current object in the others list as well.
     {
         size_t n = others.length;
         if (n == 0) throw new Error("Need to average from a nonempty array.");
         foreach(other; others) {
-            if ( this is other ) { throw new Error("Must not include destination in source list."); }
+            if ( this is *other ) { throw new Error("Must not include destination in source list."); }
         }
         // Accumulate from a clean slate and then divide.
         p = 0.0; T = 0.0; u = 0.0; p_e = 0.0; a = 0.0;

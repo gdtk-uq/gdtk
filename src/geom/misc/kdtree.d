@@ -64,7 +64,7 @@ Node* makeTree(size_t i = 0)(Node[] nodes) pure nothrow @nogc {
     return n;
 }
 
-double distance_squared(in ref Node a, in ref Node b) pure nothrow @nogc {
+double distance_squared(in Node a, in Node b) pure nothrow @nogc {
         double result = (a.x[0] - b.x[0]) ^^ 2
                       + (a.x[1] - b.x[1]) ^^ 2
                       + (a.x[2] - b.x[2]) ^^ 2;
@@ -72,7 +72,7 @@ double distance_squared(in ref Node a, in ref Node b) pure nothrow @nogc {
     }
 
 void fast_nearest(in Node* root,
-                  in ref Node nd,
+                  in Node nd,
                   in size_t i,
                   ref const(Node)* best,
                   ref double bestDist,

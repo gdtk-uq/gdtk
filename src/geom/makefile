@@ -71,7 +71,7 @@ LIBLUA := $(LUA_DIR)/install/lib/liblua.a
 LIBLUAPATH := $(LUA_DIR)/lib
 
 
-DFLAGS := -w -debug -dip1008 -g -I..
+DFLAGS := -w -debug -dip1008 -preview=in -g -I..
 OF := -of
 DLINKFLAGS :=
 ifeq ($(findstring libplot,$(LIBPLOT_VERSION_STR)), libplot)

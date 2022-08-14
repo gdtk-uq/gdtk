@@ -704,7 +704,7 @@ public:
                 foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
                     auto c = blk.cells[cid];
                     FlowState fs = c.fs;
-                    GasState gs = fs.gas;
+                    GasState* gs = &(fs.gas);
                     buf[ii++] = gs.rho.re; version(complex_numbers) { buf[ii++] = gs.rho.im; }
                     buf[ii++] = gs.p.re; version(complex_numbers) { buf[ii++] = gs.p.im; }
                     buf[ii++] = gs.T.re; version(complex_numbers) { buf[ii++] = gs.T.im; }
@@ -784,7 +784,7 @@ public:
                     auto c = ghost_cells[gi];
                     c.is_interior_to_domain = true;
                     FlowState fs = c.fs;
-                    GasState gs = fs.gas;
+                    GasState* gs = &(fs.gas);
                     gs.rho.re = buf[ii++]; version(complex_numbers) { gs.rho.im = buf[ii++]; }
                     gs.p.re = buf[ii++]; version(complex_numbers) { gs.p.im = buf[ii++]; }
                     gs.T.re = buf[ii++]; version(complex_numbers) { gs.T.im = buf[ii++]; }

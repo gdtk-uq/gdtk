@@ -481,7 +481,7 @@ private:
     @nogc const
     number ideal_omega_at_wall(const FVCell cell, number d0)
     // As recommended by Wilson Chan, we use Menter's correction
-    // for omega values at the wall. This appears as Eqn A12 in 
+    // for omega values at the wall. This appears as Eqn A12 in
     // Menter's paper.
     // Reference:
     // Menter (1994)
@@ -490,9 +490,8 @@ private:
     // AIAA Journal, 32:8, pp. 1598--1605
     // Notes: Moved here from boundary_interface_effect.d (NNG)
     {
-        auto wall_gas = cell.fs.gas;
         // Note: d0 is half_cell_width_at_wall.
-        number nu = wall_gas.mu / wall_gas.rho;
+        number nu = cell.fs.gas.mu / cell.fs.gas.rho;
         double beta1 = 0.075;
         return 10 * (6 * nu) / (beta1 * d0 * d0);
     }
@@ -500,8 +499,8 @@ private:
 }
 
 /*
-Object representing the Spalart Allmaras turbulence model 
- Notes: 
+Object representing the Spalart Allmaras turbulence model
+ Notes:
   - The model here is taken from "Modifications and Clarifications
     for the Implementation of the Spalart-Alllmaras Turbulence Model"
     by Steven R. Allmaras, Forrester T. Johnson and Philippe R. Spalart

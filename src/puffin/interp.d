@@ -24,18 +24,19 @@ void interp_l2r2(Face2D f, ref FlowState2D fsL, ref FlowState2D fsR,
 {
     auto fsL1 = f.left_cells[1].fs; auto fsL0 = f.left_cells[0].fs;
     auto fsR0 = f.right_cells[0].fs; auto fsR1 = f.right_cells[1].fs;
-    auto gasL1 = fsL1.gas; auto gasL0 = fsL0.gas; auto gasR0 = fsR0.gas; auto gasR1 = fsR1.gas;
-    auto gasL = fsL.gas; auto gasR = fsR.gas;
+    auto gasL1 = &(fsL1.gas); auto gasL0 = &(fsL0.gas);
+    auto gasR0 = &(fsR0.gas); auto gasR1 = &(fsR1.gas);
+    auto gasL = &(fsL.gas); auto gasR = &(fsR.gas);
     // First-order reconstruction is just a copy from the nearest cell centre.
-    gasL.copy_values_from(gasL0);
-    gasR.copy_values_from(gasR0);
+    gasL.copy_values_from(*gasL0);
+    gasR.copy_values_from(*gasR0);
     // We will interpolate only some properties.
     interp_l2r2_scalar(gasL1.rho, gasL0.rho, gasR0.rho, gasR1.rho, gasL.rho, gasR.rho, clipFlag);
     interp_l2r2_scalar(gasL1.u, gasL0.u, gasR0.u, gasR1.u, gasL.u, gasR.u, clipFlag);
-    gmodel.update_thermo_from_rhou(gasL);
-    gmodel.update_sound_speed(gasL);
-    gmodel.update_thermo_from_rhou(gasR);
-    gmodel.update_sound_speed(gasR);
+    gmodel.update_thermo_from_rhou(*gasL);
+    gmodel.update_sound_speed(*gasL);
+    gmodel.update_thermo_from_rhou(*gasR);
+    gmodel.update_sound_speed(*gasR);
     //
     interp_l2r2_scalar(fsL1.vel.x, fsL0.vel.x, fsR0.vel.x, fsR1.vel.x, fsL.vel.x, fsR.vel.x, clipFlag);
     interp_l2r2_scalar(fsL1.vel.y, fsL0.vel.y, fsR0.vel.y, fsR1.vel.y, fsL.vel.y, fsR.vel.y, clipFlag);

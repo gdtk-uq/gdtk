@@ -307,7 +307,7 @@ public:
         foreach (j; 0 .. ncells) {
             auto face = ifaces_west[j];
             auto fs = flowstates_west[j];
-            auto g = fs.gas;
+            GasState* g = &(fs.gas);
             double Vx = fs.vel.x;
             double Vy = fs.vel.y;
             double M = sqrt(Vx*Vx+Vy*Vy)/g.a;

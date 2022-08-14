@@ -235,14 +235,14 @@ public:
     {
         size_t n = others.length;
         if (n == 0) throw new FlowSolverException("Need to average from a nonempty array.");
-        GasState[] gasList;
+        GasState*[] gasList;
         // Note that, because we cast away their "const"ness,
         // we need to be honest and not to fiddle with the other gas states.
         foreach(other; others) {
             if ( this is other ) {
                 throw new FlowSolverException("Must not include destination in source list.");
             }
-            gasList ~= cast(GasState)other.gas;
+            gasList ~= cast(GasState*)&(other.gas);
         }
         gas.copy_average_values_from(gasList, gm);
         // Accumulate from a clean slate and then divide.
@@ -761,7 +761,7 @@ public:
         u = gmodel.internal_energy(fs.gas).re;
         v = fs.vel.x.re;
         // Derivatives of EOS that are needed when computing increments later.
-        auto gs = GasState(fs.gas);
+        GasState gs = GasState(fs.gas);
         gmodel.update_thermo_from_rhou(gs);
         if (fabs(gs.p.re - p)/p > 1.0e-5) {
             throw new Error("Pressure mismatch in gas states that should be equal. What's up?");

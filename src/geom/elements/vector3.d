@@ -58,7 +58,7 @@ struct Vector3 {
             }
     } // end version complex_numbers
 
-    @nogc this(in Vector3 other)
+    @nogc this(const(Vector3) other)
     {
         x = other.x; y = other.y; z = other.z;
     }
@@ -287,12 +287,7 @@ struct Vector3 {
     } // end version complex_numbers
 
     // Assignment operators. (Alexandrescu Section 7.1.5.1)
-    @nogc void opAssign(ref Vector3 rhs)
-    {
-        x = rhs.x; y = rhs.y; z = rhs.z;
-    }
-
-    @nogc void opAssign(Vector3 rhs)
+    @nogc void opAssign(in Vector3 rhs)
     {
         x = rhs.x; y = rhs.y; z = rhs.z;
     }
@@ -305,23 +300,6 @@ struct Vector3 {
     }
 
     @nogc void opOpAssign(string op)(in Vector3 rhs)
-        if (op == "-")
-    {
-        x -= rhs.x; y -= rhs.y; z -= rhs.z;
-    }
-
-    // 2018-08-28 PJ found that to call from within @nogc functions,
-    // we had to use ref const(Vector3) rather than in Vector3
-    // as the type of the parameter rhs.
-    // So, we now have two sets of these combined-operator assignments
-    // but the compiler seems to be able to pick the one it needs.
-    @nogc void opOpAssign(string op)(ref const(Vector3) rhs)
-        if (op == "+")
-    {
-        x += rhs.x; y += rhs.y; z += rhs.z;
-    }
-
-    @nogc void opOpAssign(string op)(ref const(Vector3) rhs)
         if (op == "-")
     {
         x -= rhs.x; y -= rhs.y; z -= rhs.z;
