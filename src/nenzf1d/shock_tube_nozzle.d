@@ -251,7 +251,7 @@ Result analyse(int verbosityLevel, Config config)
     auto reactor = init_thermochemical_reactor(gm2, reactions_filename, reactions_filename2);
     double[10] reactor_params; // An array that passes extra parameters to the reactor.
     //
-    void write_tp_state(ref GasState gs, string fill="  ")
+    void write_tp_state(ref const(GasState) gs, string fill="  ")
     {
         writefln("%spressure    %g kPa", fill, gs.p/1000.0);
         writefln("%sdensity     %g kg/m^3", fill, gs.rho);
@@ -266,7 +266,7 @@ Result analyse(int verbosityLevel, Config config)
         }
     }
     //
-    GasState init_tp_state_from_cea(ref GasState state6e, ref GasState state6, GasModel gm2){
+    GasState init_tp_state_from_cea(ref const(GasState) state6e, ref const(GasState) state6, GasModel gm2){
         if (state6e.ceaSavedData is null) {
             throw new Exception("Failed to find ceaSavedData in state6e");
         }
@@ -277,18 +277,18 @@ Result analyse(int verbosityLevel, Config config)
             writeln("Start part B state mass fractions from CEA.");
             writeln("massf=", state6e.ceaSavedData.massf);
         }
-        GasState gas0 = GasState(gm2);
-        gas0.p = state6e.p; gas0.T = state6e.T;
-        foreach (ref Tmode; gas0.T_modes) { Tmode = state6e.T; }
+        GasState gs = GasState(gm2);
+        gs.p = state6e.p; gs.T = state6e.T;
+        foreach (ref Tmode; gs.T_modes) { Tmode = state6e.T; }
         foreach (name; species) {
-            gas0.massf[gm2.species_index(name)] = state6.ceaSavedData.massf[name];
+            gs.massf[gm2.species_index(name)] = state6.ceaSavedData.massf[name];
         }
         // CEA2 should be good to 0.01 percent.
         // If it is not, we probably have something significant wrong.
-        scale_mass_fractions(gas0.massf, 0.0, 0.0001);
-        gm2.update_thermo_from_pT(gas0);
-        gm2.update_sound_speed(gas0);
-        return gas0;
+        scale_mass_fractions(gs.massf, 0.0, 0.0001);
+        gm2.update_thermo_from_pT(gs);
+        gm2.update_sound_speed(gs);
+        return gs;
     }
     //
     GasState init_tp_state_from_eqgas(ref GasState state6e, EquilibriumGas gm_eq, GasModel gm2){
@@ -298,7 +298,7 @@ Result analyse(int verbosityLevel, Config config)
         // mass fractions, and then copy them into the new GasState, based on gm2.
         // @author: Nick Gibbons
         gm_eq.update_thermo_from_pT(state6e);
-        GasState tpgs = gm_eq.savedGasState;
+        GasState tpgs = GasState(gm_eq.savedGasState);
         ThermallyPerfectGasEquilibrium tpgm = gm_eq.savedGasModel;
         if (verbosityLevel >= 1) {
             writeln("Initializing gas state using equilibrium gas saved data");
@@ -307,17 +307,17 @@ Result analyse(int verbosityLevel, Config config)
             writeln("Start part B state mass fractions from ceq.");
             writeln("massf=", tpgs.massf);
         }
-        GasState gas0 = GasState(gm2);
-        gas0.p = tpgs.p; gas0.T = tpgs.T;
-        foreach (ref Tmode; gas0.T_modes) { Tmode = tpgs.T; }
+        GasState gs = GasState(gm2);
+        gs.p = tpgs.p; gs.T = tpgs.T;
+        foreach (ref Tmode; gs.T_modes) { Tmode = tpgs.T; }
         // We're assuming that the species order is the same in both models,
         // which could be a problem if the user doesn't keep them in order.
         foreach (name; species) {
-            gas0.massf[gm2.species_index(name)] = tpgs.massf[tpgm.species_index(name)];
+            gs.massf[gm2.species_index(name)] = tpgs.massf[tpgm.species_index(name)];
         }
-        gm2.update_thermo_from_pT(gas0);
-        gm2.update_sound_speed(gas0);
-        return gas0;
+        gm2.update_thermo_from_pT(gs);
+        gm2.update_sound_speed(gs);
+        return gs;
     }
     //
     // We will continue with a non-equilibrium chemistry expansion
