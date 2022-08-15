@@ -426,7 +426,7 @@ number expand_from_stagnation(ref const(GasState) state0, number p_over_p0,
 
 
 number expand_to_mach(ref const(GasState) state0, number mach,
-                      GasState state1, GasModel gm)
+                      ref GasState state1, GasModel gm)
 /**
  * Given a stagnation condition state0, expand to a given Mach number.
  *
