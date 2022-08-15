@@ -304,7 +304,7 @@ public:
         uint nsp = myConfig.n_species;
         foreach (i, v; grid.vertices) {
             auto new_vtx = new FVVertex(myConfig, lsq_workspace_at_vertices, to!int(i));
-            if (myConfig.unstructured_limiter == UnstructuredLimiter.mlp)
+            if (myConfig.unstructured_limiter == UnstructuredLimiter.venkat_mlp)
                 new_vtx.gradients = new LSQInterpGradients(nsp, myConfig.n_modes, myConfig.turb_model.nturb);
             new_vtx.pos[0] = v;
             vertices ~= new_vtx;
@@ -751,7 +751,7 @@ public:
         if (vertex_list.length == 0) { vertex_list = vertices; }
 
         if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
-            if (myConfig.unstructured_limiter == UnstructuredLimiter.mlp) {
+            if (myConfig.unstructured_limiter == UnstructuredLimiter.venkat_mlp) {
                 foreach (vtx; vertex_list) {
                     vtx.gradients.store_max_min_values_for_mlp_limiter(vtx.cell_cloud, myConfig);
                 }
@@ -769,8 +769,11 @@ public:
                         case UnstructuredLimiter.min_mod:
                             // do nothing now
                             break;
-                        case UnstructuredLimiter.mlp:
-                            c.gradients.mlp_limit(c.cell_cloud, c.ws, myConfig);
+                        case UnstructuredLimiter.barth:
+                            c.gradients.barth_limit(c.cell_cloud, c.ws, myConfig);
+                            break;
+                        case UnstructuredLimiter.park:
+                            c.gradients.park_limit(c.cell_cloud, c.ws, myConfig);
                             break;
                         case UnstructuredLimiter.hvan_albada:
                             c.gradients.van_albada_limit(c.cell_cloud, c.ws, true, myConfig);
@@ -778,11 +781,17 @@ public:
                         case UnstructuredLimiter.van_albada:
                             c.gradients.van_albada_limit(c.cell_cloud, c.ws, false, myConfig);
                             break;
-                        case UnstructuredLimiter.barth:
-                            c.gradients.barth_limit(c.cell_cloud, c.ws, myConfig);
+                        case UnstructuredLimiter.hnishikawa:
+                            c.gradients.nishikawa_limit(c.cell_cloud, c.ws, true, myConfig, gtl);
                             break;
-                        case UnstructuredLimiter.park:
-                            c.gradients.park_limit(c.cell_cloud, c.ws, myConfig);
+                        case UnstructuredLimiter.nishikawa:
+                            c.gradients.nishikawa_limit(c.cell_cloud, c.ws, false, myConfig, gtl);
+                            break;
+                        case UnstructuredLimiter.hvenkat_mlp:
+                            c.gradients.venkat_mlp_limit(c.cell_cloud, c.ws, true, myConfig, gtl);
+                            break;
+                        case UnstructuredLimiter.venkat_mlp:
+                            c.gradients.venkat_mlp_limit(c.cell_cloud, c.ws, false, myConfig, gtl);
                             break;
                         case UnstructuredLimiter.hvenkat:
                             c.gradients.venkat_limit(c.cell_cloud, c.ws, true, myConfig, gtl);

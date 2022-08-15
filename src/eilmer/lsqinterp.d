@@ -400,42 +400,82 @@ public:
     } // end barth_limit()
 
     @nogc
-    void mlp_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
-                   ref LocalConfig myConfig, size_t gtl=0)
+    void venkat_mlp_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
+                      bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig, size_t gtl=0)
     {
-        // The implementation of the MLP limiter follows the implementation in VULCAN
-        // i.e. it uses the MLP approach, and the Van Leer limiting function
-        // as outlined in the NASA publication on VULCAN's unstructured solver [White et al 2017]
-        size_t dimensions = myConfig.dimensions;
-        number a, b, U, phi, denom, numer, s;
-        immutable double eps = 1.0e-12;
-        // The following function to be used at compile time.
+        // This is an implementation of the multi-dimensional limiting process from ref. [1],
+        // which  uses the Venkatakrishnan limiter function from ref. [2].
+        //
+        // Note that we use non-dimensional quantities in the limiter function to improve the
+        // effect of the smoothing parameter.
+        //
+        // references:
+        // [1] J. S. Park and C. Kim
+        //     Multi-dimensional limiting process for ﬁnite volume methods on unstructured grids
+        //     Computers & Fluids, vol. 65, pg. 8-24 (2012)
+        // [2] V. Venkatakrishnan
+        //     Convergence to steady state solutions of the Euler equations on unstructured grids with limiters.
+        //     Journal of Computational Physics vol.118 pp120-130 (1995)
+        //
+
+        number delp, delm, delu, theta, U, Umax, Umin, phi, h, phi_f, nondim;
+        immutable double K = myConfig.smooth_limiter_coeff;
+        if (myConfig.dimensions == 3) {
+            h = pow(cell_cloud[0].volume[gtl], 1.0/3.0);
+        } else {
+            h = sqrt(cell_cloud[0].volume[gtl]);
+        }
+        number eps2; // = (K*h) * (K*h) * (K*h);
+
+        // Park heuristic pressure limiter
+        number phi_hp = 1.0;
+        if (apply_heuristic_pressure_limiter) {
+            park_limit(cell_cloud, ws, myConfig);
+            phi_hp = pPhi;
+        }
+
         string codeForLimits(string qname, string gname, string limFactorname,
                              string qMaxname, string qMinname)
         {
-            string code = "{
+            string code = "{ ";
+            if ( qname == "vel.x" || qname == "vel.y" || qname == "vel.z" ) {
+                code ~= "number velMax = sqrt(velxMax*velxMax+velyMax*velyMax+velzMax*velzMax);
+                         number velMin = sqrt(velxMin*velxMin+velyMin*velyMin+velzMin*velzMin);
+                         nondim = 0.5*fabs(velMax+velMin) + 1.0e-25;";
+            } else if ( qname == "gas.massf[isp]" ) {
+                code ~= "nondim = 1.0;";
+            } else {
+                code ~= "nondim = 0.5*fabs("~qMaxname~" + "~qMinname~");";
+            }
+            code ~= "
             U = cell_cloud[0].fs."~qname~";
-            phi = 1.0;
-            if (fabs("~gname~"[0]) > ESSENTIALLY_ZERO ||
-                fabs("~gname~"[1]) > ESSENTIALLY_ZERO ||
-                fabs("~gname~"[2]) > ESSENTIALLY_ZERO) {
-                foreach (i, vtx; cell_cloud[0].vtx) {
-                    number dx = vtx.pos[gtl].x - cell_cloud[0].pos[gtl].x; 
-                    number dy = vtx.pos[gtl].y - cell_cloud[0].pos[gtl].y; 
-                    number dz = vtx.pos[gtl].z - cell_cloud[0].pos[gtl].z;
-                    a = "~gname~"[0] * dx + "~gname~"[1] * dy;
-                    if (myConfig.dimensions == 3) a += "~gname~"[2] * dz;
-                    a = copysign(((fabs(a) + eps)), a); 
-                    if (fabs(a) > ESSENTIALLY_ZERO) {
-                        b = (a > 0.0) ? vtx.gradients."~qMaxname~" - U: vtx.gradients."~qMinname~" - U;
-                        numer = b*fabs(a) + a*fabs(b);
-                        denom = fabs(a) + fabs(b) + eps;
-                        s = (1.0/a) * (numer/denom);          
-                    } else {
-                        s = 1.0;
-                    }
-                    phi = fmin(phi, s);
+            Umin = U;
+            Umax = U;
+            foreach (ci; cell_cloud) {
+                foreach (cj; ci.cell_cloud) {
+                    Umin = fmin(Umin, cj.fs."~qname~");
+                    Umax = fmax(Umax, cj.fs."~qname~");
                 }
+            }
+            delu = (Umax-Umin)/nondim;
+            theta = delu/(K*pow(h, 1.5));
+            eps2 = (K*delu*delu)/(1.0+theta);
+            phi = 1.0;
+            foreach (i, v; cell_cloud[0].vtx) {
+                number dx = v.pos[gtl].x - cell_cloud[0].pos[gtl].x;
+                number dy = v.pos[gtl].y - cell_cloud[0].pos[gtl].y;
+                number dz = v.pos[gtl].z - cell_cloud[0].pos[gtl].z;
+                delm = "~gname~"[0] * dx + "~gname~"[1] * dy;
+                if (myConfig.dimensions == 3) { delm += "~gname~"[2] * dz; }
+                delp = (delm >= 0.0) ? Umax - U: Umin - U;
+                delp /= nondim;
+                delm /= nondim;
+                if (delm == 0.0) {
+                    phi_f = 1.0;
+                } else {
+                    phi_f = (delp*delp + 2.0*delp*delm + eps2)/(delp*delp + 2.0*delm*delm + delp*delm + eps2);
+                }
+                phi = fmin(phi, phi_f);
             }
             "~limFactorname~" = phi;
             }
@@ -519,7 +559,7 @@ public:
             }
             break;
         } // end switch thermo_interpolator
-    } // end mlp_limit()
+    } // end venkat_mlp_limit()
 
     @nogc
     void store_max_min_values_for_mlp_limiter(FVCell[] cell_cloud, ref LocalConfig myConfig)
@@ -666,7 +706,7 @@ public:
             } else if ( qname == "gas.massf[isp]" ) {
                 code ~= "nondim = 1.0;";
             } else {
-                code ~= "nondim = 0.5*fabs("~qMaxname~" + "~qMinname~") + 1.0e-25;";
+                code ~= "nondim = 0.5*fabs("~qMaxname~" + "~qMinname~");";
             }
             code ~= "
             U = cell_cloud[0].fs."~qname~";
@@ -680,7 +720,11 @@ public:
                 delp = (delm >= 0.0) ? 0.5*("~qMaxname~" - U): 0.5*("~qMinname~" - U);
                 delp /= nondim;
                 delm /= nondim;
-                phi_f = (2.0*(delm*delp+eps*eps))/(delp*delp+delm*delm+2.0*eps*eps);
+                if (delm == 0.0) {
+                    phi_f = 1.0;
+                } else {
+                    phi_f = (2.0*(delm*delp+eps*eps))/(delp*delp+delm*delm+2.0*eps*eps);
+                }
                 phi = fmin(phi, phi_f);
             }
             "~limFactorname~" = phi*phi_hp;
@@ -787,7 +831,7 @@ public:
         number delp, delm, U, phi, h, phi_f, nondim;
         immutable double K = myConfig.smooth_limiter_coeff;
         if (myConfig.dimensions == 3) {
-            h = cell_cloud[0].volume[gtl]^^(1.0/3.0);
+            h = pow(cell_cloud[0].volume[gtl], 1.0/3.0);
         } else {
             h = sqrt(cell_cloud[0].volume[gtl]);
         }
@@ -811,7 +855,7 @@ public:
             } else if ( qname == "gas.massf[isp]" ) {
                 code ~= "nondim = 1.0;";
             } else {
-                code ~= "nondim = 0.5*fabs("~qMaxname~" + "~qMinname~") + 1.0e-25;";
+                code ~= "nondim = 0.5*fabs("~qMaxname~" + "~qMinname~");";
             }
             code ~= "
             U = cell_cloud[0].fs."~qname~";
@@ -825,7 +869,11 @@ public:
                 delp = (delm >= 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
                 delp /= nondim;
                 delm /= nondim;
-                phi_f = (delp*delp + 2.0*delp*delm + eps2)/(delp*delp + 2.0*delm*delm + delp*delm + eps2);
+                if (delm == 0.0) {
+                    phi_f = 1.0;
+                } else {
+                    phi_f = (delp*delp + 2.0*delp*delm + eps2)/(delp*delp + 2.0*delm*delm + delp*delm + eps2);
+                }
                 phi = fmin(phi, phi_f);
             }
             "~limFactorname~" = phi*phi_hp;
@@ -911,6 +959,155 @@ public:
             break;
         } // end switch thermo_interpolator
     } // end venkat_limit()
+
+    @nogc
+    void nishikawa_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
+                      bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig, size_t gtl=0)
+    {
+        // This is the R3 limiter from ref. [1].
+        //
+        // Note that we use non-dimensional quantities in the limiter function to improve the
+        // effect of the smoothing parameter.
+        //
+        // references:
+        // [1] H. Nishikawa
+        //     New Unstructured-Grid Limiter Functions
+        //     2022 AIAA SciTech Forum
+        //
+        number a, b, S, delp, delm, U, phi, h, phi_f, nondim;
+        immutable double K = myConfig.smooth_limiter_coeff;
+        if (myConfig.dimensions == 3) {
+            h = pow(cell_cloud[0].volume[gtl], 1.0/3.0);
+        } else {
+            h = sqrt(cell_cloud[0].volume[gtl]);
+        }
+        number eps = (K*h)*(K*h)*(K*h)*(K*h);
+
+        // Park heuristic pressure limiter
+        number phi_hp = 1.0;
+        if (apply_heuristic_pressure_limiter) {
+            park_limit(cell_cloud, ws, myConfig);
+            phi_hp = pPhi;
+        }
+
+        string codeForLimits(string qname, string gname, string limFactorname,
+                             string qMaxname, string qMinname)
+        {
+            string code = "{ ";
+            if ( qname == "vel.x" || qname == "vel.y" || qname == "vel.z" ) {
+                code ~= "number velMax = sqrt(velxMax*velxMax+velyMax*velyMax+velzMax*velzMax);
+                         number velMin = sqrt(velxMin*velxMin+velyMin*velyMin+velzMin*velzMin);
+                         nondim = 0.5*fabs(velMax+velMin) + 1.0e-25;";
+            } else if ( qname == "gas.massf[isp]" ) {
+                code ~= "nondim = 1.0;";
+            } else {
+                code ~= "nondim = 0.5*fabs("~qMaxname~" + "~qMinname~");";
+            }
+            code ~= "
+            U = cell_cloud[0].fs."~qname~";
+            phi = 1.0;
+            foreach (i, f; cell_cloud[0].iface) {
+                number dx = f.pos.x - cell_cloud[0].pos[gtl].x;
+                number dy = f.pos.y - cell_cloud[0].pos[gtl].y;
+                number dz = f.pos.z - cell_cloud[0].pos[gtl].z;
+                delm = "~gname~"[0] * dx + "~gname~"[1] * dy;
+                if (myConfig.dimensions == 3) { delm += "~gname~"[2] * dz; }
+                delp = (delm >= 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
+                delp /= nondim;
+                a = fabs(delp);
+                delm /= nondim;
+                b = fabs(delm);
+                if (a > 2*b) {
+                    phi_f = 1.0;
+                } else {
+                    S = 4*b*b;
+                    phi_f = (a*a*a + eps + a*S)/(a*a*a + eps + b*(delp*delp + S));
+                }
+                phi = fmin(phi, phi_f);
+            }
+            "~limFactorname~" = phi*phi_hp;
+            }
+            ";
+            return code;
+        }
+        // x-velocity
+        mixin(codeForLimits("vel.x", "velx", "velxPhi", "velxMax", "velxMin"));
+        mixin(codeForLimits("vel.y", "vely", "velyPhi", "velyMax", "velyMin"));
+        mixin(codeForLimits("vel.z", "velz", "velzPhi", "velzMax", "velzMin"));
+        version(MHD) {
+            if (myConfig.MHD) {
+                mixin(codeForLimits("B.x", "Bx", "BxPhi", "BxMax", "BxMin"));
+                mixin(codeForLimits("B.y", "By", "ByPhi", "ByMax", "ByMin"));
+                mixin(codeForLimits("B.z", "Bz", "BzPhi", "BzMax", "BzMin"));
+                if (myConfig.divergence_cleaning) {
+                    mixin(codeForLimits("psi", "psi", "psiPhi", "psiMax", "psiMin"));
+                }
+            }
+        }
+        version(turbulence) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) {
+                mixin(codeForLimits("turb[it]","turb[it]","turbPhi[it]","turbMax[it]","turbMin[it]"));
+            }
+        }
+        version(multi_species_gas) {
+            auto nsp = myConfig.n_species;
+            if (nsp > 1) {
+                // Multiple species.
+                foreach (isp; 0 .. nsp) {
+                    mixin(codeForLimits("gas.massf[isp]", "massf[isp]", "massfPhi[isp]",
+                                        "massfMax[isp]", "massfMin[isp]"));
+                }
+            } else {
+                // Only one possible gradient value for a single species.
+                massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+            }
+        }
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
+        auto nmodes = myConfig.n_modes;
+        final switch (myConfig.thermo_interpolator) {
+        case InterpolateOption.pt:
+            mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
+            mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
+                                        "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhou:
+            mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
+            mixin(codeForLimits("gas.u", "u", "uPhi", "uMax", "uMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
+                                        "u_modesMax[imode]", "u_modesMin[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhop:
+            mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
+            mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
+                                        "u_modesMax[imode]", "u_modesMin[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhot:
+            mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
+            mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
+                                        "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
+            }
+            break;
+        } // end switch thermo_interpolator
+    } // end nishikawa_limit()
 
     @nogc
     void park_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
@@ -1097,7 +1294,9 @@ public:
             // the Park limiter needs the pressure gradient
             if (myConfig.unstructured_limiter == UnstructuredLimiter.park ||
                 myConfig.unstructured_limiter == UnstructuredLimiter.hvan_albada ||
-                myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat){
+                myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat ||
+                myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat_mlp ||
+                myConfig.unstructured_limiter == UnstructuredLimiter.hnishikawa) {
                 mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
             }
             break;
@@ -1123,7 +1322,9 @@ public:
             // the Park limiter needs the pressure gradient
             if (myConfig.unstructured_limiter == UnstructuredLimiter.park ||
                 myConfig.unstructured_limiter == UnstructuredLimiter.hvan_albada ||
-                myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat){
+                myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat ||
+                myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat_mlp ||
+                myConfig.unstructured_limiter == UnstructuredLimiter.hnishikawa) {
                 mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
             }
             break;
@@ -1223,15 +1424,21 @@ public:
                         min_mod_limit(mygradL[1], mygradR[1]);
                         min_mod_limit(mygradL[2], mygradR[2]);
                         break;
-                    case UnstructuredLimiter.mlp:
+                    case UnstructuredLimiter.barth:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.park:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.hvan_albada:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.van_albada:
                         goto case UnstructuredLimiter.venkat;
-                    case UnstructuredLimiter.barth:
+                    case UnstructuredLimiter.hnishikawa:
                         goto case UnstructuredLimiter.venkat;
-                    case UnstructuredLimiter.park:
+                    case UnstructuredLimiter.nishikawa:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.hvenkat_mlp:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.venkat_mlp:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.hvenkat:
                         goto case UnstructuredLimiter.venkat;
@@ -1452,15 +1659,21 @@ public:
                         break;
                     case UnstructuredLimiter.min_mod:
                         break;
-                    case UnstructuredLimiter.mlp:
+                    case UnstructuredLimiter.barth:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.park:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.hvan_albada:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.van_albada:
                         goto case UnstructuredLimiter.venkat;
-                    case UnstructuredLimiter.barth:
+                    case UnstructuredLimiter.hnishikawa:
                         goto case UnstructuredLimiter.venkat;
-                    case UnstructuredLimiter.park:
+                    case UnstructuredLimiter.nishikawa:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.hvenkat_mlp:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.venkat_mlp:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.hvenkat:
                         goto case UnstructuredLimiter.venkat;
@@ -1650,15 +1863,21 @@ public:
                         break;
                     case UnstructuredLimiter.min_mod:
                         break;
-                    case UnstructuredLimiter.mlp:
+                    case UnstructuredLimiter.barth:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.park:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.hvan_albada:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.van_albada:
                         goto case UnstructuredLimiter.venkat;
-                    case UnstructuredLimiter.barth:
+                    case UnstructuredLimiter.hnishikawa:
                         goto case UnstructuredLimiter.venkat;
-                    case UnstructuredLimiter.park:
+                    case UnstructuredLimiter.nishikawa:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.hvenkat_mlp:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.venkat_mlp:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.hvenkat:
                         goto case UnstructuredLimiter.venkat;

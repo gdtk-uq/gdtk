@@ -416,11 +416,14 @@ SpatialDerivLocn spatial_deriv_locn_from_name(string name)
 enum UnstructuredLimiter {
     van_albada2,
     min_mod,
-    mlp,
-    hvan_albada,
-    van_albada,
     barth,
     park,
+    hvan_albada,
+    van_albada,
+    hnishikawa,
+    nishikawa,
+    hvenkat_mlp,
+    venkat_mlp,
     hvenkat,
     venkat
 }
@@ -431,11 +434,14 @@ string unstructured_limiter_name(UnstructuredLimiter ul)
     final switch ( ul ) {
     case UnstructuredLimiter.van_albada2: return "van_albada2";
     case UnstructuredLimiter.min_mod: return "min_mod";
-    case UnstructuredLimiter.mlp: return "mlp";
-    case UnstructuredLimiter.hvan_albada: return "hvan_albada";
-    case UnstructuredLimiter.van_albada: return "van_albada";
     case UnstructuredLimiter.barth: return "barth";
     case UnstructuredLimiter.park: return "park";
+    case UnstructuredLimiter.hvan_albada: return "hvan_albada";
+    case UnstructuredLimiter.van_albada: return "van_albada";
+    case UnstructuredLimiter.hnishikawa: return "hnishikawa";
+    case UnstructuredLimiter.nishikawa: return "nishikawa";
+    case UnstructuredLimiter.hvenkat_mlp: return "hvenkat_mlp";
+    case UnstructuredLimiter.venkat_mlp: return "venkat_mlp";
     case UnstructuredLimiter.hvenkat: return "hvenkat";
     case UnstructuredLimiter.venkat: return "venkat";
     }
@@ -447,11 +453,14 @@ UnstructuredLimiter unstructured_limiter_from_name(string name)
     switch ( name ) {
     case "van_albada2": return UnstructuredLimiter.van_albada2;
     case "min_mod": return UnstructuredLimiter.min_mod;
-    case "mlp": return UnstructuredLimiter.mlp;
-    case "hvan_albada": return UnstructuredLimiter.hvan_albada;
-    case "van_albada": return UnstructuredLimiter.van_albada;
     case "barth": return UnstructuredLimiter.barth;
     case "park": return UnstructuredLimiter.park;
+    case "hvan_albada": return UnstructuredLimiter.hvan_albada;
+    case "van_albada": return UnstructuredLimiter.van_albada;
+    case "hnishikawa": return UnstructuredLimiter.hnishikawa;
+    case "nishikawa": return UnstructuredLimiter.nishikawa;
+    case "hvenkat_mlp": return UnstructuredLimiter.hvenkat_mlp;
+    case "venkat_mlp": return UnstructuredLimiter.venkat_mlp;
     case "hvenkat": return UnstructuredLimiter.hvenkat;
     case "venkat": return UnstructuredLimiter.venkat;
     default:
