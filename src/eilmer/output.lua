@@ -216,6 +216,8 @@ function output.write_config_file(fileName)
    f:write(string.format('"flowstate_limits_max_temp": %.18e,\n', config.flowstate_limits_max_temp))
    f:write(string.format('"flowstate_limits_min_temp": %.18e,\n', config.flowstate_limits_min_temp))
    f:write(string.format('"flowstate_limits_min_pressure": %.18e,\n', config.flowstate_limits_min_pressure))
+   f:write(string.format('"user_specified_velocities_are_in_non_rotating_frame": %s,\n',
+                         tostring(config.user_specified_velocities_are_in_non_rotating_frame)))
    f:write(string.format('"max_invalid_cells": %d,\n', config.max_invalid_cells))
    f:write(string.format('"adjust_invalid_cell_data": %s,\n', tostring(config.adjust_invalid_cell_data)))
    f:write(string.format('"report_invalid_cells": %s,\n', tostring(config.report_invalid_cells)))
@@ -298,17 +300,13 @@ function output.write_config_file(fileName)
    f:write(string.format('"viscous_delay": %.18e,\n', config.viscous_delay))
    f:write(string.format('"shear_stress_relative_limit": %.18e,\n', config.shear_stress_relative_limit))
    f:write(string.format('"apply_shear_stress_relative_limit": %s,\n', tostring(config.apply_shear_stress_relative_limit)))
-   f:write(string.format('"mass_diffusion_model": "%s",\n',
-			 string.lower(config.mass_diffusion_model)))
+   f:write(string.format('"mass_diffusion_model": "%s",\n', string.lower(config.mass_diffusion_model)))
    f:write(string.format('"diffusion_coefficient_type": "%s",\n', string.lower(config.diffusion_coefficient_type)))
    f:write(string.format('"lewis_number": %.18e,\n', config.lewis_number))
    --
-   f:write(string.format('"turbulence_model": "%s",\n',
-			 string.lower(config.turbulence_model)))
-   f:write(string.format('"turbulence_prandtl_number": %.18e,\n',
-			 config.turbulence_prandtl_number))
-   f:write(string.format('"turbulence_schmidt_number": %.18e,\n',
-			 config.turbulence_schmidt_number))
+   f:write(string.format('"turbulence_model": "%s",\n', string.lower(config.turbulence_model)))
+   f:write(string.format('"turbulence_prandtl_number": %.18e,\n', config.turbulence_prandtl_number))
+   f:write(string.format('"turbulence_schmidt_number": %.18e,\n', config.turbulence_schmidt_number))
    f:write(string.format('"max_mu_t_factor": %.18e,\n', config.max_mu_t_factor))
    f:write(string.format('"transient_mu_t_factor": %.18e,\n', config.transient_mu_t_factor))
    f:write(string.format('"freestream_turbulent_intensity": %.18e,\n', config.freestream_turbulent_intensity))

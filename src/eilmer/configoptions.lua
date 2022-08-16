@@ -62,6 +62,8 @@ configOptionsHidden = { -- hidden from user
    flowstate_limits_min_temp = 0.0, -- Kelvin
    flowstate_limits_min_pressure = 0.1, -- Pascals
    --
+   user_specified_velocities_are_in_non_rotating_frame = true,
+   --
    ignore_low_T_thermo_update_failure = true,
    suggested_low_T_value = 200.0,
    adjust_invalid_cell_data = false,

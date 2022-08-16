@@ -618,7 +618,6 @@ version(shape_sensitivity) {
 void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                              in FlowState fs, double t0, double omegaz, GasModel gmodel)
 // Keep in sync with SFluidBlock.write_solution.
-// Note that we assume the FlowState fs to be in a nonrotating frame.
 {
     // Numbers of cells derived from numbers of vertices in grid.
     auto nicell = grid.niv - 1;
@@ -666,7 +665,9 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                         Vector3 p111 = *grid[i+1,j+1,k+1];
                         Vector3 p011 = *grid[i,j+1,k+1];
                         hex_cell_properties(p000, p100, p110, p010, p001, p101, p111, p011, pos, volume, iLen, jLen, kLen);
-                        if (omegaz != 0.0) { myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz); }
+                        if (GlobalConfig.user_specified_velocities_are_in_non_rotating_frame && (omegaz != 0.0)) {
+                            myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz);
+                        }
                     } else {
                         throw new Exception("GlobalConfig.dimensions not 2 or 3.");
                     }
@@ -722,7 +723,9 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                         Vector3 p111 = *grid[i+1,j+1,k+1];
                         Vector3 p011 = *grid[i,j+1,k+1];
                         hex_cell_properties(p000, p100, p110, p010, p001, p101, p111, p011, pos, volume, iLen, jLen, kLen);
-                        if (omegaz != 0.0) { myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz); }
+                        if (GlobalConfig.user_specified_velocities_are_in_non_rotating_frame && (omegaz != 0.0)) {
+                            myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz);
+                        }
                     } else {
                         throw new Exception("GlobalConfig.dimensions not 2 or 3.");
                     }
@@ -750,6 +753,8 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
     // Numbers of cells derived from numbers of vertices in grid.
     auto ncells = grid.ncells;
     //
+    auto myfs = new FlowState(fs);
+    //
     // Write the data for the whole unstructured block.
     switch (GlobalConfig.flow_format) {
     case "gziptext": goto default;
@@ -774,10 +779,10 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
             foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
             pos /= to!number(grid.cells[i].vtx_id_list.length);
             number volume = 0.0;
-            if (omegaz != 0.0) {
-                throw new Error("Oops, we have not yet implemented rotating-frame code here.");
+            if (GlobalConfig.user_specified_velocities_are_in_non_rotating_frame && (omegaz != 0.0)) {
+                myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz);
             }
-            cell_data_to_raw_binary(outfile, pos, volume, fs,
+            cell_data_to_raw_binary(outfile, pos, volume, myfs,
                                     to!number(0.0), to!number(0.0), to!number(0.0),
                                     GlobalConfig.with_local_time_stepping, -1.0, -1.0, -1.0,
                                     GlobalConfig.include_quality,
@@ -810,10 +815,10 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
             foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
             pos /= to!number(grid.cells[i].vtx_id_list.length);
             number volume = 0.0;
-            if (omegaz != 0.0) {
-                throw new Error("Oops, we have not yet implemented rotating-frame code here.");
+            if (GlobalConfig.user_specified_velocities_are_in_non_rotating_frame && (omegaz != 0.0)) {
+                myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz);
             }
-            outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
+            outfile.compress(" " ~ cell_data_as_string(pos, volume, myfs,
                                                        to!number(0.0), to!number(0.0), to!number(0.0),
                                                        GlobalConfig.with_local_time_stepping, -1.0, -1.0, -1.0,
                                                        GlobalConfig.include_quality,
@@ -925,7 +930,11 @@ extern(C) int write_initial_sg_flow_legacy_file_from_lua(lua_State* L)
                             errMsg ~= "The returned object is not a proper _FlowState object or table.";
                             luaL_error(L, errMsg.toStringz);
                         }
-                        cell_data_to_raw_binary(outfile, pos, volume, fs,
+                        auto myfs = new FlowState(fs);
+                        if (GlobalConfig.user_specified_velocities_are_in_non_rotating_frame && (omegaz != 0.0)) {
+                            myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz);
+                        }
+                        cell_data_to_raw_binary(outfile, pos, volume, myfs,
                                                 to!number(0.0), to!number(0.0), to!number(0.0),
                                                 GlobalConfig.with_local_time_stepping, -1.0, -1.0, -1.0,
                                                 GlobalConfig.include_quality,
@@ -1003,7 +1012,11 @@ extern(C) int write_initial_sg_flow_legacy_file_from_lua(lua_State* L)
                             errMsg ~= "The returned object is not a proper _FlowState object or suitable table.";
                             luaL_error(L, errMsg.toStringz);
                         }
-                        outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
+                        auto myfs = new FlowState(fs);
+                        if (GlobalConfig.user_specified_velocities_are_in_non_rotating_frame && (omegaz != 0.0)) {
+                            myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz);
+                        }
+                        outfile.compress(" " ~ cell_data_as_string(pos, volume, myfs,
                                                                    to!number(0.0), to!number(0.0), to!number(0.0),
                                                                    GlobalConfig.with_local_time_stepping, -1.0, -1.0, -1.0,
                                                                    GlobalConfig.include_quality,
@@ -1097,7 +1110,11 @@ extern(C) int write_initial_usg_flow_legacy_file_from_lua(lua_State* L)
                     errMsg ~= "The returned object is not a proper _FlowState object or a suitable table.";
                     luaL_error(L, errMsg.toStringz);
                 }
-                cell_data_to_raw_binary(outfile, pos, volume, fs,
+                auto myfs = new FlowState(fs);
+                if (GlobalConfig.user_specified_velocities_are_in_non_rotating_frame && (omegaz != 0.0)) {
+                    myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz);
+                }
+                cell_data_to_raw_binary(outfile, pos, volume, myfs,
                                         to!number(0.0), to!number(0.0), to!number(0.0),
                                         GlobalConfig.with_local_time_stepping, -1.0, -1.0, -1.0,
                                         GlobalConfig.include_quality,
@@ -1152,7 +1169,11 @@ extern(C) int write_initial_usg_flow_legacy_file_from_lua(lua_State* L)
                     errMsg ~= "The returned object is not a proper _FlowState object or suitable table.";
                     luaL_error(L, errMsg.toStringz);
                 }
-                outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
+                auto myfs = new FlowState(fs);
+                if (GlobalConfig.user_specified_velocities_are_in_non_rotating_frame && (omegaz != 0.0)) {
+                    myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz);
+                }
+                outfile.compress(" " ~ cell_data_as_string(pos, volume, myfs,
                                                            to!number(0.0), to!number(0.0), to!number(0.0),
                                                            GlobalConfig.with_local_time_stepping, -1.0, -1.0, -1.0,
                                                            GlobalConfig.include_quality,

@@ -935,6 +935,9 @@ final class GlobalConfig {
     // without throwing an exception.
     shared static int max_invalid_cells = 0;
     shared static FlowStateLimits flowstate_limits;
+    // The velocities in the user-specified FlowStates are assumed to be in the
+    // non-rotating frame of reference.
+    shared static bool user_specified_velocities_are_in_non_rotating_frame = true;
     //
     // Convective flux calculation can be via either:
     // (1) low-order, one-dimensional flux calculators with local flow-field
@@ -1309,6 +1312,7 @@ public:
     bool adjust_invalid_cell_data;
     bool report_invalid_cells;
     FlowStateLimits flowstate_limits;
+    bool user_specified_velocities_are_in_non_rotating_frame;
     //
     bool high_order_flux_calculator;
     FluxCalculator flux_calculator;
@@ -1470,6 +1474,7 @@ public:
         adjust_invalid_cell_data = cfg.adjust_invalid_cell_data;
         report_invalid_cells = cfg.report_invalid_cells;
         flowstate_limits = cfg.flowstate_limits;
+        user_specified_velocities_are_in_non_rotating_frame = cfg.user_specified_velocities_are_in_non_rotating_frame;
         //
         high_order_flux_calculator = cfg.high_order_flux_calculator;
         flux_calculator = cfg.flux_calculator;
@@ -1824,6 +1829,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_double("flowstate_limits_max_temp", "flowstate_limits.max_temp"));
     mixin(update_double("flowstate_limits_min_temp", "flowstate_limits.min_temp"));
     mixin(update_double("flowstate_limits_min_pressure", "flowstate_limits.min_pressure"));
+    mixin(update_bool("user_specified_velocities_are_in_non_rotating_frame", "user_specified_velocities_are_in_non_rotating_frame"));
     mixin(update_bool("ignore_low_T_thermo_update_failure", "ignore_low_T_thermo_update_failure"));
     mixin(update_double("suggested_low_T_value", "suggested_low_T_value"));
     mixin(update_bool("adjust_invalid_cell_data", "adjust_invalid_cell_data"));
