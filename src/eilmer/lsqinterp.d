@@ -55,7 +55,7 @@ public:
             } else {
                 dz[i] = 0.0;
             }
-        }           
+        }
         // Prepare the normal matrix for the cloud and invert it.
         if (dimensions == 3) {
             number[6][3] xTx; // normal matrix, augmented to give 6 entries per row
@@ -75,7 +75,7 @@ public:
             double very_small_value = 1.0e-16*(normInf!(3,3,6,number)(xTx).re)^^3;
             if (0 != computeInverse!(3,3,6,number)(xTx, very_small_value)) {
                 throw new FlowSolverException("Failed to invert LSQ normal matrix");
-                // Assume that the rows are linearly dependent 
+                // Assume that the rows are linearly dependent
                 // because the sample points are colinear.
                 // Maybe we could proceed by working as a single-dimensional interpolation.
             }
@@ -99,7 +99,7 @@ public:
             double very_small_value = 1.0e-16*(normInf!(2,2,4,number)(xTx).re)^^2;
             if (0 != computeInverse!(2,2,4,number)(xTx, very_small_value)) {
                 throw new FlowSolverException("Failed to invert LSQ normal matrix");
-                // Assume that the rows are linearly dependent 
+                // Assume that the rows are linearly dependent
                 // because the sample points are colinear.
                 // Maybe we could proceed by working as a single-dimensional interpolation.
             }
@@ -113,7 +113,7 @@ public:
 } // end class LSQInterpWorkspace
 
 class LSQInterpGradients {
-    // These are the quantities that will be interpolated from cell centres 
+    // These are the quantities that will be interpolated from cell centres
     // to the Left and Right sides of interfaces.
     // We need to hold onto their gradients within cells.
 public:
@@ -401,7 +401,7 @@ public:
 
     @nogc
     void venkat_mlp_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
-                      bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig, size_t gtl=0)
+                          bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig, size_t gtl=0)
     {
         // This is an implementation of the multi-dimensional limiting process from ref. [1],
         // which  uses the Venkatakrishnan limiter function from ref. [2].
@@ -514,11 +514,11 @@ public:
                 massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
             }
         }
-        // Interpolate on two of the thermodynamic quantities, 
-        // and fill in the rest based on an EOS call. 
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
         auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
-        case InterpolateOption.pt: 
+        case InterpolateOption.pt:
             mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
             mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
             version(multi_T_gas) {
@@ -548,7 +548,7 @@ public:
                 }
             }
             break;
-        case InterpolateOption.rhot: 
+        case InterpolateOption.rhot:
             mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
             mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
             version(multi_T_gas) {
@@ -616,11 +616,11 @@ public:
                 massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
             }
         }
-        // Interpolate on two of the thermodynamic quantities, 
-        // and fill in the rest based on an EOS call. 
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
         auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
-        case InterpolateOption.pt: 
+        case InterpolateOption.pt:
             mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
             mixin(codeForGradients("gas.T", "T", "TMax", "TMin"));
             version(multi_T_gas) {
@@ -650,7 +650,7 @@ public:
                 }
             }
             break;
-        case InterpolateOption.rhot: 
+        case InterpolateOption.rhot:
             mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
             mixin(codeForGradients("gas.T", "T", "TMax", "TMin"));
             version(multi_T_gas) {
@@ -962,7 +962,7 @@ public:
 
     @nogc
     void nishikawa_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
-                      bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig, size_t gtl=0)
+                         bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig, size_t gtl=0)
     {
         // This is the R3 limiter from ref. [1].
         //
@@ -1175,11 +1175,11 @@ public:
             }
         }
 
-        // Interpolate on two of the thermodynamic quantities, 
-        // and fill in the rest based on an EOS call. 
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
         auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
-        case InterpolateOption.pt: 
+        case InterpolateOption.pt:
             pPhi = phi; TPhi = phi;
             version(multi_T_gas) {
                 foreach (imode; 0 .. nmodes) { T_modesPhi[imode] = phi; }
@@ -1268,11 +1268,11 @@ public:
                 massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
             }
         }
-        // Interpolate on two of the thermodynamic quantities, 
-        // and fill in the rest based on an EOS call. 
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
         auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
-        case InterpolateOption.pt: 
+        case InterpolateOption.pt:
             mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
             mixin(codeForGradients("gas.T", "T", "TMax", "TMin"));
             version(multi_T_gas) {
@@ -1310,7 +1310,7 @@ public:
                 }
             }
             break;
-        case InterpolateOption.rhot: 
+        case InterpolateOption.rhot:
             mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
             mixin(codeForGradients("gas.T", "T", "TMax", "TMin"));
             version(multi_T_gas) {
@@ -1331,7 +1331,7 @@ public:
         } // end switch thermo_interpolator
         return;
     } // end compute_lsq_gradients()
-    
+
 } // end class LSQInterpGradients
 
 
@@ -1341,7 +1341,7 @@ private:
     LocalConfig myConfig;
 
 public:
-    this(LocalConfig myConfig) 
+    this(LocalConfig myConfig)
     {
         this.myConfig = myConfig;
     }
@@ -1517,10 +1517,10 @@ public:
                     Rght.gas.massf[0] = 1.0;
                 }
             }
-            // Interpolate on two of the thermodynamic quantities, 
-            // and fill in the rest based on an EOS call. 
+            // Interpolate on two of the thermodynamic quantities,
+            // and fill in the rest based on an EOS call.
             // If an EOS call fails, fall back to just copying cell-centre data.
-            // This does presume that the cell-centre data is valid. 
+            // This does presume that the cell-centre data is valid.
             string codeForThermoUpdate(string funname)
             {
                 string code = "
@@ -1540,7 +1540,7 @@ public:
                 return code;
             }
             final switch (myConfig.thermo_interpolator) {
-            case InterpolateOption.pt: 
+            case InterpolateOption.pt:
                 mixin(codeForReconstruction("gas.p", "p", "gas.p", "pPhi"));
                 mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
                 version(multi_T_gas) {
@@ -1588,7 +1588,7 @@ public:
                 }
                 mixin(codeForThermoUpdate("rhop"));
                 break;
-            case InterpolateOption.rhot: 
+            case InterpolateOption.rhot:
                 mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
                 mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
                 version(multi_T_gas) {
@@ -1731,10 +1731,10 @@ public:
                     Rght.gas.massf[0] = 1.0;
                 }
             }
-            // Interpolate on two of the thermodynamic quantities, 
-            // and fill in the rest based on an EOS call. 
+            // Interpolate on two of the thermodynamic quantities,
+            // and fill in the rest based on an EOS call.
             // If an EOS call fails, fall back to just copying cell-centre data.
-            // This does presume that the cell-centre data is valid. 
+            // This does presume that the cell-centre data is valid.
             string codeForThermoUpdate(string funname)
             {
                 string code = "
@@ -1748,7 +1748,7 @@ public:
                 return code;
             }
             final switch (myConfig.thermo_interpolator) {
-            case InterpolateOption.pt: 
+            case InterpolateOption.pt:
                 mixin(codeForReconstruction("gas.p", "p", "gas.p", "pPhi"));
                 mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
                 version(multi_T_gas) {
@@ -1793,7 +1793,7 @@ public:
                 }
                 mixin(codeForThermoUpdate("rhop"));
                 break;
-            case InterpolateOption.rhot: 
+            case InterpolateOption.rhot:
                 mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
                 mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
                 version(multi_T_gas) {
@@ -1935,10 +1935,10 @@ public:
                     Lft.gas.massf[0] = 1.0;
                 }
             }
-            // Interpolate on two of the thermodynamic quantities, 
-            // and fill in the rest based on an EOS call. 
+            // Interpolate on two of the thermodynamic quantities,
+            // and fill in the rest based on an EOS call.
             // If an EOS call fails, fall back to just copying cell-centre data.
-            // This does presume that the cell-centre data is valid. 
+            // This does presume that the cell-centre data is valid.
             string codeForThermoUpdate(string funname)
             {
                 string code = "
@@ -1952,7 +1952,7 @@ public:
                 return code;
             }
             final switch (myConfig.thermo_interpolator) {
-            case InterpolateOption.pt: 
+            case InterpolateOption.pt:
                 mixin(codeForReconstruction("gas.p", "p", "gas.p", "pPhi"));
                 mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
                 version(multi_T_gas) {
@@ -1997,7 +1997,7 @@ public:
                 }
                 mixin(codeForThermoUpdate("rhop"));
                 break;
-            case InterpolateOption.rhot: 
+            case InterpolateOption.rhot:
                 mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
                 mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
                 version(multi_T_gas) {

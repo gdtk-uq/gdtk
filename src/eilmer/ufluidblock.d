@@ -88,7 +88,7 @@ public:
         myConfig.init_gas_model_bits();
         cells.length = ncells; // not defined yet
         bool lua_fs = false;
-        FlowState myfs;
+        FlowState* myfs;
         // check where our flowstate is coming from
         if ( isObjType(L, 3, "_FlowState") ) {
             myfs = checkFlowState(L, 3);
@@ -176,7 +176,7 @@ public:
                     luaL_error(L, errMsg.toStringz);
                 }
             }
-            cells[cell_idx] = new FVCell(myConfig, pos, myfs, volume, to!int(cell_idx));
+            cells[cell_idx] = new FVCell(myConfig, pos, *myfs, volume, to!int(cell_idx));
         }
         block_io = get_fluid_block_io(this);
         if (lua_fs) { lua_settop(L, 0); }
@@ -564,11 +564,11 @@ public:
                 foreach (c; cells) {
                     // First cell in the cloud is the cell itself.  Differences are taken about it.
                     c.cloud_pos ~= &(c.pos[0]);
-                    c.cloud_fs ~= c.fs;
+                    c.cloud_fs ~= &(c.fs);
                     // Subsequent cells are the surrounding cells.
                     foreach (i, f; c.iface) {
                         c.cloud_pos ~= &(f.pos);
-                        c.cloud_fs ~= f.fs;
+                        c.cloud_fs ~= &(f.fs);
                     } // end foreach face
                 }
                 // We will also need derivative storage in ghostcells because the

@@ -234,7 +234,7 @@ public:
     }
 
     @nogc
-    void gradients_xy_div(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos)
+    void gradients_xy_div(ref FlowState*[] cloud_fs, ref Vector3*[] cloud_pos)
     // Using the divergence theorem (I think), compute the average gradients
     // for the flow conditions over a polygon in the xy-plane.
     //     2-----1   1
@@ -486,7 +486,7 @@ public:
     } // end set_up_workspace_leastsq()
 
     @nogc
-    void gradients_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos,
+    void gradients_leastsq(ref FlowState*[] cloud_fs, ref Vector3*[] cloud_pos,
                            ref WLSQGradWorkspace ws)
     // Evaluate the gradients using the precomputed weights.
     {

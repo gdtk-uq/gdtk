@@ -49,7 +49,7 @@ MassDiffusionModel massDiffusionModelFromName(string name)
 
 interface MassDiffusion {
     @nogc
-    void update_mass_fluxes(FlowState fs, const FlowGradients grad,
+    void update_mass_fluxes(ref FlowState fs, const FlowGradients grad,
                             number[] jx, number[] jy, number[] jz);
 }
 
@@ -82,7 +82,7 @@ class FicksFirstLaw : MassDiffusion {
     }
 
     @nogc
-    void update_mass_fluxes(FlowState fs, const FlowGradients grad,
+    void update_mass_fluxes(ref FlowState fs, const FlowGradients grad,
                             number[] jx, number[] jy, number[] jz)
     {
         version(multi_species_gas) {
@@ -151,7 +151,7 @@ class SpeciesSpecificLewisNumbers : DiffusionCoefficient {
         // [FIX-ME] gmodel.update_trans_coeffs(Q); // This feels bad. Shouldn't this be set already???
         number Prandtl = gmodel.Prandtl(Q);
         foreach (isp; 0 .. gmodel.n_species) {
-            D_avg[isp] = Q.mu / (Q.rho * Prandtl * LeS[isp]); 
+            D_avg[isp] = Q.mu / (Q.rho * Prandtl * LeS[isp]);
         }
     }
 private:

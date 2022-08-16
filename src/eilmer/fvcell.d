@@ -120,7 +120,7 @@ public:
     FlowGradients grad;
     WLSQGradWorkspace ws_grad;
     Vector3*[] cloud_pos; // Positions of flow points for gradients calculation.
-    FlowState[] cloud_fs; // References to flow states at those points.
+    FlowState*[] cloud_fs; // References to flow states at those points.
     // Terms for loose-coupling of radiation.
     number Q_rad_org;
     number f_rad_org;
@@ -206,7 +206,7 @@ public:
         double[] turb_init;
         foreach(i; 0 .. myConfig.turb_model.nturb)
             turb_init ~= myConfig.turb_model.turb_limits(i).re;
-        fs = new FlowState(gmodel, 100.0e3, T, T_modes, Vector3(0.0,0.0,0.0), turb_init);
+        fs = FlowState(gmodel, 100.0e3, T, T_modes, Vector3(0.0,0.0,0.0), turb_init);
         size_t ncq = myConfig.cqi.n; // number of conserved quantities
         foreach(i; 0 .. myConfig.n_flow_time_levels) {
             U ~= new ConservedQuantities(ncq);
@@ -265,7 +265,7 @@ public:
         aux_cell_data = AuxCellData.get_aux_cell_data_items(myConfig);
     }
 
-    this(LocalConfig myConfig, Vector3 pos, FlowState fs,  number volume, int id_init=-1)
+    this(LocalConfig myConfig, in Vector3 pos, in FlowState fs, in number volume, int id_init=-1)
     // stripped down initialisation
     {
         id = id_init;
@@ -501,13 +501,13 @@ public:
         auto gmodel = myConfig.gmodel;
         size_t n = others.length;
         if (n == 0) throw new FlowSolverException("Need to average from a nonempty array.");
-        FlowState[] fsList;
+        FlowState*[] fsList;
         // We need to be honest and not to fiddle with the other gas states.
         foreach(other; others) {
             if ( this is other ) {
                 throw new FlowSolverException("Must not include destination in source list.");
             }
-            fsList ~= cast(FlowState)other.fs;
+            fsList ~= cast(FlowState*)&(other.fs);
         }
         fs.copy_average_values_from(fsList, gmodel);
         // Accumulate from a clean slate and then divide.

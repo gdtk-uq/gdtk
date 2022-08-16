@@ -133,7 +133,7 @@ private:
         p += deltas[2];
         u += deltas[3];
         // Put into interface FlowState object.
-        auto fs = c.fs; // local reference
+        auto fs = &(c.fs); // local reference
         fs.gas.p = p; // not really needed because we use rhou
         fs.gas.rho = rho;
         fs.gas.u = u;
