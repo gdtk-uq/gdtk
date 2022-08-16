@@ -46,7 +46,7 @@ void into_nonrotating_frame(ref Vector3 v, ref const(Vector3) pos, double omegaz
 }
 
 
-struct FlowState {
+class FlowState {
 public:
     GasState gas;  // gas state
     Vector3 vel;   // flow velocity, m/s
@@ -112,7 +112,8 @@ public:
 
     this(in FlowState other)
     {
-        gas = GasState(other.gas);
+        gas = GasState(to!int(other.gas.massf.length), to!int(other.gas.T_modes.length));
+        gas.copy_values_from(other.gas);
         vel.set(other.vel);
         version(MHD) {
             B.set(other.B);
@@ -120,7 +121,8 @@ public:
             divB = other.divB;
         }
         version(turbulence) {
-            turb = other.turb.dup;
+            turb.length = other.turb.length;
+            foreach (i; 0 .. turb.length) turb[i] = other.turb[i];
         }
         mu_t = other.mu_t;
         k_t = other.k_t;
@@ -183,14 +185,17 @@ public:
         S = getJSONdouble(json_data, "S", 0.0);
     }
 
+    this() {} // makes no sense to define the data in the absence of a model
+
     FlowState dup() const
     {
-        return FlowState(this);
+        return new FlowState(this);
     }
 
-    @nogc void opAssign(in FlowState other)
+    @nogc
+    void copy_values_from(in FlowState other)
     {
-        gas = other.gas;
+        gas.copy_values_from(other.gas);
         vel.set(other.vel);
         version(MHD) {
             B.set(other.B);
@@ -198,17 +203,11 @@ public:
             divB = other.divB;
         }
         version(turbulence) {
-            foreach (i; 0 .. turb.length) { turb[i] = other.turb[i]; }
+            foreach(i; 0 .. turb.length) turb[i] =  other.turb[i];
         }
         mu_t = other.mu_t;
         k_t = other.k_t;
         S = other.S;
-    }
-
-    @nogc
-    void copy_values_from(in FlowState other)
-    {
-        this = other;
     }
 
     @nogc
@@ -230,7 +229,7 @@ public:
         k_t = w0*fs0.k_t + w1*fs1.k_t;
     } // end copy_average_values_from()
 
-    void copy_average_values_from(in FlowState*[] others, GasModel gm)
+    void copy_average_values_from(in FlowState[] others, GasModel gm)
     // Note that we must not send the current object in the others list as well.
     // Involves some memory allocation.
     {
@@ -240,7 +239,7 @@ public:
         // Note that, because we cast away their "const"ness,
         // we need to be honest and not to fiddle with the other gas states.
         foreach(other; others) {
-            if ( &this is other ) {
+            if ( this is other ) {
                 throw new FlowSolverException("Must not include destination in source list.");
             }
             gasList ~= cast(GasState*)&(other.gas);
@@ -288,7 +287,7 @@ public:
         S = S;
     } // end copy_average_values_from()
 
-    string toString() const
+    override string toString() const
     {
         char[] repr;
         repr ~= "FlowState(";
@@ -450,7 +449,7 @@ public:
             string txt = to!string(line);
             if (!canFind(txt, "#") && !canFind(txt, "pos.x")) {
                 // Assume that we have a line of data rather than variable names.
-                fstate ~= FlowState(GlobalConfig.gmodel_master, GlobalConfig.turb_model.nturb);
+                fstate ~= new FlowState(GlobalConfig.gmodel_master, GlobalConfig.turb_model.nturb);
                 pos ~= Vector3();
                 number volume, Q_rad_org, f_rad_org, Q_rE_rad;
                 double dt_chem, dt_therm, dt_local;
@@ -608,7 +607,7 @@ public:
             string txt = to!string(line).chomp();
             if (txt.length > 0 && !canFind(txt, "#") && !canFind(txt, "vel.x")) {
                 // Assume that we have a line of data values rather than variable names.
-                auto fs = FlowState(gm, nturb);
+                auto fs= new FlowState(gm, nturb);
                 double tme;
                 auto items = txt.split();
                 if (items.length < 6+gm.n_species+gm.n_modes+nturb) {
@@ -643,7 +642,7 @@ public:
     } // end this()
 
     @nogc
-    void set_flowstate(ref FlowState fs, double t, GasModel gm)
+    void set_flowstate(FlowState fs, double t, GasModel gm)
     {
         // Find where we are in history and interpolate the flow state.
         size_t nt = times.length;
@@ -715,7 +714,7 @@ public:
     } // end this()
 
     @nogc
-    void set_flowstate(ref FlowState fs, double t, ref Vector3 pos, GasModel gm)
+    void set_flowstate(FlowState fs, double t, ref Vector3 pos, GasModel gm)
     {
         fs.vel.x = base_velx;
         fs.vel.y = base_vely;
@@ -739,7 +738,7 @@ private:
     double base_velz;
     double base_p;
     double base_T;
-} // end class SyntheticFlowState
+} // end SyntheticFlow
 
 
 class SourceFlow {
@@ -753,7 +752,7 @@ public:
     double p, rho, u, v; // Nominal flow condition.
     double dfdrho, dfdu; // Sensitivities for EOS p = f(rho, u)
 
-    this(GasModel gmodel, ref const(FlowState) fs, double r)
+    this(GasModel gmodel, const(FlowState) fs, double r)
     {
         this.r = r;
         // Keep a copy of the interesting parts of the nominal state.

@@ -49,7 +49,7 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
 
     switch ( bfeType ) {
     case "const_flux":
-        auto flowstate = FlowState(jsonData["flowstate"], gmodel);
+        auto flowstate = new FlowState(jsonData["flowstate"], gmodel);
         double x0 = getJSONdouble(jsonData, "x0", 0.0);
         double y0 = getJSONdouble(jsonData, "y0", 0.0);
         double z0 = getJSONdouble(jsonData, "z0", 0.0);

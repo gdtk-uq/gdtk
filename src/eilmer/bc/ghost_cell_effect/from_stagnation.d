@@ -48,7 +48,7 @@ public:
          double mass_flux, double relax_factor)
     {
         super(id, boundary, "FromStagnation");
-        this.stagnation_condition = FlowState(stagnation_condition);
+        this.stagnation_condition = new FlowState(stagnation_condition);
         this.luaFileName = fileName;
         this.direction_type = direction_type;
         this.direction_vector = vec;
@@ -60,7 +60,7 @@ public:
         auto gmodel = GlobalConfig.gmodel_master;
         stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
         stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
-        inflow_condition = FlowState(stagnation_condition);
+        inflow_condition = new FlowState(stagnation_condition);
         // The following limits are used when adjusting the stagnation pressure
         // to achieve a fixed mass flow per unit area.
         // The initially-specified stagnation condition needs to be a reasonable guess

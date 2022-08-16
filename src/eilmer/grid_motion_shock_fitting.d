@@ -85,7 +85,7 @@ void compute_vtx_velocities_for_sf(FBArray fba)
             blkId = fba.blockArray[0][jb][kb];
             if (canFind(GlobalConfig.localFluidBlockIds, blkId)) {
                 blk = cast(SFluidBlock) globalBlocks[blkId];
-                FlowState Rght = FlowState(blk.myConfig.gmodel, blk.myConfig.turb_model.nturb);
+                FlowState Rght = new FlowState(blk.myConfig.gmodel, blk.myConfig.turb_model.nturb);
                 foreach (k; 0 .. blk.nkc) {
                     foreach (j; 0 .. blk.njc) {
                         auto f = blk.get_ifi(0,j,k);

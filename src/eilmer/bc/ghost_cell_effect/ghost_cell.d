@@ -82,7 +82,7 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
         newGCE = new GhostCellInternalCopyThenReflect(blk_id, boundary);
         break;
     case "flowstate_copy":
-        auto flowstate = FlowState(jsonData["flowstate"], gmodel);
+        auto flowstate = new FlowState(jsonData["flowstate"], gmodel);
         double x0 = getJSONdouble(jsonData, "x0", 0.0);
         double y0 = getJSONdouble(jsonData, "y0", 0.0);
         double z0 = getJSONdouble(jsonData, "z0", 0.0);
@@ -107,12 +107,12 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
         newGCE = new GhostCellExtrapolateCopy(blk_id, boundary, xOrder);
         break;
     case "from_upwind_copy":
-        auto flowstate = FlowState(jsonData["flowstate"], gmodel);
+        auto flowstate = new FlowState(jsonData["flowstate"], gmodel);
         newGCE = new GhostCellFromUpwindCopy(blk_id, boundary, flowstate);
         break;
     case "from_upwind_copy_dual_state":
-        auto flowstate1 = FlowState(jsonData["flowstate1"], gmodel);
-        auto flowstate2 = FlowState(jsonData["flowstate2"], gmodel);
+        auto flowstate1 = new FlowState(jsonData["flowstate1"], gmodel);
+        auto flowstate2 = new FlowState(jsonData["flowstate2"], gmodel);
         Vector3 p = getJSONVector3(jsonData, "p", Vector3(0.0,0.0,0.0));
         Vector3 n = getJSONVector3(jsonData, "n", Vector3(0.0,1.0,0.0));
         newGCE = new GhostCellFromUpwindCopyDualState(blk_id, boundary, flowstate1, flowstate2, p, n);
@@ -127,7 +127,7 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
         newGCE = new GhostCellFixedPT(blk_id, boundary, p_outside, T_outside);
         break;
     case "from_stagnation_condition":
-        auto stagnation_condition = FlowState(jsonData["stagnation_condition"], gmodel);
+        auto stagnation_condition = new FlowState(jsonData["stagnation_condition"], gmodel);
         string fname = getJSONstring(jsonData, "filename", "");
         string direction_type = getJSONstring(jsonData, "direction_type", "normal");
         double direction_x = getJSONdouble(jsonData, "direction_x", 1.0);

@@ -118,7 +118,7 @@ public:
         }
     }
 
-    @nogc void opAssign(in GasState other)
+    @nogc void copy_values_from(ref const(GasState) other)
     {
         rho = other.rho;
         p = other.p;
@@ -134,11 +134,6 @@ public:
         sigma = other.sigma;
         foreach (i; 0 .. massf.length) { massf[i] = other.massf[i]; }
         quality = other.quality;
-    }
-
-    @nogc void copy_values_from(ref const(GasState) other)
-    {
-        this = other;
     }
 
     @nogc void copy_average_values_from(ref const(GasState) gs0, ref const(GasState) gs1, double w0=0.5)

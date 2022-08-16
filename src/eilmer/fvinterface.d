@@ -78,14 +78,14 @@ public:
     //
     // Shock-detector-related quantities.
     int[] nbr_id; // list of neighbour ids
-    FlowState*[] nbr_fs; // list of neighbouring flow states
+    FlowState[] nbr_fs; // list of neighbouring flow states
     number[] nbr_dist; // distance to neighbour
     //
     // Viscous-flux-related quantities.
     FlowGradients grad;
     WLSQGradWorkspace ws_grad;
     Vector3*[] cloud_pos; // Positions of flow points for gradients calculation.
-    FlowState*[] cloud_fs; // References to flow states at those points.
+    FlowState[] cloud_fs; // References to flow states at those points.
     number[] jx; // diffusive mass flux in x
     number[] jy; // diffusive mass flux in y
     number[] jz; // diffusive mass flux in z
@@ -125,7 +125,7 @@ public:
         double[] turb_init;
         foreach(i; 0 .. myConfig.turb_model.nturb)
             turb_init ~= myConfig.turb_model.turb_limits(i).re;
-        fs = FlowState(gmodel, 100.0e3, 300, T_modes, Vector3(0.0,0.0,0.0), turb_init);
+        fs = new FlowState(gmodel, 100.0e3, 300, T_modes, Vector3(0.0,0.0,0.0), turb_init);
         F = new ConservedQuantities(myConfig.cqi.n);
         F.clear();
         grad = new FlowGradients(myConfig);
@@ -174,7 +174,7 @@ public:
         n = other.n;
         t1 = other.t1;
         t2 = other.t2;
-        fs = FlowState(other.fs, gm);
+        fs = new FlowState(other.fs, gm);
         F = new ConservedQuantities(other.F);
         tau_wall_x = other.tau_wall_x;
         tau_wall_y = other.tau_wall_y;

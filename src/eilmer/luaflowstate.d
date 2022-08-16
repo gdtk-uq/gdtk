@@ -43,35 +43,13 @@ immutable string[] validFlowStateFields = ["p", "T", "T_modes", "p_e",
                                            "velx", "vely", "velz",
                                            "Bx", "By", "Bz", "psi", "divB",
                                            "turb", "mu_t", "k_t", "S"];
-static const(FlowState*)[] flowStateStore;
+static const(FlowState)[] flowStateStore;
 
-/**
- * This creates a new userdata spot on the stack and populates it with a FlowState struct.
- * Anything that we push into the Lua domain, we need to keep alive in the D world, so keep references.
- */
-FlowState* pushFlowState(lua_State *L, FlowState* fs)
+// Makes it a little more consistent to make this
+// available under this name.
+FlowState checkFlowState(lua_State* L, int index)
 {
-    // [FIX-ME] PJ 2022-08-16 I think that we need to change to using an integer handle
-    // to the FlowState within the Dlang domain.
-    // The content of the dynamic arrays within a FlowState will not be included
-    // in the size of the struct so the assignment is likely to fail.
-    auto fsPtr = cast(FlowState*) lua_newuserdata(L, (*fs).sizeof);
-    *fsPtr = *fs;
-    luaL_getmetatable(L, FlowStateMT.toStringz);
-    lua_setmetatable(L, -2);
-    return fs;
-}
-FlowState* checkFlowState(lua_State* L, int index)
-{
-    auto fsPtr = cast(FlowState*) luaL_checkudata(L, index, FlowStateMT.toStringz);
-    return fsPtr;
-}
-
-extern(C) int toStringFlowState(lua_State* L)
-{
-    auto a = checkFlowState(L, 1);
-    lua_pushstring(L, a.toString.toStringz);
-    return 1;
+    return checkObj!(FlowState, FlowStateMT)(L, index);
 }
 
 /**
@@ -110,22 +88,21 @@ Be sure to call setGasModel(fname) before using a FlowState object.`;
         luaL_error(L, errMsg.toStringz);
     }
     lua_remove(L, 1); // Remove first argument "this".
-    FlowState* fs;
+    FlowState fs;
     int narg = lua_gettop(L);
     if (narg == 0) {
-        // [FIX-ME] PJ 2022-08-16 We should raise an error here.
-        // Make an empty FlowState -- No, don't do this!
+        // Make an empty FlowState
         size_t nturb = 2; // TODO: Does this ever get called? What is it for? (NNG)
         fs = new FlowState(managedGasModel, nturb);
-        flowStateStore ~= pushObj!(FlowState*, FlowStateMT)(L, fs);
+        flowStateStore ~= pushObj!(FlowState, FlowStateMT)(L, fs);
         return 1;
     }
     fs = makeFlowStateFromTable(L, 1);
-    flowStateStore ~= pushFlowState(L, fs);
+    flowStateStore ~= pushObj!(FlowState, FlowStateMT)(L, fs);
     return 1;
 }
 
-FlowState* makeFlowStateFromTable(lua_State* L, int tblindx)
+FlowState makeFlowStateFromTable(lua_State* L, int tblindx)
 {
     string errMsg;
     auto managedGasModel = GlobalConfig.gmodel_master;
@@ -411,7 +388,7 @@ extern(C) int toTable(lua_State* L)
     auto fs = checkFlowState(L, 1);
     lua_newtable(L); // anonymous table { }
     int tblIdx = lua_gettop(L);
-    pushFlowStateToTable(L, tblIdx, *fs, gmodel);
+    pushFlowStateToTable(L, tblIdx, fs, gmodel);
     return 1;
 }
 
@@ -570,7 +547,7 @@ void registerFlowState(lua_State* L)
     /* Register methods for use. */
     lua_pushcfunction(L, &newFlowState);
     lua_setfield(L, -2, "new");
-    lua_pushcfunction(L, &toStringFlowState);
+    lua_pushcfunction(L, &toStringObj!(FlowState, FlowStateMT));
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &toTable);
     lua_setfield(L, -2, "toTable");

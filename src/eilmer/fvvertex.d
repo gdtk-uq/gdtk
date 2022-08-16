@@ -31,7 +31,7 @@ public:
     FlowGradients grad;
     number radial_pos_norm = 0;
     Vector3*[] cloud_pos; // Positions of flow points for derivative calculation.
-    FlowState*[] cloud_fs; // References to flow states at those points.
+    FlowState[] cloud_fs; // References to flow states at those points.
     FVCell[] cell_cloud; // for the MLP limiter we need access to the gradients within each cell
     WLSQGradWorkspace ws_grad;
     LSQInterpGradients gradients; // needed for the MLP limiter
@@ -59,7 +59,7 @@ public:
         if (other.ws_grad) {
             ws_grad = new WLSQGradWorkspace(other.ws_grad);
         }
-        // Because we copy the following pointers,
+        // Because we copy the following pointers and references,
         // we cannot have const (or "in") qualifier on other.
         cloud_pos = other.cloud_pos.dup();
         cloud_fs = other.cloud_fs.dup();

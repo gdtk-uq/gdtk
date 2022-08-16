@@ -138,7 +138,7 @@ public:
         myConfig.init_gas_model_bits();
         cells.length = ncells; // not defined yet
         bool lua_fs = false;
-        FlowState* myfs;
+        FlowState myfs;
         // check where our flowstate is coming from
         if ( isObjType(L, 3, "_FlowState") ) {
             myfs = checkFlowState(L, 3);
@@ -200,7 +200,7 @@ public:
                 }
             }
             // make the cell
-            cell = new FVCell(myConfig, pos, *myfs, volume, to!int(cell_idx));
+            cell = new FVCell(myConfig, pos, myfs, volume, to!int(cell_idx));
         }
         block_io = get_fluid_block_io(this);
         if (lua_fs) { lua_settop(L, 0); }
@@ -1149,11 +1149,11 @@ public:
         foreach (c; cells) {
             // First cell in the cloud is the cell itself.  Differences are taken about it.
             c.cloud_pos ~= &(c.pos[0]);
-            c.cloud_fs ~= &(c.fs);
+            c.cloud_fs ~= c.fs;
             // Subsequent cells are the surrounding interfaces.
             foreach (i, f; c.iface) {
                 c.cloud_pos ~= &(f.pos);
-                c.cloud_fs ~= &(f.fs);
+                c.cloud_fs ~= f.fs;
             } // end foreach face
         }
         // Check that we have correctly assembled clouds.
@@ -1205,7 +1205,7 @@ public:
                         FVInterface F = get_ifj(i,j+1);
                         // Retain locations and references to flow states for later.
                         face.cloud_pos = [&(face.pos), &(D.pos), &(E.pos[gtl]), &(F.pos)];
-                        face.cloud_fs = [&(face.fs), &(D.fs), &(E.fs), &(F.fs)];
+                        face.cloud_fs = [face.fs, D.fs, E.fs, F.fs];
                     } else if (i == nic) {
                         // east boundary
                         FVInterface A = get_ifj(i-1,j+1);
@@ -1214,10 +1214,10 @@ public:
                         // Retain locations and references to flow states for later.
                         if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                             face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos)];
-                            face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs)];
+                            face.cloud_fs = [face.fs, A.fs, B.fs, C.fs];
                         } else {
                             face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos), &(face.pos)];
-                            face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(face.fs)];
+                            face.cloud_fs = [A.fs, B.fs, C.fs, face.fs];
                         }
                     } else {
                         // interior face
@@ -1231,11 +1231,11 @@ public:
                         if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                             face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos),
                                               &(D.pos), &(E.pos[gtl]), &(F.pos)];
-                            face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(F.fs)];
+                            face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
                         } else {
                             face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos),
                                               &(D.pos), &(E.pos[gtl]), &(F.pos)];
-                            face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(F.fs)];
+                            face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
                         }
                     }
                 } // j loop
@@ -1252,7 +1252,7 @@ public:
                         FVInterface F = get_ifi(i,j);
                         // Retain locations and references to flow states for later.
                         face.cloud_pos = [&(face.pos), &(D.pos), &(E.pos[gtl]), &(F.pos)];
-                        face.cloud_fs = [&(face.fs), &(D.fs), &(E.fs), &(F.fs)];
+                        face.cloud_fs = [face.fs, D.fs, E.fs, F.fs];
                     } else if (j == njc) {
                         // north boundary
                         FVInterface A = get_ifi(i,j-1);
@@ -1261,10 +1261,10 @@ public:
                         // Retain locations and references to flow states for later.
                         if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                             face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos)];
-                            face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs)];
+                            face.cloud_fs = [face.fs, A.fs, B.fs, C.fs];
                         } else {
                             face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos), &(face.pos)];
-                            face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(face.fs)];
+                            face.cloud_fs = [A.fs, B.fs, C.fs, face.fs];
                         }
                     } else {
                         // interior face
@@ -1277,15 +1277,15 @@ public:
                         // Retain locations and references to flow states for later.
                         face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos),
                                           &(D.pos), &(E.pos[gtl]), &(F.pos)];
-                        face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(F.fs)];
+                        face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
                         if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                             face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos),
                                               &(D.pos), &(E.pos[gtl]), &(F.pos)];
-                            face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(F.fs)];
+                            face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
                         } else {
                             face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos),
                                               &(D.pos), &(E.pos[gtl]), &(F.pos)];
-                            face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(F.fs)];
+                            face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
                         }
                     }
                 } // j loop
@@ -1307,7 +1307,7 @@ public:
                             // Retain locations and references to flow states for later.
                             face.cloud_pos = [&(face.pos), &(F.pos), &(G.pos), &(H.pos),
                                               &(I.pos), &(J.pos[gtl])];
-                            face.cloud_fs = [&(face.fs), &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
+                            face.cloud_fs = [face.fs, F.fs, G.fs, H.fs, I.fs, J.fs];
                         } else if (i == nic) {
                             // east boundary
                             FVInterface A = get_ifj(i-1,j+1,k);
@@ -1319,11 +1319,11 @@ public:
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                                 face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
                                                   &(E.pos[gtl])];
-                                face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs)];
+                                face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs];
                             } else {
                                 face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos),
                                                   &(E.pos[gtl]), &(face.pos)];
-                                face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(face.fs)];
+                                face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs, face.fs];
                             }
                         } else {
                             // interior face
@@ -1341,13 +1341,13 @@ public:
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                                 face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
                                                   &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
-                                face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs),
-                                                 &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
+                                face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
+                                                 F.fs, G.fs, H.fs, I.fs, J.fs];
                             } else {
                                 face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
                                                   &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
-                                face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs),
-                                                 &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
+                                face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs,
+                                                 F.fs, G.fs, H.fs, I.fs, J.fs];
                             }
                         }
                     } // k loop
@@ -1369,7 +1369,7 @@ public:
                             // Retain locations and references to flow states for later.
                             face.cloud_pos = [&(face.pos), &(F.pos), &(G.pos), &(H.pos),
                                               &(I.pos), &(J.pos[gtl])];
-                            face.cloud_fs = [&(face.fs), &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
+                            face.cloud_fs = [face.fs, F.fs, G.fs, H.fs, I.fs, J.fs];
                         } else if (j == njc) {
                             // north boundary
                             FVInterface A = get_ifi(i+1,j-1,k);
@@ -1381,11 +1381,11 @@ public:
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                                 face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
                                                   &(E.pos[gtl])];
-                                face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs)];
+                                face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs];
                             } else {
                                 face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos),
                                                   &(E.pos[gtl]), &(face.pos)];
-                                face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(face.fs)];
+                                face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs, face.fs];
                             }
                         } else {
                             // interior face
@@ -1403,13 +1403,13 @@ public:
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                                 face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
                                                   &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
-                                face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs),
-                                                 &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
+                                face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
+                                                 F.fs, G.fs, H.fs, I.fs, J.fs];
                             } else {
                                 face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
                                                   &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
-                                face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs),
-                                                 &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
+                                face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs,
+                                                 F.fs, G.fs, H.fs, I.fs, J.fs];
                             }
                         }
                     } // k loop
@@ -1431,7 +1431,7 @@ public:
                             // Retain locations and references to flow states for later.
                             face.cloud_pos = [&(face.pos), &(F.pos), &(G.pos), &(H.pos),
                                               &(I.pos), &(J.pos[gtl])];
-                            face.cloud_fs = [&(face.fs), &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
+                            face.cloud_fs = [face.fs, F.fs, G.fs, H.fs, I.fs, J.fs];
                         } else if (k == nkc) {
                             // top boundary
                             FVInterface A = get_ifj(i,j+1,k-1);
@@ -1443,11 +1443,11 @@ public:
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                                 face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
                                                   &(E.pos[gtl])];
-                                face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs)];
+                                face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs];
                             } else {
                                 face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos),
                                                   &(E.pos[gtl]), &(face.pos)];
-                                face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs), &(face.fs)];
+                                face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs, face.fs];
                             }
                         } else {
                             // interior face
@@ -1465,13 +1465,13 @@ public:
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                                 face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
                                                   &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
-                                face.cloud_fs = [&(face.fs), &(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs),
-                                                 &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
+                                face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
+                                             F.fs, G.fs, H.fs, I.fs, J.fs];
                             } else {
                                 face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]),
                                                   &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
-                                face.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs), &(E.fs),
-                                                 &(F.fs), &(G.fs), &(H.fs), &(I.fs), &(J.fs)];
+                                face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs,
+                                                 F.fs, G.fs, H.fs, I.fs, J.fs];
                             }
                         }
                     } // k loop
@@ -1505,7 +1505,7 @@ public:
                     FVCell D = get_cell(i-1,j-1);
                     // Retain locations and references to flow states for later.
                     vtx.cloud_pos = [&(A.pos[gtl]), &(B.pos[gtl]), &(C.pos[gtl]), &(D.pos[gtl])];
-                    vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs)];
+                    vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
                 } // j loop
             } // i loop
             // Half-cells along the edges of the block.
@@ -1518,7 +1518,7 @@ public:
                 FVCell C = get_cell(i-1,j);
                 FVCell D = get_cell(i-1,j-1);
                 vtx.cloud_pos = [&(A.pos), &(B.pos), &(C.pos[gtl]), &(D.pos[gtl])];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs)];
+                vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
             } // j loop
             // West boundary
             foreach (j; 1 .. njv-1) {
@@ -1530,7 +1530,7 @@ public:
                 FVInterface C = get_ifi(i,j);
                 FVInterface D = get_ifi(i,j-1);
                 vtx.cloud_pos = [&(A.pos[gtl]), &(B.pos[gtl]), &(C.pos), &(D.pos)];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs)];
+                vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
             } // j loop
             // North boundary
             foreach (i; 1 .. niv-1) {
@@ -1541,7 +1541,7 @@ public:
                 FVInterface C = get_ifj(i-1,j);
                 FVCell D = get_cell(i-1,j-1);
                 vtx.cloud_pos = [&(A.pos[gtl]), &(B.pos), &(C.pos), &(D.pos[gtl])];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs)];
+                vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
             } // i loop
             // South boundary
             foreach (i; 1 .. niv-1) {
@@ -1552,7 +1552,7 @@ public:
                 FVCell C = get_cell(i-1,j);
                 FVInterface D = get_ifj(i-1,j);
                 vtx.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos[gtl]), &(D.pos)];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs), &(D.fs)];
+                vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
             } // i loop
             // For the corners, we are going to use the same divergence-theorem-based
             // gradient calculator and let one edge collapse to a point, thus giving
@@ -1565,7 +1565,7 @@ public:
                 FVInterface B = get_ifj(i-1,j);
                 FVCell C = get_cell(i-1,j-1);
                 vtx.cloud_pos = [&(A.pos), &(B.pos), &(C.pos[gtl])];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs)];
+                vtx.cloud_fs = [A.fs, B.fs, C.fs];
             }
             // South-east corner
             {
@@ -1575,7 +1575,7 @@ public:
                 FVCell B = get_cell(i-1,j);
                 FVInterface C = get_ifj(i-1,j);
                 vtx.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos)];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs)];
+                vtx.cloud_fs = [A.fs, B.fs, C.fs];
             }
             // South-west corner
             {
@@ -1585,7 +1585,7 @@ public:
                 FVCell B = get_cell(i,j);
                 FVInterface C = get_ifi(i,j);
                 vtx.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos)];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs)];
+                vtx.cloud_fs = [A.fs, B.fs, C.fs];
             }
             // North-west corner
             {
@@ -1595,7 +1595,7 @@ public:
                 FVInterface B = get_ifj(i,j);
                 FVInterface C = get_ifi(i,j-1);
                 vtx.cloud_pos = [&(A.pos[gtl]), &(B.pos), &(C.pos)];
-                vtx.cloud_fs = [&(A.fs), &(B.fs), &(C.fs)];
+                vtx.cloud_fs = [A.fs, B.fs, C.fs];
             }
         } else { // Flow quantity derivatives for 3D.
             // Internal secondary cell geometry information
@@ -1613,7 +1613,7 @@ public:
                         FVCell c7 = get_cell(i,j+1,k+1);
                         vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos[gtl]), &(c3.pos[gtl]),
                                          &(c4.pos[gtl]), &(c5.pos[gtl]), &(c6.pos[gtl]), &(c7.pos[gtl])];
-                        vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs), &(c6.fs), &(c7.fs)];
+                        vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs, c6.fs, c7.fs];
                     }
                 }
             }
@@ -1632,7 +1632,7 @@ public:
                     FVCell c7 = get_cell(i,j+1,k+1);
                     vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos[gtl]),
                                      &(c4.pos[gtl]), &(c5.pos), &(c6.pos), &(c7.pos[gtl])];
-                    vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs), &(c6.fs), &(c7.fs)];
+                    vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs, c6.fs, c7.fs];
                 }
             }
             // West boundary secondary cell geometry information
@@ -1650,7 +1650,7 @@ public:
                     FVInterface c7 = get_ifi(i+1,j+1,k+1);
                     vtx.cloud_pos = [&(c0.pos), &(c1.pos[gtl]), &(c2.pos[gtl]), &(c3.pos),
                                      &(c4.pos), &(c5.pos[gtl]), &(c6.pos[gtl]), &(c7.pos)];
-                    vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs), &(c6.fs), &(c7.fs)];
+                    vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs, c6.fs, c7.fs];
                 }
             }
             // North boundary secondary cell geometry information
@@ -1668,7 +1668,7 @@ public:
                     FVInterface c7 = get_ifj(i,j+1,k+1);
                     vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos), &(c3.pos),
                                      &(c4.pos[gtl]), &(c5.pos[gtl]), &(c6.pos), &(c7.pos)];
-                    vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs), &(c6.fs), &(c7.fs)];
+                    vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs, c6.fs, c7.fs];
                 }
             }
             // South boundary secondary cell geometry information
@@ -1686,7 +1686,7 @@ public:
                     FVCell c7 = get_cell(i,j+1,k+1);
                     vtx.cloud_pos = [&(c0.pos), &(c1.pos), &(c2.pos[gtl]), &(c3.pos[gtl]),
                                      &(c4.pos), &(c5.pos), &(c6.pos[gtl]), &(c7.pos[gtl])];
-                    vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs), &(c6.fs), &(c7.fs)];
+                    vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs, c6.fs, c7.fs];
                 }
             }
             // Top boundary secondary cell geometry information
@@ -1704,7 +1704,7 @@ public:
                     FVInterface c7 = get_ifk(i,j+1,k+1);
                     vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos[gtl]), &(c3.pos[gtl]),
                                      &(c4.pos), &(c5.pos), &(c6.pos), &(c7.pos)];
-                    vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs), &(c6.fs), &(c7.fs)];
+                    vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs, c6.fs, c7.fs];
                 }
             }
             // Bottom boundary secondary cell geometry information
@@ -1722,7 +1722,7 @@ public:
                     FVCell c7 = get_cell(i,j+1,k+1);
                     vtx.cloud_pos = [&(c0.pos), &(c1.pos), &(c2.pos), &(c3.pos),
                                      &(c4.pos[gtl]), &(c5.pos[gtl]), &(c6.pos[gtl]), &(c7.pos[gtl])];
-                    vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs), &(c6.fs), &(c7.fs)];
+                    vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs, c6.fs, c7.fs];
                 }
             }
             // Now, do the 4 edges around the bottom face.
@@ -1738,7 +1738,7 @@ public:
                 FVInterface c5 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Bottom-North edge [3]-->[2]
             foreach (i; 1 .. niv-1) {
@@ -1752,7 +1752,7 @@ public:
                 FVInterface c5 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Bottom-West edge [0]-->[3]
             foreach (j; 1 .. njv-1) {
@@ -1766,7 +1766,7 @@ public:
                 FVInterface c5 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Bottom-East edge [1]-->[2]
             foreach (j; 1 .. njv-1) {
@@ -1780,7 +1780,7 @@ public:
                 FVInterface c5 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // 4 edges around the top face.
             // Top-South edge [4]-->[5]
@@ -1795,7 +1795,7 @@ public:
                 FVInterface c5 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Top-North edge [7]-->[6]
             foreach (i; 1 .. niv-1) {
@@ -1809,7 +1809,7 @@ public:
                 FVInterface c5 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Top-West edge [4]-->[7]
             foreach (j; 1 .. njv-1) {
@@ -1823,7 +1823,7 @@ public:
                 FVInterface c5 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Top-East edge [5]-->[6]
             foreach (j; 1 .. njv-1) {
@@ -1837,7 +1837,7 @@ public:
                 FVInterface c5 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // 4 edges running from bottom to top.
             // South-West edge [0]-->[4]
@@ -1852,7 +1852,7 @@ public:
                 FVInterface c5 = get_ifj(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // South-East edge [1]-->[5]
             foreach (k; 1 .. nkv-1) {
@@ -1866,7 +1866,7 @@ public:
                 FVInterface c5 = get_ifj(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // North-East edge [2]-->[6]
             foreach (k; 1 .. nkv-1) {
@@ -1880,7 +1880,7 @@ public:
                 FVInterface c5 = get_ifj(i,j+1,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // North-West edge [3]-->[7]
             foreach (k; 1 .. nkv-1) {
@@ -1894,7 +1894,7 @@ public:
                 FVInterface c5 = get_ifj(i,j+1,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos[gtl]), &(c2.pos),
                                  &(c3.pos), &(c4.pos), &(c5.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs), &(c4.fs), &(c5.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs, c4.fs, c5.fs];
             }
             // Finally, the 8 corners.
             // South-West-Bottom corner [0]
@@ -1906,7 +1906,7 @@ public:
                 FVInterface c2 = get_ifj(i,j,k);
                 FVInterface c3 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // South-East-Bottom corner [1]
             {
@@ -1917,7 +1917,7 @@ public:
                 FVInterface c2 = get_ifj(i,j,k);
                 FVInterface c3 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // North-East-Bottom corner [2]
             {
@@ -1928,7 +1928,7 @@ public:
                 FVInterface c2 = get_ifj(i,j+1,k);
                 FVInterface c3 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // North-West-Bottom corner [3]
             {
@@ -1939,7 +1939,7 @@ public:
                 FVInterface c2 = get_ifj(i,j+1,k);
                 FVInterface c3 = get_ifk(i,j,k);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // South-West-Top corner [4]
             {
@@ -1950,7 +1950,7 @@ public:
                 FVInterface c2 = get_ifj(i,j,k);
                 FVInterface c3 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // South-East-Top corner [5]
             {
@@ -1961,7 +1961,7 @@ public:
                 FVInterface c2 = get_ifj(i,j,k);
                 FVInterface c3 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // North-East-Top corner [6]
             {
@@ -1972,7 +1972,7 @@ public:
                 FVInterface c2 = get_ifj(i,j+1,k);
                 FVInterface c3 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
             // North-West-Top corner [7]
             {
@@ -1983,7 +1983,7 @@ public:
                 FVInterface c2 = get_ifj(i,j+1,k);
                 FVInterface c3 = get_ifk(i,j,k+1);
                 vtx.cloud_pos = [&(c0.pos[gtl]), &(c1.pos), &(c2.pos), &(c3.pos)];
-                vtx.cloud_fs = [&(c0.fs), &(c1.fs), &(c2.fs), &(c3.fs)];
+                vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
             }
         } // end if (myConfig.dimensions
         //

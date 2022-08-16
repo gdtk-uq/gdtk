@@ -2209,8 +2209,8 @@ void ASF_242(ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
     // this stencil is using references to comply with @nogc
     // we need to convert back after we have finished with them
     // (this is very inefficient)
-    FlowState*[4] stencil = [&(IFace.left_cells[1].fs),  &(IFace.left_cells[0].fs),
-                             &(IFace.right_cells[0].fs), &(IFace.right_cells[1].fs)];
+    FlowState[4] stencil = [IFace.left_cells[1].fs,  IFace.left_cells[0].fs,
+                            IFace.right_cells[0].fs, IFace.right_cells[1].fs];
     foreach (cell; stencil) {
         cell.vel.x -= IFace.gvel.x;
         cell.vel.y -= IFace.gvel.y;

@@ -903,7 +903,7 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
 			    }
 
                             auto tm = blk.myConfig.turb_model;
-                            auto fs = &(bcells[0].fs);
+                            auto fs = bcells[0].fs;
                             foreach(it; 0 .. tm.nturb){
                                 blk.Minv[blk.MASS,blk.TKE+it] = to!number(0.0); // second row
 				blk.Minv[blk.X_MOM,blk.TKE+it] = to!number(0.0); // third row
@@ -1777,7 +1777,7 @@ void compute_flow_jacobian_rows_for_cell(ref SMatrix!number A, ref size_t aa_idx
             }
 
             auto tm = blk.myConfig.turb_model;
-            auto fs = &(pcell.fs);
+            auto fs = pcell.fs;
             foreach(it; 0 .. tm.nturb){
             blk.Minv[blk.MASS,blk.TKE+it] = to!number(0.0); // second row
             blk.Minv[blk.X_MOM,blk.TKE+it] = to!number(0.0); // third row
@@ -1860,7 +1860,7 @@ void compute_flow_jacobian_rows_for_cell(ref SMatrix!number A, ref size_t aa_idx
             }
 
             auto tm = blk.myConfig.turb_model;
-            auto fs = &(pcell.fs);
+            auto fs = pcell.fs;
             foreach(it; 0 .. tm.nturb){
             blk.Minv[blk.MASS,blk.TKE+it] = to!number(0.0); // second row
             blk.Minv[blk.X_MOM,blk.TKE+it] = to!number(0.0); // third row

@@ -214,8 +214,8 @@ public:
         auto cqi = dedicatedConfig[id].cqi;
         Linf_residuals = new ConservedQuantities(cqi.n);
         // Workspace for flux_calc method.
-        Lft = FlowState(dedicatedConfig[id].gmodel, dedicatedConfig[id].turb_model.nturb);
-        Rght = FlowState(dedicatedConfig[id].gmodel, dedicatedConfig[id].turb_model.nturb);
+        Lft = new FlowState(dedicatedConfig[id].gmodel, dedicatedConfig[id].turb_model.nturb);
+        Rght = new FlowState(dedicatedConfig[id].gmodel, dedicatedConfig[id].turb_model.nturb);
         //
         // Workspace for implicit updates of the thermochemistry.
         version(multi_species_gas) {
@@ -617,7 +617,7 @@ public:
                 if (myConfig.adjust_invalid_cell_data) {
                     // We shall set the cell data to something that
                     // is valid (and self consistent).
-                    FlowState*[] neighbour_flows;
+                    FlowState[] neighbour_flows;
                     if (myConfig.report_invalid_cells) {
                         writeln("Adjusting cell data to a local average.");
                     }
@@ -626,7 +626,7 @@ public:
                         auto other_cell = (cell.outsign[i] == 1) ? face.right_cell : face.left_cell;
                         if (other_cell && other_cell.contains_flow_data &&
                             other_cell.fs.check_data(other_cell.pos[gtl], myConfig)) {
-                            neighbour_flows ~= &(other_cell.fs);
+                            neighbour_flows ~= other_cell.fs;
                         }
                     }
                     if (neighbour_flows.length == 0) {
@@ -1118,7 +1118,7 @@ public:
         size_t nentry = 0;
         GasModel gmodel = cast(GasModel) myConfig.gmodel;
         if (gmodel is null) { gmodel = GlobalConfig.gmodel_master; }
-        fs_save = FlowState(gmodel, myConfig.turb_model.nturb);
+        fs_save = new FlowState(gmodel, myConfig.turb_model.nturb);
 
         // gather the expected number of non-zero entries in the flow Jacobian
         foreach (cell; cells) {

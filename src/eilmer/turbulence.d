@@ -37,17 +37,17 @@ class TurbulenceModel{
 
     // Methods to be overridden.
     abstract TurbulenceModel dup();
-    @nogc abstract void source_terms(ref const(FlowState) fs,const FlowGradients grad, const number ybar, const number dwall, const number L_min, const number L_max, ref number[] source) const;
-    @nogc abstract number turbulent_viscosity(ref const(FlowState) fs, const FlowGradients grad, const number ybar, const number dwall) const;
-    @nogc abstract number turbulent_conductivity(ref const(FlowState) fs, GasModel gm) const;
-    @nogc abstract number turbulent_signal_frequency(ref const(FlowState) fs) const;
-    @nogc abstract number turbulent_kinetic_energy(ref const(FlowState) fs) const;
-    @nogc abstract number[3] turbulent_kinetic_energy_transport(ref const(FlowState) fs, const FlowGradients grad) const;
+    @nogc abstract void source_terms(const FlowState fs,const FlowGradients grad, const number ybar, const number dwall, const number L_min, const number L_max, ref number[] source) const;
+    @nogc abstract number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number ybar, const number dwall) const;
+    @nogc abstract number turbulent_conductivity(const FlowState fs, GasModel gm) const;
+    @nogc abstract number turbulent_signal_frequency(const FlowState fs) const;
+    @nogc abstract number turbulent_kinetic_energy(const FlowState fs) const;
+    @nogc abstract number[3] turbulent_kinetic_energy_transport(const FlowState fs, const FlowGradients grad) const;
     @nogc abstract string primitive_variable_name(size_t i) const;
     @nogc abstract number turb_limits(size_t i) const;
-    @nogc abstract number viscous_transport_coeff(ref const(FlowState) fs, size_t i) const;
-    @nogc abstract bool is_valid(ref const(FlowStateLimits) fsl, const number[] turb) const;
-    @nogc abstract number tke_rhoturb_derivatives(ref const(FlowState) fs, size_t i) const;
+    @nogc abstract number viscous_transport_coeff(const FlowState fs, size_t i) const;
+    @nogc abstract bool is_valid(const FlowStateLimits fsl, const number[] turb) const;
+    @nogc abstract number tke_rhoturb_derivatives(const FlowState fs, size_t i) const;
     @nogc abstract void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FVCell cell, ref FlowState fs) const;
 
     // Common methods
@@ -70,7 +70,7 @@ Object representing turbulence model in laminar flow.
 */
 class noTurbulenceModel : TurbulenceModel {
     this (){}
-    this (const JSONValue config){}    // Used in GlobalConfig constructor
+    this (const JSONValue config){}    // Used in GlobalConfig constructor 
     this (noTurbulenceModel other){}   // Used in dup, in localconfig constructor
 
     // This seems weird but is apparently idiomatic?
@@ -84,33 +84,33 @@ class noTurbulenceModel : TurbulenceModel {
     }
 
     @nogc final override
-    void source_terms(ref const(FlowState) fs,const FlowGradients grad, const number ybar,
+    void source_terms(const FlowState fs,const FlowGradients grad, const number ybar,
                       const number dwall, const number L_min, const number L_max,
                       ref number[] source) const {
-        return;
+        return; 
     }
 
-    @nogc final override number turbulent_viscosity(ref const(FlowState) fs, const FlowGradients grad, const number ybar, const number dwall) const {
+    @nogc final override number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number ybar, const number dwall) const {
         number mu_t = 0.0;
         return mu_t;
     }
-    @nogc final override number turbulent_conductivity(ref const(FlowState) fs, GasModel gm) const {
+    @nogc final override number turbulent_conductivity(const FlowState fs, GasModel gm) const {
         number k_t = 0.0;
         return k_t;
     }
 
-    @nogc final override number turbulent_signal_frequency(ref const(FlowState) fs) const {
+    @nogc final override number turbulent_signal_frequency(const FlowState fs) const {
         number turb_signal = 1e-99; // We never want this to be the limiting factor (1/s)
         return turb_signal;
     }
 
-    @nogc final override number turbulent_kinetic_energy(ref const(FlowState) fs) const {
+    @nogc final override number turbulent_kinetic_energy(const FlowState fs) const {
         number tke=0.0;
         return tke;
     }
 
     @nogc final override
-    number[3] turbulent_kinetic_energy_transport(ref const(FlowState) fs, const FlowGradients grad) const {
+    number[3] turbulent_kinetic_energy_transport(const FlowState fs, const FlowGradients grad) const {
         number[3] qtke;
         qtke[0] = 0.0;
         qtke[1] = 0.0;
@@ -126,21 +126,21 @@ class noTurbulenceModel : TurbulenceModel {
         number def = 0.0;
         return def;
     }
-    @nogc final override number viscous_transport_coeff(ref const(FlowState) fs, size_t i) const {
+    @nogc final override number viscous_transport_coeff(const FlowState fs, size_t i) const {
         number mu_eff = 0.0;
         return mu_eff;
     }
-    @nogc final override bool is_valid(ref const(FlowStateLimits) fsl, const number[] turb) const {
+    @nogc final override bool is_valid(const FlowStateLimits fsl, const number[] turb) const {
         return true;
     }
-    @nogc final override number tke_rhoturb_derivatives(ref const(FlowState) fs, size_t i) const {
+    @nogc final override number tke_rhoturb_derivatives(const FlowState fs, size_t i) const {
         number dtke_drhoturb = 0.0;
         return dtke_drhoturb;
     }
 
     @nogc final override
     void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FVCell cell, ref FlowState fs) const {
-        /*
+        /* 
             Set the interface value of each turbulent primitive,
             given the nearest cell above it inside the flow domain
         */
@@ -198,15 +198,15 @@ class kwTurbulenceModel : TurbulenceModel {
     }
 
     @nogc final override
-    void source_terms(ref const(FlowState) fs, const FlowGradients grad, const number ybar,
+    void source_terms(const FlowState fs,const FlowGradients grad, const number ybar,
                       const number dwall, const number L_min, const number L_max,
                       ref number[] source) const {
         /*
         Compute k-omega source terms.
-
+        
         Production and Dissipation expressions for turbulence kinetic energy
         and turbulence frequency (or pseudo-vorticity). Based on Wilcox's 2006 model.
-
+        
         Jan 2007: Initial implementation (Jan-Pieter Nap, PJ)
         Dec 2008: Implementation of the 3D terms (W Chan)
         Jan 2011: Minor modification to allow for implicit updating of tke and omega (W Chan)
@@ -282,7 +282,7 @@ class kwTurbulenceModel : TurbulenceModel {
         } // end if myConfig.dimensions
 
         D_K = beta_star * fs.gas.rho * tke * omega;
-
+    
         // Apply a limit to the tke production as suggested by Jeff White, November 2007.
         const double P_OVER_D_LIMIT = 25.0;
         P_K = fmin(P_K, P_OVER_D_LIMIT*D_K);
@@ -309,10 +309,10 @@ class kwTurbulenceModel : TurbulenceModel {
         //    number maxRateBasedOnLimit = fs.gas.rho*Cv*deltaT/dt;
         //    Q_rtke = fmin(maxRateBasedOnLimit, Q_rtke);
         //}
-        return;
+        return; 
     }
 
-    @nogc final override number turbulent_viscosity(ref const(FlowState) fs, const FlowGradients grad, const number ybar, const number dwall) const {
+    @nogc final override number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number ybar, const number dwall) const {
         /*
         Calculate mu_t, the turbulence viscosity.
 
@@ -363,23 +363,23 @@ class kwTurbulenceModel : TurbulenceModel {
         number mu_t = fs.gas.rho * tke / omega_t;
         return mu_t;
     }
-    @nogc final override number turbulent_conductivity(ref const(FlowState) fs, GasModel gm) const {
+    @nogc final override number turbulent_conductivity(const FlowState fs, GasModel gm) const {
         // Warning: Make sure fs.mu_t is up to date before calling this method
         number k_t = gm.Cp(fs.gas) * fs.mu_t / Pr_t;
         return k_t;
     }
-    @nogc final override number turbulent_signal_frequency(ref const(FlowState) fs) const {
+    @nogc final override number turbulent_signal_frequency(const FlowState fs) const {
         number turb_signal = fs.turb[1];
         return turb_signal;
     }
 
-    @nogc final override number turbulent_kinetic_energy(ref const(FlowState) fs) const {
+    @nogc final override number turbulent_kinetic_energy(const FlowState fs) const {
         number tke = fs.turb[0];
         return tke;
     }
 
     @nogc final override
-    number[3] turbulent_kinetic_energy_transport(ref const(FlowState) fs, const FlowGradients grad) const {
+    number[3] turbulent_kinetic_energy_transport(const FlowState fs, const FlowGradients grad) const {
         // k-w uses the same expression for \overline{rho uj" 0.5 ui" ui"} as in the tke equation
         // taken from fvinterface viscous_flux_calc
         number mu_effective = viscous_transport_coeff(fs, 0);
@@ -400,28 +400,29 @@ class kwTurbulenceModel : TurbulenceModel {
         return _varlimits[i];
     }
 
-    @nogc final override number viscous_transport_coeff(ref const(FlowState) fs, size_t i) const {
+    @nogc final override number viscous_transport_coeff(const FlowState fs, size_t i) const {
         /*
-        For line 657 of fvinterface, where k and w have slightly different transport coefficients
-        */
+        For line 657 of fvinterface, where k and w have slightly different transport coefficients 
+        
+        */ 
         number sigma = _sigmas[i];
         number mu_effective = fs.gas.mu + sigma * fs.gas.rho * fs.turb[0] / fs.turb[1];
         return mu_effective;
     }
 
-    @nogc final override bool is_valid(ref const(FlowStateLimits) fsl, const number[] turb) const {
+    @nogc final override bool is_valid(const FlowStateLimits fsl, const number[] turb) const {
         bool isvalid = is_tke_valid(fsl, turb[0]) && is_omega_valid(turb[1]);
         return isvalid;
     }
 
-    @nogc final override number tke_rhoturb_derivatives(ref const(FlowState) fs, size_t i) const {
+    @nogc final override number tke_rhoturb_derivatives(const FlowState fs, size_t i) const {
         number dtke_drhoturb = _rhocoeffs[i];
         return dtke_drhoturb;
     }
 
-    @nogc final override
+    @nogc final override 
     void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FVCell cell, ref FlowState fs) const {
-        /*
+        /* 
             Set the interface value of each turbulent primitive,
             given the nearest cell above it inside the flow domain
         */
@@ -538,7 +539,7 @@ class saTurbulenceModel : TurbulenceModel {
     }
 
     @nogc override
-    void source_terms(ref const(FlowState) fs, const FlowGradients grad, const number ybar,
+    void source_terms(const FlowState fs,const FlowGradients grad, const number ybar,
                       const number dwall, const number L_min, const number L_max,
                       ref number[] source) const {
         /*
@@ -589,11 +590,11 @@ class saTurbulenceModel : TurbulenceModel {
         return;
     } // end source_terms()
 
-    @nogc override number turbulent_viscosity(ref const(FlowState) fs, const FlowGradients grad, const number ybar, const number dwall) const {
+    @nogc override number turbulent_viscosity(const FlowState fs, const FlowGradients grad, const number ybar, const number dwall) const {
         /*
         Compute the turbulent viscosity mu_t from the SA transport variable nuhat
         See equation (1) from Allmaras (2012)
-        */
+        */ 
         number nuhat = fs.turb[0];
         number rho= fs.gas.rho;
         number mu = fs.gas.mu;
@@ -603,34 +604,34 @@ class saTurbulenceModel : TurbulenceModel {
         number mu_t = rho*nuhat*fv1;
         return mu_t;
     }
-    @nogc override number turbulent_conductivity(ref const(FlowState) fs, GasModel gm) const {
+    @nogc override number turbulent_conductivity(const FlowState fs, GasModel gm) const {
         // Warning: Make sure fs.mu_t is up to date before calling this method
         number k_t = gm.Cp(fs.gas) * fs.mu_t / Pr_t;
         return k_t;
     }
 
-    @nogc final override number turbulent_signal_frequency(ref const(FlowState) fs) const {
+    @nogc final override number turbulent_signal_frequency(const FlowState fs) const {
         /*
         The SA model doesn't really have an equivalent frequency...
         Something to think about in the future
-        */
+        */ 
         number turb_signal = 1e-99; // We never want this to be the limiting factor (1/s)
         return turb_signal;
     }
 
-    @nogc final override number turbulent_kinetic_energy(ref const(FlowState) fs) const {
+    @nogc final override number turbulent_kinetic_energy(const FlowState fs) const {
         /*
         SA model assumes tke is small, there is a way to estimate it if need be
-        */
+        */ 
         number tke=0.0;
         return tke;
     }
 
     @nogc final override
-    number[3] turbulent_kinetic_energy_transport(ref const(FlowState) fs, const FlowGradients grad) const {
+    number[3] turbulent_kinetic_energy_transport(const FlowState fs, const FlowGradients grad) const {
         /*
         Since tke==0 everywhere...
-        */
+        */ 
         number[3] qtke;
         qtke[0] = 0.0;
         qtke[1] = 0.0;
@@ -646,7 +647,7 @@ class saTurbulenceModel : TurbulenceModel {
         return _varlimits[i];
     }
 
-    @nogc override number viscous_transport_coeff(ref const(FlowState) fs, size_t i) const {
+    @nogc override number viscous_transport_coeff(const FlowState fs, size_t i) const {
         /*
         Viscous diffusion of nuhat, the green term in Gibbons (2019) equation 2.32
         */
@@ -657,11 +658,11 @@ class saTurbulenceModel : TurbulenceModel {
         return mu_eff;
     }
 
-    @nogc final override bool is_valid(ref const(FlowStateLimits) fsl, const number[] turb) const {
+    @nogc final override bool is_valid(const FlowStateLimits fsl, const number[] turb) const {
         return is_nuhat_valid(turb[0]);
     }
 
-    @nogc final override number tke_rhoturb_derivatives(ref const(FlowState) fs, size_t i) const {
+    @nogc final override number tke_rhoturb_derivatives(const FlowState fs, size_t i) const {
         /*
         Since tke is zero everywhere...
         */
@@ -671,7 +672,7 @@ class saTurbulenceModel : TurbulenceModel {
 
     @nogc final override
     void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FVCell cell, ref FlowState fs) const {
-        /*
+        /* 
         nuhat is set to zero at no slip walls in accord with Allmaras (2012), eqn 7
         */
         fs.turb[0] = 0.0;
@@ -824,7 +825,7 @@ class sabcmTurbulenceModel : saTurbulenceModel {
     }
 
     @nogc override
-    void source_terms(ref const(FlowState) fs, const FlowGradients grad, const number ybar,
+    void source_terms(const FlowState fs,const FlowGradients grad, const number ybar,
                       const number dwall, const number L_min, const number L_max,
                       ref number[] source) const {
         /*
@@ -930,7 +931,7 @@ Object representing the Modified Edwards version of the Spalart Allmaras model
  Notes:
  - The model here is taken from "Comparison of Eddy Viscosity-Transport Turbulence
    Models for Three-Dimensional, Shock-Separated Flowfields", Edwards and Chandra (1997)
- - This version is intended by a more stable in compressible flow, particularly for
+ - This version is intended by a more stable in compressible flow, particularly for 
    implicit solvers with large timesteps.
  - It also removes the ft2 sink term, which is designed to gently pull the nuhat
    values down in regions of no strain, to allow for tripping. The paper does not
@@ -1135,7 +1136,7 @@ TurbulenceModel init_turbulence_model(const string turbulence_model_name)
     /*
     Interface for generating polymorphic turbulence models, similar to ../gas/init_gas_model.d
        - Default version. Be very careful with this, it just uses GlobalConfig values, whether
-       or not they have been set correctly yet!
+       or not they have been set correctly yet! 
 
     @author: Nick Gibbons
     */

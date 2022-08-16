@@ -625,7 +625,7 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
     auto nkcell = grid.nkv - 1;
     if (GlobalConfig.dimensions == 2) nkcell = 1;
     //
-    auto myfs = FlowState(fs);
+    auto myfs = new FlowState(fs);
     //
     // Write the data for the whole structured block.
     switch (GlobalConfig.flow_format) {
@@ -753,7 +753,7 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
     // Numbers of cells derived from numbers of vertices in grid.
     auto ncells = grid.ncells;
     //
-    auto myfs = FlowState(fs);
+    auto myfs = new FlowState(fs);
     //
     // Write the data for the whole unstructured block.
     switch (GlobalConfig.flow_format) {
@@ -841,11 +841,11 @@ extern(C) int write_initial_sg_flow_legacy_file_from_lua(lua_State* L)
     if (GlobalConfig.flow_variable_list.length == 0) {
         foreach(varname; build_flow_variable_list()) { GlobalConfig.flow_variable_list ~= varname; }
     }
-    FlowState* fs;
+    FlowState fs;
     // Test if we have a simple flow state or something more exotic
     if ( isObjType(L, 3, "_FlowState") ) {
         fs = checkFlowState(L, 3);
-        write_initial_flow_file(fname, grid, *fs, t0, omegaz, GlobalConfig.gmodel_master);
+        write_initial_flow_file(fname, grid, fs, t0, omegaz, GlobalConfig.gmodel_master);
         lua_settop(L, 0); // clear stack
         return 0;
     }
@@ -930,7 +930,7 @@ extern(C) int write_initial_sg_flow_legacy_file_from_lua(lua_State* L)
                             errMsg ~= "The returned object is not a proper _FlowState object or table.";
                             luaL_error(L, errMsg.toStringz);
                         }
-                        auto myfs = FlowState(*fs);
+                        auto myfs = new FlowState(fs);
                         if (GlobalConfig.user_specified_velocities_are_in_non_rotating_frame && (omegaz != 0.0)) {
                             myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz);
                         }
@@ -1012,7 +1012,7 @@ extern(C) int write_initial_sg_flow_legacy_file_from_lua(lua_State* L)
                             errMsg ~= "The returned object is not a proper _FlowState object or suitable table.";
                             luaL_error(L, errMsg.toStringz);
                         }
-                        auto myfs = FlowState(*fs);
+                        auto myfs = new FlowState(fs);
                         if (GlobalConfig.user_specified_velocities_are_in_non_rotating_frame && (omegaz != 0.0)) {
                             myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz);
                         }
@@ -1046,11 +1046,11 @@ extern(C) int write_initial_usg_flow_legacy_file_from_lua(lua_State* L)
     if (GlobalConfig.flow_variable_list.length == 0) {
         foreach(varname; build_flow_variable_list()) { GlobalConfig.flow_variable_list ~= varname; }
     }
-    FlowState* fs;
+    FlowState fs;
     // Test if we have a simple flow state or something more exotic
     if ( isObjType(L, 3, "_FlowState") ) {
         fs = checkFlowState(L, 3);
-        write_initial_flow_file(fname, grid, *fs, t0, omegaz, GlobalConfig.gmodel_master);
+        write_initial_flow_file(fname, grid, fs, t0, omegaz, GlobalConfig.gmodel_master);
         lua_settop(L, 0); // clear stack
         return 0;
     }
@@ -1110,7 +1110,7 @@ extern(C) int write_initial_usg_flow_legacy_file_from_lua(lua_State* L)
                     errMsg ~= "The returned object is not a proper _FlowState object or a suitable table.";
                     luaL_error(L, errMsg.toStringz);
                 }
-                auto myfs = FlowState(*fs);
+                auto myfs = new FlowState(fs);
                 if (GlobalConfig.user_specified_velocities_are_in_non_rotating_frame && (omegaz != 0.0)) {
                     myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz);
                 }
@@ -1169,7 +1169,7 @@ extern(C) int write_initial_usg_flow_legacy_file_from_lua(lua_State* L)
                     errMsg ~= "The returned object is not a proper _FlowState object or suitable table.";
                     luaL_error(L, errMsg.toStringz);
                 }
-                auto myfs = FlowState(*fs);
+                auto myfs = new FlowState(fs);
                 if (GlobalConfig.user_specified_velocities_are_in_non_rotating_frame && (omegaz != 0.0)) {
                     myfs.vel.set(fs.vel); into_rotating_frame(myfs.vel, pos, omegaz);
                 }

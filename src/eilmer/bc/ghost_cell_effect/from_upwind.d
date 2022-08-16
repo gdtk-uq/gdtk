@@ -32,7 +32,7 @@ public:
     this(int id, int boundary, in FlowState _fstate)
     {
         super(id, boundary, "fromUpwindCopy");
-        fstate = FlowState(_fstate);
+        fstate = new FlowState(_fstate);
     }
 
     override string toString() const
@@ -122,9 +122,9 @@ public:
     this(int id, int boundary, in FlowState fstate1, in FlowState fstate2, Vector3 p, Vector3 n)
     {
         super(id, boundary, "fromUpwindCopyDualState");
-        this.fstate1 = FlowState(fstate1);
-        this.fstate2 = FlowState(fstate2);
-        this.blended_fstate = FlowState(fstate1);
+        this.fstate1 = new FlowState(fstate1);
+        this.fstate2 = new FlowState(fstate2);
+        this.blended_fstate = new FlowState(fstate1);
         this.p = Vector3(p);
         this.n = Vector3(n);
     }
