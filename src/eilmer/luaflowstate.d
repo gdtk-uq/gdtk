@@ -51,6 +51,10 @@ static const(FlowState*)[] flowStateStore;
  */
 FlowState* pushFlowState(lua_State *L, FlowState* fs)
 {
+    // [FIX-ME] PJ 2022-08-16 I think that we need to change to using an integer handle
+    // to the FlowState within the Dlang domain.
+    // The content of the dynamic arrays within a FlowState will not be included
+    // in the size of the struct so the assignment is likely to fail.
     auto fsPtr = cast(FlowState*) lua_newuserdata(L, (*fs).sizeof);
     *fsPtr = *fs;
     luaL_getmetatable(L, FlowStateMT.toStringz);
@@ -109,7 +113,8 @@ Be sure to call setGasModel(fname) before using a FlowState object.`;
     FlowState* fs;
     int narg = lua_gettop(L);
     if (narg == 0) {
-        // Make an empty FlowState
+        // [FIX-ME] PJ 2022-08-16 We should raise an error here.
+        // Make an empty FlowState -- No, don't do this!
         size_t nturb = 2; // TODO: Does this ever get called? What is it for? (NNG)
         fs = new FlowState(managedGasModel, nturb);
         flowStateStore ~= pushObj!(FlowState*, FlowStateMT)(L, fs);

@@ -112,8 +112,7 @@ public:
 
     this(in FlowState other)
     {
-        gas = GasState(to!int(other.gas.massf.length), to!int(other.gas.T_modes.length));
-        gas.copy_values_from(other.gas);
+        gas = GasState(other.gas);
         vel.set(other.vel);
         version(MHD) {
             B.set(other.B);
@@ -121,8 +120,7 @@ public:
             divB = other.divB;
         }
         version(turbulence) {
-            turb.length = other.turb.length;
-            foreach (i; 0 .. turb.length) turb[i] = other.turb[i];
+            turb = other.turb.dup;
         }
         mu_t = other.mu_t;
         k_t = other.k_t;
@@ -190,10 +188,9 @@ public:
         return FlowState(this);
     }
 
-    @nogc
-    void copy_values_from(in FlowState other)
+    @nogc void opAssign(in FlowState other)
     {
-        gas.copy_values_from(other.gas);
+        gas = other.gas;
         vel.set(other.vel);
         version(MHD) {
             B.set(other.B);
@@ -201,11 +198,17 @@ public:
             divB = other.divB;
         }
         version(turbulence) {
-            foreach(i; 0 .. turb.length) turb[i] =  other.turb[i];
+            foreach (i; 0 .. turb.length) { turb[i] = other.turb[i]; }
         }
         mu_t = other.mu_t;
         k_t = other.k_t;
         S = other.S;
+    }
+
+    @nogc
+    void copy_values_from(in FlowState other)
+    {
+        this = other;
     }
 
     @nogc
