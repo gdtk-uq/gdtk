@@ -425,7 +425,7 @@ public:
         } else {
             h = sqrt(cell_cloud[0].volume[gtl]);
         }
-        number eps2; // = (K*h) * (K*h) * (K*h);
+        number eps2;
 
         // Park heuristic pressure limiter
         number phi_hp = 1.0;
@@ -460,6 +460,7 @@ public:
             delu = (Umax-Umin)/nondim;
             theta = delu/(K*pow(h, 1.5));
             eps2 = (K*delu*delu)/(1.0+theta);
+            eps2 += 1.0e-25; // prevent division by zero
             phi = 1.0;
             foreach (i, v; cell_cloud[0].vtx) {
                 number dx = v.pos[gtl].x - cell_cloud[0].pos[gtl].x;
@@ -477,7 +478,7 @@ public:
                 }
                 phi = fmin(phi, phi_f);
             }
-            "~limFactorname~" = phi;
+            "~limFactorname~" = phi*phi_hp;
             }
             ";
             return code;
