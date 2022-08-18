@@ -291,6 +291,7 @@ function output.write_config_file(fileName)
    f:write(string.format('"include_ghost_cells_in_spatial_deriv_clouds": %s,\n',
 			 tostring(config.include_ghost_cells_in_spatial_deriv_clouds)))
    f:write(string.format('"upwind_vertex_gradients": %s,\n',tostring(config.upwind_vertex_gradients)))
+   f:write(string.format('"save_convective_gradients": %s,\n',tostring(config.save_convective_gradients)))
    f:write(string.format('"save_viscous_gradients": %s,\n',tostring(config.save_viscous_gradients)))
    f:write(string.format('"save_limiter_values": %s,\n',tostring(config.save_limiter_values)))
    f:write(string.format('"save_residual_values": %s,\n',tostring(config.save_residual_values)))

@@ -63,9 +63,14 @@ class AuxCellData
             if (name == FlowAverage.tag) return counter;
         }
 
+        if (GlobalConfig.interpolation_order > 1 && GlobalConfig.save_convective_gradients) {
+            counter += 1;
+            if (name == CellConvectiveGradientData.tag) return counter;
+        }
+
         if (GlobalConfig.viscous && GlobalConfig.save_viscous_gradients) {
             counter += 1;
-            if (name == CellGradientData.tag) return counter;
+            if (name == CellViscousGradientData.tag) return counter;
         }
 
         if (GlobalConfig.do_temporal_DFT) {
@@ -110,8 +115,11 @@ class AuxCellData
         i = get_order(FlowAverage.tag);
         if (i >= 0) aux_data[i] = new FlowAverage();
 
-        i = get_order(CellGradientData.tag);
-        if (i >= 0) aux_data[i] = new CellGradientData();
+        i = get_order(CellConvectiveGradientData.tag);
+        if (i >= 0) aux_data[i] = new CellConvectiveGradientData();
+
+        i = get_order(CellViscousGradientData.tag);
+        if (i >= 0) aux_data[i] = new CellViscousGradientData();
 
         i = get_order(GeneralDFT.tag);
         if (i >= 0) aux_data[i] = new GeneralDFT();
@@ -784,6 +792,143 @@ template GenGradArrayAccess(string name, string location, string d)
     }";
 }
 
+//=============================================================================
+// Cell Convective Gradients
+//=============================================================================
+
+mixin(GenCellVariableAccess!("AccessConvectiveDVelxDX", "gradients.velx[0]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDVelxDY", "gradients.velx[1]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDVelxDZ", "gradients.velx[2]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDVelyDX", "gradients.vely[0]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDVelyDY", "gradients.vely[1]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDVelyDZ", "gradients.vely[2]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDVelzDX", "gradients.velz[0]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDVelzDY", "gradients.velz[1]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDVelzDZ", "gradients.velz[2]"));
+
+version(multi_species_gas) {
+mixin(GenGradArrayAccess!("AccessConvectiveDMassFDX", "gradients.massf", "0"));
+mixin(GenGradArrayAccess!("AccessConvectiveDMassFDY", "gradients.massf", "1"));
+mixin(GenGradArrayAccess!("AccessConvectiveDMassFDZ", "gradients.massf", "2"));
+}
+
+mixin(GenCellVariableAccess!("AccessConvectiveDRhoDX", "gradients.rho[0]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDRhoDY", "gradients.rho[1]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDRhoDZ", "gradients.rho[2]"));
+
+mixin(GenCellVariableAccess!("AccessConvectiveDPDX", "gradients.p[0]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDPDY", "gradients.p[1]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDPDZ", "gradients.p[2]"));
+
+mixin(GenCellVariableAccess!("AccessConvectiveDTDX", "gradients.T[0]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDTDY", "gradients.T[1]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDTDZ", "gradients.T[2]"));
+
+mixin(GenCellVariableAccess!("AccessConvectiveDUDX", "gradients.u[0]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDUDY", "gradients.u[1]"));
+mixin(GenCellVariableAccess!("AccessConvectiveDUDZ", "gradients.u[2]"));
+
+version(multi_T_gas) {
+mixin(GenGradArrayAccess!("AccessConvectiveDTModesDX", "gradients.T_modes", "0"));
+mixin(GenGradArrayAccess!("AccessConvectiveDTModesDY", "gradients.T_modes", "1"));
+mixin(GenGradArrayAccess!("AccessConvectiveDTModesDZ", "gradients.T_modes", "2"));
+mixin(GenGradArrayAccess!("AccessConvectiveDUModesDX", "gradients.u_modes", "0"));
+mixin(GenGradArrayAccess!("AccessConvectiveDUModesDY", "gradients.u_modes", "1"));
+mixin(GenGradArrayAccess!("AccessConvectiveDUModesDZ", "gradients.u_modes", "2"));
+}
+
+version(turbulence) {
+mixin(GenGradArrayAccess!("AccessConvectiveDTurbDX", "gradients.turb", "0"));
+mixin(GenGradArrayAccess!("AccessConvectiveDTurbDY", "gradients.turb", "1"));
+mixin(GenGradArrayAccess!("AccessConvectiveDTurbDZ", "gradients.turb", "2"));
+}
+
+class CellConvectiveGradientData : AuxCellData
+// An empty auxiliary data item that acts as a pass-through for accessing
+// the viscous flow gradients
+{
+    public:
+
+    static tag = "convective_gradient";
+
+    this(){
+        index = AuxCellData.get_order(tag);
+    }
+
+    override void init(LocalConfig myConfig){}
+
+    override @nogc void update(FVCell cell, double dt, double time, size_t step){}
+
+    static VariableAccess[string] get_accessors(LocalConfig myConfig)
+    {
+        VariableAccess[string] acc;
+
+        acc["dvelx_dx"] = new AccessConvectiveDVelxDX();
+        acc["dvelx_dy"] = new AccessConvectiveDVelxDY();
+        acc["dvely_dx"] = new AccessConvectiveDVelyDX();
+        acc["dvely_dy"] = new AccessConvectiveDVelyDY();
+
+        acc["dT_dx"] = new AccessConvectiveDTDX();
+        acc["dT_dy"] = new AccessConvectiveDTDY();
+
+        acc["dU_dx"] = new AccessConvectiveDUDX();
+        acc["dU_dy"] = new AccessConvectiveDUDY();
+
+        acc["dRho_dx"] = new AccessConvectiveDRhoDX();
+        acc["dRho_dy"] = new AccessConvectiveDRhoDY();
+
+        acc["dP_dx"] = new AccessConvectiveDPDX();
+        acc["dP_dy"] = new AccessConvectiveDPDY();
+
+        if (myConfig.dimensions == 3) {
+            acc["dvelx_dz"] = new AccessConvectiveDVelxDZ();
+            acc["dvely_dz"] = new AccessConvectiveDVelyDZ();
+            acc["dvelz_dx"] = new AccessConvectiveDVelzDX();
+            acc["dvelz_dy"] = new AccessConvectiveDVelzDY();
+            acc["dvelz_dz"] = new AccessConvectiveDVelzDZ();
+            acc["dT_dz"] = new AccessConvectiveDTDZ();
+            acc["dU_dz"] = new AccessConvectiveDUDZ();
+            acc["dRho_dz"] = new AccessConvectiveDRhoDZ();
+            acc["dP_dz"] = new AccessConvectiveDPDZ();
+        }
+
+        version(multi_species_gas) {
+        foreach(it; 0 .. myConfig.gmodel.n_species) {
+            acc["d"~massfName(myConfig.gmodel, it)~"_dx"] = new AccessConvectiveDMassFDX(it);
+            acc["d"~massfName(myConfig.gmodel, it)~"_dy"] = new AccessConvectiveDMassFDY(it);
+            if (myConfig.dimensions == 3) acc["d"~massfName(myConfig.gmodel, it)~"_dz"] = new AccessConvectiveDMassFDZ(it);
+        }
+        }
+
+        version(multi_T_gas) {
+        foreach(it; 0 .. myConfig.gmodel.n_modes) {
+            acc["d"~k_modesName(it)~"_dx"] = new AccessConvectiveDTModesDX(it);
+            acc["d"~k_modesName(it)~"_dy"] = new AccessConvectiveDTModesDY(it);
+            if (myConfig.dimensions == 3) acc["d"~k_modesName(it)~"_dz"] = new AccessConvectiveDTModesDZ(it);
+        }
+        foreach(it; 0 .. myConfig.gmodel.n_modes) {
+            acc["d"~u_modesName(it)~"_dx"] = new AccessConvectiveDUModesDX(it);
+            acc["d"~u_modesName(it)~"_dy"] = new AccessConvectiveDUModesDY(it);
+            if (myConfig.dimensions == 3) acc["d"~u_modesName(it)~"_dz"] = new AccessConvectiveDUModesDZ(it);
+        }
+        }
+
+        version(turbulence) {
+        foreach(it; 0 .. myConfig.turb_model.nturb) {
+            acc["d"~myConfig.turb_model.primitive_variable_name(it)~"_dx"] = new AccessConvectiveDTurbDX(it);
+            acc["d"~myConfig.turb_model.primitive_variable_name(it)~"_dy"] = new AccessConvectiveDTurbDY(it);
+            if (myConfig.dimensions == 3) acc["d"~myConfig.turb_model.primitive_variable_name(it)~"_dz"] = new AccessConvectiveDTurbDZ(it);
+        }
+        }
+
+        return acc;
+    }
+}
+
+//=============================================================================
+// Cell Viscous Gradients
+//=============================================================================
+
 mixin(GenCellVariableAccess!("AccessDUDX", "grad.vel[0][0]"));
 mixin(GenCellVariableAccess!("AccessDUDY", "grad.vel[0][1]"));
 mixin(GenCellVariableAccess!("AccessDUDZ", "grad.vel[0][2]"));
@@ -816,13 +961,13 @@ mixin(GenGradArrayAccess!("AccessDTurbDY", "grad.turb", "1"));
 mixin(GenGradArrayAccess!("AccessDTurbDZ", "grad.turb", "2"));
 }
 
-class CellGradientData : AuxCellData
+class CellViscousGradientData : AuxCellData
 // An empty auxiliary data item that acts as a pass-through for accessing
 // the viscous flow gradients
 {
     public:
 
-    static tag = "gradient";
+    static tag = "viscous_gradient";
 
     this(){
         index = AuxCellData.get_order(tag);

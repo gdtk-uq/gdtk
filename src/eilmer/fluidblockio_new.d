@@ -488,14 +488,21 @@ FluidBlockIO[] get_fluid_block_io(FluidBlock blk=null)
     if (GlobalConfig.do_flow_average) {
         io_list ~= new TimeAverageIO(blk);
     }
+    if (GlobalConfig.interpolation_order > 1 && GlobalConfig.save_convective_gradients) {
+        auto this_blk = cast(UFluidBlock) blk;
+        if (!this_blk) { writeln("WARNING: save_convective_gradients incompatible with a structured-grid block."); }
+        else { io_list ~= new CellConvectiveGradIO(blk); }
+    }
     if (GlobalConfig.viscous && GlobalConfig.save_viscous_gradients) {
-        io_list ~= new CellGradIO(blk);
+        io_list ~= new CellViscousGradIO(blk);
     }
     if (GlobalConfig.do_temporal_DFT) {
         io_list ~= new DFTIO(blk);
     }
     if (GlobalConfig.save_limiter_values) {
-        io_list ~= new CellLimiterIO(blk);
+        auto this_blk = cast(UFluidBlock) blk;
+        if (!this_blk) { writeln("WARNING: save_limiter_values incompatible with a structured-grid block."); }
+        else { io_list ~= new CellLimiterIO(blk); }
     }
     if (GlobalConfig.save_residual_values) {
         io_list ~= new CellResidualIO(blk);
@@ -665,13 +672,13 @@ class TimeAverageIO : FluidBlockIO
     }
 }
 
-class CellGradIO : FluidBlockIO
+class CellConvectiveGradIO : FluidBlockIO
 {
     public:
 
     this(FluidBlock blk=null)
     {
-        tag = CellGradientData.tag;
+        tag = CellConvectiveGradientData.tag;
         size_t n_cells = 0;
         LocalConfig myConfig;
         if (blk !is null) {
@@ -686,7 +693,35 @@ class CellGradIO : FluidBlockIO
         index = blk.get_cell_write_indices();
         set_binary(myConfig.flow_format == "eilmer4binary");
         // get the accessors
-        foreach (key, acc ; CellGradientData.get_accessors(myConfig)) {
+        foreach (key, acc ; CellConvectiveGradientData.get_accessors(myConfig)) {
+            add_accessor(key, acc);
+        }
+        make_buffers(n_cells);
+    }
+}
+
+class CellViscousGradIO : FluidBlockIO
+{
+    public:
+
+    this(FluidBlock blk=null)
+    {
+        tag = CellViscousGradientData.tag;
+        size_t n_cells = 0;
+        LocalConfig myConfig;
+        if (blk !is null) {
+            block = blk;
+            myConfig = block.myConfig;
+            n_cells = block.cells.length;
+        } else {
+            myConfig = new LocalConfig(-1);
+            myConfig.gmodel = GlobalConfig.gmodel_master;
+        }
+        // get all of the cells data
+        index = blk.get_cell_write_indices();
+        set_binary(myConfig.flow_format == "eilmer4binary");
+        // get the accessors
+        foreach (key, acc ; CellViscousGradientData.get_accessors(myConfig)) {
             add_accessor(key, acc);
         }
         make_buffers(n_cells);

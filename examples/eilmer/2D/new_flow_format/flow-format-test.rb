@@ -49,7 +49,7 @@ class TestBack < Test::Unit::TestCase
         
         "e4shared --post --job=ffs --tindx-plot=\"1,2,3,4,5\" --vtk-xml --plotTag=average",
         "e4shared --post --job=ffs --tindx-plot=last --vtk-xml --plotTag=DFT",
-        "e4shared --post --job=ffs --tindx-plot=\"1,2,3,4,5\" --vtk-xml --plotTag=gradient",
+        "e4shared --post --job=ffs --tindx-plot=\"1,2,3,4,5\" --vtk-xml --plotTag=viscous_gradient",
       ]
 
       cmds.each do |cmd|
