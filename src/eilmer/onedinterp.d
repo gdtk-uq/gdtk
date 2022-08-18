@@ -24,7 +24,7 @@ immutable double epsilon_van_albada = 1.0e-12;
 
 template GetCellVariable(string name, string location)
 {
-    const char[] GetCellVariable = 
+    const char[] GetCellVariable =
     "pragma(inline) @nogc void "~name~"(size_t n)(FVCell[] cells, number[] scalars)
     {
         static foreach(i; 0 .. n) {
@@ -35,7 +35,7 @@ template GetCellVariable(string name, string location)
 
 template GetCellArrayVariable(string name, string location)
 {
-    const char[] GetCellArrayVariable = 
+    const char[] GetCellArrayVariable =
     "pragma(inline) @nogc void "~name~"(size_t n)(FVCell[] cells, size_t index, number[] scalars)
     {
         static foreach(i; 0 .. n) {
@@ -188,7 +188,7 @@ string codeForInterpolation()
     }
     version(turbulence) {
         foreach (it; 0 .. myConfig.turb_model.nturb){
-            GetTurb!(numL)(cL, it, sL); GetTurb!(numR)(cR, it, sR); 
+            GetTurb!(numL)(cL, it, sL); GetTurb!(numR)(cR, it, sR);
             calculate_scalar(Lft.turb[it], Rght.turb[it], sL, sR, weight);
         }
     }
@@ -198,7 +198,7 @@ string codeForInterpolation()
             // Multiple species.
             if (myConfig.allow_reconstruction_for_species) {
                 foreach (isp; 0 .. nsp) {
-                    GetMassF!(numL)(cL, isp, sL); GetMassF!(numR)(cR, isp, sR); 
+                    GetMassF!(numL)(cL, isp, sL); GetMassF!(numR)(cR, isp, sR);
                     calculate_scalar(Lft.gas.massf[isp], Rght.gas.massf[isp], sL, sR, weight);
 
                 }
@@ -246,7 +246,7 @@ string codeForInterpolation()
         version(multi_T_gas) {
             if (myConfig.allow_reconstruction_for_energy_modes) {
                 foreach (i; 0 .. nmodes) {
-                    GetTMode!(numL)(cL, i, sL); GetTMode!(numR)(cR, i, sR); 
+                    GetTMode!(numL)(cL, i, sL); GetTMode!(numR)(cR, i, sR);
                     calculate_scalar(Lft.gas.T_modes[i], Rght.gas.T_modes[i], sL, sR, weight);
                 }
             } else {
@@ -266,7 +266,7 @@ string codeForInterpolation()
         version(multi_T_gas) {
             if (myConfig.allow_reconstruction_for_energy_modes) {
                 foreach (i; 0 .. nmodes) {
-                    GetUMode!(numL)(cL, i, sL); GetUMode!(numR)(cR, i, sR); 
+                    GetUMode!(numL)(cL, i, sL); GetUMode!(numR)(cR, i, sR);
                     calculate_scalar(Lft.gas.u_modes[i], Rght.gas.u_modes[i], sL, sR, weight);
                 }
             } else {
@@ -306,7 +306,7 @@ string codeForInterpolation()
         version(multi_T_gas) {
             if (myConfig.allow_reconstruction_for_energy_modes) {
                 foreach (i; 0 .. nmodes) {
-                    GetTMode!(numL)(cL, i, sL); GetTMode!(numR)(cR, i, sR); 
+                    GetTMode!(numL)(cL, i, sL); GetTMode!(numR)(cR, i, sR);
                     calculate_scalar(Lft.gas.T_modes[i], Rght.gas.T_modes[i], sL, sR, weight);
                 }
             } else {
@@ -629,7 +629,7 @@ string codeForInterpolation()
             Lft = clip_to_limits(Lft, sL[0], sR[0]);
             // Rght is already clipped inside weight_scalar().
         }
-    } 
+    }
 
     copy_flowstate(f, Lft, Rght);
 
@@ -665,7 +665,7 @@ string codeForInterpolation()
             Lft = clip_to_limits(Lft, sL[0], sR[0]);
             // Rght is already clipped inside weight_scalar().
         }
-    } 
+    }
 
     copy_flowstate(f, Lft, Rght);
 
@@ -921,7 +921,7 @@ string codeForInterpolation()
  class OneDInterpolator {
     public:
     LocalConfig myConfig;
-    
+
     this(){}
     this(LocalConfig myConfig)
     {

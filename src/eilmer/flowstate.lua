@@ -148,13 +148,13 @@ function FlowState:toJSONString()
    -- Since writing the JSON data is all about getting the values
    -- into the Dlang domain, we'll just delegate this work to the
    -- wrapped Dlang FlowState class.
-   local fs = _FlowState:new{p=self.p, T=self.T, T_modes=self.T_modes, p_e=self.p_e,
+   local fs = _FlowState.new{p=self.p, T=self.T, T_modes=self.T_modes, p_e=self.p_e,
 			     quality=self.quality, massf=self.massf,
 			     velx=self.velx, vely=self.vely, velz=self.velz,
 			     Bx=self.Bx, By=self.By, Bz=self.Bz, psi=self.psi, divB=self.divB,
 			     turb=self.turb, mu_t=self.mu_t, k_t=self.k_t,
 			     S=self.S}
-   return fs:toJSONString()
+   return _FlowState.toJSONString(fs)
 end
 
 function FlowState:__tostring()

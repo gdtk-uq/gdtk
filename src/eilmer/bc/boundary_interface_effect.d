@@ -49,7 +49,7 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
         newBIE = new BIE_CopyCellData(blk_id, boundary);
         break;
     case "flow_state_copy_to_interface":
-        auto flowstate = new FlowState(jsonData["flowstate"], gmodel);
+        auto flowstate = FlowState(jsonData["flowstate"], gmodel);
         double x0 = getJSONdouble(jsonData, "x0", 0.0);
         double y0 = getJSONdouble(jsonData, "y0", 0.0);
         double z0 = getJSONdouble(jsonData, "z0", 0.0);
@@ -327,7 +327,7 @@ private:
         p += deltas[2];
         u += deltas[3];
         // Put into interface FlowState object.
-        auto fs = f.fs;
+        auto fs = &(f.fs);
         fs.gas.p = p; // not really needed because we use rhou
         fs.gas.rho = rho;
         fs.gas.u = u;
@@ -403,7 +403,7 @@ public:
     {
         super(id, boundary, "flowStateCopyFromHistory");
         fhistory = new FlowHistory(fileName);
-        fstate = new FlowState(GlobalConfig.gmodel_master, GlobalConfig.turb_model.nturb);
+        fstate = FlowState(GlobalConfig.gmodel_master, GlobalConfig.turb_model.nturb);
     }
 
     override string toString() const
@@ -778,9 +778,8 @@ public:
     {
         uint nsp = blk.myConfig.n_species;
         BoundaryCondition bc = blk.bc[which_boundary];
-        FlowState fs = f.fs;
         version(multi_species_gas) {
-            foreach (isp; 0 .. nsp) { fs.gas.massf[isp] = massfAtWall[isp]; }
+            foreach (isp; 0 .. nsp) { f.fs.gas.massf[isp] = massfAtWall[isp]; }
         }
     }
 
@@ -789,9 +788,8 @@ public:
         uint nsp = blk.myConfig.n_species;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
-            FlowState fs = f.fs;
             version(multi_species_gas) {
-                foreach (isp; 0 .. nsp) { fs.gas.massf[isp] = massfAtWall[isp]; }
+                foreach (isp; 0 .. nsp) { f.fs.gas.massf[isp] = massfAtWall[isp]; }
             }
         }
     } // end apply_unstructured_grid()
@@ -801,9 +799,8 @@ public:
     {
         uint nsp = blk.myConfig.n_species;
         BoundaryCondition bc = blk.bc[which_boundary];
-        FlowState fs = f.fs;
         version(multi_species_gas) {
-            foreach (isp; 0 .. nsp) { fs.gas.massf[isp] = massfAtWall[isp]; }
+            foreach (isp; 0 .. nsp) { f.fs.gas.massf[isp] = massfAtWall[isp]; }
         }
     }
 

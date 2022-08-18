@@ -198,11 +198,11 @@ function build_grid_and_flow_files(job)
       if type(ifs) == "table" and ifs.myType == "FlowState" then
 	 -- We have one of the pure-Lua FlowState objects and we convert it to
 	 -- a wrapped-D-language _FlowState object.
-	 ifs = _FlowState:new(ifs)
+	 ifs = _FlowState.new(ifs)
       elseif type(ifs) == "function" then
 	 -- leave alone
-      elseif type(ifs) == "userdata" then
-	 -- presume to be a wrapped-D-language _FlowState object already
+      elseif type(ifs) == "number" then
+	 -- presume that we have a D-language _FlowState struct already in place
       elseif type(ifs) == "string" then
          -- We are given the name of a flow file and we'll copy that in place directly
          existingFlowFile = ifs

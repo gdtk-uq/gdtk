@@ -1748,7 +1748,7 @@ public:
                 outgoing_flowstate_tag = make_mpi_tag(blk.id, which_boundary, 0);
                 size_t ii = 0;
                 foreach (c; outgoing_mapped_cells) {
-                    FlowState fs = c.fs;
+                    FlowState* fs = &(c.fs);
                     GasState* gs = &(fs.gas);
                     outgoing_flowstate_buf[ii++] = gs.rho.re; version(complex_numbers) { outgoing_flowstate_buf[ii++] = gs.rho.im; }
                     outgoing_flowstate_buf[ii++] = gs.p.re; version(complex_numbers) { outgoing_flowstate_buf[ii++] = gs.p.im; }
@@ -1835,7 +1835,7 @@ public:
                 size_t ii = 0;
                 foreach (c; ghost_cells) {
                     c.is_interior_to_domain = true;
-                    FlowState fs = c.fs;
+                    FlowState* fs = &(c.fs);
                     GasState* gs = &(fs.gas);
                     gs.rho.re = incoming_flowstate_buf[ii++]; version(complex_numbers) { gs.rho.im = incoming_flowstate_buf[ii++]; }
                     gs.p.re = incoming_flowstate_buf[ii++]; version(complex_numbers) { gs.p.im = incoming_flowstate_buf[ii++]; }
@@ -1911,7 +1911,7 @@ public:
                           incoming_flowstate_tag, MPI_COMM_WORLD, &incoming_flowstate_request);
             } else {
             }
-        } else { 
+        } else {
         }
     } // end exchange_shock_phase0()
 
@@ -1921,10 +1921,10 @@ public:
     {
         version(mpi_parallel) {
             if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
-                
+                //
                 assert(outgoing_mapped_cells.length == ghost_cells.length,
                        "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
-
+                //
                 const size_t fs_size = 1;
                 size_t ne = ghost_cells.length * fs_size;
                 version(complex_numbers) { ne *= 2; }

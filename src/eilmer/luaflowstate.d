@@ -30,12 +30,10 @@ import globalconfig;
 import fluidblockio_old;
 import fluidblockio;
 
-// Name for FlowState object in Lua scripts.
-// PJ, 2017-12-02: Note the preceding underscore in the name.
-// We intend the user to interact with another (table-based) class
-// in their scripts but continue to want this D-wrapped class
-// to be available in the Lua domain.
-immutable string FlowStateMT = "_FlowState";
+// Name for FlowState objects in Lua scripts are a pure Lua play,
+// however, we wish to provide a few FlowState-related functions
+// that have been coded in Dlang.
+// These functions are provided in a Lua table called _FlowState.
 
 immutable string[] validFlowStateFields = ["p", "T", "T_modes", "p_e",
                                            "quality", "massf",
@@ -43,24 +41,34 @@ immutable string[] validFlowStateFields = ["p", "T", "T_modes", "p_e",
                                            "velx", "vely", "velz",
                                            "Bx", "By", "Bz", "psi", "divB",
                                            "turb", "mu_t", "k_t", "S"];
-static const(FlowState)[] flowStateStore;
+static const(FlowState*)[] flowStateStore;
 
-// Makes it a little more consistent to make this
-// available under this name.
-FlowState checkFlowState(lua_State* L, int index)
+FlowState* checkFlowState(lua_State* L, int index)
 {
-    return checkObj!(FlowState, FlowStateMT)(L, index);
+    size_t fs_id = to!size_t(luaL_checknumber(L, index));
+    if (fs_id < flowStateStore.length) {
+        return cast(FlowState*)flowStateStore[fs_id];
+    } else {
+        throw new Error(format("id number to FlowState is not valid: %d", fs_id));
+    }
+}
+
+extern(C) int toStringFlowState(lua_State* L)
+{
+    FlowState* a = checkFlowState(L, 1);
+    lua_pushstring(L, a.toString.toStringz);
+    return 1;
 }
 
 /**
- * This function implements our constructor for the Lua interface.
+ * This function provides a way of making Dlanf FlowState structs from the Lua interface.
  *
- * Construction of a _FlowState object from in Lua will accept:
+ * Construction of a _FlowState struct from in Lua will accept:
  * -----------------
- * fs = _FlowState:new{p=1.0e5, T=300.0, velx=1000.0, vely=200.0, massf={spName=1.0}}
- * fs = _FlowState:new{p=1.0e7, T=300.0}
- * fs = _FlowState:new()
- * fs = _FlowState:new{}
+ * fs_id = _FlowState.new{p=1.0e5, T=300.0, velx=1000.0, vely=200.0, massf={spName=1.0}}
+ * fs_id = _FlowState.new{p=1.0e7, T=300.0}
+ * fs_id = _FlowState.new()
+ * fs_id = _FlowState.new{}
  * -----------------
  * Missing velocity components are set to 0.0.
  * Missing mass fraction list is set to {1.0}.
@@ -87,22 +95,21 @@ It appears that you have not yet set the GasModel.
 Be sure to call setGasModel(fname) before using a FlowState object.`;
         luaL_error(L, errMsg.toStringz);
     }
-    lua_remove(L, 1); // Remove first argument "this".
-    FlowState fs;
+    FlowState* fs;
     int narg = lua_gettop(L);
     if (narg == 0) {
-        // Make an empty FlowState
-        size_t nturb = 2; // TODO: Does this ever get called? What is it for? (NNG)
-        fs = new FlowState(managedGasModel, nturb);
-        flowStateStore ~= pushObj!(FlowState, FlowStateMT)(L, fs);
-        return 1;
+        // Make an empty FlowState in the context of a GasModel.
+        fs = new FlowState(managedGasModel, GlobalConfig.turb_model.nturb);
+    } else {
+        // Presume that the supplied argument is a table representing the FlowState.
+        fs = makeFlowStateFromTable(L, 1);
     }
-    fs = makeFlowStateFromTable(L, 1);
-    flowStateStore ~= pushObj!(FlowState, FlowStateMT)(L, fs);
+    flowStateStore ~= fs;
+    lua_pushinteger(L, flowStateStore.length-1);
     return 1;
 }
 
-FlowState makeFlowStateFromTable(lua_State* L, int tblindx)
+FlowState* makeFlowStateFromTable(lua_State* L, int tblindx)
 {
     string errMsg;
     auto managedGasModel = GlobalConfig.gmodel_master;
@@ -269,8 +276,8 @@ The value should be a number.`;
     // Shock detector value.
     double S = getNumberFromTable(L, tblindx, "S", false, 0.0, true, format(errMsgTmplt, "S"));
 
-    auto fs = new FlowState(managedGasModel, p, T, T_modes, vel, turb, massf, quality, B,
-                            psi, divB, mu_t, k_t, S);
+    FlowState* fs = new FlowState(managedGasModel, p, T, T_modes, vel, turb, massf, quality, B,
+                                  psi, divB, mu_t, k_t, S);
     return fs;
 } // end makeFlowStateFromTable()
 
@@ -388,7 +395,7 @@ extern(C) int toTable(lua_State* L)
     auto fs = checkFlowState(L, 1);
     lua_newtable(L); // anonymous table { }
     int tblIdx = lua_gettop(L);
-    pushFlowStateToTable(L, tblIdx, fs, gmodel);
+    pushFlowStateToTable(L, tblIdx, *fs, gmodel);
     return 1;
 }
 
@@ -532,22 +539,18 @@ extern(C) int fromTable(lua_State* L)
 
 extern(C) int toJSONString(lua_State* L)
 {
-    auto fs = checkFlowState(L, 1);
+    FlowState* fs = checkFlowState(L, 1);
     lua_pushstring(L, fs.toJSONString().toStringz);
     return 1;
 }
 
 void registerFlowState(lua_State* L)
 {
-    luaL_newmetatable(L, FlowStateMT.toStringz);
-
-    /* metatable.__index = metatable */
-    lua_pushvalue(L, -1); // duplicates the current metatable
-    lua_setfield(L, -2, "__index");
-    /* Register methods for use. */
+    // Register methods for use but put them into a table called _FlowState.
+    lua_newtable(L);
     lua_pushcfunction(L, &newFlowState);
     lua_setfield(L, -2, "new");
-    lua_pushcfunction(L, &toStringObj!(FlowState, FlowStateMT));
+    lua_pushcfunction(L, &toStringFlowState);
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &toTable);
     lua_setfield(L, -2, "toTable");
@@ -555,8 +558,8 @@ void registerFlowState(lua_State* L)
     lua_setfield(L, -2, "fromTable");
     lua_pushcfunction(L, &toJSONString);
     lua_setfield(L, -2, "toJSONString");
-    // Make class visible
-    lua_setglobal(L, FlowStateMT.toStringz);
+    // Make table visible
+    lua_setglobal(L, "_FlowState".toStringz);
 
     lua_pushcfunction(L, &write_initial_sg_flow_file_from_lua);
     lua_setglobal(L, "write_initial_sg_flow_file");

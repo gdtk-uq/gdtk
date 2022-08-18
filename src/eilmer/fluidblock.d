@@ -99,8 +99,8 @@ public:
     //
     // Work-space that gets reused.
     // The following objects are used in the convective_flux method.
-    FlowState Lft;
-    FlowState Rght;
+    FlowState* Lft;
+    FlowState* Rght;
     //
     // Super-time-stepping parameters used when applying flexible stages per block
     int s_RKL; // number of super-step
@@ -173,7 +173,7 @@ public:
     version(nk_accelerator)
     {
 
-    FlowState fs_save;
+    FlowState* fs_save;
 
     // storage for a precondition matrix
     FlowJacobian flowJacobian;
@@ -216,7 +216,6 @@ public:
         // Workspace for flux_calc method.
         Lft = new FlowState(dedicatedConfig[id].gmodel, dedicatedConfig[id].turb_model.nturb);
         Rght = new FlowState(dedicatedConfig[id].gmodel, dedicatedConfig[id].turb_model.nturb);
-        //
         // Workspace for implicit updates of the thermochemistry.
         version(multi_species_gas) {
             if (myConfig.reacting && cqi.n_species > 1) {
@@ -227,6 +226,9 @@ public:
             if (cqi.n_modes > 0) {
                 thermochem_source.length += cqi.n_modes;
             }
+        }
+        version(nk_accelerator) {
+            fs_save = new FlowState(dedicatedConfig[id].gmodel, dedicatedConfig[id].turb_model.nturb);
         }
     }
 
@@ -617,7 +619,7 @@ public:
                 if (myConfig.adjust_invalid_cell_data) {
                     // We shall set the cell data to something that
                     // is valid (and self consistent).
-                    FlowState[] neighbour_flows;
+                    FlowState*[] neighbour_flows;
                     if (myConfig.report_invalid_cells) {
                         writeln("Adjusting cell data to a local average.");
                     }
@@ -626,7 +628,7 @@ public:
                         auto other_cell = (cell.outsign[i] == 1) ? face.right_cell : face.left_cell;
                         if (other_cell && other_cell.contains_flow_data &&
                             other_cell.fs.check_data(other_cell.pos[gtl], myConfig)) {
-                            neighbour_flows ~= other_cell.fs;
+                            neighbour_flows ~= &(other_cell.fs);
                         }
                     }
                     if (neighbour_flows.length == 0) {
@@ -1361,7 +1363,7 @@ public:
 
             // return cell to original state
             pcell.U[ftl].copy_values_from(pcell.U[0]);
-            pcell.fs.copy_values_from(fs_save);
+            pcell.fs.copy_values_from(*fs_save);
             if (myConfig.viscous) {
                 foreach (cell; pcell.cell_list) { cell.grad.copy_values_from(cell.grad_save); }
             }
@@ -1449,7 +1451,7 @@ public:
 
                     // return cells to original state
                     pcell.U[ftl].copy_values_from(pcell.U[0]);
-                    pcell.fs.copy_values_from(fs_save);
+                    pcell.fs.copy_values_from(*fs_save);
 
                     // update (ghost cell) boundary conditions
                     if (bc[bface.bc_id].preReconAction.length > 0) { bc[bface.bc_id].applyPreReconAction(0.0, 0, 0, bface); }
@@ -1485,7 +1487,7 @@ public:
 
                     // return cell to original state
                     ghost_cell.U[ftl].copy_values_from(ghost_cell.U[0]);
-                    ghost_cell.fs.copy_values_from(fs_save);
+                    ghost_cell.fs.copy_values_from(*fs_save);
                     if (myConfig.viscous) {
                         foreach (cell; ghost_cell.cell_list) { cell.grad.copy_values_from(cell.grad_save); }
                     }
