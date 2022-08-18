@@ -164,7 +164,7 @@ public:
 
         _mol_masses ~= s_molecular_weight(0).re;
 
-        Q_temp = GasState(this); // For use in dpdrho_const_T()
+        Q_temp = new GasState(this); // For use in dpdrho_const_T()
     } // End constructor
 
 
@@ -567,7 +567,7 @@ public:
         Q_temp.rho = rho_step; // Modify density slightly
 
         // Evaluate gas state due to perturbed rho, holding constant T
-        this.update_thermo_from_rhoT(Q_temp);
+        this.update_thermo_from_rhoT(*Q_temp);
         number p_step = Q_temp.p;
         return ( (p_step - p) / h);
      }
@@ -590,7 +590,7 @@ private:
     double[][] _k_hat;
     double[][] _Cp_hat;
 
-    GasState Q_temp;
+    GasState* Q_temp;
 } // End of uniformLUT class
 
 version(uniform_lut_test)

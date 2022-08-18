@@ -685,7 +685,7 @@ version(chemistry_update_test) {
         auto gmodel = new ThermallyPerfectGas("sample-input/H2-I2-HI.lua");
         auto rmech = createReactionMechanism("sample-input/H2-I2-inp.lua", gmodel, 100.0, 10000.0);
 
-        auto gd = GasState(3, 1);
+        GasState gd = GasState(gmodel);
         gd.T = 700.0;
         double c0 = 4.54;
         double[] conc0 = [c0, c0, 0.0];

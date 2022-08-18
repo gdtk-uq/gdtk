@@ -187,11 +187,11 @@ version(init_gas_model_test) {
 
         // Methods for testing gas state class
         import gas.gas_state;
-        auto gd = GasState(2, 1);
+        GasState* gd = new GasState(2, 1); // Use a pointer because we will change the GasModel later.
         gd.massf[0] = 0.8;
         gd.massf[1] = 0.2;
         number[] phi = [to!number(9.0), to!number(16.0)];
-        assert(approxEqualNumbers(to!number(10.4), mass_average(gd, phi), 1.0e-6));
+        assert(approxEqualNumbers(to!number(10.4), mass_average(*gd, phi), 1.0e-6));
 
         // Iterative methods test using idealgas single species model
         // These assume IdealGas class is working properly
@@ -208,20 +208,20 @@ version(init_gas_model_test) {
             throw new Exception(msg);
         }
 
-        gd = GasState(gm, 100.0e3, 300.0);
-        assert(approxEqualNumbers(gm.R(gd), to!number(287.086), 1.0e-4), "gas constant");
+        gd = new GasState(gm, 100.0e3, 300.0);
+        assert(approxEqualNumbers(gm.R(*gd), to!number(287.086), 1.0e-4), "gas constant");
         assert(gm.n_modes == 0, "number of energy modes");
         assert(gm.n_species == 1, "number of species");
         assert(approxEqualNumbers(gd.p, to!number(1.0e5)), "pressure");
         assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6), "static temperature");
         assert(approxEqualNumbers(gd.massf[0], to!number(1.0), 1.0e-6), "massf[0]");
 
-        gm.update_thermo_from_pT(gd);
-        gm.update_sound_speed(gd);
+        gm.update_thermo_from_pT(*gd);
+        gm.update_sound_speed(*gd);
         assert(approxEqualNumbers(gd.rho, to!number(1.16109), 1.0e-4), "density");
         assert(approxEqualNumbers(gd.u, to!number(215314.0), 1.0e-4), "internal energy");
         assert(approxEqualNumbers(gd.a, to!number(347.241), 1.0e-4), "sound speed");
-        gm.update_trans_coeffs(gd);
+        gm.update_trans_coeffs(*gd);
         assert(approxEqualNumbers(gd.mu, to!number(1.84691e-05), 1.0e-6), "viscosity");
         assert(approxEqualNumbers(gd.k, to!number(0.0262449), 1.0e-6), "conductivity");
 
@@ -229,7 +229,7 @@ version(init_gas_model_test) {
         // variables that are thermodynamically consistent
         number e_given = 1.0e7;
         number rho_given = 2.0;
-        auto Q = GasState(gm);
+        GasState Q = GasState(gm); // Use the struct directly.
         Q.u = e_given;
         Q.rho = rho_given;
         gm.update_thermo_from_rhou(Q);
