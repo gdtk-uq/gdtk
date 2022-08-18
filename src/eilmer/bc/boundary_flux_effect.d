@@ -519,7 +519,7 @@ public:
         auto blk = cast(UFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be a UFluidBlock object.");
         assert(!(blk.myConfig.MHD), "Oops, not implemented for MHD.");
-
+        //
         BoundaryCondition bc = blk.bc[which_boundary];
 	int outsign = bc.outsigns[f.i_bndry];
 	FVCell interior_cell = (outsign == 1) ? f.left_cell : f.right_cell;
@@ -532,7 +532,7 @@ public:
         auto blk = cast(UFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be a UFluidBlock object.");
         assert(!(blk.myConfig.MHD), "Oops, not implemented for MHD.");
-
+        //
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, face; bc.faces) {
             int outsign = bc.outsigns[i];

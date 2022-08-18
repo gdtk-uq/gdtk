@@ -198,6 +198,9 @@ public:
             divB = other.divB;
         }
         version(turbulence) {
+            debug {
+                if (turb.length != other.turb.length) { throw new Error("Incorrect turb length."); }
+            }
             foreach (i; 0 .. turb.length) { turb[i] = other.turb[i]; }
         }
         mu_t = other.mu_t;

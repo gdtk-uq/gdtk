@@ -514,18 +514,14 @@ class BIE_ZeroVelocity : BoundaryInterfaceEffect {
     {
         auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
-	FlowState fs = f.fs;
-	fs.vel.x = 0.0; fs.vel.y = 0.0; fs.vel.z = 0.0;
+	f.fs.vel.set(0.0, 0.0, 0.0);
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
-        foreach (i, f; bc.faces) {
-            FlowState fs = f.fs;
-            fs.vel.x = 0.0; fs.vel.y = 0.0; fs.vel.z = 0.0;
-        } // end foreach face
+        foreach (i, f; bc.faces) { f.fs.vel.set(0.0, 0.0, 0.0); }
     }
 
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
@@ -541,10 +537,8 @@ class BIE_ZeroVelocity : BoundaryInterfaceEffect {
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
-        foreach (i, f; bc.faces) {
-            f.fs.vel.set(0.0, 0.0, 0.0);
-        }
-    } // end apply_structured_grid()
+        foreach (i, f; bc.faces) { f.fs.vel.set(0.0, 0.0, 0.0); }
+    }
 } // end class BIE_ZeroVelocity
 
 
@@ -565,8 +559,7 @@ class BIE_ZeroSlipWallVelocity : BoundaryInterfaceEffect {
     {
         auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
-	FlowState fs = f.fs;
-	fs.vel.set(f.gvel);
+	f.fs.vel.set(f.gvel);
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -574,9 +567,8 @@ class BIE_ZeroSlipWallVelocity : BoundaryInterfaceEffect {
         auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
-            FlowState fs = f.fs;
-            fs.vel.set(f.gvel);
-        } // end foreach face
+            f.fs.vel.set(f.gvel);
+        }
     }
 
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
@@ -712,10 +704,9 @@ public:
     {
         auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
-	FlowState fs = f.fs;
-	fs.gas.T = Twall;
+	f.fs.gas.T = Twall;
 	version(multi_T_gas) {
-	    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
+	    foreach(ref elem; f.fs.gas.T_modes) { elem = Twall; }
 	}
     }
 
@@ -723,10 +714,9 @@ public:
     {
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
-            FlowState fs = f.fs;
-            fs.gas.T = Twall;
+            f.fs.gas.T = Twall;
             version(multi_T_gas) {
-                foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
+                foreach(ref elem; f.fs.gas.T_modes) { elem = Twall; }
             }
         }
     } // end apply_unstructured_grid()
@@ -735,10 +725,9 @@ public:
     {
         auto gmodel = blk.myConfig.gmodel;
         BoundaryCondition bc = blk.bc[which_boundary];
-	FlowState fs = f.fs;
-	fs.gas.T = Twall;
+	f.fs.gas.T = Twall;
 	version(multi_T_gas) {
-	    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
+	    foreach(ref elem; f.fs.gas.T_modes) { elem = Twall; }
 	}
     }
 
@@ -749,10 +738,9 @@ public:
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
-            FlowState fs = f.fs;
-            fs.gas.T = Twall;
+            f.fs.gas.T = Twall;
             version(multi_T_gas) {
-                foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
+                foreach(ref elem; f.fs.gas.T_modes) { elem = Twall; }
             }
         }
     } // end apply_structured_grid()
@@ -811,9 +799,8 @@ public:
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
-            FlowState fs = f.fs;
             version(multi_species_gas) {
-                foreach (isp; 0 .. nsp) { fs.gas.massf[isp] = massfAtWall[isp]; }
+                foreach (isp; 0 .. nsp) { f.fs.gas.massf[isp] = massfAtWall[isp]; }
             }
         }
     } // end apply_structured_grid()
@@ -835,9 +822,8 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
     {
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
-	FlowState fs = f.fs;
-	gmodel.update_thermo_from_pT(fs.gas);
-	gmodel.update_trans_coeffs(fs.gas);
+	gmodel.update_thermo_from_pT(f.fs.gas);
+	gmodel.update_trans_coeffs(f.fs.gas);
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -845,9 +831,8 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
         foreach (i, f; bc.faces) {
-            FlowState fs = f.fs;
-            gmodel.update_thermo_from_pT(fs.gas);
-            gmodel.update_trans_coeffs(fs.gas);
+            gmodel.update_thermo_from_pT(f.fs.gas);
+            gmodel.update_trans_coeffs(f.fs.gas);
         }
     } // end apply_unstructured_grid()
 
@@ -855,9 +840,8 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
     {
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
-	FlowState fs = f.fs;
-	gmodel.update_thermo_from_pT(fs.gas);
-	gmodel.update_trans_coeffs(fs.gas);
+	gmodel.update_thermo_from_pT(f.fs.gas);
+	gmodel.update_trans_coeffs(f.fs.gas);
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
@@ -867,9 +851,8 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
         foreach (i, f; bc.faces) {
-            FlowState fs = f.fs;
-            gmodel.update_thermo_from_pT(fs.gas);
-            gmodel.update_trans_coeffs(fs.gas);
+            gmodel.update_thermo_from_pT(f.fs.gas);
+            gmodel.update_trans_coeffs(f.fs.gas);
         }
     } // end apply_structured_grid()
 } // end class BIE_UpdateThermoTransCoeffs

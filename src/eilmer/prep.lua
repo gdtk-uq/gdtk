@@ -148,13 +148,11 @@ function build_grid_and_flow_files(job)
          fluidBlockIdsForPrep[i] = fluidBlocks[i].id
       end
    end
-
    if (config.new_flow_format) then
-      os.execute("mkdir -p CellData/field/t0000") -- this violoates "Don't Repeat Yourself" (CellData/field)
+      os.execute("mkdir -p CellData/field/t0000")
    else
       os.execute("mkdir -p flow/t0000")
    end
-
    os.execute("mkdir -p grid/t0000")
    if #solidBlocks >= 1 then
       os.execute("mkdir -p solid-grid/t0000")
@@ -174,10 +172,9 @@ function build_grid_and_flow_files(job)
       else
 	 error(string.format("Oops, invalid grid_format: %s", config.grid_format))
       end
-
-      local fileName;
-
-      if (config.new_flow_format) then 
+      --
+      local fileName
+      if (config.new_flow_format) then
          fileName = "CellData/field/t0000/" .. job .. string.format(".field.b%04d.t0000", id)
          if ((config.flow_format == "eilmer4text") or (config.flow_format == "eilmer4binary")) then
             fileName = fileName .. ".zip"

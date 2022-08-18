@@ -665,7 +665,7 @@ public:
                 // To match the function over in flowstate.d
                 // void copy_values_from(in FlowState other)
                 // and over in gas_state.d
-                // @nogc void copy_values_from(ref const(GasState) other) 
+                // @nogc void copy_values_from(ref const(GasState) other)
                 //size_t ne = incoming_ncells_list[i] * (nmodes*3 + nspecies + 23);
                 size_t fs_size = flowstate_buffer_entry_size(blk.myConfig);
                 size_t ne = incoming_ncells_list[i] * fs_size;
@@ -703,7 +703,7 @@ public:
                 size_t ii = 0;
                 foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
                     auto c = blk.cells[cid];
-                    FlowState fs = c.fs;
+                    FlowState* fs = &(c.fs);
                     GasState* gs = &(fs.gas);
                     buf[ii++] = gs.rho.re; version(complex_numbers) { buf[ii++] = gs.rho.im; }
                     buf[ii++] = gs.p.re; version(complex_numbers) { buf[ii++] = gs.p.im; }
@@ -783,7 +783,7 @@ public:
                 foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
                     auto c = ghost_cells[gi];
                     c.is_interior_to_domain = true;
-                    FlowState fs = c.fs;
+                    FlowState* fs = &(c.fs);
                     GasState* gs = &(fs.gas);
                     gs.rho.re = buf[ii++]; version(complex_numbers) { gs.rho.im = buf[ii++]; }
                     gs.p.re = buf[ii++]; version(complex_numbers) { gs.p.im = buf[ii++]; }
@@ -870,7 +870,7 @@ public:
                 size_t ii = 0;
                 foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
                     auto c = blk.cells[cid];
-                    FlowState fs = c.fs;
+                    FlowState* fs = &(c.fs);
                     buf[ii++] = fs.mu_t.re; version(complex_numbers) { buf[ii++] = fs.mu_t.im; }
                     buf[ii++] = fs.k_t.re; version(complex_numbers) { buf[ii++] = fs.k_t.im; }
                 }
@@ -907,7 +907,7 @@ public:
                 size_t ii = 0;
                 foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
                     auto c = ghost_cells[gi];
-                    FlowState fs = c.fs;
+                    FlowState* fs = &(c.fs);
                     fs.mu_t.re = buf[ii++]; version(complex_numbers) { fs.mu_t.im = buf[ii++]; }
                     fs.k_t.re = buf[ii++]; version(complex_numbers) { fs.k_t.im = buf[ii++]; }
                 }
@@ -925,13 +925,12 @@ public:
     size_t convective_gradient_buffer_entry_size(const LocalConfig myConfig)
     {
         /*
-        Compute the amount of space needed for one gradient in the SEND/RECV buffer 
+        Compute the amount of space needed for one gradient in the SEND/RECV buffer
 
         Note: This routine must be kept consistent with the buffer packing in
         exchange_convective_gradient phases 1 and 2
         @author: Nick N. Gibbons
         */
-
         size_t nspecies = myConfig.n_species;
         size_t nmodes = myConfig.n_modes;
         size_t nitems = 42;
@@ -939,11 +938,9 @@ public:
         version(turbulence) { nitems += myConfig.turb_model.nturb*6; }
         nitems += nmodes*12;
         nitems += nspecies*6;
-
         version(complex_numbers) {
             nitems *= 2;
         }
-        
         return nitems;
     }
 
@@ -1272,28 +1269,25 @@ public:
     size_t viscous_gradient_buffer_entry_size(const LocalConfig myConfig)
     {
         /*
-        Compute the amount of space needed for one gradient in the SEND/RECV buffer 
+        Compute the amount of space needed for one gradient in the SEND/RECV buffer
 
         Note: This routine must be kept consistent with the buffer packing in exchange_viscous_gradient
         phases 1 and 2
         @author: Nick N. Gibbons
         */
-
         size_t nspecies = myConfig.n_species;
         size_t nmodes = myConfig.n_modes;
         size_t nitems = 12;
         version(turbulence) { nitems += myConfig.turb_model.nturb*3; }
         nitems += nmodes*3;
         nitems += nspecies*3;
-
         version(complex_numbers) {
             nitems *= 2;
         }
-        
         return nitems;
     }
 
-        // not @nogc
+    // not @nogc
     void exchange_viscous_gradient_phase0(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {

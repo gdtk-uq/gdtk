@@ -467,7 +467,7 @@ T checkObj(T, string metatableName)(lua_State* L, int index)
 }
 
 /**
- * Test if the object type from index position in stack matches tname.
+ * Test if the Lua-object type from index position in stack matches tname.
  *
  * Assuming the object is stored as Lua userdata, this returns
  * the metatable name, which is essentially the object's type.
@@ -483,6 +483,20 @@ T checkObj(T, string metatableName)(lua_State* L, int index)
 bool isObjType(lua_State* L, int index, string tname)
 {
     bool result;
+    if (tname == "number") {
+        if (lua_isnumber(L, index)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    if (tname == "string") {
+        if (lua_isstring(L, index)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
     void *p = lua_touserdata(L, index);
     if ( p ) {  // value is a userdata?
         if (lua_getmetatable(L, index)) {  // does it have a metatable?

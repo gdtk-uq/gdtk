@@ -90,7 +90,7 @@ public:
         bool lua_fs = false;
         FlowState* myfs;
         // check where our flowstate is coming from
-        if ( isObjType(L, 3, "_FlowState") ) {
+        if ( isObjType(L, 3, "number") ) {
             myfs = checkFlowState(L, 3);
             lua_settop(L, 0); // clear stack
         } else if (lua_isfunction(L, 3)) {
@@ -172,7 +172,7 @@ public:
                 if (!myfs) {
                     string errMsg = "Error in from Lua function call for setting FlowState\n";
                     errMsg ~= "as a function of position (x, y, z).\n";
-                    errMsg ~= "The returned object is not a proper _FlowState object or suitable table.";
+                    errMsg ~= "The returned object is not a proper _FlowState handle or suitable table.";
                     luaL_error(L, errMsg.toStringz);
                 }
             }

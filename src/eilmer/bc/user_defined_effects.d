@@ -416,7 +416,7 @@ private:
         // So we need to test every possibility and only set
         // the non-nil values.
         auto gmodel = blk.myConfig.gmodel;
-        FlowState fs = iface.fs;
+        FlowState* fs = &(iface.fs);
 
         lua_getfield(L, tblIdx, "p");
         if ( !lua_isnil(L, -1) ) {

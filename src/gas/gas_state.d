@@ -120,22 +120,24 @@ public:
 
     @nogc void opAssign(in GasState other)
     {
+        debug {
+            if (u_modes.length != other.u_modes.length) { throw new Error("Incorrect u_modes length."); }
+            if (T_modes.length != other.T_modes.length) { throw new Error("Incorrect T_modes length."); }
+            if (k_modes.length != other.k_modes.length) { throw new Error("Incorrect k_modes length."); }
+            if (massf.length != other.massf.length) { throw new Error("Incorrect massf length."); }
+        }
         rho = other.rho;
         p = other.p;
         T = other.T;
         u = other.u;
         p_e = other.p_e;
         a = other.a;
-        if (u_modes.length != other.u_modes.length) { throw new Error("Incorrect u_modes length."); }
         foreach (i; 0 .. u_modes.length) { u_modes[i] = other.u_modes[i]; }
-        if (T_modes.length != other.T_modes.length) { throw new Error("Incorrect T_modes length."); }
         foreach (i; 0 .. T_modes.length) { T_modes[i] = other.T_modes[i]; }
         mu = other.mu;
         k = other.k;
-        if (k_modes.length != other.k_modes.length) { throw new Error("Incorrect k_modes length."); }
         foreach (i; 0 .. k_modes.length) { k_modes[i] = other.k_modes[i]; }
         sigma = other.sigma;
-        if (massf.length != other.massf.length) { throw new Error("Incorrect massf length."); }
         foreach (i; 0 .. massf.length) { massf[i] = other.massf[i]; }
         quality = other.quality;
     }

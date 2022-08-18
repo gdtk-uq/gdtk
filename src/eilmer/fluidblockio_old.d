@@ -752,7 +752,6 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
 {
     // Numbers of cells derived from numbers of vertices in grid.
     auto ncells = grid.ncells;
-    //
     auto myfs = FlowState(fs);
     //
     // Write the data for the whole unstructured block.
@@ -842,8 +841,8 @@ extern(C) int write_initial_sg_flow_legacy_file_from_lua(lua_State* L)
         foreach(varname; build_flow_variable_list()) { GlobalConfig.flow_variable_list ~= varname; }
     }
     FlowState* fs;
-    // Test if we have a simple flow state or something more exotic
-    if ( isObjType(L, 3, "_FlowState") ) {
+    // Test if we have a simple flow state handle or something more exotic
+    if ( isObjType(L, 3, "number") ) {
         fs = checkFlowState(L, 3);
         write_initial_flow_file(fname, grid, *fs, t0, omegaz, GlobalConfig.gmodel_master);
         lua_settop(L, 0); // clear stack
@@ -1047,8 +1046,8 @@ extern(C) int write_initial_usg_flow_legacy_file_from_lua(lua_State* L)
         foreach(varname; build_flow_variable_list()) { GlobalConfig.flow_variable_list ~= varname; }
     }
     FlowState* fs;
-    // Test if we have a simple flow state or something more exotic
-    if ( isObjType(L, 3, "_FlowState") ) {
+    // Test if we have a simple flow state handle or something more exotic.
+    if ( isObjType(L, 3, "number") ) {
         fs = checkFlowState(L, 3);
         write_initial_flow_file(fname, grid, *fs, t0, omegaz, GlobalConfig.gmodel_master);
         lua_settop(L, 0); // clear stack
