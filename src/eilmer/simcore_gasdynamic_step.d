@@ -293,6 +293,16 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
     }
+
+    // for unstructured blocks we need to transfer the convective gradients before the flux calc
+    if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
+        exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
+    }
+
+    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+	if (blk.active) { blk.convective_flux_phase2(allow_high_order_interpolation, gtl); }
+    }
+
     if (GlobalConfig.apply_bcs_in_parallel) {
 	foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	    if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
@@ -545,6 +555,16 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	foreach (blk; parallel(localFluidBlocksBySize,1)) {
 	    if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
 	}
+
+        // for unstructured blocks we need to transfer the convective gradients before the flux calc
+        if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
+            exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
+        }
+
+	foreach (blk; parallel(localFluidBlocksBySize,1)) {
+	    if (blk.active) { blk.convective_flux_phase2(allow_high_order_interpolation, gtl); }
+	}
+
 	if (GlobalConfig.apply_bcs_in_parallel) {
 	    foreach (blk; parallel(localFluidBlocksBySize,1)) {
 		if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
@@ -927,13 +947,13 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                  (GlobalConfig.shock_detector_freeze_step > SimState.step))) {
                 detect_shocks(gtl, ftl);
             }
-            // Phase 05 LOCAL
+            // Phase 05a LOCAL
             try {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
                 }
             } catch (Exception e) {
-                debug { writefln("Exception thrown in phase 05 of stage %d of explicit update: %s", stage, e.msg); }
+                debug { writefln("Exception thrown in phase 05a of stage %d of explicit update: %s", stage, e.msg); }
                 step_failed = 1;
             }
             version(mpi_parallel) {
@@ -944,7 +964,29 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 SimState.dt_global = SimState.dt_global * 0.2;
                 break;
             }
-            // Phase 06 MPI
+            // Phase 05b MPI
+            // for unstructured blocks we need to transfer the convective gradients before the flux calc
+            if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
+                exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
+            }
+            // Phase 06a LOCAL
+            try {
+                foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                    if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
+                }
+            } catch (Exception e) {
+                debug { writefln("Exception thrown in phase 06a of stage %d of explicit update: %s", stage, e.msg); }
+                step_failed = 1;
+            }
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+            }
+            if (step_failed) {
+                // Start the step over again with a reduced time step.
+                SimState.dt_global = SimState.dt_global * 0.2;
+                break;
+            }
+            // Phase 06b MPI
             // for unstructured blocks we need to transfer the convective gradients before the flux calc
             if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
                 exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
@@ -952,7 +994,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             // Phase 07 LOCAL
             try {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
+                    if (blk.active) { blk.convective_flux_phase2(allow_high_order_interpolation, gtl); }
                 }
                 if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -1546,13 +1588,13 @@ void gasdynamic_explicit_increment_with_moving_grid()
         if (GlobalConfig.do_shock_detect) {
             detect_shocks(gtl, ftl);
         }
-        // Phase 05 LOCAL
+        // Phase 05a LOCAL
         try {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
             }
         } catch (Exception e) {
-            debug { writefln("Exception thrown in phase 05 of stage 1 of explicit update on moving grid: %s", e.msg); }
+            debug { writefln("Exception thrown in phase 05a of stage 1 of explicit update on moving grid: %s", e.msg); }
             step_failed = 1;
         }
         version(mpi_parallel) {
@@ -1563,7 +1605,29 @@ void gasdynamic_explicit_increment_with_moving_grid()
             SimState.dt_global = SimState.dt_global * 0.2;
             continue;
         }
-        // Phase 06 (maybe) MPI
+        // Phase 05b (maybe) MPI
+        // for unstructured blocks we need to transfer the convective gradients before the flux calc
+        if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
+            exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
+        }
+        // Phase 06a LOCAL
+        try {
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
+            }
+        } catch (Exception e) {
+            debug { writefln("Exception thrown in phase 06a of stage 1 of explicit update on moving grid: %s", e.msg); }
+            step_failed = 1;
+        }
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        }
+        if (step_failed) {
+            // Start the step over again with a reduced time step.
+            SimState.dt_global = SimState.dt_global * 0.2;
+            continue;
+        }
+        // Phase 06b (maybe) MPI
         // for unstructured blocks we need to transfer the convective gradients before the flux calc
         if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
             exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
@@ -1571,7 +1635,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         // Phase 07 LOCAL
         try {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
+                if (blk.active) { blk.convective_flux_phase2(allow_high_order_interpolation, gtl); }
             }
             if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -1891,10 +1955,32 @@ void gasdynamic_explicit_increment_with_moving_grid()
             if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
                 exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
             }
-            // Phase 05 LOCAL
+            // Phase 04 LOCAL
             try {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, 0); } // note 0 rather then gtl
+                }
+            } catch (Exception e) {
+                debug { writefln("Exception thrown in phase 04 of stage 2 of explicit update on moving grid: %s", e.msg); }
+                step_failed = 1;
+            }
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+            }
+            if (step_failed) {
+                // Start the step over again with a reduced time step.
+                SimState.dt_global = SimState.dt_global * 0.2;
+                continue;
+            }
+            // Phase 04 (maybe) MPI
+            // for unstructured blocks we need to transfer the convective gradients before the flux calc
+            if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
+                exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
+            }
+            // Phase 05 LOCAL
+            try {
+                foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                    if (blk.active) { blk.convective_flux_phase2(allow_high_order_interpolation, 0); } // note 0 rather then gtl
                 }
                 if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {

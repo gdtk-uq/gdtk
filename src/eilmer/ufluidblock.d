@@ -304,8 +304,6 @@ public:
         uint nsp = myConfig.n_species;
         foreach (i, v; grid.vertices) {
             auto new_vtx = new FVVertex(myConfig, lsq_workspace_at_vertices, to!int(i));
-            if (myConfig.unstructured_limiter == UnstructuredLimiter.venkat_mlp)
-                new_vtx.gradients = new LSQInterpGradients(nsp, myConfig.n_modes, myConfig.turb_model.nturb);
             new_vtx.pos[0] = v;
             vertices ~= new_vtx;
         }
@@ -751,14 +749,28 @@ public:
         if (vertex_list.length == 0) { vertex_list = vertices; }
 
         if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
-            if (myConfig.unstructured_limiter == UnstructuredLimiter.venkat_mlp) {
-                foreach (vtx; vertex_list) {
-                    vtx.gradients.store_max_min_values_for_mlp_limiter(vtx.cell_cloud, myConfig);
-                }
-            }
             foreach (c; cell_list) {
+                if (myConfig.unstructured_limiter == UnstructuredLimiter.venkat_mlp) {
+                    c.gradients.store_max_min_values_for_extended_stencil(c.cell_cloud, myConfig);
+                } else {
+                    c.gradients.store_max_min_values_for_compact_stencil(c.cell_cloud, myConfig);
+                }
                 c.gradients.compute_lsq_values(c.cell_cloud, c.ws, myConfig);
             }
+        } // end if interpolation_order > 1
+    } // end convective_flux-phase0()
+
+        @nogc
+    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0,
+                                         FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
+        // Compute limiter values of flow quantities for higher-order reconstruction, if required.
+        // To be used, later, in the convective flux calculation.
+    {
+
+        if (cell_list.length == 0) { cell_list = cells; }
+        if (vertex_list.length == 0) { vertex_list = vertices; }
+
+        if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             if (GlobalConfig.frozen_limiter == false) {
                 foreach (c; cell_list) {
                     // It is more efficient to determine limiting factor here for some usg limiters.
@@ -806,7 +818,7 @@ public:
     } // end convective_flux-phase0()
 
     @nogc
-    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0,
+    override void convective_flux_phase2(bool allow_high_order_interpolation, size_t gtl=0,
                                          FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
     // Make use of the flow gradients to actually do the high-order reconstruction
     // and then compute fluxes of conserved quantities at all faces.

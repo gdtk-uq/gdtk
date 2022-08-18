@@ -563,108 +563,6 @@ public:
     } // end venkat_mlp_limit()
 
     @nogc
-    void store_max_min_values_for_mlp_limiter(FVCell[] cell_cloud, ref LocalConfig myConfig)
-    {
-        // the MLP limiter stores the maximum and minimum flowstate values
-        // that surround a node, at the node
-        size_t dimensions = myConfig.dimensions;
-        auto np = cell_cloud.length;
-        // The following function to be used at compile time.
-        string codeForGradients(string qname, string gname,
-                                string qMaxname, string qMinname)
-        {
-            string code = "{
-                number q0 = cell_cloud[0].fs."~qname~";
-                "~qMaxname~" = q0;
-                "~qMinname~" = q0;
-                foreach (i; 1 .. np) {
-                    "~qMaxname~" = fmax("~qMaxname~", cell_cloud[i].fs."~qname~");
-                    "~qMinname~" = fmin("~qMinname~", cell_cloud[i].fs."~qname~");
-                }
-                }
-                ";
-            return code;
-        }
-        // x-velocity
-        mixin(codeForGradients("vel.x", "velx", "velxMax", "velxMin"));
-        mixin(codeForGradients("vel.y", "vely", "velyMax", "velyMin"));
-        mixin(codeForGradients("vel.z", "velz", "velzMax", "velzMin"));
-        version(MHD) {
-            if (myConfig.MHD) {
-                mixin(codeForGradients("B.x", "Bx", "BxMax", "BxMin"));
-                mixin(codeForGradients("B.y", "By", "ByMax", "ByMin"));
-                mixin(codeForGradients("B.z", "Bz", "BzMax", "BzMin"));
-                if (myConfig.divergence_cleaning) {
-                    mixin(codeForGradients("psi", "psi", "psiMax", "psiMin"));
-                }
-            }
-        }
-        version(turbulence) {
-            foreach (it; 0 .. myConfig.turb_model.nturb) {
-                mixin(codeForGradients("turb[it]","turb[it]","turbMax[it]","turbMin[it]"));
-            }
-        }
-        version(multi_species_gas) {
-            auto nsp = myConfig.n_species;
-            if (nsp > 1) {
-                // Multiple species.
-                foreach (isp; 0 .. nsp) {
-                    mixin(codeForGradients("gas.massf[isp]", "massf[isp]",
-                                           "massfMax[isp]", "massfMin[isp]"));
-                }
-            } else {
-                // Only one possible gradient value for a single species.
-                massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
-            }
-        }
-        // Interpolate on two of the thermodynamic quantities,
-        // and fill in the rest based on an EOS call.
-        auto nmodes = myConfig.n_modes;
-        final switch (myConfig.thermo_interpolator) {
-        case InterpolateOption.pt:
-            mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
-            mixin(codeForGradients("gas.T", "T", "TMax", "TMin"));
-            version(multi_T_gas) {
-                foreach (imode; 0 .. nmodes) {
-                    mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]",
-                                           "T_modesMax[imode]", "T_modesMin[imode]"));
-                }
-            }
-            break;
-        case InterpolateOption.rhou:
-            mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
-            mixin(codeForGradients("gas.u", "u", "uMax", "uMin"));
-            version(multi_T_gas) {
-                foreach (imode; 0 .. nmodes) {
-                    mixin(codeForGradients("gas.u_modes[imode]", "u_modes[imode]",
-                                           "u_modesMax[imode]", "u_modesMin[imode]"));
-                }
-            }
-            break;
-        case InterpolateOption.rhop:
-            mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
-            mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
-            version(multi_T_gas) {
-                foreach (imode; 0 .. nmodes) {
-                    mixin(codeForGradients("gas.u_modes[imode]", "u_modes[imode]",
-                                           "u_modesMax[imode]", "u_modesMin[imode]"));
-                }
-            }
-            break;
-        case InterpolateOption.rhot:
-            mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
-            mixin(codeForGradients("gas.T", "T", "TMax", "TMin"));
-            version(multi_T_gas) {
-                foreach (imode; 0 .. nmodes) {
-                    mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]",
-                                           "T_modesMax[imode]", "T_modesMin[imode]"));
-                }
-            }
-            break;
-        } // end switch thermo_interpolator
-    } // end store_max_min_values_for_mlp_limiter()
-
-    @nogc
     void van_albada_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
                           bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig, size_t gtl=0)
     {
@@ -1211,6 +1109,202 @@ public:
     } // end park_limit()
 
     @nogc
+    void store_max_min_values_for_compact_stencil(FVCell[] cell_cloud, ref LocalConfig myConfig)
+    {
+        // Some of the limiters require the maximum and minimum flowstate variables in the reconstruction stencil
+
+        size_t dimensions = myConfig.dimensions;
+        auto np = cell_cloud.length;
+
+        // The following function to be used at compile time.
+        string codeForMaxMin(string qname, string qMaxname, string qMinname)
+        {
+            string code = "{
+                "~qMaxname~" = cell_cloud[0].fs."~qname~";
+                "~qMinname~" = cell_cloud[0].fs."~qname~";
+                foreach (i; 1 .. np) {
+                    "~qMaxname~" = fmax("~qMaxname~", cell_cloud[i].fs."~qname~");
+                    "~qMinname~" = fmin("~qMinname~", cell_cloud[i].fs."~qname~");
+                }
+            }
+            ";
+            return code;
+        }
+
+        mixin(codeForMaxMin("vel.x", "velxMax", "velxMin"));
+        mixin(codeForMaxMin("vel.y", "velyMax", "velyMin"));
+        mixin(codeForMaxMin("vel.z", "velzMax", "velzMin"));
+        version(MHD) {
+            if (myConfig.MHD) {
+                mixin(codeForMaxMin("B.x", "BxMax", "BxMin"));
+                mixin(codeForMaxMin("B.y", "ByMax", "ByMin"));
+                mixin(codeForMaxMin("B.z", "BzMax", "BzMin"));
+                if (myConfig.divergence_cleaning) {
+                    mixin(codeForMaxMin("psi", "psiMax", "psiMin"));
+                }
+            }
+        }
+        version(turbulence) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) {
+                mixin(codeForMaxMin("turb[it]", "turbMax[it]", "turbMin[it]"));
+            }
+        }
+        version(multi_species_gas) {
+            auto nsp = myConfig.n_species;
+            if (nsp > 1) {
+                // Multiple species.
+                foreach (isp; 0 .. nsp) {
+                    mixin(codeForMaxMin("gas.massf[isp]", "massfMax[isp]", "massfMin[isp]"));
+                }
+            } else {
+                // Only one possible gradient value for a single species.
+                massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+            }
+        }
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
+        auto nmodes = myConfig.n_modes;
+        final switch (myConfig.thermo_interpolator) {
+        case InterpolateOption.pt:
+            mixin(codeForMaxMin("gas.p", "pMax", "pMin"));
+            mixin(codeForMaxMin("gas.T", "TMax", "TMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForMaxMin("gas.T_modes[imode]", "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhou:
+            mixin(codeForMaxMin("gas.rho", "rhoMax", "rhoMin"));
+            mixin(codeForMaxMin("gas.u", "uMax", "uMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForMaxMin("gas.u_modes[imode]", "u_modesMax[imode]", "u_modesMin[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhop:
+            mixin(codeForMaxMin("gas.rho", "rhoMax", "rhoMin"));
+            mixin(codeForMaxMin("gas.p", "pMax", "pMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForMaxMin("gas.u_modes[imode]", "u_modesMax[imode]", "u_modesMin[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhot:
+            mixin(codeForMaxMin("gas.rho", "rhoMax", "rhoMin"));
+            mixin(codeForMaxMin("gas.T", "TMax", "TMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForMaxMin("gas.T_modes[imode]", "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
+            }
+            break;
+        } // end switch thermo_interpolator
+        return;
+    } // end store_max_min_values_for_compact_stencil()
+
+    @nogc
+    void store_max_min_values_for_extended_stencil(FVCell[] cell_cloud, ref LocalConfig myConfig)
+    {
+        // the MLP limiter is unique in that it requires the max/min values from a stencil that includes all cells attached to the vertices of a cell
+
+        size_t dimensions = myConfig.dimensions;
+        auto np = cell_cloud.length;
+
+        // The following function to be used at compile time.
+        string codeForMaxMin(string qname, string qMaxname, string qMinname)
+        {
+            string code = "{
+                "~qMaxname~" = cell_cloud[0].fs."~qname~";
+                "~qMinname~" = cell_cloud[0].fs."~qname~";
+                foreach (i, v; cell_cloud[0].vtx) {
+                    foreach (c; v.cell_cloud) {
+                        "~qMaxname~" = fmax("~qMaxname~", c.fs."~qname~");
+                        "~qMinname~" = fmin("~qMinname~", c.fs."~qname~");
+                    }
+                }
+            }
+            ";
+            return code;
+        }
+
+        mixin(codeForMaxMin("vel.x", "velxMax", "velxMin"));
+        mixin(codeForMaxMin("vel.y", "velyMax", "velyMin"));
+        mixin(codeForMaxMin("vel.z", "velzMax", "velzMin"));
+        version(MHD) {
+            if (myConfig.MHD) {
+                mixin(codeForMaxMin("B.x", "BxMax", "BxMin"));
+                mixin(codeForMaxMin("B.y", "ByMax", "ByMin"));
+                mixin(codeForMaxMin("B.z", "BzMax", "BzMin"));
+                if (myConfig.divergence_cleaning) {
+                    mixin(codeForMaxMin("psi", "psiMax", "psiMin"));
+                }
+            }
+        }
+        version(turbulence) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) {
+                mixin(codeForMaxMin("turb[it]", "turbMax[it]", "turbMin[it]"));
+            }
+        }
+        version(multi_species_gas) {
+            auto nsp = myConfig.n_species;
+            if (nsp > 1) {
+                // Multiple species.
+                foreach (isp; 0 .. nsp) {
+                    mixin(codeForMaxMin("gas.massf[isp]", "massfMax[isp]", "massfMin[isp]"));
+                }
+            } else {
+                // Only one possible gradient value for a single species.
+                massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+            }
+        }
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
+        auto nmodes = myConfig.n_modes;
+        final switch (myConfig.thermo_interpolator) {
+        case InterpolateOption.pt:
+            mixin(codeForMaxMin("gas.p", "pMax", "pMin"));
+            mixin(codeForMaxMin("gas.T", "TMax", "TMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForMaxMin("gas.T_modes[imode]", "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhou:
+            mixin(codeForMaxMin("gas.rho", "rhoMax", "rhoMin"));
+            mixin(codeForMaxMin("gas.u", "uMax", "uMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForMaxMin("gas.u_modes[imode]", "u_modesMax[imode]", "u_modesMin[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhop:
+            mixin(codeForMaxMin("gas.rho", "rhoMax", "rhoMin"));
+            mixin(codeForMaxMin("gas.p", "pMax", "pMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForMaxMin("gas.u_modes[imode]", "u_modesMax[imode]", "u_modesMin[imode]"));
+                }
+            }
+            break;
+        case InterpolateOption.rhot:
+            mixin(codeForMaxMin("gas.rho", "rhoMax", "rhoMin"));
+            mixin(codeForMaxMin("gas.T", "TMax", "TMin"));
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForMaxMin("gas.T_modes[imode]", "T_modesMax[imode]", "T_modesMin[imode]"));
+                }
+            }
+            break;
+        } // end switch thermo_interpolator
+        return;
+    } // end store_max_min_values_for_extended_stencil()
+
+    @nogc
     void compute_lsq_values(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
                             ref LocalConfig myConfig)
     {
@@ -1222,16 +1316,12 @@ public:
         {
             string code = "{
                 number q0 = cell_cloud[0].fs."~qname~";
-                "~qMaxname~" = q0;
-                "~qMinname~" = q0;
                 "~gname~"[0] = 0.0; "~gname~"[1] = 0.0; "~gname~"[2] = 0.0;
                 foreach (i; 1 .. np) {
                     number dq = cell_cloud[i].fs."~qname~" - q0;
                     "~gname~"[0] += ws.wx[i] * dq;
                     "~gname~"[1] += ws.wy[i] * dq;
                     if (dimensions == 3) { "~gname~"[2] += ws.wz[i] * dq; }
-                    "~qMaxname~" = fmax("~qMaxname~", cell_cloud[i].fs."~qname~");
-                    "~qMinname~" = fmin("~qMinname~", cell_cloud[i].fs."~qname~");
                 }
                 }
                 ";
