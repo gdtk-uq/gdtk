@@ -449,7 +449,7 @@ private:
     immutable number small_tke = 0.1;
     immutable number small_omega = 1.0;
 
-    @nogc bool is_tke_valid(const FlowStateLimits flowstate_limits, const number tke) const {
+    @nogc bool is_tke_valid(ref const(FlowStateLimits) flowstate_limits, const number tke) const {
         if (!isFinite(tke.re)) {
             debug { writeln("Turbulence KE invalid number ", tke); }
             return false;
