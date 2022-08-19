@@ -2122,19 +2122,14 @@ void osher(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
 // Note that it will only work in a debug build because we have hidden the memory allocations in a debug block.
 {
     auto gmodel = myConfig.gmodel;
-    bool have_intermediate_states;
-    GasState stateLstar, stateRstar, stateX0;
+    GasState* stateLstar, stateRstar, stateX0;
     debug {
-        // This cheat to hide the allocation from the @nogc
-        // will run horribly slowly but we are intending only to do small test problems.
-        stateLstar = GasState(gmodel);
-        stateRstar = GasState(gmodel);
-        stateX0 = GasState(gmodel);
-        have_intermediate_states = true;
-    } else {
-        have_intermediate_states = false;
+        // This cheat is to hide the allocation from the @nogc checker.
+        if (!stateLstar) stateLstar = new GasState(gmodel);
+        if (!stateRstar) stateRstar = new GasState(gmodel);
+        if (!stateX0) stateX0 = new GasState(gmodel);
     }
-    if (!have_intermediate_states) {
+    if (!(stateLstar && stateRstar && stateX0)) {
         throw new Error("The osher flux calculator is only usable in the debug flavour of build.");
     }
     //
@@ -2146,10 +2141,10 @@ void osher(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     }
     //
     number[5] rsol = osher_riemann(Lft.gas, Rght.gas, Lft.vel.x, Rght.vel.x,
-                                   stateLstar, stateRstar, stateX0, gmodel);
+                                   *stateLstar, *stateRstar, *stateX0, gmodel);
     number rho = stateX0.rho;
     number p = stateX0.p;
-    number u = gmodel.internal_energy(stateX0);
+    number u = gmodel.internal_energy(*stateX0);
     number velx = rsol[4];
     number vely = (velx > 0.0) ? Lft.vel.y : Rght.vel.y;
     number velz = (velx > 0.0) ? Lft.vel.z : Rght.vel.z;

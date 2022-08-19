@@ -62,6 +62,8 @@ public:
     number k_t;    // turbulence thermal-conductivity
     number S;         // shock indicator
 
+    @disable this();
+    
     this(GasModel gm,
          in double p_init,
          in double T_init,

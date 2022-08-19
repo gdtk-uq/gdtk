@@ -46,6 +46,8 @@ public:
     // in CEAGas methods that don't have access to the original CEA output file.
     CEASavedData* ceaSavedData;
 
+    @disable this();
+
     this(uint n_species, uint n_modes, bool includeSavedData=false)
     {
         massf.length = n_species;

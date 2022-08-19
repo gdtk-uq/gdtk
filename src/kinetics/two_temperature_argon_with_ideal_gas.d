@@ -39,9 +39,9 @@ final class UpdateArgonFracWithIdeal : ThermochemicalReactor {
         if (mygm !is null) {
             massf_tiny = mygm.massf_tiny;
             ideal_gas = mygm.ideal_gas;
-            Q_ideal = GasState(ideal_gas);
+            Q_ideal = new GasState(ideal_gas);
             argon_gas = mygm.argon_gas;
-            Q_argon = GasState(argon_gas);
+            Q_argon = new GasState(argon_gas);
             argon_reactor = new UpdateArgonFrac(fname, argon_gas);
         } else {
             throw new ThermochemicalReactorUpdateException("Need a 2T argon gas but did not get one.");
@@ -65,8 +65,8 @@ final class UpdateArgonFracWithIdeal : ThermochemicalReactor {
             Q_argon.massf[0] = Q.massf[1]/argon_massf;
             Q_argon.massf[1] = Q.massf[2]/argon_massf;
             Q_argon.massf[2] = Q.massf[3]/argon_massf;
-            argon_gas.update_thermo_from_rhoT(Q_argon);
-            argon_reactor(Q_argon, tInterval, dtSuggest, params);
+            argon_gas.update_thermo_from_rhoT(*Q_argon);
+            argon_reactor(*Q_argon, tInterval, dtSuggest, params);
             // Bring the updated argon species back into the composite model
             Q.massf[1] = Q_argon.massf[0]*argon_massf;
             Q.massf[2] = Q_argon.massf[1]*argon_massf;
@@ -93,8 +93,8 @@ private:
     double massf_tiny;
     GasModel ideal_gas;
     GasModel argon_gas;
-    GasState Q_ideal;
-    GasState Q_argon;
+    GasState* Q_ideal;
+    GasState* Q_argon;
     ThermochemicalReactor argon_reactor;
 } // end class UpdateArgonFracWithIdeal
 

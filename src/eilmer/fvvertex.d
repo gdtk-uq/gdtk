@@ -36,6 +36,8 @@ public:
     WLSQGradWorkspace* ws_grad;
     LSQInterpGradients* gradients; // needed for the MLP limiter
 
+    @disable this();
+    
     this(LocalConfig myConfig,
          bool allocate_spatial_deriv_lsq_workspace,
          int id_init=-1)

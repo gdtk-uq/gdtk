@@ -184,7 +184,7 @@ public:
     LocalConfig myConfig;
 
 public:
-    this() {}
+    @disable this();
 
     this(LocalConfig myConfig, bool allocate_spatial_deriv_lsq_workspace=false, int id_init=-1)
     {

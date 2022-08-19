@@ -106,6 +106,8 @@ private:
     LocalConfig myConfig;
 
 public:
+    @disable this();
+    
     this(LocalConfig myConfig,
          IndexDirection idir,
          bool allocate_spatial_deriv_lsq_workspace,
