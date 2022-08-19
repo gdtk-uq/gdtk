@@ -80,7 +80,7 @@ public:
 // Now that the ConservedQuantities object is a simple vector of quantities,
 // this collection of indices helps us select individual elements.
 
-class ConservedQuantitiesIndices {
+struct ConservedQuantitiesIndices {
 public:
     bool threeD;
     bool turb;
@@ -205,7 +205,7 @@ public:
         }
     } // end constructor
 
-    this(const(ConservedQuantitiesIndices) other)
+    this(ref const(ConservedQuantitiesIndices) other)
     {
         threeD = other.threeD;
         turb = other.turb;
@@ -229,7 +229,7 @@ public:
         modes = other.modes;
     } // end copy constructor
 
-    override string toString() const
+    string toString() const
     {
         char[] repr;
         repr ~= "ConservedQuantitiesIndices(";
@@ -241,4 +241,4 @@ public:
         repr ~= ")";
         return to!string(repr);
     }
-} // end ConvservedQuantitiesIndices
+} // end struct ConservedQuantitiesIndices

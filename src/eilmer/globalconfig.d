@@ -853,7 +853,7 @@ final class GlobalConfig {
     shared static bool axisymmetric = false;
     shared static bool gravity_non_zero = false;
     shared static double gravity_x = 0.0, gravity_y = 0.0, gravity_z = 0.0; // N/kg
-    static ConservedQuantitiesIndices cqi;
+    static ConservedQuantitiesIndices* cqi;
     shared static int nFluidBlockArrays = 0;
     //
     // Parameters controlling update
@@ -1290,7 +1290,7 @@ public:
     bool axisymmetric;
     bool gravity_non_zero;
     Vector3 gravity;
-    ConservedQuantitiesIndices cqi;
+    ConservedQuantitiesIndices* cqi;
     GasdynamicUpdate gasdynamic_update_scheme;
     size_t n_flow_time_levels;
     bool residual_smoothing;
@@ -1453,7 +1453,7 @@ public:
         if (gravity_non_zero) { gravity.set(cfg.gravity_x, cfg.gravity_y, cfg.gravity_z); }
         // Sometimes this constructor is called and GlobalConfig will not have been completely initialized.
         // Presumably these times, not all of the GlobalConfig is needed, so press on doing what can be done.
-        if (cfg.cqi) { cqi = new ConservedQuantitiesIndices(cfg.cqi); }
+        if (cfg.cqi) { cqi = new ConservedQuantitiesIndices(*(cfg.cqi)); }
         gasdynamic_update_scheme = cfg.gasdynamic_update_scheme;
         n_flow_time_levels = cfg.n_flow_time_levels;
         residual_smoothing = cfg.residual_smoothing;
