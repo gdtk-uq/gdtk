@@ -28,13 +28,13 @@ public:
     Vector3[] pos;  // x,y,z-Coordinates for time-levels, m
     Vector3[] vel;  // vertex velocity for time-levels, m/s
     // Derivatives of primary-cell variables.
-    FlowGradients grad;
+    FlowGradients* grad;
     number radial_pos_norm = 0;
     Vector3*[] cloud_pos; // Positions of flow points for derivative calculation.
     FlowState*[] cloud_fs; // References to flow states at those points.
     FVCell[] cell_cloud; // for the MLP limiter we need access to the gradients within each cell
-    WLSQGradWorkspace ws_grad;
-    LSQInterpGradients gradients; // needed for the MLP limiter
+    WLSQGradWorkspace* ws_grad;
+    LSQInterpGradients* gradients; // needed for the MLP limiter
 
     this(LocalConfig myConfig,
          bool allocate_spatial_deriv_lsq_workspace,
@@ -50,14 +50,14 @@ public:
         }
     }
 
-    this(FVVertex other)
+    this(FVVertex other) // not const; see note below
     {
         id = other.id;
         pos = other.pos.dup;
         vel = other.vel.dup;
-        grad = new FlowGradients(other.grad);
+        grad = new FlowGradients(*(other.grad));
         if (other.ws_grad) {
-            ws_grad = new WLSQGradWorkspace(other.ws_grad);
+            ws_grad = new WLSQGradWorkspace(*(other.ws_grad));
         }
         // Because we copy the following pointers,
         // we cannot have const (or "in") qualifier on other.
@@ -72,7 +72,7 @@ public:
             id = other.id;
             foreach (i; 0 .. pos.length) { pos[i].set(other.pos[i]); }
             foreach (i; 0 .. vel.length) { vel[i].set(other.vel[i]); }
-            grad.copy_values_from(other.grad);
+            grad.copy_values_from(*(other.grad));
             // omit ws_grad
         }
     } // end copy_values_from()

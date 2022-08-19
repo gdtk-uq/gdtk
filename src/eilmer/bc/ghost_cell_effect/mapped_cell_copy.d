@@ -1260,7 +1260,7 @@ public:
         } else { // not mpi_parallel
             // For a single process, just access the data directly.
             foreach (i, mygc; ghost_cells) {
-                mygc.gradients.copy_values_from(mapped_cells[i].gradients);
+                mygc.gradients.copy_values_from(*(mapped_cells[i].gradients));
             }
         }
     } // end exchange_convective_gradient_phase2()
@@ -1453,7 +1453,7 @@ public:
         } else { // not mpi_parallel
             // For a single process, just access the data directly.
             foreach (i, mygc; ghost_cells) {
-                mygc.grad.copy_values_from(mapped_cells[i].grad);
+                mygc.grad.copy_values_from(*(mapped_cells[i].grad));
             }
         }
     } // end exchange_viscous_gradient_phase2()

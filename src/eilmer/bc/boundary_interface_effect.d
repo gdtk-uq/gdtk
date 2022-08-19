@@ -1672,8 +1672,8 @@ protected:
         gmodel.update_thermo_from_pT(IFace.fs.gas);
         gmodel.update_trans_coeffs(IFace.fs.gas);
 
-        cell.grad.gradients_leastsq(cell.cloud_fs, cell.cloud_pos, cell.ws_grad);
-        IFace.grad.copy_values_from(cell.grad);
+        cell.grad.gradients_leastsq(cell.cloud_fs, cell.cloud_pos, *(cell.ws_grad));
+        IFace.grad.copy_values_from(*(cell.grad));
         number qx = IFace.fs.gas.k*cell.grad.T[0];
         number qy = IFace.fs.gas.k*cell.grad.T[1];
         number qz = IFace.fs.gas.k*cell.grad.T[2];
@@ -1690,7 +1690,7 @@ protected:
         // Species diffusion has the opposite sign, for some reason.
         number q_diffusion = to!number(0.0);
         if (catalytic){
-            blk.myConfig.massDiffusion.update_mass_fluxes(IFace.fs, cell.grad, jx, jy, jz);
+            blk.myConfig.massDiffusion.update_mass_fluxes(IFace.fs, *(cell.grad), jx, jy, jz);
             foreach (isp; 0 .. nsp) {
                 number h = gmodel.enthalpy(IFace.fs.gas, cast(int)isp);
                 q_diffusion += (jx[isp]*h*IFace.n.x + jy[isp]*h*IFace.n.y + jz[isp]*h*IFace.n.z);

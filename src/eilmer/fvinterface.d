@@ -82,8 +82,8 @@ public:
     number[] nbr_dist; // distance to neighbour
     //
     // Viscous-flux-related quantities.
-    FlowGradients grad;
-    WLSQGradWorkspace ws_grad;
+    FlowGradients* grad;
+    WLSQGradWorkspace* ws_grad;
     Vector3*[] cloud_pos; // Positions of flow points for gradients calculation.
     FlowState*[] cloud_fs; // References to flow states at those points.
     number[] jx; // diffusive mass flux in x
@@ -156,7 +156,7 @@ public:
         }
     }
 
-    this(FVInterface other, GasModel gm)
+    this(FVInterface other, GasModel gm) // not const; see note below
     {
         id = other.id;
         idir = other.idir;
@@ -180,8 +180,8 @@ public:
         tau_wall_y = other.tau_wall_y;
         tau_wall_z = other.tau_wall_z;
         q = other.q;
-        grad = new FlowGradients(other.grad);
-        if (other.ws_grad) ws_grad = new WLSQGradWorkspace(other.ws_grad);
+        grad = new FlowGradients(*(other.grad));
+        if (other.ws_grad) ws_grad = new WLSQGradWorkspace(*(other.ws_grad));
         // Because we copy the following pointers and references,
         // we cannot have const (or "in") qualifier on other.
         cloud_pos = other.cloud_pos.dup();
@@ -242,7 +242,7 @@ public:
             tau_wall_y = other.tau_wall_y;
             tau_wall_z = other.tau_wall_z;
             q = other.q;
-            grad.copy_values_from(other.grad);
+            grad.copy_values_from(*(other.grad));
             q_diffusion = other.q_diffusion;
             // omit scratch workspace ws_grad
         } // end switch
@@ -428,10 +428,10 @@ public:
                 uwf_sum += 1.0;
             }
         }
-        grad.copy_values_from(vtx[0].grad);
+        grad.copy_values_from(*(vtx[0].grad));
         grad.scale_values_by(uwfs[0]);
         foreach (i; 1 .. vtx.length) {
-            grad.accumulate_values_from(vtx[i].grad, uwfs[i]);
+            grad.accumulate_values_from(*(vtx[i].grad), uwfs[i]);
         }
         grad.scale_values_by(1.0/uwf_sum);
     } // end average_vertex_deriv_values()
@@ -669,7 +669,7 @@ public:
         // diffusion in areas with a small turbulent viscosity.
         version(multi_species_gas) {
             if (myConfig.mass_diffusion_model != MassDiffusionModel.none) {
-                myConfig.massDiffusion.update_mass_fluxes(fs, grad, jx, jy, jz);
+                myConfig.massDiffusion.update_mass_fluxes(fs, *grad, jx, jy, jz);
                 foreach (isp; 0 .. n_species) {
                     jx[isp] *= viscous_factor;
                     jy[isp] *= viscous_factor;
@@ -790,7 +790,7 @@ public:
                 if (myConfig.dimensions == 3) { tau_zz -= 2.0/3.0 * fs.gas.rho * tke; }
 
                 // Turbulent transport of turbulent kinetic energy
-                number[3] qtke = myConfig.turb_model.turbulent_kinetic_energy_transport(fs, grad);
+                number[3] qtke = myConfig.turb_model.turbulent_kinetic_energy_transport(fs, *grad);
                 qx += qtke[0];
                 qy += qtke[1];
                 if (myConfig.dimensions == 3) { qz += qtke[2]; }

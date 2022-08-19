@@ -25,18 +25,13 @@ immutable double ESSENTIALLY_ZERO = 1.0e-50;
 
 
 // TODO: These objects violate RAII. Is there a good reason for it? (NNG 30/05/22)
-class LSQInterpWorkspace {
+struct LSQInterpWorkspace {
 public:
     // A place to hold the intermediate results for computing
     // the least-squares model as a weighted sum of the flow data.
     number[cloud_nmax] wx, wy, wz;
 
-    this()
-    {
-        // do nothing
-    }
-
-    this(const LSQInterpWorkspace other)
+    this(in LSQInterpWorkspace other)
     {
         wx[] = other.wx[]; wy[] = other.wy[]; wz[] = other.wz[];
     }
@@ -110,9 +105,9 @@ public:
             }
         }
     } // end assemble_and_invert_normal_matrix()
-} // end class LSQInterpWorkspace
+} // end struct LSQInterpWorkspace
 
-class LSQInterpGradients {
+struct LSQInterpGradients {
     // These are the quantities that will be interpolated from cell centres
     // to the Left and Right sides of interfaces.
     // We need to hold onto their gradients within cells.
@@ -1474,8 +1469,8 @@ public:
         if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             // High-order reconstruction for some properties.
             //
-            LSQInterpWorkspace wsL = cL0.ws;
-            LSQInterpWorkspace wsR = cR0.ws;
+            LSQInterpWorkspace* wsL = cL0.ws;
+            LSQInterpWorkspace* wsR = cR0.ws;
             // vector from left-cell-centre to face midpoint
             number dLx = IFace.pos.x - cL0.pos[gtl].x;
             number dLy = IFace.pos.y - cL0.pos[gtl].y;
@@ -1724,7 +1719,7 @@ public:
         if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             // High-order reconstruction for some properties.
             //
-            LSQInterpWorkspace wsR = cR0.ws;
+            LSQInterpWorkspace* wsR = cR0.ws;
             // vector from left-cell-centre to face midpoint
             number dRx = IFace.pos.x - cR0.pos[gtl].x;
             number dRy = IFace.pos.y - cR0.pos[gtl].y;
@@ -1928,7 +1923,7 @@ public:
         if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             // High-order reconstruction for some properties.
             //
-            LSQInterpWorkspace wsL = cL0.ws;
+            LSQInterpWorkspace* wsL = cL0.ws;
             // vector from left-cell-centre to face midpoint
             number dLx = IFace.pos.x - cL0.pos[gtl].x;
             number dLy = IFace.pos.y - cL0.pos[gtl].y;

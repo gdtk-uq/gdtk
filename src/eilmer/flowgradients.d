@@ -29,7 +29,7 @@ import mass_diffusion;
 
 immutable size_t cloud_nmax = 12;
 
-class WLSQGradWorkspace {
+struct WLSQGradWorkspace {
 public:
     // A place to hold the intermediate results for computing
     // the least-squares model as a weighted sum of the flow data.
@@ -39,22 +39,17 @@ public:
     // 0=compute_about_mid, 1=compute_about_[0]
     size_t n; // cloud_pos.length;
 
-    this()
-    {
-        // don't need to do anything
-    }
-
-    this(const WLSQGradWorkspace other)
+    this(in WLSQGradWorkspace other)
     {
         wx[] = other.wx[]; wy[] = other.wy[]; wz[] = other.wz[];
         compute_about_mid = other.compute_about_mid;
         loop_init = other.loop_init;
         n = other.n;
     }
-} // end class WLSQGradWorkspace
+} // end struct WLSQGradWorkspace
 
 
-class FlowGradients {
+struct FlowGradients {
     // Spatial derivatives of the flow quantities
 public:
     number[3][3] vel;
@@ -110,7 +105,7 @@ public:
         }
     }
 
-    this(const FlowGradients other)
+    this(in FlowGradients other)
     {
         foreach(i; 0 .. 3) vel[i][] = other.vel[i][];
         version(multi_species_gas) {
@@ -129,7 +124,7 @@ public:
     }
 
     @nogc
-    void copy_values_from(const FlowGradients other)
+    void copy_values_from(in FlowGradients other)
     {
         foreach (i; 0 .. 3) { vel[i][] = other.vel[i][]; }
         version(multi_species_gas) {
@@ -145,7 +140,7 @@ public:
     }
 
     @nogc
-    void accumulate_values_from(const FlowGradients other)
+    void accumulate_values_from(in FlowGradients other)
     {
         foreach (i; 0 .. 3) { vel[i][] += other.vel[i][]; }
         version(multi_species_gas) {
@@ -161,7 +156,7 @@ public:
     }
 
     @nogc
-    void accumulate_values_from(const FlowGradients other, number factor)
+    void accumulate_values_from(in FlowGradients other, number factor)
     {
         foreach (i; 0 .. 3) {
             foreach (j; 0 .. 3) vel[i][j] += other.vel[i][j] * factor;
@@ -200,7 +195,7 @@ public:
         }
     }
 
-    override string toString() const
+    string toString() const
     {
         char[] repr;
         repr ~= "FlowGradients(";
@@ -344,7 +339,7 @@ public:
     void set_up_workspace_leastsq(ref Vector3*[] cloud_pos, ref Vector3 pos,
                                   bool compute_about_mid, ref WLSQGradWorkspace ws)
     {
-        assert(ws, "We are missing the workspace!");
+        assert(&ws is null, "We are missing the workspace!");
         size_t n = cloud_pos.length;
         assert(n <= cloud_nmax, "Too many points in cloud.");
         number[cloud_nmax] weights2;
@@ -490,7 +485,7 @@ public:
                            ref WLSQGradWorkspace ws)
     // Evaluate the gradients using the precomputed weights.
     {
-        if (!ws) {
+        if (&ws is null) {
             debug {
                 writeln("Attempt to do a least-squares gradients calculation " ~
                         "without the workspace being initialized.");
@@ -564,4 +559,4 @@ public:
         }
     } // end gradients_leastsq()
 
-} // end class FlowGradients
+} // end struct FlowGradients

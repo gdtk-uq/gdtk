@@ -2329,14 +2329,14 @@ public:
                 // The other block happens to be in this MPI process so
                 // we know that we can just access the cell data directly.
                 foreach (i; 0 .. ghost_cells.length) {
-                    ghost_cells[i].grad.copy_values_from(mapped_cells[i].grad);
+                    ghost_cells[i].grad.copy_values_from(*(mapped_cells[i].grad));
                 }
             }
         } else { // not mpi_parallel
             // For a single process,
             // we know that we can just access the data directly.
             foreach (i; 0 .. ghost_cells.length) {
-                ghost_cells[i].grad.copy_values_from(mapped_cells[i].grad);
+                ghost_cells[i].grad.copy_values_from(*(mapped_cells[i].grad));
             }
         }
         // Done with copying from source cells.

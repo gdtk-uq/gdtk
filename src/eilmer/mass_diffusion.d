@@ -49,7 +49,7 @@ MassDiffusionModel massDiffusionModelFromName(string name)
 
 interface MassDiffusion {
     @nogc
-    void update_mass_fluxes(ref FlowState fs, const FlowGradients grad,
+    void update_mass_fluxes(ref FlowState fs, ref const(FlowGradients) grad,
                             number[] jx, number[] jy, number[] jz);
 }
 
@@ -82,7 +82,7 @@ class FicksFirstLaw : MassDiffusion {
     }
 
     @nogc
-    void update_mass_fluxes(ref FlowState fs, const FlowGradients grad,
+    void update_mass_fluxes(ref FlowState fs, ref const(FlowGradients) grad,
                             number[] jx, number[] jy, number[] jz)
     {
         version(multi_species_gas) {

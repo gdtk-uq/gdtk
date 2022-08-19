@@ -1112,17 +1112,17 @@ public:
             final switch (myConfig.spatial_deriv_locn) {
             case SpatialDerivLocn.vertices:
                 foreach(vtx; vertices) {
-                    vtx.grad.set_up_workspace_leastsq(vtx.cloud_pos, vtx.pos[gtl], true, vtx.ws_grad);
+                    vtx.grad.set_up_workspace_leastsq(vtx.cloud_pos, vtx.pos[gtl], true, *(vtx.ws_grad));
                 }
                 break;
             case SpatialDerivLocn.faces:
                 foreach(iface; faces) {
-                    iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
+                    iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, *(iface.ws_grad));
                 }
                 break;
             case SpatialDerivLocn.cells:
                 foreach(cell; cells) {
-                    cell.grad.set_up_workspace_leastsq(cell.cloud_pos, cell.pos[gtl], false, cell.ws_grad);
+                    cell.grad.set_up_workspace_leastsq(cell.cloud_pos, cell.pos[gtl], false, *(cell.ws_grad));
                 }
             } // end switch
         }

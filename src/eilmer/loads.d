@@ -199,7 +199,7 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
     auto gmodel = GlobalConfig.gmodel_master;
     auto cqi = GlobalConfig.cqi;
     FlowState fs = iface.fs;
-    FlowGradients grad = iface.grad;
+    FlowGradients* grad = iface.grad;
     // iface orientation
     number nx = iface.n.x; number ny = iface.n.y; number nz = iface.n.z;
     // iface properties

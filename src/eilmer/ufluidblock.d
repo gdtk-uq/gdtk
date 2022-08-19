@@ -656,15 +656,15 @@ public:
             // LSQ weights are used in the calculation of flow gradients for the viscous terms.
             if (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
                 foreach(cell; cells) {
-                    cell.grad.set_up_workspace_leastsq(cell.cloud_pos, cell.pos[gtl], false, cell.ws_grad);
+                    cell.grad.set_up_workspace_leastsq(cell.cloud_pos, cell.pos[gtl], false, *(cell.ws_grad));
                 }
             } else if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
                 foreach(iface; faces) {
-                    iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
+                    iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, *(iface.ws_grad));
                 }
             } else { // myConfig.spatial_deriv_locn == vertices
                 foreach(vtx; vertices) {
-                    vtx.grad.set_up_workspace_leastsq(vtx.cloud_pos, vtx.pos[gtl], true, vtx.ws_grad);
+                    vtx.grad.set_up_workspace_leastsq(vtx.cloud_pos, vtx.pos[gtl], true, *(vtx.ws_grad));
                 }
             }
         }
@@ -755,7 +755,7 @@ public:
                 } else {
                     c.gradients.store_max_min_values_for_compact_stencil(c.cell_cloud, myConfig);
                 }
-                c.gradients.compute_lsq_values(c.cell_cloud, c.ws, myConfig);
+                c.gradients.compute_lsq_values(c.cell_cloud, *(c.ws), myConfig);
             }
         } // end if interpolation_order > 1
     } // end convective_flux-phase0()
@@ -782,34 +782,34 @@ public:
                             // do nothing now
                             break;
                         case UnstructuredLimiter.barth:
-                            c.gradients.barth_limit(c.cell_cloud, c.ws, myConfig);
+                            c.gradients.barth_limit(c.cell_cloud, *(c.ws), myConfig);
                             break;
                         case UnstructuredLimiter.park:
-                            c.gradients.park_limit(c.cell_cloud, c.ws, myConfig);
+                            c.gradients.park_limit(c.cell_cloud, *(c.ws), myConfig);
                             break;
                         case UnstructuredLimiter.hvan_albada:
-                            c.gradients.van_albada_limit(c.cell_cloud, c.ws, true, myConfig);
+                            c.gradients.van_albada_limit(c.cell_cloud, *(c.ws), true, myConfig);
                             break;
                         case UnstructuredLimiter.van_albada:
-                            c.gradients.van_albada_limit(c.cell_cloud, c.ws, false, myConfig);
+                            c.gradients.van_albada_limit(c.cell_cloud, *(c.ws), false, myConfig);
                             break;
                         case UnstructuredLimiter.hnishikawa:
-                            c.gradients.nishikawa_limit(c.cell_cloud, c.ws, true, myConfig, gtl);
+                            c.gradients.nishikawa_limit(c.cell_cloud, *(c.ws), true, myConfig, gtl);
                             break;
                         case UnstructuredLimiter.nishikawa:
-                            c.gradients.nishikawa_limit(c.cell_cloud, c.ws, false, myConfig, gtl);
+                            c.gradients.nishikawa_limit(c.cell_cloud, *(c.ws), false, myConfig, gtl);
                             break;
                         case UnstructuredLimiter.hvenkat_mlp:
-                            c.gradients.venkat_mlp_limit(c.cell_cloud, c.ws, true, myConfig, gtl);
+                            c.gradients.venkat_mlp_limit(c.cell_cloud, *(c.ws), true, myConfig, gtl);
                             break;
                         case UnstructuredLimiter.venkat_mlp:
-                            c.gradients.venkat_mlp_limit(c.cell_cloud, c.ws, false, myConfig, gtl);
+                            c.gradients.venkat_mlp_limit(c.cell_cloud, *(c.ws), false, myConfig, gtl);
                             break;
                         case UnstructuredLimiter.hvenkat:
-                            c.gradients.venkat_limit(c.cell_cloud, c.ws, true, myConfig, gtl);
+                            c.gradients.venkat_limit(c.cell_cloud, *(c.ws), true, myConfig, gtl);
                             break;
                         case UnstructuredLimiter.venkat:
-                            c.gradients.venkat_limit(c.cell_cloud, c.ws, false, myConfig, gtl);
+                            c.gradients.venkat_limit(c.cell_cloud, *(c.ws), false, myConfig, gtl);
                             break;
                     } // end switch
                 } // end foreach c
@@ -845,9 +845,9 @@ public:
                     // Fill in ghost-cell gradients from the other side of the face.
                     foreach (i, f; bcond.faces) {
                         if (bcond.outsigns[i] == 1) {
-                            f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
+                            f.right_cell.gradients.copy_values_from(*(f.left_cell.gradients));
                         } else {
-                            f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
+                            f.left_cell.gradients.copy_values_from(*(f.right_cell.gradients));
                         }
                     } // end foreach f
                 } // end if !found_mapped_cell_bc

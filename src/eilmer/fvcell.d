@@ -113,12 +113,12 @@ public:
     ConservedQuantities Qudf; // source terms from user-defined function (temporary storage, each update)
     ConservedQuantities[2] dUdt_copy; // for residual smoothing
     // for unstructured grids, we may be doing high-order reconstruction
-    LSQInterpWorkspace ws;
-    LSQInterpGradients gradients; // we only need these workspaces for the unstructured
+    LSQInterpWorkspace* ws;
+    LSQInterpGradients* gradients; // we only need these workspaces for the unstructured
                                   // solver, they are instantiated in ufluidblock.d
     // Viscous-flux-related quantities.
-    FlowGradients grad;
-    WLSQGradWorkspace ws_grad;
+    FlowGradients* grad;
+    WLSQGradWorkspace* ws_grad;
     Vector3*[] cloud_pos; // Positions of flow points for gradients calculation.
     FlowState*[] cloud_fs; // References to flow states at those points.
     // Terms for loose-coupling of radiation.
@@ -163,7 +163,7 @@ public:
 	//size_t global_id;
         number[][] dRdU;
         ConservedQuantities Q_save;
-        FlowGradients grad_save;
+        FlowGradients* grad_save;
         // stencil of effected cells & faces used in forming the flow Jacobian
         //FVCell[] jacobian_cell_stencil;
         //FVInterface[] jacobian_face_stencil;
@@ -344,7 +344,7 @@ public:
             L_max = other.L_max;
             fs.copy_values_from(other.fs);
             Q.copy_values_from(other.Q);
-            grad.copy_values_from(other.grad);
+            grad.copy_values_from(*(other.grad));
             foreach(i; 0 .. other.myConfig.n_flow_time_levels) {
                 U[i].copy_values_from(other.U[i]);
                 dUdt[i].copy_values_from(other.dUdt[i]);
@@ -1096,7 +1096,7 @@ public:
     void turbulence_viscosity()
     {
         auto gmodel = myConfig.gmodel;
-        fs.mu_t = myConfig.turb_model.turbulent_viscosity(fs, grad, pos[0].y, dwall);
+        fs.mu_t = myConfig.turb_model.turbulent_viscosity(fs, *grad, pos[0].y, dwall);
         fs.k_t = myConfig.turb_model.turbulent_conductivity(fs, gmodel);
     }
 
@@ -1195,7 +1195,7 @@ public:
         version(turbulence) {
             if (in_turbulent_zone) {
                 number[] rhoturb = Q.vec[cqi.rhoturb .. cqi.rhoturb+cqi.n_turb];
-                myConfig.turb_model.source_terms(fs, grad, pos[0].y, dwall, L_min, L_max, rhoturb);
+                myConfig.turb_model.source_terms(fs, *grad, pos[0].y, dwall, L_min, L_max, rhoturb);
             }
         }
 
@@ -1334,16 +1334,16 @@ public:
     @nogc
     void average_vertex_deriv_values()
     {
-        grad.copy_values_from(vtx[0].grad);
-        foreach (i; 1 .. vtx.length) grad.accumulate_values_from(vtx[i].grad);
+        grad.copy_values_from(*(vtx[0].grad));
+        foreach (i; 1 .. vtx.length) grad.accumulate_values_from(*(vtx[i].grad));
         grad.scale_values_by(to!number(1.0/vtx.length));
     } // end average_vertex_deriv_values()
 
     @nogc
     void average_interface_deriv_values()
     {
-        grad.copy_values_from(iface[0].grad);
-        foreach (i; 1 .. iface.length) grad.accumulate_values_from(iface[i].grad);
+        grad.copy_values_from(*(iface[0].grad));
+        foreach (i; 1 .. iface.length) grad.accumulate_values_from(*(iface[i].grad));
         grad.scale_values_by(to!number(1.0/iface.length));
     } // end average_interface_deriv_values()
 

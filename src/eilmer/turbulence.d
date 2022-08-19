@@ -37,12 +37,12 @@ class TurbulenceModel{
 
     // Methods to be overridden.
     abstract TurbulenceModel dup();
-    @nogc abstract void source_terms(ref const(FlowState) fs,const FlowGradients grad, const number ybar, const number dwall, const number L_min, const number L_max, ref number[] source) const;
-    @nogc abstract number turbulent_viscosity(ref const(FlowState) fs, const FlowGradients grad, const number ybar, const number dwall) const;
+    @nogc abstract void source_terms(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar, const number dwall, const number L_min, const number L_max, ref number[] source) const;
+    @nogc abstract number turbulent_viscosity(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar, const number dwall) const;
     @nogc abstract number turbulent_conductivity(ref const(FlowState) fs, GasModel gm) const;
     @nogc abstract number turbulent_signal_frequency(ref const(FlowState) fs) const;
     @nogc abstract number turbulent_kinetic_energy(ref const(FlowState) fs) const;
-    @nogc abstract number[3] turbulent_kinetic_energy_transport(ref const(FlowState) fs, const FlowGradients grad) const;
+    @nogc abstract number[3] turbulent_kinetic_energy_transport(ref const(FlowState) fs, ref const(FlowGradients) grad) const;
     @nogc abstract string primitive_variable_name(size_t i) const;
     @nogc abstract number turb_limits(size_t i) const;
     @nogc abstract number viscous_transport_coeff(ref const(FlowState) fs, size_t i) const;
@@ -84,13 +84,13 @@ class noTurbulenceModel : TurbulenceModel {
     }
 
     @nogc final override
-    void source_terms(ref const(FlowState) fs,const FlowGradients grad, const number ybar,
+    void source_terms(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar,
                       const number dwall, const number L_min, const number L_max,
                       ref number[] source) const {
         return;
     }
 
-    @nogc final override number turbulent_viscosity(ref const(FlowState) fs, const FlowGradients grad, const number ybar, const number dwall) const {
+    @nogc final override number turbulent_viscosity(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar, const number dwall) const {
         number mu_t = 0.0;
         return mu_t;
     }
@@ -110,7 +110,7 @@ class noTurbulenceModel : TurbulenceModel {
     }
 
     @nogc final override
-    number[3] turbulent_kinetic_energy_transport(ref const(FlowState) fs, const FlowGradients grad) const {
+    number[3] turbulent_kinetic_energy_transport(ref const(FlowState) fs, ref const(FlowGradients) grad) const {
         number[3] qtke;
         qtke[0] = 0.0;
         qtke[1] = 0.0;
@@ -198,7 +198,7 @@ class kwTurbulenceModel : TurbulenceModel {
     }
 
     @nogc final override
-    void source_terms(ref const(FlowState) fs, const FlowGradients grad, const number ybar,
+    void source_terms(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar,
                       const number dwall, const number L_min, const number L_max,
                       ref number[] source) const {
         /*
@@ -312,7 +312,7 @@ class kwTurbulenceModel : TurbulenceModel {
         return;
     }
 
-    @nogc final override number turbulent_viscosity(ref const(FlowState) fs, const FlowGradients grad, const number ybar, const number dwall) const {
+    @nogc final override number turbulent_viscosity(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar, const number dwall) const {
         /*
         Calculate mu_t, the turbulence viscosity.
 
@@ -379,7 +379,7 @@ class kwTurbulenceModel : TurbulenceModel {
     }
 
     @nogc final override
-    number[3] turbulent_kinetic_energy_transport(ref const(FlowState) fs, const FlowGradients grad) const {
+    number[3] turbulent_kinetic_energy_transport(ref const(FlowState) fs, ref const(FlowGradients) grad) const {
         // k-w uses the same expression for \overline{rho uj" 0.5 ui" ui"} as in the tke equation
         // taken from fvinterface viscous_flux_calc
         number mu_effective = viscous_transport_coeff(fs, 0);
@@ -538,7 +538,7 @@ class saTurbulenceModel : TurbulenceModel {
     }
 
     @nogc override
-    void source_terms(ref const(FlowState) fs, const FlowGradients grad, const number ybar,
+    void source_terms(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar,
                       const number dwall, const number L_min, const number L_max,
                       ref number[] source) const {
         /*
@@ -589,7 +589,7 @@ class saTurbulenceModel : TurbulenceModel {
         return;
     } // end source_terms()
 
-    @nogc override number turbulent_viscosity(ref const(FlowState) fs, const FlowGradients grad, const number ybar, const number dwall) const {
+    @nogc override number turbulent_viscosity(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar, const number dwall) const {
         /*
         Compute the turbulent viscosity mu_t from the SA transport variable nuhat
         See equation (1) from Allmaras (2012)
@@ -627,7 +627,7 @@ class saTurbulenceModel : TurbulenceModel {
     }
 
     @nogc final override
-    number[3] turbulent_kinetic_energy_transport(ref const(FlowState) fs, const FlowGradients grad) const {
+    number[3] turbulent_kinetic_energy_transport(ref const(FlowState) fs, ref const(FlowGradients) grad) const {
         /*
         Since tke==0 everywhere...
         */
@@ -715,7 +715,7 @@ protected:
     }
 
     @nogc number
-    compute_Shat_mulitplied_by_nuhat(const FlowGradients grad, const number nuhat, const number nu,
+    compute_Shat_mulitplied_by_nuhat(ref const(FlowGradients) grad, const number nuhat, const number nu,
                  const number d, const number fv1, const number fv2) const pure {
         // No axisymmetric corrections since W is antisymmetric
         number Omega = compute_Omega(grad);
@@ -761,7 +761,7 @@ protected:
     }
 
     @nogc number
-    compute_Omega(const FlowGradients grad) const pure{
+    compute_Omega(ref const(FlowGradients) grad) const pure{
         number Omega = 0.0;
         number Wij;
         foreach(i; 0 .. 3) {
@@ -824,7 +824,7 @@ class sabcmTurbulenceModel : saTurbulenceModel {
     }
 
     @nogc override
-    void source_terms(ref const(FlowState) fs, const FlowGradients grad, const number ybar,
+    void source_terms(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar,
                       const number dwall, const number L_min, const number L_max,
                       ref number[] source) const {
         /*
@@ -971,7 +971,7 @@ protected:
     }
 
     @nogc override number
-    compute_Shat_mulitplied_by_nuhat(const FlowGradients grad, const number nuhat, const number nu,
+    compute_Shat_mulitplied_by_nuhat(ref const(FlowGradients) grad, const number nuhat, const number nu,
                  const number d, const number fv1, const number fv2) const pure {
         /*
         The Edwards variant of Spalart-Allmaras contains a definition of Shat
