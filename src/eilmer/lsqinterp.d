@@ -710,6 +710,9 @@ public:
                       bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig, size_t gtl=0)
     {
         // This is the classic Venkatakrishnan limiter from ref. [1], refer to ref. [2] for implementation details.
+        // We use the new definition for eps2 as given in ref. [3].
+        // We have found that it provides a less noisy triggering of the limiter compared to the original
+        // definition provided in ref. [1] of eps2 = (K*h) * (K*h) * (K*h).
         //
         // Note that we use non-dimensional quantities in the limiter function to improve the
         // effect of the smoothing parameter.
@@ -721,15 +724,18 @@ public:
         // [2] Blazek J.
         //     CFD principles and applications
         //     pg. 156, Third edition, 2007
+        // [3] J. S. Park and C. Kim
+        //     Multi-dimensional limiting process for ﬁnite volume methods on unstructured grids
+        //     Computers & Fluids, vol. 65, pg. 8-24 (2012)
         //
-        number delp, delm, U, phi, h, phi_f, nondim;
+        number delp, delm, delu, U, theta, phi, h, phi_f, nondim;
         immutable double K = myConfig.smooth_limiter_coeff;
         if (myConfig.dimensions == 3) {
             h = pow(cell_cloud[0].volume[gtl], 1.0/3.0);
         } else {
             h = sqrt(cell_cloud[0].volume[gtl]);
         }
-        number eps2 = (K*h) * (K*h) * (K*h);
+        number eps2;
 
         // Park heuristic pressure limiter
         number phi_hp = 1.0;
@@ -753,6 +759,10 @@ public:
             }
             code ~= "
             U = cell_cloud[0].fs."~qname~";
+            delu = ("~qMaxname~"-"~qMinname~")/nondim;
+            theta = delu/(K*pow(h, 1.5));
+            eps2 = (K*delu*delu)/(1.0+theta);
+            eps2 += 1.0e-25; // prevent division by zero
             phi = 1.0;
             foreach (i, f; cell_cloud[0].iface) {
                 number dx = f.pos.x - cell_cloud[0].pos[gtl].x;
