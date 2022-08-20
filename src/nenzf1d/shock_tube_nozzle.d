@@ -324,7 +324,7 @@ Result analyse(int verbosityLevel, Config config)
     // only if we have the correct gas models in play.
     auto gm_cea = cast(CEAGas) gm1;
     auto gm_eq = cast(EquilibriumGas) gm1;
-    GasState gas0;
+    GasState gas0 = GasState(gm2);
     if (gm_cea !is null){
         try {
             gas0 = init_tp_state_from_cea(state6e, state6, gm2);
