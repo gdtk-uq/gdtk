@@ -204,12 +204,12 @@ void broadcastResiduals(ref ConservedQuantities residuals){
 */
     double[] buffer;
 
-    int size = to!int(residuals.vec.length);
+    int size = to!int(residuals.length);
     version(complex_numbers){ size *= 2; }
     buffer.length = size;
 
     size_t i=0;
-    foreach(f; residuals.vec){
+    foreach(f; residuals){
         buffer[i] = f.re;
         i++;
         version(complex_numbers){
@@ -221,7 +221,7 @@ void broadcastResiduals(ref ConservedQuantities residuals){
     MPI_Bcast(buffer.ptr, size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     i=0;
-    foreach(j; 0 .. residuals.vec.length){
+    foreach(j; 0 .. residuals.length){
         residuals[j].re = buffer[i];
         i++;
         version(complex_numbers){
