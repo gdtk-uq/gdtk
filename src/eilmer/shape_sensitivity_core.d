@@ -109,14 +109,14 @@ void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v,
     cellCount = 0;
     auto cqi = blk.myConfig.cqi;
     foreach (cell; blk.cells) {
-        p[cellCount+blk.MASS] = cell.dUdt[0].vec[cqi.mass].im/EPS.im;
-        p[cellCount+blk.X_MOM] = cell.dUdt[0].vec[cqi.xMom].im/EPS.im;
-        p[cellCount+blk.Y_MOM] = cell.dUdt[0].vec[cqi.yMom].im/EPS.im;
+        p[cellCount+blk.MASS] = cell.dUdt[0][cqi.mass].im/EPS.im;
+        p[cellCount+blk.X_MOM] = cell.dUdt[0][cqi.xMom].im/EPS.im;
+        p[cellCount+blk.Y_MOM] = cell.dUdt[0][cqi.yMom].im/EPS.im;
         if ( blk.myConfig.dimensions == 3 )
-            p[cellCount+blk.Z_MOM] = cell.dUdt[0].vec[cqi.zMom].im/EPS.im;
-        p[cellCount+blk.TOT_ENERGY] = cell.dUdt[0].vec[cqi.totEnergy].im/EPS.im;
+            p[cellCount+blk.Z_MOM] = cell.dUdt[0][cqi.zMom].im/EPS.im;
+        p[cellCount+blk.TOT_ENERGY] = cell.dUdt[0][cqi.totEnergy].im/EPS.im;
         foreach(it; 0 .. nturb){
-            p[cellCount+blk.TKE+it] = cell.dUdt[0].vec[cqi.rhoturb+it].im/EPS.im;
+            p[cellCount+blk.TKE+it] = cell.dUdt[0][cqi.rhoturb+it].im/EPS.im;
         }
         cellCount += nPrimitive;
     }
@@ -142,14 +142,14 @@ void evalConservativeJacobianVecProd(FluidBlock blk, size_t nConserved, number[]
     int cellCount = 0;
     foreach (cell; blk.cells) {
         cell.U[1].copy_values_from(cell.U[0]);
-        cell.U[1].vec[cqi.mass] += EPS*v[cellCount+blk.MASS];
-        cell.U[1].vec[cqi.xMom] += EPS*v[cellCount+blk.X_MOM];
-        cell.U[1].vec[cqi.yMom] += EPS*v[cellCount+blk.Y_MOM];
+        cell.U[1][cqi.mass] += EPS*v[cellCount+blk.MASS];
+        cell.U[1][cqi.xMom] += EPS*v[cellCount+blk.X_MOM];
+        cell.U[1][cqi.yMom] += EPS*v[cellCount+blk.Y_MOM];
         if ( blk.myConfig.dimensions == 3 )
-            cell.U[1].vec[cqi.zMom] += EPS*v[cellCount+blk.Z_MOM];
-        cell.U[1].vec[cqi.totEnergy] += EPS*v[cellCount+blk.TOT_ENERGY];
+            cell.U[1][cqi.zMom] += EPS*v[cellCount+blk.Z_MOM];
+        cell.U[1][cqi.totEnergy] += EPS*v[cellCount+blk.TOT_ENERGY];
         foreach(it; 0 .. nturb){
-            cell.U[1].vec[cqi.rhoturb+it] += EPS*v[cellCount+blk.TKE+it];
+            cell.U[1][cqi.rhoturb+it] += EPS*v[cellCount+blk.TKE+it];
         }
         cell.decode_conserved(0, 1, 0.0);
         cellCount += nConserved;
@@ -157,14 +157,14 @@ void evalConservativeJacobianVecProd(FluidBlock blk, size_t nConserved, number[]
     steadystate_core.evalRHS(0.0, 1);
     cellCount = 0;
     foreach (cell; blk.cells) {
-        p[cellCount+blk.MASS] = cell.dUdt[1].vec[cqi.mass].im/EPS.im;
-        p[cellCount+blk.X_MOM] = cell.dUdt[1].vec[cqi.xMom].im/EPS.im;
-        p[cellCount+blk.Y_MOM] = cell.dUdt[1].vec[cqi.yMom].im/EPS.im;
+        p[cellCount+blk.MASS] = cell.dUdt[1][cqi.mass].im/EPS.im;
+        p[cellCount+blk.X_MOM] = cell.dUdt[1][cqi.xMom].im/EPS.im;
+        p[cellCount+blk.Y_MOM] = cell.dUdt[1][cqi.yMom].im/EPS.im;
         if ( blk.myConfig.dimensions == 3 )
-            p[cellCount+blk.Z_MOM] = cell.dUdt[1].vec[cqi.zMom].im/EPS.im;
-        p[cellCount+blk.TOT_ENERGY] = cell.dUdt[1].vec[cqi.totEnergy].im/EPS.im;
+            p[cellCount+blk.Z_MOM] = cell.dUdt[1][cqi.zMom].im/EPS.im;
+        p[cellCount+blk.TOT_ENERGY] = cell.dUdt[1][cqi.totEnergy].im/EPS.im;
         foreach(it; 0 .. nturb){
-            p[cellCount+blk.TKE+it] = cell.dUdt[1].vec[cqi.rhoturb+it].im/EPS.im;
+            p[cellCount+blk.TKE+it] = cell.dUdt[1][cqi.rhoturb+it].im/EPS.im;
         }
         cellCount += nConserved;
     }
@@ -1990,28 +1990,28 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
     //codeStr ~= "pcell.copy_values_from(cellSave, CopyDataOption.all);";
     // ------------------ compute interface flux derivatives ------------------
     codeStr ~= "foreach (i, iface; pcell.jacobian_face_stencil) {";
-    codeStr ~= "iface.dFdU[blk.MASS][" ~ posInArray ~ "] = blk.ifaceP[i].F.vec[cqi.mass].im/EPS.im;";
-    codeStr ~= "iface.dFdU[blk.X_MOM][" ~ posInArray ~ "] = blk.ifaceP[i].F.vec[cqi.xMom].im/EPS.im;";
-    codeStr ~= "iface.dFdU[blk.Y_MOM][" ~ posInArray ~ "] = blk.ifaceP[i].F.vec[cqi.yMom].im/EPS.im;";
+    codeStr ~= "iface.dFdU[blk.MASS][" ~ posInArray ~ "] = blk.ifaceP[i].F[cqi.mass].im/EPS.im;";
+    codeStr ~= "iface.dFdU[blk.X_MOM][" ~ posInArray ~ "] = blk.ifaceP[i].F[cqi.xMom].im/EPS.im;";
+    codeStr ~= "iface.dFdU[blk.Y_MOM][" ~ posInArray ~ "] = blk.ifaceP[i].F[cqi.yMom].im/EPS.im;";
     codeStr ~= "if (blk.myConfig.dimensions == 3) {";
-    codeStr ~= "iface.dFdU[blk.Z_MOM][" ~ posInArray ~ "] = blk.ifaceP[i].F.vec[cqi.zMom].im/EPS.im;";
+    codeStr ~= "iface.dFdU[blk.Z_MOM][" ~ posInArray ~ "] = blk.ifaceP[i].F[cqi.zMom].im/EPS.im;";
     codeStr ~= "}";
-    codeStr ~= "iface.dFdU[blk.TOT_ENERGY][" ~ posInArray ~ "] = blk.ifaceP[i].F.vec[cqi.totEnergy].im/EPS.im;";
+    codeStr ~= "iface.dFdU[blk.TOT_ENERGY][" ~ posInArray ~ "] = blk.ifaceP[i].F[cqi.totEnergy].im/EPS.im;";
     codeStr ~= "foreach(it; 0 .. blk.myConfig.turb_model.nturb){";
-    codeStr ~= "iface.dFdU[blk.TKE+it][" ~ posInArray ~ "] = blk.ifaceP[i].F.vec[cqi.rhoturb+it].im/EPS.im;";
+    codeStr ~= "iface.dFdU[blk.TKE+it][" ~ posInArray ~ "] = blk.ifaceP[i].F[cqi.rhoturb+it].im/EPS.im;";
     codeStr ~= "}";
     codeStr ~= "}";
     codeStr ~= "foreach (i, cell; pcell.jacobian_cell_stencil) {";
     //codeStr ~= "writeln(cell.Q);";
-    codeStr ~= "cell.dQdU[blk.MASS][" ~ posInArray ~ "] = cell.Q.vec[cqi.mass].im/EPS.im;";
-    codeStr ~= "cell.dQdU[blk.X_MOM][" ~ posInArray ~ "] = cell.Q.vec[cqi.xMom].im/EPS.im;";
-    codeStr ~= "cell.dQdU[blk.Y_MOM][" ~ posInArray ~ "] = cell.Q.vec[cqi.yMom].im/EPS.im;";
+    codeStr ~= "cell.dQdU[blk.MASS][" ~ posInArray ~ "] = cell.Q[cqi.mass].im/EPS.im;";
+    codeStr ~= "cell.dQdU[blk.X_MOM][" ~ posInArray ~ "] = cell.Q[cqi.xMom].im/EPS.im;";
+    codeStr ~= "cell.dQdU[blk.Y_MOM][" ~ posInArray ~ "] = cell.Q[cqi.yMom].im/EPS.im;";
     codeStr ~= "if (blk.myConfig.dimensions == 3) {";
-    codeStr ~= "cell.dQdU[blk.Z_MOM][" ~ posInArray ~ "] = cell.Q.vec[cqi.zMom].im/EPS.im;";
+    codeStr ~= "cell.dQdU[blk.Z_MOM][" ~ posInArray ~ "] = cell.Q[cqi.zMom].im/EPS.im;";
     codeStr ~= "}";
-    codeStr ~= "cell.dQdU[blk.TOT_ENERGY][" ~ posInArray ~ "] = cell.Q.vec[cqi.totEnergy].im/EPS.im;";
+    codeStr ~= "cell.dQdU[blk.TOT_ENERGY][" ~ posInArray ~ "] = cell.Q[cqi.totEnergy].im/EPS.im;";
     codeStr ~= "foreach(it; 0 .. blk.myConfig.turb_model.nturb){";
-    codeStr ~= "cell.dQdU[blk.TKE+it][" ~ posInArray ~ "] = cell.Q.vec[cqi.rhoturb+it].im/EPS.im;";
+    codeStr ~= "cell.dQdU[blk.TKE+it][" ~ posInArray ~ "] = cell.Q[cqi.rhoturb+it].im/EPS.im;";
     codeStr ~= "}";
     codeStr ~= "}";
     codeStr ~= "pcell.copy_values_from(blk.cellSave, CopyDataOption.all);";
@@ -2118,7 +2118,7 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
     //size_t TOT_ENERGY = cqi.totEnergyIdx;
     //size_t TKE = cqi.tkeIdx;
     //size_t OMEGA = cqi.omegaIdx;
-
+    //
     foreach (i; 0..nDesignVars) {
         foreach (myblk; localFluidBlocks) {
             ensure_directory_is_present(make_path_name!"grid"(0));
@@ -2128,11 +2128,11 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
             myblk.compute_primary_cell_geometric_data(0);
             myblk.compute_least_squares_setup(0);
         }
-
+        //
         /*
         foreach (myblk; localFluidBlocks) {
             myblk.read_solution(make_file_name!"flow"("ramp", myblk.id, 0, GlobalConfig.flowFileExt), false);
-            
+            //
             // We can apply a special initialisation to the flow field, if requested.
             //if (GlobalConfig.diffuseWallBCsOnInit) {
             //writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
@@ -2141,7 +2141,7 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
             //    diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
             //}
             //}
-            
+            //
             foreach (cell; myblk.cells) {
                 cell.encode_conserved(0, 0, myblk.omegaz);
                 // Even though the following call appears redundant at this point,
@@ -2152,51 +2152,51 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
         }
         */
         //steadystate_core.evalRHS(0.0, 0);
-        
+        //
         // perturb design variable +ve
         gtl = 1; ftl = 1;
-        
+        //
         // perturb design variable in complex plan
-        P0 = design_variables[i].y; 
+        P0 = design_variables[i].y;
         design_variables[i].y = P0 + EPS;
-        
+        //
         // perturb grid
         gridUpdate(design_variables, 1);
-
+        //
         foreach (myblk; parallel(localFluidBlocks,1)) {
             foreach(j, vtx; myblk.vertices) {
                 vtx.pos[0].x = vtx.pos[1].x;
                 vtx.pos[0].y = vtx.pos[1].y;
             }
         }
-
+        //
         //exchange_ghost_cell_geometry_data();
         //exchange_ghost_cell_boundary_data(0.0, 0, 0);
-        
+        //
         foreach (myblk; parallel(localFluidBlocks,1)) {
             myblk.compute_primary_cell_geometric_data(0);
             myblk.compute_least_squares_setup(0);
-            
+            //
             //foreach ( face; myblk.faces )
-            //    foreach ( j; 0..face.cloud_pos.length) writef("%d    %.16f    %.16f \n", face.id, face.ws_grad.wx[j], face.ws_grad.wy[j]); 
+            //    foreach ( j; 0..face.cloud_pos.length) writef("%d    %.16f    %.16f \n", face.id, face.ws_grad.wx[j], face.ws_grad.wy[j]);
         }
 
         exchange_ghost_cell_geometry_data();
         exchange_ghost_cell_boundary_data(0.0, 0, 0);
-        
+        //
         foreach (myblk; parallel(localFluidBlocks,1)) {
             //myblk.compute_primary_cell_geometric_data(0);
             myblk.compute_least_squares_setup(0);
-            
+            //
             //foreach ( face; myblk.faces )
-            //    foreach ( j; 0..face.cloud_pos.length) writef("%d    %.16f    %.16f \n", face.id, face.ws_grad.wx[j], face.ws_grad.wy[j]); 
+            //    foreach ( j; 0..face.cloud_pos.length) writef("%d    %.16f    %.16f \n", face.id, face.ws_grad.wx[j], face.ws_grad.wy[j]);
         }
-        
+        //
         //evalRHS(0.0, ftl, 0);
         steadystate_core.evalRHS(0.0, ftl);
-        
+        //
         objFcnEvalP = objective_function_evaluation(0);
-        
+        //
         // compute cost function sensitivity
         g[i] = (objFcnEvalP.im)/(EPS.im);
 
@@ -2204,18 +2204,18 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
         foreach (myblk; parallel(localFluidBlocks,1)) {
             auto cqi = myblk.myConfig.cqi;
             foreach(j, cell; myblk.cells) {
-                myblk.rT[i, j*nPrimitive+myblk.MASS] = to!number((-cell.dUdt[ftl].vec[cqi.mass].im)/(EPS.im));
-                myblk.rT[i, j*nPrimitive+myblk.X_MOM] = to!number((-cell.dUdt[ftl].vec[cqi.xMom].im)/(EPS.im));
-                myblk.rT[i, j*nPrimitive+myblk.Y_MOM] = to!number((-cell.dUdt[ftl].vec[cqi.yMom].im)/(EPS.im));
-                if (myblk.myConfig.dimensions == 3) 
-                    myblk.rT[i, j*nPrimitive+myblk.Z_MOM] = to!number((-cell.dUdt[ftl].vec[cqi.zMom].im)/(EPS.im));
-                myblk.rT[i, j*nPrimitive+myblk.TOT_ENERGY] = to!number((-cell.dUdt[ftl].vec[cqi.totEnergy].im)/(EPS.im));                
+                myblk.rT[i, j*nPrimitive+myblk.MASS] = to!number((-cell.dUdt[ftl][cqi.mass].im)/(EPS.im));
+                myblk.rT[i, j*nPrimitive+myblk.X_MOM] = to!number((-cell.dUdt[ftl][cqi.xMom].im)/(EPS.im));
+                myblk.rT[i, j*nPrimitive+myblk.Y_MOM] = to!number((-cell.dUdt[ftl][cqi.yMom].im)/(EPS.im));
+                if (myblk.myConfig.dimensions == 3)
+                    myblk.rT[i, j*nPrimitive+myblk.Z_MOM] = to!number((-cell.dUdt[ftl][cqi.zMom].im)/(EPS.im));
+                myblk.rT[i, j*nPrimitive+myblk.TOT_ENERGY] = to!number((-cell.dUdt[ftl][cqi.totEnergy].im)/(EPS.im));
                 foreach(it; 0 .. myblk.myConfig.turb_model.nturb){
-                    myblk.rT[i, j*nPrimitive+myblk.TKE+it] = to!number((-cell.dUdt[ftl].vec[cqi.rhoturb+it].im)/(EPS.im));
+                    myblk.rT[i, j*nPrimitive+myblk.TKE+it] = to!number((-cell.dUdt[ftl][cqi.rhoturb+it].im)/(EPS.im));
                 }
             }
         }
-        
+        //
         // restore design variable
         design_variables[i].y = P0;
     }

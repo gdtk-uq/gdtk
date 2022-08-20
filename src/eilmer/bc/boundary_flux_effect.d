@@ -221,7 +221,7 @@ public:
 
         // Finally update properties in interfaces
         myBC.ifaces[f.i_bndry].fs.gas.T = T;
-        myBC.ifaces[f.i_bndry].F.vec[cqi.totEnergy] = outsign*q;
+        myBC.ifaces[f.i_bndry].F[cqi.totEnergy] = outsign*q;
     }
 
     // not @nogc
@@ -280,7 +280,7 @@ public:
 
             // Finally update properties in interfaces
             myBC.ifaces[i].fs.gas.T = T;
-            myBC.ifaces[i].F.vec[cqi.totEnergy] = outsign*q;
+            myBC.ifaces[i].F[cqi.totEnergy] = outsign*q;
         }
 
         //auto myBC = blk.bc[which_boundary];
@@ -466,7 +466,7 @@ private:
         number vely_rel = vely - f.gvel.y;
         number velz_rel = velz - f.gvel.z;
         number massFlux = rho * (velx_rel*f.n.x + vely_rel*f.n.y + velz_rel*f.n.z);
-        f.F.vec[cqi.mass] = massFlux;
+        f.F[cqi.mass] = massFlux;
         /++ when the boundary is moving we use the relative velocity
          + between the fluid and the boundary interface to determine
          + the amount of mass flux across the cell face (above).
@@ -477,23 +477,23 @@ private:
          + on its velocity. Since we we want this momentum flux in global
          + coordinates there is no need to rotate the velocity.
          ++/
-        f.F.vec[cqi.xMom] = p*f.n.x + velx*massFlux;
-        f.F.vec[cqi.yMom] = p*f.n.y + vely*massFlux;
+        f.F[cqi.xMom] = p*f.n.x + velx*massFlux;
+        f.F[cqi.yMom] = p*f.n.y + vely*massFlux;
         if (cqi.threeD) {
-            f.F.vec[cqi.zMom] = p*f.n.z + velz*massFlux;
+            f.F[cqi.zMom] = p*f.n.z + velz*massFlux;
         }
-        f.F.vec[cqi.totEnergy] = massFlux*(u + 0.5*(velx*velx + vely*vely + velz*velz)) +
+        f.F[cqi.totEnergy] = massFlux*(u + 0.5*(velx*velx + vely*vely + velz*velz)) +
             p*(velx*f.n.x + vely*f.n.y + velz*f.n.z);
         version(multi_species_gas) {
             if (cqi.n_species > 1) {
                 foreach (i; 0 .. cqi.n_species) {
-                    f.F.vec[cqi.species+i] = massFlux*fstate.gas.massf[i];
+                    f.F[cqi.species+i] = massFlux*fstate.gas.massf[i];
                 }
             }
         }
         version(multi_T_gas) {
             foreach (i; 0 .. cqi.n_modes){
-                f.F.vec[cqi.modes+i] = massFlux*fstate.gas.u_modes[i];
+                f.F[cqi.modes+i] = massFlux*fstate.gas.u_modes[i];
             }
         }
     } // end apply_to_single_face()
@@ -579,10 +579,10 @@ private:
         number mass_flux = fs.gas.rho * dot(v_rel, face.n);
         if ((outsign*mass_flux) > 0.0) {
             // We have a true outflow flux.
-            face.F.vec[cqi.mass] = mass_flux;
-            face.F.vec[cqi.xMom] = fs.gas.p * face.n.x + fs.vel.x * mass_flux;
-            face.F.vec[cqi.yMom] = fs.gas.p * face.n.y + fs.vel.y * mass_flux;
-            if (cqi.threeD) { face.F.vec[cqi.zMom] = fs.gas.p * face.n.z + fs.vel.z * mass_flux; }
+            face.F[cqi.mass] = mass_flux;
+            face.F[cqi.xMom] = fs.gas.p * face.n.x + fs.vel.x * mass_flux;
+            face.F[cqi.yMom] = fs.gas.p * face.n.y + fs.vel.y * mass_flux;
+            if (cqi.threeD) { face.F[cqi.zMom] = fs.gas.p * face.n.z + fs.vel.z * mass_flux; }
             number utot = fs.gas.u + 0.5*dot(fs.vel,fs.vel);
             version(multi_T_gas) {
                 foreach (umode; fs.gas.u_modes) { utot += umode; }
@@ -590,7 +590,7 @@ private:
             version(turbulence) {
                 utot += blk.myConfig.turb_model.turbulent_kinetic_energy(fs);
             }
-            face.F.vec[cqi.totEnergy] = mass_flux*utot + fs.gas.p*dot(fs.vel,face.n);
+            face.F[cqi.totEnergy] = mass_flux*utot + fs.gas.p*dot(fs.vel,face.n);
             if (omegaz != 0.0) {
                 // Rotating frame.
                 number x = face.pos.x;
@@ -599,45 +599,45 @@ private:
                 // The conserved quantity is rotating-frame total energy,
                 // so we need to take -(u**2)/2 off the total energy.
                 // Note that rotating frame velocity u = omegaz * r.
-                face.F.vec[cqi.totEnergy] -= mass_flux * 0.5*omegaz*omegaz*rsq;
+                face.F[cqi.totEnergy] -= mass_flux * 0.5*omegaz*omegaz*rsq;
             }
             version(turbulence) {
-                foreach (i; 0 .. blk.myConfig.turb_model.nturb) { face.F.vec[cqi.rhoturb+i] = mass_flux * fs.turb[i]; }
+                foreach (i; 0 .. blk.myConfig.turb_model.nturb) { face.F[cqi.rhoturb+i] = mass_flux * fs.turb[i]; }
             }
             version(MHD) {
                 // [TODO] PJ 2018-10-25 MHD?
             }
             version(multi_species_gas) {
                 if (cqi.n_species > 1) {
-                    foreach (i; 0 .. cqi.n_species) { face.F.vec[cqi.species+i] = mass_flux * fs.gas.massf[i]; }
+                    foreach (i; 0 .. cqi.n_species) { face.F[cqi.species+i] = mass_flux * fs.gas.massf[i]; }
                 }
             }
             version(multi_T_gas) {
-                foreach (i; 0 .. cqi.n_modes) { face.F.vec[cqi.modes+i] = mass_flux * fs.gas.u_modes[i]; }
+                foreach (i; 0 .. cqi.n_modes) { face.F[cqi.modes+i] = mass_flux * fs.gas.u_modes[i]; }
             }
         } else {
             // We have a situation where the nominal mass flux
             // indicates that flow should be coming into the domain.
             // Since we really do not want to have this happen,
             // we close off the face and think of it as a wall.
-            face.F.vec[cqi.mass] = 0.0;
-            face.F.vec[cqi.xMom] = face.n.x * fs.gas.p;
-            face.F.vec[cqi.yMom] = face.n.y * fs.gas.p;
-            if (cqi.threeD) { face.F.vec[cqi.zMom] = face.n.z * fs.gas.p; }
-            face.F.vec[cqi.totEnergy] = fs.gas.p * dot(face.gvel,face.n);
+            face.F[cqi.mass] = 0.0;
+            face.F[cqi.xMom] = face.n.x * fs.gas.p;
+            face.F[cqi.yMom] = face.n.y * fs.gas.p;
+            if (cqi.threeD) { face.F[cqi.zMom] = face.n.z * fs.gas.p; }
+            face.F[cqi.totEnergy] = fs.gas.p * dot(face.gvel,face.n);
             version(turbulence) {
-                foreach (i; 0 .. blk.myConfig.turb_model.nturb) { face.F.vec[cqi.rhoturb+i] = 0.0; }
+                foreach (i; 0 .. blk.myConfig.turb_model.nturb) { face.F[cqi.rhoturb+i] = 0.0; }
             }
             version(MHD) {
                 // [TODO] PJ 2018-10-25 MHD?
             }
             version(multi_species_gas) {
                 if (cqi.n_species > 1) {
-                    foreach (i; 0 .. cqi.n_species) { face.F.vec[cqi.species+i] = 0.0; }
+                    foreach (i; 0 .. cqi.n_species) { face.F[cqi.species+i] = 0.0; }
                 }
             }
             version(multi_T_gas) {
-                foreach (i; 0 .. cqi.n_modes) { face.F.vec[cqi.modes+i] = 0.0; }
+                foreach (i; 0 .. cqi.n_modes) { face.F[cqi.modes+i] = 0.0; }
             }
         }
         return;
@@ -696,11 +696,11 @@ public:
         auto cqi = blk.myConfig.cqi;
         //
         foreach (i, f; bc.faces) {
-            f.F.vec[cqi.totEnergy] = f.fs.gas.p * dot(f.n, f.gvel);
-            f.F.vec[cqi.xMom] = f.fs.gas.p * dot(f.n, nx);
-            f.F.vec[cqi.yMom] = f.fs.gas.p * dot(f.n, ny);
-            if (cqi.threeD) { f.F.vec[cqi.zMom] = f.fs.gas.p * dot(f.n, nz); }
-            f.F.vec[cqi.mass] = 0.;
+            f.F[cqi.totEnergy] = f.fs.gas.p * dot(f.n, f.gvel);
+            f.F[cqi.xMom] = f.fs.gas.p * dot(f.n, nx);
+            f.F[cqi.yMom] = f.fs.gas.p * dot(f.n, ny);
+            if (cqi.threeD) { f.F[cqi.zMom] = f.fs.gas.p * dot(f.n, nz); }
+            f.F[cqi.mass] = 0.;
         }
     } // end apply_structured_grid()
 } // end BFE_UpdateEnergyWallNormalVelocity
@@ -759,8 +759,8 @@ class BFE_ThermionicElectronFlux : BoundaryFluxEffect {
             //    f.F.massf[electron_index] -= sign*emf;
             //}
             number eef = electron_energy_flux(f);
-            f.F.vec[cqi.totEnergy] -= sign*eef;
-            version(multi_T_gas) { f.F.vec[cqi.modes+0] -= sign*eef; }
+            f.F[cqi.totEnergy] -= sign*eef;
+            version(multi_T_gas) { f.F[cqi.modes+0] -= sign*eef; }
         }
     }
 

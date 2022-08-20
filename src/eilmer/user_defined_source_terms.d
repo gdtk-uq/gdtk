@@ -52,15 +52,15 @@ void getUDFSourceTermsForCell(lua_State* L, FVCell cell, size_t gtl,
     //
     // Grab values from user-returned table at TOS
     // For any missing values, put in 0.0
-    cell.Qudf.vec[cqi.mass] = getNumberFromTable(L, -1, "mass", false, 0.0);
-    cell.Qudf.vec[cqi.xMom] = getNumberFromTable(L, -1, "momentum_x", false, 0.0);
-    cell.Qudf.vec[cqi.yMom] = getNumberFromTable(L, -1, "momentum_y", false, 0.0);
-    if (cqi.threeD) { cell.Qudf.vec[cqi.zMom] = getNumberFromTable(L, -1, "momentum_z", false, 0.0); }
-    cell.Qudf.vec[cqi.totEnergy] = getNumberFromTable(L, -1, "total_energy",false, 0.0);
+    cell.Qudf[cqi.mass] = getNumberFromTable(L, -1, "mass", false, 0.0);
+    cell.Qudf[cqi.xMom] = getNumberFromTable(L, -1, "momentum_x", false, 0.0);
+    cell.Qudf[cqi.yMom] = getNumberFromTable(L, -1, "momentum_y", false, 0.0);
+    if (cqi.threeD) { cell.Qudf[cqi.zMom] = getNumberFromTable(L, -1, "momentum_z", false, 0.0); }
+    cell.Qudf[cqi.totEnergy] = getNumberFromTable(L, -1, "total_energy",false, 0.0);
     version(turbulence) {
         foreach(it; 0 .. myConfig.turb_model.nturb){
             string tname = myConfig.turb_model.primitive_variable_name(it);
-            cell.Qudf.vec[cqi.rhoturb+it] = getNumberFromTable(L, -1, tname, false, 0.0);
+            cell.Qudf[cqi.rhoturb+it] = getNumberFromTable(L, -1, tname, false, 0.0);
         }
     }
     version(multi_species_gas) {
@@ -79,7 +79,7 @@ void getUDFSourceTermsForCell(lua_State* L, FVCell cell, size_t gtl,
                         lua_pop(L, 1);
                         throw new LuaInputException(errMsg);
                     }
-                    cell.Qudf.vec[cqi.species+isp] = lua_tonumber(L, -1);
+                    cell.Qudf[cqi.species+isp] = lua_tonumber(L, -1);
                     lua_pop(L, 1);
                 }
                 lua_pop(L, 1); // discard species table
@@ -88,7 +88,7 @@ void getUDFSourceTermsForCell(lua_State* L, FVCell cell, size_t gtl,
                 // For the single-species case, we just set the
                 // source terms of the single-species to equal
                 // that of the mass term.
-                // if (n_species == 1) { There is no storage for cell.Qudf.vec[cqi.species+0] }
+                // if (n_species == 1) { There is no storage for cell.Qudf[cqi.species+0] }
                 // For multi-component gases, there is really no sensible decision,
                 // so leave it alone.
             }
@@ -100,7 +100,7 @@ void getUDFSourceTermsForCell(lua_State* L, FVCell cell, size_t gtl,
             if ( !lua_isnil(L, -1) ) {
                 foreach (imode; 0 .. n_modes) {
                     lua_rawgeti(L, -1, to!int(imode)+1);
-                    cell.Qudf.vec[cqi.modes+imode] = lua_tonumber(L, -1);
+                    cell.Qudf[cqi.modes+imode] = lua_tonumber(L, -1);
                     lua_pop(L, 1);
                 }
             }

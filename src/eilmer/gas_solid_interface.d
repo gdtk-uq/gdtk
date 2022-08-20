@@ -54,7 +54,7 @@ void computeFluxesAndTemperatures(int ftl, FVCell[] gasCells, FVInterface[] gasI
         q = -kG_dnG * (T - gasCells[i].fs.gas.T);
         // Finally update properties in interfaces
         gasIFaces[i].fs.gas.T = T;
-        gasIFaces[i].F.vec[cqi.totEnergy] = q; // CHECK ME: might only work for
+        gasIFaces[i].F[cqi.totEnergy] = q; // CHECK ME: might only work for
                                                // NORTH-SOUTH orientation.
                                                // Need to think about sign.
         solidIFaces[i].T = T;
@@ -123,7 +123,7 @@ void computeFluxesAndTemperatures2(int ftl, FVCell[] gasCells, FVInterface[] gas
 	auto kG_dyG = kG/dyG;
         auto q = -kG_dyG*(T[i] - gasCells[i].fs.gas.T);
         gasIFaces[i].fs.gas.T = T[i];
-        gasIFaces[i].F.vec[cqi.totEnergy] = q;
+        gasIFaces[i].F[cqi.totEnergy] = q;
         solidIFaces[i].T = T[i];
         solidIFaces[i].flux = q;
     }

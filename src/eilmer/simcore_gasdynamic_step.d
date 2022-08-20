@@ -400,7 +400,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	foreach (cell; blk.cells) {
             auto U0 = cell.U[0]; auto U1 = cell.U[1]; auto dUdt0 = cell.dUdt[0];
             foreach (k; 0 .. cqi.n) {
-                U1.vec[k] = U0.vec[k] + muj_tilde*dt*dUdt0.vec[k];
+                U1[k] = U0[k] + muj_tilde*dt*dUdt0[k];
             }
 	    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || euler_step) {
                 // RKL1 (j=1)
@@ -690,15 +690,15 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
                     auto U0 = cell.U[0]; auto U1 = cell.U[1]; auto U2 = cell.U[2];
                     auto dUdt0 = cell.dUdt[1];
                     foreach (k; 0 .. cqi.n) {
-                        U2.vec[k] = muj*U1.vec[k] + vuj*U0.vec[k] + muj_tilde*dt*dUdt0.vec[k];
+                        U2[k] = muj*U1[k] + vuj*U0[k] + muj_tilde*dt*dUdt0[k];
                     }
                 } else {
                     // RKL2
                     auto U0 = cell.U[0]; auto U1 = cell.U[1]; auto U2 = cell.U[2]; auto U3 = cell.U[3];
                     auto dUdt0 = cell.dUdt[1]; auto dUdtO = cell.dUdt[0]; // Note the subtly-different names.
                     foreach (k; 0 .. cqi.n) {
-                        U2.vec[k] = muj*U1.vec[k] + vuj*U0.vec[k] + (1.0-muj-vuj)*U3.vec[k] +
-                            muj_tilde*dt*dUdt0.vec[k] + gam_tilde*dt*dUdtO.vec[k];
+                        U2[k] = muj*U1[k] + vuj*U0[k] + (1.0-muj-vuj)*U3[k] +
+                            muj_tilde*dt*dUdt0[k] + gam_tilde*dt*dUdtO[k];
                     }
                 }
 		cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
@@ -1163,12 +1163,11 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                             auto U0 = cell.U[0];
                             auto U1 = cell.U[1];
                             foreach (j; 0 .. cqi.n) {
-                                U1.vec[j] = U0.vec[j] + dt*gamma_1*dUdt0.vec[j];
+                                U1[j] = U0[j] + dt*gamma_1*dUdt0[j];
                             }
                             version(turbulence) {
                                 foreach(j; 0 .. cqi.n_turb){
-                                    U1.vec[cqi.rhoturb+j] = fmax(U1.vec[cqi.rhoturb+j],
-                                                                 U0.vec[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
+                                    U1[cqi.rhoturb+j] = fmax(U1[cqi.rhoturb+j], U0[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
                                 }
                                 // ...assuming a minimum value of 1.0 for omega
                                 // It may occur (near steps in the wall) that a large flux of romega
@@ -1182,7 +1181,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                             }
                             version(MHD) {
                                 if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
-                                    U1.vec[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
+                                    U1[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
                             cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
@@ -1214,17 +1213,16 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                             if (blk.myConfig.gasdynamic_update_scheme == GasdynamicUpdate.denman_rk3) { U_old = cell.U[1]; }
                             auto U2 = cell.U[2];
                             foreach (j; 0 .. cqi.n) {
-                                U2.vec[j] = U_old.vec[j] + dt*(gamma_1*dUdt0.vec[j] + gamma_2*dUdt1.vec[j]);
+                                U2[j] = U_old[j] + dt*(gamma_1*dUdt0[j] + gamma_2*dUdt1[j]);
                             }
                             version(turbulence) {
                                 foreach(j; 0 .. cqi.n_turb){
-                                    U2.vec[cqi.rhoturb+j] = fmax(U2.vec[cqi.rhoturb+j],
-                                                                 U_old.vec[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
+                                    U2[cqi.rhoturb+j] = fmax(U2[cqi.rhoturb+j], U_old[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
                                 }
                             }
                             version(MHD) {
                                 if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
-                                    U2.vec[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
+                                    U2[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
                             cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
@@ -1265,17 +1263,16 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                             if (blk.myConfig.gasdynamic_update_scheme == GasdynamicUpdate.denman_rk3) { U_old = cell.U[2]; }
                             auto U3 = cell.U[3];
                             foreach (j; 0 .. cqi.n) {
-                                U3.vec[j] = U_old.vec[j] + dt * (gamma_1*dUdt0.vec[j] + gamma_2*dUdt1.vec[j] + gamma_3*dUdt2.vec[j]);
+                                U3[j] = U_old[j] + dt * (gamma_1*dUdt0[j] + gamma_2*dUdt1[j] + gamma_3*dUdt2[j]);
                             }
                             version(turbulence) {
                                 foreach(j; 0 .. cqi.n_turb){
-                                    U3.vec[cqi.rhoturb+j] = fmax(U3.vec[cqi.rhoturb+j],
-                                                                 U_old.vec[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
+                                    U3[cqi.rhoturb+j] = fmax(U3[cqi.rhoturb+j], U_old[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
                                 }
                             }
                             version(MHD) {
                                 if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
-                                    U3.vec[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
+                                    U3[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
                             cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
@@ -1776,17 +1773,16 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     auto U1 = cell.U[1];
                     number vr = cell.volume[0] / cell.volume[1];
                     foreach (j; 0 .. cqi.n) {
-                        U1.vec[j] = vr*(U0.vec[j] + dt*dUdt0.vec[j]);
+                        U1[j] = vr*(U0[j] + dt*dUdt0[j]);
                     }
                     version(turbulence) {
                         foreach(j; 0 .. cqi.n_turb){
-                            U1.vec[cqi.rhoturb+j] = fmax(U1.vec[cqi.rhoturb+j],
-                                                         U1.vec[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
+                            U1[cqi.rhoturb+j] = fmax(U1[cqi.rhoturb+j], U1[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
                         }
                     }
                     version(MHD) {
                         if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
-                            U1.vec[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
+                            U1[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                         }
                     }
                     cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
@@ -2133,17 +2129,16 @@ void gasdynamic_explicit_increment_with_moving_grid()
                         number gamma_2 = 0.5 * cell.volume[1];
                         //
                         foreach (j; 0 .. cqi.n) {
-                            U2.vec[j] = vol_inv * (v_old * U0.vec[j] + dt * (gamma_1 * dUdt0.vec[j] + gamma_2 * dUdt1.vec[j]));
+                            U2[j] = vol_inv * (v_old * U0[j] + dt * (gamma_1 * dUdt0[j] + gamma_2 * dUdt1[j]));
                         }
                         version(turbulence) {
                             foreach(j; 0 .. cqi.n_turb){
-                                U2.vec[cqi.rhoturb+j] = fmax(U2.vec[cqi.rhoturb+j],
-                                                             U2.vec[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
+                                U2[cqi.rhoturb+j] = fmax(U2[cqi.rhoturb+j], U2[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
                             }
                         }
                         version(MHD) {
                             if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
-                                U2.vec[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
+                                U2[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                             }
                         }
                         cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
@@ -2236,8 +2231,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
     }
     if (step_failed) {
-        string msg = format("Explicit update failed after %d attempts; giving up.",
-                            GlobalConfig.max_attempts_for_step);
+        string msg = format("Explicit update failed after %d attempts; giving up.", GlobalConfig.max_attempts_for_step);
         throw new FlowSolverException(msg);
     }
     //
@@ -2377,8 +2371,8 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     // Augmented matrix for our linear system.
                     blk.crhs = new Matrix!double(cqi.n, cqi.n+1);
                 }
-                if (!blk.U0save) { blk.U0save = new ConservedQuantities(cqi.n); }
-                if (!blk.RU0) { blk.RU0 = new ConservedQuantities(cqi.n); }
+                if (blk.U0save.length != cqi.n) { blk.U0save = new_ConservedQuantities(cqi.n); }
+                if (blk.RU0.length != cqi.n) { blk.RU0 = new_ConservedQuantities(cqi.n); }
                 if (blk.dRUdU.length != cqi.n) { blk.dRUdU.length = cqi.n; }
                 //
                 // Now, work through the cells, doing the update.
@@ -2404,7 +2398,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     dUdt0.clear();
                     blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix, reaction_fraction);
                     bool allFinite = true;
-                    foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k].re)) { allFinite = false; } }
+                    foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0[k].re)) { allFinite = false; } }
                     if (!allFinite) {
                         debug { writeln("Unperturbed state U0=", U0, " dUdt0=", dUdt0); }
                         throw new Error("While evaluating initial R(U), not all dUdt elements are finite.");
@@ -2419,35 +2413,35 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                             double h = 1.0e-30;
                             number hc = Complex!double(0.0, h);
                             // Perturb one quantity.
-                            U0.vec[j] += hc;
+                            U0[j] += hc;
                             cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                             // Get derivative vector.
                             dUdt0.clear();
                             blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix, reaction_fraction);
-                            foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k].re)) { allFinite = false; } }
+                            foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0[k].re)) { allFinite = false; } }
                             if (!allFinite) {
                                 debug { writeln("Perturbation j=", j, " U0", U0, " dUdt0=", dUdt0); }
                                 throw new Error("While evaluating perturbed R(U), Not all dUdt elements are finite.");
                             }
                             foreach (k; 0 .. cqi.n) {
-                                blk.dRUdU[k] = dUdt0.vec[k].im / h;
+                                blk.dRUdU[k] = dUdt0[k].im / h;
                             }
                         } else {
                             // Scale the perturbation on the magnitude of the conserved quantity.
-                            double h = (blk.myConfig.perturbation_for_real_differences)*(fabs(U0.vec[j]) + 1.0);
+                            double h = (blk.myConfig.perturbation_for_real_differences)*(fabs(U0[j]) + 1.0);
                             // Perturb one quantity.
-                            U0.vec[j] += h;
+                            U0[j] += h;
                             cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                             // Get derivative vector.
                             dUdt0.clear();
                             blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix, reaction_fraction);
-                            foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k])) { allFinite = false; } }
+                            foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0[k])) { allFinite = false; } }
                             if (!allFinite) {
                                 debug { writeln("Perturbation j=", j, " U0", U0, " dUdt0=", dUdt0); }
                                 throw new Error("While evaluating perturbed R(U), Not all dUdt elements are finite.");
                             }
                             foreach (k; 0 .. cqi.n) {
-                                blk.dRUdU[k] = (dUdt0.vec[k] - blk.RU0.vec[k])/h;
+                                blk.dRUdU[k] = (dUdt0[k] - blk.RU0[k])/h;
                             }
                         }
                         // Assemble coefficients of the linear system in the augmented matrix.
@@ -2460,15 +2454,14 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                     dUdt0.clear();
                     blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_rhs, reaction_fraction);
-                    foreach (k; 0 .. cqi.n) { blk.crhs._data[k][cqi.n] = dUdt0.vec[k].re; }
+                    foreach (k; 0 .. cqi.n) { blk.crhs._data[k][cqi.n] = dUdt0[k].re; }
                     // Solve for dU and update U.
                     gaussJordanElimination!double(blk.crhs);
-                    foreach (j; 0 .. cqi.n) { U1.vec[j] = U0.vec[j] + M*blk.crhs._data[j][cqi.n]; }
+                    foreach (j; 0 .. cqi.n) { U1[j] = U0[j] + M*blk.crhs._data[j][cqi.n]; }
                     //
                     version(turbulence) {
                         foreach(j; 0 .. cqi.n_turb){
-                            U1.vec[cqi.rhoturb+j] = fmax(U1.vec[cqi.rhoturb+j],
-                                                         U0.vec[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
+                            U1[cqi.rhoturb+j] = fmax(U1[cqi.rhoturb+j], U0[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
                         }
                     }
                     // [TODO] PJ 2021-05-15 MHD bits
@@ -2778,8 +2771,8 @@ void gasdynamic_implicit_increment_with_moving_grid()
                     // Augmented matrix for our linear system.
                     blk.crhs = new Matrix!double(cqi.n, cqi.n+1);
                 }
-                if (!blk.U0save) { blk.U0save = new ConservedQuantities(cqi.n); }
-                if (!blk.RU0) { blk.RU0 = new ConservedQuantities(cqi.n); }
+                if (blk.U0save.length != cqi.n) { blk.U0save = new_ConservedQuantities(cqi.n); }
+                if (blk.RU0.length != cqi.n) { blk.RU0 = new_ConservedQuantities(cqi.n); }
                 if (blk.dRUdU.length != cqi.n) { blk.dRUdU.length = cqi.n; }
                 //
                 // Now, work through the cells, doing the update.
@@ -2803,7 +2796,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
                     dUdt0.clear();
                     blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix, reaction_fraction);
                     bool allFinite = true;
-                    foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k].re)) { allFinite = false; } }
+                    foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0[k].re)) { allFinite = false; } }
                     if (!allFinite) {
                         debug { writeln("Unperturbed state U0=", U0, " dUdt0=", dUdt0); }
                         throw new Error("While evaluating initial R(U), not all dUdt elements are finite.");
@@ -2818,35 +2811,35 @@ void gasdynamic_implicit_increment_with_moving_grid()
                             double h = 1.0e-30;
                             number hc = Complex!double(0.0, h);
                             // Perturb one quantity.
-                            U0.vec[j] += hc;
+                            U0[j] += hc;
                             cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                             // Get derivative vector.
                             dUdt0.clear();
                             blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix, reaction_fraction);
-                            foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k].re)) { allFinite = false; } }
+                            foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0[k].re)) { allFinite = false; } }
                             if (!allFinite) {
                                 debug { writeln("Perturbation j=", j, " U0", U0, " dUdt0=", dUdt0); }
                                 throw new Error("While evaluating perturbed R(U), Not all dUdt elements are finite.");
                             }
                             foreach (k; 0 .. cqi.n) {
-                                blk.dRUdU[k] = dUdt0.vec[k].im / h;
+                                blk.dRUdU[k] = dUdt0[k].im / h;
                             }
                         } else {
                             // Scale the perturbation on the magnitude of the conserved quantity.
-                            double h = (blk.myConfig.perturbation_for_real_differences)*(fabs(U0.vec[j]) + 1.0);
+                            double h = (blk.myConfig.perturbation_for_real_differences)*(fabs(U0[j]) + 1.0);
                             // Perturb one quantity.
-                            U0.vec[j] += h;
+                            U0[j] += h;
                             cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                             // Get derivative vector.
                             dUdt0.clear();
                             blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_matrix, reaction_fraction);
-                            foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0.vec[k])) { allFinite = false; } }
+                            foreach (k; 0 .. cqi.n) { if (!isFinite(dUdt0[k])) { allFinite = false; } }
                             if (!allFinite) {
                                 debug { writeln("Perturbation j=", j, " U0", U0, " dUdt0=", dUdt0); }
                                 throw new Error("While evaluating perturbed R(U), Not all dUdt elements are finite.");
                             }
                             foreach (k; 0 .. cqi.n) {
-                                blk.dRUdU[k] = (dUdt0.vec[k] - blk.RU0.vec[k])/h;
+                                blk.dRUdU[k] = (dUdt0[k] - blk.RU0[k])/h;
                             }
                         }
                         // Assemble coefficients of the linear system in the augmented matrix.
@@ -2859,17 +2852,16 @@ void gasdynamic_implicit_increment_with_moving_grid()
                     cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                     dUdt0.clear();
                     blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_rhs, reaction_fraction);
-                    foreach (k; 0 .. cqi.n) { blk.crhs._data[k][cqi.n] = dUdt0.vec[k].re; }
+                    foreach (k; 0 .. cqi.n) { blk.crhs._data[k][cqi.n] = dUdt0[k].re; }
                     // Solve for dU and update U.
                     gaussJordanElimination!double(blk.crhs);
                     // We apply the GCL scaling, also.
                     double vr = cell.volume[gtl0].re / cell.volume[gtl1].re;
-                    foreach (k; 0 .. cqi.n) { U1.vec[k] = to!number(vr*(U0.vec[k].re + M*blk.crhs._data[k][cqi.n])); }
+                    foreach (k; 0 .. cqi.n) { U1[k] = to!number(vr*(U0[k].re + M*blk.crhs._data[k][cqi.n])); }
                     //
                     version(turbulence) {
                         foreach(k; 0 .. cqi.n_turb){
-                            U1.vec[cqi.rhoturb+k] = fmax(U1.vec[cqi.rhoturb+k],
-                                                         U1.vec[cqi.mass] * blk.myConfig.turb_model.turb_limits(k));
+                            U1[cqi.rhoturb+k] = fmax(U1[cqi.rhoturb+k], U1[cqi.mass] * blk.myConfig.turb_model.turb_limits(k));
                         }
                     }
                     // [TODO] PJ 2021-05-15 MHD bits

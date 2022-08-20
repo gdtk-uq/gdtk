@@ -1235,19 +1235,19 @@ class CellLimiterData : AuxCellData
 // Cell Residual Values
 //=============================================================================
 
-mixin(GenCellArrayVariableAccess!("AccessMass", "dUdt[0].vec"));
-mixin(GenCellArrayVariableAccess!("AccessMomx", "dUdt[0].vec"));
-mixin(GenCellArrayVariableAccess!("AccessMomy", "dUdt[0].vec"));
-mixin(GenCellArrayVariableAccess!("AccessMomz", "dUdt[0].vec"));
-mixin(GenCellArrayVariableAccess!("AccessTotEnergy", "dUdt[0].vec"));
+mixin(GenCellArrayVariableAccess!("AccessMass", "dUdt[0]"));
+mixin(GenCellArrayVariableAccess!("AccessMomx", "dUdt[0]"));
+mixin(GenCellArrayVariableAccess!("AccessMomy", "dUdt[0]"));
+mixin(GenCellArrayVariableAccess!("AccessMomz", "dUdt[0]"));
+mixin(GenCellArrayVariableAccess!("AccessTotEnergy", "dUdt[0]"));
 version(multi_species_gas) {
-    mixin(GenCellArrayVariableAccess!("AccessRhoMassf", "dUdt[0].vec"));
+    mixin(GenCellArrayVariableAccess!("AccessRhoMassf", "dUdt[0]"));
 }
 version(multi_T_gas) {
-    mixin(GenCellArrayVariableAccess!("AccessRhoUmodes", "dUdt[0].vec"));
+    mixin(GenCellArrayVariableAccess!("AccessRhoUmodes", "dUdt[0]"));
 }
 version(turbulence) {
-    mixin(GenCellArrayVariableAccess!("AccessRhoTurb", "dUdt[0].vec"));
+    mixin(GenCellArrayVariableAccess!("AccessRhoTurb", "dUdt[0]"));
 }
 
 class CellResidualData : AuxCellData

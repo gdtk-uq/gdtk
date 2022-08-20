@@ -128,7 +128,7 @@ public:
         foreach(i; 0 .. myConfig.turb_model.nturb)
             turb_init ~= myConfig.turb_model.turb_limits(i).re;
         fs = FlowState(gmodel, 100.0e3, 300, T_modes, Vector3(0.0,0.0,0.0), turb_init);
-        F = new ConservedQuantities(myConfig.cqi.n);
+        F = new_ConservedQuantities(myConfig.cqi.n);
         F.clear();
         grad = new FlowGradients(myConfig);
         if (allocate_spatial_deriv_lsq_workspace) {
@@ -177,7 +177,7 @@ public:
         t1 = other.t1;
         t2 = other.t2;
         fs = FlowState(other.fs, gm);
-        F = new ConservedQuantities(other.F);
+        F = new_ConservedQuantities(other.F.length); F.copy_values_from(other.F);
         tau_wall_x = other.tau_wall_x;
         tau_wall_y = other.tau_wall_y;
         tau_wall_z = other.tau_wall_z;
@@ -828,35 +828,35 @@ public:
             // [TODO] As per Jason's recommendation, we need to do something
             // to correct for corner cells.
             // [TODO] Currently implemented for 2D; need to extend to 3D.
-            F.vec[cqi.xMom] -= tau_xx*nx + tau_wall_x;
-            F.vec[cqi.yMom] -= tau_yy*ny + tau_wall_y;
-            if (cqi.threeD) { F.vec[cqi.zMom] -= tau_zz*nz + tau_wall_z; }
-            F.vec[cqi.totEnergy] -=
+            F[cqi.xMom] -= tau_xx*nx + tau_wall_x;
+            F[cqi.yMom] -= tau_yy*ny + tau_wall_y;
+            if (cqi.threeD) { F[cqi.zMom] -= tau_zz*nz + tau_wall_z; }
+            F[cqi.totEnergy] -=
                 tau_xx*fs.vel.x*nx + tau_yy*fs.vel.y*ny + tau_zz*fs.vel.z*nz +
                 tau_wall_x*fs.vel.x + tau_wall_y*fs.vel.y + tau_wall_z*fs.vel.z + q;
         }
         else { // proceed with locally computed shear and heat flux
             // Mass flux -- NO CONTRIBUTION, unless there's diffusion (below)
-            F.vec[cqi.xMom] -= tau_xx*nx + tau_xy*ny + tau_xz*nz;
-            F.vec[cqi.yMom] -= tau_xy*nx + tau_yy*ny + tau_yz*nz;
-            if (cqi.threeD) { F.vec[cqi.zMom] -= tau_xz*nx + tau_yz*ny + tau_zz*nz; }
-            F.vec[cqi.totEnergy] -=
+            F[cqi.xMom] -= tau_xx*nx + tau_xy*ny + tau_xz*nz;
+            F[cqi.yMom] -= tau_xy*nx + tau_yy*ny + tau_yz*nz;
+            if (cqi.threeD) { F[cqi.zMom] -= tau_xz*nx + tau_yz*ny + tau_zz*nz; }
+            F[cqi.totEnergy] -=
                 (tau_xx*fs.vel.x + tau_xy*fs.vel.y + tau_xz*fs.vel.z + qx)*nx +
                 (tau_xy*fs.vel.x + tau_yy*fs.vel.y + tau_yz*fs.vel.z + qy)*ny +
                 (tau_xz*fs.vel.x + tau_yz*fs.vel.y + tau_zz*fs.vel.z + qz)*nz;
         } // end if
         version(multi_T_gas) {
             foreach (imode; 0 .. n_modes) {
-                F.vec[cqi.modes+imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][0] * nx;
-                F.vec[cqi.modes+imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][1] * ny;
-                F.vec[cqi.modes+imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][2] * nz;
+                F[cqi.modes+imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][0] * nx;
+                F[cqi.modes+imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][1] * ny;
+                F[cqi.modes+imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][2] * nz;
                 // Species diffusion contribution to the energy modes (added by NNG, 2022/01/26)
                 version(multi_species_gas) {
                     if (myConfig.turb_model.isTurbulent || (myConfig.mass_diffusion_model != MassDiffusionModel.none)) {
                         foreach (isp; 0 .. n_species) {
                             number hMode = gmodel.enthalpyPerSpeciesInMode(fs.gas, cast(int)isp, cast(int)imode);
                             // The sign here needs to be opposite to the thermal conduction, hence +=
-                            F.vec[cqi.modes+imode] += viscous_factor * hMode *(jx[isp]*n.x
+                            F[cqi.modes+imode] += viscous_factor * hMode *(jx[isp]*n.x
                                                                              + jy[isp]*n.y
                                                                              + jz[isp]*n.z);
                         }
@@ -881,7 +881,7 @@ public:
                     tau_ty = mu_effective * grad.turb[i][1];
                     if (myConfig.dimensions == 3) { tau_tz = mu_effective * grad.turb[i][2]; }
                     //
-                    F.vec[cqi.rhoturb+i] -= tau_tx * nx + tau_ty * ny + tau_tz * nz;
+                    F[cqi.rhoturb+i] -= tau_tx * nx + tau_ty * ny + tau_tz * nz;
                 }
             }
         }
@@ -890,7 +890,7 @@ public:
                 myConfig.mass_diffusion_model != MassDiffusionModel.none) {
                 if (cqi.n_species > 1) {
                     foreach (isp; 0 .. cqi.n_species) {
-                        F.vec[cqi.species+isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
+                        F[cqi.species+isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
                     }
                 }
             }

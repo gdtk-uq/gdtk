@@ -212,7 +212,7 @@ public:
     void init_workspace()
     {
         auto cqi = dedicatedConfig[id].cqi;
-        Linf_residuals = new ConservedQuantities(cqi.n);
+        Linf_residuals = new_ConservedQuantities(cqi.n);
         // Workspace for flux_calc method.
         Lft = new FlowState(dedicatedConfig[id].gmodel, dedicatedConfig[id].turb_model.nturb);
         Rght = new FlowState(dedicatedConfig[id].gmodel, dedicatedConfig[id].turb_model.nturb);
@@ -785,7 +785,7 @@ public:
         energy_residual_loc.clear();
         foreach(FVCell cell; cells) {
             cell.rho_at_start_of_step = cell.fs.gas.rho;
-            cell.rE_at_start_of_step = cell.U[0].vec[cqi.totEnergy];
+            cell.rE_at_start_of_step = cell.U[0][cqi.totEnergy];
         }
     } // end init_residuals()
 
@@ -817,7 +817,7 @@ public:
             // In the following line, the zero index is used because,
             // at the end of the gas-dynamic update, that index holds
             // the updated data.
-            number currentEnergy = cell.U[0].vec[cqi.totEnergy];
+            number currentEnergy = cell.U[0][cqi.totEnergy];
             local_residual = (currentEnergy - cell.rE_at_start_of_step) / currentEnergy;
             local_residual = fabs(local_residual);
             if ( local_residual > energy_residual ) {
@@ -838,9 +838,9 @@ public:
         auto cqi = myConfig.cqi;
         Linf_residuals.copy_values_from(cells[0].dUdt[0]);
         foreach (i; 0 .. cqi.n) {
-            Linf_residuals.vec[i] = fabs(Linf_residuals.vec[i]);
+            Linf_residuals[i] = fabs(Linf_residuals[i]);
             foreach (cell; cells) {
-                Linf_residuals.vec[i] = fmax(Linf_residuals.vec[i], fabs(cell.dUdt[0].vec[i]));
+                Linf_residuals[i] = fmax(Linf_residuals[i], fabs(cell.dUdt[0][i]));
             }
         }
     } // end compute_Linf_residuals()
@@ -851,24 +851,24 @@ public:
         auto cqi = myConfig.cqi;
         L2_residual = 0.0;
         foreach (cell; cells) {
-            L2_residual += fabs(cell.dUdt[0].vec[cqi.mass])^^2;
-	    L2_residual += fabs(cell.dUdt[0].vec[cqi.xMom])^^2;
-	    L2_residual += fabs(cell.dUdt[0].vec[cqi.yMom])^^2;
-	    if (cqi.threeD) { L2_residual += fabs(cell.dUdt[0].vec[cqi.zMom])^^2; }
-	    L2_residual += fabs(cell.dUdt[0].vec[cqi.totEnergy])^^2;
+            L2_residual += fabs(cell.dUdt[0][cqi.mass])^^2;
+	    L2_residual += fabs(cell.dUdt[0][cqi.xMom])^^2;
+	    L2_residual += fabs(cell.dUdt[0][cqi.yMom])^^2;
+	    if (cqi.threeD) { L2_residual += fabs(cell.dUdt[0][cqi.zMom])^^2; }
+	    L2_residual += fabs(cell.dUdt[0][cqi.totEnergy])^^2;
 	    version(turbulence) {
                 foreach(it; 0 .. myConfig.turb_model.nturb){
-                    L2_residual += fabs(cell.dUdt[0].vec[cqi.rhoturb+it])^^2;
+                    L2_residual += fabs(cell.dUdt[0][cqi.rhoturb+it])^^2;
                 }
 	    }
             version(multi_species_gas) {
                 foreach(isp; 0 .. myConfig.gmodel.n_species){
-                    L2_residual += fabs(cell.dUdt[0].vec[cqi.species+isp])^^2;
+                    L2_residual += fabs(cell.dUdt[0][cqi.species+isp])^^2;
                 }
 	    }
             version(multi_T_gas) {
                 foreach(imode; 0 .. myConfig.gmodel.n_modes){
-                    L2_residual += fabs(cell.dUdt[0].vec[cqi.modes+imode])^^2;
+                    L2_residual += fabs(cell.dUdt[0][cqi.modes+imode])^^2;
                 }
 	    }
         }
@@ -882,7 +882,7 @@ public:
         foreach(boundary; bc) {
             if (boundary.type != "exchange_over_full_face" && boundary.type != "exchange_using_mapped_cells") {
                 foreach(i, face; boundary.faces) {
-                    mass_balance += boundary.outsigns[i] * face.F.vec[cqi.mass] * face.area[0];
+                    mass_balance += boundary.outsigns[i] * face.F[cqi.mass] * face.area[0];
                 }
             }
         }
@@ -1349,8 +1349,8 @@ public:
 
             // peturb conserved quantity
             version(complex_numbers) { eps = complex(0.0, eps0.re); }
-            else { eps = eps0*fabs(pcell.U[ftl].vec[j]) + eps0; }
-            pcell.U[ftl].vec[j] += eps;
+            else { eps = eps0*fabs(pcell.U[ftl][j]) + eps0; }
+            pcell.U[ftl][j] += eps;
             pcell.decode_conserved(gtl, ftl, 0.0);
 
             // evaluate perturbed residuals in local stencil
@@ -1359,8 +1359,8 @@ public:
             // fill local Jacobians
             foreach (cell; pcell.cell_list) {
                 foreach(i; 0..nConserved) {
-                    version(complex_numbers) { cell.dRdU[i][j] = cell.dUdt[ftl].vec[i].im/eps.im; }
-                    else { cell.dRdU[i][j] = (cell.dUdt[ftl].vec[i]-cell.dUdt[0].vec[i])/eps; }
+                    version(complex_numbers) { cell.dRdU[i][j] = cell.dUdt[ftl][i].im/eps.im; }
+                    else { cell.dRdU[i][j] = (cell.dUdt[ftl][i]-cell.dUdt[0][i])/eps; }
                 }
             }
 
@@ -1438,8 +1438,8 @@ public:
 
                     // peturb conserved quantity
                     version(complex_numbers) { eps = complex(0.0, eps0.re); }
-                    else { eps = eps0*fabs(pcell.U[ftl].vec[idx]) + eps0; }
-                    pcell.U[ftl].vec[idx] += eps;
+                    else { eps = eps0*fabs(pcell.U[ftl][idx]) + eps0; }
+                    pcell.U[ftl][idx] += eps;
                     pcell.decode_conserved(gtl, ftl, 0.0);
 
                     // update (ghost cell) boundary conditions
@@ -1448,8 +1448,8 @@ public:
 
                     // fill local Jacobian
                     foreach(jdx; 0..nConserved) {
-                        version(complex_numbers) { flowJacobian.dudU[jdx][idx] = ghost_cell.U[ftl].vec[jdx].im/(eps.im); }
-                        else { flowJacobian.dudU[jdx][idx] = (ghost_cell.U[ftl].vec[jdx]-ghost_cell.U[0].vec[jdx])/eps; }
+                        version(complex_numbers) { flowJacobian.dudU[jdx][idx] = ghost_cell.U[ftl][jdx].im/(eps.im); }
+                        else { flowJacobian.dudU[jdx][idx] = (ghost_cell.U[ftl][jdx]-ghost_cell.U[0][jdx])/eps; }
                     }
 
                     // return cells to original state
@@ -1473,8 +1473,8 @@ public:
 
                     // peturb conserved quantity
                     version(complex_numbers) { eps = complex(0.0, eps0.re); }
-                    else { eps = eps0*fabs(ghost_cell.U[ftl].vec[idx]) + eps0; }
-                    ghost_cell.U[ftl].vec[idx] += eps;
+                    else { eps = eps0*fabs(ghost_cell.U[ftl][idx]) + eps0; }
+                    ghost_cell.U[ftl][idx] += eps;
                     ghost_cell.decode_conserved(gtl, ftl, 0.0);
 
                     // evaluate perturbed residuals in local stencil
@@ -1483,8 +1483,8 @@ public:
                     // fill local Jacobians
                     foreach (cell; ghost_cell.cell_list) {
                         foreach(jdx; 0..nConserved) {
-                            version(complex_numbers) { cell.dRdU[jdx][idx] = cell.dUdt[ftl].vec[jdx].im/eps.im; }
-                            else { cell.dRdU[jdx][idx] = (cell.dUdt[ftl].vec[jdx]-cell.dUdt[0].vec[jdx])/eps; }
+                            version(complex_numbers) { cell.dRdU[jdx][idx] = cell.dUdt[ftl][jdx].im/eps.im; }
+                            else { cell.dRdU[jdx][idx] = (cell.dUdt[ftl][jdx]-cell.dUdt[0][jdx])/eps; }
                         }
                     }
 
@@ -1583,7 +1583,7 @@ public:
                 if (cell.id == pcell.id) {
                     cell.add_thermochemical_source_vector(thermochem_source, limit_factor);
                 } else {
-                    foreach (j; 0 .. myConfig.cqi.n) { cell.Q.vec[j] += cell.Q_save.vec[j]; }
+                    foreach (j; 0 .. myConfig.cqi.n) { cell.Q[j] += cell.Q_save[j]; }
                 }
             }
             if (myConfig.udf_source_terms) {
@@ -1686,34 +1686,34 @@ public:
         foreach (cell; cells) {
             cell.U[1].copy_values_from(cell.U[0]);
             version(complex_numbers) {
-                cell.U[1].vec[cqi.mass] += complex(0.0, EPS.re*vec[cellCount+MASS].re);
-                cell.U[1].vec[cqi.xMom] += complex(0.0, EPS.re*vec[cellCount+X_MOM].re);
-                cell.U[1].vec[cqi.yMom] += complex(0.0, EPS.re*vec[cellCount+Y_MOM].re);
-                if ( myConfig.dimensions == 3 ) { cell.U[1].vec[cqi.zMom] += complex(0.0, EPS.re*vec[cellCount+Z_MOM].re); }
-                cell.U[1].vec[cqi.totEnergy] += complex(0.0, EPS.re*vec[cellCount+TOT_ENERGY].re);
-                foreach(it; 0 .. nturb) { cell.U[1].vec[cqi.rhoturb+it] += complex(0.0, EPS.re*vec[cellCount+TKE+it].re); }
+                cell.U[1][cqi.mass] += complex(0.0, EPS.re*vec[cellCount+MASS].re);
+                cell.U[1][cqi.xMom] += complex(0.0, EPS.re*vec[cellCount+X_MOM].re);
+                cell.U[1][cqi.yMom] += complex(0.0, EPS.re*vec[cellCount+Y_MOM].re);
+                if ( myConfig.dimensions == 3 ) { cell.U[1][cqi.zMom] += complex(0.0, EPS.re*vec[cellCount+Z_MOM].re); }
+                cell.U[1][cqi.totEnergy] += complex(0.0, EPS.re*vec[cellCount+TOT_ENERGY].re);
+                foreach(it; 0 .. nturb) { cell.U[1][cqi.rhoturb+it] += complex(0.0, EPS.re*vec[cellCount+TKE+it].re); }
                 version(multi_species_gas){
                     if (myConfig.n_species > 1) {
-                        foreach(sp; 0 .. nsp) { cell.U[1].vec[cqi.species+sp] += complex(0.0, EPS.re*vec[cellCount+SPECIES+sp].re); }
+                        foreach(sp; 0 .. nsp) { cell.U[1][cqi.species+sp] += complex(0.0, EPS.re*vec[cellCount+SPECIES+sp].re); }
                     }
                 }
                 version(multi_T_gas){
-                    foreach(imode; 0 .. nmodes) { cell.U[1].vec[cqi.modes+imode] += complex(0.0, EPS.re*vec[cellCount+MODES+imode].re); }
+                    foreach(imode; 0 .. nmodes) { cell.U[1][cqi.modes+imode] += complex(0.0, EPS.re*vec[cellCount+MODES+imode].re); }
                 }
             } else {
-                cell.U[1].vec[cqi.mass] += (EPS*vec[cellCount+MASS]);
-                cell.U[1].vec[cqi.xMom] += (EPS*vec[cellCount+X_MOM]);
-                cell.U[1].vec[cqi.yMom] += (EPS*vec[cellCount+Y_MOM]);
-                if ( myConfig.dimensions == 3 ) { cell.U[1].vec[cqi.zMom] += (EPS*vec[cellCount+Z_MOM]); }
-                cell.U[1].vec[cqi.totEnergy] += (EPS*vec[cellCount+TOT_ENERGY]);
-                foreach(it; 0 .. nturb) { cell.U[1].vec[cqi.rhoturb+it] += (EPS*vec[cellCount+TKE+it]); }
+                cell.U[1][cqi.mass] += (EPS*vec[cellCount+MASS]);
+                cell.U[1][cqi.xMom] += (EPS*vec[cellCount+X_MOM]);
+                cell.U[1][cqi.yMom] += (EPS*vec[cellCount+Y_MOM]);
+                if ( myConfig.dimensions == 3 ) { cell.U[1][cqi.zMom] += (EPS*vec[cellCount+Z_MOM]); }
+                cell.U[1][cqi.totEnergy] += (EPS*vec[cellCount+TOT_ENERGY]);
+                foreach(it; 0 .. nturb) { cell.U[1][cqi.rhoturb+it] += (EPS*vec[cellCount+TKE+it]); }
                 version(multi_species_gas){
                     if (myConfig.n_species > 1) {
-                        foreach(sp; 0 .. nsp) { cell.U[1].vec[cqi.species+sp] += (EPS*vec[cellCount+SPECIES+sp]); }
+                        foreach(sp; 0 .. nsp) { cell.U[1][cqi.species+sp] += (EPS*vec[cellCount+SPECIES+sp]); }
                     }
                 }
                 version(multi_T_gas){
-                    foreach(imode; 0 .. nmodes) { cell.U[1].vec[cqi.modes+imode] += (EPS*vec[cellCount+MODES+imode]); }
+                    foreach(imode; 0 .. nmodes) { cell.U[1][cqi.modes+imode] += (EPS*vec[cellCount+MODES+imode]); }
                 }
             }
             cell.decode_conserved(0, 1, 0.0);
@@ -1725,34 +1725,34 @@ public:
         cellCount = 0;
         foreach (cell; cells) {
             version(complex_numbers) {
-                sol[cellCount+MASS] = cell.dUdt[1].vec[cqi.mass].im/EPS;
-                sol[cellCount+X_MOM] = cell.dUdt[1].vec[cqi.xMom].im/EPS;
-                sol[cellCount+Y_MOM] = cell.dUdt[1].vec[cqi.yMom].im/EPS;
-                if ( myConfig.dimensions == 3 ) { sol[cellCount+Z_MOM] = cell.dUdt[1].vec[cqi.zMom].im/EPS; }
-                sol[cellCount+TOT_ENERGY] = cell.dUdt[1].vec[cqi.totEnergy].im/EPS;
-                foreach(it; 0 .. nturb) { sol[cellCount+TKE+it] = cell.dUdt[1].vec[cqi.rhoturb+it].im/EPS; }
+                sol[cellCount+MASS] = cell.dUdt[1][cqi.mass].im/EPS;
+                sol[cellCount+X_MOM] = cell.dUdt[1][cqi.xMom].im/EPS;
+                sol[cellCount+Y_MOM] = cell.dUdt[1][cqi.yMom].im/EPS;
+                if ( myConfig.dimensions == 3 ) { sol[cellCount+Z_MOM] = cell.dUdt[1][cqi.zMom].im/EPS; }
+                sol[cellCount+TOT_ENERGY] = cell.dUdt[1][cqi.totEnergy].im/EPS;
+                foreach(it; 0 .. nturb) { sol[cellCount+TKE+it] = cell.dUdt[1][cqi.rhoturb+it].im/EPS; }
                 version(multi_species_gas){
                     if (myConfig.n_species > 1) {
-                        foreach(sp; 0 .. nsp) { sol[cellCount+SPECIES+sp] = cell.dUdt[1].vec[cqi.species+sp].im/EPS; }
+                        foreach(sp; 0 .. nsp) { sol[cellCount+SPECIES+sp] = cell.dUdt[1][cqi.species+sp].im/EPS; }
                     }
                 }
                 version(multi_T_gas){
-                    foreach(imode; 0 .. nmodes) { sol[cellCount+MODES+imode] = cell.dUdt[1].vec[cqi.modes+imode].im/EPS; }
+                    foreach(imode; 0 .. nmodes) { sol[cellCount+MODES+imode] = cell.dUdt[1][cqi.modes+imode].im/EPS; }
                 }
             } else {
-                sol[cellCount+MASS] = (cell.dUdt[1].vec[cqi.mass]-cell.dUdt[0].vec[cqi.mass])/EPS;
-                sol[cellCount+X_MOM] = (cell.dUdt[1].vec[cqi.xMom]-cell.dUdt[0].vec[cqi.xMom])/EPS;
-                sol[cellCount+Y_MOM] = (cell.dUdt[1].vec[cqi.yMom]-cell.dUdt[0].vec[cqi.yMom])/EPS;
-                if ( myConfig.dimensions == 3 ) { sol[cellCount+Z_MOM] = (cell.dUdt[1].vec[cqi.zMom]-cell.dUdt[0].vec[cqi.zMom])/EPS; }
-                sol[cellCount+TOT_ENERGY] = (cell.dUdt[1].vec[cqi.totEnergy]-cell.dUdt[0].vec[cqi.totEnergy])/EPS;
-                foreach(it; 0 .. nturb) { sol[cellCount+TKE+it] = (cell.dUdt[1].vec[cqi.rhoturb+it]-cell.dUdt[0].vec[cqi.rhoturb+it])/EPS; }
+                sol[cellCount+MASS] = (cell.dUdt[1][cqi.mass]-cell.dUdt[0][cqi.mass])/EPS;
+                sol[cellCount+X_MOM] = (cell.dUdt[1][cqi.xMom]-cell.dUdt[0][cqi.xMom])/EPS;
+                sol[cellCount+Y_MOM] = (cell.dUdt[1][cqi.yMom]-cell.dUdt[0][cqi.yMom])/EPS;
+                if ( myConfig.dimensions == 3 ) { sol[cellCount+Z_MOM] = (cell.dUdt[1][cqi.zMom]-cell.dUdt[0][cqi.zMom])/EPS; }
+                sol[cellCount+TOT_ENERGY] = (cell.dUdt[1][cqi.totEnergy]-cell.dUdt[0][cqi.totEnergy])/EPS;
+                foreach(it; 0 .. nturb) { sol[cellCount+TKE+it] = (cell.dUdt[1][cqi.rhoturb+it]-cell.dUdt[0][cqi.rhoturb+it])/EPS; }
                 version(multi_species_gas){
                     if (myConfig.n_species > 1) {
-                        foreach(sp; 0 .. nsp) { sol[cellCount+SPECIES+sp] = (cell.dUdt[1].vec[cqi.species+sp]-cell.dUdt[0].vec[cqi.species+sp])/EPS; }
+                        foreach(sp; 0 .. nsp) { sol[cellCount+SPECIES+sp] = (cell.dUdt[1][cqi.species+sp]-cell.dUdt[0][cqi.species+sp])/EPS; }
                     }
                 }
                 version(multi_T_gas){
-                    foreach(imode; 0 .. nmodes) { sol[cellCount+MODES+imode] = (cell.dUdt[1].vec[cqi.modes+imode]-cell.dUdt[0].vec[cqi.modes+imode])/EPS; }
+                    foreach(imode; 0 .. nmodes) { sol[cellCount+MODES+imode] = (cell.dUdt[1][cqi.modes+imode]-cell.dUdt[0][cqi.modes+imode])/EPS; }
                 }
             }
 
@@ -1769,8 +1769,8 @@ public:
         if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
         int n_species = GlobalConfig.gmodel_master.n_species();
         int n_modes = GlobalConfig.gmodel_master.n_modes();
-        maxRate = new ConservedQuantities(nConserved);
-        residuals = new ConservedQuantities(nConserved);
+        maxRate = new_ConservedQuantities(nConserved);
+        residuals = new_ConservedQuantities(nConserved);
 
         size_t mOuter = to!size_t(GlobalConfig.sssOptions.maxOuterIterations);
         size_t mInner = to!size_t(GlobalConfig.sssOptions.nInnerIterations);

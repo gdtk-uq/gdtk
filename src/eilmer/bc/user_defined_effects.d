@@ -683,33 +683,33 @@ private:
 
         lua_getfield(L, tblIdx, "mass");
         if ( !lua_isnil(L, -1) ) {
-            iface.F.vec[cqi.mass] += getDouble(L, tblIdx, "mass");
+            iface.F[cqi.mass] += getDouble(L, tblIdx, "mass");
         }
         lua_pop(L, 1);
 
         lua_getfield(L, tblIdx, "momentum_x");
         if ( !lua_isnil(L, -1) ) {
-            iface.F.vec[cqi.xMom] += getDouble(L, tblIdx, "momentum_x");
+            iface.F[cqi.xMom] += getDouble(L, tblIdx, "momentum_x");
         }
         lua_pop(L, 1);
 
         lua_getfield(L, tblIdx, "momentum_y");
         if ( !lua_isnil(L, -1) ) {
-            iface.F.vec[cqi.yMom] += getDouble(L, tblIdx, "momentum_y");
+            iface.F[cqi.yMom] += getDouble(L, tblIdx, "momentum_y");
         }
         lua_pop(L, 1);
 
         if (cqi.threeD) {
             lua_getfield(L, tblIdx, "momentum_z");
             if ( !lua_isnil(L, -1) ) {
-                iface.F.vec[cqi.zMom] += getDouble(L, tblIdx, "momentum_z");
+                iface.F[cqi.zMom] += getDouble(L, tblIdx, "momentum_z");
             }
             lua_pop(L, 1);
         }
 
         lua_getfield(L, tblIdx, "total_energy");
         if ( !lua_isnil(L, -1) ) {
-            iface.F.vec[cqi.totEnergy] += getDouble(L, tblIdx, "total_energy");
+            iface.F[cqi.totEnergy] += getDouble(L, tblIdx, "total_energy");
         }
         lua_pop(L, 1);
 

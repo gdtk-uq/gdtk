@@ -209,17 +209,17 @@ public:
         fs = FlowState(gmodel, 100.0e3, T, T_modes, Vector3(0.0,0.0,0.0), turb_init);
         size_t ncq = myConfig.cqi.n; // number of conserved quantities
         foreach(i; 0 .. myConfig.n_flow_time_levels) {
-            U ~= new ConservedQuantities(ncq);
+            U ~= new_ConservedQuantities(ncq);
             U[i].clear();
-            dUdt ~= new ConservedQuantities(ncq);
+            dUdt ~= new_ConservedQuantities(ncq);
         }
-        Q = new ConservedQuantities(ncq);
+        Q = new_ConservedQuantities(ncq);
         Q.clear();
-        Qudf = new ConservedQuantities(ncq);
+        Qudf = new_ConservedQuantities(ncq);
         Qudf.clear();
         if (myConfig.residual_smoothing) {
-            dUdt_copy[0] = new ConservedQuantities(ncq);
-            dUdt_copy[1] = new ConservedQuantities(ncq);
+            dUdt_copy[0] = new_ConservedQuantities(ncq);
+            dUdt_copy[1] = new_ConservedQuantities(ncq);
         }
         grad = new FlowGradients(myConfig);
         if (allocate_spatial_deriv_lsq_workspace) {
@@ -228,7 +228,7 @@ public:
         //
         version(nk_accelerator) {
             grad_save = new FlowGradients(myConfig);
-            Q_save = new ConservedQuantities(ncq);
+            Q_save = new_ConservedQuantities(ncq);
             dRdU.length = ncq; // number of conserved variables
             foreach (ref a; dRdU) a.length = ncq;
             foreach (i; 0..dRdU.length) {
@@ -527,43 +527,43 @@ public:
         ConservedQuantities myU = U[ftl];
         number myrho = fs.gas.rho;
         // Mass per unit volume.
-        myU.vec[cqi.mass] = myrho;
+        myU[cqi.mass] = myrho;
         // Momentum per unit volume.
-        myU.vec[cqi.xMom] = fs.gas.rho*fs.vel.x;
-        myU.vec[cqi.yMom] = fs.gas.rho*fs.vel.y;
-        if (cqi.threeD) { myU.vec[cqi.zMom] = fs.gas.rho*fs.vel.z; }
+        myU[cqi.xMom] = fs.gas.rho*fs.vel.x;
+        myU[cqi.yMom] = fs.gas.rho*fs.vel.y;
+        if (cqi.threeD) { myU[cqi.zMom] = fs.gas.rho*fs.vel.z; }
         version(MHD) {
             // Magnetic field
             if (cqi.MHD) {
-                myU.vec[cqi.xB] = fs.B.x;
-                myU.vec[cqi.yB] = fs.B.y;
-                myU.vec[cqi.zB] = fs.B.z;
-                myU.vec[cqi.psi] = fs.psi;
-                myU.vec[cqi.divB] = fs.divB;
+                myU[cqi.xB] = fs.B.x;
+                myU[cqi.yB] = fs.B.y;
+                myU[cqi.zB] = fs.B.z;
+                myU[cqi.psi] = fs.psi;
+                myU[cqi.divB] = fs.divB;
             }
         }
         // Total Energy / unit volume
         number u = myConfig.gmodel.internal_energy(fs.gas);
         number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y+fs.vel.z*fs.vel.z);
-        myU.vec[cqi.totEnergy] = fs.gas.rho*(u + ke);
+        myU[cqi.totEnergy] = fs.gas.rho*(u + ke);
         version(turbulence) {
             if (cqi.turb) {
                 foreach(i; 0 .. myConfig.turb_model.nturb){
-                    myU.vec[cqi.rhoturb+i] = fs.gas.rho * fs.turb[i];
+                    myU[cqi.rhoturb+i] = fs.gas.rho * fs.turb[i];
                 }
-                myU.vec[cqi.totEnergy] += fs.gas.rho * myConfig.turb_model.turbulent_kinetic_energy(fs);
+                myU[cqi.totEnergy] += fs.gas.rho * myConfig.turb_model.turbulent_kinetic_energy(fs);
             }
         }
         version(MHD) {
             if (myConfig.MHD) {
                 number me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z);
-                myU.vec[cqi.totEnergy] += me;
+                myU[cqi.totEnergy] += me;
             }
         }
         version(multi_T_gas) {
             // Other internal energies: energy in mode per unit volume.
             foreach(imode; 0 .. cqi.n_modes) {
-                myU.vec[cqi.modes+imode] = fs.gas.rho*fs.gas.u_modes[imode];
+                myU[cqi.modes+imode] = fs.gas.rho*fs.gas.u_modes[imode];
             }
         }
         if (omegaz != 0.0) {
@@ -578,17 +578,17 @@ public:
             number rsq = x*x + y*y;
             // The conserved quantity is rothalpy. I = E - (u**2)/2
             // where rotating frame velocity  u = omegaz * r.
-            myU.vec[cqi.totEnergy] -= rho*0.5*omegaz*omegaz*rsq;
+            myU[cqi.totEnergy] -= rho*0.5*omegaz*omegaz*rsq;
         }
         version(multi_species_gas) {
             // Species densities: mass of species is per unit volume.
             if (cqi.n_species > 1) {
                 foreach(isp; 0 .. cqi.n_species) {
-                    myU.vec[cqi.species+isp] = fs.gas.rho*fs.gas.massf[isp];
+                    myU[cqi.species+isp] = fs.gas.rho*fs.gas.massf[isp];
                 }
             }
         }
-        assert(U[ftl].vec[cqi.mass] > 0.0, "invalid density in conserved quantities vector" ~
+        assert(U[ftl][cqi.mass] > 0.0, "invalid density in conserved quantities vector" ~
                " at end of FVCell.encode_conserved().");
         return;
     } // end encode_conserved()
@@ -604,14 +604,14 @@ public:
         // mass / unit volume = density
         number rho = 0.0;
         if (cqi.mass == 0) {
-            rho = myU.vec[cqi.mass];
+            rho = myU[cqi.mass];
         } else {
             // if cqi.mass \= 0, then we assume that we have dropped the mass continuity equation from the solver,
             // in that case, the total density is a sum of the species densities
             foreach(isp; 0 .. cqi.n_species) {
                 // impose positivity on the species densities here
-                if (myU.vec[cqi.species+isp] < 0.0) myU.vec[cqi.species+isp] = to!number(0.0);
-                rho += myU.vec[cqi.species+isp];
+                if (myU[cqi.species+isp] < 0.0) myU[cqi.species+isp] = to!number(0.0);
+                rho += myU[cqi.species+isp];
             }
         }
         if (!(rho.re > 0.0)) {
@@ -639,14 +639,14 @@ public:
         number dinv = 1.0 / rho;
 
         // Velocities from momenta.
-        number zMom = (cqi.threeD) ? myU.vec[cqi.zMom] : to!number(0.0);
-        fs.vel.set(myU.vec[cqi.xMom]*dinv, myU.vec[cqi.yMom]*dinv, zMom*dinv);
+        number zMom = (cqi.threeD) ? myU[cqi.zMom] : to!number(0.0);
+        fs.vel.set(myU[cqi.xMom]*dinv, myU[cqi.yMom]*dinv, zMom*dinv);
         version(MHD) {
             // Magnetic field.
             if (cqi.MHD) {
-                fs.B.set(myU.vec[cqi.xB], myU.vec[cqi.yB], myU.vec[cqi.zB]);
-                fs.psi = myU.vec[cqi.psi];
-                fs.divB = myU.vec[cqi.divB];
+                fs.B.set(myU[cqi.xB], myU[cqi.yB], myU[cqi.zB]);
+                fs.psi = myU[cqi.psi];
+                fs.divB = myU[cqi.divB];
             }
         }
         // Divide up the total energy per unit volume.
@@ -658,10 +658,10 @@ public:
             number x = pos[gtl].x;
             number y = pos[gtl].y;
             number rsq = x*x + y*y;
-            rE = myU.vec[cqi.totEnergy] + rho*0.5*omegaz*omegaz*rsq;
+            rE = myU[cqi.totEnergy] + rho*0.5*omegaz*omegaz*rsq;
         } else {
             // Non-rotating frame.
-            rE = myU.vec[cqi.totEnergy];
+            rE = myU[cqi.totEnergy];
         }
         version(MHD) {
             number me = 0.0;
@@ -677,17 +677,17 @@ public:
             if (cqi.turb) {
                 if (allow_k_omega_update) {
                     foreach(i; 0 .. myConfig.turb_model.nturb) {
-                        if (isNaN(myU.vec[cqi.rhoturb+i]))
+                        if (isNaN(myU[cqi.rhoturb+i]))
                             throw new FlowSolverException("Turbulent quantity is Not A Number.");
                         // enforce positivity of turbulence model conserved quantities
-                        if (myU.vec[cqi.rhoturb+i] < 0.0) {
+                        if (myU[cqi.rhoturb+i] < 0.0) {
                             foreach (j; 0 .. myConfig.turb_model.nturb) {
                                 // taking the absolute value has been observed to be more
                                 // stable than clipping them to a small value (e.g. 1.0e-10)
-                                myU.vec[cqi.rhoturb+j] = fabs(myU.vec[cqi.rhoturb+j]);
+                                myU[cqi.rhoturb+j] = fabs(myU[cqi.rhoturb+j]);
                             }
                         }
-                        fs.turb[i] = myU.vec[cqi.rhoturb+i] * dinv;
+                        fs.turb[i] = myU[cqi.rhoturb+i] * dinv;
                     }
                 }
                 u -= myConfig.turb_model.turbulent_kinetic_energy(fs);
@@ -699,7 +699,7 @@ public:
         // Other energies, if any.
         version(multi_T_gas) {
             number u_other = 0.0;
-            foreach(imode; 0 .. gmodel.n_modes) { fs.gas.u_modes[imode] = myU.vec[cqi.modes+imode] * dinv; }
+            foreach(imode; 0 .. gmodel.n_modes) { fs.gas.u_modes[imode] = myU[cqi.modes+imode] * dinv; }
             foreach(ei; fs.gas.u_modes) { u_other += ei; }
             fs.gas.u = u - u_other;
         } else {
@@ -713,8 +713,8 @@ public:
                 number rhos_sum = 0.0;
                 foreach(isp; 0 .. cqi.n_species) {
                     // impose positivity on the species densities
-                    if (myU.vec[cqi.species+isp] < 0.0) myU.vec[cqi.species+isp] = to!number(0.0);
-                    rhos_sum += myU.vec[cqi.species+isp];
+                    if (myU[cqi.species+isp] < 0.0) myU[cqi.species+isp] = to!number(0.0);
+                    rhos_sum += myU[cqi.species+isp];
                 }
                 if (fabs(rhos_sum - rho) > assert_error_tolerance) {
                     string msg = "Sum of species densities far from total density";
@@ -728,12 +728,12 @@ public:
                 }
                 if ( fabs(rhos_sum - rho) > tolerance ) {
                     number scale_factor = rho/rhos_sum;
-                    foreach(isp; 0 .. cqi.n_species) { myU.vec[cqi.species+isp] *= scale_factor; }
+                    foreach(isp; 0 .. cqi.n_species) { myU[cqi.species+isp] *= scale_factor; }
                 }
             } // end if (myConfig.n_species > 1 && cqi.mass == 0)
             try {
                 if (cqi.n_species > 1) {
-                    foreach(isp; 0 .. cqi.n_species) { fs.gas.massf[isp] = myU.vec[cqi.species+isp] * dinv; }
+                    foreach(isp; 0 .. cqi.n_species) { fs.gas.massf[isp] = myU[cqi.species+isp] * dinv; }
                 } else {
                     fs.gas.massf[0] = 1.0;
                 }
@@ -836,11 +836,11 @@ public:
             // Integrate the fluxes across the interfaces that bound the cell.
             foreach(i; 0 .. iface.length) {
                 number area = outsign[i] * iface[i].area[gtl];
-                surface_integral -= iface[i].F.vec[j] * area;
+                surface_integral -= iface[i].F[j] * area;
             }
             // Then evaluate the derivatives of conserved quantities.
             // Conserved quantities are stored per-unit-volume.
-            my_dUdt.vec[j] = vol_inv * surface_integral + Q.vec[j];
+            my_dUdt[j] = vol_inv * surface_integral + Q[j];
         }
     } // end time_derivatives()
 
@@ -950,14 +950,14 @@ public:
             // Species densities: mass of species isp per unit volume.
             if (cqi.n_species > 1) {
                 foreach(isp; 0 .. fs.gas.massf.length) {
-                    U[0].vec[cqi.species+isp] = fs.gas.rho * fs.gas.massf[isp];
+                    U[0][cqi.species+isp] = fs.gas.rho * fs.gas.massf[isp];
                 }
             }
         }
         version(multi_T_gas) {
             // Independent energies energy: Joules per unit volume.
             foreach(imode; 0 .. fs.gas.u_modes.length) {
-                U[0].vec[cqi.modes+imode] = fs.gas.rho * fs.gas.u_modes[imode];
+                U[0][cqi.modes+imode] = fs.gas.rho * fs.gas.u_modes[imode];
             }
         }
     } // end thermochemical_increment()
@@ -1132,24 +1132,24 @@ public:
             number wx = fs.vel.x;
             number wy = fs.vel.y;
             // Coriolis and centrifugal forces contribute to momenta.
-            Q.vec[cqi.xMom] += rho * (omegaz*omegaz*x + 2.0*omegaz*wy);
-            Q.vec[cqi.yMom] += rho * (omegaz*omegaz*y - 2.0*omegaz*wx);
+            Q[cqi.xMom] += rho * (omegaz*omegaz*x + 2.0*omegaz*wy);
+            Q[cqi.yMom] += rho * (omegaz*omegaz*y - 2.0*omegaz*wx);
             // There is no contribution to the energy equation in the rotating frame
             // because it is implicit in the use of rothalpy as the conserved quantity.
         }
         if (myConfig.axisymmetric) {
             // For axisymmetric flow:
             // pressure contribution from the Front and Back (radial) interfaces.
-            Q.vec[cqi.yMom] += fs.gas.p * areaxy[gtl] / volume[gtl];
+            Q[cqi.yMom] += fs.gas.p * areaxy[gtl] / volume[gtl];
         }
         if (myConfig.gravity_non_zero) {
             number rho = fs.gas.rho;
             // Force per unit volume.
-            Q.vec[cqi.xMom] += myConfig.gravity.x * rho;
-            Q.vec[cqi.yMom] += myConfig.gravity.y * rho;
-            if (cqi.threeD) { Q.vec[cqi.zMom] += myConfig.gravity.z * rho; }
+            Q[cqi.xMom] += myConfig.gravity.x * rho;
+            Q[cqi.yMom] += myConfig.gravity.y * rho;
+            if (cqi.threeD) { Q[cqi.zMom] += myConfig.gravity.z * rho; }
             // Work done per unit volume.
-            Q.vec[cqi.totEnergy] += rho * dot(myConfig.gravity, fs.vel);
+            Q[cqi.totEnergy] += rho * dot(myConfig.gravity, fs.vel);
         }
         // Species production (other than chemistry).
         // For the chemistry and other-internal energy exchange,
@@ -1162,9 +1162,9 @@ public:
             // Add value to total energy
             // FIX-ME: - assuming electronic mode is the last in the vector of energies
             //         - what about Q_renergies[0]?
-            Q.vec[cqi.totEnergy] += Q_rE_rad;
+            Q[cqi.totEnergy] += Q_rE_rad;
             version(multi_T_gas) {
-                // Q.vec[cqi.modes+cqi.n_modes-1] += Q_rE_rad; // FIX-ME old C++ code
+                // Q[cqi.modes+cqi.n_modes-1] += Q_rE_rad; // FIX-ME old C++ code
             }
         }
         return;
@@ -1189,12 +1189,12 @@ public:
             // Note that these quantities are approximated at the
             // mid-point of the cell face and so should never be
             // singular -- at least I hope that this is so.
-            Q.vec[cqi.yMom] -= tau_00 * areaxy[0] / volume[0];
+            Q[cqi.yMom] -= tau_00 * areaxy[0] / volume[0];
         } // end if ( myConfig.axisymmetric )
 
         version(turbulence) {
             if (in_turbulent_zone) {
-                number[] rhoturb = Q.vec[cqi.rhoturb .. cqi.rhoturb+cqi.n_turb];
+                number[] rhoturb = Q[cqi.rhoturb .. cqi.rhoturb+cqi.n_turb];
                 myConfig.turb_model.source_terms(fs, *grad, pos[0].y, dwall, L_min, L_max, rhoturb);
             }
         }
@@ -1241,12 +1241,12 @@ public:
         version(multi_species_gas) {
             if (cqi.n_species > 1) {
                 myConfig.thermochemUpdate.eval_source_terms(myConfig.gmodel, fs.gas, thermochem_source);
-                foreach(sp; 0 .. cqi.n_species) { Q.vec[cqi.species+sp] += reaction_factor*thermochem_source[sp]; }
+                foreach(sp; 0 .. cqi.n_species) { Q[cqi.species+sp] += reaction_factor*thermochem_source[sp]; }
             }
         }
         version(multi_T_gas) {
             foreach(imode; 0 .. cqi.n_modes) {
-                Q.vec[cqi.modes+imode] += reaction_factor*thermochem_source[cqi.n_species+imode];
+                Q[cqi.modes+imode] += reaction_factor*thermochem_source[cqi.n_species+imode];
             }
         }
     }
@@ -1452,13 +1452,13 @@ public:
 
         // peturb conserved quantities by approximation of dU
         U[1].copy_values_from(U[0]);
-        U[1].vec[cqi.mass] += dUk[MASS];
-        U[1].vec[cqi.xMom] += dUk[X_MOM];
-        U[1].vec[cqi.yMom] += dUk[Y_MOM];
-        if (GlobalConfig.dimensions == 3) { U[1].vec[cqi.zMom] += dUk[Z_MOM]; }
-        U[1].vec[cqi.totEnergy] += dUk[TOT_ENERGY];
+        U[1][cqi.mass] += dUk[MASS];
+        U[1][cqi.xMom] += dUk[X_MOM];
+        U[1][cqi.yMom] += dUk[Y_MOM];
+        if (GlobalConfig.dimensions == 3) { U[1][cqi.zMom] += dUk[Z_MOM]; }
+        U[1][cqi.totEnergy] += dUk[TOT_ENERGY];
         foreach(it; 0 .. nturb) {
-            U[1].vec[cqi.rhoturb+it] += dUk[TKE+it];
+            U[1][cqi.rhoturb+it] += dUk[TKE+it];
         }
 
         // update primitive variables

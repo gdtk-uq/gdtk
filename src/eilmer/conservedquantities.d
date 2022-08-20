@@ -1,11 +1,12 @@
 /**
  * conservedquantities.d
- * Class for the vector of conserved quantities, for use in the CFD codes.
+ * Storage for the vector of conserved quantities, for use in the CFD codes.
  *
  * Author: Peter J., Rowan G. and Kyle Damm
  * Version:
  * 2014-07-17: initial cut, to explore options.
  * 2021-05-10: Change to array storage.
+ * 2022-08-20: Bare array.
  */
 
 module conservedquantities;
@@ -20,61 +21,44 @@ import gas;
 
 
 // Underlying definition of the conserved quantities collection,
-// as seen by the transient solver.
+// as seen by the transient solver, is just an array.
+alias ConservedQuantities = number[];
 
-class ConservedQuantities {
-public:
-    number[] vec;
+ConservedQuantities new_ConservedQuantities(size_t n)
+{
+    return new number[n];
+}
 
-    this(size_t n)
+@nogc void copy_values_from(ref number[] vec, ref const(number[]) src)
+{
+    foreach (i, ref e; vec) { e = src[i]; }
+}
+
+@nogc void clear(ref number[] vec)
+{
+    foreach (ref e; vec) { e = 0.0; }
+}
+
+@nogc void add(ref number[] vec, ref const(number[]) other, double factor=1.0)
+{
+    foreach (i, ref e; vec) e += other[i] * factor;
+}
+
+@nogc void scale(ref number[] vec, double factor)
+{
+    foreach (ref e; vec) { e *= factor; }
+}
+
+
+version(complex_numbers) {
+    // When performing the complex-step Frechet derivative in the Newton-Krylov accelerator,
+    // the conserved quantities accumulate imaginary components,
+    // so we have to start with a clean slate, so to speak.
+    @nogc void clear_imaginary_components(ref number[] vec)
     {
-        vec.length = n;
+        foreach (ref e; vec) { e.im = 0.0; }
     }
-
-    this(ref const(ConservedQuantities) other)
-    {
-        vec.length = other.vec.length;
-        foreach (i, ref e; vec) { e = other.vec[i]; }
-    }
-
-    @nogc void copy_values_from(ref const(ConservedQuantities) src)
-    {
-        foreach (i, ref e; vec) { e = src.vec[i]; }
-    }
-
-    @nogc void clear()
-    {
-        foreach (ref e; vec) { e = 0.0; }
-    }
-
-    @nogc void add(ref const(ConservedQuantities) other, double factor=1.0)
-    {
-        foreach (i, ref e; vec) e += other.vec[i] * factor;
-    }
-
-    @nogc void scale(double factor)
-    {
-        foreach (ref e; vec) { e *= factor; }
-    }
-
-    override string toString() const
-    {
-        char[] repr;
-        repr ~= "ConservedQuantities(vec=" ~ to!string(vec) ~ ")";
-        return to!string(repr);
-    }
-
-    version(complex_numbers) {
-        // When performing the complex-step Frechet derivative in the Newton-Krylov accelerator,
-        // the conserved quantities accumulate imaginary components,
-        // so we have to start with a clean slate, so to speak.
-        @nogc void clear_imaginary_components()
-        {
-            foreach (ref e; vec) { e.im = 0.0; }
-        }
-    } // end version(complex_numbers)
-
-} // end class ConservedQuantities
+} // end version(complex_numbers)
 
 
 // Now that the ConservedQuantities object is a simple vector of quantities,

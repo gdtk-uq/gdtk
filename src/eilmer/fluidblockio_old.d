@@ -1459,12 +1459,12 @@ string write_residuals_to_string(const(FVCell) c)
     auto writer = appender!string();
     version(complex_numbers) {
         formattedWrite(writer, "%.18e %.18e %.18e %.18e",
-                       -c.dUdt[0].vec[cqi.mass].re, -c.dUdt[0].vec[cqi.xMom].re,
-                       -c.dUdt[0].vec[cqi.yMom].re, -c.dUdt[0].vec[cqi.totEnergy].re);
+                       -c.dUdt[0][cqi.mass].re, -c.dUdt[0][cqi.xMom].re,
+                       -c.dUdt[0][cqi.yMom].re, -c.dUdt[0][cqi.totEnergy].re);
     } else {
         formattedWrite(writer, "%.18e %.18e %.18e %.18e",
-                       -c.dUdt[0].vec[cqi.mass], -c.dUdt[0].vec[cqi.xMom],
-                       -c.dUdt[0].vec[cqi.yMom], -c.dUdt[0].vec[cqi.totEnergy]);
+                       -c.dUdt[0][cqi.mass], -c.dUdt[0][cqi.xMom],
+                       -c.dUdt[0][cqi.yMom], -c.dUdt[0][cqi.totEnergy]);
     }
     return writer.data;
 }

@@ -897,7 +897,7 @@ int integrate_in_time(double target_time_as_requested)
     //
     number mass_balance = to!number(0.0);
     number L2_residual = to!number(0.0);
-    auto Linf_residuals = new ConservedQuantities(GlobalConfig.cqi.n);
+    auto Linf_residuals = new_ConservedQuantities(GlobalConfig.cqi.n);
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         writeln("Integrate in time.");
@@ -1098,9 +1098,9 @@ int integrate_in_time(double target_time_as_requested)
                         // Reduce residual values across MPI tasks.
                         double my_local_value;
                         foreach (i; 0 .. cqi.n) {
-                            my_local_value = Linf_residuals.vec[i].re;
+                            my_local_value = Linf_residuals[i].re;
                             MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                            Linf_residuals.vec[i] = to!number(my_local_value);
+                            Linf_residuals[i] = to!number(my_local_value);
                         }
                         my_local_value = mass_balance.re;
                         MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -1114,11 +1114,11 @@ int integrate_in_time(double target_time_as_requested)
                         string residualsFile = "config/"~GlobalConfig.base_file_name~"-residuals.txt";
                         string txt = format("%7d %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e\n",
                                             SimState.step, SimState.time, wall_clock_elapsed,
-                                            Linf_residuals.vec[cqi.mass].re,
-                                            Linf_residuals.vec[cqi.xMom].re,
-                                            Linf_residuals.vec[cqi.yMom].re,
-                                            (cqi.threeD) ? Linf_residuals.vec[cqi.zMom].re : 0.0,
-                                            Linf_residuals.vec[cqi.totEnergy].re,
+                                            Linf_residuals[cqi.mass].re,
+                                            Linf_residuals[cqi.xMom].re,
+                                            Linf_residuals[cqi.yMom].re,
+                                            (cqi.threeD) ? Linf_residuals[cqi.zMom].re : 0.0,
+                                            Linf_residuals[cqi.totEnergy].re,
                                             fabs(L2_residual.re), fabs(mass_balance.re));
                         std.file.append(residualsFile, txt);
                     }
@@ -1557,7 +1557,7 @@ void chemistry_step(double dt)
 } // end chemistry_half_step()
 
 
-void compute_Linf_residuals(ConservedQuantities Linf_residuals)
+void compute_Linf_residuals(ref ConservedQuantities Linf_residuals)
 {
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         blk.compute_Linf_residuals();
@@ -1566,7 +1566,7 @@ void compute_Linf_residuals(ConservedQuantities Linf_residuals)
     auto cqi = GlobalConfig.cqi;
     foreach (blk; localFluidBlocksBySize) {
         foreach (i; 0 .. cqi.n) {
-            Linf_residuals.vec[i] = fmax(Linf_residuals.vec[i], fabs(blk.Linf_residuals.vec[i]));
+            Linf_residuals[i] = fmax(Linf_residuals[i], fabs(blk.Linf_residuals[i]));
         }
     }
 } // end compute_Linf_residuals()

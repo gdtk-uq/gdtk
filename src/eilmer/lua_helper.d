@@ -275,7 +275,7 @@ void pushFluidCellToTable(lua_State* L, int tblIdx, ref const(FVCell) cell,
     // For Carrie Xie 2022-05-24, we want access to the user-defined energy source term
     // when we sample the Fluid cell during the UDF evaluation for the corresponding solid cell.
     auto cqi = myConfig.cqi;
-    lua_pushnumber(L, cell.Qudf.vec[cqi.totEnergy]); lua_setfield(L, tblIdx, "Qudf_totEnergy");
+    lua_pushnumber(L, cell.Qudf[cqi.totEnergy]); lua_setfield(L, tblIdx, "Qudf_totEnergy");
 } // end pushFluidCellToTable()
 
 void pushFluidFaceToTable(lua_State* L, int tblIdx, ref const(FVInterface) face,

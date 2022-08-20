@@ -41,6 +41,7 @@ import ufluidblock: UFluidBlock;
 import fvinterface;
 import bc;
 import mass_diffusion;
+import conservedquantities;
 
 version(mpi_parallel) {
     import mpi;
@@ -224,9 +225,9 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
         // compute stress tensor at interface in global reference frame
         iface.F.clear();
         iface.viscous_flux_calc();
-        tau_wall_x = iface.F.vec[cqi.xMom];
-        tau_wall_y = iface.F.vec[cqi.yMom];
-        tau_wall_z = (cqi.threeD) ? iface.F.vec[cqi.zMom] : to!number(0.0);
+        tau_wall_x = iface.F[cqi.xMom];
+        tau_wall_y = iface.F[cqi.yMom];
+        tau_wall_z = (cqi.threeD) ? iface.F[cqi.zMom] : to!number(0.0);
         number tau_wall = sqrt(tau_wall_x^^2 + tau_wall_y^^2 + tau_wall_z^^2);
         // compute y+
         nu_wall = mu_wall / rho_wall;
@@ -317,9 +318,9 @@ void computeRunTimeLoads()
                 if (GlobalConfig.viscous) {
                     // The shear stresses have been calculated and stored in the flux
                     // for momentum just before calling this function.
-                    Vector3 shearForce = Vector3(face.F.vec[cqi.xMom]*area,
-                                                 face.F.vec[cqi.yMom]*area,
-                                                 (cqi.threeD) ? face.F.vec[cqi.zMom]*area : to!number(0.0));
+                    Vector3 shearForce = Vector3(face.F[cqi.xMom]*area,
+                                                 face.F[cqi.yMom]*area,
+                                                 (cqi.threeD) ? face.F[cqi.zMom]*area : to!number(0.0));
                     cross(momentContrib, momentArm, shearForce);
                     group.resultantForce += shearForce;
                     group.resultantMoment += momentContrib;
