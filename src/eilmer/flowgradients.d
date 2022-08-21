@@ -339,7 +339,6 @@ public:
     void set_up_workspace_leastsq(ref Vector3*[] cloud_pos, ref Vector3 pos,
                                   bool compute_about_mid, ref WLSQGradWorkspace ws)
     {
-        assert(&ws is null, "We are missing the workspace!");
         size_t n = cloud_pos.length;
         assert(n <= cloud_nmax, "Too many points in cloud.");
         number[cloud_nmax] weights2;
