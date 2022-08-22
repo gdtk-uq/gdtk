@@ -96,6 +96,8 @@ private:
     LocalConfig myConfig;
 
 public:
+    @disable this();
+    
     this(LocalConfig myConfig)
     {
         this.myConfig = myConfig;
