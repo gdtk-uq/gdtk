@@ -609,8 +609,13 @@ public:
             // if cqi.mass \= 0, then we assume that we have dropped the mass continuity equation from the solver,
             // in that case, the total density is a sum of the species densities
             foreach(isp; 0 .. cqi.n_species) {
-                // impose positivity on the species densities here
-                if (myU[cqi.species+isp] < 0.0) myU[cqi.species+isp] = to!number(0.0);
+                // if (myU[cqi.species+isp] < 0.0) myU[cqi.species+isp] = to!number(0.0);
+                // We were originally imposing positivity on the species densities here to prevent slightly negative mass fractions,
+                // this was causing noisy convergence for some problems using the steady-state accelerator due to the artificial nature
+                // of suppressing the negative mass fractions after an update (i.e. the numerical solution really should have negative
+                // mass fractions due to the numerical methods employed).
+                // We are trialing the removal of this enforcement (note that this will only take effect for the steady-state solver here).
+                // KAD 2022-08-22.
                 rho += myU[cqi.species+isp];
             }
         }
