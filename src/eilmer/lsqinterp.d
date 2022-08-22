@@ -1442,6 +1442,8 @@ public:
         this.myConfig = myConfig;
     }
 
+    // The steady-state solver wants to override the order of interpolation
+    // in various parts of its calculation.
     @nogc int get_interpolation_order()
     {
         return myConfig.interpolation_order;

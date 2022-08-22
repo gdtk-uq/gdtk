@@ -220,20 +220,7 @@ public:
     {
         super.init_workspace();
         // Workspace for flux_calc method.
-
-        switch (dedicatedConfig[id].interpolation_scheme) {
-            case "legacy":
-                one_d = new LegacyOneDInterpolator(dedicatedConfig[id]);
-                break;
-            case "regular":
-                one_d = new RegularOneDInterpolator(dedicatedConfig[id]);
-                break;
-            case "irregular":
-                one_d = new IrregularOneDInterpolator(dedicatedConfig[id]);
-                break;
-            default:
-                throw new FlowSolverException("Unrecognised interpolation scheme");
-        }
+        one_d = new OneDInterpolator(dedicatedConfig[id]);
     }
 
     @nogc override int get_interpolation_order()
