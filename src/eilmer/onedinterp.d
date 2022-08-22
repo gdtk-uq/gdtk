@@ -1120,7 +1120,7 @@ private:
     number w0, w1;
     number wL_L2, wL_L1, wL_L0, wL_R0, wL_R1;
     number wR_L1, wR_L0, wR_R0, wR_R1, wR_R2;
-    LocalConfig myConfig;
+    // LocalConfig myConfig;
 
 public:
     this(LocalConfig myConfig)
