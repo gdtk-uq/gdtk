@@ -104,7 +104,10 @@ public:
     // this flag might not be needed.
     // Such a change will need a big rework of boundary condition code.
     bool contains_flow_data;
-    bool is_interior_to_domain; // true if the cell is interior to the flow domain
+    // true if the cell is interior to the flow domain. Note that ghost cells at a
+    // shared boundary with another block are also flagged as true, whereas normal
+    // ghost cells at a `real' boundary are false. (NNG 23/08/22)
+    bool is_interior_to_domain;
     bool allow_k_omega_update = true; // turbulent wall functions may turn this off
     FlowState fs; // Flow properties
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.

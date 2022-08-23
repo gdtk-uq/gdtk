@@ -448,6 +448,7 @@ public:
         foreach (mygc; ghost_cells) {
             Vector3 ghostpos = mygc.pos[0];
             Vector3 mypos = ghostpos;
+            mygc.is_interior_to_domain = true; // Ghost cells need to be flagged as interior
             if (transform_position) {
                 Vector3 del1 = ghostpos - c0;
                 Vector3 c1 = c0 + dot(n, del1) * n;
@@ -782,7 +783,6 @@ public:
                 size_t ii = 0;
                 foreach (gi; ghost_cell_indices[incoming_block_list[i]][blk.id]) {
                     auto c = ghost_cells[gi];
-                    c.is_interior_to_domain = true;
                     FlowState* fs = &(c.fs);
                     GasState* gs = &(fs.gas);
                     gs.rho.re = buf[ii++]; version(complex_numbers) { gs.rho.im = buf[ii++]; }
@@ -830,7 +830,6 @@ public:
             // For a single process, just access the data directly.
             foreach (i, mygc; ghost_cells) {
                 mygc.fs.copy_values_from(mapped_cells[i].fs);
-                mygc.is_interior_to_domain = mapped_cells[i].is_interior_to_domain;
                 // this array is used for the LU-SGS implementation ... TODO: maybe this should be it's own routine
                 mygc.dUk = mapped_cells[i].dUk;
             }
