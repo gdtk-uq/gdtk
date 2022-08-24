@@ -390,77 +390,84 @@ private:
         return Cv_tr;
     }
 
-    @nogc
-    number vibElecTemperature(ref GasState gs)
-    {
-        int MAX_ITERATIONS = 40;
+    version(complex_numbers) {
+        // For the complex numbers version of the code we need a Newton's method with a fixed number of iterations.
+        // An explanation can be found in:
+        //     E. J. Nielsen and W. L. Kleb
+        //     Efficient Construction of Discrete Adjoint Operators on Unstructured Grids by Using Complex Variables
+        //     AIAA Journal, vol. 44, no. 4, 2006.
+        //
+        @nogc
+        number vibElecTemperature(ref GasState gs)
+        {
+            int MAX_ITERATIONS = 10;
 
-        // Take the supplied T_modes[0] as the initial guess.
-        number T_guess = gs.T_modes[0];
-        number u0 = vibElecEnergyMixture(gs, T_guess);
-        number f_guess =  u0 - gs.u_modes[0];
+            // Take the supplied T_modes[0] as the initial guess.
+            number T_guess = gs.T_modes[0];
+            number u0 = vibElecEnergyMixture(gs, T_guess);
+            number f_guess =  u0 - gs.u_modes[0];
 
-        // Before iterating, check if the supplied guess is
-        // good enough. Define good enough as 1/100th of a Joule.
-        double E_TOL = 1e-5;
-        if (fabs(f_guess) < E_TOL) {
-
-            version(complex_numbers) {
-            /*
-                In complex numbers mode, we would normally do a fixed number of
-                iterations in any newton's method loop, in order to set the
-                imaginary components of T_modes[0]. Unfortunately, this routine
-                needs to be able to bail out early, in case f_guess is near
-                zero because the mass fractions of vibrating species might be
-                near zero, in which case T_modes[0] is undefined or very large,
-                in which case the best thing to do is just leave it alone.
-
-                One possible fix, used here, is to always set the imaginary
-                components using the analytical derivatives, which are easily
-                computable for this function. See NNG's notes from 27th of Jan,
-                2022 for the derivation.
-            */
-                number Cvv = vibElecCvMixture(gs, T_guess);
-                // Cap Cvv to prevent T_modes[0].im from getting too large
-                Cvv = fmax(Cvv, 1e-12);
-
-                // The analytical derivatives involve Cvv and the species energies
-                double T_guess_im = gs.u_modes[0].im/Cvv.re;
-                foreach(i, massfi; gs.massf) T_guess_im -=  massfi.im*vibElecEnergyPerSpecies(T_guess, cast(int) i).re/Cvv.re;
-                gs.T_modes[0].im = T_guess_im;
+            // Begin iterating.
+            int count = 0;
+            number Cv, dT;
+            foreach (iter; 0 .. MAX_ITERATIONS) {
+                Cv = vibElecCvMixture(gs, T_guess);
+                dT = -f_guess/Cv;
+                T_guess += dT;
+                f_guess = vibElecEnergyMixture(gs, T_guess) - gs.u_modes[0];
+                count++;
             }
-            return gs.T_modes[0];
+
+            return T_guess;
         }
+    } else {
+        @nogc
+        number vibElecTemperature(ref GasState gs)
+        {
+            int MAX_ITERATIONS = 40;
 
-        // We'll keep adjusting our temperature estimate
-        // until it is less than TOL.
-        double TOL = 1.0e-9;
+            // Take the supplied T_modes[0] as the initial guess.
+            number T_guess = gs.T_modes[0];
+            number u0 = vibElecEnergyMixture(gs, T_guess);
+            number f_guess =  u0 - gs.u_modes[0];
 
-        // Begin iterating.
-        int count = 0;
-        number Cv, dT;
-        foreach (iter; 0 .. MAX_ITERATIONS) {
-            Cv = vibElecCvMixture(gs, T_guess);
-            dT = -f_guess/Cv;
-            T_guess += dT;
-            if (fabs(dT) < TOL) {
-                break;
+            // Before iterating, check if the supplied guess is
+            // good enough. Define good enough as 1/100th of a Joule.
+            double E_TOL = 1e-5;
+            if (fabs(f_guess) < E_TOL) {
+                return gs.T_modes[0];
             }
-            f_guess = vibElecEnergyMixture(gs, T_guess) - gs.u_modes[0];
-            count++;
-        }
 
-        if ((count == MAX_ITERATIONS)&&(fabs(dT)>1e-3)) {
-            string msg = "The 'vibTemperature' function failed to converge.\n";
-            debug {
-                msg ~= format("The final value for Tvib was: %12.6f\n", T_guess);
-                msg ~= "The supplied GasState was:\n";
-                msg ~= gs.toString() ~ "\n";
+            // We'll keep adjusting our temperature estimate
+            // until it is less than TOL.
+            double TOL = 1.0e-9;
+
+            // Begin iterating.
+            int count = 0;
+            number Cv, dT;
+            foreach (iter; 0 .. MAX_ITERATIONS) {
+                Cv = vibElecCvMixture(gs, T_guess);
+                dT = -f_guess/Cv;
+                T_guess += dT;
+                if (fabs(dT) < TOL) {
+                    break;
+                }
+                f_guess = vibElecEnergyMixture(gs, T_guess) - gs.u_modes[0];
+                count++;
             }
-            throw new GasModelException(msg);
+
+            if ((count == MAX_ITERATIONS)&&(fabs(dT)>1e-3)) {
+                string msg = "The 'vibTemperature' function failed to converge.\n";
+                debug {
+                    msg ~= format("The final value for Tvib was: %12.6f\n", T_guess);
+                    msg ~= "The supplied GasState was:\n";
+                    msg ~= gs.toString() ~ "\n";
+                }
+                throw new GasModelException(msg);
+            }
+            return T_guess;
         }
-        return T_guess;
-    }
+    } // version()
 }
 
 version(two_temperature_gas_test) {
