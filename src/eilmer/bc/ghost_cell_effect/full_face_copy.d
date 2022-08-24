@@ -1474,8 +1474,6 @@ public:
                 mapped_cells ~= other_blk.cells[mapped_cell_ids[i]];
             }
         }
-        // Ghost cells need to be flagged as interior, for later (NNG 23/08/22)
-        foreach (c; ghost_cells) c.is_interior_to_domain = true;
     } // end set_up_cell_mapping_phase2()
 
     @nogc
@@ -1836,6 +1834,7 @@ public:
                 }
                 size_t ii = 0;
                 foreach (c; ghost_cells) {
+                    c.is_interior_to_domain = true;
                     FlowState* fs = &(c.fs);
                     GasState* gs = &(fs.gas);
                     gs.rho.re = incoming_flowstate_buf[ii++]; version(complex_numbers) { gs.rho.im = incoming_flowstate_buf[ii++]; }
@@ -1882,6 +1881,7 @@ public:
                 // we know that we can just access the cell data directly.
                 foreach (i; 0 .. ghost_cells.length) {
                     ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
+                    ghost_cells[i].is_interior_to_domain = mapped_cells[i].is_interior_to_domain;
                 }
             }
         } else { // not mpi_parallel
@@ -1889,6 +1889,7 @@ public:
             // we know that we can just access the data directly.
             foreach (i; 0 .. ghost_cells.length) {
                 ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
+                ghost_cells[i].is_interior_to_domain = mapped_cells[i].is_interior_to_domain;
             }
         }
         // Done with copying from source cells.
@@ -1964,11 +1965,13 @@ public:
                 }
                 size_t ii = 0;
                 foreach (c; ghost_cells) {
+                    c.is_interior_to_domain = true;
                     c.fs.S.re = incoming_flowstate_buf[ii++]; version(complex_numbers) { c.fs.S.im = incoming_flowstate_buf[ii++]; }
                 }
             } else {
                 foreach (i; 0 .. ghost_cells.length) {
                     ghost_cells[i].fs.S = mapped_cells[i].fs.S;
+                    ghost_cells[i].is_interior_to_domain = mapped_cells[i].is_interior_to_domain;
                 }
             }
         } else { // not mpi_parallel
@@ -1976,6 +1979,7 @@ public:
             // we know that we can just access the data directly.
             foreach (i; 0 .. ghost_cells.length) {
                 ghost_cells[i].fs.S = mapped_cells[i].fs.S;
+                ghost_cells[i].is_interior_to_domain = mapped_cells[i].is_interior_to_domain;
             }
         }
         // Done with copying from source cells.
