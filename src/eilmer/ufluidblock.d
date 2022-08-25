@@ -481,19 +481,36 @@ public:
                 c.cell_cloud ~= c;
                 size_t[] cell_ids;
                 cell_ids ~= c.id;
-                // Subsequent cells are the surrounding cells.
+                // next we add the nearest neighbour cells
+                // Note that we assume these cells are next in the array when creating the low order Jacobian
+                foreach (i, f; c.iface) {
+                    if (c.outsign[i] == 1) {
+                        if (f.right_cell && f.right_cell.contains_flow_data) {
+                            c.cell_cloud ~= f.right_cell;
+                            cell_ids ~= f.right_cell.id;
+                        }
+                    } else {
+                        if (f.left_cell && f.left_cell.contains_flow_data) {
+                            c.cell_cloud ~= f.left_cell;
+                            cell_ids ~= f.left_cell.id;
+                        }
+                    }
+                } // end foreach face
+                // finally we add the remaining cells that share a node with the central cell
                 bool is_on_boundary = false;
                 foreach(face; c.iface) if (face.is_on_boundary) is_on_boundary = true;
                 if (is_on_boundary) {
                     // apply nearest-face neighbour
                     foreach (i, f; c.iface) {
                         if (c.outsign[i] == 1) {
-                            if (f.right_cell && f.right_cell.contains_flow_data) {
+                            if (f.right_cell && cell_ids.canFind(f.right_cell.id) == false && f.right_cell.contains_flow_data) {
                                 c.cell_cloud ~= f.right_cell;
+                                cell_ids ~= f.right_cell.id;
                             }
                         } else {
-                            if (f.left_cell && f.left_cell.contains_flow_data) {
+                            if (f.left_cell && cell_ids.canFind(f.left_cell.id) == false && f.left_cell.contains_flow_data) {
                                 c.cell_cloud ~= f.left_cell;
+                                cell_ids ~= f.left_cell.id;
                             }
                         }
                     } // end foreach face

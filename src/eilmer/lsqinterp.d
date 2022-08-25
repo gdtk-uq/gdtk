@@ -20,7 +20,7 @@ import flowstate;
 import fvinterface;
 import fvcell;
 
-immutable size_t cloud_nmax = 12;
+immutable size_t cloud_nmax = 112;
 immutable double ESSENTIALLY_ZERO = 1.0e-50;
 
 

@@ -1642,9 +1642,11 @@ public:
 
         if (nearest_neighbours) {
             // this first order stencil adds the nearest neighbours
-
-            // gather additional cells
-            foreach (cell; cell_cloud) {
+            // Note that if the use_extended_stencil is set to true, then there will be more than just
+            // nearest neighbour cells in the cell cloud, so care must be taken to gather the correct cells
+            size_t np = iface.length + 1;
+            foreach (i; 1 .. np) {
+                FVCell cell = cell_cloud[i];
                 bool cell_exists = cell_ids.canFind(cell.id);
                 if (!cell_exists && cell.id < 1_000_000_000 && is_interior_to_domain) {
                     unordered_cell_list ~= cell;
