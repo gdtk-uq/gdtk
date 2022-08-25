@@ -1,0 +1,23 @@
+set term x11 font "arial,25" noraise size 1000,700
+set title "Residual history\n[Press 'x' to exit]"
+set logscale y
+set ylabel 'relative residuals'
+set xlabel 'step'
+set yrange [1.0e-18:10]
+#set xrange [0:30]
+set y2tics
+set y2label 'eta'
+set y2range [0:1]
+set key font ",15"
+plot 'e4-nk.diagnostics.dat' u 1:11 t 'global' w lines lw 2.5, \
+     'e4-nk.diagnostics.dat' u 1:13 t 'mass' w lines lw 2.5, \
+     'e4-nk.diagnostics.dat' u 1:15 t 'x-mom' w lines lw 2.5, \
+     'e4-nk.diagnostics.dat' u 1:17 t 'y-mom' w lines lw 2.5, \
+     'e4-nk.diagnostics.dat' u 1:19 t 'energy' w lines lw 2.5 lc 7, \
+     'e4-nk.diagnostics.dat' u 1:21 t 'tke' w lines lw 2.5 lc 7, \
+     'e4-nk.diagnostics.dat' u 1:23 t 'omega' w lines lw 2.5 lc 7, \
+     'e4-nk.diagnostics.dat' u 1:5 axes x1y2 t 'eta' w lines lw 2
+pause 0.5
+bind "x" "exit gnuplot"
+reread
+
