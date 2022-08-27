@@ -232,7 +232,6 @@ function output.write_config_file(fileName)
    f:write(string.format('"high_order_flux_calculator": %s,\n', tostring(config.high_order_flux_calculator)))
    f:write(string.format('"flux_calculator": "%s",\n', config.flux_calculator))
    f:write(string.format('"interpolation_order": %d,\n', config.interpolation_order))
-   f:write(string.format('"interpolation_scheme": "%s",\n', tostring(config.interpolation_scheme)))
    f:write(string.format('"interpolation_delay": %.18e,\n', config.interpolation_delay))
    f:write(string.format('"allow_interpolation_for_sensitivity_matrix": %s,\n',
                          tostring(config.allow_interpolation_for_sensitivity_matrix)))
