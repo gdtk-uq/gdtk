@@ -2314,6 +2314,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     number beta;
     mixin(dot_over_blocks("beta", "r0", "r0"));
     version(mpi_parallel) {
+        // NOTE: this dot product has been observed to be sensitive to the order of operations,
+        //       the use of MPI_Allreduce means that the same convergence behaviour can not be expected
+        //       for a different mapping of blocks over the MPI tasks and/or a shared memory calculation
+        //       2022-09-30 (KAD).
         MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
     }
@@ -2494,6 +2498,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 number H0_ij;
                 mixin(dot_over_blocks("H0_ij", "w", "v"));
                 version(mpi_parallel) {
+                    // NOTE: this dot product has been observed to be sensitive to the order of operations,
+                    //       the use of MPI_Allreduce means that the same convergence behaviour can not be expected
+                    //       for a different mapping of blocks over the MPI tasks and/or a shared memory calculation
+                    //       2022-09-30 (KAD).
                     MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                     version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
                 }
@@ -2505,6 +2513,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             number H0_jp1j;
             mixin(dot_over_blocks("H0_jp1j", "w", "w"));
             version(mpi_parallel) {
+                // NOTE: this dot product has been observed to be sensitive to the order of operations,
+                //       the use of MPI_Allreduce means that the same convergence behaviour can not be expected
+                //       for a different mapping of blocks over the MPI tasks and/or a shared memory calculation
+                //       2022-09-30 (KAD).
                 MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                 version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
             }
