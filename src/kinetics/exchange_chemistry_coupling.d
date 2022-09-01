@@ -71,6 +71,11 @@ class ImpartialDissociation : ExchangeChemistryCoupling {
         // to a non-singular approximation if iGamma gets too small.
         if (fabs(iGamma)<iGammaSwitchThreshold){
             return LTaylorSeries1(iGamma, D);
+        // Equation (39) can also overflow if the translational temp is much higher than the Tv.
+        // L2 has been derived using a limit that turns the troublesome exp(x) into an exp(-x),
+        // which safely underflows to zero instead of a nasty floating point infinity.
+        } else if (iGamma>iGammaOverflowThreshold) {
+            return L2(iGamma, D);
         } else {
             return L(iGamma, D);
         }
@@ -89,6 +94,7 @@ class ImpartialDissociation : ExchangeChemistryCoupling {
 private:
     const double D, Thetav;
     immutable number iGammaSwitchThreshold = to!number(1e-7); // Determined by trial and error, see notes 26/05/21
+    immutable double iGammaOverflowThreshold = 0.001; // See NNG notes 01/09/22
 
     @nogc const number L(number iT, double Y){
     /*
@@ -97,6 +103,18 @@ private:
         Notes: We use the inverse pseudo-temperature iT=1/T to save some division operations
     */
         return R_universal*Thetav/(exp(Thetav*iT) - 1.0) - Y/(exp(Y/R_universal*iT) - 1.0);
+    }
+
+    @nogc const number L2(number iT, double Y){
+    /*
+        Equation (39) from Knab, 1995, the molar vibrational energy content of the harmonic oscillator.
+
+        Notes: This expression is a limit as Y/Ru*iT -> large, which catches a NaN that otherwise
+               appears due to exp(Y/R_u*iT) overflowing. It's technically possible, but very
+               unlikely, that exp(Thetav*iT) can overflow as well, but we have no check for that
+               presently. (NNG 01/09/22)
+    */
+        return R_universal*Thetav/(exp(Thetav*iT) - 1.0) - Y*exp(-Y/R_universal*iT);
     }
 
     @nogc const number LTaylorSeries1(number iT, double Y){
