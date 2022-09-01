@@ -5,7 +5,13 @@ DMD ?= ldmd2
 PLATFORM ?= linux
 INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR := ../../build
-REVISION_STRING := $(shell git rev-parse --short HEAD)
+REPO_DIR := $(shell cd ../../; pwd)
+ifneq ("$(wildcard $(REPO_DIR)/.git)","")
+    # Repository exists
+    REVISION_STRING := $(shell git rev-parse --short HEAD)
+else
+    REVISION_STRING := unknown
+endif
 
 TEST_PROGRAMS := vector3_test vector3_complex_test \
 	projection_test projection_complex_test \

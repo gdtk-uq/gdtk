@@ -290,12 +290,21 @@ INSTALL_DIR ?= $(HOME)/gdtkinst
 
 # The build destination sits locally for present
 BUILD_DIR := ../../build
+
+# Some information that we want to embed into the source code.
 BUILD_DATE := $(shell date)
 
-REVISION_STRING := $(shell git rev-parse --short HEAD)
-REVISION_AGE := $(shell git log -1 --format=%cd --date=relative)
-REVISION_DATE := $(shell git log -1 --format=%cd)
 REPO_DIR := $(shell cd ../../; pwd)
+ifneq ("$(wildcard $(REPO_DIR)/.git)","")
+    # Repository exists
+    REVISION_STRING := $(shell git rev-parse --short HEAD)
+    REVISION_AGE := $(shell git log -1 --format=%cd --date=relative)
+    REVISION_DATE := $(shell git log -1 --format=%cd)
+else
+    REVISION_STRING := unknown
+    REVISION_AGE := unknown
+    REVISION_DATE := unknown
+endif
 
 DFLAGS :=
 DLINKFLAGS :=

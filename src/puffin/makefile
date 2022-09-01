@@ -52,7 +52,13 @@ INSTALL_DIR ?= $(HOME)/gdtkinst
 # The build destination sits locally for present
 BUILD_DIR := ../../build
 
-REVISION_STRING := $(shell git rev-parse --short HEAD)
+REPO_DIR := $(shell cd ../../; pwd)
+ifneq ("$(wildcard $(REPO_DIR)/.git)","")
+    # Repository exists
+    REVISION_STRING := $(shell git rev-parse --short HEAD)
+else
+    REVISION_STRING := unknown
+endif
 
 ifeq ($(DMD), dmd)
     ifeq ($(FLAVOUR), debug)
