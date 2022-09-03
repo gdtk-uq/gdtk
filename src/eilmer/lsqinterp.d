@@ -426,7 +426,7 @@ public:
         number phi_hp = 1.0;
         if (apply_heuristic_pressure_limiter) {
             park_limit(cell_cloud, ws, myConfig);
-            phi_hp = pPhi;
+            phi_hp = velxPhi; // we choose velxPhi here since it will always be set regardless of the thermo_interpolator
         }
 
         string codeForLimits(string qname, string gname, string limFactorname,
@@ -586,7 +586,7 @@ public:
         number phi_hp = 1.0;
         if (apply_heuristic_pressure_limiter) {
             park_limit(cell_cloud, ws, myConfig);
-            phi_hp = pPhi;
+            phi_hp = velxPhi; // we choose velxPhi here since it will always be set regardless of the thermo_interpolator
         }
 
         string codeForLimits(string qname, string gname, string limFactorname,
@@ -741,7 +741,7 @@ public:
         number phi_hp = 1.0;
         if (apply_heuristic_pressure_limiter) {
             park_limit(cell_cloud, ws, myConfig);
-            phi_hp = pPhi;
+            phi_hp = velxPhi; // we choose velxPhi here since it will always be set regardless of the thermo_interpolator
         }
 
         string codeForLimits(string qname, string gname, string limFactorname,
@@ -891,7 +891,7 @@ public:
         number phi_hp = 1.0;
         if (apply_heuristic_pressure_limiter) {
             park_limit(cell_cloud, ws, myConfig);
-            phi_hp = pPhi;
+            phi_hp = velxPhi; // we choose velxPhi here since it will always be set regardless of the thermo_interpolator
         }
 
         string codeForLimits(string qname, string gname, string limFactorname,
