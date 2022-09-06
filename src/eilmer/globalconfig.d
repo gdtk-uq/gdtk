@@ -997,6 +997,7 @@ final class GlobalConfig {
     shared static bool allow_reconstruction_for_energy_modes = true;
     shared static bool apply_limiter = true;
     shared static bool extrema_clipping = true;
+    shared static bool apply_heuristic_pressure_based_limiting = false;
     shared static bool interpolate_in_local_frame = true; // only for structured-grid
     // The unstructured solver has a selection of limiters available
     shared static UnstructuredLimiter unstructured_limiter = UnstructuredLimiter.venkat;
@@ -1323,6 +1324,7 @@ public:
     bool allow_reconstruction_for_energy_modes;
     bool apply_limiter;
     bool extrema_clipping;
+    bool apply_heuristic_pressure_based_limiting;
     bool interpolate_in_local_frame;
     bool apply_entropy_fix;
     UnstructuredLimiter unstructured_limiter;
@@ -1487,6 +1489,7 @@ public:
         allow_reconstruction_for_energy_modes = cfg.allow_reconstruction_for_energy_modes;
         apply_limiter = cfg.apply_limiter;
         extrema_clipping = cfg.extrema_clipping;
+        apply_heuristic_pressure_based_limiting = cfg.apply_heuristic_pressure_based_limiting;
         interpolate_in_local_frame = cfg.interpolate_in_local_frame;
         apply_entropy_fix = cfg.apply_entropy_fix;
         unstructured_limiter = cfg.unstructured_limiter;
@@ -1847,6 +1850,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
     mixin(update_bool("apply_limiter", "apply_limiter"));
     mixin(update_bool("extrema_clipping", "extrema_clipping"));
+    mixin(update_bool("apply_heuristic_pressure_based_limiting", "apply_heuristic_pressure_based_limiting"));
     mixin(update_bool("interpolate_in_local_frame", "interpolate_in_local_frame"));
     mixin(update_bool("apply_entropy_fix", "apply_entropy_fix"));
     mixin(update_enum("unstructured_limiter", "unstructured_limiter", "unstructured_limiter_from_name"));
@@ -1941,6 +1945,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  smooth_limiter_coeff: ", cfg.smooth_limiter_coeff);
         writeln("  nsteps_of_chemistry_ramp: ", cfg.nsteps_of_chemistry_ramp);
         writeln("  extrema_clipping: ", cfg.extrema_clipping);
+        writeln("  apply_heuristic_pressure_based_limiting: ", cfg.apply_heuristic_pressure_based_limiting);
         writeln("  interpolate_in_local_frame: ", cfg.interpolate_in_local_frame);
         writeln("  shear_tolerance: ", cfg.shear_tolerance);
         writeln("  M_inf: ", cfg.M_inf);

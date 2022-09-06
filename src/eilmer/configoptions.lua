@@ -85,6 +85,7 @@ configOptionsHidden = { -- hidden from user
    allow_reconstruction_for_energy_modes = true,
    apply_limiter = true,
    extrema_clipping = true,
+   apply_heuristic_pressure_based_limiting = false,
    interpolate_in_local_frame = true,
    apply_entropy_fix = true,
    unstructured_limiter = "venkat",
