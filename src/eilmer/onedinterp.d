@@ -1122,7 +1122,7 @@ public:
     void interp_l2r0(ref FVInterface IFace,
                      ref FVCell cL1, ref FVCell cL0,
                      number cL1Length, number cL0Length,
-                     ref FlowState Lft,)
+                     ref FlowState Lft)
     {
         auto gmodel = myConfig.gmodel;
         uint nsp = myConfig.n_species;
