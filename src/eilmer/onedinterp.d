@@ -144,7 +144,7 @@ public:
                 }
             }
             number alpha = fabs(pmax-pmin)/pmin;
-            beta = 0.5/(1.0+alpha*alpha*alpha*alpha);
+            beta = 1.0/(1.0+alpha*alpha*alpha*alpha);
         }
 
         if (myConfig.interpolation_order == 3) {
