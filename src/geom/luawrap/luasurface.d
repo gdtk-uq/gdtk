@@ -37,7 +37,7 @@ immutable string SubRangedSurfaceMT = "SubRangedSurface";
 immutable string BezierPatchMT = "BezierPatch";
 immutable string ControlPointPatchMT = "ControlPointPatch";
 immutable string BezierTrianglePatchMT = "BezierTrianglePatch";
-
+immutable string NURBSPatchMT = "NURBSPatch";
 
 static const(ParametricSurface)[] surfaceStore;
 static const(BezierTrianglePatch)[] triPatchStore;
@@ -1091,6 +1091,133 @@ extern(C) int newControlPointPatch(lua_State* L)
 } // end newControlPointPatch()
 
 
+/**
+ * This is the constructor for a NURBSPatch to be used from the Lua interface.
+ *
+ * At successful completion of this function, a new NURBSPatch object
+ * is pushed onto the Lua stack.
+ *
+ * Construction is:
+ * -------------------------
+ * patch = NURBSPatch:new{points=P, weights=w,
+                          u_knots=U, v_knots=V,
+			  u_degree=p, v_degree=q}
+ * --------------------------
+ *
+ * [TODO] -- document inputs
+ */
+
+extern(C) int newNURBSPatch(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 2)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected NURBSPatch:new{}; ";
+        errMsg ~= "maybe you tried NURBSPatch.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in constructor NURBSPatch:new{}. " ~
+            "A table with input parameters is expected as the first argument.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["points", "weights",
+				  "u_knots", "v_knots",
+				  "u_degree", "v_degree"])) {
+        string errMsg = "Error in call to NURBSPatch:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    
+    lua_getfield(L, 1, "points");
+    if (!lua_istable(L, -1)) {
+        string errMsg = "There's a problem in call to NURBSPatch:new{}. " ~
+            "An array of arrays for 'points' is expected.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    int np1 = to!int(lua_objlen(L, -1));
+    int mp1 = 0;
+    int n = np1 - 1;
+    int m = 0;
+    Vector3[][] P;
+    P.length = np1;
+    foreach (i; 0 .. np1) {
+        lua_rawgeti(L, -1, i+1); // +1 for Lua offset
+        if (i == 0) {
+            mp1 = to!int(lua_objlen(L, -1));
+            m = mp1 - 1;
+        }
+        else {
+            if (mp1 != lua_objlen(L, -1)) {
+                string errMsg = "There's a problem in call to NURBSPatch:new{}. " ~
+                    "Inconsistent numbers of points in array of 'points'.";
+                luaL_error(L, errMsg.toStringz);
+            }
+        }
+        P[i].length = mp1;
+        foreach (j; 0 .. mp1) {
+            lua_rawgeti(L, -1, j+1);
+            auto p = toVector3(L, -1);
+            P[i][j].set(p);
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
+    }
+    lua_pop(L, 1);
+
+    // Get "weights"
+    double[4][][] Pw;
+    double[] w;
+    lua_getfield(L, 1, "weights");
+    if (!lua_istable(L, -1)) {
+        string errMsg = "There's a problem in call to NURBSPatch:new{}. " ~
+            "An array of arrays for 'weights' is expected.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    int nw1 = to!int(lua_objlen(L, -1));
+    Pw.length = nw1;
+    foreach (i; 0 .. nw1) {
+	lua_rawgeti(L, -1, i+1); // +1 for lua offset
+	int mw = to!int(lua_objlen(L, -1));
+	w.length = 0;
+	foreach (j; 0 .. mw) {
+	    lua_rawgeti(L, -1, j+1); // +1 for lua offset
+	    if (lua_isnumber(L, -1)) w ~= lua_tonumber(L, -1);
+	    // Silently ignore anything else
+	    lua_pop(L, 1);
+	}
+	lua_pop(L, 1);
+	Pw[i].length = w.length;
+	foreach (j, wt; w) {
+	    Pw[i][j][0] = P[i][j].x.re * wt;
+	    Pw[i][j][1] = P[i][j].y.re * wt;
+	    Pw[i][j][2] = P[i][j].z.re * wt;
+	    Pw[i][j][3] = wt;
+	}
+    }
+    lua_pop(L, 1);
+    
+    // Get "u_knots"
+    double[] U;
+    getArrayOfDoubles(L, 1, "u_knots", U);
+
+    // Get "v_knots"
+    double[] V;
+    getArrayOfDoubles(L, 1, "v_knots", V);
+    
+    // Get "u_degree"
+    int p = getInt(L, 1, "u_degree");
+
+    // Get "v_degree"
+    int q = getInt(L, 1, "v_degree");
+
+    // Try to construct object.
+    auto nurbsPatch = new NURBSSurface(Pw, U, p, V, q);
+    surfaceStore ~= pushObj!(NURBSSurface, NURBSPatchMT)(L, nurbsPatch);
+    return 1;
+} // end newNURBSPatch()
+
+
 
 /* ---------- convenience functions -------------- */
 
@@ -1620,6 +1747,34 @@ void registerSurfaces(lua_State* L)
 
     lua_setglobal(L, ControlPointPatchMT.toStringz);
     lua_getglobal(L, ControlPointPatchMT.toStringz); lua_setglobal(L, "ControlPointSurface"); // alias
+
+
+    // Register the NURBSPatch object
+    luaL_newmetatable(L, NURBSPatchMT.toStringz);
+
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newNURBSPatch);
+    lua_setfield(L, -2, "new");
+    
+    lua_pushcfunction(L, &opCallSurface!(NURBSSurface, NURBSPatchMT));
+    lua_setfield(L, -2, "__call");
+
+    lua_pushcfunction(L, &opCallSurface!(NURBSSurface, NURBSPatchMT));
+    lua_setfield(L, -2, "eval");
+
+    lua_pushcfunction(L, &toStringObj!(NURBSSurface, NURBSPatchMT));
+    lua_setfield(L, -2, "__tostring");
+
+    lua_pushcfunction(L, &areaOfSurface!(NURBSSurface, NURBSPatchMT));
+    lua_setfield(L, -2, "area");
+
+    lua_setglobal(L, NURBSPatchMT.toStringz);
+    lua_getglobal(L, NURBSPatchMT.toStringz); lua_setglobal(L, "NURBSSurface"); // alias
+
     
     // Register utility functions.
     lua_pushcfunction(L, &isSurface); lua_setglobal(L, "isSurface");

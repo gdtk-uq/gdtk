@@ -15,3 +15,4 @@ public import geom.surface.beziertrianglepatch;
 public import geom.surface.nozzleexpansionpatch;
 public import geom.surface.spherepatch;
 public import geom.surface.cubepatch;
+public import geom.surface.nurbssurface;
