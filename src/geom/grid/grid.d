@@ -122,7 +122,7 @@ class Grid {
     abstract size_t[] get_list_of_boundary_cells(size_t boundary_indx);
 
     @nogc
-    void compute_cell_properties(size_t indx, ref Vector3 centroid, ref number volume)
+    void compute_cell_properties(size_t indx, bool true_centroid, ref Vector3 centroid, ref number volume)
     {
         number iLen, jLen, kLen, Lmin;
         size_t nvtx; size_t[8] vtx_ids;
@@ -156,19 +156,19 @@ class Grid {
                                 vertices[vtx_ids[2]], vertices[vtx_ids[3]],
                                 vertices[vtx_ids[4]], vertices[vtx_ids[5]],
                                 vertices[vtx_ids[6]], vertices[vtx_ids[7]],
-                                centroid, volume, iLen, jLen, kLen);
+                                true_centroid, centroid, volume, iLen, jLen, kLen);
             return;
         case 5:
             pyramid_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]],
                                vertices[vtx_ids[2]], vertices[vtx_ids[3]],
                                vertices[vtx_ids[4]],
-                               centroid, volume);
+                               true_centroid, centroid, volume);
             return;
         case 6:
             wedge_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]],
                              vertices[vtx_ids[2]], vertices[vtx_ids[3]],
                              vertices[vtx_ids[4]], vertices[vtx_ids[5]],
-                             centroid, volume);
+                             true_centroid, centroid, volume);
             return;
         default:
             throw new Error("Unhandled number of vertices.");

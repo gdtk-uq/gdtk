@@ -389,78 +389,90 @@ number tetragonal_dipyramid_volume(ref const(Vector3) p0, ref const(Vector3) p1,
 @nogc
 void pyramid_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                         ref const(Vector3) p2, ref const(Vector3) p3,
-                        ref const(Vector3) p4,
+                        ref const(Vector3) p4, bool true_centroid,
                         ref Vector3 centroid, ref number volume)
 {
-    // approximating the centroid via a simple averaging of vertex positions
-    // has shown to be more robust when importing an unstructurd grid and
-    // also appears to provide a better distribution of points for the
-    // least-squares gradient estimation [KAD 2022-08-03].
-    centroid.set(0.2*(p0.x+p1.x+p2.x+p3.x+p4.x),
-                 0.2*(p0.y+p1.y+p2.y+p3.y+p4.y),
-                 0.2*(p0.z+p1.z+p2.z+p3.z+p4.z));
     // p0-p1-p2-p3 is the quadrilateral base, p4 is the peak.
     // cycle of base vertices is counterclockwise, viewed from p4.
     //
-    // Split into 4 tetrahedra and sum contributions to volume.
+    // Split into 4 tetrahedra and sum contributions to volume and moment.
     Vector3 pmB; // Mid-point of quadrilateral base.
     pmB.set(0.25*(p0.x+p1.x+p2.x+p3.x),
             0.25*(p0.y+p1.y+p2.y+p3.y),
             0.25*(p0.z+p1.z+p2.z+p3.z));
     //
-    volume = 0.0;
+    volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
     number tet_volume; Vector3 tet_centroid;
     tetrahedron_properties(p0, p1, pmB, p4, tet_centroid, tet_volume);
-    volume += tet_volume;
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
     tetrahedron_properties(p1, p2, pmB, p4, tet_centroid, tet_volume);
-    volume += tet_volume;
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
     tetrahedron_properties(p2, p3, pmB, p4, tet_centroid, tet_volume);
-    volume += tet_volume;
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
     tetrahedron_properties(p3, p0, pmB, p4, tet_centroid, tet_volume);
-    volume += tet_volume;
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
+    //
+    if (fabs(volume) > 0.0) { moment /= volume; } // to get overall centroid
+    if (true_centroid) {
+        centroid = moment;
+    } else {
+        // approximating the centroid via a simple averaging of vertex positions
+        // has shown to be more robust when importing an unstructurd grid and
+        // also appears to provide a better distribution of points for the
+        // least-squares gradient estimation [KAD 2022-08-03].
+        centroid.set(0.2*(p0.x+p1.x+p2.x+p3.x+p4.x),
+                     0.2*(p0.y+p1.y+p2.y+p3.y+p4.y),
+                     0.2*(p0.z+p1.z+p2.z+p3.z+p4.z));
+    }
     //
     return;
 } // end pyramid_properties()
 
 @nogc
-void pyramid_properties(ref const(Vector3)[] p,
+void pyramid_properties(ref const(Vector3)[] p, bool true_centroid,
                         ref Vector3 centroid, ref number volume)
 {
-    pyramid_properties(p[0], p[1], p[2], p[3], p[4], centroid, volume);
+    pyramid_properties(p[0], p[1], p[2], p[3], p[4], true_centroid, centroid, volume);
 }
 
 @nogc
 void pyramid_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                         ref const(Vector3) p2, ref const(Vector3) p3,
-                        ref const(Vector3) p4,
+                        ref const(Vector3) p4, bool true_centroid,
                         ref Vector3 centroid, ref number volume, ref number L_min)
 {
-    // approximating the centroid via a simple averaging of vertex positions
-    // has shown to be more robust when importing an unstructurd grid and
-    // also appears to provide a better distribution of points for the
-    // least-squares gradient estimation [KAD 2022-08-03].
-    centroid.set(0.2*(p0.x+p1.x+p2.x+p3.x+p4.x),
-                 0.2*(p0.y+p1.y+p2.y+p3.y+p4.y),
-                 0.2*(p0.z+p1.z+p2.z+p3.z+p4.z));
     // p0-p1-p2-p3 is the quadrilateral base, p4 is the peak.
     // cycle of base vertices is counterclockwise, viewed from p4.
     //
-    // Split into 4 tetrahedra and sum contributions to volume.
+    // Split into 4 tetrahedra and sum contributions to volume and moment.
     Vector3 pmB; // Mid-point of quadrilateral base.
     pmB.set(0.25*(p0.x+p1.x+p2.x+p3.x),
             0.25*(p0.y+p1.y+p2.y+p3.y),
             0.25*(p0.z+p1.z+p2.z+p3.z));
     //
-    volume = 0.0;
+    volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
     number tet_volume; Vector3 tet_centroid;
     tetrahedron_properties(p0, p1, pmB, p4, tet_centroid, tet_volume);
-    volume += tet_volume;
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
     tetrahedron_properties(p1, p2, pmB, p4, tet_centroid, tet_volume);
-    volume += tet_volume;
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
     tetrahedron_properties(p2, p3, pmB, p4, tet_centroid, tet_volume);
-    volume += tet_volume;
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
     tetrahedron_properties(p3, p0, pmB, p4, tet_centroid, tet_volume);
-    volume += tet_volume;
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
+    //
+    if (fabs(volume) > 0.0) { moment /= volume; } // to get overall centroid
+    if (true_centroid) {
+        centroid = moment;
+    } else {
+        // approximating the centroid via a simple averaging of vertex positions
+        // has shown to be more robust when importing an unstructurd grid and
+        // also appears to provide a better distribution of points for the
+        // least-squares gradient estimation [KAD 2022-08-03].
+        centroid.set(0.2*(p0.x+p1.x+p2.x+p3.x+p4.x),
+                     0.2*(p0.y+p1.y+p2.y+p3.y+p4.y),
+                     0.2*(p0.z+p1.z+p2.z+p3.z+p4.z));
+    }
     //
     double third = 1.0/3.0;
     L_min = fmin(pow(volume, third), 2.0*distance_between(pmB, centroid));
@@ -477,79 +489,79 @@ void pyramid_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 } // end pyramid_properties()
 
 @nogc
-void pyramid_properties(ref const(Vector3)[] p,
+void pyramid_properties(ref const(Vector3)[] p, bool true_centroid,
                         ref Vector3 centroid, ref number volume, ref number L_min)
 {
-    pyramid_properties(p[0], p[1], p[2], p[3], p[4], centroid, volume, L_min);
+    pyramid_properties(p[0], p[1], p[2], p[3], p[4], true_centroid, centroid, volume, L_min);
 }
 
 @nogc
 void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                       ref const(Vector3) p2, ref const(Vector3) p3,
                       ref const(Vector3) p4, ref const(Vector3) p5,
+                      bool true_centroid,
                       ref Vector3 centroid, ref number volume)
 {
     // Use the average of the vertex points to get a rough centroid of the wedge.
-    // approximating the centroid via a simple averaging of vertex positions
-    // has shown to be more robust when importing an unstructurd grid and
-    // also appears to provide a better distribution of points for the
-    // least-squares gradient estimation [KAD 2022-08-03].
     centroid.set(1.0/6.0*(p0.x+p1.x+p2.x+p3.x+p4.x+p5.x),
                  1.0/6.0*(p0.y+p1.y+p2.y+p3.y+p4.y+p5.y),
                  1.0/6.0*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z));
     // Split the wedge into three pyramids and two tetrahedra
     // using this centroid as the peak of each sub-volume.
     number sub_volume; Vector3 sub_centroid;
-    volume = 0.0;
-    pyramid_properties(p3, p5, p2, p0, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
-    pyramid_properties(p1, p2, p5, p4, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
-    pyramid_properties(p0, p1, p4, p3, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
+    volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
+    pyramid_properties(p3, p5, p2, p0, centroid, true, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p1, p2, p5, p4, centroid, true, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p0, p1, p4, p3, centroid, true, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
     tetrahedron_properties(p0, p2, p1, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
     tetrahedron_properties(p3, p4, p5, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    //
+    if (fabs(volume) > 0.0) { moment /= volume; } // to get overall centroid
+    if (true_centroid) { centroid = moment; }
     //
     return;
 } // end wedge_properties()
 
 @nogc
-void wedge_properties(ref const(Vector3)[] p,
+void wedge_properties(ref const(Vector3)[] p, bool true_centroid,
                       ref Vector3 centroid, ref number volume)
 {
-    wedge_properties(p[0], p[1], p[2], p[3], p[4], p[5], centroid, volume);
+    wedge_properties(p[0], p[1], p[2], p[3], p[4], p[5], true_centroid, centroid, volume);
 }
 
 @nogc
 void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                       ref const(Vector3) p2, ref const(Vector3) p3,
                       ref const(Vector3) p4, ref const(Vector3) p5,
+                      bool true_centroid,
                       ref Vector3 centroid, ref number volume, ref number L_min)
 {
     // Use the average of the vertex points to get a rough centroid of the wedge.
-    // approximating the centroid via a simple averaging of vertex positions
-    // has shown to be more robust when importing an unstructurd grid and
-    // also appears to provide a better distribution of points for the
-    // least-squares gradient esimation [KAD 2022-08-03].
     centroid.set(1.0/6.0*(p0.x+p1.x+p2.x+p3.x+p4.x+p5.x),
                  1.0/6.0*(p0.y+p1.y+p2.y+p3.y+p4.y+p5.y),
                  1.0/6.0*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z));
     // Split the wedge into three pyramids and two tetrahedra
     // using this centroid as the peak of each sub-volume.
     number sub_volume; Vector3 sub_centroid;
-    volume = 0.0;
-    pyramid_properties(p3, p5, p2, p0, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
-    pyramid_properties(p1, p2, p5, p4, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
-    pyramid_properties(p0, p1, p4, p3, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
+    volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
+    pyramid_properties(p3, p5, p2, p0, centroid, true, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p1, p2, p5, p4, centroid, true, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p0, p1, p4, p3, centroid, true, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
     tetrahedron_properties(p0, p2, p1, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
     tetrahedron_properties(p3, p4, p5, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    //
+    if (fabs(volume) > 0.0) { moment /= volume; } // to get overall centroid
+    if (true_centroid) { centroid = moment; }
     //
     double third = 1.0/3.0;
     L_min = pow(volume, third);
@@ -568,10 +580,10 @@ void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 } // end wedge_properties()
 
 @nogc
-void wedge_properties(ref const(Vector3)[] p,
+void wedge_properties(ref const(Vector3)[] p, bool true_centroid,
                       ref Vector3 centroid, ref number volume, ref number L_min)
 {
-    wedge_properties(p[0], p[1], p[2], p[3], p[4], p[5], centroid, volume, L_min);
+    wedge_properties(p[0], p[1], p[2], p[3], p[4], p[5], true_centroid, centroid, volume, L_min);
 }
 
 @nogc
@@ -579,6 +591,7 @@ void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                          ref const(Vector3) p2, ref const(Vector3) p3,
                          ref const(Vector3) p4, ref const(Vector3) p5,
                          ref const(Vector3) p6, ref const(Vector3) p7,
+                         bool true_centroid,
                          ref Vector3 centroid, ref number volume,
                          ref number iLen, ref number jLen, ref number kLen)
 {
@@ -590,10 +603,6 @@ void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     //
     // Estimate the centroid so that we can use it as the peak
     // of each of the pyramid sub-volumes.
-    // approximating the centroid via a simple averaging of vertex positions
-    // has shown to be more robust when importing an unstructurd grid and
-    // also appears to provide a better distribution of points for the
-    // least-squares gradient esimation [KAD 2022-08-03].
     centroid.set(0.125*(p0.x+p1.x+p2.x+p3.x+p4.x+p5.x+p6.x+p7.x),
                  0.125*(p0.y+p1.y+p2.y+p3.y+p4.y+p5.y+p6.y+p7.y),
                  0.125*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z+p6.z+p7.z));
@@ -636,19 +645,19 @@ void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     // J. Grandy (1997) Efficient Computation of Volume of Hexahedral Cells UCRL-ID-128886.
     // Base of each dipyramid is specified clockwise from the outside.
     number sub_volume; Vector3 sub_centroid;
-    volume = 0.0;
-    pyramid_properties(p6, p7, p3, p2, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
-    pyramid_properties(p5, p6, p2, p1, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
-    pyramid_properties(p4, p5, p1, p0, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
-    pyramid_properties(p7, p4, p0, p3, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
-    pyramid_properties(p7, p6, p5, p4, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
-    pyramid_properties(p0, p1, p2, p3, centroid, sub_centroid, sub_volume);
-    volume += sub_volume;
+    volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
+    pyramid_properties(p6, p7, p3, p2, centroid, true, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p5, p6, p2, p1, centroid, true, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p4, p5, p1, p0, centroid, true, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p7, p4, p0, p3, centroid, true, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p7, p6, p5, p4, centroid, true, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p0, p1, p2, p3, centroid, true, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
     //
     if ( (volume < 0.0 && fabs(volume) < smallButSignificantVolume) ||
          (volume >= 0.0 && volume < verySmallVolume) ) {
@@ -658,16 +667,18 @@ void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
         volume = 0.0;
     }
     //
+    if (fabs(volume) > 0.0) { moment /= volume; } // to get overall centroid
+    if (true_centroid) { centroid = moment; }
     return;
 } // end hex_cell_properties()
 
 @nogc
-void hex_cell_properties(ref const(Vector3)[] p,
+void hex_cell_properties(ref const(Vector3)[] p, bool true_centroid,
                          ref Vector3 centroid, ref number volume,
                          ref number iLen, ref number jLen, ref number kLen)
 {
     hex_cell_properties(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
-                        centroid, volume, iLen, jLen, kLen);
+                        true_centroid, centroid, volume, iLen, jLen, kLen);
 }
 
 
@@ -1057,7 +1068,7 @@ version(properties_test) {
         p3 = p0 + incz;
         Vector3 p4 = p1 + incz;
         Vector3 p5 = p2 + incz;
-        wedge_properties(p0, p1, p2, p3, p4, p5, centroid, volume);
+        wedge_properties(p0, p1, p2, p3, p4, p5, true, centroid, volume);
         assert(approxEqualVectors(centroid, Vector3(dx,0.5,-0.5)), failedUnitTest());
         assert(approxEqualNumbers(volume, to!number(cos(radians(30))*0.5*1.0)), failedUnitTest());
 
@@ -1070,7 +1081,7 @@ version(properties_test) {
             p3_dash = p0_dash + incz;
             auto p4_dash = p1_dash + incz;
             auto p5_dash = p2_dash + incz;
-            wedge_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, p5_dash, centroid_dash, volume_dash);
+            wedge_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, p5_dash, true, centroid_dash, volume_dash);
             dvol_da = volume_dash.im/h;
             dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
             assert(isClose(dvol_da, alpha*sin(radians(60))), failedUnitTest());
@@ -1081,7 +1092,7 @@ version(properties_test) {
         p0 = Vector3(0,0,0); p1 = Vector3(1,0,0);
         p2 = Vector3(1,1,0); p3 = Vector3(0,1,0);
         p4 = Vector3(0.5,0.5,1); // peak
-        pyramid_properties(p0, p1, p2, p3, p4, centroid, volume);
+        pyramid_properties(p0, p1, p2, p3, p4, true, centroid, volume);
         assert(approxEqualVectors(centroid, Vector3(0.5,0.5,1.0/4)), failedUnitTest());
         assert(approxEqualNumbers(volume, to!number(1.0/3)), failedUnitTest());
 
@@ -1090,7 +1101,7 @@ version(properties_test) {
             p0_dash = Vector3(zero,zero,zero); p1_dash = Vector3(alpha+ih,zero,zero);
             p2_dash = Vector3(alpha+ih,alpha+ih,zero); p3_dash = Vector3(zero,alpha+ih,zero);
             p4_dash = Vector3(0.5,0.5,1); // peak
-            pyramid_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, centroid_dash, volume_dash);
+            pyramid_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, true, centroid_dash, volume_dash);
             dvol_da = volume_dash.im/h;
             dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
             assert(isClose(dvol_da, 2.0*alpha/3.0), failedUnitTest());
@@ -1103,7 +1114,7 @@ version(properties_test) {
         p4 = Vector3(0,0,1); p5 = Vector3(1,0,1);
         Vector3 p6 = Vector3(1,1,1); Vector3 p7 = Vector3(0,1,1);
         number iLen, jLen, kLen;
-        hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, centroid, volume,
+        hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, true, centroid, volume,
                             iLen, jLen, kLen);
         assert(approxEqualVectors(centroid, Vector3(0.5,0.5,0.5)), failedUnitTest());
         assert(approxEqualNumbers(volume, to!number(1.0)), failedUnitTest());
@@ -1114,8 +1125,8 @@ version(properties_test) {
             p2_dash = Vector3(alpha+ih,alpha+ih,zero); p3_dash = Vector3(zero,alpha+ih,zero);
             p4_dash = Vector3(zero,zero,alpha+ih); p5_dash = Vector3(alpha+ih,zero,alpha+ih);
             auto p6_dash = Vector3(alpha+ih,alpha+ih,alpha+ih); auto p7_dash = Vector3(zero,alpha+ih,alpha+ih);
-            hex_cell_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, p5_dash, p6_dash, p7_dash, centroid_dash, volume_dash,
-                            iLen, jLen, kLen);
+            hex_cell_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, p5_dash, p6_dash, p7_dash,
+                                true, centroid_dash, volume_dash, iLen, jLen, kLen);
             dvol_da = volume_dash.im/h;
             dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
             assert(isClose(dvol_da, 3.0*alpha^^2), failedUnitTest());

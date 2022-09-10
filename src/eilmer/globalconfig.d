@@ -850,6 +850,11 @@ final class GlobalConfig {
     shared static int nFluidBlocks = 0; // Number of fluid blocks in the overall simulation.
     shared static int nSolidBlocks = 0; // Number of solid blocks in the overall simulation.
     shared static int dimensions = 2; // default is 2, other valid option is 3
+    // Approximating the centroids of 3D cells via a simple averaging of vertex positions
+    // has shown to be more robust when importing an unstructurd grid and appears to provide
+    // a better distribution of points for the least-squares gradient estimation [KAD 2022-08-03]
+    // So, by default, we use the average points.
+    shared static bool true_centroids = false;
     shared static bool axisymmetric = false;
     shared static bool gravity_non_zero = false;
     shared static double gravity_x = 0.0, gravity_y = 0.0, gravity_z = 0.0; // N/kg
@@ -1282,6 +1287,7 @@ public:
     bool new_flow_format;
     //
     int dimensions;
+    bool true_centroids;
     bool axisymmetric;
     bool gravity_non_zero;
     Vector3 gravity;
@@ -1443,6 +1449,7 @@ public:
         flow_format = cfg.flow_format;
         new_flow_format = cfg.new_flow_format;
         dimensions = cfg.dimensions;
+        true_centroids = cfg.true_centroids;
         axisymmetric = cfg.axisymmetric;
         gravity_non_zero = cfg.gravity_non_zero;
         if (gravity_non_zero) { gravity.set(cfg.gravity_x, cfg.gravity_y, cfg.gravity_z); }
@@ -1743,6 +1750,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("sticky_electrons", "sticky_electrons"));
     mixin(update_bool("include_quality", "include_quality"));
     mixin(update_int("dimensions", "dimensions"));
+    mixin(update_bool("true_centroids", "true_centroids"));
     mixin(update_bool("axisymmetric", "axisymmetric"));
     double[] components_default = [0.0, 0.0, 0.0];
     double[] components = getJSONdoublearray(jsonData, "gravity", components_default);
@@ -1760,6 +1768,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  sticky_electrons: ", cfg.sticky_electrons);
         writeln("  include_quality: ", cfg.include_quality);
         writeln("  dimensions: ", cfg.dimensions);
+        writeln("  true_centroids: ", cfg.true_centroids);
         writeln("  axisymmetric: ", cfg.axisymmetric);
         writeln("  gravity_non_zero: ", cfg.gravity_non_zero);
         writeln(format("  gravity: [%e, %e, %e]", cfg.gravity_x, cfg.gravity_y, cfg.gravity_z));

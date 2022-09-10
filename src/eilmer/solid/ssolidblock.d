@@ -639,17 +639,17 @@ public:
                     // Base of each dipyramid is specified clockwise from the outside.
                     number sub_volume; Vector3 sub_centroid;
                     volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
-                    pyramid_properties(p6, p7, p3, p2, centroid, sub_centroid, sub_volume);
+                    pyramid_properties(p6, p7, p3, p2, centroid, false, sub_centroid, sub_volume);
                     volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
-                    pyramid_properties(p5, p6, p2, p1, centroid, sub_centroid, sub_volume);
+                    pyramid_properties(p5, p6, p2, p1, centroid, false, sub_centroid, sub_volume);
                     volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
-                    pyramid_properties(p4, p5, p1, p0, centroid, sub_centroid, sub_volume);
+                    pyramid_properties(p4, p5, p1, p0, centroid, false, sub_centroid, sub_volume);
                     volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
-                    pyramid_properties(p7, p4, p0, p3, centroid, sub_centroid, sub_volume);
+                    pyramid_properties(p7, p4, p0, p3, centroid, false, sub_centroid, sub_volume);
                     volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
-                    pyramid_properties(p7, p6, p5, p4, centroid, sub_centroid, sub_volume);
+                    pyramid_properties(p7, p6, p5, p4, centroid, false, sub_centroid, sub_volume);
                     volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
-                    pyramid_properties(p0, p1, p2, p3, centroid, sub_centroid, sub_volume);
+                    pyramid_properties(p0, p1, p2, p3, centroid, false, sub_centroid, sub_volume);
                     volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
                     //
                     if (volume < 0.0) {

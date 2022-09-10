@@ -128,7 +128,7 @@ public:
                 gridBlocks ~= new StructuredGrid(fileName, grid_format);
                 break;
             case Grid_t.unstructured_grid:
-                gridBlocks ~= new UnstructuredGrid(fileName, grid_format);
+                gridBlocks ~= new UnstructuredGrid(fileName, grid_format, false);
             }
             gridBlocks[$-1].sort_cells_into_bins();
             if (new_flow_format) {

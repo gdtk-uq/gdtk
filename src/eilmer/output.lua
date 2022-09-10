@@ -146,6 +146,7 @@ function output.write_config_file(fileName)
    f:write(string.format('"sticky_electrons": %s,\n', tostring(config.sticky_electrons)))
    f:write(string.format('"include_quality": %s,\n', tostring(config.include_quality)))
    f:write(string.format('"dimensions": %d,\n', config.dimensions))
+   f:write(string.format('"true_centroids": %s,\n', tostring(config.true_centroids)))
    f:write(string.format('"axisymmetric": %s,\n', tostring(config.axisymmetric)))
    config.gravity.x = config.gravity.x or 0.0
    config.gravity.y = config.gravity.y or 0.0

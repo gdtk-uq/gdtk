@@ -261,6 +261,12 @@ extern(C) int newUnstructuredGrid(lua_State* L)
             lua_getfield(L, 1, "fmt".toStringz);
             if ( !lua_isnil(L, -1) ) { fmt = to!string(luaL_checkstring(L, -1)); }
             lua_pop(L, 1); // dispose of fmt item
+            bool true_centroids = false;
+            lua_getfield(L, 1, "true_centroids".toStringz);
+            if ( !lua_isnil(L, -1) ) {
+                true_centroids = to!bool(lua_toboolean(L, -1));
+            }
+            lua_pop(L, 1); // dispose of true_centroids item
             bool expect_gmsh_order_for_wedges = true;
             lua_getfield(L, 1, "expect_gmsh_order_for_wedges".toStringz);
             if ( !lua_isnil(L, -1) ) {
@@ -268,7 +274,7 @@ extern(C) int newUnstructuredGrid(lua_State* L)
             }
             lua_pop(L, 1); // dispose of expect_gmsh_order_for_wedges item
             if (filename.length > 0) {
-                usgrid = new UnstructuredGrid(filename, fmt, scale,
+                usgrid = new UnstructuredGrid(filename, fmt, true_centroids, scale,
                                               expect_gmsh_order_for_wedges,
                                               label);
             }

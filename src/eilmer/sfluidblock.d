@@ -168,7 +168,8 @@ public:
                 Vector3 p101 = *grid[i+1,j,k+1];
                 Vector3 p111 = *grid[i+1,j+1,k+1];
                 Vector3 p011 = *grid[i,j+1,k+1];
-                hex_cell_properties(p000, p100, p110, p010, p001, p101, p111, p011, pos, volume, iLen, jLen, kLen);
+                hex_cell_properties(p000, p100, p110, p010, p001, p101, p111, p011,
+                                    GlobalConfig.true_centroids, pos, volume, iLen, jLen, kLen);
             } else {
                 throw new Exception("GlobalConfig.dimensions not 2 or 3.");
             }
@@ -879,7 +880,7 @@ public:
             foreach (c; cells) { c.update_2D_geometric_data(gtl, myConfig.axisymmetric); }
             foreach (f; faces) { f.update_2D_geometric_data(gtl, myConfig.axisymmetric); }
         } else { // 3D
-            foreach (c; cells) { c.update_3D_geometric_data(gtl); }
+            foreach (c; cells) { c.update_3D_geometric_data(gtl, myConfig.true_centroids); }
             foreach (f; faces) { f.update_3D_geometric_data(gtl); }
         }
         //

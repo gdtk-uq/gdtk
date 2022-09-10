@@ -67,7 +67,7 @@ extern(C) int cellVolume(T, string MTname)(lua_State *L)
     size_t indx = to!size_t(luaL_checkint(L, 2));
     number volume;
     Vector3 centroid;
-    grid.compute_cell_properties(indx, centroid, volume);
+    grid.compute_cell_properties(indx, true, centroid, volume);
     lua_pushnumber(L, volume);
     return 1;
 }
@@ -78,7 +78,7 @@ extern(C) int cellCentroid(T, string MTname)(lua_State *L)
     size_t indx = to!size_t(luaL_checkint(L, 2));
     number volume;
     Vector3 centroid;
-    grid.compute_cell_properties(indx, centroid, volume);
+    grid.compute_cell_properties(indx, true, centroid, volume);
     return pushVector3(L, centroid);
 }
 

@@ -807,7 +807,7 @@ public:
     } // end constructor from StructuredGrid object
 
     // Imported grid.
-    this(string fileName, string fmt, double scale=1.0,
+    this(string fileName, string fmt, bool true_centroids, double scale=1.0,
          bool expect_gmsh_order_for_wedges=true, string new_label="")
     {
         super(Grid_t.unstructured_grid, 0, new_label);
@@ -815,7 +815,7 @@ public:
         switch (fmt) {
         case "gziptext": read_from_gzip_file(fileName, scale); break;
         case "rawbinary": read_from_raw_binary_file(fileName, scale); break;
-        case "su2text": read_from_su2_file(fileName, scale, expect_gmsh_order_for_wedges); break;
+        case "su2text": read_from_su2_file(fileName, true_centroids, scale, expect_gmsh_order_for_wedges); break;
         case "vtktext": read_from_vtk_text_file(fileName, scale); break;
         case "vtkxml": throw new Error("Reading from VTK XML format not implemented.");
         default: throw new Error("Import an UnstructuredGrid, unknown format: " ~ fmt);
@@ -1253,7 +1253,9 @@ public:
         link_faces_back_to_cells();
     } // end read_from_raw_binary_file()
 
-    void read_from_su2_file(string fileName, double scale=1.0,
+    void read_from_su2_file(string fileName,
+                            bool true_centroids,
+                            double scale=1.0,
                             bool expect_gmsh_order_for_wedges=true)
     // Information on the su2 file format from
     // https://github.com/su2code/SU2/wiki/Mesh-File
@@ -1519,7 +1521,7 @@ public:
             // will be determined and remembered when we add the face to the cell.
             Vector3 centroid;
             number volume;
-            compute_cell_properties(i, centroid, volume);
+            compute_cell_properties(i, true_centroids, centroid, volume);
             if (dimensions == 2) {
                 switch(cell.cell_type) {
                 case USGCell_type.triangle:

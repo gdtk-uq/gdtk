@@ -153,7 +153,7 @@ private:
         number volume, iLength, jLength, kLength;
         Vector3 centroid;
         hex_cell_properties(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
-                            centroid, volume, iLength, jLength, kLength);
+                            true, centroid, volume, iLength, jLength, kLength);
         if (volume <= 0.0) {
             string msg = format("Apparently-invalid volume (%g) for hex block.", volume);
             throw new GeometryException(msg);

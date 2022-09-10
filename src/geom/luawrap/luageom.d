@@ -484,7 +484,7 @@ extern(C) int hexCellProperties(lua_State* L)
         number volume;
         number iLen, jLen, kLen;
         hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7,
-                            centroid, volume, iLen, jLen, kLen);
+                            true, centroid, volume, iLen, jLen, kLen);
 
         lua_newtable(L); // anonymous table { }
         auto tblIndx = lua_gettop(L);

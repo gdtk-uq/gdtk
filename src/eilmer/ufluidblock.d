@@ -131,16 +131,16 @@ public:
                 case 8:
                     hex_cell_properties(vertices[0], vertices[1], vertices[2], vertices[3],
                                         vertices[4], vertices[5], vertices[6], vertices[7],
-                                        pos, volume, iLength, jLength, kLength);
+                                        GlobalConfig.true_centroids, pos, volume, iLength, jLength, kLength);
                     break;
                 case 5:
-                    pyramid_properties(vertices[0], vertices[1], vertices[2], vertices[3],
-                                       vertices[4], pos, volume, L_min);
+                    pyramid_properties(vertices[0], vertices[1], vertices[2], vertices[3], vertices[4],
+                                       GlobalConfig.true_centroids, pos, volume, L_min);
                     break;
                 case 6:
                     wedge_properties(vertices[0], vertices[1], vertices[2],
                                      vertices[3], vertices[4], vertices[5],
-                                     pos, volume, L_min);
+                                     GlobalConfig.true_centroids, pos, volume, L_min);
                     break;
                 default:
                     debug { msg ~= format("Unhandled number of vertices: %d", vertices.length); }
@@ -281,7 +281,7 @@ public:
 
     override void init_grid_and_flow_arrays(string gridFileName)
     {
-        grid = new UnstructuredGrid(gridFileName, myConfig.grid_format);
+        grid = new UnstructuredGrid(gridFileName, myConfig.grid_format, myConfig.true_centroids);
         if (grid.nvertices != nvertices) {
             string msg = format("UnstructuredGrid: incoming grid has %d vertices " ~
                                 "but expected %d vertices.", grid.nvertices, nvertices);
@@ -617,7 +617,7 @@ public:
             foreach (c; cells) { c.update_2D_geometric_data(gtl, myConfig.axisymmetric); }
             foreach (f; faces) { f.update_2D_geometric_data(gtl, myConfig.axisymmetric); }
         } else { // 3D
-            foreach (c; cells) { c.update_3D_geometric_data(gtl); }
+            foreach (c; cells) { c.update_3D_geometric_data(gtl, myConfig.true_centroids); }
             foreach (f; faces) { f.update_3D_geometric_data(gtl); }
         }
         //
@@ -719,7 +719,7 @@ public:
     override void read_new_underlying_grid(string fileName)
     {
         if (myConfig.verbosity_level > 1) { writeln("read_new_underlying_grid() for block ", id); }
-        grid = new UnstructuredGrid(fileName, myConfig.grid_format);
+        grid = new UnstructuredGrid(fileName, myConfig.grid_format, myConfig.true_centroids);
         grid.sort_cells_into_bins();
     }
 

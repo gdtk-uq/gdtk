@@ -22,6 +22,7 @@ configOptionsHidden = { -- hidden from user
    user_pad_length = 0,
    nFluidBlocks = 0,
    dimensions = 2,
+   true_centroids = false,
    axisymmetric = false,
    gravity = {x=0.0, y=0.0, z=0.0},
    --

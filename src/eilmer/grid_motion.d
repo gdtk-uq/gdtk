@@ -98,6 +98,7 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
         Vector3 p0, p1, p2, p3, p4, p5, p6, p7;
         Vector3 centroid_hex, sub_centroid;
         number volume, sub_volume, temp2;
+        bool tc = blk.myConfig.true_centroids;
         // loop over i-interfaces and compute interface velocity wif'.
         foreach (k; 0 .. blk.nkc) {
             foreach (j; 0 .. blk.njc) {
@@ -116,17 +117,17 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
                                  0.125*(p0.y+p1.y+p2.y+p3.y+p4.y+p5.y+p6.y+p7.y),
                                  0.125*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z+p6.z+p7.z));
                     volume = 0.0;
-                    pyramid_properties(p6, p7, p3, p2, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p6, p7, p3, p2, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
-                    pyramid_properties(p5, p6, p2, p1, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p5, p6, p2, p1, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
-                    pyramid_properties(p4, p5, p1, p0, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p4, p5, p1, p0, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
-                    pyramid_properties(p7, p4, p0, p3, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p7, p4, p0, p3, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
-                    pyramid_properties(p7, p6, p5, p4, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p7, p6, p5, p4, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
-                    pyramid_properties(p0, p1, p2, p3, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p0, p1, p2, p3, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
                     //
                     IFace = blk.get_ifi(i,j,k);
@@ -169,17 +170,17 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
                                  0.125*(p0.y+p1.y+p2.y+p3.y+p4.y+p5.y+p6.y+p7.y),
                                  0.125*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z+p6.z+p7.z));
                     volume = 0.0;
-                    pyramid_properties(p6, p7, p3, p2, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p6, p7, p3, p2, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
-                    pyramid_properties(p5, p6, p2, p1, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p5, p6, p2, p1, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
-                    pyramid_properties(p4, p5, p1, p0, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p4, p5, p1, p0, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
-                    pyramid_properties(p7, p4, p0, p3, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p7, p4, p0, p3, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
-                    pyramid_properties(p7, p6, p5, p4, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p7, p6, p5, p4, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
-                    pyramid_properties(p0, p1, p2, p3, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p0, p1, p2, p3, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
                     //
                     IFace = blk.get_ifj(i,j,k);
@@ -222,17 +223,17 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
                                  0.125*(p0.y+p1.y+p2.y+p3.y+p4.y+p5.y+p6.y+p7.y),
                                  0.125*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z+p6.z+p7.z));
                     volume = 0.0;
-                    pyramid_properties(p6, p7, p3, p2, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p6, p7, p3, p2, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
-                    pyramid_properties(p5, p6, p2, p1, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p5, p6, p2, p1, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
-                    pyramid_properties(p4, p5, p1, p0, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p4, p5, p1, p0, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
-                    pyramid_properties(p7, p4, p0, p3, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p7, p4, p0, p3, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
-                    pyramid_properties(p7, p6, p5, p4, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p7, p6, p5, p4, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
-                    pyramid_properties(p0, p1, p2, p3, centroid_hex, sub_centroid, sub_volume);
+                    pyramid_properties(p0, p1, p2, p3, centroid_hex, tc, sub_centroid, sub_volume);
                     volume += sub_volume;
                     //
                     IFace = blk.get_ifk(i,j,k);

@@ -449,7 +449,7 @@ public:
     } // end update_2D_geometric_data()
 
     @nogc
-    void update_3D_geometric_data(size_t gtl)
+    void update_3D_geometric_data(size_t gtl, bool true_centroid)
     {
         string msg = "FVCell.update_3D_geometric_data(): ";
         number iL, jL, kL;
@@ -463,19 +463,19 @@ public:
         case 8:
             hex_cell_properties(vtx[0].pos[gtl], vtx[1].pos[gtl], vtx[2].pos[gtl], vtx[3].pos[gtl],
                                 vtx[4].pos[gtl], vtx[5].pos[gtl], vtx[6].pos[gtl], vtx[7].pos[gtl],
-                                pos[gtl], volume[gtl], iL, jL, kL);
+                                true_centroid, pos[gtl], volume[gtl], iL, jL, kL);
             iLength = iL; jLength = jL; kLength = kL;
             L_min = min(iLength, jLength, kLength);
             break;
         case 5:
             pyramid_properties(vtx[0].pos[gtl], vtx[1].pos[gtl], vtx[2].pos[gtl], vtx[3].pos[gtl],
-                               vtx[4].pos[gtl], pos[gtl], volume[gtl], L_min);
+                               vtx[4].pos[gtl], true_centroid, pos[gtl], volume[gtl], L_min);
             iLength = L_min; jLength = L_min; kLength = L_min;
             break;
         case 6:
             wedge_properties(vtx[0].pos[gtl], vtx[1].pos[gtl], vtx[2].pos[gtl],
                              vtx[3].pos[gtl], vtx[4].pos[gtl], vtx[5].pos[gtl],
-                             pos[gtl], volume[gtl], L_min);
+                             true_centroid, pos[gtl], volume[gtl], L_min);
             iLength = L_min; jLength = L_min; kLength = L_min;
             break;
         default:
