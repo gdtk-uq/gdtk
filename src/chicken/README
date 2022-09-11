@@ -1,0 +1,8 @@
+The start of a 3D flow solver written in CUDA C++.
+
+So far this is just an experiment to see if we can write the CUDA code
+in similar form to the Eilmer and Puffin codes, so that we can reuse
+our Dlang code base for geometric elements and flux calculators.
+
+PJ 2022-09-11
+
