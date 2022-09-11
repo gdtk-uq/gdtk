@@ -18,7 +18,6 @@ struct FlowState {
     }
 }; // end FlowState
 
-
 namespace CQI {
     // For sizing and indexing into the Flux vectors of conserved quantities.
     //
@@ -33,5 +32,10 @@ namespace CQI {
     constexpr size_t zMom = 3;
     constexpr size_t totEnergy = 4;
 };
+
+// We are going to store the vector of conserved quantities and its derivatives
+// in simple arrays and our time update with have a number of stages.
+constexpr size_t TLevels = 3;
+typedef number ConservedQuantities[TLevels][CQI::n];
 
 #endif

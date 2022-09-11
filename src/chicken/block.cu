@@ -19,28 +19,104 @@ namespace BCCode {
     // Boundary condition codes, to decide what to do for the ghost cells.
     constexpr int wall = 0;
     constexpr int exchange = 1;
+    constexpr int inflow = 2;
+    constexpr int outflow = 3;
+    // [TODO] need to consider periodic boundary conditions.
+    // There's not enough information here to have arbitrary block connections.
 };
 
 struct Block {
-    int nic;
-    int njc;
-    int nkc;
+    int nic; // Number of cells i-direction.
+    int njc; // Number of cells j-direction.
+    int nkc; // Number of cells k-direction.
+    int firstGhostCells[6]; // Index of the first ghost cell for each face.
+    // Ghost cells will be stored at the end of the active cells collection.
     //
     vector<Cell> cells;
-    vector<Face> ifaces;
-    vector<Face> jfaces;
-    vector<Face> kfaces;
+    vector<Face> iFaces;
+    vector<Face> jFaces;
+    vector<Face> kFaces;
     vector<Vector3> vertices;
     //
-    int bc_codes[6];
+    // Active cells have conserved quantities data, along with the time derivatives.
+    vector<ConservedQuantities> Q;
+    vector<ConservedQuantities> dQdt;
     //
+    int bcCodes[6];
+
+    __host__
     string toString() {
         string repr = "Block(nic=" + to_string(nic) +
             ", njc=" + to_string(njc) + ", nkc=" + to_string(nkc) + ")";
         return repr;
     }
 
-    // [TODO] PJ 2022-09-11 methods for allocation of the storage arrays, etc.
+    // Methods to index the elements making up the block.
+
+    __host__ __device__
+    int activeCellIndex(int i, int j, int k)
+    {
+        return k*nic*njc + j*nic + i;
+    }
+
+    __host__ __device__
+    int ghostCellIndex(int faceIndx, int i0, int i1, int depth)
+    {
+        int cellIndxOnFace = 0;
+        switch (faceIndx) {
+        case FaceNames::iminus:
+        case FaceNames::iplus:
+            // jk face
+            cellIndxOnFace = i1*njc + i0;
+            break;
+        case FaceNames::jminus:
+        case FaceNames::jplus:
+            // ik face
+            cellIndxOnFace = i1*njc + i0;
+            break;
+        case FaceNames::kminus:
+        case FaceNames::kplus:
+            // ik face
+            cellIndxOnFace = i1*njc + i0;
+            break;
+        }
+        return firstGhostCells[faceIndx] + cellIndxOnFace;
+    }
+
+    __host__ __device__
+    int iFaceIndx(int i, int j, int k)
+    {
+        return i*njc*nkc + k*njc + j;
+    }
+
+    __host__ __device__
+    int jFaceIndx(int i, int j, int k)
+    {
+        return j*nic*nkc + k*nic + i;
+    }
+
+    __host__ __device__
+    int kFaceIndx(int i, int j, int k)
+    {
+        return k*nic*njc + j*nic + i;
+    }
+
+    __host__
+    void configure(int i, int j, int k, int codes[])
+    {
+        nic = i;
+        njc = j;
+        nkc = k;
+        for (int b=0; b < 6; b++) { bcCodes[b] = codes[b]; }
+        return;
+    }
+
+    __host__
+    void allocate_arrays()
+    {
+        // [TODO]
+        return;
+    }
 
 }; // end Block
 
