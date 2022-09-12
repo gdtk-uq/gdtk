@@ -9,6 +9,7 @@
 #include "number.cu"
 #include "vector3.cu"
 #include "gas.cu"
+#include "vertex.cu"
 #include "flow.cu"
 #include "face.cu"
 #include "cell.cu"
@@ -99,6 +100,12 @@ struct Block {
     int kFaceIndx(int i, int j, int k)
     {
         return k*nic*njc + j*nic + i;
+    }
+
+    __host__ __device__
+    int vtxIndx(int i, int j, int k)
+    {
+        return k*(nic+1)*(njc+1) + j*(nic+1) + i;
     }
 
     __host__

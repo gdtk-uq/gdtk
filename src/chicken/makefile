@@ -1,7 +1,7 @@
 # makefile for chicken
 # PJ 2022-09-11
 
-SOURCE_FILES := main.cu cell.cu face.cu flux.cu flow.cu gas.cu vector3.cu number.cu
+SOURCE_FILES := main.cu cell.cu face.cu vertex.cu flux.cu flow.cu gas.cu vector3.cu number.cu
 
 # Default build is for double numbers.
 chicken : $(SOURCE_FILES)
