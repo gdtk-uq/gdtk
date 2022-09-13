@@ -70,6 +70,9 @@ ParametricSurface checkSurface(lua_State* L, int index) {
         return checkObj!(BezierPatch, BezierPatchMT)(L, index);
     if ( isObjType(L, index, ControlPointPatchMT) )
         return checkObj!(ControlPointPatch, ControlPointPatchMT)(L, index);
+    if ( isObjType(L, index, NURBSPatchMT) )
+        return checkObj!(NURBSSurface, NURBSPatchMT)(L, index);
+
     // if no match found then
     return null;
 }
