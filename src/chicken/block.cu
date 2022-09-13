@@ -6,6 +6,9 @@
 #define BLOCK_INCLUDED
 
 #include <string>
+#include <fstream>
+#include <stdexcept>
+
 #include "number.cu"
 #include "vector3.cu"
 #include "gas.cu"
@@ -110,6 +113,7 @@ struct Block {
 
     __host__
     void configure(int i, int j, int k, int codes[])
+    // Do this before reading a grid or flow file.
     {
         nic = i;
         njc = j;
@@ -119,11 +123,57 @@ struct Block {
     }
 
     __host__
-    void allocate_arrays()
+    void allocateStorage()
     {
-        // [TODO]
+        // [TODO] maybe we should do this after reading a grid.
         return;
     }
+
+    __host__
+    void readGrid(string fileName, bool vtkHeader=true)
+    // Reads the vertex locations from a file, resizing storage as needed.
+    // The numbers of cells are also set.
+    {
+        auto f = fstream(fileName, fstream::in);
+        constexpr int maxc = 256;
+        char line[maxc];
+        int niv, njv, nkv;
+        if (vtkHeader) {
+            f.getline(line, maxc); // expect "vtk"
+            f.getline(line, maxc); // title line
+            f.getline(line, maxc); // expect "ASCII"
+            f.getline(line, maxc); // expect "STRUCTURED_GRID"
+            f.getline(line, maxc); // DIMENSIONS line
+            sscanf(line, "DIMENSIONS %d %d %d", &niv, &njv, &nkv);
+        } else {
+            f.getline(line, maxc);
+            sscanf(line, "%d %d %d", &niv, &njv, &nkv);
+        }
+        if ((nic != niv-1) || (njc != njv-1) || (nkc != nkv-1)) {
+            throw new runtime_error("Unexpected grid size: niv="+to_string(niv)+
+                                    " njv="+to_string(njv)+
+                                    " nkv="+to_string(nkv));
+        }
+        vertices.resize(niv*njv*nkv);
+        //
+        // Standard order of vertices.
+        for (int k=0; k < nkv; k++) {
+            for (int j=0; j < njv; j++) {
+                for (int i=0; i < niv; i++) {
+                    f.getline(line, maxc);
+                    number x, y, z;
+                    #ifdef FLOAT_NUMBERS
+                    sscanf(line "%f %f %f", &x, &y, &z);
+                    #else
+                    scanf(line, "%lf %lf %lf", &x, &y, &z);
+                    #endif
+                    vertices[vtxIndx(i,j,k)].set(x, y, z);
+                } // for i
+            } // for j
+        } // for k
+        f.close();
+        return;
+    } // end readGrid()
 
 }; // end Block
 

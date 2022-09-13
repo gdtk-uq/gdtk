@@ -1383,7 +1383,7 @@ string[] read_VTK_header_line(string target, File f)
         throw new Error(text("Did not find ", target, " while reading VTK grid file"));
     }
     return tokens;
-} // end locate_VTK_header_line()
+} // end read_VTK_header_line()
 
 //-----------------------------------------------------------------
 
