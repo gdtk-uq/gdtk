@@ -5,10 +5,13 @@ SOURCE_FILES := main.cu block.cu cell.cu face.cu vertex.cu flux.cu flow.cu gas.c
 
 # Default build is for double numbers.
 chicken : $(SOURCE_FILES)
-	nvcc -lineinfo -o chicken main.cu
+	nvcc -DCUDA -std c++17 -lineinfo -o chicken main.cu
 
 chicken_f : $(SOURCE_FILES)
-	nvcc -DFLOAT_NUMBERS -lineinfo -o chicken main.cu
+	nvcc -DCUDA -DFLOAT_NUMBERS -std c++17 -lineinfo -o chicken main.cu
+
+chicken_host_only : $(SOURCE_FILES)
+	nvcc -lineinfo -std c++17 -o chicken main.cu
 
 chicken_run : chicken
 	./chicken
