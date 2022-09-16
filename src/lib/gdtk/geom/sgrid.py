@@ -89,7 +89,7 @@ class StructuredGrid():
         return
 
     def make_from_pvolume(self, pvolume, niv, njv, nkv, cf_list):
-        if not isinstance(psurf, ParametricVolume):
+        if not isinstance(pvolume, ParametricVolume):
             raise Exception("Need to supply a ParametricVolume to construct the grid.")
         if niv < 2:
             raise Exception(f"niv is too small: {niv}")

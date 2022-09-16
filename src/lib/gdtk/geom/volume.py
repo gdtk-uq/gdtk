@@ -10,7 +10,7 @@ import math
 from abc import ABC, abstractmethod
 from copy import copy
 from gdtk.geom.vector3 import Vector3, approxEqualVectors
-from gdtk.geom.path import Line
+from gdtk.geom.surface import CoonsPatch
 
 
 class ParametricVolume(ABC):
@@ -138,10 +138,12 @@ class TFIVolume(ParametricVolume):
         jplus_rt = self.jplus(r, t)
         kminus_rs = self.kminus(r, s)
         kplus_rs = self.kplus(r, s)
-        double omr = 1.0 - r; double oms = 1.0 - s; double omt = 1.0 - t;
-        BigC = (omr*oms*omt)*p000 + (omr*oms*t)*p001 + (omr*s*omt)*p010 + (omr*s*t)*p011 + \
-            (r*oms*omt)*p100 + (r*oms*t)*p101 + (r*s*omt)*p110 + (r*s*t)*p111;
+        omr = 1.0-r; oms = 1.0-s; omt = 1.0-t;
+        BigC = (omr*oms*omt)*self.p000 + (omr*oms*t)*self.p001 + \
+            (omr*s*omt)*self.p010 + (omr*s*t)*self.p011 + \
+            (r*oms*omt)*self.p100 + (r*oms*t)*self.p101 + \
+            (r*s*omt)*self.p110 + (r*s*t)*self.p111
         p_rst = 0.5*(omr*iminus_st + r*iplus_st + \
                      oms*jminus_rt + s*jplus_rt + \
-                     omt*kminus_rs + t*kplus_rs) - 0.5*BigC;
+                     omt*kminus_rs + t*kplus_rs) - 0.5*BigC
         return p_rst
