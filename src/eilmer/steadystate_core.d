@@ -426,11 +426,35 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     cellCount += nConserved;
                 }
         }
+
+        if (GlobalConfig.sssOptions.include_turb_quantities_in_residual == false) {
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                auto cqi = blk.myConfig.cqi;
+                int cellCount = 0;
+                foreach (i, cell; blk.cells) {
+                    foreach(it; 0 .. cqi.n_turb) { blk.FU[cellCount+TKE+it] = to!number(0.0); }
+                    cellCount += nConserved;
+                }
+            }
+        }
+
         mixin(dot_over_blocks("normRef", "FU", "FU"));
         version(mpi_parallel) {
             MPI_Allreduce(MPI_IN_PLACE, &(normRef), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         }
         normRef = sqrt(normRef);
+
+        if (GlobalConfig.sssOptions.include_turb_quantities_in_residual == false) {
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                auto cqi = blk.myConfig.cqi;
+                int cellCount = 0;
+                foreach (i, cell; blk.cells) {
+                    foreach(it; 0 .. cqi.n_turb) { blk.FU[cellCount+TKE+it] = -cell.dUdt[0][cqi.rhoturb+it]; }
+                    cellCount += nConserved;
+                }
+            }
+        }
+
     }
 
     // if we are restarting a simulation we need read the initial residuals from a file
@@ -489,6 +513,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 string modename = "T_MODES["~to!string(imode)~"]"; //capitalize(GlobalConfig.gmodel_master.energy_mode_name(imode));
                 writefln("%s:            %.12e",modename, maxResiduals[cqi.modes+imode].re);
             }
+        }
+        if (GlobalConfig.sssOptions.include_turb_quantities_in_residual == false) {
+            writeln("WARNING: The GLOBAL reference residual does not include turbulence quantities since include_turb_quantities_in_residual is set to false.");
         }
         // store the initial residuals
         string refResidFname = jobName ~ "-ref-residuals.saved";
@@ -2258,12 +2285,34 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         }
     }
 
+    if (GlobalConfig.sssOptions.include_turb_quantities_in_residual == false) {
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            auto cqi = blk.myConfig.cqi;
+            int cellCount = 0;
+            foreach (i, cell; blk.cells) {
+                foreach(it; 0 .. cqi.n_turb) { blk.FU[cellCount+TKE+it] = to!number(0.0); }
+                cellCount += nConserved;
+            }
+        }
+    }
+
     double unscaledNorm2;
     mixin(dot_over_blocks("unscaledNorm2", "FU", "FU"));
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &unscaledNorm2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
     unscaledNorm2 = sqrt(unscaledNorm2);
+
+    if (GlobalConfig.sssOptions.include_turb_quantities_in_residual == false) {
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            auto cqi = blk.myConfig.cqi;
+            int cellCount = 0;
+            foreach (i, cell; blk.cells) {
+                foreach(it; 0 .. cqi.n_turb) { blk.FU[cellCount+TKE+it] = cell.dUdt[0][cqi.rhoturb+it]; }
+                cellCount += nConserved;
+            }
+        }
+    }
 
 
     // Initialise some arrays and matrices that have already been allocated

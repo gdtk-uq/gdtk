@@ -765,6 +765,7 @@ struct SteadyStateSolverOptions {
     int nInnerIterations = 5;
     double cfl_max = 1e8;
     double cfl_min = 1e-02;
+    bool include_turb_quantities_in_residual = true;
     bool residual_based_cfl_scheduling = true;
     int cfl_schedule_length = 0;
     double[] cfl_schedule_value_list;
@@ -2426,6 +2427,7 @@ void read_control_file()
             ssso.cfl_schedule_iter_list[i] = (i < cfl_schedule_iter_data.length) ? cfl_schedule_iter_data[i] : default_cfl_schedule_iter_data[i];
         }
         //
+        ssso.include_turb_quantities_in_residual = getJSONbool(sssOptions, "include_turb_quantities_in_residual", ssso.include_turb_quantities_in_residual);
         ssso.residual_based_cfl_scheduling = getJSONbool(sssOptions, "residual_based_cfl_scheduling", ssso.residual_based_cfl_scheduling);
         ssso.cfl_max = getJSONdouble(sssOptions, "cfl_max", ssso.cfl_max);
         ssso.cfl_min = getJSONdouble(sssOptions, "cfl_min", ssso.cfl_min);

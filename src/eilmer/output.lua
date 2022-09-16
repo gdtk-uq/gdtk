@@ -59,6 +59,7 @@ function output.write_control_file(fileName)
    f:write(string.format('   "max_restarts": %d,\n', SteadyStateSolver.max_restarts))
    f:write(string.format('   "number_inner_iterations": %d,\n', SteadyStateSolver.number_inner_iterations))
    f:write(string.format('   "number_start_up_steps": %d,\n', SteadyStateSolver.number_start_up_steps))
+   f:write(string.format('   "include_turb_quantities_in_residual": %s,\n', tostring(SteadyStateSolver.include_turb_quantities_in_residual)))
    f:write(string.format('   "residual_based_cfl_scheduling": %s,\n', tostring(SteadyStateSolver.residual_based_cfl_scheduling)))
    --
    if type(SteadyStateSolver.cfl_schedule_value_list) == 'table' then

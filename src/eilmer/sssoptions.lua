@@ -43,6 +43,7 @@ sssOptionsHidden = { -- hidden from user
    number_inner_iterations = 5,
 
    -- CFL ramp settings
+   include_turb_quantities_in_residual = true,
    residual_based_cfl_scheduling = true,
    cfl_max = 1.0e8,
    cfl_min = 1.0e-02,
