@@ -25,6 +25,7 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
     FVCell[size_t] cellsInDiffusionZone;
     size_t[] cellsAddedLastStep;
     size_t[] cellsAddedThisStep;
+    double eps = 1.0e-25;
 
     // Determine which walls if any are no-slip walls
     bool[size_t] noSlipWalls;
@@ -65,11 +66,10 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
                     foreach (ref T; cell.fs.gas.T_modes) T = face.fs.gas.T;
                 }
                 cell.fs.vel.set(face.fs.vel);
-                // FIXME: This causes problems with the SA turbulence model (NNG)
                 if (cell.in_turbulent_zone) {
                     version(turbulence) {
                         foreach(it; 0 .. blk.myConfig.turb_model.nturb){
-                            cell.fs.turb[it] = face.fs.turb[it];
+                            cell.fs.turb[it] = face.fs.turb[it] + eps; // prevent the turbulence vars being zero
                         }
                     }
                     cell.fs.mu_t = face.fs.mu_t;
