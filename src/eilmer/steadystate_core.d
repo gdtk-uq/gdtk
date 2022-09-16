@@ -2778,19 +2778,19 @@ void max_residuals(ref ConservedQuantities residuals)
         number[2] modesLocal;
 
         foreach (cell; blk.cells) {
-            if ( nsp == 1 ) { massLocal = cell.dUdt[0][cqi.mass]; }
-            xMomLocal = cell.dUdt[0][cqi.xMom];
-            yMomLocal = cell.dUdt[0][cqi.yMom];
-            zMomLocal = cell.dUdt[0][cqi.zMom];
-            energyLocal = cell.dUdt[0][cqi.totEnergy];
+            if ( nsp == 1 ) { massLocal = fabs(cell.dUdt[0][cqi.mass]); }
+            xMomLocal = fabs(cell.dUdt[0][cqi.xMom]);
+            yMomLocal = fabs(cell.dUdt[0][cqi.yMom]);
+            zMomLocal = fabs(cell.dUdt[0][cqi.zMom]);
+            energyLocal = fabs(cell.dUdt[0][cqi.totEnergy]);
             foreach(it; 0 .. nturb){
-                turbLocal[it] = cell.dUdt[0][cqi.rhoturb+it];
+                turbLocal[it] = fabs(cell.dUdt[0][cqi.rhoturb+it]);
             }
             version(multi_species_gas){
-            foreach(sp; 0 .. nsp){ speciesLocal[sp] = cell.dUdt[0][cqi.species+sp]; }
+            foreach(sp; 0 .. nsp){ speciesLocal[sp] = fabs(cell.dUdt[0][cqi.species+sp]); }
             }
             version(multi_T_gas){
-            foreach(imode; 0 .. nmodes){ modesLocal[imode] = cell.dUdt[0][cqi.modes+imode]; }
+            foreach(imode; 0 .. nmodes){ modesLocal[imode] = fabs(cell.dUdt[0][cqi.modes+imode]); }
             }
             if ( nsp == 1 ) { blk.residuals[cqi.mass] = fmax(blk.residuals[cqi.mass], massLocal); }
             blk.residuals[cqi.xMom] = fmax(blk.residuals[cqi.xMom], xMomLocal);
