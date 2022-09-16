@@ -31,7 +31,7 @@ class CoonsPatch(ParametricSurface):
     Surface using transfinite interpolation of the edges.
     """
     _slots_ = ['north', 'east', 'south', 'west',
-               'p00', 'p10', 'p11', 'p10', 'defined_by_corners']
+               'p00', 'p10', 'p11', 'p01', 'defined_by_corners']
 
     def __init__(self, north=None, east=None, south=None, west=None,
                  p00=None, p10=None, p11=None, p01=None):

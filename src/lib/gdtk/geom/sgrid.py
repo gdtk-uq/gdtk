@@ -5,6 +5,7 @@ StructuredGrid class for Eilmer calculations.
 Similar to the Dlang equivalent class.
 
 PJ, 2020-07-05 Initial code
+    2022-09-16 Add Volume grid
 """
 import math
 from abc import ABC, abstractmethod
@@ -13,6 +14,7 @@ import gzip
 from gdtk.geom.vector3 import Vector3
 from gdtk.geom.path import Path
 from gdtk.geom.surface import ParametricSurface
+from gdtk.geom.volume import ParametricVolume
 from gdtk.geom.cluster import *
 
 class StructuredGrid():
@@ -34,6 +36,15 @@ class StructuredGrid():
             cf_list = [cf if isinstance(cf, ClusterFunction) else LinearFunction()
                        for cf in cf_list]
             self.make_from_psurface(psurf, niv, njv, cf_list)
+        elif "pvolume" in kwargs.keys():
+            pvolume = kwargs['pvolume']
+            niv = kwargs.get('niv', 1)
+            njv = kwargs.get('njv', 1)
+            nkv = kwargs.get('nkv', 1)
+            cf_list = kwargs.get('cf_list', [None, None, None])
+            cf_list = [cf if isinstance(cf, ClusterFunction) else LinearFunction()
+                       for cf in cf_list]
+            self.make_from_pvolume(pvolume, niv, njv, nkv, cf_list)
         elif "gzfile" in kwargs.keys():
             self.read_from_gzip_file(kwargs.get('gzfile'))
         else:
@@ -75,6 +86,36 @@ class StructuredGrid():
                 sdash = (1.0-r) * sWest[j] + r * sEast[j];
                 rdash = (1.0-s) * rSouth[i] + s * rNorth[i];
                 self.vertices[i].append(psurf(rdash, sdash))
+        return
+
+    def make_from_pvolume(self, pvolume, niv, njv, nkv, cf_list):
+        if not isinstance(psurf, ParametricVolume):
+            raise Exception("Need to supply a ParametricVolume to construct the grid.")
+        if niv < 2:
+            raise Exception(f"niv is too small: {niv}")
+        if njv < 2:
+            raise Exception(f"njv is too small: {njv}")
+        if nkv < 2:
+            raise Exception(f"nkv is too small: {nkv}")
+        self.niv = niv
+        self.njv = njv
+        self.nkv = nkv
+        self.dimensions = 3
+        # Single cluster function for each index direction.
+        # This is different to the cluster-function per edge for Eilmer.
+        rs = cf_list[0].distribute_parameter_values(niv)
+        ss = cf_list[1].distribute_parameter_values(njv)
+        ts = cf_list[2].distribute_parameter_values(nkv)
+        self.vertices = []
+        for i in range(0,niv):
+            r = rs[i]
+            self.vertices.append([])
+            for j in range(0,njv):
+                s = ss[j]
+                self.vertices[i].append([])
+                for k in range(0,nkv):
+                    t = ts[k]
+                    self.vertices[i][j].append(pvolume(r, s, t))
         return
 
     def read_from_gzip_file(self, file_name):
