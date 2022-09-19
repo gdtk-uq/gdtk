@@ -125,16 +125,14 @@ public:
         Rght.copy_values_from(cR0.fs);
 
         number beta = 1.0;
-        if (myConfig.apply_heuristic_pressure_based_limiting) {
+        bool one_sided_interp = (f.left_cells.length == 0 || f.right_cells.length == 0);
+        if (myConfig.apply_heuristic_pressure_based_limiting && !one_sided_interp) {
             // Optional pressure-based augmentation factor on the base limiter value,
             // intended for use on problems with strong bow shocks.
             // The equations are taken from pg. 33-34 of
             //     Simulation and Dynamics of Hypersonic Turbulent Combustion
             //     N. Gibbons, University of Queensland, 2019
             //
-            if (f.left_cells.length == 0 || f.right_cells.length == 0) {
-                throw new Error("Stencils not suitable for heuristic pressure-based limiting.");
-            }
             number pmin = cL0.fs.gas.p;
             number pmax = cL0.fs.gas.p;
             foreach (arr; [f.left_cells, f.right_cells]) {
