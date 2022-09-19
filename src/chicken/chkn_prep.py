@@ -34,6 +34,8 @@ Versions:
 import sys
 import os
 from getopt import getopt
+from abc import ABC, abstractmethod
+import collections
 import math
 from copy import copy
 import numpy as np
@@ -304,6 +306,9 @@ class GasState():
         self.a = math.sqrt(gmodel.gamma * gmodel.R * self.T)
         return
 
+    def __repr__(self):
+        return "GasState(p={}, T={})".format(self.p, self.T)
+
     def to_json(self):
         result = '{"p": %g, "T": %g, "rho": %g, "e": %g, "a": %g}' \
             % (self.p, self.T, self.rho, self.e, self.a)
@@ -336,10 +341,109 @@ class FlowState():
         self.indx = len(flowStatesList)
         flowStatesList.append(self)
 
+    def __repr__(self):
+        return "FlowState(gas={}, vel={})".format(self.gas, self.vel)
+
     def to_json(self):
         result = '{"gas": %s, "vel": [%g, %g, %g]}' \
             % (self.gas.to_json(), self.vel.x, self.vel.y, self.vel.z)
         return result
+
+# There is a bit of boiler place code here but it gives us
+# a nice notation for use in the user's input script.
+
+FaceNames = 'iminus iplus jminus jplus kminus kplus'
+Face = collections.namedtuple('_', FaceNames)(*range(6))
+FaceList = FaceNames.split()
+
+BCNames = 'exchange wall_slip wall_no_slip inflow outflow'
+BCCode = collections.namedtuple('_', BCNames)(*range(5))
+
+class BoundaryCondition(ABC):
+    """
+    Base class for the family of boundary conditions.
+    """
+    __slots__ = ['tag']
+
+    @abstractmethod
+    def __repr__(self):
+        pass
+
+class ExchangeBC(BoundaryCondition):
+    """
+    Block-face-to-block-face-exchange boundary condition.
+    """
+    __slots__ = ['tag']
+
+    def __init__(self):
+        self.tag = 'exchange'
+
+    def __repr__(self):
+        return "ExchangeBC()"
+
+    def to_json(self):
+        return '{"tag": "%s"}' % (self.tag)
+
+class WallWithSlipBC(BoundaryCondition):
+    """
+    Wall with slip boundary condition.
+    """
+    __slots__ = ['tag']
+
+    def __init__(self):
+        self.tag = 'wall_slip'
+
+    def __repr__(self):
+        return "WallWithSlipBC()"
+
+    def to_json(self):
+        return '{"tag": "%s"}' % (self.tag)
+
+class WallNoSlipBC(BoundaryCondition):
+    """
+    Wall with slip boundary condition.
+    """
+    __slots__ = ['tag']
+
+    def __init__(self):
+        self.tag = 'wall_no_slip'
+
+    def __repr__(self):
+        return "WallNoSlipBC()"
+
+    def to_json(self):
+        return '{"tag": "%s"}' % (self.tag)
+
+class InflowBC(BoundaryCondition):
+    """
+    Inflow boundary condition.
+    """
+    __slots__ = ['tag', 'fs']
+
+    def __init__(self, fs):
+        self.tag = 'inflow'
+        self.fs = copy(fs)
+
+    def __repr__(self):
+        return "InflowBC(fs={})".format(self.fs)
+
+    def to_json(self):
+        return '{"tag": "%s", "flow_state": "%s"}' % (self.tag, self.fs)
+
+class OutflowBC(BoundaryCondition):
+    """
+    Outflow boundary condition.
+    """
+    __slots__ = ['tag']
+
+    def __init__(self):
+        self.tag = 'outflow'
+
+    def __repr__(self):
+        return "OutflowBC()"
+
+    def to_json(self):
+        return '{"tag": "%s"}' % (self.tag)
 
 
 class FluidBlock():
@@ -347,7 +451,7 @@ class FluidBlock():
     This class is used to build a description of the flow domain.
     """
     __slots__ = 'indx', 'i', 'j', 'k', 'grid', 'initialState', \
-        'nic', 'njc', 'nkc', 'label'
+        'nic', 'njc', 'nkc', 'bcs', 'label'
 
     def __init__(self, i=0, j=0, k=0, grid=None, initialState=None,
                  bcs={}, label=""):
@@ -363,7 +467,19 @@ class FluidBlock():
             self.initialState = initialState
         else:
             raise RuntimeError('Need to supply a FlowState object.')
-        # [TODO] boundary conditions
+        #
+        # Boundary conditions
+        # Set default values and then overwrite, if the user has supplied them.
+        self.bcs = {}
+        for f in FaceList: self.bcs[f] = WallWithSlipBC()
+        for key in bcs.keys():
+            if key in [Face.iminus, 'iminus']: self.bcs['iminus'] = bcs[key]
+            if key in [Face.iplus, 'iplus']: self.bcs['iplus'] = bcs[key]
+            if key in [Face.jminus, 'jminus']: self.bcs['jminus'] = bcs[key]
+            if key in [Face.iplus, 'jplus']: self.bcs['jplus'] = bcs[key]
+            if key in [Face.kminus, 'kminus']: self.bcs['kminus'] = bcs[key]
+            if key in [Face.kplus, 'kplus']: self.bcs['kplus'] = bcs[key]
+        #
         self.i = i
         self.j = j
         self.k = k
@@ -377,6 +493,11 @@ class FluidBlock():
         """
         result = '{"i": %d, "j": %d, "k": %d, "initial_flow_state": %d,' % \
             (self.i, self.j, self.k, self.initialState.indx)
+        result += ' "bcs": {'
+        for i,f in enumerate(FaceList):
+            result += '"%s": %s' % (f, self.bcs[f].to_json())
+            result += ',' if i < len(FaceList)-1 else ''
+        result += '},'
         result += ' "label": "%s"}' % self.label
         return result
 
