@@ -39,7 +39,7 @@ from copy import copy
 import numpy as np
 import json
 
-from gdtk.geom.vector3 import Vector3
+from gdtk.geom.vector3 import Vector3, hexahedron_properties
 from gdtk.geom.volume import TFIVolume
 from gdtk.geom.sgrid import StructuredGrid
 from gdtk.numeric import roberts
@@ -169,7 +169,7 @@ class GlobalConfig():
         fp.write('  "dt_hist": %s,\n' % json.dumps(tlist))
         return
 
-    def arrange_array_of_fluid_blocks(self):
+    def check_array_of_fluid_blocks(self):
         """
         Allocates the individual blocks to locations in the global array of blocks.
 
@@ -372,11 +372,46 @@ class FluidBlock():
         fluidBlocksList.append(self)
 
     def to_json(self):
+        """
+        A representation of the block's configuration.
+        """
         result = '{"i": %d, "j": %d, "k": %d, "initial_flow_state": %d,' % \
             (self.i, self.j, self.k, self.initialState.indx)
         result += ' "label": "%s"}' % self.label
         return result
 
+    def write_flow_data_to_file(self, fileName):
+        """
+        Construct enough of the flow states in each cell so that the
+        flow data can be written to a file.
+
+        The format will is approximately VTK point-data format.
+        """
+        with open(fileName, 'w') as fp:
+            fp.write('# x y z vol p T rho e a velx vely velz\n')
+            for k in range(0, self.nkc):
+                for j in range(0, self.njc):
+                    for i in range(0, self.nic):
+                        # Construct the cell properties.
+                        p000 = self.grid.vertices[i][j][k]
+                        p100 = self.grid.vertices[i+1][j][k]
+                        p110 = self.grid.vertices[i+1][j+1][k]
+                        p010 = self.grid.vertices[i][j+1][k]
+                        p001 = self.grid.vertices[i][j][k+1]
+                        p101 = self.grid.vertices[i+1][j][k+1]
+                        p111 = self.grid.vertices[i+1][j+1][k+1]
+                        p011 = self.grid.vertices[i][j+1][k+1]
+                        centroid, volume = hexahedron_properties(p000, p100, p110, p010,
+                                                                 p001, p101, p111, p011)
+                        fp.write('%g %g %g %g' % (centroid.x, centroid.y, centroid.z, volume))
+                        fs = self.initialState
+                        g = fs.gas
+                        fp.write(' %g %g %g %g %g' % (g.p, g.T, g.rho, g.e, g.a))
+                        vel = fs.vel
+                        fp.write(' %g %g %g' % (vel.x, vel.y, vel.z))
+                        fp.write('\n')
+            # after for k loop
+        return
 
 # --------------------------------------------------------------------
 
@@ -418,6 +453,8 @@ def write_initial_files():
         #
         fp.write("}\n")
     #
+    print('Write the grid files for individual blocks.')
+    #
     gridDir = config.job_name+'/grid'
     if not os.path.exists(gridDir):
         os.mkdir(gridDir)
@@ -425,7 +462,18 @@ def write_initial_files():
         fileName = gridDir + ('/grid-%04d-%04d-%04d.vtk' % (fb.i, fb.j, fb.k))
         fb.grid.write_to_vtk_file(fileName)
     #
-    # [TODO] Write the initial flow-field files.
+    print('Write the initial flow-field files.')
+    #
+    flowDir = config.job_name+'/flow/t0000'
+    if not os.path.exists(flowDir):
+        os.makedirs(flowDir)
+    for fb in fluidBlocksList:
+        fileName = flowDir + ('/flow-%04d-%04d-%04d.data' % (fb.i, fb.j, fb.k))
+        fb.write_flow_data_to_file(fileName)
+    #
+    with open(config.job_name+'/times.data', 'w') as fp:
+        fp.write("# tindx t\n")
+        fp.write("0 0.0\n")
     #
     print("End write initial files.")
     return
@@ -460,7 +508,7 @@ if __name__ == '__main__':
         print("  fluid blocks      :", len(fluidBlocksList))
         if len(fluidBlocksList) < 1:
             print("Warning: no fluid blocks defined; this is unusual.")
-        config.arrange_array_of_fluid_blocks()
+        config.check_array_of_fluid_blocks()
         write_initial_files()
     print("Done.")
     sys.exit(0)
