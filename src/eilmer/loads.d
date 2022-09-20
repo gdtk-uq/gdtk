@@ -91,11 +91,11 @@ void write_boundary_loads_to_file(double sim_time, int current_loads_tindx) {
     } // end foreach
 } // end write_boundary_loads_to_file()
 
-string generate_boundary_load_file(int blkid, int current_loads_tindx, double sim_time, string group)
+string generate_boundary_load_file(int blkid, int bcid, int current_loads_tindx, double sim_time, string group)
 {
     // generate data file -- naming format tindx_groupname.dat
-    string fname = format("%s/t%04d/b%04d.t%04d.%s.dat", loadsDir, current_loads_tindx,
-                          blkid, current_loads_tindx, group);
+    string fname = format("%s/t%04d/b%04d.bc%04d.t%04d.%s.dat", loadsDir, current_loads_tindx,
+                          blkid, bcid, current_loads_tindx, group);
     // reate file
     auto f = File(fname, "w");
     f.writeln("# t = ", sim_time);
@@ -112,7 +112,7 @@ void apply_unstructured_grid(UFluidBlock blk, double sim_time, int current_loads
 {
     foreach (bndary; blk.bc) {
         if (canFind(GlobalConfig.group_names_for_loads, bndary.group)) {
-            string fname = generate_boundary_load_file(blk.id, current_loads_tindx, sim_time, bndary.group);
+            string fname = generate_boundary_load_file(blk.id, bndary.which_boundary, current_loads_tindx, sim_time, bndary.group);
             foreach (i, iface; bndary.faces) {
                 // cell width normal to surface
                 number w = (bndary.outsigns[i] == 1) ? iface.left_cell.L_min : iface.right_cell.L_min;
@@ -125,7 +125,7 @@ void apply_unstructured_grid(UFluidBlock blk, double sim_time, int current_loads
 void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_tindx) {
     foreach (bndary; blk.bc) {
         if (canFind(GlobalConfig.group_names_for_loads, bndary.group)) {
-            string fname = generate_boundary_load_file(blk.id, current_loads_tindx, sim_time, bndary.group);
+            string fname = generate_boundary_load_file(blk.id, bndary.which_boundary, current_loads_tindx, sim_time, bndary.group);
             // For structured blocks, all cell faces along a boundary point out or
             // all faces point in, so just use a constant for the outsign value.
             final switch (bndary.which_boundary) {
