@@ -2070,6 +2070,7 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
             }
         }
         blk.estimate_turbulence_viscosity(cell_list);
+        blk.average_turbulent_transprops_to_faces(iface_list);
         blk.viscous_flux(iface_list);
 
         foreach(f; iface_list) {
@@ -2666,6 +2667,7 @@ void evalRHS(double pseudoSimTime, int ftl, int gtl)
         foreach (blk; parallel(localFluidBlocks,1)) {
             blk.flow_property_spatial_derivatives(gtl); 
             blk.estimate_turbulence_viscosity();
+            blk.average_turbulent_transprops_to_faces();
             blk.viscous_flux();
         }
         foreach (blk; localFluidBlocks) {

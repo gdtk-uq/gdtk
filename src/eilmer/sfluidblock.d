@@ -2050,6 +2050,53 @@ public:
         return;
     } // end sync_vertices_to_underlying_grid()
 
+    @nogc
+    override void average_turbulent_transprops_to_faces()
+    {
+        if (!myConfig.turb_model.isTurbulent) return;
+
+        // ifi interior faces
+        size_t idx;
+        foreach(j; 0 .. njc){
+            foreach(i; 1 .. niv-1){
+                idx = j*niv + i;
+                faces[idx].fs.mu_t = 0.5*(faces[idx].left_cell.fs.mu_t + faces[idx].right_cell.fs.mu_t);
+                faces[idx].fs.k_t = 0.5*(faces[idx].left_cell.fs.k_t + faces[idx].right_cell.fs.k_t);
+            }
+        }
+        // ifj interior faces
+        size_t offset = niv*njc;
+        foreach(j; 1 .. njv-1){
+            foreach(i; 0 .. nic){
+                idx = j*nic + i + offset;
+                faces[idx].fs.mu_t = 0.5*(faces[idx].left_cell.fs.mu_t + faces[idx].right_cell.fs.mu_t);
+                faces[idx].fs.k_t = 0.5*(faces[idx].left_cell.fs.k_t + faces[idx].right_cell.fs.k_t);
+            }
+        }
+
+        // ifi edge faces
+        foreach(j; 0 .. njc){
+            size_t i = 0;
+            idx = j*niv + i;
+            faces[idx].average_turbulent_transprops();
+
+            i = niv-1;
+            idx = j*niv + i;
+            faces[idx].average_turbulent_transprops();
+        }
+        // ifj edge faces
+        size_t j = 0;
+        foreach(i; 0 .. nic){
+            idx = j*nic + i + offset;
+            faces[idx].average_turbulent_transprops();
+        }
+        j = njv-1;
+        foreach(i; 0 .. nic){
+            idx = j*nic + i + offset;
+            faces[idx].average_turbulent_transprops();
+        }
+    }
+
     override void read_new_underlying_grid(string fileName)
     {
         if (myConfig.verbosity_level > 1) { writeln("read_new_underlying_grid() for block ", id); }
@@ -2282,7 +2329,6 @@ public:
         return index;
     }
 } // end class SFluidBlock
-
 
 /** Indexing of the data in 2D.
  *

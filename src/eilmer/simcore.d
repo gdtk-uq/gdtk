@@ -430,7 +430,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     // 1. reconstruction prior to convective flux calculation for the unstructured-grid blocks
     // 2. calculation of flow gradients for the viscous fluxes with least-squares gradients.
     foreach (myblk; localFluidBlocks) { myblk.compute_least_squares_setup(0); }
-    //
+
     version (gpu_chem) {
         initGPUChem();
     }
@@ -1216,7 +1216,10 @@ int integrate_in_time(double target_time_as_requested)
                         // only the viscous contribution.
                         foreach (blk; parallel(localFluidBlocksBySize,1)) {
                             blk.clear_fluxes_of_conserved_quantities();
-                            if (blk.active) { blk.viscous_flux(); }
+                            if (blk.active) {
+                                blk.average_turbulent_transprops_to_faces();
+                                blk.viscous_flux();
+                            }
                         }
                     }
                     computeRunTimeLoads();

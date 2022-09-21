@@ -603,6 +603,23 @@ public:
     } // end average_cell_spatial_derivs()
 
     @nogc
+    void average_turbulent_transprops()
+    {
+        if (left_cell && right_cell && left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) {
+            fs.k_t = 0.5*(left_cell.fs.k_t+right_cell.fs.k_t);
+            fs.mu_t = 0.5*(left_cell.fs.mu_t+right_cell.fs.mu_t);
+        } else if (left_cell && left_cell.is_interior_to_domain) {
+            fs.k_t = left_cell.fs.k_t;
+            fs.mu_t = left_cell.fs.mu_t;
+        } else if (right_cell && right_cell.is_interior_to_domain) {
+            fs.k_t = right_cell.fs.k_t;
+            fs.mu_t = right_cell.fs.mu_t;
+        } else {
+            assert(0, "Oops, don't seem to have a cell available.");
+        }
+    }
+
+    @nogc
     void viscous_flux_calc()
     // Unified 2D and 3D viscous-flux calculation.
     // Note that the gradient values need to be in place before calling this procedure.
@@ -616,53 +633,12 @@ public:
         uint n_species = myConfig.n_species;
         uint n_modes = myConfig.n_modes;
         double viscous_factor = myConfig.viscous_factor;
-        number k_laminar = fs.gas.k;
-        number mu_laminar = fs.gas.mu;
-        if (myConfig.use_viscosity_from_cells) {
-            // Emulate Eilmer3 behaviour by using the viscous transport coefficients
-            // from the cells either side of the interface.
-            if (left_cell && right_cell && left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) {
-                k_laminar = 0.5*(left_cell.fs.gas.k+right_cell.fs.gas.k);
-                mu_laminar = 0.5*(left_cell.fs.gas.mu+right_cell.fs.gas.mu);
-            } else if (left_cell && left_cell.is_interior_to_domain) {
-                k_laminar = left_cell.fs.gas.k;
-                mu_laminar = left_cell.fs.gas.mu;
-            } else if (right_cell && right_cell.is_interior_to_domain) {
-                k_laminar = right_cell.fs.gas.k;
-                mu_laminar = right_cell.fs.gas.mu;
-            } else {
-                assert(0, "Oops, don't seem to have a cell available.");
-            }
-        }
-        number k_eff;
-        number mu_eff;
+        number k_eff = fs.gas.k + fs.k_t ;
+        number mu_eff = fs.gas.mu + fs.mu_t;
         number lmbda;
-        // We would like to use the most up to date turbulent properties,
-        // so take averages of the neighbouring cell values.
-        if (left_cell && right_cell && left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) {
-            k_eff = viscous_factor * (k_laminar + 0.5*(left_cell.fs.k_t+right_cell.fs.k_t));
-            mu_eff = viscous_factor * (mu_laminar + 0.5*(left_cell.fs.mu_t+right_cell.fs.mu_t));
-        } else if (left_cell && left_cell.is_interior_to_domain) {
-            k_eff = viscous_factor * (k_laminar + left_cell.fs.k_t);
-            mu_eff = viscous_factor * (mu_laminar + left_cell.fs.mu_t);
-        } else if (right_cell && right_cell.is_interior_to_domain) {
-            k_eff = viscous_factor * (k_laminar + right_cell.fs.k_t);
-            mu_eff = viscous_factor * (mu_laminar + right_cell.fs.mu_t);
-        } else {
-            assert(0, "Oops, don't seem to have a cell available.");
-        }
         lmbda = -2.0/3.0 * mu_eff;
-        //
-        number local_pressure;
-        if (left_cell && right_cell && left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) {
-            local_pressure = 0.5*(left_cell.fs.gas.p+right_cell.fs.gas.p);
-        } else if (left_cell && left_cell.is_interior_to_domain) {
-            local_pressure = left_cell.fs.gas.p;
-        } else if (right_cell && right_cell.is_interior_to_domain) {
-            local_pressure = right_cell.fs.gas.p;
-        } else {
-            assert(0, "Oops, don't seem to have a cell available.");
-        }
+
+        number local_pressure = fs.gas.p;
         number shear_stress_limit = myConfig.shear_stress_relative_limit * local_pressure;
         number heat_transfer_limit = (mu_eff > 0.0) ? k_eff/mu_eff*shear_stress_limit : to!number(0.0);
 
@@ -688,18 +664,7 @@ public:
 
         if (myConfig.turb_model.isTurbulent) {
             double Sc_t = myConfig.turbulence_schmidt_number;
-            number D_t; // = fs.mu_t / (fs.gas.rho * Sc_t)
-            // we would like to use the most up to date turbulent properties,
-            // so take averages of the neighbouring cell values
-            if (left_cell && right_cell && left_cell.is_interior_to_domain && right_cell.is_interior_to_domain) {
-                D_t = 0.5*(left_cell.fs.mu_t+right_cell.fs.mu_t) / (fs.gas.rho * Sc_t);
-            } else if (left_cell && left_cell.is_interior_to_domain) {
-                D_t = left_cell.fs.mu_t / (fs.gas.rho * Sc_t);
-            } else if (right_cell && right_cell.is_interior_to_domain) {
-                D_t = right_cell.fs.mu_t / (fs.gas.rho * Sc_t);
-            } else {
-                assert(0, "Oops, don't seem to have a cell available.");
-            }
+            number D_t = fs.mu_t / (fs.gas.rho * Sc_t);
             version(multi_species_gas) {
                 foreach (isp; 0 .. n_species) {
                     jx[isp] -= fs.gas.rho * D_t * grad.massf[isp][0];

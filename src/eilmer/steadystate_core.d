@@ -1509,6 +1509,7 @@ void evalRHS(double pseudoSimTime, int ftl)
         // recent mu_t and k_t values.
         exchange_ghost_cell_turbulent_viscosity();
         foreach (blk; parallel(localFluidBlocks,1)) {
+            blk.average_turbulent_transprops_to_faces();
             blk.viscous_flux();
         }
         foreach (blk; localFluidBlocks) {

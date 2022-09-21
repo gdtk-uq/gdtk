@@ -86,7 +86,7 @@ public:
     FVInterface[] faces;
     FVVertex[] vertices;
     BoundaryCondition[] bc; // collection of references to the boundary conditions
-    //
+
     // We need to know the number of cells even if the grid is not read
     // for this block in the local process.
     size_t ncells_expected;
@@ -765,6 +765,22 @@ public:
     void clear_fluxes_of_conserved_quantities()
     {
         foreach (iface; faces) { iface.F.clear(); }
+    }
+
+    @nogc
+    void average_turbulent_transprops_to_faces(FVInterface[] face_list)
+    {
+        if (myConfig.turb_model.isTurbulent){
+            foreach (iface; face_list) { iface.average_turbulent_transprops(); }
+        }
+    }
+
+    @nogc
+    void average_turbulent_transprops_to_faces()
+    {
+        if (myConfig.turb_model.isTurbulent){
+            foreach (iface; faces) { iface.average_turbulent_transprops(); }
+        }
     }
 
     @nogc
@@ -1558,6 +1574,7 @@ public:
                 }
             }
             estimate_turbulence_viscosity(cell_list);
+            average_turbulent_transprops_to_faces(iface_list);
             viscous_flux(iface_list);
             foreach(f; iface_list) {
                 if (f.is_on_boundary) { applyPostDiffFluxAction(0.0, gtl, ftl, f); }
@@ -1608,6 +1625,8 @@ public:
         }
 
     } // end evalRHS()
+
+
 
     // The following two methods are used to verify the numerical Jacobian implementation.
     void verify_jacobian(double sigma)
@@ -1892,6 +1911,7 @@ public:
                 foreach(f; c.iface) { f.average_cell_deriv_values(gtl); }
             } // end switch spatial_deriv_locn
             estimate_turbulence_viscosity(cell_list);
+            average_turbulent_transprops_to_faces(c.iface);
             viscous_flux(c.iface);
             foreach(f; c.iface) {
                 if (f.is_on_boundary) { applyPostDiffFluxAction(t, gtl, ftl, f); }

@@ -359,6 +359,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         exchange_ghost_cell_gas_solid_boundary_data();
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) {
+                blk.average_turbulent_transprops_to_faces();
                 blk.viscous_flux();
             }
         }
@@ -621,6 +622,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
             exchange_ghost_cell_gas_solid_boundary_data();
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) {
+                    blk.average_turbulent_transprops_to_faces();
                     blk.viscous_flux();
                 }
             }
@@ -1098,6 +1100,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 try {
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
                         if (blk.active) {
+                            blk.average_turbulent_transprops_to_faces();
                             blk.viscous_flux();
                         }
                     }
@@ -1729,7 +1732,10 @@ void gasdynamic_explicit_increment_with_moving_grid()
             // Phase 12 LOCAL
             try {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) { blk.viscous_flux(); }
+                    if (blk.active) {
+                        blk.average_turbulent_transprops_to_faces();
+                        blk.viscous_flux();
+                    }
                 }
                 if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -2078,6 +2084,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 try {
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
                         if (blk.active) {
+                            blk.average_turbulent_transprops_to_faces();
                             blk.viscous_flux();
                         }
                     }

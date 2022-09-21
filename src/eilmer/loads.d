@@ -217,6 +217,7 @@ void compute_and_store_loads(FVInterface iface, int outsign, number cellWidthNor
     number tau_wall_x, tau_wall_y, tau_wall_z;
     if (GlobalConfig.viscous) {
         iface.F.clear();
+        iface.average_turbulent_transprops();
         iface.viscous_flux_calc();
         // compute heat load
         q_cond = iface.q_conduction;
