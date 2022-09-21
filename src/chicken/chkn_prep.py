@@ -40,6 +40,7 @@ import math
 from copy import copy
 import numpy as np
 import json
+from zipfile import ZipFile
 
 from gdtk.geom.vector3 import Vector3, hexahedron_properties
 from gdtk.geom.volume import TFIVolume
@@ -98,7 +99,7 @@ class GlobalConfig():
         'nib', 'njb', 'nkb', 'blk_ids', 'nics', 'njcs', 'nkcs', \
         'dt_init', 'cfl_list', 'cfl_count', 'print_count', \
         'dt_plot_list', 'max_time', 'max_step', \
-        'x_order', 't_order'
+        'x_order', 't_order', 'flow_var_names'
 
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -123,6 +124,9 @@ class GlobalConfig():
         self.max_step = 10
         self.x_order = 2
         self.t_order = 2
+        self.flow_var_names = ['pos.x', 'pos.y', 'pos.z', 'vol',
+                               'p', 'T', 'rho', 'e', 'a',
+                               'vel.x', 'vel.y', 'vel.z']
         #
         GlobalConfig.count += 1
         return
@@ -451,7 +455,8 @@ class FluidBlock():
     This class is used to build a description of the flow domain.
     """
     __slots__ = 'indx', 'i', 'j', 'k', 'grid', 'initialState', \
-        'nic', 'njc', 'nkc', 'bcs', 'label'
+        'nic', 'njc', 'nkc', 'bcs', 'label', \
+        'cellc', 'cellv'
 
     def __init__(self, i=0, j=0, k=0, grid=None, initialState=None,
                  bcs={}, label=""):
@@ -501,37 +506,60 @@ class FluidBlock():
         result += ' "label": "%s"}' % self.label
         return result
 
-    def write_flow_data_to_file(self, fileName):
+    def construct_cell_properties(self):
         """
-        Construct enough of the flow states in each cell so that the
-        flow data can be written to a file.
+        We want the cell volumes and centroids available for writing
+        into the initial flow file.
+        """
+        self.cellc = np.zeros((self.nic, self.njc, self.nkc), dtype=Vector3)
+        self.cellv = np.zeros((self.nic, self.njc, self.nkc), dtype=float)
+        for i in range(0, self.nic):
+            for j in range(0, self.njc):
+                for k in range(0, self.nkc):
+                    # Construct the cell properties.
+                    p000 = self.grid.vertices[i][j][k]
+                    p100 = self.grid.vertices[i+1][j][k]
+                    p110 = self.grid.vertices[i+1][j+1][k]
+                    p010 = self.grid.vertices[i][j+1][k]
+                    p001 = self.grid.vertices[i][j][k+1]
+                    p101 = self.grid.vertices[i+1][j][k+1]
+                    p111 = self.grid.vertices[i+1][j+1][k+1]
+                    p011 = self.grid.vertices[i][j+1][k+1]
+                    centroid, volume = hexahedron_properties(p000, p100, p110, p010,
+                                                             p001, p101, p111, p011)
+                    self.cellc[i][j][k] = centroid
+                    self.cellv[i][j][k] = volume
+        return
 
-        The format will is approximately VTK point-data format.
+    def write_flow_data_to_zip_file(self, fileName, varNamesList):
         """
-        with open(fileName, 'w') as fp:
-            fp.write('# x y z vol p T rho e a velx vely velz\n')
-            for k in range(0, self.nkc):
-                for j in range(0, self.njc):
-                    for i in range(0, self.nic):
-                        # Construct the cell properties.
-                        p000 = self.grid.vertices[i][j][k]
-                        p100 = self.grid.vertices[i+1][j][k]
-                        p110 = self.grid.vertices[i+1][j+1][k]
-                        p010 = self.grid.vertices[i][j+1][k]
-                        p001 = self.grid.vertices[i][j][k+1]
-                        p101 = self.grid.vertices[i+1][j][k+1]
-                        p111 = self.grid.vertices[i+1][j+1][k+1]
-                        p011 = self.grid.vertices[i][j+1][k+1]
-                        centroid, volume = hexahedron_properties(p000, p100, p110, p010,
-                                                                 p001, p101, p111, p011)
-                        fp.write('%g %g %g %g' % (centroid.x, centroid.y, centroid.z, volume))
-                        fs = self.initialState
-                        g = fs.gas
-                        fp.write(' %g %g %g %g %g' % (g.p, g.T, g.rho, g.e, g.a))
-                        vel = fs.vel
-                        fp.write(' %g %g %g' % (vel.x, vel.y, vel.z))
-                        fp.write('\n')
-            # after for k loop
+        The format is approximately Eilmer's new IO format.
+        """
+        fs = self.initialState
+        gas = fs.gas
+        vel = fs.vel
+        with ZipFile(fileName, mode='w') as zf:
+            for varName in varNamesList:
+                with zf.open(varName, mode='w') as fp:
+                    for k in range(0, self.nkc):
+                        for j in range(0, self.njc):
+                            for i in range(0, self.nic):
+                                value = 0.0
+                                if varName == 'pos.x': value = self.cellc[i][j][k].x
+                                elif varName == 'pos.y': value = self.cellc[i][j][k].y
+                                elif varName == 'pos.z': value = self.cellc[i][j][k].z
+                                elif varName == 'vol': value = self.cellv[i][j][k]
+                                elif varName == 'p': value = gas.p
+                                elif varName == 'T': value = gas.T
+                                elif varName == 'rho': value = gas.rho
+                                elif varName == 'e': value = gas.e
+                                elif varName == 'a': value = gas.a
+                                elif varName == 'vel.x': value = vel.x
+                                elif varName == 'vel.y': value = vel.y
+                                elif varName == 'vel.z': value = vel.z
+                                else: raise RuntimeError('unhandled variable name: ' + varName)
+                                fp.write(f'{value}\n'.encode('utf-8'))
+            # end varName loop
         return
 
 # --------------------------------------------------------------------
@@ -589,8 +617,9 @@ def write_initial_files():
     if not os.path.exists(flowDir):
         os.makedirs(flowDir)
     for fb in fluidBlocksList:
-        fileName = flowDir + ('/flow-%04d-%04d-%04d.data' % (fb.i, fb.j, fb.k))
-        fb.write_flow_data_to_file(fileName)
+        fb.construct_cell_properties()
+        fileName = flowDir + ('/flow-%04d-%04d-%04d.zip' % (fb.i, fb.j, fb.k))
+        fb.write_flow_data_to_zip_file(fileName, config.flow_var_names)
     #
     with open(config.job_name+'/times.data', 'w') as fp:
         fp.write("# tindx t\n")
