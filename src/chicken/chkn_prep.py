@@ -610,8 +610,8 @@ def write_initial_files():
     if not os.path.exists(gridDir):
         os.mkdir(gridDir)
     for fb in fluidBlocksList:
-        fileName = gridDir + ('/grid-%04d-%04d-%04d.vtk' % (fb.i, fb.j, fb.k))
-        fb.grid.write_to_vtk_file(fileName)
+        fileName = gridDir + ('/grid-%04d-%04d-%04d.gz' % (fb.i, fb.j, fb.k))
+        fb.grid.write_to_gzip_file(fileName)
     #
     print('Write the initial flow-field files.')
     #
@@ -633,7 +633,7 @@ def write_initial_files():
 # --------------------------------------------------------------------
 
 if __name__ == '__main__':
-    print("Begin chkn_prep...")
+    print("Begin chkn-prep...")
 
     userOptions = getopt(sys.argv[1:], shortOptions, longOptions)
     uoDict = dict(userOptions[0])

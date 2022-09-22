@@ -6,7 +6,7 @@
 # PJ 2022-09-11 build and run in the source directory
 #    2022-09-19 build and install, much like our other GDTK programs
 
-SELECTED_TARGETS := chicken_for_cpu chkn-prep
+SELECTED_TARGETS := chicken_for_cpu chkn-prep chkn-post
 
 # The install destination.
 INSTALL_DIR ?= $(HOME)/gdtkinst
@@ -49,6 +49,11 @@ chkn-prep : chkn_prep.py
 	cp chkn_prep.py chkn-prep
 	chmod +x chkn-prep
 
+# The program for post-processing the simulation files.
+chkn-post : chkn_post.py
+	cp chkn_post.py chkn-post
+	chmod +x chkn-post
+
 install: $(SELECTED_TARGETS)
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
@@ -56,11 +61,12 @@ install: $(SELECTED_TARGETS)
 	- mkdir -p $(BUILD_DIR)/share
 	cp chkn-run $(BUILD_DIR)/bin
 	cp chkn-prep $(BUILD_DIR)/bin
+	cp chkn-post $(BUILD_DIR)/bin
 	cp -r ../lib/* $(BUILD_DIR)/lib
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 clean :
-	- rm chkn-run chkn-prep
+	- rm chkn-run chkn-prep chkn-post
 	- rm -r $(BUILD_DIR)/*
 	- rm chicken.ncu-rep
