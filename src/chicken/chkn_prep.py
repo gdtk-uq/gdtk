@@ -124,6 +124,7 @@ class GlobalConfig():
         self.max_step = 10
         self.x_order = 2
         self.t_order = 2
+        # The following is not meant to be edited for individual simulations.
         self.flow_var_names = ['pos.x', 'pos.y', 'pos.z', 'vol',
                                'p', 'T', 'rho', 'e', 'a',
                                'vel.x', 'vel.y', 'vel.z']
@@ -173,6 +174,7 @@ class GlobalConfig():
         tlist = [self.dt_plot_list[i][2] for i in range(n_dt_plot)]
         assert min(tlist) > 0.0, "Require positive nonzero dt_hist values."
         fp.write('  "dt_hist": %s,\n' % json.dumps(tlist))
+        fp.write('  "flow_var_names": %s,\n' % json.dumps(self.flow_var_names))
         return
 
     def check_array_of_fluid_blocks(self):
