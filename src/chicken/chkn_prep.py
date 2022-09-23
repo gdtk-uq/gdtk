@@ -143,6 +143,7 @@ class GlobalConfig():
         fp.write('  "nib": %d,\n' % self.nib)
         fp.write('  "njb": %d,\n' % self.njb)
         fp.write('  "nkb": %d,\n' % self.nkb)
+        fp.write('  "blk_ids": %s,\n' % self.blk_ids.tolist())
         fp.write('  "max_time": %e,\n' % self.max_time)
         fp.write('  "max_step": %d,\n' % self.max_step)
         fp.write('  "dt_init": %e,\n' % self.dt_init)
@@ -536,6 +537,9 @@ class FluidBlock():
     def write_flow_data_to_zip_file(self, fileName, varNamesList):
         """
         The format is approximately Eilmer's new IO format.
+
+        The order of the cells corresponds to the order expected
+        for a VTK structured-grid.
         """
         fs = self.initialState
         gas = fs.gas
