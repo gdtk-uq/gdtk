@@ -22,7 +22,7 @@ import gas;
 
 // Underlying definition of the conserved quantities collection,
 // as seen by the transient solver, is just an array.
-alias ConservedQuantities = number[];
+immutable alias ConservedQuantities = number[];
 
 ConservedQuantities new_ConservedQuantities(size_t n)
 {

@@ -9,9 +9,9 @@ import std.math;
 import nm.complex;
 
 version(complex_numbers) {
-    alias number = Complex!double;
+    immutable alias number = Complex!double;
 } else {
-    alias number = double;
+    immutable alias number = double;
 }
 
 /**
