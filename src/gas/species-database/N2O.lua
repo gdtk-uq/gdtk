@@ -80,6 +80,44 @@ db.N2O.grimechThermoCoeffs = {
      -0.22017207E+01,
    }
 }
+db.N2O.ceaViscosity = {
+   nsegments = 2,
+   segment0 = {
+      T_lower = 200.0,
+      T_upper = 1000.0,
+      A =  0.58959112e+00,
+      B = -0.15565178e+03,
+      C =  0.37630431e+04,
+      D =  0.21223853e+01
+   },
+   segment1 = {
+      T_lower = 1000.0,
+      T_upper = 5000.0,
+      A =  0.64571469e+00,
+      B = -0.88806585e+01,
+      C = -0.41560559e+05,
+      D = 0.16332498e+01
+   }
+}
+db.N2O.ceaThermCond = {
+   nsegments = 2,
+   segment0 = {
+      T_lower = 200.0,
+      T_upper = 1000.0,
+      A =  0.65165376e+00,
+      B = -0.34373058e+03,
+      C =  0.15090399e+05,
+      D =  0.24242359e+01
+   },
+   segment1 = {
+      T_lower = 1000.0,
+      T_upper = 5000.0,
+      A =  0.64720604e+00,
+      B = -0.78680195e+02,
+      C = -0.11965729e+06,
+      D = 0.23246569e+01
+   }
+}
 db.N2O.Hf = {
    value = 81600.0,
    units = 'J/mol',
