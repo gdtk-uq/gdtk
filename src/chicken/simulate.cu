@@ -6,7 +6,8 @@
 #ifndef SIMULATE_INCLUDED
 #define SIMULATE_INCLUDED
 
-#include <stdio.h>
+//#include <stdio.h>
+#include <cstdio>
 #include <stdlib.h>
 #include <vector>
 #include <iostream>
@@ -34,12 +35,28 @@ struct SimState {
     number dt_plot;
 };
 
+vector<Block*> fluidBlocks;
+
 void do_something(); // left over from the CUDA workshop experiment
 
 void initialize_simulation(int tindx_start)
 {
+    char nameBuf[256];
     read_config_file(Config::job + "/config.json");
-    // [TODO] read initial grids and flow data
+    // Read initial grids and flow data
+    for (int k=0; k < Config::nkb; ++k) {
+        for (int j=0; j < Config::njb; ++j) {
+            for (int i=0; i < Config::nib; ++i) {
+                Block* blkptr = new Block{};
+                int bcCodes[6] = {0, 0, 0, 0, 0, 0}; // [TODO]
+                blkptr->configure(Config::nics[i], Config::njcs[j], Config::nkcs[k], bcCodes);
+                sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
+                string fileName = Config::job + string(nameBuf);
+                blkptr->readGrid(fileName);
+                fluidBlocks.push_back(blkptr);
+            }
+        }
+    }
     do_something();
     return;
 }

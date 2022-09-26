@@ -8,7 +8,7 @@
 #include <string>
 #include <fstream>
 #include <stdexcept>
-
+#include "include/bxzstr/bxzstr.hpp"
 #include "number.cu"
 #include "vector3.cu"
 #include "gas.cu"
@@ -130,11 +130,14 @@ struct Block {
     }
 
     __host__
-    void readGrid(string fileName, bool vtkHeader=true)
-    // Reads the vertex locations from a file, resizing storage as needed.
-    // The numbers of cells are also set.
+    void readGrid(string fileName, bool vtkHeader=false)
+    // Reads the vertex locations from a compressed file, resizing storage as needed.
+    // The numbers of cells are also checked.
     {
-        auto f = fstream(fileName, fstream::in);
+        auto f = bxz::ifstream(fileName); // gzip file
+        if (!f) {
+            throw new runtime_error("Did not open grid file successfully: "+fileName);
+        }
         constexpr int maxc = 256;
         char line[maxc];
         int niv, njv, nkv;
@@ -146,8 +149,15 @@ struct Block {
             f.getline(line, maxc); // DIMENSIONS line
             sscanf(line, "DIMENSIONS %d %d %d", &niv, &njv, &nkv);
         } else {
+            f.getline(line, maxc); // expect "structured_grid 1.0"
+            f.getline(line, maxc); // label:
+            f.getline(line, maxc); // dimensions:
             f.getline(line, maxc);
-            sscanf(line, "%d %d %d", &niv, &njv, &nkv);
+            sscanf(line, "niv: %d", &niv);
+            f.getline(line, maxc);
+            sscanf(line, "njv: %d", &njv);
+            f.getline(line, maxc);
+            sscanf(line, "nkv: %d", &nkv);
         }
         if ((nic != niv-1) || (njc != njv-1) || (nkc != nkv-1)) {
             throw new runtime_error("Unexpected grid size: niv="+to_string(niv)+
@@ -165,7 +175,7 @@ struct Block {
                     #ifdef FLOAT_NUMBERS
                     sscanf(line "%f %f %f", &x, &y, &z);
                     #else
-                    scanf(line, "%lf %lf %lf", &x, &y, &z);
+                    sscanf(line, "%lf %lf %lf", &x, &y, &z);
                     #endif
                     vertices[vtxIndx(i,j,k)].set(x, y, z);
                 } // for i
