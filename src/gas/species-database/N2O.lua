@@ -25,6 +25,33 @@ db.N2O.epsilon = {
    description = 'Lennard-Jones potential well depth.',
    reference = 'GRI-Mech 3.0 transport file.'
 }
+db.N2O.ceaThermoCoeffs = {
+   nsegments = 2,
+   T_break_points = {200.0, 1000.0, 6000.0},
+   T_blend_ranges = {400.0},
+   segment0 = {
+      4.288225970e+04,
+     -6.440118440e+02,
+      6.034351430e+00,
+      2.265394436e-04,
+      3.472782850e-06,
+     -3.627748640e-09,
+      1.137969552e-12,
+      1.179405506e+04,
+     -1.003128570e+01,
+   },
+   segment1 = {
+      3.438448040e+05,
+     -2.404557558e+03,
+      9.125636220e+00,
+     -5.401667930e-04,
+      1.315124031e-07,
+     -1.414215100e-11,
+      6.381066870e-16,
+      2.198632638e+04,
+     -3.147805016e+01,
+   }
+}
 db.N2O.grimechThermoCoeffs = {
    notes = 'data from GRIMECH 3.0',
    nsegments = 2, 
