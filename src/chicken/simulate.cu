@@ -38,7 +38,7 @@ void do_something(); // left over from the CUDA workshop experiment
 
 void initialize_simulation(int tindx_start)
 {
-    // [TODO] read JSON config
+    read_config_file(Config::job + "/config.json");
     // [TODO] read initial grids and flow data
     do_something();
     return;
