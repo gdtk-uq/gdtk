@@ -8,9 +8,10 @@
 #include "iostream"
 #include "fstream"
 #include "string"
+#include "include/nlohmann/json.hpp"
 
 #include "number.cu"
-#include "include/nlohmann/json.hpp"
+#include "cell.cu"
 
 using namespace std;
 using json = nlohmann::json;
@@ -60,6 +61,14 @@ void read_config_file(string fileName)
     cout << "  nics: ["; for (auto i : Config::nics) cout << i << ","; cout << "]" << endl;
     cout << "  njcs: ["; for (auto i : Config::njcs) cout << i << ","; cout << "]" << endl;
     cout << "  nkcs: ["; for (auto i : Config::nkcs) cout << i << ","; cout << "]" << endl;
+    //
+    // Check that we have consistent names in the flow zip archives.
+    vector<string> iovar_names = jsonData["iovar_names"].get<vector<string> >();
+    for (int i=0; i < IOvar::n; ++i) {
+        if (iovar_names[i] != IOvar::names[i]) {
+            cout << "Mismatched iovar: " << iovar_names[i] << IOvar::names[i] << endl;
+        }
+    }
     //
     return;
 }

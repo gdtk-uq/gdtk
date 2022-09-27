@@ -99,7 +99,7 @@ class GlobalConfig():
         'nib', 'njb', 'nkb', 'blk_ids', 'nics', 'njcs', 'nkcs', \
         'dt_init', 'cfl_list', 'cfl_count', 'print_count', \
         'dt_plot_list', 'max_time', 'max_step', \
-        'x_order', 't_order', 'flow_var_names'
+        'x_order', 't_order', 'iovar_names'
 
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -124,10 +124,12 @@ class GlobalConfig():
         self.max_step = 10
         self.x_order = 2
         self.t_order = 2
-        # The following is not meant to be edited for individual simulations.
-        self.flow_var_names = ['pos.x', 'pos.y', 'pos.z', 'vol',
-                               'p', 'T', 'rho', 'e', 'a',
-                               'vel.x', 'vel.y', 'vel.z']
+        # The following is not meant to be edited for individual simulations but
+        # should be kept consistent with the symbols in IOvar namespace
+        # that is defined in cell.cu.
+        self.iovar_names = ['pos.x', 'pos.y', 'pos.z', 'vol',
+                            'p', 'T', 'rho', 'e', 'a',
+                            'vel.x', 'vel.y', 'vel.z']
         #
         GlobalConfig.count += 1
         return
@@ -175,7 +177,7 @@ class GlobalConfig():
         tlist = [self.dt_plot_list[i][2] for i in range(n_dt_plot)]
         assert min(tlist) > 0.0, "Require positive nonzero dt_hist values."
         fp.write('  "dt_hist": %s,\n' % json.dumps(tlist))
-        fp.write('  "flow_var_names": %s,\n' % json.dumps(self.flow_var_names))
+        fp.write('  "iovar_names": %s,\n' % json.dumps(self.iovar_names))
         return
 
     def check_array_of_fluid_blocks(self):
@@ -625,7 +627,7 @@ def write_initial_files():
     for fb in fluidBlocksList:
         fb.construct_cell_properties()
         fileName = flowDir + ('/flow-%04d-%04d-%04d.zip' % (fb.i, fb.j, fb.k))
-        fb.write_flow_data_to_zip_file(fileName, config.flow_var_names)
+        fb.write_flow_data_to_zip_file(fileName, config.iovar_names)
     #
     with open(config.job_name+'/times.data', 'w') as fp:
         fp.write("# tindx t\n")
