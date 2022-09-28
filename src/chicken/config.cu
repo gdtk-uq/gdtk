@@ -8,15 +8,33 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <sstream>
 #include <map>
 #include "include/nlohmann/json.hpp"
 
 #include "number.cu"
 #include "flow.cu"
 #include "cell.cu"
+#include "block.cu"
 
 using namespace std;
 using json = nlohmann::json;
+
+struct BConfig {
+    int i, j, k;
+    int initial_fs;
+    int bcCodes[6];
+    int bc_fs[6];
+
+    string toString() {
+        ostringstream repr;
+        repr << "BConfig(i=" << i << ", j=" << j << ", k=" << k;
+        repr << ", bcCodes=["; for (auto c: bcCodes) repr << c << ","; repr << "]";
+        repr << ", bc_fs=["; for (auto f : bc_fs) repr << f << ","; repr << "]";
+        repr << ")";
+        return repr.str();
+    }
+};
 
 namespace Config {
     string job = "job";
@@ -27,6 +45,7 @@ namespace Config {
     int nkb = 1;
     vector<int> nics, njcs, nkcs;
     vector<vector<vector<int> > >blk_ids;
+    vector<BConfig> blk_configs;
 }
 
 void read_config_file(string fileName)
@@ -87,6 +106,9 @@ void read_config_file(string fileName)
     for (auto fs : Config::flow_states) cout << fs.toString() << ",";
     cout << "]" << endl;
     //
+    // Block configs appear in the JSON file in order of their definition in the Python input script.
+    // This index is the block id and is different to the i,j,k indices into the block array.
+    //
     Config::nib = jsonData["nib"].get<int>();
     Config::njb = jsonData["njb"].get<int>();
     Config::nkb = jsonData["nkb"].get<int>();
@@ -109,11 +131,25 @@ void read_config_file(string fileName)
             }
         }
     }
-    // [TODO] Turn into a more convenient internal format.
+    //
     int n_fluid_blocks = jsonData["n_fluid_blocks"].get<int>();
-    vector<json> fluid_blocks = jsonData["fluid_blocks"].get<vector<json> >();
-    for (int b=0; b < fluid_blocks.size(); b++) {
-        cout << "fluid_block json: " << fluid_blocks[b] << endl;
+    vector<json> fluid_blocks_json = jsonData["fluid_blocks"].get<vector<json> >();
+    for (auto blk_json : fluid_blocks_json) {
+        BConfig blk_config;
+        blk_config.i = blk_json["i"].get<int>();
+        blk_config.j = blk_json["j"].get<int>();
+        blk_config.k = blk_json["k"].get<int>();
+        blk_config.initial_fs = blk_json["initial_flow_state"].get<int>();
+        map<string,json> bcs_json = blk_json["bcs"].get<map<string,json> >();
+        for (auto name : Face::names) {
+            map<string,string> bc = bcs_json[name].get<map<string,string> >();
+            int i = Face_indx_from_name(name);
+            blk_config.bcCodes[i] = BC_code_from_name(bc["tag"]);
+            // [TODO] We need to handle flow states associated with boundary conditions.
+            blk_config.bc_fs[i] = 0;
+        }
+        cout << "blk_config: " << blk_config.toString() << endl;
+        Config::blk_configs.push_back(blk_config);
     }
     return;
 }

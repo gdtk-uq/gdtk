@@ -50,8 +50,9 @@ void initialize_simulation(int tindx_start)
                 if (Config::blk_ids[i][j][k] >= 0) {
                     // Only defined blocks in the array will have a non-zero id.
                     Block* blkptr = new Block{};
-                    int bcCodes[6] = {0, 0, 0, 0, 0, 0}; // [TODO]
-                    blkptr->configure(Config::nics[i], Config::njcs[j], Config::nkcs[k], bcCodes);
+                    int blk_id = Config::blk_ids[i][j][k];
+                    blkptr->configure(Config::nics[i], Config::njcs[j], Config::nkcs[k],
+                                      Config::blk_configs[blk_id].bcCodes);
                     sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
                     string fileName = Config::job + string(nameBuf);
                     blkptr->readGrid(fileName);

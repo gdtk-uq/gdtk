@@ -24,17 +24,19 @@ namespace Face {
     constexpr int kminus = 4;
     constexpr int kplus = 5;
 
-    int faceIndx_from_name(string name)
-    {
-        if (name == "iminus") return iminus;
-        if (name == "iplus") return iplus;
-        if (name == "jminus") return jminus;
-        if (name == "jplus") return jplus;
-        if (name == "kminus") return kminus;
-        if (name == "kplus") return kplus;
-        throw new runtime_error("Invalid face name: "+name);
-    }
+    vector<string> names {"iminus", "iplus", "jminus", "jplus", "kminus", "kplus"};
 };
+
+int Face_indx_from_name(string name)
+{
+    if (name == "iminus") return Face::iminus;
+    if (name == "iplus") return Face::iplus;
+    if (name == "jminus") return Face::jminus;
+    if (name == "jplus") return Face::jplus;
+    if (name == "kminus") return Face::kminus;
+    if (name == "kplus") return Face::kplus;
+    throw new runtime_error("Invalid face name: " + name);
+}
 
 namespace IOvar {
     // Following the new IO model for Eilmer, we set up the accessor functions

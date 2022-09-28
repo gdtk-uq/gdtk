@@ -30,17 +30,17 @@ namespace BCCode {
     constexpr int outflow = 4;
 
     vector<string> names{"wall_with_slip", "wall_no_slip", "exchange", "inflow", "outflow"};
-
-    int bcCode_from_name(string name)
-    {
-        if (name == "wall_with_slip") return wall_with_slip;
-        if (name == "wall_no_slip") return wall_no_slip;
-        if (name == "exchange") return exchange;
-        if (name == "inflow") return inflow;
-        if (name == "outflow") return outflow;
-        return wall_with_slip;
-    }
 };
+
+int BC_code_from_name(string name)
+{
+    if (name == "wall_with_slip") return BCCode::wall_with_slip;
+    if (name == "wall_no_slip") return BCCode::wall_no_slip;
+    if (name == "exchange") return BCCode::exchange;
+    if (name == "inflow") return BCCode::inflow;
+    if (name == "outflow") return BCCode::outflow;
+    return BCCode::wall_with_slip;
+}
 
 struct Block {
     int nic; // Number of cells i-direction.
