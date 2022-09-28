@@ -142,10 +142,6 @@ class GlobalConfig():
         #
         fp.write('  "title": "%s",\n' % self.title)
         fp.write('  "gas_model": %s,\n' % self.gas_model.to_json())
-        fp.write('  "nib": %d,\n' % self.nib)
-        fp.write('  "njb": %d,\n' % self.njb)
-        fp.write('  "nkb": %d,\n' % self.nkb)
-        fp.write('  "blk_ids": %s,\n' % self.blk_ids.tolist())
         fp.write('  "max_time": %e,\n' % self.max_time)
         fp.write('  "max_step": %d,\n' % self.max_step)
         fp.write('  "dt_init": %e,\n' % self.dt_init)
@@ -199,10 +195,13 @@ class GlobalConfig():
         self.nib = imax+1
         self.njb = jmax+1
         self.nkb = kmax+1
+        # As each block is defined in the input script, it will get a location in the array.
+        # We will use the following array of ids to indicate which blocks in the array
+        # have been defined.  We will allow some blocks to be left undefined.
         self.blk_ids = np.zeros((self.nib, self.njb, self.nkb), dtype=int)
-        self.blk_ids -= 1 # Start with a negative id so that we can see missing blocks.
+        self.blk_ids -= 1 # Start with a negative id so that we can see undefined blocks.
         #
-        # Identify the array positions for the fluid blocks that are present and
+        # Identify the array positions for the fluid blocks that are defined and
         # check that their numbers of cells are consistent across the array.
         self.nics = np.zeros(self.nib, dtype=int)
         self.njcs = np.zeros(self.njb, dtype=int)
@@ -598,6 +597,9 @@ def write_initial_files():
         #
         n_fluid_blocks = len(fluidBlocksList)
         fp.write('  "n_fluid_blocks": %d,\n' % n_fluid_blocks)
+        fp.write('  "nib": %d,\n' % config.nib)
+        fp.write('  "njb": %d,\n' % config.njb)
+        fp.write('  "nkb": %d,\n' % config.nkb)
         fp.write('  "blk_ids": %s,\n' % json.dumps(config.blk_ids.tolist()))
         fp.write('  "nics": %s,\n' % json.dumps(config.nics.tolist()))
         fp.write('  "njcs": %s,\n' % json.dumps(config.njcs.tolist()))

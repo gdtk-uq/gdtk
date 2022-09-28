@@ -5,15 +5,16 @@
 #ifndef GAS_INCLUDED
 #define GAS_INCLUDED
 
+#include <cmath>
 #include <string>
 #include "number.cu"
 
 using namespace std;
 
 namespace GasModel {
-    constexpr number g = 1.4f;
-    constexpr number R = 287.1f;
-    constexpr number Cv = R / (g-1.0f);
+    constexpr number g = 1.4;
+    constexpr number R = 287.1;
+    constexpr number Cv = R / (g-1.0);
 };
 
 

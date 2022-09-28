@@ -5,10 +5,16 @@
 #ifndef NUMBER_INCLUDED
 #define NUMBER_INCLUDED
 
+#include <cmath>
+
 # ifdef FLOAT_NUMBERS
 typedef float number;
 #else
 typedef double number;
 #endif
+
+bool approxEquals(double a, double b, double e) {
+    return fabs(a - b) < e;
+}
 
 #endif

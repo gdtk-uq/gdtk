@@ -47,13 +47,16 @@ void initialize_simulation(int tindx_start)
     for (int k=0; k < Config::nkb; ++k) {
         for (int j=0; j < Config::njb; ++j) {
             for (int i=0; i < Config::nib; ++i) {
-                Block* blkptr = new Block{};
-                int bcCodes[6] = {0, 0, 0, 0, 0, 0}; // [TODO]
-                blkptr->configure(Config::nics[i], Config::njcs[j], Config::nkcs[k], bcCodes);
-                sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
-                string fileName = Config::job + string(nameBuf);
-                blkptr->readGrid(fileName);
-                fluidBlocks.push_back(blkptr);
+                if (Config::blk_ids[i][j][k] >= 0) {
+                    // Only defined blocks in the array will have a non-zero id.
+                    Block* blkptr = new Block{};
+                    int bcCodes[6] = {0, 0, 0, 0, 0, 0}; // [TODO]
+                    blkptr->configure(Config::nics[i], Config::njcs[j], Config::nkcs[k], bcCodes);
+                    sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
+                    string fileName = Config::job + string(nameBuf);
+                    blkptr->readGrid(fileName);
+                    fluidBlocks.push_back(blkptr);
+                }
             }
         }
     }
