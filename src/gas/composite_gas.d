@@ -68,7 +68,7 @@ public:
         case "two-temperature-gas":
             _n_modes = 1;
             mThermo = new TwoTemperatureGasMixture(L, _species_names);
-            mTransProps = new TwoTemperatureTransProps(L, _species_names);
+            mTransProps = new TwoTemperatureTransProps(L, _species_names, this);
             break;
         default:
             string errMsg = format("Problem trying to construct gas model. The physical model variant '%s' is not known.\n", mPhysicalModel);
@@ -177,7 +177,7 @@ public:
 
     @nogc override void update_trans_coeffs(ref GasState gs)
     {
-        mTransProps.updateTransProps(gs);
+        mTransProps.updateTransProps(gs, this);
     }
 
     @nogc override void binary_diffusion_coefficients(ref const(GasState) Q, ref number[][] D)

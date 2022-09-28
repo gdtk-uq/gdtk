@@ -10,10 +10,11 @@ module gas.diffusion.transport_properties_model;
 
 import nm.number;
 import gas : GasState;
+import gas : GasModel;
 
 interface TransportPropertiesModel {
 public:
-    @nogc void updateTransProps(ref GasState gs);
+    @nogc void updateTransProps(ref GasState gs, GasModel gm);
     @nogc void binaryDiffusionCoefficients(ref const(GasState) gs, ref number[][] D);
 }
 

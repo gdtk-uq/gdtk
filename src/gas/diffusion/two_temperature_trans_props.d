@@ -24,6 +24,7 @@ module gas.diffusion.two_temperature_trans_props;
 import std.math;
 import std.string;
 import std.conv;
+import std.algorithm;
 
 import util.lua;
 import util.lua_service;
@@ -32,11 +33,12 @@ import nm.number;
 
 import gas;
 import gas.diffusion.transport_properties_model;
+import gas.physical_constants;
 
 class TwoTemperatureTransProps : TransportPropertiesModel {
 public:
 
-    this(lua_State *L, string[] speciesNames)
+    this(lua_State *L, string[] speciesNames, GasModel gm)
     {
         mNSpecies = to!int(speciesNames.length);
         double[] molMasses;
@@ -146,7 +148,7 @@ public:
     }
 
     @nogc
-    override void updateTransProps(ref GasState gs)
+    override void updateTransProps(ref GasState gs, GasModel gm)
     {
         massf2molef(gs.massf, mMolMasses, mMolef);
         // Computation of transport coefficients via collision integrals.
@@ -199,24 +201,37 @@ public:
         number k_tr = 2.3901e-8*(15./4.)*kB_erg*sumA;
         k_tr *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
 
-        // 2. k_rot
-        // Assuming fully excited, eq (75) in Gnoffo
+        // 2. k_rot and k_vib at the same time
+        // Assuming rotation is fully excited, eq (75) in Gnoffo
+        // and vibration is partially excited eq (52a) in Gupta, Yos, Thomson
         number k_rot = 0.0;
+        number k_vib = 0.0;
+
+        // For k_vib, Cp(T_vib) needs to be evaluated
+        number T_save = gs.T;
+        gs.T = gs.T_modes[0];
         foreach (isp; mMolecularSpecies) {
             denom = 0.0;
             foreach (jsp; 0 .. mNSpecies) {
                 denom += mMolef[jsp]*mDelta_11[isp][jsp];
             }
             k_rot += mMolef[isp]/denom;
+
+            // figure out how much vibrational excitation there is
+            // The equation in the paper doesn't call for the min,
+            // but it has been included to get the same result as
+            // when the flow is fully excited
+            number Cp = mMolMasses[isp]/R_universal*gm.Cp(gs, isp);
+            k_vib += (min(Cp, to!number(9.0/2.0)) - 7.0/2.0) * mMolef[isp]/denom;
         }
+        gs.T = T_save;
         k_rot *= 2.3901e-8*kB_erg;
         k_rot *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
+        k_vib *= 2.3901e-8*kB_erg;
+        k_vib *= (4.184/1.0e-2); // cal/cm.s.K) --> J/(m.s.K)
+
         // Eq (76) in Gnoffo.
         gs.k = k_tr + k_rot;
-
-        // 3. k_vib
-        // Eq (77) in Gnoffo
-        number k_vib = k_rot;
 
         // 4. k_e
         number k_E = 0.0;
@@ -381,6 +396,7 @@ version(two_temperature_trans_props_test)
     int main()
     {
         import util.msg_service;
+        import gas.composite_gas;
 
         FloatingPointControl fpctrl;
         // Enable hardware exceptions for division by zero, overflow to infinity,
@@ -389,22 +405,27 @@ version(two_temperature_trans_props_test)
         fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
 
         auto L = init_lua_State();
+        GasModel gm = new CompositeGas("sample-data/N2-N.lua");
         doLuaFile(L, "sample-data/N2-N.lua");
         string[] speciesNames;
         getArrayOfStrings(L, "species", speciesNames);
-        auto ttp = new TwoTemperatureTransProps(L, speciesNames);
+        auto ttp = new TwoTemperatureTransProps(L, speciesNames, gm);
         lua_close(L);
         auto gs = GasState(2, 1);
         gs.p = 1.0e5;
         gs.T = 2000.0;
         gs.T_modes[0] = 3000.0;
-        gs.massf[0] = 0.2;
-        gs.massf[1] = 0.8;
+        gs.massf[0] = 0.8;
+        gs.massf[1] = 0.2;
 
-        ttp.updateTransProps(gs);
+        ttp.updateTransProps(gs, gm);
 
         import std.stdio;
         writefln("mu= %.6e  k= %.6e  k_v= %.6e\n", gs.mu, gs.k, gs.k_modes[0]);
+
+        gs.T_modes[0] = 300.0;
+        ttp.updateTransProps(gs, gm);
+        writefln("mu = %.6e k = %.6e k_v = %.6e", gs.mu, gs.k, gs.k_modes[0]);
 
         return 0;
     }

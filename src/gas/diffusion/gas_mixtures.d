@@ -58,7 +58,7 @@ public:
     }
 
     @nogc
-    override void updateTransProps(ref GasState gs)
+    override void updateTransProps(ref GasState gs, GasModel gm)
     {
         mVisc.update_viscosity(gs);
         mThermCond.update_thermal_conductivity(gs);
