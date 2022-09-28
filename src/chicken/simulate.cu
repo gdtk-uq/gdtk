@@ -56,6 +56,9 @@ void initialize_simulation(int tindx_start)
                     sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
                     string fileName = Config::job + string(nameBuf);
                     blkptr->readGrid(fileName);
+                    sprintf(nameBuf, "/flow/t%04d/flow-%04d-%04d-%04d.zip", tindx_start, i, j, k);
+                    fileName = Config::job + string(nameBuf);
+                    blkptr->readFlow(fileName);
                     fluidBlocks.push_back(blkptr);
                 }
             }

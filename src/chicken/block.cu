@@ -9,6 +9,8 @@
 #include <fstream>
 #include <stdexcept>
 #include "include/bxzstr/bxzstr.hpp"
+#include <zip.h>
+
 #include "number.cu"
 #include "vector3.cu"
 #include "gas.cu"
@@ -212,6 +214,53 @@ struct Block {
         f.close();
         return;
     } // end readGrid()
+
+    __host__
+    void readFlow(string fileName)
+    // Reads the flow data archive from a ZIP file.
+    // The correct data storage is presumed to exist.
+    //
+    // Code modelled on the simple example by Dodrigo Rivas Costa found at
+    // https://stackoverflow.com/questions/10440113/simple-way-to-unzip-a-zip-file-using-zlib
+    {
+        int err = 0;
+        zip *z = zip_open(fileName.c_str(), 0, &err);
+        if (err) {
+            cerr << "Failed to open zip archive " << fileName << endl;
+        }
+        if (z) {
+            struct zip_stat st;
+            for (int m=0; m < IOvar::n; m++) {
+                string name = IOvar::names[m];
+                // Search archive for a variable's data.
+                zip_stat_init(&st);
+                zip_stat(z, name.c_str(), 0, &st);
+                // Allocate enough memory for the uncompressed content and read it.
+                char* content = new char[st.size];
+                zip_file* f = zip_fopen(z, name.c_str(), 0);
+                if (f) {
+                    zip_fread(f, content, st.size);
+                    zip_fclose(f);
+                    stringstream ss(content);
+                    string item;
+                    for (int k=0; k < nkc; k++) {
+                        for (int j=0; j < njc; j++) {
+                            for (int i=0; i < nic; i++) {
+                                getline(ss, item, '\n');
+                                FVCell& c = cells[activeCellIndex(i,j,k)];
+                                c.iovar_set(m, stod(item));
+                            }
+                        }
+                    }
+                } else {
+                    cerr << "Could not open file " << name << " in ZIP archive " << fileName << endl;
+                }
+                delete[] content;
+            }
+            zip_close(z);
+        }
+        return;
+    }
 
 }; // end Block
 
