@@ -13,7 +13,7 @@
 
 using namespace std;
 
-struct Face {
+struct FVFace {
     Vector3 pos; // midpoint position in space
     number area;
     Vector3 n;  // unit normal
@@ -27,9 +27,9 @@ struct Face {
     int right_cells[2]{0, 0};
 
     string toString() {
-        return "Face(n=" + n.toString() + ", t1=" + t1.toString() +
+        return "FVFace(n=" + n.toString() + ", t1=" + t1.toString() +
             ", t2=" + t2.toString() + ")";
     }
-}; // end Face
+}; // end FVFace
 
 #endif

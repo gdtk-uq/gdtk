@@ -15,7 +15,7 @@
 using namespace std;
 
 __host__ __device__
-void ausmdv(Face& f, const FlowState& fsL, const FlowState& fsR)
+void ausmdv(FVFace& f, const FlowState& fsL, const FlowState& fsR)
 // Compute the face's flux vector from left and right flow states.
 // Wada and Liou's flux calculator, implemented from details in their AIAA paper,
 // with hints from Ian Johnston.

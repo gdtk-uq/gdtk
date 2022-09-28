@@ -400,7 +400,7 @@ class WallWithSlipBC(BoundaryCondition):
     __slots__ = ['tag']
 
     def __init__(self):
-        self.tag = 'wall_slip'
+        self.tag = 'wall_with_slip'
 
     def __repr__(self):
         return "WallWithSlipBC()"

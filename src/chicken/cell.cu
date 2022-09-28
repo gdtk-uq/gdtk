@@ -15,7 +15,7 @@
 
 using namespace std;
 
-namespace FaceNames {
+namespace Face {
     // Symbolic names for the faces of the cell and of the block.
     constexpr int iminus = 0;
     constexpr int iplus = 1;
@@ -23,6 +23,17 @@ namespace FaceNames {
     constexpr int jplus = 3;
     constexpr int kminus = 4;
     constexpr int kplus = 5;
+
+    int faceIndx_from_name(string name)
+    {
+        if (name == "iminus") return iminus;
+        if (name == "iplus") return iplus;
+        if (name == "jminus") return jminus;
+        if (name == "jplus") return jplus;
+        if (name == "kminus") return kminus;
+        if (name == "kplus") return kplus;
+        throw new runtime_error("Invalid face name: "+name);
+    }
 };
 
 namespace IOvar {
@@ -52,7 +63,7 @@ namespace IOvar {
     constexpr int n = velz + 1; // number of symbols that point to the flow variables
 }
 
-struct Cell {
+struct FVCell {
     Vector3 pos; // position of centroid
     number volume;
     number iLength, jLength, kLength; // These lengths are used in the interpolation fns.

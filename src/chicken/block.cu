@@ -21,25 +21,40 @@ using namespace std;
 
 namespace BCCode {
     // Boundary condition codes, to decide what to do for the ghost cells.
-    constexpr int wall = 0;
-    constexpr int exchange = 1;
-    constexpr int inflow = 2;
-    constexpr int outflow = 3;
-    // [TODO] need to consider periodic boundary conditions.
+    // Periodic boundary conditions should just work if we wrap the index in each direction.
     // There's not enough information here to have arbitrary block connections.
+    constexpr int wall_with_slip = 0;
+    constexpr int wall_no_slip = 1;
+    constexpr int exchange = 2;
+    constexpr int inflow = 3;
+    constexpr int outflow = 4;
+
+    vector<string> names{"wall_with_slip", "wall_no_slip", "exchange", "inflow", "outflow"};
+
+    int bcCode_from_name(string name)
+    {
+        if (name == "wall_with_slip") return wall_with_slip;
+        if (name == "wall_no_slip") return wall_no_slip;
+        if (name == "exchange") return exchange;
+        if (name == "inflow") return inflow;
+        if (name == "outflow") return outflow;
+        return wall_with_slip;
+    }
 };
 
 struct Block {
     int nic; // Number of cells i-direction.
     int njc; // Number of cells j-direction.
     int nkc; // Number of cells k-direction.
-    int firstGhostCells[6]; // Index of the first ghost cell for each face.
+    int nActiveCells; // Number of active cells (with conserved quantities) in the block.
     // Ghost cells will be stored at the end of the active cells collection.
+    int nGhostCells[6]; // Number of ghost cells on each face.
+    int firstGhostCells[6]; // Index of the first ghost cell for each face.
     //
-    vector<Cell> cells;
-    vector<Face> iFaces;
-    vector<Face> jFaces;
-    vector<Face> kFaces;
+    vector<FVCell> cells;
+    vector<FVFace> iFaces;
+    vector<FVFace> jFaces;
+    vector<FVFace> kFaces;
     vector<Vector3> vertices;
     //
     // Active cells have conserved quantities data, along with the time derivatives.
@@ -68,18 +83,18 @@ struct Block {
     {
         int cellIndxOnFace = 0;
         switch (faceIndx) {
-        case FaceNames::iminus:
-        case FaceNames::iplus:
+        case Face::iminus:
+        case Face::iplus:
             // jk face
             cellIndxOnFace = i1*njc + i0;
             break;
-        case FaceNames::jminus:
-        case FaceNames::jplus:
+        case Face::jminus:
+        case Face::jplus:
             // ik face
             cellIndxOnFace = i1*njc + i0;
             break;
-        case FaceNames::kminus:
-        case FaceNames::kplus:
+        case Face::kminus:
+        case Face::kplus:
             // ik face
             cellIndxOnFace = i1*njc + i0;
             break;
@@ -113,19 +128,32 @@ struct Block {
 
     __host__
     void configure(int i, int j, int k, int codes[])
+    // Set up the block to hold the grid and flow data.
     // Do this before reading a grid or flow file.
     {
         nic = i;
         njc = j;
         nkc = k;
         for (int b=0; b < 6; b++) { bcCodes[b] = codes[b]; }
-        return;
-    }
-
-    __host__
-    void allocateStorage()
-    {
-        // [TODO] maybe we should do this after reading a grid.
+        //
+        int nActiveCells = nic*njc*nkc;
+        // For the moment assume that all boundary conditions require ghost cells.
+        nGhostCells[Face::iminus] = 2*njc*nkc;
+        nGhostCells[Face::iplus] = 2*njc*nkc;
+        nGhostCells[Face::jminus] = 2*nic*nkc;
+        nGhostCells[Face::jplus] = 2*nic*nkc;
+        nGhostCells[Face::kminus] = 2*nic*njc;
+        nGhostCells[Face::kplus] = 2*nic*njc;
+        firstGhostCells[0] = nActiveCells;
+        for (int f=1; f < 6; f++) firstGhostCells[i] = firstGhostCells[i-1] + nGhostCells[i-1];
+        // Now that we know the numbers of cells, resize the vector to fit them all.
+        cells.resize(firstGhostCells[5]+nGhostCells[5]);
+        // Each set of finite-volume faces is in the index-plane of the corresponding vertices.
+        iFaces.resize((nic+1)*njc*nkc);
+        jFaces.resize(nic*(njc+1)*nkc);
+        kFaces.resize(nic*njc*(nkc+1));
+        // And the vertices.
+        vertices.resize((nic+1)*(njc+1)*(nkc+1));
         return;
     }
 
