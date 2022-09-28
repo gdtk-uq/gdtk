@@ -6,6 +6,9 @@
 #define FLOW_INCLUDED
 
 #include <string>
+#include "number.cu"
+#include "vector3.cu"
+#include "gas.cu"
 
 using namespace std;
 

@@ -12,6 +12,7 @@
 #include "include/nlohmann/json.hpp"
 
 #include "number.cu"
+#include "flow.cu"
 #include "cell.cu"
 
 using namespace std;
@@ -20,6 +21,7 @@ using json = nlohmann::json;
 namespace Config {
     string job = "job";
     string title = "";
+    vector<FlowState> flow_states;
     int nib = 1;
     int njb = 1;
     int nkb = 1;
@@ -71,12 +73,19 @@ void read_config_file(string fileName)
         }
     }
     //
-    // [TODO] Turn into a more convenient internal format.
     int n_flow_states = jsonData["n_flow_states"].get<int>();
-    vector<json> flow_states = jsonData["flow_states"].get<vector<json> >();
-    for (int f=0; f < flow_states.size(); f++) {
-        cout << "flow_state json: " << flow_states[f] << endl;
+    vector<json> flow_states_json = jsonData["flow_states"].get<vector<json> >();
+    for (auto fsj: flow_states_json) {
+        auto gas = GasState{};
+        gas.p=fsj["gas"]["p"].get<number>();
+        gas.T=fsj["gas"]["T"].get<number>();
+        gas.update_from_pT();
+        auto vel = fsj["vel"].get<vector<number> >();
+        Config::flow_states.push_back(FlowState{gas, Vector3{vel[0], vel[1], vel[2]}});
     }
+    cout << "  flow_states: [";
+    for (auto fs : Config::flow_states) cout << fs.toString() << ",";
+    cout << "]" << endl;
     //
     Config::nib = jsonData["nib"].get<int>();
     Config::njb = jsonData["njb"].get<int>();
