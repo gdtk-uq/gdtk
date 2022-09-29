@@ -67,7 +67,7 @@ void read_config_file(string fileName)
         f.close();
         delete[] text;
     } else {
-        cerr << "Could not open ifstream for config.json." << endl;
+        throw new runtime_error("Could not open ifstream for config.json.");
     }
     Config::title = jsonData["title"].get<string>();
     cout << "  title: " << Config::title << endl;

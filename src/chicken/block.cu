@@ -7,6 +7,7 @@
 
 #include <string>
 #include <fstream>
+#include <sstream>
 #include <stdexcept>
 #include "include/bxzstr/bxzstr.hpp"
 #include <zip.h>
@@ -224,9 +225,9 @@ struct Block {
     // https://stackoverflow.com/questions/10440113/simple-way-to-unzip-a-zip-file-using-zlib
     {
         int err = 0;
-        zip *z = zip_open(fileName.c_str(), 0, &err);
+        zip *z = zip_open(fileName.c_str(), ZIP_RDONLY, &err);
         if (err) {
-            cerr << "Failed to open zip archive " << fileName << endl;
+            cerr << "Failed to open zip archive for reading: " << fileName << endl;
         }
         if (z) {
             struct zip_stat st;
@@ -260,7 +261,48 @@ struct Block {
             zip_close(z);
         }
         return;
-    }
+    } // end readFlow()
+
+    __host__
+    void writeFlow(string fileName)
+    // Writes the flow data into a new ZIP archive file.
+    // Any necessary directories are presumed to exist.
+    {
+        int err = 0;
+        zip *z = zip_open(fileName.c_str(), ZIP_CREATE, &err);
+        if (err) {
+            cerr << "Failed to open zip archive for writing: " << fileName << endl;
+        }
+        if (z) {
+            for (int m=0; m < IOvar::n; m++) {
+                string name = IOvar::names[m];
+                ostringstream ss;
+                for (int k=0; k < nkc; k++) {
+                    for (int j=0; j < njc; j++) {
+                        for (int i=0; i < nic; i++) {
+                            FVCell& c = cells[activeCellIndex(i,j,k)];
+                            ss << c.iovar_get(m) << endl;
+                        }
+                    }
+                }
+                string data = ss.str();
+                // Add the data to the ZIP archive as a file.
+                zip_source_t* zs = zip_source_buffer(z, data.c_str(), data.size(), 0);
+                if (zs) {
+                    int zindx = zip_file_add(z, name.c_str(), zs, ZIP_FL_OVERWRITE);
+                    if (zindx < 0) {
+                        cerr << "Could not add file " << name << " to ZIP archive " << fileName << endl;
+                        zip_source_free(zs);
+                    }
+                } else {
+                    cerr << "Error adding file to zip: " << string(zip_strerror(z)) << endl;
+                    zip_source_free(zs);
+                }
+            }
+            zip_close(z);
+        }
+        return;
+    } // end writeFlow()
 
 }; // end Block
 

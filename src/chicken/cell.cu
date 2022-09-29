@@ -6,6 +6,8 @@
 #define CELL_INCLUDED
 
 #include <string>
+#include <sstream>
+
 #include "number.cu"
 #include "vector3.cu"
 #include "gas.cu"
@@ -72,19 +74,18 @@ struct FVCell {
     FlowState fs;
     // We will keep connections to the pieces compising the cell
     // as indices into global arrays.
-    int vtx[8]{0, 0, 0, 0};
-    int face[6]{0, 0, 0, 0, 0, 0};
+    vector<int> vtx{0, 0, 0, 0, 0, 0, 0, 0};
+    vector<int> face{0, 0, 0, 0, 0, 0};
 
     string toString() {
-        string repr = "Cell(pos=" + pos.toString() +
-            ", volume=" + to_string(volume) + ", Q=[";
-        // for (int i=0; i < TLevels; i++) {
-        //     repr += "[";
-        //     for (int j=0; j < CQI::n; j++) { repr += to_string(Q[i][j]) + " "; }
-        //     repr += "] ";
-        // }
-        repr += "] )";
-        return repr;
+        ostringstream repr;
+        repr << "Cell(pos=" << pos.toString() << ", volume=" << volume;
+        repr << ", iLength=" << iLength << ", jLength=" << jLength << ", kLength=" << kLength;
+        repr << ", fs=" << fs.toString();
+        repr << ", vtx=["; for(auto v : vtx) repr << v << ","; repr << "]";
+        repr << ", face=["; for(auto v : face) repr << v << ","; repr << "]";
+        repr << ")";
+        return repr.str();
     }
 
     void iovar_set(int i, number val)
@@ -93,6 +94,7 @@ struct FVCell {
         case IOvar::posx: pos.x = val; break;
         case IOvar::posy: pos.y = val; break;
         case IOvar::posz: pos.z = val; break;
+        case IOvar::vol: volume = val; break;
         case IOvar::p: fs.gas.p = val; break;
         case IOvar::T: fs.gas.T = val; break;
         case IOvar::rho: fs.gas.rho = val; break;
@@ -101,6 +103,8 @@ struct FVCell {
         case IOvar::velx: fs.vel.x = val; break;
         case IOvar::vely: fs.vel.y = val; break;
         case IOvar::velz: fs.vel.z = val; break;
+        default:
+            throw new runtime_error("Invalid selection for IOvar: "+to_string(i));
         }
     }
 
@@ -110,6 +114,7 @@ struct FVCell {
         case IOvar::posx: return pos.x;
         case IOvar::posy: return pos.y;
         case IOvar::posz: return pos.z;
+        case IOvar::vol: return volume;
         case IOvar::p: return fs.gas.p;
         case IOvar::T: return fs.gas.T;
         case IOvar::rho: return fs.gas.rho;
@@ -118,7 +123,10 @@ struct FVCell {
         case IOvar::velx: return fs.vel.x;
         case IOvar::vely: return fs.vel.y;
         case IOvar::velz: return fs.vel.z;
+        default:
+            throw new runtime_error("Invalid selection for IOvar: "+to_string(i));
         }
+        // So we never return from here.
     }
 
     // [TODO] PJ 2022-09-11 construct cell details from the connected faces and vertices.
