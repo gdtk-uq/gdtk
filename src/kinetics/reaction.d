@@ -56,7 +56,7 @@ public:
     @property @nogc number K_eq() const { return _K_eq; }
     @property @nogc ref int[] participants() { return _participants; }
 
-    this(RateConstant forward, RateConstant backward, GasModel gmodel)
+    this(RateConstant forward, RateConstant backward, GasModel gmodel, int rctIndex_f=-1, int rctIndex_b=-1)
     {
         _gmodel = gmodel;
         _Qw = GasState(gmodel);
@@ -76,6 +76,8 @@ public:
             _forward = forward.dup();
             _backward = backward.dup();
         }
+        _rctIndex_f = rctIndex_f;
+        _rctIndex_b = rctIndex_b;
     }
 
     abstract Reaction dup();
@@ -90,12 +92,15 @@ public:
                 eval_equilibrium_constant(Q);
                 // Let's take assume that n_modes >= 1 indicates a multi-temperature
                 // simulation. In which case, we need to evaluate the k_f at equilibrium
-                // with the translational temperature in order to determine k_b.
+                // with the rate controlling temperature in order to determine k_b.
                 if (_gmodel.n_modes >= 1) {
-                    _Qw.T = Q.T;
-                    _Qw.T_modes[] = Q.T;
-                    number kf_eq = eval_forward_rate_constant(_Qw);
-                    _k_b = kf_eq/_K_eq;
+                    // We need to re-evaluate the forward rate constant at the
+                    // backwards rate controlling temperature
+                    number T = (_rctIndex_b < 0) ? Q.T : Q.T_modes[_rctIndex_b];
+                    _Qw.T = T;
+                    _Qw.T_modes[] = T;
+                    number kf_rct = eval_forward_rate_constant(_Qw);
+                    _k_b = kf_rct/_K_eq;
                 }
                 else {
                     _k_b = _k_f/_K_eq;
@@ -140,6 +145,9 @@ private:
     GasState _Qw; // a GasState for temporary working
     int[] _participants; // Storage of indices of species that
                          // participate in this reaction
+    // hacky way to store the rate controlling temperature
+    // if only one of the rates is supplied
+    int _rctIndex_f, _rctIndex_b;
     @nogc number eval_forward_rate_constant(in GasState Q)
     {
         return _forward.eval(Q);
@@ -163,13 +171,13 @@ class ElementaryReaction : Reaction
 public:
     this(RateConstant forward, RateConstant backward, GasModel gmodel,
          int[] reac_spidx, double[] reac_coeffs, int[] prod_spidx, double[] prod_coeffs,
-         size_t n_species)
+         size_t n_species, int rctIndex_f, int rctIndex_b)
     {
         assert(reac_spidx.length == reac_coeffs.length,
                brokenPreCondition("reac_spidx and reac_coeffs arrays not of equal length"));
         assert(prod_spidx.length == prod_coeffs.length,
                brokenPreCondition("prod_spdix and prod_coeffs arrays are not of equal length"));
-        super(forward, backward, gmodel);
+        super(forward, backward, gmodel, rctIndex_f, rctIndex_b);
         bool[int] pmap;
         foreach ( i; 0 .. reac_spidx.length ) {
             _reactants ~= tuple(reac_spidx[i], reac_coeffs[i]);
@@ -218,8 +226,8 @@ public:
     override void eval_equilibrium_constant(in GasState Q)
     {
         _Qw.T = Q.T;
-	if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium
-        _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
+        if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium
+            _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
 
     @nogc
@@ -284,13 +292,13 @@ class AnonymousColliderReaction : Reaction
 public:
     this(RateConstant forward, RateConstant backward, GasModel gmodel,
          int[] reac_spidx, double[] reac_coeffs, int[] prod_spidx, double[] prod_coeffs,
-         Tuple!(int,double)[] efficiencies, size_t n_species)
+         Tuple!(int,double)[] efficiencies, size_t n_species, int rctIndex_f=-1, int rctIndex_b=-1)
     {
         assert(reac_spidx.length == reac_coeffs.length,
                brokenPreCondition("reac_spidx and reac_coeffs arrays not of equal length"));
         assert(prod_spidx.length == prod_coeffs.length,
                brokenPreCondition("prod_spdix and prod_coeffs arrays are not of equal length"));
-        super(forward, backward, gmodel);
+        super(forward, backward, gmodel, rctIndex_f, rctIndex_b);
         bool[int] pmap;
         foreach ( i; 0 .. reac_spidx.length ) {
             _reactants ~= tuple(reac_spidx[i], reac_coeffs[i]);
@@ -340,9 +348,12 @@ public:
     @nogc
     override void eval_equilibrium_constant(in GasState Q)
     {
+        //int rctIdx = with_backwards_rct ? _rctIndex_b : _rctIndex_f;
+        //number T = (rctIdx == -1) ? Q.T : Q.T_modes[rctIdx];
+
         _Qw.T = Q.T;
-	if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium
-        _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
+        if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium
+            _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
 
     @nogc
@@ -433,6 +444,8 @@ private:
 Reaction createReaction(lua_State* L, GasModel gmodel)
 {
     int n_species = gmodel.n_species;
+    int rctIndex_f = -1;
+    int rctIndex_b = -1;
     // We need to attempt to get table of efficiencies also
     Tuple!(int, double)[] efficiencies;
     lua_getfield(L, -1, "efficiencies");
@@ -449,9 +462,15 @@ Reaction createReaction(lua_State* L, GasModel gmodel)
     // All Reactions have a forward and backward rate.
     lua_getfield(L, -1, "frc");
     auto frc = createRateConstant(L, efficiencies, gmodel);
+    if (frc is null){
+        rctIndex_f = getIntWithDefault(L, -1, "rctIndex", -1);
+    }
     lua_pop(L, 1);
     lua_getfield(L, -1, "brc");
     auto brc = createRateConstant(L, efficiencies, gmodel);
+    if (brc is null){
+        rctIndex_b = getIntWithDefault(L, -1, "rctIndex", -1);
+    }
     lua_pop(L, 1);
 
     // And most use reacIdx, reacCoeffs, prodIdx and prodCoeffs lists.
@@ -468,7 +487,7 @@ Reaction createReaction(lua_State* L, GasModel gmodel)
     switch (type) {
     case "elementary":
         return new ElementaryReaction(frc, brc, gmodel, reacIdx, reacCoeffs,
-                                      prodIdx, prodCoeffs, n_species);
+                                      prodIdx, prodCoeffs, n_species, rctIndex_f, rctIndex_b);
     case "anonymous_collider":
         // We need to get table of efficiencies also
         return new AnonymousColliderReaction(frc, brc, gmodel,

@@ -25,6 +25,26 @@ db.N.epsilon = {
    description = 'Lennard-Jones potential well depth.',
    reference = 'Svehla (1962)'
 }
+db.N.electronic_levels = {
+  Te = {
+    value = {0.0, 19227.95, 28839.18, 83335.6, 86192.79, 88132.45, 93581.55},
+    units = 'cm^(-1)',
+    description = 'Electronic energy levels',
+    reference = 'NIST'
+  },
+  g = {
+    value = {4, 10, 6, 12, 6, 12, 2},
+    units = 'NA',
+    description = 'degeneracy of electronic energy levels',
+    reference = 'NIST'
+  }
+}
+db.N.ionisation_energy = {
+  value = 14.53413,
+  units = "eV",
+  description = "Ionisation energy",
+  reference = "https://physics.nist.gov/PhysRefData/ASD/ionEnergy.html"
+}
 db.N.ceaThermoCoeffs = {
    nsegments = 4,
    T_break_points = {200.0, 1000.0, 6000.0, 20000.0, 50000.0},

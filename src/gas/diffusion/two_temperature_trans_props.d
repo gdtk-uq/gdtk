@@ -245,7 +245,9 @@ public:
             k_E *= 2.3901e-8*(15./4.)*kB_erg;
             k_E *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
         }
-        gs.k_modes[0] = k_vib + k_E;
+        gs.k_modes[$-1] = 0.0;
+        gs.k_modes[0] = k_vib;
+        gs.k_modes[$-1] += k_E;
     }
 
     @nogc void binaryDiffusionCoefficients(ref const(GasState) gs, ref number[][] D)
@@ -269,7 +271,7 @@ public:
 
         foreach (isp; 0 .. mNSpecies) {
             foreach (jsp; 0 .. isp+1) {
-                number T = (isp == mElectronIdx || jsp == mElectronIdx) ? gs.T_modes[0] : gs.T;
+                number T = (isp == mElectronIdx || jsp == mElectronIdx) ? gs.T_modes[$-1] : gs.T;
                 number Dij = (kB_erg * T)/(p_cgs * mDelta_11[isp][jsp]); // cm^2/s
                 Dij /= (100*100); // cm2/s -> m2/s
                 D[isp][jsp] = Dij;
@@ -341,8 +343,9 @@ private:
                     log_T_CI = log(T_CI);
                 }
                 else {
-                    // collisions with electron: use vibroelectronic temperature in calculation
-                    T_CI = gs.T_modes[0];
+                    // collisions with electron: use electron temperature in calculation
+                    // assume the electron temperature is the last modal temperature
+                    T_CI = gs.T_modes[$-1];
                     log_T_CI = log(T_CI);
                 }
                 number expnt = mA_11[isp][jsp]*(log_T_CI)^^2 + mB_11[isp][jsp]*log_T_CI + mC_11[isp][jsp];
@@ -375,7 +378,7 @@ private:
                 }
                 else {
                     // collisions with electron: use vibroelectronic temperature in calculation
-                    T_CI = gs.T_modes[0];
+                    T_CI = gs.T_modes[$-1];
                     log_T_CI = log(T_CI);
                 }
                 number expnt = mA_22[isp][jsp]*(log_T_CI)^^2 + mB_22[isp][jsp]*log_T_CI + mC_22[isp][jsp];

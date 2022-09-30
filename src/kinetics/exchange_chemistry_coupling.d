@@ -28,6 +28,8 @@ import nm.number;
 import util.lua;
 import util.lua_service;
 import gas;
+import gas.thermo.energy_modes;
+import gas.physical_constants;
 
 
 interface ExchangeChemistryCoupling {
@@ -42,18 +44,20 @@ class ImpartialDissociation : ExchangeChemistryCoupling {
         level. Essentially it's the model proposed in Treanor and Marrone, 1962, but written with 
         the nomenclature of Knab et al. 1995
     */
-    this(lua_State *L) {
+    this(lua_State *L, int mode) {
         this.D = getDouble(L, -1, "D");
         this.Thetav = getDouble(L, -1, "Thetav");
+        this.mode = mode;
     }
 
-    this(double D, double Thetav) {
+    this(double D, double Thetav, int mode) {
         this.D = D;
         this.Thetav = Thetav;
+        this.mode = mode;
     }
 
     ImpartialDissociation dup() {
-        return new ImpartialDissociation(D, Thetav);
+        return new ImpartialDissociation(D, Thetav, mode);
     }
     
     @nogc
@@ -64,7 +68,7 @@ class ImpartialDissociation : ExchangeChemistryCoupling {
         hand column of text.
     */  
         number T = gs.T;
-        number Tv = gs.T_modes[0];
+        number Tv = gs.T_modes[mode];
         number iGamma = (T - Tv)/(T*Tv); // Inverse of pseudo-temperature in equation (36)
 
         // Equation (39) gives garbage results when T and Tv are close to one another, so we switch
@@ -94,6 +98,7 @@ class ImpartialDissociation : ExchangeChemistryCoupling {
 private:
     const double D, Thetav;
     immutable number iGammaSwitchThreshold = to!number(1e-7); // Determined by trial and error, see notes 26/05/21
+    int mode;
     immutable double iGammaOverflowThreshold = 0.001; // See NNG notes 01/09/22
 
     @nogc const number L(number iT, double Y){
@@ -125,12 +130,80 @@ private:
     }
 }
 
-ExchangeChemistryCoupling createExchangeChemistryCoupling(lua_State *L)
+class ImpartialChemElectronElectronic : ExchangeChemistryCoupling {
+public:
+    this (GasModel gmodel, int isp, int mode){
+        this.isp = isp;
+        this.gmodel = gmodel;
+        this.mode = mode;
+    }
+
+    ExchangeChemistryCoupling dup() {
+        return new ImpartialChemElectronElectronic(gmodel, isp, mode);
+    }
+
+    @nogc number Gvanish(in GasState gs){
+        // Species vanish with electron/electronic energy equal to the average
+        // electron/electronic energy at the electron/electronic temperature.
+        // Multiply by molar mass to convert J/kg -> J/mol
+        return gmodel.energyPerSpeciesInMode(gs, isp, mode) * gmodel.mol_masses[isp];
+    }
+
+    @nogc number Gappear(in GasState gs){
+        // Species appear with electron/electronic energy equal to the average
+        // electron/electronic energy at the electron/electronic temperature.
+        // Multiply by molar mass to convert J/kg -> J/mol
+        return gmodel.energyPerSpeciesInMode(gs, isp, mode) * gmodel.mol_masses[isp];
+    }
+
+private:
+    GasModel gmodel;
+    int isp;
+    int mode;
+}
+
+class ElectronImpactIonisation : ExchangeChemistryCoupling {
+public:
+    this (number ionisation_energy){
+        // convert eV to J/mol
+        this.ionisation_energy = ionisation_energy * electron_volt_energy * Avogadro_number;
+    }
+
+    this (lua_State* L){
+        double ionisation_energy = getDouble(L, -1, "ionisation_energy");
+        this(to!number(ionisation_energy));
+    }
+
+    ElectronImpactIonisation dup() {
+        return new ElectronImpactIonisation(ionisation_energy);
+    }
+
+    @nogc number Gappear(in GasState gs){
+        /// electrons appear with the energy of ionisation for the species that ionised
+        return -ionisation_energy;
+    }
+
+    @nogc number Gvanish(in GasState gs){
+        /// electrons vanish with the energy of ionisation for the species absorbing it
+        return -ionisation_energy;
+    }
+
+private:
+    number ionisation_energy;
+}
+
+ExchangeChemistryCoupling createExchangeChemistryCoupling(lua_State *L, int mode, GasModel gmodel, int isp)
 {
     auto model = getString(L, -1, "model");
     switch (model) {
     case "ImpartialDissociation":
-        return new ImpartialDissociation(L);
+        return new ImpartialDissociation(L, mode);
+    case "ImpartialChemElectronElectronic":
+        return new ImpartialChemElectronElectronic(gmodel, isp, mode);
+    case "ElectronAtTranslationTemp":
+        return new ImpartialChemElectronElectronic(gmodel, isp, -1);
+    case "ElectronImpactIonisation":
+        return new ElectronImpactIonisation(L);
     default:
         string msg = format("The exchange chemistry coupling model: %s is not known.", model);
         throw new Error(msg);

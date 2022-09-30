@@ -367,6 +367,53 @@ function write2TAir(f, species, db, optsTable)
    end
 end
 
+function writeCollisionIntegrals(f, species, db, optsTable)
+   cidb = optsTable.ci_database or "gupta"
+   fname = CIDBFileName[cidb]
+   if not fname then
+      print("Collision integral database is not available: ", cidb)
+      print("Bailing out!")
+      os.exit(1)
+   end
+   DGD = os.getenv("DGD")
+   dir = DGD.."/data/"
+   dbName = dir..fname
+   dofile(dbName)
+   print("Collision integral database loaded from: ", dbName, "\n")
+
+   f:write("db.CIs = {}\n")
+   for isp,p in ipairs(species) do
+      for jsp=1,isp do
+         q = species[jsp]
+         key = p .. ":" .. q
+         ci = cis[key]
+         if not ci then
+            -- We'll try a reverse key
+            key = q .. ":" .. p
+            ci = cis[key]
+            if not ci then
+               print(string.format("Collision integral data for colliding pair --  %s:%s -- could not be found in database.", p, q))
+               if optsTable.CI_default then
+                  ci = cis[optsTable.CI_default]
+                  print(string.format("Substituting with default: %s.\n", optsTable.CI_default))
+               else
+                  print("No default selection provided.\n")
+                  print("Bailing out!")
+                  os.exit(1)
+               end
+            end
+         end
+         f:write(string.format("db.CIs['%s'] = {\n", key))
+         piList = {"pi_Omega_11", "pi_Omega_22"}
+         for _,key in ipairs(piList) do
+            f:write(string.format("   %s = {A= % 6.4f, B= % 6.4f, C= % 6.4f, D= % 6.4f},\n",
+                                  key, ci[key].A, ci[key].B, ci[key].C, ci[key].D))
+         end
+         f:write("}\n")
+      end
+   end
+end
+
 function write2TN2(f, species, db, optsTable)
    -- species for this model are N2 and N in fixed order.
    speciesList = {'N2', 'N'}
@@ -446,51 +493,88 @@ function write2TGas(f, species, db, optsTable)
       f:write(string.format("db['%s'].Lewis = %.8f\n", sp, Lewis))
       writeCeaThermoCoeffs(f, sp, db, optsTable)
    end
-   -- Now a section for collision integrals.
-   cidb = optsTable.ci_database or "gupta"
-   fname = CIDBFileName[cidb]
-   if not fname then
-      print("Collision integral database is not available: ", cidb)
-      print("Bailing out!")
-      os.exit(1)
+   writeCollisionIntegrals(f, species, db, optsTable)
+end
+
+
+function write3TGas(f, species, db, optsTable)
+    f:write("species = {")
+   for _,sp in ipairs(species) do
+      f:write(string.format("'%s', ", sp))
    end
-   DGD = os.getenv("DGD")
-   dir = DGD.."/data/"
-   dbName = dir..fname
-   dofile(dbName)
-   print("Collision integral database loaded from: ", dbName, "\n")
-   
-   f:write("db.CIs = {}\n")
-   for isp,p in ipairs(species) do
-      for jsp=1,isp do
-         q = species[jsp]
-         key = p .. ":" .. q
-         ci = cis[key]
-         if not ci then
-            -- We'll try a reverse key
-            key = q .. ":" .. p
-            ci = cis[key]
-            if not ci then
-               print(string.format("Collision integral data for colliding pair --  %s:%s -- could not be found in database.", p, q))
-               if optsTable.CI_default then
-                  ci = cis[optsTable.CI_default]
-                  print(string.format("Substituting with default: %s.\n", optsTable.CI_default))
-               else
-                  print("No default selection provided.\n")
-                  print("Bailing out!")
-                  os.exit(1)
-               end
-            end
-         end
-         f:write(string.format("db.CIs['%s'] = {\n", key))
-         piList = {"pi_Omega_11", "pi_Omega_22"}
-         for _,key in ipairs(piList) do
-            f:write(string.format("   %s = {A= % 6.4f, B= % 6.4f, C= % 6.4f, D= % 6.4f},\n",
-                                  key, ci[key].A, ci[key].B, ci[key].C, ci[key].D))
-         end
+   f:write("}\n\n")
+   f:write("physical_model = 'three-temperature-gas'\n")
+   f:write("db = {}\n")
+   for _,sp in ipairs(species) do
+      f:write(string.format("db['%s'] = {}\n", sp))
+      f:write(string.format("db['%s'].type = '%s'\n", sp, db[sp].type))
+      if db[sp].type == "molecule" then
+         f:write(string.format("db['%s'].molecule_type = '%s'\n", sp, db[sp].molecule_type))
+         f:write(string.format("db['%s'].vib_data = {\n", sp))
+         f:write("  model = 'harmonic',\n")
+         f:write(string.format("  theta_v = %.3f\n", db[sp].theta_v.value))
          f:write("}\n")
       end
+      if db[sp].type ~= "electron" then
+         f:write(string.format("db['%s'].electronic_levels = {\n", sp))
+         f:write("  model = 'multi-level',\n")
+         f:write("  g  = {")
+         for _,g in pairs(db[sp].electronic_levels.g.value) do
+            f:write(string.format("%d, ", g))
+         end
+         f:write("},\n")
+         f:write("  Te = {")
+         for _,Te in pairs(db[sp].electronic_levels.Te.value) do
+            f:write(string.format("%.3f, ", Te))
+         end
+         f:write("},\n")
+         f:write("}\n")
+      end
+      f:write(string.format("db['%s'].atomicConstituents = { ", sp))
+      for k,v in pairs(db[sp].atomicConstituents) do
+         f:write(string.format("%s=%d, ", k, v))
+      end
+      f:write("}\n")
+      f:write(string.format("db['%s'].charge = %d\n", sp, db[sp].charge))
+      f:write(string.format("db['%s'].M = %.8e\n", sp, db[sp].M.value))
+      if db[sp].Hf then
+         f:write(string.format("db['%s'].Hf = %.8e\n", sp, db[sp].Hf.value))
+      end
+      if db[sp].ionisation_energy then
+         f:write(string.format("db['%s'].ionisation_energy = %.8e\n", sp, db[sp].ionisation_energy.value))
+      end
+      diffusion_info_missing = false
+      if db[sp].sigma then
+         sigma = db[sp].sigma.value
+      else
+         diffusion_info_missing = true
+         sigma = db.default.sigma.value
+      end
+      f:write(string.format("db['%s'].sigma = %.8f\n", sp, sigma))
+      if db[sp].epsilon then
+         epsilon = db[sp].epsilon.value
+      else
+          diffusion_info_missing = true
+         epsilon = db.default.epsilon.value
+      end
+      f:write(string.format("db['%s'].epsilon = %.8f\n", sp, epsilon))
+      -- Ionised species have a different potentials to LJ, so we don't mind them being missing (NNG)
+      if ((db[sp].charge == 0) and diffusion_info_missing) then
+          print("------------------------------------------------------------------------------------------")
+          print("WARNING: Lennard-Jones potential data could not be found for species: ", sp)
+          print("WARNING: As a substitute the values from 'defaults.lua' will be used.")
+          print("WARNING: This may affect a multi-species calculation with mass diffusion.")
+          print("------------------------------------------------------------------------------------------")
+      end
+
+      Lewis = db.default.Lewis.value
+      if db[sp].Lewis then
+         Lewis = db[sp].Lewis.value
+      end
+      f:write(string.format("db['%s'].Lewis = %.8f\n", sp, Lewis))
+      writeCeaThermoCoeffs(f, sp, db, optsTable)
    end
+   writeCollisionIntegrals(f, species, db, optsTable)
 end
 
 gasModels = {}
@@ -513,6 +597,10 @@ gasModels["TWO-TEMPERATURE DISSOCIATING NITROGEN"] = gasModels["TWOTEMPERATUREN2
 gasModels["TWOTEMPERATUREGAS"] = {writeFn=write2TGas, DName="CompositeGas"}
 gasModels["TWO TEMPERATURE GAS"] = gasModels["TWOTEMPERATUREGAS"]
 gasModels["TWO-TEMPERATURE GAS"] = gasModels["TWOTEMPERATUREGAS"]
+-- Three-temperature gas
+gasModels["THREETEMPERATUREGAS"] = {writeFn=write3TGas, DName="CompositeGas"}
+gasModels["THREE TEMPERATURE GAS"] = gasModels["THREETEMPERATUREGAS"]
+gasModels["THREE-TEMPERATURE GAS"] = gasModels["THREETEMPERATUREGAS"]
 
 function printHelp()
    print("prep-gas --- Prepares a gas model input file for Eilmer4.")

@@ -20,6 +20,7 @@ import std.string;
 import std.math;
 import std.conv;
 import std.stdio;
+import std.algorithm;
 
 import nm.complex;
 import nm.number;
@@ -211,6 +212,55 @@ protected:
     }
 }
 
+class CandlerEV : RelaxationTime {
+    // Free electron/vibration relaxation times. This uses the curve fit form given by Candler
+    // (Eq. 2.7.14 of his thesis) for N2.
+
+    this(double a_low, double b_low, double c_low, double a_high, double b_high, double c_high)
+    {
+        m_a_low = a_low; m_b_low = b_low; m_c_low = c_low;
+        m_a_high = a_high; m_b_high = b_high; m_c_high = c_high;
+    }
+
+    this(lua_State *L)
+    {
+        m_a_low = getDouble(L, -1, "a_low");
+        m_b_low = getDouble(L, -1, "b_low");
+        m_c_low = getDouble(L, -1, "c_low");
+        m_a_high = getDouble(L, -1, "a_high");
+        m_b_high = getDouble(L, -1, "b_high");
+        m_c_high = getDouble(L, -1, "c_high");
+    }
+
+    CandlerEV dup()
+    {
+        return new CandlerEV(m_a_low, m_b_low, m_c_low, m_a_high, m_b_high, m_c_high);
+    }
+
+
+    @nogc
+    number eval(in GasState gs, number[] molef, number[] numden)
+    {
+        // assume free electron temperature is within the last temperature
+        number Te = gs.T_modes[$-1];
+        number log_Te = log10(Te);
+        // limit p_e to small number, to avoid divide by zero error later on
+        number p_e = max(gs.p_e, to!number(1e-14));
+        number log_pe_tau;
+        if (Te <= 7000) {
+            log_pe_tau = m_a_low * log_Te * log_Te + m_b_low * log_Te + m_c_low;
+        }
+        else {
+            log_pe_tau = m_a_high * log_Te * log_Te + m_b_high * log_Te + m_c_high;
+        }
+        // Divide by electron pressure converted to atmospheres
+        return exp(log_pe_tau)/p_e/101325.0;
+    }
+
+private:
+    double m_a_low, m_b_low, m_c_low, m_a_high, m_b_high, m_c_high;
+}
+
 
 RelaxationTime createRelaxationTime(lua_State *L, int p, int q, GasModel gmodel)
 {
@@ -224,6 +274,8 @@ RelaxationTime createRelaxationTime(lua_State *L, int p, int q, GasModel gmodel)
 	return new ParkHTC2VT(L, p, q, gmodel);
     case "KimHTC":
 	return new KimHTCVT(L, p, q, gmodel);
+    case "Candler":
+    return new CandlerEV(L);
     default:
 	string msg = format("The relaxation time model: %s is not known.", model);
 	throw new Error(msg);

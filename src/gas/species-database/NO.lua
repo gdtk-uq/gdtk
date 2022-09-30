@@ -7,6 +7,23 @@ db.NO.theta_v = {
    description = 'characteristic vibrational temperature',
    reference = 'Capitelli et al (2005), Table 19. omega_e in ground state converted to K'
 }
+db.NO.electronic_levels = {
+  Te = {
+    --value = {60.55, 38440.00, 43965.7, 45932.3, 48680.0, 52175.7},
+    value = {0.0, 38440.00, 43965.7, 45932.3, 48680.0, 52175.7},
+    --value = {0.0, 120.94, 38807, 43966, 45932,47950,52186,53085,53637},
+    units = 'cm^(-1)',
+    description = 'Electronic energies',
+    reference = 'NIST'
+  },
+  g = {
+    value = {4, 8, 2, 4, 4, 4},
+    --value={2,2,8,2,4,4,4,2,4},
+    units = 'NA',
+    description = 'Degeneracy of electronic energy levels',
+    reference = 'NIST',
+  }
+}
 db.NO.atomicConstituents = {O=1,N=1,}
 db.NO.charge = 0
 db.NO.M = {

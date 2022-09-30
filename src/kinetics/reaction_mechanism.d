@@ -92,14 +92,19 @@ public:
     }
 
     @nogc
-    final number k_f(int ir)
+    final number k_f(int ir) const
     {
         return _reactions[ir].k_f;
     }
     @nogc
-    final number k_b(int ir)
+    final number k_b(int ir) const
     {
         return _reactions[ir].k_b;
+    }
+    @nogc
+    final number K_eq(int ir) const
+    {
+        return _reactions[ir].K_eq;
     }
     @nogc
     final number rate(int ir, int isp)

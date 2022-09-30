@@ -24,6 +24,7 @@ import gas.physical_constants;
 import gas.thermo.thermo_model;
 import gas.thermo.therm_perf_gas_mix;
 import gas.thermo.two_temperature_gas;
+import gas.thermo.three_temperature_gas;
 import gas.diffusion.transport_properties_model;
 import gas.diffusion.gas_mixtures;
 import gas.diffusion.two_temperature_trans_props;
@@ -68,6 +69,11 @@ public:
         case "two-temperature-gas":
             _n_modes = 1;
             mThermo = new TwoTemperatureGasMixture(L, _species_names);
+            mTransProps = new TwoTemperatureTransProps(L, _species_names, this);
+            break;
+        case "three-temperature-gas":
+            _n_modes = 2;
+            mThermo = new ThreeTemperatureGasMixture(L, _species_names);
             mTransProps = new TwoTemperatureTransProps(L, _species_names, this);
             break;
         default:

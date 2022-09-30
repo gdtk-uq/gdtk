@@ -21,6 +21,20 @@ db['O2+'].gamma = {
    description = '(ideal) ratio of specific heats at room temperature',
    reference = 'diatomic molecule at low temperatures, gamma = 7/5'
 }
+db['O2+'].electronic_levels = {
+  Te = {
+    value = {0.0, 32964.00, 40669.00, 49552.00},
+    units = 'cm^(-1)',
+    description = 'Electronic energy levels',
+    reference = 'NIST'
+  },
+  g = {
+    value = {4, 8, 4, 4},
+    units = 'NA',
+    description = 'Degeneracy of electronic energy levels',
+    reference = 'NIST'
+  }
+}
 db['O2+'].ceaThermoCoeffs = {
    nsegments = 3,
    T_break_points = {298.15, 1000.0, 6000.0, 20000.0},

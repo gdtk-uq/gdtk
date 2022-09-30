@@ -14,6 +14,20 @@ db['O+'].gamma = {
    description = '(ideal) ratio of specific heats at room temperature',
    reference = 'monatomic gas'
 }
+db['O+'].electronic_levels = {
+  Te = {
+    value = {0.0, 91.25, 61871.81, 61903.47, 61944.19, 107807.11},
+    units = 'cm^(-1)',
+    description = 'Electronic energy levels',
+    reference = 'NIST'
+  },
+  g = {
+    value = {2, 4, 2, 4, 6, 6,},
+    units = 'NA',
+    description = 'Degeneracy of electronic energy levels',
+    reference = 'NIST'
+  }
+}
 db['O+'].ceaThermoCoeffs = {
    nsegments = 4,
    T_break_points = {298.15, 1000.0, 6000.0, 20000.0, 50000.0},
