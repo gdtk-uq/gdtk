@@ -60,6 +60,9 @@ void initialize_simulation(int tindx_start)
                     fileName = Config::job + string(nameBuf);
                     blkptr->readFlow(fileName);
                     cout << "Sample cell data: " << blkptr->cells[blkptr->activeCellIndex(0,0,0)].toString() << endl;
+                    cout << "Sample iFace data: " << blkptr->iFaces[blkptr->iFaceIndex(0,0,0)].toString() << endl;
+                    cout << "Sample jFace data: " << blkptr->jFaces[blkptr->jFaceIndex(0,0,0)].toString() << endl;
+                    cout << "Sample kFace data: " << blkptr->kFaces[blkptr->kFaceIndex(0,0,0)].toString() << endl;
                     fluidBlocks.push_back(blkptr);
                     if (blk_id+1 != fluidBlocks.size()) {
                         throw new runtime_error("Inconsistent blk_id and fluidBlocks array.");

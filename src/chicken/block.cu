@@ -85,24 +85,28 @@ struct Block {
     int ghostCellIndex(int faceIndx, int i0, int i1, int depth)
     {
         int cellIndxOnFace = 0;
+        int nCellsOnFace = 0;
         switch (faceIndx) {
         case Face::iminus:
         case Face::iplus:
-            // jk face
+            // jk face with i0==j,i1==k
             cellIndxOnFace = i1*njc + i0;
+            nCellsOnFace = njc*nkc;
             break;
         case Face::jminus:
         case Face::jplus:
-            // ik face
-            cellIndxOnFace = i1*njc + i0;
+            // ik face with i0==i,i1==k
+            cellIndxOnFace = i1*nic + i0;
+            nCellsOnFace = nic*nkc;
             break;
         case Face::kminus:
         case Face::kplus:
-            // ik face
-            cellIndxOnFace = i1*njc + i0;
+            // ij face with i0==i,i1==j
+            cellIndxOnFace = i1*nic + i0;
+            nCellsOnFace = nic*njc;
             break;
         }
-        return firstGhostCells[faceIndx] + cellIndxOnFace;
+        return firstGhostCells[faceIndx] + nCellsOnFace*depth + cellIndxOnFace;
     }
 
     __host__ __device__
@@ -226,22 +230,84 @@ struct Block {
         }
         // jFaces
         for (int k=0; k < nkc; k++) {
-            for (int j=0; j < njc+1; j++) {
-                for (int i=0; i < nic; i++) {
-                    // [TODO]
+            for (int i=0; i < nic; i++) {
+                for (int j=0; j < njc+1; j++) {
+                    FVFace& f = jFaces[jFaceIndex(i,j,k)];
+                    f.vtx[0] = vtxIndex(i,j,k);
+                    f.vtx[1] = vtxIndex(i+1,j,k);
+                    f.vtx[2] = vtxIndex(i+1,j,k+1);
+                    f.vtx[3] = vtxIndex(i,j,k+1);
+                    if (j == 0) {
+                        f.left_cells[0] = ghostCellIndex(Face::jminus,i,k,1);
+                        f.left_cells[1] = ghostCellIndex(Face::jminus,i,k,0);
+                        f.right_cells[0] = activeCellIndex(i,j+1,k);
+                        f.right_cells[1] = activeCellIndex(i,j+2,k);
+                    } else if (j == 1) {
+                        f.left_cells[0] = ghostCellIndex(Face::jminus,i,k,0);
+                        f.left_cells[1] = activeCellIndex(i,j-1,k);
+                        f.right_cells[0] = activeCellIndex(i,j+1,k);
+                        f.right_cells[1] = activeCellIndex(i,j+2,k);
+                    } else if (j == njc-1) {
+                        f.left_cells[0] = activeCellIndex(i,j,k);
+                        f.left_cells[1] = activeCellIndex(i,j-1,k);
+                        f.right_cells[0] = activeCellIndex(i,j+1,k);
+                        f.right_cells[1] = ghostCellIndex(Face::jplus,i,k,0);
+                    } else if (j == njc) {
+                        f.left_cells[0] = activeCellIndex(i,j,k);
+                        f.left_cells[1] = activeCellIndex(i,j-1,k);
+                        f.right_cells[0] = ghostCellIndex(Face::jplus,i,k,0);
+                        f.right_cells[1] = ghostCellIndex(Face::jplus,i,k,1);
+                    } else {
+                        // Interior cell.
+                        f.left_cells[0] = activeCellIndex(i,j,k);
+                        f.left_cells[1] = activeCellIndex(i,j-1,k);
+                        f.right_cells[0] = activeCellIndex(i,j+1,k);
+                        f.right_cells[1] = activeCellIndex(i,j+2,k);
+                    }
                 }
             }
         }
         // kFaces
-        for (int k=0; k < nkc+1; k++) {
-            for (int j=0; j < njc; j++) {
-                for (int i=0; i < nic; i++) {
-                    // [TODO]
+        for (int j=0; j < njc; j++) {
+            for (int i=0; i < nic; i++) {
+                for (int k=0; k < nkc+1; k++) {
+                    FVFace& f = kFaces[kFaceIndex(i,j,k)];
+                    f.vtx[0] = vtxIndex(i,j,k);
+                    f.vtx[1] = vtxIndex(i+1,j,k);
+                    f.vtx[2] = vtxIndex(i+1,j+1,k);
+                    f.vtx[3] = vtxIndex(i,j+1,k);
+                    if (k == 0) {
+                        f.left_cells[0] = ghostCellIndex(Face::kminus,i,j,1);
+                        f.left_cells[1] = ghostCellIndex(Face::kminus,i,j,0);
+                        f.right_cells[0] = activeCellIndex(i,j,k+1);
+                        f.right_cells[1] = activeCellIndex(i,j,k+2);
+                    } else if (k == 1) {
+                        f.left_cells[0] = ghostCellIndex(Face::kminus,i,j,0);
+                        f.left_cells[1] = activeCellIndex(i,j,k-1);
+                        f.right_cells[0] = activeCellIndex(i,j,k+1);
+                        f.right_cells[1] = activeCellIndex(i,j,k+2);
+                    } else if (k == nkc-1) {
+                        f.left_cells[0] = activeCellIndex(i,j,k);
+                        f.left_cells[1] = activeCellIndex(i,j,k-1);
+                        f.right_cells[0] = activeCellIndex(i,j,k+1);
+                        f.right_cells[1] = ghostCellIndex(Face::kplus,i,j,0);
+                    } else if (k == nkc) {
+                        f.left_cells[0] = activeCellIndex(i,j,k);
+                        f.left_cells[1] = activeCellIndex(i,j,k-1);
+                        f.right_cells[0] = ghostCellIndex(Face::kplus,i,j,0);
+                        f.right_cells[1] = ghostCellIndex(Face::kplus,i,j,1);
+                    } else {
+                        // Interior cell.
+                        f.left_cells[0] = activeCellIndex(i,j,k);
+                        f.left_cells[1] = activeCellIndex(i,j,k-1);
+                        f.right_cells[0] = activeCellIndex(i,j,k+1);
+                        f.right_cells[1] = activeCellIndex(i,j,k+2);
+                    }
                 }
             }
         }
         return;
-    }
+    } // end configure()
 
     __host__
     void readGrid(string fileName, bool vtkHeader=false)
