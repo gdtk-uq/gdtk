@@ -39,9 +39,14 @@ vector<Block*> fluidBlocks;
 
 void do_something(); // left over from the CUDA workshop experiment
 
+__host__
 void initialize_simulation(int tindx_start)
 {
     char nameBuf[256];
+    filesystem::path pth{Config::job};
+    if (!filesystem::exists(pth) || !filesystem::is_directory(pth)) {
+        throw runtime_error("Job directory is not present in current directory.");
+    }
     read_config_file(Config::job + "/config.json");
     // Read initial grids and flow data
     for (int k=0; k < Config::nkb; ++k) {
@@ -60,13 +65,14 @@ void initialize_simulation(int tindx_start)
                     fileName = Config::job + string(nameBuf);
                     blkptr->readFlow(fileName);
                     blkptr->computeGeometry();
+                    blkptr->encodeConserved(0);
                     cout << "Sample cell data: " << blkptr->cells[blkptr->activeCellIndex(0,0,0)].toString() << endl;
                     cout << "Sample iFace data: " << blkptr->iFaces[blkptr->iFaceIndex(0,0,0)].toString() << endl;
                     cout << "Sample jFace data: " << blkptr->jFaces[blkptr->jFaceIndex(0,0,0)].toString() << endl;
                     cout << "Sample kFace data: " << blkptr->kFaces[blkptr->kFaceIndex(0,0,0)].toString() << endl;
                     fluidBlocks.push_back(blkptr);
                     if (blk_id+1 != fluidBlocks.size()) {
-                        throw new runtime_error("Inconsistent blk_id and fluidBlocks array.");
+                        throw runtime_error("Inconsistent blk_id and fluidBlocks array.");
                     }
                 }
             }
@@ -76,6 +82,7 @@ void initialize_simulation(int tindx_start)
     return;
 } // initialize_simulation()
 
+__host__
 void write_flow_data(int tindx)
 {
     char nameBuf[256];
@@ -99,11 +106,16 @@ void write_flow_data(int tindx)
     return;
 } // end write_flow_data()
 
+__host__
 void march_in_time()
 {
+    for (auto* blkptr : fluidBlocks) {
+        int bad_cell = blkptr->decodeConserved(0);
+    }
     return;
 }
 
+__host__
 void finalize_simulation()
 {
     // Exercise the writing of flow data, even we have done no calculations.

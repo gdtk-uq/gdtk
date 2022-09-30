@@ -498,7 +498,7 @@ struct Block {
     {
         auto f = bxz::ifstream(fileName); // gzip file
         if (!f) {
-            throw new runtime_error("Did not open grid file successfully: "+fileName);
+            throw runtime_error("Did not open grid file successfully: "+fileName);
         }
         constexpr int maxc = 256;
         char line[maxc];
@@ -522,9 +522,8 @@ struct Block {
             sscanf(line, "nkv: %d", &nkv);
         }
         if ((nic != niv-1) || (njc != njv-1) || (nkc != nkv-1)) {
-            throw new runtime_error("Unexpected grid size: niv="+to_string(niv)+
-                                    " njv="+to_string(njv)+
-                                    " nkv="+to_string(nkv));
+            throw runtime_error("Unexpected grid size: niv="+to_string(niv)+
+                                " njv="+to_string(njv)+ " nkv="+to_string(nkv));
         }
         vertices.resize(niv*njv*nkv);
         //
@@ -634,6 +633,30 @@ struct Block {
         }
         return;
     } // end writeFlow()
+
+    __host__
+    void encodeConserved(int level)
+    {
+        for (auto i=0; i < nActiveCells; i++) {
+            FVCell& c = cells[i];
+            ConservedQuantities& U = Q[level*nActiveCells + i];
+            c.encode_conserved(U);
+        }
+        return;
+    }
+
+    __host__
+    int decodeConserved(int level)
+    {
+        int bad_cell = 0;
+        for (auto i=0; i < nActiveCells; i++) {
+            FVCell& c = cells[i];
+            ConservedQuantities U = Q[level*nActiveCells + i];
+            int flag = c.decode_conserved(U);
+            if (flag) { bad_cell = -i; }
+        }
+        return bad_cell;
+    }
 
 }; // end Block
 

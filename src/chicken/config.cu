@@ -10,6 +10,7 @@
 #include <string>
 #include <sstream>
 #include <map>
+#include <stdexcept>
 #include "include/nlohmann/json.hpp"
 
 #include "number.cu"
@@ -67,7 +68,7 @@ void read_config_file(string fileName)
         f.close();
         delete[] text;
     } else {
-        throw new runtime_error("Could not open ifstream for config.json.");
+        throw runtime_error("Could not open ifstream for config.json.");
     }
     Config::title = jsonData["title"].get<string>();
     cout << "  title: " << Config::title << endl;
@@ -81,7 +82,7 @@ void read_config_file(string fileName)
              << " R:" << gas_model_data["R"]
              << " Cv:" << gas_model_data["Cv"]
              << endl;
-        throw new runtime_error("Incorrect gas model data");
+        throw runtime_error("Incorrect gas model data");
     }
     //
     // Check that we have consistent names in the flow zip archives.

@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <string>
+#include <stdexcept>
 
 #include "include/argagg/argagg.hpp"
 #include "config.cu"
@@ -52,9 +53,12 @@ int main(int argc, char* argv[])
     int tindx_start = 0;
     if (args["tindx"]) { tindx_start = args["tindx"].as<int>(0); }
     cout << "tindx_start: " << tindx_start << endl;
-    initialize_simulation(tindx_start);
-    march_in_time();
-    finalize_simulation();
-    //
+    try {
+        initialize_simulation(tindx_start);
+        march_in_time();
+        finalize_simulation();
+    } catch (const runtime_error& e) {
+        cerr << e.what() << endl;
+    }
     return 0;
 }
