@@ -38,6 +38,12 @@ struct Vector3 {
     }
 
     __host__ __device__
+    void sub(const Vector3& other)
+    {
+        x -= other.x; y -= other.y; z -= other.z;
+    }
+
+    __host__ __device__
     void mul(number scalar)
     {
         x *= scalar; y *= scalar; z *= scalar;

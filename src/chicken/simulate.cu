@@ -59,6 +59,7 @@ void initialize_simulation(int tindx_start)
                     sprintf(nameBuf, "/flow/t%04d/flow-%04d-%04d-%04d.zip", tindx_start, i, j, k);
                     fileName = Config::job + string(nameBuf);
                     blkptr->readFlow(fileName);
+                    blkptr->computeGeometry();
                     cout << "Sample cell data: " << blkptr->cells[blkptr->activeCellIndex(0,0,0)].toString() << endl;
                     cout << "Sample iFace data: " << blkptr->iFaces[blkptr->iFaceIndex(0,0,0)].toString() << endl;
                     cout << "Sample jFace data: " << blkptr->jFaces[blkptr->jFaceIndex(0,0,0)].toString() << endl;

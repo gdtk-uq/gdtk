@@ -72,8 +72,11 @@ struct FVCell {
     number volume;
     number iLength, jLength, kLength; // These lengths are used in the interpolation fns.
     FlowState fs;
-    // We will keep connections to the pieces compising the cell
-    // as indices into global arrays.
+    // We will keep connections to the pieces compising the cell as indices
+    // into the block's arrays.
+    // Although we probably don't need build and keep this data for the structured grid,
+    // it simplifies some of the geometry and update code and may ease the use of
+    // unstructured grids at a later date.
     array<int,8> vtx{0, 0, 0, 0, 0, 0, 0, 0};
     array<int,6> face{0, 0, 0, 0, 0, 0};
 
@@ -129,8 +132,7 @@ struct FVCell {
         // So we never return from here.
     }
 
-    // [TODO] PJ 2022-09-11 construct cell details from the connected faces and vertices.
-    // Cell update and IO methods, etc.
+    // [TODO] PJ 2022-09-30 Cell conserved-quantity encode, decode and update methods, etc.
 
 }; // end Cell
 

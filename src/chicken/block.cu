@@ -310,6 +310,188 @@ struct Block {
     } // end configure()
 
     __host__
+    void computeGeometry()
+    // Compute cell and face geometric data.
+    // Do this after reading the grid and flow files because we need the vertex locations
+    // and because cell positions and volumes are part of the flow data.
+    // This function will overwrite them with (potentially) better values.
+    {
+        for (int k=0; k < nkc; k++) {
+            for (int j=0; j < njc; j++) {
+                for (int i=0; i < nic; i++) {
+                    FVCell& c = cells[activeCellIndex(i,j,k)];
+                    hex_cell_properties(vertices[c.vtx[0]], vertices[c.vtx[1]],
+                                        vertices[c.vtx[2]], vertices[c.vtx[3]],
+                                        vertices[c.vtx[4]], vertices[c.vtx[5]],
+                                        vertices[c.vtx[6]], vertices[c.vtx[7]],
+                                        false, c.pos, c.volume, c.iLength, c.jLength, c.kLength);
+                }
+            }
+        }
+        // iFaces
+        for (int k=0; k < nkc; k++) {
+            for (int j=0; j < njc; j++) {
+                for (int i=0; i < nic+1; i++) {
+                    FVFace& f = iFaces[iFaceIndex(i,j,k)];
+                    quad_properties(vertices[f.vtx[0]], vertices[f.vtx[1]],
+                                    vertices[f.vtx[2]], vertices[f.vtx[3]],
+                                    f.pos, f.n, f.t1, f.t2, f.area);
+                }
+            }
+        }
+        // jFaces
+        for (int k=0; k < nkc; k++) {
+            for (int i=0; i < nic; i++) {
+                for (int j=0; j < njc+1; j++) {
+                    FVFace& f = jFaces[jFaceIndex(i,j,k)];
+                    quad_properties(vertices[f.vtx[0]], vertices[f.vtx[1]],
+                                    vertices[f.vtx[2]], vertices[f.vtx[3]],
+                                    f.pos, f.n, f.t1, f.t2, f.area);
+                }
+            }
+        }
+        // kFaces
+        for (int j=0; j < njc; j++) {
+            for (int i=0; i < nic; i++) {
+                for (int k=0; k < nkc+1; k++) {
+                    FVFace& f = kFaces[kFaceIndex(i,j,k)];
+                    quad_properties(vertices[f.vtx[0]], vertices[f.vtx[1]],
+                                    vertices[f.vtx[2]], vertices[f.vtx[3]],
+                                    f.pos, f.n, f.t1, f.t2, f.area);
+                }
+            }
+        }
+        //
+        // Work around the boundaries and extrapolate cell positions and lengths
+        // into the ghost cells.  We need this data for high-order reconstruction
+        // for the inviscid fluxes and for computation of the flow-property gradients
+        // for the viscous fluxes.
+        //
+        // Face::iminus
+        for (int k=0; k < nkc; k++) {
+            for (int j=0; j < njc; j++) {
+                FVFace& f = iFaces[iFaceIndex(0,j,k)];
+                FVCell& c0 = cells[f.right_cells[0]];
+                FVCell& g0 = cells[f.left_cells[0]];
+                g0.iLength = c0.iLength;
+                g0.jLength = c0.jLength;
+                g0.kLength = c0.kLength;
+                Vector3 d = f.pos; d.sub(c0.pos);
+                g0.pos = f.pos; g0.pos.add(d);
+                //
+                FVCell& g1 = cells[f.left_cells[1]];
+                g1.iLength = c0.iLength;
+                g1.jLength = c0.jLength;
+                g1.kLength = c0.kLength;
+                d.mul(3.0);
+                g1.pos = f.pos; g1.pos.add(d);
+            }
+        }
+        // Face::iplus
+        for (int k=0; k < nkc; k++) {
+            for (int j=0; j < njc; j++) {
+                FVFace& f = iFaces[iFaceIndex(nic,j,k)];
+                FVCell& c0 = cells[f.left_cells[0]];
+                FVCell& g0 = cells[f.right_cells[0]];
+                g0.iLength = c0.iLength;
+                g0.jLength = c0.jLength;
+                g0.kLength = c0.kLength;
+                Vector3 d = f.pos; d.sub(c0.pos);
+                g0.pos = f.pos; g0.pos.add(d);
+                //
+                FVCell& g1 = cells[f.right_cells[1]];
+                g1.iLength = c0.iLength;
+                g1.jLength = c0.jLength;
+                g1.kLength = c0.kLength;
+                d.mul(3.0);
+                g1.pos = f.pos; g1.pos.add(d);
+            }
+        }
+        // Face::jminus
+        for (int k=0; k < nkc; k++) {
+            for (int i=0; i < nic; i++) {
+                FVFace& f = jFaces[jFaceIndex(i,0,k)];
+                FVCell& c0 = cells[f.right_cells[0]];
+                FVCell& g0 = cells[f.left_cells[0]];
+                g0.iLength = c0.iLength;
+                g0.jLength = c0.jLength;
+                g0.kLength = c0.kLength;
+                Vector3 d = f.pos; d.sub(c0.pos);
+                g0.pos = f.pos; g0.pos.add(d);
+                //
+                FVCell& g1 = cells[f.left_cells[1]];
+                g1.iLength = c0.iLength;
+                g1.jLength = c0.jLength;
+                g1.kLength = c0.kLength;
+                d.mul(3.0);
+                g1.pos = f.pos; g1.pos.add(d);
+            }
+        }
+        // Face::jplus
+        for (int k=0; k < nkc; k++) {
+            for (int i=0; i < nic; i++) {
+                FVFace& f = jFaces[jFaceIndex(i,njc,k)];
+                FVCell& c0 = cells[f.left_cells[0]];
+                FVCell& g0 = cells[f.right_cells[0]];
+                g0.iLength = c0.iLength;
+                g0.jLength = c0.jLength;
+                g0.kLength = c0.kLength;
+                Vector3 d = f.pos; d.sub(c0.pos);
+                g0.pos = f.pos; g0.pos.add(d);
+                //
+                FVCell& g1 = cells[f.right_cells[1]];
+                g1.iLength = c0.iLength;
+                g1.jLength = c0.jLength;
+                g1.kLength = c0.kLength;
+                d.mul(3.0);
+                g1.pos = f.pos; g1.pos.add(d);
+            }
+        }
+        // Face::kminus
+        for (int j=0; j < njc; j++) {
+            for (int i=0; i < nic; i++) {
+                FVFace& f = kFaces[kFaceIndex(i,j,0)];
+                FVCell& c0 = cells[f.right_cells[0]];
+                FVCell& g0 = cells[f.left_cells[0]];
+                g0.iLength = c0.iLength;
+                g0.jLength = c0.jLength;
+                g0.kLength = c0.kLength;
+                Vector3 d = f.pos; d.sub(c0.pos);
+                g0.pos = f.pos; g0.pos.add(d);
+                //
+                FVCell& g1 = cells[f.left_cells[1]];
+                g1.iLength = c0.iLength;
+                g1.jLength = c0.jLength;
+                g1.kLength = c0.kLength;
+                d.mul(3.0);
+                g1.pos = f.pos; g1.pos.add(d);
+            }
+        }
+        // Face::kplus
+        for (int j=0; j < njc; j++) {
+            for (int i=0; i < nic; i++) {
+                FVFace& f = kFaces[kFaceIndex(i,j,nkc)];
+                FVCell& c0 = cells[f.left_cells[0]];
+                FVCell& g0 = cells[f.right_cells[0]];
+                g0.iLength = c0.iLength;
+                g0.jLength = c0.jLength;
+                g0.kLength = c0.kLength;
+                Vector3 d = f.pos; d.sub(c0.pos);
+                g0.pos = f.pos; g0.pos.add(d);
+                //
+                FVCell& g1 = cells[f.right_cells[1]];
+                g1.iLength = c0.iLength;
+                g1.jLength = c0.jLength;
+                g1.kLength = c0.kLength;
+                d.mul(3.0);
+                g1.pos = f.pos; g1.pos.add(d);
+            }
+        }
+        //
+        return;
+    } // end computeGeometry()
+
+    __host__
     void readGrid(string fileName, bool vtkHeader=false)
     // Reads the vertex locations from a compressed file, resizing storage as needed.
     // The numbers of cells are also checked.
