@@ -26,7 +26,7 @@ namespace Face {
     constexpr int kminus = 4;
     constexpr int kplus = 5;
 
-    vector<string> names {"iminus", "iplus", "jminus", "jplus", "kminus", "kplus"};
+    array<string,6> names {"iminus", "iplus", "jminus", "jplus", "kminus", "kplus"};
 };
 
 int Face_indx_from_name(string name)
@@ -74,8 +74,8 @@ struct FVCell {
     FlowState fs;
     // We will keep connections to the pieces compising the cell
     // as indices into global arrays.
-    vector<int> vtx{0, 0, 0, 0, 0, 0, 0, 0};
-    vector<int> face{0, 0, 0, 0, 0, 0};
+    array<int,8> vtx{0, 0, 0, 0, 0, 0, 0, 0};
+    array<int,6> face{0, 0, 0, 0, 0, 0};
 
     string toString() {
         ostringstream repr;

@@ -6,6 +6,7 @@
 #define FLOW_INCLUDED
 
 #include <string>
+#include <array>
 #include "number.cu"
 #include "vector3.cu"
 #include "gas.cu"
@@ -37,8 +38,9 @@ namespace CQI {
 };
 
 // We are going to store the vector of conserved quantities and its derivatives
-// in simple arrays and our time update with have a number of stages.
+// in a C++ arrays.
+typedef array<number,CQI::n> ConservedQuantities;
+// Time-update scheme will have a number of stages.
 constexpr size_t TLevels = 3;
-typedef number ConservedQuantities[TLevels][CQI::n];
 
 #endif

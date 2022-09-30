@@ -27,15 +27,15 @@ CUDA_SOURCE_FILES := main.cu config.cu simulate.cu block.cu cell.cu face.cu vert
 
 # Target for FP64 (double) numbers.
 chicken_for_cuda : $(CUDA_SOURCE_FILES)
-	nvcc -DCUDA -std c++17 -lineinfo -o chkn-run main.cu -lz -lzip
+	nvcc -DCUDA -std c++17 --expt-relaxed-constexpr -lineinfo -o chkn-run main.cu -lz -lzip
 
 # Target for FP32 (float) numbers.
 chicken_for_cuda_f : $(CUDA_SOURCE_FILES)
-	nvcc -DCUDA -DFLOAT_NUMBERS -std c++17 -lineinfo -o chkn-run main.cu -lz -lzip
+	nvcc -DCUDA -DFLOAT_NUMBERS -std c++17 --expt-relaxed-constexpr -lineinfo -o chkn-run main.cu -lz -lzip
 
 # Target for CPU-only flavour of the code with FP64 (double) numbers.
 chicken_for_cpu : $(CUDA_SOURCE_FILES)
-	nvcc -lineinfo -std c++17 -o chkn-run main.cu -lz -lzip
+	nvcc -lineinfo -std c++17 --expt-relaxed-constexpr -o chkn-run main.cu -lz -lzip
 
 # Note that profiling needs to be done via sudo
 # because we need access to the hardware counters.
