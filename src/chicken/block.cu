@@ -9,6 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <limits>
 #include "include/bxzstr/bxzstr.hpp"
 #include <zip.h>
 
@@ -696,27 +697,27 @@ struct Block {
     } // end eval_dUdt()
 
     __host__ __device__
-    number estimate_local_dt(FVCell& c, number cfl)
+    number estimate_local_dt(FVCell& c, Vector3 inorm, Vector3 jnorm, Vector3 knorm, number cfl)
     {
         // We assume that the cells are (roughly) hexagonal and work with
         // velocities normal to the faces.
         FlowState& fs = c.fs;
-        FVFace& fim = iFaces[c.face[Face::iminus]];
-        FVFace& fjm = jFaces[c.face[Face::jminus]];
-        FVFace& fkm = kFaces[c.face[Face::kminus]];
-        number isignal = c.iLength/(fabs(fs.vel.dot(fim.n))+fs.gas.a);
-        number jsignal = c.jLength/(fabs(fs.vel.dot(fjm.n))+fs.gas.a);
-        number ksignal = c.kLength/(fabs(fs.vel.dot(fkm.n))+fs.gas.a);
+        number isignal = c.iLength/(fabs(fs.vel.dot(inorm))+fs.gas.a);
+        number jsignal = c.jLength/(fabs(fs.vel.dot(jnorm))+fs.gas.a);
+        number ksignal = c.kLength/(fabs(fs.vel.dot(knorm))+fs.gas.a);
         return cfl * fmin(fmin(isignal,jsignal),ksignal);
     } // end estimate_local_dt()
 
     __host__
     number estimate_allowed_dt(number cfl)
     {
-        number smallest_dt = 1.0e6; // Something large.
+        number smallest_dt = numeric_limits<number>::max();
         for (auto i=0; i < nActiveCells; i++) {
             FVCell& c = cells[i];
-            smallest_dt = fmin(smallest_dt, estimate_local_dt(c, cfl));
+            Vector3 inorm = iFaces[c.face[Face::iminus]].n;
+            Vector3 jnorm = jFaces[c.face[Face::jminus]].n;
+            Vector3 knorm = kFaces[c.face[Face::kminus]].n;
+            smallest_dt = fmin(smallest_dt, estimate_local_dt(c, inorm, jnorm, knorm, cfl));
         }
         return smallest_dt;
     } // end estimate_allowed_dt()

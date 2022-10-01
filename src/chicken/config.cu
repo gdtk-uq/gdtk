@@ -143,11 +143,13 @@ void read_config_file(string fileName)
         blk_config.initial_fs = blk_json["initial_flow_state"].get<int>();
         map<string,json> bcs_json = blk_json["bcs"].get<map<string,json> >();
         for (auto name : Face::names) {
-            map<string,string> bc = bcs_json[name].get<map<string,string> >();
+            map<string,json> bc = bcs_json[name].get<map<string,json> >();
             int i = Face_indx_from_name(name);
-            blk_config.bcCodes[i] = BC_code_from_name(bc["tag"]);
-            // [TODO] We need to handle flow states associated with boundary conditions.
-            blk_config.bc_fs[i] = 0;
+            blk_config.bcCodes[i] = BC_code_from_name(bc["tag"].get<string>());
+            blk_config.bc_fs[i] = 0; // Default flowstate index.
+            if (blk_config.bcCodes[i] == BCCode::inflow) {
+                blk_config.bc_fs[i] = bc["flow_state_index"].get<int>();
+            }
         }
         cout << "blk_config: " << blk_config.toString() << endl;
         Config::blk_configs.push_back(blk_config);

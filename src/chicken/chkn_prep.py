@@ -426,17 +426,21 @@ class InflowBC(BoundaryCondition):
     """
     Inflow boundary condition.
     """
-    __slots__ = ['tag', 'fs']
+    __slots__ = ['tag', 'fsi']
 
     def __init__(self, fs):
         self.tag = 'inflow'
-        self.fs = copy(fs)
+        if type(fs) is FlowState:
+            self.fsi = fs.indx
+        else:
+            raise RuntimeError("Inflow boundary condition expects a FlowState object.")
 
     def __repr__(self):
-        return "InflowBC(fs={})".format(self.fs)
+        global flowStatesList
+        return "InflowBC(fs={})".format(flowStatesList[self.fsi])
 
     def to_json(self):
-        return '{"tag": "%s", "flow_state": "%s"}' % (self.tag, self.fs)
+        return '{"tag": "%s", "flow_state_index": %d}' % (self.tag, self.fsi)
 
 class OutflowBC(BoundaryCondition):
     """

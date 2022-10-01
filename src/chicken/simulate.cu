@@ -6,13 +6,14 @@
 #ifndef SIMULATE_INCLUDED
 #define SIMULATE_INCLUDED
 
-//#include <stdio.h>
+#include <cmath>
 #include <cstdio>
 #include <stdlib.h>
 #include <vector>
 #include <iostream>
 #include <string>
 #include <filesystem>
+#include <limits>
 
 #include "number.cu"
 #include "vector3.cu"
@@ -106,11 +107,40 @@ void write_flow_data(int tindx)
     return;
 } // end write_flow_data()
 
+__host__
+void apply_boundary_conditions()
+{
+    for (auto* blkptr : fluidBlocks) {
+        for (int ibc=0; ibc < 6; ibc++) {
+            switch (blkptr->bcCodes[ibc]) {
+            case BCCode::wall_with_slip:
+                // For all faces in boundary, copy data, reflecting velocity.
+                break;
+            case BCCode::wall_no_slip:
+                // For all faces in boundary, copy data, reflecting velocity.
+                // Set the face velocity to zero.
+                break;
+            case BCCode::exchange:
+                // Depending on which face, look up the adjacent block in ijk indices
+                // and copy the data.
+                break;
+            case BCCode::inflow:
+                // Copy the associated flow state data into the ghost cells.
+                break;
+            case BCCode::outflow:
+                // Copy the interior flow states to the ghost cells.
+                break;
+            default:
+                throw runtime_error("Invalid bcCode: "+to_string(blkptr->bcCodes[ibc]));
+            } // end switch
+        } // end for ibc
+    } // end for blkptr
+} // end apply_boundary_conditions()
 
 __host__
 void gasdynamic_update(number dt)
 {
-    // Apply BCs across blocks.
+    apply_boundary_conditions();
     // update_stage_1 for all blocks
     //
 } // end gasdynamic_update()
@@ -119,6 +149,10 @@ __host__
 void march_in_time()
 {
     // Occasionally determine allowable time step.
+    number dt = 1.0e-6; // [TODO] get from config
+    for (auto* blkptr : fluidBlocks) {
+        dt = fmin(dt, blkptr->estimate_allowed_dt(0.5));
+    }
     // Call gasdynamic_update an number of times.
     for (auto* blkptr : fluidBlocks) {
         int bad_cell = blkptr->decodeConserved(0);
