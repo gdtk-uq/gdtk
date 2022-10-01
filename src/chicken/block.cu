@@ -658,6 +658,81 @@ struct Block {
         return bad_cell;
     }
 
+    __host__ __device__
+    void eval_dUdt(FVCell& c, ConservedQuantities& dUdt)
+    // These are the spatial (RHS) terms in the semi-discrete governing equations.
+    {
+        number vol_inv = 1.0/c.volume;
+        auto& fim = iFaces[c.face[Face::iminus]];
+        auto& fip = iFaces[c.face[Face::iplus]];
+        auto& fjm = jFaces[c.face[Face::jminus]];
+        auto& fjp = jFaces[c.face[Face::jplus]];
+        auto& fkm = kFaces[c.face[Face::kminus]];
+        auto& fkp = kFaces[c.face[Face::kplus]];
+        //
+        for (int i=0; i < CQI::n; i++) {
+            // Integrate the fluxes across the interfaces that bound the cell.
+            number surface_integral = 0.0;
+            surface_integral = fim.area*fim.F[i] - fip.area*fip.F[i]
+                + fjm.area*fjm.F[i] - fjp.area*fjp.F[i]
+                + fkm.area*fkm.F[i] - fkp.area*fkp.F[i];
+            // Then evaluate the derivatives of conserved quantity.
+            // Note that conserved quantities are stored per-unit-volume.
+            dUdt[i] = vol_inv*surface_integral;
+        }
+        return;
+    } // end eval_dUdt()
+
+    __host__
+    void eval_dUdt(int level)
+    // Evaluate RHS terms for all cells in this block.
+    {
+        for (auto i=0; i < nActiveCells; i++) {
+            FVCell& c = cells[i];
+            ConservedQuantities dUdt = dQdt[level*nActiveCells + i];
+            eval_dUdt(c, dUdt);
+        }
+        return;
+    } // end eval_dUdt()
+
+    __host__ __device__
+    number estimate_local_dt(FVCell& c, number cfl)
+    {
+        // We assume that the cells are (roughly) hexagonal and work with
+        // velocities normal to the faces.
+        FlowState& fs = c.fs;
+        FVFace& fim = iFaces[c.face[Face::iminus]];
+        FVFace& fjm = jFaces[c.face[Face::jminus]];
+        FVFace& fkm = kFaces[c.face[Face::kminus]];
+        number isignal = c.iLength/(fabs(fs.vel.dot(fim.n))+fs.gas.a);
+        number jsignal = c.jLength/(fabs(fs.vel.dot(fjm.n))+fs.gas.a);
+        number ksignal = c.kLength/(fabs(fs.vel.dot(fkm.n))+fs.gas.a);
+        return cfl * fmin(fmin(isignal,jsignal),ksignal);
+    } // end estimate_local_dt()
+
+    __host__
+    number estimate_allowed_dt(number cfl)
+    {
+        number smallest_dt = 1.0e6; // Something large.
+        for (auto i=0; i < nActiveCells; i++) {
+            FVCell& c = cells[i];
+            smallest_dt = fmin(smallest_dt, estimate_local_dt(c, cfl));
+        }
+        return smallest_dt;
+    } // end estimate_allowed_dt()
+
+    __host__
+    void update_stage_1(number dt)
+    // Predictor step.
+    // Assume BCs have been applied.
+    // 1. compute fluxes across all FVFaces
+    // 2. compute dUdt_level0 for all cells
+    // 3. increment U_level0 -> U_level1
+    {
+        // [TODO]
+        return;
+    } // end predictor_step()
+
 }; // end Block
 
 #endif

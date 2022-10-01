@@ -171,8 +171,6 @@ struct FVCell {
         return 0;
     }
 
-    // [TODO] PJ 2022-10-01 Cell update methods, etc.
-
 }; // end Cell
 
 #endif

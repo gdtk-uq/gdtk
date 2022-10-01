@@ -106,9 +106,20 @@ void write_flow_data(int tindx)
     return;
 } // end write_flow_data()
 
+
+__host__
+void gasdynamic_update(number dt)
+{
+    // Apply BCs across blocks.
+    // update_stage_1 for all blocks
+    //
+} // end gasdynamic_update()
+
 __host__
 void march_in_time()
 {
+    // Occasionally determine allowable time step.
+    // Call gasdynamic_update an number of times.
     for (auto* blkptr : fluidBlocks) {
         int bad_cell = blkptr->decodeConserved(0);
     }
