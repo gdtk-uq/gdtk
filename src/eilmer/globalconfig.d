@@ -1001,6 +1001,7 @@ final class GlobalConfig {
     shared static InterpolateOption thermo_interpolator = InterpolateOption.rhou;
     shared static bool allow_reconstruction_for_species = true;
     shared static bool allow_reconstruction_for_energy_modes = true;
+    shared static bool allow_reconstruction_for_turbulent_variables = true;
     shared static bool apply_limiter = true;
     shared static bool extrema_clipping = true;
     shared static bool apply_heuristic_pressure_based_limiting = false;
@@ -1329,6 +1330,7 @@ public:
     InterpolateOption thermo_interpolator;
     bool allow_reconstruction_for_species;
     bool allow_reconstruction_for_energy_modes;
+    bool allow_reconstruction_for_turbulent_variables;
     bool apply_limiter;
     bool extrema_clipping;
     bool apply_heuristic_pressure_based_limiting;
@@ -1495,6 +1497,7 @@ public:
         thermo_interpolator = cfg.thermo_interpolator;
         allow_reconstruction_for_species = cfg.allow_reconstruction_for_species;
         allow_reconstruction_for_energy_modes = cfg.allow_reconstruction_for_energy_modes;
+        allow_reconstruction_for_turbulent_variables = cfg.allow_reconstruction_for_turbulent_variables;
         apply_limiter = cfg.apply_limiter;
         extrema_clipping = cfg.extrema_clipping;
         apply_heuristic_pressure_based_limiting = cfg.apply_heuristic_pressure_based_limiting;
@@ -1858,6 +1861,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_enum("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
     mixin(update_bool("allow_reconstruction_for_species", "allow_reconstruction_for_species"));
     mixin(update_bool("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
+    mixin(update_bool("allow_reconstruction_for_turbulent_variables", "allow_reconstruction_for_turbulent_variables"));
     mixin(update_bool("apply_limiter", "apply_limiter"));
     mixin(update_bool("extrema_clipping", "extrema_clipping"));
     mixin(update_bool("apply_heuristic_pressure_based_limiting", "apply_heuristic_pressure_based_limiting"));
@@ -1947,6 +1951,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  thermo_interpolator: ", thermo_interpolator_name(cfg.thermo_interpolator));
         writeln("  allow_reconstruction_for_species: ", cfg.allow_reconstruction_for_species);
         writeln("  allow_reconstruction_for_energy_modes: ", cfg.allow_reconstruction_for_energy_modes);
+        writeln("  allow_reconstruction_for_turbulent_variables: ", cfg.allow_reconstruction_for_turbulent_variables);
         writeln("  apply_limiter: ", cfg.apply_limiter);
         writeln("  apply_entropy_fix: ", cfg.apply_entropy_fix);
         writeln("  unstructured_limiter: ", unstructured_limiter_name(cfg.unstructured_limiter));

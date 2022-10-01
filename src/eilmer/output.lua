@@ -249,6 +249,8 @@ function output.write_config_file(fileName)
 			 tostring(config.allow_reconstruction_for_energy_modes)))
    f:write(string.format('"allow_reconstruction_for_species": %s,\n',
 			 tostring(config.allow_reconstruction_for_species)))
+   f:write(string.format('"allow_reconstruction_for_turbulent_variables": %s,\n',
+			 tostring(config.allow_reconstruction_for_turbulent_variables)))
    f:write(string.format('"interpolate_in_local_frame": %s,\n',
 			 tostring(config.interpolate_in_local_frame)))
    f:write(string.format('"apply_limiter": %s,\n', tostring(config.apply_limiter)))

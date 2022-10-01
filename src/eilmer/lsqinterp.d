@@ -1583,8 +1583,13 @@ public:
                 }
             }
             version(turbulence) {
-            foreach (it; 0 .. myConfig.turb_model.nturb) {
-                    mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
+                if (myConfig.allow_reconstruction_for_turbulent_variables) {
+                    foreach (it; 0 .. myConfig.turb_model.nturb) {
+                        mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
+                    }
+                } else {
+                    Lft.turb[] = IFace.left_cell.fs.turb[];
+                    Rght.turb[] = IFace.right_cell.fs.turb[];
                 }
             }
             version(multi_species_gas) {
@@ -1805,8 +1810,12 @@ public:
                 }
             }
             version(turbulence) {
-                foreach (it; 0 .. myConfig.turb_model.nturb) {
-                    mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
+                if (myConfig.allow_reconstruction_for_turbulent_variables) {
+                    foreach (it; 0 .. myConfig.turb_model.nturb) {
+                        mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
+                    }
+                } else {
+                    Rght.gas.massf[] = IFace.right_cell.fs.turb[];
                 }
             }
             version(multi_species_gas) {
@@ -2009,8 +2018,12 @@ public:
                 }
             }
             version(turbulence) {
-                foreach (it; 0 .. myConfig.turb_model.nturb) {
-                    mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
+                if (myConfig.allow_reconstruction_for_turbulent_variables) {
+                    foreach (it; 0 .. myConfig.turb_model.nturb) {
+                        mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
+                    }
+                } else {
+                    Lft.gas.massf[] = IFace.left_cell.fs.turb[];
                 }
             }
             version(multi_species_gas) {

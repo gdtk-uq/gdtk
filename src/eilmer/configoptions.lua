@@ -84,6 +84,7 @@ configOptionsHidden = { -- hidden from user
    thermo_interpolator = "rhou",
    allow_reconstruction_for_species = true,
    allow_reconstruction_for_energy_modes = true,
+   allow_reconstruction_for_turbulent_variables = true,
    apply_limiter = true,
    extrema_clipping = true,
    apply_heuristic_pressure_based_limiting = false,
