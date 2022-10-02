@@ -38,7 +38,7 @@ struct SimState {
 
 vector<Block*> fluidBlocks;
 
-void do_something(); // left over from the CUDA workshop experiment
+void do_something(); // left over from the CUDA workshop experiment [TODO] remove
 
 __host__
 void initialize_simulation(int tindx_start)
@@ -55,31 +55,34 @@ void initialize_simulation(int tindx_start)
             for (int i=0; i < Config::nib; ++i) {
                 if (Config::blk_ids[i][j][k] >= 0) {
                     // Only defined blocks in the array will have a non-zero id.
-                    Block* blkptr = new Block{};
+                    Block* blk_ptr = new Block{};
                     int blk_id = Config::blk_ids[i][j][k];
-                    blkptr->configure(Config::nics[i], Config::njcs[j], Config::nkcs[k],
-                                      Config::blk_configs[blk_id].bcCodes);
+                    blk_ptr->configure(Config::nics[i], Config::njcs[j], Config::nkcs[k]);
                     sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
                     string fileName = Config::job + string(nameBuf);
-                    blkptr->readGrid(fileName);
+                    blk_ptr->readGrid(fileName);
                     sprintf(nameBuf, "/flow/t%04d/flow-%04d-%04d-%04d.zip", tindx_start, i, j, k);
                     fileName = Config::job + string(nameBuf);
-                    blkptr->readFlow(fileName);
-                    blkptr->computeGeometry();
-                    blkptr->encodeConserved(0);
-                    cout << "Sample cell data: " << blkptr->cells[blkptr->activeCellIndex(0,0,0)].toString() << endl;
-                    cout << "Sample iFace data: " << blkptr->iFaces[blkptr->iFaceIndex(0,0,0)].toString() << endl;
-                    cout << "Sample jFace data: " << blkptr->jFaces[blkptr->jFaceIndex(0,0,0)].toString() << endl;
-                    cout << "Sample kFace data: " << blkptr->kFaces[blkptr->kFaceIndex(0,0,0)].toString() << endl;
-                    fluidBlocks.push_back(blkptr);
+                    blk_ptr->readFlow(fileName);
+                    blk_ptr->computeGeometry();
+                    blk_ptr->encodeConserved(0);
+                    cout << "Sample cell data: " << blk_ptr->cells[blk_ptr->activeCellIndex(0,0,0)].toString() << endl;
+                    cout << "Sample iFace data: " << blk_ptr->iFaces[blk_ptr->iFaceIndex(0,0,0)].toString() << endl;
+                    cout << "Sample jFace data: " << blk_ptr->jFaces[blk_ptr->jFaceIndex(0,0,0)].toString() << endl;
+                    cout << "Sample kFace data: " << blk_ptr->kFaces[blk_ptr->kFaceIndex(0,0,0)].toString() << endl;
+                    fluidBlocks.push_back(blk_ptr);
                     if (blk_id+1 != fluidBlocks.size()) {
-                        throw runtime_error("Inconsistent blk_id and fluidBlocks array.");
+                        throw runtime_error("Inconsistent blk_id and position in fluidBlocks array.");
                     }
                 }
             }
         }
     }
-    do_something();
+    if (fluidBlocks.size() != Config::nFluidBlocks) {
+        throw runtime_error("Inconsistent number of blocks: "+
+                            to_string(fluidBlocks.size())+" "+to_string(Config::nFluidBlocks));
+    }
+    do_something(); // Left over from GPU bootcamp exercise. [TODO] remove it
     return;
 } // initialize_simulation()
 
@@ -96,10 +99,10 @@ void write_flow_data(int tindx)
                 if (Config::blk_ids[i][j][k] >= 0) {
                     // Only defined blocks in the array will have a non-zero id.
                     int blk_id = Config::blk_ids[i][j][k];
-                    Block* blkptr = fluidBlocks[blk_id];
+                    Block* blk_ptr = fluidBlocks[blk_id];
                     sprintf(nameBuf, "%s/flow-%04d-%04d-%04d.zip", flowDir.c_str(), i, j, k);
                     string fileName = string(nameBuf);
-                    blkptr->writeFlow(fileName);
+                    blk_ptr->writeFlow(fileName);
                 }
             }
         }
@@ -107,34 +110,31 @@ void write_flow_data(int tindx)
     return;
 } // end write_flow_data()
 
+// Repetitive boundary condition code is hidden here.
+#include "bcs.cu"
+
 __host__
 void apply_boundary_conditions()
+// Since the boundary-condition code needs a view of all blocks and
+// most of the coperations are switching between code to copy specific data,
+// we expect the CPU to apply the boundary conditions more effectively than the GPU.
+// Measurements might tell us otherwise.
 {
-    for (auto* blkptr : fluidBlocks) {
+    for (int iblk=0; iblk < Config::nFluidBlocks; iblk++) {
+        auto* blk_config = &(Config::blk_configs[iblk]);
+        auto* blk_ptr = fluidBlocks[iblk];
         for (int ibc=0; ibc < 6; ibc++) {
-            switch (blkptr->bcCodes[ibc]) {
-            case BCCode::wall_with_slip:
-                // For all faces in boundary, copy data, reflecting velocity.
-                break;
-            case BCCode::wall_no_slip:
-                // For all faces in boundary, copy data, reflecting velocity.
-                // Set the face velocity to zero.
-                break;
-            case BCCode::exchange:
-                // Depending on which face, look up the adjacent block in ijk indices
-                // and copy the data.
-                break;
-            case BCCode::inflow:
-                // Copy the associated flow state data into the ghost cells.
-                break;
-            case BCCode::outflow:
-                // Copy the interior flow states to the ghost cells.
-                break;
+            switch (blk_config->bcCodes[ibc]) {
+            case BCCode::wall_with_slip: bc_wall_with_slip(blk_ptr, ibc); break;
+            case BCCode::wall_no_slip: bc_wall_no_slip(blk_ptr, ibc); break;
+            case BCCode::exchange: bc_exchange(iblk, ibc); break;
+            case BCCode::inflow: bc_inflow(blk_ptr, ibc, Config::flow_states[blk_config->bc_fs[ibc]]); break;
+            case BCCode::outflow: bc_outflow(blk_ptr, ibc); break;
             default:
-                throw runtime_error("Invalid bcCode: "+to_string(blkptr->bcCodes[ibc]));
-            } // end switch
+                throw runtime_error("Invalid bcCode: "+to_string(blk_config->bcCodes[ibc]));
+            }
         } // end for ibc
-    } // end for blkptr
+    } // end for iblk
 } // end apply_boundary_conditions()
 
 __host__
@@ -150,12 +150,13 @@ void march_in_time()
 {
     // Occasionally determine allowable time step.
     number dt = 1.0e-6; // [TODO] get from config
-    for (auto* blkptr : fluidBlocks) {
-        dt = fmin(dt, blkptr->estimate_allowed_dt(0.5));
+    for (auto* blk_ptr : fluidBlocks) {
+        dt = fmin(dt, blk_ptr->estimate_allowed_dt(0.5));
     }
+    gasdynamic_update(dt);
     // Call gasdynamic_update an number of times.
-    for (auto* blkptr : fluidBlocks) {
-        int bad_cell = blkptr->decodeConserved(0);
+    for (auto* blk_ptr : fluidBlocks) {
+        int bad_cell = blk_ptr->decodeConserved(0);
     }
     return;
 }

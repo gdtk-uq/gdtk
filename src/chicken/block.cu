@@ -47,25 +47,37 @@ int BC_code_from_name(string name)
 }
 
 struct Block {
+    // Active cells are the "real" cells in the simulation.
+    // We compute the evolution of the gas-dynamic flow properties within them.
     int nic; // Number of cells i-direction.
     int njc; // Number of cells j-direction.
     int nkc; // Number of cells k-direction.
     int nActiveCells; // Number of active cells (with conserved quantities) in the block.
-    // Ghost cells will be stored at the end of the active cells collection.
-    array<int,6> nGhostCells; // Number of ghost cells on each face.
-    array<int,6> firstGhostCells; // Index of the first ghost cell for each face.
-    //
     vector<FVCell> cells;
-    vector<FVFace> iFaces;
-    vector<FVFace> jFaces;
-    vector<FVFace> kFaces;
-    vector<Vector3> vertices;
     //
     // Active cells have conserved quantities data, along with the time derivatives.
     vector<ConservedQuantities> Q;
     vector<ConservedQuantities> dQdt;
     //
-    array<int,6> bcCodes;
+    // Ghost cells are associated with each block boundary face and
+    // will be stored separately from the active cells collection.
+    // Also, for each boundary face, we store some config information
+    // to make the boundary-condition code a bit more compact.
+    vector<FVCell> gcells;
+    array<int,6> n0c; // number of cells in first index direction for each face.
+    array<int,6> n1c; // Number of cells in second index direction for each face.
+    array<int,6> nGhostCells; // Number of ghost cells on each face.
+    array<int,6> firstGhostCells; // Index of the first ghost cell for each face.
+    //
+    // Collections of faces which bound the active cells.
+    // We compute fluxes of conserved flow properties across these faces.
+    vector<FVFace> iFaces;
+    vector<FVFace> jFaces;
+    vector<FVFace> kFaces;
+    //
+    // The vertices are used to define the locations and geometric properties
+    // of faces and cells.
+    vector<Vector3> vertices;
 
     __host__
     string toString() {
@@ -85,28 +97,8 @@ struct Block {
     __host__ __device__
     int ghostCellIndex(int faceIndx, int i0, int i1, int depth)
     {
-        int cellIndxOnFace = 0;
-        int nCellsOnFace = 0;
-        switch (faceIndx) {
-        case Face::iminus:
-        case Face::iplus:
-            // jk face with i0==j,i1==k
-            cellIndxOnFace = i1*njc + i0;
-            nCellsOnFace = njc*nkc;
-            break;
-        case Face::jminus:
-        case Face::jplus:
-            // ik face with i0==i,i1==k
-            cellIndxOnFace = i1*nic + i0;
-            nCellsOnFace = nic*nkc;
-            break;
-        case Face::kminus:
-        case Face::kplus:
-            // ij face with i0==i,i1==j
-            cellIndxOnFace = i1*nic + i0;
-            nCellsOnFace = nic*njc;
-            break;
-        }
+        int cellIndxOnFace = i1*n0c[faceIndx] + i0;
+        int nCellsOnFace = n0c[faceIndx]*n1c[faceIndx];
         return firstGhostCells[faceIndx] + nCellsOnFace*depth + cellIndxOnFace;
     }
 
@@ -135,34 +127,46 @@ struct Block {
     }
 
     __host__
-    void configure(int i, int j, int k, int codes[])
+    void configure(int i, int j, int k)
     // Set up the block to hold the grid and flow data.
     // Do this before reading a grid or flow file.
     {
         nic = i;
         njc = j;
         nkc = k;
-        for (int b=0; b < 6; b++) { bcCodes[b] = codes[b]; }
-        //
         int nActiveCells = nic*njc*nkc;
-        // For the moment assume that all boundary conditions require ghost cells.
-        nGhostCells[Face::iminus] = 2*njc*nkc;
-        nGhostCells[Face::iplus] = 2*njc*nkc;
-        nGhostCells[Face::jminus] = 2*nic*nkc;
-        nGhostCells[Face::jplus] = 2*nic*nkc;
-        nGhostCells[Face::kminus] = 2*nic*njc;
-        nGhostCells[Face::kplus] = 2*nic*njc;
-        firstGhostCells[0] = nActiveCells;
-        for (int f=1; f < 6; f++) firstGhostCells[f] = firstGhostCells[f-1] + nGhostCells[f-1];
         //
-        // Now that we know the numbers of cells, resize the vector to fit them all.
-        cells.resize(firstGhostCells[5]+nGhostCells[5]);
+        // Now that we know the numbers of cells, resize the data store to fit them all.
+        cells.resize(nActiveCells);
         Q.resize(nActiveCells*TLevels);
         dQdt.resize(nActiveCells*TLevels);
+        #ifdef CUDA
+        // We need to allocate corresponding memory space on the GPU.
+        // [TODO]
+        #endif
+        //
+        // For the moment assume that all boundary conditions require ghost cells.
+        n0c[Face::iminus] = njc; n1c[Face::iminus] = nkc;
+        n0c[Face::iplus] = njc; n1c[Face::iplus] = nkc;
+        n0c[Face::jminus] = nic; n1c[Face::jminus] = nkc;
+        n0c[Face::jplus] = nic; n1c[Face::jplus] = nkc;
+        n0c[Face::kminus] = nic; n1c[Face::kminus] = njc;
+        n0c[Face::kplus] = nic; n1c[Face::kplus] = njc;
+        for (int f=0; f < 6; f++) {
+            nGhostCells[f] = 2*n0c[f]*n1c[f];
+            if (f > 1) {
+                firstGhostCells[f] = firstGhostCells[f-1] + nGhostCells[f-1];
+            } else {
+                firstGhostCells[f] = 0;
+            }
+        }
+        gcells.resize(firstGhostCells[5]+nGhostCells[5]);
+        //
         // Each set of finite-volume faces is in the index-plane of the corresponding vertices.
         iFaces.resize((nic+1)*njc*nkc);
         jFaces.resize(nic*(njc+1)*nkc);
         kFaces.resize(nic*njc*(nkc+1));
+        //
         // And the vertices.
         vertices.resize((nic+1)*(njc+1)*(nkc+1));
         //
@@ -373,14 +377,14 @@ struct Block {
             for (int j=0; j < njc; j++) {
                 FVFace& f = iFaces[iFaceIndex(0,j,k)];
                 FVCell& c0 = cells[f.right_cells[0]];
-                FVCell& g0 = cells[f.left_cells[0]];
+                FVCell& g0 = gcells[f.left_cells[0]];
                 g0.iLength = c0.iLength;
                 g0.jLength = c0.jLength;
                 g0.kLength = c0.kLength;
                 Vector3 d = f.pos; d.sub(c0.pos);
                 g0.pos = f.pos; g0.pos.add(d);
                 //
-                FVCell& g1 = cells[f.left_cells[1]];
+                FVCell& g1 = gcells[f.left_cells[1]];
                 g1.iLength = c0.iLength;
                 g1.jLength = c0.jLength;
                 g1.kLength = c0.kLength;
@@ -393,14 +397,14 @@ struct Block {
             for (int j=0; j < njc; j++) {
                 FVFace& f = iFaces[iFaceIndex(nic,j,k)];
                 FVCell& c0 = cells[f.left_cells[0]];
-                FVCell& g0 = cells[f.right_cells[0]];
+                FVCell& g0 = gcells[f.right_cells[0]];
                 g0.iLength = c0.iLength;
                 g0.jLength = c0.jLength;
                 g0.kLength = c0.kLength;
                 Vector3 d = f.pos; d.sub(c0.pos);
                 g0.pos = f.pos; g0.pos.add(d);
                 //
-                FVCell& g1 = cells[f.right_cells[1]];
+                FVCell& g1 = gcells[f.right_cells[1]];
                 g1.iLength = c0.iLength;
                 g1.jLength = c0.jLength;
                 g1.kLength = c0.kLength;
@@ -413,14 +417,14 @@ struct Block {
             for (int i=0; i < nic; i++) {
                 FVFace& f = jFaces[jFaceIndex(i,0,k)];
                 FVCell& c0 = cells[f.right_cells[0]];
-                FVCell& g0 = cells[f.left_cells[0]];
+                FVCell& g0 = gcells[f.left_cells[0]];
                 g0.iLength = c0.iLength;
                 g0.jLength = c0.jLength;
                 g0.kLength = c0.kLength;
                 Vector3 d = f.pos; d.sub(c0.pos);
                 g0.pos = f.pos; g0.pos.add(d);
                 //
-                FVCell& g1 = cells[f.left_cells[1]];
+                FVCell& g1 = gcells[f.left_cells[1]];
                 g1.iLength = c0.iLength;
                 g1.jLength = c0.jLength;
                 g1.kLength = c0.kLength;
@@ -433,14 +437,14 @@ struct Block {
             for (int i=0; i < nic; i++) {
                 FVFace& f = jFaces[jFaceIndex(i,njc,k)];
                 FVCell& c0 = cells[f.left_cells[0]];
-                FVCell& g0 = cells[f.right_cells[0]];
+                FVCell& g0 = gcells[f.right_cells[0]];
                 g0.iLength = c0.iLength;
                 g0.jLength = c0.jLength;
                 g0.kLength = c0.kLength;
                 Vector3 d = f.pos; d.sub(c0.pos);
                 g0.pos = f.pos; g0.pos.add(d);
                 //
-                FVCell& g1 = cells[f.right_cells[1]];
+                FVCell& g1 = gcells[f.right_cells[1]];
                 g1.iLength = c0.iLength;
                 g1.jLength = c0.jLength;
                 g1.kLength = c0.kLength;
@@ -453,14 +457,14 @@ struct Block {
             for (int i=0; i < nic; i++) {
                 FVFace& f = kFaces[kFaceIndex(i,j,0)];
                 FVCell& c0 = cells[f.right_cells[0]];
-                FVCell& g0 = cells[f.left_cells[0]];
+                FVCell& g0 = gcells[f.left_cells[0]];
                 g0.iLength = c0.iLength;
                 g0.jLength = c0.jLength;
                 g0.kLength = c0.kLength;
                 Vector3 d = f.pos; d.sub(c0.pos);
                 g0.pos = f.pos; g0.pos.add(d);
                 //
-                FVCell& g1 = cells[f.left_cells[1]];
+                FVCell& g1 = gcells[f.left_cells[1]];
                 g1.iLength = c0.iLength;
                 g1.jLength = c0.jLength;
                 g1.kLength = c0.kLength;
@@ -473,14 +477,14 @@ struct Block {
             for (int i=0; i < nic; i++) {
                 FVFace& f = kFaces[kFaceIndex(i,j,nkc)];
                 FVCell& c0 = cells[f.left_cells[0]];
-                FVCell& g0 = cells[f.right_cells[0]];
+                FVCell& g0 = gcells[f.right_cells[0]];
                 g0.iLength = c0.iLength;
                 g0.jLength = c0.jLength;
                 g0.kLength = c0.kLength;
                 Vector3 d = f.pos; d.sub(c0.pos);
                 g0.pos = f.pos; g0.pos.add(d);
                 //
-                FVCell& g1 = cells[f.right_cells[1]];
+                FVCell& g1 = gcells[f.right_cells[1]];
                 g1.iLength = c0.iLength;
                 g1.jLength = c0.jLength;
                 g1.kLength = c0.kLength;

@@ -22,7 +22,7 @@ else
     REVISION_STRING := unknown
 endif
 
-CUDA_SOURCE_FILES := main.cu config.cu simulate.cu block.cu cell.cu face.cu vertex.cu \
+CUDA_SOURCE_FILES := main.cu config.cu simulate.cu bcs.cu block.cu cell.cu face.cu vertex.cu \
   flux.cu flow.cu gas.cu vector3.cu number.cu
 
 # Target for FP64 (double) numbers.

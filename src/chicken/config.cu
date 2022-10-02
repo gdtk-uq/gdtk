@@ -41,9 +41,10 @@ namespace Config {
     string job = "job";
     string title = "";
     vector<FlowState> flow_states;
-    int nib = 1;
-    int njb = 1;
-    int nkb = 1;
+    int nFluidBlocks;
+    int nib;
+    int njb;
+    int nkb;
     vector<int> nics, njcs, nkcs;
     vector<vector<vector<int> > >blk_ids;
     vector<BConfig> blk_configs;
@@ -133,7 +134,7 @@ void read_config_file(string fileName)
         }
     }
     //
-    int n_fluid_blocks = jsonData["n_fluid_blocks"].get<int>();
+    Config::nFluidBlocks = jsonData["n_fluid_blocks"].get<int>();
     vector<json> fluid_blocks_json = jsonData["fluid_blocks"].get<vector<json> >();
     for (auto blk_json : fluid_blocks_json) {
         BConfig blk_config;
@@ -153,6 +154,10 @@ void read_config_file(string fileName)
         }
         cout << "blk_config: " << blk_config.toString() << endl;
         Config::blk_configs.push_back(blk_config);
+    }
+    if (Config::nFluidBlocks != Config::blk_configs.size()) {
+        throw runtime_error("Did not read the correct number of block configurations: "+
+                            to_string(Config::nFluidBlocks)+" "+to_string(Config::blk_configs.size()));
     }
     return;
 }
