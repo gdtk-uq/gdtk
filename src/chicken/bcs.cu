@@ -6,6 +6,9 @@
 //
 // PJ 2022-10-03
 
+#ifndef BCS_INCLUDED
+#define BCS_INCLUDED
+
 __host__
 void bc_wall_with_slip(Block* blk_ptr, int ibc)
 // Copy data, reflecting velocity.
@@ -510,3 +513,5 @@ void bc_outflow(Block* blk_ptr, int ibc)
         break;
     }
 } // end bc_outflow()
+
+#endif
