@@ -115,13 +115,13 @@ class GlobalConfig():
         self.dt_init = 1.0e-6
         self.cfl_list = []
         self.cfl_count = 10;
-        self.print_count = 50;
+        self.print_count = 20;
         # If dt_plot_list is still an empty list when we write
         # the parameter file, just use the max_time value for
         # both dt_plot and dt_his.  Fill in later, when necessary.
         self.dt_plot_list = []
         self.max_time = 1.0e-3
-        self.max_step = 10
+        self.max_step = 100
         self.x_order = 2
         self.t_order = 2
         # The following is not meant to be edited for individual simulations but

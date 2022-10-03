@@ -40,6 +40,7 @@ struct FVFace {
         repr << ")";
         return repr.str();
     }
+
 }; // end FVFace
 
 #endif

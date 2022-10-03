@@ -15,36 +15,15 @@
 
 #include "number.cu"
 #include "vector3.cu"
+#include "config.cu"
 #include "gas.cu"
 #include "vertex.cu"
 #include "flow.cu"
 #include "face.cu"
 #include "cell.cu"
+#include "flux.cu"
 
 using namespace std;
-
-namespace BCCode {
-    // Boundary condition codes, to decide what to do for the ghost cells.
-    // Periodic boundary conditions should just work if we wrap the index in each direction.
-    // There's not enough information here to have arbitrary block connections.
-    constexpr int wall_with_slip = 0;
-    constexpr int wall_no_slip = 1;
-    constexpr int exchange = 2;
-    constexpr int inflow = 3;
-    constexpr int outflow = 4;
-
-    array<string,5> names{"wall_with_slip", "wall_no_slip", "exchange", "inflow", "outflow"};
-};
-
-int BC_code_from_name(string name)
-{
-    if (name == "wall_with_slip") return BCCode::wall_with_slip;
-    if (name == "wall_no_slip") return BCCode::wall_no_slip;
-    if (name == "exchange") return BCCode::exchange;
-    if (name == "inflow") return BCCode::inflow;
-    if (name == "outflow") return BCCode::outflow;
-    return BCCode::wall_with_slip;
-}
 
 struct Block {
     // Active cells are the "real" cells in the simulation.
@@ -60,10 +39,11 @@ struct Block {
     vector<ConservedQuantities> dQdt;
     //
     // Ghost cells are associated with each block boundary face and
-    // will be stored separately from the active cells collection.
+    // will be stored at the end of the active cells collection.
+    // The flux calculation functions will dip into this collection for
+    // active cells and ghost cells without knowing the difference.
     // Also, for each boundary face, we store some config information
     // to make the boundary-condition code a bit more compact.
-    vector<FVCell> gcells;
     array<int,6> n0c; // number of cells in first index direction for each face.
     array<int,6> n1c; // Number of cells in second index direction for each face.
     array<int,6> nGhostCells; // Number of ghost cells on each face.
@@ -136,15 +116,6 @@ struct Block {
         nkc = k;
         int nActiveCells = nic*njc*nkc;
         //
-        // Now that we know the numbers of cells, resize the data store to fit them all.
-        cells.resize(nActiveCells);
-        Q.resize(nActiveCells*TLevels);
-        dQdt.resize(nActiveCells*TLevels);
-        #ifdef CUDA
-        // We need to allocate corresponding memory space on the GPU.
-        // [TODO]
-        #endif
-        //
         // For the moment assume that all boundary conditions require ghost cells.
         n0c[Face::iminus] = njc; n1c[Face::iminus] = nkc;
         n0c[Face::iplus] = njc; n1c[Face::iplus] = nkc;
@@ -152,15 +123,23 @@ struct Block {
         n0c[Face::jplus] = nic; n1c[Face::jplus] = nkc;
         n0c[Face::kminus] = nic; n1c[Face::kminus] = njc;
         n0c[Face::kplus] = nic; n1c[Face::kplus] = njc;
-        for (int f=0; f < 6; f++) {
-            nGhostCells[f] = 2*n0c[f]*n1c[f];
-            if (f > 1) {
-                firstGhostCells[f] = firstGhostCells[f-1] + nGhostCells[f-1];
+        for (int ib=0; ib < 6; ib++) {
+            nGhostCells[ib] = 2*n0c[ib]*n1c[ib];
+            if (ib > 1) {
+                firstGhostCells[ib] = firstGhostCells[ib-1] + nGhostCells[ib-1];
             } else {
-                firstGhostCells[f] = 0;
+                firstGhostCells[ib] = nActiveCells;
             }
         }
-        gcells.resize(firstGhostCells[5]+nGhostCells[5]);
+        //
+        // Now that we know the numbers of cells, resize the data store to fit them all.
+        cells.resize(firstGhostCells[5]+nGhostCells[5]);
+        Q.resize(nActiveCells*TLevels);
+        dQdt.resize(nActiveCells*TLevels);
+        #ifdef CUDA
+        // We need to allocate corresponding memory space on the GPU.
+        // [TODO]
+        #endif
         //
         // Each set of finite-volume faces is in the index-plane of the corresponding vertices.
         iFaces.resize((nic+1)*njc*nkc);
@@ -377,14 +356,14 @@ struct Block {
             for (int j=0; j < njc; j++) {
                 FVFace& f = iFaces[iFaceIndex(0,j,k)];
                 FVCell& c0 = cells[f.right_cells[0]];
-                FVCell& g0 = gcells[f.left_cells[0]];
+                FVCell& g0 = cells[f.left_cells[0]];
                 g0.iLength = c0.iLength;
                 g0.jLength = c0.jLength;
                 g0.kLength = c0.kLength;
                 Vector3 d = f.pos; d.sub(c0.pos);
                 g0.pos = f.pos; g0.pos.add(d);
                 //
-                FVCell& g1 = gcells[f.left_cells[1]];
+                FVCell& g1 = cells[f.left_cells[1]];
                 g1.iLength = c0.iLength;
                 g1.jLength = c0.jLength;
                 g1.kLength = c0.kLength;
@@ -397,14 +376,14 @@ struct Block {
             for (int j=0; j < njc; j++) {
                 FVFace& f = iFaces[iFaceIndex(nic,j,k)];
                 FVCell& c0 = cells[f.left_cells[0]];
-                FVCell& g0 = gcells[f.right_cells[0]];
+                FVCell& g0 = cells[f.right_cells[0]];
                 g0.iLength = c0.iLength;
                 g0.jLength = c0.jLength;
                 g0.kLength = c0.kLength;
                 Vector3 d = f.pos; d.sub(c0.pos);
                 g0.pos = f.pos; g0.pos.add(d);
                 //
-                FVCell& g1 = gcells[f.right_cells[1]];
+                FVCell& g1 = cells[f.right_cells[1]];
                 g1.iLength = c0.iLength;
                 g1.jLength = c0.jLength;
                 g1.kLength = c0.kLength;
@@ -417,14 +396,14 @@ struct Block {
             for (int i=0; i < nic; i++) {
                 FVFace& f = jFaces[jFaceIndex(i,0,k)];
                 FVCell& c0 = cells[f.right_cells[0]];
-                FVCell& g0 = gcells[f.left_cells[0]];
+                FVCell& g0 = cells[f.left_cells[0]];
                 g0.iLength = c0.iLength;
                 g0.jLength = c0.jLength;
                 g0.kLength = c0.kLength;
                 Vector3 d = f.pos; d.sub(c0.pos);
                 g0.pos = f.pos; g0.pos.add(d);
                 //
-                FVCell& g1 = gcells[f.left_cells[1]];
+                FVCell& g1 = cells[f.left_cells[1]];
                 g1.iLength = c0.iLength;
                 g1.jLength = c0.jLength;
                 g1.kLength = c0.kLength;
@@ -437,14 +416,14 @@ struct Block {
             for (int i=0; i < nic; i++) {
                 FVFace& f = jFaces[jFaceIndex(i,njc,k)];
                 FVCell& c0 = cells[f.left_cells[0]];
-                FVCell& g0 = gcells[f.right_cells[0]];
+                FVCell& g0 = cells[f.right_cells[0]];
                 g0.iLength = c0.iLength;
                 g0.jLength = c0.jLength;
                 g0.kLength = c0.kLength;
                 Vector3 d = f.pos; d.sub(c0.pos);
                 g0.pos = f.pos; g0.pos.add(d);
                 //
-                FVCell& g1 = gcells[f.right_cells[1]];
+                FVCell& g1 = cells[f.right_cells[1]];
                 g1.iLength = c0.iLength;
                 g1.jLength = c0.jLength;
                 g1.kLength = c0.kLength;
@@ -457,14 +436,14 @@ struct Block {
             for (int i=0; i < nic; i++) {
                 FVFace& f = kFaces[kFaceIndex(i,j,0)];
                 FVCell& c0 = cells[f.right_cells[0]];
-                FVCell& g0 = gcells[f.left_cells[0]];
+                FVCell& g0 = cells[f.left_cells[0]];
                 g0.iLength = c0.iLength;
                 g0.jLength = c0.jLength;
                 g0.kLength = c0.kLength;
                 Vector3 d = f.pos; d.sub(c0.pos);
                 g0.pos = f.pos; g0.pos.add(d);
                 //
-                FVCell& g1 = gcells[f.left_cells[1]];
+                FVCell& g1 = cells[f.left_cells[1]];
                 g1.iLength = c0.iLength;
                 g1.jLength = c0.jLength;
                 g1.kLength = c0.kLength;
@@ -477,14 +456,14 @@ struct Block {
             for (int i=0; i < nic; i++) {
                 FVFace& f = kFaces[kFaceIndex(i,j,nkc)];
                 FVCell& c0 = cells[f.left_cells[0]];
-                FVCell& g0 = gcells[f.right_cells[0]];
+                FVCell& g0 = cells[f.right_cells[0]];
                 g0.iLength = c0.iLength;
                 g0.jLength = c0.jLength;
                 g0.kLength = c0.kLength;
                 Vector3 d = f.pos; d.sub(c0.pos);
                 g0.pos = f.pos; g0.pos.add(d);
                 //
-                FVCell& g1 = gcells[f.right_cells[1]];
+                FVCell& g1 = cells[f.right_cells[1]];
                 g1.iLength = c0.iLength;
                 g1.jLength = c0.jLength;
                 g1.kLength = c0.kLength;
@@ -639,67 +618,6 @@ struct Block {
         return;
     } // end writeFlow()
 
-    __host__
-    void encodeConserved(int level)
-    {
-        for (auto i=0; i < nActiveCells; i++) {
-            FVCell& c = cells[i];
-            ConservedQuantities& U = Q[level*nActiveCells + i];
-            c.encode_conserved(U);
-        }
-        return;
-    }
-
-    __host__
-    int decodeConserved(int level)
-    {
-        int bad_cell = 0;
-        for (auto i=0; i < nActiveCells; i++) {
-            FVCell& c = cells[i];
-            ConservedQuantities U = Q[level*nActiveCells + i];
-            int flag = c.decode_conserved(U);
-            if (flag) { bad_cell = -i; }
-        }
-        return bad_cell;
-    }
-
-    __host__ __device__
-    void eval_dUdt(FVCell& c, ConservedQuantities& dUdt)
-    // These are the spatial (RHS) terms in the semi-discrete governing equations.
-    {
-        number vol_inv = 1.0/c.volume;
-        auto& fim = iFaces[c.face[Face::iminus]];
-        auto& fip = iFaces[c.face[Face::iplus]];
-        auto& fjm = jFaces[c.face[Face::jminus]];
-        auto& fjp = jFaces[c.face[Face::jplus]];
-        auto& fkm = kFaces[c.face[Face::kminus]];
-        auto& fkp = kFaces[c.face[Face::kplus]];
-        //
-        for (int i=0; i < CQI::n; i++) {
-            // Integrate the fluxes across the interfaces that bound the cell.
-            number surface_integral = 0.0;
-            surface_integral = fim.area*fim.F[i] - fip.area*fip.F[i]
-                + fjm.area*fjm.F[i] - fjp.area*fjp.F[i]
-                + fkm.area*fkm.F[i] - fkp.area*fkp.F[i];
-            // Then evaluate the derivatives of conserved quantity.
-            // Note that conserved quantities are stored per-unit-volume.
-            dUdt[i] = vol_inv*surface_integral;
-        }
-        return;
-    } // end eval_dUdt()
-
-    __host__
-    void eval_dUdt(int level)
-    // Evaluate RHS terms for all cells in this block.
-    {
-        for (auto i=0; i < nActiveCells; i++) {
-            FVCell& c = cells[i];
-            ConservedQuantities dUdt = dQdt[level*nActiveCells + i];
-            eval_dUdt(c, dUdt);
-        }
-        return;
-    } // end eval_dUdt()
-
     __host__ __device__
     number estimate_local_dt(FVCell& c, Vector3 inorm, Vector3 jnorm, Vector3 knorm, number cfl)
     {
@@ -727,16 +645,108 @@ struct Block {
     } // end estimate_allowed_dt()
 
     __host__
-    void update_stage_1(number dt)
-    // Predictor step.
-    // Assume BCs have been applied.
-    // 1. compute fluxes across all FVFaces
-    // 2. compute dUdt_level0 for all cells
-    // 3. increment U_level0 -> U_level1
+    void encodeConserved(int level)
     {
-        // [TODO]
+        for (auto i=0; i < nActiveCells; i++) {
+            FVCell& c = cells[i];
+            ConservedQuantities& U = Q[level*nActiveCells + i];
+            c.encode_conserved(U);
+        }
         return;
-    } // end predictor_step()
+    }
+
+    __host__
+    int decodeConserved(int level)
+    {
+        int bad_cell_count = 0;
+        for (auto i=0; i < nActiveCells; i++) {
+            FVCell& c = cells[i];
+            ConservedQuantities U = Q[level*nActiveCells + i];
+            int flag = c.decode_conserved(U);
+            if (flag) { bad_cell_count += 1; }
+        }
+        return bad_cell_count;
+    }
+
+    __host__
+    void calculate_fluxes(int x_order)
+    {
+        for (auto& face : iFaces) {
+            FlowState fsL = cells[face.left_cells[0]].fs;
+            FlowState fsR = cells[face.right_cells[0]].fs;
+            ausmdv(face, fsL, fsR);
+        }
+        for (auto& face : jFaces) {
+            FlowState fsL = cells[face.left_cells[0]].fs;
+            FlowState fsR = cells[face.right_cells[0]].fs;
+            ausmdv(face, fsL, fsR);
+        }
+        for (auto& face : kFaces) {
+            FlowState& fsL = cells[face.left_cells[0]].fs;
+            FlowState& fsR = cells[face.right_cells[0]].fs;
+            ausmdv(face, fsL, fsR);
+        }
+        return;
+    }
+
+    __host__
+    void eval_dUdt(FVCell& c, ConservedQuantities& dUdt)
+    // These are the spatial (RHS) terms in the semi-discrete governing equations.
+    {
+        number vol_inv = 1.0/c.volume;
+        auto& fim = iFaces[c.face[Face::iminus]];
+        auto& fip = iFaces[c.face[Face::iplus]];
+        auto& fjm = jFaces[c.face[Face::jminus]];
+        auto& fjp = jFaces[c.face[Face::jplus]];
+        auto& fkm = kFaces[c.face[Face::kminus]];
+        auto& fkp = kFaces[c.face[Face::kplus]];
+        //
+        for (int i=0; i < CQI::n; i++) {
+            // Integrate the fluxes across the interfaces that bound the cell.
+            number surface_integral = 0.0;
+            surface_integral = fim.area*fim.F[i] - fip.area*fip.F[i]
+                + fjm.area*fjm.F[i] - fjp.area*fjp.F[i]
+                + fkm.area*fkm.F[i] - fkp.area*fkp.F[i];
+            // Then evaluate the derivatives of conserved quantity.
+            // Note that conserved quantities are stored per-unit-volume.
+            dUdt[i] = vol_inv*surface_integral;
+        }
+        return;
+    } // end eval_dUdt()
+
+    __host__
+    int update_stage_1(number dt)
+    // Predictor step.
+    {
+        cout << "Start update_state_1 for block " << endl;
+        int bad_cell_count = 0;
+        for (auto i=0; i < nActiveCells; i++) {
+            FVCell& c = cells[i];
+            ConservedQuantities dUdt = dQdt[i];
+            eval_dUdt(c, dUdt);
+            ConservedQuantities U0 = Q[i];
+            ConservedQuantities U1 = Q[nActiveCells + i];
+            for (int j=0; j < CQI::n; j++) {
+                U1[j] = U0[j] + dt*dUdt[j];
+            }
+            int flag = c.decode_conserved(U1);
+            if (flag) { bad_cell_count += 1; }
+        }
+        cout << "End update_state_1 for block: bad_cell_count=" << bad_cell_count << endl;
+        return bad_cell_count;
+    } // end update_stage_1()
+
+    __host__
+    void copy_conserved_data(int from_level, int to_level)
+    {
+        for (auto i=0; i < nActiveCells; i++) {
+            ConservedQuantities U_from = Q[from_level*nActiveCells + i];
+            ConservedQuantities U_to = Q[to_level*nActiveCells + i];
+            for (int j=0; j < CQI::n; j++) {
+                U_to[j] = U_from[j];
+            }
+        }
+    } // end copy_conserved_data()
 
 }; // end Block
 

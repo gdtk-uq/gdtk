@@ -21,6 +21,29 @@
 using namespace std;
 using json = nlohmann::json;
 
+namespace BCCode {
+    // Boundary condition codes, to decide what to do for the ghost cells.
+    // Periodic boundary conditions should just work if we wrap the index in each direction.
+    // There's not enough information here to have arbitrary block connections.
+    constexpr int wall_with_slip = 0;
+    constexpr int wall_no_slip = 1;
+    constexpr int exchange = 2;
+    constexpr int inflow = 3;
+    constexpr int outflow = 4;
+
+    array<string,5> names{"wall_with_slip", "wall_no_slip", "exchange", "inflow", "outflow"};
+};
+
+int BC_code_from_name(string name)
+{
+    if (name == "wall_with_slip") return BCCode::wall_with_slip;
+    if (name == "wall_no_slip") return BCCode::wall_no_slip;
+    if (name == "exchange") return BCCode::exchange;
+    if (name == "inflow") return BCCode::inflow;
+    if (name == "outflow") return BCCode::outflow;
+    return BCCode::wall_with_slip;
+}
+
 struct BConfig {
     int i, j, k;
     int initial_fs;
@@ -48,6 +71,13 @@ namespace Config {
     vector<int> nics, njcs, nkcs;
     vector<vector<vector<int> > >blk_ids;
     vector<BConfig> blk_configs;
+    int print_count = 20;
+    int cfl_count = 10;
+    number dt_plot = 1.0e-5;
+    number cfl = 0.5; // [TODO] replace with schedule
+    number dt_init = 1.0e-6;
+    number max_time = 1.0e-3;
+    int max_step = 100.0;
 }
 
 void read_config_file(string fileName)
@@ -152,14 +182,26 @@ void read_config_file(string fileName)
                 blk_config.bc_fs[i] = bc["flow_state_index"].get<int>();
             }
         }
-        cout << "blk_config: " << blk_config.toString() << endl;
+        cout << "  blk=" << Config::blk_configs.size() << " config=" << blk_config.toString() << endl;
         Config::blk_configs.push_back(blk_config);
     }
     if (Config::nFluidBlocks != Config::blk_configs.size()) {
         throw runtime_error("Did not read the correct number of block configurations: "+
                             to_string(Config::nFluidBlocks)+" "+to_string(Config::blk_configs.size()));
     }
+    //
+    Config::dt_init = jsonData["dt_init"].get<number>();
+    Config::max_time = jsonData["max_time"].get<number>();
+    Config::max_step = jsonData["max_step"].get<int>();
+    Config::cfl = 0.5;  // [TODO] schedule of cfl with time.
+    Config::cfl_count = jsonData["cfl_count"].get<int>();
+    Config::print_count = jsonData["print_count"].get<int>();
+    cout << "  dt_init=" << Config::dt_init << endl;
+    cout << "  max_time=" << Config::max_time << endl;
+    cout << "  max_step=" << Config::max_step << endl;
+    cout << "  clf_count=" << Config::cfl_count << endl;
+    cout << "  print_count=" << Config::print_count << endl;
     return;
-}
+} // end read_config_file()
 
 #endif

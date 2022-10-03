@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <vector>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <filesystem>
 #include <limits>
@@ -28,12 +29,13 @@
 
 using namespace std;
 
-struct SimState {
-    number dt;
-    int step;
-    int max_step;
-    number t_final;
-    number dt_plot;
+namespace SimState {
+    number dt = 0.0;
+    int step = 0;
+    int t = 0.0;
+    number t_plot = 0.0;
+    int next_plot_indx = 1;
+    bool finished = false;
 };
 
 vector<Block*> fluidBlocks;
@@ -64,10 +66,10 @@ void initialize_simulation(int tindx_start)
                     blk_ptr->readFlow(fileName);
                     blk_ptr->computeGeometry();
                     blk_ptr->encodeConserved(0);
-                    cout << "Sample cell data: " << blk_ptr->cells[blk_ptr->activeCellIndex(0,0,0)].toString() << endl;
-                    cout << "Sample iFace data: " << blk_ptr->iFaces[blk_ptr->iFaceIndex(0,0,0)].toString() << endl;
-                    cout << "Sample jFace data: " << blk_ptr->jFaces[blk_ptr->jFaceIndex(0,0,0)].toString() << endl;
-                    cout << "Sample kFace data: " << blk_ptr->kFaces[blk_ptr->kFaceIndex(0,0,0)].toString() << endl;
+                    // cout << "Sample cell data: " << blk_ptr->cells[blk_ptr->activeCellIndex(0,0,0)].toString() << endl;
+                    // cout << "Sample iFace data: " << blk_ptr->iFaces[blk_ptr->iFaceIndex(0,0,0)].toString() << endl;
+                    // cout << "Sample jFace data: " << blk_ptr->jFaces[blk_ptr->jFaceIndex(0,0,0)].toString() << endl;
+                    // cout << "Sample kFace data: " << blk_ptr->kFaces[blk_ptr->kFaceIndex(0,0,0)].toString() << endl;
                     fluidBlocks.push_back(blk_ptr);
                     if (blk_id+1 != fluidBlocks.size()) {
                         throw runtime_error("Inconsistent blk_id and position in fluidBlocks array.");
@@ -80,6 +82,26 @@ void initialize_simulation(int tindx_start)
         throw runtime_error("Inconsistent number of blocks: "+
                             to_string(fluidBlocks.size())+" "+to_string(Config::nFluidBlocks));
     }
+    //
+    // Set up the simulation control parameters.
+    SimState::t = 0.0;
+    // Read times.data file to determine starting time.
+    ifstream timesFile(Config::job+"/times.data", ifstream::binary);
+    if (timesFile.good()) {
+        string line;
+        while (getline(timesFile, line)) {
+            if (line.empty()) continue;
+            if (line.find("#") < string::npos) continue; // Skip the comment.
+            stringstream ss(line);
+            int tindx; number tme;
+            ss >> tindx >> tme;
+            if (tindx == tindx_start) {
+                SimState::t = tme;
+                SimState::next_plot_indx = tindx + 1;
+            }
+        }
+    }
+    SimState::t_plot = SimState::t + Config::dt_plot;
     return;
 } // initialize_simulation()
 
@@ -135,26 +157,45 @@ void apply_boundary_conditions()
 } // end apply_boundary_conditions()
 
 __host__
-void gasdynamic_update(number dt)
-{
-    apply_boundary_conditions();
-    // update_stage_1 for all blocks
-    //
-} // end gasdynamic_update()
-
-__host__
 void march_in_time()
 {
-    // Occasionally determine allowable time step.
-    number dt = 1.0e-6; // [TODO] get from config
-    for (auto* blk_ptr : fluidBlocks) {
-        dt = fmin(dt, blk_ptr->estimate_allowed_dt(0.5));
-    }
-    gasdynamic_update(dt);
-    // Call gasdynamic_update an number of times.
-    for (auto* blk_ptr : fluidBlocks) {
-        int bad_cell = blk_ptr->decodeConserved(0);
-    }
+    cout << "march_in_time() start" << endl;
+    SimState::dt = Config::dt_init;
+    SimState::step = 0;
+    //
+    while (SimState::step < Config::max_step && SimState::t < Config::max_time) {
+        cout << "Start of step " << SimState::step << " dt=" << SimState::dt
+             << " t=" << SimState::t << endl;
+        //
+        // Occasionally determine allowable time step.
+        if (SimState::step > 0 && (SimState::step % Config::cfl_count)==0) {
+            for (auto* blk_ptr : fluidBlocks) {
+                SimState::dt = fmin(SimState::dt, blk_ptr->estimate_allowed_dt(Config::cfl));
+            }
+        }
+        // Attempt a step.
+        int bad_cell_count = 0;
+        for (auto* blk_ptr : fluidBlocks) {
+            bad_cell_count += blk_ptr->update_stage_1(SimState::dt);
+        }
+        if (bad_cell_count == 0) {
+            for (auto* blk_ptr : fluidBlocks) {
+                blk_ptr->copy_conserved_data(1, 0);
+            }
+        } else {
+            throw runtime_error("Bad cell count: "+to_string(bad_cell_count));
+        }
+        //
+        SimState::t += SimState::dt;
+        SimState::step += 1;
+        //
+        if (SimState::step > 0 && (SimState::step % Config::print_count)==0) {
+            cout << "Step=" << SimState::step << " t=" << SimState::t
+                 << " dt=" << SimState::dt << " cfl=" << Config::cfl
+                 << endl;
+        }
+    } // end while loop
+    cout << "march_in_time() end" << endl;
     return;
 }
 
@@ -162,7 +203,7 @@ __host__
 void finalize_simulation()
 {
     // Exercise the writing of flow data, even we have done no calculations.
-    write_flow_data(1);
+    write_flow_data(SimState::next_plot_indx);
     return;
 }
 
