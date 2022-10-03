@@ -21,3 +21,6 @@ low_pressure = FlowState(p=20.0e3, T=270.0)
 #
 b0 = FluidBlock(i=0, grid=grd0, initialState=high_pressure, bcs={'iplus':ExchangeBC()})
 b1 = FluidBlock(i=1, grid=grd1, initialState=low_pressure, bcs={'iminus':ExchangeBC()})
+#
+config.max_time = 5.0e-3
+config.max_step = 3000

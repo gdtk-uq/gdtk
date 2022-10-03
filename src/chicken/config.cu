@@ -98,6 +98,7 @@ void read_config_file(string fileName)
         }
         f.close();
         delete[] text;
+        cout << "Finished reading JSON file." << endl;
     } else {
         throw runtime_error("Could not open ifstream for config.json.");
     }
