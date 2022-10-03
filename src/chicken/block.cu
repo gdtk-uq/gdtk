@@ -582,6 +582,7 @@ struct Block {
     // Writes the flow data into a new ZIP archive file.
     // Any necessary directories are presumed to exist.
     {
+        vector<string> data; // A place to retain the string data while the zip file is constructed.
         int err = 0;
         zip *z = zip_open(fileName.c_str(), ZIP_CREATE, &err);
         if (err) {
@@ -599,22 +600,23 @@ struct Block {
                         }
                     }
                 }
-                string data = ss.str();
+                data.push_back(ss.str());
+                int last = data.size()-1;
                 // Add the data to the ZIP archive as a file.
-                zip_source_t* zs = zip_source_buffer(z, data.c_str(), data.size(), 0);
+                zip_source_t* zs = zip_source_buffer(z, data[last].c_str(), data[last].size(), 0);
                 if (zs) {
-                    int zindx = zip_file_add(z, name.c_str(), zs, ZIP_FL_OVERWRITE);
+                    int zindx = zip_file_add(z, name.c_str(), zs, ZIP_FL_OVERWRITE|ZIP_FL_ENC_UTF_8);
                     if (zindx < 0) {
                         cerr << "Could not add file " << name << " to ZIP archive " << fileName << endl;
                         zip_source_free(zs);
                     }
                 } else {
-                    cerr << "Error adding file to zip: " << string(zip_strerror(z)) << endl;
-                    zip_source_free(zs);
+                    cerr << "Error getting source to add file to zip: " << string(zip_strerror(z)) << endl;
                 }
             }
             zip_close(z);
         }
+        data.resize(0);
         return;
     } // end writeFlow()
 
