@@ -718,7 +718,6 @@ struct Block {
     int update_stage_1(number dt)
     // Predictor step.
     {
-        cout << "Start update_state_1 for block " << endl;
         int bad_cell_count = 0;
         for (auto i=0; i < nActiveCells; i++) {
             FVCell& c = cells[i];
@@ -732,7 +731,6 @@ struct Block {
             int flag = c.decode_conserved(U1);
             if (flag) { bad_cell_count += 1; }
         }
-        cout << "End update_state_1 for block: bad_cell_count=" << bad_cell_count << endl;
         return bad_cell_count;
     } // end update_stage_1()
 

@@ -32,7 +32,7 @@ using namespace std;
 namespace SimState {
     number dt = 0.0;
     int step = 0;
-    int t = 0.0;
+    number t = 0.0;
     number t_plot = 0.0;
     int next_plot_indx = 1;
     bool finished = false;
@@ -66,10 +66,6 @@ void initialize_simulation(int tindx_start)
                     blk_ptr->readFlow(fileName);
                     blk_ptr->computeGeometry();
                     blk_ptr->encodeConserved(0);
-                    // cout << "Sample cell data: " << blk_ptr->cells[blk_ptr->activeCellIndex(0,0,0)].toString() << endl;
-                    // cout << "Sample iFace data: " << blk_ptr->iFaces[blk_ptr->iFaceIndex(0,0,0)].toString() << endl;
-                    // cout << "Sample jFace data: " << blk_ptr->jFaces[blk_ptr->jFaceIndex(0,0,0)].toString() << endl;
-                    // cout << "Sample kFace data: " << blk_ptr->kFaces[blk_ptr->kFaceIndex(0,0,0)].toString() << endl;
                     fluidBlocks.push_back(blk_ptr);
                     if (blk_id+1 != fluidBlocks.size()) {
                         throw runtime_error("Inconsistent blk_id and position in fluidBlocks array.");
@@ -106,8 +102,10 @@ void initialize_simulation(int tindx_start)
 } // initialize_simulation()
 
 __host__
-void write_flow_data(int tindx)
+void write_flow_data(int tindx, number tme)
 {
+    cout << "Write flow data at tindx=" << tindx << " time=" << tme << endl;
+    //
     char nameBuf[256];
     sprintf(nameBuf, "%s/flow/t%04d", Config::job.c_str(), tindx);
     string flowDir = string(nameBuf);
@@ -126,6 +124,9 @@ void write_flow_data(int tindx)
             }
         }
     }
+    // Update the times file.
+    ofstream timesFile(Config::job+"/times.data", ofstream::binary|ofstream::app);
+    timesFile << tindx << " " << tme << endl;
     return;
 } // end write_flow_data()
 
@@ -164,8 +165,6 @@ void march_in_time()
     SimState::step = 0;
     //
     while (SimState::step < Config::max_step && SimState::t < Config::max_time) {
-        cout << "Start of step " << SimState::step << " dt=" << SimState::dt
-             << " t=" << SimState::t << endl;
         //
         // Occasionally determine allowable time step.
         if (SimState::step > 0 && (SimState::step % Config::cfl_count)==0) {
@@ -203,7 +202,7 @@ __host__
 void finalize_simulation()
 {
     // Exercise the writing of flow data, even we have done no calculations.
-    write_flow_data(SimState::next_plot_indx);
+    write_flow_data(SimState::next_plot_indx, SimState::t);
     return;
 }
 

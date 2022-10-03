@@ -101,7 +101,7 @@ def read_block_of_flow_data(fileName):
     global config
     flowData = {}
     with ZipFile(fileName, mode='r') as zf:
-        for var in config["flow_var_names"]:
+        for var in config["iovar_names"]:
             with zf.open(var, mode='r') as fp:
                 text = fp.read().decode('utf-8')
                 data = []
@@ -129,7 +129,7 @@ def write_vtk_files(jobDir, tindx):
     fp.write('<PStructuredGrid WholeExtent="%d %d %d %d %d %d" GhostLevel="0">\n' %
              (0, whole_niv-1, 0, whole_njv-1, 0, whole_nkv-1))
     fp.write('<PCellData>\n')
-    for var in config["flow_var_names"]:
+    for var in config["iovar_names"]:
         fp.write('<DataArray Name="%s" type="Float64" NumberOfComponents="1" format="ascii" />\n' % (var,))
     fp.write('</PCellData>\n')
     fp.write('<PPoints>\n')
@@ -174,7 +174,7 @@ def write_vtk_structured_grid_file(fileName, grid, flowData,
                   start_njv, start_njv+grid.njv-1,
                   start_nkv, start_nkv+grid.nkv-1))
         fp.write('<CellData>\n')
-        for var in config["flow_var_names"]:
+        for var in config["iovar_names"]:
             fp.write('<DataArray Name="%s" type="Float64" NumberOfComponents="1" format="ascii">\n' % (var,))
             for item in flowData[var]: fp.write('%g\n' % (item,))
             fp.write('</DataArray>\n')
