@@ -173,6 +173,12 @@ struct Block {
         }
         //
         // Make connections from faces to cells and vertices.
+        //
+        // Face i  0     1     2     3     4
+        //         +-----+-----+-----+-----+
+        // Cell i  |  0  |  1  |  2  |  3  |
+        //         +-----+-----+-----+-----+
+        //
         // iFaces
         for (int k=0; k < nkc; k++) {
             for (int j=0; j < njc; j++) {
@@ -185,29 +191,29 @@ struct Block {
                     if (i == 0) {
                         f.left_cells[1] = ghostCellIndex(Face::iminus,j,k,1);
                         f.left_cells[0] = ghostCellIndex(Face::iminus,j,k,0);
-                        f.right_cells[0] = activeCellIndex(i+1,j,k);
-                        f.right_cells[1] = activeCellIndex(i+2,j,k);
+                        f.right_cells[0] = activeCellIndex(i,j,k);
+                        f.right_cells[1] = activeCellIndex(i+1,j,k);
                     } else if (i == 1) {
                         f.left_cells[1] = ghostCellIndex(Face::iminus,j,k,0);
-                        f.left_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[0] = activeCellIndex(i+1,j,k);
-                        f.right_cells[1] = activeCellIndex(i+2,j,k);
+                        f.left_cells[0] = activeCellIndex(i-1,j,k);
+                        f.right_cells[0] = activeCellIndex(i,j,k);
+                        f.right_cells[1] = activeCellIndex(i+1,j,k);
                     } else if (i == nic-1) {
-                        f.left_cells[1] = activeCellIndex(i-1,j,k);
-                        f.left_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[0] = activeCellIndex(i+1,j,k);
+                        f.left_cells[1] = activeCellIndex(i-2,j,k);
+                        f.left_cells[0] = activeCellIndex(i-1,j,k);
+                        f.right_cells[0] = activeCellIndex(i,j,k);
                         f.right_cells[1] = ghostCellIndex(Face::iplus,j,k,0);
                     } else if (i == nic) {
-                        f.left_cells[1] = activeCellIndex(i-1,j,k);
-                        f.left_cells[0] = activeCellIndex(i,j,k);
+                        f.left_cells[1] = activeCellIndex(i-2,j,k);
+                        f.left_cells[0] = activeCellIndex(i-1,j,k);
                         f.right_cells[0] = ghostCellIndex(Face::iplus,j,k,0);
                         f.right_cells[1] = ghostCellIndex(Face::iplus,j,k,1);
                     } else {
                         // Interior cell.
-                        f.left_cells[1] = activeCellIndex(i-1,j,k);
-                        f.left_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[0] = activeCellIndex(i+1,j,k);
-                        f.right_cells[1] = activeCellIndex(i+2,j,k);
+                        f.left_cells[1] = activeCellIndex(i-2,j,k);
+                        f.left_cells[0] = activeCellIndex(i-1,j,k);
+                        f.right_cells[0] = activeCellIndex(i,j,k);
+                        f.right_cells[1] = activeCellIndex(i+1,j,k);
                     }
                 }
             }
@@ -224,29 +230,29 @@ struct Block {
                     if (j == 0) {
                         f.left_cells[1] = ghostCellIndex(Face::jminus,i,k,1);
                         f.left_cells[0] = ghostCellIndex(Face::jminus,i,k,0);
-                        f.right_cells[0] = activeCellIndex(i,j+1,k);
-                        f.right_cells[1] = activeCellIndex(i,j+2,k);
+                        f.right_cells[0] = activeCellIndex(i,j,k);
+                        f.right_cells[1] = activeCellIndex(i,j+1,k);
                     } else if (j == 1) {
                         f.left_cells[1] = ghostCellIndex(Face::jminus,i,k,0);
-                        f.left_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[0] = activeCellIndex(i,j+1,k);
-                        f.right_cells[1] = activeCellIndex(i,j+2,k);
+                        f.left_cells[0] = activeCellIndex(i,j-1,k);
+                        f.right_cells[0] = activeCellIndex(i,j,k);
+                        f.right_cells[1] = activeCellIndex(i,j+1,k);
                     } else if (j == njc-1) {
-                        f.left_cells[1] = activeCellIndex(i,j-1,k);
-                        f.left_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[0] = activeCellIndex(i,j+1,k);
+                        f.left_cells[1] = activeCellIndex(i,j-2,k);
+                        f.left_cells[0] = activeCellIndex(i,j-1,k);
+                        f.right_cells[0] = activeCellIndex(i,j,k);
                         f.right_cells[1] = ghostCellIndex(Face::jplus,i,k,0);
                     } else if (j == njc) {
-                        f.left_cells[1] = activeCellIndex(i,j-1,k);
-                        f.left_cells[0] = activeCellIndex(i,j,k);
+                        f.left_cells[1] = activeCellIndex(i,j-2,k);
+                        f.left_cells[0] = activeCellIndex(i,j-1,k);
                         f.right_cells[0] = ghostCellIndex(Face::jplus,i,k,0);
                         f.right_cells[1] = ghostCellIndex(Face::jplus,i,k,1);
                     } else {
                         // Interior cell.
-                        f.left_cells[1] = activeCellIndex(i,j-1,k);
-                        f.left_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[0] = activeCellIndex(i,j+1,k);
-                        f.right_cells[1] = activeCellIndex(i,j+2,k);
+                        f.left_cells[1] = activeCellIndex(i,j-2,k);
+                        f.left_cells[0] = activeCellIndex(i,j-1,k);
+                        f.right_cells[0] = activeCellIndex(i,j,k);
+                        f.right_cells[1] = activeCellIndex(i,j+1,k);
                     }
                 }
             }
@@ -263,29 +269,29 @@ struct Block {
                     if (k == 0) {
                         f.left_cells[1] = ghostCellIndex(Face::kminus,i,j,1);
                         f.left_cells[0] = ghostCellIndex(Face::kminus,i,j,0);
-                        f.right_cells[0] = activeCellIndex(i,j,k+1);
-                        f.right_cells[1] = activeCellIndex(i,j,k+2);
+                        f.right_cells[0] = activeCellIndex(i,j,k);
+                        f.right_cells[1] = activeCellIndex(i,j,k+1);
                     } else if (k == 1) {
                         f.left_cells[1] = ghostCellIndex(Face::kminus,i,j,0);
-                        f.left_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[0] = activeCellIndex(i,j,k+1);
-                        f.right_cells[1] = activeCellIndex(i,j,k+2);
+                        f.left_cells[0] = activeCellIndex(i,j,k-1);
+                        f.right_cells[0] = activeCellIndex(i,j,k);
+                        f.right_cells[1] = activeCellIndex(i,j,k+1);
                     } else if (k == nkc-1) {
-                        f.left_cells[1] = activeCellIndex(i,j,k-1);
-                        f.left_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[0] = activeCellIndex(i,j,k+1);
+                        f.left_cells[1] = activeCellIndex(i,j,k-2);
+                        f.left_cells[0] = activeCellIndex(i,j,k-1);
+                        f.right_cells[0] = activeCellIndex(i,j,k);
                         f.right_cells[1] = ghostCellIndex(Face::kplus,i,j,0);
                     } else if (k == nkc) {
-                        f.left_cells[1] = activeCellIndex(i,j,k-1);
-                        f.left_cells[0] = activeCellIndex(i,j,k);
+                        f.left_cells[1] = activeCellIndex(i,j,k-2);
+                        f.left_cells[0] = activeCellIndex(i,j,k-1);
                         f.right_cells[0] = ghostCellIndex(Face::kplus,i,j,0);
                         f.right_cells[1] = ghostCellIndex(Face::kplus,i,j,1);
                     } else {
                         // Interior cell.
-                        f.left_cells[1] = activeCellIndex(i,j,k-1);
-                        f.left_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[0] = activeCellIndex(i,j,k+1);
-                        f.right_cells[1] = activeCellIndex(i,j,k+2);
+                        f.left_cells[1] = activeCellIndex(i,j,k-2);
+                        f.left_cells[0] = activeCellIndex(i,j,k-1);
+                        f.right_cells[0] = activeCellIndex(i,j,k);
+                        f.right_cells[1] = activeCellIndex(i,j,k+1);
                     }
                 }
             }
