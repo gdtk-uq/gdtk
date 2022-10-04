@@ -71,13 +71,16 @@ namespace Config {
     vector<int> nics, njcs, nkcs;
     vector<vector<vector<int> > >blk_ids;
     vector<BConfig> blk_configs;
+    //
     int print_count = 20;
     int cfl_count = 10;
     number dt_plot = 1.0e-5;
-    number cfl = 0.5; // [TODO] replace with schedule
+    number cfl = 0.25; // [TODO] replace with schedule
     number dt_init = 1.0e-6;
     number max_time = 1.0e-3;
     int max_step = 100.0;
+    //
+    int x_order = 2;
 }
 
 void read_config_file(string fileName)
@@ -194,7 +197,7 @@ void read_config_file(string fileName)
     Config::dt_init = jsonData["dt_init"].get<number>();
     Config::max_time = jsonData["max_time"].get<number>();
     Config::max_step = jsonData["max_step"].get<int>();
-    Config::cfl = 0.5;  // [TODO] schedule of cfl with time.
+    Config::cfl = 0.25;  // [TODO] schedule of cfl with time.
     Config::cfl_count = jsonData["cfl_count"].get<int>();
     Config::print_count = jsonData["print_count"].get<int>();
     cout << "  dt_init=" << Config::dt_init << endl;

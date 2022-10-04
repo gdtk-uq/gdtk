@@ -172,9 +172,12 @@ void march_in_time()
                 SimState::dt = fmin(SimState::dt, blk_ptr->estimate_allowed_dt(Config::cfl));
             }
         }
-        // Attempt a step.
+        // Attempt a step, stage 1.
+        apply_boundary_conditions();
+        //
         int bad_cell_count = 0;
         for (auto* blk_ptr : fluidBlocks) {
+            blk_ptr->calculate_fluxes(Config::x_order);
             bad_cell_count += blk_ptr->update_stage_1(SimState::dt);
         }
         if (bad_cell_count == 0) {

@@ -151,10 +151,12 @@ struct FVCell {
 
     __host__ __device__
     int decode_conserved(ConservedQuantities& U)
-    // Returns 0 for success, 1 for negative density.
+    // Returns 0 for success, 1 for the presence of nans or negative density.
     {
+        bool any_nans = false; for (auto v : U) { if (isnan(v)) { any_nans = true; } }
+        if (any_nans) return 1;
         number rho = U[CQI::mass];
-        if (rho <= 0.0) return -1;
+        if (rho <= 0.0) return 1;
         number dinv = 1.0/rho;
         fs.vel.set(U[CQI::xMom]*dinv, U[CQI::yMom]*dinv, U[CQI::zMom]*dinv);
         // Split the total energy per unit volume.

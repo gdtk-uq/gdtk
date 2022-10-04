@@ -114,7 +114,7 @@ struct Block {
         nic = i;
         njc = j;
         nkc = k;
-        int nActiveCells = nic*njc*nkc;
+        nActiveCells = nic*njc*nkc;
         //
         // For the moment assume that all boundary conditions require ghost cells.
         n0c[Face::iminus] = njc; n1c[Face::iminus] = nkc;
@@ -183,29 +183,29 @@ struct Block {
                     f.vtx[2] = vtxIndex(i,j+1,k+1);
                     f.vtx[3] = vtxIndex(i,j,k+1);
                     if (i == 0) {
-                        f.left_cells[0] = ghostCellIndex(Face::iminus,j,k,1);
-                        f.left_cells[1] = ghostCellIndex(Face::iminus,j,k,0);
+                        f.left_cells[1] = ghostCellIndex(Face::iminus,j,k,1);
+                        f.left_cells[0] = ghostCellIndex(Face::iminus,j,k,0);
                         f.right_cells[0] = activeCellIndex(i+1,j,k);
                         f.right_cells[1] = activeCellIndex(i+2,j,k);
                     } else if (i == 1) {
-                        f.left_cells[0] = ghostCellIndex(Face::iminus,j,k,0);
-                        f.left_cells[1] = activeCellIndex(i-1,j,k);
+                        f.left_cells[1] = ghostCellIndex(Face::iminus,j,k,0);
+                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.right_cells[0] = activeCellIndex(i+1,j,k);
                         f.right_cells[1] = activeCellIndex(i+2,j,k);
                     } else if (i == nic-1) {
-                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.left_cells[1] = activeCellIndex(i-1,j,k);
+                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.right_cells[0] = activeCellIndex(i+1,j,k);
                         f.right_cells[1] = ghostCellIndex(Face::iplus,j,k,0);
                     } else if (i == nic) {
-                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.left_cells[1] = activeCellIndex(i-1,j,k);
+                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.right_cells[0] = ghostCellIndex(Face::iplus,j,k,0);
                         f.right_cells[1] = ghostCellIndex(Face::iplus,j,k,1);
                     } else {
                         // Interior cell.
-                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.left_cells[1] = activeCellIndex(i-1,j,k);
+                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.right_cells[0] = activeCellIndex(i+1,j,k);
                         f.right_cells[1] = activeCellIndex(i+2,j,k);
                     }
@@ -222,29 +222,29 @@ struct Block {
                     f.vtx[2] = vtxIndex(i+1,j,k+1);
                     f.vtx[3] = vtxIndex(i,j,k+1);
                     if (j == 0) {
-                        f.left_cells[0] = ghostCellIndex(Face::jminus,i,k,1);
-                        f.left_cells[1] = ghostCellIndex(Face::jminus,i,k,0);
+                        f.left_cells[1] = ghostCellIndex(Face::jminus,i,k,1);
+                        f.left_cells[0] = ghostCellIndex(Face::jminus,i,k,0);
                         f.right_cells[0] = activeCellIndex(i,j+1,k);
                         f.right_cells[1] = activeCellIndex(i,j+2,k);
                     } else if (j == 1) {
-                        f.left_cells[0] = ghostCellIndex(Face::jminus,i,k,0);
-                        f.left_cells[1] = activeCellIndex(i,j-1,k);
+                        f.left_cells[1] = ghostCellIndex(Face::jminus,i,k,0);
+                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.right_cells[0] = activeCellIndex(i,j+1,k);
                         f.right_cells[1] = activeCellIndex(i,j+2,k);
                     } else if (j == njc-1) {
-                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.left_cells[1] = activeCellIndex(i,j-1,k);
+                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.right_cells[0] = activeCellIndex(i,j+1,k);
                         f.right_cells[1] = ghostCellIndex(Face::jplus,i,k,0);
                     } else if (j == njc) {
-                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.left_cells[1] = activeCellIndex(i,j-1,k);
+                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.right_cells[0] = ghostCellIndex(Face::jplus,i,k,0);
                         f.right_cells[1] = ghostCellIndex(Face::jplus,i,k,1);
                     } else {
                         // Interior cell.
-                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.left_cells[1] = activeCellIndex(i,j-1,k);
+                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.right_cells[0] = activeCellIndex(i,j+1,k);
                         f.right_cells[1] = activeCellIndex(i,j+2,k);
                     }
@@ -261,29 +261,29 @@ struct Block {
                     f.vtx[2] = vtxIndex(i+1,j+1,k);
                     f.vtx[3] = vtxIndex(i,j+1,k);
                     if (k == 0) {
-                        f.left_cells[0] = ghostCellIndex(Face::kminus,i,j,1);
-                        f.left_cells[1] = ghostCellIndex(Face::kminus,i,j,0);
+                        f.left_cells[1] = ghostCellIndex(Face::kminus,i,j,1);
+                        f.left_cells[0] = ghostCellIndex(Face::kminus,i,j,0);
                         f.right_cells[0] = activeCellIndex(i,j,k+1);
                         f.right_cells[1] = activeCellIndex(i,j,k+2);
                     } else if (k == 1) {
-                        f.left_cells[0] = ghostCellIndex(Face::kminus,i,j,0);
-                        f.left_cells[1] = activeCellIndex(i,j,k-1);
+                        f.left_cells[1] = ghostCellIndex(Face::kminus,i,j,0);
+                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.right_cells[0] = activeCellIndex(i,j,k+1);
                         f.right_cells[1] = activeCellIndex(i,j,k+2);
                     } else if (k == nkc-1) {
-                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.left_cells[1] = activeCellIndex(i,j,k-1);
+                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.right_cells[0] = activeCellIndex(i,j,k+1);
                         f.right_cells[1] = ghostCellIndex(Face::kplus,i,j,0);
                     } else if (k == nkc) {
-                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.left_cells[1] = activeCellIndex(i,j,k-1);
+                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.right_cells[0] = ghostCellIndex(Face::kplus,i,j,0);
                         f.right_cells[1] = ghostCellIndex(Face::kplus,i,j,1);
                     } else {
                         // Interior cell.
-                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.left_cells[1] = activeCellIndex(i,j,k-1);
+                        f.left_cells[0] = activeCellIndex(i,j,k);
                         f.right_cells[0] = activeCellIndex(i,j,k+1);
                         f.right_cells[1] = activeCellIndex(i,j,k+2);
                     }
@@ -636,7 +636,7 @@ struct Block {
     number estimate_allowed_dt(number cfl)
     {
         number smallest_dt = numeric_limits<number>::max();
-        for (auto i=0; i < nActiveCells; i++) {
+        for (int i=0; i < nActiveCells; i++) {
             FVCell& c = cells[i];
             Vector3 inorm = iFaces[c.face[Face::iminus]].n;
             Vector3 jnorm = jFaces[c.face[Face::jminus]].n;
@@ -649,7 +649,7 @@ struct Block {
     __host__
     void encodeConserved(int level)
     {
-        for (auto i=0; i < nActiveCells; i++) {
+        for (int i=0; i < nActiveCells; i++) {
             FVCell& c = cells[i];
             ConservedQuantities& U = Q[level*nActiveCells + i];
             c.encode_conserved(U);
@@ -661,11 +661,10 @@ struct Block {
     int decodeConserved(int level)
     {
         int bad_cell_count = 0;
-        for (auto i=0; i < nActiveCells; i++) {
+        for (int i=0; i < nActiveCells; i++) {
             FVCell& c = cells[i];
             ConservedQuantities U = Q[level*nActiveCells + i];
-            int flag = c.decode_conserved(U);
-            if (flag) { bad_cell_count += 1; }
+            bad_cell_count += c.decode_conserved(U);
         }
         return bad_cell_count;
     }
@@ -674,19 +673,52 @@ struct Block {
     void calculate_fluxes(int x_order)
     {
         for (auto& face : iFaces) {
-            FlowState fsL = cells[face.left_cells[0]].fs;
-            FlowState fsR = cells[face.right_cells[0]].fs;
+            FlowState& fsL = cells[face.left_cells[0]].fs;
+            FlowState& fsR = cells[face.right_cells[0]].fs;
             ausmdv(face, fsL, fsR);
+            //
+            // Check that we have reasonable numbers being returned.
+            bool have_nans = false;
+            for (int j=0; j < CQI::n; j++) { if (isnan(face.F[j])) have_nans = true; }
+            if (have_nans) {
+                cerr << "ausmdv found nans for iFace pos=" << face.pos.toString() << " F=[";
+                for (auto v : face.F) cerr << v << ",";
+                cerr << "]" << endl;
+                cerr << "fsL=" << fsL.toString() << endl;
+                cerr << "fsR=" << fsR.toString() << endl;
+            }
         }
         for (auto& face : jFaces) {
-            FlowState fsL = cells[face.left_cells[0]].fs;
-            FlowState fsR = cells[face.right_cells[0]].fs;
+            FlowState& fsL = cells[face.left_cells[0]].fs;
+            FlowState& fsR = cells[face.right_cells[0]].fs;
             ausmdv(face, fsL, fsR);
+            //
+            // Check that we have reasonable numbers being returned.
+            bool have_nans = false;
+            for (int j=0; j < CQI::n; j++) { if (isnan(face.F[j])) have_nans = true; }
+            if (have_nans) {
+                cerr << "ausmdv found nans for jFace pos=" << face.pos.toString() << " F=[";
+                for (auto v : face.F) cerr << v << ",";
+                cerr << "]" << endl;
+                cerr << "fsL=" << fsL.toString() << endl;
+                cerr << "fsR=" << fsR.toString() << endl;
+            }
         }
         for (auto& face : kFaces) {
             FlowState& fsL = cells[face.left_cells[0]].fs;
             FlowState& fsR = cells[face.right_cells[0]].fs;
             ausmdv(face, fsL, fsR);
+            //
+            // Check that we have reasonable numbers being returned.
+            bool have_nans = false;
+            for (int j=0; j < CQI::n; j++) { if (isnan(face.F[j])) have_nans = true; }
+            if (have_nans) {
+                cerr << "ausmdv found nans for kFace pos=" << face.pos.toString() << " F=[";
+                for (auto v : face.F) cerr << v << ",";
+                cerr << "]" << endl;
+                cerr << "fsL=" << fsL.toString() << endl;
+                cerr << "fsR=" << fsR.toString() << endl;
+            }
         }
         return;
     }
@@ -721,17 +753,16 @@ struct Block {
     // Predictor step.
     {
         int bad_cell_count = 0;
-        for (auto i=0; i < nActiveCells; i++) {
+        for (int i=0; i < nActiveCells; i++) {
             FVCell& c = cells[i];
-            ConservedQuantities dUdt = dQdt[i];
+            ConservedQuantities& dUdt = dQdt[i];
             eval_dUdt(c, dUdt);
-            ConservedQuantities U0 = Q[i];
-            ConservedQuantities U1 = Q[nActiveCells + i];
+            ConservedQuantities& U0 = Q[i];
+            ConservedQuantities& U1 = Q[nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
                 U1[j] = U0[j] + dt*dUdt[j];
             }
-            int flag = c.decode_conserved(U1);
-            if (flag) { bad_cell_count += 1; }
+            bad_cell_count += c.decode_conserved(U1);
         }
         return bad_cell_count;
     } // end update_stage_1()
@@ -740,8 +771,8 @@ struct Block {
     void copy_conserved_data(int from_level, int to_level)
     {
         for (auto i=0; i < nActiveCells; i++) {
-            ConservedQuantities U_from = Q[from_level*nActiveCells + i];
-            ConservedQuantities U_to = Q[to_level*nActiveCells + i];
+            ConservedQuantities& U_from = Q[from_level*nActiveCells + i];
+            ConservedQuantities& U_to = Q[to_level*nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
                 U_to[j] = U_from[j];
             }
