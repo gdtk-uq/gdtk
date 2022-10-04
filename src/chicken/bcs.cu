@@ -10,9 +10,10 @@
 #define BCS_INCLUDED
 
 __host__
-void bc_wall_with_slip(Block* blk_ptr, int ibc)
+void bc_wall_with_slip(int iblk, int ibc)
 // Copy data, reflecting velocity.
 {
+    Block* blk_ptr = fluidBlocks[iblk];
     switch (ibc) {
     case Face::iminus: // jk across face
         for (int k=0; k < blk_ptr->nkc; k++) {
@@ -127,9 +128,10 @@ void bc_wall_with_slip(Block* blk_ptr, int ibc)
 
 
 __host__
-void bc_wall_no_slip(Block* blk_ptr, int ibc)
+void bc_wall_no_slip(int iblk, int ibc)
 // Copy data, reflecting velocity, [TODO] then set the face velocity to zero.
 {
+    Block* blk_ptr = fluidBlocks[iblk];
     switch (ibc) {
     case Face::iminus: // jk across face
         for (int k=0; k < blk_ptr->nkc; k++) {
@@ -249,8 +251,8 @@ void bc_exchange(int iblk, int ibc)
 // The other block will have a corresponding boundary with the same type of boundary condition,
 // so the "exchange" occurs is two phases.
 {
-    auto* blk_config = &(Config::blk_configs[iblk]);
-    auto* blk_ptr = fluidBlocks[iblk];
+    BConfig* blk_config = &(Config::blk_configs[iblk]);
+    Block* blk_ptr = fluidBlocks[iblk];
     //
     switch (ibc) {
     case Face::iminus: { // jk across face
@@ -360,9 +362,10 @@ void bc_exchange(int iblk, int ibc)
 
 
 __host__
-void bc_inflow(Block* blk_ptr, int ibc, FlowState& inflow)
+void bc_inflow(int iblk, int ibc, FlowState& inflow)
 // Copy the associated flow state data into the ghost cells.
 {
+    Block* blk_ptr = fluidBlocks[iblk];
     switch (ibc) {
     case Face::iminus: // jk across face
         for (int k=0; k < blk_ptr->nkc; k++) {
@@ -435,9 +438,10 @@ void bc_inflow(Block* blk_ptr, int ibc, FlowState& inflow)
 
 
 __host__
-void bc_outflow(Block* blk_ptr, int ibc)
+void bc_outflow(int iblk, int ibc)
 // Copy the interior flow states to the ghost cells.
 {
+    Block* blk_ptr = fluidBlocks[iblk];
     switch (ibc) {
     case Face::iminus: // jk across face
         for (int k=0; k < blk_ptr->nkc; k++) {

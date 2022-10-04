@@ -142,14 +142,13 @@ void apply_boundary_conditions()
 {
     for (int iblk=0; iblk < Config::nFluidBlocks; iblk++) {
         auto* blk_config = &(Config::blk_configs[iblk]);
-        auto* blk_ptr = fluidBlocks[iblk];
         for (int ibc=0; ibc < 6; ibc++) {
             switch (blk_config->bcCodes[ibc]) {
-            case BCCode::wall_with_slip: bc_wall_with_slip(blk_ptr, ibc); break;
-            case BCCode::wall_no_slip: bc_wall_no_slip(blk_ptr, ibc); break;
+            case BCCode::wall_with_slip: bc_wall_with_slip(iblk, ibc); break;
+            case BCCode::wall_no_slip: bc_wall_no_slip(iblk, ibc); break;
             case BCCode::exchange: bc_exchange(iblk, ibc); break;
-            case BCCode::inflow: bc_inflow(blk_ptr, ibc, Config::flow_states[blk_config->bc_fs[ibc]]); break;
-            case BCCode::outflow: bc_outflow(blk_ptr, ibc); break;
+            case BCCode::inflow: bc_inflow(iblk, ibc, Config::flow_states[blk_config->bc_fs[ibc]]); break;
+            case BCCode::outflow: bc_outflow(iblk, ibc); break;
             default:
                 throw runtime_error("Invalid bcCode: "+to_string(blk_config->bcCodes[ibc]));
             }
