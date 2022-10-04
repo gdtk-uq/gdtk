@@ -35,7 +35,6 @@ namespace SimState {
     number t = 0.0;
     number t_plot = 0.0;
     int next_plot_indx = 1;
-    bool finished = false;
 };
 
 vector<Block*> fluidBlocks;
@@ -141,16 +140,16 @@ void apply_boundary_conditions()
 // Measurements might tell us otherwise.
 {
     for (int iblk=0; iblk < Config::nFluidBlocks; iblk++) {
-        auto* blk_config = &(Config::blk_configs[iblk]);
+        BConfig& blk_config = Config::blk_configs[iblk];
         for (int ibc=0; ibc < 6; ibc++) {
-            switch (blk_config->bcCodes[ibc]) {
+            switch (blk_config.bcCodes[ibc]) {
             case BCCode::wall_with_slip: bc_wall_with_slip(iblk, ibc); break;
             case BCCode::wall_no_slip: bc_wall_no_slip(iblk, ibc); break;
             case BCCode::exchange: bc_exchange(iblk, ibc); break;
-            case BCCode::inflow: bc_inflow(iblk, ibc, Config::flow_states[blk_config->bc_fs[ibc]]); break;
+            case BCCode::inflow: bc_inflow(iblk, ibc, Config::flow_states[blk_config.bc_fs[ibc]]); break;
             case BCCode::outflow: bc_outflow(iblk, ibc); break;
             default:
-                throw runtime_error("Invalid bcCode: "+to_string(blk_config->bcCodes[ibc]));
+                throw runtime_error("Invalid bcCode: "+to_string(blk_config.bcCodes[ibc]));
             }
         } // end for ibc
     } // end for iblk
@@ -167,7 +166,7 @@ void march_in_time()
         //
         // Occasionally determine allowable time step.
         if (SimState::step > 0 && (SimState::step % Config::cfl_count)==0) {
-            for (auto* blk_ptr : fluidBlocks) {
+            for (Block* blk_ptr : fluidBlocks) {
                 SimState::dt = fmin(SimState::dt, blk_ptr->estimate_allowed_dt(Config::cfl));
             }
         }
@@ -175,12 +174,13 @@ void march_in_time()
         apply_boundary_conditions();
         //
         int bad_cell_count = 0;
-        for (auto* blk_ptr : fluidBlocks) {
+        for (Block* blk_ptr : fluidBlocks) {
             blk_ptr->calculate_fluxes(Config::x_order);
             bad_cell_count += blk_ptr->update_stage_1(SimState::dt);
         }
         if (bad_cell_count == 0) {
-            for (auto* blk_ptr : fluidBlocks) {
+            // After a successful step, copy the conserved data back to level 0.
+            for (Block* blk_ptr : fluidBlocks) {
                 blk_ptr->copy_conserved_data(1, 0);
             }
         } else {

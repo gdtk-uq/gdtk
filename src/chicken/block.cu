@@ -743,8 +743,7 @@ struct Block {
         //
         for (int i=0; i < CQI::n; i++) {
             // Integrate the fluxes across the interfaces that bound the cell.
-            number surface_integral = 0.0;
-            surface_integral = fim.area*fim.F[i] - fip.area*fip.F[i]
+            number surface_integral = fim.area*fim.F[i] - fip.area*fip.F[i]
                 + fjm.area*fjm.F[i] - fjp.area*fjp.F[i]
                 + fkm.area*fkm.F[i] - fkp.area*fkp.F[i];
             // Then evaluate the derivatives of conserved quantity.
