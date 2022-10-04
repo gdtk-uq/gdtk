@@ -1050,7 +1050,7 @@ final class GlobalConfig {
     //
     // Shock detector freezing
     shared static bool frozen_shock_detector = false;
-    shared static int shock_detector_freeze_step = 1000;
+    shared static int shock_detector_freeze_step = 1_000_000_000;
     //
     // With this flag on, the energy equation is modified such that
     // an artificial compressibility form of equations is solved.

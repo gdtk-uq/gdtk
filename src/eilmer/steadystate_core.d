@@ -692,6 +692,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     GlobalConfig.frozen_limiter = true;
                 }
             }
+            if (step > GlobalConfig.shock_detector_freeze_step) {
+                GlobalConfig.frozen_shock_detector = true;
+            }
         }
 
         // solve linear system for dU
@@ -1440,7 +1443,7 @@ void evalRHS(double pseudoSimTime, int ftl)
     // We don't want to switch between flux calculator application while
     // doing the Frechet derivative, so we'll only search for shock points
     // at ftl = 0, which is when the F(U) evaluation is made.
-    if (ftl == 0 && GlobalConfig.do_shock_detect) { detect_shocks(0, ftl); }
+    if (ftl == 0 && GlobalConfig.do_shock_detect && GlobalConfig.frozen_shock_detector == false) { detect_shocks(0, ftl); }
 
     // We need to apply the copy_cell_data BIE at this point to allow propagation of
     // "shocked" cell information (fs.S) to the boundary interface BEFORE the convective

@@ -105,7 +105,7 @@ configOptionsHidden = { -- hidden from user
    strict_shock_detector = true,
    shock_detector_smoothing = 0,
    frozen_shock_detector = false,
-   shock_detector_freeze_step = 1000,
+   shock_detector_freeze_step = 1000000000,
    --
    artificial_compressibility = false,
    ac_alpha = 0.1,
