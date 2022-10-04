@@ -37,7 +37,7 @@ namespace SimState {
     int next_plot_indx = 1;
 };
 
-vector<Block*> fluidBlocks;
+vector<Block> fluidBlocks;
 
 __host__
 void initialize_simulation(int tindx_start)
@@ -54,18 +54,18 @@ void initialize_simulation(int tindx_start)
             for (int i=0; i < Config::nib; ++i) {
                 if (Config::blk_ids[i][j][k] >= 0) {
                     // Only defined blocks in the array will have a non-zero id.
-                    Block* blk_ptr = new Block{};
+                    Block blk;
                     int blk_id = Config::blk_ids[i][j][k];
-                    blk_ptr->configure(Config::nics[i], Config::njcs[j], Config::nkcs[k]);
+                    blk.configure(Config::nics[i], Config::njcs[j], Config::nkcs[k]);
                     sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
                     string fileName = Config::job + string(nameBuf);
-                    blk_ptr->readGrid(fileName);
+                    blk.readGrid(fileName);
                     sprintf(nameBuf, "/flow/t%04d/flow-%04d-%04d-%04d.zip", tindx_start, i, j, k);
                     fileName = Config::job + string(nameBuf);
-                    blk_ptr->readFlow(fileName);
-                    blk_ptr->computeGeometry();
-                    blk_ptr->encodeConserved(0);
-                    fluidBlocks.push_back(blk_ptr);
+                    blk.readFlow(fileName);
+                    blk.computeGeometry();
+                    blk.encodeConserved(0);
+                    fluidBlocks.push_back(blk);
                     if (blk_id+1 != fluidBlocks.size()) {
                         throw runtime_error("Inconsistent blk_id and position in fluidBlocks array.");
                     }
@@ -115,10 +115,9 @@ void write_flow_data(int tindx, number tme)
                 if (Config::blk_ids[i][j][k] >= 0) {
                     // Only defined blocks in the array will have a non-zero id.
                     int blk_id = Config::blk_ids[i][j][k];
-                    Block* blk_ptr = fluidBlocks[blk_id];
                     sprintf(nameBuf, "%s/flow-%04d-%04d-%04d.zip", flowDir.c_str(), i, j, k);
                     string fileName = string(nameBuf);
-                    blk_ptr->writeFlow(fileName);
+                    fluidBlocks[blk_id].writeFlow(fileName);
                 }
             }
         }
@@ -166,22 +165,22 @@ void march_in_time()
         //
         // Occasionally determine allowable time step.
         if (SimState::step > 0 && (SimState::step % Config::cfl_count)==0) {
-            for (Block* blk_ptr : fluidBlocks) {
-                SimState::dt = fmin(SimState::dt, blk_ptr->estimate_allowed_dt(Config::cfl));
+            for (Block& blk : fluidBlocks) {
+                SimState::dt = fmin(SimState::dt, blk.estimate_allowed_dt(Config::cfl));
             }
         }
         // Attempt a step, stage 1.
         apply_boundary_conditions();
         //
         int bad_cell_count = 0;
-        for (Block* blk_ptr : fluidBlocks) {
-            blk_ptr->calculate_fluxes(Config::x_order);
-            bad_cell_count += blk_ptr->update_stage_1(SimState::dt);
+        for (Block& blk : fluidBlocks) {
+            blk.calculate_fluxes(Config::x_order);
+            bad_cell_count += blk.update_stage_1(SimState::dt);
         }
         if (bad_cell_count == 0) {
             // After a successful step, copy the conserved data back to level 0.
-            for (Block* blk_ptr : fluidBlocks) {
-                blk_ptr->copy_conserved_data(1, 0);
+            for (Block& blk : fluidBlocks) {
+                blk.copy_conserved_data(1, 0);
             }
         } else {
             throw runtime_error("Bad cell count: "+to_string(bad_cell_count));
