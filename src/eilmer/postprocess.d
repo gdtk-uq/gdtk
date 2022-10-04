@@ -532,6 +532,12 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                         double vx = soln.flowBlocks[ib]["vel.x", idx];
                         double vy = soln.flowBlocks[ib]["vel.y", idx];
                         double vz = soln.flowBlocks[ib]["vel.z", idx];
+                        double vel = sqrt(vx*vx + vy*vy + vz*vz);
+                        if (vel < 1.0e-12) {
+                            // if the velocity is too small, there isn't any streamline to follow
+                            writeln("Streamline has terminated: the velocity in the current cell is too small.");
+                            break;
+                        }
                         double dx = direct*vx*stepSize;
                         double dy = direct*vy*stepSize;
                         double dz = direct*vz*stepSize;
