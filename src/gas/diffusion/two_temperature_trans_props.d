@@ -206,6 +206,7 @@ public:
         // and vibration is partially excited eq (52a) in Gupta, Yos, Thomson
         number k_rot = 0.0;
         number k_vib = 0.0;
+        number k_ee = 0.0;
 
         // For k_vib, Cp(T_vib) needs to be evaluated
         number T_save = gs.T;
@@ -223,12 +224,15 @@ public:
             // when the flow is fully excited
             number Cp = mMolMasses[isp]/R_universal*gm.Cp(gs, isp);
             k_vib += (min(Cp, to!number(9.0/2.0)) - 7.0/2.0) * mMolef[isp]/denom;
+            k_ee += max(to!number(0.0), (Cp - 9.0/2.0)) * mMolef[isp]/denom;
         }
         gs.T = T_save;
         k_rot *= 2.3901e-8*kB_erg;
         k_rot *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
         k_vib *= 2.3901e-8*kB_erg;
         k_vib *= (4.184/1.0e-2); // cal/cm.s.K) --> J/(m.s.K)
+        k_ee *= 2.3901e-8*kB_erg;
+        k_ee *= (4.184/1.0e-2); // cal/cm.s.K) --> J/(m.s.K)
 
         // Eq (76) in Gnoffo.
         gs.k = k_tr + k_rot;
@@ -241,13 +245,13 @@ public:
             foreach (jsp; 0 .. mNSpecies) {
                 denom += 1.45*mMolef[jsp]*mDelta_22[mElectronIdx][jsp];
             }
-            k_E = mMolef[mElectronIdx]/denom;
+            k_E = max(to!number(0.0), mMolef[mElectronIdx])/denom;
             k_E *= 2.3901e-8*(15./4.)*kB_erg;
             k_E *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
         }
         gs.k_modes[$-1] = 0.0;
         gs.k_modes[0] = k_vib;
-        gs.k_modes[$-1] += k_E;
+        gs.k_modes[$-1] += k_E + k_ee;
     }
 
     @nogc void binaryDiffusionCoefficients(ref const(GasState) gs, ref number[][] D)
