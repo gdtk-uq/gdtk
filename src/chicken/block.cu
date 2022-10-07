@@ -130,12 +130,6 @@ struct Block {
                 firstGhostCells[ib] = nActiveCells;
             }
         }
-        cout << "Configure block: nic=" << nic << " njc=" << njc << " nkc=" << nkc << endl;
-        cout << "nActiveCells=" << nActiveCells << endl;
-        for (int ib=0; ib < 6; ib++) {
-            cout << "ib=" << ib << " n0c=" << n0c[ib] << " n1c=" << n1c[ib];
-            cout << " firstGhostCells=" << firstGhostCells[ib] << " nGhostCells=" << nGhostCells[ib] << endl;
-        }
         //
         // Now that we know the numbers of cells, resize the data store to fit them all.
         cells.resize(firstGhostCells[5]+nGhostCells[5]);

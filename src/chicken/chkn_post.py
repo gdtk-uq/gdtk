@@ -215,9 +215,7 @@ if __name__ == '__main__':
         #
         read_config(jobDir)
         print("times=", times)
-        print("config=", config)
         read_grids(jobDir)
-        # print('grids=', grids)
         #
         tindx = 0 # default is the initial-time index
         if "--tindx" in uoDict:
@@ -225,7 +223,6 @@ if __name__ == '__main__':
         elif "-t" in uoDict:
             tindx = int(uoDict.get("-t", "0"))
         read_flow_blocks(jobDir, tindx)
-        # print('flows=', flows)
         write_vtk_files(jobDir, tindx)
         #
         print("Done.")
