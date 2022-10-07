@@ -164,9 +164,11 @@ void march_in_time()
         //
         // Occasionally determine allowable time step.
         if (SimState::step > 0 && (SimState::step % Config::cfl_count)==0) {
+            number smallest_dt = numeric_limits<number>::max();
             for (Block& blk : fluidBlocks) {
-                SimState::dt = fmin(SimState::dt, blk.estimate_allowed_dt(Config::cfl));
+                smallest_dt = fmin(smallest_dt, blk.estimate_allowed_dt(Config::cfl));
             }
+            SimState::dt = smallest_dt;
         }
         // Attempt a step, stage 1.
         apply_boundary_conditions();
