@@ -165,8 +165,9 @@ void march_in_time()
         // Occasionally determine allowable time step.
         if (SimState::step > 0 && (SimState::step % Config::cfl_count)==0) {
             number smallest_dt = numeric_limits<number>::max();
+            number cfl = Config::cfl_schedule.get_value(SimState::t);
             for (Block& blk : fluidBlocks) {
-                smallest_dt = fmin(smallest_dt, blk.estimate_allowed_dt(Config::cfl));
+                smallest_dt = fmin(smallest_dt, blk.estimate_allowed_dt(cfl));
             }
             SimState::dt = smallest_dt;
         }
@@ -192,7 +193,7 @@ void march_in_time()
         //
         if (SimState::step > 0 && (SimState::step % Config::print_count)==0) {
             cout << "Step=" << SimState::step << " t=" << SimState::t
-                 << " dt=" << SimState::dt << " cfl=" << Config::cfl
+                 << " dt=" << SimState::dt << " cfl=" << Config::cfl_schedule.get_value(SimState::t)
                  << endl;
         }
     } // end while loop

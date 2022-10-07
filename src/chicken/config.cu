@@ -44,6 +44,7 @@ int BC_code_from_name(string name)
     return BCCode::wall_with_slip;
 }
 
+
 struct BConfig {
     int i, j, k;
     int initial_fs;
@@ -58,7 +59,46 @@ struct BConfig {
         repr << ")";
         return repr.str();
     }
-};
+}; // end struct BConfig
+
+
+struct Schedule {
+    vector<number> t_change; // times at which the value changes
+    vector<number> values; // the corresponding values
+
+    string toString() {
+        ostringstream repr;
+        repr << "Schedule(";
+        repr << "t_change=["; for (auto t : t_change) repr << t << ","; repr << "]";
+        repr << "values=["; for (auto v : values) repr << v << ","; repr << "]";
+        repr << ")";
+        return repr.str();
+    }
+
+    number get_value(number t)
+    {
+        // Select one of our tabulated schedule of values.
+        int i = t_change.size() - 1;
+        while ((i > 0) && (t < t_change[i])) { i--; }
+        return values[i];
+    }
+
+    number interpolate_value(number t)
+    {
+        // Attempt an interpolation of the tabulated schedule of values.
+        if (t <= t_change[0]) { return values[0]; }
+        int n = t_change.size();
+        if (t >= t_change[n-1]) { return values[n-1]; }
+        // If we get to this point, we must have at least 2 values in our schedule
+        // and we can interpolate between a pair of them.
+        int i = n - 1;
+        while ((i > 0) && (t < t_change[i])) { i--; }
+        number frac = (t-t_change[i])/(t_change[i+1]-t_change[i]);
+        number value = (1.0-frac)*values[i] + frac*values[i+1];
+        return value;
+    }
+}; // end struct Schedule
+
 
 namespace Config {
     string job = "job";
@@ -75,7 +115,7 @@ namespace Config {
     int print_count = 20;
     int cfl_count = 10;
     number dt_plot = 1.0e-5;
-    number cfl = 0.25; // [TODO] replace with schedule
+    Schedule cfl_schedule;
     number dt_init = 1.0e-6;
     number max_time = 1.0e-3;
     int max_step = 100.0;
@@ -197,13 +237,16 @@ void read_config_file(string fileName)
     Config::dt_init = jsonData["dt_init"].get<number>();
     Config::max_time = jsonData["max_time"].get<number>();
     Config::max_step = jsonData["max_step"].get<int>();
-    Config::cfl = 0.25;  // [TODO] schedule of cfl with time.
+    vector<number> cfl_times = jsonData["cfl_times"].get<vector<number> >();
+    vector<number> cfl_values = jsonData["cfl_values"].get<vector<number> >();
+    Config::cfl_schedule = Schedule{cfl_times, cfl_values};
     Config::cfl_count = jsonData["cfl_count"].get<int>();
     Config::print_count = jsonData["print_count"].get<int>();
     cout << "  dt_init=" << Config::dt_init << endl;
     cout << "  max_time=" << Config::max_time << endl;
     cout << "  max_step=" << Config::max_step << endl;
-    cout << "  clf_count=" << Config::cfl_count << endl;
+    cout << "  cfl_count=" << Config::cfl_count << endl;
+    cout << "  cfl_schedule=" << Config::cfl_schedule.toString() << endl;
     cout << "  print_count=" << Config::print_count << endl;
     return;
 } // end read_config_file()
