@@ -22,7 +22,6 @@
 #include "flow.cu"
 #include "vertex.cu"
 #include "face.cu"
-#include "flux.cu"
 #include "cell.cu"
 #include "block.cu"
 #include "config.cu"
@@ -174,6 +173,11 @@ void march_in_time()
         //
         int bad_cell_count = 0;
         for (Block& blk : fluidBlocks) {
+            // DEBUG
+            FVFace& f = blk.iFaces[blk.iFaceIndex(0,0,0)];
+            cout << "DEBUG-A ghost-cell via face fs=" << blk.cells[f.left_cells[0]].fs.toString() << endl;
+            cout << "ghost cell indexing fs=" << blk.cells[blk.ghostCellIndex(Face::iminus,0,0,0)].fs.toString() << endl;
+            //
             blk.calculate_fluxes(Config::x_order);
             bad_cell_count += blk.update_stage_1(SimState::dt);
         }

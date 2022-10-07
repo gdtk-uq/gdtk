@@ -21,7 +21,6 @@
 #include "flow.cu"
 #include "face.cu"
 #include "cell.cu"
-#include "flux.cu"
 
 using namespace std;
 
@@ -679,55 +678,40 @@ struct Block {
     void calculate_fluxes(int x_order)
     {
         for (auto& face : iFaces) {
-            FlowState& fsL = cells[face.left_cells[0]].fs;
-            FlowState& fsR = cells[face.right_cells[0]].fs;
-            ausmdv(face, fsL, fsR);
-            //
-            // Check that we have reasonable numbers being returned.
-            bool have_nans = false;
-            for (int j=0; j < CQI::n; j++) { if (isnan(face.F[j])) have_nans = true; }
-            if (have_nans) {
-                cerr << "ausmdv found nans for iFace pos=" << face.pos.toString() << " F=[";
-                for (auto v : face.F) cerr << v << ",";
-                cerr << "]" << endl;
-                cerr << "fsL=" << fsL.toString() << endl;
-                cerr << "fsR=" << fsR.toString() << endl;
-            }
+            FlowState& fsL1 = cells[face.left_cells[1]].fs;
+            FlowState& fsL0 = cells[face.left_cells[0]].fs;
+            FlowState& fsR0 = cells[face.right_cells[0]].fs;
+            FlowState& fsR1 = cells[face.right_cells[1]].fs;
+            number lenL1 = cells[face.left_cells[1]].iLength;
+            number lenL0 = cells[face.left_cells[0]].iLength;
+            number lenR0 = cells[face.right_cells[0]].iLength;
+            number lenR1 = cells[face.right_cells[1]].iLength;
+            face.calculate_flux(fsL1, fsL0, fsR0, fsR1, lenL1, lenL0, lenR0, lenR1, x_order);
         }
         for (auto& face : jFaces) {
-            FlowState& fsL = cells[face.left_cells[0]].fs;
-            FlowState& fsR = cells[face.right_cells[0]].fs;
-            ausmdv(face, fsL, fsR);
-            //
-            // Check that we have reasonable numbers being returned.
-            bool have_nans = false;
-            for (int j=0; j < CQI::n; j++) { if (isnan(face.F[j])) have_nans = true; }
-            if (have_nans) {
-                cerr << "ausmdv found nans for jFace pos=" << face.pos.toString() << " F=[";
-                for (auto v : face.F) cerr << v << ",";
-                cerr << "]" << endl;
-                cerr << "fsL=" << fsL.toString() << endl;
-                cerr << "fsR=" << fsR.toString() << endl;
-            }
+            FlowState& fsL1 = cells[face.left_cells[1]].fs;
+            FlowState& fsL0 = cells[face.left_cells[0]].fs;
+            FlowState& fsR0 = cells[face.right_cells[0]].fs;
+            FlowState& fsR1 = cells[face.right_cells[1]].fs;
+            number lenL1 = cells[face.left_cells[1]].jLength;
+            number lenL0 = cells[face.left_cells[0]].jLength;
+            number lenR0 = cells[face.right_cells[0]].jLength;
+            number lenR1 = cells[face.right_cells[1]].jLength;
+            face.calculate_flux(fsL1, fsL0, fsR0, fsR1, lenL1, lenL0, lenR0, lenR1, x_order);
         }
         for (auto& face : kFaces) {
-            FlowState& fsL = cells[face.left_cells[0]].fs;
-            FlowState& fsR = cells[face.right_cells[0]].fs;
-            ausmdv(face, fsL, fsR);
-            //
-            // Check that we have reasonable numbers being returned.
-            bool have_nans = false;
-            for (int j=0; j < CQI::n; j++) { if (isnan(face.F[j])) have_nans = true; }
-            if (have_nans) {
-                cerr << "ausmdv found nans for kFace pos=" << face.pos.toString() << " F=[";
-                for (auto v : face.F) cerr << v << ",";
-                cerr << "]" << endl;
-                cerr << "fsL=" << fsL.toString() << endl;
-                cerr << "fsR=" << fsR.toString() << endl;
-            }
+            FlowState& fsL1 = cells[face.left_cells[1]].fs;
+            FlowState& fsL0 = cells[face.left_cells[0]].fs;
+            FlowState& fsR0 = cells[face.right_cells[0]].fs;
+            FlowState& fsR1 = cells[face.right_cells[1]].fs;
+            number lenL1 = cells[face.left_cells[1]].kLength;
+            number lenL0 = cells[face.left_cells[0]].kLength;
+            number lenR0 = cells[face.right_cells[0]].kLength;
+            number lenR1 = cells[face.right_cells[1]].kLength;
+            face.calculate_flux(fsL1, fsL0, fsR0, fsR1, lenL1, lenL0, lenR0, lenR1, x_order);
         }
         return;
-    }
+    } // end calculate_fluxes()
 
     __host__
     void eval_dUdt(FVCell& c, ConservedQuantities& dUdt)
