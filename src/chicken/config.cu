@@ -185,6 +185,7 @@ void read_config_file(string fileName)
     // Block configs appear in the JSON file in order of their definition in the Python input script.
     // This index is the block id and is different to the i,j,k indices into the block array.
     //
+    Config::nFluidBlocks = jsonData["n_fluid_blocks"].get<int>();
     Config::nib = jsonData["nib"].get<int>();
     Config::njb = jsonData["njb"].get<int>();
     Config::nkb = jsonData["nkb"].get<int>();
@@ -208,7 +209,6 @@ void read_config_file(string fileName)
         }
     }
     //
-    Config::nFluidBlocks = jsonData["n_fluid_blocks"].get<int>();
     vector<json> fluid_blocks_json = jsonData["fluid_blocks"].get<vector<json> >();
     for (auto blk_json : fluid_blocks_json) {
         BConfig blk_config;

@@ -49,33 +49,24 @@ void initialize_simulation(int tindx_start)
     }
     read_config_file(Config::job + "/config.json");
     // Read initial grids and flow data
-    for (int k=0; k < Config::nkb; ++k) {
-        for (int j=0; j < Config::njb; ++j) {
-            for (int i=0; i < Config::nib; ++i) {
-                if (Config::blk_ids[i][j][k] >= 0) {
-                    // Only defined blocks in the array will have a non-zero id.
-                    Block blk;
-                    int blk_id = Config::blk_ids[i][j][k];
-                    blk.configure(Config::nics[i], Config::njcs[j], Config::nkcs[k]);
-                    sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
-                    string fileName = Config::job + string(nameBuf);
-                    blk.readGrid(fileName);
-                    sprintf(nameBuf, "/flow/t%04d/flow-%04d-%04d-%04d.zip", tindx_start, i, j, k);
-                    fileName = Config::job + string(nameBuf);
-                    blk.readFlow(fileName);
-                    blk.computeGeometry();
-                    blk.encodeConserved(0);
-                    fluidBlocks.push_back(blk);
-                    if (blk_id+1 != fluidBlocks.size()) {
-                        throw runtime_error("Inconsistent blk_id and position in fluidBlocks array.");
-                    }
-                }
-            }
+    for (int blk_id=0; blk_id < Config::nFluidBlocks; ++blk_id) {
+        BConfig& blk_config = Config::blk_configs[blk_id];
+        int i = blk_config.i; int j = blk_config.j; int k = blk_config.k;
+        if (blk_id != Config::blk_ids[i][j][k]) {
+            throw runtime_error("blk_id=" + to_string(blk_id) + " is inconsistent: i=" +
+                                to_string(i) + " j=" + to_string(j) + " k=" + to_string(k));
         }
-    }
-    if (fluidBlocks.size() != Config::nFluidBlocks) {
-        throw runtime_error("Inconsistent number of blocks: "+
-                            to_string(fluidBlocks.size())+" "+to_string(Config::nFluidBlocks));
+        Block blk;
+        blk.configure(Config::nics[i], Config::njcs[j], Config::nkcs[k]);
+        sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
+        string fileName = Config::job + string(nameBuf);
+        blk.readGrid(fileName);
+        sprintf(nameBuf, "/flow/t%04d/flow-%04d-%04d-%04d.zip", tindx_start, i, j, k);
+        fileName = Config::job + string(nameBuf);
+        blk.readFlow(fileName);
+        blk.computeGeometry();
+        blk.encodeConserved(0);
+        fluidBlocks.push_back(blk);
     }
     //
     // Set up the simulation control parameters.
@@ -110,18 +101,12 @@ void write_flow_data(int tindx, number tme)
     sprintf(nameBuf, "%s/flow/t%04d", Config::job.c_str(), tindx);
     string flowDir = string(nameBuf);
     if (!filesystem::exists(flowDir)) { filesystem::create_directories(flowDir); }
-    for (int k=0; k < Config::nkb; ++k) {
-        for (int j=0; j < Config::njb; ++j) {
-            for (int i=0; i < Config::nib; ++i) {
-                if (Config::blk_ids[i][j][k] >= 0) {
-                    // Only defined blocks in the array will have a non-zero id.
-                    int blk_id = Config::blk_ids[i][j][k];
-                    sprintf(nameBuf, "%s/flow-%04d-%04d-%04d.zip", flowDir.c_str(), i, j, k);
-                    string fileName = string(nameBuf);
-                    fluidBlocks[blk_id].writeFlow(fileName);
-                }
-            }
-        }
+    for (int blk_id=0; blk_id < Config::nFluidBlocks; ++blk_id) {
+        BConfig& blk_config = Config::blk_configs[blk_id];
+        int i = blk_config.i; int j = blk_config.j; int k = blk_config.k;
+        sprintf(nameBuf, "%s/flow-%04d-%04d-%04d.zip", flowDir.c_str(), i, j, k);
+        string fileName = string(nameBuf);
+        fluidBlocks[blk_id].writeFlow(fileName);
     }
     // Update the times file.
     ofstream timesFile(Config::job+"/times.data", ofstream::binary|ofstream::app);

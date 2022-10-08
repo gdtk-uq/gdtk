@@ -24,7 +24,7 @@ inflow = FlowState(p=101.325e3, T=300.0, velx=3.0*sspeed)
 #
 a0 = Vector3(0.0, 0.0, 0.0); a1 = Vector3(0.0, 0.2, 0.0); a2 = Vector3(0.0, 1.0, 0.0)
 b0 = Vector3(0.6, 0.0, 0.0); b1 = Vector3(0.6, 0.2, 0.0); b2 = Vector3(0.6, 1.0, 0.0)
-c1 = Vector3(3.0, 0.2, 0.0); c2 = Vector3(3.0, 1.0, 0.0)
+c0 = Vector3(3.0, 0.0, 0.0); c1 = Vector3(3.0, 0.2, 0.0); c2 = Vector3(3.0, 1.0, 0.0)
 H = Vector3(0.0, 0.0, 0.1)
 vol0 = TFIVolume(p000=a0, p100=b0, p110=b1, p010=a1,
                  p001=a0+H, p101=b0+H, p111=b1+H, p011=a1+H)
@@ -50,6 +50,17 @@ blk1 = FluidBlock(i=0, j=1, grid=grd1, initialState=initial,
                   bcs={'iminus':InflowBC(inflow), 'jminus':ExchangeBC(),'iplus':ExchangeBC()})
 blk2 = FluidBlock(i=1, j=1, grid=grd2, initialState=initial,
                   bcs={'iminus':ExchangeBC(),'iplus':OutflowBC()})
+#
+# Although the sumulation code can cope with not having a full array of blocks,
+# the StructuredGrid in Paraview cannot tolerate missing pieces.
+# To deal with that, we will make a dummy volume and carry it along.
+# Once we get the post-processor to build and unstructured-grid for Paraview,
+# we can drop it.
+vol3 = TFIVolume(p000=b0, p100=c0, p110=c1, p010=b1,
+                 p001=b0+H, p101=c0+H, p111=c1+H, p011=b1+H)
+grd3 = StructuredGrid(pvolume=vol3, niv=nbc+1, njv=n01+1, nkv=3)
+pretend_solid = FlowState(p=101.325e6, T=100.0)
+blk3 = FluidBlock(i=1, j=0, grid=grd3, initialState=pretend_solid)
 #
 config.dt_init = 1.0e-8
 config.max_time = 5.0e-3
