@@ -408,6 +408,8 @@ class GasState(object):
     def massf(self, mf_given):
         nsp = self.gmodel.n_species
         if type(mf_given) == type([]):
+            if len(mf_given) != nsp:
+                raise Exception(f"mass fraction list is not correct length. nsp={nsp}; len(massf)={len(mf_given)}")
             mf_list = mf_given.copy()
         elif type(mf_given) == type({}):
             mf_list = []
@@ -441,6 +443,8 @@ class GasState(object):
     @molef.setter
     def molef(self, molef_given):
         nsp = self.gmodel.n_species
+        if len(molef_given) != nsp:
+            raise Exception(f"mole fraction list is not correct length. nsp={nsp}; len(molef)={len(molef_given)}")
         mf_list = self.gmodel.molef2massf(molef_given)
         mf = ffi.new("double[]", mf_list)
         flag = so.gas_state_set_array_field(self.id, b"massf", mf, nsp)
@@ -478,6 +482,8 @@ class GasState(object):
         if n == 0: return []
         if type(um_given) != type([]):
             raise Exception("u_modes needs to be supplied as a list.")
+        if len(um_given) != n:
+            raise Exception(f"u_moodes list is not correct length. nmodes={n}; len(u_modes)={len(um_given)}")
         um = ffi.new("double[]", um_given)
         flag = so.gas_state_set_array_field(self.id, b"u_modes", um, n)
         if flag < 0: raise Exception("could not set u_modes.")
@@ -497,6 +503,8 @@ class GasState(object):
         if n == 0: return []
         if type(Tm_given) != type([]):
             raise Exception("T_modes needs to be supplied as a list.")
+        if len(Tm_given) != n:
+            raise Exception(f"T_moodes list is not correct length. nmodes={n}; len(T_modes)={len(Tm_given)}")
         Tm = ffi.new("double[]", Tm_given)
         flag = so.gas_state_set_array_field(self.id, b"T_modes", Tm, n)
         if flag < 0: raise Exception("could not set T_modes.")
