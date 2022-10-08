@@ -299,7 +299,7 @@ void bc_exchange(int iblk, int ibc)
         for (int k=0; k < blk.nkc; k++) {
             for (int i=0; i < blk.nic; i++) {
                 FVFace& f = blk.jFaces[blk.jFaceIndex(i, 0, k)];
-                FVFace& other_f = other_blk.jFaces[other_blk.iFaceIndex(i, other_blk.njc, k)];
+                FVFace& other_f = other_blk.jFaces[other_blk.jFaceIndex(i, other_blk.njc, k)];
                 blk.cells[f.left_cells[0]].fs = other_blk.cells[other_f.left_cells[0]].fs;
                 blk.cells[f.left_cells[1]].fs = other_blk.cells[other_f.left_cells[1]].fs;
             } // end for i
@@ -315,7 +315,7 @@ void bc_exchange(int iblk, int ibc)
         Block& other_blk = fluidBlocks[other_id];
         for (int k=0; k < blk.nkc; k++) {
             for (int i=0; i < blk.nic; i++) {
-                FVFace& f = blk.jFaces[blk.iFaceIndex(i, blk.njc, k)];
+                FVFace& f = blk.jFaces[blk.jFaceIndex(i, blk.njc, k)];
                 FVFace& other_f = other_blk.jFaces[other_blk.jFaceIndex(i, 0, k)];
                 blk.cells[f.right_cells[0]].fs = other_blk.cells[other_f.right_cells[0]].fs;
                 blk.cells[f.right_cells[1]].fs = other_blk.cells[other_f.right_cells[1]].fs;
@@ -332,7 +332,7 @@ void bc_exchange(int iblk, int ibc)
         Block& other_blk = fluidBlocks[other_id];
         for (int j=0; j < blk.njc; j++) {
             for (int i=0; i < blk.nic; i++) {
-                FVFace& f = blk.kFaces[blk.iFaceIndex(i, j, 0)];
+                FVFace& f = blk.kFaces[blk.kFaceIndex(i, j, 0)];
                 FVFace& other_f = other_blk.kFaces[other_blk.kFaceIndex(i, j, other_blk.nkc)];
                 blk.cells[f.left_cells[0]].fs = other_blk.cells[other_f.left_cells[0]].fs;
                 blk.cells[f.left_cells[1]].fs = other_blk.cells[other_f.left_cells[1]].fs;
@@ -350,7 +350,7 @@ void bc_exchange(int iblk, int ibc)
         for (int j=0; j < blk.njc; j++) {
             for (int i=0; i < blk.nic; i++) {
                 FVFace& f = blk.kFaces[blk.kFaceIndex(i, j, blk.nkc)];
-                FVFace& other_f = other_blk.kFaces[other_blk.iFaceIndex(i, j, 0)];
+                FVFace& other_f = other_blk.kFaces[other_blk.kFaceIndex(i, j, 0)];
                 blk.cells[f.right_cells[0]].fs = other_blk.cells[other_f.right_cells[0]].fs;
                 blk.cells[f.right_cells[1]].fs = other_blk.cells[other_f.right_cells[1]].fs;
             } // end for j

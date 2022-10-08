@@ -46,7 +46,7 @@ struct Block {
     array<int,6> n0c; // number of cells in first index direction for each face.
     array<int,6> n1c; // Number of cells in second index direction for each face.
     array<int,6> nGhostCells; // Number of ghost cells on each face.
-    array<int,6> firstGhostCells; // Index of the first ghost cell for each face.
+    array<int,6> firstGhostCell; // Index of the first ghost cell for each face.
     //
     // Collections of faces which bound the active cells.
     // We compute fluxes of conserved flow properties across these faces.
@@ -78,7 +78,7 @@ struct Block {
     {
         int cellIndxOnFace = i1*n0c[faceIndx] + i0;
         int nCellsOnFace = n0c[faceIndx]*n1c[faceIndx];
-        return firstGhostCells[faceIndx] + nCellsOnFace*depth + cellIndxOnFace;
+        return firstGhostCell[faceIndx] + nCellsOnFace*depth + cellIndxOnFace;
     }
 
     __host__ __device__
@@ -124,15 +124,11 @@ struct Block {
         n0c[Face::kplus] = nic; n1c[Face::kplus] = njc;
         for (int ib=0; ib < 6; ib++) {
             nGhostCells[ib] = 2*n0c[ib]*n1c[ib];
-            if (ib > 0) {
-                firstGhostCells[ib] = firstGhostCells[ib-1] + nGhostCells[ib-1];
-            } else {
-                firstGhostCells[ib] = nActiveCells;
-            }
+            firstGhostCell[ib] = (ib > 0) ? firstGhostCell[ib-1] + nGhostCells[ib-1] : nActiveCells;
         }
         //
         // Now that we know the numbers of cells, resize the data store to fit them all.
-        cells.resize(firstGhostCells[5]+nGhostCells[5]);
+        cells.resize(firstGhostCell[5]+nGhostCells[5]);
         Q.resize(nActiveCells*TLevels);
         dQdt.resize(nActiveCells*TLevels);
         #ifdef CUDA
@@ -669,7 +665,11 @@ struct Block {
         for (int i=0; i < nActiveCells; i++) {
             FVCell& c = cells[i];
             ConservedQuantities U = Q[level*nActiveCells + i];
-            bad_cell_count += c.decode_conserved(U);
+            int bad_cell_flag = c.decode_conserved(U);
+            bad_cell_count += bad_cell_flag;
+            if (bad_cell_flag) {
+                cerr << "DEBUG-A Bad cell at pos=" << c.pos.toString() << endl;
+            }
         }
         return bad_cell_count;
     }
@@ -751,7 +751,11 @@ struct Block {
             for (int j=0; j < CQI::n; j++) {
                 U1[j] = U0[j] + dt*dUdt[j];
             }
-            bad_cell_count += c.decode_conserved(U1);
+            int bad_cell_flag = c.decode_conserved(U1);
+            bad_cell_count += bad_cell_flag;
+            if (bad_cell_flag) {
+                cerr << "DEBUG-B Bad cell at pos=" << c.pos.toString() << endl;
+            }
         }
         return bad_cell_count;
     } // end update_stage_1()

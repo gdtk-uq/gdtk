@@ -44,11 +44,11 @@ grd0 = StructuredGrid(pvolume=vol0, niv=nab+1, njv=n01+1, nkv=3)
 grd1 = StructuredGrid(pvolume=vol1, niv=nab+1, njv=n12+1, nkv=3)
 grd2 = StructuredGrid(pvolume=vol2, niv=nbc+1, njv=n12+1, nkv=3)
 #
-blk0 = FluidBlock(i=0, j=0, grid=grd0, initialState=initial,
+blk0 = FluidBlock(i=0, j=0, grid=grd0, initialState=inflow,
                   bcs={'iminus':InflowBC(inflow),'jplus':ExchangeBC()})
-blk1 = FluidBlock(i=0, j=1, grid=grd1, initialState=initial,
+blk1 = FluidBlock(i=0, j=1, grid=grd1, initialState=inflow,
                   bcs={'iminus':InflowBC(inflow), 'jminus':ExchangeBC(),'iplus':ExchangeBC()})
-blk2 = FluidBlock(i=1, j=1, grid=grd2, initialState=initial,
+blk2 = FluidBlock(i=1, j=1, grid=grd2, initialState=inflow,
                   bcs={'iminus':ExchangeBC(),'iplus':OutflowBC()})
 #
 # Although the sumulation code can cope with not having a full array of blocks,
@@ -59,12 +59,10 @@ blk2 = FluidBlock(i=1, j=1, grid=grd2, initialState=initial,
 vol3 = TFIVolume(p000=b0, p100=c0, p110=c1, p010=b1,
                  p001=b0+H, p101=c0+H, p111=c1+H, p011=b1+H)
 grd3 = StructuredGrid(pvolume=vol3, niv=nbc+1, njv=n01+1, nkv=3)
-pretend_solid = FlowState(p=101.325e6, T=100.0)
-blk3 = FluidBlock(i=1, j=0, grid=grd3, initialState=pretend_solid)
+blk3 = FluidBlock(i=1, j=0, grid=grd3, initialState=initial)
 #
-config.dt_init = 1.0e-8
 config.max_time = 5.0e-3
-config.max_step = 1  # 6000
+config.max_step = 6000
 add_cfl_value(0.0, 0.5)
 add_dt_plot(0.0, 1.0e-3)
 
