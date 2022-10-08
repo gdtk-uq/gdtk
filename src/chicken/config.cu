@@ -114,7 +114,7 @@ namespace Config {
     //
     int print_count = 20;
     int cfl_count = 10;
-    number dt_plot = 1.0e-5;
+    Schedule dt_plot_schedule;
     Schedule cfl_schedule;
     number dt_init = 1.0e-6;
     number max_time = 1.0e-3;
@@ -242,12 +242,16 @@ void read_config_file(string fileName)
     Config::cfl_schedule = Schedule{cfl_times, cfl_values};
     Config::cfl_count = jsonData["cfl_count"].get<int>();
     Config::print_count = jsonData["print_count"].get<int>();
+    vector<number> t_change = jsonData["t_change"].get<vector<number> >();
+    vector<number> dt_plot = jsonData["dt_plot"].get<vector<number> >();
+    Config::dt_plot_schedule = Schedule{t_change, dt_plot};
     cout << "  dt_init=" << Config::dt_init << endl;
     cout << "  max_time=" << Config::max_time << endl;
     cout << "  max_step=" << Config::max_step << endl;
     cout << "  cfl_count=" << Config::cfl_count << endl;
     cout << "  cfl_schedule=" << Config::cfl_schedule.toString() << endl;
     cout << "  print_count=" << Config::print_count << endl;
+    cout << "  dt_plot_schedule=" << Config::dt_plot_schedule.toString() << endl;
     return;
 } // end read_config_file()
 

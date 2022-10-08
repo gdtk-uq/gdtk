@@ -34,6 +34,7 @@ namespace SimState {
     number t = 0.0;
     number t_plot = 0.0;
     int next_plot_indx = 1;
+    int steps_since_last_plot = 0;
 };
 
 vector<Block> fluidBlocks;
@@ -95,7 +96,8 @@ void initialize_simulation(int tindx_start)
             }
         }
     }
-    SimState::t_plot = SimState::t + Config::dt_plot;
+    SimState::t_plot = SimState::t + Config::dt_plot_schedule.get_value(SimState::t);
+    SimState::steps_since_last_plot = 0;
     return;
 } // initialize_simulation()
 
@@ -190,23 +192,33 @@ void march_in_time()
         //
         SimState::t += SimState::dt;
         SimState::step += 1;
+        SimState::steps_since_last_plot += 1;
         //
         if (SimState::step > 0 && (SimState::step % Config::print_count)==0) {
             cout << "Step=" << SimState::step << " t=" << SimState::t
                  << " dt=" << SimState::dt << " cfl=" << Config::cfl_schedule.get_value(SimState::t)
                  << endl;
         }
+        //
+        // Occasionally dump the flow data for making plots.
+        if (SimState::t >= SimState::t_plot) {
+            write_flow_data(SimState::next_plot_indx, SimState::t);
+            SimState::steps_since_last_plot = 0;
+            SimState::next_plot_indx += 1;
+            SimState::t_plot = SimState::t + Config::dt_plot_schedule.get_value(SimState::t);
+        }
     } // end while loop
     cout << "march_in_time() end" << endl;
     return;
-}
+} // end march_in_time()
 
 __host__
 void finalize_simulation()
 {
-    // Exercise the writing of flow data, even we have done no calculations.
-    write_flow_data(SimState::next_plot_indx, SimState::t);
+    if (SimState::steps_since_last_plot > 0) {
+        write_flow_data(SimState::next_plot_indx, SimState::t);
+    }
     return;
-}
+} // end finalize_simulation()
 
 #endif

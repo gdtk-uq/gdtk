@@ -239,6 +239,7 @@ def add_cfl_value(t_change, cfl_value):
 
     t_change: (float) The time, in seconds, at which this cfl should take effect.
     cfl_value: (float) Ratio of actual time step divided by allowable time step.
+
     Returns: the new length of the list
     """
     global config
@@ -253,7 +254,7 @@ def add_cfl_value(t_change, cfl_value):
     return len(config.cfl_list)
 
 
-def add_dt_plot(t_change, dt_plot, dt_his):
+def add_dt_plot(t_change, dt_plot, dt_his=1.0e-6):
     """
     Add a dt tuple to the dt_plot tuple list in GlobalConfig.
 
@@ -261,7 +262,9 @@ def add_dt_plot(t_change, dt_plot, dt_his):
         at which this dt_plot and dt_his should take effect.
     dt_plot: (float) Time interval between writing whole solutions
         for later plotting.
-    dt_his: (float) Time interval between writing data to history file.
+    dt_his: (float) Optional time interval between writing data to history file.
+        2022-10-08 We are not presently writing history files. This may change.
+
     Returns: the new length of the list
     """
     global config

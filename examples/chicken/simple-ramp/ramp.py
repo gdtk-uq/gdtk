@@ -31,3 +31,6 @@ b1 = FluidBlock(i=1, grid=grd1, initialState=initial,
 #
 config.max_time = 5.0e-3
 config.max_step = 5000
+add_cfl_value(0.0, 0.5)
+add_dt_plot(0.0, 5.0e-3)
+
