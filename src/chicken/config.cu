@@ -121,6 +121,7 @@ namespace Config {
     int max_step = 100.0;
     //
     int x_order = 2;
+    int t_order = 2;
 }
 
 void read_config_file(string fileName)
@@ -234,6 +235,8 @@ void read_config_file(string fileName)
                             to_string(Config::nFluidBlocks)+" "+to_string(Config::blk_configs.size()));
     }
     //
+    Config::x_order = jsonData["x_order"].get<int>();
+    Config::t_order = jsonData["t_order"].get<int>();
     Config::dt_init = jsonData["dt_init"].get<number>();
     Config::max_time = jsonData["max_time"].get<number>();
     Config::max_step = jsonData["max_step"].get<int>();
@@ -245,6 +248,8 @@ void read_config_file(string fileName)
     vector<number> t_change = jsonData["t_change"].get<vector<number> >();
     vector<number> dt_plot = jsonData["dt_plot"].get<vector<number> >();
     Config::dt_plot_schedule = Schedule{t_change, dt_plot};
+    cout << "  x_order=" << Config::x_order << endl;
+    cout << "  t_order=" << Config::t_order << endl;
     cout << "  dt_init=" << Config::dt_init << endl;
     cout << "  max_time=" << Config::max_time << endl;
     cout << "  max_step=" << Config::max_step << endl;

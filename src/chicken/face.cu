@@ -9,6 +9,7 @@
 #include <sstream>
 #include <vector>
 #include <array>
+#include <cmath>
 
 #include "number.cu"
 #include "vector3.cu"
@@ -17,6 +18,37 @@
 #include "gas.cu"
 
 using namespace std;
+
+// Interpolation functions that will be used in the fluc calculator.
+
+__host__ __device__
+number van_albada_limit1(number a, number b)
+// A smooth slope limiter.
+{
+    constexpr number eps = 1.0e-12;
+    number s = (a*b + fabs(a*b) + eps)/(a*a + b*b + eps);
+    return s;
+}
+
+__host__ __device__
+void interp_l2r2_scalar(number qL1, number qL0, number qR0, number qR1,
+                        number& qL, number& qR)
+// Reconstruct values, qL,qR, at the middle interface for a stencil of 4 cell-centred values.
+// Assume equal cell widths.
+{
+    // Set up differences and limiter values.
+    number delLminus = (qL0 - qL1);
+    number del = (qR0 - qL0);
+    number delRplus = (qR1 - qR0);
+    number sL = van_albada_limit1(delLminus, del);
+    number sR = van_albada_limit1(del, delRplus);
+    // The actual high-order reconstruction, possibly limited.
+    qL = qL0 + sL * 0.125 * (3.0*del + delLminus);
+    qR = qR0 - sR * 0.125 * (delRplus + 3.0*del);
+} // end of interp_l2r2_scalar()
+
+
+// Flux calculations are done in the context of a face on a cell.
 
 struct FVFace {
     Vector3 pos; // midpoint position in space
@@ -149,12 +181,27 @@ struct FVFace {
     // And one generic flux calculation function.
 
     __host__ __device__
-    void calculate_flux(FlowState& fsL1, FlowState& fsL0, FlowState& fsR0, FlowState& fsR1,
-                        number L1, number L0, number R0, number R1, int x_order)
+    void calculate_flux(FlowState& fsL1, FlowState& fsL0, FlowState& fsR0, FlowState& fsR1, int x_order)
     // Generic fluc calculation function.
     {
-        // [TODO] Implement reconstruction and allow other flux calculators.
-        ausmdv(fsL0, fsR0);
+        // First-order reconstruction is just a copy from the nearest cell centre.
+        FlowState fsL{fsL0};
+        FlowState fsR{fsR0};
+        if (x_order > 1) {
+            // We will interpolate only some GasState properties...
+            interp_l2r2_scalar(fsL1.gas.rho, fsL0.gas.rho, fsR0.gas.rho, fsR1.gas.rho, fsL.gas.rho, fsR.gas.rho);
+            interp_l2r2_scalar(fsL1.gas.e, fsL0.gas.e, fsR0.gas.e, fsR1.gas.e, fsL.gas.e, fsR.gas.e);
+            // and make the rest consistent.
+            fsL.gas.update_from_rhoe();
+            fsR.gas.update_from_rhoe();
+            // Velocity components.
+            interp_l2r2_scalar(fsL1.vel.x, fsL0.vel.x, fsR0.vel.x, fsR1.vel.x, fsL.vel.x, fsR.vel.x);
+            interp_l2r2_scalar(fsL1.vel.y, fsL0.vel.y, fsR0.vel.y, fsR1.vel.y, fsL.vel.y, fsR.vel.y);
+            interp_l2r2_scalar(fsL1.vel.z, fsL0.vel.z, fsR0.vel.z, fsR1.vel.z, fsL.vel.z, fsR.vel.z);
+        }
+        // Use the reconstructed values near the face in a simple flux calculator.
+        ausmdv(fsL, fsR);
+        // [TODO] Allow other flux calculators.
     }
 
 }; // end FVFace
