@@ -578,6 +578,75 @@ class FluidBlock():
 
 # --------------------------------------------------------------------
 
+class FBArray():
+    """
+    This class is used to help build a description of the flow domain,
+    several FluidBlocks at a time.
+    """
+    __slots__ =  'origin', 'nblocks', 'grid', 'initialState', 'bcs', 'label'
+
+    def __init__(self, origin={'i':0,'j':0,'k':0}, nblocks={'i':1,'j':1,'k':1},
+                 grid=None, initialState=None, bcs={}, label=""):
+        """
+        A single grid is split into an array of subgrids and
+        a FluidBlock is constructed for each subgrid.
+        """
+        global config, fluidBlocksList, flowStatesList
+        #
+        if isinstance(grid, StructuredGrid):
+            self.grid = grid
+        else:
+            raise RuntimeError('Need to supply a StructuredGrid object.')
+        #
+        if isinstance(initialState, FlowState):
+            self.initialState = initialState
+        else:
+            raise RuntimeError('Need to supply a FlowState object.')
+        #
+        # Boundary conditions
+        # Set default values and then overwrite, if the user has supplied them.
+        self.bcs = {}
+        for f in FaceList: self.bcs[f] = WallWithSlipBC()
+        for key in bcs.keys():
+            if key in [Face.iminus, 'iminus']: self.bcs['iminus'] = bcs[key]
+            if key in [Face.iplus, 'iplus']: self.bcs['iplus'] = bcs[key]
+            if key in [Face.jminus, 'jminus']: self.bcs['jminus'] = bcs[key]
+            if key in [Face.iplus, 'jplus']: self.bcs['jplus'] = bcs[key]
+            if key in [Face.kminus, 'kminus']: self.bcs['kminus'] = bcs[key]
+            if key in [Face.kplus, 'kplus']: self.bcs['kplus'] = bcs[key]
+        #
+        self.origin = {'i':0, 'j':0, 'k':0}
+        for key in origin.keys():
+            if key in ['I', 'i']: self.origin['i'] = origin[key]
+            if key in ['J', 'j']: self.origin['j'] = origin[key]
+            if key in ['K', 'k']: self.origin['k'] = origin[key]
+        #
+        self.nblocks = {'i':1, 'j':1, 'k':1}
+        for key in nblocks.keys():
+            if key in ['I', 'i']: self.nblocks['i'] = nblocks[key]
+            if key in ['J', 'j']: self.nblocks['j'] = nblocks[key]
+            if key in ['K', 'k']: self.nblocks['k'] = nblocks[key]
+        #
+        # For the moment, make a single blocks.
+        # [TODO]: split up the grid and make the proper array.
+        i = origin['i']
+        j = origin['j']
+        k = origin['k']
+        newBlock = FluidBlock(i=i, j=j, k=k, grid=self.grid,
+                              initialState=self.initialState, bcs=self.bcs,
+                              label=self.label+("-%d-%d-%d".format(i, j, k)))
+        self.blks.append(newBlock)
+
+def identifyBlockConnections():
+    """
+    Work through the collection of blocks and connect adjacent blocks in the global array
+    setting the common boundary faces to "exchange".
+    """
+    return
+
+# --------------------------------------------------------------------
+
+
 def write_initial_files():
     """
     Writes the files needed for the main simulation code.

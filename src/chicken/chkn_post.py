@@ -143,14 +143,16 @@ def write_vtk_files(jobDir, tindx):
             for i in range(config['nib']):
                 fileName = 'flow-t%04d-%04d-%04d-%04d.vts' % (tindx, i, j, k)
                 key = '%d,%d,%d'%(i,j,k)
-                grid = grids[key]
-                fp.write('<Piece Extent="%d %d %d %d %d %d" Source="%s" />\n' %
-                         (start_niv, start_niv+grid.niv-1,
-                          start_njv, start_njv+grid.njv-1,
-                          start_nkv, start_nkv+grid.nkv-1, fileName))
-                write_vtk_structured_grid_file(plotDir+'/'+fileName, grid, flows[key],
-                                               whole_niv, whole_njv, whole_nkv,
-                                               start_niv, start_njv, start_nkv)
+                if key in grids.keys():
+                    # Write this piece only if the block exists.
+                    grid = grids[key]
+                    fp.write('<Piece Extent="%d %d %d %d %d %d" Source="%s" />\n' %
+                             (start_niv, start_niv+grid.niv-1,
+                              start_njv, start_njv+grid.njv-1,
+                              start_nkv, start_nkv+grid.nkv-1, fileName))
+                    write_vtk_structured_grid_file(plotDir+'/'+fileName, grid, flows[key],
+                                                   whole_niv, whole_njv, whole_nkv,
+                                                   start_niv, start_njv, start_nkv)
                 start_niv += config['nics'][i]
             start_njv += config['njcs'][j]
         start_nkv += config['nkcs'][k]
