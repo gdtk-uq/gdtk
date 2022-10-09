@@ -40,7 +40,5 @@ namespace CQI {
 // We are going to store the vector of conserved quantities and its derivatives
 // in a C++ arrays.
 typedef array<number,CQI::n> ConservedQuantities;
-// Time-update scheme will have a number of stages.
-constexpr size_t TLevels = 3;
 
 #endif

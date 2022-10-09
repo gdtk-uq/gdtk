@@ -160,23 +160,47 @@ void march_in_time()
             }
             SimState::dt = smallest_dt;
         }
-        // Attempt a step, stage 1.
-        apply_boundary_conditions();
-        //
+        // Gas-dynamic update over three stages with TVD-RK3 weights.
         int bad_cell_count = 0;
+        // Stage 1.
+        // number t = SimState::t; // Only needed if we have time-dependent source terms or BCs.
+        apply_boundary_conditions();
         for (Block& blk : fluidBlocks) {
             if (blk.active) {
                 blk.calculate_fluxes(Config::x_order);
                 bad_cell_count += blk.update_stage_1(SimState::dt);
             }
         }
-        if (bad_cell_count == 0) {
-            // After a successful step, copy the conserved data back to level 0.
-            for (Block& blk : fluidBlocks) {
-                if (blk.active) { blk.copy_conserved_data(1, 0); }
+        if (bad_cell_count > 0) {
+            throw runtime_error("Stage 1 bad cell count: "+to_string(bad_cell_count));
+        }
+        // Stage 2
+        // t = SimState::t + 0.5*SimState::dt;
+        apply_boundary_conditions();
+        for (Block& blk : fluidBlocks) {
+            if (blk.active) {
+                blk.calculate_fluxes(Config::x_order);
+                bad_cell_count += blk.update_stage_2(SimState::dt);
             }
-        } else {
-            throw runtime_error("Bad cell count: "+to_string(bad_cell_count));
+        }
+        if (bad_cell_count > 0) {
+            throw runtime_error("Stage 2 bad cell count: "+to_string(bad_cell_count));
+        }
+        // Stage 3
+        // t = SimState::t + SimState::dt;
+        apply_boundary_conditions();
+        for (Block& blk : fluidBlocks) {
+            if (blk.active) {
+                blk.calculate_fluxes(Config::x_order);
+                bad_cell_count += blk.update_stage_3(SimState::dt);
+            }
+        }
+        if (bad_cell_count > 0) {
+            throw runtime_error("Stage 3 bad cell count: "+to_string(bad_cell_count));
+        }
+        // After a successful gasdynamic update, copy the conserved data back to level 0.
+        for (Block& blk : fluidBlocks) {
+            if (blk.active) { blk.copy_conserved_data(1, 0); }
         }
         //
         SimState::t += SimState::dt;

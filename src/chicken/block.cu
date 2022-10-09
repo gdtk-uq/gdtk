@@ -137,8 +137,8 @@ struct Block {
         // Now that we know the numbers of cells, resize the data store to fit them all.
         cells.resize(firstGhostCell[5]+nGhostCells[5]);
         if (active) {
-            Q.resize(nActiveCells*TLevels);
-            dQdt.resize(nActiveCells*TLevels);
+            Q.resize(nActiveCells*2);
+            dQdt.resize(nActiveCells*3);
         }
         #ifdef CUDA
         // We need to allocate corresponding memory space on the GPU.
@@ -703,6 +703,9 @@ struct Block {
     __host__
     void eval_dUdt(FVCell& c, ConservedQuantities& dUdt)
     // These are the spatial (RHS) terms in the semi-discrete governing equations.
+    //
+    // Even though this is a cell-level calculation, the code is in the Block context
+    // because it needs access to the iFace, jFace and kFace arrays.
     {
         number vol_inv = 1.0/c.volume;
         auto& fim = iFaces[c.face[Face::iminus]];
@@ -726,26 +729,75 @@ struct Block {
 
     __host__
     int update_stage_1(number dt)
-    // Predictor step.
+    // Stage 1 of the TVD-RK3 update scheme (predictor step).
     {
         int bad_cell_count = 0;
         for (int i=0; i < nActiveCells; i++) {
             FVCell& c = cells[i];
-            ConservedQuantities& dUdt = dQdt[i];
-            eval_dUdt(c, dUdt);
+            ConservedQuantities& dUdt0 = dQdt[i];
+            eval_dUdt(c, dUdt0);
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
-                U1[j] = U0[j] + dt*dUdt[j];
+                U1[j] = U0[j] + dt*dUdt0[j];
             }
             int bad_cell_flag = c.decode_conserved(U1);
             bad_cell_count += bad_cell_flag;
             if (bad_cell_flag) {
-                cerr << "DEBUG-B Bad cell at pos=" << c.pos.toString() << endl;
+                cerr << "Stage 1 update, Bad cell at pos=" << c.pos.toString() << endl;
             }
         }
         return bad_cell_count;
     } // end update_stage_1()
+
+    __host__
+    int update_stage_2(number dt)
+    // Stage 2 of the TVD-RK3 update scheme.
+    {
+        int bad_cell_count = 0;
+        for (int i=0; i < nActiveCells; i++) {
+            FVCell& c = cells[i];
+            ConservedQuantities& dUdt0 = dQdt[i];
+            ConservedQuantities& dUdt1 = dQdt[nActiveCells + i];
+            eval_dUdt(c, dUdt1);
+            ConservedQuantities& U0 = Q[i];
+            ConservedQuantities& U1 = Q[nActiveCells + i];
+            for (int j=0; j < CQI::n; j++) {
+                U1[j] = U0[j] + 0.25*dt*(dUdt0[j] + dUdt1[j]);
+            }
+            int bad_cell_flag = c.decode_conserved(U1);
+            bad_cell_count += bad_cell_flag;
+            if (bad_cell_flag) {
+                cerr << "Stage 2 update, Bad cell at pos=" << c.pos.toString() << endl;
+            }
+        }
+        return bad_cell_count;
+    } // end update_stage_2()
+
+    __host__
+    int update_stage_3(number dt)
+    // Stage 3 of the TVD_RK3 update scheme.
+    {
+        int bad_cell_count = 0;
+        for (int i=0; i < nActiveCells; i++) {
+            FVCell& c = cells[i];
+            ConservedQuantities& dUdt0 = dQdt[i];
+            ConservedQuantities& dUdt1 = dQdt[nActiveCells + i];
+            ConservedQuantities& dUdt2 = dQdt[2*nActiveCells + i];
+            eval_dUdt(c, dUdt2);
+            ConservedQuantities& U0 = Q[i];
+            ConservedQuantities& U1 = Q[nActiveCells + i];
+            for (int j=0; j < CQI::n; j++) {
+                U1[j] = U0[j] + dt*(1.0/6.0*dUdt0[j] + 1.0/6.0*dUdt1[j] + 4.0/6.0*dUdt2[j]);
+            }
+            int bad_cell_flag = c.decode_conserved(U1);
+            bad_cell_count += bad_cell_flag;
+            if (bad_cell_flag) {
+                cerr << "Stage 3 update, Bad cell at pos=" << c.pos.toString() << endl;
+            }
+        }
+        return bad_cell_count;
+    } // end update_stage_3()
 
     __host__
     void copy_conserved_data(int from_level, int to_level)
