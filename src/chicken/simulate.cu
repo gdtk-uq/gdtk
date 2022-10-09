@@ -57,7 +57,7 @@ void initialize_simulation(int tindx_start)
                                 to_string(i) + " j=" + to_string(j) + " k=" + to_string(k));
         }
         Block blk;
-        blk.configure(Config::nics[i], Config::njcs[j], Config::nkcs[k]);
+        blk.configure(Config::nics[i], Config::njcs[j], Config::nkcs[k], blk_config.active);
         sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
         string fileName = Config::job + string(nameBuf);
         blk.readGrid(fileName);
@@ -65,7 +65,7 @@ void initialize_simulation(int tindx_start)
         fileName = Config::job + string(nameBuf);
         blk.readFlow(fileName);
         blk.computeGeometry();
-        blk.encodeConserved(0);
+        if (blk_config.active) { blk.encodeConserved(0); }
         fluidBlocks.push_back(blk);
     }
     //
@@ -126,17 +126,19 @@ void apply_boundary_conditions()
 {
     for (int iblk=0; iblk < Config::nFluidBlocks; iblk++) {
         BConfig& blk_config = Config::blk_configs[iblk];
-        for (int ibc=0; ibc < 6; ibc++) {
-            switch (blk_config.bcCodes[ibc]) {
-            case BCCode::wall_with_slip: bc_wall_with_slip(iblk, ibc); break;
-            case BCCode::wall_no_slip: bc_wall_no_slip(iblk, ibc); break;
-            case BCCode::exchange: bc_exchange(iblk, ibc); break;
-            case BCCode::inflow: bc_inflow(iblk, ibc, Config::flow_states[blk_config.bc_fs[ibc]]); break;
-            case BCCode::outflow: bc_outflow(iblk, ibc); break;
-            default:
-                throw runtime_error("Invalid bcCode: "+to_string(blk_config.bcCodes[ibc]));
-            }
-        } // end for ibc
+        if (blk_config.active) {
+            for (int ibc=0; ibc < 6; ibc++) {
+                switch (blk_config.bcCodes[ibc]) {
+                case BCCode::wall_with_slip: bc_wall_with_slip(iblk, ibc); break;
+                case BCCode::wall_no_slip: bc_wall_no_slip(iblk, ibc); break;
+                case BCCode::exchange: bc_exchange(iblk, ibc); break;
+                case BCCode::inflow: bc_inflow(iblk, ibc, Config::flow_states[blk_config.bc_fs[ibc]]); break;
+                case BCCode::outflow: bc_outflow(iblk, ibc); break;
+                default:
+                    throw runtime_error("Invalid bcCode: "+to_string(blk_config.bcCodes[ibc]));
+                }
+            } // end for ibc
+        } // end if active
     } // end for iblk
 } // end apply_boundary_conditions()
 
@@ -154,7 +156,7 @@ void march_in_time()
             number smallest_dt = numeric_limits<number>::max();
             number cfl = Config::cfl_schedule.get_value(SimState::t);
             for (Block& blk : fluidBlocks) {
-                smallest_dt = fmin(smallest_dt, blk.estimate_allowed_dt(cfl));
+                if (blk.active) { smallest_dt = fmin(smallest_dt, blk.estimate_allowed_dt(cfl)); }
             }
             SimState::dt = smallest_dt;
         }
@@ -163,13 +165,15 @@ void march_in_time()
         //
         int bad_cell_count = 0;
         for (Block& blk : fluidBlocks) {
-            blk.calculate_fluxes(Config::x_order);
-            bad_cell_count += blk.update_stage_1(SimState::dt);
+            if (blk.active) {
+                blk.calculate_fluxes(Config::x_order);
+                bad_cell_count += blk.update_stage_1(SimState::dt);
+            }
         }
         if (bad_cell_count == 0) {
             // After a successful step, copy the conserved data back to level 0.
             for (Block& blk : fluidBlocks) {
-                blk.copy_conserved_data(1, 0);
+                if (blk.active) { blk.copy_conserved_data(1, 0); }
             }
         } else {
             throw runtime_error("Bad cell count: "+to_string(bad_cell_count));

@@ -25,6 +25,11 @@
 using namespace std;
 
 struct Block {
+    // Active blocks will be updates during the gas-dynamic update calculations.
+    // Blocks that are not active will just have their initial data preserved,
+    // so that it can be written out to make the overall structured-grid complete
+    // for Paraview.
+    bool active;
     // Active cells are the "real" cells in the simulation.
     // We compute the evolution of the gas-dynamic flow properties within them.
     int nic; // Number of cells i-direction.
@@ -61,7 +66,8 @@ struct Block {
     __host__
     string toString() {
         string repr = "Block(nic=" + to_string(nic) +
-            ", njc=" + to_string(njc) + ", nkc=" + to_string(nkc) + ")";
+            ", njc=" + to_string(njc) + ", nkc=" + to_string(nkc) +
+            ", active=" + to_string(active) + ")";
         return repr;
     }
 
@@ -76,8 +82,8 @@ struct Block {
     __host__ __device__
     int ghostCellIndex(int faceIndx, int i0, int i1, int depth)
     {
-        int cellIndxOnFace = i1*n0c[faceIndx] + i0;
-        int nCellsOnFace = n0c[faceIndx]*n1c[faceIndx];
+        int cellIndxOnFace = (active) ? i1*n0c[faceIndx] + i0 : 0;
+        int nCellsOnFace = (active) ? n0c[faceIndx]*n1c[faceIndx] : 0;
         return firstGhostCell[faceIndx] + nCellsOnFace*depth + cellIndxOnFace;
     }
 
@@ -106,10 +112,11 @@ struct Block {
     }
 
     __host__
-    void configure(int i, int j, int k)
+    void configure(int i, int j, int k, bool _active)
     // Set up the block to hold the grid and flow data.
     // Do this before reading a grid or flow file.
     {
+        active = _active;
         nic = i;
         njc = j;
         nkc = k;
@@ -123,14 +130,16 @@ struct Block {
         n0c[Face::kminus] = nic; n1c[Face::kminus] = njc;
         n0c[Face::kplus] = nic; n1c[Face::kplus] = njc;
         for (int ib=0; ib < 6; ib++) {
-            nGhostCells[ib] = 2*n0c[ib]*n1c[ib];
+            nGhostCells[ib] = (active) ? 2*n0c[ib]*n1c[ib] : 0;
             firstGhostCell[ib] = (ib > 0) ? firstGhostCell[ib-1] + nGhostCells[ib-1] : nActiveCells;
         }
         //
         // Now that we know the numbers of cells, resize the data store to fit them all.
         cells.resize(firstGhostCell[5]+nGhostCells[5]);
-        Q.resize(nActiveCells*TLevels);
-        dQdt.resize(nActiveCells*TLevels);
+        if (active) {
+            Q.resize(nActiveCells*TLevels);
+            dQdt.resize(nActiveCells*TLevels);
+        }
         #ifdef CUDA
         // We need to allocate corresponding memory space on the GPU.
         // [TODO]
@@ -346,6 +355,8 @@ struct Block {
                 }
             }
         }
+        //
+        if (!active) return; // No ghost cells for an inactive block.
         //
         // Work around the boundaries and extrapolate cell positions and lengths
         // into the ghost cells.  We need this data for high-order reconstruction
@@ -621,18 +632,6 @@ struct Block {
         return;
     } // end writeFlow()
 
-    __host__ __device__
-    number estimate_local_dt(FVCell& c, Vector3 inorm, Vector3 jnorm, Vector3 knorm, number cfl)
-    {
-        // We assume that the cells are (roughly) hexagonal and work with
-        // velocities normal to the faces.
-        FlowState& fs = c.fs;
-        number isignal = c.iLength/(fabs(fs.vel.dot(inorm))+fs.gas.a);
-        number jsignal = c.jLength/(fabs(fs.vel.dot(jnorm))+fs.gas.a);
-        number ksignal = c.kLength/(fabs(fs.vel.dot(knorm))+fs.gas.a);
-        return cfl * fmin(fmin(isignal,jsignal),ksignal);
-    } // end estimate_local_dt()
-
     __host__
     number estimate_allowed_dt(number cfl)
     {
@@ -642,7 +641,7 @@ struct Block {
             Vector3 inorm = iFaces[c.face[Face::iminus]].n;
             Vector3 jnorm = jFaces[c.face[Face::jminus]].n;
             Vector3 knorm = kFaces[c.face[Face::kminus]].n;
-            smallest_dt = fmin(smallest_dt, estimate_local_dt(c, inorm, jnorm, knorm, cfl));
+            smallest_dt = fmin(smallest_dt, c.estimate_local_dt(inorm, jnorm, knorm, cfl));
         }
         return smallest_dt;
     } // end estimate_allowed_dt()

@@ -465,12 +465,12 @@ class FluidBlock():
     """
     This class is used to build a description of the flow domain.
     """
-    __slots__ = 'indx', 'i', 'j', 'k', 'grid', 'initialState', \
+    __slots__ = 'indx', 'active', 'i', 'j', 'k', 'grid', 'initialState', \
         'nic', 'njc', 'nkc', 'bcs', 'label', \
         'cellc', 'cellv'
 
     def __init__(self, i=0, j=0, k=0, grid=None, initialState=None,
-                 bcs={}, label=""):
+                 bcs={}, active=True, label=""):
         global config, fluidBlocksList, flowStatesList
         if isinstance(grid, StructuredGrid):
             self.grid = grid
@@ -499,6 +499,7 @@ class FluidBlock():
         self.i = i
         self.j = j
         self.k = k
+        self.active = active;
         self.label = label
         self.indx = len(fluidBlocksList)
         fluidBlocksList.append(self)
@@ -514,6 +515,7 @@ class FluidBlock():
             result += '"%s": %s' % (f, self.bcs[f].to_json())
             result += ',' if i < len(FaceList)-1 else ''
         result += '},'
+        result += ' "active": %s,' % json.dumps(self.active)
         result += ' "label": "%s"}' % self.label
         return result
 
@@ -586,7 +588,7 @@ class FBArray():
     __slots__ =  'origin', 'nblocks', 'grid', 'initialState', 'bcs', 'label'
 
     def __init__(self, origin={'i':0,'j':0,'k':0}, nblocks={'i':1,'j':1,'k':1},
-                 grid=None, initialState=None, bcs={}, label=""):
+                 grid=None, initialState=None, bcs={}, active=True, label=""):
         """
         A single grid is split into an array of subgrids and
         a FluidBlock is constructed for each subgrid.
@@ -634,6 +636,7 @@ class FBArray():
         k = origin['k']
         newBlock = FluidBlock(i=i, j=j, k=k, grid=self.grid,
                               initialState=self.initialState, bcs=self.bcs,
+                              active=self.active,
                               label=self.label+("-%d-%d-%d".format(i, j, k)))
         self.blks.append(newBlock)
 

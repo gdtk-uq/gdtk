@@ -173,6 +173,17 @@ struct FVCell {
         return 0;
     }
 
+    __host__ __device__
+    number estimate_local_dt(Vector3 inorm, Vector3 jnorm, Vector3 knorm, number cfl)
+    {
+        // We assume that the cells are (roughly) hexagonal and work with
+        // velocities normal to the faces.
+        number isignal = iLength/(fabs(fs.vel.dot(inorm))+fs.gas.a);
+        number jsignal = jLength/(fabs(fs.vel.dot(jnorm))+fs.gas.a);
+        number ksignal = kLength/(fabs(fs.vel.dot(knorm))+fs.gas.a);
+        return cfl * fmin(fmin(isignal,jsignal),ksignal);
+    }
+
 }; // end Cell
 
 #endif

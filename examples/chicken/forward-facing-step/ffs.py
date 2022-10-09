@@ -59,7 +59,7 @@ blk2 = FluidBlock(i=1, j=1, grid=grd2, initialState=inflow,
 vol3 = TFIVolume(p000=b0, p100=c0, p110=c1, p010=b1,
                  p001=b0+H, p101=c0+H, p111=c1+H, p011=b1+H)
 grd3 = StructuredGrid(pvolume=vol3, niv=nbc+1, njv=n01+1, nkv=3)
-blk3 = FluidBlock(i=1, j=0, grid=grd3, initialState=initial)
+blk3 = FluidBlock(i=1, j=0, grid=grd3, initialState=initial, active=False)
 #
 config.max_time = 5.0e-3
 config.max_step = 6000

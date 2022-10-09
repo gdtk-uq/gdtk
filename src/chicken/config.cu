@@ -50,12 +50,14 @@ struct BConfig {
     int initial_fs;
     int bcCodes[6];
     int bc_fs[6];
+    bool active;
 
     string toString() {
         ostringstream repr;
         repr << "BConfig(i=" << i << ", j=" << j << ", k=" << k;
         repr << ", bcCodes=["; for (auto c: bcCodes) repr << c << ","; repr << "]";
         repr << ", bc_fs=["; for (auto f : bc_fs) repr << f << ","; repr << "]";
+        repr << ", active=" << active;
         repr << ")";
         return repr.str();
     }
@@ -216,6 +218,7 @@ void read_config_file(string fileName)
         blk_config.i = blk_json["i"].get<int>();
         blk_config.j = blk_json["j"].get<int>();
         blk_config.k = blk_json["k"].get<int>();
+        blk_config.active = blk_json["active"].get<bool>();
         blk_config.initial_fs = blk_json["initial_flow_state"].get<int>();
         map<string,json> bcs_json = blk_json["bcs"].get<map<string,json> >();
         for (auto name : Face::names) {
