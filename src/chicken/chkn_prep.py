@@ -511,8 +511,7 @@ class FluidBlock():
         """
         A representation of the block's configuration.
         """
-        result = '{"i": %d, "j": %d, "k": %d, "initial_flow_state": %d,' % \
-            (self.i, self.j, self.k, self.initialState.indx)
+        result = '{"i": %d, "j": %d, "k": %d,' % (self.i, self.j, self.k)
         result += ' "bcs": {'
         for i,f in enumerate(FaceList):
             result += '"%s": %s' % (f, self.bcs[f].to_json())

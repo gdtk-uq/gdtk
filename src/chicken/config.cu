@@ -47,7 +47,6 @@ int BC_code_from_name(string name)
 
 struct BConfig {
     int i, j, k;
-    int initial_fs;
     int bcCodes[6];
     int bc_fs[6];
     bool active;
@@ -219,7 +218,6 @@ void read_config_file(string fileName)
         blk_config.j = blk_json["j"].get<int>();
         blk_config.k = blk_json["k"].get<int>();
         blk_config.active = blk_json["active"].get<bool>();
-        blk_config.initial_fs = blk_json["initial_flow_state"].get<int>();
         map<string,json> bcs_json = blk_json["bcs"].get<map<string,json> >();
         for (auto name : Face::names) {
             map<string,json> bc = bcs_json[name].get<map<string,json> >();
