@@ -481,8 +481,11 @@ class FluidBlock():
         self.nkc = grid.nkv - 1
         if isinstance(initialState, FlowState):
             self.initialState = initialState
+        elif callable(initialState):
+            self.initialState = initialState
         else:
-            raise RuntimeError('Need to supply a FlowState object.')
+            raise RuntimeError('Need to supply a FlowState object or a function that produces'+
+                               'a FlowState object as a function of (x,y,z) location.')
         #
         # Boundary conditions
         # Set default values and then overwrite, if the user has supplied them.
@@ -551,19 +554,35 @@ class FluidBlock():
         The order of the cells corresponds to the order expected
         for a VTK structured-grid.
         """
-        fs = self.initialState
-        gas = fs.gas
-        vel = fs.vel
+        # Decide if we have a single FlowState for every cell the whole block,
+        # or whether we have to evalulate a function to give a distinct FlowState
+        # at the center of each cell.
+        fs = None; fn = None
+        if isinstance(self.initialState, FlowState):
+            fs = self.initialState
+        elif callable(self.initialState):
+            fn = self.initialState
+        #
+        # Construct the ZIP archive, one variable (file) at a time.
         with ZipFile(fileName, mode='w') as zf:
             for varName in varNamesList:
                 with zf.open(varName, mode='w') as fp:
                     for k in range(0, self.nkc):
                         for j in range(0, self.njc):
                             for i in range(0, self.nic):
+                                x = self.cellc[i][j][k].x
+                                y = self.cellc[i][j][k].y
+                                z = self.cellc[i][j][k].z
+                                # The following call quite repetitive and wasteful
+                                # but will typically be used for small exercises,
+                                # I hope.
+                                if fn: fs = fn(x, y, z)
+                                gas = fs.gas
+                                vel = fs.vel
                                 value = 0.0
-                                if varName == 'pos.x': value = self.cellc[i][j][k].x
-                                elif varName == 'pos.y': value = self.cellc[i][j][k].y
-                                elif varName == 'pos.z': value = self.cellc[i][j][k].z
+                                if varName == 'pos.x': value = x
+                                elif varName == 'pos.y': value = y
+                                elif varName == 'pos.z': value = z
                                 elif varName == 'vol': value = self.cellv[i][j][k]
                                 elif varName == 'p': value = gas.p
                                 elif varName == 'T': value = gas.T
