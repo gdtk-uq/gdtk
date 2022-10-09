@@ -126,19 +126,18 @@ void apply_boundary_conditions()
 {
     for (int iblk=0; iblk < Config::nFluidBlocks; iblk++) {
         BConfig& blk_config = Config::blk_configs[iblk];
-        if (blk_config.active) {
-            for (int ibc=0; ibc < 6; ibc++) {
-                switch (blk_config.bcCodes[ibc]) {
-                case BCCode::wall_with_slip: bc_wall_with_slip(iblk, ibc); break;
-                case BCCode::wall_no_slip: bc_wall_no_slip(iblk, ibc); break;
-                case BCCode::exchange: bc_exchange(iblk, ibc); break;
-                case BCCode::inflow: bc_inflow(iblk, ibc, Config::flow_states[blk_config.bc_fs[ibc]]); break;
-                case BCCode::outflow: bc_outflow(iblk, ibc); break;
-                default:
-                    throw runtime_error("Invalid bcCode: "+to_string(blk_config.bcCodes[ibc]));
-                }
-            } // end for ibc
-        } // end if active
+        if (!blk_config.active) continue;
+        for (int ibc=0; ibc < 6; ibc++) {
+            switch (blk_config.bcCodes[ibc]) {
+            case BCCode::wall_with_slip: bc_wall_with_slip(iblk, ibc); break;
+            case BCCode::wall_no_slip: bc_wall_no_slip(iblk, ibc); break;
+            case BCCode::exchange: bc_exchange(iblk, ibc); break;
+            case BCCode::inflow: bc_inflow(iblk, ibc, Config::flow_states[blk_config.bc_fs[ibc]]); break;
+            case BCCode::outflow: bc_outflow(iblk, ibc); break;
+            default:
+                throw runtime_error("Invalid bcCode: "+to_string(blk_config.bcCodes[ibc]));
+            }
+        } // end for ibc
     } // end for iblk
 } // end apply_boundary_conditions()
 
@@ -156,20 +155,21 @@ void march_in_time()
             number smallest_dt = numeric_limits<number>::max();
             number cfl = Config::cfl_schedule.get_value(SimState::t);
             for (Block& blk : fluidBlocks) {
-                if (blk.active) { smallest_dt = fmin(smallest_dt, blk.estimate_allowed_dt(cfl)); }
+                if (!blk.active) continue;
+                smallest_dt = fmin(smallest_dt, blk.estimate_allowed_dt(cfl));
             }
             SimState::dt = smallest_dt;
         }
+        //
         // Gas-dynamic update over three stages with TVD-RK3 weights.
         int bad_cell_count = 0;
         // Stage 1.
         // number t = SimState::t; // Only needed if we have time-dependent source terms or BCs.
         apply_boundary_conditions();
         for (Block& blk : fluidBlocks) {
-            if (blk.active) {
-                blk.calculate_fluxes(Config::x_order);
-                bad_cell_count += blk.update_stage_1(SimState::dt);
-            }
+            if (!blk.active) continue;
+            blk.calculate_fluxes(Config::x_order);
+            bad_cell_count += blk.update_stage_1(SimState::dt);
         }
         if (bad_cell_count > 0) {
             throw runtime_error("Stage 1 bad cell count: "+to_string(bad_cell_count));
@@ -178,10 +178,9 @@ void march_in_time()
         // t = SimState::t + 0.5*SimState::dt;
         apply_boundary_conditions();
         for (Block& blk : fluidBlocks) {
-            if (blk.active) {
-                blk.calculate_fluxes(Config::x_order);
-                bad_cell_count += blk.update_stage_2(SimState::dt);
-            }
+            if (!blk.active) continue;
+            blk.calculate_fluxes(Config::x_order);
+            bad_cell_count += blk.update_stage_2(SimState::dt);
         }
         if (bad_cell_count > 0) {
             throw runtime_error("Stage 2 bad cell count: "+to_string(bad_cell_count));
@@ -190,23 +189,24 @@ void march_in_time()
         // t = SimState::t + SimState::dt;
         apply_boundary_conditions();
         for (Block& blk : fluidBlocks) {
-            if (blk.active) {
-                blk.calculate_fluxes(Config::x_order);
-                bad_cell_count += blk.update_stage_3(SimState::dt);
-            }
+            if (!blk.active) continue;
+            blk.calculate_fluxes(Config::x_order);
+            bad_cell_count += blk.update_stage_3(SimState::dt);
         }
         if (bad_cell_count > 0) {
             throw runtime_error("Stage 3 bad cell count: "+to_string(bad_cell_count));
         }
         // After a successful gasdynamic update, copy the conserved data back to level 0.
         for (Block& blk : fluidBlocks) {
-            if (blk.active) { blk.copy_conserved_data(1, 0); }
+            if (!blk.active) continue;
+            blk.copy_conserved_data(1, 0);
         }
         //
         SimState::t += SimState::dt;
         SimState::step += 1;
         SimState::steps_since_last_plot += 1;
         //
+        // Occasionally write the current step and time to the console.
         if (SimState::step > 0 && (SimState::step % Config::print_count)==0) {
             cout << "Step=" << SimState::step << " t=" << SimState::t
                  << " dt=" << SimState::dt << " cfl=" << Config::cfl_schedule.get_value(SimState::t)
