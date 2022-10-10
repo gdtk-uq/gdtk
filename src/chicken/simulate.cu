@@ -15,6 +15,7 @@
 #include <string>
 #include <filesystem>
 #include <limits>
+#include <chrono>
 
 #include "number.cu"
 #include "vector3.cu"
@@ -47,6 +48,7 @@ void initialize_simulation(int tindx_start)
     if (!filesystem::exists(pth) || !filesystem::is_directory(pth)) {
         throw runtime_error("Job directory is not present in current directory.");
     }
+    auto clock_start = chrono::system_clock::now();
     read_config_file(Config::job + "/config.json");
     // Read initial grids and flow data
     for (int blk_id=0; blk_id < Config::nFluidBlocks; ++blk_id) {
@@ -89,13 +91,17 @@ void initialize_simulation(int tindx_start)
     }
     SimState::t_plot = SimState::t + Config::dt_plot_schedule.get_value(SimState::t);
     SimState::steps_since_last_plot = 0;
+    auto clock_now = chrono::system_clock::now();
+    auto clock_ms = chrono::duration_cast<chrono::milliseconds>(clock_now - clock_start);
+    cout << "initialize_simulation() finished in " << clock_ms.count() << "ms" << endl;
     return;
 } // initialize_simulation()
 
 __host__
 void write_flow_data(int tindx, number tme)
 {
-    cout << "Write flow data at tindx=" << tindx << " time=" << tme << endl;
+    cout << "Write flow data at tindx=" << tindx
+         << " time=" << scientific << setprecision(3) << tme << endl;
     //
     char nameBuf[256];
     sprintf(nameBuf, "%s/flow/t%04d", Config::job.c_str(), tindx);
@@ -145,6 +151,7 @@ __host__
 void march_in_time()
 {
     cout << "march_in_time() start" << endl;
+    auto clock_start = chrono::system_clock::now();
     SimState::dt = Config::dt_init;
     SimState::step = 0;
     //
@@ -208,8 +215,19 @@ void march_in_time()
         //
         // Occasionally write the current step and time to the console.
         if (SimState::step > 0 && (SimState::step % Config::print_count)==0) {
-            cout << "Step=" << SimState::step << " t=" << SimState::t
-                 << " dt=" << SimState::dt << " cfl=" << Config::cfl_schedule.get_value(SimState::t)
+            auto clock_now = chrono::system_clock::now();
+            auto clock_ms = chrono::duration_cast<chrono::milliseconds>(clock_now - clock_start);
+            double wall_clock_elapsed = clock_ms.count()/1000.0;
+            double wall_clock_per_step = wall_clock_elapsed / SimState::step;
+            double WCtFT = (Config::max_time - SimState::t) / SimState::dt * wall_clock_per_step;
+            double WCtMS = (Config::max_step - SimState::step) * wall_clock_per_step;
+            cout << "Step=" << SimState::step
+                 << " t=" << scientific << setprecision(3) << SimState::t
+                 << " dt=" << SimState::dt
+                 << " cfl=" << fixed << Config::cfl_schedule.get_value(SimState::t)
+                 << " WC=" << wall_clock_elapsed << "s"
+                 << " WCtFT=" << WCtFT << "s"
+                 << " WCtMS=" << WCtMS << "s"
                  << endl;
         }
         //
