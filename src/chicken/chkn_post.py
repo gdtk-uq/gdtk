@@ -115,9 +115,30 @@ def read_block_of_flow_data(fileName):
 
 # --------------------------------------------------------------------
 
+def write_pvd_file(jobDir, tindxList, timesList):
+    """
+    Write a single .pvd file that ties all of the snapshot files together
+    into a single time-stamped dataset that Paraview can read.
+    """
+    plotDir = jobDir + '/plot'
+    if not os.path.exists(plotDir): os.mkdir(plotDir)
+    fileName = plotDir + '/flow.pvd'
+    fp = open(fileName, mode='w')
+    fp.write('<?xml version="1.0"?>\n')
+    fp.write('<VTKFile type="Collection" version="0.1" byte_order="BigEndian">\n')
+    fp.write('<Collection>\n')
+    for tindx,timeStamp in zip(tindxList, timesList):
+        pvtsFileName = 'flow-t%04d.pvts' % (tindx,)
+        fp.write('<DataSet timestep="%.18e" group="" part="0" file="%s"/>\n' % (timeStamp, pvtsFileName))
+    fp.write('</Collection>\n')
+    fp.write('</VTKFile>\n')
+    fp.close()
+    return
+
 def write_vtk_files(jobDir, tindx):
     """
-    Write the collection of VTK files for a single tindx.
+    Write snapshot of the flow data as a collection of VTK files for a single tindx.
+    This collection of files will describe the pieces of an overall StructuredGrid.
     """
     global config, grids, flows
     plotDir = jobDir + '/plot'
@@ -278,6 +299,8 @@ if __name__ == '__main__':
             read_flow_blocks(jobDir, tindx)
             write_vtk_files(jobDir, tindx)
         #
+        timesList = [times[tindx] for tindx in tindxList]
+        write_pvd_file(jobDir, tindxList, timesList)
         print("Done.")
     #
     sys.exit(0)
