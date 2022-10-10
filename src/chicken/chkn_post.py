@@ -35,8 +35,11 @@ def printUsage():
     print("Usage: chkn-post" +
           " [--help | -h]" +
           " [--job=<jobName> | -f <jobName>]" +
-          " [--tindx=<int> | -t <int>"
+          " [--tindx=<tindxSpec> | -t <tindxSpec>"
     )
+    print("  tindxSpec may specify a single index or a range of indices.")
+    print("  Some examples: 0  1  $  -1  all  0:$  :$  :  0:-1  :-1")
+    print("  If tindxSpec is not given, just the final-time snapshot is written.")
     print("")
     return
 
@@ -165,7 +168,9 @@ def write_vtk_structured_grid_file(fileName, grid, flowData,
                                    whole_niv, whole_njv, whole_nkv,
                                    start_niv, start_njv, start_nkv):
     """
-    Combine the grid and flow data for one block into a VTK StructuredGrid file.
+    Combine the grid and flow data for one block into a VTK StructuredGrid file
+
+    for one piece of the overall grid..
     """
     with open(fileName, mode='w') as fp:
         fp.write('<VTKFile type="StructuredGrid" version="0.1" byte_order="BigEndian">\n')
@@ -219,13 +224,59 @@ if __name__ == '__main__':
         print("times=", times)
         read_grids(jobDir)
         #
-        tindx = 0 # default is the initial-time index
+        tindxSpec = "$" # default is the final-time index
+        tindxList = []
+        timesKeys = list(times)
+        timesKeys.sort()
         if "--tindx" in uoDict:
-            tindx = int(uoDict.get("--tindx", "0"))
+            tindxSpec = uoDict.get("--tindx", "$")
         elif "-t" in uoDict:
-            tindx = int(uoDict.get("-t", "0"))
-        read_flow_blocks(jobDir, tindx)
-        write_vtk_files(jobDir, tindx)
+            tindxSpec = uoDict.get("-t", "$")
+        #
+        # Decide which saved snapshots to write out, saving them to a list.
+        if tindxSpec == '$' or tindxSpec == '-1':
+            # Pick out the final-time index.
+            tindxList = [timesKeys[-1]]
+        elif tindxSpec == 'all':
+            tindxList = timesKeys[:]
+        elif tindxSpec.isnumeric():
+            # A single integer is assumed.
+            tindxList = [int(tindxSpec)]
+        elif tindxSpec.find(':') >= 0:
+            # We have a range specified
+            firstSpec, lastSpec = tindxSpec.split(':')
+            first = 0
+            last = timesKeys[-1]
+            #
+            if firstSpec.isnumeric():
+                first = int(firstSpec)
+            elif firstSpec == '':
+                first = 0
+            elif firstSpec == '$' or firstSpec == '-1':
+                first = timesKeys[-1]
+            else:
+                raise Exception("Cannot convert firstSpec={}".format(firstSpec))
+            #
+            if lastSpec.isnumeric():
+                last = int(lastSpec)
+            elif lastSpec == '':
+                last = timesKeys[-1]
+            elif lastSpec == '$' or lastSpec == '-1':
+                last = timesKeys[-1]
+            else:
+                raise Exception("Cannot convert lastSpec={}".format(lastSpec))
+            #
+            tindxList = []
+            for tindx in timesKeys:
+                if tindx >= first and tindx <= last: tindxList.append(tindx)
+        else:
+            raise Exception("Did not know what to do with tindxSpec="+tindxSpec)
+        #
+        # Write out that list of snapshots.
+        for tindx in tindxList:
+            print("Writing tindx={}".format(tindx))
+            read_flow_blocks(jobDir, tindx)
+            write_vtk_files(jobDir, tindx)
         #
         print("Done.")
     #
