@@ -977,6 +977,7 @@ int integrate_in_time(double target_time_as_requested)
     auto coupling_with_solid_domains_save = GlobalConfig.coupling_with_solid_domains;
     GlobalConfig.coupling_with_solid_domains = SolidDomainCoupling.tight;
     //
+    SimState.wall_clock_start = Clock.currTime();
     while ( !finished_time_stepping ) {
         try {
             if (SimState.step == solid_domain_loose_coupling_delay &&
