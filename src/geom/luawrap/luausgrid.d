@@ -267,7 +267,7 @@ extern(C) int newUnstructuredGrid(lua_State* L)
                 true_centroids = to!bool(lua_toboolean(L, -1));
             }
             lua_pop(L, 1); // dispose of true_centroids item
-            bool expect_gmsh_order_for_wedges = true;
+            bool expect_gmsh_order_for_wedges = false;
             lua_getfield(L, 1, "expect_gmsh_order_for_wedges".toStringz);
             if ( !lua_isnil(L, -1) ) {
                 expect_gmsh_order_for_wedges = to!bool(lua_toboolean(L, -1));

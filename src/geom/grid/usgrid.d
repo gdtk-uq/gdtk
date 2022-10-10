@@ -32,9 +32,8 @@ import paver2d;
 // between the tag values.  This is vtk_element_types below.
 // 2016-dec-01: Kyle has found that Pointwise writes the su2 file with GMSH
 // vertex ordering for the wedge elements.  We retain the VTK ordering.
-// 2022-oct-10: Pointwise now writes the wedge/prism element out in the correct
-// VTK vertex ordering. The Pointwise SU2 grid importer currently hasn't been
-// updated but we have lodged a bug report with the Pointwise development team.
+// 2022-oct-10: Pointwise now writes the wedge/prism element out with VTK order
+// for the nodes.
 
 enum USGCell_type {
     none = 0,
@@ -811,14 +810,14 @@ public:
 
     // Imported grid.
     this(string fileName, string fmt, bool true_centroids, double scale=1.0,
-         bool expect_gmsh_order_for_wedges=true, string new_label="")
+         bool expect_gmsh_order_for_wedges=false, string new_label="")
     {
         super(Grid_t.unstructured_grid, 0, new_label);
         // dimensions will be reset on reading grid
         switch (fmt) {
         case "gziptext": read_from_gzip_file(fileName, scale); break;
         case "rawbinary": read_from_raw_binary_file(fileName, scale); break;
-        case "su2text": read_from_su2_file(fileName, true_centroids, scale); break;
+        case "su2text": read_from_su2_file(fileName, true_centroids, scale, expect_gmsh_order_for_wedges); break;
         case "vtktext": read_from_vtk_text_file(fileName, scale); break;
         case "vtkxml": throw new Error("Reading from VTK XML format not implemented.");
         default: throw new Error("Import an UnstructuredGrid, unknown format: " ~ fmt);
@@ -1258,7 +1257,8 @@ public:
 
     void read_from_su2_file(string fileName,
                             bool true_centroids,
-                            double scale=1.0)
+                            double scale=1.0,
+                            bool expect_gmsh_order_for_wedges=false)
     // Information on the su2 file format from
     // https://github.com/su2code/SU2/wiki/Mesh-File
     // scale = unit length in metres
@@ -1322,6 +1322,12 @@ public:
                 string msg = "Unknown element type.";
                 msg ~= format("\nCell i: %d line:\"%s\"", i, lineContent);
                 throw new GeometryException(msg);
+            }
+            if (cell_type == USGCell_type.wedge && expect_gmsh_order_for_wedges) {
+                // We assume that we have picked up the vertex indices for a wedge
+                // in GMSH order but we need to store them in VTK order.
+                vtx_id_list = [vtx_id_list[1], vtx_id_list[0], vtx_id_list[2],
+                               vtx_id_list[4], vtx_id_list[3], vtx_id_list[5]];
             }
             size_t[] face_id_list; // empty, so far
             int[] outsign_list; // empty, so far
