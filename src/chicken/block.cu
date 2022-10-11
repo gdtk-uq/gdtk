@@ -52,6 +52,7 @@ struct Block {
     array<int,6> n1c; // Number of cells in second index direction for each face.
     array<int,6> nGhostCells; // Number of ghost cells on each face.
     array<int,6> firstGhostCell; // Index of the first ghost cell for each face.
+    int nTotalGhostCells; // Total number of ghost cells for the Block
     //
     // Collections of faces which bound the active cells.
     // We compute fluxes of conserved flow properties across these faces.
@@ -129,13 +130,15 @@ struct Block {
         n0c[Face::jplus] = nic; n1c[Face::jplus] = nkc;
         n0c[Face::kminus] = nic; n1c[Face::kminus] = njc;
         n0c[Face::kplus] = nic; n1c[Face::kplus] = njc;
+        nTotalGhostCells = 0;
         for (int ib=0; ib < 6; ib++) {
             nGhostCells[ib] = (active) ? 2*n0c[ib]*n1c[ib] : 0;
             firstGhostCell[ib] = (ib > 0) ? firstGhostCell[ib-1] + nGhostCells[ib-1] : nActiveCells;
+            nTotalGhostCells += nGhostCells[ib];
         }
         //
         // Now that we know the numbers of cells, resize the data store to fit them all.
-        cells.resize(firstGhostCell[5]+nGhostCells[5]);
+        cells.resize(nActiveCells+nTotalGhostCells);
         if (active) {
             Q.resize(nActiveCells*2);
             dQdt.resize(nActiveCells*3);
