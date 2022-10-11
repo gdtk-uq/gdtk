@@ -102,6 +102,7 @@ struct Schedule {
 
 
 namespace Config {
+    int verbosity = 0;
     string job = "job";
     string title = "";
     vector<FlowState> flow_states;
@@ -127,7 +128,7 @@ namespace Config {
 
 void read_config_file(string fileName)
 {
-    cout << "Reading JSON config file." << endl;
+    if (Config::verbosity > 0) cout << "Reading JSON config file." << endl;
     json jsonData;
     ifstream f(fileName, ifstream::binary);
     if (f) {
@@ -143,12 +144,12 @@ void read_config_file(string fileName)
         }
         f.close();
         delete[] text;
-        cout << "Finished reading JSON file." << endl;
+        if (Config::verbosity > 0) cout << "Finished reading JSON file." << endl;
     } else {
         throw runtime_error("Could not open ifstream for config.json.");
     }
     Config::title = jsonData["title"].get<string>();
-    cout << "  title: " << Config::title << endl;
+    if (Config::verbosity > 0) cout << "  title: " << Config::title << endl;
     //
     // Check that we have consistent gas model.
     map<string, number> gas_model_data = jsonData["gas_model"].get<map<string, number> >();
@@ -180,9 +181,11 @@ void read_config_file(string fileName)
         auto vel = fsj["vel"].get<vector<number> >();
         Config::flow_states.push_back(FlowState{gas, Vector3{vel[0], vel[1], vel[2]}});
     }
-    cout << "  flow_states: [";
-    for (auto fs : Config::flow_states) cout << fs.toString() << ",";
-    cout << "]" << endl;
+    if (Config::verbosity > 0) {
+        cout << "  flow_states: [";
+        for (auto fs : Config::flow_states) cout << fs.toString() << ",";
+        cout << "]" << endl;
+    }
     //
     // Block configs appear in the JSON file in order of their definition in the Python input script.
     // This index is the block id and is different to the i,j,k indices into the block array.
@@ -191,22 +194,28 @@ void read_config_file(string fileName)
     Config::nib = jsonData["nib"].get<int>();
     Config::njb = jsonData["njb"].get<int>();
     Config::nkb = jsonData["nkb"].get<int>();
-    cout << "  nib: " << Config::nib << endl;
-    cout << "  njb: " << Config::njb << endl;
-    cout << "  nkb: " << Config::nkb << endl;
+    if (Config::verbosity > 0) {
+        cout << "  nib: " << Config::nib << endl;
+        cout << "  njb: " << Config::njb << endl;
+        cout << "  nkb: " << Config::nkb << endl;
+    }
     //
     Config::nics = jsonData["nics"].get<vector<int> >();
     Config::njcs = jsonData["njcs"].get<vector<int> >();
     Config::nkcs = jsonData["nkcs"].get<vector<int> >();
-    cout << "  nics: ["; for (auto i : Config::nics) cout << i << ","; cout << "]" << endl;
-    cout << "  njcs: ["; for (auto i : Config::njcs) cout << i << ","; cout << "]" << endl;
-    cout << "  nkcs: ["; for (auto i : Config::nkcs) cout << i << ","; cout << "]" << endl;
+    if (Config::verbosity > 0) {
+        cout << "  nics: ["; for (auto i : Config::nics) cout << i << ","; cout << "]" << endl;
+        cout << "  njcs: ["; for (auto i : Config::njcs) cout << i << ","; cout << "]" << endl;
+        cout << "  nkcs: ["; for (auto i : Config::nkcs) cout << i << ","; cout << "]" << endl;
+    }
     //
     Config::blk_ids = jsonData["blk_ids"].get<vector<vector<vector<int> > > >();
-    for (int k=0; k < Config::nkb; k++) {
-        for (int j=0; j < Config::njb; j++) {
-            for (int i=0; i < Config::nib; i++) {
-                cout << "  blk_ids[" << i << "," << j << "," << k << "]=" << Config::blk_ids[i][j][k] << endl;
+    if (Config::verbosity > 0) {
+        for (int k=0; k < Config::nkb; k++) {
+            for (int j=0; j < Config::njb; j++) {
+                for (int i=0; i < Config::nib; i++) {
+                    cout << "  blk_ids[" << i << "," << j << "," << k << "]=" << Config::blk_ids[i][j][k] << endl;
+                }
             }
         }
     }
@@ -228,7 +237,9 @@ void read_config_file(string fileName)
                 blk_config.bc_fs[i] = bc["flow_state_index"].get<int>();
             }
         }
-        cout << "  blk=" << Config::blk_configs.size() << " config=" << blk_config.toString() << endl;
+        if (Config::verbosity > 0) {
+            cout << "  blk=" << Config::blk_configs.size() << " config=" << blk_config.toString() << endl;
+        }
         Config::blk_configs.push_back(blk_config);
     }
     if (Config::nFluidBlocks != Config::blk_configs.size()) {
@@ -249,15 +260,17 @@ void read_config_file(string fileName)
     vector<number> t_change = jsonData["t_change"].get<vector<number> >();
     vector<number> dt_plot = jsonData["dt_plot"].get<vector<number> >();
     Config::dt_plot_schedule = Schedule{t_change, dt_plot};
-    cout << "  x_order=" << Config::x_order << endl;
-    cout << "  t_order=" << Config::t_order << endl;
-    cout << "  dt_init=" << Config::dt_init << endl;
-    cout << "  max_time=" << Config::max_time << endl;
-    cout << "  max_step=" << Config::max_step << endl;
-    cout << "  cfl_count=" << Config::cfl_count << endl;
-    cout << "  cfl_schedule=" << Config::cfl_schedule.toString() << endl;
-    cout << "  print_count=" << Config::print_count << endl;
-    cout << "  dt_plot_schedule=" << Config::dt_plot_schedule.toString() << endl;
+    if (Config::verbosity > 0) {
+        cout << "  x_order=" << Config::x_order << endl;
+        cout << "  t_order=" << Config::t_order << endl;
+        cout << "  dt_init=" << Config::dt_init << endl;
+        cout << "  max_time=" << Config::max_time << endl;
+        cout << "  max_step=" << Config::max_step << endl;
+        cout << "  cfl_count=" << Config::cfl_count << endl;
+        cout << "  cfl_schedule=" << Config::cfl_schedule.toString() << endl;
+        cout << "  print_count=" << Config::print_count << endl;
+        cout << "  dt_plot_schedule=" << Config::dt_plot_schedule.toString() << endl;
+    }
     return;
 } // end read_config_file()
 

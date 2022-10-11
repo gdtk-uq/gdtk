@@ -150,7 +150,7 @@ void apply_boundary_conditions()
 __host__
 void march_in_time()
 {
-    cout << "march_in_time() start" << endl;
+    if (Config::verbosity > 0) cout << "march_in_time() start" << endl;
     auto clock_start = chrono::system_clock::now();
     SimState::dt = Config::dt_init;
     SimState::step = 0;
@@ -239,7 +239,7 @@ void march_in_time()
             SimState::t_plot = SimState::t + Config::dt_plot_schedule.get_value(SimState::t);
         }
     } // end while loop
-    cout << "march_in_time() end" << endl;
+    if (Config::verbosity > 0) cout << "march_in_time() end" << endl;
     return;
 } // end march_in_time()
 

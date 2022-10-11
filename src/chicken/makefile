@@ -5,8 +5,19 @@
 #
 # PJ 2022-09-11 build and run in the source directory
 #    2022-09-19 build and install, much like our other GDTK programs
+#
+# To build and install CPU flavour:
+# $ make install
+#
+# To build and install GPU flavour:
+# $ make GPU=1 install
 
-SELECTED_TARGETS := chicken_for_cpu chkn-prep chkn-post
+SELECTED_TARGETS := chkn-prep chkn-post
+ifeq ($(GPU),1)
+  SELECTED_TARGETS += chicken_for_cuda
+else
+  SELECTED_TARGETS += chicken_for_cpu
+endif
 
 # The install destination.
 INSTALL_DIR ?= $(HOME)/gdtkinst
@@ -27,21 +38,30 @@ CUDA_SOURCE_FILES := main.cu config.cu simulate.cu bcs.cu block.cu cell.cu face.
 
 # Target for FP64 (double) numbers.
 chicken_for_cuda : $(CUDA_SOURCE_FILES)
-	nvcc -DCUDA -std c++17 --expt-relaxed-constexpr -lineinfo -o chkn-run main.cu -lz -lzip
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		main.cu > main_with_rev_string.cu
+	nvcc -DCUDA -std c++17 --expt-relaxed-constexpr -lineinfo -o chkn-run \
+		main_with_rev_string.cu -lz -lzip
 
 # Target for FP32 (float) numbers.
 chicken_for_cuda_f : $(CUDA_SOURCE_FILES)
-	nvcc -DCUDA -DFLOAT_NUMBERS -std c++17 --expt-relaxed-constexpr -lineinfo -o chkn-run main.cu -lz -lzip
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		main.cu > main_with_rev_string.cu
+	nvcc -DCUDA -DFLOAT_NUMBERS -std c++17 --expt-relaxed-constexpr -lineinfo -o chkn-run \
+		main_main_with_rev_string.cu -lz -lzip
 
 # Target for CPU-only flavour of the code with FP64 (double) numbers.
 chicken_for_cpu : $(CUDA_SOURCE_FILES)
-	nvcc -lineinfo -std c++17 --expt-relaxed-constexpr -o chkn-run main.cu -lz -lzip
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		main.cu > main_with_rev_string.cu
+	nvcc -lineinfo -std c++17 --expt-relaxed-constexpr -o chkn-run \
+		main_with_rev_string.cu -lz -lzip
 
 # Note that profiling needs to be done via sudo
 # because we need access to the hardware counters.
 cuda_profile : chicken_for_cuda
 	/usr/local/cuda-11.7/bin/ncu --set full --clock-control none --target-processes all \
-		-o chicken -f ./chicken -lz -lzip
+		-o chicken -f ./chkn-run -lz -lzip
 
 # The program for preparing the config, grid and flow files
 # for the start of a simulation.
@@ -67,6 +87,6 @@ install: $(SELECTED_TARGETS)
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 clean :
-	- rm chkn-run chkn-prep chkn-post
+	- rm chkn-run chkn-prep chkn-post main_with_rev_string.cu
 	- rm -r $(BUILD_DIR)/*
 	- rm chicken.ncu-rep
