@@ -41,6 +41,7 @@ from copy import copy
 import numpy as np
 import json
 from zipfile import ZipFile
+import time
 
 from gdtk.geom.vector3 import Vector3, hexahedron_properties
 from gdtk.geom.volume import TFIVolume
@@ -767,5 +768,5 @@ if __name__ == '__main__':
             print("Warning: no fluid blocks defined; this is unusual.")
         config.check_array_of_fluid_blocks()
         write_initial_files()
-    print("Done.")
+    print("Done in {:.3f} seconds.".format(time.process_time()))
     sys.exit(0)
