@@ -134,46 +134,6 @@ struct FVCell {
     }
 
     __host__ __device__
-    void encode_conserved(ConservedQuantities& U)
-    {
-        number rho = fs.gas.rho;
-        // Mass per unit volume.
-        U[CQI::mass] = rho;
-        // Momentum per unit volume.
-        U[CQI::xMom] = rho*fs.vel.x;
-        U[CQI::yMom] = rho*fs.vel.y;
-        U[CQI::zMom] = rho*fs.vel.z;
-        // Total Energy / unit volume
-        number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y+fs.vel.z*fs.vel.z);
-        U[CQI::totEnergy] = rho*(fs.gas.e + ke);
-        return;
-    }
-
-    __host__ __device__
-    int decode_conserved(ConservedQuantities& U)
-    // Returns 0 for success, 1 for the presence of nans or negative density.
-    {
-        bool any_nans = false; for (auto v : U) { if (isnan(v)) { any_nans = true; } }
-        if (any_nans) return 1;
-        number rho = U[CQI::mass];
-        if (rho <= 0.0) return 1;
-        number dinv = 1.0/rho;
-        fs.vel.set(U[CQI::xMom]*dinv, U[CQI::yMom]*dinv, U[CQI::zMom]*dinv);
-        // Split the total energy per unit volume.
-        // Start with the total energy, then take out the other components.
-        // Internal energy is what remains.
-        number e = U[CQI::totEnergy] * dinv;
-        // Remove kinetic energy for bulk flow.
-        number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y + fs.vel.z*fs.vel.z);
-        e -= ke;
-        // Put data into cell's gas state.
-        fs.gas.rho = rho;
-        fs.gas.e = e;
-        fs.gas.update_from_rhoe();
-        return 0;
-    }
-
-    __host__ __device__
     number estimate_local_dt(Vector3 inorm, Vector3 jnorm, Vector3 knorm, number cfl)
     {
         // We assume that the cells are (roughly) hexagonal and work with

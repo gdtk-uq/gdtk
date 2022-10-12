@@ -653,9 +653,9 @@ struct Block {
     void encodeConserved(int level)
     {
         for (int i=0; i < nActiveCells; i++) {
-            FVCell& c = cells[i];
+            FlowState& fs = cells[i].fs;
             ConservedQuantities& U = Q[level*nActiveCells + i];
-            c.encode_conserved(U);
+            fs.encode_conserved(U);
         }
         return;
     }
@@ -667,7 +667,7 @@ struct Block {
         for (int i=0; i < nActiveCells; i++) {
             FVCell& c = cells[i];
             ConservedQuantities U = Q[level*nActiveCells + i];
-            int bad_cell_flag = c.decode_conserved(U);
+            int bad_cell_flag = c.fs.decode_conserved(U);
             bad_cell_count += bad_cell_flag;
             if (bad_cell_flag) {
                 cerr << "DEBUG-A Bad cell at pos=" << c.pos.toString() << endl;
@@ -744,7 +744,7 @@ struct Block {
             for (int j=0; j < CQI::n; j++) {
                 U1[j] = U0[j] + dt*dUdt0[j];
             }
-            int bad_cell_flag = c.decode_conserved(U1);
+            int bad_cell_flag = c.fs.decode_conserved(U1);
             bad_cell_count += bad_cell_flag;
             if (bad_cell_flag) {
                 cerr << "Stage 1 update, Bad cell at pos=" << c.pos.toString() << endl;
@@ -768,7 +768,7 @@ struct Block {
             for (int j=0; j < CQI::n; j++) {
                 U1[j] = U0[j] + 0.25*dt*(dUdt0[j] + dUdt1[j]);
             }
-            int bad_cell_flag = c.decode_conserved(U1);
+            int bad_cell_flag = c.fs.decode_conserved(U1);
             bad_cell_count += bad_cell_flag;
             if (bad_cell_flag) {
                 cerr << "Stage 2 update, Bad cell at pos=" << c.pos.toString() << endl;
@@ -793,7 +793,7 @@ struct Block {
             for (int j=0; j < CQI::n; j++) {
                 U1[j] = U0[j] + dt*(1.0/6.0*dUdt0[j] + 1.0/6.0*dUdt1[j] + 4.0/6.0*dUdt2[j]);
             }
-            int bad_cell_flag = c.decode_conserved(U1);
+            int bad_cell_flag = c.fs.decode_conserved(U1);
             bad_cell_count += bad_cell_flag;
             if (bad_cell_flag) {
                 cerr << "Stage 3 update, Bad cell at pos=" << c.pos.toString() << endl;
