@@ -1,15 +1,11 @@
 // main.cu
-// Toy compressible-flow CFD program to try out CUDA programming.
+// Compressible-flow CFD program to try out CUDA programming.
 //
-// PJ 2022-09-09
-//   Initial hack adapts the vector addition example from the CUDA workshop
-//   to look a bit closer to our Puffin CFD code.
-// PJ 2022-09-25
-//   Start the process of making it a real flow simulation code.
 
 #include <iostream>
 #include <string>
 #include <stdexcept>
+#include <filesystem>
 #include <chrono>
 
 #include "include/argagg/argagg.hpp"
@@ -61,7 +57,16 @@ int main(int argc, char* argv[])
     if (Config::verbosity > 0) cout << "tindx_start: " << tindx_start << endl;
     try {
         initialize_simulation(tindx_start);
-        march_in_time();
+        #ifdef CUDA
+        if (!filesystem::exists(filesystem::status("/proc/driver/nvidia"))) {
+            throw runtime_error("Cannot find NVIDIA driver in /proc/driver.");
+        }
+        cudaGetDeviceCount(&Config::nDevices);
+        cout << "CUDA devices found: " << Config::nDevices << endl;
+        if (Config::nDevices > 0) { march_in_time_using_gpu(); }
+        #else
+        march_in_time_using_cpu_only();
+        #endif
         finalize_simulation();
     } catch (const runtime_error& e) {
         cerr << e.what() << endl;

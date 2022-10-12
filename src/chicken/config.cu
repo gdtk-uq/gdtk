@@ -103,9 +103,12 @@ struct Schedule {
 
 namespace Config {
     int verbosity = 0;
+    int nDevices = 0;
+    //
     string job = "job";
     string title = "";
     vector<FlowState> flow_states;
+    //
     int nFluidBlocks;
     int nib;
     int njb;
@@ -125,6 +128,7 @@ namespace Config {
     int x_order = 2;
     int t_order = 2;
 }
+
 
 void read_config_file(string fileName)
 {

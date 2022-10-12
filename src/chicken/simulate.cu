@@ -40,6 +40,7 @@ namespace SimState {
 
 vector<Block> fluidBlocks;
 
+
 __host__
 void initialize_simulation(int tindx_start)
 {
@@ -67,7 +68,6 @@ void initialize_simulation(int tindx_start)
         fileName = Config::job + string(nameBuf);
         blk.readFlow(fileName);
         blk.computeGeometry();
-        if (blk_config.active) { blk.encodeConserved(0); }
         fluidBlocks.push_back(blk);
     }
     //
@@ -97,6 +97,7 @@ void initialize_simulation(int tindx_start)
     return;
 } // initialize_simulation()
 
+
 __host__
 void write_flow_data(int tindx, number tme)
 {
@@ -120,8 +121,10 @@ void write_flow_data(int tindx, number tme)
     return;
 } // end write_flow_data()
 
+
 // Repetitive boundary condition code is hidden here.
 #include "bcs.cu"
+
 
 __host__
 void apply_boundary_conditions()
@@ -147,13 +150,20 @@ void apply_boundary_conditions()
     } // end for iblk
 } // end apply_boundary_conditions()
 
+
 __host__
-void march_in_time()
+void march_in_time_using_cpu_only()
+// Variant of the main simulation function which uses only the CPU.
+// We retain this function as a reasonably-easy-to-read reference code,
+// while be build the GPU variant.
 {
-    if (Config::verbosity > 0) cout << "march_in_time() start" << endl;
+    if (Config::verbosity > 0) cout << "march_in_time_using_cpu_only() start" << endl;
     auto clock_start = chrono::system_clock::now();
     SimState::dt = Config::dt_init;
     SimState::step = 0;
+    for (Block& blk : fluidBlocks) {
+        if (blk.active) blk.encodeConserved(0);
+    }
     //
     while (SimState::step < Config::max_step && SimState::t < Config::max_time) {
         //
@@ -239,9 +249,111 @@ void march_in_time()
             SimState::t_plot = SimState::t + Config::dt_plot_schedule.get_value(SimState::t);
         }
     } // end while loop
-    if (Config::verbosity > 0) cout << "march_in_time() end" << endl;
+    if (Config::verbosity > 0) cout << "march_in_time_using_cpu_only() end" << endl;
     return;
 } // end march_in_time()
+
+
+__host__
+void march_in_time_using_gpu()
+// Variant of the main simulation function where we may offload work to the GPU.
+{
+    if (Config::verbosity > 0) cout << "march_in_time_using_gpu() start" << endl;
+    auto clock_start = chrono::system_clock::now();
+    SimState::dt = Config::dt_init;
+    SimState::step = 0;
+    for (Block& blk : fluidBlocks) {
+        if (blk.active) blk.encodeConserved(0);
+    }
+    //
+    while (SimState::step < Config::max_step && SimState::t < Config::max_time) {
+        //
+        // Occasionally determine allowable time step.
+        if (SimState::step > 0 && (SimState::step % Config::cfl_count)==0) {
+            number smallest_dt = numeric_limits<number>::max();
+            number cfl = Config::cfl_schedule.get_value(SimState::t);
+            for (Block& blk : fluidBlocks) {
+                if (!blk.active) continue;
+                smallest_dt = fmin(smallest_dt, blk.estimate_allowed_dt(cfl));
+            }
+            SimState::dt = smallest_dt;
+        }
+        //
+        // Gas-dynamic update over three stages with TVD-RK3 weights.
+        int bad_cell_count = 0;
+        // Stage 1.
+        // number t = SimState::t; // Only needed if we have time-dependent source terms or BCs.
+        apply_boundary_conditions();
+        for (Block& blk : fluidBlocks) {
+            if (!blk.active) continue;
+            blk.calculate_fluxes(Config::x_order);
+            bad_cell_count += blk.update_stage_1(SimState::dt);
+        }
+        if (bad_cell_count > 0) {
+            throw runtime_error("Stage 1 bad cell count: "+to_string(bad_cell_count));
+        }
+        // Stage 2
+        // t = SimState::t + 0.5*SimState::dt;
+        apply_boundary_conditions();
+        for (Block& blk : fluidBlocks) {
+            if (!blk.active) continue;
+            blk.calculate_fluxes(Config::x_order);
+            bad_cell_count += blk.update_stage_2(SimState::dt);
+        }
+        if (bad_cell_count > 0) {
+            throw runtime_error("Stage 2 bad cell count: "+to_string(bad_cell_count));
+        }
+        // Stage 3
+        // t = SimState::t + SimState::dt;
+        apply_boundary_conditions();
+        for (Block& blk : fluidBlocks) {
+            if (!blk.active) continue;
+            blk.calculate_fluxes(Config::x_order);
+            bad_cell_count += blk.update_stage_3(SimState::dt);
+        }
+        if (bad_cell_count > 0) {
+            throw runtime_error("Stage 3 bad cell count: "+to_string(bad_cell_count));
+        }
+        // After a successful gasdynamic update, copy the conserved data back to level 0.
+        for (Block& blk : fluidBlocks) {
+            if (!blk.active) continue;
+            blk.copy_conserved_data(1, 0);
+        }
+        //
+        SimState::t += SimState::dt;
+        SimState::step += 1;
+        SimState::steps_since_last_plot += 1;
+        //
+        // Occasionally write the current step and time to the console.
+        if (SimState::step > 0 && (SimState::step % Config::print_count)==0) {
+            auto clock_now = chrono::system_clock::now();
+            auto clock_ms = chrono::duration_cast<chrono::milliseconds>(clock_now - clock_start);
+            double wall_clock_elapsed = clock_ms.count()/1000.0;
+            double wall_clock_per_step = wall_clock_elapsed / SimState::step;
+            double WCtFT = (Config::max_time - SimState::t) / SimState::dt * wall_clock_per_step;
+            double WCtMS = (Config::max_step - SimState::step) * wall_clock_per_step;
+            cout << "Step=" << SimState::step
+                 << " t=" << scientific << setprecision(3) << SimState::t
+                 << " dt=" << SimState::dt
+                 << " cfl=" << fixed << Config::cfl_schedule.get_value(SimState::t)
+                 << " WC=" << wall_clock_elapsed << "s"
+                 << " WCtFT=" << WCtFT << "s"
+                 << " WCtMS=" << WCtMS << "s"
+                 << endl;
+        }
+        //
+        // Occasionally dump the flow data for making plots.
+        if (SimState::t >= SimState::t_plot) {
+            write_flow_data(SimState::next_plot_indx, SimState::t);
+            SimState::steps_since_last_plot = 0;
+            SimState::next_plot_indx += 1;
+            SimState::t_plot = SimState::t + Config::dt_plot_schedule.get_value(SimState::t);
+        }
+    } // end while loop
+    if (Config::verbosity > 0) cout << "march_in_time_using_gpu() end" << endl;
+    return;
+} // end march_in_time_using_gpu()
+
 
 __host__
 void finalize_simulation()

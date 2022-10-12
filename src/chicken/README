@@ -6,3 +6,20 @@ our Dlang code base for geometric elements and flux calculators.
 
 PJ 2022-09-11
 
+Some history:
+
+PJ 2022-09-09
+  Initial hack adapts the vector addition example from the CUDA workshop
+  to look a bit closer to our Puffin CFD code.
+
+PJ 2022-09-25
+  Start the process of making it a real flow simulation code.
+
+PJ 2022-10-12
+  The basic inviscid compressible flow solver for CPU is complete enough
+  to do some simple calculations such as the Sod shock tube, supersonic flow
+  over a simple ramp and a periodic shear layer.
+
+  Start the real GPU variant, with all of the GPU action limited to the
+  march_in_time function in the simulate.cu file.
+
