@@ -16,7 +16,7 @@
 #include "number.cu"
 #include "flow.cu"
 #include "cell.cu"
-#include "block.cu"
+
 
 using namespace std;
 using json = nlohmann::json;
@@ -46,10 +46,128 @@ int BC_code_from_name(string name)
 
 
 struct BConfig {
+    // Active blocks will be updates during the gas-dynamic update calculations.
+    // Blocks that are not active will just have their initial data preserved,
+    // so that it can be written out to make the overall structured-grid complete
+    // for Paraview.
+    bool active;
+    //
+    // Location of this block in the global array.
     int i, j, k;
+    //
+    // Active cells are the "real" cells in the simulation.
+    // We compute the evolution of the gas-dynamic flow properties within them.
+    int nic; // Number of cells i-direction.
+    int njc; // Number of cells j-direction.
+    int nkc; // Number of cells k-direction.
+    int nActiveCells; // Number of active cells (with conserved quantities) in the block.
+    //
+    // Ghost cells are associated with each block boundary face and
+    // will be stored at the end of the active cells collection.
+    // The flux calculation functions will dip into this collection for
+    // active cells and ghost cells without knowing the difference.
+    // Also, for each boundary face, we store some config information
+    // to make the boundary-condition code a bit more compact.
+    array<int,6> n0c; // number of cells in first index direction for each face.
+    array<int,6> n1c; // Number of cells in second index direction for each face.
+    array<int,6> nGhostCells; // Number of ghost cells on each face.
+    array<int,6> firstGhostCell; // Index of the first ghost cell for each face.
+    int nTotalGhostCells; // Total number of ghost cells for the Block
+    //
+    // Faces in each index direction are used to define cells and
+    // to use as locations for flux calculations.
+    int n_iFaces;
+    int n_jFaces;
+    int n_kFaces;
+    //
+    // GPU-related parameters.
+    int threads_per_GPUblock = 0;
+    int nGPUblocks_for_cells = 0;
+    int nGPUblocks_for_iFaces = 0;
+    int nGPUblocks_for_jFaces = 0;
+    int nGPUblocks_for_kFaces = 0;
+    //
+    // Boundary condition codes and associated FlowStates.
     int bcCodes[6];
     int bc_fs[6];
-    bool active;
+
+    __host__
+    void fill_in_dimensions(int _nic, int _njc, int _nkc)
+    {
+        nic = _nic;
+        njc = _njc;
+        nkc = _nkc;
+        nActiveCells = nic*njc*nkc;
+        //
+        // For the moment assume that all boundary conditions require ghost cells.
+        n0c[Face::iminus] = njc; n1c[Face::iminus] = nkc;
+        n0c[Face::iplus] = njc; n1c[Face::iplus] = nkc;
+        n0c[Face::jminus] = nic; n1c[Face::jminus] = nkc;
+        n0c[Face::jplus] = nic; n1c[Face::jplus] = nkc;
+        n0c[Face::kminus] = nic; n1c[Face::kminus] = njc;
+        n0c[Face::kplus] = nic; n1c[Face::kplus] = njc;
+        nTotalGhostCells = 0;
+        for (int ib=0; ib < 6; ib++) {
+            nGhostCells[ib] = (active) ? 2*n0c[ib]*n1c[ib] : 0;
+            firstGhostCell[ib] = (ib > 0) ? firstGhostCell[ib-1] + nGhostCells[ib-1] : nActiveCells;
+            nTotalGhostCells += nGhostCells[ib];
+        }
+        //
+        n_iFaces = (nic+1)*njc*nkc;
+        n_jFaces = nic*(njc+1)*nkc;
+        n_kFaces = nic*njc*(nkc+1);
+        //
+        #ifdef CUDA
+        // We need to allocate corresponding memory space on the GPU.
+        threads_per_GPUblock = 128;
+        nGPUblocks_for_cells = ceil(double(nActiveCells)/threads_per_GPUblock);
+        nGPUblocks_for_iFaces = ceil(double(n_iFaces)/threads_per_GPUblock);
+        nGPUblocks_for_jFaces = ceil(double(n_jFaces)/threads_per_GPUblock);
+        nGPUblocks_for_kFaces = ceil(double(n_kFaces)/threads_per_GPUblock);
+        #endif
+        return;
+    }
+
+    // Methods to index the elements making up the block.
+
+    __host__ __device__
+    int activeCellIndex(int i, int j, int k)
+    {
+        return k*nic*njc + j*nic + i;
+    }
+
+    __host__ __device__
+    int ghostCellIndex(int faceIndx, int i0, int i1, int depth)
+    {
+        int cellIndxOnFace = (active) ? i1*n0c[faceIndx] + i0 : 0;
+        int nCellsOnFace = (active) ? n0c[faceIndx]*n1c[faceIndx] : 0;
+        return firstGhostCell[faceIndx] + nCellsOnFace*depth + cellIndxOnFace;
+    }
+
+    __host__ __device__
+    int iFaceIndex(int i, int j, int k)
+    {
+        return i*njc*nkc + k*njc + j;
+    }
+
+    __host__ __device__
+    int jFaceIndex(int i, int j, int k)
+    {
+        return j*nic*nkc + k*nic + i;
+    }
+
+    __host__ __device__
+    int kFaceIndex(int i, int j, int k)
+    {
+        return k*nic*njc + j*nic + i;
+    }
+
+    __host__ __device__
+    int vtxIndex(int i, int j, int k)
+    {
+        return k*(nic+1)*(njc+1) + j*(nic+1) + i;
+    }
+
 
     string toString() {
         ostringstream repr;

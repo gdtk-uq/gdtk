@@ -25,17 +25,7 @@
 using namespace std;
 
 struct Block {
-    // Active blocks will be updates during the gas-dynamic update calculations.
-    // Blocks that are not active will just have their initial data preserved,
-    // so that it can be written out to make the overall structured-grid complete
-    // for Paraview.
-    bool active;
-    // Active cells are the "real" cells in the simulation.
-    // We compute the evolution of the gas-dynamic flow properties within them.
-    int nic; // Number of cells i-direction.
-    int njc; // Number of cells j-direction.
-    int nkc; // Number of cells k-direction.
-    int nActiveCells; // Number of active cells (with conserved quantities) in the block.
+    // Storage for active cells and ghost cells.
     vector<FVCell> cells;
     FVCell* cells_on_gpu;
     //
@@ -45,26 +35,11 @@ struct Block {
     ConservedQuantities* Q_on_gpu;
     ConservedQuantities* dQdt_on_gpu;
     //
-    // Ghost cells are associated with each block boundary face and
-    // will be stored at the end of the active cells collection.
-    // The flux calculation functions will dip into this collection for
-    // active cells and ghost cells without knowing the difference.
-    // Also, for each boundary face, we store some config information
-    // to make the boundary-condition code a bit more compact.
-    array<int,6> n0c; // number of cells in first index direction for each face.
-    array<int,6> n1c; // Number of cells in second index direction for each face.
-    array<int,6> nGhostCells; // Number of ghost cells on each face.
-    array<int,6> firstGhostCell; // Index of the first ghost cell for each face.
-    int nTotalGhostCells; // Total number of ghost cells for the Block
-    //
     // Collections of faces which bound the active cells.
     // We compute fluxes of conserved flow properties across these faces.
     vector<FVFace> iFaces;
     vector<FVFace> jFaces;
     vector<FVFace> kFaces;
-    int n_iFaces;
-    int n_jFaces;
-    int n_kFaces;
     FVFace* iFaces_on_gpu;
     FVFace* jFaces_on_gpu;
     FVFace* kFaces_on_gpu;
@@ -73,111 +48,36 @@ struct Block {
     // of faces and cells.
     vector<Vector3> vertices;
     Vector3* vertices_on_gpu;
-    //
-    // GPU-related parameters.
-    int threads_per_GPUblock = 0;
-    int nGPUblocks_for_cells = 0;
-    int nGPUblocks_for_iFaces = 0;
-    int nGPUblocks_for_jFaces = 0;
-    int nGPUblocks_for_kFaces = 0;
 
 
     __host__
     string toString() {
-        string repr = "Block(nic=" + to_string(nic) +
-            ", njc=" + to_string(njc) + ", nkc=" + to_string(nkc) +
-            ", active=" + to_string(active) + ")";
+        string repr = "Block()";
         return repr;
     }
 
-    // Methods to index the elements making up the block.
-
-    __host__ __device__
-    int activeCellIndex(int i, int j, int k)
-    {
-        return k*nic*njc + j*nic + i;
-    }
-
-    __host__ __device__
-    int ghostCellIndex(int faceIndx, int i0, int i1, int depth)
-    {
-        int cellIndxOnFace = (active) ? i1*n0c[faceIndx] + i0 : 0;
-        int nCellsOnFace = (active) ? n0c[faceIndx]*n1c[faceIndx] : 0;
-        return firstGhostCell[faceIndx] + nCellsOnFace*depth + cellIndxOnFace;
-    }
-
-    __host__ __device__
-    int iFaceIndex(int i, int j, int k)
-    {
-        return i*njc*nkc + k*njc + j;
-    }
-
-    __host__ __device__
-    int jFaceIndex(int i, int j, int k)
-    {
-        return j*nic*nkc + k*nic + i;
-    }
-
-    __host__ __device__
-    int kFaceIndex(int i, int j, int k)
-    {
-        return k*nic*njc + j*nic + i;
-    }
-
-    __host__ __device__
-    int vtxIndex(int i, int j, int k)
-    {
-        return k*(nic+1)*(njc+1) + j*(nic+1) + i;
-    }
-
     __host__
-    void configure(int i, int j, int k, bool _active)
+    void configure(BConfig& cfg)
     // Set up the block to hold the grid and flow data.
     // Do this before reading a grid or flow file.
     {
-        active = _active;
-        nic = i;
-        njc = j;
-        nkc = k;
-        nActiveCells = nic*njc*nkc;
-        //
-        // For the moment assume that all boundary conditions require ghost cells.
-        n0c[Face::iminus] = njc; n1c[Face::iminus] = nkc;
-        n0c[Face::iplus] = njc; n1c[Face::iplus] = nkc;
-        n0c[Face::jminus] = nic; n1c[Face::jminus] = nkc;
-        n0c[Face::jplus] = nic; n1c[Face::jplus] = nkc;
-        n0c[Face::kminus] = nic; n1c[Face::kminus] = njc;
-        n0c[Face::kplus] = nic; n1c[Face::kplus] = njc;
-        nTotalGhostCells = 0;
-        for (int ib=0; ib < 6; ib++) {
-            nGhostCells[ib] = (active) ? 2*n0c[ib]*n1c[ib] : 0;
-            firstGhostCell[ib] = (ib > 0) ? firstGhostCell[ib-1] + nGhostCells[ib-1] : nActiveCells;
-            nTotalGhostCells += nGhostCells[ib];
-        }
-        //
         // Now that we know the numbers of cells, resize the data store to fit them all.
-        cells.resize(nActiveCells+nTotalGhostCells);
-        if (active) {
-            Q.resize(nActiveCells*2);
-            dQdt.resize(nActiveCells*3);
+        cells.resize(cfg.nActiveCells + cfg.nTotalGhostCells);
+        if (cfg.active) {
+            Q.resize(cfg.nActiveCells*2);
+            dQdt.resize(cfg.nActiveCells*3);
         }
         //
         // Each set of finite-volume faces is in the index-plane of the corresponding vertices.
-        n_iFaces = (nic+1)*njc*nkc; iFaces.resize(n_iFaces);
-        n_jFaces = nic*(njc+1)*nkc; jFaces.resize(n_jFaces);
-        n_kFaces = nic*njc*(nkc+1); kFaces.resize(n_kFaces);
+        iFaces.resize(cfg.n_iFaces);
+        jFaces.resize(cfg.n_jFaces);
+        kFaces.resize(cfg.n_kFaces);
         //
         // And the vertices.
-        vertices.resize((nic+1)*(njc+1)*(nkc+1));
+        vertices.resize((cfg.nic+1)*(cfg.njc+1)*(cfg.nkc+1));
         //
         #ifdef CUDA
         // We need to allocate corresponding memory space on the GPU.
-        threads_per_GPUblock = 128;
-        nGPUblocks_for_cells = ceil(double(nActiveCells)/threads_per_GPUblock);
-        nGPUblocks_for_iFaces = ceil(double(n_iFaces)/threads_per_GPUblock);
-        nGPUblocks_for_jFaces = ceil(double(n_jFaces)/threads_per_GPUblock);
-        nGPUblocks_for_kFaces = ceil(double(n_kFaces)/threads_per_GPUblock);
-        //
         cudaMalloc(&cells_on_gpu, cells.size()*sizeof(FVCell));
         if (!cells_on_gpu) throw runtime_error("Could not allocate cells on gpu.");
         cudaMalloc(&Q_on_gpu, Q.size()*sizeof(ConservedQuantities));
@@ -188,24 +88,24 @@ struct Block {
         #endif
         //
         // Make connections from cells to faces and vertices.
-        for (int k=0; k < nkc; k++) {
-            for (int j=0; j < njc; j++) {
-                for (int i=0; i < nic; i++) {
-                    FVCell& c = cells[activeCellIndex(i,j,k)];
-                    c.face[Face::iminus] = iFaceIndex(i,j,k);
-                    c.face[Face::iplus] = iFaceIndex(i+1,j,k);
-                    c.face[Face::jminus] = jFaceIndex(i,j,k);
-                    c.face[Face::jplus] = jFaceIndex(i,j+1,k);
-                    c.face[Face::kminus] = kFaceIndex(i,j,k);
-                    c.face[Face::kplus] = kFaceIndex(i,j,k+1);
-                    c.vtx[0] = vtxIndex(i,j,k);
-                    c.vtx[1] = vtxIndex(i+1,j,k);
-                    c.vtx[2] = vtxIndex(i+1,j+1,k);
-                    c.vtx[3] = vtxIndex(i,j+1,k);
-                    c.vtx[4] = vtxIndex(i,j,k+1);
-                    c.vtx[5] = vtxIndex(i+1,j,k+1);
-                    c.vtx[6] = vtxIndex(i+1,j+1,k+1);
-                    c.vtx[7] = vtxIndex(i,j+1,k+1);
+        for (int k=0; k < cfg.nkc; k++) {
+            for (int j=0; j < cfg.njc; j++) {
+                for (int i=0; i < cfg.nic; i++) {
+                    FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
+                    c.face[Face::iminus] = cfg.iFaceIndex(i,j,k);
+                    c.face[Face::iplus] = cfg.iFaceIndex(i+1,j,k);
+                    c.face[Face::jminus] = cfg.jFaceIndex(i,j,k);
+                    c.face[Face::jplus] = cfg.jFaceIndex(i,j+1,k);
+                    c.face[Face::kminus] = cfg.kFaceIndex(i,j,k);
+                    c.face[Face::kplus] = cfg.kFaceIndex(i,j,k+1);
+                    c.vtx[0] = cfg.vtxIndex(i,j,k);
+                    c.vtx[1] = cfg.vtxIndex(i+1,j,k);
+                    c.vtx[2] = cfg.vtxIndex(i+1,j+1,k);
+                    c.vtx[3] = cfg.vtxIndex(i,j+1,k);
+                    c.vtx[4] = cfg.vtxIndex(i,j,k+1);
+                    c.vtx[5] = cfg.vtxIndex(i+1,j,k+1);
+                    c.vtx[6] = cfg.vtxIndex(i+1,j+1,k+1);
+                    c.vtx[7] = cfg.vtxIndex(i,j+1,k+1);
                 }
             }
         }
@@ -218,118 +118,118 @@ struct Block {
         //         +-----+-----+-----+-----+
         //
         // iFaces
-        for (int k=0; k < nkc; k++) {
-            for (int j=0; j < njc; j++) {
-                for (int i=0; i < nic+1; i++) {
-                    FVFace& f = iFaces[iFaceIndex(i,j,k)];
-                    f.vtx[0] = vtxIndex(i,j,k);
-                    f.vtx[1] = vtxIndex(i,j+1,k);
-                    f.vtx[2] = vtxIndex(i,j+1,k+1);
-                    f.vtx[3] = vtxIndex(i,j,k+1);
+        for (int k=0; k < cfg.nkc; k++) {
+            for (int j=0; j < cfg.njc; j++) {
+                for (int i=0; i < cfg.nic+1; i++) {
+                    FVFace& f = iFaces[cfg.iFaceIndex(i,j,k)];
+                    f.vtx[0] = cfg.vtxIndex(i,j,k);
+                    f.vtx[1] = cfg.vtxIndex(i,j+1,k);
+                    f.vtx[2] = cfg.vtxIndex(i,j+1,k+1);
+                    f.vtx[3] = cfg.vtxIndex(i,j,k+1);
                     if (i == 0) {
-                        f.left_cells[1] = ghostCellIndex(Face::iminus,j,k,1);
-                        f.left_cells[0] = ghostCellIndex(Face::iminus,j,k,0);
-                        f.right_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[1] = activeCellIndex(i+1,j,k);
+                        f.left_cells[1] = cfg.ghostCellIndex(Face::iminus,j,k,1);
+                        f.left_cells[0] = cfg.ghostCellIndex(Face::iminus,j,k,0);
+                        f.right_cells[0] = cfg.activeCellIndex(i,j,k);
+                        f.right_cells[1] = cfg.activeCellIndex(i+1,j,k);
                     } else if (i == 1) {
-                        f.left_cells[1] = ghostCellIndex(Face::iminus,j,k,0);
-                        f.left_cells[0] = activeCellIndex(i-1,j,k);
-                        f.right_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[1] = activeCellIndex(i+1,j,k);
-                    } else if (i == nic-1) {
-                        f.left_cells[1] = activeCellIndex(i-2,j,k);
-                        f.left_cells[0] = activeCellIndex(i-1,j,k);
-                        f.right_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[1] = ghostCellIndex(Face::iplus,j,k,0);
-                    } else if (i == nic) {
-                        f.left_cells[1] = activeCellIndex(i-2,j,k);
-                        f.left_cells[0] = activeCellIndex(i-1,j,k);
-                        f.right_cells[0] = ghostCellIndex(Face::iplus,j,k,0);
-                        f.right_cells[1] = ghostCellIndex(Face::iplus,j,k,1);
+                        f.left_cells[1] = cfg.ghostCellIndex(Face::iminus,j,k,0);
+                        f.left_cells[0] = cfg.activeCellIndex(i-1,j,k);
+                        f.right_cells[0] = cfg.activeCellIndex(i,j,k);
+                        f.right_cells[1] = cfg.activeCellIndex(i+1,j,k);
+                    } else if (i == cfg.nic-1) {
+                        f.left_cells[1] = cfg.activeCellIndex(i-2,j,k);
+                        f.left_cells[0] = cfg.activeCellIndex(i-1,j,k);
+                        f.right_cells[0] = cfg.activeCellIndex(i,j,k);
+                        f.right_cells[1] = cfg.ghostCellIndex(Face::iplus,j,k,0);
+                    } else if (i == cfg.nic) {
+                        f.left_cells[1] = cfg.activeCellIndex(i-2,j,k);
+                        f.left_cells[0] = cfg.activeCellIndex(i-1,j,k);
+                        f.right_cells[0] = cfg.ghostCellIndex(Face::iplus,j,k,0);
+                        f.right_cells[1] = cfg.ghostCellIndex(Face::iplus,j,k,1);
                     } else {
                         // Interior cell.
-                        f.left_cells[1] = activeCellIndex(i-2,j,k);
-                        f.left_cells[0] = activeCellIndex(i-1,j,k);
-                        f.right_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[1] = activeCellIndex(i+1,j,k);
+                        f.left_cells[1] = cfg.activeCellIndex(i-2,j,k);
+                        f.left_cells[0] = cfg.activeCellIndex(i-1,j,k);
+                        f.right_cells[0] = cfg.activeCellIndex(i,j,k);
+                        f.right_cells[1] = cfg.activeCellIndex(i+1,j,k);
                     }
                 }
             }
         }
         // jFaces
-        for (int k=0; k < nkc; k++) {
-            for (int i=0; i < nic; i++) {
-                for (int j=0; j < njc+1; j++) {
-                    FVFace& f = jFaces[jFaceIndex(i,j,k)];
-                    f.vtx[0] = vtxIndex(i,j,k);
-                    f.vtx[1] = vtxIndex(i+1,j,k);
-                    f.vtx[2] = vtxIndex(i+1,j,k+1);
-                    f.vtx[3] = vtxIndex(i,j,k+1);
+        for (int k=0; k < cfg.nkc; k++) {
+            for (int i=0; i < cfg.nic; i++) {
+                for (int j=0; j < cfg.njc+1; j++) {
+                    FVFace& f = jFaces[cfg.jFaceIndex(i,j,k)];
+                    f.vtx[0] = cfg.vtxIndex(i,j,k);
+                    f.vtx[1] = cfg.vtxIndex(i+1,j,k);
+                    f.vtx[2] = cfg.vtxIndex(i+1,j,k+1);
+                    f.vtx[3] = cfg.vtxIndex(i,j,k+1);
                     if (j == 0) {
-                        f.left_cells[1] = ghostCellIndex(Face::jminus,i,k,1);
-                        f.left_cells[0] = ghostCellIndex(Face::jminus,i,k,0);
-                        f.right_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[1] = activeCellIndex(i,j+1,k);
+                        f.left_cells[1] = cfg.ghostCellIndex(Face::jminus,i,k,1);
+                        f.left_cells[0] = cfg.ghostCellIndex(Face::jminus,i,k,0);
+                        f.right_cells[0] = cfg.activeCellIndex(i,j,k);
+                        f.right_cells[1] = cfg.activeCellIndex(i,j+1,k);
                     } else if (j == 1) {
-                        f.left_cells[1] = ghostCellIndex(Face::jminus,i,k,0);
-                        f.left_cells[0] = activeCellIndex(i,j-1,k);
-                        f.right_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[1] = activeCellIndex(i,j+1,k);
-                    } else if (j == njc-1) {
-                        f.left_cells[1] = activeCellIndex(i,j-2,k);
-                        f.left_cells[0] = activeCellIndex(i,j-1,k);
-                        f.right_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[1] = ghostCellIndex(Face::jplus,i,k,0);
-                    } else if (j == njc) {
-                        f.left_cells[1] = activeCellIndex(i,j-2,k);
-                        f.left_cells[0] = activeCellIndex(i,j-1,k);
-                        f.right_cells[0] = ghostCellIndex(Face::jplus,i,k,0);
-                        f.right_cells[1] = ghostCellIndex(Face::jplus,i,k,1);
+                        f.left_cells[1] = cfg.ghostCellIndex(Face::jminus,i,k,0);
+                        f.left_cells[0] = cfg.activeCellIndex(i,j-1,k);
+                        f.right_cells[0] = cfg.activeCellIndex(i,j,k);
+                        f.right_cells[1] = cfg.activeCellIndex(i,j+1,k);
+                    } else if (j == cfg.njc-1) {
+                        f.left_cells[1] = cfg.activeCellIndex(i,j-2,k);
+                        f.left_cells[0] = cfg.activeCellIndex(i,j-1,k);
+                        f.right_cells[0] = cfg.activeCellIndex(i,j,k);
+                        f.right_cells[1] = cfg.ghostCellIndex(Face::jplus,i,k,0);
+                    } else if (j == cfg.njc) {
+                        f.left_cells[1] = cfg.activeCellIndex(i,j-2,k);
+                        f.left_cells[0] = cfg.activeCellIndex(i,j-1,k);
+                        f.right_cells[0] = cfg.ghostCellIndex(Face::jplus,i,k,0);
+                        f.right_cells[1] = cfg.ghostCellIndex(Face::jplus,i,k,1);
                     } else {
                         // Interior cell.
-                        f.left_cells[1] = activeCellIndex(i,j-2,k);
-                        f.left_cells[0] = activeCellIndex(i,j-1,k);
-                        f.right_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[1] = activeCellIndex(i,j+1,k);
+                        f.left_cells[1] = cfg.activeCellIndex(i,j-2,k);
+                        f.left_cells[0] = cfg.activeCellIndex(i,j-1,k);
+                        f.right_cells[0] = cfg.activeCellIndex(i,j,k);
+                        f.right_cells[1] = cfg.activeCellIndex(i,j+1,k);
                     }
                 }
             }
         }
         // kFaces
-        for (int j=0; j < njc; j++) {
-            for (int i=0; i < nic; i++) {
-                for (int k=0; k < nkc+1; k++) {
-                    FVFace& f = kFaces[kFaceIndex(i,j,k)];
-                    f.vtx[0] = vtxIndex(i,j,k);
-                    f.vtx[1] = vtxIndex(i+1,j,k);
-                    f.vtx[2] = vtxIndex(i+1,j+1,k);
-                    f.vtx[3] = vtxIndex(i,j+1,k);
+        for (int j=0; j < cfg.njc; j++) {
+            for (int i=0; i < cfg.nic; i++) {
+                for (int k=0; k < cfg.nkc+1; k++) {
+                    FVFace& f = kFaces[cfg.kFaceIndex(i,j,k)];
+                    f.vtx[0] = cfg.vtxIndex(i,j,k);
+                    f.vtx[1] = cfg.vtxIndex(i+1,j,k);
+                    f.vtx[2] = cfg.vtxIndex(i+1,j+1,k);
+                    f.vtx[3] = cfg.vtxIndex(i,j+1,k);
                     if (k == 0) {
-                        f.left_cells[1] = ghostCellIndex(Face::kminus,i,j,1);
-                        f.left_cells[0] = ghostCellIndex(Face::kminus,i,j,0);
-                        f.right_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[1] = activeCellIndex(i,j,k+1);
+                        f.left_cells[1] = cfg.ghostCellIndex(Face::kminus,i,j,1);
+                        f.left_cells[0] = cfg.ghostCellIndex(Face::kminus,i,j,0);
+                        f.right_cells[0] = cfg.activeCellIndex(i,j,k);
+                        f.right_cells[1] = cfg.activeCellIndex(i,j,k+1);
                     } else if (k == 1) {
-                        f.left_cells[1] = ghostCellIndex(Face::kminus,i,j,0);
-                        f.left_cells[0] = activeCellIndex(i,j,k-1);
-                        f.right_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[1] = activeCellIndex(i,j,k+1);
-                    } else if (k == nkc-1) {
-                        f.left_cells[1] = activeCellIndex(i,j,k-2);
-                        f.left_cells[0] = activeCellIndex(i,j,k-1);
-                        f.right_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[1] = ghostCellIndex(Face::kplus,i,j,0);
-                    } else if (k == nkc) {
-                        f.left_cells[1] = activeCellIndex(i,j,k-2);
-                        f.left_cells[0] = activeCellIndex(i,j,k-1);
-                        f.right_cells[0] = ghostCellIndex(Face::kplus,i,j,0);
-                        f.right_cells[1] = ghostCellIndex(Face::kplus,i,j,1);
+                        f.left_cells[1] = cfg.ghostCellIndex(Face::kminus,i,j,0);
+                        f.left_cells[0] = cfg.activeCellIndex(i,j,k-1);
+                        f.right_cells[0] = cfg.activeCellIndex(i,j,k);
+                        f.right_cells[1] = cfg.activeCellIndex(i,j,k+1);
+                    } else if (k == cfg.nkc-1) {
+                        f.left_cells[1] = cfg.activeCellIndex(i,j,k-2);
+                        f.left_cells[0] = cfg.activeCellIndex(i,j,k-1);
+                        f.right_cells[0] = cfg.activeCellIndex(i,j,k);
+                        f.right_cells[1] = cfg.ghostCellIndex(Face::kplus,i,j,0);
+                    } else if (k == cfg.nkc) {
+                        f.left_cells[1] = cfg.activeCellIndex(i,j,k-2);
+                        f.left_cells[0] = cfg.activeCellIndex(i,j,k-1);
+                        f.right_cells[0] = cfg.ghostCellIndex(Face::kplus,i,j,0);
+                        f.right_cells[1] = cfg.ghostCellIndex(Face::kplus,i,j,1);
                     } else {
                         // Interior cell.
-                        f.left_cells[1] = activeCellIndex(i,j,k-2);
-                        f.left_cells[0] = activeCellIndex(i,j,k-1);
-                        f.right_cells[0] = activeCellIndex(i,j,k);
-                        f.right_cells[1] = activeCellIndex(i,j,k+1);
+                        f.left_cells[1] = cfg.activeCellIndex(i,j,k-2);
+                        f.left_cells[0] = cfg.activeCellIndex(i,j,k-1);
+                        f.right_cells[0] = cfg.activeCellIndex(i,j,k);
+                        f.right_cells[1] = cfg.activeCellIndex(i,j,k+1);
                     }
                 }
             }
@@ -353,59 +253,37 @@ struct Block {
     }
 
     __host__
-    void computeGeometry()
+    void computeGeometry(BConfig& cfg)
     // Compute cell and face geometric data.
     // Do this after reading the grid and flow files because we need the vertex locations
     // and because cell positions and volumes are part of the flow data.
     // This function will overwrite them with (potentially) better values.
     {
-        for (int k=0; k < nkc; k++) {
-            for (int j=0; j < njc; j++) {
-                for (int i=0; i < nic; i++) {
-                    FVCell& c = cells[activeCellIndex(i,j,k)];
-                    hex_cell_properties(vertices[c.vtx[0]], vertices[c.vtx[1]],
-                                        vertices[c.vtx[2]], vertices[c.vtx[3]],
-                                        vertices[c.vtx[4]], vertices[c.vtx[5]],
-                                        vertices[c.vtx[6]], vertices[c.vtx[7]],
-                                        false, c.pos, c.volume, c.iLength, c.jLength, c.kLength);
-                }
-            }
+        for (int ic=0; ic < cfg.nActiveCells; ic++) {
+            FVCell& c = cells[ic];
+            hex_cell_properties(vertices[c.vtx[0]], vertices[c.vtx[1]],
+                                vertices[c.vtx[2]], vertices[c.vtx[3]],
+                                vertices[c.vtx[4]], vertices[c.vtx[5]],
+                                vertices[c.vtx[6]], vertices[c.vtx[7]],
+                                false, c.pos, c.volume, c.iLength, c.jLength, c.kLength);
         }
-        // iFaces
-        for (int k=0; k < nkc; k++) {
-            for (int j=0; j < njc; j++) {
-                for (int i=0; i < nic+1; i++) {
-                    FVFace& f = iFaces[iFaceIndex(i,j,k)];
-                    quad_properties(vertices[f.vtx[0]], vertices[f.vtx[1]],
-                                    vertices[f.vtx[2]], vertices[f.vtx[3]],
-                                    f.pos, f.n, f.t1, f.t2, f.area);
-                }
-            }
+        for (auto& f : iFaces) {
+            quad_properties(vertices[f.vtx[0]], vertices[f.vtx[1]],
+                            vertices[f.vtx[2]], vertices[f.vtx[3]],
+                            f.pos, f.n, f.t1, f.t2, f.area);
         }
-        // jFaces
-        for (int k=0; k < nkc; k++) {
-            for (int i=0; i < nic; i++) {
-                for (int j=0; j < njc+1; j++) {
-                    FVFace& f = jFaces[jFaceIndex(i,j,k)];
-                    quad_properties(vertices[f.vtx[0]], vertices[f.vtx[1]],
-                                    vertices[f.vtx[2]], vertices[f.vtx[3]],
-                                    f.pos, f.n, f.t1, f.t2, f.area);
-                }
-            }
+        for (auto& f : jFaces) {
+            quad_properties(vertices[f.vtx[0]], vertices[f.vtx[1]],
+                            vertices[f.vtx[2]], vertices[f.vtx[3]],
+                            f.pos, f.n, f.t1, f.t2, f.area);
         }
-        // kFaces
-        for (int j=0; j < njc; j++) {
-            for (int i=0; i < nic; i++) {
-                for (int k=0; k < nkc+1; k++) {
-                    FVFace& f = kFaces[kFaceIndex(i,j,k)];
-                    quad_properties(vertices[f.vtx[0]], vertices[f.vtx[1]],
-                                    vertices[f.vtx[2]], vertices[f.vtx[3]],
-                                    f.pos, f.n, f.t1, f.t2, f.area);
-                }
-            }
+        for (auto& f : kFaces) {
+            quad_properties(vertices[f.vtx[0]], vertices[f.vtx[1]],
+                            vertices[f.vtx[2]], vertices[f.vtx[3]],
+                            f.pos, f.n, f.t1, f.t2, f.area);
         }
         //
-        if (!active) return; // No ghost cells for an inactive block.
+        if (!cfg.active) return; // No ghost cells for an inactive block.
         //
         // Work around the boundaries and extrapolate cell positions and lengths
         // into the ghost cells.  We need this data for high-order reconstruction
@@ -413,9 +291,9 @@ struct Block {
         // for the viscous fluxes.
         //
         // Face::iminus
-        for (int k=0; k < nkc; k++) {
-            for (int j=0; j < njc; j++) {
-                FVFace& f = iFaces[iFaceIndex(0,j,k)];
+        for (int k=0; k < cfg.nkc; k++) {
+            for (int j=0; j < cfg.njc; j++) {
+                FVFace& f = iFaces[cfg.iFaceIndex(0,j,k)];
                 FVCell& c0 = cells[f.right_cells[0]];
                 FVCell& g0 = cells[f.left_cells[0]];
                 g0.iLength = c0.iLength;
@@ -433,9 +311,9 @@ struct Block {
             }
         }
         // Face::iplus
-        for (int k=0; k < nkc; k++) {
-            for (int j=0; j < njc; j++) {
-                FVFace& f = iFaces[iFaceIndex(nic,j,k)];
+        for (int k=0; k < cfg.nkc; k++) {
+            for (int j=0; j < cfg.njc; j++) {
+                FVFace& f = iFaces[cfg.iFaceIndex(cfg.nic,j,k)];
                 FVCell& c0 = cells[f.left_cells[0]];
                 FVCell& g0 = cells[f.right_cells[0]];
                 g0.iLength = c0.iLength;
@@ -453,9 +331,9 @@ struct Block {
             }
         }
         // Face::jminus
-        for (int k=0; k < nkc; k++) {
-            for (int i=0; i < nic; i++) {
-                FVFace& f = jFaces[jFaceIndex(i,0,k)];
+        for (int k=0; k < cfg.nkc; k++) {
+            for (int i=0; i < cfg.nic; i++) {
+                FVFace& f = jFaces[cfg.jFaceIndex(i,0,k)];
                 FVCell& c0 = cells[f.right_cells[0]];
                 FVCell& g0 = cells[f.left_cells[0]];
                 g0.iLength = c0.iLength;
@@ -473,9 +351,9 @@ struct Block {
             }
         }
         // Face::jplus
-        for (int k=0; k < nkc; k++) {
-            for (int i=0; i < nic; i++) {
-                FVFace& f = jFaces[jFaceIndex(i,njc,k)];
+        for (int k=0; k < cfg.nkc; k++) {
+            for (int i=0; i < cfg.nic; i++) {
+                FVFace& f = jFaces[cfg.jFaceIndex(i,cfg.njc,k)];
                 FVCell& c0 = cells[f.left_cells[0]];
                 FVCell& g0 = cells[f.right_cells[0]];
                 g0.iLength = c0.iLength;
@@ -493,9 +371,9 @@ struct Block {
             }
         }
         // Face::kminus
-        for (int j=0; j < njc; j++) {
-            for (int i=0; i < nic; i++) {
-                FVFace& f = kFaces[kFaceIndex(i,j,0)];
+        for (int j=0; j < cfg.njc; j++) {
+            for (int i=0; i < cfg.nic; i++) {
+                FVFace& f = kFaces[cfg.kFaceIndex(i,j,0)];
                 FVCell& c0 = cells[f.right_cells[0]];
                 FVCell& g0 = cells[f.left_cells[0]];
                 g0.iLength = c0.iLength;
@@ -513,9 +391,9 @@ struct Block {
             }
         }
         // Face::kplus
-        for (int j=0; j < njc; j++) {
-            for (int i=0; i < nic; i++) {
-                FVFace& f = kFaces[kFaceIndex(i,j,nkc)];
+        for (int j=0; j < cfg.njc; j++) {
+            for (int i=0; i < cfg.nic; i++) {
+                FVFace& f = kFaces[cfg.kFaceIndex(i,j,cfg.nkc)];
                 FVCell& c0 = cells[f.left_cells[0]];
                 FVCell& g0 = cells[f.right_cells[0]];
                 g0.iLength = c0.iLength;
@@ -537,7 +415,7 @@ struct Block {
     } // end computeGeometry()
 
     __host__
-    void readGrid(string fileName, bool vtkHeader=false)
+    void readGrid(BConfig& cfg, string fileName, bool vtkHeader=false)
     // Reads the vertex locations from a compressed file, resizing storage as needed.
     // The numbers of cells are also checked.
     {
@@ -566,7 +444,7 @@ struct Block {
             f.getline(line, maxc);
             sscanf(line, "nkv: %d", &nkv);
         }
-        if ((nic != niv-1) || (njc != njv-1) || (nkc != nkv-1)) {
+        if ((cfg.nic != niv-1) || (cfg.njc != njv-1) || (cfg.nkc != nkv-1)) {
             throw runtime_error("Unexpected grid size: niv="+to_string(niv)+
                                 " njv="+to_string(njv)+ " nkv="+to_string(nkv));
         }
@@ -583,7 +461,7 @@ struct Block {
                     #else
                     sscanf(line, "%lf %lf %lf", &x, &y, &z);
                     #endif
-                    vertices[vtxIndex(i,j,k)].set(x, y, z);
+                    vertices[cfg.vtxIndex(i,j,k)].set(x, y, z);
                 } // for i
             } // for j
         } // for k
@@ -592,7 +470,7 @@ struct Block {
     } // end readGrid()
 
     __host__
-    void readFlow(string fileName)
+    void readFlow(BConfig& cfg, string fileName)
     // Reads the flow data archive from a ZIP file.
     // The correct data storage is presumed to exist.
     //
@@ -619,11 +497,11 @@ struct Block {
                     zip_fclose(f);
                     stringstream ss(content);
                     string item;
-                    for (int k=0; k < nkc; k++) {
-                        for (int j=0; j < njc; j++) {
-                            for (int i=0; i < nic; i++) {
+                    for (int k=0; k < cfg.nkc; k++) {
+                        for (int j=0; j < cfg.njc; j++) {
+                            for (int i=0; i < cfg.nic; i++) {
                                 getline(ss, item, '\n');
-                                FVCell& c = cells[activeCellIndex(i,j,k)];
+                                FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
                                 c.iovar_set(m, stod(item));
                             }
                         }
@@ -639,7 +517,7 @@ struct Block {
     } // end readFlow()
 
     __host__
-    void writeFlow(string fileName)
+    void writeFlow(BConfig& cfg, string fileName)
     // Writes the flow data into a new ZIP archive file.
     // Any necessary directories are presumed to exist.
     {
@@ -653,10 +531,10 @@ struct Block {
             for (int m=0; m < IOvar::n; m++) {
                 string name = IOvar::names[m];
                 ostringstream ss;
-                for (int k=0; k < nkc; k++) {
-                    for (int j=0; j < njc; j++) {
-                        for (int i=0; i < nic; i++) {
-                            FVCell& c = cells[activeCellIndex(i,j,k)];
+                for (int k=0; k < cfg.nkc; k++) {
+                    for (int j=0; j < cfg.njc; j++) {
+                        for (int i=0; i < cfg.nic; i++) {
+                            FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
                             ss << c.iovar_get(m) << endl;
                         }
                     }
@@ -682,10 +560,10 @@ struct Block {
     } // end writeFlow()
 
     __host__
-    number estimate_allowed_dt(number cfl)
+    number estimate_allowed_dt(BConfig& cfg, number cfl)
     {
         number smallest_dt = numeric_limits<number>::max();
-        for (int i=0; i < nActiveCells; i++) {
+        for (int i=0; i < cfg.nActiveCells; i++) {
             FVCell& c = cells[i];
             Vector3 inorm = iFaces[c.face[Face::iminus]].n;
             Vector3 jnorm = jFaces[c.face[Face::jminus]].n;
@@ -696,23 +574,23 @@ struct Block {
     } // end estimate_allowed_dt()
 
     __host__
-    void encodeConserved(int level)
+    void encodeConserved(BConfig& cfg, int level)
     {
-        for (int i=0; i < nActiveCells; i++) {
+        for (int i=0; i < cfg.nActiveCells; i++) {
             FlowState& fs = cells[i].fs;
-            ConservedQuantities& U = Q[level*nActiveCells + i];
+            ConservedQuantities& U = Q[level*cfg.nActiveCells + i];
             fs.encode_conserved(U);
         }
         return;
     }
 
     __host__
-    int decodeConserved(int level)
+    int decodeConserved(BConfig& cfg, int level)
     {
         int bad_cell_count = 0;
-        for (int i=0; i < nActiveCells; i++) {
+        for (int i=0; i < cfg.nActiveCells; i++) {
             FVCell& c = cells[i];
-            ConservedQuantities U = Q[level*nActiveCells + i];
+            ConservedQuantities U = Q[level*cfg.nActiveCells + i];
             int bad_cell_flag = c.fs.decode_conserved(U);
             bad_cell_count += bad_cell_flag;
             if (bad_cell_flag) {
@@ -777,16 +655,16 @@ struct Block {
     } // end eval_dUdt()
 
     __host__
-    int update_stage_1(number dt)
+    int update_stage_1(BConfig& cfg, number dt)
     // Stage 1 of the TVD-RK3 update scheme (predictor step).
     {
         int bad_cell_count = 0;
-        for (int i=0; i < nActiveCells; i++) {
+        for (int i=0; i < cfg.nActiveCells; i++) {
             FVCell& c = cells[i];
             ConservedQuantities& dUdt0 = dQdt[i];
             eval_dUdt(c, dUdt0);
             ConservedQuantities& U0 = Q[i];
-            ConservedQuantities& U1 = Q[nActiveCells + i];
+            ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
                 U1[j] = U0[j] + dt*dUdt0[j];
             }
@@ -800,17 +678,17 @@ struct Block {
     } // end update_stage_1()
 
     __host__
-    int update_stage_2(number dt)
+    int update_stage_2(BConfig& cfg, number dt)
     // Stage 2 of the TVD-RK3 update scheme.
     {
         int bad_cell_count = 0;
-        for (int i=0; i < nActiveCells; i++) {
+        for (int i=0; i < cfg.nActiveCells; i++) {
             FVCell& c = cells[i];
             ConservedQuantities& dUdt0 = dQdt[i];
-            ConservedQuantities& dUdt1 = dQdt[nActiveCells + i];
+            ConservedQuantities& dUdt1 = dQdt[cfg.nActiveCells + i];
             eval_dUdt(c, dUdt1);
             ConservedQuantities& U0 = Q[i];
-            ConservedQuantities& U1 = Q[nActiveCells + i];
+            ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
                 U1[j] = U0[j] + 0.25*dt*(dUdt0[j] + dUdt1[j]);
             }
@@ -824,18 +702,18 @@ struct Block {
     } // end update_stage_2()
 
     __host__
-    int update_stage_3(number dt)
+    int update_stage_3(BConfig& cfg, number dt)
     // Stage 3 of the TVD_RK3 update scheme.
     {
         int bad_cell_count = 0;
-        for (int i=0; i < nActiveCells; i++) {
+        for (int i=0; i < cfg.nActiveCells; i++) {
             FVCell& c = cells[i];
             ConservedQuantities& dUdt0 = dQdt[i];
-            ConservedQuantities& dUdt1 = dQdt[nActiveCells + i];
-            ConservedQuantities& dUdt2 = dQdt[2*nActiveCells + i];
+            ConservedQuantities& dUdt1 = dQdt[cfg.nActiveCells + i];
+            ConservedQuantities& dUdt2 = dQdt[2*cfg.nActiveCells + i];
             eval_dUdt(c, dUdt2);
             ConservedQuantities& U0 = Q[i];
-            ConservedQuantities& U1 = Q[nActiveCells + i];
+            ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
                 U1[j] = U0[j] + dt*(1.0/6.0*dUdt0[j] + 1.0/6.0*dUdt1[j] + 4.0/6.0*dUdt2[j]);
             }
@@ -849,11 +727,11 @@ struct Block {
     } // end update_stage_3()
 
     __host__
-    void copy_conserved_data(int from_level, int to_level)
+    void copy_conserved_data(BConfig& cfg, int from_level, int to_level)
     {
-        for (auto i=0; i < nActiveCells; i++) {
-            ConservedQuantities& U_from = Q[from_level*nActiveCells + i];
-            ConservedQuantities& U_to = Q[to_level*nActiveCells + i];
+        for (auto i=0; i < cfg.nActiveCells; i++) {
+            ConservedQuantities& U_from = Q[from_level*cfg.nActiveCells + i];
+            ConservedQuantities& U_to = Q[to_level*cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
                 U_to[j] = U_from[j];
             }
