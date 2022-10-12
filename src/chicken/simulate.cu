@@ -361,6 +361,9 @@ void finalize_simulation()
     if (SimState::steps_since_last_plot > 0) {
         write_flow_data(SimState::next_plot_indx, SimState::t);
     }
+    for (Block& blk : fluidBlocks) {
+        blk.releaseMemory();
+    }
     return;
 } // end finalize_simulation()
 

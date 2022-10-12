@@ -37,10 +37,13 @@ struct Block {
     int nkc; // Number of cells k-direction.
     int nActiveCells; // Number of active cells (with conserved quantities) in the block.
     vector<FVCell> cells;
+    FVCell* cells_on_gpu;
     //
     // Active cells have conserved quantities data, along with the time derivatives.
     vector<ConservedQuantities> Q;
     vector<ConservedQuantities> dQdt;
+    ConservedQuantities* Q_on_gpu;
+    ConservedQuantities* dQdt_on_gpu;
     //
     // Ghost cells are associated with each block boundary face and
     // will be stored at the end of the active cells collection.
@@ -59,10 +62,25 @@ struct Block {
     vector<FVFace> iFaces;
     vector<FVFace> jFaces;
     vector<FVFace> kFaces;
+    int n_iFaces;
+    int n_jFaces;
+    int n_kFaces;
+    FVFace* iFaces_on_gpu;
+    FVFace* jFaces_on_gpu;
+    FVFace* kFaces_on_gpu;
     //
     // The vertices are used to define the locations and geometric properties
     // of faces and cells.
     vector<Vector3> vertices;
+    Vector3* vertices_on_gpu;
+    //
+    // GPU-related parameters.
+    int threads_per_GPUblock = 0;
+    int nGPUblocks_for_cells = 0;
+    int nGPUblocks_for_iFaces = 0;
+    int nGPUblocks_for_jFaces = 0;
+    int nGPUblocks_for_kFaces = 0;
+
 
     __host__
     string toString() {
@@ -143,18 +161,31 @@ struct Block {
             Q.resize(nActiveCells*2);
             dQdt.resize(nActiveCells*3);
         }
-        #ifdef CUDA
-        // We need to allocate corresponding memory space on the GPU.
-        // [TODO]
-        #endif
         //
         // Each set of finite-volume faces is in the index-plane of the corresponding vertices.
-        iFaces.resize((nic+1)*njc*nkc);
-        jFaces.resize(nic*(njc+1)*nkc);
-        kFaces.resize(nic*njc*(nkc+1));
+        n_iFaces = (nic+1)*njc*nkc; iFaces.resize(n_iFaces);
+        n_jFaces = nic*(njc+1)*nkc; jFaces.resize(n_jFaces);
+        n_kFaces = nic*njc*(nkc+1); kFaces.resize(n_kFaces);
         //
         // And the vertices.
         vertices.resize((nic+1)*(njc+1)*(nkc+1));
+        //
+        #ifdef CUDA
+        // We need to allocate corresponding memory space on the GPU.
+        threads_per_GPUblock = 128;
+        nGPUblocks_for_cells = ceil(double(nActiveCells)/threads_per_GPUblock);
+        nGPUblocks_for_iFaces = ceil(double(n_iFaces)/threads_per_GPUblock);
+        nGPUblocks_for_jFaces = ceil(double(n_jFaces)/threads_per_GPUblock);
+        nGPUblocks_for_kFaces = ceil(double(n_kFaces)/threads_per_GPUblock);
+        //
+        cudaMalloc(&cells_on_gpu, cells.size()*sizeof(FVCell));
+        if (!cells_on_gpu) throw runtime_error("Could not allocate cells on gpu.");
+        cudaMalloc(&Q_on_gpu, Q.size()*sizeof(ConservedQuantities));
+        if (!Q_on_gpu) throw runtime_error("Could not allocate Q on gpu.");
+        cudaMalloc(&dQdt_on_gpu, dQdt.size()*sizeof(ConservedQuantities));
+        if (!dQdt_on_gpu) throw runtime_error("Could not allocate dQdt on gpu.");
+        // [TODO] others...
+        #endif
         //
         // Make connections from cells to faces and vertices.
         for (int k=0; k < nkc; k++) {
@@ -305,6 +336,21 @@ struct Block {
         }
         return;
     } // end configure()
+
+    __host__
+    void releaseMemory()
+    {
+        cells.resize(0);
+        Q.resize(0);
+        dQdt.resize(0);
+        // [TODO] others...
+        #ifdef CUDA
+        if (cells_on_gpu) { cudaFree(&cells_on_gpu); cells_on_gpu = NULL; }
+        if (cells_on_gpu) { cudaFree(&Q_on_gpu); Q_on_gpu = NULL; }
+        if (cells_on_gpu) { cudaFree(&dQdt_on_gpu); dQdt_on_gpu = NULL; }
+        #endif
+        return;
+    }
 
     __host__
     void computeGeometry()
