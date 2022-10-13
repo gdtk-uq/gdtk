@@ -1,0 +1,26 @@
+== 2D/moving-grid/rotating-square-simple
+
+image::square-rotating-animation.gif[width=80%,title="Rotating Square Pressure Field"]
+
+This example displays a square in Mach 6 free flight conditions, following a prescribed rotational motion.
+The implementation of dynamics builds on the ideas illustrated in the piston example above, and are defined by the user.
+
+Taking \(\theta\) as the angle of the square face relative to incoming flow \((\theta_0 = 0)\), the dynamics were defined by the rotational velocity \(\omega\):
+\[\omega(t) = A \cos((2 \pi / t_f) \cdot t)\]
+
+Where \(A = 2000\) (rad/s). This formulation ensures a large sweep of angles are completed over the simulation time \([0,t_f]\), while also enusuring the square finishes at it's starting angle relative to the incoming flow.
+
+The inflow conditions for this simulation are:
+
+* freestream pressure: 760 Pa
+* freestream temperature: 71 K
+* freestream V: 1005.0 m/s
+
+Results from the simulation are shown below (flow startup omitted): 
+
+[cols="a,a", frame=none, grid=none]
+|===
+|image::rotating-square-forces.svg[width=90%,title="Aerodynamic Forces"]
+|image::rotating-square-moment.svg[width=90%,title="Aerodynamic Moment (about body centre)"]
+|===
+
