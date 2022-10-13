@@ -14,7 +14,6 @@
 #include "gas.cu"
 #include "flow.cu"
 #include "vertex.cu"
-#include "face.cu"
 
 using namespace std;
 
@@ -40,6 +39,7 @@ int Face_indx_from_name(string name)
     if (name == "kplus") return Face::kplus;
     throw runtime_error("Invalid face name: " + name);
 }
+
 
 namespace IOvar {
     // Following the new IO model for Eilmer, we set up the accessor functions
@@ -67,6 +67,7 @@ namespace IOvar {
     constexpr int velz = vely + 1;
     constexpr int n = velz + 1; // number of symbols that point to the flow variables
 }
+
 
 struct FVCell {
     Vector3 pos; // position of centroid

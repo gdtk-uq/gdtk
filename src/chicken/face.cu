@@ -13,11 +13,21 @@
 
 #include "number.cu"
 #include "vector3.cu"
-#include "vertex.cu"
-#include "flow.cu"
 #include "gas.cu"
+#include "vertex.cu"
+#include "config.cu"
+#include "flow.cu"
 
 using namespace std;
+
+namespace FluxCalc {
+    // Selection of flux calculator happens at compile time,
+    // setting flux_calculator below.
+    array<string,2> names{"ausmdv", "sbp_asf"};
+    //
+    constexpr int ausmdv = 0;
+    constexpr int sbp_asf = 1;
+};
 
 // Interpolation functions that will be used in the fluc calculator.
 
@@ -178,31 +188,63 @@ struct FVFace {
         return;
     } // end ausmdv()
 
+
+    __host__ __device__
+    void sbp_asf(FlowState& fsL1, FlowState& fsL0, FlowState& fsR0, FlowState& fsR1)
+    // Christine's Summation-By-Parts Alpha-Split Flux calculation function.
+    {
+        Vector3 velL1 = Vector3(fsL1.vel);
+        Vector3 velL0 = Vector3(fsL0.vel);
+        Vector3 velR0 = Vector3(fsR0.vel);
+        Vector3 velR1 = Vector3(fsR1.vel);
+        velL1.transform_to_local_frame(n, t1, t2);
+        velL0.transform_to_local_frame(n, t1, t2);
+        velR0.transform_to_local_frame(n, t1, t2);
+        velR1.transform_to_local_frame(n, t1, t2);
+        //
+        // [TODO] some fancy calculation here.
+        //
+        F[CQI::mass] = 0.0;
+        Vector3 momentum{0.0, 0.0, 0.0};
+        momentum.transform_to_global_frame(n, t1, t2);
+        F[CQI::xMom] = momentum.x;
+        F[CQI::yMom] = momentum.y;
+        F[CQI::zMom] = momentum.z;
+        F[CQI::totEnergy] = 0.0;
+    } // end sbp_asf()
+
+
     // And one generic flux calculation function.
 
     __host__ __device__
     void calculate_flux(FlowState& fsL1, FlowState& fsL0, FlowState& fsR0, FlowState& fsR1, int x_order)
-    // Generic fluc calculation function.
+    // Generic flux calculation function.
     {
-        // First-order reconstruction is just a copy from the nearest cell centre.
-        FlowState fsL{fsL0};
-        FlowState fsR{fsR0};
-        if (x_order > 1) {
-            // We will interpolate only some GasState properties...
-            interp_l2r2_scalar(fsL1.gas.rho, fsL0.gas.rho, fsR0.gas.rho, fsR1.gas.rho, fsL.gas.rho, fsR.gas.rho);
-            interp_l2r2_scalar(fsL1.gas.e, fsL0.gas.e, fsR0.gas.e, fsR1.gas.e, fsL.gas.e, fsR.gas.e);
-            // and make the rest consistent.
-            fsL.gas.update_from_rhoe();
-            fsR.gas.update_from_rhoe();
-            // Velocity components.
-            interp_l2r2_scalar(fsL1.vel.x, fsL0.vel.x, fsR0.vel.x, fsR1.vel.x, fsL.vel.x, fsR.vel.x);
-            interp_l2r2_scalar(fsL1.vel.y, fsL0.vel.y, fsR0.vel.y, fsR1.vel.y, fsL.vel.y, fsR.vel.y);
-            interp_l2r2_scalar(fsL1.vel.z, fsL0.vel.z, fsR0.vel.z, fsR1.vel.z, fsL.vel.z, fsR.vel.z);
+        // Choose the flavour of flux calculator at compile time.
+        constexpr int flux_calculator = FluxCalc::ausmdv;
+        //
+        if (flux_calculator ==  FluxCalc::ausmdv) {
+            // First-order reconstruction is just a copy from the nearest cell centre.
+            FlowState fsL{fsL0};
+            FlowState fsR{fsR0};
+            if (x_order > 1) {
+                // We will interpolate only some GasState properties...
+                interp_l2r2_scalar(fsL1.gas.rho, fsL0.gas.rho, fsR0.gas.rho, fsR1.gas.rho, fsL.gas.rho, fsR.gas.rho);
+                interp_l2r2_scalar(fsL1.gas.e, fsL0.gas.e, fsR0.gas.e, fsR1.gas.e, fsL.gas.e, fsR.gas.e);
+                // and make the rest consistent.
+                fsL.gas.update_from_rhoe();
+                fsR.gas.update_from_rhoe();
+                // Velocity components.
+                interp_l2r2_scalar(fsL1.vel.x, fsL0.vel.x, fsR0.vel.x, fsR1.vel.x, fsL.vel.x, fsR.vel.x);
+                interp_l2r2_scalar(fsL1.vel.y, fsL0.vel.y, fsR0.vel.y, fsR1.vel.y, fsL.vel.y, fsR.vel.y);
+                interp_l2r2_scalar(fsL1.vel.z, fsL0.vel.z, fsR0.vel.z, fsR1.vel.z, fsL.vel.z, fsR.vel.z);
+            }
+            // Use the reconstructed values near the face in a simple flux calculator.
+            ausmdv(fsL, fsR);
+        } else if (flux_calculator == FluxCalc::sbp_asf) {
+            sbp_asf(fsL1, fsL0, fsR0, fsR1);
         }
-        // Use the reconstructed values near the face in a simple flux calculator.
-        ausmdv(fsL, fsR);
-        // [TODO] Allow other flux calculators.
-    }
+    } // end calculate_flux()
 
 }; // end FVFace
 

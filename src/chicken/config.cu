@@ -21,6 +21,7 @@
 using namespace std;
 using json = nlohmann::json;
 
+
 namespace BCCode {
     // Boundary condition codes, to decide what to do for the ghost cells.
     // Periodic boundary conditions should just work if we wrap the index in each direction.
