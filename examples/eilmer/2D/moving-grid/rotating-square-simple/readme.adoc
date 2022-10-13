@@ -8,7 +8,7 @@ The implementation of dynamics builds on the ideas illustrated in the piston exa
 Taking \(\theta\) as the angle of the square face relative to incoming flow \((\theta_0 = 0)\), the dynamics were defined by the rotational velocity \(\omega\):
 \[\omega(t) = A \cos((2 \pi / t_f) \cdot t)\]
 
-Where \(A = 2000\) (rad/s). This formulation ensures a large sweep of angles are completed over the simulation time \([0,t_f]\), while also enusuring the square finishes at it's starting angle relative to the incoming flow.
+where \(A = 2000\) (rad/s). This formulation ensures a large sweep of angles are completed over the simulation time \([0,t_f]\), while also enusuring the square finishes at it's starting angle relative to the incoming flow.
 
 The inflow conditions for this simulation are:
 
