@@ -628,33 +628,6 @@ struct Block {
     } // end calculate_fluxes()
 
     __host__
-    void eval_dUdt(FVCell& c, ConservedQuantities& dUdt)
-    // These are the spatial (RHS) terms in the semi-discrete governing equations.
-    //
-    // Even though this is a cell-level calculation, the code is in the Block context
-    // because it needs access to the iFace, jFace and kFace arrays.
-    {
-        number vol_inv = 1.0/c.volume;
-        auto& fim = iFaces[c.face[Face::iminus]];
-        auto& fip = iFaces[c.face[Face::iplus]];
-        auto& fjm = jFaces[c.face[Face::jminus]];
-        auto& fjp = jFaces[c.face[Face::jplus]];
-        auto& fkm = kFaces[c.face[Face::kminus]];
-        auto& fkp = kFaces[c.face[Face::kplus]];
-        //
-        for (int i=0; i < CQI::n; i++) {
-            // Integrate the fluxes across the interfaces that bound the cell.
-            number surface_integral = fim.area*fim.F[i] - fip.area*fip.F[i]
-                + fjm.area*fjm.F[i] - fjp.area*fjp.F[i]
-                + fkm.area*fkm.F[i] - fkp.area*fkp.F[i];
-            // Then evaluate the derivatives of conserved quantity.
-            // Note that conserved quantities are stored per-unit-volume.
-            dUdt[i] = vol_inv*surface_integral;
-        }
-        return;
-    } // end eval_dUdt()
-
-    __host__
     int update_stage_1(BConfig& cfg, number dt)
     // Stage 1 of the TVD-RK3 update scheme (predictor step).
     {
@@ -662,7 +635,7 @@ struct Block {
         for (int i=0; i < cfg.nActiveCells; i++) {
             FVCell& c = cells[i];
             ConservedQuantities& dUdt0 = dQdt[i];
-            eval_dUdt(c, dUdt0);
+            c.eval_dUdt(dUdt0, iFaces.data(), jFaces.data(), kFaces.data());
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
@@ -686,7 +659,7 @@ struct Block {
             FVCell& c = cells[i];
             ConservedQuantities& dUdt0 = dQdt[i];
             ConservedQuantities& dUdt1 = dQdt[cfg.nActiveCells + i];
-            eval_dUdt(c, dUdt1);
+            c.eval_dUdt(dUdt1, iFaces.data(), jFaces.data(), kFaces.data());
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
@@ -711,7 +684,7 @@ struct Block {
             ConservedQuantities& dUdt0 = dQdt[i];
             ConservedQuantities& dUdt1 = dQdt[cfg.nActiveCells + i];
             ConservedQuantities& dUdt2 = dQdt[2*cfg.nActiveCells + i];
-            eval_dUdt(c, dUdt2);
+            c.eval_dUdt(dUdt2, iFaces.data(), jFaces.data(), kFaces.data());
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {

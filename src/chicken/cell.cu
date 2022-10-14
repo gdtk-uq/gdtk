@@ -14,6 +14,7 @@
 #include "gas.cu"
 #include "flow.cu"
 #include "vertex.cu"
+#include "face.cu"
 
 using namespace std;
 
@@ -144,6 +145,30 @@ struct FVCell {
         number ksignal = kLength/(fabs(fs.vel.dot(knorm))+fs.gas.a);
         return cfl * fmin(fmin(isignal,jsignal),ksignal);
     }
+
+    __host__ __device__
+    void eval_dUdt(ConservedQuantities& dUdt, FVFace iFaces[], FVFace jFaces[], FVFace kFaces[])
+    // These are the spatial (RHS) terms in the semi-discrete governing equations.
+    {
+        number vol_inv = 1.0/volume;
+        auto& fim = iFaces[face[Face::iminus]];
+        auto& fip = iFaces[face[Face::iplus]];
+        auto& fjm = jFaces[face[Face::jminus]];
+        auto& fjp = jFaces[face[Face::jplus]];
+        auto& fkm = kFaces[face[Face::kminus]];
+        auto& fkp = kFaces[face[Face::kplus]];
+        //
+        for (int i=0; i < CQI::n; i++) {
+            // Integrate the fluxes across the interfaces that bound the cell.
+            number surface_integral = fim.area*fim.F[i] - fip.area*fip.F[i]
+                + fjm.area*fjm.F[i] - fjp.area*fjp.F[i]
+                + fkm.area*fkm.F[i] - fkp.area*fkp.F[i];
+            // Then evaluate the derivatives of conserved quantity.
+            // Note that conserved quantities are stored per-unit-volume.
+            dUdt[i] = vol_inv*surface_integral;
+        }
+        return;
+    } // end eval_dUdt()
 
 }; // end Cell
 
