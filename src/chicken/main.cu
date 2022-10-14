@@ -19,11 +19,11 @@ int main(int argc, char* argv[])
 {
     cout << "Chicken compressible-flow CFD" << endl;
     cout << "Revision-id: PUT_REVISION_STRING_HERE" << endl;
-    #ifdef CUDA
+#ifdef CUDA
     cout << "CUDA flavour of program" << endl;
-    #else
+#else
     cout << "CPU flavour of program." << endl;
-    #endif
+#endif
     auto clock_start = chrono::system_clock::now();
     //
     argagg::parser argparser {{
@@ -57,16 +57,16 @@ int main(int argc, char* argv[])
     if (Config::verbosity > 0) cout << "tindx_start: " << tindx_start << endl;
     try {
         initialize_simulation(tindx_start);
-        #ifdef CUDA
+#ifdef CUDA
         if (!filesystem::exists(filesystem::status("/proc/driver/nvidia"))) {
             throw runtime_error("Cannot find NVIDIA driver in /proc/driver.");
         }
         cudaGetDeviceCount(&Config::nDevices);
         cout << "CUDA devices found: " << Config::nDevices << endl;
         if (Config::nDevices > 0) { march_in_time_using_gpu(); }
-        #else
+#else
         march_in_time_using_cpu_only();
-        #endif
+#endif
         finalize_simulation();
     } catch (const runtime_error& e) {
         cerr << e.what() << endl;

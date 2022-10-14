@@ -13,7 +13,7 @@ __host__
 void bc_wall_with_slip(int iblk, int ibc)
 // Copy data, reflecting velocity.
 {
-    BConfig& cfg = Config::blk_configs[iblk];
+    BConfig& cfg = blk_configs[iblk];
     Block& blk = fluidBlocks[iblk];
     switch (ibc) {
     case Face::iminus: // jk across face
@@ -132,7 +132,7 @@ __host__
 void bc_wall_no_slip(int iblk, int ibc)
 // Copy data, reflecting velocity, [TODO] then set the face velocity to zero.
 {
-    BConfig& cfg = Config::blk_configs[iblk];
+    BConfig& cfg = blk_configs[iblk];
     Block& blk = fluidBlocks[iblk];
     switch (ibc) {
     case Face::iminus: // jk across face
@@ -253,7 +253,7 @@ void bc_exchange(int iblk, int ibc)
 // The other block will have a corresponding boundary with the same type of boundary condition,
 // so the "exchange" occurs is two phases.
 {
-    BConfig& cfg = Config::blk_configs[iblk];
+    BConfig& cfg = blk_configs[iblk];
     Block& blk = fluidBlocks[iblk];
     //
     switch (ibc) {
@@ -264,7 +264,7 @@ void bc_exchange(int iblk, int ibc)
         int other_k = cfg.k;
         int other_id = Config::blk_ids[other_i][other_j][other_k];
         Block& other_blk = fluidBlocks[other_id];
-        BConfig& other_cfg = Config::blk_configs[other_id];
+        BConfig& other_cfg = blk_configs[other_id];
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
                 FVFace& f = blk.iFaces[cfg.iFaceIndex(0, j, k)];
@@ -282,7 +282,7 @@ void bc_exchange(int iblk, int ibc)
         int other_k = cfg.k;
         int other_id = Config::blk_ids[other_i][other_j][other_k];
         Block& other_blk = fluidBlocks[other_id];
-        BConfig& other_cfg = Config::blk_configs[other_id];
+        BConfig& other_cfg = blk_configs[other_id];
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
                 FVFace& f = blk.iFaces[cfg.iFaceIndex(cfg.nic, j, k)];
@@ -300,7 +300,7 @@ void bc_exchange(int iblk, int ibc)
         int other_k = cfg.k;
         int other_id = Config::blk_ids[other_i][other_j][other_k];
         Block& other_blk = fluidBlocks[other_id];
-        BConfig& other_cfg = Config::blk_configs[other_id];
+        BConfig& other_cfg = blk_configs[other_id];
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.jFaces[cfg.jFaceIndex(i, 0, k)];
@@ -318,7 +318,7 @@ void bc_exchange(int iblk, int ibc)
         int other_k = cfg.k;
         int other_id = Config::blk_ids[other_i][other_j][other_k];
         Block& other_blk = fluidBlocks[other_id];
-        BConfig& other_cfg = Config::blk_configs[other_id];
+        BConfig& other_cfg = blk_configs[other_id];
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.jFaces[cfg.jFaceIndex(i, cfg.njc, k)];
@@ -336,7 +336,7 @@ void bc_exchange(int iblk, int ibc)
         if (other_k < 0) { other_k = Config::nkb-1; } // Wrap around.
         int other_id = Config::blk_ids[other_i][other_j][other_k];
         Block& other_blk = fluidBlocks[other_id];
-        BConfig& other_cfg = Config::blk_configs[other_id];
+        BConfig& other_cfg = blk_configs[other_id];
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.kFaces[cfg.kFaceIndex(i, j, 0)];
@@ -354,7 +354,7 @@ void bc_exchange(int iblk, int ibc)
         if (other_k >= Config::nkb) { other_k = 0; } // Wrap around.
         int other_id = Config::blk_ids[other_i][other_j][other_k];
         Block& other_blk = fluidBlocks[other_id];
-        BConfig& other_cfg = Config::blk_configs[other_id];
+        BConfig& other_cfg = blk_configs[other_id];
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.kFaces[cfg.kFaceIndex(i, j, cfg.nkc)];
@@ -373,7 +373,7 @@ __host__
 void bc_inflow(int iblk, int ibc, FlowState& inflow)
 // Copy the associated flow state data into the ghost cells.
 {
-    BConfig& cfg = Config::blk_configs[iblk];
+    BConfig& cfg = blk_configs[iblk];
     Block& blk = fluidBlocks[iblk];
     switch (ibc) {
     case Face::iminus: // jk across face
@@ -450,7 +450,7 @@ __host__
 void bc_outflow(int iblk, int ibc)
 // Copy the interior flow states to the ghost cells.
 {
-    BConfig& cfg = Config::blk_configs[iblk];
+    BConfig& cfg = blk_configs[iblk];
     Block& blk = fluidBlocks[iblk];
     switch (ibc) {
     case Face::iminus: // jk across face

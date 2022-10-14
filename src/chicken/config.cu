@@ -234,7 +234,6 @@ namespace Config {
     int nkb;
     vector<int> nics, njcs, nkcs;
     vector<vector<vector<int> > >blk_ids;
-    vector<BConfig> blk_configs;
     //
     int print_count = 20;
     int cfl_count = 10;
@@ -249,7 +248,7 @@ namespace Config {
 }
 
 
-void read_config_file(string fileName)
+vector<BConfig> read_config_file(string fileName)
 {
     if (Config::verbosity > 0) cout << "Reading JSON config file." << endl;
     json jsonData;
@@ -344,30 +343,31 @@ void read_config_file(string fileName)
     }
     //
     vector<json> fluid_blocks_json = jsonData["fluid_blocks"].get<vector<json> >();
+    vector<BConfig> blk_configs;
     for (auto blk_json : fluid_blocks_json) {
-        BConfig blk_config;
-        blk_config.i = blk_json["i"].get<int>();
-        blk_config.j = blk_json["j"].get<int>();
-        blk_config.k = blk_json["k"].get<int>();
-        blk_config.active = blk_json["active"].get<bool>();
+        BConfig cfg;
+        cfg.i = blk_json["i"].get<int>();
+        cfg.j = blk_json["j"].get<int>();
+        cfg.k = blk_json["k"].get<int>();
+        cfg.active = blk_json["active"].get<bool>();
         map<string,json> bcs_json = blk_json["bcs"].get<map<string,json> >();
         for (auto name : Face::names) {
             map<string,json> bc = bcs_json[name].get<map<string,json> >();
             int i = Face_indx_from_name(name);
-            blk_config.bcCodes[i] = BC_code_from_name(bc["tag"].get<string>());
-            blk_config.bc_fs[i] = 0; // Default flowstate index.
-            if (blk_config.bcCodes[i] == BCCode::inflow) {
-                blk_config.bc_fs[i] = bc["flow_state_index"].get<int>();
+            cfg.bcCodes[i] = BC_code_from_name(bc["tag"].get<string>());
+            cfg.bc_fs[i] = 0; // Default flowstate index.
+            if (cfg.bcCodes[i] == BCCode::inflow) {
+                cfg.bc_fs[i] = bc["flow_state_index"].get<int>();
             }
         }
         if (Config::verbosity > 0) {
-            cout << "  blk=" << Config::blk_configs.size() << " config=" << blk_config.toString() << endl;
+            cout << "  blk=" << blk_configs.size() << " config=" << cfg.toString() << endl;
         }
-        Config::blk_configs.push_back(blk_config);
+        blk_configs.push_back(cfg);
     }
-    if (Config::nFluidBlocks != Config::blk_configs.size()) {
+    if (Config::nFluidBlocks != blk_configs.size()) {
         throw runtime_error("Did not read the correct number of block configurations: "+
-                            to_string(Config::nFluidBlocks)+" "+to_string(Config::blk_configs.size()));
+                            to_string(Config::nFluidBlocks)+" "+to_string(blk_configs.size()));
     }
     //
     Config::x_order = jsonData["x_order"].get<int>();
@@ -394,7 +394,7 @@ void read_config_file(string fileName)
         cout << "  print_count=" << Config::print_count << endl;
         cout << "  dt_plot_schedule=" << Config::dt_plot_schedule.toString() << endl;
     }
-    return;
+    return blk_configs;
 } // end read_config_file()
 
 #endif

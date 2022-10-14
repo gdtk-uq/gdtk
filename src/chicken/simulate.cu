@@ -38,8 +38,11 @@ namespace SimState {
     int steps_since_last_plot = 0;
 };
 
-vector<Block> fluidBlocks;
 
+vector<Block> fluidBlocks;
+Block* fluidBlocks_on_gpu;
+vector<BConfig> blk_configs;
+BConfig* blk_configs_on_gpu;
 
 __host__
 void initialize_simulation(int tindx_start)
@@ -50,10 +53,10 @@ void initialize_simulation(int tindx_start)
         throw runtime_error("Job directory is not present in current directory.");
     }
     auto clock_start = chrono::system_clock::now();
-    read_config_file(Config::job + "/config.json");
+    blk_configs = read_config_file(Config::job + "/config.json");
     // Read initial grids and flow data
     for (int blk_id=0; blk_id < Config::nFluidBlocks; ++blk_id) {
-        BConfig& cfg = Config::blk_configs[blk_id];
+        BConfig& cfg = blk_configs[blk_id];
         int i = cfg.i; int j = cfg.j; int k = cfg.k;
         if (blk_id != Config::blk_ids[i][j][k]) {
             throw runtime_error("blk_id=" + to_string(blk_id) + " is inconsistent: i=" +
@@ -70,6 +73,18 @@ void initialize_simulation(int tindx_start)
         blk.computeGeometry(cfg);
         fluidBlocks.push_back(blk);
     }
+#ifdef CUDA
+    // We need to put a copy of the block and config data onto the GPU.
+    int nbytes = blk_configs.size()*sizeof(BConfig);
+    cudaMalloc(&blk_configs_on_gpu, nbytes);
+    if (!blk_configs_on_gpu) throw runtime_error("Could not allocate blk_configs on gpu.");
+    cudaMemcpy(blk_configs_on_gpu, blk_configs.data(), nbytes, cudaMemcpyHostToDevice);
+    //
+    nbytes = fluidBlocks.size()*sizeof(Block);
+    cudaMalloc(&fluidBlocks_on_gpu, nbytes);
+    if (!fluidBlocks_on_gpu) throw runtime_error("Could not allocate fluidBlocks on gpu.");
+    cudaMemcpy(fluidBlocks_on_gpu, fluidBlocks.data(), nbytes, cudaMemcpyHostToDevice);
+#endif
     //
     // Set up the simulation control parameters.
     SimState::t = 0.0;
@@ -109,7 +124,7 @@ void write_flow_data(int tindx, number tme)
     string flowDir = string(nameBuf);
     if (!filesystem::exists(flowDir)) { filesystem::create_directories(flowDir); }
     for (int blk_id=0; blk_id < Config::nFluidBlocks; ++blk_id) {
-        BConfig& blk_config = Config::blk_configs[blk_id];
+        BConfig& blk_config = blk_configs[blk_id];
         int i = blk_config.i; int j = blk_config.j; int k = blk_config.k;
         sprintf(nameBuf, "%s/flow-%04d-%04d-%04d.zip", flowDir.c_str(), i, j, k);
         string fileName = string(nameBuf);
@@ -134,7 +149,7 @@ void apply_boundary_conditions()
 // Measurements might tell us otherwise.
 {
     for (int iblk=0; iblk < Config::nFluidBlocks; iblk++) {
-        BConfig& blk_config = Config::blk_configs[iblk];
+        BConfig& blk_config = blk_configs[iblk];
         if (!blk_config.active) continue;
         for (int ibc=0; ibc < 6; ibc++) {
             switch (blk_config.bcCodes[ibc]) {
@@ -162,7 +177,7 @@ void march_in_time_using_cpu_only()
     SimState::dt = Config::dt_init;
     SimState::step = 0;
     for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-        BConfig& cfg = Config::blk_configs[ib];
+        BConfig& cfg = blk_configs[ib];
         if (cfg.active) fluidBlocks[ib].encodeConserved(cfg, 0);
     }
     //
@@ -173,7 +188,7 @@ void march_in_time_using_cpu_only()
             number smallest_dt = numeric_limits<number>::max();
             number cfl = Config::cfl_schedule.get_value(SimState::t);
             for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-                BConfig& cfg = Config::blk_configs[ib];
+                BConfig& cfg = blk_configs[ib];
                 Block& blk = fluidBlocks[ib];
                 if (cfg.active) smallest_dt = fmin(smallest_dt, blk.estimate_allowed_dt(cfg, cfl));
             }
@@ -186,7 +201,7 @@ void march_in_time_using_cpu_only()
         // number t = SimState::t; // Only needed if we have time-dependent source terms or BCs.
         apply_boundary_conditions();
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = Config::blk_configs[ib];
+            BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (cfg.active) {
                 blk.calculate_fluxes(Config::x_order);
@@ -200,7 +215,7 @@ void march_in_time_using_cpu_only()
         // t = SimState::t + 0.5*SimState::dt;
         apply_boundary_conditions();
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = Config::blk_configs[ib];
+            BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (cfg.active) {
                 blk.calculate_fluxes(Config::x_order);
@@ -214,7 +229,7 @@ void march_in_time_using_cpu_only()
         // t = SimState::t + SimState::dt;
         apply_boundary_conditions();
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = Config::blk_configs[ib];
+            BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (cfg.active) {
                 blk.calculate_fluxes(Config::x_order);
@@ -226,7 +241,7 @@ void march_in_time_using_cpu_only()
         }
         // After a successful gasdynamic update, copy the conserved data back to level 0.
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = Config::blk_configs[ib];
+            BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (cfg.active) blk.copy_conserved_data(cfg, 1, 0);
         }
@@ -275,8 +290,34 @@ void march_in_time_using_gpu()
     SimState::dt = Config::dt_init;
     SimState::step = 0;
     for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-        BConfig& cfg = Config::blk_configs[ib];
-        if (cfg.active) fluidBlocks[ib].encodeConserved(cfg, 0);
+        BConfig& cfg = blk_configs[ib];
+        if (!cfg.active) continue;
+        auto& blk = fluidBlocks[ib];
+        // Transfer block data, including the initial flow states, to the GPU and encode.
+        int nbytes = blk.cells.size()*sizeof(FVCell);
+        cudaMemcpy(blk.cells_on_gpu, blk.cells.data(), nbytes, cudaMemcpyHostToDevice);
+        // No need to send conserved quantities and their time-derivatives
+        // but we do want to send faces and vertices.
+        nbytes = blk.iFaces.size()*sizeof(FVFace);
+        cudaMemcpy(blk.iFaces_on_gpu, blk.iFaces.data(), nbytes, cudaMemcpyHostToDevice);
+        nbytes = blk.jFaces.size()*sizeof(FVFace);
+        cudaMemcpy(blk.jFaces_on_gpu, blk.jFaces.data(), nbytes, cudaMemcpyHostToDevice);
+        nbytes = blk.kFaces.size()*sizeof(FVFace);
+        cudaMemcpy(blk.kFaces_on_gpu, blk.kFaces.data(), nbytes, cudaMemcpyHostToDevice);
+        nbytes = blk.vertices.size()*sizeof(Vector3);
+        cudaMemcpy(blk.vertices_on_gpu, blk.vertices.data(), nbytes, cudaMemcpyHostToDevice);
+        // Now, do the encode of flow states to conserved quantities.
+        Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
+        BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
+        int nGPUblocks = cfg.nGPUblocks_for_cells;
+        int nGPUthreads = cfg.threads_per_GPUblock;
+        encodeConserved_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, 0);
+        cout << cudaGetErrorString(cudaGetLastError()) << endl;
+        // [TODO] PJ 2022-10-15
+        // For the moment, bring the encoded data back to the host for further work.
+        // We will leave it on the GPU once we get the other GPU processing functions in place.
+        nbytes = blk.Q.size()*sizeof(ConservedQuantities);
+        cudaMemcpy(blk.Q.data(), blk.Q_on_gpu, nbytes, cudaMemcpyDeviceToHost);
     }
     //
     while (SimState::step < Config::max_step && SimState::t < Config::max_time) {
@@ -286,7 +327,7 @@ void march_in_time_using_gpu()
             number smallest_dt = numeric_limits<number>::max();
             number cfl = Config::cfl_schedule.get_value(SimState::t);
             for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-                BConfig& cfg = Config::blk_configs[ib];
+                BConfig& cfg = blk_configs[ib];
                 Block& blk = fluidBlocks[ib];
                 if (cfg.active) smallest_dt = fmin(smallest_dt, blk.estimate_allowed_dt(cfg, cfl));
             }
@@ -299,7 +340,7 @@ void march_in_time_using_gpu()
         // number t = SimState::t; // Only needed if we have time-dependent source terms or BCs.
         apply_boundary_conditions();
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = Config::blk_configs[ib];
+            BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (cfg.active) {
                 blk.calculate_fluxes(Config::x_order);
@@ -313,7 +354,7 @@ void march_in_time_using_gpu()
         // t = SimState::t + 0.5*SimState::dt;
         apply_boundary_conditions();
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = Config::blk_configs[ib];
+            BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (cfg.active) {
                 blk.calculate_fluxes(Config::x_order);
@@ -327,7 +368,7 @@ void march_in_time_using_gpu()
         // t = SimState::t + SimState::dt;
         apply_boundary_conditions();
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = Config::blk_configs[ib];
+            BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (cfg.active) {
                 blk.calculate_fluxes(Config::x_order);
@@ -339,7 +380,7 @@ void march_in_time_using_gpu()
         }
         // After a successful gasdynamic update, copy the conserved data back to level 0.
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = Config::blk_configs[ib];
+            BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (cfg.active) blk.copy_conserved_data(cfg, 1, 0);
         }

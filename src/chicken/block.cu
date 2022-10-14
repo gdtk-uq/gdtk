@@ -76,7 +76,7 @@ struct Block {
         // And the vertices.
         vertices.resize((cfg.nic+1)*(cfg.njc+1)*(cfg.nkc+1));
         //
-        #ifdef CUDA
+#ifdef CUDA
         // We need to allocate corresponding memory space on the GPU.
         cudaMalloc(&cells_on_gpu, cells.size()*sizeof(FVCell));
         if (!cells_on_gpu) throw runtime_error("Could not allocate cells on gpu.");
@@ -84,8 +84,15 @@ struct Block {
         if (!Q_on_gpu) throw runtime_error("Could not allocate Q on gpu.");
         cudaMalloc(&dQdt_on_gpu, dQdt.size()*sizeof(ConservedQuantities));
         if (!dQdt_on_gpu) throw runtime_error("Could not allocate dQdt on gpu.");
-        // [TODO] others...
-        #endif
+        cudaMalloc(&iFaces_on_gpu, iFaces.size()*sizeof(FVFace));
+        if (!iFaces_on_gpu) throw runtime_error("Could not allocate iFaces on gpu.");
+        cudaMalloc(&jFaces_on_gpu, jFaces.size()*sizeof(FVFace));
+        if (!jFaces_on_gpu) throw runtime_error("Could not allocate jFaces on gpu.");
+        cudaMalloc(&kFaces_on_gpu, kFaces.size()*sizeof(FVFace));
+        if (!kFaces_on_gpu) throw runtime_error("Could not allocate kFaces on gpu.");
+        cudaMalloc(&vertices_on_gpu, vertices.size()*sizeof(Vector3));
+        if (!vertices_on_gpu) throw runtime_error("Could not allocate vertices on gpu.");
+#endif
         //
         // Make connections from cells to faces and vertices.
         for (int k=0; k < cfg.nkc; k++) {
@@ -243,12 +250,19 @@ struct Block {
         cells.resize(0);
         Q.resize(0);
         dQdt.resize(0);
-        // [TODO] others...
-        #ifdef CUDA
+        iFaces.resize(0);
+        jFaces.resize(0);
+        kFaces.resize(0);
+        vertices.resize(0);
+#ifdef CUDA
         if (cells_on_gpu) { cudaFree(&cells_on_gpu); cells_on_gpu = NULL; }
-        if (cells_on_gpu) { cudaFree(&Q_on_gpu); Q_on_gpu = NULL; }
-        if (cells_on_gpu) { cudaFree(&dQdt_on_gpu); dQdt_on_gpu = NULL; }
-        #endif
+        if (Q_on_gpu) { cudaFree(&Q_on_gpu); Q_on_gpu = NULL; }
+        if (dQdt_on_gpu) { cudaFree(&dQdt_on_gpu); dQdt_on_gpu = NULL; }
+        if (iFaces_on_gpu) { cudaFree(&iFaces_on_gpu); iFaces_on_gpu = NULL; }
+        if (jFaces_on_gpu) { cudaFree(&jFaces_on_gpu); jFaces_on_gpu = NULL; }
+        if (kFaces_on_gpu) { cudaFree(&kFaces_on_gpu); kFaces_on_gpu = NULL; }
+        if (vertices_on_gpu) { cudaFree(&vertices_on_gpu); vertices_on_gpu = NULL; }
+#endif
         return;
     }
 
@@ -581,7 +595,6 @@ struct Block {
             ConservedQuantities& U = Q[level*cfg.nActiveCells + i];
             fs.encode_conserved(U);
         }
-        return;
     }
 
     __host__
@@ -712,5 +725,22 @@ struct Block {
     } // end copy_conserved_data()
 
 }; // end Block
+
+
+
+// GPU global functions cannot be member functions of FluidBlock
+// so we need to pass the FluidBlock reference into them and that
+// Block struct also needs to be in the global memory of the GPU.
+
+__global__
+void encodeConserved_on_gpu(Block& blk, BConfig& cfg, int level)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FlowState& fs = blk.cells_on_gpu[i].fs;
+        ConservedQuantities& U = blk.Q_on_gpu[level*cfg.nActiveCells + i];
+        fs.encode_conserved(U);
+    }
+}
 
 #endif
