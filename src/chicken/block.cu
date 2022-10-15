@@ -733,6 +733,20 @@ struct Block {
 // Block struct also needs to be in the global memory of the GPU.
 
 __global__
+void estimate_allowed_dt_on_gpu(Block& blk, BConfig& cfg, number cfl, long long int* smallest_dt_picos)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FVCell& c = blk.cells_on_gpu[i];
+        Vector3 inorm = blk.iFaces_on_gpu[c.face[Face::iminus]].n;
+        Vector3 jnorm = blk.jFaces_on_gpu[c.face[Face::jminus]].n;
+        Vector3 knorm = blk.kFaces_on_gpu[c.face[Face::kminus]].n;
+        long long int dt_picos = trunc(c.estimate_local_dt(inorm, jnorm, knorm, cfl)*1.0e12);
+        atomicMin(smallest_dt_picos, dt_picos);
+    }
+}
+
+__global__
 void encodeConserved_on_gpu(Block& blk, BConfig& cfg, int level)
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;

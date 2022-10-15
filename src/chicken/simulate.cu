@@ -350,28 +350,48 @@ void march_in_time_using_gpu()
         if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
     }
     //
+    // A couple of global variables for keeping an eye on the simulation process.
+    int bad_cell_count = 0;
+    int* bad_cell_count_on_gpu;
+    auto status = cudaMalloc(&bad_cell_count_on_gpu, sizeof(int));
+    if (status) throw runtime_error("Could not allocate bad_cell_count_on_gpu.");
+    //
+    long long int* smallest_dt_picos_on_gpu;
+    status = cudaMalloc(&smallest_dt_picos_on_gpu, sizeof(long long int));
+    if (status) throw runtime_error("Could not allocate smallest_dt_picos_on_gpu.");
+    //
+    // Main stepping loop.
+    //
     while (SimState::step < Config::max_step && SimState::t < Config::max_time) {
         //
         // Occasionally determine allowable time step.
         if (SimState::step > 0 && (SimState::step % Config::cfl_count)==0) {
-            number smallest_dt = numeric_limits<number>::max();
+            long long int smallest_dt_picos = numeric_limits<long long int>::max();
+            status = cudaMemcpy(smallest_dt_picos_on_gpu, &smallest_dt_picos,
+                sizeof(long long int), cudaMemcpyHostToDevice);
+            if (status) throw runtime_error("Could not copy smallest_dt_picos to gpu.");
             number cfl = Config::cfl_schedule.get_value(SimState::t);
             for (int ib=0; ib < Config::nFluidBlocks; ib++) {
                 BConfig& cfg = blk_configs[ib];
+                if (!cfg.active) continue;
                 Block& blk = fluidBlocks[ib];
-                // [TODO] PJ 2022-10-15
-                // For the moment, just do this on the host CPU.
-                // Make a GPU variant of estimate_allowed()
-                if (cfg.active) smallest_dt = fmin(smallest_dt, blk.estimate_allowed_dt(cfg, cfl));
+                Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
+                BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
+                int nGPUblocks = cfg.nGPUblocks_for_cells;
+                int nGPUthreads = cfg.threads_per_GPUblock;
+                estimate_allowed_dt_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
+                                                                       cfl, smallest_dt_picos_on_gpu);
+                auto cudaError = cudaGetLastError();
+                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
             }
-            SimState::dt = smallest_dt;
+            status = cudaMemcpy(&smallest_dt_picos, smallest_dt_picos_on_gpu,
+                sizeof(long long int), cudaMemcpyDeviceToHost);
+            if (status) throw runtime_error("Could not copy smallest_dt_picos from gpu to host cpu.");
+            SimState::dt = smallest_dt_picos * 1.0e-12;
         }
         //
         // Gas-dynamic update over three stages with TVD-RK3 weights.
-        int bad_cell_count = 0;
-        int* bad_cell_count_on_gpu;
-        auto status = cudaMalloc(&bad_cell_count_on_gpu, sizeof(int));
-        if (status) throw runtime_error("Could not allocate bad_cell_count_on_gpu.");
+        bad_cell_count = 0;
         status = cudaMemcpy(bad_cell_count_on_gpu, &bad_cell_count, sizeof(int), cudaMemcpyHostToDevice);
         if (status) throw runtime_error("Could not copy bad_cell_count to gpu.");
         //
@@ -446,7 +466,7 @@ void march_in_time_using_gpu()
         // Stage 2
         // t = SimState::t + 0.5*SimState::dt;
         apply_boundary_conditions();
-        // [TODO] PJ 2022-10-15 Eventually, copy just the ghost cell data onto the GPU.
+        //
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
@@ -510,7 +530,7 @@ void march_in_time_using_gpu()
         // Stage 3
         // t = SimState::t + SimState::dt;
         apply_boundary_conditions();
-        // [TODO] PJ 2022-10-15 Eventually, copy just the ghost cell data onto the GPU.
+        //
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
