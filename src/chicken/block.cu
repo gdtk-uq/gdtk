@@ -78,20 +78,20 @@ struct Block {
         //
 #ifdef CUDA
         // We need to allocate corresponding memory space on the GPU.
-        cudaMalloc(&cells_on_gpu, cells.size()*sizeof(FVCell));
-        if (!cells_on_gpu) throw runtime_error("Could not allocate cells on gpu.");
-        cudaMalloc(&Q_on_gpu, Q.size()*sizeof(ConservedQuantities));
-        if (!Q_on_gpu) throw runtime_error("Could not allocate Q on gpu.");
-        cudaMalloc(&dQdt_on_gpu, dQdt.size()*sizeof(ConservedQuantities));
-        if (!dQdt_on_gpu) throw runtime_error("Could not allocate dQdt on gpu.");
-        cudaMalloc(&iFaces_on_gpu, iFaces.size()*sizeof(FVFace));
-        if (!iFaces_on_gpu) throw runtime_error("Could not allocate iFaces on gpu.");
-        cudaMalloc(&jFaces_on_gpu, jFaces.size()*sizeof(FVFace));
-        if (!jFaces_on_gpu) throw runtime_error("Could not allocate jFaces on gpu.");
-        cudaMalloc(&kFaces_on_gpu, kFaces.size()*sizeof(FVFace));
-        if (!kFaces_on_gpu) throw runtime_error("Could not allocate kFaces on gpu.");
-        cudaMalloc(&vertices_on_gpu, vertices.size()*sizeof(Vector3));
-        if (!vertices_on_gpu) throw runtime_error("Could not allocate vertices on gpu.");
+        auto status = cudaMalloc(&cells_on_gpu, cells.size()*sizeof(FVCell));
+        if (status) throw runtime_error("Could not allocate cells on gpu.");
+        status = cudaMalloc(&Q_on_gpu, Q.size()*sizeof(ConservedQuantities));
+        if (status) throw runtime_error("Could not allocate Q on gpu.");
+        status = cudaMalloc(&dQdt_on_gpu, dQdt.size()*sizeof(ConservedQuantities));
+        if (status) throw runtime_error("Could not allocate dQdt on gpu.");
+        status = cudaMalloc(&iFaces_on_gpu, iFaces.size()*sizeof(FVFace));
+        if (status) throw runtime_error("Could not allocate iFaces on gpu.");
+        status = cudaMalloc(&jFaces_on_gpu, jFaces.size()*sizeof(FVFace));
+        if (status) throw runtime_error("Could not allocate jFaces on gpu.");
+        status = cudaMalloc(&kFaces_on_gpu, kFaces.size()*sizeof(FVFace));
+        if (status) throw runtime_error("Could not allocate kFaces on gpu.");
+        status = cudaMalloc(&vertices_on_gpu, vertices.size()*sizeof(Vector3));
+        if (status) throw runtime_error("Could not allocate vertices on gpu.");
 #endif
         //
         // Make connections from cells to faces and vertices.
@@ -740,6 +740,127 @@ void encodeConserved_on_gpu(Block& blk, BConfig& cfg, int level)
         FlowState& fs = blk.cells_on_gpu[i].fs;
         ConservedQuantities& U = blk.Q_on_gpu[level*cfg.nActiveCells + i];
         fs.encode_conserved(U);
+    }
+}
+
+__global__
+void copy_conserved_data_on_gpu(Block& blk, BConfig& cfg, int from_level, int to_level)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        ConservedQuantities& U_from = blk.Q_on_gpu[from_level*cfg.nActiveCells + i];
+        ConservedQuantities& U_to = blk.Q_on_gpu[to_level*cfg.nActiveCells + i];
+        for (int j=0; j < CQI::n; j++) {
+            U_to[j] = U_from[j];
+        }
+    }
+}
+
+__global__
+void calculate_iFace_fluxes_on_gpu(Block& blk, BConfig& cfg, int x_order)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.n_iFaces) {
+        FVFace& face = blk.iFaces_on_gpu[i];
+        FlowState& fsL1 = blk.cells_on_gpu[face.left_cells[1]].fs;
+        FlowState& fsL0 = blk.cells_on_gpu[face.left_cells[0]].fs;
+        FlowState& fsR0 = blk.cells_on_gpu[face.right_cells[0]].fs;
+        FlowState& fsR1 = blk.cells_on_gpu[face.right_cells[1]].fs;
+        face.calculate_flux(fsL1, fsL0, fsR0, fsR1, x_order);
+    }
+}
+
+__global__
+void calculate_jFace_fluxes_on_gpu(Block& blk, BConfig& cfg, int x_order)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.n_jFaces) {
+        FVFace& face = blk.jFaces_on_gpu[i];
+        FlowState& fsL1 = blk.cells_on_gpu[face.left_cells[1]].fs;
+        FlowState& fsL0 = blk.cells_on_gpu[face.left_cells[0]].fs;
+        FlowState& fsR0 = blk.cells_on_gpu[face.right_cells[0]].fs;
+        FlowState& fsR1 = blk.cells_on_gpu[face.right_cells[1]].fs;
+        face.calculate_flux(fsL1, fsL0, fsR0, fsR1, x_order);
+    }
+}
+
+__global__
+void calculate_kFace_fluxes_on_gpu(Block& blk, BConfig& cfg, int x_order)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.n_kFaces) {
+        FVFace& face = blk.kFaces_on_gpu[i];
+        FlowState& fsL1 = blk.cells_on_gpu[face.left_cells[1]].fs;
+        FlowState& fsL0 = blk.cells_on_gpu[face.left_cells[0]].fs;
+        FlowState& fsR0 = blk.cells_on_gpu[face.right_cells[0]].fs;
+        FlowState& fsR1 = blk.cells_on_gpu[face.right_cells[1]].fs;
+        face.calculate_flux(fsL1, fsL0, fsR0, fsR1, x_order);
+    }
+}
+
+__global__
+void update_stage_1_on_gpu(Block& blk, BConfig& cfg, number dt, int* bad_cell_count)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FVCell& c = blk.cells_on_gpu[i];
+        ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
+        c.eval_dUdt(dUdt0, blk.iFaces_on_gpu, blk.jFaces_on_gpu, blk.kFaces_on_gpu);
+        ConservedQuantities& U0 = blk.Q_on_gpu[i];
+        ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
+        for (int j=0; j < CQI::n; j++) {
+            U1[j] = U0[j] + dt*dUdt0[j];
+        }
+        int bad_cell_flag = c.fs.decode_conserved(U1);
+        atomicAdd(bad_cell_count, bad_cell_flag);
+        if (bad_cell_flag) {
+            printf("Stage 1 update, Bad cell at pos x=%g y=%g z=%g\n", c.pos.x, c.pos.y, c.pos.z);
+        }
+    }
+}
+
+__global__
+void update_stage_2_on_gpu(Block& blk, BConfig& cfg, number dt, int* bad_cell_count)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FVCell& c = blk.cells_on_gpu[i];
+        ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
+        ConservedQuantities& dUdt1 = blk.dQdt_on_gpu[cfg.nActiveCells + i];
+        c.eval_dUdt(dUdt1, blk.iFaces_on_gpu, blk.jFaces_on_gpu, blk.kFaces_on_gpu);
+        ConservedQuantities& U0 = blk.Q_on_gpu[i];
+        ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
+        for (int j=0; j < CQI::n; j++) {
+            U1[j] = U0[j] + 0.25*dt*(dUdt0[j] + dUdt1[j]);
+        }
+        int bad_cell_flag = c.fs.decode_conserved(U1);
+        atomicAdd(bad_cell_count, bad_cell_flag);
+        if (bad_cell_flag) {
+            printf("Stage 2 update, Bad cell at pos x=%g y=%g z=%g\n", c.pos.x, c.pos.y, c.pos.z);
+        }
+    }
+}
+
+__global__
+void update_stage_3_on_gpu(Block& blk, BConfig& cfg, number dt, int* bad_cell_count)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FVCell& c = blk.cells_on_gpu[i];
+        ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
+        ConservedQuantities& dUdt1 = blk.dQdt_on_gpu[cfg.nActiveCells + i];
+        ConservedQuantities& dUdt2 = blk.dQdt_on_gpu[2*cfg.nActiveCells + i];
+        c.eval_dUdt(dUdt2, blk.iFaces_on_gpu, blk.jFaces_on_gpu, blk.kFaces_on_gpu);
+        ConservedQuantities& U0 = blk.Q_on_gpu[i];
+        ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
+        for (int j=0; j < CQI::n; j++) {
+            U1[j] = U0[j] + dt*(1.0/6.0*dUdt0[j] + 1.0/6.0*dUdt1[j] + 4.0/6.0*dUdt2[j]);
+        }
+        int bad_cell_flag = c.fs.decode_conserved(U1);
+        atomicAdd(bad_cell_count, bad_cell_flag);
+        if (bad_cell_flag) {
+            printf("Stage 3 update, Bad cell at pos x=%g y=%g z=%g\n", c.pos.x, c.pos.y, c.pos.z);
+        }
     }
 }
 

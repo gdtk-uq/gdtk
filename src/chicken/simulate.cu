@@ -76,14 +76,28 @@ void initialize_simulation(int tindx_start)
 #ifdef CUDA
     // We need to put a copy of the block and config data onto the GPU.
     int nbytes = blk_configs.size()*sizeof(BConfig);
-    cudaMalloc(&blk_configs_on_gpu, nbytes);
-    if (!blk_configs_on_gpu) throw runtime_error("Could not allocate blk_configs on gpu.");
-    cudaMemcpy(blk_configs_on_gpu, blk_configs.data(), nbytes, cudaMemcpyHostToDevice);
+    auto status = cudaMalloc(&blk_configs_on_gpu, nbytes);
+    if (status) {
+        cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+        throw runtime_error("Could not allocate blk_configs on gpu.");
+    }
+    status = cudaMemcpy(blk_configs_on_gpu, blk_configs.data(), nbytes, cudaMemcpyHostToDevice);
+    if (status) {
+        cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+        throw runtime_error("Could not copy blk_configs to gpu.");
+    }
     //
     nbytes = fluidBlocks.size()*sizeof(Block);
-    cudaMalloc(&fluidBlocks_on_gpu, nbytes);
-    if (!fluidBlocks_on_gpu) throw runtime_error("Could not allocate fluidBlocks on gpu.");
-    cudaMemcpy(fluidBlocks_on_gpu, fluidBlocks.data(), nbytes, cudaMemcpyHostToDevice);
+    status = cudaMalloc(&fluidBlocks_on_gpu, nbytes);
+    if (status) {
+        cerr << cudaGetErrorString(cudaGetLastError()) << endl;;
+        throw runtime_error("Could not allocate fluidBlocks on gpu.");
+    }
+    status = cudaMemcpy(fluidBlocks_on_gpu, fluidBlocks.data(), nbytes, cudaMemcpyHostToDevice);
+    if (status) {
+        cerr << cudaGetErrorString(cudaGetLastError()) << endl;;
+        throw runtime_error("Could not copy fluidBlocks to gpu.");
+    }
 #endif
     //
     // Set up the simulation control parameters.
@@ -295,29 +309,45 @@ void march_in_time_using_gpu()
         auto& blk = fluidBlocks[ib];
         // Transfer block data, including the initial flow states, to the GPU and encode.
         int nbytes = blk.cells.size()*sizeof(FVCell);
-        cudaMemcpy(blk.cells_on_gpu, blk.cells.data(), nbytes, cudaMemcpyHostToDevice);
+        auto status = cudaMemcpy(blk.cells_on_gpu, blk.cells.data(), nbytes, cudaMemcpyHostToDevice);
+        if (status) {
+            cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+            throw runtime_error("Could not copy blk.cells to gpu.");
+        }
         // No need to send conserved quantities and their time-derivatives
         // but we do want to send faces and vertices.
         nbytes = blk.iFaces.size()*sizeof(FVFace);
-        cudaMemcpy(blk.iFaces_on_gpu, blk.iFaces.data(), nbytes, cudaMemcpyHostToDevice);
+        status = cudaMemcpy(blk.iFaces_on_gpu, blk.iFaces.data(), nbytes, cudaMemcpyHostToDevice);
+        if (status) {
+            cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+            throw runtime_error("Could not copy blk.iFaces to gpu.");
+        }
         nbytes = blk.jFaces.size()*sizeof(FVFace);
-        cudaMemcpy(blk.jFaces_on_gpu, blk.jFaces.data(), nbytes, cudaMemcpyHostToDevice);
+        status = cudaMemcpy(blk.jFaces_on_gpu, blk.jFaces.data(), nbytes, cudaMemcpyHostToDevice);
+        if (status) {
+            cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+            throw runtime_error("Could not copy blk.jFaces to gpu.");
+        }
         nbytes = blk.kFaces.size()*sizeof(FVFace);
-        cudaMemcpy(blk.kFaces_on_gpu, blk.kFaces.data(), nbytes, cudaMemcpyHostToDevice);
+        status = cudaMemcpy(blk.kFaces_on_gpu, blk.kFaces.data(), nbytes, cudaMemcpyHostToDevice);
+        if (status) {
+            cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+            throw runtime_error("Could not copy blk.kFaces to gpu.");
+        }
         nbytes = blk.vertices.size()*sizeof(Vector3);
-        cudaMemcpy(blk.vertices_on_gpu, blk.vertices.data(), nbytes, cudaMemcpyHostToDevice);
+        status = cudaMemcpy(blk.vertices_on_gpu, blk.vertices.data(), nbytes, cudaMemcpyHostToDevice);
+        if (status) {
+            cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+            throw runtime_error("Could not copy blk.vertices to gpu.");
+        }
         // Now, do the encode of flow states to conserved quantities.
         Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
         BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
         int nGPUblocks = cfg.nGPUblocks_for_cells;
         int nGPUthreads = cfg.threads_per_GPUblock;
         encodeConserved_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, 0);
-        cout << cudaGetErrorString(cudaGetLastError()) << endl;
-        // [TODO] PJ 2022-10-15
-        // For the moment, bring the encoded data back to the host for further work.
-        // We will leave it on the GPU once we get the other GPU processing functions in place.
-        nbytes = blk.Q.size()*sizeof(ConservedQuantities);
-        cudaMemcpy(blk.Q.data(), blk.Q_on_gpu, nbytes, cudaMemcpyDeviceToHost);
+        auto cudaError = cudaGetLastError();
+        if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
     }
     //
     while (SimState::step < Config::max_step && SimState::t < Config::max_time) {
@@ -329,6 +359,9 @@ void march_in_time_using_gpu()
             for (int ib=0; ib < Config::nFluidBlocks; ib++) {
                 BConfig& cfg = blk_configs[ib];
                 Block& blk = fluidBlocks[ib];
+                // [TODO] PJ 2022-10-15
+                // For the moment, just do this on the host CPU.
+                // Make a GPU variant of estimate_allowed()
                 if (cfg.active) smallest_dt = fmin(smallest_dt, blk.estimate_allowed_dt(cfg, cfl));
             }
             SimState::dt = smallest_dt;
@@ -336,53 +369,219 @@ void march_in_time_using_gpu()
         //
         // Gas-dynamic update over three stages with TVD-RK3 weights.
         int bad_cell_count = 0;
+        int* bad_cell_count_on_gpu;
+        auto status = cudaMalloc(&bad_cell_count_on_gpu, sizeof(int));
+        if (status) throw runtime_error("Could not allocate bad_cell_count_on_gpu.");
+        status = cudaMemcpy(bad_cell_count_on_gpu, &bad_cell_count, sizeof(int), cudaMemcpyHostToDevice);
+        if (status) throw runtime_error("Could not copy bad_cell_count to gpu.");
+        //
         // Stage 1.
         // number t = SimState::t; // Only needed if we have time-dependent source terms or BCs.
         apply_boundary_conditions();
+        // [TODO] PJ 2022-10-15
+        // Boundary-conditions are done on the host CPU, affecting only the ghost-cell data.
+        // If we continue to do this, we should copy just the ghost cell data onto the GPU,
+        // however, we could do the boundary conditions on the GPU is all of the blocks fit.
+        // That would eliminate lots of copying back and forth.
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
-            if (cfg.active) {
-                blk.calculate_fluxes(Config::x_order);
-                bad_cell_count += blk.update_stage_1(cfg, SimState::dt);
+            if (!cfg.active) continue;
+            int nbytes = blk.cells.size()*sizeof(FVCell);
+            auto status = cudaMemcpy(blk.cells_on_gpu, blk.cells.data(), nbytes, cudaMemcpyHostToDevice);
+            if (status) {
+                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+                throw runtime_error("Could not copy blk.cells to gpu.");
             }
         }
+        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
+            BConfig& cfg = blk_configs[ib];
+            Block& blk = fluidBlocks[ib];
+            if (!cfg.active) continue;
+            // Do the stage-1 update on the GPU.
+            Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
+            BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
+            int nGPUblocks = cfg.nGPUblocks_for_iFaces;
+            int nGPUthreads = cfg.threads_per_GPUblock;
+            calculate_iFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
+            auto cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            //
+            nGPUblocks = cfg.nGPUblocks_for_jFaces;
+            nGPUthreads = cfg.threads_per_GPUblock;
+            calculate_jFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
+            cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            //
+            nGPUblocks = cfg.nGPUblocks_for_kFaces;
+            nGPUthreads = cfg.threads_per_GPUblock;
+            calculate_kFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
+            cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            //
+            nGPUblocks = cfg.nGPUblocks_for_cells;
+            nGPUthreads = cfg.threads_per_GPUblock;
+            update_stage_1_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
+                                                              SimState::dt, bad_cell_count_on_gpu);
+            cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+        }
+        status = cudaMemcpy(&bad_cell_count, bad_cell_count_on_gpu, sizeof(int), cudaMemcpyDeviceToHost);
+        if (status) throw runtime_error("Could not copy bad_cell_count from gpu to host cpu.");
         if (bad_cell_count > 0) {
             throw runtime_error("Stage 1 bad cell count: "+to_string(bad_cell_count));
         }
+        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
+            BConfig& cfg = blk_configs[ib];
+            Block& blk = fluidBlocks[ib];
+            if (!cfg.active) continue;
+            int nbytes = blk.cells.size()*sizeof(FVCell);
+            auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
+            if (status) {
+                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+                throw runtime_error("Could not copy blk.cells from gpu to cpu.");
+            }
+        }
+        //
         // Stage 2
         // t = SimState::t + 0.5*SimState::dt;
         apply_boundary_conditions();
+        // [TODO] PJ 2022-10-15 Eventually, copy just the ghost cell data onto the GPU.
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
-            if (cfg.active) {
-                blk.calculate_fluxes(Config::x_order);
-                bad_cell_count += blk.update_stage_2(cfg, SimState::dt);
+            if (!cfg.active) continue;
+            int nbytes = blk.cells.size()*sizeof(FVCell);
+            auto status = cudaMemcpy(blk.cells_on_gpu, blk.cells.data(), nbytes, cudaMemcpyHostToDevice);
+            if (status) {
+                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+                throw runtime_error("Could not copy blk.cells to gpu.");
             }
         }
+        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
+            BConfig& cfg = blk_configs[ib];
+            Block& blk = fluidBlocks[ib];
+            if (!cfg.active) continue;
+            // Do the stage-1 update on the GPU.
+            Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
+            BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
+            int nGPUblocks = cfg.nGPUblocks_for_iFaces;
+            int nGPUthreads = cfg.threads_per_GPUblock;
+            calculate_iFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
+            auto cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            //
+            nGPUblocks = cfg.nGPUblocks_for_jFaces;
+            nGPUthreads = cfg.threads_per_GPUblock;
+            calculate_jFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
+            cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            //
+            nGPUblocks = cfg.nGPUblocks_for_kFaces;
+            nGPUthreads = cfg.threads_per_GPUblock;
+            calculate_kFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
+            cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            //
+            nGPUblocks = cfg.nGPUblocks_for_cells;
+            nGPUthreads = cfg.threads_per_GPUblock;
+            update_stage_2_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
+                                                              SimState::dt, bad_cell_count_on_gpu);
+            cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+        }
+        status = cudaMemcpy(&bad_cell_count, bad_cell_count_on_gpu, sizeof(int), cudaMemcpyDeviceToHost);
+        if (status) throw runtime_error("Could not copy bad_cell_count from gpu to host cpu.");
         if (bad_cell_count > 0) {
             throw runtime_error("Stage 2 bad cell count: "+to_string(bad_cell_count));
         }
-        // Stage 3
-        // t = SimState::t + SimState::dt;
-        apply_boundary_conditions();
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
-            if (cfg.active) {
-                blk.calculate_fluxes(Config::x_order);
-                bad_cell_count += blk.update_stage_3(cfg, SimState::dt);
+            if (!cfg.active) continue;
+            int nbytes = blk.cells.size()*sizeof(FVCell);
+            auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
+            if (status) {
+                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+                throw runtime_error("Could not copy blk.cells from gpu to cpu.");
             }
         }
+        //
+        // Stage 3
+        // t = SimState::t + SimState::dt;
+        apply_boundary_conditions();
+        // [TODO] PJ 2022-10-15 Eventually, copy just the ghost cell data onto the GPU.
+        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
+            BConfig& cfg = blk_configs[ib];
+            Block& blk = fluidBlocks[ib];
+            if (!cfg.active) continue;
+            int nbytes = blk.cells.size()*sizeof(FVCell);
+            auto status = cudaMemcpy(blk.cells_on_gpu, blk.cells.data(), nbytes, cudaMemcpyHostToDevice);
+            if (status) {
+                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+                throw runtime_error("Could not copy blk.cells to gpu.");
+            }
+        }
+        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
+            BConfig& cfg = blk_configs[ib];
+            Block& blk = fluidBlocks[ib];
+            if (!cfg.active) continue;
+            // Do the stage-1 update on the GPU.
+            Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
+            BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
+            int nGPUblocks = cfg.nGPUblocks_for_iFaces;
+            int nGPUthreads = cfg.threads_per_GPUblock;
+            calculate_iFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
+            auto cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            //
+            nGPUblocks = cfg.nGPUblocks_for_jFaces;
+            nGPUthreads = cfg.threads_per_GPUblock;
+            calculate_jFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
+            cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            //
+            nGPUblocks = cfg.nGPUblocks_for_kFaces;
+            nGPUthreads = cfg.threads_per_GPUblock;
+            calculate_kFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
+            cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            //
+            nGPUblocks = cfg.nGPUblocks_for_cells;
+            nGPUthreads = cfg.threads_per_GPUblock;
+            update_stage_3_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
+                                                              SimState::dt, bad_cell_count_on_gpu);
+            cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+        }
+        status = cudaMemcpy(&bad_cell_count, bad_cell_count_on_gpu, sizeof(int), cudaMemcpyDeviceToHost);
+        if (status) throw runtime_error("Could not copy bad_cell_count from gpu to host cpu.");
         if (bad_cell_count > 0) {
             throw runtime_error("Stage 3 bad cell count: "+to_string(bad_cell_count));
+        }
+        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
+            BConfig& cfg = blk_configs[ib];
+            Block& blk = fluidBlocks[ib];
+            if (!cfg.active) continue;
+            int nbytes = blk.cells.size()*sizeof(FVCell);
+            auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
+            if (status) {
+                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+                throw runtime_error("Could not copy blk.cells from gpu to cpu.");
+            }
         }
         // After a successful gasdynamic update, copy the conserved data back to level 0.
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
-            if (cfg.active) blk.copy_conserved_data(cfg, 1, 0);
+            if (!cfg.active) continue;
+            Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
+            BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
+            int nGPUblocks = cfg.nGPUblocks_for_cells;
+            int nGPUthreads = cfg.threads_per_GPUblock;
+            copy_conserved_data_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, 1, 0);
+            auto cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
         //
         SimState::t += SimState::dt;
