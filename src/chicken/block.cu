@@ -57,24 +57,29 @@ struct Block {
     }
 
     __host__
-    void configure(BConfig& cfg)
+    size_t configure(BConfig& cfg)
     // Set up the block to hold the grid and flow data.
     // Do this before reading a grid or flow file.
     {
+        size_t bytes_allocated = 0;
         // Now that we know the numbers of cells, resize the data store to fit them all.
         cells.resize(cfg.nActiveCells + cfg.nTotalGhostCells);
+        bytes_allocated += cells.size()*sizeof(FVCell);
         if (cfg.active) {
             Q.resize(cfg.nActiveCells*2);
             dQdt.resize(cfg.nActiveCells*3);
         }
+        bytes_allocated += (Q.size()+dQdt.size())*sizeof(ConservedQuantities);
         //
         // Each set of finite-volume faces is in the index-plane of the corresponding vertices.
         iFaces.resize(cfg.n_iFaces);
         jFaces.resize(cfg.n_jFaces);
         kFaces.resize(cfg.n_kFaces);
+        bytes_allocated += (iFaces.size()+jFaces.size()+kFaces.size())*sizeof(FVFace);
         //
         // And the vertices.
         vertices.resize((cfg.nic+1)*(cfg.njc+1)*(cfg.nkc+1));
+        bytes_allocated += vertices.size()*sizeof(Vector3);
         //
 #ifdef CUDA
         // We need to allocate corresponding memory space on the GPU.
@@ -241,7 +246,7 @@ struct Block {
                 }
             }
         }
-        return;
+        return bytes_allocated;
     } // end configure()
 
     __host__

@@ -55,15 +55,18 @@ void initialize_simulation(int tindx_start)
     auto clock_start = chrono::system_clock::now();
     blk_configs = read_config_file(Config::job + "/config.json");
     // Read initial grids and flow data
+    size_t bytes_allocated = 0;
     for (int blk_id=0; blk_id < Config::nFluidBlocks; ++blk_id) {
         BConfig& cfg = blk_configs[blk_id];
+        bytes_allocated += sizeof(BConfig);
         int i = cfg.i; int j = cfg.j; int k = cfg.k;
         if (blk_id != Config::blk_ids[i][j][k]) {
             throw runtime_error("blk_id=" + to_string(blk_id) + " is inconsistent: i=" +
                                 to_string(i) + " j=" + to_string(j) + " k=" + to_string(k));
         }
         cfg.fill_in_dimensions(Config::nics[i], Config::njcs[j], Config::nkcs[k]);
-        Block blk; blk.configure(cfg);
+        Block blk;
+        bytes_allocated += sizeof(Block) + blk.configure(cfg);
         sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
         string fileName = Config::job + string(nameBuf);
         blk.readGrid(cfg, fileName);
@@ -73,6 +76,7 @@ void initialize_simulation(int tindx_start)
         blk.computeGeometry(cfg);
         fluidBlocks.push_back(blk);
     }
+    cout << "Bytes allocated on CPU: " << fixed << setprecision(3) << bytes_allocated/1.0e6 << "MB" << endl;
 #ifdef CUDA
     // We need to put a copy of the block and config data onto the GPU.
     int nbytes = blk_configs.size()*sizeof(BConfig);
