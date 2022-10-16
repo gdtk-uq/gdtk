@@ -40,28 +40,28 @@ CUDA_SOURCE_FILES := main.cu config.cu simulate.cu bcs.cu block.cu cell.cu face.
 chicken_for_cuda : $(CUDA_SOURCE_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		main.cu > main_with_rev_string.cu
-	nvcc -DCUDA -std c++17 --expt-relaxed-constexpr -lineinfo -o chkn-run \
-		main_with_rev_string.cu -lz -lzip
+	nvcc -DCUDA -std c++17 -O2 --expt-relaxed-constexpr -lineinfo -o chkn-run \
+		main_with_rev_string.cu -lz -lzip -Xcompiler -fopenmp
 
 # Target for FP32 (float) numbers.
 chicken_for_cuda_f : $(CUDA_SOURCE_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		main.cu > main_with_rev_string.cu
-	nvcc -DCUDA -DFLOAT_NUMBERS -std c++17 --expt-relaxed-constexpr -lineinfo -o chkn-run \
-		main_main_with_rev_string.cu -lz -lzip
+	nvcc -DCUDA -DFLOAT_NUMBERS -std c++17 -O2 --expt-relaxed-constexpr -lineinfo -o chkn-run \
+		main_main_with_rev_string.cu -lz -lzip -Xcompiler -fopenmp
 
 # Target for CPU-only flavour of the code with FP64 (double) numbers.
 chicken_for_cpu : $(CUDA_SOURCE_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		main.cu > main_with_rev_string.cu
-	nvcc -lineinfo -std c++17 --expt-relaxed-constexpr -o chkn-run \
-		main_with_rev_string.cu -lz -lzip
+	nvcc -lineinfo -std c++17 -O2 --expt-relaxed-constexpr -o chkn-run \
+		main_with_rev_string.cu -lz -lzip -Xcompiler -fopenmp
 
 # Note that profiling needs to be done via sudo
 # because we need access to the hardware counters.
 cuda_profile : chicken_for_cuda
 	/usr/local/cuda-11.7/bin/ncu --set full --clock-control none --target-processes all \
-		-o chicken -f ./chkn-run -lz -lzip
+		-o chicken -f ./chkn-run
 
 # The program for preparing the config, grid and flow files
 # for the start of a simulation.

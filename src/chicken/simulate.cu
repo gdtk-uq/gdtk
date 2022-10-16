@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <limits>
 #include <chrono>
+#include <omp.h>
 
 #include "number.cu"
 #include "vector3.cu"
@@ -166,6 +167,7 @@ void apply_boundary_conditions()
 // we expect the CPU to apply the boundary conditions more effectively than the GPU.
 // Measurements might tell us otherwise.
 {
+    #pragma omp parallel for
     for (int iblk=0; iblk < Config::nFluidBlocks; iblk++) {
         BConfig& blk_config = blk_configs[iblk];
         if (!blk_config.active) continue;
