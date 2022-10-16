@@ -57,6 +57,7 @@ void initialize_simulation(int tindx_start)
     blk_configs = read_config_file(Config::job + "/config.json");
     // Read initial grids and flow data
     size_t bytes_allocated = 0;
+    size_t cells_in_simulation = 0;
     for (int blk_id=0; blk_id < Config::nFluidBlocks; ++blk_id) {
         BConfig& cfg = blk_configs[blk_id];
         bytes_allocated += sizeof(BConfig);
@@ -76,7 +77,9 @@ void initialize_simulation(int tindx_start)
         blk.readFlow(cfg, fileName);
         blk.computeGeometry(cfg);
         fluidBlocks.push_back(blk);
+        if (cfg.active) cells_in_simulation += cfg.nic*cfg.njc*cfg.nkc;
     }
+    cout << "Cells in simulation: " << cells_in_simulation << endl;
     cout << "Bytes allocated on CPU: " << fixed << setprecision(3) << bytes_allocated/1.0e6 << "MB" << endl;
 #ifdef CUDA
     // We need to put a copy of the block and config data onto the GPU.
@@ -196,6 +199,11 @@ void march_in_time_using_cpu_only()
     auto clock_start = chrono::system_clock::now();
     SimState::dt = Config::dt_init;
     SimState::step = 0;
+    // A couple of global arrays to regulate the simulation.
+    vector<number> allowed_dts; allowed_dts.resize(Config::nFluidBlocks);
+    vector<int> bad_cell_counts; bad_cell_counts.resize(Config::nFluidBlocks);
+    //
+    #pragma omp parallel for
     for (int ib=0; ib < Config::nFluidBlocks; ib++) {
         BConfig& cfg = blk_configs[ib];
         if (cfg.active) fluidBlocks[ib].encodeConserved(cfg, 0);
@@ -206,12 +214,15 @@ void march_in_time_using_cpu_only()
         // Occasionally determine allowable time step.
         if (SimState::step > 0 && (SimState::step % Config::cfl_count)==0) {
             number smallest_dt = numeric_limits<number>::max();
+            for (auto& adt : allowed_dts) adt = smallest_dt;
             number cfl = Config::cfl_schedule.get_value(SimState::t);
+            #pragma omp parallel for
             for (int ib=0; ib < Config::nFluidBlocks; ib++) {
                 BConfig& cfg = blk_configs[ib];
                 Block& blk = fluidBlocks[ib];
-                if (cfg.active) smallest_dt = fmin(smallest_dt, blk.estimate_allowed_dt(cfg, cfl));
+                if (cfg.active) allowed_dts[ib] = blk.estimate_allowed_dt(cfg, cfl);
             }
+            for (auto adt : allowed_dts) smallest_dt = fmin(smallest_dt, adt);
             SimState::dt = smallest_dt;
         }
         //
@@ -220,46 +231,56 @@ void march_in_time_using_cpu_only()
         // Stage 1.
         // number t = SimState::t; // Only needed if we have time-dependent source terms or BCs.
         apply_boundary_conditions();
+        for (auto& bcc : bad_cell_counts) bcc = 0;
+        #pragma omp parallel for
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (cfg.active) {
                 blk.calculate_fluxes(Config::x_order);
-                bad_cell_count += blk.update_stage_1(cfg, SimState::dt);
+                bad_cell_counts[ib] = blk.update_stage_1(cfg, SimState::dt);
             }
         }
+        for (auto bcc : bad_cell_counts) bad_cell_count += bcc;
         if (bad_cell_count > 0) {
             throw runtime_error("Stage 1 bad cell count: "+to_string(bad_cell_count));
         }
         // Stage 2
         // t = SimState::t + 0.5*SimState::dt;
         apply_boundary_conditions();
+        for (auto& bcc : bad_cell_counts) bcc = 0;
+        #pragma omp parallel for
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (cfg.active) {
                 blk.calculate_fluxes(Config::x_order);
-                bad_cell_count += blk.update_stage_2(cfg, SimState::dt);
+                bad_cell_counts[ib] = blk.update_stage_2(cfg, SimState::dt);
             }
         }
+        for (auto bcc : bad_cell_counts) bad_cell_count += bcc;
         if (bad_cell_count > 0) {
             throw runtime_error("Stage 2 bad cell count: "+to_string(bad_cell_count));
         }
         // Stage 3
         // t = SimState::t + SimState::dt;
         apply_boundary_conditions();
+        for (auto& bcc : bad_cell_counts) bcc = 0;
+        #pragma omp parallel for
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (cfg.active) {
                 blk.calculate_fluxes(Config::x_order);
-                bad_cell_count += blk.update_stage_3(cfg, SimState::dt);
+                bad_cell_counts[ib] = blk.update_stage_3(cfg, SimState::dt);
             }
         }
+        for (auto bcc : bad_cell_counts) bad_cell_count += bcc;
         if (bad_cell_count > 0) {
             throw runtime_error("Stage 3 bad cell count: "+to_string(bad_cell_count));
         }
         // After a successful gasdynamic update, copy the conserved data back to level 0.
+        #pragma omp parallel for
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
