@@ -396,7 +396,7 @@ void march_in_time_using_gpu()
             long long int smallest_dt_picos = numeric_limits<long long int>::max();
             status = cudaMemcpy(smallest_dt_picos_on_gpu, &smallest_dt_picos,
                 sizeof(long long int), cudaMemcpyHostToDevice);
-            if (status) throw runtime_error("Could not copy smallest_dt_picos to gpu.");
+            if (status) throw runtime_error("Stage 0, could not copy smallest_dt_picos to gpu.");
             number cfl = Config::cfl_schedule.get_value(SimState::t);
             for (int ib=0; ib < Config::nFluidBlocks; ib++) {
                 BConfig& cfg = blk_configs[ib];
@@ -413,32 +413,31 @@ void march_in_time_using_gpu()
             }
             status = cudaMemcpy(&smallest_dt_picos, smallest_dt_picos_on_gpu,
                 sizeof(long long int), cudaMemcpyDeviceToHost);
-            if (status) throw runtime_error("Could not copy smallest_dt_picos from gpu to host cpu.");
+            if (status) throw runtime_error("Stage 0, could not copy smallest_dt_picos from gpu to host cpu.");
             SimState::dt = smallest_dt_picos * 1.0e-12;
         }
         //
         // Gas-dynamic update over three stages with TVD-RK3 weights.
         bad_cell_count = 0;
         status = cudaMemcpy(bad_cell_count_on_gpu, &bad_cell_count, sizeof(int), cudaMemcpyHostToDevice);
-        if (status) throw runtime_error("Could not copy bad_cell_count to gpu.");
+        if (status) throw runtime_error("Stage 0, could not copy bad_cell_count to gpu.");
         //
         // Stage 1.
         // number t = SimState::t; // Only needed if we have time-dependent source terms or BCs.
         apply_boundary_conditions();
-        // [TODO] PJ 2022-10-15
-        // Boundary-conditions are done on the host CPU, affecting only the ghost-cell data.
-        // If we continue to do this, we should copy just the ghost cell data onto the GPU,
-        // however, we could do the boundary conditions on the GPU is all of the blocks fit.
-        // That would eliminate lots of copying back and forth.
+        // Boundary-conditions are done on the host CPU, affecting only the ghost-cell data,
+        // so we copy just the ghost cell data onto the GPU,
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (!cfg.active) continue;
-            int nbytes = blk.cells.size()*sizeof(FVCell);
-            auto status = cudaMemcpy(blk.cells_on_gpu, blk.cells.data(), nbytes, cudaMemcpyHostToDevice);
+            FVCell* addr_on_cpu = blk.cells.data() + cfg.nActiveCells;
+            FVCell* addr_on_gpu = blk.cells_on_gpu + cfg.nActiveCells;
+            int nbytes = cfg.nTotalGhostCells*sizeof(FVCell);
+            auto status = cudaMemcpy(addr_on_gpu, addr_on_cpu, nbytes, cudaMemcpyHostToDevice);
             if (status) {
                 cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Could not copy blk.cells to gpu.");
+                throw runtime_error("Stage 1, could not copy ghost cells to gpu.");
             }
         }
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
@@ -474,19 +473,20 @@ void march_in_time_using_gpu()
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
         status = cudaMemcpy(&bad_cell_count, bad_cell_count_on_gpu, sizeof(int), cudaMemcpyDeviceToHost);
-        if (status) throw runtime_error("Could not copy bad_cell_count from gpu to host cpu.");
+        if (status) throw runtime_error("Stage 1, could not copy bad_cell_count from gpu to host cpu.");
         if (bad_cell_count > 0) {
-            throw runtime_error("Stage 1 bad cell count: "+to_string(bad_cell_count));
+            throw runtime_error("Stage 1, bad cell count: "+to_string(bad_cell_count));
         }
+        // Copy cell data back to the CPU for just the active cells.
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (!cfg.active) continue;
-            int nbytes = blk.cells.size()*sizeof(FVCell);
+            int nbytes = cfg.nActiveCells*sizeof(FVCell);
             auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
             if (status) {
                 cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Could not copy blk.cells from gpu to cpu.");
+                throw runtime_error("Stage 1, could not copy blk.cells from gpu to cpu.");
             }
         }
         //
@@ -498,11 +498,13 @@ void march_in_time_using_gpu()
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (!cfg.active) continue;
-            int nbytes = blk.cells.size()*sizeof(FVCell);
-            auto status = cudaMemcpy(blk.cells_on_gpu, blk.cells.data(), nbytes, cudaMemcpyHostToDevice);
+            FVCell* addr_on_cpu = blk.cells.data() + cfg.nActiveCells;
+            FVCell* addr_on_gpu = blk.cells_on_gpu + cfg.nActiveCells;
+            int nbytes = cfg.nTotalGhostCells*sizeof(FVCell);
+            auto status = cudaMemcpy(addr_on_gpu, addr_on_cpu, nbytes, cudaMemcpyHostToDevice);
             if (status) {
                 cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Could not copy blk.cells to gpu.");
+                throw runtime_error("Stage 2, could not copy ghost cells to gpu.");
             }
         }
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
@@ -538,19 +540,20 @@ void march_in_time_using_gpu()
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
         status = cudaMemcpy(&bad_cell_count, bad_cell_count_on_gpu, sizeof(int), cudaMemcpyDeviceToHost);
-        if (status) throw runtime_error("Could not copy bad_cell_count from gpu to host cpu.");
+        if (status) throw runtime_error("Stage 2, could not copy bad_cell_count from gpu to host cpu.");
         if (bad_cell_count > 0) {
-            throw runtime_error("Stage 2 bad cell count: "+to_string(bad_cell_count));
+            throw runtime_error("Stage 2, bad cell count: "+to_string(bad_cell_count));
         }
+        // Copy cell data back to the CPU for just the active cells.
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (!cfg.active) continue;
-            int nbytes = blk.cells.size()*sizeof(FVCell);
+            int nbytes = cfg.nActiveCells*sizeof(FVCell);
             auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
             if (status) {
                 cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Could not copy blk.cells from gpu to cpu.");
+                throw runtime_error("Stage 2, could not copy blk.cells from gpu to cpu.");
             }
         }
         //
@@ -562,11 +565,13 @@ void march_in_time_using_gpu()
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (!cfg.active) continue;
-            int nbytes = blk.cells.size()*sizeof(FVCell);
-            auto status = cudaMemcpy(blk.cells_on_gpu, blk.cells.data(), nbytes, cudaMemcpyHostToDevice);
+            FVCell* addr_on_cpu = blk.cells.data() + cfg.nActiveCells;
+            FVCell* addr_on_gpu = blk.cells_on_gpu + cfg.nActiveCells;
+            int nbytes = cfg.nTotalGhostCells*sizeof(FVCell);
+            auto status = cudaMemcpy(addr_on_gpu, addr_on_cpu, nbytes, cudaMemcpyHostToDevice);
             if (status) {
                 cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Could not copy blk.cells to gpu.");
+                throw runtime_error("Stage 3, could not copy ghost cells to gpu.");
             }
         }
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
@@ -602,22 +607,23 @@ void march_in_time_using_gpu()
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
         status = cudaMemcpy(&bad_cell_count, bad_cell_count_on_gpu, sizeof(int), cudaMemcpyDeviceToHost);
-        if (status) throw runtime_error("Could not copy bad_cell_count from gpu to host cpu.");
+        if (status) throw runtime_error("Stage 3, could not copy bad_cell_count from gpu to host cpu.");
         if (bad_cell_count > 0) {
-            throw runtime_error("Stage 3 bad cell count: "+to_string(bad_cell_count));
+            throw runtime_error("Stage 3, bad cell count: "+to_string(bad_cell_count));
         }
+        // Copy cell data back to the CPU for just the active cells.
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (!cfg.active) continue;
-            int nbytes = blk.cells.size()*sizeof(FVCell);
+            int nbytes = cfg.nActiveCells*sizeof(FVCell);
             auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
             if (status) {
                 cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Could not copy blk.cells from gpu to cpu.");
+                throw runtime_error("Stage 3, could not copy blk.cells from gpu to cpu.");
             }
         }
-        // After a successful gasdynamic update, copy the conserved data back to level 0.
+        // After a successful gasdynamic update, copy the conserved data back to level 0 on the GPU.
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
