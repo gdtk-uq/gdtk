@@ -218,7 +218,7 @@ public:
         Rght = new FlowState(dedicatedConfig[id].gmodel, dedicatedConfig[id].turb_model.nturb);
         // Workspace for implicit updates of the thermochemistry.
         version(multi_species_gas) {
-            if (myConfig.reacting && cqi.n_species > 1) {
+            if (myConfig.reacting) {
                 thermochem_source.length = cqi.n_species;
             }
         }

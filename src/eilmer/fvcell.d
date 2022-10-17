@@ -1238,20 +1238,24 @@ public:
     @nogc
     void add_thermochemical_source_vector(number[] thermochem_source, double reaction_factor)
     {
-        // It does not make a lot of sense to call this function for n_species == 1
-        // Maybe we should just set chem_source[0] = 0.0.
-        // 2021-05-11 PJ [TODO] Ask Rowan.
+        // Bug fixes to this function by NNG on 17/10/22. Previously we skipped
+        // calling eval_source_terms if n_species==1, which caused issues with
+        // multi-temperature single species calculations. The new code now
+        // includes a dummy entry in thermochem_source[0] if nspecies==1, but does
+        // not update Q with the results in that case.
+
         auto cqi = myConfig.cqi;
-        if (fs.gas.T <= myConfig.T_frozen) { return; }
+        if (fs.gas.T <= myConfig.T_frozen) { return; } // TODO: What about T_frozen_energy?
+        myConfig.thermochemUpdate.eval_source_terms(myConfig.gmodel, fs.gas, thermochem_source);
+
         version(multi_species_gas) {
             if (cqi.n_species > 1) {
-                myConfig.thermochemUpdate.eval_source_terms(myConfig.gmodel, fs.gas, thermochem_source);
                 foreach(sp; 0 .. cqi.n_species) { Q[cqi.species+sp] += reaction_factor*thermochem_source[sp]; }
             }
         }
         version(multi_T_gas) {
             foreach(imode; 0 .. cqi.n_modes) {
-                Q[cqi.modes+imode] += reaction_factor*thermochem_source[cqi.n_species+imode];
+                Q[cqi.modes+imode] += reaction_factor*thermochem_source[$-cqi.n_modes+imode];
             }
         }
     }
