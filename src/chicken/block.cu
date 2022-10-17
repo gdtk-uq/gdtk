@@ -35,14 +35,10 @@ struct Block {
     ConservedQuantities* Q_on_gpu;
     ConservedQuantities* dQdt_on_gpu;
     //
-    // Collections of faces which bound the active cells.
+    // Collection of faces which bound the active cells.
     // We compute fluxes of conserved flow properties across these faces.
-    vector<FVFace> iFaces;
-    vector<FVFace> jFaces;
-    vector<FVFace> kFaces;
-    FVFace* iFaces_on_gpu;
-    FVFace* jFaces_on_gpu;
-    FVFace* kFaces_on_gpu;
+    vector<FVFace> faces;
+    FVFace* faces_on_gpu;
     //
     // The vertices are used to define the locations and geometric properties
     // of faces and cells.
@@ -71,11 +67,10 @@ struct Block {
         }
         bytes_allocated += (Q.size()+dQdt.size())*sizeof(ConservedQuantities);
         //
-        // Each set of finite-volume faces is in the index-plane of the corresponding vertices.
-        iFaces.resize(cfg.n_iFaces);
-        jFaces.resize(cfg.n_jFaces);
-        kFaces.resize(cfg.n_kFaces);
-        bytes_allocated += (iFaces.size()+jFaces.size()+kFaces.size())*sizeof(FVFace);
+        // Each set of finite-volume faces is in the index-plane of the corresponding vertices
+        // but we pack them all into the one vector.
+        faces.resize(cfg.nFaces);
+        bytes_allocated += faces.size()*sizeof(FVFace);
         //
         // And the vertices.
         vertices.resize((cfg.nic+1)*(cfg.njc+1)*(cfg.nkc+1));
@@ -89,12 +84,8 @@ struct Block {
         if (status) throw runtime_error("Could not allocate Q on gpu.");
         status = cudaMalloc(&dQdt_on_gpu, dQdt.size()*sizeof(ConservedQuantities));
         if (status) throw runtime_error("Could not allocate dQdt on gpu.");
-        status = cudaMalloc(&iFaces_on_gpu, iFaces.size()*sizeof(FVFace));
-        if (status) throw runtime_error("Could not allocate iFaces on gpu.");
-        status = cudaMalloc(&jFaces_on_gpu, jFaces.size()*sizeof(FVFace));
-        if (status) throw runtime_error("Could not allocate jFaces on gpu.");
-        status = cudaMalloc(&kFaces_on_gpu, kFaces.size()*sizeof(FVFace));
-        if (status) throw runtime_error("Could not allocate kFaces on gpu.");
+        status = cudaMalloc(&faces_on_gpu, faces.size()*sizeof(FVFace));
+        if (status) throw runtime_error("Could not allocate faces on gpu.");
         status = cudaMalloc(&vertices_on_gpu, vertices.size()*sizeof(Vector3));
         if (status) throw runtime_error("Could not allocate vertices on gpu.");
 #endif
@@ -133,7 +124,7 @@ struct Block {
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
                 for (int i=0; i < cfg.nic+1; i++) {
-                    FVFace& f = iFaces[cfg.iFaceIndex(i,j,k)];
+                    FVFace& f = faces[cfg.iFaceIndex(i,j,k)];
                     f.vtx[0] = cfg.vtxIndex(i,j,k);
                     f.vtx[1] = cfg.vtxIndex(i,j+1,k);
                     f.vtx[2] = cfg.vtxIndex(i,j+1,k+1);
@@ -172,7 +163,7 @@ struct Block {
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
                 for (int j=0; j < cfg.njc+1; j++) {
-                    FVFace& f = jFaces[cfg.jFaceIndex(i,j,k)];
+                    FVFace& f = faces[cfg.jFaceIndex(i,j,k)];
                     f.vtx[0] = cfg.vtxIndex(i,j,k);
                     f.vtx[1] = cfg.vtxIndex(i+1,j,k);
                     f.vtx[2] = cfg.vtxIndex(i+1,j,k+1);
@@ -211,7 +202,7 @@ struct Block {
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
                 for (int k=0; k < cfg.nkc+1; k++) {
-                    FVFace& f = kFaces[cfg.kFaceIndex(i,j,k)];
+                    FVFace& f = faces[cfg.kFaceIndex(i,j,k)];
                     f.vtx[0] = cfg.vtxIndex(i,j,k);
                     f.vtx[1] = cfg.vtxIndex(i+1,j,k);
                     f.vtx[2] = cfg.vtxIndex(i+1,j+1,k);
@@ -255,17 +246,13 @@ struct Block {
         cells.resize(0);
         Q.resize(0);
         dQdt.resize(0);
-        iFaces.resize(0);
-        jFaces.resize(0);
-        kFaces.resize(0);
+        faces.resize(0);
         vertices.resize(0);
 #ifdef CUDA
         if (cells_on_gpu) { cudaFree(&cells_on_gpu); cells_on_gpu = NULL; }
         if (Q_on_gpu) { cudaFree(&Q_on_gpu); Q_on_gpu = NULL; }
         if (dQdt_on_gpu) { cudaFree(&dQdt_on_gpu); dQdt_on_gpu = NULL; }
-        if (iFaces_on_gpu) { cudaFree(&iFaces_on_gpu); iFaces_on_gpu = NULL; }
-        if (jFaces_on_gpu) { cudaFree(&jFaces_on_gpu); jFaces_on_gpu = NULL; }
-        if (kFaces_on_gpu) { cudaFree(&kFaces_on_gpu); kFaces_on_gpu = NULL; }
+        if (faces_on_gpu) { cudaFree(&faces_on_gpu); faces_on_gpu = NULL; }
         if (vertices_on_gpu) { cudaFree(&vertices_on_gpu); vertices_on_gpu = NULL; }
 #endif
         return;
@@ -286,17 +273,7 @@ struct Block {
                                 vertices[c.vtx[6]], vertices[c.vtx[7]],
                                 false, c.pos, c.volume, c.iLength, c.jLength, c.kLength);
         }
-        for (auto& f : iFaces) {
-            quad_properties(vertices[f.vtx[0]], vertices[f.vtx[1]],
-                            vertices[f.vtx[2]], vertices[f.vtx[3]],
-                            f.pos, f.n, f.t1, f.t2, f.area);
-        }
-        for (auto& f : jFaces) {
-            quad_properties(vertices[f.vtx[0]], vertices[f.vtx[1]],
-                            vertices[f.vtx[2]], vertices[f.vtx[3]],
-                            f.pos, f.n, f.t1, f.t2, f.area);
-        }
-        for (auto& f : kFaces) {
+        for (auto& f : faces) {
             quad_properties(vertices[f.vtx[0]], vertices[f.vtx[1]],
                             vertices[f.vtx[2]], vertices[f.vtx[3]],
                             f.pos, f.n, f.t1, f.t2, f.area);
@@ -312,7 +289,7 @@ struct Block {
         // Face::iminus
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
-                FVFace& f = iFaces[cfg.iFaceIndex(0,j,k)];
+                FVFace& f = faces[cfg.iFaceIndex(0,j,k)];
                 FVCell& c0 = cells[f.right_cells[0]];
                 FVCell& g0 = cells[f.left_cells[0]];
                 g0.iLength = c0.iLength;
@@ -332,7 +309,7 @@ struct Block {
         // Face::iplus
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
-                FVFace& f = iFaces[cfg.iFaceIndex(cfg.nic,j,k)];
+                FVFace& f = faces[cfg.iFaceIndex(cfg.nic,j,k)];
                 FVCell& c0 = cells[f.left_cells[0]];
                 FVCell& g0 = cells[f.right_cells[0]];
                 g0.iLength = c0.iLength;
@@ -352,7 +329,7 @@ struct Block {
         // Face::jminus
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = jFaces[cfg.jFaceIndex(i,0,k)];
+                FVFace& f = faces[cfg.jFaceIndex(i,0,k)];
                 FVCell& c0 = cells[f.right_cells[0]];
                 FVCell& g0 = cells[f.left_cells[0]];
                 g0.iLength = c0.iLength;
@@ -372,7 +349,7 @@ struct Block {
         // Face::jplus
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = jFaces[cfg.jFaceIndex(i,cfg.njc,k)];
+                FVFace& f = faces[cfg.jFaceIndex(i,cfg.njc,k)];
                 FVCell& c0 = cells[f.left_cells[0]];
                 FVCell& g0 = cells[f.right_cells[0]];
                 g0.iLength = c0.iLength;
@@ -392,7 +369,7 @@ struct Block {
         // Face::kminus
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = kFaces[cfg.kFaceIndex(i,j,0)];
+                FVFace& f = faces[cfg.kFaceIndex(i,j,0)];
                 FVCell& c0 = cells[f.right_cells[0]];
                 FVCell& g0 = cells[f.left_cells[0]];
                 g0.iLength = c0.iLength;
@@ -412,7 +389,7 @@ struct Block {
         // Face::kplus
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = kFaces[cfg.kFaceIndex(i,j,cfg.nkc)];
+                FVFace& f = faces[cfg.kFaceIndex(i,j,cfg.nkc)];
                 FVCell& c0 = cells[f.left_cells[0]];
                 FVCell& g0 = cells[f.right_cells[0]];
                 g0.iLength = c0.iLength;
@@ -584,9 +561,9 @@ struct Block {
         number smallest_dt = numeric_limits<number>::max();
         for (int i=0; i < cfg.nActiveCells; i++) {
             FVCell& c = cells[i];
-            Vector3 inorm = iFaces[c.face[Face::iminus]].n;
-            Vector3 jnorm = jFaces[c.face[Face::jminus]].n;
-            Vector3 knorm = kFaces[c.face[Face::kminus]].n;
+            Vector3 inorm = faces[c.face[Face::iminus]].n;
+            Vector3 jnorm = faces[c.face[Face::jminus]].n;
+            Vector3 knorm = faces[c.face[Face::kminus]].n;
             smallest_dt = fmin(smallest_dt, c.estimate_local_dt(inorm, jnorm, knorm, cfl));
         }
         return smallest_dt;
@@ -621,28 +598,13 @@ struct Block {
     __host__
     void calculate_fluxes(int x_order)
     {
-        for (auto& face : iFaces) {
+        for (auto& face : faces) {
             FlowState& fsL1 = cells[face.left_cells[1]].fs;
             FlowState& fsL0 = cells[face.left_cells[0]].fs;
             FlowState& fsR0 = cells[face.right_cells[0]].fs;
             FlowState& fsR1 = cells[face.right_cells[1]].fs;
             face.calculate_flux(fsL1, fsL0, fsR0, fsR1, x_order);
         }
-        for (auto& face : jFaces) {
-            FlowState& fsL1 = cells[face.left_cells[1]].fs;
-            FlowState& fsL0 = cells[face.left_cells[0]].fs;
-            FlowState& fsR0 = cells[face.right_cells[0]].fs;
-            FlowState& fsR1 = cells[face.right_cells[1]].fs;
-            face.calculate_flux(fsL1, fsL0, fsR0, fsR1, x_order);
-        }
-        for (auto& face : kFaces) {
-            FlowState& fsL1 = cells[face.left_cells[1]].fs;
-            FlowState& fsL0 = cells[face.left_cells[0]].fs;
-            FlowState& fsR0 = cells[face.right_cells[0]].fs;
-            FlowState& fsR1 = cells[face.right_cells[1]].fs;
-            face.calculate_flux(fsL1, fsL0, fsR0, fsR1, x_order);
-        }
-        return;
     } // end calculate_fluxes()
 
     __host__
@@ -653,7 +615,7 @@ struct Block {
         for (int i=0; i < cfg.nActiveCells; i++) {
             FVCell& c = cells[i];
             ConservedQuantities& dUdt0 = dQdt[i];
-            c.eval_dUdt(dUdt0, iFaces.data(), jFaces.data(), kFaces.data());
+            c.eval_dUdt(dUdt0, faces.data());
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
@@ -677,7 +639,7 @@ struct Block {
             FVCell& c = cells[i];
             ConservedQuantities& dUdt0 = dQdt[i];
             ConservedQuantities& dUdt1 = dQdt[cfg.nActiveCells + i];
-            c.eval_dUdt(dUdt1, iFaces.data(), jFaces.data(), kFaces.data());
+            c.eval_dUdt(dUdt1, faces.data());
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
@@ -702,7 +664,7 @@ struct Block {
             ConservedQuantities& dUdt0 = dQdt[i];
             ConservedQuantities& dUdt1 = dQdt[cfg.nActiveCells + i];
             ConservedQuantities& dUdt2 = dQdt[2*cfg.nActiveCells + i];
-            c.eval_dUdt(dUdt2, iFaces.data(), jFaces.data(), kFaces.data());
+            c.eval_dUdt(dUdt2, faces.data());
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
@@ -743,9 +705,9 @@ void estimate_allowed_dt_on_gpu(Block& blk, BConfig& cfg, number cfl, long long 
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nActiveCells) {
         FVCell& c = blk.cells_on_gpu[i];
-        Vector3 inorm = blk.iFaces_on_gpu[c.face[Face::iminus]].n;
-        Vector3 jnorm = blk.jFaces_on_gpu[c.face[Face::jminus]].n;
-        Vector3 knorm = blk.kFaces_on_gpu[c.face[Face::kminus]].n;
+        Vector3 inorm = blk.faces_on_gpu[c.face[Face::iminus]].n;
+        Vector3 jnorm = blk.faces_on_gpu[c.face[Face::jminus]].n;
+        Vector3 knorm = blk.faces_on_gpu[c.face[Face::kminus]].n;
         long long int dt_picos = trunc(c.estimate_local_dt(inorm, jnorm, knorm, cfl)*1.0e12);
         atomicMin(smallest_dt_picos, dt_picos);
     }
@@ -776,39 +738,11 @@ void copy_conserved_data_on_gpu(Block& blk, BConfig& cfg, int from_level, int to
 }
 
 __global__
-void calculate_iFace_fluxes_on_gpu(Block& blk, BConfig& cfg, int x_order)
+void calculate_fluxes_on_gpu(Block& blk, BConfig& cfg, int x_order)
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
-    if (i < cfg.n_iFaces) {
-        FVFace& face = blk.iFaces_on_gpu[i];
-        FlowState& fsL1 = blk.cells_on_gpu[face.left_cells[1]].fs;
-        FlowState& fsL0 = blk.cells_on_gpu[face.left_cells[0]].fs;
-        FlowState& fsR0 = blk.cells_on_gpu[face.right_cells[0]].fs;
-        FlowState& fsR1 = blk.cells_on_gpu[face.right_cells[1]].fs;
-        face.calculate_flux(fsL1, fsL0, fsR0, fsR1, x_order);
-    }
-}
-
-__global__
-void calculate_jFace_fluxes_on_gpu(Block& blk, BConfig& cfg, int x_order)
-{
-    int i = blockIdx.x*blockDim.x + threadIdx.x;
-    if (i < cfg.n_jFaces) {
-        FVFace& face = blk.jFaces_on_gpu[i];
-        FlowState& fsL1 = blk.cells_on_gpu[face.left_cells[1]].fs;
-        FlowState& fsL0 = blk.cells_on_gpu[face.left_cells[0]].fs;
-        FlowState& fsR0 = blk.cells_on_gpu[face.right_cells[0]].fs;
-        FlowState& fsR1 = blk.cells_on_gpu[face.right_cells[1]].fs;
-        face.calculate_flux(fsL1, fsL0, fsR0, fsR1, x_order);
-    }
-}
-
-__global__
-void calculate_kFace_fluxes_on_gpu(Block& blk, BConfig& cfg, int x_order)
-{
-    int i = blockIdx.x*blockDim.x + threadIdx.x;
-    if (i < cfg.n_kFaces) {
-        FVFace& face = blk.kFaces_on_gpu[i];
+    if (i < cfg.nFaces) {
+        FVFace& face = blk.faces_on_gpu[i];
         FlowState& fsL1 = blk.cells_on_gpu[face.left_cells[1]].fs;
         FlowState& fsL0 = blk.cells_on_gpu[face.left_cells[0]].fs;
         FlowState& fsR0 = blk.cells_on_gpu[face.right_cells[0]].fs;
@@ -824,7 +758,7 @@ void update_stage_1_on_gpu(Block& blk, BConfig& cfg, number dt, int* bad_cell_co
     if (i < cfg.nActiveCells) {
         FVCell& c = blk.cells_on_gpu[i];
         ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
-        c.eval_dUdt(dUdt0, blk.iFaces_on_gpu, blk.jFaces_on_gpu, blk.kFaces_on_gpu);
+        c.eval_dUdt(dUdt0, blk.faces_on_gpu);
         ConservedQuantities& U0 = blk.Q_on_gpu[i];
         ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
         for (int j=0; j < CQI::n; j++) {
@@ -846,7 +780,7 @@ void update_stage_2_on_gpu(Block& blk, BConfig& cfg, number dt, int* bad_cell_co
         FVCell& c = blk.cells_on_gpu[i];
         ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
         ConservedQuantities& dUdt1 = blk.dQdt_on_gpu[cfg.nActiveCells + i];
-        c.eval_dUdt(dUdt1, blk.iFaces_on_gpu, blk.jFaces_on_gpu, blk.kFaces_on_gpu);
+        c.eval_dUdt(dUdt1, blk.faces_on_gpu);
         ConservedQuantities& U0 = blk.Q_on_gpu[i];
         ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
         for (int j=0; j < CQI::n; j++) {
@@ -869,7 +803,7 @@ void update_stage_3_on_gpu(Block& blk, BConfig& cfg, number dt, int* bad_cell_co
         ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
         ConservedQuantities& dUdt1 = blk.dQdt_on_gpu[cfg.nActiveCells + i];
         ConservedQuantities& dUdt2 = blk.dQdt_on_gpu[2*cfg.nActiveCells + i];
-        c.eval_dUdt(dUdt2, blk.iFaces_on_gpu, blk.jFaces_on_gpu, blk.kFaces_on_gpu);
+        c.eval_dUdt(dUdt2, blk.faces_on_gpu);
         ConservedQuantities& U0 = blk.Q_on_gpu[i];
         ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
         for (int j=0; j < CQI::n; j++) {

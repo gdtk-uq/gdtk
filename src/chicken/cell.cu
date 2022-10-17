@@ -147,16 +147,16 @@ struct FVCell {
     }
 
     __host__ __device__
-    void eval_dUdt(ConservedQuantities& dUdt, FVFace iFaces[], FVFace jFaces[], FVFace kFaces[])
+    void eval_dUdt(ConservedQuantities& dUdt, FVFace faces[])
     // These are the spatial (RHS) terms in the semi-discrete governing equations.
     {
         number vol_inv = 1.0/volume;
-        auto& fim = iFaces[face[Face::iminus]];
-        auto& fip = iFaces[face[Face::iplus]];
-        auto& fjm = jFaces[face[Face::jminus]];
-        auto& fjp = jFaces[face[Face::jplus]];
-        auto& fkm = kFaces[face[Face::kminus]];
-        auto& fkp = kFaces[face[Face::kplus]];
+        auto& fim = faces[face[Face::iminus]];
+        auto& fip = faces[face[Face::iplus]];
+        auto& fjm = faces[face[Face::jminus]];
+        auto& fjp = faces[face[Face::jplus]];
+        auto& fkm = faces[face[Face::kminus]];
+        auto& fkp = faces[face[Face::kplus]];
         //
         for (int i=0; i < CQI::n; i++) {
             // Integrate the fluxes across the interfaces that bound the cell.

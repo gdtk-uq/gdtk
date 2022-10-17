@@ -19,7 +19,7 @@ void bc_wall_with_slip(int iblk, int ibc)
     case Face::iminus: // jk across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
-                FVFace& f = blk.iFaces[cfg.iFaceIndex(0, j, k)];
+                FVFace& f = blk.faces[cfg.iFaceIndex(0, j, k)];
                 FVCell& c = blk.cells[f.right_cells[0]];
                 FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
                 fs0 = c.fs;
@@ -37,7 +37,7 @@ void bc_wall_with_slip(int iblk, int ibc)
     case Face::iplus: // jk across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
-                FVFace& f = blk.iFaces[cfg.iFaceIndex(cfg.nic, j, k)];
+                FVFace& f = blk.faces[cfg.iFaceIndex(cfg.nic, j, k)];
                 FVCell& c = blk.cells[f.left_cells[0]];
                 FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
                 fs0 = c.fs;
@@ -55,7 +55,7 @@ void bc_wall_with_slip(int iblk, int ibc)
     case Face::jminus: // ik across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.jFaces[cfg.jFaceIndex(i, 0, k)];
+                FVFace& f = blk.faces[cfg.jFaceIndex(i, 0, k)];
                 FVCell& c = blk.cells[f.right_cells[0]];
                 FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
                 fs0 = c.fs;
@@ -73,7 +73,7 @@ void bc_wall_with_slip(int iblk, int ibc)
     case Face::jplus: // ik across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.jFaces[cfg.jFaceIndex(i, cfg.njc, k)];
+                FVFace& f = blk.faces[cfg.jFaceIndex(i, cfg.njc, k)];
                 FVCell& c = blk.cells[f.left_cells[0]];
                 FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
                 fs0 = c.fs;
@@ -91,7 +91,7 @@ void bc_wall_with_slip(int iblk, int ibc)
     case Face::kminus: // ij across face
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.kFaces[cfg.kFaceIndex(i, j, 0)];
+                FVFace& f = blk.faces[cfg.kFaceIndex(i, j, 0)];
                 FVCell& c = blk.cells[f.right_cells[0]];
                 FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
                 fs0 = c.fs;
@@ -109,7 +109,7 @@ void bc_wall_with_slip(int iblk, int ibc)
     case Face::kplus: // ij across face
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.kFaces[cfg.kFaceIndex(i, j, cfg.nkc)];
+                FVFace& f = blk.faces[cfg.kFaceIndex(i, j, cfg.nkc)];
                 FVCell& c = blk.cells[f.left_cells[0]];
                 FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
                 fs0 = c.fs;
@@ -138,7 +138,7 @@ void bc_wall_no_slip(int iblk, int ibc)
     case Face::iminus: // jk across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
-                FVFace& f = blk.iFaces[cfg.iFaceIndex(0, j, k)];
+                FVFace& f = blk.faces[cfg.iFaceIndex(0, j, k)];
                 FVCell& c = blk.cells[f.right_cells[0]];
                 FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
                 fs0 = c.fs;
@@ -156,7 +156,7 @@ void bc_wall_no_slip(int iblk, int ibc)
     case Face::iplus: // jk across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
-                FVFace& f = blk.iFaces[cfg.iFaceIndex(cfg.nic, j, k)];
+                FVFace& f = blk.faces[cfg.iFaceIndex(cfg.nic, j, k)];
                 FVCell& c = blk.cells[f.left_cells[0]];
                 FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
                 fs0 = c.fs;
@@ -174,7 +174,7 @@ void bc_wall_no_slip(int iblk, int ibc)
     case Face::jminus: // ik across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.jFaces[cfg.jFaceIndex(i, 0, k)];
+                FVFace& f = blk.faces[cfg.jFaceIndex(i, 0, k)];
                 FVCell& c = blk.cells[f.right_cells[0]];
                 FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
                 fs0 = c.fs;
@@ -192,7 +192,7 @@ void bc_wall_no_slip(int iblk, int ibc)
     case Face::jplus: // ik across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.jFaces[cfg.jFaceIndex(i, cfg.njc, k)];
+                FVFace& f = blk.faces[cfg.jFaceIndex(i, cfg.njc, k)];
                 FVCell& c = blk.cells[f.left_cells[0]];
                 FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
                 fs0 = c.fs;
@@ -210,7 +210,7 @@ void bc_wall_no_slip(int iblk, int ibc)
     case Face::kminus: // ij across face
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.kFaces[cfg.kFaceIndex(i, j, 0)];
+                FVFace& f = blk.faces[cfg.kFaceIndex(i, j, 0)];
                 FVCell& c = blk.cells[f.right_cells[0]];
                 FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
                 fs0 = c.fs;
@@ -228,7 +228,7 @@ void bc_wall_no_slip(int iblk, int ibc)
     case Face::kplus: // ij across face
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.kFaces[cfg.kFaceIndex(i, j, cfg.nkc)];
+                FVFace& f = blk.faces[cfg.kFaceIndex(i, j, cfg.nkc)];
                 FVCell& c = blk.cells[f.left_cells[0]];
                 FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
                 fs0 = c.fs;
@@ -267,8 +267,8 @@ void bc_exchange(int iblk, int ibc)
         BConfig& other_cfg = blk_configs[other_id];
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
-                FVFace& f = blk.iFaces[cfg.iFaceIndex(0, j, k)];
-                FVFace& other_f = other_blk.iFaces[other_cfg.iFaceIndex(other_cfg.nic, j, k)];
+                FVFace& f = blk.faces[cfg.iFaceIndex(0, j, k)];
+                FVFace& other_f = other_blk.faces[other_cfg.iFaceIndex(other_cfg.nic, j, k)];
                 blk.cells[f.left_cells[0]].fs = other_blk.cells[other_f.left_cells[0]].fs;
                 blk.cells[f.left_cells[1]].fs = other_blk.cells[other_f.left_cells[1]].fs;
             } // end for j
@@ -285,8 +285,8 @@ void bc_exchange(int iblk, int ibc)
         BConfig& other_cfg = blk_configs[other_id];
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
-                FVFace& f = blk.iFaces[cfg.iFaceIndex(cfg.nic, j, k)];
-                FVFace& other_f = other_blk.iFaces[other_cfg.iFaceIndex(0, j, k)];
+                FVFace& f = blk.faces[cfg.iFaceIndex(cfg.nic, j, k)];
+                FVFace& other_f = other_blk.faces[other_cfg.iFaceIndex(0, j, k)];
                 blk.cells[f.right_cells[0]].fs = other_blk.cells[other_f.right_cells[0]].fs;
                 blk.cells[f.right_cells[1]].fs = other_blk.cells[other_f.right_cells[1]].fs;
             } // end for j
@@ -303,8 +303,8 @@ void bc_exchange(int iblk, int ibc)
         BConfig& other_cfg = blk_configs[other_id];
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.jFaces[cfg.jFaceIndex(i, 0, k)];
-                FVFace& other_f = other_blk.jFaces[other_cfg.jFaceIndex(i, other_cfg.njc, k)];
+                FVFace& f = blk.faces[cfg.jFaceIndex(i, 0, k)];
+                FVFace& other_f = other_blk.faces[other_cfg.jFaceIndex(i, other_cfg.njc, k)];
                 blk.cells[f.left_cells[0]].fs = other_blk.cells[other_f.left_cells[0]].fs;
                 blk.cells[f.left_cells[1]].fs = other_blk.cells[other_f.left_cells[1]].fs;
             } // end for i
@@ -321,8 +321,8 @@ void bc_exchange(int iblk, int ibc)
         BConfig& other_cfg = blk_configs[other_id];
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.jFaces[cfg.jFaceIndex(i, cfg.njc, k)];
-                FVFace& other_f = other_blk.jFaces[other_cfg.jFaceIndex(i, 0, k)];
+                FVFace& f = blk.faces[cfg.jFaceIndex(i, cfg.njc, k)];
+                FVFace& other_f = other_blk.faces[other_cfg.jFaceIndex(i, 0, k)];
                 blk.cells[f.right_cells[0]].fs = other_blk.cells[other_f.right_cells[0]].fs;
                 blk.cells[f.right_cells[1]].fs = other_blk.cells[other_f.right_cells[1]].fs;
             } // end for i
@@ -339,8 +339,8 @@ void bc_exchange(int iblk, int ibc)
         BConfig& other_cfg = blk_configs[other_id];
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.kFaces[cfg.kFaceIndex(i, j, 0)];
-                FVFace& other_f = other_blk.kFaces[other_cfg.kFaceIndex(i, j, other_cfg.nkc)];
+                FVFace& f = blk.faces[cfg.kFaceIndex(i, j, 0)];
+                FVFace& other_f = other_blk.faces[other_cfg.kFaceIndex(i, j, other_cfg.nkc)];
                 blk.cells[f.left_cells[0]].fs = other_blk.cells[other_f.left_cells[0]].fs;
                 blk.cells[f.left_cells[1]].fs = other_blk.cells[other_f.left_cells[1]].fs;
             } // end for i
@@ -357,8 +357,8 @@ void bc_exchange(int iblk, int ibc)
         BConfig& other_cfg = blk_configs[other_id];
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.kFaces[cfg.kFaceIndex(i, j, cfg.nkc)];
-                FVFace& other_f = other_blk.kFaces[other_cfg.kFaceIndex(i, j, 0)];
+                FVFace& f = blk.faces[cfg.kFaceIndex(i, j, cfg.nkc)];
+                FVFace& other_f = other_blk.faces[other_cfg.kFaceIndex(i, j, 0)];
                 blk.cells[f.right_cells[0]].fs = other_blk.cells[other_f.right_cells[0]].fs;
                 blk.cells[f.right_cells[1]].fs = other_blk.cells[other_f.right_cells[1]].fs;
             } // end for j
@@ -379,7 +379,7 @@ void bc_inflow(int iblk, int ibc, FlowState& inflow)
     case Face::iminus: // jk across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
-                FVFace& f = blk.iFaces[cfg.iFaceIndex(0, j, k)];
+                FVFace& f = blk.faces[cfg.iFaceIndex(0, j, k)];
                 FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
                 fs0 = inflow;
                 FlowState& fs1 = blk.cells[f.left_cells[1]].fs;
@@ -390,7 +390,7 @@ void bc_inflow(int iblk, int ibc, FlowState& inflow)
     case Face::iplus: // jk across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
-                FVFace& f = blk.iFaces[cfg.iFaceIndex(cfg.nic, j, k)];
+                FVFace& f = blk.faces[cfg.iFaceIndex(cfg.nic, j, k)];
                 FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
                 fs0 = inflow;
                 FlowState& fs1 = blk.cells[f.right_cells[1]].fs;
@@ -401,7 +401,7 @@ void bc_inflow(int iblk, int ibc, FlowState& inflow)
     case Face::jminus: // ik across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.jFaces[cfg.jFaceIndex(i, 0, k)];
+                FVFace& f = blk.faces[cfg.jFaceIndex(i, 0, k)];
                 FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
                 fs0 = inflow;
                 FlowState& fs1 = blk.cells[f.left_cells[1]].fs;
@@ -412,7 +412,7 @@ void bc_inflow(int iblk, int ibc, FlowState& inflow)
     case Face::jplus: // ik across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.jFaces[cfg.jFaceIndex(i, cfg.njc, k)];
+                FVFace& f = blk.faces[cfg.jFaceIndex(i, cfg.njc, k)];
                 FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
                 fs0 = inflow;
                 FlowState& fs1 = blk.cells[f.right_cells[1]].fs;
@@ -423,7 +423,7 @@ void bc_inflow(int iblk, int ibc, FlowState& inflow)
     case Face::kminus: // ij across face
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.kFaces[cfg.kFaceIndex(i, j, 0)];
+                FVFace& f = blk.faces[cfg.kFaceIndex(i, j, 0)];
                 FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
                 fs0 = inflow;
                 FlowState& fs1 = blk.cells[f.left_cells[1]].fs;
@@ -434,7 +434,7 @@ void bc_inflow(int iblk, int ibc, FlowState& inflow)
     case Face::kplus: // ij across face
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.kFaces[cfg.kFaceIndex(i, j, cfg.nkc)];
+                FVFace& f = blk.faces[cfg.kFaceIndex(i, j, cfg.nkc)];
                 FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
                 fs0 = inflow;
                 FlowState& fs1 = blk.cells[f.right_cells[1]].fs;
@@ -456,7 +456,7 @@ void bc_outflow(int iblk, int ibc)
     case Face::iminus: // jk across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
-                FVFace& f = blk.iFaces[cfg.iFaceIndex(0, j, k)];
+                FVFace& f = blk.faces[cfg.iFaceIndex(0, j, k)];
                 FVCell& c = blk.cells[f.right_cells[0]];
                 FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
                 fs0 = c.fs;
@@ -468,7 +468,7 @@ void bc_outflow(int iblk, int ibc)
     case Face::iplus: // jk across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
-                FVFace& f = blk.iFaces[cfg.iFaceIndex(cfg.nic, j, k)];
+                FVFace& f = blk.faces[cfg.iFaceIndex(cfg.nic, j, k)];
                 FVCell& c = blk.cells[f.left_cells[0]];
                 FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
                 fs0 = c.fs;
@@ -480,7 +480,7 @@ void bc_outflow(int iblk, int ibc)
     case Face::jminus: // ik across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.jFaces[cfg.jFaceIndex(i, 0, k)];
+                FVFace& f = blk.faces[cfg.jFaceIndex(i, 0, k)];
                 FVCell& c = blk.cells[f.right_cells[0]];
                 FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
                 fs0 = c.fs;
@@ -492,7 +492,7 @@ void bc_outflow(int iblk, int ibc)
     case Face::jplus: // ik across face
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.jFaces[cfg.jFaceIndex(i, cfg.njc, k)];
+                FVFace& f = blk.faces[cfg.jFaceIndex(i, cfg.njc, k)];
                 FVCell& c = blk.cells[f.left_cells[0]];
                 FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
                 fs0 = c.fs;
@@ -504,7 +504,7 @@ void bc_outflow(int iblk, int ibc)
     case Face::kminus: // ij across face
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.kFaces[cfg.kFaceIndex(i, j, 0)];
+                FVFace& f = blk.faces[cfg.kFaceIndex(i, j, 0)];
                 FVCell& c = blk.cells[f.right_cells[0]];
                 FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
                 fs0 = c.fs;
@@ -516,7 +516,7 @@ void bc_outflow(int iblk, int ibc)
     case Face::kplus: // ij across face
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
-                FVFace& f = blk.kFaces[cfg.kFaceIndex(i, j, cfg.nkc)];
+                FVFace& f = blk.faces[cfg.kFaceIndex(i, j, cfg.nkc)];
                 FVCell& c = blk.cells[f.left_cells[0]];
                 FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
                 fs0 = c.fs;

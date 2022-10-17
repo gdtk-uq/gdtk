@@ -343,23 +343,11 @@ void march_in_time_using_gpu()
         }
         // No need to send conserved quantities and their time-derivatives
         // but we do want to send faces and vertices.
-        nbytes = blk.iFaces.size()*sizeof(FVFace);
-        status = cudaMemcpy(blk.iFaces_on_gpu, blk.iFaces.data(), nbytes, cudaMemcpyHostToDevice);
+        nbytes = blk.faces.size()*sizeof(FVFace);
+        status = cudaMemcpy(blk.faces_on_gpu, blk.faces.data(), nbytes, cudaMemcpyHostToDevice);
         if (status) {
             cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-            throw runtime_error("Could not copy blk.iFaces to gpu.");
-        }
-        nbytes = blk.jFaces.size()*sizeof(FVFace);
-        status = cudaMemcpy(blk.jFaces_on_gpu, blk.jFaces.data(), nbytes, cudaMemcpyHostToDevice);
-        if (status) {
-            cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-            throw runtime_error("Could not copy blk.jFaces to gpu.");
-        }
-        nbytes = blk.kFaces.size()*sizeof(FVFace);
-        status = cudaMemcpy(blk.kFaces_on_gpu, blk.kFaces.data(), nbytes, cudaMemcpyHostToDevice);
-        if (status) {
-            cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-            throw runtime_error("Could not copy blk.kFaces to gpu.");
+            throw runtime_error("Could not copy blk.faces to gpu.");
         }
         nbytes = blk.vertices.size()*sizeof(Vector3);
         status = cudaMemcpy(blk.vertices_on_gpu, blk.vertices.data(), nbytes, cudaMemcpyHostToDevice);
@@ -447,22 +435,11 @@ void march_in_time_using_gpu()
             // Do the stage-1 update on the GPU.
             Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
             BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
-            int nGPUblocks = cfg.nGPUblocks_for_iFaces;
+            //
+            int nGPUblocks = cfg.nGPUblocks_for_faces;
             int nGPUthreads = cfg.threads_per_GPUblock;
-            calculate_iFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
+            calculate_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
             auto cudaError = cudaGetLastError();
-            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            //
-            nGPUblocks = cfg.nGPUblocks_for_jFaces;
-            nGPUthreads = cfg.threads_per_GPUblock;
-            calculate_jFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
-            cudaError = cudaGetLastError();
-            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            //
-            nGPUblocks = cfg.nGPUblocks_for_kFaces;
-            nGPUthreads = cfg.threads_per_GPUblock;
-            calculate_kFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
-            cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
@@ -514,22 +491,11 @@ void march_in_time_using_gpu()
             // Do the stage-1 update on the GPU.
             Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
             BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
-            int nGPUblocks = cfg.nGPUblocks_for_iFaces;
+            //
+            int nGPUblocks = cfg.nGPUblocks_for_faces;
             int nGPUthreads = cfg.threads_per_GPUblock;
-            calculate_iFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
+            calculate_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
             auto cudaError = cudaGetLastError();
-            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            //
-            nGPUblocks = cfg.nGPUblocks_for_jFaces;
-            nGPUthreads = cfg.threads_per_GPUblock;
-            calculate_jFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
-            cudaError = cudaGetLastError();
-            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            //
-            nGPUblocks = cfg.nGPUblocks_for_kFaces;
-            nGPUthreads = cfg.threads_per_GPUblock;
-            calculate_kFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
-            cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
@@ -581,22 +547,11 @@ void march_in_time_using_gpu()
             // Do the stage-1 update on the GPU.
             Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
             BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
-            int nGPUblocks = cfg.nGPUblocks_for_iFaces;
+            //
+            int nGPUblocks = cfg.nGPUblocks_for_faces;
             int nGPUthreads = cfg.threads_per_GPUblock;
-            calculate_iFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
+            calculate_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
             auto cudaError = cudaGetLastError();
-            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            //
-            nGPUblocks = cfg.nGPUblocks_for_jFaces;
-            nGPUthreads = cfg.threads_per_GPUblock;
-            calculate_jFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
-            cudaError = cudaGetLastError();
-            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            //
-            nGPUblocks = cfg.nGPUblocks_for_kFaces;
-            nGPUthreads = cfg.threads_per_GPUblock;
-            calculate_kFace_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::x_order);
-            cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;

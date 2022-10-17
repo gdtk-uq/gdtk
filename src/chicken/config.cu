@@ -80,13 +80,12 @@ struct BConfig {
     int n_iFaces;
     int n_jFaces;
     int n_kFaces;
+    int nFaces;
     //
     // GPU-related parameters.
     int threads_per_GPUblock = 0;
     int nGPUblocks_for_cells = 0;
-    int nGPUblocks_for_iFaces = 0;
-    int nGPUblocks_for_jFaces = 0;
-    int nGPUblocks_for_kFaces = 0;
+    int nGPUblocks_for_faces = 0;
     //
     // Boundary condition codes and associated FlowStates.
     int bcCodes[6];
@@ -117,14 +116,13 @@ struct BConfig {
         n_iFaces = (nic+1)*njc*nkc;
         n_jFaces = nic*(njc+1)*nkc;
         n_kFaces = nic*njc*(nkc+1);
+        nFaces = n_iFaces + n_jFaces + n_kFaces;
         //
         #ifdef CUDA
         // We need to allocate corresponding memory space on the GPU.
         threads_per_GPUblock = 128;
         nGPUblocks_for_cells = ceil(double(nActiveCells)/threads_per_GPUblock);
-        nGPUblocks_for_iFaces = ceil(double(n_iFaces)/threads_per_GPUblock);
-        nGPUblocks_for_jFaces = ceil(double(n_jFaces)/threads_per_GPUblock);
-        nGPUblocks_for_kFaces = ceil(double(n_kFaces)/threads_per_GPUblock);
+        nGPUblocks_for_faces = ceil(double(nFaces)/threads_per_GPUblock);
         #endif
         return;
     }
@@ -154,13 +152,13 @@ struct BConfig {
     __host__ __device__
     int jFaceIndex(int i, int j, int k)
     {
-        return j*nic*nkc + k*nic + i;
+        return n_iFaces + j*nic*nkc + k*nic + i;
     }
 
     __host__ __device__
     int kFaceIndex(int i, int j, int k)
     {
-        return k*nic*njc + j*nic + i;
+        return n_iFaces + n_jFaces + k*nic*njc + j*nic + i;
     }
 
     __host__ __device__
