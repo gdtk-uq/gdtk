@@ -596,14 +596,14 @@ struct Block {
     }
 
     __host__
-    void calculate_fluxes(int x_order)
+    void calculate_convective_fluxes(int flux_calc, int x_order)
     {
         for (auto& face : faces) {
             FlowState& fsL1 = cells[face.left_cells[1]].fs;
             FlowState& fsL0 = cells[face.left_cells[0]].fs;
             FlowState& fsR0 = cells[face.right_cells[0]].fs;
             FlowState& fsR1 = cells[face.right_cells[1]].fs;
-            face.calculate_flux(fsL1, fsL0, fsR0, fsR1, x_order);
+            face.calculate_convective_flux(fsL1, fsL0, fsR0, fsR1, flux_calc, x_order);
         }
     } // end calculate_fluxes()
 
@@ -738,7 +738,7 @@ void copy_conserved_data_on_gpu(Block& blk, const BConfig& cfg, int from_level, 
 }
 
 __global__
-void calculate_fluxes_on_gpu(Block& blk, const BConfig& cfg, int x_order)
+void calculate_convective_fluxes_on_gpu(Block& blk, const BConfig& cfg, int flux_calc, int x_order)
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nFaces) {
@@ -747,7 +747,7 @@ void calculate_fluxes_on_gpu(Block& blk, const BConfig& cfg, int x_order)
         FlowState& fsL0 = blk.cells_on_gpu[face.left_cells[0]].fs;
         FlowState& fsR0 = blk.cells_on_gpu[face.right_cells[0]].fs;
         FlowState& fsR1 = blk.cells_on_gpu[face.right_cells[1]].fs;
-        face.calculate_flux(fsL1, fsL0, fsR0, fsR1, x_order);
+        face.calculate_convective_flux(fsL1, fsL0, fsR0, fsR1, flux_calc, x_order);
     }
 }
 

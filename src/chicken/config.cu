@@ -219,6 +219,23 @@ struct Schedule {
 }; // end struct Schedule
 
 
+namespace FluxCalc {
+    // Selection of flux calculator happens at compile time,
+    // setting flux_calculator below.
+    array<string,2> names{"ausmdv", "sbp_asf"};
+    //
+    constexpr int ausmdv = 0;
+    constexpr int sbp_asf = 1;
+};
+
+int flux_calc_from_name(string name)
+{
+    if (name == "ausmdv") return FluxCalc::ausmdv;
+    if (name == "sbp_asf"  || name == "sbp-asf") return FluxCalc::sbp_asf;
+    return FluxCalc::ausmdv;
+}
+
+
 namespace Config {
     int verbosity = 0;
     int nDevices = 0;
@@ -244,6 +261,7 @@ namespace Config {
     //
     int x_order = 2;
     int t_order = 2;
+    int flux_calc = FluxCalc::ausmdv;
 }
 
 
@@ -371,6 +389,7 @@ vector<BConfig> read_config_file(string fileName)
     //
     Config::x_order = jsonData["x_order"].get<int>();
     Config::t_order = jsonData["t_order"].get<int>();
+    Config::flux_calc = flux_calc_from_name(jsonData["flux_calc"].get<string>());
     Config::dt_init = jsonData["dt_init"].get<number>();
     Config::max_time = jsonData["max_time"].get<number>();
     Config::max_step = jsonData["max_step"].get<int>();
@@ -385,6 +404,7 @@ vector<BConfig> read_config_file(string fileName)
     if (Config::verbosity > 0) {
         cout << "  x_order=" << Config::x_order << endl;
         cout << "  t_order=" << Config::t_order << endl;
+        cout << "  flux_calc=" << FluxCalc::names[Config::flux_calc] << endl;
         cout << "  dt_init=" << Config::dt_init << endl;
         cout << "  max_time=" << Config::max_time << endl;
         cout << "  max_step=" << Config::max_step << endl;

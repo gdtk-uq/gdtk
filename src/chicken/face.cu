@@ -20,15 +20,6 @@
 
 using namespace std;
 
-namespace FluxCalc {
-    // Selection of flux calculator happens at compile time,
-    // setting flux_calculator below.
-    array<string,2> names{"ausmdv", "sbp_asf"};
-    //
-    constexpr int ausmdv = 0;
-    constexpr int sbp_asf = 1;
-};
-
 // Interpolation functions that will be used in the fluc calculator.
 
 __host__ __device__
@@ -259,13 +250,10 @@ struct FVFace {
     // And one generic flux calculation function.
 
     __host__ __device__
-    void calculate_flux(FlowState& fsL1, FlowState& fsL0, FlowState& fsR0, FlowState& fsR1, int x_order)
+    void calculate_convective_flux(FlowState& fsL1, FlowState& fsL0, FlowState& fsR0, FlowState& fsR1, int flux_calc, int x_order)
     // Generic flux calculation function.
     {
-        // Choose the flavour of flux calculator at compile time.
-        constexpr int flux_calculator = FluxCalc::ausmdv;
-        //
-        if (flux_calculator ==  FluxCalc::ausmdv) {
+        if (flux_calc == 0) { // FluxCalc::ausmdv (PJ 2022-10-19 Name cannot be seen.)
             // First-order reconstruction is just a copy from the nearest cell centre.
             FlowState fsL{fsL0};
             FlowState fsR{fsR0};
@@ -283,7 +271,7 @@ struct FVFace {
             }
             // Use the reconstructed values near the face in a simple flux calculator.
             ausmdv(fsL, fsR);
-        } else if (flux_calculator == FluxCalc::sbp_asf) {
+        } else if (flux_calc == 1) { // FluxCalc::sbp_asf
             sbp_asf(fsL1, fsL0, fsR0, fsR1);
         }
     } // end calculate_flux()
