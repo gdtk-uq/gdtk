@@ -9,7 +9,7 @@ H = 10.0 # y-direction in metres
 L = 10.0 # x-direction in metres
 ymin = -0.2*H; ymax = 1.2*H
 xmin = -0.2*L; xmax = 1.2*L
-zmin = -0.002; zmax = 0.0
+zmin = -0.2; zmax = 0.0
 #
 vol0 = TFIVolume(p000=Vector3(xmin,ymin,zmin), p100=Vector3(xmax,ymin,zmin),
                  p110=Vector3(xmax,ymax,zmin), p010=Vector3(xmin,ymax,zmin),
@@ -29,8 +29,8 @@ def initial_flow(x, y, z):
     xc = L/2.0
     yc = H/2.0
     rhoFlow = pFlow/(Rgas*TFlow) # rho0
-    a0 = math.sqrt(Gamma*Rgas*TFlow) 
-    eps = 5.0*a0                #strength of vortex
+    a0 = math.sqrt(Gamma*Rgas*TFlow)
+    eps = 5.0*a0/10              #strength of vortex, reduced by 10, PJ 2022-10-18
     pi24 = 4.0*math.pow(math.pi,2)
     velx_inf = a0
     vely_inf = a0
@@ -55,14 +55,15 @@ def initial_flow(x, y, z):
         vely = vely_inf
     else:
         velx = -ybar/r * v + velx_inf
-        vely = xbar/r * v
+        vely = xbar/r * v + vely_inf
     return FlowState(p=pressure, velx=velx, vely=vely, T=T)
 
 
 
 #
 blk0 = FluidBlock(grid=grd0, initialState=initial_flow,
-                  bcs={'iminus':ExchangeBC(),'iplus':ExchangeBC()})
+                  bcs={'iminus':ExchangeBC(),'iplus':ExchangeBC(),
+                       'jminus':ExchangeBC(),'jplus':ExchangeBC()})
 #
 config.max_time = 10.0e-3  # seconds
 config.max_step = 150000
