@@ -1,0 +1,33 @@
+{
+  "title": "Isentropic Vortex.",
+  "gas_model": {"gamma": 1.4, "R": 287.1, "Cv": 717.75},
+  "max_time": 1.000000e-02,
+  "max_step": 150000,
+  "dt_init": 1.000000e-06,
+  "n_cfl": 1,
+  "cfl_times": [0.0],
+  "cfl_values": [0.5],
+  "cfl_count": 10,
+  "print_count": 20,
+  "x_order": 2,
+  "t_order": 2,
+  "n_dt_plot": 1,
+  "t_change": [0.0],
+  "dt_plot": [0.0001],
+  "dt_hist": [1e-06],
+  "iovar_names": ["pos.x", "pos.y", "pos.z", "vol", "p", "T", "rho", "e", "a", "vel.x", "vel.y", "vel.z"],
+  "n_flow_states": 0,
+  "flow_states": [
+  ],
+  "n_fluid_blocks": 1,
+  "nib": 1,
+  "njb": 1,
+  "nkb": 1,
+  "blk_ids": [[[0]]],
+  "nics": [120],
+  "njcs": [120],
+  "nkcs": [2],
+  "fluid_blocks": [
+    {"i": 0, "j": 0, "k": 0, "bcs": {"iminus": {"tag": "exchange"},"iplus": {"tag": "exchange"},"jminus": {"tag": "wall_with_slip"},"jplus": {"tag": "wall_with_slip"},"kminus": {"tag": "wall_with_slip"},"kplus": {"tag": "wall_with_slip"}}, "active": true, "label": ""}
+  ]
+}
