@@ -262,7 +262,7 @@ struct FVFace {
     // Generic flux calculation function.
     {
         // Choose the flavour of flux calculator at compile time.
-        constexpr int flux_calculator = FluxCalc::sbp_asf;
+        constexpr int flux_calculator = FluxCalc::ausmdv;
         //
         if (flux_calculator ==  FluxCalc::ausmdv) {
             // First-order reconstruction is just a copy from the nearest cell centre.
