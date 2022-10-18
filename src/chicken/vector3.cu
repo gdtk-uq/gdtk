@@ -27,7 +27,8 @@ struct Vector3 {
         x = other.x; y = other.y; z = other.z;
     }
 
-    string toString() {
+    string toString() const
+    {
         return "[x=" + to_string(x) + ", y=" + to_string(y) + ", z=" + to_string(z) + "]";
     }
 

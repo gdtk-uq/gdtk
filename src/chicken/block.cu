@@ -53,7 +53,7 @@ struct Block {
     }
 
     __host__
-    size_t configure(BConfig& cfg)
+    size_t configure(const BConfig& cfg)
     // Set up the block to hold the grid and flow data.
     // Do this before reading a grid or flow file.
     {
@@ -259,7 +259,7 @@ struct Block {
     }
 
     __host__
-    void computeGeometry(BConfig& cfg)
+    void computeGeometry(const BConfig& cfg)
     // Compute cell and face geometric data.
     // Do this after reading the grid and flow files because we need the vertex locations
     // and because cell positions and volumes are part of the flow data.
@@ -411,7 +411,7 @@ struct Block {
     } // end computeGeometry()
 
     __host__
-    void readGrid(BConfig& cfg, string fileName, bool vtkHeader=false)
+    void readGrid(const BConfig& cfg, string fileName, bool vtkHeader=false)
     // Reads the vertex locations from a compressed file, resizing storage as needed.
     // The numbers of cells are also checked.
     {
@@ -444,7 +444,7 @@ struct Block {
             throw runtime_error("Unexpected grid size: niv="+to_string(niv)+
                                 " njv="+to_string(njv)+ " nkv="+to_string(nkv));
         }
-        vertices.resize(niv*njv*nkv);
+        if (vertices.size() != niv*njv*nkv) throw runtime_error("Incorrect size of vertices.");
         //
         // Standard order of vertices.
         for (int k=0; k < nkv; k++) {
@@ -466,7 +466,7 @@ struct Block {
     } // end readGrid()
 
     __host__
-    void readFlow(BConfig& cfg, string fileName)
+    void readFlow(const BConfig& cfg, string fileName)
     // Reads the flow data archive from a ZIP file.
     // The correct data storage is presumed to exist.
     //
@@ -513,7 +513,7 @@ struct Block {
     } // end readFlow()
 
     __host__
-    void writeFlow(BConfig& cfg, string fileName)
+    void writeFlow(const BConfig& cfg, string fileName)
     // Writes the flow data into a new ZIP archive file.
     // Any necessary directories are presumed to exist.
     {
@@ -556,7 +556,7 @@ struct Block {
     } // end writeFlow()
 
     __host__
-    number estimate_allowed_dt(BConfig& cfg, number cfl)
+    number estimate_allowed_dt(const BConfig& cfg, number cfl)
     {
         number smallest_dt = numeric_limits<number>::max();
         for (int i=0; i < cfg.nActiveCells; i++) {
@@ -570,7 +570,7 @@ struct Block {
     } // end estimate_allowed_dt()
 
     __host__
-    void encodeConserved(BConfig& cfg, int level)
+    void encodeConserved(const BConfig& cfg, int level)
     {
         for (int i=0; i < cfg.nActiveCells; i++) {
             FlowState& fs = cells[i].fs;
@@ -580,7 +580,7 @@ struct Block {
     }
 
     __host__
-    int decodeConserved(BConfig& cfg, int level)
+    int decodeConserved(const BConfig& cfg, int level)
     {
         int bad_cell_count = 0;
         for (int i=0; i < cfg.nActiveCells; i++) {
@@ -608,7 +608,7 @@ struct Block {
     } // end calculate_fluxes()
 
     __host__
-    int update_stage_1(BConfig& cfg, number dt)
+    int update_stage_1(const BConfig& cfg, number dt)
     // Stage 1 of the TVD-RK3 update scheme (predictor step).
     {
         int bad_cell_count = 0;
@@ -631,7 +631,7 @@ struct Block {
     } // end update_stage_1()
 
     __host__
-    int update_stage_2(BConfig& cfg, number dt)
+    int update_stage_2(const BConfig& cfg, number dt)
     // Stage 2 of the TVD-RK3 update scheme.
     {
         int bad_cell_count = 0;
@@ -655,7 +655,7 @@ struct Block {
     } // end update_stage_2()
 
     __host__
-    int update_stage_3(BConfig& cfg, number dt)
+    int update_stage_3(const BConfig& cfg, number dt)
     // Stage 3 of the TVD_RK3 update scheme.
     {
         int bad_cell_count = 0;
@@ -680,7 +680,7 @@ struct Block {
     } // end update_stage_3()
 
     __host__
-    void copy_conserved_data(BConfig& cfg, int from_level, int to_level)
+    void copy_conserved_data(const BConfig& cfg, int from_level, int to_level)
     {
         for (auto i=0; i < cfg.nActiveCells; i++) {
             ConservedQuantities& U_from = Q[from_level*cfg.nActiveCells + i];
@@ -700,7 +700,7 @@ struct Block {
 // Block struct also needs to be in the global memory of the GPU.
 
 __global__
-void estimate_allowed_dt_on_gpu(Block& blk, BConfig& cfg, number cfl, long long int* smallest_dt_picos)
+void estimate_allowed_dt_on_gpu(Block& blk, const BConfig& cfg, number cfl, long long int* smallest_dt_picos)
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nActiveCells) {
@@ -714,7 +714,7 @@ void estimate_allowed_dt_on_gpu(Block& blk, BConfig& cfg, number cfl, long long 
 }
 
 __global__
-void encodeConserved_on_gpu(Block& blk, BConfig& cfg, int level)
+void encodeConserved_on_gpu(Block& blk, const BConfig& cfg, int level)
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nActiveCells) {
@@ -725,7 +725,7 @@ void encodeConserved_on_gpu(Block& blk, BConfig& cfg, int level)
 }
 
 __global__
-void copy_conserved_data_on_gpu(Block& blk, BConfig& cfg, int from_level, int to_level)
+void copy_conserved_data_on_gpu(Block& blk, const BConfig& cfg, int from_level, int to_level)
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nActiveCells) {
@@ -738,7 +738,7 @@ void copy_conserved_data_on_gpu(Block& blk, BConfig& cfg, int from_level, int to
 }
 
 __global__
-void calculate_fluxes_on_gpu(Block& blk, BConfig& cfg, int x_order)
+void calculate_fluxes_on_gpu(Block& blk, const BConfig& cfg, int x_order)
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nFaces) {
@@ -752,7 +752,7 @@ void calculate_fluxes_on_gpu(Block& blk, BConfig& cfg, int x_order)
 }
 
 __global__
-void update_stage_1_on_gpu(Block& blk, BConfig& cfg, number dt, int* bad_cell_count)
+void update_stage_1_on_gpu(Block& blk, const BConfig& cfg, number dt, int* bad_cell_count)
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nActiveCells) {
@@ -773,7 +773,7 @@ void update_stage_1_on_gpu(Block& blk, BConfig& cfg, number dt, int* bad_cell_co
 }
 
 __global__
-void update_stage_2_on_gpu(Block& blk, BConfig& cfg, number dt, int* bad_cell_count)
+void update_stage_2_on_gpu(Block& blk, const BConfig& cfg, number dt, int* bad_cell_count)
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nActiveCells) {
@@ -795,7 +795,7 @@ void update_stage_2_on_gpu(Block& blk, BConfig& cfg, number dt, int* bad_cell_co
 }
 
 __global__
-void update_stage_3_on_gpu(Block& blk, BConfig& cfg, number dt, int* bad_cell_count)
+void update_stage_3_on_gpu(Block& blk, const BConfig& cfg, number dt, int* bad_cell_count)
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nActiveCells) {

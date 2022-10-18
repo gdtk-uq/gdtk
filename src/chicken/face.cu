@@ -73,7 +73,8 @@ struct FVFace {
     array<int,2> left_cells{0, 0};
     array<int,2> right_cells{0, 0};
 
-    string toString() {
+    string toString() const
+    {
         ostringstream repr;
         repr << "FVFace(pos=" << pos.toString() << ", n=" << n.toString()
              << ", t1=" << t1.toString() << ", t2=" << t2.toString() << ", area=" << area;

@@ -130,13 +130,13 @@ struct BConfig {
     // Methods to index the elements making up the block.
 
     __host__ __device__
-    int activeCellIndex(int i, int j, int k)
+    int activeCellIndex(int i, int j, int k) const
     {
         return k*nic*njc + j*nic + i;
     }
 
     __host__ __device__
-    int ghostCellIndex(int faceIndx, int i0, int i1, int depth)
+    int ghostCellIndex(int faceIndx, int i0, int i1, int depth) const
     {
         int cellIndxOnFace = (active) ? i1*n0c[faceIndx] + i0 : 0;
         int nCellsOnFace = (active) ? n0c[faceIndx]*n1c[faceIndx] : 0;
@@ -144,31 +144,32 @@ struct BConfig {
     }
 
     __host__ __device__
-    int iFaceIndex(int i, int j, int k)
+    int iFaceIndex(int i, int j, int k) const
     {
         return i*njc*nkc + k*njc + j;
     }
 
     __host__ __device__
-    int jFaceIndex(int i, int j, int k)
+    int jFaceIndex(int i, int j, int k) const
     {
         return n_iFaces + j*nic*nkc + k*nic + i;
     }
 
     __host__ __device__
-    int kFaceIndex(int i, int j, int k)
+    int kFaceIndex(int i, int j, int k) const
     {
         return n_iFaces + n_jFaces + k*nic*njc + j*nic + i;
     }
 
     __host__ __device__
-    int vtxIndex(int i, int j, int k)
+    int vtxIndex(int i, int j, int k) const
     {
         return k*(nic+1)*(njc+1) + j*(nic+1) + i;
     }
 
 
-    string toString() {
+    string toString() const
+    {
         ostringstream repr;
         repr << "BConfig(i=" << i << ", j=" << j << ", k=" << k;
         repr << ", bcCodes=["; for (auto c: bcCodes) repr << c << ","; repr << "]";
