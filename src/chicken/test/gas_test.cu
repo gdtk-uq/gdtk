@@ -7,8 +7,8 @@
 // $ ./gas_test
 //
 #include <iostream>
-#include "number.cu"
-#include "gas.cu"
+#include "../number.cu"
+#include "../gas.cu"
 
 using namespace std;
 

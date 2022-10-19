@@ -7,8 +7,8 @@
 // $ ./rsla_test
 //
 #include <iostream>
-#include "number.cu"
-#include "rsla.cu"
+#include "../number.cu"
+#include "../rsla.cu"
 
 using namespace std;
 
