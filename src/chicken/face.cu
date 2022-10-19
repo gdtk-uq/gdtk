@@ -183,67 +183,64 @@ struct FVFace {
 
     __host__ __device__
     void sbp_asf(FlowState& fsL1, FlowState& fsL0, FlowState& fsR0, FlowState& fsR1)
-    // Christine's Summation-By-Parts Alpha-Split Flux calculation function.
+    // Lachlan's and Christine's Summation-By-Parts Alpha-Split Flux calculation function
     {
-        Vector3 velL1 = Vector3(fsL1.vel);
-        Vector3 velL0 = Vector3(fsL0.vel);
-        Vector3 velR0 = Vector3(fsR0.vel);
-        Vector3 velR1 = Vector3(fsR1.vel);
-        velL1.transform_to_local_frame(n, t1, t2);
-        velL0.transform_to_local_frame(n, t1, t2);
-        velR0.transform_to_local_frame(n, t1, t2);
-        velR1.transform_to_local_frame(n, t1, t2);
+        int i;
+        array<FlowState,4> stencil{fsL1, fsL0, fsR0, fsR1};
+        array<Vector3,4> Vel{fsL1.vel, fsL0.vel, fsR0.vel, fsR1.vel};
+        for(i=0;i<4;++i)
+        {
+            Vel[i].transform_to_local_frame(n, t1, t2);
+        }
         //
-        // [TODO] some fancy calculation here.
-        //
-        // L1
-        number rhoL1 = fsL1.gas.rho; number velxL1 = velL1.x; number velyL1 = velL1.y; number velzL1 = velL1.z; number pL1 = fsL1.gas.p; number eL1 = fsL1.gas.e;
-        number rhoL1velxL1 = rhoL1*velxL1; number rhoL1velyL1 = rhoL1*velyL1; number rhoL1velzL1 = rhoL1*velzL1; number rhoL1eL1 = eL1*rhoL1;
-        // L0
-        number rhoL0 = fsL0.gas.rho; number velxL0 = velL0.x; number velyL0 = velL0.y; number velzL0 = velL0.z; number pL0 = fsL0.gas.p; number eL0 = fsL0.gas.e;
-        number rhoL0velxL0 = rhoL0*velxL0; number rhoL0velyL0 = rhoL0*velyL0; number rhoL0velzL0 = rhoL0*velzL0; number rhoL0eL0 = eL0*rhoL0;
-        // R0
-        number rhoR0 = fsR0.gas.rho; number velxR0 = velR0.x; number velyR0 = velR0.y; number velzR0 = velR0.z; number pR0 = fsR0.gas.p; number eR0 = fsR0.gas.e;
-        number rhoR0velxR0 = rhoR0*velxR0; number rhoR0velyR0 = rhoR0*velyR0; number rhoR0velzR0 = rhoR0*velzR0; number rhoR0eR0 = eR0*rhoR0;
-        // R1
-        number rhoR1 = fsR1.gas.rho; number velxR1 = velR1.x; number velyR1 = velR1.y; number velzR1 = velR1.z; number pR1 = fsR1.gas.p; number eR1 = fsR1.gas.e;
-        number rhoR1velxR1 = rhoR1*velxR1; number rhoR1velyR1 = rhoR1*velyR1; number rhoR1velzR1 = rhoR1*velzR1; number rhoR1eR1 = eR1*rhoR1;
-        //
-        number f_c_0 = (1.0 / 12.0) * (-rhoL1*velxL1 + 7.0*rhoL0*velxL0 + 7.0*rhoR0*velxR0 - rhoR1*velxR1);
-        number f_c_1 = (1.0 / 12.0) * (-rhoL1velxL1*velxL1 + 7.0*rhoL0velxL0*velxL0 + 7.0*rhoR0velxR0*velxR0 - rhoR1velxR1*velxR1);
-        number f_c_2 = (1.0 / 12.0) * (-rhoL1velyL1*velxL1 + 7.0*rhoL0velyL0*velxL0 + 7.0*rhoR0velyR0*velxR0 - rhoR1velyR1*velxR1);
-        number f_c_3 = (1.0 / 12.0) * (-rhoL1velzL1*velxL1 + 7.0*rhoL0velzL0*velxL0 + 7.0*rhoR0velzR0*velxR0 - rhoR1velzR1*velxR1);
-        number f_c_4 = (1.0 / 12.0) * (-rhoL1eL1*velxL1 + 7.0*rhoL0eL0*velxL0 + 7.0*rhoR0eR0*velxR0 - rhoR1eR1*velxR1);
-        number f_c_5 = (1.0 / 12.0) * (-rhoL1velxL1*velxL1*velxL1 + 7.0*rhoL0velxL0*velxL0*velxL0 + 7.0*rhoR0velxR0*velxR0*velxR0 - rhoR1velxR1*velxR1*velxR1);
-        number f_c_6 = (1.0 / 12.0) * (-rhoL1velyL1*velyL1*velxL1 + 7.0*rhoL0velyL0*velyL0*velxL0 + 7.0*rhoR0velyR0*velyR0*velxR0 - rhoR1velyR1*velyR1*velxR1);
-        number f_c_7 = (1.0 / 12.0) * (-rhoL1velzL1*velzL1*velxL1 + 7.0*rhoL0velzL0*velzL0*velxL0 + 7.0*rhoR0velzR0*velzR0*velxR0 - rhoR1velzR1*velzR1*velxR1);
-        number f_c_8 = (1.0 / 12.0) * (-pL1*velxL1 + 7.0*pL0*velxL0 + 7.0*pR0*velxR0 - pR1*velxR1);
-        number f_c_9 = (1.0 / 12.0) * (-pL1 + 7.0*pL0 + 7.0*pR0 - pR1);
-        //
-        number f_e_0 = (1.0 / 12.0) * (-rhoL1*velxR0 - rhoR0*velxL1 + 8.0*rhoL0*velxR0 + 8.0*rhoR0*velxL0 - rhoL0*velxR1 - rhoR1*velxL0);
-        number f_e_1 = (1.0 / 12.0) * (-rhoL1velxL1*velxR0 - rhoR0velxR0*velxL1 + 8.0*rhoL0velxL0*velxR0 + 8.0* rhoR0velxR0*velxL0 - rhoL0velxL0*velxR1 - rhoR1velxR1*velxL0);
-        number f_e_2 = (1.0 / 12.0) * (-rhoL1velyL1*velxR0 - rhoR0velyR0*velxL1 + 8.0*rhoL0velyL0*velxR0 + 8.0* rhoR0velyR0*velxL0 - rhoL0velyL0*velxR1 - rhoR1velyR1*velxL0);
-        number f_e_3 = (1.0 / 12.0) * (-rhoL1velzL1*velxR0 - rhoR0velzR0*velxL1 + 8.0*rhoL0velzL0*velxR0 + 8.0* rhoR0velzR0*velxL0 - rhoL0velzL0*velxR1 - rhoR1velzR1*velxL0);
-        number f_e_4 = (1.0 / 12.0) * (-rhoL1eL1*velxR0 - rhoR0eR0*velxL1 + 8.0*rhoL0eL0*velxR0 + 8.0* rhoR0eR0*velxL0 - rhoL0eL0*velxR1 - rhoR1eR1*velxL0);
-        number f_e_5 = (1.0 / 12.0) * (-rhoL1velxL1*velxL1*velxR0 - rhoR0velxR0*velxR0*velxL1 + 8.0*rhoL0velxL0*velxL0*velxR0 + 8.0*rhoR0velxR0*velxR0*velxL0 - rhoL0velxL0*velxL0*velxR1 - rhoR1velxR1*velxR1*velxL0);
-        number f_e_6 = (1.0 / 12.0) * (-rhoL1velyL1*velyL1*velxR0 - rhoR0velyR0*velyR0*velxL1 + 8.0*rhoL0velyL0*velyL0*velxR0 + 8.0*rhoR0velyR0*velyR0*velxL0 - rhoL0velyL0*velyL0*velxR1 - rhoR1velyR1*velyR1*velxL0);
-        number f_e_7 = (1.0 / 12.0) * (-rhoL1velzL1*velzL1*velxR0 - rhoR0velzR0*velzR0*velxL1 + 8.0*rhoL0velzL0*velzL0*velxR0 + 8.0*rhoR0velzR0*velzR0*velxL0 - rhoL0velzL0*velzL0*velxR1 - rhoR1velzR1*velzR1*velxL0);
-        number f_e_8 = (1.0 / 12.0) * (-pL1*velxR0 - pR0*velxL1 + 8.0*pL0*velxR0 + 8.0*pR0*velxL0 - pL0*velxR1 - pR1*velxL0);
-        number f_e_9 = (1.0 / 12.0) * (-pL1 - pR0 + 8.0*pL0 + 8.0*pR0 - pL0 - pR1);
+        number v[10][4] , w[10][4]; 
+        for(i=0;i<4;++i)
+        {
+            v[0][i] = stencil[i].gas.rho;
+            w[0][i] = Vel[i].x;
+            v[1][i] = Vel[i].x * stencil[i].gas.rho;
+            w[1][i] = Vel[i].x;
+            v[2][i] = Vel[i].y * stencil[i].gas.rho;
+            w[2][i] = Vel[i].x;
+            v[3][i] = Vel[i].z * stencil[i].gas.rho;
+            w[3][i] = Vel[i].x;
+            v[4][i] = stencil[i].gas.e * stencil[i].gas.rho;
+            w[4][i] = Vel[i].x;
+            v[5][i] = Vel[i].x * Vel[i].x * stencil[i].gas.rho;
+            w[5][i] = Vel[i].x;
+            v[6][i] = Vel[i].y * Vel[i].y * stencil[i].gas.rho;
+            w[6][i] = Vel[i].x;
+            v[7][i] = Vel[i].z * Vel[i].z * stencil[i].gas.rho;
+            w[7][i] = Vel[i].x;
+            v[8][i] = stencil[i].gas.p;
+            w[8][i] = Vel[i].x;
+            v[9][i] = stencil[i].gas.p;
+            w[9][i] = 1;
+        }
+
+        number f_c[10];
+        number f_e[10];
+
+        for(i=0;i<10;++i)
+        {
+            f_c[i] = (1.0 / 12.0) * (-v[i][0] * w[i][0] + 7.0 * v[i][1] * w[i][1] + 7.0 * v[i][2] * w[i][2] - v[i][3] * w[i][3]);
+            f_e[i] = (1.0 / 12.0) * (-v[i][0] * w[i][2] - v[i][2] * w[i][0] + 8 * v[i][1] * w[i][2] + 8 * v[i][2] * w[i][1] - v[i][1] * w[i][3] - v[i][3] * w[i][1]);
+        }
         //
         number alpha_mass = 1.0; number alpha_mom = 0.5; number alpha_ie = 0.5; number alpha_ke = 0.0; number alpha_p = 0.0;
         //
-        F[CQI::mass] = alpha_mass * f_c_0 + (1.0 - alpha_mass) * f_e_0;
-        number mom_x = alpha_mom * f_c_1 + (1.0 - alpha_mom) * f_e_1 + (alpha_p * f_c_9 + (1.0 - alpha_p) * f_e_9);
-        number mom_y = alpha_mom * f_c_2 + (1.0 - alpha_mom) * f_e_2;
-        number mom_z = alpha_mom * f_c_3 + (1.0 - alpha_mom) * f_e_3;
+        F[CQI::mass] = alpha_mass * f_c[0] + (1.0 - alpha_mass) * f_e[0];
+        number mom_x = alpha_mom * f_c[1] + (1.0 - alpha_mom) * f_e[1] + (alpha_p * f_c[9] + (1.0 - alpha_p) * f_e[9]);
+        number mom_y = alpha_mom * f_c[2] + (1.0 - alpha_mom) * f_e[2];
+        number mom_z = alpha_mom * f_c[3] + (1.0 - alpha_mom) * f_e[3];
         //
         Vector3 momentum{mom_x, mom_y, mom_z};
         momentum.transform_to_global_frame(n, t1, t2);
         F[CQI::xMom] = momentum.x;
         F[CQI::yMom] = momentum.y;
         F[CQI::zMom] = momentum.z;
-        F[CQI::totEnergy] = alpha_ie * f_c_4 + (1.0 - alpha_ie) * f_e_4 + (1.0 / 2.0) * (alpha_ke * f_c_5 + (1.0 - alpha_ke) * f_e_5 + alpha_ke * f_c_6 + (1.0 - alpha_ke) * f_e_6 + alpha_ke * f_c_7 + (1.0 - alpha_ke) * f_e_7) + alpha_p * f_c_8 + (1.0 - alpha_p) * f_e_8;
+        F[CQI::totEnergy] = alpha_ie * f_c[4] + (1.0 - alpha_ie) * f_e[4] + (1.0 / 2.0) * (alpha_ke * f_c[5] + (1.0 - alpha_ke) * f_e[5] + alpha_ke * f_c[6] +
+           (1.0 - alpha_ke) * f_e[6] + alpha_ke * f_c[7] + (1.0 - alpha_ke) * f_e[7]) + alpha_p * f_c[8] + (1.0 - alpha_p) * f_e[8];
     } // end sbp_asf()
 
 
