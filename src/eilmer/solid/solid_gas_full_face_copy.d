@@ -150,6 +150,13 @@ public:
         // larger underlying block array that includes the surrounding layers of ghost cells.
         size_t i_dest, j_dest, k_dest;
         //
+        // NOTE: we need to fill out the other_blk.myConfig gas model using the GlobalConfig object here,
+        //       this is because the other_blk.myConfig will not be filled out (i.e. n_modes = 0 & n_species = 0)
+        //       if it is sitting in another MPI process. It is safe to operate using the GlobalConfig object
+        //       here since this function (set_up_cell_mapping_phase0) is only ever called in a serial loop through
+        //       the array of block objects. KAD 2022-10-19.
+        other_blk.myConfig.init_gas_model_bits();
+        //
         if (blk.myConfig.dimensions == 2) {
             // Handle the 2D case separately.
             switch (which_boundary) {
