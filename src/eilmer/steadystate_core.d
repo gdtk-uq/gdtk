@@ -1121,13 +1121,13 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 if (GlobalConfig.is_master_task){
                     if (legacy) {
                         ensure_directory_is_present(make_path_name!"flow"(nWrittenSnapshots));
-                        ensure_directory_is_present(make_path_name!"solid"(nWrittenSnapshots));
                     } else {
                         foreach(io; io_list) {
                             string path = "CellData/"~io.tag;
                             if (io.do_save()) ensure_directory_is_present(make_path_name(path, nWrittenSnapshots));
                         }
                     }
+                    ensure_directory_is_present(make_path_name!"solid"(nWrittenSnapshots));
                 }
                 version(mpi_parallel) {
                     MPI_Barrier(MPI_COMM_WORLD);
