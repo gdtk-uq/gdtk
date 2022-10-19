@@ -164,10 +164,10 @@ struct Block {
             for (int i=0; i < cfg.nic; i++) {
                 for (int j=0; j < cfg.njc+1; j++) {
                     FVFace& f = faces[cfg.jFaceIndex(i,j,k)];
-                    f.vtx[0] = cfg.vtxIndex(i,j,k);
-                    f.vtx[1] = cfg.vtxIndex(i+1,j,k);
-                    f.vtx[2] = cfg.vtxIndex(i+1,j,k+1);
-                    f.vtx[3] = cfg.vtxIndex(i,j,k+1);
+                    f.vtx[0] = cfg.vtxIndex(i+1,j,k);
+                    f.vtx[1] = cfg.vtxIndex(i,j,k);
+                    f.vtx[2] = cfg.vtxIndex(i,j,k+1);
+                    f.vtx[3] = cfg.vtxIndex(i+1,j,k+1);
                     if (j == 0) {
                         f.left_cells[1] = cfg.ghostCellIndex(Face::jminus,i,k,1);
                         f.left_cells[0] = cfg.ghostCellIndex(Face::jminus,i,k,0);

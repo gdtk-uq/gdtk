@@ -67,4 +67,5 @@ blk0 = FluidBlock(grid=grd0, initialState=initial_flow,
 #
 config.max_time = 10.0e-3  # seconds
 config.max_step = 150000
+config.flux_calc = "sbp_asf"
 add_dt_plot(0.0, 0.1e-3)
