@@ -155,10 +155,14 @@ def write_vtk_files(jobDir, tindx):
              (0, whole_niv-1, 0, whole_njv-1, 0, whole_nkv-1))
     fp.write('<PCellData>\n')
     for var in config["iovar_names"]:
-        fp.write('<DataArray Name="%s" type="Float64" NumberOfComponents="1" format="ascii" />\n' % (var,))
+        fp.write('<PDataArray Name="%s" type="Float64" NumberOfComponents="1" format="ascii" />\n' % (var,))
+    if "vel.x" in config["iovar_names"] and "a" in config["iovar_names"]:
+        fp.write('<PDataArray Name="Mach" type="Float64" NumberOfComponents="1" format="ascii" />\n');
+    if "vel.x" in config["iovar_names"]:
+        fp.write('<PDataArray Name="vel.vector" type="Float64" NumberOfComponents="3" format="ascii" />\n');
     fp.write('</PCellData>\n')
     fp.write('<PPoints>\n')
-    fp.write('<DataArray type="Float64" NumberOfComponents="3" format="ascii" />\n')
+    fp.write('<PDataArray type="Float64" NumberOfComponents="3" format="ascii" />\n')
     fp.write('</PPoints>\n')
     start_nkv = 0
     for k in range(config['nkb']):
@@ -206,6 +210,15 @@ def write_vtk_structured_grid_file(fileName, grid, flowData,
         for var in config["iovar_names"]:
             fp.write('<DataArray Name="%s" type="Float64" NumberOfComponents="1" format="ascii">\n' % (var,))
             for item in flowData[var]: fp.write('%g\n' % (item,))
+            fp.write('</DataArray>\n')
+        if "vel.x" in config["iovar_names"] and  "a" in config["iovar_names"]:
+            fp.write('<DataArray Name="Mach" type="Float64" NumberOfComponents="1" format="ascii">\n');
+            for a,vx,vy,vz in zip(flowData["a"],flowData["vel.x"],flowData["vel.y"],flowData["vel.z"]):
+                fp.write('%g\n' % (math.sqrt(vx*vx+vy*vy+vz*vz)/a))
+            fp.write('</DataArray>\n')
+        if "vel.x" in config["iovar_names"]:
+            fp.write('<DataArray Name="vel.vector" type="Float64" NumberOfComponents="3" format="ascii">\n');
+            for velxyz in zip(flowData["vel.x"],flowData["vel.y"],flowData["vel.z"]): fp.write('%g %g %g\n' % velxyz)
             fp.write('</DataArray>\n')
         fp.write('</CellData>\n')
         fp.write('<Points>\n')
