@@ -61,7 +61,7 @@ File begin_PVTU_file(string fileName, string[] variableNames)
     f.write("</PPoints>\n");
     f.write("<PCellData>\n");
     foreach (var; variableNames) {
-        f.writef(" <DataArray Name=\"%s\" type=\"Float32\" NumberOfComponents=\"1\"/>\n", var);
+        f.writef(" <PDataArray Name=\"%s\" type=\"Float32\" NumberOfComponents=\"1\"/>\n", var);
     }
     if (canFind(variableNames,"vel.x")) {
         f.write(" <PDataArray Name=\"vel.vector\" type=\"Float32\" NumberOfComponents=\"3\"/>\n");
