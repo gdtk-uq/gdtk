@@ -88,8 +88,8 @@ struct BConfig {
     int nGPUblocks_for_faces = 0;
     //
     // Boundary condition codes and associated FlowStates.
-    int bcCodes[6];
-    int bc_fs[6];
+    array<int,6> bcCodes;
+    array<int,6> bc_fs;
 
     __host__
     void fill_in_dimensions(int _nic, int _njc, int _nkc)
