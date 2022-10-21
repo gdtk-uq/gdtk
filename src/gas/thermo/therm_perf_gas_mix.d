@@ -10,6 +10,7 @@ module gas.thermo.therm_perf_gas_mix;
 import std.math;
 import std.string;
 import std.conv;
+import std.stdio;
 import util.lua;
 import util.lua_service;
 import nm.nm_exception : NumericalMethodException;
@@ -86,7 +87,7 @@ public:
             return s - s_guess;
         }
 
-        if (bracket!(zeroFun,number)(T1, T2) == -1) {
+        if (bracket!(zeroFun,number)(T1, T2, 10.0, 200000.0) == -1) {
             string msg = "The 'bracket' function failed to find temperature values\n";
             debug {
                 msg ~= "that bracketed the zero function in GasMixtureThermo.update_thermo_from_ps().\n";
