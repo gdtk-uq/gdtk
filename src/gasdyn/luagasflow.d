@@ -410,7 +410,7 @@ extern(C) int gasflow_steady_flow_with_area_change(lua_State* L)
     }
     double p2p1_min=1.0e-4; // default value
     if (lua_isnumber(L, 5)) {
-        tol = to!double(luaL_checknumber(L, 5));
+        p2p1_min = to!double(luaL_checknumber(L, 5));
     }
     //
     try {
