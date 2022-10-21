@@ -60,9 +60,24 @@ struct FVFace {
     array<number,CQI::n> F; // flux vector for conserved quantities
     // We will keep connections to the pieces composing the face
     // as indices into global arrays.
-    array<int,4> vtx{0, 0, 0, 0};
-    array<int,2> left_cells{0, 0};
-    array<int,2> right_cells{0, 0};
+    array<int,4> vtx{-1,-1,-1,-1};
+    array<int,2> left_cells{-1,-1};
+    array<int,2> right_cells{-1,-1};
+    // For the gradient calculations that form part of the viscous fluxes
+    // we keep lists of faces and cells that form a cloud of points around
+    // this face-centre.
+    // We also need the FlowState at this face-centre.  It will be set during
+    // the convective-flux calculation or by the boundary-condition code for a wall.
+    FlowState fs;
+    array<int,2> cells_in_cloud{-1,-1};
+    array<int,8> faces_in_cloud{-1,-1,-1,-1,-1,-1,-1,-1};
+    int nccloud = 0;
+    int nfcloud = 0;
+    // Spatial gradients with respect to directions x,y,z.
+    number grad_vel[3][3];
+    number grad_T[3];
+    // Prepared least-squares solution for cloud of cell- and face-FlowStates.
+    array<number,10> wx, wy, wz;
 
     string toString() const
     {
@@ -76,7 +91,7 @@ struct FVFace {
         return repr.str();
     }
 
-    // Specific flux calculators here...
+    // Specific convective-flux calculators here...
 
     __host__ __device__
     void ausmdv(const FlowState& fsL, const FlowState& fsR)
@@ -247,8 +262,9 @@ struct FVFace {
     // And one generic flux calculation function.
 
     __host__ __device__
-    void calculate_convective_flux(FlowState& fsL1, FlowState& fsL0, FlowState& fsR0, FlowState& fsR1, int flux_calc, int x_order)
-    // Generic flux calculation function.
+    void calculate_convective_flux(FlowState& fsL1, FlowState& fsL0, FlowState& fsR0, FlowState& fsR1,
+                                   int flux_calc, int x_order)
+    // Generic convective-flux calculation function.
     {
         if (flux_calc == 0) { // FluxCalc::ausmdv (PJ 2022-10-19 Name cannot be seen.)
             // First-order reconstruction is just a copy from the nearest cell centre.
@@ -268,8 +284,11 @@ struct FVFace {
             }
             // Use the reconstructed values near the face in a simple flux calculator.
             ausmdv(fsL, fsR);
+            // For later use in gradient calculations for viscous fluxes.
+            fs.set_as_average(fsL,fsR);
         } else if (flux_calc == 1) { // FluxCalc::sbp_asf
             sbp_asf(fsL1, fsL0, fsR0, fsR1);
+            fs.set_as_average(fsL0,fsR0);
         }
     } // end calculate_flux()
 

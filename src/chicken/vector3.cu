@@ -22,6 +22,12 @@ struct Vector3 {
     }
 
     __host__ __device__
+    void set_as_average(const Vector3& a, const Vector3& b)
+    {
+        x = 0.5*(a.x+b.x); y = 0.5*(a.y+b.y); z = 0.5*(a.z+b.z);
+    }
+
+    __host__ __device__
     void set(const Vector3& other)
     {
         x = other.x; y = other.y; z = other.z;

@@ -262,6 +262,7 @@ namespace Config {
     int x_order = 2;
     int t_order = 2;
     int flux_calc = FluxCalc::ausmdv;
+    bool viscous = false;
 }
 
 
@@ -401,6 +402,7 @@ vector<BConfig> read_config_file(string fileName)
     vector<number> t_change = jsonData["t_change"].get<vector<number> >();
     vector<number> dt_plot = jsonData["dt_plot"].get<vector<number> >();
     Config::dt_plot_schedule = Schedule{t_change, dt_plot};
+    Config::viscous = jsonData["viscous"].get<bool>();
     if (Config::verbosity > 0) {
         cout << "  x_order=" << Config::x_order << endl;
         cout << "  t_order=" << Config::t_order << endl;
@@ -412,6 +414,7 @@ vector<BConfig> read_config_file(string fileName)
         cout << "  cfl_schedule=" << Config::cfl_schedule.toString() << endl;
         cout << "  print_count=" << Config::print_count << endl;
         cout << "  dt_plot_schedule=" << Config::dt_plot_schedule.toString() << endl;
+        cout << "  viscous=" << Config::viscous << endl;
     }
     return blk_configs;
 } // end read_config_file()

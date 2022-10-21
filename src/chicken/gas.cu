@@ -58,6 +58,14 @@ struct GasState {
     }
 
     __host__ __device__
+    void set_as_average(const GasState& a, const GasState& b)
+    {
+        rho = 0.5*(a.rho+b.rho);
+        e = 0.5*(a.e+b.e);
+        update_from_rhoe();
+    }
+
+    __host__ __device__
     void trans_coeffs(number& mu, number& k)
     {
         using namespace GasModel;

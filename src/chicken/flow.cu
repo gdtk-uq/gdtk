@@ -43,6 +43,13 @@ struct FlowState {
     }
 
     __host__ __device__
+    void set_as_average(const FlowState& a, const FlowState& b)
+    {
+        gas.set_as_average(a.gas, b.gas);
+        vel.set_as_average(a.vel, b.vel);
+    }
+
+    __host__ __device__
     void encode_conserved(ConservedQuantities& U)
     {
         number rho = gas.rho;

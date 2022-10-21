@@ -100,7 +100,7 @@ class GlobalConfig():
         'nib', 'njb', 'nkb', 'blk_ids', 'nics', 'njcs', 'nkcs', \
         'dt_init', 'cfl_list', 'cfl_count', 'print_count', \
         'dt_plot_list', 'max_time', 'max_step', \
-        'x_order', 't_order', 'flux_calc', 'iovar_names'
+        'x_order', 't_order', 'flux_calc', 'viscous', 'iovar_names'
 
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -126,6 +126,7 @@ class GlobalConfig():
         self.x_order = 2
         self.t_order = 2
         self.flux_calc = "ausmdv"
+        self.viscous = False
         # The following is not meant to be edited for individual simulations but
         # should be kept consistent with the symbols in IOvar namespace
         # that is defined in cell.cu.
@@ -161,6 +162,7 @@ class GlobalConfig():
         fp.write('  "x_order": %d,\n' % self.x_order)
         fp.write('  "t_order": %d,\n' % self.t_order)
         fp.write('  "flux_calc": "%s",\n' % self.flux_calc)
+        fp.write('  "viscous": %s,\n' % json.dumps(self.viscous))
         #
         if len(self.dt_plot_list) == 0:
             # Since the user did not specify any, default to the end.
