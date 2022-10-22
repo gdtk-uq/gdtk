@@ -14,6 +14,7 @@
 #include <zip.h>
 
 #include "number.cu"
+#include "rsla.cu"
 #include "vector3.cu"
 #include "config.cu"
 #include "gas.cu"
@@ -23,6 +24,74 @@
 #include "cell.cu"
 
 using namespace std;
+
+__host__ __device__
+int setup_LSQ_arrays_at_face(FVFace f, FVCell cells[], FVFace faces[])
+// Prepare the inverse of the least-squares design matrix and use it to
+// prepare the final weights of the points in the cloud at each face.
+// The evaluation of each flow gradient becomes a matrix*vector product.
+//
+// Returns 0 if all successful, else 1 if a singular matrix is encountered.
+//
+// Adapted from the Eilmer4 code PJ, 2022-10-22.
+// Placed in block.cu so that FVCell and FVFace struct definitions can be seen.
+{
+    // Get pointers to all of the cloud FlowStates and positions.
+    FlowState* flows[cloud_nmax];
+    Vector3* cloud_pos[cloud_nmax];
+    for (int i=0; i < f.cloud_nc; i++) { cloud_pos[i] = &(cells[i].pos); }
+    for (int i=0; i < f.cloud_nf; i++) { cloud_pos[f.cloud_nc+i] = &(faces[i].pos); }
+    int cloud_n = f.cloud_nc + f.cloud_nf;
+    //
+    // Calculate the weights used in the least-squares gradient calculation.
+    // These are the square of the weights on the original linear constraint eqns
+    // and are calculated with the face centre as the reference point.
+    number weights2[cloud_nmax];
+    number x0 = f.pos.x; number y0 = f.pos.y; number z0 = f.pos.z;
+    for (int i=0; i < cloud_n; i++) {
+        number dx = cloud_pos[i]->x - x0;
+        number dy = cloud_pos[i]->y - y0;
+        number dz = cloud_pos[i]->z - z0;
+        weights2[i] = 1.0/(dx*dx+dy*dy+dz*dz);
+    }
+    //
+    number dx[cloud_nmax], dy[cloud_nmax], dz[cloud_nmax];
+    number xx = 0.0; number xy = 0.0; number xz = 0.0;
+    number yy = 0.0; number yz = 0.0; number zz = 0.0;
+    for (int i=0; i < cloud_n; i++) {
+        dx[i] = cloud_pos[i]->x - x0;
+        dy[i] = cloud_pos[i]->y - y0;
+        dz[i] = cloud_pos[i]->z - z0;
+        xx += weights2[i]*dx[i]*dx[i];
+        xy += weights2[i]*dx[i]*dy[i];
+        xz += weights2[i]*dx[i]*dz[i];
+        yy += weights2[i]*dy[i]*dy[i];
+        yz += weights2[i]*dy[i]*dz[i];
+        zz += weights2[i]*dz[i]*dz[i];
+    }
+    number xTx[3][3]; // normal matrix
+    xTx[0][0] = xx; xTx[0][1] = xy; xTx[0][2] = xz;
+    xTx[1][0] = xy; xTx[1][1] = yy; xTx[1][2] = yz;
+    xTx[2][0] = xz; xTx[2][1] = yz; xTx[2][2] = zz;
+    //
+    number xTxInv[3][3]; // Inverse of normal matrix.
+    number very_small_value = 1.0e-16; // Should be 1.0e-32 (normInf(xTx))^^3;
+    if (0 != MInverse(xTx, xTxInv, very_small_value)) {
+        return 1;
+    }
+    // Prepare final weights for later use in the reconstruction phase.
+    for (int i=0; i < cloud_n; i++) {
+        f.wx[i] = xTxInv[0][0]*dx[i] + xTxInv[0][1]*dy[i] + xTxInv[0][2]*dz[i];
+        f.wx[i] *= weights2[i];
+        f.wy[i] = xTxInv[1][0]*dx[i] + xTxInv[1][1]*dy[i] + xTxInv[1][2]*dz[i];
+        f.wy[i] *= weights2[i];
+        f.wz[i] = xTxInv[2][0]*dx[i] + xTxInv[2][1]*dy[i] + xTxInv[2][2]*dz[i];
+        f.wz[i] *= weights2[i];
+    }
+    return 0; // All weights successfully computed.
+} // end setup_LSQ_arrays()
+
+
 
 struct Block {
     // Storage for active cells and ghost cells.
@@ -163,38 +232,38 @@ struct Block {
                         if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j,k), -1};
-                            f.nccloud = 1;
+                            f.cloud_nc = 1;
                         } else {
                             f.cells_in_cloud = {cfg.ghostCellIndex(Face::iminus,j,k,0), cfg.activeCellIndex(i,j,k)};
-                            f.nccloud = 2;
+                            f.cloud_nc = 2;
                         }
                         f.faces_in_cloud = {cfg.jFaceIndex(i,j,k), cfg.jFaceIndex(i,j+1,k),
                                             cfg.kFaceIndex(i,j,k), cfg.kFaceIndex(i,j,k+1),
                                             -1, -1, -1, -1};
-                        f.nfcloud = 4;
+                        f.cloud_nf = 4;
                     } else if (i == cfg.nic) {
                         f.bcCode = cfg.bcCodes[Face::iplus];
                         if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i-1,j,k), -1};
-                            f.nccloud = 1;
+                            f.cloud_nc = 1;
                         } else {
                             f.cells_in_cloud = {cfg.activeCellIndex(i-1,j,k), cfg.ghostCellIndex(Face::iplus,j,k,0)};
-                            f.nccloud = 2;
+                            f.cloud_nc = 2;
                         }
                         f.faces_in_cloud = {cfg.jFaceIndex(i-1,j,k), cfg.jFaceIndex(i-1,j+1,k),
                                             cfg.kFaceIndex(i-1,j,k), cfg.kFaceIndex(i-1,j,k+1),
                                             -1, -1, -1, -1};
-                        f.nfcloud = 4;
+                        f.cloud_nf = 4;
                     } else {
                         f.bcCode = -1; // Interior face.
                         f.cells_in_cloud = {cfg.activeCellIndex(i-1,j,k), cfg.activeCellIndex(i,j,k)};
-                        f.nccloud = 2;
+                        f.cloud_nc = 2;
                         f.faces_in_cloud = {cfg.jFaceIndex(i-1,j,k), cfg.jFaceIndex(i-1,j+1,k),
                                             cfg.kFaceIndex(i-1,j,k), cfg.kFaceIndex(i-1,j,k+1),
                                             cfg.jFaceIndex(i,j,k), cfg.jFaceIndex(i,j+1,k),
                                             cfg.kFaceIndex(i,j,k), cfg.kFaceIndex(i,j,k+1)};
-                        f.nfcloud = 8;
+                        f.cloud_nf = 8;
                     }
                 }
             }
@@ -242,38 +311,38 @@ struct Block {
                         if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j,k), -1};
-                            f.nccloud = 1;
+                            f.cloud_nc = 1;
                         } else {
                             f.cells_in_cloud = {cfg.ghostCellIndex(Face::jminus,i,k,0), cfg.activeCellIndex(i,j,k)};
-                            f.nccloud = 2;
+                            f.cloud_nc = 2;
                         }
                         f.faces_in_cloud = {cfg.iFaceIndex(i,j,k), cfg.iFaceIndex(i+1,j,k),
                                             cfg.kFaceIndex(i,j,k), cfg.kFaceIndex(i,j,k+1),
                                             -1, -1, -1, -1};
-                        f.nfcloud = 4;
+                        f.cloud_nf = 4;
                     } else if (j == cfg.njc) {
                         f.bcCode = cfg.bcCodes[Face::jplus];
                         if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j-1,k), -1};
-                            f.nccloud = 1;
+                            f.cloud_nc = 1;
                         } else {
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j-1,k), cfg.ghostCellIndex(Face::jplus,i,k,0)};
-                            f.nccloud = 2;
+                            f.cloud_nc = 2;
                         }
                         f.faces_in_cloud = {cfg.iFaceIndex(i,j-1,k), cfg.iFaceIndex(i+1,j-1,k),
                                             cfg.kFaceIndex(i,j-1,k), cfg.kFaceIndex(i,j-1,k+1),
                                             -1, -1, -1, -1};
-                        f.nfcloud = 4;
+                        f.cloud_nf = 4;
                     } else {
                         f.bcCode = -1; // Interior face.
                         f.cells_in_cloud = {cfg.activeCellIndex(i,j-1,k), cfg.activeCellIndex(i,j,k)};
-                        f.nccloud = 2;
+                        f.cloud_nc = 2;
                         f.faces_in_cloud = {cfg.iFaceIndex(i,j-1,k), cfg.iFaceIndex(i+1,j-1,k),
                                             cfg.kFaceIndex(i,j-1,k), cfg.kFaceIndex(i,j-1,k+1),
                                             cfg.iFaceIndex(i,j,k), cfg.iFaceIndex(i+1,j,k),
                                             cfg.kFaceIndex(i,j,k), cfg.kFaceIndex(i,j,k+1)};
-                        f.nfcloud = 8;
+                        f.cloud_nf = 8;
                     }
                 }
             }
@@ -321,38 +390,38 @@ struct Block {
                         if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j,k), -1};
-                            f.nccloud = 1;
+                            f.cloud_nc = 1;
                         } else {
                             f.cells_in_cloud = {cfg.ghostCellIndex(Face::kminus,i,j,0), cfg.activeCellIndex(i,j,k)};
-                            f.nccloud = 2;
+                            f.cloud_nc = 2;
                         }
                         f.faces_in_cloud = {cfg.iFaceIndex(i,j,k), cfg.iFaceIndex(i+1,j,k),
                                             cfg.jFaceIndex(i,j,k), cfg.jFaceIndex(i,j+1,k),
                                             -1, -1, -1, -1};
-                        f.nfcloud = 4;
+                        f.cloud_nf = 4;
                     } else if (k == cfg.nkc) {
                         f.bcCode = cfg.bcCodes[Face::kplus];
                         if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j,k-1), -1};
-                            f.nccloud = 1;
+                            f.cloud_nc = 1;
                         } else {
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j,k-1), cfg.ghostCellIndex(Face::kplus,i,j,0)};
-                            f.nccloud = 2;
+                            f.cloud_nc = 2;
                         }
                         f.faces_in_cloud = {cfg.iFaceIndex(i,j,k-1), cfg.iFaceIndex(i+1,j,k-1),
                                             cfg.jFaceIndex(i,j,k-1), cfg.jFaceIndex(i,j+1,k-1),
                                             -1, -1, -1, -1};
-                        f.nfcloud = 4;
+                        f.cloud_nf = 4;
                     } else {
                         f.bcCode = -1; // Interior face.
                         f.cells_in_cloud = {cfg.activeCellIndex(i,j,k-1), cfg.activeCellIndex(i,j,k)};
-                        f.nccloud = 2;
+                        f.cloud_nc = 2;
                         f.faces_in_cloud = {cfg.iFaceIndex(i,j,k-1), cfg.iFaceIndex(i+1,j,k-1),
                                             cfg.jFaceIndex(i,j,k-1), cfg.jFaceIndex(i,j+1,k-1),
                                             cfg.iFaceIndex(i,j,k), cfg.iFaceIndex(i+1,j,k),
                                             cfg.jFaceIndex(i,j,k), cfg.jFaceIndex(i,j+1,k)};
-                        f.nfcloud = 8;
+                        f.cloud_nf = 8;
                     }
                 }
             }
@@ -730,8 +799,15 @@ struct Block {
     __host__
     void setup_LSQ_arrays()
     {
+        int failures = 0;
         for (auto& face : faces) {
-            face.setup_LSQ_arrays();
+            int flag = setup_LSQ_arrays_at_face(face, cells.data(), faces.data());
+            if (flag) {
+                cerr << "Singular normal matrix at f.pos=" << face.pos.toString() << endl;
+            }
+        }
+        if (failures > 0) {
+            throw runtime_error("Singular matrices encountered while setting up LSQ weights.");
         }
     }
 
@@ -896,12 +972,13 @@ void calculate_convective_fluxes_on_gpu(Block& blk, const BConfig& cfg, int flux
 }
 
 __global__
-void setup_LSQ_arrays_on_gpu(Block& blk, const BConfig& cfg)
+void setup_LSQ_arrays_on_gpu(Block& blk, const BConfig& cfg, int* failures)
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nFaces) {
         FVFace& face = blk.faces_on_gpu[i];
-        face.setup_LSQ_arrays();
+        int flag = setup_LSQ_arrays_at_face(face, blk.cells_on_gpu, blk.faces_on_gpu);
+        atomicAdd(failures, flag);
     }
 }
 

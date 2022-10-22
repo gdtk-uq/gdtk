@@ -358,6 +358,24 @@ void march_in_time_using_gpu()
     auto clock_start = chrono::system_clock::now();
     SimState::dt = Config::dt_init;
     SimState::step = 0;
+    //
+    // A couple of global variables for keeping an eye on the simulation process.
+    int bad_cell_count = 0;
+    int* bad_cell_count_on_gpu;
+    auto status = cudaMalloc(&bad_cell_count_on_gpu, sizeof(int));
+    if (status) throw runtime_error("Could not allocate bad_cell_count_on_gpu.");
+    //
+    int failed_lsq_setup = 0;
+    int* failed_lsq_setup_on_gpu;
+    status = cudaMalloc(&failed_lsq_setup_on_gpu, sizeof(int));
+    if (status) throw runtime_error("Could not allocate failed_lsq_setup_on_gpu.");
+    status = cudaMemcpy(failed_lsq_setup_on_gpu, &failed_lsq_setup, sizeof(int), cudaMemcpyHostToDevice);
+    if (status) throw runtime_error("Stage 0, could not copy failed_lsq_setup to gpu.");
+    //
+    long long int* smallest_dt_picos_on_gpu;
+    status = cudaMalloc(&smallest_dt_picos_on_gpu, sizeof(long long int));
+    if (status) throw runtime_error("Could not allocate smallest_dt_picos_on_gpu.");
+    //
     for (int ib=0; ib < Config::nFluidBlocks; ib++) {
         BConfig& cfg = blk_configs[ib];
         if (!cfg.active) continue;
@@ -392,21 +410,16 @@ void march_in_time_using_gpu()
         auto cudaError = cudaGetLastError();
         if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         if (Config::viscous) {
-            setup_LSQ_arrays_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
+            setup_LSQ_arrays_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, failed_lsq_setup_on_gpu);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
     }
-    //
-    // A couple of global variables for keeping an eye on the simulation process.
-    int bad_cell_count = 0;
-    int* bad_cell_count_on_gpu;
-    auto status = cudaMalloc(&bad_cell_count_on_gpu, sizeof(int));
-    if (status) throw runtime_error("Could not allocate bad_cell_count_on_gpu.");
-    //
-    long long int* smallest_dt_picos_on_gpu;
-    status = cudaMalloc(&smallest_dt_picos_on_gpu, sizeof(long long int));
-    if (status) throw runtime_error("Could not allocate smallest_dt_picos_on_gpu.");
+    status = cudaMemcpy(&failed_lsq_setup, failed_lsq_setup_on_gpu, sizeof(int), cudaMemcpyDeviceToHost);
+    if (status) throw runtime_error("Could not copy failed_lsq_setup from gpu to host cpu.");
+    if (failed_lsq_setup > 0) {
+        throw runtime_error("failed_lsq_setup: "+to_string(failed_lsq_setup));
+    }
     //
     // Main stepping loop.
     //

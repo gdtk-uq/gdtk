@@ -51,6 +51,10 @@ void interp_l2r2_scalar(number qL1, number qL0, number qR0, number qR1,
 
 // Flux calculations are done in the context of a face on a cell.
 
+constexpr int cloud_ncmax = 2;
+constexpr int cloud_nfmax = 8;
+constexpr int cloud_nmax = cloud_ncmax + cloud_nfmax;
+
 struct FVFace {
     Vector3 pos; // midpoint position in space
     number area;
@@ -70,12 +74,12 @@ struct FVFace {
     // the convective-flux calculation or by the boundary-condition code for a wall.
     int bcCode{-1};
     FlowState fs;
-    array<int,2> cells_in_cloud{-1,-1};
-    array<int,8> faces_in_cloud{-1,-1,-1,-1,-1,-1,-1,-1};
-    int nccloud = 0;
-    int nfcloud = 0;
+    array<int,cloud_ncmax> cells_in_cloud{-1,-1};
+    array<int,cloud_nfmax> faces_in_cloud{-1,-1,-1,-1,-1,-1,-1,-1};
+    int cloud_nc = 0;
+    int cloud_nf = 0;
     // Prepared least-squares solution for cloud of cell- and face-FlowStates.
-    array<number,10> wx, wy, wz;
+    array<number,cloud_nmax> wx, wy, wz;
 
     string toString() const
     {
@@ -294,15 +298,6 @@ struct FVFace {
     // Methods for viscous fluxes and spatial gradients.
 
     __host__ __device__
-    void setup_LSQ_arrays()
-    // Prepare the inverse of the least-squares design matrix and use it to
-    // prepare the final weights of the points in the cloud, such that
-    // the evaluation of each flow-quantity gradient comes down to a dot product.
-    {
-        // [TO-DO]
-    }
-
-    __host__ __device__
     void apply_viscous_boundary_condition()
     // Set the FlowState according to the type of boundary condition.
     // Will overwrite some of the FlowState properties computed earlier
@@ -319,7 +314,7 @@ struct FVFace {
             // Do nothing.
             break;
         }
-    }
+    } // end apply_viscous_boundary_condition()
 
     __host__ __device__
     void add_viscous_flux()
@@ -333,7 +328,7 @@ struct FVFace {
         number grad_vel[3][3];
         number grad_T[3];
         // [TO-DO]
-    }
+    } // end add_viscous_flux()
 
 }; // end FVFace
 
