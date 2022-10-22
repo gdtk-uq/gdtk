@@ -17,13 +17,18 @@ import std.algorithm;
 import util.lua;
 import nm.complex;
 import nm.number;
-
-import gas;
-import geom: gridTypeName, Grid_t;
 import geom.luawrap;
+import gas;
+import gas.luagas_model;
+import nm.luabbla;
+import geom: gridTypeName, Grid_t;
+
 import fvcell;
 import fvinterface;
 import luaflowstate;
+import luaflowsolution;
+import luaidealgasflow;
+import luagasflow;
 import globalconfig;
 import globaldata;
 import solidfvcell;
@@ -31,6 +36,57 @@ import ssolidblock;
 import sfluidblock;
 import ufluidblock;
 import fluidblock;
+
+struct LuaEnvOptions {
+    bool withGlobalConfig = true;
+    bool withGeom = true;
+    bool withGas = true;
+    bool withFlow = true;
+    bool withNumerics = true;
+};
+
+lua_State* initLuaStateForPrep()
+{
+    auto L = luaL_newstate();
+    luaL_openlibs(L);
+    LuaEnvOptions luaOpts;
+    luaOpts.withGlobalConfig = true;
+    luaOpts.withGeom = true;
+    luaOpts.withGas = true;
+    luaOpts.withFlow = true;
+    luaOpts.withNumerics = true;
+    registerLuaEnvironment(L, luaOpts);
+    return L;
+}
+
+// ------------------------------------------------------------------
+void registerLuaEnvironment(lua_State *L, LuaEnvOptions opt)
+{
+    if (opt.withGlobalConfig) registerGlobalConfig(L);
+    if (opt.withGeom) {
+        registerVector3(L);
+        registerPaths(L);
+        registerGpathUtils(L);
+        registerSurfaces(L);
+        registerVolumes(L);
+        registerUnivariateFunctions(L);
+        registerStructuredGrid(L);
+        registerUnstructuredGrid(L);
+        registerSketch(L);
+    }
+    if (opt.withGas) {
+        registerGasModel(L);
+    }
+    if (opt.withFlow) {
+        registerFlowSolution(L);
+        registerFlowState(L);
+        registeridealgasflowFunctions(L);
+        registergasflowFunctions(L);
+    }
+    if (opt.withNumerics) {
+        registerBBLA(L);
+    }
+}
 
 // -----------------------------------------------------
 // Functions to synchronise an array in the Dlang domain with a table in Lua

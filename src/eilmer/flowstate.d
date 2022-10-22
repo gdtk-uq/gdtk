@@ -354,7 +354,7 @@ public:
         }
         formattedWrite(writer, ", \"mu_t\": %.18e", mu_t.re);
         formattedWrite(writer, ", \"k_t\": %.18e", k_t.re);
-        formattedWrite(writer, ", \"S\": %.18e", S);
+        formattedWrite(writer, ", \"S\": %.18e", S.re);
         formattedWrite(writer, "}");
         return writer.data;
     } // end toJSONString()
