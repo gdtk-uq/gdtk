@@ -27,18 +27,22 @@ namespace BCCode {
     // Periodic boundary conditions should just work if we wrap the index in each direction.
     // There's not enough information here to have arbitrary block connections.
     constexpr int wall_with_slip = 0;
-    constexpr int wall_no_slip = 1;
-    constexpr int exchange = 2;
-    constexpr int inflow = 3;
-    constexpr int outflow = 4;
+    constexpr int wall_no_slip_adiabatic = 1;
+    constexpr int wall_no_slip_fixed_T = 2;
+    constexpr int exchange = 3;
+    constexpr int inflow = 4;
+    constexpr int outflow = 5;
 
-    array<string,5> names{"wall_with_slip", "wall_no_slip", "exchange", "inflow", "outflow"};
+    array<string,6> names{"wall_with_slip", "wall_no_slip_adiabatic", "wall_no_slip_fixed_T",
+            "exchange", "inflow", "outflow"};
 };
 
 int BC_code_from_name(string name)
 {
     if (name == "wall_with_slip") return BCCode::wall_with_slip;
-    if (name == "wall_no_slip") return BCCode::wall_no_slip;
+    if (name == "wall_no_slip_adiabatic") return BCCode::wall_no_slip_adiabatic;
+    if (name == "wall_no_slip_fixed_T") return BCCode::wall_no_slip_fixed_T;
+    if (name == "wall_no_slip") return BCCode::wall_no_slip_adiabatic; // alias
     if (name == "exchange") return BCCode::exchange;
     if (name == "inflow") return BCCode::inflow;
     if (name == "outflow") return BCCode::outflow;

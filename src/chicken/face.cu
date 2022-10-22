@@ -68,15 +68,12 @@ struct FVFace {
     // this face-centre.
     // We also need the FlowState at this face-centre.  It will be set during
     // the convective-flux calculation or by the boundary-condition code for a wall.
-    int which_boundary{-1};
+    int bcCode{-1};
     FlowState fs;
     array<int,2> cells_in_cloud{-1,-1};
     array<int,8> faces_in_cloud{-1,-1,-1,-1,-1,-1,-1,-1};
     int nccloud = 0;
     int nfcloud = 0;
-    // Spatial gradients with respect to directions x,y,z.
-    number grad_vel[3][3];
-    number grad_T[3];
     // Prepared least-squares solution for cloud of cell- and face-FlowStates.
     array<number,10> wx, wy, wz;
 
@@ -291,7 +288,52 @@ struct FVFace {
             sbp_asf(fsL1, fsL0, fsR0, fsR1);
             fs.set_as_average(fsL0,fsR0);
         }
-    } // end calculate_flux()
+    } // end calculate_convective_flux()
+
+    //------------------------------------------------------------------------------------
+    // Methods for viscous fluxes and spatial gradients.
+
+    __host__ __device__
+    void setup_LSQ_arrays()
+    // Prepare the inverse of the least-squares design matrix and use it to
+    // prepare the final weights of the points in the cloud, such that
+    // the evaluation of each flow-quantity gradient comes down to a dot product.
+    {
+        // [TO-DO]
+    }
+
+    __host__ __device__
+    void apply_viscous_boundary_condition()
+    // Set the FlowState according to the type of boundary condition.
+    // Will overwrite some of the FlowState properties computed earlier
+    // in the convective-flux calculation.
+    {
+        switch (bcCode) {
+        case 1: // BCCode::wall_no_slip_adiabatic [FIX-ME] would prefer symbolic name
+            // [TO-DO]
+            break;
+        case 2: // BCCode::wall_no_slip_fixed_T [FIX-ME] would prefer symbolic name
+            // [TO-DO]
+            break;
+        default:
+            // Do nothing.
+            break;
+        }
+    }
+
+    __host__ __device__
+    void add_viscous_flux()
+    // Add the viscous component of the fluxes of mass, momentum and energy
+    // to the convective flux values that were computed eariler.
+    {
+        // Use the prepared least-squares weights to evaluate the flow-quantity gradients
+        // then combine with the transport coefficients to estimate the viscous fluxes.
+        //
+        // Spatial gradients with respect to directions x,y,z.
+        number grad_vel[3][3];
+        number grad_T[3];
+        // [TO-DO]
+    }
 
 }; // end FVFace
 

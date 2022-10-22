@@ -164,7 +164,9 @@ void write_flow_data(int tindx, number tme)
 
 
 __host__
-void apply_boundary_conditions()
+void apply_boundary_conditions_for_convective_fluxes()
+// Fill in the flow properties for ghost cells that sit around the block boundaries.
+//
 // Since the boundary-condition code needs a view of all blocks and
 // most of the coperations are switching between code to copy specific data,
 // we expect the CPU to apply the boundary conditions more effectively than the GPU.
@@ -176,17 +178,28 @@ void apply_boundary_conditions()
         if (!blk_config.active) continue;
         for (int ibc=0; ibc < 6; ibc++) {
             switch (blk_config.bcCodes[ibc]) {
-            case BCCode::wall_with_slip: bc_wall_with_slip(iblk, ibc); break;
-            case BCCode::wall_no_slip: bc_wall_no_slip(iblk, ibc); break;
-            case BCCode::exchange: bc_exchange(iblk, ibc); break;
-            case BCCode::inflow: bc_inflow(iblk, ibc, Config::flow_states[blk_config.bc_fs[ibc]]); break;
-            case BCCode::outflow: bc_outflow(iblk, ibc); break;
+            case BCCode::wall_with_slip:
+                bc_wall_with_slip(iblk, ibc);
+                break;
+            case BCCode::wall_no_slip_adiabatic:
+            case BCCode::wall_no_slip_fixed_T:
+                bc_wall_no_slip(iblk, ibc);
+                break;
+            case BCCode::exchange:
+                bc_exchange(iblk, ibc);
+                break;
+            case BCCode::inflow:
+                bc_inflow(iblk, ibc, Config::flow_states[blk_config.bc_fs[ibc]]);
+                break;
+            case BCCode::outflow:
+                bc_outflow(iblk, ibc);
+                break;
             default:
                 throw runtime_error("Invalid bcCode: "+to_string(blk_config.bcCodes[ibc]));
             }
         } // end for ibc
     } // end for iblk
-} // end apply_boundary_conditions()
+} // end apply_boundary_conditions_for_convective_fluxes()
 
 
 __host__
@@ -206,7 +219,10 @@ void march_in_time_using_cpu_only()
     #pragma omp parallel for
     for (int ib=0; ib < Config::nFluidBlocks; ib++) {
         BConfig& cfg = blk_configs[ib];
-        if (cfg.active) fluidBlocks[ib].encodeConserved(cfg, 0);
+        if (cfg.active) {
+            fluidBlocks[ib].encodeConserved(cfg, 0);
+            if (Config::viscous) fluidBlocks[ib].setup_LSQ_arrays();
+        }
     }
     //
     while (SimState::step < Config::max_step && SimState::t < Config::max_time) {
@@ -230,7 +246,7 @@ void march_in_time_using_cpu_only()
         int bad_cell_count = 0;
         // Stage 1.
         // number t = SimState::t; // Only needed if we have time-dependent source terms or BCs.
-        apply_boundary_conditions();
+        apply_boundary_conditions_for_convective_fluxes();
         for (auto& bcc : bad_cell_counts) bcc = 0;
         #pragma omp parallel for
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
@@ -238,6 +254,10 @@ void march_in_time_using_cpu_only()
             Block& blk = fluidBlocks[ib];
             if (cfg.active) {
                 blk.calculate_convective_fluxes(Config::flux_calc, Config::x_order);
+                if (Config::viscous) {
+                    blk.apply_viscous_boundary_conditions();
+                    blk.add_viscous_flux();
+                }
                 bad_cell_counts[ib] = blk.update_stage_1(cfg, SimState::dt);
             }
         }
@@ -247,7 +267,7 @@ void march_in_time_using_cpu_only()
         }
         // Stage 2
         // t = SimState::t + 0.5*SimState::dt;
-        apply_boundary_conditions();
+        apply_boundary_conditions_for_convective_fluxes();
         for (auto& bcc : bad_cell_counts) bcc = 0;
         #pragma omp parallel for
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
@@ -255,6 +275,10 @@ void march_in_time_using_cpu_only()
             Block& blk = fluidBlocks[ib];
             if (cfg.active) {
                 blk.calculate_convective_fluxes(Config::flux_calc, Config::x_order);
+                if (Config::viscous) {
+                    blk.apply_viscous_boundary_conditions();
+                    blk.add_viscous_flux();
+                }
                 bad_cell_counts[ib] = blk.update_stage_2(cfg, SimState::dt);
             }
         }
@@ -264,7 +288,7 @@ void march_in_time_using_cpu_only()
         }
         // Stage 3
         // t = SimState::t + SimState::dt;
-        apply_boundary_conditions();
+        apply_boundary_conditions_for_convective_fluxes();
         for (auto& bcc : bad_cell_counts) bcc = 0;
         #pragma omp parallel for
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
@@ -272,6 +296,10 @@ void march_in_time_using_cpu_only()
             Block& blk = fluidBlocks[ib];
             if (cfg.active) {
                 blk.calculate_convective_fluxes(Config::flux_calc, Config::x_order);
+                if (Config::viscous) {
+                    blk.apply_viscous_boundary_conditions();
+                    blk.add_viscous_flux();
+                }
                 bad_cell_counts[ib] = blk.update_stage_3(cfg, SimState::dt);
             }
         }
@@ -363,6 +391,11 @@ void march_in_time_using_gpu()
         encodeConserved_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, 0);
         auto cudaError = cudaGetLastError();
         if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+        if (Config::viscous) {
+            setup_LSQ_arrays_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
+            auto cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+        }
     }
     //
     // A couple of global variables for keeping an eye on the simulation process.
@@ -412,7 +445,7 @@ void march_in_time_using_gpu()
         //
         // Stage 1.
         // number t = SimState::t; // Only needed if we have time-dependent source terms or BCs.
-        apply_boundary_conditions();
+        apply_boundary_conditions_for_convective_fluxes();
         // Boundary-conditions are done on the host CPU, affecting only the ghost-cell data,
         // so we copy just the ghost cell data onto the GPU,
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
@@ -442,6 +475,14 @@ void march_in_time_using_gpu()
                                                                            Config::flux_calc, Config::x_order);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            if (Config::viscous) {
+                apply_viscous_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
+                cudaError = cudaGetLastError();
+                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+                add_viscous_flux_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
+                cudaError = cudaGetLastError();
+                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            }
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
             nGPUthreads = cfg.threads_per_GPUblock;
@@ -470,7 +511,7 @@ void march_in_time_using_gpu()
         //
         // Stage 2
         // t = SimState::t + 0.5*SimState::dt;
-        apply_boundary_conditions();
+        apply_boundary_conditions_for_convective_fluxes();
         //
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
@@ -499,6 +540,14 @@ void march_in_time_using_gpu()
                                                                            Config::flux_calc, Config::x_order);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            if (Config::viscous) {
+                apply_viscous_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
+                cudaError = cudaGetLastError();
+                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+                add_viscous_flux_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
+                cudaError = cudaGetLastError();
+                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            }
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
             nGPUthreads = cfg.threads_per_GPUblock;
@@ -527,7 +576,7 @@ void march_in_time_using_gpu()
         //
         // Stage 3
         // t = SimState::t + SimState::dt;
-        apply_boundary_conditions();
+        apply_boundary_conditions_for_convective_fluxes();
         //
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
@@ -556,6 +605,14 @@ void march_in_time_using_gpu()
                                                                            Config::flux_calc, Config::x_order);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            if (Config::viscous) {
+                apply_viscous_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
+                cudaError = cudaGetLastError();
+                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+                add_viscous_flux_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
+                cudaError = cudaGetLastError();
+                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            }
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
             nGPUthreads = cfg.threads_per_GPUblock;
