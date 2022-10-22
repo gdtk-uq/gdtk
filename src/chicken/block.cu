@@ -129,6 +129,7 @@ struct Block {
                     f.vtx[1] = cfg.vtxIndex(i,j+1,k);
                     f.vtx[2] = cfg.vtxIndex(i,j+1,k+1);
                     f.vtx[3] = cfg.vtxIndex(i,j,k+1);
+                    // Set neighbouring cells for convective fluxes.
                     if (i == 0) {
                         f.left_cells[1] = cfg.ghostCellIndex(Face::iminus,j,k,1);
                         f.left_cells[0] = cfg.ghostCellIndex(Face::iminus,j,k,0);
@@ -150,11 +151,52 @@ struct Block {
                         f.right_cells[0] = cfg.ghostCellIndex(Face::iplus,j,k,0);
                         f.right_cells[1] = cfg.ghostCellIndex(Face::iplus,j,k,1);
                     } else {
-                        // Interior cell.
+                        // All interior cells.
                         f.left_cells[1] = cfg.activeCellIndex(i-2,j,k);
                         f.left_cells[0] = cfg.activeCellIndex(i-1,j,k);
                         f.right_cells[0] = cfg.activeCellIndex(i,j,k);
                         f.right_cells[1] = cfg.activeCellIndex(i+1,j,k);
+                    }
+                    // Set cloud of FlowStates for gradient calculations of viscous fluxes.
+                    if (i == 0) {
+                        f.which_boundary = Face::iminus;
+                        if (cfg.bcCodes[Face::iminus] == BCCode::wall_with_slip ||
+                            cfg.bcCodes[Face::iminus] == BCCode::wall_with_slip) {
+                            // Do not use ghost cell.
+                            f.cells_in_cloud = {cfg.activeCellIndex(i,j,k), -1};
+                            f.nccloud = 1;
+                        } else {
+                            f.cells_in_cloud = {cfg.ghostCellIndex(Face::iminus,j,k,0), cfg.activeCellIndex(i,j,k)};
+                            f.nccloud = 2;
+                        }
+                        f.faces_in_cloud = {cfg.jFaceIndex(i,j,k), cfg.jFaceIndex(i,j+1,k),
+                                            cfg.kFaceIndex(i,j,k), cfg.kFaceIndex(i,j,k+1),
+                                            -1, -1, -1, -1};
+                        f.nfcloud = 4;
+                    } else if (i == cfg.nic) {
+                        f.which_boundary = Face::iplus;
+                        if (cfg.bcCodes[Face::iplus] == BCCode::wall_with_slip ||
+                            cfg.bcCodes[Face::iplus] == BCCode::wall_with_slip) {
+                            // Do not use ghost cell.
+                            f.cells_in_cloud = {cfg.activeCellIndex(i-1,j,k), -1};
+                            f.nccloud = 1;
+                        } else {
+                            f.cells_in_cloud = {cfg.activeCellIndex(i-1,j,k), cfg.ghostCellIndex(Face::iplus,j,k,0)};
+                            f.nccloud = 2;
+                        }
+                        f.faces_in_cloud = {cfg.jFaceIndex(i-1,j,k), cfg.jFaceIndex(i-1,j+1,k),
+                                            cfg.kFaceIndex(i-1,j,k), cfg.kFaceIndex(i-1,j,k+1),
+                                            -1, -1, -1, -1};
+                        f.nfcloud = 4;
+                    } else {
+                        f.which_boundary = -1; // Interior face.
+                        f.cells_in_cloud = {cfg.activeCellIndex(i-1,j,k), cfg.activeCellIndex(i,j,k)};
+                        f.nccloud = 2;
+                        f.faces_in_cloud = {cfg.jFaceIndex(i-1,j,k), cfg.jFaceIndex(i-1,j+1,k),
+                                            cfg.kFaceIndex(i-1,j,k), cfg.kFaceIndex(i-1,j,k+1),
+                                            cfg.jFaceIndex(i,j,k), cfg.jFaceIndex(i,j+1,k),
+                                            cfg.kFaceIndex(i,j,k), cfg.kFaceIndex(i,j,k+1)};
+                        f.nfcloud = 8;
                     }
                 }
             }
@@ -168,6 +210,7 @@ struct Block {
                     f.vtx[1] = cfg.vtxIndex(i,j,k);
                     f.vtx[2] = cfg.vtxIndex(i,j,k+1);
                     f.vtx[3] = cfg.vtxIndex(i+1,j,k+1);
+                    // Set neighbouring cells for convective fluxes.
                     if (j == 0) {
                         f.left_cells[1] = cfg.ghostCellIndex(Face::jminus,i,k,1);
                         f.left_cells[0] = cfg.ghostCellIndex(Face::jminus,i,k,0);
@@ -189,11 +232,52 @@ struct Block {
                         f.right_cells[0] = cfg.ghostCellIndex(Face::jplus,i,k,0);
                         f.right_cells[1] = cfg.ghostCellIndex(Face::jplus,i,k,1);
                     } else {
-                        // Interior cell.
+                        // All interior cells.
                         f.left_cells[1] = cfg.activeCellIndex(i,j-2,k);
                         f.left_cells[0] = cfg.activeCellIndex(i,j-1,k);
                         f.right_cells[0] = cfg.activeCellIndex(i,j,k);
                         f.right_cells[1] = cfg.activeCellIndex(i,j+1,k);
+                    }
+                    // Set cloud of FlowStates for gradient calculations of viscous fluxes.
+                    if (j == 0) {
+                        f.which_boundary = Face::jminus;
+                        if (cfg.bcCodes[Face::jminus] == BCCode::wall_with_slip ||
+                            cfg.bcCodes[Face::jminus] == BCCode::wall_with_slip) {
+                            // Do not use ghost cell.
+                            f.cells_in_cloud = {cfg.activeCellIndex(i,j,k), -1};
+                            f.nccloud = 1;
+                        } else {
+                            f.cells_in_cloud = {cfg.ghostCellIndex(Face::jminus,i,k,0), cfg.activeCellIndex(i,j,k)};
+                            f.nccloud = 2;
+                        }
+                        f.faces_in_cloud = {cfg.iFaceIndex(i,j,k), cfg.iFaceIndex(i+1,j,k),
+                                            cfg.kFaceIndex(i,j,k), cfg.kFaceIndex(i,j,k+1),
+                                            -1, -1, -1, -1};
+                        f.nfcloud = 4;
+                    } else if (j == cfg.njc) {
+                        f.which_boundary = Face::jplus;
+                        if (cfg.bcCodes[Face::jplus] == BCCode::wall_with_slip ||
+                            cfg.bcCodes[Face::jplus] == BCCode::wall_with_slip) {
+                            // Do not use ghost cell.
+                            f.cells_in_cloud = {cfg.activeCellIndex(i,j-1,k), -1};
+                            f.nccloud = 1;
+                        } else {
+                            f.cells_in_cloud = {cfg.activeCellIndex(i,j-1,k), cfg.ghostCellIndex(Face::jplus,i,k,0)};
+                            f.nccloud = 2;
+                        }
+                        f.faces_in_cloud = {cfg.iFaceIndex(i,j-1,k), cfg.iFaceIndex(i+1,j-1,k),
+                                            cfg.kFaceIndex(i,j-1,k), cfg.kFaceIndex(i,j-1,k+1),
+                                            -1, -1, -1, -1};
+                        f.nfcloud = 4;
+                    } else {
+                        f.which_boundary = -1; // Interior face.
+                        f.cells_in_cloud = {cfg.activeCellIndex(i,j-1,k), cfg.activeCellIndex(i,j,k)};
+                        f.nccloud = 2;
+                        f.faces_in_cloud = {cfg.iFaceIndex(i,j-1,k), cfg.iFaceIndex(i+1,j-1,k),
+                                            cfg.kFaceIndex(i,j-1,k), cfg.kFaceIndex(i,j-1,k+1),
+                                            cfg.iFaceIndex(i,j,k), cfg.iFaceIndex(i+1,j,k),
+                                            cfg.kFaceIndex(i,j,k), cfg.kFaceIndex(i,j,k+1)};
+                        f.nfcloud = 8;
                     }
                 }
             }
@@ -207,6 +291,7 @@ struct Block {
                     f.vtx[1] = cfg.vtxIndex(i+1,j,k);
                     f.vtx[2] = cfg.vtxIndex(i+1,j+1,k);
                     f.vtx[3] = cfg.vtxIndex(i,j+1,k);
+                    // Set neighbouring cells for convective fluxes.
                     if (k == 0) {
                         f.left_cells[1] = cfg.ghostCellIndex(Face::kminus,i,j,1);
                         f.left_cells[0] = cfg.ghostCellIndex(Face::kminus,i,j,0);
@@ -228,11 +313,52 @@ struct Block {
                         f.right_cells[0] = cfg.ghostCellIndex(Face::kplus,i,j,0);
                         f.right_cells[1] = cfg.ghostCellIndex(Face::kplus,i,j,1);
                     } else {
-                        // Interior cell.
+                        // All interior cells.
                         f.left_cells[1] = cfg.activeCellIndex(i,j,k-2);
                         f.left_cells[0] = cfg.activeCellIndex(i,j,k-1);
                         f.right_cells[0] = cfg.activeCellIndex(i,j,k);
                         f.right_cells[1] = cfg.activeCellIndex(i,j,k+1);
+                    }
+                    // Set cloud of FlowStates for gradient calculations of viscous fluxes.
+                    if (k == 0) {
+                        f.which_boundary = Face::kminus;
+                        if (cfg.bcCodes[Face::kminus] == BCCode::wall_with_slip ||
+                            cfg.bcCodes[Face::kminus] == BCCode::wall_with_slip) {
+                            // Do not use ghost cell.
+                            f.cells_in_cloud = {cfg.activeCellIndex(i,j,k), -1};
+                            f.nccloud = 1;
+                        } else {
+                            f.cells_in_cloud = {cfg.ghostCellIndex(Face::kminus,i,j,0), cfg.activeCellIndex(i,j,k)};
+                            f.nccloud = 2;
+                        }
+                        f.faces_in_cloud = {cfg.iFaceIndex(i,j,k), cfg.iFaceIndex(i+1,j,k),
+                                            cfg.jFaceIndex(i,j,k), cfg.jFaceIndex(i,j+1,k),
+                                            -1, -1, -1, -1};
+                        f.nfcloud = 4;
+                    } else if (k == cfg.nkc) {
+                        f.which_boundary = Face::kplus;
+                        if (cfg.bcCodes[Face::kplus] == BCCode::wall_with_slip ||
+                            cfg.bcCodes[Face::kplus] == BCCode::wall_with_slip) {
+                            // Do not use ghost cell.
+                            f.cells_in_cloud = {cfg.activeCellIndex(i,j,k-1), -1};
+                            f.nccloud = 1;
+                        } else {
+                            f.cells_in_cloud = {cfg.activeCellIndex(i,j,k-1), cfg.ghostCellIndex(Face::kplus,i,j,0)};
+                            f.nccloud = 2;
+                        }
+                        f.faces_in_cloud = {cfg.iFaceIndex(i,j,k-1), cfg.iFaceIndex(i+1,j,k-1),
+                                            cfg.jFaceIndex(i,j,k-1), cfg.jFaceIndex(i,j+1,k-1),
+                                            -1, -1, -1, -1};
+                        f.nfcloud = 4;
+                    } else {
+                        f.which_boundary = -1; // Interior face.
+                        f.cells_in_cloud = {cfg.activeCellIndex(i,j,k-1), cfg.activeCellIndex(i,j,k)};
+                        f.nccloud = 2;
+                        f.faces_in_cloud = {cfg.iFaceIndex(i,j,k-1), cfg.iFaceIndex(i+1,j,k-1),
+                                            cfg.jFaceIndex(i,j,k-1), cfg.jFaceIndex(i,j+1,k-1),
+                                            cfg.iFaceIndex(i,j,k), cfg.iFaceIndex(i+1,j,k),
+                                            cfg.jFaceIndex(i,j,k), cfg.jFaceIndex(i,j+1,k)};
+                        f.nfcloud = 8;
                     }
                 }
             }

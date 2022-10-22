@@ -68,6 +68,7 @@ struct FVFace {
     // this face-centre.
     // We also need the FlowState at this face-centre.  It will be set during
     // the convective-flux calculation or by the boundary-condition code for a wall.
+    int which_boundary{-1};
     FlowState fs;
     array<int,2> cells_in_cloud{-1,-1};
     array<int,8> faces_in_cloud{-1,-1,-1,-1,-1,-1,-1,-1};
