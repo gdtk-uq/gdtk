@@ -300,7 +300,7 @@ struct FVFace {
     } // end calculate_convective_flux()
 
     //------------------------------------------------------------------------------------
-    // Methods for viscous fluxes and spatial gradients.
+    // Methods for viscous fluxes, using the spatial gradients.
 
     __host__ __device__
     void apply_viscous_boundary_condition()
@@ -310,10 +310,11 @@ struct FVFace {
     {
         switch (bcCode) {
         case 1: // BCCode::wall_no_slip_adiabatic [FIX-ME] would prefer symbolic name
-            // [TO-DO]
+            fs.vel.set(0.0, 0.0, 0.0);
             break;
         case 2: // BCCode::wall_no_slip_fixed_T [FIX-ME] would prefer symbolic name
-            // [TO-DO]
+            fs.vel.set(0.0, 0.0, 0.0);
+            fs.gas.T = 300.0; // Some nominal value [TODO] make adjustable
             break;
         default:
             // Do nothing.
@@ -327,7 +328,30 @@ struct FVFace {
     // to the convective flux values that were computed eariler.
     {
         // Combine the flow-quantity gradients with the transport coefficients.
-        // [TO-DO]
+        number mu, k;
+        fs.gas.trans_coeffs(mu, k);
+        number lmbda = -2.0/3.0 * mu;
+        // Shear stresses.
+        number tau_xx = 2.0*mu*dvxdx + lmbda*(dvxdx + dvydy + dvzdz);
+        number tau_yy = 2.0*mu*dvydy + lmbda*(dvxdx + dvydy + dvzdz);
+        number tau_zz = 2.0*mu*dvzdz + lmbda*(dvxdx + dvydy + dvzdz);
+        number tau_xy = mu * (dvxdy + dvydx);
+        number tau_xz = mu * (dvxdz + dvzdx);
+        number tau_yz = mu * (dvydz + dvzdy);
+        // Thermal conduction.
+        number qx = k * dTdx;
+        number qy = k * dTdy;
+        number qz = k * dTdz;
+        // Combine into fluxes: store as the dot product (F.n).
+        number nx = n.x; number ny = n.y; number nz = n.z;
+        // Mass flux -- NO CONTRIBUTION
+        F[CQI::xMom] -= tau_xx*nx + tau_xy*ny + tau_xz*nz;
+        F[CQI::yMom] -= tau_xy*nx + tau_yy*ny + tau_yz*nz;
+        F[CQI::zMom] -= tau_xz*nx + tau_yz*ny + tau_zz*nz;
+        F[CQI::totEnergy] -=
+            (tau_xx*fs.vel.x + tau_xy*fs.vel.y + tau_xz*fs.vel.z + qx)*nx +
+            (tau_xy*fs.vel.x + tau_yy*fs.vel.y + tau_yz*fs.vel.z + qy)*ny +
+            (tau_xz*fs.vel.x + tau_yz*fs.vel.y + tau_zz*fs.vel.z + qz)*nz;
     } // end add_viscous_flux()
 
 }; // end FVFace
