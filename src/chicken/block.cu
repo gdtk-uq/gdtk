@@ -38,8 +38,8 @@ int setup_LSQ_arrays_at_face(FVFace& f, FVCell cells[], FVFace faces[])
 {
     // Get pointers to all of the cloud positions.
     Vector3* cloud_pos[cloud_nmax];
-    for (int i=0; i < f.cloud_nc; i++) { cloud_pos[i] = &(cells[i].pos); }
-    for (int i=0; i < f.cloud_nf; i++) { cloud_pos[f.cloud_nc+i] = &(faces[i].pos); }
+    for (int i=0; i < f.cloud_nc; i++) { cloud_pos[i] = &(cells[f.cells_in_cloud[i]].pos); }
+    for (int i=0; i < f.cloud_nf; i++) { cloud_pos[f.cloud_nc+i] = &(faces[f.faces_in_cloud[i]].pos); }
     int cloud_n = f.cloud_nc + f.cloud_nf;
     //
     // Calculate the weights used in the least-squares gradient calculation.
@@ -100,8 +100,8 @@ void calculate_gradients_at_face(FVFace& f, FVCell cells[], FVFace faces[])
 {
     // Get pointers to all of the cloud FlowStates.
     FlowState* cloud_fs[cloud_nmax];
-    for (int i=0; i < f.cloud_nc; i++) { cloud_fs[i] = &(cells[i].fs); }
-    for (int i=0; i < f.cloud_nf; i++) { cloud_fs[f.cloud_nc+i] = &(faces[i].fs); }
+    for (int i=0; i < f.cloud_nc; i++) { cloud_fs[i] = &(cells[f.cells_in_cloud[i]].fs); }
+    for (int i=0; i < f.cloud_nf; i++) { cloud_fs[f.cloud_nc+i] = &(faces[f.faces_in_cloud[i]].fs); }
     int cloud_n = f.cloud_nc + f.cloud_nf;
     // Now, compute the gradients, one flow quantity at a time.
     number q0 = f.fs.gas.T;

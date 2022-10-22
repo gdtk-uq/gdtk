@@ -410,6 +410,8 @@ void march_in_time_using_gpu()
         auto cudaError = cudaGetLastError();
         if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         if (Config::viscous) {
+            nGPUblocks = cfg.nGPUblocks_for_faces;
+            nGPUthreads = cfg.threads_per_GPUblock;
             setup_LSQ_arrays_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, failed_lsq_setup_on_gpu);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
