@@ -80,6 +80,11 @@ struct FVFace {
     int cloud_nf = 0;
     // Prepared least-squares solution for cloud of cell- and face-FlowStates.
     array<number,cloud_nmax> wx, wy, wz;
+    // Spatial gradients with respect to directions x,y,z.
+    number dvxdx, dvxdy, dvxdz;
+    number dvydx, dvydy, dvydz;
+    number dvzdx, dvzdy, dvzdz;
+    number dTdx, dTdy, dTdz;
 
     string toString() const
     {
@@ -321,12 +326,7 @@ struct FVFace {
     // Add the viscous component of the fluxes of mass, momentum and energy
     // to the convective flux values that were computed eariler.
     {
-        // Use the prepared least-squares weights to evaluate the flow-quantity gradients
-        // then combine with the transport coefficients to estimate the viscous fluxes.
-        //
-        // Spatial gradients with respect to directions x,y,z.
-        number grad_vel[3][3];
-        number grad_T[3];
+        // Combine the flow-quantity gradients with the transport coefficients.
         // [TO-DO]
     } // end add_viscous_flux()
 

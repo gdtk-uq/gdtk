@@ -26,7 +26,7 @@
 using namespace std;
 
 __host__ __device__
-int setup_LSQ_arrays_at_face(FVFace f, FVCell cells[], FVFace faces[])
+int setup_LSQ_arrays_at_face(FVFace& f, FVCell cells[], FVFace faces[])
 // Prepare the inverse of the least-squares design matrix and use it to
 // prepare the final weights of the points in the cloud at each face.
 // The evaluation of each flow gradient becomes a matrix*vector product.
@@ -36,8 +36,7 @@ int setup_LSQ_arrays_at_face(FVFace f, FVCell cells[], FVFace faces[])
 // Adapted from the Eilmer4 code PJ, 2022-10-22.
 // Placed in block.cu so that FVCell and FVFace struct definitions can be seen.
 {
-    // Get pointers to all of the cloud FlowStates and positions.
-    FlowState* flows[cloud_nmax];
+    // Get pointers to all of the cloud positions.
     Vector3* cloud_pos[cloud_nmax];
     for (int i=0; i < f.cloud_nc; i++) { cloud_pos[i] = &(cells[i].pos); }
     for (int i=0; i < f.cloud_nf; i++) { cloud_pos[f.cloud_nc+i] = &(faces[i].pos); }
@@ -54,6 +53,8 @@ int setup_LSQ_arrays_at_face(FVFace f, FVCell cells[], FVFace faces[])
         number dz = cloud_pos[i]->z - z0;
         weights2[i] = 1.0/(dx*dx+dy*dy+dz*dz);
     }
+    //
+    // Set up the matrix for the normal equations.
     //
     number dx[cloud_nmax], dy[cloud_nmax], dz[cloud_nmax];
     number xx = 0.0; number xy = 0.0; number xz = 0.0;
@@ -92,6 +93,52 @@ int setup_LSQ_arrays_at_face(FVFace f, FVCell cells[], FVFace faces[])
 } // end setup_LSQ_arrays()
 
 
+__host__ __device__
+void calculate_gradients_at_face(FVFace& f, FVCell cells[], FVFace faces[])
+// Compute the flow quantity gradients at the face centre,
+// making use of the least-squares coefficients prepared at the start of stepping.
+{
+    // Get pointers to all of the cloud FlowStates.
+    FlowState* cloud_fs[cloud_nmax];
+    for (int i=0; i < f.cloud_nc; i++) { cloud_fs[i] = &(cells[i].fs); }
+    for (int i=0; i < f.cloud_nf; i++) { cloud_fs[f.cloud_nc+i] = &(faces[i].fs); }
+    int cloud_n = f.cloud_nc + f.cloud_nf;
+    // Now, compute the gradients, one flow quantity at a time.
+    number q0 = f.fs.gas.T;
+    f.dTdx = 0.0; f.dTdy = 0.0; f.dTdz = 0.0;
+    for (int i=0; i < cloud_n; i++) {
+        number dq = cloud_fs[i]->gas.T - q0;
+        f.dTdx += f.wx[i] * dq;
+        f.dTdy += f.wy[i] * dq;
+        f.dTdz += f.wz[i] * dq;
+    }
+    q0 = f.fs.vel.x;
+    f.dvxdx = 0.0; f.dvxdy = 0.0; f.dvxdz = 0.0;
+    for (int i=0; i < cloud_n; i++) {
+        number dq = cloud_fs[i]->vel.x - q0;
+        f.dvxdx += f.wx[i] * dq;
+        f.dvxdy += f.wy[i] * dq;
+        f.dvxdz += f.wz[i] * dq;
+    }
+    q0 = f.fs.vel.y;
+    f.dvydx = 0.0; f.dvydy = 0.0; f.dvydz = 0.0;
+    for (int i=0; i < cloud_n; i++) {
+        number dq = cloud_fs[i]->vel.y - q0;
+        f.dvydx += f.wx[i] * dq;
+        f.dvydy += f.wy[i] * dq;
+        f.dvydz += f.wz[i] * dq;
+    }
+    q0 = f.fs.vel.z;
+    f.dvzdx = 0.0; f.dvzdy = 0.0; f.dvzdz = 0.0;
+    for (int i=0; i < cloud_n; i++) {
+        number dq = cloud_fs[i]->vel.z - q0;
+        f.dvzdx += f.wx[i] * dq;
+        f.dvzdy += f.wy[i] * dq;
+        f.dvzdz += f.wz[i] * dq;
+    }
+} // end calculate_gradients_at_face()
+
+//-----------------------------------------------------------------------------------
 
 struct Block {
     // Storage for active cells and ghost cells.
@@ -823,6 +870,7 @@ struct Block {
     void add_viscous_flux()
     {
         for (auto& face : faces) {
+            calculate_gradients_at_face(face, cells.data(), faces.data());
             face.add_viscous_flux();
         }
     }
@@ -998,6 +1046,7 @@ void add_viscous_flux_on_gpu(Block& blk, const BConfig& cfg)
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nFaces) {
         FVFace& face = blk.faces_on_gpu[i];
+        calculate_gradients_at_face(face, blk.cells_on_gpu, blk.faces_on_gpu);
         face.add_viscous_flux();
     }
 }
