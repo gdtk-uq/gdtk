@@ -372,9 +372,6 @@ FaceNames = 'iminus iplus jminus jplus kminus kplus'
 Face = collections.namedtuple('_', FaceNames)(*range(6))
 FaceList = FaceNames.split()
 
-BCNames = 'exchange wall_slip wall_no_slip inflow outflow'
-BCCode = collections.namedtuple('_', BCNames)(*range(5))
-
 class BoundaryCondition(ABC):
     """
     Base class for the family of boundary conditions.
@@ -415,20 +412,36 @@ class WallWithSlipBC(BoundaryCondition):
     def to_json(self):
         return '{"tag": "%s"}' % (self.tag)
 
-class WallNoSlipBC(BoundaryCondition):
+class WallNoSlipAdiabaticBC(BoundaryCondition):
     """
-    Wall with slip boundary condition.
+    Wall, no-slip boundary condition, no heat flux.
     """
     __slots__ = ['tag']
 
     def __init__(self):
-        self.tag = 'wall_no_slip'
+        self.tag = 'wall_no_slip_adiabatic'
 
     def __repr__(self):
-        return "WallNoSlipBC()"
+        return "WallNoSlipAdiabaticBC()"
 
     def to_json(self):
         return '{"tag": "%s"}' % (self.tag)
+
+class WallNoSlipFixedTBC(BoundaryCondition):
+    """
+    Wall, no-slip boundary condition, fixed temperature (and corresponding heat flux).
+    """
+    __slots__ = ['tag', 'TWall']
+
+    def __init__(self):
+        self.tag = 'wall_no_slip_fixed_T'
+        self.TWall = 300.0
+
+    def __repr__(self):
+        return "WallNoSlipFixedTBC(TWall=%g)" % (self.TWall)
+
+    def to_json(self):
+        return '{"tag": "%s", "TWall": %g}' % (self.tag, self.TWall)
 
 class InflowBC(BoundaryCondition):
     """

@@ -94,6 +94,7 @@ struct BConfig {
     // Boundary condition codes and associated FlowStates.
     array<int,6> bcCodes;
     array<int,6> bc_fs;
+    array<double,6> bc_TWall;
 
     __host__
     void fill_in_dimensions(int _nic, int _njc, int _nkc)
@@ -276,18 +277,15 @@ vector<BConfig> read_config_file(string fileName)
     json jsonData;
     ifstream f(fileName, ifstream::binary);
     if (f) {
-        f.seekg(0, f.end);
-        int length = f.tellg();
-        f.seekg(0, f.beg);
-        char* text = new char[length];
-        f.read(text, length);
+        ostringstream ss; ss << f.rdbuf();
+        string text = ss.str();
+        if (Config::verbosity > 1) cout << "File content:\n" << text << endl;
         if (f) {
             jsonData = json::parse(text);
         } else {
             cerr << "Could not read all of config.json file." << endl;
         }
         f.close();
-        delete[] text;
         if (Config::verbosity > 0) cout << "Finished reading JSON file." << endl;
     } else {
         throw runtime_error("Could not open ifstream for config.json.");
@@ -380,6 +378,9 @@ vector<BConfig> read_config_file(string fileName)
             cfg.bc_fs[i] = 0; // Default flowstate index.
             if (cfg.bcCodes[i] == BCCode::inflow) {
                 cfg.bc_fs[i] = bc["flow_state_index"].get<int>();
+            }
+            if (cfg.bcCodes[i] == BCCode::wall_no_slip_fixed_T) {
+                cfg.bc_TWall[i] = bc["TWall"].get<double>();
             }
         }
         if (Config::verbosity > 0) {
