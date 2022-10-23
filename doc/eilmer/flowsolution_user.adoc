@@ -4,7 +4,7 @@ In a preparation script, the `FlowSolution` object is used
 to initialise the domain with a flow field from another
 (completed) job.
 
- FlowSolution:new{jobName, dir, tindx, nBlocks, gindx}
+ FlowSolution:new{jobName, dir, tindx, nBlocks, gindx, make_kdtree}
 
 `jobName` ::
     _string_, no default +
@@ -43,10 +43,17 @@ to initialise the domain with a flow field from another
     index explicitly to 0 so that the non-moving flow solution is read in with
     its initial grid at grid time index 0.
 
+`make_kdtree` ::
+    _int_, default = 0 +
+    when make_kdtree is selected (=1) the search speed for locating cells
+    is considerably improved. It does this by using a kd tree filtering
+    and sorting approach.
+    There is, however, a startup cost for building the kd tree.
+
 Example of use:
 
  initial = FlowSolution:new{jobName='sphere', dir='../inviscid',
-                            tindx=10, nBlocks=4}
+                            tindx=10, nBlocks=4, make_kdtree=1}
 
 
 
