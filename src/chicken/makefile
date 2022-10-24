@@ -25,6 +25,12 @@ INSTALL_DIR ?= $(HOME)/gdtkinst
 # The build destination sits locally for present
 BUILD_DIR := ../../build
 
+LOCAL_ZIP ?= 1
+LOCAL_ZIP_DIR ?= $(HOME)/libzip
+ifeq ($(LOCAL_ZIP), 1)
+    LOCAL_ZIP_INC := -I$(LOCAL_ZIP_DIR)/include -L$(LOCAL_ZIP_DIR)/lib64
+endif
+
 REPO_DIR := $(shell cd ../../; pwd)
 ifneq ("$(wildcard $(REPO_DIR)/.git)","")
     # Repository exists
@@ -41,21 +47,21 @@ chicken_for_cuda : $(CUDA_SOURCE_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		main.cu > main_with_rev_string.cu
 	nvcc -DCUDA -std c++17 -O2 --expt-relaxed-constexpr -lineinfo -o chkn-run \
-		main_with_rev_string.cu -lz -lzip -Xcompiler -fopenmp
+		main_with_rev_string.cu -lz $(LOCAL_ZIP_INC) -lzip -Xcompiler -fopenmp
 
 # Target for FP32 (float) numbers.
 chicken_for_cuda_f : $(CUDA_SOURCE_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		main.cu > main_with_rev_string.cu
 	nvcc -DCUDA -DFLOAT_NUMBERS -std c++17 -O2 --expt-relaxed-constexpr -lineinfo -o chkn-run \
-		main_main_with_rev_string.cu -lz -lzip -Xcompiler -fopenmp
+		main_main_with_rev_string.cu -lz $(LOCAL_ZIP_INC) -lzip -Xcompiler -fopenmp
 
 # Target for CPU-only flavour of the code with FP64 (double) numbers.
 chicken_for_cpu : $(CUDA_SOURCE_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		main.cu > main_with_rev_string.cu
 	nvcc -lineinfo -std c++17 -O2 --expt-relaxed-constexpr -o chkn-run \
-		main_with_rev_string.cu -lz -lzip -Xcompiler -fopenmp
+		main_with_rev_string.cu -lz $(LOCAL_ZIP_INC) -lzip -Xcompiler -fopenmp
 
 # Note that profiling needs to be done via sudo
 # because we need access to the hardware counters.
