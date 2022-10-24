@@ -39,7 +39,7 @@ end
 
 function ChemistryCouplingMechanism(t)
    -- Gather chemistry coupling mechanisms, these don't get validated
-   --t.type = "C-V"
+   t.type = "C-V"
    userCCMechs[#userCCMechs+1] = t
 end
 

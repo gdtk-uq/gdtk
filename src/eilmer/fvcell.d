@@ -1224,11 +1224,6 @@ public:
             // }
             // // [TODO] FIXME: Assuming the free electron energy is included in the last mode
             // Q.energies.back() += udivpe * myConfig.diffusion_factor;
-            number dudx = grad.vel[0][0] + grad.vel[1][1];
-            if (myConfig.dimensions == 3){
-                dudx += grad.vel[2][2];
-            }
-            Q[cqi.modes+cqi.n_modes] -= fs.gas.p_e * dudx;
         } // end if ( myConfig.electric_field_work )
         return;
     } // end add_viscous_source_vector()

@@ -37,8 +37,6 @@ import kinetics.exchange_chemistry_coupling;
 
 class EnergyExchangeMechanism {
     @property @nogc number tau() const { return m_tau; }
-    @property @nogc int mode_i() const { return m_mode_i; }
-    @property @nogc int mode_j() const { return m_mode_j; }
     @nogc void evalRelaxationTime(in GasState gs, number[] molef, number[] numden)
     {
         m_tau = mRT.eval(gs, molef, numden);
@@ -49,33 +47,29 @@ private:
     number m_tau;
     RelaxationTime mRT;
     GasModel mGmodel;
-    int m_mode_i;
-    int m_mode_j;
 }
 
 class LandauTellerVT : EnergyExchangeMechanism {
 public:
-    this () {}
-    this(lua_State *L, int mode_i, int mode_j, GasModel gmodel)
+
+    this(lua_State *L, int mode, GasModel gmodel)
     {
         string pspecies = getString(L, -1, "p");
         string qspecies = getString(L, -1, "q");
         m_p = gmodel.species_index(pspecies);
         m_q = gmodel.species_index(qspecies);
-        m_mode_i = mode_i;
-        m_mode_j = mode_j;
+        m_mode = mode;
         mGmodel = gmodel;
         lua_getfield(L, -1, "relaxation_time");
         mRT = createRelaxationTime(L, m_p, m_q, gmodel);
         lua_pop(L, 1);
     }
 
-    this(int p, int q, int mode_i, int mode_j, RelaxationTime RT, GasModel gmodel)
+    this(int p, int q, int mode, RelaxationTime RT, GasModel gmodel)
     {
         m_p = p;
         m_q = q;
-        m_mode_i = mode_i;
-        m_mode_j = mode_j;
+        m_mode = mode;
         mRT = RT.dup();
         mGmodel = gmodel;
     }
@@ -87,8 +81,8 @@ public:
         // occurs from collisions with particle q.
         if (m_tau < 0.0) // signals very small mole fraction of q
             return to!number(0.0);
-        number evStar = mGmodel.energyPerSpeciesInMode(gsEq, m_p, m_mode_i);
-        number ev = mGmodel.energyPerSpeciesInMode(gs, m_p, m_mode_i);
+        number evStar = mGmodel.energyPerSpeciesInMode(gsEq, m_p, m_mode);
+        number ev = mGmodel.energyPerSpeciesInMode(gs, m_p, m_mode);
         // NOTE 1. tau has already been weighted by colliding mole fractions.
         //         This is taken care of as part of by using bath pressure in
         //         calculation of relaxation time.
@@ -99,46 +93,7 @@ public:
 private:
     int m_p;
     int m_q;
-}
-
-class LandauTellerEV : EnergyExchangeMechanism {
-    this (lua_State *L, int mode_i, int mode_j, GasModel gmodel) {
-        string pspecies = getString(L, -1, "p");
-        string qspecies = "e-";
-        m_p = gmodel.species_index(pspecies);
-        m_q = gmodel.species_index(qspecies);
-        m_mode_i = mode_i;
-        m_mode_j = mode_j;
-        mGmodel = gmodel;
-        lua_getfield(L, -1, "relaxation_time");
-        mRT = createRelaxationTime(L, m_p, m_q, gmodel);
-        lua_pop(L, 1);
-    }
-
-    this(int p, int q, int mode_i, int mode_j, RelaxationTime RT, GasModel gmodel)
-    {
-        m_p = p;
-        m_q = q;
-        m_mode_i = mode_i;
-        m_mode_j = mode_j;
-        mRT = RT.dup();
-        mGmodel = gmodel;
-    }
-
-    @nogc
-    override number rate(in GasState gs, in GasState gsEq, number[] molef, number[] numden, in ReactionMechanism rMech)
-    {
-        // see notes for LandauTellerVT
-        if (m_tau < 0.0)
-            return to!number(0.0);
-        number evStar = mGmodel.energyPerSpeciesInMode(gsEq, m_p, m_mode_i);
-        number ev = mGmodel.energyPerSpeciesInMode(gs, m_p, m_mode_i);
-        number tmp = (evStar - ev)/m_tau;
-        return gs.massf[m_q] * mGmodel.mol_masses[m_p] / mGmodel.mol_masses[m_q] * tmp;
-    }
-
-private:
-    int m_p, m_q;
+    int m_mode;
 }
 
 class ElectronExchangeET : EnergyExchangeMechanism {
@@ -152,18 +107,17 @@ class ElectronExchangeET : EnergyExchangeMechanism {
         the RKF step.
         @author: Nick Gibbons
     */
-    this(lua_State *L, int mode_i, int mode_j, GasModel gmodel)
+    this(lua_State *L, int mode, GasModel gmodel)
     {
         string pspecies = getString(L, -1, "p");
         string qspecies = getString(L, -1, "q");
         m_p = gmodel.species_index(pspecies);
         m_q = gmodel.species_index(qspecies);
         m_e = m_p;
-        m_mode_i = mode_i;
-        m_mode_j = mode_j;
+        m_mode = mode;
         mGmodel = gmodel;
         lua_getfield(L, -1, "exchange_cross_section");
-        mCS = createExchangeCrossSection(L, m_e, m_q, m_mode_i);
+        mCS = createExchangeCrossSection(L, m_e, m_q);
         lua_pop(L, 1);
 
         m_me = gmodel.mol_masses[m_e]/Avogadro_number;
@@ -171,13 +125,12 @@ class ElectronExchangeET : EnergyExchangeMechanism {
         check_species_indices(m_e, m_q, gmodel);
     }
 
-    this(int p, int q, int mode_i, int mode_j, ExchangeCrossSection CS, GasModel gmodel)
+    this(int p, int q, int mode, ExchangeCrossSection CS, GasModel gmodel)
     {
         m_p = p;
         m_q = q;
         m_e = p;
-        m_mode_i = mode_i;
-        m_mode_j = mode_j;
+        m_mode = mode;
         mCS = CS.dup();
         mGmodel = gmodel;
 
@@ -202,7 +155,7 @@ class ElectronExchangeET : EnergyExchangeMechanism {
         number ne = numden[m_e];
         number nq = numden[m_q];
         number Eq = Boltzmann_constant*gs.T;
-        number Ee = Boltzmann_constant*gs.T_modes[m_mode_i];
+        number Ee = Boltzmann_constant*gs.T_modes[0];
         number Qeq = mCS(gs, numden); // Exchange collision cross section
 
         number rate = six_times_sqrt2*ne*nq*sqrt(m_me*Ee/pi)*Qeq/m_mq*(Eq - Ee);
@@ -220,6 +173,7 @@ private:
     int m_p;
     int m_q;
     int m_e;
+    int m_mode;
     ExchangeCrossSection mCS;
     GasModel mGmodel;
     double m_me, m_mq;
@@ -241,23 +195,21 @@ class MarroneTreanorCV : EnergyExchangeMechanism {
 
         @author: Nick Gibbons
     */
-    this(lua_State *L, int mode_i, int mode_j, GasModel gmodel)
+    this(lua_State *L, int mode, GasModel gmodel)
     {
-        m_mode_i = mode_i;
-        m_mode_j = mode_j;
+        m_mode = mode;
         mGmodel = gmodel;
 
         mReactionIdx = getInt(L, -1, "reaction_index");
         mSpeciesIdx  = gmodel.species_index(getString(L, -1, "p"));
         lua_getfield(L, -1, "coupling_model");
-        mECC = createExchangeChemistryCoupling(L, mode_i, gmodel, mSpeciesIdx);
+        mECC = createExchangeChemistryCoupling(L);
         lua_pop(L, 1);
     }
 
-    this(int mode_i, int mode_j, GasModel gmodel, int reactionidx, int speciesidx, ExchangeChemistryCoupling ECC)
+    this(int mode, GasModel gmodel, int reactionidx, int speciesidx, ExchangeChemistryCoupling ECC)
     {
-        m_mode_i = mode_i;
-        m_mode_j = mode_j;
+        m_mode = mode;
         mGmodel = gmodel;
         mReactionIdx = reactionidx;
         mSpeciesIdx = speciesidx;
@@ -289,23 +241,21 @@ class MarroneTreanorCV : EnergyExchangeMechanism {
     }
 
 private:
-    int mReactionIdx, mSpeciesIdx;
+    int m_mode, mReactionIdx, mSpeciesIdx;
     GasModel mGmodel;
     ExchangeChemistryCoupling mECC;
 }
 
-EnergyExchangeMechanism createEnergyExchangeMechanism(lua_State *L, int mode_i, int mode_j, GasModel gmodel)
+EnergyExchangeMechanism createEnergyExchangeMechanism(lua_State *L, int mode, GasModel gmodel)
 {
     auto rateModel = getString(L, -1, "rate");
     switch (rateModel) {
     case "Landau-Teller":
-        return new LandauTellerVT(L, mode_i, mode_j, gmodel);
+        return new LandauTellerVT(L, mode, gmodel);
     case "ElectronExchange":
-        return new ElectronExchangeET(L, mode_i, mode_j, gmodel);
+        return new ElectronExchangeET(L, mode, gmodel);
     case "Marrone-Treanor":
-        return new MarroneTreanorCV(L, mode_i, mode_j, gmodel);
-    case "Landau-Teller-EV":
-        return new LandauTellerEV(L, mode_i, mode_j, gmodel);
+        return new MarroneTreanorCV(L, mode, gmodel);
     default:
         string msg = format("The EE mechanism rate model: %s is not known.", rateModel);
         throw new Error(msg);

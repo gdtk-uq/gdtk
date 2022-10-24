@@ -63,18 +63,6 @@ local function transformRateConstant(t, coeffs, anonymousCollider, energyModes)
          end
       end
       m.rctIndex = rctIndex
-   elseif m.model == "fromEqConst" then
-     local rctIndex = -1
-     if t.rateControllingTemperature then
-         if energyModes[t.rateControllingTemperature] then
-            rctIndex = energyModes[t.rateControllingTemperature]
-         else
-            print("The supplied 'rateControllingTemperature' string is unknown: ", t.rateControllingTemperature)
-            print("Bailing out!")
-            os.exit(1)
-         end
-     end
-     m.rctIndex = rctIndex
    elseif m.model == 'Park' then
       m.A = t.A*convFactor
       m.n = t.n
@@ -140,10 +128,7 @@ local function rateConstantToLuaStr(rc)
       end
       str = str .. "\n}"
    elseif rc.model == 'fromEqConst' then
-     if not rc.rctIndex then
-       rc.rctIndex=-1
-     end
-     str = string.format("{model='fromEqConst', rctIndex=%d}", rc.rctIndex)
+      str = "{model='fromEqConst'}"
    else
       print(string.format("ERROR: rate constant model '%s' is not known.", rc.model))
       os.exit(1)

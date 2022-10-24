@@ -29,29 +29,6 @@ db.O.epsilon = {
 db.O.Lewis = {
    value = 0.712
 }
-db.O.electronic_levels = {
-  Te = {
-    --value = {77.97, 15867.86, 33792.58, 73768.2, 76794.98, 86629.09},
-    value = {0.0, 15867.86, 33792.58, 73768.2, 76794.98, 86629.09},
-    --value = {0.0, 158.3, 227.0, 15867.9, 33792.6},
-    units = 'cm^(-1)',
-    description = 'Electronic energy levels',
-    reference = 'NIST'
-  },
-  g = {
-    value = {9, 5, 1, 5, 3, 15},
-    --value = {5, 3, 1, 5, 1},
-    units = 'cm^(-1)',
-    description = 'Degeneracy of electronic energy levels',
-    reference = 'NIST'
-  }
-}
-db.O.ionisation_energy = {
-  value = 13.618055,
-  units = "eV",
-  description = "Ionisation energy",
-  reference = "https://physics.nist.gov/PhysRefData/ASD/ionEnergy.html"
-}
 db.O.ceaThermoCoeffs = {
    nsegments = 4,
    T_break_points = {200.0, 1000.0, 6000.0, 20000.0, 50000.0},

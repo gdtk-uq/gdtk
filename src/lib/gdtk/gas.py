@@ -311,7 +311,6 @@ class GasState(object):
         text += ', p=%g' % self.p
         text += ', T=%g' % self.T
         text += ', u=%g' % self.u
-        text += ', p_e=%g' % self.p_e
         if self.gmodel.n_modes > 0:
             text += ', T_modes=%s' % self.T_modes
             text += ', u_modes=%s' % self.u_modes
@@ -343,18 +342,6 @@ class GasState(object):
     def p(self, value):
         flag = so.gas_state_set_scalar_field(self.id, b"p", value)
         if flag < 0: raise Exception("could not set pressure.")
-        return
-
-    @property
-    def p_e(self):
-        value_pe = ffi.new("double *")
-        flag = so.gas_state_get_scalar_field(self.id, b"p_e", value_pe)
-        if flag < 0: raise Exception("could not get electron pressure.")
-        return value_pe[0]
-    @p_e.setter
-    def p_e(self, value):
-        flag = so.gas_state_set_scalar_field(self.id, b"p_e", value)
-        if flag < 0: raise Exception("could not set electron pressure.")
         return
 
     @property

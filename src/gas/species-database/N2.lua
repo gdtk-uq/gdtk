@@ -7,32 +7,6 @@ db.N2.theta_v = {
    description = 'characteristic vibrational temperature',
    reference = 'Capitelli et al (2005), Table 15. omega_e in ground state converted to K'
 }
-db.N2.theta_D = {
-  value = 78740.00,
-  units = 'K',
-  description = 'characteristic dissociation tempereature',
-  reference = '???'
-}
-db.N2.electronic_levels = {
-  g  = {
-   value = {1, 3, 6, 6, 3, 1, 2},
-   units = 'NA',
-   description = 'degeneracy of electronic levels',
-   reference = 'NIST'
-  },
-  Te = {
-    value = {0.0, 50203.66, 59619.09, 59808.00, 66272.5, 68152.66, 69283.06},
-    units = 'cm^(-1)',
-    description = 'Electronic excitation energy',
-    reference = 'NIST',
-  }
-}
-db.N2.ionisation_energy = {
-  value = 15.581,
-  units = 'eV',
-  descritpion = 'Ionisation energy',
-  reference = 'https://webbook.nist.gov/cgi/cbook.cgi?ID=C7727379&Mask=20'
-}
 db.N2.atomicConstituents = {N=2}
 db.N2.charge = 0
 db.N2.M = {

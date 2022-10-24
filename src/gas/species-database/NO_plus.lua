@@ -7,20 +7,6 @@ db['NO+'].theta_v = {
    description = 'characteristic vibrational temperature',
    reference = 'Copied from NO'
 }
-db['NO+'].electronic_levels = {
-  Te = {
-    value={0.0, 52190.00, 59240.00, 61880.0, 67720.0, 71450.0, 73471.72},
-    units = 'cm^(-1)',
-    description = 'Electronic energy levels',
-    reference = 'NIST'
-  },
-  g = {
-    value = {1, 3, 6, 6, 3, 1, 2, 2},
-    units = 'cm^(-1)',
-    description = 'Degeneracy of electronic energy levels',
-    reference = 'NIST'
-  }
-}
 db['NO+'].atomicConstituents = {O=1,N=1,}
 db['NO+'].charge = 1
 db['NO+'].M = {

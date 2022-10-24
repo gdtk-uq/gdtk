@@ -14,20 +14,6 @@ db['N+'].gamma =  {
    description = '(ideal) ratio of specific heats at room temperature',
    reference = 'Cp/Cv from CEA2 at room temperature'
 }
-db['N+'].electronic_levels = {
-  Te = {
-    value = {0.0, 70.07, 188.19, 22036.47, 47031.63, 67312.23},
-    units = 'cm^(-1)',
-    description = 'Electronic energy levels',
-    reference = 'NIST'
-  },
-  g = {
-    value = {1, 3, 5, 5, 1, 5},
-    units = 'NA',
-    description = 'Degeneracy of electronic energy levels',
-    reference = 'NIST'
-  }
-}
 db['N+'].ceaThermoCoeffs = {
    nsegments = 4,
    T_break_points = {298.15, 1000.0, 6000.0, 20000.0, 50000.0},

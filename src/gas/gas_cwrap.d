@@ -176,9 +176,6 @@ extern (C) int gas_state_set_scalar_field(int gs_i, const char* field_name, doub
         case "p":
             gs.p = value;
             break;
-        case "p_e":
-            gs.p_e = value;
-            break;
         case "T":
             gs.T = value;
             break;
@@ -208,9 +205,6 @@ extern (C) int gas_state_get_scalar_field(int gs_i, const char* field_name, doub
             break;
         case "p":
             *value = gs.p;
-            break;
-        case "p_e":
-            *value = gs.p_e;
             break;
         case "T":
             *value = gs.T;

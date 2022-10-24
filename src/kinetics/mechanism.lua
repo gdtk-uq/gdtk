@@ -18,10 +18,6 @@ local function transformRelaxationTime(rt, p, q, db)
       M_q = db[q].M*1000.0 -- kg -> g
       mu = (M_p * M_q)/(M_p + M_q)
       theta_v = db[p].theta_v
-      -- in the 3T gas model, theta_v is stored away inside a nested table
-      if theta_v == nil then
-         theta_v = db[p].vib_data.theta_v
-      end
       -- If the user has not supplied values for a and b compute them from Millikan and White's correlation
       if rt.a == nil then
          t.a = 1.16e-3*sqrt(mu)*pow(theta_v, 4/3)
@@ -51,15 +47,6 @@ local function transformRelaxationTime(rt, p, q, db)
       t.submodel = transformRelaxationTime(rt.submodel, p, q, db)
       t.sigma = rt.sigma
       t.exponent = rt.exponent
-   elseif t.model == "ParkN2e-" then
-      t.a_low = rt.a_low
-      t.b_low = rt.b_low
-      t.c_low = rt.c_low
-      t.a_high = rt.a_high
-      t.b_high = rt.b_high
-      t.c_high = rt.c_high
-   elseif t.model == "Candler" then
-      t.submodel = transformRelaxationTime(rt.submodel, p, q, db)
    else
       print("The relaxation time model: ", t.model, " it not known.")
       print("Bailing out!")
@@ -86,7 +73,7 @@ local function calculateDissociationEnergy(dissociating_species, db)
    return D
 end
 
-local function buildChemistryCouplingModel(m, participating_species, db)
+local function buildChemistryCouplingModel(m, dissociating_species, db)
    -- Coupling models for chemistry vibrational coupling need their parameters
    -- assembled into a table. We do that here, computing any things that they need.
    --
@@ -96,19 +83,8 @@ local function buildChemistryCouplingModel(m, participating_species, db)
    ccm.model = m.model
 
    if m.model == "ImpartialDissociation" then
-       ccm.Thetav = db[participating_species].theta_v
-       -- in the 3T gas model, theta_v is inside a nested table
-       if ccm.Thetav == nil then
-          ccm.Thetav = db[participating_species].vib_data.theta_v
-       end
-       ccm.D = calculateDissociationEnergy(participating_species, db)
-   elseif m.model == "ImpartialCEE" or m.model == "HeavyParticleCollisionIonisation" or m.model == "ElectronAtTranslationTemp" then
-      -- nothing extra to do
-   elseif m.model == "ElectronImpactIonisation" then
-      -- the ion is created with the ionisation energy of the species
-      -- it was created from
-      ps = string.gsub(participating_species, "+", "", 1)
-      ccm.ionisation_energy = db[ps].ionisation_energy
+       ccm.Thetav = db[dissociating_species].theta_v
+       ccm.D = calculateDissociationEnergy(dissociating_species, db)
    else
       print(string.format("ERROR: chemistry coupling model '%s' is not known.", m.model))
       os.exit(1)
@@ -129,11 +105,6 @@ local function relaxationTimeToLuaStr(rt)
    elseif rt.model == "KimHTC" then
       submodelstr = relaxationTimeToLuaStr(rt.submodel)
       str = string.format("{model='KimHTC', sigma=%.4e, exponent=%.4f, submodel=%s}", rt.sigma, rt.exponent, submodelstr)
-   elseif rt.model == "Candler" then
-      submodelstr = relaxationTimeToLuaStr(rt.submodel)
-      str = string.format("{model='Candler', %s }", submodelstr)
-   elseif rt.model == "ParkN2e-" then
-      str = string.format("a_low=%.4e, b_low=%.4e, c_low=%.4e, a_high=%.4e, b_high=%.4e, c_high=%.4e", rt.a_low, rt.b_low, rt.c_low, rt.a_high, rt.b_high, rt.c_high)
    else
       print(string.format("ERROR: relaxation time model '%s' is not known.", rt.model))
       os.exit(1)
@@ -145,12 +116,6 @@ local function chemistryCouplingTypeToLuaStr(ct)
    local str = ""
    if ct.model == "ImpartialDissociation" then
       str = string.format("{model='ImpartialDissociation', D=%f, Thetav=%f}", ct.D, ct.Thetav)
-   elseif ct.model == "ImpartialCEE" or ct.model == "HeavyParticleCollisionIonisation" then
-      str = "{model = 'ImpartialChemElectronElectronic'}"
-   elseif ct.model == "ElectronAtTranslationTemp" then
-      str = "{model = 'ElectronAtTranslationTemp'}"
-   elseif ct.model == "ElectronImpactIonisation" then
-      str = string.format("{model='ElectronImpactIonisation', ionisation_energy=%f}", ct.ionisation_energy)
    else
       print(string.format("ERROR: Chemistry coupling type '%s' is not known.", ct.model))
       os.exit(1)
@@ -204,7 +169,7 @@ end
 function mechanism.mechanismToLuaStr(index, m)
    local typeStr
    local argStr
-   if m.type == "V-T" or m.type == "E-V" or m.type == "V-E" then
+   if m.type == "V-T" then
       argStr = string.format("  p = '%s', q = '%s',\n", m.p, m.q)
       argStr = argStr .. string.format("  rate = '%s',\n", m.rate)
       argStr = argStr .. string.format("  relaxation_time = %s\n", relaxationTimeToLuaStr(m.rt))
@@ -212,7 +177,7 @@ function mechanism.mechanismToLuaStr(index, m)
       argStr = string.format("  p = '%s', q = '%s',\n", m.p, m.q)
       argStr = argStr .. string.format("  rate = 'ElectronExchange',\n")
       argStr = argStr .. string.format("  exchange_cross_section = %s\n", tableToString(m.exchange_cross_section))
-   elseif m.type == "C-V" or m.type == "C-E" then
+   elseif m.type == "C-V" then
       argStr = string.format("  p = '%s',\n", m.p)
       argStr = argStr .. string.format("  rate = '%s',\n", m.rate)
       argStr = argStr .. string.format("  reaction_index = %d,\n", m.reaction_index)
@@ -354,7 +319,7 @@ function mechanism.addUserMechToTable(index, m, mechanisms, species, db)
          mechanisms[index].type = m.type
          mechanisms[index].p = p
          mechanisms[index].q = q
-         if m.type == 'V-T' or m.type == "V-E" or m.type == "E-V" then
+         if m.type == 'V-T' then
             mechanisms[index].rate = m.rate
             mechanisms[index].rt = transformRelaxationTime(m.relaxation_time, p, q, db)
          elseif m.type == 'E-T' then
@@ -381,17 +346,6 @@ local function seekEntriesWithLabel(table, keyname, keyvalue)
    for k,v in pairs(table) do
       if v[keyname] == keyvalue then entries[k] = v end
    end
-   return entries
-end
-
-local function seekIons(table)
-   entries = {}
-   for k,v in pairs(table) do
-      if string.find(k, "+") then
-         entries[k]=v
-      end
-   end
-   entries["e-"]=nil
    return entries
 end
 
@@ -440,27 +394,9 @@ function mechanism.addUserChemMechToTable(index, m, mechanisms, species, db, rea
             participant_species[spname] = db[spname]
          end
 
-         if m.rate == "Marrone-Treanor" then
-            -- for backwards compatibility, if no type was given assume C-V
-            if m.type == nil then
-               m.type = "C-V"
-            end
-            if m.type == "C-V" then
-               participants = seekEntriesWithLabel(participant_species, "type", "molecule")
-            else
-               participants = participant_species
-            end
-            if m.coupling_model.model == "ElectronImpactIonisation" then
-               participants = seekIons(participant_species)
-            end
-            if m.coupling_model.model == "HeavyParticleCollisionIonisation" then
-                participants = seekEntriesWithLabel(participant_species, "type", "electron")
-            end
-         else
-            print(string.format('ERROR: Unknown chemistry coupling rate: %s', m.type))
-         end
+         participant_molecules = seekEntriesWithLabel(participant_species, "type", "molecule")
 
-         for speciesname,dbentry in pairs(participants) do
+         for speciesname,dbentry in pairs(participant_molecules) do
             mechanisms[index] = {}
             mechanisms[index].type = m.type
             mechanisms[index].p = speciesname

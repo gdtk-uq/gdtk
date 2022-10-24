@@ -41,26 +41,24 @@ class GnoffoNeutralECS : ExchangeCrossSection {
         rate will still scale above this temperature however, because of the 
         Te dependance in the rate equation.
     */
-    this(int e, int q, double a, double b, double c, int mode) {
+    this(int e, int q, double a, double b, double c) {
         this.e = e;
         this.q = q;
         this.a = a;
         this.b = b;
         this.c = c;
-        this.mode = mode;
     }
 
-    this(lua_State *L, int e, int q, int mode) {
+    this(lua_State *L, int e, int q) {
         this.e = e;
         this.q = q;
         this.a = getDouble(L, -1, "a");
         this.b = getDouble(L, -1, "b");
         this.c = getDouble(L, -1, "c");
-        this.mode = mode;
     }
 
     GnoffoNeutralECS dup() {
-        return new GnoffoNeutralECS(e, q, a, b, c, mode);
+        return new GnoffoNeutralECS(e, q, a, b, c);
     }
     
     @nogc
@@ -71,7 +69,7 @@ class GnoffoNeutralECS : ExchangeCrossSection {
     }
 
 private:
-    int e,q,mode;
+    int e,q;
     double a,b,c;
 }
 
@@ -89,43 +87,41 @@ class CoulombIonECS : ExchangeCrossSection {
         derivation of the formulas, but it would be nice to know which one is
         less approximate... (See notes from 21/04/28)
     */
-    this(int e, int q, int mode) {
+    this(int e, int q) {
         this.e = e;
         this.q = q;
-        this.mode = mode;
     }
 
-    this(lua_State *L, int e, int q, int mode) {
+    this(lua_State *L, int e, int q) {
         this.e = e;
         this.q = q;
-        this.mode = mode;
     }
 
     CoulombIonECS dup() {
-        return new CoulombIonECS(e, q, mode);
+        return new CoulombIonECS(e, q);
     }
     
     @nogc
     override number opCall(in GasState gs, number[] numden) {
         number ne = fmax(1.0, numden[e]);
-        number ir0 = 4.0*pi*Boltzmann_constant*gs.T_modes[mode]*vacuum_permittivity/elementary_charge/elementary_charge;
+        number ir0 = 4.0*pi*Boltzmann_constant*gs.T_modes[0]*vacuum_permittivity/elementary_charge/elementary_charge;
         number Lambda = log(9.0/4.0*ir0*ir0*ir0/pi/ne);
         return 2.0*pi/9.0/ir0/ir0*Lambda;
     }
 
 private:
-    int e,q,mode;
+    int e,q;
     immutable double pi = to!double(PI);
 }
 
-ExchangeCrossSection createExchangeCrossSection(lua_State *L, int e, int q, int mode)
+ExchangeCrossSection createExchangeCrossSection(lua_State *L, int e, int q)
 {
     auto type = getString(L, -1, "type");
     switch (type) {
     case "GnoffoNeutral":
-        return new GnoffoNeutralECS(L, e, q, mode);
+        return new GnoffoNeutralECS(L, e, q);
     case "Coulomb":
-        return new CoulombIonECS(L, e, q, mode);
+        return new CoulombIonECS(L, e, q);
     default:
         string msg = format("The exchange cross section type: %s is not known.", type);
         throw new Error(msg);
