@@ -3,6 +3,7 @@
 //
 // For a given block and boundary, we work across all faces in the boundary
 // and set the ghost-cell flow states appropriate for the boundary condition.
+// These functions are intended to be used just for the CPU flavour of the code.
 //
 // PJ 2022-10-03
 
@@ -380,10 +381,8 @@ void bc_inflow(int iblk, int ibc, FlowState& inflow)
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
                 FVFace& f = blk.faces[cfg.iFaceIndex(0, j, k)];
-                FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
-                fs0 = inflow;
-                FlowState& fs1 = blk.cells[f.left_cells[1]].fs;
-                fs1 = inflow;
+                blk.cells[f.left_cells[0]].fs = inflow;
+                blk.cells[f.left_cells[1]].fs = inflow;
             } // end for j
         } // end for k
         break;
@@ -391,10 +390,8 @@ void bc_inflow(int iblk, int ibc, FlowState& inflow)
         for (int k=0; k < cfg.nkc; k++) {
             for (int j=0; j < cfg.njc; j++) {
                 FVFace& f = blk.faces[cfg.iFaceIndex(cfg.nic, j, k)];
-                FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
-                fs0 = inflow;
-                FlowState& fs1 = blk.cells[f.right_cells[1]].fs;
-                fs1 = inflow;
+                blk.cells[f.right_cells[0]].fs = inflow;
+                blk.cells[f.right_cells[1]].fs = inflow;
             } // end for j
         } // end for k
         break;
@@ -402,10 +399,8 @@ void bc_inflow(int iblk, int ibc, FlowState& inflow)
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.faces[cfg.jFaceIndex(i, 0, k)];
-                FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
-                fs0 = inflow;
-                FlowState& fs1 = blk.cells[f.left_cells[1]].fs;
-                fs1 = inflow;
+                blk.cells[f.left_cells[0]].fs = inflow;
+                blk.cells[f.left_cells[1]].fs = inflow;
             } // end for i
         } // end for k
         break;
@@ -413,10 +408,8 @@ void bc_inflow(int iblk, int ibc, FlowState& inflow)
         for (int k=0; k < cfg.nkc; k++) {
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.faces[cfg.jFaceIndex(i, cfg.njc, k)];
-                FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
-                fs0 = inflow;
-                FlowState& fs1 = blk.cells[f.right_cells[1]].fs;
-                fs1 = inflow;
+                blk.cells[f.right_cells[0]].fs = inflow;
+                blk.cells[f.right_cells[1]].fs = inflow;
             } // end for i
         } // end for k
         break;
@@ -424,10 +417,8 @@ void bc_inflow(int iblk, int ibc, FlowState& inflow)
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.faces[cfg.kFaceIndex(i, j, 0)];
-                FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
-                fs0 = inflow;
-                FlowState& fs1 = blk.cells[f.left_cells[1]].fs;
-                fs1 = inflow;
+                blk.cells[f.left_cells[0]].fs = inflow;
+                blk.cells[f.left_cells[1]].fs = inflow;
             } // end for i
         } // end for j
         break;
@@ -435,10 +426,8 @@ void bc_inflow(int iblk, int ibc, FlowState& inflow)
         for (int j=0; j < cfg.njc; j++) {
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.faces[cfg.kFaceIndex(i, j, cfg.nkc)];
-                FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
-                fs0 = inflow;
-                FlowState& fs1 = blk.cells[f.right_cells[1]].fs;
-                fs1 = inflow;
+                blk.cells[f.right_cells[0]].fs = inflow;
+                blk.cells[f.right_cells[1]].fs = inflow;
             } // end for j
         } // end for k
         break;
@@ -458,10 +447,8 @@ void bc_outflow(int iblk, int ibc)
             for (int j=0; j < cfg.njc; j++) {
                 FVFace& f = blk.faces[cfg.iFaceIndex(0, j, k)];
                 FVCell& c = blk.cells[f.right_cells[0]];
-                FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
-                fs0 = c.fs;
-                FlowState& fs1 = blk.cells[f.left_cells[1]].fs;
-                fs1 = c.fs;
+                blk.cells[f.left_cells[0]].fs = c.fs;
+                blk.cells[f.left_cells[1]].fs = c.fs;
             } // end for j
         } // end for k
         break;
@@ -470,10 +457,8 @@ void bc_outflow(int iblk, int ibc)
             for (int j=0; j < cfg.njc; j++) {
                 FVFace& f = blk.faces[cfg.iFaceIndex(cfg.nic, j, k)];
                 FVCell& c = blk.cells[f.left_cells[0]];
-                FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
-                fs0 = c.fs;
-                FlowState& fs1 = blk.cells[f.right_cells[1]].fs;
-                fs1 = c.fs;
+                blk.cells[f.right_cells[0]].fs = c.fs;
+                blk.cells[f.right_cells[1]].fs = c.fs;
             } // end for j
         } // end for k
         break;
@@ -482,10 +467,8 @@ void bc_outflow(int iblk, int ibc)
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.faces[cfg.jFaceIndex(i, 0, k)];
                 FVCell& c = blk.cells[f.right_cells[0]];
-                FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
-                fs0 = c.fs;
-                FlowState& fs1 = blk.cells[f.left_cells[1]].fs;
-                fs1 = c.fs;
+                blk.cells[f.left_cells[0]].fs = c.fs;
+                blk.cells[f.left_cells[1]].fs = c.fs;
             } // end for i
         } // end for k
         break;
@@ -494,10 +477,8 @@ void bc_outflow(int iblk, int ibc)
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.faces[cfg.jFaceIndex(i, cfg.njc, k)];
                 FVCell& c = blk.cells[f.left_cells[0]];
-                FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
-                fs0 = c.fs;
-                FlowState& fs1 = blk.cells[f.right_cells[1]].fs;
-                fs1 = c.fs;
+                blk.cells[f.right_cells[0]].fs = c.fs;
+                blk.cells[f.right_cells[1]].fs = c.fs;
             } // end for i
         } // end for k
         break;
@@ -506,10 +487,8 @@ void bc_outflow(int iblk, int ibc)
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.faces[cfg.kFaceIndex(i, j, 0)];
                 FVCell& c = blk.cells[f.right_cells[0]];
-                FlowState& fs0 = blk.cells[f.left_cells[0]].fs;
-                fs0 = c.fs;
-                FlowState& fs1 = blk.cells[f.left_cells[1]].fs;
-                fs1 = c.fs;
+                blk.cells[f.left_cells[0]].fs = c.fs;
+                blk.cells[f.left_cells[1]].fs = c.fs;
             } // end for i
         } // end for j
         break;
@@ -518,14 +497,51 @@ void bc_outflow(int iblk, int ibc)
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.faces[cfg.kFaceIndex(i, j, cfg.nkc)];
                 FVCell& c = blk.cells[f.left_cells[0]];
-                FlowState& fs0 = blk.cells[f.right_cells[0]].fs;
-                fs0 = c.fs;
-                FlowState& fs1 = blk.cells[f.right_cells[1]].fs;
-                fs1 = c.fs;
+                blk.cells[f.right_cells[0]].fs = c.fs;
+                blk.cells[f.right_cells[1]].fs = c.fs;
             } // end for j
         } // end for k
         break;
     }
 } // end bc_outflow()
+
+
+__host__
+void apply_boundary_conditions_for_convective_fluxes()
+// Fill in the flow properties for ghost cells that sit around the block boundaries.
+//
+// Since the boundary-condition code needs a view of all blocks and
+// most of the coperations are switching between code to copy specific data,
+// we expect the CPU to apply the boundary conditions more effectively than the GPU.
+// Measurements might tell us otherwise.
+{
+    #pragma omp parallel for
+    for (int iblk=0; iblk < Config::nFluidBlocks; iblk++) {
+        BConfig& blk_config = blk_configs[iblk];
+        if (!blk_config.active) continue;
+        for (int ibc=0; ibc < 6; ibc++) {
+            switch (blk_config.bcCodes[ibc]) {
+            case BCCode::wall_with_slip:
+                bc_wall_with_slip(iblk, ibc);
+                break;
+            case BCCode::wall_no_slip_adiabatic:
+            case BCCode::wall_no_slip_fixed_T:
+                bc_wall_no_slip(iblk, ibc);
+                break;
+            case BCCode::exchange:
+                bc_exchange(iblk, ibc);
+                break;
+            case BCCode::inflow:
+                bc_inflow(iblk, ibc, Config::flow_states[blk_config.bc_fs[ibc]]);
+                break;
+            case BCCode::outflow:
+                bc_outflow(iblk, ibc);
+                break;
+            default:
+                throw runtime_error("Invalid bcCode: "+to_string(blk_config.bcCodes[ibc]));
+            }
+        } // end for ibc
+    } // end for iblk
+} // end apply_boundary_conditions_for_convective_fluxes()
 
 #endif
