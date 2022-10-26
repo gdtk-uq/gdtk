@@ -15,10 +15,38 @@
 #include "vector3.cu"
 #include "gas.cu"
 #include "vertex.cu"
-#include "config.cu"
 #include "flow.cu"
 
 using namespace std;
+
+
+namespace BCCode {
+    // Boundary condition codes, to decide what to do for the ghost cells.
+    // Periodic boundary conditions should just work if we wrap the index in each direction.
+    // There's not enough information here to have arbitrary block connections.
+    constexpr int wall_with_slip = 0;
+    constexpr int wall_no_slip_adiabatic = 1;
+    constexpr int wall_no_slip_fixed_T = 2;
+    constexpr int exchange = 3;
+    constexpr int inflow = 4;
+    constexpr int outflow = 5;
+
+    array<string,6> names{"wall_with_slip", "wall_no_slip_adiabatic", "wall_no_slip_fixed_T",
+            "exchange", "inflow", "outflow"};
+};
+
+int BC_code_from_name(string name)
+{
+    if (name == "wall_with_slip") return BCCode::wall_with_slip;
+    if (name == "wall_no_slip_adiabatic") return BCCode::wall_no_slip_adiabatic;
+    if (name == "wall_no_slip_fixed_T") return BCCode::wall_no_slip_fixed_T;
+    if (name == "wall_no_slip") return BCCode::wall_no_slip_adiabatic; // alias
+    if (name == "exchange") return BCCode::exchange;
+    if (name == "inflow") return BCCode::inflow;
+    if (name == "outflow") return BCCode::outflow;
+    return BCCode::wall_with_slip;
+}
+
 
 // Interpolation functions that will be used in the fluc calculator.
 
@@ -67,13 +95,15 @@ struct FVFace {
     array<int,4> vtx{-1,-1,-1,-1};
     array<int,2> left_cells{-1,-1};
     array<int,2> right_cells{-1,-1};
+    // To apply boundary conditions at the face, we need to carry some extra information.
+    // Not all faces are boundary faces, so we start with dummy values.
+    int bcCode{-1};
+    int other_blk_id{-1};
+    array<int,2> other_cells{-1,-1};
+    int inflow_id{-1};
     // For the gradient calculations that form part of the viscous fluxes
     // we keep lists of faces and cells that form a cloud of points around
     // this face-centre.
-    // We also need the FlowState at this face-centre.  It will be set during
-    // the convective-flux calculation or by the boundary-condition code for a wall.
-    int bcCode{-1};
-    FlowState fs;
     array<int,cloud_ncmax> cells_in_cloud{-1,-1};
     array<int,cloud_nfmax> faces_in_cloud{-1,-1,-1,-1,-1,-1,-1,-1};
     int cloud_nc = 0;
@@ -85,6 +115,9 @@ struct FVFace {
     number dvydx, dvydy, dvydz;
     number dvzdx, dvzdy, dvzdz;
     number dTdx, dTdy, dTdz;
+    // We also need the FlowState at this face-centre.  It will be set during
+    // the convective-flux calculation or by the boundary-condition code for a wall.
+    FlowState fs;
 
     string toString() const
     {
@@ -97,6 +130,33 @@ struct FVFace {
         repr << ")";
         return repr.str();
     }
+
+
+    __host__ __device__
+    void apply_convective_boundary_condition()
+    // Set the ghost cell FlowStates according to the type of boundary condition.
+    {
+        if (bcCode < 0) return; // interior face
+        //
+        switch (bcCode) {
+        case BCCode::wall_with_slip:
+            break;
+        case BCCode::wall_no_slip_adiabatic:
+            break;
+        case BCCode::wall_no_slip_fixed_T:
+            break;
+        case BCCode::exchange:
+            break;
+        case BCCode::inflow:
+            break;
+        case BCCode::outflow:
+            break;
+        default:
+            // Do nothing.
+            break;
+        }
+    } // end apply_convective_boundary_condition()
+
 
     // Specific convective-flux calculators here...
 
@@ -309,10 +369,10 @@ struct FVFace {
     // in the convective-flux calculation.
     {
         switch (bcCode) {
-        case 1: // BCCode::wall_no_slip_adiabatic [FIX-ME] would prefer symbolic name
+        case BCCode::wall_no_slip_adiabatic:
             fs.vel.set(0.0, 0.0, 0.0);
             break;
-        case 2: // BCCode::wall_no_slip_fixed_T [FIX-ME] would prefer symbolic name
+        case BCCode::wall_no_slip_fixed_T:
             fs.vel.set(0.0, 0.0, 0.0);
             fs.gas.T = 300.0; // Some nominal value [TODO] make adjustable
             break;
