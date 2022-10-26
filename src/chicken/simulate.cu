@@ -44,6 +44,7 @@ vector<Block> fluidBlocks;
 Block* fluidBlocks_on_gpu;
 vector<BConfig> blk_configs;
 BConfig* blk_configs_on_gpu;
+FlowState* flowStates_on_gpu;
 
 __host__
 void initialize_simulation(int tindx_start)

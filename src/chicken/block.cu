@@ -25,6 +25,99 @@
 
 using namespace std;
 
+
+__host__ __device__
+void apply_convective_boundary_condition(FVFace& f, FVCell cells[], FlowState flowStates[])
+// For a given FVFace, set the ghost cell FlowStates according to the type of boundary condition.
+// Input:
+// f: reference to the FVFace
+// cells: array of cells in the current block
+// flowStates: array of FlowStates needed by inflow boundary conditions
+//
+// [TODO] PJ 2022-10-26 To implement exchange BC, we need to access all blocks.
+//
+{
+    if (f.bcCode < 0) return; // Interior face, leave now.
+    //
+    switch (f.bcCode) {
+    case BCCode::wall_with_slip:
+    case BCCode::wall_no_slip_adiabatic:
+    case BCCode::wall_no_slip_fixed_T: {
+        // Copy data, reflecting velocity.
+        if (f.bcId == Face::iplus || f.bcId == Face::jplus || f.bcId == Face::kplus) {
+            FVCell& c = cells[f.left_cells[0]];
+            FlowState& fs0 = cells[f.right_cells[0]].fs;
+            fs0 = c.fs;
+            fs0.vel.transform_to_local_frame(f.n, f.t1, f.t2);
+            fs0.vel.x = -(fs0.vel.x);
+            fs0.vel.transform_to_global_frame(f.n, f.t1, f.t2);
+            FlowState& fs1 = cells[f.right_cells[1]].fs;
+            fs1 = c.fs;
+            fs1.vel.transform_to_local_frame(f.n, f.t1, f.t2);
+            fs1.vel.x = -(fs1.vel.x);
+            fs1.vel.transform_to_global_frame(f.n, f.t1, f.t2);
+        } else {
+            FVCell& c = cells[f.right_cells[0]];
+            FlowState& fs0 = cells[f.left_cells[0]].fs;
+            fs0 = c.fs;
+            fs0.vel.transform_to_local_frame(f.n, f.t1, f.t2);
+            fs0.vel.x = -(fs0.vel.x);
+            fs0.vel.transform_to_global_frame(f.n, f.t1, f.t2);
+            FlowState& fs1 = cells[f.left_cells[1]].fs;
+            fs1 = c.fs;
+            fs1.vel.transform_to_local_frame(f.n, f.t1, f.t2);
+            fs1.vel.x = -(fs1.vel.x);
+            fs1.vel.transform_to_global_frame(f.n, f.t1, f.t2);
+        }
+        break;
+    }
+    case BCCode::exchange: {
+        if (f.bcId == Face::iplus || f.bcId == Face::jplus || f.bcId == Face::kplus) {
+            // [TODO] PJ 2022-10-26 Not yet implemented.
+            // Need to access an arbitrary block of cells.
+        } else {
+            // [TODO] PJ 2022-10-26 Not yet implemented.
+        }
+        break;
+    }
+    case BCCode::inflow: {
+        FlowState& inflow = flowStates[f.inflowId];
+        if (f.bcId == Face::iplus || f.bcId == Face::jplus || f.bcId == Face::kplus) {
+            FlowState& fs0 = cells[f.right_cells[0]].fs;
+            fs0 = inflow;
+            FlowState& fs1 = cells[f.right_cells[1]].fs;
+            fs1 = inflow;
+        } else {
+            FlowState& fs0 = cells[f.left_cells[0]].fs;
+            fs0 = inflow;
+            FlowState& fs1 = cells[f.left_cells[1]].fs;
+            fs1 = inflow;
+        }
+        break;
+    }
+    case BCCode::outflow: {
+        if (f.bcId == Face::iplus || f.bcId == Face::jplus || f.bcId == Face::kplus) {
+            FVCell& c = cells[f.left_cells[0]];
+            FlowState& fs0 = cells[f.right_cells[0]].fs;
+            fs0 = c.fs;
+            FlowState& fs1 = cells[f.right_cells[1]].fs;
+            fs1 = c.fs;
+        } else {
+            FVCell& c = cells[f.right_cells[0]];
+            FlowState& fs0 = cells[f.left_cells[0]].fs;
+            fs0 = c.fs;
+            FlowState& fs1 = cells[f.left_cells[1]].fs;
+            fs1 = c.fs;
+        }
+        break;
+    }
+    default:
+        // Do nothing.
+        break;
+    }
+} // end apply_convective_boundary_condition()
+
+
 __host__ __device__
 int setup_LSQ_arrays_at_face(FVFace& f, FVCell cells[], FVFace faces[])
 // Prepare the inverse of the least-squares design matrix and use it to
@@ -251,6 +344,20 @@ struct Block {
                         f.left_cells[0] = cfg.ghostCellIndex(Face::iminus,j,k,0);
                         f.right_cells[0] = cfg.activeCellIndex(i,j,k);
                         f.right_cells[1] = cfg.activeCellIndex(i+1,j,k);
+                        f.bcId = Face::iminus;
+                        f.bcCode = cfg.bcCodes[Face::iminus];
+                        if (f.bcCode == BCCode::inflow) f.inflowId = cfg.bc_fs[Face::iminus];
+                        if (f.bcCode == BCCode::wall_no_slip_fixed_T) f.TWall = cfg.bc_TWall[Face::iminus];
+                        if (f.bcCode == BCCode::exchange) {
+                            int other_i = cfg.i - 1;
+                            if (other_i < 0) { other_i = Config::nib-1; } // Wrap around.
+                            int other_j = cfg.j;
+                            int other_k = cfg.k;
+                            f.other_blkId = Config::blk_ids[other_i][other_j][other_k];
+                            f.other_cells[0] = -1; // Need another cfg here but it may now yet exist!
+                            f.other_cells[1] = -1; // Need another cfg here but it may now yet exist!
+                            // [TODO] PJ 2022-10-26 We are going to have to handle this later at run-time.
+                        }
                     } else if (i == 1) {
                         f.left_cells[1] = cfg.ghostCellIndex(Face::iminus,j,k,0);
                         f.left_cells[0] = cfg.activeCellIndex(i-1,j,k);
@@ -266,6 +373,13 @@ struct Block {
                         f.left_cells[0] = cfg.activeCellIndex(i-1,j,k);
                         f.right_cells[0] = cfg.ghostCellIndex(Face::iplus,j,k,0);
                         f.right_cells[1] = cfg.ghostCellIndex(Face::iplus,j,k,1);
+                        f.bcId = Face::iplus;
+                        f.bcCode = cfg.bcCodes[Face::iplus];
+                        if (f.bcCode == BCCode::inflow) f.inflowId = cfg.bc_fs[Face::iplus];
+                        if (f.bcCode == BCCode::wall_no_slip_fixed_T) f.TWall = cfg.bc_TWall[Face::iplus];
+                        if (f.bcCode == BCCode::exchange) {
+                            // [TODO] exchange information
+                        }
                     } else {
                         // All interior cells.
                         f.left_cells[1] = cfg.activeCellIndex(i-2,j,k);
@@ -330,6 +444,13 @@ struct Block {
                         f.left_cells[0] = cfg.ghostCellIndex(Face::jminus,i,k,0);
                         f.right_cells[0] = cfg.activeCellIndex(i,j,k);
                         f.right_cells[1] = cfg.activeCellIndex(i,j+1,k);
+                        f.bcId = Face::jminus;
+                        f.bcCode = cfg.bcCodes[Face::jminus];
+                        if (f.bcCode == BCCode::inflow) f.inflowId = cfg.bc_fs[Face::jminus];
+                        if (f.bcCode == BCCode::wall_no_slip_fixed_T) f.TWall = cfg.bc_TWall[Face::jminus];
+                        if (f.bcCode == BCCode::exchange) {
+                            // [TODO] exchange information
+                        }
                     } else if (j == 1) {
                         f.left_cells[1] = cfg.ghostCellIndex(Face::jminus,i,k,0);
                         f.left_cells[0] = cfg.activeCellIndex(i,j-1,k);
@@ -345,6 +466,13 @@ struct Block {
                         f.left_cells[0] = cfg.activeCellIndex(i,j-1,k);
                         f.right_cells[0] = cfg.ghostCellIndex(Face::jplus,i,k,0);
                         f.right_cells[1] = cfg.ghostCellIndex(Face::jplus,i,k,1);
+                        f.bcId = Face::jplus;
+                        f.bcCode = cfg.bcCodes[Face::jplus];
+                        if (f.bcCode == BCCode::inflow) f.inflowId = cfg.bc_fs[Face::jplus];
+                        if (f.bcCode == BCCode::wall_no_slip_fixed_T) f.TWall = cfg.bc_TWall[Face::jplus];
+                        if (f.bcCode == BCCode::exchange) {
+                            // [TODO] exchange information
+                        }
                     } else {
                         // All interior cells.
                         f.left_cells[1] = cfg.activeCellIndex(i,j-2,k);
@@ -409,6 +537,13 @@ struct Block {
                         f.left_cells[0] = cfg.ghostCellIndex(Face::kminus,i,j,0);
                         f.right_cells[0] = cfg.activeCellIndex(i,j,k);
                         f.right_cells[1] = cfg.activeCellIndex(i,j,k+1);
+                        f.bcId = Face::kminus;
+                        f.bcCode = cfg.bcCodes[Face::kminus];
+                        if (f.bcCode == BCCode::inflow) f.inflowId = cfg.bc_fs[Face::kminus];
+                        if (f.bcCode == BCCode::wall_no_slip_fixed_T) f.TWall = cfg.bc_TWall[Face::kminus];
+                        if (f.bcCode == BCCode::exchange) {
+                            // [TODO] exchange information
+                        }
                     } else if (k == 1) {
                         f.left_cells[1] = cfg.ghostCellIndex(Face::kminus,i,j,0);
                         f.left_cells[0] = cfg.activeCellIndex(i,j,k-1);
@@ -424,6 +559,13 @@ struct Block {
                         f.left_cells[0] = cfg.activeCellIndex(i,j,k-1);
                         f.right_cells[0] = cfg.ghostCellIndex(Face::kplus,i,j,0);
                         f.right_cells[1] = cfg.ghostCellIndex(Face::kplus,i,j,1);
+                        f.bcId = Face::kplus;
+                        f.bcCode = cfg.bcCodes[Face::kplus];
+                        if (f.bcCode == BCCode::inflow) f.inflowId = cfg.bc_fs[Face::kplus];
+                        if (f.bcCode == BCCode::wall_no_slip_fixed_T) f.TWall = cfg.bc_TWall[Face::kplus];
+                        if (f.bcCode == BCCode::exchange) {
+                            // [TODO] exchange information
+                        }
                     } else {
                         // All interior cells.
                         f.left_cells[1] = cfg.activeCellIndex(i,j,k-2);

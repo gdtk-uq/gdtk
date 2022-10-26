@@ -97,10 +97,12 @@ struct FVFace {
     array<int,2> right_cells{-1,-1};
     // To apply boundary conditions at the face, we need to carry some extra information.
     // Not all faces are boundary faces, so we start with dummy values.
+    int bcId{-1};
     int bcCode{-1};
-    int other_blk_id{-1};
+    int other_blkId{-1};
     array<int,2> other_cells{-1,-1};
-    int inflow_id{-1};
+    int inflowId{-1};
+    double TWall{300.0};
     // For the gradient calculations that form part of the viscous fluxes
     // we keep lists of faces and cells that form a cloud of points around
     // this face-centre.
@@ -130,32 +132,6 @@ struct FVFace {
         repr << ")";
         return repr.str();
     }
-
-
-    __host__ __device__
-    void apply_convective_boundary_condition()
-    // Set the ghost cell FlowStates according to the type of boundary condition.
-    {
-        if (bcCode < 0) return; // interior face
-        //
-        switch (bcCode) {
-        case BCCode::wall_with_slip:
-            break;
-        case BCCode::wall_no_slip_adiabatic:
-            break;
-        case BCCode::wall_no_slip_fixed_T:
-            break;
-        case BCCode::exchange:
-            break;
-        case BCCode::inflow:
-            break;
-        case BCCode::outflow:
-            break;
-        default:
-            // Do nothing.
-            break;
-        }
-    } // end apply_convective_boundary_condition()
 
 
     // Specific convective-flux calculators here...
@@ -374,7 +350,7 @@ struct FVFace {
             break;
         case BCCode::wall_no_slip_fixed_T:
             fs.vel.set(0.0, 0.0, 0.0);
-            fs.gas.T = 300.0; // Some nominal value [TODO] make adjustable
+            fs.gas.T = TWall;
             break;
         default:
             // Do nothing.
