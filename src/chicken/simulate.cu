@@ -127,9 +127,6 @@ void initialize_simulation(int tindx_start)
         cerr << cudaGetErrorString(cudaGetLastError()) << endl;;
         throw runtime_error("Could not copy fluidBlocks to gpu.");
     }
-    //
-    status = cudaDeviceSynchronize();
-    if (status) throw runtime_error("Toward end of initialize_simulation: Could not synchronize device.");
 #endif
     //
     // Set up the simulation control parameters.
@@ -398,8 +395,6 @@ void march_in_time_using_gpu()
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
     }
-    status = cudaDeviceSynchronize();
-    if (status) throw runtime_error("Before main loop, could not synchronize device.");
     status = cudaMemcpy(&failed_lsq_setup, failed_lsq_setup_on_gpu, sizeof(int), cudaMemcpyDeviceToHost);
     if (status) throw runtime_error("Could not copy failed_lsq_setup from gpu to host cpu.");
     if (failed_lsq_setup > 0) {
@@ -413,8 +408,7 @@ void march_in_time_using_gpu()
         // Occasionally determine allowable time step.
         if (SimState::step > 0 && (SimState::step % Config::cfl_count)==0) {
             long long int smallest_dt_picos = numeric_limits<long long int>::max();
-            status = cudaMemcpy(smallest_dt_picos_on_gpu, &smallest_dt_picos,
-                sizeof(long long int), cudaMemcpyHostToDevice);
+            status = cudaMemcpy(smallest_dt_picos_on_gpu, &smallest_dt_picos, sizeof(long long int), cudaMemcpyHostToDevice);
             if (status) throw runtime_error("Stage 0, could not copy smallest_dt_picos to gpu.");
             number cfl = Config::cfl_schedule.get_value(SimState::t);
             for (int ib=0; ib < Config::nFluidBlocks; ib++) {
@@ -425,15 +419,11 @@ void march_in_time_using_gpu()
                 BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
                 int nGPUblocks = cfg.nGPUblocks_for_cells;
                 int nGPUthreads = cfg.threads_per_GPUblock;
-                estimate_allowed_dt_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
-                                                                       cfl, smallest_dt_picos_on_gpu);
+                estimate_allowed_dt_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, cfl, smallest_dt_picos_on_gpu);
                 auto cudaError = cudaGetLastError();
                 if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
             }
-            status = cudaDeviceSynchronize();
-            if (status) throw runtime_error("Stage 0, could not synchronize device.");
-            status = cudaMemcpy(&smallest_dt_picos, smallest_dt_picos_on_gpu,
-                sizeof(long long int), cudaMemcpyDeviceToHost);
+            status = cudaMemcpy(&smallest_dt_picos, smallest_dt_picos_on_gpu, sizeof(long long int), cudaMemcpyDeviceToHost);
             if (status) throw runtime_error("Stage 0, could not copy smallest_dt_picos from gpu to host cpu.");
             SimState::dt = smallest_dt_picos * 1.0e-12;
         }
@@ -454,13 +444,10 @@ void march_in_time_using_gpu()
             //
             int nGPUblocks = cfg.nGPUblocks_for_faces;
             int nGPUthreads = cfg.threads_per_GPUblock;
-            apply_convective_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
-                                                                                    flowStates_on_gpu, fluidBlocks_on_gpu);
+            apply_convective_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, flowStates_on_gpu, fluidBlocks_on_gpu);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
-        status = cudaDeviceSynchronize();
-        if (status) throw runtime_error("Stage 1, after convective bcs, could not synchronize device.");
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
@@ -471,8 +458,7 @@ void march_in_time_using_gpu()
             //
             int nGPUblocks = cfg.nGPUblocks_for_faces;
             int nGPUthreads = cfg.threads_per_GPUblock;
-            calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
-                                                                           Config::flux_calc, Config::x_order);
+            calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::flux_calc, Config::x_order);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
             if (Config::viscous) {
@@ -486,13 +472,10 @@ void march_in_time_using_gpu()
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
             nGPUthreads = cfg.threads_per_GPUblock;
-            update_stage_1_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
-                                                              SimState::dt, bad_cell_count_on_gpu);
+            update_stage_1_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, SimState::dt, bad_cell_count_on_gpu);
             cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
-        status = cudaDeviceSynchronize();
-        if (status) throw runtime_error("Stage 1, after update, could not synchronize device.");
         status = cudaMemcpy(&bad_cell_count, bad_cell_count_on_gpu, sizeof(int), cudaMemcpyDeviceToHost);
         if (status) throw runtime_error("Stage 1, could not copy bad_cell_count from gpu to host cpu.");
         if (bad_cell_count > 0) {
@@ -511,13 +494,10 @@ void march_in_time_using_gpu()
             //
             int nGPUblocks = cfg.nGPUblocks_for_faces;
             int nGPUthreads = cfg.threads_per_GPUblock;
-            apply_convective_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
-                                                                                    flowStates_on_gpu, fluidBlocks_on_gpu);
+            apply_convective_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, flowStates_on_gpu, fluidBlocks_on_gpu);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
-        status = cudaDeviceSynchronize();
-        if (status) throw runtime_error("Stage 2, after convective bcs, could not synchronize device.");
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
@@ -528,8 +508,7 @@ void march_in_time_using_gpu()
             //
             int nGPUblocks = cfg.nGPUblocks_for_faces;
             int nGPUthreads = cfg.threads_per_GPUblock;
-            calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
-                                                                           Config::flux_calc, Config::x_order);
+            calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::flux_calc, Config::x_order);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
             if (Config::viscous) {
@@ -543,13 +522,10 @@ void march_in_time_using_gpu()
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
             nGPUthreads = cfg.threads_per_GPUblock;
-            update_stage_2_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
-                                                              SimState::dt, bad_cell_count_on_gpu);
+            update_stage_2_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, SimState::dt, bad_cell_count_on_gpu);
             cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
-        status = cudaDeviceSynchronize();
-        if (status) throw runtime_error("Stage 2, after update, could not synchronize device.");
         status = cudaMemcpy(&bad_cell_count, bad_cell_count_on_gpu, sizeof(int), cudaMemcpyDeviceToHost);
         if (status) throw runtime_error("Stage 2, could not copy bad_cell_count from gpu to host cpu.");
         if (bad_cell_count > 0) {
@@ -568,13 +544,10 @@ void march_in_time_using_gpu()
             //
             int nGPUblocks = cfg.nGPUblocks_for_faces;
             int nGPUthreads = cfg.threads_per_GPUblock;
-            apply_convective_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
-                                                                                    flowStates_on_gpu, fluidBlocks_on_gpu);
+            apply_convective_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, flowStates_on_gpu, fluidBlocks_on_gpu);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
-        status = cudaDeviceSynchronize();
-        if (status) throw runtime_error("Stage 3, after convective bcs, could not synchronize device.");
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
@@ -585,8 +558,7 @@ void march_in_time_using_gpu()
             //
             int nGPUblocks = cfg.nGPUblocks_for_faces;
             int nGPUthreads = cfg.threads_per_GPUblock;
-            calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
-                                                                           Config::flux_calc, Config::x_order);
+            calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::flux_calc, Config::x_order);
             auto cudaError = cudaGetLastError();
             //
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
@@ -601,13 +573,10 @@ void march_in_time_using_gpu()
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
             nGPUthreads = cfg.threads_per_GPUblock;
-            update_stage_3_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
-                                                              SimState::dt, bad_cell_count_on_gpu);
+            update_stage_3_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, SimState::dt, bad_cell_count_on_gpu);
             cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
-        status = cudaDeviceSynchronize();
-        if (status) throw runtime_error("Stage 3, after update, could not synchronize device.");
         status = cudaMemcpy(&bad_cell_count, bad_cell_count_on_gpu, sizeof(int), cudaMemcpyDeviceToHost);
         if (status) throw runtime_error("Stage 3, could not copy bad_cell_count from gpu to host cpu.");
         if (bad_cell_count > 0) {
@@ -626,8 +595,6 @@ void march_in_time_using_gpu()
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
-        status = cudaDeviceSynchronize();
-        if (status) throw runtime_error("After copy of conserved data back to level 0, could not synchronize device.");
         //
         SimState::t += SimState::dt;
         SimState::step += 1;
@@ -665,8 +632,6 @@ void march_in_time_using_gpu()
                     throw runtime_error("On dump flow data for plot, could not copy blk.cells from gpu to cpu.");
                 }
             }
-            status = cudaDeviceSynchronize();
-            if (status) throw runtime_error("After copy cells back to cpu, could not synchronize device.");
             write_flow_data(SimState::next_plot_indx, SimState::t);
             SimState::steps_since_last_plot = 0;
             SimState::next_plot_indx += 1;
@@ -695,8 +660,6 @@ void finalize_simulation()
                 throw runtime_error("Finalize, could not copy blk.cells from gpu to cpu.");
             }
         }
-        auto status = cudaDeviceSynchronize();
-        if (status) throw runtime_error("Finalize, could not synchronize device.");
         #endif
         write_flow_data(SimState::next_plot_indx, SimState::t);
     }
