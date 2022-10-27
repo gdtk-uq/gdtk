@@ -50,220 +50,8 @@ FlowState* flowStates_on_gpu;
 // so include the boundary-condition functions after defining those collections.
 #include "bcs.cu"
 
-//-------------------------------------------------------------------------------------------------
-
-__host__
-void configure_exchange_info(vector<Block>& blks, vector<BConfig>& cfgs)
-// Set up the per-face information for the exchange boundary condition.
-// Do this after all blocks have been configured wecause we need to dip into
-// the other block to get the cell indices on the corresponding boundary face.
-{
-    for (int iblk=0; iblk < Config::nFluidBlocks; ++iblk) {
-        BConfig& cfg = cfgs[iblk];
-        if (!cfg.active) continue;
-        Block& blk = blks[iblk];
-        if (cfg.bcCodes[Face::iminus] == BCCode::exchange) { // jk across face
-            int other_i = cfg.i - 1;
-            if (other_i < 0) { other_i = Config::nib-1; } // Wrap around.
-            int other_j = cfg.j;
-            int other_k = cfg.k;
-            int other_id = Config::blk_ids[other_i][other_j][other_k];
-            Block& other_blk = blks[other_id];
-            BConfig& other_cfg = cfgs[other_id];
-            for (int k=0; k < cfg.nkc; k++) {
-                for (int j=0; j < cfg.njc; j++) {
-                    FVFace& f = blk.faces[cfg.iFaceIndex(0, j, k)];
-                    FVFace& other_f = other_blk.faces[other_cfg.iFaceIndex(other_cfg.nic, j, k)];
-                    f.other_blkId = other_id;
-                    f.other_cells[0] = other_f.left_cells[0];
-                    f.other_cells[1] = other_f.left_cells[1];
-                } // end for j
-            } // end for k
-        }
-        if (cfg.bcCodes[Face::iplus] == BCCode::exchange) { // jk across face
-            int other_i = cfg.i + 1;
-            if (other_i >= Config::nib) { other_i = 0; } // Wrap around.
-            int other_j = cfg.j;
-            int other_k = cfg.k;
-            int other_id = Config::blk_ids[other_i][other_j][other_k];
-            Block& other_blk = fluidBlocks[other_id];
-            BConfig& other_cfg = blk_configs[other_id];
-            for (int k=0; k < cfg.nkc; k++) {
-                for (int j=0; j < cfg.njc; j++) {
-                    FVFace& f = blk.faces[cfg.iFaceIndex(cfg.nic, j, k)];
-                    FVFace& other_f = other_blk.faces[other_cfg.iFaceIndex(0, j, k)];
-                    f.other_blkId = other_id;
-                    f.other_cells[0] = other_f.right_cells[0];
-                    f.other_cells[1] = other_f.right_cells[1];
-                } // end for j
-            } // end for k
-        }
-        if (cfg.bcCodes[Face::jminus] == BCCode::exchange) { // ik across face
-            int other_i = cfg.i;
-            int other_j = cfg.j - 1;
-            if (other_j < 0) { other_j = Config::njb-1; } // Wrap around.
-            int other_k = cfg.k;
-            int other_id = Config::blk_ids[other_i][other_j][other_k];
-            Block& other_blk = fluidBlocks[other_id];
-            BConfig& other_cfg = blk_configs[other_id];
-            for (int k=0; k < cfg.nkc; k++) {
-                for (int i=0; i < cfg.nic; i++) {
-                    FVFace& f = blk.faces[cfg.jFaceIndex(i, 0, k)];
-                    FVFace& other_f = other_blk.faces[other_cfg.jFaceIndex(i, other_cfg.njc, k)];
-                    f.other_blkId = other_id;
-                    f.other_cells[0] = other_f.left_cells[0];
-                    f.other_cells[1] = other_f.left_cells[1];
-                } // end for i
-            } // end for k
-        }
-        if (cfg.bcCodes[Face::jplus] == BCCode::exchange) { // ik across face
-            int other_i = cfg.i;
-            int other_j = cfg.j + 1;
-            if (other_j >= Config::njb) { other_j = 0; } // Wrap around.
-            int other_k = cfg.k;
-            int other_id = Config::blk_ids[other_i][other_j][other_k];
-            Block& other_blk = fluidBlocks[other_id];
-            BConfig& other_cfg = blk_configs[other_id];
-            for (int k=0; k < cfg.nkc; k++) {
-                for (int i=0; i < cfg.nic; i++) {
-                    FVFace& f = blk.faces[cfg.jFaceIndex(i, cfg.njc, k)];
-                    FVFace& other_f = other_blk.faces[other_cfg.jFaceIndex(i, 0, k)];
-                    f.other_blkId = other_id;
-                    f.other_cells[0] = other_f.right_cells[0];
-                    f.other_cells[1] = other_f.right_cells[1];
-                } // end for i
-            } // end for k
-        }
-        if (cfg.bcCodes[Face::kminus] == BCCode::exchange) { // ij across face
-            int other_i = cfg.i;
-            int other_j = cfg.j;
-            int other_k = cfg.k - 1;
-            if (other_k < 0) { other_k = Config::nkb-1; } // Wrap around.
-            int other_id = Config::blk_ids[other_i][other_j][other_k];
-            Block& other_blk = fluidBlocks[other_id];
-            BConfig& other_cfg = blk_configs[other_id];
-            for (int j=0; j < cfg.njc; j++) {
-                for (int i=0; i < cfg.nic; i++) {
-                    FVFace& f = blk.faces[cfg.kFaceIndex(i, j, 0)];
-                    FVFace& other_f = other_blk.faces[other_cfg.kFaceIndex(i, j, other_cfg.nkc)];
-                    f.other_blkId = other_id;
-                    f.other_cells[0] = other_f.left_cells[0];
-                    f.other_cells[1] = other_f.left_cells[1];
-                } // end for i
-            } // end for j
-        }
-        if (cfg.bcCodes[Face::kplus] == BCCode::exchange) { // ij across face
-            int other_i = cfg.i;
-            int other_j = cfg.j;
-            int other_k = cfg.k + 1;
-            if (other_k >= Config::nkb) { other_k = 0; } // Wrap around.
-            int other_id = Config::blk_ids[other_i][other_j][other_k];
-            Block& other_blk = fluidBlocks[other_id];
-            BConfig& other_cfg = blk_configs[other_id];
-            for (int j=0; j < cfg.njc; j++) {
-                for (int i=0; i < cfg.nic; i++) {
-                    FVFace& f = blk.faces[cfg.kFaceIndex(i, j, cfg.nkc)];
-                    FVFace& other_f = other_blk.faces[other_cfg.kFaceIndex(i, j, 0)];
-                    f.other_blkId = other_id;
-                    f.other_cells[0] = other_f.right_cells[0];
-                    f.other_cells[1] = other_f.right_cells[1];
-                } // end for j
-            } // end for k
-        }
-    } // end for iblk
-} // end configure_exchange_info()
-
-
-__device__
-void apply_convective_boundary_condition(FVFace& f, FVCell cells[],
-                                         FlowState flowStates[], Block blks[])
-// For a given FVFace, set the ghost cell FlowStates according to the type of boundary condition.
-// Input:
-// f:          reference to the FVFace
-// cells:      array of cells in the current block
-// flowStates: array of FlowStates needed by inflow boundary condition
-// blks:       array of Block objects needed by the exchange boundary condition
-//
-{
-    if (f.bcCode < 0) return; // Interior face, leave now.
-    //
-    switch (f.bcCode) {
-    case BCCode::wall_with_slip:
-    case BCCode::wall_no_slip_adiabatic:
-    case BCCode::wall_no_slip_fixed_T: {
-        // Copy data, reflecting velocity.
-        if (f.bcId == Face::iplus || f.bcId == Face::jplus || f.bcId == Face::kplus) {
-            FVCell& c = cells[f.left_cells[0]];
-            FlowState& fs0 = cells[f.right_cells[0]].fs;
-            fs0 = c.fs;
-            fs0.vel.transform_to_local_frame(f.n, f.t1, f.t2);
-            fs0.vel.x = -(fs0.vel.x);
-            fs0.vel.transform_to_global_frame(f.n, f.t1, f.t2);
-            FlowState& fs1 = cells[f.right_cells[1]].fs;
-            fs1 = c.fs;
-            fs1.vel.transform_to_local_frame(f.n, f.t1, f.t2);
-            fs1.vel.x = -(fs1.vel.x);
-            fs1.vel.transform_to_global_frame(f.n, f.t1, f.t2);
-        } else {
-            FVCell& c = cells[f.right_cells[0]];
-            FlowState& fs0 = cells[f.left_cells[0]].fs;
-            fs0 = c.fs;
-            fs0.vel.transform_to_local_frame(f.n, f.t1, f.t2);
-            fs0.vel.x = -(fs0.vel.x);
-            fs0.vel.transform_to_global_frame(f.n, f.t1, f.t2);
-            FlowState& fs1 = cells[f.left_cells[1]].fs;
-            fs1 = c.fs;
-            fs1.vel.transform_to_local_frame(f.n, f.t1, f.t2);
-            fs1.vel.x = -(fs1.vel.x);
-            fs1.vel.transform_to_global_frame(f.n, f.t1, f.t2);
-        }
-        break;
-    }
-    case BCCode::exchange: {
-        Block& other_blk = blks[f.other_blkId];
-        FVCell* other_cells = other_blk.cells_on_gpu;
-        // Note that this function only works from within a kernel.
-        // On the CPU, we ould like to do the following but it is not allowed from a __device__ function.
-        // FVCell* other_cells = other_blk.cells.data();
-        if (f.bcId == Face::iplus || f.bcId == Face::jplus || f.bcId == Face::kplus) {
-            cells[f.right_cells[0]].fs = other_cells[f.other_cells[0]].fs;
-            cells[f.right_cells[1]].fs = other_cells[f.other_cells[1]].fs;
-        } else {
-            cells[f.left_cells[0]].fs = other_cells[f.other_cells[0]].fs;
-            cells[f.left_cells[1]].fs = other_cells[f.other_cells[1]].fs;
-        }
-        break;
-    }
-    case BCCode::inflow: {
-        FlowState& inflow = flowStates[f.inflowId];
-        if (f.bcId == Face::iplus || f.bcId == Face::jplus || f.bcId == Face::kplus) {
-            cells[f.right_cells[0]].fs = inflow;
-            cells[f.right_cells[1]].fs = inflow;
-        } else {
-            cells[f.left_cells[0]].fs = inflow;
-            cells[f.left_cells[1]].fs = inflow;
-        }
-        break;
-    }
-    case BCCode::outflow: {
-        if (f.bcId == Face::iplus || f.bcId == Face::jplus || f.bcId == Face::kplus) {
-            FVCell& c = cells[f.left_cells[0]];
-            cells[f.right_cells[0]].fs = c.fs;
-            cells[f.right_cells[1]].fs = c.fs;
-        } else {
-            FVCell& c = cells[f.right_cells[0]];
-            cells[f.left_cells[0]].fs = c.fs;
-            cells[f.left_cells[1]].fs = c.fs;
-        }
-        break;
-    }
-    default:
-        // Do nothing.
-        break;
-    }
-} // end apply_convective_boundary_condition()
-
 //------------------------------------------------------------------------------------------------
+
 
 __host__
 void initialize_simulation(int tindx_start)
@@ -548,7 +336,7 @@ void march_in_time_using_gpu()
     status = cudaMalloc(&failed_lsq_setup_on_gpu, sizeof(int));
     if (status) throw runtime_error("Could not allocate failed_lsq_setup_on_gpu.");
     status = cudaMemcpy(failed_lsq_setup_on_gpu, &failed_lsq_setup, sizeof(int), cudaMemcpyHostToDevice);
-    if (status) throw runtime_error("Stage 0, could not copy failed_lsq_setup to gpu.");
+    if (status) throw runtime_error("Could not copy failed_lsq_setup to gpu.");
     //
     long long int* smallest_dt_picos_on_gpu;
     status = cudaMalloc(&smallest_dt_picos_on_gpu, sizeof(long long int));
@@ -638,21 +426,19 @@ void march_in_time_using_gpu()
         //
         // Stage 1.
         // number t = SimState::t; // Only needed if we have time-dependent source terms or BCs.
-        apply_boundary_conditions_for_convective_fluxes();
-        // Boundary-conditions are done on the host CPU, affecting only the ghost-cell data,
-        // so we copy just the ghost cell data onto the GPU,
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (!cfg.active) continue;
-            FVCell* addr_on_cpu = blk.cells.data() + cfg.nActiveCells;
-            FVCell* addr_on_gpu = blk.cells_on_gpu + cfg.nActiveCells;
-            int nbytes = cfg.nTotalGhostCells*sizeof(FVCell);
-            auto status = cudaMemcpy(addr_on_gpu, addr_on_cpu, nbytes, cudaMemcpyHostToDevice);
-            if (status) {
-                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Stage 1, could not copy ghost cells to gpu.");
-            }
+            Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
+            BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
+            //
+            int nGPUblocks = cfg.nGPUblocks_for_faces;
+            int nGPUthreads = cfg.threads_per_GPUblock;
+            apply_convective_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
+                                                                                    flowStates_on_gpu, fluidBlocks_on_gpu);
+            auto cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
@@ -689,35 +475,23 @@ void march_in_time_using_gpu()
         if (bad_cell_count > 0) {
             throw runtime_error("Stage 1, bad cell count: "+to_string(bad_cell_count));
         }
-        // Copy cell data back to the CPU for just the active cells.
-        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = blk_configs[ib];
-            Block& blk = fluidBlocks[ib];
-            if (!cfg.active) continue;
-            int nbytes = cfg.nActiveCells*sizeof(FVCell);
-            auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
-            if (status) {
-                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Stage 1, could not copy blk.cells from gpu to cpu.");
-            }
-        }
         //
         // Stage 2
         // t = SimState::t + 0.5*SimState::dt;
-        apply_boundary_conditions_for_convective_fluxes();
-        //
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (!cfg.active) continue;
-            FVCell* addr_on_cpu = blk.cells.data() + cfg.nActiveCells;
-            FVCell* addr_on_gpu = blk.cells_on_gpu + cfg.nActiveCells;
-            int nbytes = cfg.nTotalGhostCells*sizeof(FVCell);
-            auto status = cudaMemcpy(addr_on_gpu, addr_on_cpu, nbytes, cudaMemcpyHostToDevice);
-            if (status) {
-                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Stage 2, could not copy ghost cells to gpu.");
-            }
+            // Do the stage-1 update on the GPU.
+            Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
+            BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
+            //
+            int nGPUblocks = cfg.nGPUblocks_for_faces;
+            int nGPUthreads = cfg.threads_per_GPUblock;
+            apply_convective_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
+                                                                                    flowStates_on_gpu, fluidBlocks_on_gpu);
+            auto cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
@@ -754,35 +528,23 @@ void march_in_time_using_gpu()
         if (bad_cell_count > 0) {
             throw runtime_error("Stage 2, bad cell count: "+to_string(bad_cell_count));
         }
-        // Copy cell data back to the CPU for just the active cells.
-        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = blk_configs[ib];
-            Block& blk = fluidBlocks[ib];
-            if (!cfg.active) continue;
-            int nbytes = cfg.nActiveCells*sizeof(FVCell);
-            auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
-            if (status) {
-                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Stage 2, could not copy blk.cells from gpu to cpu.");
-            }
-        }
         //
         // Stage 3
         // t = SimState::t + SimState::dt;
-        apply_boundary_conditions_for_convective_fluxes();
-        //
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (!cfg.active) continue;
-            FVCell* addr_on_cpu = blk.cells.data() + cfg.nActiveCells;
-            FVCell* addr_on_gpu = blk.cells_on_gpu + cfg.nActiveCells;
-            int nbytes = cfg.nTotalGhostCells*sizeof(FVCell);
-            auto status = cudaMemcpy(addr_on_gpu, addr_on_cpu, nbytes, cudaMemcpyHostToDevice);
-            if (status) {
-                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Stage 3, could not copy ghost cells to gpu.");
-            }
+            // Do the stage-1 update on the GPU.
+            Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
+            BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
+            //
+            int nGPUblocks = cfg.nGPUblocks_for_faces;
+            int nGPUthreads = cfg.threads_per_GPUblock;
+            apply_convective_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
+                                                                                    flowStates_on_gpu, fluidBlocks_on_gpu);
+            auto cudaError = cudaGetLastError();
+            if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
@@ -797,6 +559,7 @@ void march_in_time_using_gpu()
             calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
                                                                            Config::flux_calc, Config::x_order);
             auto cudaError = cudaGetLastError();
+            //
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
             if (Config::viscous) {
                 apply_viscous_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
@@ -818,18 +581,6 @@ void march_in_time_using_gpu()
         if (status) throw runtime_error("Stage 3, could not copy bad_cell_count from gpu to host cpu.");
         if (bad_cell_count > 0) {
             throw runtime_error("Stage 3, bad cell count: "+to_string(bad_cell_count));
-        }
-        // Copy cell data back to the CPU for just the active cells.
-        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = blk_configs[ib];
-            Block& blk = fluidBlocks[ib];
-            if (!cfg.active) continue;
-            int nbytes = cfg.nActiveCells*sizeof(FVCell);
-            auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
-            if (status) {
-                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Stage 3, could not copy blk.cells from gpu to cpu.");
-            }
         }
         // After a successful gasdynamic update, copy the conserved data back to level 0 on the GPU.
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
@@ -869,6 +620,18 @@ void march_in_time_using_gpu()
         //
         // Occasionally dump the flow data for making plots.
         if (SimState::t >= SimState::t_plot) {
+            // Copy cell data back to the CPU for just the active cells.
+            for (int ib=0; ib < Config::nFluidBlocks; ib++) {
+                BConfig& cfg = blk_configs[ib];
+                Block& blk = fluidBlocks[ib];
+                if (!cfg.active) continue;
+                int nbytes = cfg.nActiveCells*sizeof(FVCell);
+                auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
+                if (status) {
+                    cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+                    throw runtime_error("On dump flow data for plot, could not copy blk.cells from gpu to cpu.");
+                }
+            }
             write_flow_data(SimState::next_plot_indx, SimState::t);
             SimState::steps_since_last_plot = 0;
             SimState::next_plot_indx += 1;
@@ -884,6 +647,20 @@ __host__
 void finalize_simulation()
 {
     if (SimState::steps_since_last_plot > 0) {
+        #ifdef CUDA
+        // Copy cell data back to the CPU for just the active cells.
+        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
+            BConfig& cfg = blk_configs[ib];
+            Block& blk = fluidBlocks[ib];
+            if (!cfg.active) continue;
+            int nbytes = cfg.nActiveCells*sizeof(FVCell);
+            auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
+            if (status) {
+                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+                throw runtime_error("Finalize, could not copy blk.cells from gpu to cpu.");
+            }
+        }
+        #endif
         write_flow_data(SimState::next_plot_indx, SimState::t);
     }
     for (Block& blk : fluidBlocks) {
