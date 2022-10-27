@@ -339,26 +339,6 @@ struct FVFace {
     // Methods for viscous fluxes, using the spatial gradients.
 
     __host__ __device__
-    void apply_viscous_boundary_condition()
-    // Set the FlowState according to the type of boundary condition.
-    // Will overwrite some of the FlowState properties computed earlier
-    // in the convective-flux calculation.
-    {
-        switch (bcCode) {
-        case BCCode::wall_no_slip_adiabatic:
-            fs.vel.set(0.0, 0.0, 0.0);
-            break;
-        case BCCode::wall_no_slip_fixed_T:
-            fs.vel.set(0.0, 0.0, 0.0);
-            fs.gas.T = TWall;
-            break;
-        default:
-            // Do nothing.
-            break;
-        }
-    } // end apply_viscous_boundary_condition()
-
-    __host__ __device__
     void add_viscous_flux()
     // Add the viscous component of the fluxes of mass, momentum and energy
     // to the convective flux values that were computed eariler.

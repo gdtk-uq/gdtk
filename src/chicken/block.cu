@@ -884,14 +884,6 @@ struct Block {
     }
 
     __host__
-    void apply_viscous_boundary_conditions()
-    {
-        for (auto& face : faces) {
-            face.apply_viscous_boundary_condition();
-        }
-    }
-
-    __host__
     void add_viscous_flux()
     {
         for (auto& face : faces) {
@@ -1052,16 +1044,6 @@ void setup_LSQ_arrays_on_gpu(Block& blk, const BConfig& cfg, int* failures)
         FVFace& face = blk.faces_on_gpu[i];
         int flag = setup_LSQ_arrays_at_face(face, blk.cells_on_gpu, blk.faces_on_gpu);
         atomicAdd(failures, flag);
-    }
-}
-
-__global__
-void apply_viscous_boundary_conditions_on_gpu(Block& blk, const BConfig& cfg)
-{
-    int i = blockIdx.x*blockDim.x + threadIdx.x;
-    if (i < cfg.nFaces) {
-        FVFace& face = blk.faces_on_gpu[i];
-        face.apply_viscous_boundary_condition();
     }
 }
 

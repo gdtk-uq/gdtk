@@ -433,7 +433,7 @@ void march_in_time_using_cpu_only()
             if (cfg.active) {
                 blk.calculate_convective_fluxes(Config::flux_calc, Config::x_order);
                 if (Config::viscous) {
-                    blk.apply_viscous_boundary_conditions();
+                    apply_viscous_boundary_conditions(blk);
                     blk.add_viscous_flux();
                 }
                 bad_cell_counts[ib] = blk.update_stage_1(cfg, SimState::dt);
@@ -454,7 +454,7 @@ void march_in_time_using_cpu_only()
             if (cfg.active) {
                 blk.calculate_convective_fluxes(Config::flux_calc, Config::x_order);
                 if (Config::viscous) {
-                    blk.apply_viscous_boundary_conditions();
+                    apply_viscous_boundary_conditions(blk);
                     blk.add_viscous_flux();
                 }
                 bad_cell_counts[ib] = blk.update_stage_2(cfg, SimState::dt);
@@ -475,7 +475,7 @@ void march_in_time_using_cpu_only()
             if (cfg.active) {
                 blk.calculate_convective_fluxes(Config::flux_calc, Config::x_order);
                 if (Config::viscous) {
-                    blk.apply_viscous_boundary_conditions();
+                    apply_viscous_boundary_conditions(blk);
                     blk.add_viscous_flux();
                 }
                 bad_cell_counts[ib] = blk.update_stage_3(cfg, SimState::dt);

@@ -10,6 +10,9 @@
 #ifndef BCS_INCLUDED
 #define BCS_INCLUDED
 
+// Part A.
+// Set the ghost-cell quantities to effect the boundary-conditions for convective fluxes.
+
 __host__
 void bc_wall_reflect_normal_velocity(int iblk, int ibc)
 // Copy data, reflecting velocity.
@@ -423,5 +426,48 @@ void apply_boundary_conditions_for_convective_fluxes()
         } // end for ibc
     } // end for iblk
 } // end apply_boundary_conditions_for_convective_fluxes()
+
+
+// Part B.
+// Set the FlowStates at the actual faces for effecting the boundary conditions for viscous fluxes.
+
+__host__ __device__
+void apply_viscous_boundary_condition(FVFace& f)
+// Set the FlowState according to the type of boundary condition.
+// Will overwrite some of the FlowState properties computed earlier
+// in the convective-flux calculation.
+{
+    switch (f.bcCode) {
+    case BCCode::wall_no_slip_adiabatic:
+        f.fs.vel.set(0.0, 0.0, 0.0);
+        break;
+    case BCCode::wall_no_slip_fixed_T:
+        f.fs.vel.set(0.0, 0.0, 0.0);
+        f.fs.gas.T = f.TWall;
+        break;
+    default:
+        // Do nothing.
+        break;
+    }
+} // end apply_viscous_boundary_condition()
+
+
+__host__
+void apply_viscous_boundary_conditions(Block& blk)
+{
+    for (auto& face : blk.faces) {
+        apply_viscous_boundary_condition(face);
+    }
+}
+
+__global__
+void apply_viscous_boundary_conditions_on_gpu(Block& blk, const BConfig& cfg)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nFaces) {
+        FVFace& face = blk.faces_on_gpu[i];
+        apply_viscous_boundary_condition(face);
+    }
+}
 
 #endif
