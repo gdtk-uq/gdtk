@@ -74,7 +74,7 @@ void initialize_simulation(int tindx_start)
             throw runtime_error("blk_id=" + to_string(blk_id) + " is inconsistent: i=" +
                                 to_string(i) + " j=" + to_string(j) + " k=" + to_string(k));
         }
-        cfg.fill_in_dimensions(Config::nics[i], Config::njcs[j], Config::nkcs[k]);
+        cfg.fill_in_dimensions(Config::nics[i], Config::njcs[j], Config::nkcs[k], Config::threads_per_GPUblock);
         Block blk;
         bytes_allocated += sizeof(Block) + blk.configure(cfg);
         sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
@@ -383,13 +383,13 @@ void march_in_time_using_gpu()
         Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
         BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
         int nGPUblocks = cfg.nGPUblocks_for_cells;
-        int nGPUthreads = cfg.threads_per_GPUblock;
+        int nGPUthreads = Config::threads_per_GPUblock;
         encodeConserved_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, 0);
         auto cudaError = cudaGetLastError();
         if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         if (Config::viscous) {
             nGPUblocks = cfg.nGPUblocks_for_faces;
-            nGPUthreads = cfg.threads_per_GPUblock;
+            nGPUthreads = Config::threads_per_GPUblock;
             setup_LSQ_arrays_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, failed_lsq_setup_on_gpu);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
@@ -418,7 +418,7 @@ void march_in_time_using_gpu()
                 Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
                 BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
                 int nGPUblocks = cfg.nGPUblocks_for_cells;
-                int nGPUthreads = cfg.threads_per_GPUblock;
+                int nGPUthreads = Config::threads_per_GPUblock;
                 estimate_allowed_dt_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, cfl, smallest_dt_picos_on_gpu);
                 auto cudaError = cudaGetLastError();
                 if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
@@ -443,7 +443,7 @@ void march_in_time_using_gpu()
             BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
             //
             int nGPUblocks = cfg.nGPUblocks_for_faces;
-            int nGPUthreads = cfg.threads_per_GPUblock;
+            int nGPUthreads = Config::threads_per_GPUblock;
             apply_convective_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, flowStates_on_gpu, fluidBlocks_on_gpu);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
@@ -457,7 +457,7 @@ void march_in_time_using_gpu()
             BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
             //
             int nGPUblocks = cfg.nGPUblocks_for_faces;
-            int nGPUthreads = cfg.threads_per_GPUblock;
+            int nGPUthreads = Config::threads_per_GPUblock;
             calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::flux_calc, Config::x_order);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
@@ -471,7 +471,7 @@ void march_in_time_using_gpu()
             }
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
-            nGPUthreads = cfg.threads_per_GPUblock;
+            nGPUthreads = Config::threads_per_GPUblock;
             update_stage_1_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, SimState::dt, bad_cell_count_on_gpu);
             cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
@@ -493,7 +493,7 @@ void march_in_time_using_gpu()
             BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
             //
             int nGPUblocks = cfg.nGPUblocks_for_faces;
-            int nGPUthreads = cfg.threads_per_GPUblock;
+            int nGPUthreads = Config::threads_per_GPUblock;
             apply_convective_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, flowStates_on_gpu, fluidBlocks_on_gpu);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
@@ -507,7 +507,7 @@ void march_in_time_using_gpu()
             BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
             //
             int nGPUblocks = cfg.nGPUblocks_for_faces;
-            int nGPUthreads = cfg.threads_per_GPUblock;
+            int nGPUthreads = Config::threads_per_GPUblock;
             calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::flux_calc, Config::x_order);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
@@ -521,7 +521,7 @@ void march_in_time_using_gpu()
             }
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
-            nGPUthreads = cfg.threads_per_GPUblock;
+            nGPUthreads = Config::threads_per_GPUblock;
             update_stage_2_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, SimState::dt, bad_cell_count_on_gpu);
             cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
@@ -543,7 +543,7 @@ void march_in_time_using_gpu()
             BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
             //
             int nGPUblocks = cfg.nGPUblocks_for_faces;
-            int nGPUthreads = cfg.threads_per_GPUblock;
+            int nGPUthreads = Config::threads_per_GPUblock;
             apply_convective_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, flowStates_on_gpu, fluidBlocks_on_gpu);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
@@ -557,7 +557,7 @@ void march_in_time_using_gpu()
             BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
             //
             int nGPUblocks = cfg.nGPUblocks_for_faces;
-            int nGPUthreads = cfg.threads_per_GPUblock;
+            int nGPUthreads = Config::threads_per_GPUblock;
             calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::flux_calc, Config::x_order);
             auto cudaError = cudaGetLastError();
             //
@@ -572,7 +572,7 @@ void march_in_time_using_gpu()
             }
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
-            nGPUthreads = cfg.threads_per_GPUblock;
+            nGPUthreads = Config::threads_per_GPUblock;
             update_stage_3_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, SimState::dt, bad_cell_count_on_gpu);
             cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
@@ -590,7 +590,7 @@ void march_in_time_using_gpu()
             Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
             BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
             int nGPUblocks = cfg.nGPUblocks_for_cells;
-            int nGPUthreads = cfg.threads_per_GPUblock;
+            int nGPUthreads = Config::threads_per_GPUblock;
             copy_conserved_data_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, 1, 0);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));

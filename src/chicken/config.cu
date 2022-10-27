@@ -60,7 +60,7 @@ struct BConfig {
     int nFaces;
     //
     // GPU-related parameters.
-    int threads_per_GPUblock = 0;
+    int threads_per_GPUblock = 128;
     int nGPUblocks_for_cells = 0;
     int nGPUblocks_for_faces = 0;
     //
@@ -70,7 +70,7 @@ struct BConfig {
     array<double,6> bc_TWall;
 
     __host__
-    void fill_in_dimensions(int _nic, int _njc, int _nkc)
+    void fill_in_dimensions(int _nic, int _njc, int _nkc, int threads_per_GPUblock)
     {
         nic = _nic;
         njc = _njc;
@@ -97,8 +97,7 @@ struct BConfig {
         nFaces = n_iFaces + n_jFaces + n_kFaces;
         //
         #ifdef CUDA
-        // We need to allocate corresponding memory space on the GPU.
-        threads_per_GPUblock = 128;
+        // We need to allocate corresponding resources on the GPU.
         nGPUblocks_for_cells = ceil(double(nActiveCells)/threads_per_GPUblock);
         nGPUblocks_for_faces = ceil(double(nFaces)/threads_per_GPUblock);
         #endif
@@ -241,6 +240,9 @@ namespace Config {
     int t_order = 2;
     int flux_calc = FluxCalc::ausmdv;
     bool viscous = false;
+    //
+    // GPU-related parameters.
+    int threads_per_GPUblock = 128;
 }
 
 
@@ -381,6 +383,7 @@ vector<BConfig> read_config_file(string fileName)
     vector<number> dt_plot = jsonData["dt_plot"].get<vector<number> >();
     Config::dt_plot_schedule = Schedule{t_change, dt_plot};
     Config::viscous = jsonData["viscous"].get<bool>();
+    Config::threads_per_GPUblock = jsonData["threads_per_gpu_block"].get<int>();
     if (Config::verbosity > 0) {
         cout << "  x_order=" << Config::x_order << endl;
         cout << "  t_order=" << Config::t_order << endl;
@@ -393,6 +396,7 @@ vector<BConfig> read_config_file(string fileName)
         cout << "  print_count=" << Config::print_count << endl;
         cout << "  dt_plot_schedule=" << Config::dt_plot_schedule.toString() << endl;
         cout << "  viscous=" << Config::viscous << endl;
+        cout << "  threads_per_gpu_block=" << Config::threads_per_GPUblock << endl;
     }
     return blk_configs;
 } // end read_config_file()
