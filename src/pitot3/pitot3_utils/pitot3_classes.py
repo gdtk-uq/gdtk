@@ -16,10 +16,18 @@ from gdtk.ideal_gas_flow import p0_p
 from gdtk.numeric.zero_solvers import secant
 
 def eilmer4_CEAGas_input_file_creator(output_filename, mixtureName, speciesList, reactants,
-                                      inputUnits, withIons, trace = 1.0e-6):
+                                      inputUnits, withIons, trace = 1.0e-6,
+                                      header = '-- CEA Gas model made automatically by PITOT3'):
     """Just a function to make an input file for the CEAGas object..."""
 
-    with open('{0}.lua'.format(output_filename), 'w') as gas_file:
+
+    if '.lua' not in output_filename:
+        output_filename += '.lua'
+
+    with open(output_filename, 'w') as gas_file:
+        gas_file.write(header + '\n')
+        gas_file.write('\n')
+
         gas_file.write('model = "CEAGas"' + '\n')
         gas_file.write('\n')
 
@@ -36,6 +44,236 @@ def eilmer4_CEAGas_input_file_creator(output_filename, mixtureName, speciesList,
         gas_file.write('}')
 
     return
+
+def eilmer4_CEAGas_gmodel_without_ions_creator(gmodel_filename):
+
+    """
+    This is a function which takes a link to a CEA Gas file with ions and makes a version of it without ions
+    in the current folder. It then returns the filename so the gmodel can be used in the program.
+
+    This function is needed as sometimes PITOT3 fails in expansions at low temperatures where ions asre not needed, anyway,
+    this gmodel without ions will hopefully allow these cases to be solved.
+
+    :param gmodel_filename:
+    :return:
+    """
+
+    # first we load the file line by line and pull out what we need
+    # we are making the assumption that what we have is a proper good quality functioning CEA Gas gas model...
+
+    variables_to_look_for_list = ['mixtureName', 'speciesList', 'reactants', 'inputUnits', 'trace']
+
+    # model = "CEAGas"
+    #
+    # CEAGas = {
+    #   mixtureName = "driver_gas",
+    #   speciesList = {'He', 'Ar'},
+    #   reactants = {He = 0.8, Ar = 0.2},
+    #   inputUnits = 'moles',
+    #   withIons = false,
+    #   trace = 1e-06
+    # }
+
+    with open(gmodel_filename) as gmodel_file:
+        for line in gmodel_file:
+
+            if line[0:2] != '--' and '=' in line: # -- is the lua comment character and any line we need will have = in it...
+
+                split_line = line.strip().split('=')
+
+                variable_name = split_line[0].strip()
+                variable = split_line[1].strip()
+
+                if variable_name in variables_to_look_for_list:
+                    # we just have a case for each variable as that seemed easiest to me...
+                    if variable_name == 'mixtureName':
+                        # we add without ions to the end of it
+
+                        characters_to_replace = ["'", '"', ',']
+
+                        for character in characters_to_replace:
+                            variable = variable.replace(character, '')
+
+                        mixtureName = variable + '-without-ions'
+                    if variable_name == 'speciesList':
+                        # we need to split the input into a list...
+                        split_species_list = variable.split(',')
+
+                        speciesList = []
+
+                        characters_to_replace = ['{', '}', "'", '"']
+
+                        for species in split_species_list:
+                            for character in characters_to_replace:
+                                species = species.replace(character, '')
+
+                            # any species with a + or a - in it is a charged particle, remove them!
+
+                            if '+' not in species and '-' not in species and species:
+                                speciesList.append(species)
+
+                    if variable_name == 'reactants':
+                        # this will already be kind of split for us by the original = split... so let us recombine that
+                        # and then keep going
+
+                        variable = '='.join(split_line[1:])
+
+                        split_reactants_list = variable.split(',')
+
+                        characters_to_replace = ['{', '}', "'", '"', ' ', ',']
+
+                        reactants = {}
+
+                        for reactant in split_reactants_list:
+                            for character in characters_to_replace:
+                                reactant = reactant.replace(character, '')
+
+                            split_reactant = reactant.split('=')
+
+                            if len(split_reactant) == 2:
+                                reactants[split_reactant[0]] = float(split_reactant[1])
+
+                    if variable_name == 'inputUnits':
+
+                        characters_to_replace = ["'", '"', ',']
+
+                        for character in characters_to_replace:
+                            variable = variable.replace(character, '')
+
+                        inputUnits = variable
+
+                    if variable_name == 'trace':
+
+                        trace = float(variable)
+
+    # now the final variable is withIons which will be False
+    withIons = False
+
+    # now we just need to give ourselves a filename for the new gmodel
+    # and make the file...
+
+    gmodel_justfilename = gmodel_filename.split('/')[-1] # remove the folders etc.
+
+    # the pitot3 format is kind of cea-gmodel-name-gas-model.lua
+    # assuming that lets remove anything like that...
+    parts_to_remove = ['cea-', '-gas-model', '.lua']
+
+    gmodel_name = gmodel_justfilename
+
+    for part in parts_to_remove:
+        gmodel_name = gmodel_name.replace(part, '')
+
+    # now we reconstitute it in the PITOT3 style...
+
+    gmodel_without_ions_filename = f'cea-{gmodel_name}-without-ions-gas-model.lua'
+
+
+    header = '-- modified gas model made with PITOT3 without ions for low temperature operation'
+
+    eilmer4_CEAGas_input_file_creator(gmodel_without_ions_filename, mixtureName, speciesList, reactants, inputUnits,
+                                      withIons, trace, header)
+
+    return gmodel_without_ions_filename
+
+def finite_wave_dp_wrapper(state1, v1, characteristic, p2, state2, gas_flow, steps=100,
+                           gmodel_without_ions = None, cutoff_temp = 5000.0, number_of_calculations = 10):
+
+    """
+    Similar to how in PITOT3 I had a "normal shock wrapper" to deal with cases where the normal shock just didn't work
+    this is my way of trying to do this in PITOT3. It breaks the finite wave dp up into a set of blocks, so if any of them
+    bail out, we can try to turn ions off and keep going (if we're below the characteristic temp...)
+
+
+    :param state1:
+    :param v1:
+    :param characteristic:
+    :param p2:
+    :param state2:
+    :param steps:
+    :param gmodel_without_ions:
+    :param cutoff_temp:
+    :return:
+    """
+
+    import numpy as np
+
+    p1 = state1.p
+
+    pressure_list = np.geomspace(p1, p2, number_of_calculations + 1)
+
+    substeps = int(steps/number_of_calculations)
+
+    # let us make a new local versions of states 1 and 2 for this local calculation...
+
+    state1_local = GasState(state1.gmodel)
+
+    state1_local.p = state1.p
+    state1_local.T = state1.T
+
+    state1_local.update_thermo_from_pT()
+    state1_local.update_sound_speed()
+
+    state2_local = GasState(state1.gmodel)
+
+    # now we loop through all of the pressures
+    for pressure in pressure_list:
+        if pressure != p1: # skip that first value...
+
+            try:
+
+                v2g = gas_flow.finite_wave_dp(state1_local, v1, characteristic, pressure, state2_local, steps=substeps)
+
+            except Exception as e:
+                print(e)
+                print("Unsteady expansion calculation failed, probably due to a CEA error.")
+                
+                if state1_local.T < cutoff_temp:
+                    print(f"We are below the set cutoff temperature of {cutoff_temp} K so we are going to try performing this part of the calculation without ions.")
+
+                    state1_local_without_ions = GasState(gmodel_without_ions)
+
+                    state2_local_without_ions = GasState(gmodel_without_ions)
+
+                    state1_local_without_ions.p = state1_local.p
+                    state1_local_without_ions.T = state1_local.T
+
+                    state1_local_without_ions.update_thermo_from_pT()
+                    state1_local_without_ions.update_sound_speed()
+
+                    gas_flow_without_ions = GasFlow(gmodel_without_ions)
+
+                    v2g = gas_flow_without_ions.finite_wave_dp(state1_local_without_ions, v1, characteristic, pressure,
+                                                               state2_local_without_ions, steps=substeps)
+
+                    print("Calculation was successful. Turning ions back on")
+
+                    # turning ions back on for next calculation...
+
+                    state2_local.p = state2_local_without_ions.p
+                    state2_local.T = state2_local_without_ions.T
+
+                    state2_local.update_thermo_from_pT()
+                    state2_local.update_sound_speed()
+                else:
+                    raise Exception("pitot3_classes.finite_wave_dp_wrapper: Unsteady expansion failed but the temperature is too high to justify turning ions off.")
+
+            # now we need to make our state2 state 1 for the next step and v2g v1 as well
+
+            v1 = v2g
+
+            state1_local.p = state2_local.p
+            state1_local.T = state2_local.T
+
+            state1_local.update_thermo_from_pT()
+            state1_local.update_sound_speed()
+
+    state2.p = state2_local.p
+    state2.T = state2_local.T
+
+    state2.update_thermo_from_pT()
+    state2.update_sound_speed()
+
+    return v2g
 
 class Facility(object):
     """
@@ -800,13 +1038,28 @@ class Facility_State(object):
 
         self.reference_gas_state = reference_gas_state
 
+        self.gas_state_gmodel = self.gas_state.gmodel
+
+        # we make a no-ions version of the gmodel if needed.
+        # (we do this for any CEA gas model with ions
+        # as they can fail at low temperatures, and sometimes
+        # we want to be able to keep going then...)
+
+        if self.get_gas_state_gmodel_type() == 'CEAGas':
+            # this assumes the gas state has been created properly at some point...
+            if 'e-' in self.gas_state.ceaSavedData['massf']:
+                gmodel_without_ions_filename = eilmer4_CEAGas_gmodel_without_ions_creator(self.gas_state_gmodel.file_name)
+
+                self.gas_state_gmodel_without_ions = GasModel(gmodel_without_ions_filename)
+
+            else:
+                self.gas_state_gmodel_without_ions = None
+        else:
+            self.gas_state_gmodel_without_ions = None
+
         return
 
     def __str__(self):
-        #text = "Facility_State(state {0}: p = {1:.2f} Pa, T = {2:.2f} K, V = {3:.2f} m/s, M = {4:.2f})".format(self.state_name,
-        #                                                                                                       self.gas_state.p,
-        #                                                                                                       self.gas_state.T,
-        #                                                                                                       self.v, self.M)
         text = "Facility_State(state {0}: p = {1:.2f} Pa, T = {2:.2f} K, gam = {3:.2f}, R = {4:.2f} J/kg K, V = {5:.2f} m/s, M = {6:.2f})".format(self.state_name,
                                                                                                                self.gas_state.p,
                                                                                                                self.gas_state.T,
@@ -829,6 +1082,27 @@ class Facility_State(object):
         """
 
         return self.gas_state
+
+    def get_gas_state_gmodel(self):
+        """
+        Return just the gas model of the gas state.
+        """
+
+        return self.gas_state_gmodel
+
+    def get_gas_state_gmodel_without_ions(self):
+        """
+        Return the gas model without ions if we have it...
+        """
+
+        return self.gas_state_gmodel_without_ions
+
+    def get_gas_state_gmodel_type(self):
+        """
+        Return just the type of the gas model's gas state
+        """
+
+        return self.gas_state_gmodel.type_str
 
     def get_v(self):
         """
@@ -1188,7 +1462,7 @@ class Facility_State(object):
 
         """
 
-        if self.get_gas_state().gmodel.type_str == 'CEAGas':
+        if self.get_gas_state_gmodel().type_str == 'CEAGas':
             # a fill state will not have many different species, so we should just the species which actually exist
             species_massf_dict = self.get_gas_state().ceaSavedData['massf']
             reduced_species_massf_dict = {}
@@ -1401,8 +1675,9 @@ class Tube(object):
             unsteadily_expanded_gas_state = GasState(unsteadily_expanding_state_gmodel)
             unsteadily_expanding_state_gas_flow = GasFlow(unsteadily_expanding_state_gmodel)
 
-            v3g = unsteadily_expanding_state_gas_flow.finite_wave_dp(unsteadily_expanding_state.get_gas_state(), unsteadily_expanding_state.get_v(),
-                                                                     'cplus', p3, unsteadily_expanded_gas_state, steps=steps)
+            v3g = finite_wave_dp_wrapper(unsteadily_expanding_state.get_gas_state(), unsteadily_expanding_state.get_v(),
+                                         'cplus', p3, unsteadily_expanded_gas_state, unsteadily_expanding_state_gas_flow,
+                                         steps = steps, gmodel_without_ions=unsteadily_expanding_state.get_gas_state_gmodel_without_ions())
 
             # shocked state label number will be the fill state label + 1, the unsteadily expanded state will be that number + 2
             # this is easy for shock tube and acceleration tube as we have s1 or s5, but harder for secondary driver where it is sd1
@@ -1526,10 +1801,14 @@ class Tube(object):
 
             if self.expand_to == 'flow_behind_shock':
                 # just do the same calculation as the secant solver, this is the ideal case
-                v3g = unsteadily_expanding_state_gas_flow.finite_wave_dp(self.unsteadily_expanding_state.get_gas_state(),
-                                                                         self.unsteadily_expanding_state.get_v(),
-                                                                         'cplus', p3, unsteadily_expanded_gas_state,
-                                                                         steps=self.unsteady_expansion_steps)
+
+                v3g = finite_wave_dp_wrapper(self.unsteadily_expanding_state.get_gas_state(),
+                                             self.unsteadily_expanding_state.get_v(),
+                                             'cplus', p3, unsteadily_expanded_gas_state,
+                                             unsteadily_expanding_state_gas_flow,
+                                             steps=self.unsteady_expansion_steps,
+                                             gmodel_without_ions=self.unsteadily_expanding_state.get_gas_state_gmodel_without_ions())
+
             elif self.expand_to == 'shock_speed':
                 # we use finite wave_dv and expand to the shock speed instead...
                 v3g = unsteadily_expanding_state_gas_flow.finite_wave_dv(self.unsteadily_expanding_state.get_gas_state(),
