@@ -275,6 +275,106 @@ def finite_wave_dp_wrapper(state1, v1, characteristic, p2, state2, gas_flow, ste
 
     return v2g
 
+def finite_wave_dv_wrapper(state1, v1, characteristic, v2_target, state2, gas_flow, steps=100, t_min=200.0,
+                           gmodel_without_ions=None, cutoff_temp=5000.0, number_of_calculations=10):
+    """
+    Similar to how in PITOT3 I had a "normal shock wrapper" to deal with cases where the normal shock just didn't work
+    this is my way of trying to do this in PITOT3. It breaks the finite wave dv up into a set of blocks, so if any of them
+    bail out, we can try to turn ions off and keep going (if we're below the characteristic temp...)
+
+
+    :param state1:
+    :param v1:
+    :param characteristic:
+    :param v2_target:
+    :param state2:
+    :param steps:
+    :param gmodel_without_ions:
+    :param cutoff_temp:
+    :return:
+    """
+
+    import numpy as np
+
+    # I used geomspace above as the pressure changes logarthimically, velocity is more linear so I have just used linspace here...
+    velocity_list = np.linspace(v1, v2_target, number_of_calculations + 1)
+
+    substeps = int(steps / number_of_calculations)
+
+    # let us make a new local versions of states 1 and 2 for this local calculation...
+
+    state1_local = GasState(state1.gmodel)
+
+    state1_local.p = state1.p
+    state1_local.T = state1.T
+
+    state1_local.update_thermo_from_pT()
+    state1_local.update_sound_speed()
+
+    state2_local = GasState(state1.gmodel)
+
+    # now we loop through all of the pressures
+    for velocity in velocity_list:
+        if velocity != v1:  # skip that first value...
+
+            try:
+
+                v2g = gas_flow.finite_wave_dv(state1_local, v1, characteristic, velocity, state2_local, steps=substeps, t_min= t_min)
+
+            except Exception as e:
+                print(e)
+                print("Unsteady expansion calculation failed, probably due to a CEA error.")
+
+                if state1_local.T < cutoff_temp:
+                    print(
+                        f"We are below the set cutoff temperature of {cutoff_temp} K so we are going to try performing this part of the calculation without ions.")
+
+                    state1_local_without_ions = GasState(gmodel_without_ions)
+
+                    state2_local_without_ions = GasState(gmodel_without_ions)
+
+                    state1_local_without_ions.p = state1_local.p
+                    state1_local_without_ions.T = state1_local.T
+
+                    state1_local_without_ions.update_thermo_from_pT()
+                    state1_local_without_ions.update_sound_speed()
+
+                    gas_flow_without_ions = GasFlow(gmodel_without_ions)
+
+                    v2g = gas_flow_without_ions.finite_wave_dv(state1_local_without_ions, v1, characteristic, velocity,
+                                                               state2_local_without_ions, steps=substeps, t_min=t_min)
+
+                    print("Calculation was successful. Turning ions back on")
+
+                    # turning ions back on for next calculation...
+
+                    state2_local.p = state2_local_without_ions.p
+                    state2_local.T = state2_local_without_ions.T
+
+                    state2_local.update_thermo_from_pT()
+                    state2_local.update_sound_speed()
+                else:
+                    raise Exception(
+                        "pitot3_classes.finite_wave_dp_wrapper: Unsteady expansion failed but the temperature is too high to justify turning ions off.")
+
+            # now we need to make our state2 state 1 for the next step and v2g v1 as well
+
+            v1 = v2g
+
+            state1_local.p = state2_local.p
+            state1_local.T = state2_local.T
+
+            state1_local.update_thermo_from_pT()
+            state1_local.update_sound_speed()
+
+    state2.p = state2_local.p
+    state2.T = state2_local.T
+
+    state2.update_thermo_from_pT()
+    state2.update_sound_speed()
+
+    return v2g
+
 class Facility(object):
     """
     Class to load in and store test facility information for PITOT3.
@@ -1811,10 +1911,12 @@ class Tube(object):
 
             elif self.expand_to == 'shock_speed':
                 # we use finite wave_dv and expand to the shock speed instead...
-                v3g = unsteadily_expanding_state_gas_flow.finite_wave_dv(self.unsteadily_expanding_state.get_gas_state(),
-                                                                         self.unsteadily_expanding_state.get_v(),
-                                                                         'cplus', self.vs, unsteadily_expanded_gas_state,
-                                                                         steps=self.unsteady_expansion_steps)
+                v3g = finite_wave_dv_wrapper(self.unsteadily_expanding_state.get_gas_state(),
+                                             self.unsteadily_expanding_state.get_v(),
+                                             'cplus', self.vs, unsteadily_expanded_gas_state,
+                                             unsteadily_expanding_state_gas_flow,
+                                             steps=self.unsteady_expansion_steps,
+                                             gmodel_without_ions=self.unsteadily_expanding_state.get_gas_state_gmodel_without_ions())
 
             # for this state, if the entrance state had a reference gas state, we can grab it as the reference state...
 
