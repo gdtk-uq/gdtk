@@ -175,6 +175,66 @@ def eilmer4_CEAGas_gmodel_without_ions_creator(gmodel_filename):
 
     return gmodel_without_ions_filename
 
+def eilmer4_IdealGas_gas_model_creator(gas_state):
+    """
+    This function is to make a dummy ideal gas gas model for PITOT3 to do the frozen normal shock calculation
+    over the test model with.
+
+    This gas model should not be used for other things! As it will have dummy entropy, viscocity and thermal conductivity
+    values which are just based on air.
+
+    :param gas_state:
+    :return:
+    """
+
+    ideal_gas_gmodel_filename = 'PITOT3_ideal_gas_test_section_gmodel.lua'
+
+    # we need the specific heat ratio (gamma) and molecular mass
+    # from the CEA gas model to put into the ideal gas gas model.
+
+    gamma = gas_state.gamma
+    molecular_mass = gas_state.ceaSavedData['Mmass']
+
+    with open(ideal_gas_gmodel_filename, mode = 'w') as ideal_gas_gmodel_file:
+
+        gas_model_string = \
+f"""-- this is a dummy ideal gas gas model made by PITOT3 purely 
+-- to perform a frozen shock over the test model.
+-- Do not use it for anything else! As the entropy, viscosity and 
+-- thermal conductivity values are just dummy values for air.
+
+model = "IdealGas"
+
+IdealGas = {{
+    speciesName = 'dummy PITOT3 test section species',
+    mMass = {molecular_mass},
+    gamma = {gamma},
+    entropyRefValues = {{
+        s1 = 0.0,
+        T1 = 298.15,
+        p1 = 101.325e3
+    }},
+    viscosity = {{
+    model = 'Sutherland',
+    mu_ref = 1.716e-5,
+    T_ref = 273.0,
+    S = 111.0,
+    }},
+    thermCondModel = {{
+    model = 'Sutherland',
+    T_ref = 273.0,
+    k_ref = 0.0241,
+    S = 194.0
+    }}
+}}
+
+"""
+
+        ideal_gas_gmodel_file.write(gas_model_string)
+
+    return ideal_gas_gmodel_filename
+
+
 def finite_wave_dp_wrapper(state1, v1, characteristic, p2, state2, gas_flow, steps=100,
                            gmodel_without_ions = None, cutoff_temp = 5000.0, number_of_calculations = 10):
 
@@ -1121,7 +1181,7 @@ class Facility_State(object):
 
     """
 
-    def __init__(self, state_name, gas_state, v, reference_gas_state = None):
+    def __init__(self, state_name, gas_state, v, reference_gas_state = None, room_temperature_only_gmodel = None):
         """
 
         :param state_name: just a string labelled the state, probably just '4', '3s', '1' etc.
@@ -1156,6 +1216,8 @@ class Facility_State(object):
                 self.gas_state_gmodel_without_ions = None
         else:
             self.gas_state_gmodel_without_ions = None
+
+        self.room_temperature_only_gmodel = room_temperature_only_gmodel
 
         return
 
@@ -1196,6 +1258,13 @@ class Facility_State(object):
         """
 
         return self.gas_state_gmodel_without_ions
+
+    def get_room_temperature_only_gmodel(self):
+        """
+        Return the gas model without ions if we have it...
+        """
+
+        return self.room_temperature_only_gmodel
 
     def get_gas_state_gmodel_type(self):
         """
@@ -1700,6 +1769,9 @@ class Tube(object):
             fill_state_gas_object.gmodel = fill_gmodel
 
         else:
+
+            fill_room_temperature_only_gmodel = None
+
             fill_state_gas_object = GasState(fill_gmodel)
 
             fill_state_gas_object.p = self.fill_pressure
@@ -1714,7 +1786,7 @@ class Tube(object):
         # now make the related facility state object:
         # the fill state can be its own reference state...
         self.fill_state = Facility_State(self.fill_state_name, fill_state_gas_object, fill_state_v,
-                                         reference_gas_state=fill_state_gas_object)
+                                         reference_gas_state=fill_state_gas_object, room_temperature_only_gmodel = fill_room_temperature_only_gmodel)
 
         self.shocked_fill_state_name = shocked_fill_state_name
 
@@ -1882,8 +1954,14 @@ class Tube(object):
             v2, v2g = fill_state_gas_flow.normal_shock(self.fill_state.get_gas_state(), self.vs, shocked_gas_state)
 
             # for the shocked state we can just use the fill state as the reference state...
-            self.shocked_state = Facility_State(self.shocked_fill_state_name, shocked_gas_state, v2g,
-                                                reference_gas_state=self.fill_state.get_gas_state())
+            # we need to carry around the room temperature only gas model for if we need it for CO2 gases in the nozzle expansion...
+            if self.fill_state.get_room_temperature_only_gmodel():
+                self.shocked_state = Facility_State(self.shocked_fill_state_name, shocked_gas_state, v2g,
+                                                    reference_gas_state=self.fill_state.get_gas_state(),
+                                                    room_temperature_only_gmodel=self.fill_state.get_room_temperature_only_gmodel())
+            else:
+                self.shocked_state = Facility_State(self.shocked_fill_state_name, shocked_gas_state, v2g,
+                                                    reference_gas_state=self.fill_state.get_gas_state())
 
             # Across the contact surface, p3 == p2 (i.e. the post-shock pressure is teh same as the unsteadily expanded pressure)
             p3 = shocked_gas_state.p
@@ -1924,8 +2002,16 @@ class Tube(object):
                 reference_gas_state = self.unsteadily_expanding_state.get_reference_gas_state()
             else:
                 reference_gas_state = None
-            self.unsteadily_expanded_state = Facility_State(self.unsteadily_expanded_entrance_state_name, unsteadily_expanded_gas_state, v3g,
-                                                            reference_gas_state=reference_gas_state)
+
+            # we need to carry around the room temperature only gas model for if we need it for CO2 gases in the nozzle expansion...
+            if self.unsteadily_expanding_state.get_room_temperature_only_gmodel():
+                self.unsteadily_expanded_state = Facility_State(self.unsteadily_expanded_entrance_state_name, unsteadily_expanded_gas_state, v3g,
+                                                                reference_gas_state=reference_gas_state,
+                                                                room_temperature_only_gmodel=self.unsteadily_expanding_state.get_room_temperature_only_gmodel())
+            else:
+                self.unsteadily_expanded_state = Facility_State(self.unsteadily_expanded_entrance_state_name,
+                                                                unsteadily_expanded_gas_state, v3g,
+                                                                reference_gas_state=reference_gas_state)
 
             for facility_state in [self.shocked_state, self.unsteadily_expanded_state]:
                 print('-'*60)
@@ -2221,7 +2307,8 @@ class Nozzle(object):
     """
 
     def __init__(self, entrance_state_name, entrance_state, exit_state_name, area_ratio, nozzle_expansion_tolerance,
-                 facility_type = None, expansion_tube_nozzle_expansion_minimum_p2_over_p1 = None):
+                 facility_type = None, expansion_tube_nozzle_expansion_minimum_p2_over_p1 = None,
+                 maximum_temp_for_room_temperature_only_gmodel = 1100.0):
         """
 
         :param entrance_state_name:
@@ -2271,7 +2358,6 @@ class Nozzle(object):
 
             print ("M6 expected is 1.0 and M6 found is {0:.4f}.".format(M6))
 
-
             if M6 < 1.0 and M6 >= 0.98:
                 print ("M6 is just below 1.0 so it is being set to 1.0 so the code can continue.")
                 # this must be above 1 to do the supersonic steady_flow_with_area_change...
@@ -2306,11 +2392,41 @@ class Nozzle(object):
             # (this now stored in the default config so the user can change it if they want).
             # the main case that fails is CO2 cases, everything else seems to be able to cope with it.
 
-            v_exit = entrance_state_gas_flow_object.steady_flow_with_area_change(self.entrance_state.get_gas_state(),
-                                                                                 self.entrance_state.get_v(),
-                                                                                 self.area_ratio, exit_gas_state,
-                                                                                 tol=nozzle_expansion_tolerance,
-                                                                                 p2p1_min=expansion_tube_nozzle_expansion_minimum_p2_over_p1)
+            try:
+
+                v_exit = entrance_state_gas_flow_object.steady_flow_with_area_change(self.entrance_state.get_gas_state(),
+                                                                                     self.entrance_state.get_v(),
+                                                                                     self.area_ratio, exit_gas_state,
+                                                                                     tol=nozzle_expansion_tolerance,
+                                                                                     p2p1_min=expansion_tube_nozzle_expansion_minimum_p2_over_p1)
+            except Exception as e:
+                print(e)
+                print("Nozzle expansion has failed.")
+
+                if self.entrance_state.get_room_temperature_only_gmodel() and self.entrance_state.get_gas_state().T < maximum_temp_for_room_temperature_only_gmodel:
+                    print(f"Our gas state has a room temperature only gas model and we are below the maximum temperature for using that model of {maximum_temp_for_room_temperature_only_gmodel}.")
+                    print('So we are going to try doing the nozzle expansion with that model.')
+
+                    original_gmodel = self.entrance_state.get_gas_state_gmodel()
+
+                    room_temperature_only_gmodel = self.entrance_state.get_room_temperature_only_gmodel()
+                    room_temperature_only_gas_flow = GasFlow(room_temperature_only_gmodel)
+
+                    entrance_gas_state = self.entrance_state.get_gas_state()
+
+                    entrance_gas_state.gmodel = room_temperature_only_gmodel
+
+                    exit_gas_state = GasState(room_temperature_only_gmodel)
+
+                    v_exit = room_temperature_only_gas_flow.steady_flow_with_area_change(
+                        entrance_gas_state,
+                        self.entrance_state.get_v(),
+                        self.area_ratio, exit_gas_state,
+                        tol=nozzle_expansion_tolerance,
+                        p2p1_min=expansion_tube_nozzle_expansion_minimum_p2_over_p1)
+
+                    entrance_gas_state.gmodel = original_gmodel
+                    exit_gas_state.gmodel = original_gmodel
 
         else:
             v_exit = entrance_state_gas_flow_object.steady_flow_with_area_change(self.entrance_state.get_gas_state(), self.entrance_state.get_v(),
@@ -2443,7 +2559,35 @@ class Test_Section(object):
         :return:
         """
 
-        # TO DO: work out how to get a perfect gas version, which was easy in PITOT
+        if self.test_section_state.get_gas_state_gmodel_type() == 'CEAGas':
+
+            print('-'*60)
+            print("Starting frozen normal shock calculation over the test model.")
+
+            ideal_gas_gmodel_filename = eilmer4_IdealGas_gas_model_creator(self.test_section_state.get_gas_state())
+
+            test_section_state_ideal_gas_gmodel = GasModel(ideal_gas_gmodel_filename)
+            test_section_state_ideal_gas_gas_flow_object = GasFlow(test_section_state_ideal_gas_gmodel)
+
+            test_section_ideal_gas_gas_state = GasState(test_section_state_ideal_gas_gmodel)
+
+            test_section_ideal_gas_gas_state.p = self.test_section_state.get_gas_state().p
+            test_section_ideal_gas_gas_state.T = self.test_section_state.get_gas_state().T
+
+            test_section_ideal_gas_gas_state.update_thermo_from_pT()
+            test_section_ideal_gas_gas_state.update_sound_speed()
+
+            post_normal_shock_ideal_gas_gas_state = GasState(test_section_state_ideal_gas_gmodel)
+
+            v10f, v10g = test_section_state_ideal_gas_gas_flow_object.normal_shock(test_section_ideal_gas_gas_state,
+                                                                                   self.test_section_state.get_v(),
+                                                                                   post_normal_shock_ideal_gas_gas_state)
+
+            #v10 here instead of v10g as the model is stationary in the lab frame...
+            self.post_normal_shock_ideal_gas_state = Facility_State('{0}f'.format(self.test_section_post_shock_state_name),
+                                                                    post_normal_shock_ideal_gas_gas_state, v10f)
+
+            print (self.post_normal_shock_ideal_gas_state)
 
         print('-'*60)
         print("Starting equilibrium normal shock calculation over the test model.")
@@ -2617,7 +2761,10 @@ class Test_Section(object):
 
         """
 
-        facility_state_list = [self.post_normal_shock_state]
+        if self.test_section_state.get_gas_state_gmodel_type() == 'CEAGas':
+            facility_state_list = [self.post_normal_shock_ideal_gas_state, self.post_normal_shock_state]
+        else:
+            facility_state_list = [self.post_normal_shock_state]
 
         if hasattr(self, 'post_conical_shock_state'):
             facility_state_list += [self.post_conical_shock_state]
