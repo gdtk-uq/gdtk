@@ -318,7 +318,7 @@ class GasState():
         """
         self.e = gmodel.Cv * self.T
         self.rho = self.p / (gmodel.R * self.T)
-        self.a = math.sqrt(gmodel.gamma * gmodel.R * self.T)
+        self.a = np.sqrt(gmodel.gamma * gmodel.R * self.T)
         return
 
     def __repr__(self):
@@ -489,13 +489,39 @@ class FluidBlock():
             self.grid = grid
         else:
             raise RuntimeError('Need to supply a StructuredGrid object.')
+        self.construct_cell_properties()
+
         self.nic = grid.niv - 1
         self.njc = grid.njv - 1
         self.nkc = grid.nkv - 1
+        assert(self.nic==self.cellc.x.shape[2])
+        assert(self.njc==self.cellc.y.shape[1])
+        assert(self.nkc==self.cellc.z.shape[0])
+
         if isinstance(initialState, FlowState):
-            self.initialState = initialState
+            ncells = self.nic*self.njc*self.nkc
+            flow = FlowState(p=np.full(ncells, initialState.gas.p),
+                             T=np.full(ncells, initialState.gas.T),
+                             velx=np.full(ncells, initialState.vel.x),
+                             vely=np.full(ncells, initialState.vel.y),
+                             velz=np.full(ncells, initialState.vel.z))
+            self.initialState = flow
         elif callable(initialState):
-            self.initialState = initialState
+            ncells = self.nic*self.njc*self.nkc
+            p = np.zeros(ncells); T = np.zeros(ncells);
+            velx = np.zeros(ncells); vely = np.zeros(ncells); velz = np.zeros(ncells);
+            idx = 0
+            for kk in range(self.nkc):
+                for jj in range(self.njc):
+                    for ii in range(self.nic):
+                        x = self.cellc.x[kk,jj,ii]
+                        y = self.cellc.y[kk,jj,ii]
+                        z = self.cellc.z[kk,jj,ii]
+                        state = initialState(x,y,z)
+                        p[idx] = state.gas.p; T[idx] = state.gas.T;
+                        velx[idx] = state.vel.x; vely[idx] = state.vel.y; velz[idx] = state.vel.z; 
+                        idx += 1
+            self.initialState = FlowState(p=p, T=T, velx=velx, vely=vely, velz=velz)
         else:
             raise RuntimeError('Need to supply a FlowState object or a function that produces'+
                                'a FlowState object as a function of (x,y,z) location.')
@@ -524,7 +550,6 @@ class FluidBlock():
 
     def check_in_flowstates_from_bcs(self, bc):
         if type(bc) is InflowBC:
-            print("Checking in fs {} with idx {}".format(bc.fs, len(flowStatesList)))
             bc.fsi = len(flowStatesList)
             flowStatesList.append(bc.fs)
 
@@ -547,25 +572,41 @@ class FluidBlock():
         We want the cell volumes and centroids available for writing
         into the initial flow file.
         """
-        self.cellc = np.zeros((self.nic, self.njc, self.nkc), dtype=Vector3)
-        self.cellv = np.zeros((self.nic, self.njc, self.nkc), dtype=float)
-        for i in range(0, self.nic):
-            for j in range(0, self.njc):
-                for k in range(0, self.nkc):
-                    # Construct the cell properties.
-                    p000 = self.grid.vertices[i][j][k]
-                    p100 = self.grid.vertices[i+1][j][k]
-                    p110 = self.grid.vertices[i+1][j+1][k]
-                    p010 = self.grid.vertices[i][j+1][k]
-                    p001 = self.grid.vertices[i][j][k+1]
-                    p101 = self.grid.vertices[i+1][j][k+1]
-                    p111 = self.grid.vertices[i+1][j+1][k+1]
-                    p011 = self.grid.vertices[i][j+1][k+1]
-                    centroid, volume = hexahedron_properties(p000, p100, p110, p010,
-                                                             p001, p101, p111, p011)
-                    self.cellc[i][j][k] = centroid
-                    self.cellv[i][j][k] = volume
-        return
+        p000 = Vector3(x=self.grid.points.x[:-1, :-1, :-1],
+                       y=self.grid.points.y[:-1, :-1, :-1],
+                       z=self.grid.points.z[:-1, :-1, :-1])
+
+        p100 = Vector3(x=self.grid.points.x[:-1, :-1, 1:],
+                       y=self.grid.points.y[:-1, :-1, 1:],
+                       z=self.grid.points.z[:-1, :-1, 1:])
+
+        p010 = Vector3(x=self.grid.points.x[:-1, 1:, :-1],
+                       y=self.grid.points.y[:-1, 1:, :-1],
+                       z=self.grid.points.z[:-1, 1:, :-1])
+
+        p110 = Vector3(x=self.grid.points.x[:-1, 1:, 1:],
+                       y=self.grid.points.y[:-1, 1:, 1:],
+                       z=self.grid.points.z[:-1, 1:, 1:])
+
+        p001 = Vector3(x=self.grid.points.x[1:, :-1, :-1],
+                       y=self.grid.points.y[1:, :-1, :-1],
+                       z=self.grid.points.z[1:, :-1, :-1])
+
+        p101 = Vector3(x=self.grid.points.x[1:, :-1, 1:],
+                       y=self.grid.points.y[1:, :-1, 1:],
+                       z=self.grid.points.z[1:, :-1, 1:])
+
+        p011 = Vector3(x=self.grid.points.x[1:, 1:, :-1],
+                       y=self.grid.points.y[1:, 1:, :-1],
+                       z=self.grid.points.z[1:, 1:, :-1])
+
+        p111 = Vector3(x=self.grid.points.x[1:, 1:, 1:],
+                       y=self.grid.points.y[1:, 1:, 1:],
+                       z=self.grid.points.z[1:, 1:, 1:])
+
+        self.cellc, self.cellv = hexahedron_properties(p000, p100, p110, p010,
+                                                       p001, p101, p111, p011)
+
 
     def write_flow_data_to_zip_file(self, fileName, varNamesList):
         """
@@ -574,46 +615,30 @@ class FluidBlock():
         The order of the cells corresponds to the order expected
         for a VTK structured-grid.
         """
-        # Decide if we have a single FlowState for every cell the whole block,
-        # or whether we have to evalulate a function to give a distinct FlowState
-        # at the center of each cell.
-        fs = None; fn = None
-        if isinstance(self.initialState, FlowState):
-            fs = self.initialState
-        elif callable(self.initialState):
-            fn = self.initialState
-        #
         # Construct the ZIP archive, one variable (file) at a time.
+        x = self.cellc.x
+        y = self.cellc.y
+        z = self.cellc.z
+        gas = self.initialState.gas
+        vel = self.initialState.vel
+
         with ZipFile(fileName, mode='w') as zf:
             for varName in varNamesList:
                 with zf.open(varName, mode='w') as fp:
-                    for k in range(0, self.nkc):
-                        for j in range(0, self.njc):
-                            for i in range(0, self.nic):
-                                x = self.cellc[i][j][k].x
-                                y = self.cellc[i][j][k].y
-                                z = self.cellc[i][j][k].z
-                                # The following call quite repetitive and wasteful
-                                # but will typically be used for small exercises,
-                                # I hope.
-                                if fn: fs = fn(x, y, z)
-                                gas = fs.gas
-                                vel = fs.vel
-                                value = 0.0
-                                if varName == 'pos.x': value = x
-                                elif varName == 'pos.y': value = y
-                                elif varName == 'pos.z': value = z
-                                elif varName == 'vol': value = self.cellv[i][j][k]
-                                elif varName == 'p': value = gas.p
-                                elif varName == 'T': value = gas.T
-                                elif varName == 'rho': value = gas.rho
-                                elif varName == 'e': value = gas.e
-                                elif varName == 'a': value = gas.a
-                                elif varName == 'vel.x': value = vel.x
-                                elif varName == 'vel.y': value = vel.y
-                                elif varName == 'vel.z': value = vel.z
-                                else: raise RuntimeError('unhandled variable name: ' + varName)
-                                fp.write(f'{value}\n'.encode('utf-8'))
+                    if varName == 'pos.x': value = x
+                    elif varName == 'pos.y': value = y
+                    elif varName == 'pos.z': value = z
+                    elif varName == 'vol': value = self.cellv
+                    elif varName == 'p': value = gas.p
+                    elif varName == 'T': value = gas.T
+                    elif varName == 'rho': value = gas.rho
+                    elif varName == 'e': value = gas.e
+                    elif varName == 'a': value = gas.a
+                    elif varName == 'vel.x': value = vel.x
+                    elif varName == 'vel.y': value = vel.y
+                    elif varName == 'vel.z': value = vel.z
+                    else: raise RuntimeError('unhandled variable name: ' + varName)
+                    np.savetxt(fp,value.flatten())
             # end varName loop
         return
 
@@ -752,7 +777,6 @@ def write_initial_files():
     if not os.path.exists(flowDir):
         os.makedirs(flowDir)
     for fb in fluidBlocksList:
-        fb.construct_cell_properties()
         fileName = flowDir + ('/flow-%04d-%04d-%04d.zip' % (fb.i, fb.j, fb.k))
         fb.write_flow_data_to_zip_file(fileName, config.iovar_names)
     #
