@@ -93,6 +93,6 @@ install: $(SELECTED_TARGETS)
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 clean :
-	- rm chkn-run chkn-prep chkn-post main_with_rev_string.cu
-	- rm -r $(BUILD_DIR)/*
-	- rm chicken.ncu-rep
+	- rm -f chkn-run chkn-prep chkn-post main_with_rev_string.cu
+	- rm -rf $(BUILD_DIR)/*
+	- rm -f chicken.ncu-rep
