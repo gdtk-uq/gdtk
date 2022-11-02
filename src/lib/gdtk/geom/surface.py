@@ -6,7 +6,7 @@ These are made to work like the Dlang equivalent classes.
 
 PJ, 2020-07-05
 """
-import math
+import numpy as np
 from abc import ABC, abstractmethod
 from copy import copy
 from gdtk.geom.vector3 import Vector3, approxEqualVectors
@@ -91,7 +91,34 @@ class CoonsPatch(ParametricSurface):
         north_r = self.north(r)
         west_s = self.west(s)
         east_s = self.east(s)
-        p = (1.0-s)*south_r + s*north_r + (1.0-r)*west_s + r*east_s - \
-            ((1.0-r)*(1.0-s)*self.p00 + (1.0-r)*s*self.p01 +
-             r*(1.0-s)*self.p10 + r*s*self.p11)
+        p = south_r*(1.0-s) + north_r*s + west_s*(1.0-r) + east_s*r - \
+            (self.p00*(1.0-r)*(1.0-s) + self.p01*(1.0-r)*s +
+             self.p10*r*(1.0-s) + self.p11*r*s)
         return p
+
+if __name__=='__main__':
+
+    p0 = Vector3(x=0.0, y=0.0)
+    p1 = Vector3(x=1.0, y=0.0)
+    p2 = Vector3(x=1.0, y=1.0)
+    p3 = Vector3(x=0.0, y=1.0)
+    patch = CoonsPatch(p00=p0, p10=p1, p11=p2, p01=p3)
+
+    x = patch(0.5, 0.5)
+    xx= patch(np.array([0.5, 0.5]), np.array([0.5, 0.5]))
+
+    assert(np.isclose(x.x, xx.x[0]))
+    assert(np.isclose(x.y, xx.y[0]))
+
+    n = Line(p3, p2)
+    s = Line(p0, p1)
+    e = Line(p1, p2)
+    w = Line(p0, p3)
+    patch = CoonsPatch(north=n, south=s, east=e, west=w)
+
+    x = patch(0.5, 0.5)
+    xx= patch(np.array([0.5, 0.5]), np.array([0.5, 0.5]))
+    print(xx)
+
+    assert(np.isclose(x.x, xx.x[0]))
+    assert(np.isclose(x.y, xx.y[0]))

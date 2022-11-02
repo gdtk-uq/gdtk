@@ -7,10 +7,11 @@ Peter Jacobs and Rowan Gollan.
 Versions:
   2020-02-05 Build enough to make Points and Paths
   2020-07-30 Integrate minimal_geometry from cfcfd3 project.
+  2022-10-07 Arrayification by NNG, (Newcastle Interchange Line, NSW)
 """
 
-import math
 import numbers
+import numpy as np
 
 class Vector3(object):
     """
@@ -38,7 +39,7 @@ class Vector3(object):
                 if len(x) > 2:
                     self.z = x[2]
                 else:
-                    self.z = 0.0
+                    self.z = 0.0*self.y
             else:
                 raise Exception("Need to supply at least 2 coordinates.")
         elif isinstance(x, dict):
@@ -52,16 +53,21 @@ class Vector3(object):
         else:
             # Presume that we have been given at least 2 numbers.
             self.x = x
-            if y == None: raise Exception("Expected a number for y coordinate.")
+            if y is None: raise Exception("Expected a number for y coordinate.")
             self.y = y
-            if z == None:
-                self.z = 0.0
+            if z is None:
+                self.z = 0.0*self.y
             else:
                 self.z = z
-        if not(isinstance(self.x, numbers.Real) and
-               isinstance(self.y, numbers.Real) and
-               isinstance(self.z, numbers.Real)):
-            raise Exception("Elements should be Real numbers.")
+        args_are_not_real = not(isinstance(self.x, numbers.Real)
+                            and isinstance(self.y, numbers.Real)
+                            and isinstance(self.z, numbers.Real))
+        args_are_not_array= not(isinstance(self.x, np.ndarray)
+                            and isinstance(self.y, np.ndarray)
+                            and isinstance(self.z, np.ndarray))
+        if args_are_not_real and args_are_not_array:
+            print(self.x, self.y, self.z, type(self.x), type( self.y), type(self.z))
+            raise Exception("Elements should be Real numbers or arrays.")
         return
 
     def __repr__(self):
@@ -70,7 +76,7 @@ class Vector3(object):
 
     def __abs__(self):
         "Returns magnitude."
-        return math.sqrt(self.x**2 + self.y**2 + self.z**2)
+        return np.sqrt(self.x**2 + self.y**2 + self.z**2)
 
     def __pos__(self):
         "Returns copy of self."
@@ -100,7 +106,7 @@ class Vector3(object):
 
     def __mul__(self, other):
         "Returns new Vector3 self*number"
-        if isinstance(other, numbers.Real):
+        if isinstance(other, numbers.Real) or isinstance(other, np.ndarray):
             return Vector3(self.x*other, self.y*other, self.z*other)
         else:
             return NotImplemented
@@ -111,7 +117,7 @@ class Vector3(object):
 
     def __imul__(self, other):
         "Returns self *= other number."
-        if isinstance(other, numbers.Real):
+        if isinstance(other, numbers.Real) or isinstance(other, np.ndarray):
             self.x *= other; self.y *= other; self.z *= other
             return self
         else:
@@ -119,14 +125,14 @@ class Vector3(object):
 
     def __truediv__(self, other):
         "Returns new Vector3 self/number"
-        if isinstance(other, numbers.Real):
+        if isinstance(other, numbers.Real) or isinstance(other, np.ndarray):
             return Vector3(self.x/other, self.y/other, self.z/other)
         else:
             return NotImplemented
 
     def __itruediv__(self, other):
         "Returns self /= other number."
-        if isinstance(other, numbers.Real):
+        if isinstance(other, numbers.Real) or isinstance(other, np.ndarray):
             self.x /= other; self.y /= other; self.z /= other
             return self
         else:
@@ -135,7 +141,7 @@ class Vector3(object):
     def unit(self):
         "Returns new unit vector."
         mag = abs(self)
-        if mag == 0.0:
+        if np.any(mag == 0.0):
             raise ValueError("Zero magnitude vector has no defined direction.")
         return Vector3(self.x/mag, self.y/mag, self.z/mag)
 
@@ -158,7 +164,7 @@ class Vector3(object):
 
         We trust that n, t1 and t2 are normalized and for a correct RH system.
         """
-        if c: self -= c
+        if c is not None: self -= c
         newX = self.dot(n); newY = self.dot(t1); newZ = self.dot(t2)
         self.x = newX; self.y = newY; self.z = newZ
         return self
@@ -172,7 +178,7 @@ class Vector3(object):
         newX = self.x*n.x + self.y*t1.x + self.z*t2.x
         newY = self.x*n.y + self.y*t1.y + self.y*t2.y
         newZ = self.x*n.z + self.y*t1.z + self.z*t2.z
-        if c:
+        if c is not None:
             newX += c.x; newY += c.y; newZ += c.z
         self.x = newX; self.y = newY; self.z = newZ
         return self
@@ -185,9 +191,9 @@ def approxEqualVectors(a, b, rel_tol=1.0e-2, abs_tol=1.0e-5):
     """
     Test that all components are close.
     """
-    return all([math.isclose(a.x, b.x, rel_tol=rel_tol, abs_tol=abs_tol),
-                math.isclose(a.y, b.y, rel_tol=rel_tol, abs_tol=abs_tol),
-                math.isclose(a.z, b.z, rel_tol=rel_tol, abs_tol=abs_tol)])
+    return np.all([np.isclose(a.x, b.x, rtol=rel_tol, atol=abs_tol),
+                np.isclose(a.y, b.y, rtol=rel_tol, atol=abs_tol),
+                np.isclose(a.z, b.z, rtol=rel_tol, atol=abs_tol)])
 
 def cross(a, b):
     """
@@ -243,13 +249,14 @@ def wedge_properties(p0, p1, p2, p3, p4, p5):
     c2, v2 = tetrahedron_properties(p0, p5, p4, p1)
     c3, v3 = tetrahedron_properties(p0, p1, p2, p5)
     volume = v1 + v2 + v3
-    if volume < VERY_SMALL_MAGNITUDE:
-        #print "Warning wedge_properties():"
-        #print "Very small or negative volume: ", volume
-        #print "Setting volume to zero."
-        volume = 0.0
-        centroid = (c1 + c2 + c3)/3.0
-        return centroid, volume
+    # TODO: It's hard to make this array agnostic... (NNG)
+    #if volume < VERY_SMALL_MAGNITUDE:
+    #    #print "Warning wedge_properties():"
+    #    #print "Very small or negative volume: ", volume
+    #    #print "Setting volume to zero."
+    #    volume = 0.0
+    #    centroid = (c1 + c2 + c3)/3.0
+    #    return centroid, volume
     #
     centroid = (c1*v1 + c2*v2 + c3*v3)/volume
     return centroid, volume
@@ -259,14 +266,8 @@ def hexahedron_properties(p0, p1, p2, p3, p4, p5, p6, p7):
     c1, v1 = wedge_properties(p0, p1, p2, p4, p5, p6)
     c2, v2 = wedge_properties(p0, p2, p3, p4, p6, p7)
     volume = v1 + v2
-    if volume < VERY_SMALL_MAGNITUDE:
-        #print "Warning hexahedron_properties():"
-        #print "Very small or negative volume: ", volume
-        #print "Setting volume to zero."
-        volume = 0.0
-        centroid = 0.5*(c1 + c2)
-        return centroid, volume
-    #
+    # TODO: It's hard to make this array agnostic... (NNG)
+    #small = volume < VERY_SMALL_MAGNITUDE
     centroid = (c1*v1 + c2*v2)/volume
     return centroid, volume
 
@@ -274,3 +275,100 @@ def hexahedron_volume(p0, p1, p2, p3, p4, p5, p6, p7):
     "Returns volume for hexahedron."
     c, v = hexahedron_properties(p0, p1, p2, p3, p4, p5, p6, p7)
     return v
+
+if __name__=='__main__':
+    p0 = Vector3(x=1.0, y=2.0, z=3.0)
+    p1 = Vector3(1.0, 2.0, 3.0)
+    p2 = Vector3([1.0, 2.0, 3.0])
+    p3 = Vector3({'x':1.0, 'y':2.0, 'z':3.0})
+    p4 = Vector3(p3)
+
+    p5 = Vector3(x=np.array([1.0, 1.0, 1.0, 1.0]),
+                 y=np.array([2.0, 2.0, 2.0, 2.0]),
+                 z=np.array([3.0, 3.0, 3.0, 3.0]))
+
+    assert(np.isclose(abs(p0), abs(p5)[0]))
+    assert(np.isclose((p0+p0).x, (p5+p5).x[0]))
+    assert(np.isclose((p0+p0).y, (p5+p5).y[0]))
+    assert(np.isclose((p0+p0).z, (p5+p5).z[0]))
+
+    assert(np.isclose((p0+p0).unit().x, (p5+p5).unit().x[0]))
+    assert(np.isclose((p0+p0).unit().y, (p5+p5).unit().y[0]))
+    assert(np.isclose((p0+p0).unit().z, (p5+p5).unit().z[0]))
+
+    assert(np.isclose(p0.dot(p0), p5.dot(p5)[0]))
+
+    assert(approxEqualVectors(p5,p5))
+
+    b0 = Vector3(x=3.0, y=2.0, z=1.0)
+    b5 = Vector3(x=np.array([3.0, 3.0, 3.0, 3.0]),
+                 y=np.array([2.0, 2.0, 2.0, 2.0]),
+                 z=np.array([1.0, 1.0, 1.0, 1.0]))
+    pb0 = cross(p0, b0)
+    pb5 = cross(p5, b5)
+    assert(np.isclose((pb0).x, (pb5).x[0]))
+    assert(np.isclose((pb0).y, (pb5).y[0]))
+    assert(np.isclose((pb0).z, (pb5).z[0]))
+
+    p0 = Vector3(x=0.0, y=0.0)
+    p1 = Vector3(x=1.0, y=0.0)
+    p2 = Vector3(x=1.0, y=1.0)
+    p3 = Vector3(x=0.0, y=1.0)
+    centroid, n, t1, t2, area = quad_properties(p0, p1, p2, p3)
+
+    q0 = Vector3(x=np.array([0.0, 0.0]), y=np.array([0.0, 0.0]))
+    q1 = Vector3(x=np.array([1.0, 1.0]), y=np.array([0.0, 0.0]))
+    q2 = Vector3(x=np.array([1.0, 1.0]), y=np.array([1.0, 1.0]))
+    q3 = Vector3(x=np.array([0.0, 0.0]), y=np.array([1.0, 1.0]))
+    qcentroid, qn, qt1, qt2, qarea = quad_properties(q0, q1, q2, q3)
+    assert(np.isclose((centroid).x, (qcentroid).x[0]))
+    assert(np.isclose((centroid).y, (qcentroid).y[0]))
+    assert(np.isclose((centroid).z, (qcentroid).z[0]))
+    assert(np.isclose(area, qarea[0]))
+    assert(np.isclose(area, qarea[0]))
+    assert(np.isclose(area, qarea[0]))
+
+    p0 = Vector3(x=0.0, y=0.0, z=0.0)
+    p1 = Vector3(x=1.0, y=0.0, z=0.0)
+    p2 = Vector3(x=1.0, y=1.0, z=0.0)
+    p3 = Vector3(x=0.0, y=0.0, z=1.0)
+    p4 = Vector3(x=1.0, y=0.0, z=1.0)
+    p5 = Vector3(x=1.0, y=1.0, z=1.0)
+    centroid, volume = wedge_properties(p0, p1, p2, p3, p4, p5)
+
+    q0 = Vector3(x=np.array([0.0,0.0]), y=np.array([0.0,0.0]), z=np.array([0.0,0.0])) 
+    q1 = Vector3(x=np.array([1.0,1.0]), y=np.array([0.0,0.0]), z=np.array([0.0,0.0]))
+    q2 = Vector3(x=np.array([1.0,1.0]), y=np.array([1.0,1.0]), z=np.array([0.0,0.0]))
+    q3 = Vector3(x=np.array([0.0,0.0]), y=np.array([0.0,0.0]), z=np.array([1.0,1.0]))
+    q4 = Vector3(x=np.array([1.0,1.0]), y=np.array([0.0,0.0]), z=np.array([1.0,1.0]))
+    q5 = Vector3(x=np.array([1.0,1.0]), y=np.array([1.0,1.0]), z=np.array([1.0,1.0]))
+    qcentroid, qvolume = wedge_properties(q0, q1, q2, q3, q4, q5)
+    assert(np.isclose((centroid).x, (qcentroid).x[0]))
+    assert(np.isclose((centroid).y, (qcentroid).y[0]))
+    assert(np.isclose((centroid).z, (qcentroid).z[0]))
+
+    assert(np.isclose(volume, qvolume[0]))
+
+    p0 = Vector3(x=0.0, y=0.0, z=0.0)
+    p1 = Vector3(x=1.0, y=0.0, z=0.0)
+    p2 = Vector3(x=1.0, y=1.0, z=0.0)
+    p3 = Vector3(x=0.0, y=1.0, z=0.0)
+    p4 = Vector3(x=0.0, y=0.0, z=1.0)
+    p5 = Vector3(x=1.0, y=0.0, z=1.0)
+    p6 = Vector3(x=1.0, y=1.0, z=1.0)
+    p7 = Vector3(x=0.0, y=1.0, z=1.0)
+    centroid, volume = hexahedron_properties(p0, p1, p2, p3, p4, p5, p6, p7)
+
+    q0 = Vector3(x=np.array([0.0,0.0]), y=np.array([0.0,0.0]), z=np.array([0.0,0.0])) 
+    q1 = Vector3(x=np.array([1.0,1.0]), y=np.array([0.0,0.0]), z=np.array([0.0,0.0]))
+    q2 = Vector3(x=np.array([1.0,1.0]), y=np.array([1.0,1.0]), z=np.array([0.0,0.0]))
+    q3 = Vector3(x=np.array([0.0,0.0]), y=np.array([1.0,1.0]), z=np.array([0.0,0.0]))
+    q4 = Vector3(x=np.array([0.0,0.0]), y=np.array([0.0,0.0]), z=np.array([1.0,1.0]))
+    q5 = Vector3(x=np.array([1.0,1.0]), y=np.array([0.0,0.0]), z=np.array([1.0,1.0]))
+    q6 = Vector3(x=np.array([1.0,1.0]), y=np.array([1.0,1.0]), z=np.array([1.0,1.0]))
+    q7 = Vector3(x=np.array([0.0,0.0]), y=np.array([1.0,1.0]), z=np.array([1.0,1.0]))
+    qcentroid, qvolume = hexahedron_properties(q0, q1, q2, q3, q4, q5, q6, q7)
+    assert(np.isclose((centroid).x, (qcentroid).x[0]))
+    assert(np.isclose((centroid).y, (qcentroid).y[0]))
+    assert(np.isclose((centroid).z, (qcentroid).z[0]))
+

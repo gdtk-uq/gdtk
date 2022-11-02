@@ -5,10 +5,12 @@ Path classes for geometric modelling.
 These are made to work like the Dlang equivalent classes.
 
 PJ, 2020-02-05
+Arrayification by NNG, 2022-10-07 (Pokolbin, NSW)
 """
-import math
+import numpy as np
 from abc import ABC, abstractmethod
 from gdtk.geom.vector3 import Vector3, cross
+
 
 class Path(ABC):
     """
@@ -102,15 +104,15 @@ class Arc(Path):
         # the local xy-plane, with ca along the x-axis.
         cb_local = Vector3(cb)
         cb_local.transform_to_local_frame(tangent1, tangent2, n)
-        if abs(cb_local.z) > 1.0e-6:
+        if np.any(np.absolute(cb_local.z)) > 1.0e-6:
             raise Exception("Arc: problem with transformation cb_local=%s" % cb_local)
         # Angle of the final point on the arc is in the range -pi < th <= +pi.
-        theta = math.atan2(cb_local.y, cb_local.x)
+        theta = np.arctan2(cb_local.y, cb_local.x)
         # The length of the circular arc.
         L = theta * cb_mag
         # Move the second point around the arc in the local xy-plane.
         theta *= t
-        loc = Vector3(math.cos(theta)*cb_mag, math.sin(theta)*cb_mag, 0.0)
+        loc = Vector3(np.cos(theta)*cb_mag, np.sin(theta)*cb_mag, 0.0*theta)
         # Transform back to global xyz coordinates
         # and remember to add the centre coordinates.
         loc.transform_to_global_frame(tangent1, tangent2, n, self.c);
@@ -142,13 +144,68 @@ class Bezier(Path):
         Q = self.B.copy() # work array will be overwritten
         for k in range(n_order):
             for i in range(n_order-k):
-                Q[i] = (1.0-t)*Q[i] + t*Q[i+1]
+                Q[i] = Q[i]*(1.0-t) + Q[i+1]*t
         return Q[0]
 
     # end class Bezier
 
 
 class Polyline(Path):
+    """
+    Collection of Path segments.
+    """
+    __slots__ = ['segments', 't_values', 'isclosed']
+
+    def __init__(self, segments, closed=False, tolerance=1.0e-10):
+        self.segments = []
+        for seg in segments: self.segments.append(seg)
+        self.isclosed = closed
+        if self.isclosed:
+            p0 = self.segments[0](0.0)
+            p1 = self.segments[-1](1.0)
+            if (abs(p1-p0) > tolerance):
+                self.segments.append(Line(p0,p1))
+        self.reset_breakpoints()
+        return
+
+    def reset_breakpoints(self):
+        self.t_values = [0.0]
+        t_total = 0.0
+        for seg in self.segments:
+            t_total += seg.length()
+            self.t_values.append(t_total)
+        for i in range(len(self.t_values)): self.t_values[i] /= t_total
+        return
+
+    def __repr__(self):
+        text = "Polyline(segments=["
+        n = len(self.segments)
+        for i in range(n):
+            text += '{}'.format(self.segments[i])
+            text += ', ' if i < n-1 else ']'
+        return text
+
+    def __call__(self, t):
+        n = len(self.segments)
+        if n == 1: return self.segments[0](t)
+
+        f = self.segments[0](t) # Hmmmmmmmm FIXME
+        f*= 0.0
+
+        for i, tl, tu in zip(range(n),self.t_values[:-1], self.t_values[1:]):
+            t_local = (t-tl)/(tu-tl)
+            isokay = np.logical_and(t_local>=-1e-9, t_local<1.000000001)
+            f += self.segments[i](t_local)*isokay
+        return f
+
+    def length(self):
+        L = 0.0
+        for seg in self.segments: L += seg.length()
+        return L
+
+    # end class Polyline
+
+class Polyline_old(Path):
     """
     Collection of Path segments.
     """
@@ -201,7 +258,6 @@ class Polyline(Path):
         return L
 
     # end class Polyline
-
 
 class Spline(Polyline):
     """
@@ -287,6 +343,68 @@ class ArcLengthParameterizedPath(Path):
             self.arc_lengths.append(L)
             self.t_values.append(dt*i)
             p0 = p1
+        self.t_values = np.array(self.t_values)
+        self.arc_lengths = np.array(self.arc_lengths)
+        return
+
+    def underlying_t(self, t):
+        """
+        Search the pieces of arc length to find the piece containing the
+        desired point and then interpolate the local value of t for that piece.
+        """
+        # The incoming parameter value, t, is proportional to arc_length fraction.
+        L_target = t * self.arc_lengths[-1]
+
+        # Do a single variable linear interpolation to approximate an ordinary t value
+        ut = np.interp(L_target, self.arc_lengths, self.t_values, left=0.0, right=1.0)
+        return ut
+
+    def __repr__(self):
+        return "ArcLengthParameterizedPath(underlying_path={}, n={})".format(
+            self.underlying_path, self._n)
+
+    def __call__(self, t):
+        return self.underlying_path(self.underlying_t(t))
+
+    def length(self):
+        return self.underlying_path.length()
+
+    # end class ArcLengthParameterizedPath
+
+class ArcLengthParameterizedPath_old(Path):
+    """
+    A Path reparameterized such that equal increments in t correspond
+    to approximately equal increments in arc length.
+    """
+    __slots__ = ['underlying_path', 'arc_lengths', 't_values', '_n']
+
+    def __init__(self, underlying_path, n=1000):
+        if isinstance(underlying_path, Path):
+            self.underlying_path = underlying_path
+            if n < 1: raise RuntimeError("Should have at least one arc-length sample.")
+            self._n = n
+            self.set_arc_lengths()
+        else:
+            raise NotImplementedError("underlying_path should be a type of Path")
+        return
+
+    def set_arc_lengths(self):
+        """
+        Compute the arc lengths for a number of sample points along the Path
+        (in equally-spaced values of t) so that these can later be used to do
+        a reverse interpolation on the evaluation parameter.
+        """
+        dt = 1.0/self._n
+        L = 0.0
+        self.arc_lengths = [0.0,]
+        self.t_values = [0.0,]
+        p0 = self.underlying_path(0.0)
+        for i in range(1, self._n+1):
+            p1 = self.underlying_path(dt*i)
+            L += abs(p1-p0)
+            self.arc_lengths.append(L)
+            self.t_values.append(dt*i)
+            p0 = p1
         return
 
     def underlying_t(self, t):
@@ -320,3 +438,81 @@ class ArcLengthParameterizedPath(Path):
 
     # end class ArcLengthParameterizedPath
 
+if __name__=='__main__':
+    # Test code by NNG
+    p0 = Vector3(0.0, 0.0)
+    p1 = Vector3(1.0, 1.0)
+    line = Line(p0, p1)
+    x = line(0.5)
+    xx = line(np.array([0.5, 0.5]))
+    assert(np.isclose(x.x, xx.x[0]))
+
+    a = Vector3(1.0, 0.0)
+    b = Vector3(0.0, 1.0)
+    c = Vector3(0.0, 0.0)
+    arc = Arc(a,b,c)
+    x = arc(0.5)
+    xx = arc(np.array([0.5, 0.5]))
+    assert(np.isclose(x.x, xx.x[0]))
+
+    a = Vector3(0.0, 0.0)
+    b = Vector3(0.25, 0.25)
+    c = Vector3(1.0, 1.0)
+    bez = Bezier([a,b,c])
+    x = bez(0.5)
+    xx = bez(np.array([0.5, 0.5]))
+    assert(np.isclose(x.x, xx.x[0]))
+
+    a = Vector3(0.0, 0.0)
+    b = Vector3(1.0, 1.0)
+    c = Vector3(4.0, 4.0)
+    l0 = Line(a, b)
+    l1 = Line(b, c)
+    polyline = Polyline([l0, l1])
+    polyline2 = Polyline_old([l0, l1])
+    assert(np.isclose(polyline(0.0).x,      polyline2(0.0).x))
+    assert(np.isclose(polyline(0.25/2.0).x, polyline2(0.25/2.0).x))
+    assert(np.isclose(polyline(0.75).x,     polyline2(0.75).x))
+    assert(np.isclose(polyline(1.0).x,      polyline2(1.0).x))
+
+    xx = polyline(np.array([0.0, 0.25/2.0, 0.75, 1.0]))
+    assert(np.isclose(polyline(0.0).x,      xx.x[0]))
+    assert(np.isclose(polyline(0.25/2.0).x, xx.x[1]))
+    assert(np.isclose(polyline(0.75).x,     xx.x[2]))
+    assert(np.isclose(polyline(1.0).x,      xx.x[3]))
+
+    a = [0.0, 0.0]
+    b = [0.25, 0.25]
+    c = [1.0, 1.0]
+    spline = Spline([a,b,c])
+    x = spline(0.5)
+    xx = spline(np.array([0.5, 0.5]))
+    assert(np.isclose(x.x, xx.x[0]))
+
+    a = Vector3(0.0, 0.0)
+    b = Vector3(1.0, 1.0)
+    c = Vector3(4.0, 4.0)
+    l0 = Line(a, b)
+    l1 = Line(b, c)
+    polyline = Polyline([l0, l1])
+    ppath = ArcLengthParameterizedPath(polyline)
+    ppath2 = ArcLengthParameterizedPath_old(polyline)
+    x = ppath(0.5)
+    x2 = ppath2(0.5)
+    assert(np.isclose(x.x, x2.x))
+    assert(np.isclose(x.y, x2.y))
+
+    x = ppath(0.0)
+    x2 = ppath2(0.0)
+    assert(np.isclose(x.x, x2.x))
+    assert(np.isclose(x.y, x2.y))
+
+    x = ppath(1.0)
+    x2 = ppath2(1.0)
+    assert(np.isclose(x.x, x2.x))
+    assert(np.isclose(x.y, x2.y))
+
+    x = ppath(0.5)
+    xx = ppath(np.array([0.5, 0.5]))
+    assert(np.isclose(x.x, xx.x[0]))
+    assert(np.isclose(x.y, xx.y[0]))
