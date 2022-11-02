@@ -236,7 +236,7 @@ IdealGas = {{
 
 
 def finite_wave_dp_wrapper(state1, v1, characteristic, p2, state2, gas_flow, steps=100,
-                           gmodel_without_ions = None, cutoff_temp = 5000.0, number_of_calculations = 10):
+                           gmodel_without_ions = None, cutoff_temp_for_no_ions = 5000.0, number_of_calculations = 10):
 
     """
     Similar to how in PITOT3 I had a "normal shock wrapper" to deal with cases where the normal shock just didn't work
@@ -277,18 +277,21 @@ def finite_wave_dp_wrapper(state1, v1, characteristic, p2, state2, gas_flow, ste
 
     # now we loop through all of the pressures
     for pressure in pressure_list:
+
         if pressure != p1: # skip that first value...
 
             try:
 
                 v2g = gas_flow.finite_wave_dp(state1_local, v1, characteristic, pressure, state2_local, steps=substeps)
 
+                have_performed_calculation_without_ions = False # didn't need it
+
             except Exception as e:
                 print(e)
                 print("Unsteady expansion calculation failed, probably due to a CEA error.")
                 
-                if state1_local.T < cutoff_temp:
-                    print(f"We are below the set cutoff temperature of {cutoff_temp} K so we are going to try performing this part of the calculation without ions.")
+                if state1_local.T < cutoff_temp_for_no_ions and gmodel_without_ions:
+                    print(f"We are below the set cutoff temperature of {cutoff_temp_for_no_ions} K so we are going to try performing this part of the calculation without ions.")
 
                     state1_local_without_ions = GasState(gmodel_without_ions)
 
@@ -305,15 +308,24 @@ def finite_wave_dp_wrapper(state1, v1, characteristic, p2, state2, gas_flow, ste
                     v2g = gas_flow_without_ions.finite_wave_dp(state1_local_without_ions, v1, characteristic, pressure,
                                                                state2_local_without_ions, steps=substeps)
 
+                    have_performed_calculation_without_ions = True
+
                     print("Calculation was successful. Turning ions back on")
 
                     # turning ions back on for next calculation...
+
+                    # set the gas state here without ions, in case it fails here
+                    state2_local.gmodel = gmodel_without_ions
 
                     state2_local.p = state2_local_without_ions.p
                     state2_local.T = state2_local_without_ions.T
 
                     state2_local.update_thermo_from_pT()
                     state2_local.update_sound_speed()
+
+                    # then turn the ions back on here...
+
+                    state2_local.gmodel = state1.gmodel
                 else:
                     raise Exception("pitot3_classes.finite_wave_dp_wrapper: Unsteady expansion failed but the temperature is too high to justify turning ions off.")
 
@@ -321,11 +333,27 @@ def finite_wave_dp_wrapper(state1, v1, characteristic, p2, state2, gas_flow, ste
 
             v1 = v2g
 
+            if have_performed_calculation_without_ions:
+                # we turn ions off when we set the state here in case it would fail otherwise...
+
+                state1_local.gmodel = gmodel_without_ions
+
             state1_local.p = state2_local.p
             state1_local.T = state2_local.T
 
             state1_local.update_thermo_from_pT()
             state1_local.update_sound_speed()
+
+            if have_performed_calculation_without_ions:
+                state1_local.gmodel = state1.gmodel
+
+    # we may even need to turn off ions here too...
+
+    # all of these statements will be from the last iteration here, so that is fine...
+    if have_performed_calculation_without_ions:
+            # we turn ions off when we set the state here in case it would fail otherwise...
+
+            state2.gmodel = gmodel_without_ions
 
     state2.p = state2_local.p
     state2.T = state2_local.T
@@ -333,10 +361,13 @@ def finite_wave_dp_wrapper(state1, v1, characteristic, p2, state2, gas_flow, ste
     state2.update_thermo_from_pT()
     state2.update_sound_speed()
 
+    if have_performed_calculation_without_ions:
+        state2.gmodel = state1.gmodel
+
     return v2g
 
 def finite_wave_dv_wrapper(state1, v1, characteristic, v2_target, state2, gas_flow, steps=100, t_min=200.0,
-                           gmodel_without_ions=None, cutoff_temp=5000.0, number_of_calculations=10):
+                           gmodel_without_ions=None, cutoff_temp_for_no_ions=5000.0, number_of_calculations=10):
     """
     Similar to how in PITOT3 I had a "normal shock wrapper" to deal with cases where the normal shock just didn't work
     this is my way of trying to do this in PITOT3. It breaks the finite wave dv up into a set of blocks, so if any of them
@@ -381,13 +412,15 @@ def finite_wave_dv_wrapper(state1, v1, characteristic, v2_target, state2, gas_fl
 
                 v2g = gas_flow.finite_wave_dv(state1_local, v1, characteristic, velocity, state2_local, steps=substeps, t_min= t_min)
 
+                have_performed_calculation_without_ions = False # didn't need it
+
             except Exception as e:
                 print(e)
                 print("Unsteady expansion calculation failed, probably due to a CEA error.")
 
-                if state1_local.T < cutoff_temp:
+                if state1_local.T < cutoff_temp_for_no_ions and gmodel_without_ions:
                     print(
-                        f"We are below the set cutoff temperature of {cutoff_temp} K so we are going to try performing this part of the calculation without ions.")
+                        f"We are below the set cutoff temperature of {cutoff_temp_for_no_ions} K so we are going to try performing this part of the calculation without ions.")
 
                     state1_local_without_ions = GasState(gmodel_without_ions)
 
@@ -404,15 +437,25 @@ def finite_wave_dv_wrapper(state1, v1, characteristic, v2_target, state2, gas_fl
                     v2g = gas_flow_without_ions.finite_wave_dv(state1_local_without_ions, v1, characteristic, velocity,
                                                                state2_local_without_ions, steps=substeps, t_min=t_min)
 
+                    have_performed_calculation_without_ions = True
+
                     print("Calculation was successful. Turning ions back on")
 
                     # turning ions back on for next calculation...
+
+                    # set the gas state here without ions, in case it fails here
+                    state2_local.gmodel = gmodel_without_ions
 
                     state2_local.p = state2_local_without_ions.p
                     state2_local.T = state2_local_without_ions.T
 
                     state2_local.update_thermo_from_pT()
                     state2_local.update_sound_speed()
+
+                    # then turn the ions back on here...
+
+                    state2_local.gmodel = state1.gmodel
+
                 else:
                     raise Exception(
                         "pitot3_classes.finite_wave_dp_wrapper: Unsteady expansion failed but the temperature is too high to justify turning ions off.")
@@ -421,17 +464,36 @@ def finite_wave_dv_wrapper(state1, v1, characteristic, v2_target, state2, gas_fl
 
             v1 = v2g
 
+            if have_performed_calculation_without_ions:
+                # we turn ions off when we set the state here in case it would fail otherwise...
+
+                state1_local.gmodel = gmodel_without_ions
+
             state1_local.p = state2_local.p
             state1_local.T = state2_local.T
 
             state1_local.update_thermo_from_pT()
             state1_local.update_sound_speed()
 
+            if have_performed_calculation_without_ions:
+                state1_local.gmodel = state1.gmodel
+
+    # we may even need to turn off ions here too...
+
+    # all of these statements will be from the last iteration here, so that is fine...
+    if have_performed_calculation_without_ions:
+            # we turn ions off when we set the state here in case it would fail otherwise...
+
+            state2.gmodel = gmodel_without_ions
+
     state2.p = state2_local.p
     state2.T = state2_local.T
 
     state2.update_thermo_from_pT()
     state2.update_sound_speed()
+
+    if have_performed_calculation_without_ions:
+        state2.gmodel = state1.gmodel
 
     return v2g
 
@@ -2308,7 +2370,7 @@ class Nozzle(object):
 
     def __init__(self, entrance_state_name, entrance_state, exit_state_name, area_ratio, nozzle_expansion_tolerance,
                  facility_type = None, expansion_tube_nozzle_expansion_minimum_p2_over_p1 = None,
-                 maximum_temp_for_room_temperature_only_gmodel = 1100.0):
+                 maximum_temp_for_room_temperature_only_gmodel = 1100.0, cutoff_temp_for_no_ions = 5000.0):
         """
 
         :param entrance_state_name:
@@ -2403,6 +2465,9 @@ class Nozzle(object):
                 print(e)
                 print("Nozzle expansion has failed.")
 
+                # we have a case for using the room temperature only gs model for CO2
+                # and turning off ionisation for cases with ionisaton...
+
                 if self.entrance_state.get_room_temperature_only_gmodel() and self.entrance_state.get_gas_state().T < maximum_temp_for_room_temperature_only_gmodel:
                     print(f"Our gas state has a room temperature only gas model and we are below the maximum temperature for using that model of {maximum_temp_for_room_temperature_only_gmodel}.")
                     print('So we are going to try doing the nozzle expansion with that model.')
@@ -2419,6 +2484,31 @@ class Nozzle(object):
                     exit_gas_state = GasState(room_temperature_only_gmodel)
 
                     v_exit = room_temperature_only_gas_flow.steady_flow_with_area_change(
+                        entrance_gas_state,
+                        self.entrance_state.get_v(),
+                        self.area_ratio, exit_gas_state,
+                        tol=nozzle_expansion_tolerance,
+                        p2p1_min=expansion_tube_nozzle_expansion_minimum_p2_over_p1)
+
+                    entrance_gas_state.gmodel = original_gmodel
+                    exit_gas_state.gmodel = original_gmodel
+
+                elif self.entrance_state.get_gas_state_gmodel_without_ions() and self.entrance_state.get_gas_state().T < cutoff_temp_for_no_ions:
+                    print(
+                        f"We are below the set cutoff temperature of {cutoff_temp_for_no_ions} K so we are going to try performing the nozzle expansion without ions.")
+
+                    original_gmodel = self.entrance_state.get_gas_state_gmodel()
+
+                    gmodel_without_ions = self.entrance_state.get_gas_state_gmodel_without_ions()
+                    gas_flow_without_ions = GasFlow(gmodel_without_ions )
+
+                    entrance_gas_state = self.entrance_state.get_gas_state()
+
+                    entrance_gas_state.gmodel = gmodel_without_ions
+
+                    exit_gas_state = GasState(gmodel_without_ions)
+
+                    v_exit = gas_flow_without_ions.steady_flow_with_area_change(
                         entrance_gas_state,
                         self.entrance_state.get_v(),
                         self.area_ratio, exit_gas_state,
