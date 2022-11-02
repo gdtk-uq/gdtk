@@ -294,7 +294,6 @@ def add_dt_plot(t_change, dt_plot, dt_his=1.0e-6):
 # ---------------------------------------------------------------------
 #
 # We will accumulate references to defined objects.
-gasStatesList = []
 flowStatesList = []
 fluidBlocksList = []
 
@@ -308,12 +307,9 @@ class GasState():
         """
         Input pressure (in Pa) and temperature (in degrees K).
         """
-        global config, gasStatesList
         self.p = p
         self.T = T
         self.update_from_pT(config.gas_model)
-        self.indx = len(gasStatesList)
-        gasStatesList.append(self)
 
     def update_from_pT(self, gmodel):
         """
@@ -347,7 +343,6 @@ class FlowState():
     def __init__(self, gas=None, p=100.0e3, T=300.0,
                  vel=None, velx=0.0, vely=0.0, velz=0.0,
                  label=""):
-        global flowStatesList
         if isinstance(gas, GasState):
             self.gas = copy(gas)
         else:
@@ -357,8 +352,6 @@ class FlowState():
         else:
             self.vel = Vector3(velx, vely, velz)
         self.label = label
-        self.indx = len(flowStatesList)
-        flowStatesList.append(self)
 
     def __repr__(self):
         return "FlowState(gas={}, vel={})".format(self.gas, self.vel)
@@ -450,18 +443,17 @@ class InflowBC(BoundaryCondition):
     """
     Inflow boundary condition.
     """
-    __slots__ = ['tag', 'fsi']
+    __slots__ = ['tag', 'fs', 'fsi']
 
     def __init__(self, fs):
         self.tag = 'inflow'
         if type(fs) is FlowState:
-            self.fsi = fs.indx
+            self.fs = fs
         else:
             raise RuntimeError("Inflow boundary condition expects a FlowState object.")
 
     def __repr__(self):
-        global flowStatesList
-        return "InflowBC(fs={})".format(flowStatesList[self.fsi])
+        return "InflowBC(fs={})".format(self.fs)
 
     def to_json(self):
         return '{"tag": "%s", "flow_state_index": %d}' % (self.tag, self.fsi)
@@ -520,6 +512,8 @@ class FluidBlock():
             if key in [Face.kminus, 'kminus']: self.bcs['kminus'] = bcs[key]
             if key in [Face.kplus, 'kplus']: self.bcs['kplus'] = bcs[key]
         #
+        for bc in bcs.values(): self.check_in_flowstates_from_bcs(bc)
+
         self.i = i
         self.j = j
         self.k = k
@@ -527,6 +521,12 @@ class FluidBlock():
         self.label = label
         self.indx = len(fluidBlocksList)
         fluidBlocksList.append(self)
+
+    def check_in_flowstates_from_bcs(self, bc):
+        if type(bc) is InflowBC:
+            print("Checking in fs {} with idx {}".format(bc.fs, len(flowStatesList)))
+            bc.fsi = len(flowStatesList)
+            flowStatesList.append(bc.fs)
 
     def to_json(self):
         """
@@ -656,6 +656,8 @@ class FBArray():
             if key in [Face.kminus, 'kminus']: self.bcs['kminus'] = bcs[key]
             if key in [Face.kplus, 'kplus']: self.bcs['kplus'] = bcs[key]
         #
+        for bc in bcs.values(): self.check_in_flowstates_from_bcs(bc)
+
         self.origin = {'i':0, 'j':0, 'k':0}
         for key in origin.keys():
             if key in ['I', 'i']: self.origin['i'] = origin[key]
@@ -678,6 +680,11 @@ class FBArray():
                               active=self.active,
                               label=self.label+("-%d-%d-%d".format(i, j, k)))
         self.blks.append(newBlock)
+
+    def check_in_flowstates_from_bcs(self, bc):
+        if type(bc) is InflowBC:
+            bc.fsi = len(flowStatesList)
+            flowStatesList.append(bc.fs)
 
 def identifyBlockConnections():
     """
