@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
         {"job", {"-j", "--job"}, "string job-name", 1},
         {"tindx", {"-t", "--tindx"}, "integer time-index", 1},
         {"verbosity", {"-v", "--verbosity"}, "integer level of verbosity for console messages", 1},
-        {"binary", {"-b", "--binary"}, "write data files as binary data", 0},
+        {"binary", {"-b", "--binary"}, "read and write data files as binary data", 0},
     }};
     argagg::parser_results args;
     try {

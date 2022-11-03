@@ -676,6 +676,9 @@ struct Block {
     // Reads the vertex locations from a compressed file, resizing storage as needed.
     // The numbers of cells are also checked.
     {
+        if (vtkHeader && binary_data) {
+            throw runtime_error("Do no ask to read vtk grid file with binary data.");
+        }
         auto f = bxz::ifstream(fileName); // gzip file
         if (!f) {
             throw runtime_error("Did not open grid file successfully: "+fileName);
@@ -691,15 +694,32 @@ struct Block {
             f.getline(line, maxc); // DIMENSIONS line
             sscanf(line, "DIMENSIONS %d %d %d", &niv, &njv, &nkv);
         } else {
-            f.getline(line, maxc); // expect "structured_grid 1.0"
-            f.getline(line, maxc); // label:
-            f.getline(line, maxc); // dimensions:
-            f.getline(line, maxc);
-            sscanf(line, "niv: %d", &niv);
-            f.getline(line, maxc);
-            sscanf(line, "njv: %d", &njv);
-            f.getline(line, maxc);
-            sscanf(line, "nkv: %d", &nkv);
+            if (binary_data) {
+                number item;
+                f.read(reinterpret_cast<char*>(&item), sizeof(number)); // dimensions
+                f.read(reinterpret_cast<char*>(&item), sizeof(number)); // 0.0
+                f.read(reinterpret_cast<char*>(&item), sizeof(number)); // 0.0
+                f.read(reinterpret_cast<char*>(&item), sizeof(number));
+                cout << "DEBUG item=" << item << endl;
+                niv = int(item);
+                f.read(reinterpret_cast<char*>(&item), sizeof(number));
+                cout << "DEBUG item=" << item << endl;
+                njv = int(item);
+                f.read(reinterpret_cast<char*>(&item), sizeof(number));
+                cout << "DEBUG item=" << item << endl;
+                nkv = int(item);
+            } else {
+                // ASCII text
+                f.getline(line, maxc); // expect "structured_grid 1.0"
+                f.getline(line, maxc); // label:
+                f.getline(line, maxc); // dimensions:
+                f.getline(line, maxc);
+                sscanf(line, "niv: %d", &niv);
+                f.getline(line, maxc);
+                sscanf(line, "njv: %d", &njv);
+                f.getline(line, maxc);
+                sscanf(line, "nkv: %d", &nkv);
+            }
         }
         if ((cfg.nic != niv-1) || (cfg.njc != njv-1) || (cfg.nkc != nkv-1)) {
             throw runtime_error("Unexpected grid size: niv="+to_string(niv)+
@@ -711,13 +731,20 @@ struct Block {
         for (int k=0; k < nkv; k++) {
             for (int j=0; j < njv; j++) {
                 for (int i=0; i < niv; i++) {
-                    f.getline(line, maxc);
                     number x, y, z;
-                    #ifdef FLOAT_NUMBERS
-                    sscanf(line "%f %f %f", &x, &y, &z);
-                    #else
-                    sscanf(line, "%lf %lf %lf", &x, &y, &z);
-                    #endif
+                    if (binary_data) {
+                        f.read(reinterpret_cast<char*>(&x), sizeof(number));
+                        f.read(reinterpret_cast<char*>(&y), sizeof(number));
+                        f.read(reinterpret_cast<char*>(&z), sizeof(number));
+                    } else {
+                        // ASCII text
+                        f.getline(line, maxc);
+                        #ifdef FLOAT_NUMBERS
+                        sscanf(line "%f %f %f", &x, &y, &z);
+                        #else
+                        sscanf(line, "%lf %lf %lf", &x, &y, &z);
+                        #endif
+                    }
                     vertices[cfg.vtxIndex(i,j,k)].set(x, y, z);
                 } // for i
             } // for j
@@ -752,17 +779,24 @@ struct Block {
                 if (f) {
                     zip_fread(f, content, st.size);
                     zip_fclose(f);
-                    stringstream ss(content);
-                    string item;
-                    for (int k=0; k < cfg.nkc; k++) {
-                        for (int j=0; j < cfg.njc; j++) {
-                            for (int i=0; i < cfg.nic; i++) {
-                                getline(ss, item, '\n');
-                                FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
-                                c.iovar_set(m, stod(item));
+                        stringstream ss(content);
+                        for (int k=0; k < cfg.nkc; k++) {
+                            for (int j=0; j < cfg.njc; j++) {
+                                for (int i=0; i < cfg.nic; i++) {
+                                    FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
+                                    if (binary_data) {
+                                        number item;
+                                        ss.read(reinterpret_cast<char*>(&item), sizeof(number));
+                                        c.iovar_set(m, item);
+                                    } else {
+                                        // ASCII text format for data
+                                        string item;
+                                        getline(ss, item, '\n');
+                                        c.iovar_set(m, stod(item));
+                                    }
+                                }
                             }
                         }
-                    }
                 } else {
                     cerr << "Could not open file " << name << " in ZIP archive " << fileName << endl;
                 }
@@ -792,7 +826,13 @@ struct Block {
                     for (int j=0; j < cfg.njc; j++) {
                         for (int i=0; i < cfg.nic; i++) {
                             FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
-                            ss << c.iovar_get(m) << endl;
+                            if (binary_data) {
+                                number item = c.iovar_get(m);
+                                ss.write(reinterpret_cast<char*>(&item), sizeof(number));
+                            } else {
+                                // ASCII text format for data
+                                ss << c.iovar_get(m) << endl;
+                            }
                         }
                     }
                 }
