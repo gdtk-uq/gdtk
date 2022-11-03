@@ -105,37 +105,39 @@ void calculate_gradients_at_face(FVFace& f, FVCell cells[], FVFace faces[])
     for (int i=0; i < f.cloud_nf; i++) { cloud_fs[f.cloud_nc+i] = faces[f.faces_in_cloud[i]].fs; }
     int cloud_n = f.cloud_nc + f.cloud_nf;
     // Now, compute the gradients, one flow quantity at a time.
-    number q0 = f.fs.gas.T;
+    number T0 = f.fs.gas.T;
+    number velx0 = f.fs.vel.x;
+    number vely0 = f.fs.vel.y;
+    number velz0 = f.fs.vel.z;
     f.dTdx = 0.0; f.dTdy = 0.0; f.dTdz = 0.0;
-    for (int i=0; i < cloud_n; i++) {
-        number dq = cloud_fs[i].gas.T - q0;
-        f.dTdx += f.wx[i] * dq;
-        f.dTdy += f.wy[i] * dq;
-        f.dTdz += f.wz[i] * dq;
-    }
-    q0 = f.fs.vel.x;
     f.dvxdx = 0.0; f.dvxdy = 0.0; f.dvxdz = 0.0;
-    for (int i=0; i < cloud_n; i++) {
-        number dq = cloud_fs[i].vel.x - q0;
-        f.dvxdx += f.wx[i] * dq;
-        f.dvxdy += f.wy[i] * dq;
-        f.dvxdz += f.wz[i] * dq;
-    }
-    q0 = f.fs.vel.y;
     f.dvydx = 0.0; f.dvydy = 0.0; f.dvydz = 0.0;
-    for (int i=0; i < cloud_n; i++) {
-        number dq = cloud_fs[i].vel.y - q0;
-        f.dvydx += f.wx[i] * dq;
-        f.dvydy += f.wy[i] * dq;
-        f.dvydz += f.wz[i] * dq;
-    }
-    q0 = f.fs.vel.z;
     f.dvzdx = 0.0; f.dvzdy = 0.0; f.dvzdz = 0.0;
+    number dq = 0;
     for (int i=0; i < cloud_n; i++) {
-        number dq = cloud_fs[i].vel.z - q0;
-        f.dvzdx += f.wx[i] * dq;
-        f.dvzdy += f.wy[i] * dq;
-        f.dvzdz += f.wz[i] * dq;
+	number wx = f.wx[i];
+	number wy = f.wy[i];
+	number wz = f.wz[i];
+	// temperature
+        dq = cloud_fs[i].gas.T - T0;
+        f.dTdx += wx * dq;
+        f.dTdy += wy * dq;
+        f.dTdz += wz * dq;
+	// x velocity
+        dq = cloud_fs[i].vel.x - velx0;
+        f.dvxdx += wx * dq;
+        f.dvxdy += wy * dq;
+        f.dvxdz += wz * dq;
+	// y velocity
+        dq = cloud_fs[i].vel.y - vely0;
+        f.dvydx += wx * dq;
+        f.dvydy += wy * dq;
+        f.dvydz += wz * dq;
+	// z velocity
+        dq = cloud_fs[i].vel.z - velz0;
+        f.dvzdx += wx * dq;
+        f.dvzdy += wy * dq;
+        f.dvzdz += wz * dq;
     }
 } // end calculate_gradients_at_face()
 
