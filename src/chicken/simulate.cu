@@ -77,7 +77,11 @@ void initialize_simulation(int tindx_start, bool binary_data)
         cfg.fill_in_dimensions(Config::nics[i], Config::njcs[j], Config::nkcs[k], Config::threads_per_GPUblock);
         Block blk;
         bytes_allocated += sizeof(Block) + blk.configure(cfg);
-        sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
+        if (binary_data) {
+            sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d", i, j, k);
+        } else {
+            sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
+        }
         string fileName = Config::job + string(nameBuf);
         blk.readGrid(cfg, fileName, binary_data);
         sprintf(nameBuf, "/flow/t%04d/flow-%04d-%04d-%04d.zip", tindx_start, i, j, k);

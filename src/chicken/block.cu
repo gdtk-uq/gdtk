@@ -691,15 +691,9 @@ struct Block {
             f.read(reinterpret_cast<char*>(&item), sizeof(number)); // dimensions
             f.read(reinterpret_cast<char*>(&item), sizeof(number)); // 0.0
             f.read(reinterpret_cast<char*>(&item), sizeof(number)); // 0.0
-            f.read(reinterpret_cast<char*>(&item), sizeof(number));
-            cout << "DEBUG item=" << item << endl;
-            int niv = int(item);
-            f.read(reinterpret_cast<char*>(&item), sizeof(number));
-            cout << "DEBUG item=" << item << endl;
-            int njv = int(item);
-            f.read(reinterpret_cast<char*>(&item), sizeof(number));
-            cout << "DEBUG item=" << item << endl;
-            int nkv = int(item);
+            f.read(reinterpret_cast<char*>(&item), sizeof(number)); int niv = int(item);
+            f.read(reinterpret_cast<char*>(&item), sizeof(number)); int njv = int(item);
+            f.read(reinterpret_cast<char*>(&item), sizeof(number)); int nkv = int(item);
             if ((cfg.nic != niv-1) || (cfg.njc != njv-1) || (cfg.nkc != nkv-1)) {
                 throw runtime_error("Unexpected grid size: niv="+to_string(niv)+
                                     " njv="+to_string(njv)+ " nkv="+to_string(nkv));
