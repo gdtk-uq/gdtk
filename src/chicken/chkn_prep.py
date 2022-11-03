@@ -429,9 +429,9 @@ class WallNoSlipFixedTBC(BoundaryCondition):
     """
     __slots__ = ['tag', 'TWall']
 
-    def __init__(self):
+    def __init__(self, TWall):
         self.tag = 'wall_no_slip_fixed_T'
-        self.TWall = 300.0
+        self.TWall = TWall
 
     def __repr__(self):
         return "WallNoSlipFixedTBC(TWall=%g)" % (self.TWall)
