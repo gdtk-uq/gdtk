@@ -89,6 +89,7 @@ install: $(SELECTED_TARGETS)
 	cp chkn-prep $(BUILD_DIR)/bin
 	cp chkn-post $(BUILD_DIR)/bin
 	cp -r ../lib/* $(BUILD_DIR)/lib
+	cp -r chkn_post.py $(BUILD_DIR)/lib
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 

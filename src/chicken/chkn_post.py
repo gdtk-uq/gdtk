@@ -56,9 +56,11 @@ def read_config(jobDir):
     Read the config and times files.
     """
     global config, times
-    text = open(jobDir + '/config.json', 'r').read()
+    with open(jobDir + '/config.json', 'r') as fp:
+        text = fp.read()
     config = json.loads(text)
-    text = open(jobDir + '/times.data', 'r').readlines()
+    with open(jobDir + '/times.data', 'r') as fp:
+        text = fp.readlines()
     for line in text:
         if len(line.strip()) == 0: continue
         if line[0] == '#': continue
