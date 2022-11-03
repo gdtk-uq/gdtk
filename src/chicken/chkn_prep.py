@@ -825,7 +825,7 @@ if __name__ == '__main__':
         if len(fluidBlocksList) < 1:
             print("Warning: no fluid blocks defined; this is unusual.")
         config.check_array_of_fluid_blocks()
-        binaryData = ("--binary" in uoDict) or ("-f" in uoDict)
+        binaryData = ("--binary" in uoDict) or ("-b" in uoDict)
         write_initial_files(binaryData)
     print("Done in {:.3f} seconds.".format(time.process_time()))
     sys.exit(0)
