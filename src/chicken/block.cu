@@ -679,37 +679,61 @@ struct Block {
         if (vtkHeader && binary_data) {
             throw runtime_error("Do no ask to read vtk grid file with binary data.");
         }
-        auto f = bxz::ifstream(fileName); // gzip file
-        if (!f) {
-            throw runtime_error("Did not open grid file successfully: "+fileName);
-        }
-        constexpr int maxc = 256;
-        char line[maxc];
-        int niv, njv, nkv;
-        if (vtkHeader) {
-            f.getline(line, maxc); // expect "vtk"
-            f.getline(line, maxc); // title line
-            f.getline(line, maxc); // expect "ASCII"
-            f.getline(line, maxc); // expect "STRUCTURED_GRID"
-            f.getline(line, maxc); // DIMENSIONS line
-            sscanf(line, "DIMENSIONS %d %d %d", &niv, &njv, &nkv);
+        if (binary_data) {
+            // Raw, binary data in the grid file.
+            auto f = ifstream(fileName);
+            if (!f) {
+                throw runtime_error("Did not open binary grid file successfully: "+fileName);
+            }
+            number item;
+            f.read(reinterpret_cast<char*>(&item), sizeof(number)); // dimensions
+            f.read(reinterpret_cast<char*>(&item), sizeof(number)); // 0.0
+            f.read(reinterpret_cast<char*>(&item), sizeof(number)); // 0.0
+            f.read(reinterpret_cast<char*>(&item), sizeof(number));
+            cout << "DEBUG item=" << item << endl;
+            int niv = int(item);
+            f.read(reinterpret_cast<char*>(&item), sizeof(number));
+            cout << "DEBUG item=" << item << endl;
+            int njv = int(item);
+            f.read(reinterpret_cast<char*>(&item), sizeof(number));
+            cout << "DEBUG item=" << item << endl;
+            int nkv = int(item);
+            if ((cfg.nic != niv-1) || (cfg.njc != njv-1) || (cfg.nkc != nkv-1)) {
+                throw runtime_error("Unexpected grid size: niv="+to_string(niv)+
+                                    " njv="+to_string(njv)+ " nkv="+to_string(nkv));
+            }
+            if (vertices.size() != niv*njv*nkv) throw runtime_error("Incorrect size of vertices.");
+            //
+            // Standard order of vertices.
+            for (int k=0; k < nkv; k++) {
+                for (int j=0; j < njv; j++) {
+                    for (int i=0; i < niv; i++) {
+                        number x, y, z;
+                        f.read(reinterpret_cast<char*>(&x), sizeof(number));
+                        f.read(reinterpret_cast<char*>(&y), sizeof(number));
+                        f.read(reinterpret_cast<char*>(&z), sizeof(number));
+                        vertices[cfg.vtxIndex(i,j,k)].set(x, y, z);
+                    } // for i
+                } // for j
+            } // for k
+            f.close();
         } else {
-            if (binary_data) {
-                number item;
-                f.read(reinterpret_cast<char*>(&item), sizeof(number)); // dimensions
-                f.read(reinterpret_cast<char*>(&item), sizeof(number)); // 0.0
-                f.read(reinterpret_cast<char*>(&item), sizeof(number)); // 0.0
-                f.read(reinterpret_cast<char*>(&item), sizeof(number));
-                cout << "DEBUG item=" << item << endl;
-                niv = int(item);
-                f.read(reinterpret_cast<char*>(&item), sizeof(number));
-                cout << "DEBUG item=" << item << endl;
-                njv = int(item);
-                f.read(reinterpret_cast<char*>(&item), sizeof(number));
-                cout << "DEBUG item=" << item << endl;
-                nkv = int(item);
+            // Gzipped text file.
+            auto f = bxz::ifstream(fileName); // gzip file
+            if (!f) {
+                throw runtime_error("Did not open gzipped grid file successfully: "+fileName);
+            }
+            constexpr int maxc = 256;
+            char line[maxc];
+            int niv, njv, nkv;
+            if (vtkHeader) {
+                f.getline(line, maxc); // expect "vtk"
+                f.getline(line, maxc); // title line
+                f.getline(line, maxc); // expect "ASCII"
+                f.getline(line, maxc); // expect "STRUCTURED_GRID"
+                f.getline(line, maxc); // DIMENSIONS line
+                sscanf(line, "DIMENSIONS %d %d %d", &niv, &njv, &nkv);
             } else {
-                // ASCII text
                 f.getline(line, maxc); // expect "structured_grid 1.0"
                 f.getline(line, maxc); // label:
                 f.getline(line, maxc); // dimensions:
@@ -720,36 +744,29 @@ struct Block {
                 f.getline(line, maxc);
                 sscanf(line, "nkv: %d", &nkv);
             }
-        }
-        if ((cfg.nic != niv-1) || (cfg.njc != njv-1) || (cfg.nkc != nkv-1)) {
-            throw runtime_error("Unexpected grid size: niv="+to_string(niv)+
-                                " njv="+to_string(njv)+ " nkv="+to_string(nkv));
-        }
-        if (vertices.size() != niv*njv*nkv) throw runtime_error("Incorrect size of vertices.");
-        //
-        // Standard order of vertices.
-        for (int k=0; k < nkv; k++) {
-            for (int j=0; j < njv; j++) {
-                for (int i=0; i < niv; i++) {
-                    number x, y, z;
-                    if (binary_data) {
-                        f.read(reinterpret_cast<char*>(&x), sizeof(number));
-                        f.read(reinterpret_cast<char*>(&y), sizeof(number));
-                        f.read(reinterpret_cast<char*>(&z), sizeof(number));
-                    } else {
-                        // ASCII text
+            if ((cfg.nic != niv-1) || (cfg.njc != njv-1) || (cfg.nkc != nkv-1)) {
+                throw runtime_error("Unexpected grid size: niv="+to_string(niv)+
+                                    " njv="+to_string(njv)+ " nkv="+to_string(nkv));
+            }
+            if (vertices.size() != niv*njv*nkv) throw runtime_error("Incorrect size of vertices.");
+            //
+            // Standard order of vertices.
+            for (int k=0; k < nkv; k++) {
+                for (int j=0; j < njv; j++) {
+                    for (int i=0; i < niv; i++) {
+                        number x, y, z;
                         f.getline(line, maxc);
-                        #ifdef FLOAT_NUMBERS
+#                       ifdef FLOAT_NUMBERS
                         sscanf(line "%f %f %f", &x, &y, &z);
-                        #else
+#                       else
                         sscanf(line, "%lf %lf %lf", &x, &y, &z);
-                        #endif
-                    }
-                    vertices[cfg.vtxIndex(i,j,k)].set(x, y, z);
-                } // for i
-            } // for j
-        } // for k
-        f.close();
+#                       endif
+                        vertices[cfg.vtxIndex(i,j,k)].set(x, y, z);
+                    } // for i
+                } // for j
+            } // for k
+            f.close();
+        } // end of gzipped text file
         return;
     } // end readGrid()
 
