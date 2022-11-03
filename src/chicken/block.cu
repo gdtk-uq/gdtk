@@ -100,15 +100,15 @@ void calculate_gradients_at_face(FVFace& f, FVCell cells[], FVFace faces[])
 // making use of the least-squares coefficients prepared at the start of stepping.
 {
     // Get pointers to all of the cloud FlowStates.
-    FlowState* cloud_fs[cloud_nmax];
-    for (int i=0; i < f.cloud_nc; i++) { cloud_fs[i] = &(cells[f.cells_in_cloud[i]].fs); }
-    for (int i=0; i < f.cloud_nf; i++) { cloud_fs[f.cloud_nc+i] = &(faces[f.faces_in_cloud[i]].fs); }
+    FlowState cloud_fs[cloud_nmax];
+    for (int i=0; i < f.cloud_nc; i++) { cloud_fs[i] = cells[f.cells_in_cloud[i]].fs; }
+    for (int i=0; i < f.cloud_nf; i++) { cloud_fs[f.cloud_nc+i] = faces[f.faces_in_cloud[i]].fs; }
     int cloud_n = f.cloud_nc + f.cloud_nf;
     // Now, compute the gradients, one flow quantity at a time.
     number q0 = f.fs.gas.T;
     f.dTdx = 0.0; f.dTdy = 0.0; f.dTdz = 0.0;
     for (int i=0; i < cloud_n; i++) {
-        number dq = cloud_fs[i]->gas.T - q0;
+        number dq = cloud_fs[i].gas.T - q0;
         f.dTdx += f.wx[i] * dq;
         f.dTdy += f.wy[i] * dq;
         f.dTdz += f.wz[i] * dq;
@@ -116,7 +116,7 @@ void calculate_gradients_at_face(FVFace& f, FVCell cells[], FVFace faces[])
     q0 = f.fs.vel.x;
     f.dvxdx = 0.0; f.dvxdy = 0.0; f.dvxdz = 0.0;
     for (int i=0; i < cloud_n; i++) {
-        number dq = cloud_fs[i]->vel.x - q0;
+        number dq = cloud_fs[i].vel.x - q0;
         f.dvxdx += f.wx[i] * dq;
         f.dvxdy += f.wy[i] * dq;
         f.dvxdz += f.wz[i] * dq;
@@ -124,7 +124,7 @@ void calculate_gradients_at_face(FVFace& f, FVCell cells[], FVFace faces[])
     q0 = f.fs.vel.y;
     f.dvydx = 0.0; f.dvydy = 0.0; f.dvydz = 0.0;
     for (int i=0; i < cloud_n; i++) {
-        number dq = cloud_fs[i]->vel.y - q0;
+        number dq = cloud_fs[i].vel.y - q0;
         f.dvydx += f.wx[i] * dq;
         f.dvydy += f.wy[i] * dq;
         f.dvydz += f.wz[i] * dq;
@@ -132,7 +132,7 @@ void calculate_gradients_at_face(FVFace& f, FVCell cells[], FVFace faces[])
     q0 = f.fs.vel.z;
     f.dvzdx = 0.0; f.dvzdy = 0.0; f.dvzdz = 0.0;
     for (int i=0; i < cloud_n; i++) {
-        number dq = cloud_fs[i]->vel.z - q0;
+        number dq = cloud_fs[i].vel.z - q0;
         f.dvzdx += f.wx[i] * dq;
         f.dvzdy += f.wy[i] * dq;
         f.dvzdz += f.wz[i] * dq;
