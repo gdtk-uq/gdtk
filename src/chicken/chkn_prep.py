@@ -50,14 +50,15 @@ from gdtk.numeric import roberts
 
 sys.path.append("") # so that we can find user's scripts in current directory
 
-shortOptions = "hf:"
-longOptions = ["help", "job="]
+shortOptions = "hf:b"
+longOptions = ["help", "job=", "binary"]
 
 def printUsage():
     print("Prepare a chicken run by reading a job script and writing grid and flow files.")
     print("Usage: chkn-prep" + \
           " [--help | -h]" + \
-          " [--job=<jobName> | -f <jobName>]")
+          " [--job=<jobName> | -f <jobName>]" + \
+          " [--binary | -b]")
     print("")
     return
 
@@ -608,7 +609,7 @@ class FluidBlock():
                                                        p001, p101, p111, p011)
 
 
-    def write_flow_data_to_zip_file(self, fileName, varNamesList):
+    def write_flow_data_to_zip_file(self, fileName, varNamesList, binaryData):
         """
         The format is approximately Eilmer's new IO format.
 
@@ -638,8 +639,11 @@ class FluidBlock():
                     elif varName == 'vel.y': value = vel.y
                     elif varName == 'vel.z': value = vel.z
                     else: raise RuntimeError('unhandled variable name: ' + varName)
-                    np.savetxt(fp,value.flatten())
-            # end varName loop
+                    if binaryData:
+                        fp.write(value.flatten().tobytes())
+                    else:
+                        np.savetxt(fp, value.flatten())
+                    # end varName loop
         return
 
 # --------------------------------------------------------------------
@@ -721,7 +725,7 @@ def identifyBlockConnections():
 # --------------------------------------------------------------------
 
 
-def write_initial_files():
+def write_initial_files(binaryData):
     """
     Writes the files needed for the main simulation code.
 
@@ -768,8 +772,11 @@ def write_initial_files():
     if not os.path.exists(gridDir):
         os.mkdir(gridDir)
     for fb in fluidBlocksList:
-        fileName = gridDir + ('/grid-%04d-%04d-%04d.gz' % (fb.i, fb.j, fb.k))
-        fb.grid.write_to_gzip_file(fileName)
+        fileName = gridDir + ('/grid-%04d-%04d-%04d' % (fb.i, fb.j, fb.k))
+        if binaryData:
+            fb.grid.write_to_binary_file(fileName)
+        else:
+            fb.grid.write_to_gzip_file(fileName+'.gz')
     #
     print('Write the initial flow-field files.')
     #
@@ -778,7 +785,7 @@ def write_initial_files():
         os.makedirs(flowDir)
     for fb in fluidBlocksList:
         fileName = flowDir + ('/flow-%04d-%04d-%04d.zip' % (fb.i, fb.j, fb.k))
-        fb.write_flow_data_to_zip_file(fileName, config.iovar_names)
+        fb.write_flow_data_to_zip_file(fileName, config.iovar_names, binaryData)
     #
     with open(config.job_name+'/times.data', 'w') as fp:
         fp.write("# tindx t\n")
@@ -818,6 +825,7 @@ if __name__ == '__main__':
         if len(fluidBlocksList) < 1:
             print("Warning: no fluid blocks defined; this is unusual.")
         config.check_array_of_fluid_blocks()
-        write_initial_files()
+        binaryData = ("--binary" in uoDict) or ("-f" in uoDict)
+        write_initial_files(binaryData)
     print("Done in {:.3f} seconds.".format(time.process_time()))
     sys.exit(0)

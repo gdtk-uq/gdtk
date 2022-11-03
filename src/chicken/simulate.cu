@@ -54,7 +54,7 @@ FlowState* flowStates_on_gpu;
 
 
 __host__
-void initialize_simulation(int tindx_start)
+void initialize_simulation(int tindx_start, bool binary_data)
 {
     char nameBuf[256];
     filesystem::path pth{Config::job};
@@ -79,10 +79,10 @@ void initialize_simulation(int tindx_start)
         bytes_allocated += sizeof(Block) + blk.configure(cfg);
         sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
         string fileName = Config::job + string(nameBuf);
-        blk.readGrid(cfg, fileName);
+        blk.readGrid(cfg, fileName, binary_data);
         sprintf(nameBuf, "/flow/t%04d/flow-%04d-%04d-%04d.zip", tindx_start, i, j, k);
         fileName = Config::job + string(nameBuf);
-        blk.readFlow(cfg, fileName);
+        blk.readFlow(cfg, fileName, binary_data);
         blk.computeGeometry(cfg);
         fluidBlocks.push_back(blk);
         if (cfg.active) cells_in_simulation += cfg.nic*cfg.njc*cfg.nkc;
@@ -157,7 +157,7 @@ void initialize_simulation(int tindx_start)
 
 
 __host__
-void write_flow_data(int tindx, number tme)
+void write_flow_data(int tindx, number tme, bool binary_data)
 {
     cout << "Write flow data at tindx=" << tindx
          << " time=" << scientific << setprecision(3) << tme << endl;
@@ -171,7 +171,7 @@ void write_flow_data(int tindx, number tme)
         int i = blk_config.i; int j = blk_config.j; int k = blk_config.k;
         sprintf(nameBuf, "%s/flow-%04d-%04d-%04d.zip", flowDir.c_str(), i, j, k);
         string fileName = string(nameBuf);
-        fluidBlocks[blk_id].writeFlow(blk_config, fileName);
+        fluidBlocks[blk_id].writeFlow(blk_config, fileName, binary_data);
     }
     // Update the times file.
     ofstream timesFile(Config::job+"/times.data", ofstream::binary|ofstream::app);
@@ -181,7 +181,7 @@ void write_flow_data(int tindx, number tme)
 
 
 __host__
-void march_in_time_using_cpu_only()
+void march_in_time_using_cpu_only(bool binary_data)
 // Variant of the main simulation function which uses only the CPU.
 // We retain this function as a reasonably-easy-to-read reference code,
 // while be build the GPU variant.
@@ -317,7 +317,7 @@ void march_in_time_using_cpu_only()
         //
         // Occasionally dump the flow data for making plots.
         if (SimState::t >= SimState::t_plot) {
-            write_flow_data(SimState::next_plot_indx, SimState::t);
+            write_flow_data(SimState::next_plot_indx, SimState::t, binary_data);
             SimState::steps_since_last_plot = 0;
             SimState::next_plot_indx += 1;
             SimState::t_plot = SimState::t + Config::dt_plot_schedule.get_value(SimState::t);
@@ -329,7 +329,7 @@ void march_in_time_using_cpu_only()
 
 
 __host__
-void march_in_time_using_gpu()
+void march_in_time_using_gpu(bool binary_data)
 // Variant of the main simulation function where we may offload work to the GPU.
 {
     if (Config::verbosity > 0) cout << "march_in_time_using_gpu() start" << endl;
@@ -632,7 +632,7 @@ void march_in_time_using_gpu()
                     throw runtime_error("On dump flow data for plot, could not copy blk.cells from gpu to cpu.");
                 }
             }
-            write_flow_data(SimState::next_plot_indx, SimState::t);
+            write_flow_data(SimState::next_plot_indx, SimState::t, binary_data);
             SimState::steps_since_last_plot = 0;
             SimState::next_plot_indx += 1;
             SimState::t_plot = SimState::t + Config::dt_plot_schedule.get_value(SimState::t);
@@ -644,7 +644,7 @@ void march_in_time_using_gpu()
 
 
 __host__
-void finalize_simulation()
+void finalize_simulation(bool binary_data)
 {
     if (SimState::steps_since_last_plot > 0) {
         #ifdef CUDA
@@ -661,7 +661,7 @@ void finalize_simulation()
             }
         }
         #endif
-        write_flow_data(SimState::next_plot_indx, SimState::t);
+        write_flow_data(SimState::next_plot_indx, SimState::t, binary_data);
     }
     for (Block& blk : fluidBlocks) {
         blk.releaseMemory();

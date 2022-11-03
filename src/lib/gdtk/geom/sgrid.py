@@ -7,6 +7,7 @@ Similar to the Dlang equivalent class.
 PJ, 2020-07-05 Initial code
     2022-09-16 Add Volume grid
 NNG 2022-11-01 Arrayification (Canberra, ACT)
+PJ  2022-11-03 Binary files
 """
 import numpy as np
 from abc import ABC, abstractmethod
@@ -48,6 +49,8 @@ class StructuredGrid():
             self.make_from_pvolume(pvolume, niv, njv, nkv, cf_list)
         elif "gzfile" in kwargs.keys():
             self.read_from_gzip_file(kwargs.get('gzfile'))
+        elif "binaryfile" in kwargs.keys():
+            self.read_from_binary_file(kwargs.get('binaryfile'))
         else:
             raise Exception("Do not know how to make grid.")
         self.label = "unknown"
@@ -123,7 +126,7 @@ class StructuredGrid():
             self.njv = int(items[1])
             line = f.readline(); items = line.split()
             self.nkv = int(items[1])
-
+            #
             data = np.loadtxt(f)
             x = data[:,0]
             y = data[:,1]
@@ -143,6 +146,31 @@ class StructuredGrid():
             self.points = Vector3(x=x.copy(), y=y.copy(), z = z.copy())
         return
 
+    def read_from_binary_file(self, file_name):
+        data = np.fromfile(file_name, dtype=float)
+        data = data.reshape((data.shape[0]//3,3))
+        self.dimensions = int(data[0,0])
+        self.niv = int(data[1,0])
+        self.njv = int(data[1,1])
+        self.nkv = int(data[1,2])
+        x = data[2:,0]
+        y = data[2:,1]
+        z = data[2:,2]
+        if self.dimensions == 1:
+            pass
+        elif self.dimensions == 2:
+            x = x.reshape((self.njv, self.niv))
+            y = y.reshape((self.njv, self.niv))
+            z = z.reshape((self.njv, self.niv))
+        elif self.dimensions == 3:
+            x = x.reshape((self.nkv, self.njv, self.niv))
+            y = y.reshape((self.nkv, self.njv, self.niv))
+            z = z.reshape((self.nkv, self.njv, self.niv))
+        else:
+            raise RuntimeError("Invalid dimensions.")
+        self.points = Vector3(x=x.copy(), y=y.copy(), z = z.copy())
+        return
+
     def write_to_gzip_file(self, file_name):
         with gzip.open(file_name, "wt") as f:
             f.write("structured_grid 1.0\n")
@@ -151,12 +179,24 @@ class StructuredGrid():
             f.write(f"niv: {self.niv}\n")
             f.write(f"njv: {self.njv}\n")
             f.write(f"nkv: {self.nkv}\n")
-
+            #
             data = np.zeros((self.nkv*self.njv*self.niv,3))
             data[:,0] = self.points.x.flatten()
             data[:,1] = self.points.y.flatten()
             data[:,2] = self.points.z.flatten()
             np.savetxt(f, data)
+        return
+
+    def write_to_binary_file(self, file_name):
+        data = np.zeros((self.nkv*self.njv*self.niv+2,3),dtype=np.float)
+        # Pack the metadata into the first two rows.
+        data[0,:] = [float(self.dimensions), 0.0, 0.0]
+        data[1,:] = [float(self.niv), float(self.njv), float(self.nkv)]
+        # Pack the main data into the remaining rows.
+        data[2:,0] = self.points.x.flatten()
+        data[2:,1] = self.points.y.flatten()
+        data[2:,2] = self.points.z.flatten()
+        data.tofile(file_name)
         return
 
     def write_to_vtk_file(self, file_name):

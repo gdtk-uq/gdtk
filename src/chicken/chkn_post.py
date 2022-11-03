@@ -28,15 +28,16 @@ from gdtk.geom.vector3 import Vector3, hexahedron_properties
 from gdtk.geom.sgrid import StructuredGrid
 
 
-shortOptions = "hft:"
-longOptions = ["help", "job=", "tindx="]
+shortOptions = "hf:t:b"
+longOptions = ["help", "job=", "tindx=", "binary"]
 
 def printUsage():
     print("Post-process a chicken run to produce VTK format files.")
     print("Usage: chkn-post" +
           " [--help | -h]" +
           " [--job=<jobName> | -f <jobName>]" +
-          " [--tindx=<tindxSpec> | -t <tindxSpec>"
+          " [--tindx=<tindxSpec> | -t <tindxSpec>" +
+          " [--binary | -b]"
     )
     print("  tindxSpec may specify a single index or a range of indices.")
     print("  Some examples: 0  1  $  -1  all  0:$  :$  :  0:-1  :-1")
@@ -68,7 +69,7 @@ def read_config(jobDir):
         times[int(items[0])] = float(items[1])
     return
 
-def read_grids(jobDir):
+def read_grids(jobDir, binaryData):
     """
     Read the full set of grids.
     """
@@ -79,12 +80,17 @@ def read_grids(jobDir):
     for k in range(config['nkb']):
         for j in range(config['njb']):
             for i in range(config['nib']):
-                fileName = gridDir + ('/grid-%04d-%04d-%04d.gz' % (i, j, k))
-                if os.path.exists(fileName):
-                    grids['%d,%d,%d'%(i,j,k)] = StructuredGrid(gzfile=fileName)
+                fileName = gridDir + ('/grid-%04d-%04d-%04d' % (i, j, k))
+                if binaryData:
+                    if os.path.exists(fileName):
+                        grids['%d,%d,%d'%(i,j,k)] = StructuredGrid(binaryfile=fileName)
+                else:
+                    fileName += '.gz'
+                    if os.path.exists(fileName):
+                        grids['%d,%d,%d'%(i,j,k)] = StructuredGrid(gzfile=fileName)
     return
 
-def read_flow_blocks(jobDir, tindx):
+def read_flow_blocks(jobDir, tindx, binaryData):
     """
     Read the flow blocks for an individual tindx.
     """
@@ -97,10 +103,10 @@ def read_flow_blocks(jobDir, tindx):
             for i in range(config['nib']):
                 fileName = flowDir + ('/flow-%04d-%04d-%04d.zip' % (i, j, k))
                 if os.path.exists(fileName):
-                    flows['%d,%d,%d'%(i,j,k)] = read_block_of_flow_data(fileName)
+                    flows['%d,%d,%d'%(i,j,k)] = read_block_of_flow_data(fileName, binaryData)
     return
 
-def read_block_of_flow_data(fileName):
+def read_block_of_flow_data(fileName, binaryData):
     """
     Unpack a zip archive to get the flow field data as lists of float numbers.
     """
@@ -109,11 +115,15 @@ def read_block_of_flow_data(fileName):
     with ZipFile(fileName, mode='r') as zf:
         for var in config["iovar_names"]:
             with zf.open(var, mode='r') as fp:
-                text = fp.read().decode('utf-8')
-                data = []
-                for item in text.split('\n'):
-                    if len(item) > 0: data.append(float(item))
-                flowData[var] = data
+                if binaryData:
+                    data = np.frombuffer(fp.read(), dtype=float)
+                    flowData[var] = list(data)
+                else:
+                    text = fp.read().decode('utf-8')
+                    data = []
+                    for item in text.split('\n'):
+                        if len(item) > 0: data.append(float(item))
+                    flowData[var] = data
     return flowData
 
 # --------------------------------------------------------------------
@@ -261,7 +271,9 @@ if __name__ == '__main__':
         #
         read_config(jobDir)
         print("times=", times)
-        read_grids(jobDir)
+        #
+        binaryData = ("--binary" in uoDict) or ("-f" in uoDict)
+        read_grids(jobDir, binaryData)
         #
         tindxSpec = "$" # default is the final-time index
         tindxList = []
@@ -314,7 +326,7 @@ if __name__ == '__main__':
         # Write out that list of snapshots.
         for tindx in tindxList:
             print("Writing tindx={}".format(tindx))
-            read_flow_blocks(jobDir, tindx)
+            read_flow_blocks(jobDir, tindx, binaryData)
             write_vtk_files(jobDir, tindx)
         #
         timesList = [times[tindx] for tindx in tindxList]

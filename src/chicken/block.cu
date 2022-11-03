@@ -672,7 +672,7 @@ struct Block {
     } // end computeGeometry()
 
     __host__
-    void readGrid(const BConfig& cfg, string fileName, bool vtkHeader=false)
+    void readGrid(const BConfig& cfg, string fileName, bool binary_data, bool vtkHeader=false)
     // Reads the vertex locations from a compressed file, resizing storage as needed.
     // The numbers of cells are also checked.
     {
@@ -727,7 +727,7 @@ struct Block {
     } // end readGrid()
 
     __host__
-    void readFlow(const BConfig& cfg, string fileName)
+    void readFlow(const BConfig& cfg, string fileName, bool binary_data)
     // Reads the flow data archive from a ZIP file.
     // The correct data storage is presumed to exist.
     //
@@ -774,7 +774,7 @@ struct Block {
     } // end readFlow()
 
     __host__
-    void writeFlow(const BConfig& cfg, string fileName)
+    void writeFlow(const BConfig& cfg, string fileName, bool binary_data)
     // Writes the flow data into a new ZIP archive file.
     // Any necessary directories are presumed to exist.
     {
