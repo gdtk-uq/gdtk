@@ -640,6 +640,7 @@ class FluidBlock():
                     elif varName == 'vel.z': value = vel.z
                     else: raise RuntimeError('unhandled variable name: ' + varName)
                     if binaryData:
+                        print("DEBUG var=", varName, " value=", value)
                         fp.write(value.flatten().tobytes())
                     else:
                         np.savetxt(fp, value.flatten())

@@ -792,24 +792,33 @@ struct Block {
                 if (f) {
                     zip_fread(f, content, st.size);
                     zip_fclose(f);
-                        stringstream ss(content);
+                    if (binary_data) {
+                        stringstream ss(content, ios::in | ios::binary);
                         for (int k=0; k < cfg.nkc; k++) {
                             for (int j=0; j < cfg.njc; j++) {
                                 for (int i=0; i < cfg.nic; i++) {
                                     FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
-                                    if (binary_data) {
-                                        number item;
-                                        ss.read(reinterpret_cast<char*>(&item), sizeof(number));
-                                        c.iovar_set(m, item);
-                                    } else {
-                                        // ASCII text format for data
-                                        string item;
-                                        getline(ss, item, '\n');
-                                        c.iovar_set(m, stod(item));
-                                    }
+                                    number item;
+                                    ss.read(reinterpret_cast<char*>(&item), sizeof(number));
+                                    cout << "DEBUG var=" << name << " i=" << i << " j=" << j << " k=" << k << " value=" << item << endl;
+                                    c.iovar_set(m, item);
                                 }
                             }
                         }
+                    } else {
+                        // ASCII text format for data
+                        stringstream ss(content, ios::in);
+                        for (int k=0; k < cfg.nkc; k++) {
+                            for (int j=0; j < cfg.njc; j++) {
+                                for (int i=0; i < cfg.nic; i++) {
+                                    FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
+                                    string item;
+                                    getline(ss, item, '\n');
+                                    c.iovar_set(m, stod(item));
+                                }
+                            }
+                        }
+                    }
                 } else {
                     cerr << "Could not open file " << name << " in ZIP archive " << fileName << endl;
                 }
