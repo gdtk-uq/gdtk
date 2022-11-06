@@ -180,7 +180,7 @@ class StructuredGrid():
             f.write(f"njv: {self.njv}\n")
             f.write(f"nkv: {self.nkv}\n")
             #
-            data = np.zeros((self.nkv*self.njv*self.niv,3))
+            data = np.zeros((self.nkv*self.njv*self.niv,3), dtype=float)
             data[:,0] = self.points.x.flatten()
             data[:,1] = self.points.y.flatten()
             data[:,2] = self.points.z.flatten()
@@ -188,7 +188,7 @@ class StructuredGrid():
         return
 
     def write_to_binary_file(self, file_name):
-        data = np.zeros((self.nkv*self.njv*self.niv+2,3),dtype=np.float)
+        data = np.zeros((self.nkv*self.njv*self.niv+2,3), dtype=float)
         # Pack the metadata into the first two rows.
         data[0,:] = [float(self.dimensions), 0.0, 0.0]
         data[1,:] = [float(self.niv), float(self.njv), float(self.nkv)]
@@ -209,7 +209,7 @@ class StructuredGrid():
             f.write("DIMENSIONS %d %d %d\n" % (self.niv, self.njv, self.nkv))
             f.write("POINTS %d float\n" % (self.niv*self.njv*self.nkv))
 
-            data = np.zeros((self.nkv*self.njv*self.niv,3))
+            data = np.zeros((self.nkv*self.njv*self.niv,3), dtype=float)
             data[:,0] = self.points.x.flatten()
             data[:,1] = self.points.y.flatten()
             data[:,2] = self.points.z.flatten()

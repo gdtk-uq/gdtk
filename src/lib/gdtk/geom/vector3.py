@@ -60,11 +60,11 @@ class Vector3(object):
             else:
                 self.z = z
         args_are_not_real = not(isinstance(self.x, numbers.Real)
-                            and isinstance(self.y, numbers.Real)
-                            and isinstance(self.z, numbers.Real))
+                                and isinstance(self.y, numbers.Real)
+                                and isinstance(self.z, numbers.Real))
         args_are_not_array= not(isinstance(self.x, np.ndarray)
-                            and isinstance(self.y, np.ndarray)
-                            and isinstance(self.z, np.ndarray))
+                                and isinstance(self.y, np.ndarray)
+                                and isinstance(self.z, np.ndarray))
         if args_are_not_real and args_are_not_array:
             print(self.x, self.y, self.z, type(self.x), type( self.y), type(self.z))
             raise Exception("Elements should be Real numbers or arrays.")

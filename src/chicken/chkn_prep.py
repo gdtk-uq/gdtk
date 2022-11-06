@@ -227,11 +227,11 @@ class GlobalConfig():
             if self.njcs[j] == 0: self.njcs[j] = njc
             if self.nkcs[k] == 0: self.nkcs[k] = nkc
             if nic != self.nics[i]:
-                raise RuntimeError('Block at i=%d j=%d k=%d has inconsistent nic=%d' % (i, j, k, nic))
+                raise RuntimeError('FluidBlock at i=%d j=%d k=%d has inconsistent nic=%d' % (i, j, k, nic))
             if njc != self.njcs[j]:
-                raise RuntimeError('Block at i=%d j=%d k=%d has inconsistent njc=%d' % (i, j, k, njc))
+                raise RuntimeError('FluidBlock at i=%d j=%d k=%d has inconsistent njc=%d' % (i, j, k, njc))
             if nkc != self.nkcs[k]:
-                raise RuntimeError('Block at i=%d j=%d k=%d has inconsistent nkc=%d' % (i, j, k, nkc))
+                raise RuntimeError('FluidBlock at i=%d j=%d k=%d has inconsistent nkc=%d' % (i, j, k, nkc))
         #
         return
 
@@ -457,6 +457,8 @@ class InflowBC(BoundaryCondition):
         return "InflowBC(fs={})".format(self.fs)
 
     def to_json(self):
+        # Note that the index to the FlowState will be assigned when
+        # a Block is constructed that has InflowBC objects.
         return '{"tag": "%s", "flow_state_index": %d}' % (self.tag, self.fsi)
 
 class OutflowBC(BoundaryCondition):
@@ -481,48 +483,57 @@ class FluidBlock():
     """
     __slots__ = 'indx', 'active', 'i', 'j', 'k', 'grid', 'initialState', \
         'nic', 'njc', 'nkc', 'bcs', 'label', \
-        'cellc', 'cellv'
+        'cellc', 'cellv', 'flow'
 
     def __init__(self, i=0, j=0, k=0, grid=None, initialState=None,
                  bcs={}, active=True, label=""):
+        # When constructing a FluidBlock, we fill out the full grid and
+        # the flow data in each cell within the block.
+        # This allow us to use numpy arrays, for speed.
         global config, fluidBlocksList, flowStatesList
         if isinstance(grid, StructuredGrid):
             self.grid = grid
         else:
             raise RuntimeError('Need to supply a StructuredGrid object.')
         self.construct_cell_properties()
-
+        #
         self.nic = grid.niv - 1
         self.njc = grid.njv - 1
         self.nkc = grid.nkv - 1
+        # Note the index order k,j,i in the numpy array shape.
         assert(self.nic==self.cellc.x.shape[2])
         assert(self.njc==self.cellc.y.shape[1])
         assert(self.nkc==self.cellc.z.shape[0])
-
+        ncells = self.nic*self.njc*self.nkc
+        #
         if isinstance(initialState, FlowState):
-            ncells = self.nic*self.njc*self.nkc
-            flow = FlowState(p=np.full(ncells, initialState.gas.p),
-                             T=np.full(ncells, initialState.gas.T),
-                             velx=np.full(ncells, initialState.vel.x),
-                             vely=np.full(ncells, initialState.vel.y),
-                             velz=np.full(ncells, initialState.vel.z))
-            self.initialState = flow
+            self.flow = {'p': np.full(ncells, initialState.gas.p), 'T':np.full(ncells, initialState.gas.T),
+                         'rho':np.full(ncells, initialState.gas.rho), 'e':np.full(ncells, initialState.gas.e),
+                         'a':np.full(ncells, initialState.gas.a), 'velx': np.full(ncells, initialState.vel.x),
+                         'vely': np.full(ncells, initialState.vel.y), 'velz': np.full(ncells, initialState.vel.z)}
         elif callable(initialState):
-            ncells = self.nic*self.njc*self.nkc
-            p = np.zeros(ncells); T = np.zeros(ncells);
-            velx = np.zeros(ncells); vely = np.zeros(ncells); velz = np.zeros(ncells);
+            # The user has supplied a function,
+            # which we use one cell-centre at a time.
+            self.flow = {'p': np.zeros(ncells, dtype=float), 'T': np.zeros(ncells, dtype=float),
+                         'rho': np.zeros(ncells, dtype=float), 'e': np.zeros(ncells, dtype=float),
+                         'a': np.zeros(ncells, dtype=float), 'velx': np.zeros(ncells, dtype=float),
+                         'vely': np.zeros(ncells, dtype=float), 'velz': np.zeros(ncells, dtype=float)}
             idx = 0
             for kk in range(self.nkc):
                 for jj in range(self.njc):
                     for ii in range(self.nic):
-                        x = self.cellc.x[kk,jj,ii]
-                        y = self.cellc.y[kk,jj,ii]
-                        z = self.cellc.z[kk,jj,ii]
+                        # Note index order.
+                        x = self.cellc.x[kk,jj,ii]; y = self.cellc.y[kk,jj,ii]; z = self.cellc.z[kk,jj,ii]
                         state = initialState(x,y,z)
-                        p[idx] = state.gas.p; T[idx] = state.gas.T;
-                        velx[idx] = state.vel.x; vely[idx] = state.vel.y; velz[idx] = state.vel.z; 
+                        self.flow['p'][idx] = state.gas.p
+                        self.flow['T'][idx] = state.gas.T
+                        self.flow['rho'][idx] = state.gas.rho
+                        self.flow['e'][idx] = state.gas.e
+                        self.flow['a'][idx] = state.gas.a;
+                        self.flow['velx'][idx] = state.vel.x
+                        self.flow['vely'][idx] = state.vel.y
+                        self.flow['velz'][idx] = state.vel.z
                         idx += 1
-            self.initialState = FlowState(p=p, T=T, velx=velx, vely=vely, velz=velz)
         else:
             raise RuntimeError('Need to supply a FlowState object or a function that produces'+
                                'a FlowState object as a function of (x,y,z) location.')
@@ -539,8 +550,12 @@ class FluidBlock():
             if key in [Face.kminus, 'kminus']: self.bcs['kminus'] = bcs[key]
             if key in [Face.kplus, 'kplus']: self.bcs['kplus'] = bcs[key]
         #
-        for bc in bcs.values(): self.check_in_flowstates_from_bcs(bc)
-
+        # Check in only those FlowStates associated with boundary conditions.
+        for bc in bcs.values():
+            if type(bc) is InflowBC:
+                bc.fsi = len(flowStatesList)
+                flowStatesList.append(bc.fs)
+        #
         self.i = i
         self.j = j
         self.k = k
@@ -548,11 +563,6 @@ class FluidBlock():
         self.label = label
         self.indx = len(fluidBlocksList)
         fluidBlocksList.append(self)
-
-    def check_in_flowstates_from_bcs(self, bc):
-        if type(bc) is InflowBC:
-            bc.fsi = len(flowStatesList)
-            flowStatesList.append(bc.fs)
 
     def to_json(self):
         """
@@ -576,35 +586,27 @@ class FluidBlock():
         p000 = Vector3(x=self.grid.points.x[:-1, :-1, :-1],
                        y=self.grid.points.y[:-1, :-1, :-1],
                        z=self.grid.points.z[:-1, :-1, :-1])
-
         p100 = Vector3(x=self.grid.points.x[:-1, :-1, 1:],
                        y=self.grid.points.y[:-1, :-1, 1:],
                        z=self.grid.points.z[:-1, :-1, 1:])
-
         p010 = Vector3(x=self.grid.points.x[:-1, 1:, :-1],
                        y=self.grid.points.y[:-1, 1:, :-1],
                        z=self.grid.points.z[:-1, 1:, :-1])
-
         p110 = Vector3(x=self.grid.points.x[:-1, 1:, 1:],
                        y=self.grid.points.y[:-1, 1:, 1:],
                        z=self.grid.points.z[:-1, 1:, 1:])
-
         p001 = Vector3(x=self.grid.points.x[1:, :-1, :-1],
                        y=self.grid.points.y[1:, :-1, :-1],
                        z=self.grid.points.z[1:, :-1, :-1])
-
         p101 = Vector3(x=self.grid.points.x[1:, :-1, 1:],
                        y=self.grid.points.y[1:, :-1, 1:],
                        z=self.grid.points.z[1:, :-1, 1:])
-
         p011 = Vector3(x=self.grid.points.x[1:, 1:, :-1],
                        y=self.grid.points.y[1:, 1:, :-1],
                        z=self.grid.points.z[1:, 1:, :-1])
-
         p111 = Vector3(x=self.grid.points.x[1:, 1:, 1:],
                        y=self.grid.points.y[1:, 1:, 1:],
                        z=self.grid.points.z[1:, 1:, 1:])
-
         self.cellc, self.cellv = hexahedron_properties(p000, p100, p110, p010,
                                                        p001, p101, p111, p011)
 
@@ -617,34 +619,27 @@ class FluidBlock():
         for a VTK structured-grid.
         """
         # Construct the ZIP archive, one variable (file) at a time.
-        x = self.cellc.x
-        y = self.cellc.y
-        z = self.cellc.z
-        gas = self.initialState.gas
-        vel = self.initialState.vel
-
         with ZipFile(fileName, mode='w') as zf:
             for varName in varNamesList:
                 with zf.open(varName, mode='w') as fp:
-                    if varName == 'pos.x': value = x
-                    elif varName == 'pos.y': value = y
-                    elif varName == 'pos.z': value = z
+                    if varName == 'pos.x': value = self.cellc.x
+                    elif varName == 'pos.y': value = self.cellc.y
+                    elif varName == 'pos.z': value = self.cellc.z
                     elif varName == 'vol': value = self.cellv
-                    elif varName == 'p': value = gas.p
-                    elif varName == 'T': value = gas.T
-                    elif varName == 'rho': value = gas.rho
-                    elif varName == 'e': value = gas.e
-                    elif varName == 'a': value = gas.a
-                    elif varName == 'vel.x': value = vel.x
-                    elif varName == 'vel.y': value = vel.y
-                    elif varName == 'vel.z': value = vel.z
+                    elif varName == 'p': value = self.flow['p']
+                    elif varName == 'T': value = self.flow['T']
+                    elif varName == 'rho': value = self.flow['rho']
+                    elif varName == 'e': value = self.flow['e']
+                    elif varName == 'a': value = self.flow['a']
+                    elif varName == 'vel.x': value = self.flow['velx']
+                    elif varName == 'vel.y': value = self.flow['vely']
+                    elif varName == 'vel.z': value = self.flow['velz']
                     else: raise RuntimeError('unhandled variable name: ' + varName)
                     if binaryData:
-                        # print("DEBUG var=", varName, " value=", value)
                         fp.write(value.flatten().tobytes())
                     else:
                         np.savetxt(fp, value.flatten())
-                    # end varName loop
+                # end varName loop
         return
 
 # --------------------------------------------------------------------
@@ -687,7 +682,7 @@ class FBArray():
             if key in [Face.kplus, 'kplus']: self.bcs['kplus'] = bcs[key]
         #
         for bc in bcs.values(): self.check_in_flowstates_from_bcs(bc)
-
+        #
         self.origin = {'i':0, 'j':0, 'k':0}
         for key in origin.keys():
             if key in ['I', 'i']: self.origin['i'] = origin[key]
