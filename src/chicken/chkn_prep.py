@@ -620,6 +620,7 @@ class FluidBlock():
         """
         # Construct the ZIP archive, one variable (file) at a time.
         zf = ZipFile(fileName, mode='w')
+        buf = {} # to retain the output buffers until the zip archive is closed.
         for varName in varNamesList:
             if varName == 'pos.x': value = self.cellc.x
             elif varName == 'pos.y': value = self.cellc.y
@@ -636,9 +637,11 @@ class FluidBlock():
             else: raise RuntimeError('unhandled variable name: ' + varName)
             fp = zf.open(varName, mode='w')
             if binaryData:
-                fp.write(value.flatten().tobytes())
+                buf[varName] = value.flatten().tobytes()
             else:
-                np.savetxt(fp, value.flatten())
+                text = np.array2string(value.flatten(), separator='\n')
+                buf[varName] = text.strip('[]').encode('utf-8')
+            fp.write(buf[varName])
             fp.close()
             # end varName loop
         zf.close()
