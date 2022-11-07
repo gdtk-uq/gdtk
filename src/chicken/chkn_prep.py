@@ -619,27 +619,29 @@ class FluidBlock():
         for a VTK structured-grid.
         """
         # Construct the ZIP archive, one variable (file) at a time.
-        with ZipFile(fileName, mode='w') as zf:
-            for varName in varNamesList:
-                with zf.open(varName, mode='w') as fp:
-                    if varName == 'pos.x': value = self.cellc.x
-                    elif varName == 'pos.y': value = self.cellc.y
-                    elif varName == 'pos.z': value = self.cellc.z
-                    elif varName == 'vol': value = self.cellv
-                    elif varName == 'p': value = self.flow['p']
-                    elif varName == 'T': value = self.flow['T']
-                    elif varName == 'rho': value = self.flow['rho']
-                    elif varName == 'e': value = self.flow['e']
-                    elif varName == 'a': value = self.flow['a']
-                    elif varName == 'vel.x': value = self.flow['velx']
-                    elif varName == 'vel.y': value = self.flow['vely']
-                    elif varName == 'vel.z': value = self.flow['velz']
-                    else: raise RuntimeError('unhandled variable name: ' + varName)
-                    if binaryData:
-                        fp.write(value.flatten().tobytes())
-                    else:
-                        np.savetxt(fp, value.flatten())
-                # end varName loop
+        zf = ZipFile(fileName, mode='w')
+        for varName in varNamesList:
+            if varName == 'pos.x': value = self.cellc.x
+            elif varName == 'pos.y': value = self.cellc.y
+            elif varName == 'pos.z': value = self.cellc.z
+            elif varName == 'vol': value = self.cellv
+            elif varName == 'p': value = self.flow['p']
+            elif varName == 'T': value = self.flow['T']
+            elif varName == 'rho': value = self.flow['rho']
+            elif varName == 'e': value = self.flow['e']
+            elif varName == 'a': value = self.flow['a']
+            elif varName == 'vel.x': value = self.flow['velx']
+            elif varName == 'vel.y': value = self.flow['vely']
+            elif varName == 'vel.z': value = self.flow['velz']
+            else: raise RuntimeError('unhandled variable name: ' + varName)
+            fp = zf.open(varName, mode='w')
+            if binaryData:
+                fp.write(value.flatten().tobytes())
+            else:
+                np.savetxt(fp, value.flatten())
+            fp.close()
+            # end varName loop
+        zf.close()
         return
 
 # --------------------------------------------------------------------

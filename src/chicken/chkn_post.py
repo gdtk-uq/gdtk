@@ -108,22 +108,19 @@ def read_flow_blocks(jobDir, tindx, binaryData):
 
 def read_block_of_flow_data(fileName, binaryData):
     """
-    Unpack a zip archive to get the flow field data as lists of float numbers.
+    Look into a zip archive to get the flow field data as 1D arrays of float numbers.
     """
     global config
     flowData = {}
-    with ZipFile(fileName, mode='r') as zf:
-        for var in config["iovar_names"]:
-            with zf.open(var, mode='r') as fp:
-                if binaryData:
-                    data = np.frombuffer(fp.read(), dtype=float)
-                    flowData[var] = list(data)
-                else:
-                    text = fp.read().decode('utf-8')
-                    data = []
-                    for item in text.split('\n'):
-                        if len(item) > 0: data.append(float(item))
-                    flowData[var] = data
+    zf = ZipFile(fileName, mode='r')
+    for var in config["iovar_names"]:
+        fp = zf.open(var, mode='r')
+        if binaryData:
+            flowData[var] = np.frombuffer(fp.read(), dtype=float)
+        else:
+            flowData[var] = np.loadtxt(fp)
+        fp.close()
+    zf.close()
     return flowData
 
 # --------------------------------------------------------------------
