@@ -781,19 +781,24 @@ struct Block {
         }
         if (z) {
             struct zip_stat st;
+            vector<char*> contents; contents.resize(IOvar::n);
             for (int m=0; m < IOvar::n; m++) {
                 string name = IOvar::names[m];
                 // Search archive for a variable's data.
                 zip_stat_init(&st);
                 zip_stat(z, name.c_str(), 0, &st);
                 // Allocate enough memory for the uncompressed content and read it.
-                char* content = new char[st.size];
+                if (st.size == 0) {
+                    cerr << "IOvar name=" << name << " st.size=" << st.size << endl;
+                    runtime_error("Zero value for st.size.");
+                }
+                contents[m] = new char[st.size];
                 zip_file* f = zip_fopen(z, name.c_str(), 0);
                 if (f) {
-                    zip_fread(f, content, st.size);
+                    zip_fread(f, contents[m], st.size);
                     zip_fclose(f);
                     if (binary_data) {
-                        stringstream ss(content, ios::in | ios::binary);
+                        stringstream ss(contents[m], ios::in | ios::binary);
                         for (int k=0; k < cfg.nkc; k++) {
                             for (int j=0; j < cfg.njc; j++) {
                                 for (int i=0; i < cfg.nic; i++) {
@@ -808,7 +813,7 @@ struct Block {
                         }
                     } else {
                         // ASCII text format for data
-                        stringstream ss(content, ios::in);
+                        stringstream ss(contents[m], ios::in);
                         for (int k=0; k < cfg.nkc; k++) {
                             for (int j=0; j < cfg.njc; j++) {
                                 for (int i=0; i < cfg.nic; i++) {
@@ -823,8 +828,9 @@ struct Block {
                 } else {
                     cerr << "Could not open file " << name << " in ZIP archive " << fileName << endl;
                 }
-                delete[] content;
-            }
+            } // end for m...
+            for (auto ptr : contents) { delete[] ptr; }
+            contents.resize(0);
             zip_close(z);
         }
         return;

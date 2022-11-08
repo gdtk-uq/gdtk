@@ -57,6 +57,8 @@ chicken_for_cuda_f : $(CUDA_SOURCE_FILES)
 		main_main_with_rev_string.cu -lz $(LOCAL_ZIP_INC) -lzip -Xcompiler -fopenmp
 
 # Target for CPU-only flavour of the code with FP64 (double) numbers.
+# -O2 is usual optimization flag
+# -O0 -g for debug
 chicken_for_cpu : $(CUDA_SOURCE_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		main.cu > main_with_rev_string.cu

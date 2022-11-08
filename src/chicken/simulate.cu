@@ -327,6 +327,10 @@ void march_in_time_using_cpu_only(bool binary_data)
             SimState::t_plot = SimState::t + Config::dt_plot_schedule.get_value(SimState::t);
         }
     } // end while loop
+    //
+    allowed_dts.resize(0);
+    bad_cell_counts.resize(0);
+    //
     if (Config::verbosity > 0) cout << "march_in_time_using_cpu_only() end" << endl;
     return;
 } // end march_in_time_using_cpu_only()
