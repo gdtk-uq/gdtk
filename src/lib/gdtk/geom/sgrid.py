@@ -23,7 +23,7 @@ class StructuredGrid():
     """
     Structured grid.
     """
-    _slots_ = ['dimensions', 'niv', 'njv', 'nkv', 'points', 'label']
+    _slots_ = ['dimensions', 'niv', 'njv', 'nkv', 'vertices', 'label']
 
     def __init__(self, **kwargs):
         """
