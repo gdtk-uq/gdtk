@@ -35,8 +35,7 @@ class StructuredGrid():
             niv = kwargs.get('niv', 1)
             njv = kwargs.get('njv', 1)
             cf_list = kwargs.get('cf_list', [None, None, None, None])
-            cf_list = [cf if isinstance(cf, ClusterFunction) else LinearFunction()
-                       for cf in cf_list]
+            cf_list = [cf if isinstance(cf, ClusterFunction) else LinearFunction() for cf in cf_list]
             self.make_from_psurface(psurf, niv, njv, cf_list)
         elif "pvolume" in kwargs.keys():
             pvolume = kwargs['pvolume']
@@ -44,8 +43,7 @@ class StructuredGrid():
             njv = kwargs.get('njv', 1)
             nkv = kwargs.get('nkv', 1)
             cf_list = kwargs.get('cf_list', [None, None, None])
-            cf_list = [cf if isinstance(cf, ClusterFunction) else LinearFunction()
-                       for cf in cf_list]
+            cf_list = [cf if isinstance(cf, ClusterFunction) else LinearFunction() for cf in cf_list]
             self.make_from_pvolume(pvolume, niv, njv, nkv, cf_list)
         elif "gzfile" in kwargs.keys():
             self.read_from_gzip_file(kwargs.get('gzfile'))
@@ -75,16 +73,15 @@ class StructuredGrid():
         sEast = cf_list[1].distribute_parameter_values(njv)
         rSouth = cf_list[2].distribute_parameter_values(niv)
         sWest = cf_list[3].distribute_parameter_values(njv)
-        self.niv = niv
-        self.njv = njv
-        self.nkv = 1
+        self.niv = niv; self.njv = njv; self.nkv = 1
         self.dimensions = 2
-        r = np.linspace(0.0,1.0, niv)
-        s = np.linspace(0.0,1.0, njv)
+        r = np.fromfunction(lambda i,j: i, (niv, njv), dtype=float) / (niv-1)
+        s = np.fromfunction(lambda i,j: j, (niv, njv), dtype=float) / (njv-1)
+        # Blend the clustered sample points from each edge of the rs unit square.
         sdash = (1.0-r) * sWest + r * sEast;
         rdash = (1.0-s) * rSouth + s * rNorth;
-        rrdash, ssdash = np.meshgrid(rdash, sdash)
-        self.points = psurf(rrdash, ssdash)
+        # Compute the xyz spatial coordinates of the surface.
+        self.vertices = psurf(rdash, sdash)
         return
 
     def make_from_pvolume(self, pvolume, niv, njv, nkv, cf_list):
@@ -96,54 +93,51 @@ class StructuredGrid():
             raise Exception(f"njv is too small: {njv}")
         if nkv < 2:
             raise Exception(f"nkv is too small: {nkv}")
-        self.niv = niv
-        self.njv = njv
-        self.nkv = nkv
+        self.niv = niv; self.njv = njv; self.nkv = nkv
         self.dimensions = 3
+        rs = np.fromfunction(lambda i,j,k: i, (niv, njv, nkv)) / (niv-1)
+        ss = np.fromfunction(lambda i,j,k: j, (niv, njv, nkv)) / (njv-1)
+        ts = np.fromfunction(lambda i,j,k: k, (niv, njv, nkv)) / (nkv-1)
         # Single cluster function for each index direction.
         # This is different to the cluster-function per edge for Eilmer.
-        rs = cf_list[0].distribute_parameter_values(niv)
-        ss = cf_list[1].distribute_parameter_values(njv)
-        ts = cf_list[2].distribute_parameter_values(nkv)
-        # To ensure x,y, then z variation order of the points, we call
-        # meshgrid in this way. The 2D case is different, because it
-        # defaults to a different 'indexing' setting
-        t,s,r = np.meshgrid(ts,ss,rs, indexing='ij')
-        self.points = pvolume(r, s, t)
+        rdash = cf_list[0](rs)
+        sdash = cf_list[1](ss)
+        tdash = cf_list[2](ts)
+        self.vertices = pvolume(rdash, sdash, tdash)
         return
 
     def read_from_gzip_file(self, file_name):
-        with gzip.open(file_name, "rt") as f:
-            line = f.readline(); items = line.split()
-            assert items[1] == "1.0", "incorrect structured_grid version"
-            line = f.readline(); items = line.split()
-            self.label = items[1]
-            line = f.readline(); items = line.split()
-            self.dimensions = int(items[1])
-            line = f.readline(); items = line.split()
-            self.niv = int(items[1])
-            line = f.readline(); items = line.split()
-            self.njv = int(items[1])
-            line = f.readline(); items = line.split()
-            self.nkv = int(items[1])
-            #
-            data = np.loadtxt(f)
-            x = data[:,0]
-            y = data[:,1]
-            z = data[:,2]
-            if self.dimensions == 1:
-                pass
-            elif self.dimensions == 2:
-                x = x.reshape((self.njv, self.niv))
-                y = y.reshape((self.njv, self.niv))
-                z = z.reshape((self.njv, self.niv))
-            elif self.dimensions == 3:
-                x = x.reshape((self.nkv, self.njv, self.niv))
-                y = y.reshape((self.nkv, self.njv, self.niv))
-                z = z.reshape((self.nkv, self.njv, self.niv))
-            else:
-                raise RuntimeError("Invalid dimensions.")
-            self.points = Vector3(x=x.copy(), y=y.copy(), z = z.copy())
+        f = gzip.open(file_name, "rt")
+        line = f.readline(); items = line.split()
+        assert items[1] == "1.0", "incorrect structured_grid version"
+        line = f.readline(); items = line.split()
+        self.label = items[1]
+        line = f.readline(); items = line.split()
+        self.dimensions = int(items[1])
+        line = f.readline(); items = line.split()
+        self.niv = int(items[1])
+        line = f.readline(); items = line.split()
+        self.njv = int(items[1])
+        line = f.readline(); items = line.split()
+        self.nkv = int(items[1])
+        data = np.loadtxt(f)
+        f.close()
+        # The serialized data in the file has loops in the VTK index order,
+        # with k as the outer loop, then j and then i as the innermost loop
+        x = data[:,0]; y = data[:,1]; z = data[:,2]
+        if self.dimensions == 1:
+            pass
+        elif self.dimensions == 2:
+            x = x.reshape((self.njv, self.niv)).transpose()
+            y = y.reshape((self.njv, self.niv)).transpose()
+            z = z.reshape((self.njv, self.niv)).transpose()
+        elif self.dimensions == 3:
+            x = x.reshape((self.nkv, self.njv, self.niv)).transpose()
+            y = y.reshape((self.nkv, self.njv, self.niv)).transpose()
+            z = z.reshape((self.nkv, self.njv, self.niv)).transpose()
+        else:
+            raise RuntimeError("Invalid dimensions.")
+        self.vertices = Vector3(x=x.copy(), y=y.copy(), z = z.copy())
         return
 
     def read_from_binary_file(self, file_name):
@@ -159,32 +153,34 @@ class StructuredGrid():
         if self.dimensions == 1:
             pass
         elif self.dimensions == 2:
-            x = x.reshape((self.njv, self.niv))
-            y = y.reshape((self.njv, self.niv))
-            z = z.reshape((self.njv, self.niv))
+            x = x.reshape((self.njv, self.niv)).transpose()
+            y = y.reshape((self.njv, self.niv)).transpose()
+            z = z.reshape((self.njv, self.niv)).transpose()
         elif self.dimensions == 3:
-            x = x.reshape((self.nkv, self.njv, self.niv))
-            y = y.reshape((self.nkv, self.njv, self.niv))
-            z = z.reshape((self.nkv, self.njv, self.niv))
+            x = x.reshape((self.nkv, self.njv, self.niv)).transpose()
+            y = y.reshape((self.nkv, self.njv, self.niv)).transpose()
+            z = z.reshape((self.nkv, self.njv, self.niv)).transpose()
         else:
             raise RuntimeError("Invalid dimensions.")
-        self.points = Vector3(x=x.copy(), y=y.copy(), z = z.copy())
+        self.vertices = Vector3(x=x.copy(), y=y.copy(), z=z.copy())
         return
 
     def write_to_gzip_file(self, file_name):
-        with gzip.open(file_name, "wt") as f:
-            f.write("structured_grid 1.0\n")
-            f.write(f"label: {self.label}\n")
-            f.write(f"dimensions: {self.dimensions}\n")
-            f.write(f"niv: {self.niv}\n")
-            f.write(f"njv: {self.njv}\n")
-            f.write(f"nkv: {self.nkv}\n")
-            #
-            data = np.zeros((self.nkv*self.njv*self.niv,3), dtype=float)
-            data[:,0] = self.points.x.flatten()
-            data[:,1] = self.points.y.flatten()
-            data[:,2] = self.points.z.flatten()
-            np.savetxt(f, data)
+        f = gzip.open(file_name, "wt")
+        f.write("structured_grid 1.0\n")
+        f.write(f"label: {self.label}\n")
+        f.write(f"dimensions: {self.dimensions}\n")
+        f.write(f"niv: {self.niv}\n")
+        f.write(f"njv: {self.njv}\n")
+        f.write(f"nkv: {self.nkv}\n")
+        # The serialized data in the file has loops in the VTK index order,
+        # with k as the outer loop, then j and then i as the innermost loop
+        data = np.zeros((self.nkv*self.njv*self.niv,3), dtype=float)
+        data[:,0] = self.vertices.x.transpose().flatten()
+        data[:,1] = self.vertices.y.transpose().flatten()
+        data[:,2] = self.vertices.z.transpose().flatten()
+        np.savetxt(f, data)
+        f.close()
         return
 
     def write_to_binary_file(self, file_name):
@@ -193,27 +189,29 @@ class StructuredGrid():
         data[0,:] = [float(self.dimensions), 0.0, 0.0]
         data[1,:] = [float(self.niv), float(self.njv), float(self.nkv)]
         # Pack the main data into the remaining rows.
-        data[2:,0] = self.points.x.flatten()
-        data[2:,1] = self.points.y.flatten()
-        data[2:,2] = self.points.z.flatten()
+        data[2:,0] = self.vertices.x.transpose().flatten()
+        data[2:,1] = self.vertices.y.transpose().flatten()
+        data[2:,2] = self.vertices.z.transpose().flatten()
         data.tofile(file_name)
         return
 
     def write_to_vtk_file(self, file_name):
-        with open(file_name, "wt") as f:
-            f.write("# vtk DataFile Version 2.0\n")
-            f.write(self.label+'\n')
-            f.write("ASCII\n")
-            f.write("\n")
-            f.write("DATASET STRUCTURED_GRID\n")
-            f.write("DIMENSIONS %d %d %d\n" % (self.niv, self.njv, self.nkv))
-            f.write("POINTS %d float\n" % (self.niv*self.njv*self.nkv))
-
-            data = np.zeros((self.nkv*self.njv*self.niv,3), dtype=float)
-            data[:,0] = self.points.x.flatten()
-            data[:,1] = self.points.y.flatten()
-            data[:,2] = self.points.z.flatten()
-            np.savetxt(f, data)
+        f = open(file_name, "wt")
+        f.write("# vtk DataFile Version 2.0\n")
+        f.write(self.label+'\n')
+        f.write("ASCII\n")
+        f.write("\n")
+        f.write("DATASET STRUCTURED_GRID\n")
+        f.write("DIMENSIONS %d %d %d\n" % (self.niv, self.njv, self.nkv))
+        f.write("POINTS %d float\n" % (self.niv*self.njv*self.nkv))
+        # The serialized data in the file has k as the outer loop,
+        # then j and then i as the innermost loop.
+        data = np.zeros((self.nkv*self.njv*self.niv,3), dtype=float)
+        data[:,0] = self.vertices.x.transpose().flatten()
+        data[:,1] = self.vertices.y.transpose().flatten()
+        data[:,2] = self.vertices.z.transpose().flatten()
+        np.savetxt(f, data)
+        f.close()
         return
 
 class StructuredGrid_old():
@@ -398,15 +396,21 @@ class StructuredGrid_old():
         return
 
 if __name__=='__main__':
-    #p0 = Vector3(x=0.0, y=0.0)
-    #p1 = Vector3(x=1.0, y=0.0)
-    #p2 = Vector3(x=1.0, y=1.0)
-    #p3 = Vector3(x=0.0, y=1.0)
-    #patch = CoonsPatch(p00=p0, p10=p1, p11=p2, p01=p3)
-    #grid = StructuredGrid(psurf=patch, niv=11, njv=11)
-    #grid2= StructuredGrid_old(psurf=patch, niv=11, njv=11)
-    #grid.write_to_gzip_file("test.gz")
-    #grid2.write_to_gzip_file("test2.gz")
+    p0 = Vector3(x=0.0, y=0.0)
+    p1 = Vector3(x=1.0, y=0.0)
+    p2 = Vector3(x=1.0, y=1.0)
+    p3 = Vector3(x=0.0, y=1.0)
+    patch = CoonsPatch(p00=p0, p10=p1, p11=p2, p01=p3)
+    grid = StructuredGrid(psurf=patch, niv=11, njv=11)
+    grid2= StructuredGrid_old(psurf=patch, niv=11, njv=11)
+    grid.write_to_gzip_file("test.gz")
+    grid2.write_to_gzip_file("test2.gz")
+
+    gridb = StructuredGrid(gzfile = "test.gz")
+    assert(grid.vertices.x.shape==gridb.vertices.x.shape)
+    assert(np.all(np.isclose(grid.vertices.x, gridb.vertices.x)))
+    assert(np.all(np.isclose(grid.vertices.y, gridb.vertices.y)))
+    assert(np.all(np.isclose(grid.vertices.z, gridb.vertices.z)))
 
     p0 = Vector3(x=0.0, y=0.0, z=0.0)
     p1 = Vector3(x=1.0, y=0.0, z=0.0)
@@ -418,14 +422,14 @@ if __name__=='__main__':
     p7 = Vector3(x=0.0, y=1.0, z=1.0)
     volume = TFIVolume(p000=p0, p100=p1, p110=p2, p010=p3,
                        p001=p4, p101=p5, p111=p6, p011=p7)
-    grid = StructuredGrid(pvolume=volume, niv=11, njv=11, nkv=11)
-    grid2= StructuredGrid_old(pvolume=volume, niv=11, njv=11, nkv=11)
-    grid.write_to_gzip_file("test.gz")
-    grid2.write_to_gzip_file("test2.gz")
+    grid3 = StructuredGrid(pvolume=volume, niv=11, njv=11, nkv=11)
+    grid4= StructuredGrid_old(pvolume=volume, niv=11, njv=11, nkv=11)
+    grid3.write_to_gzip_file("test3.gz")
+    grid4.write_to_gzip_file("test4.gz")
 
-    grid3 = StructuredGrid(gzfile = "test.gz")
-    assert(grid.points.x.shape==grid3.points.x.shape)
-    assert(np.all(np.isclose(grid.points.x, grid3.points.x)))
-    assert(np.all(np.isclose(grid.points.y, grid3.points.y)))
-    assert(np.all(np.isclose(grid.points.z, grid3.points.z)))
+    grid3b = StructuredGrid(gzfile = "test3.gz")
+    assert(grid3.vertices.x.shape==grid3b.vertices.x.shape)
+    assert(np.all(np.isclose(grid3.vertices.x, grid3b.vertices.x)))
+    assert(np.all(np.isclose(grid3.vertices.y, grid3b.vertices.y)))
+    assert(np.all(np.isclose(grid3.vertices.z, grid3b.vertices.z)))
 

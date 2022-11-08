@@ -9,6 +9,7 @@ These functions should behave the same as the C code functions.
 .. Version:
    2005-03-22: Python2 port from C code.
    2020-04-06: Python3 port for l1d4
+   2022-11-08: Allow arrays of ordinate values to be transformed.
 """
 
 import numpy as np
@@ -33,31 +34,23 @@ def roberts(eta, alpha, beta):
     etabar = etabar / ((2.0 * alpha + 1.0) * (1.0 + lmbda))
     return etabar
 
-
-def distribute_points_1(t1, t2, n, end1, end2, beta):
+def roberts_1(eta, end1, end2, beta):
     """
-    Generate a set of n+1 points nonuniformly distributed from t1 to t2.
+    Compute a stretched ordinate.
 
-    :param t1: parameter value  1
-    :param t2: parameter value  2
-    :param n: number of intervals (the number of points is n+1)
-    :param end1: (bool) cluster flag for end 1:
+    eta: unstretched ordinate, scalar or array
+    end1: (bool) cluster flag for end 1:
+        False: points are not clustered to end 1
+        True: points ARE clustered to end 1
+    end2: (bool) cluster flag for end 2:
+        False: points are not clustered to end 2
+        True: points ARE clustered to end 2
+    beta: grid stretching parameter:
+        1 < beta < +inf : points are clustered
+        The closer to 1, the more the clustering.
+        beta < 1 for no clustering.
 
-        | False: points are not clustered to end 1
-        | True: points ARE clustered to end 1
-
-    :param end2: (bool) cluster flag for end 2:
-
-        | False: points are not clustered to end 2
-        | True: points ARE clustered to end 2
-
-    :param beta: grid stretching parameter:
-
-        | 1 < beta < +inf : points are clustered
-        | The closer to 1, the more the clustering.
-        | beta < 1 for no clustering.
-
-    :returns: the array of n+1 distributed values.
+    Returns the stretched ordinate.
     """
     # Decide on stretching parameters for Robert's transform.
     alpha = 0.5
@@ -73,18 +66,36 @@ def distribute_points_1(t1, t2, n, end1, end2, beta):
     if (not end1) and end2:
         reverse = False
         alpha = 0.0
-    # Compute the grid points as an array.
-    # The intermediate parameter is uniformly distributed.
-    del_eta = 1.0 / n
-    i = np.arange(n+1)
-    eta = del_eta * i
-    # Cluster the points.
     if cluster:
         if reverse: eta = 1.0 - eta
         etabar = roberts(eta, alpha, beta)
         if reverse: etabar = 1.0 - etabar
     else:
         etabar = eta
+    return etabar
+
+def distribute_points_1(t1, t2, n, end1, end2, beta):
+    """
+    Generate a set of n+1 points nonuniformly distributed from t1 to t2.
+
+    t1: parameter value  1
+    t2: parameter value  2
+    n: number of intervals (the number of points is n+1)
+    end1: (bool) cluster flag for end 1:
+        False: points are not clustered to end 1
+        True: points ARE clustered to end 1
+    end2: (bool) cluster flag for end 2:
+        False: points are not clustered to end 2
+        True: points ARE clustered to end 2
+    beta: grid stretching parameter:
+        1 < beta < +inf : points are clustered
+        The closer to 1, the more the clustering.
+        beta < 1 for no clustering.
+
+    Returns the array of n+1 distributed values.
+    """
+    # Compute the grid points as an array.
+    etabar = roberts_1(np.linspace(0.0, 1.0, n+1), end1, end2, beta)
     # Compute the parameter value within the given end-points.
     x = (1.0 - etabar) * t1 + etabar * t2
     return x

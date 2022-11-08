@@ -500,10 +500,9 @@ class FluidBlock():
         self.nic = grid.niv - 1
         self.njc = grid.njv - 1
         self.nkc = grid.nkv - 1
-        # Note the index order k,j,i in the numpy array shape.
-        assert(self.nic==self.cellc.x.shape[2])
+        assert(self.nic==self.cellc.x.shape[0])
         assert(self.njc==self.cellc.y.shape[1])
-        assert(self.nkc==self.cellc.z.shape[0])
+        assert(self.nkc==self.cellc.z.shape[2])
         ncells = self.nic*self.njc*self.nkc
         #
         if isinstance(initialState, FlowState):
@@ -519,11 +518,12 @@ class FluidBlock():
                          'a': np.zeros(ncells, dtype=float), 'velx': np.zeros(ncells, dtype=float),
                          'vely': np.zeros(ncells, dtype=float), 'velz': np.zeros(ncells, dtype=float)}
             idx = 0
+            # Note VTK ordering of loops
             for kk in range(self.nkc):
                 for jj in range(self.njc):
                     for ii in range(self.nic):
                         # Note index order.
-                        x = self.cellc.x[kk,jj,ii]; y = self.cellc.y[kk,jj,ii]; z = self.cellc.z[kk,jj,ii]
+                        x = self.cellc.x[ii,jj,kk]; y = self.cellc.y[ii,jj,kk]; z = self.cellc.z[ii,jj,kk]
                         state = initialState(x,y,z)
                         self.flow['p'][idx] = state.gas.p
                         self.flow['T'][idx] = state.gas.T
@@ -583,30 +583,30 @@ class FluidBlock():
         We want the cell volumes and centroids available for writing
         into the initial flow file.
         """
-        p000 = Vector3(x=self.grid.points.x[:-1, :-1, :-1],
-                       y=self.grid.points.y[:-1, :-1, :-1],
-                       z=self.grid.points.z[:-1, :-1, :-1])
-        p100 = Vector3(x=self.grid.points.x[:-1, :-1, 1:],
-                       y=self.grid.points.y[:-1, :-1, 1:],
-                       z=self.grid.points.z[:-1, :-1, 1:])
-        p010 = Vector3(x=self.grid.points.x[:-1, 1:, :-1],
-                       y=self.grid.points.y[:-1, 1:, :-1],
-                       z=self.grid.points.z[:-1, 1:, :-1])
-        p110 = Vector3(x=self.grid.points.x[:-1, 1:, 1:],
-                       y=self.grid.points.y[:-1, 1:, 1:],
-                       z=self.grid.points.z[:-1, 1:, 1:])
-        p001 = Vector3(x=self.grid.points.x[1:, :-1, :-1],
-                       y=self.grid.points.y[1:, :-1, :-1],
-                       z=self.grid.points.z[1:, :-1, :-1])
-        p101 = Vector3(x=self.grid.points.x[1:, :-1, 1:],
-                       y=self.grid.points.y[1:, :-1, 1:],
-                       z=self.grid.points.z[1:, :-1, 1:])
-        p011 = Vector3(x=self.grid.points.x[1:, 1:, :-1],
-                       y=self.grid.points.y[1:, 1:, :-1],
-                       z=self.grid.points.z[1:, 1:, :-1])
-        p111 = Vector3(x=self.grid.points.x[1:, 1:, 1:],
-                       y=self.grid.points.y[1:, 1:, 1:],
-                       z=self.grid.points.z[1:, 1:, 1:])
+        p000 = Vector3(x=self.grid.vertices.x[:-1, :-1, :-1],
+                       y=self.grid.vertices.y[:-1, :-1, :-1],
+                       z=self.grid.vertices.z[:-1, :-1, :-1])
+        p100 = Vector3(x=self.grid.vertices.x[1:, :-1, :-1],
+                       y=self.grid.vertices.y[1:, :-1, :-1],
+                       z=self.grid.vertices.z[1:, :-1, :-1])
+        p010 = Vector3(x=self.grid.vertices.x[:-1, 1:, :-1],
+                       y=self.grid.vertices.y[:-1, 1:, :-1],
+                       z=self.grid.vertices.z[:-1, 1:, :-1])
+        p110 = Vector3(x=self.grid.vertices.x[1:, 1:, :-1],
+                       y=self.grid.vertices.y[1:, 1:, :-1],
+                       z=self.grid.vertices.z[1:, 1:, :-1])
+        p001 = Vector3(x=self.grid.vertices.x[:-1, :-1, 1:],
+                       y=self.grid.vertices.y[:-1, :-1, 1:],
+                       z=self.grid.vertices.z[:-1, :-1, 1:])
+        p101 = Vector3(x=self.grid.vertices.x[1:, :-1, 1:],
+                       y=self.grid.vertices.y[1:, :-1, 1:],
+                       z=self.grid.vertices.z[1:, :-1, 1:])
+        p011 = Vector3(x=self.grid.vertices.x[:-1, 1:, 1:],
+                       y=self.grid.vertices.y[:-1, 1:, 1:],
+                       z=self.grid.vertices.z[:-1, 1:, 1:])
+        p111 = Vector3(x=self.grid.vertices.x[1:, 1:, 1:],
+                       y=self.grid.vertices.y[1:, 1:, 1:],
+                       z=self.grid.vertices.z[1:, 1:, 1:])
         self.cellc, self.cellv = hexahedron_properties(p000, p100, p110, p010,
                                                        p001, p101, p111, p011)
 

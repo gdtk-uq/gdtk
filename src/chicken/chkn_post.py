@@ -235,9 +235,9 @@ def write_vtk_structured_grid_file(fileName, grid, flowData,
         for k in range(grid.nkv):
             for j in range(grid.njv):
                 for i in range(grid.niv):
-                    x = grid.points.x[k][j][i]
-                    y = grid.points.y[k][j][i]
-                    z = grid.points.z[k][j][i]
+                    x = grid.vertices.x[i][j][k]
+                    y = grid.vertices.y[i][j][k]
+                    z = grid.vertices.z[i][j][k]
                     fp.write('%g %g %g\n'%(x, y, z))
         fp.write('</DataArray>\n')
         fp.write('</Points>\n')
