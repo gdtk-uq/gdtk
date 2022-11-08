@@ -49,9 +49,9 @@ namespace IOvar {
 
     // Keep the following list consistent with the GlobalConfig.iovar_names list
     // in chkn_prep.py and with the symbolic constants just below.
-    vector<string> names {"pos.x", "pos.y", "pos.z", "vol",
+    vector<string> names {"posx", "posy", "posz", "vol",
                               "p", "T", "rho", "e", "a",
-                              "vel.x", "vel.y", "vel.z"};
+                              "velx", "vely", "velz"};
 
     // We will use these symbols to select the varaible of interest.
     constexpr int posx = 0;

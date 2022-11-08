@@ -133,9 +133,9 @@ class GlobalConfig():
         # The following is not meant to be edited for individual simulations but
         # should be kept consistent with the symbols in IOvar namespace
         # that is defined in cell.cu.
-        self.iovar_names = ['pos.x', 'pos.y', 'pos.z', 'vol',
+        self.iovar_names = ['posx', 'posy', 'posz', 'vol',
                             'p', 'T', 'rho', 'e', 'a',
-                            'vel.x', 'vel.y', 'vel.z']
+                            'velx', 'vely', 'velz']
         #
         GlobalConfig.count += 1
         return
@@ -622,24 +622,24 @@ class FluidBlock():
         zf = ZipFile(fileName, mode='w')
         buf = {} # to retain the output buffers until the zip archive is closed.
         for varName in varNamesList:
-            if varName == 'pos.x': value = self.cellc.x
-            elif varName == 'pos.y': value = self.cellc.y
-            elif varName == 'pos.z': value = self.cellc.z
+            if varName == 'posx': value = self.cellc.x
+            elif varName == 'posy': value = self.cellc.y
+            elif varName == 'posz': value = self.cellc.z
             elif varName == 'vol': value = self.cellv
             elif varName == 'p': value = self.flow['p']
             elif varName == 'T': value = self.flow['T']
             elif varName == 'rho': value = self.flow['rho']
             elif varName == 'e': value = self.flow['e']
             elif varName == 'a': value = self.flow['a']
-            elif varName == 'vel.x': value = self.flow['velx']
-            elif varName == 'vel.y': value = self.flow['vely']
-            elif varName == 'vel.z': value = self.flow['velz']
+            elif varName == 'velx': value = self.flow['velx']
+            elif varName == 'vely': value = self.flow['vely']
+            elif varName == 'velz': value = self.flow['velz']
             else: raise RuntimeError('unhandled variable name: ' + varName)
             fp = zf.open(varName, mode='w')
             if binaryData:
                 buf[varName] = value.flatten().tobytes()
             else:
-                text = np.array2string(value.flatten(), separator='\n')
+                text = np.array2string(value.flatten(), separator='\n', threshold=100_000_000)
                 buf[varName] = text.strip('[]').encode('utf-8')
             fp.write(buf[varName])
             fp.close()

@@ -805,8 +805,8 @@ struct Block {
                                     FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
                                     number item;
                                     ss.read(reinterpret_cast<char*>(&item), sizeof(number));
-                                    cout << "DEBUG binary_data var=" << name << " i=" << i << " j=" << j
-                                         << " k=" << k << " value=" << item << endl;
+                                    // cout << "DEBUG binary_data var=" << name << " i=" << i << " j=" << j
+                                    //      << " k=" << k << " value=" << item << endl;
                                     c.iovar_set(m, item);
                                 }
                             }
@@ -820,6 +820,8 @@ struct Block {
                                     FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
                                     string item;
                                     getline(ss, item, '\n');
+                                    // cout << "DEBUG text_data var=" << name << " i=" << i << " j=" << j
+                                    //      << " k=" << k << " value=" << item << endl;
                                     c.iovar_set(m, stod(item));
                                 }
                             }
