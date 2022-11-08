@@ -795,8 +795,12 @@ struct Block {
                 contents[m] = new char[st.size];
                 zip_file* f = zip_fopen(z, name.c_str(), 0);
                 if (f) {
-                    zip_fread(f, contents[m], st.size);
+                    int nbytes_read = zip_fread(f, contents[m], st.size);
                     zip_fclose(f);
+                    if (nbytes_read != st.size) {
+                        cerr << "Did not read all content for var=" << name << " st.size=" << st.size
+                             << " nbytes_read=" << nbytes_read << endl;
+                    }
                     if (binary_data) {
                         stringstream ss(contents[m], ios::in | ios::binary);
                         for (int k=0; k < cfg.nkc; k++) {
@@ -820,9 +824,17 @@ struct Block {
                                     FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
                                     string item;
                                     getline(ss, item, '\n');
-                                    // cout << "DEBUG text_data var=" << name << " i=" << i << " j=" << j
-                                    //      << " k=" << k << " value=" << item << endl;
-                                    c.iovar_set(m, stod(item));
+                                    number value;
+                                    try {
+                                        value = stod(item);
+                                    } catch (const exception& e) {
+                                        cerr << "DEBUG text_data var=" << name << " i=" << i << " j=" << j
+                                             << " k=" << k << " item text=" << item << endl;
+                                        cerr << "DEBUG if IOvar name happens to be vol, do not worry; it will be replaced." << endl;
+                                        cerr << "DEBUG exception seen: " << e.what() << endl;
+                                        value = 0.0;
+                                    }
+                                    c.iovar_set(m, value);
                                 }
                             }
                         }
