@@ -1808,6 +1808,8 @@ class Tube(object):
             fill_room_temperature_only_gmodel_location = '{0}/cea-{1}-room-temperature-only-gas-model.lua'.format(preset_gas_models_folder, self.fill_gas_name)
         elif self.fill_gas_model == 'custom' and self.fill_gas_filename:
             fill_gmodel_location = self.fill_gas_filename
+            # we make it the gas name with -room-temperature-only-gas-model added... (in the same folder)
+            fill_room_temperature_only_gmodel_location = fill_gmodel_location.split('.')[0] + '-room-temperature-only-gas-model.' + fill_gmodel_location.split('.')[-1]
 
         fill_gmodel = GasModel(os.path.expandvars(fill_gmodel_location))
 
