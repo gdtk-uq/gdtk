@@ -99,46 +99,49 @@ void calculate_gradients_at_face(FVFace& f, FVCell cells[], FVFace faces[])
 // Compute the flow quantity gradients at the face centre,
 // making use of the least-squares coefficients prepared at the start of stepping.
 {
-    // Get pointers to all of the cloud FlowStates.
+    // Get local copies of the cloud FlowStates.
     FlowState cloud_fs[cloud_nmax];
     for (int i=0; i < f.cloud_nc; i++) { cloud_fs[i] = cells[f.cells_in_cloud[i]].fs; }
     for (int i=0; i < f.cloud_nf; i++) { cloud_fs[f.cloud_nc+i] = faces[f.faces_in_cloud[i]].fs; }
     int cloud_n = f.cloud_nc + f.cloud_nf;
+    FlowState fs0 = f.fs;
     // Now, compute the gradients, one flow quantity at a time.
-    number T0 = f.fs.gas.T;
-    number velx0 = f.fs.vel.x;
-    number vely0 = f.fs.vel.y;
-    number velz0 = f.fs.vel.z;
-    f.dTdx = 0.0; f.dTdy = 0.0; f.dTdz = 0.0;
-    f.dvxdx = 0.0; f.dvxdy = 0.0; f.dvxdz = 0.0;
-    f.dvydx = 0.0; f.dvydy = 0.0; f.dvydz = 0.0;
-    f.dvzdx = 0.0; f.dvzdy = 0.0; f.dvzdz = 0.0;
-    number dq = 0;
+    // On device, local memory will be faster than accumulating results in global memory.
+    Vector3 grad_T{0.0, 0.0, 0.0};
+    Vector3 grad_vx{0.0, 0.0, 0.0};
+    Vector3 grad_vy{0.0, 0.0, 0.0};
+    Vector3 grad_vz{0.0, 0.0, 0.0};
+    number dq = 0.0;
     for (int i=0; i < cloud_n; i++) {
 	number wx = f.wx[i];
 	number wy = f.wy[i];
 	number wz = f.wz[i];
 	// temperature
-        dq = cloud_fs[i].gas.T - T0;
-        f.dTdx += wx * dq;
-        f.dTdy += wy * dq;
-        f.dTdz += wz * dq;
+        dq = cloud_fs[i].gas.T - fs0.gas.T;
+        grad_T.x += wx * dq;
+        grad_T.y += wy * dq;
+        grad_T.z += wz * dq;
 	// x velocity
-        dq = cloud_fs[i].vel.x - velx0;
-        f.dvxdx += wx * dq;
-        f.dvxdy += wy * dq;
-        f.dvxdz += wz * dq;
+        dq = cloud_fs[i].vel.x - fs0.vel.x;
+        grad_vx.x += wx * dq;
+        grad_vx.y += wy * dq;
+        grad_vx.z += wz * dq;
 	// y velocity
-        dq = cloud_fs[i].vel.y - vely0;
-        f.dvydx += wx * dq;
-        f.dvydy += wy * dq;
-        f.dvydz += wz * dq;
+        dq = cloud_fs[i].vel.y - fs0.vel.y;
+        grad_vy.x += wx * dq;
+        grad_vy.y += wy * dq;
+        grad_vy.z += wz * dq;
 	// z velocity
-        dq = cloud_fs[i].vel.z - velz0;
-        f.dvzdx += wx * dq;
-        f.dvzdy += wy * dq;
-        f.dvzdz += wz * dq;
+        dq = cloud_fs[i].vel.z - fs0.vel.z;
+        grad_vz.x += wx * dq;
+        grad_vz.y += wy * dq;
+        grad_vz.z += wz * dq;
     }
+    // On device, copy back to global data space.
+    f.grad_T = grad_T;
+    f.grad_vx = grad_vx;
+    f.grad_vy = grad_vy;
+    f.grad_vz = grad_vz;
 } // end calculate_gradients_at_face()
 
 //-----------------------------------------------------------------------------------

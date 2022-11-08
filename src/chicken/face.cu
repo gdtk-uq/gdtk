@@ -113,10 +113,7 @@ struct FVFace {
     // Prepared least-squares solution for cloud of cell- and face-FlowStates.
     array<number,cloud_nmax> wx, wy, wz;
     // Spatial gradients with respect to directions x,y,z.
-    number dvxdx, dvxdy, dvxdz;
-    number dvydx, dvydy, dvydz;
-    number dvzdx, dvzdy, dvzdz;
-    number dTdx, dTdy, dTdz;
+    Vector3 grad_vx, grad_vy, grad_vz, grad_T;
     // We also need the FlowState at this face-centre.  It will be set during
     // the convective-flux calculation or by the boundary-condition code for a wall.
     FlowState fs;
@@ -348,16 +345,16 @@ struct FVFace {
         fs.gas.trans_coeffs(mu, k);
         number lmbda = -2.0/3.0 * mu;
         // Shear stresses.
-        number tau_xx = 2.0*mu*dvxdx + lmbda*(dvxdx + dvydy + dvzdz);
-        number tau_yy = 2.0*mu*dvydy + lmbda*(dvxdx + dvydy + dvzdz);
-        number tau_zz = 2.0*mu*dvzdz + lmbda*(dvxdx + dvydy + dvzdz);
-        number tau_xy = mu * (dvxdy + dvydx);
-        number tau_xz = mu * (dvxdz + dvzdx);
-        number tau_yz = mu * (dvydz + dvzdy);
+        number tau_xx = 2.0*mu*grad_vx.x + lmbda*(grad_vx.x + grad_vy.y + grad_vz.z);
+        number tau_yy = 2.0*mu*grad_vy.y + lmbda*(grad_vx.x + grad_vy.y + grad_vz.z);
+        number tau_zz = 2.0*mu*grad_vz.z + lmbda*(grad_vx.x + grad_vy.y + grad_vz.z);
+        number tau_xy = mu * (grad_vx.y + grad_vy.x);
+        number tau_xz = mu * (grad_vx.z + grad_vz.x);
+        number tau_yz = mu * (grad_vy.z + grad_vz.y);
         // Thermal conduction.
-        number qx = k * dTdx;
-        number qy = k * dTdy;
-        number qz = k * dTdz;
+        number qx = k * grad_T.x;
+        number qy = k * grad_T.y;
+        number qz = k * grad_T.z;
         // Combine into fluxes: store as the dot product (F.n).
         number nx = n.x; number ny = n.y; number nz = n.z;
         // Mass flux -- NO CONTRIBUTION
