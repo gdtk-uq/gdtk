@@ -253,6 +253,7 @@ double d2fdxdy_2d(double xi, double xN, double xS, double xE, double xW,
 }
 /*
    More testing, let's try solving for d2dx2 and d2dxy separately 
+    - This seems to work. The above is now redundant.
 */
 
 const string R_D = "((dxE*dxN^^2-dxE^^2*dxN)*dyS+(dxE^^2*dxS-dxE*dxS^^2)*dyN
@@ -340,149 +341,224 @@ const string R_Iyy = "(((2*dxN-2*dxE)*dxS^^2+(2*dxE^^2-2*dxN^^2)*dxS+2*dxE*dxN^^
 /*
     This section of field derivatives is for cases with only three finite difference points,
     but with the fourth bit of information provided by a gradient restriction, generally
-    an insulating wall on the east side of the cell.
+    an insulating wall on one side of the cell.
     
 */
 
+const string ZGN_Nx = "0.0";
 
-const string ZGE_Nx = "-((dxS*dyS*dyW^^2+(dxS^^2*dxW-dxW*dyS^^2)*dyW-dxS*dxW^^2*dyS)*nyE)";
+const string ZGN_Sx = "-((dxE^^2*dyW^^2-dxW^^2*dyE^^2)*nxY)";
 
-const string ZGE_Sx = "((dxN*dyN*dyW^^2+(dxN^^2*dxW-dxW*dyN^^2)*dyW-dxN*dxW^^2*dyN)*nyE)";
+const string ZGN_Ex = "((dxS^^2*dyW^^2-dxW^^2*dyS^^2)*nxY)";
+
+const string ZGN_Wx = "((dxE^^2*dyS^^2-dxS^^2*dyE^^2)*nxY)";
+
+const string ZGN_Ix = "-(((dxS^^2-dxE^^2)*dyW^^2+(dxE^^2-dxW^^2)*dyS^^2+(dxW^^2-dxS^^2)*dyE^^2)*nxY)";
+
+
+const string ZGN_Ny = "0.0";
+
+const string ZGN_Sy = "((dxE^^2*dyW^^2-dxW^^2*dyE^^2)*nxN)";
+
+const string ZGN_Ey = "-((dxS^^2*dyW^^2-dxW^^2*dyS^^2)*nxN)";
+
+const string ZGN_Wy = "-((dxE^^2*dyS^^2-dxS^^2*dyE^^2)*nxN)";
+
+const string ZGN_Iy = "(((dxS^^2-dxE^^2)*dyW^^2+(dxE^^2-dxW^^2)*dyS^^2+(dxW^^2-dxS^^2)*dyE^^2)*nxN)";
+
+
+const string ZGN_Nxx = "0.0";
+
+const string ZGN_Sxx = "((2*dxE*dyW^^2-2*dxW*dyE^^2)*nxY+(2*dyE^^2*dyW-2*dyE*dyW^^2)*nxN)";
+
+const string ZGN_Exx = "-((2*dxS*dyW^^2-2*dxW*dyS^^2)*nxY+(2*dyS^^2*dyW-2*dyS*dyW^^2)*nxN)";
+
+const string ZGN_Wxx = "-((2*dxE*dyS^^2-2*dxS*dyE^^2)*nxY+(2*dyE^^2*dyS-2*dyE*dyS^^2)*nxN)";
+
+const string ZGN_Ixx = "(((2*dxS-2*dxE)*dyW^^2+(2*dxE-2*dxW)*dyS^^2+(2*dxW-2*dxS)*dyE^^2)*nxY
+ +((2*dyE-2*dyS)*dyW^^2+(2*dyS^^2-2*dyE^^2)*dyW-2*dyE*dyS^^2+2*dyE^^2*dyS)*nxN)";
+
+
+const string ZGN_Nyy = "0.0";
+
+const string ZGN_Syy = "-((2*dxE*dxW^^2-2*dxE^^2*dxW)*nxY+(2*dxE^^2*dyW-2*dxW^^2*dyE)*nxN)";
+
+const string ZGN_Eyy = "((2*dxS*dxW^^2-2*dxS^^2*dxW)*nxY+(2*dxS^^2*dyW-2*dxW^^2*dyS)*nxN)";
+
+const string ZGN_Wyy = "((2*dxE*dxS^^2-2*dxE^^2*dxS)*nxY+(2*dxE^^2*dyS-2*dxS^^2*dyE)*nxN)";
+
+const string ZGN_Iyy = "-(((2*dxS-2*dxE)*dxW^^2+(2*dxE^^2-2*dxS^^2)*dxW+2*dxE*dxS^^2-2*dxE^^2*dxS)*nxY
+ +((2*dxS^^2-2*dxE^^2)*dyW+(2*dxE^^2-2*dxW^^2)*dyS+(2*dxW^^2-2*dxS^^2)*dyE)*nxN)";
+
+const string ZGN_D = "((dxE*dxS^^2-dxE^^2*dxS)*dyW^^2+(dxE^^2*dxW-dxE*dxW^^2)*dyS^^2
+                            +(dxS*dxW^^2-dxS^^2*dxW)*dyE^^2)
+ *nxY
+  +((dxE^^2*dyS-dxS^^2*dyE)*dyW^^2+(dxS^^2*dyE^^2-dxE^^2*dyS^^2)*dyW+dxW^^2*dyE*dyS^^2
+                                -dxW^^2*dyE^^2*dyS)
+    *nxN";
+
+/*  South */
+
+const string ZGS_Nx = "-((dxE^^2*dyW^^2-dxW^^2*dyE^^2)*nyS)";
+
+const string ZGS_Sx = "0.0";
+
+const string ZGS_Ex = "((dxN^^2*dyW^^2-dxW^^2*dyN^^2)*nyS)";
+
+const string ZGS_Wx = "((dxE^^2*dyN^^2-dxN^^2*dyE^^2)*nyS)";
+
+const string ZGS_Ix = "-(((dxN^^2-dxE^^2)*dyW^^2+(dxE^^2-dxW^^2)*dyN^^2+(dxW^^2-dxN^^2)*dyE^^2)*nyS)";
+
+
+const string ZGS_Ny = "((dxE^^2*dyW^^2-dxW^^2*dyE^^2)*nxS)";
+
+const string ZGS_Sy = "0.0";
+
+const string ZGS_Ey = "-((dxN^^2*dyW^^2-dxW^^2*dyN^^2)*nxS)";
+
+const string ZGS_Wy = "-((dxE^^2*dyN^^2-dxN^^2*dyE^^2)*nxS)";
+
+const string ZGS_Iy = "(((dxN^^2-dxE^^2)*dyW^^2+(dxE^^2-dxW^^2)*dyN^^2+(dxW^^2-dxN^^2)*dyE^^2)*nxS)";
+
+
+const string ZGS_Nxx = "((2*dxE*dyW^^2-2*dxW*dyE^^2)*nyS+(2*dyE^^2*dyW-2*dyE*dyW^^2)*nxS)";
+
+const string ZGS_Sxx = "0.0";
+
+const string ZGS_Exx = "-((2*dxN*dyW^^2-2*dxW*dyN^^2)*nyS+(2*dyN^^2*dyW-2*dyN*dyW^^2)*nxS)";
+
+const string ZGS_Wxx = "-((2*dxE*dyN^^2-2*dxN*dyE^^2)*nyS+(2*dyE^^2*dyN-2*dyE*dyN^^2)*nxS)";
+
+const string ZGS_Ixx = "(((2*dxN-2*dxE)*dyW^^2+(2*dxE-2*dxW)*dyN^^2+(2*dxW-2*dxN)*dyE^^2)*nyS
+ +((2*dyE-2*dyN)*dyW^^2+(2*dyN^^2-2*dyE^^2)*dyW-2*dyE*dyN^^2+2*dyE^^2*dyN)*nxS)";
+
+
+const string ZGS_Nyy = "-((2*dxE*dxW^^2-2*dxE^^2*dxW)*nyS+(2*dxE^^2*dyW-2*dxW^^2*dyE)*nxS)";
+
+const string ZGS_Syy = "0.0";
+
+const string ZGS_Eyy = "((2*dxN*dxW^^2-2*dxN^^2*dxW)*nyS+(2*dxN^^2*dyW-2*dxW^^2*dyN)*nxS)";
+
+const string ZGS_Wyy = "((2*dxE*dxN^^2-2*dxE^^2*dxN)*nyS+(2*dxE^^2*dyN-2*dxN^^2*dyE)*nxS)";
+
+const string ZGS_Iyy = "-(((2*dxN-2*dxE)*dxW^^2+(2*dxE^^2-2*dxN^^2)*dxW+2*dxE*dxN^^2-2*dxE^^2*dxN)*nyS
+ +((2*dxN^^2-2*dxE^^2)*dyW+(2*dxE^^2-2*dxW^^2)*dyN+(2*dxW^^2-2*dxN^^2)*dyE)*nxS)";
+
+const string ZGS_D = "((dxE*dxN^^2-dxE^^2*dxN)*dyW^^2+(dxE^^2*dxW-dxE*dxW^^2)*dyN^^2
+                            +(dxN*dxW^^2-dxN^^2*dxW)*dyE^^2)
+ *nyS
+  +((dxE^^2*dyN-dxN^^2*dyE)*dyW^^2+(dxN^^2*dyE^^2-dxE^^2*dyN^^2)*dyW+dxW^^2*dyE*dyN^^2
+                                -dxW^^2*dyE^^2*dyN)
+    *nxS";
+
+/* East */
+
+const string ZGE_Nx = "-((dxS^^2*dyW^^2-dxW^^2*dyS^^2)*nyE)";
+
+const string ZGE_Sx = "((dxN^^2*dyW^^2-dxW^^2*dyN^^2)*nyE)";
 
 const string ZGE_Ex = "0.0";
 
-const string ZGE_Wx = "-((dxN*dyN*dyS^^2+(dxN^^2*dxS-dxS*dyN^^2)*dyS-dxN*dxS^^2*dyN)*nyE)";
+const string ZGE_Wx = "-((dxN^^2*dyS^^2-dxS^^2*dyN^^2)*nyE)";
 
-const string ZGE_Ix = "(((dxS*dyS-dxN*dyN)*dyW^^2+((-dxW*dyS^^2)+dxW*dyN^^2+(dxS^^2-dxN^^2)*dxW)*dyW
-                         +dxN*dyN*dyS^^2+((-dxS*dyN^^2)-dxS*dxW^^2+dxN^^2*dxS)*dyS
-                                                  +(dxN*dxW^^2-dxN*dxS^^2)*dyN)*nyE)";
+const string ZGE_Ix = "(((dxS^^2-dxN^^2)*dyW^^2+(dxN^^2-dxW^^2)*dyS^^2+(dxW^^2-dxS^^2)*dyN^^2)*nyE)";
 
-const string ZGE_Ny = "((dxS*dyS*dyW^^2+(dxS^^2*dxW-dxW*dyS^^2)*dyW-dxS*dxW^^2*dyS)*nxE)";
 
-const string ZGE_Sy = "-((dxN*dyN*dyW^^2+(dxN^^2*dxW-dxW*dyN^^2)*dyW-dxN*dxW^^2*dyN)*nxE)";
+const string ZGE_Ny = "((dxS^^2*dyW^^2-dxW^^2*dyS^^2)*nxE)";
+
+const string ZGE_Sy = "-((dxN^^2*dyW^^2-dxW^^2*dyN^^2)*nxE)";
 
 const string ZGE_Ey = "0.0";
 
-const string ZGE_Wy = "((dxN*dyN*dyS^^2+(dxN^^2*dxS-dxS*dyN^^2)*dyS-dxN*dxS^^2*dyN)*nxE)";
+const string ZGE_Wy = "((dxN^^2*dyS^^2-dxS^^2*dyN^^2)*nxE)";
 
-const string ZGE_Iy = "-(((dxS*dyS-dxN*dyN)*dyW^^2+((-dxW*dyS^^2)+dxW*dyN^^2+(dxS^^2-dxN^^2)*dxW)*dyW
-                          +dxN*dyN*dyS^^2
-                          +((-dxS*dyN^^2)-dxS*dxW^^2+dxN^^2*dxS)*dyS
-                          +(dxN*dxW^^2-dxN*dxS^^2)*dyN)*nxE)";
+const string ZGE_Iy = "-(((dxS^^2-dxN^^2)*dyW^^2+(dxN^^2-dxW^^2)*dyS^^2+(dxW^^2-dxS^^2)*dyN^^2)*nxE)";
 
-const string ZGE_Nxx = "((2*dxS*dxW*dyW-2*dxS*dxW*dyS)*nyE+(2*dxS-2*dxW)*dyS*dyW*nxE)";
 
-const string ZGE_Sxx = "-((2*dxN*dxW*dyW-2*dxN*dxW*dyN)*nyE+(2*dxN-2*dxW)*dyN*dyW*nxE)";
+const string ZGE_Nxx = "((2*dxS*dyW^^2-2*dxW*dyS^^2)*nyE+(2*dyS^^2*dyW-2*dyS*dyW^^2)*nxE)";
+
+const string ZGE_Sxx = "-((2*dxN*dyW^^2-2*dxW*dyN^^2)*nyE+(2*dyN^^2*dyW-2*dyN*dyW^^2)*nxE)";
 
 const string ZGE_Exx = "0.0";
 
-const string ZGE_Wxx = "((2*dxN*dxS*dyS-2*dxN*dxS*dyN)*nyE+(2*dxN-2*dxS)*dyN*dyS*nxE)";
+const string ZGE_Wxx = "((2*dxN*dyS^^2-2*dxS*dyN^^2)*nyE+(2*dyN^^2*dyS-2*dyN*dyS^^2)*nxE)";
 
-const string ZGE_Ixx = "-(((2*dxS-2*dxN)*dxW*dyW+(2*dxN*dxS-2*dxS*dxW)*dyS+(2*dxN*dxW-2*dxN*dxS)*dyN)
+const string ZGE_Ixx = "-(((2*dxS-2*dxN)*dyW^^2+(2*dxN-2*dxW)*dyS^^2+(2*dxW-2*dxS)*dyN^^2)*nyE
+ +((2*dyN-2*dyS)*dyW^^2+(2*dyS^^2-2*dyN^^2)*dyW-2*dyN*dyS^^2+2*dyN^^2*dyS)*nxE)";
+
+
+const string ZGE_Nyy = "-((2*dxS*dxW^^2-2*dxS^^2*dxW)*nyE+(2*dxS^^2*dyW-2*dxW^^2*dyS)*nxE)";
+
+const string ZGE_Syy = "((2*dxN*dxW^^2-2*dxN^^2*dxW)*nyE+(2*dxN^^2*dyW-2*dxW^^2*dyN)*nxE)";
+
+const string ZGE_Eyy = "0.0";
+
+const string ZGE_Wyy = "-((2*dxN*dxS^^2-2*dxN^^2*dxS)*nyE+(2*dxN^^2*dyS-2*dxS^^2*dyN)*nxE)";
+
+const string ZGE_Iyy = "(((2*dxS-2*dxN)*dxW^^2+(2*dxN^^2-2*dxS^^2)*dxW+2*dxN*dxS^^2-2*dxN^^2*dxS)*nyE
+ +((2*dxS^^2-2*dxN^^2)*dyW+(2*dxN^^2-2*dxW^^2)*dyS+(2*dxW^^2-2*dxS^^2)*dyN)*nxE)";
+
+const string ZGE_D = "((dxN^^2*dxS-dxN*dxS^^2)*dyW^^2+(dxN*dxW^^2-dxN^^2*dxW)*dyS^^2
+                            +(dxS^^2*dxW-dxS*dxW^^2)*dyN^^2)
  *nyE
- +(((2*dxS-2*dxW)*dyS+(2*dxW-2*dxN)*dyN)*dyW+(2*dxN-2*dxS)*dyN*dyS)*nxE)";
-
-
-const string ZGE_Nxy = "((dxS*dyW^^2-dxW*dyS^^2-dxS*dxW^^2+dxS^^2*dxW)*nyE
- +((-dyS*dyW^^2)+(dyS^^2-dxS^^2)*dyW+dxW^^2*dyS)*nxE)";
-
-const string ZGE_Sxy = "-((dxN*dyW^^2-dxW*dyN^^2-dxN*dxW^^2+dxN^^2*dxW)*nyE
- +((-dyN*dyW^^2)+(dyN^^2-dxN^^2)*dyW+dxW^^2*dyN)*nxE)";
-
-const string ZGE_Exy = "0.0";
-
-const string ZGE_Wxy = "((dxN*dyS^^2-dxS*dyN^^2-dxN*dxS^^2+dxN^^2*dxS)*nyE
- +((-dyN*dyS^^2)+(dyN^^2-dxN^^2)*dyS+dxS^^2*dyN)*nxE)";
-
-const string ZGE_Ixy = "-(((dxS-dxN)*dyW^^2+(dxN-dxW)*dyS^^2+(dxW-dxS)*dyN^^2+(dxN-dxS)*dxW^^2
-                  +(dxS^^2-dxN^^2)*dxW-dxN*dxS^^2+dxN^^2*dxS)
- *nyE
- +((dyN-dyS)*dyW^^2+(dyS^^2-dyN^^2-dxS^^2+dxN^^2)*dyW-dyN*dyS^^2
-                  +(dyN^^2+dxW^^2-dxN^^2)*dyS+(dxS^^2-dxW^^2)*dyN)
-  *nxE)";
-
-const string ZGE_D = "((dxN*dxS*dyN-dxN*dxS*dyS)*dyW^^2+(dxN*dxW*dyS^^2-dxS*dxW*dyN^^2
-                                               +(dxN^^2*dxS-dxN*dxS^^2)*dxW)
-                                 *dyW-dxN*dxW*dyN*dyS^^2
-                                +(dxS*dxW*dyN^^2+dxN*dxS*dxW^^2-dxN^^2*dxS*dxW)
-                                 *dyS+(dxN*dxS^^2*dxW-dxN*dxS*dxW^^2)*dyN)
- *nyE
- +((dxS-dxN)*dyN*dyS*dyW^^2+((dxN-dxW)*dyN*dyS^^2
-                           +((dxW-dxS)*dyN^^2-dxN^^2*dxW+dxN^^2*dxS)*dyS
-                           +(dxS^^2*dxW-dxN*dxS^^2)*dyN)
-                           *dyW+(dxN-dxS)*dxW^^2*dyN*dyS)
+ +((dxS^^2*dyN-dxN^^2*dyS)*dyW^^2+(dxN^^2*dyS^^2-dxS^^2*dyN^^2)*dyW-dxW^^2*dyN*dyS^^2
+                              +dxW^^2*dyN^^2*dyS)
   *nxE";
 
 /*
     With an insulating boundary on the west side, the formulas are similar, but different.
 */
 
-const string ZGW_Nx = "-((dxE*dyE*dyS^^2+(dxE^^2*dxS-dxS*dyE^^2)*dyS-dxE*dxS^^2*dyE)*nyW)";
+const string ZGW_Nx = "((dxE^^2*dyS^^2-dxS^^2*dyE^^2)*nyW)";
 
-const string ZGW_Sx = "((dxE*dyE*dyN^^2+(dxE^^2*dxN-dxN*dyE^^2)*dyN-dxE*dxN^^2*dyE)*nyW)";
+const string ZGW_Sx = "-((dxE^^2*dyN^^2-dxN^^2*dyE^^2)*nyW)";
 
-const string ZGW_Ex = "((dxN*dyN*dyS^^2+(dxN^^2*dxS-dxS*dyN^^2)*dyS-dxN*dxS^^2*dyN)*nyW)";
+const string ZGW_Ex = "-((dxN^^2*dyS^^2-dxS^^2*dyN^^2)*nyW)";
 
 const string ZGW_Wx = "0.0";
 
-const string ZGW_Ix = "-(((dxN*dyN-dxE*dyE)*dyS^^2+((-dxS*dyN^^2)+dxS*dyE^^2+(dxN^^2-dxE^^2)*dxS)*dyS
-                          +dxE*dyE*dyN^^2
-                          +((-dxN*dyE^^2)-dxN*dxS^^2+dxE^^2*dxN)*dyN
-                          +(dxE*dxS^^2-dxE*dxN^^2)*dyE)*nyW)";
+const string ZGW_Ix = "(((dxN^^2-dxE^^2)*dyS^^2+(dxE^^2-dxS^^2)*dyN^^2+(dxS^^2-dxN^^2)*dyE^^2)*nyW)";
 
-const string ZGW_Ny = "((dxE*dyE*dyS^^2+(dxE^^2*dxS-dxS*dyE^^2)*dyS-dxE*dxS^^2*dyE)*nxW)";
 
-const string ZGW_Sy = "-((dxE*dyE*dyN^^2+(dxE^^2*dxN-dxN*dyE^^2)*dyN-dxE*dxN^^2*dyE)*nxW)";
+const string ZGW_Ny = "-((dxE^^2*dyS^^2-dxS^^2*dyE^^2)*nxW)";
 
-const string ZGW_Ey = "-((dxN*dyN*dyS^^2+(dxN^^2*dxS-dxS*dyN^^2)*dyS-dxN*dxS^^2*dyN)*nxW)";
+const string ZGW_Sy = "((dxE^^2*dyN^^2-dxN^^2*dyE^^2)*nxW)";
+
+const string ZGW_Ey = "((dxN^^2*dyS^^2-dxS^^2*dyN^^2)*nxW)";
 
 const string ZGW_Wy = "0.0";
 
-const string ZGW_Iy = "(((dxN*dyN-dxE*dyE)*dyS^^2+((-dxS*dyN^^2)+dxS*dyE^^2+(dxN^^2-dxE^^2)*dxS)*dyS
-                         +dxE*dyE*dyN^^2+((-dxN*dyE^^2)-dxN*dxS^^2+dxE^^2*dxN)*dyN
-                         +(dxE*dxS^^2-dxE*dxN^^2)*dyE)*nxW)";
+const string ZGW_Iy = "-(((dxN^^2-dxE^^2)*dyS^^2+(dxE^^2-dxS^^2)*dyN^^2+(dxS^^2-dxN^^2)*dyE^^2)*nxW)";
 
-const string ZGW_Nxx = "((2*dxE*dxS*dyS-2*dxE*dxS*dyE)*nyW+(2*dxE-2*dxS)*dyE*dyS*nxW)";
 
-const string ZGW_Sxx = "-((2*dxE*dxN*dyN-2*dxE*dxN*dyE)*nyW+(2*dxE-2*dxN)*dyE*dyN*nxW)";
+const string ZGW_Nxx = "-((2*dxE*dyS^^2-2*dxS*dyE^^2)*nyW+(2*dyE^^2*dyS-2*dyE*dyS^^2)*nxW)";
 
-const string ZGW_Exx = "-((2*dxN*dxS*dyS-2*dxN*dxS*dyN)*nyW+(2*dxN-2*dxS)*dyN*dyS*nxW)";
+const string ZGW_Sxx = "((2*dxE*dyN^^2-2*dxN*dyE^^2)*nyW+(2*dyE^^2*dyN-2*dyE*dyN^^2)*nxW)";
+
+const string ZGW_Exx = "((2*dxN*dyS^^2-2*dxS*dyN^^2)*nyW+(2*dyN^^2*dyS-2*dyN*dyS^^2)*nxW)";
 
 const string ZGW_Wxx = "0.0";
 
-const string ZGW_Ixx = "(((2*dxN-2*dxE)*dxS*dyS+(2*dxE*dxN-2*dxN*dxS)*dyN+(2*dxE*dxS-2*dxE*dxN)*dyE)
+const string ZGW_Ixx = "-(((2*dxN-2*dxE)*dyS^^2+(2*dxE-2*dxS)*dyN^^2+(2*dxS-2*dxN)*dyE^^2)*nyW
+ +((2*dyE-2*dyN)*dyS^^2+(2*dyN^^2-2*dyE^^2)*dyS-2*dyE*dyN^^2+2*dyE^^2*dyN)*nxW)";
+
+
+const string ZGW_Nyy = "((2*dxE*dxS^^2-2*dxE^^2*dxS)*nyW+(2*dxE^^2*dyS-2*dxS^^2*dyE)*nxW)";
+
+const string ZGW_Syy = "-((2*dxE*dxN^^2-2*dxE^^2*dxN)*nyW+(2*dxE^^2*dyN-2*dxN^^2*dyE)*nxW)";
+
+const string ZGW_Eyy = "-((2*dxN*dxS^^2-2*dxN^^2*dxS)*nyW+(2*dxN^^2*dyS-2*dxS^^2*dyN)*nxW)";
+
+const string ZGW_Wyy = "0.0";
+
+const string ZGW_Iyy = "(((2*dxN-2*dxE)*dxS^^2+(2*dxE^^2-2*dxN^^2)*dxS+2*dxE*dxN^^2-2*dxE^^2*dxN)*nyW
+ +((2*dxN^^2-2*dxE^^2)*dyS+(2*dxE^^2-2*dxS^^2)*dyN+(2*dxS^^2-2*dxN^^2)*dyE)*nxW)";
+
+const string ZGW_D = "((dxE^^2*dxN-dxE*dxN^^2)*dyS^^2+(dxE*dxS^^2-dxE^^2*dxS)*dyN^^2
+                            +(dxN^^2*dxS-dxN*dxS^^2)*dyE^^2)
  *nyW
- +(((2*dxN-2*dxS)*dyN+(2*dxS-2*dxE)*dyE)*dyS+(2*dxE-2*dxN)*dyE*dyN)*nxW)";
-
-const string ZGW_Nxy = "((dxE*dyS^^2-dxS*dyE^^2-dxE*dxS^^2+dxE^^2*dxS)*nyW
- +((-dyE*dyS^^2)+(dyE^^2-dxE^^2)*dyS+dxS^^2*dyE)*nxW)";
-
-const string ZGW_Sxy = "-((dxN*dyS^^2-dxS*dyN^^2-dxN*dxS^^2+dxN^^2*dxS)*nyW
- +((-dyN*dyS^^2)+(dyN^^2-dxN^^2)*dyS+dxS^^2*dyN)*nxW)";
-
-const string ZGW_Exy = "-((dxN*dyS^^2-dxS*dyN^^2-dxN*dxS^^2+dxN^^2*dxS)*nyW
- +((-dyN*dyS^^2)+(dyN^^2-dxN^^2)*dyS+dxS^^2*dyN)*nxW)";
-
-const string ZGW_Wxy = "0.0";
-
-const string ZGW_Ixy = "(((dxN-dxE)*dyS^^2+(dxE-dxS)*dyN^^2+(dxS-dxN)*dyE^^2+(dxE-dxN)*dxS^^2
-                 +(dxN^^2-dxE^^2)*dxS-dxE*dxN^^2+dxE^^2*dxN)
- *nyW
- +((dyE-dyN)*dyS^^2+(dyN^^2-dyE^^2-dxN^^2+dxE^^2)*dyS-dyE*dyN^^2
-                  +(dyE^^2+dxS^^2-dxE^^2)*dyN+(dxN^^2-dxS^^2)*dyE)
-  *nxW)";
-
-const string ZGW_D = "((dxE*dxN*dyN-dxE*dxN*dyE)*dyS^^2+((-dxE*dxS*dyN^^2)+dxN*dxS*dyE^^2
-                                                  +(dxE*dxN^^2-dxE^^2*dxN)*dxS)
-                                 *dyS+dxE*dxS*dyE*dyN^^2
-                                +((-dxN*dxS*dyE^^2)-dxE*dxN*dxS^^2
-                                                  +dxE^^2*dxN*dxS)
-                                 *dyN+(dxE*dxN*dxS^^2-dxE*dxN^^2*dxS)*dyE)
- *nyW
- +((dxE-dxN)*dyE*dyN*dyS^^2+((dxS-dxE)*dyE*dyN^^2
-                           +((dxN-dxS)*dyE^^2+dxE^^2*dxS-dxE^^2*dxN)*dyN
-                           +(dxE*dxN^^2-dxN^^2*dxS)*dyE)
-                           *dyS+(dxN-dxE)*dxS^^2*dyE*dyN)
+ +((dxN^^2*dyE-dxE^^2*dyN)*dyS^^2+(dxE^^2*dyN^^2-dxN^^2*dyE^^2)*dyS-dxS^^2*dyE*dyN^^2
+                              +dxS^^2*dyE^^2*dyN)
   *nxW";
 
 /*
