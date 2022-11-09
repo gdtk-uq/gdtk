@@ -101,8 +101,8 @@ class GlobalConfig():
         'nib', 'njb', 'nkb', 'blk_ids', 'nics', 'njcs', 'nkcs', \
         'dt_init', 'cfl_list', 'cfl_count', 'print_count', \
         'dt_plot_list', 'max_time', 'max_step', \
-        'x_order', 't_order', 'flux_calc', 'viscous', 'iovar_names', \
-        'threads_per_gpu_block'
+        'x_order', 't_order', 'flux_calc', 'viscous', 'source_terms', \
+        'iovar_names', 'threads_per_gpu_block'
 
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -129,6 +129,7 @@ class GlobalConfig():
         self.t_order = 2
         self.flux_calc = "ausmdv"
         self.viscous = False
+        self.source_terms = "none"
         self.threads_per_gpu_block = 128
         # The following is not meant to be edited for individual simulations but
         # should be kept consistent with the symbols in IOvar namespace
@@ -166,6 +167,7 @@ class GlobalConfig():
         fp.write('  "t_order": %d,\n' % self.t_order)
         fp.write('  "flux_calc": "%s",\n' % self.flux_calc)
         fp.write('  "viscous": %s,\n' % json.dumps(self.viscous))
+        fp.write('  "source_terms": "%s",\n' % self.source_terms)
         fp.write('  "threads_per_gpu_block": %d,\n' % self.threads_per_gpu_block)
         #
         if len(self.dt_plot_list) == 0:

@@ -476,7 +476,7 @@ void march_in_time_using_gpu(bool binary_data)
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
             nGPUthreads = Config::threads_per_GPUblock;
-            update_stage_1_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, SimState::dt, bad_cell_count_on_gpu);
+            update_stage_1_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, SimState::dt, Config::source_terms, bad_cell_count_on_gpu);
             cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
@@ -526,7 +526,7 @@ void march_in_time_using_gpu(bool binary_data)
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
             nGPUthreads = Config::threads_per_GPUblock;
-            update_stage_2_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, SimState::dt, bad_cell_count_on_gpu);
+            update_stage_2_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, SimState::dt, Config::source_terms, bad_cell_count_on_gpu);
             cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }
@@ -577,7 +577,7 @@ void march_in_time_using_gpu(bool binary_data)
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
             nGPUthreads = Config::threads_per_GPUblock;
-            update_stage_3_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, SimState::dt, bad_cell_count_on_gpu);
+            update_stage_3_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, SimState::dt, Config::source_terms, bad_cell_count_on_gpu);
             cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         }

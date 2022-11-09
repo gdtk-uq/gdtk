@@ -954,6 +954,7 @@ struct Block {
             FVCell& c = cells[i];
             ConservedQuantities& dUdt0 = dQdt[i];
             c.eval_dUdt(dUdt0, faces.data());
+            c.add_source_terms(dUdt0, Config::source_terms);
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
@@ -978,6 +979,7 @@ struct Block {
             ConservedQuantities& dUdt0 = dQdt[i];
             ConservedQuantities& dUdt1 = dQdt[cfg.nActiveCells + i];
             c.eval_dUdt(dUdt1, faces.data());
+            c.add_source_terms(dUdt1, Config::source_terms);
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
@@ -1003,6 +1005,7 @@ struct Block {
             ConservedQuantities& dUdt1 = dQdt[cfg.nActiveCells + i];
             ConservedQuantities& dUdt2 = dQdt[2*cfg.nActiveCells + i];
             c.eval_dUdt(dUdt2, faces.data());
+            c.add_source_terms(dUdt0, Config::source_terms);
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
@@ -1112,13 +1115,14 @@ void add_viscous_flux_on_gpu(Block& blk, const BConfig& cfg)
 }
 
 __global__
-void update_stage_1_on_gpu(Block& blk, const BConfig& cfg, number dt, int* bad_cell_count)
+void update_stage_1_on_gpu(Block& blk, const BConfig& cfg, number dt, int isrc, int* bad_cell_count)
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nActiveCells) {
         FVCell& c = blk.cells_on_gpu[i];
         ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
         c.eval_dUdt(dUdt0, blk.faces_on_gpu);
+        c.add_source_terms(dUdt0, isrc);
         ConservedQuantities& U0 = blk.Q_on_gpu[i];
         ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
         for (int j=0; j < CQI::n; j++) {
@@ -1133,7 +1137,7 @@ void update_stage_1_on_gpu(Block& blk, const BConfig& cfg, number dt, int* bad_c
 }
 
 __global__
-void update_stage_2_on_gpu(Block& blk, const BConfig& cfg, number dt, int* bad_cell_count)
+void update_stage_2_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, int* bad_cell_count)
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nActiveCells) {
@@ -1141,6 +1145,7 @@ void update_stage_2_on_gpu(Block& blk, const BConfig& cfg, number dt, int* bad_c
         ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
         ConservedQuantities& dUdt1 = blk.dQdt_on_gpu[cfg.nActiveCells + i];
         c.eval_dUdt(dUdt1, blk.faces_on_gpu);
+        c.add_source_terms(dUdt1, isrc);
         ConservedQuantities& U0 = blk.Q_on_gpu[i];
         ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
         for (int j=0; j < CQI::n; j++) {
@@ -1155,7 +1160,7 @@ void update_stage_2_on_gpu(Block& blk, const BConfig& cfg, number dt, int* bad_c
 }
 
 __global__
-void update_stage_3_on_gpu(Block& blk, const BConfig& cfg, number dt, int* bad_cell_count)
+void update_stage_3_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, int* bad_cell_count)
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nActiveCells) {
@@ -1164,6 +1169,7 @@ void update_stage_3_on_gpu(Block& blk, const BConfig& cfg, number dt, int* bad_c
         ConservedQuantities& dUdt1 = blk.dQdt_on_gpu[cfg.nActiveCells + i];
         ConservedQuantities& dUdt2 = blk.dQdt_on_gpu[2*cfg.nActiveCells + i];
         c.eval_dUdt(dUdt2, blk.faces_on_gpu);
+        c.add_source_terms(dUdt2, isrc);
         ConservedQuantities& U0 = blk.Q_on_gpu[i];
         ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
         for (int j=0; j < CQI::n; j++) {

@@ -241,6 +241,7 @@ namespace Config {
     int x_order = 2;
     int t_order = 2;
     int flux_calc = FluxCalc::ausmdv;
+    int source_terms = SourceTerms::none;
     bool viscous = false;
     //
     // GPU-related parameters.
@@ -377,6 +378,7 @@ vector<BConfig> read_config_file(string fileName)
     Config::x_order = jsonData["x_order"].get<int>();
     Config::t_order = jsonData["t_order"].get<int>();
     Config::flux_calc = flux_calc_from_name(jsonData["flux_calc"].get<string>());
+    Config::source_terms = source_terms_from_name(jsonData["source_terms"].get<string>());
     Config::dt_init = jsonData["dt_init"].get<number>();
     Config::max_time = jsonData["max_time"].get<number>();
     Config::max_step = jsonData["max_step"].get<int>();
@@ -394,6 +396,7 @@ vector<BConfig> read_config_file(string fileName)
         cout << "  x_order=" << Config::x_order << endl;
         cout << "  t_order=" << Config::t_order << endl;
         cout << "  flux_calc=" << FluxCalc::names[Config::flux_calc] << endl;
+        cout << "  source_terms=" << SourceTerms::names[Config::source_terms] << endl;
         cout << "  dt_init=" << Config::dt_init << endl;
         cout << "  max_time=" << Config::max_time << endl;
         cout << "  max_step=" << Config::max_step << endl;

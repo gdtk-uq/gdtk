@@ -42,6 +42,23 @@ int Face_indx_from_name(string name)
 }
 
 
+namespace SourceTerms {
+    array<string,3> names{"none", "manufactured_solution", "powers_aslam_combustion"};
+    //
+    constexpr int none = 0;
+    constexpr int manufactured_solution = 1;
+    constexpr int powers_aslam_combustion = 2;
+};
+
+int source_terms_from_name(string name)
+{
+    if (name == "none") return SourceTerms::none;
+    if (name == "manufactured_solution") return SourceTerms::manufactured_solution;
+    if (name == "powers_aslam_combustion") return SourceTerms::powers_aslam_combustion;
+    return SourceTerms::none;
+}
+
+
 namespace IOvar {
     // Following the new IO model for Eilmer, we set up the accessor functions
     // for the flow data that is held in the flow data files.
@@ -144,6 +161,31 @@ struct FVCell {
         number jsignal = jLength/(fabs(fs.vel.dot(jnorm))+fs.gas.a);
         number ksignal = kLength/(fabs(fs.vel.dot(knorm))+fs.gas.a);
         return cfl * fmin(fmin(isignal,jsignal),ksignal);
+    }
+
+    __host__ __device__
+    void add_source_terms(ConservedQuantities& dUdt, int isrc)
+    {
+        switch (isrc) {
+        case SourceTerms::none:
+            break;
+        case SourceTerms::manufactured_solution:
+            dUdt[CQI::mass] += 0.0; // [TODO] implement the actual calculation.
+            dUdt[CQI::xMom] += 0.0;
+            dUdt[CQI::yMom] += 0.0;
+            dUdt[CQI::zMom] += 0.0;
+            dUdt[CQI::totEnergy] += 0.0;
+            break;
+        case SourceTerms::powers_aslam_combustion:
+            // Powers and Aslam A->B combustion.
+            if (fs.gas.T > 400.0) {
+                dUdt[CQI::totEnergy] += 0.0; // [TODO] implement the actual calculation.
+            }
+            break;
+        default:
+            break;
+        }
+        return;
     }
 
     __host__ __device__
