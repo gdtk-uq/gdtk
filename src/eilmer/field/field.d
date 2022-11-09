@@ -27,6 +27,13 @@ import fieldconductivity;
 import fieldexchange;
 import fieldderivatives;
 
+immutable uint ZNG_interior = 0b0000;
+immutable uint ZNG_north    = 0b0001;
+immutable uint ZNG_east     = 0b0010;
+immutable uint ZNG_south    = 0b0100;
+immutable uint ZNG_west     = 0b1000;
+immutable uint[4] ZNG_types = [ZNG_north, ZNG_east, ZNG_south, ZNG_west];
+
 class ElectricField {
     this(const FluidBlock[] localFluidBlocks, const string field_conductivity_model) {
         writeln("Initialising Electric Field Solver...");
@@ -116,7 +123,25 @@ class ElectricField {
                 double[4] fdx, fdy, fdxx, fdyy;
                 double _Ix, _Iy, _Ixx, _Iyy, D;
 
-                if (cell.iface[1].is_on_boundary) {
+                // Figure out what kind of cell we are, since ones with ZeroNormalGradient
+                // have different equations for the derivatives...
+				uint celltype = ZNG_interior;
+                foreach(io, face; cell.iface){
+                    writefln("Testing face: %d %d %s ", face.id, io, face_name[io]);
+					if (face.is_on_boundary) {
+						auto field_bc = field_bcs[blkid][face.bc_id];
+                        writefln("Is Boundary! %d %s", io, field_bc);
+						if ((cast(ZeroNormalGradient) field_bc) !is null) {
+                            writefln("Is ZNG! %d", ZNG_types[io] );
+                            celltype = celltype | ZNG_types[io];
+						}
+                    }
+				}
+
+                writefln(" celltype is %d", celltype);
+                switch (celltype) {
+                case ZNG_east:
+                    writefln("In ZNG_east");
                     D = mixin(ZGE_D);
                     fdx[0] = mixin(ZGE_Nx);
                     fdx[1] = mixin(ZGE_Ex);
@@ -141,7 +166,9 @@ class ElectricField {
                     fdyy[2] = mixin(ZGE_Syy);
                     fdyy[3] = mixin(ZGE_Wyy);
                     _Iyy    = mixin(ZGE_Iyy);
-                } else if (cell.iface[3].is_on_boundary) {
+                    break;
+                case ZNG_west:
+                    writefln("In ZNG_west");
                     D = mixin(ZGW_D);
                     fdx[0] = mixin(ZGW_Nx);
                     fdx[1] = mixin(ZGW_Ex);
@@ -166,7 +193,9 @@ class ElectricField {
                     fdyy[2] = mixin(ZGW_Syy);
                     fdyy[3] = mixin(ZGW_Wyy);
                     _Iyy    = mixin(ZGW_Iyy);
-                } else {
+                    break;
+                case ZNG_interior:
+                    writefln("In ZNG_interior");
                     D = mixin(R_D);
                     fdx[0] = mixin(R_Nx);
                     fdx[1] = mixin(R_Ex);
@@ -191,6 +220,10 @@ class ElectricField {
                     fdyy[2] = mixin(R_Syy);
                     fdyy[3] = mixin(R_Wyy);
                     _Iyy    = mixin(R_Iyy);
+                    break;
+                default:
+                    string errMsg = format("An invalid ZNGtype '%s' was requested.", celltype);
+                    throw new Error(errMsg);
                 }
 
                 //writef("Cell boundaries: ");
@@ -200,7 +233,7 @@ class ElectricField {
                 //        writef("%s - %s, ", face_name[io], field_bc);
                 //    }
                 //}
-                //writefln("");
+                writefln("");
                 foreach(io, face; cell.iface){
                     face.fs.gas.sigma = conductivity(face.fs.gas, face.pos, gmodel); // TODO: Redundant work.
                     double sign = cell.outsign[io];
@@ -300,6 +333,7 @@ class ElectricField {
 private:
     immutable int nbands = 5; // 5 for a 2D structured grid
     immutable bool precondition = true;
+
 
     GMResFieldSolver gmres;
     ConductivityModel conductivity;
