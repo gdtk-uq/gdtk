@@ -10,6 +10,7 @@ Author:
 
 Versions:
   2022-09-23  First Python code adpated from chkn_prep.py
+  2022-11-09  Rebuilt flow file reader.
 """
 
 # ----------------------------------------------------------------------
@@ -21,7 +22,7 @@ import math
 from copy import copy
 import numpy as np
 import json
-from zipfile import ZipFile
+import gzip
 import time
 
 from gdtk.geom.vector3 import Vector3, hexahedron_properties
@@ -82,6 +83,7 @@ def read_grids(jobDir, binaryData):
             for i in range(config['nib']):
                 fileName = gridDir + ('/grid-%04d-%04d-%04d' % (i, j, k))
                 if binaryData:
+                    fileName += '.bin'
                     if os.path.exists(fileName):
                         grids['%d,%d,%d'%(i,j,k)] = StructuredGrid(binaryfile=fileName)
                 else:
@@ -101,26 +103,28 @@ def read_flow_blocks(jobDir, tindx, binaryData):
     for k in range(config['nkb']):
         for j in range(config['njb']):
             for i in range(config['nib']):
-                fileName = flowDir + ('/flow-%04d-%04d-%04d.zip' % (i, j, k))
+                fileName = flowDir + ('/flow-%04d-%04d-%04d' % (i, j, k))
+                fileName += '.bin' if binaryData else '.gz'
                 if os.path.exists(fileName):
                     flows['%d,%d,%d'%(i,j,k)] = read_block_of_flow_data(fileName, binaryData)
     return
 
 def read_block_of_flow_data(fileName, binaryData):
     """
-    Look into a zip archive to get the flow field data as 1D arrays of float numbers.
+    The flow field data comes as a 1D array of float numbers.
+    The data for each flow variable is appended end-to-end.
     """
     global config
+    f = open(fileName, 'rb') if binaryData else gzip.open(fileName, 'rt')
+    combinedData = np.frombuffer(f.read(), dtype=float) if binaryData else np.loadtxt(f)
+    f.close()
+    ntotal = combinedData.shape[0]
+    nvars = len(config["iovar_names"])
+    ncells = ntotal // nvars
+    combinedData = combinedData.reshape((nvars,ncells))
     flowData = {}
-    zf = ZipFile(fileName, mode='r')
-    for var in config["iovar_names"]:
-        fp = zf.open(var, mode='r')
-        if binaryData:
-            flowData[var] = np.frombuffer(fp.read(), dtype=float)
-        else:
-            flowData[var] = np.loadtxt(fp)
-        fp.close()
-    zf.close()
+    for j,var in enumerate(config["iovar_names"]):
+        flowData[var] = combinedData[j,:]
     return flowData
 
 # --------------------------------------------------------------------

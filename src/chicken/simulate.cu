@@ -77,15 +77,11 @@ void initialize_simulation(int tindx_start, bool binary_data)
         cfg.fill_in_dimensions(Config::nics[i], Config::njcs[j], Config::nkcs[k], Config::threads_per_GPUblock);
         Block blk;
         bytes_allocated += sizeof(Block) + blk.configure(cfg);
-        if (binary_data) {
-            sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d", i, j, k);
-        } else {
-            sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
-        }
-        string fileName = Config::job + string(nameBuf);
+        sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d", i, j, k);
+        string fileName = Config::job + string(nameBuf) + ((binary_data) ? ".bin" : ".gz");
         blk.readGrid(cfg, fileName, binary_data);
-        sprintf(nameBuf, "/flow/t%04d/flow-%04d-%04d-%04d.zip", tindx_start, i, j, k);
-        fileName = Config::job + string(nameBuf);
+        sprintf(nameBuf, "/flow/t%04d/flow-%04d-%04d-%04d", tindx_start, i, j, k);
+        fileName = Config::job + string(nameBuf) + ((binary_data) ? ".bin" : ".gz");
         blk.readFlow(cfg, fileName, binary_data);
         blk.computeGeometry(cfg);
         fluidBlocks.push_back(blk);
@@ -173,8 +169,8 @@ void write_flow_data(int tindx, number tme, bool binary_data)
     for (int blk_id=0; blk_id < Config::nFluidBlocks; ++blk_id) {
         BConfig& blk_config = blk_configs[blk_id];
         int i = blk_config.i; int j = blk_config.j; int k = blk_config.k;
-        sprintf(nameBuf, "%s/flow-%04d-%04d-%04d.zip", flowDir.c_str(), i, j, k);
-        string fileName = string(nameBuf);
+        sprintf(nameBuf, "%s/flow-%04d-%04d-%04d", flowDir.c_str(), i, j, k);
+        string fileName = string(nameBuf) + ((binary_data) ? ".bin" : ".gz");
         fluidBlocks[blk_id].writeFlow(blk_config, fileName, binary_data);
     }
     // Update the times file.

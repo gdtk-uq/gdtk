@@ -40,7 +40,7 @@ import math
 from copy import copy
 import numpy as np
 import json
-from zipfile import ZipFile
+import gzip
 import time
 
 from gdtk.geom.vector3 import Vector3, hexahedron_properties
@@ -611,16 +611,14 @@ class FluidBlock():
                                                        p001, p101, p111, p011)
 
 
-    def write_flow_data_to_zip_file(self, fileName, varNamesList, binaryData):
+    def write_flow_data_to_file(self, fileName, varNamesList, binaryData):
         """
-        The format is approximately Eilmer's new IO format.
+        Write the data into the one file, one IO-variable after the other.
 
-        The order of the cells corresponds to the order expected
-        for a VTK structured-grid.
+        Within each block, the order of the cells corresponds to
+        the order expected for a VTK structured-grid.
         """
-        # Construct the ZIP archive, one variable (file) at a time.
-        zf = ZipFile(fileName, mode='w')
-        buf = {} # to retain the output buffers until the zip archive is closed.
+        f = open(fileName, 'wb') if binaryData else gzip.open(fileName, 'wt')
         for varName in varNamesList:
             if varName == 'posx': value = self.cellc.x
             elif varName == 'posy': value = self.cellc.y
@@ -635,16 +633,14 @@ class FluidBlock():
             elif varName == 'vely': value = self.flow['vely']
             elif varName == 'velz': value = self.flow['velz']
             else: raise RuntimeError('unhandled variable name: ' + varName)
-            fp = zf.open(varName, mode='w')
             if binaryData:
-                buf[varName] = value.flatten().tobytes()
+                buf = value.flatten().tobytes()
             else:
                 text = np.array2string(value.flatten(), separator='\n', threshold=100_000_000)
-                buf[varName] = text.strip('[]').encode('utf-8')
-            fp.write(buf[varName])
-            fp.close()
+                buf = text.strip('[]')+'\n'
+            f.write(buf)
             # end varName loop
-        zf.close()
+        f.close()
         return
 
 # --------------------------------------------------------------------
@@ -775,7 +771,7 @@ def write_initial_files(binaryData):
     for fb in fluidBlocksList:
         fileName = gridDir + ('/grid-%04d-%04d-%04d' % (fb.i, fb.j, fb.k))
         if binaryData:
-            fb.grid.write_to_binary_file(fileName)
+            fb.grid.write_to_binary_file(fileName+'.bin')
         else:
             fb.grid.write_to_gzip_file(fileName+'.gz')
     #
@@ -785,8 +781,9 @@ def write_initial_files(binaryData):
     if not os.path.exists(flowDir):
         os.makedirs(flowDir)
     for fb in fluidBlocksList:
-        fileName = flowDir + ('/flow-%04d-%04d-%04d.zip' % (fb.i, fb.j, fb.k))
-        fb.write_flow_data_to_zip_file(fileName, config.iovar_names, binaryData)
+        fileName = flowDir + ('/flow-%04d-%04d-%04d' % (fb.i, fb.j, fb.k))
+        fileName += '.bin' if binaryData else '.gz'
+        fb.write_flow_data_to_file(fileName, config.iovar_names, binaryData)
     #
     with open(config.job_name+'/times.data', 'w') as fp:
         fp.write("# tindx t\n")

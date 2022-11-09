@@ -771,134 +771,95 @@ struct Block {
 
     __host__
     void readFlow(const BConfig& cfg, string fileName, bool binary_data)
-    // Reads the flow data archive from a ZIP file.
-    // The correct data storage is presumed to exist.
-    //
-    // Code modelled on the simple example by Dodrigo Rivas Costa found at
-    // https://stackoverflow.com/questions/10440113/simple-way-to-unzip-a-zip-file-using-zlib
+    // Reads the flow data from the file, one IO-variable at a time.
+    // The cell indexing is in the same as expected in a VTK file.
     {
-        int err = 0;
-        zip *z = zip_open(fileName.c_str(), ZIP_RDONLY, &err);
-        if (err) {
-            cerr << "Failed to open zip archive for reading: " << fileName << endl;
-        }
-        if (z) {
-            struct zip_stat st;
-            vector<char*> contents; contents.resize(IOvar::n);
+        if (binary_data) {
+            auto f = ifstream(fileName, ios::binary);
+            if (!f) {
+                throw runtime_error("Did not open binary flow file successfully: "+fileName);
+            }
             for (int m=0; m < IOvar::n; m++) {
                 string name = IOvar::names[m];
-                // Search archive for a variable's data.
-                zip_stat_init(&st);
-                zip_stat(z, name.c_str(), 0, &st);
-                // Allocate enough memory for the uncompressed content and read it.
-                if (st.size == 0) {
-                    cerr << "IOvar name=" << name << " st.size=" << st.size << endl;
-                    runtime_error("Zero value for st.size.");
-                }
-                contents[m] = new char[st.size];
-                zip_file* f = zip_fopen(z, name.c_str(), 0);
-                if (f) {
-                    int nbytes_read = zip_fread(f, contents[m], st.size);
-                    zip_fclose(f);
-                    if (nbytes_read != st.size) {
-                        cerr << "Did not read all content for var=" << name << " st.size=" << st.size
-                             << " nbytes_read=" << nbytes_read << endl;
-                    }
-                    if (binary_data) {
-                        stringstream ss(contents[m], ios::in | ios::binary);
-                        for (int k=0; k < cfg.nkc; k++) {
-                            for (int j=0; j < cfg.njc; j++) {
-                                for (int i=0; i < cfg.nic; i++) {
-                                    FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
-                                    number item;
-                                    ss.read(reinterpret_cast<char*>(&item), sizeof(number));
-                                    // cout << "DEBUG binary_data var=" << name << " i=" << i << " j=" << j
-                                    //      << " k=" << k << " value=" << item << endl;
-                                    c.iovar_set(m, item);
-                                }
-                            }
-                        }
-                    } else {
-                        // ASCII text format for data
-                        stringstream ss(contents[m], ios::in);
-                        for (int k=0; k < cfg.nkc; k++) {
-                            for (int j=0; j < cfg.njc; j++) {
-                                for (int i=0; i < cfg.nic; i++) {
-                                    FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
-                                    string item;
-                                    getline(ss, item, '\n');
-                                    number value;
-                                    try {
-                                        value = stod(item);
-                                    } catch (const exception& e) {
-                                        cerr << "DEBUG text_data var=" << name << " i=" << i << " j=" << j
-                                             << " k=" << k << " item text=" << item << endl;
-                                        cerr << "DEBUG if IOvar name happens to be vol, do not worry; it will be replaced." << endl;
-                                        cerr << "DEBUG exception seen: " << e.what() << endl;
-                                        value = 0.0;
-                                    }
-                                    c.iovar_set(m, value);
-                                }
-                            }
+                for (int k=0; k < cfg.nkc; k++) {
+                    for (int j=0; j < cfg.njc; j++) {
+                        for (int i=0; i < cfg.nic; i++) {
+                            FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
+                            number value;
+                            f.read(reinterpret_cast<char*>(&value), sizeof(number));
+                            c.iovar_set(m, value);
                         }
                     }
-                } else {
-                    cerr << "Could not open file " << name << " in ZIP archive " << fileName << endl;
                 }
             } // end for m...
-            for (auto ptr : contents) { delete[] ptr; }
-            contents.resize(0);
-            zip_close(z);
+            f.close();
+        } else {
+            // Gzipped text file.
+            auto f = bxz::ifstream(fileName); // gzip file
+            if (!f) {
+                throw runtime_error("Did not open gzipped flow file successfully: "+fileName);
+            }
+            for (int m=0; m < IOvar::n; m++) {
+                string name = IOvar::names[m];
+                for (int k=0; k < cfg.nkc; k++) {
+                    for (int j=0; j < cfg.njc; j++) {
+                        for (int i=0; i < cfg.nic; i++) {
+                            FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
+                            number value;
+                            f >> value;
+                            c.iovar_set(m, value);
+                        }
+                    }
+                }
+            } // end for m...
+            f.close();
         }
         return;
     } // end readFlow()
 
     __host__
     void writeFlow(const BConfig& cfg, string fileName, bool binary_data)
-    // Writes the flow data into a new ZIP archive file.
+    // Writes the flow data into a new file.
+    // All IO-variables are written sequentially.
     // Any necessary directories are presumed to exist.
     {
-        vector<string> data; // A place to retain the string data while the zip file is constructed.
-        int err = 0;
-        zip *z = zip_open(fileName.c_str(), ZIP_CREATE, &err);
-        if (err) {
-            cerr << "Failed to open zip archive for writing: " << fileName << endl;
-        }
-        if (z) {
+        if (binary_data) {
+            auto f = ofstream(fileName, ios::binary);
+            if (!f) {
+                throw runtime_error("Did not open binary flow file successfully for writing: "+fileName);
+            }
             for (int m=0; m < IOvar::n; m++) {
                 string name = IOvar::names[m];
-                ostringstream ss;
                 for (int k=0; k < cfg.nkc; k++) {
                     for (int j=0; j < cfg.njc; j++) {
                         for (int i=0; i < cfg.nic; i++) {
                             FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
-                            if (binary_data) {
-                                number item = c.iovar_get(m);
-                                ss.write(reinterpret_cast<char*>(&item), sizeof(number));
-                            } else {
-                                // ASCII text format for data
-                                ss << c.iovar_get(m) << endl;
-                            }
+                            number item = c.iovar_get(m);
+                            f.write(reinterpret_cast<char*>(&item), sizeof(number));
                         }
                     }
                 }
-                data.push_back(ss.str());
-                int last = data.size()-1;
-                // Add the data to the ZIP archive as a file.
-                zip_source_t* zs = zip_source_buffer(z, data[last].c_str(), data[last].size(), 0);
-                if (zs) {
-                    int zindx = zip_file_add(z, name.c_str(), zs, ZIP_FL_OVERWRITE|ZIP_FL_ENC_UTF_8);
-                    if (zindx < 0) {
-                        cerr << "Could not add file " << name << " to ZIP archive " << fileName << endl;
-                        zip_source_free(zs);
-                    }
-                } else {
-                    cerr << "Error getting source to add file to zip: " << string(zip_strerror(z)) << endl;
-                }
+            } // end for m...
+            f.close();
+        } else {
+            // Gzipped text file.
+            auto f = bxz::ofstream(fileName); // gzip file
+            if (!f) {
+                throw runtime_error("Did not open gzipped flow file successfully for writing: "+fileName);
             }
-            zip_close(z);
+            for (int m=0; m < IOvar::n; m++) {
+                string name = IOvar::names[m];
+                for (int k=0; k < cfg.nkc; k++) {
+                    for (int j=0; j < cfg.njc; j++) {
+                        for (int i=0; i < cfg.nic; i++) {
+                            FVCell& c = cells[cfg.activeCellIndex(i,j,k)];
+                            f << c.iovar_get(m) << endl;
+                        }
+                    }
+                }
+            } // end for m...
+            f.close();
         }
-        data.resize(0);
         return;
     } // end writeFlow()
 
