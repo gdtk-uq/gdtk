@@ -367,3 +367,59 @@ void exchange_ghost_cell_gas_solid_boundary_data()
         }
     }
 }
+
+void send_gas_domain_boundary_heat_flux_data_to_solid_domain()
+{
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_fluidstate_heat_flux_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_fluidstate_heat_flux_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_fluidstate_heat_flux_phase2(); }
+            }
+        }
+    }
+}
+
+void send_solid_domain_boundary_temperature_data_to_gas_domain()
+{
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solidstate_temperature_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solidstate_temperature_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solidstate_temperature_phase2(); }
+            }
+        }
+    }
+}

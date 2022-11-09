@@ -896,7 +896,7 @@ public:
                 version(complex_numbers) { ne += myBC.gasCells.length * (this_blk.myConfig.n_flow_time_levels * 2 + 11); }
                 if (outgoing_solidstate_buf.length < ne) { outgoing_solidstate_buf.length = ne; }
                 size_t ii = 0;
-                foreach (c; outgoing_mapped_cells) {
+                foreach (i, c; outgoing_mapped_cells) {
                     foreach (j; 0 .. this_blk.myConfig.n_flow_time_levels) {
                         outgoing_solidstate_buf[ii++] = c.e[j].re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.e[j].im; }
                         outgoing_solidstate_buf[ii++] = c.dedt[j].re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.dedt[j].im; }
@@ -964,12 +964,117 @@ public:
                     MPI_Wait(&incoming_fluidstate_request, &incoming_fluidstate_status);
                 }
                 size_t ii = 0;
-                foreach (c; myBC.gasCells) {
+                foreach (i, c; myBC.gasCells) {
                     c.pos[0].x.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.pos[0].x.im = incoming_fluidstate_buf[ii++]; }
                     c.pos[0].y.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.pos[0].y.im = incoming_fluidstate_buf[ii++]; }
                     c.pos[0].z.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.pos[0].z.im = incoming_fluidstate_buf[ii++]; }
                     c.fs.gas.T.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.fs.gas.T.im = incoming_fluidstate_buf[ii++]; }
                     c.fs.gas.k.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.fs.gas.k.im = incoming_fluidstate_buf[ii++]; }
+                }
+            } else {
+                // The other block happens to be in this MPI process so
+                // we know that we can just access the cell data directly.
+                foreach (i; 0 .. myBC.gasCells.length) {
+                    myBC.gasCells[i].copy_values_from(mapped_cells[i], CopyDataOption.all);
+                }
+            }
+        } else { // not mpi_parallel
+            // For a single process,
+            // we know that we can just access the data directly.
+            foreach (i; 0 .. myBC.gasCells.length) {
+                myBC.gasCells[i].copy_values_from(mapped_cells[i], CopyDataOption.all);
+            }
+        }
+    } // end exchange_fluidstate_phase2()
+
+    // not @nogc because we may set length and use MPI_Irecv
+    void exchange_fluidstate_heat_flux_phase0()
+    {
+        version(mpi_parallel) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
+                // The other block is in another MPI process, go fetch the geometry data via messages.
+                //
+                // Prepare to exchange geometry data for the boundary cells.
+                // To match .copy_values_from(mapped_cells[i], CopyDataOption.grid) as defined in fvcell.d.
+                //
+                size_t ne = myBC.gasCells.length;
+                version(complex_numbers) { ne *= 2; }
+                if (incoming_fluidstate_buf.length < ne) { incoming_fluidstate_buf.length = ne; }
+                //
+                // Post non-blocking receive for geometry data that we expect to receive later
+                // from the other_blk MPI process.
+                incoming_fluidstate_tag = make_mpi_tag(other_blk.id, other_face, 3);
+                MPI_Irecv(incoming_fluidstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                          incoming_fluidstate_tag, MPI_COMM_WORLD, &incoming_fluidstate_request);
+            } else {
+                // The source block happens to be in this MPI process so
+                // we know that we can just access the cell data directly
+                // in the final phase.
+            }
+        } else { // not mpi_parallel
+            // For a single process,
+            // we know that we can just access the data directly,
+            // in the final phase.
+        }
+    } // end exchange_fluidstate_phase0()
+
+    // not @nogc
+    void exchange_solidstate_temperature_phase1()
+    {
+        version(mpi_parallel) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
+                // The other block is in another MPI process, go fetch the data via messages.
+                //
+                // Blocking send of this block's geometry data
+                // to the corresponding non-blocking receive that was posted
+                // in the other MPI process.
+                outgoing_solidstate_tag = make_mpi_tag(blk.id, which_boundary, 2);
+                size_t ne = myBC.gasCells.length;
+                version(complex_numbers) { ne += myBC.gasCells.length; }
+                if (outgoing_solidstate_buf.length < ne) { outgoing_solidstate_buf.length = ne; }
+                size_t ii = 0;
+                foreach (i, c; outgoing_mapped_cells) {
+                    outgoing_solidstate_buf[ii++] = c.T.re; version(complex_numbers) { outgoing_solidstate_buf[ii++] = c.T.im; }
+                }
+                version(mpi_timeouts) {
+                    MPI_Request send_request;
+                    MPI_Isend(outgoing_solidstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                              outgoing_solidstate_tag, MPI_COMM_WORLD, &send_request);
+                    MPI_Status send_status;
+                    MPI_Wait_a_while(&send_request, &send_status);
+                } else {
+                    MPI_Send(outgoing_solidstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
+                             outgoing_solidstate_tag, MPI_COMM_WORLD);
+                }
+            } else {
+                // The other block happens to be in this MPI process so
+                // we know that we can just access the cell data directly
+                // in the final phase.
+            }
+        } else { // not mpi_parallel
+            // For a single process,
+            // we know that we can just access the data directly
+            // in the final phase.
+        }
+    } // end exchange_solidstate_phase1()
+
+    // not @nogc
+    void exchange_fluidstate_heat_flux_phase2()
+    {
+        version(mpi_parallel) {
+            if (find(GlobalConfig.localFluidBlockIds, other_blk.id).empty) {
+                // The other block is in another MPI process, go fetch the data via messages.
+                //
+                // Wait for non-blocking receive to complete.
+                // Once complete, copy the data back into the local context.
+                version(mpi_timeouts) {
+                    MPI_Wait_a_while(&incoming_fluidstate_request, &incoming_fluidstate_status);
+                } else {
+                    MPI_Wait(&incoming_fluidstate_request, &incoming_fluidstate_status);
+                }
+                size_t ii = 0;
+                foreach (i, c; myBC.gasCells) {
+                    c.q_solid.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.q_solid.im = incoming_fluidstate_buf[ii++]; }
                 }
             } else {
                 // The other block happens to be in this MPI process so

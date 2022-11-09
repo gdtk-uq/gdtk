@@ -9,7 +9,7 @@
  *          That code was first worked on by Delphine Francois
  *          and Justin Beri.
  */
-
+/*
 module gas_solid_interface;
 
 import std.stdio;
@@ -128,3 +128,4 @@ void computeFluxesAndTemperatures2(int ftl, FVCell[] gasCells, FVInterface[] gas
         solidIFaces[i].flux = q;
     }
 }
+*/

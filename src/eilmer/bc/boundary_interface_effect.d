@@ -112,6 +112,14 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
                                                           otherBlock, face_index(otherFaceName),
                                                           neighbourOrientation);
         break;
+    case "temperature_from_gas_solid_interface2":
+        int otherBlock = getJSONint(jsonData, "other_block", -1);
+        string otherFaceName = getJSONstring(jsonData, "other_face", "none");
+        int neighbourOrientation = getJSONint(jsonData, "neighbour_orientation", 0);
+        newBIE = new BIE_TemperatureFromGasSolidInterface2(blk_id, boundary,
+                                                           otherBlock, face_index(otherFaceName),
+                                                           neighbourOrientation);
+        break;
     case "thermionic_radiative_equilibrium":
         double emissivity = getJSONdouble(jsonData, "emissivity", 0.0);
         double Ar = getJSONdouble(jsonData, "Ar", 0.0);
@@ -1492,6 +1500,65 @@ public:
     }
 
 } // end class BIE_TemperatureFromGasSolidInterface
+
+class BIE_TemperatureFromGasSolidInterface2 : BoundaryInterfaceEffect {
+public:
+    int neighbourSolidBlk;
+    int neighbourSolidFace;
+    int neighbourOrientation;
+
+    this(int id, int boundary,
+         int otherBlock, int otherFace, int orient)
+    {
+        super(id, boundary, "TemperatureFromGasSolidInterface2");
+        neighbourSolidBlk = otherBlock;
+        neighbourSolidFace = otherFace;
+        neighbourOrientation = orient;
+    }
+
+    override string toString() const
+    {
+        return "TemperatureFromGasSolidInterface2()";
+    }
+
+    @nogc
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        throw new Error("BIE_TemperatureFromGasSolidInterface2.apply_unstructured_grid() not implemented yet");
+    }
+
+    @nogc
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+        throw new Error("BIE_TemperatureFromGasSolidInterface2.apply_unstructured_grid() not implemented yet");
+    }
+
+    @nogc
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
+    {
+        auto myBC = blk.bc[which_boundary];
+        number Twall = myBC.solidCells[f.i_bndry].T;
+        myBC.ifaces[f.i_bndry].fs.gas.T = Twall;
+        version(multi_T_gas) {
+            foreach(ref elem; myBC.ifaces[f.i_bndry].fs.gas.T_modes) { elem = Twall; }
+        }
+    }
+
+    @nogc
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+        auto myBC = blk.bc[which_boundary];
+        number Twall;
+        foreach ( i; 0 .. myBC.ifaces.length ) {
+            Twall = myBC.solidCells[i].T;
+            myBC.ifaces[i].fs.gas.T = Twall;
+            version(multi_T_gas) {
+                foreach(ref elem; myBC.ifaces[i].fs.gas.T_modes) { elem = Twall; }
+            }
+        }
+    }
+
+} // end class BIE_TemperatureFromGasSolidInterface2
 
 class BIE_ThermionicRadiativeEquilibrium : BoundaryInterfaceEffect {
     this(int id, int boundary, double emissivity, double Ar, double phi, int ThermionicEmissionActive, size_t nsp,

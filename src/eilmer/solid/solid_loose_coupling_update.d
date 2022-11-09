@@ -33,6 +33,8 @@ import solid_gas_full_face_copy;
 import simcore_exchange;
 import solid_udf_source_terms;
 import solidprops;
+import simcore_io;
+import simcore;
 
 version(mpi_parallel) {
     import mpi;
@@ -68,6 +70,15 @@ double determine_dt(double cfl_value)
     }
     return dt;
 } // end determine_dt
+
+void integrate_solid_in_time(int super_time_steps, double sim_time)
+{
+    SimState.s_RKL = super_time_steps;
+    SimState.time = 0.0;
+    foreach (blk; parallel(localFluidBlocks,1)) { blk.active = false; }
+    integrate_in_time(sim_time);
+    foreach (blk; parallel(localFluidBlocks,1)) { blk.active = true; }
+}
 
 void solid_update(int step, double pseudoSimTime, double cfl, double eta, double sigma)
 {

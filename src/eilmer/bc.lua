@@ -405,6 +405,17 @@ function TemperatureFromGasSolidInterface:tojson()
    return str
 end
 
+TemperatureFromGasSolidInterface2 = BoundaryInterfaceEffect:new{otherBlock=nil, otherFace=nil, orientation=-1}
+TemperatureFromGasSolidInterface2.type = "temperature_from_gas_solid_interface2"
+function TemperatureFromGasSolidInterface2:tojson()
+   local str = string.format('          {"type": "%s", ', self.type)
+   str = str .. string.format('"other_block": %d, ', self.otherBlock)
+   str = str .. string.format('"other_face": "%s", ', self.otherFace)
+   str = str .. string.format('"orientation": %d', self.orientation)
+   str = str .. '}'
+   return str
+end
+
 ThermionicRadiativeEquilibrium = BoundaryInterfaceEffect:new{emissivity=1.0, Ar=0.0, phi=0.0,
                           ThermionicEmissionActive=0,catalytic_type="none", wall_massf_composition={}}
 ThermionicRadiativeEquilibrium.type = "thermionic_radiative_equilibrium"
@@ -1746,6 +1757,50 @@ function WallBC_AdjacentToSolid:new(o)
    return o
 end
 
+WallBC_AdjacentToSolid2 = BoundaryCondition:new()
+WallBC_AdjacentToSolid2.type = "wall_adjacent_to_solid2"
+function WallBC_AdjacentToSolid2:new(o)
+   local flag = type(self)=='table' and self.type=='wall_adjacent_to_solid2'
+   if not flag then
+      error("Make sure that you are using WallBC_AdjacentToSolid2:new{}"..
+               " and not WallBC_AdjacentToSolid2.new{}", 2)
+   end
+   o = o or {}
+   flag = checkAllowedNames(o, {"otherBlock", "otherFace", "orientation", "catalytic_type", "wall_massf_composition",
+                                "label", "group", "is_design_surface", "num_cntrl_pts","field_bc"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_AdjacentToSolid2 constructor.", 2)
+   end
+   o = BoundaryCondition.new(self, o)
+   o.group = "adjacent_to_solid"
+   o.is_wall_with_viscous_effects = true
+   o.preReconAction = { GasSolidFullFaceCopy:new{otherBlock=o.otherBlock,
+                                                 otherFace=o.otherFace,
+                                                 orientation=o.orientation},
+                        InternalCopyThenReflect:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(),
+                                           ZeroSlipWallVelocity:new(),
+                                           TemperatureFromGasSolidInterface2:new{otherBlock=o.otherBlock,
+                                                                                 otherFace=o.otherFace,
+                                                                                 orientation=o.orientation}}
+
+   if o.catalytic_type == "fixed_composition" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+         FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
+   elseif o.catalytic_type == "equilibrium" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = EquilibriumComposition:new{}
+   end
+
+   o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = UpdateThermoTransCoeffs:new()
+
+   if config.turbulence_model ~= "none" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallTurbulent:new()
+   end
+   o.postDiffFluxAction = { }
+   o.is_configured = true
+   return o
+end
+
 -- ---------------------------------------------------------------------------
 -- Classes related to Solid blocks and boundary conditions
 
@@ -1875,6 +1930,13 @@ function SolidBFE_ConstantFlux:tojson()
    return str
 end
 
+SolidBFE_ConstantFluxFromSolidGasInterface = SolidBoundaryFluxEffect:new{}
+SolidBFE_ConstantFluxFromSolidGasInterface.type = "constant_flux_from_solid_gas_interface"
+function SolidBFE_ConstantFluxFromSolidGasInterface:tojson()
+   local str = string.format('          {"type": "%s"} ', self.type)
+   return str
+end
+
 SolidBFE_UserDefined = SolidBoundaryFluxEffect:new{fileName='user-defined-solid-bc.lua'}
 SolidBFE_UserDefined.type = "user_defined"
 function SolidBFE_UserDefined:tojson()
@@ -1989,14 +2051,27 @@ function SolidAdjacentToGasBC:new(o)
    return o
 end
 
+SolidAdjacentToGasBC2 = SolidBoundaryCondition:new()
+SolidAdjacentToGasBC2.type = "SolidAdjacentToGas2"
+function SolidAdjacentToGasBC2:new(o)
+   o = SolidBoundaryCondition.new(self, o)
+   o.preSpatialDerivActionAtBndryCells = { SolidGasFullFaceCopy:new{otherBlock=o.otherBlock,
+                                                                    otherFace=o.otherFace,
+                                                                    orientation=o.orientation}}
+   o.preSpatialDerivActionAtBndryFaces = { SolidBIE_CopyAdjacentCellT:new{} }
+   o.postFluxAction = { SolidBFE_ConstantFluxFromSolidGasInterface:new{} }
+   o.setsFluxDirectly = true
+   return o
+end
+
 SolidConnectionBoundaryBC = SolidBoundaryCondition:new()
 SolidConnectionBoundaryBC.type = "SolidConnectionBoundary"
 function SolidConnectionBoundaryBC:new(o)
    o = SolidBoundaryCondition.new(self, o)
    o.setsFluxDirectly = true
    o.preSpatialDerivActionAtBndryFaces = { SolidBIE_ConnectionBoundary:new{otherBlock=o.otherBlock,
-							       otherFace=o.otherFace,
-							       orientation=o.orientation} }
+                                                                           otherFace=o.otherFace,
+                                                                           orientation=o.orientation} }
    return o
 end
 

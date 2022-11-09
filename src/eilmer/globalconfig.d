@@ -562,7 +562,7 @@ TCIModel tci_model_from_name(string name)
 } // end tci_model_from_name()
 
 
-enum SolidDomainCoupling { tight, loose, lagged }
+enum SolidDomainCoupling { tight, loose, lagged, steady_fluid_transient_solid }
 
 @nogc
 string solidDomainCouplingName(SolidDomainCoupling i)
@@ -571,6 +571,7 @@ string solidDomainCouplingName(SolidDomainCoupling i)
     case SolidDomainCoupling.tight: return "tight";
     case SolidDomainCoupling.loose: return "loose";
     case SolidDomainCoupling.lagged: return "lagged";
+    case SolidDomainCoupling.steady_fluid_transient_solid: return "steady_fluid_transient_solid";
     }
 }
 
@@ -581,6 +582,7 @@ SolidDomainCoupling solidDomainCouplingFromName(string name)
     case "tight": return SolidDomainCoupling.tight;
     case "loose": return SolidDomainCoupling.loose;
     case "lagged": return SolidDomainCoupling.lagged;
+    case "steady_fluid_transient_solid": return SolidDomainCoupling.steady_fluid_transient_solid;
     default: return SolidDomainCoupling.tight;
     }
 }
