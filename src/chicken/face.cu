@@ -30,9 +30,10 @@ namespace BCCode {
     constexpr int exchange = 3;
     constexpr int inflow = 4;
     constexpr int outflow = 5;
+    constexpr int inflow_function = 6;
 
-    array<string,6> names{"wall_with_slip", "wall_no_slip_adiabatic", "wall_no_slip_fixed_T",
-            "exchange", "inflow", "outflow"};
+    array<string,7> names{"wall_with_slip", "wall_no_slip_adiabatic", "wall_no_slip_fixed_T",
+            "exchange", "inflow", "outflow", "inflow_function"};
 };
 
 int BC_code_from_name(string name)
@@ -44,9 +45,28 @@ int BC_code_from_name(string name)
     if (name == "exchange") return BCCode::exchange;
     if (name == "inflow") return BCCode::inflow;
     if (name == "outflow") return BCCode::outflow;
+    if (name == "inflow_function") return BCCode::inflow_function;
     return BCCode::wall_with_slip;
 }
 
+namespace BCFunction {
+    // We have a number of functions coded to use in filling the ghost cells.
+    constexpr int none = 0;
+    constexpr int supersonic_vortex = 1;
+    constexpr int laminar_boundary_layer = 2;
+    constexpr int manufactured_solution = 3;
+
+    array<string,4> names{"none", "supersonic_vortex", "laminar_boundary_layer", "manufactured_solution"};
+};
+
+int BC_function_from_name(string name)
+{
+    if (name == "none") return BCFunction::none;
+    if (name == "supersonic_vortex") return BCFunction::supersonic_vortex;
+    if (name == "laminar_boundary_layer") return BCFunction::laminar_boundary_layer;
+    if (name == "manufactured_solution") return BCFunction::manufactured_solution;
+    return BCFunction::none;
+}
 
 // Interpolation functions that will be used in the fluc calculator.
 
@@ -103,6 +123,7 @@ struct FVFace {
     array<int,2> other_cells{-1,-1};
     int inflowId{-1};
     double TWall{300.0};
+    int bcFun{-1};
     // For the gradient calculations that form part of the viscous fluxes
     // we keep lists of faces and cells that form a cloud of points around
     // this face-centre.

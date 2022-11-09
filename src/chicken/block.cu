@@ -261,6 +261,7 @@ struct Block {
                         f.bcCode = cfg.bcCodes[Face::iminus];
                         if (f.bcCode == BCCode::inflow) f.inflowId = cfg.bc_fs[Face::iminus];
                         if (f.bcCode == BCCode::wall_no_slip_fixed_T) f.TWall = cfg.bc_TWall[Face::iminus];
+                        if (f.bcCode == BCCode::inflow_function) f.bcFun = cfg.bc_fun[Face::iminus];
                     } else if (i == 1) {
                         f.left_cells[1] = cfg.ghostCellIndex(Face::iminus,j,k,0);
                         f.left_cells[0] = cfg.activeCellIndex(i-1,j,k);
@@ -280,6 +281,7 @@ struct Block {
                         f.bcCode = cfg.bcCodes[Face::iplus];
                         if (f.bcCode == BCCode::inflow) f.inflowId = cfg.bc_fs[Face::iplus];
                         if (f.bcCode == BCCode::wall_no_slip_fixed_T) f.TWall = cfg.bc_TWall[Face::iplus];
+                        if (f.bcCode == BCCode::inflow_function) f.bcFun = cfg.bc_fun[Face::iplus];
                     } else {
                         // All interior cells.
                         f.left_cells[1] = cfg.activeCellIndex(i-2,j,k);
@@ -348,6 +350,7 @@ struct Block {
                         f.bcCode = cfg.bcCodes[Face::jminus];
                         if (f.bcCode == BCCode::inflow) f.inflowId = cfg.bc_fs[Face::jminus];
                         if (f.bcCode == BCCode::wall_no_slip_fixed_T) f.TWall = cfg.bc_TWall[Face::jminus];
+                        if (f.bcCode == BCCode::inflow_function) f.bcFun = cfg.bc_fun[Face::jminus];
                     } else if (j == 1) {
                         f.left_cells[1] = cfg.ghostCellIndex(Face::jminus,i,k,0);
                         f.left_cells[0] = cfg.activeCellIndex(i,j-1,k);
@@ -367,6 +370,7 @@ struct Block {
                         f.bcCode = cfg.bcCodes[Face::jplus];
                         if (f.bcCode == BCCode::inflow) f.inflowId = cfg.bc_fs[Face::jplus];
                         if (f.bcCode == BCCode::wall_no_slip_fixed_T) f.TWall = cfg.bc_TWall[Face::jplus];
+                        if (f.bcCode == BCCode::inflow_function) f.bcFun = cfg.bc_fun[Face::jplus];
                     } else {
                         // All interior cells.
                         f.left_cells[1] = cfg.activeCellIndex(i,j-2,k);
@@ -435,6 +439,7 @@ struct Block {
                         f.bcCode = cfg.bcCodes[Face::kminus];
                         if (f.bcCode == BCCode::inflow) f.inflowId = cfg.bc_fs[Face::kminus];
                         if (f.bcCode == BCCode::wall_no_slip_fixed_T) f.TWall = cfg.bc_TWall[Face::kminus];
+                        if (f.bcCode == BCCode::inflow_function) f.bcFun = cfg.bc_fun[Face::kminus];
                     } else if (k == 1) {
                         f.left_cells[1] = cfg.ghostCellIndex(Face::kminus,i,j,0);
                         f.left_cells[0] = cfg.activeCellIndex(i,j,k-1);
@@ -454,6 +459,7 @@ struct Block {
                         f.bcCode = cfg.bcCodes[Face::kplus];
                         if (f.bcCode == BCCode::inflow) f.inflowId = cfg.bc_fs[Face::kplus];
                         if (f.bcCode == BCCode::wall_no_slip_fixed_T) f.TWall = cfg.bc_TWall[Face::kplus];
+                        if (f.bcCode == BCCode::inflow_function) f.bcFun = cfg.bc_fun[Face::kplus];
                     } else {
                         // All interior cells.
                         f.left_cells[1] = cfg.activeCellIndex(i,j,k-2);

@@ -68,6 +68,7 @@ struct BConfig {
     array<int,6> bcCodes;
     array<int,6> bc_fs;
     array<double,6> bc_TWall;
+    array<int,6> bc_fun;
 
     __host__
     void fill_in_dimensions(int _nic, int _njc, int _nkc, int threads_per_GPUblock)
@@ -149,8 +150,9 @@ struct BConfig {
     {
         ostringstream repr;
         repr << "BConfig(i=" << i << ", j=" << j << ", k=" << k;
-        repr << ", bcCodes=["; for (auto c: bcCodes) repr << c << ","; repr << "]";
+        repr << ", bcCodes=["; for (auto c: bcCodes) repr << BCCode::names[c] << ","; repr << "]";
         repr << ", bc_fs=["; for (auto f : bc_fs) repr << f << ","; repr << "]";
+        repr << ", bc_fun=["; for (auto f : bc_fun) repr << BCFunction::names[f] << ","; repr << "]";
         repr << ", active=" << active;
         repr << ")";
         return repr.str();
@@ -356,6 +358,10 @@ vector<BConfig> read_config_file(string fileName)
             }
             if (cfg.bcCodes[i] == BCCode::wall_no_slip_fixed_T) {
                 cfg.bc_TWall[i] = bc["TWall"].get<double>();
+            }
+            cfg.bc_fun[i] = 0; // Default function index.
+            if (cfg.bcCodes[i] == BCCode::inflow_function) {
+                cfg.bc_fun[i] = BC_function_from_name(bc["tag"].get<string>());
             }
         }
         if (Config::verbosity > 0) {

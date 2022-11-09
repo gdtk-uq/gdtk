@@ -461,6 +461,22 @@ class InflowBC(BoundaryCondition):
         # a Block is constructed that has InflowBC objects.
         return '{"tag": "%s", "flow_state_index": %d}' % (self.tag, self.fsi)
 
+class InflowFunctionBC(BoundaryCondition):
+    """
+    Inflow boundary condition based on a function coded into the main program.
+    """
+    __slots__ = ['tag', 'fun_name']
+
+    def __init__(self, fun_name):
+        self.tag = 'inflow_function'
+        self.fn_name = fun_name
+
+    def __repr__(self):
+        return "InflowFunctionBC(fun_name={})".format(self.fun_name)
+
+    def to_json(self):
+        return '{"tag": "%s", "fun_name": "%s"}' % (self.tag, self.fun_name)
+
 class OutflowBC(BoundaryCondition):
     """
     Outflow boundary condition.

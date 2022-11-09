@@ -319,6 +319,113 @@ void bc_inflow(int iblk, int ibc, FlowState& inflow)
 } // end bc_inflow()
 
 
+__host__ __device__
+FlowState compute_inflow_state_from_function(int ifn, Vector3 pos)
+{
+    FlowState inflow;
+    // Dummy value.
+    inflow.gas.p = 100.0e3;
+    inflow.gas.T = 300.0;
+    inflow.gas.update_from_pT();
+    inflow.vel.set(0.0, 0.0, 0.0);
+    //
+    switch (ifn) {
+    case BCFunction::none:
+        break;
+    case BCFunction::supersonic_vortex:
+        // [TODO]
+        break;
+    case BCFunction::laminar_boundary_layer:
+        // [TODO]
+        break;
+    case BCFunction::manufactured_solution:
+        // [TODO]
+        break;
+    default:
+        break;
+    }
+    return inflow;
+}
+
+
+__host__
+void bc_inflow_function(int iblk, int ibc, int ifn)
+// Copy the associated flow state data into the ghost cells.
+{
+    BConfig& cfg = blk_configs[iblk];
+    Block& blk = fluidBlocks[iblk];
+    //
+    switch (ibc) {
+    case Face::iminus: // jk across face
+        for (int k=0; k < cfg.nkc; k++) {
+            for (int j=0; j < cfg.njc; j++) {
+                FVFace& f = blk.faces[cfg.iFaceIndex(0, j, k)];
+                FVCell& g0 = blk.cells[f.left_cells[0]];
+                g0.fs = compute_inflow_state_from_function(ifn, g0.pos);
+                FVCell& g1 = blk.cells[f.left_cells[1]];
+                g1.fs = compute_inflow_state_from_function(ifn, g1.pos);
+            } // end for j
+        } // end for k
+        break;
+    case Face::iplus: // jk across face
+        for (int k=0; k < cfg.nkc; k++) {
+            for (int j=0; j < cfg.njc; j++) {
+                FVFace& f = blk.faces[cfg.iFaceIndex(cfg.nic, j, k)];
+                FVCell& g0 = blk.cells[f.right_cells[0]];
+                g0.fs = compute_inflow_state_from_function(ifn, g0.pos);
+                FVCell& g1 = blk.cells[f.right_cells[1]];
+                g1.fs = compute_inflow_state_from_function(ifn, g1.pos);
+            } // end for j
+        } // end for k
+        break;
+    case Face::jminus: // ik across face
+        for (int k=0; k < cfg.nkc; k++) {
+            for (int i=0; i < cfg.nic; i++) {
+                FVFace& f = blk.faces[cfg.jFaceIndex(i, 0, k)];
+                FVCell& g0 = blk.cells[f.left_cells[0]];
+                g0.fs = compute_inflow_state_from_function(ifn, g0.pos);
+                FVCell& g1 = blk.cells[f.left_cells[1]];
+                g1.fs = compute_inflow_state_from_function(ifn, g1.pos);
+            } // end for i
+        } // end for k
+        break;
+    case Face::jplus: // ik across face
+        for (int k=0; k < cfg.nkc; k++) {
+            for (int i=0; i < cfg.nic; i++) {
+                FVFace& f = blk.faces[cfg.jFaceIndex(i, cfg.njc, k)];
+                FVCell& g0 = blk.cells[f.right_cells[0]];
+                g0.fs = compute_inflow_state_from_function(ifn, g0.pos);
+                FVCell& g1 = blk.cells[f.right_cells[1]];
+                g1.fs = compute_inflow_state_from_function(ifn, g1.pos);
+            } // end for i
+        } // end for k
+        break;
+    case Face::kminus: // ij across face
+        for (int j=0; j < cfg.njc; j++) {
+            for (int i=0; i < cfg.nic; i++) {
+                FVFace& f = blk.faces[cfg.kFaceIndex(i, j, 0)];
+                FVCell& g0 = blk.cells[f.left_cells[0]];
+                g0.fs = compute_inflow_state_from_function(ifn, g0.pos);
+                FVCell& g1 = blk.cells[f.left_cells[1]];
+                g1.fs = compute_inflow_state_from_function(ifn, g1.pos);
+            } // end for i
+        } // end for j
+        break;
+    case Face::kplus: // ij across face
+        for (int j=0; j < cfg.njc; j++) {
+            for (int i=0; i < cfg.nic; i++) {
+                FVFace& f = blk.faces[cfg.kFaceIndex(i, j, cfg.nkc)];
+                FVCell& g0 = blk.cells[f.right_cells[0]];
+                g0.fs = compute_inflow_state_from_function(ifn, g0.pos);
+                FVCell& g1 = blk.cells[f.right_cells[1]];
+                g1.fs = compute_inflow_state_from_function(ifn, g1.pos);
+            } // end for j
+        } // end for k
+        break;
+    }
+} // end bc_inflow_function()
+
+
 __host__
 void bc_outflow(int iblk, int ibc)
 // Copy the interior flow states to the ghost cells.
@@ -416,6 +523,9 @@ void apply_boundary_conditions_for_convective_fluxes()
                 break;
             case BCCode::inflow:
                 bc_inflow(iblk, ibc, Config::flow_states[blk_config.bc_fs[ibc]]);
+                break;
+            case BCCode::inflow_function:
+                bc_inflow_function(iblk, ibc, blk_config.bc_fun[ibc]);
                 break;
             case BCCode::outflow:
                 bc_outflow(iblk, ibc);
@@ -625,6 +735,20 @@ void apply_convective_boundary_condition(FVFace& f, FVCell cells[],
         }
         break;
     }
+    case BCCode::inflow_function: {
+        if (f.bcId == Face::iplus || f.bcId == Face::jplus || f.bcId == Face::kplus) {
+            FVCell& g0 = cells[f.right_cells[0]];
+            g0.fs = compute_inflow_state_from_function(f.bcFun, g0.pos);
+            FVCell& g1 = cells[f.right_cells[1]];
+            g1.fs = compute_inflow_state_from_function(f.bcFun, g1.pos);
+        } else {
+            FVCell& g0 = cells[f.left_cells[0]];
+            g0.fs = compute_inflow_state_from_function(f.bcFun, g0.pos);
+            FVCell& g1 = cells[f.left_cells[1]];
+            g1.fs = compute_inflow_state_from_function(f.bcFun, g1.pos);
+        }
+        break;
+    }
     case BCCode::outflow: {
         if (f.bcId == Face::iplus || f.bcId == Face::jplus || f.bcId == Face::kplus) {
             FVCell& c = cells[f.left_cells[0]];
@@ -676,6 +800,8 @@ void apply_viscous_boundary_condition(FVFace& f)
         f.fs.vel.set(0.0, 0.0, 0.0);
         f.fs.gas.T = f.TWall;
         break;
+    case BCCode::inflow_function:
+        f.fs = compute_inflow_state_from_function(f.bcFun, f.pos);
     default:
         // Do nothing.
         break;
