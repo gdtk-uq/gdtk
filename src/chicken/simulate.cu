@@ -331,6 +331,167 @@ void march_in_time_using_cpu_only(bool binary_data)
     return;
 } // end march_in_time_using_cpu_only()
 
+// GPU kernel functions
+
+
+// GPU global functions cannot be member functions of FluidBlock
+// so we need to pass the FluidBlock reference into them and that
+// Block struct also needs to be in the global memory of the GPU.
+
+__global__
+void estimate_allowed_dt_on_gpu(Block& blk, const BConfig& cfg, number cfl, long long int* smallest_dt_picos)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FVCell& c = blk.cells_on_gpu[i];
+        Vector3 inorm = blk.faces_on_gpu[c.face[Face::iminus]].n;
+        Vector3 jnorm = blk.faces_on_gpu[c.face[Face::jminus]].n;
+        Vector3 knorm = blk.faces_on_gpu[c.face[Face::kminus]].n;
+        long long int dt_picos = trunc(c.estimate_local_dt(inorm, jnorm, knorm, cfl)*1.0e12);
+        atomicMin(smallest_dt_picos, dt_picos);
+    }
+}
+
+__global__
+void encodeConserved_on_gpu(Block& blk, const BConfig& cfg, int level)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FlowState& fs = blk.cells_on_gpu[i].fs;
+        ConservedQuantities& U = blk.Q_on_gpu[level*cfg.nActiveCells + i];
+        fs.encode_conserved(U);
+    }
+}
+
+__global__
+void copy_conserved_data_on_gpu(Block& blk, const BConfig& cfg, int from_level, int to_level)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        ConservedQuantities& U_from = blk.Q_on_gpu[from_level*cfg.nActiveCells + i];
+        ConservedQuantities& U_to = blk.Q_on_gpu[to_level*cfg.nActiveCells + i];
+        for (int j=0; j < CQI::n; j++) {
+            U_to[j] = U_from[j];
+        }
+    }
+}
+
+__global__
+void setup_LSQ_arrays_on_gpu(Block& blk, const BConfig& cfg, int* failures)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nFaces) {
+        FVFace& face = blk.faces_on_gpu[i];
+        int flag = setup_LSQ_arrays_at_face(face, blk.cells_on_gpu, blk.faces_on_gpu);
+        atomicAdd(failures, flag);
+    }
+}
+
+__global__
+void apply_convective_boundary_conditions_on_gpu(Block& blk, const BConfig& cfg,
+                                                 FlowState flowStates_on_gpu[],
+                                                 Block blks_on_gpu[])
+{
+    // [TODO] consider merging this kernel function into calculate_fluxes_on_gpu (just below).
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nFaces) {
+        FVFace& face = blk.faces_on_gpu[i];
+        apply_convective_boundary_condition(face, blk.cells_on_gpu, flowStates_on_gpu, blks_on_gpu);
+    }
+}
+
+__global__
+void calculate_fluxes_on_gpu(Block& blk, const BConfig& cfg, int flux_calc, int x_order, bool viscous)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nFaces) {
+        FVFace face = blk.faces_on_gpu[i]; // Local copy of face into registers
+        FlowState fsL1 = blk.cells_on_gpu[face.left_cells[1]].fs;
+        FlowState fsL0 = blk.cells_on_gpu[face.left_cells[0]].fs;
+        FlowState fsR0 = blk.cells_on_gpu[face.right_cells[0]].fs;
+        FlowState fsR1 = blk.cells_on_gpu[face.right_cells[1]].fs;
+        face.calculate_convective_flux(fsL1, fsL0, fsR0, fsR1, flux_calc, x_order);
+        if (viscous) {
+            apply_viscous_boundary_condition(face);
+            // [TODO] If we merge the following two function calls,
+            // we would not need to retain the gradients in the Face struct.
+            // Just use them to update the fluxes and then discard.
+            calculate_gradients_at_face(face, blk.cells_on_gpu, blk.faces_on_gpu);
+            face.add_viscous_flux();
+        }
+        blk.faces_on_gpu[i].F = face.F; // Copy back to global space, just the fluxes.
+    }
+}
+
+__global__
+void update_stage_1_on_gpu(Block& blk, const BConfig& cfg, number dt, int isrc, int* bad_cell_count)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FVCell& c = blk.cells_on_gpu[i];
+        ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
+        c.eval_dUdt(dUdt0, blk.faces_on_gpu);
+        c.add_source_terms(dUdt0, isrc);
+        ConservedQuantities& U0 = blk.Q_on_gpu[i];
+        ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
+        for (int j=0; j < CQI::n; j++) {
+            U1[j] = U0[j] + dt*dUdt0[j];
+        }
+        int bad_cell_flag = c.fs.decode_conserved(U1);
+        atomicAdd(bad_cell_count, bad_cell_flag);
+        if (bad_cell_flag) {
+            printf("Stage 1 update, Bad cell at pos x=%g y=%g z=%g\n", c.pos.x, c.pos.y, c.pos.z);
+        }
+    }
+}
+
+__global__
+void update_stage_2_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, int* bad_cell_count)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FVCell& c = blk.cells_on_gpu[i];
+        ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
+        ConservedQuantities& dUdt1 = blk.dQdt_on_gpu[cfg.nActiveCells + i];
+        c.eval_dUdt(dUdt1, blk.faces_on_gpu);
+        c.add_source_terms(dUdt1, isrc);
+        ConservedQuantities& U0 = blk.Q_on_gpu[i];
+        ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
+        for (int j=0; j < CQI::n; j++) {
+            U1[j] = U0[j] + 0.25*dt*(dUdt0[j] + dUdt1[j]);
+        }
+        int bad_cell_flag = c.fs.decode_conserved(U1);
+        atomicAdd(bad_cell_count, bad_cell_flag);
+        if (bad_cell_flag) {
+            printf("Stage 2 update, Bad cell at pos x=%g y=%g z=%g\n", c.pos.x, c.pos.y, c.pos.z);
+        }
+    }
+}
+
+__global__
+void update_stage_3_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, int* bad_cell_count)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FVCell& c = blk.cells_on_gpu[i];
+        ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
+        ConservedQuantities& dUdt1 = blk.dQdt_on_gpu[cfg.nActiveCells + i];
+        ConservedQuantities& dUdt2 = blk.dQdt_on_gpu[2*cfg.nActiveCells + i];
+        c.eval_dUdt(dUdt2, blk.faces_on_gpu);
+        c.add_source_terms(dUdt2, isrc);
+        ConservedQuantities& U0 = blk.Q_on_gpu[i];
+        ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
+        for (int j=0; j < CQI::n; j++) {
+            U1[j] = U0[j] + dt*(1.0/6.0*dUdt0[j] + 1.0/6.0*dUdt1[j] + 4.0/6.0*dUdt2[j]);
+        }
+        int bad_cell_flag = c.fs.decode_conserved(U1);
+        atomicAdd(bad_cell_count, bad_cell_flag);
+        if (bad_cell_flag) {
+            printf("Stage 3 update, Bad cell at pos x=%g y=%g z=%g\n", c.pos.x, c.pos.y, c.pos.z);
+        }
+    }
+}
+
 
 __host__
 void march_in_time_using_gpu(bool binary_data)
@@ -451,28 +612,9 @@ void march_in_time_using_gpu(bool binary_data)
             apply_convective_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, flowStates_on_gpu, fluidBlocks_on_gpu);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-        }
-        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = blk_configs[ib];
-            Block& blk = fluidBlocks[ib];
-            if (!cfg.active) continue;
-            // Do the stage-1 update on the GPU.
-            Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
-            BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
-            //
-            int nGPUblocks = cfg.nGPUblocks_for_faces;
-            int nGPUthreads = Config::threads_per_GPUblock;
-            calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::flux_calc, Config::x_order);
-            auto cudaError = cudaGetLastError();
+            calculate_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::flux_calc, Config::x_order, Config::viscous);
+            cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            if (Config::viscous) {
-                apply_viscous_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
-                cudaError = cudaGetLastError();
-                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-                add_viscous_flux_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
-                cudaError = cudaGetLastError();
-                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            }
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
             nGPUthreads = Config::threads_per_GPUblock;
@@ -501,28 +643,9 @@ void march_in_time_using_gpu(bool binary_data)
             apply_convective_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, flowStates_on_gpu, fluidBlocks_on_gpu);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-        }
-        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = blk_configs[ib];
-            Block& blk = fluidBlocks[ib];
-            if (!cfg.active) continue;
-            // Do the stage-1 update on the GPU.
-            Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
-            BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
-            //
-            int nGPUblocks = cfg.nGPUblocks_for_faces;
-            int nGPUthreads = Config::threads_per_GPUblock;
-            calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::flux_calc, Config::x_order);
-            auto cudaError = cudaGetLastError();
+            calculate_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::flux_calc, Config::x_order, Config::viscous);
+            cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            if (Config::viscous) {
-                apply_viscous_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
-                cudaError = cudaGetLastError();
-                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-                add_viscous_flux_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
-                cudaError = cudaGetLastError();
-                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            }
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
             nGPUthreads = Config::threads_per_GPUblock;
@@ -551,29 +674,9 @@ void march_in_time_using_gpu(bool binary_data)
             apply_convective_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, flowStates_on_gpu, fluidBlocks_on_gpu);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-        }
-        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = blk_configs[ib];
-            Block& blk = fluidBlocks[ib];
-            if (!cfg.active) continue;
-            // Do the stage-1 update on the GPU.
-            Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
-            BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
-            //
-            int nGPUblocks = cfg.nGPUblocks_for_faces;
-            int nGPUthreads = Config::threads_per_GPUblock;
-            calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::flux_calc, Config::x_order);
-            auto cudaError = cudaGetLastError();
-            //
+            calculate_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::flux_calc, Config::x_order, Config::viscous);
+            cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            if (Config::viscous) {
-                apply_viscous_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
-                cudaError = cudaGetLastError();
-                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-                add_viscous_flux_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
-                cudaError = cudaGetLastError();
-                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            }
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
             nGPUthreads = Config::threads_per_GPUblock;

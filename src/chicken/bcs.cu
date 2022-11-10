@@ -768,19 +768,6 @@ void apply_convective_boundary_condition(FVFace& f, FVCell cells[],
 } // end apply_convective_boundary_condition()
 
 
-__global__
-void apply_convective_boundary_conditions_on_gpu(Block& blk, const BConfig& cfg,
-                                                 FlowState flowStates_on_gpu[],
-                                                 Block blks_on_gpu[])
-{
-    int i = blockIdx.x*blockDim.x + threadIdx.x;
-    if (i < cfg.nFaces) {
-        FVFace& face = blk.faces_on_gpu[i];
-        apply_convective_boundary_condition(face, blk.cells_on_gpu, flowStates_on_gpu, blks_on_gpu);
-    }
-}
-
-
 //-------------------------------------------------------------------------------------------------
 // Part C.
 // Set the FlowStates at the actual faces for effecting the boundary conditions for viscous fluxes.
@@ -813,16 +800,6 @@ __host__
 void apply_viscous_boundary_conditions(Block& blk)
 {
     for (auto& face : blk.faces) {
-        apply_viscous_boundary_condition(face);
-    }
-}
-
-__global__
-void apply_viscous_boundary_conditions_on_gpu(Block& blk, const BConfig& cfg)
-{
-    int i = blockIdx.x*blockDim.x + threadIdx.x;
-    if (i < cfg.nFaces) {
-        FVFace& face = blk.faces_on_gpu[i];
         apply_viscous_boundary_condition(face);
     }
 }
