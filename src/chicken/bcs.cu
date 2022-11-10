@@ -683,29 +683,22 @@ void apply_convective_boundary_condition(FVFace& f, FVCell cells[],
     case BCCode::wall_no_slip_fixed_T: {
         // Copy data, reflecting velocity.
         if (f.bcId == Face::iplus || f.bcId == Face::jplus || f.bcId == Face::kplus) {
-            FVCell& c = cells[f.left_cells[0]];
-            FlowState& fs0 = cells[f.right_cells[0]].fs;
-            fs0 = c.fs;
+            // [TODO] PJ 2022-11-11
+            // Note that the following fill of the ghost cell FlowStates reuses the same interior data.
+            // It may be better to also use the data from the second interior cell.
+            FlowState fs0 = cells[f.left_cells[0]].fs;
             fs0.vel.transform_to_local_frame(f.n, f.t1, f.t2);
             fs0.vel.x = -(fs0.vel.x);
             fs0.vel.transform_to_global_frame(f.n, f.t1, f.t2);
-            FlowState& fs1 = cells[f.right_cells[1]].fs;
-            fs1 = c.fs;
-            fs1.vel.transform_to_local_frame(f.n, f.t1, f.t2);
-            fs1.vel.x = -(fs1.vel.x);
-            fs1.vel.transform_to_global_frame(f.n, f.t1, f.t2);
+            cells[f.right_cells[0]].fs = fs0;
+            cells[f.right_cells[1]].fs = fs0;
         } else {
-            FVCell& c = cells[f.right_cells[0]];
-            FlowState& fs0 = cells[f.left_cells[0]].fs;
-            fs0 = c.fs;
+            FlowState fs0 = cells[f.right_cells[0]].fs;
             fs0.vel.transform_to_local_frame(f.n, f.t1, f.t2);
             fs0.vel.x = -(fs0.vel.x);
             fs0.vel.transform_to_global_frame(f.n, f.t1, f.t2);
-            FlowState& fs1 = cells[f.left_cells[1]].fs;
-            fs1 = c.fs;
-            fs1.vel.transform_to_local_frame(f.n, f.t1, f.t2);
-            fs1.vel.x = -(fs1.vel.x);
-            fs1.vel.transform_to_global_frame(f.n, f.t1, f.t2);
+            cells[f.left_cells[0]].fs = fs0;
+            cells[f.left_cells[1]].fs = fs0;
         }
         break;
     }
@@ -725,7 +718,7 @@ void apply_convective_boundary_condition(FVFace& f, FVCell cells[],
         break;
     }
     case BCCode::inflow: {
-        FlowState& inflow = flowStates[f.inflowId];
+        FlowState inflow = flowStates[f.inflowId];
         if (f.bcId == Face::iplus || f.bcId == Face::jplus || f.bcId == Face::kplus) {
             cells[f.right_cells[0]].fs = inflow;
             cells[f.right_cells[1]].fs = inflow;
@@ -751,13 +744,13 @@ void apply_convective_boundary_condition(FVFace& f, FVCell cells[],
     }
     case BCCode::outflow: {
         if (f.bcId == Face::iplus || f.bcId == Face::jplus || f.bcId == Face::kplus) {
-            FVCell& c = cells[f.left_cells[0]];
-            cells[f.right_cells[0]].fs = c.fs;
-            cells[f.right_cells[1]].fs = c.fs;
+            FlowState fs0 = cells[f.left_cells[0]].fs;
+            cells[f.right_cells[0]].fs = fs0;
+            cells[f.right_cells[1]].fs = fs0;
         } else {
-            FVCell& c = cells[f.right_cells[0]];
-            cells[f.left_cells[0]].fs = c.fs;
-            cells[f.left_cells[1]].fs = c.fs;
+            FlowState fs0 = cells[f.right_cells[0]].fs;
+            cells[f.left_cells[0]].fs = fs0;
+            cells[f.left_cells[1]].fs = fs0;
         }
         break;
     }
