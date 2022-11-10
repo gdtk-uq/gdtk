@@ -105,8 +105,7 @@ local function transformRelaxationTime(rt, p, q, db)
    return t
 end
 
-
-local function calculateDissociationEnergy(dissociating_species, db)
+function mechanism.calculateDissociationEnergy(dissociating_species, db)
    -- Calculate the dissociation energy by assuming the species splits
    -- completely into its atomic components. This may require some scrunity
    -- for polyatomic molecules, e.g. CO2

@@ -14,12 +14,16 @@
 --                  and charge balance
 --]]
 
+
 local reaction = {}
 
 local lpeg = require 'lpeg'
 local lex_elems = require 'lex_elems'
+local mechanism = require 'mechanism'
 
-local function transformRateConstant(t, coeffs, anonymousCollider, energyModes)
+local calculateDissociationEnergy = mechanism.calculateDissociationEnergy
+
+local function transformRateConstant(t, coeffs, anonymousCollider, energyModes, db)
    local nc = 0
    for _,c in ipairs(coeffs) do
       nc = nc + c
@@ -30,9 +34,8 @@ local function transformRateConstant(t, coeffs, anonymousCollider, energyModes)
    local base = 1.0e-6
    local convFactor = base^(nc-1)
 
-   m = {}
+   local m = {}
    m.model = t[1]
-
    if m.model == 'Arrhenius' then
       m.A = t.A*convFactor
       m.n = t.n
@@ -101,6 +104,19 @@ local function transformRateConstant(t, coeffs, anonymousCollider, energyModes)
       else
 	 m.model = 'Lindemann-Hinshelwood'
       end
+   elseif m.model == "Marrone-Treanor" then
+       Runiv = 8.3145
+       m.D = calculateDissociationEnergy(t.D, db) / Runiv
+       m.U = m.D / t.U
+       m.theta = db[t.D].theta_v
+       m.rate = transformRateConstant(t.rate, coeffs, anonymousCollider, energyModes, db)
+   elseif m.model == "Modified-Marrone-Treanor" then
+       Runiv = 8.3145
+       m.D = calculateDissociationEnergy(t.D, db) / Runiv
+       m.theta = db[t.D].theta_v
+       m.aU = t.aU
+       m.Ustar = t.Ustar
+       m.rate = transformRateConstant(t.rate, coeffs, anonymousCollider, energyModes, db)
    else
       print("The rate constant model: ", m.model, " is not known.")
       print("Bailing out!")
@@ -139,6 +155,16 @@ local function rateConstantToLuaStr(rc)
 	 str = str .. string.format(" %s=%16.12e, ", k, v)
       end
       str = str .. "\n}"
+   elseif rc.model == 'Marrone-Treanor' then
+       str = "{model='Marrone-Treanor', "
+       str = str .. string.format("D=%16.12e, U=%16.12e, theta=%16.12e, rate=", rc.D, rc.U, rc.theta)
+       str = str .. rateConstantToLuaStr(rc.rate)
+       str = str .. "}"
+   elseif rc.model == 'Modified-Marrone-Treanor' then
+       str = "{model='Modified-Marrone-Treanor', "
+       str = str .. string.format("D=%16.12e, aU=%16.12e, Ustar=%16.12e, theta=%16.12e, rate=", rc.D, rc.aU, rc.Ustar, rc.theta)
+       str = str .. rateConstantToLuaStr(rc.rate)
+       str = str .. "}"
    elseif rc.model == 'fromEqConst' then
      if not rc.rctIndex then
        rc.rctIndex=-1
@@ -309,7 +335,7 @@ end
 --          efficiencies = {}
 -- }
 --
-function reaction.transformReaction(t, species, energyModes, suppressWarnings)
+function reaction.transformReaction(t, species, energyModes, db, suppressWarnings)
    r = {}
    r.equation = t[1]
    r.type = "elementary"
@@ -396,12 +422,12 @@ function reaction.transformReaction(t, species, energyModes, suppressWarnings)
    end
 
    if t.fr then
-      r.frc = transformRateConstant(t.fr, r.reacCoeffs, anonymousCollider, energyModes)
+      r.frc = transformRateConstant(t.fr, r.reacCoeffs, anonymousCollider, energyModes, db)
    else
       r.frc = {model="fromEqConst"}
    end
    if t.br then
-      r.brc = transformRateConstant(t.br, r.prodCoeffs, anonymousCollider, energyModes)
+      r.brc = transformRateConstant(t.br, r.prodCoeffs, anonymousCollider, energyModes, db)
    else
       r.brc = {model="fromEqConst"}
    end

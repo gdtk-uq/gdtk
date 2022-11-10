@@ -371,6 +371,120 @@ private:
     double _A, _n, _C, _s;
 }
 
+// the partition function evaluated at equilibrium
+// this function is used in the various Marrone-Treanor
+// rate constants
+@nogc number _Q(number T, number D, number theta)
+{
+    number num = 1 - exp(-D/T);
+    number den = 1 - exp(-theta/T);
+    return num/den;
+}
+
+// Non-equilibrium rate constant from
+// Knab, Fruhauf, Messerschmid 1995. It modifies an existing
+// rate constant to account for vibrational non-equilbrium.
+// The lua constructor has a nested table:
+// tab = {model='MarroneTreanor', U=..., D=..., theta=..., R=..., 
+//                           rate = {model='Arrhenius', A=, ...}}
+class MarroneTreanorRateConstant : RateConstant {
+public:
+    this(RateConstant rate, number U, number D, number theta)
+    {
+       _rate = rate; 
+       _D = D;
+       _theta = theta;
+       _U = U;
+    }
+
+    this(lua_State* L, Tuple!(int, double)[] efficiencies, GasModel gmodel)
+    {
+        _U = getDouble(L, -1, "U");
+        _D = getDouble(L, -1, "D");
+        _theta = getDouble(L, -1, "theta");
+        lua_getfield(L, -1, "rate");
+        _rate = createRateConstant(L, efficiencies, gmodel);
+        lua_pop(L, 1);
+    }
+
+    MarroneTreanorRateConstant dup()
+    {
+        return new MarroneTreanorRateConstant(_rate, _U, _D, _theta);
+    }
+
+    @nogc number eval(in GasState Q)
+    {
+        // first, evaluate the original rate
+        number kEQ = _rate.eval(Q); 
+
+        // then compute the non-eq factor
+        number Gamma = 1./(1./Q.T_modes[0] - 1./Q.T - 1./_U);
+        number Q_T = _Q(Q.T, _D, _theta);
+        number Q_Gamma = _Q(Gamma, _D, _theta);
+        number Q_Tv = _Q(Q.T_modes[0], _D, _theta);
+        number Q_U = _Q(-_U, _D, _theta);
+        return kEQ * Q_T * Q_Gamma / (Q_Tv * Q_U);
+    }
+
+private:
+    RateConstant _rate; // the underlying rate constant
+    number _D; // dissociation temperature (K)
+    number _theta; // characteristic vibration temperature (K)
+    number _U; // model parameter (K)
+}
+
+class MMTRateConstant : RateConstant {
+public:
+    this(RateConstant rate, number D, number theta, number aU, number U_star)
+    {
+        _rate = rate;
+        _D = D;
+        _theta = theta;
+        _aU = aU;
+        _U_star = U_star;
+    }
+
+    MMTRateConstant dup()
+    {
+        return new MMTRateConstant(_rate, _D, _theta, _aU, _U_star);
+    }
+
+    this(lua_State* L, Tuple!(int, double)[] efficiencies, GasModel gmodel)
+    {
+        _aU = getDouble(L, -1, "aU");
+        _U_star = getDouble(L, -1, "Ustar");
+        _D = getDouble(L, -1, "D");
+        _theta = getDouble(L, -1, "theta");
+        lua_getfield(L, -1, "rate");
+        _rate = createRateConstant(L, efficiencies, gmodel);
+        lua_pop(L, 1);
+    }
+
+    @nogc number eval(in GasState Q)
+    {
+        number kEQ = _rate.eval(Q);
+
+        number Tinv = 1./Q.T;
+        number Tvinv = 1./Q.T_modes[0];
+        number Uinv = _aU*Tinv + 1./_U_star;
+        number U = 1./Uinv;
+        number TF = 1./(Tvinv - Tinv - Uinv);
+        number Q_T = _Q(Q.T, _D, _theta);
+        number Q_TF = _Q(TF, _D, _theta);
+        number Q_Tv = _Q(Q.T_modes[0], _D, _theta);
+        number Q_U = _Q(-U, _D, _theta);
+        return kEQ * Q_T * Q_TF / (Q_Tv * Q_U);
+    }
+
+private:
+    RateConstant _rate; // the underlying rate constant
+    number _D; // dissociation temperature (K)
+    number _theta; // characteristic vibration temperature (K)
+    number _aU; // model parameter (unitless)
+    number _U_star; // model parameter (K)
+}
+
+
 /++
  + Create a RateConstant object based on information in a LuaTable.
  +
@@ -397,6 +511,10 @@ RateConstant createRateConstant(lua_State* L, Tuple!(int, double)[] efficiencies
         return new YRRateConstant(L, efficiencies, gmodel);
     case "Park":
         return new Park2TRateConstant(L);
+    case "Marrone-Treanor":
+        return new MarroneTreanorRateConstant(L, efficiencies, gmodel);
+    case "Modified-Marrone-Treanor":
+        return new MMTRateConstant(L, efficiencies, gmodel);
     case "fromEqConst":
         return null;
     default:

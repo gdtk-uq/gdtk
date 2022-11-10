@@ -345,7 +345,7 @@ function main()
    for i,r in ipairs(reactions) do
       r.number = i
       if validateReaction(reactions[i]) then 
-         reactions[i] = transformReaction(r, species, energyModes, SUPPRESS_WARNINGS)
+         reactions[i] = transformReaction(r, species, energyModes, db, SUPPRESS_WARNINGS)
       else
          print("Error while trying to validate reaction ", i)
          print(reactions[i][1])
