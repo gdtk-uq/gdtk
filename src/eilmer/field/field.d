@@ -127,21 +127,42 @@ class ElectricField {
                 // have different equations for the derivatives...
 				uint celltype = ZNG_interior;
                 foreach(io, face; cell.iface){
-                    writefln("Testing face: %d %d %s ", face.id, io, face_name[io]);
 					if (face.is_on_boundary) {
 						auto field_bc = field_bcs[blkid][face.bc_id];
-                        writefln("Is Boundary! %d %s", io, field_bc);
 						if ((cast(ZeroNormalGradient) field_bc) !is null) {
-                            writefln("Is ZNG! %d", ZNG_types[io] );
                             celltype = celltype | ZNG_types[io];
 						}
                     }
 				}
 
-                writefln(" celltype is %d", celltype);
                 switch (celltype) {
+                case ZNG_north:
+                    D = mixin(ZGN_D);
+                    fdx[0] = mixin(ZGN_Nx);
+                    fdx[1] = mixin(ZGN_Ex);
+                    fdx[2] = mixin(ZGN_Sx);
+                    fdx[3] = mixin(ZGN_Wx);
+                    _Ix    = mixin(ZGN_Ix);
+
+                    fdy[0] = mixin(ZGN_Ny);
+                    fdy[1] = mixin(ZGN_Ey);
+                    fdy[2] = mixin(ZGN_Sy);
+                    fdy[3] = mixin(ZGN_Wy);
+                    _Iy    = mixin(ZGN_Iy);
+
+                    fdxx[0] = mixin(ZGN_Nxx);
+                    fdxx[1] = mixin(ZGN_Exx);
+                    fdxx[2] = mixin(ZGN_Sxx);
+                    fdxx[3] = mixin(ZGN_Wxx);
+                    _Ixx    = mixin(ZGN_Ixx);
+
+                    fdyy[0] = mixin(ZGN_Nyy);
+                    fdyy[1] = mixin(ZGN_Eyy);
+                    fdyy[2] = mixin(ZGN_Syy);
+                    fdyy[3] = mixin(ZGN_Wyy);
+                    _Iyy    = mixin(ZGN_Iyy);
+                    break;
                 case ZNG_east:
-                    writefln("In ZNG_east");
                     D = mixin(ZGE_D);
                     fdx[0] = mixin(ZGE_Nx);
                     fdx[1] = mixin(ZGE_Ex);
@@ -167,8 +188,33 @@ class ElectricField {
                     fdyy[3] = mixin(ZGE_Wyy);
                     _Iyy    = mixin(ZGE_Iyy);
                     break;
+                case ZNG_south:
+                    D = mixin(ZGS_D);
+                    fdx[0] = mixin(ZGS_Nx);
+                    fdx[1] = mixin(ZGS_Ex);
+                    fdx[2] = mixin(ZGS_Sx);
+                    fdx[3] = mixin(ZGS_Wx);
+                    _Ix    = mixin(ZGS_Ix);
+
+                    fdy[0] = mixin(ZGS_Ny);
+                    fdy[1] = mixin(ZGS_Ey);
+                    fdy[2] = mixin(ZGS_Sy);
+                    fdy[3] = mixin(ZGS_Wy);
+                    _Iy    = mixin(ZGS_Iy);
+
+                    fdxx[0] = mixin(ZGS_Nxx);
+                    fdxx[1] = mixin(ZGS_Exx);
+                    fdxx[2] = mixin(ZGS_Sxx);
+                    fdxx[3] = mixin(ZGS_Wxx);
+                    _Ixx    = mixin(ZGS_Ixx);
+
+                    fdyy[0] = mixin(ZGS_Nyy);
+                    fdyy[1] = mixin(ZGS_Eyy);
+                    fdyy[2] = mixin(ZGS_Syy);
+                    fdyy[3] = mixin(ZGS_Wyy);
+                    _Iyy    = mixin(ZGS_Iyy);
+                    break;
                 case ZNG_west:
-                    writefln("In ZNG_west");
                     D = mixin(ZGW_D);
                     fdx[0] = mixin(ZGW_Nx);
                     fdx[1] = mixin(ZGW_Ex);
@@ -195,7 +241,6 @@ class ElectricField {
                     _Iyy    = mixin(ZGW_Iyy);
                     break;
                 case ZNG_interior:
-                    writefln("In ZNG_interior");
                     D = mixin(R_D);
                     fdx[0] = mixin(R_Nx);
                     fdx[1] = mixin(R_Ex);
@@ -226,14 +271,6 @@ class ElectricField {
                     throw new Error(errMsg);
                 }
 
-                //writef("Cell boundaries: ");
-                //foreach(io, face; cell.iface){
-                //    if (face.is_on_boundary) {
-                //        auto field_bc = field_bcs[blkid][face.bc_id];
-                //        writef("%s - %s, ", face_name[io], field_bc);
-                //    }
-                //}
-                writefln("");
                 foreach(io, face; cell.iface){
                     face.fs.gas.sigma = conductivity(face.fs.gas, face.pos, gmodel); // TODO: Redundant work.
                     double sign = cell.outsign[io];

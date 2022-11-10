@@ -347,13 +347,13 @@ const string R_Iyy = "(((2*dxN-2*dxE)*dxS^^2+(2*dxE^^2-2*dxN^^2)*dxS+2*dxE*dxN^^
 
 const string ZGN_Nx = "0.0";
 
-const string ZGN_Sx = "-((dxE^^2*dyW^^2-dxW^^2*dyE^^2)*nxY)";
+const string ZGN_Sx = "-((dxE^^2*dyW^^2-dxW^^2*dyE^^2)*nyN)";
 
-const string ZGN_Ex = "((dxS^^2*dyW^^2-dxW^^2*dyS^^2)*nxY)";
+const string ZGN_Ex = "((dxS^^2*dyW^^2-dxW^^2*dyS^^2)*nyN)";
 
-const string ZGN_Wx = "((dxE^^2*dyS^^2-dxS^^2*dyE^^2)*nxY)";
+const string ZGN_Wx = "((dxE^^2*dyS^^2-dxS^^2*dyE^^2)*nyN)";
 
-const string ZGN_Ix = "-(((dxS^^2-dxE^^2)*dyW^^2+(dxE^^2-dxW^^2)*dyS^^2+(dxW^^2-dxS^^2)*dyE^^2)*nxY)";
+const string ZGN_Ix = "-(((dxS^^2-dxE^^2)*dyW^^2+(dxE^^2-dxW^^2)*dyS^^2+(dxW^^2-dxS^^2)*dyE^^2)*nyN)";
 
 
 const string ZGN_Ny = "0.0";
@@ -369,30 +369,30 @@ const string ZGN_Iy = "(((dxS^^2-dxE^^2)*dyW^^2+(dxE^^2-dxW^^2)*dyS^^2+(dxW^^2-d
 
 const string ZGN_Nxx = "0.0";
 
-const string ZGN_Sxx = "((2*dxE*dyW^^2-2*dxW*dyE^^2)*nxY+(2*dyE^^2*dyW-2*dyE*dyW^^2)*nxN)";
+const string ZGN_Sxx = "((2*dxE*dyW^^2-2*dxW*dyE^^2)*nyN+(2*dyE^^2*dyW-2*dyE*dyW^^2)*nxN)";
 
-const string ZGN_Exx = "-((2*dxS*dyW^^2-2*dxW*dyS^^2)*nxY+(2*dyS^^2*dyW-2*dyS*dyW^^2)*nxN)";
+const string ZGN_Exx = "-((2*dxS*dyW^^2-2*dxW*dyS^^2)*nyN+(2*dyS^^2*dyW-2*dyS*dyW^^2)*nxN)";
 
-const string ZGN_Wxx = "-((2*dxE*dyS^^2-2*dxS*dyE^^2)*nxY+(2*dyE^^2*dyS-2*dyE*dyS^^2)*nxN)";
+const string ZGN_Wxx = "-((2*dxE*dyS^^2-2*dxS*dyE^^2)*nyN+(2*dyE^^2*dyS-2*dyE*dyS^^2)*nxN)";
 
-const string ZGN_Ixx = "(((2*dxS-2*dxE)*dyW^^2+(2*dxE-2*dxW)*dyS^^2+(2*dxW-2*dxS)*dyE^^2)*nxY
+const string ZGN_Ixx = "(((2*dxS-2*dxE)*dyW^^2+(2*dxE-2*dxW)*dyS^^2+(2*dxW-2*dxS)*dyE^^2)*nyN
  +((2*dyE-2*dyS)*dyW^^2+(2*dyS^^2-2*dyE^^2)*dyW-2*dyE*dyS^^2+2*dyE^^2*dyS)*nxN)";
 
 
 const string ZGN_Nyy = "0.0";
 
-const string ZGN_Syy = "-((2*dxE*dxW^^2-2*dxE^^2*dxW)*nxY+(2*dxE^^2*dyW-2*dxW^^2*dyE)*nxN)";
+const string ZGN_Syy = "-((2*dxE*dxW^^2-2*dxE^^2*dxW)*nyN+(2*dxE^^2*dyW-2*dxW^^2*dyE)*nxN)";
 
-const string ZGN_Eyy = "((2*dxS*dxW^^2-2*dxS^^2*dxW)*nxY+(2*dxS^^2*dyW-2*dxW^^2*dyS)*nxN)";
+const string ZGN_Eyy = "((2*dxS*dxW^^2-2*dxS^^2*dxW)*nyN+(2*dxS^^2*dyW-2*dxW^^2*dyS)*nxN)";
 
-const string ZGN_Wyy = "((2*dxE*dxS^^2-2*dxE^^2*dxS)*nxY+(2*dxE^^2*dyS-2*dxS^^2*dyE)*nxN)";
+const string ZGN_Wyy = "((2*dxE*dxS^^2-2*dxE^^2*dxS)*nyN+(2*dxE^^2*dyS-2*dxS^^2*dyE)*nxN)";
 
-const string ZGN_Iyy = "-(((2*dxS-2*dxE)*dxW^^2+(2*dxE^^2-2*dxS^^2)*dxW+2*dxE*dxS^^2-2*dxE^^2*dxS)*nxY
+const string ZGN_Iyy = "-(((2*dxS-2*dxE)*dxW^^2+(2*dxE^^2-2*dxS^^2)*dxW+2*dxE*dxS^^2-2*dxE^^2*dxS)*nyN
  +((2*dxS^^2-2*dxE^^2)*dyW+(2*dxE^^2-2*dxW^^2)*dyS+(2*dxW^^2-2*dxS^^2)*dyE)*nxN)";
 
 const string ZGN_D = "((dxE*dxS^^2-dxE^^2*dxS)*dyW^^2+(dxE^^2*dxW-dxE*dxW^^2)*dyS^^2
                             +(dxS*dxW^^2-dxS^^2*dxW)*dyE^^2)
- *nxY
+ *nyN
   +((dxE^^2*dyS-dxS^^2*dyE)*dyW^^2+(dxS^^2*dyE^^2-dxE^^2*dyS^^2)*dyW+dxW^^2*dyE*dyS^^2
                                 -dxW^^2*dyE^^2*dyS)
     *nxN";
