@@ -394,12 +394,12 @@ void calculate_fluxes_on_gpu(Block& blk, const BConfig& cfg,
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nFaces) {
-        FVFace face = blk.faces_on_gpu[i]; // Local copy of face into registers
+        FVFace& face = blk.faces_on_gpu[i];
         apply_convective_boundary_condition(face, blk.cells_on_gpu, flowStates_on_gpu, blks_on_gpu);
-        FlowState fsL1 = blk.cells_on_gpu[face.left_cells[1]].fs;
-        FlowState fsL0 = blk.cells_on_gpu[face.left_cells[0]].fs;
-        FlowState fsR0 = blk.cells_on_gpu[face.right_cells[0]].fs;
-        FlowState fsR1 = blk.cells_on_gpu[face.right_cells[1]].fs;
+        FlowState& fsL1 = blk.cells_on_gpu[face.left_cells[1]].fs;
+        FlowState& fsL0 = blk.cells_on_gpu[face.left_cells[0]].fs;
+        FlowState& fsR0 = blk.cells_on_gpu[face.right_cells[0]].fs;
+        FlowState& fsR1 = blk.cells_on_gpu[face.right_cells[1]].fs;
         face.calculate_convective_flux(fsL1, fsL0, fsR0, fsR1, flux_calc, x_order);
         if (viscous) {
             apply_viscous_boundary_condition(face);
@@ -409,7 +409,6 @@ void calculate_fluxes_on_gpu(Block& blk, const BConfig& cfg,
             calculate_gradients_at_face(face, blk.cells_on_gpu, blk.faces_on_gpu);
             face.add_viscous_flux();
         }
-        blk.faces_on_gpu[i].F = face.F; // Copy back to global space, just the fluxes.
     }
 }
 

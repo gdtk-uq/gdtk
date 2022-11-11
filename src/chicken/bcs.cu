@@ -782,6 +782,7 @@ void apply_viscous_boundary_condition(FVFace& f)
         break;
     case BCCode::inflow_function:
         f.fs = compute_inflow_state_from_function(f.bcFun, f.pos);
+        break;
     default:
         // Do nothing.
         break;
