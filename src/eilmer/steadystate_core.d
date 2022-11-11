@@ -929,9 +929,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     GlobalConfig.frozen_limiter = true;
                 }
                 limiterFreezingCondition = true;
-                if (GlobalConfig.is_master_task) {
-                    writefln("=== limiter freezing condition met at step: %d ===", step);
-                }
+                writefln("=== limiter freezing condition met at step: %d ===", step);
             }
 	}
         // Check on some stopping criteria
