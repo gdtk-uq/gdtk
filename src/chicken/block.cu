@@ -1005,7 +1005,7 @@ struct Block {
             ConservedQuantities& dUdt1 = dQdt[cfg.nActiveCells + i];
             ConservedQuantities& dUdt2 = dQdt[2*cfg.nActiveCells + i];
             c.eval_dUdt(dUdt2, faces.data());
-            c.add_source_terms(dUdt0, Config::source_terms);
+            c.add_source_terms(dUdt2, Config::source_terms);
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
