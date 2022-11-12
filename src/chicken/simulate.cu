@@ -368,11 +368,8 @@ void copy_conserved_data_on_gpu(Block& blk, const BConfig& cfg, int from_level, 
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nActiveCells) {
-        ConservedQuantities& U_from = blk.Q_on_gpu[from_level*cfg.nActiveCells + i];
-        ConservedQuantities& U_to = blk.Q_on_gpu[to_level*cfg.nActiveCells + i];
-        for (int j=0; j < CQI::n; j++) {
-            U_to[j] = U_from[j];
-        }
+        ConservedQuantities U_from = blk.Q_on_gpu[from_level*cfg.nActiveCells + i];
+        blk.Q_on_gpu[to_level*cfg.nActiveCells + i] = U_from;
     }
 }
 
