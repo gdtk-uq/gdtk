@@ -199,12 +199,19 @@ struct FVCell {
         auto& fjp = faces[face[Face::jplus]];
         auto& fkm = faces[face[Face::kminus]];
         auto& fkp = faces[face[Face::kplus]];
+        // Introducing local variables for the data helps
+        // promote coalesced global memory access on the GPU.
+        number area_im = fim.area; ConservedQuantities F_im = fim.F;
+        number area_ip = fip.area; ConservedQuantities F_ip = fip.F;
+        number area_jm = fjm.area; ConservedQuantities F_jm = fjm.F;
+        number area_jp = fjp.area; ConservedQuantities F_jp = fjp.F;
+        number area_km = fkm.area; ConservedQuantities F_km = fkm.F;
+        number area_kp = fkp.area; ConservedQuantities F_kp = fkp.F;
         //
         for (int i=0; i < CQI::n; i++) {
             // Integrate the fluxes across the interfaces that bound the cell.
-            number surface_integral = fim.area*fim.F[i] - fip.area*fip.F[i]
-                + fjm.area*fjm.F[i] - fjp.area*fjp.F[i]
-                + fkm.area*fkm.F[i] - fkp.area*fkp.F[i];
+            number surface_integral = area_im*F_im[i] - area_ip*F_ip[i]
+                + area_jm*F_jm[i] - area_jp*F_jp[i] + area_km*F_km[i] - area_kp*F_kp[i];
             // Then evaluate the derivatives of conserved quantity.
             // Note that conserved quantities are stored per-unit-volume.
             dUdt[i] = vol_inv*surface_integral;
