@@ -411,14 +411,13 @@ void update_stage_1_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, 
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nActiveCells) {
         FVCell& c = blk.cells_on_gpu[i];
-        ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
+        ConservedQuantities dUdt0;
         c.eval_dUdt(dUdt0, blk.faces_on_gpu, isrc);
-        ConservedQuantities& U0 = blk.Q_on_gpu[i];
-        ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
-        for (int j=0; j < CQI::n; j++) {
-            U1[j] = U0[j] + dt*dUdt0[j];
-        }
-        int bad_cell_flag = c.fs.decode_conserved(U1);
+        blk.dQdt_on_gpu[i] = dUdt0; // keep
+        ConservedQuantities U = blk.Q_on_gpu[i]; // U0
+        for (int j=0; j < CQI::n; j++) { U[j] += dt*dUdt0[j]; }
+        blk.Q_on_gpu[cfg.nActiveCells + i] = U; // keep update
+        int bad_cell_flag = c.fs.decode_conserved(U);
         atomicAdd(bad_cell_count, bad_cell_flag);
         if (bad_cell_flag) {
             printf("Stage 1 update, Bad cell at pos x=%g y=%g z=%g\n", c.pos.x, c.pos.y, c.pos.z);
@@ -432,15 +431,14 @@ void update_stage_2_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, 
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nActiveCells) {
         FVCell& c = blk.cells_on_gpu[i];
-        ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
-        ConservedQuantities& dUdt1 = blk.dQdt_on_gpu[cfg.nActiveCells + i];
+        ConservedQuantities dUdt0 = blk.dQdt_on_gpu[i];
+        ConservedQuantities dUdt1;
         c.eval_dUdt(dUdt1, blk.faces_on_gpu, isrc);
-        ConservedQuantities& U0 = blk.Q_on_gpu[i];
-        ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
-        for (int j=0; j < CQI::n; j++) {
-            U1[j] = U0[j] + 0.25*dt*(dUdt0[j] + dUdt1[j]);
-        }
-        int bad_cell_flag = c.fs.decode_conserved(U1);
+        blk.dQdt_on_gpu[cfg.nActiveCells + i] = dUdt1; // keep
+        ConservedQuantities U = blk.Q_on_gpu[i]; // U0
+        for (int j=0; j < CQI::n; j++) { U[j] += 0.25*dt*(dUdt0[j] + dUdt1[j]); }
+        blk.Q_on_gpu[cfg.nActiveCells + i] = U; // keep update
+        int bad_cell_flag = c.fs.decode_conserved(U);
         atomicAdd(bad_cell_count, bad_cell_flag);
         if (bad_cell_flag) {
             printf("Stage 2 update, Bad cell at pos x=%g y=%g z=%g\n", c.pos.x, c.pos.y, c.pos.z);
@@ -454,16 +452,17 @@ void update_stage_3_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, 
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nActiveCells) {
         FVCell& c = blk.cells_on_gpu[i];
-        ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
-        ConservedQuantities& dUdt1 = blk.dQdt_on_gpu[cfg.nActiveCells + i];
-        ConservedQuantities& dUdt2 = blk.dQdt_on_gpu[2*cfg.nActiveCells + i];
+        ConservedQuantities dUdt0 = blk.dQdt_on_gpu[i];
+        ConservedQuantities dUdt1 = blk.dQdt_on_gpu[cfg.nActiveCells + i];
+        ConservedQuantities dUdt2;
         c.eval_dUdt(dUdt2, blk.faces_on_gpu, isrc);
-        ConservedQuantities& U0 = blk.Q_on_gpu[i];
-        ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
+        // blk.dQdt_on_gpu[2*cfg.nActiveCells + i] = dUdt2; // no need to keep, last stage
+        ConservedQuantities U = blk.Q_on_gpu[i]; // U0
         for (int j=0; j < CQI::n; j++) {
-            U1[j] = U0[j] + dt*(1.0/6.0*dUdt0[j] + 1.0/6.0*dUdt1[j] + 4.0/6.0*dUdt2[j]);
+            U[j] += dt*(1.0/6.0*dUdt0[j] + 1.0/6.0*dUdt1[j] + 4.0/6.0*dUdt2[j]);
         }
-        int bad_cell_flag = c.fs.decode_conserved(U1);
+        blk.Q_on_gpu[cfg.nActiveCells + i] = U; // keep update
+        int bad_cell_flag = c.fs.decode_conserved(U);
         atomicAdd(bad_cell_count, bad_cell_flag);
         if (bad_cell_flag) {
             printf("Stage 3 update, Bad cell at pos x=%g y=%g z=%g\n", c.pos.x, c.pos.y, c.pos.z);
