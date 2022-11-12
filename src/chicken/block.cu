@@ -95,9 +95,11 @@ int setup_LSQ_arrays_at_face(FVFace& f, FVCell cells[], FVFace faces[])
 
 
 __host__ __device__
-void calculate_gradients_at_face(FVFace& f, FVCell cells[], FVFace faces[])
+void add_viscous_fluxes_at_face(FVFace& f, FVCell cells[], FVFace faces[])
 // Compute the flow quantity gradients at the face centre,
 // making use of the least-squares coefficients prepared at the start of stepping.
+// Then add the viscous component of the fluxes of mass, momentum and energy
+// to the convective flux values that were computed eariler.
 {
     // Get local copies of the cloud FlowStates.
     FlowState cloud_fs[cloud_nmax];
@@ -137,12 +139,35 @@ void calculate_gradients_at_face(FVFace& f, FVCell cells[], FVFace faces[])
         grad_vz.y += wy * dq;
         grad_vz.z += wz * dq;
     }
-    // On device, copy back to global data space.
-    f.grad_T = grad_T;
-    f.grad_vx = grad_vx;
-    f.grad_vy = grad_vy;
-    f.grad_vz = grad_vz;
-} // end calculate_gradients_at_face()
+    // Calculate the viscous fluxes of mass, momentum and energy by
+    // Combining the flow-quantity gradients with the transport coefficients.
+    number mu, k;
+    fs0.gas.trans_coeffs(mu, k);
+    number lmbda = -2.0/3.0 * mu;
+    // Shear stresses.
+    number tau_xx = 2.0*mu*grad_vx.x + lmbda*(grad_vx.x + grad_vy.y + grad_vz.z);
+    number tau_yy = 2.0*mu*grad_vy.y + lmbda*(grad_vx.x + grad_vy.y + grad_vz.z);
+    number tau_zz = 2.0*mu*grad_vz.z + lmbda*(grad_vx.x + grad_vy.y + grad_vz.z);
+    number tau_xy = mu * (grad_vx.y + grad_vy.x);
+    number tau_xz = mu * (grad_vx.z + grad_vz.x);
+    number tau_yz = mu * (grad_vy.z + grad_vz.y);
+    // Thermal conduction.
+    number qx = k * grad_T.x;
+    number qy = k * grad_T.y;
+    number qz = k * grad_T.z;
+    // Combine into fluxes: store as the dot product (F.n).
+    Vector3 n = f.n;
+    ConservedQuantities F = f.F; // face folds convective fluxes already.
+    // Mass flux -- NO CONTRIBUTION
+    F[CQI::xMom] -= tau_xx*n.x + tau_xy*n.y + tau_xz*n.z;
+    F[CQI::yMom] -= tau_xy*n.x + tau_yy*n.y + tau_yz*n.z;
+    F[CQI::zMom] -= tau_xz*n.x + tau_yz*n.y + tau_zz*n.z;
+    F[CQI::totEnergy] -=
+        (tau_xx*fs0.vel.x + tau_xy*fs0.vel.y + tau_xz*fs0.vel.z + qx)*n.x +
+        (tau_xy*fs0.vel.x + tau_yy*fs0.vel.y + tau_yz*fs0.vel.z + qy)*n.y +
+        (tau_xz*fs0.vel.x + tau_yz*fs0.vel.y + tau_zz*fs0.vel.z + qz)*n.z;
+    f.F = F;
+} // end add_viscous_fluxes_at_face()
 
 //-----------------------------------------------------------------------------------
 
@@ -937,11 +962,10 @@ struct Block {
     }
 
     __host__
-    void add_viscous_flux()
+    void add_viscous_fluxes()
     {
         for (auto& face : faces) {
-            calculate_gradients_at_face(face, cells.data(), faces.data());
-            face.add_viscous_flux();
+            add_viscous_fluxes_at_face(face, cells.data(), faces.data());
         }
     }
 

@@ -234,7 +234,7 @@ void march_in_time_using_cpu_only(bool binary_data)
                 blk.calculate_convective_fluxes(Config::flux_calc, Config::x_order);
                 if (Config::viscous) {
                     apply_viscous_boundary_conditions(blk);
-                    blk.add_viscous_flux();
+                    blk.add_viscous_fluxes();
                 }
                 bad_cell_counts[ib] = blk.update_stage_1(cfg, SimState::dt);
             }
@@ -255,7 +255,7 @@ void march_in_time_using_cpu_only(bool binary_data)
                 blk.calculate_convective_fluxes(Config::flux_calc, Config::x_order);
                 if (Config::viscous) {
                     apply_viscous_boundary_conditions(blk);
-                    blk.add_viscous_flux();
+                    blk.add_viscous_fluxes();
                 }
                 bad_cell_counts[ib] = blk.update_stage_2(cfg, SimState::dt);
             }
@@ -276,7 +276,7 @@ void march_in_time_using_cpu_only(bool binary_data)
                 blk.calculate_convective_fluxes(Config::flux_calc, Config::x_order);
                 if (Config::viscous) {
                     apply_viscous_boundary_conditions(blk);
-                    blk.add_viscous_flux();
+                    blk.add_viscous_fluxes();
                 }
                 bad_cell_counts[ib] = blk.update_stage_3(cfg, SimState::dt);
             }
@@ -403,11 +403,7 @@ void calculate_fluxes_on_gpu(Block& blk, const BConfig& cfg,
         face.calculate_convective_flux(fsL1, fsL0, fsR0, fsR1, flux_calc, x_order);
         if (viscous) {
             apply_viscous_boundary_condition(face);
-            // [TODO] If we merge the following two function calls,
-            // we would not need to retain the gradients in the Face struct.
-            // Just use them to update the fluxes and then discard.
-            calculate_gradients_at_face(face, blk.cells_on_gpu, blk.faces_on_gpu);
-            face.add_viscous_flux();
+            add_viscous_fluxes_at_face(face, blk.cells_on_gpu, blk.faces_on_gpu);
         }
     }
 }
