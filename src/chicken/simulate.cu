@@ -419,8 +419,7 @@ void update_stage_1_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, 
     if (i < cfg.nActiveCells) {
         FVCell& c = blk.cells_on_gpu[i];
         ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
-        c.eval_dUdt(dUdt0, blk.faces_on_gpu);
-        c.add_source_terms(dUdt0, isrc);
+        c.eval_dUdt(dUdt0, blk.faces_on_gpu, isrc);
         ConservedQuantities& U0 = blk.Q_on_gpu[i];
         ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
         for (int j=0; j < CQI::n; j++) {
@@ -442,8 +441,7 @@ void update_stage_2_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, 
         FVCell& c = blk.cells_on_gpu[i];
         ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
         ConservedQuantities& dUdt1 = blk.dQdt_on_gpu[cfg.nActiveCells + i];
-        c.eval_dUdt(dUdt1, blk.faces_on_gpu);
-        c.add_source_terms(dUdt1, isrc);
+        c.eval_dUdt(dUdt1, blk.faces_on_gpu, isrc);
         ConservedQuantities& U0 = blk.Q_on_gpu[i];
         ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
         for (int j=0; j < CQI::n; j++) {
@@ -466,8 +464,7 @@ void update_stage_3_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, 
         ConservedQuantities& dUdt0 = blk.dQdt_on_gpu[i];
         ConservedQuantities& dUdt1 = blk.dQdt_on_gpu[cfg.nActiveCells + i];
         ConservedQuantities& dUdt2 = blk.dQdt_on_gpu[2*cfg.nActiveCells + i];
-        c.eval_dUdt(dUdt2, blk.faces_on_gpu);
-        c.add_source_terms(dUdt2, isrc);
+        c.eval_dUdt(dUdt2, blk.faces_on_gpu, isrc);
         ConservedQuantities& U0 = blk.Q_on_gpu[i];
         ConservedQuantities& U1 = blk.Q_on_gpu[cfg.nActiveCells + i];
         for (int j=0; j < CQI::n; j++) {

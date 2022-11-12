@@ -189,7 +189,7 @@ struct FVCell {
     }
 
     __host__ __device__
-    void eval_dUdt(ConservedQuantities& dUdt, FVFace faces[])
+    void eval_dUdt(ConservedQuantities& dUdt, FVFace faces[], int isrc)
     // These are the spatial (RHS) terms in the semi-discrete governing equations.
     {
         number vol_inv = 1.0/volume;
@@ -209,6 +209,8 @@ struct FVCell {
             // Note that conserved quantities are stored per-unit-volume.
             dUdt[i] = vol_inv*surface_integral;
         }
+        //
+        if (isrc != SourceTerms::none) add_source_terms(dUdt, isrc);
         return;
     } // end eval_dUdt()
 

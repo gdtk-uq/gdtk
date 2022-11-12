@@ -953,8 +953,7 @@ struct Block {
         for (int i=0; i < cfg.nActiveCells; i++) {
             FVCell& c = cells[i];
             ConservedQuantities& dUdt0 = dQdt[i];
-            c.eval_dUdt(dUdt0, faces.data());
-            c.add_source_terms(dUdt0, Config::source_terms);
+            c.eval_dUdt(dUdt0, faces.data(), Config::source_terms);
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
@@ -978,8 +977,7 @@ struct Block {
             FVCell& c = cells[i];
             ConservedQuantities& dUdt0 = dQdt[i];
             ConservedQuantities& dUdt1 = dQdt[cfg.nActiveCells + i];
-            c.eval_dUdt(dUdt1, faces.data());
-            c.add_source_terms(dUdt1, Config::source_terms);
+            c.eval_dUdt(dUdt1, faces.data(), Config::source_terms);
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
@@ -1004,8 +1002,7 @@ struct Block {
             ConservedQuantities& dUdt0 = dQdt[i];
             ConservedQuantities& dUdt1 = dQdt[cfg.nActiveCells + i];
             ConservedQuantities& dUdt2 = dQdt[2*cfg.nActiveCells + i];
-            c.eval_dUdt(dUdt2, faces.data());
-            c.add_source_terms(dUdt2, Config::source_terms);
+            c.eval_dUdt(dUdt2, faces.data(), Config::source_terms);
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
