@@ -24,25 +24,35 @@ import numpy as np
 import json
 import gzip
 import time
+from collections import namedtuple
 
 from gdtk.geom.vector3 import Vector3, hexahedron_properties
 from gdtk.geom.sgrid import StructuredGrid
 
 
-shortOptions = "hf:t:b"
-longOptions = ["help", "job=", "tindx=", "binary"]
+shortOptions = "hf:t:bvp:s:"
+longOptions = ["help", "job=", "tindx=", "binary", "vtk-xml", "probe=", "slice="]
 
 def printUsage():
     print("Post-process a chicken run to produce VTK format files.")
     print("Usage: chkn-post" +
           " [--help | -h]" +
           " [--job=<jobName> | -f <jobName>]" +
-          " [--tindx=<tindxSpec> | -t <tindxSpec>" +
-          " [--binary | -b]"
+          " [--binary | -b]" +
+          " [--tindx=<tindxSpec> | -t <tindxSpec>]" +
+          " [--vtk-xml | -v]" +
+          " [--slice=<sliceSpec> | -s <sliceSpec>]" +
+          " [--probe=<x,y,z> | -p <x,y,z>]"
     )
+    print("  Default is to write VTK files. --vtk-xml")
+    print("  You may elect to select slices of data, instead, to be written to a GNUPlot file.")
+    print("  Or you may probe the data close to a specific point in space.")
+    print("")
     print("  tindxSpec may specify a single index or a range of indices.")
     print("  Some examples: 0  1  $  -1  all  0:$  :$  :  0:-1  :-1")
     print("  If tindxSpec is not given, just the final-time snapshot is written.")
+    print("")
+    print("  <x,y,z> represents 3 float numbers separated by commas.")
     print("")
     return
 
@@ -113,6 +123,9 @@ def read_block_of_flow_data(fileName, binaryData):
     """
     The flow field data comes as a 1D array of float numbers.
     The data for each flow variable is appended end-to-end.
+
+    Return the flow data in flattened arrays because that is the arrangement
+    that suits the VTK format files.
     """
     global config
     f = open(fileName, 'rb') if binaryData else gzip.open(fileName, 'rt')
@@ -126,6 +139,53 @@ def read_block_of_flow_data(fileName, binaryData):
     for j,var in enumerate(config["iovar_names"]):
         flowData[var] = combinedData[j,:]
     return flowData
+
+def reshape_flow_data_arrays():
+    """
+    Reshape the individual arrays of data into the original 3D arrangement for each block.
+    """
+    global config, flows
+    nics = config['nics']; njcs = config['njcs']; nkcs = config['nkcs']
+    blk_ids = config['blk_ids']
+    for ib in range(config['nib']):
+        for jb in range(config['njb']):
+            for kb in range(config['nkb']):
+                if blk_ids[ib][jb][kb] >= 0:
+                    # Block data should exist.
+                    flowData = flows['%d,%d,%d'%(ib,jb,kb)]
+                    for var in flowData.keys():
+                        flowData[var] = flowData[var].reshape((nics[ib],njcs[jb],nkcs[kb]))
+                    flows['%d,%d,%d'%(ib,jb,kb)] = flowData
+    return
+
+def find_nearest_cell(x, y, z):
+    """
+    Locate the nearest cell to the location (x,y,z), in any block.
+
+    Returns the block and cell indices of the closest cell centre in a dictionary.
+    """
+    global config, flows
+    closest = {'ib':-1, 'jb':-1, 'kb':-1, 'ic':-1, 'jc':-1, 'kc':-1, 'distance':sys.float_info.max}
+    nics = config['nics']; njcs = config['njcs']; nkcs = config['nkcs']
+    blk_ids = config['blk_ids']
+    for ib in range(config['nib']):
+        for jb in range(config['njb']):
+            for kb in range(config['nkb']):
+                if blk_ids[ib][jb][kb] >= 0:
+                    # Block data should exist.
+                    flowData = flows['%d,%d,%d'%(ib,jb,kb)]
+                    for ic in range(nics[ib]):
+                        for jc in range(njcs[jb]):
+                            for kc in range(nkcs[kb]):
+                                xc = flowData['posx'][ic][jc][kc]
+                                yc = flowData['posy'][ic][jc][kc]
+                                zc = flowData['posz'][ic][jc][kc]
+                                distance = math.sqrt((x-xc)**2 + (y-yc)**2 + (z-zc)**2)
+                                if (distance < closest['distance']):
+                                    closest['ib'] = ib; closest['jb'] = jb; closest['kb'] = kb
+                                    closest['ic'] = ic; closest['jc'] = jc; closest['kc'] = kc
+                                    closest['distance'] = distance
+    return closest
 
 # --------------------------------------------------------------------
 
@@ -257,74 +317,83 @@ if __name__ == '__main__':
 
     userOptions = getopt(sys.argv[1:], shortOptions, longOptions)
     uoDict = dict(userOptions[0])
-    if len(userOptions[0]) == 0 or \
-           "--help" in uoDict or \
-           "-h" in uoDict:
+    if len(userOptions[0]) == 0 or ("--help" in uoDict) or ("-h" in uoDict):
         printUsage()
+        sys.exit(0)
+    #
+    # Continue on, to do some real work.
+    if "--job" in uoDict:
+        jobName = uoDict.get("--job", "")
+    elif "-f" in uoDict:
+        jobName = uoDict.get("-f", "")
     else:
-        if "--job" in uoDict:
-            jobName = uoDict.get("--job", "")
-        elif "-f" in uoDict:
-            jobName = uoDict.get("-f", "")
-        else:
-            raise Exception("Job name is not specified.")
-        jobDir, ext = os.path.splitext(jobName)
+        raise Exception("Job name is not specified.")
+    jobDir, ext = os.path.splitext(jobName)
+    #
+    read_config(jobDir)
+    print("times=", times)
+    #
+    binaryData = ("--binary" in uoDict) or ("-f" in uoDict)
+    read_grids(jobDir, binaryData)
+    #
+    tindxSpec = "$" # default is the final-time index
+    tindxList = []
+    timesKeys = list(times)
+    timesKeys.sort()
+    if "--tindx" in uoDict:
+        tindxSpec = uoDict.get("--tindx", "$")
+    elif "-t" in uoDict:
+        tindxSpec = uoDict.get("-t", "$")
+    #
+    # Decide which saved snapshots to write out, saving them to a list.
+    if tindxSpec == '$' or tindxSpec == '-1':
+        # Pick out the final-time index.
+        tindxList = [timesKeys[-1]]
+    elif tindxSpec == 'all':
+        tindxList = timesKeys[:]
+    elif tindxSpec.isnumeric():
+        # A single integer is assumed.
+        tindxList = [int(tindxSpec)]
+    elif tindxSpec.find(':') >= 0:
+        # We have a range specified
+        firstSpec, lastSpec = tindxSpec.split(':')
+        first = 0
+        last = timesKeys[-1]
         #
-        read_config(jobDir)
-        print("times=", times)
-        #
-        binaryData = ("--binary" in uoDict) or ("-f" in uoDict)
-        read_grids(jobDir, binaryData)
-        #
-        tindxSpec = "$" # default is the final-time index
-        tindxList = []
-        timesKeys = list(times)
-        timesKeys.sort()
-        if "--tindx" in uoDict:
-            tindxSpec = uoDict.get("--tindx", "$")
-        elif "-t" in uoDict:
-            tindxSpec = uoDict.get("-t", "$")
-        #
-        # Decide which saved snapshots to write out, saving them to a list.
-        if tindxSpec == '$' or tindxSpec == '-1':
-            # Pick out the final-time index.
-            tindxList = [timesKeys[-1]]
-        elif tindxSpec == 'all':
-            tindxList = timesKeys[:]
-        elif tindxSpec.isnumeric():
-            # A single integer is assumed.
-            tindxList = [int(tindxSpec)]
-        elif tindxSpec.find(':') >= 0:
-            # We have a range specified
-            firstSpec, lastSpec = tindxSpec.split(':')
+        if firstSpec.isnumeric():
+            first = int(firstSpec)
+        elif firstSpec == '':
             first = 0
-            last = timesKeys[-1]
-            #
-            if firstSpec.isnumeric():
-                first = int(firstSpec)
-            elif firstSpec == '':
-                first = 0
-            elif firstSpec == '$' or firstSpec == '-1':
-                first = timesKeys[-1]
-            else:
-                raise Exception("Cannot convert firstSpec={}".format(firstSpec))
-            #
-            if lastSpec.isnumeric():
-                last = int(lastSpec)
-            elif lastSpec == '':
-                last = timesKeys[-1]
-            elif lastSpec == '$' or lastSpec == '-1':
-                last = timesKeys[-1]
-            else:
-                raise Exception("Cannot convert lastSpec={}".format(lastSpec))
-            #
-            tindxList = []
-            for tindx in timesKeys:
-                if tindx >= first and tindx <= last: tindxList.append(tindx)
+        elif firstSpec == '$' or firstSpec == '-1':
+            first = timesKeys[-1]
         else:
-            raise Exception("Did not know what to do with tindxSpec="+tindxSpec)
+            raise Exception("Cannot convert firstSpec={}".format(firstSpec))
         #
-        # Write out that list of snapshots.
+        if lastSpec.isnumeric():
+            last = int(lastSpec)
+        elif lastSpec == '':
+            last = timesKeys[-1]
+        elif lastSpec == '$' or lastSpec == '-1':
+            last = timesKeys[-1]
+        else:
+            raise Exception("Cannot convert lastSpec={}".format(lastSpec))
+        #
+        tindxList = []
+        for tindx in timesKeys:
+            if tindx >= first and tindx <= last: tindxList.append(tindx)
+    else:
+        raise Exception("Did not know what to do with tindxSpec="+tindxSpec)
+    #
+    action = "vtk-xml" # Default action
+    if ("--vtk-xml" in uoDict) or ("-v" in uoDict):
+        action = "vtk-xml"
+    elif ("--probe" in uoDict) or ("-p" in uoDict):
+        action = "probe"
+    elif ("--slice" in uoDict) or ("-s" in uoDict):
+        action = "slice"
+    #
+    if action == "vtk-xml":
+        print("Write out flow data snapshots as VTK files.")
         for tindx in tindxList:
             print("Writing tindx={}".format(tindx))
             read_flow_blocks(jobDir, tindx, binaryData)
@@ -332,6 +401,33 @@ if __name__ == '__main__':
         #
         timesList = [times[tindx] for tindx in tindxList]
         write_pvd_file(jobDir, tindxList, timesList)
+    #
+    if action == "probe":
+        if "--probe" in uoDict:
+            xyzSpec = uoDict.get("--probe", "")
+        elif "-f" in uoDict:
+            xyzSpec = uoDict.get("-p", "")
+        x, y, z = xyzSpec.strip().split(',')
+        x = float(x); y = float(y); z = float(z)
+        print("Probe the flow data close to ({}, {}, {}).".format(x,y,z))
+        for tindx in tindxList:
+            print("Probing flow data at tindx={}".format(tindx))
+            read_flow_blocks(jobDir, tindx, binaryData)
+            reshape_flow_data_arrays()
+            closest = find_nearest_cell(x, y, z)
+            print("closest cell at", closest)
+            flowData = flows['%d,%d,%d'%(closest['ib'],closest['jb'],closest['kb'])]
+            for var in config['iovar_names']:
+                print('  {}: {}'.format(var, flowData[var][closest['ic'],closest['jc'],closest['kc']]))
+    #
+    if action == "slice":
+        print("Select just a 1D of flow data.")
+        # [TODO] get sliceSpec from command-line options.
+        for tindx in tindxList:
+            print("Slicing flow data at tindx={}".format(tindx))
+            read_flow_blocks(jobDir, tindx, binaryData)
+            reshape_flow_data_arrays()
+            print("  Not yet implemented.")
     #
     print("Done in {:.3f} seconds.".format(time.process_time()))
     sys.exit(0)
