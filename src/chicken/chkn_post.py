@@ -154,7 +154,7 @@ def reshape_flow_data_arrays():
                     # Block data should exist.
                     flowData = flows['%d,%d,%d'%(ib,jb,kb)]
                     for var in flowData.keys():
-                        flowData[var] = flowData[var].reshape((nics[ib],njcs[jb],nkcs[kb]))
+                        flowData[var] = flowData[var].reshape((nkcs[kb],njcs[jb],nics[ib])).transpose()
                     flows['%d,%d,%d'%(ib,jb,kb)] = flowData
     return
 
@@ -186,6 +186,40 @@ def find_nearest_cell(x, y, z):
                                     closest['ic'] = ic; closest['jc'] = jc; closest['kc'] = kc
                                     closest['distance'] = distance
     return closest
+
+# --------------------------------------------------------------------
+
+def write_slice_list_to_gnuplot_file(sliceList, fileName):
+    nics = config['nics']; njcs = config['njcs']; nkcs = config['nkcs']
+    f = open(fileName, 'wt')
+    f.write('# ')
+    for var in config['iovar_names']: f.write(var+' ')
+    f.write('\n')
+    for slice in sliceList:
+        ib = slice['ib']; jb = slice['jb']; kb = slice['kb']
+        if config['blk_ids'][ib][jb][kb] < 0: continue
+        # At this point, the block was active in the simulation and has valid flow data.
+        flowData = flows['%d,%d,%d'%(ib, jb, kb)]
+        if slice['dir'] == 'i':
+            jc = slice['jc']; kc = slice['kc']
+            for ic in range(nics[ib]):
+                for var in config['iovar_names']:
+                    f.write('%e ' % flowData[var][ic][jc][kc])
+                f.write('\n')
+        if slice['dir'] == 'j':
+            ic = slice['ic']; kc = slice['kc']
+            for jc in range(njcs[jb]):
+                for var in config['iovar_names']:
+                    f.write('%e ' % flowData[var][ic][jc][kc])
+                f.write('\n')
+        if slice['dir'] == 'k':
+            ic = slice['ic']; jc = slice['jc']
+            for kc in range(nkcs[kb]):
+                for var in config['iovar_names']:
+                    f.write('%e ' % flowData[var][ic][jc][kc])
+                f.write('\n')
+    f.close()
+    return
 
 # --------------------------------------------------------------------
 
@@ -405,7 +439,7 @@ if __name__ == '__main__':
     if action == "probe":
         if "--probe" in uoDict:
             xyzSpec = uoDict.get("--probe", "")
-        elif "-f" in uoDict:
+        elif "-p" in uoDict:
             xyzSpec = uoDict.get("-p", "")
         x, y, z = xyzSpec.strip().split(',')
         x = float(x); y = float(y); z = float(z)
@@ -422,12 +456,51 @@ if __name__ == '__main__':
     #
     if action == "slice":
         print("Select just a 1D of flow data.")
-        # [TODO] get sliceSpec from command-line options.
-        for tindx in tindxList:
-            print("Slicing flow data at tindx={}".format(tindx))
-            read_flow_blocks(jobDir, tindx, binaryData)
-            reshape_flow_data_arrays()
-            print("  Not yet implemented.")
+        if "--slice" in uoDict:
+            sliceSpec = uoDict.get("--slice", "")
+        elif "-s" in uoDict:
+            sliceSpec = uoDict.get("-s", "")
+        # Accept multiple slices, separated by semicolons.
+        # Individual slices of the form ib,jb,kb,:,jc,kc or ib,jb,kb,ic,:,kc or ib,jb,kb,ic,jc,:
+        # where the : is a literal colon and the other items are integers.
+        # These select a slice of cells in one index direction (identified by the colon)
+        # for the specific block.
+        sliceSpecs = sliceSpec.strip().split(';')
+        print(sliceSpecs)
+        sliceList = []
+        for spText in sliceSpecs:
+            ib,jb,kb,ic,jc,kc = spText.split(',')
+            slice = {'ib':int(ib), 'jb':int(jb), 'kb':int(kb)}
+            if ic == ':':
+                slice['dir'] = 'i';
+                slice['ic'] = 0
+                slice['jc'] = int(jc)
+                slice['kc'] = int(kc)
+            elif jc == ':':
+                slice['dir'] = 'j';
+                slice['ic'] = int(ic)
+                slice['jc'] = 0
+                slice['kc'] = int(kc)
+            elif kc == ':':
+                slice['dir'] = 'k';
+                slice['ic'] = int(ic)
+                slice['jc'] = int(jc)
+                slice['kc'] = 0
+            else:
+                print("Did not specify a direction in the slice specification: "+spText)
+                continue
+            sliceList.append(slice)
+        #
+        if len(sliceList) == 0:
+            print("No valid slices specified.")
+        else:
+            print("sliceList=", sliceList)
+            for tindx in tindxList:
+                print("Slicing flow data at tindx={}".format(tindx))
+                read_flow_blocks(jobDir, tindx, binaryData)
+                reshape_flow_data_arrays()
+                fileName = "slice-t%04d.data" % (tindx)
+                write_slice_list_to_gnuplot_file(sliceList, fileName)
     #
     print("Done in {:.3f} seconds.".format(time.process_time()))
     sys.exit(0)
