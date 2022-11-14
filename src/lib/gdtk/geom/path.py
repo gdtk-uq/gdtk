@@ -6,6 +6,7 @@ These are made to work like the Dlang equivalent classes.
 
 PJ, 2020-02-05
 Arrayification by NNG, 2022-10-07 (Pokolbin, NSW)
+FnPath by PJ, 2022-11-14
 """
 import numpy as np
 from abc import ABC, abstractmethod
@@ -61,6 +62,35 @@ class Line(Path):
         return abs(self.p1 - self.p0)
 
     # end class Line
+
+
+class FnPath(Path):
+    """
+    A path defined by a user-supplied Python function.
+    """
+    __slots__ = ['fn']
+
+    def __init__(self, fn):
+        """
+        Construct from a user-supplied function fn(t) that yields Vector3 values.
+        """
+        if not callable(fn): raise RuntimeError("FnPath: fn is not callable.")
+        if not isinstance(fn(0.0), Vector3):
+            raise RuntimeError("FnPath: fn did not return a Vector3 instance for t=0.0.")
+        t_ends = np.array([0.0, 1.0])
+        p_ends = fn(t_ends)
+        if not isinstance(p_ends, Vector3):
+            raise RuntimeError("FnPath: fn did not return a Vector3 instance for array of t values.")
+        self.fn = fn
+        return
+
+    def __repr__(self):
+        return "FnPath(fn={})".format(self.fn)
+
+    def __call__(self, t):
+        return self.fn(t)
+
+    # end class FnPath
 
 
 class Arc(Path):
@@ -446,6 +476,17 @@ if __name__=='__main__':
     x = line(0.5)
     xx = line(np.array([0.5, 0.5]))
     assert(np.isclose(x.x, xx.x[0]))
+
+    # FnPath PJ 2022-11-14
+    def myFun(t):
+        end0 = Vector3(0.0, 0.0, 0.0)
+        end1 = Vector3(1.0, 2.0, 3.0)
+        return end0*(1.0-t) + end1*t
+    funpth = FnPath(myFun)
+    x = funpth(0.5)
+    xx = funpth(np.array([0.5, 0.5]))
+    assert(np.isclose(x.x, 0.5))
+    assert(np.isclose(xx.x[0], 0.5))
 
     a = Vector3(1.0, 0.0)
     b = Vector3(0.0, 1.0)
