@@ -30,8 +30,8 @@ from gdtk.geom.vector3 import Vector3, hexahedron_properties
 from gdtk.geom.sgrid import StructuredGrid
 
 
-shortOptions = "hf:t:bvp:s:"
-longOptions = ["help", "job=", "tindx=", "binary", "vtk-xml", "probe=", "slice="]
+shortOptions = "hf:t:bvp:s:o:"
+longOptions = ["help", "job=", "tindx=", "binary", "vtk-xml", "probe=", "slice=", "output-file="]
 
 def printUsage():
     print("Post-process a chicken run to produce VTK format files.")
@@ -42,6 +42,7 @@ def printUsage():
           " [--tindx=<tindxSpec> | -t <tindxSpec>]" +
           " [--vtk-xml | -v]" +
           " [--slice=<sliceSpec> | -s <sliceSpec>]" +
+          " [--output-file=<name> | -o <name>]" +
           " [--probe=<x,y,z> | -p <x,y,z>]"
     )
     print("  Default is to write VTK files. --vtk-xml")
@@ -52,7 +53,13 @@ def printUsage():
     print("  Some examples: 0  1  $  -1  all  0:$  :$  :  0:-1  :-1")
     print("  If tindxSpec is not given, just the final-time snapshot is written.")
     print("")
-    print("  <x,y,z> represents 3 float numbers separated by commas.")
+    print("  When writing GNUPlot files of the flow data,")
+    print("  sliceSpec may specify one or more slices of cells in particular blocks.")
+    print("  See the code for more details.")
+    print("  If the output file is not specified, it defaults to slice-tnnnn.data")
+    print("")
+    print("  For --probe, <x,y,z> represents 3 float numbers separated by commas.")
+    print("  Output is just to the console.")
     print("")
     return
 
@@ -495,11 +502,16 @@ if __name__ == '__main__':
             print("No valid slices specified.")
         else:
             print("sliceList=", sliceList)
+            filePrefix = "slice"
+            if "--output-file" in uoDict:
+                filePrefix = uoDict.get("--output-file", "")
+            elif "-o" in uoDict:
+                filePrefix = uoDict.get("-o", "")
             for tindx in tindxList:
                 print("Slicing flow data at tindx={}".format(tindx))
                 read_flow_blocks(jobDir, tindx, binaryData)
                 reshape_flow_data_arrays()
-                fileName = "slice-t%04d.data" % (tindx)
+                fileName = "%s-t%04d.data" % (filePrefix, tindx)
                 write_slice_list_to_gnuplot_file(sliceList, fileName)
     #
     print("Done in {:.3f} seconds.".format(time.process_time()))
