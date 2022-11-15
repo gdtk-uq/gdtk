@@ -73,6 +73,11 @@ class FnPath(Path):
     def __init__(self, fn):
         """
         Construct from a user-supplied function fn(t) that yields Vector3 values.
+
+        Note that, as of Nick's arrayification of the gridding functions in Nov 2022,
+        this user-supplied function needs to be able to accept a numpy.ndarray of t values.
+        The shape of the array may have one, two or three dimensions, depending on which
+        grid-generation function is calling it.
         """
         if not callable(fn): raise RuntimeError("FnPath: fn is not callable.")
         if not isinstance(fn(0.0), Vector3):
