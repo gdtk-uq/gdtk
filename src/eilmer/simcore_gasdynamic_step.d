@@ -500,13 +500,14 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ||
         GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
 	// Next do solid domain update IMMEDIATELY after at same flow time level
+        exchange_ghost_cell_solid_boundary_data(); // we need up to date temperatures for the spatial derivative calc.
 	foreach (sblk; parallel(localSolidBlocks, 1)) {
 	    if (!sblk.active) continue;
 	    sblk.averageTemperatures();
 	    sblk.clearSources();
 	    sblk.computeSpatialDerivatives(ftl);
         }
-        exchange_ghost_cell_solid_boundary_data();
+        exchange_ghost_cell_solid_boundary_data(); // we need to transfer the spatial derivatives for the flux eval.
         exchange_ghost_cell_gas_solid_boundary_data();
         foreach (sblk; parallel(localSolidBlocks, 1)) {
             if (!sblk.active) continue;
@@ -792,13 +793,14 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ||
             GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
 	    // Next do solid domain update IMMEDIATELY after at same flow time level
+            exchange_ghost_cell_solid_boundary_data(); // we need up to date temperatures for the spatial derivative calc.
 	    foreach (sblk; parallel(localSolidBlocks, 1)) {
 		if (!sblk.active) continue;
                 sblk.averageTemperatures();
 		sblk.clearSources();
 		sblk.computeSpatialDerivatives(ftl);
             }
-            exchange_ghost_cell_solid_boundary_data();
+            exchange_ghost_cell_solid_boundary_data(); // we need to transfer the spatial derivatives for the flux eval.
             foreach (sblk; parallel(localSolidBlocks, 1)) {
                 if (!sblk.active) continue;
                 sblk.computeFluxes();
@@ -1379,6 +1381,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 // Phase 15 LOCAL
                 // Next do solid domain update IMMEDIATELY after at same flow time level
                 // exchange_ghost_cell_gas_solid_boundary_data();
+                exchange_ghost_cell_solid_boundary_data();
                 try {
                     if (GlobalConfig.apply_bcs_in_parallel) {
                         foreach (sblk; parallel(localSolidBlocks, 1)) {
@@ -1885,6 +1888,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         }
         //
         // Next do solid domain update IMMEDIATELY after at same flow time level
+        exchange_ghost_cell_solid_boundary_data();
         // Phase 15 LOCAL
         try {
             foreach (sblk; localSolidBlocks) {
@@ -2242,6 +2246,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
             }
             //
             // Do solid domain update IMMEDIATELY after at same flow time level
+            exchange_ghost_cell_solid_boundary_data();
             // Phase 13 LOCAL
             try {
                 foreach (sblk; localSolidBlocks) {
@@ -2569,6 +2574,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
             // Phase 06 LOCAL
             // Next do solid domain update IMMEDIATELY after at same flow time leve
             // exchange_ghost_cell_gas_solid_boundary_data();
+            exchange_ghost_cell_solid_boundary_data();
             try {
                 if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (sblk; parallel(localSolidBlocks, 1)) {
@@ -2969,6 +2975,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
             // Phase 08 LOCAL
             // Next do solid domain update IMMEDIATELY after at same flow time leve
             // exchange_ghost_cell_gas_solid_boundary_data();
+            exchange_ghost_cell_solid_boundary_data();
             try {
                 if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (sblk; parallel(localSolidBlocks, 1)) {
