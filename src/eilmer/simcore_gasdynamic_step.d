@@ -204,6 +204,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         if (dt_global > dt_remainder) {
             // the explicit time-step is larger than the remaining simulation time,
             // so we just set the super-time-step to the remaining time and perform an Euler step
+            euler_step = true;
             S = 1;
             dt_super = dt_remainder;
         }
