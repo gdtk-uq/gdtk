@@ -52,6 +52,7 @@ configOptionsHidden = { -- hidden from user
    coupling_with_solid_domains = "tight",
    solid_has_isotropic_properties = true,
    solid_has_homogeneous_properties = true,
+   solid_domain_augmented_deriv_avg = true,
    --
    apply_bcs_in_parallel = true,
    --
