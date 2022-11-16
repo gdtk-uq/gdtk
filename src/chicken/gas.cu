@@ -24,8 +24,12 @@ namespace GasModel {
     constexpr int a_b_reacting_gas = 1; // Reacting gas, species A to species B
     //
     // We must make a selection at compile time, here.
+    #ifdef IDEAL_AIR
     constexpr int model = ideal_air;
-    // constexpr int model = a_b_reacting_gas;
+    #endif
+    #ifdef AB_REACTING_GAS
+    constexpr int model = a_b_reacting_gas;
+    #endif
     //
     constexpr number g = (model == ideal_air) ? 1.4 : 6.0/5.0; // ratio of specific heats
     constexpr number R = (model == ideal_air) ? 287.1 : 287.0; // gas constant J/kg/K
@@ -64,7 +68,7 @@ struct GasState {
     void update_from_pT()
     {
         using namespace GasModel;
-        e = T*Cv + YB*q;
+        e = T*Cv - YB*q;
         rho = p/(T*R);
         a = sqrt(g*R*T);
     }
@@ -73,7 +77,7 @@ struct GasState {
     void update_from_rhoe()
     {
         using namespace GasModel;
-        T = (e - YB*q)/Cv;
+        T = (e + YB*q)/Cv;
         p = rho*R*T;
         a = sqrt(g*R*T);
     }

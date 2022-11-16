@@ -2,21 +2,29 @@
 #
 # Select the default flavour of the build in SELECTED_TARGETS, below.
 # The particular program that is compiled will be called chkn-run.
+# Note that the gas model is selected at compile time.
 #
 # PJ 2022-09-11 build and run in the source directory
 #    2022-09-19 build and install, much like our other GDTK programs
 #
-# To build and install CPU flavour:
+# To build and install CPU flavour for the ideal air gas model:
 # $ make install
 #
-# To build and install GPU flavour:
-# $ make GPU=1 install
+# To build and install GPU flavour for the reacting gas model:
+# $ make GPU=1 AB_GAS=1 install
 
 SELECTED_TARGETS := chkn-prep chkn-post
 ifeq ($(GPU),1)
   SELECTED_TARGETS += chicken_for_cuda
 else
   SELECTED_TARGETS += chicken_for_cpu
+endif
+
+GAS_MODEL ?= IDEAL_AIR
+ifeq ($(AB_GAS),1)
+  GAS_MODEL := AB_REACTING_GAS
+else
+  GAS_MODEL := IDEAL_AIR
 endif
 
 # The install destination.
@@ -46,14 +54,14 @@ CUDA_SOURCE_FILES := main.cu config.cu simulate.cu bcs.cu block.cu cell.cu face.
 chicken_for_cuda : $(CUDA_SOURCE_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		main.cu > main_with_rev_string.cu
-	nvcc -DCUDA -std c++17 -O2 --expt-relaxed-constexpr -lineinfo -o chkn-run \
+	nvcc -DCUDA -std c++17 -O2 --expt-relaxed-constexpr -lineinfo -o chkn-run -D$(GAS_MODEL) \
 		main_with_rev_string.cu -lz $(LOCAL_ZIP_INC) -lzip -Xcompiler -fopenmp
 
 # Target for FP32 (float) numbers.
 chicken_for_cuda_f : $(CUDA_SOURCE_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		main.cu > main_with_rev_string.cu
-	nvcc -DCUDA -DFLOAT_NUMBERS -std c++17 -O2 --expt-relaxed-constexpr -lineinfo -o chkn-run \
+	nvcc -DCUDA -DFLOAT_NUMBERS -std c++17 -O2 --expt-relaxed-constexpr -lineinfo -o chkn-run -D$(GAS_MODEL) \
 		main_main_with_rev_string.cu -lz $(LOCAL_ZIP_INC) -lzip -Xcompiler -fopenmp
 
 # Target for CPU-only flavour of the code with FP64 (double) numbers.
@@ -62,7 +70,7 @@ chicken_for_cuda_f : $(CUDA_SOURCE_FILES)
 chicken_for_cpu : $(CUDA_SOURCE_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		main.cu > main_with_rev_string.cu
-	nvcc -lineinfo -std c++17 -O2 --expt-relaxed-constexpr -o chkn-run \
+	nvcc -lineinfo -std c++17 -O2 --expt-relaxed-constexpr -o chkn-run -D$(GAS_MODEL) \
 		main_with_rev_string.cu -lz $(LOCAL_ZIP_INC) -lzip -Xcompiler -fopenmp
 
 # Note that profiling needs to be done via sudo

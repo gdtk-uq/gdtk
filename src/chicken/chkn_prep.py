@@ -328,7 +328,7 @@ class GasState():
         Given p and T, update the other thermodynamic properties
         for a particular gas model.
         """
-        self.e = gmodel.Cv * self.T - self.YB * gmodel.q
+        self.e = gmodel.Cv * self.T + self.YB * gmodel.q
         self.rho = self.p / (gmodel.R * self.T)
         self.a = np.sqrt(gmodel.gamma * gmodel.R * self.T)
         return
