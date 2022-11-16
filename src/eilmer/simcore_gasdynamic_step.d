@@ -196,6 +196,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         }
 
         // set the super-time-step
+        SimState.dt_global_parab = dt_global;
         S = SimState.s_RKL;
         double dt_super = dt_global*(S*S+S)/2.0;
 
@@ -204,7 +205,6 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         if (dt_global > dt_remainder) {
             // the explicit time-step is larger than the remaining simulation time,
             // so we just set the super-time-step to the remaining time and perform an Euler step
-            euler_step = true;
             S = 1;
             dt_super = dt_remainder;
         }
@@ -226,6 +226,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         }
 
         // place the super-time-step into the dt_global variables
+        if (S == 1) { euler_step = true; }
         dt_global = dt_super;
         SimState.dt_global = dt_global;
 
