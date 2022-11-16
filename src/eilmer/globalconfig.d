@@ -414,7 +414,7 @@ SpatialDerivLocn spatial_deriv_locn_from_name(string name)
 
 // Symbolic names for the flavours of unstructured limiters.
 enum UnstructuredLimiter {
-    van_albada2,
+    svan_albada,
     min_mod,
     barth,
     park,
@@ -432,7 +432,7 @@ enum UnstructuredLimiter {
 string unstructured_limiter_name(UnstructuredLimiter ul)
 {
     final switch ( ul ) {
-    case UnstructuredLimiter.van_albada2: return "van_albada2";
+    case UnstructuredLimiter.svan_albada: return "svan_albada";
     case UnstructuredLimiter.min_mod: return "min_mod";
     case UnstructuredLimiter.barth: return "barth";
     case UnstructuredLimiter.park: return "park";
@@ -451,7 +451,7 @@ string unstructured_limiter_name(UnstructuredLimiter ul)
 UnstructuredLimiter unstructured_limiter_from_name(string name)
 {
     switch ( name ) {
-    case "van_albada2": return UnstructuredLimiter.van_albada2;
+    case "svan_albada": return UnstructuredLimiter.svan_albada;
     case "min_mod": return UnstructuredLimiter.min_mod;
     case "barth": return UnstructuredLimiter.barth;
     case "park": return UnstructuredLimiter.park;

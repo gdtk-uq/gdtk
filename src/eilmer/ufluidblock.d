@@ -792,7 +792,7 @@ public:
                 foreach (c; cell_list) {
                     // It is more efficient to determine limiting factor here for some usg limiters.
                     final switch (myConfig.unstructured_limiter) {
-                        case UnstructuredLimiter.van_albada2:
+                        case UnstructuredLimiter.svan_albada:
                             // do nothing now
                             break;
                         case UnstructuredLimiter.min_mod:
