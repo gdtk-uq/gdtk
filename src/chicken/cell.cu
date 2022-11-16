@@ -43,18 +43,16 @@ int Face_indx_from_name(string name)
 
 
 namespace SourceTerms {
-    array<string,3> names{"none", "manufactured_solution", "powers_aslam_combustion"};
+    array<string,3> names{"none", "manufactured_solution"};
     //
     constexpr int none = 0;
     constexpr int manufactured_solution = 1;
-    constexpr int powers_aslam_combustion = 2;
 };
 
 int source_terms_from_name(string name)
 {
     if (name == "none") return SourceTerms::none;
     if (name == "manufactured_solution") return SourceTerms::manufactured_solution;
-    if (name == "powers_aslam_combustion") return SourceTerms::powers_aslam_combustion;
     return SourceTerms::none;
 }
 
@@ -67,7 +65,7 @@ namespace IOvar {
     // Keep the following list consistent with the GlobalConfig.iovar_names list
     // in chkn_prep.py and with the symbolic constants just below.
     vector<string> names {"posx", "posy", "posz", "vol",
-                              "p", "T", "rho", "e", "a",
+                              "p", "T", "rho", "e", "YB", "a",
                               "velx", "vely", "velz"};
 
     // We will use these symbols to select the varaible of interest.
@@ -79,7 +77,8 @@ namespace IOvar {
     constexpr int T = p + 1;
     constexpr int rho = T + 1;
     constexpr int e = rho + 1;
-    constexpr int a = e + 1;
+    constexpr int YB = e + 1;
+    constexpr int a = YB + 1;
     constexpr int velx = a + 1;
     constexpr int vely = velx + 1;
     constexpr int velz = vely + 1;
@@ -122,6 +121,7 @@ struct FVCell {
         case IOvar::T: fs.gas.T = val; break;
         case IOvar::rho: fs.gas.rho = val; break;
         case IOvar::e: fs.gas.e = val; break;
+        case IOvar::YB: fs.gas.YB = val; break;
         case IOvar::a: fs.gas.a = val; break;
         case IOvar::velx: fs.vel.x = val; break;
         case IOvar::vely: fs.vel.y = val; break;
@@ -142,6 +142,7 @@ struct FVCell {
         case IOvar::T: return fs.gas.T;
         case IOvar::rho: return fs.gas.rho;
         case IOvar::e: return fs.gas.e;
+        case IOvar::YB: return fs.gas.YB;
         case IOvar::a: return fs.gas.a;
         case IOvar::velx: return fs.vel.x;
         case IOvar::vely: return fs.vel.y;
@@ -175,12 +176,7 @@ struct FVCell {
             dUdt[CQI::yMom] += 0.0;
             dUdt[CQI::zMom] += 0.0;
             dUdt[CQI::totEnergy] += 0.0;
-            break;
-        case SourceTerms::powers_aslam_combustion:
-            // Powers and Aslam A->B combustion.
-            if (fs.gas.T > 400.0) {
-                dUdt[CQI::totEnergy] += 0.0; // [TODO] implement the actual calculation.
-            }
+            dUdt[CQI::YB] += 0.0;
             break;
         default:
             break;

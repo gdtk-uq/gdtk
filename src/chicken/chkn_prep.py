@@ -63,22 +63,28 @@ def printUsage():
     return
 
 #----------------------------------------------------------------------
-# We will work with a simple ideal gas.
-# Presently, this just for inviscid flow. We have yet to add viscous effects.
 
-class IdealGas():
+class GasModel():
     """
-    A simple gas model.
-    """
-    __slots__ = 'gamma', 'R', 'Cv'
+    A simple ideal gas model with a possibility of heat release.
 
-    def __init__(self, gamma=1.4, R=287.1):
+    The selection of the gas model properties needs to be consistent with selection made in gas.cu.
+    That selection is made at compile time, so remember to rebuild the simulation code if you
+    change parameter values.
+    """
+    __slots__ = 'gamma', 'R', 'Cv', 'q', 'alpha', 'Ti'
+
+    def __init__(self, gamma=1.4, R=287.1, q=0.0, alpha=0.0, Ti=0.0):
         self.gamma = gamma
         self.R = R
         self.Cv = R/(gamma-1.0)
+        self.q = q
+        self.alpha = alpha
+        self.Ti = Ti
 
     def to_json(self):
-        result = '{"gamma": %g, "R": %g, "Cv": %g}' % (self.gamma, self.R, self.Cv)
+        result = '{"gamma": %g, "R": %g, "Cv": %g, "q": %g, "alpha": %g, "Ti": %g}' % \
+            (self.gamma, self.R, self.Cv, self.q, self.alpha, self.Ti)
         return result
 
 #----------------------------------------------------------------------
@@ -101,8 +107,8 @@ class GlobalConfig():
         'nib', 'njb', 'nkb', 'blk_ids', 'nics', 'njcs', 'nkcs', \
         'dt_init', 'cfl_list', 'cfl_count', 'print_count', \
         'dt_plot_list', 'max_time', 'max_step', \
-        'x_order', 't_order', 'flux_calc', 'viscous', 'source_terms', \
-        'iovar_names', 'threads_per_gpu_block'
+        'x_order', 't_order', 'flux_calc', 'viscous', 'reacting', \
+        'source_terms', 'iovar_names', 'threads_per_gpu_block'
 
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -111,7 +117,7 @@ class GlobalConfig():
 
         self.job_name = ""
         self.title = "Chicken Simulation."
-        self.gas_model = IdealGas()
+        self.gas_model = GasModel()
         self.nib = None
         self.njb = None
         self.nkb = None
@@ -128,6 +134,7 @@ class GlobalConfig():
         self.x_order = 2
         self.t_order = 2
         self.flux_calc = "ausmdv"
+        self.reacting = False
         self.viscous = False
         self.source_terms = "none"
         self.threads_per_gpu_block = 128
@@ -135,7 +142,7 @@ class GlobalConfig():
         # should be kept consistent with the symbols in IOvar namespace
         # that is defined in cell.cu.
         self.iovar_names = ['posx', 'posy', 'posz', 'vol',
-                            'p', 'T', 'rho', 'e', 'a',
+                            'p', 'T', 'rho', 'e', 'YB', 'a',
                             'velx', 'vely', 'velz']
         #
         GlobalConfig.count += 1
@@ -166,6 +173,7 @@ class GlobalConfig():
         fp.write('  "x_order": %d,\n' % self.x_order)
         fp.write('  "t_order": %d,\n' % self.t_order)
         fp.write('  "flux_calc": "%s",\n' % self.flux_calc)
+        fp.write('  "reacting": %s,\n' % json.dumps(self.reacting))
         fp.write('  "viscous": %s,\n' % json.dumps(self.viscous))
         fp.write('  "source_terms": "%s",\n' % self.source_terms)
         fp.write('  "threads_per_gpu_block": %d,\n' % self.threads_per_gpu_block)
@@ -304,14 +312,15 @@ class GasState():
     """
     The data that defines the state of the gas.
     """
-    __slots__ = 'indx', 'p', 'T', 'rho', 'e', 'a'
+    __slots__ = 'indx', 'p', 'T', 'rho', 'e', 'YB', 'a'
 
-    def __init__(self, p, T):
+    def __init__(self, p, T, YB=0.0):
         """
         Input pressure (in Pa) and temperature (in degrees K).
         """
         self.p = p
         self.T = T
+        self.YB = YB
         self.update_from_pT(config.gas_model)
 
     def update_from_pT(self, gmodel):
@@ -319,17 +328,17 @@ class GasState():
         Given p and T, update the other thermodynamic properties
         for a particular gas model.
         """
-        self.e = gmodel.Cv * self.T
+        self.e = gmodel.Cv * self.T - self.YB * gmodel.q
         self.rho = self.p / (gmodel.R * self.T)
         self.a = np.sqrt(gmodel.gamma * gmodel.R * self.T)
         return
 
     def __repr__(self):
-        return "GasState(p={}, T={})".format(self.p, self.T)
+        return "GasState(p={}, T={}, YB={})".format(self.p, self.T, self.YB)
 
     def to_json(self):
-        result = '{"p": %g, "T": %g, "rho": %g, "e": %g, "a": %g}' \
-            % (self.p, self.T, self.rho, self.e, self.a)
+        result = '{"p": %g, "T": %g, "rho": %g, "e": %g, "YB": %g, "a": %g}' \
+            % (self.p, self.T, self.rho, self.e, self.YB, self.a)
         return result
 
 
@@ -343,13 +352,13 @@ class FlowState():
 
     __slots__ = 'indx', 'label', 'gas', 'vel'
 
-    def __init__(self, gas=None, p=100.0e3, T=300.0,
+    def __init__(self, gas=None, p=100.0e3, T=300.0, YB=0.0,
                  vel=None, velx=0.0, vely=0.0, velz=0.0,
                  label=""):
         if isinstance(gas, GasState):
             self.gas = copy(gas)
         else:
-            self.gas = GasState(p=p, T=T)
+            self.gas = GasState(p=p, T=T, YB=YB)
         if isinstance(vel, Vector3):
             self.vel = copy(vel)
         else:
@@ -526,15 +535,19 @@ class FluidBlock():
         if isinstance(initialState, FlowState):
             self.flow = {'p': np.full(ncells, initialState.gas.p), 'T':np.full(ncells, initialState.gas.T),
                          'rho':np.full(ncells, initialState.gas.rho), 'e':np.full(ncells, initialState.gas.e),
-                         'a':np.full(ncells, initialState.gas.a), 'velx': np.full(ncells, initialState.vel.x),
-                         'vely': np.full(ncells, initialState.vel.y), 'velz': np.full(ncells, initialState.vel.z)}
+                         'YB':np.full(ncells, initialState.gas.YB), 'a':np.full(ncells, initialState.gas.a),
+                         'velx': np.full(ncells, initialState.vel.x),
+                         'vely': np.full(ncells, initialState.vel.y),
+                         'velz': np.full(ncells, initialState.vel.z)}
         elif callable(initialState):
             # The user has supplied a function,
             # which we use one cell-centre at a time.
             self.flow = {'p': np.zeros(ncells, dtype=float), 'T': np.zeros(ncells, dtype=float),
                          'rho': np.zeros(ncells, dtype=float), 'e': np.zeros(ncells, dtype=float),
-                         'a': np.zeros(ncells, dtype=float), 'velx': np.zeros(ncells, dtype=float),
-                         'vely': np.zeros(ncells, dtype=float), 'velz': np.zeros(ncells, dtype=float)}
+                         'YB': np.zeros(ncells, dtype=float), 'a': np.zeros(ncells, dtype=float),
+                         'velx': np.zeros(ncells, dtype=float),
+                         'vely': np.zeros(ncells, dtype=float),
+                         'velz': np.zeros(ncells, dtype=float)}
             idx = 0
             # Note VTK ordering of loops
             for kk in range(self.nkc):
@@ -547,6 +560,7 @@ class FluidBlock():
                         self.flow['T'][idx] = state.gas.T
                         self.flow['rho'][idx] = state.gas.rho
                         self.flow['e'][idx] = state.gas.e
+                        self.flow['YB'][idx] = state.gas.YB
                         self.flow['a'][idx] = state.gas.a;
                         self.flow['velx'][idx] = state.vel.x
                         self.flow['vely'][idx] = state.vel.y
@@ -646,6 +660,7 @@ class FluidBlock():
             elif varName == 'T': value = self.flow['T']
             elif varName == 'rho': value = self.flow['rho']
             elif varName == 'e': value = self.flow['e']
+            elif varName == 'YB': value = self.flow['YB']
             elif varName == 'a': value = self.flow['a']
             elif varName == 'velx': value = self.flow['velx']
             elif varName == 'vely': value = self.flow['vely']

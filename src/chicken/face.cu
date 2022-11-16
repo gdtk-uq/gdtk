@@ -176,6 +176,7 @@ struct FVFace {
         number aL = fsL.gas.a;
         number keL = 0.5*(velxL*velxL + velyL*velyL + velzL*velzL);
         number HL = uL + pLrL + keL;
+        number YBL = fsL.gas.YB;
         //
         number rhoR = fsR.gas.rho;
         number pR = fsR.gas.p;
@@ -187,6 +188,7 @@ struct FVFace {
         number aR = fsR.gas.a;
         number keR = 0.5*(velxR*velxR + velyR*velyR + velzR*velzR);
         number HR = uR + pR/rhoR + keR;
+        number YBR = fsR.gas.YB;
         //
         // This is the main part of the flux calculator.
         //
@@ -249,8 +251,8 @@ struct FVFace {
         F[CQI::zMom] = momentum.z;
         number H = (mass_half >= 0.0) ? HL : HR;
         F[CQI::totEnergy] = mass_half*H;
-        // When we introduce species, get the species flux lines from the Dlang code.
-        // [TODO] PJ 2022-09-11
+        number YB = (mass_half >= 0.0) ? YBL : YBR;
+        F[CQI::YB] = mass_half*YB;
         return;
     } // end ausmdv()
 
@@ -267,7 +269,7 @@ struct FVFace {
             Vel[i].transform_to_local_frame(n, t1, t2);
         }
         //
-        number v[10][4] , w[10][4]; 
+        number v[10][4] , w[10][4];
         for(i=0;i<4;++i)
         {
             v[0][i] = stencil[i].gas.rho;
@@ -315,6 +317,8 @@ struct FVFace {
         F[CQI::zMom] = momentum.z;
         F[CQI::totEnergy] = alpha_ie * f_c[4] + (1.0 - alpha_ie) * f_e[4] + (1.0 / 2.0) * (alpha_ke * f_c[5] + (1.0 - alpha_ke) * f_e[5] + alpha_ke * f_c[6] +
            (1.0 - alpha_ke) * f_e[6] + alpha_ke * f_c[7] + (1.0 - alpha_ke) * f_e[7]) + alpha_p * f_c[8] + (1.0 - alpha_p) * f_e[8];
+        // Gas species; [FIXME] PJ 2022-11-16
+        F[CQI::YB] = 0.0;
     } // end sbp_asf()
 
 
@@ -333,6 +337,7 @@ struct FVFace {
                 // We will interpolate only some GasState properties...
                 interp_l2r2_scalar(fsL1.gas.rho, fsL0.gas.rho, fsR0.gas.rho, fsR1.gas.rho, fsL.gas.rho, fsR.gas.rho);
                 interp_l2r2_scalar(fsL1.gas.e, fsL0.gas.e, fsR0.gas.e, fsR1.gas.e, fsL.gas.e, fsR.gas.e);
+                interp_l2r2_scalar(fsL1.gas.YB, fsL0.gas.YB, fsR0.gas.YB, fsR1.gas.YB, fsL.gas.YB, fsR.gas.YB);
                 // and make the rest consistent.
                 fsL.gas.update_from_rhoe();
                 fsR.gas.update_from_rhoe();

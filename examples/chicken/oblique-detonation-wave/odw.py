@@ -4,13 +4,17 @@
 # Peter J. 2022-11-15
 #
 config.title = "Oblique detonation wave."
+print(config.title)
 config.dt_init = 1.0e-6
 config.max_time = 2.0e-2
 config.max_step = 300000
 add_dt_plot(0.0, config.max_time/40)
 #
+config.gas_model = GasModel(gamma=6.0/5.0, R=287.0,
+                            q=300000.0, alpha=1000.0, Ti=362.58)
 inflow = FlowState(p=86.1e3, T=300.0, velx=964.302)
 initial = FlowState(p=28.7e3, T=300.0, velx=0.0)
+config.reacting = True
 #
 # Geometry
 from gdtk.geom.path import Line, FnPath
@@ -40,10 +44,12 @@ dz = Vector3(0.0, 0.0, zmax)
 vol0 = SweptSurfaceVolume(face0123=patch0, edge04=Line(a0, a0+dz))
 vol1 = SweptSurfaceVolume(face0123=patch1, edge04=Line(b0, b0+dz))
 #
-nn = 64
+factor = 2
+nn = factor*40
 nnx = nn; nny = nn # overall numbers of cells
-nnx0 = int(0.125*nnx) # share for blk0
-nnx1 = nnx - int(0.125*nnx) # share for blk1
+fraction0 = (0-xmin)/(xmax-xmin) # fraction of domain upstream of wedge
+nnx0 = int(fraction0*nnx) # share for blk0
+nnx1 = nnx - nnx0 # share for blk1
 grd0 = StructuredGrid(pvolume=vol0, niv=nnx0+1, njv=nny+1, nkv=3)
 grd1 = StructuredGrid(pvolume=vol1, niv=nnx1+1, njv=nny+1, nkv=3)
 #

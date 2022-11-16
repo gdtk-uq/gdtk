@@ -326,6 +326,7 @@ FlowState compute_inflow_state_from_function(int ifn, Vector3 pos)
     // Dummy value.
     inflow.gas.p = 100.0e3;
     inflow.gas.T = 300.0;
+    inflow.gas.YB = 0.0;
     inflow.gas.update_from_pT();
     inflow.vel.set(0.0, 0.0, 0.0);
     //

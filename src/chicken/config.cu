@@ -242,6 +242,7 @@ namespace Config {
     int t_order = 2;
     int flux_calc = FluxCalc::ausmdv;
     int source_terms = SourceTerms::none;
+    bool reacting = false;
     bool viscous = false;
     //
     // GPU-related parameters.
@@ -275,9 +276,15 @@ vector<BConfig> read_config_file(string fileName)
     map<string, number> gas_model_data = jsonData["gas_model"].get<map<string, number> >();
     if (!approxEquals(GasModel::g, gas_model_data["gamma"], 1.0e-6) ||
         !approxEquals(GasModel::R, gas_model_data["R"], 1.0e-6) ||
+        !approxEquals(GasModel::q, gas_model_data["q"], 1.0e-6) ||
+        !approxEquals(GasModel::alpha, gas_model_data["alpha"], 1.0e-6) ||
+        !approxEquals(GasModel::Ti, gas_model_data["Ti"], 1.0e-6) ||
         !approxEquals(GasModel::Cv, gas_model_data["Cv"], 1.0e-6)) {
         cerr << "  gas_model_data: gamma:" << gas_model_data["gamma"]
              << " R:" << gas_model_data["R"]
+             << " q:" << gas_model_data["q"]
+             << " alpha:" << gas_model_data["alpha"]
+             << " Ti:" << gas_model_data["Ti"]
              << " Cv:" << gas_model_data["Cv"]
              << endl;
         throw runtime_error("Incorrect gas model data");
@@ -297,6 +304,7 @@ vector<BConfig> read_config_file(string fileName)
         auto gas = GasState{};
         gas.p=fsj["gas"]["p"].get<number>();
         gas.T=fsj["gas"]["T"].get<number>();
+        gas.YB=fsj["gas"]["YB"].get<number>();
         gas.update_from_pT();
         auto vel = fsj["vel"].get<vector<number> >();
         Config::flow_states.push_back(FlowState{gas, Vector3{vel[0], vel[1], vel[2]}});
@@ -390,6 +398,7 @@ vector<BConfig> read_config_file(string fileName)
     vector<number> t_change = jsonData["t_change"].get<vector<number> >();
     vector<number> dt_plot = jsonData["dt_plot"].get<vector<number> >();
     Config::dt_plot_schedule = Schedule{t_change, dt_plot};
+    Config::reacting = jsonData["reacting"].get<bool>();
     Config::viscous = jsonData["viscous"].get<bool>();
     Config::threads_per_GPUblock = jsonData["threads_per_gpu_block"].get<int>();
     if (Config::verbosity > 0) {
@@ -405,6 +414,7 @@ vector<BConfig> read_config_file(string fileName)
         cout << "  print_count=" << Config::print_count << endl;
         cout << "  dt_plot_schedule=" << Config::dt_plot_schedule.toString() << endl;
         cout << "  viscous=" << Config::viscous << endl;
+        cout << "  reacting=" << Config::reacting << endl;
         cout << "  threads_per_gpu_block=" << Config::threads_per_GPUblock << endl;
     }
     return blk_configs;

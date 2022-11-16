@@ -1053,6 +1053,18 @@ struct Block {
         }
     } // end copy_conserved_data()
 
+    __host__
+    void update_chemistry(const BConfig& cfg, number dt)
+    {
+        for (auto i=0; i < cfg.nActiveCells; i++) {
+            FlowState& fs = cells[i].fs;
+            GasState& gs = fs.gas;
+            gs.update_chemistry(dt);
+            ConservedQuantities& U = Q[i]; // presume level 0
+            fs.encode_conserved(U);
+        }
+    } // end update_chemistry()
+
 }; // end Block
 
 #endif

@@ -21,12 +21,13 @@ namespace CQI {
     // knowing that we are building the code for a particular number of species.
     // The plan is to have the gas model, number of species, etc,
     // known at compile time. [TODO] PJ 2022-09-11
-    constexpr size_t n = 5;
     constexpr size_t mass = 0;
     constexpr size_t xMom = 1;
     constexpr size_t yMom = 2;
     constexpr size_t zMom = 3;
     constexpr size_t totEnergy = 4;
+    constexpr size_t YB = 5;
+    constexpr size_t n = 6; // overall number of elements
 };
 
 // We are going to store the vector of conserved quantities and its derivatives
@@ -62,6 +63,8 @@ struct FlowState {
         // Total Energy / unit volume
         number ke = 0.5*(vel.x*vel.x + vel.y*vel.y+vel.z*vel.z);
         U[CQI::totEnergy] = rho*(gas.e + ke);
+        // Mass fraction of gas species B.
+        U[CQI::YB] = rho*gas.YB;
         return;
     } // end encode_conserved()
 
@@ -85,6 +88,7 @@ struct FlowState {
         // Put data into cell's gas state.
         gas.rho = rho;
         gas.e = e;
+        gas.YB = U[CQI::YB]*dinv;
         gas.update_from_rhoe();
         return 0;
     } // end decode_conserved()

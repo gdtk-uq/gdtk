@@ -293,6 +293,16 @@ void march_in_time_using_cpu_only(bool binary_data)
             if (cfg.active) blk.copy_conserved_data(cfg, 1, 0);
         }
         //
+        // Apply the chemical reaction, operator split.
+        if (Config::reacting) {
+            #pragma omp parallel for
+            for (int ib=0; ib < Config::nFluidBlocks; ib++) {
+                BConfig& cfg = blk_configs[ib];
+                Block& blk = fluidBlocks[ib];
+                if (cfg.active) blk.update_chemistry(cfg, SimState::dt);
+            }
+        }
+        //
         SimState::t += SimState::dt;
         SimState::step += 1;
         SimState::steps_since_last_plot += 1;
@@ -467,6 +477,19 @@ void update_stage_3_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, 
         if (bad_cell_flag) {
             printf("Stage 3 update, Bad cell at pos x=%g y=%g z=%g\n", c.pos.x, c.pos.y, c.pos.z);
         }
+    }
+}
+
+__global__
+void update_chemistry_on_gpu(Block& blk, const BConfig& cfg, number dt)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FlowState& fs = blk.cells_on_gpu[i].fs;
+        GasState& gs = fs.gas;
+        gs.update_chemistry(dt);
+        ConservedQuantities& U = blk.Q_on_gpu[i];  // presume level 0
+        fs.encode_conserved(U);
     }
 }
 
@@ -676,6 +699,22 @@ void march_in_time_using_gpu(bool binary_data)
             copy_conserved_data_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, 1, 0);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+        }
+        //
+        // Apply the chemical reaction, operator split.
+        if (Config::reacting) {
+            for (int ib=0; ib < Config::nFluidBlocks; ib++) {
+                BConfig& cfg = blk_configs[ib];
+                Block& blk = fluidBlocks[ib];
+                if (!cfg.active) continue;
+                Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
+                BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
+                int nGPUblocks = cfg.nGPUblocks_for_cells;
+                int nGPUthreads = Config::threads_per_GPUblock;
+                update_chemistry_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, SimState::dt);
+                auto cudaError = cudaGetLastError();
+                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            }
         }
         //
         SimState::t += SimState::dt;
