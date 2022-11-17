@@ -259,66 +259,79 @@ struct FVFace {
 
     __host__ __device__
     void sbp_asf(FlowState& fsL1, FlowState& fsL0, FlowState& fsR0, FlowState& fsR1)
-    // Lachlan's and Christine's Summation-By-Parts Alpha-Split Flux calculation function
+    // Lachlan's and Christine's Summation-By-Parts Alpha-Split Flux calculation function.
+    //
+    // This flux calculator is based on the formulation in the NASA Techmical Memo
+    // Travis C. Fisher, Mark H. Carpenter, Jan Nordstroem, Nail K. Yamaleev and R. Charles Swanson
+    // Discretely Conservative Finite-Difference Formulations for Nonlinear Conservation Laws
+    // in Split Form: Theory and Boundary Conditions
+    // NASA/TM-2011-217307  November 2011
     {
-        int i;
-        array<FlowState,4> stencil{fsL1, fsL0, fsR0, fsR1};
-        array<Vector3,4> Vel{fsL1.vel, fsL0.vel, fsR0.vel, fsR1.vel};
-        for(i=0;i<4;++i)
-        {
-            Vel[i].transform_to_local_frame(n, t1, t2);
+        // Get local copies of the near-by flow states and transform into the frame
+        // that is local to the interface, with the local x-direction aligned with
+        // the face normal.
+        array<GasState,4> gas{fsL1.gas, fsL0.gas, fsR0.gas, fsR1.gas};
+        array<Vector3,4> vel{fsL1.vel, fsL0.vel, fsR0.vel, fsR1.vel};
+        for (int i = 0; i < 4; ++i) { vel[i].transform_to_local_frame(n, t1, t2); }
+        //
+        // Factored terms from the conservtion equations.
+        number v[10][4]; number w[10][4];
+        for (int i = 0; i < 4; ++i) {
+            number rho = gas[i].rho; number p = gas[i].p; number e = gas[i].e;
+            number velx = vel[i].x; number vely = vel[i].y; number velz = vel[i].z;
+            v[0][i] = rho;           w[0][i] = velx;  // mass
+            v[1][i] = velx*rho;      w[1][i] = velx;  // x-momentum
+            v[2][i] = vely*rho;      w[2][i] = velx;  // y-momentum
+            v[3][i] = velz*rho;      w[3][i] = velx;  // z-momentum
+            v[4][i] = e*rho;         w[4][i] = velx;  // Internal energy
+            // PJ 2022-11-17
+            // I wonder if putting the 0.5 here instead of in the flux weighting
+            // for the kinetic-energy terms will alter things.
+            v[5][i] = velx*velx*rho; w[5][i] = velx;  // Kinetic energy, x
+            v[6][i] = vely*vely*rho; w[6][i] = velx;  // Kinetic energy, y
+            v[7][i] = velz*velz*rho; w[7][i] = velx;  // Kinetic energy, z
+            v[8][i] = p;             w[8][i] = velx;  // Pressure work in energy equation.
+            v[9][i] = p;             w[9][i] = 1;     // Pressure in momentum equation
         }
         //
-        number v[10][4] , w[10][4];
-        for(i=0;i<4;++i)
-        {
-            v[0][i] = stencil[i].gas.rho;
-            w[0][i] = Vel[i].x;
-            v[1][i] = Vel[i].x * stencil[i].gas.rho;
-            w[1][i] = Vel[i].x;
-            v[2][i] = Vel[i].y * stencil[i].gas.rho;
-            w[2][i] = Vel[i].x;
-            v[3][i] = Vel[i].z * stencil[i].gas.rho;
-            w[3][i] = Vel[i].x;
-            v[4][i] = stencil[i].gas.e * stencil[i].gas.rho;
-            w[4][i] = Vel[i].x;
-            v[5][i] = Vel[i].x * Vel[i].x * stencil[i].gas.rho;
-            w[5][i] = Vel[i].x;
-            v[6][i] = Vel[i].y * Vel[i].y * stencil[i].gas.rho;
-            w[6][i] = Vel[i].x;
-            v[7][i] = Vel[i].z * Vel[i].z * stencil[i].gas.rho;
-            w[7][i] = Vel[i].x;
-            v[8][i] = stencil[i].gas.p;
-            w[8][i] = Vel[i].x;
-            v[9][i] = stencil[i].gas.p;
-            w[9][i] = 1;
-        }
-
-        number f_c[10];
-        number f_e[10];
-
-        for(i=0;i<10;++i)
-        {
-            f_c[i] = (1.0 / 12.0) * (-v[i][0] * w[i][0] + 7.0 * v[i][1] * w[i][1] + 7.0 * v[i][2] * w[i][2] - v[i][3] * w[i][3]);
-            f_e[i] = (1.0 / 12.0) * (-v[i][0] * w[i][2] - v[i][2] * w[i][0] + 8 * v[i][1] * w[i][2] + 8 * v[i][2] * w[i][1] - v[i][1] * w[i][3] - v[i][3] * w[i][1]);
+        // Fluxes.
+        number f_c[10]; number f_e[10];
+        for (int j = 0; j < 10; ++j) {
+            // Divergence-form flux (eq 3.6 in NASA/TM-2011-217307)
+            f_c[j] = (1.0/12.0) * (-v[j][0]*w[j][0] + 7.0*v[j][1]*w[j][1] + 7.0*v[j][2]*w[j][2] - v[j][3]*w[j][3]);
+            // Product-rule flux (eq 3.6 in NASA/TM-2011-217307)
+            f_e[j] = (1.0/12.0) * (-v[j][0]*w[j][2] - v[j][2]*w[j][0] + 8*v[j][1]*w[j][2]
+                                   + 8*v[j][2]*w[j][1] - v[j][1]*w[j][3] - v[j][3]*w[j][1]);
         }
         //
-        number alpha_mass = 1.0; number alpha_mom = 0.5; number alpha_ie = 0.5; number alpha_ke = 0.0; number alpha_p = 0.0;
+        // Alpha weights, as used by Jeff White.
+        constexpr number alpha_mass = 1.0;
+        constexpr number alpha_mom = 0.5;
+        constexpr number alpha_ie = 0.5;
+        constexpr number alpha_ke = 0.0;
+        constexpr number alpha_p = 0.0;
         //
-        F[CQI::mass] = alpha_mass * f_c[0] + (1.0 - alpha_mass) * f_e[0];
-        number mom_x = alpha_mom * f_c[1] + (1.0 - alpha_mom) * f_e[1] + (alpha_p * f_c[9] + (1.0 - alpha_p) * f_e[9]);
-        number mom_y = alpha_mom * f_c[2] + (1.0 - alpha_mom) * f_e[2];
-        number mom_z = alpha_mom * f_c[3] + (1.0 - alpha_mom) * f_e[3];
+        // Assemble weighted fluxes.
+        number mass_flux = alpha_mass*f_c[0] + (1.0-alpha_mass)*f_e[0];
+        F[CQI::mass] = mass_flux;
         //
+        number mom_x = alpha_mom*f_c[1] + (1.0-alpha_mom)*f_e[1] + (alpha_p*f_c[9] + (1.0-alpha_p)*f_e[9]);
+        number mom_y = alpha_mom*f_c[2] + (1.0-alpha_mom)*f_e[2];
+        number mom_z = alpha_mom*f_c[3] + (1.0-alpha_mom)*f_e[3];
         Vector3 momentum{mom_x, mom_y, mom_z};
         momentum.transform_to_global_frame(n, t1, t2);
         F[CQI::xMom] = momentum.x;
         F[CQI::yMom] = momentum.y;
         F[CQI::zMom] = momentum.z;
-        F[CQI::totEnergy] = alpha_ie * f_c[4] + (1.0 - alpha_ie) * f_e[4] + (1.0 / 2.0) * (alpha_ke * f_c[5] + (1.0 - alpha_ke) * f_e[5] + alpha_ke * f_c[6] +
-           (1.0 - alpha_ke) * f_e[6] + alpha_ke * f_c[7] + (1.0 - alpha_ke) * f_e[7]) + alpha_p * f_c[8] + (1.0 - alpha_p) * f_e[8];
-        // Gas species; [FIXME] PJ 2022-11-16
-        F[CQI::YB] = 0.0;
+        //
+        F[CQI::totEnergy] = alpha_ie*f_c[4] + (1.0-alpha_ie)*f_e[4] +
+            0.5*(alpha_ke*f_c[5] + (1.0-alpha_ke)*f_e[5] +
+                 alpha_ke*f_c[6] + (1.0-alpha_ke)*f_e[6] +
+                 alpha_ke*f_c[7] + (1.0-alpha_ke)*f_e[7]) +
+            alpha_p*f_c[8] + (1.0-alpha_p)*f_e[8];
+        //
+        // Choose which cell to use for the species, based on which way the wind is blowing.
+        F[CQI::YB] = mass_flux * ((mass_flux >= 0.0) ? gas[1].YB : gas[2].YB);
     } // end sbp_asf()
 
 
