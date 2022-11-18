@@ -22,6 +22,7 @@ import gas.init_gas_model;
 
 import kinetics.thermochemical_reactor;
 import kinetics.init_thermochemical_reactor;
+import kinetics.reaction_mechanism;
 
 import gasflow;
 
@@ -31,6 +32,7 @@ import gasflow;
 GasModel[] gas_models;
 GasState*[] gas_states;
 ThermochemicalReactor[] thermochemical_reactors;
+ReactionMechanism[] reaction_mechanisms;
 
 extern (C) int cwrap_gas_init()
 {
@@ -38,6 +40,7 @@ extern (C) int cwrap_gas_init()
     gas_models.length = 0;
     gas_states.length = 0;
     thermochemical_reactors.length = 0;
+    reaction_mechanisms.length = 0;
     return 0;
 }
 
@@ -818,7 +821,56 @@ extern (C) int thermochemical_reactor_gas_state_update(int cr_i, int gs_i,
 }
 
 //---------------------------------------------------------------------------
+extern (C) int reaction_mechanism_new(int gm_i, const char* filename)
+{
+    try {
+        auto rm = createReactionMechanism(to!string(filename), gas_models[gm_i], 300.0, 30000.0);
+        reaction_mechanisms ~= rm;
+        return to!int(reaction_mechanisms.length - 1);
+    } catch (Exception e) {
+        stderr.writeln("Failed to construct a new ReactionMechanism.");
+        stderr.writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
 
+extern (C) int reaction_mechanism_n_reactions(int rm_i)
+{
+    try {
+        int n = to!int(reaction_mechanisms[rm_i].n_reactions);
+        return n;
+    } catch (Exception e) {
+        stderr.writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int reaction_mechanism_tickrates(int rm_i, int gm_i, int gs_i, double* tickrates)
+{
+    // Return the individual reaction rates as an array
+    try {
+        auto rm = reaction_mechanisms[rm_i];
+        auto gm = gas_models[gm_i];
+        auto gs = gas_states[gs_i];
+        
+        double[] tickrates_array, concentrations;
+        tickrates_array.length = rm.n_reactions;
+        concentrations.length = gm.n_species;
+
+        rm.eval_rate_constants(*gs);
+        gm.massf2conc(*gs, concentrations);
+        rm.eval_tickrates(concentrations, tickrates_array);
+        foreach(i; 0 .. rm.n_reactions) tickrates[i] = tickrates_array[i];
+
+        return 0;
+    } catch (Exception e) {
+        stderr.writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+
+//---------------------------------------------------------------------------
 extern(C)
 int gasflow_shock_ideal(int state1_id, double vs, int state2_id, int gm_id,
                         double* results)
