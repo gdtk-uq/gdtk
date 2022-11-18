@@ -284,9 +284,6 @@ struct FVFace {
             v[2][i] = vely*rho;      w[2][i] = velx;  // y-momentum
             v[3][i] = velz*rho;      w[3][i] = velx;  // z-momentum
             v[4][i] = e*rho;         w[4][i] = velx;  // Internal energy
-            // PJ 2022-11-17
-            // I wonder if putting the 0.5 here instead of in the flux weighting
-            // for the kinetic-energy terms will alter things.
             v[5][i] = velx*velx*rho; w[5][i] = velx;  // Kinetic energy, x
             v[6][i] = vely*vely*rho; w[6][i] = velx;  // Kinetic energy, y
             v[7][i] = velz*velz*rho; w[7][i] = velx;  // Kinetic energy, z
@@ -297,7 +294,7 @@ struct FVFace {
         // Fluxes.
         number f_c[10]; number f_e[10];
         for (int j = 0; j < 10; ++j) {
-            // Divergence-form flux (eq 3.6 in NASA/TM-2011-217307)
+            // Divergence-form flux (eq 3.5 in NASA/TM-2011-217307)
             f_c[j] = (1.0/12.0) * (-v[j][0]*w[j][0] + 7.0*v[j][1]*w[j][1] + 7.0*v[j][2]*w[j][2] - v[j][3]*w[j][3]);
             // Product-rule flux (eq 3.6 in NASA/TM-2011-217307)
             f_e[j] = (1.0/12.0) * (-v[j][0]*w[j][2] - v[j][2]*w[j][0] + 8*v[j][1]*w[j][2]
