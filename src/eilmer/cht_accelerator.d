@@ -236,10 +236,11 @@ int main(string[] args)
 
     // read .cht JSON file
     int npoints, super_time_steps;
-    bool constant_freestream, init_precondition_matrix;
+    bool constant_freestream, warm_start_fluid_solve, init_precondition_matrix;
     JSONValue jsonData = readJSONfile(jobName~".cht");
     npoints             = to!int(jsonData["npoints"].integer);
     constant_freestream = jsonData["constant_freestream"].boolean;
+    warm_start_fluid_solve = jsonData["warm_start_fluid_solve"].boolean;
     super_time_steps    = to!int(jsonData["super_time_steps"].integer);
 
     // bootstrap the coupled boundary condition by sending the initial solid temperature to the fluid domain
@@ -266,6 +267,12 @@ int main(string[] args)
         if (!constant_freestream) {
             FlowState inflow = FlowState(jsonData["point_"~to!string(idx)]["flowstate"], GlobalConfig.gmodel_master);
             set_inflow_condition(inflow);
+        }
+
+        // set the initial condition for this point if not warm starting with previous flow solution
+        if (!warm_start_fluid_solve) {
+            FlowState initial = FlowState(jsonData["point_"~to!string(idx)]["flowstate"], GlobalConfig.gmodel_master);
+            set_initial_condition(initial);
         }
 
         // fluid domain solver
@@ -300,6 +307,20 @@ int main(string[] args)
 
     exitFlag = 0;
     return exitFlag;
+}
+
+void set_initial_condition(FlowState initial) {
+    // helper function that copies the provided FlowState into all of the cell flowstates
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        foreach (cell; blk.cells) {
+            cell.fs.copy_values_from(initial);
+            blk.myConfig.gmodel.update_thermo_from_pT(cell.fs.gas);
+            cell.encode_conserved(0, 0, 0.0);
+            cell.decode_conserved(0, 0, 0.0);
+        }
+    }
+
+    return;
 }
 
 void set_inflow_condition(FlowState inflow) {
