@@ -21,6 +21,7 @@ import std.parallelism;
 import std.algorithm;
 import std.getopt;
 import std.json;
+import std.file;
 
 import json_helper;
 import simcore_exchange;
@@ -279,6 +280,15 @@ int main(string[] args)
 
         // fluid domain solver
         iterate_to_steady_state(snapshotStart, maxCPUs, threadsPerMPITask, include_solid_domain_in_nk_solve, init_precondition_matrix);
+        if (GlobalConfig.is_master_task) {
+            // save a copy of the steady-state solver diagnostics file
+            string file_name = "e4-nk.diagnostics.dat";
+            if (exists(file_name)) {
+                rename(file_name, to!string(loads_idx)~"_"~file_name);
+            } else {
+                writef("WARNING: Could not find %s, no copy has been saved. \n", file_name);
+            }
+        }
 
         // write loads file
         write_loads(loads_idx);
