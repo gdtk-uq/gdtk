@@ -23,6 +23,7 @@ import std.getopt;
 import std.json;
 import std.file;
 
+import fileutil;
 import json_helper;
 import simcore_exchange;
 import bc;
@@ -35,6 +36,9 @@ import globalconfig;
 import simcore : init_simulation;
 import postprocess : readTimesFile;
 import loads;
+import fluidblockio;
+import fluidblockio_old;
+import fluidblockio_new;
 import solid_loose_coupling_update;
 
 version(mpi_parallel) {
@@ -251,7 +255,7 @@ int main(string[] args)
     double time = 0.0;
     foreach (idx; 0..npoints) {
 
-        int loads_idx = idx;
+        int io_idx = idx;
 
         // we only need to initialise the precondition matrix for the steady-state solver on the first iteration
         init_precondition_matrix = (idx == 0) ? true: false;
@@ -284,14 +288,14 @@ int main(string[] args)
             // save a copy of the steady-state solver diagnostics file
             string file_name = "e4-nk.diagnostics.dat";
             if (exists(file_name)) {
-                rename(file_name, to!string(loads_idx)~"_"~file_name);
+                rename(file_name, to!string(io_idx)~"_"~file_name);
             } else {
                 writef("WARNING: Could not find %s, no copy has been saved. \n", file_name);
             }
         }
 
         // write loads file
-        write_loads(loads_idx);
+        write_loads(io_idx);
 
         // transfer heat flux data from fluid domain to solid domain (Flux Forward)
         send_gas_domain_boundary_heat_flux_data_to_solid_domain();
@@ -302,6 +306,8 @@ int main(string[] args)
         // transfer temperature data from solid domain to fluid domain (Temperature Back)
         send_solid_domain_boundary_temperature_data_to_gas_domain();
 
+        // write out a flow/solid solution
+        write_cht_solution(jobName, time, io_idx);
     }
 
     // fluid domain solver
@@ -360,4 +366,41 @@ void set_inflow_condition(FlowState inflow) {
     }
 
     return;
+}
+
+void write_cht_solution(string jobName, double time, int idx) {
+    // helper function to write a flow and solid solution
+    int tindx = 1_000_000 + idx; // TODO: temporary hack, we need a more elegant solution. KAD 2022-11-18
+    FluidBlockIO[] io_list = localFluidBlocks[0].block_io;
+    bool legacy = is_legacy_format(GlobalConfig.flow_format);
+    if (GlobalConfig.is_master_task){
+        if (legacy) {
+            ensure_directory_is_present(make_path_name!"flow"(tindx));
+        } else {
+            foreach(io; io_list) {
+                string path = "CellData/"~io.tag;
+                if (io.do_save()) ensure_directory_is_present(make_path_name(path, tindx));
+            }
+        }
+        ensure_directory_is_present(make_path_name!"solid"(tindx));
+    }
+    version(mpi_parallel) {
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+    foreach (blk; localFluidBlocks) {
+        if (legacy) {
+            auto fileName = make_file_name!"flow"(jobName, blk.id, tindx, GlobalConfig.flowFileExt);
+            blk.write_solution(fileName, time);
+        } else {
+            foreach(io; blk.block_io) {
+                auto fileName = make_file_name("CellData", io.tag, jobName, blk.id, tindx, GlobalConfig.flowFileExt);
+                if (io.do_save()) io.save_to_file(fileName, time);
+            }
+        }
+    }
+    foreach (sblk; localSolidBlocks) {
+        auto fileName = make_file_name!"solid"(jobName, sblk.id, tindx, "gz");
+        sblk.writeSolution(fileName, time);
+    }
+
 }
