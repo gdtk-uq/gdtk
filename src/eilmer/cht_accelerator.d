@@ -250,6 +250,8 @@ int main(string[] args)
     double time = 0.0;
     foreach (idx; 0..npoints) {
 
+        int loads_idx = idx;
+
         // we only need to initialise the precondition matrix for the steady-state solver on the first iteration
         init_precondition_matrix = (idx == 0) ? true: false;
 
@@ -278,6 +280,9 @@ int main(string[] args)
         // fluid domain solver
         iterate_to_steady_state(snapshotStart, maxCPUs, threadsPerMPITask, include_solid_domain_in_nk_solve, init_precondition_matrix);
 
+        // write loads file
+        write_loads(loads_idx);
+
         // transfer heat flux data from fluid domain to solid domain (Flux Forward)
         send_gas_domain_boundary_heat_flux_data_to_solid_domain();
 
@@ -293,12 +298,7 @@ int main(string[] args)
     iterate_to_steady_state(snapshotStart, maxCPUs, threadsPerMPITask, include_solid_domain_in_nk_solve, init_precondition_matrix);
 
     // put the final loads file in a special directory
-    int dir_id = 9999; // TODO: temporary hack, we need a more elegant solution. KAD 2022-11-08
-    if (GlobalConfig.is_master_task) { init_current_loads_tindx_dir(dir_id); }
-    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-    wait_for_current_tindx_dir(dir_id);
-    write_boundary_loads_to_file(SimState.time, dir_id);
-    if (GlobalConfig.is_master_task) { update_loads_times_file(SimState.time, dir_id); }
+    write_loads(npoints);
 
     if (GlobalConfig.is_master_task) {
         writeln("Done simulation.");
@@ -308,6 +308,17 @@ int main(string[] args)
     exitFlag = 0;
     return exitFlag;
 }
+
+void write_loads(int idx) {
+    // helper function that writes out the loads file
+    int dir_id = 1_000_000 + idx; // TODO: temporary hack, we need a more elegant solution. KAD 2022-11-08
+    if (GlobalConfig.is_master_task) { init_current_loads_tindx_dir(dir_id); }
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    wait_for_current_tindx_dir(dir_id);
+    write_boundary_loads_to_file(SimState.time, dir_id);
+    if (GlobalConfig.is_master_task) { update_loads_times_file(SimState.time, dir_id); }
+}
+
 
 void set_initial_condition(FlowState initial) {
     // helper function that copies the provided FlowState into all of the cell flowstates
