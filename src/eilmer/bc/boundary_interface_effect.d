@@ -1538,9 +1538,9 @@ public:
     {
         auto myBC = blk.bc[which_boundary];
         number Twall = myBC.solidCells[f.i_bndry].T;
-        myBC.ifaces[f.i_bndry].fs.gas.T = Twall;
+        f.fs.gas.T = Twall;
         version(multi_T_gas) {
-            foreach(ref elem; myBC.ifaces[f.i_bndry].fs.gas.T_modes) { elem = Twall; }
+            foreach(ref elem; f.fs.gas.T_modes) { elem = Twall; }
         }
     }
 
