@@ -2,7 +2,7 @@
 // Test program for GasModel and GasState functions.
 // PJ 2022-10-18
 // Build with
-// $ nvcc --expt-relaxed-constexpr -o gas_test gas_test.cu
+// $ nvcc --expt-relaxed-constexpr -o gas_test -DIDEAL_AIR gas_test.cu
 // Run with
 // $ ./gas_test
 //
