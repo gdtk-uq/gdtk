@@ -287,6 +287,14 @@ struct Block {
                         if (f.bcCode == BCCode::inflow) f.inflowId = cfg.bc_fs[Face::iminus];
                         if (f.bcCode == BCCode::wall_no_slip_fixed_T) f.TWall = cfg.bc_TWall[Face::iminus];
                         if (f.bcCode == BCCode::inflow_function) f.bcFun = cfg.bc_fun[Face::iminus];
+                    } else if (i == 1 && i == cfg.nic) {
+                        cerr << "cfg.nic=" << cfg.nic << endl;
+                        throw runtime_error("Too few cells in the i-index direction.");
+                    } else if (i == 1 && i == cfg.nic-1) {
+                        f.left_cells[1] = cfg.ghostCellIndex(Face::iminus,j,k,0);
+                        f.left_cells[0] = cfg.activeCellIndex(i-1,j,k);
+                        f.right_cells[0] = cfg.activeCellIndex(i,j,k);
+                        f.right_cells[1] = cfg.ghostCellIndex(Face::iplus,j,k,0);
                     } else if (i == 1) {
                         f.left_cells[1] = cfg.ghostCellIndex(Face::iminus,j,k,0);
                         f.left_cells[0] = cfg.activeCellIndex(i-1,j,k);
@@ -376,6 +384,14 @@ struct Block {
                         if (f.bcCode == BCCode::inflow) f.inflowId = cfg.bc_fs[Face::jminus];
                         if (f.bcCode == BCCode::wall_no_slip_fixed_T) f.TWall = cfg.bc_TWall[Face::jminus];
                         if (f.bcCode == BCCode::inflow_function) f.bcFun = cfg.bc_fun[Face::jminus];
+                    } else if (j == 1 && j == cfg.njc) {
+                        cerr << "cfg.njc=" << cfg.njc << endl;
+                        throw runtime_error("Too few cells in the j-index direction.");
+                    } else if (j == 1 && j == cfg.njc-1) {
+                        f.left_cells[1] = cfg.ghostCellIndex(Face::jminus,i,k,0);
+                        f.left_cells[0] = cfg.activeCellIndex(i,j-1,k);
+                        f.right_cells[0] = cfg.activeCellIndex(i,j,k);
+                        f.right_cells[1] = cfg.ghostCellIndex(Face::jplus,i,k,0);
                     } else if (j == 1) {
                         f.left_cells[1] = cfg.ghostCellIndex(Face::jminus,i,k,0);
                         f.left_cells[0] = cfg.activeCellIndex(i,j-1,k);
@@ -465,6 +481,14 @@ struct Block {
                         if (f.bcCode == BCCode::inflow) f.inflowId = cfg.bc_fs[Face::kminus];
                         if (f.bcCode == BCCode::wall_no_slip_fixed_T) f.TWall = cfg.bc_TWall[Face::kminus];
                         if (f.bcCode == BCCode::inflow_function) f.bcFun = cfg.bc_fun[Face::kminus];
+                    } else if (k == 1 && k == cfg.nkc) {
+                        cerr << "cfg.nkc=" << cfg.nkc << endl;
+                        throw runtime_error("Too few cells in the k-index direction.");
+                    } else if (k == 1 && k == cfg.nkc-1) {
+                        f.left_cells[1] = cfg.ghostCellIndex(Face::kminus,i,j,0);
+                        f.left_cells[0] = cfg.activeCellIndex(i,j,k-1);
+                        f.right_cells[0] = cfg.activeCellIndex(i,j,k);
+                        f.right_cells[1] = cfg.ghostCellIndex(Face::kplus,i,j,0);
                     } else if (k == 1) {
                         f.left_cells[1] = cfg.ghostCellIndex(Face::kminus,i,j,0);
                         f.left_cells[0] = cfg.activeCellIndex(i,j,k-1);

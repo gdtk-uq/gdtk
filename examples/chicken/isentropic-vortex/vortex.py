@@ -16,7 +16,7 @@ vol0 = TFIVolume(p000=Vector3(xmin,ymin,zmin), p100=Vector3(xmax,ymin,zmin),
                  p001=Vector3(xmin,ymin,zmax), p101=Vector3(xmax,ymin,zmax),
                  p111=Vector3(xmax,ymax,zmax), p011=Vector3(xmin,ymax,zmax))
 factor = 1
-grd0 = StructuredGrid(pvolume=vol0, niv=int(120*factor)+1, njv=int(120*factor)+1, nkv=4)
+grd0 = StructuredGrid(pvolume=vol0, niv=int(120*factor)+1, njv=int(120*factor)+1, nkv=3)
 #
 def initial_flow(x, y, z):
     """
@@ -56,7 +56,7 @@ blk0 = FluidBlock(grid=grd0, initialState=initial_flow,
                   bcs={'iminus':ExchangeBC(),'iplus':ExchangeBC(),
                        'jminus':ExchangeBC(),'jplus':ExchangeBC()})
 #
-config.max_time = 10.0e-3  # seconds
+config.max_time = 50.0e-3  # seconds
 config.max_step = 150000
 config.flux_calc = "sbp_asf"
-add_dt_plot(0.0, 0.1e-3)
+add_dt_plot(0.0, 1.0e-3)
