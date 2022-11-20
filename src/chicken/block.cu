@@ -970,9 +970,19 @@ struct Block {
     }
 
     __host__
+    void WRITE_DEBUG_DATA(string label, int cIndx)
+    {
+        cout << "DEBUG " << label << endl;
+        cout << "DEBUG cells[" << cIndx << "]=" << cells[0] << endl;
+        cout << "DEBUG faces=["; for (auto i : cells[cIndx].face) cout << faces[i] << ","; cout << "]" << endl;
+    }
+
+    __host__
     int update_stage_1(const BConfig& cfg, number dt)
     // Stage 1 of the TVD-RK3 update scheme (predictor step).
     {
+        int cIndx = cfg.activeCellIndex(cfg.nic/2, cfg.njc/2, cfg.nkc-1);
+        WRITE_DEBUG_DATA("update_stage_1 A:", cIndx);
         int bad_cell_count = 0;
         for (int i=0; i < cfg.nActiveCells; i++) {
             FVCell& c = cells[i];
@@ -989,6 +999,7 @@ struct Block {
                 cerr << "Stage 1 update, Bad cell at pos=" << c.pos << endl;
             }
         }
+        WRITE_DEBUG_DATA("update_stage_1 B:", cIndx);
         return bad_cell_count;
     } // end update_stage_1()
 
@@ -996,6 +1007,8 @@ struct Block {
     int update_stage_2(const BConfig& cfg, number dt)
     // Stage 2 of the TVD-RK3 update scheme.
     {
+        int cIndx = cfg.activeCellIndex(cfg.nic/2, cfg.njc/2, cfg.nkc-1);
+        WRITE_DEBUG_DATA("update_stage_2 A:", cIndx);
         int bad_cell_count = 0;
         for (int i=0; i < cfg.nActiveCells; i++) {
             FVCell& c = cells[i];
@@ -1013,6 +1026,7 @@ struct Block {
                 cerr << "Stage 2 update, Bad cell at pos=" << c.pos << endl;
             }
         }
+        WRITE_DEBUG_DATA("update_stage_2 B:", cIndx);
         return bad_cell_count;
     } // end update_stage_2()
 
@@ -1020,6 +1034,8 @@ struct Block {
     int update_stage_3(const BConfig& cfg, number dt)
     // Stage 3 of the TVD_RK3 update scheme.
     {
+        int cIndx = cfg.activeCellIndex(cfg.nic/2, cfg.njc/2, cfg.nkc-1);
+        WRITE_DEBUG_DATA("update_stage_3 A:", cIndx);
         int bad_cell_count = 0;
         for (int i=0; i < cfg.nActiveCells; i++) {
             FVCell& c = cells[i];
@@ -1038,6 +1054,7 @@ struct Block {
                 cerr << "Stage 3 update, Bad cell at pos=" << c.pos << endl;
             }
         }
+        WRITE_DEBUG_DATA("update_stage_3 B:", cIndx);
         return bad_cell_count;
     } // end update_stage_3()
 

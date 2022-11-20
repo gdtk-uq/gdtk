@@ -142,9 +142,16 @@ struct FVFace {
         ostringstream repr;
         repr << "FVFace(pos=" << pos.toString() << ", n=" << n.toString()
              << ", t1=" << t1.toString() << ", t2=" << t2.toString() << ", area=" << area;
+        repr << ", F=["; for (auto v : F) repr << v << ","; repr << "]";
         repr << ", vtx=["; for (auto i : vtx) repr << i << ","; repr << "]";
         repr << ", left_cells=["; for (auto i : left_cells) repr << i << ","; repr << "]";
         repr << ", right_cells=["; for (auto i : right_cells) repr << i << ","; repr << "]";
+        repr << ", bcId=" << bcId << ", bcCode=" << bcCode
+             << ", other_blkId=" << other_blkId << ", other_cells=[" << other_cells[0]
+             << ", " << other_cells[1] << "], inflowId=" << inflowId
+             << ", TWall=" << TWall << ", bcFun=" << bcFun;
+        repr << ", cells_in_cloud=["; for (auto i : cells_in_cloud) repr << i <<","; repr << "]";
+        repr << ", faces_in_cloud=["; for (auto i : faces_in_cloud) repr << i <<","; repr << "]";
         repr << ")";
         return repr.str();
     }
