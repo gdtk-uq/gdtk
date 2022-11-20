@@ -16,7 +16,7 @@ vol0 = TFIVolume(p000=Vector3(xmin,ymin,zmin), p100=Vector3(xmax,ymin,zmin),
                  p001=Vector3(xmin,ymin,zmax), p101=Vector3(xmax,ymin,zmax),
                  p111=Vector3(xmax,ymax,zmax), p011=Vector3(xmin,ymax,zmax))
 factor = 1
-grd0 = StructuredGrid(pvolume=vol0, niv=int(120*factor)+1, njv=int(120*factor)+1, nkv=3)
+grd0 = StructuredGrid(pvolume=vol0, niv=int(120*factor)+1, njv=int(120*factor)+1, nkv=4)
 #
 def initial_flow(x, y, z):
     """
@@ -31,7 +31,7 @@ def initial_flow(x, y, z):
     a0 = math.sqrt(Gamma*Rgas*T0)
     # Vortex centre and strength
     xc = L/2.0; yc = H/2.0
-    eps = 5.0*a0/10              #strength of vortex, reduced by 10, PJ 2022-10-18
+    eps = 5.0*a0
     xbar = x - xc; ybar = y - yc
     r2 = xbar**2 + ybar**2
     r = math.sqrt(r2)

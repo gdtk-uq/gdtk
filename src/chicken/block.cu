@@ -973,16 +973,25 @@ struct Block {
     void WRITE_DEBUG_DATA(string label, int cIndx)
     {
         cout << "DEBUG " << label << endl;
-        cout << "DEBUG cells[" << cIndx << "]=" << cells[0] << endl;
-        cout << "DEBUG faces=["; for (auto i : cells[cIndx].face) cout << faces[i] << ","; cout << "]" << endl;
+        FVCell c = cells[cIndx];
+        cout << "DEBUG cells[" << cIndx << "]=" << c << endl;
+        cout << "DEBUG faces=["; for (auto i : c.face) cout << faces[i] << ","; cout << "]" << endl;
+        cout << "DEBUG FlowStates given to kminus face flux calculation:" << endl;
+        FVFace& fkm = faces[c.face[Face::kminus]];
+        FlowState& fsL1 = cells[fkm.left_cells[1]].fs; Vector3 posL1 = cells[fkm.left_cells[1]].pos;
+        FlowState& fsL0 = cells[fkm.left_cells[0]].fs; Vector3 posL0 = cells[fkm.left_cells[0]].pos;
+        FlowState& fsR0 = cells[fkm.right_cells[0]].fs; Vector3 posR0 = cells[fkm.right_cells[0]].pos;
+        FlowState& fsR1 = cells[fkm.right_cells[1]].fs; Vector3 posR1 = cells[fkm.right_cells[1]].pos;
+        cout << "DEBUG posL1=" << posL1 << " fsL1=" << fsL1 << endl;
+        cout << "DEBUG posL0=" << posL0 << " fsL0=" << fsL0 << endl;
+        cout << "DEBUG posR0=" << posR0 << " fsR0=" << fsR0 << endl;
+        cout << "DEBUG posR1=" << posR1 << " fsR1=" << fsR1 << endl;
     }
 
     __host__
     int update_stage_1(const BConfig& cfg, number dt)
     // Stage 1 of the TVD-RK3 update scheme (predictor step).
     {
-        int cIndx = cfg.activeCellIndex(cfg.nic/2, cfg.njc/2, cfg.nkc-1);
-        WRITE_DEBUG_DATA("update_stage_1 A:", cIndx);
         int bad_cell_count = 0;
         for (int i=0; i < cfg.nActiveCells; i++) {
             FVCell& c = cells[i];
@@ -999,7 +1008,6 @@ struct Block {
                 cerr << "Stage 1 update, Bad cell at pos=" << c.pos << endl;
             }
         }
-        WRITE_DEBUG_DATA("update_stage_1 B:", cIndx);
         return bad_cell_count;
     } // end update_stage_1()
 
@@ -1007,8 +1015,6 @@ struct Block {
     int update_stage_2(const BConfig& cfg, number dt)
     // Stage 2 of the TVD-RK3 update scheme.
     {
-        int cIndx = cfg.activeCellIndex(cfg.nic/2, cfg.njc/2, cfg.nkc-1);
-        WRITE_DEBUG_DATA("update_stage_2 A:", cIndx);
         int bad_cell_count = 0;
         for (int i=0; i < cfg.nActiveCells; i++) {
             FVCell& c = cells[i];
@@ -1026,7 +1032,6 @@ struct Block {
                 cerr << "Stage 2 update, Bad cell at pos=" << c.pos << endl;
             }
         }
-        WRITE_DEBUG_DATA("update_stage_2 B:", cIndx);
         return bad_cell_count;
     } // end update_stage_2()
 
@@ -1034,8 +1039,6 @@ struct Block {
     int update_stage_3(const BConfig& cfg, number dt)
     // Stage 3 of the TVD_RK3 update scheme.
     {
-        int cIndx = cfg.activeCellIndex(cfg.nic/2, cfg.njc/2, cfg.nkc-1);
-        WRITE_DEBUG_DATA("update_stage_3 A:", cIndx);
         int bad_cell_count = 0;
         for (int i=0; i < cfg.nActiveCells; i++) {
             FVCell& c = cells[i];
@@ -1054,7 +1057,6 @@ struct Block {
                 cerr << "Stage 3 update, Bad cell at pos=" << c.pos << endl;
             }
         }
-        WRITE_DEBUG_DATA("update_stage_3 B:", cIndx);
         return bad_cell_count;
     } // end update_stage_3()
 
