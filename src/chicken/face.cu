@@ -265,7 +265,8 @@ struct FVFace {
 
 
     __host__ __device__
-    void sbp_asf(FlowState& fsL1, FlowState& fsL0, FlowState& fsR0, FlowState& fsR1)
+    void sbp_asf(const FlowState& fsL1, const FlowState& fsL0,
+                 const FlowState& fsR0, const FlowState& fsR1)
     // Lachlan's and Christine's Summation-By-Parts Alpha-Split Flux calculation function.
     //
     // This flux calculator is based on the formulation in the NASA Techmical Memo
@@ -342,7 +343,8 @@ struct FVFace {
     // And one generic flux calculation function.
 
     __host__ __device__
-    void calculate_convective_flux(FlowState& fsL1, FlowState& fsL0, FlowState& fsR0, FlowState& fsR1,
+    void calculate_convective_flux(const FlowState& fsL1, const FlowState& fsL0,
+                                   const FlowState& fsR0, const FlowState& fsR1,
                                    int flux_calc, int x_order)
     // Generic convective-flux calculation function.
     {
