@@ -159,12 +159,19 @@ struct BConfig {
     }
 }; // end struct BConfig
 
+__host__
+ostream& operator<<(ostream& os, const BConfig cfg)
+{
+    os << cfg.toString();
+    return os;
+}
+
 
 struct Schedule {
     vector<number> t_change; // times at which the value changes
     vector<number> values; // the corresponding values
 
-    string toString() {
+    string toString() const {
         ostringstream repr;
         repr << "Schedule(";
         repr << "t_change=["; for (auto t : t_change) repr << t << ","; repr << "]";
@@ -173,7 +180,7 @@ struct Schedule {
         return repr.str();
     }
 
-    number get_value(number t)
+    number get_value(number t) const
     {
         // Select one of our tabulated schedule of values.
         int i = t_change.size() - 1;
@@ -181,7 +188,7 @@ struct Schedule {
         return values[i];
     }
 
-    number interpolate_value(number t)
+    number interpolate_value(number t) const
     {
         // Attempt an interpolation of the tabulated schedule of values.
         if (t <= t_change[0]) { return values[0]; }
@@ -196,6 +203,13 @@ struct Schedule {
         return value;
     }
 }; // end struct Schedule
+
+__host__
+ostream& operator<<(ostream& os, const Schedule sch)
+{
+    os << sch.toString();
+    return os;
+}
 
 
 namespace FluxCalc {
@@ -311,7 +325,7 @@ vector<BConfig> read_config_file(string fileName)
     }
     if (Config::verbosity > 0) {
         cout << "  flow_states: [";
-        for (auto fs : Config::flow_states) cout << fs.toString() << ",";
+        for (auto fs : Config::flow_states) cout << fs << ",";
         cout << "]" << endl;
     }
     //
@@ -374,7 +388,7 @@ vector<BConfig> read_config_file(string fileName)
             }
         }
         if (Config::verbosity > 0) {
-            cout << "  blk=" << blk_configs.size() << " config=" << cfg.toString() << endl;
+            cout << "  blk=" << blk_configs.size() << " config=" << cfg << endl;
         }
         blk_configs.push_back(cfg);
     }
@@ -410,9 +424,9 @@ vector<BConfig> read_config_file(string fileName)
         cout << "  max_time=" << Config::max_time << endl;
         cout << "  max_step=" << Config::max_step << endl;
         cout << "  cfl_count=" << Config::cfl_count << endl;
-        cout << "  cfl_schedule=" << Config::cfl_schedule.toString() << endl;
+        cout << "  cfl_schedule=" << Config::cfl_schedule << endl;
         cout << "  print_count=" << Config::print_count << endl;
-        cout << "  dt_plot_schedule=" << Config::dt_plot_schedule.toString() << endl;
+        cout << "  dt_plot_schedule=" << Config::dt_plot_schedule << endl;
         cout << "  viscous=" << Config::viscous << endl;
         cout << "  reacting=" << Config::reacting << endl;
         cout << "  threads_per_gpu_block=" << Config::threads_per_GPUblock << endl;

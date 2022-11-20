@@ -928,7 +928,7 @@ struct Block {
             int bad_cell_flag = c.fs.decode_conserved(U);
             bad_cell_count += bad_cell_flag;
             if (bad_cell_flag) {
-                cerr << "DEBUG-A Bad cell at pos=" << c.pos.toString() << endl;
+                cerr << "DEBUG-A Bad cell at pos=" << c.pos << endl;
             }
         }
         return bad_cell_count;
@@ -953,7 +953,7 @@ struct Block {
         for (auto& face : faces) {
             int flag = setup_LSQ_arrays_at_face(face, cells.data(), faces.data());
             if (flag) {
-                cerr << "Singular normal matrix at f.pos=" << face.pos.toString() << endl;
+                cerr << "Singular normal matrix at f.pos=" << face.pos << endl;
             }
         }
         if (failures > 0) {
@@ -986,7 +986,7 @@ struct Block {
             int bad_cell_flag = c.fs.decode_conserved(U1);
             bad_cell_count += bad_cell_flag;
             if (bad_cell_flag) {
-                cerr << "Stage 1 update, Bad cell at pos=" << c.pos.toString() << endl;
+                cerr << "Stage 1 update, Bad cell at pos=" << c.pos << endl;
             }
         }
         return bad_cell_count;
@@ -1010,7 +1010,7 @@ struct Block {
             int bad_cell_flag = c.fs.decode_conserved(U1);
             bad_cell_count += bad_cell_flag;
             if (bad_cell_flag) {
-                cerr << "Stage 2 update, Bad cell at pos=" << c.pos.toString() << endl;
+                cerr << "Stage 2 update, Bad cell at pos=" << c.pos << endl;
             }
         }
         return bad_cell_count;
@@ -1035,7 +1035,7 @@ struct Block {
             int bad_cell_flag = c.fs.decode_conserved(U1);
             bad_cell_count += bad_cell_flag;
             if (bad_cell_flag) {
-                cerr << "Stage 3 update, Bad cell at pos=" << c.pos.toString() << endl;
+                cerr << "Stage 3 update, Bad cell at pos=" << c.pos << endl;
             }
         }
         return bad_cell_count;

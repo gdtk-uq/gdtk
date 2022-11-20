@@ -39,7 +39,7 @@ struct FlowState {
     GasState gas;
     Vector3 vel;
 
-    string toString() {
+    string toString() const {
         return "FlowState(" + gas.toString() + ", vel=" + vel.toString() + ")";
     }
 
@@ -94,5 +94,12 @@ struct FlowState {
     } // end decode_conserved()
 
 }; // end FlowState
+
+__host__
+ostream& operator<<(ostream& os, const FlowState fs)
+{
+    os << fs.toString();
+    return os;
+}
 
 #endif

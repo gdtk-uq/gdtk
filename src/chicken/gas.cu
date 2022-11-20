@@ -57,7 +57,7 @@ struct GasState {
     number YB;   // mass fraction of species B, rhoB/rho
     number a;    // sound speed, m/s
 
-    string toString() {
+    string toString() const {
         return "GasState(p=" + to_string(p) + ", rho=" + to_string(rho) +
             ", T=" + to_string(T) + ", e=" + to_string(e) +
             ", YB=" + to_string(YB) + ", a=" + to_string(a) + ")";
@@ -111,5 +111,12 @@ struct GasState {
     }
 
 }; // end GasState
+
+__host__
+ostream& operator<<(ostream& os, const GasState gs)
+{
+    os << gs.toString();
+    return os;
+}
 
 #endif

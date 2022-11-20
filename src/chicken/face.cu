@@ -368,4 +368,12 @@ struct FVFace {
 
 }; // end FVFace
 
+
+__host__
+ostream& operator<<(ostream& os, const FVFace f)
+{
+    os << f.toString();
+    return os;
+}
+
 #endif

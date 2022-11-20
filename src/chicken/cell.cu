@@ -99,7 +99,7 @@ struct FVCell {
     array<int,8> vtx{0, 0, 0, 0, 0, 0, 0, 0};
     array<int,6> face{0, 0, 0, 0, 0, 0};
 
-    string toString() {
+    string toString() const {
         ostringstream repr;
         repr << "Cell(pos=" << pos.toString() << ", volume=" << volume;
         repr << ", iLength=" << iLength << ", jLength=" << jLength << ", kLength=" << kLength;
@@ -218,5 +218,13 @@ struct FVCell {
     } // end eval_dUdt()
 
 }; // end Cell
+
+
+__host__
+ostream& operator<<(ostream& os, const FVCell c)
+{
+    os << c.toString();
+    return os;
+}
 
 #endif
