@@ -173,51 +173,110 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     double alpha;
     double s_RKL;
     int S;
-    if (GlobalConfig.fixed_time_step) {
 
-        // if we have a fixed time step then we won't have calculated either a hyperbolic or parabolic dt
-        // we need to specify the number of super-steps in this case
-        S = 7;
-        dt_global = GlobalConfig.dt_init;
+    if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
 
-    } else {
-
-        // otherwise we will calculate the suitable number of super-steps as per:
-        //    A stabilized Runge–Kutta–Legendre method for explicit super-time-stepping of parabolic and mixed equations
-        //    Journal of Computational Physics,
-        //    Meyer et al. (2014)
-
-        double dt_hyp = SimState.dt_global;
-        double dt_parab = SimState.dt_global_parab;
-        alpha = (dt_hyp)/(dt_parab);
-
-        if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
-            s_RKL = 0.5*(-1.0+sqrt(1+8.0*alpha)); // RKL1
-        } else {
-            s_RKL = 0.5*(-1.0+sqrt(9+16.0*alpha));  // RKL2
+        // We determine the allowable timestep here to overwrite the timestep calculated for the fluid domain
+        // TODO: think about a more appropriate place to calculate the timestep. KAD 2022-11-08
+        double cfl_value = GlobalConfig.cfl_schedule.interpolate_value(SimState.time);
+        double dt_local = double.max;
+        dt_global = double.max;
+        bool first = true;
+        foreach (sblk; localSolidBlocks) {
+            dt_local = sblk.determine_time_step_size(cfl_value);
+            if (first) {
+                dt_global = dt_local;
+                first = false;
+            } else {
+                dt_global = fmin(dt_global, dt_local);
+            }
+        }
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &dt_global, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
         }
 
-        // it is recommended to round S down to the nearest odd integer for stability
-        S = to!int(floor(s_RKL));
-        if ( fmod(S, 2) == 0 && s_RKL != 1 ) { S = S - 1; }
+        // set the super-time-step
+        SimState.dt_global_parab = dt_global;
+        S = SimState.s_RKL;
+        double dt_super = dt_global*(S*S+S)/2.0;
 
-        // When dt_parab is approxmately equal to or greater than dt_hyper (i.e. S <= 1), then we will just do a simple Euler step
-        if (S <= 1) {
+        // check for a couple of edge cases when using the user specified S is not appropriate...
+        double dt_remainder = SimState.target_time - SimState.time;
+        if (dt_global > dt_remainder) {
+            // the explicit time-step is larger than the remaining simulation time,
+            // so we just set the super-time-step to the remaining time and perform an Euler step
             S = 1;
-            euler_step = true;
-            if ((SimState.step % GlobalConfig.print_count) == 0 && GlobalConfig.is_master_task) {
-                writeln("WARNING: dtPARAB (", SimState.dt_global_parab, ") ~= dtHYPER (", SimState.dt_global, ") .... taking an Euler step.");
+            dt_super = dt_remainder;
+        }
+        else if (dt_remainder < dt_super) {
+            // the remaining time is larger than the explicit time-step but smaller than the super-time-step,
+            // we borrow from the mixed equation formulation to find a suitable S
+            alpha = dt_remainder/dt_global;
+            if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
+                s_RKL = 0.5*(-1.0+sqrt(1+8.0*alpha)); // RKL1
+            } else {
+                s_RKL = 0.5*(-1.0+sqrt(9+16.0*alpha));  // RKL2
+            }
+            S = to!int(floor(s_RKL));
+            if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
+                dt_super = dt_global * (S*S+S)/(2.0); // RKL1
+            } else {
+                dt_super = dt_global * (S*S+S-2.0)/(4.0); // RKL2
             }
         }
 
-        // Due to rounding S we should alter the time-step to be consistent
-        if (euler_step) {
-            dt_global = SimState.dt_global;
+        // place the super-time-step into the dt_global variables
+        if (S == 1) { euler_step = true; }
+        dt_global = dt_super;
+        SimState.dt_global = dt_global;
+
+    } else {
+        if (GlobalConfig.fixed_time_step) {
+
+            // if we have a fixed time step then we won't have calculated either a hyperbolic or parabolic dt
+            // we need to specify the number of super-steps in this case
+            S = 7;
+            dt_global = GlobalConfig.dt_init;
+
         } else {
+
+            // otherwise we will calculate the suitable number of super-steps as per:
+            //    A stabilized Runge–Kutta–Legendre method for explicit super-time-stepping of parabolic and mixed equations
+            //    Journal of Computational Physics,
+            //    Meyer et al. (2014)
+
+            double dt_hyp = SimState.dt_global;
+            double dt_parab = SimState.dt_global_parab;
+            alpha = (dt_hyp)/(dt_parab);
+
             if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
-                dt_global = SimState.dt_global_parab * (S*S+S)/(2.0); // RKL1
+                s_RKL = 0.5*(-1.0+sqrt(1+8.0*alpha)); // RKL1
             } else {
-                dt_global = SimState.dt_global_parab * (S*S+S-2.0)/(4.0); // RKL2
+                s_RKL = 0.5*(-1.0+sqrt(9+16.0*alpha));  // RKL2
+            }
+
+            // it is recommended to round S down to the nearest odd integer for stability
+            S = to!int(floor(s_RKL));
+            if ( fmod(S, 2) == 0 && s_RKL != 1 ) { S = S - 1; }
+
+            // When dt_parab is approxmately equal to or greater than dt_hyper (i.e. S <= 1), then we will just do a simple Euler step
+            if (S <= 1) {
+                S = 1;
+                euler_step = true;
+                if ((SimState.step % GlobalConfig.print_count) == 0 && GlobalConfig.is_master_task) {
+                    writeln("WARNING: dtPARAB (", SimState.dt_global_parab, ") ~= dtHYPER (", SimState.dt_global, ") .... taking an Euler step.");
+                }
+            }
+
+            // Due to rounding S we should alter the time-step to be consistent
+            if (euler_step) {
+                dt_global = SimState.dt_global;
+            } else {
+                if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
+                    dt_global = SimState.dt_global_parab * (S*S+S)/(2.0); // RKL1
+                } else {
+                    dt_global = SimState.dt_global_parab * (S*S+S-2.0)/(4.0); // RKL2
+                }
             }
         }
     }
@@ -440,15 +499,17 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	throw new FlowSolverException("Too many bad cells; go home.");
     }
     //
-    if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
+    if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ||
+        GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
 	// Next do solid domain update IMMEDIATELY after at same flow time level
+        exchange_ghost_cell_solid_boundary_data(); // we need up to date temperatures for the spatial derivative calc.
 	foreach (sblk; parallel(localSolidBlocks, 1)) {
 	    if (!sblk.active) continue;
 	    sblk.averageTemperatures();
 	    sblk.clearSources();
 	    sblk.computeSpatialDerivatives(ftl);
         }
-        exchange_ghost_cell_solid_boundary_data();
+        exchange_ghost_cell_solid_boundary_data(); // we need to transfer the spatial derivatives for the flux eval.
         exchange_ghost_cell_gas_solid_boundary_data();
         foreach (sblk; parallel(localSolidBlocks, 1)) {
             if (!sblk.active) continue;
@@ -731,15 +792,17 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    throw new FlowSolverException("Too many bad cells; go home.");
 	}
 	//
-	if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
+	if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ||
+            GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
 	    // Next do solid domain update IMMEDIATELY after at same flow time level
+            exchange_ghost_cell_solid_boundary_data(); // we need up to date temperatures for the spatial derivative calc.
 	    foreach (sblk; parallel(localSolidBlocks, 1)) {
 		if (!sblk.active) continue;
                 sblk.averageTemperatures();
 		sblk.clearSources();
 		sblk.computeSpatialDerivatives(ftl);
             }
-            exchange_ghost_cell_solid_boundary_data();
+            exchange_ghost_cell_solid_boundary_data(); // we need to transfer the spatial derivatives for the flux eval.
             foreach (sblk; parallel(localSolidBlocks, 1)) {
                 if (!sblk.active) continue;
                 sblk.computeFluxes();
@@ -779,7 +842,8 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
                 }
 	    }
 	} // end foreach blk
-        if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
+        if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ||
+            GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
             foreach (sblk; parallel(localSolidBlocks,1)) {
                 if (sblk.active) {
                     foreach (scell; sblk.activeCells) {
@@ -807,7 +871,8 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         }
     } // end foreach blk
     //
-    if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
+    if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ||
+        GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
         foreach (sblk; localSolidBlocks) {
             if (sblk.active) {
                 //size_t end_indx = 1; // time-level holds current solution
@@ -1318,6 +1383,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 // Phase 15 LOCAL
                 // Next do solid domain update IMMEDIATELY after at same flow time level
                 // exchange_ghost_cell_gas_solid_boundary_data();
+                exchange_ghost_cell_solid_boundary_data();
                 try {
                     if (GlobalConfig.apply_bcs_in_parallel) {
                         foreach (sblk; parallel(localSolidBlocks, 1)) {
@@ -1824,6 +1890,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         }
         //
         // Next do solid domain update IMMEDIATELY after at same flow time level
+        exchange_ghost_cell_solid_boundary_data();
         // Phase 15 LOCAL
         try {
             foreach (sblk; localSolidBlocks) {
@@ -2181,6 +2248,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
             }
             //
             // Do solid domain update IMMEDIATELY after at same flow time level
+            exchange_ghost_cell_solid_boundary_data();
             // Phase 13 LOCAL
             try {
                 foreach (sblk; localSolidBlocks) {
@@ -2508,6 +2576,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
             // Phase 06 LOCAL
             // Next do solid domain update IMMEDIATELY after at same flow time leve
             // exchange_ghost_cell_gas_solid_boundary_data();
+            exchange_ghost_cell_solid_boundary_data();
             try {
                 if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (sblk; parallel(localSolidBlocks, 1)) {
@@ -2908,6 +2977,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
             // Phase 08 LOCAL
             // Next do solid domain update IMMEDIATELY after at same flow time leve
             // exchange_ghost_cell_gas_solid_boundary_data();
+            exchange_ghost_cell_solid_boundary_data();
             try {
                 if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (sblk; parallel(localSolidBlocks, 1)) {

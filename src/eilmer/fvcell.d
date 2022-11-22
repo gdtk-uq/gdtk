@@ -121,6 +121,10 @@ public:
     WLSQGradWorkspace* ws_grad;
     Vector3*[] cloud_pos; // Positions of flow points for gradients calculation.
     FlowState*[] cloud_fs; // References to flow states at those points.
+
+    // Heat flux used in the loosely coupled CHT solver (we currently store this here for convenience).
+    number q_solid; // TODO: We should think about whether there is a more appropriate place to store this. KAD 2022-11-08
+
     // Terms for loose-coupling of radiation.
     number Q_rad_org;
     number f_rad_org;
@@ -349,6 +353,7 @@ public:
                 U[i].copy_values_from(other.U[i]);
                 dUdt[i].copy_values_from(other.dUdt[i]);
             }
+            q_solid = other.q_solid;
         } // end switch
     }
 

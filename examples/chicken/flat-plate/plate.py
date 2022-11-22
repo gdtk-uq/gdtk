@@ -35,4 +35,4 @@ cf_k = RobertsFunction(True, False, 1.05)
 grd0 = StructuredGrid(pvolume=vol0, niv=61, njv=3, nkv=81, cf_list=[cf_i, None, cf_k])
 b0 = FluidBlock(i=0, grid=grd0, initialState=inflow,
                 bcs={'iminus':InflowBC(inflow),'iplus':OutflowBC(),
-                     'kminus':WallNoSlipFixedTBC(),'kplus':InflowBC(inflow)})
+                     'kminus':WallNoSlipFixedTBC(300.0),'kplus':InflowBC(inflow)})

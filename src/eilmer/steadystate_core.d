@@ -265,7 +265,7 @@ void broadcastRestartInfo(ref RestartInfo[] times){
 
 } // end version(mpi_parallel)
 
-void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITask)
+void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITask, bool include_solid_domain = true, bool init_precondition_matrix = true)
 {
     auto wallClockStart = Clock.currTime();
     string jobName = GlobalConfig.base_file_name;
@@ -372,7 +372,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     bool residualsUpToDate = false;
     bool finalStep = false;
     bool usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
-    if (usePreconditioner) {
+    if (usePreconditioner && init_precondition_matrix) {
         evalRHS(0.0, 0);
         // initialize the flow Jacobians used as local precondition matrices for GMRES
         final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
@@ -916,7 +916,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         }
 
         // after a successful fluid domain update, proceed to perform a solid domain update
-        if (localSolidBlocks.length > 0) { solid_update(step, pseudoSimTime, cfl, eta, sigma); }
+        if (include_solid_domain && localSolidBlocks.length > 0) { solid_update(step, pseudoSimTime, cfl, eta, sigma); }
 
         pseudoSimTime += dt;
         wallClockElapsed = 1.0e-3*(Clock.currTime() - wallClockStart).total!"msecs"();

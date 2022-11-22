@@ -309,19 +309,45 @@ local function connectBlocks(blkA, faceA, blkB, faceB, orientation)
 						   orientation=orientation}
       -- [TODO] need to test for matching corner locations and consistent numbers of cells
    elseif blkA.myType == "FluidBlock" and blkB.myType == "SolidBlock" then
-      blkA.bcList[faceA] = WallBC_AdjacentToSolid:new{otherBlock=blkB.id,
-                                                      otherFace=faceB,
-                                                      orientation=orientation}
-      blkB.bcList[faceB] = SolidAdjacentToGasBC:new{otherBlock=blkA.id,
-                                                    otherFace=faceA,
-                                                    orientation=orientation}
+      -- The preprocessor will set the time-accurate fluid/solid coupling BC by default unless the user explicitly requests the alternate
+      local flag = blkA.bcList[faceA].type == "wall_adjacent_to_solid2" and blkB.bcList[faceB].type == "SolidAdjacentToGas2"
+      if not flag then
+         blkA.bcList[faceA] = WallBC_AdjacentToSolid:new{otherBlock=blkB.id,
+                                                         otherFace=faceB,
+                                                         orientation=orientation}
+         blkB.bcList[faceB] = SolidAdjacentToGasBC:new{otherBlock=blkA.id,
+                                                       otherFace=faceA,
+                                                       orientation=orientation}
+      else
+         blkA.bcList[faceA] = WallBC_AdjacentToSolid2:new{otherBlock=blkB.id,
+                                                          otherFace=faceB,
+                                                          orientation=orientation,
+                                                          catalytic_type=blkA.bcList[faceA].catalytic_type,
+                                                          wall_massf_composition=blkA.bcList[faceA].wall_massf_composition}
+         blkB.bcList[faceB] = SolidAdjacentToGasBC2:new{otherBlock=blkA.id,
+                                                        otherFace=faceA,
+                                                        orientation=orientation}
+      end
    elseif blkA.myType == "SolidBlock" and blkB.myType == "FluidBlock" then
-      blkA.bcList[faceA] = SolidAdjacentToGasBC:new{otherBlock=blkB.id,
-                                                    otherFace=faceB,
-                                                    orientation=orientation}
-      blkB.bcList[faceB] = WallBC_AdjacentToSolid:new{otherBlock=blkA.id,
-                                                      otherFace=faceA,
-                                                      orientation=orientation}
+      -- The preprocessor will set the time-accurate fluid/solid coupling BC by default unless the user explicitly requests the alternate
+      local flag = blkB.bcList[faceB].type == "wall_adjacent_to_solid2" and blkA.bcList[faceA].type == "SolidAdjacentToGas2"
+      if not flag then
+         blkA.bcList[faceA] = SolidAdjacentToGasBC:new{otherBlock=blkB.id,
+                                                       otherFace=faceB,
+                                                       orientation=orientation}
+         blkB.bcList[faceB] = WallBC_AdjacentToSolid:new{otherBlock=blkA.id,
+                                                         otherFace=faceA,
+                                                         orientation=orientation}
+      else
+         blkA.bcList[faceA] = SolidAdjacentToGasBC2:new{otherBlock=blkB.id,
+                                                        otherFace=faceB,
+                                                        orientation=orientation}
+         blkB.bcList[faceB] = WallBC_AdjacentToSolid2:new{otherBlock=blkA.id,
+                                                          otherFace=faceA,
+                                                          orientation=orientation,
+                                                          catalytic_type=blkB.bcList[faceB].catalytic_type,
+                                                          wall_massf_composition=blkB.bcList[faceB].wall_massf_composition}
+      end
    elseif blkA.myType == "SolidBlock" and blkB.myType == "SolidBlock" then
       blkA.bcList[faceA] = SolidFullFaceCopyBoundaryBC:new{otherBlock=blkB.id,
                                                            otherFace=faceB,

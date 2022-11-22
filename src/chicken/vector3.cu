@@ -133,6 +133,14 @@ struct Vector3 {
 
 }; // end Vector3
 
+
+__host__
+ostream& operator<<(ostream& os, const Vector3 v)
+{
+    os << v.toString();
+    return os;
+}
+
 __host__ __device__
 void cross(Vector3& v3, const Vector3& v1, const Vector3& v2)
 // Vector cross product for use in a single statement that will not make temporaries.

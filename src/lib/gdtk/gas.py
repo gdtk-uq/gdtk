@@ -64,6 +64,10 @@ ffi.cdef("""
     int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval,
                                                 double* dt_suggest);
 
+    int reaction_mechanism_new(int gm_i, char* filename);
+    int reaction_mechanism_n_reactions(int rm_i);
+    int reaction_mechanism_tickrates(int rm_i, int gm_i, int gs_i, double* tickrates);
+
     int gasflow_shock_ideal(int state1_id, double vs, int state2_id, int gm_id,
                             double* results);
     int gasflow_normal_shock(int state1_id, double vs, int state2_id, int gm_id,
@@ -632,6 +636,30 @@ class ThermochemicalReactor(object):
                                                           t_interval, dt_suggestp)
         if flag < 0: raise Exception("could not update state.")
         return dt_suggestp[0]
+
+# -----------------------------------------------------------------------------------
+class ReactionMechanism(object):
+    def __init__(self, gmodel, filename):
+        self.filename = filename
+        self.gmodel = gmodel
+        self.id = so.reaction_mechanism_new(self.gmodel.id,
+                                                bytes(self.filename, 'utf-8'))
+    def __str__(self):
+        text = 'ReactionMechanism(id=%d, gmodel.id=%d, file="%s")' % \
+            (self.id, self.gmodel.id, self.filename)
+        return text
+
+    @property
+    def n_reactions(self):
+        return so.reaction_mechanism_n_reactions(self.id)
+
+    def reaction_tickrates(self, gstate):
+        tickrates = ffi.new("double[]", [0.0]*self.n_reactions)
+        flag = so.reaction_mechanism_tickrates(self.id, self.gmodel.id, gstate.id, tickrates);
+
+        if flag < 0: raise Exception("Could not compute reaction tickrates.")
+        return [tickrates[i] for i in range(self.n_reactions)]
+
 
 #------------------------------------------------------------------------------------
 

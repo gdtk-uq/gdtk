@@ -40,7 +40,7 @@ import math
 from copy import copy
 import numpy as np
 import json
-from zipfile import ZipFile
+import gzip
 import time
 
 from gdtk.geom.vector3 import Vector3, hexahedron_properties
@@ -50,34 +50,41 @@ from gdtk.numeric import roberts
 
 sys.path.append("") # so that we can find user's scripts in current directory
 
-shortOptions = "hf:"
-longOptions = ["help", "job="]
+shortOptions = "hf:b"
+longOptions = ["help", "job=", "binary"]
 
 def printUsage():
     print("Prepare a chicken run by reading a job script and writing grid and flow files.")
     print("Usage: chkn-prep" + \
           " [--help | -h]" + \
-          " [--job=<jobName> | -f <jobName>]")
+          " [--job=<jobName> | -f <jobName>]" + \
+          " [--binary | -b]")
     print("")
     return
 
 #----------------------------------------------------------------------
-# We will work with a simple ideal gas.
-# Presently, this just for inviscid flow. We have yet to add viscous effects.
 
-class IdealGas():
+class GasModel():
     """
-    A simple gas model.
-    """
-    __slots__ = 'gamma', 'R', 'Cv'
+    A simple ideal gas model with a possibility of heat release.
 
-    def __init__(self, gamma=1.4, R=287.1):
+    The selection of the gas model properties needs to be consistent with selection made in gas.cu.
+    That selection is made at compile time, so remember to rebuild the simulation code if you
+    change parameter values.
+    """
+    __slots__ = 'gamma', 'R', 'Cv', 'q', 'alpha', 'Ti'
+
+    def __init__(self, gamma=1.4, R=287.1, q=0.0, alpha=0.0, Ti=0.0):
         self.gamma = gamma
         self.R = R
         self.Cv = R/(gamma-1.0)
+        self.q = q
+        self.alpha = alpha
+        self.Ti = Ti
 
     def to_json(self):
-        result = '{"gamma": %g, "R": %g, "Cv": %g}' % (self.gamma, self.R, self.Cv)
+        result = '{"gamma": %g, "R": %g, "Cv": %g, "q": %g, "alpha": %g, "Ti": %g}' % \
+            (self.gamma, self.R, self.Cv, self.q, self.alpha, self.Ti)
         return result
 
 #----------------------------------------------------------------------
@@ -100,7 +107,8 @@ class GlobalConfig():
         'nib', 'njb', 'nkb', 'blk_ids', 'nics', 'njcs', 'nkcs', \
         'dt_init', 'cfl_list', 'cfl_count', 'print_count', \
         'dt_plot_list', 'max_time', 'max_step', \
-        'x_order', 't_order', 'flux_calc', 'viscous', 'iovar_names'
+        'x_order', 't_order', 'flux_calc', 'viscous', 'reacting', \
+        'source_terms', 'iovar_names', 'threads_per_gpu_block'
 
     def __init__(self):
         """Accepts user-specified data and sets defaults. Make one only."""
@@ -109,7 +117,7 @@ class GlobalConfig():
 
         self.job_name = ""
         self.title = "Chicken Simulation."
-        self.gas_model = IdealGas()
+        self.gas_model = GasModel()
         self.nib = None
         self.njb = None
         self.nkb = None
@@ -126,13 +134,16 @@ class GlobalConfig():
         self.x_order = 2
         self.t_order = 2
         self.flux_calc = "ausmdv"
+        self.reacting = False
         self.viscous = False
+        self.source_terms = "none"
+        self.threads_per_gpu_block = 128
         # The following is not meant to be edited for individual simulations but
         # should be kept consistent with the symbols in IOvar namespace
         # that is defined in cell.cu.
-        self.iovar_names = ['pos.x', 'pos.y', 'pos.z', 'vol',
-                            'p', 'T', 'rho', 'e', 'a',
-                            'vel.x', 'vel.y', 'vel.z']
+        self.iovar_names = ['posx', 'posy', 'posz', 'vol',
+                            'p', 'T', 'rho', 'e', 'YB', 'a',
+                            'velx', 'vely', 'velz']
         #
         GlobalConfig.count += 1
         return
@@ -162,7 +173,10 @@ class GlobalConfig():
         fp.write('  "x_order": %d,\n' % self.x_order)
         fp.write('  "t_order": %d,\n' % self.t_order)
         fp.write('  "flux_calc": "%s",\n' % self.flux_calc)
+        fp.write('  "reacting": %s,\n' % json.dumps(self.reacting))
         fp.write('  "viscous": %s,\n' % json.dumps(self.viscous))
+        fp.write('  "source_terms": "%s",\n' % self.source_terms)
+        fp.write('  "threads_per_gpu_block": %d,\n' % self.threads_per_gpu_block)
         #
         if len(self.dt_plot_list) == 0:
             # Since the user did not specify any, default to the end.
@@ -223,11 +237,11 @@ class GlobalConfig():
             if self.njcs[j] == 0: self.njcs[j] = njc
             if self.nkcs[k] == 0: self.nkcs[k] = nkc
             if nic != self.nics[i]:
-                raise RuntimeError('Block at i=%d j=%d k=%d has inconsistent nic=%d' % (i, j, k, nic))
+                raise RuntimeError('FluidBlock at i=%d j=%d k=%d has inconsistent nic=%d' % (i, j, k, nic))
             if njc != self.njcs[j]:
-                raise RuntimeError('Block at i=%d j=%d k=%d has inconsistent njc=%d' % (i, j, k, njc))
+                raise RuntimeError('FluidBlock at i=%d j=%d k=%d has inconsistent njc=%d' % (i, j, k, njc))
             if nkc != self.nkcs[k]:
-                raise RuntimeError('Block at i=%d j=%d k=%d has inconsistent nkc=%d' % (i, j, k, nkc))
+                raise RuntimeError('FluidBlock at i=%d j=%d k=%d has inconsistent nkc=%d' % (i, j, k, nkc))
         #
         return
 
@@ -291,7 +305,6 @@ def add_dt_plot(t_change, dt_plot, dt_his=1.0e-6):
 # ---------------------------------------------------------------------
 #
 # We will accumulate references to defined objects.
-gasStatesList = []
 flowStatesList = []
 fluidBlocksList = []
 
@@ -299,35 +312,33 @@ class GasState():
     """
     The data that defines the state of the gas.
     """
-    __slots__ = 'indx', 'p', 'T', 'rho', 'e', 'a'
+    __slots__ = 'indx', 'p', 'T', 'rho', 'e', 'YB', 'a'
 
-    def __init__(self, p, T):
+    def __init__(self, p, T, YB=0.0):
         """
         Input pressure (in Pa) and temperature (in degrees K).
         """
-        global config, gasStatesList
         self.p = p
         self.T = T
+        self.YB = YB
         self.update_from_pT(config.gas_model)
-        self.indx = len(gasStatesList)
-        gasStatesList.append(self)
 
     def update_from_pT(self, gmodel):
         """
         Given p and T, update the other thermodynamic properties
         for a particular gas model.
         """
-        self.e = gmodel.Cv * self.T
+        self.e = gmodel.Cv * self.T + self.YB * gmodel.q
         self.rho = self.p / (gmodel.R * self.T)
-        self.a = math.sqrt(gmodel.gamma * gmodel.R * self.T)
+        self.a = np.sqrt(gmodel.gamma * gmodel.R * self.T)
         return
 
     def __repr__(self):
-        return "GasState(p={}, T={})".format(self.p, self.T)
+        return "GasState(p={}, T={}, YB={})".format(self.p, self.T, self.YB)
 
     def to_json(self):
-        result = '{"p": %g, "T": %g, "rho": %g, "e": %g, "a": %g}' \
-            % (self.p, self.T, self.rho, self.e, self.a)
+        result = '{"p": %g, "T": %g, "rho": %g, "e": %g, "YB": %g, "a": %g}' \
+            % (self.p, self.T, self.rho, self.e, self.YB, self.a)
         return result
 
 
@@ -341,21 +352,18 @@ class FlowState():
 
     __slots__ = 'indx', 'label', 'gas', 'vel'
 
-    def __init__(self, gas=None, p=100.0e3, T=300.0,
+    def __init__(self, gas=None, p=100.0e3, T=300.0, YB=0.0,
                  vel=None, velx=0.0, vely=0.0, velz=0.0,
                  label=""):
-        global flowStatesList
         if isinstance(gas, GasState):
             self.gas = copy(gas)
         else:
-            self.gas = GasState(p=p, T=T)
+            self.gas = GasState(p=p, T=T, YB=YB)
         if isinstance(vel, Vector3):
             self.vel = copy(vel)
         else:
             self.vel = Vector3(velx, vely, velz)
         self.label = label
-        self.indx = len(flowStatesList)
-        flowStatesList.append(self)
 
     def __repr__(self):
         return "FlowState(gas={}, vel={})".format(self.gas, self.vel)
@@ -433,9 +441,9 @@ class WallNoSlipFixedTBC(BoundaryCondition):
     """
     __slots__ = ['tag', 'TWall']
 
-    def __init__(self):
+    def __init__(self, TWall):
         self.tag = 'wall_no_slip_fixed_T'
-        self.TWall = 300.0
+        self.TWall = TWall
 
     def __repr__(self):
         return "WallNoSlipFixedTBC(TWall=%g)" % (self.TWall)
@@ -447,21 +455,38 @@ class InflowBC(BoundaryCondition):
     """
     Inflow boundary condition.
     """
-    __slots__ = ['tag', 'fsi']
+    __slots__ = ['tag', 'fs', 'fsi']
 
     def __init__(self, fs):
         self.tag = 'inflow'
         if type(fs) is FlowState:
-            self.fsi = fs.indx
+            self.fs = fs
         else:
             raise RuntimeError("Inflow boundary condition expects a FlowState object.")
 
     def __repr__(self):
-        global flowStatesList
-        return "InflowBC(fs={})".format(flowStatesList[self.fsi])
+        return "InflowBC(fs={})".format(self.fs)
 
     def to_json(self):
+        # Note that the index to the FlowState will be assigned when
+        # a Block is constructed that has InflowBC objects.
         return '{"tag": "%s", "flow_state_index": %d}' % (self.tag, self.fsi)
+
+class InflowFunctionBC(BoundaryCondition):
+    """
+    Inflow boundary condition based on a function coded into the main program.
+    """
+    __slots__ = ['tag', 'fun_name']
+
+    def __init__(self, fun_name):
+        self.tag = 'inflow_function'
+        self.fn_name = fun_name
+
+    def __repr__(self):
+        return "InflowFunctionBC(fun_name={})".format(self.fun_name)
+
+    def to_json(self):
+        return '{"tag": "%s", "fun_name": "%s"}' % (self.tag, self.fun_name)
 
 class OutflowBC(BoundaryCondition):
     """
@@ -485,22 +510,62 @@ class FluidBlock():
     """
     __slots__ = 'indx', 'active', 'i', 'j', 'k', 'grid', 'initialState', \
         'nic', 'njc', 'nkc', 'bcs', 'label', \
-        'cellc', 'cellv'
+        'cellc', 'cellv', 'flow'
 
     def __init__(self, i=0, j=0, k=0, grid=None, initialState=None,
                  bcs={}, active=True, label=""):
+        # When constructing a FluidBlock, we fill out the full grid and
+        # the flow data in each cell within the block.
+        # This allow us to use numpy arrays, for speed.
         global config, fluidBlocksList, flowStatesList
         if isinstance(grid, StructuredGrid):
             self.grid = grid
         else:
             raise RuntimeError('Need to supply a StructuredGrid object.')
+        self.construct_cell_properties()
+        #
         self.nic = grid.niv - 1
         self.njc = grid.njv - 1
         self.nkc = grid.nkv - 1
+        assert(self.nic==self.cellc.x.shape[0])
+        assert(self.njc==self.cellc.y.shape[1])
+        assert(self.nkc==self.cellc.z.shape[2])
+        ncells = self.nic*self.njc*self.nkc
+        #
         if isinstance(initialState, FlowState):
-            self.initialState = initialState
+            self.flow = {'p': np.full(ncells, initialState.gas.p), 'T':np.full(ncells, initialState.gas.T),
+                         'rho':np.full(ncells, initialState.gas.rho), 'e':np.full(ncells, initialState.gas.e),
+                         'YB':np.full(ncells, initialState.gas.YB), 'a':np.full(ncells, initialState.gas.a),
+                         'velx': np.full(ncells, initialState.vel.x),
+                         'vely': np.full(ncells, initialState.vel.y),
+                         'velz': np.full(ncells, initialState.vel.z)}
         elif callable(initialState):
-            self.initialState = initialState
+            # The user has supplied a function,
+            # which we use one cell-centre at a time.
+            self.flow = {'p': np.zeros(ncells, dtype=float), 'T': np.zeros(ncells, dtype=float),
+                         'rho': np.zeros(ncells, dtype=float), 'e': np.zeros(ncells, dtype=float),
+                         'YB': np.zeros(ncells, dtype=float), 'a': np.zeros(ncells, dtype=float),
+                         'velx': np.zeros(ncells, dtype=float),
+                         'vely': np.zeros(ncells, dtype=float),
+                         'velz': np.zeros(ncells, dtype=float)}
+            idx = 0
+            # Note VTK ordering of loops
+            for kk in range(self.nkc):
+                for jj in range(self.njc):
+                    for ii in range(self.nic):
+                        # Note index order.
+                        x = self.cellc.x[ii,jj,kk]; y = self.cellc.y[ii,jj,kk]; z = self.cellc.z[ii,jj,kk]
+                        state = initialState(x,y,z)
+                        self.flow['p'][idx] = state.gas.p
+                        self.flow['T'][idx] = state.gas.T
+                        self.flow['rho'][idx] = state.gas.rho
+                        self.flow['e'][idx] = state.gas.e
+                        self.flow['YB'][idx] = state.gas.YB
+                        self.flow['a'][idx] = state.gas.a;
+                        self.flow['velx'][idx] = state.vel.x
+                        self.flow['vely'][idx] = state.vel.y
+                        self.flow['velz'][idx] = state.vel.z
+                        idx += 1
         else:
             raise RuntimeError('Need to supply a FlowState object or a function that produces'+
                                'a FlowState object as a function of (x,y,z) location.')
@@ -516,6 +581,12 @@ class FluidBlock():
             if key in [Face.iplus, 'jplus']: self.bcs['jplus'] = bcs[key]
             if key in [Face.kminus, 'kminus']: self.bcs['kminus'] = bcs[key]
             if key in [Face.kplus, 'kplus']: self.bcs['kplus'] = bcs[key]
+        #
+        # Check in only those FlowStates associated with boundary conditions.
+        for bc in bcs.values():
+            if type(bc) is InflowBC:
+                bc.fsi = len(flowStatesList)
+                flowStatesList.append(bc.fs)
         #
         self.i = i
         self.j = j
@@ -544,74 +615,65 @@ class FluidBlock():
         We want the cell volumes and centroids available for writing
         into the initial flow file.
         """
-        self.cellc = np.zeros((self.nic, self.njc, self.nkc), dtype=Vector3)
-        self.cellv = np.zeros((self.nic, self.njc, self.nkc), dtype=float)
-        for i in range(0, self.nic):
-            for j in range(0, self.njc):
-                for k in range(0, self.nkc):
-                    # Construct the cell properties.
-                    p000 = self.grid.vertices[i][j][k]
-                    p100 = self.grid.vertices[i+1][j][k]
-                    p110 = self.grid.vertices[i+1][j+1][k]
-                    p010 = self.grid.vertices[i][j+1][k]
-                    p001 = self.grid.vertices[i][j][k+1]
-                    p101 = self.grid.vertices[i+1][j][k+1]
-                    p111 = self.grid.vertices[i+1][j+1][k+1]
-                    p011 = self.grid.vertices[i][j+1][k+1]
-                    centroid, volume = hexahedron_properties(p000, p100, p110, p010,
-                                                             p001, p101, p111, p011)
-                    self.cellc[i][j][k] = centroid
-                    self.cellv[i][j][k] = volume
-        return
+        p000 = Vector3(x=self.grid.vertices.x[:-1, :-1, :-1],
+                       y=self.grid.vertices.y[:-1, :-1, :-1],
+                       z=self.grid.vertices.z[:-1, :-1, :-1])
+        p100 = Vector3(x=self.grid.vertices.x[1:, :-1, :-1],
+                       y=self.grid.vertices.y[1:, :-1, :-1],
+                       z=self.grid.vertices.z[1:, :-1, :-1])
+        p010 = Vector3(x=self.grid.vertices.x[:-1, 1:, :-1],
+                       y=self.grid.vertices.y[:-1, 1:, :-1],
+                       z=self.grid.vertices.z[:-1, 1:, :-1])
+        p110 = Vector3(x=self.grid.vertices.x[1:, 1:, :-1],
+                       y=self.grid.vertices.y[1:, 1:, :-1],
+                       z=self.grid.vertices.z[1:, 1:, :-1])
+        p001 = Vector3(x=self.grid.vertices.x[:-1, :-1, 1:],
+                       y=self.grid.vertices.y[:-1, :-1, 1:],
+                       z=self.grid.vertices.z[:-1, :-1, 1:])
+        p101 = Vector3(x=self.grid.vertices.x[1:, :-1, 1:],
+                       y=self.grid.vertices.y[1:, :-1, 1:],
+                       z=self.grid.vertices.z[1:, :-1, 1:])
+        p011 = Vector3(x=self.grid.vertices.x[:-1, 1:, 1:],
+                       y=self.grid.vertices.y[:-1, 1:, 1:],
+                       z=self.grid.vertices.z[:-1, 1:, 1:])
+        p111 = Vector3(x=self.grid.vertices.x[1:, 1:, 1:],
+                       y=self.grid.vertices.y[1:, 1:, 1:],
+                       z=self.grid.vertices.z[1:, 1:, 1:])
+        self.cellc, self.cellv = hexahedron_properties(p000, p100, p110, p010,
+                                                       p001, p101, p111, p011)
 
-    def write_flow_data_to_zip_file(self, fileName, varNamesList):
-        """
-        The format is approximately Eilmer's new IO format.
 
-        The order of the cells corresponds to the order expected
-        for a VTK structured-grid.
+    def write_flow_data_to_file(self, fileName, varNamesList, binaryData):
         """
-        # Decide if we have a single FlowState for every cell the whole block,
-        # or whether we have to evalulate a function to give a distinct FlowState
-        # at the center of each cell.
-        fs = None; fn = None
-        if isinstance(self.initialState, FlowState):
-            fs = self.initialState
-        elif callable(self.initialState):
-            fn = self.initialState
-        #
-        # Construct the ZIP archive, one variable (file) at a time.
-        with ZipFile(fileName, mode='w') as zf:
-            for varName in varNamesList:
-                with zf.open(varName, mode='w') as fp:
-                    for k in range(0, self.nkc):
-                        for j in range(0, self.njc):
-                            for i in range(0, self.nic):
-                                x = self.cellc[i][j][k].x
-                                y = self.cellc[i][j][k].y
-                                z = self.cellc[i][j][k].z
-                                # The following call quite repetitive and wasteful
-                                # but will typically be used for small exercises,
-                                # I hope.
-                                if fn: fs = fn(x, y, z)
-                                gas = fs.gas
-                                vel = fs.vel
-                                value = 0.0
-                                if varName == 'pos.x': value = x
-                                elif varName == 'pos.y': value = y
-                                elif varName == 'pos.z': value = z
-                                elif varName == 'vol': value = self.cellv[i][j][k]
-                                elif varName == 'p': value = gas.p
-                                elif varName == 'T': value = gas.T
-                                elif varName == 'rho': value = gas.rho
-                                elif varName == 'e': value = gas.e
-                                elif varName == 'a': value = gas.a
-                                elif varName == 'vel.x': value = vel.x
-                                elif varName == 'vel.y': value = vel.y
-                                elif varName == 'vel.z': value = vel.z
-                                else: raise RuntimeError('unhandled variable name: ' + varName)
-                                fp.write(f'{value}\n'.encode('utf-8'))
+        Write the data into the one file, one IO-variable after the other.
+
+        Within each block, the order of the cells corresponds to
+        the order expected for a VTK structured-grid.
+        """
+        f = open(fileName, 'wb') if binaryData else gzip.open(fileName, 'wt')
+        for varName in varNamesList:
+            if varName == 'posx': value = self.cellc.x
+            elif varName == 'posy': value = self.cellc.y
+            elif varName == 'posz': value = self.cellc.z
+            elif varName == 'vol': value = self.cellv
+            elif varName == 'p': value = self.flow['p']
+            elif varName == 'T': value = self.flow['T']
+            elif varName == 'rho': value = self.flow['rho']
+            elif varName == 'e': value = self.flow['e']
+            elif varName == 'YB': value = self.flow['YB']
+            elif varName == 'a': value = self.flow['a']
+            elif varName == 'velx': value = self.flow['velx']
+            elif varName == 'vely': value = self.flow['vely']
+            elif varName == 'velz': value = self.flow['velz']
+            else: raise RuntimeError('unhandled variable name: ' + varName)
+            if binaryData:
+                buf = value.flatten().tobytes()
+            else:
+                text = np.array2string(value.flatten(), separator='\n', threshold=100_000_000)
+                buf = text.strip('[]')+'\n'
+            f.write(buf)
             # end varName loop
+        f.close()
         return
 
 # --------------------------------------------------------------------
@@ -653,6 +715,8 @@ class FBArray():
             if key in [Face.kminus, 'kminus']: self.bcs['kminus'] = bcs[key]
             if key in [Face.kplus, 'kplus']: self.bcs['kplus'] = bcs[key]
         #
+        for bc in bcs.values(): self.check_in_flowstates_from_bcs(bc)
+        #
         self.origin = {'i':0, 'j':0, 'k':0}
         for key in origin.keys():
             if key in ['I', 'i']: self.origin['i'] = origin[key]
@@ -676,6 +740,11 @@ class FBArray():
                               label=self.label+("-%d-%d-%d".format(i, j, k)))
         self.blks.append(newBlock)
 
+    def check_in_flowstates_from_bcs(self, bc):
+        if type(bc) is InflowBC:
+            bc.fsi = len(flowStatesList)
+            flowStatesList.append(bc.fs)
+
 def identifyBlockConnections():
     """
     Work through the collection of blocks and connect adjacent blocks in the global array
@@ -686,7 +755,7 @@ def identifyBlockConnections():
 # --------------------------------------------------------------------
 
 
-def write_initial_files():
+def write_initial_files(binaryData):
     """
     Writes the files needed for the main simulation code.
 
@@ -733,8 +802,11 @@ def write_initial_files():
     if not os.path.exists(gridDir):
         os.mkdir(gridDir)
     for fb in fluidBlocksList:
-        fileName = gridDir + ('/grid-%04d-%04d-%04d.gz' % (fb.i, fb.j, fb.k))
-        fb.grid.write_to_gzip_file(fileName)
+        fileName = gridDir + ('/grid-%04d-%04d-%04d' % (fb.i, fb.j, fb.k))
+        if binaryData:
+            fb.grid.write_to_binary_file(fileName+'.bin')
+        else:
+            fb.grid.write_to_gzip_file(fileName+'.gz')
     #
     print('Write the initial flow-field files.')
     #
@@ -742,9 +814,9 @@ def write_initial_files():
     if not os.path.exists(flowDir):
         os.makedirs(flowDir)
     for fb in fluidBlocksList:
-        fb.construct_cell_properties()
-        fileName = flowDir + ('/flow-%04d-%04d-%04d.zip' % (fb.i, fb.j, fb.k))
-        fb.write_flow_data_to_zip_file(fileName, config.iovar_names)
+        fileName = flowDir + ('/flow-%04d-%04d-%04d' % (fb.i, fb.j, fb.k))
+        fileName += '.bin' if binaryData else '.gz'
+        fb.write_flow_data_to_file(fileName, config.iovar_names, binaryData)
     #
     with open(config.job_name+'/times.data', 'w') as fp:
         fp.write("# tindx t\n")
@@ -784,6 +856,7 @@ if __name__ == '__main__':
         if len(fluidBlocksList) < 1:
             print("Warning: no fluid blocks defined; this is unusual.")
         config.check_array_of_fluid_blocks()
-        write_initial_files()
+        binaryData = ("--binary" in uoDict) or ("-b" in uoDict)
+        write_initial_files(binaryData)
     print("Done in {:.3f} seconds.".format(time.process_time()))
     sys.exit(0)

@@ -975,7 +975,7 @@ int integrate_in_time(double target_time_as_requested)
     int solid_domain_loose_coupling_delay = 1000;
     int update_solid_domain_on_step = solid_domain_loose_coupling_delay;
     auto coupling_with_solid_domains_save = GlobalConfig.coupling_with_solid_domains;
-    GlobalConfig.coupling_with_solid_domains = SolidDomainCoupling.tight;
+    if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose) { GlobalConfig.coupling_with_solid_domains = SolidDomainCoupling.tight; }
     //
     SimState.wall_clock_start = Clock.currTime();
     while ( !finished_time_stepping ) {

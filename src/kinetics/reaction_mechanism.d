@@ -59,6 +59,14 @@ public:
     }
 
     @nogc
+    final void eval_tickrates(in number[] conc, number[] tickrates)
+    {
+        foreach ( ref r; _reactions ) r.eval_rates(conc);
+        foreach ( i, ref r; _reactions ) {
+            tickrates[i] = r.tickrate;
+        }
+    }
+    @nogc
     final void eval_rates(in number[] conc, number[] rates)
     {
         eval_split_rates(conc, _q, _L);

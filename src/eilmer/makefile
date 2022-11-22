@@ -20,6 +20,7 @@ FLAVOUR ?= debug
 PLATFORM ?= linux
 
 WITH_MPI ?= 0
+WITH_CHT ?= 0
 WITH_NK ?= 0
 WITH_PIR ?= 0
 WITH_SSC ?= 0
@@ -73,6 +74,11 @@ ifeq ($(WITH_NK),1)
     PROGRAMS += e4-nk-shared-real
 endif
 
+ifeq ($(WITH_CHT),1)
+    PROGRAMS += e4-cht-shared
+    PROGRAMS += e4-cht-shared-real
+endif
+
 ifeq ($(WITH_PIR),1)
     PROGRAMS += e4-pir-shared
 endif
@@ -93,6 +99,10 @@ ifeq ($(WITH_MPI),1)
         PROGRAMS += e4-nk-dist
         PROGRAMS += e4-nk-dist-real
     endif
+    ifeq ($(WITH_CHT),1)
+        PROGRAMS += e4-cht-dist
+        PROGRAMS += e4-cht-dist-real
+    endif
     ifeq ($(WITH_PIR),1)
         PROGRAMS += e4-pir-dist
     endif
@@ -110,6 +120,10 @@ ifeq ($(WITH_MPICH),1)
     ifeq ($(WITH_NK),1)
         PROGRAMS += e4-nk-dist
         PROGRAMS += e4-nk-dist-real
+    endif
+    ifeq ($(WITH_CHT),1)
+        PROGRAMS += e4-cht-dist
+        PROGRAMS += e4-cht-dist-real
     endif
     ifeq ($(WITH_PIR),1)
         PROGRAMS += e4-pir-dist
@@ -510,7 +524,9 @@ clean:
 	- rm -f mpi_main_complex_with_rev_string.d
 	- rm -f loadbalance_with_rev_string.d
 	- rm -f e4mpi e4zmpi e4loadbalance e4ssc e4zshared
-	- rm -f e4-nk-shared e4-nk-shared-real e4-nk-dist e4-nk-dist-real e4-pir-shared e4-pir-dist
+	- rm -f e4-nk-shared e4-nk-shared-real e4-nk-dist e4-nk-dist-real
+	- rm -f e4-pir-shared e4-pir-shared-real e4-pir-dist e4-pir-dist-real
+	- rm -f e4-cht-shared e4-cht-shared-real e4-cht-dist e4-cht-dist-real
 	- rm -f e4shared_diagnostic
 	- rm -f e4shared-debug
 	- rm -f dgd-for-mech4480.tgz
@@ -800,6 +816,108 @@ e4-nk-dist-real: nk_accelerator.d steadystate_core.d solid/solid_loose_coupling_
 		$(DVERSION)nk_accelerator \
 		$(DVERSION)steady_state \
 		mpi_nk_accelerator_with_string_subst.d steadystate_core.d solid/solid_loose_coupling_update.d \
+		$(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(MPI_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(DLINKFLAGS) -L-lmpi
+
+e4-cht-shared: cht_accelerator.d steadystate_core.d solid/solid_loose_coupling_update.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
+		cht_accelerator.d > cht_accelerator_with_string_subst.d
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
+		$(DVERSION)complex_numbers \
+		$(DVERSION)nk_accelerator \
+		$(DVERSION)steady_state \
+		cht_accelerator_with_string_subst.d steadystate_core.d solid/solid_loose_coupling_update.d \
+		$(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(DLINKFLAGS)
+
+e4-cht-shared-real: cht_accelerator.d steadystate_core.d solid/solid_loose_coupling_update.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
+		cht_accelerator.d > cht_accelerator_with_string_subst.d
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
+		$(DVERSION)nk_accelerator \
+		$(DVERSION)steady_state \
+		cht_accelerator_with_string_subst.d steadystate_core.d solid/solid_loose_coupling_update.d \
+		$(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(DLINKFLAGS)
+
+e4-cht-dist: cht_accelerator.d steadystate_core.d solid/solid_loose_coupling_update.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	cd $(MPI_DIR); make
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
+		cht_accelerator.d > mpi_cht_accelerator_with_string_subst.d
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
+		$(DVERSION)mpi_parallel $(MPI_LIB_DIRS_SEARCH) \
+		$(DVERSION)complex_numbers \
+		$(DVERSION)nk_accelerator \
+		$(DVERSION)steady_state \
+		mpi_cht_accelerator_with_string_subst.d steadystate_core.d solid/solid_loose_coupling_update.d \
+		$(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(MPI_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(DLINKFLAGS) -L-lmpi
+
+e4-cht-dist-real: cht_accelerator.d steadystate_core.d solid/solid_loose_coupling_update.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	cd $(MPI_DIR); make
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
+		cht_accelerator.d > mpi_cht_accelerator_with_string_subst.d
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
+		$(DVERSION)mpi_parallel $(MPI_LIB_DIRS_SEARCH) \
+		$(DVERSION)nk_accelerator \
+		$(DVERSION)steady_state \
+		mpi_cht_accelerator_with_string_subst.d steadystate_core.d solid/solid_loose_coupling_update.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \

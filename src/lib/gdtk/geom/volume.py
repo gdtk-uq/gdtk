@@ -4,13 +4,26 @@ ParametricVolume classes for geometric modelling.
 
 These are made to work like the Dlang equivalent classes.
 
+Notes: NNG made minor changes to this module (and surface.py)
+to allow for arrayification as part of the chicken project.
+Principly, this is because of a strange quirk of python's
+operator overloading, where the __mult__ method of the
+leftmost object in a a*b operation is called first.
+
+For the geom library, we always want GeomObject*array
+rather than array*Geomobject, to make sure that GeomObject's
+__mult__ is called, which correctly applies the array
+to the individual components of the object.
+
 PJ, 2022-09-16
+NNG, 2022-11-01
 """
-import math
+import numpy as np
 from abc import ABC, abstractmethod
 from copy import copy
 from gdtk.geom.vector3 import Vector3, approxEqualVectors
-from gdtk.geom.surface import CoonsPatch
+from gdtk.geom.path import Path, Line
+from gdtk.geom.surface import ParametricSurface, CoonsPatch
 
 
 class ParametricVolume(ABC):
@@ -139,11 +152,72 @@ class TFIVolume(ParametricVolume):
         kminus_rs = self.kminus(r, s)
         kplus_rs = self.kplus(r, s)
         omr = 1.0-r; oms = 1.0-s; omt = 1.0-t;
-        BigC = (omr*oms*omt)*self.p000 + (omr*oms*t)*self.p001 + \
-            (omr*s*omt)*self.p010 + (omr*s*t)*self.p011 + \
-            (r*oms*omt)*self.p100 + (r*oms*t)*self.p101 + \
-            (r*s*omt)*self.p110 + (r*s*t)*self.p111
-        p_rst = 0.5*(omr*iminus_st + r*iplus_st + \
-                     oms*jminus_rt + s*jplus_rt + \
-                     omt*kminus_rs + t*kplus_rs) - 0.5*BigC
+        BigC = self.p000*(omr*oms*omt) + self.p001*(omr*oms*t) + \
+            self.p010*(omr*s*omt) + self.p011*(omr*s*t) + \
+            self.p100*(r*oms*omt) + self.p101*(r*oms*t) + \
+            self.p110*(r*s*omt) + self.p111*(r*s*t)
+        p_rst = 0.5*(iminus_st*omr + iplus_st*r + \
+                     jminus_rt*oms + jplus_rt*s + \
+                     kminus_rs*omt + kplus_rs*t) - 0.5*BigC
         return p_rst
+
+
+class SweptSurfaceVolume(ParametricVolume):
+    """
+    Volume constructed from a kminus face and an edge from p0 (p000) to p4 (p001).
+
+    The resulting volume has p000 located at edge04(0.0) and p001 at edge(1.0).
+    """
+
+    def __init__(self, face0123, edge04):
+        if not isinstance(face0123, ParametricSurface):
+            raise RuntimeError("SweptSurfaceVolume: face0123 is not a ParametricSurface.")
+        if not isinstance(edge04, Path):
+            raise RuntimeError("SweptSurfaceVolume: edge04 is not a Path object.")
+        self.face0123 = copy(face0123)
+        self.edge04 = copy(edge04)
+        return
+
+    def __repr__(self):
+        return f"SweptSurfaceVolume(face0123={self.face0123}, edge04={self.edge04})"
+
+    def __call__(self, r, s, t):
+        """
+        Evaluate point(s) in the volume.
+        """
+        return self.edge04(t) + self.face0123(r, s) - self.face0123(0.0, 0.0)
+
+
+if __name__=='__main__':
+    p0 = Vector3(x=0.0, y=0.0, z=0.0)
+    p1 = Vector3(x=1.0, y=0.0, z=0.0)
+    p2 = Vector3(x=1.0, y=1.0, z=0.0)
+    p3 = Vector3(x=0.0, y=1.0, z=0.0)
+    p4 = Vector3(x=0.0, y=0.0, z=1.0)
+    p5 = Vector3(x=1.0, y=0.0, z=1.0)
+    p6 = Vector3(x=1.0, y=1.0, z=1.0)
+    p7 = Vector3(x=0.0, y=1.0, z=1.0)
+    volume = TFIVolume(p000=p0, p100=p1, p110=p2, p010=p3,
+                       p001=p4, p101=p5, p111=p6, p011=p7)
+    #
+    x = volume(0.5, 0.5, 0.5)
+    xx= volume(np.array([0.5, 0.5]), np.array([0.5, 0.5]), np.array([0.5, 0.5]))
+    #
+    assert(np.isclose(x.x, xx.x[0]))
+    assert(np.isclose(x.y, xx.y[0]))
+    assert(np.isclose(x.z, xx.z[0]))
+    #
+    face0123 = CoonsPatch(p00=p0, p10=p1, p11=p2, p01=p3)
+    edge04 = Line(p0, p4)
+    volume2 = SweptSurfaceVolume(face0123=face0123, edge04=edge04)
+    # print("volume2=", volume2)
+    #
+    x2 = volume2(0.5, 0.5, 0.5)
+    xx2 = volume2(np.array([0.5, 0.5]), np.array([0.5, 0.5]), np.array([0.5, 0.5]))
+    # print("x2=", x2, " xx2=", xx2)
+    assert(np.isclose(x2.x, 0.5))
+    assert(np.isclose(x2.y, 0.5))
+    assert(np.isclose(x2.z, 0.5))
+    assert(np.isclose(xx2.x[0], 0.5))
+    assert(np.isclose(xx2.y[0], 0.5))
+    assert(np.isclose(xx2.z[0], 0.5))

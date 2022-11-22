@@ -16,6 +16,8 @@ import globalconfig;
 import solidfvinterface;
 import ssolidblock;
 import solidfvcell;
+import nm.complex;
+import nm.number;
 
 SolidBoundaryFluxEffect makeSolidBFEfromJson(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -28,6 +30,9 @@ SolidBoundaryFluxEffect makeSolidBFEfromJson(JSONValue jsonData, int blk_id, int
     case "constant_flux":
         double fluxValue = getJSONdouble(jsonData, "flux_value", 0.0);
         newBFE = new SolidBFE_ConstantFlux(blk_id, boundary, fluxValue);
+        break;
+    case "constant_flux_from_solid_gas_interface":
+        newBFE = new SolidBFE_ConstantFluxFromSolidGasInterface(blk_id, boundary);
         break;
     case "user_defined":
         string fname = getJSONstring(jsonData, "filename", "none");
@@ -208,6 +213,50 @@ public:
     
 private:
     double _fluxValue;
+}
+
+class SolidBFE_ConstantFluxFromSolidGasInterface : SolidBoundaryFluxEffect {
+public:
+    this(int id, int boundary)
+    {
+        super(id, boundary, "SolidGasInterface");
+    }
+
+    override void apply(double t, int tLevel)
+    {
+
+        auto myBC = blk.bc[whichBoundary];
+        number q;
+        int outsign;
+
+        switch(whichBoundary){
+        case Face.north:
+            outsign = 1;
+            break;
+        case Face.east:
+            outsign = 1;
+            break;
+        case Face.south:
+            outsign = -1;
+            break;
+        case Face.west:
+            outsign = -1;
+            break;
+        case Face.top:
+            outsign = 1;
+            break;
+        case Face.bottom:
+            outsign = -1;
+            break;
+        default:
+            throw new Error("oops, wrong boundary id");
+        } // end switch
+
+        foreach ( i; 0 .. myBC.ifaces.length ) {
+            q = myBC.gasCells[i].q_solid;
+            myBC.ifaces[i].flux = outsign*q;
+        }
+    }
 }
 
 class SolidBFE_UserDefined : SolidBoundaryFluxEffect {

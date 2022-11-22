@@ -42,6 +42,21 @@ int Face_indx_from_name(string name)
 }
 
 
+namespace SourceTerms {
+    array<string,3> names{"none", "manufactured_solution"};
+    //
+    constexpr int none = 0;
+    constexpr int manufactured_solution = 1;
+};
+
+int source_terms_from_name(string name)
+{
+    if (name == "none") return SourceTerms::none;
+    if (name == "manufactured_solution") return SourceTerms::manufactured_solution;
+    return SourceTerms::none;
+}
+
+
 namespace IOvar {
     // Following the new IO model for Eilmer, we set up the accessor functions
     // for the flow data that is held in the flow data files.
@@ -49,9 +64,9 @@ namespace IOvar {
 
     // Keep the following list consistent with the GlobalConfig.iovar_names list
     // in chkn_prep.py and with the symbolic constants just below.
-    vector<string> names {"pos.x", "pos.y", "pos.z", "vol",
-                              "p", "T", "rho", "e", "a",
-                              "vel.x", "vel.y", "vel.z"};
+    vector<string> names {"posx", "posy", "posz", "vol",
+                              "p", "T", "rho", "e", "YB", "a",
+                              "velx", "vely", "velz"};
 
     // We will use these symbols to select the varaible of interest.
     constexpr int posx = 0;
@@ -62,7 +77,8 @@ namespace IOvar {
     constexpr int T = p + 1;
     constexpr int rho = T + 1;
     constexpr int e = rho + 1;
-    constexpr int a = e + 1;
+    constexpr int YB = e + 1;
+    constexpr int a = YB + 1;
     constexpr int velx = a + 1;
     constexpr int vely = velx + 1;
     constexpr int velz = vely + 1;
@@ -83,7 +99,7 @@ struct FVCell {
     array<int,8> vtx{0, 0, 0, 0, 0, 0, 0, 0};
     array<int,6> face{0, 0, 0, 0, 0, 0};
 
-    string toString() {
+    string toString() const {
         ostringstream repr;
         repr << "Cell(pos=" << pos.toString() << ", volume=" << volume;
         repr << ", iLength=" << iLength << ", jLength=" << jLength << ", kLength=" << kLength;
@@ -105,6 +121,7 @@ struct FVCell {
         case IOvar::T: fs.gas.T = val; break;
         case IOvar::rho: fs.gas.rho = val; break;
         case IOvar::e: fs.gas.e = val; break;
+        case IOvar::YB: fs.gas.YB = val; break;
         case IOvar::a: fs.gas.a = val; break;
         case IOvar::velx: fs.vel.x = val; break;
         case IOvar::vely: fs.vel.y = val; break;
@@ -125,6 +142,7 @@ struct FVCell {
         case IOvar::T: return fs.gas.T;
         case IOvar::rho: return fs.gas.rho;
         case IOvar::e: return fs.gas.e;
+        case IOvar::YB: return fs.gas.YB;
         case IOvar::a: return fs.gas.a;
         case IOvar::velx: return fs.vel.x;
         case IOvar::vely: return fs.vel.y;
@@ -147,7 +165,27 @@ struct FVCell {
     }
 
     __host__ __device__
-    void eval_dUdt(ConservedQuantities& dUdt, FVFace faces[])
+    void add_source_terms(ConservedQuantities& dUdt, int isrc)
+    {
+        switch (isrc) {
+        case SourceTerms::none:
+            break;
+        case SourceTerms::manufactured_solution:
+            dUdt[CQI::mass] += 0.0; // [TODO] implement the actual calculation.
+            dUdt[CQI::xMom] += 0.0;
+            dUdt[CQI::yMom] += 0.0;
+            dUdt[CQI::zMom] += 0.0;
+            dUdt[CQI::totEnergy] += 0.0;
+            dUdt[CQI::YB] += 0.0;
+            break;
+        default:
+            break;
+        }
+        return;
+    }
+
+    __host__ __device__
+    void eval_dUdt(ConservedQuantities& dUdt, FVFace faces[], int isrc)
     // These are the spatial (RHS) terms in the semi-discrete governing equations.
     {
         number vol_inv = 1.0/volume;
@@ -157,19 +195,36 @@ struct FVCell {
         auto& fjp = faces[face[Face::jplus]];
         auto& fkm = faces[face[Face::kminus]];
         auto& fkp = faces[face[Face::kplus]];
+        // Introducing local variables for the data helps
+        // promote coalesced global memory access on the GPU.
+        number area_im = fim.area; ConservedQuantities F_im = fim.F;
+        number area_ip = fip.area; ConservedQuantities F_ip = fip.F;
+        number area_jm = fjm.area; ConservedQuantities F_jm = fjm.F;
+        number area_jp = fjp.area; ConservedQuantities F_jp = fjp.F;
+        number area_km = fkm.area; ConservedQuantities F_km = fkm.F;
+        number area_kp = fkp.area; ConservedQuantities F_kp = fkp.F;
         //
         for (int i=0; i < CQI::n; i++) {
             // Integrate the fluxes across the interfaces that bound the cell.
-            number surface_integral = fim.area*fim.F[i] - fip.area*fip.F[i]
-                + fjm.area*fjm.F[i] - fjp.area*fjp.F[i]
-                + fkm.area*fkm.F[i] - fkp.area*fkp.F[i];
+            number surface_integral = area_im*F_im[i] - area_ip*F_ip[i]
+                + area_jm*F_jm[i] - area_jp*F_jp[i] + area_km*F_km[i] - area_kp*F_kp[i];
             // Then evaluate the derivatives of conserved quantity.
             // Note that conserved quantities are stored per-unit-volume.
             dUdt[i] = vol_inv*surface_integral;
         }
+        //
+        if (isrc != SourceTerms::none) add_source_terms(dUdt, isrc);
         return;
     } // end eval_dUdt()
 
 }; // end Cell
+
+
+__host__
+ostream& operator<<(ostream& os, const FVCell c)
+{
+    os << c.toString();
+    return os;
+}
 
 #endif

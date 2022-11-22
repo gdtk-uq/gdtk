@@ -15,10 +15,10 @@ Steps to generate this file:
    This can go anywhere, but somewhere near the top is good.
 
 Notes:
- - Module cray-mpich/8.1.14 and PrgEnv-gnu/8.3.2 were used, with library
-   /opt/cray/pe/mpich/8.1.14/ofi/gnu/9.1/
+ - Module cray-mpich/8.1.19 and PrgEnv-gnu/8.3.2 were used, with library
+   /opt/cray/pe/mpich/8.1.19/ofi/gnu/9.1
 
-@author: (with much gnashing of teeth and funereal wailing) Nick Gibbons [12/06/22]
+@author: (with much gnashing of teeth and funereal wailing) Nick Gibbons [16/11/22]
 */
 
 import core.stdc.config;
@@ -359,6 +359,14 @@ alias __int32_t = int;
 alias __uint32_t = uint;
 alias __int64_t = c_long;
 alias __uint64_t = c_ulong;
+alias __int_least8_t = byte;
+alias __uint_least8_t = ubyte;
+alias __int_least16_t = short;
+alias __uint_least16_t = ushort;
+alias __int_least32_t = int;
+alias __uint_least32_t = uint;
+alias __int_least64_t = c_long;
+alias __uint_least64_t = c_ulong;
 alias __quad_t = c_long;
 alias __u_quad_t = c_ulong;
 alias __intmax_t = c_long;
@@ -402,7 +410,6 @@ alias __ssize_t = c_long;
 alias __syscall_slong_t = c_long;
 alias __syscall_ulong_t = c_ulong;
 alias __loff_t = c_long;
-alias __qaddr_t = c_long*;
 alias __caddr_t = char*;
 alias __intptr_t = c_long;
 alias __socklen_t = uint;

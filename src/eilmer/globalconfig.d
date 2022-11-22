@@ -414,7 +414,7 @@ SpatialDerivLocn spatial_deriv_locn_from_name(string name)
 
 // Symbolic names for the flavours of unstructured limiters.
 enum UnstructuredLimiter {
-    van_albada2,
+    svan_albada,
     min_mod,
     barth,
     park,
@@ -432,7 +432,7 @@ enum UnstructuredLimiter {
 string unstructured_limiter_name(UnstructuredLimiter ul)
 {
     final switch ( ul ) {
-    case UnstructuredLimiter.van_albada2: return "van_albada2";
+    case UnstructuredLimiter.svan_albada: return "svan_albada";
     case UnstructuredLimiter.min_mod: return "min_mod";
     case UnstructuredLimiter.barth: return "barth";
     case UnstructuredLimiter.park: return "park";
@@ -451,7 +451,7 @@ string unstructured_limiter_name(UnstructuredLimiter ul)
 UnstructuredLimiter unstructured_limiter_from_name(string name)
 {
     switch ( name ) {
-    case "van_albada2": return UnstructuredLimiter.van_albada2;
+    case "svan_albada": return UnstructuredLimiter.svan_albada;
     case "min_mod": return UnstructuredLimiter.min_mod;
     case "barth": return UnstructuredLimiter.barth;
     case "park": return UnstructuredLimiter.park;
@@ -562,7 +562,7 @@ TCIModel tci_model_from_name(string name)
 } // end tci_model_from_name()
 
 
-enum SolidDomainCoupling { tight, loose, lagged }
+enum SolidDomainCoupling { tight, loose, lagged, steady_fluid_transient_solid }
 
 @nogc
 string solidDomainCouplingName(SolidDomainCoupling i)
@@ -571,6 +571,7 @@ string solidDomainCouplingName(SolidDomainCoupling i)
     case SolidDomainCoupling.tight: return "tight";
     case SolidDomainCoupling.loose: return "loose";
     case SolidDomainCoupling.lagged: return "lagged";
+    case SolidDomainCoupling.steady_fluid_transient_solid: return "steady_fluid_transient_solid";
     }
 }
 
@@ -581,6 +582,7 @@ SolidDomainCoupling solidDomainCouplingFromName(string name)
     case "tight": return SolidDomainCoupling.tight;
     case "loose": return SolidDomainCoupling.loose;
     case "lagged": return SolidDomainCoupling.lagged;
+    case "steady_fluid_transient_solid": return SolidDomainCoupling.steady_fluid_transient_solid;
     default: return SolidDomainCoupling.tight;
     }
 }
@@ -885,6 +887,7 @@ final class GlobalConfig {
     shared static SolidDomainLooseUpdateOptions sdluOptions;
     shared static bool solid_has_isotropic_properties = true;
     shared static bool solid_has_homogeneous_properties = true;
+    shared static bool solid_domain_augmented_deriv_avg = true;
     shared static double solid_domain_cfl = 0.85;
     //
     // Parameters related to possible motion of the grid.
@@ -1311,6 +1314,7 @@ public:
     //
     bool solid_has_isotropic_properties;
     bool solid_has_homogeneous_properties;
+    bool solid_domain_augmented_deriv_avg;
     //
     bool ignore_low_T_thermo_update_failure;
     double suggested_low_T_value;
@@ -1476,6 +1480,7 @@ public:
         //
         solid_has_isotropic_properties = cfg.solid_has_isotropic_properties;
         solid_has_homogeneous_properties = cfg.solid_has_homogeneous_properties;
+        solid_domain_augmented_deriv_avg = cfg.solid_domain_augmented_deriv_avg;
         //
         ignore_low_T_thermo_update_failure = cfg.ignore_low_T_thermo_update_failure;
         suggested_low_T_value = cfg.suggested_low_T_value;
@@ -1831,6 +1836,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_enum("coupling_with_solid_domains", "coupling_with_solid_domains", "solidDomainCouplingFromName"));
     mixin(update_bool("solid_has_isotropic_properties", "solid_has_isotropic_properties"));
     mixin(update_bool("solid_has_homogeneous_properties", "solid_has_homogeneous_properties"));
+    mixin(update_bool("solid_domain_augmented_deriv_avg", "solid_domain_augmented_deriv_avg"));
 
     // Parameters controlling convective update in detail
     //
@@ -1924,6 +1930,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  coupling_with_solid_domains: ", cfg.coupling_with_solid_domains);
         writeln("  solid_has_isotropic_properties: ", cfg.solid_has_isotropic_properties);
         writeln("  solid_has_homogeneous_properties: ", cfg.solid_has_homogeneous_properties);
+        writeln("  solid_domain_augmented_deriv_avg: ", cfg.solid_domain_augmented_deriv_avg);
         writeln("  apply_bcs_in_parallel: ", cfg.apply_bcs_in_parallel);
         writeln("  flowstate_limits_max_velocity: ", cfg.flowstate_limits.max_velocity);
         writeln("  flowstate_limits_max_tke: ", cfg.flowstate_limits.max_tke);

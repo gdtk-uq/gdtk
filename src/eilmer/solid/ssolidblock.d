@@ -864,9 +864,14 @@ public:
             dTdy = cL0.dTdy;
             dTdz = cL0.dTdz;
         } else {
-            dTdx = 0.5*(cL0.dTdx+cR0.dTdx) - jump*(nx/ndotehat);
-            dTdy = 0.5*(cL0.dTdy+cR0.dTdy) - jump*(ny/ndotehat);
-            dTdz = 0.5*(cL0.dTdz+cR0.dTdz) - jump*(nz/ndotehat);
+            dTdx = 0.5*(cL0.dTdx+cR0.dTdx);
+            dTdy = 0.5*(cL0.dTdy+cR0.dTdy);
+            dTdz = 0.5*(cL0.dTdz+cR0.dTdz);
+            if (myConfig.solid_domain_augmented_deriv_avg) {
+                dTdx -= jump*(nx/ndotehat);
+                dTdy -= jump*(ny/ndotehat);
+                dTdz -= jump*(nz/ndotehat);
+            }
         }
     } // end averageCellSpatialDerivatives()
 

@@ -6,16 +6,21 @@ We use these so that we can pass around the parameters and cluster function
 for generating an arrays of parametric ordinates [0.0 ... 1.0].
 
 PJ, 2020-07-06
+    2022-11-08 Allow direct calls of the underlying functions.
 """
 
 from abc import ABC, abstractmethod
 import numpy as np
-from gdtk.numeric.roberts import distribute_points_1
+from gdtk.numeric.roberts import distribute_points_1, roberts_1
 
 
 class ClusterFunction(ABC):
     @abstractmethod
-    def __repr__():
+    def __repr__(self):
+        pass
+
+    @abstractmethod
+    def __call__(self, x):
         pass
 
     @abstractmethod
@@ -30,12 +35,17 @@ class LinearFunction(ClusterFunction):
     def __repr__(self):
         return "LinearFunction()"
 
+    def __call__(self, x):
+        """
+        Simply returns the value, be it scalar or array.
+        """
+        return x
+
     def distribute_parameter_values(self, nv):
         """
         Returns an array of uniformly-distributed sample points in range [0.0 ... 1.0].
         """
         return np.linspace(0.0, 1.0, nv)
-
 
 class RobertsFunction(ClusterFunction):
     """
@@ -57,6 +67,12 @@ class RobertsFunction(ClusterFunction):
 
     def __repr__(self):
         return f"RobertsFunction(end0={self.end0}, end1={self.end1}, beta={self.beta})"
+
+    def __call__(self, x):
+        """
+        Evaluates the function for x, be it a scalar or array.
+        """
+        return roberts_1(x, self.end0, self.end1, self.beta)
 
     def distribute_parameter_values(self, nv):
         """

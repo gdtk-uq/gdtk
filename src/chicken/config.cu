@@ -15,39 +15,12 @@
 
 #include "number.cu"
 #include "flow.cu"
+#include "face.cu"
 #include "cell.cu"
 
 
 using namespace std;
 using json = nlohmann::json;
-
-
-namespace BCCode {
-    // Boundary condition codes, to decide what to do for the ghost cells.
-    // Periodic boundary conditions should just work if we wrap the index in each direction.
-    // There's not enough information here to have arbitrary block connections.
-    constexpr int wall_with_slip = 0;
-    constexpr int wall_no_slip_adiabatic = 1;
-    constexpr int wall_no_slip_fixed_T = 2;
-    constexpr int exchange = 3;
-    constexpr int inflow = 4;
-    constexpr int outflow = 5;
-
-    array<string,6> names{"wall_with_slip", "wall_no_slip_adiabatic", "wall_no_slip_fixed_T",
-            "exchange", "inflow", "outflow"};
-};
-
-int BC_code_from_name(string name)
-{
-    if (name == "wall_with_slip") return BCCode::wall_with_slip;
-    if (name == "wall_no_slip_adiabatic") return BCCode::wall_no_slip_adiabatic;
-    if (name == "wall_no_slip_fixed_T") return BCCode::wall_no_slip_fixed_T;
-    if (name == "wall_no_slip") return BCCode::wall_no_slip_adiabatic; // alias
-    if (name == "exchange") return BCCode::exchange;
-    if (name == "inflow") return BCCode::inflow;
-    if (name == "outflow") return BCCode::outflow;
-    return BCCode::wall_with_slip;
-}
 
 
 struct BConfig {
@@ -87,7 +60,7 @@ struct BConfig {
     int nFaces;
     //
     // GPU-related parameters.
-    int threads_per_GPUblock = 0;
+    int threads_per_GPUblock = 128;
     int nGPUblocks_for_cells = 0;
     int nGPUblocks_for_faces = 0;
     //
@@ -95,9 +68,10 @@ struct BConfig {
     array<int,6> bcCodes;
     array<int,6> bc_fs;
     array<double,6> bc_TWall;
+    array<int,6> bc_fun;
 
     __host__
-    void fill_in_dimensions(int _nic, int _njc, int _nkc)
+    void fill_in_dimensions(int _nic, int _njc, int _nkc, int threads_per_GPUblock)
     {
         nic = _nic;
         njc = _njc;
@@ -124,8 +98,7 @@ struct BConfig {
         nFaces = n_iFaces + n_jFaces + n_kFaces;
         //
         #ifdef CUDA
-        // We need to allocate corresponding memory space on the GPU.
-        threads_per_GPUblock = 128;
+        // We need to allocate corresponding resources on the GPU.
         nGPUblocks_for_cells = ceil(double(nActiveCells)/threads_per_GPUblock);
         nGPUblocks_for_faces = ceil(double(nFaces)/threads_per_GPUblock);
         #endif
@@ -177,20 +150,28 @@ struct BConfig {
     {
         ostringstream repr;
         repr << "BConfig(i=" << i << ", j=" << j << ", k=" << k;
-        repr << ", bcCodes=["; for (auto c: bcCodes) repr << c << ","; repr << "]";
+        repr << ", bcCodes=["; for (auto c: bcCodes) repr << BCCode::names[c] << ","; repr << "]";
         repr << ", bc_fs=["; for (auto f : bc_fs) repr << f << ","; repr << "]";
+        repr << ", bc_fun=["; for (auto f : bc_fun) repr << BCFunction::names[f] << ","; repr << "]";
         repr << ", active=" << active;
         repr << ")";
         return repr.str();
     }
 }; // end struct BConfig
 
+__host__
+ostream& operator<<(ostream& os, const BConfig cfg)
+{
+    os << cfg.toString();
+    return os;
+}
+
 
 struct Schedule {
     vector<number> t_change; // times at which the value changes
     vector<number> values; // the corresponding values
 
-    string toString() {
+    string toString() const {
         ostringstream repr;
         repr << "Schedule(";
         repr << "t_change=["; for (auto t : t_change) repr << t << ","; repr << "]";
@@ -199,7 +180,7 @@ struct Schedule {
         return repr.str();
     }
 
-    number get_value(number t)
+    number get_value(number t) const
     {
         // Select one of our tabulated schedule of values.
         int i = t_change.size() - 1;
@@ -207,7 +188,7 @@ struct Schedule {
         return values[i];
     }
 
-    number interpolate_value(number t)
+    number interpolate_value(number t) const
     {
         // Attempt an interpolation of the tabulated schedule of values.
         if (t <= t_change[0]) { return values[0]; }
@@ -222,6 +203,13 @@ struct Schedule {
         return value;
     }
 }; // end struct Schedule
+
+__host__
+ostream& operator<<(ostream& os, const Schedule sch)
+{
+    os << sch.toString();
+    return os;
+}
 
 
 namespace FluxCalc {
@@ -267,7 +255,12 @@ namespace Config {
     int x_order = 2;
     int t_order = 2;
     int flux_calc = FluxCalc::ausmdv;
+    int source_terms = SourceTerms::none;
+    bool reacting = false;
     bool viscous = false;
+    //
+    // GPU-related parameters.
+    int threads_per_GPUblock = 128;
 }
 
 
@@ -297,9 +290,15 @@ vector<BConfig> read_config_file(string fileName)
     map<string, number> gas_model_data = jsonData["gas_model"].get<map<string, number> >();
     if (!approxEquals(GasModel::g, gas_model_data["gamma"], 1.0e-6) ||
         !approxEquals(GasModel::R, gas_model_data["R"], 1.0e-6) ||
+        !approxEquals(GasModel::q, gas_model_data["q"], 1.0e-6) ||
+        !approxEquals(GasModel::alpha, gas_model_data["alpha"], 1.0e-6) ||
+        !approxEquals(GasModel::Ti, gas_model_data["Ti"], 1.0e-6) ||
         !approxEquals(GasModel::Cv, gas_model_data["Cv"], 1.0e-6)) {
         cerr << "  gas_model_data: gamma:" << gas_model_data["gamma"]
              << " R:" << gas_model_data["R"]
+             << " q:" << gas_model_data["q"]
+             << " alpha:" << gas_model_data["alpha"]
+             << " Ti:" << gas_model_data["Ti"]
              << " Cv:" << gas_model_data["Cv"]
              << endl;
         throw runtime_error("Incorrect gas model data");
@@ -319,13 +318,14 @@ vector<BConfig> read_config_file(string fileName)
         auto gas = GasState{};
         gas.p=fsj["gas"]["p"].get<number>();
         gas.T=fsj["gas"]["T"].get<number>();
+        gas.YB=fsj["gas"]["YB"].get<number>();
         gas.update_from_pT();
         auto vel = fsj["vel"].get<vector<number> >();
         Config::flow_states.push_back(FlowState{gas, Vector3{vel[0], vel[1], vel[2]}});
     }
     if (Config::verbosity > 0) {
         cout << "  flow_states: [";
-        for (auto fs : Config::flow_states) cout << fs.toString() << ",";
+        for (auto fs : Config::flow_states) cout << fs << ",";
         cout << "]" << endl;
     }
     //
@@ -382,9 +382,13 @@ vector<BConfig> read_config_file(string fileName)
             if (cfg.bcCodes[i] == BCCode::wall_no_slip_fixed_T) {
                 cfg.bc_TWall[i] = bc["TWall"].get<double>();
             }
+            cfg.bc_fun[i] = 0; // Default function index.
+            if (cfg.bcCodes[i] == BCCode::inflow_function) {
+                cfg.bc_fun[i] = BC_function_from_name(bc["tag"].get<string>());
+            }
         }
         if (Config::verbosity > 0) {
-            cout << "  blk=" << blk_configs.size() << " config=" << cfg.toString() << endl;
+            cout << "  blk=" << blk_configs.size() << " config=" << cfg << endl;
         }
         blk_configs.push_back(cfg);
     }
@@ -396,6 +400,7 @@ vector<BConfig> read_config_file(string fileName)
     Config::x_order = jsonData["x_order"].get<int>();
     Config::t_order = jsonData["t_order"].get<int>();
     Config::flux_calc = flux_calc_from_name(jsonData["flux_calc"].get<string>());
+    Config::source_terms = source_terms_from_name(jsonData["source_terms"].get<string>());
     Config::dt_init = jsonData["dt_init"].get<number>();
     Config::max_time = jsonData["max_time"].get<number>();
     Config::max_step = jsonData["max_step"].get<int>();
@@ -407,19 +412,24 @@ vector<BConfig> read_config_file(string fileName)
     vector<number> t_change = jsonData["t_change"].get<vector<number> >();
     vector<number> dt_plot = jsonData["dt_plot"].get<vector<number> >();
     Config::dt_plot_schedule = Schedule{t_change, dt_plot};
+    Config::reacting = jsonData["reacting"].get<bool>();
     Config::viscous = jsonData["viscous"].get<bool>();
+    Config::threads_per_GPUblock = jsonData["threads_per_gpu_block"].get<int>();
     if (Config::verbosity > 0) {
         cout << "  x_order=" << Config::x_order << endl;
         cout << "  t_order=" << Config::t_order << endl;
         cout << "  flux_calc=" << FluxCalc::names[Config::flux_calc] << endl;
+        cout << "  source_terms=" << SourceTerms::names[Config::source_terms] << endl;
         cout << "  dt_init=" << Config::dt_init << endl;
         cout << "  max_time=" << Config::max_time << endl;
         cout << "  max_step=" << Config::max_step << endl;
         cout << "  cfl_count=" << Config::cfl_count << endl;
-        cout << "  cfl_schedule=" << Config::cfl_schedule.toString() << endl;
+        cout << "  cfl_schedule=" << Config::cfl_schedule << endl;
         cout << "  print_count=" << Config::print_count << endl;
-        cout << "  dt_plot_schedule=" << Config::dt_plot_schedule.toString() << endl;
+        cout << "  dt_plot_schedule=" << Config::dt_plot_schedule << endl;
         cout << "  viscous=" << Config::viscous << endl;
+        cout << "  reacting=" << Config::reacting << endl;
+        cout << "  threads_per_gpu_block=" << Config::threads_per_GPUblock << endl;
     }
     return blk_configs;
 } // end read_config_file()

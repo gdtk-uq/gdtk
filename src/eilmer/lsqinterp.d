@@ -1514,10 +1514,38 @@ public:
                 mygradR[2] = cR0.gradients."~gname~"[2];
                 if (myConfig.apply_limiter) {
                     final switch (myConfig.unstructured_limiter) {
-                    case UnstructuredLimiter.van_albada2:
-                        van_albada_limit(mygradL[0], mygradR[0]);
-                        van_albada_limit(mygradL[1], mygradR[1]);
-                        van_albada_limit(mygradL[2], mygradR[2]);
+                    case UnstructuredLimiter.svan_albada:
+                        double eps = myConfig.smooth_limiter_coeff/100.0;
+                        number qq = isNaN(qL0) ? to!number(1.0) : fmax(1.0, fabs(qL0));
+
+                        number dqL = -4.0*dLx*mygradL[0] + -4.0*dLy*mygradL[1];
+                        number dqR = -4.0*dRx*mygradR[0] + -4.0*dRy*mygradR[1];
+                        if (myConfig.dimensions == 3) {
+                            dqL += -4.0*dLz*mygradL[2];
+                            dqR += -4.0*dRz*mygradR[2];
+                        }
+
+                        number qL1 = qR0 + dqL;
+                        number qR1 = qL0 + dqR;
+
+                        number delLminus = (qL0 - qL1);
+                        number del = (qR0 - qL0);
+                        number delRplus = (qR1 - qR0);
+
+                        // val Albada limiter, modified with the non-dimensional
+                        // smoothing parameter qq*eps. See notes 15/11/22 (NNG)
+                        number sL = (delLminus*del + fabs(delLminus*del) + qq*eps) /
+                                    (delLminus*delLminus + del*del + qq*eps);
+                        number sR = (del*delRplus + fabs(del*delRplus) + qq*eps) /
+                                    (del*del + delRplus*delRplus + qq*eps);
+
+                        mygradL[0] *= sL;
+                        mygradL[1] *= sL;
+                        mygradL[2] *= sL;
+
+                        mygradR[0] *= sR;
+                        mygradR[1] *= sR;
+                        mygradR[2] *= sR;
                         break;
                     case UnstructuredLimiter.min_mod:
                         min_mod_limit(mygradL[0], mygradR[0]);
@@ -1760,7 +1788,7 @@ public:
                 mygradR[2] = cR0.gradients."~gname~"[2];
                 if (myConfig.apply_limiter && myConfig.extrema_clipping) {
                     final switch (myConfig.unstructured_limiter) {
-                    case UnstructuredLimiter.van_albada2:
+                    case UnstructuredLimiter.svan_albada:
                         break;
                     case UnstructuredLimiter.min_mod:
                         break;
@@ -1968,7 +1996,7 @@ public:
                 mygradL[2] = cL0.gradients."~gname~"[2];
                 if (myConfig.apply_limiter && myConfig.extrema_clipping) {
                     final switch (myConfig.unstructured_limiter) {
-                    case UnstructuredLimiter.van_albada2:
+                    case UnstructuredLimiter.svan_albada:
                         break;
                     case UnstructuredLimiter.min_mod:
                         break;

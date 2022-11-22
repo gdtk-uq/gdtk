@@ -123,6 +123,11 @@ public:
         _w_b = eval_backward_rate(conc);
     }
 
+    @nogc final number tickrate() const
+    {
+        return _w_f - _w_b;
+    }
+
     @nogc abstract number production(int isp) const;
     @nogc abstract number loss(int isp) const;
 

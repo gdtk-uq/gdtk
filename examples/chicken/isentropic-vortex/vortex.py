@@ -22,50 +22,41 @@ def initial_flow(x, y, z):
     """
     User-defined function for the initial flow state works in physical space.
     """
-    Rgas = 287.1
-    Gamma = 1.4
-    pFlow = 100.0e3 # Pa
-    TFlow = 300.0 # K
-    xc = L/2.0
-    yc = H/2.0
-    rhoFlow = pFlow/(Rgas*TFlow) # rho0
-    a0 = math.sqrt(Gamma*Rgas*TFlow)
-    eps = 5.0*a0/10              #strength of vortex, reduced by 10, PJ 2022-10-18
-    pi24 = 4.0*math.pow(math.pi,2)
-    velx_inf = a0
-    vely_inf = a0
-    xbar = x - xc
-    ybar = y - yc
-    xbar2 = xbar**2
-    ybar2 = ybar**2
-    xandybar = xbar2 + ybar2
-    r = math.sqrt(xandybar)
-    #vortex flow
-    r2 = r*r
-    tmp0 = eps**2/pi24*math.exp(1.0-r2)
+    # Ideal air gas model
+    Rgas = 287.1; Gamma = 1.4
+    # Undisturbed gas state
+    p0 = 100.0e3 # Pa
+    T0 = 300.0 # K
+    rho0 = p0/(Rgas*T0)
+    a0 = math.sqrt(Gamma*Rgas*T0)
+    # Vortex centre and strength
+    xc = L/2.0; yc = H/2.0
+    eps = 5.0*a0
+    xbar = x - xc; ybar = y - yc
+    r2 = xbar**2 + ybar**2
+    r = math.sqrt(r2)
+    # Vortex flow
+    tmp0 = (eps/(2*math.pi))**2 * math.exp(1.0-r2)
     v2 = tmp0*r2
     v = math.sqrt(v2)
     dT = (Gamma-1.0)/(Rgas*Gamma)*0.5*tmp0
-    T = TFlow - dT
-    tmp1 = math.pow(rhoFlow, Gamma)/pFlow * Rgas * T
-    rho = math.pow(tmp1,1.0/(Gamma-1.0))
+    T = T0 - dT
+    tmp1 = math.pow(rho0, Gamma)/p0 * Rgas * T
+    rho = math.pow(tmp1, 1.0/(Gamma-1.0))
     pressure = rho*Rgas*T
     if r < 1.0e-9:
-        velx = velx_inf
-        vely = vely_inf
+        velx = 0.0; vely = 0.0
     else:
-        velx = -ybar/r * v + velx_inf
-        vely = xbar/r * v + vely_inf
-    return FlowState(p=pressure, velx=velx, vely=vely, T=T)
-
-
-
+        velx = -ybar/r * v; vely = xbar/r * v
+    # Add background velocity
+    velx += a0; vely += a0
+    return FlowState(p=pressure, velx=velx, vely=vely, velz=0.0, T=T)
 #
 blk0 = FluidBlock(grid=grd0, initialState=initial_flow,
                   bcs={'iminus':ExchangeBC(),'iplus':ExchangeBC(),
                        'jminus':ExchangeBC(),'jplus':ExchangeBC()})
 #
-config.max_time = 10.0e-3  # seconds
+config.max_time = 50.0e-3  # seconds
 config.max_step = 150000
 config.flux_calc = "sbp_asf"
-add_dt_plot(0.0, 0.1e-3)
+add_dt_plot(0.0, 1.0e-3)

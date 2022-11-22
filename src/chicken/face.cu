@@ -15,10 +15,58 @@
 #include "vector3.cu"
 #include "gas.cu"
 #include "vertex.cu"
-#include "config.cu"
 #include "flow.cu"
 
 using namespace std;
+
+
+namespace BCCode {
+    // Boundary condition codes, to decide what to do for the ghost cells.
+    // Periodic boundary conditions should just work if we wrap the index in each direction.
+    // There's not enough information here to have arbitrary block connections.
+    constexpr int wall_with_slip = 0;
+    constexpr int wall_no_slip_adiabatic = 1;
+    constexpr int wall_no_slip_fixed_T = 2;
+    constexpr int exchange = 3;
+    constexpr int inflow = 4;
+    constexpr int outflow = 5;
+    constexpr int inflow_function = 6;
+
+    array<string,7> names{"wall_with_slip", "wall_no_slip_adiabatic", "wall_no_slip_fixed_T",
+            "exchange", "inflow", "outflow", "inflow_function"};
+};
+
+int BC_code_from_name(string name)
+{
+    if (name == "wall_with_slip") return BCCode::wall_with_slip;
+    if (name == "wall_no_slip_adiabatic") return BCCode::wall_no_slip_adiabatic;
+    if (name == "wall_no_slip_fixed_T") return BCCode::wall_no_slip_fixed_T;
+    if (name == "wall_no_slip") return BCCode::wall_no_slip_adiabatic; // alias
+    if (name == "exchange") return BCCode::exchange;
+    if (name == "inflow") return BCCode::inflow;
+    if (name == "outflow") return BCCode::outflow;
+    if (name == "inflow_function") return BCCode::inflow_function;
+    return BCCode::wall_with_slip;
+}
+
+namespace BCFunction {
+    // We have a number of functions coded to use in filling the ghost cells.
+    constexpr int none = 0;
+    constexpr int supersonic_vortex = 1;
+    constexpr int laminar_boundary_layer = 2;
+    constexpr int manufactured_solution = 3;
+
+    array<string,4> names{"none", "supersonic_vortex", "laminar_boundary_layer", "manufactured_solution"};
+};
+
+int BC_function_from_name(string name)
+{
+    if (name == "none") return BCFunction::none;
+    if (name == "supersonic_vortex") return BCFunction::supersonic_vortex;
+    if (name == "laminar_boundary_layer") return BCFunction::laminar_boundary_layer;
+    if (name == "manufactured_solution") return BCFunction::manufactured_solution;
+    return BCFunction::none;
+}
 
 // Interpolation functions that will be used in the fluc calculator.
 
@@ -67,36 +115,47 @@ struct FVFace {
     array<int,4> vtx{-1,-1,-1,-1};
     array<int,2> left_cells{-1,-1};
     array<int,2> right_cells{-1,-1};
+    // To apply boundary conditions at the face, we need to carry some extra information.
+    // Not all faces are boundary faces, so we start with dummy values.
+    int bcId{-1};
+    int bcCode{-1};
+    int other_blkId{-1};
+    array<int,2> other_cells{-1,-1};
+    int inflowId{-1};
+    double TWall{300.0};
+    int bcFun{-1};
     // For the gradient calculations that form part of the viscous fluxes
     // we keep lists of faces and cells that form a cloud of points around
     // this face-centre.
-    // We also need the FlowState at this face-centre.  It will be set during
-    // the convective-flux calculation or by the boundary-condition code for a wall.
-    int bcCode{-1};
-    FlowState fs;
     array<int,cloud_ncmax> cells_in_cloud{-1,-1};
     array<int,cloud_nfmax> faces_in_cloud{-1,-1,-1,-1,-1,-1,-1,-1};
     int cloud_nc = 0;
     int cloud_nf = 0;
     // Prepared least-squares solution for cloud of cell- and face-FlowStates.
     array<number,cloud_nmax> wx, wy, wz;
-    // Spatial gradients with respect to directions x,y,z.
-    number dvxdx, dvxdy, dvxdz;
-    number dvydx, dvydy, dvydz;
-    number dvzdx, dvzdy, dvzdz;
-    number dTdx, dTdy, dTdz;
+    // We also need the FlowState at this face-centre.  It will be set during
+    // the convective-flux calculation or by the boundary-condition code for a wall.
+    FlowState fs;
 
     string toString() const
     {
         ostringstream repr;
         repr << "FVFace(pos=" << pos.toString() << ", n=" << n.toString()
              << ", t1=" << t1.toString() << ", t2=" << t2.toString() << ", area=" << area;
+        repr << ", F=["; for (auto v : F) repr << v << ","; repr << "]";
         repr << ", vtx=["; for (auto i : vtx) repr << i << ","; repr << "]";
         repr << ", left_cells=["; for (auto i : left_cells) repr << i << ","; repr << "]";
         repr << ", right_cells=["; for (auto i : right_cells) repr << i << ","; repr << "]";
+        repr << ", bcId=" << bcId << ", bcCode=" << bcCode
+             << ", other_blkId=" << other_blkId << ", other_cells=[" << other_cells[0]
+             << ", " << other_cells[1] << "], inflowId=" << inflowId
+             << ", TWall=" << TWall << ", bcFun=" << bcFun;
+        repr << ", cells_in_cloud=["; for (auto i : cells_in_cloud) repr << i <<","; repr << "]";
+        repr << ", faces_in_cloud=["; for (auto i : faces_in_cloud) repr << i <<","; repr << "]";
         repr << ")";
         return repr.str();
     }
+
 
     // Specific convective-flux calculators here...
 
@@ -124,6 +183,7 @@ struct FVFace {
         number aL = fsL.gas.a;
         number keL = 0.5*(velxL*velxL + velyL*velyL + velzL*velzL);
         number HL = uL + pLrL + keL;
+        number YBL = fsL.gas.YB;
         //
         number rhoR = fsR.gas.rho;
         number pR = fsR.gas.p;
@@ -135,6 +195,7 @@ struct FVFace {
         number aR = fsR.gas.a;
         number keR = 0.5*(velxR*velxR + velyR*velyR + velzR*velzR);
         number HR = uR + pR/rhoR + keR;
+        number YBR = fsR.gas.YB;
         //
         // This is the main part of the flux calculator.
         //
@@ -197,79 +258,93 @@ struct FVFace {
         F[CQI::zMom] = momentum.z;
         number H = (mass_half >= 0.0) ? HL : HR;
         F[CQI::totEnergy] = mass_half*H;
-        // When we introduce species, get the species flux lines from the Dlang code.
-        // [TODO] PJ 2022-09-11
+        number YB = (mass_half >= 0.0) ? YBL : YBR;
+        F[CQI::YB] = mass_half*YB;
         return;
     } // end ausmdv()
 
 
     __host__ __device__
-    void sbp_asf(FlowState& fsL1, FlowState& fsL0, FlowState& fsR0, FlowState& fsR1)
-    // Lachlan's and Christine's Summation-By-Parts Alpha-Split Flux calculation function
+    void sbp_asf(const FlowState& fsL1, const FlowState& fsL0,
+                 const FlowState& fsR0, const FlowState& fsR1)
+    // Lachlan's and Christine's Summation-By-Parts Alpha-Split Flux calculation function.
+    //
+    // This flux calculator is based on the formulation in the NASA Techmical Memo
+    // Travis C. Fisher, Mark H. Carpenter, Jan Nordstroem, Nail K. Yamaleev and R. Charles Swanson
+    // Discretely Conservative Finite-Difference Formulations for Nonlinear Conservation Laws
+    // in Split Form: Theory and Boundary Conditions
+    // NASA/TM-2011-217307  November 2011
     {
-        int i;
-        array<FlowState,4> stencil{fsL1, fsL0, fsR0, fsR1};
-        array<Vector3,4> Vel{fsL1.vel, fsL0.vel, fsR0.vel, fsR1.vel};
-        for(i=0;i<4;++i)
-        {
-            Vel[i].transform_to_local_frame(n, t1, t2);
+        // Get local copies of the near-by flow states and transform into the frame
+        // that is local to the interface, with the local x-direction aligned with
+        // the face normal.
+        array<GasState,4> gas{fsL1.gas, fsL0.gas, fsR0.gas, fsR1.gas};
+        array<Vector3,4> vel{fsL1.vel, fsL0.vel, fsR0.vel, fsR1.vel};
+        for (int i = 0; i < 4; ++i) { vel[i].transform_to_local_frame(n, t1, t2); }
+        //
+        // Factored terms from the conservtion equations.
+        number v[10][4]; number w[10][4];
+        for (int i = 0; i < 4; ++i) {
+            number rho = gas[i].rho; number p = gas[i].p; number e = gas[i].e;
+            number velx = vel[i].x; number vely = vel[i].y; number velz = vel[i].z;
+            v[0][i] = rho;           w[0][i] = velx;  // mass
+            v[1][i] = velx*rho;      w[1][i] = velx;  // x-momentum
+            v[2][i] = vely*rho;      w[2][i] = velx;  // y-momentum
+            v[3][i] = velz*rho;      w[3][i] = velx;  // z-momentum
+            v[4][i] = e*rho;         w[4][i] = velx;  // Internal energy
+            v[5][i] = velx*velx*rho; w[5][i] = velx;  // Kinetic energy, x
+            v[6][i] = vely*vely*rho; w[6][i] = velx;  // Kinetic energy, y
+            v[7][i] = velz*velz*rho; w[7][i] = velx;  // Kinetic energy, z
+            v[8][i] = p;             w[8][i] = velx;  // Pressure work in energy equation.
+            v[9][i] = p;             w[9][i] = 1;     // Pressure in momentum equation
         }
         //
-        number v[10][4] , w[10][4]; 
-        for(i=0;i<4;++i)
-        {
-            v[0][i] = stencil[i].gas.rho;
-            w[0][i] = Vel[i].x;
-            v[1][i] = Vel[i].x * stencil[i].gas.rho;
-            w[1][i] = Vel[i].x;
-            v[2][i] = Vel[i].y * stencil[i].gas.rho;
-            w[2][i] = Vel[i].x;
-            v[3][i] = Vel[i].z * stencil[i].gas.rho;
-            w[3][i] = Vel[i].x;
-            v[4][i] = stencil[i].gas.e * stencil[i].gas.rho;
-            w[4][i] = Vel[i].x;
-            v[5][i] = Vel[i].x * Vel[i].x * stencil[i].gas.rho;
-            w[5][i] = Vel[i].x;
-            v[6][i] = Vel[i].y * Vel[i].y * stencil[i].gas.rho;
-            w[6][i] = Vel[i].x;
-            v[7][i] = Vel[i].z * Vel[i].z * stencil[i].gas.rho;
-            w[7][i] = Vel[i].x;
-            v[8][i] = stencil[i].gas.p;
-            w[8][i] = Vel[i].x;
-            v[9][i] = stencil[i].gas.p;
-            w[9][i] = 1;
-        }
-
-        number f_c[10];
-        number f_e[10];
-
-        for(i=0;i<10;++i)
-        {
-            f_c[i] = (1.0 / 12.0) * (-v[i][0] * w[i][0] + 7.0 * v[i][1] * w[i][1] + 7.0 * v[i][2] * w[i][2] - v[i][3] * w[i][3]);
-            f_e[i] = (1.0 / 12.0) * (-v[i][0] * w[i][2] - v[i][2] * w[i][0] + 8 * v[i][1] * w[i][2] + 8 * v[i][2] * w[i][1] - v[i][1] * w[i][3] - v[i][3] * w[i][1]);
+        // Fluxes.
+        number f_c[10]; number f_e[10];
+        for (int j = 0; j < 10; ++j) {
+            // Divergence-form flux (eq 3.5 in NASA/TM-2011-217307)
+            f_c[j] = (1.0/12.0) * (-v[j][0]*w[j][0] + 7.0*v[j][1]*w[j][1] + 7.0*v[j][2]*w[j][2] - v[j][3]*w[j][3]);
+            // Product-rule flux (eq 3.6 in NASA/TM-2011-217307)
+            f_e[j] = (1.0/12.0) * (-v[j][0]*w[j][2] - v[j][2]*w[j][0] + 8*v[j][1]*w[j][2]
+                                   + 8*v[j][2]*w[j][1] - v[j][1]*w[j][3] - v[j][3]*w[j][1]);
         }
         //
-        number alpha_mass = 1.0; number alpha_mom = 0.5; number alpha_ie = 0.5; number alpha_ke = 0.0; number alpha_p = 0.0;
+        // Alpha weights, as used by Jeff White.
+        constexpr number alpha_mass = 1.0;
+        constexpr number alpha_mom = 0.5;
+        constexpr number alpha_ie = 0.5;
+        constexpr number alpha_ke = 0.0;
+        constexpr number alpha_p = 0.0;
         //
-        F[CQI::mass] = alpha_mass * f_c[0] + (1.0 - alpha_mass) * f_e[0];
-        number mom_x = alpha_mom * f_c[1] + (1.0 - alpha_mom) * f_e[1] + (alpha_p * f_c[9] + (1.0 - alpha_p) * f_e[9]);
-        number mom_y = alpha_mom * f_c[2] + (1.0 - alpha_mom) * f_e[2];
-        number mom_z = alpha_mom * f_c[3] + (1.0 - alpha_mom) * f_e[3];
+        // Assemble weighted fluxes.
+        number mass_flux = alpha_mass*f_c[0] + (1.0-alpha_mass)*f_e[0];
+        F[CQI::mass] = mass_flux;
         //
+        number mom_x = alpha_mom*f_c[1] + (1.0-alpha_mom)*f_e[1] + (alpha_p*f_c[9] + (1.0-alpha_p)*f_e[9]);
+        number mom_y = alpha_mom*f_c[2] + (1.0-alpha_mom)*f_e[2];
+        number mom_z = alpha_mom*f_c[3] + (1.0-alpha_mom)*f_e[3];
         Vector3 momentum{mom_x, mom_y, mom_z};
         momentum.transform_to_global_frame(n, t1, t2);
         F[CQI::xMom] = momentum.x;
         F[CQI::yMom] = momentum.y;
         F[CQI::zMom] = momentum.z;
-        F[CQI::totEnergy] = alpha_ie * f_c[4] + (1.0 - alpha_ie) * f_e[4] + (1.0 / 2.0) * (alpha_ke * f_c[5] + (1.0 - alpha_ke) * f_e[5] + alpha_ke * f_c[6] +
-           (1.0 - alpha_ke) * f_e[6] + alpha_ke * f_c[7] + (1.0 - alpha_ke) * f_e[7]) + alpha_p * f_c[8] + (1.0 - alpha_p) * f_e[8];
+        //
+        F[CQI::totEnergy] = alpha_ie*f_c[4] + (1.0-alpha_ie)*f_e[4] +
+            0.5*(alpha_ke*f_c[5] + (1.0-alpha_ke)*f_e[5] +
+                 alpha_ke*f_c[6] + (1.0-alpha_ke)*f_e[6] +
+                 alpha_ke*f_c[7] + (1.0-alpha_ke)*f_e[7]) +
+            alpha_p*f_c[8] + (1.0-alpha_p)*f_e[8];
+        //
+        // Choose which cell to use for the species, based on which way the wind is blowing.
+        F[CQI::YB] = mass_flux * ((mass_flux >= 0.0) ? gas[1].YB : gas[2].YB);
     } // end sbp_asf()
 
 
     // And one generic flux calculation function.
 
     __host__ __device__
-    void calculate_convective_flux(FlowState& fsL1, FlowState& fsL0, FlowState& fsR0, FlowState& fsR1,
+    void calculate_convective_flux(const FlowState& fsL1, const FlowState& fsL0,
+                                   const FlowState& fsR0, const FlowState& fsR1,
                                    int flux_calc, int x_order)
     // Generic convective-flux calculation function.
     {
@@ -281,6 +356,7 @@ struct FVFace {
                 // We will interpolate only some GasState properties...
                 interp_l2r2_scalar(fsL1.gas.rho, fsL0.gas.rho, fsR0.gas.rho, fsR1.gas.rho, fsL.gas.rho, fsR.gas.rho);
                 interp_l2r2_scalar(fsL1.gas.e, fsL0.gas.e, fsR0.gas.e, fsR1.gas.e, fsL.gas.e, fsR.gas.e);
+                interp_l2r2_scalar(fsL1.gas.YB, fsL0.gas.YB, fsR0.gas.YB, fsR1.gas.YB, fsL.gas.YB, fsR.gas.YB);
                 // and make the rest consistent.
                 fsL.gas.update_from_rhoe();
                 fsR.gas.update_from_rhoe();
@@ -299,61 +375,14 @@ struct FVFace {
         }
     } // end calculate_convective_flux()
 
-    //------------------------------------------------------------------------------------
-    // Methods for viscous fluxes, using the spatial gradients.
-
-    __host__ __device__
-    void apply_viscous_boundary_condition()
-    // Set the FlowState according to the type of boundary condition.
-    // Will overwrite some of the FlowState properties computed earlier
-    // in the convective-flux calculation.
-    {
-        switch (bcCode) {
-        case 1: // BCCode::wall_no_slip_adiabatic [FIX-ME] would prefer symbolic name
-            fs.vel.set(0.0, 0.0, 0.0);
-            break;
-        case 2: // BCCode::wall_no_slip_fixed_T [FIX-ME] would prefer symbolic name
-            fs.vel.set(0.0, 0.0, 0.0);
-            fs.gas.T = 300.0; // Some nominal value [TODO] make adjustable
-            break;
-        default:
-            // Do nothing.
-            break;
-        }
-    } // end apply_viscous_boundary_condition()
-
-    __host__ __device__
-    void add_viscous_flux()
-    // Add the viscous component of the fluxes of mass, momentum and energy
-    // to the convective flux values that were computed eariler.
-    {
-        // Combine the flow-quantity gradients with the transport coefficients.
-        number mu, k;
-        fs.gas.trans_coeffs(mu, k);
-        number lmbda = -2.0/3.0 * mu;
-        // Shear stresses.
-        number tau_xx = 2.0*mu*dvxdx + lmbda*(dvxdx + dvydy + dvzdz);
-        number tau_yy = 2.0*mu*dvydy + lmbda*(dvxdx + dvydy + dvzdz);
-        number tau_zz = 2.0*mu*dvzdz + lmbda*(dvxdx + dvydy + dvzdz);
-        number tau_xy = mu * (dvxdy + dvydx);
-        number tau_xz = mu * (dvxdz + dvzdx);
-        number tau_yz = mu * (dvydz + dvzdy);
-        // Thermal conduction.
-        number qx = k * dTdx;
-        number qy = k * dTdy;
-        number qz = k * dTdz;
-        // Combine into fluxes: store as the dot product (F.n).
-        number nx = n.x; number ny = n.y; number nz = n.z;
-        // Mass flux -- NO CONTRIBUTION
-        F[CQI::xMom] -= tau_xx*nx + tau_xy*ny + tau_xz*nz;
-        F[CQI::yMom] -= tau_xy*nx + tau_yy*ny + tau_yz*nz;
-        F[CQI::zMom] -= tau_xz*nx + tau_yz*ny + tau_zz*nz;
-        F[CQI::totEnergy] -=
-            (tau_xx*fs.vel.x + tau_xy*fs.vel.y + tau_xz*fs.vel.z + qx)*nx +
-            (tau_xy*fs.vel.x + tau_yy*fs.vel.y + tau_yz*fs.vel.z + qy)*ny +
-            (tau_xz*fs.vel.x + tau_yz*fs.vel.y + tau_zz*fs.vel.z + qz)*nz;
-    } // end add_viscous_flux()
-
 }; // end FVFace
+
+
+__host__
+ostream& operator<<(ostream& os, const FVFace f)
+{
+    os << f.toString();
+    return os;
+}
 
 #endif

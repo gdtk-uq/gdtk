@@ -31,6 +31,7 @@ int main(int argc, char* argv[])
         {"job", {"-j", "--job"}, "string job-name", 1},
         {"tindx", {"-t", "--tindx"}, "integer time-index", 1},
         {"verbosity", {"-v", "--verbosity"}, "integer level of verbosity for console messages", 1},
+        {"binary", {"-b", "--binary"}, "read and write data files as binary data", 0},
     }};
     argagg::parser_results args;
     try {
@@ -40,7 +41,7 @@ int main(int argc, char* argv[])
         return 1;
     }
     if (args["help"]) {
-        cerr << "chkn-run --job=<string> [--tindx=<int>] [--verbosity=<int>]" << endl;
+        cerr << "chkn-run --job=<string> [--tindx=<int>] [--verbosity=<int>] [--binary]" << endl;
         return 0;
     }
     Config::verbosity = 0;
@@ -55,19 +56,22 @@ int main(int argc, char* argv[])
     int tindx_start = 0;
     if (args["tindx"]) tindx_start = args["tindx"].as<int>(0);
     if (Config::verbosity > 0) cout << "tindx_start: " << tindx_start << endl;
+    bool binary_data = false;
+    if (args["binary"]) binary_data = true;
+    if (Config::verbosity > 0) cout << "binary_data: " << binary_data << endl;
     try {
-        initialize_simulation(tindx_start);
+        initialize_simulation(tindx_start, binary_data);
 #ifdef CUDA
         if (!filesystem::exists(filesystem::status("/proc/driver/nvidia"))) {
             throw runtime_error("Cannot find NVIDIA driver in /proc/driver.");
         }
         cudaGetDeviceCount(&Config::nDevices);
         cout << "CUDA devices found: " << Config::nDevices << endl;
-        if (Config::nDevices > 0) { march_in_time_using_gpu(); }
+        if (Config::nDevices > 0) { march_in_time_using_gpu(binary_data); }
 #else
-        march_in_time_using_cpu_only();
+        march_in_time_using_cpu_only(binary_data);
 #endif
-        finalize_simulation();
+        finalize_simulation(binary_data);
     } catch (const runtime_error& e) {
         cerr << e.what() << endl;
     }

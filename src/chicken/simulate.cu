@@ -44,9 +44,17 @@ vector<Block> fluidBlocks;
 Block* fluidBlocks_on_gpu;
 vector<BConfig> blk_configs;
 BConfig* blk_configs_on_gpu;
+FlowState* flowStates_on_gpu;
+
+// The exchange boundary condition needs to see the collections of data,
+// so include the boundary-condition functions after defining those collections.
+#include "bcs.cu"
+
+//------------------------------------------------------------------------------------------------
+
 
 __host__
-void initialize_simulation(int tindx_start)
+void initialize_simulation(int tindx_start, bool binary_data)
 {
     char nameBuf[256];
     filesystem::path pth{Config::job};
@@ -66,21 +74,22 @@ void initialize_simulation(int tindx_start)
             throw runtime_error("blk_id=" + to_string(blk_id) + " is inconsistent: i=" +
                                 to_string(i) + " j=" + to_string(j) + " k=" + to_string(k));
         }
-        cfg.fill_in_dimensions(Config::nics[i], Config::njcs[j], Config::nkcs[k]);
+        cfg.fill_in_dimensions(Config::nics[i], Config::njcs[j], Config::nkcs[k], Config::threads_per_GPUblock);
         Block blk;
         bytes_allocated += sizeof(Block) + blk.configure(cfg);
-        sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d.gz", i, j, k);
-        string fileName = Config::job + string(nameBuf);
-        blk.readGrid(cfg, fileName);
-        sprintf(nameBuf, "/flow/t%04d/flow-%04d-%04d-%04d.zip", tindx_start, i, j, k);
-        fileName = Config::job + string(nameBuf);
-        blk.readFlow(cfg, fileName);
+        sprintf(nameBuf, "/grid/grid-%04d-%04d-%04d", i, j, k);
+        string fileName = Config::job + string(nameBuf) + ((binary_data) ? ".bin" : ".gz");
+        blk.readGrid(cfg, fileName, binary_data);
+        sprintf(nameBuf, "/flow/t%04d/flow-%04d-%04d-%04d", tindx_start, i, j, k);
+        fileName = Config::job + string(nameBuf) + ((binary_data) ? ".bin" : ".gz");
+        blk.readFlow(cfg, fileName, binary_data);
         blk.computeGeometry(cfg);
         fluidBlocks.push_back(blk);
         if (cfg.active) cells_in_simulation += cfg.nic*cfg.njc*cfg.nkc;
     }
     cout << "Cells in simulation: " << cells_in_simulation << endl;
     cout << "Bytes allocated on CPU: " << fixed << setprecision(3) << bytes_allocated/1.0e6 << "MB" << endl;
+    configure_exchange_info(fluidBlocks, blk_configs);
 #ifdef CUDA
     // We need to put a copy of the block and config data onto the GPU.
     int nbytes = blk_configs.size()*sizeof(BConfig);
@@ -102,6 +111,18 @@ void initialize_simulation(int tindx_start)
         throw runtime_error("Could not allocate fluidBlocks on gpu.");
     }
     status = cudaMemcpy(fluidBlocks_on_gpu, fluidBlocks.data(), nbytes, cudaMemcpyHostToDevice);
+    if (status) {
+        cerr << cudaGetErrorString(cudaGetLastError()) << endl;;
+        throw runtime_error("Could not copy fluidBlocks to gpu.");
+    }
+    //
+    nbytes = Config::flow_states.size()*sizeof(FlowState);
+    status = cudaMalloc(&flowStates_on_gpu, nbytes);
+    if (status) {
+        cerr << cudaGetErrorString(cudaGetLastError()) << endl;;
+        throw runtime_error("Could not allocate flowStates on gpu.");
+    }
+    status = cudaMemcpy(flowStates_on_gpu, Config::flow_states.data(), nbytes, cudaMemcpyHostToDevice);
     if (status) {
         cerr << cudaGetErrorString(cudaGetLastError()) << endl;;
         throw runtime_error("Could not copy fluidBlocks to gpu.");
@@ -136,7 +157,7 @@ void initialize_simulation(int tindx_start)
 
 
 __host__
-void write_flow_data(int tindx, number tme)
+void write_flow_data(int tindx, number tme, bool binary_data)
 {
     cout << "Write flow data at tindx=" << tindx
          << " time=" << scientific << setprecision(3) << tme << endl;
@@ -148,9 +169,9 @@ void write_flow_data(int tindx, number tme)
     for (int blk_id=0; blk_id < Config::nFluidBlocks; ++blk_id) {
         BConfig& blk_config = blk_configs[blk_id];
         int i = blk_config.i; int j = blk_config.j; int k = blk_config.k;
-        sprintf(nameBuf, "%s/flow-%04d-%04d-%04d.zip", flowDir.c_str(), i, j, k);
-        string fileName = string(nameBuf);
-        fluidBlocks[blk_id].writeFlow(blk_config, fileName);
+        sprintf(nameBuf, "%s/flow-%04d-%04d-%04d", flowDir.c_str(), i, j, k);
+        string fileName = string(nameBuf) + ((binary_data) ? ".bin" : ".gz");
+        fluidBlocks[blk_id].writeFlow(blk_config, fileName, binary_data);
     }
     // Update the times file.
     ofstream timesFile(Config::job+"/times.data", ofstream::binary|ofstream::app);
@@ -159,51 +180,8 @@ void write_flow_data(int tindx, number tme)
 } // end write_flow_data()
 
 
-// Repetitive boundary condition code is hidden here.
-#include "bcs.cu"
-
-
 __host__
-void apply_boundary_conditions_for_convective_fluxes()
-// Fill in the flow properties for ghost cells that sit around the block boundaries.
-//
-// Since the boundary-condition code needs a view of all blocks and
-// most of the coperations are switching between code to copy specific data,
-// we expect the CPU to apply the boundary conditions more effectively than the GPU.
-// Measurements might tell us otherwise.
-{
-    #pragma omp parallel for
-    for (int iblk=0; iblk < Config::nFluidBlocks; iblk++) {
-        BConfig& blk_config = blk_configs[iblk];
-        if (!blk_config.active) continue;
-        for (int ibc=0; ibc < 6; ibc++) {
-            switch (blk_config.bcCodes[ibc]) {
-            case BCCode::wall_with_slip:
-                bc_wall_with_slip(iblk, ibc);
-                break;
-            case BCCode::wall_no_slip_adiabatic:
-            case BCCode::wall_no_slip_fixed_T:
-                bc_wall_no_slip(iblk, ibc);
-                break;
-            case BCCode::exchange:
-                bc_exchange(iblk, ibc);
-                break;
-            case BCCode::inflow:
-                bc_inflow(iblk, ibc, Config::flow_states[blk_config.bc_fs[ibc]]);
-                break;
-            case BCCode::outflow:
-                bc_outflow(iblk, ibc);
-                break;
-            default:
-                throw runtime_error("Invalid bcCode: "+to_string(blk_config.bcCodes[ibc]));
-            }
-        } // end for ibc
-    } // end for iblk
-} // end apply_boundary_conditions_for_convective_fluxes()
-
-
-__host__
-void march_in_time_using_cpu_only()
+void march_in_time_using_cpu_only(bool binary_data)
 // Variant of the main simulation function which uses only the CPU.
 // We retain this function as a reasonably-easy-to-read reference code,
 // while be build the GPU variant.
@@ -255,8 +233,8 @@ void march_in_time_using_cpu_only()
             if (cfg.active) {
                 blk.calculate_convective_fluxes(Config::flux_calc, Config::x_order);
                 if (Config::viscous) {
-                    blk.apply_viscous_boundary_conditions();
-                    blk.add_viscous_flux();
+                    apply_viscous_boundary_conditions(blk);
+                    blk.add_viscous_fluxes();
                 }
                 bad_cell_counts[ib] = blk.update_stage_1(cfg, SimState::dt);
             }
@@ -276,8 +254,8 @@ void march_in_time_using_cpu_only()
             if (cfg.active) {
                 blk.calculate_convective_fluxes(Config::flux_calc, Config::x_order);
                 if (Config::viscous) {
-                    blk.apply_viscous_boundary_conditions();
-                    blk.add_viscous_flux();
+                    apply_viscous_boundary_conditions(blk);
+                    blk.add_viscous_fluxes();
                 }
                 bad_cell_counts[ib] = blk.update_stage_2(cfg, SimState::dt);
             }
@@ -297,8 +275,8 @@ void march_in_time_using_cpu_only()
             if (cfg.active) {
                 blk.calculate_convective_fluxes(Config::flux_calc, Config::x_order);
                 if (Config::viscous) {
-                    blk.apply_viscous_boundary_conditions();
-                    blk.add_viscous_flux();
+                    apply_viscous_boundary_conditions(blk);
+                    blk.add_viscous_fluxes();
                 }
                 bad_cell_counts[ib] = blk.update_stage_3(cfg, SimState::dt);
             }
@@ -313,6 +291,16 @@ void march_in_time_using_cpu_only()
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (cfg.active) blk.copy_conserved_data(cfg, 1, 0);
+        }
+        //
+        // Apply the chemical reaction, operator split.
+        if (Config::reacting) {
+            #pragma omp parallel for
+            for (int ib=0; ib < Config::nFluidBlocks; ib++) {
+                BConfig& cfg = blk_configs[ib];
+                Block& blk = fluidBlocks[ib];
+                if (cfg.active) blk.update_chemistry(cfg, SimState::dt);
+            }
         }
         //
         SimState::t += SimState::dt;
@@ -339,19 +327,175 @@ void march_in_time_using_cpu_only()
         //
         // Occasionally dump the flow data for making plots.
         if (SimState::t >= SimState::t_plot) {
-            write_flow_data(SimState::next_plot_indx, SimState::t);
+            write_flow_data(SimState::next_plot_indx, SimState::t, binary_data);
             SimState::steps_since_last_plot = 0;
             SimState::next_plot_indx += 1;
             SimState::t_plot = SimState::t + Config::dt_plot_schedule.get_value(SimState::t);
         }
     } // end while loop
+    //
+    allowed_dts.resize(0);
+    bad_cell_counts.resize(0);
+    //
     if (Config::verbosity > 0) cout << "march_in_time_using_cpu_only() end" << endl;
     return;
 } // end march_in_time_using_cpu_only()
 
+// GPU kernel functions
+
+
+// GPU global functions cannot be member functions of FluidBlock
+// so we need to pass the FluidBlock reference into them and that
+// Block struct also needs to be in the global memory of the GPU.
+
+__global__
+void estimate_allowed_dt_on_gpu(Block& blk, const BConfig& cfg, number cfl, long long int* smallest_dt_picos)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FVCell& c = blk.cells_on_gpu[i];
+        Vector3 inorm = blk.faces_on_gpu[c.face[Face::iminus]].n;
+        Vector3 jnorm = blk.faces_on_gpu[c.face[Face::jminus]].n;
+        Vector3 knorm = blk.faces_on_gpu[c.face[Face::kminus]].n;
+        long long int dt_picos = trunc(c.estimate_local_dt(inorm, jnorm, knorm, cfl)*1.0e12);
+        atomicMin(smallest_dt_picos, dt_picos);
+    }
+}
+
+__global__
+void encodeConserved_on_gpu(Block& blk, const BConfig& cfg, int level)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FlowState& fs = blk.cells_on_gpu[i].fs;
+        ConservedQuantities& U = blk.Q_on_gpu[level*cfg.nActiveCells + i];
+        fs.encode_conserved(U);
+    }
+}
+
+__global__
+void copy_conserved_data_on_gpu(Block& blk, const BConfig& cfg, int from_level, int to_level)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        ConservedQuantities U_from = blk.Q_on_gpu[from_level*cfg.nActiveCells + i];
+        blk.Q_on_gpu[to_level*cfg.nActiveCells + i] = U_from;
+    }
+}
+
+__global__
+void setup_LSQ_arrays_on_gpu(Block& blk, const BConfig& cfg, int* failures)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nFaces) {
+        FVFace& face = blk.faces_on_gpu[i];
+        int flag = setup_LSQ_arrays_at_face(face, blk.cells_on_gpu, blk.faces_on_gpu);
+        atomicAdd(failures, flag);
+    }
+}
+
+__global__
+void calculate_fluxes_on_gpu(Block& blk, const BConfig& cfg,
+                             FlowState flowStates_on_gpu[], Block blks_on_gpu[],
+                             int flux_calc, int x_order, bool viscous)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nFaces) {
+        FVFace& face = blk.faces_on_gpu[i];
+        apply_convective_boundary_condition(face, blk.cells_on_gpu, flowStates_on_gpu, blks_on_gpu);
+        FlowState& fsL1 = blk.cells_on_gpu[face.left_cells[1]].fs;
+        FlowState& fsL0 = blk.cells_on_gpu[face.left_cells[0]].fs;
+        FlowState& fsR0 = blk.cells_on_gpu[face.right_cells[0]].fs;
+        FlowState& fsR1 = blk.cells_on_gpu[face.right_cells[1]].fs;
+        face.calculate_convective_flux(fsL1, fsL0, fsR0, fsR1, flux_calc, x_order);
+        if (viscous) {
+            apply_viscous_boundary_condition(face);
+            add_viscous_fluxes_at_face(face, blk.cells_on_gpu, blk.faces_on_gpu);
+        }
+    }
+}
+
+__global__
+void update_stage_1_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, int* bad_cell_count)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FVCell& c = blk.cells_on_gpu[i];
+        ConservedQuantities dUdt0;
+        c.eval_dUdt(dUdt0, blk.faces_on_gpu, isrc);
+        blk.dQdt_on_gpu[i] = dUdt0; // keep
+        ConservedQuantities U = blk.Q_on_gpu[i]; // U0
+        for (int j=0; j < CQI::n; j++) { U[j] += dt*dUdt0[j]; }
+        blk.Q_on_gpu[cfg.nActiveCells + i] = U; // keep update
+        int bad_cell_flag = c.fs.decode_conserved(U);
+        atomicAdd(bad_cell_count, bad_cell_flag);
+        if (bad_cell_flag) {
+            printf("Stage 1 update, Bad cell at pos x=%g y=%g z=%g\n", c.pos.x, c.pos.y, c.pos.z);
+        }
+    }
+}
+
+__global__
+void update_stage_2_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, int* bad_cell_count)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FVCell& c = blk.cells_on_gpu[i];
+        ConservedQuantities dUdt0 = blk.dQdt_on_gpu[i];
+        ConservedQuantities dUdt1;
+        c.eval_dUdt(dUdt1, blk.faces_on_gpu, isrc);
+        blk.dQdt_on_gpu[cfg.nActiveCells + i] = dUdt1; // keep
+        ConservedQuantities U = blk.Q_on_gpu[i]; // U0
+        for (int j=0; j < CQI::n; j++) { U[j] += 0.25*dt*(dUdt0[j] + dUdt1[j]); }
+        blk.Q_on_gpu[cfg.nActiveCells + i] = U; // keep update
+        int bad_cell_flag = c.fs.decode_conserved(U);
+        atomicAdd(bad_cell_count, bad_cell_flag);
+        if (bad_cell_flag) {
+            printf("Stage 2 update, Bad cell at pos x=%g y=%g z=%g\n", c.pos.x, c.pos.y, c.pos.z);
+        }
+    }
+}
+
+__global__
+void update_stage_3_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, int* bad_cell_count)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FVCell& c = blk.cells_on_gpu[i];
+        ConservedQuantities dUdt0 = blk.dQdt_on_gpu[i];
+        ConservedQuantities dUdt1 = blk.dQdt_on_gpu[cfg.nActiveCells + i];
+        ConservedQuantities dUdt2;
+        c.eval_dUdt(dUdt2, blk.faces_on_gpu, isrc);
+        // blk.dQdt_on_gpu[2*cfg.nActiveCells + i] = dUdt2; // no need to keep, last stage
+        ConservedQuantities U = blk.Q_on_gpu[i]; // U0
+        for (int j=0; j < CQI::n; j++) {
+            U[j] += dt*(1.0/6.0*dUdt0[j] + 1.0/6.0*dUdt1[j] + 4.0/6.0*dUdt2[j]);
+        }
+        blk.Q_on_gpu[cfg.nActiveCells + i] = U; // keep update
+        int bad_cell_flag = c.fs.decode_conserved(U);
+        atomicAdd(bad_cell_count, bad_cell_flag);
+        if (bad_cell_flag) {
+            printf("Stage 3 update, Bad cell at pos x=%g y=%g z=%g\n", c.pos.x, c.pos.y, c.pos.z);
+        }
+    }
+}
+
+__global__
+void update_chemistry_on_gpu(Block& blk, const BConfig& cfg, number dt)
+{
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+    if (i < cfg.nActiveCells) {
+        FlowState& fs = blk.cells_on_gpu[i].fs;
+        GasState& gs = fs.gas;
+        gs.update_chemistry(dt);
+        ConservedQuantities& U = blk.Q_on_gpu[i];  // presume level 0
+        fs.encode_conserved(U);
+    }
+}
+
 
 __host__
-void march_in_time_using_gpu()
+void march_in_time_using_gpu(bool binary_data)
 // Variant of the main simulation function where we may offload work to the GPU.
 {
     if (Config::verbosity > 0) cout << "march_in_time_using_gpu() start" << endl;
@@ -370,7 +514,7 @@ void march_in_time_using_gpu()
     status = cudaMalloc(&failed_lsq_setup_on_gpu, sizeof(int));
     if (status) throw runtime_error("Could not allocate failed_lsq_setup_on_gpu.");
     status = cudaMemcpy(failed_lsq_setup_on_gpu, &failed_lsq_setup, sizeof(int), cudaMemcpyHostToDevice);
-    if (status) throw runtime_error("Stage 0, could not copy failed_lsq_setup to gpu.");
+    if (status) throw runtime_error("Could not copy failed_lsq_setup to gpu.");
     //
     long long int* smallest_dt_picos_on_gpu;
     status = cudaMalloc(&smallest_dt_picos_on_gpu, sizeof(long long int));
@@ -405,13 +549,13 @@ void march_in_time_using_gpu()
         Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
         BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
         int nGPUblocks = cfg.nGPUblocks_for_cells;
-        int nGPUthreads = cfg.threads_per_GPUblock;
+        int nGPUthreads = Config::threads_per_GPUblock;
         encodeConserved_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, 0);
         auto cudaError = cudaGetLastError();
         if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
         if (Config::viscous) {
             nGPUblocks = cfg.nGPUblocks_for_faces;
-            nGPUthreads = cfg.threads_per_GPUblock;
+            nGPUthreads = Config::threads_per_GPUblock;
             setup_LSQ_arrays_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, failed_lsq_setup_on_gpu);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
@@ -430,8 +574,7 @@ void march_in_time_using_gpu()
         // Occasionally determine allowable time step.
         if (SimState::step > 0 && (SimState::step % Config::cfl_count)==0) {
             long long int smallest_dt_picos = numeric_limits<long long int>::max();
-            status = cudaMemcpy(smallest_dt_picos_on_gpu, &smallest_dt_picos,
-                sizeof(long long int), cudaMemcpyHostToDevice);
+            status = cudaMemcpy(smallest_dt_picos_on_gpu, &smallest_dt_picos, sizeof(long long int), cudaMemcpyHostToDevice);
             if (status) throw runtime_error("Stage 0, could not copy smallest_dt_picos to gpu.");
             number cfl = Config::cfl_schedule.get_value(SimState::t);
             for (int ib=0; ib < Config::nFluidBlocks; ib++) {
@@ -441,14 +584,12 @@ void march_in_time_using_gpu()
                 Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
                 BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
                 int nGPUblocks = cfg.nGPUblocks_for_cells;
-                int nGPUthreads = cfg.threads_per_GPUblock;
-                estimate_allowed_dt_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
-                                                                       cfl, smallest_dt_picos_on_gpu);
+                int nGPUthreads = Config::threads_per_GPUblock;
+                estimate_allowed_dt_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, cfl, smallest_dt_picos_on_gpu);
                 auto cudaError = cudaGetLastError();
                 if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
             }
-            status = cudaMemcpy(&smallest_dt_picos, smallest_dt_picos_on_gpu,
-                sizeof(long long int), cudaMemcpyDeviceToHost);
+            status = cudaMemcpy(&smallest_dt_picos, smallest_dt_picos_on_gpu, sizeof(long long int), cudaMemcpyDeviceToHost);
             if (status) throw runtime_error("Stage 0, could not copy smallest_dt_picos from gpu to host cpu.");
             SimState::dt = smallest_dt_picos * 1.0e-12;
         }
@@ -460,48 +601,23 @@ void march_in_time_using_gpu()
         //
         // Stage 1.
         // number t = SimState::t; // Only needed if we have time-dependent source terms or BCs.
-        apply_boundary_conditions_for_convective_fluxes();
-        // Boundary-conditions are done on the host CPU, affecting only the ghost-cell data,
-        // so we copy just the ghost cell data onto the GPU,
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
             if (!cfg.active) continue;
-            FVCell* addr_on_cpu = blk.cells.data() + cfg.nActiveCells;
-            FVCell* addr_on_gpu = blk.cells_on_gpu + cfg.nActiveCells;
-            int nbytes = cfg.nTotalGhostCells*sizeof(FVCell);
-            auto status = cudaMemcpy(addr_on_gpu, addr_on_cpu, nbytes, cudaMemcpyHostToDevice);
-            if (status) {
-                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Stage 1, could not copy ghost cells to gpu.");
-            }
-        }
-        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = blk_configs[ib];
-            Block& blk = fluidBlocks[ib];
-            if (!cfg.active) continue;
-            // Do the stage-1 update on the GPU.
             Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
             BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
             //
             int nGPUblocks = cfg.nGPUblocks_for_faces;
-            int nGPUthreads = cfg.threads_per_GPUblock;
-            calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
-                                                                           Config::flux_calc, Config::x_order);
+            int nGPUthreads = Config::threads_per_GPUblock;
+            calculate_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, flowStates_on_gpu, fluidBlocks_on_gpu,
+                                                                Config::flux_calc, Config::x_order, Config::viscous);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            if (Config::viscous) {
-                apply_viscous_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
-                cudaError = cudaGetLastError();
-                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-                add_viscous_flux_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
-                cudaError = cudaGetLastError();
-                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            }
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
-            nGPUthreads = cfg.threads_per_GPUblock;
-            update_stage_1_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
+            nGPUthreads = Config::threads_per_GPUblock;
+            update_stage_1_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::source_terms,
                                                               SimState::dt, bad_cell_count_on_gpu);
             cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
@@ -511,36 +627,9 @@ void march_in_time_using_gpu()
         if (bad_cell_count > 0) {
             throw runtime_error("Stage 1, bad cell count: "+to_string(bad_cell_count));
         }
-        // Copy cell data back to the CPU for just the active cells.
-        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = blk_configs[ib];
-            Block& blk = fluidBlocks[ib];
-            if (!cfg.active) continue;
-            int nbytes = cfg.nActiveCells*sizeof(FVCell);
-            auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
-            if (status) {
-                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Stage 1, could not copy blk.cells from gpu to cpu.");
-            }
-        }
         //
         // Stage 2
         // t = SimState::t + 0.5*SimState::dt;
-        apply_boundary_conditions_for_convective_fluxes();
-        //
-        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = blk_configs[ib];
-            Block& blk = fluidBlocks[ib];
-            if (!cfg.active) continue;
-            FVCell* addr_on_cpu = blk.cells.data() + cfg.nActiveCells;
-            FVCell* addr_on_gpu = blk.cells_on_gpu + cfg.nActiveCells;
-            int nbytes = cfg.nTotalGhostCells*sizeof(FVCell);
-            auto status = cudaMemcpy(addr_on_gpu, addr_on_cpu, nbytes, cudaMemcpyHostToDevice);
-            if (status) {
-                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Stage 2, could not copy ghost cells to gpu.");
-            }
-        }
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
@@ -550,23 +639,15 @@ void march_in_time_using_gpu()
             BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
             //
             int nGPUblocks = cfg.nGPUblocks_for_faces;
-            int nGPUthreads = cfg.threads_per_GPUblock;
-            calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
-                                                                           Config::flux_calc, Config::x_order);
+            int nGPUthreads = Config::threads_per_GPUblock;
+            calculate_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, flowStates_on_gpu, fluidBlocks_on_gpu,
+                                                                Config::flux_calc, Config::x_order, Config::viscous);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            if (Config::viscous) {
-                apply_viscous_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
-                cudaError = cudaGetLastError();
-                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-                add_viscous_flux_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
-                cudaError = cudaGetLastError();
-                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            }
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
-            nGPUthreads = cfg.threads_per_GPUblock;
-            update_stage_2_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
+            nGPUthreads = Config::threads_per_GPUblock;
+            update_stage_2_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::source_terms,
                                                               SimState::dt, bad_cell_count_on_gpu);
             cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
@@ -576,36 +657,9 @@ void march_in_time_using_gpu()
         if (bad_cell_count > 0) {
             throw runtime_error("Stage 2, bad cell count: "+to_string(bad_cell_count));
         }
-        // Copy cell data back to the CPU for just the active cells.
-        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = blk_configs[ib];
-            Block& blk = fluidBlocks[ib];
-            if (!cfg.active) continue;
-            int nbytes = cfg.nActiveCells*sizeof(FVCell);
-            auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
-            if (status) {
-                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Stage 2, could not copy blk.cells from gpu to cpu.");
-            }
-        }
         //
         // Stage 3
         // t = SimState::t + SimState::dt;
-        apply_boundary_conditions_for_convective_fluxes();
-        //
-        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = blk_configs[ib];
-            Block& blk = fluidBlocks[ib];
-            if (!cfg.active) continue;
-            FVCell* addr_on_cpu = blk.cells.data() + cfg.nActiveCells;
-            FVCell* addr_on_gpu = blk.cells_on_gpu + cfg.nActiveCells;
-            int nbytes = cfg.nTotalGhostCells*sizeof(FVCell);
-            auto status = cudaMemcpy(addr_on_gpu, addr_on_cpu, nbytes, cudaMemcpyHostToDevice);
-            if (status) {
-                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Stage 3, could not copy ghost cells to gpu.");
-            }
-        }
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
             Block& blk = fluidBlocks[ib];
@@ -615,23 +669,15 @@ void march_in_time_using_gpu()
             BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
             //
             int nGPUblocks = cfg.nGPUblocks_for_faces;
-            int nGPUthreads = cfg.threads_per_GPUblock;
-            calculate_convective_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
-                                                                           Config::flux_calc, Config::x_order);
+            int nGPUthreads = Config::threads_per_GPUblock;
+            calculate_fluxes_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, flowStates_on_gpu, fluidBlocks_on_gpu,
+                                                                Config::flux_calc, Config::x_order, Config::viscous);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            if (Config::viscous) {
-                apply_viscous_boundary_conditions_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
-                cudaError = cudaGetLastError();
-                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-                add_viscous_flux_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu);
-                cudaError = cudaGetLastError();
-                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
-            }
             //
             nGPUblocks = cfg.nGPUblocks_for_cells;
-            nGPUthreads = cfg.threads_per_GPUblock;
-            update_stage_3_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu,
+            nGPUthreads = Config::threads_per_GPUblock;
+            update_stage_3_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, Config::source_terms,
                                                               SimState::dt, bad_cell_count_on_gpu);
             cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
@@ -641,18 +687,6 @@ void march_in_time_using_gpu()
         if (bad_cell_count > 0) {
             throw runtime_error("Stage 3, bad cell count: "+to_string(bad_cell_count));
         }
-        // Copy cell data back to the CPU for just the active cells.
-        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
-            BConfig& cfg = blk_configs[ib];
-            Block& blk = fluidBlocks[ib];
-            if (!cfg.active) continue;
-            int nbytes = cfg.nActiveCells*sizeof(FVCell);
-            auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
-            if (status) {
-                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
-                throw runtime_error("Stage 3, could not copy blk.cells from gpu to cpu.");
-            }
-        }
         // After a successful gasdynamic update, copy the conserved data back to level 0 on the GPU.
         for (int ib=0; ib < Config::nFluidBlocks; ib++) {
             BConfig& cfg = blk_configs[ib];
@@ -661,10 +695,26 @@ void march_in_time_using_gpu()
             Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
             BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
             int nGPUblocks = cfg.nGPUblocks_for_cells;
-            int nGPUthreads = cfg.threads_per_GPUblock;
+            int nGPUthreads = Config::threads_per_GPUblock;
             copy_conserved_data_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, 1, 0);
             auto cudaError = cudaGetLastError();
             if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+        }
+        //
+        // Apply the chemical reaction, operator split.
+        if (Config::reacting) {
+            for (int ib=0; ib < Config::nFluidBlocks; ib++) {
+                BConfig& cfg = blk_configs[ib];
+                Block& blk = fluidBlocks[ib];
+                if (!cfg.active) continue;
+                Block& blk_on_gpu = fluidBlocks_on_gpu[ib];
+                BConfig& cfg_on_gpu = blk_configs_on_gpu[ib];
+                int nGPUblocks = cfg.nGPUblocks_for_cells;
+                int nGPUthreads = Config::threads_per_GPUblock;
+                update_chemistry_on_gpu<<<nGPUblocks,nGPUthreads>>>(blk_on_gpu, cfg_on_gpu, SimState::dt);
+                auto cudaError = cudaGetLastError();
+                if (cudaError) throw runtime_error(cudaGetErrorString(cudaError));
+            }
         }
         //
         SimState::t += SimState::dt;
@@ -691,7 +741,19 @@ void march_in_time_using_gpu()
         //
         // Occasionally dump the flow data for making plots.
         if (SimState::t >= SimState::t_plot) {
-            write_flow_data(SimState::next_plot_indx, SimState::t);
+            // Copy cell data back to the CPU for just the active cells.
+            for (int ib=0; ib < Config::nFluidBlocks; ib++) {
+                BConfig& cfg = blk_configs[ib];
+                Block& blk = fluidBlocks[ib];
+                if (!cfg.active) continue;
+                int nbytes = cfg.nActiveCells*sizeof(FVCell);
+                auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
+                if (status) {
+                    cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+                    throw runtime_error("On dump flow data for plot, could not copy blk.cells from gpu to cpu.");
+                }
+            }
+            write_flow_data(SimState::next_plot_indx, SimState::t, binary_data);
             SimState::steps_since_last_plot = 0;
             SimState::next_plot_indx += 1;
             SimState::t_plot = SimState::t + Config::dt_plot_schedule.get_value(SimState::t);
@@ -703,10 +765,24 @@ void march_in_time_using_gpu()
 
 
 __host__
-void finalize_simulation()
+void finalize_simulation(bool binary_data)
 {
     if (SimState::steps_since_last_plot > 0) {
-        write_flow_data(SimState::next_plot_indx, SimState::t);
+        #ifdef CUDA
+        // Copy cell data back to the CPU for just the active cells.
+        for (int ib=0; ib < Config::nFluidBlocks; ib++) {
+            BConfig& cfg = blk_configs[ib];
+            Block& blk = fluidBlocks[ib];
+            if (!cfg.active) continue;
+            int nbytes = cfg.nActiveCells*sizeof(FVCell);
+            auto status = cudaMemcpy(blk.cells.data(), blk.cells_on_gpu, nbytes, cudaMemcpyDeviceToHost);
+            if (status) {
+                cerr << cudaGetErrorString(cudaGetLastError()) << endl;
+                throw runtime_error("Finalize, could not copy blk.cells from gpu to cpu.");
+            }
+        }
+        #endif
+        write_flow_data(SimState::next_plot_indx, SimState::t, binary_data);
     }
     for (Block& blk : fluidBlocks) {
         blk.releaseMemory();
