@@ -319,7 +319,9 @@ struct Block {
                     // Set cloud of FlowStates for gradient calculations of viscous fluxes.
                     if (i == 0) {
                         f.bcCode = cfg.bcCodes[Face::iminus];
-                        if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
+                        if (f.bcCode == BCCode::wall_with_slip ||
+                            f.bcCode == BCCode::wall_no_slip_adiabatic ||
+                            f.bcCode == BCCode::wall_no_slip_fixed_T) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j,k), -1};
                             f.cloud_nc = 1;
@@ -333,7 +335,9 @@ struct Block {
                         f.cloud_nf = 4;
                     } else if (i == cfg.nic) {
                         f.bcCode = cfg.bcCodes[Face::iplus];
-                        if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
+                        if (f.bcCode == BCCode::wall_with_slip ||
+                            f.bcCode == BCCode::wall_no_slip_adiabatic ||
+                            f.bcCode == BCCode::wall_no_slip_fixed_T) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i-1,j,k), -1};
                             f.cloud_nc = 1;
@@ -416,7 +420,9 @@ struct Block {
                     // Set cloud of FlowStates for gradient calculations of viscous fluxes.
                     if (j == 0) {
                         f.bcCode = cfg.bcCodes[Face::jminus];
-                        if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
+                        if (f.bcCode == BCCode::wall_with_slip ||
+                            f.bcCode == BCCode::wall_no_slip_adiabatic ||
+                            f.bcCode == BCCode::wall_no_slip_fixed_T) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j,k), -1};
                             f.cloud_nc = 1;
@@ -430,7 +436,9 @@ struct Block {
                         f.cloud_nf = 4;
                     } else if (j == cfg.njc) {
                         f.bcCode = cfg.bcCodes[Face::jplus];
-                        if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
+                        if (f.bcCode == BCCode::wall_with_slip ||
+                            f.bcCode == BCCode::wall_no_slip_adiabatic ||
+                            f.bcCode == BCCode::wall_no_slip_fixed_T) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j-1,k), -1};
                             f.cloud_nc = 1;
@@ -513,7 +521,9 @@ struct Block {
                     // Set cloud of FlowStates for gradient calculations of viscous fluxes.
                     if (k == 0) {
                         f.bcCode = cfg.bcCodes[Face::kminus];
-                        if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
+                        if (f.bcCode == BCCode::wall_with_slip ||
+                            f.bcCode == BCCode::wall_no_slip_adiabatic ||
+                            f.bcCode == BCCode::wall_no_slip_fixed_T) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j,k), -1};
                             f.cloud_nc = 1;
@@ -527,7 +537,9 @@ struct Block {
                         f.cloud_nf = 4;
                     } else if (k == cfg.nkc) {
                         f.bcCode = cfg.bcCodes[Face::kplus];
-                        if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
+                        if (f.bcCode == BCCode::wall_with_slip ||
+                            f.bcCode == BCCode::wall_no_slip_adiabatic ||
+                            f.bcCode == BCCode::wall_no_slip_fixed_T) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j,k-1), -1};
                             f.cloud_nc = 1;
@@ -1051,6 +1063,24 @@ struct Block {
         cout << "DEBUG posL0=" << posL0 << " fsL0=" << fsL0 << endl;
         cout << "DEBUG posR0=" << posR0 << " fsR0=" << fsR0 << endl;
         cout << "DEBUG posR1=" << posR1 << " fsR1=" << fsR1 << endl;
+    }
+
+    __host__
+    void WRITE_DEBUG_DATA2(string label, int fIndx)
+    {
+        cout << "DEBUG " << label << endl;
+        FVFace f = faces[fIndx];
+        cout << "DEBUG faces[" << fIndx << "]=" << f << endl;
+        cout << "DEBUG cells in cloud" << endl;
+        for (int i=0; i < f.cloud_nc; i++) {
+            cout << "DEBUG i=" << i << " pos=" << cells[f.cells_in_cloud[i]].pos
+                 << " fs=" << cells[f.cells_in_cloud[i]].fs << endl;
+        }
+        cout << "DEBUG faces in cloud" << endl;
+        for (int i=0; i < f.cloud_nf; i++) {
+            cout << "DEBUG i=" << i << " pos=" << faces[f.faces_in_cloud[i]].pos
+                 << " fs=" << faces[f.faces_in_cloud[i]].fs << endl;
+        }
     }
 
     __host__

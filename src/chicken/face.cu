@@ -150,8 +150,10 @@ struct FVFace {
              << ", other_blkId=" << other_blkId << ", other_cells=[" << other_cells[0]
              << ", " << other_cells[1] << "], inflowId=" << inflowId
              << ", TWall=" << TWall << ", bcFun=" << bcFun;
+        repr << ", cloud_nc=" << cloud_nc << ", cloud_nf=" << cloud_nf;
         repr << ", cells_in_cloud=["; for (auto i : cells_in_cloud) repr << i <<","; repr << "]";
         repr << ", faces_in_cloud=["; for (auto i : faces_in_cloud) repr << i <<","; repr << "]";
+        repr << ", fs=" << fs;
         repr << ")";
         return repr.str();
     }
