@@ -47,23 +47,20 @@ int setup_LSQ_arrays_at_face(FVFace& f, FVCell cells[], FVFace faces[])
     // These are the square of the weights on the original linear constraint eqns
     // and are calculated with the face centre as the reference point.
     number weights2[cloud_nmax];
-    number x0 = f.pos.x; number y0 = f.pos.y; number z0 = f.pos.z;
-    for (int i=0; i < cloud_n; i++) {
-        number dx = cloud_pos[i]->x - x0;
-        number dy = cloud_pos[i]->y - y0;
-        number dz = cloud_pos[i]->z - z0;
-        weights2[i] = 1.0/(dx*dx+dy*dy+dz*dz);
-    }
-    //
-    // Set up the matrix for the normal equations.
-    //
     number dx[cloud_nmax], dy[cloud_nmax], dz[cloud_nmax];
-    number xx = 0.0; number xy = 0.0; number xz = 0.0;
-    number yy = 0.0; number yz = 0.0; number zz = 0.0;
+    number x0 = f.pos.x; number y0 = f.pos.y; number z0 = f.pos.z;
     for (int i=0; i < cloud_n; i++) {
         dx[i] = cloud_pos[i]->x - x0;
         dy[i] = cloud_pos[i]->y - y0;
         dz[i] = cloud_pos[i]->z - z0;
+        weights2[i] = 1.0/(dx[i]*dx[i] + dy[i]*dy[i] + dz[i]*dz[i]);
+    }
+    //
+    // Set up the matrix for the normal equations.
+    //
+    number xx = 0.0; number xy = 0.0; number xz = 0.0;
+    number yy = 0.0; number yz = 0.0; number zz = 0.0;
+    for (int i=0; i < cloud_n; i++) {
         xx += weights2[i]*dx[i]*dx[i];
         xy += weights2[i]*dx[i]*dy[i];
         xz += weights2[i]*dx[i]*dz[i];
@@ -83,12 +80,9 @@ int setup_LSQ_arrays_at_face(FVFace& f, FVCell cells[], FVFace faces[])
     }
     // Prepare final weights for later use in the reconstruction phase.
     for (int i=0; i < cloud_n; i++) {
-        f.wx[i] = xTxInv[0][0]*dx[i] + xTxInv[0][1]*dy[i] + xTxInv[0][2]*dz[i];
-        f.wx[i] *= weights2[i];
-        f.wy[i] = xTxInv[1][0]*dx[i] + xTxInv[1][1]*dy[i] + xTxInv[1][2]*dz[i];
-        f.wy[i] *= weights2[i];
-        f.wz[i] = xTxInv[2][0]*dx[i] + xTxInv[2][1]*dy[i] + xTxInv[2][2]*dz[i];
-        f.wz[i] *= weights2[i];
+        f.wx[i] = weights2[i]*(xTxInv[0][0]*dx[i] + xTxInv[0][1]*dy[i] + xTxInv[0][2]*dz[i]);
+        f.wy[i] = weights2[i]*(xTxInv[1][0]*dx[i] + xTxInv[1][1]*dy[i] + xTxInv[1][2]*dz[i]);
+        f.wz[i] = weights2[i]*(xTxInv[2][0]*dx[i] + xTxInv[2][1]*dy[i] + xTxInv[2][2]*dz[i]);
     }
     return 0; // All weights successfully computed.
 } // end setup_LSQ_arrays()
@@ -157,7 +151,7 @@ void add_viscous_fluxes_at_face(FVFace& f, FVCell cells[], FVFace faces[])
     number qz = k * grad_T.z;
     // Combine into fluxes: store as the dot product (F.n).
     Vector3 n = f.n;
-    ConservedQuantities F = f.F; // face folds convective fluxes already.
+    ConservedQuantities F = f.F; // face holds convective fluxes already.
     // Mass flux -- NO CONTRIBUTION
     F[CQI::xMom] -= tau_xx*n.x + tau_xy*n.y + tau_xz*n.z;
     F[CQI::yMom] -= tau_xy*n.x + tau_yy*n.y + tau_yz*n.z;
@@ -559,7 +553,7 @@ struct Block {
             }
         }
         //
-        // Now that the faces exist, we can over write the TWall values if the FixedWallT
+        // Now that the faces exist, we can overwrite the TWall values in the FixedWallT
         // boundary conditions were set with individual temperature values for each face.
         for (int bf=0; bf < 6; bf++) {
             if (cfg.bcCodes[bf] == BCCode::wall_no_slip_fixed_T && cfg.bc_TWall_form[bf] == TWallForm::fun) {
