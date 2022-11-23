@@ -272,6 +272,14 @@ public:
         }
         return e_ve;
     }
+    @nogc
+    override number cpPerSpecies(in GasState gs, int isp)
+    {
+        // Using the fact that internal structure specific heats
+        // are equal, that is, Cp_vib = Cv_vib
+        return mCpTR[isp] + vibElecCvPerSpecies(gs.T_modes[0], isp);
+    }
+
 
 private:
     double[] mR;

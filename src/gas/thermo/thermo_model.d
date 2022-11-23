@@ -35,4 +35,5 @@ public:
     @nogc number enthalpyPerSpeciesInMode(in GasState gs, int isp, int imode);
     @nogc number entropy(in GasState gs);
     @nogc number entropyPerSpecies(in GasState gs, int isp);
+    @nogc number cpPerSpecies(in GasState gs, int isp);
 }

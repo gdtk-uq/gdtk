@@ -322,6 +322,11 @@ public:
         return mCurves[isp].eval_s(gs.T) - mR[isp]*log(gs.p/P_atm);
     }
 
+    @nogc override number cpPerSpecies(in GasState gs, int isp)
+    {
+        return mCurves[isp].eval_Cp(gs.T);
+    }
+
 private:
     double[] mR;
     CEAThermoCurve[] mCurves;
@@ -443,7 +448,6 @@ private:
             }
         }
     }
-
 }
 
 version(therm_perf_gas_mix_test) {

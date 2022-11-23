@@ -38,7 +38,7 @@ import gas.physical_constants;
 class TwoTemperatureTransProps : TransportPropertiesModel {
 public:
 
-    this(lua_State *L, string[] speciesNames, GasModel gm)
+    this(lua_State *L, string[] speciesNames)
     {
         mNSpecies = to!int(speciesNames.length);
         double[] molMasses;
@@ -208,8 +208,6 @@ public:
         number k_vib = 0.0;
 
         // For k_vib, Cp(T_vib) needs to be evaluated
-        number T_save = gs.T;
-        gs.T = gs.T_modes[0];
         foreach (isp; mMolecularSpecies) {
             denom = 0.0;
             foreach (jsp; 0 .. mNSpecies) {
@@ -222,9 +220,8 @@ public:
             // but it has been included to get the same result as
             // when the flow is fully excited
             number Cp = mMolMasses[isp]/R_universal*gm.Cp(gs, isp);
-            k_vib += (min(Cp, to!number(9.0/2.0)) - 7.0/2.0) * mMolef[isp]/denom;
+            k_vib += fmax((fmin(Cp.re, 9.0/2.0) - 7.0/2.0), 0.0) * mMolef[isp]/denom;
         }
-        gs.T = T_save;
         k_rot *= 2.3901e-8*kB_erg;
         k_rot *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
         k_vib *= 2.3901e-8*kB_erg;
@@ -409,7 +406,7 @@ version(two_temperature_trans_props_test)
         doLuaFile(L, "sample-data/N2-N.lua");
         string[] speciesNames;
         getArrayOfStrings(L, "species", speciesNames);
-        auto ttp = new TwoTemperatureTransProps(L, speciesNames, gm);
+        auto ttp = new TwoTemperatureTransProps(L, speciesNames);
         lua_close(L);
         auto gs = GasState(2, 1);
         gs.p = 1.0e5;
@@ -427,6 +424,35 @@ version(two_temperature_trans_props_test)
         ttp.updateTransProps(gs, gm);
         writefln("mu = %.6e k = %.6e k_v = %.6e", gs.mu, gs.k, gs.k_modes[0]);
 
+        //auto L = init_lua_State();
+        //GasModel gm = new CompositeGas("gm-air11-2T.lua");
+        //doLuaFile(L, "gm-air11-2T.lua");
+        //string[] speciesNames;
+        //getArrayOfStrings(L, "species", speciesNames);
+        //auto ttp = new TwoTemperatureTransProps(L, speciesNames);
+        //lua_close(L);
+        //auto gs = GasState(11, 1);
+        //gs.p = 0.1*101.35e3;
+        //gs.T = 1000.0;
+        //gs.T_modes[0] = 3000.0;
+
+        //gs.massf[0] =     7.455871e-01; // N2
+        //gs.massf[1] =     2.543794e-01; // O2
+        //gs.massf[2] =     0.000000e+00; // N
+        //gs.massf[3] =     1.310344e-10; // O
+        //gs.massf[4] =     3.355965e-05; // NO
+        //gs.massf[5] =     0.000000e+00; // N2+
+        //gs.massf[6] =     0.000000e+00; // O2+
+        //gs.massf[7] =     0.000000e+00; // N+
+        //gs.massf[8] =     0.000000e+00; // O+
+        //gs.massf[9] =     0.000000e+00; // NO+
+        //gs.massf[10] =     0.000000e+00; // e-
+
+
+        //gm.update_thermo_from_pT(gs);
+        //ttp.updateTransProps(gs, gm);
+        //import std.stdio;
+        //writefln("mu= %.6e  k= %.6e  k_v= %.6e\n", gs.mu, gs.k, gs.k_modes[0]);
         return 0;
     }
 }
