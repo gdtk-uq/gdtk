@@ -558,6 +558,53 @@ struct Block {
                 }
             }
         }
+        //
+        // Now that the faces exist, we can over write the TWall values if the FixedWallT
+        // boundary conditions were set with individual temperature values for each face.
+        for (int bf=0; bf < 6; bf++) {
+            if (cfg.bcCodes[bf] == BCCode::wall_no_slip_fixed_T && cfg.bc_TWall_form[bf] == TWallForm::fun) {
+                char fileName[256];
+                sprintf(fileName, "%s/TWall-%04d-%04d-%04d-%s.gz", Config::job.c_str(),
+                        cfg.i, cfg.j, cfg.k, Face::names[bf].c_str());
+                // Gzipped text file.
+                auto fs = bxz::ifstream(fileName); // gzip file
+                if (!fs) {
+                    throw runtime_error("Did not open gzipped TWall file successfully: "+string(fileName));
+                }
+                switch (bf) {
+                case Face::iminus: case Face::iplus: {
+                    int i = (bf == Face::iminus) ? 0 : cfg.nic;
+                    for (int k=0; k < cfg.nkc; k++) {
+                        for (int j=0; j < cfg.njc; j++) {
+                            fs >> faces[cfg.iFaceIndex(i,j,k)].TWall;
+                        }
+                    }
+                    break;
+                }
+                case Face::jminus: case Face::jplus: {
+                    int j = (bf == Face::jminus) ? 0 : cfg.njc;
+                    for (int k=0; k < cfg.nkc; k++) {
+                        for (int i=0; i < cfg.nic; i++) {
+                            fs >> faces[cfg.jFaceIndex(i,j,k)].TWall;
+                        }
+                    }
+                    break;
+                }
+                case Face::kminus: case Face::kplus: {
+                    int k = (bf == Face::kminus) ? 0 : cfg.nkc;
+                    for (int j=0; j < cfg.njc; j++) {
+                        for (int i=0; i < cfg.nic; i++) {
+                            fs >> faces[cfg.kFaceIndex(i,j,k)].TWall;
+                        }
+                    }
+                    break;
+                }
+                default:
+                    throw runtime_error("Oops.");
+                }
+                fs.close();
+            }
+        }
         return bytes_allocated;
     } // end configure()
 
