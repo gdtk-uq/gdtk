@@ -8,6 +8,7 @@ output_filename : 'PITOT3_result'
 
 facilities_folder : '$PITOT3_DATA/facilities'
 preset_gas_models_folder : '$PITOT3_DATA/preset_gas_models'
+species_molecular_weights_file : '$PITOT3_DATA/PITOT3_species_molecular_weights.yaml'
 
 # generic set up stuff, 
 # most of this should be in the facility stuff too, but good to have defaults to work with
@@ -30,6 +31,9 @@ test_section_post_shock_state_name : 's10'
 # generic gas properties
 T_0 : 298.15 #K
 p_0 : 101325.0 #Pa
+
+# units for the equilibrium gas outputs (moles or massf)
+outputUnits : 'moles'
 
 # all of the diaphragms are ideal in the default case (i.e. they do nothing)
 # diaphragm default values

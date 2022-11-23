@@ -9,19 +9,43 @@ Chris James (c.james4@uq.edu.au) - (01/01/21)
 import sys, os, math
 import yaml
 
+# some stuff I had to do get NO to load in yaml... from here https://stackoverflow.com/questions/36463531/pyyaml-automatically-converting-certain-keys-to-boolean-values
+
+from yaml.loader import Reader, Scanner, Parser, Composer, SafeConstructor, Resolver
+
+class StrictBoolSafeResolver(Resolver):
+    pass
+
+# remove resolver entries for On/Off/Yes/No
+for ch in "OoYyNn":
+    if len(StrictBoolSafeResolver.yaml_implicit_resolvers[ch]) == 1:
+        del StrictBoolSafeResolver.yaml_implicit_resolvers[ch]
+    else:
+        StrictBoolSafeResolver.yaml_implicit_resolvers[ch] = [x for x in
+                StrictBoolSafeResolver.yaml_implicit_resolvers[ch] if x[0] != 'tag:yaml.org,2002:bool']
+
+class StrictBoolSafeLoader(Reader, Scanner, Parser, Composer, SafeConstructor, StrictBoolSafeResolver):
+    def __init__(self, stream):
+        Reader.__init__(self, stream)
+        Scanner.__init__(self)
+        Parser.__init__(self)
+        Composer.__init__(self)
+        SafeConstructor.__init__(self)
+        StrictBoolSafeResolver.__init__(self)
+
 # I have put functions and classes on different lines here as it was getting too long
 # TO DO: the functions could even be put in a functions file...
 from pitot3_utils.pitot3_classes import Facility, Driver, Diaphragm, Facility_State, Tube, Nozzle, Test_Section
 from pitot3_utils.pitot3_classes import eilmer4_CEAGas_input_file_creator, expansion_tube_test_time_calculator, state_output_for_final_output, pitot3_results_output
 
-VERSION_STRING = '8-Nov-2022'
+VERSION_STRING = '23-Nov-2022'
 
 #-----------------------------------------------------------------------------------
 
 def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$PITOT3_DATA'):
 
     print('-'*60)
-    print ("Running PITOT3 version: {0}".format(VERSION_STRING))
+    print (f"Running PITOT3 version: {VERSION_STRING}")
     print('-'*60)
 
     print("Let's get started, shall we:")
@@ -75,12 +99,19 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
     facilities_folder = config_data['facilities_folder']
     preset_gas_models_folder = config_data['preset_gas_models_folder']
 
+    # load the species molecular weights file here so we can use it to get mole fractions when needed...
+    species_molecular_weights_filename = config_data['species_molecular_weights_file']
+    species_molecular_weights_file = open(os.path.expandvars(species_molecular_weights_filename))
+    species_MW_dict = yaml.load(species_molecular_weights_file, Loader=StrictBoolSafeLoader)
+
+    outputUnits = config_data['outputUnits']
+
     T_0 = float(config_data['T_0'])
     p_0 = float(config_data['p_0'])
 
     mode = config_data['mode']
 
-    print("Calculation mode is '{0}'.".format(mode))
+    print(f"Calculation mode is '{mode}'.")
 
     # facility set up stuff
     if 'facility' in config_data:
@@ -100,7 +131,7 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
     #--------------------------------------------------------------------------------
     # load facility
     if facility_name:
-        print ("Chosen facility is '{0}'.".format(facility_name))
+        print (f"Chosen facility is '{facility_name}'.")
 
         facility_yaml_filename = '{0}/{1}.yaml'.format(facilities_folder, facility_name)
         facility_yaml_file = open(os.path.expandvars(facility_yaml_filename))
@@ -126,8 +157,7 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
         secondary_driver_flag = config_data['secondary_driver']
         nozzle_flag = config_data['nozzle']
 
-    print ("Facility type is '{0}'.".format(facility_type))
-
+    print (f"Facility type is '{facility_type}'.")
     if nozzle_flag:
 
         if 'area_ratio' in config_data:
@@ -136,7 +166,7 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
             # TO DO: need to throw some kind of exception here if they have not chosen a facility...
             # otherwise get the facility's geometric area ratio...
             area_ratio = facility.get_nozzle_geometric_area_ratio()
-            print("User has not specified an area ratio, so the geometric area ratio of this facility's nozzle ({0}) will be used.".format(area_ratio))
+            print(f"User has not specified an area ratio, so the geometric area ratio of this facility's nozzle ({area_ratio}) will be used.")
 
     #-------------------------------------------------------------------------------------------------------
     # go through driver conditions
@@ -158,10 +188,10 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
     #-------------------------------------------------------------------------------------------------
     # pick a driver condition
     if driver_condition_name != 'custom':
-        print("Chosen driver condition is '{0}'.".format(driver_condition_name))
+        print(f"Chosen driver condition is '{driver_condition_name}'.")
         driver_condition_file_location = facilities_folder + '/' + facility.get_driver_conditions_folder() + '/' + driver_condition_name + '.yaml'
     else:
-        print("Using custom driver condition from the file {0}.".format(config_data['driver_condition_filename']))
+        print(f"Using custom driver condition from the file {config_data['driver_condition_filename']}.")
         driver_condition_file_location = config_data['driver_condition_filename']
 
     driver_yaml_file = open(os.path.expandvars(driver_condition_file_location))
@@ -169,20 +199,18 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
 
     # TO DO: I was thinking that it would be good to make this have lots of inputs, but it is almost too complicated
     # + it generally comes from a file...
-    driver = Driver(driver_condition_input_data, p_0=p_0, T_0=T_0, preset_gas_models_folder = preset_gas_models_folder)
+    driver = Driver(driver_condition_input_data, p_0=p_0, T_0=T_0, preset_gas_models_folder = preset_gas_models_folder,
+                    outputUnits = outputUnits, species_MW_dict = species_MW_dict)
 
     state4 = driver.get_driver_rupture_state()
-    print("Driver gas model is {0}.".format(state4.get_gas_state().gmodel.type_str))
+    print(f"Driver gas model is {state4.get_gas_state().gmodel.type_str}.")
 
     if state4.get_gas_state().gmodel.type_str == 'CEAGas':
-        print("Driver gas composition is {0} (by mass) ({1}).".format(state4.get_reduced_species_massf_dict(),
-                                                                      state4.get_gamma_and_R_string()))
+        print(f"Driver gas composition is {state4.get_reduced_composition_single_line_output_string()} ({state4.get_gamma_and_R_string()}).")
     else:
-        print("Driver gas {0}.".format(state4.get_gamma_and_R_string()))
+        print(f"Driver gas {state4.get_gamma_and_R_string()}.")
 
-    print ("Driver rupture conditions are p4 = {0:.2f} MPa, T4 = {1:.2f} K, M_throat = {2}.".format(state4.get_gas_state().p/1.0e6,
-                                                                                                    state4.get_gas_state().T,
-                                                                                                    driver.get_M_throat()))
+    print (f"Driver rupture conditions are p4 = {state4.get_gas_state().p/1.0e6:.2f} MPa, T4 = {state4.get_gas_state().T:.2f} K, M_throat = {driver.get_M_throat()}.")
 
     gas_path.append(driver)
     object_dict['driver'] = driver
@@ -215,17 +243,17 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
         # TO DO: I really need to make the gas objects etc. so that we can actually get more data here...
 
         if secondary_driver_gas_gas_model != 'custom':
-            print("Secondary driver gas is {0}. Secondary driver gas gas model is {1}.".format(secondary_driver_gas_name, secondary_driver_gas_gas_model))
+            print(f"Secondary driver gas is {secondary_driver_gas_name}. Secondary driver gas gas model is {secondary_driver_gas_gas_model}.")
         else:
-            print("Using custom secondary driver gas from the file {0}.".format(secondary_driver_gas_filename))
-            print("Secondary driver gas gas model is {0}.".format(secondary_driver_gas_gas_model))
+            print(f"Using custom secondary driver gas from the file {secondary_driver_gas_filename}.")
+            print(f"Secondary driver gas gas model is {secondary_driver_gas_gas_model}.")
 
-        print("Secondary driver fill pressure (p{0}) is {1:.2f} Pa.".format(secondary_driver_fill_state_name[1:], psd1))
-        print("Secondary driver fill temperature (T{0}) is {1:.2f} K.".format(secondary_driver_fill_state_name[1:], Tsd1))
+        print(f"Secondary driver fill pressure (p{secondary_driver_fill_state_name[1:]}) is {psd1:.2f} Pa.")
+        print(f"Secondary driver fill temperature (T{secondary_driver_fill_state_name[1:]}) is {Tsd1:.2f} K.")
 
         if mode in ['fully_experimental']:
             vsd = float(config_data['vsd'])
-            print("Selected secondary driver shock speed (vsd) is {0:.2f} m/s.".format(vsd))
+            print(f"Selected secondary driver shock speed (vsd) is {vsd:.2f} m/s.")
 
     # shock tube stuff
     test_gas_gas_model = config_data['test_gas_gas_model']
@@ -245,16 +273,17 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
         T1 = T_0
 
     if test_gas_gas_model != 'custom':
-        print("Test gas is {0}. Test gas gas model is {1}.".format(test_gas_name, test_gas_gas_model))
+        print(f"Test gas is {test_gas_name}. Test gas gas model is {test_gas_gas_model}.")
     else:
-        print("Using custom test gas from the file {0}.".format(test_gas_filename))
-        print("Test gas gas model is {0}.".format(test_gas_gas_model))
-    print("Shock tube fill pressure (p{0}) is {1:.2f} Pa.".format(shock_tube_fill_state_name[1:], p1))
-    print("Shock tube fill temperature (T{0}) is {1:.2f} K.".format(shock_tube_fill_state_name[1:], T1))
+        print(f"Using custom test gas from the file {test_gas_filename}.")
+        print(f"Test gas gas model is {test_gas_gas_model}.")
+
+    print(f"Shock tube fill pressure (p{shock_tube_fill_state_name[1:]}) is {p1:.2f} Pa.")
+    print(f"Shock tube fill temperature (T{shock_tube_fill_state_name[1:]}) is {T1:.2f} K.")
 
     if mode in ['fully_experimental', 'experimental_shock_tube_theoretical_acceleration_tube']:
         vs1 = float(config_data['vs1'])
-        print("Selected shock tube shock speed (vs1) is {0:.2f} m/s.".format(vs1))
+        print(f"Selected shock tube shock speed (vs1) is {vs1:.2f} m/s.")
 
     if facility_type == 'expansion_tube':
 
@@ -278,20 +307,20 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
             T5 = T_0
 
         if accelerator_gas_gas_model != 'custom':
-            print("Accelerator gas is {0}. Accelerator gas gas model is {1}.".format(accelerator_gas_name, accelerator_gas_gas_model))
+            print(f"Accelerator gas is {accelerator_gas_name}. Accelerator gas gas model is {accelerator_gas_gas_model}.")
         else:
-            print("Using custom accelerator gas from the file {0}.".format(accelerator_gas_filename))
-            print("Accelerator gas gas model is {0}.".format(accelerator_gas_gas_model))
+            print(f"Using custom accelerator gas from the file {accelerator_gas_filename}.")
+            print(f"Accelerator gas gas model is {accelerator_gas_gas_model}.")
 
-        print("Acceleration tube fill pressure (p{0}) is {1:.2f} Pa.".format(acceleration_tube_fill_state_name[1:], p5))
-        print("Acceleration tube fill temperature (T{0}) is {1:.2f} K.".format(acceleration_tube_fill_state_name[1:], T5))
+        print(f"Acceleration tube fill pressure (p{acceleration_tube_fill_state_name[1:]}) is {p5:.2f} Pa.")
+        print(f"Acceleration tube fill temperature (T{acceleration_tube_fill_state_name[1:]}) is {T5:.2f} K.")
 
         if mode in ['fully_experimental', 'theoretical_shock_tube_experimental_acceleration_tube']:
             vs2 = float(config_data['vs2'])
-            print("Selected acceleration tube shock speed (vs2) is {0:.2f} m/s.".format(vs2))
+            print(f"Selected acceleration tube shock speed (vs2) is {vs2:.2f} m/s.")
 
     if nozzle_flag:
-        print("Nozzle area ratio is {0}.".format(area_ratio))
+        print(f"Nozzle area ratio is {area_ratio}.")
 
     #-------------------------------------------------------------------------------------------------
     # pick a primary diaphragm model
@@ -343,7 +372,8 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
                                 expand_to=secondary_driver_expand_to, expansion_factor=secondary_driver_expansion_factor,
                                 preset_gas_models_folder=preset_gas_models_folder,
                                 unsteady_expansion_steps=secondary_driver_unsteady_expansion_steps,
-                                vs_guess_1=vsd_guess_1, vs_guess_2=vsd_guess_2, vs_limits=vsd_limits, vs_tolerance=vsd_tolerance)
+                                vs_guess_1=vsd_guess_1, vs_guess_2=vsd_guess_2, vs_limits=vsd_limits, vs_tolerance=vsd_tolerance,
+                                outputUnits = outputUnits, species_MW_dict = species_MW_dict)
 
         gas_path.append(secondary_driver)
         object_dict['secondary_driver'] = secondary_driver
@@ -401,7 +431,8 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
                       expand_to = shock_tube_expand_to, expansion_factor = shock_tube_expansion_factor,
                       preset_gas_models_folder = preset_gas_models_folder,
                       unsteady_expansion_steps = shock_tube_unsteady_expansion_steps,
-                      vs_guess_1 = vs1_guess_1, vs_guess_2 = vs1_guess_2, vs_limits = vs1_limits, vs_tolerance = vs1_tolerance)
+                      vs_guess_1 = vs1_guess_1, vs_guess_2 = vs1_guess_2, vs_limits = vs1_limits, vs_tolerance = vs1_tolerance,
+                      outputUnits = outputUnits, species_MW_dict = species_MW_dict)
 
     gas_path.append(shock_tube)
     object_dict['shock_tube'] = shock_tube
@@ -517,7 +548,8 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
                                  expand_to = acceleration_tube_expand_to, expansion_factor = acceleration_tube_expansion_factor,
                                  preset_gas_models_folder = preset_gas_models_folder,
                                  unsteady_expansion_steps = acceleration_tube_unsteady_expansion_steps,
-                                 vs_guess_1 = vs2_guess_1, vs_guess_2 = vs2_guess_2, vs_limits = vs2_limits, vs_tolerance = vs2_tolerance)
+                                 vs_guess_1 = vs2_guess_1, vs_guess_2 = vs2_guess_2, vs_limits = vs2_limits, vs_tolerance = vs2_tolerance,
+                                 outputUnits = outputUnits, species_MW_dict = species_MW_dict)
 
         gas_path.append(acceleration_tube)
         object_dict['acceleration_tube'] = acceleration_tube
