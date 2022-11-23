@@ -2196,74 +2196,96 @@ void osher(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
 
 @nogc
 void ASF_242(ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0) {
-    // Start by substracting interface velocities and transforming to local frame;
-    // it is unlikely we will be using moving grids with this solver, but no harm in including this.
+    // Lachlan's Alpha-Split Flux calculation function.
+    //
+    // This flux calculator is based on the formulation in the NASA Techmical Memo
+    // Travis C. Fisher, Mark H. Carpenter, Jan Nordstroem, Nail K. Yamaleev and R. Charles Swanson
+    // Discretely Conservative Finite-Difference Formulations for Nonlinear Conservation Laws
+    // in Split Form: Theory and Boundary Conditions
+    // NASA/TM-2011-217307  November 2011
+    //
+    // And the AIAA Paper by White et al. 2012
+    //
     auto gmodel = myConfig.gmodel;
     ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
     // this stencil is using references to comply with @nogc
     // we need to convert back after we have finished with them
     // (this is very inefficient)
-    FlowState*[4] stencil = [&(IFace.left_cells[1].fs),  &(IFace.left_cells[0].fs),
-                             &(IFace.right_cells[0].fs), &(IFace.right_cells[1].fs)];
-    foreach (cell; stencil) {
-        cell.vel.x -= IFace.gvel.x;
-        cell.vel.y -= IFace.gvel.y;
-        cell.vel.z -= IFace.gvel.z;
-        cell.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+    GasState*[4] gases = [&(IFace.left_cells[1].fs.gas),  &(IFace.left_cells[0].fs.gas),
+                          &(IFace.right_cells[0].fs.gas), &(IFace.right_cells[1].fs.gas)];
+    // Function-local copy of the velocity vectors.
+    Vector3[4] vels = [IFace.left_cells[1].fs.vel,  IFace.left_cells[0].fs.vel,
+                       IFace.right_cells[0].fs.vel, IFace.right_cells[1].fs.vel];
+    // Start by substracting interface velocities and transforming to local frame;
+    // it is unlikely we will be using moving grids with this solver, but no harm in including this.
+    foreach (ref vel; vels) {
+        vel -= IFace.gvel;
+        vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     }
-    // Define the v,w functions as prescribed by White et al. 2012 for the simple convective fluxes
+    // Define the v,w factors as prescribed by White et al. 2012 for the simple convective fluxes
     number[4][10] v, w;
-    foreach (i, cell; stencil) {
-        v[0][i] = cell.gas.rho;
-        w[0][i] = cell.vel.x;
-        v[1][i] = cell.vel.x * cell.gas.rho;
-        w[1][i] = cell.vel.x;
-        v[2][i] = cell.vel.y * cell.gas.rho;
-        w[2][i] = cell.vel.x;
-        v[3][i] = cell.vel.z * cell.gas.rho;
-        w[3][i] = cell.vel.x;
-        v[4][i] = gmodel.internal_energy(cell.gas) * cell.gas.rho;
-        w[4][i] = cell.vel.x;
-        v[5][i] = cell.vel.x * cell.vel.x * cell.gas.rho;
-        w[5][i] = cell.vel.x;
-        v[6][i] = cell.vel.y * cell.vel.y * cell.gas.rho;
-        w[6][i] = cell.vel.x;
-        v[7][i] = cell.vel.z * cell.vel.z * cell.gas.rho;
-        w[7][i] = cell.vel.x;
-        v[8][i] = cell.gas.p;
-        w[8][i] = cell.vel.x;
-        v[9][i] = cell.gas.p;
-        w[9][i] = 1;
+    foreach (i; 0 .. gases.length) {
+        number rho = gases[i].rho; number p = gases[i].p;
+        number e = gmodel.internal_energy(*gases[i]);
+        number velx = vels[i].x; number vely = vels[i].y; number velz = vels[i].z;
+        v[0][i] = rho;           w[0][i] = velx;  // mass
+        v[1][i] = velx*rho;      w[1][i] = velx;  // x-momentum
+        v[2][i] = vely*rho;      w[2][i] = velx;  // y-momentum
+        v[3][i] = velz*rho;      w[3][i] = velx;  // z-momentum
+        v[4][i] = e*rho;         w[4][i] = velx;  // Internal energy
+        v[5][i] = velx*velx*rho; w[5][i] = velx;  // Kinetic energy, x
+        v[6][i] = vely*vely*rho; w[6][i] = velx;  // Kinetic energy, y
+        v[7][i] = velz*velz*rho; w[7][i] = velx;  // Kinetic energy, z
+        v[8][i] = p;             w[8][i] = velx;  // Pressure work in energy equation.
+        v[9][i] = p;             w[9][i] = 1;     // Pressure in momentum equation
     }
-    // convert back
-    foreach (cell; stencil) {
-        cell.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
-        cell.vel.x += IFace.gvel.x;
-        cell.vel.y += IFace.gvel.y;
-        cell.vel.z += IFace.gvel.z;
-    }
+    //
     // Prepare the conservative and product rule fluxes arrays
     number[10] f_c, f_e;
     // Calculate conservative and product rule fluxes
-    foreach (i ; 0 .. 10) {
-        f_c[i] = (1.0 / 12.0) * (-v[i][0] * w[i][0] + 7.0 * v[i][1] * w[i][1] + 7.0 * v[i][2] * w[i][2] - v[i][3] * w[i][3]);
-        f_e[i] = (1.0 / 12.0) * (-v[i][0] * w[i][2] - v[i][2] * w[i][0] + 8 * v[i][1] * w[i][2] + 8 * v[i][2] * w[i][1] - v[i][1] * w[i][3] - v[i][3] * w[i][1]);
+    foreach (j; 0 .. 10) {
+        // Divergence-form flux (eq 3.5 in NASA/TM-2011-217307)
+        f_c[j] = (1.0/12.0) * (-v[j][0]*w[j][0] + 7.0*v[j][1]*w[j][1] + 7.0*v[j][2]*w[j][2] - v[j][3]*w[j][3]);
+        // Product-rule flux (eq 3.6 in NASA/TM-2011-217307)
+        f_e[j] = (1.0/12.0) * (-v[j][0]*w[j][2] - v[j][2]*w[j][0] + 8*v[j][1]*w[j][2]
+                               + 8*v[j][2]*w[j][1] - v[j][1]*w[j][3] - v[j][3]*w[j][1]);
     }
-    // Define the splitting values as per White et al, in the conservative skew-symmetric form of Honein and Moin.
-    number alpha_mass = 1.0, alpha_mom = 0.5, alpha_ie = 0.5, alpha_ke = 0.0, alpha_p = 0.0;
+    // Define the splitting values as per White et al,
+    // in the conservative skew-symmetric form of Honein and Moin.
+    number alpha_mass = 1.0;
+    number alpha_mom = 0.5;
+    number alpha_ie = 0.5;
+    number alpha_ke = 0.0;
+    number alpha_p = 0.0;
     //
     // Calculate the final flux values of the simple quantities mass, momentum and energy
-    number mass_flux = factor*(alpha_mass * f_c[0] + (1.0 - alpha_mass) * f_e[0]);
+    number mass_flux = factor*(alpha_mass*f_c[0] + (1.0-alpha_mass)*f_e[0]);
     F[cqi.mass] += mass_flux;
-    F[cqi.xMom] += factor*(alpha_mom * f_c[1] + (1.0 - alpha_mom) * f_e[1]) + (alpha_p * f_c[9] + (1.0 - alpha_p) * f_e[9]);
-    F[cqi.yMom] += factor*(alpha_mom * f_c[2] + (1.0 - alpha_mom) * f_e[2]);
-    if (cqi.threeD) { F[cqi.zMom] += factor*(alpha_mom * f_c[3] + (1.0 - alpha_mom) * f_e[3]); }
-    F[cqi.totEnergy] += factor*(alpha_ie * f_c[4] + (1.0 - alpha_ie) * f_e[4] + (1.0 / 2.0) * (alpha_ke * f_c[5] + (1.0 - alpha_ke) * f_e[5] + alpha_ke * f_c[6] +
-           (1.0 - alpha_ke) * f_e[6] + alpha_ke * f_c[7] + (1.0 - alpha_ke) * f_e[7]) + alpha_p * f_c[8] + (1.0 - alpha_p) * f_e[8]);
+    F[cqi.xMom] += factor*(alpha_mom*f_c[1] + (1.0-alpha_mom)*f_e[1]) + (alpha_p*f_c[9] + (1.0-alpha_p)*f_e[9]);
+    F[cqi.yMom] += factor*(alpha_mom*f_c[2] + (1.0-alpha_mom)*f_e[2]);
+    if (cqi.threeD) { F[cqi.zMom] += factor*(alpha_mom*f_c[3] + (1.0-alpha_mom)*f_e[3]); }
+    F[cqi.totEnergy] += factor*(alpha_ie*f_c[4] + (1.0-alpha_ie)*f_e[4] +
+                                0.5*(alpha_ke*f_c[5] + (1.0-alpha_ke)*f_e[5] +
+                                     alpha_ke*f_c[6] + (1.0-alpha_ke)*f_e[6] +
+                                     alpha_ke*f_c[7] + (1.0-alpha_ke)*f_e[7]) +
+                                alpha_p*f_c[8] + (1.0-alpha_p)*f_e[8]);
     //
-    // remaining fluxes (copied from Roe flux)
-    // Here we will base these extended properties based on the left and right cell average properties rather than some reconstructed values.
+    // If we're doing pure high-order flux, we bypass the normal convective flux program path
+    // so need to transform the fluxes to the global frame here.
+    if (factor == 1.0) {
+        if (cqi.threeD) {
+            F[cqi.zMom] += IFace.gvel.z * F[cqi.mass];
+            transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], F[cqi.zMom], IFace.n, IFace.t1, IFace.t2);
+        } else {
+            number zDummy = to!number(0.0);
+            transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], zDummy, IFace.n, IFace.t1, IFace.t2);
+        }
+    }
+    //
+    // Other fluxes (copied from Roe flux)
+    // Here we will base these extended properties based on the left and right
+    // cell average properties rather than some reconstructed values.
     if (mass_flux >= 0.0) {
         /* Wind is blowing from the left */
         version(turbulence) {
@@ -2289,18 +2311,6 @@ void ASF_242(ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
         }
         version(multi_T_gas) {
             foreach (i; 0 .. cqi.n_modes) { F[cqi.modes+i] += mass_flux*IFace.right_cells[0].fs.gas.u_modes[i]; }
-        }
-    }
-
-    // If we're doing pure high-order flux, we bypass the normal convective flux program path so need to transform the fluxes to the global frame here
-
-    if (factor == 1.0) {
-        if (cqi.threeD) {
-            F[cqi.zMom] += IFace.gvel.z * F[cqi.mass];
-            transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], F[cqi.zMom], IFace.n, IFace.t1, IFace.t2);
-        } else {
-            number zDummy = to!number(0.0);
-            transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], zDummy, IFace.n, IFace.t1, IFace.t2);
         }
     }
 } // end ASF_242()
