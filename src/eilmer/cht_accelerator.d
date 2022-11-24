@@ -348,6 +348,16 @@ void set_initial_condition(FlowState initial) {
         }
     }
 
+    // we need to apply the special blending if required
+    if (GlobalConfig.diffuseWallBCsOnInit) {
+        foreach (myblk; parallel(localFluidBlocks,1)) {
+            diffuseWallBCsIntoBlock(myblk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
+        }
+    }
+
+    // we also switch off any flags that may have been turned on during the previous flow simulation here
+    GlobalConfig.frozen_limiter = false; // this is a formality, since it won't have any effect for structured grids
+    GlobalConfig.frozen_shock_detector = false;
     return;
 }
 
