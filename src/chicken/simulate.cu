@@ -217,7 +217,8 @@ void march_in_time_using_cpu_only(bool binary_data)
                 if (cfg.active) allowed_dts[ib] = blk.estimate_allowed_dt(cfg, cfl);
             }
             for (auto adt : allowed_dts) smallest_dt = fmin(smallest_dt, adt);
-            SimState::dt = smallest_dt;
+            // Make the transition to larger allowable time step not so sudden.
+            SimState::dt = fmin(1.5*SimState::dt, smallest_dt);
         }
         //
         // Gas-dynamic update over three stages with TVD-RK3 weights.
