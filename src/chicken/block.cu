@@ -47,23 +47,20 @@ int setup_LSQ_arrays_at_face(FVFace& f, FVCell cells[], FVFace faces[])
     // These are the square of the weights on the original linear constraint eqns
     // and are calculated with the face centre as the reference point.
     number weights2[cloud_nmax];
-    number x0 = f.pos.x; number y0 = f.pos.y; number z0 = f.pos.z;
-    for (int i=0; i < cloud_n; i++) {
-        number dx = cloud_pos[i]->x - x0;
-        number dy = cloud_pos[i]->y - y0;
-        number dz = cloud_pos[i]->z - z0;
-        weights2[i] = 1.0/(dx*dx+dy*dy+dz*dz);
-    }
-    //
-    // Set up the matrix for the normal equations.
-    //
     number dx[cloud_nmax], dy[cloud_nmax], dz[cloud_nmax];
-    number xx = 0.0; number xy = 0.0; number xz = 0.0;
-    number yy = 0.0; number yz = 0.0; number zz = 0.0;
+    number x0 = f.pos.x; number y0 = f.pos.y; number z0 = f.pos.z;
     for (int i=0; i < cloud_n; i++) {
         dx[i] = cloud_pos[i]->x - x0;
         dy[i] = cloud_pos[i]->y - y0;
         dz[i] = cloud_pos[i]->z - z0;
+        weights2[i] = 1.0/(dx[i]*dx[i] + dy[i]*dy[i] + dz[i]*dz[i]);
+    }
+    //
+    // Set up the matrix for the normal equations.
+    //
+    number xx = 0.0; number xy = 0.0; number xz = 0.0;
+    number yy = 0.0; number yz = 0.0; number zz = 0.0;
+    for (int i=0; i < cloud_n; i++) {
         xx += weights2[i]*dx[i]*dx[i];
         xy += weights2[i]*dx[i]*dy[i];
         xz += weights2[i]*dx[i]*dz[i];
@@ -83,12 +80,9 @@ int setup_LSQ_arrays_at_face(FVFace& f, FVCell cells[], FVFace faces[])
     }
     // Prepare final weights for later use in the reconstruction phase.
     for (int i=0; i < cloud_n; i++) {
-        f.wx[i] = xTxInv[0][0]*dx[i] + xTxInv[0][1]*dy[i] + xTxInv[0][2]*dz[i];
-        f.wx[i] *= weights2[i];
-        f.wy[i] = xTxInv[1][0]*dx[i] + xTxInv[1][1]*dy[i] + xTxInv[1][2]*dz[i];
-        f.wy[i] *= weights2[i];
-        f.wz[i] = xTxInv[2][0]*dx[i] + xTxInv[2][1]*dy[i] + xTxInv[2][2]*dz[i];
-        f.wz[i] *= weights2[i];
+        f.wx[i] = weights2[i]*(xTxInv[0][0]*dx[i] + xTxInv[0][1]*dy[i] + xTxInv[0][2]*dz[i]);
+        f.wy[i] = weights2[i]*(xTxInv[1][0]*dx[i] + xTxInv[1][1]*dy[i] + xTxInv[1][2]*dz[i]);
+        f.wz[i] = weights2[i]*(xTxInv[2][0]*dx[i] + xTxInv[2][1]*dy[i] + xTxInv[2][2]*dz[i]);
     }
     return 0; // All weights successfully computed.
 } // end setup_LSQ_arrays()
@@ -157,7 +151,7 @@ void add_viscous_fluxes_at_face(FVFace& f, FVCell cells[], FVFace faces[])
     number qz = k * grad_T.z;
     // Combine into fluxes: store as the dot product (F.n).
     Vector3 n = f.n;
-    ConservedQuantities F = f.F; // face folds convective fluxes already.
+    ConservedQuantities F = f.F; // face holds convective fluxes already.
     // Mass flux -- NO CONTRIBUTION
     F[CQI::xMom] -= tau_xx*n.x + tau_xy*n.y + tau_xz*n.z;
     F[CQI::yMom] -= tau_xy*n.x + tau_yy*n.y + tau_yz*n.z;
@@ -325,7 +319,9 @@ struct Block {
                     // Set cloud of FlowStates for gradient calculations of viscous fluxes.
                     if (i == 0) {
                         f.bcCode = cfg.bcCodes[Face::iminus];
-                        if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
+                        if (f.bcCode == BCCode::wall_with_slip ||
+                            f.bcCode == BCCode::wall_no_slip_adiabatic ||
+                            f.bcCode == BCCode::wall_no_slip_fixed_T) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j,k), -1};
                             f.cloud_nc = 1;
@@ -339,7 +335,9 @@ struct Block {
                         f.cloud_nf = 4;
                     } else if (i == cfg.nic) {
                         f.bcCode = cfg.bcCodes[Face::iplus];
-                        if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
+                        if (f.bcCode == BCCode::wall_with_slip ||
+                            f.bcCode == BCCode::wall_no_slip_adiabatic ||
+                            f.bcCode == BCCode::wall_no_slip_fixed_T) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i-1,j,k), -1};
                             f.cloud_nc = 1;
@@ -422,7 +420,9 @@ struct Block {
                     // Set cloud of FlowStates for gradient calculations of viscous fluxes.
                     if (j == 0) {
                         f.bcCode = cfg.bcCodes[Face::jminus];
-                        if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
+                        if (f.bcCode == BCCode::wall_with_slip ||
+                            f.bcCode == BCCode::wall_no_slip_adiabatic ||
+                            f.bcCode == BCCode::wall_no_slip_fixed_T) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j,k), -1};
                             f.cloud_nc = 1;
@@ -436,7 +436,9 @@ struct Block {
                         f.cloud_nf = 4;
                     } else if (j == cfg.njc) {
                         f.bcCode = cfg.bcCodes[Face::jplus];
-                        if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
+                        if (f.bcCode == BCCode::wall_with_slip ||
+                            f.bcCode == BCCode::wall_no_slip_adiabatic ||
+                            f.bcCode == BCCode::wall_no_slip_fixed_T) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j-1,k), -1};
                             f.cloud_nc = 1;
@@ -519,7 +521,9 @@ struct Block {
                     // Set cloud of FlowStates for gradient calculations of viscous fluxes.
                     if (k == 0) {
                         f.bcCode = cfg.bcCodes[Face::kminus];
-                        if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
+                        if (f.bcCode == BCCode::wall_with_slip ||
+                            f.bcCode == BCCode::wall_no_slip_adiabatic ||
+                            f.bcCode == BCCode::wall_no_slip_fixed_T) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j,k), -1};
                             f.cloud_nc = 1;
@@ -533,7 +537,9 @@ struct Block {
                         f.cloud_nf = 4;
                     } else if (k == cfg.nkc) {
                         f.bcCode = cfg.bcCodes[Face::kplus];
-                        if (f.bcCode == BCCode::wall_with_slip || f.bcCode == BCCode::wall_with_slip) {
+                        if (f.bcCode == BCCode::wall_with_slip ||
+                            f.bcCode == BCCode::wall_no_slip_adiabatic ||
+                            f.bcCode == BCCode::wall_no_slip_fixed_T) {
                             // Do not use ghost cell.
                             f.cells_in_cloud = {cfg.activeCellIndex(i,j,k-1), -1};
                             f.cloud_nc = 1;
@@ -556,6 +562,53 @@ struct Block {
                         f.cloud_nf = 8;
                     }
                 }
+            }
+        }
+        //
+        // Now that the faces exist, we can overwrite the TWall values in the FixedWallT
+        // boundary conditions were set with individual temperature values for each face.
+        for (int bf=0; bf < 6; bf++) {
+            if (cfg.bcCodes[bf] == BCCode::wall_no_slip_fixed_T && cfg.bc_TWall_form[bf] == TWallForm::fun) {
+                char fileName[256];
+                sprintf(fileName, "%s/TWall-%04d-%04d-%04d-%s.gz", Config::job.c_str(),
+                        cfg.i, cfg.j, cfg.k, Face::names[bf].c_str());
+                // Gzipped text file.
+                auto fs = bxz::ifstream(fileName); // gzip file
+                if (!fs) {
+                    throw runtime_error("Did not open gzipped TWall file successfully: "+string(fileName));
+                }
+                switch (bf) {
+                case Face::iminus: case Face::iplus: {
+                    int i = (bf == Face::iminus) ? 0 : cfg.nic;
+                    for (int k=0; k < cfg.nkc; k++) {
+                        for (int j=0; j < cfg.njc; j++) {
+                            fs >> faces[cfg.iFaceIndex(i,j,k)].TWall;
+                        }
+                    }
+                    break;
+                }
+                case Face::jminus: case Face::jplus: {
+                    int j = (bf == Face::jminus) ? 0 : cfg.njc;
+                    for (int k=0; k < cfg.nkc; k++) {
+                        for (int i=0; i < cfg.nic; i++) {
+                            fs >> faces[cfg.jFaceIndex(i,j,k)].TWall;
+                        }
+                    }
+                    break;
+                }
+                case Face::kminus: case Face::kplus: {
+                    int k = (bf == Face::kminus) ? 0 : cfg.nkc;
+                    for (int j=0; j < cfg.njc; j++) {
+                        for (int i=0; i < cfg.nic; i++) {
+                            fs >> faces[cfg.kFaceIndex(i,j,k)].TWall;
+                        }
+                    }
+                    break;
+                }
+                default:
+                    throw runtime_error("Oops.");
+                }
+                fs.close();
             }
         }
         return bytes_allocated;
@@ -1010,6 +1063,24 @@ struct Block {
         cout << "DEBUG posL0=" << posL0 << " fsL0=" << fsL0 << endl;
         cout << "DEBUG posR0=" << posR0 << " fsR0=" << fsR0 << endl;
         cout << "DEBUG posR1=" << posR1 << " fsR1=" << fsR1 << endl;
+    }
+
+    __host__
+    void WRITE_DEBUG_DATA2(string label, int fIndx)
+    {
+        cout << "DEBUG " << label << endl;
+        FVFace f = faces[fIndx];
+        cout << "DEBUG faces[" << fIndx << "]=" << f << endl;
+        cout << "DEBUG cells in cloud" << endl;
+        for (int i=0; i < f.cloud_nc; i++) {
+            cout << "DEBUG i=" << i << " pos=" << cells[f.cells_in_cloud[i]].pos
+                 << " fs=" << cells[f.cells_in_cloud[i]].fs << endl;
+        }
+        cout << "DEBUG faces in cloud" << endl;
+        for (int i=0; i < f.cloud_nf; i++) {
+            cout << "DEBUG i=" << i << " pos=" << faces[f.faces_in_cloud[i]].pos
+                 << " fs=" << faces[f.faces_in_cloud[i]].fs << endl;
+        }
     }
 
     __host__

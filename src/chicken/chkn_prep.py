@@ -9,7 +9,7 @@ a user-specified input script that contains, in Python,
 the code that defines the facility geometry and gas-path details.
 
 Usage:
-  $ chkn_prep --job=<jobName>
+  $ chkn_prep --job=<jobName> --binary
 
 The simulation control data is then organised via the classes
 GlobalConfig, FlowState, BoundaryCondition and its subclasses.
@@ -437,19 +437,114 @@ class WallNoSlipAdiabaticBC(BoundaryCondition):
 
 class WallNoSlipFixedTBC(BoundaryCondition):
     """
-    Wall, no-slip boundary condition, fixed temperature (and corresponding heat flux).
+    Wall, no-slip boundary condition, fixed temperature.
+
+    TWall can be either single value or a user-supplied function TWall(x, y, z).
+    If the form is a function, specific values for each boundary face will be
+    written to a file.
     """
-    __slots__ = ['tag', 'TWall']
+    __slots__ = ['tag', 'form', 'value', 'fun', 'values']
 
     def __init__(self, TWall):
         self.tag = 'wall_no_slip_fixed_T'
-        self.TWall = TWall
+        self.fun = None
+        self.value = 0.0
+        if callable(TWall):
+            self.form = 'fun'
+            self.fun = TWall
+            # Note that will fill in the specific face values later,
+            # in the context of a given grid.
+        elif isinstance(TWall, (int, float)):
+            self.form = 'value'
+            self.value = float(TWall)
+        else:
+            raise RuntimeError("TWall should be a single number or a function of (x,y,z)")
 
     def __repr__(self):
-        return "WallNoSlipFixedTBC(TWall=%g)" % (self.TWall)
+        s = "WallNoSlipFixedTBC(TWall="
+        if self.form == 'fun':
+            s += 'user-supplied-function)'
+        else:
+            s += '%g)' % (value)
+        return s
 
     def to_json(self):
-        return '{"tag": "%s", "TWall": %g}' % (self.tag, self.TWall)
+        return '{"tag": "%s", "form": "%s", "value": %g}' % (self.tag, self.form, self.value)
+
+    def write_values_to_file(self, fileName):
+        with gzip.open(fileName, 'wt') as f:
+            for v in self.values: f.write('%g\n' % v)
+        return
+
+    def generate_values(self, grid, face):
+        """
+        Generate the temperature value for each face.
+        Note that the loop nesting order must match the reader in the C++ world.
+        """
+        if not isinstance(grid, StructuredGrid):
+            raise RuntimeError('Did not get a StructuredGrid object.')
+        nic = grid.niv - 1
+        njc = grid.njv - 1
+        nkc = grid.nkv - 1
+        self.values = []
+        if face in ['iminus','iplus']:
+            i = 0 if face == 'iminus' else nic
+            p0 = Vector3(x=grid.vertices.x[i, :-1, :-1],
+                         y=grid.vertices.y[i, :-1, :-1],
+                         z=grid.vertices.z[i, :-1, :-1])
+            p1 = Vector3(x=grid.vertices.x[i, 1:, :-1],
+                         y=grid.vertices.y[i, 1:, :-1],
+                         z=grid.vertices.z[i, 1:, :-1])
+            p2 = Vector3(x=grid.vertices.x[i, 1:, 1:],
+                         y=grid.vertices.y[i, 1:, 1:],
+                         z=grid.vertices.z[i: 1:, 1:])
+            p3 = Vector3(x=grid.vertices.x[i, :-1, 1:],
+                         y=grid.vertices.y[i, :-1, 1:],
+                         z=grid.vertices.z[i, :-1, 1:])
+            pmid = 0.25*(p0+p1+p2+p3)
+            for k in range(nkc):
+                for j in range(njc):
+                    self.values.append(self.fun(pmid.x, pmid.y, pmid.z))
+        elif face in ['jminus','jplus']:
+            j = 0 if face == 'jminus' else njc
+            p1 = Vector3(x=grid.vertices.x[:-1, j, :-1],
+                         y=grid.vertices.y[:-1, j, :-1],
+                         z=grid.vertices.z[:-1, j, :-1])
+            p0 = Vector3(x=grid.vertices.x[1:, j, :-1],
+                         y=grid.vertices.y[1:, j, :-1],
+                         z=grid.vertices.z[1:, j, :-1])
+            p3 = Vector3(x=grid.vertices.x[1:, j, 1:],
+                         y=grid.vertices.y[1:, j, 1:],
+                         z=grid.vertices.z[1:, j, 1:])
+            p2 = Vector3(x=grid.vertices.x[:-1, j, 1:],
+                         y=grid.vertices.y[:-1, j, 1:],
+                         z=grid.vertices.z[:-1, j, 1:])
+            pmid = 0.25*(p0+p1+p2+p3)
+            for k in range(nkc):
+                for i in range(nic):
+                    self.values.append(self.fun(pmid.x, pmid.y, pmid.z))
+        elif face in ['kminus','kplus']:
+            k = 0 if face == 'kminus' else nkc
+            p0 = Vector3(x=grid.vertices.x[:-1, :-1, k],
+                         y=grid.vertices.y[:-1, :-1, k],
+                         z=grid.vertices.z[:-1, :-1, k])
+            p1 = Vector3(x=grid.vertices.x[1:, :-1, k],
+                         y=grid.vertices.y[1:, :-1, k],
+                         z=grid.vertices.z[1:, :-1, k])
+            p2 = Vector3(x=grid.vertices.x[:-1, 1:, k],
+                         y=grid.vertices.y[:-1, 1:, k],
+                         z=grid.vertices.z[:-1, 1:, k])
+            p3 = Vector3(x=grid.vertices.x[1:, 1:, k],
+                         y=grid.vertices.y[1:, 1:, k],
+                         z=grid.vertices.z[1:, 1:, k])
+            pmid = 0.25*(p0+p1+p2+p3)
+            for j in range(njc):
+                for i in range(nic):
+                    self.values.append(self.fun(pmid.x, pmid.y, pmid.z))
+        else:
+            raise RuntimeError("Unknown face: "+str(face))
+        return
+
 
 class InflowBC(BoundaryCondition):
     """
@@ -553,7 +648,6 @@ class FluidBlock():
             for kk in range(self.nkc):
                 for jj in range(self.njc):
                     for ii in range(self.nic):
-                        # Note index order.
                         x = self.cellc.x[ii,jj,kk]; y = self.cellc.y[ii,jj,kk]; z = self.cellc.z[ii,jj,kk]
                         state = initialState(x,y,z)
                         self.flow['p'][idx] = state.gas.p
@@ -587,6 +681,13 @@ class FluidBlock():
             if type(bc) is InflowBC:
                 bc.fsi = len(flowStatesList)
                 flowStatesList.append(bc.fs)
+        #
+        # For boundary conditions that are fixed-temperature and specified via
+        # a user-supplied function, generate the specific values for each boundary face.
+        for face in FaceList:
+            bc = self.bcs[face]
+            if type(bc) is WallNoSlipFixedTBC and bc.form == 'fun':
+                bc.generate_values(self.grid, face)
         #
         self.i = i
         self.j = j
@@ -817,6 +918,14 @@ def write_initial_files(binaryData):
         fileName = flowDir + ('/flow-%04d-%04d-%04d' % (fb.i, fb.j, fb.k))
         fileName += '.bin' if binaryData else '.gz'
         fb.write_flow_data_to_file(fileName, config.iovar_names, binaryData)
+        #
+        # For boundary conditions that are fixed-temperature and specified via
+        # a user-supplied function, write out the specific values for each boundary face.
+        for face in FaceList:
+            bc = fb.bcs[face]
+            if type(bc) is WallNoSlipFixedTBC and bc.form == 'fun':
+                fileName = 'TWall-%04d-%04d-%04d-%s.gz' % (fb.i, fb.j, fb.k, face)
+                bc.write_values_to_file(config.job_name+'/'+fileName)
     #
     with open(config.job_name+'/times.data', 'w') as fp:
         fp.write("# tindx t\n")

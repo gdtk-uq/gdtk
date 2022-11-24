@@ -310,10 +310,11 @@ int main(string[] args)
         write_cht_solution(jobName, time, io_idx);
     }
 
-    // fluid domain solver
-    iterate_to_steady_state(snapshotStart, maxCPUs, threadsPerMPITask, include_solid_domain_in_nk_solve, init_precondition_matrix);
+    // Perform RHS evaluation to fill the fluid/solid BC with the latest solid temperature...
+    steadystate_core.evalRHS(0.0, 0);
 
-    // put the final loads file in a special directory
+    // ... and write out the final loads file
+    // NOTE: the heat flux in this loads file will not be physical
     write_loads(npoints);
 
     if (GlobalConfig.is_master_task) {

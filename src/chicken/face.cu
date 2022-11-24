@@ -150,8 +150,10 @@ struct FVFace {
              << ", other_blkId=" << other_blkId << ", other_cells=[" << other_cells[0]
              << ", " << other_cells[1] << "], inflowId=" << inflowId
              << ", TWall=" << TWall << ", bcFun=" << bcFun;
+        repr << ", cloud_nc=" << cloud_nc << ", cloud_nf=" << cloud_nf;
         repr << ", cells_in_cloud=["; for (auto i : cells_in_cloud) repr << i <<","; repr << "]";
         repr << ", faces_in_cloud=["; for (auto i : faces_in_cloud) repr << i <<","; repr << "]";
+        repr << ", fs=" << fs;
         repr << ")";
         return repr.str();
     }
@@ -309,7 +311,8 @@ struct FVFace {
                                    + 8*v[j][2]*w[j][1] - v[j][1]*w[j][3] - v[j][3]*w[j][1]);
         }
         //
-        // Alpha weights, as used by Jeff White.
+        // Define the splitting values as per White et al,
+        // in the conservative skew-symmetric form of Honein and Moin.
         constexpr number alpha_mass = 1.0;
         constexpr number alpha_mom = 0.5;
         constexpr number alpha_ie = 0.5;

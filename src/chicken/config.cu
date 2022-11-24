@@ -22,6 +22,10 @@
 using namespace std;
 using json = nlohmann::json;
 
+namespace TWallForm {
+    constexpr int value = 0;
+    constexpr int fun = 1;
+};
 
 struct BConfig {
     // Active blocks will be updates during the gas-dynamic update calculations.
@@ -67,6 +71,7 @@ struct BConfig {
     // Boundary condition codes and associated FlowStates.
     array<int,6> bcCodes;
     array<int,6> bc_fs;
+    array<int,6> bc_TWall_form;
     array<double,6> bc_TWall;
     array<int,6> bc_fun;
 
@@ -380,7 +385,9 @@ vector<BConfig> read_config_file(string fileName)
                 cfg.bc_fs[i] = bc["flow_state_index"].get<int>();
             }
             if (cfg.bcCodes[i] == BCCode::wall_no_slip_fixed_T) {
-                cfg.bc_TWall[i] = bc["TWall"].get<double>();
+                cfg.bc_TWall_form[i] = TWallForm::value;
+                if (bc["form"].get<string>() == "fun") cfg.bc_TWall_form[i] = TWallForm::fun;
+                cfg.bc_TWall[i] = bc["value"].get<double>();
             }
             cfg.bc_fun[i] = 0; // Default function index.
             if (cfg.bcCodes[i] == BCCode::inflow_function) {

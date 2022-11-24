@@ -68,7 +68,7 @@ public:
         case "two-temperature-gas":
             _n_modes = 1;
             mThermo = new TwoTemperatureGasMixture(L, _species_names);
-            mTransProps = new TwoTemperatureTransProps(L, _species_names, this);
+            mTransProps = new TwoTemperatureTransProps(L, _species_names);
             break;
         default:
             string errMsg = format("Problem trying to construct gas model. The physical model variant '%s' is not known.\n", mPhysicalModel);
@@ -173,6 +173,10 @@ public:
     @nogc override number entropy(in GasState gs, int isp)
     {
         return mThermo.entropyPerSpecies(gs, isp);
+    }
+    @nogc override number Cp(in GasState Q, int isp)
+    {
+        return mThermo.cpPerSpecies(Q, isp);
     }
 
     @nogc override void update_trans_coeffs(ref GasState gs)

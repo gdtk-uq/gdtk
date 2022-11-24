@@ -677,7 +677,7 @@ class Driver(object):
     Class to store and calculate facility driver information.
     """
 
-    def __init__(self, cfg, p_0 = None, T_0 = None, preset_gas_models_folder = None):
+    def __init__(self, cfg, p_0 = None, T_0 = None, preset_gas_models_folder = None, outputUnits = 'massf', species_MW_dict = None):
         """
 
         :param cfg: Python dictionary which contains configuration information which is loaded into the class,
@@ -846,7 +846,8 @@ class Driver(object):
             reference_gas_state.update_sound_speed()
 
             # now make our facility driver object...
-            self.state4i = Facility_State('s4i', state4i, v4i, reference_gas_state=reference_gas_state)
+            self.state4i = Facility_State('s4i', state4i, v4i, reference_gas_state=reference_gas_state,
+                                          species_MW_dict=species_MW_dict, outputUnits=outputUnits)
 
             if self.driver_condition_type == 'isentropic-compression-p4':
                 self.p4 = float(cfg['p4'])
@@ -892,7 +893,8 @@ class Driver(object):
 
         # now make our facility driver object...
         self.state4 = Facility_State('s4', state4, v4,
-                                     reference_gas_state=reference_gas_state)
+                                     reference_gas_state=reference_gas_state,
+                                     outputUnits=outputUnits, species_MW_dict=species_MW_dict)
 
         if self.driver_exit_state_name == '3s':
             driver_gas_flow_object = GasFlow(self.gmodel)
@@ -922,7 +924,8 @@ class Driver(object):
             # now make our facility driver object...
             # user the same reference gas state as above...
             self.state3s = Facility_State('s3s', state3s, v3s,
-                                          reference_gas_state=reference_gas_state)
+                                          reference_gas_state=reference_gas_state,
+                                          outputUnits=outputUnits, species_MW_dict=species_MW_dict, )
 
         return
 
@@ -1243,7 +1246,8 @@ class Facility_State(object):
 
     """
 
-    def __init__(self, state_name, gas_state, v, reference_gas_state = None, room_temperature_only_gmodel = None):
+    def __init__(self, state_name, gas_state, v, reference_gas_state = None, room_temperature_only_gmodel = None,
+                 outputUnits = 'massf', species_MW_dict = None):
         """
 
         :param state_name: just a string labelled the state, probably just '4', '3s', '1' etc.
@@ -1280,6 +1284,18 @@ class Facility_State(object):
             self.gas_state_gmodel_without_ions = None
 
         self.room_temperature_only_gmodel = room_temperature_only_gmodel
+
+        self.outputUnits = outputUnits
+
+        if self.outputUnits == 'moles' and not species_MW_dict:
+            raise Exception("pitot3_classes.Facility_State: Cannot select OutputUnits of 'moles' without providing a species molecular weight dictionary.")
+
+        if species_MW_dict and self.get_gas_state_gmodel_type() == 'CEAGas':
+            # make a species MW dict with just the species in the gas...
+            self.species_MW_dict = {}
+
+            for species in self.gas_state.ceaSavedData['massf'].keys():
+                self.species_MW_dict[species] = species_MW_dict[species]
 
         return
 
@@ -1683,6 +1699,19 @@ class Facility_State(object):
 
         return "gam = {0:.2f}, R = {1:.2f} J/kg K".format(gas_state.gamma, gas_state.R)
 
+    def get_molecular_mass(self):
+        """
+        Just a function to get the molecular mass as I always find the stuff hidden in the CEA output hard to find...
+        (if it is the CEA gas object the molecular mass on the gas object is empty...
+
+        :return:
+        """
+
+        if self.get_gas_state_gmodel().type_str == 'CEAGas':
+            return self.get_gas_state().ceaSavedData['Mmass']
+        else:
+            return self.get_gas_state().molecular_mass
+
     def get_reduced_species_massf_dict(self):
         """
         If the gas is a CEAGas, it will go through the gas dictionary and remove any values which are empty,
@@ -1707,32 +1736,135 @@ class Facility_State(object):
             print("GasModel is not a CEAGas, so this function isn't useful. Will return None.")
             return None
 
-    # def get_reduced_species_molef_dict(self):
-    #     """
-    #     If the gas is a CEAGas, it will go through the gas dictionary and remove any values which are empty,
-    #     which is very easy for printing things like fill states which probably only have 1-3 gases out of the full set of
-    #     high temperature possibilities.
-    #
-    #     Obviously not useful if the GasModel isn't a CEAGas...
-    #
-    #     This is the same as the function above but it converts to mole fractions while doing it...
-    #
-    #     """
-    #
-    #     if self.get_gas_state().gmodel.type_str == 'CEAGas':
-    #         # a fill state will not have many different species, so we should just the species which actually exist
-    #         species_massf_dict = self.get_gas_state().ceaSavedData['massf']
-    #
-    #         reduced_species_massf_dict = {}
-    #         for species in species_massf_dict.keys():
-    #             if species_massf_dict[species] > 0.0:
-    #                 reduced_species_massf_dict[species] = species_massf_dict[species]
-    #
-    #         return reduced_species_massf_dict
-    #
-    #     else:
-    #         print("GasModel is not a CEAGas, so this function isn't useful. Will return None.")
-    #         return None
+    def get_reduced_species_moles_dict(self):
+        """
+        This is like the function above, but it converts reduct massf dictionary to mole fractions using the molecular weights of
+        all of the species which we should have in self.species_MW_dict
+
+        :return:
+        """
+
+        if self.get_gas_state_gmodel().type_str == 'CEAGas':
+
+            # start by getting the reduced mass fractions
+
+            reduced_species_massf_dict = self.get_reduced_species_massf_dict()
+
+            reduced_species_moles_dict = {}
+
+            gas_total_MW = self.get_molecular_mass()*1000.0 # to get into g/mol
+
+            for species in reduced_species_massf_dict:
+                mass_fraction = reduced_species_massf_dict[species]
+                species_MW = self.species_MW_dict[species]
+
+                mole_fraction = mass_fraction*(gas_total_MW/species_MW)
+
+                reduced_species_moles_dict[species] = mole_fraction
+
+            return reduced_species_moles_dict
+
+        else:
+            print("GasModel is not a CEAGas, so this function isn't useful. Will return None.")
+            return None
+
+    def get_reduced_species_moles_dict_for_printing(self, number_of_digits = 3):
+        """
+
+        This takes the output from the function above and turns it into strings of particular length to make it look better printing.
+
+        I actually then just make it a complete string so I can control what it looks like better...
+
+        :return:
+        """
+
+        original_reduced_species_moles_dict = self.get_reduced_species_moles_dict()
+
+        str_reduced_species_moles_dict = {}
+
+        for species in original_reduced_species_moles_dict:
+            mole_fraction = original_reduced_species_moles_dict[species]
+
+            if mole_fraction > 0.001:
+                mole_fraction_string = f'{mole_fraction:.{number_of_digits}}'
+            else:
+                mole_fraction_string = f'{mole_fraction:.{number_of_digits}e}'
+
+            str_reduced_species_moles_dict[species] = mole_fraction_string
+
+        # now I turn it into a string for better output...
+
+        output_string = ''
+
+        for species in str_reduced_species_moles_dict:
+            if species == list(str_reduced_species_moles_dict.keys())[0]:
+                output_string += f"{{'{species}': {str_reduced_species_moles_dict[species]}, "
+            elif species == list(str_reduced_species_moles_dict.keys())[-1]:
+                output_string += f"'{species}': {str_reduced_species_moles_dict[species]}}}"
+            else:
+                output_string += f"'{species}': {str_reduced_species_moles_dict[species]}, "
+
+        return output_string
+
+    def get_reduced_composition(self):
+        """
+        Depending on the outputUnits selected, this function will run the appropriate function above
+        and return the dictionary.
+
+        :return:
+
+        """
+
+        if self.outputUnits == 'massf':
+            return self.get_reduced_species_massf_dict()
+        elif self.outputUnits == 'moles':
+            return self.get_reduced_species_moles_dict()
+
+    def get_reduced_composition_for_printing(self):
+        """
+        Depending on the outputUnits selected, this function will run the appropriate function above
+        and return the dictionary.
+
+        :return:
+
+        """
+
+        if self.outputUnits == 'massf':
+            return self.get_reduced_species_massf_dict()
+        elif self.outputUnits == 'moles':
+            return self.get_reduced_species_moles_dict_for_printing()
+
+    def get_reduced_composition_with_units(self):
+        """
+        Depending on the outputUnits selected, this function will run the appropriate function above
+        and return the dictionary with the units too.
+
+        :return:
+
+        """
+
+        return self.get_reduced_composition(), self.outputUnits
+
+    def get_reduced_composition_single_line_output_string(self):
+        """
+        This is kind of like the two functions above, but it returns a string for printing.
+
+        :return:
+
+        """
+
+        return f'{self.get_reduced_composition_for_printing()} (by {self.outputUnits})'
+
+    def get_reduced_composition_two_line_output_string(self):
+        """
+        This is kind of like the two functions above, but it returns a string for printing.
+        This is the longer two line version.
+
+        :return:
+
+        """
+
+        return f'species in {self.get_state_name()} at equilibrium (by {self.outputUnits}): \n{self.get_reduced_composition_for_printing()}'
 
     def get_mu(self):
         """
@@ -1776,7 +1908,8 @@ class Tube(object):
     def __init__(self, tube_name, tube_length, tube_diameter, fill_pressure, fill_temperature, fill_gas_model, fill_gas_name, fill_gas_filename,
                  fill_state_name, shocked_fill_state_name, entrance_state_name, entrance_state, unsteadily_expanded_entrance_state_name,
                  expand_to, expansion_factor,
-                 preset_gas_models_folder, unsteady_expansion_steps, vs_guess_1, vs_guess_2, vs_limits, vs_tolerance):
+                 preset_gas_models_folder, unsteady_expansion_steps, vs_guess_1, vs_guess_2, vs_limits, vs_tolerance,
+                 outputUnits = 'massf', species_MW_dict = None):
 
         self.tube_name = tube_name
 
@@ -1850,7 +1983,8 @@ class Tube(object):
         # now make the related facility state object:
         # the fill state can be its own reference state...
         self.fill_state = Facility_State(self.fill_state_name, fill_state_gas_object, fill_state_v,
-                                         reference_gas_state=fill_state_gas_object, room_temperature_only_gmodel = fill_room_temperature_only_gmodel)
+                                         reference_gas_state=fill_state_gas_object, room_temperature_only_gmodel = fill_room_temperature_only_gmodel,
+                                         outputUnits = outputUnits, species_MW_dict = species_MW_dict)
 
         self.shocked_fill_state_name = shocked_fill_state_name
 
@@ -1888,7 +2022,7 @@ class Tube(object):
             """Compute the velocity mismatch for a given shock speed."""
 
             print ('-' * 60)
-            print ("Current guess for {0} = {1:.2f} m/s".format(shock_name, vs))
+            print (f"Current guess for {shock_name} = {vs:.2f} m/s")
 
             # the shocked state has the same gmodel as the fill_state
             # which we can use to get the shocked state and its gas flow object...
@@ -1927,20 +2061,18 @@ class Tube(object):
                 shocked_state_label_number = 'sd' + str(int(fill_state_name[2]) + 1)
                 unsteadily_expanded_state_label_number = 'sd' + str(int(fill_state_name[2]) + 2)
 
-            print("Current p{0} = {1:.2f} Pa, current p{2} = {3:.2f} Pa.".format(shocked_state_label_number, shocked_gas_state.p,
-                                                                         unsteadily_expanded_state_label_number, unsteadily_expanded_gas_state.p))
-            print("Current v{0}g = {1:.2f} m/s, current v{2}g = {3:.2f} m/s.".format(shocked_state_label_number, v2g,
-                                                                             unsteadily_expanded_state_label_number, v3g))
+            print(f"Current p{shocked_state_label_number} = {shocked_gas_state.p:.2f} Pa, current p{unsteadily_expanded_state_label_number} = {unsteadily_expanded_gas_state.p:.2f} Pa.")
+            print(f"Current v{shocked_state_label_number}g = {v2g:.2f} m/s, current v{unsteadily_expanded_state_label_number}g = {v3g:.2f} m/s.")
             if abs((v2g - v3g) / v2g) > 0.001:
-                print("Current (v{0}g - v{1}g) / v{0}g = {2:.6f}.".format(shocked_state_label_number, unsteadily_expanded_state_label_number, (v2g - v3g) / v2g))
+                print(f"Current (v{shocked_state_label_number}g - v{unsteadily_expanded_state_label_number}g) / v{shocked_state_label_number}g = {(v2g - v3g) / v2g:.6f}.")
             else:
-                print("Current (v{0}g - v{1}g) / v{0}g = {2:.3e}.".format(shocked_state_label_number, unsteadily_expanded_state_label_number, (v2g - v3g) / v2g))
+                print(f"Current (v{shocked_state_label_number}g - v{unsteadily_expanded_state_label_number}g) / v{shocked_state_label_number}g = {(v2g - v3g) / v2g:.3e}.")
 
             return (v2g - v3g) / v2g
 
         print('-'*60)
-        print("Calculating {0} shock speed ({1}).".format(self.tube_name, self.shock_name))
-        print("{0} fill state is:".format(self.tube_name))
+        print(f"Calculating {self.tube_name} shock speed ({self.shock_name}).")
+        print(f"{self.tube_name} fill state is:")
         print(self.fill_state)
         print("Unsteadily expanding entry state is:")
         print(self.unsteadily_expanding_state)
@@ -1951,7 +2083,7 @@ class Tube(object):
         self.Ms = self.vs / self.fill_state.get_gas_state().a
 
         print ('-' * 60)
-        print ("From secant solve: {0} = {1:.2f} m/s".format(self.shock_name, self.vs))
+        print (f"From secant solve: {self.shock_name} = {self.vs:.2f} m/s")
 
         return
 
@@ -1973,7 +2105,7 @@ class Tube(object):
         """
 
         print ('-'*60)
-        print("Setting {0} shock speed ({1}) to {2:.2f} m/s".format(self.tube_name, self.shock_name, vs))
+        print(f"Setting {self.tube_name} shock speed ({ self.shock_name}) to {vs:.2f} m/s")
 
         self.vs = vs
         self.Ms = self.vs / self.fill_state.get_gas_state().a
@@ -2003,9 +2135,7 @@ class Tube(object):
 
         if hasattr(self, 'vs'):
             print ('-'*60)
-            print("Now that {0} is known, finding conditions at states {1} and {2}.".format(self.shock_name,
-                                                                                            self.shocked_fill_state_name,
-                                                                                            self.unsteadily_expanded_entrance_state_name))
+            print(f"Now that {self.shock_name} is known, finding conditions at states {self.shocked_fill_state_name} and {self.unsteadily_expanded_entrance_state_name}.")
 
             # now that we have the shock speed, we can get the final versions of the post-shock and unsteadily expanded states
             # (we don't use the values from the secant solver as we may want to change what we expand the unsteadily expanded state to)
@@ -2022,10 +2152,12 @@ class Tube(object):
             if self.fill_state.get_room_temperature_only_gmodel():
                 self.shocked_state = Facility_State(self.shocked_fill_state_name, shocked_gas_state, v2g,
                                                     reference_gas_state=self.fill_state.get_gas_state(),
-                                                    room_temperature_only_gmodel=self.fill_state.get_room_temperature_only_gmodel())
+                                                    room_temperature_only_gmodel=self.fill_state.get_room_temperature_only_gmodel(),
+                                                    outputUnits = self.fill_state.outputUnits, species_MW_dict = self.fill_state.species_MW_dict)
             else:
                 self.shocked_state = Facility_State(self.shocked_fill_state_name, shocked_gas_state, v2g,
-                                                    reference_gas_state=self.fill_state.get_gas_state())
+                                                    reference_gas_state=self.fill_state.get_gas_state(),
+                                                    outputUnits = self.fill_state.outputUnits, species_MW_dict = self.fill_state.species_MW_dict)
 
             # Across the contact surface, p3 == p2 (i.e. the post-shock pressure is teh same as the unsteadily expanded pressure)
             p3 = shocked_gas_state.p
@@ -2071,28 +2203,28 @@ class Tube(object):
             if self.unsteadily_expanding_state.get_room_temperature_only_gmodel():
                 self.unsteadily_expanded_state = Facility_State(self.unsteadily_expanded_entrance_state_name, unsteadily_expanded_gas_state, v3g,
                                                                 reference_gas_state=reference_gas_state,
-                                                                room_temperature_only_gmodel=self.unsteadily_expanding_state.get_room_temperature_only_gmodel())
+                                                                room_temperature_only_gmodel=self.unsteadily_expanding_state.get_room_temperature_only_gmodel(),
+                                                                outputUnits = self.unsteadily_expanding_state.outputUnits, species_MW_dict = self.unsteadily_expanding_state.species_MW_dict)
             else:
                 self.unsteadily_expanded_state = Facility_State(self.unsteadily_expanded_entrance_state_name,
                                                                 unsteadily_expanded_gas_state, v3g,
-                                                                reference_gas_state=reference_gas_state)
+                                                                reference_gas_state=reference_gas_state,
+                                                                outputUnits = self.unsteadily_expanding_state.outputUnits, species_MW_dict = self.unsteadily_expanding_state.species_MW_dict)
 
             for facility_state in [self.shocked_state, self.unsteadily_expanded_state]:
                 print('-'*60)
                 print(facility_state)
                 if facility_state.get_gas_state().gmodel.type_str == 'CEAGas':
-                    print('species in {0} at equilibrium (by mass):'.format(facility_state.get_state_name()))
-                    print(facility_state.get_reduced_species_massf_dict())
+                    print(facility_state.get_reduced_composition_two_line_output_string())
 
                 # add the stagnation enthalpy, if we can:
                 if facility_state.reference_gas_state:
                     total_enthalpy = facility_state.get_total_enthalpy()
 
                     if total_enthalpy:
-                        print ("The total enthalpy (Ht) at state {0} is {1:.2f} MJ/kg.".format(facility_state.get_state_name(),
-                                                                                               total_enthalpy/1.0e6))
+                        print (f"The total enthalpy (Ht) at state {facility_state.get_state_name()} is {total_enthalpy/1.0e6:.2f} MJ/kg.")
                     else:
-                        print("Was unable to calculate the total enthalpy at state {0} so it cannot be printed".format(facility_state.get_state_name()))
+                        print(f"Was unable to calculate the total enthalpy at state {facility_state.get_state_name()} so it cannot be printed")
             return
 
         else:
@@ -2151,18 +2283,13 @@ class Tube(object):
                 print('-'*60)
                 print(facility_state)
                 if facility_state.get_gas_state().gmodel.type_str == 'CEAGas':
-                    print('species in {0} at equilibrium (by mass):'.format(facility_state.get_state_name()))
-                    print(facility_state.get_reduced_species_massf_dict())
+                    print(facility_state.get_reduced_composition_two_line_output_string())
 
                 # add the stagnation enthalpy, if we can:
                 if facility_state.reference_gas_state:
                     total_enthalpy = facility_state.get_total_enthalpy()
 
-                    print ("The total enthalpy (Ht) at state {0} is {1:.2f} MJ/kg.".format(facility_state.get_state_name(),
-                                                                                           total_enthalpy/1.0e6))
-
-
-
+                    print (f"The total enthalpy (Ht) at state {facility_state.get_state_name()} is {total_enthalpy/1.0e6:.2f} MJ/kg.")
 
         else:
             print("Shocked and unsteadily expanded states must have been calculated for this function to be used.")
@@ -2393,7 +2520,7 @@ class Nozzle(object):
         # TO DO: maybe add some comments about what it is doing...
 
         print('-'*60)
-        print("Starting steady expansion through the nozzle using an area ratio of {0}".format(self.area_ratio))
+        print(f"Starting steady expansion through the nozzle using an area ratio of {self.area_ratio}")
 
         # make the gas model object
 
@@ -2420,7 +2547,7 @@ class Nozzle(object):
 
             M6 = v6 / state6.a
 
-            print ("M6 expected is 1.0 and M6 found is {0:.4f}.".format(M6))
+            print (f"M6 expected is 1.0 and M6 found is {M6:.4f}.")
 
             if M6 < 1.0 and M6 >= 0.98:
                 print ("M6 is just below 1.0 so it is being set to 1.0 so the code can continue.")
@@ -2431,7 +2558,7 @@ class Nozzle(object):
                 while M6 < 1.0:
                     v6 += 0.001
                     M6 = v6 / state6.a
-                print ("The velocity has also been slightly adjusted from {0:.4f} m/s to {1:.4f} m/s.".format(old_velocity, v6))
+                print (f"The velocity has also been slightly adjusted from {old_velocity:.4f} m/s to {v6:.4f} m/s.")
             elif M6 < 0.98:
                 raise Exception("pitot3_classes.Nozzle: M throat is too small, so there must be an issue here...")
 
@@ -2441,7 +2568,8 @@ class Nozzle(object):
             else:
                 reference_gas_state = None
             self.state6 = Facility_State('s6', state6, v6,
-                                             reference_gas_state=reference_gas_state)
+                                         reference_gas_state=reference_gas_state,
+                                         outputUnits=self.entrance_state.outputUnits, species_MW_dict=self.entrance_state.species_MW_dict)
 
             v_exit = entrance_state_gas_flow_object.steady_flow_with_area_change(self.state6.get_gas_state(),
                                                                                  self.state6.get_v(),
@@ -2531,12 +2659,12 @@ class Nozzle(object):
         else:
             reference_gas_state = None
         self.exit_state = Facility_State(self.exit_state_name, exit_gas_state, v_exit,
-                                         reference_gas_state=reference_gas_state)
+                                         reference_gas_state=reference_gas_state,
+                                         outputUnits=self.entrance_state.outputUnits, species_MW_dict=self.entrance_state.species_MW_dict)
 
         print (self.exit_state)
         if self.exit_state.get_gas_state().gmodel.type_str == 'CEAGas':
-            print('species in {0} at equilibrium (by mass):'.format(self.exit_state.get_state_name()))
-            print(self.exit_state.get_reduced_species_massf_dict())
+            print(self.exit_state.get_reduced_composition_two_line_output_string())
 
         return
 
@@ -2676,7 +2804,7 @@ class Test_Section(object):
                                                                                    post_normal_shock_ideal_gas_gas_state)
 
             #v10 here instead of v10g as the model is stationary in the lab frame...
-            self.post_normal_shock_ideal_gas_state = Facility_State('{0}f'.format(self.test_section_post_shock_state_name),
+            self.post_normal_shock_ideal_gas_state = Facility_State(f'{self.test_section_post_shock_state_name}f',
                                                                     post_normal_shock_ideal_gas_gas_state, v10f)
 
             print (self.post_normal_shock_ideal_gas_state)
@@ -2700,16 +2828,16 @@ class Test_Section(object):
             reference_gas_state = None
 
         #v10 here instead of v10g as the model is stationary in the lab frame...
-        self.post_normal_shock_state = Facility_State('{0}e'.format(self.test_section_post_shock_state_name),
+        self.post_normal_shock_state = Facility_State(f'{self.test_section_post_shock_state_name}e',
                                                       post_normal_shock_gas_state, v10,
-                                                      reference_gas_state=reference_gas_state)
+                                                      reference_gas_state=reference_gas_state,
+                                                      outputUnits=self.entrance_state.outputUnits,
+                                                      species_MW_dict=self.entrance_state.species_MW_dict)
 
         print (self.post_normal_shock_state)
 
-        # TO DO: need to get the mole fractions working too that is normally what we want...
         if self.post_normal_shock_state.get_gas_state().gmodel.type_str == 'CEAGas':
-            print('species in {0} at equilibrium (by mass):'.format(self.post_normal_shock_state.get_state_name()))
-            print(self.post_normal_shock_state.get_reduced_species_massf_dict())
+            print(self.post_normal_shock_state.get_reduced_composition_two_line_output_string())
 
     def get_post_normal_shock_state(self):
         """
@@ -2735,7 +2863,7 @@ class Test_Section(object):
         cone_half_angle = math.radians(self.cone_half_angle_degrees)
 
         print('-' * 60)
-        print("Starting equilibrium conical shock calculation with a cone half angle of {0} degrees.".format(self.cone_half_angle_degrees))
+        print(f"Starting equilibrium conical shock calculation with a cone half angle of {self.cone_half_angle_degrees} degrees.")
 
         test_section_state_gmodel = self.test_section_state.get_gas_state().gmodel
         test_section_state_gas_flow_object = GasFlow(test_section_state_gmodel)
@@ -2752,7 +2880,7 @@ class Test_Section(object):
 
         self.conical_shock_half_angle_degrees = math.degrees(beta)
 
-        print("Shock angle over the cone is {0} degrees".format(self.conical_shock_half_angle_degrees))
+        print(f"Shock angle over the cone is {self.conical_shock_half_angle_degrees} degrees")
 
         cone_half_angle_calculated, v10c = test_section_state_gas_flow_object.theta_cone(self.test_section_state.get_gas_state(),
                                                                                    self.test_section_state.get_v(),
@@ -2761,8 +2889,7 @@ class Test_Section(object):
 
         cone_half_angle_calculated_degrees = math.degrees(cone_half_angle_calculated)
 
-        print ("The calculated cone half-angle should be the same as the specified one: {0} deg = {1} deg".format(cone_half_angle_calculated_degrees,
-                                                                                                                  self.cone_half_angle_degrees))
+        print (f"The calculated cone half-angle should be the same as the specified one: {cone_half_angle_calculated_degrees} deg = {self.cone_half_angle_degrees} deg")
 
         # if the entrance state has a reference gas state, we can grab that as the post-shock state will have the same one.
         if self.entrance_state.reference_gas_state:
@@ -2770,15 +2897,16 @@ class Test_Section(object):
         else:
             reference_gas_state = None
 
-        self.post_conical_shock_state = Facility_State('{0}c'.format(self.test_section_post_shock_state_name),
+        self.post_conical_shock_state = Facility_State(f'{self.test_section_post_shock_state_name}c',
                                                        post_conical_shock_gas_state, v10c,
-                                                       reference_gas_state=reference_gas_state)
+                                                       reference_gas_state=reference_gas_state,
+                                                       outputUnits=self.entrance_state.outputUnits,
+                                                       species_MW_dict=self.entrance_state.species_MW_dict)
 
         print(self.post_conical_shock_state)
 
-        if self.post_normal_shock_state.get_gas_state().gmodel.type_str == 'CEAGas':
-            print('species in {0} at equilibrium (by mass):'.format(self.post_normal_shock_state.get_state_name()))
-            print(self.post_normal_shock_state.get_reduced_species_massf_dict())
+        if self.post_conical_shock_state.get_gas_state().gmodel.type_str == 'CEAGas':
+            print(self.post_conical_shock_state.get_reduced_composition_two_line_output_string())
 
         return
 
@@ -2794,7 +2922,7 @@ class Test_Section(object):
         wedge_angle = math.radians(self.wedge_angle_degrees)
 
         print('-' * 60)
-        print("Starting equilibrium wedge shock calculation with a wedge angle of {0} degrees.".format(self.wedge_angle_degrees))
+        print(f"Starting equilibrium wedge shock calculation with a wedge angle of {self.wedge_angle_degrees} degrees.")
 
         print("Test section freestream state is:")
         print(self.test_section_state)
@@ -2811,7 +2939,7 @@ class Test_Section(object):
 
         self.wedge_shock_angle_degrees = math.degrees(beta)
 
-        print("Shock angle over the wedge is {0} degrees".format(self.wedge_shock_angle_degrees))
+        print(f"Shock angle over the wedge is {self.wedge_shock_angle_degrees} degrees")
 
         wedge_angle_calculated, v10w = test_section_state_gas_flow_object.theta_oblique(self.test_section_state.get_gas_state(),
                                                                                         self.test_section_state.get_v(),
@@ -2822,8 +2950,7 @@ class Test_Section(object):
 
         # TO DO: could add the check on this angle here which PITOT had...
 
-        print ("The calculated wedge angle should be the same as the specified one: {0} deg = {1} deg".format(wedge_angle_calculated_degrees,
-                                                                                                               self.wedge_angle_degrees))
+        print (f"The calculated wedge angle should be the same as the specified one: {wedge_angle_calculated_degrees} deg = {self.wedge_angle_degrees} deg")
 
         # if the entrance state has a reference gas state, we can grab that as the post-shock state will have the same one.
         if self.entrance_state.reference_gas_state:
@@ -2831,15 +2958,16 @@ class Test_Section(object):
         else:
             reference_gas_state = None
 
-        self.post_wedge_shock_state = Facility_State('{0}w'.format(self.test_section_post_shock_state_name),
+        self.post_wedge_shock_state = Facility_State(f'{self.test_section_post_shock_state_name}w',
                                                      post_wedge_shock_gas_state, v10w,
-                                                     reference_gas_state=reference_gas_state)
+                                                     reference_gas_state=reference_gas_state,
+                                                     outputUnits=self.entrance_state.outputUnits,
+                                                     species_MW_dict=self.entrance_state.species_MW_dict)
 
         print(self.post_wedge_shock_state)
 
         if self.post_wedge_shock_state.get_gas_state().gmodel.type_str == 'CEAGas':
-            print('species in {0} at equilibrium (by mass):'.format(self.post_wedge_shock_state.get_state_name()))
-            print(self.post_wedge_shock_state.get_reduced_species_massf_dict())
+            print(self.post_wedge_shock_state.get_reduced_composition_two_line_output_string())
 
         return
 
@@ -3042,35 +3170,33 @@ def pitot3_results_output(config_data, gas_path, object_dict):
     for output_stream in output_list:
         # words starting with vowels causing issues below...
         if config_data['facility_type'] in ['expansion_tube']:
-            print("PITOT3 Version {0} doing an {1} calculation.".format(config_data['VERSION_STRING'], config_data['facility_type']),
+            print(f"PITOT3 Version {config_data['VERSION_STRING']} doing an {config_data['facility_type']} calculation.",
                   file=output_stream)
         else:
-            print("PITOT3 Version {0} doing a {1} calculation.".format(config_data['VERSION_STRING'], config_data['facility_type']),
+            print(f"PITOT3 Version {config_data['VERSION_STRING']} doing a {config_data['facility_type']} calculation.",
                   file=output_stream)
-        print("Calculation mode is '{0}'.".format(config_data['mode']), file=output_stream)
+        print(f"Calculation mode is '{config_data['mode']}'.", file=output_stream)
         if config_data['facility']:
-            print("Facility is '{0}'.".format(config_data['facility']), file=output_stream)
+            print(f"Facility is '{config_data['facility']}'.", file=output_stream)
 
         driver = object_dict['driver']
         state4 = driver.get_driver_rupture_state()
         if config_data['driver_condition'] != 'custom':
-            print("Driver condition is '{0}'. Driver gas model is {1}.".format(config_data['driver_condition'],
-                                                                               state4.get_gas_state().gmodel.type_str),
+            print(f"Driver condition is '{config_data['driver_condition']}'. Driver gas model is {state4.get_gas_state().gmodel.type_str}.",
                   file=output_stream)
         else:
-            print("Using custom driver condition from the file {0}.".format(config_data['driver_condition_filename']),
+            print(f"Using custom driver condition from the file {config_data['driver_condition_filename']}.",
                   file=output_stream)
-            print("Driver gas model is {0}.".format(state4.get_gas_state().gmodel.type_str),
+            print(f"Driver gas model is {state4.get_gas_state().gmodel.type_str}.",
                   file=output_stream)
 
         if state4.get_gas_state().gmodel.type_str == 'CEAGas':
-            print("Driver gas composition is {0} (by mass) ({1}).".format(state4.get_reduced_species_massf_dict(),
-                                                                          state4.get_gamma_and_R_string()),
+            print(f"Driver gas composition is {state4.get_reduced_composition_single_line_output_string()} ({state4.get_gamma_and_R_string()}).",
                   file=output_stream)
         else:
-            print("Driver gas {0}.".format(state4.get_gamma_and_R_string()), file=output_stream)
+            print(f"Driver gas {state4.get_gamma_and_R_string()}.", file=output_stream)
         if 'nozzle' in object_dict:
-            print("Nozzle area ratio is {0}.".format(object_dict['nozzle'].get_area_ratio()), file=output_stream)
+            print(f"Nozzle area ratio is {object_dict['nozzle'].get_area_ratio()}.", file=output_stream)
 
         if 'secondary_driver' in object_dict:
             secondary_driver = object_dict['secondary_driver']
@@ -3078,24 +3204,19 @@ def pitot3_results_output(config_data, gas_path, object_dict):
             secondary_driver_fill_state = secondary_driver.get_fill_state()
 
             if secondary_driver.get_fill_gas_model() != 'custom':
-                print("Secondary driver gas ({0}) is {1}. Secondary driver gas model is {2}.".format(
-                    secondary_driver_fill_state.get_state_name(),
-                    secondary_driver.get_fill_gas_name(),
-                    secondary_driver_fill_state.get_gas_state().gmodel.type_str),
+                print(f"Secondary driver gas ({secondary_driver_fill_state.get_state_name()}) is {secondary_driver.get_fill_gas_name()}. Secondary driver gas model is { secondary_driver_fill_state.get_gas_state().gmodel.type_str}.",
                       file=output_stream)
             else:
-                print('Using custom secondary driver gas from the file {0}.'.format(secondary_driver.get_fill_gas_filename()),
+                print(f'Using custom secondary driver gas from the file {secondary_driver.get_fill_gas_filename()}.',
                       file=output_stream)
-                print("Secondary driver gas model is {0}.".format(secondary_driver_fill_state.get_gas_state().gmodel.type_str),
+                print(f"Secondary driver gas model is {secondary_driver_fill_state.get_gas_state().gmodel.type_str}.",
                     file=output_stream)
 
             if secondary_driver_fill_state.get_gas_state().gmodel.type_str == 'CEAGas':
-                print("Secondary driver gas composition is {0} by mass ({1}).".format(
-                    secondary_driver_fill_state.get_reduced_species_massf_dict(),
-                    secondary_driver_fill_state.get_gamma_and_R_string()),
+                print(f"Secondary driver gas composition is {secondary_driver_fill_state.get_reduced_composition_single_line_output_string()} ({secondary_driver_fill_state.get_gamma_and_R_string()}).",
                       file=output_stream)
             else:
-                print("Secondary driver gas {0}.".format(secondary_driver_fill_state.get_gamma_and_R_string()),
+                print(f"Secondary driver gas {secondary_driver_fill_state.get_gamma_and_R_string()}.",
                       file=output_stream)
 
         # we need the test gas here, which is the shock tube fill state...
@@ -3105,24 +3226,20 @@ def pitot3_results_output(config_data, gas_path, object_dict):
         shock_tube_fill_state = shock_tube.get_fill_state()
 
         if shock_tube.get_fill_gas_model() != 'custom':
-            print("Test gas ({0}) is {1}. Test gas gas model is {2}.".format(shock_tube_fill_state.get_state_name(),
-                                                                             shock_tube.get_fill_gas_name(),
-                                                                             shock_tube_fill_state.get_gas_state().gmodel.type_str),
+            print(f"Test gas ({shock_tube_fill_state.get_state_name()}) is {shock_tube.get_fill_gas_name()}. Test gas gas model is {shock_tube_fill_state.get_gas_state().gmodel.type_str}.",
                   file=output_stream)
         else:
-            print('Using custom test gas from the file {0}.'.format(shock_tube.get_fill_gas_filename()),
+            print(f'Using custom test gas from the file {shock_tube.get_fill_gas_filename()}.',
                   file=output_stream)
-            print("Test gas gas model is {0}.".format(shock_tube_fill_state.get_gas_state().gmodel.type_str),
+            print(f"Test gas gas model is {shock_tube_fill_state.get_gas_state().gmodel.type_str}.",
                   file=output_stream)
 
         if shock_tube_fill_state.get_gas_state().gmodel.type_str == 'CEAGas':
 
-            print("Test gas composition is {0} by mass ({1})".format(
-                shock_tube_fill_state.get_reduced_species_massf_dict(),
-                shock_tube_fill_state.get_gamma_and_R_string()),
+            print(f"Test gas composition is {shock_tube_fill_state.get_reduced_composition_single_line_output_string()} ({shock_tube_fill_state.get_gamma_and_R_string()})",
                   file=output_stream)
         else:
-            print("Test gas {0}".format(shock_tube_fill_state.get_gamma_and_R_string()),
+            print(f"Test gas {shock_tube_fill_state.get_gamma_and_R_string()}",
                   file=output_stream)
 
         # if we have an acceleration tube, we are an expansion tube...
@@ -3132,37 +3249,29 @@ def pitot3_results_output(config_data, gas_path, object_dict):
             acceleration_tube_fill_state = acceleration_tube.get_fill_state()
 
             if acceleration_tube.get_fill_gas_model() != 'custom':
-                print("Accelerator gas ({0}) is {1}. Accelerator gas gas model is {2}.".format(
-                    acceleration_tube_fill_state.get_state_name(),
-                    acceleration_tube.get_fill_gas_name(),
-                    acceleration_tube_fill_state.get_gas_state().gmodel.type_str),
+                print(f"Accelerator gas ({acceleration_tube_fill_state.get_state_name()}) is {acceleration_tube.get_fill_gas_name()}. Accelerator gas gas model is {acceleration_tube_fill_state.get_gas_state().gmodel.type_str}.",
                       file=output_stream)
             else:
-                print('Using custom accelerator gas from the file {0}.'.format(acceleration_tube.get_fill_gas_filename()),
+                print(f'Using custom accelerator gas from the file {acceleration_tube.get_fill_gas_filename()}.',
                       file=output_stream)
-                print("Accelerator gas gas model is {0}.".format(acceleration_tube_fill_state.get_gas_state().gmodel.type_str),
+                print(f"Accelerator gas gas model is {acceleration_tube_fill_state.get_gas_state().gmodel.type_str}.",
                     file=output_stream)
 
             if acceleration_tube_fill_state.get_gas_state().gmodel.type_str == 'CEAGas':
-                print("Accelerator gas composition is {0} by mass ({1}).".format(
-                    acceleration_tube_fill_state.get_reduced_species_massf_dict(),
-                    acceleration_tube_fill_state.get_gamma_and_R_string()),
+                print(f"Accelerator gas composition is {acceleration_tube_fill_state.get_reduced_composition_single_line_output_string()} ({acceleration_tube_fill_state.get_gamma_and_R_string()}).",
                       file=output_stream)
             else:
-                print("Accelerator gas {0}.".format(acceleration_tube_fill_state.get_gamma_and_R_string()),
+                print(f"Accelerator gas {acceleration_tube_fill_state.get_gamma_and_R_string()}.",
                       file=output_stream)
 
         if 'secondary_driver' in locals():
-            print('vsd = {0:.2f} m/s, Msd = {1:.2f}'.format(secondary_driver.get_shock_speed(),
-                                                            secondary_driver.get_shock_Mach_number()),
+            print(f'vsd = {secondary_driver.get_shock_speed():.2f} m/s, Msd = {secondary_driver.get_shock_Mach_number():.2f}',
                   file=output_stream)
 
-        shock_speed_output = 'vs1 = {0:.2f} m/s, Ms1 = {1:.2f}'.format(shock_tube.get_shock_speed(),
-                                                                       shock_tube.get_shock_Mach_number())
+        shock_speed_output = f'vs1 = {shock_tube.get_shock_speed():.2f} m/s, Ms1 = {shock_tube.get_shock_Mach_number():.2f}'
 
         if 'acceleration_tube' in locals():
-            shock_speed_output += ', vs2 = {0:.2f} m/s, Ms2 = {1:.2f}'.format(acceleration_tube.get_shock_speed(),
-                                                                              acceleration_tube.get_shock_Mach_number())
+            shock_speed_output += f', vs2 = {acceleration_tube.get_shock_speed():.2f} m/s, Ms2 = {acceleration_tube.get_shock_Mach_number():.2f}'
 
         print(shock_speed_output, file=output_stream)
 
@@ -3180,13 +3289,13 @@ def pitot3_results_output(config_data, gas_path, object_dict):
 
                 tube_name = object_dict[tube].get_tube_name()
                 # this tries to just get 'sd', or 'st' which obviously assumes that the user has kept a similar form...
-                tube_name_reduced = '{0}{1}'.format(tube_name.split('_')[0][0], tube_name.split('_')[1][0])
+                tube_name_reduced = f"{tube_name.split('_')[0][0]}{tube_name.split('_')[1][0]}"
                 vr, Mr = object_dict[diaphragm].get_vr_Mr()
 
-                print("NOTE: a user specified reflected shock was done at the end of the {0}.".format(tube_name),
+                print(f"NOTE: a user specified reflected shock was done at the end of the {tube_name}.",
                       file=output_stream)
 
-                print("vr-{0} = {1:.2f} m/s, Mr-{0} = {2:.2f}".format(tube_name_reduced, vr, Mr),
+                print(f"vr-{tube_name_reduced} = {vr:.2f} m/s, Mr-{vr} = {Mr:.2f}",
                       file=output_stream)
 
         key = "{0:6}{1:10}{2:8}{3:6}{4:8}{5:6}{6:9}{7:8}{8:7}{9:7}{10:5}".format("state", "p", "T", "a", "v", "M",
@@ -3238,48 +3347,38 @@ def pitot3_results_output(config_data, gas_path, object_dict):
                 freestream_flight_equivalent_velocity = nozzle_inlet_state.get_flight_equivalent_velocity()
 
         if freestream_total_temperature:
-            print("The freestream ({0}) total temperature (Tt) is {1:.2f} K.".format(freestream_state.get_state_name(),
-                                                                                     freestream_total_temperature),
+            print(f"The freestream ({freestream_state.get_state_name()}) total temperature (Tt) is {freestream_total_temperature:.2f} K.",
                   file=output_stream)
 
         if freestream_flight_equivalent_velocity:
-            print("The freestream ({0}) flight equivalent velocity (Ue) is {1:.2f} m/s.".format(
-                freestream_state.get_state_name(),
-                freestream_flight_equivalent_velocity),
+            print(f"The freestream ({freestream_state.get_state_name()}) flight equivalent velocity (Ue) is {freestream_flight_equivalent_velocity:.2f} m/s.",
                   file=output_stream)
 
         if 'acceleration_tube' in locals():
             if acceleration_tube.tube_length:
                 basic_test_time = expansion_tube_test_time_calculator(acceleration_tube)
-                print("Basic test time = {0:.2f} microseconds.".format(basic_test_time * 1.0e6), file=output_stream)
+                print(f"Basic test time = {basic_test_time * 1.0e6:.2f} microseconds.", file=output_stream)
 
         if hasattr(test_section, 'post_wedge_shock_state'):
-            print("Wedge angle was {0:.2f} degrees. Wedge shock angle (beta) was found to be {1:.2f} degrees.".format(
-                test_section.wedge_angle_degrees,
-                test_section.wedge_shock_angle_degrees),
+            print(f"Wedge angle was {test_section.wedge_angle_degrees:.2f} degrees. Wedge shock angle (beta) was found to be {test_section.wedge_shock_angle_degrees:.2f} degrees.",
                   file=output_stream)
 
-        print("Freestream ({0}) unit Reynolds number is {1:.2f} /m (related mu is {2:.2e} Pa.s)." \
-              .format(freestream_state.get_state_name(), freestream_state.get_unit_Reynolds_number(),
-                      freestream_state.get_mu()),
+        print(f"Freestream ({freestream_state.get_state_name()}) unit Reynolds number is {freestream_state.get_unit_Reynolds_number():.2f} /m (related mu is {freestream_state.get_mu():.2e} Pa.s).",
               file=output_stream)
 
-        print("Post normal shock equilibrium ({0}) unit Reynolds number is {1:.2f} /m (related mu is {2:.2e} Pa.s)." \
-              .format(test_section_post_normal_shock_state.get_state_name(),
-                      test_section_post_normal_shock_state.get_unit_Reynolds_number(),
-                      test_section_post_normal_shock_state.get_mu()),
+        print(f"Post normal shock equilibrium ({test_section_post_normal_shock_state.get_state_name()}) unit Reynolds number is {test_section_post_normal_shock_state.get_unit_Reynolds_number():.2f} /m (related mu is {test_section_post_normal_shock_state.get_mu():.2e} Pa.s).",
               file=output_stream)
+
+
 
         if freestream_state.get_gas_state().gmodel.type_str == 'CEAGas':
-            print("Species in the freestream state ({0}) at equilibrium (by mass):".format(
-                freestream_state.get_state_name()),
+            print(f"Species in the freestream state ({freestream_state.get_state_name()}) at equilibrium (by {freestream_state.outputUnits}):",
                   file=output_stream)
-            print(freestream_state.get_reduced_species_massf_dict(), file=output_stream)
+            print(freestream_state.get_reduced_species_moles_dict_for_printing(), file=output_stream)
 
         if test_section.get_post_normal_shock_state().get_gas_state().gmodel.type_str == 'CEAGas':
-            print("Species in the shock layer at equilibrium ({0}) (by mass):".format(
-                test_section.get_post_normal_shock_state().get_state_name()),
+            print(f"Species in the shock layer at equilibrium ({test_section.get_post_normal_shock_state().get_state_name()}) (by {test_section.get_post_normal_shock_state().outputUnits}):",
                   file=output_stream)
-            print(test_section.get_post_normal_shock_state().get_reduced_species_massf_dict(), file=output_stream)
+            print(test_section.get_post_normal_shock_state().get_reduced_species_moles_dict_for_printing(), file=output_stream)
 
     return
