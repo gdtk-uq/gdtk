@@ -22,7 +22,7 @@ config.dt_init = 1.0e-9
 add_cfl_value(0.0, 0.5)
 add_dt_plot(0.0, 0.5e-3)
 #
-inflow = FlowState(p=1.013e3/10, T=300.0, velx=1390.0) # Lower pressure to increase BL thickness.
+inflow = FlowState(p=1.013e3, T=300.0, velx=1390.0)
 #
 L = 1.1; H = 0.4*L; W = 0.1
 vol0 = TFIVolume(p000=Vector3(0,0,W),      p100=Vector3(L,0,W),
@@ -32,7 +32,7 @@ vol0 = TFIVolume(p000=Vector3(0,0,W),      p100=Vector3(L,0,W),
 from gdtk.geom.cluster import RobertsFunction
 cf_i = RobertsFunction(True, False, 1.05)
 cf_k = RobertsFunction(True, False, 1.05)
-grd0 = StructuredGrid(pvolume=vol0, niv=61, njv=3, nkv=81, cf_list=[cf_i, None, cf_k])
+grd0 = StructuredGrid(pvolume=vol0, niv=221, njv=3, nkv=193, cf_list=[cf_i, None, cf_k])
 b0 = FluidBlock(i=0, grid=grd0, initialState=inflow,
                 bcs={'iminus':InflowBC(inflow),'iplus':OutflowBC(),
                      'kminus':WallNoSlipFixedTBC(300.0),'kplus':InflowBC(inflow)})
