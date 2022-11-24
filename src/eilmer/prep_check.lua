@@ -15,7 +15,7 @@ function prep_check.initTurbulence(fs, turbulence_model_name)
         if fs.omega~=1.0 then error(string.format("Turbulence model is none but omega set: %.18e", fs.omega)) end
         if fs.nuhat~=0.0 then error(string.format("Turbulence model is none but nuhat set: %.18e", fs.nuhat)) end
         turb = {}
-    elseif turbulence_model_name == "k_omega" then
+    elseif string.find(turbulence_model_name , "k_omega") then
         if fs.nuhat~=0.0 then error(string.format("Turbulence model is k_omega but nuhat set: %.18e", fs.nuhat)) end
         turb = {fs.tke, fs.omega}
     elseif string.find(turbulence_model_name , "spalart_allmaras") then

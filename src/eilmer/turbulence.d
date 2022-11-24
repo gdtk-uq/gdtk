@@ -157,7 +157,14 @@ Object representating the wilcox k-omega turbulence model.
   - See "Suitability of the k-w turbulence model for scramjet flowfield simulations"
     W. Y. K. Chan and P. A. Jacobs and D. J. Mee
     Int. J. Numer. Meth. Fluids (2011)
-
+  - Added the vorticity-based source term option. KAD 2022-11-09
+    This modification was originally suggested in ref. [1] for airfoils,
+    and suggested for blunt-body flows in ref. [2]. It is referred to as the
+    Wilcox k-omega Two-Equation Models with Vorticity Source Term in ref. [3].
+    references:
+    [1] Improved Two-Equation k-omega Turbulence Models for Aerodynamic Flows, F. R. Menter, NASA TM 103975 (1992)
+    [2] Turbulence on Blunt Bodies at Reentry Speeds, S. Sefidbakht, Ohio State University Thesis (2011)
+    [3] https://turbmodels.larc.nasa.gov/wilcox.html
 */
 class kwTurbulenceModel : TurbulenceModel {
     this (){
@@ -165,28 +172,30 @@ class kwTurbulenceModel : TurbulenceModel {
         bool axisymmetric      = GlobalConfig.axisymmetric;
         int dimensions         = GlobalConfig.dimensions;
         number max_mu_t_factor = GlobalConfig.max_mu_t_factor;
-        this(Pr_t, axisymmetric, dimensions, max_mu_t_factor);
+        bool use_vorticity_based_source_term = false;
+        this(Pr_t, axisymmetric, dimensions, max_mu_t_factor, use_vorticity_based_source_term);
     }
 
-    this (const JSONValue config){
+    this (const JSONValue config, bool use_vorticity_based_source_term = false){
         // What to do about default values? inherit from globalconfig??? Throw an error if not found?
         number Pr_t            = getJSONdouble(config, "turbulence_prandtl_number", 0.89);
         bool axisymmetric      = getJSONbool(config, "axisymmetric", false);
         int dimensions         = getJSONint(config, "dimensions", 2);
         number max_mu_t_factor = getJSONdouble(config, "max_mu_t_factor", 300.0);
-        this(Pr_t, axisymmetric, dimensions, max_mu_t_factor);
+        this(Pr_t, axisymmetric, dimensions, max_mu_t_factor, use_vorticity_based_source_term);
     }
 
     this (kwTurbulenceModel other){
-        this(other.Pr_t, other.axisymmetric, other.dimensions, other.max_mu_t_factor);
+        this(other.Pr_t, other.axisymmetric, other.dimensions, other.max_mu_t_factor, other.use_vorticity_based_source_term);
         return;
     }
 
-    this (number Pr_t, bool axisymmetric, int dimensions, number max_mu_t_factor) {
+    this (number Pr_t, bool axisymmetric, int dimensions, number max_mu_t_factor, bool use_vorticity_based_source_term) {
         this.Pr_t = Pr_t;
         this.axisymmetric = axisymmetric;
         this.dimensions = dimensions;
         this.max_mu_t_factor = max_mu_t_factor ;
+        this.use_vorticity_based_source_term = use_vorticity_based_source_term;
     }
     @nogc final override string modelName() const {return "k_omega";}
     @nogc final override size_t nturb() const {return 2;}
@@ -239,21 +248,32 @@ class kwTurbulenceModel : TurbulenceModel {
                 // 2D axisymmetric
                 //number v_over_y = fs.vel.y / pos[0].y;
                 number v_over_y = fs.vel.y / ybar;
-                // JP.Nap correction from 03-May-2007 (-v_over_y in parentheses)
-                // P_K -= 0.6667 * mu_t * v_over_y * (dudx+dvdy-v_over_y);
-                // Wilson Chan correction to JP Nap's version (13 Dec 2008)
-                P_K = 2.0 * fs.mu_t * (dudx*dudx + dvdy*dvdy)
-                    + fs.mu_t * (dudy + dvdx) * (dudy + dvdx)
-                    - 2.0/3.0 * fs.mu_t * (dudx + dvdy + v_over_y)
-                    * (dudx + dvdy + v_over_y)
-                    + 2.0 * fs.mu_t * (v_over_y) * (v_over_y)
-                    - 2.0/3.0 * fs.gas.rho * tke * (dudx + dvdy + v_over_y);
+                if (use_vorticity_based_source_term) {
+                    // TODO: we need to check if there should be a v_over_y term here. KAD 2022-11-09
+                    number omega2 = (dvdx-dudy)*(dvdx-dudy);
+                    P_K = fs.mu_t*omega2 - 2.0/3.0 * fs.gas.rho * tke * (dudx + dvdy);
+                } else {
+                    // JP.Nap correction from 03-May-2007 (-v_over_y in parentheses)
+                    // P_K -= 0.6667 * mu_t * v_over_y * (dudx+dvdy-v_over_y);
+                    // Wilson Chan correction to JP Nap's version (13 Dec 2008)
+                    P_K = 2.0 * fs.mu_t * (dudx*dudx + dvdy*dvdy)
+                        + fs.mu_t * (dudy + dvdx) * (dudy + dvdx)
+                        - 2.0/3.0 * fs.mu_t * (dudx + dvdy + v_over_y)
+                        * (dudx + dvdy + v_over_y)
+                        + 2.0 * fs.mu_t * (v_over_y) * (v_over_y)
+                        - 2.0/3.0 * fs.gas.rho * tke * (dudx + dvdy + v_over_y);
+                }
                 WWS = 0.25 * (dvdx - dudy) * (dvdx - dudy) * v_over_y ;
             } else {
                 // 2D cartesian
-                P_K = 1.3333 * fs.mu_t * (dudx*dudx - dudx*dvdy + dvdy*dvdy)
-                    + fs.mu_t * (dudy + dvdx) * (dudy + dvdx)
-                    - 0.66667 * fs.gas.rho * tke * (dudx + dvdy);
+                if (use_vorticity_based_source_term) {
+                    number omega2 = (dvdx-dudy)*(dvdx-dudy);
+                    P_K = fs.mu_t*omega2 - 2.0/3.0 * fs.gas.rho * tke * (dudx + dvdy);
+                } else {
+                    P_K = 1.3333 * fs.mu_t * (dudx*dudx - dudx*dvdy + dvdy*dvdy)
+                        + fs.mu_t * (dudy + dvdx) * (dudy + dvdx)
+                        - 0.66667 * fs.gas.rho * tke * (dudx + dvdy);
+                }
                 WWS = 0.0 ;
             }
             cross_diff = dtkedx * domegadx + dtkedy * domegady ;
@@ -266,12 +286,17 @@ class kwTurbulenceModel : TurbulenceModel {
             number dtkedz = grad.turb[0][2];
             number domegadz = grad.turb[1][2];
             // 3D cartesian
-            P_K = 2.0 * fs.mu_t * (dudx*dudx + dvdy*dvdy + dwdz*dwdz)
-                - 2.0/3.0 * fs.mu_t * (dudx + dvdy + dwdz) * (dudx + dvdy + dwdz)
-                - 2.0/3.0 * fs.gas.rho * tke * (dudx + dvdy + dwdz)
-                + fs.mu_t * (dudy + dvdx) * (dudy + dvdx)
-                + fs.mu_t * (dudz + dwdx) * (dudz + dwdx)
-                + fs.mu_t * (dvdz + dwdy) * (dvdz + dwdy) ;
+            if (use_vorticity_based_source_term) {
+                number omega2 = (dwdy-dvdz)*(dwdy-dvdz) + (dudz-dwdx)*(dudz-dwdx) + (dvdx-dudy)*(dvdx-dudy);
+                P_K = fs.mu_t*omega2 - 2.0/3.0 * fs.gas.rho * tke * (dudx + dvdy + dwdz);
+            } else {
+                P_K = 2.0 * fs.mu_t * (dudx*dudx + dvdy*dvdy + dwdz*dwdz)
+                    - 2.0/3.0 * fs.mu_t * (dudx + dvdy + dwdz) * (dudx + dvdy + dwdz)
+                    - 2.0/3.0 * fs.gas.rho * tke * (dudx + dvdy + dwdz)
+                    + fs.mu_t * (dudy + dvdx) * (dudy + dvdx)
+                    + fs.mu_t * (dudz + dwdx) * (dudz + dwdx)
+                    + fs.mu_t * (dvdz + dwdy) * (dvdz + dwdy) ;
+            }
             cross_diff = dtkedx * domegadx + dtkedy * domegady + dtkedz * domegadz ;
             WWS = 0.25 * (dudy - dvdx) * (dudy - dvdx) * dwdz
                 + 0.25 * (dudz - dwdx) * (dudz - dwdx) * dvdy
@@ -448,6 +473,7 @@ private:
     immutable number[2] _rhocoeffs = [1.0, 0.0];
     immutable number small_tke = 0.1;
     immutable number small_omega = 1.0;
+    immutable bool use_vorticity_based_source_term;
 
     @nogc bool is_tke_valid(ref const(FlowStateLimits) flowstate_limits, const number tke) const {
         if (!isFinite(tke.re)) {
@@ -1108,6 +1134,9 @@ version(turbulence){
     case "k_omega":
         turbulence_model = new kwTurbulenceModel(config);
         break;
+    case "k_omega_vorticity":
+        turbulence_model = new kwTurbulenceModel(config, true);
+        break;
     case "spalart_allmaras":
         turbulence_model = new saTurbulenceModel(config);
         break;
@@ -1147,6 +1176,9 @@ TurbulenceModel init_turbulence_model(const string turbulence_model_name)
         break;
 version(turbulence){
     case "k_omega":
+        turbulence_model = new kwTurbulenceModel();
+        break;
+    case "k_omega_vorticity":
         turbulence_model = new kwTurbulenceModel();
         break;
     case "spalart_allmaras":
