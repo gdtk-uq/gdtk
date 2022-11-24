@@ -274,7 +274,15 @@ public:
 
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        throw new Error("GhostCellFromStagnation.apply_for_interface_structured_grid() not yet implemented");
+        auto gmodel = blk.myConfig.gmodel;
+        auto bc = blk.bc[which_boundary];
+        int outsign = bc.outsigns[f.i_bndry];
+        FVCell cell = (outsign == 1) ? f.left_cells[0] : f.right_cells[0];
+        determine_inflow_condition_at_face(f, cell, outsign, gmodel);
+        foreach (n; 0 .. blk.n_ghost_cell_layers) {
+            FVCell ghost = (outsign == 1) ? f.right_cells[n] : f.left_cells[n];
+            ghost.fs.copy_values_from(inflow_condition);
+        }
     }
 
     // not @nogc
