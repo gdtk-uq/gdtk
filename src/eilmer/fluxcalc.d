@@ -2205,7 +2205,9 @@ void ASF_242(ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
     // NASA/TM-2011-217307  November 2011
     //
     // And the AIAA Paper by White et al. 2012
-    //
+    // Low-Dissipation Advection Schemes Designed for Large Eddy Simulation of Hypersonic Propulsion
+    // Systems
+
     auto gmodel = myConfig.gmodel;
     ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
@@ -2262,7 +2264,7 @@ void ASF_242(ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
     // Calculate the final flux values of the simple quantities mass, momentum and energy
     number mass_flux = factor*(alpha_mass*f_c[0] + (1.0-alpha_mass)*f_e[0]);
     F[cqi.mass] += mass_flux;
-    F[cqi.xMom] += factor*(alpha_mom*f_c[1] + (1.0-alpha_mom)*f_e[1]) + (alpha_p*f_c[9] + (1.0-alpha_p)*f_e[9]);
+    F[cqi.xMom] += factor*(alpha_mom*f_c[1] + (1.0-alpha_mom)*f_e[1] + (alpha_p*f_c[9] + (1.0-alpha_p)*f_e[9]));
     F[cqi.yMom] += factor*(alpha_mom*f_c[2] + (1.0-alpha_mom)*f_e[2]);
     if (cqi.threeD) { F[cqi.zMom] += factor*(alpha_mom*f_c[3] + (1.0-alpha_mom)*f_e[3]); }
     F[cqi.totEnergy] += factor*(alpha_ie*f_c[4] + (1.0-alpha_ie)*f_e[4] +
