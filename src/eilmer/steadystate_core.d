@@ -927,6 +927,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 if (GlobalConfig.frozen_limiter == false) {
                     evalRHS(pseudoSimTime, 0);
                     GlobalConfig.frozen_limiter = true;
+                    GlobalConfig.frozen_shock_detector = true;
                 }
                 limiterFreezingCondition = true;
                 writefln("=== limiter freezing condition met at step: %d ===", step);
@@ -1314,6 +1315,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     // for some simulations we freeze the limiter to assist in reducing the relative residuals
     // to machine precision - in these instances it is typically necessary to store the limiter 
     // values for further analysis.
+    /*
     if (GlobalConfig.frozen_limiter) {
         string limValDir = "limiter-values";
         if (GlobalConfig.is_master_task) { ensure_directory_is_present(limValDir); }
@@ -1355,6 +1357,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             outFile.close();
         }
     } // end if (GlobalConfig.frozen_limiter)    
+    */
 }
 
 void allocate_global_fluid_workspace()
