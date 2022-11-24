@@ -592,7 +592,8 @@ void march_in_time_using_gpu(bool binary_data)
             }
             status = cudaMemcpy(&smallest_dt_picos, smallest_dt_picos_on_gpu, sizeof(long long int), cudaMemcpyDeviceToHost);
             if (status) throw runtime_error("Stage 0, could not copy smallest_dt_picos from gpu to host cpu.");
-            SimState::dt = smallest_dt_picos * 1.0e-12;
+            // Make the transition to larger allowable time step not so sudden.
+            SimState::dt = fmin(1.5*SimState::dt, smallest_dt_picos*1.0e-12);
         }
         //
         // Gas-dynamic update over three stages with TVD-RK3 weights.
