@@ -76,7 +76,7 @@ def prepareCases(scale, ncellsList, fluxCalc, derivCalc, blocking, threading):
 def runCases(ncellsList):
     cwd = os.getcwd()
     for ncells in ncellsList:
-        print "========= Working on grid: %dx%d ===========" % (ncells, ncells)
+        print ("========= Working on grid: %dx%d ===========" % (ncells, ncells))
         subDir = "%dx%d" % (ncells, ncells)
         os.chdir(subDir)
         cmd = "sh run.sh"

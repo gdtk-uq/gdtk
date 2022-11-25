@@ -42,7 +42,7 @@ def buildCaseStr(case, ncells, fluxCalc, derivCalc, blocking):
     return str
 
 def buildRunStr(threading):
-    str = "python make_lua_files.py\n"
+    str = "python3 make_lua_files.py\n"
     str += "e4shared --job=mms --prep\n"
     str += "e4shared --job=mms --run"
     if threading == 'single':
