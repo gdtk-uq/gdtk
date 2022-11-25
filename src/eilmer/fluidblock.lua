@@ -358,7 +358,7 @@ local function connectBlocks(blkA, faceA, blkB, faceB, orientation)
    end
 end -- connectBlocks()
 
-local function identifyBlockConnections(blockList, excludeList, tolerance)
+local function identifyBlockConnections(blockList, excludeList, tolerance, only_fluid_solid_boundary_connections)
    -- Identify block connections by trying to match corner points.
    -- Parameters (all optional):
    -- blockList: the list of SFluidBlock objects to be included in the search.
@@ -368,13 +368,34 @@ local function identifyBlockConnections(blockList, excludeList, tolerance)
    -- tolerance: spatial tolerance for the colocation of vertices
    --
    local myBlockList = {}
+   local myBlockListA = {}
+   local myBlockListB = {}
+
    if blockList then
       -- The caller has provided a list of Blocks to bound the search.
       for _,v in ipairs(blockList) do myBlockList[#myBlockList+1] = v end
    else
-      -- The caller has not provided a list; use the global blocks lists.
-      for _,v in ipairs(fluidBlocks) do myBlockList[#myBlockList+1] = v end
-      for _,v in ipairs(solidBlocks) do myBlockList[#myBlockList+1] = v end
+      if only_fluid_solid_boundary_connections then
+         -- The caller has requested that we only need to search for connections between fluid/solid blocks
+         for _,v in ipairs(fluidBlocks) do
+            for _,bc in pairs(v.bcList) do
+               if bc.type == "wall_adjacent_to_solid" or bc.type == "wall_adjacent_to_solid2" then
+                  myBlockListA[#myBlockListA+1] = v
+               end
+            end
+         end
+         for _,v in ipairs(solidBlocks) do
+            for _,bc in pairs(v.bcList) do
+               if bc.type == "SolidAdjacentToGas" or bc.type == "SolidAdjacentToGas2" then
+                  myBlockListB[#myBlockListB+1] = v
+               end
+            end
+         end
+      else
+         -- The caller has not provided a list; use the global blocks lists.
+         for _,v in ipairs(fluidBlocks) do myBlockList[#myBlockList+1] = v end
+         for _,v in ipairs(solidBlocks) do myBlockList[#myBlockList+1] = v end
+      end
    end
    excludeList = excludeList or {}
    -- Put UFluidBlock objects into the exclude list because they don't
@@ -384,8 +405,13 @@ local function identifyBlockConnections(blockList, excludeList, tolerance)
    end
    tolerance = tolerance or 1.0e-6
    --
-   for _,A in ipairs(myBlockList) do
-      for _,B in ipairs(myBlockList) do
+   if not only_fluid_solid_boundary_connections then
+      myBlockListA = myBlockList
+      myBlockListB = myBlockList
+   end
+   --
+   for _,A in ipairs(myBlockListA) do
+      for _,B in ipairs(myBlockListB) do
 	 if (A ~= B) and (not isPairInList({A, B}, excludeList)) then
 	    -- print("Proceed with test for coincident vertices.") -- DEBUG
 	    local connectionCount = 0
