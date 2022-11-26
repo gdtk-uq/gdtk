@@ -198,7 +198,12 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         // set the super-time-step
         SimState.dt_global_parab = dt_global;
         S = SimState.s_RKL;
-        double dt_super = dt_global*(S*S+S)/2.0;
+        double dt_super;
+        if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
+            dt_super = dt_global * (S*S+S)/(2.0); // RKL1
+        } else {
+            dt_super = dt_global * (S*S+S-2.0)/(4.0); // RKL2
+        }
 
         // check for a couple of edge cases when using the user specified S is not appropriate...
         double dt_remainder = SimState.target_time - SimState.time;
@@ -531,10 +536,14 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 		    addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
 		}
 		scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-                if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || euler_step) {
-                    scell.stage1RKL1Update(dt_global, 1, SimState.s_RKL); // RKL1 (j=1)
+                if (euler_step) {
+                    scell.eulerUpdate(dt_global);
                 } else {
-                    scell.stage1RKL2Update(dt_global, 1, SimState.s_RKL); // RKL1 (j=1)
+                    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
+                        scell.stage1RKL1Update(dt_global, 1, SimState.s_RKL); // RKL1 (j=1)
+                    } else {
+                        scell.stage1RKL2Update(dt_global, 1, SimState.s_RKL); // RKL2 (j=1)
+                    }
                 }
                 scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
 	    } // end foreach scell
