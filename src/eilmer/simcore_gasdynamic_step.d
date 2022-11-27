@@ -832,7 +832,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 			addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
 		    }
 		    scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-                    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1 || euler_step) {
+                    if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
                         scell.stage2RKL1Update(dt_global, j, SimState.s_RKL); // RKL1 (j=1)
                     } else {
                         scell.stage2RKL2Update(dt_global, j, SimState.s_RKL); // RKL2 (j=1)
@@ -869,14 +869,14 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         }
     } // end foreach (J; 2..S+1)
 
-    int idx = 2;
-    if (euler_step) { idx = 1; }
+    size_t end_indx;
+    if (euler_step) { end_indx = 1; }
+    else { end_indx = 2; }
 
     // Get the end conserved data into U[0] for next step.
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) {
-            size_t end_indx = 1; // time-level holds current solution
-            foreach (cell; blk.cells) { cell.U[0].copy_values_from(cell.U[idx]); } //swap(cell.U[0], cell.U[end_indx]); }
+            foreach (cell; blk.cells) { cell.U[0].copy_values_from(cell.U[end_indx]); }
         }
     } // end foreach blk
     //
@@ -884,8 +884,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
         foreach (sblk; localSolidBlocks) {
             if (sblk.active) {
-                //size_t end_indx = 1; // time-level holds current solution
-                foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[idx]; }
+                foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[end_indx]; }
             }
         } // end foreach sblk
     }
