@@ -845,7 +845,7 @@ extern (C) int reaction_mechanism_n_reactions(int rm_i)
     }
 }
 
-extern (C) int reaction_mechanism_tickrates(int rm_i, int gm_i, int gs_i, double* tickrates)
+extern (C) int reaction_mechanism_tickrates(int rm_i, int gm_i, int gs_i, double* forwardrates, double* backwardrates)
 {
     // Return the individual reaction rates as an array
     try {
@@ -853,14 +853,16 @@ extern (C) int reaction_mechanism_tickrates(int rm_i, int gm_i, int gs_i, double
         auto gm = gas_models[gm_i];
         auto gs = gas_states[gs_i];
         
-        double[] tickrates_array, concentrations;
-        tickrates_array.length = rm.n_reactions;
+        double[] forward_tickrates, backward_tickrates, concentrations;
+        forward_tickrates.length = rm.n_reactions;
+        backward_tickrates.length = rm.n_reactions;
         concentrations.length = gm.n_species;
 
         rm.eval_rate_constants(*gs);
         gm.massf2conc(*gs, concentrations);
-        rm.eval_tickrates(concentrations, tickrates_array);
-        foreach(i; 0 .. rm.n_reactions) tickrates[i] = tickrates_array[i];
+        rm.eval_tickrates(concentrations, forward_tickrates, backward_tickrates);
+        foreach(i; 0 .. rm.n_reactions) forwardrates[i] = forward_tickrates[i];
+        foreach(i; 0 .. rm.n_reactions) backwardrates[i] = backward_tickrates[i];
 
         return 0;
     } catch (Exception e) {

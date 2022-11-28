@@ -59,11 +59,12 @@ public:
     }
 
     @nogc
-    final void eval_tickrates(in number[] conc, number[] tickrates)
+    final void eval_tickrates(in number[] conc, number[] forward, number[] backward)
     {
         foreach ( ref r; _reactions ) r.eval_rates(conc);
         foreach ( i, ref r; _reactions ) {
-            tickrates[i] = r.tickrate;
+            forward[i] = r.forward_tickrate;
+            backward[i] = r.backward_tickrate;
         }
     }
     @nogc

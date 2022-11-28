@@ -66,7 +66,7 @@ ffi.cdef("""
 
     int reaction_mechanism_new(int gm_i, char* filename);
     int reaction_mechanism_n_reactions(int rm_i);
-    int reaction_mechanism_tickrates(int rm_i, int gm_i, int gs_i, double* tickrates);
+    int reaction_mechanism_tickrates(int rm_i, int gm_i, int gs_i, double* forwardrates, double* backwardrates);
 
     int gasflow_shock_ideal(int state1_id, double vs, int state2_id, int gm_id,
                             double* results);
@@ -654,11 +654,28 @@ class ReactionMechanism(object):
         return so.reaction_mechanism_n_reactions(self.id)
 
     def reaction_tickrates(self, gstate):
-        tickrates = ffi.new("double[]", [0.0]*self.n_reactions)
-        flag = so.reaction_mechanism_tickrates(self.id, self.gmodel.id, gstate.id, tickrates);
+        forwardrates = ffi.new("double[]", [0.0]*self.n_reactions)
+        backwardrates = ffi.new("double[]", [0.0]*self.n_reactions)
+        flag = so.reaction_mechanism_tickrates(self.id, self.gmodel.id, gstate.id, forwardrates, backwardrates);
 
         if flag < 0: raise Exception("Could not compute reaction tickrates.")
-        return [tickrates[i] for i in range(self.n_reactions)]
+        return [forwardrates[i] - backwardrates[i] for i in range(self.n_reactions)]
+
+    def forward_tickrates(self, gstate):
+        forwardrates = ffi.new("double[]", [0.0]*self.n_reactions)
+        backwardrates = ffi.new("double[]", [0.0]*self.n_reactions)
+        flag = so.reaction_mechanism_tickrates(self.id, self.gmodel.id, gstate.id, forwardrates, backwardrates);
+
+        if flag < 0: raise Exception("Could not compute reaction tickrates.")
+        return [forwardrates[i] for i in range(self.n_reactions)]
+
+    def backward_tickrates(self, gstate):
+        forwardrates = ffi.new("double[]", [0.0]*self.n_reactions)
+        backwardrates = ffi.new("double[]", [0.0]*self.n_reactions)
+        flag = so.reaction_mechanism_tickrates(self.id, self.gmodel.id, gstate.id, forwardrates, backwardrates);
+
+        if flag < 0: raise Exception("Could not compute reaction tickrates.")
+        return [backwardrates[i] for i in range(self.n_reactions)]
 
 
 #------------------------------------------------------------------------------------
