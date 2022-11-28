@@ -19,6 +19,7 @@ setuptools.setup(
     package_dir={"": "."},
     packages=setuptools.find_packages(where="."),
     python_requires=">=3.7",
+    install_requires=["cffi"],
     setup_requires=[
             "setuptools_git",
             "setuptools_scm",
