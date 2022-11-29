@@ -39,6 +39,12 @@ struct Vector3 {
     }
 
     __host__ __device__
+    bool approxEqual(const Vector3 other, double tol=0.001)
+    {
+        return (abs(x-other.x) < tol) && (abs(y-other.y) < tol) && (abs(z-other.z) < tol);
+    }
+
+    __host__ __device__
     void add(const Vector3& other)
     {
         x += other.x; y += other.y; z += other.z;

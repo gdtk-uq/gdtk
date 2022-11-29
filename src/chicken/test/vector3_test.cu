@@ -21,6 +21,7 @@ int main()
     Vector3 z = Vector3{0.0, 0.0, 1.0};
     //
     Vector3 n = y; Vector3 t1 = z; Vector3 t2 = cross(n, t1);
+    cout << "t2.approxEqual(x)=" << t2.approxEqual(x) << endl;
     cout << "Original a=" << a << endl;
     a.normalize();
     cout << "Normalized a=" << a << endl;

@@ -104,7 +104,7 @@ int computeInverse(size_t N, size_t NDIM, size_t NDIM2, T)
             foreach(i; 0 .. N) {
                 if ( i == j ) continue;
                 T cij = c[i][j];
-                foreach(col; 0 .. 2*N) c[i][col] -= cij * c[j][col]; 
+                foreach(col; 0 .. 2*N) c[i][col] -= cij * c[j][col];
             }
         } // end foreach j
     } // end static if N > 3
@@ -135,8 +135,8 @@ int computeInverseDebug(size_t N, size_t NDIM, size_t NDIM2, T)
             if ( abs(c[i][j]) > abs(c[p][j]) ) p = i;
         }
         if (abs(c[p][j]) <= very_small_value) {
-            string msg = format(" matrix is essentially singular j=%d p=%d", j, p) ~ 
-                " \nc=" ~to!string(c) ~ " \ncsave=" ~ to!string(csave); 
+            string msg = format(" matrix is essentially singular j=%d p=%d", j, p) ~
+                " \nc=" ~to!string(c) ~ " \ncsave=" ~ to!string(csave);
             writeln(msg);
             return -1; // singular
         }
@@ -152,7 +152,7 @@ int computeInverseDebug(size_t N, size_t NDIM, size_t NDIM2, T)
         foreach(i; 0 .. N) {
             if ( i == j ) continue;
             T cij = c[i][j];
-            foreach(col; 0 .. 2*N) c[i][col] -= cij * c[j][col]; 
+            foreach(col; 0 .. 2*N) c[i][col] -= cij * c[j][col];
         }
     } // end foreach j
     return 0; // success
@@ -216,7 +216,7 @@ version(rsla_test) {
 
         // Try same workspace with a smaller 2x2 system.
         x[0] = -0.5; x[1] = 1.0;
-        A[0][0] = 0.0; A[0][1] = 2.0; A[0][2] = 1.0; A[0][3] = 0.0; 
+        A[0][0] = 0.0; A[0][1] = 2.0; A[0][2] = 1.0; A[0][3] = 0.0;
         A[1][0] = 2.0; A[1][1] = 2.0; A[1][2] = 0.0; A[1][3] = 1.0;
         b[0] = A[0][0]*x[0] + A[0][1]*x[1];
         b[1] = A[1][0]*x[0] + A[1][1]*x[1];
@@ -234,7 +234,7 @@ version(rsla_test) {
         A[0][0] = 0.0; A[0][1] = 2.0; A[0][2] = 0.0;
         A[1][0] = 2.0; A[1][1] = 2.0; A[1][2] = 3.0;
         A[2][0] = 4.0; A[2][1] = -3.0; A[2][2] = 0.0;
-        A[0][3] = 1.0; A[0][4] = 0.0; A[0][5] = 0.0; 
+        A[0][3] = 1.0; A[0][4] = 0.0; A[0][5] = 0.0;
         A[1][3] = 0.0; A[1][4] = 1.0; A[1][5] = 0.0;
         A[2][3] = 0.0; A[2][4] = 0.0; A[2][5] = 1.0;
         b[0] = A[0][0]*x[0] + A[0][1]*x[1] + A[0][2]*x[2];

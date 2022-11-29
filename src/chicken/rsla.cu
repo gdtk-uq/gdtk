@@ -5,13 +5,18 @@
 // PJ 2022-10-17 adapted the direct inverse calculations from the Dlang variant.
 //   Calculation of the flow gradients (for the viscous terms) requires
 //   the solution of 3x3 linear equations.
-//   Would like to have used C++ array class but nvcc did like them for __device__ fns.
+//   Would like to have used C++ array class but nvcc did not like them for __device__ fns.
+//
+// PJ 2022-11-29 Add templated Matrix class and functions.
+//
 
 #ifndef RSLA_INCLUDED
 #define RSLA_INCLUDED
 
 #include <cmath>
 #include <sstream>
+#include <iostream>
+#include <array>
 
 #include "number.cu"
 
@@ -95,5 +100,117 @@ int MInverse(const number c[3][3], number cinv[3][3], number very_small_value=1.
     cinv[2][2] = (c[0][0]*c[1][1] - c[0][1]*c[1][0])*one_over_det;
     return 0;
 }
+
+// A more general matrix size can be implemented via templates,
+// in which we specify the size at compile time.
+
+template <size_t nrows, size_t ncols>
+struct Matrix {
+    array<array<number, ncols>, nrows> data;
+
+    string toString() const
+    {
+        stringstream ss;
+        ss << "[";
+        for (int i=0; i < nrows; ++i) {
+            ss << "[";
+            for (int j=0; j < ncols; ++j) {
+                ss << data[i][j] << ((j < ncols-1) ? "," : "]");
+            }
+            ss << ((i < nrows-1) ? "," : "]");
+        }
+        return ss.str();
+    }
+
+    bool approxEqual(const Matrix<nrows,ncols> other, double tol=0.001)
+    {
+        bool isEqual = true; // Assume, then test elements.
+        for (int i=0; i < nrows; ++i) {
+            for (int j=0; j < ncols; ++j) {
+                if (abs(data[i][j] - other.data[i][j]) > tol) isEqual = false;
+            }
+        }
+        return isEqual;
+    }
+
+    int getColumn(int j, Matrix<nrows,1>& x)
+    {
+        if (j >= ncols) return -1;
+        for (int i=0; i < nrows; ++i) { x.data[i][0] = data[i][j]; }
+        return 0;
+    }
+
+    int getColumn(int j, number x[])
+    {
+        if (j >= ncols) return -1;
+        for (int i=0; i < nrows; ++i) { x[i] = data[i][j]; }
+        return 0;
+    }
+}; // end Matrix
+
+template <size_t nrows, size_t ncols>
+ostream& operator<<(ostream& os, const Matrix<nrows,ncols> m)
+{
+    os << m.toString();
+    return os;
+}
+
+template <size_t nrows1, size_t ncols1, size_t ncols2>
+Matrix<nrows1, ncols2> dot(const Matrix<nrows1,ncols1>& a, const Matrix<ncols1,ncols2>& b)
+{
+    Matrix<nrows1,ncols2> c;
+    for (int i=0; i < nrows1; ++i) {
+        for (int j=0; j < ncols2; ++j) {
+            number s = 0.0;
+            for (int k=0; k < ncols1; ++k) { s += a.data[i][k]*b.data[k][j]; }
+            c.data[i][j] = s;
+        }
+    }
+    return c;
+}
+
+template <size_t nrows1, size_t ncols1, size_t ncols2>
+Matrix<nrows1, ncols1+ncols2> hstack(const Matrix<nrows1,ncols1>& a, const Matrix<nrows1,ncols2>& b)
+{
+    Matrix<nrows1,ncols1+ncols2> c;
+    for (int i=0; i < nrows1; ++i) {
+        for (int j=0; j < ncols1; ++j) { c.data[i][j] = a.data[i][j]; }
+        for (int j=0; j < ncols2; ++j) { c.data[i][ncols1+j] = b.data[i][j]; }
+    }
+    return c;
+}
+
+/**
+ * Perform Gauss-Jordan elimination on an augmented matrix.
+ * c = [A|b] such that the mutated matrix becomes [I|x]
+ * where x is the solution vector(s) to A.x = b
+ */
+template<size_t nrows, size_t ncols>
+int gaussJordanElimination(Matrix<nrows,ncols>& c, double very_small_value=1.0e-16)
+{
+    static_assert(ncols > nrows, "too few columns supplied");
+    for(int j=0; j < nrows; ++j) {
+        // Select pivot.
+        size_t p = j;
+        for(int i=j+1; i < nrows; ++i) {
+            if (abs(c.data[i][j]) > abs(c.data[p][j])) p = i;
+        }
+        if (abs(c.data[p][j]) < very_small_value) {
+            // Matrix is essentially singular.
+            return -1;
+        }
+        if (p != j) { swap(c.data[p], c.data[j]); }
+        // Scale row j to get unity on the diagonal.
+        number cjj = c.data[j][j];
+        for (int col=0; col < ncols; ++col) { c.data[j][col] /= cjj; }
+        // Do the elimination to get zeros in all off diagonal values in column j.
+        for (int i=0; i < nrows; ++i) {
+            if (i == j) continue;
+            number cij = c.data[i][j];
+            for (int col=0; col < ncols; ++col) { c.data[i][col] -= cij * c.data[j][col]; }
+        }
+    } // end for j
+    return 0; // success
+} // end gaussJordanElimination()
 
 #endif
