@@ -19,66 +19,66 @@ int main()
     number A[2][2]{0.0, 2.0, 2.0, 2.0};
     number x[2]{-0.5, 1.0};
     number b[2]; MVMult(A,x, b);
-    cout << "A=" << toString(A) << endl;
-    cout << "x=" << toString2(x) << endl;
-    cout << "b=" << toString2(b) << endl;
+    cout << "A=" << toString<2,2>(A) << endl;
+    cout << "x=" << toString<2>(x) << endl;
+    cout << "b=" << toString<2>(b) << endl;
     number Ainv[2][2]; int status = MInverse(A, Ainv, 1.0e-9);
     cout << "status=" << status << endl;
-    cout << "Ainv=" << toString(Ainv) << endl;
+    cout << "Ainv=" << toString<2,2>(Ainv) << endl;
     number y[2]; MVMult(Ainv,b, y);
-    cout << "y=" << toString2(y) << endl;
+    cout << "y=" << toString<2>(y) << endl;
     //
     cout << "and again, with a 3x3 system." << endl;
     number x3[3]{-0.5, 1.0, 1.0/3};
     number A33[3][3]{0.0, 2.0, 0.0,  2.0, 2.0, 3.0,  4.0, -3.0, 0.0};
     number b3[3]; MVMult(A33, x3, b3);
-    cout << "A33=" << toString(A33) << endl;
-    cout << "x3=" << toString3(x3) << endl;
-    cout << "b3=" << toString3(b3) << endl;
+    cout << "A33=" << toString<3,3>(A33) << endl;
+    cout << "x3=" << toString<3>(x3) << endl;
+    cout << "b3=" << toString<3>(b3) << endl;
     number A33inv[3][3]; status = MInverse(A33, A33inv);
-    cout << "A33inv=" << toString(A33) << endl;
+    cout << "A33inv=" << toString<3,3>(A33) << endl;
     number y3[3]; MVMult(A33inv, b3, y3);
-    cout << "y3=" << toString3(y3) << endl;
+    cout << "y3=" << toString<3>(y3) << endl;
     //
     cout << "Try Matrix bits, size 3." << endl;
-    Matrix<3,1> xx{-0.5, 1.0, 1.0/3};
-    Matrix<3,3> AA{0.0, 2.0, 0.0,  2.0, 2.0, 3.0,  4.0, -3.0, 0.0};
-    cout << "AA=" << AA << endl;
-    cout << "xx=" << xx << endl;
-    Matrix<3,1> bb = dot<3,3,1>(AA, xx);
-    cout << "bb=" << bb << endl;
-    Matrix<3,4> cc = hstack(AA, bb);
-    cout << "Augmented Matrix cc=hstack(AA,bb)=" << cc << endl;
-    if (gaussJordanElimination(cc)) {
+    number xx[3][1] {-0.5, 1.0, 1.0/3};
+    number AA[3][3] {0.0, 2.0, 0.0,  2.0, 2.0, 3.0,  4.0, -3.0, 0.0};
+    cout << "AA=" << toString<3,3>(AA) << endl;
+    cout << "xx=" << toString<3,1>(xx) << endl;
+    number bb[3][1]; dot<3,3,1>(AA, xx, bb);
+    cout << "bb=" << toString<3,1>(bb) << endl;
+    number cc[3][4]; hstack<3,3,1>(AA, bb, cc);
+    cout << "Augmented Matrix cc=hstack(AA,bb)=" << toString<3,4>(cc) << endl;
+    if (gaussJordanElimination<3,4>(cc)) {
         cout << "Matrix was singular." << endl;
     }
-    cout << "After Gauss-Jordan elimination cc=" << cc << endl;
+    cout << "After Gauss-Jordan elimination cc=" << toString<3,4>(cc) << endl;
     number yy[3];
-    if(cc.getColumn(3, yy)) { cout << "Invalid column." << endl; }
-    cout << "yy=["; for (int i=0; i < 3; ++i) cout << yy[i] << ((i < 2) ? "," : "]"); cout << endl;
+    if(getColumn<3,4>(cc, 3, yy)) { cout << "Invalid column." << endl; }
+    cout << "yy=" << toString<3>(yy) << endl;
     //
     cout << "Try Matrix bits, size 4." << endl;
-    Matrix<4,1> bbb{0.0, -2.0, -7.0, 6.0};
-    Matrix<4,4> AAA {
+    number bbb[4][1] {0.0, -2.0, -7.0, 6.0};
+    number AAA[4][4] {
             0.0,  2.0,  0.0,  1.0,
             2.0,  2.0,  3.0,  2.0,
             4.0, -3.0,  0.0,  1.0,
             6.0,  1.0, -6.0, -5.0
             };
-    cout << "AAA=" << AAA << endl;
-    cout << "bbb=" << bbb << endl;
-    Matrix<4,5> Ab = hstack(AAA, bbb);
-    cout << "Augmented Matrix Ab=hstack(AAA,bbb)=" << Ab << endl;
-    if (gaussJordanElimination(Ab)) {
+    cout << "AAA=" << toString<4,4>(AAA) << endl;
+    cout << "bbb=" << toString<4,1>(bbb) << endl;
+    number Ab[4][5]; hstack<4,4,1>(AAA, bbb, Ab);
+    cout << "Augmented Matrix Ab=hstack(AAA,bbb)=" << toString<4,5>(Ab) << endl;
+    if (gaussJordanElimination<4,5>(Ab)) {
         cout << "Matrix was singular." << endl;
     }
-    cout << "After Gauss-Jordan elimination Ab=" << Ab << endl;
-    Matrix<4,1> xxx;
-    if(Ab.getColumn(4, xxx)) { cout << "Invalid column." << endl; }
-    cout << "xxx=" << xxx << endl;
-    Matrix<4,1> bbb2 = dot<4,4,1>(AAA, xxx);
-    cout << "bbb2=" << bbb2 << endl;
-    cout << "bbb.approxEqual(bbb2)=" << bbb.approxEqual(bbb2) << endl;
+    cout << "After Gauss-Jordan elimination Ab=" << toString<4,5>(Ab) << endl;
+    number xxx[4][1];
+    if(getColumn<4,5>(Ab, 4, xxx)) { cout << "Invalid column." << endl; }
+    cout << "xxx=" << toString<4,1>(xxx) << endl;
+    number bbb2[4][1]; dot<4,4,1>(AAA, xxx, bbb2);
+    cout << "bbb2=" << toString<4,1>(bbb2) << endl;
+    cout << "approxEqual(bbb, bbb2)=" << approxEqual<4,1>(bbb, bbb2) << endl;
     //
     return 0;
 }
