@@ -1008,9 +1008,9 @@ class CellViscousGradientData : AuxCellData
 
         version(multi_T_gas) {
         foreach(it; 0 .. myConfig.gmodel.n_modes) {
-            acc["d"~k_modesName(it)~"_dx"] = new AccessDTModesDX(it);
-            acc["d"~k_modesName(it)~"_dy"] = new AccessDTModesDY(it);
-            if (myConfig.dimensions == 3) acc["d"~k_modesName(it)~"_dz"] = new AccessDTModesDZ(it);
+            acc["d"~T_modesName(it)~"_dx"] = new AccessDTModesDX(it);
+            acc["d"~T_modesName(it)~"_dy"] = new AccessDTModesDY(it);
+            if (myConfig.dimensions == 3) acc["d"~T_modesName(it)~"_dz"] = new AccessDTModesDZ(it);
         }
         }
 
