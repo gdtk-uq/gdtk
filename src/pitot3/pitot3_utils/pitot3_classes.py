@@ -2372,7 +2372,7 @@ class Tube(object):
         :return:
         """
         if hasattr(self, 'get_unsteadily_expanded_state'):
-            return self.shocked_state
+            return self.unsteadily_expanded_state
         else:
             print("The unsteadily expanded state has not yet been calculated.")
 
@@ -2850,6 +2850,22 @@ class Test_Section(object):
             # calculate it and then return it
             self.calculate_post_normal_shock_state()
             return self.post_normal_shock_state
+
+    def get_post_normal_shock_ideal_gas_state(self):
+        """
+        Return the test section post-normal shock state. (and calculate it if it doesn't exist already.)
+        """
+
+        if hasattr(self, 'post_normal_shock_ideal_gas_state'):
+            return self.post_normal_shock_ideal_gas_state
+        else:
+            if self.test_section_state.get_gas_state_gmodel_type() == 'CEAGas':
+                # calculate it and then return it
+                self.calculate_post_normal_shock_state()
+                return self.post_normal_shock_ideal_gas_state
+            else:
+                print("The gas model is not CEAGas, so there will not be a post-normal shock ideal gas state. Returning None.")
+                return None
 
     def calculate_post_conical_shock_state(self, cone_half_angle_degrees):
         """
