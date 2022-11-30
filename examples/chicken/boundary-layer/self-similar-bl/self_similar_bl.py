@@ -7,6 +7,11 @@ The calculation is based on the self-similar solution for a flat plate,
 as described in section 6.5 of J.D. Anderson's text
 Hypersonic and High Temperature Gas Dynamics.
 
+Usage:
+Edit the parameters describing the flow conditions and the streamwise position
+and then run this program to generate the InflowBoundaryLayerBC.data file
+for use by the chicken flow solver.
+
 Author: PJ
 06-Mar-2011 Original code.
 2022-11-26 Update for the GDTK project.
@@ -44,7 +49,7 @@ k_e = mu_e * C_p / Pr
 print("rho_e=", rho_e, "mu_e=", mu_e, "k_e=", k_e)
 
 # Choose a position along the plate
-x = 0.1  # metres
+x = 0.5  # metres
 xi = rho_e * u_e * mu_e * x
 print("x=", x, "xi=", xi)
 
@@ -134,14 +139,55 @@ else:
     fdd, gd = 0.44547389521432856, 1.0632176798422215
 eta, z = integrate_through_bl(fdd, gd)
 
-# Write the data for plotting (with gnuplot, maybe).
+# Write the data for plotting (with gnuplot, maybe) and curve fitting.
 fp = open('profile.data', 'w')
 fp.write("# eta f fd fdd g gd y p T rho u\n")
+ys = []; Ts = []; rhos = []; us = []
 for i in range(len(eta)):
     f, fd, fdd, g, gd, y = z[i]
     h = g * h_e; T = h / C_p; rho = p_e / (R * T); u = fd * u_e
+    ys.append(y); Ts.append(T); rhos.append(rho); us.append(u)
     fp.write("%f %f %f %f %f %f %f %f %f %f %f\n" %
              (eta[i], f, fd, fdd, g, gd, y, p_e, T, rho, u))
 fp.close()
+
+# Put a spline through a number of the sampled points.
+from gdtk.numeric.spline import CubicSpline
+y_sample = []; T_sample = []; rho_sample = []; u_sample = []
+N = len(ys)
+M = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0]
+for i in M:
+    j = int((N-1)*i)
+    y_sample.append(ys[j]);
+    T_sample.append(Ts[j])
+    u_sample.append(us[j])
+sT = CubicSpline(y_sample, T_sample)
+su = CubicSpline(y_sample, u_sample)
+#
+# Write the spline data for use as a Chicken InflowBoundaryLayerBC
+fp = open('InflowBoundaryLayerBC.data', 'w')
+fp.write('%g\n' % p_e)
+fp.write('%d\n' % len(y_sample))
+for i in range(len(y_sample)):
+    fp.write('%g %g %g\n' % (y_sample[i], T_sample[i], u_sample[i]))
+fp.close()
+
+from pylab import linspace, plot, title, xlabel, ylabel, show, subplots
+y_plot = linspace(min(ys), max(ys), 100)
+T_plot = [sT(y) for y in y_plot]
+rho_plot = [p_e/(sT(y)*R) for y in y_plot]
+u_plot = [su(y) for y in y_plot]
+fig, axs = subplots(3, sharex=True)
+axs[0].plot(ys, Ts, '-')
+axs[0].plot(y_plot, T_plot, '-r')
+axs[1].plot(ys, rhos, '-')
+axs[1].plot(y_plot, rho_plot, '-r')
+axs[2].plot(ys, us, '-')
+axs[2].plot(y_plot, u_plot, '-r')
+fig.suptitle("Spline approximation of boundary-layer properties.")
+axs[0].set(ylabel ='T, degree K')
+axs[1].set(ylabel ='rho, kg/m**3')
+axs[2].set(xlabel='y, m', ylabel ='velx, m/s')
+show()
 
 print("Done.")
