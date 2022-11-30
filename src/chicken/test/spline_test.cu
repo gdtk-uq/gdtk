@@ -14,12 +14,14 @@ number runge(number x) { return 1.0/(1.0 + 25* x * x); }
 int main()
 {
     cout << "Test for CubicSpline." << endl;
+    cout << "Simple initialization example." << endl;
     number x[5]{0.0, 1.0, 2.0, 3.0, 4.0};
     number y[5]{0.0, 1.0, 0.0, 1.0, 0.0};
     auto s0 = CubicSpline<4>(x, y);
     cout << "s0=" << s0.toString() << endl;
 
-    constexpr int ns = 20;
+    cout << "Runge function example." << endl;
+    constexpr int ns = 21;
     number x0 = -1.0;
     number x1 = 1.0;
     number dx = (x1-x0)/(ns-1);
@@ -33,13 +35,16 @@ int main()
     cout << "s=" << s.toString() << endl;
     constexpr int ms = 100;
     dx = (x1-x0)/(ms-1);
+    number max_dy = 0.0;
     for (int i=0; i < ms; ++i) {
         number xx = x0 + dx*i;
         number y_runge = runge(xx);
         number y_spline = s.eval(xx);
         number dy = y_spline - y_runge;
-        cout << xx << " " << y_runge << " " << y_spline << " " << dy << endl;
+        max_dy = (abs(dy) > max_dy) ? abs(dy) : max_dy;
+        // cout << xx << " " << y_runge << " " << y_spline << " " << dy << endl;
         // assert(fabs(dy) < 0.02, failedUnitTest());
     }
+    cout << "max_dy=" << max_dy << endl;
     return 0;
 }

@@ -76,6 +76,14 @@ int MInverse(const number c[3][3], number cinv[3][3], number very_small_value=1.
 namespace rsla {
 
     template <size_t nrows, size_t ncols>
+    void set_all_zero(number a[nrows][ncols])
+    {
+        for (int i=0; i < nrows; ++i) {
+            for (int j=0; j < ncols; ++j) { a[i][j] = 0.0; }
+        }
+    }
+
+    template <size_t nrows, size_t ncols>
     string toString(const number data[nrows][ncols])
     {
         stringstream ss;
@@ -103,7 +111,8 @@ namespace rsla {
     }
 
     template <size_t nrows, size_t ncols>
-    bool approxEqual(const number data[nrows][ncols], const number other[nrows][ncols], double tol=0.001)
+    bool approxEqual(const number data[nrows][ncols], const number other[nrows][ncols],
+                     double tol=0.001)
     {
         bool isEqual = true; // Assume, then test elements.
         for (int i=0; i < nrows; ++i) {
@@ -115,7 +124,8 @@ namespace rsla {
     }
 
     template <size_t nrows>
-    bool approxEqual(const number data[nrows][1], const number other[nrows], double tol=0.001)
+    bool approxEqual(const number data[nrows][1], const number other[nrows],
+                     double tol=0.001)
     {
         bool isEqual = true; // Assume, then test elements.
         for (int i=0; i < nrows; ++i) {

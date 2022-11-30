@@ -43,7 +43,7 @@ struct CubicSpline {
         // The sigma[i], i=1...n-1 (inclusive) are the unknowns since
         // the natural end conditions are sigma[0]=sigma[n]=0.0
         constexpr size_t m = n-1; // number of unknowns (and constraint equations)
-        number A[m][m+1]; // Augmented matrix
+        number A[m][m+1]; rsla::set_all_zero<m,m+1>(A); // Augmented matrix
         for (int k=0; k < m; ++k) {
             size_t i = k + 1; // i-index as in the lecture notes
             if (k > 0) { A[k][k-1] = h[i-1]; }
@@ -51,7 +51,9 @@ struct CubicSpline {
             if (k < m-1) { A[k][k+1] = h[i]; }
             A[k][m] = 6.0*((ys[i+1]-ys[i])/h[i] - (ys[i]-ys[i-1])/h[i-1]); // RHS elements
         }
-        rsla::gaussJordanElimination<m,m+1>(A);
+        if (rsla::gaussJordanElimination<m,m+1>(A)) {
+            throw runtime_error("Gauss-Jordan elimination failed while solving for sigma.");
+        }
         // Put sigma values in place in the full array.
         number sigma[n+1]; sigma[0] = 0.0; sigma[n] = 0.0;
         for (int i=0; i < m; ++i) { sigma[i+1] = A[i][m]; }
