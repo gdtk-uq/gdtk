@@ -75,7 +75,7 @@ int setup_LSQ_arrays_at_face(FVFace& f, FVCell cells[], FVFace faces[])
     //
     number xTxInv[3][3]; // Inverse of normal matrix.
     number very_small_value = 1.0e-16; // Should be 1.0e-32 (normInf(xTx))^^3;
-    if (0 != MInverse(xTx, xTxInv, very_small_value)) {
+    if (0 != rsla::MInverse(xTx, xTxInv, very_small_value)) {
         return 1;
     }
     // Prepare final weights for later use in the reconstruction phase.

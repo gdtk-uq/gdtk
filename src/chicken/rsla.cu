@@ -21,59 +21,58 @@
 
 using namespace std;
 
-
-__host__ __device__
-void MVMult(const number c[2][2], const number x[2], number result[2])
-{
-    result[0] = c[0][0]*x[0] + c[0][1]*x[1];
-    result[1] = c[1][0]*x[0] + c[1][1]*x[1];
-}
-
-__host__ __device__
-void MVMult(const number c[3][3], const number x[3], number result[3])
-{
-    result[0] = c[0][0]*x[0] + c[0][1]*x[1] + c[0][2]*x[2];
-    result[1] = c[1][0]*x[0] + c[1][1]*x[1] + c[1][2]*x[2];
-    result[2] = c[2][0]*x[0] + c[2][1]*x[1] + c[2][2]*x[2];
-}
-
-__host__ __device__
-int MInverse(const number c[2][2], number d[2][2], number very_small_value=1.0e-12)
-{
-    number det = c[0][0]*c[1][1] - c[0][1]*c[1][0];
-    if (fabs(det) <= very_small_value) return -1; // singular
-    // compute inverse directly
-    number one_over_det = 1.0/det;
-    d[0][0] =  c[1][1]*one_over_det; d[0][1] = -c[0][1]*one_over_det;
-    d[1][0] = -c[1][0]*one_over_det; d[1][1] =  c[0][0]*one_over_det;
-    return 0;
-}
-
-__host__ __device__
-int MInverse(const number c[3][3], number cinv[3][3], number very_small_value=1.0e-12)
-{
-    number det = c[0][0]*(c[1][1]*c[2][2] - c[1][2]*c[2][1])
-        - c[0][1]*(c[1][0]*c[2][2] - c[1][2]*c[2][0])
-        + c[0][2]*(c[1][0]*c[2][1] - c[1][1]*c[2][0]);
-    if (abs(det) <= very_small_value) return -1; // singular
-    // compute inverse directly
-    number one_over_det = 1.0/det;
-    cinv[0][0] = (c[1][1]*c[2][2] - c[1][2]*c[2][1])*one_over_det;
-    cinv[0][1] = (c[0][2]*c[2][1] - c[0][1]*c[2][2])*one_over_det;
-    cinv[0][2] = (c[0][1]*c[1][2] - c[0][2]*c[1][1])*one_over_det;
-    cinv[1][0] = (c[1][2]*c[2][0] - c[1][0]*c[2][2])*one_over_det;
-    cinv[1][1] = (c[0][0]*c[2][2] - c[0][2]*c[2][0])*one_over_det;
-    cinv[1][2] = (c[0][2]*c[1][0] - c[0][0]*c[1][2])*one_over_det;
-    cinv[2][0] = (c[1][0]*c[2][1] - c[1][1]*c[2][0])*one_over_det;
-    cinv[2][1] = (c[0][1]*c[2][0] - c[0][0]*c[2][1])*one_over_det;
-    cinv[2][2] = (c[0][0]*c[1][1] - c[0][1]*c[1][0])*one_over_det;
-    return 0;
-}
-
-// A more general matrix size can be implemented via templates,
-// in which we specify the size at compile time.
-
 namespace rsla {
+
+    __host__ __device__
+    void MVMult(const number c[2][2], const number x[2], number result[2])
+    {
+        result[0] = c[0][0]*x[0] + c[0][1]*x[1];
+        result[1] = c[1][0]*x[0] + c[1][1]*x[1];
+    }
+
+    __host__ __device__
+    void MVMult(const number c[3][3], const number x[3], number result[3])
+    {
+        result[0] = c[0][0]*x[0] + c[0][1]*x[1] + c[0][2]*x[2];
+        result[1] = c[1][0]*x[0] + c[1][1]*x[1] + c[1][2]*x[2];
+        result[2] = c[2][0]*x[0] + c[2][1]*x[1] + c[2][2]*x[2];
+    }
+
+    __host__ __device__
+    int MInverse(const number c[2][2], number d[2][2], number very_small_value=1.0e-12)
+    {
+        number det = c[0][0]*c[1][1] - c[0][1]*c[1][0];
+        if (fabs(det) <= very_small_value) return -1; // singular
+        // compute inverse directly
+        number one_over_det = 1.0/det;
+        d[0][0] =  c[1][1]*one_over_det; d[0][1] = -c[0][1]*one_over_det;
+        d[1][0] = -c[1][0]*one_over_det; d[1][1] =  c[0][0]*one_over_det;
+        return 0;
+    }
+
+    __host__ __device__
+    int MInverse(const number c[3][3], number cinv[3][3], number very_small_value=1.0e-12)
+    {
+        number det = c[0][0]*(c[1][1]*c[2][2] - c[1][2]*c[2][1])
+            - c[0][1]*(c[1][0]*c[2][2] - c[1][2]*c[2][0])
+            + c[0][2]*(c[1][0]*c[2][1] - c[1][1]*c[2][0]);
+        if (abs(det) <= very_small_value) return -1; // singular
+        // compute inverse directly
+        number one_over_det = 1.0/det;
+        cinv[0][0] = (c[1][1]*c[2][2] - c[1][2]*c[2][1])*one_over_det;
+        cinv[0][1] = (c[0][2]*c[2][1] - c[0][1]*c[2][2])*one_over_det;
+        cinv[0][2] = (c[0][1]*c[1][2] - c[0][2]*c[1][1])*one_over_det;
+        cinv[1][0] = (c[1][2]*c[2][0] - c[1][0]*c[2][2])*one_over_det;
+        cinv[1][1] = (c[0][0]*c[2][2] - c[0][2]*c[2][0])*one_over_det;
+        cinv[1][2] = (c[0][2]*c[1][0] - c[0][0]*c[1][2])*one_over_det;
+        cinv[2][0] = (c[1][0]*c[2][1] - c[1][1]*c[2][0])*one_over_det;
+        cinv[2][1] = (c[0][1]*c[2][0] - c[0][0]*c[2][1])*one_over_det;
+        cinv[2][2] = (c[0][0]*c[1][1] - c[0][1]*c[1][0])*one_over_det;
+        return 0;
+    }
+
+    // A more general matrix size can be implemented via templates,
+    // in which we specify the size at compile time.
 
     template <size_t nrows, size_t ncols>
     void set_all_zero(number a[nrows][ncols])
