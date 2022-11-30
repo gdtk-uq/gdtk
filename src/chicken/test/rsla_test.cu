@@ -11,6 +11,7 @@
 #include "../rsla.cu"
 
 using namespace std;
+using namespace rsla;
 
 int main()
 {

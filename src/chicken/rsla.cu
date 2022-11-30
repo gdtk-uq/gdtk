@@ -16,7 +16,6 @@
 #include <cmath>
 #include <sstream>
 #include <iostream>
-#include <array>
 
 #include "number.cu"
 
@@ -74,146 +73,150 @@ int MInverse(const number c[3][3], number cinv[3][3], number very_small_value=1.
 // A more general matrix size can be implemented via templates,
 // in which we specify the size at compile time.
 
-template <size_t nrows, size_t ncols>
-string toString(const number data[nrows][ncols])
-{
-    stringstream ss;
-    ss << "[";
-    for (int i=0; i < nrows; ++i) {
+namespace rsla {
+
+    template <size_t nrows, size_t ncols>
+    string toString(const number data[nrows][ncols])
+    {
+        stringstream ss;
         ss << "[";
-        for (int j=0; j < ncols; ++j) {
-            ss << data[i][j] << ((j < ncols-1) ? "," : "]");
-        }
-        ss << ((i < nrows-1) ? "," : "]");
-    }
-    return ss.str();
-}
-
-template <size_t nrows>
-string toString(const number data[nrows])
-{
-    stringstream ss;
-    ss << "[";
-    for (int i=0; i < nrows; ++i) {
-        ss << data[i];
-        ss << ((i < nrows-1) ? "," : "]");
-    }
-    return ss.str();
-}
-
-template <size_t nrows, size_t ncols>
-bool approxEqual(const number data[nrows][ncols], const number other[nrows][ncols], double tol=0.001)
-{
-    bool isEqual = true; // Assume, then test elements.
-    for (int i=0; i < nrows; ++i) {
-        for (int j=0; j < ncols; ++j) {
-            if (abs(data[i][j] - other[i][j]) > tol) isEqual = false;
-        }
-    }
-    return isEqual;
-}
-
-template <size_t nrows>
-bool approxEqual(const number data[nrows][1], const number other[nrows], double tol=0.001)
-{
-    bool isEqual = true; // Assume, then test elements.
-    for (int i=0; i < nrows; ++i) {
-        if (abs(data[i][0] - other[i]) > tol) isEqual = false;
-    }
-    return isEqual;
-}
-
-template <size_t nrows, size_t ncols>
-int getColumn(number data[nrows][ncols], int j, number x[nrows])
-{
-    if (j >= ncols) return -1;
-    for (int i=0; i < nrows; ++i) { x[i] = data[i][j]; }
-    return 0;
-}
-
-template <size_t nrows, size_t ncols>
-int getColumn(number data[nrows][ncols], int j, number x[nrows][1])
-{
-    if (j >= ncols) return -1;
-    for (int i=0; i < nrows; ++i) { x[i][0] = data[i][j]; }
-    return 0;
-}
-
-template <size_t nrows1, size_t ncols1, size_t ncols2>
-void dot(const number a[nrows1][ncols1], const number b[ncols1][ncols2],
-         number c[nrows1][ncols2])
-{
-    for (int i=0; i < nrows1; ++i) {
-        for (int j=0; j < ncols2; ++j) {
-            number s = 0.0;
-            for (int k=0; k < ncols1; ++k) { s += a[i][k]*b[k][j]; }
-            c[i][j] = s;
-        }
-    }
-}
-
-template <size_t nrows1, size_t ncols1>
-void dot(const number a[nrows1][ncols1], const number b[ncols1],
-         number c[nrows1])
-{
-    for (int i=0; i < nrows1; ++i) {
-        number s = 0.0;
-        for (int k=0; k < ncols1; ++k) { s += a[i][k]*b[k]; }
-        c[i] = s;
-    }
-}
-
-template <size_t nrows1, size_t ncols1, size_t ncols2>
-void hstack(const number a[nrows1][ncols1], const number b[nrows1][ncols2],
-            number c[nrows1][ncols1+ncols2])
-{
-    for (int i=0; i < nrows1; ++i) {
-        for (int j=0; j < ncols1; ++j) { c[i][j] = a[i][j]; }
-        for (int j=0; j < ncols2; ++j) { c[i][ncols1+j] = b[i][j]; }
-    }
-}
-
-template <size_t nrows1, size_t ncols1>
-void hstack(const number a[nrows1][ncols1], const number b[nrows1],
-            number c[nrows1][ncols1+1])
-{
-    for (int i=0; i < nrows1; ++i) {
-        for (int j=0; j < ncols1; ++j) { c[i][j] = a[i][j]; }
-        c[i][ncols1] = b[i];
-    }
-}
-
-/**
- * Perform Gauss-Jordan elimination on an augmented matrix.
- * c = [A|b] such that the mutated matrix becomes [I|x]
- * where x is the solution vector(s) to A.x = b
- */
-template<size_t nrows, size_t ncols>
-int gaussJordanElimination(number c[nrows][ncols], double very_small_value=1.0e-16)
-{
-    static_assert(ncols > nrows, "Too few columns supplied.");
-    for(int j=0; j < nrows; ++j) {
-        // Select pivot.
-        size_t p = j;
-        for(int i=j+1; i < nrows; ++i) {
-            if (abs(c[i][j]) > abs(c[p][j])) p = i;
-        }
-        if (abs(c[p][j]) < very_small_value) {
-            // Matrix is essentially singular.
-            return -1;
-        }
-        if (p != j) { swap(c[p], c[j]); }
-        // Scale row j to get unity on the diagonal.
-        number cjj = c[j][j];
-        for (int col=0; col < ncols; ++col) { c[j][col] /= cjj; }
-        // Do the elimination to get zeros in all off diagonal values in column j.
         for (int i=0; i < nrows; ++i) {
-            if (i == j) continue;
-            number cij = c[i][j];
-            for (int col=0; col < ncols; ++col) { c[i][col] -= cij * c[j][col]; }
+            ss << "[";
+            for (int j=0; j < ncols; ++j) {
+                ss << data[i][j] << ((j < ncols-1) ? "," : "]");
+            }
+            ss << ((i < nrows-1) ? "," : "]");
         }
-    } // end for j
-    return 0; // success
-} // end gaussJordanElimination()
+        return ss.str();
+    }
+
+    template <size_t nrows>
+    string toString(const number data[nrows])
+    {
+        stringstream ss;
+        ss << "[";
+        for (int i=0; i < nrows; ++i) {
+            ss << data[i];
+            ss << ((i < nrows-1) ? "," : "]");
+        }
+        return ss.str();
+    }
+
+    template <size_t nrows, size_t ncols>
+    bool approxEqual(const number data[nrows][ncols], const number other[nrows][ncols], double tol=0.001)
+    {
+        bool isEqual = true; // Assume, then test elements.
+        for (int i=0; i < nrows; ++i) {
+            for (int j=0; j < ncols; ++j) {
+                if (abs(data[i][j] - other[i][j]) > tol) isEqual = false;
+            }
+        }
+        return isEqual;
+    }
+
+    template <size_t nrows>
+    bool approxEqual(const number data[nrows][1], const number other[nrows], double tol=0.001)
+    {
+        bool isEqual = true; // Assume, then test elements.
+        for (int i=0; i < nrows; ++i) {
+            if (abs(data[i][0] - other[i]) > tol) isEqual = false;
+        }
+        return isEqual;
+    }
+
+    template <size_t nrows, size_t ncols>
+    int getColumn(number data[nrows][ncols], int j, number x[nrows])
+    {
+        if (j >= ncols) return -1;
+        for (int i=0; i < nrows; ++i) { x[i] = data[i][j]; }
+        return 0;
+    }
+
+    template <size_t nrows, size_t ncols>
+    int getColumn(number data[nrows][ncols], int j, number x[nrows][1])
+    {
+        if (j >= ncols) return -1;
+        for (int i=0; i < nrows; ++i) { x[i][0] = data[i][j]; }
+        return 0;
+    }
+
+    template <size_t nrows1, size_t ncols1, size_t ncols2>
+    void dot(const number a[nrows1][ncols1], const number b[ncols1][ncols2],
+             number c[nrows1][ncols2])
+    {
+        for (int i=0; i < nrows1; ++i) {
+            for (int j=0; j < ncols2; ++j) {
+                number s = 0.0;
+                for (int k=0; k < ncols1; ++k) { s += a[i][k]*b[k][j]; }
+                c[i][j] = s;
+            }
+        }
+    }
+
+    template <size_t nrows1, size_t ncols1>
+    void dot(const number a[nrows1][ncols1], const number b[ncols1],
+             number c[nrows1])
+    {
+        for (int i=0; i < nrows1; ++i) {
+            number s = 0.0;
+            for (int k=0; k < ncols1; ++k) { s += a[i][k]*b[k]; }
+            c[i] = s;
+        }
+    }
+
+    template <size_t nrows1, size_t ncols1, size_t ncols2>
+    void hstack(const number a[nrows1][ncols1], const number b[nrows1][ncols2],
+                number c[nrows1][ncols1+ncols2])
+    {
+        for (int i=0; i < nrows1; ++i) {
+            for (int j=0; j < ncols1; ++j) { c[i][j] = a[i][j]; }
+            for (int j=0; j < ncols2; ++j) { c[i][ncols1+j] = b[i][j]; }
+        }
+    }
+
+    template <size_t nrows1, size_t ncols1>
+    void hstack(const number a[nrows1][ncols1], const number b[nrows1],
+                number c[nrows1][ncols1+1])
+    {
+        for (int i=0; i < nrows1; ++i) {
+            for (int j=0; j < ncols1; ++j) { c[i][j] = a[i][j]; }
+            c[i][ncols1] = b[i];
+        }
+    }
+
+    /**
+     * Perform Gauss-Jordan elimination on an augmented matrix.
+     * c = [A|b] such that the mutated matrix becomes [I|x]
+     * where x is the solution vector(s) to A.x = b
+     */
+    template<size_t nrows, size_t ncols>
+    int gaussJordanElimination(number c[nrows][ncols], double very_small_value=1.0e-16)
+    {
+        static_assert(ncols > nrows, "Too few columns supplied.");
+        for(int j=0; j < nrows; ++j) {
+            // Select pivot.
+            size_t p = j;
+            for(int i=j+1; i < nrows; ++i) {
+                if (abs(c[i][j]) > abs(c[p][j])) p = i;
+            }
+            if (abs(c[p][j]) < very_small_value) {
+                // Matrix is essentially singular.
+                return -1;
+            }
+            if (p != j) { swap(c[p], c[j]); }
+            // Scale row j to get unity on the diagonal.
+            number cjj = c[j][j];
+            for (int col=0; col < ncols; ++col) { c[j][col] /= cjj; }
+            // Do the elimination to get zeros in all off diagonal values in column j.
+            for (int i=0; i < nrows; ++i) {
+                if (i == j) continue;
+                number cij = c[i][j];
+                for (int col=0; col < ncols; ++col) { c[i][col] -= cij * c[j][col]; }
+            }
+        } // end for j
+        return 0; // success
+    } // end gaussJordanElimination()
+
+} // end namespace rsla
 
 #endif
