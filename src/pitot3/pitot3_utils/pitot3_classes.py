@@ -1290,12 +1290,19 @@ class Facility_State(object):
         if self.outputUnits == 'moles' and not species_MW_dict:
             raise Exception("pitot3_classes.Facility_State: Cannot select OutputUnits of 'moles' without providing a species molecular weight dictionary.")
 
-        if species_MW_dict and self.get_gas_state_gmodel_type() == 'CEAGas':
-            # make a species MW dict with just the species in the gas...
-            self.species_MW_dict = {}
+        # in the end, doing it this way did not work when I did calculations without ions,
+        # so I'll just store the whole species MW dict with every facility state... it isn't a big deal.
+        #if species_MW_dict and self.get_gas_state_gmodel_type() == 'CEAGas':
+        #    # make a species MW dict with just the species in the gas...
+        #    self.species_MW_dict = {}
+        #
+        #    for species in self.gas_state.ceaSavedData['massf'].keys():
+        #        self.species_MW_dict[species] = species_MW_dict[species]
 
-            for species in self.gas_state.ceaSavedData['massf'].keys():
-                self.species_MW_dict[species] = species_MW_dict[species]
+        if self.get_gas_state_gmodel_type() == 'CEAGas':
+            self.species_MW_dict = species_MW_dict
+        else:
+            self.species_MW_dict = None
 
         return
 
@@ -3397,4 +3404,4 @@ def pitot3_results_output(config_data, gas_path, object_dict):
                   file=output_stream)
             print(test_section.get_post_normal_shock_state().get_reduced_species_moles_dict_for_printing(), file=output_stream)
 
-    return
+    return states_list

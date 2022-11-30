@@ -6,7 +6,7 @@ Chris James (c.james4@uq.edu.au) - (01/01/21)
 
 """
 
-VERSION_STRING = '29-Nov-2022'
+VERSION_STRING = '30-Nov-2022'
 
 import sys, os, math
 import yaml
@@ -608,9 +608,17 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
     #--------------------------------------------------------------------------------------------
     # now do the final output
 
-    pitot3_results_output(config_data, gas_path, object_dict)
+    # I am returning the states list here from the output so I can return a states dictionary with the output now...
+    states_list = pitot3_results_output(config_data, gas_path, object_dict)
 
-    return config_data, gas_path, object_dict
+    states_dict = {}
+
+    for state in states_list:
+        state_name = state.get_state_name()
+
+        states_dict[state_name] = state
+
+    return config_data, gas_path, object_dict, states_dict
 
 
 # ----------------------------------------------------------------------------

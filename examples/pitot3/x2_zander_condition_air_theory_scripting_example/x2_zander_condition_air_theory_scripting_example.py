@@ -26,7 +26,7 @@ config_dict = {'mode':'fully_theoretical','output_filename':'x2_zander_condition
                'test_gas_gas_model':'CEAGas', 'test_gas_name':'n2-o2-with-ions', 'p1':3000.0, 'p5':'10.0',
                'area_ratio':5.64, 'cone_half_angle_degrees':15.0, 'wedge_angle_degrees':54.0}
 
-config_data, gas_path, object_dict = run_pitot3(config_dict = config_dict)
+config_data, gas_path, object_dict, states_dict = run_pitot3(config_dict = config_dict)
 
 #----------------------------------------------------------------------------------------------
 # the code that lets us pull some useful things out of the output of the code
