@@ -1681,7 +1681,7 @@ public:
         read_VTK_header_line("vtk", f);
         label = f.readln().strip();
         read_VTK_header_line("ASCII", f);
-        read_VTK_header_line("USTRUCTURED_GRID", f);
+        read_VTK_header_line("UNSTRUCTURED_GRID", f);
         tokens = f.readln().strip().split();
         throw new Error("read_from_vtk_text_file() is not finished, yet.");
         // For VTK files, we need to work out how to extract

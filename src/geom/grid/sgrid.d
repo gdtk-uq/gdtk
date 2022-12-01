@@ -744,13 +744,17 @@ public:
             read_VTK_header_line("ASCII", f);
             read_VTK_header_line("STRUCTURED_GRID", f);
             tokens = read_VTK_header_line("DIMENSIONS", f);
+            niv = to!int(tokens[1]);
+            njv = to!int(tokens[2]);
+            nkv = to!int(tokens[3]);
+            read_VTK_header_line("POINTS", f);
         } else {
             tokens = f.readln().strip().split();
+            niv = to!int(tokens[0]);
+            njv = to!int(tokens[1]);
+            nkv = to!int(tokens[2]);
         }
         dimensions = 0; // start with none
-        niv = to!int(tokens[0]);
-        njv = to!int(tokens[1]);
-        nkv = to!int(tokens[2]);
         if (niv > 1 && njv > 1 && nkv > 1) {
             dimensions = 3;
         } else {
