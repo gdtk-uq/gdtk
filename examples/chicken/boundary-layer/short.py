@@ -14,7 +14,7 @@ config.title = "Supersonic flow over a short plate."
 config.viscous = True
 config.max_time = 2.5e-3
 config.max_step = 300000
-config.dt_init = 1.0e-9
+config.dt_init = 1.0e-8
 add_cfl_value(0.0, 0.5)
 add_dt_plot(0.0, 0.5e-3)
 #
@@ -26,7 +26,7 @@ vol0 = TFIVolume(p000=Vector3(L0,0,W),       p100=Vector3(L,0,W),
                  p001=Vector3(L0,0.625*H,W), p101=Vector3(L,H,W),
                  p111=Vector3(L,H,0),        p011=Vector3(L0,0.625*H,0))
 from gdtk.geom.cluster import RobertsFunction
-cf_i = RobertsFunction(True, False, 1.05)
+cf_i = RobertsFunction(True, False, 1.2)
 cf_k = RobertsFunction(True, False, 1.05)
 grd0 = StructuredGrid(pvolume=vol0, niv=121, njv=3, nkv=193, cf_list=[cf_i, None, cf_k])
 b0 = FluidBlock(i=0, grid=grd0, initialState=inflow,

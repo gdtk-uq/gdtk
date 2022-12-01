@@ -74,6 +74,7 @@ struct BoundaryLayerProfile {
     {
         number y = pos.y;
         fs.gas.p = p_e;
+        fs.gas.YB = 0.0;
         number T, velx;
         if (y <= T_spline.x0()) {
             T = T_spline.y0();
@@ -231,6 +232,7 @@ struct BConfig {
         repr << ", bcCodes=["; for (auto c: bcCodes) repr << BCCode::names[c] << ","; repr << "]";
         repr << ", bc_fs=["; for (auto f : bc_fs) repr << f << ","; repr << "]";
         repr << ", bc_fun=["; for (auto f : bc_fun) repr << BCFunction::names[f] << ","; repr << "]";
+        repr << ", bc_bl_profile=" << bc_bl_profile;
         repr << ", active=" << active;
         repr << ")";
         return repr.str();
@@ -462,9 +464,10 @@ vector<BConfig> read_config_file(string fileName)
                 if (bc["form"].get<string>() == "fun") cfg.bc_TWall_form[i] = TWallForm::fun;
                 cfg.bc_TWall[i] = bc["value"].get<double>();
             }
-            cfg.bc_fun[i] = 0; // Default function index.
+            cfg.bc_fun[i] = BCFunction::none; // Default function index.
             if (cfg.bcCodes[i] == BCCode::inflow_function) {
-                cfg.bc_fun[i] = BC_function_from_name(bc["tag"].get<string>());
+                cfg.bc_fun[i] = BC_function_from_name(bc["fun_name"].get<string>());
+                cout << " bc_fun[i]=" << cfg.bc_fun[i] << endl;
                 if (cfg.bc_fun[i] == BCFunction::laminar_boundary_layer) {
                     // Get the boundary-layer profile details.
                     // Note that, presently, there is only one allowed profile

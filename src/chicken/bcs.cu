@@ -323,7 +323,6 @@ __host__ __device__
 FlowState compute_inflow_state_from_function(int ifn, Vector3 pos, const BConfig& cfg)
 {
     FlowState inflow;
-    //
     switch (ifn) {
     case BCFunction::none:
         break;
