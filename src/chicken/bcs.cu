@@ -320,27 +320,33 @@ void bc_inflow(int iblk, int ibc, FlowState& inflow)
 
 
 __host__ __device__
-FlowState compute_inflow_state_from_function(int ifn, Vector3 pos)
+FlowState compute_inflow_state_from_function(int ifn, Vector3 pos, const BConfig& cfg)
 {
     FlowState inflow;
-    // Dummy value.
-    inflow.gas.p = 100.0e3;
-    inflow.gas.T = 300.0;
-    inflow.gas.YB = 0.0;
-    inflow.gas.update_from_pT();
-    inflow.vel.set(0.0, 0.0, 0.0);
     //
     switch (ifn) {
     case BCFunction::none:
         break;
     case BCFunction::supersonic_vortex:
         // [TODO]
+        // Dummy value.
+        inflow.gas.p = 100.0e3;
+        inflow.gas.T = 300.0;
+        inflow.gas.YB = 0.0;
+        inflow.gas.update_from_pT();
+        inflow.vel.set(0.0, 0.0, 0.0);
         break;
     case BCFunction::laminar_boundary_layer:
-        // [TODO]
+        cfg.bc_bl_profile.eval(pos, inflow);
         break;
     case BCFunction::manufactured_solution:
         // [TODO]
+        // Dummy value.
+        inflow.gas.p = 100.0e3;
+        inflow.gas.T = 300.0;
+        inflow.gas.YB = 0.0;
+        inflow.gas.update_from_pT();
+        inflow.vel.set(0.0, 0.0, 0.0);
         break;
     default:
         break;
@@ -362,9 +368,9 @@ void bc_inflow_function(int iblk, int ibc, int ifn)
             for (int j=0; j < cfg.njc; j++) {
                 FVFace& f = blk.faces[cfg.iFaceIndex(0, j, k)];
                 FVCell& g0 = blk.cells[f.left_cells[0]];
-                g0.fs = compute_inflow_state_from_function(ifn, g0.pos);
+                g0.fs = compute_inflow_state_from_function(ifn, g0.pos, cfg);
                 FVCell& g1 = blk.cells[f.left_cells[1]];
-                g1.fs = compute_inflow_state_from_function(ifn, g1.pos);
+                g1.fs = compute_inflow_state_from_function(ifn, g1.pos, cfg);
             } // end for j
         } // end for k
         break;
@@ -373,9 +379,9 @@ void bc_inflow_function(int iblk, int ibc, int ifn)
             for (int j=0; j < cfg.njc; j++) {
                 FVFace& f = blk.faces[cfg.iFaceIndex(cfg.nic, j, k)];
                 FVCell& g0 = blk.cells[f.right_cells[0]];
-                g0.fs = compute_inflow_state_from_function(ifn, g0.pos);
+                g0.fs = compute_inflow_state_from_function(ifn, g0.pos, cfg);
                 FVCell& g1 = blk.cells[f.right_cells[1]];
-                g1.fs = compute_inflow_state_from_function(ifn, g1.pos);
+                g1.fs = compute_inflow_state_from_function(ifn, g1.pos, cfg);
             } // end for j
         } // end for k
         break;
@@ -384,9 +390,9 @@ void bc_inflow_function(int iblk, int ibc, int ifn)
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.faces[cfg.jFaceIndex(i, 0, k)];
                 FVCell& g0 = blk.cells[f.left_cells[0]];
-                g0.fs = compute_inflow_state_from_function(ifn, g0.pos);
+                g0.fs = compute_inflow_state_from_function(ifn, g0.pos, cfg);
                 FVCell& g1 = blk.cells[f.left_cells[1]];
-                g1.fs = compute_inflow_state_from_function(ifn, g1.pos);
+                g1.fs = compute_inflow_state_from_function(ifn, g1.pos, cfg);
             } // end for i
         } // end for k
         break;
@@ -395,9 +401,9 @@ void bc_inflow_function(int iblk, int ibc, int ifn)
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.faces[cfg.jFaceIndex(i, cfg.njc, k)];
                 FVCell& g0 = blk.cells[f.right_cells[0]];
-                g0.fs = compute_inflow_state_from_function(ifn, g0.pos);
+                g0.fs = compute_inflow_state_from_function(ifn, g0.pos, cfg);
                 FVCell& g1 = blk.cells[f.right_cells[1]];
-                g1.fs = compute_inflow_state_from_function(ifn, g1.pos);
+                g1.fs = compute_inflow_state_from_function(ifn, g1.pos, cfg);
             } // end for i
         } // end for k
         break;
@@ -406,9 +412,9 @@ void bc_inflow_function(int iblk, int ibc, int ifn)
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.faces[cfg.kFaceIndex(i, j, 0)];
                 FVCell& g0 = blk.cells[f.left_cells[0]];
-                g0.fs = compute_inflow_state_from_function(ifn, g0.pos);
+                g0.fs = compute_inflow_state_from_function(ifn, g0.pos, cfg);
                 FVCell& g1 = blk.cells[f.left_cells[1]];
-                g1.fs = compute_inflow_state_from_function(ifn, g1.pos);
+                g1.fs = compute_inflow_state_from_function(ifn, g1.pos, cfg);
             } // end for i
         } // end for j
         break;
@@ -417,9 +423,9 @@ void bc_inflow_function(int iblk, int ibc, int ifn)
             for (int i=0; i < cfg.nic; i++) {
                 FVFace& f = blk.faces[cfg.kFaceIndex(i, j, cfg.nkc)];
                 FVCell& g0 = blk.cells[f.right_cells[0]];
-                g0.fs = compute_inflow_state_from_function(ifn, g0.pos);
+                g0.fs = compute_inflow_state_from_function(ifn, g0.pos, cfg);
                 FVCell& g1 = blk.cells[f.right_cells[1]];
-                g1.fs = compute_inflow_state_from_function(ifn, g1.pos);
+                g1.fs = compute_inflow_state_from_function(ifn, g1.pos, cfg);
             } // end for j
         } // end for k
         break;
@@ -667,13 +673,14 @@ void configure_exchange_info(vector<Block>& blks, vector<BConfig>& cfgs)
 
 __device__
 void apply_convective_boundary_condition(FVFace& f, FVCell cells[],
-                                         FlowState flowStates[], Block blks[])
+                                         FlowState flowStates[], Block blks[], const BConfig& cfg)
 // For a given FVFace, set the ghost cell FlowStates according to the type of boundary condition.
 // Input:
 // f:          reference to the FVFace
 // cells:      array of cells in the current block
 // flowStates: array of FlowStates needed by inflow boundary condition
 // blks:       array of Block objects needed by the exchange boundary condition
+// cfg:        reference to the block's config structure
 //
 {
     if (f.bcCode < 0) return; // Interior face, leave now.
@@ -732,14 +739,14 @@ void apply_convective_boundary_condition(FVFace& f, FVCell cells[],
     case BCCode::inflow_function: {
         if (f.bcId == Face::iplus || f.bcId == Face::jplus || f.bcId == Face::kplus) {
             FVCell& g0 = cells[f.right_cells[0]];
-            g0.fs = compute_inflow_state_from_function(f.bcFun, g0.pos);
+            g0.fs = compute_inflow_state_from_function(f.bcFun, g0.pos, cfg);
             FVCell& g1 = cells[f.right_cells[1]];
-            g1.fs = compute_inflow_state_from_function(f.bcFun, g1.pos);
+            g1.fs = compute_inflow_state_from_function(f.bcFun, g1.pos, cfg);
         } else {
             FVCell& g0 = cells[f.left_cells[0]];
-            g0.fs = compute_inflow_state_from_function(f.bcFun, g0.pos);
+            g0.fs = compute_inflow_state_from_function(f.bcFun, g0.pos, cfg);
             FVCell& g1 = cells[f.left_cells[1]];
-            g1.fs = compute_inflow_state_from_function(f.bcFun, g1.pos);
+            g1.fs = compute_inflow_state_from_function(f.bcFun, g1.pos, cfg);
         }
         break;
     }
@@ -768,7 +775,7 @@ void apply_convective_boundary_condition(FVFace& f, FVCell cells[],
 
 
 __host__ __device__
-void apply_viscous_boundary_condition(FVFace& f)
+void apply_viscous_boundary_condition(FVFace& f, const BConfig& cfg)
 // Set the FlowState according to the type of boundary condition.
 // Will overwrite some of the FlowState properties computed earlier
 // in the convective-flux calculation.
@@ -782,7 +789,7 @@ void apply_viscous_boundary_condition(FVFace& f)
         f.fs.gas.T = f.TWall;
         break;
     case BCCode::inflow_function:
-        f.fs = compute_inflow_state_from_function(f.bcFun, f.pos);
+        f.fs = compute_inflow_state_from_function(f.bcFun, f.pos, cfg);
         break;
     default:
         // Do nothing.
@@ -792,10 +799,10 @@ void apply_viscous_boundary_condition(FVFace& f)
 
 
 __host__
-void apply_viscous_boundary_conditions(Block& blk)
+void apply_viscous_boundary_conditions(Block& blk, const BConfig& cfg)
 {
     for (auto& face : blk.faces) {
-        apply_viscous_boundary_condition(face);
+        apply_viscous_boundary_condition(face, cfg);
     }
 }
 

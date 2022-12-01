@@ -575,7 +575,7 @@ class InflowFunctionBC(BoundaryCondition):
 
     def __init__(self, fun_name):
         self.tag = 'inflow_function'
-        self.fn_name = fun_name
+        self.fun_name = fun_name
 
     def __repr__(self):
         return "InflowFunctionBC(fun_name={})".format(self.fun_name)

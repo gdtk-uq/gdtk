@@ -17,7 +17,7 @@ int main()
     cout << "Simple initialization example." << endl;
     number x[5]{0.0, 1.0, 2.0, 3.0, 4.0};
     number y[5]{0.0, 1.0, 0.0, 1.0, 0.0};
-    auto s0 = CubicSpline<4>(x, y);
+    CubicSpline<4> s0; s0.set(x, y);
     cout << "s0=" << s0.toString() << endl;
 
     cout << "Runge function example." << endl;
@@ -31,7 +31,7 @@ int main()
         x_sample[i] = xx;
         y_sample[i] = runge(xx);
     }
-    auto s = CubicSpline<ns-1>(x_sample, y_sample);
+    CubicSpline<ns-1> s; s.set(x_sample, y_sample);
     cout << "s=" << s.toString() << endl;
     constexpr int ms = 100;
     dx = (x1-x0)/(ms-1);

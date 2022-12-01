@@ -25,7 +25,7 @@ struct CubicSpline {
     number b[n];
     number c[n];
 
-    CubicSpline(const number _xs[n+1], const number _ys[n+1])
+    void set(const number _xs[n+1], const number _ys[n+1])
     // Sets up the interpolatory cubic spline through the (x, y) points.
     //   xs : sequence of x-coordinates
     //   ys : sequence of y-coordinates
@@ -63,7 +63,7 @@ struct CubicSpline {
             b[i] = sigma[i]/2.0;
             c[i] = (ys[i+1]-ys[i])/h[i] - (2.0*sigma[i] + sigma[i+1])*h[i]/6.0;
         }
-    } // end constructor
+    } // end set()
 
     string toString() const
     {
@@ -78,6 +78,7 @@ struct CubicSpline {
         return ss.str();
     }
 
+    __host__ __device__
     number eval(number x) const
     // Evaluates the spline at point x by first searching for the
     // relevant segment and then evaluating the local polynomial piece.
@@ -93,6 +94,18 @@ struct CubicSpline {
         double dx = x - xs[i];
         return ((a[i]*dx + b[i])*dx + c[i])*dx + ys[i];
     }
+
+    __host__ __device__
+    number x0() const { return xs[0]; }
+
+    __host__ __device__
+    number y0() const { return ys[0]; }
+
+    __host__ __device__
+    number xn() const { return xs[n]; }
+
+    __host__ __device__
+    number yn() const { return ys[n]; }
 }; // end CubicSpline
 
 #endif

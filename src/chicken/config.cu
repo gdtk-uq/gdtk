@@ -14,6 +14,7 @@
 #include "include/nlohmann/json.hpp"
 
 #include "number.cu"
+#include "spline.cu"
 #include "flow.cu"
 #include "face.cu"
 #include "cell.cu"
@@ -26,6 +27,77 @@ namespace TWallForm {
     constexpr int value = 0;
     constexpr int fun = 1;
 };
+
+constexpr int NSplineSamplePoints = 12; // Pre-arranged with the Python program that generated the profile.
+
+struct BoundaryLayerProfile {
+    number p_e;
+    CubicSpline<NSplineSamplePoints-1> T_spline, velx_spline;
+
+    __host__
+    void readFromFile(string fileName)
+    {
+        filesystem::path pth{fileName};
+        if (!filesystem::exists(pth) || !filesystem::is_regular_file(pth)) {
+            throw runtime_error("Boundary-layer file is not present in current directory.");
+        }
+        auto f = ifstream(fileName);
+        f >> p_e;
+        int nsample; f >> nsample;
+        if (nsample != NSplineSamplePoints) {
+            throw runtime_error("Boundary-layer file has unexpected number of sample points.");
+        }
+        vector<number> ys, Ts, velxs;
+        for (int i=0; i < nsample; ++i) {
+            number y, T, velx;
+            f >> y; ys.push_back(y);
+            f >> T; Ts.push_back(T);
+            f >> velx; velxs.push_back(velx);
+        }
+        T_spline.set(ys.data(), Ts.data());
+        velx_spline.set(ys.data(), velxs.data());
+    }
+
+    __host__
+    string toString() const {
+        ostringstream repr;
+        repr << "BoundaryLayerProfile(";
+        repr << "p_e=" << p_e;
+        repr << "T_spline=" << T_spline.toString();
+        repr << "velx_spline=" << velx_spline.toString();
+        repr << ")";
+        return repr.str();
+    }
+
+    __host__ __device__
+    void eval(Vector3 pos, FlowState& fs) const
+    {
+        number y = pos.y;
+        fs.gas.p = p_e;
+        number T, velx;
+        if (y <= T_spline.x0()) {
+            T = T_spline.y0();
+            velx = velx_spline.y0();
+        } else if (y >= T_spline.xn()) {
+            T = T_spline.yn();
+            velx = velx_spline.yn();
+        } else {
+            T = T_spline.eval(y);
+            velx = velx_spline.eval(y);
+        }
+        fs.gas.T = T;
+        fs.gas.update_from_pT();
+        fs.vel.set(velx, 0.0, 0.0);
+    }
+};
+
+__host__
+ostream& operator<<(ostream& os, const BoundaryLayerProfile blp)
+{
+    os << blp.toString();
+    return os;
+}
+
 
 struct BConfig {
     // Active blocks will be updates during the gas-dynamic update calculations.
@@ -74,6 +146,7 @@ struct BConfig {
     array<int,6> bc_TWall_form;
     array<double,6> bc_TWall;
     array<int,6> bc_fun;
+    BoundaryLayerProfile bc_bl_profile; // There is only one profile.
 
     __host__
     void fill_in_dimensions(int _nic, int _njc, int _nkc, int threads_per_GPUblock)
@@ -392,6 +465,12 @@ vector<BConfig> read_config_file(string fileName)
             cfg.bc_fun[i] = 0; // Default function index.
             if (cfg.bcCodes[i] == BCCode::inflow_function) {
                 cfg.bc_fun[i] = BC_function_from_name(bc["tag"].get<string>());
+                if (cfg.bc_fun[i] == BCFunction::laminar_boundary_layer) {
+                    // Get the boundary-layer profile details.
+                    // Note that, presently, there is only one allowed profile
+                    // and one source of profile data read. This might change.
+                    cfg.bc_bl_profile.readFromFile("./InflowBoundaryLayerBC.data");
+                }
             }
         }
         if (Config::verbosity > 0) {

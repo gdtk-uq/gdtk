@@ -234,7 +234,7 @@ void march_in_time_using_cpu_only(bool binary_data)
             if (cfg.active) {
                 blk.calculate_convective_fluxes(Config::flux_calc, Config::x_order);
                 if (Config::viscous) {
-                    apply_viscous_boundary_conditions(blk);
+                    apply_viscous_boundary_conditions(blk, cfg);
                     blk.add_viscous_fluxes();
                 }
                 bad_cell_counts[ib] = blk.update_stage_1(cfg, SimState::dt);
@@ -255,7 +255,7 @@ void march_in_time_using_cpu_only(bool binary_data)
             if (cfg.active) {
                 blk.calculate_convective_fluxes(Config::flux_calc, Config::x_order);
                 if (Config::viscous) {
-                    apply_viscous_boundary_conditions(blk);
+                    apply_viscous_boundary_conditions(blk, cfg);
                     blk.add_viscous_fluxes();
                 }
                 bad_cell_counts[ib] = blk.update_stage_2(cfg, SimState::dt);
@@ -276,7 +276,7 @@ void march_in_time_using_cpu_only(bool binary_data)
             if (cfg.active) {
                 blk.calculate_convective_fluxes(Config::flux_calc, Config::x_order);
                 if (Config::viscous) {
-                    apply_viscous_boundary_conditions(blk);
+                    apply_viscous_boundary_conditions(blk, cfg);
                     blk.add_viscous_fluxes();
                 }
                 bad_cell_counts[ib] = blk.update_stage_3(cfg, SimState::dt);
@@ -403,14 +403,14 @@ void calculate_fluxes_on_gpu(Block& blk, const BConfig& cfg,
     int i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < cfg.nFaces) {
         FVFace& face = blk.faces_on_gpu[i];
-        apply_convective_boundary_condition(face, blk.cells_on_gpu, flowStates_on_gpu, blks_on_gpu);
+        apply_convective_boundary_condition(face, blk.cells_on_gpu, flowStates_on_gpu, blks_on_gpu, cfg);
         FlowState& fsL1 = blk.cells_on_gpu[face.left_cells[1]].fs;
         FlowState& fsL0 = blk.cells_on_gpu[face.left_cells[0]].fs;
         FlowState& fsR0 = blk.cells_on_gpu[face.right_cells[0]].fs;
         FlowState& fsR1 = blk.cells_on_gpu[face.right_cells[1]].fs;
         face.calculate_convective_flux(fsL1, fsL0, fsR0, fsR1, flux_calc, x_order);
         if (viscous) {
-            apply_viscous_boundary_condition(face);
+            apply_viscous_boundary_condition(face, cfg);
             add_viscous_fluxes_at_face(face, blk.cells_on_gpu, blk.faces_on_gpu);
         }
     }
