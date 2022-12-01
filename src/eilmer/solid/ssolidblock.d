@@ -1084,7 +1084,7 @@ public:
     @nogc
     override double determine_time_step_size(double cfl_value)
     {
-        number signal, L_min, dt_local, dt_allow;
+        number alpha, L_min, dt_local, dt_allow;
         bool first = true;
         foreach(cell; activeCells) {
 
@@ -1104,9 +1104,8 @@ public:
                 auto kLen = sqrt(dx^^2 + dy^^2 + dz^^2);
                 L_min = min(iLen, jLen, kLen);
             }
-
-            signal = cell.sp.k / (cell.sp.rho*cell.sp.Cp*(L_min^^2));
-            dt_local = cfl_value / signal; // Recommend a time step size.
+            alpha = cell.sp.k / (cell.sp.rho*cell.sp.Cp);
+            dt_local = cfl_value * (L_min^^2) / (2.0*alpha);
             if (first) {
                 dt_allow = dt_local;
                 first = false;
