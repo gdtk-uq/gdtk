@@ -1016,7 +1016,10 @@ final class GlobalConfig {
     // Allow the AUSMDV entropy fix to be switched off
     // Note: this is an experimental feature that will probably be removed in a later revision [KAD 20-12-2021]
     shared static bool apply_entropy_fix = true;
-
+    //
+    // Switch for enforcing strict positivity on the species densities in fvcell's decode routine
+    shared static bool enforce_species_density_positivity = false;
+    //
     // Allow the least-squares cloud of points (used to compute a cell-center gradient for
     // reconstruction in the unstructured solver) to grow.
     shared static bool use_extended_stencil = false;
@@ -1340,6 +1343,7 @@ public:
     bool apply_heuristic_pressure_based_limiting;
     bool interpolate_in_local_frame;
     bool apply_entropy_fix;
+    bool enforce_species_density_positivity;
     UnstructuredLimiter unstructured_limiter;
     int freeze_limiter_on_step;
     bool use_extended_stencil;
@@ -1508,6 +1512,7 @@ public:
         apply_heuristic_pressure_based_limiting = cfg.apply_heuristic_pressure_based_limiting;
         interpolate_in_local_frame = cfg.interpolate_in_local_frame;
         apply_entropy_fix = cfg.apply_entropy_fix;
+        enforce_species_density_positivity = cfg.enforce_species_density_positivity;
         unstructured_limiter = cfg.unstructured_limiter;
         freeze_limiter_on_step = cfg.freeze_limiter_on_step;
         use_extended_stencil = cfg.use_extended_stencil;
@@ -1873,6 +1878,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("apply_heuristic_pressure_based_limiting", "apply_heuristic_pressure_based_limiting"));
     mixin(update_bool("interpolate_in_local_frame", "interpolate_in_local_frame"));
     mixin(update_bool("apply_entropy_fix", "apply_entropy_fix"));
+    mixin(update_bool("enforce_species_density_positivity", "enforce_species_density_positivity"));
     mixin(update_enum("unstructured_limiter", "unstructured_limiter", "unstructured_limiter_from_name"));
     mixin(update_int("freeze_limiter_on_step", "freeze_limiter_on_step"));
     mixin(update_bool("use_extended_stencil", "use_extended_stencil"));
@@ -1961,6 +1967,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  allow_reconstruction_for_turbulent_variables: ", cfg.allow_reconstruction_for_turbulent_variables);
         writeln("  apply_limiter: ", cfg.apply_limiter);
         writeln("  apply_entropy_fix: ", cfg.apply_entropy_fix);
+        writeln("  enforce_species_density_positivity: ", cfg.enforce_species_density_positivity);
         writeln("  unstructured_limiter: ", unstructured_limiter_name(cfg.unstructured_limiter));
         writeln("  freeze_limiter_on_step: ", cfg.freeze_limiter_on_step);
         writeln("  use_extended_stencil: ", cfg.use_extended_stencil);

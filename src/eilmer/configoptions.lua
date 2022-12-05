@@ -91,6 +91,7 @@ configOptionsHidden = { -- hidden from user
    apply_heuristic_pressure_based_limiting = false,
    interpolate_in_local_frame = true,
    apply_entropy_fix = true,
+   enforce_species_density_positivity = false,
    unstructured_limiter = "venkat",
    freeze_limiter_on_step = 1000000000,
    use_extended_stencil = false,
