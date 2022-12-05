@@ -552,17 +552,9 @@ public:
                                            gR0.massf[isp], gR1.massf[isp], gR2.massf[isp],
                                            Lft.gas.massf[isp], Rght.gas.massf[isp], beta);
                     }
-                    try {
+                    if (myConfig.scale_species_after_reconstruction) {
                         scale_mass_fractions(Lft.gas.massf);
-                    } catch(Exception e) {
-                        debug { writeln(e.msg); }
-                        Lft.gas.massf[] = gL0.massf[];
-                    }
-                    try {
                         scale_mass_fractions(Rght.gas.massf);
-                    } catch(Exception e) {
-                        debug { writeln(e.msg); }
-                        Rght.gas.massf[] = gR0.massf[];
                     }
                 } else {
                     Lft.gas.massf[] = gL0.massf[];
@@ -721,17 +713,9 @@ public:
                         interp_l2r2_scalar(gL1.massf[isp], gL0.massf[isp], gR0.massf[isp], gR1.massf[isp],
                                            Lft.gas.massf[isp], Rght.gas.massf[isp], beta);
                     }
-                    try {
+                    if (myConfig.scale_species_after_reconstruction) {
                         scale_mass_fractions(Lft.gas.massf);
-                    } catch(Exception e) {
-                        debug { writeln(e.msg); }
-                        Lft.gas.massf[] = gL0.massf[];
-                    }
-                    try {
                         scale_mass_fractions(Rght.gas.massf);
-                    } catch(Exception e) {
-                        debug { writeln(e.msg); }
-                        Rght.gas.massf[] = gR0.massf[];
                     }
                 } else {
                     Lft.gas.massf[] = gL0.massf[];
@@ -867,17 +851,9 @@ public:
                         interp_l2r1_scalar(gL1.massf[isp], gL0.massf[isp], gR0.massf[isp],
                                            Lft.gas.massf[isp], Rght.gas.massf[isp], beta);
                     }
-                    try {
+                    if (myConfig.scale_species_after_reconstruction) {
                         scale_mass_fractions(Lft.gas.massf);
-                    } catch(Exception e) {
-                        debug { writeln(e.msg); }
-                        Lft.gas.massf[] = gL0.massf[];
-                    }
-                    try {
                         scale_mass_fractions(Rght.gas.massf);
-                    } catch(Exception e) {
-                        debug { writeln(e.msg); }
-                        Rght.gas.massf[] = gR0.massf[];
                     }
                 } else {
                     Lft.gas.massf[] = gL0.massf[];
@@ -1016,17 +992,9 @@ public:
                         interp_l1r2_scalar(gL0.massf[isp], gR0.massf[isp], gR1.massf[isp],
                                            Lft.gas.massf[isp], Rght.gas.massf[isp], beta);
                     }
-                    try {
+                    if (myConfig.scale_species_after_reconstruction) {
                         scale_mass_fractions(Lft.gas.massf);
-                    } catch(Exception e) {
-                        debug { writeln(e.msg); }
-                        Lft.gas.massf[] = gL0.massf[];
-                    }
-                    try {
                         scale_mass_fractions(Rght.gas.massf);
-                    } catch(Exception e) {
-                        debug { writeln(e.msg); }
-                        Rght.gas.massf[] = gR0.massf[];
                     }
                 } else {
                     Lft.gas.massf[] = gL0.massf[];
@@ -1164,12 +1132,8 @@ public:
                     foreach (isp; 0 .. nsp) {
                         Lft.gas.massf[isp] = weight_scalar(gL0.massf[isp], gL1.massf[isp]);
                     }
-                    try {
+                    if (myConfig.scale_species_after_reconstruction)
                         scale_mass_fractions(Lft.gas.massf);
-                    } catch(Exception e) {
-                        debug { writeln(e.msg); }
-                        Lft.gas.massf[] = gL0.massf[];
-                    }
                 } else {
                     Lft.gas.massf[] = gL0.massf[];
                 }
@@ -1295,12 +1259,8 @@ public:
                     foreach (isp; 0 .. nsp) {
                         Rght.gas.massf[isp] = weight_scalar(gR0.massf[isp], gR1.massf[isp]);
                     }
-                    try {
+                    if (myConfig.scale_species_after_reconstruction)
                         scale_mass_fractions(Rght.gas.massf);
-                    } catch(Exception e) {
-                        debug { writeln(e.msg); }
-                        Rght.gas.massf[] = gR0.massf[];
-                    }
                 } else {
                     Rght.gas.massf[] = gR0.massf[];
                 }

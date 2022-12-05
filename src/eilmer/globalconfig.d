@@ -1019,6 +1019,8 @@ final class GlobalConfig {
     //
     // Switch for enforcing strict positivity on the species densities in fvcell's decode routine
     shared static bool enforce_species_density_positivity = false;
+    // A switch for calling scale_mass_fractions in onedinterp.d
+    shared static bool scale_species_after_reconstruction = true;
     //
     // Allow the least-squares cloud of points (used to compute a cell-center gradient for
     // reconstruction in the unstructured solver) to grow.
@@ -1344,6 +1346,7 @@ public:
     bool interpolate_in_local_frame;
     bool apply_entropy_fix;
     bool enforce_species_density_positivity;
+    bool scale_species_after_reconstruction;
     UnstructuredLimiter unstructured_limiter;
     int freeze_limiter_on_step;
     bool use_extended_stencil;
@@ -1513,6 +1516,7 @@ public:
         interpolate_in_local_frame = cfg.interpolate_in_local_frame;
         apply_entropy_fix = cfg.apply_entropy_fix;
         enforce_species_density_positivity = cfg.enforce_species_density_positivity;
+        scale_species_after_reconstruction = cfg.scale_species_after_reconstruction;
         unstructured_limiter = cfg.unstructured_limiter;
         freeze_limiter_on_step = cfg.freeze_limiter_on_step;
         use_extended_stencil = cfg.use_extended_stencil;
@@ -1879,6 +1883,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("interpolate_in_local_frame", "interpolate_in_local_frame"));
     mixin(update_bool("apply_entropy_fix", "apply_entropy_fix"));
     mixin(update_bool("enforce_species_density_positivity", "enforce_species_density_positivity"));
+    mixin(update_bool("scale_species_after_reconstruction", "scale_species_after_reconstruction"));
     mixin(update_enum("unstructured_limiter", "unstructured_limiter", "unstructured_limiter_from_name"));
     mixin(update_int("freeze_limiter_on_step", "freeze_limiter_on_step"));
     mixin(update_bool("use_extended_stencil", "use_extended_stencil"));
@@ -1968,6 +1973,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  apply_limiter: ", cfg.apply_limiter);
         writeln("  apply_entropy_fix: ", cfg.apply_entropy_fix);
         writeln("  enforce_species_density_positivity: ", cfg.enforce_species_density_positivity);
+        writeln("  scale_species_after_reconstruction: ", cfg.scale_species_after_reconstruction);
         writeln("  unstructured_limiter: ", unstructured_limiter_name(cfg.unstructured_limiter));
         writeln("  freeze_limiter_on_step: ", cfg.freeze_limiter_on_step);
         writeln("  use_extended_stencil: ", cfg.use_extended_stencil);

@@ -92,6 +92,7 @@ configOptionsHidden = { -- hidden from user
    interpolate_in_local_frame = true,
    apply_entropy_fix = true,
    enforce_species_density_positivity = false,
+   scale_species_after_reconstruction = true,
    unstructured_limiter = "venkat",
    freeze_limiter_on_step = 1000000000,
    use_extended_stencil = false,

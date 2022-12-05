@@ -1628,17 +1628,9 @@ public:
                             mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]",
                                                         "gas.massf[isp]", "massfPhi[isp]"));
                         }
-                        try {
+                        if (myConfig.scale_species_after_reconstruction) {
                             scale_mass_fractions(Lft.gas.massf);
-                        } catch (Exception e) {
-                            debug { writeln(e.msg); }
-                            Lft.gas.massf[] = IFace.left_cell.fs.gas.massf[];
-                        }
-                        try {
                             scale_mass_fractions(Rght.gas.massf);
-                        } catch (Exception e) {
-                            debug { writeln(e.msg); }
-                            Rght.gas.massf[] = IFace.right_cell.fs.gas.massf[];
                         }
                     } else {
                         Lft.gas.massf[] = IFace.left_cell.fs.gas.massf[];
@@ -1854,11 +1846,8 @@ public:
                             mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]",
                                                         "gas.massf[isp]", "massfPhi[isp]"));
                         }
-                        try {
+                        if (myConfig.scale_species_after_reconstruction) {
                             scale_mass_fractions(Rght.gas.massf);
-                        } catch (Exception e) {
-                            debug { writeln(e.msg); }
-                            Rght.gas.massf[] = IFace.right_cell.fs.gas.massf[];
                         }
                     } else {
                         Rght.gas.massf[] = IFace.right_cell.fs.gas.massf[];
@@ -2062,11 +2051,8 @@ public:
                             mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]",
                                                         "gas.massf[isp]", "massfPhi[isp]"));
                         }
-                        try {
+                        if (myConfig.scale_species_after_reconstruction) {
                             scale_mass_fractions(Lft.gas.massf);
-                        } catch (Exception e) {
-                            debug { writeln(e.msg); }
-                            Lft.gas.massf[] = IFace.left_cell.fs.gas.massf[];
                         }
                     } else {
                         Lft.gas.massf[] = IFace.left_cell.fs.gas.massf[];
