@@ -1,6 +1,7 @@
 // postprocess.d for the Lagrangian 1D Gas Dynamics, also known as L1d4.
 // PA Jacobs
 // 2020-04-08
+// 2022-12-08 Add cell history for David Mee.
 //
 module postprocess;
 
@@ -12,6 +13,7 @@ import std.json;
 import std.file;
 import std.algorithm;
 import std.math;
+import core.stdc.math: HUGE_VAL;
 
 import json_helper;
 import gas;
@@ -22,6 +24,82 @@ import lcell;
 import piston;
 import simcore;
 import misc;
+
+
+void generate_cell_history(double x0, int tindxStart, int tindxEnd, bool milliSec)
+{
+    writeln("Postprocessing to produce the history for a cell, starting at x=", x0);
+    double[int] times = readTimesFile();
+    int[] tindices = times.keys();
+    tindices.sort();
+    if (!tindices.canFind(tindxStart)) { tindxStart = tindices[0]; }
+    tindxEnd = min(tindxEnd, tindices[$-1]);
+    size_t ntimes = 0;
+    foreach (tindx; tindxStart .. tindxEnd+1) {
+        if (tindices.canFind(tindx)) { ntimes += 1; }
+    }
+    // We need just enough of the configuration to set up the gas slug array.
+    string dirName = L1dConfig.job_name;
+    JSONValue jsonData = readJSONfile(dirName~"/config.json");
+    auto configData = jsonData["config"];
+    L1dConfig.gas_model_files = getJSONstringarray(configData, "gas_model_files", []);
+    assert(gmodels.length == 0, "Gas models array is not empty.");
+    foreach (fileName; L1dConfig.gas_model_files) { gmodels ~= init_gas_model(fileName); }
+    L1dConfig.nslugs = getJSONint(configData, "nslugs", 0);
+    assert(gasslugs.length == 0, "Gas slugs array is not empty.");
+    foreach (i; 0 .. L1dConfig.nslugs) {
+        auto myData = jsonData[format("slug_%d", i)];
+        gasslugs ~= new GasSlug(i, myData);
+    }
+    // Look through all of the gas slugs and pick the cell closest to the pin.
+    size_t selected_slug;
+    size_t selected_cell;
+    double near_dist = HUGE_VAL;
+    foreach (islug, s; gasslugs) {
+        writeln("Read state data for slug ", islug);
+        File fp = File(L1dConfig.job_name~format("/slug-%04d-cells.data", islug), "r");
+        int tindx = tindxStart;
+        if (tindices.canFind(tindx)) {
+            writeln("Get data for tindx=", tindx);
+            s.read_cell_data(fp, tindx);
+        } else {
+            throw new Error(format("Specified tindx=%d is not available.", tindx));
+        }
+        fp.close();
+        foreach (icell, c; s.cells) {
+            double dist = fabs(c.xmid - x0);
+            if (dist < near_dist) {
+                selected_slug = islug;
+                selected_cell = icell;
+                near_dist = dist;
+            }
+        }
+        writefln("Selected slug=%d cell=%d at initial-position=%g",
+                 selected_slug, selected_cell,
+                 gasslugs[selected_slug].cells[selected_cell].xmid);
+    } // foreach gasslug
+    //
+    // Re-open the individual slug and write the data for just the selected cell.
+    string fileName = format("slug-%04d-cell-%04d.data", selected_slug, selected_cell);
+    File fp = File(L1dConfig.job_name~format("/slug-%04d-cells.data", selected_slug), "r");
+    File fpv = File(fileName, "w");
+    string header = "# t" ~ ((milliSec) ? "(ms)" : "(s)") ~ " xmid p T rho vel";
+    fpv.writeln(header);
+    foreach (tindx; tindxStart .. tindxEnd+1) {
+        if (tindices.canFind(tindx)) {
+            writeln("  Get data for tindx=", tindx);
+            auto s = gasslugs[selected_slug];
+            s.read_cell_data(fp, tindx);
+            auto c = s.cells[selected_cell];
+            double t = times[tindx]; if (milliSec) { t *= 1000.0; }
+            fpv.writefln("%e %e %e %e %e %e", t, c.xmid, c.gas.p, c.gas.T, c.gas.rho, c.vel);
+        }
+    } // foreach tindx
+    fpv.close();
+    fp.close();
+    writeln("Have written cell history to file: ", fileName);
+    return;
+}
 
 
 void generate_xt_dataset_gnuplot(string varName, int tindxStart, int tindxEnd, bool takeLog)

@@ -33,6 +33,7 @@ Actions:
   --run-simulation                   run the simulation
   --time-slice                       extract a single-time slice for gas slugs
   --piston-history                   assemble the history dataset for a piston
+  --cell-history                     Assemble the history dataset for a cell
   --xt-data                          generate an xt-dataset for a flow variable (GNUPlot)
   --xt-data-vtk                      generate an xt-dataset for all flow variables (VTK)
   --xt-data-json                     generate an xt-dataset for all flow variables (JSON)
@@ -45,6 +46,7 @@ Parameters:
   --tindx-end=<int>                  time index of the final data for xt-dataset
                                        (default 9999)
   --pindx=<int>                      piston index for history generation
+  --x0=<double>                      cell initial position for history generation
   --var-name=<name>                  flow variable name
   --log10                            take logarithm of flow variable
                                        Useful to get a better range for pressure.
@@ -69,6 +71,7 @@ Parameters:
     bool runSimulation = false;
     bool timeSlice = false;
     bool pistonHistory = false;
+    bool cellHistory = false;
     bool xtData = false;
     bool xtDataVTK = false;
     bool xtDataJSON = false;
@@ -76,6 +79,7 @@ Parameters:
     int tindx = 0;
     int tindxEnd = 9999;
     int pistonIndx = 0;
+    double x0 = 0.0;
     string varName = "";
     bool takeLog = false;
     bool milliSec = false;
@@ -87,6 +91,7 @@ Parameters:
                "run-simulation", &runSimulation,
                "time-slice", &timeSlice,
                "piston-history", &pistonHistory,
+               "cell-history", &cellHistory,
                "xt-data", &xtData,
                "xt-data-vtk", &xtDataVTK,
                "xt-data-json", &xtDataJSON,
@@ -94,6 +99,7 @@ Parameters:
                "tindx", &tindx,
                "tindx-end", &tindxEnd,
                "pindx", &pistonIndx,
+               "x0", &x0,
                "var-name", &varName,
                "log10", &takeLog,
                "millisec", &milliSec,
@@ -166,6 +172,8 @@ Parameters:
         extract_time_slice(tindx);
     } else if (pistonHistory) {
         assemble_piston_history(pistonIndx);
+    } else if (cellHistory) {
+        generate_cell_history(x0, tindx, tindxEnd, milliSec);
     } else if (xtData) {
         generate_xt_dataset_gnuplot(varName, tindx, tindxEnd, takeLog);
     } else if (xtDataVTK) {
