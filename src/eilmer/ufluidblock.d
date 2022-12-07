@@ -53,7 +53,6 @@ public:
     UnstructuredGrid grid;
     // Work-space that gets reused.
     // The following objects are used in the convective_flux method.
-    LsqInterpolator lsq;
 
 public:
     this(in int id, JSONValue json_data)
@@ -197,17 +196,16 @@ public:
     {
         super.init_workspace();
         // Workspace for flux_calc method.
-        lsq = new LsqInterpolator(dedicatedConfig[id]);
     }
 
     @nogc override int get_interpolation_order()
     {
-        return lsq.get_interpolation_order();
+        return myConfig.interpolation_order;
     }
 
     @nogc override void set_interpolation_order(int order)
     {
-        lsq.set_interpolation_order(order);
+        myConfig.interpolation_order = order;
     }
 
     override void init_lua_globals()
@@ -873,17 +871,18 @@ public:
         //
         // At this point, we should have all gradient values up to date and we are now ready
         // to reconstruct field values and compute the convective fluxes.
+        debug{writefln("Calling interp with interpolation_order=%d", myConfig.interpolation_order);}
         foreach (f; iface_list) {
             bool do_reconstruction = allow_high_order_interpolation && !f.in_suppress_reconstruction_zone;
             if (f.left_cell && f.right_cell) {
-		lsq.interp_both(f, gtl, *Lft, *Rght, do_reconstruction);
+                interp_both(myConfig, f, gtl, *Lft, *Rght, do_reconstruction);
                 compute_interface_flux_interior(*Lft, *Rght, f, myConfig, omegaz);
             } else if (f.right_cell) {
-                lsq.interp_right(f, gtl, *Rght, do_reconstruction);
+                interp_right(myConfig, f, gtl, *Rght, do_reconstruction);
                 compute_flux_at_left_wall(*Rght, f, myConfig, omegaz);
             } else if (f.left_cell) {
-                lsq.interp_left(f, gtl, *Lft, do_reconstruction);
-		compute_flux_at_right_wall(*Lft, f, myConfig, omegaz);
+                interp_left(myConfig, f, gtl, *Lft, do_reconstruction);
+                compute_flux_at_right_wall(*Lft, f, myConfig, omegaz);
             } else {
                 assert(0, "oops, a face without attached cells");
             }

@@ -1431,33 +1431,9 @@ public:
 } // end class LSQInterpGradients
 
 
-class LsqInterpolator {
-
-private:
-    LocalConfig myConfig;
-
-public:
-    @disable this();
-    
-    this(LocalConfig myConfig)
-    {
-        this.myConfig = myConfig;
-    }
-
-    // The steady-state solver wants to override the order of interpolation
-    // in various parts of its calculation.
-    @nogc int get_interpolation_order()
-    {
-        return myConfig.interpolation_order;
-    }
-
-    @nogc void set_interpolation_order(int order)
-    {
-        myConfig.interpolation_order = order;
-    }
 
     @nogc
-    void interp_both(ref FVInterface IFace, size_t gtl,
+    void interp_both(LocalConfig myConfig, ref FVInterface IFace, size_t gtl,
                      ref FlowState Lft, ref FlowState Rght,
                      bool allow_high_order_interpolation)
     // Interpolate the flow field quantities at the left- and right-side of the interface,
@@ -1474,7 +1450,7 @@ public:
         // the viscous-transport and diffusion coefficients.
         Lft.copy_values_from(cL0.fs);
         Rght.copy_values_from(cR0.fs);
-	IFace.fs.copy_average_values_from(Lft, Rght);
+        IFace.fs.copy_average_values_from(Lft, Rght);
         // For some simulations we would like to have the boundaries to remain 1st order.
         if (myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary) { return; }
         // Enforce first order reconstruction for cells that capure the shocks,
@@ -1735,7 +1711,7 @@ public:
     } // end interp_both()
 
     @nogc
-    void interp_right(ref FVInterface IFace, size_t gtl, ref FlowState Rght,
+    void interp_right(LocalConfig myConfig, ref FVInterface IFace, size_t gtl, ref FlowState Rght,
                       bool allow_high_order_interpolation)
     // Interpolate the flow field quantities at the right-side of the interface,
     // given information in right-cell attached to this interface.
@@ -1940,7 +1916,7 @@ public:
     } // end interp_right()
 
     @nogc
-    void interp_left(ref FVInterface IFace, size_t gtl, ref FlowState Lft,
+    void interp_left(LocalConfig myConfig, ref FVInterface IFace, size_t gtl, ref FlowState Lft,
                      bool allow_high_order_interpolation)
     // Interpolate the flow field quantities at the left-side of the interface,
     // given information in the left-cell attached to this interface.
@@ -2143,6 +2119,4 @@ public:
         } // end of high-order reconstruction
         return;
     } // end interp_left()
-
-} // end class LsqInterpolator
 
