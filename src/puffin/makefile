@@ -150,7 +150,7 @@ clean:
 	- rm *.o
 	- rm $(PROGRAMS)
 	- rm -r $(BUILD_DIR)/*
-	- rm main_with_rev_string.d
+	- rm puffin_main_with_rev_string.d
 	- cd $(LUA_DIR); make clean;
 	- cd $(GAS_DIR); make clean; rm libgas.a
 	- cd $(KINETICS_DIR); make clean
@@ -165,7 +165,7 @@ $(LIBGASF):
 $(LIBCEQ):
 	cd $(CEQ_DIR); make
 
-puffin: main.d $(PUFFIN_FILES) \
+puffin: puffin_main.d $(PUFFIN_FILES) \
 	$(GEOM_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -173,9 +173,9 @@ puffin: main.d $(PUFFIN_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-		main.d > main_with_rev_string.d
+		puffin_main.d > puffin_main_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)puffin \
-		main_with_rev_string.d \
+		puffin_main_with_rev_string.d \
 		$(PUFFIN_FILES) \
 		$(GEOM_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \

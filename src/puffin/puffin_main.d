@@ -1,4 +1,4 @@
-// main.d of
+// puffin_main.d of
 // Puffin, a calculator for steady-state 2D supersonic flow.
 //
 // PA Jacobs
