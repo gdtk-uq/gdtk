@@ -187,20 +187,20 @@ puffin: puffin_main.d $(PUFFIN_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-puffin-prep: puffin-prep.py
-	cp puffin-prep.py puffin-prep
+puffin-prep: puffin_prep.py
+	cp puffin_prep.py puffin-prep
 	chmod +x puffin-prep
 
-puffin-post: puffin-post.py
-	cp puffin-post.py puffin-post
+puffin-post: puffin_post.py
+	cp puffin_post.py puffin-post
 	chmod +x puffin-post
 
-lrkt-prep: lorikeet-prep.py
-	cp lorikeet-prep.py lrkt-prep
+lrkt-prep: lorikeet_prep.py
+	cp lorikeet_prep.py lrkt-prep
 	chmod +x lrkt-prep
 
-lrkt-post: lorikeet-post.py
-	cp lorikeet-post.py lrkt-post
+lrkt-post: lorikeet_post.py
+	cp lorikeet_post.py lrkt-post
 	chmod +x lrkt-post
 
 prep-gas:

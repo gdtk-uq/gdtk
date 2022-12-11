@@ -578,10 +578,12 @@ if __name__ == '__main__':
         config.job_name, ext = os.path.splitext(jobName)
         inputScriptName = config.job_name + ".py"
         print("Input script file name: %s" % inputScriptName)
-
+        #
         # The user-specified input comes in the form of Python code.
         # It is up to the user to be careful; there is no security.
+        #
         exec(compile(open(inputScriptName, "rb").read(), inputScriptName, 'exec'))
+        #
         print("Summary:")
         print("  iovar_names   :", config.iovar_names)
         print("  fluid blocks  :", len(fluidBlocksList))
