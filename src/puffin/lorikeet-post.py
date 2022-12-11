@@ -1,9 +1,9 @@
 #! /usr/bin/env python3
 """
-Python program to post-process the simulation data from the Chicken 3D Flow Solver.
+Python program to post-process the simulation data from the Lorikeet 2D Flow Solver.
 
 Usage:
-  $ lorikeet-post --job=<jobName>
+  $ lrkt-post --job=<jobName>
 
 Author:
   P.A. Jacobs
@@ -29,7 +29,7 @@ from gdtk.geom.vector3 import Vector3, quad_properties
 from gdtk.geom.sgrid import StructuredGrid
 
 
-shortOptions = "hf:t:bvp:s:o:"
+shortOptions = "hf:t:vp:s:o:"
 longOptions = ["help", "job=", "tindx=", "vtk-xml", "probe=", "slice=", "output-file="]
 
 def printUsage():
@@ -120,8 +120,8 @@ def read_block_of_flow_data(fileName):
     The flow field data comes as a 1D array of float numbers.
     The data for each flow variable is appended end-to-end.
 
-    Return the flow data in flattened arrays because that is the arrangement
-    that suits the VTK format files.
+    Return the flow data in flattened arrays, one column for each flow-variable,
+    because that is the arrangement that suits the VTK format files.
     """
     global config
     f = gzip.open(fileName, 'rt')
@@ -318,7 +318,7 @@ def write_vtk_structured_grid_file(fileName, grid, flowData, whole_niv, whole_nj
 # --------------------------------------------------------------------
 
 if __name__ == '__main__':
-    print("Begin chkn-post...")
+    print("Begin lorikeet-post...")
 
     userOptions = getopt(sys.argv[1:], shortOptions, longOptions)
     uoDict = dict(userOptions[0])

@@ -131,8 +131,8 @@ def read_block_of_flow_data(fileName, binaryData):
     The flow field data comes as a 1D array of float numbers.
     The data for each flow variable is appended end-to-end.
 
-    Return the flow data in flattened arrays because that is the arrangement
-    that suits the VTK format files.
+    Return the flow data in flattened arrays, one column for each flow-variable,
+    because that is the arrangement that suits the VTK format files.
     """
     global config
     f = open(fileName, 'rb') if binaryData else gzip.open(fileName, 'rt')

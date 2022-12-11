@@ -9,7 +9,7 @@ a user-specified input script that contains, in Python,
 the code that defines the domain geometry and gas-path details.
 
 Usage:
-  $ lorikeet-prep --job=<jobName>
+  $ lrkt-prep --job=<jobName>
 
 The simulation control data is then organised via the classes
 GlobalConfig, FlowState, BoundaryCondition and its subclasses.
@@ -51,8 +51,8 @@ from gdtk.gas import GasModel, GasState, ThermochemicalReactor
 
 sys.path.append("") # so that we can find user's scripts in current directory
 
-shortOptions = "hf:b"
-longOptions = ["help", "job=", "binary"]
+shortOptions = "hf:"
+longOptions = ["help", "job="]
 
 def printUsage():
     print("Prepare a lorikeet run by reading a job script and writing grid and flow files.")
@@ -275,7 +275,7 @@ class FlowState():
 
     def to_json(self):
         gas_dict = {'p': self.gas.p, 'T': self.gas.T, 'massf': self.gas.massf}
-        result = '{"gas": %s, "vel": [%g, %g]}' % (json_dumps(gas_dict), self.vel.x, self.vel.y)
+        result = '{"gas": %s, "vel": [%g, %g]}' % (json.dumps(gas_dict), self.vel.x, self.vel.y)
         return result
 
 # There is a bit of boiler place code here but it gives us
@@ -332,7 +332,7 @@ class InflowBC(BoundaryCondition):
     """
     Inflow boundary condition.
     """
-    __slots__ = ['tag', 'fs', 'fsi']
+    __slots__ = ['tag', 'fs']
 
     def __init__(self, fs):
         self.tag = 'inflow'
@@ -345,9 +345,7 @@ class InflowBC(BoundaryCondition):
         return "InflowBC(fs={})".format(self.fs)
 
     def to_json(self):
-        # Note that the index to the FlowState will be assigned when
-        # a Block is constructed that has InflowBC objects.
-        return '{"tag": "%s", "flow_state_index": %d}' % (self.tag, self.fsi)
+        return '{"tag": "%s", "flow_state": %s}' % (self.tag, self.fs.to_json())
 
 
 class OutflowBC(BoundaryCondition):
