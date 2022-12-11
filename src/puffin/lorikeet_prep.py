@@ -560,7 +560,7 @@ def write_initial_files():
 # --------------------------------------------------------------------
 
 if __name__ == '__main__':
-    print("Begin lorikeet-prep...")
+    print("Begin lorikeet preprocessing...")
 
     userOptions = getopt(sys.argv[1:], shortOptions, longOptions)
     uoDict = dict(userOptions[0])
@@ -586,9 +586,13 @@ if __name__ == '__main__':
         #
         print("Summary:")
         print("  iovar_names   :", config.iovar_names)
-        print("  fluid blocks  :", len(fluidBlocksList))
         if len(fluidBlocksList) < 1:
             print("Warning: no fluid blocks defined; this is unusual.")
+        else:
+            nActive = 0;
+            for b in fluidBlocksList:
+                if b.active: nActive += 1
+            print("  fluid blocks  :", nActive, "active", len(fluidBlocksList)-nActive, "inactive")
         config.check_array_of_fluid_blocks()
         write_initial_files()
     print("Done in {:.3f} seconds.".format(time.process_time()))

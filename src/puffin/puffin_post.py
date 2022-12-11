@@ -12,6 +12,7 @@ PA Jacobs
 #
 import sys
 import os
+import time
 from getopt import getopt
 import math
 import numpy as np
@@ -128,7 +129,7 @@ def writeCrossFile(jobName, n_streams, ncells_all, xLocation):
 # ----------------------------------------------------------------------
 #
 if __name__ == '__main__':
-    print("Begin puffin-post...")
+    print("Begin puffin postprocessing...")
 
     userOptions = getopt(sys.argv[1:], shortOptions, longOptions)
     uoDict = dict(userOptions[0])
@@ -136,60 +137,59 @@ if __name__ == '__main__':
            "--help" in uoDict or \
            "-h" in uoDict:
         printUsage()
+        sys.exit(0)
+    #
+    if "--job" in uoDict:
+        jobName = uoDict.get("--job", "")
+    elif "-f" in uoDict:
+        jobName = uoDict.get("-f", "")
     else:
-        if "--job" in uoDict:
-            jobName = uoDict.get("--job", "")
-        elif "-f" in uoDict:
-            jobName = uoDict.get("-f", "")
+        raise Exception("Job name is not specified.")
+    jobName, ext = os.path.splitext(jobName)
+    print("jobName=", jobName)
+    #
+    if "--output" in uoDict:
+        plotFormat = uoDict.get("--output", "")
+    elif "-o" in uoDict:
+        plotFormat = uoDict.get("-o", "")
+    else:
+        raise Exception("Plot format is not specified.")
+    print("plotFormat=", plotFormat)
+    #
+    # Let's try to do some work in the job directory.
+    #
+    if not (os.path.exists(jobName) and os.path.isdir(jobName)):
+        raise Exception("Could not find directory for job.")
+    startDir = os.getcwd()
+    os.chdir(jobName)
+    config = json.loads(open("config.json", "r").read())
+    n_streams = config["n_streams"]
+    ncells_all = [config["ncells_%d" % i] for i in range(n_streams)]
+    print("n_streams=", n_streams)
+    if plotFormat == "vtk":
+        writeVTKfiles(jobName, n_streams, ncells_all)
+    elif plotFormat == "stream":
+        if "--stream-index" in uoDict:
+            streamIndex = int(uoDict.get("--stream-index", ""))
+        elif "-s" in uoDict:
+            streamIndex = int(uoDict.get("-s", ""))
         else:
-            raise Exception("Job name is not specified.")
-        jobName, ext = os.path.splitext(jobName)
-        print("jobName=", jobName)
-        #
-        if "--output" in uoDict:
-            plotFormat = uoDict.get("--output", "")
-        elif "-o" in uoDict:
-            plotFormat = uoDict.get("-o", "")
+            raise Exception("Stream index is not specified.")
+        print("streamIndex=", streamIndex)
+        if "--cell-index" in uoDict:
+            cellIndexStr = uoDict.get("--cell-index", "")
+        elif "-s" in uoDict:
+            cellIndexStr = uoDict.get("-s", "")
         else:
-            raise Exception("Plot format is not specified.")
-        print("plotFormat=", plotFormat)
-        #
-        # Let's try to do some work in the job directory.
-        #
-        if not (os.path.exists(jobName) and os.path.isdir(jobName)):
-            print("Could not find directory for job.")
+            raise Exception("Cell index is not specified.")
+        if (cellIndexStr == "$"):
+            cellIndex = ncells_all[streamIndex] - 1
         else:
-            startDir = os.getcwd()
-            os.chdir(jobName)
-            config = json.loads(open("config.json", "r").read())
-            n_streams = config["n_streams"]
-            ncells_all = [config["ncells_%d" % i] for i in range(n_streams)]
-            print("n_streams=", n_streams)
-            if (plotFormat == "vtk"):
-                writeVTKfiles(jobName, n_streams, ncells_all)
-            elif (plotFormat == "stream"):
-                if "--stream-index" in uoDict:
-                    streamIndex = int(uoDict.get("--stream-index", ""))
-                elif "-s" in uoDict:
-                    streamIndex = int(uoDict.get("-s", ""))
-                else:
-                    raise Exception("Stream index is not specified.")
-                print("streamIndex=", streamIndex)
-                if "--cell-index" in uoDict:
-                    cellIndexStr = uoDict.get("--cell-index", "")
-                elif "-s" in uoDict:
-                    cellIndexStr = uoDict.get("-s", "")
-                else:
-                    raise Exception("Cell index is not specified.")
-                if (cellIndexStr == "$"):
-                    cellIndex = ncells_all[streamIndex] - 1
-                else:
-                    cellIndex = int(cellindexStr)
-                print("cellIndex=", cellIndex)
-                writeStreamLineFile(jobName, streamIndex, ncells_all[streamIndex], cellIndex)
-            else:
-                writeCrossFile(jobName, n_streams, ncells_all, xLocation)
-            os.chdir(startDir)
-        #
-        print("Done.")
+            cellIndex = int(cellindexStr)
+        print("cellIndex=", cellIndex)
+        writeStreamLineFile(jobName, streamIndex, ncells_all[streamIndex], cellIndex)
+    else:
+        writeCrossFile(jobName, n_streams, ncells_all, xLocation)
+    os.chdir(startDir)
+    print("Done in {:.3f} seconds.".format(time.process_time()))
     sys.exit(0)

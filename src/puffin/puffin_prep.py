@@ -34,6 +34,7 @@ Versions:
 import sys
 import os
 import collections
+import time
 from getopt import getopt
 import math
 import numpy as np
@@ -307,7 +308,7 @@ def write_initial_files():
 # --------------------------------------------------------------------
 
 if __name__ == '__main__':
-    print("Begin puffin-prep...")
+    print("Begin puffin preprocessing...")
 
     userOptions = getopt(sys.argv[1:], shortOptions, longOptions)
     uoDict = dict(userOptions[0])
@@ -332,5 +333,5 @@ if __name__ == '__main__':
         if len(streamTubeList) < 1:
             print("Warning: no stream tubes defined; this is unusual.")
         write_initial_files()
-    print("Done.")
+    print("Done in {:.3f} seconds.".format(time.process_time()))
     sys.exit(0)

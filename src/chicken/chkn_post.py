@@ -354,7 +354,7 @@ def write_vtk_structured_grid_file(fileName, grid, flowData,
 # --------------------------------------------------------------------
 
 if __name__ == '__main__':
-    print("Begin chkn-post...")
+    print("Begin chicken postprocessing...")
 
     userOptions = getopt(sys.argv[1:], shortOptions, longOptions)
     uoDict = dict(userOptions[0])

@@ -318,7 +318,7 @@ def write_vtk_structured_grid_file(fileName, grid, flowData, whole_niv, whole_nj
 # --------------------------------------------------------------------
 
 if __name__ == '__main__':
-    print("Begin lorikeet-post...")
+    print("Begin lorikeet postprocessing...")
 
     userOptions = getopt(sys.argv[1:], shortOptions, longOptions)
     uoDict = dict(userOptions[0])

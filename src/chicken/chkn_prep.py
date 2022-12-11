@@ -937,7 +937,7 @@ def write_initial_files(binaryData):
 # --------------------------------------------------------------------
 
 if __name__ == '__main__':
-    print("Begin chkn-prep...")
+    print("Begin chicken preprocessing...")
 
     userOptions = getopt(sys.argv[1:], shortOptions, longOptions)
     uoDict = dict(userOptions[0])
@@ -960,10 +960,14 @@ if __name__ == '__main__':
         # It is up to the user to be careful; there is no security.
         exec(compile(open(inputScriptName, "rb").read(), inputScriptName, 'exec'))
         print("Summary:")
-        print("  flow states       :", len(flowStatesList))
-        print("  fluid blocks      :", len(fluidBlocksList))
+        print("  flow states   :", len(flowStatesList))
         if len(fluidBlocksList) < 1:
             print("Warning: no fluid blocks defined; this is unusual.")
+        else:
+            nActive = 0;
+            for b in fluidBlocksList:
+                if b.active: nActive += 1
+            print("  fluid blocks  :", nActive, "active", len(fluidBlocksList)-nActive, "inactive")
         config.check_array_of_fluid_blocks()
         binaryData = ("--binary" in uoDict) or ("-b" in uoDict)
         write_initial_files(binaryData)
