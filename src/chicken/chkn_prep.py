@@ -9,7 +9,7 @@ a user-specified input script that contains, in Python,
 the code that defines the facility geometry and gas-path details.
 
 Usage:
-  $ chkn_prep --job=<jobName> --binary
+  $ chkn-prep --job=<jobName> --binary
 
 The simulation control data is then organised via the classes
 GlobalConfig, FlowState, BoundaryCondition and its subclasses.

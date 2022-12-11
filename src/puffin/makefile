@@ -8,10 +8,12 @@ DMD ?= ldc2
 FLAVOUR ?= debug
 PLATFORM ?= linux
 
-PROGRAMS := puffin puffin-prep puffin-post
+PROGRAMS := puffin puffin-prep puffin-post lorikeet-prep
 
 PUFFIN_FILES := config.d marching_calc.d streamtube.d \
 	cell.d face.d flow.d flux.d interp.d
+
+LORIKEET_FILES :=
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
@@ -192,6 +194,10 @@ puffin-prep: puffin-prep.py
 puffin-post: puffin-post.py
 	cp puffin-post.py puffin-post
 	chmod +x puffin-post
+
+lorikeet-prep: lorikeet-prep.py
+	cp lorikeet-prep.py lorikeet-prep
+	chmod +x lorikeet-prep
 
 prep-gas:
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas

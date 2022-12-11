@@ -69,14 +69,16 @@ class StructuredGrid():
             raise Exception(f"niv is too small: {niv}")
         if njv < 2:
             raise Exception(f"njv is too small: {njv}")
-        rNorth = cf_list[0].distribute_parameter_values(niv)
-        sEast = cf_list[1].distribute_parameter_values(njv)
-        rSouth = cf_list[2].distribute_parameter_values(niv)
-        sWest = cf_list[3].distribute_parameter_values(njv)
         self.niv = niv; self.njv = njv; self.nkv = 1
         self.dimensions = 2
+        # Start with uniformly-distributed sample points.
         r = np.fromfunction(lambda i,j: i, (niv, njv), dtype=float) / (niv-1)
         s = np.fromfunction(lambda i,j: j, (niv, njv), dtype=float) / (njv-1)
+        # Compute independent cluster function along each edge.
+        rNorth = cf_list[0](r)
+        sEast = cf_list[1](s)
+        rSouth = cf_list[2](r)
+        sWest = cf_list[3](s)
         # Blend the clustered sample points from each edge of the rs unit square.
         sdash = (1.0-r) * sWest + r * sEast;
         rdash = (1.0-s) * rSouth + s * rNorth;
