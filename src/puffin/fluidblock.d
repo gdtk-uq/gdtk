@@ -141,71 +141,133 @@ public:
     void set_up_data_storage()
     // Set up the storage and make connections to the vertices.
     {
-        /+
-        foreach (j; 0 .. ncells+1) {
-            vertices_west ~= Vector3();
-            vertices_east ~= Vector3();
-        }
-        foreach (j; 0 .. ncells) {
-            ifaces_west ~= new Face2D(gmodel, cqi);
-            ifaces_east ~= new Face2D(gmodel, cqi);
-        }
-        foreach (j; 0 .. ncells+1) {
-            jfaces ~= new Face2D(gmodel, cqi);
-        }
-        foreach (j; 0 .. ncells) {
-            cells ~= new Cell2D(gmodel, cqi);
-            flowstates_west ~= FlowState2D(gmodel);
-        }
-        foreach (j; 0 .. 2) {
-            ghost_cells_left ~= new Cell2D(gmodel, cqi);
-            ghost_cells_right ~= new Cell2D(gmodel, cqi);
-        }
-        foreach (j; 0 .. ncells) {
-            ifaces_west[j].p0 = &(vertices_west[j]);
-            ifaces_west[j].p1 = &(vertices_west[j+1]);
-            //
-            ifaces_east[j].p0 = &(vertices_east[j]);
-            ifaces_east[j].p1 = &(vertices_east[j+1]);
-        }
-        foreach (j; 0 .. ncells+1) {
-            auto f = jfaces[j];
-            f.p0 = &(vertices_east[j]);
-            f.p1 = &(vertices_west[j]);
-            if (j == 0) {
-                f.left_cells[1] = ghost_cells_left[1];
-                f.left_cells[0] = ghost_cells_left[0];
-            } else if (j == 1) {
-                f.left_cells[1] = ghost_cells_left[0];
-                f.left_cells[0] = cells[j-1];
-            } else {
-                f.left_cells[1] = cells[j-2];
-                f.left_cells[0] = cells[j-1];
-            }
-            if (j == ncells-1) {
-                f.right_cells[0] = cells[j];
-                f.right_cells[1] = ghost_cells_right[0];
-            } else if (j ==  ncells) {
-                f.right_cells[0] = ghost_cells_right[0];
-                f.right_cells[1] = ghost_cells_right[1];
-            } else {
-                f.right_cells[0] = cells[j];
-                f.right_cells[1] = cells[j+1];
+        // Allocate the actual data space.
+        n_vertices = (nic+1)*(njc+1);
+        vertices.length = n_vertices;
+        //
+        n_ifaces = (nic+1)*njc;
+        foreach (indx; 0 .. n_ifaces) { ifaces ~= new Face2D(gmodel, cqi); }
+        //
+        n_jfaces = nic*(njc+1);
+        foreach (indx; 0 .. n_jfaces) { jfaces ~= new Face2D(gmodel, cqi); }
+        //
+        n_cells = nic*njc;
+        foreach (indx; 0 .. n_cells) { cells ~= new Cell2D(gmodel, cqi); }
+        //
+        // Connect cells to faces and vertices.
+        foreach (j; 0 .. njc) {
+            foreach (i; 0 .. nic) {
+                auto c = cells[cell_index(i,j)];
+                c.p00 = &(vertices[vertex_index(i,j)]);
+                c.p10 = &(vertices[vertex_index(i+1,j)]);
+                c.p11 = &(vertices[vertex_index(i+1,j+1)]);
+                c.p01 = &(vertices[vertex_index(i,j+1)]);
+                //
+                c.faceW = ifaces[iface_index(i,j)];
+                c.faceE = ifaces[iface_index(i+1,j)];
+                c.faceS = jfaces[jface_index(i,j)];
+                c.faceN = jfaces[jface_index(i,j+1)];
             }
         }
-        foreach (j; 0 .. ncells) {
-            auto c = cells[j];
-            c.p00 = &(vertices_west[j]);
-            c.p10 = &(vertices_east[j]);
-            c.p11 = &(vertices_east[j+1]);
-            c.p01 = &(vertices_west[j+1]);
-            //
-            c.faceN = jfaces[j+1];
-            c.faceE = ifaces_east[j];
-            c.faceS = jfaces[j];
-            c.faceW = ifaces_west[j];
-        }
-        +/
+        // Now, add ghost cells and make connection faces to their neighbour cells.
+        foreach (j; 0 .. njc) {
+            auto ghost_cell_left_1 = new Cell2D(gmodel, cqi);
+            auto ghost_cell_left_0 = new Cell2D(gmodel, cqi);
+            auto ghost_cell_right_0 = new Cell2D(gmodel, cqi);
+            auto ghost_cell_right_1 = new Cell2D(gmodel, cqi);
+            foreach (i; 0 ..nic) {
+                Face2D f = ifaces[iface_index(i,j)];
+                // Want unit normal to right and pointing in i-direction.
+                f.p0 = &(vertices[vertex_index(i,j)]);
+                f.p1 = &(vertices[vertex_index(i,j+1)]);
+                if (i == 0) {
+                    // Left-most face in block.
+                    f.left_cells[1] = ghost_cell_left_1;
+                    f.left_cells[0] = ghost_cell_left_0;
+                    f.right_cells[0] = cells[cell_index(i,j)];
+                    f.right_cells[1] = cells[cell_index(i+1,j)];
+                } else if (i == 1 && i == nic-1) {
+                    // Middle face when there is only 2 cells across block.
+                    f.left_cells[1] = ghost_cell_left_0;
+                    f.left_cells[0] = cells[cell_index(i-1,j)];
+                    f.right_cells[0] = cells[cell_index(i,j)];
+                    f.right_cells[1] = ghost_cell_right_0;
+                } else if (i == 1) {
+                    // First face in from left in a large block.
+                    f.left_cells[1] = ghost_cell_left_0;
+                    f.left_cells[0] = cells[cell_index(i-1,j)];
+                    f.right_cells[0] = cells[cell_index(i,j)];
+                    f.right_cells[1] = cells[cell_index(i+1,j)];
+                } else if (i == nic-1) {
+                    // First face in from right in a large block.
+                    f.left_cells[1] = cells[cell_index(i-2,j)];
+                    f.left_cells[0] = cells[cell_index(i-1,j)];
+                    f.right_cells[0] = cells[cell_index(i,j)];
+                    f.right_cells[1] = ghost_cell_right_0;
+                } else if (i == nic) {
+                    // Last face on block edge.
+                    f.left_cells[1] = cells[cell_index(i-2,j)];
+                    f.left_cells[0] = cells[cell_index(i-1,j)];
+                    f.right_cells[0] = ghost_cell_right_0;
+                    f.right_cells[1] = ghost_cell_right_1;
+                } else {
+                    // Interior face in a large block.
+                    f.left_cells[1] = cells[cell_index(i-2,j)];
+                    f.left_cells[0] = cells[cell_index(i-1,j)];
+                    f.right_cells[0] = cells[cell_index(i,j)];
+                    f.right_cells[1] = cells[cell_index(i+1,j)];
+                }
+            } // end for i
+        } // end for j
+        foreach (i; 0 .. nic) {
+            auto ghost_cell_left_1 = new Cell2D(gmodel, cqi);
+            auto ghost_cell_left_0 = new Cell2D(gmodel, cqi);
+            auto ghost_cell_right_0 = new Cell2D(gmodel, cqi);
+            auto ghost_cell_right_1 = new Cell2D(gmodel, cqi);
+            foreach (j; 0 ..njc+1) {
+                Face2D f = jfaces[jface_index(i,j)];
+                // Want unit normal to right and pointing in j-direction.
+                f.p0 = &(vertices[vertex_index(i+1,j)]);
+                f.p1 = &(vertices[vertex_index(i,j)]);
+                if (j == 0) {
+                    // Left-most face in block.
+                    f.left_cells[1] = ghost_cell_left_1;
+                    f.left_cells[0] = ghost_cell_left_0;
+                    f.right_cells[0] = cells[cell_index(i,j)];
+                    f.right_cells[1] = cells[cell_index(i,j+1)];
+                } else if (j == 1 && j == njc-1) {
+                    // Middle face when there is only 2 cells across block.
+                    f.left_cells[1] = ghost_cell_left_0;
+                    f.left_cells[0] = cells[cell_index(i,j-1)];
+                    f.right_cells[0] = cells[cell_index(i,j)];
+                    f.right_cells[1] = ghost_cell_right_0;
+                } else if (j == 1) {
+                    // First face in from left in a large block.
+                    f.left_cells[1] = ghost_cell_left_0;
+                    f.left_cells[0] = cells[cell_index(i,j-1)];
+                    f.right_cells[0] = cells[cell_index(i,j)];
+                    f.right_cells[1] = cells[cell_index(i,j+1)];
+                } else if (j == njc-1) {
+                    // First face in from right in a large block.
+                    f.left_cells[1] = cells[cell_index(i,j-2)];
+                    f.left_cells[0] = cells[cell_index(i,j-1)];
+                    f.right_cells[0] = cells[cell_index(i,j)];
+                    f.right_cells[1] = ghost_cell_right_0;
+                } else if (j == njc) {
+                    // Last face on block edge.
+                    f.left_cells[1] = cells[cell_index(i,j-2)];
+                    f.left_cells[0] = cells[cell_index(i,j-1)];
+                    f.right_cells[0] = ghost_cell_right_0;
+                    f.right_cells[1] = ghost_cell_right_1;
+                } else {
+                    // Interior face in a large block.
+                    f.left_cells[1] = cells[cell_index(i,j-2)];
+                    f.left_cells[0] = cells[cell_index(i,j-1)];
+                    f.right_cells[0] = cells[cell_index(i,j)];
+                    f.right_cells[1] = cells[cell_index(i,j+1)];
+                }
+            } // end for j
+        } // end for i
         return;
     } // end set_up_data_storage()
 
