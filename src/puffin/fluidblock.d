@@ -8,6 +8,7 @@ module fluidblock;
 import std.conv;
 import std.stdio;
 import std.string;
+import std.file;
 import std.json;
 import std.format;
 import std.range;
@@ -89,9 +90,20 @@ public:
         shear_tol = Config.shear_tol;
         //
         // writeln("DEBUG configData.type=", configData.type, " configData=", configData);
-        nic = getJSONint(configData, "nic", 0);
-        njc = getJSONint(configData, "njc", 0);
+        i = getJSONint(configData, "i", -1);
+        j = getJSONint(configData, "j", -1);
+        if (i < 0 || j < 0) {
+            throw new Exception("Invalid indices for block.");
+        }
+        nic = Config.nics[i];
+        njc = Config.njcs[j];
         active = getJSONbool(configData, "active", true);
+        if (active) {
+            if (Config.blk_ids[i][j] != indx) {
+                writefln("indx=%d i=%d j=%d blk_ids=%s", indx, i, j, Config.blk_ids);
+                throw new Exception("Block seems out of place.");
+            }
+        }
         //
         void setBC(ref BC bc, JSONValue jsonBC) {
             // writeln("DEBUG jsonData=", jsonBC);
@@ -163,7 +175,7 @@ public:
     @nogc
     int jface_index(int i, int j)
     {
-        return j*nic + j;
+        return j*nic + i;
     }
 
     void set_up_data_storage()
@@ -203,7 +215,7 @@ public:
             auto ghost_cell_left_0 = new Cell2D(gmodel, cqi);
             auto ghost_cell_right_0 = new Cell2D(gmodel, cqi);
             auto ghost_cell_right_1 = new Cell2D(gmodel, cqi);
-            foreach (i; 0 ..nic) {
+            foreach (i; 0 .. nic+1) {
                 Face2D f = ifaces[iface_index(i,j)];
                 // Want unit normal to right and pointing in i-direction.
                 f.p0 = &(vertices[vertex_index(i,j)]);
@@ -252,7 +264,7 @@ public:
             auto ghost_cell_left_0 = new Cell2D(gmodel, cqi);
             auto ghost_cell_right_0 = new Cell2D(gmodel, cqi);
             auto ghost_cell_right_1 = new Cell2D(gmodel, cqi);
-            foreach (j; 0 ..njc+1) {
+            foreach (j; 0 .. njc+1) {
                 Face2D f = jfaces[jface_index(i,j)];
                 // Want unit normal to right and pointing in j-direction.
                 f.p0 = &(vertices[vertex_index(i+1,j)]);
@@ -301,6 +313,22 @@ public:
 
     void read_grid_data()
     {
+        string fileName = format("%s/grid/grid-%04d-%04d.gz", Config.job_name, i, j);
+        if (!(exists(fileName) && isFile(fileName))) {
+            writefln("Grid file name: %s", fileName);
+            throw new Exception("Grid file cannot be found.");
+        }
+        auto grid = new StructuredGrid(fileName, "gziptext");
+        if (!(nic+1 == grid.niv && njc+1 == grid.njv && 1 == grid.nkv)) {
+            writefln("nic=%d njc=%d grid.niv=%d grid.njv=%d grid.nkv=%d",
+                     nic, njc, grid.niv, grid.njv, grid.nkv);
+            throw new Exception("Grid size did not match.");
+        }
+        foreach (j; 0 .. njc+1) {
+            foreach(i; 0 .. nic+1) {
+                vertices[vertex_index(i,j)].set(grid[i,j]);
+            }
+        }
         return;
     }
 

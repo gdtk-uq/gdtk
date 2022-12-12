@@ -190,7 +190,7 @@ void do_time_integration()
         if (progress.t >= progress.plot_at_t) {
             int tindx = progress.tindx + 1;
             foreach (b; fluidBlocks) { b.write_flow_data(tindx); }
-            // FIXME append to times file.
+            append(format("%s/times.data", Config.job_name), format("%d %g\n", tindx, progress.t));
             progress.steps_since_last_plot_write = 0;
             progress.plot_at_t += Config.plot_dt;
             progress.tindx = tindx;
@@ -203,7 +203,7 @@ void do_time_integration()
     if (progress.steps_since_last_plot_write > 0) {
         int tindx = progress.tindx + 1;
         foreach (b; fluidBlocks) { b.write_flow_data(tindx); }
-        // FIXME append to times file.
+        append(format("%s/times.data", Config.job_name), format("%d %g\n", tindx, progress.t));
         progress.tindx = tindx;
     }
     return;

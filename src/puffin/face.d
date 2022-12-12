@@ -58,7 +58,9 @@ public:
     string toString() const
     {
         string repr = "Face2D(";
-        repr ~= format("pos=%s, n=%s, t1=%s, area=%g", pos, n, t1, area);
+        repr ~= format("p0=%s", ((p0) ? (*p0).toString() : "null"));
+        repr ~= format(", p1=%s", ((p1) ? (*p1).toString() : "null"));
+        repr ~= format(", pos=%s, n=%s, t1=%s, area=%g", pos, n, t1, area);
         repr ~= format(", F=%s", F);
         repr ~= ")";
         return repr;
@@ -71,8 +73,10 @@ public:
         t1 = *p1; t1 -= *p0; t1.normalize();
         Vector3 t2 = Vector3(0.0, 0.0, 1.0);
         cross(n, t1, t2); n.normalize();
+        // Assume unit depth in z for 2D planar geometry.
         area = distance_between(*p1, *p0);
         pos = *p0; pos += *p1; pos *= 0.5;
+        // Area per radian about the z-axis for 2D axisymmetric geometry.
         if (axiFlag) { area *= pos.y; }
         return;
     }
