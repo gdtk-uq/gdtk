@@ -15,6 +15,7 @@ import std.range;
 import std.math;
 import std.algorithm;
 import core.stdc.math: HUGE_VAL;
+import gzip;
 
 import nm.schedule;
 import json_helper;
@@ -342,42 +343,37 @@ public:
 
     void read_flow_data(int tindx)
     {
+        string fileName = format("%s/flow/t%04d/flow-%04d-%04d.gz", Config.job_name, tindx, i, j);
+        if (!(exists(fileName) && isFile(fileName))) {
+            writefln("Flow file name: %s", fileName);
+            throw new Exception("Flow file cannot be found.");
+        }
+        auto byLine = new GzipByLine(fileName);
+        foreach (varName; Config.iovar_names) {
+            foreach (i; 0 .. n_cells) {
+                auto line = byLine.front; byLine.popFront();
+                double value = to!double(line.strip());
+                cells[i].iovar_set(varName, value);
+            }
+        }
+        byLine.range.f.close();
         return;
     }
 
     void write_flow_data(int tindx)
     {
-        /+
-        bool write_header = false;
-        int nsp = gmodel.n_species;
-        int nmodes = gmodel.n_modes;
-        File fp;
-        string fileName = format("%s/flow-%d.data", Config.job_name, indx);
-        if (write_header) {
-            fp = File(fileName, "w");
-            fp.write("# x  y  velx vely  M  rho  p  T  u  a  shock");
-            foreach (i; 0 .. nsp) { fp.write(format(" massf-%d", i)); }
-            foreach (i; 0 .. nmodes) { fp.write(format(" T_modes-%d u_modes-%d", i, i)); }
-            fp.write("\n");
-        } else {
-            fp = File(fileName, "a");
+        string dirName = format("%s/flow/t%04d", Config.job_name, tindx);
+        string fileName = dirName ~ format("/flow-%04d-%04d.gz", i, j);
+        if (!(exists(dirName) && isDir(dirName))) {
+            mkdir(dirName);
         }
-        foreach (j; 0 .. n_cells) {
-            auto face = ifaces_west[j];
-            auto fs = flowstates_west[j];
-            GasState* g = &(fs.gas);
-            double Vx = fs.vel.x;
-            double Vy = fs.vel.y;
-            double M = sqrt(Vx*Vx+Vy*Vy)/g.a;
-            double shock = (cells[j].shock_flag) ? 1.0 : 0.0;
-            fp.write(format("%e %e %e %e %e", face.pos.x, face.pos.y, Vx, Vy, M));
-            fp.write(format(" %e %e %e %e %e %f", g.rho, g.p, g.T, g.u, g.a, shock));
-            foreach (i; 0 .. nsp) { fp.write(format(" %e", g.massf[i])); }
-            foreach (i; 0 .. nmodes) { fp.write(format(" %e %e", g.T_modes[i], g.u_modes[i])); }
-            fp.write("\n");
+        auto outfile = new GzipOut(fileName);
+        foreach (varName; Config.iovar_names) {
+            foreach (i; 0 .. n_cells) {
+                outfile.compress(format("%e\n", cells[i].iovar_get(varName)));
+            }
         }
-        fp.close();
-        +/
+        outfile.finish();
         return;
     } // end  write_flow_data()
 

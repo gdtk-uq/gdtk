@@ -7,6 +7,9 @@ module cell;
 
 import std.format;
 import std.math;
+import std.algorithm;
+import std.conv;
+import std.array;
 
 import geom;
 import gas;
@@ -65,6 +68,57 @@ public:
         foreach (i; 0 .. dUdt.length) { repr ~= format(", dUdt[%d]=%s", i, dUdt[i]); }
         repr ~= ")";
         return repr;
+    }
+
+    void iovar_set(string name, double val)
+    {
+        switch (name) {
+        case "posx": pos.x = val; break;
+        case "posy": pos.y = val; break;
+        case "posz": pos.z = val; break;
+        case "vol": volume = val; break;
+        case "p": fs.gas.p = val; break;
+        case "T": fs.gas.T = val; break;
+        case "rho": fs.gas.rho = val; break;
+        case "e": fs.gas.u = val; break;
+        case "a": fs.gas.a = val; break;
+        case "velx": fs.vel.x = val; break;
+        case "vely": fs.vel.y = val; break;
+        case "velz": fs.vel.z = val; break;
+        default:
+            if (name.canFind("massf")) {
+                int i = to!int(name.split("_")[1]);
+                fs.gas.massf[i] = val;
+            } else {
+                throw new Exception("Invalid selection for IOvar: " ~ name);
+            }
+        }
+    }
+
+    double iovar_get(string name)
+    {
+        switch (name) {
+        case "posx": return pos.x;
+        case "posy": return pos.y;
+        case "posz": return pos.z;
+        case "vol": return volume;
+        case "p": return fs.gas.p;
+        case "T": return fs.gas.T;
+        case "rho": return fs.gas.rho;
+        case "e": return fs.gas.u;
+        case "a": return fs.gas.a;
+        case "velx": return fs.vel.x;
+        case "vely": return fs.vel.y;
+        case "velz": return fs.vel.z;
+        default:
+            if (name.canFind("massf")) {
+                int i = to!int(name.split("_")[1]);
+                return fs.gas.massf[i];
+            } else {
+                throw new Exception("Invalid selection for IOvar: " ~ name);
+            }
+        }
+        // So we never return from here.
     }
 
     @nogc
