@@ -13,6 +13,7 @@ import std.format;
 import std.range;
 import std.math;
 import std.algorithm;
+import core.stdc.math: HUGE_VAL;
 
 import nm.schedule;
 import json_helper;
@@ -25,48 +26,46 @@ import cell;
 import face;
 import flux;
 
+enum BCCode {wall_with_slip=0, exchange=1, inflow=2, outflow=3};
 
-enum BCCode {wall=0, exchange=1}; // To decide what to do at the boundaries.
-
+struct BC {
+    int code = BCCode.wall_with_slip;
+    FlowState2D* fs;
+}
 
 class FluidBlock {
 public:
     int indx;
+    int i, j;
+    bool active;
     GasModel gmodel;
     CQIndex cqi;
-    GasState gs;
-    Vector3 vel;
-    int ncells;
+    int nic, njc;
     bool axiFlag;
     double cfl;
     FluxCalcCode flux_calc;
     int x_order;
     double compression_tol;
     double shear_tol;
+    BC bc_west, bc_east, bc_south, bc_north;
     //
-    Schedule!double y_lower, y_upper;
-    Schedule!int bc_lower, bc_upper;
-    //
-    Vector3[] vertices_west;
-    Vector3[] vertices_east;
-    Face2D[] ifaces_west;
-    Face2D[] ifaces_east;
+    Vector3[] vertices;
+    Face2D[] ifaces;
     Face2D[] jfaces;
-    //
     Cell2D[] cells;
-    Cell2D[] ghost_cells_left;
-    Cell2D[] ghost_cells_right;
-    //
-    FlowState2D[] flowstates_west;
+    // Storage of the halo of ghost flow states around the active cells.
+    Cell2D[] ghost_cells;
+    int n_vertices, n_cells, n_ifaces, n_jfaces, n_ghost_cells;
     //
     // Scratch space for taking a gas-dynamic step.
     FlowState2D fsL, fsR;
 
 
     this(int indx, JSONValue configData)
+    // Configure the fluid block from the blob of JSON data associated with it.
     {
         this.indx = indx;
-        ncells = getJSONint(configData, format("ncells_%d", indx), 0);
+        nic = getJSONint(configData, format("ncells_%d", indx), 0);
         //
         gmodel = init_gas_model(Config.gas_model_file);
         cqi = CQIndex(gmodel.n_species, gmodel.n_modes);
@@ -77,6 +76,7 @@ public:
         compression_tol = Config.compression_tol;
         shear_tol = Config.shear_tol;
         //
+        /+
         auto inflowData = configData[format("inflow_%d", indx)];
         double p = getJSONdouble(inflowData, "p", 100.0e3);
         double T = getJSONdouble(inflowData, "T", 300.0);
@@ -91,44 +91,7 @@ public:
         double velx = getJSONdouble(inflowData, "velx", 0.0);
         double vely = getJSONdouble(inflowData, "vely", 0.0);
         vel.set(velx, vely);
-        //
-        int n_bc;
-        double dx_bc;
-        double[] xs, y0s, y1s;
-        int[] bc0s, bc1s;
-        string fileName = format("%s/streamtube-%d.data", Config.job_name, indx);
-        auto lines = File(fileName, "r").byLine();
-        foreach (line; lines) {
-            auto txt = line.strip();
-            if (canFind(txt, "n_bc")) {
-                n_bc = to!int(txt.split("=")[1]);
-                continue;
-            }
-            if (canFind(txt, "dx_bc")) {
-                dx_bc = to!double(txt.split("=")[1]);
-                continue;
-            }
-            if (canFind(txt, "#")) continue;
-            auto items = txt.split();
-            if (items.length >= 5) {
-                xs ~= to!double(items[0]);
-                y0s ~= to!double(items[1]);
-                y1s ~= to!double(items[2]);
-                bc0s ~= to!int(items[3]);
-                bc1s ~= to!int(items[4]);
-            }
-        }
-        if (n_bc != xs.length) {
-            writeln("WARNING: n_bc=", n_bc, " length=", xs.length);
-        }
-        if ((xs[1]-xs[0]-dx_bc)/dx_bc > 1.0e-9) {
-            writeln("WARNING: dx=", xs[1]-xs[0], " dx_bc=", dx_bc);
-        }
-        y_lower = new Schedule!double(xs, y0s);
-        y_upper = new Schedule!double(xs, y1s);
-        bc_lower = new Schedule!int(xs, bc0s);
-        bc_upper = new Schedule!int(xs, bc1s);
-        //
+        +/
         // Scratch space
         fsL = FlowState2D(gmodel);
         fsR = FlowState2D(gmodel);
@@ -136,24 +99,49 @@ public:
 
     override string toString()
     {
-        string repr = "StreamTube(";
-        repr ~= format("indx=%d", indx);
-        repr ~= format(", gmodel=%s, gs=%s, vel=%s", gmodel, gs, vel);
+        string repr = "FluidBlock(";
+        repr ~= format("i=%d, j=%d", i, j);
+        repr ~= format(", gmodel=%s", gmodel);
         repr ~= format(", cqi=%s", cqi);
         repr ~= format(", axiFlag=%s", axiFlag);
         repr ~= format(", flux_calc=%s", to!string(flux_calc));
         repr ~= format(", compression_tol=%g, shear_tol=%g", compression_tol, shear_tol);
         repr ~= format(", x_order=%d", x_order);
-        repr ~= format(", ncells=%d", ncells);
-        repr ~= format(", y_lower=%s, y_upper=%s", y_lower, y_upper);
-        repr ~= format(", bc_lower=%s, bc_upper=%s", bc_lower, bc_upper);
+        repr ~= format(", n_cells=%d", n_cells);
+        repr ~= format(", bc_west=%s, bc_east=%s", bc_west, bc_east);
+        repr ~= format(", bc_south=%s, bc_north=%s", bc_south, bc_north);
         repr ~= ")";
         return repr;
+    }
+
+    @nogc
+    int cell_index(int i, int j)
+    {
+        return j*nic + i;
+    }
+
+    @nogc
+    int vertex_index(int i, int j)
+    {
+        return j*(nic+1) + i;
+    }
+
+    @nogc
+    int iface_index(int i, int j)
+    {
+        return i*njc + j;
+    }
+
+    @nogc
+    int jface_index(int i, int j)
+    {
+        return j*nic + j;
     }
 
     void set_up_data_storage()
     // Set up the storage and make connections to the vertices.
     {
+        /+
         foreach (j; 0 .. ncells+1) {
             vertices_west ~= Vector3();
             vertices_east ~= Vector3();
@@ -217,6 +205,7 @@ public:
             c.faceS = jfaces[j];
             c.faceW = ifaces_west[j];
         }
+        +/
         return;
     } // end set_up_data_storage()
 
@@ -225,39 +214,22 @@ public:
         return;
     }
 
+    @nogc
+    void set_up_geometry()
+    {
+        foreach (f; ifaces) { f.compute_geometry(axiFlag); }
+        foreach (f; jfaces) { f.compute_geometry(axiFlag); }
+        foreach (c; cells) { c.compute_geometry(axiFlag); }
+    }
+
     void read_flow_data(int tindx)
     {
         return;
     }
 
-    @nogc
-    void set_up_slice(double x)
-    {
-        // Locations for the east vertices.
-        double y0 = y_lower.interpolate_value(x);
-        double y1 = y_upper.interpolate_value(x);
-        foreach (j; 0 .. ncells+1) {
-            auto frac = to!double(j)/to!double(ncells);
-            double y = (1.0-frac)*y0 + frac*y1;
-            vertices_east[j].set(x, y);
-        }
-        // Compute the face and cell geometric properties.
-        foreach (j; 0 .. ncells) {
-            ifaces_east[j].compute_geometry(axiFlag);
-            cells[j].compute_geometry(axiFlag);
-        }
-        foreach (j; 0 .. ncells+1) {
-            jfaces[j].compute_geometry(axiFlag);
-        }
-        // Finally, initialize the flow by propagating from the west.
-        foreach (j; 0 .. ncells) {
-            cells[j].fs.copy_values_from(flowstates_west[j]);
-        }
-        return;
-    } // end set_up_slice()
-
     void write_flow_data(int tindx)
     {
+        /+
         bool write_header = false;
         int nsp = gmodel.n_species;
         int nmodes = gmodel.n_modes;
@@ -272,7 +244,7 @@ public:
         } else {
             fp = File(fileName, "a");
         }
-        foreach (j; 0 .. ncells) {
+        foreach (j; 0 .. n_cells) {
             auto face = ifaces_west[j];
             auto fs = flowstates_west[j];
             GasState* g = &(fs.gas);
@@ -287,6 +259,7 @@ public:
             fp.write("\n");
         }
         fp.close();
+        +/
         return;
     } // end  write_flow_data()
 
@@ -300,8 +273,8 @@ public:
     @nogc
     double estimate_allowable_dt()
     {
-        double dt = cells[0].estimate_local_dt(cfl);
-        foreach (j; 1 .. ncells) { dt = fmin(dt, cells[j].estimate_local_dt(cfl)); }
+        double dt = HUGE_VAL;
+        foreach (c; cells) { dt = fmin(dt, c.estimate_local_dt(cfl)); }
         return dt;
     }
 
@@ -309,8 +282,7 @@ public:
     void mark_shock_cells()
     {
         foreach (c; cells) { c.shock_flag = false; }
-        foreach (c; ghost_cells_left) { c.shock_flag = false; }
-        foreach (c; ghost_cells_right) { c.shock_flag = false; }
+        foreach (c; ghost_cells) { c.shock_flag = false; }
         foreach (f; jfaces) {
             if (f.is_shock(compression_tol, shear_tol)) {
                 f.left_cells[0].shock_flag = true;
@@ -323,13 +295,11 @@ public:
     @nogc
     void predictor_step(double dt)
     {
-        foreach (c; cells) { c.estimate_local_dt(cfl); }
-        foreach (j; 0 .. ncells) {
-            ifaces_west[j].simple_flux(flowstates_west[j], gmodel, cqi);
-            ifaces_east[j].simple_flux(cells[j].fs, gmodel, cqi);
+        foreach (f; ifaces) {
+            f.calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
         }
-        foreach (j; 0 .. ncells+1) {
-            jfaces[j].calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
+        foreach (f; jfaces) {
+            f.calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
         }
         foreach (c; cells) {
             c.eval_dUdt(0, axiFlag);
@@ -342,11 +312,11 @@ public:
     @nogc
     void corrector_step(double dt)
     {
-        foreach (j; 0 .. ncells) {
-            ifaces_east[j].simple_flux(cells[j].fs, gmodel, cqi);
+        foreach (f; ifaces) {
+            f.calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
         }
-        foreach (j; 0 .. ncells+1) {
-            jfaces[j].calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
+        foreach (f; jfaces) {
+            f.calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
         }
         foreach (c; cells) {
             c.eval_dUdt(1, axiFlag);

@@ -95,6 +95,7 @@ void init_simulation(int tindx)
     foreach (b; fluidBlocks) {
         b.set_up_data_storage();
         b.read_grid_data();
+        b.set_up_geometry();
         b.read_flow_data(tindx);
     }
     progress.step = 0;
@@ -167,6 +168,7 @@ void do_time_integration()
         if (progress.t >= progress.plot_at_t) {
             int tindx = progress.tindx + 1;
             foreach (b; fluidBlocks) { b.write_flow_data(tindx); }
+            // FIXME append to times file.
             progress.steps_since_last_plot_write = 0;
             progress.plot_at_t += Config.plot_dt;
             progress.tindx = tindx;
@@ -179,6 +181,7 @@ void do_time_integration()
     if (progress.steps_since_last_plot_write > 0) {
         int tindx = progress.tindx + 1;
         foreach (b; fluidBlocks) { b.write_flow_data(tindx); }
+        // FIXME append to times file.
         progress.tindx = tindx;
     }
     return;
