@@ -27,6 +27,7 @@ import face;
 import flux;
 
 enum BCCode {wall_with_slip=0, exchange=1, inflow=2, outflow=3};
+string[] BCCodeNames = ["wall_with_slip", "exchange", "inflow", "outflow"];
 
 int BC_code_from_name(string name)
 {
@@ -42,7 +43,7 @@ struct BC {
     FlowState2D* fs;
 
     string toString() {
-        return format("BC(code=%d, fs=%s)", code, ((fs) ? to!string(*fs) : "null"));
+        return format("BC(type=%s, fs=%s)", BCCodeNames[code], ((fs) ? to!string(*fs) : "null"));
     }
 }
 
@@ -91,34 +92,33 @@ public:
         nic = getJSONint(configData, "nic", 0);
         njc = getJSONint(configData, "njc", 0);
         active = getJSONbool(configData, "active", true);
-        JSONValue jsonBCs = configData["bcs"];
-        JSONValue jsonBC = jsonBCs["iminus"];
-        // writeln("DEBUG iminus jsonBC=", jsonBC);
-        bc_west.code = BC_code_from_name(jsonBC["tag"].str);
-        if (bc_west.code == BCCode.inflow) {
-            // [TODO] Push this into a function so that we can reuse it below. PJ 2022-12-12
-            auto fs = new FlowState2D(gmodel);
-            JSONValue jsonFlow = jsonBC["flow_state"];
-            double p = getJSONdouble(jsonFlow, "p", 100.0e3);
-            double T = getJSONdouble(jsonFlow, "T", 300.0);
-            double[] default_massf = [1.0, ];
-            foreach (i; 1 .. gmodel.n_species) { default_massf ~= 0.0; }
-            double[] massf = getJSONdoublearray(jsonFlow, "massf", default_massf);
-            fs.gas.p = p; fs.gas.T = T; fs.gas.massf[] = massf[];
-            gmodel.update_thermo_from_pT(fs.gas);
-            gmodel.update_sound_speed(fs.gas);
-            //
-            double velx = getJSONdouble(jsonFlow, "velx", 0.0);
-            double vely = getJSONdouble(jsonFlow, "vely", 0.0);
-            fs.vel.set(velx, vely);
-            bc_west.fs = fs;
+        //
+        void setBC(ref BC bc, JSONValue jsonBC) {
+            // writeln("DEBUG jsonData=", jsonBC);
+            bc.code = BC_code_from_name(jsonBC["tag"].str);
+            if (bc.code == BCCode.inflow) {
+                auto fs = new FlowState2D(gmodel);
+                JSONValue jsonFlow = jsonBC["flow_state"];
+                double p = getJSONdouble(jsonFlow, "p", 100.0e3);
+                double T = getJSONdouble(jsonFlow, "T", 300.0);
+                double[] default_massf = [1.0, ];
+                foreach (i; 1 .. gmodel.n_species) { default_massf ~= 0.0; }
+                double[] massf = getJSONdoublearray(jsonFlow, "massf", default_massf);
+                fs.gas.p = p; fs.gas.T = T; fs.gas.massf[] = massf[];
+                gmodel.update_thermo_from_pT(fs.gas);
+                gmodel.update_sound_speed(fs.gas);
+                //
+                double velx = getJSONdouble(jsonFlow, "velx", 0.0);
+                double vely = getJSONdouble(jsonFlow, "vely", 0.0);
+                fs.vel.set(velx, vely);
+                bc_west.fs = fs;
+            }
         }
-        jsonBC = jsonBCs["iplus"];
-        bc_east.code = BC_code_from_name(jsonBC["tag"].str);
-        jsonBC = jsonBCs["jminus"];
-        bc_south.code = BC_code_from_name(jsonBC["tag"].str);
-        jsonBC = jsonBCs["jplus"];
-        bc_north.code = BC_code_from_name(jsonBC["tag"].str);
+        JSONValue jsonBCs = configData["bcs"];
+        setBC(bc_west, jsonBCs["iminus"]);
+        setBC(bc_east, jsonBCs["iplus"]);
+        setBC(bc_south, jsonBCs["jminus"]);
+        setBC(bc_north, jsonBCs["jplus"]);
         //
         // Scratch space
         fsL = FlowState2D(gmodel);
