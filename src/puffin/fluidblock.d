@@ -28,9 +28,22 @@ import flux;
 
 enum BCCode {wall_with_slip=0, exchange=1, inflow=2, outflow=3};
 
+int BC_code_from_name(string name)
+{
+    if (name == "wall_with_slip") return BCCode.wall_with_slip;
+    if (name == "exchange") return BCCode.exchange;
+    if (name == "inflow") return BCCode.inflow;
+    if (name == "outflow") return BCCode.outflow;
+    return BCCode.wall_with_slip;
+}
+
 struct BC {
     int code = BCCode.wall_with_slip;
     FlowState2D* fs;
+
+    string toString() {
+        return format("BC(code=%d, fs=%s)", code, ((fs) ? to!string(*fs) : "null"));
+    }
 }
 
 class FluidBlock {
@@ -65,8 +78,6 @@ public:
     // Configure the fluid block from the blob of JSON data associated with it.
     {
         this.indx = indx;
-        nic = getJSONint(configData, format("ncells_%d", indx), 0);
-        //
         gmodel = init_gas_model(Config.gas_model_file);
         cqi = CQIndex(gmodel.n_species, gmodel.n_modes);
         axiFlag = Config.axisymmetric;
@@ -76,22 +87,39 @@ public:
         compression_tol = Config.compression_tol;
         shear_tol = Config.shear_tol;
         //
-        /+
-        auto inflowData = configData[format("inflow_%d", indx)];
-        double p = getJSONdouble(inflowData, "p", 100.0e3);
-        double T = getJSONdouble(inflowData, "T", 300.0);
-        double[] default_massf = [1.0, ];
-        foreach (i; 1 .. gmodel.n_species) { default_massf ~= 0.0; }
-        double[] massf = getJSONdoublearray(inflowData, "massf", default_massf);
-        gs = GasState(gmodel);
-        gs.p = p; gs.T = T; gs.massf[] = massf[];
-        gmodel.update_thermo_from_pT(gs);
-        gmodel.update_sound_speed(gs);
+        // writeln("DEBUG configData.type=", configData.type, " configData=", configData);
+        nic = getJSONint(configData, "nic", 0);
+        njc = getJSONint(configData, "njc", 0);
+        active = getJSONbool(configData, "active", true);
+        JSONValue jsonBCs = configData["bcs"];
+        JSONValue jsonBC = jsonBCs["iminus"];
+        // writeln("DEBUG iminus jsonBC=", jsonBC);
+        bc_west.code = BC_code_from_name(jsonBC["tag"].str);
+        if (bc_west.code == BCCode.inflow) {
+            // [TODO] Push this into a function so that we can reuse it below. PJ 2022-12-12
+            auto fs = new FlowState2D(gmodel);
+            JSONValue jsonFlow = jsonBC["flow_state"];
+            double p = getJSONdouble(jsonFlow, "p", 100.0e3);
+            double T = getJSONdouble(jsonFlow, "T", 300.0);
+            double[] default_massf = [1.0, ];
+            foreach (i; 1 .. gmodel.n_species) { default_massf ~= 0.0; }
+            double[] massf = getJSONdoublearray(jsonFlow, "massf", default_massf);
+            fs.gas.p = p; fs.gas.T = T; fs.gas.massf[] = massf[];
+            gmodel.update_thermo_from_pT(fs.gas);
+            gmodel.update_sound_speed(fs.gas);
+            //
+            double velx = getJSONdouble(jsonFlow, "velx", 0.0);
+            double vely = getJSONdouble(jsonFlow, "vely", 0.0);
+            fs.vel.set(velx, vely);
+            bc_west.fs = fs;
+        }
+        jsonBC = jsonBCs["iplus"];
+        bc_east.code = BC_code_from_name(jsonBC["tag"].str);
+        jsonBC = jsonBCs["jminus"];
+        bc_south.code = BC_code_from_name(jsonBC["tag"].str);
+        jsonBC = jsonBCs["jplus"];
+        bc_north.code = BC_code_from_name(jsonBC["tag"].str);
         //
-        double velx = getJSONdouble(inflowData, "velx", 0.0);
-        double vely = getJSONdouble(inflowData, "vely", 0.0);
-        vel.set(velx, vely);
-        +/
         // Scratch space
         fsL = FlowState2D(gmodel);
         fsR = FlowState2D(gmodel);

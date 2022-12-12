@@ -441,10 +441,10 @@ class FluidBlock():
         self.bcs = {}
         for f in FaceList: self.bcs[f] = WallWithSlipBC()
         for key in bcs.keys():
-            if key in [Face.iminus, 'iminus']: self.bcs['iminus'] = bcs[key]
-            if key in [Face.iplus, 'iplus']: self.bcs['iplus'] = bcs[key]
-            if key in [Face.jminus, 'jminus']: self.bcs['jminus'] = bcs[key]
-            if key in [Face.iplus, 'jplus']: self.bcs['jplus'] = bcs[key]
+            if key in [Face.iminus, 'iminus', 'west']: self.bcs['iminus'] = bcs[key]
+            if key in [Face.iplus, 'iplus', 'east']: self.bcs['iplus'] = bcs[key]
+            if key in [Face.jminus, 'jminus', 'south']: self.bcs['jminus'] = bcs[key]
+            if key in [Face.iplus, 'jplus', 'north']: self.bcs['jplus'] = bcs[key]
         #
         self.i = i
         self.j = j

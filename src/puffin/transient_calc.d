@@ -45,37 +45,53 @@ void init_simulation(int tindx)
     JSONValue configData = readJSONfile(dirName~"/config.json");
     Config.title = getJSONstring(configData, "title", "");
     Config.gas_model_file = getJSONstring(configData, "gas_model_file", "");
+    Config.iovar_names = getJSONstringarray(configData, "iovar_names", [""]);
     Config.reaction_file_1 = getJSONstring(configData, "reaction_files_1", "");
     Config.reaction_file_2 = getJSONstring(configData, "reaction_file_2", "");
     Config.reacting = getJSONbool(configData, "reacting", false);
     Config.T_frozen = getJSONdouble(configData, "T_frozen", 300.0);
     Config.axisymmetric = getJSONbool(configData, "axisymmetric", false);
-    Config.max_t = getJSONdouble(configData, "max_t", 0.0);
+    Config.max_t = getJSONdouble(configData, "max_time", 0.0);
     Config.max_step = getJSONint(configData, "max_step", 0);
     Config.dt_init = getJSONdouble(configData, "dt_init", 1.0e-6);
     Config.cfl = getJSONdouble(configData, "cfl", 0.5);
+    Config.cfl_count = getJSONint(configData, "cfl_count", 0);
     Config.print_count = getJSONint(configData, "print_count", 50);
-    Config.plot_dx = getJSONdouble(configData, "plot_dx", 1.0e-2);
+    Config.plot_dt = getJSONdouble(configData, "plot_dt", 1.0e-2);
     Config.x_order = getJSONint(configData, "x_order", 2);
     Config.t_order = getJSONint(configData, "t_order", 2);
     Config.flux_calc = to!FluxCalcCode(getJSONint(configData, "flux_calc", 0));
     Config.compression_tol = getJSONdouble(configData, "compression_tol", -0.3);
     Config.shear_tol = getJSONdouble(configData, "shear_tol", 0.2);
-    Config.n_blocks = getJSONint(configData, "n_blocks", 1);
+    Config.n_fluid_blocks = getJSONint(configData, "n_fluid_blocks", 0);
+    Config.nib = getJSONint(configData, "nib", 0);
+    Config.njb = getJSONint(configData, "njb", 0);
+    JSONValue jsonIds = configData["blk_ids"];
+    Config.blk_ids.length = Config.nib;
+    foreach (i; 0 .. Config.nib) {
+        Config.blk_ids[i].length = Config.njb;
+        JSONValue jsonRow = jsonIds[i];
+        foreach (j; 0 .. Config.njb) { Config.blk_ids[i][j] = to!int(jsonRow[j].integer); }
+    }
+    int[] nics = getJSONintarray(configData, "nics", [0]);
+    foreach (n; nics) { Config.nics ~= n; }
+    int[] njcs = getJSONintarray(configData, "njcs", [0]);
+    foreach (n; njcs) { Config.njcs ~= n; }
     if (Config.verbosity_level >= 1) {
         writeln("Config:");
         writefln("  title= \"%s\"", Config.title);
         writeln("  gas_model_files= ", Config.gas_model_file);
+        writeln("  iovar_names= ", Config.iovar_names);
         writeln("  reaction_files_1= ", Config.reaction_file_1);
         writeln("  reaction_files_2= ", Config.reaction_file_2);
         writeln("  reacting= ", Config.reacting);
         writeln("  T_frozen= ", Config.T_frozen);
         writeln("  axisymmetric= ", Config.axisymmetric);
-        writeln("  max_t= ", Config.max_t);
+        writeln("  max_time= ", Config.max_t);
         writeln("  max_step= ", Config.max_step);
         writeln("  dt_init= ", Config.dt_init);
-        writeln("  max_step_relax= ", Config.max_step_relax);
         writeln("  cfl= ", Config.cfl);
+        writeln("  cfl_count= ", Config.cfl_count);
         writeln("  print_count= ", Config.print_count);
         writeln("  plot_dt= ", Config.plot_dt);
         writeln("  x_order= ", Config.x_order);
@@ -83,10 +99,16 @@ void init_simulation(int tindx)
         writeln("  flux_calc= ", Config.flux_calc);
         writeln("  compression_tol= ", Config.compression_tol);
         writeln("  shear_tol= ", Config.shear_tol);
-        writeln("  n_blocks= ", Config.n_blocks);
+        writeln("  n_fluid_blocks= ", Config.n_fluid_blocks);
+        writeln("  nib= ", Config.nib);
+        writeln("  njb= ", Config.njb);
+        writeln("  blk_ids= ", Config.blk_ids);
+        writeln("  nics= ", Config.nics);
+        writeln("  njcs= ", Config.njcs);
     }
-    foreach (i; 0 .. Config.n_blocks) {
-        fluidBlocks ~= new FluidBlock(i, configData);
+    JSONValue jsonData = configData["fluid_blocks"];
+    foreach (i; 0 .. Config.n_fluid_blocks) {
+        fluidBlocks ~= new FluidBlock(i, jsonData[i]);
         if (Config.verbosity_level >= 1) {
             writefln("  fluidBlocks[%d]= %s", i, fluidBlocks[i]);
         }

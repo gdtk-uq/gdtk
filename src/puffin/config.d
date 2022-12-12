@@ -27,6 +27,7 @@ public:
     shared static string job_name = ""; // Change this to suit at run time.
     shared static string title = "";
     static string gas_model_file;
+    static string[] iovar_names;
     static string reaction_file_1;
     static string reaction_file_2;
     shared static bool reacting = false;
@@ -53,5 +54,10 @@ public:
     shared static int cfl_count = 10;
     shared static double max_t;
     shared static double plot_dt;
-    shared static int n_blocks;
+    shared static int n_fluid_blocks;
+    shared static int nib;
+    shared static int njb;
+    shared static int[][] blk_ids;
+    shared static int[] nics;
+    shared static int[] njcs;
 }
