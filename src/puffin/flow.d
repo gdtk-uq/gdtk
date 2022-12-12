@@ -1,4 +1,4 @@
-// flow.d -- Part of the Puffin steady-flow calculator.
+// flow.d -- Part of the Puffin and Lorikeet flow calculators.
 //
 // PA Jacobs
 // 2022-01-22

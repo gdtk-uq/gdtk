@@ -1,4 +1,4 @@
-// interp.d -- Part of the Puffin steady-flow calculator.
+// interp.d -- Part of the Puffin and Lorikeet flow calculators.
 //
 // PA Jacobs
 // 2022-02-02

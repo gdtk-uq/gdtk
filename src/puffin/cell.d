@@ -1,4 +1,4 @@
-// cell.d -- Part of the Puffin steady-flow calculator.
+// cell.d -- Part of the Puffin and Lorikeet flow calculators.
 //
 // PA Jacobs
 // 2022-01-22

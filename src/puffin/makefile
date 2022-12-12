@@ -8,12 +8,13 @@ DMD ?= ldc2
 FLAVOUR ?= debug
 PLATFORM ?= linux
 
-PROGRAMS := puffin puffin-prep puffin-post lrkt-prep lrkt-post
+PROGRAMS := puffin puffin-prep puffin-post lrkt-run lrkt-prep lrkt-post
 
 PUFFIN_FILES := config.d marching_calc.d streamtube.d \
 	cell.d face.d flow.d flux.d interp.d
 
-LORIKEET_FILES :=
+LORIKEET_FILES := config.d transient_calc.d fluidblock.d \
+	cell.d face.d flow.d flux.d interp.d
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
@@ -152,7 +153,7 @@ clean:
 	- rm *.o
 	- rm $(PROGRAMS)
 	- rm -r $(BUILD_DIR)/*
-	- rm puffin_main_with_rev_string.d
+	- rm puffin_main_with_rev_string.d lorikeet_main_with_rev_string.d
 	- cd $(LUA_DIR); make clean;
 	- cd $(GAS_DIR); make clean; rm libgas.a
 	- cd $(KINETICS_DIR); make clean
@@ -194,6 +195,26 @@ puffin-prep: puffin_prep.py
 puffin-post: puffin_post.py
 	cp puffin_post.py puffin-post
 	chmod +x puffin-post
+
+lrkt-run: lorikeet_main.d $(LORIKEET_FILES) \
+	$(GEOM_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		lorikeet_main.d > lorikeet_main_with_rev_string.d
+	$(DMD) $(DFLAGS) $(OF)lrkt-run \
+		lorikeet_main_with_rev_string.d \
+		$(LORIKEET_FILES) \
+		$(GEOM_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(DLINKFLAGS)
 
 lrkt-prep: lorikeet_prep.py
 	cp lorikeet_prep.py lrkt-prep

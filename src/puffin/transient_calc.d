@@ -1,9 +1,9 @@
-// marching_calc.d -- Part of the Puffin steady-flow calculator.
+// transient_calc.d -- Part of the Lorikeet transient-flow calculator.
 //
 // PA Jacobs
-// 2022-01-22
+// 2022-12-12: Adapt from Puffin and Chicken codes.
 //
-module marching_calc;
+module transient_calc;
 
 import std.conv;
 import std.stdio;
@@ -19,25 +19,27 @@ import std.algorithm;
 import json_helper;
 import geom;
 import config;
-import streamtube;
+import fluidblock;
 
 // We use __gshared so that several threads may access
 // the following array concurrently.
-__gshared static StreamTube[] streams;
+__gshared static FluidBlock[] fluidBlocks;
 
 struct ProgressData {
-    int step = 0;
-    double x = 0.0;
-    double dx = 0.0;
-    double plot_at_x = 0.0;
-    double[] dt_values;
+    int step = 0; // steps so far
+    double t = 0.0; // time at start of gas-dynamic update
+    double dt = 0.0; // increment of time for the gas-dynamic update
+    int tindx = 0; // index of the flow data just read or written
+    double plot_at_t = 0.0; // time at which to write another blob of flow data
+    double[] dt_values; // a place to store the allowable dt for each block
     int steps_since_last_plot_write = 0;
     SysTime wall_clock_start;
 }
 
 __gshared static ProgressData progress;
 
-void init_calculation()
+void init_simulation(int tindx)
+// Set up configuration and read block data for a given tindx.
 {
     string dirName = Config.job_name;
     JSONValue configData = readJSONfile(dirName~"/config.json");
@@ -48,10 +50,9 @@ void init_calculation()
     Config.reacting = getJSONbool(configData, "reacting", false);
     Config.T_frozen = getJSONdouble(configData, "T_frozen", 300.0);
     Config.axisymmetric = getJSONbool(configData, "axisymmetric", false);
-    Config.max_x = getJSONdouble(configData, "max_x", 0.0);
+    Config.max_t = getJSONdouble(configData, "max_t", 0.0);
     Config.max_step = getJSONint(configData, "max_step", 0);
-    Config.dx = getJSONdouble(configData, "dx", 0.0);
-    Config.max_step_relax = getJSONint(configData, "max_step_relax", 100);
+    Config.dt_init = getJSONdouble(configData, "dt_init", 1.0e-6);
     Config.cfl = getJSONdouble(configData, "cfl", 0.5);
     Config.print_count = getJSONint(configData, "print_count", 50);
     Config.plot_dx = getJSONdouble(configData, "plot_dx", 1.0e-2);
@@ -60,7 +61,7 @@ void init_calculation()
     Config.flux_calc = to!FluxCalcCode(getJSONint(configData, "flux_calc", 0));
     Config.compression_tol = getJSONdouble(configData, "compression_tol", -0.3);
     Config.shear_tol = getJSONdouble(configData, "shear_tol", 0.2);
-    Config.n_streams = getJSONint(configData, "n_streams", 1);
+    Config.n_blocks = getJSONint(configData, "n_blocks", 1);
     if (Config.verbosity_level >= 1) {
         writeln("Config:");
         writefln("  title= \"%s\"", Config.title);
@@ -70,48 +71,62 @@ void init_calculation()
         writeln("  reacting= ", Config.reacting);
         writeln("  T_frozen= ", Config.T_frozen);
         writeln("  axisymmetric= ", Config.axisymmetric);
-        writeln("  max_x= ", Config.max_x);
+        writeln("  max_t= ", Config.max_t);
         writeln("  max_step= ", Config.max_step);
-        writeln("  dx= ", Config.dx);
+        writeln("  dt_init= ", Config.dt_init);
         writeln("  max_step_relax= ", Config.max_step_relax);
         writeln("  cfl= ", Config.cfl);
         writeln("  print_count= ", Config.print_count);
-        writeln("  plot_dx= ", Config.plot_dx);
+        writeln("  plot_dt= ", Config.plot_dt);
         writeln("  x_order= ", Config.x_order);
         writeln("  t_order= ", Config.t_order);
         writeln("  flux_calc= ", Config.flux_calc);
         writeln("  compression_tol= ", Config.compression_tol);
         writeln("  shear_tol= ", Config.shear_tol);
-        writeln("  n_streams= ", Config.n_streams);
+        writeln("  n_blocks= ", Config.n_blocks);
     }
-    foreach (i; 0 .. Config.n_streams) {
-        streams ~= new StreamTube(i, configData);
+    foreach (i; 0 .. Config.n_blocks) {
+        fluidBlocks ~= new FluidBlock(i, configData);
         if (Config.verbosity_level >= 1) {
-            writefln("  stream[%d]= %s", i, streams[i]);
+            writefln("  fluidBlocks[%d]= %s", i, fluidBlocks[i]);
         }
     }
     //
-    foreach (st; streams) {
-        st.set_up_data_storage();
-        st.set_up_inflow_boundary();
-        st.write_flow_data(true);
+    foreach (b; fluidBlocks) {
+        b.set_up_data_storage();
+        b.read_grid_data();
+        b.read_flow_data(tindx);
     }
     progress.step = 0;
-    progress.x = 0.0;
-    progress.dx = Config.dx;
-    progress.plot_at_x = Config.plot_dx;
+    progress.t = 0.0;
+    progress.dt = Config.dt_init;
+    progress.tindx = tindx;
+    progress.plot_at_t = Config.plot_dt;
     progress.steps_since_last_plot_write = 0;
-    progress.dt_values.length = streams.length;
+    progress.dt_values.length = fluidBlocks.length;
     return;
 } // end init_calculation()
 
-void do_space_marching_calculation()
+
+void do_time_integration()
 {
     progress.wall_clock_start = Clock.currTime();
-    while (progress.x < Config.max_x || progress.step < Config.max_step) {
-        // 1. Set size of space step.
-        if (progress.dx < Config.dx) { progress.dx *= 1.2; }
-        progress.dx = min(Config.dx, progress.dx);
+    foreach (b; fluidBlocks) {
+        b.encode_conserved(0);
+    }
+    while (progress.t < Config.max_t || progress.step < Config.max_step) {
+        // 1. Occasionally set size of time step.
+        if (progress.step > 0 && (progress.step % Config.cfl_count)==0) {
+            foreach (j, b; fluidBlocks) { // FIXME can do in parallel
+                progress.dt_values[j] = b.estimate_allowable_dt();
+            }
+            double smallest_dt = progress.dt_values[0];
+            foreach (j; 1 .. progress.dt_values.length) {
+                smallest_dt = fmin(smallest_dt, progress.dt_values[j]);
+            }
+            // Make the transition to larger allowable time step not so sudden.
+            progress.dt = fmin(1.5*progress.dt, smallest_dt);
+        }
         // 2. Take a step.
         int attempt_number = 0;
         bool step_failed;
@@ -119,21 +134,20 @@ void do_space_marching_calculation()
             ++attempt_number;
             step_failed = false;
             try {
-                foreach (st; streams) { st.set_up_slice(progress.x + progress.dx); }
-                relax_slice_to_steady_flow(progress.x + 0.5*progress.dx);
+                gas_dynamic_update(progress.dt);
             } catch (Exception e) {
                 writefln("Step failed e.msg=%s", e.msg);
                 step_failed = true;
-                progress.dx *= 0.2;
+                progress.dt *= 0.2;
             }
         } while (step_failed && (attempt_number <= 3));
         if (step_failed) {
             throw new Exception("Step failed after 3 attempts.");
         }
         //
-        // 3. Prepare for next spatial step.
-        foreach (st; streams) { st.shuffle_data_west(); }
-        progress.x += progress.dx;
+        // 3. Prepare for next time step.
+        foreach (b; fluidBlocks) { b.transfer_conserved_quantities(2, 0); }
+        progress.t += progress.dt;
         progress.step++;
         //
         // 4. Occasional console output.
@@ -142,18 +156,20 @@ void do_space_marching_calculation()
             // For reporting wall-clock time, convert with precision of milliseconds.
             auto elapsed_ms = (Clock.currTime() - progress.wall_clock_start).total!"msecs"();
             double elapsed_s = to!double(elapsed_ms)/1000;
-            double WCtFT = ((progress.x > 0.0) && (progress.step > 0)) ?
-                elapsed_s*(Config.max_x-progress.x)/progress.dx/progress.step : 0.0;
-            writefln("Step=%d x=%.3e dx=%.3e WC=%.1f WCtFT=%.1f",
-                     progress.step, progress.x, progress.dx, elapsed_s, WCtFT);
+            double WCtFT = ((progress.t > 0.0) && (progress.step > 0)) ?
+                elapsed_s*(Config.max_t-progress.t)/progress.dt/progress.step : 0.0;
+            writefln("Step=%d t=%.3e dt=%.3e WC=%.1f WCtFT=%.1f",
+                     progress.step, progress.t, progress.dt, elapsed_s, WCtFT);
             stdout.flush();
         }
         //
-        // 5. Write a flow slice (maybe).
-        if (progress.x >= progress.plot_at_x) {
-            foreach (st; streams) { st.write_flow_data(false); }
+        // 5. Write a flow solution (maybe).
+        if (progress.t >= progress.plot_at_t) {
+            int tindx = progress.tindx + 1;
+            foreach (b; fluidBlocks) { b.write_flow_data(tindx); }
             progress.steps_since_last_plot_write = 0;
-            progress.plot_at_x += Config.plot_dx;
+            progress.plot_at_t += Config.plot_dt;
+            progress.tindx = tindx;
         } else {
             progress.steps_since_last_plot_write++;
         }
@@ -161,56 +177,48 @@ void do_space_marching_calculation()
     //
     // Write the final slice, maybe.
     if (progress.steps_since_last_plot_write > 0) {
-        foreach (st; streams) { st.write_flow_data(false); }
+        int tindx = progress.tindx + 1;
+        foreach (b; fluidBlocks) { b.write_flow_data(tindx); }
+        progress.tindx = tindx;
     }
     return;
-} // end do_space_marching_calculation()
+} // end do_time integration()
+
 
 @nogc
-void relax_slice_to_steady_flow(double xmid)
-// We are operating on a slice with its mid-point being at x=xmid.
-// There may be more than one StreamTube in the slice and any exchange
-// boundary condition will necessarily involve two StreamTubes.
+void gas_dynamic_update(double dt)
+// Work across all blocks, attempting to integrate the conserved quantities
+// over an increment of time, dt.
 {
-    foreach (j, st; streams) {
-        st.encode_conserved(0);
-        progress.dt_values[j] = st.estimate_allowable_dt();
-    }
-    double dt = progress.dt_values[0];
-    foreach (j; 1 .. progress.dt_values.length) {
-        dt = fmin(dt, progress.dt_values[j]);
-    }
     //
     foreach (k; 0 .. Config.max_step_relax) {
         // 1. Predictor (Euler) step..
-        apply_boundary_conditions(xmid);
-        foreach (st; streams) { st.mark_shock_cells(); }
-        foreach (st; streams) { st.predictor_step(dt); }
+        apply_boundary_conditions();
+        foreach (b; fluidBlocks) { b.mark_shock_cells(); }
+        foreach (b; fluidBlocks) { b.predictor_step(dt); }
         if (Config.t_order > 1) {
-            apply_boundary_conditions(xmid);
-            foreach (st; streams) {
-                st.corrector_step(dt);
-                st.transfer_conserved_quantities(2, 0);
+            apply_boundary_conditions();
+            foreach (b; fluidBlocks) {
+                b.corrector_step(dt);
+                b.transfer_conserved_quantities(2, 0);
             }
         } else {
             // Clean-up after Euler step.
-            foreach (st; streams) {
-                st.transfer_conserved_quantities(1, 0);
+            foreach (b; fluidBlocks) {
+                b.transfer_conserved_quantities(1, 0);
             }
         }
-        // 3. [TODO] measure residuals overall
-        // break early, if residuals are small enough
     }
     return;
-} // end relax_slice_to_steady_flow()
+} // end gas_dynamic_update()
 
 @nogc
-void apply_boundary_conditions(double xmid)
-// Look up boundary conditions at xmid and apply boundary conditions.
+void apply_boundary_conditions()
 // Application of the boundary conditions is essentially filling the
 // ghost-cell flow states with suitable data.
 {
-    foreach (i, st; streams) {
+    foreach (b; fluidBlocks) {
+        /+
         int bc0 = st.bc_lower.get_value(xmid);
         switch (bc0) {
         case BCCode.wall:
@@ -263,6 +271,7 @@ void apply_boundary_conditions(double xmid)
         default:
             throw new Exception("Unknown BCCode.");
         }
-    } // end foreach st
++/
+    } // end foreach b
     return;
 } // end apply_boundary_conditions()
