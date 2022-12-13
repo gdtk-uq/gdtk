@@ -233,23 +233,20 @@ void gas_dynamic_update(double dt)
 // Work across all blocks, attempting to integrate the conserved quantities
 // over an increment of time, dt.
 {
-    //
-    foreach (k; 0 .. Config.max_step_relax) {
-        // 1. Predictor (Euler) step..
+    // 1. Predictor (Euler) step..
+    apply_boundary_conditions();
+    foreach (b; fluidBlocks) { b.mark_shock_cells(); }
+    foreach (b; fluidBlocks) { b.predictor_step(dt); }
+    if (Config.t_order > 1) {
         apply_boundary_conditions();
-        foreach (b; fluidBlocks) { b.mark_shock_cells(); }
-        foreach (b; fluidBlocks) { b.predictor_step(dt); }
-        if (Config.t_order > 1) {
-            apply_boundary_conditions();
-            foreach (b; fluidBlocks) {
-                b.corrector_step(dt);
-                b.transfer_conserved_quantities(2, 0);
-            }
-        } else {
-            // Clean-up after Euler step.
-            foreach (b; fluidBlocks) {
-                b.transfer_conserved_quantities(1, 0);
-            }
+        foreach (b; fluidBlocks) {
+            b.corrector_step(dt);
+            b.transfer_conserved_quantities(2, 0);
+        }
+    } else {
+        // Clean-up after Euler step.
+        foreach (b; fluidBlocks) {
+            b.transfer_conserved_quantities(1, 0);
         }
     }
     return;
