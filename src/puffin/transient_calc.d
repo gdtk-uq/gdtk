@@ -156,6 +156,7 @@ void do_time_integration()
         b.encode_conserved(0);
     }
     while (progress.t < Config.max_t && progress.step < Config.max_step) {
+        //
         // 1. Occasionally set size of time step.
         if (progress.step > 0 && (progress.step % Config.cfl_count)==0) {
             foreach (j, b; fluidBlocks) { // FIXME can do in parallel
@@ -168,6 +169,7 @@ void do_time_integration()
             // Make the transition to larger allowable time step not so sudden.
             progress.dt = fmin(1.5*progress.dt, smallest_dt);
         }
+        //
         // 2. Take a step.
         int attempt_number = 0;
         bool step_failed;
@@ -187,7 +189,6 @@ void do_time_integration()
         }
         //
         // 3. Prepare for next time step.
-        foreach (b; fluidBlocks) { b.transfer_conserved_quantities(2, 0); }
         progress.t += progress.dt;
         progress.step++;
         //

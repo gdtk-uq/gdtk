@@ -121,9 +121,8 @@ public:
                 gmodel.update_thermo_from_pT(fs.gas);
                 gmodel.update_sound_speed(fs.gas);
                 //
-                double velx = getJSONdouble(jsonFlow, "velx", 0.0);
-                double vely = getJSONdouble(jsonFlow, "vely", 0.0);
-                fs.vel.set(velx, vely);
+                double[] vel = getJSONdoublearray(jsonFlow, "vel", [0.0,0.0]);
+                fs.vel.set(vel[0], vel[1]);
                 bc_west.fs = fs;
             }
         }
