@@ -100,7 +100,7 @@ class GlobalConfig(object):
         self.print_count = 50
         self.plot_dx = 1.0e-2
         self.max_x = 1.0
-        self.max_step = 10
+        self.max_step = 100000
         self.cfl = 0.5
         self.max_step_relax = 100
         self.x_order = 2

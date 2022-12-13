@@ -137,7 +137,7 @@ void do_time_integration()
     foreach (b; fluidBlocks) {
         b.encode_conserved(0);
     }
-    while (progress.t < Config.max_t || progress.step < Config.max_step) {
+    while (progress.t < Config.max_t && progress.step < Config.max_step) {
         // 1. Occasionally set size of time step.
         if (progress.step > 0 && (progress.step % Config.cfl_count)==0) {
             foreach (j, b; fluidBlocks) { // FIXME can do in parallel

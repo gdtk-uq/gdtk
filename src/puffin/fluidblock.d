@@ -357,8 +357,11 @@ public:
             }
         }
         byLine.range.f.close();
+        // Since not all thermo data may have been set,
+        // we update the thermo assuming that p and T are correct.
+        foreach (c; cells) { gmodel.update_thermo_from_pT(c.fs.gas); }
         return;
-    }
+    } // end read_flow_data()
 
     void write_flow_data(int tindx)
     {
@@ -375,7 +378,7 @@ public:
         }
         outfile.finish();
         return;
-    } // end  write_flow_data()
+    } // end write_flow_data()
 
     @nogc
     void encode_conserved(size_t ftl)

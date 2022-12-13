@@ -108,7 +108,7 @@ void init_calculation()
 void do_space_marching_calculation()
 {
     progress.wall_clock_start = Clock.currTime();
-    while (progress.x < Config.max_x || progress.step < Config.max_step) {
+    while (progress.x < Config.max_x && progress.step < Config.max_step) {
         // 1. Set size of space step.
         if (progress.dx < Config.dx) { progress.dx *= 1.2; }
         progress.dx = min(Config.dx, progress.dx);
