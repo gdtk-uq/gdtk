@@ -120,8 +120,26 @@ void init_simulation(int tindx)
         b.set_up_geometry();
         b.read_flow_data(tindx);
     }
+    // Read times file to get our starting time for this simulation.
+    double start_t = 0.0;
+    auto tf = File(format("%s/times.data", Config.job_name), "r");
+    bool tindxFound = false;
+    foreach (string line; lines(tf)) {
+        if (line.startsWith("#")) continue;
+        auto items = line.split();
+        int index = to!int(items[0]);
+        if (index == tindx) {
+            tindxFound = true;
+            start_t = to!double(items[1]);
+            break;
+        }
+    }
+    if (!tindxFound) {
+        throw new Exception("Did not find requested starting tindx in times file.");
+    }
+    writefln("Start simulation at t= %g", start_t);
     progress.step = 0;
-    progress.t = 0.0;
+    progress.t = start_t;
     progress.dt = Config.dt_init;
     progress.tindx = tindx;
     progress.plot_at_t = Config.plot_dt;
