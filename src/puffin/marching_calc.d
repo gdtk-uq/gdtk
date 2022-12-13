@@ -255,7 +255,7 @@ void apply_boundary_conditions(double xmid)
             fstate.vel.transform_to_global_frame(face.n, face.t1);
             break;
         case BCCode.exchange:
-            // We fill the ghost-cells with data drom the neighbour streamtube.
+            // We fill the ghost-cells with data from the neighbour streamtube.
             auto nst = streams[i+1];
             st.ghost_cells_right[0].fs.copy_values_from(nst.cells[0].fs);
             st.ghost_cells_right[1].fs.copy_values_from(nst.cells[1].fs);

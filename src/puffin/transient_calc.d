@@ -181,7 +181,7 @@ void do_time_integration()
             double elapsed_s = to!double(elapsed_ms)/1000;
             double WCtFT = ((progress.t > 0.0) && (progress.step > 0)) ?
                 elapsed_s*(Config.max_t-progress.t)/progress.dt/progress.step : 0.0;
-            writefln("Step=%d t=%.3e dt=%.3e WC=%.1f WCtFT=%.1f",
+            writefln("Step=%d t=%.3e dt=%.3e WC=%.3f WCtFT=%.3f",
                      progress.step, progress.t, progress.dt, elapsed_s, WCtFT);
             stdout.flush();
         }
@@ -241,62 +241,205 @@ void gas_dynamic_update(double dt)
 void apply_boundary_conditions()
 // Application of the boundary conditions is essentially filling the
 // ghost-cell flow states with suitable data.
+// We do this in a context that has a view of all blocks so that exchange
+// of flow data between blocks is easy.
 {
     foreach (b; fluidBlocks) {
-        /+
-        int bc0 = st.bc_lower.get_value(xmid);
-        switch (bc0) {
-        case BCCode.wall:
+        final switch (b.bc_west.code) {
+        case BCCode.wall_with_slip: {
             // The slip-wall condition is implemented by filling the ghost cells
             // with reflected-normal-velocity flow.
-            auto fstate = &(st.ghost_cells_left[0].fs);
-            auto face = st.jfaces[0];
-            fstate.copy_values_from(st.cells[0].fs);
-            fstate.vel.transform_to_local_frame(face.n, face.t1);
-            fstate.vel.x = -(fstate.vel.x);
-            fstate.vel.transform_to_global_frame(face.n, face.t1);
-            //
-            fstate = &(st.ghost_cells_left[1].fs);
-            fstate.copy_values_from(st.cells[1].fs);
-            fstate.vel.transform_to_local_frame(face.n, face.t1);
-            fstate.vel.x = -(fstate.vel.x);
-            fstate.vel.transform_to_global_frame(face.n, face.t1);
-            break;
-        case BCCode.exchange:
-            // We fill the ghost-cells with data drom the neighbour streamtube.
-            auto nst = streams[i-1];
-            st.ghost_cells_left[0].fs.copy_values_from(nst.cells[nst.ncells-1].fs);
-            st.ghost_cells_left[1].fs.copy_values_from(nst.cells[nst.ncells-2].fs);
-            break;
-        default:
-            throw new Exception("Unknown BCCode.");
+            foreach (j; 0 .. b.njc) {
+                auto face = b.ifaces[b.iface_index(0,j)];
+                auto fstate = &(face.left_cells[0].fs);
+                fstate.copy_values_from(face.right_cells[0].fs);
+                fstate.vel.transform_to_local_frame(face.n, face.t1);
+                fstate.vel.x = -(fstate.vel.x);
+                fstate.vel.transform_to_global_frame(face.n, face.t1);
+                //
+                fstate = &(face.left_cells[1].fs);
+                fstate.copy_values_from(face.right_cells[1].fs);
+                fstate.vel.transform_to_local_frame(face.n, face.t1);
+                fstate.vel.x = -(fstate.vel.x);
+                fstate.vel.transform_to_global_frame(face.n, face.t1);
+            }
+        } break;
+        case BCCode.exchange: {
+            // We fill the ghost-cells with data from the neighbour fluid block.
+            int other_i = b.i - 1;
+            if (other_i < 0) { other_i = Config.nib-1; } // Wrap around.
+            int other_j = b.j;
+            int other_id = Config.blk_ids[other_i][other_j];
+            auto other_b = fluidBlocks[other_id];
+            foreach (j; 0 .. b.njc) {
+                auto face = b.ifaces[b.iface_index(0,j)];
+                auto other_face = other_b.ifaces[other_b.iface_index(other_b.nic,j)];
+                face.left_cells[0].fs.copy_values_from(other_face.left_cells[0].fs);
+                face.left_cells[1].fs.copy_values_from(other_face.left_cells[1].fs);
+            }
+        } break;
+        case BCCode.inflow: {
+            foreach (j; 0 .. b.njc) {
+                auto face = b.ifaces[b.iface_index(0,j)];
+                face.left_cells[0].fs.copy_values_from(*(b.bc_west.fs));
+                face.left_cells[1].fs.copy_values_from(*(b.bc_west.fs));
+            }
+        } break;
+        case BCCode.outflow: {
+            foreach (j; 0 .. b.njc) {
+                auto face = b.ifaces[b.iface_index(0,j)];
+                face.left_cells[0].fs.copy_values_from(face.right_cells[0].fs);
+                face.left_cells[1].fs.copy_values_from(face.right_cells[0].fs);
+            }
         }
-        int bc1 = st.bc_upper.get_value(xmid);
-        switch (bc1) {
-        case BCCode.wall:
-            auto fstate = &(st.ghost_cells_right[0].fs);
-            auto face = st.jfaces[st.ncells];
-            fstate.copy_values_from(st.cells[st.ncells-1].fs);
-            fstate.vel.transform_to_local_frame(face.n, face.t1);
-            fstate.vel.x = -(fstate.vel.x);
-            fstate.vel.transform_to_global_frame(face.n, face.t1);
-            //
-            fstate = &(st.ghost_cells_right[1].fs);
-            fstate.copy_values_from(st.cells[st.ncells-2].fs);
-            fstate.vel.transform_to_local_frame(face.n, face.t1);
-            fstate.vel.x = -(fstate.vel.x);
-            fstate.vel.transform_to_global_frame(face.n, face.t1);
-            break;
-        case BCCode.exchange:
-            // We fill the ghost-cells with data drom the neighbour streamtube.
-            auto nst = streams[i+1];
-            st.ghost_cells_right[0].fs.copy_values_from(nst.cells[0].fs);
-            st.ghost_cells_right[1].fs.copy_values_from(nst.cells[1].fs);
-            break;
-        default:
-            throw new Exception("Unknown BCCode.");
+        } // end switch bc_west
+        //
+        final switch (b.bc_east.code) {
+        case BCCode.wall_with_slip: {
+            // The slip-wall condition is implemented by filling the ghost cells
+            // with reflected-normal-velocity flow.
+            foreach (j; 0 .. b.njc) {
+                auto face = b.ifaces[b.iface_index(b.nic,j)];
+                auto fstate = &(face.right_cells[0].fs);
+                fstate.copy_values_from(face.left_cells[0].fs);
+                fstate.vel.transform_to_local_frame(face.n, face.t1);
+                fstate.vel.x = -(fstate.vel.x);
+                fstate.vel.transform_to_global_frame(face.n, face.t1);
+                //
+                fstate = &(face.right_cells[1].fs);
+                fstate.copy_values_from(face.left_cells[1].fs);
+                fstate.vel.transform_to_local_frame(face.n, face.t1);
+                fstate.vel.x = -(fstate.vel.x);
+                fstate.vel.transform_to_global_frame(face.n, face.t1);
+            }
+        } break;
+        case BCCode.exchange: {
+            // We fill the ghost-cells with data from the neighbour fluid block.
+            int other_i = b.i + 1;
+            if (other_i >= Config.nib) { other_i = 0; } // Wrap around.
+            int other_j = b.j;
+            int other_id = Config.blk_ids[other_i][other_j];
+            auto other_b = fluidBlocks[other_id];
+            foreach (j; 0 .. b.njc) {
+                auto face = b.ifaces[b.iface_index(b.nic,j)];
+                auto other_face = other_b.ifaces[other_b.iface_index(0,j)];
+                face.right_cells[0].fs.copy_values_from(other_face.right_cells[0].fs);
+                face.right_cells[1].fs.copy_values_from(other_face.right_cells[1].fs);
+            }
+        } break;
+        case BCCode.inflow: {
+            foreach (j; 0 .. b.njc) {
+                auto face = b.ifaces[b.iface_index(b.nic,j)];
+                face.right_cells[0].fs.copy_values_from(*(b.bc_east.fs));
+                face.right_cells[1].fs.copy_values_from(*(b.bc_east.fs));
+            }
+        } break;
+        case BCCode.outflow: {
+            foreach (j; 0 .. b.njc) {
+                auto face = b.ifaces[b.iface_index(b.nic,j)];
+                face.right_cells[0].fs.copy_values_from(face.left_cells[0].fs);
+                face.right_cells[1].fs.copy_values_from(face.left_cells[0].fs);
+            }
         }
-+/
+        } // end switch bc_east
+        //
+        final switch (b.bc_south.code) {
+        case BCCode.wall_with_slip: {
+            // The slip-wall condition is implemented by filling the ghost cells
+            // with reflected-normal-velocity flow.
+            foreach (i; 0 .. b.nic) {
+                auto face = b.jfaces[b.jface_index(i,0)];
+                auto fstate = &(face.left_cells[0].fs);
+                fstate.copy_values_from(face.right_cells[0].fs);
+                fstate.vel.transform_to_local_frame(face.n, face.t1);
+                fstate.vel.x = -(fstate.vel.x);
+                fstate.vel.transform_to_global_frame(face.n, face.t1);
+                //
+                fstate = &(face.left_cells[1].fs);
+                fstate.copy_values_from(face.right_cells[1].fs);
+                fstate.vel.transform_to_local_frame(face.n, face.t1);
+                fstate.vel.x = -(fstate.vel.x);
+                fstate.vel.transform_to_global_frame(face.n, face.t1);
+            }
+        } break;
+        case BCCode.exchange: {
+            // We fill the ghost-cells with data from the neighbour fluid block.
+            int other_i = b.i;
+            int other_j = b.j - 1;
+            if (other_j < 0) { other_j = Config.njb-1; } // Wrap around.
+            int other_id = Config.blk_ids[other_i][other_j];
+            auto other_b = fluidBlocks[other_id];
+            foreach (i; 0 .. b.nic) {
+                auto face = b.jfaces[b.jface_index(i,0)];
+                auto other_face = other_b.jfaces[other_b.jface_index(i,other_b.njc)];
+                face.left_cells[0].fs.copy_values_from(other_face.left_cells[0].fs);
+                face.left_cells[1].fs.copy_values_from(other_face.left_cells[1].fs);
+            }
+        } break;
+        case BCCode.inflow: {
+            foreach (i; 0 .. b.nic) {
+                auto face = b.jfaces[b.jface_index(i,0)];
+                face.left_cells[0].fs.copy_values_from(*(b.bc_south.fs));
+                face.left_cells[1].fs.copy_values_from(*(b.bc_south.fs));
+            }
+        } break;
+        case BCCode.outflow: {
+            foreach (i; 0 .. b.nic) {
+                auto face = b.jfaces[b.jface_index(i,0)];
+                face.left_cells[0].fs.copy_values_from(face.right_cells[0].fs);
+                face.left_cells[1].fs.copy_values_from(face.right_cells[0].fs);
+            }
+        }
+        } // end switch bc_south
+        //
+        final switch (b.bc_north.code) {
+        case BCCode.wall_with_slip: {
+            // The slip-wall condition is implemented by filling the ghost cells
+            // with reflected-normal-velocity flow.
+            foreach (i; 0 .. b.nic) {
+                auto face = b.jfaces[b.jface_index(i,b.njc)];
+                auto fstate = &(face.right_cells[0].fs);
+                fstate.copy_values_from(face.left_cells[0].fs);
+                fstate.vel.transform_to_local_frame(face.n, face.t1);
+                fstate.vel.x = -(fstate.vel.x);
+                fstate.vel.transform_to_global_frame(face.n, face.t1);
+                //
+                fstate = &(face.right_cells[1].fs);
+                fstate.copy_values_from(face.left_cells[1].fs);
+                fstate.vel.transform_to_local_frame(face.n, face.t1);
+                fstate.vel.x = -(fstate.vel.x);
+                fstate.vel.transform_to_global_frame(face.n, face.t1);
+            }
+        } break;
+        case BCCode.exchange: {
+            // We fill the ghost-cells with data from the neighbour fluid block.
+            int other_i = b.i;
+            int other_j = b.j + 1;
+            if (other_j >= Config.njb) { other_j = 0; } // Wrap around.
+            int other_id = Config.blk_ids[other_i][other_j];
+            auto other_b = fluidBlocks[other_id];
+            foreach (i; 0 .. b.nic) {
+                auto face = b.jfaces[b.jface_index(i,b.njc)];
+                auto other_face = other_b.jfaces[other_b.jface_index(i,0)];
+                face.right_cells[0].fs.copy_values_from(other_face.right_cells[0].fs);
+                face.right_cells[1].fs.copy_values_from(other_face.right_cells[1].fs);
+            }
+        } break;
+        case BCCode.inflow: {
+            foreach (i; 0 .. b.nic) {
+                auto face = b.jfaces[b.jface_index(i,b.njc)];
+                face.right_cells[0].fs.copy_values_from(*(b.bc_north.fs));
+                face.right_cells[1].fs.copy_values_from(*(b.bc_north.fs));
+            }
+        } break;
+        case BCCode.outflow: {
+            foreach (i; 0 .. b.nic) {
+                auto face = b.jfaces[b.jface_index(i,b.njc)];
+                face.right_cells[0].fs.copy_values_from(face.left_cells[0].fs);
+                face.right_cells[1].fs.copy_values_from(face.left_cells[0].fs);
+            }
+        }
+        } // end switch bc_north
     } // end foreach b
     return;
 } // end apply_boundary_conditions()
