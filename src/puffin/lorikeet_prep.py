@@ -392,23 +392,33 @@ class FluidBlock():
         # The data constructed for the flow dictionary must cover all of the iovar_names.
         #
         if isinstance(initialState, FlowState):
-            self.flow = {'posx':self.cellc.x, 'posy':self.cellc.y, 'vol':self.cellv,
-                         'p': np.full(ncells, initialState.gas.p), 'T':np.full(ncells, initialState.gas.T),
-                         'rho':np.full(ncells, initialState.gas.rho), 'e':np.full(ncells, initialState.gas.u),
+            # Note VTK ordering of loops; the IO functions assume this ordering.
+            self.flow = {'posx':self.cellc.x.transpose().flatten(),
+                         'posy':self.cellc.y.transpose().flatten(),
+                         'vol':self.cellv.transpose().flatten(),
+                         'p': np.full(ncells, initialState.gas.p),
+                         'T':np.full(ncells, initialState.gas.T),
+                         'rho':np.full(ncells, initialState.gas.rho),
+                         'e':np.full(ncells, initialState.gas.u),
                          'a':np.full(ncells, initialState.gas.a),
-                         'velx': np.full(ncells, initialState.vel.x), 'vely': np.full(ncells, initialState.vel.y)}
+                         'velx': np.full(ncells, initialState.vel.x),
+                         'vely': np.full(ncells, initialState.vel.y)}
             for isp in range(config.gmodel.n_species):
                 name = 'massf_%d_%s' % (isp, config.gmodel.species_names[isp])
                 self.flow[name] = np.full(ncells, initialState.gas.massf[isp])
         elif callable(initialState):
             # The user has supplied a function,
             # which we use one cell-centre at a time.
-            self.flow = {'posx':np.zeros(ncells, dtype=float), 'posy':np.zeros(ncells, dtype=float),
+            self.flow = {'posx':np.zeros(ncells, dtype=float),
+                         'posy':np.zeros(ncells, dtype=float),
                          'vol':np.zeros(ncells, dtype=float),
-                         'p':np.zeros(ncells, dtype=float), 'T':np.zeros(ncells, dtype=float),
-                         'rho':np.zeros(ncells, dtype=float), 'e':np.zeros(ncells, dtype=float),
+                         'p':np.zeros(ncells, dtype=float),
+                         'T':np.zeros(ncells, dtype=float),
+                         'rho':np.zeros(ncells, dtype=float),
+                         'e':np.zeros(ncells, dtype=float),
                          'a':np.zeros(ncells, dtype=float),
-                         'velx':np.zeros(ncells, dtype=float), 'vely':np.zeros(ncells, dtype=float)}
+                         'velx':np.zeros(ncells, dtype=float),
+                         'vely':np.zeros(ncells, dtype=float)}
             for isp in range(config.gmodel.n_species):
                 name = 'massf_%d_%s' % (isp, config.gmodel.species_names[isp])
                 self.flow[name] = np.zeros(ncells, dtype=float)
@@ -482,7 +492,7 @@ class FluidBlock():
         self.cellc, nrm, t1, t2, self.cellv = quad_properties(p00, p10, p11, p01)
         # In 2D axisymmetric geometry, the volume is per radian swept about the x-axis.
         if config.axisymmetric: self.cellv *= self.cellc.y
-
+        return
 
     def write_flow_data_to_file(self, fileName, varNamesList):
         """

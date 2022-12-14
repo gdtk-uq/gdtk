@@ -19,6 +19,7 @@ import std.algorithm;
 import json_helper;
 import geom;
 import config;
+import flow;
 import fluidblock;
 
 // We use __gshared so that several threads may access
@@ -270,7 +271,7 @@ void apply_boundary_conditions()
             // with reflected-normal-velocity flow.
             foreach (j; 0 .. b.njc) {
                 auto face = b.ifaces[b.iface_index(0,j)];
-                auto fstate = &(face.left_cells[0].fs);
+                FlowState2D* fstate = &(face.left_cells[0].fs);
                 fstate.copy_values_from(face.right_cells[0].fs);
                 fstate.vel.transform_to_local_frame(face.n, face.t1);
                 fstate.vel.x = -(fstate.vel.x);
@@ -319,7 +320,7 @@ void apply_boundary_conditions()
             // with reflected-normal-velocity flow.
             foreach (j; 0 .. b.njc) {
                 auto face = b.ifaces[b.iface_index(b.nic,j)];
-                auto fstate = &(face.right_cells[0].fs);
+                FlowState2D* fstate = &(face.right_cells[0].fs);
                 fstate.copy_values_from(face.left_cells[0].fs);
                 fstate.vel.transform_to_local_frame(face.n, face.t1);
                 fstate.vel.x = -(fstate.vel.x);
@@ -368,7 +369,7 @@ void apply_boundary_conditions()
             // with reflected-normal-velocity flow.
             foreach (i; 0 .. b.nic) {
                 auto face = b.jfaces[b.jface_index(i,0)];
-                auto fstate = &(face.left_cells[0].fs);
+                FlowState2D* fstate = &(face.left_cells[0].fs);
                 fstate.copy_values_from(face.right_cells[0].fs);
                 fstate.vel.transform_to_local_frame(face.n, face.t1);
                 fstate.vel.x = -(fstate.vel.x);
@@ -417,7 +418,7 @@ void apply_boundary_conditions()
             // with reflected-normal-velocity flow.
             foreach (i; 0 .. b.nic) {
                 auto face = b.jfaces[b.jface_index(i,b.njc)];
-                auto fstate = &(face.right_cells[0].fs);
+                FlowState2D* fstate = &(face.right_cells[0].fs);
                 fstate.copy_values_from(face.left_cells[0].fs);
                 fstate.vel.transform_to_local_frame(face.n, face.t1);
                 fstate.vel.x = -(fstate.vel.x);

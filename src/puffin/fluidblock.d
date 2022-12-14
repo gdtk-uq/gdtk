@@ -90,7 +90,6 @@ public:
         compression_tol = Config.compression_tol;
         shear_tol = Config.shear_tol;
         //
-        // writeln("DEBUG configData.type=", configData.type, " configData=", configData);
         i = getJSONint(configData, "i", -1);
         j = getJSONint(configData, "j", -1);
         if (i < 0 || j < 0) {
@@ -107,7 +106,6 @@ public:
         }
         //
         void setBC(ref BC bc, JSONValue jsonBC) {
-            // writeln("DEBUG jsonData=", jsonBC);
             bc.code = BC_code_from_name(jsonBC["tag"].str);
             if (bc.code == BCCode.inflow) {
                 JSONValue jsonFlow = jsonBC["flow_state"];
@@ -349,6 +347,8 @@ public:
             foreach (i; 0 .. n_cells) {
                 auto line = byLine.front; byLine.popFront();
                 double value = to!double(line.strip());
+                // Do not overwrite the cell's geometry data.
+                if (varName == "vol" || varName == "pos.x" || varName == "posy") continue;
                 cells[i].iovar_set(varName, value);
             }
         }

@@ -13,6 +13,9 @@ print("T=", inflow.gas.T, "density=", inflow.gas.rho, "sound speed= ", inflow.ga
 print("inflow Mach number=", 1000.0/inflow.gas.a)
 print("dynamic pressure q=", 1/2*inflow.gas.rho*1.0e6)
 #
+# Need to have the axisymmetric flag set before constructing the fluid blocks
+# else the cell volumes will not be correctly set.
+config.axisymmetric = True
 #
 # Set up two quadrilaterals in the (x,y)-plane by first defining
 # the corner nodes, then the lines between those corners.
@@ -43,7 +46,6 @@ blk0 = FluidBlock(i=0, grid=grd0, initialState=inflow,
 blk1 = FluidBlock(i=1, grid=grd1, initialState=initial,
                   bcs={'iminus':ExchangeBC(),'iplus':OutflowBC()})
 #
-config.axisymmetric = True
 config.flux_calc = FluxCalc.ausmdv_plus_hanel
 config.max_time = 5.0e-3
 config.max_step = 3000
