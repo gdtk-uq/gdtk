@@ -308,7 +308,6 @@ public:
                 }
             } // end for j
         } // end for i
-        return;
     } // end set_up_data_storage()
 
     void read_grid_data()
@@ -329,8 +328,7 @@ public:
                 vertices[vertex_index(i,j)].set(grid[i,j]);
             }
         }
-        return;
-    }
+    } // end read_grid_data()
 
     @nogc
     void set_up_geometry()
@@ -359,7 +357,6 @@ public:
         // Since not all thermo data may have been set,
         // we update the thermo assuming that p and T are correct.
         foreach (c; cells) { gmodel.update_thermo_from_pT(c.fs.gas); }
-        return;
     } // end read_flow_data()
 
     void write_flow_data(int tindx)
@@ -376,14 +373,18 @@ public:
             }
         }
         outfile.finish();
-        return;
     } // end write_flow_data()
 
     @nogc
     void encode_conserved(size_t ftl)
     {
         foreach (c; cells) { c.encode_conserved(ftl, gmodel); }
-        return;
+    }
+
+    @nogc
+    void decode_conserved(size_t ftl)
+    {
+        foreach (c; cells) { c.decode_conserved(ftl, gmodel); }
     }
 
     @nogc
@@ -405,47 +406,19 @@ public:
                 f.right_cells[0].shock_flag = true;
             }
         }
-        return;
     }
 
     @nogc
-    void predictor_step(double dt)
+    void update_conserved_for_stage(int stage, double dt)
     {
-        foreach (f; ifaces) {
-            f.calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
-        }
-        foreach (f; jfaces) {
-            f.calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
-        }
-        foreach (c; cells) {
-            c.eval_dUdt(0, axiFlag);
-            c.U[1][] = c.U[0][] + dt*c.dUdt[0][];
-            c.decode_conserved(1, gmodel);
-        }
-        return;
-    } // end predictor_step()
-
-    @nogc
-    void corrector_step(double dt)
-    {
-        foreach (f; ifaces) {
-            f.calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
-        }
-        foreach (f; jfaces) {
-            f.calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
-        }
-        foreach (c; cells) {
-            c.eval_dUdt(1, axiFlag);
-            c.U[2][] = c.U[0][] + 0.5*dt*(c.dUdt[0][] + c.dUdt[1][]);
-            c.decode_conserved(2, gmodel);
-        }
-        return;
-    } // end corrector_step()
+        foreach (f; ifaces) { f.calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi); }
+        foreach (f; jfaces) { f.calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi); }
+        foreach (c; cells) { c.update_conserved_for_stage(stage, dt, axiFlag, gmodel); }
+    }
 
     @nogc
     void transfer_conserved_quantities(size_t from, size_t dest)
     {
         foreach (c; cells) { c.U[dest][] = c.U[from][]; }
-        return;
     }
 } // end class FluidBlock

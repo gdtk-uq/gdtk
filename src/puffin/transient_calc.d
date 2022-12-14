@@ -177,11 +177,27 @@ void do_time_integration()
             ++attempt_number;
             step_failed = false;
             try {
-                gas_dynamic_update(progress.dt);
+                // 1. Predictor (Euler) stage.
+                apply_boundary_conditions();
+                foreach (b; fluidBlocks) {
+                    b.mark_shock_cells();
+                    b.update_conserved_for_stage(1, progress.dt);
+                }
+                // 2. Corrector stage.
+                if (Config.t_order > 1) {
+                    apply_boundary_conditions();
+                    foreach (b; fluidBlocks) {
+                        b.update_conserved_for_stage(2, progress.dt);
+                    }
+                }
             } catch (Exception e) {
                 writefln("Step failed e.msg=%s", e.msg);
                 step_failed = true;
                 progress.dt *= 0.2;
+                // We need to restore the flow-field.
+                foreach (b; fluidBlocks) {
+                    b.decode_conserved(0);
+                }
             }
         } while (step_failed && (attempt_number <= 3));
         if (step_failed) {
@@ -189,6 +205,9 @@ void do_time_integration()
         }
         //
         // 3. Prepare for next time step.
+        foreach (b; fluidBlocks) {
+            b.transfer_conserved_quantities(1, 0);
+        }
         progress.t += progress.dt;
         progress.step++;
         //
@@ -234,22 +253,6 @@ void gas_dynamic_update(double dt)
 // Work across all blocks, attempting to integrate the conserved quantities
 // over an increment of time, dt.
 {
-    // 1. Predictor (Euler) step..
-    apply_boundary_conditions();
-    foreach (b; fluidBlocks) { b.mark_shock_cells(); }
-    foreach (b; fluidBlocks) { b.predictor_step(dt); }
-    if (Config.t_order > 1) {
-        apply_boundary_conditions();
-        foreach (b; fluidBlocks) {
-            b.corrector_step(dt);
-            b.transfer_conserved_quantities(2, 0);
-        }
-    } else {
-        // Clean-up after Euler step.
-        foreach (b; fluidBlocks) {
-            b.transfer_conserved_quantities(1, 0);
-        }
-    }
     return;
 } // end gas_dynamic_update()
 

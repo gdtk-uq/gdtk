@@ -184,19 +184,19 @@ void relax_slice_to_steady_flow(double xmid)
     foreach (k; 0 .. Config.max_step_relax) {
         // 1. Predictor (Euler) step..
         apply_boundary_conditions(xmid);
-        foreach (st; streams) { st.mark_shock_cells(); }
-        foreach (st; streams) { st.predictor_step(dt); }
+        foreach (st; streams) {
+            st.mark_shock_cells();
+            st.predictor_step(dt);
+        }
         if (Config.t_order > 1) {
             apply_boundary_conditions(xmid);
             foreach (st; streams) {
                 st.corrector_step(dt);
-                st.transfer_conserved_quantities(2, 0);
             }
-        } else {
-            // Clean-up after Euler step.
-            foreach (st; streams) {
-                st.transfer_conserved_quantities(1, 0);
-            }
+        }
+        // Prepare for next step.
+        foreach (st; streams) {
+            st.transfer_conserved_quantities(1, 0);
         }
         // 3. [TODO] measure residuals overall
         // break early, if residuals are small enough

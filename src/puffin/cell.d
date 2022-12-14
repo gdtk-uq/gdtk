@@ -31,7 +31,7 @@ public:
     //
     FlowState2D fs;
     bool shock_flag;
-    double[][3] U; // Conserved quantities at time levels.
+    double[][2] U; // Conserved quantities at time levels.
     double[][2] dUdt; // Time-derivatives of conserved quantities.
 
     this(GasModel gmodel, in CQIndex cqi)
@@ -241,6 +241,22 @@ public:
         }
         return;
     } // end eval_dUdt()
+
+    @nogc
+    void update_conserved_for_stage(int stage, double dt, bool axiFlag, GasModel gmodel)
+    {
+        if (stage == 1) {
+            // Predictor.
+            eval_dUdt(0, axiFlag);
+            U[1][] = U[0][] + dt*dUdt[0][];
+        } else {
+            // Corrector.
+            eval_dUdt(1, axiFlag);
+            U[1][] = U[0][] + 0.5*dt*(dUdt[0][] + dUdt[1][]);
+        }
+        decode_conserved(1, gmodel);
+        return;
+    }
 
     @nogc
     double estimate_local_dt(double cfl)

@@ -364,9 +364,7 @@ public:
             jfaces[j].calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
         }
         foreach (c; cells) {
-            c.eval_dUdt(0, axiFlag);
-            c.U[1][] = c.U[0][] + dt*c.dUdt[0][];
-            c.decode_conserved(1, gmodel);
+            c.update_conserved_for_stage(1, dt, axiFlag, gmodel);
         }
         return;
     } // end predictor_step()
@@ -381,9 +379,7 @@ public:
             jfaces[j].calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
         }
         foreach (c; cells) {
-            c.eval_dUdt(1, axiFlag);
-            c.U[2][] = c.U[0][] + 0.5*dt*(c.dUdt[0][] + c.dUdt[1][]);
-            c.decode_conserved(2, gmodel);
+            c.update_conserved_for_stage(2, dt, axiFlag, gmodel);
         }
         return;
     } // end corrector_step()
