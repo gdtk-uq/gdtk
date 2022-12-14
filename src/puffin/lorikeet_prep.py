@@ -146,7 +146,7 @@ class GlobalConfig():
         fp.write('  "print_count": %d,\n' % self.print_count)
         fp.write('  "x_order": %d,\n' % self.x_order)
         fp.write('  "t_order": %d,\n' % self.t_order)
-        fp.write('  "flux_calc": "%s",\n' % self.flux_calc)
+        fp.write('  "flux_calc": %d,\n' % self.flux_calc)
         fp.write('  "plot_dt": %e,\n' % self.plot_dt)
         return
 
@@ -187,9 +187,9 @@ class GlobalConfig():
             if self.nics[i] == 0: self.nics[i] = nic
             if self.njcs[j] == 0: self.njcs[j] = njc
             if nic != self.nics[i]:
-                raise RuntimeError('FluidBlock at i=%d j=%d k=%d has inconsistent nic=%d' % (i, j, nic))
+                raise RuntimeError('FluidBlock at i=%d j=%d has inconsistent nic=%d' % (i, j, nic))
             if njc != self.njcs[j]:
-                raise RuntimeError('FluidBlock at i=%d j=%d k=%d has inconsistent njc=%d' % (i, j, njc))
+                raise RuntimeError('FluidBlock at i=%d j=%d has inconsistent njc=%d' % (i, j, njc))
         #
         return
 

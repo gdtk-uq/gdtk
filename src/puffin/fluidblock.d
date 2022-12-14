@@ -110,20 +110,19 @@ public:
             // writeln("DEBUG jsonData=", jsonBC);
             bc.code = BC_code_from_name(jsonBC["tag"].str);
             if (bc.code == BCCode.inflow) {
-                auto fs = new FlowState2D(gmodel);
                 JSONValue jsonFlow = jsonBC["flow_state"];
-                double p = getJSONdouble(jsonFlow, "p", 100.0e3);
-                double T = getJSONdouble(jsonFlow, "T", 300.0);
+                JSONValue jsonGas = jsonFlow["gas"];
+                double p = getJSONdouble(jsonGas, "p", 100.0e3);
+                double T = getJSONdouble(jsonGas, "T", 300.0);
                 double[] default_massf = [1.0, ];
                 foreach (i; 1 .. gmodel.n_species) { default_massf ~= 0.0; }
-                double[] massf = getJSONdoublearray(jsonFlow, "massf", default_massf);
-                fs.gas.p = p; fs.gas.T = T; fs.gas.massf[] = massf[];
-                gmodel.update_thermo_from_pT(fs.gas);
-                gmodel.update_sound_speed(fs.gas);
-                //
+                double[] massf = getJSONdoublearray(jsonGas, "massf", default_massf);
+                bc.fs = new FlowState2D(gmodel);
+                bc.fs.gas.p = p; bc.fs.gas.T = T; bc.fs.gas.massf[] = massf[];
+                gmodel.update_thermo_from_pT(bc.fs.gas);
+                gmodel.update_sound_speed(bc.fs.gas);
                 double[] vel = getJSONdoublearray(jsonFlow, "vel", [0.0,0.0]);
-                fs.vel.set(vel[0], vel[1]);
-                bc_west.fs = fs;
+                bc.fs.vel.set(vel[0], vel[1]);
             }
         }
         JSONValue jsonBCs = configData["bcs"];
