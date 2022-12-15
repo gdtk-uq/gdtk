@@ -36,6 +36,12 @@ parser.add_argument('-d', '--debug', dest='debugFlag', action='store_true',
                     help='print intermediate values for debug purposes')
 args = parser.parse_args()
 
+if (len(args.fileNames) == 0):
+    print("To display xt-data for the gas slugs from an l1d4 simulation,")
+    print("at least one xt-data file (in JSON format) is expected to be specified.")
+    print("Use the --help option to see what options can be specified.")
+    sys.exit(1)
+
 print('fileNames=', args.fileNames)
 if args.debugFlag:
     print('varName=', args.varName)
@@ -114,8 +120,8 @@ def within_limits(xx, tt, xLimits=xLimits, tLimits=tLimits):
 for s in slugs:
     xtL = np.array([(x,t) for x,t in zip(s['xL'], s['simTimes']) if within_limits(x,t)])
     xtR = np.array([(x,t) for x,t in zip(s['xR'], s['simTimes']) if within_limits(x,t)])
-    ax.plot(xtL[:,0], xtL[:,1], color='black')
-    ax.plot(xtR[:,0], xtR[:,1], color='black')
+    if len(xtL) > 1: ax.plot(xtL[:,0], xtL[:,1], color='black')
+    if len(xtR) > 1: ax.plot(xtR[:,0], xtR[:,1], color='black')
 
 # Assume that all slugs have the same list of variables and units and
 # just pick the names out of the first one.
