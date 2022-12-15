@@ -14,7 +14,7 @@ print("inflow Mach number=", 1000.0/inflow.gas.a)
 print("dynamic pressure q=", 1/2*inflow.gas.rho*1.0e6)
 #
 # Need to have the axisymmetric flag set before constructing the fluid blocks
-# else the cell volumes will not be correctly set.
+# else the cell volumes will not be correctly set in the t=0 flow file.
 config.axisymmetric = True
 #
 # Set up two quadrilaterals in the (x,y)-plane by first defining
