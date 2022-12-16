@@ -871,7 +871,6 @@ public:
         //
         // At this point, we should have all gradient values up to date and we are now ready
         // to reconstruct field values and compute the convective fluxes.
-        debug{writefln("Calling interp with interpolation_order=%d", myConfig.interpolation_order);}
         foreach (f; iface_list) {
             bool do_reconstruction = allow_high_order_interpolation && !f.in_suppress_reconstruction_zone;
             if (f.left_cell && f.right_cell) {
