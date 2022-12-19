@@ -31,13 +31,15 @@ class CoonsPatch(ParametricSurface):
     Surface using transfinite interpolation of the edges.
     """
     _slots_ = ['north', 'east', 'south', 'west',
-               'p00', 'p10', 'p11', 'p01', 'defined_by_corners']
+               'p00', 'p10', 'p11', 'p01', 'defined_by_corners',
+               'offset']
 
     def __init__(self, north=None, east=None, south=None, west=None,
                  p00=None, p10=None, p11=None, p01=None):
         """
         Initialise from edges or corner points.
         """
+        self.offset = Vector3(0,0,0)
         if all([north, east, south, west]):
             self.north = copy(north)
             self.east = copy(east)
@@ -93,8 +95,20 @@ class CoonsPatch(ParametricSurface):
         east_s = self.east(s)
         p = south_r*(1.0-s) + north_r*s + west_s*(1.0-r) + east_s*r - \
             (self.p00*(1.0-r)*(1.0-s) + self.p01*(1.0-r)*s +
-             self.p10*r*(1.0-s) + self.p11*r*s)
+             self.p10*r*(1.0-s) + self.p11*r*s) + self.offset
         return p
+    
+    def __add__(self, other):
+        """Displace the Coons Patch using a Vector3 object.
+        """
+        if not isinstance(other, Vector3):
+            raise Exception(f"Cannot add a {type(other)} to a CoonsPatch.")
+        
+        offset_patch = copy(self)
+        offset_patch.offset = other
+
+        return offset_patch
+
 
 if __name__=='__main__':
 
