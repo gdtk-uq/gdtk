@@ -558,6 +558,12 @@ public:
         if (blk.bc[which_boundary].myL == null) {
             blk.bc[which_boundary].init_lua_State(luafname);
         }
+        if (blk.myConfig.n_species>1){
+            massflux.length = blk.myConfig.n_species;
+        }
+        if (blk.myConfig.n_modes>0){
+            modesflux.length = blk.myConfig.n_modes;
+        }
    }
     override string toString() const
     {
@@ -570,8 +576,9 @@ public:
         size_t j = 0, k = 0;
         FVCell ghost0, ghost1;
         BoundaryCondition bc = blk.bc[which_boundary];
-	callFluxUDF(t, gtl, ftl, f.i_bndry, j, k, f);
-	lua_gc(bc.myL, LUA_GCCOLLECT, 0);
+        int outsign = bc.outsigns[f.i_bndry];
+        callFluxUDF(t, gtl, ftl, f.i_bndry, j, k, f, outsign);
+        lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }  // end apply_unstructured_grid()
 
     // not @nogc
@@ -581,7 +588,8 @@ public:
         FVCell ghost0, ghost1;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
-            callFluxUDF(t, gtl, ftl, i, j, k, f);
+            int outsign = bc.outsigns[f.i_bndry];
+            callFluxUDF(t, gtl, ftl, i, j, k, f, outsign);
         }
         lua_gc(bc.myL, LUA_GCCOLLECT, 0);
     }  // end apply_unstructured_grid()
@@ -600,7 +608,8 @@ public:
             // Indices passed in are for the cell just inside the boundary.
             ijk = cell_index_to_logical_coordinates(f.right_cells[0].id, blk.nic, blk.njc);
 	}
-        callFluxUDF(t, gtl, ftl, ijk[0], ijk[1], ijk[2], f);
+        int outsign = bc.outsigns[f.i_bndry];
+        callFluxUDF(t, gtl, ftl, ijk[0], ijk[1], ijk[2], f, outsign);
     }
 
     // not @nogc
@@ -608,6 +617,7 @@ public:
     {
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        BoundaryCondition bc = blk.bc[which_boundary];
         //
         final switch (which_boundary) {
         case Face.north:
@@ -615,8 +625,9 @@ public:
             foreach (k; 0 .. blk.nkc)  {
                 foreach (i; 0 .. blk.nic) {
                     auto f = blk.get_ifj(i,j,k);
+                    int outsign = bc.outsigns[f.i_bndry];
                     // Indices passed in are for the cell just inside the boundary.
-                    callFluxUDF(t, gtl, ftl, i, j-1, k, f);
+                    callFluxUDF(t, gtl, ftl, i, j-1, k, f, outsign);
                 }
             }
             break;
@@ -625,7 +636,8 @@ public:
             foreach (k; 0 .. blk.nkc) {
                 foreach (j; 0 .. blk.njc) {
                     auto f = blk.get_ifi(i,j,k);
-                    callFluxUDF(t, gtl, ftl, i-1, j, k, f);
+                    int outsign = bc.outsigns[f.i_bndry];
+                    callFluxUDF(t, gtl, ftl, i-1, j, k, f, outsign);
                 }
             }
             break;
@@ -634,7 +646,8 @@ public:
             foreach (k; 0 .. blk.nkc)  {
                 foreach (i; 0 .. blk.nic) {
                     auto f = blk.get_ifj(i,j,k);
-                    callFluxUDF(t, gtl, ftl, i, j, k, f);
+                    int outsign = bc.outsigns[f.i_bndry];
+                    callFluxUDF(t, gtl, ftl, i, j, k, f, outsign);
                 }
             }
             break;
@@ -643,7 +656,8 @@ public:
             foreach (k; 0 .. blk.nkc) {
                 foreach (j; 0 .. blk.njc) {
                     auto f = blk.get_ifi(i,j,k);
-                    callFluxUDF(t, gtl, ftl, i, j, k, f);
+                    int outsign = bc.outsigns[f.i_bndry];
+                    callFluxUDF(t, gtl, ftl, i, j, k, f, outsign);
                 }
             }
             break;
@@ -652,7 +666,8 @@ public:
             foreach (i; 0 .. blk.nic) {
                 foreach (j; 0 .. blk.njc) {
                     auto f = blk.get_ifk(i,j,k);
-                    callFluxUDF(t, gtl, ftl, i, j, k-1, f);
+                    int outsign = bc.outsigns[f.i_bndry];
+                    callFluxUDF(t, gtl, ftl, i, j, k-1, f, outsign);
                 }
             }
             break;
@@ -661,7 +676,8 @@ public:
             foreach (i; 0 .. blk.nic) {
                 foreach (j; 0 .. blk.njc) {
                     auto f = blk.get_ifk(i,j,k);
-                    callFluxUDF(t, gtl, ftl, i, j, k, f);
+                    int outsign = bc.outsigns[f.i_bndry];
+                    callFluxUDF(t, gtl, ftl, i, j, k, f, outsign);
                 }
             }
             break;
@@ -670,6 +686,7 @@ public:
     } // end apply_structured_grid()
 
 private:
+    double[] massflux, modesflux;
     // not @nogc
     void putFluxIntoInterface(lua_State* L, int tblIdx, FVInterface iface)
     {
@@ -715,21 +732,44 @@ private:
 
         version(multi_T_gas) {
             if (gmodel.n_modes > 0) {
-                // TODO: update user-defined flux for multiple energy modes.
-                throw new Error("User-defined flux not implemented for n_modes > 0.");
+                lua_getfield(L, tblIdx, "T_modes");
+                if ( !lua_isnil(L, -1) ) {
+                    // Interior-modes fluxes should be provided as an array.
+                    getArrayOfDoubles(L, tblIdx, "T_modes", modesflux);
+                    foreach (i; 0 .. cqi.n_modes) {
+                        iface.F[cqi.modes+i] += modesflux[i];
+                    }
+                }
+                lua_pop(L, 1);
             }
         }
 
         version(multi_species_gas) {
-            // There is no storage in the flux vector for a single-species gas.
-            // Also, there's no clear choice for multi-species.
-            // Maybe best not to alter the species flux.
-            // lua_getfield(L, tblIdx, "species");
-            // if (!lua_isnil(L, -1)) {
-            //     int massfIdx = lua_gettop(L);
-            //     getSpeciesValsFromTable(L, gmodel, massfIdx, iface.F.massf, "species");
-            // }
-            // lua_pop(L, 1);
+            if (cqi.n_species>1){
+                lua_getfield(L, tblIdx, "species");
+                if (!lua_isnil(L, -1)) {
+                    int massfIdx = lua_gettop(L);
+                    getSpeciesValsFromTable(L, gmodel, massfIdx, massflux, "species");
+
+                    version(steady_state) {
+                        foreach (i; 0 .. cqi.n_species) {
+                            iface.F[cqi.species+i] += massflux[i];
+                        }
+                    } else { // The transient code uses mass fractions instead
+                        double totalmassflux = 0.0;
+                        foreach (i; 0 .. cqi.n_species) {
+                            totalmassflux += massflux[i];
+                        }
+                        iface.F[cqi.mass] += totalmassflux;
+
+                        foreach (i; 0 .. cqi.n_species) {
+                            iface.F[cqi.species+i] += massflux[i]/totalmassflux;
+                        }
+                    }
+                }
+                lua_pop(L, 1);
+
+            }
         }
 
         version(turbulence) {
@@ -743,7 +783,7 @@ private:
 
     // not @nogc
     void callFluxUDF(double t, int gtl, int ftl, size_t i, size_t j, size_t k,
-                     FVInterface IFace)
+                     FVInterface IFace, int outsign)
     {
         // 1. Set up for calling function
         auto L = blk.bc[which_boundary].myL;
@@ -757,6 +797,7 @@ private:
         lua_pushinteger(L, gtl); lua_setfield(L, -2, "gridTimeLevel");
         lua_pushinteger(L, ftl); lua_setfield(L, -2, "flowTimeLevel");
         lua_pushinteger(L, which_boundary); lua_setfield(L, -2, "boundaryId");
+        lua_pushinteger(L, outsign); lua_setfield(L, -2, "outsign");
         lua_pushnumber(L, IFace.pos.x); lua_setfield(L, -2, "x");
         lua_pushnumber(L, IFace.pos.y); lua_setfield(L, -2, "y");
         lua_pushnumber(L, IFace.pos.z); lua_setfield(L, -2, "z");
