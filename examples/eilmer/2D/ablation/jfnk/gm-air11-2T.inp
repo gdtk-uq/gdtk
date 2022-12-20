@@ -1,0 +1,6 @@
+model = "TwoTemperatureGas"
+species = {'N2', 'O2', 'N', 'O', 'NO', 'CO', 'N2+', 'O2+', 'N+', 'O+', 'NO+', 'e-',}
+options = {
+      -- Use N2:N2 as default just for now
+      CI_default =  "N2:N2"
+}
