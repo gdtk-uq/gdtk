@@ -51,6 +51,7 @@ public:
     size_t nfaces;
     size_t nboundaries;
     UnstructuredGrid grid;
+    size_t ninteriorfaces;
     // Work-space that gets reused.
     // The following objects are used in the convective_flux method.
 
@@ -296,6 +297,8 @@ public:
             throw new FlowSolverException(msg);
         }
         grid.sort_cells_into_bins();
+        ninteriorfaces = grid.ninteriorfaces;
+
         // Assemble array storage for finite-volume cells, etc.
         bool lsq_workspace_at_vertices = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
@@ -712,6 +715,21 @@ public:
     override void sync_vertices_to_underlying_grid(size_t gtl=0)
     {
         foreach (i; 0 .. vertices.length) { grid[i].set(vertices[i].pos[gtl]); }
+    }
+
+    @nogc
+    override void average_turbulent_transprops_to_faces()
+    {
+        if (!myConfig.turb_model.isTurbulent) return;
+
+        foreach(idx; 0 .. ninteriorfaces){
+            faces[idx].fs.mu_t = 0.5*(faces[idx].left_cell.fs.mu_t + faces[idx].right_cell.fs.mu_t);
+            faces[idx].fs.k_t = 0.5*(faces[idx].left_cell.fs.k_t + faces[idx].right_cell.fs.k_t);
+        }
+
+        foreach(idx; ninteriorfaces .. nfaces){
+            faces[idx].average_turbulent_transprops();
+        }
     }
 
     override void read_new_underlying_grid(string fileName)

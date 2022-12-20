@@ -886,8 +886,8 @@ public:
     */
     {
 
-        writefln("Called sort_faces_in_boundary_order... ");
-        SysTime start = Clock.currTime();
+        //writefln("Called sort_faces_in_boundary_order... ");
+        //SysTime start = Clock.currTime();
 
         // First thing we do is build look up tables for finding which boundary set and position
         // each boundary face belongs to. We use a pair of temporary associative arrays for this.
@@ -973,8 +973,8 @@ public:
         //    writefln(" %d %s %s", i, bfs.tag, bfs.face_id_list);
         //}
 
-        double elapsed = to!double((Clock.currTime() - start).total!"msecs"());
-        writefln("Done %d swaps in %f msec", nswaps, elapsed);
+        //double elapsed = to!double((Clock.currTime() - start).total!"msecs"());
+        //writefln("Done %d swaps in %f msec", nswaps, elapsed);
     }
 
     @nogc
