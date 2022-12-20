@@ -16,6 +16,7 @@ import std.algorithm;
 import std.array;
 import std.format;
 import std.math;
+import std.datetime;
 import gzip;
 import nm.complex;
 import nm.number;
@@ -420,7 +421,7 @@ public:
 
 class UnstructuredGrid : Grid {
 public:
-    size_t nfaces, nboundaries;
+    size_t nfaces, nboundaries, ninteriorfaces;
     USGFace[] faces;
     // The following dictionary of faces, identified by their defining vertices,
     // will enable us to quickly search for an already defined face.
@@ -505,6 +506,7 @@ public:
         nfaces = faces.length;
         ncells = cells.length;
         nboundaries = boundaries.length;
+        sort_faces_in_boundary_order();
     } // end construction via paving in 2D
 
     this(const Vector3[] boundary, BoundaryFaceSet[] in_boundaries, const string new_label="")
@@ -543,6 +545,7 @@ public:
             }
         }
         niv = vertices.length; njv = 1; nkv = 1;
+        sort_faces_in_boundary_order();
     } //end Heather's paved grid constructor
 
     this(const StructuredGrid sg, const string new_label="")
@@ -806,6 +809,8 @@ public:
         assert(nfaces == faces.length, "mismatch in number of faces");
         assert(ncells == cells.length, "mismatch in number of cells");
         niv = vertices.length; njv = 1; nkv = 1;
+
+        sort_faces_in_boundary_order();
     } // end constructor from StructuredGrid object
 
     // Imported grid.
@@ -824,6 +829,7 @@ public:
         }
         if (new_label != "") { label = new_label; }
         niv = vertices.length; njv = 1; nkv = 1;
+        sort_faces_in_boundary_order();
     } // end constructor from data imported from a file
 
     UnstructuredGrid dup() const
@@ -864,6 +870,119 @@ public:
         repr ~= format(", boundaries=%s", boundaries);
         repr ~= ")";
         return repr;
+    }
+
+    void sort_faces_in_boundary_order()
+    /*
+        This routine enables some optimisation trickery later on in the flow solver.
+        Specifically, when looping through the faces, we want to be able to know where
+        the interior ones are without having to manually check interiorness every time.
+
+        We do this by sorting the face references so that all the interior ones are first,
+        then the boundary faces grouped together in the order their boundaries appear in
+        in "boundaries" the array of BoundaryFaceSet objects.
+
+        @author: Nick Gibbons (13/12/22)
+    */
+    {
+
+        writefln("Called sort_faces_in_boundary_order... ");
+        SysTime start = Clock.currTime();
+
+        // First thing we do is build look up tables for finding which boundary set and position
+        // each boundary face belongs to. We use a pair of temporary associative arrays for this.
+        size_t[size_t] faceidx_to_boundary_table;
+        size_t[size_t] faceidx_to_boundary_idx_table;
+
+
+        size_t nboundaryfaces = 0;
+        foreach(i, bfs; boundaries){
+            foreach(j, faceid; bfs.face_id_list){
+                faces[faceid].is_on_boundary = true;
+                faceidx_to_boundary_table[faceid] = i;
+                faceidx_to_boundary_idx_table[faceid] = j;
+                nboundaryfaces += 1;
+            }
+        }
+
+        ninteriorfaces = nfaces-nboundaryfaces;
+        // Check that this was done properly...
+        //foreach(i, face; faces) {
+            //writefln(" %d %s %s", i, face.vtx_id_list, face.is_on_boundary);
+            //writefln(" %s %d ", makeFaceTag(face.vtx_id_list), faceIndices[makeFaceTag(face.vtx_id_list)]);
+            //if (face.left_cell)  writefln("   lcell %s" , face.left_cell.face_id_list);
+            //if (face.right_cell) writefln("   rcell %s ", face.right_cell.face_id_list);
+        //}
+
+        size_t nswaps = 0;
+        // Now we do the sort, in place, by swapping references (see 14/12/22 notes for derivation)
+        foreach(i; 0 .. ninteriorfaces){
+            // If face at i is internal, that's good. We can skip an iteration.
+            if (!faces[i].is_on_boundary) continue;
+
+            // At this point we know that the i face is on a boundary. We want to swap
+            // it with an internal face, so scan along until we find one:
+            foreach(j; i+1 .. nfaces){
+                if (!faces[j].is_on_boundary) {
+                    // We've find an internal face in position j. This needs to be swapped 
+                    // in the faces array, but also anywhere a face index is recorded. There
+                    // are four places in the UnstructuredGrid object where this occurs.
+
+                    // 1.) the faceIndices arrays, which map vertex ids to face ids
+                    string ifaceTag = makeFaceTag(faces[i].vtx_id_list);
+                    string jfaceTag = makeFaceTag(faces[j].vtx_id_list);
+                    faceIndices[ifaceTag] = j;
+                    faceIndices[jfaceTag] = i;
+
+                    // 2.) The USGCell objects, which have a list of face ids attached to them
+                    // Note that i's cells may not be initialised, which we need to test for.
+                    size_t il, ir, jl, jr;
+                    if (faces[i].left_cell)  il = countUntil(faces[i].left_cell.face_id_list, i);
+                    if (faces[i].right_cell) ir = countUntil(faces[i].right_cell.face_id_list, i);
+                    if (faces[j].left_cell)  jl = countUntil(faces[j].left_cell.face_id_list, j);
+                    if (faces[j].right_cell) jr = countUntil(faces[j].right_cell.face_id_list, j);
+
+                    if (faces[i].left_cell)  faces[i].left_cell.face_id_list[il] = j;
+                    if (faces[i].right_cell) faces[i].right_cell.face_id_list[ir] = j;
+                    if (faces[j].left_cell)  faces[j].left_cell.face_id_list[jl] = i;
+                    if (faces[j].right_cell) faces[j].right_cell.face_id_list[jr] = i;
+
+                    // 3.) The BoundaryFaceSet collection called boundaries. We use the tables
+                    // we made eariler to figure out which one i is sitting inside.
+                    size_t ibfs = faceidx_to_boundary_table[i];
+                    size_t ibfsidx = faceidx_to_boundary_idx_table[i];
+                    assert(boundaries[ibfs].face_id_list[ibfsidx] == i); 
+                    boundaries[ibfs].face_id_list[ibfsidx] = j;
+
+                    // 4.) This face might come up again later. That means we need to update the 
+                    // BFS lookup tables to reflect the new index. The old key at i is no longer valid
+                    // but we should never be looking that up in future iterations, because i is always
+                    // increasing.
+                    faceidx_to_boundary_table[j] = ibfs;
+                    faceidx_to_boundary_idx_table[j] = ibfsidx;
+
+                    // 5.) Finally, swap the face references in memory
+                    swap(faces[i], faces[j]);
+                    nswaps += 1;
+                    break; // terminate the foreach(j; i+1 .. nfaces) scanning loop
+
+                } // if found interior scope
+            } // scan j faces scope
+        } // loop through i interior worth of faces
+
+        // Check that this was done properly...
+        //foreach(i, face; faces) {
+        //    writefln(" %d %s %s", i, face.vtx_id_list, face.is_on_boundary);
+        //    writefln(" %s %d ", makeFaceTag(face.vtx_id_list), faceIndices[makeFaceTag(face.vtx_id_list)]);
+        //    if (face.left_cell)  writefln("   lcell %s" , face.left_cell.face_id_list); // checked
+        //    if (face.right_cell) writefln("   rcell %s ", face.right_cell.face_id_list); // checked
+        //}
+        //foreach(i, bfs; boundaries){
+        //    writefln(" %d %s %s", i, bfs.tag, bfs.face_id_list);
+        //}
+
+        double elapsed = to!double((Clock.currTime() - start).total!"msecs"());
+        writefln("Done %d swaps in %.3f msec", nswaps, elapsed);
     }
 
     @nogc
