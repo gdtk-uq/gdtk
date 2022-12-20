@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from numpy import *
@@ -24,7 +24,7 @@ Let's read in the number of reactions, number of species, the stoichiometric
 coefficients and the third body efficiencies from the input file. The input file
 is located in the source directory along with the template file.
 '''
-print "reading in reaction data file"
+print("reading in reaction data file")
 
 vji_p = []
 MM = []
@@ -33,13 +33,16 @@ with open('chem-compact-notation.inp', 'r') as f:
     data = f.readlines()
     count = 0
     for line in data:
-        dat = line.split()
+        if len(line) > 0 and line[0] == '#':
+            count += 1
+            continue
+        dat = [int(val) for val in line.split()]
         if count==0:                   #reading in no. species/reactions
-            num_spec = int(dat[0])
-            num_reac = int(dat[1])
-            vji_pp = zeros((num_reac, num_spec))
-            vji_p = zeros((num_reac, num_spec))
-            MM = zeros((num_reac, num_spec+1))
+            num_spec = dat[0]
+            num_reac = dat[1]
+            vji_pp = zeros((num_reac, num_spec),dtype=int)
+            vji_p = zeros((num_reac, num_spec),dtype=int)
+            MM = zeros((num_reac, num_spec+1),dtype=int)
         if count>1 and count<num_reac+2:                  #stoichiometric coeffs (reactants)
             for i in linspace(0, len(dat)-1, len(dat)):
                 i = int(i)
@@ -49,23 +52,23 @@ with open('chem-compact-notation.inp', 'r') as f:
                 i = int(i)
                 vji_pp[count-num_reac-3][i] = dat[i]
         if count>num_reac*2+3 and count<num_reac*3+4:    #third body efficiencies
-            if int(dat[0])==0:
-                MM[count-num_reac*2-4][0]=dat[0]
-            if int(dat[0])==1:
-                MM[count-num_reac*2-4][0]=dat[0]
+            if dat[0]==0:
+                MM[count-num_reac*2-4][0]= dat[0]
+            if dat[0]==1:
+                MM[count-num_reac*2-4][0]= dat[0]
                 for i in linspace(0, len(dat)-1, len(dat)):
                     i = int(i)
                     MM[count-num_reac*2-4][i] = dat[i]
-            elif int(dat[0])>1:
-                print "Error: encountered integer above 1"
+            elif dat[0]>1:
+                print("Error: encountered integer above 1")
                 sys.exit()
 
         count += 1
 
-#print vji_pp
-#print vji_p
-#print MM
-print "data read successfully"
+#print(vji_pp)
+#print(vji_p)
+#print(MM)
+print("data read successfully")
 
 #------------------------------------------------------------------------------------
 # 					M equations 
@@ -77,7 +80,7 @@ for reactions with M in them, and only multiples species concentrations with
 non-zero efficiencies to save on floating point operations.
 '''
 
-print "setting up M equation"
+print("setting up M equation")
 
 with open('workfile', 'w') as f:
     for i in linspace(0, num_reac-1, num_reac):
@@ -117,7 +120,7 @@ with open('workfile', 'w') as f:
         p, which fit the ODE structure of dy/dt = q - py. This is based off of the compact notation
         method found in Turns' textbook An Introduction to Combustion.
         '''
-    print "setting up Production equations (q)"
+    print("setting up Production equations (q)")
     
     vji = zeros((num_reac, num_spec))  
     for j in linspace(0, num_spec-1, num_spec):
@@ -151,7 +154,7 @@ with open('workfile', 'w') as f:
                         l = int(l)
                         i = int(i)
                         if vji_pp[i][l] > 0:
-                            for pow in linspace(0, vji_pp[i][l]-1, vji_pp[i][l]):
+                            for pow_ in linspace(0, vji_pp[i][l]-1, vji_pp[i][l]):
                                 value = '*Y[idx+numcell*'	
                                 s = str(value)
                                 f.write(s)
@@ -175,7 +178,7 @@ with open('workfile', 'w') as f:
                         l = int(l)
                         i = int(i)
                         if vji_p[i][l] > 0:
-                            for pow in linspace(0, vji_p[i][l]-1, vji_p[i][l]):
+                            for pow_ in linspace(0, vji_p[i][l]-1, vji_p[i][l]):
                                 value = '*Y[idx+numcell*'	
                                 s = str(value)
                                 f.write(s)
@@ -194,7 +197,7 @@ with open('workfile', 'w') as f:
 #------------------------------------------------------------------------------------
 # 					ODEs - Loss terms (p)
 #------------------------------------------------------------------------------------
-    print "setting up Loss equation (p)"
+    print("setting up Loss equation (p)")
     
     vji = zeros((num_reac, num_spec))  
     for j in linspace(0, num_spec-1, num_spec):
@@ -232,14 +235,14 @@ with open('workfile', 'w') as f:
                                 if vji_p[i][l] == 1.0:
                                     pass
                                 elif vji_p[i][l] > 1.0:
-                                    for pow in linspace(0, vji_p[i][l]-2, vji_p[i][l]-1):
+                                    for pow_ in linspace(0, vji_p[i][l]-2, vji_p[i][l]-1):
                                         value = '*Y[idx+numcell*'	
                                         s = str(value)
                                         f.write(s)
                                         f.write(str(int(l)))
                                         f.write(']')
                             else:
-                                for pow in linspace(0, vji_p[i][l]-1, vji_p[i][l]):
+                                for pow_ in linspace(0, vji_p[i][l]-1, vji_p[i][l]):
                                     value = '*Y[idx+numcell*'	
                                     s = str(value)
                                     f.write(s)
@@ -267,14 +270,14 @@ with open('workfile', 'w') as f:
                                 if vji_pp[i][l] == 1.0:
                                     pass
                                 elif vji_pp[i][l] > 1.0:
-                                    for pow in linspace(0, vji_pp[i][l]-2, vji_pp[i][l]-1):
+                                    for pow_ in linspace(0, vji_pp[i][l]-2, vji_pp[i][l]-1):
                                         value = '*Y[idx+numcell*'	
                                         s = str(value)
                                         f.write(s)
                                         f.write(str(int(l)))
                                         f.write(']')
                             else:	
-                                for pow in linspace(0, vji_pp[i][l]-1, vji_pp[i][l]):
+                                for pow_ in linspace(0, vji_pp[i][l]-1, vji_pp[i][l]):
                                     value = '*Y[idx+numcell*'	
                                     s = str(value)
                                     f.write(s)
@@ -297,7 +300,7 @@ f.close
 '''
 Let's now piece together the equations with the kernel template file. 
 '''
-print "putting Kernel together"
+print("putting Kernel together")
 
 in_file = open('workfile')   #open and read set of equations
 indata = in_file.read()    
@@ -317,7 +320,7 @@ dest = src_dir + "/lib/"
 cmd = "cp libcudakernel.so " + dest
 os.system(cmd)
 
-print "Kernel ready for launch."
+print("Kernel ready for launch.")
 #------------------------------------------------------------------------------------
 # 			       Kernel is ready
 #------------------------------------------------------------------------------------

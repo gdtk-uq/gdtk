@@ -162,9 +162,9 @@ public:
         //prepareKernelArgsForGPU(dt_flow);
 
         // Define an index space for work items
-        size_t blkDimx = 1;
+        size_t blkDimx = 32;
         size_t blkDimy = 1;
-        size_t grdDimx = _ncell;
+        size_t grdDimx = to!size_t((_ncell + blkDimx - 1) / blkDimx);
         size_t grdDimy = 1;
 
         // Execute the kernel
@@ -177,6 +177,7 @@ public:
         cudaMemcpy( cast(void*)_Y, cast(void*)_cc.bufY, _cc.datasize, cudaMemcpyKind.cudaMemcpyDeviceToHost );
         cudaMemcpy( cast(void*)_h, cast(void*)_cc.bufh, _cc.ncell*double.sizeof, cudaMemcpyKind.cudaMemcpyDeviceToHost );
         
+        auto cqi = localFluidBlocks[0].myConfig.cqi;
         // Now use the new concentrations to update the rest of the gas state
         foreach ( i, cell; _cells ) {
             foreach ( isp; 0 .. nsp ) _conc[isp] = _Y[i+isp*_ncell];
@@ -185,7 +186,7 @@ public:
             _gmodel.update_thermo_from_rhou(cell.fs.gas);
             if ( GlobalConfig.viscous ) _gmodel.update_trans_coeffs(cell.fs.gas);
             foreach ( isp; 0 .. nsp )
-                cell.U[0].massf[isp] = cell.fs.gas.rho*cell.fs.gas.massf[isp];
+                cell.U[0][cqi.species+isp] = cell.fs.gas.rho*cell.fs.gas.massf[isp];
         }
     }
 
