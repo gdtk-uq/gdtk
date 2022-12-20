@@ -301,8 +301,9 @@ class Spline(Polyline):
     def __init__(self, points, closed=False, tolerance=1.0e-10):
         self.points = [Vector3(p) for p in points]
         if closed and (abs(self.points[0]-self.points[-1]) > tolerance):
-            self.points.append(Vectot3(points[0]))
+            self.points.append(Vector3(points[0]))
         self.closed = closed
+
         # Given m+1 interpolation points p, determine the m-segment
         # Bezier polyline that interpolates these points as a spline.
         # This is done by first determining the array of weight points
@@ -321,6 +322,7 @@ class Spline(Polyline):
         # This amounts to copying the whole p collection.
         m = len(self.points)-1
         d = [Vector3(p) for p in self.points]
+        
         # Apply Gauss-Seidel iteration until
         # the internal weight points converge.
         for j in range(50):
