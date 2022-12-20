@@ -800,7 +800,7 @@ function WallBC_NoSlip_FixedT0:new(o)
    flag = checkAllowedNames(o, {"Twall", "wall_function", "field_bc",
                                 "catalytic_type", "wall_massf_composition",
                                 "label", "group", "is_design_surface", "num_cntrl_pts",
-                                "thermionic_emission"})
+                                "user_post_diff_flux"})
    if not flag then
       error("Invalid name for item supplied to WallBC_NoSlip_FixedT0 constructor.", 2)
    end
@@ -831,8 +831,8 @@ function WallBC_NoSlip_FixedT0:new(o)
       end
    end
 
-   if o.thermionic_emission == "true" then
-      o.postDiffFluxAction = {ThermionicElectronFlux:new{Ar=1.20e6, phi=2.0}}
+   if o.user_post_diff_flux then
+      o.postDiffFluxAction = {UserDefinedFlux:new{fileName=o.user_post_diff_flux}}
    end
    o.is_configured = true
    return o
