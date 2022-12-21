@@ -133,4 +133,52 @@ void parse_config_data_for_transient_solver(JSONValue configData)
         writeln("  nics= ", Config.nics);
         writeln("  njcs= ", Config.njcs);
     }
-} // end parse_JSON_data()
+} // end parse_config_data_for_transient_solver()
+
+
+void parse_config_data_for_marching_solver(JSONValue configData)
+{
+    Config.title = getJSONstring(configData, "title", "");
+    Config.gas_model_file = getJSONstring(configData, "gas_model_file", "");
+    Config.reaction_file_1 = getJSONstring(configData, "reaction_files_1", "");
+    Config.reaction_file_2 = getJSONstring(configData, "reaction_file_2", "");
+    Config.reacting = getJSONbool(configData, "reacting", false);
+    Config.T_frozen = getJSONdouble(configData, "T_frozen", 300.0);
+    Config.axisymmetric = getJSONbool(configData, "axisymmetric", false);
+    Config.max_x = getJSONdouble(configData, "max_x", 0.0);
+    Config.max_step = getJSONint(configData, "max_step", 0);
+    Config.dx = getJSONdouble(configData, "dx", 0.0);
+    Config.max_step_relax = getJSONint(configData, "max_step_relax", 100);
+    Config.cfl = getJSONdouble(configData, "cfl", 0.5);
+    Config.print_count = getJSONint(configData, "print_count", 50);
+    Config.plot_dx = getJSONdouble(configData, "plot_dx", 1.0e-2);
+    Config.x_order = getJSONint(configData, "x_order", 2);
+    Config.t_order = getJSONint(configData, "t_order", 2);
+    Config.flux_calc = to!FluxCalcCode(getJSONint(configData, "flux_calc", 0));
+    Config.compression_tol = getJSONdouble(configData, "compression_tol", -0.3);
+    Config.shear_tol = getJSONdouble(configData, "shear_tol", 0.2);
+    Config.n_streams = getJSONint(configData, "n_streams", 1);
+    if (Config.verbosity_level > 1) {
+        writeln("Config:");
+        writefln("  title= \"%s\"", Config.title);
+        writeln("  gas_model_files= ", Config.gas_model_file);
+        writeln("  reaction_files_1= ", Config.reaction_file_1);
+        writeln("  reaction_files_2= ", Config.reaction_file_2);
+        writeln("  reacting= ", Config.reacting);
+        writeln("  T_frozen= ", Config.T_frozen);
+        writeln("  axisymmetric= ", Config.axisymmetric);
+        writeln("  max_x= ", Config.max_x);
+        writeln("  max_step= ", Config.max_step);
+        writeln("  dx= ", Config.dx);
+        writeln("  max_step_relax= ", Config.max_step_relax);
+        writeln("  cfl= ", Config.cfl);
+        writeln("  print_count= ", Config.print_count);
+        writeln("  plot_dx= ", Config.plot_dx);
+        writeln("  x_order= ", Config.x_order);
+        writeln("  t_order= ", Config.t_order);
+        writeln("  flux_calc= ", Config.flux_calc);
+        writeln("  compression_tol= ", Config.compression_tol);
+        writeln("  shear_tol= ", Config.shear_tol);
+        writeln("  n_streams= ", Config.n_streams);
+    }
+} // end parse_config_data_for_marching_solver()
