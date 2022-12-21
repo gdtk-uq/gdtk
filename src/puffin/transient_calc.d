@@ -15,6 +15,7 @@ import std.format;
 import std.range;
 import std.math;
 import std.algorithm;
+import core.stdc.math: HUGE_VAL;
 
 import json_helper;
 import geom;
@@ -116,6 +117,9 @@ void init_simulation(int tindx)
     }
     //
     foreach (b; fluidBlocks) {
+        // We set up all blocks fully, whether they are active or not.
+        // This is because we need a full complement of block partitions
+        // for the VTK structured grid that is built for Paraview.
         b.set_up_data_storage();
         b.read_grid_data();
         b.set_up_geometry();
@@ -154,19 +158,16 @@ void do_time_integration()
 {
     progress.wall_clock_start = Clock.currTime();
     foreach (b; fluidBlocks) {
-        b.encode_conserved(0);
+        if (b.active) { b.encode_conserved(0); }
     }
     while (progress.t < Config.max_t && progress.step < Config.max_step) {
         //
         // 1. Occasionally set size of time step.
         if (progress.step > 0 && (progress.step % Config.cfl_count)==0) {
-            foreach (j, b; fluidBlocks) { // FIXME can do in parallel
-                progress.dt_values[j] = b.estimate_allowable_dt();
+            foreach (j, b; fluidBlocks) {
+                progress.dt_values[j] = (b.active) ? b.estimate_allowable_dt() : HUGE_VAL;
             }
-            double smallest_dt = progress.dt_values[0];
-            foreach (j; 1 .. progress.dt_values.length) {
-                smallest_dt = fmin(smallest_dt, progress.dt_values[j]);
-            }
+            double smallest_dt = progress.dt_values.minElement();
             // Make the transition to larger allowable time step not so sudden.
             progress.dt = fmin(1.5*progress.dt, smallest_dt);
         }
@@ -181,6 +182,7 @@ void do_time_integration()
                 // 1. Predictor (Euler) stage.
                 apply_boundary_conditions();
                 foreach (b; fluidBlocks) {
+                    if (!b.active) continue;
                     b.mark_shock_cells();
                     b.update_conserved_for_stage(1, progress.dt);
                 }
@@ -188,6 +190,7 @@ void do_time_integration()
                 if (Config.t_order > 1) {
                     apply_boundary_conditions();
                     foreach (b; fluidBlocks) {
+                        if (!b.active) continue;
                         b.update_conserved_for_stage(2, progress.dt);
                     }
                 }
@@ -197,7 +200,7 @@ void do_time_integration()
                 progress.dt *= 0.2;
                 // We need to restore the flow-field.
                 foreach (b; fluidBlocks) {
-                    b.decode_conserved(0);
+                    if (b.active) { b.decode_conserved(0); }
                 }
             }
         } while (step_failed && (attempt_number <= 3));
@@ -207,7 +210,7 @@ void do_time_integration()
         //
         // 3. Prepare for next time step.
         foreach (b; fluidBlocks) {
-            b.transfer_conserved_quantities(1, 0);
+            if (b.active) { b.transfer_conserved_quantities(1, 0); }
         }
         progress.t += progress.dt;
         progress.step++;
@@ -250,14 +253,6 @@ void do_time_integration()
 
 
 @nogc
-void gas_dynamic_update(double dt)
-// Work across all blocks, attempting to integrate the conserved quantities
-// over an increment of time, dt.
-{
-    return;
-} // end gas_dynamic_update()
-
-@nogc
 void apply_boundary_conditions()
 // Application of the boundary conditions is essentially filling the
 // ghost-cell flow states with suitable data.
@@ -265,6 +260,8 @@ void apply_boundary_conditions()
 // of flow data between blocks is easy.
 {
     foreach (b; fluidBlocks) {
+        if (!b.active) continue;
+        //
         final switch (b.bc_west.code) {
         case BCCode.wall_with_slip: {
             // The slip-wall condition is implemented by filling the ghost cells
