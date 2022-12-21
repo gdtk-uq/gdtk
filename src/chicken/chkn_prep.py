@@ -504,7 +504,7 @@ class WallNoSlipFixedTBC(BoundaryCondition):
             pmid = 0.25*(p0+p1+p2+p3)
             for k in range(nkc):
                 for j in range(njc):
-                    self.values.append(self.fun(pmid.x, pmid.y, pmid.z))
+                    self.values.append(self.fun(pmid.x[j,k], pmid.y[j,k], pmid.z[j,k]))
         elif face in ['jminus','jplus']:
             j = 0 if face == 'jminus' else njc
             p1 = Vector3(x=grid.vertices.x[:-1, j, :-1],
@@ -522,7 +522,7 @@ class WallNoSlipFixedTBC(BoundaryCondition):
             pmid = 0.25*(p0+p1+p2+p3)
             for k in range(nkc):
                 for i in range(nic):
-                    self.values.append(self.fun(pmid.x, pmid.y, pmid.z))
+                    self.values.append(self.fun(pmid.x[i,k], pmid.y[i,k], pmid.z[i,k]))
         elif face in ['kminus','kplus']:
             k = 0 if face == 'kminus' else nkc
             p0 = Vector3(x=grid.vertices.x[:-1, :-1, k],
@@ -540,7 +540,7 @@ class WallNoSlipFixedTBC(BoundaryCondition):
             pmid = 0.25*(p0+p1+p2+p3)
             for j in range(njc):
                 for i in range(nic):
-                    self.values.append(self.fun(pmid.x, pmid.y, pmid.z))
+                    self.values.append(self.fun(pmid.x[i,j], pmid.y[i,j], pmid.z[i,j]))
         else:
             raise RuntimeError("Unknown face: "+str(face))
         return
