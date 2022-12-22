@@ -329,6 +329,8 @@ ifeq ($(DMD), dmd)
     FAST_DFLAGS := -w -g -O -release -boundscheck=off -version=flavour_fast
     OF := -of
     DVERSION := -version=
+    # DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
+    DFLAGS += -dip1008 -preview=in
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
@@ -344,6 +346,8 @@ ifeq ($(DMD), ldmd2)
     FAST_DFLAGS := -w -g -O2 -release -inline -boundscheck=off -version=flavour_fast
     OF := -of
     DVERSION := -version=
+    # DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
+    DFLAGS += -dip1008 -preview=in
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
@@ -360,6 +364,8 @@ ifeq ($(DMD), ldc2)
     DEBUG_DFLAGS := -w -g -d-debug -d-version=flavour_debug
     PROFILE_DFLAGS := -fprofile-generate -g -w -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_profile
     FAST_DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_fast -flto=full
+    # DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
+    DFLAGS += -dip1008 -preview=in
     ifeq ($(WITH_THREAD_SANITIZER), 1)
         DFLAGS := $(DFLAGS) -fsanitize=thread
     endif
@@ -387,12 +393,15 @@ ifeq ($(DMD), ldc2)
         DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
 endif
-ifeq ($(DMD), gdc-8)
-    DEBUG_DFLAGS := -Wall -Og -g -fversion=flavour_debug
+ifeq ($(DMD), gdc-12)
+    DEBUG_DFLAGS := -Wall -Og -g -fversion=flavour_debug -fcheck=bounds -fcheck=assert -fdebug
     PROFILE_DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_profile
     FAST_DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_fast
     OF := -o
     DVERSION := -fversion=
+    # DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
+    # Needs at least gdc-12.
+    DFLAGS += -fpreview=dip1008 -fpreview=in
     ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -lplot
@@ -414,13 +423,7 @@ ifeq ($(FLAVOUR), fast)
     FLAVOUR_FLAGS := $(FAST_DFLAGS)
 endif
 
-# DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
-# This rules out the use of gdc for compiling the code.
-# gdc-8 built on 2.069.2 with updates to 2016-01-15
-# gdc-9 built on 2.076.0 which appeared 2017-09-01
-# gdc-10 will back-port static foreach, which we also use.
-# Expect gdc-10 to be out in May 2020.
-DFLAGS += -dip1008 -preview=in
+# The compiler needs to be able to find source files in the following directories.
 DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
 
 ifeq ($(DEBUG_CHEM),1)
