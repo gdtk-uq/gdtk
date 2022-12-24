@@ -29,6 +29,7 @@ public:
     // 2 : plus verbose init messages
     // 3 : plus verbose stepping messages
     //
+    shared static maxCPUs = 1;
     shared static string job_name = ""; // Change this to suit at run time.
     shared static string title = "";
     static string gas_model_file;

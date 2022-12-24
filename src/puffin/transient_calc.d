@@ -16,6 +16,7 @@ import std.range;
 import std.math;
 import std.algorithm;
 import core.stdc.math: HUGE_VAL;
+import std.parallelism;
 
 import json_helper;
 import geom;
@@ -46,6 +47,11 @@ void init_simulation(int tindx)
     string dirName = Config.job_name;
     JSONValue configData = readJSONfile(dirName~"/config.json");
     parse_config_data_for_transient_solver(configData);
+    //
+    // Parallel runtime will have main thread plus extras.
+    int extraThreadsInPool = min(Config.maxCPUs-1, Config.n_fluid_blocks-1);
+    defaultPoolThreads(extraThreadsInPool);
+    //
     JSONValue blockData = configData["fluid_blocks"];
     foreach (i; 0 .. Config.n_fluid_blocks) {
         fluidBlocks ~= new FluidBlock(i, blockData[i]);
@@ -54,16 +60,17 @@ void init_simulation(int tindx)
         }
     }
     //
+    // We set up all blocks fully, whether they are active or not.
+    // This is because we need a full complement of block partitions
+    // for the VTK structured grid that is built for Paraview.
     foreach (b; fluidBlocks) {
-        // We set up all blocks fully, whether they are active or not.
-        // This is because we need a full complement of block partitions
-        // for the VTK structured grid that is built for Paraview.
         b.set_up_data_storage();
         b.read_grid_data();
         b.set_up_geometry();
         b.read_flow_data(tindx);
     }
     // Read times file to get our starting time for this simulation.
+    // This allows for restarted simulations, with tindx > 0.
     double start_t = 0.0;
     auto tf = File(format("%s/times.data", Config.job_name), "r");
     bool tindxFound = false;
@@ -102,7 +109,7 @@ void do_time_integration()
         //
         // 1. Occasionally set size of time step.
         if (progress.step > 0 && (progress.step % Config.cfl_count)==0) {
-            foreach (j, b; fluidBlocks) {
+            foreach (j, b; parallel(fluidBlocks, 1)) {
                 progress.dt_values[j] = (b.active) ? b.estimate_allowable_dt() : HUGE_VAL;
             }
             double smallest_dt = progress.dt_values.minElement();
@@ -119,7 +126,7 @@ void do_time_integration()
             try {
                 // 1. Predictor (Euler) stage.
                 apply_boundary_conditions();
-                foreach (b; fluidBlocks) {
+                foreach (b; parallel(fluidBlocks, 1)) {
                     if (!b.active) continue;
                     b.mark_shock_cells();
                     b.update_conserved_for_stage(1, progress.dt);
@@ -127,7 +134,7 @@ void do_time_integration()
                 // 2. Corrector stage.
                 if (Config.t_order > 1) {
                     apply_boundary_conditions();
-                    foreach (b; fluidBlocks) {
+                    foreach (b; parallel(fluidBlocks, 1)) {
                         if (!b.active) continue;
                         b.update_conserved_for_stage(2, progress.dt);
                     }
@@ -137,7 +144,7 @@ void do_time_integration()
                 step_failed = true;
                 progress.dt *= 0.2;
                 // We need to restore the flow-field.
-                foreach (b; fluidBlocks) {
+                foreach (b; parallel(fluidBlocks, 1)) {
                     if (b.active) { b.decode_conserved(0); }
                 }
             }
@@ -147,7 +154,7 @@ void do_time_integration()
         }
         //
         // 3. Prepare for next time step.
-        foreach (b; fluidBlocks) {
+        foreach (b; parallel(fluidBlocks, 1)) {
             if (b.active) { b.transfer_conserved_quantities(1, 0); }
         }
         progress.t += progress.dt;
@@ -190,14 +197,13 @@ void do_time_integration()
 } // end do_time integration()
 
 
-@nogc
 void apply_boundary_conditions()
 // Application of the boundary conditions is essentially filling the
 // ghost-cell flow states with suitable data.
 // We do this in a context that has a view of all blocks so that exchange
 // of flow data between blocks is easy.
 {
-    foreach (b; fluidBlocks) {
+    foreach (b; parallel(fluidBlocks, 1)) {
         if (!b.active) continue;
         //
         final switch (b.bc_west.code) {

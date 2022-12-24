@@ -11,6 +11,8 @@ import std.file;
 import std.path;
 import std.getopt;
 import std.conv;
+import std.algorithm;
+import std.parallelism;
 
 import config;
 import transient_calc;
@@ -35,6 +37,7 @@ Actions:
 Parameters:
   --job=<string>                     file names built from this string
   --tindx=<int>                      starting index for flow-field data (default 0)
+  --max-cpus=<int>                   to process blocks in parallel, set to more than 1
   --verbosity=<int>                  level of commentary as the work is done
                                        0=very little written to console
                                        1=major steps commentary (default)
@@ -51,6 +54,7 @@ Parameters:
     }
     //
     string jobName = "";
+    int maxCPUs = 1; // default to single-threaded simulation
     int verbosityLevel = 1; // default to commenting on major steps
     bool helpWanted = false;
     int tindx = 0;
@@ -59,6 +63,7 @@ Parameters:
                "job", &jobName,
                "verbosity", &verbosityLevel,
                "tindx", &tindx,
+               "max-cpus", &maxCPUs,
                "help", &helpWanted
                );
     } catch (Exception e) {
@@ -117,6 +122,7 @@ Parameters:
     }
     Config.job_name = jobName;
     Config.verbosity_level = verbosityLevel;
+    Config.maxCPUs = min(max(maxCPUs, 1), totalCPUs);
     //
     if (verbosityLevel > 0) { writeln("Do a simulation."); }
     init_simulation(tindx);
