@@ -15,6 +15,7 @@ import std.format;
 import std.range;
 import std.math;
 import std.algorithm;
+import std.parallelism;
 
 import json_helper;
 import geom;
@@ -49,6 +50,10 @@ void init_calculation()
         }
     }
     //
+    // Parallel runtime will have main thread plus extras.
+    int extraThreadsInPool = min(Config.maxCPUs-1, Config.n_streams-1);
+    defaultPoolThreads(extraThreadsInPool);
+    //
     foreach (st; streams) {
         st.set_up_data_storage();
         st.set_up_inflow_boundary();
@@ -77,7 +82,7 @@ void do_space_marching_calculation()
             ++attempt_number;
             step_failed = false;
             try {
-                foreach (st; streams) { st.set_up_slice(progress.x + progress.dx); }
+                foreach (st; parallel(streams, 1)) { st.set_up_slice(progress.x + progress.dx); }
                 relax_slice_to_steady_flow(progress.x + 0.5*progress.dx);
             } catch (Exception e) {
                 writefln("Step failed e.msg=%s", e.msg);
@@ -90,7 +95,7 @@ void do_space_marching_calculation()
         }
         //
         // 3. Prepare for next spatial step.
-        foreach (st; streams) { st.shuffle_data_west(); }
+        foreach (st; parallel(streams, 1)) { st.shuffle_data_west(); }
         progress.x += progress.dx;
         progress.step++;
         //
@@ -124,36 +129,33 @@ void do_space_marching_calculation()
     return;
 } // end do_space_marching_calculation()
 
-@nogc
+
 void relax_slice_to_steady_flow(double xmid)
 // We are operating on a slice with its mid-point being at x=xmid.
 // There may be more than one StreamTube in the slice and any exchange
 // boundary condition will necessarily involve two StreamTubes.
 {
-    foreach (j, st; streams) {
+    foreach (j, st; parallel(streams, 1)) {
         st.encode_conserved(0);
         progress.dt_values[j] = st.estimate_allowable_dt();
     }
-    double dt = progress.dt_values[0];
-    foreach (j; 1 .. progress.dt_values.length) {
-        dt = fmin(dt, progress.dt_values[j]);
-    }
+    double dt = progress.dt_values.minElement();
     //
     foreach (k; 0 .. Config.max_step_relax) {
         // 1. Predictor (Euler) step..
         apply_boundary_conditions(xmid);
-        foreach (st; streams) {
+        foreach (st; parallel(streams, 1)) {
             st.mark_shock_cells();
             st.predictor_step(dt);
         }
         if (Config.t_order > 1) {
             apply_boundary_conditions(xmid);
-            foreach (st; streams) {
+            foreach (st; parallel(streams, 1)) {
                 st.corrector_step(dt);
             }
         }
         // Prepare for next step.
-        foreach (st; streams) {
+        foreach (st; parallel(streams, 1)) {
             st.transfer_conserved_quantities(1, 0);
         }
         // 3. [TODO] measure residuals overall
@@ -162,12 +164,14 @@ void relax_slice_to_steady_flow(double xmid)
     return;
 } // end relax_slice_to_steady_flow()
 
-@nogc
+
 void apply_boundary_conditions(double xmid)
 // Look up boundary conditions at xmid and apply boundary conditions.
 // Application of the boundary conditions is essentially filling the
 // ghost-cell flow states with suitable data.
 {
+    // We could make the following loop parallel, but it seems that the
+    // amount of work per thread is too small to benefit.
     foreach (i, st; streams) {
         int bc0 = st.bc_lower.get_value(xmid);
         switch (bc0) {

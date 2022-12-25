@@ -11,6 +11,8 @@ import std.file;
 import std.path;
 import std.getopt;
 import std.conv;
+import std.algorithm;
+import std.parallelism;
 
 import config;
 import marching_calc;
@@ -34,6 +36,7 @@ Actions:
 
 Parameters:
   --job=<string>                     file names built from this string
+  --max-cpus=<int>                   to process blocks in parallel, set to more than 1
   --verbosity=<int>                  level of commentary as the work is done
                                        0=very little written to console
                                        1=major steps commentary (default)
@@ -50,12 +53,14 @@ Parameters:
     }
     //
     string jobName = "";
+    int maxCPUs = 1; // default to single-threaded simulation
     int verbosityLevel = 1; // default to commenting on major steps
     bool helpWanted = false;
     try {
         getopt(args,
                "job", &jobName,
                "verbosity", &verbosityLevel,
+               "max-cpus", &maxCPUs,
                "help", &helpWanted
                );
     } catch (Exception e) {
@@ -69,7 +74,7 @@ Parameters:
         return exitFlag;
     }
     if (verbosityLevel > 0) {
-        writeln("Puffin 2D supersonic flow calculator.");
+        writeln("Puffin 2D supersonic steady-flow calculator.");
         writeln("Revision: PUT_REVISION_STRING_HERE");
         writeln("Compiler-name: PUT_COMPILER_NAME_HERE");
         //
@@ -114,6 +119,7 @@ Parameters:
     }
     Config.job_name = jobName;
     Config.verbosity_level = verbosityLevel;
+    Config.maxCPUs = min(max(maxCPUs, 1), totalCPUs);
     //
     if (verbosityLevel > 0) { writeln("Do a Calculation."); }
     init_calculation();
