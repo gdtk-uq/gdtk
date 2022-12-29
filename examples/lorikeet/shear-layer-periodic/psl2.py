@@ -11,11 +11,12 @@ init_gas_model("ideal-air-gas-model.lua")
 H = 0.010 # y-direction layer thickness in metres
 L = 0.100 # x-direction wavelength in metres
 ymin = -20.0*H; ymax = 20.0*H
-xmin = -L; xmax = L
+xmin = -3*L; xmax = -L
 #
 box0 = CoonsPatch(p00=Vector3(xmin,ymin), p10=Vector3(xmax,ymin),
                   p11=Vector3(xmax,ymax), p01=Vector3(xmin,ymax))
-boxes = [box0, box0+Vector3(2*L,0,0), box0-Vector3(2*L,0,0)]
+# Arrange boxes with increasing index from left to right.
+boxes = [box0, box0+Vector3(2*L,0,0), box0+Vector3(4*L,0,0)]
 factor = 1
 grds = [StructuredGrid(psurf=b, niv=int(60*factor)+1, njv=int(120*factor)+1) for b in boxes]
 #
