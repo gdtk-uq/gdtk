@@ -55,6 +55,7 @@ public:
     int i, j;
     bool active;
     GasModel gmodel;
+    ThermochemicalReactor thermochemUpdate;
     CQIndex cqi;
     int nic, njc;
     bool axiFlag;
@@ -384,6 +385,12 @@ public:
     void decode_conserved(size_t ftl)
     {
         foreach (c; cells) { c.decode_conserved(ftl, gmodel); }
+    }
+
+    @nogc
+    void thermochemical_increment(double dt)
+    {
+        foreach (c; cells) { c.thermochemical_increment(dt, gmodel, thermochemUpdate); }
     }
 
     @nogc

@@ -10,6 +10,7 @@ init_gas_model("powers-aslam-gas-model.lua")
 inflow = FlowState(p=86.1e3, T=300.0, velx=964.302, massf=[1.0, 0.0])
 initial = FlowState(p=28.7e3, T=300.0, velx=0.0, massf=[1.0, 0.0])
 config.reacting = True
+config.reaction_file_1 = "powers-aslam-gas-model.lua"
 #
 # Geometry
 from gdtk.geom.path import Line, FnPath
@@ -46,7 +47,7 @@ grd1 = StructuredGrid(psurf=patch1, niv=nnx1+1, njv=nny+1)
 blk0 = FluidBlock(i=0, grid=grd0, initialState=inflow,
                   bcs={'iminus':InflowBC(inflow),'iplus':ExchangeBC()})
 blk1 = FluidBlock(i=1, grid=grd1, initialState=initial,
-                  bcs={'iminus':ExchangeBC(),'iplus':OutflowBC()})
+                  bcs={'iminus':ExchangeBC(),'iplus':OutflowBC(),'jplus':OutflowBC()})
 #
 config.flux_calc = FluxCalc.ausmdv_plus_hanel
 config.max_time = 2.0e-2

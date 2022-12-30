@@ -13,6 +13,7 @@ import std.array;
 
 import geom;
 import gas;
+import kinetics;
 import gasflow;
 import config;
 import flow;
@@ -218,6 +219,42 @@ public:
         }
         return;
     } // end decode_conserved()
+
+    @nogc
+    void thermochemical_increment(double dt, GasModel gmodel, ThermochemicalReactor reactor)
+    {
+        double[maxParams] params; // An artifact from Eilmer.
+        try {
+            double dt_chem = -1.0; // Allow the reactor to chose its own time step.
+            reactor(fs.gas, dt, dt_chem, params);
+        } catch(ThermochemicalReactorUpdateException err) {
+            debug {
+                string msg = format("Chemical reactor failed: %s\n", err.msg);
+                msg ~= format("This cell is located at: %s\n", pos);
+            }
+            throw new Exception("thermochemical_increment() failed");
+        }
+        // The update only changes mass fractions; we need to impose
+        // a thermodynamic constraint based on a call to the equation of state.
+        try {
+            gmodel.update_thermo_from_rhou(fs.gas);
+        }
+        catch (Exception err) {
+            debug {
+                string msg = format("update_thermo_from_rhou() failed: %s\n", err.msg);
+                msg ~= format("This cell is located at: %s\n", pos);
+            }
+            throw new Exception("thermochemical_increment() failed");
+        }
+        // Finally, we have to manually update the conservation quantities
+        // for the gas-dynamics time integration.
+        auto myU = U[0]; // Note the assumption that we are at level 0.
+        double rho = fs.gas.rho;
+        if (cqi.n_species > 1) {
+            foreach(i; 0 .. cqi.n_species) { myU[cqi.species+i] = rho*fs.gas.massf[i]; }
+        }
+        foreach(i; 0 .. cqi.n_modes) { myU[cqi.modes+i] = rho*fs.gas.u_modes[i]; }
+    } // end thermochemical_increment()
 
     @nogc
     void eval_dUdt(size_t ftl, bool axiFlag)

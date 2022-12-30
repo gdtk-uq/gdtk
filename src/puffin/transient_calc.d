@@ -20,6 +20,8 @@ import std.parallelism;
 
 import json_helper;
 import geom;
+import gas;
+import kinetics;
 import config;
 import flow;
 import fluidblock;
@@ -68,6 +70,10 @@ void init_simulation(int tindx)
         b.read_grid_data();
         b.set_up_geometry();
         b.read_flow_data(tindx);
+        if (Config.reacting) {
+            b.thermochemUpdate =
+                init_thermochemical_reactor(b.gmodel, Config.reaction_file_1, Config.reaction_file_2);
+        }
     }
     // Read times file to get our starting time for this simulation.
     // This allows for restarted simulations, with tindx > 0.
@@ -150,17 +156,25 @@ void do_time_integration()
             }
         } while (step_failed && (attempt_number <= 3));
         if (step_failed) {
-            throw new Exception("Step failed after 3 attempts.");
+            throw new Exception("Gasdynamic step failed after 3 attempts.");
         }
         //
         // 3. Prepare for next time step.
         foreach (b; parallel(fluidBlocks, 1)) {
             if (b.active) { b.transfer_conserved_quantities(1, 0); }
         }
+        //
+        // 4. Chemistry step is loosely coupled to the gas dynamics.
+        if (Config.reacting) {
+            foreach (b; parallel(fluidBlocks, 1)) {
+                if (b.active) { b.thermochemical_increment(progress.dt); }
+            }
+        }
+        //
         progress.t += progress.dt;
         progress.step++;
         //
-        // 4. Occasional console output.
+        // 5. Occasional console output.
         if (Config.verbosity_level >= 1 &&
             ((progress.step % Config.print_count) == 0)) {
             // For reporting wall-clock time, convert with precision of milliseconds.

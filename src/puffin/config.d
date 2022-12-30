@@ -74,7 +74,7 @@ void parse_config_data_for_transient_solver(JSONValue configData)
     Config.title = getJSONstring(configData, "title", "");
     Config.gas_model_file = getJSONstring(configData, "gas_model_file", "");
     Config.iovar_names = getJSONstringarray(configData, "iovar_names", [""]);
-    Config.reaction_file_1 = getJSONstring(configData, "reaction_files_1", "");
+    Config.reaction_file_1 = getJSONstring(configData, "reaction_file_1", "");
     Config.reaction_file_2 = getJSONstring(configData, "reaction_file_2", "");
     Config.reacting = getJSONbool(configData, "reacting", false);
     Config.T_frozen = getJSONdouble(configData, "T_frozen", 300.0);
