@@ -19,7 +19,7 @@ from gdtk.geom.surface import CoonsPatch
 xmin = -0.25; xmax = 1.75
 ymin = 0.0; ymax = 2.0
 #
-from oblique_detonation import *
+from gdtk.oblique_detonation import *
 from math import pi
 od =  ObliqueDetonation(pi/4.0, 300.0, 3.0, 1.0)
 wall = FnPath(od.create_wall_function(0.0, xmax))
