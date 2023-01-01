@@ -1,3 +1,4 @@
 __all__ = ['imoc', 'geom', 'numeric',
            'gas', 'ideal_gas_flow', 'reflected_shock_tunnel',
-           'sutherland', 'billig', 'oblique_detonation']
+           'sutherland', 'oblique_detonation',
+           'billig', 'billig_patch']

@@ -313,7 +313,11 @@ def beta_obl(M1, theta, g=1.4, tol=1.0e-6):
     if M1 < 1.0: raise Exception("M1 is subsonic")
     sign_beta = -1 if theta < 0.0 else 1
     theta = abs(theta)
-    b1 = asin(1.0/M1); b2 = b1 * 1.05
+    b1 = asin(1.0/M1);
+    if theta < tol:
+        # Small deflection will produce a very weak shock.
+        return sign_beta * b1
+    b2 = b1 * 1.05
     def f_to_solve(beta): return theta_obl(M1, beta, g) - theta
     f1 = f_to_solve(b1)
     if abs(f1) < tol: return sign_beta * b1

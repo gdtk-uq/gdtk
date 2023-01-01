@@ -499,16 +499,20 @@ unittest {
  *   theta: flow deflection angle (radians)
  * Returns: shock angle with respect to initial flow direction (radians)
  */
-double beta_obl(double M1, double theta, double g=1.4,double tol=1.0e-6)
+double beta_obl(double M1, double theta, double g=1.4, double tol=1.0e-6)
 {
     if (M1 < 1.0) {
         throw new GasFlowException(text("beta_obl: subsonic Mach number: ", M1));
+    }
+    if (theta == 0.0) {
+        throw new GasFlowException("beta_obl: zero deflection angle, so there can be no shock");
     }
     int sign_beta = (theta < 0.0) ? -1 : 1;
     theta = fabs(theta);
     auto f_to_solve = delegate(double beta){return theta_obl(M1, beta, g) - theta;};
     //
     double b1 = asin(1.0/M1); // the weakest shock is at the Mach angle
+    if (theta < tol) return sign_beta*b1;
     double f1 = f_to_solve(b1);
     if (fabs(f1) < tol) return sign_beta*b1;
     double b2 = b1 * 1.05; // second guess slightly stronger

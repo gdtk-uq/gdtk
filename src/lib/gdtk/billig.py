@@ -10,14 +10,14 @@ from J.D. Anderson's text Hypersonic and High Temperature Gas Dynamics
             2022-11-26 Port to the GDTK project and Python3
 """
 
-from math import exp, sqrt, pow, tan
+from math import exp, sqrt, pow, tan, asin
 from gdtk.ideal_gas_flow import beta_obl, beta_cone2
 
 def delta_over_R(M, axi):
     """
     Calculates the normalised stand-off distance.
     """
-    if axi == 1:
+    if axi:
         # Spherical nose
         d_R = 0.143 * exp(3.24/(M*M))
     else:
@@ -30,7 +30,7 @@ def Rc_over_R(M, axi):
     """
     Calculates the normalised radius of curvature of the shock.
     """
-    if axi == 1:
+    if axi:
         # Spherical nose
         Rc_R = 1.143 * exp(0.54/pow(M-1, 1.2))
     else:
@@ -39,7 +39,7 @@ def Rc_over_R(M, axi):
     return Rc_R
 
 
-def x_from_y(y, M, theta=0.0, axi=0, R_nose=1.0):
+def x_from_y(y, M, theta=0.0, axi=False, R_nose=1.0):
     """
     Determine the x-coordinate of a point on the shock wave.
 
@@ -47,10 +47,10 @@ def x_from_y(y, M, theta=0.0, axi=0, R_nose=1.0):
     :param M: free-stream Mach number
     :param theta: angle (in radians wrt free-stream direction)
                   of the downstream surface
-    :param axi: (int) axisymmetric flag:
+    :param axi: (bool) axisymmetric flag:
 
-                | == 0 : cylinder-wedge
-                | == 1 : sphere-cone
+                | == False : cylinder-wedge
+                | == True  : sphere-cone
 
     :param R_nose: radius of the forebody (either cylinder or sphere)
 
@@ -60,18 +60,16 @@ def x_from_y(y, M, theta=0.0, axi=0, R_nose=1.0):
     """
     Rc = R_nose * Rc_over_R(M, axi)
     d = R_nose * delta_over_R(M, axi)
-    if axi == 1:
-        # Use shock angle on a cone
-        beta = beta_cone2(M, theta)
+    if theta == 0.0:
+        beta = asin(1.0/M)
     else:
-        # Use shock angle on a wedge
-        beta = beta_obl(M, theta)
+        beta = beta_cone2(M, theta) if axi else beta_obl(M, theta)
     tan_beta = tan(beta)
     cot_beta = 1.0/tan_beta
     x = R_nose + d - Rc * cot_beta**2 * (sqrt(1 + (y*tan_beta/Rc)**2) - 1)
     return x
 
-def y_from_x(x, M, theta=0.0, axi=0, R_nose=1.0):
+def y_from_x(x, M, theta=0.0, axi=False, R_nose=1.0):
     """
     Determine the y-coordinate of a point on the shock wave.
 
@@ -79,10 +77,10 @@ def y_from_x(x, M, theta=0.0, axi=0, R_nose=1.0):
     :param M: free-stream Mach number
     :param theta: angle (in radians wrt free-stream direction)
                   of the downstream surface
-    :param axi: (int) axisymmetric flag:
+    :param axi: (bool) axisymmetric flag:
 
-                | == 0 : cylinder-wedge
-                | == 1 : sphere-cone
+                | == False : cylinder-wedge
+                | == True  : sphere-cone
 
     :param R_nose: radius of the forebody (either cylinder or sphere)
 
@@ -92,8 +90,8 @@ def y_from_x(x, M, theta=0.0, axi=0, R_nose=1.0):
     """
     Rc = R_nose * Rc_over_R(M, axi)
     d = R_nose * delta_over_R(M, axi)
-    if axi == 1:
-    # Use shock angle on a cone
+    if axi:
+        # Use shock angle on a cone
         beta = beta_cone2(M, theta)
     else:
         # Use shock angle on a wedge

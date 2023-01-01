@@ -322,7 +322,7 @@ class Spline(Polyline):
         # This amounts to copying the whole p collection.
         m = len(self.points)-1
         d = [Vector3(p) for p in self.points]
-        
+        #
         # Apply Gauss-Seidel iteration until
         # the internal weight points converge.
         for j in range(50):
