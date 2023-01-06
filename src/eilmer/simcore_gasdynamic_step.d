@@ -907,6 +907,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     // Later, each stage will set its own coefficients for the dependent variables.
     shared double c2 = 1.0; // default for predictor-corrector update
     shared double c3 = 1.0; // default for predictor-corrector update
+    shared double c4 = 1.0; // Only used for classic_rk4
     final switch ( GlobalConfig.gasdynamic_update_scheme ) {
     case GasdynamicUpdate.euler:
     case GasdynamicUpdate.backward_euler:
@@ -920,6 +921,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     case GasdynamicUpdate.rkl2: assert(false, "invalid option");
     case GasdynamicUpdate.moving_grid_1_stage:
     case GasdynamicUpdate.moving_grid_2_stage: assert(false, "invalid option");
+    case GasdynamicUpdate.classic_rk4: c2 = 0.5; c3 = 0.5; c4 = 1.0;
     }
     //
     int attempt_number = 0;
@@ -942,6 +944,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             case 1: SimState.time = t0; break;
             case 2: SimState.time = t0 + c2 * SimState.dt_global; break;
             case 3: SimState.time = t0 + c3 * SimState.dt_global; break;
+            case 4: SimState.time = t0 + c4 * SimState.dt_global; break;
             default: throw new Error("Invalid state for explicit update.");
             }
             // Phase 01 LOCAL
@@ -1232,6 +1235,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                         case GasdynamicUpdate.denman_rk3: gamma_1 = 8.0/15.0; break;
                         case GasdynamicUpdate.rkl1:
                         case GasdynamicUpdate.rkl2: assert(false, "invalid option");
+                        case GasdynamicUpdate.classic_rk4: gamma_1 = 1.0 / 2.0; break;
                         }
                         foreach (cell; blk.cells) {
                             auto dt = (blklocal_with_local_time_stepping) ? cell.dt_local : blklocal_dt_global;
@@ -1280,6 +1284,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                         case GasdynamicUpdate.denman_rk3: gamma_1 = -17.0/60.0; gamma_2 = 5.0/12.0; break;
                         case GasdynamicUpdate.rkl1:
                         case GasdynamicUpdate.rkl2: assert(false, "invalid option");
+                        case GasdynamicUpdate.classic_rk4: gamma_1 = 0.0; gamma_2 = 1.0 / 2.0; break;
                         }
                         foreach (cell; blk.cells) {
                             auto dt = (blklocal_with_local_time_stepping) ? cell.dt_local : blklocal_dt_global;
@@ -1329,6 +1334,9 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                             break;
                         case GasdynamicUpdate.rkl1:
                         case GasdynamicUpdate.rkl2: assert(false, "invalid option");
+                        case GasdynamicUpdate.classic_rk4:
+                            gamma_1 = 0.0; gamma_2 = 0.0; gamma_3 = 1.0;
+                            break;
                         }
                         foreach (cell; blk.cells) {
                             auto dt = (blklocal_with_local_time_stepping) ? cell.dt_local : blklocal_dt_global;
@@ -1349,6 +1357,54 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                             version(MHD) {
                                 if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
                                     U3[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
+                                }
+                            }
+                            cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
+                        } // end foreach cell
+                        break;
+                    case 4:
+                        writeln("Do stage 4");
+                        double gamma_1 = 1.0/6.0; // presume classic_rk4 scheme.
+                        double gamma_2 = 2.0/6.0;
+                        double gamma_3 = 2.0/6.0;
+                        double gamma_4 = 1.0/6.0;
+                        final switch (blk.myConfig.gasdynamic_update_scheme) {
+                        case GasdynamicUpdate.euler:
+                        case GasdynamicUpdate.backward_euler:
+                        case GasdynamicUpdate.implicit_rk1:
+                        case GasdynamicUpdate.moving_grid_1_stage:
+                        case GasdynamicUpdate.moving_grid_2_stage:
+                        case GasdynamicUpdate.pc:
+                        case GasdynamicUpdate.midpoint:
+                        case GasdynamicUpdate.classic_rk3:
+                        case GasdynamicUpdate.tvd_rk3:
+                        case GasdynamicUpdate.denman_rk3:
+                        case GasdynamicUpdate.rkl1:
+                        case GasdynamicUpdate.rkl2: assert(false, "invalid option");
+                        case GasdynamicUpdate.classic_rk4:
+                            gamma_1 = 1.0 / 6.0; gamma_2 = 1.0 / 3.0; gamma_3 = 1.0 / 3.0; gamma_4 = 1.0 / 6.0;
+                            break;
+                        }
+                        foreach (cell; blk.cells) {
+                            auto dt = (blklocal_with_local_time_stepping) ? cell.dt_local : blklocal_dt_global;
+                            auto dUdt0 = cell.dUdt[0];
+                            auto dUdt1 = cell.dUdt[1];
+                            auto dUdt2 = cell.dUdt[2];
+                            auto dUdt3 = cell.dUdt[3];
+                            auto U_old = cell.U[0];
+                            if (blk.myConfig.gasdynamic_update_scheme == GasdynamicUpdate.denman_rk3) { U_old = cell.U[2]; }
+                            auto U4 = cell.U[4];
+                            foreach (j; 0 .. cqi.n) {
+                                U4[j] = U_old[j] + dt * (gamma_1*dUdt0[j] + gamma_2*dUdt1[j] + gamma_3*dUdt2[j] + gamma_4 * dUdt3[j]);
+                            }
+                            version(turbulence) {
+                                foreach(j; 0 .. cqi.n_turb){
+                                    U4[cqi.rhoturb+j] = fmax(U4[cqi.rhoturb+j], U_old[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
+                                }
+                            }
+                            version(MHD) {
+                                if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
+                                    U4[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
                             cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
@@ -1456,6 +1512,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                             case 1: scell.stage1Update(SimState.dt_global); break;
                             case 2: scell.stage2Update(SimState.dt_global); break;
                             case 3: scell.stage3Update(SimState.dt_global); break;
+                            case 4: scell.stage4Update(SimState.dt_global); break;
                             default: throw new Error("Invalid state for explicit update.");
                             }
                             scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);

@@ -96,7 +96,8 @@ enum GasdynamicUpdate {
     moving_grid_1_stage,
     moving_grid_2_stage,
     backward_euler,
-    implicit_rk1
+    implicit_rk1,
+    classic_rk4
 }
 
 @nogc
@@ -115,6 +116,7 @@ string gasdynamic_update_scheme_name(GasdynamicUpdate gdut)
     case GasdynamicUpdate.moving_grid_2_stage: return "moving_grid_2_stage";
     case GasdynamicUpdate.backward_euler: return "backward_euler";
     case GasdynamicUpdate.implicit_rk1: return "implicit_rk1";
+    case GasdynamicUpdate.classic_rk4: return "classic_rk4";
     }
 } // end gasdynamic_update_scheme_name()
 
@@ -134,6 +136,7 @@ size_t number_of_stages_for_update_scheme(GasdynamicUpdate gdut)
     case GasdynamicUpdate.moving_grid_2_stage: return 2;
     case GasdynamicUpdate.backward_euler: return 1;
     case GasdynamicUpdate.implicit_rk1: return 1;
+    case GasdynamicUpdate.classic_rk4: return 4;
     }
 } // end number_of_stages_for_update_scheme()
 
@@ -153,6 +156,7 @@ bool is_explicit_update_scheme(GasdynamicUpdate gdut)
     case GasdynamicUpdate.moving_grid_2_stage: return true;
     case GasdynamicUpdate.backward_euler: return false;
     case GasdynamicUpdate.implicit_rk1: return false;
+    case GasdynamicUpdate.classic_rk4: return true;
     }
 } // is_explicit_update_scheme()
 
@@ -172,6 +176,7 @@ size_t final_index_for_update_scheme(GasdynamicUpdate gdut)
     case GasdynamicUpdate.moving_grid_2_stage: return 2;
     case GasdynamicUpdate.backward_euler: return 1;
     case GasdynamicUpdate.implicit_rk1: return 1;
+    case GasdynamicUpdate.classic_rk4: return 4;
     }
 } // end final_index_for_update_scheme()
 
@@ -192,6 +197,7 @@ GasdynamicUpdate update_scheme_from_name(string name)
     case "moving_grid_2_stage": return GasdynamicUpdate.moving_grid_2_stage;
     case "backward_euler": return GasdynamicUpdate.backward_euler;
     case "implicit_rk1": return GasdynamicUpdate.implicit_rk1;
+    case "classic_rk4": return GasdynamicUpdate.classic_rk4;
     default:
         string msg = format("Invalid gasdynamic update scheme '%s' selected.", name);
         throw new Error(msg);

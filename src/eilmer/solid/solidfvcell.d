@@ -233,6 +233,7 @@ public:
         case GasdynamicUpdate.denman_rk3: gamma1 = 8.0/15.0; break;
         case GasdynamicUpdate.rkl1:
         case GasdynamicUpdate.rkl2: assert(false, "invalid option");
+        case GasdynamicUpdate.classic_rk4: gamma1 = 0.5; break;
         }
         e[1] = e[0] + dt*gamma1*dedt[0];
     }
@@ -255,6 +256,7 @@ public:
         case GasdynamicUpdate.denman_rk3: gamma1 = -17.0/60.0; gamma2 = 5.0/12.0; break;
         case GasdynamicUpdate.rkl1:
         case GasdynamicUpdate.rkl2: assert(false, "invalid option");
+        case GasdynamicUpdate.classic_rk4: gamma1 = 0.0; gamma2 = 0.5; break;
         }
         e[2] = e[0] + dt*(gamma1*dedt[0] + gamma2*dedt[1]);
     }
@@ -280,10 +282,34 @@ public:
         case GasdynamicUpdate.denman_rk3: gamma1 = 0.0; gamma2 = -5.0/12.0; gamma3 = 3.0/4.0; break;
         case GasdynamicUpdate.rkl1:
         case GasdynamicUpdate.rkl2: assert(false, "invalid option");
+        case GasdynamicUpdate.classic_rk4: gamma1 = 0.0; gamma2 = 0.0; gamma3 = 1.0; break;
         }
         e[3] = e[0] + dt*(gamma1*dedt[0] + gamma2*dedt[1] + gamma3*dedt[2]);
     }
 
+    void stage4Update(double dt)
+    {
+        double gamma1 = 1.0/6.0; // presume classic_rk4 scheme.
+        double gamma2 = 2.0/6.0;
+        double gamma3 = 2.0/6.0;
+        double gamma4 = 1.0/6.0;
+        final switch (myConfig.gasdynamic_update_scheme) {
+        case GasdynamicUpdate.euler:
+        case GasdynamicUpdate.implicit_rk1:
+        case GasdynamicUpdate.backward_euler:
+        case GasdynamicUpdate.moving_grid_1_stage:
+        case GasdynamicUpdate.moving_grid_2_stage:
+        case GasdynamicUpdate.pc:
+        case GasdynamicUpdate.midpoint:
+        case GasdynamicUpdate.classic_rk3:
+        case GasdynamicUpdate.tvd_rk3:
+        case GasdynamicUpdate.denman_rk3:
+        case GasdynamicUpdate.rkl1:
+        case GasdynamicUpdate.rkl2:
+        case GasdynamicUpdate.classic_rk4: gamma1 = 1.0/6.0; gamma2 = 2.0/6.0; gamma3 = 2.0/6.0; gamma4 = 1.0/6.0; break;
+        }
+        e[3] = e[0] + dt*(gamma1*dedt[0] + gamma2*dedt[1] + gamma3*dedt[2] + gamma4*dedt[3]);
+    }
     version(complex_numbers) {
         @nogc void clear_imaginary_components()
         // When performing the complex-step Frechet derivative in the Newton-Krylov accelerator,
