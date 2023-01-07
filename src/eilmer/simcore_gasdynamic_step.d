@@ -1363,7 +1363,6 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                         } // end foreach cell
                         break;
                     case 4:
-                        writeln("Do stage 4");
                         double gamma_1 = 1.0/6.0; // presume classic_rk4 scheme.
                         double gamma_2 = 2.0/6.0;
                         double gamma_3 = 2.0/6.0;
