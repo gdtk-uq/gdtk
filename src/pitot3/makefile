@@ -17,6 +17,8 @@ install : $(INSTALL_DIR)
 	cd $(CEA_DIR); make install
 	@echo Copying pitot3.py to $(INSTALL_DIR)/bin
 	cp -f pitot3.py $(INSTALL_DIR)/bin
+	@echo Copying pitot3_condition_builder.py to $(INSTALL_DIR)/bin
+	cp -f pitot3_condition_builder.py $(INSTALL_DIR)/bin
 	@echo Copying pitot3_utils folder to $(INSTALL_DIR)/lib
 	cp -r pitot3_utils $(INSTALL_DIR)/lib
 	@echo Copying pitot3_data folder to $(INSTALL_DIR)/share

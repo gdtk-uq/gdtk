@@ -364,6 +364,9 @@ def run_pitot3_condition_builder(config_dict = {}, config_filename = None,
             print(f"Loading result from test {test_name}.")
             print('-'*60)
 
+            # grab the test number too in case we need it ...
+            test_number = test_name[len(base_output_filename)+1:]
+
             # where we start out...
             starting_working_directory = os.getcwd()
 
@@ -621,9 +624,13 @@ def pitot3_condition_builder_test_run(test_name, changing_input_config_dict, var
 
     # we implement a few checks here to see if we need to re-run the simulation or not
 
-    if f'{test_name}.pickle' not in files_in_the_current_run_directory:
-        # this one of the output files, so the simulation has not been ran.
+    if f'{test_name}.pickle' not in files_in_the_current_run_directory and f'{test_name}_failed.txt' not in files_in_the_current_run_directory:
+        # this is one of the output files, so the simulation has not been ran.
         run_simulation = True
+    elif f'{test_name}.pickle' not in files_in_the_current_run_directory and f'{test_name}_failed.txt' in files_in_the_current_run_directory:
+        # {test_name}_failed.txt file is just a dummy file which tells the condition builder that this run failed.
+        # it is no point re-running the simulation if this is in the folder!
+        run_simulation = False
     else:
         # we need to load the pickle file to double check that this result is the same as the input file
         # (it could have been an old simulation)
@@ -662,6 +669,12 @@ def pitot3_condition_builder_test_run(test_name, changing_input_config_dict, var
             print("The run appears to have failed:")
             print(e)
             print("The result will not be added to the output.")
+
+            failure_filename = f'{test_name}_failed.txt'
+            print(f"Te dummy file {failure_filename} will also be created in the folder so the program knows that the run failed.")
+
+            with open(failure_filename, 'w') as failure_file:
+                pass
     else:
         print("Simulation has already been ran. This simulation will be skipped.")
 
@@ -696,8 +709,9 @@ def remove_condition_builder_folders(mode = 'remove all folders', base_output_fi
             elif mode == 'conserve folders' and dirname_for_comparison not in folder_list:
                 print(f"Deleting the folder {dirname} as it is not in the list of folders to conserve.")
                 shutil.rmtree(dirname)
-            elif mode == 'delete folders' and dirname_for_comparison in folder_list:
+            elif mode == 'remove folders' and dirname_for_comparison in folder_list:
                 print(f"Deleting the folder {dirname} as it is in the list of folders to delete.")
+                shutil.rmtree(dirname)
 
     return
 

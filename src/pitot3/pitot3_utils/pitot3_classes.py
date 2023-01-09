@@ -752,12 +752,20 @@ def pitot3_single_line_output_file_creator(config_data, object_dict, states_dict
         else:
             add_trans_coeffs_and_unit_Re = False
 
-        if states_dict:
+        # we need a special case here for if optional states (such as s10w) fail
+        # we just set everything to None...
+        if states_dict and state_name in states_dict:
             facility_state = states_dict[state_name]
             facilty_state_dictionary_output = facility_state.get_dictionary_output(add_trans_coeffs_and_unit_Re=add_trans_coeffs_and_unit_Re)
 
-        else:
+        elif json_output_states_dict and state_name in json_output_states_dict:
             facilty_state_dictionary_output = json_output_states_dict[state_name]
+        else:
+            # we just make a fake dictionary output for the state where everything is None
+            facilty_state_dictionary_output = {}
+
+            for variable in variables_to_print_list:
+                facilty_state_dictionary_output[variable] = 'None'
 
         for variable in variables_to_print_list:
             if state_name not in ['sd2', 'sd3']:
@@ -3440,42 +3448,51 @@ class Test_Section(object):
 
         post_wedge_shock_gas_state = GasState(test_section_state_gmodel)
 
-        # start by getting the shock angle (beta)
-        beta = test_section_state_gas_flow_object.beta_oblique(self.test_section_state.get_gas_state(),
-                                                               self.test_section_state.get_v(),
-                                                               wedge_angle)
+        try:
 
-        self.wedge_shock_angle_degrees = math.degrees(beta)
+            # start by getting the shock angle (beta)
+            beta = test_section_state_gas_flow_object.beta_oblique(self.test_section_state.get_gas_state(),
+                                                                   self.test_section_state.get_v(),
+                                                                   wedge_angle)
 
-        print(f"Shock angle over the wedge is {self.wedge_shock_angle_degrees} degrees")
+            self.wedge_shock_angle_degrees = math.degrees(beta)
 
-        wedge_angle_calculated, v10w = test_section_state_gas_flow_object.theta_oblique(self.test_section_state.get_gas_state(),
-                                                                                        self.test_section_state.get_v(),
-                                                                                        beta,
-                                                                                        post_wedge_shock_gas_state)
+            print(f"Shock angle over the wedge is {self.wedge_shock_angle_degrees} degrees")
 
-        wedge_angle_calculated_degrees = math.degrees(wedge_angle_calculated)
+            wedge_angle_calculated, v10w = test_section_state_gas_flow_object.theta_oblique(self.test_section_state.get_gas_state(),
+                                                                                            self.test_section_state.get_v(),
+                                                                                            beta,
+                                                                                            post_wedge_shock_gas_state)
 
-        # TO DO: could add the check on this angle here which PITOT had...
+            wedge_angle_calculated_degrees = math.degrees(wedge_angle_calculated)
 
-        print (f"The calculated wedge angle should be the same as the specified one: {wedge_angle_calculated_degrees} deg = {self.wedge_angle_degrees} deg")
+            # TO DO: could add the check on this angle here which PITOT had...
 
-        # if the entrance state has a reference gas state, we can grab that as the post-shock state will have the same one.
-        if self.entrance_state.reference_gas_state:
-            reference_gas_state = self.entrance_state.get_reference_gas_state()
-        else:
-            reference_gas_state = None
+            print (f"The calculated wedge angle should be the same as the specified one: {wedge_angle_calculated_degrees} deg = {self.wedge_angle_degrees} deg")
 
-        self.post_wedge_shock_state = Facility_State(f'{self.test_section_post_shock_state_name}w',
-                                                     post_wedge_shock_gas_state, v10w,
-                                                     reference_gas_state=reference_gas_state,
-                                                     outputUnits=self.entrance_state.outputUnits,
-                                                     species_MW_dict=self.entrance_state.species_MW_dict)
+            # if the entrance state has a reference gas state, we can grab that as the post-shock state will have the same one.
+            if self.entrance_state.reference_gas_state:
+                reference_gas_state = self.entrance_state.get_reference_gas_state()
+            else:
+                reference_gas_state = None
 
-        print(self.post_wedge_shock_state)
+            self.post_wedge_shock_state = Facility_State(f'{self.test_section_post_shock_state_name}w',
+                                                         post_wedge_shock_gas_state, v10w,
+                                                         reference_gas_state=reference_gas_state,
+                                                         outputUnits=self.entrance_state.outputUnits,
+                                                         species_MW_dict=self.entrance_state.species_MW_dict)
 
-        if self.post_wedge_shock_state.get_gas_state().gmodel.type_str == 'CEAGas':
-            print(self.post_wedge_shock_state.get_reduced_composition_two_line_output_string())
+            print(self.post_wedge_shock_state)
+
+            if self.post_wedge_shock_state.get_gas_state().gmodel.type_str == 'CEAGas':
+                print(self.post_wedge_shock_state.get_reduced_composition_two_line_output_string())
+
+        except Exception as e:
+            print("Wedge shock calculation has failed:")
+            print(e)
+            print("Result will not be added to the output.")
+
+            self.post_wedge_shock_state = None
 
         return
 
@@ -3497,7 +3514,7 @@ class Test_Section(object):
         if hasattr(self, 'post_conical_shock_state'):
             facility_state_list += [self.post_conical_shock_state]
 
-        if hasattr(self, 'post_wedge_shock_state'):
+        if hasattr(self, 'post_wedge_shock_state') and self.post_wedge_shock_state:
             facility_state_list += [self.post_wedge_shock_state]
 
         return facility_state_list
@@ -3877,8 +3894,11 @@ def pitot3_results_output(config_data, gas_path, object_dict):
                 basic_test_time = expansion_tube_test_time_calculator(acceleration_tube)
                 print(f"Basic test time = {basic_test_time * 1.0e6:.2f} microseconds.", file=output_stream)
 
-        if hasattr(test_section, 'post_wedge_shock_state'):
+        if hasattr(test_section, 'post_wedge_shock_state') and test_section.post_wedge_shock_state:
             print(f"Wedge angle was {test_section.wedge_angle_degrees:.2f} degrees. Wedge shock angle (beta) was found to be {test_section.wedge_shock_angle_degrees:.2f} degrees.",
+                  file=output_stream)
+        elif hasattr(test_section, 'post_wedge_shock_state') and not test_section.post_wedge_shock_state:
+            print(f"Calculation with a Wedge angle of {test_section.wedge_angle_degrees:.2f} degrees was attempted but it failed.",
                   file=output_stream)
 
         print(f"Freestream ({freestream_state.get_state_name()}) unit Reynolds number is {freestream_state.get_unit_Reynolds_number():.2f} /m (related mu is {freestream_state.get_mu():.2e} Pa.s).",
