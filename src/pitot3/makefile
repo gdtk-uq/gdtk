@@ -23,6 +23,7 @@ install : $(INSTALL_DIR)
 	cp -r pitot3_data $(INSTALL_DIR)/share
 	@echo Making pitot3.py program executable
 	chmod +x $(INSTALL_DIR)/bin/pitot3.py
+	chmod +x $(INSTALL_DIR)/bin/pitot3_condition_builder.py
 	@echo -----------------------------------------
 	@echo pitot3 should now be installed.
 	@echo -----------------------------------------

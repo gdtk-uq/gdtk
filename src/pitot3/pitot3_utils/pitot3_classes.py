@@ -497,6 +497,381 @@ def finite_wave_dv_wrapper(state1, v1, characteristic, v2_target, state2, gas_fl
 
     return v2g
 
+def pitot3_input_yaml_file_creator(config_dict, output_filename):
+    """
+    Function that takes a PITOT3 config dict and makes a related yaml file.
+
+    I am building this for a condition builder, mainly, to get the simulations ready to go...
+
+    :param config_dict:
+    :return:
+    """
+
+    print(f'Exporting config dictionary to the file {output_filename}.')
+
+    with open(output_filename, 'w') as output_file:
+        # yaml.dump did not deal with the Nonetypes correctly, so I just did this manually here...
+
+        output_file.write("# PITOT3 input file created automatically by the function pitot3_input_yaml_file_creator \n \n")
+
+        for key in config_dict.keys():
+            item = config_dict[key]
+
+            # I don't think a proper string (with quotations) is needed for yaml files
+            if isinstance(item, str):
+                output_file.write(f"{key} : '{item}' \n")
+            else:
+                output_file.write(f"{key} : {item} \n")
+
+    return
+
+def pitot3_states_dict_json_output_file_creator(states_dict, output_filename):
+
+    """
+    Function that takes the PITOT3 result states dictionary and makes a dictionary output version of each state
+    and outputs it to a json file.
+
+    :param states_dictionary:
+    :param output_filename:
+    :return:
+    """
+
+    import json
+
+    print('-'*60)
+    print(f'Exporting facility states data to the json file {output_filename}.')
+    print('-'*60)
+
+    states_dict_output_dict = {} # bad name, I know...
+
+    for state_name in states_dict:
+
+        facility_state = states_dict[state_name]
+
+        if state_name in ['s2','s7','s8','s10e']: # just calculate the transport coeffcients and unit Re for these important states... (as I had some issues with it sometimes...
+            states_dict_output_dict[state_name] = facility_state.get_dictionary_output(add_trans_coeffs_and_unit_Re = True)
+        else:
+            states_dict_output_dict[state_name] = facility_state.get_dictionary_output()
+
+    with open(output_filename, "w") as output_file:
+        json.dump(states_dict_output_dict, output_file)
+
+    return
+
+def pitot3_states_dict_json_output_file_loader(json_output_filename):
+    """
+
+    Just a simple function to load the json output file back into Python.
+
+    :param output_filename:
+    :return:
+    """
+
+    import json
+
+    with open(json_output_filename, "r") as json_output_file:
+        states_dict_output_dict = json.load(json_output_file)
+
+    return states_dict_output_dict
+
+def pitot3_pickle_output_file_creator(dict_of_objects, output_filename):
+
+    """
+    A function to pickle the PITOT3 objects, mainly for the condition builder intermediate results.
+
+    :param dict_of_objects:
+    :param output_filename:
+    :return:
+    """
+
+    import pickle
+
+    with open(output_filename, "wb") as output_file:
+        pickle.dump(dict_of_objects, output_file, pickle.HIGHEST_PROTOCOL)
+
+    return
+
+def pitot3_pickle_output_file_loader(pickle_output_filename):
+    """
+
+    Just a simple function to load the pickle output file back into Python.
+
+    :param pickle_output_filename:
+    :return:
+    """
+
+    import pickle
+
+    with open(pickle_output_filename, "rb") as pickle_output_file:
+        dict_of_objects = pickle.load(pickle_output_file)
+
+    return dict_of_objects
+
+def pitot3_single_line_output_file_creator(config_data, object_dict, states_dict, json_output_states_dict = None, output_to_file = True,
+                                           condition_builder_output = False, return_title_and_result_lists = False):
+
+    """
+    This is a function to allow us to make the PITOT3 output a single line csv (with a lot of columns)
+    handy for loading simply, sometimes, and will be useful for creating output for the condition builder.
+
+    The json output states dict can be used for running this function instead of the states dict itself
+    (This is handy when using pickled objects where the original gas model may not be available
+
+    :param config_data:
+    :param object_dict:
+    :param states_dict:
+    :return:
+    """
+
+    # we just make two lists which we print to file on two lines when we're done...
+    title_list = []
+    value_list = []
+
+    # first we need to know the type of facility and whether we have a secondary driver or a nozzle
+    # or not as that changes some decisions later on...
+
+    facility_type = config_data['facility_type']
+    if 'secondary_driver' in object_dict:
+        secondary_driver_flag = True
+    else:
+        secondary_driver_flag = False
+    if 'nozzle' in object_dict:
+        nozzle_flag = True
+    else:
+        nozzle_flag = False
+
+    # it will also help to know what the test section state is, so we should get that too...
+
+    test_section = object_dict['test_section']
+    freestream_state = test_section.get_entrance_state()
+    freestream_state_name = freestream_state.get_state_name()
+
+    # start by adding some stuff from the config dictionary...
+
+    config_dict_initial_variables = []
+
+    if condition_builder_output:
+        # we add the test number to the start too...
+        config_dict_initial_variables += ['test_number']
+
+    config_dict_initial_variables += ['driver_condition']
+
+    if nozzle_flag:
+        config_dict_initial_variables += ['area_ratio']
+
+    if secondary_driver_flag:
+        config_dict_initial_variables += ['secondary_driver_gas_gas_model', 'secondary_driver_gas_name']
+
+    config_dict_initial_variables += ['test_gas_gas_model', 'test_gas_name']
+
+    if facility_type == 'expansion_tube':
+        config_dict_initial_variables += ['accelerator_gas_gas_model', 'accelerator_gas_name']
+
+    if secondary_driver_flag: config_dict_initial_variables += ['psd1']
+
+    config_dict_initial_variables += ['p1']
+
+    if facility_type == 'expansion_tube': config_dict_initial_variables += ['p5']
+
+    for variable in config_dict_initial_variables:
+        title_list.append(variable)
+        value_list.append(config_data[variable])
+
+    # now add the shock speeds...
+
+    if secondary_driver_flag:
+        title_list.append('vsd1')
+        value_list.append(object_dict['secondary_driver'].get_shock_speed())
+
+    title_list.append('vs1')
+    value_list.append(object_dict['shock_tube'].get_shock_speed())
+
+    if facility_type == 'expansion_tube':
+        title_list.append('vs2')
+        value_list.append(object_dict['acceleration_tube'].get_shock_speed())
+
+    # we start by just printing the test section values at the start, as they are useful to be able to find easily!
+
+    freestream_variables_to_print_list = ['Ht', 'h', 'Ue', 'pitot_p','total_p']
+
+    if states_dict:
+        freestream_facility_state = states_dict[freestream_state_name]
+        freestream_facilty_state_dictionary_output = freestream_facility_state.get_dictionary_output()
+
+    else:
+        freestream_facilty_state_dictionary_output = json_output_states_dict[freestream_state_name]
+
+    for variable in freestream_variables_to_print_list:
+
+        title_list.append(variable)
+        value_list.append(freestream_facilty_state_dictionary_output[variable])
+
+    # now we go through states and print some values, with some special values printed out when it recognises certain states...
+
+    states_to_print_list = []
+
+    if secondary_driver_flag:
+        states_to_print_list += ['sd2', 'sd3']
+
+    states_to_print_list += ['s2', 's3']
+
+    if facility_type == 'expansion_tube':
+        states_to_print_list += ['s7', 's6']
+
+    if nozzle_flag:
+        states_to_print_list += ['s8']
+
+    states_to_print_list += ['s10f', 's10e']
+
+    if 'cone_half_angle_degrees' in config_data:
+        states_to_print_list += ['s10c']
+
+    if 'wedge_angle_degrees' in config_data:
+        states_to_print_list += ['s10w']
+
+    generic_variables_to_print_list = ['p', 'T', 'rho', 'v', 'M', 'a']
+
+    # dictionary to store when we want a variable to print more things...
+
+    extra_variables_to_print_dict = {}
+    extra_variables_to_print_dict['s2'] = ['gamma', 'R', 'Ht', 'h']
+    extra_variables_to_print_dict[freestream_state_name] = ['gamma', 'R', 'unit_Re']
+    extra_variables_to_print_dict['s10e'] = ['unit_Re']
+
+    for state_name in states_to_print_list:
+
+        state_name_without_the_s = state_name[1:]
+
+        if state_name in extra_variables_to_print_dict:
+            variables_to_print_list = generic_variables_to_print_list + extra_variables_to_print_dict[state_name]
+        else:
+            variables_to_print_list = generic_variables_to_print_list
+
+        if 'unit_Re' in variables_to_print_list:
+            add_trans_coeffs_and_unit_Re = True
+        else:
+            add_trans_coeffs_and_unit_Re = False
+
+        if states_dict:
+            facility_state = states_dict[state_name]
+            facilty_state_dictionary_output = facility_state.get_dictionary_output(add_trans_coeffs_and_unit_Re=add_trans_coeffs_and_unit_Re)
+
+        else:
+            facilty_state_dictionary_output = json_output_states_dict[state_name]
+
+        for variable in variables_to_print_list:
+            if state_name not in ['sd2', 'sd3']:
+                variable_name = f"{variable}{state_name_without_the_s}"
+            else:
+                variable_name = f"{variable}{state_name}"
+
+            title_list.append(variable_name)
+            value_list.append(facilty_state_dictionary_output[variable])
+
+    # finally, we output the composition of selected states...
+
+    states_to_print_composition_list = ['s2']
+
+    if facility_type == 'expansion_tube':
+        states_to_print_composition_list += ['s7']
+
+    if nozzle_flag:
+        states_to_print_composition_list += ['s8']
+
+    states_to_print_composition_list += ['s10e']
+
+    # now get the composition we want to do:
+
+    outputUnits = config_data['outputUnits']
+
+    for state_name in states_to_print_composition_list:
+
+        if states_dict:
+            facility_state = states_dict[state_name]
+            facilty_state_dictionary_output = facility_state.get_dictionary_output()
+
+            gmodel_type = facility_state.get_gas_state_gmodel_type()
+
+        else:
+            facilty_state_dictionary_output = json_output_states_dict[state_name]
+
+            gmodel_type = facilty_state_dictionary_output['gmodel_type']
+
+        if gmodel_type == 'CEAGas':
+
+            if outputUnits == 'moles':
+                composition = facilty_state_dictionary_output['composition_moles']
+                composition_type_variable = 'X'
+
+            elif outputUnits == 'massf':
+                composition = facilty_state_dictionary_output['composition_massf']
+                composition_type_variable = 'c'
+
+            for species in composition.keys():
+
+                variable_name = f"{state_name} {composition_type_variable}{species}"
+
+                title_list.append(variable_name)
+                value_list.append(composition[species])
+
+    # now we output the results to a file
+
+    title_line = ''
+
+    for variable_name in title_list:
+        if variable_name != title_list[-1]:
+            title_line += f'{variable_name},'
+        else:
+            title_line += f'{variable_name}'
+
+    result_line = ''
+
+    for value in value_list:
+        if value != value_list[-1]:
+            result_line += f'{value},'
+        else:
+            result_line += f'{value}'
+
+    if output_to_file:
+
+        output_filename = config_data['output_filename'] + '_one_line_output.csv'
+
+        with open(output_filename, 'w') as output_file:
+            output_file.write(title_line + '\n')
+            output_file.write(result_line)
+
+    if not return_title_and_result_lists:
+        return title_line, result_line
+    else:
+        return title_line, result_line, title_list, value_list
+
+def pitot3_remote_run_creator(config_dict, run_folder, pitot_3_input_file_filename):
+    """
+    Function to make a folder with a given name and put a PITOT3 input file in it which can be ran later.
+
+    :param config_dict:
+    :param run_folder:
+    :return:
+    """
+
+    import os
+
+    print('-'*60)
+    print(f"Making a folder called {run_folder} and putting a PITOT3.yaml input file called {pitot_3_input_file_filename} in it.")
+    print('-'*60)
+
+    if not os.path.exists(run_folder):
+        os.mkdir(run_folder)
+    else:
+        print("Just a warning that the specified run folder already exists, so it isn't being created now.")
+
+    if pitot_3_input_file_filename[-5:] != '.yaml':
+        pitot_3_input_file_filename += '.yaml'
+
+    pitot3_input_yaml_file_creator(config_dict, run_folder + '/' + pitot_3_input_file_filename)
+
+    return
+
 class Facility(object):
     """
     Class to load in and store test facility information for PITOT3.
@@ -1266,6 +1641,9 @@ class Facility_State(object):
 
         self.gas_state_gmodel = self.gas_state.gmodel
 
+        # we save this here for when we reload the objects and may not have the gasmodel itself handy...
+        self.gas_state_gmodel_typestr = self.gas_state_gmodel.type_str
+
         # we make a no-ions version of the gmodel if needed.
         # (we do this for any CEA gas model with ions
         # as they can fail at low temperatures, and sometimes
@@ -1356,7 +1734,7 @@ class Facility_State(object):
         Return just the type of the gas model's gas state
         """
 
-        return self.gas_state_gmodel.type_str
+        return self.gas_state_gmodel_typestr
 
     def get_v(self):
         """
@@ -1666,7 +2044,13 @@ class Facility_State(object):
         self.calculate_total_enthalpy()
 
         if self.total_enthalpy:
-            self.flight_equivalent_velocity = math.sqrt(2.0 * self.total_enthalpy)
+            try:
+                self.flight_equivalent_velocity = math.sqrt(2.0 * self.total_enthalpy)
+            except Exception as e:
+                print(e)
+                print("Failed to calculate flight equivalent velocity.")
+                print("self.flight_equivalent_velocity will be set to None.")
+                self.flight_equivalent_velocity = None
         else:
             print("Total enthalpy could not be calculated, so the flight equivalent velocity could not be calculated either.")
             print("self.flight_equivalent_velocity will be set to None.")
@@ -1714,10 +2098,54 @@ class Facility_State(object):
         :return:
         """
 
-        if self.get_gas_state_gmodel().type_str == 'CEAGas':
+        if self.get_gas_state_gmodel_type() == 'CEAGas':
+
             return self.get_gas_state().ceaSavedData['Mmass']
         else:
             return self.get_gas_state().molecular_mass
+
+    def get_species_massf_dict(self):
+        """
+        If the gas is a CEAGas, this function will return the CEA mass fractions dictionary.
+
+        :return:
+        """
+
+        if self.get_gas_state_gmodel_type() == 'CEAGas':
+
+            return self.get_gas_state().ceaSavedData['massf']
+
+        else:
+            print("GasModel is not a CEAGas, so this function isn't useful. Will return None.")
+            return None
+
+    def get_species_moles_dict(self):
+        """
+        This is like the function above, but it converts the massf dictionary to mole fractions using the
+        molecular weights of all of the species which we should have in self.species_MW_dict
+
+        :return:
+        """
+
+        if self.get_gas_state_gmodel_type() == 'CEAGas':
+
+            # start by getting the reduced mass fractions
+
+            species_massf_dict = self.get_species_massf_dict()
+
+            species_moles_dict = {}
+
+            gas_total_MW = self.get_molecular_mass()*1000.0 # to get into g/mol
+
+            for species in species_massf_dict:
+                mass_fraction = species_massf_dict[species]
+                species_MW = self.species_MW_dict[species]
+
+                mole_fraction = mass_fraction*(gas_total_MW/species_MW)
+
+                species_moles_dict[species] = mole_fraction
+
+            return species_moles_dict
 
     def get_reduced_species_massf_dict(self):
         """
@@ -1729,9 +2157,9 @@ class Facility_State(object):
 
         """
 
-        if self.get_gas_state_gmodel().type_str == 'CEAGas':
+        if self.get_gas_state_gmodel_type() == 'CEAGas':
             # a fill state will not have many different species, so we should just the species which actually exist
-            species_massf_dict = self.get_gas_state().ceaSavedData['massf']
+            species_massf_dict = self.get_species_massf_dict()
             reduced_species_massf_dict = {}
             for species in species_massf_dict.keys():
                 if species_massf_dict[species] > 0.0:
@@ -1745,31 +2173,40 @@ class Facility_State(object):
 
     def get_reduced_species_moles_dict(self):
         """
-        This is like the function above, but it converts reduct massf dictionary to mole fractions using the molecular weights of
-        all of the species which we should have in self.species_MW_dict
+        This is like the function above, but for mole fractions.
 
         :return:
         """
 
-        if self.get_gas_state_gmodel().type_str == 'CEAGas':
+        if self.get_gas_state_gmodel_type() == 'CEAGas':
 
-            # start by getting the reduced mass fractions
+            # # start by getting the reduced mass fractions
+            #
+            # reduced_species_massf_dict = self.get_reduced_species_massf_dict()
+            #
+            # reduced_species_moles_dict = {}
+            #
+            # gas_total_MW = self.get_molecular_mass()*1000.0 # to get into g/mol
+            #
+            # for species in reduced_species_massf_dict:
+            #     mass_fraction = reduced_species_massf_dict[species]
+            #     species_MW = self.species_MW_dict[species]
+            #
+            #     mole_fraction = mass_fraction*(gas_total_MW/species_MW)
+            #
+            #     reduced_species_moles_dict[species] = mole_fraction
+            #
+            # return reduced_species_moles_dict
 
-            reduced_species_massf_dict = self.get_reduced_species_massf_dict()
+            if self.get_gas_state_gmodel_type() == 'CEAGas':
+                # a fill state will not have many different species, so we should just the species which actually exist
+                species_moles_dict = self.get_species_moles_dict()
+                reduced_species_moles_dict = {}
+                for species in species_moles_dict.keys():
+                    if species_moles_dict[species] > 0.0:
+                        reduced_species_moles_dict[species] = species_moles_dict[species]
 
-            reduced_species_moles_dict = {}
-
-            gas_total_MW = self.get_molecular_mass()*1000.0 # to get into g/mol
-
-            for species in reduced_species_massf_dict:
-                mass_fraction = reduced_species_massf_dict[species]
-                species_MW = self.species_MW_dict[species]
-
-                mole_fraction = mass_fraction*(gas_total_MW/species_MW)
-
-                reduced_species_moles_dict[species] = mole_fraction
-
-            return reduced_species_moles_dict
+                return reduced_species_moles_dict
 
         else:
             print("GasModel is not a CEAGas, so this function isn't useful. Will return None.")
@@ -1883,7 +2320,9 @@ class Facility_State(object):
         """
 
         gas_state = self.get_gas_state()
-        gas_state.update_trans_coeffs()
+
+        if gas_state.mu == 0.0: # this seems to be the default value before it is set. We only set it if needed, as we may be trying to load a pickle object and not want to use CEA again...
+            gas_state.update_trans_coeffs()
 
         return gas_state.mu
 
@@ -1900,6 +2339,52 @@ class Facility_State(object):
         mu = self.get_mu()
 
         return (gas_state.rho*v)/mu
+
+    def get_dictionary_output(self, add_trans_coeffs_and_unit_Re = False):
+        """
+        This function puts everything useful in the state into a dictionary for when we might want to return it in this form...
+
+        do_not_add_transport_coefficients input is used for the state10f state which has bogus transport coefficients...
+
+        :return:
+        """
+
+        state_name = self.state_name
+
+        gas_state = self.get_gas_state()
+
+        gmodel_type = self.get_gas_state_gmodel_type()
+
+        molecular_mass = self.get_molecular_mass()
+
+        v = self.get_v()
+        M = self.get_M()
+
+        Ht = self.get_total_enthalpy()
+        Ue = self.get_flight_equivalent_velocity()
+
+        total_p = self.get_total_pressure()
+        total_T = self.get_total_temperature()
+        pitot_p = self.get_pitot_pressure()
+
+        output_dict = {'state_name':state_name, 'gmodel_type':gmodel_type,
+                       'rho':gas_state.rho, 'p':gas_state.p, 'T':gas_state.T, 'a':gas_state.a,
+                       'h':gas_state.enthalpy, 'u':gas_state.u, 's':gas_state.entropy,
+                       'gamma':gas_state.gamma, 'R':gas_state.R, 'Cp':gas_state.Cp, 'molecular_mass':molecular_mass,
+                       'v':v, 'M':M, 'Ht':Ht, 'Ue':Ue, 'total_p':total_p, 'total_T':total_T, 'pitot_p':pitot_p}
+
+        if add_trans_coeffs_and_unit_Re:
+            output_dict['unit_Re'] = self.get_unit_Reynolds_number()
+            output_dict['k'] = gas_state.k
+            output_dict['mu'] = gas_state.mu
+
+        if gmodel_type == 'CEAGas':
+            output_dict['composition_massf'] = self.get_species_massf_dict()
+
+            if self.outputUnits == 'moles':
+                output_dict['composition_moles'] = self.get_species_moles_dict()
+
+        return output_dict
 
 class Tube(object):
     """
@@ -3321,6 +3806,9 @@ def pitot3_results_output(config_data, gas_path, object_dict):
                 print(f"vr-{tube_name_reduced} = {vr:.2f} m/s, Mr-{vr} = {Mr:.2f}",
                       file=output_stream)
 
+        #---------------------------------------------------------------------------------------------------------------
+        # doing the main output below...
+
         key = "{0:6}{1:10}{2:8}{3:6}{4:8}{5:6}{6:9}{7:8}{8:7}{9:7}{10:5}".format("state", "p", "T", "a", "v", "M",
                                                                                  "rho", "pitot_p", "stgn_p", "Ht", "h")
         print(key, file=output_stream)
@@ -3340,6 +3828,7 @@ def pitot3_results_output(config_data, gas_path, object_dict):
             output_line = state_output_for_final_output(facility_state)
             print(output_line, file=output_stream)
 
+        #---------------------------------------------------------------------------------------------------------------
         # now do some final extra outputs at the bottom...
         # start by pulling out our freestream and post-shock test section states which we will need later...
         test_section = object_dict['test_section']
@@ -3369,6 +3858,12 @@ def pitot3_results_output(config_data, gas_path, object_dict):
 
                 freestream_flight_equivalent_velocity = nozzle_inlet_state.get_flight_equivalent_velocity()
 
+                # if this works we should set the freestream state Ht and Ue to this value too...
+                # (I will find a way to make this fix up the table output too...
+
+                freestream_state.total_enthalpy = nozzle_inlet_state.get_total_enthalpy()
+                freestream_state.flight_equivalent_velocity = freestream_flight_equivalent_velocity
+
         if freestream_total_temperature:
             print(f"The freestream ({freestream_state.get_state_name()}) total temperature (Tt) is {freestream_total_temperature:.2f} K.",
                   file=output_stream)
@@ -3392,8 +3887,6 @@ def pitot3_results_output(config_data, gas_path, object_dict):
         print(f"Post normal shock equilibrium ({test_section_post_normal_shock_state.get_state_name()}) unit Reynolds number is {test_section_post_normal_shock_state.get_unit_Reynolds_number():.2f} /m (related mu is {test_section_post_normal_shock_state.get_mu():.2e} Pa.s).",
               file=output_stream)
 
-
-
         if freestream_state.get_gas_state().gmodel.type_str == 'CEAGas':
             print(f"Species in the freestream state ({freestream_state.get_state_name()}) at equilibrium (by {freestream_state.outputUnits}):",
                   file=output_stream)
@@ -3404,4 +3897,45 @@ def pitot3_results_output(config_data, gas_path, object_dict):
                   file=output_stream)
             print(test_section.get_post_normal_shock_state().get_reduced_species_moles_dict_for_printing(), file=output_stream)
 
-    return states_list
+    # some extra stuff at the bottom here, we make a states dict so we can return it later on...
+
+    states_dict = {}
+
+    for state in states_list:
+        state_name = state.get_state_name()
+
+        states_dict[state_name] = state
+
+    # and we output a cut down version of the states to a json file...
+
+    pitot3_states_dict_json_output_file_creator(states_dict, config_data['output_filename'] + '.json')
+
+    # and the full result to a pickle...
+
+    dict_of_objects = {'config_data':config_data, 'gas_path':gas_path,
+                       'object_dict':object_dict, 'states_dict':states_dict}
+
+    pitot3_pickle_output_file_creator(dict_of_objects, config_data['output_filename'] + '.pickle')
+
+    # and we output a one line csv of the output too...
+    pitot3_single_line_output_file_creator(config_data, object_dict, states_dict)
+
+    return states_dict
+
+
+def cleanup_function():
+    """Function to clean up temporary files created during the running of the program."""
+
+    import os
+
+    print ("-" * 60)
+    print ("Removing temporary files created during the running of the program.")
+    print ("-" * 60)
+
+    files_to_remove_list = ['thermo.inp', 'thermo.out', 'thermo.lib', 'tmp.inp', 'tmp.out', 'trans.inp', 'trans.out', 'trans.lib']
+
+    for file in files_to_remove_list:
+        if os.path.isfile(file):
+            os.remove(file)
+
+    return

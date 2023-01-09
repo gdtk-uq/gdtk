@@ -6,7 +6,7 @@ Chris James (c.james4@uq.edu.au) - (01/01/21)
 
 """
 
-VERSION_STRING = '30-Nov-2022'
+VERSION_STRING = '09-Jan-2023'
 
 import sys, os, math
 import yaml
@@ -38,11 +38,13 @@ class StrictBoolSafeLoader(Reader, Scanner, Parser, Composer, SafeConstructor, S
 # I have put functions and classes on different lines here as it was getting too long
 # TO DO: the functions could even be put in a functions file...
 from pitot3_utils.pitot3_classes import Facility, Driver, Diaphragm, Facility_State, Tube, Nozzle, Test_Section
-from pitot3_utils.pitot3_classes import eilmer4_CEAGas_input_file_creator, expansion_tube_test_time_calculator, state_output_for_final_output, pitot3_results_output
+from pitot3_utils.pitot3_classes import eilmer4_CEAGas_input_file_creator, expansion_tube_test_time_calculator, \
+    state_output_for_final_output, pitot3_results_output, cleanup_function
 
 #-----------------------------------------------------------------------------------
 
-def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$PITOT3_DATA'):
+def run_pitot3(config_dict = {}, config_filename = None,
+               pitot3_data_folder = '$PITOT3_DATA', default_config_yaml_filename = 'PITOT3_default_config.yaml'):
 
     print('-'*60)
     print (f"Running PITOT3 version: {VERSION_STRING}")
@@ -53,7 +55,6 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
     #--------------------------------------------------------------------------------
     # load the default config which loads everything which runs the program...
 
-    default_config_yaml_filename = 'PITOT3_default_config.yaml'
     default_config_file = open(os.path.expandvars(pitot3_data_folder +  '/' + default_config_yaml_filename))
     default_config_data = yaml.load(default_config_file, Loader=yaml.FullLoader)
 
@@ -608,18 +609,18 @@ def run_pitot3(config_dict = {}, config_filename = None, pitot3_data_folder = '$
     #--------------------------------------------------------------------------------------------
     # now do the final output
 
-    # I am returning the states list here from the output so I can return a states dictionary with the output now...
-    states_list = pitot3_results_output(config_data, gas_path, object_dict)
+    # I am returning the states dict here from the output so I can return a states dictionary with the output now...
+    states_dict = pitot3_results_output(config_data, gas_path, object_dict)
 
-    states_dict = {}
+    # cleanup temporary files before exiting...
 
-    for state in states_list:
-        state_name = state.get_state_name()
+    cleanup_function()
 
-        states_dict[state_name] = state
+    print('-'*60)
+    print("Run finished successfully.")
+    print('-'*60)
 
     return config_data, gas_path, object_dict, states_dict
-
 
 # ----------------------------------------------------------------------------
 
