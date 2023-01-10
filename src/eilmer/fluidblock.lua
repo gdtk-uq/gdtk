@@ -358,7 +358,7 @@ local function connectBlocks(blkA, faceA, blkB, faceB, orientation)
    end
 end -- connectBlocks()
 
-local function identifyBlockConnections(blockList, excludeList, tolerance, only_fluid_solid_boundary_connections)
+local function identifyBlockConnections(blockList, excludeList, tolerance, imported_cht_grid)
    -- Identify block connections by trying to match corner points.
    -- Parameters (all optional):
    -- blockList: the list of SFluidBlock objects to be included in the search.
@@ -368,26 +368,27 @@ local function identifyBlockConnections(blockList, excludeList, tolerance, only_
    -- tolerance: spatial tolerance for the colocation of vertices
    --
    local myBlockList = {}
-   local myBlockListA = {}
-   local myBlockListB = {}
 
    if blockList then
       -- The caller has provided a list of Blocks to bound the search.
       for _,v in ipairs(blockList) do myBlockList[#myBlockList+1] = v end
    else
-      if only_fluid_solid_boundary_connections then
-         -- The caller has requested that we only need to search for connections between fluid/solid blocks
+      if imported_cht_grid then
+         -- The caller has flagged that this is an imported fluid/solid grid,
+         -- so we only need to search for connections between fluid/solid blocks,
+         -- and potentially any solid/solid blocks that don't have a connectivity map
+         -- from GridPro (e.g. if the solid domain consists of several different materials).
          for _,v in ipairs(fluidBlocks) do
             for _,bc in pairs(v.bcList) do
                if bc.type == "wall_adjacent_to_solid" or bc.type == "wall_adjacent_to_solid2" then
-                  myBlockListA[#myBlockListA+1] = v
+                  myBlockList[#myBlockList+1] = v
                end
             end
          end
          for _,v in ipairs(solidBlocks) do
             for _,bc in pairs(v.bcList) do
-               if bc.type == "SolidAdjacentToGas" or bc.type == "SolidAdjacentToGas2" then
-                  myBlockListB[#myBlockListB+1] = v
+               if bc.type == "SolidAdjacentToGas" or bc.type == "SolidAdjacentToGas2" or bc.type == "SolidAdiabatic" then
+                  myBlockList[#myBlockList+1] = v
                end
             end
          end
@@ -404,14 +405,8 @@ local function identifyBlockConnections(blockList, excludeList, tolerance, only_
       if A.grid:get_type() == "unstructured_grid" then excludeList[#excludeList+1] = A end
    end
    tolerance = tolerance or 1.0e-6
-   --
-   if not only_fluid_solid_boundary_connections then
-      myBlockListA = myBlockList
-      myBlockListB = myBlockList
-   end
-   --
-   for _,A in ipairs(myBlockListA) do
-      for _,B in ipairs(myBlockListB) do
+   for _,A in ipairs(myBlockList) do
+      for _,B in ipairs(myBlockList) do
 	 if (A ~= B) and (not isPairInList({A, B}, excludeList)) then
 	    -- print("Proceed with test for coincident vertices.") -- DEBUG
 	    local connectionCount = 0
