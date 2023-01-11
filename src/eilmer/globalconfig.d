@@ -751,6 +751,7 @@ struct SteadyStateSolverOptions {
     int startPreconditioning = 1;
     int iluFill = 0;
     PreconditionMatrixType preconditionMatrixType = PreconditionMatrixType.jacobi;
+    FluxCalculator preconditionMatrixFluxCalculator = FluxCalculator.adaptive_hanel_ausmdv;
     double preconditionerSigma = 1.0e-30;
     bool frozenLimiterOnLHS = false;
     bool useAdaptivePreconditioner = false;
@@ -2418,6 +2419,18 @@ void read_control_file()
         } catch (Exception e) {
             ssso.preconditionMatrixType = mySaveValue1;
         }
+        auto mySaveValue2 = ssso.preconditionMatrixFluxCalculator;
+        try {
+            string name = sssOptions["precondition_matrix_flux_calculator"].str;
+            // if the user hasn't specified a specific flux calculator for the precondition matrix then we will just set it to the main flux calculator
+            if ( name == "same as config.flux_calculator" ) {
+                ssso.preconditionMatrixFluxCalculator = cfg.flux_calculator;
+            } else {
+                ssso.preconditionMatrixFluxCalculator = flux_calculator_from_name(name);
+            }
+        } catch (Exception e) {
+            ssso.preconditionMatrixFluxCalculator = mySaveValue2;
+        }
         ssso.preconditionerSigma = getJSONdouble(sssOptions, "preconditioner_sigma", ssso.preconditionerSigma);
         ssso.frozenLimiterOnLHS = getJSONbool(sssOptions, "frozen_limiter_on_lhs", ssso.frozenLimiterOnLHS);
         ssso.useAdaptivePreconditioner = getJSONbool(sssOptions, "use_adaptive_preconditioner", ssso.useAdaptivePreconditioner);
@@ -2476,12 +2489,12 @@ void read_control_file()
         ssso.tau1 = getJSONdouble(sssOptions, "tau1", ssso.tau1);
         ssso.sigma1 = getJSONdouble(sssOptions, "sigma1", ssso.sigma1);
         ssso.p1 = getJSONdouble(sssOptions, "p1", ssso.p1);
-        auto mySaveValue2 = ssso.etaStrategy;
+        auto mySaveValue3 = ssso.etaStrategy;
         try {
             string name = sssOptions["eta_strategy"].str;
             ssso.etaStrategy = etaStrategyFromName(name);
         } catch (Exception e) {
-            ssso.etaStrategy = mySaveValue2;
+            ssso.etaStrategy = mySaveValue3;
         }
         ssso.eta1 = getJSONdouble(sssOptions, "eta1", ssso.eta1);
         ssso.eta1_max = getJSONdouble(sssOptions, "eta1_max", ssso.eta1_max);

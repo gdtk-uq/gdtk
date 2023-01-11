@@ -1312,6 +1312,10 @@ public:
         // zero entries
         flowJacobian.local.aa[] = to!number(0.0);
 
+        // temporarily change flux calculator
+        auto flux_calculator_save = myConfig.flux_calculator;
+        myConfig.flux_calculator = myConfig.sssOptions.preconditionMatrixFluxCalculator;
+
         // temporarily change interpolation order
         shared int interpolation_order_save = GlobalConfig.interpolation_order;
         myConfig.interpolation_order = to!int(flowJacobian.spatial_order);
@@ -1339,6 +1343,9 @@ public:
 
         // add boundary condition corrections to boundary cells
         apply_jacobian_bcs();
+
+        // return flux calculator to its original state
+        myConfig.flux_calculator = flux_calculator_save;
 
         // return the interpolation order to its original state
         myConfig.interpolation_order = interpolation_order_save;

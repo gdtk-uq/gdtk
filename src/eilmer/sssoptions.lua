@@ -10,6 +10,7 @@ sssOptionsHidden = { -- hidden from user
    -- preconditioner settings
    use_preconditioner = true,
    precondition_matrix_type = "ilu",
+   precondition_matrix_flux_calculator = "same as config.flux_calculator",
    -- some parameters to help reduce the cost of forming precondition matrix
    frozen_preconditioner_count = 1, -- how often the precondition matrix is updated
    start_preconditioning = 1, -- what iteration to start preconditioning on

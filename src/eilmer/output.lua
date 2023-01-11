@@ -39,6 +39,12 @@ function output.write_control_file(fileName)
    f:write(string.format('   "start_preconditioning": %d,\n', SteadyStateSolver.start_preconditioning))
    f:write(string.format('   "ilu_fill": %d,\n', SteadyStateSolver.ilu_fill))
    f:write(string.format('   "precondition_matrix_type": "%s",\n', SteadyStateSolver.precondition_matrix_type))
+   -- if the user hasn't specified a specific flux calculator for the precondition matrix then we will just set it to the main flux calculator
+   if SteadyStateSolver.precondition_matrix_flux_calculator == "same as config.flux_calculator" then
+      f:write(string.format('   "precondition_matrix_flux_calculator": "%s",\n', config.flux_calculator))
+   else
+      f:write(string.format('   "precondition_matrix_flux_calculator": "%s",\n', SteadyStateSolver.precondition_matrix_flux_calculator))
+   end
    f:write(string.format('   "preconditioner_sigma": %s,\n', tostring(SteadyStateSolver.preconditioner_sigma)))
    f:write(string.format('   "frozen_limiter_on_lhs": %s,\n', tostring(SteadyStateSolver.frozen_limiter_on_lhs)))
    f:write(string.format('   "use_adaptive_preconditioner": %s,\n', tostring(SteadyStateSolver.use_adaptive_preconditioner)))
