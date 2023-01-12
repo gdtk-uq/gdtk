@@ -63,4 +63,206 @@ public:
     abstract Vector3 opCall(double r, double s, double t) const;
     abstract ParametricVolume dup() const;
     abstract override string toString() const;
+    Vector3 dVdr(double r, double s, double t) const 
+    {
+        // Obtain the derivative approximately, via a finite-difference.
+        double dr = 0.001;
+        Vector3 V0 = this.opCall(r,s,t);
+        Vector3 derivative;
+        if (r+dr > 1.0) {
+            // r is close to the r=1.0 boundary, use a one-sided difference.
+            Vector3 Vminus1 = this.opCall(r-dr,s,t);
+            derivative = (V0 - Vminus1)/dr;
+        } else if (r-dr < 0.0) {
+            // r is close to the r=0.0 boundary, use a one-sided difference.
+            Vector3 Vplus1 = this.opCall(r+dr,s,t);
+            derivative = (Vplus1 - V0)/dr;
+        } else {
+            // Not near a boundary, use central-difference.
+            Vector3 Vminus1 = this.opCall(r-dr,s,t);
+            Vector3 Vplus1 = this.opCall(r+dr,s,t);
+            derivative = (Vplus1 - Vminus1) / (2.0*dr);
+        }
+        return derivative;
+    }
+    Vector3 dVds(double r, double s, double t) const 
+    {
+        // Obtain the derivative approximately, via a finite-difference.
+        double ds = 0.001;
+        Vector3 V0 = this.opCall(r,s,t);
+        Vector3 derivative;
+        if (s+ds > 1.0) {
+            // s is close to the s=1.0 boundary, use a one-sided difference.
+            Vector3 Vminus1 = this.opCall(r,s-ds,t);
+            derivative = (V0 - Vminus1)/ds;
+        } else if (s-ds < 0.0) {
+            // s is close to the s=0.0 boundary, use a one-sided difference.
+            Vector3 Vplus1 = this.opCall(r,s+ds,t);
+            derivative = (Vplus1 - V0)/ds;
+        } else {
+            // Not near a boundary, use central-difference.
+            Vector3 Vminus1 = this.opCall(r,s-ds,t);
+            Vector3 Vplus1 = this.opCall(r,s+ds,t);
+            derivative = (Vplus1 - Vminus1) / (2.0*ds);
+        }
+        return derivative;
+    }
+    Vector3 dVdt(double r, double s, double t) const 
+    {
+        // Obtain the derivative approximately, via a finite-difference.
+        double dt = 0.001;
+        Vector3 V0 = this.opCall(r,s,t);
+        Vector3 derivative;
+        if (t+dt > 1.0) {
+            // t is close to the t=1.0 boundary, use a one-sided difference.
+            Vector3 Vminus1 = this.opCall(r,s,t-dt);
+            derivative = (V0 - Vminus1)/dt;
+        } else if (t-dt < 0.0) {
+            // t is close to the t=0.0 boundary, use a one-sided difference.
+            Vector3 Vplus1 = this.opCall(r,s,t+dt);
+            derivative = (Vplus1 - V0)/dt;
+        } else {
+            // Not near a boundary, use central-difference.
+            Vector3 Vminus1 = this.opCall(r,s,t-dt);
+            Vector3 Vplus1 = this.opCall(r,s,t+dt);
+            derivative = (Vplus1 - Vminus1) / (2.0*dt);
+        }
+        return derivative;
+    }
+    Vector3 d2Vdr2(double r, double s, double t) const
+    {
+        // Obtain the derivative approximately, via a finite-difference.
+        double dr = 0.001;
+        Vector3 V0 = this.opCall(r,s,t);
+        Vector3 derivative;
+        if (r+dr > 1.0) {
+            // r is close to the r=1.0 boundary, use a one-sided difference.
+            Vector3 Vminus1 = this.opCall(r-dr,s,t);
+            Vector3 Vminus2 = this.opCall(r-2*dr,s,t);
+            derivative = (V0 - 2*Vminus1 + Vminus2) / (dr*dr);
+        } else if (r-dr < 0.0) {
+            // r is close to the r=0 boundary, use a one-sided difference.
+            Vector3 Vplus1 = this.opCall(r+dr,s,t);
+            Vector3 Vplus2 = this.opCall(r+2*dr,s,t);
+            derivative = (Vplus2 - 2*Vplus1 + V0) / (dr*dr);
+        } else {
+            // Not near a boundary, use central-difference.
+            Vector3 Vminus1 = this.opCall(r-dr,s,t);
+            Vector3 Vplus1 = this.opCall(r+dr,s,t);
+            derivative = (Vplus1 - 2*V0 + Vminus1) / (dr*dr);
+        }
+        return derivative;
+    }
+    Vector3 d2Vds2(double r, double s, double t) const
+    {
+        // Obtain the derivative approximately, via a finite-difference.
+        double ds = 0.001;
+        Vector3 V0 = this.opCall(r,s,t);
+        Vector3 derivative;
+        if (s+ds > 1.0) {
+            // s is close to the s=1.0 boundary, use a one-sided difference.
+            Vector3 Vminus1 = this.opCall(r,s-ds,t);
+            Vector3 Vminus2 = this.opCall(r,s-2*ds,t);
+            derivative = (V0 - 2*Vminus1 + Vminus2) / (ds*ds);
+        } else if (s-ds < 0.0) {
+            // s is close to the s=0 boundary, use a one-sided difference.
+            Vector3 Vplus1 = this.opCall(r,s+ds,t);
+            Vector3 Vplus2 = this.opCall(r,s+2*ds,t);
+            derivative = (Vplus2 - 2*Vplus1 + V0) / (ds*ds);
+        } else {
+            // Not near a boundary, use central-difference.
+            Vector3 Vminus1 = this.opCall(r,s-ds,t);
+            Vector3 Vplus1 = this.opCall(r,s+ds,t);
+            derivative = (Vplus1 - 2*V0 + Vminus1) / (ds*ds);
+        }
+        return derivative;
+    }
+    Vector3 d2Vdt2(double r, double s, double t) const
+    {
+        // Obtain the derivative approximately, via a finite-difference.
+        double dt = 0.001;
+        Vector3 V0 = this.opCall(r,s,t);
+        Vector3 derivative;
+        if (t+dt > 1.0) {
+            // t is close to the t=1.0 boundary, use a one-sided difference.
+            Vector3 Vminus1 = this.opCall(r,s,t-dt);
+            Vector3 Vminus2 = this.opCall(r,s,t-2*dt);
+            derivative = (V0 - 2*Vminus1 + Vminus2) / (dt*dt);
+        } else if (t-dt < 0.0) {
+            // t is close to the t=0 boundary, use a one-sided difference.
+            Vector3 Vplus1 = this.opCall(r,s,t+dt);
+            Vector3 Vplus2 = this.opCall(r,s,t+2*dt);
+            derivative = (Vplus2 - 2*Vplus1 + V0) / (dt*dt);
+        } else {
+            // Not near a boundary, use central-difference.
+            Vector3 Vminus1 = this.opCall(r,s,t-dt);
+            Vector3 Vplus1 = this.opCall(r,s,t+dt);
+            derivative = (Vplus1 - 2*V0 + Vminus1) / (dt*dt);
+        }
+        return derivative;
+    }
+    Vector3 d2Vdrds(double r, double s, double t) const {
+        // Obtain the derivative approximately, via a finite-difference.
+        double dr = 0.001;
+        Vector3 dVds0 = this.dVds(r,s,t);
+        Vector3 derivative;
+        if (r+dr > 1.0) {
+            // r is close to the r=1.0 boundary, use a one-sided difference.
+            Vector3 dVdsminus1 = this.dVds(r-dr,s,t);
+            derivative = (dVds0 - dVdsminus1)/dr;
+        } else if (r-dr < 0.0) {
+            // r is close to the r=0.0 boundary, use a one-sided difference.
+            Vector3 dVdsplus1 = this.dVds(r+dr,s,t);
+            derivative = (dVdsplus1 - dVds0)/dr;
+        } else {
+            // Not near a boundary, use central-difference.
+            Vector3 dVdsminus1 = this.dVds(r-dr,s,t);
+            Vector3 dVdsplus1 = this.dVds(r+dr,s,t);
+            derivative = (dVdsplus1 - dVdsminus1) / (2.0*dr);
+        }
+        return derivative;
+    }
+    Vector3 d2Vdrdt(double r, double s, double t) const {
+        // Obtain the derivative approximately, via a finite-difference.
+        double dr = 0.001;
+        Vector3 dVdt0 = this.dVdt(r,s,t);
+        Vector3 derivative;
+        if (r+dr > 1.0) {
+            // r is close to the r=1.0 boundary, use a one-sided difference.
+            Vector3 dVdtminus1 = this.dVdt(r-dr,s,t);
+            derivative = (dVdt0 - dVdtminus1)/dr;
+        } else if (r-dr < 0.0) {
+            // r is close to the r=0.0 boundary, use a one-sided difference.
+            Vector3 dVdtplus1 = this.dVdt(r+dr,s,t);
+            derivative = (dVdtplus1 - dVdt0)/dr;
+        } else {
+            // Not near a boundary, use central-difference.
+            Vector3 dVdtminus1 = this.dVdt(r-dr,s,t);
+            Vector3 dVdtplus1 = this.dVdt(r+dr,s,t);
+            derivative = (dVdtplus1 - dVdtminus1) / (2.0*dr);
+        }
+        return derivative;
+    }
+    Vector3 d2Vdsdt(double r, double s, double t) const {
+        // Obtain the derivative approximately, via a finite-difference.
+        double ds = 0.001;
+        Vector3 dVdt0 = this.dVdt(r,s,t);
+        Vector3 derivative;
+        if (s+ds > 1.0) {
+            // s is close to the s=1.0 boundary, use a one-sided difference.
+            Vector3 dVdtminus1 = this.dVdt(r,s-ds,t);
+            derivative = (dVdt0 - dVdtminus1)/ds;
+        } else if (s-ds < 0.0) {
+            // s is close to the s=0.0 boundary, use a one-sided difference.
+            Vector3 dVdtplus1 = this.dVdt(r,s+ds,t);
+            derivative = (dVdtplus1 - dVdt0)/ds;
+        } else {
+            // Not near a boundary, use central-difference.
+            Vector3 dVdtminus1 = this.dVdt(r,s-ds,t);
+            Vector3 dVdtplus1 = this.dVdt(r,s+ds,t);
+            derivative = (dVdtplus1 - dVdtminus1) / (2.0*ds);
+        }
+        return derivative;
+    }
+        
 } // end class ParametricVolume

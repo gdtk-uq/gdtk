@@ -124,6 +124,18 @@ public:
     {
         return "NURBSVolume(Pw=" ~ to!string(mPw) ~ ", U=" ~ to!string(mU) ~ ", p=" ~ to!string(m_p) ~ ", V=" ~ to!string(mV) ~ ", q=" ~ to!string(m_q) ~ ", V=" ~ to!string(mW) ~ ", r=" ~ to!string(m_r) ~ ")";
     }
+    double[2] uBounds() {
+        double[2] ubnds = [this.mU[this.m_p], this.mU[$-(this.m_p+1)]];
+        return ubnds;
+    }
+    double[2] vBounds() {
+        double[2] vbnds = [this.mV[this.m_q], this.mV[$-(this.m_q+1)]];
+        return vbnds;
+    }
+    double[2] wBounds() {
+        double[2] wbnds = [this.mW[this.m_r], this.mW[$-(this.m_r+1)]];
+        return wbnds;
+    }
 
 private:
     const double[4][][][] mPw; // array of weighted control points
