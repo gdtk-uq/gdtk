@@ -2057,43 +2057,81 @@ public:
 
         // ifi interior faces
         size_t idx;
-        foreach(j; 0 .. njc){
-            foreach(i; 1 .. niv-1){
-                idx = j*niv + i;
-                faces[idx].fs.mu_t = 0.5*(faces[idx].left_cell.fs.mu_t + faces[idx].right_cell.fs.mu_t);
-                faces[idx].fs.k_t = 0.5*(faces[idx].left_cell.fs.k_t + faces[idx].right_cell.fs.k_t);
+        foreach(k; 0 .. nkc) {
+            foreach(j; 0 .. njc){
+                foreach(i; 1 .. niv-1){
+                    idx = ifi_index(i,j,k);
+                    faces[idx].fs.mu_t = 0.5*(faces[idx].left_cell.fs.mu_t + faces[idx].right_cell.fs.mu_t);
+                    faces[idx].fs.k_t = 0.5*(faces[idx].left_cell.fs.k_t + faces[idx].right_cell.fs.k_t);
+                }
             }
         }
         // ifj interior faces
-        size_t offset = niv*njc;
-        foreach(j; 1 .. njv-1){
-            foreach(i; 0 .. nic){
-                idx = j*nic + i + offset;
-                faces[idx].fs.mu_t = 0.5*(faces[idx].left_cell.fs.mu_t + faces[idx].right_cell.fs.mu_t);
-                faces[idx].fs.k_t = 0.5*(faces[idx].left_cell.fs.k_t + faces[idx].right_cell.fs.k_t);
+        foreach(k; 0 .. nkc) {
+            foreach(j; 1 .. njv-1){
+                foreach(i; 0 .. nic){
+                    idx = ifj_index(i,j,k);
+                    faces[idx].fs.mu_t = 0.5*(faces[idx].left_cell.fs.mu_t + faces[idx].right_cell.fs.mu_t);
+                    faces[idx].fs.k_t = 0.5*(faces[idx].left_cell.fs.k_t + faces[idx].right_cell.fs.k_t);
+                }
+            }
+        }
+
+        // ifk interior faces
+        foreach(k; 1 .. nkv-1) {
+            foreach(j; 0 .. njc){
+                foreach(i; 0 .. nic){
+                    idx = ifk_index(i,j,k);
+                    faces[idx].fs.mu_t = 0.5*(faces[idx].left_cell.fs.mu_t + faces[idx].right_cell.fs.mu_t);
+                    faces[idx].fs.k_t = 0.5*(faces[idx].left_cell.fs.k_t + faces[idx].right_cell.fs.k_t);
+                }
             }
         }
 
         // ifi edge faces
-        foreach(j; 0 .. njc){
-            size_t i = 0;
-            idx = j*niv + i;
-            faces[idx].average_turbulent_transprops();
+        foreach(k; 0 .. nkc){
+            foreach(j; 0 .. njc){
+                size_t i = 0;
+                idx = ifi_index(i,j,k);
+                faces[idx].average_turbulent_transprops();
 
-            i = niv-1;
-            idx = j*niv + i;
-            faces[idx].average_turbulent_transprops();
+                i = niv-1;
+                idx = ifi_index(i,j,k);
+                faces[idx].average_turbulent_transprops();
+            }
         }
+
         // ifj edge faces
-        size_t j = 0;
-        foreach(i; 0 .. nic){
-            idx = j*nic + i + offset;
-            faces[idx].average_turbulent_transprops();
+        foreach(k; 0 .. nkc){
+            size_t j = 0;
+            foreach(i; 0 .. nic){
+                idx = ifj_index(i,j,k);
+                faces[idx].average_turbulent_transprops();
+            }
+            j = njv-1;
+            foreach(i; 0 .. nic){
+                idx = ifj_index(i,j,k);
+                faces[idx].average_turbulent_transprops();
+            }
         }
-        j = njv-1;
-        foreach(i; 0 .. nic){
-            idx = j*nic + i + offset;
-            faces[idx].average_turbulent_transprops();
+
+        // Note that nkc is actually 1 in 2D, so we use nkv>1 to test for skipping
+        if (nkv>1) {
+            // ifk edge faces
+            size_t k = 0;
+            foreach(j; 0 .. njc){
+                foreach(i; 0 .. nic){
+                    idx = ifk_index(i,j,k);
+                    faces[idx].average_turbulent_transprops();
+                }
+            }
+            k = nkv-1;
+            foreach(j; 0 .. njc){
+                foreach(i; 0 .. nic){
+                    idx = ifk_index(i,j,k);
+                    faces[idx].average_turbulent_transprops();
+                }
+            }
         }
     }
 
