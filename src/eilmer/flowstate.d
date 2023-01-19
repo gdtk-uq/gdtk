@@ -65,11 +65,11 @@ public:
     @disable this();
     
     this(GasModel gm,
-         in double p_init,
-         in double T_init,
-         in double[] T_modes_init,
-         in Vector3 vel_init,
-         in double[] turb_init,
+         in double p_init=100e3,
+         in double T_init=300.0,
+         in double[] T_modes_init=[300.0],
+         in Vector3 vel_init=Vector3(0.0,0.0,0.0),
+         in double[] turb_init=[0.0,1.0],
          in double[] massf_init=[1.0,],
          in double quality_init=1.0,
          in Vector3 B_init=Vector3(0.0,0.0,0.0),
@@ -217,6 +217,12 @@ public:
     }
 
     @nogc
+    void copy_values_from(in FlowState* other)
+    {
+        this = *other;
+    }
+
+    @nogc
     void copy_average_values_from(in FlowState fs0, in FlowState fs1, double w0=0.5)
     // Avoids memory allocation, it's all in place.
     {
@@ -234,6 +240,12 @@ public:
         mu_t = w0*fs0.mu_t + w1*fs1.mu_t;
         k_t = w0*fs0.k_t + w1*fs1.k_t;
     } // end copy_average_values_from()
+
+    @nogc
+    void copy_average_values_from(in FlowState* fs0, in FlowState* fs1, double w0=0.5)
+    {
+        copy_average_values_from(*fs0, *fs1, w0);
+    }
 
     void copy_average_values_from(in FlowState*[] others, GasModel gm)
     // Note that we must not send the current object in the others list as well.
@@ -557,7 +569,7 @@ public:
     } // end get_flowstate()
 
     @nogc
-    void adjust_velocity(ref FlowState fs, ref const(Vector3) my_pos)
+    void adjust_velocity(FlowState* fs, ref const(Vector3) my_pos)
     {
         switch (posMatch) {
         case "xyz-to-xyz": /* 3D, do nothing. */ break;

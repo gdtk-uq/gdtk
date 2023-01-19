@@ -66,7 +66,7 @@ void compute_vtx_velocities_for_sf(FBArray fba)
     auto bc = cast(BFE_ConstFlux) blk.bc[Face.west].postConvFluxAction[0];
     if (!bc) { throw new Error("Did not find an appropriate boundary-face effect."); }
     auto nominal_inflow = bc.fstate;
-    auto inflow = bc.fstate.dup(); // Start with a copy that we will partially overwrite.
+    FlowState inflow = bc.fstate.dup(); // Start with a copy that we will partially overwrite.
     SourceFlow sourceFlow;
     if (bc.r > 0.0) {
         if (GlobalConfig.dimensions == 2 && !GlobalConfig.axisymmetric) {
@@ -123,7 +123,7 @@ void compute_vtx_velocities_for_sf(FBArray fba)
                             fba.face_ws[j0+j][k0+k] = wave_speed(inflow, Rght, f.n);
                         } else {
                             // Using the first cell-centre state for R0 is first-order.
-                            fba.face_ws[j0+j][k0+k] = wave_speed(inflow, blk.get_cell(0,j,k).fs, f.n);
+                            fba.face_ws[j0+j][k0+k] = wave_speed(inflow, *(blk.get_cell(0,j,k).fs), f.n);
                         }
                         fba.face_pos[j0+j][k0+k] = f.pos;
                         fba.face_a[j0+j][k0+k] = blk.get_cell(0,j,k).fs.gas.a;
@@ -383,7 +383,7 @@ void compute_vtx_velocities_for_sf(FBArray fba)
 
 
 @nogc
-number wave_speed(const(FlowState) L0, const(FlowState) R0, const(Vector3) n)
+number wave_speed(ref const(FlowState) L0, ref const(FlowState) R0, const(Vector3) n)
 {
     // Compute wave speed at the mid-point of the boundary face
     // using the approach described in Ian Johnston's thesis.

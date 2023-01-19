@@ -523,7 +523,7 @@ public:
         BoundaryCondition bc = blk.bc[which_boundary];
 	int outsign = bc.outsigns[f.i_bndry];
 	FVCell interior_cell = (outsign == 1) ? f.left_cell : f.right_cell;
-	compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, f);
+	compute_outflow_flux(*(interior_cell.fs), outsign, blk.omegaz, f);
     }
 
     @nogc
@@ -537,7 +537,7 @@ public:
         foreach (i, face; bc.faces) {
             int outsign = bc.outsigns[i];
             FVCell interior_cell = (outsign == 1) ? face.left_cell : face.right_cell;
-            compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, face);
+            compute_outflow_flux(*(interior_cell.fs), outsign, blk.omegaz, face);
         }
     }
 
@@ -550,7 +550,7 @@ public:
         BoundaryCondition bc = blk.bc[which_boundary];
 	int outsign = bc.outsigns[f.i_bndry];
 	FVCell interior_cell = (outsign == 1) ? f.left_cells[0] : f.right_cells[0];
-	compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, f);
+	compute_outflow_flux(*(interior_cell.fs), outsign, blk.omegaz, f);
     } // end apply_for_interface_structured_grid()
 
     @nogc
@@ -564,7 +564,7 @@ public:
         foreach (i, f; bc.faces) {
             int outsign = bc.outsigns[i];
             FVCell interior_cell = (outsign == 1) ? f.left_cells[0] : f.right_cells[0];
-            compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, f);
+            compute_outflow_flux(*(interior_cell.fs), outsign, blk.omegaz, f);
         }
     } // end apply_structured_grid()
 

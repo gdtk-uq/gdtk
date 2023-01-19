@@ -1399,7 +1399,7 @@ void scan_values_from_string(FVCell c, string buffer, ref string[] varNameList, 
     if (fixedOrder) {
         scan_cell_data_from_fixed_order_string
             (buffer,
-             new_pos, new_volume, c.fs,
+             new_pos, new_volume, *(c.fs),
              c.Q_rad_org, c.f_rad_org, c.Q_rE_rad,
              c.myConfig.with_local_time_stepping, c.dt_local, c.dt_chem, c.dt_therm,
              c.myConfig.include_quality, c.myConfig.MHD,
@@ -1408,7 +1408,7 @@ void scan_values_from_string(FVCell c, string buffer, ref string[] varNameList, 
     } else {
         scan_cell_data_from_variable_order_string
             (buffer, varNameList, gmodel, c.myConfig.turb_model,
-             new_pos, new_volume, c.fs,
+             new_pos, new_volume, *(c.fs),
              c.Q_rad_org, c.f_rad_org, c.Q_rE_rad,
              c.myConfig.with_local_time_stepping, c.dt_local, c.dt_chem, c.dt_therm,
              c.myConfig.include_quality, c.myConfig.MHD,
@@ -1425,7 +1425,7 @@ void read_values_from_raw_binary(FVCell c, ref File fin, bool overwrite_geometry
 {
     Vector3 new_pos;
     number new_volume;
-    raw_binary_to_cell_data(fin, new_pos, new_volume, c.fs,
+    raw_binary_to_cell_data(fin, new_pos, new_volume, *(c.fs),
                             c.Q_rad_org, c.f_rad_org, c.Q_rE_rad,
                             c.myConfig.with_local_time_stepping, c.dt_local, c.dt_chem, c.dt_therm,
                             c.myConfig.include_quality, c.myConfig.MHD,
@@ -1439,7 +1439,7 @@ void read_values_from_raw_binary(FVCell c, ref File fin, bool overwrite_geometry
 
 string write_values_to_string(const(FVCell) c)
 {
-    return cell_data_as_string(c.pos[0], c.volume[0], c.fs,
+    return cell_data_as_string(c.pos[0], c.volume[0], *(c.fs),
                                c.Q_rad_org, c.f_rad_org, c.Q_rE_rad,
                                c.myConfig.with_local_time_stepping, c.dt_local, c.dt_chem, c.dt_therm,
                                c.myConfig.include_quality, c.myConfig.MHD,
@@ -1449,7 +1449,7 @@ string write_values_to_string(const(FVCell) c)
 
 void write_values_to_raw_binary(const(FVCell) c, ref File fout)
 {
-    cell_data_to_raw_binary(fout, c.pos[0], c.volume[0], c.fs,
+    cell_data_to_raw_binary(fout, c.pos[0], c.volume[0], *(c.fs),
                             c.Q_rad_org, c.f_rad_org, c.Q_rE_rad,
                             c.myConfig.with_local_time_stepping, c.dt_local, c.dt_chem, c.dt_therm,
                             c.myConfig.include_quality, c.myConfig.MHD,

@@ -165,7 +165,8 @@ public:
                 foreach (i; 0 .. this_blk.nicell) {
                     i_dest = i + this_blk.imin;
                     myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest+1);
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                    myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
+                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -198,7 +199,8 @@ public:
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     myBC.ifaces ~= this_blk.getIfi(i_dest+1, j_dest);
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                    myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
+                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -231,7 +233,8 @@ public:
                 foreach (i; 0 .. this_blk.nicell) {
                     i_dest = i + this_blk.imin;
                     myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest);
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig); //other_blk.myConfig, false, this_blk.id);
+                    myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
+                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -264,7 +267,8 @@ public:
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     myBC.ifaces ~= this_blk.getIfi(i_dest, j_dest);
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                    myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
+                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -306,7 +310,8 @@ public:
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest+1, k_dest);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                        myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -379,7 +384,8 @@ public:
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfi(i_dest+1, j_dest, k_dest);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                        myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -452,7 +458,8 @@ public:
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest, k_dest);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                        myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -525,7 +532,8 @@ public:
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfi(i_dest, j_dest, k_dest);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                        myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -598,7 +606,8 @@ public:
                     foreach (i; 0 .. this_blk.nicell) {
                         i_dest = i + this_blk.imin;
                         myBC.ifaces ~= this_blk.getIfk(i_dest, j_dest, k_dest+1);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                        myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -671,7 +680,8 @@ public:
                     foreach (i; 0 .. this_blk.nicell) {
                         i_dest = i + this_blk.imin;
                         myBC.ifaces ~= this_blk.getIfk(i_dest, j_dest, k_dest);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                        myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:

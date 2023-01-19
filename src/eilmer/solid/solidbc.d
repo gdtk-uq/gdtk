@@ -63,6 +63,7 @@ public:
     SolidGhostCellEffect[] preSpatialDerivActionAtBndryCells;
     SolidBoundaryInterfaceEffect[] preSpatialDerivActionAtBndryFaces;
     SolidBoundaryFluxEffect[] postFluxAction;
+    FVCellData celldata;
     FVCell[] gasCells;
     SolidFVCell[] solidCells;
     SolidFVInterface[] ifaces;

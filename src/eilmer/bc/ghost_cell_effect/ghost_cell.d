@@ -43,6 +43,12 @@ void reflect_normal_velocity(ref FlowState fs, in FVInterface IFace)
 }
 
 @nogc
+void reflect_normal_velocity(FlowState* fs, in FVInterface IFace)
+{
+    reflect_normal_velocity(*fs, IFace);
+}
+
+@nogc
 void reverse_tangential_velocity(ref FlowState fs, in FVInterface IFace)
 // Reverses the tangential velocity with respect to the supplied interface.
 //
@@ -56,6 +62,12 @@ void reverse_tangential_velocity(ref FlowState fs, in FVInterface IFace)
     fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
 }
 
+//@nogc
+//void reverse_tangential_velocity(FlowState* fs, in FVInterface IFace)
+//{
+//    reverse_tangential_velocity(*fs, IFace);
+//}
+
 @nogc
 void reflect_normal_magnetic_field(ref FlowState fs, in FVInterface IFace)
 {
@@ -68,6 +80,12 @@ void reflect_normal_magnetic_field(ref FlowState fs, in FVInterface IFace)
                 fs.psi = fs.psi + GlobalConfig.c_h * (fs.B.x - fs.B.x);
         }*/
     }
+}
+
+@nogc
+void reflect_normal_magnetic_field(FlowState* fs, in FVInterface IFace)
+{
+    reflect_normal_magnetic_field(*fs, IFace);
 }
 
 GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)

@@ -58,6 +58,10 @@ string avg_over_iface_list(string quantity, string result)
     return code;
 }
 
+struct FVCellData{
+    FlowState[] flowstates;
+}
+
 class FVCell {
 public:
     int id;  // allows us to work out where, in the block, the cell is
@@ -106,7 +110,7 @@ public:
     bool contains_flow_data;
     bool is_interior_to_domain; // true if the cell is interior to the flow domain
     bool allow_k_omega_update = true; // turbulent wall functions may turn this off
-    FlowState fs; // Flow properties
+    FlowState* fs; // Flow properties
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
     ConservedQuantities[] dUdt; // Time derivatives for the update stages.
     ConservedQuantities Q; // source (or production) terms
@@ -190,7 +194,7 @@ public:
 public:
     @disable this();
 
-    this(LocalConfig myConfig, bool allocate_spatial_deriv_lsq_workspace=false, int id_init=-1)
+    this(LocalConfig myConfig, FlowState* fs, bool allocate_spatial_deriv_lsq_workspace=false, int id_init=-1)
     {
         this.myConfig = myConfig;
         id = id_init;
@@ -203,14 +207,7 @@ public:
         GasModel gmodel = cast(GasModel) myConfig.gmodel;
         if (gmodel is null) { gmodel = GlobalConfig.gmodel_master; }
 
-        int n_species = myConfig.n_species;
-        int n_modes = myConfig.n_modes;
-        double T = 300.0;
-        double[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= 300.0; }
-        double[] turb_init;
-        foreach(i; 0 .. myConfig.turb_model.nturb)
-            turb_init ~= myConfig.turb_model.turb_limits(i).re;
-        fs = FlowState(gmodel, 100.0e3, T, T_modes, Vector3(0.0,0.0,0.0), turb_init);
+        this.fs = fs;
         size_t ncq = myConfig.cqi.n; // number of conserved quantities
         foreach(i; 0 .. myConfig.n_flow_time_levels) {
             U ~= new_ConservedQuantities(ncq);
@@ -269,7 +266,7 @@ public:
         aux_cell_data = AuxCellData.get_aux_cell_data_items(myConfig);
     }
 
-    this(LocalConfig myConfig, in Vector3 pos, in FlowState fs, in number volume, int id_init=-1)
+    this(LocalConfig myConfig, in Vector3 pos, FlowState* fs, in number volume, int id_init=-1)
     // stripped down initialisation
     {
         id = id_init;
@@ -556,7 +553,7 @@ public:
                 foreach(i; 0 .. myConfig.turb_model.nturb){
                     myU[cqi.rhoturb+i] = fs.gas.rho * fs.turb[i];
                 }
-                myU[cqi.totEnergy] += fs.gas.rho * myConfig.turb_model.turbulent_kinetic_energy(fs);
+                myU[cqi.totEnergy] += fs.gas.rho * myConfig.turb_model.turbulent_kinetic_energy(*fs);
             }
         }
         version(MHD) {
@@ -704,7 +701,7 @@ public:
                         fs.turb[i] = myU[cqi.rhoturb+i] * dinv;
                     }
                 }
-                u -= myConfig.turb_model.turbulent_kinetic_energy(fs);
+                u -= myConfig.turb_model.turbulent_kinetic_energy(*fs);
             }
         }
         // Remove kinetic energy for bulk flow.
@@ -878,7 +875,7 @@ public:
             // for this gas model thermochemical reactor we need turbulence info
             if (params.length < 1) { throw new Error("params vector too short."); }
             version(turbulence) {
-                params[0]=myConfig.turb_model.turbulent_signal_frequency(fs);
+                params[0]=myConfig.turb_model.turbulent_signal_frequency(*fs);
             } else {
                 throw new Error("FuelAirMix needs komega capability.");
             }
@@ -1034,7 +1031,7 @@ public:
         }
         this.signal_parab = signal - this.signal_hyp; // store parabolic signal for STS
         version(turbulence) {
-            number turbulent_signal = myConfig.turb_model.turbulent_signal_frequency(fs);
+            number turbulent_signal = myConfig.turb_model.turbulent_signal_frequency(*fs);
             turbulent_signal *= myConfig.turbulent_signal_factor;
             signal = fmax(signal, turbulent_signal);
             this.signal_parab = fmax(signal_parab, turbulent_signal);
@@ -1110,8 +1107,8 @@ public:
     void turbulence_viscosity()
     {
         auto gmodel = myConfig.gmodel;
-        fs.mu_t = myConfig.turb_model.turbulent_viscosity(fs, *grad, pos[0].y, dwall);
-        fs.k_t = myConfig.turb_model.turbulent_conductivity(fs, gmodel);
+        fs.mu_t = myConfig.turb_model.turbulent_viscosity(*fs, *grad, pos[0].y, dwall);
+        fs.k_t = myConfig.turb_model.turbulent_conductivity(*fs, gmodel);
     }
 
     /*
@@ -1209,7 +1206,7 @@ public:
         version(turbulence) {
             if (in_turbulent_zone) {
                 number[] rhoturb = Q[cqi.rhoturb .. cqi.rhoturb+cqi.n_turb];
-                myConfig.turb_model.source_terms(fs, *grad, pos[0].y, dwall, L_min, L_max, rhoturb);
+                myConfig.turb_model.source_terms(*fs, *grad, pos[0].y, dwall, L_min, L_max, rhoturb);
             }
         }
 

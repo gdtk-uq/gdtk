@@ -176,7 +176,7 @@ public:
                     luaL_error(L, errMsg.toStringz);
                 }
             }
-            cells[cell_idx] = new FVCell(myConfig, pos, *myfs, volume, to!int(cell_idx));
+            cells[cell_idx] = new FVCell(myConfig, pos, myfs, volume, to!int(cell_idx));
         }
         block_io = get_fluid_block_io(this);
         if (lua_fs) { lua_settop(L, 0); }
@@ -308,19 +308,29 @@ public:
             new_vtx.pos[0] = v;
             vertices ~= new_vtx;
         }
-        // sync_vertices_from_underlying_grid(0); // redundant, if done just above
+
+        // Allocate densified face and cell data
+        auto gmodel = myConfig.gmodel;
+        size_t nturb =  myConfig.turb_model.nturb;
+
+        foreach (i; 0 .. grid.cells.length) 
+            celldata.flowstates ~= FlowState(gmodel, nturb);
+        foreach (i; 0 .. grid.faces.length)
+            facedata.flowstates ~= FlowState(gmodel, nturb);
+
         bool lsq_workspace_at_faces = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
         foreach (i, f; grid.faces) {
-            auto new_face = new FVInterface(myConfig, IndexDirection.none, lsq_workspace_at_faces, to!int(i));
+            auto new_face = new FVInterface(myConfig, IndexDirection.none, &(facedata.flowstates[i]), lsq_workspace_at_faces, to!int(i));
             faces ~= new_face;
         }
+
         foreach (i, c; grid.cells) {
             // Note that the cell id and the index in the cells array are the same.
             // We will reply upon this connection in other parts of the flow code.
             bool lsq_workspace_at_cells = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
                 && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);
-            auto new_cell = new FVCell(myConfig, lsq_workspace_at_cells, to!int(i));
+            auto new_cell = new FVCell(myConfig, &(celldata.flowstates[i]), lsq_workspace_at_cells, to!int(i));
             new_cell.contains_flow_data = true;
             new_cell.is_interior_to_domain = true;
             cells ~= new_cell;
@@ -404,7 +414,8 @@ public:
 		if (bc[i].ghost_cell_data_available) {
                     // Make ghost-cell id values distinct from FVCell ids so that
                     // the warning/error messages are somewhat informative.
-                    FVCell ghost0 = new FVCell(myConfig, false, ghost_cell_start_id+ghost_cell_count);
+                    celldata.flowstates ~= FlowState(gmodel, nturb);
+                    FVCell ghost0 = new FVCell(myConfig, &(celldata.flowstates[$-1]), false, ghost_cell_start_id+ghost_cell_count);
                     ghost_cell_count++;
                     ghost0.contains_flow_data = bc[i].ghost_cell_data_available;
                     bc[i].ghostcells ~= ghost0;
@@ -475,7 +486,6 @@ public:
         // of cell faces.
         // (Will be used for the convective fluxes).
         auto nmodes = myConfig.n_modes;
-        auto nturb = myConfig.turb_model.nturb;
         if (myConfig.use_extended_stencil) {
             foreach (c; cells) {
                 // First cell in the cloud is the cell itself.  Differences are taken about it.
@@ -580,11 +590,11 @@ public:
                 foreach (c; cells) {
                     // First cell in the cloud is the cell itself.  Differences are taken about it.
                     c.cloud_pos ~= &(c.pos[0]);
-                    c.cloud_fs ~= &(c.fs);
+                    c.cloud_fs ~= c.fs;
                     // Subsequent cells are the surrounding cells.
                     foreach (i, f; c.iface) {
                         c.cloud_pos ~= &(f.pos);
-                        c.cloud_fs ~= &(f.fs);
+                        c.cloud_fs ~= f.fs;
                     } // end foreach face
                 }
                 // We will also need derivative storage in ghostcells because the

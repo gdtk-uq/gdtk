@@ -168,7 +168,7 @@ public:
 
 private:
     @nogc
-    void linearly_extrapolate_flowstate(ref FlowState fs0, ref FlowState fs1, ref FlowState fs2)
+    void linearly_extrapolate_flowstate(FlowState* fs0, FlowState* fs1, FlowState* fs2)
     {
         auto gmodel = blk.myConfig.gmodel;
         // Extrapolate on primitive variables

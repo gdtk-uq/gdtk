@@ -86,6 +86,9 @@ public:
     FVInterface[] faces;
     FVVertex[] vertices;
     BoundaryCondition[] bc; // collection of references to the boundary conditions
+    // Densified core datastructures
+    FVCellData celldata;
+    FVInterfaceData facedata;
 
     // We need to know the number of cells even if the grid is not read
     // for this block in the local process.
@@ -631,7 +634,7 @@ public:
                         auto other_cell = (cell.outsign[i] == 1) ? face.right_cell : face.left_cell;
                         if (other_cell && other_cell.contains_flow_data &&
                             other_cell.fs.check_data(other_cell.pos[gtl], myConfig)) {
-                            neighbour_flows ~= &(other_cell.fs);
+                            neighbour_flows ~= other_cell.fs;
                         }
                     }
                     if (neighbour_flows.length == 0) {
