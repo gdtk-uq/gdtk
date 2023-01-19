@@ -569,7 +569,7 @@ class GasSlug():
 
     __slots__ = 'indx', 'label', \
                 'gas', 'gmodel', 'gmodel_id', \
-                'vel', 'xL', 'xR', \
+                'initial_fs_fun', 'vel', 'xL', 'xR', \
                 'ecL', 'ecR', \
                 'ncells', 'to_end_L', 'to_end_R', 'cluster_strength', \
                 'viscous_effects', 'adiabatic', 'hcells', \
@@ -582,6 +582,7 @@ class GasSlug():
                  T = 300.0,
                  T_modes = [],
                  massf = [1.0,],
+                 initial_fs_fun = None,
                  label="",
                  ncells = 10,
                  to_end_L=False,
@@ -596,6 +597,11 @@ class GasSlug():
 
         Most parameters have default properties so that only the user
         needs to override the ones that they wish to set differently.
+
+        If an initial_fs_fn is supplied, it is expected to be a user-defined function
+        that accepts the x-position (in metres), and it returns a dictionary with
+        appropriate data (p, T, T_modes, massf, vel) for that x-position.
+        See the write_cell_data() function, below, to see what data is expected.
         """
         # Gas data related values
         self.gmodel_id = gmodel_id
@@ -603,16 +609,27 @@ class GasSlug():
         self.gas = GasState(self.gmodel)
         nsp = self.gmodel.n_species
         nmodes = self.gmodel.n_modes
-        self.gas.p = p
-        self.gas.massf = massf
-        self.gas.T = T
-        if len(T_modes) != nmodes:
-            raise Exception("T_modes is inconsistent. gmodel.n_modes=%d T_modes=%s" % (nmodes, T_modes));
-        self.gas.T_modes = T_modes
-        self.gas.update_thermo_from_pT()
-        self.gas.update_sound_speed()
-        self.gas.update_trans_coeffs()
-        self.vel = vel
+        if initial_fs_fun is None:
+            # We assemble a single flow state from the pieces of flowstate data
+            # that are (presumably) present.
+            self.gas.p = p
+            self.gas.massf = massf
+            self.gas.T = T
+            if len(T_modes) != nmodes:
+                raise Exception("T_modes is inconsistent. gmodel.n_modes=%d T_modes=%s"
+                                % (nmodes, T_modes));
+            self.gas.T_modes = T_modes
+            self.gas.update_thermo_from_pT()
+            self.gas.update_sound_speed()
+            self.gas.update_trans_coeffs()
+            self.vel = vel
+            self.initial_fs_fun = None
+        else:
+            # If we have something for initial_fs_fn, we will try to use it.
+            if not callable(initial_fs_fun):
+                raise RuntimeError("Was expecting a callable function for initial_fs_fun.")
+            self.initial_fs_fun = initial_fs_fun
+        #
         self.label = label
         #
         self.ncells = ncells
@@ -705,6 +722,26 @@ class GasSlug():
             xmid = 0.5*(self.ifxs[j+1] + self.ifxs[j])
             d, area, K_over_L, Twall, vf, htcf = tube.eval(xmid)
             volume = area * (self.ifxs[j+1] - self.ifxs[j])
+            #
+            if callable(self.initial_fs_fun):
+                fs = self.initial_fs_fun(xmid)
+                # We assemble a local flow state from the pieces of flow state data.
+                # that are (presumably) present in the returned dictionary.
+                self.gas.p = fs['p']
+                self.gas.massf = fs['massf']
+                self.gas.T = fs['T']
+                if nmodes > 0:
+                    if len(fs['T_modes']) != nmodes:
+                        raise Exception("T_modes is inconsistent. gmodel.n_modes=%d T_modes=%s"
+                                        % (nmodes, fs['T_modes']));
+                    self.gas.T_modes = fs['T_modes']
+                else:
+                    self.gas.T_modes = []
+                self.gas.update_thermo_from_pT()
+                self.gas.update_sound_speed()
+                self.gas.update_trans_coeffs()
+                self.vel = fs['vel']
+            #
             fp.write('%e %e %e %e' % (xmid, volume, self.vel, L_bar))
             fp.write(' %e %e %e %e' % (self.gas.rho, self.gas.p, self.gas.T, self.gas.u))
             fp.write(' %e %e %e' % (self.gas.a, shear_stress, heat_flux))
