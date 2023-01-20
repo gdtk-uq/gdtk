@@ -6,7 +6,7 @@
 # AIAA Scitech 2021 Forum
 # Chris James (c.james4@uq.edu.au) - 07/09/21
 
-driver_condition_name : 'x2-cold-driver-pure-80-pc-He-20-pc-Ar-6.7-MPa'
+driver_condition_name : 'x2-cold-driver-80-pc-He-20-pc-Ar-6.7-MPa'
 driver_condition_type : 'cold-driven-ideal'
 
 driver_gas_model : 'thermally-perfect-preset'

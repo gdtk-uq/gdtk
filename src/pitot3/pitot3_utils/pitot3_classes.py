@@ -1673,7 +1673,7 @@ class Facility_State(object):
 
         self.outputUnits = outputUnits
 
-        if self.outputUnits == 'moles' and not species_MW_dict:
+        if self.get_gas_state_gmodel_type() == 'CEAGas' and self.outputUnits == 'moles' and not species_MW_dict:
             raise Exception("pitot3_classes.Facility_State: Cannot select OutputUnits of 'moles' without providing a species molecular weight dictionary.")
 
         # in the end, doing it this way did not work when I did calculations without ions,
