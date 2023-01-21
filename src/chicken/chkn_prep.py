@@ -679,6 +679,8 @@ class FluidBlock():
         # Check in only those FlowStates associated with boundary conditions.
         for bc in bcs.values():
             if type(bc) is InflowBC:
+                # [TODO] PJ 2023-01-21: check if a flowState is already present in the list
+                # and add it only if not present.
                 bc.fsi = len(flowStatesList)
                 flowStatesList.append(bc.fs)
         #
@@ -784,9 +786,9 @@ class FBArray():
     This class is used to help build a description of the flow domain,
     several FluidBlocks at a time.
     """
-    __slots__ =  'origin', 'nblocks', 'grid', 'initialState', 'bcs', 'label'
+    __slots__ =  'ib0', 'jb0', 'kb0', 'nbi', 'njb', 'nkb', 'grid', 'initialState', 'bcs', 'label'
 
-    def __init__(self, origin={'i':0,'j':0,'k':0}, nblocks={'i':1,'j':1,'k':1},
+    def __init__(self, ib0=0, jb0=0, kb0=0, nib=1, njb=1, nkb=1,
                  grid=None, initialState=None, bcs={}, active=True, label=""):
         """
         A single grid is split into an array of subgrids and
@@ -797,7 +799,7 @@ class FBArray():
         if isinstance(grid, StructuredGrid):
             self.grid = grid
         else:
-            raise RuntimeError('Need to supply a StructuredGrid object.')
+            raise RuntimeError('Need to supply a StructuredGrid object to subdivide.')
         #
         if isinstance(initialState, FlowState):
             self.initialState = initialState
@@ -816,35 +818,19 @@ class FBArray():
             if key in [Face.kminus, 'kminus']: self.bcs['kminus'] = bcs[key]
             if key in [Face.kplus, 'kplus']: self.bcs['kplus'] = bcs[key]
         #
-        for bc in bcs.values(): self.check_in_flowstates_from_bcs(bc)
-        #
-        self.origin = {'i':0, 'j':0, 'k':0}
-        for key in origin.keys():
-            if key in ['I', 'i']: self.origin['i'] = origin[key]
-            if key in ['J', 'j']: self.origin['j'] = origin[key]
-            if key in ['K', 'k']: self.origin['k'] = origin[key]
-        #
-        self.nblocks = {'i':1, 'j':1, 'k':1}
-        for key in nblocks.keys():
-            if key in ['I', 'i']: self.nblocks['i'] = nblocks[key]
-            if key in ['J', 'j']: self.nblocks['j'] = nblocks[key]
-            if key in ['K', 'k']: self.nblocks['k'] = nblocks[key]
-        #
         # For the moment, make a single blocks.
         # [TODO]: split up the grid and make the proper array.
-        i = origin['i']
-        j = origin['j']
-        k = origin['k']
-        newBlock = FluidBlock(i=i, j=j, k=k, grid=self.grid,
+        i = ib0 + 0
+        j = jb0 + 0
+        k = kb0 + 0
+        newGrid = self.grid.subgrid(i0=0, j0=0, k0=0,
+                                    niv=self.grid.niv, njv=self.njv, nkv=self.nkv)
+        newBlock = FluidBlock(i=i, j=j, k=k, grid=newGrid,
                               initialState=self.initialState, bcs=self.bcs,
                               active=self.active,
                               label=self.label+("-%d-%d-%d".format(i, j, k)))
         self.blks.append(newBlock)
 
-    def check_in_flowstates_from_bcs(self, bc):
-        if type(bc) is InflowBC:
-            bc.fsi = len(flowStatesList)
-            flowStatesList.append(bc.fs)
 
 def identifyBlockConnections():
     """

@@ -11,7 +11,6 @@
 #include <stdexcept>
 #include <limits>
 #include "include/bxzstr/bxzstr.hpp"
-#include <zip.h>
 
 #include "number.cu"
 #include "rsla.cu"

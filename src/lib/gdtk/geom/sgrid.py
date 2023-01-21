@@ -45,6 +45,9 @@ class StructuredGrid():
             cf_list = kwargs.get('cf_list', [None, None, None])
             cf_list = [cf if isinstance(cf, ClusterFunction) else LinearFunction() for cf in cf_list]
             self.make_from_pvolume(pvolume, niv, njv, nkv, cf_list)
+        elif "empty" in kwargs.keys():
+            # Sometimes we just want a blank object that we will build up.
+            pass
         elif "gzfile" in kwargs.keys():
             self.read_from_gzip_file(kwargs.get('gzfile'))
         elif "binaryfile" in kwargs.keys():
@@ -107,6 +110,27 @@ class StructuredGrid():
         tdash = cf_list[2](ts)
         self.vertices = pvolume(rdash, sdash, tdash)
         return
+
+    def subgrid(self, i0=0, j0=0, k0=0, niv=1, njv=1, nkv=1):
+        newGrid = StructuredGrid(empty=True)
+        if self.dimensions == 3:
+            newGrid.vertices = self.vertices[i0:i0+niv, j0:j0+njv, k0:k0+nkv].copy()
+        elif self.dimensions == 2:
+            newGrid.vertices = self.vertices[i0:i0+niv, j0:j0+njv].copy()
+        elif self.dimensions == 1:
+            newgrid.vertices = self.vertices[i0:i0+niv].copy()
+        newGrid.niv = niv
+        newGrid.njv = njv
+        newGrid.nkv = nkv
+        if niv==1 and njv==1 and nkv==1:
+            newGrid.dimensions = 0
+        elif njv==1 and nkv==1:
+            newGrid.dimensions = 1
+        elif nkv==1:
+            newGrid.dimensions = 2
+        else:
+            newGrid.dimensions = 3
+        return newGrid
 
     def read_from_gzip_file(self, file_name):
         f = gzip.open(file_name, "rt")
