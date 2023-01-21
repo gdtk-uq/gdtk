@@ -270,10 +270,18 @@ def finite_wave_dp_wrapper(state1, v1, characteristic, p2, state2, gas_flow, ste
     state1_local.p = state1.p
     state1_local.T = state1.T
 
+    # if we're copying a thermally perfect gas, we also need to port over the mass fractions, so we'll do that here...
+    if state1.gmodel.type_str == 'ThermallyPerfectGas':
+        state1_local.massf = state1.massf
+
     state1_local.update_thermo_from_pT()
     state1_local.update_sound_speed()
 
     state2_local = GasState(state1.gmodel)
+
+    # if we're copying a thermally perfect gas, we also need to port over the mass fractions, so we'll do that here...
+    if state1.gmodel.type_str == 'ThermallyPerfectGas':
+        state2_local.massf = state1.massf
 
     # now we loop through all of the pressures
     for pressure in pressure_list:
@@ -357,6 +365,10 @@ def finite_wave_dp_wrapper(state1, v1, characteristic, p2, state2, gas_flow, ste
 
     state2.p = state2_local.p
     state2.T = state2_local.T
+
+    # if we're copying a thermally perfect gas, we also need to port over the mass fractions, so we'll do that here...
+    if state2_local.gmodel.type_str == 'ThermallyPerfectGas':
+        state2.massf = state2_local.massf
 
     state2.update_thermo_from_pT()
     state2.update_sound_speed()
@@ -1162,8 +1174,6 @@ class Driver(object):
 
                 for species in self.driver_speciesList:
                     self.driver_fill_composition_massf[species] = self.driver_fill_composition[species]*(molecular_mass_dict[species]/ total_molecular_mass)
-
-                print(self.driver_fill_composition_massf)
 
                 # TO DO: add making sure that the mass fractions add up to 1...
 
