@@ -47,6 +47,10 @@ class StructuredGrid():
             self.make_from_pvolume(pvolume, niv, njv, nkv, cf_list)
         elif "empty" in kwargs.keys():
             # Sometimes we just want a blank object that we will build up.
+            self.dimensions = None
+            self.vertices = None
+            self.niv = 0; self.njv = 0; self.nkv = 0
+            self.label = ""
             pass
         elif "gzfile" in kwargs.keys():
             self.read_from_gzip_file(kwargs.get('gzfile'))
@@ -112,16 +116,33 @@ class StructuredGrid():
         return
 
     def subgrid(self, i0=0, j0=0, k0=0, niv=1, njv=1, nkv=1):
+        """
+        Returns a copy of a subgrid of vertices.
+        Start at vertex i0,j0,k0 and extend for niv,njv,nkv vertices.
+        """
         newGrid = StructuredGrid(empty=True)
         if self.dimensions == 3:
-            newGrid.vertices = self.vertices[i0:i0+niv, j0:j0+njv, k0:k0+nkv].copy()
+            newXs = self.vertices.x[i0:i0+niv, j0:j0+njv, k0:k0+nkv].copy()
+            newYs = self.vertices.y[i0:i0+niv, j0:j0+njv, k0:k0+nkv].copy()
+            newZs = self.vertices.z[i0:i0+niv, j0:j0+njv, k0:k0+nkv].copy()
+            newGrid.vertices = Vector3(newXs, newYs, newZs)
         elif self.dimensions == 2:
-            newGrid.vertices = self.vertices[i0:i0+niv, j0:j0+njv].copy()
+            newXs = self.vertices.x[i0:i0+niv, j0:j0+njv].copy()
+            newYs = self.vertices.y[i0:i0+niv, j0:j0+njv].copy()
+            newZs = self.vertices.z[i0:i0+niv, j0:j0+njv].copy()
+            newGrid.vertices = Vector3(newXs, newYs, newZs)
         elif self.dimensions == 1:
-            newgrid.vertices = self.vertices[i0:i0+niv].copy()
+            newXs = self.vertices.x[i0:i0+niv].copy()
+            newYs = self.vertices.y[i0:i0+niv].copy()
+            newZs = self.vertices.z[i0:i0+niv].copy()
+            newGrid.vertices = Vector3(newXs, newYs, newZs)
         newGrid.niv = niv
         newGrid.njv = njv
         newGrid.nkv = nkv
+        # [TODO] PJ 2023-01-22, Think about the edge case where the number
+        # of vertices in a dimension is reduced to 1.
+        # The dimensions set below no longer be consistent with the array shape,
+        # that is inherited from the original grid.
         if niv==1 and njv==1 and nkv==1:
             newGrid.dimensions = 0
         elif njv==1 and nkv==1:

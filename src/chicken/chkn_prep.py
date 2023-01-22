@@ -781,66 +781,66 @@ class FluidBlock():
 
 # --------------------------------------------------------------------
 
-class FBArray():
+def makeFBArray(i0=0, j0=0, k0=0, ni=1, nj=1, nk=1,
+                grid=None, initialState=None, bcs={}, active=True, label=""):
     """
     This class is used to help build a description of the flow domain,
     several FluidBlocks at a time.
+    A single grid is split into an array of subgrids and
+    a FluidBlock is constructed for each subgrid.
     """
-    __slots__ =  'ib0', 'jb0', 'kb0', 'nbi', 'njb', 'nkb', 'grid', 'initialState', 'bcs', 'label'
+    global config, fluidBlocksList, flowStatesList
+    #
+    if not isinstance(grid, StructuredGrid):
+        raise RuntimeError('Need to supply a StructuredGrid object to subdivide.')
+    #
+    if not (isinstance(initialState, FlowState) or callable(initialState)):
+        raise RuntimeError('Need to supply a FlowState object or a function for initialState.')
+    #
+    # Boundary conditions
+    # Set default values and then overwrite, if the user has supplied them.
+    _bcs = {}
+    for f in FaceList: _bcs[f] = WallWithSlipBC()
+    for key in bcs.keys():
+        if key in [Face.iminus, 'iminus']: _bcs['iminus'] = bcs[key]
+        if key in [Face.iplus, 'iplus']: _bcs['iplus'] = bcs[key]
+        if key in [Face.jminus, 'jminus']: _bcs['jminus'] = bcs[key]
+        if key in [Face.iplus, 'jplus']: _bcs['jplus'] = bcs[key]
+        if key in [Face.kminus, 'kminus']: _bcs['kminus'] = bcs[key]
+        if key in [Face.kplus, 'kplus']: _bcs['kplus'] = bcs[key]
+    #
+    # Set up an array of FluidBlocks, dividing the overall grid into equal parts
+    # or as close as reasonable.
+    blks = []
+    nic = (grid.niv-1) // ni
+    njc = (grid.njv-1) // nj
+    nkc = (grid.nkv-1) // nk
+    newBCs = {}
+    for k in range(nk):
+        k0v = k * nkc
+        nkv = nkc+1 if k < nk-1 else grid.nkv-k0v
+        newBCs['kminus'] = _bcs['kminus'] if k==0 else ExchangeBC()
+        newBCs['kplus'] = _bcs['kplus'] if k==nk-1 else ExchangeBC()
+        for j in range(nj):
+            j0v = j * njc
+            njv = njc+1 if j < nj-1 else grid.njv-j0v
+            newBCs['jminus'] = _bcs['jminus'] if j==0 else ExchangeBC()
+            newBCs['jplus'] = _bcs['jplus'] if j==nj-1 else ExchangeBC()
+            for i in range(ni):
+                i0v = i * nic
+                niv = nic+1 if k < ni-1 else grid.niv-i0v
+                newBCs['iminus'] = _bcs['iminus'] if i==0 else ExchangeBC()
+                newBCs['iplus'] = _bcs['iplus'] if i==ni-1 else ExchangeBC()
+                newGrid = grid.subgrid(i0=i0v, j0=j0v, k0=k0v, niv=niv, njv=njv, nkv=nkv)
+                newBlock = FluidBlock(i=i0+i, j=j0+j, k=k0+k, grid=newGrid,
+                                      initialState=initialState, bcs=newBCs,
+                                      active=active,
+                                      label=label+("-%d-%d-%d".format(i, j, k)))
+                blks.append(newBlock)
+    return blks
 
-    def __init__(self, ib0=0, jb0=0, kb0=0, nib=1, njb=1, nkb=1,
-                 grid=None, initialState=None, bcs={}, active=True, label=""):
-        """
-        A single grid is split into an array of subgrids and
-        a FluidBlock is constructed for each subgrid.
-        """
-        global config, fluidBlocksList, flowStatesList
-        #
-        if isinstance(grid, StructuredGrid):
-            self.grid = grid
-        else:
-            raise RuntimeError('Need to supply a StructuredGrid object to subdivide.')
-        #
-        if isinstance(initialState, FlowState):
-            self.initialState = initialState
-        else:
-            raise RuntimeError('Need to supply a FlowState object.')
-        #
-        # Boundary conditions
-        # Set default values and then overwrite, if the user has supplied them.
-        self.bcs = {}
-        for f in FaceList: self.bcs[f] = WallWithSlipBC()
-        for key in bcs.keys():
-            if key in [Face.iminus, 'iminus']: self.bcs['iminus'] = bcs[key]
-            if key in [Face.iplus, 'iplus']: self.bcs['iplus'] = bcs[key]
-            if key in [Face.jminus, 'jminus']: self.bcs['jminus'] = bcs[key]
-            if key in [Face.iplus, 'jplus']: self.bcs['jplus'] = bcs[key]
-            if key in [Face.kminus, 'kminus']: self.bcs['kminus'] = bcs[key]
-            if key in [Face.kplus, 'kplus']: self.bcs['kplus'] = bcs[key]
-        #
-        # For the moment, make a single blocks.
-        # [TODO]: split up the grid and make the proper array.
-        i = ib0 + 0
-        j = jb0 + 0
-        k = kb0 + 0
-        newGrid = self.grid.subgrid(i0=0, j0=0, k0=0,
-                                    niv=self.grid.niv, njv=self.njv, nkv=self.nkv)
-        newBlock = FluidBlock(i=i, j=j, k=k, grid=newGrid,
-                              initialState=self.initialState, bcs=self.bcs,
-                              active=self.active,
-                              label=self.label+("-%d-%d-%d".format(i, j, k)))
-        self.blks.append(newBlock)
-
-
-def identifyBlockConnections():
-    """
-    Work through the collection of blocks and connect adjacent blocks in the global array
-    setting the common boundary faces to "exchange".
-    """
-    return
 
 # --------------------------------------------------------------------
-
 
 def write_initial_files(binaryData):
     """
