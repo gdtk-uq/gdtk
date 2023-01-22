@@ -784,10 +784,21 @@ class FluidBlock():
 def makeFBArray(i0=0, j0=0, k0=0, ni=1, nj=1, nk=1,
                 grid=None, initialState=None, bcs={}, active=True, label=""):
     """
-    This class is used to help build a description of the flow domain,
-    several FluidBlocks at a time.
-    A single grid is split into an array of subgrids and
-    a FluidBlock is constructed for each subgrid.
+    Build a description of the flow domain, several FluidBlocks at a time.
+    One grid is split into an array of subgrids and a FluidBlock is constructed
+    for each subgrid.
+
+    Input:
+    i0,j0,k0 : coordinates of the index subgrid in the overall block array
+    ni,nj,nk : number of subgrids
+    grid : StructuredGrid to subdivide
+    initialState : either a FlowState object or a user-defined function to set the
+        flow state throughut the blocks
+    bcs : dictionary of boundary condition objects for the boundaries of the overall grid
+    active : True if the flow is to be computed throughout these blocks
+    label : string label for the block array
+
+    Returns: a list of the constructed FluidBlock objects
     """
     global config, fluidBlocksList, flowStatesList
     #
