@@ -2076,13 +2076,16 @@ public:
     {
         if (!myConfig.turb_model.isTurbulent) return;
 
+        // FIXME: Bring in commit f879aaf4dcb3c304fc429cd66efee119dd47dbdf
         // ifi interior faces
-        size_t idx;
+        size_t idx, l, r;
         foreach(j; 0 .. njc){
             foreach(i; 1 .. niv-1){
                 idx = j*niv + i;
-                faces[idx].fs.mu_t = 0.5*(faces[idx].left_cell.fs.mu_t + faces[idx].right_cell.fs.mu_t);
-                faces[idx].fs.k_t = 0.5*(faces[idx].left_cell.fs.k_t + faces[idx].right_cell.fs.k_t);
+                l = j*niv + (i-1);
+                r = j*niv + i;
+                facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
+                facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
             }
         }
         // ifj interior faces
@@ -2090,8 +2093,10 @@ public:
         foreach(j; 1 .. njv-1){
             foreach(i; 0 .. nic){
                 idx = j*nic + i + offset;
-                faces[idx].fs.mu_t = 0.5*(faces[idx].left_cell.fs.mu_t + faces[idx].right_cell.fs.mu_t);
-                faces[idx].fs.k_t = 0.5*(faces[idx].left_cell.fs.k_t + faces[idx].right_cell.fs.k_t);
+                l = (j-1)*nic + i;
+                r = j*nic + i;
+                facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
+                facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
             }
         }
 
@@ -2229,16 +2234,6 @@ public:
                 compute_interface_flux(*Lft, *Rght, f, myConfig, omegaz);
             }
         }
-        //if (id==1){
-        //    size_t i = 4;
-        //    foreach(j; 0 .. njc){
-        //        FVInterface face = get_ifi(i,j);
-        //        debug{writefln("face %d %s %s ", face.id, face.pos, face.F);}
-        //        debug{writefln("face fs %s ", *(face.fs));}
-        //        debug{writefln("leftcell %d %s ", face.left_cell.id, *(face.left_cell.fs));}
-        //        debug{writefln("rightcell %d %s\n", face.right_cell.id, *(face.right_cell.fs));}
-        //    }
-        //}
         return;
     } // end convective_flux_phase0()
 

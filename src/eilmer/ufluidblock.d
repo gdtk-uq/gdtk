@@ -317,6 +317,7 @@ public:
             celldata.flowstates ~= FlowState(gmodel, nturb);
         foreach (i; 0 .. grid.faces.length)
             facedata.flowstates ~= FlowState(gmodel, nturb);
+        facedata.f2c.length = grid.faces.length;
 
         bool lsq_workspace_at_faces = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
@@ -365,6 +366,7 @@ public:
                         throw new FlowSolverException(msg);
                     } else {
                         my_face.left_cell = c;
+                        facedata.f2c[grid.cells[i].face_id_list[j]].left = i;
                     }
                 } else {
                     if (my_face.right_cell) {
@@ -373,6 +375,7 @@ public:
                         throw new FlowSolverException(msg);
                     } else {
                         my_face.right_cell = c;
+                        facedata.f2c[grid.cells[i].face_id_list[j]].right = i;
                     }
                 }
             }
@@ -733,8 +736,10 @@ public:
         if (!myConfig.turb_model.isTurbulent) return;
 
         foreach(idx; 0 .. ninteriorfaces){
-            faces[idx].fs.mu_t = 0.5*(faces[idx].left_cell.fs.mu_t + faces[idx].right_cell.fs.mu_t);
-            faces[idx].fs.k_t = 0.5*(faces[idx].left_cell.fs.k_t + faces[idx].right_cell.fs.k_t);
+            size_t l = facedata.f2c[idx].left;
+            size_t r = facedata.f2c[idx].right;
+            facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
+            facedata.flowstates[idx].k_t =  0.5*(celldata.flowstates[l].k_t  + celldata.flowstates[r].k_t);
         }
 
         foreach(idx; ninteriorfaces .. nfaces){

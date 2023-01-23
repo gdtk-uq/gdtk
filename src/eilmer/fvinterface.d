@@ -31,8 +31,11 @@ import globalconfig;
 import lsqinterp;
 import mass_diffusion;
 
+struct LR {size_t left,right;}
+
 struct FVInterfaceData{
     FlowState[] flowstates;
+    LR[] f2c;
 }
 
 enum IndexDirection {i=0, j, k, none=666}; // Needed for StructuredGrid interpolation.
