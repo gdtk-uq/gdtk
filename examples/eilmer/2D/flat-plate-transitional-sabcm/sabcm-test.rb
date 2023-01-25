@@ -17,7 +17,8 @@ class TestSABCM < Test::Unit::TestCase
   end
 
   def test_1_run
-    cmd = "e4-nk-shared --job=fp --verbosity=1"
+    #cmd = "e4-nk-shared --job=fp --verbosity=1"
+    cmd = "mpirun -np 8 e4-nk-dist --job=fp --verbosity=1"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     steps = 0

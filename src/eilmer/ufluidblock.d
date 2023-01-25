@@ -687,15 +687,15 @@ public:
             // LSQ weights are used in the calculation of flow gradients for the viscous terms.
             if (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
                 foreach(cell; cells) {
-                    cell.grad.set_up_workspace_leastsq(cell.cloud_pos, cell.pos[gtl], false, *(cell.ws_grad));
+                    cell.grad.set_up_workspace_leastsq(myConfig, cell.cloud_pos, cell.pos[gtl], false, *(cell.ws_grad));
                 }
             } else if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
                 foreach(iface; faces) {
-                    iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, *(iface.ws_grad));
+                    iface.grad.set_up_workspace_leastsq(myConfig, iface.cloud_pos, iface.pos, false, *(iface.ws_grad));
                 }
             } else { // myConfig.spatial_deriv_locn == vertices
                 foreach(vtx; vertices) {
-                    vtx.grad.set_up_workspace_leastsq(vtx.cloud_pos, vtx.pos[gtl], true, *(vtx.ws_grad));
+                    vtx.grad.set_up_workspace_leastsq(myConfig, vtx.cloud_pos, vtx.pos[gtl], true, *(vtx.ws_grad));
                 }
             }
         }
