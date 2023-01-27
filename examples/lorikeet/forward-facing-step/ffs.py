@@ -45,10 +45,10 @@ grd2 = StructuredGrid(psurf=box2, niv=nbc+1, njv=n12+1)
 #
 blk0 = FluidBlock(i=0, j=0, grid=grd0, initialState=inflow,
                   bcs={'iminus':InflowBC(inflow),'jplus':ExchangeBC()})
-blk1 = FluidBlock(i=0, j=1, grid=grd1, initialState=inflow,
+blk1 = makeFBArray(i0=0, j0=1, nj=4, grid=grd1, initialState=inflow,
                   bcs={'iminus':InflowBC(inflow), 'jminus':ExchangeBC(),'iplus':ExchangeBC()})
-blk2 = FluidBlock(i=1, j=1, grid=grd2, initialState=inflow,
-                  bcs={'iminus':ExchangeBC(),'iplus':OutflowBC()})
+blk2 = makeFBArray(i0=1, j0=1, ni=4, nj=4, grid=grd2, initialState=inflow,
+                   bcs={'iminus':ExchangeBC(),'iplus':OutflowBC()})
 #
 # Although the sumulation code can cope with not having a full array of blocks,
 # the StructuredGrid in Paraview cannot tolerate missing pieces.
@@ -57,7 +57,7 @@ blk2 = FluidBlock(i=1, j=1, grid=grd2, initialState=inflow,
 # we can drop it.
 box3 = CoonsPatch(p00=b0, p10=c0, p11=c1, p01=b1)
 grd3 = StructuredGrid(psurf=box3, niv=nbc+1, njv=n01+1)
-blk3 = FluidBlock(i=1, j=0, grid=grd3, initialState=initial, active=False)
+blk3 = makeFBArray(i0=1, j0=0, ni=4, grid=grd3, initialState=initial, active=False)
 #
 config.max_time = 5.0e-3
 config.max_step = 6000

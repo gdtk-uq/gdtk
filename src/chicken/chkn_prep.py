@@ -839,7 +839,7 @@ def makeFBArray(i0=0, j0=0, k0=0, ni=1, nj=1, nk=1,
             newBCs['jplus'] = _bcs['jplus'] if j==nj-1 else ExchangeBC()
             for i in range(ni):
                 i0v = i * nic
-                niv = nic+1 if k < ni-1 else grid.niv-i0v
+                niv = nic+1 if i < ni-1 else grid.niv-i0v
                 newBCs['iminus'] = _bcs['iminus'] if i==0 else ExchangeBC()
                 newBCs['iplus'] = _bcs['iplus'] if i==ni-1 else ExchangeBC()
                 newGrid = grid.subgrid(i0=i0v, j0=j0v, k0=k0v, niv=niv, njv=njv, nkv=nkv)

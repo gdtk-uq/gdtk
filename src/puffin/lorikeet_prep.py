@@ -511,6 +511,69 @@ class FluidBlock():
 
 # --------------------------------------------------------------------
 
+def makeFBArray(i0=0, j0=0, ni=1, nj=1, grid=None, initialState=None, bcs={}, active=True, label=""):
+    """
+    Build a description of the flow domain, several FluidBlocks at a time.
+    One grid is split into an array of subgrids and a FluidBlock is constructed
+    for each subgrid.
+
+    Input:
+    i0,j0 : coordinates of the index subgrid in the overall block array
+    ni,nj : number of subgrids
+    grid : StructuredGrid to subdivide
+    initialState : either a FlowState object or a user-defined function to set the
+        flow state throughut the blocks
+    bcs : dictionary of boundary condition objects for the boundaries of the overall grid
+    active : True if the flow is to be computed throughout these blocks
+    label : string label for the block array
+
+    Returns: a list of the constructed FluidBlock objects
+    """
+    global config, fluidBlocksList
+    #
+    if not isinstance(grid, StructuredGrid):
+        raise RuntimeError('Need to supply a StructuredGrid object to subdivide.')
+    #
+    if not (isinstance(initialState, FlowState) or callable(initialState)):
+        raise RuntimeError('Need to supply a FlowState object or a function for initialState.')
+    #
+    # Boundary conditions
+    # Set default values and then overwrite, if the user has supplied them.
+    _bcs = {}
+    for f in FaceList: _bcs[f] = WallWithSlipBC()
+    for key in bcs.keys():
+        if key in [Face.iminus, 'iminus', 'west']: _bcs['iminus'] = bcs[key]
+        if key in [Face.iplus, 'iplus', 'east']: _bcs['iplus'] = bcs[key]
+        if key in [Face.jminus, 'jminus', 'south']: _bcs['jminus'] = bcs[key]
+        if key in [Face.iplus, 'jplus', 'north']: _bcs['jplus'] = bcs[key]
+    #
+    # Set up an array of FluidBlocks, dividing the overall grid into equal parts
+    # or as close as reasonable.
+    blks = []
+    nic = (grid.niv-1) // ni
+    njc = (grid.njv-1) // nj
+    newBCs = {}
+    for j in range(nj):
+        j0v = j * njc
+        njv = njc+1 if j < nj-1 else grid.njv-j0v
+        newBCs['jminus'] = _bcs['jminus'] if j==0 else ExchangeBC()
+        newBCs['jplus'] = _bcs['jplus'] if j==nj-1 else ExchangeBC()
+        for i in range(ni):
+            i0v = i * nic
+            niv = nic+1 if i < ni-1 else grid.niv-i0v
+            newBCs['iminus'] = _bcs['iminus'] if i==0 else ExchangeBC()
+            newBCs['iplus'] = _bcs['iplus'] if i==ni-1 else ExchangeBC()
+            newGrid = grid.subgrid(i0=i0v, j0=j0v, niv=niv, njv=njv)
+            newBlock = FluidBlock(i=i0+i, j=j0+j, grid=newGrid,
+                                  initialState=initialState, bcs=newBCs,
+                                  active=active,
+                                  label=label+("-%d-%d".format(i, j)))
+            blks.append(newBlock)
+    return blks
+
+
+# --------------------------------------------------------------------
+
 def write_initial_files():
     """
     Writes the files needed for the main simulation code.
