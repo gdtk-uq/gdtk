@@ -119,10 +119,10 @@ private:
     Vector3 deBoor(double u, double v) const {
         // Returns the Cartesian coordinates of a point on a NURBS surface at a given set of parameter values
         // This is algorithm A4.3 from Piegl and Tiller (1997) - 'The NURBS Book'
-        int uspan = FindSpan(u, m_a, m_p, mU);
-        BasisFuns(uspan, u, m_p, mU, mNu, mNws_u);
-        int vspan = FindSpan(v, m_b, m_q, mV);
-        BasisFuns(vspan, v, m_q, mV, mNv, mNws_v);
+        int uspan = findSpan(u, m_a, m_p, mU);
+        basisFuns(uspan, u, m_p, mU, mNu, mNws_u);
+        int vspan = findSpan(v, m_b, m_q, mV);
+        basisFuns(vspan, v, m_q, mV, mNv, mNws_v);
         foreach (l; 0 .. m_q+1) {
             temp[l][] = 0.0;
             foreach (k; 0 .. m_p+1) temp[l][] += mNu[k]*mPw[uspan-m_p+k][vspan-m_q+l][];

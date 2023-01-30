@@ -165,12 +165,12 @@ private:
     
     Vector3 deBoor(double u, double v, double w) const {
         // Returns the Cartesian coordinates of a point on a NURBS volume at a given set of parameter values
-        int uspan = FindSpan(u, m_a, m_p, mU);
-        BasisFuns(uspan, u, m_p, mU, mNu, mNws_u);
-        int vspan = FindSpan(v, m_b, m_q, mV);
-        BasisFuns(vspan, v, m_q, mV, mNv, mNws_v);
-        int wspan = FindSpan(w, m_c, m_r, mW);
-        BasisFuns(wspan, w, m_r, mW, mNw, mNws_w);
+        int uspan = findSpan(u, m_a, m_p, mU);
+        basisFuns(uspan, u, m_p, mU, mNu, mNws_u);
+        int vspan = findSpan(v, m_b, m_q, mV);
+        basisFuns(vspan, v, m_q, mV, mNv, mNws_v);
+        int wspan = findSpan(w, m_c, m_r, mW);
+        basisFuns(wspan, w, m_r, mW, mNw, mNws_w);
         foreach (m; 0 .. m_r+1) {
             foreach (l; 0 .. m_q+1) {
                 temp1[l][m][] = 0.0;

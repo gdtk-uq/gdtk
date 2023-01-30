@@ -87,8 +87,8 @@ private:
     Vector3 deBoor(double u) const {
         // Returns the Cartesian coordinates of a point on a NURBS curve at a given parameter value
         // This is algorithm A4.1 from Piegl and Tiller (1997) - 'The NURBS Book'
-        int span = FindSpan(u, m_a, m_p, mU);
-        BasisFuns(span, u, m_p, mU, mN, mNws);
+        int span = findSpan(u, m_a, m_p, mU);
+        basisFuns(span, u, m_p, mU, mN, mNws);
         mCw[] = 0.0;
         mC[] = 0.0;
         foreach (i; 0 .. m_p+1) mCw[] += mN[i]*mPw[span-m_p+i][];

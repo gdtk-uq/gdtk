@@ -8,8 +8,9 @@ module nurbs_utils;
 
 import std.format;
 import std.conv;
+import std.math;
 
-int FindSpan(double u, int n, int p, const double[] U) {
+int findSpan(double u, int n, int p, const double[] U) {
     // Returns the index of the given knot vector whose value is less than the given parameter
     // This is algorithm A2.1 from Piegl and Tiller (1997) - 'The NURBS Book'
     
@@ -43,7 +44,7 @@ struct NURBSWorkspace {
     }
 }
 
-void BasisFuns(int i, double u, int p, const double[] U, ref double[] N, ref NURBSWorkspace nws) {    
+void basisFuns(int i, double u, int p, const double[] U, ref double[] N, ref NURBSWorkspace nws) {    
     // Fills in N array with all nonvanishing basis function terms
     // This is algorithm A2.2 from Piegl and Tiller (1997) - 'The NURBS Book'
     N[0] = 1.0;
@@ -68,4 +69,83 @@ void PwTest(const double[4][] Pw) {
     }
 }
 
+double[] autoKnotVector(int N, int p) {
+    // creates a knot vector this is clamped, uniform and normalised
+    // ensure number of control points and degree are compatible
+    int a = N - 1;
+    if ((p > a) || (p < 1)) {
+        throw new Error("Number of control points is not compatible with degree (1<=p<=N+1).");
+    }
+    int q = a + p + 1;
+    double[] U;
+    U.length = q + 1;
+    foreach (i; 0 .. q+1) {
+        // clamp start of curve
+        if ((0 <= i) && (i <= p)) {
+            U[i] = 0.0;
+        }
+        // fill internal knots
+        if ((p < i) && (i <= q-p-1)) {
+            U[i] = i - p;
+        }
+        // clamp end of curve
+        if ((q-p-1 < i) && (i <= q)) {
+            U[i] = q - 2*p;
+        }
+    }
+    // normalise knot vector
+    double UMax = U[$-1];
+    foreach (i; 0 .. q+1) {
+        U[i] /= UMax;
+    }
+    return U;
+}
 
+version(nurbs_utils_test) {
+    import util.msg_service;
+    int main() {
+        // example 2.3 from Piegl and Tiller (1997) - 'The NURBS Book'
+        // findSpan test
+        double u = 2.5;
+        double[] U = [0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 5.0, 5.0, 5.0];
+        int m = 11;
+        int p = 2;
+        int n = m - p - 1;
+        int i = findSpan(u, n, p, U);
+        int iExact = 4;
+        assert(isClose(i, iExact), failedUnitTest());
+        
+        // basisFuns test
+        auto nws = NURBSWorkspace(p);
+        double[] N;
+        N.length = p + 1;
+        basisFuns(i, u, p, U, N, nws);
+        double[3] Nexact = [1.0/8.0, 3.0/4.0, 1.0/8.0];
+        assert((N.length == Nexact.length), failedUnitTest());
+        foreach (idx; 0 .. N.length) {
+            assert(isClose(N[idx], Nexact[idx]), failedUnitTest());
+        }
+
+        // single-span autoKnotVector test
+        int p_ss = 3;
+        int N_ss = 4;
+        auto U_ss = autoKnotVector(N_ss, p_ss);
+        double[8] UExact_ss = [0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0];
+        assert((U_ss.length == UExact_ss.length), failedUnitTest());
+        foreach(idx; 0 .. U_ss.length) {
+            assert((isClose(U_ss[idx], UExact_ss[idx])), failedUnitTest());
+        }
+        
+        // multi-span autoKnotVector test
+        int p_ms = 2;
+        int N_ms = 5;
+        auto U_ms = autoKnotVector(N_ms, p_ms);
+        double[8] UExact_ms = [0.0, 0.0, 0.0, 1.0/3.0, 2.0/3.0, 1.0, 1.0, 1.0];
+        assert((U_ms.length == UExact_ms.length), failedUnitTest());
+        foreach(idx; 0 .. U_ms.length) {
+            assert((isClose(U_ms[idx], UExact_ms[idx])), failedUnitTest());
+        }
+        
+        return 0;
+    }
+}

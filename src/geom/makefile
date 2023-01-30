@@ -20,7 +20,7 @@ TEST_PROGRAMS := vector3_test vector3_complex_test \
 	arc_test arc_complex_test \
 	bezier_test bezier_complex_test \
 	helix_test helix_complex_test \
-	nurbs_test \
+	nurbs_utils_test nurbs_test \
 	polyline_test polyline_complex_test \
 	xspline_test \
 	xsplinelsq_test \
@@ -350,6 +350,10 @@ cubepatch_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_servic
 
 cubepatch_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -dip1008 -debug -g -w -version=cubepatch_test -version=complex_numbers \
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
+		
+nurbs_utils_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	$(DMD) -of$@ -dip1008 -debug -g -w -version=$@ \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 
