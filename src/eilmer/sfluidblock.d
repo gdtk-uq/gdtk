@@ -442,7 +442,10 @@ public:
             size_t nifaces = niv*njc*nkc;
             size_t njfaces = nic*njv*nkc;
             size_t nkfaces = nic*njc*nkv;
+            size_t nghost = (2*njc*nkc + 2*nic*nkc)*n_ghost_cell_layers;
+            if (myConfig.dimensions == 3) nghost += 2*nic*njc*n_ghost_cell_layers;
 
+            celldata.flowstates.reserve(nic*njc*nkc + nghost);
             foreach (n; 0 .. nic*njc*nkc) celldata.flowstates ~= FlowState(gmodel, nturb);
 
             foreach (n; 0 .. niv*njc*nkc) facedata.flowstates ~= FlowState(gmodel, nturb);

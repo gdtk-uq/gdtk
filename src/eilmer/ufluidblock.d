@@ -313,6 +313,14 @@ public:
         auto gmodel = myConfig.gmodel;
         size_t nturb =  myConfig.turb_model.nturb;
 
+        size_t nghost = 0;
+        foreach (bndry; grid.boundaries) nghost += bndry.face_id_list.length;
+
+        // It's very important to avoid having the array reallocated once the pointers 
+        // have been handed out to the fvcells. This can happen when calling ~= on the
+        // celldata flowstates, which we do during the creation of the ghost cells
+        // For this reason, we want to reserve sufficient space in the array here.
+        celldata.flowstates.reserve(grid.cells.length + nghost);
         foreach (i; 0 .. grid.cells.length) 
             celldata.flowstates ~= FlowState(gmodel, nturb);
         foreach (i; 0 .. grid.faces.length)
