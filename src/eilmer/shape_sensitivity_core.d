@@ -240,8 +240,12 @@ void initialisation(ref FluidBlock blk, size_t nPrimitive, size_t orderOfJacobia
         }
     }
 
-    blk.cellSave = new FVCell(blk.myConfig);
-    foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, IndexDirection.none, false);
+    blk.fsSave = FlowState(blk.myConfig.gasmodel, blk.myConfig.turb_model.nturb);
+    blk.gradSave = FlowGradients(blk.myConfig);
+    blk.cellSave = new FVCell(blk.myConfig, &(blk.fsSave), &(blk.gradSave));
+    foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.fsP[i] = FlowState(blk.myConfig.gasmodel, blk.myConfig.turb_model.nturb);
+    foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.gradP[i] = FlowGradients(blk.myConfig);
+    foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, IndexDirection.none, &(blk.fsP[i]), &(blk.gradP[i]));
 }
 
 void ghost_cell_connectivity_for_gradients(ref FluidBlock blk) {
@@ -325,6 +329,7 @@ void ghost_cell_connectivity_for_gradients(ref FluidBlock blk) {
 		    foreach(cell; mapped_cell.cell_cloud) {
 			if(!ghost_cell_global_id_list.canFind(cell.global_id) && !interior_cell_global_id_list.canFind(cell.global_id)) {
 			    // make a new cell and copy the neighbour blocks cell information
+                // FIXME: NNG, these cells don't have proper gradients/flowstates
 			    FVCell new_cell = new FVCell(blk.myConfig);
 			    new_cell.copy_values_from(cell, CopyDataOption.all);
 			    new_cell.global_id = cell.global_id;
@@ -571,8 +576,8 @@ void ghost_cell_connectivity_for_gradients(ref FluidBlock blk) {
 			cell.cloud_pos ~= &(iface.pos);
 			cell.cloud_fs ~= iface.fs;
 		    }
-		    cell.grad.set_up_workspace_leastsq(cell.cloud_pos, cell.pos[0], false, cell.ws_grad);
-		    cell.grad.gradients_leastsq(cell.cloud_fs, cell.cloud_pos, cell.ws_grad);
+		    cell.grad.set_up_workspace_leastsq(blk.myConfig, cell.cloud_pos, cell.pos[0], false, cell.ws_grad);
+		    cell.grad.gradients_leastsq(blk.myConfig, cell.cloud_fs, cell.cloud_pos, cell.ws_grad);
 		}
 	    }
 	}
@@ -2059,7 +2064,7 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, ref FVCe
 
         // currently only for least-squares at faces
 	foreach(c; cell_list) {
-            c.grad.gradients_leastsq(c.cloud_fs, c.cloud_pos, c.ws_grad); // blk.flow_property_spatial_derivatives(0);
+            c.grad.gradients_leastsq(blk.myConfig, c.cloud_fs, c.cloud_pos, c.ws_grad); // blk.flow_property_spatial_derivatives(0);
 	}
 
         // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
@@ -4075,10 +4080,12 @@ void sss_preconditioner_initialisation(ref FluidBlock blk, size_t nConservative)
             cell.dPrimitive = new Matrix!number(nConservative, nConservative);
             cell.dConservative = new Matrix!number(nConservative, nConservative);
         }
-        blk.cellSave = new FVCell(blk.myConfig);
-        foreach (i; 0..blk.MAX_PERTURBED_INTERFACES) {
-            blk.ifaceP[i] = new FVInterface(blk.myConfig, IndexDirection.none, false);
-        }
+        blk.fsSave = FlowState(blk.myConfig.gasmodel, blk.myConfig.turb_model.nturb);
+        blk.gradSave = FlowGradients(blk.myConfig);
+        blk.cellSave = new FVCell(blk.myConfig, &(blk.fsSave), &(blk.gradSave));
+        foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.fsP[i] = FlowState(blk.myConfig.gasmodel, blk.myConfig.turb_model.nturb);
+        foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.gradP[i] = FlowGradients(blk.myConfig);
+        foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, IndexDirection.none, &(blk.fsP[i]), &(blk.gradP[i]));
         break;
     case PreconditionMatrixType.ilu:
         // compute size of sparse matrix arrays
@@ -4093,8 +4100,13 @@ void sss_preconditioner_initialisation(ref FluidBlock blk, size_t nConservative)
 	blk.P.aa.length = size;
 	blk.P.ja.length = size;
 	blk.P.ia.length = blk.cells.length*blk.myConfig.cqi.n + 1;
-	blk.cellSave = new FVCell(blk.myConfig);
-        foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, IndexDirection.none, false);
+
+        blk.fsSave = FlowState(blk.myConfig.gasmodel, blk.myConfig.turb_model.nturb);
+        blk.gradSave = FlowGradients(blk.myConfig);
+        blk.cellSave = new FVCell(blk.myConfig, &(blk.fsSave), &(blk.gradSave));
+        foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.fsP[i] = FlowState(blk.myConfig.gasmodel, blk.myConfig.turb_model.nturb);
+        foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.gradP[i] = FlowGradients(blk.myConfig);
+        foreach(i; 0..blk.MAX_PERTURBED_INTERFACES) blk.ifaceP[i] = new FVInterface(blk.myConfig, IndexDirection.none, &(blk.fsP[i]), &(blk.gradP[i]));
         break;
     case PreconditionMatrixType.lu_sgs:
         break;

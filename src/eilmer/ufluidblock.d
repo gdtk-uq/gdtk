@@ -87,6 +87,7 @@ public:
         myConfig = new LocalConfig(-1);
         myConfig.init_gas_model_bits();
         cells.length = ncells; // not defined yet
+
         bool lua_fs = false;
         FlowState* myfs;
         // check where our flowstate is coming from
@@ -176,7 +177,7 @@ public:
                     luaL_error(L, errMsg.toStringz);
                 }
             }
-            cells[cell_idx] = new FVCell(myConfig, pos, myfs, volume, to!int(cell_idx));
+            cells[cell_idx] = new FVCell(myConfig, pos, myfs, null, null, volume, to!int(cell_idx));
         }
         block_io = get_fluid_block_io(this);
         if (lua_fs) { lua_settop(L, 0); }
@@ -312,6 +313,10 @@ public:
         // Allocate densified face and cell data
         auto gmodel = myConfig.gmodel;
         size_t nturb =  myConfig.turb_model.nturb;
+        bool lsq_workspace_at_cells = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
+            && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);
+        bool lsq_workspace_at_faces = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
+            && (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
 
         size_t nghost = 0;
         foreach (bndry; grid.boundaries) nghost += bndry.face_id_list.length;
@@ -321,25 +326,27 @@ public:
         // celldata flowstates, which we do during the creation of the ghost cells
         // For this reason, we want to reserve sufficient space in the array here.
         celldata.flowstates.reserve(grid.cells.length + nghost);
-        foreach (i; 0 .. grid.cells.length) 
-            celldata.flowstates ~= FlowState(gmodel, nturb);
-        foreach (i; 0 .. grid.faces.length)
-            facedata.flowstates ~= FlowState(gmodel, nturb);
-        facedata.f2c.length = grid.faces.length;
+        celldata.gradients.reserve(grid.cells.length + nghost);
+        celldata.workspaces.reserve(grid.cells.length + nghost);
 
-        bool lsq_workspace_at_faces = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
-            && (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
+        foreach (i; 0 .. grid.cells.length) celldata.flowstates ~= FlowState(gmodel, nturb);
+        foreach (i; 0 .. grid.cells.length) celldata.gradients ~= FlowGradients(myConfig);
+        foreach (i; 0 .. grid.cells.length) celldata.workspaces ~= WLSQGradWorkspace(); // TODO: skip if not needed
+
+        facedata.f2c.length = grid.faces.length;
+        foreach (i; 0 .. grid.faces.length) facedata.flowstates ~= FlowState(gmodel, nturb);
+        foreach (i; 0 .. grid.faces.length) facedata.gradients ~= FlowGradients(myConfig);
+        foreach (i; 0 .. grid.faces.length) facedata.workspaces ~= WLSQGradWorkspace();
+
         foreach (i, f; grid.faces) {
-            auto new_face = new FVInterface(myConfig, IndexDirection.none, &(facedata.flowstates[i]), lsq_workspace_at_faces, to!int(i));
+            auto new_face = new FVInterface(myConfig, IndexDirection.none, &(facedata.flowstates[i]), &(facedata.gradients[i]), &(facedata.workspaces[i]), to!int(i));
             faces ~= new_face;
         }
 
         foreach (i, c; grid.cells) {
             // Note that the cell id and the index in the cells array are the same.
             // We will reply upon this connection in other parts of the flow code.
-            bool lsq_workspace_at_cells = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
-                && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);
-            auto new_cell = new FVCell(myConfig, &(celldata.flowstates[i]), lsq_workspace_at_cells, to!int(i));
+            auto new_cell = new FVCell(myConfig, &(celldata.flowstates[i]), &(celldata.gradients[i]), &(celldata.workspaces[i]), to!int(i));
             new_cell.contains_flow_data = true;
             new_cell.is_interior_to_domain = true;
             cells ~= new_cell;
@@ -420,13 +427,15 @@ public:
                 my_face.bc_id = i; // note which boundary this face is on
                 int my_outsign = bndry.outsign_list[j];
                 bc[i].faces ~= my_face;
-		bc[i].outsigns ~= my_outsign;
-		my_face.i_bndry = bc[i].outsigns.length - 1;
-		if (bc[i].ghost_cell_data_available) {
+                bc[i].outsigns ~= my_outsign;
+                my_face.i_bndry = bc[i].outsigns.length - 1;
+                if (bc[i].ghost_cell_data_available) {
                     // Make ghost-cell id values distinct from FVCell ids so that
                     // the warning/error messages are somewhat informative.
                     celldata.flowstates ~= FlowState(gmodel, nturb);
-                    FVCell ghost0 = new FVCell(myConfig, &(celldata.flowstates[$-1]), false, ghost_cell_start_id+ghost_cell_count);
+                    celldata.gradients ~= FlowGradients(myConfig);
+                    celldata.workspaces ~= WLSQGradWorkspace();
+                    FVCell ghost0 = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]), ghost_cell_start_id+ghost_cell_count);
                     ghost_cell_count++;
                     ghost0.contains_flow_data = bc[i].ghost_cell_data_available;
                     bc[i].ghostcells ~= ghost0;

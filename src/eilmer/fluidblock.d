@@ -126,8 +126,12 @@ public:
     version(shape_sensitivity) {
     FlowJacobianT flowJacobian;
     immutable size_t MAX_PERTURBED_INTERFACES = 800;
+    FlowState fsSave;
+    FlowGradients gradSave;
     FVCell cellSave;
     FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
+    FlowState[MAX_PERTURBED_INTERFACES] fsP;
+    FlowGradients[MAX_PERTURBED_INTERFACES] gradP;
     //
     size_t[] local_pcell_global_coord_list;
     size_t[][] local_ecell_global_coord_list;

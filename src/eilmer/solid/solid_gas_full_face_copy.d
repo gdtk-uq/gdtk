@@ -32,6 +32,7 @@ import gas;
 import bc;
 import solid_ghost_cell;
 import solidbc;
+import flowgradients;
 
 // ----------------------------------------------------------------------------------
 // MPI-specific services.
@@ -162,11 +163,16 @@ public:
             switch (which_boundary) {
             case Face.north:
                 j_dest = this_blk.jmax;  // index of the north-most plane of active cells
+                myBC.celldata.flowstates.reserve(this_blk.nicell);
+                myBC.celldata.gradients.reserve(this_blk.nicell);
+                myBC.celldata.workspaces.reserve(this_blk.nicell);
                 foreach (i; 0 .. this_blk.nicell) {
                     i_dest = i + this_blk.imin;
                     myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest+1);
                     myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
+                    myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
+                    myBC.celldata.workspaces ~= WLSQGradWorkspace();
+                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -196,11 +202,16 @@ public:
                 break;
             case Face.east:
                 i_dest = this_blk.imax;  // index of the east-most plane of active cells
+                myBC.celldata.flowstates.reserve(this_blk.njcell);
+                myBC.celldata.gradients.reserve(this_blk.njcell);
+                myBC.celldata.workspaces.reserve(this_blk.njcell);
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     myBC.ifaces ~= this_blk.getIfi(i_dest+1, j_dest);
                     myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
+                    myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
+                    myBC.celldata.workspaces ~= WLSQGradWorkspace();
+                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -230,11 +241,16 @@ public:
                 break;
             case Face.south:
                 j_dest = this_blk.jmin;  // index of the south-most plane of active cells
+                myBC.celldata.flowstates.reserve(this_blk.nicell);
+                myBC.celldata.gradients.reserve(this_blk.nicell);
+                myBC.celldata.workspaces.reserve(this_blk.nicell);
                 foreach (i; 0 .. this_blk.nicell) {
                     i_dest = i + this_blk.imin;
                     myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest);
                     myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
+                    myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
+                    myBC.celldata.workspaces ~= WLSQGradWorkspace();
+                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -264,11 +280,16 @@ public:
                 break;
             case Face.west:
                 i_dest = this_blk.imin;  // index of the west-most plane of active cells
+                myBC.celldata.flowstates.reserve(this_blk.njcell);
+                myBC.celldata.gradients.reserve(this_blk.njcell);
+                myBC.celldata.workspaces.reserve(this_blk.njcell);
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     myBC.ifaces ~= this_blk.getIfi(i_dest, j_dest);
                     myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
+                    myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
+                    myBC.celldata.workspaces ~= WLSQGradWorkspace();
+                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -305,13 +326,18 @@ public:
             final switch (which_boundary) {
             case Face.north:
                 j_dest = this_blk.jmax;  // index of the north-most plane of active cells
+                myBC.celldata.flowstates.reserve(this_blk.nicell*this_blk.nkcell);
+                myBC.celldata.gradients.reserve(this_blk.nicell*this_blk.nkcell);
+                myBC.celldata.workspaces.reserve(this_blk.nicell*this_blk.nkcell);
                 foreach (i; 0 .. this_blk.nicell) {
                     i_dest = i + this_blk.imin;
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest+1, k_dest);
                         myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
+                        myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
+                        myBC.celldata.workspaces ~= WLSQGradWorkspace();
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -379,13 +405,18 @@ public:
                 break;
             case Face.east:
                 i_dest = this_blk.imax;  // index of the east-most plane of active cells
+                myBC.celldata.flowstates.reserve(this_blk.njcell*this_blk.nkcell);
+                myBC.celldata.gradients.reserve(this_blk.njcell*this_blk.nkcell);
+                myBC.celldata.workspaces.reserve(this_blk.njcell*this_blk.nkcell);
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfi(i_dest+1, j_dest, k_dest);
                         myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
+                        myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
+                        myBC.celldata.workspaces ~= WLSQGradWorkspace();
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -453,13 +484,18 @@ public:
                 break;
             case Face.south:
                 j_dest = this_blk.jmin;  // index of the south-most plane of active cells
+                myBC.celldata.flowstates.reserve(this_blk.nicell*this_blk.nkcell);
+                myBC.celldata.gradients.reserve(this_blk.nicell*this_blk.nkcell);
+                myBC.celldata.workspaces.reserve(this_blk.nicell*this_blk.nkcell);
                 foreach (i; 0 .. this_blk.nicell) {
                     i_dest = i + this_blk.imin;
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest, k_dest);
                         myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
+                        myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
+                        myBC.celldata.workspaces ~= WLSQGradWorkspace();
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -527,13 +563,18 @@ public:
                 break;
             case Face.west:
                 i_dest = this_blk.imin;  // index of the west-most plane of active cells
+                myBC.celldata.flowstates.reserve(this_blk.njcell*this_blk.nkcell);
+                myBC.celldata.gradients.reserve(this_blk.njcell*this_blk.nkcell);
+                myBC.celldata.workspaces.reserve(this_blk.njcell*this_blk.nkcell);
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfi(i_dest, j_dest, k_dest);
                         myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
+                        myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
+                        myBC.celldata.workspaces ~= WLSQGradWorkspace();
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -601,13 +642,18 @@ public:
                 break;
             case Face.top:
                 k_dest = this_blk.kmax;  // index of the top-most plane of active cells
+                myBC.celldata.flowstates.reserve(this_blk.njcell*this_blk.nicell);
+                myBC.celldata.gradients.reserve(this_blk.njcell*this_blk.nicell);
+                myBC.celldata.workspaces.reserve(this_blk.njcell*this_blk.nicell);
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     foreach (i; 0 .. this_blk.nicell) {
                         i_dest = i + this_blk.imin;
                         myBC.ifaces ~= this_blk.getIfk(i_dest, j_dest, k_dest+1);
                         myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
+                        myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
+                        myBC.celldata.workspaces ~= WLSQGradWorkspace();
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -675,13 +721,18 @@ public:
                 break;
             case Face.bottom:
                 k_dest = this_blk.kmin;  // index of the bottom-most plane of active cells
+                myBC.celldata.flowstates.reserve(this_blk.njcell*this_blk.nicell);
+                myBC.celldata.gradients.reserve(this_blk.njcell*this_blk.nicell);
+                myBC.celldata.workspaces.reserve(this_blk.njcell*this_blk.nicell);
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     foreach (i; 0 .. this_blk.nicell) {
                         i_dest = i + this_blk.imin;
                         myBC.ifaces ~= this_blk.getIfk(i_dest, j_dest, k_dest);
                         myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]));
+                        myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
+                        myBC.celldata.workspaces ~= WLSQGradWorkspace();
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:

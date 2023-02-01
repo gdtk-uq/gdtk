@@ -201,7 +201,7 @@ public:
                 }
             }
             // make the cell
-            cell = new FVCell(myConfig, pos, myfs, volume, to!int(cell_idx));
+            cell = new FVCell(myConfig, pos, myfs, null, null, volume, to!int(cell_idx));
         }
         block_io = get_fluid_block_io(this);
         if (lua_fs) { lua_settop(L, 0); }
@@ -436,7 +436,7 @@ public:
             && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);
         try {
-            // Allocate dense core data structures
+            // Allocate dense core data structures, 2023 experiment by NNG
             auto gmodel = myConfig.gmodel;
             size_t nturb = myConfig.turb_model.nturb;
             size_t nifaces = niv*njc*nkc;
@@ -446,33 +446,53 @@ public:
             if (myConfig.dimensions == 3) nghost += 2*nic*njc*n_ghost_cell_layers;
 
             celldata.flowstates.reserve(nic*njc*nkc + nghost);
+            celldata.gradients.reserve(nic*njc*nkc + nghost);
+            celldata.workspaces.reserve(nic*njc*nkc + nghost);
             foreach (n; 0 .. nic*njc*nkc) celldata.flowstates ~= FlowState(gmodel, nturb);
+            foreach (n; 0 .. nic*njc*nkc) celldata.gradients ~= FlowGradients(myConfig);
+            foreach (n; 0 .. nic*njc*nkc) celldata.workspaces ~= WLSQGradWorkspace();
 
+            // Face data
             foreach (n; 0 .. niv*njc*nkc) facedata.flowstates ~= FlowState(gmodel, nturb);
             foreach (n; 0 .. nic*njv*nkc) facedata.flowstates ~= FlowState(gmodel, nturb);
             if (myConfig.dimensions == 3) {
                 foreach (n; 0 .. nic*njc*nkv) facedata.flowstates ~= FlowState(gmodel, nturb);
             }
 
+            foreach (n; 0 .. niv*njc*nkc) facedata.gradients ~= FlowGradients(myConfig);
+            foreach (n; 0 .. nic*njv*nkc) facedata.gradients ~= FlowGradients(myConfig);
+            if (myConfig.dimensions == 3) {
+                foreach (n; 0 .. nic*njc*nkv) facedata.gradients ~= FlowGradients(myConfig);
+            }
+
+            // TODO: We want the option to skip allocating these if they aren't needed.
+            //if (lsq_workspace_at_faces) {
+            foreach (n; 0 .. niv*njc*nkc) facedata.workspaces ~= WLSQGradWorkspace();
+            foreach (n; 0 .. nic*njv*nkc) facedata.workspaces ~= WLSQGradWorkspace();
+            if (myConfig.dimensions == 3) {
+                foreach (n; 0 .. nic*njc*nkv) facedata.workspaces ~= WLSQGradWorkspace();
+            }
+            //}
+
             // Create the interior cell, vertex and interface objects for the block.
             foreach (n; 0 .. nic*njc*nkc) {
-                cells ~= new FVCell(myConfig, &(celldata.flowstates[n]),  lsq_workspace_at_cells);
+                cells ~= new FVCell(myConfig, &(celldata.flowstates[n]), &(celldata.gradients[n]), &(celldata.workspaces[n]));
             }
             foreach (n; 0 .. niv*njv*nkv) {
                 vertices ~= new FVVertex(myConfig, lsq_workspace_at_vertices);
             }
             // First, ifi faces.
             foreach (n; 0 .. niv*njc*nkc) {
-                faces ~= new FVInterface(myConfig, IndexDirection.i, &(facedata.flowstates[n]), lsq_workspace_at_faces);
+                faces ~= new FVInterface(myConfig, IndexDirection.i, &(facedata.flowstates[n]), &(facedata.gradients[n]), &(facedata.workspaces[n]));
             }
             // Second, ifj faces.
             foreach (n; 0 .. nic*njv*nkc) {
-                faces ~= new FVInterface(myConfig, IndexDirection.j, &(facedata.flowstates[n+nifaces]), lsq_workspace_at_faces);
+                faces ~= new FVInterface(myConfig, IndexDirection.j, &(facedata.flowstates[n+nifaces]), &(facedata.gradients[n+nifaces]), &(facedata.workspaces[n+nifaces]));
             }
             // Third, maybe, ifk faces.
             if (myConfig.dimensions == 3) {
                 foreach (n; 0 .. nic*njc*nkv) {
-                    faces ~= new FVInterface(myConfig, IndexDirection.k, &(facedata.flowstates[n+nifaces+njfaces]), lsq_workspace_at_faces);
+                    faces ~= new FVInterface(myConfig, IndexDirection.k, &(facedata.flowstates[n+nifaces+njfaces]), &(facedata.gradients[n+nifaces+njfaces]), &(facedata.workspaces[n+nifaces+njfaces]));
                 }
             }
             // Now, construct the ghost cells, attaching them to the boundary faces.
@@ -484,7 +504,9 @@ public:
                         auto f = get_ifj(i, njc, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
                             celldata.flowstates ~= FlowState(gmodel, nturb);
-                            auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), lsq_workspace_at_cells);
+                            celldata.gradients ~= FlowGradients(myConfig);
+                            celldata.workspaces ~= WLSQGradWorkspace();
+                            auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
                             c.id = cell_id; ++cell_id;
                             f.right_cells ~= c;
                         }
@@ -497,7 +519,9 @@ public:
                         auto f = get_ifj(i, 0, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
                             celldata.flowstates ~= FlowState(gmodel, nturb);
-                            auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), lsq_workspace_at_cells);
+                            celldata.gradients ~= FlowGradients(myConfig);
+                            celldata.workspaces ~= WLSQGradWorkspace();
+                            auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
                             c.id = cell_id; ++cell_id;
                             f.left_cells ~= c;
                         }
@@ -510,7 +534,9 @@ public:
                         auto f = get_ifi(nic, j, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
                             celldata.flowstates ~= FlowState(gmodel, nturb);
-                            auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]),  lsq_workspace_at_cells);
+                            celldata.gradients ~= FlowGradients(myConfig);
+                            celldata.workspaces ~= WLSQGradWorkspace();
+                            auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
                             c.id = cell_id; ++cell_id;
                             f.right_cells ~= c;
                         }
@@ -523,7 +549,9 @@ public:
                         auto f = get_ifi(0, j, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
                             celldata.flowstates ~= FlowState(gmodel, nturb);
-                            auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]),  lsq_workspace_at_cells);
+                            celldata.gradients ~= FlowGradients(myConfig);
+                            celldata.workspaces ~= WLSQGradWorkspace();
+                            auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
                             c.id = cell_id; ++cell_id;
                             f.left_cells ~= c;
                         }
@@ -537,7 +565,9 @@ public:
                             auto f = get_ifk(i, j, nkc);
                             foreach (n; 0 .. n_ghost_cell_layers) {
                                 celldata.flowstates ~= FlowState(gmodel, nturb);
-                                auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]),  lsq_workspace_at_cells);
+                                celldata.gradients ~= FlowGradients(myConfig);
+                                celldata.workspaces ~= WLSQGradWorkspace();
+                                auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
                                 c.id = cell_id; ++cell_id;
                                 f.right_cells ~= c;
                             }
@@ -550,7 +580,9 @@ public:
                             auto f = get_ifk(i, j, 0);
                             foreach (n; 0 .. n_ghost_cell_layers) {
                                 celldata.flowstates ~= FlowState(gmodel, nturb);
-                                auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]),  lsq_workspace_at_cells);
+                                celldata.gradients ~= FlowGradients(myConfig);
+                                celldata.workspaces ~= WLSQGradWorkspace();
+                                auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
                                 c.id = cell_id; ++cell_id;
                                 f.left_cells ~= c;
                             }

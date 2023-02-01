@@ -60,6 +60,8 @@ string avg_over_iface_list(string quantity, string result)
 
 struct FVCellData{
     FlowState[] flowstates;
+    FlowGradients[] gradients;
+    WLSQGradWorkspace[] workspaces;
 }
 
 class FVCell {
@@ -194,7 +196,7 @@ public:
 public:
     @disable this();
 
-    this(LocalConfig myConfig, FlowState* fs, bool allocate_spatial_deriv_lsq_workspace=false, int id_init=-1)
+    this(LocalConfig myConfig, FlowState* fs, FlowGradients* grad, WLSQGradWorkspace* ws_grad, int id_init=-1)
     {
         this.myConfig = myConfig;
         id = id_init;
@@ -222,10 +224,8 @@ public:
             dUdt_copy[0] = new_ConservedQuantities(ncq);
             dUdt_copy[1] = new_ConservedQuantities(ncq);
         }
-        grad = new FlowGradients(myConfig);
-        if (allocate_spatial_deriv_lsq_workspace) {
-            ws_grad = new WLSQGradWorkspace();
-        }
+        this.grad = grad;
+        this.ws_grad = ws_grad;
         //
         version(nk_accelerator) {
             grad_save = new FlowGradients(myConfig);
@@ -266,7 +266,7 @@ public:
         aux_cell_data = AuxCellData.get_aux_cell_data_items(myConfig);
     }
 
-    this(LocalConfig myConfig, in Vector3 pos, FlowState* fs, in number volume, int id_init=-1)
+    this(LocalConfig myConfig, in Vector3 pos, FlowState* fs, FlowGradients* grad, WLSQGradWorkspace* ws_grad, in number volume, int id_init=-1)
     // stripped down initialisation
     {
         id = id_init;
@@ -276,6 +276,8 @@ public:
         this.volume.length = 1;
         this.volume[0] = volume;
         this.fs = fs;
+        this.grad = grad;
+        this.ws_grad = ws_grad;
 
         // generate auxiliary data items
         aux_cell_data = AuxCellData.get_aux_cell_data_items(myConfig);

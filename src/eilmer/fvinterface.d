@@ -34,8 +34,10 @@ import mass_diffusion;
 struct LR {size_t left,right;}
 
 struct FVInterfaceData{
-    FlowState[] flowstates;
     LR[] f2c;
+    FlowState[] flowstates;
+    FlowGradients[] gradients;
+    WLSQGradWorkspace[] workspaces;
 }
 
 enum IndexDirection {i=0, j, k, none=666}; // Needed for StructuredGrid interpolation.
@@ -118,7 +120,8 @@ public:
     this(LocalConfig myConfig,
          IndexDirection idir,
          FlowState* fs,
-         bool allocate_spatial_deriv_lsq_workspace,
+         FlowGradients* grad,
+         WLSQGradWorkspace* ws_grad,
          int id_init=-1,
          char dir=' ')
     {
@@ -133,10 +136,8 @@ public:
         this.fs = fs;
         F = new_ConservedQuantities(myConfig.cqi.n);
         F.clear();
-        grad = new FlowGradients(myConfig);
-        if (allocate_spatial_deriv_lsq_workspace) {
-            ws_grad = new WLSQGradWorkspace();
-        }
+        this.grad = grad;
+        this.ws_grad = ws_grad;
         version(multi_species_gas) {
             jx.length = n_species;
             jy.length = n_species;
@@ -161,7 +162,7 @@ public:
         }
     }
 
-    this(FVInterface other, GasModel gm, FlowState* fs) // not const; see note below
+    this(FVInterface other, GasModel gm, FlowState* fs, FlowGradients* grad, WLSQGradWorkspace* ws_grad) // not const; see note below
     {
         id = other.id;
         idir = other.idir;
@@ -185,8 +186,8 @@ public:
         tau_wall_y = other.tau_wall_y;
         tau_wall_z = other.tau_wall_z;
         q = other.q;
-        grad = new FlowGradients(*(other.grad));
-        if (other.ws_grad) ws_grad = new WLSQGradWorkspace(*(other.ws_grad));
+        this.grad = grad;
+        this.ws_grad = ws_grad;
         // Because we copy the following pointers and references,
         // we cannot have const (or "in") qualifier on other.
         cloud_pos = other.cloud_pos.dup();
