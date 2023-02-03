@@ -687,6 +687,30 @@ extern (C) int gas_model_gas_state_molecular_mass(int gm_i, int gs_i, double* re
     }
 }
 
+extern (C) int gas_model_gas_state_binary_diffusion_coefficients(int gm_i, int gs_i, double* dij)
+{
+    try {
+        GasModel gm = gas_models[gm_i];
+        GasState* gs = gas_states[gs_i];
+        size_t nsp = gm.n_species;
+        double[][] D;
+        D.length = nsp;
+        foreach(ref Di; D) Di.length=nsp;
+
+        gm.binary_diffusion_coefficients(*gs, D);
+        foreach (i; 0 .. nsp) {
+            foreach(j; 0 .. nsp) {
+                dij[i*nsp + j] = D[i][j];
+            }
+        }
+        return 0;
+    } catch (Exception e) {
+        stderr.writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+
 extern (C) int gas_model_gas_state_enthalpy_isp(int gm_i, int gs_i, int isp,
                                                 double* result)
 {

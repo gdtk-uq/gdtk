@@ -50,6 +50,7 @@ ffi.cdef("""
     int gas_model_gas_state_enthalpy(int gm_i, int gs_i, double* result);
     int gas_model_gas_state_entropy(int gm_i, int gs_i, double* result);
     int gas_model_gas_state_molecular_mass(int gm_i, int gs_i, double* result);
+    int gas_model_gas_state_binary_diffusion_coefficients(int gm_i, int gs_i, double* dij);
 
     int gas_model_gas_state_enthalpy_isp(int gm_i, int gs_i, int isp, double* result);
     int gas_model_gas_state_entropy_isp(int gm_i, int gs_i, int isp, double* result);
@@ -249,6 +250,13 @@ class GasModel(object):
         flag = so.gas_model_gas_state_molecular_mass(self.id, gstate.id, valuep)
         if flag < 0: raise Exception("could not compute molecular mass.")
         return valuep[0]
+    def binary_diffusion_coefficients(self, gstate):
+        nsp = self.n_species
+        Dij = ffi.new("double[]", [0.0]*nsp*nsp)
+        flag = so.gas_model_gas_state_binary_diffusion_coefficients(self.id, gstate.id, Dij)
+        if flag < 0: raise Exception("could not compute binary diffusion coefficients.")
+        return [[Dij[i*self.n_species + j] for j in range(self.n_species)] for i in range(self.n_species)]
+
 
     def enthalpy_isp(self, gstate, isp):
         valuep = ffi.new("double *")
