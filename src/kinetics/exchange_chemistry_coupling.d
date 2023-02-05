@@ -125,12 +125,49 @@ private:
     }
 }
 
-ExchangeChemistryCoupling createExchangeChemistryCoupling(lua_State *L)
+/* 
+ *  This exchange mechanism should allow a species to be born or destroyed
+ *  without changing the temperature of the species in the absence of
+ *  other exchange mechanisms.
+ */
+class ImpartialChem : ExchangeChemistryCoupling {
+public:
+    this (GasModel gmodel, int mode, int isp){
+        this._isp = isp;
+        this._gmodel = gmodel;
+        this._mode = mode;
+        this._gs_Tr = GasState(gmodel);
+    }
+
+    ExchangeChemistryCoupling dup() {
+        return new ImpartialChem(_gmodel, _isp, _mode);
+    }
+
+    @nogc number Gvanish(in GasState gs){
+        return _gmodel.energyPerSpeciesInMode(gs, _isp, _mode) * _gmodel.mol_masses[_isp];
+    }
+
+    @nogc number Gappear(in GasState gs){
+        _gs_Tr.copy_values_from(gs);
+        _gs_Tr.T_modes[_mode] = gs.T_modes[_mode];
+        return _gmodel.energyPerSpeciesInMode(_gs_Tr, _isp, _mode) * _gmodel.mol_masses[_isp];
+    }
+
+private:
+    GasModel _gmodel;
+    GasState _gs_Tr;
+    int _isp;
+    int _mode;
+}
+
+ExchangeChemistryCoupling createExchangeChemistryCoupling(lua_State *L, GasModel gmodel, int mode, int isp)
 {
     auto model = getString(L, -1, "model");
     switch (model) {
     case "ImpartialDissociation":
         return new ImpartialDissociation(L);
+    case "ImpartialChem":
+        return new ImpartialChem(gmodel, mode, isp);
     default:
         string msg = format("The exchange chemistry coupling model: %s is not known.", model);
         throw new Error(msg);

@@ -29,6 +29,7 @@ import util.lua_service;
 import gas;
 
 
+
 interface RelaxationTime {
     RelaxationTime dup();
     @nogc number eval(in GasState gs, number[] molef, number[] numden);
@@ -212,6 +213,243 @@ protected:
 }
 
 
+/* 
+   Some functions used in SSH theory for V-V and V-T relaxation times
+   These service the SSH relaxation time that follow
+*/
+@nogc number SSH_beta(double sigma, double epsilon, double mu, double delta_E, number T){
+    double tmp_a = 2*epsilon/mu;
+    number tmp_b = 3*Plancks_constant*mu/(PI*PI*sigma*Boltzmann_constant*T*delta_E);
+    return pow(0.5 * pow(tmp_a, 9) * pow(tmp_b, 6), 1./19);
+}
+
+@nogc number SSH_rc_star(number beta, double sigma){
+    number tmp =  pow(2*beta, 1./6.) / (1. + 2./19. * beta);
+    return sigma * tmp;
+}
+
+@nogc number SSH_delta_star(number beta, double sigma) {
+    number tmp_a = 12. / pow(2*beta, 1./6.);
+    number tmp_b = 1. + 21./19. * beta;
+    return tmp_a * tmp_b / sigma;
+}
+
+@nogc number SSH_chi(number alpha_pq, number T){
+    return 0.5 * pow(alpha_pq / T, 1./3.);
+}
+
+@nogc number SSH_alpha(double mu, double delta_E, number delta_star){
+    double num = 16.*pow(PI, 4) * mu * pow(delta_E, 2);
+    number den = delta_star*delta_star * Plancks_constant*Plancks_constant * Boltzmann_constant;
+    return num / den;
+}
+
+@nogc number SSH_A(number rc_star, double sigma){
+    return rc_star * rc_star / (sigma * sigma);
+}
+
+@nogc number SSH_Z_0(number delta_star, double r){
+    number tmp = delta_star * r;
+    return tmp + (5./2)*(1. / (tmp*tmp));
+}
+
+@nogc number SSH_Z_V(double f_m, double mu_pp, double mu_pq, number alpha_pq, 
+        double theta_v, double delta_E, int i)
+{
+    double tmp_a = f_m / ((i+1)*PI*PI);
+    double tmp_b = mu_pp / mu_pq;
+    number tmp_c = alpha_pq / theta_v;
+    double tmp_d = Boltzmann_constant * theta_v / delta_E;
+    return tmp_a * tmp_b * tmp_c * tmp_d * tmp_d;
+}
+
+@nogc number SSH_Z_T(double delta_E, number alpha_pq, number T){
+    double tmp_a = PI*PI * sqrt(3/(2*PI));
+    number tmp_b = delta_E / (Boltzmann_constant * alpha_pq);
+    number tmp_c = T / alpha_pq;
+    number tmp_d = 3./2. * pow(tmp_c, -1./3.) - delta_E / (2*Boltzmann_constant*T);
+    return tmp_a * tmp_b*tmp_b * pow(tmp_c, 1./6.) * exp(tmp_d);
+}
+
+@nogc number SSH_Z_plus (double epsilon, number chi, number T){
+    number kT = Boltzmann_constant * T;
+    number tmp_a = epsilon * chi / (kT);
+    number tmp_b = 16./(3*PI*PI) * epsilon / kT;
+    number tmp_c = -4./PI * sqrt(tmp_a) - tmp_b;
+    return exp(tmp_c);
+}
+
+@nogc number collision_frequency(number n, double sigma, double mu_pq, number T){
+    number tmp = 2 * PI * Boltzmann_constant * T / mu_pq;
+    return 2 * n * sigma * sigma * sqrt(tmp);
+}
+
+/*
+vibration-vibration relaxation time of Schwartz, Slawsky, and Herzfeld
+See section 5.3.3 of Rowan's thesis for details
+
+Robert Watt: Ported Eilmer3 code to Eilmer4 (19/12/22)
+*/
+class SSH_VV : RelaxationTime {
+public:
+    this(lua_State *L, int p, int q){
+        _theta_v_p = getDouble(L, -1, "theta_v_p");
+        _theta_v_q = getDouble(L, -1, "theta_v_q");
+        _mu_pq = getDouble(L, -1, "mu_pq") / Avogadro_number;
+        _mu_pp = getDouble(L, -1, "mu_pp") / Avogadro_number;
+        _mu_qq = getDouble(L, -1, "mu_qq") / Avogadro_number;
+        _delta_E = Boltzmann_constant * (_theta_v_p - _theta_v_q);
+        _sigma = getDouble(L, -1, "sigma") * 1e-10; // angstrom -> m
+        _epsilon = getDouble(L, -1, "epsilon") * Boltzmann_constant;
+        _p = p;
+        _q = q;
+        _f_m_p = getDouble(L, -1, "f_m_p");
+        _f_m_q = getDouble(L, -1, "f_m_q");
+    }
+
+    this(int p, int q, double mu_pq, double mu_pp, double mu_qq, 
+            double sigma, double epsilon,
+            double theta_p, double theta_q, double f_m_p, double f_m_q) 
+    {
+        _p = p;
+        _q = q;
+        _mu_pq = mu_pq;
+        _mu_pp = mu_pp;
+        _mu_qq = mu_qq;
+        _sigma = sigma;
+        _epsilon = epsilon;
+        _theta_v_p = _theta_v_p;
+        _theta_v_q = _theta_v_q;
+        _delta_E = Boltzmann_constant * (_theta_v_p - _theta_v_q);
+        _f_m_p = f_m_p;
+        _f_m_q = f_m_q;
+    }
+
+    RelaxationTime dup() {
+        return new SSH_VV(_p, _q, _mu_pq, _mu_pp, _mu_qq, _sigma, _epsilon, 
+                          _theta_v_p, _theta_v_q, _f_m_p, _f_m_q);
+    }
+
+    @nogc number eval(in GasState gs, number[] molef, number[] numden) {
+        if (molef[_p] <= SMALL_MOLE_FRACTION || molef[_q] <= SMALL_MOLE_FRACTION)
+            return to!number(-1.0);
+        number T = gs.T;
+        number n = numden[_p] + numden[_q];
+        number Z_COLL = collision_frequency(n, _sigma, _mu_pq, T);
+        number P = _transition_probability(T);
+        return 1./(Z_COLL * P) * exp(-(_theta_v_p - _theta_v_q) / T);
+    }
+
+private:
+    double _mu_pp, _mu_qq, _mu_pq; // (kg) reduced mass
+    double _theta_v_p, _theta_v_q; // (K) characteristic vib temperature of molecules
+    double _delta_E;               // (J) energy difference between characteristic 
+                                   //     vibration energies
+    double _sigma, _epsilon;       // Lennard-Jones parameters (m, J)
+    int _p, _q;                    // partcipating species
+    double _f_m_p, _f_m_q;         // mass factor
+
+    @nogc number _transition_probability(number T){
+        number beta = SSH_beta(_sigma, _epsilon, _mu_pq, _delta_E, T);
+        number rc_star = SSH_rc_star(beta, _sigma);
+        number delta_star = SSH_delta_star(beta, _sigma);
+        number alpha_pq = SSH_alpha(_mu_pq, _delta_E, delta_star);
+        number chi = SSH_chi(alpha_pq, T);
+
+        number A = SSH_A(rc_star, _sigma);
+        number Z_0_p = SSH_Z_0(delta_star, _sigma);
+        number Z_0_q = SSH_Z_0(delta_star, _sigma);
+        number Z_V_p = SSH_Z_V(_f_m_p, _mu_pp, _mu_pq, alpha_pq, _theta_v_p, _delta_E, 2);
+        number Z_V_q = SSH_Z_V(_f_m_q, _mu_qq, _mu_pq, alpha_pq, _theta_v_q, _delta_E, 1);
+        number Z_T = SSH_Z_T(_delta_E, alpha_pq, T);
+        number Z_plus = SSH_Z_plus(_epsilon, chi, T);
+
+        return A/(Z_0_p*Z_0_q*Z_V_p*Z_V_q*Z_T*Z_plus);
+    }
+}
+
+/* 
+vibration-translation relaxation times using SSH theory
+See section 5.3.3 of Rowan's thesis for details
+*/
+class SSH_VT : RelaxationTime {
+public:
+    this(lua_State *L, int p, int q){
+        _theta_v_p = getDouble(L, -1, "theta_v_p");
+        _mu_pq = getDouble(L, -1, "mu_pq") / Avogadro_number;
+        _mu_pp = getDouble(L, -1, "mu_pp") / Avogadro_number;
+        _mu_qq = getDouble(L, -1, "mu_qq") / Avogadro_number;
+        _delta_E = Boltzmann_constant * _theta_v_p;
+        _sigma = getDouble(L, -1, "sigma") * 1e-10; // angstrom -> m
+        _epsilon = getDouble(L, -1, "epsilon") * Boltzmann_constant;
+        _p = p;
+        _q = q;
+        _f_m_p = getDouble(L, -1, "f_m_p");
+    }
+
+    this(int p, int q, double mu_pq, double mu_pp, double mu_qq, 
+            double sigma, double epsilon, 
+            double theta_p, double f_m_p) 
+    {
+        _p = p;
+        _q = q;
+        _mu_pq = mu_pq;
+        _mu_pp = mu_pp;
+        _mu_qq = mu_qq;
+        _sigma = sigma;
+        _epsilon = epsilon;
+        _theta_v_p = _theta_v_p;
+        _delta_E = Boltzmann_constant * _theta_v_p;
+        _f_m_p = f_m_p;
+    }
+
+    RelaxationTime dup() {
+        return new SSH_VT(_p, _q, _mu_pq, _mu_pp, _mu_qq, _sigma, _epsilon, 
+                          _theta_v_p, _f_m_p);
+    }
+
+    @nogc number eval(in GasState gs, number [] molef, number [] numden){
+        if (molef[_p] <= SMALL_MOLE_FRACTION || molef[_q] <= SMALL_MOLE_FRACTION)
+            return to!number(-1.0);
+        number T = gs.T;
+        number n;
+        if (_p == _q) {
+            n = numden[_p];
+        }
+        else {
+            n = numden[_p] + numden[_q];
+        }
+        number Z_COLL = collision_frequency(n, _sigma, _mu_pq, T);
+        number P = _transition_probability(T);
+        return 1. / (Z_COLL * P * (1. - exp(-_theta_v_p / T)));
+    }
+
+private:
+    double _mu_pp, _mu_qq, _mu_pq; // (kg) reduced mass
+    double _theta_v_p;             // (K) characteristic vib temperature of molecules
+    double _delta_E;               // (J) energy difference between characteristic 
+                                   //     vibration energies
+    double _sigma, _epsilon;       // Lennard-Jones parameters (m, J)
+    int _p, _q;                    // partcipating species
+    double _f_m_p;                 // mass factor
+
+    @nogc number _transition_probability(number T) {
+        number beta = SSH_beta(_sigma, _epsilon, _mu_pq, _delta_E, T);
+        number rc_star = SSH_rc_star(beta, _sigma);
+        number delta_star = SSH_delta_star(beta, _sigma);
+        number alpha_pq = SSH_alpha(_mu_pq, _delta_E, delta_star);
+        number chi = SSH_chi(alpha_pq, T);
+
+        number A = SSH_A(rc_star, _sigma);
+        number Z_0_p = SSH_Z_0(delta_star, _sigma);
+        number Z_V_p = SSH_Z_V(_f_m_p, _mu_pp, _mu_pq, alpha_pq, _theta_v_p, _delta_E, 1);
+        number Z_T = SSH_Z_T(_delta_E, alpha_pq, T);
+        number Z_plus = SSH_Z_plus(_epsilon, chi, T);
+        return A/(Z_0_p*Z_V_p*Z_T*Z_plus);
+    }
+}
+
+
 RelaxationTime createRelaxationTime(lua_State *L, int p, int q, GasModel gmodel)
 {
     auto model = getString(L, -1, "model");
@@ -224,6 +462,10 @@ RelaxationTime createRelaxationTime(lua_State *L, int p, int q, GasModel gmodel)
 	return new ParkHTC2VT(L, p, q, gmodel);
     case "KimHTC":
 	return new KimHTCVT(L, p, q, gmodel);
+    case "SSH_VT":
+        return new SSH_VT(L, p, q);
+    case "SSH_VV":
+        return new SSH_VV(L, p, q);
     default:
 	string msg = format("The relaxation time model: %s is not known.", model);
 	throw new Error(msg);

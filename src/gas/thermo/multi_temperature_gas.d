@@ -1,0 +1,579 @@
+/*
+ * Multi-temperature thermodynamic module
+ * 
+ * The MultiTemperatureGasMixture provides a thermodynamic model
+ * for a gas mixture with an arbitrary number of temperatures.
+ * This will generally consist of a vibration temperature for 
+ * each molecule
+ * 
+ * It is assumed that translation/rotation are stored in GasState.T
+ * The remaining energy modes are stored in GasState.T_modes
+*/
+
+module gas.thermo.multi_temperature_gas;
+
+import std.stdio;
+import std.math;
+import std.string;
+import std.conv;
+import std.algorithm;
+import util.lua;
+import util.lua_service;
+import nm.complex;
+import nm.number;
+import nm.bracketing;
+
+import gas;
+import gas.thermo.thermo_model;
+import gas.thermo.energy_modes;
+import gas.thermo.cea_thermo_curves;
+
+immutable double T_REF = 298.15; // K
+
+class MultiTemperatureGasMixture : ThermodynamicModel {
+    this(lua_State *L, string[] species_names, string[] energy_mode_names)
+    {
+        // allocate memory
+        _n_species = to!int(species_names.length);
+        _n_modes = to!int(energy_mode_names.length);
+        _R.length = _n_species;
+        _Delta_hf.length = _n_species;
+        _CpTR.length = _n_species;
+        _energy_modes.length = _n_modes;
+        _energy_modes_isp.length = _n_modes;
+        _reference_energies.length = _n_modes;
+        _max_iterations.length = _n_modes;
+        _tolerances.length = _n_modes;
+        
+        // set up the species data
+        foreach (isp, sp_name; species_names) {
+            _species_indices[sp_name] = to!int(isp);
+            if (sp_name == "e-") _electron_idx = to!int(isp);
+            lua_getglobal(L, "db");
+            lua_getfield(L, -1, sp_name.toStringz);
+            double m = getDouble(L, -1, "M");
+            _R[isp] = R_universal/m;
+            lua_getfield(L, -1, "thermoCoeffs");
+            CEAThermoCurve thermo = new CEAThermoCurve(L, _R[isp]);
+            lua_pop(L, 1);
+            _Delta_hf[isp] = thermo.eval_h(to!number(T_REF)); //getDouble(L, -1, "Hf");
+            string type = getString(L, -1, "type");
+            switch (type) {
+            case "electron":
+                _CpTR[isp] = 0.0;
+                break;
+            case "atom" :
+                _CpTR[isp] = (5./2.)*_R[isp];
+                break;
+            case "molecule":
+                string molType = getString(L, -1, "molecule_type");
+                _CpTR[isp] = (molType == "linear") ? (7./2.)*_R[isp] : (8./2.)*_R[isp];
+                break;
+            default:
+                string msg = "MultiTemperatureGas: error trying to match particle type.\n";
+                throw new Error(msg);
+            }
+            lua_pop(L, 1);
+            lua_pop(L, 1);
+        }
+
+        // set up energy modes
+        foreach (i_mode, mode_name; energy_mode_names) {
+            string[] components; 
+            lua_getglobal(L, "db");
+            lua_getfield(L, -1, "modes");
+            lua_getfield(L, -1, mode_name.toStringz); 
+            getArrayOfStrings(L, -1, "components", components);
+            _max_iterations[i_mode] = getIntWithDefault(L, -1, "max_iterations", 100);
+            _tolerances[i_mode] = getDoubleWithDefault(L, -1, "tolerance", 1e-6);
+            lua_pop(L, 1); // mode name
+            lua_pop(L, 1); // modes
+            _energy_modes[i_mode].length = to!int(components.length);
+            _energy_modes_isp[i_mode].length = to!int(components.length);
+            _reference_energies[i_mode].length = to!int(components.length);
+            foreach (i_comp, component; components) {
+                string[] component_tokens;
+                component_tokens = component.split(":");
+                string species = component_tokens[0];
+                int isp = _species_indices[species];
+                _energy_modes_isp[i_mode][i_comp] = isp;
+                if (isp == _electron_idx){
+                    _electron_mode = to!int(i_mode);
+                }
+                string energy_type = component_tokens[1];
+                lua_getfield(L, -1, species.toStringz);
+                switch (energy_type) {
+                    case "vib":
+                        _energy_modes[i_mode][i_comp] = create_vibrational_energy_model(L, _R[isp]);
+                        break;
+                    case "electronic":
+                        _energy_modes[i_mode][i_comp] = create_electronic_energy_model(L, _R[isp]);
+                        break;
+                    default:
+                        throw new Error("Unknown energy type");
+                }
+                lua_pop(L, 1); // species data entry
+
+                // evaluate energy at reference temperature
+                _reference_energies[i_mode][i_comp] = _energy_modes[i_mode][i_comp].energy(to!number(T_REF));
+            }
+            lua_pop(L, 1); // db
+        }
+    }
+
+    @nogc void updateFromPT(ref GasState gs){
+        _update_density(gs);
+        gs.u = _mixture_transrot_energy(gs);
+        _update_u_modes(gs);
+        _update_p_e(gs);
+    }
+
+    @nogc void updateFromRhoU(ref GasState gs){
+        number sum_a = 0.0;
+        number sum_b = 0.0;
+        foreach (isp; 0 .. _n_species) {
+            if (isp == _electron_idx) continue;
+            sum_a += gs.massf[isp] * (_CpTR[isp]*T_REF - _Delta_hf[isp]);
+            sum_b += gs.massf[isp] * (_CpTR[isp] - _R[isp]);
+        }
+        gs.T = (gs.u + sum_a) / sum_b;
+        _update_T_modes(gs);
+        _update_pressure(gs);
+    }
+
+    @nogc void updateFromRhoT(ref GasState gs){
+        _update_pressure(gs);
+        gs.u = _mixture_transrot_energy(gs);
+        _update_u_modes(gs);
+    }
+    
+    @nogc void updateFromRhoP(ref GasState gs){
+        // assume that u_modes is set correctly as well as rho and p
+        _update_T_modes(gs);
+        gs.T = _transrot_temp_from_rho_p(gs);
+        gs.u = _mixture_transrot_energy(gs);
+        _update_p_e(gs);
+    }
+
+    @nogc void updateFromPS(ref GasState gs, number s){
+        throw new Error("Not implemented");
+    }
+
+    @nogc void updateFromHS(ref GasState gs, number h, number s){
+        throw new Error("Not implemented");
+    }
+    
+    @nogc void updateSoundSpeed(ref GasState gs){
+        // compute the frozen sound speed
+        number gamma = dhdTConstP(gs) / dudTConstV(gs);
+        gs.a = sqrt(gamma * gs.p / gs.rho);
+    }
+
+    // Methods related to computing thermo derivatives.
+    @nogc number dudTConstV(in GasState gs){
+        number Cv = _mixture_transrot_Cv(gs);
+        foreach (imode; 0 .. _n_modes) {
+            Cv += _mixture_Cv_in_mode(gs, imode);
+        }
+        return Cv;
+    }
+
+    @nogc number dhdTConstP(in GasState gs){
+        number Cp = 0.0;
+        // Note that for internal modes, Cv = Cp
+        foreach (imode; 0 .. _n_modes){
+            Cp += _mixture_Cv_in_mode(gs, imode);
+        }
+        foreach (isp; 0 .. _n_species) {
+            Cp += gs.massf[isp] * _CpTR[isp];
+        }
+        return Cp;
+    }
+
+    @nogc number dpdrhoConstT(in GasState gs){
+        number sum = 0.0;
+        foreach (isp; 0 .. _n_species) {
+            number T = (isp == _electron_idx) ? gs.T_modes[_electron_mode] : gs.T;
+            sum += gs.massf[isp] * _R[isp] * T;
+        }
+        return sum;
+    }
+
+    @nogc number gasConstant(in GasState gs){
+        return mass_average(gs, _R);
+    }
+
+    @nogc number gasConstant(in GasState gs, int isp){
+        return to!number(_R[isp]);
+    }
+
+    @nogc number internalEnergy(in GasState gs){
+        number u = _mixture_transrot_energy(gs);
+        foreach (imode; 0 .. _n_modes) {
+            u += _mixture_energy_in_mode(gs, imode);
+        }
+        return u;
+    }
+
+    @nogc number energyPerSpeciesInMode(in GasState gs, int isp, int imode){
+        return _energy_per_species_in_mode(gs, isp, imode);
+    }
+
+    @nogc number enthalpy(in GasState gs){
+        number u = internalEnergy(gs);
+        return u + gs.p / gs.rho;
+    }
+
+    @nogc number enthalpyPerSpecies(in GasState gs, int isp){
+        number h = _CpTR[isp]*(gs.T - T_REF) + _Delta_hf[isp];
+        foreach (imode; 0 .. _n_modes) {
+            h += _energy_per_species_in_mode(gs, isp, imode);
+        }
+        return h;
+    }
+
+    @nogc number enthalpyPerSpeciesInMode(in GasState gs, int isp, int imode){
+        if (imode == -1) {
+            return _CpTR[isp] * (gs.T - T_REF) + _Delta_hf[isp];
+        }
+
+        return _energy_per_species_in_mode(gs, isp, imode);
+    }
+
+    @nogc number entropy(in GasState gs){
+        throw new Error("Not implemented");
+    }
+
+    @nogc number entropyPerSpecies(in GasState gs, int isp){
+        throw new Error("Not implemented");
+    }
+
+    @nogc number cpPerSpecies(in GasState gs, int isp){
+        number Cp = _CpTR[isp];
+
+        // For internal modes, Cp = Cv
+        foreach (imode; 0 .. _n_modes) {
+            Cp += _Cv_per_species_in_mode(gs, isp, imode);
+        }
+        return Cp;
+    }
+
+private:
+    int[string] _species_indices;
+    int _n_species;
+    int _n_modes;
+    int _electron_idx = -1;
+    int _electron_mode = -1;
+    double[] _R;
+    number[] _Delta_hf;
+    double[] _CpTR;
+    InternalEnergy[][] _energy_modes;
+    int[][] _energy_modes_isp; // keeps track of which species is contributing
+                               // to each energy mode
+    number[][] _reference_energies; // The energy of each mode evaluated at T_REF
+    double[] _tolerances;
+    int[] _max_iterations;
+
+    @nogc void _update_density(ref GasState gs){
+        number denom = 0.0;
+        foreach (isp; 0 .. _n_species) {
+            number T = (_electron_idx == isp) ? gs.T_modes[_electron_mode] : gs.T;
+            denom += gs.massf[isp] * _R[isp] * T;
+        }
+        gs.rho = gs.p/denom;
+    }
+
+    @nogc void _update_pressure(ref GasState gs) {
+        gs.p = 0.0;
+        foreach (isp; 0 .. _n_species) {
+            number T = (isp == _electron_idx) ? gs.T_modes[_electron_mode] : gs.T;
+            gs.p += gs.massf[isp] * gs.rho * _R[isp] * T;
+        }
+        _update_p_e(gs);
+    }
+
+    @nogc void _update_T_modes(ref GasState gs) {
+        foreach (imode; 0 .. _n_modes) {
+            gs.T_modes[imode] = _temperature_of_mode(gs, imode);
+        }
+    }
+
+    @nogc void _update_u_modes(ref GasState gs) {
+        foreach (imode; 0 .. _n_modes) {
+            gs.u_modes[imode] = _mixture_energy_in_mode(gs, imode);
+        }
+    }
+
+    @nogc void _update_p_e(ref GasState gs){
+        if (_electron_idx != -1){
+            gs.p_e = gs.rho*gs.massf[_electron_idx]*_R[_electron_idx]*gs.T_modes[_electron_mode];
+        }
+    }
+
+    @nogc number _energy_per_species_in_mode(in GasState gs, int isp, int imode){
+        if (imode == _electron_mode && isp == _electron_idx) {
+            return 3./2. * _R[_electron_idx] * (gs.T_modes[_electron_mode] - T_REF);
+        }
+
+        number energy = to!number(0.0);
+        InternalEnergy[] components_in_mode = _energy_modes[imode];
+        number [] reference_energies = _reference_energies[imode];
+        int[] modes_isp = _energy_modes_isp[imode];
+        foreach (icomp, comp; components_in_mode) {
+            if (modes_isp[icomp] == isp) {
+                energy += comp.energy(gs.T_modes[imode]) - reference_energies[icomp];
+            }
+        }
+        return energy;
+    }
+
+    @nogc number _mixture_energy_in_mode(in GasState gs, int imode) {
+        return _mixture_energy_in_mode_at_temp(gs, gs.T_modes[imode], imode);
+    }
+
+    @nogc number _mixture_energy_in_mode_at_temp(in GasState gs, number T, int imode){
+        number energy = to!number(0.0);
+        InternalEnergy[] components_in_mode = _energy_modes[imode];
+        int[] modes_isp = _energy_modes_isp[imode];
+        number[] reference_energies = _reference_energies[imode];
+        foreach (icomp, comp; components_in_mode) {
+            int isp = modes_isp[icomp];
+            energy += gs.massf[isp] * (comp.energy(T) - reference_energies[icomp]);
+        }
+        if (imode == _electron_mode) {
+            energy += gs.massf[_electron_idx] * 3./2. * _R[_electron_idx] * (T - T_REF);
+        }
+        return energy;
+    }
+
+    @nogc number _mixture_Cv_in_mode(in GasState gs, int imode){
+        return _mixture_Cv_in_mode_at_temp(gs, gs.T_modes[imode], imode);
+    }
+
+    @nogc number _mixture_Cv_in_mode_at_temp(in GasState gs, number T, int imode){
+        number Cv = to!number(0.0);
+        InternalEnergy[] components_in_mode = _energy_modes[imode];
+        int[] modes_isp = _energy_modes_isp[imode];
+        foreach (icomp, comp; components_in_mode) {
+            int isp = modes_isp[icomp];
+            Cv += gs.massf[isp] * comp.Cv(T);
+        }
+        if (imode == _electron_mode) {
+            Cv += gs.massf[_electron_idx] * 3./2. * _R[_electron_idx];
+        }
+        return Cv;
+    }
+
+    @nogc number _Cv_per_species_in_mode(in GasState gs, int isp, int imode) {
+        if (isp == _electron_idx && imode == _electron_mode) {
+            return to!number(3./2. * _R[_electron_idx]);
+        }
+
+        number Cv = to!number(0.0);
+        InternalEnergy[] components_in_mode = _energy_modes[imode];
+        int[] modes_isp = _energy_modes_isp[imode];
+        foreach (icomp, comp; components_in_mode) {
+            if (modes_isp[icomp] == isp){
+                Cv += comp.Cv(gs.T_modes[imode]);
+            }
+        }
+        return Cv;
+    }
+
+    @nogc number _transrot_energy_per_species(in GasState gs, int isp) {
+        if (isp == _electron_idx) return to!number(0.0);
+        number h = _CpTR[isp] * (gs.T - T_REF) + _Delta_hf[isp];
+        return h - _R[isp] * gs.T;
+    }
+
+    @nogc number _mixture_transrot_energy(in GasState gs) {
+        number energy = to!number(0.0);
+        foreach (isp; 0 .. _n_species) {
+            energy += gs.massf[isp] * _transrot_energy_per_species(gs, isp);
+        }
+        return energy;
+    }
+
+    @nogc number _transrot_Cv_per_species(int isp){
+        if (isp == _electron_idx) return to!number(0.0);
+        return to!number(_CpTR[isp] - _R[isp]);
+    }
+
+    @nogc _mixture_transrot_Cv(in GasState gs) {
+        number Cv = 0.0;
+        foreach (isp; 0 .. _n_species) {
+            Cv += gs.massf[isp] * _transrot_Cv_per_species(isp);
+        }
+        return Cv;
+    }
+
+    @nogc number _transrot_temp_from_rho_p(in GasState gs) {
+        // We assume T_modes is set correctly
+        number p_heavy = gs.p;
+        if (_electron_idx != -1) {
+            p_heavy -= gs.rho*gs.massf[_electron_idx]*_R[_electron_idx]*gs.T_modes[_electron_mode];
+        }
+
+        number denom = 0.0;
+        foreach (isp; 0 .. _n_species) {
+            if (isp == _electron_idx) continue;
+            denom += gs.rho * gs.massf[isp] * _R[isp];
+        }
+        return p_heavy / denom;
+    }
+
+    @nogc number _temperature_of_mode(in GasState gs, int imode){
+        // This method is based on Dekker/Brent's method, but 
+        // uses Newton's method rather than secant/interpolation. 
+        // The idea is to try to use Newton's method, but fall 
+        // back to bisection if a Newton step is unstable
+
+        immutable int MIN_ITERATIONS = 10;
+        immutable int max_iterations = _max_iterations[imode];
+        immutable number T_MIN = to!number(10.0);
+        immutable number T_MAX = to!number(200_000.0);
+        immutable double tol = _tolerances[imode];
+        immutable number target_u = gs.u_modes[imode];
+
+        // use the current temperature as the initial guess
+        number Tb = gs.T_modes[imode];
+        number Ta = Tb + to!number(100.0);
+        number Tb_new = Tb;
+
+
+        number zero_func(number T) {
+            number u = _mixture_energy_in_mode_at_temp(gs, T, imode);
+            return u - target_u;
+        }
+        
+        // try to bracket the root
+        if (bracket!(zero_func, number)(Ta, Tb, T_MIN, T_MAX) == -1){
+            // maybe this temperature isn't well defined, in which
+            // case we should just leave the temperature alone.
+            number bath_massf = to!number(0.0);
+            int[] isps = _energy_modes_isp[imode];
+            foreach (isp; isps) {
+                bath_massf += gs.massf[isp];
+            }
+            if (bath_massf < 1e-15){
+                return gs.T_modes[imode];
+            }
+
+            // we can't recover from this
+            string msg = "Failed to bracket modal temperature";
+            debug {
+                msg ~= "\n";
+                msg ~= format("mode: %d \n", imode);
+                msg ~= format("gs: %s \n", gs);
+            }
+            throw new GasModelException(msg);
+        }
+
+        number Cv, mid, newton;
+        number f_Ta, f_Tb, f_Tb_new;
+        bool converged = false;
+        foreach (i; 0 .. max_iterations) {
+            // bisection
+            mid = (Ta + Tb) / 2;
+
+            // newton
+            Cv = _mixture_Cv_in_mode_at_temp(gs, Tb, imode);
+            f_Tb = zero_func(Tb);
+            newton = Tb - f_Tb / Cv;
+
+            // If the newton step is between the mid point and Tb, we will use
+            // the newton step. Otherwise we'll use the midpoint
+            if ((newton > mid && newton < Tb) || (newton < mid && newton > Tb)) {
+                Tb_new = newton;
+            }
+            else {
+                Tb_new = mid;
+            }
+
+            // choose new contra-point
+            f_Ta = zero_func(Ta);
+            f_Tb_new = zero_func(Tb_new);
+            if (f_Ta * f_Tb_new > 0.0) {
+                Ta = Tb;
+                f_Ta = f_Tb;
+            }
+            Tb = Tb_new;
+            f_Tb = f_Tb_new;
+
+            // make sure that b is a better guess than a
+            if (fabs(f_Ta) < fabs(f_Tb)) {
+                swap(Ta, Tb);
+                swap(f_Ta, f_Tb);
+            }
+
+            // Check for convergence. The complex number version
+            // needs to do a minimum number of iterations to 
+            // set the imaginary component correctly
+            version(complex_numbers) {
+                if (fabs(f_Tb) < tol && i > MIN_ITERATIONS){
+                    converged = true;
+                    break;
+                }
+            }
+            else {
+                if (fabs(f_Tb) < tol) {
+                    converged = true;
+                    break;
+                }
+            }
+        }
+
+        if (!converged) {
+            string msg = "Failed to converge modal temperature.";
+            debug {
+                msg ~= format(" Mode %d failed to converge. ", imode);
+                msg ~= format("The final guess was %g K. ", Tb);
+                msg ~= "The supplied gas state was:\n";
+                msg ~= gs.toString();
+                msg ~= "\n";
+            }
+            throw new GasModelException(msg);
+        }
+
+        return Tb;
+    }
+}
+
+version(multi_temperature_gas_test) {
+    int main() {
+        import util.msg_service;
+
+        FloatingPointControl fpctrl;
+        // Enable hardware exceptions for division by zero, overflow to infinity,
+        // invalid operations, and uninitialized floating-point variables.
+        // Copied from https://dlang.org/library/std/math/floating_point_control.html
+        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+
+        auto L = init_lua_State();
+        doLuaFile(L, "sample-data/air-5sp-5T-gas-model.lua");
+        string[] speciesNames;
+        string[] energy_mode_names;
+        getArrayOfStrings(L, "species", speciesNames);
+        getArrayOfStrings(L, "energy_mode_names", energy_mode_names);
+        auto tm = new MultiTemperatureGasMixture(L, speciesNames, energy_mode_names);
+        lua_close(L);
+        auto gs = GasState(5, 4);
+
+        gs.rho = 1.10696;
+        gs.u = -67000.3;
+        gs.u_modes = [to!number(19084.572423887566), to!number(31.780590009726037), to!number(42.397165292842836), to!number(0.018510507215781596)];
+        gs.massf = [to!number(0.8), to!number(0.1), to!number(0.025), to!number(0.025), to!number(0.05)];
+        gs.p = 100000.0;
+        gs.T = 500.0;
+        gs.T_modes = [to!number(1000.0), to!number(400.0), to!number(500.0), to!number(800.0)];
+        tm.updateFromRhoU(gs);
+
+        assert(approxEqualNumbers(to!number(300.0), gs.T, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(to!number(901.0), gs.T_modes[0], 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(to!number(302.0), gs.T_modes[1], 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(to!number(403.0), gs.T_modes[2], 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(to!number(704.0), gs.T_modes[3], 1.0e-6), failedUnitTest());
+
+        return 0;
+    }
+}

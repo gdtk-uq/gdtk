@@ -29,6 +29,7 @@ import nm.number;
 import util.lua;
 import util.lua_service;
 import gas;
+import gas.thermo.energy_modes;
 
 import kinetics.relaxation_time;
 import kinetics.exchange_cross_section;
@@ -37,16 +38,18 @@ import kinetics.exchange_chemistry_coupling;
 
 class EnergyExchangeMechanism {
     @property @nogc number tau() const { return m_tau; }
+    @property @nogc int mode() const { return m_mode; }
     @nogc void evalRelaxationTime(in GasState gs, number[] molef, number[] numden)
     {
         m_tau = mRT.eval(gs, molef, numden);
     }
-    @nogc abstract number rate(in GasState gs, in GasState gsEq, number[] molef, number[] numden, in ReactionMechanism rMech);
+    @nogc abstract number rate(in GasState gs, in GasState gseq, number[] molef, number[] numden, in ReactionMechanism rmech);
 
 private:
     number m_tau;
     RelaxationTime mRT;
     GasModel mGmodel;
+    int m_mode;
 }
 
 class LandauTellerVT : EnergyExchangeMechanism {
@@ -93,7 +96,6 @@ public:
 private:
     int m_p;
     int m_q;
-    int m_mode;
 }
 
 class ElectronExchangeET : EnergyExchangeMechanism {
@@ -173,7 +175,6 @@ private:
     int m_p;
     int m_q;
     int m_e;
-    int m_mode;
     ExchangeCrossSection mCS;
     GasModel mGmodel;
     double m_me, m_mq;
@@ -203,7 +204,7 @@ class MarroneTreanorCV : EnergyExchangeMechanism {
         mReactionIdx = getInt(L, -1, "reaction_index");
         mSpeciesIdx  = gmodel.species_index(getString(L, -1, "p"));
         lua_getfield(L, -1, "coupling_model");
-        mECC = createExchangeChemistryCoupling(L);
+        mECC = createExchangeChemistryCoupling(L, gmodel, mode, mSpeciesIdx);
         lua_pop(L, 1);
     }
 
@@ -246,6 +247,67 @@ private:
     ExchangeChemistryCoupling mECC;
 }
 
+class ThivetVV : EnergyExchangeMechanism {
+    /* 
+        Model for vibration exchanging with other vibration modes
+    */
+    this(lua_State *L, int mode, GasModel gmodel){
+        mGmodel = gmodel; 
+        string pspecies = getString(L, -1, "p");
+        string qspecies = getString(L, -1, "q");
+        m_p = gmodel.species_index(pspecies);
+        m_q = gmodel.species_index(qspecies);
+        m_mode = mode;
+        m_mode_q = getInt(L, -1, "mode_q");
+
+        lua_getfield(L, -1, "relaxation_time");
+        mRT = createRelaxationTime(L, m_p, m_q, gmodel);
+        lua_pop(L, 1);
+
+        _theta_v_p = getDouble(L, -1, "theta_v_p");
+        _theta_v_q = getDouble(L, -1, "theta_v_q");
+        double theta_D_p = getDouble(L, -1, "theta_D_p");
+        double theta_D_q = getDouble(L, -1, "theta_D_q");
+        double R_p = getDouble(L, -1, "R_p");
+        double R_q = getDouble(L, -1, "R_q");
+        _e_hat_q = new HarmonicOscillator(_theta_v_q, R_q);
+        _e_bar_p = new TruncatedHarmonicOscillator(_theta_v_p, theta_D_p, R_p);
+        _e_bar_q = new TruncatedHarmonicOscillator(_theta_v_q, theta_D_q, R_q);
+        _gm = gmodel;
+    }
+
+    @nogc override number rate(in GasState gs, in GasState gseq, number[] molef, 
+                                    number[] numden, in ReactionMechanism rmech){
+        // The relaxation time was set to -1 if there wasn't enough of either
+        // species present
+        if (m_tau < to!number(0.0)) {
+            return to!number(0.0);
+        }
+        /* number e_p = _gm.energyPerSpeciesInMode(gs, m_p, m_mode);   // _e_bar_p.energy(gs.T_modes[m_mode]); */
+        /* number e_q = _gm.energyPerSpeciesInMode(gs, m_q, m_mode_q); //_e_bar_q.energy(gs.T_modes[m_mode_q]); */
+        number e_p = _e_bar_p.energy(gs.T_modes[m_mode]);
+        number e_q = _e_bar_q.energy(gs.T_modes[m_mode_q]);
+        number e_hat_q = _e_hat_q.energy(gs.T);
+        number e_bar_p = _e_bar_p.energy(gs.T);
+        number e_bar_q = _e_bar_q.energy(gs.T);
+
+        number tmp_a = e_q / e_hat_q * (e_bar_p - e_p);
+        number tmp_b = e_p / e_hat_q * (e_bar_q - e_q);
+        number exp_p = 1. - exp(-_theta_v_p / gs.T);
+        number exp_q = 1. - exp(-_theta_v_q / gs.T);
+
+        return gs.massf[m_p] / m_tau * (exp_p / exp_q * tmp_a - tmp_b);
+    }
+
+private:
+    int m_p, m_q;           // species indecies of participating species
+    int m_mode_q;
+    double _theta_v_p, _theta_v_q;
+    InternalEnergy _e_hat_q;
+    InternalEnergy _e_bar_p, _e_bar_q;
+    GasModel _gm;
+}
+
 EnergyExchangeMechanism createEnergyExchangeMechanism(lua_State *L, int mode, GasModel gmodel)
 {
     auto rateModel = getString(L, -1, "rate");
@@ -256,6 +318,8 @@ EnergyExchangeMechanism createEnergyExchangeMechanism(lua_State *L, int mode, Ga
         return new ElectronExchangeET(L, mode, gmodel);
     case "Marrone-Treanor":
         return new MarroneTreanorCV(L, mode, gmodel);
+    case "Thivet":
+        return new ThivetVV(L, mode, gmodel); 
     default:
         string msg = format("The EE mechanism rate model: %s is not known.", rateModel);
         throw new Error(msg);

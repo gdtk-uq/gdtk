@@ -24,9 +24,11 @@ import gas.physical_constants;
 import gas.thermo.thermo_model;
 import gas.thermo.therm_perf_gas_mix;
 import gas.thermo.two_temperature_gas;
+import gas.thermo.multi_temperature_gas;
 import gas.diffusion.transport_properties_model;
 import gas.diffusion.gas_mixtures;
 import gas.diffusion.two_temperature_trans_props;
+import gas.diffusion.multi_temperature_trans_props;
 
 
 class CompositeGas : GasModel {
@@ -69,6 +71,13 @@ public:
             _n_modes = 1;
             mThermo = new TwoTemperatureGasMixture(L, _species_names);
             mTransProps = new TwoTemperatureTransProps(L, _species_names);
+            break;
+        case "multi-temperature-gas":
+            getArrayOfStrings(L, "energy_mode_names", _energy_mode_names);
+            create_energy_mode_reverse_lookup(); 
+            _n_modes = to!int(_energy_mode_names.length);
+            mThermo = new MultiTemperatureGasMixture(L, _species_names, _energy_mode_names);
+            mTransProps = new MultiTemperatureTransProps(L, _species_names, _energy_mode_names);
             break;
         default:
             string errMsg = format("Problem trying to construct gas model. The physical model variant '%s' is not known.\n", mPhysicalModel);
@@ -145,6 +154,10 @@ public:
     @nogc override number gas_constant(in GasState gs)
     {
         return mThermo.gasConstant(gs);
+    }
+    @nogc override number gas_constant(in GasState gs, int isp)
+    {
+        return mThermo.gasConstant(gs, isp);
     }
     @nogc override number internal_energy(in GasState gs)
     {

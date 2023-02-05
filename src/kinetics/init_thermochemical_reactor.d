@@ -37,7 +37,7 @@ import kinetics.chemistry_update;
 import kinetics.equilibrium_update;
 import kinetics.powers_aslam_kinetics;
 import kinetics.yee_kotov_kinetics;
-import kinetics.two_temperature_thermochemical_reactor;
+import kinetics.multi_temperature_thermochemical_reactor;
 import kinetics.two_temperature_argon_kinetics;
 import kinetics.ideal_dissociating_gas_kinetics;
 import kinetics.fuel_air_mix_kinetics;
@@ -89,7 +89,7 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
             reactor = new ChemistryUpdate(fileName1, gmodel);
         }
         else {
-            reactor = new TwoTemperatureThermochemicalReactor(fileName1, fileName2, gmodel);
+            reactor = new MultiTemperatureThermochemicalReactor(fileName1, fileName2, gmodel);
         }
     }
     if (typeid(gmodel) is typeid(ThermallyPerfectGasEquilibrium)) {

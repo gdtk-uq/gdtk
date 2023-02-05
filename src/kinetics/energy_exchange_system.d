@@ -107,3 +107,75 @@ private:
     // EnergyExchangeMechanism[] mChemCoupling;
 }
 
+class MultiTemperatureEnergyExchange : EnergyExchangeSystem {
+public:
+    this (GasModel gmodel)
+    {
+        mGmodel = gmodel;
+        mGsEq = GasState(gmodel);
+        mMolef.length = gmodel.n_species;
+        mNumden.length = gmodel.n_species;
+    }
+
+    this(string fname, GasModel gmodel)
+    {
+        this(gmodel);
+
+        // Load in table of energy exchange mechanisms from the verbose lua file
+        auto L = init_lua_State();
+        doLuaFile(L, fname);
+
+        lua_getglobal(L, "mechanism");
+        lua_pushnil(L); // dummy first key
+        while (lua_next(L, -2) != 0) { // -1 is the dummy key, -2 is the mechanism table
+            int mode = getInt(L, -1, "mode");
+            mEEM ~= createEnergyExchangeMechanism(L, mode, gmodel);
+            lua_pop(L, 1); // discard value but keep key so that lua_next can remove it (?!)
+        }
+        lua_pop(L, 1); // remove mechanisms table
+        lua_close(L);
+    }
+
+    @nogc void evalRelaxationTimes(in GasState gs)
+    {
+        mGmodel.massf2molef(gs, mMolef);
+        mGmodel.massf2numden(gs, mNumden);
+        foreach (mech; mEEM) {
+            mech.evalRelaxationTime(gs, mMolef, mNumden);
+        }
+    }
+
+    @nogc void evalRates(in GasState gs, in ReactionMechanism rmech, ref number[] rates)
+    {
+        // Compute a star state at transrotational equilibrium.
+        mGsEq.copy_values_from(gs);
+        mGsEq.T_modes[] = gs.T;
+        mGmodel.update_thermo_from_pT(mGsEq);
+        rates[] = to!number(0.0);
+        // Compute rate change from VT exchange
+        foreach (mech; mEEM) {
+            rates[mech.mode] += mech.rate(gs, mGsEq, mMolef, mNumden, rmech);
+        }
+    }
+
+    @nogc
+    void eval_source_terms(in ReactionMechanism rmech, ref GasState Q, ref number[] rates, ref number[] source)
+    {
+        evalRelaxationTimes(Q);
+        evalRates(Q, rmech, rates);
+        rates2source(Q, rates, source);
+    }
+
+    @nogc
+    void rates2source(in GasState Q, in number[] rates, ref number[] source)
+    {
+        foreach(i, rate; rates) source[i] = rate*Q.rho;
+    }
+
+private:
+    number[] mMolef;
+    number[] mNumden;
+    GasModel mGmodel;
+    GasState mGsEq;
+    EnergyExchangeMechanism[] mEEM;
+}

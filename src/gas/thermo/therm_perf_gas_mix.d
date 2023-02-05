@@ -267,6 +267,12 @@ public:
     }
 
     @nogc
+    override number gasConstant(in GasState gs, int isp)
+    {
+        return to!number(mR[isp]);
+    }
+
+    @nogc
     override number internalEnergy(in GasState gs)
     {
         foreach (isp, ref u; mVals) {

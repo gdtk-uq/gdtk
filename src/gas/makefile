@@ -29,7 +29,7 @@ TEST_PROGRAMS := chemkin_therm_cond_test chemkin_viscosity_test cea_therm_cond_t
 	init_gas_model_complex_test ideal_gas_complex_test cea_thermo_curves_complex_test \
 	pseudo_species_gas_test vib_specific_nitrogen_test vib_specific_co_test \
 	vib_specific_co_mixture_test electronically_specific_gas_test \
-	two_temperature_gasgiant_test
+	two_temperature_gasgiant_test multi_temperature_gas_test
 
 LUA_DIR := ../../extern/lua-5.4.3
 LIBLUA := $(LUA_DIR)/install/lib/liblua.a
@@ -410,7 +410,19 @@ two_temperature_gas_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
 
+multi_temperature_gas_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+
 two_temperature_trans_props_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
+	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS)
+
+multi_temperature_trans_props_test: $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 	$(LIBCEQ) $(LIBGASF) $(LIBLUA)
 	$(DMD) $(OF)$@ $(DFLAGS) $(DVERSION)$@ \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \

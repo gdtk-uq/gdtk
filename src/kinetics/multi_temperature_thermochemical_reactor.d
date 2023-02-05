@@ -3,7 +3,7 @@
  * Date: 2021-03-28
  */
 
-module kinetics.two_temperature_thermochemical_reactor;
+module kinetics.multi_temperature_thermochemical_reactor;
 
 import std.format;
 import std.math;
@@ -32,7 +32,7 @@ immutable double ALLOWABLE_MASSF_ERROR = 1.0e-3; // Maximum allowable error in m
 
 enum ResultOfStep { success, failure };
 
-class TwoTemperatureThermochemicalReactor : ThermochemicalReactor {
+class MultiTemperatureThermochemicalReactor : ThermochemicalReactor {
 public:
 
     this(string fname1, string fname2, GasModel gmodel)
@@ -41,6 +41,7 @@ public:
         // Hard code N2-N system to get going.
         mGmodel = gmodel;
         mNSpecies = mGmodel.n_species;
+        mNModes = mGmodel.n_modes;
         mGsInit = GasState(gmodel);
 
         auto L = init_lua_State();
@@ -49,7 +50,13 @@ public:
         mRmech = createReactionMechanism(L, gmodel, 300.0, 30000.0);
 
         // Initialise energy exchange mechanism
-        mEES = new TwoTemperatureEnergyExchange(fname2, gmodel);
+        switch (mNModes) {
+            case 1:
+                mEES = new TwoTemperatureEnergyExchange(fname2, gmodel);
+                break;
+            default:
+                mEES = new MultiTemperatureEnergyExchange(fname2, gmodel);
+        }
 
         // Set up the rest of the parameters.
         lua_getglobal(L, "config");
@@ -85,21 +92,21 @@ public:
 
     void initialiseWorkSpace()
     {
-        therm_rates.length = mNSpecies;
+        therm_rates.length = mNModes;
         mConc0.length = mNSpecies;
         mConc.length = mNSpecies;
         m_dCdt.length = mNSpecies;
-        m_duvedt.length = 1;
-        m_y0.length =  mNSpecies + 1;
-        m_yOut.length = mNSpecies + 1;
-        m_yTmp.length = mNSpecies + 1;
-        m_yErr.length = mNSpecies + 1;
-        m_k1.length = mNSpecies + 1;
-        m_k2.length = mNSpecies + 1;
-        m_k3.length = mNSpecies + 1;
-        m_k4.length = mNSpecies + 1;
-        m_k5.length = mNSpecies + 1;
-        m_k6.length = mNSpecies + 1;
+        m_duvedt.length = mNModes;
+        m_y0.length =  mNSpecies + mNModes;
+        m_yOut.length = mNSpecies + mNModes;
+        m_yTmp.length = mNSpecies + mNModes;
+        m_yErr.length = mNSpecies + mNModes;
+        m_k1.length = mNSpecies + mNModes;
+        m_k2.length = mNSpecies + mNModes;
+        m_k3.length = mNSpecies + mNModes;
+        m_k4.length = mNSpecies + mNModes;
+        m_k5.length = mNSpecies + mNModes;
+        m_k6.length = mNSpecies + mNModes;
     }
 
     @nogc
@@ -113,6 +120,7 @@ public:
         // Evaluate temperature dependent rate parameters
         mRmech.eval_rate_constants(gs);
         mEES.evalRelaxationTimes(gs);
+
 
         // Sort out stepsize for possible subcycling.
         double t = 0.0;
@@ -134,8 +142,8 @@ public:
         // Populate y0
         // Species concentrations in first part of array
         foreach (isp; 0 .. mNSpecies) m_y0[isp] = mConc0[isp];
-        // Final entry is energy change.
-        m_y0[mNSpecies] = gs.u_modes[0];
+        //Final entry is energy change.
+        m_y0[mNSpecies .. $] = gs.u_modes[];
         for ( ; cycle < mMaxSubcycles; ++cycle) {
             mRmech.eval_rate_constants(gs);
             mEES.evalRelaxationTimes(gs);
@@ -221,7 +229,7 @@ public:
                 }
             } // end attempts at single step of subcycle.
             if (attempt == mMaxAttempts) {
-                string errMsg = "Hit maxmium number of step attempts within a subcycle in 2-T thermochemical update.";
+                string errMsg = "Hit maxmium number of step attempts within a subcycle in multi-T thermochemical update.";
                 // We did poorly. Return GasState to how we found it, and throw an Exception.
                 gs.copy_values_from(mGsInit);
                 throw new ThermochemicalReactorUpdateException(errMsg);
@@ -231,9 +239,20 @@ public:
             // the temperature changes can be large over total tInterval.
             // Given this is the case, it will help robustness to re-evaluate
             // the temperature-dependent rate constants and relaxation times.
-            gs.u_modes[0] = m_y0[mNSpecies];
-            gs.u = m_uTotal - gs.u_modes[0];
-            mGmodel.update_thermo_from_rhou(gs);
+            gs.u_modes[] = m_y0[mNSpecies .. $];
+            gs.u = m_uTotal - sum(gs.u_modes);
+            try {
+                mGmodel.update_thermo_from_rhou(gs);
+            } catch (GasModelException err) {
+                gs.copy_values_from(mGsInit);
+                string msg = "Failed to update thermodynamic state in multi-T thermochemical update. ";
+                debug {
+                    msg ~= err.toString();
+                    msg ~= " The initial gas state was\n";
+                    msg ~= mGsInit.toString();
+                }
+                throw new ThermochemicalReactorUpdateException(msg);
+            }
 
             if (t >= tInterval) { // We've done enough cycling.
                 // If we've only taken one cycle, then we would like to use
@@ -259,21 +278,21 @@ public:
         foreach (ref mf; gs.massf) mf /= massfTotal;
 
         dtSuggest = dtSave;
-
     }
 
     @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
         // species source terms
-        auto chem_source = source[0..$-1]; // these are actually references not copies
+        auto chem_source = source[0..mNSpecies]; // these are actually references not copies
         mRmech.eval_source_terms(gmodel, Q, chem_source);
         // energy modes source terms
-        auto therm_source = source[$-1..source.length];
+        auto therm_source = source[mNSpecies..source.length];
         mEES.eval_source_terms(mRmech, Q, therm_rates, therm_source);
     }
 
 private:
     number[] therm_rates;
     int mNSpecies;
+    int mNModes;
     int mMaxSubcycles=10000;
     int mMaxAttempts=4;
     double mTol=1e-3;
@@ -300,14 +319,14 @@ private:
 
     @nogc
     void evalRates(ref GasState gs, number[] y, ref number[] rates) {
-        mConc[] = y[0 .. $-1];
+        mConc[] = y[0 .. mNSpecies];
         mRmech.eval_rates(mConc, m_dCdt);
-        rates[0 .. $-1] = m_dCdt[];
+        rates[0 .. mNSpecies] = m_dCdt[];
 
-        gs.u_modes[0] = y[$-1];
-        gs.u = m_uTotal - gs.u_modes[0];
+        gs.u_modes[] = y[mNSpecies .. $];
+        gs.u = m_uTotal - sum(gs.u_modes);
         mEES.evalRates(gs, mRmech, m_duvedt);
-        rates[$-1] = m_duvedt[0];
+        rates[mNSpecies .. $] = m_duvedt[];
     }
 
     @nogc
