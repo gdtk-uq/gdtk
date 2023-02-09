@@ -3,12 +3,19 @@
 # This is where the default program config is stored.
 # Other files may have their own config which would overwrite things in this file.
 
-# output filename
+# default output filename
 output_filename : 'PITOT3_result'
+
+#locations of internal structure.
 
 facilities_folder : '$PITOT3_DATA/facilities'
 preset_gas_models_folder : '$PITOT3_DATA/preset_gas_models'
 species_molecular_weights_file : '$PITOT3_DATA/PITOT3_species_molecular_weights.yaml'
+
+# control of the output and what is done at the end of the calculation
+generate_output_files : True
+cleanup_run_files : True
+cleanup_generated_gas_models : False
 
 # generic set up stuff, 
 # most of this should be in the facility stuff too, but good to have defaults to work with

@@ -629,11 +629,11 @@ def run_pitot3(config_dict = {}, config_filename = None,
     # now do the final output
 
     # I am returning the states dict here from the output so I can return a states dictionary with the output now...
-    states_dict = pitot3_results_output(config_data, gas_path, object_dict)
+    states_dict = pitot3_results_output(config_data, gas_path, object_dict, generate_output_files = config_data['generate_output_files'])
 
-    # cleanup temporary files before exiting...
-
-    cleanup_function()
+    if config_data['cleanup_run_files']:
+        # cleanup temporary files (and potentially generated gas models) before exiting...
+        cleanup_function(cleanup_generated_gas_models = config_data['cleanup_generated_gas_models'])
 
     print('-'*60)
     print("Run finished successfully.")

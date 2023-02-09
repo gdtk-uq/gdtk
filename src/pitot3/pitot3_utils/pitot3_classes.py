@@ -1518,7 +1518,7 @@ class Diaphragm(object):
         """
 
         print('-' * 60)
-        print("Doing reflected shock at the {0} which the user has asked for.".format(self.diaphragm_name))
+        print(f"Doing reflected shock at the {self.diaphragm_name} which the user has asked for.")
 
         # make a gas state to work with...
 
@@ -1540,7 +1540,7 @@ class Diaphragm(object):
 
             reflected_shocked_gas_v = 0.0
         else:
-            print("Performing a reflected shock with a user selected Mach number of {0}".format(self.Mr_input))
+            print(f"Performing a reflected shock with a user selected Mach number of {self.Mr_input}")
             # we have a numerical value, so things are a bit harder...
             self.Mr = self.Mr_input
             self.vr = self.Mr * entrance_gas_gas_state.a - entrance_gas_v
@@ -1557,21 +1557,22 @@ class Diaphragm(object):
 
         self.reflected_shocked_state = Facility_State(entrance_state.get_state_name() + 'r',
                                                       reflected_shocked_gas_gas_state, reflected_shocked_gas_v,
-                                                      reference_gas_state=reference_gas_state)
+                                                      reference_gas_state=reference_gas_state,
+                                                      outputUnits=entrance_state.outputUnits,
+                                                      species_MW_dict=entrance_state.species_MW_dict)
 
-        print('Mr = {0:.2f}, vr = {1:.2f}'.format(self.Mr, self.vr))
+        print(f'Mr = {self.Mr:.2f}, vr = {self.vr:.2f}')
         print(self.reflected_shocked_state)
-        if self.reflected_shocked_state.get_gas_state().gmodel.type_str == 'CEAGas':
-            print('species in {0} at equilibrium (by mass):'.format(self.reflected_shocked_state.get_state_name()))
-            print(self.reflected_shocked_state.get_reduced_species_massf_dict())
+
+        if self.reflected_shocked_state.get_gas_state_gmodel_type() == 'CEAGas':
+            print(self.reflected_shocked_state.get_reduced_composition_two_line_output_string())
 
         return
 
     def perform_velocity_loss_factor_at_diaphragm(self):
 
         print('-' * 60)
-        print("Multiplying the velocity at the {0} by a velocity_loss_factor of {1}".format(self.diaphragm_name,
-                                                                                            self.velocity_loss_factor))
+        print(f"Multiplying the velocity at the {self.diaphragm_name} by a velocity_loss_factor of {self.velocity_loss_factor}")
 
         entrance_gas_gas_state = self.diaphragm_entrance_state.get_gas_state()
         entrance_gas_v = self.diaphragm_entrance_state.get_v()
@@ -1584,7 +1585,9 @@ class Diaphragm(object):
         self.velocity_loss_factor_state = Facility_State(self.diaphragm_entrance_state_name + 'l',
                                                          entrance_gas_gas_state,
                                                          entrance_gas_v * self.velocity_loss_factor,
-                                                         reference_gas_state=reference_gas_state)
+                                                         reference_gas_state=reference_gas_state,
+                                                         outputUnits=self.diaphragm_entrance_state.outputUnits,
+                                                         species_MW_dict=self.diaphragm_entrance_state.species_MW_dict)
         print(self.velocity_loss_factor_state)
 
         return
@@ -2761,7 +2764,7 @@ class Tube(object):
             for facility_state in [self.shocked_state, self.unsteadily_expanded_state]:
                 print('-'*60)
                 print(facility_state)
-                if facility_state.get_gas_state().gmodel.type_str == 'CEAGas':
+                if facility_state.get_gas_state_gmodel_type() == 'CEAGas':
                     print(facility_state.get_reduced_composition_two_line_output_string())
 
                 # add the stagnation enthalpy, if we can:
@@ -2829,7 +2832,7 @@ class Tube(object):
             for facility_state in [self.stagnated_fill_gas, self.stagnated_unsteadily_expanding_gas]:
                 print('-'*60)
                 print(facility_state)
-                if facility_state.get_gas_state().gmodel.type_str == 'CEAGas':
+                if facility_state.get_gas_state_gmodel_type() == 'CEAGas':
                     print(facility_state.get_reduced_composition_two_line_output_string())
 
                 # add the stagnation enthalpy, if we can:
@@ -3210,7 +3213,7 @@ class Nozzle(object):
                                          outputUnits=self.entrance_state.outputUnits, species_MW_dict=self.entrance_state.species_MW_dict)
 
         print (self.exit_state)
-        if self.exit_state.get_gas_state().gmodel.type_str == 'CEAGas':
+        if self.exit_state.get_gas_state_gmodel_type() == 'CEAGas':
             print(self.exit_state.get_reduced_composition_two_line_output_string())
 
         return
@@ -3383,7 +3386,7 @@ class Test_Section(object):
 
         print (self.post_normal_shock_state)
 
-        if self.post_normal_shock_state.get_gas_state().gmodel.type_str == 'CEAGas':
+        if self.post_normal_shock_state.get_gas_state_gmodel_type() == 'CEAGas':
             print(self.post_normal_shock_state.get_reduced_composition_two_line_output_string())
 
     def get_post_normal_shock_state(self):
@@ -3468,7 +3471,7 @@ class Test_Section(object):
 
         print(self.post_conical_shock_state)
 
-        if self.post_conical_shock_state.get_gas_state().gmodel.type_str == 'CEAGas':
+        if self.post_conical_shock_state.get_gas_state_gmodel_type() == 'CEAGas':
             print(self.post_conical_shock_state.get_reduced_composition_two_line_output_string())
 
         return
@@ -3531,7 +3534,7 @@ class Test_Section(object):
 
             print(self.post_wedge_shock_state)
 
-            if self.post_wedge_shock_state.get_gas_state().gmodel.type_str == 'CEAGas':
+            if self.post_wedge_shock_state.get_gas_state_gmodel_type() == 'CEAGas':
                 print(self.post_wedge_shock_state.get_reduced_composition_two_line_output_string())
 
         except Exception as e:
@@ -3707,7 +3710,7 @@ def expansion_tube_test_time_calculator(acceleration_tube_tube_object):
 
     return T_usx
 
-def pitot3_results_output(config_data, gas_path, object_dict):
+def pitot3_results_output(config_data, gas_path, object_dict, generate_output_files = True):
     """
     Function which takes the config data, the gas path and the object_dict (with everything defined by name)
     and outputs the results of the program
@@ -3732,7 +3735,7 @@ def pitot3_results_output(config_data, gas_path, object_dict):
     # I would normally open files with with, but this is a standard operation so can probably deal with not having it...
     # / the code will be a bit more cleaner that way...
 
-    if 'output_filename' in config_data:
+    if 'output_filename' in config_data and generate_output_files:
         if '.txt' not in config_data['output_filename']:
             output_file = open(config_data['output_filename'] + '.txt', "w")
         else:
@@ -3754,15 +3757,15 @@ def pitot3_results_output(config_data, gas_path, object_dict):
         driver = object_dict['driver']
         state4 = driver.get_driver_rupture_state()
         if config_data['driver_condition'] != 'custom':
-            print(f"Driver condition is '{config_data['driver_condition']}'. Driver gas model is {state4.get_gas_state().gmodel.type_str}.",
+            print(f"Driver condition is '{config_data['driver_condition']}'. Driver gas model is {state4.get_gas_state_gmodel_type()}.",
                   file=output_stream)
         else:
             print(f"Using custom driver condition from the file {config_data['driver_condition_filename']}.",
                   file=output_stream)
-            print(f"Driver gas model is {state4.get_gas_state().gmodel.type_str}.",
+            print(f"Driver gas model is {state4.get_gas_state_gmodel_type()}.",
                   file=output_stream)
 
-        if state4.get_gas_state().gmodel.type_str == 'CEAGas':
+        if state4.get_gas_state_gmodel_type() == 'CEAGas':
             print(f"Driver gas composition is {state4.get_reduced_composition_single_line_output_string()} ({state4.get_gamma_and_R_string()}).",
                   file=output_stream)
         else:
@@ -3776,15 +3779,15 @@ def pitot3_results_output(config_data, gas_path, object_dict):
             secondary_driver_fill_state = secondary_driver.get_fill_state()
 
             if secondary_driver.get_fill_gas_model() != 'custom':
-                print(f"Secondary driver gas ({secondary_driver_fill_state.get_state_name()}) is {secondary_driver.get_fill_gas_name()}. Secondary driver gas model is { secondary_driver_fill_state.get_gas_state().gmodel.type_str}.",
+                print(f"Secondary driver gas ({secondary_driver_fill_state.get_state_name()}) is {secondary_driver.get_fill_gas_name()}. Secondary driver gas model is { secondary_driver_fill_state.get_gas_state_gmodel_type()}.",
                       file=output_stream)
             else:
                 print(f'Using custom secondary driver gas from the file {secondary_driver.get_fill_gas_filename()}.',
                       file=output_stream)
-                print(f"Secondary driver gas model is {secondary_driver_fill_state.get_gas_state().gmodel.type_str}.",
+                print(f"Secondary driver gas model is {secondary_driver_fill_state.get_gas_state_gmodel_type()}.",
                     file=output_stream)
 
-            if secondary_driver_fill_state.get_gas_state().gmodel.type_str == 'CEAGas':
+            if secondary_driver_fill_state.get_gas_state_gmodel_type() == 'CEAGas':
                 print(f"Secondary driver gas composition is {secondary_driver_fill_state.get_reduced_composition_single_line_output_string()} ({secondary_driver_fill_state.get_gamma_and_R_string()}).",
                       file=output_stream)
             else:
@@ -3798,15 +3801,15 @@ def pitot3_results_output(config_data, gas_path, object_dict):
         shock_tube_fill_state = shock_tube.get_fill_state()
 
         if shock_tube.get_fill_gas_model() != 'custom':
-            print(f"Test gas ({shock_tube_fill_state.get_state_name()}) is {shock_tube.get_fill_gas_name()}. Test gas gas model is {shock_tube_fill_state.get_gas_state().gmodel.type_str}.",
+            print(f"Test gas ({shock_tube_fill_state.get_state_name()}) is {shock_tube.get_fill_gas_name()}. Test gas gas model is {shock_tube_fill_state.get_gas_state_gmodel_type()}.",
                   file=output_stream)
         else:
             print(f'Using custom test gas from the file {shock_tube.get_fill_gas_filename()}.',
                   file=output_stream)
-            print(f"Test gas gas model is {shock_tube_fill_state.get_gas_state().gmodel.type_str}.",
+            print(f"Test gas gas model is {shock_tube_fill_state.get_gas_state_gmodel_type()}.",
                   file=output_stream)
 
-        if shock_tube_fill_state.get_gas_state().gmodel.type_str == 'CEAGas':
+        if shock_tube_fill_state.get_gas_state_gmodel_type() == 'CEAGas':
 
             print(f"Test gas composition is {shock_tube_fill_state.get_reduced_composition_single_line_output_string()} ({shock_tube_fill_state.get_gamma_and_R_string()})",
                   file=output_stream)
@@ -3821,15 +3824,15 @@ def pitot3_results_output(config_data, gas_path, object_dict):
             acceleration_tube_fill_state = acceleration_tube.get_fill_state()
 
             if acceleration_tube.get_fill_gas_model() != 'custom':
-                print(f"Accelerator gas ({acceleration_tube_fill_state.get_state_name()}) is {acceleration_tube.get_fill_gas_name()}. Accelerator gas gas model is {acceleration_tube_fill_state.get_gas_state().gmodel.type_str}.",
+                print(f"Accelerator gas ({acceleration_tube_fill_state.get_state_name()}) is {acceleration_tube.get_fill_gas_name()}. Accelerator gas gas model is {acceleration_tube_fill_state.get_gas_state_gmodel_type()}.",
                       file=output_stream)
             else:
                 print(f'Using custom accelerator gas from the file {acceleration_tube.get_fill_gas_filename()}.',
                       file=output_stream)
-                print(f"Accelerator gas gas model is {acceleration_tube_fill_state.get_gas_state().gmodel.type_str}.",
+                print(f"Accelerator gas gas model is {acceleration_tube_fill_state.get_gas_state_gmodel_type()}.",
                     file=output_stream)
 
-            if acceleration_tube_fill_state.get_gas_state().gmodel.type_str == 'CEAGas':
+            if acceleration_tube_fill_state.get_gas_state_gmodel_type() == 'CEAGas':
                 print(f"Accelerator gas composition is {acceleration_tube_fill_state.get_reduced_composition_single_line_output_string()} ({acceleration_tube_fill_state.get_gamma_and_R_string()}).",
                       file=output_stream)
             else:
@@ -3867,7 +3870,7 @@ def pitot3_results_output(config_data, gas_path, object_dict):
                 print(f"NOTE: a user specified reflected shock was done at the end of the {tube_name}.",
                       file=output_stream)
 
-                print(f"vr-{tube_name_reduced} = {vr:.2f} m/s, Mr-{vr} = {Mr:.2f}",
+                print(f"vr-{tube_name_reduced} = {vr:.2f} m/s, Mr-{tube_name_reduced} = {Mr:.2f}",
                       file=output_stream)
 
         #---------------------------------------------------------------------------------------------------------------
@@ -3954,12 +3957,12 @@ def pitot3_results_output(config_data, gas_path, object_dict):
         print(f"Post normal shock equilibrium ({test_section_post_normal_shock_state.get_state_name()}) unit Reynolds number is {test_section_post_normal_shock_state.get_unit_Reynolds_number():.2f} /m (related mu is {test_section_post_normal_shock_state.get_mu():.2e} Pa.s).",
               file=output_stream)
 
-        if freestream_state.get_gas_state().gmodel.type_str == 'CEAGas':
+        if freestream_state.get_gas_state_gmodel_type()== 'CEAGas':
             print(f"Species in the freestream state ({freestream_state.get_state_name()}) at equilibrium (by {freestream_state.outputUnits}):",
                   file=output_stream)
             print(freestream_state.get_reduced_species_moles_dict_for_printing(), file=output_stream)
 
-        if test_section.get_post_normal_shock_state().get_gas_state().gmodel.type_str == 'CEAGas':
+        if test_section.get_post_normal_shock_state().get_gas_state_gmodel_type() == 'CEAGas':
             print(f"Species in the shock layer at equilibrium ({test_section.get_post_normal_shock_state().get_state_name()}) (by {test_section.get_post_normal_shock_state().outputUnits}):",
                   file=output_stream)
             print(test_section.get_post_normal_shock_state().get_reduced_species_moles_dict_for_printing(), file=output_stream)
@@ -3973,24 +3976,25 @@ def pitot3_results_output(config_data, gas_path, object_dict):
 
         states_dict[state_name] = state
 
-    # and we output a cut down version of the states to a json file...
+    if generate_output_files:
+        # and we output a cut down version of the states to a json file...
 
-    pitot3_states_dict_json_output_file_creator(states_dict, config_data['output_filename'] + '.json')
+        pitot3_states_dict_json_output_file_creator(states_dict, config_data['output_filename'] + '.json')
 
-    # and the full result to a pickle...
+        # and the full result to a pickle...
 
-    dict_of_objects = {'config_data':config_data, 'gas_path':gas_path,
-                       'object_dict':object_dict, 'states_dict':states_dict}
+        dict_of_objects = {'config_data':config_data, 'gas_path':gas_path,
+                           'object_dict':object_dict, 'states_dict':states_dict}
 
-    pitot3_pickle_output_file_creator(dict_of_objects, config_data['output_filename'] + '.pickle')
+        pitot3_pickle_output_file_creator(dict_of_objects, config_data['output_filename'] + '.pickle')
 
-    # and we output a one line csv of the output too...
-    pitot3_single_line_output_file_creator(config_data, object_dict, states_dict)
+        # and we output a one line csv of the output too...
+        pitot3_single_line_output_file_creator(config_data, object_dict, states_dict)
 
     return states_dict
 
 
-def cleanup_function():
+def cleanup_function(cleanup_generated_gas_models = False):
     """Function to clean up temporary files created during the running of the program."""
 
     import os
@@ -4000,6 +4004,17 @@ def cleanup_function():
     print ("-" * 60)
 
     files_to_remove_list = ['thermo.inp', 'thermo.out', 'thermo.lib', 'tmp.inp', 'tmp.out', 'trans.inp', 'trans.out', 'trans.lib']
+
+    if cleanup_generated_gas_models:
+        files_to_remove_list += ['PITOT3_ideal_gas_test_section_gmodel.lua', 'PITOT3_cea_driver_condition.lua']
+
+        # we also need to scan the folder for any gas models without ions...
+
+        files_and_folders_in_directory = os.listdir(os.getcwd())
+
+        for file_or_folder in files_and_folders_in_directory:
+            if 'without-ions-gas-model.lua' in file_or_folder:
+                files_to_remove_list.append(file_or_folder)
 
     for file in files_to_remove_list:
         if os.path.isfile(file):
