@@ -7,6 +7,11 @@ db.N2.theta_v = {
    description = 'characteristic vibrational temperature',
    reference = 'Capitelli et al (2005), Table 15. omega_e in ground state converted to K'
 }
+db.N2.theta_D = {
+   value = 113340.4449,
+   units = 'K',
+   description = 'dissociation temperature'
+}
 db.N2.atomicConstituents = {N=2}
 db.N2.charge = 0
 db.N2.M = {
