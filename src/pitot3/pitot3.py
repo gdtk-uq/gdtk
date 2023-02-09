@@ -6,7 +6,7 @@ Chris James (c.james4@uq.edu.au) - (01/01/21)
 
 """
 
-VERSION_STRING = '09-Feb-2023'
+VERSION_STRING = '10-Feb-2023'
 
 import sys, os, math
 import yaml
@@ -187,6 +187,10 @@ def run_pitot3(config_dict = {}, config_filename = None,
     #     print(driver_condition.get_driver_condition_name())
 
     #-------------------------------------------------------------------------------------------------
+
+    print('-' * 60)
+    print("Setting up facility driver condition.")
+
     # pick a driver condition
     if driver_condition_name != 'custom_from_dict':
         if driver_condition_name != 'custom':
@@ -202,10 +206,15 @@ def run_pitot3(config_dict = {}, config_filename = None,
         print("Using driver condition specified in a dictionary in the input config.")
         driver_condition_input_data = config_data['driver_dict']
 
+    if facility.shock_tube_diameter:
+        D_shock_tube = facility.shock_tube_diameter
+    else:
+        D_shock_tube = None
+
     # TO DO: I was thinking that it would be good to make this have lots of inputs, but it is almost too complicated
     # + it generally comes from a file...
     driver = Driver(driver_condition_input_data, p_0=p_0, T_0=T_0, preset_gas_models_folder = preset_gas_models_folder,
-                    outputUnits = outputUnits, species_MW_dict = species_MW_dict)
+                    outputUnits = outputUnits, species_MW_dict = species_MW_dict, D_shock_tube = D_shock_tube)
 
     state4 = driver.get_driver_rupture_state()
     print(f"Driver gas model is {state4.get_gas_state().gmodel.type_str}.")
@@ -215,7 +224,7 @@ def run_pitot3(config_dict = {}, config_filename = None,
     else:
         print(f"Driver gas {state4.get_gamma_and_R_string()}.")
 
-    print (f"Driver rupture conditions are p4 = {state4.get_gas_state().p/1.0e6:.2f} MPa, T4 = {state4.get_gas_state().T:.2f} K, M_throat = {driver.get_M_throat()}.")
+    print (f"Driver rupture conditions are p4 = {state4.get_gas_state().p/1.0e6:.2f} MPa, T4 = {state4.get_gas_state().T:.2f} K, M_throat = {driver.get_M_throat():.2f}.")
 
     gas_path.append(driver)
     object_dict['driver'] = driver
@@ -226,6 +235,12 @@ def run_pitot3(config_dict = {}, config_filename = None,
     # so that we can add all of the various fill details which is not here currently...
     # (that may be hard without some changes to make the code set everything up and then make stuff run, but we will see
     # there may be some way)
+
+    print('-' * 60)
+    if facility_type == 'expansion_tube':
+        print("The configuration in the driven tubes is as follows:")
+    else:
+        print("The configuration in the driven tube is as follows:")
 
     if secondary_driver_flag:
         # secondary driver stuff

@@ -1072,7 +1072,7 @@ class Driver(object):
     Class to store and calculate facility driver information.
     """
 
-    def __init__(self, cfg, p_0 = None, T_0 = None, preset_gas_models_folder = None, outputUnits = 'massf', species_MW_dict = None):
+    def __init__(self, cfg, p_0 = None, T_0 = None, preset_gas_models_folder = None, outputUnits = 'massf', species_MW_dict = None, D_shock_tube = None):
         """
 
         :param cfg: Python dictionary which contains configuration information which is loaded into the class,
@@ -1092,13 +1092,6 @@ class Driver(object):
 
         self.driver_condition_name = cfg['driver_condition_name']
         self.driver_condition_type = cfg['driver_condition_type']
-
-        self.M_throat = cfg['M_throat']
-
-        if self.M_throat > 0.0:
-            self.driver_exit_state_name = '3s'
-        else:
-            self.driver_exit_state_name = '4'
 
         # -------------------- gas composition ----------------------------
 
@@ -1208,7 +1201,7 @@ class Driver(object):
             if 'driver_T' in cfg:
                 self.driver_T = float(cfg['driver_T'])
             else:
-                print("Setting driver temperature to the default value of {0:.2f} K".format(T))
+                print(f"Setting driver temperature to the default value of {T:.2f} K")
                 self.driver_T = T_0
 
             # we call this state 4i
@@ -1245,7 +1238,7 @@ class Driver(object):
             if self.driver_condition_type == 'isentropic-compression-p4':
                 self.p4 = float(cfg['p4'])
 
-                print ("Performing isentropic compression from the driver fill condition to {0:.2f} MPa.".format(self.p4/1.0e6))
+                print (f"Performing isentropic compression from the driver fill condition to {self.p4/1.0e6:.2f} MPa.")
 
                 self.T4 = state4i.T * (self.p4 / state4i.p) ** (1.0 - (1.0 / gamma))  # K
 
@@ -1253,7 +1246,7 @@ class Driver(object):
 
                 self.compression_ratio = cfg['compression_ratio']
 
-                print ("Performing isentropic compression from driver fill condition over compression ratio of {0}.".format(cfg['compression_ratio']))
+                print (f"Performing isentropic compression from driver fill condition over compression ratio of {self.compression_ratio}.")
                 pressure_ratio =  self.compression_ratio**gamma #pressure ratio is compression ratio to the power of gamma
 
                 self.p4 = state4i.p*pressure_ratio
@@ -1288,6 +1281,50 @@ class Driver(object):
         self.state4 = Facility_State('s4', state4, v4,
                                      reference_gas_state=reference_gas_state,
                                      outputUnits=outputUnits, species_MW_dict=species_MW_dict)
+
+        #-------------------- M throat ---------------------------------------------------------
+
+        if 'M_throat' in cfg:
+
+            self.M_throat = cfg['M_throat']
+
+            print(f'M_throat = {self.M_throat}')
+
+        elif 'M_throat' not in cfg and 'D_throat' in cfg and D_shock_tube:
+            # we can calculate M_throat ourselves using the throat diameter and the shock tube diameter
+
+            from eilmer.ideal_gas_flow import A_Astar
+            from scipy.optimize import newton
+
+            print("Calculating M_throat from the provided D_throat and D_shock_tube values:")
+
+            D_throat = cfg['D_throat']
+            A_throat = (math.pi/4.0)*D_throat**2.0
+
+            A_shock_tube = (math.pi/4.0)*D_shock_tube**2.0
+
+            print(f'D_throat = {D_throat} m ({D_throat*1000.0} mm)')
+            print(f'D_shock_tube = {D_shock_tube} m ({D_shock_tube*1000.0} mm)')
+
+            print(f'A_throat = {A_throat:.2e} m**2 ({A_throat*1.0e6:.2f} mm**2)')
+            print(f'A_shock_tube = {A_shock_tube:.2e} m**2 ({A_shock_tube*1.0e6:.2f} mm**2)')
+
+            A_shock_tube_over_A_throat = A_shock_tube/A_throat
+
+            print(f"A_shock_tube / A_throat = {A_shock_tube_over_A_throat:.2f}")
+
+            M_throat_eqn = lambda M_throat : A_shock_tube_over_A_throat - A_Astar(M_throat, g=self.state4.get_gas_state().gamma)
+
+            self.M_throat = newton(M_throat_eqn, 1.1)
+
+            print(f"Calculated M_throat = {self.M_throat:.2f}")
+
+        if self.M_throat > 0.0:
+            self.driver_exit_state_name = '3s'
+        else:
+            self.driver_exit_state_name = '4'
+
+        #--------------------------------------------------------------------------------------
 
         if self.driver_exit_state_name == '3s':
             driver_gas_flow_object = GasFlow(self.gmodel)
