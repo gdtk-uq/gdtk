@@ -6,7 +6,7 @@ Chris James (c.james4@uq.edu.au) - (01/01/21)
 
 """
 
-VERSION_STRING = '21-Jan-2023'
+VERSION_STRING = '09-Feb-2023'
 
 import sys, os, math
 import yaml
@@ -188,15 +188,19 @@ def run_pitot3(config_dict = {}, config_filename = None,
 
     #-------------------------------------------------------------------------------------------------
     # pick a driver condition
-    if driver_condition_name != 'custom':
-        print(f"Chosen driver condition is '{driver_condition_name}'.")
-        driver_condition_file_location = facilities_folder + '/' + facility.get_driver_conditions_folder() + '/' + driver_condition_name + '.yaml'
-    else:
-        print(f"Using custom driver condition from the file {config_data['driver_condition_filename']}.")
-        driver_condition_file_location = config_data['driver_condition_filename']
+    if driver_condition_name != 'custom_from_dict':
+        if driver_condition_name != 'custom':
+            print(f"Chosen driver condition is '{driver_condition_name}'.")
+            driver_condition_file_location = facilities_folder + '/' + facility.get_driver_conditions_folder() + '/' + driver_condition_name + '.yaml'
+        else :
+            print(f"Using custom driver condition from the file {config_data['driver_condition_filename']}.")
+            driver_condition_file_location = config_data['driver_condition_filename']
 
-    driver_yaml_file = open(os.path.expandvars(driver_condition_file_location))
-    driver_condition_input_data = yaml.load(driver_yaml_file, Loader=yaml.FullLoader)
+        driver_yaml_file = open(os.path.expandvars(driver_condition_file_location))
+        driver_condition_input_data = yaml.load(driver_yaml_file, Loader=yaml.FullLoader)
+    else:
+        print("Using driver condition specified in a dictionary in the input config.")
+        driver_condition_input_data = config_data['driver_dict']
 
     # TO DO: I was thinking that it would be good to make this have lots of inputs, but it is almost too complicated
     # + it generally comes from a file...
