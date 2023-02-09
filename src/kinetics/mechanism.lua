@@ -1,6 +1,6 @@
 -- Author: Rowan J. Gollan
 -- Date: 2021-04-08
---
+-- 
 
 local mechanism = {}
 
@@ -13,11 +13,14 @@ local lex_elems = require 'lex_elems'
 local function transformRelaxationTime(rt, p, q, db)
    local t = {}
    t.model = rt[1]
+   --
+   -- V-T relaxation time models
+   --
    if t.model == "Millikan-White" then
       M_p = db[p].M*1000.0 -- kg -> g
       M_q = db[q].M*1000.0 -- kg -> g
       mu = (M_p * M_q)/(M_p + M_q)
-      theta_v = db[p].theta_v
+      theta_v = db[p].vib_data.theta_v
       -- If the user has not supplied values for a and b compute them from Millikan and White's correlation
       if rt.a == nil then
          t.a = 1.16e-3*sqrt(mu)*pow(theta_v, 4/3)
@@ -47,6 +50,22 @@ local function transformRelaxationTime(rt, p, q, db)
       t.submodel = transformRelaxationTime(rt.submodel, p, q, db)
       t.sigma = rt.sigma
       t.exponent = rt.exponent
+      --
+      -- V-V relaxation time models
+      --
+   elseif (t.model == "Schwartz-Slawsky-Herzfeld" or t.model == "SSH") then
+      t.model = "SSH-VV"
+      M_p = db[p].M
+      M_q = db[q].M
+      t.mu_pq = (M_p * M_q)/(M_p + M_q)
+      t.mu_pp = (M_p * M_p)/(M_p + M_p)
+      t.mu_qq = (M_q * M_q)/(M_q + M_q)
+      t.theta_v_p = db[p].vib_data.theta_v
+      t.theta_v_q = db[q].vib_data.theta_v
+      t.sigma = 0.5*(db[p].sigma + db[q].sigma)
+      t.epsilon = sqrt(db[p].epsilon * db[q].epsilon)
+      t.f_m_p = 1.0
+      t.f_m_q = 1.0
    else
       print("The relaxation time model: ", t.model, " it not known.")
       print("Bailing out!")
@@ -105,6 +124,18 @@ local function relaxationTimeToLuaStr(rt)
    elseif rt.model == "KimHTC" then
       submodelstr = relaxationTimeToLuaStr(rt.submodel)
       str = string.format("{model='KimHTC', sigma=%.4e, exponent=%.4f, submodel=%s}", rt.sigma, rt.exponent, submodelstr)
+   elseif rt.model == "SSH-VV" then
+      str = "{model='SSH-VV',\n"
+      str = str .. string.format("      theta_v_p = %f,\n", rt.theta_v_p)
+      str = str .. string.format("      theta_v_q = %f,\n", rt.theta_v_q)
+      str = str .. string.format("      mu_pq = %.6e,\n", rt.mu_pq)
+      str = str .. string.format("      mu_pp = %.6e,\n", rt.mu_pp)
+      str = str .. string.format("      mu_qq = %.6e,\n", rt.mu_qq)
+      str = str .. string.format("      sigma = %.6e,\n", rt.sigma)
+      str = str .. string.format("      epsilon = %.6e,\n", rt.epsilon)
+      str = str .. string.format("      f_m_p = %.6e,\n", rt.f_m_p)
+      str = str .. string.format("      f_m_q = %.6e,\n", rt.f_m_q)
+      str = str .. "  },"
    else
       print(string.format("ERROR: relaxation time model '%s' is not known.", rt.model))
       os.exit(1)
@@ -167,10 +198,19 @@ local function tableToString(o)
 end
 
 function mechanism.mechanismToLuaStr(index, m)
-   local typeStr
    local argStr
    if m.type == "V-T" then
       argStr = string.format("  p = '%s', q = '%s',\n", m.p, m.q)
+      argStr = argStr .. string.format("  mode_p = %d,\n", energy_modes[m.p]) 
+      argStr = argStr .. string.format("  rate = '%s',\n", m.rate)
+      argStr = argStr .. string.format("  relaxation_time = %s\n", relaxationTimeToLuaStr(m.rt))
+   elseif m.type == "V-V" then
+      argStr = string.format("  p = '%s', q = '%s',\n", m.p, m.q)
+      argStr = argStr .. string.format("  mode_p = %d, mode_q= %d,\n", energy_modes[m.p], energy_modes[m.q])
+      argStr = argStr .. string.format("  theta_D_p = %.3f, theta_D_q = %.3f,\n", db[m.p].vib_data.theta_D, db[m.q].vib_data.theta_D)
+      argStr = argStr .. string.format("  theta_v_p = %.3f, theta_v_q = %.3f,\n", db[m.p].vib_data.theta_v, db[m.q].vib_data.theta_v)
+      local R_univ = 8.31451
+      argStr = argStr .. string.format("  R_p = %.3f, R_q = %.3f,\n", R_univ/db[m.p].M, R_univ/db[m.q].M)
       argStr = argStr .. string.format("  rate = '%s',\n", m.rate)
       argStr = argStr .. string.format("  relaxation_time = %s\n", relaxationTimeToLuaStr(m.rt))
    elseif m.type == "E-T" then
@@ -315,17 +355,19 @@ function mechanism.addUserMechToTable(index, m, mechanisms, species, db)
 
    for _,p in ipairs(ps) do
       for __,q in ipairs(qs) do
-         mechanisms[index] = {}
-         mechanisms[index].type = m.type
-         mechanisms[index].p = p
-         mechanisms[index].q = q
-         if m.type == 'V-T' then
-            mechanisms[index].rate = m.rate
-            mechanisms[index].rt = transformRelaxationTime(m.relaxation_time, p, q, db)
-         elseif m.type == 'E-T' then
-            mechanisms[index].exchange_cross_section = m.exchange_cross_section
+	 if not (m.type == 'V-V' and p == q) then
+	    mechanisms[index] = {}
+	    mechanisms[index].type = m.type
+	    mechanisms[index].p = p
+	    mechanisms[index].q = q
+	    if m.type == 'V-T' or m.type == 'V-V' then 
+	       mechanisms[index].rate = m.rate
+	       mechanisms[index].rt = transformRelaxationTime(m.relaxation_time, p, q, db)
+	    elseif m.type == 'E-T' then
+	       mechanisms[index].exchange_cross_section = m.exchange_cross_section
+	    end
+	    index = index + 1
          end
-         index = index + 1
       end
    end
    return index

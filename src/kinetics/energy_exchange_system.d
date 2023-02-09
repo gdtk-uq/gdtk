@@ -128,8 +128,8 @@ public:
         lua_getglobal(L, "mechanism");
         lua_pushnil(L); // dummy first key
         while (lua_next(L, -2) != 0) { // -1 is the dummy key, -2 is the mechanism table
-            int mode = getInt(L, -1, "mode");
-            mEEM ~= createEnergyExchangeMechanism(L, mode, gmodel);
+            int mode_p = getInt(L, -1, "mode_p");
+            mEEM ~= createEnergyExchangeMechanism(L, mode_p, gmodel);
             lua_pop(L, 1); // discard value but keep key so that lua_next can remove it (?!)
         }
         lua_pop(L, 1); // remove mechanisms table

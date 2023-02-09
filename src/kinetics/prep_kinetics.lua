@@ -2,6 +2,8 @@
 -- Author: Rowan J. Gollan
 -- Remix by: Nick Gibbons
 -- Date: 2021-04-08
+-- History:
+--    2023-02-05 Added handling for V-V rate input
 --
 
 local mechanism = require 'mechanism'
@@ -112,6 +114,10 @@ function main()
    -- And we'll use the D-offset for species index (from 0)
    for isp,sp in ipairs(species) do
       species[sp] = isp-1
+   end
+   -- Do the same for energy_modes
+   for imode,mode in ipairs(energy_modes) do
+      energy_modes[mode] = imode-1
    end
 
    -- Load contents from user's file.
