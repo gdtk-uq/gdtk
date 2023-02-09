@@ -116,8 +116,19 @@ function main()
       species[sp] = isp-1
    end
    -- Do the same for energy_modes
-   for imode,mode in ipairs(energy_modes) do
-      energy_modes[mode] = imode-1
+   if energy_modes then
+      for imode,mode in ipairs(energy_modes) do
+	 energy_modes[mode] = imode-1
+      end
+   else
+      -- For 2-T, we don't require the user to set energy modes explicitly
+      -- since we can make that decision. So we'll set it up.
+      energy_modes = {}
+      for isp,sp in ipairs(species) do
+	 if db[sp].type == 'molecule' then
+	    energy_modes[sp] = 0
+	 end
+      end
    end
 
    -- Load contents from user's file.

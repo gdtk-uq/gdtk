@@ -20,7 +20,7 @@ local function transformRelaxationTime(rt, p, q, db)
       M_p = db[p].M*1000.0 -- kg -> g
       M_q = db[q].M*1000.0 -- kg -> g
       mu = (M_p * M_q)/(M_p + M_q)
-      theta_v = db[p].vib_data.theta_v
+      theta_v = db[p].theta_v or db[p].vib_data.theta_v
       -- If the user has not supplied values for a and b compute them from Millikan and White's correlation
       if rt.a == nil then
          t.a = 1.16e-3*sqrt(mu)*pow(theta_v, 4/3)
