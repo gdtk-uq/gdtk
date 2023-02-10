@@ -1293,7 +1293,7 @@ class Driver(object):
         elif 'M_throat' not in cfg and 'D_throat' in cfg and D_shock_tube:
             # we can calculate M_throat ourselves using the throat diameter and the shock tube diameter
 
-            from eilmer.ideal_gas_flow import A_Astar
+            from gdtk.ideal_gas_flow import A_Astar
             from scipy.optimize import newton
 
             print("Calculating M_throat from the provided D_throat and D_shock_tube values:")
