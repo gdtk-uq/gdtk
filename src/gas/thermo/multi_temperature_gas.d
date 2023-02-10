@@ -82,12 +82,10 @@ class MultiTemperatureGasMixture : ThermodynamicModel {
             string[] components; 
             lua_getglobal(L, "db");
             lua_getfield(L, -1, "modes");
-            lua_getfield(L, -1, mode_name.toStringz); 
-            getArrayOfStrings(L, -1, "components", components);
-            _max_iterations[i_mode] = getIntWithDefault(L, -1, "max_iterations", 100);
-            _tolerances[i_mode] = getDoubleWithDefault(L, -1, "tolerance", 1e-6);
-            lua_pop(L, 1); // mode name
+            getArrayOfStrings(L, -1, mode_name, components);
             lua_pop(L, 1); // modes
+            _max_iterations[i_mode] = 100;
+            _tolerances[i_mode] = 1e-6;
             _energy_modes[i_mode].length = to!int(components.length);
             _energy_modes_isp[i_mode].length = to!int(components.length);
             _reference_energies[i_mode].length = to!int(components.length);

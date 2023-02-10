@@ -464,7 +464,7 @@ RelaxationTime createRelaxationTime(lua_State *L, int p, int q, GasModel gmodel)
 	return new KimHTCVT(L, p, q, gmodel);
     case "SSH_VT":
         return new SSH_VT(L, p, q);
-    case "SSH_VV":
+    case "SSH-VV":
         return new SSH_VV(L, p, q);
     default:
 	string msg = format("The relaxation time model: %s is not known.", model);

@@ -10,6 +10,27 @@ local sqrt = math.sqrt
 local lpeg = require 'lpeg'
 local lex_elems = require 'lex_elems'
 
+local function SSHSigma(p, db)
+   -- use 4.2 as the sigma value for N2 to better match experiment
+   -- as per Thivet et al.
+   if p == "N2" then
+      return 4.2
+   else
+      return db[p].sigma
+   end
+end
+
+local function computeMassFactor(p, db)
+   local m = {}
+   for k, v in pairs(db[p].atomicConstituents) do
+      for _=1,v do
+         m[#m+1] = db[k].M
+      end
+   end
+   Cp2 = (m[1]*m[1] + m[2]*m[2]) / (2*m[1]*m[2]*(m[1] + m[2]))
+   return 1. / (db[p].M * Cp2)
+end
+
 local function transformRelaxationTime(rt, p, q, db)
    local t = {}
    t.model = rt[1]
@@ -62,10 +83,10 @@ local function transformRelaxationTime(rt, p, q, db)
       t.mu_qq = (M_q * M_q)/(M_q + M_q)
       t.theta_v_p = db[p].vib_data.theta_v
       t.theta_v_q = db[q].vib_data.theta_v
-      t.sigma = 0.5*(db[p].sigma + db[q].sigma)
+      t.sigma = 0.5*(SSHSigma(p, db) + SSHSigma(q, db))
       t.epsilon = sqrt(db[p].epsilon * db[q].epsilon)
-      t.f_m_p = 1.0
-      t.f_m_q = 1.0
+      t.f_m_p = computeMassFactor(p, db)
+      t.f_m_q = computeMassFactor(q, db)
    else
       print("The relaxation time model: ", t.model, " it not known.")
       print("Bailing out!")
@@ -74,6 +95,7 @@ local function transformRelaxationTime(rt, p, q, db)
 
    return t
 end
+
 
 local function calculateDissociationEnergy(dissociating_species, db)
    -- Calculate the dissociation energy by assuming the species splits
@@ -102,7 +124,7 @@ local function buildChemistryCouplingModel(m, dissociating_species, db)
    ccm.model = m.model
 
    if m.model == "ImpartialDissociation" then
-       ccm.Thetav = db[dissociating_species].theta_v
+       ccm.Thetav = db[dissociating_species].theta_v or db[dissociating_species].vib_data.theta_v
        ccm.D = calculateDissociationEnergy(dissociating_species, db)
    else
       print(string.format("ERROR: chemistry coupling model '%s' is not known.", m.model))
@@ -201,7 +223,7 @@ function mechanism.mechanismToLuaStr(index, m)
    local argStr
    if m.type == "V-T" then
       argStr = string.format("  p = '%s', q = '%s',\n", m.p, m.q)
-      argStr = argStr .. string.format("  mode_p = %d,\n", energy_modes[m.p]) 
+      argStr = argStr .. string.format("  mode_p = %d,\n", energy_modes[m.p])
       argStr = argStr .. string.format("  rate = '%s',\n", m.rate)
       argStr = argStr .. string.format("  relaxation_time = %s\n", relaxationTimeToLuaStr(m.rt))
    elseif m.type == "V-V" then
@@ -220,6 +242,7 @@ function mechanism.mechanismToLuaStr(index, m)
    elseif m.type == "C-V" then
       argStr = string.format("  p = '%s',\n", m.p)
       argStr = argStr .. string.format("  rate = '%s',\n", m.rate)
+      argStr = argStr .. string.format("  mode_p = %d,\n", energy_modes[m.p]) 
       argStr = argStr .. string.format("  reaction_index = %d,\n", m.reaction_index)
       argStr = argStr .. string.format("  coupling_model = %s\n", chemistryCouplingTypeToLuaStr(m.coupling_model))
    else

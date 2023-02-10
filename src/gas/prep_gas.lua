@@ -524,10 +524,25 @@ function writeMultiTGas(f, species, db, optsTable)
       if db[sp].type == "molecule" then
          f:write(string.format("db['%s'].molecule_type = '%s'\n", sp, db[sp].molecule_type))
          f:write(string.format("db['%s'].vib_data = {\n", sp))
-	 f:write("  model = 'harmonic'\n")
+	 f:write("  model = 'from-cea-thermo-curve',\n")
 	 f:write(string.format("  theta_v = %.3f,\n", db[sp].theta_v.value))
 	 f:write(string.format("  theta_D = %.3f,\n", db[sp].theta_D.value))
 	 f:write("}\n")
+      end
+      if db[sp].type ~= "electron" then
+         f:write(string.format("db['%s'].electronic_levels = {\n", sp))
+         f:write("  model = 'multi-level',\n")
+         f:write("  g  = {")
+         for _,g in pairs(db[sp].electronic_levels.g.value) do
+            f:write(string.format("%d, ", g))
+         end
+         f:write("},\n")
+         f:write("  Te = {")
+         for _,Te in pairs(db[sp].electronic_levels.Te.value) do
+            f:write(string.format("%.3f, ", Te))
+         end
+         f:write("},\n")
+         f:write("}\n")
       end
       f:write(string.format("db['%s'].atomicConstituents = { ", sp))
       for k,v in pairs(db[sp].atomicConstituents) do

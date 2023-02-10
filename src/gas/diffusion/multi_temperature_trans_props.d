@@ -72,8 +72,8 @@ public:
         lua_getfield(L, -1, "modes");
         foreach (i_mode, mode_name; energyModeNames){
             string[] components;
-            lua_getfield(L, -1, mode_name.toStringz);
-            getArrayOfStrings(L, -1, "components", components);
+            // lua_getfield(L, -1, mode_name.toStringz);
+            getArrayOfStrings(L, -1, mode_name, components);
             foreach (component; components) {
                 string[] component_tokens;
                 component_tokens = component.split(":");
@@ -92,7 +92,7 @@ public:
                         throw new Error("Unknown energy type");
                 }
             }
-            lua_pop(L, 1);
+            // lua_pop(L, 1);
         }
         lua_pop(L, 1);
         lua_pop(L, 1);

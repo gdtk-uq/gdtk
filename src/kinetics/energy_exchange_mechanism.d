@@ -318,7 +318,7 @@ EnergyExchangeMechanism createEnergyExchangeMechanism(lua_State *L, int mode, Ga
         return new ElectronExchangeET(L, mode, gmodel);
     case "Marrone-Treanor":
         return new MarroneTreanorCV(L, mode, gmodel);
-    case "Thivet":
+    case "Thivet-SSH":
         return new ThivetVV(L, mode, gmodel); 
     default:
         string msg = format("The EE mechanism rate model: %s is not known.", rateModel);

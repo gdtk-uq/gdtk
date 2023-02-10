@@ -12,6 +12,20 @@ db.O2.theta_D = {
    units = 'K',
    description = 'dissociation temperature'
 }
+db.O2.electronic_levels = {
+  g = {
+    value = {3, 2, 1, 1, 6, 3},
+    units = 'NA',
+    description = 'degeneracy of electronic levels',
+    reference = 'NIST'
+  },
+  Te = {
+    value = {0.0, 7918.04, 13195.10, 33057.3, 34690.3, 35396.6},
+    units = 'cm^(-1)',
+    description = 'electronic excitation energy',
+    reference = 'NIST'
+  }
+}
 db.O2.atomicConstituents = {O=2,}
 db.O2.charge = 0
 db.O2.M = {
