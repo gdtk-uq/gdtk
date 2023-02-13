@@ -128,7 +128,7 @@ class GMResFieldSolver {
     }
     
     void solve(int matrix_size, int nbands, double[] A, int[] Ai, double[] b, double[] x0,
-                      double[] xf, int nmax_iter, double tol=1e-8){
+                      double[] xf, int nmax_iter, double tol=1e-12){
         /*
             Generalised Minimal Residual Method for solving linear systems representated by a banded matrix.
     

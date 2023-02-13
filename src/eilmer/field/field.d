@@ -272,6 +272,7 @@ class ElectricField {
                 }
 
                 foreach(io, face; cell.iface){
+                    int iio = (io>1) ? to!int(io+1) : to!int(io); // -> [0,1,3,4] since 2 is 
                     face.fs.gas.sigma = conductivity(face.fs.gas, face.pos, gmodel); // TODO: Redundant work.
                     double sign = cell.outsign[io];
                     double S = face.length.re;
@@ -280,28 +281,62 @@ class ElectricField {
                     double dyF = face.pos.y.re - cell.pos[0].y.re;
                     double nxF = sign*face.n.x;
                     double nyF = sign*face.n.y;
+                    double emag = sqrt(dx[io]*dx[io] + dy[io]*dy[io]);
+                    double ehatx = dx[io]/emag;
+                    double ehaty = dy[io]/emag;
+
+                    // Hybrid method
+                    double facx = nxF - ehatx*ehatx*nxF - ehatx*ehaty*nyF;
+                    double facy = nyF - ehaty*ehatx*nxF - ehaty*ehaty*nyF;
+                    double fac = (ehatx*nxF + ehaty*nyF)/emag;
+
+                    // Finite difference stencil
+                    //    double facx = nxF;
+                    //    double facy = nyF;
+                    //    double fac = 0.0;
+                    //// Direct normal gradient only
+                    //    double facx = 0.0;
+                    //    double facy = 0.0;
+                    //    double fac = (ehatx*nxF + ehaty*nyF)/emag;
+
+                    if (face.is_on_boundary) {
+                        auto field_bc = field_bcs[blkid][face.bc_id];
+                        double phif = field_bc.phif(face); // ZG will return zero here, which cancels out the below
+                        if (phif==0.0){
+                            facx = nxF;
+                            facy = nyF;
+                            fac = 0.0;
+                        } else {
+                            A[k*nbands + 2] += -1.0*S*fac*sigmaF;
+                            b[k]            -=  1.0*S*fac*sigmaF*phif;
+                        }
+                    } else {
+                        A[k*nbands + 2] +=  -1.0*S*fac*sigmaF;
+                        A[k*nbands + iio]+=  1.0*S*fac*sigmaF;
+                    }
 
                     // cell k's contribution to the flux:
-                    A[k*nbands + 2] +=  S/D*sigmaF*(nxF*(_Ix + _Ixx*dxF) + nyF*(_Iy + _Iyy*dyF));
-                    //writefln("Cell %d[%d] contribution (sigmaF=%e) %e*(nx*%e + ny*%e)=%e", k, io, sigmaF, S/D*sigmaF, (_Ix + _Ixx*dxF), (_Iy + _Iyy*dyF), S/D*sigmaF*(nxF*(_Ix + _Ixx*dxF) + nyF*(_Iy + _Iyy*dyF)));
+                    //A[k*nbands + 2] +=  S/D*sigmaF*(facx*(_Ix + _Ixx*dxF) + facy*(_Iy + _Iyy*dyF));
+                    A[k*nbands + 2] +=  S/D*sigmaF*(facx*(_Ix) + facy*(_Iy));
 
                     // Each jface makes a contribution to the flux through "face"
                     foreach(jo, jface; cell.iface){
                         if (jface.is_on_boundary) {
                             auto field_bc = field_bcs[blkid][jface.bc_id];
                             double phif = field_bc.phif(jface); // ZG will return zero here, which cancels out the below
-                            b[k] -= S/D*sigmaF*(nxF*(fdx[jo] + fdxx[jo]*dxF)
-                                            + nyF*(fdy[jo] + fdyy[jo]*dyF))*phif;
-                            //writefln("    RHS  %d contribution %e*(nx*%e + ny*%e)*%e", jo, S/D*sigmaF, (fdx[jo] + fdxx[jo]*dxF), (fdy[jo] + fdyy[jo]*dyF), phif);
+                            //b[k] -= S/D*sigmaF*(facx*(fdx[jo] + fdxx[jo]*dxF)
+                            //                  + facy*(fdy[jo] + fdyy[jo]*dyF))*phif;
+                            b[k] -= S/D*sigmaF*(facx*(fdx[jo])
+                                              + facy*(fdy[jo]))*phif;
                         } else {
                             int jjo = (jo>1) ? to!int(jo+1) : to!int(jo); // -> [0,1,3,4] since 2 is the entry for "cell"
-                            A[k*nbands + jjo] += S/D*sigmaF*(nxF*(fdx[jo] + fdxx[jo]*dxF)
-                                                         + nyF*(fdy[jo] + fdyy[jo]*dyF));
-                            //writefln("    Face %d contribution %e*(nx*%e + ny*%e)", jo, S/D*sigmaF, (fdx[jo] + fdxx[jo]*dxF), (fdy[jo] + fdyy[jo]*dyF));
+                            //A[k*nbands + jjo] += S/D*sigmaF*(facx*(fdx[jo] + fdxx[jo]*dxF)
+                            //                               + facy*(fdy[jo] + fdyy[jo]*dyF));
+                            A[k*nbands + jjo] += S/D*sigmaF*(facx*(fdx[jo])
+                                                           + facy*(fdy[jo]));
                         }
                     }
                 }
-                //writefln(" A[i,2]=[%e] b=[%e]", A[k*nbands+2], b[k]);
             }
         }
 
@@ -331,6 +366,7 @@ class ElectricField {
         }
 
     }
+
     void compute_boundary_current(FluidBlock[] localFluidBlocks) {
     /*
         Loop over the boundaries of the domain and compute the total electrical current flowing in and out.
