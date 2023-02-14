@@ -463,6 +463,67 @@ class ElectricField {
 
         Notes:
          - TODO: MPI
+         - Caution: We assume that the field and conductivity are already set
+
+        @author: Nick Gibbons
+    */
+
+        double Iin = 0.0;
+        double Iout = 0.0;
+
+        writeln("Called field.compute_boundary_current_2() ...");
+        foreach(blkid, block; localFluidBlocks){
+            foreach(cell; block.cells){
+                foreach(io, face; cell.iface){
+                    if (!face.is_on_boundary) continue;
+
+                    auto field_bc = field_bcs[blkid][face.bc_id];
+                    double phif = field_bc.phif(face);
+                    if (phif==0.0) continue; // shorthand for insulating wall
+
+                    double sign = cell.outsign[io];
+                    double S = face.length.re;
+                    double sigmaF = face.fs.gas.sigma.re;
+                    double dxF = face.pos.x.re - cell.pos[0].x.re;
+                    double dyF = face.pos.y.re - cell.pos[0].y.re;
+                    double nxF = sign*face.n.x;
+                    double nyF = sign*face.n.y;
+                    double emag = sqrt(dxF*dxF + dyF*dyF);
+                    double ehatx = dxF/emag;
+                    double ehaty = dyF/emag;
+
+                    // Hybrid method
+                    double facx = nxF - ehatx*ehatx*nxF - ehatx*ehaty*nyF;
+                    double facy = nyF - ehaty*ehatx*nxF - ehaty*ehaty*nyF;
+                    double fac = (ehatx*nxF + ehaty*nyF)/emag;
+
+                    double phigrad_dot_n = nxF*cell.electric_field[0] + nyF*cell.electric_field[1];
+
+                    //double phigrad_dot_n = facx*cell.electric_field[0] + 
+                    //                       facy*cell.electric_field[1] + 
+                    //                       fac*(phif - cell.electric_potential);
+
+                    double I = phigrad_dot_n*S*sigmaF;
+                    if (I<0.0) {
+                        Iin -= I;
+                    } else if (I>0.0) {
+                        Iout += I;
+                    }
+                }
+            }
+        }
+        writefln("    Current in:  %f (A/m)", Iin);
+        writefln("    Current out: %f (A/m)", Iout);
+	}
+
+    void compute_boundary_current_old(FluidBlock[] localFluidBlocks) {
+    /*
+        Loop over the boundaries of the domain and compute the total electrical current flowing in and out.
+        We put the contributions of each face into different buckets depending on their sign, negative means
+        current flow in and positive out.
+
+        Notes:
+         - TODO: MPI
 
         @author: Nick Gibbons
     */
