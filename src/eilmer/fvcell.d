@@ -155,6 +155,7 @@ public:
 
     // Electromagnetic Field Variables
     double electric_potential;
+    double[2] electric_field;
 
     // Shape sensitivity calculator workspace
     FVCell[] cell_list;            // list of cells in the residual stencil

@@ -108,8 +108,6 @@ class ElectricField {
                     dy[io] = pos.y.re - cell.pos[0].y.re;
                 }
 
-                // TODO: Use Face enums?
-                //double dxN = fmax(dx[0], 1e-12); double dyN = dy[0];
                 double dxN = dx[0]; double dyN = dy[0];
                 double dxE = dx[1]; double dyE = dy[1];
                 double dxS = dx[2]; double dyS = dy[2];
@@ -150,17 +148,6 @@ class ElectricField {
                     fdy[3] = mixin(ZGN_Wy);
                     _Iy    = mixin(ZGN_Iy);
 
-                    fdxx[0] = mixin(ZGN_Nxx);
-                    fdxx[1] = mixin(ZGN_Exx);
-                    fdxx[2] = mixin(ZGN_Sxx);
-                    fdxx[3] = mixin(ZGN_Wxx);
-                    _Ixx    = mixin(ZGN_Ixx);
-
-                    fdyy[0] = mixin(ZGN_Nyy);
-                    fdyy[1] = mixin(ZGN_Eyy);
-                    fdyy[2] = mixin(ZGN_Syy);
-                    fdyy[3] = mixin(ZGN_Wyy);
-                    _Iyy    = mixin(ZGN_Iyy);
                     break;
                 case ZNG_east:
                     D = mixin(ZGE_D);
@@ -176,17 +163,6 @@ class ElectricField {
                     fdy[3] = mixin(ZGE_Wy);
                     _Iy    = mixin(ZGE_Iy);
 
-                    fdxx[0] = mixin(ZGE_Nxx);
-                    fdxx[1] = mixin(ZGE_Exx);
-                    fdxx[2] = mixin(ZGE_Sxx);
-                    fdxx[3] = mixin(ZGE_Wxx);
-                    _Ixx    = mixin(ZGE_Ixx);
-
-                    fdyy[0] = mixin(ZGE_Nyy);
-                    fdyy[1] = mixin(ZGE_Eyy);
-                    fdyy[2] = mixin(ZGE_Syy);
-                    fdyy[3] = mixin(ZGE_Wyy);
-                    _Iyy    = mixin(ZGE_Iyy);
                     break;
                 case ZNG_south:
                     D = mixin(ZGS_D);
@@ -202,17 +178,6 @@ class ElectricField {
                     fdy[3] = mixin(ZGS_Wy);
                     _Iy    = mixin(ZGS_Iy);
 
-                    fdxx[0] = mixin(ZGS_Nxx);
-                    fdxx[1] = mixin(ZGS_Exx);
-                    fdxx[2] = mixin(ZGS_Sxx);
-                    fdxx[3] = mixin(ZGS_Wxx);
-                    _Ixx    = mixin(ZGS_Ixx);
-
-                    fdyy[0] = mixin(ZGS_Nyy);
-                    fdyy[1] = mixin(ZGS_Eyy);
-                    fdyy[2] = mixin(ZGS_Syy);
-                    fdyy[3] = mixin(ZGS_Wyy);
-                    _Iyy    = mixin(ZGS_Iyy);
                     break;
                 case ZNG_west:
                     D = mixin(ZGW_D);
@@ -228,17 +193,6 @@ class ElectricField {
                     fdy[3] = mixin(ZGW_Wy);
                     _Iy    = mixin(ZGW_Iy);
 
-                    fdxx[0] = mixin(ZGW_Nxx);
-                    fdxx[1] = mixin(ZGW_Exx);
-                    fdxx[2] = mixin(ZGW_Sxx);
-                    fdxx[3] = mixin(ZGW_Wxx);
-                    _Ixx    = mixin(ZGW_Ixx);
-
-                    fdyy[0] = mixin(ZGW_Nyy);
-                    fdyy[1] = mixin(ZGW_Eyy);
-                    fdyy[2] = mixin(ZGW_Syy);
-                    fdyy[3] = mixin(ZGW_Wyy);
-                    _Iyy    = mixin(ZGW_Iyy);
                     break;
                 case ZNG_interior:
                     D = mixin(R_D);
@@ -254,17 +208,6 @@ class ElectricField {
                     fdy[3] = mixin(R_Wy);
                     _Iy    = mixin(R_Iy);
 
-                    fdxx[0] = mixin(R_Nxx);
-                    fdxx[1] = mixin(R_Exx);
-                    fdxx[2] = mixin(R_Sxx);
-                    fdxx[3] = mixin(R_Wxx);
-                    _Ixx    = mixin(R_Ixx);
-
-                    fdyy[0] = mixin(R_Nyy);
-                    fdyy[1] = mixin(R_Eyy);
-                    fdyy[2] = mixin(R_Syy);
-                    fdyy[3] = mixin(R_Wyy);
-                    _Iyy    = mixin(R_Iyy);
                     break;
                 default:
                     string errMsg = format("An invalid ZNGtype '%s' was requested.", celltype);
@@ -364,7 +307,152 @@ class ElectricField {
                 i += 1;
             }
         }
+    }
 
+    void compute_electric_field_vector(FluidBlock[] localFluidBlocks) {
+    /*
+        With the electric potential field solved for, compute its gradients
+        and store the electric field vector.
+
+        Notes:
+         - TODO: MPI
+
+        @author: Nick Gibbons
+    */
+
+        FVCell other;
+        foreach(blkid, block; localFluidBlocks){
+            foreach(cell; block.cells){
+                double[4] dx, dy, nx, ny, phis;
+
+                foreach(io, face; cell.iface){
+                    Vector3 pos;
+                    double phi;
+                    double sign = cell.outsign[io];
+                    if (face.is_on_boundary) {
+                        auto field_bc = field_bcs[blkid][face.bc_id];
+                        phi = field_bc.phif(face);
+                        pos = face.pos;
+                    } else {
+                        other = face.left_cell;
+                        if (other==cell) other = face.right_cell;
+                        pos = other.pos[0];
+                        phi = other.electric_potential;
+                    }
+                    nx[io] = sign*face.n.x.re;
+                    ny[io] = sign*face.n.y.re;
+                    dx[io] = pos.x.re - cell.pos[0].x.re;
+                    dy[io] = pos.y.re - cell.pos[0].y.re;
+                    phis[io] = phi;
+                }
+
+                double dxN = dx[0]; double dyN = dy[0]; double nxN = nx[0]; double nyN = ny[0];
+                double dxE = dx[1]; double dyE = dy[1]; double nxE = nx[1]; double nyE = ny[1];
+                double dxS = dx[2]; double dyS = dy[2]; double nxS = nx[2]; double nyS = ny[2];
+                double dxW = dx[3]; double dyW = dy[3]; double nxW = nx[3]; double nyW = ny[3];
+
+                double[4] fdx, fdy;
+                double _Ix, _Iy, D;
+
+                // Figure out what kind of cell we are, since ones with ZeroNormalGradient
+                // have different equations for the derivatives...
+				uint celltype = ZNG_interior;
+                foreach(io, face; cell.iface){
+					if (face.is_on_boundary) {
+						auto field_bc = field_bcs[blkid][face.bc_id];
+						if ((cast(ZeroNormalGradient) field_bc) !is null) {
+                            celltype = celltype | ZNG_types[io];
+						}
+                    }
+				}
+
+                switch (celltype) {
+                case ZNG_north:
+                    D = mixin(ZGN_D);
+                    fdx[0] = mixin(ZGN_Nx);
+                    fdx[1] = mixin(ZGN_Ex);
+                    fdx[2] = mixin(ZGN_Sx);
+                    fdx[3] = mixin(ZGN_Wx);
+                    _Ix    = mixin(ZGN_Ix);
+
+                    fdy[0] = mixin(ZGN_Ny);
+                    fdy[1] = mixin(ZGN_Ey);
+                    fdy[2] = mixin(ZGN_Sy);
+                    fdy[3] = mixin(ZGN_Wy);
+                    _Iy    = mixin(ZGN_Iy);
+
+                    break;
+                case ZNG_east:
+                    D = mixin(ZGE_D);
+                    fdx[0] = mixin(ZGE_Nx);
+                    fdx[1] = mixin(ZGE_Ex);
+                    fdx[2] = mixin(ZGE_Sx);
+                    fdx[3] = mixin(ZGE_Wx);
+                    _Ix    = mixin(ZGE_Ix);
+
+                    fdy[0] = mixin(ZGE_Ny);
+                    fdy[1] = mixin(ZGE_Ey);
+                    fdy[2] = mixin(ZGE_Sy);
+                    fdy[3] = mixin(ZGE_Wy);
+                    _Iy    = mixin(ZGE_Iy);
+
+                    break;
+                case ZNG_south:
+                    D = mixin(ZGS_D);
+                    fdx[0] = mixin(ZGS_Nx);
+                    fdx[1] = mixin(ZGS_Ex);
+                    fdx[2] = mixin(ZGS_Sx);
+                    fdx[3] = mixin(ZGS_Wx);
+                    _Ix    = mixin(ZGS_Ix);
+
+                    fdy[0] = mixin(ZGS_Ny);
+                    fdy[1] = mixin(ZGS_Ey);
+                    fdy[2] = mixin(ZGS_Sy);
+                    fdy[3] = mixin(ZGS_Wy);
+                    _Iy    = mixin(ZGS_Iy);
+
+                    break;
+                case ZNG_west:
+                    D = mixin(ZGW_D);
+                    fdx[0] = mixin(ZGW_Nx);
+                    fdx[1] = mixin(ZGW_Ex);
+                    fdx[2] = mixin(ZGW_Sx);
+                    fdx[3] = mixin(ZGW_Wx);
+                    _Ix    = mixin(ZGW_Ix);
+
+                    fdy[0] = mixin(ZGW_Ny);
+                    fdy[1] = mixin(ZGW_Ey);
+                    fdy[2] = mixin(ZGW_Sy);
+                    fdy[3] = mixin(ZGW_Wy);
+                    _Iy    = mixin(ZGW_Iy);
+
+                    break;
+                case ZNG_interior:
+                    D = mixin(R_D);
+                    fdx[0] = mixin(R_Nx);
+                    fdx[1] = mixin(R_Ex);
+                    fdx[2] = mixin(R_Sx);
+                    fdx[3] = mixin(R_Wx);
+                    _Ix    = mixin(R_Ix);
+
+                    fdy[0] = mixin(R_Ny);
+                    fdy[1] = mixin(R_Ey);
+                    fdy[2] = mixin(R_Sy);
+                    fdy[3] = mixin(R_Wy);
+                    _Iy    = mixin(R_Iy);
+
+                    break;
+                default:
+                    string errMsg = format("An invalid ZNGtype '%s' was requested.", celltype);
+                    throw new Error(errMsg);
+                }
+
+                double Ex = (_Ix*cell.electric_potential + fdx[0]*phis[0] + fdx[1]*phis[1] + fdx[2]*phis[2] + fdx[3]*phis[3])/D;
+                double Ey = (_Iy*cell.electric_potential + fdy[0]*phis[0] + fdy[1]*phis[1] + fdy[2]*phis[2] + fdy[3]*phis[3])/D;
+                cell.electric_field[0] = Ex;
+                cell.electric_field[1] = Ey;
+            }
+        }
     }
 
     void compute_boundary_current(FluidBlock[] localFluidBlocks) {

@@ -1054,6 +1054,7 @@ int integrate_in_time(double target_time_as_requested)
             // 2.5 Update electric field solution (if needed)
             if (GlobalConfig.solve_electric_field){
                 eField.solve_efield(localFluidBlocks);
+                eField.compute_electric_field_vector(localFluidBlocks);
                 eField.compute_boundary_current(localFluidBlocks);
             }
 
