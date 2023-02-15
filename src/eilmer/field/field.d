@@ -26,6 +26,9 @@ import fieldgmres;
 import fieldconductivity;
 import fieldexchange;
 import fieldderivatives;
+version(mpi_parallel){
+    import mpi;
+}
 
 immutable uint ZNG_interior = 0b0000;
 immutable uint ZNG_north    = 0b0001;
@@ -312,21 +315,29 @@ class ElectricField {
         }
 
         // We also have enough info to set the ghost cell potentials too
+        version(mpi_parallel){ exchanger.update_buffers(phi);}
+
         foreach(blkid, block; localFluidBlocks){
             foreach(j, bc; block.bc){
                 auto field_bc = field_bcs[blkid][j];
-                SharedField sfbc = cast(SharedField) field_bc;
-                if (sfbc is null) continue;
+                if (!field_bc.isShared) continue;
 
                 foreach(fidx, f; bc.faces){
                     // Idx is the real cell's location in the phi array
-                    int idx = sfbc.other_id(f);
+                    int idx = field_bc.other_id(f);
 
-                    // We want to put this into the ghost cell, which sfbc knows about
-                    if (sfbc.other_cell_lefts[fidx]){
-                        f.left_cell.electric_potential = phi[idx];
+                    double phiidx;
+                    version(mpi_parallel) {
+                        phiidx = exchanger.external_cell_buffer[idx-phi.length];
                     } else {
-                        f.right_cell.electric_potential = phi[idx];
+                        phiidx = phi[idx];
+                    }
+
+                    // Figure out which side the ghost cell is on and set 
+                    if (bc.outsigns[fidx] == 1) {
+                        f.right_cell.electric_potential = phiidx;
+                    } else {
+                        f.left_cell.electric_potential = phiidx;
                     }
                 }
             }
@@ -537,6 +548,10 @@ class ElectricField {
                     }
                 }
             }
+        }
+        version(mpi_parallel){
+            MPI_Allreduce(MPI_IN_PLACE, &Iin, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(MPI_IN_PLACE, &Iout, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         }
         writefln("    Current in:  %f (A/m)", Iin);
         writefln("    Current out: %f (A/m)", Iout);

@@ -377,7 +377,7 @@ class MPISharedField : FieldBC {
     final bool isShared() const { return true; }
     final Vector3 other_pos(const FVInterface face) {return (other_cell_lefts[face.i_bndry]) ? face.left_cell.pos[0] : face.right_cell.pos[0];}
     final int other_id(const FVInterface face) {return external_cell_idxs[face.i_bndry];}
-    final double phif(const FVInterface face) { return 0.0;}
+    final double phif(const FVInterface face) { return (other_cell_lefts[face.i_bndry]) ? face.left_cell.electric_potential : face.right_cell.electric_potential;}
     double lhs_direct_component(double fac, const FVInterface face){ return -1.0*face.length.re*fac*face.fs.gas.sigma.re; }
     double lhs_other_component(double fac, const FVInterface face){ return 1.0*face.length.re*fac*face.fs.gas.sigma.re; }
     double rhs_direct_component(double sign, double fac, const FVInterface face){ return 0.0; }
