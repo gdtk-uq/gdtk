@@ -25,7 +25,14 @@ import bc.ghost_cell_effect.full_face_copy;
 
 interface FieldBC {
     void opCall(const double sign, const FVInterface face, const FVCell cell, int k, int nbands, size_t io, ref double[] A, ref double[] b, ref int[] Ai);
+    Vector3 other_pos(const FVInterface face);
+    int other_id(const FVInterface face);
     double phif(const FVInterface face);
+    double lhs_direct_component(double fac, const FVInterface face);
+    double lhs_other_component(double fac, const FVInterface face);
+    double rhs_direct_component(double sign, double fac, const FVInterface face);
+    double rhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface);
+    double lhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface);
     double compute_current(const double sign, const FVInterface face, const FVCell cell);
 }
 
@@ -81,7 +88,21 @@ class ZeroNormalGradient : FieldBC {
         return;
     }
 
+    final Vector3 other_pos(const FVInterface face) {return face.pos;}
+
+    final int other_id(const FVInterface face) {return -1;}
+
     final double phif(const FVInterface face) { return 0.0;}
+
+    final double lhs_direct_component(double fac, const FVInterface face){ return 0.0;}
+
+    final double lhs_other_component(double fac, const FVInterface face){ return 0.0;}
+
+    final double rhs_direct_component(double sign, double fac, const FVInterface face){ return 0.0;}
+
+    final double rhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){ return 0.0; }
+
+    final double lhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){ return 0.0; }
 
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         return 0.0;
@@ -137,7 +158,23 @@ class FixedField : FieldBC {
         A[k*nbands + 2] += -1.0*S/d*sigma*ddotn;
     }
 
+    final Vector3 other_pos(const FVInterface face) {return face.pos;}
+
+    final int other_id(const FVInterface face) {return -1;}
+
     final double phif(const FVInterface face) { return value;}
+
+    final double lhs_direct_component(double fac, const FVInterface face){ return -1.0*face.length.re*fac*face.fs.gas.sigma.re;}
+
+    final double lhs_other_component(double fac, const FVInterface face){ return 0.0;}
+
+    final double rhs_direct_component(double sign, double fac, const FVInterface face){ return face.length.re*fac*face.fs.gas.sigma.re*value;}
+
+    final double rhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){
+        return (facx*fdx + facy*fdy)/D*value;
+    }
+
+    final double lhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface) { return 0.0; }
 
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         double S = face.length.re;
@@ -178,7 +215,69 @@ class MixedField : FieldBC {
         }
     }
 
-    final double phif(const FVInterface face) { return 0.0;}
+    final Vector3 other_pos(const FVInterface face) {return face.pos;}
+
+    final int other_id(const FVInterface face) {return -1;}
+
+    final double phif(const FVInterface face) {
+        if (face.pos.x<xinsulator){
+            return nose.phif(face);
+        } else if (face.pos.x<xcollector) {
+            return insulator.phif(face);
+        } else {
+            return collector.phif(face);
+        }
+    }
+
+    final double lhs_direct_component(double fac, const FVInterface face){
+        if (face.pos.x<xinsulator){
+            return nose.lhs_direct_component(fac, face);
+        } else if (face.pos.x<xcollector) {
+            return insulator.lhs_direct_component(fac, face);
+        } else {
+            return collector.lhs_direct_component(fac, face);
+        }
+    }
+
+    final double lhs_other_component(double fac, const FVInterface face){
+        if (face.pos.x<xinsulator){
+            return nose.lhs_other_component(fac, face);
+        } else if (face.pos.x<xcollector) {
+            return insulator.lhs_other_component(fac, face);
+        } else {
+            return collector.lhs_other_component(fac, face);
+        }
+    }
+
+    final double rhs_direct_component(double sign, double fac, const FVInterface face){
+        if (face.pos.x<xinsulator){
+            return nose.rhs_direct_component(sign, fac, face);
+        } else if (face.pos.x<xcollector) {
+            return insulator.rhs_direct_component(sign, fac, face);
+        } else {
+            return collector.rhs_direct_component(sign, fac, face);
+        }
+    }
+
+    final double rhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){
+        if (jface.pos.x<xinsulator){
+            return nose.rhs_stencil_component(D, facx, facy, fdx, fdy, jface);
+        } else if (jface.pos.x<xcollector) {
+            return insulator.rhs_stencil_component(D, facx, facy, fdx, fdy, jface);
+        } else {
+            return collector.rhs_stencil_component(D, facx, facy, fdx, fdy, jface);
+        }
+    }
+
+    final double lhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){
+        if (jface.pos.x<xinsulator){
+            return nose.lhs_stencil_component(D, facx, facy, fdx, fdy, jface);
+        } else if (jface.pos.x<xcollector) {
+            return insulator.lhs_stencil_component(D, facx, facy, fdx, fdy, jface);
+        } else {
+            return collector.lhs_stencil_component(D, facx, facy, fdx, fdy, jface);
+        }
+    }
 
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         double I;
@@ -213,7 +312,23 @@ class FixedField_Test : FieldBC {
         b[k] += -1.0*phi*S/d*sigma*ddotn;
     }
 
+    final Vector3 other_pos(const FVInterface face) {return face.pos;}
+
+    final int other_id(const FVInterface face) {return -1;}
+
     final double phif(const FVInterface face) { return exp(face.pos.x.re)*sin(face.pos.y.re);}
+
+    final double lhs_direct_component(double fac, const FVInterface face){ return -1.0*face.length.re*fac*face.fs.gas.sigma.re;}
+
+    final double lhs_other_component(double fac, const FVInterface face){ return 0.0;}
+
+    final double rhs_direct_component(double sign, double fac, const FVInterface face){ return face.length.re*fac*face.fs.gas.sigma.re*phif(face);}
+
+    final double rhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){
+        return (facx*fdx + facy*fdy)/D*phif(jface);
+    }
+
+    final double lhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface) { return 0.0; }
 
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         double S = face.length.re;
@@ -248,7 +363,28 @@ class FixedGradient_Test : FieldBC {
         b[k] -= sign*phigrad_dot_n.re*S*sigma;
     }
 
+    final Vector3 other_pos(const FVInterface face) {return face.pos;}
+
+    final int other_id(const FVInterface face) {return -1;}
+
     final double phif(const FVInterface face) { return exp(face.pos.x.re)*sin(face.pos.y.re);}
+
+    final double lhs_direct_component(double fac, const FVInterface face){ return 0.0;}
+
+    final double lhs_other_component(double fac, const FVInterface face){ return 0.0;}
+
+    final double rhs_direct_component(double sign, double fac, const FVInterface face){
+        double S = face.length.re;
+        double sigma = face.fs.gas.sigma.re;
+        Vector3 phigrad = test_field_gradient(face.pos.x.re, face.pos.y.re);
+
+        number phigrad_dot_n = phigrad.dot(face.n);
+        return sign*phigrad_dot_n.re*S*sigma;
+    }
+
+    final double rhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){ return 0.0; }
+
+    final double lhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface) { return 0.0; }
 
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         double S = face.length.re;
@@ -286,9 +422,16 @@ class SharedField : FieldBC {
         // Since the arrays inside the GhostCellFullFaceCopy are not in the same order as the boundary faces
         // we have to do some work to organise our own mapping array, of boundary faces to shared cell ids.
         other_cell_ids.length = bc.faces.length;
+        other_cell_lefts.length = bc.faces.length;
         foreach(i, f; bc.faces){
             foreach(j, c; gc.ghost_cells){
-                if ((f.right_cell==c) || (f.left_cell==c)) {
+                if (f.right_cell==c) {
+                    other_cell_lefts[i] = false;
+                    other_cell_ids[i] = to!int(gc.mapped_cell_ids[j]);
+                    break;
+                }
+                if (f.left_cell==c) {
+                    other_cell_lefts[i] = true;
                     other_cell_ids[i] = to!int(gc.mapped_cell_ids[j]);
                     break;
                 }
@@ -319,7 +462,25 @@ class SharedField : FieldBC {
         A[k*nbands + 2] -= 1.0*S/d*sigma*ddotn;
     }
 
+
+    final Vector3 other_pos(const FVInterface face) {return (other_cell_lefts[face.i_bndry]) ? face.left_cell.pos[0] : face.right_cell.pos[0];}
+
+    final int other_id(const FVInterface face) {return other_cell_ids[face.i_bndry] + other_block_offset;}
+
     final double phif(const FVInterface face) { return 0.0;}
+
+    double lhs_direct_component(double fac, const FVInterface face){ return -1.0*face.length.re*fac*face.fs.gas.sigma.re; }
+
+    double lhs_other_component(double fac, const FVInterface face){ return 1.0*face.length.re*fac*face.fs.gas.sigma.re; }
+
+    double rhs_direct_component(double sign, double fac, const FVInterface face){ return 0.0; }
+
+    final double rhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){ return 0.0; }
+
+    final double lhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){
+        return (facx*fdx + facy*fdy)/D;
+    }
+
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         return 0.0;
     }
@@ -328,6 +489,7 @@ private:
     int other_blk_id;
     int other_block_offset;
     int[] other_cell_ids;
+    bool[] other_cell_lefts;
 }
 
 version(mpi_parallel){
@@ -363,13 +525,21 @@ class MPISharedField : FieldBC {
 
         // Since the arrays inside the GhostCellFullFaceCopy are not in the same order as the boundary faces
         // we have to do some work to organise our own mapping array, of boundary faces to shared cell ids.
+        other_cell_lefts.length = bc.faces.length;
         other_cell_ids.length = bc.faces.length;
         external_cell_idxs.length = bc.faces.length;
         my_offset = nExtraCells + ncells;
 
         foreach(i, f; bc.faces){
             foreach(j, c; gc.ghost_cells){
-                if ((f.right_cell==c) || (f.left_cell==c)) {
+                if (f.right_cell==c) {
+                    other_cell_lefts[i] = false;
+                    other_cell_ids[i] = to!int(gc.mapped_cell_ids[j]);
+                    external_cell_idxs[i] = to!int(i) + my_offset;
+                    break;
+                }
+                if (f.left_cell==c) {
+                    other_cell_lefts[i] = true;
                     other_cell_ids[i] = to!int(gc.mapped_cell_ids[j]);
                     external_cell_idxs[i] = to!int(i) + my_offset;
                     break;
@@ -403,13 +573,30 @@ class MPISharedField : FieldBC {
         A[k*nbands + 2] -= 1.0*S/d*sigma*ddotn;
     }
 
+    final Vector3 other_pos(const FVInterface face) {return (other_cell_lefts[face.i_bndry]) ? face.left_cell.pos[0] : face.right_cell.pos[0];}
+
+    final int other_id(const FVInterface face) {return external_cell_idxs[face.i_bndry];}
+
     final double phif(const FVInterface face) { return 0.0;}
+
+    double lhs_direct_component(double fac, const FVInterface face){ return -1.0*face.length.re*fac*face.fs.gas.sigma.re; }
+
+    double lhs_other_component(double fac, const FVInterface face){ return 1.0*face.length.re*fac*face.fs.gas.sigma.re; }
+
+    double rhs_direct_component(double sign, double fac, const FVInterface face){ return 0.0; }
+
+    final double rhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){ return 0.0; }
+
+    final double lhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){
+        return (facx*fdx + facy*fdy)/D;
+    }
 
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         return 0.0;
     }
 
 private:
+    bool[] other_cell_lefts;
     int[] external_cell_idxs;
     int my_offset;
 } // end class MPISharedField
