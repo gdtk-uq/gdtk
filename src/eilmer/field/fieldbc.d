@@ -24,6 +24,7 @@ import bc.boundary_condition;
 import bc.ghost_cell_effect.full_face_copy;
 
 interface FieldBC {
+    bool isShared() const;
     Vector3 other_pos(const FVInterface face);
     int other_id(const FVInterface face);
     double phif(const FVInterface face);
@@ -38,6 +39,7 @@ interface FieldBC {
 class ZeroNormalGradient : FieldBC {
     this() {}
 
+    final bool isShared() const { return false; }
     final Vector3 other_pos(const FVInterface face) {return face.pos;}
     final int other_id(const FVInterface face) {return -1;}
     final double phif(const FVInterface face) { return 0.0;}
@@ -59,6 +61,7 @@ class FixedField : FieldBC {
         this.value = value;
     }
 
+    final bool isShared() const { return false; }
     final Vector3 other_pos(const FVInterface face) {return face.pos;}
     final int other_id(const FVInterface face) {return -1;}
     final double phif(const FVInterface face) { return value;}
@@ -98,6 +101,8 @@ class MixedField : FieldBC {
         this.xinsulator = xinsulator;
         this.xcollector = xcollector;
     }
+
+    final bool isShared() const { return false; }
 
     final Vector3 other_pos(const FVInterface face) {return face.pos;}
 
@@ -183,6 +188,7 @@ private:
 class FixedField_Test : FieldBC {
     this() {}
 
+    final bool isShared() const { return false; }
     final Vector3 other_pos(const FVInterface face) {return face.pos;}
     final int other_id(const FVInterface face) {return -1;}
     final double phif(const FVInterface face) { return exp(face.pos.x.re)*sin(face.pos.y.re);}
@@ -217,6 +223,7 @@ class FixedGradient_Test : FieldBC {
     this() {
     }
 
+    final bool isShared() const { return false; }
     final Vector3 other_pos(const FVInterface face) {return face.pos;}
     final int other_id(const FVInterface face) {return -1;}
     final double phif(const FVInterface face) { return exp(face.pos.x.re)*sin(face.pos.y.re);}
@@ -249,6 +256,11 @@ private:
 }
 
 class SharedField : FieldBC {
+    int other_blk_id;
+    int other_block_offset;
+    int[] other_cell_ids;
+    bool[] other_cell_lefts;
+
     this(const BoundaryCondition bc, const int[] block_offsets) {
         GhostCellFullFaceCopy gc;
         foreach(action; bc.preReconAction){
@@ -287,9 +299,10 @@ class SharedField : FieldBC {
     }
 
 
+    final bool isShared() const { return true; }
     final Vector3 other_pos(const FVInterface face) {return (other_cell_lefts[face.i_bndry]) ? face.left_cell.pos[0] : face.right_cell.pos[0];}
     final int other_id(const FVInterface face) {return other_cell_ids[face.i_bndry] + other_block_offset;}
-    final double phif(const FVInterface face) { return 0.0;}
+    final double phif(const FVInterface face) { return (other_cell_lefts[face.i_bndry]) ? face.left_cell.electric_potential : face.right_cell.electric_potential;}
     double lhs_direct_component(double fac, const FVInterface face){ return -1.0*face.length.re*fac*face.fs.gas.sigma.re; }
     double lhs_other_component(double fac, const FVInterface face){ return 1.0*face.length.re*fac*face.fs.gas.sigma.re; }
     double rhs_direct_component(double sign, double fac, const FVInterface face){ return 0.0; }
@@ -300,12 +313,6 @@ class SharedField : FieldBC {
     final double compute_current(const double sign, const FVInterface face, const FVCell cell){
         return 0.0;
     }
-
-private:
-    int other_blk_id;
-    int other_block_offset;
-    int[] other_cell_ids;
-    bool[] other_cell_lefts;
 }
 
 version(mpi_parallel){
@@ -367,6 +374,7 @@ class MPISharedField : FieldBC {
         return;
     }
 
+    final bool isShared() const { return true; }
     final Vector3 other_pos(const FVInterface face) {return (other_cell_lefts[face.i_bndry]) ? face.left_cell.pos[0] : face.right_cell.pos[0];}
     final int other_id(const FVInterface face) {return external_cell_idxs[face.i_bndry];}
     final double phif(const FVInterface face) { return 0.0;}

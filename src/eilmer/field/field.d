@@ -310,6 +310,28 @@ class ElectricField {
                 i += 1;
             }
         }
+
+        // We also have enough info to set the ghost cell potentials too
+        foreach(blkid, block; localFluidBlocks){
+            foreach(j, bc; block.bc){
+                auto field_bc = field_bcs[blkid][j];
+                SharedField sfbc = cast(SharedField) field_bc;
+                if (sfbc is null) continue;
+
+                foreach(fidx, f; bc.faces){
+                    // Idx is the real cell's location in the phi array
+                    int idx = sfbc.other_id(f);
+
+                    // We want to put this into the ghost cell, which sfbc knows about
+                    if (sfbc.other_cell_lefts[fidx]){
+                        f.left_cell.electric_potential = phi[idx];
+                    } else {
+                        f.right_cell.electric_potential = phi[idx];
+                    }
+                }
+            }
+        }
+        return;
     }
 
     void compute_electric_field_vector(FluidBlock[] localFluidBlocks) {
@@ -335,7 +357,7 @@ class ElectricField {
                     if (face.is_on_boundary) {
                         auto field_bc = field_bcs[blkid][face.bc_id];
                         phi = field_bc.phif(face);
-                        pos = face.pos;
+                        pos = field_bc.other_pos(face);
                     } else {
                         other = face.left_cell;
                         if (other==cell) other = face.right_cell;
@@ -482,7 +504,8 @@ class ElectricField {
 
                     auto field_bc = field_bcs[blkid][face.bc_id];
                     double phif = field_bc.phif(face);
-                    if (phif==0.0) continue; // shorthand for insulating wall
+                    if (phif==0.0) continue; // FIXME: We don't really need this
+                    if (field_bc.isShared) continue;
 
                     double sign = cell.outsign[io];
                     double S = face.length.re;
