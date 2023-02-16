@@ -39,7 +39,6 @@ immutable uint[4] ZNG_types = [ZNG_north, ZNG_east, ZNG_south, ZNG_west];
 
 class ElectricField {
     this(const FluidBlock[] localFluidBlocks, const string field_conductivity_model) {
-        writeln("Initialising Electric Field Solver...");
         N = 0;
         foreach(block; localFluidBlocks){
             block_offsets ~= N;
@@ -72,11 +71,10 @@ class ElectricField {
             gmres = new GMResFieldSolver();
         }
 
-        writeln("    Done.");
         return;
     }
 
-    void solve_efield(FluidBlock[] localFluidBlocks) {
+    void solve_efield(FluidBlock[] localFluidBlocks, bool verbose) {
         A[] = 0.0;
         b[] = 0.0;
         Ai[] = -1;
@@ -303,7 +301,7 @@ class ElectricField {
         }
 
         phi0[] = 0.0;
-        gmres.solve(N, nbands, A, Ai, b, phi0, phi, max_iter);
+        gmres.solve(N, nbands, A, Ai, b, phi0, phi, max_iter, verbose);
 
         // Unpack the solution into the "electric_potential" members stored in the cells
         size_t i = 0;
@@ -491,7 +489,7 @@ class ElectricField {
         }
     }
 
-    void compute_boundary_current(FluidBlock[] localFluidBlocks) {
+    void compute_boundary_current(FluidBlock[] localFluidBlocks, ref double current_in, ref double current_out) {
     /*
         Loop over the boundaries of the domain and compute the total electrical current flowing in and out.
         We put the contributions of each face into different buckets depending on their sign, negative means
@@ -507,7 +505,6 @@ class ElectricField {
         double Iin = 0.0;
         double Iout = 0.0;
 
-        writeln("Called field.compute_boundary_current_2() ...");
         foreach(blkid, block; localFluidBlocks){
             foreach(cell; block.cells){
                 foreach(io, face; cell.iface){
@@ -553,8 +550,8 @@ class ElectricField {
             MPI_Allreduce(MPI_IN_PLACE, &Iin, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
             MPI_Allreduce(MPI_IN_PLACE, &Iout, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         }
-        writefln("    Current in:  %f (A/m)", Iin);
-        writefln("    Current out: %f (A/m)", Iout);
+        current_in = Iin;
+        current_out = Iout;
 	}
 
     void compute_boundary_current_old(FluidBlock[] localFluidBlocks) {
