@@ -32,6 +32,7 @@ configOptionsHidden = { -- hidden from user
    divergence_cleaning = false,
    c_h = 0.0,
    divB_damping_length = 1.0,
+   electric_field_count = 1000000000,
    solve_electric_field = false,
    field_conductivity_model="none",
    --

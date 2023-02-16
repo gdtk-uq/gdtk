@@ -1098,6 +1098,7 @@ final class GlobalConfig {
     shared static double c_h = 0.0;
     shared static double divB_damping_length = 1.0;
     // Activate the electric field solver by Nick Gibbons
+    shared static int electric_field_count = 1000000000;
     shared static bool solve_electric_field = false;
     shared static string field_conductivity_model = "none";
 
@@ -1380,6 +1381,7 @@ public:
     bool divergence_cleaning;
     double c_h;
     double divB_damping_length;
+    int electric_field_count;
     bool solve_electric_field;
     string field_conductivity_model;
     //
@@ -1551,6 +1553,7 @@ public:
         divergence_cleaning = cfg.divergence_cleaning;
         c_h = cfg.c_h;
         divB_damping_length = cfg.divB_damping_length;
+        electric_field_count = cfg.electric_field_count;
         solve_electric_field = cfg.solve_electric_field;
         field_conductivity_model = cfg.field_conductivity_model;
         //
@@ -1919,6 +1922,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("MHD_resistive", "MHD_resistive"));
     mixin(update_bool("divergence_cleaning", "divergence_cleaning"));
     mixin(update_double("divB_damping_length", "divB_damping_length"));
+    mixin(update_int("electric_field_count", "electric_field_count"));
     mixin(update_bool("solve_electric_field", "solve_electric_field"));
     mixin(update_string("field_conductivity_model", "field_conductivity_model"));
 
@@ -2002,6 +2006,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  MHD_resistive: ", cfg.MHD_resistive);
         writeln("  divergence_cleaning: ", cfg.divergence_cleaning);
         writeln("  divB_damping_length: ", cfg.divB_damping_length);
+        writeln("  electric_field_count: ", cfg.electric_field_count);
         writeln("  solve_electric_field: ", cfg.solve_electric_field);
         writeln("  field_conductivity_model: ", cfg.field_conductivity_model);
     }
