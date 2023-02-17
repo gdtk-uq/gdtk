@@ -226,8 +226,8 @@ class ElectricField {
                     double sigmaF = face.fs.gas.sigma.re;
                     double dxF = face.pos.x.re - cell.pos[0].x.re;
                     double dyF = face.pos.y.re - cell.pos[0].y.re;
-                    double nxF = sign*face.n.x;
-                    double nyF = sign*face.n.y;
+                    double nxF = sign*face.n.x.re;
+                    double nyF = sign*face.n.y.re;
                     double emag = sqrt(dx[io]*dx[io] + dy[io]*dy[io]);
                     double ehatx = dx[io]/emag;
                     double ehaty = dy[io]/emag;
@@ -520,8 +520,8 @@ class ElectricField {
                     double sigmaF = face.fs.gas.sigma.re;
                     double dxF = face.pos.x.re - cell.pos[0].x.re;
                     double dyF = face.pos.y.re - cell.pos[0].y.re;
-                    double nxF = sign*face.n.x;
-                    double nyF = sign*face.n.y;
+                    double nxF = sign*face.n.x.re;
+                    double nyF = sign*face.n.y.re;
                     double emag = sqrt(dxF*dxF + dyF*dyF);
                     double ehatx = dxF/emag;
                     double ehaty = dyF/emag;
