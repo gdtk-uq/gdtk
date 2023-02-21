@@ -358,6 +358,7 @@ public:
                 f.vtx ~= vertices[j];
             }
         }
+        celldata.c2f.length = cells.length;
         foreach (i, c; cells) {
             foreach (j; grid.cells[i].vtx_id_list) {
                 c.vtx ~= vertices[j];
@@ -373,6 +374,7 @@ public:
                 auto my_face = faces[grid.cells[i].face_id_list[j]];
                 int my_outsign = grid.cells[i].outsign_list[j];
                 c.iface ~= my_face;
+                celldata.c2f[i] ~= grid.cells[i].face_id_list[j];
                 c.outsign ~= my_outsign;
                 if (my_outsign == 1) {
                     if (my_face.left_cell) {

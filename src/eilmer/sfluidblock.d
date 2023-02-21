@@ -762,6 +762,24 @@ public:
                 }
             }
         }
+
+        // Test out a index based cell to face mapping
+        celldata.c2f.length = nkc*njc*nic;
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    size_t c = cell_index(i,j,k);
+                    celldata.c2f[c] ~= ifj_index(i,j+1,k);// north
+                    celldata.c2f[c] ~= ifi_index(i+1,j,k);// east
+                    celldata.c2f[c] ~= ifj_index(i,j,k);  // south
+                    celldata.c2f[c] ~= ifi_index(i,j,k);  // west
+                    if (myConfig.dimensions == 3) {
+                        celldata.c2f[c] ~= ifk_index(i,j,k+1); // top
+                        celldata.c2f[c] ~= ifk_index(i,j,k);   // bottom
+                    }
+                }
+            }
+        }
         //
         // for instances when a numerical Jacobian will be formed (precondition matrix or adjoint operator), it is helpful
         // to have the cell_cloud filled with references to the nearby cells that effect the convective fluxes for the given
@@ -1200,6 +1218,7 @@ public:
                 c.cloud_fs ~= f.fs;
             } // end foreach face
         }
+
         // Check that we have correctly assembled clouds.
         foreach (i; 0 .. nic) {
             foreach (j; 0 .. njc) {
