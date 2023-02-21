@@ -329,7 +329,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     number mass_balance = 0.0;
     number omega = 1.0;                  // nonlinear update relaxation factor
     number omega_allow_cfl_growth = 0.1; // we freeze the CFL for a relaxation factor below this value
-    number omega_min = 0.00001;             // minimum allowable relaxation factor to accept an update
+    number omega_min = 0.01;             // minimum allowable relaxation factor to accept an update
     number omega_reduction_factor = 0.7; // factor by which the relaxation factor is reduced during
                                          // the physicality check and line search
     number theta = GlobalConfig.sssOptions.physicalityCheckTheta;
