@@ -127,7 +127,9 @@ function main()
       for isp,sp in ipairs(species) do
 	 if db[sp].type == 'molecule' then
 	    energy_modes[sp] = 0
-	 end
+         elseif db[sp].type == "electron" then
+            energy_modes[sp] = 1
+         end
       end
    end
 

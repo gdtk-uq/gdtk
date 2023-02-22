@@ -1,10 +1,9 @@
 /**
- * multi_temperature_trans_props.d
+ * two_temperature_trans_props.d
  *
- * Author: Rowan G and Robert Watt.
+ * Author: Rowan G.
  * Date: 2021-03-16
  * History: 2021-03-16 -- code ported from two_temperature air model.
- *          2023-01-18 -- Extend two temperature version (RW).
  *
  * References
  * ----------
@@ -20,7 +19,7 @@
  * NASA TM-101528, February 1989, NASA Langley Research Center
  **/
 
-module gas.diffusion.multi_temperature_trans_props;
+module gas.diffusion.three_temperature_trans_props;
 
 import std.math;
 import std.string;
@@ -36,10 +35,10 @@ import gas;
 import gas.diffusion.transport_properties_model;
 import gas.physical_constants;
 
-class MultiTemperatureTransProps : TransportPropertiesModel {
+class ThreeTemperatureTransProps : TransportPropertiesModel {
 public:
 
-    this(lua_State *L, string[] speciesNames, string[] energyModeNames)
+    this(lua_State *L, string[] speciesNames)
     {
         mNSpecies = to!int(speciesNames.length);
         double[] molMasses;
@@ -64,39 +63,6 @@ public:
             lua_pop(L, 1);
             lua_pop(L, 1);
         }
-
-        // figure out which mode each species contributes thermal conductivity to
-        mVibModes.length = speciesNames.length;
-        mVibModes[] = -1;
-        lua_getglobal(L, "db");
-        lua_getfield(L, -1, "modes");
-        foreach (i_mode, mode_name; energyModeNames){
-            string[] components;
-            // lua_getfield(L, -1, mode_name.toStringz);
-            getArrayOfStrings(L, -1, mode_name, components);
-            foreach (component; components) {
-                string[] component_tokens;
-                component_tokens = component.split(":");
-                string species = component_tokens[0];
-                auto isp = speciesNames.countUntil(species);
-                string type = component_tokens[1];
-                switch (type) {
-                    case "vib":
-                        mVibModes[to!int(isp)] = to!int(i_mode);
-                        break;
-                    case "electronic":
-                        // we will need to include the electronic
-                        // contribution at some point
-                        break;
-                    default:
-                        throw new Error("Unknown energy type");
-                }
-            }
-            // lua_pop(L, 1);
-        }
-        lua_pop(L, 1);
-        lua_pop(L, 1);
-        
         // Fill in support data for collision integrals
         lua_getglobal(L, "db");
         lua_getfield(L, -1, "CIs");
@@ -239,7 +205,7 @@ public:
         // Assuming rotation is fully excited, eq (75) in Gnoffo
         // and vibration is partially excited eq (52a) in Gupta, Yos, Thomson
         number k_rot = 0.0;
-        gs.k_modes[] = to!number(0.0);
+        number k_vib = 0.0;
 
         // For k_vib, Cp(T_vib) needs to be evaluated
         foreach (isp; mMolecularSpecies) {
@@ -254,15 +220,26 @@ public:
             // but it has been included to get the same result as
             // when the flow is fully excited
             number Cp = mMolMasses[isp]/R_universal*gm.Cp(gs, isp);
-            int vib_mode = mVibModes[isp];
-            gs.k_modes[vib_mode] += fmax((fmin(Cp.re, 9.0/2.0) - 7.0/2.0), 0.0) * mMolef[isp]/denom;
+            k_vib += fmax((fmin(Cp.re, 9.0/2.0) - 7.0/2.0), 0.0) * mMolef[isp]/denom;
         }
+
+        // electronic contribution
+        number k_ee = 0.0;
+        // foreach (isp; 0 .. mNSpecies) {
+        //     denom = 0.0;
+        //     foreach (jsp; 0 .. mNSpecies) {
+        //         denom += mMolef[jsp]*mDelta_11[isp][jsp];
+        //     }
+        //     number Cp = mMolMasses[isp]/R_universal*gm.Cp(gs, isp);
+        //     k_ee += fmax((Cp.re - 9.0/2.0), 0.0) * mMolef[isp]/denom;
+        // }
+
         k_rot *= 2.3901e-8*kB_erg;
         k_rot *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
-        foreach (ref k_vib; gs.k_modes) {
-            k_vib *= 2.3901e-8*kB_erg;
-            k_vib *= (4.184/1.0e-2); // cal/cm.s.K) --> J/(m.s.K)
-        }
+        k_vib *= 2.3901e-8*kB_erg;
+        k_vib *= (4.184/1.0e-2); // cal/cm.s.K) --> J/(m.s.K)
+        k_ee *= 2.3901e-8*kB_erg;
+        k_ee *= (4.184/1.0e-2); // cal/cm.s.K) --> J/(m.s.K)
 
         // Eq (76) in Gnoffo.
         gs.k = k_tr + k_rot;
@@ -279,8 +256,9 @@ public:
             k_E *= 2.3901e-8*(15./4.)*kB_erg;
             k_E *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
         }
-        // assume free electron is the last mode
-        gs.k_modes[$-1] += k_E;
+        gs.k_modes[$-1] = 0.0;
+        gs.k_modes[0] = k_vib;
+        gs.k_modes[$-1] += k_E + k_ee;
     }
 
     @nogc void binaryDiffusionCoefficients(ref const(GasState) gs, ref number[][] D)
@@ -304,7 +282,7 @@ public:
 
         foreach (isp; 0 .. mNSpecies) {
             foreach (jsp; 0 .. isp+1) {
-                number T = (isp == mElectronIdx || jsp == mElectronIdx) ? gs.T_modes[0] : gs.T;
+                number T = (isp == mElectronIdx || jsp == mElectronIdx) ? gs.T_modes[$-1] : gs.T;
                 number Dij = (kB_erg * T)/(p_cgs * mDelta_11[isp][jsp]); // cm^2/s
                 Dij /= (100*100); // cm2/s -> m2/s
                 D[isp][jsp] = Dij;
@@ -318,7 +296,6 @@ private:
     int mNSpecies;
     int mElectronIdx = -1;
     int[] mMolecularSpecies;
-    int[] mVibModes;
     double[] mMolMasses;
     double[] mParticleMass;
     int[] mCharge;
@@ -377,7 +354,8 @@ private:
                     log_T_CI = log(T_CI);
                 }
                 else {
-                    // collisions with electron: use vibroelectronic temperature in calculation
+                    // collisions with electron: use electron temperature in calculation
+                    // assume the electron temperature is the last modal temperature
                     T_CI = gs.T_modes[$-1];
                     log_T_CI = log(T_CI);
                 }
@@ -411,7 +389,7 @@ private:
                 }
                 else {
                     // collisions with electron: use vibroelectronic temperature in calculation
-                    T_CI = gs.T_modes[0];
+                    T_CI = gs.T_modes[$-1];
                     log_T_CI = log(T_CI);
                 }
                 number expnt = mA_22[isp][jsp]*(log_T_CI)^^2 + mB_22[isp][jsp]*log_T_CI + mC_22[isp][jsp];
@@ -427,7 +405,7 @@ private:
 }
 
 
-version(multi_temperature_trans_props_test)
+version(two_temperature_trans_props_test)
 {
     int main()
     {

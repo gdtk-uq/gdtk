@@ -42,18 +42,20 @@ class ImpartialDissociation : ExchangeChemistryCoupling {
         level. Essentially it's the model proposed in Treanor and Marrone, 1962, but written with 
         the nomenclature of Knab et al. 1995
     */
-    this(lua_State *L) {
+    this(lua_State *L, int mode) {
         this.D = getDouble(L, -1, "D");
         this.Thetav = getDouble(L, -1, "Thetav");
+        this.mode = mode;
     }
 
-    this(double D, double Thetav) {
+    this(double D, double Thetav, int mode) {
         this.D = D;
         this.Thetav = Thetav;
+        this.mode = mode;
     }
 
     ImpartialDissociation dup() {
-        return new ImpartialDissociation(D, Thetav);
+        return new ImpartialDissociation(D, Thetav, mode);
     }
     
     @nogc
@@ -64,7 +66,7 @@ class ImpartialDissociation : ExchangeChemistryCoupling {
         hand column of text.
     */  
         number T = gs.T;
-        number Tv = gs.T_modes[0];
+        number Tv = gs.T_modes[mode];
         number iGamma = (T - Tv)/(T*Tv); // Inverse of pseudo-temperature in equation (36)
 
         // Equation (39) gives garbage results when T and Tv are close to one another, so we switch
@@ -93,6 +95,7 @@ class ImpartialDissociation : ExchangeChemistryCoupling {
 
 private:
     const double D, Thetav;
+    int mode;
     immutable number iGammaSwitchThreshold = to!number(1e-7); // Determined by trial and error, see notes 26/05/21
     immutable double iGammaOverflowThreshold = 0.001; // See NNG notes 01/09/22
 
@@ -165,7 +168,7 @@ ExchangeChemistryCoupling createExchangeChemistryCoupling(lua_State *L, GasModel
     auto model = getString(L, -1, "model");
     switch (model) {
     case "ImpartialDissociation":
-        return new ImpartialDissociation(L);
+        return new ImpartialDissociation(L, mode);
     case "ImpartialChem":
         return new ImpartialChem(gmodel, mode, isp);
     default:
