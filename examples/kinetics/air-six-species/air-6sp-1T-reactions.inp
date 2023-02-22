@@ -1,0 +1,45 @@
+-- Author: Kyle Damm
+-- Date: 21-September-2021
+--
+-- Transcribed from page 4 of
+-- An analysis of combustion studies in shock expansion tunnels and reflected shock tunnels
+-- Jachinowski, 1992
+-- Modifed to remove H reactions by NNG (22/02/23)
+
+
+Reaction{
+   'O + O + M <=> O2 + M',
+   fr={'Arrhenius', A=1.1e17, n=-1.0, C=0.0},
+   label='r9'
+}
+
+Reaction{
+   'N + N + M <=> N2 + M',
+   fr={'Arrhenius', A=2.8e17, n=-0.8, C=0.0},
+   label='r20'
+}
+
+Reaction{
+   'N + O2 <=> NO + O',
+   fr={'Arrhenius', A=6.4e09, n=1.0, C=3.17240e03},
+   label='r21'
+}
+
+Reaction{
+   'N + NO <=> N2 + O',
+   fr={'Arrhenius', A=1.6e13, n=0.0, C=0.0},
+   label='r22'
+}
+
+
+Reaction{
+   'O + NO2 <=> NO + O2',
+   fr={'Arrhenius', A=1.0e13, n=0.0, C=3.02133e02},
+   label='r32'
+}
+
+Reaction{
+   'NO2 + M <=> NO + O + M',
+   fr={'Arrhenius', A=1.16e16, n=0.0, C=3.32347e04},
+   label='r33'
+}
