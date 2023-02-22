@@ -330,6 +330,7 @@ function output.write_config_file(fileName)
    --
    f:write(string.format('"udf_source_terms_file": "%s",\n', config.udf_source_terms_file))
    f:write(string.format('"udf_source_terms": %s,\n', tostring(config.udf_source_terms)))
+   f:write(string.format('"eval_udf_source_terms_at_each_stage": %s,\n', tostring(config.eval_udf_source_terms_at_each_stage)))
    --
    f:write(string.format('"chemistry_update": "%s",\n', config.chemistry_update))
    f:write(string.format('"reacting": %s,\n', tostring(config.reacting)))
