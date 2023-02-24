@@ -69,6 +69,7 @@ class FVCell {
 public:
     int id;  // allows us to work out where, in the block, the cell is
     bool data_is_bad; // Set to false at the start of an update.
+    bool is_ghost_cell; // ghost cells include cells at a shared boundary
     // Reset and checked at points through the update so that we don't stagger on
     // with bad data poisoning the simulation.
     //
@@ -1661,7 +1662,7 @@ public:
             foreach (i; 1 .. np) {
                 FVCell cell = cell_cloud[i];
                 bool cell_exists = cell_ids.canFind(cell.id);
-                if (!cell_exists && cell.id < 1_000_000_000 && is_interior_to_domain) {
+                if (!cell_exists && !cell.is_ghost_cell && is_interior_to_domain) {
                     unordered_cell_list ~= cell;
                     cell_pos_array[cell.id] = unordered_cell_list.length-1;
                     cell_ids ~= cell.id;
@@ -1683,7 +1684,7 @@ public:
             foreach (icell; 1 .. cell_cloud.length) {
                 foreach (cell; cell_cloud[icell].cell_cloud) {
                     bool cell_exists = cell_ids.canFind(cell.id);
-                    if (!cell_exists && cell.id < 1_000_000_000 && is_interior_to_domain) {
+                    if (!cell_exists && !cell.is_ghost_cell && is_interior_to_domain) {
                         unordered_cell_list ~= cell;
                         cell_pos_array[cell.id] = unordered_cell_list.length-1;
                         cell_ids ~= cell.id;
@@ -1745,7 +1746,7 @@ public:
 
             // gather cells
             foreach (c; neighbour_cell_cloud) {
-                if ( c.id != id && c.id != neighbour_cell_cloud[0].id && c.id < 1_000_000_000 && c.is_interior_to_domain) {
+                if ( c.id != id && c.id != neighbour_cell_cloud[0].id && !c.is_ghost_cell && c.is_interior_to_domain) {
                     cell_list ~= c;
                 }
             } // finished gathering cells

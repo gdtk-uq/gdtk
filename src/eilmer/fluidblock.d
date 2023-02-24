@@ -55,10 +55,9 @@ version(mpi_parallel) {
 
 
 
-// To distinguish ghost cells from active cells, we start their id values at
-// an arbitrarily high value.  It seem high to me (PJ) but feel free to adjust it
-// if you start using grids larger I expect.
-enum ghost_cell_start_id = 1_000_000_000;
+// We no longer use a large number for the cell IDs to indicate ghost cells.
+// Instead, consult the is_ghost_cell member. (NNG, Feb 23) 
+//enum ghost_cell_start_id = 1_000_000_000;
 
 
 // The flow solver handles structured- and unstructured-grid blocks via this base class.
@@ -1189,7 +1188,7 @@ public:
         foreach (pcell; cells) {
             // loop through cells that will have non-zero entries
             foreach(cell; pcell.cell_list) {
-                assert(cell.id < ghost_cell_start_id, "Oops, we expect to not find a ghost cell at this point.");
+                assert(!cell.is_ghost_cell, "Oops, we expect to not find a ghost cell at this point.");
                 size_t jidx = cell.id; // column index
                 // populate entry with a place holder value
                 ptJac.local.aa[ptJac.aa_idx] = to!number(1.0);
@@ -1410,7 +1409,7 @@ public:
             foreach(cell; pcell.cell_list) {
                 // loop through nConserved columns for each effected cell
                 for ( size_t jp = 0; jp < nConserved; ++jp ) {
-                    assert(cell.id < ghost_cell_start_id, "Oops, we expect to not find a ghost cell at this point.");
+                    assert(!cell.is_ghost_cell, "Oops, we expect to not find a ghost cell at this point.");
                     size_t I = cell.id*nConserved + ip;
                     size_t J = pcell.id*nConserved + jp;
                     flowJacobian.local[I,J] = cell.dRdU[ip][jp];
@@ -1529,7 +1528,7 @@ public:
                 // Step 3. Calculate dR/dU and add corrections to Jacobian
                 // dR/dU = dR/du * du/dU
                 foreach(bcell; ghost_cell.cell_list) { //
-                    assert(bcell.id < ghost_cell_start_id, "Oops, we expect to not find a ghost cell at this point.");
+                    assert(!bcell.is_ghost_cell, "Oops, we expect to not find a ghost cell at this point.");
                     size_t I, J;
                     for ( size_t i = 0; i < nConserved; ++i ) {
                         I = bcell.id*nConserved + i; // column index

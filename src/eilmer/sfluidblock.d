@@ -496,7 +496,7 @@ public:
                 }
             }
             // Now, construct the ghost cells, attaching them to the boundary faces.
-            int cell_id = ghost_cell_start_id;
+            int cell_id = to!int(nic*njc*nkc);
             // North and South boundaries.
             if (bc[Face.north].ghost_cell_data_available) {
                 foreach (k; 0 .. nkc) {
@@ -507,7 +507,7 @@ public:
                             celldata.gradients ~= FlowGradients(myConfig);
                             celldata.workspaces ~= WLSQGradWorkspace();
                             auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
-                            c.id = cell_id; ++cell_id;
+                            c.id = cell_id; ++cell_id; c.is_ghost_cell = true;
                             f.right_cells ~= c;
                         }
                     }
@@ -522,7 +522,7 @@ public:
                             celldata.gradients ~= FlowGradients(myConfig);
                             celldata.workspaces ~= WLSQGradWorkspace();
                             auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
-                            c.id = cell_id; ++cell_id;
+                            c.id = cell_id; ++cell_id; c.is_ghost_cell = true;
                             f.left_cells ~= c;
                         }
                     }
@@ -537,7 +537,7 @@ public:
                             celldata.gradients ~= FlowGradients(myConfig);
                             celldata.workspaces ~= WLSQGradWorkspace();
                             auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
-                            c.id = cell_id; ++cell_id;
+                            c.id = cell_id; ++cell_id; c.is_ghost_cell = true;
                             f.right_cells ~= c;
                         }
                     }
@@ -552,7 +552,7 @@ public:
                             celldata.gradients ~= FlowGradients(myConfig);
                             celldata.workspaces ~= WLSQGradWorkspace();
                             auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
-                            c.id = cell_id; ++cell_id;
+                            c.id = cell_id; ++cell_id; c.is_ghost_cell = true;
                             f.left_cells ~= c;
                         }
                     }
@@ -568,7 +568,7 @@ public:
                                 celldata.gradients ~= FlowGradients(myConfig);
                                 celldata.workspaces ~= WLSQGradWorkspace();
                                 auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
-                                c.id = cell_id; ++cell_id;
+                                c.id = cell_id; ++cell_id; c.is_ghost_cell = true;
                                 f.right_cells ~= c;
                             }
                         }
@@ -583,7 +583,7 @@ public:
                                 celldata.gradients ~= FlowGradients(myConfig);
                                 celldata.workspaces ~= WLSQGradWorkspace();
                                 auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
-                                c.id = cell_id; ++cell_id;
+                                c.id = cell_id; ++cell_id; c.is_ghost_cell = true;
                                 f.left_cells ~= c;
                             }
                         }
