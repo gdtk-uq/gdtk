@@ -19,8 +19,6 @@ import flowstate;
 import fvinterface;
 import fvcell;
 
-immutable double epsilon_van_albada = 1.0e-12;
-
 //------------------------------------------------------------------------------
 
 /+
@@ -318,10 +316,10 @@ public:
         number sR = 1.0;
         if (myConfig.apply_limiter) {
             // val Albada limiter as per Ian Johnston's thesis.
-            sL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) /
-                (delLminus*delLminus + del*del + epsilon_van_albada);
-            sR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) /
-                (del*del + delRplus*delRplus + epsilon_van_albada);
+            sL = (delLminus*del + fabs(delLminus*del) + myConfig.epsilon_van_albada) /
+                (delLminus*delLminus + del*del + myConfig.epsilon_van_albada);
+            sR = (del*delRplus + fabs(del*delRplus) + myConfig.epsilon_van_albada) /
+                (del*del + delRplus*delRplus + myConfig.epsilon_van_albada);
         }
         // The actual high-order reconstruction, possibly limited.
         qL = qL0 + beta * sL * (wL_L2*qL2 + wL_L1*qL1 + (wL_L0-1.0)*qL0 + wL_R0*qR0 + wL_R1*qR1);
@@ -367,10 +365,10 @@ public:
         number sR = 1.0;
         if (myConfig.apply_limiter) {
             // val Albada limiter as per Ian Johnston's thesis.
-            sL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) /
-                (delLminus*delLminus + del*del + epsilon_van_albada);
-            sR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) /
-                (del*del + delRplus*delRplus + epsilon_van_albada);
+            sL = (delLminus*del + fabs(delLminus*del) + myConfig.epsilon_van_albada) /
+                (delLminus*delLminus + del*del + myConfig.epsilon_van_albada);
+            sR = (del*delRplus + fabs(del*delRplus) + myConfig.epsilon_van_albada) /
+                (del*del + delRplus*delRplus + myConfig.epsilon_van_albada);
         }
         // The actual high-order reconstruction, possibly limited.
         qL = qL0 + beta * sL * aL0 * (del * two_lenL0_plus_lenL1 + delLminus * lenR0_);
@@ -402,8 +400,8 @@ public:
         number del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
         number sL = 1.0;
         if (myConfig.apply_limiter) {
-            sL = (delLminus*del + fabs(delLminus*del) + epsilon_van_albada) /
-                (delLminus*delLminus + del*del + epsilon_van_albada);
+            sL = (delLminus*del + fabs(delLminus*del) + myConfig.epsilon_van_albada) /
+                (delLminus*delLminus + del*del + myConfig.epsilon_van_albada);
         }
         qL = qL0 + beta * sL * aL0 * (del * two_lenL0_plus_lenL1 + delLminus * lenR0_);
         if (myConfig.apply_limiter && (delLminus*del < 0.0)) {
@@ -434,8 +432,8 @@ public:
         number delRplus = (qR1 - qR0) * two_over_lenR1_plus_lenR0;
         number sR = 1.0;
         if (myConfig.apply_limiter) {
-            sR = (del*delRplus + fabs(del*delRplus) + epsilon_van_albada) /
-                (del*del + delRplus*delRplus + epsilon_van_albada);
+            sR = (del*delRplus + fabs(del*delRplus) + myConfig.epsilon_van_albada) /
+                (del*del + delRplus*delRplus + myConfig.epsilon_van_albada);
         }
         qR = qR0 - beta * sR * aR0 * (delRplus * lenL0_ + del * two_lenR0_plus_lenR1);
         if (myConfig.apply_limiter && (delRplus*del < 0.0)) {

@@ -264,6 +264,7 @@ function output.write_config_file(fileName)
    f:write(string.format('"interpolate_in_local_frame": %s,\n',
 			 tostring(config.interpolate_in_local_frame)))
    f:write(string.format('"apply_limiter": %s,\n', tostring(config.apply_limiter)))
+   f:write(string.format('"epsilon_van_albada": %s,\n', tostring(config.epsilon_van_albada)))
    f:write(string.format('"extrema_clipping": %s,\n', tostring(config.extrema_clipping)))
    f:write(string.format('"apply_heuristic_pressure_based_limiting": %s,\n', tostring(config.apply_heuristic_pressure_based_limiting)))
    f:write(string.format('"apply_entropy_fix": %s,\n', tostring(config.apply_entropy_fix)))

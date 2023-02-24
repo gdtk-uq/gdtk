@@ -1014,6 +1014,7 @@ final class GlobalConfig {
     shared static bool allow_reconstruction_for_turbulent_variables = true;
     shared static bool apply_limiter = true;
     shared static bool extrema_clipping = true;
+    shared static double epsilon_van_albada = 1e-12;
     shared static bool apply_heuristic_pressure_based_limiting = false;
     shared static bool interpolate_in_local_frame = true; // only for structured-grid
     // The unstructured solver has a selection of limiters available
@@ -1349,6 +1350,7 @@ public:
     bool allow_reconstruction_for_energy_modes;
     bool allow_reconstruction_for_turbulent_variables;
     bool apply_limiter;
+    double epsilon_van_albada;
     bool extrema_clipping;
     bool apply_heuristic_pressure_based_limiting;
     bool interpolate_in_local_frame;
@@ -1520,6 +1522,7 @@ public:
         allow_reconstruction_for_energy_modes = cfg.allow_reconstruction_for_energy_modes;
         allow_reconstruction_for_turbulent_variables = cfg.allow_reconstruction_for_turbulent_variables;
         apply_limiter = cfg.apply_limiter;
+        epsilon_van_albada = cfg.epsilon_van_albada;
         extrema_clipping = cfg.extrema_clipping;
         apply_heuristic_pressure_based_limiting = cfg.apply_heuristic_pressure_based_limiting;
         interpolate_in_local_frame = cfg.interpolate_in_local_frame;
@@ -1888,6 +1891,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
     mixin(update_bool("allow_reconstruction_for_turbulent_variables", "allow_reconstruction_for_turbulent_variables"));
     mixin(update_bool("apply_limiter", "apply_limiter"));
+    mixin(update_double("epsilon_van_albada", "epsilon_van_albada"));
     mixin(update_bool("extrema_clipping", "extrema_clipping"));
     mixin(update_bool("apply_heuristic_pressure_based_limiting", "apply_heuristic_pressure_based_limiting"));
     mixin(update_bool("interpolate_in_local_frame", "interpolate_in_local_frame"));
@@ -1982,6 +1986,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  allow_reconstruction_for_energy_modes: ", cfg.allow_reconstruction_for_energy_modes);
         writeln("  allow_reconstruction_for_turbulent_variables: ", cfg.allow_reconstruction_for_turbulent_variables);
         writeln("  apply_limiter: ", cfg.apply_limiter);
+        writeln("  epsilon_van_albada: ", cfg.epsilon_van_albada);
         writeln("  apply_entropy_fix: ", cfg.apply_entropy_fix);
         writeln("  enforce_species_density_positivity: ", cfg.enforce_species_density_positivity);
         writeln("  scale_species_after_reconstruction: ", cfg.scale_species_after_reconstruction);
