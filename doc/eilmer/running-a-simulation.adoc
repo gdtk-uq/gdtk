@@ -89,6 +89,12 @@ The command would be:
 
 This works for multi-node simulations also.
 
+To inspect the result of the load balance, you can look at
+the `mpimap` file that is written to `config` directory:
+`config/<name>.mpimap`.
+This file will show the mapping of blocks on to process IDs.
+(It could be hand-edited if you know what you're doing.)
+
 
 == Run-time
 Now that the initial flow and grid files exist, it is time to run the main
