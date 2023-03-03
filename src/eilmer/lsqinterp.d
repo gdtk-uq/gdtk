@@ -206,7 +206,13 @@ public:
 
     this(ref const(LSQInterpGradients) other)
     {
-        // TODO: Copy constructor doesn't set array sizes correctly. (NNG 30/05/22)
+        size_t nsp=0;
+        size_t nmodes=0;
+        size_t nturb=0;
+        version(multi_species_gas) { nsp = other.massf.length; }
+        version(multi_T_gas) { nmodes = other.T_modes.length;}
+        version(turbulence) { nturb = other.turb.length;}
+        this(nsp, nmodes, nturb);
         this.copy_values_from(other);
     }
 
