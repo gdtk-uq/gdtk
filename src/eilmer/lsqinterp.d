@@ -1451,8 +1451,6 @@ public:
         Lft.copy_values_from(cL0.fs);
         Rght.copy_values_from(cR0.fs);
         IFace.fs.copy_average_values_from(Lft, Rght);
-        // For some simulations we would like to have the boundaries to remain 1st order.
-        if (myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary) { return; }
         // Enforce first order reconstruction for cells that capure the shocks,
         if (myConfig.suppress_reconstruction_at_shocks && ((Lft.S == 1.0) || (Rght.S == 1.0))) { return; }
         // else apply higher-order interpolation to all faces.
@@ -1728,8 +1726,6 @@ public:
         // the viscous-transport and diffusion coefficients.
         Rght.copy_values_from(cR0.fs);
         IFace.fs.copy_values_from(Rght);
-        // For some simulations we would like to have the boundaries to remain 1st order.
-        if (myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary) { return; }
         // Enforce first order reconstruction for cells that capure the shocks,
         if (myConfig.suppress_reconstruction_at_shocks && (Rght.S == 1.0)) { return; }
         // else apply higher-order interpolation to all faces.
@@ -1932,9 +1928,7 @@ public:
         // Even for high-order reconstruction, we depend upon this copy for
         // the viscous-transport and diffusion coefficients.
         Lft.copy_values_from(cL0.fs);
-	IFace.fs.copy_values_from(Lft);
-        // For some simulations we would like to have the boundaries to remain 1st order.
-        if (myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary) { return; }
+        IFace.fs.copy_values_from(Lft);
         // Enforce first order reconstruction for cells that capure the shocks,
         if (myConfig.suppress_reconstruction_at_shocks && (Lft.S == 1.0)) { return; }
         // else apply higher-order interpolation to all faces.
