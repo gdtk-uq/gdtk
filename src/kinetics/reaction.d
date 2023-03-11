@@ -520,7 +520,7 @@ version(reaction_test) {
         auto gd = GasState(3, 1);
         gd.T = 700.0;
         auto reaction = new ElementaryReaction(rc, rc, gm, [0, 1], [1.0, 1.0],
-                                               [2], [2.0], 3);
+                                               [2], [2.0], 3, -1, -1);
         reaction.eval_rate_constants(gd);
         reaction.eval_rates(conc);
         assert(isClose(0.0, reaction.production(0)), failedUnitTest());
@@ -537,7 +537,7 @@ version(reaction_test) {
 
         // Try a reaction with backwards rate computed from equilibrium constant.
         auto reaction3 = new ElementaryReaction(rc, null, gm, [0, 1], [1., 1.],
-                                                [2], [2.], 3);
+                                                [2], [2.], 3, -1, -1);
         reaction3.eval_rate_constants(gd);
         reaction3.eval_rates(conc);
 

@@ -48,7 +48,7 @@ local function transformRateConstant(t, coeffs, anonymousCollider, energyModes)
          end
       end
       m.rctIndex = rctIndex
-      elseif m.model == 'Arrhenius' then
+   elseif m.model == 'Arrhenius-logA' or m.model == 'Arrhenius2' then
       m.logA = t.logA
       m.B = t.B
       m.C = t.C

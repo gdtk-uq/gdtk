@@ -254,7 +254,7 @@ version(reaction_mechanism_test) {
         auto gd = GasState(3, 1);
         gd.T = 700.0;
         auto reaction = new ElementaryReaction(rc, rc, gmodel, [0, 1], [1, 1],
-                                               [2], [2], 3);
+                                               [2], [2], 3, -1, -1);
         auto reacMech = new ReactionMechanism([reaction], 3, 100.0, 10000.0);
         double[] rates;
         rates.length = 3;
