@@ -102,6 +102,7 @@ LMR4_EFIELD_FILES := $(LMR4)/field/field.d \
 	$(LMR4)/field/fieldgmres.d \
 	$(LMR4)/field/fieldconductivity.d \
 	$(LMR4)/field/fieldexchange.d \
+	$(LMR4)/field/fieldderivatives.d \
 	$(LMR4)/field/fieldbc.d
 
 LMR4_EXTRA_FILES := $(LMR4)/postprocess.d \
