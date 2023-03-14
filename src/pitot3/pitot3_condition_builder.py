@@ -7,7 +7,7 @@ Chris James (c.james4@uq.edu.au) - 02/01/23
 
 """
 
-CONDITION_BUILDER_VERSION_STRING = '09-Jan-2023'
+CONDITION_BUILDER_VERSION_STRING = '14-Mar-2023'
 
 #----------------------------------------------------------------------------------------
 
@@ -294,7 +294,7 @@ def run_pitot3_condition_builder(config_dict = {}, config_filename = None,
 
     # this is important, as a previous simulation could have had more simulations...
 
-    remove_condition_builder_folders(mode='conserve folders', folder_list=test_names, cwd='.')
+    remove_condition_builder_folders(mode='conserve folders', base_output_filename=base_output_filename, folder_list=test_names, cwd='.')
 
     #----------------------------------------------------------------------------------------
     print('-'*60)
@@ -706,8 +706,8 @@ def remove_condition_builder_folders(mode = 'remove all folders', base_output_fi
                     print(f"Deleting the folder {dirname}")
                     shutil.rmtree(dirname)
 
-            elif mode == 'conserve folders' and dirname_for_comparison not in folder_list:
-                print(f"Deleting the folder {dirname} as it is not in the list of folders to conserve.")
+            elif mode == 'conserve folders' and dirname_for_comparison not in folder_list and f'{base_output_filename}_' in dirname:
+                print(f"Deleting the folder {dirname} as it is not in the list of simulation folders to conserve.")
                 shutil.rmtree(dirname)
             elif mode == 'remove folders' and dirname_for_comparison in folder_list:
                 print(f"Deleting the folder {dirname} as it is in the list of folders to delete.")
