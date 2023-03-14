@@ -217,6 +217,7 @@ function output.write_config_file(fileName)
    f:write(string.format('"MHD_resistive": %s,\n', tostring(config.MHD_resistive)))
    f:write(string.format('"divergence_cleaning": %s,\n', tostring(config.divergence_cleaning)))
    f:write(string.format('"divB_damping_length": %.18e,\n', config.divB_damping_length))
+   f:write(string.format('"electric_field_count": %d,\n', config.electric_field_count))
    f:write(string.format('"solve_electric_field": %s,\n', tostring(config.solve_electric_field)))
    f:write(string.format('"field_conductivity_model": "%s",\n', tostring(config.field_conductivity_model)))
    f:write(string.format('"apply_bcs_in_parallel": %s,\n',
@@ -263,6 +264,7 @@ function output.write_config_file(fileName)
    f:write(string.format('"interpolate_in_local_frame": %s,\n',
 			 tostring(config.interpolate_in_local_frame)))
    f:write(string.format('"apply_limiter": %s,\n', tostring(config.apply_limiter)))
+   f:write(string.format('"epsilon_van_albada": %s,\n', tostring(config.epsilon_van_albada)))
    f:write(string.format('"extrema_clipping": %s,\n', tostring(config.extrema_clipping)))
    f:write(string.format('"apply_heuristic_pressure_based_limiting": %s,\n', tostring(config.apply_heuristic_pressure_based_limiting)))
    f:write(string.format('"apply_entropy_fix": %s,\n', tostring(config.apply_entropy_fix)))
@@ -329,6 +331,7 @@ function output.write_config_file(fileName)
    --
    f:write(string.format('"udf_source_terms_file": "%s",\n', config.udf_source_terms_file))
    f:write(string.format('"udf_source_terms": %s,\n', tostring(config.udf_source_terms)))
+   f:write(string.format('"eval_udf_source_terms_at_each_stage": %s,\n', tostring(config.eval_udf_source_terms_at_each_stage)))
    --
    f:write(string.format('"chemistry_update": "%s",\n', config.chemistry_update))
    f:write(string.format('"reacting": %s,\n', tostring(config.reacting)))

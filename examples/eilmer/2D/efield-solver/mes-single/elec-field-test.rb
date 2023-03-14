@@ -34,6 +34,6 @@ class TestElec < Test::Unit::TestCase
         rms = items[2].to_f
       end
     end
-    assert((rms - 0.00026664520908412055).abs < 1.0e-06, "Failed to compute correct RMS.")
+    assert((rms - 0.0002598072).abs < 1.0e-06, "Failed to compute correct RMS.")
   end
 end

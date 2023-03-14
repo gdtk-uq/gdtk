@@ -199,7 +199,7 @@ private:
 class MultiLevelElectronic : InternalEnergy
 {
 public:
-    this (double[] theta_e, double R, int[] g, double T_min, double T_low, double T_blend)
+    this (double[] theta_e, double R, int[] g)
     {
         mR = R;
         m_theta_e = theta_e;
@@ -279,7 +279,7 @@ InternalEnergy create_vibrational_energy_model(lua_State * L, double R)
     if (model == "truncated-harmonic"){
         theta_D = getDouble(L, -1, "theta_D");
     }
-    lua_pop(L, 1);
+    lua_pop(L, 1); // vib data
     switch (model)
     {
         case "harmonic":
@@ -307,16 +307,13 @@ InternalEnergy create_electronic_energy_model(lua_State * L, double R)
     theta_e[] = theta_e[] * speed_of_light * 100.0 * Plancks_constant / Boltzmann_constant;
     int[] g;
     getArrayOfInts(L, -1, "g", g);
-    double T_low = getDoubleWithDefault(L, -1, "T_low", 0.0);
-    double T_blend = getDoubleWithDefault(L, -1, "T_blend", 0.0);
-    double T_min = getDoubleWithDefault(L, -1, "T_min", 0.1);
 
     lua_pop(L, 1);
     switch (model){
         case "two-level":
             return new TwoLevelElectronic(theta_e[0], R, g[0], g[1]);
         case "multi-level":
-            return new MultiLevelElectronic(theta_e, R, g, T_min, T_low, T_blend);
+            return new MultiLevelElectronic(theta_e, R, g);
         case "frozen":
             return new ZeroElectronic();
         default:

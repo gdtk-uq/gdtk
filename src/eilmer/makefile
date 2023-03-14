@@ -229,6 +229,7 @@ FIELD_FILES := field/field.d \
 	field/fieldgmres.d \
 	field/fieldconductivity.d \
 	field/fieldexchange.d \
+	field/fieldderivatives.d \
 	field/fieldbc.d
 
 UTIL_DIR := ../util

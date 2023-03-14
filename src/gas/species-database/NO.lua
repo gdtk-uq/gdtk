@@ -12,6 +12,20 @@ db.NO.theta_D = {
    units = 'K',
    description = 'dissociation temperature'
 }
+db.NO.electronic_levels = {
+  Te = {
+    value = {0.0, 38440.00, 43965.7, 45932.3, 48680.0, 52175.7},
+    units = 'cm^(-1)',
+    description = 'Electronic energies',
+    reference = 'NIST'
+  },
+  g = {
+    value = {4, 8, 2, 4, 4, 4},
+    units = 'NA',
+    description = 'Degeneracy of electronic energy levels',
+    reference = 'NIST',
+  }
+}
 db.NO.atomicConstituents = {O=1,N=1,}
 db.NO.charge = 0
 db.NO.M = {

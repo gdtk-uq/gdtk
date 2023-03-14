@@ -32,7 +32,7 @@ nx = 16; ny = 16;
 grid = StructuredGrid:new{psurface=quad, niv=nx+1, njv=ny+1}
 blk = FluidBlock:new{grid=grid,
                      initialState=initial,
-                     bcList={north = WallBC_WithSlip:new{field_bc=FixedGradient_Test:new{}},
+                     bcList={north = WallBC_WithSlip:new{field_bc=FixedField_Test:new{}},
                              east  = WallBC_WithSlip:new{field_bc=FixedField_Test:new{}},
                              south = WallBC_WithSlip:new{field_bc=FixedField_Test:new{}},
                              west  = WallBC_WithSlip:new{field_bc=FixedField_Test:new{}},

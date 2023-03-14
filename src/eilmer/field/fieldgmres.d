@@ -128,7 +128,7 @@ class GMResFieldSolver {
     }
     
     void solve(int matrix_size, int nbands, double[] A, int[] Ai, double[] b, double[] x0,
-                      double[] xf, int nmax_iter, double tol=1e-8){
+                      double[] xf, int nmax_iter, bool verbose, double tol=1e-12){
         /*
             Generalised Minimal Residual Method for solving linear systems representated by a banded matrix.
     
@@ -188,7 +188,6 @@ class GMResFieldSolver {
         bool success = true;
         int k;
     
-        write("Called fieldgmres.solve(): ");
         for(k=0; k<niters; k++){
             // Perform Arnoldi Iteration to generate basis vectors
             double[] qk = q[k*matrix_size .. (k+1)*matrix_size];
@@ -260,13 +259,12 @@ class GMResFieldSolver {
             residual = vector_norm(xdiff, matrix_size);
             xold[] = xnew[];
     
-            if (k%nprint==0) write(".");
+            //if ((k%nprint==0) && verbose) write(".");
             //writefln("iter: %d residual %e hkp1k %e", k, residual, hkp1k);
             if (residual<tol) break;
         }
-        writeln("");
         if (residual>=tol) success=false;
-        writefln("    Solve Complete: status=%s  iters=%d/%d  residual=%e/%e", success, k, nmax_iter, residual, tol);
+        if (verbose) writefln("    Solve Complete: status=%s  iters=%d/%d  residual=%e/%e", success, k, nmax_iter, residual, tol);
         if (success==false) throw new Error("BGMRes failed to converge!");
 
         xf[] = xnew[];
@@ -308,7 +306,7 @@ void test_bgmres(){
 
     x0[] = 0.0;
 
-    gmres.solve(matrix_size, nbands, A, Ai, b, x0, x, nmax_iter);
+    gmres.solve(matrix_size, nbands, A, Ai, b, x0, x, nmax_iter, true);
     double error=0.0;
     foreach(p; 0 .. xtarget.length) error = (xtarget[p] - x[p])*(xtarget[p] - x[p]);
     error = sqrt(error);

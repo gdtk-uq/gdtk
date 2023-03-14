@@ -71,6 +71,30 @@ If things are going badly, setting a higher value may give more information
 during the calculations, however, it is more likely that increased verbosity
 is more useful during the simulation (run-time) stage.
 
+=== `e4loadbalance` : load-balancing when n_blocks exceeds n_processors
+
+For parallel simulations with MPI, it might be useful to load balance the work
+by stacking several computational blocks onto a single MPI process.
+This load balance tool will estimate load based on number of cells in a block
+and try to distribute the work in an even manner.
+The user should decide how many processes are available.
+A typical use is when the number of blocks significantly exceeds the number of
+processes available.
+As an example, a simulation of 100 computational blocks could be distributed
+onto a 32-core workstation using this load balance tool.
+The command would be:
+```
+ > e4loadbalance --job=name --ntasks=32
+```
+
+This works for multi-node simulations also.
+
+To inspect the result of the load balance, you can look at
+the `mpimap` file that is written to `config` directory:
+`config/<name>.mpimap`.
+This file will show the mapping of blocks on to process IDs.
+(It could be hand-edited if you know what you're doing.)
+
 
 == Run-time
 Now that the initial flow and grid files exist, it is time to run the main

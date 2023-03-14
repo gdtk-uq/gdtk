@@ -436,7 +436,6 @@ private:
             writer.put(format("   p(bar)      %e\n", Q.p / 1.0e5));
             // R_universal is in J/mol/K and s from flow solver is in J/kg/K
             writer.put(format("   s/r         %e\n", s/R_universal/1000.0));
-            writer.put(format("   t(k)        %e\n", Q.T));
             break;
         default:
             throw new Exception("Unknown problemType for CEA.");

@@ -16,6 +16,7 @@ import nm.number;
 import util.lua;
 import util.lua_service;
 import gas;
+import gas.composite_gas;
 import kinetics.thermochemical_reactor;
 import kinetics.reaction_mechanism;
 import kinetics.energy_exchange_system;
@@ -38,7 +39,6 @@ public:
     this(string fname1, string fname2, GasModel gmodel)
     {
         super(gmodel);
-        // Hard code N2-N system to get going.
         mGmodel = gmodel;
         mNSpecies = mGmodel.n_species;
         mNModes = mGmodel.n_modes;
@@ -50,12 +50,24 @@ public:
         mRmech = createReactionMechanism(L, gmodel, 300.0, 30000.0);
 
         // Initialise energy exchange mechanism
-        switch (mNModes) {
-            case 1:
-                mEES = new TwoTemperatureEnergyExchange(fname2, gmodel);
-                break;
-            default:
-                mEES = new MultiTemperatureEnergyExchange(fname2, gmodel);
+        if (typeid(gmodel) is typeid(CompositeGas)) {
+            auto cg = cast(CompositeGas) gmodel;
+            switch (cg.physicalModel) {
+                case "two-temperature-gas":
+                    mEES = new TwoTemperatureEnergyExchange(fname2, gmodel);
+                    break;
+                case "three-temperature-gas":
+                    mEES = new ThreeTemperatureEnergyExchange(fname2, gmodel);
+                    break;
+                case "multi-temperature-gas":
+                    mEES = new MultiTemperatureEnergyExchange(fname2, gmodel);
+                    break;
+                default:
+                    throw new Exception("Unkown physical model");
+            }
+        }
+        else {
+            mEES = new TwoTemperatureEnergyExchange(fname2, gmodel);
         }
 
         // Set up the rest of the parameters.

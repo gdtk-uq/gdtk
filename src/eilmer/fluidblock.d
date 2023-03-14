@@ -305,7 +305,6 @@ public:
     // Adjust the in_suppress_reconstruction-zone flag for faces in this block.
     {
         foreach(f; faces) {
-            f.in_suppress_reconstruction_zone = false;
             if (myConfig.suppress_reconstruction_zones.length > 0 ) {
                 foreach(srz; myConfig.suppress_reconstruction_zones) {
                     if (srz.is_inside(f.pos, myConfig.dimensions)) {
@@ -314,7 +313,9 @@ public:
                 } // foreach srz
             }
             if (myConfig.suppress_reconstruction_at_boundaries && f.is_on_boundary) {
-                f.in_suppress_reconstruction_zone = true;
+                if (!startsWith(bc[f.bc_id].type, "exchange_")) {
+                    f.in_suppress_reconstruction_zone = true;
+                }
             }
         } // foreach face
         //

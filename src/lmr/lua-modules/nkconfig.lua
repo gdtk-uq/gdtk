@@ -36,7 +36,8 @@ NewtonKrylovGlobalConfigHidden = {
    allowable_relative_mass_change = 0.2,
    min_relaxation_factor = 0.1,
    relaxation_factor_reduction_factor = 0.7,
-
+   use_residual_smoothing = false,
+   
    -- linear solver and preconditioner
    max_linear_solver_iterations = 10,
    max_linear_solver_restarts = 0,
@@ -118,6 +119,7 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    f:write(string.format('"allowable_relative_mass_change": %.18e,\n', nkConfig.allowable_relative_mass_change))
    f:write(string.format('"min_relaxation_factor": %.18e,\n', nkConfig.min_relaxation_factor))
    f:write(string.format('"relaxation_factor_reduction_factor": %.18e,\n', nkConfig.relaxation_factor_reduction_factor))
+   f:write(string.format('"use_residual_smoothing": %s,\n', tostring(nkConfig.use_residual_smoothing)))
    -- linear solver and preconditioner
    f:write(string.format('"max_linear_solver_iterations": %d,\n', nkConfig.max_linear_solver_iterations))
    f:write(string.format('"max_linear_solver_restarts": %d,\n', nkConfig.max_linear_solver_restarts))

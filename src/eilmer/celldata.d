@@ -1302,6 +1302,8 @@ class CellResidualData : AuxCellData
 
 // Generate all of the accessors for Nick's electromagnetic field calculations
 mixin(GenCellVariableAccess!("AccessElectricPotential", "electric_potential"));
+mixin(GenCellVariableAccess!("AccessElectricFieldX", "electric_field[0]"));
+mixin(GenCellVariableAccess!("AccessElectricFieldY", "electric_field[1]"));
 
 class FieldData : AuxCellData
 // Pipe for accessing field data stored in the cells
@@ -1323,6 +1325,8 @@ class FieldData : AuxCellData
         VariableAccess[string] acc;
 
         acc["electric_potential"] = new AccessElectricPotential();
+        acc["electric_field_x"] = new AccessElectricFieldX();
+        acc["electric_field_y"] = new AccessElectricFieldY();
 
         return acc;
     }

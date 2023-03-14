@@ -387,6 +387,8 @@ RateConstant createRateConstant(lua_State* L, Tuple!(int, double)[] efficiencies
         return new ArrheniusRateConstant(L);
     case "Arrhenius2":
         return new ArrheniusRateConstant2(L);
+    case "Arrhenius-logA":
+        return new ArrheniusRateConstant2(L);
     case "Lindemann-Hinshelwood":
         return new LHRateConstant(L, efficiencies, gmodel);
     case "Troe":

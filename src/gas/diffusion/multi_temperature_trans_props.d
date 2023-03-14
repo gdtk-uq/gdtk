@@ -72,8 +72,8 @@ public:
         lua_getfield(L, -1, "modes");
         foreach (i_mode, mode_name; energyModeNames){
             string[] components;
-            lua_getfield(L, -1, mode_name.toStringz);
-            getArrayOfStrings(L, -1, "components", components);
+            // lua_getfield(L, -1, mode_name.toStringz);
+            getArrayOfStrings(L, -1, mode_name, components);
             foreach (component; components) {
                 string[] component_tokens;
                 component_tokens = component.split(":");
@@ -92,7 +92,7 @@ public:
                         throw new Error("Unknown energy type");
                 }
             }
-            lua_pop(L, 1);
+            // lua_pop(L, 1);
         }
         lua_pop(L, 1);
         lua_pop(L, 1);
@@ -378,7 +378,7 @@ private:
                 }
                 else {
                     // collisions with electron: use vibroelectronic temperature in calculation
-                    T_CI = gs.T_modes[0];
+                    T_CI = gs.T_modes[$-1];
                     log_T_CI = log(T_CI);
                 }
                 number expnt = mA_11[isp][jsp]*(log_T_CI)^^2 + mB_11[isp][jsp]*log_T_CI + mC_11[isp][jsp];

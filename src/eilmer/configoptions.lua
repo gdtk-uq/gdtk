@@ -32,6 +32,7 @@ configOptionsHidden = { -- hidden from user
    divergence_cleaning = false,
    c_h = 0.0,
    divB_damping_length = 1.0,
+   electric_field_count = 1000000000,
    solve_electric_field = false,
    field_conductivity_model="none",
    --
@@ -87,6 +88,7 @@ configOptionsHidden = { -- hidden from user
    allow_reconstruction_for_energy_modes = true,
    allow_reconstruction_for_turbulent_variables = true,
    apply_limiter = true,
+   epsilon_van_albada = 1e-12,
    extrema_clipping = true,
    apply_heuristic_pressure_based_limiting = false,
    interpolate_in_local_frame = true,

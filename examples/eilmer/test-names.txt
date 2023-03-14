@@ -21,6 +21,7 @@
 2D/vortex-supersonic/vtx-test.rb
 2D/vortex-subsonic/vtx-subsonic-test.rb
 2D/reactor-n2/reactor-test.rb
+2D/reacting-ramp/reacting-ramp-test.rb
 2D/sphere-sawada/fixed-grid/ss3-test.rb
 2D/nozzle-conical-back/back-test.rb
 2D/channel-with-bump/bump-test.rb
@@ -39,6 +40,7 @@
 3D/manufactured-solution/steady-state/Spalart-Allmaras/smoke-test/mms-SA-test.rb
 2D/cht-manufactured-solution/spatial-verification/smoke-tests/single-thread-test.rb
 2D/efield-solver/mes-single/elec-field-test.rb
+2D/efield-solver/skew-split/skew-efield-test.rb
 2D/shock-fitting/shock-tube/sodsf-test.rb
 2D/shock-fitting/cylinder/cyl-sf-test.rb
 2D/shock-fitting/cylinder-mpi/cyl-sf-mpi-test.rb

@@ -1014,6 +1014,7 @@ final class GlobalConfig {
     shared static bool allow_reconstruction_for_turbulent_variables = true;
     shared static bool apply_limiter = true;
     shared static bool extrema_clipping = true;
+    shared static double epsilon_van_albada = 1e-12;
     shared static bool apply_heuristic_pressure_based_limiting = false;
     shared static bool interpolate_in_local_frame = true; // only for structured-grid
     // The unstructured solver has a selection of limiters available
@@ -1098,6 +1099,7 @@ final class GlobalConfig {
     shared static double c_h = 0.0;
     shared static double divB_damping_length = 1.0;
     // Activate the electric field solver by Nick Gibbons
+    shared static int electric_field_count = 1000000000;
     shared static bool solve_electric_field = false;
     shared static string field_conductivity_model = "none";
 
@@ -1348,6 +1350,7 @@ public:
     bool allow_reconstruction_for_energy_modes;
     bool allow_reconstruction_for_turbulent_variables;
     bool apply_limiter;
+    double epsilon_van_albada;
     bool extrema_clipping;
     bool apply_heuristic_pressure_based_limiting;
     bool interpolate_in_local_frame;
@@ -1380,6 +1383,7 @@ public:
     bool divergence_cleaning;
     double c_h;
     double divB_damping_length;
+    int electric_field_count;
     bool solve_electric_field;
     string field_conductivity_model;
     //
@@ -1518,6 +1522,7 @@ public:
         allow_reconstruction_for_energy_modes = cfg.allow_reconstruction_for_energy_modes;
         allow_reconstruction_for_turbulent_variables = cfg.allow_reconstruction_for_turbulent_variables;
         apply_limiter = cfg.apply_limiter;
+        epsilon_van_albada = cfg.epsilon_van_albada;
         extrema_clipping = cfg.extrema_clipping;
         apply_heuristic_pressure_based_limiting = cfg.apply_heuristic_pressure_based_limiting;
         interpolate_in_local_frame = cfg.interpolate_in_local_frame;
@@ -1551,6 +1556,7 @@ public:
         divergence_cleaning = cfg.divergence_cleaning;
         c_h = cfg.c_h;
         divB_damping_length = cfg.divB_damping_length;
+        electric_field_count = cfg.electric_field_count;
         solve_electric_field = cfg.solve_electric_field;
         field_conductivity_model = cfg.field_conductivity_model;
         //
@@ -1885,6 +1891,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
     mixin(update_bool("allow_reconstruction_for_turbulent_variables", "allow_reconstruction_for_turbulent_variables"));
     mixin(update_bool("apply_limiter", "apply_limiter"));
+    mixin(update_double("epsilon_van_albada", "epsilon_van_albada"));
     mixin(update_bool("extrema_clipping", "extrema_clipping"));
     mixin(update_bool("apply_heuristic_pressure_based_limiting", "apply_heuristic_pressure_based_limiting"));
     mixin(update_bool("interpolate_in_local_frame", "interpolate_in_local_frame"));
@@ -1919,6 +1926,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("MHD_resistive", "MHD_resistive"));
     mixin(update_bool("divergence_cleaning", "divergence_cleaning"));
     mixin(update_double("divB_damping_length", "divB_damping_length"));
+    mixin(update_int("electric_field_count", "electric_field_count"));
     mixin(update_bool("solve_electric_field", "solve_electric_field"));
     mixin(update_string("field_conductivity_model", "field_conductivity_model"));
 
@@ -1978,6 +1986,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  allow_reconstruction_for_energy_modes: ", cfg.allow_reconstruction_for_energy_modes);
         writeln("  allow_reconstruction_for_turbulent_variables: ", cfg.allow_reconstruction_for_turbulent_variables);
         writeln("  apply_limiter: ", cfg.apply_limiter);
+        writeln("  epsilon_van_albada: ", cfg.epsilon_van_albada);
         writeln("  apply_entropy_fix: ", cfg.apply_entropy_fix);
         writeln("  enforce_species_density_positivity: ", cfg.enforce_species_density_positivity);
         writeln("  scale_species_after_reconstruction: ", cfg.scale_species_after_reconstruction);
@@ -2002,6 +2011,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  MHD_resistive: ", cfg.MHD_resistive);
         writeln("  divergence_cleaning: ", cfg.divergence_cleaning);
         writeln("  divB_damping_length: ", cfg.divB_damping_length);
+        writeln("  electric_field_count: ", cfg.electric_field_count);
         writeln("  solve_electric_field: ", cfg.solve_electric_field);
         writeln("  field_conductivity_model: ", cfg.field_conductivity_model);
     }

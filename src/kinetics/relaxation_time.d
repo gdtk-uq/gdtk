@@ -449,6 +449,75 @@ private:
     }
 }
 
+class CandlerEV : RelaxationTime {
+    // Free electron/vibration relaxation times. This uses the curve fit form given by Candler
+    // (Eq. 2.7.14 of his thesis) for N2.
+
+    this(double a_low, double b_low, double c_low, double a_high, double b_high, double c_high)
+    {
+        m_a_low = a_low; m_b_low = b_low; m_c_low = c_low;
+        m_a_high = a_high; m_b_high = b_high; m_c_high = c_high;
+    }
+
+    this(lua_State *L)
+    {
+        m_a_low = getDouble(L, -1, "a_low");
+        m_b_low = getDouble(L, -1, "b_low");
+        m_c_low = getDouble(L, -1, "c_low");
+        m_a_high = getDouble(L, -1, "a_high");
+        m_b_high = getDouble(L, -1, "b_high");
+        m_c_high = getDouble(L, -1, "c_high");
+    }
+
+    CandlerEV dup()
+    {
+        return new CandlerEV(m_a_low, m_b_low, m_c_low, m_a_high, m_b_high, m_c_high);
+    }
+
+
+    @nogc
+    number eval(in GasState gs, number[] molef, number[] numden)
+    {
+        if (molef[$-1] < SMALL_MOLE_FRACTION)
+            return to!number(-1.0);
+        // assume free electron temperature is within the last temperature
+        number Te = gs.T_modes[$-1];
+        number log_Te = log10(Te);
+        number p_e = gs.p_e;
+        number log_pe_tau;
+        
+        // the curve fit fit by Candler doesn't have a continuous derivative at
+        // 7000 K. So we blend it near 7000K to make sure the gradient is 
+        // continuous.
+        if (Te <= 6950.0) {
+            log_pe_tau = _eval_low_temp(log_Te);
+        }
+        else if (Te >= 7050.0) {
+            log_pe_tau = _eval_high_temp(log_Te);
+        }
+        else {
+            number dT = (Te - 6950.0) / 100.0;
+            number w0 = cos(PI/2 * dT.re) * cos(PI/2 * dT.re);
+            number w1 = 1 - w0;
+            log_pe_tau = _eval_low_temp(log_Te)*w0 + _eval_high_temp(log_Te)*w1;
+        }
+        // Divide by electron pressure converted to atmospheres
+        return pow(10.0, log_pe_tau)/(p_e/101325.0);
+    }
+
+    @nogc
+    number _eval_low_temp(number log_Te) {
+        return m_a_low * log_Te * log_Te + m_b_low * log_Te + m_c_low;
+    }
+
+    @nogc
+    number _eval_high_temp(number log_Te) {
+        return m_a_high * log_Te * log_Te + m_b_high * log_Te + m_c_high;
+    }
+
+private:
+    double m_a_low, m_b_low, m_c_low, m_a_high, m_b_high, m_c_high;
+}
 
 RelaxationTime createRelaxationTime(lua_State *L, int p, int q, GasModel gmodel)
 {
@@ -464,8 +533,10 @@ RelaxationTime createRelaxationTime(lua_State *L, int p, int q, GasModel gmodel)
 	return new KimHTCVT(L, p, q, gmodel);
     case "SSH_VT":
         return new SSH_VT(L, p, q);
-    case "SSH_VV":
+    case "SSH-VV":
         return new SSH_VV(L, p, q);
+    case "Candler":
+        return new CandlerEV(L);
     default:
 	string msg = format("The relaxation time model: %s is not known.", model);
 	throw new Error(msg);

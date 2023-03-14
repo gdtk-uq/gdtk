@@ -318,7 +318,7 @@ def finite_wave_dp_wrapper(state1, v1, characteristic, p2, state2, gas_flow, ste
 
                     have_performed_calculation_without_ions = True
 
-                    print("Calculation was successful. Turning ions back on")
+                    print("Calculation was successful. Turning ions back on.")
 
                     # turning ions back on for next calculation...
 
@@ -1680,7 +1680,7 @@ class Facility_State(object):
     """
 
     def __init__(self, state_name, gas_state, v, reference_gas_state = None, room_temperature_only_gmodel = None,
-                 outputUnits = 'massf', species_MW_dict = None):
+                 outputUnits = 'massf', species_MW_dict = None, make_gmodel_without_ions = None):
         """
 
         :param state_name: just a string labelled the state, probably just '4', '3s', '1' etc.
@@ -1709,7 +1709,9 @@ class Facility_State(object):
 
         if self.get_gas_state_gmodel_type() == 'CEAGas':
             # this assumes the gas state has been created properly at some point...
-            if 'e-' in self.gas_state.ceaSavedData['massf']:
+            # (I added the ability to have a flag here as there was a bug where if the gas state was
+            # made with the ions turned off... then the next gas state wouldn't make this object...)
+            if 'e-' in self.gas_state.ceaSavedData['massf'] or make_gmodel_without_ions:
                 gmodel_without_ions_filename = eilmer4_CEAGas_gmodel_without_ions_creator(self.gas_state_gmodel.file_name)
 
                 self.gas_state_gmodel_without_ions = GasModel(gmodel_without_ions_filename)
@@ -2749,17 +2751,27 @@ class Tube(object):
             else:
                 reference_gas_state = None
 
+            # if we had the gas model without ions, we need to ensure that the new facility state also will make a gas model
+            # without ions, as it will ahve been set without ions, so the FacilityState constructor will miss it...
+
+            if self.unsteadily_expanding_state.get_gas_state_gmodel_without_ions():
+                make_gmodel_without_ions = True
+            else:
+                make_gmodel_without_ions = None
+
             # we need to carry around the room temperature only gas model for if we need it for CO2 gases in the nozzle expansion...
             if self.unsteadily_expanding_state.get_room_temperature_only_gmodel():
                 self.unsteadily_expanded_state = Facility_State(self.unsteadily_expanded_entrance_state_name, unsteadily_expanded_gas_state, v3g,
                                                                 reference_gas_state=reference_gas_state,
                                                                 room_temperature_only_gmodel=self.unsteadily_expanding_state.get_room_temperature_only_gmodel(),
-                                                                outputUnits = self.unsteadily_expanding_state.outputUnits, species_MW_dict = self.unsteadily_expanding_state.species_MW_dict)
+                                                                outputUnits = self.unsteadily_expanding_state.outputUnits, species_MW_dict = self.unsteadily_expanding_state.species_MW_dict,
+                                                                make_gmodel_without_ions = make_gmodel_without_ions)
             else:
                 self.unsteadily_expanded_state = Facility_State(self.unsteadily_expanded_entrance_state_name,
                                                                 unsteadily_expanded_gas_state, v3g,
                                                                 reference_gas_state=reference_gas_state,
-                                                                outputUnits = self.unsteadily_expanding_state.outputUnits, species_MW_dict = self.unsteadily_expanding_state.species_MW_dict)
+                                                                outputUnits = self.unsteadily_expanding_state.outputUnits, species_MW_dict = self.unsteadily_expanding_state.species_MW_dict,
+                                                                make_gmodel_without_ions = make_gmodel_without_ions)
 
             for facility_state in [self.shocked_state, self.unsteadily_expanded_state]:
                 print('-'*60)

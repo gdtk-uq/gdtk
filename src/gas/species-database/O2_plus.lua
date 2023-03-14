@@ -7,6 +7,20 @@ db['O2+'].theta_v = {
    description = 'characteristic vibrational temperature',
    reference = 'Copied from O2'
 }
+db['O2+'].electronic_levels = {
+  Te = {
+    value = {0.0, 32964.00, 40669.00, 49552.00},
+    units = 'cm^(-1)',
+    description = 'Electronic energy levels',
+    reference = 'NIST'
+  },
+  g = {
+    value = {4, 8, 4, 4},
+    units = 'NA',
+    description = 'Degeneracy of electronic energy levels',
+    reference = 'NIST'
+  }
+}
 db['O2+'].atomicConstituents = {O=2,}
 db['O2+'].charge = 1
 db['O2+'].M = {

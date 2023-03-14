@@ -5,6 +5,7 @@
  * Date: 2022-02-28
  * History:
  *   2022-02-28 Fairly aggressive refactor of code that was in: steadystate_core.d
+ *   2022-10-22 Reworked as part of lmr5
  */
 
 module newtonkrylovsolver;
@@ -37,7 +38,7 @@ import json_helper;
 import geom;
 
 import lmrconfig;
-import conservedquantities : ConservedQuantities;
+import conservedquantities : ConservedQuantities, copy_values_from;
 import fileutil : ensure_directory_is_present;
 
 import globalconfig;
@@ -150,6 +151,7 @@ struct NKGlobalConfig {
     double allowableRelativeMassChange = 0.2;
     double minRelaxationFactor = 0.1;
     double relaxationFactorReductionFactor = 0.7;
+    bool useResidualSmoothing = false;
     // Linear solver and preconditioning
     int maxLinearSolverIterations = 10;
     int maxLinearSolverRestarts = 0;
@@ -194,7 +196,8 @@ struct NKGlobalConfig {
         allowableRelativeMassChange = getJSONdouble(jsonData, "allowable_relative_mass_change", allowableRelativeMassChange);
         minRelaxationFactor = getJSONdouble(jsonData, "min_relaxation_factor", minRelaxationFactor);
         relaxationFactorReductionFactor = getJSONdouble(jsonData, "relaxation_factor_reduction_factor", relaxationFactorReductionFactor);
-        maxLinearSolverIterations = getJSONint(jsonData, "max_linear_solver_iterations", maxLinearSolverIterations);
+	useResidualSmoothing = getJSONbool(jsonData, "use_residual_smoothing", useResidualSmoothing);
+	maxLinearSolverIterations = getJSONint(jsonData, "max_linear_solver_iterations", maxLinearSolverIterations);
         maxLinearSolverRestarts = getJSONint(jsonData, "max_linear_solver_restarts", maxLinearSolverRestarts);
         useScaling = getJSONbool(jsonData, "use_scaling", useScaling);
         frechetDerivativePerturbation = getJSONdouble(jsonData, "frechet_derivative_perturbation", frechetDerivativePerturbation);
@@ -887,7 +890,8 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
             setPhaseSettings(finalPhase);
         }
         if (activePhase.useAutoCFL) {
-            cflSelector = new ResidualBasedAutoCFL(activePhase.autoCFLExponent, activePhase.maxCFL, activePhase.thresholdRelativeResidualForCFLGrowth);
+            cflSelector = new ResidualBasedAutoCFL(activePhase.autoCFLExponent, activePhase.maxCFL,
+						   activePhase.thresholdRelativeResidualForCFLGrowth);
             cfl = restart.cfl;
         }
         else { // Assume we have a global (phase-independent) schedule
@@ -898,7 +902,8 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
         // On fresh start, the phase setting must be at 0
         setPhaseSettings(0);
         if (activePhase.useAutoCFL) {
-            cflSelector = new ResidualBasedAutoCFL(activePhase.autoCFLExponent, activePhase.maxCFL, activePhase.thresholdRelativeResidualForCFLGrowth);
+            cflSelector = new ResidualBasedAutoCFL(activePhase.autoCFLExponent, activePhase.maxCFL,
+						   activePhase.thresholdRelativeResidualForCFLGrowth);
             cfl = activePhase.startCFL;
         }
         else { // Assume we have a global (phase-independent) schedule
@@ -988,8 +993,14 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
         }
         */
 
-
+	/* 1a. perform a physicality check if required */
         double omega = nkCfg.usePhysicalityCheck ? determineRelaxationFactor() : 1.0;
+
+	/* 1b. do a line search if required */
+	if ( (omega > nkCfg.minRelaxationFactor) && nkCfg.useLineSearch ) {
+	    omega = applyLineSearch(omega);
+	}
+	
         if (omega >= nkCfg.minRelaxationFactor) {
             // Things are good. Apply omega-scaled update and continue on.
             // We think??? If not, we bail at this point.
@@ -1557,6 +1568,10 @@ double solveNewtonStep(bool updatePreconditionerThisStep)
         computePreconditioner();
     }
 
+    if (nkCfg.useResidualSmoothing) {
+	applyResidualSmoothing();
+    }
+    
     /*---
      * 1. Outer loop of restarted GMRES
      *---
@@ -1893,6 +1908,63 @@ void unscaleVector(ref number[] vec, size_t nConserved)
     }
 }
 
+/**
+ * Apply residual smoothing.
+ *
+ * Reference:
+ * Mavriplis (2021)
+ * A residual smoothing strategy for accelerating Newton method continuation.
+ * Computers & Fluids
+ *
+ * Authors: KAD and RJG
+ * Date: 2023-03-13
+ */
+void applyResidualSmoothing()
+{
+    size_t nConserved = GlobalConfig.cqi.n;
+
+    //----
+    // 1. Compute approximate solution via dU = D^{-1} * R(U) where D = preconditioner matrix
+    //----
+    
+    final switch (nkCfg.preconditioner) {
+    case PreconditionerType.lusgs:
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = to!number(0.0); }
+        mixin(lusgs_solve("DinvR", "R"));
+        break;
+    case PreconditionerType.diagonal:
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = to!number(0.0); }
+        mixin(diagonal_solve("DinvR", "R"));
+        break;
+    case PreconditionerType.jacobi:
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = to!number(0.0); }
+        mixin(jacobi_solve("DinvR", "R"));
+        break;
+    case PreconditionerType.sgs:
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = to!number(0.0); }
+        mixin(sgs_solve("DinvR", "R"));
+        break;
+    case PreconditionerType.ilu:
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            blk.DinvR[] = blk.R[];
+            nm.smla.solve(blk.flowJacobian.local, blk.DinvR);
+        }
+        break;
+    } // end switch
+
+    //----
+    // 2. Add smoothing source term to RHS
+    //----
+    foreach (blk; parallel(localFluidBlocks,1)) {
+	size_t startIdx = 0;
+	foreach (cell; blk.cells) {
+	    double dtInv = 1.0/cell.dt_local;
+	    blk.R[startIdx .. startIdx+nConserved] += dtInv * blk.DinvR[startIdx .. startIdx+nConserved];
+	    startIdx += nConserved;
+	}
+    }
+}
+
 
 /**
  * Perform GMRES iterations to fill Krylov subspace and get solution estimate.
@@ -2110,8 +2182,6 @@ bool performIterations(int maxIterations, number beta0, number targetResidual,
 /**
  * Apply preconditioning to GMRES iterations.
  *
- * NOTE: Although you don't see "dt" in the code here, it is passed in because
- *       it is accessed in the mixin code.
  * Authors: KAD and RJG
  * Date: 2022-07-09
  */
@@ -2460,7 +2530,7 @@ void evalRealMatVecProd(double sigma)
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.clear_fluxes_of_conserved_quantities();
         foreach (cell; blk.cells) cell.clear_source_vector();
-        size_t startIdx;
+        size_t startIdx = 0;
         foreach (cell; blk.cells) {
             cell.U[1][] = cell.U[0][];
             foreach (ivar; 0 .. nConserved) {
@@ -2481,16 +2551,18 @@ void evalRealMatVecProd(double sigma)
             startIdx += nConserved;
         }
     }
-    foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(activePhase.residualInterpolationOrder); }
+    foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(activePhase.residualInterpolationOrder);
 }
 
 /**
- * Determine a relaxation factor.
+ * Determine a relaxation factor based on a physicality check.
  *
  * In this algorithm, the relaxation factor keeps falling as we search across cells in order.
  * This is efficient since we're searching for a worst case. If at any point, the relaxation
  * factor gets smaller than what we're prepared to accept then we just break the search
  * in that block of cells.
+ *
+ * [TODO:KAD] Add reference please
  *
  * Authors: KAD and RJG
  * Date: 2022-03-05
@@ -2546,7 +2618,7 @@ double determineRelaxationFactor()
     //----
 
     foreach (blk; parallel(localFluidBlocks, 1)) {
-        int startIdx = 0;
+        size_t startIdx = 0;
         foreach (cell; blk.cells) {
             bool failedDecode = false;
             while (blk.omegaLocal >= minOmega) {
@@ -2585,6 +2657,104 @@ double determineRelaxationFactor()
     return omega;
 }
 
+
+/**
+ * Apply a line search to modify relaxation of factor.
+ *
+ * The line search is used *after* the physicality check is performed
+ * to ensure that the unsteady residual is reduced in this step.
+ *
+ * [TODO:KAD] Add reference please
+ *
+ * Authors: KAD and RJG
+ * Date: 2023-03-13
+ */
+double applyLineSearch(double omega) {
+
+    double minOmega = nkCfg.minRelaxationFactor;
+    double omegaReductionFactor = nkCfg.relaxationFactorReductionFactor;
+    
+    size_t nConserved = GlobalConfig.cqi.n;
+
+    double RU0 = globalResidual;
+    double RUn;
+
+    bool reduceOmega = true;
+    while (reduceOmega) {
+
+	//----
+	// 1. Compute unsteady term
+	//----
+	foreach (blk; parallel(localFluidBlocks,1)) {
+	    size_t startIdx = 0;
+	    foreach (cell; blk.cells) {
+		blk.R[startIdx .. startIdx+nConserved] = -cell.dt_local * omega * blk.dU[startIdx .. startIdx+nConserved];
+		startIdx += nConserved;
+	    }
+	}
+
+	//----
+	// 2. Compute residual at updated state
+	//----
+	foreach (blk; parallel(localFluidBlocks,1)) {
+	    size_t startIdx = 0;
+	    foreach (cell; blk.cells) {
+		cell.U[1].copy_values_from(cell.U[0]);
+		foreach (ivar; 0 .. nConserved) {
+		    cell.U[1][ivar] = cell.U[0][ivar] + omega * blk.dU[startIdx+ivar];
+		}
+		cell.decode_conserved(0, 1, 0.0);
+		startIdx += nConserved;
+	    }
+	}
+	evalResidual(1);
+	foreach (blk; parallel(localFluidBlocks,1)) {
+	    size_t startIdx = 0;
+	    foreach (cell; blk.cells) {
+		blk.R[startIdx .. startIdx+nConserved] += cell.dUdt[1][0 .. nConserved];
+		// return cell to original state
+		cell.decode_conserved(0, 0, 0.0);
+		startIdx += nConserved;
+	    }
+	}
+
+	//----
+	// 3. Add smoothing source term
+	//----
+	if (nkCfg.useResidualSmoothing) {
+	    foreach (blk; parallel(localFluidBlocks,1)) {
+		size_t startIdx = 0;
+		foreach (cell; blk.cells) {
+		    auto dtInv = 1.0/cell.dt_local;
+		    blk.R[startIdx .. startIdx+nConserved] += dtInv * blk.DinvR[startIdx .. startIdx+nConserved];
+		}
+		startIdx += nConserved;
+	    }
+	}
+
+	//----
+	// 4. Compute norm of unsteady residual
+	//----
+	mixin(dotOverBlocks("RUn", "R", "R"));
+	version(mpi_parallel) {
+	    MPI_Allreduce(MPI_IN_PLACE, &RUn, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	}
+	RUn = sqrt(RUn);
+
+	//----
+	// 5. Check if unsteady residual is reduced
+	//----
+	if ( (RUn < RU0) || (omega < minOmega) ) {
+	    // we are done, don't attempt to reduce omega any further
+	    reduceOmega = false;
+	}
+	else {
+	    omega *= omegaReductionFactor;
+	}
+    }
+
+    return omega;
+}
 
 /**
  * Apply Newton update, scaled by relaxation factor, omega.
