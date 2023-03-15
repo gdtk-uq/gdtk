@@ -1338,7 +1338,7 @@ void computeResiduals(ref ConservedQuantities residuals)
                 MPI_Reduce(MPI_IN_PLACE, &(residuals[ivar].re), 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
             }
             else {
-                MPI_Reduce(&(residuals.vec[ivar].re), &(residuals[ivar].re), 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+                MPI_Reduce(&(residuals[ivar].re), &(residuals[ivar].re), 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
             }
         }
     }

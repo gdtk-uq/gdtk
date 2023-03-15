@@ -19,6 +19,9 @@ FLAVOUR ?= debug
 # PLATFORM options are linux, macosx
 PLATFORM ?= linux
 
+# PARALLEL_FLAVOUR options are: shared, openmpi, mpich
+PARALLEL_FLAVOUR ?= shared
+
 WITH_MPI ?= 0
 WITH_NK ?= 0
 WITH_PIR ?= 0
@@ -61,6 +64,15 @@ PROGRAMS := lmr
 SUB_PROGRAMS := lmr-run-steady
 SHARE_FILES :=
 ETC_FILES := lmr.cfg
+
+ifeq ($(WITH_MPI),1)
+    PARALLEL_FLAVOUR = openmpi
+    SUB_PROGRAMS += lmr-mpi-run-steady
+    MPI_LIBRARY_DIRS = $(shell mpicc --showme:libdirs)
+    MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L-L$d)
+    MPI_DIR = $(OPENMPI_DIR)
+    MPI_FILES = $(OPENMPI_FILES)
+endif
 
 include eilmer4-files.mk
 include lmr-files.mk
@@ -323,6 +335,35 @@ lmr-run-steady: $(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS)
+
+lmr-mpi-run-steady: $(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
+	$(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
+	cd $(MPI_DIR); make
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
+		-e 's/PUT_PARALLEL_FLAVOUR_HERE/$(PARALLEL_FLAVOUR)/' \
+		$(LMR_CMD)/runsteady.d > main_with_rev_string.d
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)runsteady_main \
+		$(DVERSION)mpi_parallel \
+		$(MPI_LIB_DIRS_SEARCH) \
+		$(DVERSION)complex_numbers \
+		$(DVERSION)newton_krylov \
+		main_with_rev_string.d \
+		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD)/command.d \
+		$(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(MPI_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(DLINKFLAGS) -L-lmpi
+
 
 lmr: main.d $(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
 	$(GEOM_FILES) $(GRID_FILES) \

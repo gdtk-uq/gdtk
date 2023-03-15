@@ -7,12 +7,17 @@
 
 module runsteady;
 
+import core.runtime;
 import std.getopt;
 import std.stdio : writeln;
 
 import globalconfig;
 import command;
 import newtonkrylovsolver : initNewtonKrylovSimulation, performNewtonKrylovUpdates;
+
+version(mpi_parallel) {
+    import mpi;
+}
 
 Command runSteadyCmd;
 
@@ -32,12 +37,37 @@ version(runsteady_main)
 
 void main(string[] args)
 {
+
+    version(mpi_parallel) {
+	// This preamble copied directly from the OpenMPI hello-world example.
+	auto c_args = Runtime.cArgs;
+        MPI_Init(&(c_args.argc), &(c_args.argv));
+        int rank, size;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        GlobalConfig.mpi_rank_for_local_task = rank;
+        MPI_Comm_size(MPI_COMM_WORLD, &size);
+        GlobalConfig.mpi_size = size;
+        scope(success) { MPI_Finalize(); }
+        // Make note that we are in the context of an MPI task, presumably, one of many.
+        GlobalConfig.in_mpi_context = true;
+        GlobalConfig.is_master_task = (GlobalConfig.mpi_rank_for_local_task == 0);
+    } else {
+        // We are NOT in the context of an MPI task.
+        GlobalConfig.in_mpi_context = false;
+        GlobalConfig.is_master_task = true;
+    }
+    
     if (GlobalConfig.is_master_task) {
         writeln("Eilmer simulation code: steady-state solver mode.");
         writeln("Revision-id: PUT_REVISION_STRING_HERE");
         writeln("Revision-date: PUT_REVISION_DATE_HERE");
         writeln("Compiler-name: PUT_COMPILER_NAME_HERE");
+	writeln("Parallel-flavour: PUT_PARALLEL_FLAVOUR_HERE");
         writeln("Build-date: PUT_BUILD_DATE_HERE");
+
+	writeln("debug.....");
+	writeln("args= ", args);
+	writeln("size= ", GlobalConfig.mpi_size);
     }
     
     int verbosity = 0;
