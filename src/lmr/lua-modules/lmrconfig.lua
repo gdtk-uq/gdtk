@@ -36,6 +36,11 @@ function lmr_config.blockListFilename()
    return lmrCfg["config-directory"] .. "/" .. lmrCfg["block-list-filename"]
 end
 
+function lmr_config.mpimapFilename()
+   return lmrCfg["config-directory"] .. "/" .. lmrCfg["mpimap-filename"]
+end
+
+
 function lmr_config.nkConfigFilename()
    return lmrCfg["config-directory"] .. "/" .. lmrCfg["newton-krylov-config-filename"]
 end

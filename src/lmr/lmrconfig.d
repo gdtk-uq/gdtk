@@ -29,6 +29,7 @@ struct LmrCfg {
     immutable string flowJobName;
     immutable string blkListFile;
     immutable string vtkDir;
+    immutable string mpimapFile;
 };
 
 LmrCfg lmrCfg;
@@ -56,6 +57,7 @@ static this()
     lmrCfg.flowJobName = lmrJSONCfg["user-supplied-flow-job-name"].str;
     lmrCfg.blkListFile = lmrCfg.cfgDir ~ "/" ~ lmrJSONCfg["block-list-filename"].str;
     lmrCfg.vtkDir = lmrJSONCfg["vtk-output-directory"].str;
+    lmrCfg.mpimapFile = lmrCfg.cfgDir ~ "/" ~ lmrJSONCfg["mpimap-filename"].str;
 
 }
 

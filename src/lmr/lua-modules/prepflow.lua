@@ -29,7 +29,6 @@ local grid = require 'grid'
 Grid = grid.Grid
 connectGrids = grid.connectGrids
 connectionAsJSON = grid.connectionAsJSON
-identifyGridConnections = grid.identifyGridConnections
 
 local gridarray = require 'gridarray'
 GridArray = gridarray.GridArray
@@ -97,6 +96,10 @@ end
 
 function registerGridArray()
    print("    registerGridArray(): Do NOTHING when in prep-flow mode.")
+end
+
+function identifyGridConnections()
+   print("    identifyGridConnections(): Do NOTHING when in prep-flow mode.")
 end
 
 
@@ -232,7 +235,7 @@ function buildRuntimeConfigFiles()
    write_config_file(lmrconfig.simulationConfigFilename())
    -- write_control_file(cfgDir .. "/" .. lmrCfg["control-filename"])
    write_block_list_file(lmrconfig.blockListFilename())
-   --write_mpimap_file(cfgDir .. "/" .. lmrCfg["mpimap-filename"])
+   write_mpimap_file(lmrconfig.mpimapFilename())
    --write_fluidBlockArrays_file(cfgDir .. "/" .. lmrCfg["fluidblock-arrays-filename"])
    nkconfig.setIgnoreFlagInPhases(nkPhases)
    nkconfig.writeNKConfigToFile(NewtonKrylovGlobalConfig, nkPhases, lmrconfig.nkConfigFilename())

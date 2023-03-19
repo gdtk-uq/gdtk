@@ -281,12 +281,12 @@ endif
 
 default: lmr lmr-run-steady
 
-install:
-	cp lmr /work/gdtkinst/bin
-	cp lmr-run-steady /work/gdtkinst/bin
-	cp lua-modules/*.lua /work/gdtkinst/lib/
-	- mkdir -p /work/gdtkinst/etc
-	cp lmr.cfg /work/gdtkinst/etc/
+install: $(PROGRAMS) $(SUB_PROGRAMS)
+	cp $(PROGRAMS) $(INSTALL_DIR)/bin
+	cp $(SUB_PROGRAMS) $(INSTALL_DIR)/bin
+	cp lua-modules/*.lua $(INSTALL_DIR)/lib/
+	- mkdir -p $(INSTALL_DIR)/etc
+	cp lmr.cfg $(INSTALL_DIR)/etc/
 
 clean:
 	- rm $(PROGRAMS)

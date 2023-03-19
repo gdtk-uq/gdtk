@@ -17,7 +17,7 @@ import std.algorithm.searching : countUntil;
 import std.datetime : Clock;
 import std.parallelism : parallel, defaultPoolThreads;
 import std.stdio : File, writeln, writefln, stdout;
-import std.file : rename;
+import std.file : rename, readText;
 import std.array : appender;
 import std.format : formattedWrite;
 import std.json : JSONValue;
@@ -457,7 +457,7 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     initLocalFluidBlocks();
     initBlockIDs();
 
-    initThreadPool(maxCPUs);
+    initThreadPool(maxCPUs, threadsPerMPITask);
 
     initFluidBlocksBasic();
     initFluidBlocksGridsAndGeom();
@@ -465,6 +465,8 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     initFluidBlocksZones();
     initFluidBlocksFlowField(snapshotStart);
 
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    
     initFullFaceDataExchange();
     initMappedCellDataExchange();
     initGhostCellGeometry();
@@ -482,6 +484,8 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     initCornerCoordinates();
     if (cfg.turb_model.needs_dwall) initWallDistances();
 
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    
     // [TODO] Add in electric field solver initialisation.
 
     // Do some memory clean-up and reporting.
@@ -516,14 +520,49 @@ void initConfiguration()
 
 void initLocalFluidBlocks()
 {
-    // [TODO] mpi version
-    foreach (blk; globalBlocks) {
-        auto myfblk = cast(FluidBlock) blk;
-        if (myfblk) { localFluidBlocks ~= myfblk; }
-        /+ [TODO] add in solid blocks 
-        auto mysblk = cast(SSolidBlock) blk;
-        if (mysblk) { localSolidBlocks ~= mysblk; }
-        +/
+    version(mpi_parallel) {
+        // Assign particular fluid (& solid) blocks to this MPI task and keep a record
+        // of the MPI rank for all blocks.
+        int my_rank = GlobalConfig.mpi_rank_for_local_task;
+        GlobalConfig.mpi_rank_for_block.length = GlobalConfig.nFluidBlocks + GlobalConfig.nSolidBlocks ;
+        auto lines = readText(lmrCfg.mpimapFile).splitLines();
+        foreach (line; lines) {
+            auto content = line.strip();
+            if (content.startsWith("#")) continue; // Skip comment
+            auto tokens = content.split();
+            int blkid = to!int(tokens[0]);
+            int taskid = to!int(tokens[1]);
+            if (taskid >= GlobalConfig.mpi_size && GlobalConfig.is_master_task) {
+                writefln("Number of MPI tasks (%d) is insufficient for "~
+                         "taskid=%d that is associated with blockid=%d. Quitting.",
+                         GlobalConfig.mpi_size, taskid, blkid);
+                MPI_Abort(MPI_COMM_WORLD, 2);
+            }
+            GlobalConfig.mpi_rank_for_block[blkid] = taskid;
+            if (taskid == my_rank) {
+                auto fblk = cast(FluidBlock) globalBlocks[blkid];
+                if (fblk) { localFluidBlocks ~= fblk; }
+		/+ [TODO] Add in solid blocks.
+                auto sblk = cast(SSolidBlock) globalBlocks[blkid];
+                if (sblk) { localSolidBlocks ~= sblk; }
+		+/
+            }
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+        if (localFluidBlocks.length == 0) {
+            writefln("MPI-task with rank %d has no FluidBlocks. Quitting.", my_rank);
+            MPI_Abort(MPI_COMM_WORLD, 2);
+        }
+    }
+    else {
+	foreach (blk; globalBlocks) {
+	    auto fblk = cast(FluidBlock) blk;
+	    if (fblk) { localFluidBlocks ~= fblk; }
+	    /+ [TODO] add in solid blocks 
+	     auto mysblk = cast(SSolidBlock) blk;
+	     if (mysblk) { localSolidBlocks ~= mysblk; }
+	     +/
+	}
     }
 }
 
@@ -534,15 +573,29 @@ void initBlockIDs()
     // [TODO] add solid blocks here
 }
 
-void initThreadPool(int maxCPUs)
+void initThreadPool(int maxCPUs, int threadsPerMPITask)
 {
     auto nBlocksInThreadParallel = localFluidBlocks.length; // [TODO] add solid blocks
     int extraThreadsInPool;
-    // [TODO] handle MPI case
-    extraThreadsInPool = min(maxCPUs-1, nBlocksInThreadParallel-1);
+    version(mpi_parallel) {
+	extraThreadsInPool = min(threadsPerMPITask-1, nBlocksInThreadParallel-1);
+    }
+    else {
+	extraThreadsInPool = min(maxCPUs-1, nBlocksInThreadParallel-1);
+    }
     defaultPoolThreads(extraThreadsInPool); // total = main thread + extra-threads-in-Pool
-    if (GlobalConfig.verbosity_level > 0) {
-        writeln("Single process running with ", extraThreadsInPool+1, " threads.");
+    version(mpi_parallel) {
+	if (GlobalConfig.verbosity_level > 0) {
+	    debug {
+		int my_rank = GlobalConfig.mpi_rank_for_local_task;
+		writeln("MPI-task with rank ", my_rank, " running with ", extraThreadsInPool+1, " threads.");
+	    }
+	}
+    }
+    else {
+	if (GlobalConfig.verbosity_level > 0) {
+	    writeln("Single process running with ", extraThreadsInPool+1, " threads.");
+	}
     }
 }
 
@@ -589,6 +642,11 @@ void initFluidBlocksGridsAndGeom()
             writefln("Block[%d] failed to initialise geometry, msg=%s", blk.id, e.msg);
             anyBlockFail = true;
         }
+    }
+    version(mpi_parallel) {
+        int myFlag = to!int(anyBlockFail);
+        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        anyBlockFail = to!bool(myFlag);
     }
     if (anyBlockFail) {
         throw new NewtonKrylovException("Failed at initialisation stage during grid reading and geometry calculations.");
@@ -639,7 +697,11 @@ void initFluidBlocksFlowField(int snapshotStart)
         }
         blk.set_cell_dt_chem(-1.0);
     }
-    // [TODO] mpi reduce anyBlockFail
+    version(mpi_parallel) {
+        int myFlag = to!int(anyBlockFail);
+        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        anyBlockFail = to!bool(myFlag);
+    }
     if (anyBlockFail) {
         throw new NewtonKrylovException("Failed at initialisation stage during flow field initialisation.");
     }
@@ -678,7 +740,11 @@ void initFullFaceDataExchange()
             }
         }
     }
-    // [TODO] mpi version: reduce anyBlockFail flag
+    version(mpi_parallel) {
+        int myFlag = to!int(anyBlockFail);
+        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        anyBlockFail = to!bool(myFlag);
+    }
     if (anyBlockFail) {
         throw new NewtonKrylovException("Failed at initialisation stage during full-face boundary data exchange.");
     }
@@ -709,7 +775,11 @@ void initMappedCellDataExchange()
             }
         }
     }
-    // [TODO] mpi version: reduce anyBlockFail flag
+    version(mpi_parallel) {
+        int myFlag = to!int(anyBlockFail);
+        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        anyBlockFail = to!bool(myFlag);
+    }
     if (anyBlockFail) {
         throw new NewtonKrylovException("Failed at initialisation stage during locating mapped-cell boundaries.");
     }
@@ -869,8 +939,12 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
          *  + determine how many snapshots have already been written
          *  + determine phase and set as active phase
          */
-        extractRestartInfoFromTimesFile(jobName);
-        referenceGlobalResidual = setReferenceResidualsFromFile();
+	writeln("Restarts for NK solver not yet implemented.");
+	exit(1);
+	/* [TODO] Set up restarts from snapshots file and handle MPI case.
+	   
+	extractRestartInfoFromTimesFile(jobName);
+	referenceGlobalResidual = setReferenceResidualsFromFile();
         referenceResidualsAreSet = true;
         nWrittenSnapshots = determineNumberOfSnapshots();
         RestartInfo restart = snapshots[snapshotStart];
@@ -897,6 +971,7 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
         else { // Assume we have a global (phase-independent) schedule
             cfl = cflSelector.nextCFL(-1.0, startStep, -1.0, -1.0, -1.0);
         }
+	*/
     }
     else {
         // On fresh start, the phase setting must be at 0
@@ -1155,7 +1230,9 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
         if (((step % nkCfg.stepsBetweenSnapshots) == 0) || finalStep) {
             writeSnapshot(step, nWrittenSnapshots);
         }
-        
+
+	version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+	
         
         // [TODO] Write loads. We only need one lot of loads.
         // Any intermediate loads before steady-state have no physical meaning.
@@ -2753,6 +2830,13 @@ double applyLineSearch(double omega) {
 	}
     }
 
+    // [TODO] Check with Kyle... no reduce of omega across blocks at end of line search.
+    // In serial, find minimum omega across all blocks.
+    foreach (blk; localFluidBlocks) omega = fmin(omega, blk.omegaLocal);
+    version (mpi_parallel) {
+        // In parallel, find minimum and communicate to all processes
+        MPI_Allreduce(MPI_IN_PLACE, &(omega), 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    }
     return omega;
 }
 
