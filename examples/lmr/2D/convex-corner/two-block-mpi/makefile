@@ -23,7 +23,7 @@ init:
 	lmr prep-flow --mode=steady
 
 run:
-	lmr run-steady
+	mpirun -np 2 lmr-mpi-run-steady
 
 post: vtk
 
