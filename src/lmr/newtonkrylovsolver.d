@@ -2830,13 +2830,6 @@ double applyLineSearch(double omega) {
 	}
     }
 
-    // [TODO] Check with Kyle... no reduce of omega across blocks at end of line search.
-    // In serial, find minimum omega across all blocks.
-    foreach (blk; localFluidBlocks) omega = fmin(omega, blk.omegaLocal);
-    version (mpi_parallel) {
-        // In parallel, find minimum and communicate to all processes
-        MPI_Allreduce(MPI_IN_PLACE, &(omega), 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-    }
     return omega;
 }
 
