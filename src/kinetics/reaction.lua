@@ -83,6 +83,7 @@ local function transformRateConstant(t, coeffs, anonymousCollider, energyModes, 
       m.n = t.n
       m.C = t.C
       m.s = t.s
+      m.mode = energyModes[t.mode] or 0
    elseif m.model == 'pressure dependent' then
       m.kInf = {}
       m.kInf.A = t.kInf.A * convFactor
@@ -109,6 +110,7 @@ local function transformRateConstant(t, coeffs, anonymousCollider, energyModes, 
        m.D = calculateDissociationEnergy(t.D, db) / Runiv
        m.U = m.D / t.U
        m.theta = db[t.D].theta_v
+       m.mode = energyModes[t.mode]
        m.rate = transformRateConstant(t.rate, coeffs, anonymousCollider, energyModes, db)
    elseif m.model == "Modified-Marrone-Treanor" then
        Runiv = 8.3145
@@ -116,6 +118,7 @@ local function transformRateConstant(t, coeffs, anonymousCollider, energyModes, 
        m.theta = db[t.D].theta_v
        m.aU = t.aU
        m.Ustar = t.Ustar
+       m.mode = energyModes[t.mode]
        m.rate = transformRateConstant(t.rate, coeffs, anonymousCollider, energyModes, db)
    else
       print("The rate constant model: ", m.model, " is not known.")
@@ -133,7 +136,7 @@ local function rateConstantToLuaStr(rc)
    elseif rc.model == 'Arrhenius2' then
       str = string.format("{model='Arrhenius2', logA=%16.12e, B=%16.12e, C=%16.12e, rctIndex=%d}", rc.logA, rc.B, rc.C, rc.rctIndex)
    elseif rc.model == 'Park' then
-      str = string.format("{model='Park', A=%16.12e, n=%f, C=%16.12e, s=%f }", rc.A, rc.n, rc.C, rc.s)
+      str = string.format("{model='Park', A=%16.12e, n=%f, C=%16.12e, s=%f, mode=%d }", rc.A, rc.n, rc.C, rc.s, rc.mode)
    elseif rc.model == 'Lindemann-Hinshelwood' then
       str = "{model='Lindemann-Hinshelwood',\n"
       str = str .. string.format("   kInf={A=%16.12e, n=%f, C=%16.12e, rctIndex=-1},\n", rc.kInf.A, rc.kInf.n, rc.kInf.C)
@@ -157,12 +160,12 @@ local function rateConstantToLuaStr(rc)
       str = str .. "\n}"
    elseif rc.model == 'Marrone-Treanor' then
        str = "{model='Marrone-Treanor', "
-       str = str .. string.format("D=%16.12e, U=%16.12e, theta=%16.12e, rate=", rc.D, rc.U, rc.theta)
+       str = str .. string.format("D=%16.12e, U=%16.12e, theta=%16.12e, mode=%d, rate=", rc.D, rc.U, rc.theta, rc.mode)
        str = str .. rateConstantToLuaStr(rc.rate)
        str = str .. "}"
    elseif rc.model == 'Modified-Marrone-Treanor' then
        str = "{model='Modified-Marrone-Treanor', "
-       str = str .. string.format("D=%16.12e, aU=%16.12e, Ustar=%16.12e, theta=%16.12e, rate=", rc.D, rc.aU, rc.Ustar, rc.theta)
+       str = str .. string.format("D=%16.12e, aU=%16.12e, Ustar=%16.12e, theta=%16.12e, mode=%d, rate=", rc.D, rc.aU, rc.Ustar, rc.theta, rc.mode)
        str = str .. rateConstantToLuaStr(rc.rate)
        str = str .. "}"
    elseif rc.model == 'fromEqConst' then

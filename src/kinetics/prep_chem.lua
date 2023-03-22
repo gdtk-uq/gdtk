@@ -322,7 +322,14 @@ function main()
    end
 
    if not energyModes then
-      energyModes = {}
+      -- I didn't realise some gas models already had energyModes
+      -- when I added energy_modes to the multi-T gas model...
+      -- It would be nice to consolidate these in the future - RW 22/3/23
+      if energy_modes then
+	 energyModes = energy_modes
+      else
+	 energyModes = {}
+      end
    end
 
    for i, mode in ipairs(energyModes) do

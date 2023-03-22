@@ -50,12 +50,12 @@ interface RateConstant {
 +/
 class ArrheniusRateConstant : RateConstant {
 public:
-    this(double A, double n, double C)
+    this(double A, double n, double C, int rctIdx)
     {
         _A = A;
         _n = n;
         _C = C;
-        _rctIdx = -1;
+        _rctIdx = rctIdx;
     }
     this(lua_State* L)
     {
@@ -66,7 +66,7 @@ public:
     }
     ArrheniusRateConstant dup()
     {
-        return new ArrheniusRateConstant(_A, _n, _C);
+        return new ArrheniusRateConstant(_A, _n, _C, _rctIdx);
     }
     override number eval(in GasState Q)
     {
@@ -80,12 +80,12 @@ private:
 
 class ArrheniusRateConstant2 : RateConstant {
 public:
-    this(double logA, double B, double C)
+    this(double logA, double B, double C, int rctIdx)
     {
         _logA = logA;
         _B = B;
         _C = C;
-        _rctIdx = -1;
+        _rctIdx = rctIdx;
     }
     this(lua_State* L)
     {
@@ -96,7 +96,7 @@ public:
     }
     ArrheniusRateConstant2 dup()
     {
-        return new ArrheniusRateConstant2(_logA, _B, _C);
+        return new ArrheniusRateConstant2(_logA, _B, _C, _rctIdx);
     }
     override number eval(in GasState Q)
     {
@@ -343,12 +343,13 @@ private:
 
 class Park2TRateConstant : RateConstant {
 public:
-    this(double A, double n, double C, double s)
+    this(double A, double n, double C, double s, int mode)
     {
         _A = A;
         _n = n;
         _C = C;
         _s = s;
+        _mode = mode;
     }
     this(lua_State* L)
     {
@@ -356,19 +357,21 @@ public:
         _n = getDouble(L, -1, "n");
         _C = getDouble(L, -1, "C");
         _s = getDouble(L, -1, "s");
+        _mode = getInt(L, -1, "mode");
     }
     Park2TRateConstant dup()
     {
-        return new Park2TRateConstant(_A, _n, _C, _s);
+        return new Park2TRateConstant(_A, _n, _C, _s, _mode);
     }
     override number eval(in GasState Q)
     {
-        number T = pow(Q.T, _s)*pow(Q.T_modes[0], 1.0 - _s);
+        number T = pow(Q.T, _s)*pow(Q.T_modes[_mode], 1.0 - _s);
         return _A*pow(T, _n)*exp(-_C/T);
     }
 
 private:
     double _A, _n, _C, _s;
+    int _mode;
 }
 
 // the partition function evaluated at equilibrium
@@ -389,12 +392,13 @@ private:
 //                           rate = {model='Arrhenius', A=, ...}}
 class MarroneTreanorRateConstant : RateConstant {
 public:
-    this(RateConstant rate, number U, number D, number theta)
+    this(RateConstant rate, number U, number D, number theta, int mode)
     {
        _rate = rate; 
        _D = D;
        _theta = theta;
        _U = U;
+       _mode = mode;
     }
 
     this(lua_State* L, Tuple!(int, double)[] efficiencies, GasModel gmodel)
@@ -402,6 +406,7 @@ public:
         _U = getDouble(L, -1, "U");
         _D = getDouble(L, -1, "D");
         _theta = getDouble(L, -1, "theta");
+        _mode = getInt(L, -1, "mode");
         lua_getfield(L, -1, "rate");
         _rate = createRateConstant(L, efficiencies, gmodel);
         lua_pop(L, 1);
@@ -409,7 +414,7 @@ public:
 
     MarroneTreanorRateConstant dup()
     {
-        return new MarroneTreanorRateConstant(_rate, _U, _D, _theta);
+        return new MarroneTreanorRateConstant(_rate, _U, _D, _theta, _mode);
     }
 
     @nogc number eval(in GasState Q)
@@ -418,10 +423,10 @@ public:
         number kEQ = _rate.eval(Q); 
 
         // then compute the non-eq factor
-        number Gamma = 1./(1./Q.T_modes[0] - 1./Q.T - 1./_U);
+        number Gamma = 1./(1./Q.T_modes[_mode] - 1./Q.T - 1./_U);
         number Q_T = _Q(Q.T, _D, _theta);
         number Q_Gamma = _Q(Gamma, _D, _theta);
-        number Q_Tv = _Q(Q.T_modes[0], _D, _theta);
+        number Q_Tv = _Q(Q.T_modes[_mode], _D, _theta);
         number Q_U = _Q(-_U, _D, _theta);
         return kEQ * Q_T * Q_Gamma / (Q_Tv * Q_U);
     }
@@ -431,22 +436,24 @@ private:
     number _D; // dissociation temperature (K)
     number _theta; // characteristic vibration temperature (K)
     number _U; // model parameter (K)
+    int _mode;
 }
 
 class MMTRateConstant : RateConstant {
 public:
-    this(RateConstant rate, number D, number theta, number aU, number U_star)
+    this(RateConstant rate, number D, number theta, number aU, number U_star, int mode)
     {
         _rate = rate;
         _D = D;
         _theta = theta;
         _aU = aU;
         _U_star = U_star;
+        _mode = mode;
     }
 
     MMTRateConstant dup()
     {
-        return new MMTRateConstant(_rate, _D, _theta, _aU, _U_star);
+        return new MMTRateConstant(_rate, _D, _theta, _aU, _U_star, _mode);
     }
 
     this(lua_State* L, Tuple!(int, double)[] efficiencies, GasModel gmodel)
@@ -455,6 +462,7 @@ public:
         _U_star = getDouble(L, -1, "Ustar");
         _D = getDouble(L, -1, "D");
         _theta = getDouble(L, -1, "theta");
+        _mode = getInt(L, -1, "mode");
         lua_getfield(L, -1, "rate");
         _rate = createRateConstant(L, efficiencies, gmodel);
         lua_pop(L, 1);
@@ -465,13 +473,13 @@ public:
         number kEQ = _rate.eval(Q);
 
         number Tinv = 1./Q.T;
-        number Tvinv = 1./Q.T_modes[0];
+        number Tvinv = 1./Q.T_modes[_mode];
         number Uinv = _aU*Tinv + 1./_U_star;
         number U = 1./Uinv;
         number TF = 1./(Tvinv - Tinv - Uinv);
         number Q_T = _Q(Q.T, _D, _theta);
         number Q_TF = _Q(TF, _D, _theta);
-        number Q_Tv = _Q(Q.T_modes[0], _D, _theta);
+        number Q_Tv = _Q(Q.T_modes[_mode], _D, _theta);
         number Q_U = _Q(-U, _D, _theta);
         return kEQ * Q_T * Q_TF / (Q_Tv * Q_U);
     }
@@ -482,6 +490,7 @@ private:
     number _theta; // characteristic vibration temperature (K)
     number _aU; // model parameter (unitless)
     number _U_star; // model parameter (K)
+    int _mode;
 }
 
 

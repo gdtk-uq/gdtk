@@ -132,7 +132,7 @@ local function buildChemistryCouplingModel(m, participating_species, db)
    ccm.model = m.model
    if m.model == "ImpartialDissociation" then
        ccm.Thetav = db[participating_species].theta_v or db[participating_species].vib_data.theta_v
-       ccm.D = calculateDissociationEnergy(participating_species, db)
+       ccm.D = mechanism.calculateDissociationEnergy(participating_species, db)
    elseif m.model == "HeavyParticleCollisionIonisation" then
       -- nothing extra to do
    elseif m.model == "ImpartialChem" then
