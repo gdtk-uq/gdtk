@@ -27,7 +27,18 @@ static this()
     runSteadyCmd.description = "Run a steady-state simulation with Eilmer.";
     runSteadyCmd.shortDescription = runSteadyCmd.description;
     runSteadyCmd.helpMsg =
-`lmr run-steady [options]
+`lmr run-steady
+
+Run a simulation in steady-state mode.
+
+When invoking this command, the shared memory model of execution is used.
+This command assumes that a simulation has been pre-processed
+and is available in the working directory.
+
+For distributed memory (using MPI), use the stand-alone executable 'lmr-mpi-run-steady'.
+For example:
+
+   $ mpirun -np 4 lmr-mpi-run-steady
 
 `;
 }
