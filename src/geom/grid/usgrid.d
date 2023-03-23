@@ -1371,7 +1371,7 @@ public:
                             double scale=1.0,
                             bool expect_gmsh_order_for_wedges=false)
     // Information on the su2 file format from
-    // https://github.com/su2code/SU2/wiki/Mesh-File
+    // https://su2code.github.io/docs_v7/Mesh-File/
     // scale = unit length in metres
     {
         writeln("Begin importing SU2 grid with scale=", scale);
