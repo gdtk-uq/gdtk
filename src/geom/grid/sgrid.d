@@ -1022,14 +1022,11 @@ public:
         case "1.0":
             break;
         case "1.1":
-            debug { writefln("DEBUG ntags: %d", tags.length); }
             buf1[0] = to!int(tags.length); f.rawWrite(buf1);
             foreach (i; 0 .. tags.length) {
                 buf1[0] = to!int(tags[i].length); f.rawWrite(buf1);
-                debug { writefln("DEBUG tag[%d]: %s", i, tags[i]); }
                 f.rawWrite(to!(char[])(tags[i]));
             }
-            debug { writeln("DEBUG end of writing tags"); }
             break;
         default:
             throw new Error("StructuredGrid.write_to_raw_binary_file(): " ~
