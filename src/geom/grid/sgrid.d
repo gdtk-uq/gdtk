@@ -735,6 +735,8 @@ public:
     } // end make_grid_from_volume_trilinear()
 
     void read_from_text_file(string fileName, bool vtkHeader=true)
+    // Used to import the grid data from a third-party program.
+    // We assume that the format is VTK-like.
     {
         string[] tokens;
         auto f = File(fileName, "r");
@@ -804,15 +806,16 @@ public:
     } // end read_grid_from_text_file()
 
     override void read_from_gzip_file(string fileName, double scale=1.0)
+    // This is the "native" grid file for Eilmer -- formatted text.
     // scale = unit length in metres
     {
         auto byLine = new GzipByLine(fileName);
         auto line = byLine.front; byLine.popFront();
         string format_version;
         formattedRead(line, "structured_grid %s", &format_version);
-        if (format_version != "1.0") {
+        if (!canFind(["1.0", "1.1"], format_version)) {
             throw new Error("StructuredGrid.read_from_gzip_file(): " ~
-                            "format version found: " ~ format_version);
+                            "invalid format version found: " ~ format_version);
         }
         line = byLine.front; byLine.popFront();
         formattedRead(line, "label: %s", &label);
@@ -851,19 +854,40 @@ public:
                 } // foreach i
             } // foreach j
         } // foreach k
+        //
+        // Boundary tags are in version 1.1 plus.
+        switch (format_version) {
+        case "1.0":
+            break;
+        case "1.1":
+            line = byLine.front; byLine.popFront();
+            size_t ntags; formattedRead(line, "ntags: %d", &ntags);
+            tags.length = ntags;
+            foreach (i; 0 .. ntags) {
+                line = byLine.front; byLine.popFront();
+                formattedRead(line, format("tag[%d]: %%s", i), &(tags[i]));
+            }
+            break;
+        default:
+            throw new Error("StructuredGrid.read_from_gzip_file(): " ~
+                            "invalid format version: " ~ format_version);
+        }
         byLine.range.f.close();
     } // end read_grid_from_gzip_file()
 
     override void read_from_raw_binary_file(string fileName, double scale=1.0)
+    // This is the "native" grid file for Eilmer -- binary/raw data.
     // scale = unit length in metres
     {
         File f = File(fileName, "rb");
-        string expected_header = "structured_grid 1.0";
+        string expected_header = "structured_grid 1.x";
         char[] found_header = new char[expected_header.length];
         f.rawRead(found_header);
-        if (found_header != expected_header) {
+        string format_version;
+        formattedRead(found_header, "structured_grid %s", &format_version);
+        if (!canFind(["1.0", "1.1"], format_version)) {
             throw new Error("StructuredGrid.read_from_raw_binary_file(): " ~
-                            "unexpected header: " ~ to!string(found_header));
+                            "invalid format version found: " ~ format_version);
         }
         int[1] buf1; f.rawRead(buf1);
         int label_length = buf1[0];
@@ -900,15 +924,39 @@ public:
                 } // foreach i
             } // foreach j
         } // foreach k
+        //
+        // Boundary tags are in version 1.1 plus.
+        switch (format_version) {
+        case "1.0":
+            break;
+        case "1.1":
+            f.rawRead(buf1);
+            size_t ntags = buf1[0];
+            tags.length = ntags;
+            foreach (i; 0 .. ntags) {
+                f.rawRead(buf1);
+                int tag_length = buf1[0];
+                if (tag_length > 0) {
+                    char[] found_tag = new char[tag_length];
+                    f.rawRead(found_tag);
+                    tags[i] = to!string(found_tag);
+                }
+            }
+            break;
+        default:
+            throw new Error("StructuredGrid.read_from_raw_binary_file(): " ~
+                            "invalid format version: " ~ format_version);
+        }
         f.close();
     } // end read_grid_from_raw_binary_file()
 
     override void write_to_gzip_file(string fileName)
-    // This function essentially defines the Eilmer4 native format.
+    // This function essentially defines the Eilmer4 "native" format for text output.
     {
+        string format_version = "1.1";
         auto f = new GzipOut(fileName);
         auto writer = appender!string();
-        formattedWrite(writer, "structured_grid 1.0\n");
+        formattedWrite(writer, "structured_grid %s\n", format_version);
         formattedWrite(writer, "label: %s\n", label);
         formattedWrite(writer, "dimensions: %d\n", dimensions);
         formattedWrite(writer, "niv: %d\n", niv);
@@ -925,14 +973,33 @@ public:
                 }
             }
         }
+        //
+        // Boundary tags are in version 1.1 plus.
+        switch (format_version) {
+        case "1.0":
+            break;
+        case "1.1":
+            writer = appender!string();
+            formattedWrite(writer, "ntags: %d\n", tags.length);
+            foreach (i; 0 .. tags.length) {
+                formattedWrite(writer, "tag[%d]: %s\n", i, tags[i]);
+            }
+            f.compress(writer.data);
+            break;
+        default:
+            throw new Error("StructuredGrid.write_to_gzip_file(): " ~
+                            "invalid format version: " ~ format_version);
+        }
         f.finish();
     } // end write_grid_to_gzip_file()
 
     override void write_to_raw_binary_file(string fileName)
-    // This function essentially defines the Eilmer4 native raw-binary format.
+    // This function essentially defines the Eilmer4 "native" raw-binary format.
     {
         File f = File(fileName, "wb");
-        f.rawWrite(to!(char[])("structured_grid 1.0"));
+        string format_version = "1.1";
+        string fstr = format("structured_grid %s", format_version);
+        f.rawWrite(to!(char[])(fstr));
         int[1] buf1; buf1[0] = to!int(label.length); f.rawWrite(buf1);
         if (label.length > 0) { f.rawWrite(to!(char[])(label)); }
         int[4] buf4; buf4[0] = to!int(dimensions);
@@ -948,6 +1015,25 @@ public:
                     f.rawWrite(xyz);
                 }
             }
+        }
+        //
+        // Boundary tags are in version 1.1 plus.
+        switch (format_version) {
+        case "1.0":
+            break;
+        case "1.1":
+            debug { writefln("DEBUG ntags: %d", tags.length); }
+            buf1[0] = to!int(tags.length); f.rawWrite(buf1);
+            foreach (i; 0 .. tags.length) {
+                buf1[0] = to!int(tags[i].length); f.rawWrite(buf1);
+                debug { writefln("DEBUG tag[%d]: %s", i, tags[i]); }
+                f.rawWrite(to!(char[])(tags[i]));
+            }
+            debug { writeln("DEBUG end of writing tags"); }
+            break;
+        default:
+            throw new Error("StructuredGrid.write_to_raw_binary_file(): " ~
+                            "invalid format version: " ~ format_version);
         }
         f.close();
     } // end write_grid_to_raw_binary_file()
