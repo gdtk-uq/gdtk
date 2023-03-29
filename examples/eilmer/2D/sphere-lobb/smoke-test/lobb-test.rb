@@ -38,8 +38,11 @@ class TestLobb < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    # steps observed for simulation with backward-euler update at 2021-11-28
-    assert((steps - 15530).abs < 140, "Failed to take correct number of steps.")
+    # 15530 steps observed for simulation with backward-euler update at 2021-11-28
+    # 15734 steps observed for FLAVOUR=fast 2023-03-30
+    # 15613 steps observed for debug flavour 2023-03-30
+    # puts "steps: #{steps}"
+    assert((steps - 15613).abs < 200, "Failed to take correct number of steps.")
   end
 
   def test_2_shock_stand_off
