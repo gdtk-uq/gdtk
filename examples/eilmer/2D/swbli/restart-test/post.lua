@@ -9,6 +9,7 @@ fsol0 = FlowSolution:new{jobName="swbli", dir=".", tindx=2, nBlocks=nblocks}
 fsol6 = FlowSolution:new{jobName="swbli", dir=".", tindx=3, nBlocks=nblocks}
 
 pdiff = 0.0
+pmax = 0.0
 
 for ib=0,nblocks-1 do
    local ni = fsol0:get_nic(ib)
@@ -20,9 +21,12 @@ for ib=0,nblocks-1 do
          p0 = cellData0['p']
          p6 = cellData6['p']
          pdiff = pdiff + (p6-p0)*(p6-p0)
+         local pabs = math.abs(p6)
+         if pabs > pmax then pmax = pabs end
       end
    end
 end
 
 pdiff = math.sqrt(pdiff)
 print("pdiff: ", pdiff)
+print("pmax: ", pmax)
