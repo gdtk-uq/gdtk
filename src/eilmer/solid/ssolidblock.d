@@ -269,17 +269,18 @@ public:
             for ( size_t j = jmin-1; j <= jmax+1; ++j ) {
                 for ( size_t i = imin-1; i <= imax+1; ++i ) {
                     SolidFVCell cell = getCell(i,j,k);
-                    cell.iface ~= getIfj(i,j+1,k); // north
-                    cell.iface ~= getIfi(i+1,j,k); // east
-                    cell.iface ~= getIfj(i,j,k); // south
-                    cell.iface ~= getIfi(i,j,k); // west
+                    cell.iface.length = (myConfig.dimensions == 3) ? 6 : 4;
+                    cell.iface[Face.north] = getIfj(i,j+1,k);
+                    cell.iface[Face.east] = getIfi(i+1,j,k);
+                    cell.iface[Face.south] = getIfj(i,j,k);
+                    cell.iface[Face.west] = getIfi(i,j,k);
                     cell.vtx ~= getVtx(i,j,k);
                     cell.vtx ~= getVtx(i+1,j,k);
                     cell.vtx ~= getVtx(i+1,j+1,k);
                     cell.vtx ~= getVtx(i,j+1,k);
                     if ( myConfig.dimensions == 3 ) {
-                        cell.iface ~= getIfk(i,j,k+1); // top
-                        cell.iface ~= getIfk(i,j,k); // bottom
+                        cell.iface[Face.top] = getIfk(i,j,k+1);
+                        cell.iface[Face.bottom] = getIfk(i,j,k);
                         cell.vtx ~= getVtx(i,j,k+1);
                         cell.vtx ~= getVtx(i+1,j,k+1);
                         cell.vtx ~= getVtx(i+1,j+1,k+1);
