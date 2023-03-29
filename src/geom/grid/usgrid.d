@@ -569,7 +569,7 @@ public:
                 } else {
                     // Fabricate a tag string.
                     if (my_block_label.length > 0) { boundary_tag = my_block_label ~ "-"; }
-                    boundary_tag ~= face_name[ib]; // 0=north, 1=east, 2=south, 3=west
+                    boundary_tag ~= face_name[ib]; // 0=west, 1=east, 2=south, 3=north
                 }
                 boundaries ~= new BoundaryFaceSet(boundary_tag);
             }
@@ -587,6 +587,8 @@ public:
                 }
             }
             // i-faces
+            // As we move from the first vertex to the second vertex,
+            // the unit normal will be pointing to the right.
             size_t[][] iface_id;
             iface_id.length = sg.niv;
             foreach (i; 0 .. sg.niv) {
@@ -638,21 +640,21 @@ public:
                     // For faces, work clockwise around the cell.
                     // This is likely to give us nearly orthogonal faces 0 and 1,
                     // something that is assumed by the CFL signal_speed calcaulation.
-                    auto cell_faces = [jface_id[i][j+1], // north
+                    auto cell_faces = [iface_id[i][j], // west
                                        iface_id[i+1][j], // east
                                        jface_id[i][j], // south
-                                       iface_id[i][j]]; // west
-                    auto outsigns = [+1, +1, -1, -1];
+                                       jface_id[i][j+1]]; // north
+                    auto outsigns = [-1, +1, -1, +1];
                     size_t id = cells.length;
                     auto my_cell = new USGCell(USGCell_type.quad, id, cell_vertices,
                                                cell_faces, outsigns);
                     cells ~= my_cell;
                     // Now that we have the new cell, we can make the connections
                     // from the faces back to the cell.
-                    faces[jface_id[i][j+1]].left_cell = my_cell;
+                    faces[iface_id[i][j]].right_cell = my_cell;
                     faces[iface_id[i+1][j]].left_cell = my_cell;
                     faces[jface_id[i][j]].right_cell = my_cell;
-                    faces[iface_id[i][j]].right_cell = my_cell;
+                    faces[jface_id[i][j+1]].left_cell = my_cell;
                 }
             }
         } else {
@@ -671,7 +673,7 @@ public:
                 } else {
                     // Fabricate a tag string.
                     if (my_block_label.length > 0) { boundary_tag = my_block_label ~ "-"; }
-                    boundary_tag ~= face_name[ib]; // 0=north, 1=east, 2=south, 3=west, 4=top, 5=bottom
+                    boundary_tag ~= face_name[ib]; // 0=west, 1=east, 2=south, 3=north, 4=bottom, 5=top
                 }
                 boundaries ~= new BoundaryFaceSet(boundary_tag);
             }
@@ -694,6 +696,9 @@ public:
                 }
             }
             // i-faces
+            // Using the right-hand rule:
+            // as we progress around the vertices, following the curl of the fingers,
+            // the right thumb is pointing in the direction of the unit normal.
             size_t[][][] iface_id;
             iface_id.length = sg.niv;
             foreach (i; 0 .. sg.niv) {
@@ -733,18 +738,18 @@ public:
             foreach (k; 0 .. sg.nkv-1) {
                 foreach (j; 0 .. sg.njv) {
                     foreach (i; 0 .. sg.niv-1) {
-                        size_t[] vtx_id_list = [vtx_id[i][j][k], vtx_id[i+1][j][k],
-                                                vtx_id[i+1][j][k+1], vtx_id[i][j][k+1]];
+                        size_t[] vtx_id_list = [vtx_id[i+1][j][k], vtx_id[i][j][k],
+                                                vtx_id[i][j][k+1], vtx_id[i+1][j][k+1]];
                         faceIndices[makeFaceTag(vtx_id_list)] = faces.length;
                         faces ~= new USGFace(vtx_id_list);
                         jface_id[i][j][k] = faces.length - 1;
                         if (j == 0) {
                             boundaries[Face.south].face_id_list ~= jface_id[i][j][k];
-                            boundaries[Face.south].outsign_list ~= +1;
+                            boundaries[Face.south].outsign_list ~= -1;
                         }
                         if (j == sg.njv-1) {
                             boundaries[Face.north].face_id_list ~= jface_id[i][j][k];
-                            boundaries[Face.north].outsign_list ~= -1;
+                            boundaries[Face.north].outsign_list ~= +1;
                         }
                     }
                 }
@@ -785,25 +790,25 @@ public:
                                               vtx_id[i+1][j+1][k], vtx_id[i][j+1][k],
                                               vtx_id[i][j][k+1], vtx_id[i+1][j][k+1],
                                               vtx_id[i+1][j+1][k+1], vtx_id[i][j+1][k+1]];
-                        auto cell_faces = [jface_id[i][j+1][k], // north
+                        auto cell_faces = [iface_id[i][j][k], // west
                                            iface_id[i+1][j][k], // east
                                            jface_id[i][j][k], // south
-                                           iface_id[i][j][k], // west
-                                           kface_id[i][j][k+1], // top
-                                           kface_id[i][j][k]]; // bottom
-                        auto outsigns = [+1, +1, -1, -1, +1, -1];
+                                           jface_id[i][j+1][k], // north
+                                           kface_id[i][j][k], // bottom
+                                           kface_id[i][j][k+1]]; // top
+                        auto outsigns = [-1, +1, -1, +1, -1, +1];
                         size_t id = cells.length;
                         auto my_cell = new USGCell(USGCell_type.hexahedron, id, cell_vertices,
                                                    cell_faces, outsigns);
                         cells ~= my_cell;
                         // Now that we have the new cell, we can make the connections
                         // from the faces back to the cell.
-                        faces[jface_id[i][j+1][k]].right_cell = my_cell;
-                        faces[iface_id[i+1][j][k]].left_cell = my_cell;
-                        faces[jface_id[i][j][k]].left_cell = my_cell;
                         faces[iface_id[i][j][k]].right_cell = my_cell;
-                        faces[kface_id[i][j][k+1]].left_cell = my_cell;
+                        faces[iface_id[i+1][j][k]].left_cell = my_cell;
+                        faces[jface_id[i][j][k]].right_cell = my_cell;
+                        faces[jface_id[i][j+1][k]].left_cell = my_cell;
                         faces[kface_id[i][j][k]].right_cell = my_cell;
+                        faces[kface_id[i][j][k+1]].left_cell = my_cell;
                     }
                 }
             }
