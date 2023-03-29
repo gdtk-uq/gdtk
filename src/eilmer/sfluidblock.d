@@ -679,25 +679,27 @@ public:
         } // end if dimensions == 3
         //
         // Bind interfaces vertices to cells.
-        // There is a fixed order of faces and vertices for each cell.
-        // Refer to module geom.elements.nomenclature.
+        //
         foreach (k; 0 .. nkc) {
             foreach (j; 0 .. njc) {
                 foreach (i; 0 .. nic) {
                     auto c = get_cell(i,j,k);
-                    c.iface.length = 0; c.outsign.length = 0;
-                    c.iface ~= get_ifj(i,j+1,k); c.outsign ~= 1; // north
-                    c.iface ~= get_ifi(i+1,j,k); c.outsign ~= 1; // east
-                    c.iface ~= get_ifj(i,j,k); c.outsign ~= -1; // south
-                    c.iface ~= get_ifi(i,j,k); c.outsign ~= -1; // west
+                    c.iface.length = (myConfig.dimensions == 3) ? 6 : 4;
+                    c.outsign.length = c.iface.length;
+                    c.iface[Face.west] = get_ifi(i,j,k); c.outsign[Face.west] = -1;
+                    c.iface[Face.east] = get_ifi(i+1,j,k); c.outsign[Face.east] = 1;
+                    c.iface[Face.south] = get_ifj(i,j,k); c.outsign[Face.south] = -1;
+                    c.iface[Face.north] = get_ifj(i,j+1,k); c.outsign[Face.north] = 1;
+                    // VTK order for vertices (on bottom face).
                     c.vtx.length = 0;
                     c.vtx ~= get_vtx(i,j,k);
                     c.vtx ~= get_vtx(i+1,j,k);
                     c.vtx ~= get_vtx(i+1,j+1,k);
                     c.vtx ~= get_vtx(i,j+1,k);
                     if (myConfig.dimensions == 3) {
-                        c.iface ~= get_ifk(i,j,k+1); c.outsign ~= 1; // top
-                        c.iface ~= get_ifk(i,j,k); c.outsign ~= -1; // bottom
+                        c.iface[Face.bottom] = get_ifk(i,j,k); c.outsign[Face.bottom] = -1;
+                        c.iface[Face.top] = get_ifk(i,j,k+1); c.outsign[Face.top] = 1;
+                        // VTK order for vertices on top face.
                         c.vtx ~= get_vtx(i,j,k+1);
                         c.vtx ~= get_vtx(i+1,j,k+1);
                         c.vtx ~= get_vtx(i+1,j+1,k+1);

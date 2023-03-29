@@ -52,10 +52,10 @@ blk1 = FluidBlock:new{grid=UnstructuredGrid:new{sgrid=grid1},
 		      hcellList={9,0}}
 -- Set boundary conditions.
 -- identifyBlockConnections()
-blk0.bcList[3] = InFlowBC_Supersonic:new{flowState=inflow, label="inflow-boundary"}
-blk0.bcList[1] = ExchangeBC_MappedCell:new{}
-blk1.bcList[3] = ExchangeBC_MappedCell:new{}
-blk1.bcList[1] = OutFlowBC_Simple:new{label="outflow-boundary"}
+blk0.bcList[west_face_id] = InFlowBC_Supersonic:new{flowState=inflow, label="inflow-boundary"}
+blk0.bcList[east_face_id] = ExchangeBC_MappedCell:new{}
+blk1.bcList[west_face_id] = ExchangeBC_MappedCell:new{}
+blk1.bcList[east_face_id] = OutFlowBC_Simple:new{label="outflow-boundary"}
 
 -- Do a little more setting of global data.
 config.max_time = 5.0e-3  -- seconds

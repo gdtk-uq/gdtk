@@ -960,16 +960,17 @@ public:
     {
         double min_L_for_block, cfl_local, cfl_max;
         bool first = true;
+        bool gridFlag = grid_type == Grid_t.structured_grid;
         foreach(FVCell cell; cells) {
             // Search for the minimum length scale and the maximum CFL value in the block.
             if (first) {
                 min_L_for_block = cell.L_min.re;
-                cfl_local = cell.signal_frequency() * dt_current;
+                cfl_local = cell.signal_frequency(gridFlag) * dt_current;
                 cfl_max = cfl_local;
                 first = false;
             } else {
                 min_L_for_block = fmin(cell.L_min.re, min_L_for_block);
-                cfl_local = cell.signal_frequency() * dt_current;
+                cfl_local = cell.signal_frequency(gridFlag) * dt_current;
                 cfl_max = fmax(cfl_local, cfl_max);
             }
         }
@@ -1021,8 +1022,9 @@ public:
         // for local time-stepping we limit the larger time-steps by a factor of the smallest timestep
         int local_time_stepping_limit_factor = myConfig.local_time_stepping_limit_factor;
         bool first = true;
+        bool gridFlag = grid_type == Grid_t.structured_grid;
         foreach(FVCell cell; cells) {
-            signal = cell.signal_frequency();
+            signal = cell.signal_frequency(gridFlag);
 	    if (myConfig.with_super_time_stepping) {
                 signal_hyp = cell.signal_hyp.re;
                 signal_parab = cell.signal_parab.re;

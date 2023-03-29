@@ -1379,6 +1379,7 @@ double determine_dt(double cflInit)
     double signal, dt;
     bool first = true;
     foreach (blk; localFluidBlocks) {
+        bool gridFlag = blk.grid_type == Grid_t.structured_grid;
         foreach (cell; blk.cells) {
             if (blk.myConfig.sssOptions.inviscidCFL) {
                 // calculate the signal using the maximum inviscid wave speed
@@ -1393,7 +1394,7 @@ double determine_dt(double cflInit)
                 signal *= (1.0/cell.volume[0].re);
             } else {
                 // use the default signal frequency routine from the time-accurate code path
-                signal = cell.signal_frequency();
+                signal = cell.signal_frequency(gridFlag);
             }
             cell.dt_local = cflInit / signal;
             if (first) {
@@ -1414,8 +1415,9 @@ double determine_min_cfl(double dt)
     bool first = true;
 
     foreach (blk; localFluidBlocks) {
+        bool gridFlag = blk.grid_type == Grid_t.structured_grid;
         foreach (cell; blk.cells) {
-            signal = cell.signal_frequency();
+            signal = cell.signal_frequency(gridFlag);
             cfl_local = dt * signal;
             if (first) {
                 cfl = cfl_local;

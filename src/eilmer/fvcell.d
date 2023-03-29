@@ -423,7 +423,7 @@ public:
         case 4:
             xyplane_quad_cell_properties(vtx[0].pos[gtl], vtx[1].pos[gtl],
                                          vtx[2].pos[gtl], vtx[3].pos[gtl],
-                                         pos[gtl], xyplane_area, iL, jL, L_min); 
+                                         pos[gtl], xyplane_area, iL, jL, L_min);
             iLength = iL; jLength = jL;
             break;
         default:
@@ -978,7 +978,7 @@ public:
     } // end thermochemical_increment()
 
     @nogc
-    double signal_frequency()
+    double signal_frequency(bool using_structured_grid)
     // Remember to use stringent_cfl=true for unstructured-grid.
     {
         number signal = 0; // Signal speed is something like a frequency, with units 1/s.
@@ -991,10 +991,15 @@ public:
         //
         // Get the local normal velocities by rotating the local frame of reference.
         // Also, compute the velocity magnitude and recall the minimum length.
-        number un_N = fabs(fs.vel.dot(iface[Face.north].n));
-        number un_E = fabs(fs.vel.dot(iface[Face.east].n));
-        // just in case we are given a non-hex cell
-        size_t third_face = min(Face.top, iface.length-1);
+        size_t first_face = 0;
+        size_t second_face = 1;
+        size_t third_face = iface.length - 1; // will be Face.top for structured grid
+        if (using_structured_grid) {
+            first_face = Face.north;
+            second_face = Face.east;
+        }
+        number un_N = fabs(fs.vel.dot(iface[first_face].n));
+        number un_E = fabs(fs.vel.dot(iface[second_face].n));
         number un_T = (myConfig.dimensions == 3) ? fabs(fs.vel.dot(iface[third_face].n)) : to!number(0.0);
         if (myConfig.stringent_cfl) {
             // Compute the speed with the shortest length and the highest speed.

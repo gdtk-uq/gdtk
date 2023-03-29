@@ -14,12 +14,18 @@ south = "south"; SOUTH = "south"
 west = "west"; WEST = "west"
 top = "top"; TOP = "top"
 bottom = "bottom"; BOTTOM = "bottom"
+west_face_id = 0
+east_face_id = 1
+south_face_id = 2
+north_face_id = 3
+bottom_face_id = 4
+top_face_id = 5
 
 function faceList(dimensions)
-   local myList = {'north', 'east', 'south', 'west'}
+   local myList = {'west', 'east', 'south', 'north'}
    if dimensions == 3 then
-      table.insert(myList, 'top')
       table.insert(myList, 'bottom')
+      table.insert(myList, 'top')
    end
    return myList
 end
