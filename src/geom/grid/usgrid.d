@@ -635,6 +635,9 @@ public:
                 foreach (i; 0 .. sg.niv-1) {
                     auto cell_vertices = [vtx_id[i][j], vtx_id[i+1][j],
                                           vtx_id[i+1][j+1], vtx_id[i][j+1]];
+                    // For faces, work clockwise around the cell.
+                    // This is likely to give us nearly orthogonal faces 0 and 1,
+                    // something that is assumed by the CFL signal_speed calcaulation.
                     auto cell_faces = [jface_id[i][j+1], // north
                                        iface_id[i+1][j], // east
                                        jface_id[i][j], // south
@@ -788,7 +791,7 @@ public:
                                            iface_id[i][j][k], // west
                                            kface_id[i][j][k+1], // top
                                            kface_id[i][j][k]]; // bottom
-                        auto outsigns = [-1, +1, +1, -1, +1, -1];
+                        auto outsigns = [+1, +1, -1, -1, +1, -1];
                         size_t id = cells.length;
                         auto my_cell = new USGCell(USGCell_type.hexahedron, id, cell_vertices,
                                                    cell_faces, outsigns);
