@@ -640,11 +640,11 @@ public:
                     // For faces, work clockwise around the cell.
                     // This is likely to give us nearly orthogonal faces 0 and 1,
                     // something that is assumed by the CFL signal_speed calcaulation.
-                    auto cell_faces = [iface_id[i][j], // west
+                    auto cell_faces = [jface_id[i][j+1], // north
                                        iface_id[i+1][j], // east
                                        jface_id[i][j], // south
-                                       jface_id[i][j+1]]; // north
-                    auto outsigns = [-1, +1, -1, +1];
+                                       iface_id[i][j]]; // west
+                    auto outsigns = [+1, +1, -1, -1];
                     size_t id = cells.length;
                     auto my_cell = new USGCell(USGCell_type.quad, id, cell_vertices,
                                                cell_faces, outsigns);
@@ -790,13 +790,16 @@ public:
                                               vtx_id[i+1][j+1][k], vtx_id[i][j+1][k],
                                               vtx_id[i][j][k+1], vtx_id[i+1][j][k+1],
                                               vtx_id[i+1][j+1][k+1], vtx_id[i][j+1][k+1]];
-                        auto cell_faces = [iface_id[i][j][k], // west
+                        // Keep the old face order,
+                        // so that the CFL signal_speed calculation picks
+                        // a good set of faces, at least for quad or hex meshes.
+                        auto cell_faces = [jface_id[i][j+1][k], // north
                                            iface_id[i+1][j][k], // east
                                            jface_id[i][j][k], // south
-                                           jface_id[i][j+1][k], // north
-                                           kface_id[i][j][k], // bottom
-                                           kface_id[i][j][k+1]]; // top
-                        auto outsigns = [-1, +1, -1, +1, -1, +1];
+                                           iface_id[i][j][k], // west
+                                           kface_id[i][j][k+1], // top
+                                           kface_id[i][j][k]]; // bottom
+                        auto outsigns = [+1, +1, -1, -1, +1, -1];
                         size_t id = cells.length;
                         auto my_cell = new USGCell(USGCell_type.hexahedron, id, cell_vertices,
                                                    cell_faces, outsigns);

@@ -991,8 +991,8 @@ public:
         //
         // Get the local normal velocities by rotating the local frame of reference.
         // Also, compute the velocity magnitude and recall the minimum length.
-        size_t first_face = 0;
-        size_t second_face = 1;
+        size_t first_face = 0; // west, assuming quad or hex cells from a structured grid conversion
+        size_t second_face = 1; // south, assuming quad or hex cells from a structured grid conversion
         size_t third_face = iface.length - 1; // will be Face.top for structured grid
         if (using_structured_grid) {
             first_face = Face.north;
