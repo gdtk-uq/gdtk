@@ -42,11 +42,13 @@ function GridArray:new(o)
    o.id = #gridArraysList
    gridArraysList[#gridArraysList+1] = o
    --
+   assert(o.grid, "need to supply a grid")
+   assert(o.grid:get_type() == "structured_grid", "supplied grid needs to be a structured grid")
    o.tag = o.tag or ""
    o.fsTag = o.fsTag or ""
    o.bcTags = o.bcTags or {} -- for boundary conditions to be applied to the FluidBlocks
    for _,face in ipairs(faceList(config.dimensions)) do
-      o.bcTags[face] = o.bcTags[face] or ""
+      o.bcTags[face] = o.bcTags[face] or o.grid:get_tag(face)
    end
    --
    if o.grid then
