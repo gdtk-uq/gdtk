@@ -192,6 +192,23 @@ extern(C) int set_boundary_tags(lua_State* L)
     return 0;
 }
 
+extern(C) int get_boundary_tag(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
+    string tag = "";
+    if (lua_isstring(L, 2)) {
+        string bname = to!string(lua_tostring(L, 2));
+        tag = grid.bcTags[face_index(bname)];
+    }
+    if (lua_isnumber(L, 2)) {
+        int bindx = to!int(lua_tointeger(L, 2));
+        tag = grid.bcTags[bindx];
+    }
+    lua_pushstring(L, tag.toStringz);
+    return 1;
+}
+
 extern(C) int subgrid(lua_State* L)
 {
     int narg = lua_gettop(L);
@@ -785,6 +802,8 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "get_corner_vtx");
     lua_pushcfunction(L, &set_boundary_tags);
     lua_setfield(L, -2, "set_tags");
+    lua_pushcfunction(L, &get_boundary_tag);
+    lua_setfield(L, -2, "get_tag");
     lua_pushcfunction(L, &subgrid);
     lua_setfield(L, -2, "subgrid");
     lua_pushcfunction(L, &get_boundary_grid);

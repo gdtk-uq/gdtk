@@ -19,16 +19,13 @@ quad1 = AOPatch:new{p00=b, p10=c, p11=d, p01=e}
 -- Mesh the patches, with particular discretisation and
 -- register the grids for use in the simulation setup phase.
 nx0 = 10; nx1 = 30; ny = 40
-grid0 = registerGrid{
-   grid=StructuredGrid:new{psurface=quad0, niv=nx0+1, njv=ny+1},
-   fsTag="inflow-gas",
-   bcTags={west="INFLOW"} -- Upercase, just because we use that for SU2 bcs.
-}
-grid1 = registerGrid{
-   grid=StructuredGrid:new{psurface=quad1, niv=nx1+1, njv=ny+1},
-   fsTag="initial-gas",
-   bcTags={east="OUTFLOW"}
-}
+grid0 = StructuredGrid:new{psurface=quad0, niv=nx0+1, njv=ny+1}
+grid0:set_tags{west="INFLOW"} -- Uppercase, just because we use that for SU2 bcs.
+grid1 = StructuredGrid:new{psurface=quad1, niv=nx1+1, njv=ny+1}
+grid1:set_tags{east="OUTFLOW"}
+
+registerGrid{grid=grid0, fsTag="inflow-gas"}
+registerGrid{grid=grid1, fsTag="initial-gas"}
 identifyGridConnections()
 --
 dofile("sketch-domain.lua")

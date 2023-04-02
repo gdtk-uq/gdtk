@@ -563,9 +563,9 @@ public:
             nboundaries = 4;
             foreach(ib; 0 .. nboundaries) {
                 string boundary_tag;
-                if (sg.tags[ib].length > 0) {
+                if (sg.bcTags[ib].length > 0) {
                     // Copy the original tag string.
-                    boundary_tag = sg.tags[ib];
+                    boundary_tag = sg.bcTags[ib];
                 } else {
                     // Fabricate a tag string.
                     if (my_block_label.length > 0) { boundary_tag = my_block_label ~ "-"; }
@@ -667,9 +667,9 @@ public:
             nboundaries = 6;
             foreach(ib; 0 .. nboundaries) {
                 string boundary_tag;
-                if (sg.tags[ib].length > 0) {
+                if (sg.bcTags[ib].length > 0) {
                     // Copy the original tag string.
-                    boundary_tag = sg.tags[ib];
+                    boundary_tag = sg.bcTags[ib];
                 } else {
                     // Fabricate a tag string.
                     if (my_block_label.length > 0) { boundary_tag = my_block_label ~ "-"; }

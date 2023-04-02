@@ -28,27 +28,28 @@ class StructuredGrid : Grid {
 public:
     size_t[] vtx_id; // used to hold the single-index id for each vertex.
     // So that the structured-grid can look like an unstructured grid.
-    string[] tags; // A user-specified name for each boundary.
+    string[] bcTags; // A user-specified name for each boundary.
 
     // Blank grid, ready for import of data.
     this(size_t niv, size_t njv, size_t nkv=1, string label="")
     {
         // Infer dimensions from numbers of vertices in each direction.
+        // The boundary tags are initially empty strings and may be set later.
         int dim = 3; if (nkv == 1) { dim = (njv == 1) ? 1 : 2; }
         super(Grid_t.structured_grid, dim, label);
         this.niv = niv; this.njv = njv; this.nkv = nkv;
         switch (dim) {
         case 1:
             ncells = niv-1;
-            tags = ["", ""];
+            bcTags = ["", ""];
             break;
         case 2:
             ncells = (niv-1)*(njv-1);
-            tags = ["", "", "", ""];
+            bcTags = ["", "", "", ""];
             break;
         case 3:
             ncells = (niv-1)*(njv-1)*(nkv-1);
-            tags = ["", "", "", "", "", ""];
+            bcTags = ["", "", "", "", "", ""];
             break;
         default:
             throw new GeometryException("invalid number of dimensions");
@@ -161,7 +162,7 @@ public:
     {
         this(other.niv, other.njv, nkv = other.nkv, other.label);
         foreach (i; 0 .. vertices.length) { vertices[i].set(other.vertices[i]); }
-        tags = other.tags.dup();
+        bcTags = other.bcTags.dup();
     }
 
     StructuredGrid dup() const
@@ -170,13 +171,35 @@ public:
     }
 
     string set_tag(size_t boundary_indx, string new_tag)
+    // Sets an individual boundary tag.
     {
-        if (boundary_indx < tags.length) {
-            tags[boundary_indx] = new_tag;
+        if (boundary_indx < bcTags.length) {
+            bcTags[boundary_indx] = new_tag;
             return new_tag;
         } else {
             return "";
         }
+    }
+
+    int set_tags(string[string] tags)
+    // Sets the boundary tags given the dictionary of tags.
+    // Returns the number of tags successfully set.
+    {
+        string* p;
+        int count = 0;
+        p = "west" in tags;
+        if (p !is null) { bcTags[Face.west] = *p; count++; }
+        p = "east" in tags;
+        if (p !is null) { bcTags[Face.east] = *p; count++; }
+        p = "south" in tags;
+        if (p !is null && dimensions >= 2) { bcTags[Face.south] = *p; count++; }
+        p = "north" in tags;
+        if (p !is null && dimensions >= 2) { bcTags[Face.north] = *p; count++; }
+        p = "bottom" in tags;
+        if (p !is null && dimensions == 3) { bcTags[Face.bottom] = *p; count++; }
+        p = "top" in tags;
+        if (p !is null && dimensions == 3) { bcTags[Face.top] = *p; count++; }
+        return count;
     }
 
     override Vector3* opIndex(size_t i, size_t j, size_t k=0)
@@ -202,7 +225,7 @@ public:
         repr ~= format("dimensions=%d, niv=%d, njv=%d, nkv=%d, ncells=%d",
                        dimensions, niv, njv, nkv, ncells);
         repr ~= format(", vertices=[%s ... %s]", vertices[0], vertices[$-1]);
-        repr ~= format(", tags=%s", tags);
+        repr ~= format(", bcTags=%s", bcTags);
         repr ~= ")";
         return repr;
     }
@@ -862,10 +885,10 @@ public:
         case "1.1":
             line = byLine.front; byLine.popFront();
             size_t ntags; formattedRead(line, "ntags: %d", &ntags);
-            tags.length = ntags;
+            bcTags.length = ntags;
             foreach (i; 0 .. ntags) {
                 line = byLine.front; byLine.popFront();
-                formattedRead(line, format("tag[%d]: %%s", i), &(tags[i]));
+                formattedRead(line, format("tag[%d]: %%s", i), &(bcTags[i]));
             }
             break;
         default:
@@ -932,14 +955,14 @@ public:
         case "1.1":
             f.rawRead(buf1);
             size_t ntags = buf1[0];
-            tags.length = ntags;
+            bcTags.length = ntags;
             foreach (i; 0 .. ntags) {
                 f.rawRead(buf1);
                 int tag_length = buf1[0];
                 if (tag_length > 0) {
                     char[] found_tag = new char[tag_length];
                     f.rawRead(found_tag);
-                    tags[i] = to!string(found_tag);
+                    bcTags[i] = to!string(found_tag);
                 }
             }
             break;
@@ -980,9 +1003,9 @@ public:
             break;
         case "1.1":
             writer = appender!string();
-            formattedWrite(writer, "ntags: %d\n", tags.length);
-            foreach (i; 0 .. tags.length) {
-                formattedWrite(writer, "tag[%d]: %s\n", i, tags[i]);
+            formattedWrite(writer, "ntags: %d\n", bcTags.length);
+            foreach (i; 0 .. bcTags.length) {
+                formattedWrite(writer, "tag[%d]: %s\n", i, bcTags[i]);
             }
             f.compress(writer.data);
             break;
@@ -1022,10 +1045,10 @@ public:
         case "1.0":
             break;
         case "1.1":
-            buf1[0] = to!int(tags.length); f.rawWrite(buf1);
-            foreach (i; 0 .. tags.length) {
-                buf1[0] = to!int(tags[i].length); f.rawWrite(buf1);
-                f.rawWrite(to!(char[])(tags[i]));
+            buf1[0] = to!int(bcTags.length); f.rawWrite(buf1);
+            foreach (i; 0 .. bcTags.length) {
+                buf1[0] = to!int(bcTags[i].length); f.rawWrite(buf1);
+                f.rawWrite(to!(char[])(bcTags[i]));
             }
             break;
         default:
@@ -1747,9 +1770,12 @@ version(sgrid_test) {
                    new LinearFunction(), new LinearFunction()];
         auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
         my_grid.set_tag(Face.north, "north-face");
+        my_grid.set_tags(["south":"south-face-here-sir", "west":"west-face-here-sir!"]);
         string repr = to!string(my_grid);
         // writeln("my_grid=", repr);
         assert(repr.canFind("north-face"), failedUnitTest());
+        assert(repr.canFind("south-face-here-sir"), failedUnitTest());
+        assert(repr.canFind("west-face-here-sir!"), failedUnitTest());
         assert(approxEqualVectors(*my_grid[5,5], Vector3(0.5, 0.35, 0.0)),
                failedUnitTest());
         auto my_subgrid = my_grid.subgrid(4, 3, 4, 5);

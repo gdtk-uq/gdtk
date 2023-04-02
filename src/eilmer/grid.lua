@@ -30,7 +30,7 @@ function Grid:new(o)
    if not flag then
       error("Grid constructor expects a single table with named items.", 2)
    end
-   flag = checkAllowedNames(o, {"grid", "tag", "fsTag", "bcTags", "gridArrayId"})
+   flag = checkAllowedNames(o, {"grid", "tag", "fsTag", "gridArrayId"})
    if not flag then
       error("Invalid name for item supplied to Grid constructor.", 2)
    end
@@ -57,6 +57,7 @@ function Grid:new(o)
 				config.dimensions, o.grid.get_dimensions())
       error(msg)
    end
+   o.bcTags = {} -- Start with an empty table of boundary condition tags.
    o.type = o.grid:get_type()
    if o.type == "structured_grid" then
       -- Extract some information from the StructuredGrid
@@ -91,7 +92,7 @@ function Grid:new(o)
          "p2=", tostring(o.p[2]), "p3=", tostring(o.p[3])) ]]
       -- Attach default boundary conditions for those not specified.
       for _,face in ipairs(faceList(config.dimensions)) do
-	 o.bcTags[face] = o.bcTags[face] or ""
+	 o.bcTags[face] = o.grid:get_tag(face) or ""
       end
    end
    if o.type == "unstructured_grid" then
