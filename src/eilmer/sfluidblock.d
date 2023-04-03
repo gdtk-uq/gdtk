@@ -137,6 +137,9 @@ public:
         myConfig = new LocalConfig(-1);
         myConfig.init_gas_model_bits();
         cells.length = ncells; // not defined yet
+
+        // We don't need the full celldata for the prep stage, just the flowstates
+        celldata.flowstates.reserve(ncells);
         bool lua_fs = false;
         FlowState* myfs;
         // check where our flowstate is coming from
@@ -201,7 +204,8 @@ public:
                 }
             }
             // make the cell
-            cell = new FVCell(myConfig, pos, myfs, null, null, volume, to!int(cell_idx));
+            celldata.flowstates[cell_idx] = *myfs; // Copy the myfs flowstate into the celldata structure
+            cell = new FVCell(myConfig, pos, &celldata, volume, to!int(cell_idx));
         }
         block_io = get_fluid_block_io(this);
         if (lua_fs) { lua_settop(L, 0); }
@@ -476,7 +480,7 @@ public:
 
             // Create the interior cell, vertex and interface objects for the block.
             foreach (n; 0 .. nic*njc*nkc) {
-                cells ~= new FVCell(myConfig, &(celldata.flowstates[n]), &(celldata.gradients[n]), &(celldata.workspaces[n]));
+                cells ~= new FVCell(myConfig, &celldata, to!int(n));
             }
             foreach (n; 0 .. niv*njv*nkv) {
                 vertices ~= new FVVertex(myConfig, lsq_workspace_at_vertices);
@@ -506,8 +510,8 @@ public:
                             celldata.flowstates ~= FlowState(gmodel, nturb);
                             celldata.gradients ~= FlowGradients(myConfig);
                             celldata.workspaces ~= WLSQGradWorkspace();
-                            auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
-                            c.id = cell_id; ++cell_id; c.is_ghost_cell = true;
+                            auto c = new FVCell(myConfig, &celldata, cell_id);
+                            ++cell_id; c.is_ghost_cell = true;
                             f.right_cells ~= c;
                         }
                     }
@@ -521,8 +525,8 @@ public:
                             celldata.flowstates ~= FlowState(gmodel, nturb);
                             celldata.gradients ~= FlowGradients(myConfig);
                             celldata.workspaces ~= WLSQGradWorkspace();
-                            auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
-                            c.id = cell_id; ++cell_id; c.is_ghost_cell = true;
+                            auto c = new FVCell(myConfig, &celldata, cell_id);
+                            ++cell_id; c.is_ghost_cell = true;
                             f.left_cells ~= c;
                         }
                     }
@@ -536,8 +540,8 @@ public:
                             celldata.flowstates ~= FlowState(gmodel, nturb);
                             celldata.gradients ~= FlowGradients(myConfig);
                             celldata.workspaces ~= WLSQGradWorkspace();
-                            auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
-                            c.id = cell_id; ++cell_id; c.is_ghost_cell = true;
+                            auto c = new FVCell(myConfig, &celldata, cell_id);
+                            ++cell_id; c.is_ghost_cell = true;
                             f.right_cells ~= c;
                         }
                     }
@@ -551,8 +555,8 @@ public:
                             celldata.flowstates ~= FlowState(gmodel, nturb);
                             celldata.gradients ~= FlowGradients(myConfig);
                             celldata.workspaces ~= WLSQGradWorkspace();
-                            auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
-                            c.id = cell_id; ++cell_id; c.is_ghost_cell = true;
+                            auto c = new FVCell(myConfig, &celldata, cell_id);
+                            ++cell_id; c.is_ghost_cell = true;
                             f.left_cells ~= c;
                         }
                     }
@@ -567,8 +571,8 @@ public:
                                 celldata.flowstates ~= FlowState(gmodel, nturb);
                                 celldata.gradients ~= FlowGradients(myConfig);
                                 celldata.workspaces ~= WLSQGradWorkspace();
-                                auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
-                                c.id = cell_id; ++cell_id; c.is_ghost_cell = true;
+                                auto c = new FVCell(myConfig, &celldata, cell_id);
+                                ++cell_id; c.is_ghost_cell = true;
                                 f.right_cells ~= c;
                             }
                         }
@@ -582,8 +586,8 @@ public:
                                 celldata.flowstates ~= FlowState(gmodel, nturb);
                                 celldata.gradients ~= FlowGradients(myConfig);
                                 celldata.workspaces ~= WLSQGradWorkspace();
-                                auto c = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]));
-                                c.id = cell_id; ++cell_id; c.is_ghost_cell = true;
+                                auto c = new FVCell(myConfig, &celldata, cell_id);
+                                ++cell_id; c.is_ghost_cell = true;
                                 f.left_cells ~= c;
                             }
                         }

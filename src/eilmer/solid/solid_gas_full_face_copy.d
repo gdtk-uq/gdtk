@@ -172,7 +172,7 @@ public:
                     myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
                     myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
                     myBC.celldata.workspaces ~= WLSQGradWorkspace();
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
+                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata), to!int(i));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -211,7 +211,7 @@ public:
                     myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
                     myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
                     myBC.celldata.workspaces ~= WLSQGradWorkspace();
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
+                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata), to!int(j));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -250,7 +250,7 @@ public:
                     myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
                     myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
                     myBC.celldata.workspaces ~= WLSQGradWorkspace();
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
+                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata), to!int(i));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -289,7 +289,7 @@ public:
                     myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
                     myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
                     myBC.celldata.workspaces ~= WLSQGradWorkspace();
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
+                    myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata), to!int(j));
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -337,7 +337,7 @@ public:
                         myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
                         myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
                         myBC.celldata.workspaces ~= WLSQGradWorkspace();
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata), to!int(i*this_blk.nkcell + k));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -416,7 +416,7 @@ public:
                         myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
                         myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
                         myBC.celldata.workspaces ~= WLSQGradWorkspace();
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata), to!int(j*this_blk.nkcell + k));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -495,7 +495,7 @@ public:
                         myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
                         myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
                         myBC.celldata.workspaces ~= WLSQGradWorkspace();
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata), to!int(i*this_blk.nkcell + k));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -574,7 +574,7 @@ public:
                         myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
                         myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
                         myBC.celldata.workspaces ~= WLSQGradWorkspace();
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata), to!int(j*this_blk.nkcell + k));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -653,7 +653,7 @@ public:
                         myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
                         myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
                         myBC.celldata.workspaces ~= WLSQGradWorkspace();
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata), to!int(j*this_blk.nicell + i));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -732,7 +732,7 @@ public:
                         myBC.celldata.flowstates ~= FlowState(other_blk.myConfig.gmodel, other_blk.myConfig.turb_model.nturb);
                         myBC.celldata.gradients ~= FlowGradients(other_blk.myConfig);
                         myBC.celldata.workspaces ~= WLSQGradWorkspace();
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata.flowstates[$-1]), &(myBC.celldata.gradients[$-1]), &(myBC.celldata.workspaces[$-1]));
+                        myBC.gasCells ~= new FVCell(other_blk.myConfig, &(myBC.celldata), to!int(j*this_blk.nicell + i));
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:

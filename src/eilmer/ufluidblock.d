@@ -88,6 +88,8 @@ public:
         myConfig.init_gas_model_bits();
         cells.length = ncells; // not defined yet
 
+        // We don't need the full celldata for the prep stage, just the flowstates
+        celldata.flowstates.reserve(ncells);
         bool lua_fs = false;
         FlowState* myfs;
         // check where our flowstate is coming from
@@ -177,7 +179,8 @@ public:
                     luaL_error(L, errMsg.toStringz);
                 }
             }
-            cells[cell_idx] = new FVCell(myConfig, pos, myfs, null, null, volume, to!int(cell_idx));
+            celldata.flowstates[cell_idx] = *myfs; // Copy the myfs flowstate into the celldata structure
+            cells[cell_idx] = new FVCell(myConfig, pos, &celldata, volume, to!int(cell_idx));
         }
         block_io = get_fluid_block_io(this);
         if (lua_fs) { lua_settop(L, 0); }
@@ -346,7 +349,7 @@ public:
         foreach (i, c; grid.cells) {
             // Note that the cell id and the index in the cells array are the same.
             // We will reply upon this connection in other parts of the flow code.
-            auto new_cell = new FVCell(myConfig, &(celldata.flowstates[i]), &(celldata.gradients[i]), &(celldata.workspaces[i]), to!int(i));
+            auto new_cell = new FVCell(myConfig, &celldata, to!int(i));
             new_cell.contains_flow_data = true;
             new_cell.is_interior_to_domain = true;
             cells ~= new_cell;
@@ -437,7 +440,7 @@ public:
                     celldata.flowstates ~= FlowState(gmodel, nturb);
                     celldata.gradients ~= FlowGradients(myConfig);
                     celldata.workspaces ~= WLSQGradWorkspace();
-                    FVCell ghost0 = new FVCell(myConfig, &(celldata.flowstates[$-1]), &(celldata.gradients[$-1]), &(celldata.workspaces[$-1]), ghost_cell_id);
+                    FVCell ghost0 = new FVCell(myConfig, &celldata, ghost_cell_id);
                     ghost_cell_id++;
                     ghost0.contains_flow_data = bc[i].ghost_cell_data_available;
                     ghost0.is_ghost_cell = true;

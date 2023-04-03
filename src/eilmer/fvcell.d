@@ -114,6 +114,8 @@ public:
     bool contains_flow_data;
     bool is_interior_to_domain; // true if the cell is interior to the flow domain
     bool allow_k_omega_update = true; // turbulent wall functions may turn this off
+    //
+    FVCellData* fvcd; // Pointer to block densified storage structure
     FlowState* fs; // Flow properties
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
     ConservedQuantities[] dUdt; // Time derivatives for the update stages.
@@ -198,7 +200,7 @@ public:
 public:
     @disable this();
 
-    this(LocalConfig myConfig, FlowState* fs, FlowGradients* grad, WLSQGradWorkspace* ws_grad, int id_init=-1)
+    this(LocalConfig myConfig, FVCellData* fvcd, int id_init=-1)
     {
         this.myConfig = myConfig;
         id = id_init;
@@ -211,7 +213,6 @@ public:
         GasModel gmodel = cast(GasModel) myConfig.gmodel;
         if (gmodel is null) { gmodel = GlobalConfig.gmodel_master; }
 
-        this.fs = fs;
         size_t ncq = myConfig.cqi.n; // number of conserved quantities
         foreach(i; 0 .. myConfig.n_flow_time_levels) {
             U ~= new_ConservedQuantities(ncq);
@@ -226,8 +227,13 @@ public:
             dUdt_copy[0] = new_ConservedQuantities(ncq);
             dUdt_copy[1] = new_ConservedQuantities(ncq);
         }
-        this.grad = grad;
-        this.ws_grad = ws_grad;
+
+        this.fvcd = fvcd;
+        if (id>=0){
+            this.fs = &(fvcd.flowstates[id]);
+            this.grad = &(fvcd.gradients[id]);
+            this.ws_grad = &(fvcd.workspaces[id]);
+        }
         //
         version(nk_accelerator) {
             grad_save = new FlowGradients(myConfig);
@@ -268,7 +274,7 @@ public:
         aux_cell_data = AuxCellData.get_aux_cell_data_items(myConfig);
     }
 
-    this(LocalConfig myConfig, in Vector3 pos, FlowState* fs, FlowGradients* grad, WLSQGradWorkspace* ws_grad, in number volume, int id_init=-1)
+    this(LocalConfig myConfig, in Vector3 pos, FVCellData* fvcd, in number volume, int id_init=-1)
     // stripped down initialisation
     {
         id = id_init;
@@ -277,9 +283,9 @@ public:
         this.pos[0] = pos;
         this.volume.length = 1;
         this.volume[0] = volume;
-        this.fs = fs;
-        this.grad = grad;
-        this.ws_grad = ws_grad;
+        if (fvcd.flowstates) this.fs = &(fvcd.flowstates[id_init]);
+        if (fvcd.gradients) this.grad = &(fvcd.gradients[id_init]);
+        if (fvcd.workspaces) this.ws_grad = &(fvcd.workspaces[id_init]);
 
         // generate auxiliary data items
         aux_cell_data = AuxCellData.get_aux_cell_data_items(myConfig);
