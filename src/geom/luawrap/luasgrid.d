@@ -196,14 +196,15 @@ extern(C) int get_boundary_tag(lua_State* L)
 {
     int narg = lua_gettop(L);
     auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
-    string tag = "";
+    string tag = ""; // default value of empty string
     if (lua_isstring(L, 2)) {
-        string bname = to!string(lua_tostring(L, 2));
-        tag = grid.bcTags[face_index(bname)];
+        string bName = to!string(lua_tostring(L, 2));
+        int bIndx = face_index(bName);
+        if (bIndx < grid.bcTags.length) { tag = grid.bcTags[bIndx]; }
     }
     if (lua_isnumber(L, 2)) {
-        int bindx = to!int(lua_tointeger(L, 2));
-        tag = grid.bcTags[bindx];
+        int bIndx = to!int(lua_tointeger(L, 2));
+        if (bIndx < grid.bcTags.length) { tag = grid.bcTags[bIndx]; }
     }
     lua_pushstring(L, tag.toStringz);
     return 1;
