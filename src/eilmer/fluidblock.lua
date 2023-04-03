@@ -168,8 +168,8 @@ function FluidBlock:new(o)
          for i = 0, o.nboundaries-1 do
             local mybc = o.bcList[i]
             if (mybc == nil) and o.bcDict then
-               error("FIX-ME set the unstructured-gird bcs")
-               local tag = o.gridMetadata.get_boundaryset_tag(i) -- [FIX-ME]
+               local key = tostring(i)
+               local tag = o.gridMetadata.bcTags[key]
                mybc = o.bcDict[tag]
             end
             mybc = mybc or WallBC_WithSlip:new() -- default boundary condition

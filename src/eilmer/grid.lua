@@ -140,15 +140,18 @@ function Grid:tojson()
    end
    str = str .. '  "bcTags": {\n'
    if self.type == "structured_grid" then
+      -- Expect named boundaries
       for k, v in pairs(self.bcTags) do
-         str = str .. string.format('    "%s": "%s",\n', k, v) -- Expect named boundaries
+         str = str .. string.format('    "%s": "%s",\n', k, v)
       end
    else -- unstructured_grid
-      for j, v in ipairs(self.bcTags) do
-         str = str .. string.format('    "%d": "%s",\n', j-1, v) -- Dlang index will start at zero.
+      -- Expect numbered boundary sets.
+      -- Note that Dlang numbering starts at zero.
+      for j=0, self.grid:get_nboundaries()-1 do
+         str = str .. string.format('    "%d": "%s",\n', j, self.bcTags[j])
       end
    end
-   str = str .. '    "dummy": "xxxx"\n'
+   str = str .. '    "dummy_entry_without_trailing_comma": "xxxx"\n'
    str = str .. '  },\n'
    str = str .. string.format('  "gridArrayId": %d\n', self.gridArrayId) -- last item, no comma
    str = str .. '}\n'
