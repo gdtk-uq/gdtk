@@ -179,7 +179,7 @@ public:
                     luaL_error(L, errMsg.toStringz);
                 }
             }
-            celldata.flowstates[cell_idx] = *myfs; // Copy the myfs flowstate into the celldata structure
+            celldata.flowstates ~= *myfs; // Copy the myfs flowstate into the celldata structure
             cells[cell_idx] = new FVCell(myConfig, pos, &celldata, volume, to!int(cell_idx));
         }
         block_io = get_fluid_block_io(this);

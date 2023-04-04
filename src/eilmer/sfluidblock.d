@@ -204,7 +204,7 @@ public:
                 }
             }
             // make the cell
-            celldata.flowstates[cell_idx] = *myfs; // Copy the myfs flowstate into the celldata structure
+            celldata.flowstates ~= *myfs; // Copy the myfs flowstate into the celldata structure
             cell = new FVCell(myConfig, pos, &celldata, volume, to!int(cell_idx));
         }
         block_io = get_fluid_block_io(this);
