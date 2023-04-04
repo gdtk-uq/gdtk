@@ -25,8 +25,8 @@ nb = 2
 fba = FBArray:new{grid=grid0, nib=nb, njb=nb, initialState=initial_gas}
 print("Make wrap-around connections")
 for i=1,nb do
-   connectBlocks(fba.blockArray[i][1], south, fba.blockArray[i][nb], north, 0)
-   connectBlocks(fba.blockArray[1][i], west, fba.blockArray[nb][i], east, 0)
+   connectBlocks(fba.blockArray[i][1], 'south', fba.blockArray[i][nb], 'north', 0)
+   connectBlocks(fba.blockArray[1][i], 'west', fba.blockArray[nb][i], 'east', 0)
 end
 
 config.max_time = 50 * tau

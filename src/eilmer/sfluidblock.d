@@ -249,12 +249,6 @@ public:
         lua_pushinteger(myL, nic); lua_setglobal(myL, "nicell");
         lua_pushinteger(myL, njc); lua_setglobal(myL, "njcell");
         lua_pushinteger(myL, nkc); lua_setglobal(myL, "nkcell");
-        lua_pushinteger(myL, Face.north); lua_setglobal(myL, "north");
-        lua_pushinteger(myL, Face.east); lua_setglobal(myL, "east");
-        lua_pushinteger(myL, Face.south); lua_setglobal(myL, "south");
-        lua_pushinteger(myL, Face.west); lua_setglobal(myL, "west");
-        lua_pushinteger(myL, Face.top); lua_setglobal(myL, "top");
-        lua_pushinteger(myL, Face.bottom); lua_setglobal(myL, "bottom");
         lua_pushinteger(myL, n_ghost_cell_layers); lua_setglobal(myL, "n_ghost_cell_layers");
         // Although we make the helper functions available within
         // the block-specific Lua interpreter, we should use

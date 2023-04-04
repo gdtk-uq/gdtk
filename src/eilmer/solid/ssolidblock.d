@@ -103,12 +103,6 @@ public:
         lua_pushinteger(myL, nicell); lua_setglobal(myL, "nicell");
         lua_pushinteger(myL, njcell); lua_setglobal(myL, "njcell");
         lua_pushinteger(myL, nkcell); lua_setglobal(myL, "nkcell");
-        lua_pushinteger(myL, Face.north); lua_setglobal(myL, "north");
-        lua_pushinteger(myL, Face.east); lua_setglobal(myL, "east");
-        lua_pushinteger(myL, Face.south); lua_setglobal(myL, "south");
-        lua_pushinteger(myL, Face.west); lua_setglobal(myL, "west");
-        lua_pushinteger(myL, Face.top); lua_setglobal(myL, "top");
-        lua_pushinteger(myL, Face.bottom); lua_setglobal(myL, "bottom");
         // Although we make the helper functions available within
         // the block-specific Lua interpreter, we should use
         // those functions only in the context of the master thread.

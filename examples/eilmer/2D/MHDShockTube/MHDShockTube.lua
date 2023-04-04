@@ -98,8 +98,8 @@ right_grid = StructuredGrid:new{psurface=makePatch{north=top_right, east=right_w
 left_block = FluidBlock:new{grid=left_grid, initialState=left, bcList={west=OutFlowBC_SimpleExtrapolate:new{xOrder=1}}}
 right_block = FluidBlock:new{grid=right_grid, initialState=right, bcList={east=OutFlowBC_SimpleExtrapolate:new{xOrder=1}}}
 
-connectBlocks(left_block, north, left_block, south)
-connectBlocks(right_block, north, right_block, south)
+connectBlocks(left_block, 'north', left_block, 'south')
+connectBlocks(right_block, 'north', right_block, 'south')
 
 identifyBlockConnections()
 

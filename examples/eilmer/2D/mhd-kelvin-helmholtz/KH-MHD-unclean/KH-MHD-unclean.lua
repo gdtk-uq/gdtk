@@ -124,7 +124,7 @@ blk_3 = FluidBlock:new{grid = grid3, initialState=UDF_flow, label="flow"}
 identifyBlockConnections()
 
 --Set periodic boundary conditions
-connectBlocks(blk_0, south, blk_3, north, 0)
-connectBlocks(blk_1, south, blk_2, north, 0)
-connectBlocks(blk_0, west, blk_1, east, 0)
-connectBlocks(blk_3, west, blk_2, east, 0)
+connectBlocks(blk_0, 'south', blk_3, 'north', 0)
+connectBlocks(blk_1, 'south', blk_2, 'north', 0)
+connectBlocks(blk_0, 'west', blk_1, 'east', 0)
+connectBlocks(blk_3, 'west', blk_2, 'east', 0)

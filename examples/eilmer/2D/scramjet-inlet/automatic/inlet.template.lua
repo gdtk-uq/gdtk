@@ -111,11 +111,11 @@ for ib=0,5 do
 end
 
 -- Set boundary conditions, first, connections
-connectBlocks(blks[0], east, blks[1], west)
-connectBlocks(blks[0], north, blks[3], south)
-connectBlocks(blks[1], east, blks[2], west)
-connectBlocks(blks[3], east, blks[4], west)
-connectBlocks(blks[4], east, blks[5], west)
+connectBlocks(blks[0], 'east', blks[1], 'west')
+connectBlocks(blks[0], 'north', blks[3], 'south')
+connectBlocks(blks[1], 'east', blks[2], 'west')
+connectBlocks(blks[3], 'east', blks[4], 'west')
+connectBlocks(blks[4], 'east', blks[5], 'west')
 -- then, directly specify the other boundary conditions.
 blks[0].bcList[west] = InFlowBC_Supersonic:new{flowCondition=external_stream}
 blks[3].bcList[west] = InFlowBC_Supersonic:new{flowCondition=external_stream}

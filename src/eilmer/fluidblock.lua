@@ -302,6 +302,9 @@ local function connectBlocks(blkA, faceA, blkB, faceB, orientation)
       (blkA.grid and (blkB.grid:get_type() ~= "structured_grid"))) then
       error("connectBlocks() Works only for structured-grid blocks.", 2)
    end
+   assert(type(faceA) == 'string' and type(faceB) == 'string',
+          "connectBlocks requires faceA and faceB to be strings.")
+   --
    if blkA.myType == "FluidBlock" and blkB.myType == "FluidBlock" then
       blkA.bcList[faceA] = ExchangeBC_FullFace:new{otherBlock=blkB.id, otherFace=faceB,
 						   orientation=orientation}
