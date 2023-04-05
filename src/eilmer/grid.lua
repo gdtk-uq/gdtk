@@ -196,10 +196,18 @@ local function identifyGridConnections(includeList, excludeList, tolerance)
    local myGridList = {}
    if includeList then
       -- The caller has provided a list of grids to bound the search.
-      for _,v in ipairs(includeList) do myGridList[#myGridList+1] = v end
+      for _,A in ipairs(includeList) do
+         if A.grid:get_type() == "structured_grid" then
+            myGridList[#myGridList+1] = A
+         end
+      end
    else
       -- The caller has not provided a list; use the global grids list.
-      for _,v in ipairs(gridsList) do myGridList[#myGridList+1] = v end
+      for _,A in ipairs(gridsList) do
+         if A.grid:get_type() == "structured_grid" then
+            myGridList[#myGridList+1] = A
+         end
+      end
    end
    excludeList = excludeList or {}
    -- Put unstructured grid objects into the exclude list because they don't
@@ -207,10 +215,14 @@ local function identifyGridConnections(includeList, excludeList, tolerance)
    for _,A in ipairs(myGridList) do
       if A.grid:get_type() == "unstructured_grid" then excludeList[#excludeList+1] = A end
    end
-   if false then -- debug
-      print('myGridList=[')
+   if false then
+      print('DEBUG myGridList=[')
       for _,A in ipairs(myGridList) do print('  ', A.id, ',') end
       print(']')
+   end
+   if #myGridList == 0 then
+      -- There are no structured grids that are to be (potentially) connected.
+      return
    end
    tolerance = tolerance or 1.0e-6
    --
