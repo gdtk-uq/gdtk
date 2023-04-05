@@ -60,6 +60,8 @@ string avg_over_iface_list(string quantity, string result)
 
 struct FVCellData{
     size_t[][] c2f;
+    number[] volumes;
+    Vector3[] positions;
     FlowState[] flowstates;
     FlowGradients[] gradients;
     WLSQGradWorkspace[] workspaces;
@@ -434,6 +436,7 @@ public:
             debug { msg ~= format("Unhandled number of vertices: %d", vtx.length); }
             throw new FlowSolverException(msg);
         } // end switch
+        fvcd.positions[id] = pos[gtl];
         // Cell Volume.
         if (axisymmetric) {
             // Volume per radian = centroid y-ordinate * cell area
@@ -452,6 +455,7 @@ public:
             }
             throw new FlowSolverException(msg);
         }
+        fvcd.volumes[id] = vol;
         volume[gtl] = vol;
         areaxy[gtl] = xyplane_area;
         kLength = to!number(0.0);
@@ -492,6 +496,8 @@ public:
             debug { msg ~= format("Unhandled number of vertices: %d", vtx.length); }
             throw new FlowSolverException(msg);
         } // end switch
+        fvcd.volumes[id] = volume[gtl];
+        fvcd.positions[id] = pos[gtl];
         if (volume[gtl] <= 0.0) {
             debug {
                 msg ~= format("Invalid volume %g for cell %d in block %d at pos %s",

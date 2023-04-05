@@ -328,6 +328,8 @@ public:
         // have been handed out to the fvcells. This can happen when calling ~= on the
         // celldata flowstates, which we do during the creation of the ghost cells
         // For this reason, we want to reserve sufficient space in the array here.
+        celldata.volumes.length = grid.cells.length + nghost;
+        celldata.positions.length = grid.cells.length + nghost;
         celldata.flowstates.reserve(grid.cells.length + nghost);
         celldata.gradients.reserve(grid.cells.length + nghost);
         celldata.workspaces.reserve(grid.cells.length + nghost);
@@ -337,6 +339,10 @@ public:
         foreach (i; 0 .. grid.cells.length) celldata.workspaces ~= WLSQGradWorkspace(); // TODO: skip if not needed
 
         facedata.f2c.length = grid.faces.length;
+        facedata.positions.length = grid.faces.length;
+        facedata.flowstates.reserve(grid.faces.length);
+        facedata.gradients.reserve(grid.faces.length);
+        facedata.workspaces.reserve(grid.faces.length);
         foreach (i; 0 .. grid.faces.length) facedata.flowstates ~= FlowState(gmodel, nturb);
         foreach (i; 0 .. grid.faces.length) facedata.gradients ~= FlowGradients(myConfig);
         foreach (i; 0 .. grid.faces.length) facedata.workspaces ~= WLSQGradWorkspace();

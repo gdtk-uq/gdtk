@@ -446,9 +446,13 @@ public:
             size_t nifaces = niv*njc*nkc;
             size_t njfaces = nic*njv*nkc;
             size_t nkfaces = nic*njc*nkv;
+            size_t nfaces = nifaces + njfaces;
+            if (myConfig.dimensions == 3) nfaces += nkfaces;
             size_t nghost = (2*njc*nkc + 2*nic*nkc)*n_ghost_cell_layers;
             if (myConfig.dimensions == 3) nghost += 2*nic*njc*n_ghost_cell_layers;
 
+            celldata.volumes.length = nic*njc*nkc + nghost;
+            celldata.positions.length = nic*njc*nkc + nghost;
             celldata.flowstates.reserve(nic*njc*nkc + nghost);
             celldata.gradients.reserve(nic*njc*nkc + nghost);
             celldata.workspaces.reserve(nic*njc*nkc + nghost);
@@ -457,6 +461,11 @@ public:
             foreach (n; 0 .. nic*njc*nkc) celldata.workspaces ~= WLSQGradWorkspace();
 
             // Face data
+            facedata.positions.length = nfaces;
+            facedata.flowstates.reserve(nfaces);
+            facedata.gradients.reserve(nfaces);
+            facedata.workspaces.reserve(nfaces);
+
             foreach (n; 0 .. niv*njc*nkc) facedata.flowstates ~= FlowState(gmodel, nturb);
             foreach (n; 0 .. nic*njv*nkc) facedata.flowstates ~= FlowState(gmodel, nturb);
             if (myConfig.dimensions == 3) {
@@ -680,12 +689,10 @@ public:
         // We will depend on this equality in other parts of the flow solver.
         // We also note that these cells are interior to the block (i.e. not ghost cells)
         foreach (i, c; cells) {
-            //c.id = to!int(i);
             c.contains_flow_data = true;
             c.is_interior_to_domain = true;
         }
         foreach (i, v; vertices) { v.id = to!int(i); }
-        //foreach (i, f; faces) { f.id = to!int(i); }
         //
         // Set references to boundary faces in bc objects.
         foreach (k; 0 .. nkc) {

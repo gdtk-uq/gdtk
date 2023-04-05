@@ -35,6 +35,7 @@ struct LR {size_t left,right;}
 
 struct FVInterfaceData{
     LR[] f2c;
+    Vector3[] positions;
     FlowState[] flowstates;
     FlowGradients[] gradients;
     WLSQGradWorkspace[] workspaces;
@@ -336,6 +337,7 @@ public:
             area[gtl] = length; // Assume unit depth in the Z-direction.
         }
         pos.set(Xbar, Ybar, to!number(0.0));
+        fvid.positions[id] = pos;
     } // end update_2D_geometric_data()
 
     @nogc
@@ -359,6 +361,7 @@ public:
             debug { msg ~= format("%d", vtx.length); }
             throw new FlowSolverException(msg);
         } // end switch
+        fvid.positions[id] = pos;
     } // end update_3D_geometric_data()
 
     void construct_rotation_matrix() {
