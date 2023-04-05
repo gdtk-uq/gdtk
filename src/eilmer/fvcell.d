@@ -200,7 +200,7 @@ public:
 public:
     @disable this();
 
-    this(LocalConfig myConfig, FVCellData* fvcd, int id_init=-1)
+    this(LocalConfig myConfig, FVCellData* fvcd, int id_init)
     {
         this.myConfig = myConfig;
         id = id_init;
@@ -229,11 +229,9 @@ public:
         }
 
         this.fvcd = fvcd;
-        if (id>=0){
-            this.fs = &(fvcd.flowstates[id]);
-            this.grad = &(fvcd.gradients[id]);
-            this.ws_grad = &(fvcd.workspaces[id]);
-        }
+        this.fs = &(fvcd.flowstates[id]);
+        this.grad = &(fvcd.gradients[id]);
+        this.ws_grad = &(fvcd.workspaces[id]);
         //
         version(nk_accelerator) {
             grad_save = new FlowGradients(myConfig);
@@ -274,7 +272,7 @@ public:
         aux_cell_data = AuxCellData.get_aux_cell_data_items(myConfig);
     }
 
-    this(LocalConfig myConfig, in Vector3 pos, FVCellData* fvcd, in number volume, int id_init=-1)
+    this(LocalConfig myConfig, in Vector3 pos, FVCellData* fvcd, in number volume, int id_init)
     // stripped down initialisation
     {
         id = id_init;

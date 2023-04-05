@@ -80,6 +80,7 @@ public:
     FVCell[] right_cells;
     //
     // Flow
+    FVInterfaceData* fvid;
     FlowState* fs;          // Flow properties
     ConservedQuantities F; // Flux conserved quantity per unit area
     number tau_wall_x, tau_wall_y, tau_wall_z; // shear at face (used by wall-function BCs)
@@ -119,10 +120,8 @@ public:
     
     this(LocalConfig myConfig,
          IndexDirection idir,
-         FlowState* fs,
-         FlowGradients* grad,
-         WLSQGradWorkspace* ws_grad,
-         int id_init=-1,
+         FVInterfaceData* fvid,
+         int id_init,
          char dir=' ')
     {
         this.myConfig = myConfig;
@@ -133,11 +132,14 @@ public:
         gvel = Vector3(0.0,0.0,0.0); // default to fixed grid
         auto gmodel = myConfig.gmodel;
         uint n_species = myConfig.n_species;
-        this.fs = fs;
         F = new_ConservedQuantities(myConfig.cqi.n);
         F.clear();
-        this.grad = grad;
-        this.ws_grad = ws_grad;
+
+        this.fvid = fvid;
+        this.fs = &(fvid.flowstates[id]);
+        this.grad = &(fvid.gradients[id]);
+        this.ws_grad = &(fvid.workspaces[id]);
+
         version(multi_species_gas) {
             jx.length = n_species;
             jy.length = n_species;
@@ -162,7 +164,7 @@ public:
         }
     }
 
-    this(FVInterface other, GasModel gm, FlowState* fs, FlowGradients* grad, WLSQGradWorkspace* ws_grad) // not const; see note below
+    this(FVInterface other, GasModel gm) // not const; see note below
     {
         id = other.id;
         idir = other.idir;
@@ -180,14 +182,15 @@ public:
         n = other.n;
         t1 = other.t1;
         t2 = other.t2;
-        this.fs = fs;
         F = new_ConservedQuantities(other.F.length); F.copy_values_from(other.F);
         tau_wall_x = other.tau_wall_x;
         tau_wall_y = other.tau_wall_y;
         tau_wall_z = other.tau_wall_z;
         q = other.q;
-        this.grad = grad;
-        this.ws_grad = ws_grad;
+        this.fvid = other.fvid;
+        this.fs = &(fvid.flowstates[id]);
+        this.grad = &(fvid.gradients[id]);
+        this.ws_grad = &(fvid.workspaces[id]);
         // Because we copy the following pointers and references,
         // we cannot have const (or "in") qualifier on other.
         cloud_pos = other.cloud_pos.dup();

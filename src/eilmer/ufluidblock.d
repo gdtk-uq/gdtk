@@ -342,7 +342,7 @@ public:
         foreach (i; 0 .. grid.faces.length) facedata.workspaces ~= WLSQGradWorkspace();
 
         foreach (i, f; grid.faces) {
-            auto new_face = new FVInterface(myConfig, IndexDirection.none, &(facedata.flowstates[i]), &(facedata.gradients[i]), &(facedata.workspaces[i]), to!int(i));
+            auto new_face = new FVInterface(myConfig, IndexDirection.none, &facedata, to!int(i));
             faces ~= new_face;
         }
 

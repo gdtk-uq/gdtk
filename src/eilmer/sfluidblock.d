@@ -486,17 +486,18 @@ public:
                 vertices ~= new FVVertex(myConfig, lsq_workspace_at_vertices);
             }
             // First, ifi faces.
+            int fid = 0;
             foreach (n; 0 .. niv*njc*nkc) {
-                faces ~= new FVInterface(myConfig, IndexDirection.i, &(facedata.flowstates[n]), &(facedata.gradients[n]), &(facedata.workspaces[n]));
+                faces ~= new FVInterface(myConfig, IndexDirection.i, &facedata, fid); fid++;
             }
             // Second, ifj faces.
             foreach (n; 0 .. nic*njv*nkc) {
-                faces ~= new FVInterface(myConfig, IndexDirection.j, &(facedata.flowstates[n+nifaces]), &(facedata.gradients[n+nifaces]), &(facedata.workspaces[n+nifaces]));
+                faces ~= new FVInterface(myConfig, IndexDirection.j, &facedata, fid); fid++;
             }
             // Third, maybe, ifk faces.
             if (myConfig.dimensions == 3) {
                 foreach (n; 0 .. nic*njc*nkv) {
-                    faces ~= new FVInterface(myConfig, IndexDirection.k, &(facedata.flowstates[n+nifaces+njfaces]), &(facedata.gradients[n+nifaces+njfaces]), &(facedata.workspaces[n+nifaces+njfaces]));
+                    faces ~= new FVInterface(myConfig, IndexDirection.k, &facedata, fid); fid++;
                 }
             }
             // Now, construct the ghost cells, attaching them to the boundary faces.
@@ -679,12 +680,12 @@ public:
         // We will depend on this equality in other parts of the flow solver.
         // We also note that these cells are interior to the block (i.e. not ghost cells)
         foreach (i, c; cells) {
-            c.id = to!int(i);
+            //c.id = to!int(i);
             c.contains_flow_data = true;
             c.is_interior_to_domain = true;
         }
         foreach (i, v; vertices) { v.id = to!int(i); }
-        foreach (i, f; faces) { f.id = to!int(i); }
+        //foreach (i, f; faces) { f.id = to!int(i); }
         //
         // Set references to boundary faces in bc objects.
         foreach (k; 0 .. nkc) {
