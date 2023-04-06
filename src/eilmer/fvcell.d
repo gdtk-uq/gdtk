@@ -65,6 +65,8 @@ struct FVCellData{
     FlowState[] flowstates;
     FlowGradients[] gradients;
     WLSQGradWorkspace[] workspaces;
+    LSQInterpWorkspace[] lsqws;
+    LSQInterpGradients[] lsqgradients;
 }
 
 class FVCell {

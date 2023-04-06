@@ -306,7 +306,6 @@ public:
         // Assemble array storage for finite-volume cells, etc.
         bool lsq_workspace_at_vertices = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
-        uint nsp = myConfig.n_species;
         foreach (i, v; grid.vertices) {
             auto new_vtx = new FVVertex(myConfig, lsq_workspace_at_vertices, to!int(i));
             new_vtx.pos[0] = v;
@@ -315,7 +314,9 @@ public:
 
         // Allocate densified face and cell data
         auto gmodel = myConfig.gmodel;
+        size_t nsp = myConfig.n_species;
         size_t nturb =  myConfig.turb_model.nturb;
+        size_t nmodes = myConfig.n_modes;
         bool lsq_workspace_at_cells = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);
         bool lsq_workspace_at_faces = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
@@ -333,10 +334,13 @@ public:
         celldata.flowstates.reserve(grid.cells.length + nghost);
         celldata.gradients.reserve(grid.cells.length + nghost);
         celldata.workspaces.reserve(grid.cells.length + nghost);
+        celldata.lsqws.length = grid.cells.length;
+        celldata.lsqgradients.reserve(grid.cells.length);
 
         foreach (i; 0 .. grid.cells.length) celldata.flowstates ~= FlowState(gmodel, nturb);
         foreach (i; 0 .. grid.cells.length) celldata.gradients ~= FlowGradients(myConfig);
         foreach (i; 0 .. grid.cells.length) celldata.workspaces ~= WLSQGradWorkspace(); // TODO: skip if not needed
+        foreach (i; 0 .. grid.cells.length) celldata.lsqgradients ~= LSQInterpGradients(nsp, nmodes, nturb); // TODO: skip if not needed
 
         facedata.f2c.length = grid.faces.length;
         facedata.positions.length = grid.faces.length;
@@ -517,7 +521,6 @@ public:
         // interpolation/reconstruction of flow quantities at left- and right- sides
         // of cell faces.
         // (Will be used for the convective fluxes).
-        auto nmodes = myConfig.n_modes;
         if (myConfig.use_extended_stencil) {
             foreach (c; cells) {
                 // First cell in the cloud is the cell itself.  Differences are taken about it.
@@ -565,8 +568,8 @@ public:
                                 { c.cell_cloud ~= cells[cid]; cell_ids ~= cid; }
                     }
                 }
-                c.ws = new LSQInterpWorkspace();
-                c.gradients = new LSQInterpGradients(nsp, nmodes, nturb);
+                c.ws = &(celldata.lsqws[c.id]);
+                c.gradients = &(celldata.lsqgradients[c.id]);
             } // end foreach cell
         } else {
             foreach (c; cells) {
@@ -584,8 +587,8 @@ public:
                         }
                     }
                 } // end foreach face
-                c.ws = new LSQInterpWorkspace();
-                c.gradients = new LSQInterpGradients(nsp, nmodes, nturb);
+                c.ws = &(celldata.lsqws[c.id]);
+                c.gradients = &(celldata.lsqgradients[c.id]);
             } // end foreach cell
         } // end else
         // We will also need derivative storage in ghostcells because the
