@@ -421,12 +421,16 @@ extern(C) int newStructuredGrid(lua_State* L)
             string[] edges;
             // Extract the cluster functions from the table at top of stack.
             if (dimensions == 2) {
-                edges = ["north", "east", "south", "west"];
+                // The new face order, in 2023.  See ../geom/elements/nomenclature.d.
+                edges = ["west", "east", "south", "north"];
             } else {
+                // This 3D edge order needs to be kept consistent with
+                // the order expected by make_grid_from_volume() over in ../grid/sgrid.d.
                 edges = ["edge01", "edge12", "edge32", "edge03",
                          "edge45", "edge56", "edge76", "edge47",
                          "edge04", "edge15", "edge26", "edge37"];
             }
+            assert(number_of_edges == edges.length, "Mismatch in edge list.");
             foreach (edge_name; edges) {
                 lua_getfield(L, -1, edge_name.toStringz);
                 if ( lua_isnil(L, -1) ) {

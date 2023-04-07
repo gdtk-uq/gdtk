@@ -573,11 +573,10 @@ public:
                                 const(UnivariateFunction)[] clusterf)
     {
         // First, set up clustered parameter values along each edge.
-        // [FIX-ME] PJ 2023-04-07 Think about face order.
-        double[] rNorth = clusterf[0].distribute_parameter_values(niv);
-        double[] sEast = clusterf[1].distribute_parameter_values(njv);
-        double[] rSouth = clusterf[2].distribute_parameter_values(niv);
-        double[] sWest = clusterf[3].distribute_parameter_values(njv);
+        double[] sWest = clusterf[Face.west].distribute_parameter_values(njv);
+        double[] sEast = clusterf[Face.east].distribute_parameter_values(njv);
+        double[] rSouth = clusterf[Face.south].distribute_parameter_values(niv);
+        double[] rNorth = clusterf[Face.north].distribute_parameter_values(niv);
         // Now, work through the mesh, one point at a time,
         // blending the stretched parameter values
         // and creating the actual vertex coordinates in Cartesian space.
@@ -599,11 +598,10 @@ public:
                                          const(UnivariateFunction)[] clusterf)
     {
         // First, set up clustered parameter values along each edge.
-        // [FIX-ME] PJ 2023-04-07 Think about face order.
-        double[] rNorth = clusterf[0].distribute_parameter_values(niv);
-        double[] sEast = clusterf[1].distribute_parameter_values(njv);
-        double[] rSouth = clusterf[2].distribute_parameter_values(niv);
-        double[] sWest = clusterf[3].distribute_parameter_values(njv);
+        double[] sWest = clusterf[Face.west].distribute_parameter_values(njv);
+        double[] sEast = clusterf[Face.east].distribute_parameter_values(njv);
+        double[] rSouth = clusterf[Face.south].distribute_parameter_values(niv);
+        double[] rNorth = clusterf[Face.north].distribute_parameter_values(niv);
         // Now, work through the mesh, one point at a time,
         // linearly interpolating the stretched parameter values from edge values
         // and creating the actual vertex coordinates in Cartesian space.
@@ -630,11 +628,10 @@ public:
                                 const(double[4][4]) s_grid)
     {
         // First, set up clustered parameter values along each edge.
-        // [FIX-ME] PJ 2023-04-07 Think about face order.
-        double[] rNorth = clusterf[0].distribute_parameter_values(niv);
-        double[] sEast = clusterf[1].distribute_parameter_values(njv);
-        double[] rSouth = clusterf[2].distribute_parameter_values(niv);
-        double[] sWest = clusterf[3].distribute_parameter_values(njv);
+        double[] sWest = clusterf[Face.west].distribute_parameter_values(njv);
+        double[] sEast = clusterf[Face.east].distribute_parameter_values(njv);
+        double[] rSouth = clusterf[Face.south].distribute_parameter_values(niv);
+        double[] rNorth = clusterf[Face.north].distribute_parameter_values(niv);
         // Second, set up redistribution function to r,s.
         void remap(double r, double s, out double r_star, out double s_star)
         {

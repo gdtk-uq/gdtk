@@ -8,45 +8,27 @@ import std.math: PI;
 
 // Symbolic names and indices for the cells' faces.
 // The names of the faces of the structured-grid blocks will be the same.
-version (OLD_FACE_ORDER) {
-    enum Face {
-        north = 0,
-        east = 1,
-        south = 2,
-        west = 3,
-        top = 4,
-        bottom = 5
-    }
-    string[] face_name = [ "north", "east", "south", "west", "top", "bottom" ];
- } else {
-    // New face order, 2023-03-29, corresponding to the index notation used in Chicken.
-    // iminus, iplus, jminus, jplus, kminus, kplus
-    enum Face {
-        west = 0, iminus = 0,
-        east = 1, iplus = 1,
-        south = 2, jminus = 2,
-        north = 3, jplus = 3,
-        bottom = 4, kminus = 4,
-        top = 5, kplus = 5
-    }
-    string[] face_name = [ "west", "east", "south", "north", "bottom", "top" ];
- }
+// New face order, 2023-03-29, corresponding to the index notation used in Chicken.
+enum Face {
+    west = 0, iminus = 0,
+    east = 1, iplus = 1,
+    south = 2, jminus = 2,
+    north = 3, jplus = 3,
+    bottom = 4, kminus = 4,
+    top = 5, kplus = 5
+}
+string[] face_name = [ "west", "east", "south", "north", "bottom", "top" ];
+// Chicken names:       iminus, iplus,  jminus,  jplus,   kminus,   kplus
 
 uint face_index(string name)
 {
     switch ( name ) {
-    case "west":
-    case "iminus": return Face.west;
-    case "east":
-    case "iplus": return Face.east;
-    case "south":
-    case "jminus": return Face.south;
-    case "north":
-    case "jplus": return Face.north;
-    case "bottom":
-    case "kminus": return Face.bottom;
-    case "top":
-    case "kplus": return Face.top;
+    case "west": case "iminus": return Face.west;
+    case "east": case "iplus": return Face.east;
+    case "south": case "jminus": return Face.south;
+    case "north": case "jplus": return Face.north;
+    case "bottom": case "kminus": return Face.bottom;
+    case "top": case "kplus": return Face.top;
     default:
         throw new Error(text("Invalid face name: ", name));
     }
