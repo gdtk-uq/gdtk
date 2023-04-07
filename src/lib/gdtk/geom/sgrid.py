@@ -1,6 +1,6 @@
 # sgrid.py
 """
-StructuredGrid class for Eilmer calculations.
+StructuredGrid class for Eilmer, Chicken and Lorikeet calculations.
 
 Similar to the Dlang equivalent class.
 
@@ -13,6 +13,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from copy import copy
 import gzip
+import re
 from gdtk.geom.vector3 import Vector3
 from gdtk.geom.path import Path
 from gdtk.geom.surface import ParametricSurface, CoonsPatch
@@ -23,7 +24,7 @@ class StructuredGrid():
     """
     Structured grid.
     """
-    _slots_ = ['dimensions', 'niv', 'njv', 'nkv', 'vertices', 'label']
+    _slots_ = ['dimensions', 'niv', 'njv', 'nkv', 'vertices', 'label', 'tags']
 
     def __init__(self, **kwargs):
         """
@@ -37,6 +38,7 @@ class StructuredGrid():
             cf_list = kwargs.get('cf_list', [None, None, None, None])
             cf_list = [cf if isinstance(cf, ClusterFunction) else LinearFunction() for cf in cf_list]
             self.make_from_psurface(psurf, niv, njv, cf_list)
+            self.tags = kwargs.get('tags', ["",]*4)
         elif "pvolume" in kwargs.keys():
             pvolume = kwargs['pvolume']
             niv = kwargs.get('niv', 1)
@@ -45,17 +47,25 @@ class StructuredGrid():
             cf_list = kwargs.get('cf_list', [None, None, None])
             cf_list = [cf if isinstance(cf, ClusterFunction) else LinearFunction() for cf in cf_list]
             self.make_from_pvolume(pvolume, niv, njv, nkv, cf_list)
+            self.tags = kwargs.get('tags', ["",]*6)
         elif "empty" in kwargs.keys():
             # Sometimes we just want a blank object that we will build up.
             self.dimensions = None
             self.vertices = None
             self.niv = 0; self.njv = 0; self.nkv = 0
             self.label = ""
+            self.tags = []
             pass
         elif "gzfile" in kwargs.keys():
+            self.tags = []
             self.read_from_gzip_file(kwargs.get('gzfile'))
+            # The gzip file may include boundary tags but
+            # we might want to overwrite them, anyway.
+            self.tags = kwargs.get('tags', self.tags)
         elif "binaryfile" in kwargs.keys():
+            self.tags = []
             self.read_from_binary_file(kwargs.get('binaryfile'))
+            self.tags = kwargs.get('tags', self.tags)
         else:
             raise Exception("Do not know how to make grid.")
         self.label = "unknown"
@@ -66,6 +76,7 @@ class StructuredGrid():
         str += f"dimensions={self.dimensions}, niv={self.niv}, njv={self.njv}, nkv={self.nkv}"
         # [FIX-ME] limit how much is written for large number of vertices.
         str += f", vertices={self.vertices}"
+        str += f", tags={self.tags}"
         str += ")"
         return str
 
@@ -82,6 +93,7 @@ class StructuredGrid():
         r = np.fromfunction(lambda i,j: i, (niv, njv), dtype=float) / (niv-1)
         s = np.fromfunction(lambda i,j: j, (niv, njv), dtype=float) / (njv-1)
         # Compute independent cluster function along each edge.
+        # [FIX-ME] PJ 2023-04-07 Order of list items.
         rNorth = cf_list[0](r)
         sEast = cf_list[1](s)
         rSouth = cf_list[2](r)
@@ -154,11 +166,16 @@ class StructuredGrid():
         return newGrid
 
     def read_from_gzip_file(self, file_name):
+        """
+        Native format for Eilmer, Chicken and Lorikeet.
+        """
         f = gzip.open(file_name, "rt")
         line = f.readline(); items = line.split()
-        assert items[1] == "1.0", "incorrect structured_grid version"
+        assert items[0] == 'structured_grid'
+        format_version = items[1]
+        assert format_version in ['1.0', '1.1'] , "incorrect structured_grid version"
         line = f.readline(); items = line.split()
-        self.label = items[1]
+        self.label = items[1] if len(items) > 1 else ""
         line = f.readline(); items = line.split()
         self.dimensions = int(items[1])
         line = f.readline(); items = line.split()
@@ -167,7 +184,15 @@ class StructuredGrid():
         self.njv = int(items[1])
         line = f.readline(); items = line.split()
         self.nkv = int(items[1])
-        data = np.loadtxt(f)
+        # We now want to load the text associated with the vertex coordinates,
+        # followed by the boundary tags, if they are present.
+        data = np.loadtxt(f, max_rows=self.nkv*self.njv*self.niv)
+        if format_version == '1.1':
+            line = f.readline(); items = re.split(":", line)
+            ntags = int(items[1].strip())
+            for i in range(ntags):
+                line = f.readline(); items = re.split(":", line)
+                self.tags.append(items[1].strip())
         f.close()
         # The serialized data in the file has loops in the VTK index order,
         # with k as the outer loop, then j and then i as the innermost loop
@@ -188,6 +213,10 @@ class StructuredGrid():
         return
 
     def read_from_binary_file(self, file_name):
+        """
+        Bare-bones binary reading for Chicken and Lorikeet.
+        Not for Eilmer. No reading of boundary tags.
+        """
         data = np.fromfile(file_name, dtype=float)
         data = data.reshape((data.shape[0]//3,3))
         self.dimensions = int(data[0,0])
@@ -212,9 +241,12 @@ class StructuredGrid():
         self.vertices = Vector3(x=x.copy(), y=y.copy(), z=z.copy())
         return
 
-    def write_to_gzip_file(self, file_name):
+    def write_to_gzip_file(self, file_name, format_version="1.0"):
+        """
+        Native format for Eilmer, Chicken and Lorikeet.
+        """
         f = gzip.open(file_name, "wt")
-        f.write("structured_grid 1.0\n")
+        f.write("structured_grid %s\n" % format_version)
         f.write(f"label: {self.label}\n")
         f.write(f"dimensions: {self.dimensions}\n")
         f.write(f"niv: {self.niv}\n")
@@ -227,10 +259,18 @@ class StructuredGrid():
         data[:,1] = self.vertices.y.transpose().flatten()
         data[:,2] = self.vertices.z.transpose().flatten()
         np.savetxt(f, data)
+        if format_version == "1.1":
+            f.write(f"ntags: {len(self.tags)}\n")
+            for i, tag in enumerate(self.tags):
+                f.write(f"tag[{i}]: {tag}\n")
         f.close()
         return
 
     def write_to_binary_file(self, file_name):
+        """
+        Bare-bones binary writing for Chicken and Lorikeet.
+        Not for Eilmer. No writing of boundary tags.
+        """
         data = np.zeros((self.nkv*self.njv*self.niv+2,3), dtype=float)
         # Pack the metadata into the first two rows.
         data[0,:] = [float(self.dimensions), 0.0, 0.0]
@@ -243,6 +283,9 @@ class StructuredGrid():
         return
 
     def write_to_vtk_file(self, file_name):
+        """
+        Generic format for VTK-capable readers.
+        """
         f = open(file_name, "wt")
         f.write("# vtk DataFile Version 2.0\n")
         f.write(self.label+'\n')

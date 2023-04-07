@@ -573,6 +573,7 @@ public:
                                 const(UnivariateFunction)[] clusterf)
     {
         // First, set up clustered parameter values along each edge.
+        // [FIX-ME] PJ 2023-04-07 Think about face order.
         double[] rNorth = clusterf[0].distribute_parameter_values(niv);
         double[] sEast = clusterf[1].distribute_parameter_values(njv);
         double[] rSouth = clusterf[2].distribute_parameter_values(niv);
@@ -598,6 +599,7 @@ public:
                                          const(UnivariateFunction)[] clusterf)
     {
         // First, set up clustered parameter values along each edge.
+        // [FIX-ME] PJ 2023-04-07 Think about face order.
         double[] rNorth = clusterf[0].distribute_parameter_values(niv);
         double[] sEast = clusterf[1].distribute_parameter_values(njv);
         double[] rSouth = clusterf[2].distribute_parameter_values(niv);
@@ -628,6 +630,7 @@ public:
                                 const(double[4][4]) s_grid)
     {
         // First, set up clustered parameter values along each edge.
+        // [FIX-ME] PJ 2023-04-07 Think about face order.
         double[] rNorth = clusterf[0].distribute_parameter_values(niv);
         double[] sEast = clusterf[1].distribute_parameter_values(njv);
         double[] rSouth = clusterf[2].distribute_parameter_values(niv);
