@@ -1,1 +1,1 @@
-__all__ = ['field']
+__all__ = ['field', 'vtk_writer']

@@ -115,7 +115,7 @@ class Field():
                     for i in range(self.nic):
                         text = fp.readline().strip()
                         items = text.split(' ')
-                        assert(nvariables == len(items), "Wrong number of items on data line.")
+                        assert nvariables == len(items), "Wrong number of items on data line."
                         for n in range(nvariables):
                             self.data[self.variables[n]][i,j] = float(items[n])
             else:
@@ -127,7 +127,7 @@ class Field():
                         for i in range(self.nic):
                             text = fp.readline().strip()
                             items = text.split(' ')
-                            assert(nvariables == len(items), "Wrong number of items on data line.")
+                            assert nvariables == len(items), "Wrong number of items on data line."
                             for n in range(nvariables):
                                 self.data[self.variables[n]][i,j,k] = float(items[n])
             fp.close()

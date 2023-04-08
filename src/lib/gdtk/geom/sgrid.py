@@ -503,10 +503,10 @@ if __name__=='__main__':
     grid2.write_to_gzip_file("test2.gz")
 
     gridb = StructuredGrid(gzfile = "test.gz")
-    assert(grid.vertices.x.shape==gridb.vertices.x.shape)
-    assert(np.all(np.isclose(grid.vertices.x, gridb.vertices.x)))
-    assert(np.all(np.isclose(grid.vertices.y, gridb.vertices.y)))
-    assert(np.all(np.isclose(grid.vertices.z, gridb.vertices.z)))
+    assert grid.vertices.x.shape==gridb.vertices.x.shape
+    assert np.all(np.isclose(grid.vertices.x, gridb.vertices.x))
+    assert np.all(np.isclose(grid.vertices.y, gridb.vertices.y))
+    assert np.all(np.isclose(grid.vertices.z, gridb.vertices.z))
 
     p0 = Vector3(x=0.0, y=0.0, z=0.0)
     p1 = Vector3(x=1.0, y=0.0, z=0.0)
@@ -524,8 +524,8 @@ if __name__=='__main__':
     grid4.write_to_gzip_file("test4.gz")
 
     grid3b = StructuredGrid(gzfile = "test3.gz")
-    assert(grid3.vertices.x.shape==grid3b.vertices.x.shape)
-    assert(np.all(np.isclose(grid3.vertices.x, grid3b.vertices.x)))
-    assert(np.all(np.isclose(grid3.vertices.y, grid3b.vertices.y)))
-    assert(np.all(np.isclose(grid3.vertices.z, grid3b.vertices.z)))
+    assert grid3.vertices.x.shape==grid3b.vertices.x.shape
+    assert np.all(np.isclose(grid3.vertices.x, grid3b.vertices.x))
+    assert np.all(np.isclose(grid3.vertices.y, grid3b.vertices.y))
+    assert np.all(np.isclose(grid3.vertices.z, grid3b.vertices.z))
 
