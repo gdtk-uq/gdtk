@@ -22,7 +22,13 @@ from gdtk.geom.cluster import *
 
 class StructuredGrid():
     """
-    Structured grid.
+    A structured grid can be constructed on a parametric surface or volume or
+    can be read from a file.
+
+    Once in memory, the vertex coordinates are available as the numpy array, vertices.
+
+    There is a service function to return a subgrid, and functions to write the
+    grid to file.  Output formats include the native format and VTK format.
     """
     _slots_ = ['dimensions', 'niv', 'njv', 'nkv', 'vertices', 'label', 'tags']
 
