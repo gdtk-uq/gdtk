@@ -21,6 +21,8 @@ struct LmrCfg {
     immutable string blkFmtStr;
     immutable string snapshotDir;
     immutable string snapshotIdxFmtStr;
+    immutable string restartFile;
+    immutable string referenceResidualsFile;
     immutable string flowDir;
     immutable string zipExt;
     immutable string gzipExt;
@@ -49,6 +51,8 @@ static this()
     lmrCfg.blkFmtStr = lmrJSONCfg["block-filename-format"].str;
     lmrCfg.snapshotDir = lmrJSONCfg["snapshot-directory"].str;
     lmrCfg.snapshotIdxFmtStr = lmrJSONCfg["snapshot-index-format"].str;
+    lmrCfg.restartFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["restart-file"].str;
+    lmrCfg.referenceResidualsFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["reference-residuals-file"].str;
     lmrCfg.flowDir = lmrJSONCfg["flow-directory"].str;
     lmrCfg.zipExt = lmrJSONCfg["zip-extension"].str;
     lmrCfg.gzipExt = lmrJSONCfg["gziptext-extension"].str;

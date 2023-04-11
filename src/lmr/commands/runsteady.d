@@ -9,14 +9,30 @@ module runsteady;
 
 import core.runtime;
 import std.getopt;
-import std.stdio : writeln;
+import std.stdio : File, writeln, writefln;
+import std.string;
 
+import lmrconfig;
 import globalconfig;
 import command;
 import newtonkrylovsolver : initNewtonKrylovSimulation, performNewtonKrylovUpdates;
 
 version(mpi_parallel) {
     import mpi;
+}
+
+int determineNumberOfSnapshots()
+{
+    auto f = File(lmrCfg.restartFile, "r");
+    auto line = f.readln().strip();
+    int count = 0;
+    while (line.length > 0) {
+	if (line[0] != '#')
+	    ++count;
+	line = f.readln().strip();
+    }
+    f.close();
+    return count;
 }
 
 Command runSteadyCmd;
@@ -39,6 +55,21 @@ For distributed memory (using MPI), use the stand-alone executable 'lmr-mpi-run-
 For example:
 
    $ mpirun -np 4 lmr-mpi-run-steady
+
+options ([+] can be repeated):
+
+ -s, --snapshot-start
+     Index of snapshot to use when starting iterations.
+     examples:
+       -s 1 : start from snapshot 1
+       --snapshot-start=3 : start from snapshot 3
+       -s -1 : start from final snapshot
+       -s=0 : (special case) start from initial condition
+     default: none
+
+     NOTE: if the requested snapshot index is greater than
+           number of snapshots available, then the iterations will
+           begin from the final snapshot.
 
 `;
 }
@@ -83,6 +114,7 @@ void main(string[] args)
     
     int verbosity = 0;
     int snapshotStart = 0;
+    int numberSnapshots = 0;
     int maxCPUs = 1;
     int threadsPerMPITask = 1;
     string maxWallClock = "24:00:00";
@@ -90,7 +122,7 @@ void main(string[] args)
     getopt(args,
            config.bundling,
            "v|verbose+", &verbosity,
-           "s|snapshot", &snapshotStart,
+           "s|snapshot-start", &snapshotStart,
            "max-cpus", &maxCPUs,
            "threads-per-mpi-task", &threadsPerMPITask,
            "max-wall-clock", &maxWallClock);
@@ -99,6 +131,32 @@ void main(string[] args)
         writeln("lmr run-steady: Begin Newton-Krylov simulation.");
     }
 
+    writefln("verbosity= %d", verbosity);
+    writefln("snapshotStart= %d", snapshotStart);
+
+    // Figure out which snapshot to start from
+    if (GlobalConfig.is_master_task) {
+	numberSnapshots = determineNumberOfSnapshots();
+	writefln("numberSnapshots= %d", numberSnapshots);
+	if (snapshotStart == -1) {
+	    snapshotStart = numberSnapshots;
+	    if (verbosity > 1) {
+		writeln("lmr run-steady: snapshot requested is '-1' -- final snapshot");
+		writefln("lmr run-steady: starting from final snapshot, index= %02d", snapshotStart);
+	    }
+	}
+	if (snapshotStart > numberSnapshots) {
+	    if (verbosity > 1) {
+		writefln("lmr run-steady: snapshot requested is %02d; this is greater than number of available snapshots", snapshotStart);
+		writefln("lmr run-steady: starting from final snapshot, index= %02d", numberSnapshots);
+	    }
+	    snapshotStart = numberSnapshots;
+	}
+    }
+    version(mpi_parallel) {
+	MPI_Bcast(&snapshotStart, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    }
+    
     if (verbosity > 1) writeln("lmr run-steady: Initialise simulation.");
     initNewtonKrylovSimulation(snapshotStart, maxCPUs, threadsPerMPITask, maxWallClock);
 

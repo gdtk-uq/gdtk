@@ -14,7 +14,7 @@ import core.stdc.stdlib : exit;
 import core.memory : GC;
 import std.algorithm : min;
 import std.algorithm.searching : countUntil;
-import std.datetime : Clock;
+import std.datetime : DateTime, Clock;
 import std.parallelism : parallel, defaultPoolThreads;
 import std.stdio : File, writeln, writefln, stdout;
 import std.file : rename, readText;
@@ -393,7 +393,6 @@ Matrix!number Q1;
  */
 
 struct RestartInfo {
-    double pseudoSimTime;
     double dt;
     double cfl;
     int step;
@@ -404,8 +403,97 @@ struct RestartInfo {
     {
         residuals = new ConservedQuantities(n);
     }
+
+    this(this)
+    {
+	residuals = residuals.dup;
+    }
+    
 }
 RestartInfo[] snapshots;
+
+// For MPI, it's more robust on large clusters to broadcast
+// residuals and restart info than to rely on reading from file.
+// This was reported by Nick Gibbons. It seems the fact that these
+// files are very small might be the issue. Reading from them
+// from many processes on a networked filesystem does not seem
+// to work reliably.
+
+version(mpi_parallel){
+
+/**
+ * Helper function for sending around a conserved quantities object.
+ * 
+ * Authors: NNG and RJG
+ * Date: 2023-04-11
+ */
+void broadcastResiduals(ref ConservedQuantities residuals)
+{
+    double[] buffer;
+
+    int size = to!int(residuals.length);
+    version(complex_numbers) { size *= 2; }
+    buffer.length = size;
+
+    size_t i = 0;
+    foreach (f; residuals){
+        buffer[i] = f.re;
+        i++;
+        version(complex_numbers){
+            buffer[i] = f.im;
+            i++;
+        }
+    }
+
+    MPI_Bcast(buffer.ptr, size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    i = 0;
+    foreach (j; 0 .. residuals.length){
+        residuals[j].re = buffer[i];
+        i++;
+        version(complex_numbers) {
+            residuals[j].im = buffer[i];
+            i++;
+        }
+    }
+    return;
+}
+
+/**
+ * Helper function for sending around a collection of RestartInfo objects
+ *
+ * Notes: For some reason, this function does need a ref in its argument,
+ * even though dynamic arrays are supposed to be reference types...
+ *
+ * Authors: NNG and RJG
+ * Date: 2023-04-11
+ */
+void broadcastRestartInfo()
+{
+    // The main issue here is that the non-master processes do not actually know
+    // how many of these things there are. First we need sort that out.
+    // FIXME: Note that this could cause problems if this function is reused.
+    int n_snapshots = to!int(snapshots.length);
+    MPI_Bcast(&n_snapshots, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    if (!GlobalConfig.is_master_task) {
+        foreach (i; 0 .. n_snapshots){
+            snapshots ~= RestartInfo(GlobalConfig.cqi.n);
+        }
+    }
+
+    // Now that we have them allocated, we can fill them out
+    foreach (i; 0 .. n_snapshots){
+        MPI_Bcast(&(snapshots[i].dt), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&(snapshots[i].cfl), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&(snapshots[i].step), 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&(snapshots[i].globalResidual), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        broadcastResiduals(snapshots[n].residuals);
+    }
+}
+
+} // end version(mpi_parallel)
+
+
 
 /*
 struct LinearSystemInput {
@@ -939,30 +1027,41 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
          *  + determine how many snapshots have already been written
          *  + determine phase and set as active phase
          */
-	writeln("Restarts for NK solver not yet implemented.");
-	exit(1);
-	/* [TODO] Set up restarts from snapshots file and handle MPI case.
-	   
-	extractRestartInfoFromTimesFile(jobName);
-	referenceGlobalResidual = setReferenceResidualsFromFile();
+	// Only let master read from disk.
+	if (GlobalConfig.is_master_task) {
+	    readRestartMetadata();
+	    readReferenceResidualsFromFile();
+	}
+	// And, in MPI, broadcast information.
+	version(mpi_parallel) {
+	    broadcastRestartInfo();
+	    MPI_Bcast(&referenceGlobalResidual, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	    broadcastResiduals(referenceResiduals);
+	}
         referenceResidualsAreSet = true;
-        nWrittenSnapshots = determineNumberOfSnapshots();
-        RestartInfo restart = snapshots[snapshotStart];
+        nWrittenSnapshots = to!int(snapshots.length);
+        RestartInfo restart = snapshots[snapshotStart-1];
         startStep = restart.step + 1;
         globalResidual = restart.globalResidual;
         prevGlobalResidual = globalResidual;
         // Determine phase
-        foreach (phase, phaseStep; nkCfg.phaseChangesAtSteps) {
-            if (startStep < phaseStep) {
-                setPhaseSettings(phase); 
-                break;
-            }
-        }
-        // end condition when step is past final phase
-        if (startStep >= nkCfg.phaseChangesAtSteps[$-1]) {
-            auto finalPhase = nkCfg.phaseChangesAtSteps.length;
-            setPhaseSettings(finalPhase);
-        }
+	if (nkCfg.phaseChangesAtSteps.length == 0) {
+	    // Only a single phase
+	    setPhaseSettings(0);
+	}
+	else {
+	    foreach (phase, phaseStep; nkCfg.phaseChangesAtSteps) {
+		if (startStep < phaseStep) {
+		    setPhaseSettings(phase); 
+		    break;
+		}
+	    }
+	    // end condition when step is past final phase
+	    if (startStep >= nkCfg.phaseChangesAtSteps[$-1]) {
+		auto finalPhase = nkCfg.phaseChangesAtSteps.length;
+		setPhaseSettings(finalPhase);
+	    }
+	}
         if (activePhase.useAutoCFL) {
             cflSelector = new ResidualBasedAutoCFL(activePhase.autoCFLExponent, activePhase.maxCFL,
 						   activePhase.thresholdRelativeResidualForCFLGrowth);
@@ -971,7 +1070,6 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
         else { // Assume we have a global (phase-independent) schedule
             cfl = cflSelector.nextCFL(-1.0, startStep, -1.0, -1.0, -1.0);
         }
-	*/
     }
     else {
         // On fresh start, the phase setting must be at 0
@@ -993,13 +1091,6 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
     bool startOfNewPhase = false;
 
     foreach (step; startStep .. nkCfg.maxNewtonSteps+1) {
-        /*
-        debug {
-            writeln("DEBUG: performNewtoKrylovUpdate()");
-            writefln("       STEP %2d ", step);
-        }
-        */
-        
         /*---
          * 0. Check for any special actions based on step to perform at START of step
          *---
@@ -1052,21 +1143,9 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
          * 1. Perforn Newton update
          *---
          */
-        /*
-        debug {
-            writeln("DEBUG: performNewtoKrylovUpdate()");
-            writefln("       about to solve for Newton step.", step);
-        }
-        */
-
-        globalResidual = solveNewtonStep(updatePreconditionerThisStep);
-
-        /*
-        debug {
-            writeln("DEBUG: performNewtoKrylovUpdate()");
-            writefln("       Newton step done.", step);
-        }
-        */
+        prevGlobalResidual = globalResidual;
+        solveNewtonStep(updatePreconditionerThisStep);
+	computeGlobalResidual();
 
 	/* 1a. perform a physicality check if required */
         double omega = nkCfg.usePhysicalityCheck ? determineRelaxationFactor() : 1.0;
@@ -1150,15 +1229,9 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
          *---
          * Here we need to do some house-keeping and see if we continue with iterations.
          */
-        /*
-        debug {
-            writeln("DEBUG: performNewtoKrylovUpdate()");
-            writefln("       post-update actions on step=  %d", step);
-        }
-        */
-        
+
         /*----
-         * 2a. Search for reference residuals if needed
+         * 2a. Set reference residuals if needed
          *----
          */
         if (!referenceResidualsAreSet) {
@@ -1184,6 +1257,8 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
                     }
                     writeln("*");
                     writeln("*************************************************************************\n");
+
+		    writeReferenceResidualsToFile();
                 }
             }
         }
@@ -1217,7 +1292,9 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
                 }
             }
         }
+
         // [TODO] Add in a halt_now condition.
+
         /*---
          * 2c. Reporting (to files and screen)
          *---
@@ -1228,7 +1305,7 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
         }
 
         if (((step % nkCfg.stepsBetweenSnapshots) == 0) || finalStep) {
-            writeSnapshot(step, nWrittenSnapshots);
+            writeSnapshot(step, dt, cfl, nWrittenSnapshots);
         }
 
 	version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
@@ -1303,67 +1380,29 @@ void initPreconditioner()
     }
 }
 
-void extractRestartInfoFromTimesFile(string jobName)
+void writeReferenceResidualsToFile()
 {
-    size_t nConserved = GlobalConfig.cqi.n;
-    RestartInfo restartInfo = RestartInfo(nConserved);
-    // Start reading the times file, looking for the snapshot index
-    auto timesFile = File("./config/" ~ jobName ~ ".times");
-    auto line = timesFile.readln().strip();
-    while (line.length > 0) {
-        if (line[0] != '#') {
-            // Process a non-comment line.
-            auto tokens = line.split();
-            auto idx = to!int(tokens[0]);
-            restartInfo.pseudoSimTime = to!double(tokens[1]);
-            restartInfo.dt = to!double(tokens[2]);
-            restartInfo.cfl = to!double(tokens[3]);
-            restartInfo.step = to!int(tokens[4]);
-            restartInfo.globalResidual = to!double(tokens[5]);
-            size_t startIdx = 6;
-            foreach (ivar; 0 .. nConserved) {
-                restartInfo.residuals[ivar] = to!double(tokens[startIdx+ivar]);
-            }
-            snapshots ~= restartInfo;
-        }
-        line = timesFile.readln().strip();
+    auto f = File(lmrCfg.referenceResidualsFile, "w");
+    f.writef("%.18e", referenceGlobalResidual);
+    foreach (r; referenceResiduals) {
+	f.writef(" %.18e", r.re);
     }
-    timesFile.close();
-    return;
+    f.writef("\n");
+    f.close();
 }
 
-double setReferenceResidualsFromFile()
+void readReferenceResidualsFromFile()
 {
-    double refGlobalResidual;
     size_t nConserved = GlobalConfig.cqi.n;
-    
-    auto refResid = File(refResidFname, "r");
-    auto line = refResid.readln().strip();
+    auto f = File(lmrCfg.referenceResidualsFile, "r");
+    auto line = f.readln().strip();
     auto tokens = line.split();
-    refGlobalResidual = to!double(tokens[0]);
+    referenceGlobalResidual = to!double(tokens[0]);
     size_t startIdx = 1;
     foreach (ivar; 0 .. nConserved) {
         referenceResiduals[ivar] = to!double(tokens[startIdx+ivar]);
     }
-    refResid.close();
-    return refGlobalResidual;
-}
-
-int determineNumberOfSnapshots()
-{
-    string jobName = GlobalConfig.base_file_name;
-    int nWrittenSnapshots = 0;
-    auto timesFile = File("./config/" ~ jobName ~ ".times");
-    auto line = timesFile.readln().strip();
-    while (line.length > 0) {
-        if (line[0] != '#') {
-            nWrittenSnapshots++;
-        }
-        line = timesFile.readln().strip();
-    }
-    timesFile.close();
-    nWrittenSnapshots--; // We don't count the initial solution as a written snapshot
-    return nWrittenSnapshots; 
+    f.close();
 }
 
 void allocateGlobalGMRESWorkspace()
@@ -1576,7 +1615,7 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
  * History:
  *    2022-03-02  Major clean-up as part of refactoring work.
  */
-double solveNewtonStep(bool updatePreconditionerThisStep)
+void solveNewtonStep(bool updatePreconditionerThisStep)
 {
     /*
     debug {
@@ -1618,7 +1657,7 @@ double solveNewtonStep(bool updatePreconditionerThisStep)
     }
     */
     
-    double globalResidual = computeGlobalResidual();
+
 
     /*
     debug {
@@ -1774,11 +1813,6 @@ double solveNewtonStep(bool updatePreconditionerThisStep)
     gmresInfo.initResidual = beta0.re;
     gmresInfo.finalResidual = beta.re;
     gmresInfo.iterationCount = iterationCount;
-    
-    // NOTE: global residual is value at START, before applying Newton update.
-    // The caller applies the update, so we can't compute the new global
-    // residual in here.
-    return globalResidual;
 }
 
 /**
@@ -1858,16 +1892,13 @@ void determineScaleFactors(ref ConservedQuantities scale)
  * Authors: KAD and RJG
  * Date: 2022-03-02
  */
-double computeGlobalResidual()
+void computeGlobalResidual()
 {
-    double globalResidual;
     mixin(dotOverBlocks("globalResidual", "R", "R"));
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &globalResidual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
     globalResidual = sqrt(globalResidual);
-
-    return globalResidual;
 }
 
 
@@ -2946,9 +2977,10 @@ void writeDiagnostics(int step, double dt, double cfl, double wallClockElapsed, 
     diagnostics.close();
 }
 
-void writeSnapshot(int step, ref int nWrittenSnapshots)
+void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
 {
     alias cfg = GlobalConfig;
+    size_t nConserved = cfg.cqi.n;
     if (cfg.is_master_task) {
         writeln();
         writefln("+++++++++++++++++++++++++++++++++++++++");
@@ -2957,9 +2989,15 @@ void writeSnapshot(int step, ref int nWrittenSnapshots)
         writeln();
     }
 
+    if (!residualsUpToDate) {
+	computeResiduals(currentResiduals);
+	residualsUpToDate = true;
+    }
+    
     nWrittenSnapshots++;
 
     if (nWrittenSnapshots <= nkCfg.totalSnapshots) {
+	// Write snapshot
         auto dirName = steadyFlowDirectory(nWrittenSnapshots);        
         if (cfg.is_master_task) {
             ensure_directory_is_present(dirName);
@@ -2971,6 +3009,15 @@ void writeSnapshot(int step, ref int nWrittenSnapshots)
                 if (io.do_save()) io.save_to_file(fileName, dummySimTime);
             }
         }
+
+	// Add restart info
+	snapshots ~= RestartInfo(nConserved);
+	snapshots[$-1].step = step;
+	snapshots[$-1].dt = dt;
+	snapshots[$-1].cfl = cfl;
+	snapshots[$-1].globalResidual = globalResidual;
+	snapshots[$-1].residuals = currentResiduals.dup;
+	
     }
     else {
         // We need to shuffle all of the snapshots
@@ -2989,10 +3036,57 @@ void writeSnapshot(int step, ref int nWrittenSnapshots)
                 if (io.do_save()) io.save_to_file(fileName, dummySimTime);
             }
         }
+
+	// Shuffle the restart info
+	snapshots[0 .. nkCfg.totalSnapshots-1] = snapshots[1 .. nkCfg.totalSnapshots];
+	// Add new info at end
+	snapshots[$-1].step = step;
+	snapshots[$-1].dt = dt;
+	snapshots[$-1].cfl = cfl;
+	snapshots[$-1].globalResidual = globalResidual;
+	snapshots[$-1].residuals = currentResiduals.dup;
     }
-  
+
+    if (GlobalConfig.is_master_task) {
+	writeRestartMetadata(snapshots);
+    }
 }
 
+void writeRestartMetadata(RestartInfo[] snapshots)
+{
+    auto f = File(lmrCfg.restartFile, "w");
+    auto timeNow =  cast(DateTime)(Clock.currTime());
+    f.writefln("# Restart metadata written at: %s", timeNow.toSimpleString());
+    f.writefln("# step,  dt,  cfl, global-residual, n-conserved quantities residuals");
+    foreach (snap; snapshots) {
+	f.writef("%04d %.18e %.18e %.18e", snap.step, snap.dt, snap.cfl, snap.globalResidual);
+	foreach (r; snap.residuals) f.writef(" %.18e", r.re);
+	f.writef("\n");
+    }
+    f.close();
+}
+
+void readRestartMetadata()
+{
+    auto nConserved = GlobalConfig.cqi.n;
+    auto f = File(lmrCfg.restartFile, "r");
+    auto line = f.readln().strip();
+    while (line.length > 0) {
+	if (line[0] != '#') {
+	    // Process non-comment line
+	    auto tks = line.split();
+	    snapshots ~= RestartInfo(nConserved);
+	    snapshots[$-1].step = to!int(tks[0]);
+	    snapshots[$-1].dt = to!double(tks[1]);
+	    snapshots[$-1].cfl = to!double(tks[2]);
+	    snapshots[$-1].globalResidual = to!double(tks[3]);
+	    size_t start_idx = 4;
+	    foreach (i, ref r; snapshots[$-1].residuals) r = to!double(tks[start_idx+i]);
+	}
+	line = f.readln().strip();
+    }
+    f.close();
+}
 
 void printStatusToScreen(int step, double cfl, double dt, double wallClockElapsed, ref bool residualsUpToDate)
 {

@@ -321,6 +321,7 @@ lmr-run-steady: $(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		-e 's/PUT_PARALLEL_FLAVOUR_HERE/$(PARALLEL_FLAVOUR)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		$(LMR_CMD)/runsteady.d > main_with_rev_string.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)runsteady_main \
@@ -346,8 +347,8 @@ lmr-mpi-run-steady: $(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		-e 's/PUT_PARALLEL_FLAVOUR_HERE/$(PARALLEL_FLAVOUR)/' \
+		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		$(LMR_CMD)/runsteady.d > main_with_rev_string.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)runsteady_main \
 		$(DVERSION)mpi_parallel \
