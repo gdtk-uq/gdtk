@@ -840,15 +840,31 @@ public:
         } // end if interpolation_order > 1
     } // end convective_flux-phase0()
 
-        @nogc
+    @nogc
     override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0,
                                          FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
         // Compute limiter values of flow quantities for higher-order reconstruction, if required.
         // To be used, later, in the convective flux calculation.
     {
-
-        if (cell_list.length == 0) { cell_list = cells; }
-        if (vertex_list.length == 0) { vertex_list = vertices; }
+        if (cell_list.length==0) {
+        if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
+            if (GlobalConfig.frozen_limiter == false) {
+                switch (myConfig.unstructured_limiter) {
+                case UnstructuredLimiter.venkat:
+                    foreach (i; 0 .. ncells) {
+                        celldata.lsqgradients[i].venkat_limit2(celldata.flowstates[i],
+                            celldata.lsqws[i], celldata.volumes[i], celldata.positions[i],
+                            celldata.c2f[i], facedata.positions, false, myConfig);
+                    }
+                break;
+                default:
+                    throw new Error("Bad limiter selected");
+                }
+            }
+        }
+        // Compute limiter values of flow quantities for higher-order reconstruction, if required.
+        // To be used, later, in the convective flux calculation.
+        } else {
 
         if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             if (GlobalConfig.frozen_limiter == false) {
@@ -895,6 +911,7 @@ public:
                 } // end foreach c
             } // if (frozen_limter == false)
         } // end if interpolation_order > 1
+        }
     } // end convective_flux-phase0()
 
     @nogc
