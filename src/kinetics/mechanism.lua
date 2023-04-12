@@ -81,8 +81,8 @@ local function transformRelaxationTime(rt, p, q, db)
       t.mu_pq = (M_p * M_q)/(M_p + M_q)
       t.mu_pp = (M_p * M_p)/(M_p + M_p)
       t.mu_qq = (M_q * M_q)/(M_q + M_q)
-      t.theta_v_p = db[p].vib_data.theta_v
-      t.theta_v_q = db[q].vib_data.theta_v
+      t.theta_v_p = db[p].theta_v or db[p].vib_data.theta_v
+      t.theta_v_q = db[p].theta_v or db[q].vib_data.theta_v
       t.sigma = 0.5*(SSHSigma(p, db) + SSHSigma(q, db))
       t.epsilon = sqrt(db[p].epsilon * db[q].epsilon)
       t.f_m_p = computeMassFactor(p, db)
@@ -246,12 +246,12 @@ function mechanism.mechanismToLuaStr(index, m)
    local argStr
    if m.type == "V-T" or m.type == "E-V" or m.type == "V-E" then
       argStr = string.format("  p = '%s', q = '%s',\n", m.p, m.q)
-      argStr = argStr .. string.format("  mode_p = %d,\n", energy_modes[m.p])
+      argStr = argStr .. string.format("  mode_p = %d,\n", energy_modes[m.p].vib)
       argStr = argStr .. string.format("  rate = '%s',\n", m.rate)
       argStr = argStr .. string.format("  relaxation_time = %s\n", relaxationTimeToLuaStr(m.rt))
    elseif m.type == "V-V" then
       argStr = string.format("  p = '%s', q = '%s',\n", m.p, m.q)
-      argStr = argStr .. string.format("  mode_p = %d, mode_q= %d,\n", energy_modes[m.p], energy_modes[m.q])
+      argStr = argStr .. string.format("  mode_p = %d, mode_q= %d,\n", energy_modes[m.p].vib, energy_modes[m.q].vib)
       argStr = argStr .. string.format("  theta_D_p = %.3f, theta_D_q = %.3f,\n", db[m.p].vib_data.theta_D, db[m.q].vib_data.theta_D)
       argStr = argStr .. string.format("  theta_v_p = %.3f, theta_v_q = %.3f,\n", db[m.p].vib_data.theta_v, db[m.q].vib_data.theta_v)
       local R_univ = 8.31451
@@ -266,7 +266,7 @@ function mechanism.mechanismToLuaStr(index, m)
    elseif m.type == "C-V" or m.type == "C-E" then
       argStr = string.format("  p = '%s',\n", m.p)
       argStr = argStr .. string.format("  rate = '%s',\n", m.rate)
-      argStr = argStr .. string.format("  mode_p = %d,\n", energy_modes[m.p]) 
+      argStr = argStr .. string.format("  mode_p = %d,\n", energy_modes[m.p].vib) 
       argStr = argStr .. string.format("  reaction_index = %d,\n", m.reaction_index)
       argStr = argStr .. string.format("  coupling_model = %s\n", chemistryCouplingTypeToLuaStr(m.coupling_model))
    else

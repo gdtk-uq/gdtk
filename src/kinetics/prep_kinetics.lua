@@ -58,6 +58,32 @@ function buildVerboseLuaFile(fName)
    f:close()
 end
 
+local function splitComponent(component)
+   -- split an energy component of the form "species:energy_type", as given in the gas model
+   -- into the species and energy_type
+   local t = {}
+   for str in string.gmatch(component, "([^:]+)") do
+      table.insert(t, str)
+   end
+   return t[1], t[2]
+end
+
+local function buildEnergyModes(mode_names, modes)
+   -- Build a table which maps the species name (and energy type) to the 
+   -- energy mode index where that energy is accounted for.
+   local energy_modes = {}
+   for imode, mode_name in ipairs(mode_names) do
+      for _, comp in ipairs(modes[mode_name]) do
+         local species, energy_type = splitComponent(comp)
+         if not energy_modes[species] then
+            energy_modes[species] = {}
+         end
+         energy_modes[species][energy_type] = imode-1
+      end
+   end
+   return energy_modes
+end
+
 
 function main()
    local gmodelFile, chemmodelFile, inFname, outFname
@@ -117,18 +143,23 @@ function main()
    end
    -- Do the same for energy_modes
    if energy_modes then
-      for imode,mode in ipairs(energy_modes) do
-	 energy_modes[mode] = imode-1
-      end
-   else
+      energy_modes = buildEnergyModes(energy_modes, db.modes)
+   elseif physical_model == "two-temperature-gas" then
       -- For 2-T, we don't require the user to set energy modes explicitly
       -- since we can make that decision. So we'll set it up.
       energy_modes = {}
       for isp,sp in ipairs(species) do
-	 if db[sp].type == 'molecule' then
-	    energy_modes[sp] = 0
-         elseif db[sp].type == "electron" then
-            energy_modes[sp] = 1
+         energy_modes[sp] = {}
+         energy_modes[sp].vib = 0
+         energy_modes[sp].electronic = 0
+      end
+   elseif physical_model == "three-temperature-gas" then
+      energy_modes = {}
+      for isp, sp in ipairs(species) do
+         if db[sp].type == "molecule" then
+            energy_modes[sp] = {}
+            energy_modes[sp].vib = 0
+            energy_modes[sp].electronic = 1
          end
       end
    end
