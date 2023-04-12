@@ -706,9 +706,9 @@ public:
     } // end van_albada_limit()
 
     @nogc
-    void venkat_limit2(ref FlowState fs, ref LSQInterpWorkspace ws, number volume, Vector3 pos,
+    void venkat_limit2(in FlowState fs, in LSQInterpWorkspace ws, number volume, Vector3 pos,
                        size_t[] face_idxs, Vector3[] facepositions,
-                       bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig)
+                       bool apply_heuristic_pressure_limiter, LocalConfig myConfig)
     {
         // This is the classic Venkatakrishnan limiter from ref. [1], refer to ref. [2] for implementation details.
         // We use the new definition for eps2 as given in ref. [3].
