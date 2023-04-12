@@ -130,8 +130,11 @@ void main(string[] args)
            "threads-per-mpi-task", &threadsPerMPITask,
            "max-wall-clock", &maxWallClock);
 
-    if (verbosity > 0) {
-        writeln("lmr run-steady: Begin Newton-Krylov simulation.");
+    if (verbosity > 0 && GlobalConfig.is_master_task) {
+	writeln("lmr run-steady: Begin Newton-Krylov simulation.");
+	version(mpi_parallel) {
+	    writefln("lmr-mpi-run-steady: number of MPI ranks= %d", size);
+	}
     }
 
     // Figure out which snapshot to start from
@@ -156,10 +159,10 @@ void main(string[] args)
 	MPI_Bcast(&snapshotStart, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
     
-    if (verbosity > 1) writeln("lmr run-steady: Initialise simulation.");
+    if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run-steady: Initialise simulation.");
     initNewtonKrylovSimulation(snapshotStart, maxCPUs, threadsPerMPITask, maxWallClock);
 
-    if (verbosity > 1) writeln("lmr run-steady: Perform Newton steps.");
+    if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run-steady: Perform Newton steps.");
     performNewtonKrylovUpdates(snapshotStart, maxCPUs, threadsPerMPITask);
 
     return;

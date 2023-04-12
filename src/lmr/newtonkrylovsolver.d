@@ -521,7 +521,7 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
 {
     alias cfg = GlobalConfig;
     if (cfg.verbosity_level > 0 && cfg.is_master_task) {
-        writeln("Begin initNewtonKrylovSimulation()...");
+        writeln("lmr run-steady: Begin initNewtonKrylovSimulation()...");
     }
     // Start timer
     SimState.maxWallClockSeconds = timeStringToSeconds(maxWallClock);
@@ -593,7 +593,7 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     if (cfg.verbosity_level > 0 && cfg.is_master_task) {
         // For reporting wall-clock time, convert to seconds with precision of milliseconds.
         double wall_clock_elapsed = to!double((Clock.currTime() - SimState.wall_clock_start).total!"msecs"())/1000.0;
-        writefln("Done initNewtonKrylovSimulation() at wall-clock(WC)= %.1f sec", wall_clock_elapsed);
+        writefln("lmr run-steady: Done initNewtonKrylovSimulation() at wall-clock(WC)= %.1f sec", wall_clock_elapsed);
         stdout.flush();
     }
 }
