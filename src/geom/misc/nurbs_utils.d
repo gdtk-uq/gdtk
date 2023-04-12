@@ -6,9 +6,13 @@
 
 module nurbs_utils;
 
-import std.format;
 import std.conv;
+import std.format;
 import std.math;
+
+import geom.volume.nurbsvolume;
+
+import nm.number;
 
 int findSpan(double u, int n, int p, const double[] U) {
     // Returns the index of the given knot vector whose value is less than the given parameter
@@ -63,10 +67,25 @@ void basisFuns(int i, double u, int p, const double[] U, ref double[] N, ref NUR
 
 void PwTest(const double[4][] Pw) {
     if (Pw.length < 2) {
-	        string errMsg = "NURBS() A NURBS path requires at least two control points.\n";
-	        errMsg ~= format("Supplied number of control points: %s", Pw.length);
-	        throw new Error(text(errMsg));
+        string errMsg = "NURBS() A NURBS path requires at least two control points.\n";
+        errMsg ~= format("Supplied number of control points: %s", Pw.length);
+        throw new Error(text(errMsg));
     }
+}
+
+number[4][][][] duplicatePw(const number[4][][][] Pw) {
+    number[4][][][] Pw_copy;
+    Pw_copy.length = Pw.length;
+    foreach (i, array_i; Pw) {
+        Pw_copy[i].length = array_i.length;
+        foreach (j, array_j; array_i) {
+            Pw_copy[i][j].length = array_j.length;
+            foreach (k, array_k; array_j) {
+                Pw_copy[i][j][k] = array_k;
+            }
+        }
+    }
+    return Pw_copy;
 }
 
 double[] autoKnotVector(int N, int p) {
@@ -81,24 +100,24 @@ double[] autoKnotVector(int N, int p) {
     U.length = q + 1;
     foreach (i; 0 .. q+1) {
         // clamp start of curve
-        if ((0 <= i) && (i <= p)) {
-            U[i] = 0.0;
-        }
+        if ((0 <= i) && (i <= p)) { U[i] = 0.0; }
         // fill internal knots
-        if ((p < i) && (i <= q-p-1)) {
-            U[i] = i - p;
-        }
+        if ((p < i) && (i <= q-p-1)) { U[i] = i - p; }
         // clamp end of curve
-        if ((q-p-1 < i) && (i <= q)) {
-            U[i] = q - 2*p;
-        }
+        if ((q-p-1 < i) && (i <= q)) { U[i] = q - 2*p; }
     }
     // normalise knot vector
     double UMax = U[$-1];
-    foreach (i; 0 .. q+1) {
-        U[i] /= UMax;
-    }
+    foreach (i; 0 .. q+1) { U[i] /= UMax; }
     return U;
+}
+
+void convNURBSVolDataToVTK(string nurbsDataFile, string volVTKFile="nurbs.vts", string netVTKFile="net.vts")
+{
+    auto nurbs = new NURBSVolume(nurbsDataFile);
+    nurbs.writeAsVtkXml(volVTKFile);
+    nurbs.writeCntrlNetAsVtkXml(netVTKFile);
+    return;
 }
 
 version(nurbs_utils_test) {

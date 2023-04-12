@@ -7,6 +7,8 @@
 
 module geom.volume.parametricvolume;
 
+import std.stdio;
+
 import geom.elements;
 
 // Nomenclature for the parametric distances, bounding surfaces, paths and corners.
@@ -266,3 +268,37 @@ public:
     }
         
 } // end class ParametricVolume
+
+void writeVolumeAsVtkXml(ParametricVolume vol, string fileName, int nrPts, int nsPts, int ntPts)
+{
+    double dr = 1.0/(nrPts-1);
+    double ds = 1.0/(nsPts-1);
+    double dt = 1.0/(ntPts-1);
+    auto f = File(fileName, "w");
+    f.writeln("<VTKFile type=\"StructuredGrid\" version=\"1.0\" header_type=\"UInt64\">");
+    f.writefln("  <StructuredGrid WholeExtent=\"%d %d %d %d %d %d\">", 0, nrPts-1, 0, nsPts-1, 0, ntPts-1);
+    f.writefln("    <Piece Extent=\"%d %d %d %d %d %d\">",  0, nrPts-1, 0, nsPts-1, 0, ntPts-1);
+    f.writeln("      <Points>");
+    f.writeln("        <DataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\">");
+    foreach (k; 0 .. ntPts) {
+        foreach (j; 0 .. nsPts) {
+            foreach (i; 0 .. nrPts) {
+                auto r = i*dr;
+                auto s = j*ds;
+                auto t = k*dt;
+                auto p = vol(r, s, t);
+                version (complex_numbers) {
+                    f.writefln("       %20.16e %20.16e %20.16e", p.x.re, p.y.re, p.z.re);
+                } else {
+                    f.writefln("       %20.16e %20.16e %20.16e", p.x, p.y, p.z);
+                }
+            }
+        }
+    }
+    f.writeln("        </DataArray>");
+    f.writeln("      </Points>");
+    f.writeln("    </Piece>");
+    f.writeln("  </StructuredGrid>");
+    f.writeln("</VTKFile>");
+    f.close();
+}
