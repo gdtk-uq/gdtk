@@ -11,6 +11,7 @@ import core.runtime;
 import std.getopt;
 import std.stdio : File, writeln, writefln;
 import std.string;
+import std.file : exists;
 
 import lmrconfig;
 import globalconfig;
@@ -23,6 +24,9 @@ version(mpi_parallel) {
 
 int determineNumberOfSnapshots()
 {
+    if (!exists(lmrCfg.restartFile))
+	return 0;
+	
     auto f = File(lmrCfg.restartFile, "r");
     auto line = f.readln().strip();
     int count = 0;
@@ -71,6 +75,9 @@ options ([+] can be repeated):
            number of snapshots available, then the iterations will
            begin from the final snapshot.
 
+ -v, --verbose [+]
+     Increase verbosity during progression of iterative solver.
+
 `;
 }
 
@@ -106,10 +113,6 @@ void main(string[] args)
         writeln("Compiler-name: PUT_COMPILER_NAME_HERE");
 	writeln("Parallel-flavour: PUT_PARALLEL_FLAVOUR_HERE");
         writeln("Build-date: PUT_BUILD_DATE_HERE");
-
-	writeln("debug.....");
-	writeln("args= ", args);
-	writeln("size= ", GlobalConfig.mpi_size);
     }
     
     int verbosity = 0;
@@ -131,13 +134,9 @@ void main(string[] args)
         writeln("lmr run-steady: Begin Newton-Krylov simulation.");
     }
 
-    writefln("verbosity= %d", verbosity);
-    writefln("snapshotStart= %d", snapshotStart);
-
     // Figure out which snapshot to start from
     if (GlobalConfig.is_master_task) {
 	numberSnapshots = determineNumberOfSnapshots();
-	writefln("numberSnapshots= %d", numberSnapshots);
 	if (snapshotStart == -1) {
 	    snapshotStart = numberSnapshots;
 	    if (verbosity > 1) {

@@ -487,7 +487,7 @@ void broadcastRestartInfo()
         MPI_Bcast(&(snapshots[i].cfl), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         MPI_Bcast(&(snapshots[i].step), 1, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Bcast(&(snapshots[i].globalResidual), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        broadcastResiduals(snapshots[n].residuals);
+        broadcastResiduals(snapshots[i].residuals);
     }
 }
 
