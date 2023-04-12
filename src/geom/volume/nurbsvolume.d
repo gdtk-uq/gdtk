@@ -440,20 +440,30 @@ private:
         basisFuns(wSpan, w, r, W, mNw, mNws_w);
         foreach (m; 0 .. r+1) {
             foreach (l; 0 .. q+1) {
-                foreach (n; 0 .. 4) temp1[l][m][n] = 0.0;
+                foreach (n; 0 .. 4) { temp1[l][m][n] = 0.0; }
                 foreach (k; 0 .. p+1) {
-                    temp1[l][m][] += mNu[k]*Pw[uSpan-p+k][vSpan-q+l][wSpan-r+m][];
+                    foreach (n; 0 .. 4) {
+                        temp1[l][m][] += mNu[k]*Pw[uSpan-p+k][vSpan-q+l][wSpan-r+m][n];
+                    }
                 }
             }
         }
         foreach (m; 0 .. r+1) {
-            foreach (n; 0 .. 4) temp2[m][n] = 0.0;
-            foreach (l; 0 .. q+1) temp2[m][] += mNv[l]*temp1[l][m][];
+            foreach (n; 0 .. 4) { temp2[m][n] = 0.0; }
+            foreach (l; 0 .. q+1) {
+                foreach (n; 0 .. 4) {
+                    temp2[m][n] += mNv[l]*temp1[l][m][n];
+                }
+            }
         }
-        foreach (n; 0 .. 4) mSw[n] = 0.0;
-        foreach (n; 0 .. 3) mS[n] = 0.0;
-        foreach (m; 0 .. r+1) mSw[] += mNw[m]*temp2[m][];
-        foreach (i; 0 .. 3) mS[i] = mSw[i]/mSw[3];
+        foreach (n; 0 .. 4) { mSw[n] = 0.0; }
+        foreach (n; 0 .. 3) { mS[n] = 0.0; }
+        foreach (m; 0 .. r+1) {
+            foreach (n; 0 .. 4) {
+                mSw[n] += mNw[m]*temp2[m][n];
+            }
+        }
+        foreach (i; 0 .. 3) { mS[i] = mSw[i]/mSw[3]; }
         return Vector3(mS);
     }
 }
