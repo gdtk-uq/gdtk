@@ -101,13 +101,13 @@ public:
         if (put_mass_in_last_position) {
             xMom = 0; names ~= "x-mom";
             yMom = 1; names ~= "y-mom";
-            if (dimensions == 3) {
+            if (dimensions == 3 || MHD) {
                 threeD = true;
                 zMom = 2; names ~= "z-mom";
                 totEnergy = 3; names ~= "total-energy";
                 n = 4;
             } else {
-                // Do not carry z-momentum for 2D simulations.
+                // Do not carry z-momentum for 2D simulations (unless it's MHD).
                 threeD = false;
                 totEnergy = 2; names ~= "total-energy";
                 n = 3;
@@ -148,13 +148,13 @@ public:
             mass = 0; names ~= "mass";
             xMom = 1; names ~= "x-mom";
             yMom = 2; names ~= "y-mom";
-            if (dimensions == 3) {
+            if (dimensions == 3 || MHD) {
                 threeD = true;
                 zMom = 3; names ~= "z-mom";
                 totEnergy = 4; names ~= "total-energy";
                 n = 5;
             } else {
-                // Do not carry z-momentum for 2D simulations.
+                // Do not carry z-momentum for 2D simulations (unless it's MHD).
                 threeD = false;
                 totEnergy = 3; names ~= "total-energy";
                 n = 4;
