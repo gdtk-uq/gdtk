@@ -331,6 +331,7 @@ public:
         // For this reason, we want to reserve sufficient space in the array here.
         celldata.volumes.length = grid.cells.length + nghost;
         celldata.positions.length = grid.cells.length + nghost;
+        celldata.face_distances.length = grid.cells.length;
         celldata.flowstates.reserve(grid.cells.length + nghost);
         celldata.gradients.reserve(grid.cells.length + nghost);
         celldata.workspaces.reserve(grid.cells.length + nghost);
@@ -666,6 +667,12 @@ public:
             foreach (c; cells) { c.update_3D_geometric_data(gtl, myConfig.true_centroids); }
             foreach (f; faces) { f.update_3D_geometric_data(gtl); }
         }
+
+        foreach(i, ifaces; celldata.c2f){
+            foreach(j, jface; ifaces){ 
+                celldata.face_distances[i][j] = facedata.positions[jface] - celldata.positions[i];
+            }
+        }
         //
         // Guess the position ghost-cell centres and copy cross-cell lengths.
         // Copy without linear extrapolation for the moment.
@@ -853,8 +860,8 @@ public:
                 case UnstructuredLimiter.venkat:
                     foreach (i; 0 .. ncells) {
                         celldata.lsqgradients[i].venkat_limit2(celldata.flowstates[i],
-                            celldata.lsqws[i], celldata.volumes[i], celldata.positions[i],
-                            celldata.c2f[i], facedata.positions, false, myConfig);
+                            celldata.lsqws[i], celldata.volumes[i], celldata.face_distances[i],
+                            false, myConfig);
                     }
                 break;
                 default:

@@ -706,8 +706,8 @@ public:
     } // end van_albada_limit()
 
     @nogc
-    void venkat_limit2(in FlowState fs, in LSQInterpWorkspace ws, number volume, Vector3 pos,
-                       size_t[] face_idxs, Vector3[] facepositions,
+    void venkat_limit2(in FlowState fs, in LSQInterpWorkspace ws, number volume,
+                       Vector3[4] face_distances,
                        bool apply_heuristic_pressure_limiter, LocalConfig myConfig)
     {
         // This is the classic Venkatakrishnan limiter from ref. [1], refer to ref. [2] for implementation details.
@@ -765,12 +765,9 @@ public:
             eps2 = (K*delu*delu)/(1.0+theta);
             eps2 += 1.0e-25; // prevent division by zero
             phi = 1.0;
-            foreach (i; face_idxs) {
-                number dx = facepositions[i].x - pos.x;
-                number dy = facepositions[i].y - pos.y;
-                number dz = facepositions[i].z - pos.z;
-                delm = "~gname~"[0] * dx + "~gname~"[1] * dy;
-                if (myConfig.dimensions == 3) { delm += "~gname~"[2] * dz; }
+            foreach (dx; face_distances) {
+                delm = "~gname~"[0] * dx.x + "~gname~"[1] * dx.y;
+                if (myConfig.dimensions == 3) { delm += "~gname~"[2] * dx.z; }
                 delp = (delm >= 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
                 delp /= nondim;
                 delm /= nondim;
@@ -2280,3 +2277,31 @@ public:
         return;
     } // end interp_left()
 
+
+
+@nogc number venkat_velocity(number qname, number[3] gname, number qMaxname, number qMinname) {
+    number velMax = sqrt(velxMax*velxMax+velyMax*velyMax+velzMax*velzMax);
+    number velMin = sqrt(velxMin*velxMin+velyMin*velyMin+velzMin*velzMin);
+    number nondim = 0.5*fabs(velMax+velMin) + 1.0e-25;
+    number U = qname;
+    number delu = (qMaxname-qMinname)/nondim;
+    number theta = delu/h;
+    number eps2 = (K*delu*delu)/(1.0+theta);
+    eps2 += 1.0e-25; // prevent division by zero
+
+    number phi = 1.0;
+    foreach (dx; face_distances) {
+        delm = gname[0] * dx.x + gname[1] * dx.y;
+        if (myConfig.dimensions == 3) { delm += gname[2] * dx.z; }
+        delp = (delm >= 0.0) ? qMaxname - U: qMinname - U;
+        delp /= nondim;
+        delm /= nondim;
+        if (delm == 0.0) {
+            phi_f = 1.0;
+        } else {
+            phi_f = (delp*delp + 2.0*delp*delm + eps2)/(delp*delp + 2.0*delm*delm + delp*delm + eps2);
+        }
+        phi = fmin(phi, phi_f);
+    }
+    return phi;
+}

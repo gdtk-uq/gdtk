@@ -62,6 +62,7 @@ struct FVCellData{
     size_t[][] c2f;
     number[] volumes;
     Vector3[] positions;
+    Vector3[4][] face_distances;
     FlowState[] flowstates;
     FlowGradients[] gradients;
     WLSQGradWorkspace[] workspaces;
