@@ -443,7 +443,7 @@ private:
                 foreach (n; 0 .. 4) { temp1[l][m][n] = 0.0; }
                 foreach (k; 0 .. p+1) {
                     foreach (n; 0 .. 4) {
-                        temp1[l][m][] += mNu[k]*Pw[uSpan-p+k][vSpan-q+l][wSpan-r+m][n];
+                        temp1[l][m][n] += mNu[k]*Pw[uSpan-p+k][vSpan-q+l][wSpan-r+m][n];
                     }
                 }
             }
