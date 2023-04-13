@@ -261,7 +261,7 @@ function mechanism.mechanismToLuaStr(index, m)
    elseif m.type == "E-T" then
       argStr = string.format("  p = '%s', q = '%s',\n", m.p, m.q)
       argStr = argStr .. string.format("  rate = 'ElectronExchange',\n")
-      argStr = argStr .. string.format("  mode_p = %d,\n", energy_modes[m.p])
+      argStr = argStr .. string.format("  mode_p = %d,\n", energy_modes[m.p].electron)
       argStr = argStr .. string.format("  exchange_cross_section = %s\n", tableToString(m.exchange_cross_section))
    elseif m.type == "C-V" or m.type == "C-E" then
       argStr = string.format("  p = '%s',\n", m.p)
