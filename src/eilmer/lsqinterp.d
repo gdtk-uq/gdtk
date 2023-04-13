@@ -123,10 +123,10 @@ public:
         number BxMin, ByMin, BzMin, psiMin;
     }
     version(turbulence) {
-        number[3][] turb;
-        number[] turbPhi;
-        number[] turbMax;
-        number[] turbMin;
+        number[3][2] turb;
+        number[2] turbPhi;
+        number[2] turbMax;
+        number[2] turbMin;
     }
     version(multi_species_gas) {
         number[3][] massf;
@@ -168,13 +168,6 @@ public:
             T_modesMin.length = nmodes;
             u_modesMin.length = nmodes;
         }
-        version(turbulence) {
-            turb.length = nturb;
-            turbPhi.length = nturb;
-            turbMax.length = nturb;
-            turbMin.length = nturb;
-        }
-
         // The user has the option to postprocess the limiter values for visualisation,
         // so we initialize these values to -1.0.
         // We need to do this because:

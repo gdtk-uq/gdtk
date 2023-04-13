@@ -258,7 +258,7 @@ The value should be a number.`;
         foreach(it; 0 .. tm.nturb){
             string tvname = tm.primitive_variable_name(it);
             double tv = getNumberFromTable(L, tblindx, tvname, false, 0.0, true, format(errMsgTmplt, tvname));
-            turb ~= tv;
+            turb[it] = tv;
         }
     } else if (lua_istable(L, -1)) {
         // TODO: Consider making LUA always store tvariables by name
@@ -270,13 +270,15 @@ The value should be a number.`;
         errMsg ~= "turb field not valid";
         throw new LuaInputException(errMsg);
     }
+    double[2] turb0 = 0.0;
+    foreach(it; 0 .. turb.length) turb0[it] = turb[it];
     double mu_t = getNumberFromTable(L, tblindx, "mu_t", false, 0.0, true, format(errMsgTmplt, "mu_t"));
     double k_t = getNumberFromTable(L, tblindx, "k_t", false, 0.0, true, format(errMsgTmplt, "k_t"));
 
     // Shock detector value.
     double S = getNumberFromTable(L, tblindx, "S", false, 0.0, true, format(errMsgTmplt, "S"));
 
-    FlowState* fs = new FlowState(managedGasModel, p, T, T_modes, vel, turb, massf, quality, B,
+    FlowState* fs = new FlowState(managedGasModel, p, T, T_modes, vel, turb0, massf, quality, B,
                                   psi, divB, mu_t, k_t, S);
     return fs;
 } // end makeFlowStateFromTable()
