@@ -42,6 +42,7 @@ NewtonKrylovGlobalConfigHidden = {
    max_linear_solver_iterations = 10,
    max_linear_solver_restarts = 0,
    use_scaling = true,
+   use_real_valued_frechet_derivative = false,
    frechet_derivative_perturbation = 1.0e-30,
    use_preconditioner = true,
    preconditioner_perturbation = 1.0e-30,
@@ -124,6 +125,7 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    f:write(string.format('"max_linear_solver_iterations": %d,\n', nkConfig.max_linear_solver_iterations))
    f:write(string.format('"max_linear_solver_restarts": %d,\n', nkConfig.max_linear_solver_restarts))
    f:write(string.format('"use_scaling": %s,\n', tostring(nkConfig.use_scaling)))
+   f:write(string.format('"use_real_valued_frechet_derivative": %s,\n', tostring(nkConfig.use_real_valued_frechet_derivative)))
    f:write(string.format('"frechet_derivative_perturbation": %.18e,\n', nkConfig.frechet_derivative_perturbation))
    f:write(string.format('"use_preconditioner": %s,\n', tostring(nkConfig.use_preconditioner)))
    f:write(string.format('"preconditioner_perturbation": %.18e,\n', nkConfig.preconditioner_perturbation))

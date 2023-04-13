@@ -156,6 +156,7 @@ struct NKGlobalConfig {
     int maxLinearSolverIterations = 10;
     int maxLinearSolverRestarts = 0;
     bool useScaling = true;
+    bool useRealValuedFrechetDerivative = false;
     double frechetDerivativePerturbation = 1.0e-30;
     bool usePreconditioner = true;
     double preconditionerPerturbation = 1.0e-30;
@@ -200,6 +201,7 @@ struct NKGlobalConfig {
 	maxLinearSolverIterations = getJSONint(jsonData, "max_linear_solver_iterations", maxLinearSolverIterations);
         maxLinearSolverRestarts = getJSONint(jsonData, "max_linear_solver_restarts", maxLinearSolverRestarts);
         useScaling = getJSONbool(jsonData, "use_scaling", useScaling);
+        useRealValuedFrechetDerivative = getJSONbool(jsonData, "use_real_valued_frechet_derivative", useRealValuedFrechetDerivative);
         frechetDerivativePerturbation = getJSONdouble(jsonData, "frechet_derivative_perturbation", frechetDerivativePerturbation);
         usePreconditioner = getJSONbool(jsonData, "use_preconditioner", usePreconditioner);
         preconditionerPerturbation = getJSONdouble(jsonData, "preconditioner_perturbation", preconditionerPerturbation);
@@ -2419,7 +2421,11 @@ number computePerturbationSize()
 void evalJacobianVectorProduct(double sigma)
 {
     version (complex_numbers) {
-        evalComplexMatVecProd(sigma);
+        if (nkCfg.useRealValuedFrechetDerivative) {
+            evalRealMatVecProd(sigma);
+        } else {
+            evalComplexMatVecProd(sigma);
+        }
     }
     else {
         evalRealMatVecProd(sigma);
