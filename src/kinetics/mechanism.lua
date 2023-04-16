@@ -82,7 +82,7 @@ local function transformRelaxationTime(rt, p, q, db)
       t.mu_pp = (M_p * M_p)/(M_p + M_p)
       t.mu_qq = (M_q * M_q)/(M_q + M_q)
       t.theta_v_p = db[p].theta_v or db[p].vib_data.theta_v
-      t.theta_v_q = db[p].theta_v or db[q].vib_data.theta_v
+      t.theta_v_q = db[q].theta_v or db[q].vib_data.theta_v
       t.sigma = 0.5*(SSHSigma(p, db) + SSHSigma(q, db))
       t.epsilon = sqrt(db[p].epsilon * db[q].epsilon)
       t.f_m_p = computeMassFactor(p, db)
