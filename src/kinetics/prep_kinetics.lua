@@ -151,6 +151,7 @@ function main()
       for isp,sp in ipairs(species) do
          energy_modes[sp] = {}
          energy_modes[sp].vib = 0
+         energy_modes[sp].electron = 0
          energy_modes[sp].electronic = 0
       end
    elseif physical_model == "three-temperature-gas" then
