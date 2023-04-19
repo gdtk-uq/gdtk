@@ -20,6 +20,7 @@ import kinetics.thermochemical_reactor;
 
 alias RelaxTimeFunc = @nogc number function(number, number);
 
+version(multi_T_gas){
 final class VibRelaxNitrogen : ThermochemicalReactor {
     this(string fname, GasModel gmodel)
     {
@@ -71,6 +72,7 @@ final class VibRelaxNitrogen : ThermochemicalReactor {
 private:
     GasState _Q_eq;
     RelaxTimeFunc _relaxTimeCalc;
+}
 }
 
 @nogc

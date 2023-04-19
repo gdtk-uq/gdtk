@@ -27,6 +27,7 @@ import gas.electronic_species;
 immutable double T_REF = 298.15; // K
 static string[] molecularSpeciesNames = ["N2", "O2", "NO", "N2+", "O2+", "NO+"];
 
+version(multi_T_gas){
 class ElectronicallySpecificGas : GasModel
 {
 public:
@@ -695,6 +696,7 @@ private:
 
         return T_guess;
     }
+}
 }
 
 double[11] _macro_mol_masses;

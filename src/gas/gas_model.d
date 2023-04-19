@@ -322,7 +322,9 @@ public:
         // In other words, we assume no real gas effects.
         Q.p = P_atm;
         Q.T = T_MIN;
+        version(multi_T_gas){
         foreach (ref T; Q.T_modes) T = T_MIN;
+        }
         update_thermo_from_pT(Q);
     }
 

@@ -850,7 +850,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             registerThermochemicalReactor(L);
             registerReactionMechanism(L);
             registerChemistryUpdate(L);
-            registerElectronicallySpecificKinetics(L);
+            version(multi_T_gas){ registerElectronicallySpecificKinetics(L); }
             registeridealgasflowFunctions(L);
             registergasflowFunctions(L);
             registerBBLA(L);

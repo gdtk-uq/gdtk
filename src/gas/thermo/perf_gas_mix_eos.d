@@ -43,8 +43,10 @@ public:
     @nogc override void update_pressure(ref GasState Q) const {
         number Rmix = heavyParticleGasConstant(Q);
         Q.p = Q.rho*Rmix*Q.T;
+        version(multi_T_gas){
         if (_separateElecTemp) {
             Q.p += Q.rho*Q.massf[_eSpIdx]*_R[_eSpIdx]*Q.T_modes[_eMIdx];
+        }
         }
     }
 
@@ -55,8 +57,10 @@ public:
     @nogc override void update_density(ref GasState Q) const {
         number Rmix = heavyParticleGasConstant(Q);
         number denom = Rmix*Q.T;
+        version(multi_T_gas){
         if (_separateElecTemp) {
             denom += Q.massf[_eSpIdx]*_R[_eSpIdx]*Q.T_modes[_eMIdx];
+        }
         }
         Q.rho = Q.p/denom;
     }
@@ -70,8 +74,10 @@ public:
     @nogc override void update_temperature(ref GasState Q) const {
         number Rmix = heavyParticleGasConstant(Q);
         number p = Q.p;
+        version(multi_T_gas){
         if (_separateElecTemp) {
             p -= Q.rho*Q.massf[_eSpIdx]*_R[_eSpIdx]*Q.T_modes[_eMIdx];
+        }
         }
         Q.T = p/(Rmix*Q.rho);
     }

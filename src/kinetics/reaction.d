@@ -91,14 +91,17 @@ public:
                 // Let's take assume that n_modes >= 1 indicates a multi-temperature
                 // simulation. In which case, we need to evaluate the k_f at equilibrium
                 // with the translational temperature in order to determine k_b.
+                version(multi_T_gas){
                 if (_gmodel.n_modes >= 1) {
                     _Qw.T = Q.T;
                     _Qw.T_modes[] = Q.T;
                     number kf_eq = eval_forward_rate_constant(_Qw);
                     _k_b = kf_eq/_K_eq;
-                }
-                else {
+                } else {
                     _k_b = _k_f/_K_eq;
+                }
+                } else { // If multi_T is disable, just compute k_b normally
+                _k_b = _k_f/_K_eq;
                 }
             }
             else {
@@ -228,7 +231,9 @@ public:
     override void eval_equilibrium_constant(in GasState Q)
     {
         _Qw.T = Q.T;
-	if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium
+        version(multi_T_gas) {
+            if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium
+        }
         _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
 
@@ -351,7 +356,9 @@ public:
     override void eval_equilibrium_constant(in GasState Q)
     {
         _Qw.T = Q.T;
-	if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium
+        version(multi_T_gas) {
+            if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium
+        }
         _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
 

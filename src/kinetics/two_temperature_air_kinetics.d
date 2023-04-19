@@ -37,6 +37,7 @@ immutable double DT_REDUCTION_FACTOR = 10.0; // factor by which to reduce timest
                                              // after a failed attempt
 immutable double H_MIN = 1.0e-15; // Minimum allowable step size
 
+version(multi_T_gas){
 final class TwoTemperatureAirKinetics : ThermochemicalReactor {
     ReactionMechanism rmech;
     ChemODEStep cstep;
@@ -707,6 +708,7 @@ private:
         return ResultOfStep.failure;
     }
 
+}
 }
 
 static double[string] A_MW; // A parameter in Millikan-White expression

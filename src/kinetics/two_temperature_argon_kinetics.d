@@ -27,6 +27,7 @@ import util.lua;
 import util.lua_service;
 import kinetics.thermochemical_reactor;
 
+version(multi_T_gas){
 final class UpdateArgonFrac : ThermochemicalReactor {
 
     this(string fname, GasModel gmodel)
@@ -406,6 +407,7 @@ private:
 
     double _chem_dt;
 } // end class UpdateArgonFrac
+}
 
 
 version(two_temperature_argon_kinetics_test) {

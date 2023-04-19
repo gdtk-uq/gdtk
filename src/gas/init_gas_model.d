@@ -31,13 +31,13 @@ import gas.two_temperature_argon_plus_ideal;
 import gas.ideal_dissociating_gas;
 import gas.two_temperature_air;
 import gas.two_temperature_nitrogen;
-import gas.two_temperature_dissociating_nitrogen : TwoTemperatureDissociatingNitrogen;
+import gas.two_temperature_dissociating_nitrogen;
 import gas.vib_specific_nitrogen;
 import gas.vib_specific_co;
 import gas.fuel_air_mix;
 import gas.equilibrium_gas;
-import gas.electronically_specific_gas: ElectronicallySpecificGas;
-import gas.two_temperature_gasgiant: TwoTemperatureGasGiant;
+import gas.electronically_specific_gas;
+import gas.two_temperature_gasgiant;
 
 GasModel init_gas_model(string file_name="gas-model.lua")
 /**
@@ -124,14 +124,15 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         case "PseudoSpeciesGas":
             gm = new PseudoSpeciesGas(L);
             break;
+        case "IdealDissociatingGas":
+            gm = new IdealDissociatingGas(L);
+            break;
+version(multi_T_gas){
         case "TwoTemperatureReactingArgon":
             gm = new TwoTemperatureReactingArgon(L);
             break;
         case "TwoTemperatureArgonPlusIdealGas":
             gm = new TwoTemperatureArgonPlusIdealGas(L);
-            break;
-        case "IdealDissociatingGas":
-            gm = new IdealDissociatingGas(L);
             break;
         case "TwoTemperatureAir":
             gm = new TwoTemperatureAir(L);
@@ -142,26 +143,27 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         case "TwoTemperatureDissociatingNitrogen":
             gm = new TwoTemperatureDissociatingNitrogen(L);
             break;
-        case "VibSpecificNitrogen":
-            gm = new VibSpecificNitrogen(L);
+        case "ElectronicallySpecificGas":
+            gm = new ElectronicallySpecificGas(L);
             break;
+        case "TwoTemperatureGasGiant":
+            gm = new TwoTemperatureGasGiant();
+            break;
+}
         case "VibSpecificCO":
             gm = new VibSpecificCO(L);
             break;
         case "VibSpecificCOMixture":
             gm = new VibSpecificCOMixture(L);
             break;
+        case "VibSpecificNitrogen":
+            gm = new VibSpecificNitrogen(L);
+            break;
         case "FuelAirMix":
             gm = new FuelAirMix(L);
             break;
         case "EquilibriumGas":
             gm = new EquilibriumGas(L);
-            break;
-        case "ElectronicallySpecificGas":
-            gm = new ElectronicallySpecificGas(L);
-            break;
-        case "TwoTemperatureGasGiant":
-            gm = new TwoTemperatureGasGiant();
             break;
         default:
             string errMsg = format("The gas model '%s' is not available.", gas_model_name);

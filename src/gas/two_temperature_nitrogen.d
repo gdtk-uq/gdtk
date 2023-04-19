@@ -21,6 +21,7 @@ import gas.gas_state;
 import gas.physical_constants;
 import gas.diffusion.cea_viscosity;
 
+version(multi_T_gas){
 class TwoTemperatureNitrogen : GasModel {
 public:
     this()
@@ -165,4 +166,5 @@ private:
     double _B_11 = 0.1392;
     double _C_11 = -1.1559;
     double _D_11 = 6.9352;
+}
 }

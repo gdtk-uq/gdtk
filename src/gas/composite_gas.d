@@ -28,7 +28,6 @@ import gas.diffusion.transport_properties_model;
 import gas.diffusion.gas_mixtures;
 import gas.diffusion.two_temperature_trans_props;
 
-
 class CompositeGas : GasModel {
 public:
     @property string physicalModel() { return mPhysicalModel; }
@@ -65,11 +64,13 @@ public:
             mThermo = new ThermPerfGasMixture(L, _species_names);
             mTransProps = new GasMixtureTransProps(L, _species_names);
             break;
+        version(multi_T_gas){
         case "two-temperature-gas":
             _n_modes = 1;
             mThermo = new TwoTemperatureGasMixture(L, _species_names);
             mTransProps = new TwoTemperatureTransProps(L, _species_names);
             break;
+        }
         default:
             string errMsg = format("Problem trying to construct gas model. The physical model variant '%s' is not known.\n", mPhysicalModel);
             throw new Error(errMsg);
@@ -194,15 +195,18 @@ public:
     {
         Q.p = P_atm;
         Q.T = T_MIN;
-        foreach (ref T; Q.T_modes) T = T_MIN;
+        version(multi_T_gas) { foreach (ref T; Q.T_modes) T = T_MIN; }
         auto uTot = mThermo.internalEnergy(Q);
+        version(multi_T_gas){
         foreach (imode; 0 .. _n_modes) {
             Q.u_modes[imode] = 0.0;
             foreach (isp; 0 .. _n_species) {
                 Q.u_modes[imode] += Q.massf[isp] * mThermo.energyPerSpeciesInMode(Q, isp, imode);
             }
         }
-        Q.u = uTot - sum(Q.u_modes);
+        }
+        Q.u = uTot;
+        version(multi_T_gas){ Q.u -= sum(Q.u_modes); }
     }
 
 private:
@@ -210,7 +214,6 @@ private:
     ThermodynamicModel mThermo;
     TransportPropertiesModel mTransProps;
 }
-
 
 version(composite_gas_test) {
     int main() {

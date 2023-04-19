@@ -36,6 +36,7 @@ enum Species {H2=0, H, Hplus, eminus, He, Heplus}
 // For table parameters see end of file.
 // They are declared in the static this() function.
 
+version(multi_T_gas){
 class TwoTemperatureGasGiant : GasModel {
 public:
     int[] molecularSpecies;
@@ -555,6 +556,7 @@ private:
         return T_guess;
     }
 
+}
 }
 
 static double[6] del_hf;

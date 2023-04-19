@@ -34,6 +34,7 @@ import gas.diffusion.therm_cond;
 // First, the basic gas model.
 enum Species {Ar=0, Ar_plus, e_minus}
 
+version(multi_T_gas){
 class TwoTemperatureReactingArgon: GasModel {
 public:
 
@@ -216,6 +217,7 @@ private:
     double _Te_default = 10000.0; // may be over-ridden for a specific situation
     double _e_mass_over_ion_mass; // set once mol masses are set in constructor
 } // end class
+}
 
 //// Unit test of the basic gas model...
 

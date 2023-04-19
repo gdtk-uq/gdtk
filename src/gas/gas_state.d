@@ -32,12 +32,14 @@ public:
     // The array length will be determined by the specific model and,
     // to get the total internal energy,
     // the gas-dynamics part of the code will need to sum the array elements.
+    version(multi_T_gas) {
     number[] u_modes;  /// specific internal energies for thermal nonequilibrium model, J/kg
     number[] T_modes;  /// temperatures for internal energies for thermal nonequilibrium, K
+    number[] k_modes;  /// thermal conductivities for the nonequilibrium model, W/(m.K)
+    }
     /// Transport properties
     number mu;   /// viscosity, Pa.s
     number k;  /// thermal conductivity for a single temperature gas, W/(m.K)
-    number[] k_modes;  /// thermal conductivities for the nonequilibrium model, W/(m.K)
     number sigma;    /// electrical conductivity, S/m
     /// Composition
     number[] massf;  /// species mass fractions
@@ -51,9 +53,11 @@ public:
     this(uint n_species, uint n_modes, bool includeSavedData=false)
     {
         massf.length = n_species;
+        version(multi_T_gas) {
         u_modes.length = n_modes;
         T_modes.length = n_modes;
         k_modes.length = n_modes;
+        }
         if (includeSavedData) { ceaSavedData = new CEASavedData; }
     }
 
@@ -72,10 +76,12 @@ public:
         T = T_init;
         size_t nsp = gm.n_species;
         size_t nmodes = gm.n_modes;
+        version(multi_T_gas) {
         T_modes.length = nmodes;
         foreach(i; 0 .. nmodes) { T_modes[i] = T_modes_init[i]; }
         u_modes.length = nmodes;
         k_modes.length = nmodes;
+        }
         massf.length = nsp;
         foreach(i; 0 .. nsp) {
             massf[i] = (i < massf_init.length) ? massf_init[i] : 0.0;
@@ -107,11 +113,13 @@ public:
         T = other.T;
         u = other.u;
         a = other.a;
+        version(multi_T_gas) {
         u_modes = other.u_modes.dup;
         T_modes = other.T_modes.dup;
+        k_modes = other.k_modes.dup;
+        }
         mu = other.mu;
         k = other.k;
-        k_modes = other.k_modes.dup;
         sigma = other.sigma;
         massf = other.massf.dup;
         quality = other.quality;
@@ -123,9 +131,11 @@ public:
     @nogc void opAssign(in GasState other)
     {
         debug {
+        version(multi_T_gas) {
             if (u_modes.length != other.u_modes.length) { throw new Error("Incorrect u_modes length."); }
             if (T_modes.length != other.T_modes.length) { throw new Error("Incorrect T_modes length."); }
             if (k_modes.length != other.k_modes.length) { throw new Error("Incorrect k_modes length."); }
+        }
             if (massf.length != other.massf.length) { throw new Error("Incorrect massf length."); }
         }
         rho = other.rho;
@@ -134,11 +144,13 @@ public:
         u = other.u;
         p_e = other.p_e;
         a = other.a;
+        version(multi_T_gas){
         foreach (i; 0 .. u_modes.length) { u_modes[i] = other.u_modes[i]; }
         foreach (i; 0 .. T_modes.length) { T_modes[i] = other.T_modes[i]; }
+        foreach (i; 0 .. k_modes.length) { k_modes[i] = other.k_modes[i]; }
+        }
         mu = other.mu;
         k = other.k;
-        foreach (i; 0 .. k_modes.length) { k_modes[i] = other.k_modes[i]; }
         sigma = other.sigma;
         foreach (i; 0 .. massf.length) { massf[i] = other.massf[i]; }
         quality = other.quality;
@@ -159,11 +171,13 @@ public:
         u = w0*gs0.u + w1*gs1.u;
         p_e = w0*gs0.p_e + w1*gs1.p_e;
         a = w0*gs0.a + w1*gs1.a;
+        version(multi_T_gas){
         foreach(i; 0 .. u_modes.length) { u_modes[i] = w0*gs0.u_modes[i] + w1*gs1.u_modes[i]; }
         foreach(i; 0 .. T_modes.length) { T_modes[i] = w0*gs0.T_modes[i] + w1*gs1.T_modes[i]; }
+        foreach(i; 0 .. k_modes.length) { k_modes[i] = w0*gs0.k_modes[i] + w1*gs1.k_modes[i]; }
+        }
         mu = w0*gs0.mu + w1*gs1.mu;
         k = w0*gs0.k + w1*gs1.k;
-        foreach(i; 0 .. k_modes.length) { k_modes[i] = w0*gs0.k_modes[i] + w1*gs1.k_modes[i]; }
         sigma = w0*gs0.sigma + w1*gs1.sigma;
         foreach(i; 0 .. massf.length) { massf[i] = w0*gs0.massf[i] + w1*gs1.massf[i]; }
         quality = w0*gs0.quality + w1*gs1.quality;
@@ -179,28 +193,34 @@ public:
         }
         // Accumulate from a clean slate and then divide.
         p = 0.0; T = 0.0; u = 0.0; p_e = 0.0; a = 0.0;
+        version(multi_T_gas){
         foreach(ref elem; u_modes) { elem = 0.0; }
         foreach(ref elem; T_modes) { elem = 0.0; }
-        mu = 0.0; k = 0.0;
         foreach(ref elem; k_modes) { elem = 0.0; }
+        }
+        mu = 0.0; k = 0.0;
         sigma = 0.0;
         foreach(ref elem; massf) { elem = 0.0; }
         quality = 0.0;
         foreach(other; others) {
             p += other.p; T += other.T; u += other.u; p_e += other.p_e; a += other.a;
+            version(multi_T_gas){
             foreach(i; 0 .. u_modes.length) { u_modes[i] += other.u_modes[i]; }
             foreach(i; 0 .. T_modes.length) { T_modes[i] += other.T_modes[i]; }
-            mu += other.mu; k += other.k;
             foreach(i; 0 .. k_modes.length) { k_modes[i] += other.k_modes[i]; }
+            }
+            mu += other.mu; k += other.k;
             sigma += other.sigma;
             foreach(i; 0 .. massf.length) { massf[i] += other.massf[i]; }
             quality += other.quality;
         }
         p /= n; T /= n; u /= n; p_e /= n; a /= n;
+        version(multi_T_gas){
         foreach(ref elem; T_modes) { elem /= n; }
         foreach(ref elem; u_modes) { elem /= n; }
-        mu /= n; k /= n;
         foreach(ref elem; k_modes) { elem /= n; }
+        }
+        mu /= n; k /= n;
         sigma /= n;
         foreach(ref elem; massf) { elem /= n; }
         quality /= n;
@@ -223,6 +243,7 @@ public:
             debug { if (print_message) writeln("Temperature invalid: ", T); }
             is_data_valid = false;
         }
+        version(multi_T_gas){
         auto nmodes = u_modes.length;
         foreach(imode; 0 .. nmodes) {
             if (!isFinite(T_modes[imode].re) || T_modes[imode] < 1.01 * TMIN) {
@@ -233,6 +254,7 @@ public:
                 debug { if (print_message) writeln("Energy[", imode, "] invalid: ", u_modes[imode]); }
                 is_data_valid = false;
             }
+        }
         }
         if (!isFinite(p.re)) {
             debug { if (print_message) writeln("Total pressure invalid: ", p); }
@@ -264,11 +286,13 @@ public:
         repr ~= ", u=" ~ to!string(u);
         repr ~= ", p_e=" ~ to!string(p_e);
         repr ~= ", a=" ~ to!string(a);
+        version(multi_T_gas){
         repr ~= ", T_modes=" ~ to!string(T_modes);
         repr ~= ", u_modes=" ~ to!string(u_modes);
+        repr ~= ", k_modes=" ~ to!string(k_modes);
+        }
         repr ~= ", mu=" ~ to!string(mu);
         repr ~= ", k=" ~ to!string(k);
-        repr ~= ", k_modes=" ~ to!string(k_modes);
         repr ~= ", massf=" ~ to!string(massf);
         repr ~= ", quality=" ~ to!string(quality);
         repr ~= ", sigma=" ~ to!string(sigma);
@@ -288,11 +312,13 @@ version(complex_numbers) {
         a.im = 0.0;
         T.im = 0.0;
         u.im = 0.0;
+        version(multi_T_gas){
         foreach( i; 0..u_modes.length) u_modes[i].im = 0.0;
         foreach( i; 0..T_modes.length) T_modes[i].im = 0.0;
+        foreach( i; 0..k_modes.length) k_modes[i].im = 0.0;
+        }
         mu.im = 0.0;
         k.im = 0.0;
-        foreach( i; 0..k_modes.length) k_modes[i].im = 0.0;
         sigma.im = 0.0;
         foreach( i; 0..massf.length) massf[i].im = 0.0;
         quality.im = 0.0;

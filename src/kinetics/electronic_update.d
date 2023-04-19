@@ -43,6 +43,7 @@ import gas.electronically_specific_gas;
 import util.lua;
 import util.lua_service;
 
+version(multi_T_gas){
 class ElectronicUpdate
 {
 public:
@@ -283,6 +284,7 @@ private:
     {
         return to!number(0);
     }
+}
 }
 
 

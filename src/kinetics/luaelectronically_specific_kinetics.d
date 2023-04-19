@@ -19,6 +19,7 @@ import gas.luagas_model;
 import kinetics.thermochemical_reactor;
 import kinetics.electronically_specific_kinetics;
 
+version(multi_T_gas){
 immutable string ElectronicallySpecificKineticsMT = "ElectronicallySpecificKinetics";
 
 static const(ElectronicallySpecificKinetics)[] ESKStore;
@@ -118,4 +119,5 @@ void registerElectronicallySpecificKinetics(lua_State* L)
 
     // Make class visible.
     lua_setglobal(L, ElectronicallySpecificKineticsMT.toStringz);
+}
 }

@@ -24,6 +24,7 @@ import kinetics.energy_exchange_mechanism;
 import kinetics.relaxation_time;
 import kinetics.reaction_mechanism;
 
+version(multi_T_gas){
 interface EnergyExchangeSystem {
     @nogc void evalRelaxationTimes(in GasState gs);
     @nogc void evalRates(in GasState gs, in ReactionMechanism, ref number[] rates);
@@ -107,3 +108,4 @@ private:
     // EnergyExchangeMechanism[] mChemCoupling;
 }
 
+}

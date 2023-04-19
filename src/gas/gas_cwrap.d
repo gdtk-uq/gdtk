@@ -244,12 +244,14 @@ extern (C) int gas_state_set_array_field(int gs_i, const char* field_name, doubl
         case "massf":
             foreach (i; 0 .. n) { gs.massf[i] = values[i]; }
             break;
+        version(multi_T_gas){
         case "u_modes":
             foreach (i; 0 .. n) { gs.u_modes[i] = values[i]; }
             break;
         case "T_modes":
             foreach (i; 0 .. n) { gs.T_modes[i] = values[i]; }
             break;
+        }
         default:
             string msg = format("Cannot set field name: %s", name);
             throw new Exception(msg);
@@ -270,6 +272,7 @@ extern (C) int gas_state_get_array_field(int gs_i, const char* field_name, doubl
         case "massf":
             foreach (i; 0 .. n) { values[i] = gs.massf[i]; }
             break;
+        version(multi_T_gas){
         case "u_modes":
             foreach (i; 0 .. n) { values[i] = gs.u_modes[i]; }
             break;
@@ -279,6 +282,7 @@ extern (C) int gas_state_get_array_field(int gs_i, const char* field_name, doubl
         case "k_modes":
             foreach (i; 0 .. n) { values[i] = gs.k_modes[i]; }
             break;
+        }
         default:
             string msg = format("Unavailable field name: %s", name);
             throw new Exception(msg);
@@ -423,8 +427,10 @@ extern (C) int gas_model_gas_state_update_thermo_from_rhou(int gm_i, int gs_i)
         bool valid = true;
         if (!isFinite(gs.rho)) { valid = false; }
         if (!isFinite(gs.u)) { valid = false; }
+        version(multi_T_gas){
         foreach (i; 0 .. gm.n_modes) {
             if (!isFinite(gs.u_modes[i])) { valid = false; }
+        }
         }
         if (gm.n_species > 1) {
             foreach (i; 0 .. gm.n_species) {

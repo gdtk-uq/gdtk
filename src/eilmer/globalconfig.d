@@ -1703,8 +1703,8 @@ import gas.two_temperature_nitrogen;
 import gas.vib_specific_nitrogen;
 import gas.fuel_air_mix;
 import gas.equilibrium_gas;
-import gas.electronically_specific_gas: ElectronicallySpecificGas;
-import gas.two_temperature_gasgiant: TwoTemperatureGasGiant;
+import gas.electronically_specific_gas;
+import gas.two_temperature_gasgiant;
 
 JSONValue read_config_file()
 {
@@ -1744,10 +1744,12 @@ void set_config_for_core(JSONValue jsonData)
         if (cast(VeryViscousAir)gm) { multiSpecies = false; }
         if (cast(UniformLUT)gm) { multiSpecies = false; }
         if (cast(AdaptiveLUT)gm) { multiSpecies = false; }
+        version(multi_T_gas){
         if (cast(TwoTemperatureReactingArgon)gm) { multiT = true; }
         if (cast(TwoTemperatureAir)gm) { multiT = true; }
         if (cast(TwoTemperatureNitrogen)gm) { multiT = true; }
         if (cast(TwoTemperatureGasGiant)gm) { multiT = true; }
+        }
         version(multi_species_gas) {
             // Any gas model will do.
         } else {

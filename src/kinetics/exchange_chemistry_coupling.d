@@ -30,6 +30,7 @@ import util.lua_service;
 import gas;
 
 
+version(multi_T_gas){
 interface ExchangeChemistryCoupling {
     ExchangeChemistryCoupling dup();
     @nogc number Gvanish(in GasState gs);
@@ -137,3 +138,4 @@ ExchangeChemistryCoupling createExchangeChemistryCoupling(lua_State *L)
     }
 }
 
+}

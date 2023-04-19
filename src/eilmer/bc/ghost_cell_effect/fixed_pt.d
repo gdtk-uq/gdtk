@@ -52,7 +52,7 @@ public:
         ghost0.fs.copy_values_from(src_cell.fs);
         ghost0.fs.gas.p = p_outside;
         ghost0.fs.gas.T = T_outside;
-        foreach(ref elem; ghost0.fs.gas.T_modes) { elem = T_outside; }
+        version(multi_T_gas){ foreach(ref elem; ghost0.fs.gas.T_modes) { elem = T_outside; } }
         gmodel.update_thermo_from_pT(ghost0.fs.gas);
     } // end apply_for_interface_unstructured_grid()
 
@@ -73,7 +73,7 @@ public:
             ghost0.fs.copy_values_from(src_cell.fs);
             ghost0.fs.gas.p = p_outside;
             ghost0.fs.gas.T = T_outside;
-            foreach(ref elem; ghost0.fs.gas.T_modes) { elem = T_outside; }
+            version(multi_T_gas) { foreach(ref elem; ghost0.fs.gas.T_modes) { elem = T_outside; } }
             gmodel.update_thermo_from_pT(ghost0.fs.gas);
         } // end foreach face
     } // end apply_unstructured_grid()
@@ -96,7 +96,7 @@ public:
             dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
             dest_cell.fs.gas.p = p_outside;
             dest_cell.fs.gas.T = T_outside;
-            foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; }
+            version(multi_T_gas){ foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } }
             gmodel.update_thermo_from_pT(dest_cell.fs.gas);
         }
     } // end apply_for_interface_structured_grid()
@@ -121,7 +121,7 @@ public:
                 dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
                 dest_cell.fs.gas.p = p_outside;
                 dest_cell.fs.gas.T = T_outside;
-                foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; }
+                version(multi_T_gas){ foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } }
                 gmodel.update_thermo_from_pT(dest_cell.fs.gas);
             }
         }

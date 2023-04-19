@@ -39,6 +39,7 @@ immutable double T_REF = 298.15; // K (based on CEA reference temperature value)
  * focussed on separating the electron as having a distinct temperature from the
  * heavy particles.
  */
+version(multi_T_gas){
 class TwoTemperatureGasMixture : ThermodynamicModel {
 public:
 
@@ -625,6 +626,7 @@ private:
             return T_guess;
         }
     } // version()
+}
 }
 
 version(two_temperature_gas_test) {

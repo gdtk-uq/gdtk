@@ -25,8 +25,10 @@ interface ThermalConductivity {
     @nogc final void update_thermal_conductivity(ref GasState Q)
     {
         Q.k = eval(Q, -1);
+        version(multi_T_gas){
         for ( auto imode = 0; imode < Q.T_modes.length; ++imode) {
             Q.k_modes[imode] = eval(Q, imode);
+        }
         }
     }
     @nogc number eval(ref const(GasState) Q, int imode);

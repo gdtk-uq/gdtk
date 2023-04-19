@@ -33,6 +33,7 @@ immutable double DT_REDUCTION_FACTOR = 10.0; // factor by which to reduce timest
 immutable double H_MIN = 1.0e-15; // Minimum allowable step size
 enum ResultOfStep { success, failure };
 
+version(multi_T_gas){
 final class TwoTemperatureDissociatingNitrogenKinetics : ThermochemicalReactor {
     this(string chemFile, string energyExchFile, GasModel gmodel)
     {
@@ -434,5 +435,5 @@ private:
         hSuggest = scale*h;
         return ResultOfStep.failure;
     }
-
+}
 }

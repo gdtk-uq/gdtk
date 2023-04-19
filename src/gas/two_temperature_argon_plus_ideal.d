@@ -33,6 +33,7 @@ import nm.brent;
 
 enum Species {ideal=0, Ar, Ar_plus, e_minus}
 
+version(multi_T_gas){
 class TwoTemperatureArgonPlusIdealGas: GasModel {
 public:
 
@@ -574,6 +575,7 @@ private
     GasState Q_argon, Q_ideal;
     double _e_mass_over_ion_mass; // set once mol masses are set in constructor
 } // end class TwoTemperatureArgonPlusIdealGas
+}
 
 version(two_temperature_argon_plus_ideal_test) {
     import std.stdio;

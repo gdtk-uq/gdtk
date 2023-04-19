@@ -179,11 +179,11 @@ public:
     }
     override number internal_energy(in GasState Q) const
     {
-        return Q.u + sum(Q.u_modes);
+        return Q.u + energyInNoneq(Q);
     }
     override number enthalpy(in GasState Q) const
     {
-        return Q.u + sum(Q.u_modes) + Q.p/Q.rho;
+        return Q.u +  energyInNoneq(Q) + Q.p/Q.rho;
     }
     override number entropy(in GasState Q) const
     {
@@ -213,7 +213,7 @@ private:
     ParentsSpecies _parentSpecies;
     GasState _parentsQ;
 
-    @nogc number energyInNoneq(ref GasState Q) const {
+    @nogc number energyInNoneq(in GasState Q) const {
         number uNoneq = 0.0;
         foreach (isp; 0 .. _n_species) {
             uNoneq += Q.massf[isp] * _pseudoSpecies[isp].energy(Q);

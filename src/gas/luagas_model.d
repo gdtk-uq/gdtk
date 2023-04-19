@@ -848,6 +848,7 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, ref GasState Q)
     }
     lua_pop(L, 1);
 
+    version(multi_T_gas){
     lua_getfield(L, idx, "u_modes");
     if ( lua_istable(L, -1) ) {
         auto n = to!int(lua_objlen(L, -1));
@@ -907,6 +908,7 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, ref GasState Q)
         throw new Error(errMsg);
     }
     lua_pop(L, 1);
+    }
 
     lua_getfield(L, idx, "mu");
     if ( lua_isnumber(L, -1) ) {
@@ -932,6 +934,7 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, ref GasState Q)
     }
     lua_pop(L, 1);
 
+    version(multi_T_gas){
     lua_getfield(L, idx, "k_modes");
     if ( lua_istable(L, -1) ) {
         auto n = to!int(lua_objlen(L, -1));
@@ -961,6 +964,7 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, ref GasState Q)
         throw new Error(errMsg);
     }
     lua_pop(L, 1);
+    }
 
     lua_getfield(L, idx, "sigma");
     if ( lua_isnumber(L, -1) ) {
@@ -1067,6 +1071,7 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
     lua_pushnumber(L, Q.u);
     lua_setfield(L, idx, "u");
 
+    version(multi_T_gas){
     lua_newtable(L);
     foreach (i, e; Q.u_modes) {
         lua_pushnumber(L, e); lua_rawseti(L, -2, to!int(i)+1);
@@ -1078,6 +1083,7 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
         lua_pushnumber(L, T); lua_rawseti(L, -2, to!int(i)+1);
     }
     lua_setfield(L, idx, "T_modes");
+    }
 
     lua_pushnumber(L, Q.mu);
     lua_setfield(L, idx, "mu");
@@ -1085,11 +1091,13 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
     lua_pushnumber(L, Q.k);
     lua_setfield(L, idx, "k");
 
+    version(multi_T_gas){
     lua_newtable(L);
     foreach (i, k; Q.k_modes) {
         lua_pushnumber(L, k); lua_rawseti(L, -2, to!int(i)+1);
     }
     lua_setfield(L, idx, "k_modes");
+    }
 
     lua_pushnumber(L, Q.sigma);
     lua_setfield(L, idx, "sigma");

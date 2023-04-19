@@ -35,6 +35,7 @@ import gas;
 import gas.diffusion.transport_properties_model;
 import gas.physical_constants;
 
+version(multi_T_gas){
 class TwoTemperatureTransProps : TransportPropertiesModel {
 public:
 
@@ -385,6 +386,7 @@ private:
             }
         }
     }
+}
 }
 
 

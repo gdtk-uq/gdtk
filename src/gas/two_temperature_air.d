@@ -49,6 +49,7 @@ enum Species {N=0, O, N2, O2, NO, Nplus, Oplus, N2plus, O2plus, NOplus, eminus}
 // For table parameters see end of file.
 // They are declared in the static this() function.
 
+version(multi_T_gas){
 class TwoTemperatureAir : GasModel {
 public:
     int[] molecularSpecies;
@@ -740,6 +741,7 @@ private:
         return T_guess;
     }
 
+}
 }
 
 version(two_temperature_air_test) {

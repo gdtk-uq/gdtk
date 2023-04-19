@@ -70,7 +70,12 @@ public:
     }
     override number eval(in GasState Q)
     {
+        version(multi_T_gas){
         number T = (_rctIdx == -1) ? Q.T : Q.T_modes[_rctIdx];
+        } else {
+        number T = Q.T;
+        }
+
         return _A*pow(T, _n)*exp(-_C/T);
     }
 private:
@@ -100,7 +105,13 @@ public:
     }
     override number eval(in GasState Q)
     {
+
+        version(multi_T_gas){
         number T = (_rctIdx == -1) ? Q.T : Q.T_modes[_rctIdx];
+        } else {
+        number T = Q.T;
+        }
+
         return exp(_logA + _B*T - _C/T);
     }
 private:
@@ -341,6 +352,7 @@ private:
 
 +/
 
+version(multi_T_gas){
 class Park2TRateConstant : RateConstant {
 public:
     this(double A, double n, double C, double s)
@@ -370,6 +382,7 @@ public:
 private:
     double _A, _n, _C, _s;
 }
+}
 
 /++
  + Create a RateConstant object based on information in a LuaTable.
@@ -379,6 +392,7 @@ private:
  +        -- then model-specific parameters follow.
  +        A=..., n=..., C=...}
  +/
+
 RateConstant createRateConstant(lua_State* L, Tuple!(int, double)[] efficiencies, GasModel gmodel)
 {
     auto model = getString(L, -1, "model");
@@ -393,8 +407,10 @@ RateConstant createRateConstant(lua_State* L, Tuple!(int, double)[] efficiencies
         return new TroeRateConstant(L, efficiencies, gmodel);
     case "Yungster-Rabinowitz":
         return new YRRateConstant(L, efficiencies, gmodel);
+    version(multi_T_gas){
     case "Park":
         return new Park2TRateConstant(L);
+    }
     case "fromEqConst":
         return null;
     default:

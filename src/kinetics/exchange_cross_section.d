@@ -26,6 +26,7 @@ import util.lua_service;
 import gas;
 
 
+version(multi_T_gas){
 interface ExchangeCrossSection {
     ExchangeCrossSection dup();
     @nogc number opCall(in GasState gs, number[] numden);
@@ -127,5 +128,6 @@ ExchangeCrossSection createExchangeCrossSection(lua_State *L, int e, int q)
         throw new Error(msg);
     }
 
+}
 }
 

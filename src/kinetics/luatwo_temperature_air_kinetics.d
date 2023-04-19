@@ -19,6 +19,7 @@ import gas.luagas_model;
 import kinetics.thermochemical_reactor;
 import kinetics.two_temperature_air_kinetics;
 
+version(multi_T_gas){
 immutable string TwoTemperatureAirKineticsMT = "TwoTemperatureAirKinetics";
 
 static const(TwoTemperatureAirKinetics)[] TwoTemperatureAirKineticsStore;
@@ -129,4 +130,5 @@ void registerTwoTemperatureAirKinetics(lua_State* L)
 
     // Make class visible.
     lua_setglobal(L, TwoTemperatureAirKineticsMT.toStringz);
+}
 }

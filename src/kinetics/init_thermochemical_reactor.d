@@ -89,7 +89,11 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
             reactor = new ChemistryUpdate(fileName1, gmodel);
         }
         else {
+            version(multi_T_gas){
             reactor = new TwoTemperatureThermochemicalReactor(fileName1, fileName2, gmodel);
+            } else {
+            throw new Error("No TwoTemperature reactor available with MULTI_T_HAS=0");
+            }
         }
     }
     if (typeid(gmodel) is typeid(ThermallyPerfectGasEquilibrium)) {
@@ -104,17 +108,12 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
             reactor = new UpdateAB(fileName1, gmodel);
         }
     }
+version(multi_T_gas){
     if ((cast(TwoTemperatureReactingArgon) gmodel) !is null) {
         reactor = new UpdateArgonFrac(fileName1, gmodel);
     }
     if ((cast(TwoTemperatureArgonPlusIdealGas) gmodel) !is null) {
         reactor = new UpdateArgonFracWithIdeal(fileName1, gmodel);
-    }
-    if ((cast(IdealDissociatingGas) gmodel) !is null) {
-        reactor = new UpdateIDG(fileName1, gmodel);
-    }
-    if ((cast(FuelAirMix) gmodel) !is null) {
-        reactor = new MixingLimitedUpdate(fileName1, gmodel);
     }
     if ((cast(TwoTemperatureNitrogen) gmodel) !is null) {
         reactor = new VibRelaxNitrogen(fileName1, gmodel);
@@ -125,11 +124,8 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     if ((cast(VibSpecificNitrogen) gmodel) !is null) {
         reactor = new VibSpecificNitrogenRelaxation(fileName1, gmodel);
     }
-    if (typeid(gmodel) is typeid(VibSpecificCO)) {
-        reactor = new VibSpecificCORelaxation(fileName1, gmodel);
-    }
-    if (typeid(gmodel) is typeid(VibSpecificCOMixture)) {
-        reactor = new VibSpecificCOMixtureRelaxation(fileName1, fileName2, gmodel);
+    if ((cast(TwoTemperatureGasGiant) gmodel) !is null) {
+        reactor = new UpdateGasGiant(gmodel);
     }
     if ((cast(TwoTemperatureAir) gmodel) !is null) {
         reactor = new TwoTemperatureAirKinetics(fileName1, fileName2, gmodel);
@@ -137,14 +133,24 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     if ((cast(ElectronicallySpecificGas) gmodel) !is null) {
         reactor = new ElectronicallySpecificKinetics(fileName1, gmodel);
     }
+}
+    if (typeid(gmodel) is typeid(VibSpecificCO)) {
+        reactor = new VibSpecificCORelaxation(fileName1, gmodel);
+    }
+    if (typeid(gmodel) is typeid(VibSpecificCOMixture)) {
+        reactor = new VibSpecificCOMixtureRelaxation(fileName1, fileName2, gmodel);
+    }
+    if ((cast(IdealDissociatingGas) gmodel) !is null) {
+        reactor = new UpdateIDG(fileName1, gmodel);
+    }
+    if ((cast(FuelAirMix) gmodel) !is null) {
+        reactor = new MixingLimitedUpdate(fileName1, gmodel);
+    }
     version (with_dvode)
     {
         if ((cast(PseudoSpeciesGas) gmodel) !is null) {
             reactor = new PseudoSpeciesKinetics(gmodel);
         }
-    }
-    if ((cast(TwoTemperatureGasGiant) gmodel) !is null) {
-        reactor = new UpdateGasGiant(gmodel);
     }
     if (reactor is null) {
         throw new ThermochemicalReactorUpdateException("Oops, failed to set up a ThermochemicalReactor.");

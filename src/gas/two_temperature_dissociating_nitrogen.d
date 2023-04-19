@@ -33,6 +33,7 @@ enum Species {N2=0, N}
 // For table parameters see end of file.
 // They are declared in the static this() function.
 
+version(multi_T_gas){
 class TwoTemperatureDissociatingNitrogen : GasModel {
 public:
 
@@ -459,6 +460,7 @@ private:
         return T_guess;
     }
 
+}
 }
 
 version(two_temperature_dissociating_nitrogen_test) {

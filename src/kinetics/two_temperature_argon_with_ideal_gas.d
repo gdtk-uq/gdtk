@@ -30,6 +30,7 @@ import util.lua_service;
 import kinetics.thermochemical_reactor;
 import kinetics.two_temperature_argon_kinetics;
 
+version(multi_T_gas){
 final class UpdateArgonFracWithIdeal : ThermochemicalReactor {
 
     this(string fname, GasModel gmodel)
@@ -97,6 +98,7 @@ private:
     GasState* Q_argon;
     ThermochemicalReactor argon_reactor;
 } // end class UpdateArgonFracWithIdeal
+}
 
 
 version(two_temperature_argon_with_ideal_gas_test) {

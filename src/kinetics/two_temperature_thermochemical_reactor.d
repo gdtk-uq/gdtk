@@ -32,6 +32,7 @@ immutable double ALLOWABLE_MASSF_ERROR = 1.0e-3; // Maximum allowable error in m
 
 enum ResultOfStep { success, failure };
 
+version(multi_T_gas){
 class TwoTemperatureThermochemicalReactor : ThermochemicalReactor {
 public:
 
@@ -387,4 +388,5 @@ private:
         return ResultOfStep.failure;
     }
 
+}
 }

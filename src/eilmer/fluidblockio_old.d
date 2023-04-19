@@ -1609,7 +1609,9 @@ void cell_data_to_raw_binary(ref File fout,
         if (include_quality) { dbl1[0] = fs.gas.quality.re; fout.rawWrite(dbl1); }
         dbl4[0] = fs.gas.p.re; dbl4[1] = fs.gas.a.re; dbl4[2] = fs.gas.mu.re; dbl4[3] = fs.gas.k.re;
         fout.rawWrite(dbl4);
-        foreach (kvalue; fs.gas.k_modes) { dbl1[0] = kvalue.re; fout.rawWrite(dbl1); }
+        version(multi_T_gas) {
+            foreach (kvalue; fs.gas.k_modes) { dbl1[0] = kvalue.re; fout.rawWrite(dbl1); }
+        }
         dbl2[0] = fs.mu_t.re; dbl2[1] = fs.k_t.re; fout.rawWrite(dbl2);
         dbl1[0] = fs.S.re; fout.rawWrite(dbl1);
         if (radiation) {
@@ -1657,7 +1659,7 @@ void cell_data_to_raw_binary(ref File fout,
         if (include_quality) { dbl1[0] = fs.gas.quality; fout.rawWrite(dbl1); }
         dbl4[0] = fs.gas.p; dbl4[1] = fs.gas.a; dbl4[2] = fs.gas.mu; dbl4[3] = fs.gas.k;
         fout.rawWrite(dbl4);
-        version(multi_species_gas) {
+        version(multi_T_gas) {
             foreach (kvalue; fs.gas.k_modes) { dbl1[0] = kvalue; fout.rawWrite(dbl1); }
         }
         dbl2[0] = fs.mu_t; dbl2[1] = fs.k_t; fout.rawWrite(dbl2);

@@ -43,6 +43,7 @@ immutable double DT_REDUCTION_FACTOR = 10.0; // factor by which to reduce timest
 immutable double H_MIN = 1.0e-15; // Minimum allowable step size
 enum ResultOfStep { success, failure };
 
+version(multi_T_gas){
 final class ElectronicallySpecificKinetics : ThermochemicalReactor {
     this(string listOfFiles, GasModel gmodel)
     {
@@ -681,6 +682,7 @@ private:
             Q.massf[isp] = macro_state.massf[isp - _n_elec_species + 2];
         }
     }
+}
 }
 
 

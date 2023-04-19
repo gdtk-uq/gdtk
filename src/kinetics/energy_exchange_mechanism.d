@@ -35,6 +35,7 @@ import kinetics.exchange_cross_section;
 import kinetics.reaction_mechanism;
 import kinetics.exchange_chemistry_coupling;
 
+version(multi_T_gas){
 class EnergyExchangeMechanism {
     @property @nogc number tau() const { return m_tau; }
     @nogc void evalRelaxationTime(in GasState gs, number[] molef, number[] numden)
@@ -250,14 +251,18 @@ EnergyExchangeMechanism createEnergyExchangeMechanism(lua_State *L, int mode, Ga
 {
     auto rateModel = getString(L, -1, "rate");
     switch (rateModel) {
+    version(multi_T_gas){
     case "Landau-Teller":
         return new LandauTellerVT(L, mode, gmodel);
     case "ElectronExchange":
         return new ElectronExchangeET(L, mode, gmodel);
     case "Marrone-Treanor":
         return new MarroneTreanorCV(L, mode, gmodel);
+    }
     default:
         string msg = format("The EE mechanism rate model: %s is not known.", rateModel);
         throw new Error(msg);
     }
+}
+
 }
