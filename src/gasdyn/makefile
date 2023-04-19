@@ -40,9 +40,13 @@ include $(KINETICS_DIR)/kinetics_files.mk
 DFLAGS := -w -debug -g -dip1008 -I..
 OF := -of
 DLINKFLAGS := -L-ldl -L-lgfortran
+DVERSION := -version=
 
 DFLAGS_LUA := -w -debug -g -dip1008 -I.. -I$(LUAD_DIR)
 DLINKFLAGS_LUA := -L-L$(LIBLUAPATH) $(DLINKFLAGS)
+
+# We always want these with the gas stuff, I think
+DFLAGS += $(DVERSION)multi_species_gas $(DVERSION)multi_T_gas
 
 demo: $(DEMO_PROGRAMS)
 	@echo "Demo codes built."

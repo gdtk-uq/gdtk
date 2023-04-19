@@ -132,6 +132,9 @@ ifeq ($(WITH_DVODE),1)
     DLINKFLAGS += -L-lgfortran
 endif
 
+# We always want these with the gas stuff, I think
+DFLAGS += $(DVERSION)multi_species_gas $(DVERSION)multi_T_gas
+
 # DIP1008 allows throwing of exceptions in @nogc code.
 # See notes in src/eilmer/makefile.
 DFLAGS += -dip1008 -preview=in

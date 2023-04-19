@@ -39,11 +39,15 @@ LIBLUA := ${LUA_DIR}/install/lib/liblua.a
 LIBLUAPATH := ${LUA_DIR}/lib
 
 DLINKFLAGS :=  -w -L-ldl
+DVERSION := -version=
 
 ifeq ($(WITH_DVODE),1)
     DFLAGS += -version=with_dvode
     DLINKFLAGS += -L-lgfortran
 endif
+
+# We always want these with the gas stuff, I think
+DFLAGS += $(DVERSION)multi_species_gas $(DVERSION)multi_T_gas
 
 build-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
 	- mkdir -p $(BUILD_DIR)/bin
