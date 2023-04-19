@@ -290,8 +290,7 @@ class ThivetVV : EnergyExchangeMechanism {
         if (m_tau < to!number(0.0)) {
             return to!number(0.0);
         }
-        /* number e_p = _gm.energyPerSpeciesInMode(gs, m_p, m_mode);   // _e_bar_p.energy(gs.T_modes[m_mode]); */
-        /* number e_q = _gm.energyPerSpeciesInMode(gs, m_q, m_mode_q); //_e_bar_q.energy(gs.T_modes[m_mode_q]); */
+
         number e_p = _e_bar_p.energy(gs.T_modes[m_mode_p]);
         number e_q = _e_bar_q.energy(gs.T_modes[m_mode_q]);
         number e_hat_q = _e_hat_q.energy(gs.T);
@@ -304,6 +303,7 @@ class ThivetVV : EnergyExchangeMechanism {
         number exp_q = 1. - exp(-_theta_v_q / gs.T);
 
         return gs.massf[m_p] / m_tau * (exp_p / exp_q * tmp_a - tmp_b);
+
     }
 
 private:

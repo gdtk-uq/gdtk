@@ -89,6 +89,18 @@ local function transformRelaxationTime(rt, p, q, db)
       t.f_m_q = computeMassFactor(q, db)
       t.r_eq_p = db[p].r_eq
       t.r_eq_q = db[q].r_eq
+   elseif t.model == "SSH-VT" then
+      t.model = "SSH-VT"
+      M_p = db[p].M
+      M_q = db[q].M
+      t.mu_pq = (M_p * M_q)/(M_p + M_q)
+      t.mu_pp = (M_p * M_p)/(M_p + M_p)
+      t.mu_qq = (M_q * M_q)/(M_q + M_q)
+      t.theta_v_p = db[p].theta_v or db[p].vib_data.theta_v
+      t.sigma = 0.5*(SSHSigma(p, db) + SSHSigma(q, db))
+      t.epsilon = sqrt(db[p].epsilon * db[q].epsilon)
+      t.f_m_p = computeMassFactor(p, db)
+      t.r_eq_p = db[p].r_eq
    elseif t.model == "ParkN2e-" then
       t.a_low = rt.a_low
       t.b_low = rt.b_low
@@ -178,6 +190,16 @@ local function relaxationTimeToLuaStr(rt)
       str = str .. string.format("      r_eq_p = %.8e,\n", rt.r_eq_p)
       str = str .. string.format("      r_eq_q = %.8e,\n", rt.r_eq_q)
       str = str .. "  },"
+   elseif rt.model == "SSH-VT" then
+      str = "{model='SSH_VT',\n"
+      str = str .. string.format("      theta_v_p = %f,\n", rt.theta_v_p)
+      str = str .. string.format("      mu_pq = %.6e,\n", rt.mu_pq)
+      str = str .. string.format("      mu_pp = %.6e,\n", rt.mu_pp)
+      str = str .. string.format("      mu_qq = %.6e,\n", rt.mu_qq)
+      str = str .. string.format("      sigma = %.6e,\n", rt.sigma)
+      str = str .. string.format("      epsilon = %.6e,\n", rt.epsilon)
+      str = str .. string.format("      f_m_p = %.6e,\n", rt.f_m_p)
+      str = str .. string.format("      r_eq_p = %.8e,\n", rt.r_eq_p)
       str = str .. "  },"
    elseif rt.model == "Candler" then
       submodelstr = relaxationTimeToLuaStr(rt.submodel)
