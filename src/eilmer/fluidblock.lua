@@ -313,7 +313,7 @@ local function connectBlocks(blkA, faceA, blkB, faceB, orientation)
       -- [TODO] need to test for matching corner locations and consistent numbers of cells
    elseif blkA.myType == "FluidBlock" and blkB.myType == "SolidBlock" then
       -- The preprocessor will set the time-accurate fluid/solid coupling BC by default unless the user explicitly requests the alternate
-      local flag = blkA.bcList[faceA].type == "wall_adjacent_to_solid2" and blkB.bcList[faceB].type == "SolidAdjacentToGas2"
+      flag = config.coupling_with_solid_domains == "steady_fluid_transient_solid"
       if not flag then
          blkA.bcList[faceA] = WallBC_AdjacentToSolid:new{otherBlock=blkB.id,
                                                          otherFace=faceB,
@@ -333,7 +333,7 @@ local function connectBlocks(blkA, faceA, blkB, faceB, orientation)
       end
    elseif blkA.myType == "SolidBlock" and blkB.myType == "FluidBlock" then
       -- The preprocessor will set the time-accurate fluid/solid coupling BC by default unless the user explicitly requests the alternate
-      local flag = blkB.bcList[faceB].type == "wall_adjacent_to_solid2" and blkA.bcList[faceA].type == "SolidAdjacentToGas2"
+      flag = config.coupling_with_solid_domains == "steady_fluid_transient_solid"
       if not flag then
          blkA.bcList[faceA] = SolidAdjacentToGasBC:new{otherBlock=blkB.id,
                                                        otherFace=faceB,

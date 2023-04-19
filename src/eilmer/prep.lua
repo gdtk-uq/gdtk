@@ -18,6 +18,7 @@ config = configoptions.config
 local gridpro = require 'gridpro'
 -- Make these functions global so that users may call them
 -- in the configuration script
+returnGridproGridBlockType = gridpro.returnGridproGridBlockType
 applyGridproConnectivity = gridpro.applyGridproConnectivity
 applyGridproBoundaryConditions = gridpro.applyGridproBoundaryConditions
 to_eilmer_axis_map = gridpro.to_eilmer_axis_map

@@ -52,8 +52,16 @@ local function to_eilmer_axis_map(gridpro_ijk)
    return eilmer_ijk
 end
 
-function gridpro.applyGridproConnectivity(fname, blks)
+function gridpro.applyGridproConnectivity(fname, blks, gridpro2eilmer_id_map)
    print("Applying block connections from GridPro connectivity file: ", fname)
+   -- the user may provide an id_map which defines the mapping of GridPro block ids to Eilmer block ids
+   -- if an id_map is not provided, we will fill in an id_map with a 1:1 mapping
+   if gridpro2eilmer_id_map == nil then
+      gridpro2eilmer_id_map = {}
+      for i,blk in ipairs(blks) do
+         gridpro2eilmer_id_map[i] = i
+      end
+   end
    local f = assert(io.open(fname, 'r'))
    local line
    while true do
@@ -66,7 +74,7 @@ function gridpro.applyGridproConnectivity(fname, blks)
    local nb = tonumber(split_string(line)[1])
    local conns = {}
    for ib=1,nb do
-      conns[#conns+1] = {}
+      conns[gridpro2eilmer_id_map[ib]] = {}
       while true do
 	 line = f:read("*line")
 	 tks = split_string(line)
@@ -76,34 +84,34 @@ function gridpro.applyGridproConnectivity(fname, blks)
       end
       -- Work on faces in order.
       -- Gridpro imin ==> Eilmer WEST face
-      local otherBlk = tonumber(tks[5])
-      if otherBlk > 0 then -- there is a connection
-	 conns[ib]["west"] = {otherBlk, tks[6]}
+      local otherBlk = gridpro2eilmer_id_map[tonumber(tks[5])]
+      if otherBlk ~= nil and otherBlk > 0 then -- there is a connection
+	 conns[gridpro2eilmer_id_map[ib]]["west"] = {otherBlk, tks[6]}
       end
       -- Gridpro imax ==> Eilmer EAST face
-      otherBlk = tonumber(tks[9])
-      if otherBlk > 0 then
-	 conns[ib]["east"] = {otherBlk, tks[10]}
+      otherBlk = gridpro2eilmer_id_map[tonumber(tks[9])]
+      if otherBlk ~= nil and otherBlk > 0 then
+	 conns[gridpro2eilmer_id_map[ib]]["east"] = {otherBlk, tks[10]}
       end
       -- Gridpro jmin ==> Eilmer SOUTH face
-      otherBlk = tonumber(tks[13])
-      if otherBlk > 0 then
-	 conns[ib]["south"] = {otherBlk, tks[14]}
+      otherBlk = gridpro2eilmer_id_map[tonumber(tks[13])]
+      if otherBlk ~= nil and otherBlk > 0 then
+	 conns[gridpro2eilmer_id_map[ib]]["south"] = {otherBlk, tks[14]}
       end
       -- Gridpro jmax ==> Eilmer NORTH face
-      otherBlk = tonumber(tks[17])
-      if otherBlk > 0 then
-	 conns[ib]["north"] = {otherBlk, tks[18]}
+      otherBlk = gridpro2eilmer_id_map[tonumber(tks[17])]
+      if otherBlk ~= nil and otherBlk > 0 then
+	 conns[gridpro2eilmer_id_map[ib]]["north"] = {otherBlk, tks[18]}
       end
       -- Gridpro kmin ==> Eilmer BOTTOM face
-      otherBlk = tonumber(tks[21])
-      if otherBlk > 0 then
-	 conns[ib]["bottom"] = {otherBlk, tks[22]}
+      otherBlk = gridpro2eilmer_id_map[tonumber(tks[21])]
+      if otherBlk ~= nil and otherBlk > 0 then
+	 conns[gridpro2eilmer_id_map[ib]]["bottom"] = {otherBlk, tks[22]}
       end
       -- Gridpro kmax ==> Eilmer TOP face
-      otherBlk = tonumber(tks[25])
-      if otherBlk > 0 then
-	 conns[ib]["top"] = {otherBlk, tks[26]}
+      otherBlk = gridpro2eilmer_id_map[tonumber(tks[25])]
+      if otherBlk ~= nil and otherBlk > 0 then
+	 conns[gridpro2eilmer_id_map[ib]]["top"] = {otherBlk, tks[26]}
       end
    end
    f:close()
@@ -128,7 +136,15 @@ function gridpro.applyGridproConnectivity(fname, blks)
 
 end
 
-function gridpro.applyGridproBoundaryConditions(fname, blks, bcMap, dim)
+function gridpro.applyGridproBoundaryConditions(fname, blks, bcMap, dim, gridpro2eilmer_id_map)
+   -- the user may provide an id_map which defines the mapping of GridPro block ids to Eilmer block ids
+   -- if an id_map is not provided, we will fill in an id_map with a 1:1 mapping
+   if gridpro2eilmer_id_map == nil then
+      gridpro2eilmer_id_map = {}
+      for i,blk in ipairs(blks) do
+         gridpro2eilmer_id_map[i] = i
+      end
+   end
    local dim = dim or 3
    f = assert(io.open(fname, "r"))
    local line = f:read("*line")
@@ -152,13 +168,13 @@ function gridpro.applyGridproBoundaryConditions(fname, blks, bcMap, dim)
 	    break
 	 end
       end
-      bcs[#bcs+1] = {west=tonumber(tks[5]),
-		     east=tonumber(tks[7]),
-		     south=tonumber(tks[9]),
-		     north=tonumber(tks[11])}
+      bcs[gridpro2eilmer_id_map[i]] = {west=tonumber(tks[5]),
+                                       east=tonumber(tks[7]),
+                                       south=tonumber(tks[9]),
+                                       north=tonumber(tks[11])}
       if dim == 3 then
-	 bcs[#bcs].bottom = tonumber(tks[13])
-	 bcs[#bcs].top = tonumber(tks[15])
+	 bcs[gridpro2eilmer_id_map[i]].bottom = tonumber(tks[13])
+	 bcs[gridpro2eilmer_id_map[i]].top = tonumber(tks[15])
       end
    end
    -- Read labels and discard
@@ -205,6 +221,30 @@ function gridpro.applyGridproBoundaryConditions(fname, blks, bcMap, dim)
    end
 end
 
+function gridpro.returnGridproGridBlockType(fname, fluid_domain_id)
+   f = assert(io.open(fname, "r"))
+   local line = f:read("*line")
+   local tks = split_string(line)
+   nBlocks = tonumber(tks[1])
+   blk_type = {}
+   for i=1,nBlocks do
+      -- Loop past comment lines
+      while true do
+	 line = f:read("*line")
+	 tks = split_string(line)
+	 if string.sub(tks[1], 1, 1) ~= '#' then
+	    -- We have a valid line.
+	    break
+	 end
+      end
+      if (tonumber(tks[3]) == fluid_domain_id) then
+         blk_type[#blk_type+1] = "fluid"
+      else
+         blk_type[#blk_type+1] = "solid"
+      end
+   end
+   return blk_type
+end
 
 function gridpro.to_eilmer_axis_map(gridpro_ijk)
    -- Convert from GridPro axis_map string to Eilmer3 axis_map string.
