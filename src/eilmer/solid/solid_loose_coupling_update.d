@@ -71,12 +71,13 @@ double determine_dt(double cfl_value)
     return dt;
 } // end determine_dt
 
-void integrate_solid_in_time(int super_time_steps, double sim_time)
+void integrate_solid_in_time(int super_time_steps, double dt_couple)
 {
+    GlobalConfig.max_time = dt_couple;
     SimState.s_RKL = super_time_steps;
     SimState.time = 0.0;
     foreach (blk; parallel(localFluidBlocks,1)) { blk.active = false; }
-    integrate_in_time(sim_time);
+    integrate_in_time(dt_couple);
     foreach (blk; parallel(localFluidBlocks,1)) { blk.active = true; }
 }
 

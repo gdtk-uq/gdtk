@@ -22,6 +22,7 @@ import std.algorithm;
 import std.getopt;
 import std.json;
 import std.file;
+import std.math;
 
 import fileutil;
 import json_helper;
@@ -240,19 +241,43 @@ int main(string[] args)
     }
 
     // read .cht JSON file
-    int npoints, super_time_steps;
+    int npoints, super_time_steps, n_startup_steps;
     bool constant_freestream, warm_start_fluid_solve, init_precondition_matrix;
-    JSONValue jsonData = readJSONfile(jobName~".cht");
-    npoints             = to!int(jsonData["npoints"].integer);
-    constant_freestream = jsonData["constant_freestream"].boolean;
+    double dt_couple_max, dt_couple_init;
+    JSONValue jsonData     = readJSONfile(jobName~".cht");
+    npoints                = to!int(jsonData["npoints"].integer);
+    constant_freestream    = jsonData["constant_freestream"].boolean;
     warm_start_fluid_solve = jsonData["warm_start_fluid_solve"].boolean;
-    super_time_steps    = to!int(jsonData["super_time_steps"].integer);
+    super_time_steps       = to!int(jsonData["super_time_steps"].integer);
+    dt_couple_max          = jsonData["dt_couple_max"].floating;
+    dt_couple_init         = jsonData["dt_couple_init"].floating;
+    n_startup_steps        = to!int(jsonData["n_startup_steps"].integer);
+
+    if (n_startup_steps > npoints) {
+        if (GlobalConfig.is_master_task) {
+            writeln("The user has requested more startup steps than points in the trajectory.");
+            writeln("Bailing out!");
+            stdout.flush();
+        }
+        exitFlag = 1;
+        return exitFlag;
+    }
 
     // bootstrap the coupled boundary condition by sending the initial solid temperature to the fluid domain
     send_solid_domain_boundary_temperature_data_to_gas_domain();
 
     // run CHT simulation
     double time = 0.0;
+    double dt_couple = dt_couple_init;
+    double dt_factor;
+    if (n_startup_steps == 0) {
+        dt_factor = 1.0;
+        dt_couple_max = dt_couple_init;
+    }
+    else {
+        dt_factor = pow(dt_couple_max/dt_couple_init, 1.0/n_startup_steps);
+    }
+
     foreach (idx; 0..npoints) {
 
         int io_idx = idx;
@@ -268,7 +293,7 @@ int main(string[] args)
             writefln("### Simulating point %d at t = %.5f seconds ###", idx, time);
             writefln("#################################################");
         }
-        time += jsonData["point_"~to!string(idx)]["time"].floating;
+        time += dt_couple;
 
         // set the inflow condition for this point
         if (!constant_freestream) {
@@ -301,13 +326,16 @@ int main(string[] args)
         send_gas_domain_boundary_heat_flux_data_to_solid_domain();
 
         // solid domain solver
-        integrate_solid_in_time(super_time_steps, time);
+        integrate_solid_in_time(super_time_steps, dt_couple);
 
         // transfer temperature data from solid domain to fluid domain (Temperature Back)
         send_solid_domain_boundary_temperature_data_to_gas_domain();
 
         // write out a flow/solid solution
         write_cht_solution(jobName, time, io_idx);
+
+        // increase dt_couple
+        dt_couple = fmin(dt_couple_max, dt_couple*dt_factor);
     }
 
     // Perform RHS evaluation to fill the fluid/solid BC with the latest solid temperature...
