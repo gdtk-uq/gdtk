@@ -87,6 +87,8 @@ local function transformRelaxationTime(rt, p, q, db)
       t.epsilon = sqrt(db[p].epsilon * db[q].epsilon)
       t.f_m_p = computeMassFactor(p, db)
       t.f_m_q = computeMassFactor(q, db)
+      t.r_eq_p = db[p].r_eq
+      t.r_eq_q = db[q].r_eq
    elseif t.model == "ParkN2e-" then
       t.a_low = rt.a_low
       t.b_low = rt.b_low
@@ -173,6 +175,9 @@ local function relaxationTimeToLuaStr(rt)
       str = str .. string.format("      epsilon = %.6e,\n", rt.epsilon)
       str = str .. string.format("      f_m_p = %.6e,\n", rt.f_m_p)
       str = str .. string.format("      f_m_q = %.6e,\n", rt.f_m_q)
+      str = str .. string.format("      r_eq_p = %.8e,\n", rt.r_eq_p)
+      str = str .. string.format("      r_eq_q = %.8e,\n", rt.r_eq_q)
+      str = str .. "  },"
       str = str .. "  },"
    elseif rt.model == "Candler" then
       submodelstr = relaxationTimeToLuaStr(rt.submodel)

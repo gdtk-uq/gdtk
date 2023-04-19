@@ -605,6 +605,9 @@ function writeMultiTGas(f, species, db, optsTable)
          epsilon = db.default.epsilon.value
       end
       f:write(string.format("db['%s'].epsilon = %.8f\n", sp, epsilon))
+      if db[sp].r_eq then
+	 f:write(string.format("db['%s'].r_eq = %.8e\n", sp, db[sp].r_eq.value))
+      end
       -- Ionised species have a different potentials to LJ, so we don't mind them being missing (NNG)
       if ((db[sp].charge == 0) and diffusion_info_missing) then
           print("------------------------------------------------------------------------------------------")

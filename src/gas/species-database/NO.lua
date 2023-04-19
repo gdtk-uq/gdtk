@@ -52,6 +52,12 @@ db.NO.epsilon = {
    description = 'Lennard-Jones potential well depth.',
    reference = 'GRI-Mech 3.0 transport file.'
 }
+db.NO.r_eq = {
+   value = 1.15e-10,
+   units = 'm',
+   description = 'Equilibrium intermolecular distance',
+   reference = 'NIST Chemistry WebBook: http://webbook.nist.gov/chemistry/ (with spradian07::diatom.dat data for some parameters'
+}
 db.NO.ceaThermoCoeffs = {
    nsegments = 3,
    T_break_points = {200.0, 1000.0, 6000.0, 20000.0},

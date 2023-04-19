@@ -305,11 +305,14 @@ public:
         _q = q;
         _f_m_p = getDouble(L, -1, "f_m_p");
         _f_m_q = getDouble(L, -1, "f_m_q");
+        _r_eq_p = getDouble(L, -1, "r_eq_p");
+        _r_eq_q = getDouble(L, -1, "r_eq_q");
     }
 
     this(int p, int q, double mu_pq, double mu_pp, double mu_qq, 
             double sigma, double epsilon,
-            double theta_p, double theta_q, double f_m_p, double f_m_q) 
+            double theta_p, double theta_q, double f_m_p, double f_m_q, 
+            double r_eq_p, double r_eq_q) 
     {
         _p = p;
         _q = q;
@@ -323,11 +326,13 @@ public:
         _delta_E = Boltzmann_constant * (_theta_v_p - _theta_v_q);
         _f_m_p = f_m_p;
         _f_m_q = f_m_q;
+        _r_eq_p = r_eq_p;
+        _r_eq_q = r_eq_q;
     }
 
     RelaxationTime dup() {
         return new SSH_VV(_p, _q, _mu_pq, _mu_pp, _mu_qq, _sigma, _epsilon, 
-                          _theta_v_p, _theta_v_q, _f_m_p, _f_m_q);
+                          _theta_v_p, _theta_v_q, _f_m_p, _f_m_q, _r_eq_p, _r_eq_q);
     }
 
     @nogc number eval(in GasState gs, number[] molef, number[] numden) {
@@ -348,6 +353,7 @@ private:
     double _sigma, _epsilon;       // Lennard-Jones parameters (m, J)
     int _p, _q;                    // partcipating species
     double _f_m_p, _f_m_q;         // mass factor
+    double _r_eq_p, _r_eq_q;       // Equilibrium separation of molecule
 
     @nogc number _transition_probability(number T){
         number beta = SSH_beta(_sigma, _epsilon, _mu_pq, _delta_E, T);
@@ -357,8 +363,8 @@ private:
         number chi = SSH_chi(alpha_pq, T);
 
         number A = SSH_A(rc_star, _sigma);
-        number Z_0_p = SSH_Z_0(delta_star, _sigma);
-        number Z_0_q = SSH_Z_0(delta_star, _sigma);
+        number Z_0_p = SSH_Z_0(delta_star, _r_eq_p);
+        number Z_0_q = SSH_Z_0(delta_star, _r_eq_q);
         number Z_V_p = SSH_Z_V(_f_m_p, _mu_pp, _mu_pq, alpha_pq, _theta_v_p, _delta_E, 2);
         number Z_V_q = SSH_Z_V(_f_m_q, _mu_qq, _mu_pq, alpha_pq, _theta_v_q, _delta_E, 1);
         number Z_T = SSH_Z_T(_delta_E, alpha_pq, T);
@@ -385,11 +391,12 @@ public:
         _p = p;
         _q = q;
         _f_m_p = getDouble(L, -1, "f_m_p");
+        _r_eq_p = getDouble(L, -1, "r_eq_p");
     }
 
     this(int p, int q, double mu_pq, double mu_pp, double mu_qq, 
             double sigma, double epsilon, 
-            double theta_p, double f_m_p) 
+            double theta_p, double f_m_p, double r_eq_p) 
     {
         _p = p;
         _q = q;
@@ -401,16 +408,18 @@ public:
         _theta_v_p = _theta_v_p;
         _delta_E = Boltzmann_constant * _theta_v_p;
         _f_m_p = f_m_p;
+        _r_eq_p = r_eq_p;
     }
 
     RelaxationTime dup() {
         return new SSH_VT(_p, _q, _mu_pq, _mu_pp, _mu_qq, _sigma, _epsilon, 
-                          _theta_v_p, _f_m_p);
+                          _theta_v_p, _f_m_p, _r_eq_p);
     }
 
     @nogc number eval(in GasState gs, number [] molef, number [] numden){
         if (molef[_p] <= SMALL_MOLE_FRACTION || molef[_q] <= SMALL_MOLE_FRACTION)
             return to!number(-1.0);
+
         number T = gs.T;
         number n;
         if (_p == _q) {
@@ -430,6 +439,7 @@ private:
     double _delta_E;               // (J) energy difference between characteristic 
                                    //     vibration energies
     double _sigma, _epsilon;       // Lennard-Jones parameters (m, J)
+    double _r_eq_p, _r_eq_q;       // Equilibrium interatomic distance
     int _p, _q;                    // partcipating species
     double _f_m_p;                 // mass factor
 
@@ -441,8 +451,8 @@ private:
         number chi = SSH_chi(alpha_pq, T);
 
         number A = SSH_A(rc_star, _sigma);
-        number Z_0_p = SSH_Z_0(delta_star, _sigma);
-        number Z_V_p = SSH_Z_V(_f_m_p, _mu_pp, _mu_pq, alpha_pq, _theta_v_p, _delta_E, 1);
+        number Z_0_p = SSH_Z_0(delta_star, _r_eq_p);
+        number Z_V_p = SSH_Z_V(_f_m_p, _mu_pp, _mu_pq, alpha_pq, _theta_v_p, _delta_E, 0);
         number Z_T = SSH_Z_T(_delta_E, alpha_pq, T);
         number Z_plus = SSH_Z_plus(_epsilon, chi, T);
         return A/(Z_0_p*Z_V_p*Z_T*Z_plus);
