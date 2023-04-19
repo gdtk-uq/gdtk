@@ -339,7 +339,7 @@ public:
         if (molef[_p] <= SMALL_MOLE_FRACTION || molef[_q] <= SMALL_MOLE_FRACTION)
             return to!number(-1.0);
         number T = gs.T;
-        number n = numden[_p] + numden[_q];
+        number n = numden[_q];
         number Z_COLL = collision_frequency(n, _sigma, _mu_pq, T);
         number P = _transition_probability(T);
         return 1./(Z_COLL * P) * exp(-(_theta_v_p - _theta_v_q) / T);
@@ -421,13 +421,7 @@ public:
             return to!number(-1.0);
 
         number T = gs.T;
-        number n;
-        if (_p == _q) {
-            n = numden[_p];
-        }
-        else {
-            n = numden[_p] + numden[_q];
-        }
+        number n = numden[_q];
         number Z_COLL = collision_frequency(n, _sigma, _mu_pq, T);
         number P = _transition_probability(T);
         return 1. / (Z_COLL * P * (1. - exp(-_theta_v_p / T)));
