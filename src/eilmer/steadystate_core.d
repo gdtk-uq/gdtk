@@ -664,7 +664,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     double sigma;
     foreach (step; startStep .. nsteps+1) {
         SimState.step = step;
-        if ( (step/GlobalConfig.control_count)*GlobalConfig.control_count == step ) {
+        if ( GlobalConfig.control_count > 0 && (step/GlobalConfig.control_count)*GlobalConfig.control_count == step ) {
             read_control_file(); // Reparse the time-step control parameters occasionally.
         }
         residualsUpToDate = false;
