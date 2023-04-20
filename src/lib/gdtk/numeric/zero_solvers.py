@@ -114,6 +114,48 @@ def bisection(f, bx, ux, tol=1.0e-6):
         else:
             ux = midpoint
     return 0.5*(bx+ux)
+    # end bisection()
+
+def newton(fun, fun_dash, x0, tol=1.0e-11, limits=[], max_iterations=100, tf=False):
+    """
+    The iterative newton method for zero-finding in one-dimension.
+
+    f: user-defined function f(x)
+    f_dash: differental of function f(x) d/dx(f(x))
+    x0: first guess
+    tol: stopping tolerance for f(x)=0
+    limits: [lb, ub] lower and upper bound for solution space. f(lb) and 
+            f(ub) must have opposing signs
+    max_iterations: to stop the iterations running forever, just in case...
+    tf: boolean flag to turn on printing of intermediate states
+
+    Returns: x such that f(x)=0
+    """
+    if limits != []:
+        if len(limits) == 1:
+            raise(ValueError('Both lower and upper limit need to be'))
+        if len(limits) == 2:
+            sign_lower = fun(limits[0]) / abs(fun(limits[0]))
+            sign_upper = fun(limits[1]) / abs(fun(limits[0]))
+            if sign_lower*sign_upper>0:
+                raise(ValueError('Bad initial lower and upper limits'))
+    for i in range(max_iterations):
+        try:
+            x1 = x0 - fun(x0) / fun_dash(x0)
+        except ZeroDivisionError:
+            raise RuntimeError('Cannot proceed with zero slope.')
+        f1 = fun(x1)
+        if limits != []:
+            if x1 < limits[0] or x1 > limits[1]:  # perform bisection step.
+                if f1/abs(f1) * sign_lower > 0: limits[0]=x0
+                else: limits[1]=x0
+                x1 = (limits[0]+limits[1])/2
+        if tf: print('  %d \t  %f \t %f \t %e' % (i+1, x0, x1, f1 ))
+        x0 = x1
+        if abs(f1) < tol: return x1
+    raise RuntimeError('Did not converge after ', i+1, ' iterations')
+    # end newton()
+
 
 # -------------------------------------------------------------------
 

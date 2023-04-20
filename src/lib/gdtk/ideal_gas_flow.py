@@ -35,6 +35,7 @@ Two-dimensional flows:
 from math import *
 import numpy
 from gdtk.numeric.zero_solvers import secant as solve
+from gdtk.numeric.zero_solvers import newton as solve_newton
 
 # ---------------------------------------------------------------
 # Isentropic flow
@@ -325,6 +326,41 @@ def beta_obl(M1, theta, g=1.4, tol=1.0e-6):
     if abs(f2) < tol: return sign_beta * b2
     return sign_beta * solve(f_to_solve, b1, b2, tol=tol)
 
+def beta_obl_newt(M1, theta, g=1.4, tol=1.0e-6):
+    """
+    Oblique shock wave angle.
+    calculation using Newton's methods
+
+    M1: upstream Mach number
+    theta: flow deflection angle (radians)
+    Returns: shock angle with respect to initial flow direction (radians)
+    """
+    if M1 < 1.0: raise Exception("M1 is subsonic")
+    sign_beta = -1 if theta < 0.0 else 1
+    theta = abs(theta)
+    b0 = asin(1.0/M1)
+    if theta < tol:
+        # Small deflection will produce a very weak shock.
+        return sign_beta * b0
+    def fun(beta):
+        m1sb = M1 * abs(sin(beta))
+        m1cb = M1 * abs(cos(beta))
+        if m1cb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1cb)
+        t1 = 2.0 / tan(beta) * (m1sb**2 - 1.0)
+        t2 = 1/(M1**2 * (g + cos(2.0 * beta)) + 2.0)
+        return atan(t1*t2) - theta
+    def fun_dash(beta):
+        m1sb = M1 * abs(sin(beta))
+        t1 = 2.0 / tan(beta) * (m1sb**2 - 1.0)
+        t2 = 1/(M1**2 * (g + cos(2.0 * beta)) + 2.0)
+        x = t1*t2
+        df_dx = 1/(1+x**2)
+        dt1_db = 2*M1**2 * cos(2*beta) + 2/(sin(beta)**2)
+        dt2_db = (M1**2 * (g + cos(2.0 * beta)) + 2.0)**-2 * M1**2 * 2 *sin(2*beta)
+        dx_db = dt1_db*t2 + t1*dt2_db
+        return df_dx*dx_db
+    return sign_beta * solve_newton(fun, fun_dash, 0.9*b0, tol=tol)
+
 def beta_obl2(M1, p2_p1, g=1.4):
     """
     Oblique shock wave angle.
@@ -347,7 +383,8 @@ def theta_obl(M1, beta, g=1.4):
     Returns: theta, flow deflection angle (radians)
     """
     m1sb = M1 * abs(sin(beta))
-    if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
+    m1cb = M1 * abs(cos(beta))
+    if m1cb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1cb)
     t1 = 2.0 / tan(beta) * (m1sb**2 - 1.0)
     t2 = M1**2 * (g + cos(2.0 * beta)) + 2.0
     theta = atan(t1/t2)
@@ -362,7 +399,8 @@ def M2_obl(M1, beta, theta, g=1.4):
     Returns: M2, Mach number in flow after the shock
     """
     m1sb = M1 * abs(sin(beta))
-    if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
+    m1cb = M1 * abs(cos(beta))
+    if m1cb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1cb)
     numer = 1.0 + (g - 1.0) * 0.5 * m1sb**2
     denom = g * m1sb**2 - (g - 1.0) * 0.5
     m2 = sqrt(numer / denom / (sin(beta - theta))**2 )
@@ -377,7 +415,8 @@ def r2_r1_obl(M1, beta, g=1.4):
     Returns: r2/r1
     """
     m1sb = M1 * abs(sin(beta))
-    if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
+    m1cb = M1 * abs(cos(beta))
+    if m1cb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1cb)
     numer = (g + 1.0) * m1sb**2
     denom = 2.0 + (g - 1.0) * m1sb**2
     return numer / denom
@@ -411,7 +450,8 @@ def p2_p1_obl(M1, beta, g=1.4):
     Returns: p2/p1
     """
     m1sb = M1 * abs(sin(beta))
-    if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
+    m1cb = M1 * abs(cos(beta))
+    if m1cb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1cb)
     return 1.0 + 2.0 * g / (g + 1.0) * (m1sb**2 - 1.0)
 
 def T2_T1_obl(M1, beta, g=1.4):
@@ -433,7 +473,8 @@ def p02_p01_obl(M1, beta, g=1.4):
     Returns: p02/p01
     """
     m1sb = M1 * abs(sin(beta))
-    if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
+    m1cb = M1 * abs(cos(beta))
+    if m1cb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1cb)
     t1 = (g + 1.0) / (2.0 * g * m1sb**2 - (g - 1.0))
     t2 = (g + 1.0) * m1sb**2 / (2.0 + (g - 1.0) * m1sb**2)
     return t1**(1.0/(g-1.0)) * t2**(g/(g-1.0))
