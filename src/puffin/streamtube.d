@@ -45,7 +45,7 @@ public:
     double shear_tol;
     //
     Schedule!double y_lower, y_upper;
-    Schedule!int bc_lower, bc_upper;
+    Schedule!int bc_lower, bc_upper, active;
     //
     Vector3[] vertices_west;
     Vector3[] vertices_east;
@@ -95,7 +95,7 @@ public:
         int n_bc;
         double dx_bc;
         double[] xs, y0s, y1s;
-        int[] bc0s, bc1s;
+        int[] bc0s, bc1s, act;
         string fileName = format("%s/streamtube-%d.data", Config.job_name, indx);
         auto lines = File(fileName, "r").byLine();
         foreach (line; lines) {
@@ -110,12 +110,13 @@ public:
             }
             if (canFind(txt, "#")) continue;
             auto items = txt.split();
-            if (items.length >= 5) {
+            if (items.length >= 6) {
                 xs ~= to!double(items[0]);
                 y0s ~= to!double(items[1]);
                 y1s ~= to!double(items[2]);
                 bc0s ~= to!int(items[3]);
                 bc1s ~= to!int(items[4]);
+                act ~= to!int(items[5]);
             }
         }
         if (n_bc != xs.length) {
@@ -128,6 +129,7 @@ public:
         y_upper = new Schedule!double(xs, y1s);
         bc_lower = new Schedule!int(xs, bc0s);
         bc_upper = new Schedule!int(xs, bc1s);
+        active = new Schedule!int(xs, act);
         //
         // Scratch space
         fsL = FlowState2D(gmodel);
@@ -147,6 +149,7 @@ public:
         repr ~= format(", ncells=%d", ncells);
         repr ~= format(", y_lower=%s, y_upper=%s", y_lower, y_upper);
         repr ~= format(", bc_lower=%s, bc_upper=%s", bc_lower, bc_upper);
+        repr ~= format(", active=%s", active);
         repr ~= ")";
         return repr;
     }
@@ -289,7 +292,7 @@ public:
         return;
     } // end shuffle_data_west()
 
-    void write_flow_data(bool write_header)
+    void write_flow_data(bool write_header, bool write_data)
     {
         int nsp = gmodel.n_species;
         int nmodes = gmodel.n_modes;
@@ -304,19 +307,21 @@ public:
         } else {
             fp = File(fileName, "a");
         }
-        foreach (j; 0 .. ncells) {
-            auto face = ifaces_west[j];
-            auto fs = flowstates_west[j];
-            GasState* g = &(fs.gas);
-            double Vx = fs.vel.x;
-            double Vy = fs.vel.y;
-            double M = sqrt(Vx*Vx+Vy*Vy)/g.a;
-            double shock = (cells[j].shock_flag) ? 1.0 : 0.0;
-            fp.write(format("%e %e %e %e %e", face.pos.x, face.pos.y, Vx, Vy, M));
-            fp.write(format(" %e %e %e %e %e %f", g.rho, g.p, g.T, g.u, g.a, shock));
-            foreach (i; 0 .. nsp) { fp.write(format(" %e", g.massf[i])); }
-            foreach (i; 0 .. nmodes) { fp.write(format(" %e %e", g.T_modes[i], g.u_modes[i])); }
-            fp.write("\n");
+        if (write_data) {
+            foreach (j; 0 .. ncells) {
+                auto face = ifaces_west[j];
+                auto fs = flowstates_west[j];
+                GasState* g = &(fs.gas);
+                double Vx = fs.vel.x;
+                double Vy = fs.vel.y;
+                double M = sqrt(Vx*Vx+Vy*Vy)/g.a;
+                double shock = (cells[j].shock_flag) ? 1.0 : 0.0;
+                fp.write(format("%e %e %e %e %e", face.pos.x, face.pos.y, Vx, Vy, M));
+                fp.write(format(" %e %e %e %e %e %f", g.rho, g.p, g.T, g.u, g.a, shock));
+                foreach (i; 0 .. nsp) { fp.write(format(" %e", g.massf[i])); }
+                foreach (i; 0 .. nmodes) { fp.write(format(" %e %e", g.T_modes[i], g.u_modes[i])); }
+                fp.write("\n");
+            }
         }
         fp.close();
         return;

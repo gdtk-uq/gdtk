@@ -212,10 +212,11 @@ class StreamTube():
     __slots__ = 'indx', 'label', \
                 'gas', 'velx', 'vely', 'ncells', \
                 'y0', 'y1', 'bc0', 'bc1', \
-                'xs', 'y0s', 'y1s', 'bc0s', 'bc1s', 'nbc'
+                'xs', 'y0s', 'y1s', 'bc0s', 'bc1s', 'nbc', \
+                'act'
 
     def __init__(self, gas=None, velx=1000.0, vely=0.0,
-                 y0=None, y1=None, bc0=None, bc1=None,
+                 y0=None, y1=None, bc0=None, bc1=None, act=None,
                  ncells=10, nbc=101, label="",):
         """
         Creates an outline of a streamtube with user-specified boundaries.
@@ -230,6 +231,9 @@ class StreamTube():
                  if bc0(x) == 0, this stream exchanges data with lower stream
                  if bc0(x) == 1, this stream exchanges data with upper stream
         bc1    : upper boundary condition as an integer function of x
+        act    : active cell indicator as an integer function of x
+                 if act(x) == 1, the flow solver is applied
+                 if act(x) == 0, flow is mapped from one cell to next.
         ncells : number of cells between lower and upper boundary
         nbc    : number of points in the boundary definitions
         label  : optional label for postprocessing
@@ -255,6 +259,11 @@ class StreamTube():
             self.bc1 = bc1
         else:
             raise RuntimeError("Was expecting a function for bc1")
+        if callable(act):
+            self.act = act
+        else:
+            def act(x): return 1
+            self.act = act
         self.ncells = ncells
         self.nbc = nbc
         #
@@ -278,13 +287,14 @@ class StreamTube():
         y1s = [self.y1(x) for x in xs]
         bc0s = [self.bc0(x) for x in xs]
         bc1s = [self.bc1(x) for x in xs]
+        active = [self.act(x) for x in xs]
         fileName = config.job_name + ('/streamtube-%d.data' % self.indx)
         with open(fileName, 'w') as fp:
-            fp.write('# x  y0  y1  bc0  bc1\n')
+            fp.write('# x  y0  y1  bc0  bc1 act\n')
             fp.write('# n_bc=%d\n' % self.nbc)
             fp.write('# dx_bc=%g\n' % (xs[1]-xs[0]))
             for i in range(len(xs)):
-                fp.write('%g %g %g %g %g\n' % (xs[i], y0s[i], y1s[i], bc0s[i], bc1s[i]))
+                fp.write('%g %g %g %g %g %g\n' % (xs[i], y0s[i], y1s[i], bc0s[i], bc1s[i], active[i]))
         return
 
 # --------------------------------------------------------------------

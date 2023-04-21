@@ -57,7 +57,11 @@ void init_calculation()
     foreach (st; streams) {
         st.set_up_data_storage();
         st.set_up_inflow_boundary();
-        st.write_flow_data(true);
+        if (st.active.get_value(0.) == 1) {
+            st.write_flow_data(true, true);
+        } else {
+            st.write_flow_data(true, false);
+        }
     }
     progress.step = 0;
     progress.x = 0.0;
@@ -114,7 +118,11 @@ void do_space_marching_calculation()
         //
         // 5. Write a flow slice (maybe).
         if (progress.x >= progress.plot_at_x) {
-            foreach (st; streams) { st.write_flow_data(false); }
+            foreach (st; streams) { 
+                if (st.active.get_value(progress.x) == 1) {
+                    st.write_flow_data(false, true);
+                } 
+            }
             progress.steps_since_last_plot_write = 0;
             progress.plot_at_x += Config.plot_dx;
         } else {
@@ -124,7 +132,7 @@ void do_space_marching_calculation()
     //
     // Write the final slice, maybe.
     if (progress.steps_since_last_plot_write > 0) {
-        foreach (st; streams) { st.write_flow_data(false); }
+        foreach (st; streams) { st.write_flow_data(false, true); }
     }
     return;
 } // end do_space_marching_calculation()
@@ -145,13 +153,17 @@ void relax_slice_to_steady_flow(double xmid)
         // 1. Predictor (Euler) step..
         apply_boundary_conditions(xmid);
         foreach (st; parallel(streams, 1)) {
-            st.mark_shock_cells();
-            st.predictor_step(dt);
+            if (st.active.get_value(xmid) == 1) {
+                st.mark_shock_cells();
+                st.predictor_step(dt);
+            }
         }
         if (Config.t_order > 1) {
             apply_boundary_conditions(xmid);
             foreach (st; parallel(streams, 1)) {
-                st.corrector_step(dt);
+                if (st.active.get_value(xmid) == 1) {
+                    st.corrector_step(dt);
+                }
             }
         }
         // Prepare for next step.
