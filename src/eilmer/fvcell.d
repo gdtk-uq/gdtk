@@ -59,10 +59,11 @@ string avg_over_iface_list(string quantity, string result)
 }
 
 struct FVCellData{
+    size_t[] nfaces;
     size_t[][] c2f;
     number[] volumes;
     Vector3[] positions;
-    Vector3[4][] face_distances;
+    Vector3[][] face_distances;
     FlowState[] flowstates;
     FlowGradients[] gradients;
     WLSQGradWorkspace[] workspaces;

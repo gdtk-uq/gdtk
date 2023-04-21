@@ -700,7 +700,7 @@ public:
 
     @nogc
     void venkat_limit2(in FlowState fs, in LSQInterpWorkspace ws, number volume,
-                       Vector3[4] face_distances,
+                       Vector3[] face_distances, size_t nfaces,
                        bool apply_heuristic_pressure_limiter, LocalConfig myConfig)
     {
         // This is the classic Venkatakrishnan limiter from ref. [1], refer to ref. [2] for implementation details.
@@ -744,9 +744,9 @@ public:
         bool is3d = myConfig.dimensions == 3;
 
         // x-velocity
-        velxPhi = venkat_equation(fs.vel.x, velx, velxMax, velxMin, h, K, face_distances, is3d, velnondim);
-        velyPhi = venkat_equation(fs.vel.y, vely, velyMax, velyMin, h, K, face_distances, is3d, velnondim);
-        velzPhi = venkat_equation(fs.vel.z, velz, velzMax, velzMin, h, K, face_distances, is3d, velnondim);
+        velxPhi = venkat_equation(fs.vel.x, velx, velxMax, velxMin, h, K, face_distances, nfaces, is3d, velnondim);
+        velyPhi = venkat_equation(fs.vel.y, vely, velyMax, velyMin, h, K, face_distances, nfaces, is3d, velnondim);
+        velzPhi = venkat_equation(fs.vel.z, velz, velzMax, velzMin, h, K, face_distances, nfaces, is3d, velnondim);
         //version(MHD) {
         //    if (myConfig.MHD) {
         //        mixin(codeForLimits("B.x", "Bx", "BxPhi", "BxMax", "BxMin"));
@@ -759,7 +759,7 @@ public:
         //}
         version(turbulence) {
             foreach (it; 0 .. myConfig.turb_model.nturb) {
-                turbPhi[it] = venkat_equation(fs.turb[it], turb[it], turbMax[it], turbMin[it], h, K, face_distances, is3d);
+                turbPhi[it] = venkat_equation(fs.turb[it], turb[it], turbMax[it], turbMin[it], h, K, face_distances, nfaces, is3d);
             }
         }
         version(multi_species_gas) {
@@ -790,8 +790,8 @@ public:
             //}
             break;
         case InterpolateOption.rhou:
-            rhoPhi = venkat_equation(fs.gas.rho, rho, rhoMax, rhoMin, h, K, face_distances, is3d);
-            uPhi = venkat_equation(fs.gas.u, u, uMax, uMin, h, K, face_distances, is3d);
+            rhoPhi = venkat_equation(fs.gas.rho, rho, rhoMax, rhoMin, h, K, face_distances, nfaces, is3d);
+            uPhi = venkat_equation(fs.gas.u, u, uMax, uMin, h, K, face_distances, nfaces, is3d);
             //version(multi_T_gas) {
             //    foreach (imode; 0 .. nmodes) {
             //        mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
@@ -2237,7 +2237,7 @@ public:
         return;
     } // end interp_left()
 
-@nogc number venkat_equation(number qname, number[3] gname, number qMaxname, number qMinname, number h, double K, const Vector3[4] face_distances, bool is3d, number nondim) {
+@nogc number venkat_equation(number qname, number[3] gname, number qMaxname, number qMinname, number h, double K, const Vector3[] face_distances, size_t nfaces, bool is3d, number nondim) {
     number U = qname;
     number delu = (qMaxname-qMinname)/nondim;
     number theta = delu/h;
@@ -2245,7 +2245,8 @@ public:
     eps2 += 1.0e-25; // prevent division by zero
 
     number phi = 1.0;
-    foreach (dx; face_distances) {
+    foreach (i; 0 .. nfaces) {
+        Vector3 dx = face_distances[i];
         number delm = gname[0] * dx.x + gname[1] * dx.y;
         if (is3d) { delm += gname[2] * dx.z; }
         number delp = (delm >= 0.0) ? qMaxname - U: qMinname - U;
@@ -2262,7 +2263,7 @@ public:
     return phi;
 }
 
-@nogc number venkat_equation(number qname, number[3] gname, number qMaxname, number qMinname, number h, double K, const Vector3[4] face_distances, bool is3d) {
+@nogc number venkat_equation(number qname, number[3] gname, number qMaxname, number qMinname, number h, double K, const Vector3[] face_distances, size_t nfaces, bool is3d) {
     number nondim = 0.5*fabs(qMaxname + qMinname);
     number U = qname;
     number delu = (qMaxname-qMinname)/nondim;
@@ -2271,7 +2272,8 @@ public:
     eps2 += 1.0e-25; // prevent division by zero
 
     number phi = 1.0;
-    foreach (dx; face_distances) {
+    foreach (i; 0 .. nfaces) {
+        Vector3 dx = face_distances[i];
         number delm = gname[0] * dx.x + gname[1] * dx.y;
         if (is3d) { delm += gname[2] * dx.z; }
         number delp = (delm >= 0.0) ? qMaxname - U: qMinname - U;

@@ -451,6 +451,7 @@ public:
             size_t nghost = (2*njc*nkc + 2*nic*nkc)*n_ghost_cell_layers;
             if (myConfig.dimensions == 3) nghost += 2*nic*njc*n_ghost_cell_layers;
 
+            celldata.nfaces.length = nic*njc*nkc;
             celldata.volumes.length = nic*njc*nkc + nghost;
             celldata.positions.length = nic*njc*nkc + nghost;
             celldata.flowstates.reserve(nic*njc*nkc + nghost);
@@ -789,6 +790,7 @@ public:
                         celldata.c2f[c] ~= ifk_index(i,j,k+1); // top
                         celldata.c2f[c] ~= ifk_index(i,j,k);   // bottom
                     }
+                    celldata.nfaces[c] = celldata.c2f[c].length;
                 }
             }
         }

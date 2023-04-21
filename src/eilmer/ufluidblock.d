@@ -329,6 +329,7 @@ public:
         // have been handed out to the fvcells. This can happen when calling ~= on the
         // celldata flowstates, which we do during the creation of the ghost cells
         // For this reason, we want to reserve sufficient space in the array here.
+        celldata.nfaces.length = grid.cells.length;
         celldata.volumes.length = grid.cells.length + nghost;
         celldata.positions.length = grid.cells.length + nghost;
         celldata.face_distances.length = grid.cells.length;
@@ -410,6 +411,8 @@ public:
                     }
                 }
             }
+            celldata.nfaces[i] = celldata.c2f[i].length;
+            celldata.face_distances[i].length = celldata.nfaces[i];
         } // end foreach cells
         //
         // Set up the lists of indices for look-up of cells and faces
@@ -861,7 +864,7 @@ public:
                     foreach (i; 0 .. ncells) {
                         celldata.lsqgradients[i].venkat_limit2(celldata.flowstates[i],
                             celldata.lsqws[i], celldata.volumes[i], celldata.face_distances[i],
-                            false, myConfig);
+                            celldata.nfaces[i], false, myConfig);
                     }
                 break;
                 default:
