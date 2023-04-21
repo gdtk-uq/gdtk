@@ -302,6 +302,9 @@ class ThivetVV : EnergyExchangeMechanism {
         number exp_p = 1. - exp(-_theta_v_p / gs.T);
         number exp_q = 1. - exp(-_theta_v_q / gs.T);
 
+        // multiply by massf[p] to convert J/kg-of-species-p to J/kg-of-mixture
+        // The scaling by molef[q] is taken care of by using numden[q] in the
+        // relaxation time instead of the total number density.
         return gs.massf[m_p] / m_tau * (exp_p / exp_q * tmp_a - tmp_b);
 
     }

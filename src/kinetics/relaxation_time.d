@@ -279,9 +279,21 @@ protected:
     return exp(tmp_c);
 }
 
-@nogc number collision_frequency(number n, double sigma, double mu_pq, number T){
+@nogc number collision_frequency(number n_q, double sigma, double mu_pq, number T){
+    // The collision frequency we are computing is the frequency of collision 
+    // between a single particle of species p and any particle of q. 
+    // Standard formulations of collision frequency count the number of collisions
+    // between any particle of species p with any particle of q. Hence the 
+    // collision frequency we are computing is Z_(pq) / numden[p]. Thus we only
+    // need the number density of species q; the number density of species p will
+    // cancel. 
+    //
+    // Note that this also means it doesn't matter if the colliding species are like
+    // or unlike -- we are only tracking a single particle of species p. The discussion
+    // in Rowan's thesis on apge 89-90 about the number density is not relevant given
+    // the assumptions and cancellation disscused here.
     number tmp = 2 * PI * Boltzmann_constant * T / mu_pq;
-    return 2 * n * sigma * sigma * sqrt(tmp);
+    return 2 * n_q * sigma * sigma * sqrt(tmp);
 }
 
 /*
