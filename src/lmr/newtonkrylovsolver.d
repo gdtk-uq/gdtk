@@ -348,6 +348,7 @@ class ResidualBasedAutoCFL : CFLSelector {
         cflTrial = fmin(cflTrial, mLimitOnCFLIncreaseRatio*cfl);
         cflTrial = fmax(cflTrial, mLimitOnCFLDecreaseRatio*cfl);
         cflTrial = fmin(cflTrial, mMaxCFL);
+
         return cflTrial;
     }
 
@@ -399,6 +400,7 @@ struct RestartInfo {
     double cfl;
     int step;
     double globalResidual;
+    double prevGlobalResidual;
     ConservedQuantities residuals;
 
     this(size_t n)
@@ -489,6 +491,7 @@ void broadcastRestartInfo()
         MPI_Bcast(&(snapshots[i].cfl), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         MPI_Bcast(&(snapshots[i].step), 1, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Bcast(&(snapshots[i].globalResidual), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&(snapshots[i].prevGlobalResidual), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         broadcastResiduals(snapshots[i].residuals);
     }
 }
@@ -1034,6 +1037,9 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
 	    readRestartMetadata();
 	    readReferenceResidualsFromFile();
 	}
+	// Now ditch snapshots BEYOND what was requested.
+	snapshots.length = snapshotStart;
+
 	// And, in MPI, broadcast information.
 	version(mpi_parallel) {
 	    broadcastRestartInfo();
@@ -1042,10 +1048,10 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
 	}
         referenceResidualsAreSet = true;
         nWrittenSnapshots = to!int(snapshots.length);
-        RestartInfo restart = snapshots[snapshotStart-1];
+        RestartInfo restart = snapshots[$-1];
         startStep = restart.step + 1;
         globalResidual = restart.globalResidual;
-        prevGlobalResidual = globalResidual;
+        prevGlobalResidual = restart.prevGlobalResidual;
         // Determine phase
 	if (nkCfg.phaseChangesAtSteps.length == 0) {
 	    // Only a single phase
@@ -1067,7 +1073,7 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
         if (activePhase.useAutoCFL) {
             cflSelector = new ResidualBasedAutoCFL(activePhase.autoCFLExponent, activePhase.maxCFL,
 						   activePhase.thresholdRelativeResidualForCFLGrowth);
-            cfl = restart.cfl;
+            cfl = cflSelector.nextCFL(restart.cfl, startStep, globalResidual, prevGlobalResidual, globalResidual/referenceGlobalResidual);
         }
         else { // Assume we have a global (phase-independent) schedule
             cfl = cflSelector.nextCFL(-1.0, startStep, -1.0, -1.0, -1.0);
@@ -1093,13 +1099,15 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
     bool startOfNewPhase = false;
 
     foreach (step; startStep .. nkCfg.maxNewtonSteps+1) {
+	
         /*---
          * 0. Check for any special actions based on step to perform at START of step
          *---
          *    a. change of phase
          *    b. limiter freezing
-         *    c. set the timestep
-         *    d. set flag on preconditioner
+	 *    c. compute CFl for this step
+         *    d. set the timestep
+         *    e. set flag on preconditioner
          */
         residualsUpToDate = false;
         // 0a. change of phase 
@@ -1130,10 +1138,39 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
             cfg.frozen_limiter = true;
         }
 
-        // 0c. Set the timestep for this step
+	// 0c. Compute the CFL for this step
+	if (step > startStep) { // because starting step is taken care of specially BEFORE this loop
+	    if (numberBadSteps == 0) {
+		// then previous update was fine, so proceed to get a new CFL value
+		if (activePhase.useAutoCFL) {
+		    // We need to be careful in the early steps with the auto CFL.
+		    // On step 1, we have no previous residual, so we can't make an adjustment.
+		    // Also, we need to check on a residual drop, but this makes no sense
+		    // until the reference residuals are established.
+		    if (step > nkCfg.numberOfStepsForSettingReferenceResiduals) {
+			cfl = cflSelector.nextCFL(cfl, step, globalResidual, prevGlobalResidual, globalResidual/referenceGlobalResidual);
+		    }
+		}
+		else {
+		    cfl = cflSelector.nextCFL(-1.0, step, -1.0, -1.0, -1.0);
+		}
+            }
+	    else {
+		// Presume last step was bad, so we reduce the CFL (if doing auto CFL)
+		cfl *= nkCfg.cflReductionFactor;
+		if (cfl <= nkCfg.cflMin) {
+		    writeln("The CFL has been reduced due a bad step, but now it has dropped below the minimum allowable CFL.");
+		    writefln("current cfl = %e  \t minimum allowable cfl = %e", cfl, nkCfg.cflMin);
+		    writeln("Bailing out!");
+		    exit(1);
+		}
+	    }
+	}
+	
+        // 0d. Set the timestep for this step
         dt = setDtInCells(cfl);
 
-        // 0d. determine if we need to update preconditioner
+        // 0e. determine if we need to update preconditioner
 
         if (step == startStep || startOfNewPhase || (step % activePhase.stepsBetweenPreconditionerUpdate) == 0) {
             updatePreconditionerThisStep = true;
@@ -1176,19 +1213,6 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
                     exit(1);
                 }
             }
-            // Since things are good, we can select a new CFL
-            if (activePhase.useAutoCFL) {
-                // We need to be careful in the early steps with the auto CFL.
-                // On step 1, we have no previous residual, so we can't make an adjustment.
-                // Also, we need to check on a residual drop, but this makes no sense
-                // until the reference residuals are established.
-                if (step > startStep && step > nkCfg.numberOfStepsForSettingReferenceResiduals) {
-                    cfl = cflSelector.nextCFL(cfl, step, globalResidual, prevGlobalResidual, globalResidual/referenceGlobalResidual);
-                }
-            }
-            else {
-                cfl = cflSelector.nextCFL(-1.0, step, -1.0, -1.0, -1.0);
-            }
             numberBadSteps = 0;
         }
         else if (omega < nkCfg.minRelaxationFactor && activePhase.useAutoCFL) {
@@ -1200,16 +1224,6 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
                 writeln("Bailing out!");
                 exit(1);
             }
-
-            // Do NOT apply update. Simply change CFL for next step.
-            cfl *= nkCfg.cflReductionFactor;
-            if (cfl <= nkCfg.cflMin) {
-                writeln("The CFL has been reduced due a bad step, but now it has dropped below the minimum allowable CFL.");
-                writefln("current cfl = %e  \t minimum allowable cfl = %e", cfl, nkCfg.cflMin);
-                writeln("Bailing out!");
-                exit(1);
-            }
-            
             // Return flow states to their original state for next attempt.
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (cell; blk.cells) {
@@ -1265,9 +1279,6 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
             }
         }
 
-        // We can now set previous residual in preparation for next step.
-        prevGlobalResidual = globalResidual;
-        
         /*---
          * 2b. Stopping checks.
          *---
@@ -1323,7 +1334,7 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
         }
 
         if (finalStep) break;
-        
+
     }
 }
 
@@ -3022,6 +3033,7 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
 	snapshots[$-1].dt = dt;
 	snapshots[$-1].cfl = cfl;
 	snapshots[$-1].globalResidual = globalResidual;
+	snapshots[$-1].prevGlobalResidual = prevGlobalResidual;
 	snapshots[$-1].residuals = currentResiduals.dup;
 	
     }
@@ -3050,6 +3062,7 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
 	snapshots[$-1].dt = dt;
 	snapshots[$-1].cfl = cfl;
 	snapshots[$-1].globalResidual = globalResidual;
+	snapshots[$-1].prevGlobalResidual = prevGlobalResidual;
 	snapshots[$-1].residuals = currentResiduals.dup;
     }
 
@@ -3063,9 +3076,9 @@ void writeRestartMetadata(RestartInfo[] snapshots)
     auto f = File(lmrCfg.restartFile, "w");
     auto timeNow =  cast(DateTime)(Clock.currTime());
     f.writefln("# Restart metadata written at: %s", timeNow.toSimpleString());
-    f.writefln("# step,  dt,  cfl, global-residual, n-conserved quantities residuals");
+    f.writefln("# step,  dt,  cfl, global-residual, pre-global-residual, n-conserved quantities residuals");
     foreach (snap; snapshots) {
-	f.writef("%04d %.18e %.18e %.18e", snap.step, snap.dt, snap.cfl, snap.globalResidual);
+	f.writef("%04d %.18e %.18e %.18e %.18e", snap.step, snap.dt, snap.cfl, snap.globalResidual, snap.prevGlobalResidual);
 	foreach (r; snap.residuals) f.writef(" %.18e", r.re);
 	f.writef("\n");
     }
@@ -3086,7 +3099,8 @@ void readRestartMetadata()
 	    snapshots[$-1].dt = to!double(tks[1]);
 	    snapshots[$-1].cfl = to!double(tks[2]);
 	    snapshots[$-1].globalResidual = to!double(tks[3]);
-	    size_t start_idx = 4;
+	    snapshots[$-1].prevGlobalResidual = to!double(tks[4]);
+	    size_t start_idx = 5;
 	    foreach (i, ref r; snapshots[$-1].residuals) r = to!double(tks[start_idx+i]);
 	}
 	line = f.readln().strip();
