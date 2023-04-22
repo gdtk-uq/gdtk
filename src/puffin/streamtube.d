@@ -44,7 +44,7 @@ public:
     double compression_tol;
     double shear_tol;
     //
-    Schedule!double y_lower, y_upper;
+    Schedule!double y_lower, y_upper, add_rho, add_xmom, add_ymom, add_tE;
     Schedule!int bc_lower, bc_upper, active;
     //
     Vector3[] vertices_west;
@@ -94,7 +94,7 @@ public:
         //
         int n_bc;
         double dx_bc;
-        double[] xs, y0s, y1s;
+        double[] xs, y0s, y1s, add_r, add_xm, add_ym, add_tEE;
         int[] bc0s, bc1s, act;
         string fileName = format("%s/streamtube-%d.data", Config.job_name, indx);
         auto lines = File(fileName, "r").byLine();
@@ -110,13 +110,17 @@ public:
             }
             if (canFind(txt, "#")) continue;
             auto items = txt.split();
-            if (items.length >= 6) {
+            if (items.length >= 10) {
                 xs ~= to!double(items[0]);
                 y0s ~= to!double(items[1]);
                 y1s ~= to!double(items[2]);
                 bc0s ~= to!int(items[3]);
                 bc1s ~= to!int(items[4]);
                 act ~= to!int(items[5]);
+                add_r ~= to!double(items[6]);
+                add_xm ~= to!double(items[7]);
+                add_ym ~= to!double(items[8]);
+                add_tEE ~= to!double(items[9]);
             }
         }
         if (n_bc != xs.length) {
@@ -130,6 +134,10 @@ public:
         bc_lower = new Schedule!int(xs, bc0s);
         bc_upper = new Schedule!int(xs, bc1s);
         active = new Schedule!int(xs, act);
+        add_rho = new Schedule!double(xs, add_r);
+        add_xmom = new Schedule!double(xs, add_xm);
+        add_ymom = new Schedule!double(xs, add_ym);
+        add_tE = new Schedule!double(xs, add_tEE);
         //
         // Scratch space
         fsL = FlowState2D(gmodel);
@@ -150,6 +158,7 @@ public:
         repr ~= format(", y_lower=%s, y_upper=%s", y_lower, y_upper);
         repr ~= format(", bc_lower=%s, bc_upper=%s", bc_lower, bc_upper);
         repr ~= format(", active=%s", active);
+        repr ~= format(", add_rho=%s", add_rho);
         repr ~= ")";
         return repr;
     }
@@ -273,6 +282,42 @@ public:
         }
         return;
     } // end set_up_slice()
+
+    @nogc
+    void add_mass_source_term(double dU, size_t ftl)
+    // Loop over cells in current slide and add source term
+    {
+        CQIndex cqi;
+        foreach (c; cells) { c.add_source_term(cqi.mass, dU, ftl); }
+        return;
+    } // end add_mass_source_term()
+
+    @nogc
+    void add_xmom_source_term(double dU, size_t ftl)
+    // Loop over cells in current slide and add source term
+    {
+        CQIndex cqi;
+        foreach (c; cells) { c.add_source_term(cqi.xMom, dU, ftl); }
+        return;
+    } // end add_xmom_source_term()
+
+    @nogc
+    void add_ymom_source_term(double dU, size_t ftl)
+    // Loop over cells in current slide and add source term
+    {
+        CQIndex cqi;
+        foreach (c; cells) { c.add_source_term(cqi.yMom, dU, ftl); }
+        return;
+    } // end add_ymom_source_term()
+
+    @nogc
+    void add_totenergy_source_term(double dU, size_t ftl)
+    // Loop over cells in current slide and add source term
+    {
+        CQIndex cqi;
+        foreach (c; cells) { c.add_source_term(cqi.totEnergy, dU, ftl); }
+        return;
+    } // end add_totenergy_source_term()
 
     @nogc
     void shuffle_data_west()

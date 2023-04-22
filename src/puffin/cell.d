@@ -221,6 +221,20 @@ public:
     } // end decode_conserved()
 
     @nogc
+    void add_source_term(ulong ind, double dU, size_t ftl)
+    // Add source term to conserved quantities.
+    // Quantities per unit volume.
+    // Inputs:
+    //   ind: index to conserved quantity
+    //   dU: increment for conserved quantity
+    //   ftl: index to the particular vector of conserved quantities to decode.
+    {
+        auto myU = U[ftl];
+        myU[ind] = myU[ind] + dU*volume;
+        return;
+    } // end add_source_term()
+
+    @nogc
     void thermochemical_increment(double dt, GasModel gmodel, ThermochemicalReactor reactor)
     {
         double[maxParams] params; // An artifact from Eilmer.

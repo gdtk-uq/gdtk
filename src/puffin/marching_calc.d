@@ -166,6 +166,10 @@ void relax_slice_to_steady_flow(double xmid)
                 }
             }
         }
+        //
+        // Add source terms to conserved quantities
+        add_source_terms(xmid, progress.dx);
+        //
         // Prepare for next step.
         foreach (st; parallel(streams, 1)) {
             st.transfer_conserved_quantities(1, 0);
@@ -176,6 +180,30 @@ void relax_slice_to_steady_flow(double xmid)
     return;
 } // end relax_slice_to_steady_flow()
 
+void add_source_terms(double xmid, double dx)
+// Look up source terms at xmid and add these to all cells in
+// streamtube.
+{
+    foreach (j, st; parallel(streams, 1)) {
+        // add rho source term
+        if (st.add_rho.get_value(xmid) != 0) {
+            st.add_mass_source_term(st.add_rho.get_value(xmid), 1);
+        }
+        // add x momentum source term
+        if (st.add_xmom.get_value(xmid) != 0) {
+            st.add_xmom_source_term(st.add_xmom.get_value(xmid), 1);
+        }
+        // add y momentum source term
+        if (st.add_ymom.get_value(xmid) != 0) {
+            st.add_ymom_source_term(st.add_ymom.get_value(xmid), 1);
+        }
+        // add total Energy source term
+        if (st.add_tE.get_value(xmid) != 0) {
+            st.add_totenergy_source_term(st.add_tE.get_value(xmid), 1);
+        }
+    }
+    return;
+} // add_source_terms(double xmid)
 
 void apply_boundary_conditions(double xmid)
 // Look up boundary conditions at xmid and apply boundary conditions.

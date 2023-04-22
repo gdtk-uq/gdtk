@@ -213,10 +213,12 @@ class StreamTube():
                 'gas', 'velx', 'vely', 'ncells', \
                 'y0', 'y1', 'bc0', 'bc1', \
                 'xs', 'y0s', 'y1s', 'bc0s', 'bc1s', 'nbc', \
-                'act'
+                'act', 'add_rho', 'add_xmo', 'add_ymo', 'add_tE'
 
     def __init__(self, gas=None, velx=1000.0, vely=0.0,
-                 y0=None, y1=None, bc0=None, bc1=None, act=None,
+                 y0=None, y1=None, bc0=None, bc1=None,
+                 act=None, add_rho=None, add_xmo=None,
+                 add_ymo=None, add_tE=None,
                  ncells=10, nbc=101, label="",):
         """
         Creates an outline of a streamtube with user-specified boundaries.
@@ -231,9 +233,13 @@ class StreamTube():
                  if bc0(x) == 0, this stream exchanges data with lower stream
                  if bc0(x) == 1, this stream exchanges data with upper stream
         bc1    : upper boundary condition as an integer function of x
-        act    : active cell indicator as an integer function of x
+        act    : (optional) active cell indicator as an integer function of x
                  if act(x) == 1, the flow solver is applied
                  if act(x) == 0, flow is mapped from one cell to next.
+        add_rho : (optional) source term for mass as a function of x.
+        add_xmo : (optional) source term for x-momentum as a function of x.
+        add_ymo : (optional) source term for y-momentum as a function of x.
+        add_tE : (optional) source term for totalEnergy as a function of x.
         ncells : number of cells between lower and upper boundary
         nbc    : number of points in the boundary definitions
         label  : optional label for postprocessing
@@ -264,6 +270,26 @@ class StreamTube():
         else:
             def act(x): return 1
             self.act = act
+        if callable(add_rho):
+            self.add_rho = add_rho
+        else:
+            def add_rho(x): return 0.
+            self.add_rho = add_rho
+        if callable(add_xmo):
+            self.add_xmo = add_xmo
+        else:
+            def add_xmo(x): return 0.
+            self.add_xmo = add_xmo
+        if callable(add_ymo):
+            self.add_ymo = add_ymo
+        else:
+            def add_ymo(x): return 0.
+            self.add_ymo = add_ymo
+        if callable(add_tE):
+            self.add_tE = add_tE
+        else:
+            def add_tE(x): return 0.
+            self.add_tE = add_tE
         self.ncells = ncells
         self.nbc = nbc
         #
@@ -288,13 +314,18 @@ class StreamTube():
         bc0s = [self.bc0(x) for x in xs]
         bc1s = [self.bc1(x) for x in xs]
         active = [self.act(x) for x in xs]
+        add_rho = [self.add_rho(x) for x in xs]
+        add_xmo = [self.add_xmo(x) for x in xs]
+        add_ymo = [self.add_ymo(x) for x in xs]
+        add_tE = [self.add_tE(x) for x in xs]
         fileName = config.job_name + ('/streamtube-%d.data' % self.indx)
         with open(fileName, 'w') as fp:
             fp.write('# x  y0  y1  bc0  bc1 act\n')
             fp.write('# n_bc=%d\n' % self.nbc)
             fp.write('# dx_bc=%g\n' % (xs[1]-xs[0]))
             for i in range(len(xs)):
-                fp.write('%g %g %g %g %g %g\n' % (xs[i], y0s[i], y1s[i], bc0s[i], bc1s[i], active[i]))
+                fp.write('%g %g %g %g %g %g %g %g %g %g\n' % (xs[i], y0s[i], y1s[i], bc0s[i], bc1s[i], 
+                                                            active[i], add_rho[i], add_xmo[i], add_ymo[i], add_tE[i]))
         return
 
 # --------------------------------------------------------------------
