@@ -165,28 +165,13 @@ ifeq ($(DMD), dmd)
         DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
 endif
-ifeq ($(DMD), ldmd2)
-    DEBUG_DFLAGS := -w -g -debug -version=flavour_debug
-    PROFILE_DFLAGS := -profile -w -O2 -release -inline -boundscheck=off -version=flavour_profile
-    FAST_DFLAGS := -w -g -O2 -release -inline -boundscheck=off -version=flavour_fast
-    OF := -of
-    DVERSION := -version=
-    ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
-        DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
-        DLINKFLAGS := $(DLINKFLAGS) -L-lplot
-    endif
-    DLINKFLAGS := $(DLINKFLAGS) -L-ldl
-    ifneq ($(TECPLOT_BIN_DIR), unavailable)
-        DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
-    endif
-endif
 ifeq ($(DMD), ldc2)
     # -fprofile-generate will result in profraw files being written
     # that may be viewed, showing the top 10 functions with internal block counts
     # llvm-profdata show -text -topn=10 <profraw-file>
-    DEBUG_DFLAGS := -w -g -d-debug -d-version=flavour_debug
-    PROFILE_DFLAGS := -fprofile-generate -g -w -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_profile
-    FAST_DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_fast -flto=full
+    DEBUG_DFLAGS := -w -g --d-debug --d-version=flavour_debug
+    PROFILE_DFLAGS := -fprofile-generate -g -w -O2 -release -enable-inlining -boundscheck=off --d-version=flavour_profile
+    FAST_DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off --d-version=flavour_fast -flto=full
     ifeq ($(WITH_THREAD_SANITIZER), 1)
         DFLAGS := $(DFLAGS) -fsanitize=thread
     endif
