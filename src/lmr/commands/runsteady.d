@@ -75,6 +75,16 @@ options ([+] can be repeated):
            number of snapshots available, then the iterations will
            begin from the final snapshot.
 
+ --start-with-cfl|--cfl
+     Override the starting CFL on the command line.
+
+     --start-with-cfl=100 : start stepping with cfl of 100
+     --cfl 3.5 : start stepping with cfl of 3.5
+
+
+     NOTE: When not set, the starting CFL comes from input file
+           or is computed for the case of a restart.
+
  -v, --verbose [+]
      Increase verbosity during progression of iterative solver.
 
@@ -120,16 +130,20 @@ void main(string[] args)
     int numberSnapshots = 0;
     int maxCPUs = 1;
     int threadsPerMPITask = 1;
+    double startCFL = -1.0;
     string maxWallClock = "24:00:00";
 
     getopt(args,
            config.bundling,
            "v|verbose+", &verbosity,
            "s|snapshot-start", &snapshotStart,
+	   "start-with-cfl|cfl", &startCFL,
            "max-cpus", &maxCPUs,
            "threads-per-mpi-task", &threadsPerMPITask,
            "max-wall-clock", &maxWallClock);
 
+    GlobalConfig.verbosity_level = verbosity;
+    
     if (verbosity > 0 && GlobalConfig.is_master_task) {
 	writeln("lmr run-steady: Begin Newton-Krylov simulation.");
 	version(mpi_parallel) {
@@ -163,7 +177,7 @@ void main(string[] args)
     initNewtonKrylovSimulation(snapshotStart, maxCPUs, threadsPerMPITask, maxWallClock);
 
     if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run-steady: Perform Newton steps.");
-    performNewtonKrylovUpdates(snapshotStart, maxCPUs, threadsPerMPITask);
+    performNewtonKrylovUpdates(snapshotStart, startCFL, maxCPUs, threadsPerMPITask);
 
     return;
 }

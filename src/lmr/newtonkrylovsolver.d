@@ -951,7 +951,7 @@ void initWallDistances()
  *---------------------------------------------------------------------
  */
 
-void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMPITask)
+void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs, int threadsPerMPITask)
 {
     alias cfg = GlobalConfig;
     string jobName = cfg.base_file_name;
@@ -1092,6 +1092,14 @@ void performNewtonKrylovUpdates(int snapshotStart, int maxCPUs, int threadsPerMP
         }
     }
 
+    // Override CFL if supplied at command line.
+    if (startCFL > 0.0) {
+	cfl = startCFL;
+	if (cfg.verbosity_level > 0 && cfg.is_master_task) {
+	    writefln("lmr run-steady: CFL overridden with command-line choice, cfl=%f", cfl);
+	}
+    }
+    
     // Start timer right at beginning of stepping.
     auto wallClockStart = Clock.currTime();
     double wallClockElapsed;
