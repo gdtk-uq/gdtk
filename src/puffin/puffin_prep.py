@@ -320,7 +320,7 @@ class StreamTube():
         add_tE = [self.add_tE(x) for x in xs]
         fileName = config.job_name + ('/streamtube-%d.data' % self.indx)
         with open(fileName, 'w') as fp:
-            fp.write('# x  y0  y1  bc0  bc1 act\n')
+            fp.write('# x  y0  y1  bc0  bc1 act add_rho add_xmo add_ymo add_tE\n')
             fp.write('# n_bc=%d\n' % self.nbc)
             fp.write('# dx_bc=%g\n' % (xs[1]-xs[0]))
             for i in range(len(xs)):
