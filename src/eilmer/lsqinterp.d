@@ -1928,7 +1928,7 @@ public:
                         mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
                     }
                 } else {
-                    Rght.gas.massf[] = IFace.right_cell.fs.turb[];
+                    Rght.turb[] = IFace.right_cell.fs.turb[];
                 }
             }
             version(multi_species_gas) {
@@ -2133,7 +2133,7 @@ public:
                         mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
                     }
                 } else {
-                    Lft.gas.massf[] = IFace.left_cell.fs.turb[];
+                    Lft.turb[] = IFace.left_cell.fs.turb[];
                 }
             }
             version(multi_species_gas) {
