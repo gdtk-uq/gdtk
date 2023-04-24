@@ -699,7 +699,7 @@ public:
     } // end van_albada_limit()
 
     @nogc
-    void venkat_limit2(in FlowState fs, in LSQInterpWorkspace ws, number volume,
+    void venkat_limit2(in FlowState fs, number volume,
                        Vector3[] face_distances, size_t nfaces,
                        bool apply_heuristic_pressure_limiter, LocalConfig myConfig)
     {
@@ -747,16 +747,16 @@ public:
         velxPhi = venkat_equation(fs.vel.x, velx, velxMax, velxMin, h, K, face_distances, nfaces, is3d, velnondim);
         velyPhi = venkat_equation(fs.vel.y, vely, velyMax, velyMin, h, K, face_distances, nfaces, is3d, velnondim);
         velzPhi = venkat_equation(fs.vel.z, velz, velzMax, velzMin, h, K, face_distances, nfaces, is3d, velnondim);
-        //version(MHD) {
-        //    if (myConfig.MHD) {
-        //        mixin(codeForLimits("B.x", "Bx", "BxPhi", "BxMax", "BxMin"));
-        //        mixin(codeForLimits("B.y", "By", "ByPhi", "ByMax", "ByMin"));
-        //        mixin(codeForLimits("B.z", "Bz", "BzPhi", "BzMax", "BzMin"));
-        //        if (myConfig.divergence_cleaning) {
-        //            mixin(codeForLimits("psi", "psi", "psiPhi", "psiMax", "psiMin"));
-        //        }
-        //    }
-        //}
+        version(MHD) {
+            if (myConfig.MHD) {
+                BxPhi = venkat_equation(fs.B.x, Bx, BxMax, BxMin, h, K, face_distances, nfaces, is3d);
+                ByPhi = venkat_equation(fs.B.y, By, ByMax, ByMin, h, K, face_distances, nfaces, is3d);
+                BzPhi = venkat_equation(fs.B.z, Bz, BzMax, BzMin, h, K, face_distances, nfaces, is3d);
+                if (myConfig.divergence_cleaning) {
+                    psiPhi = venkat_equation(fs.psi, psi, psiMax, psiMin, h, K, face_distances, nfaces, is3d);
+                }
+            }
+        }
         version(turbulence) {
             foreach (it; 0 .. myConfig.turb_model.nturb) {
                 turbPhi[it] = venkat_equation(fs.turb[it], turb[it], turbMax[it], turbMin[it], h, K, face_distances, nfaces, is3d);
@@ -767,8 +767,7 @@ public:
             if (nsp > 1) {
                 // Multiple species.
                 foreach (isp; 0 .. nsp) {
-                    continue;
-                    //mixin(codeForLimits("gas.massf[isp]", "massf[isp]", "massfPhi[isp]", "massfMax[isp]", "massfMin[isp]"));
+                    massfPhi[isp] = venkat_equation(fs.gas.massf[isp], massf[isp], massfMax[isp], massfMin[isp], h, K, face_distances, nfaces, is3d, massnondim);
                 }
             } else {
                 // Only one possible gradient value for a single species.
@@ -780,44 +779,44 @@ public:
         auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
         case InterpolateOption.pt:
-            //mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
-            //mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
-            //version(multi_T_gas) {
-            //    foreach (imode; 0 .. nmodes) {
-            //        mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
-            //                            "T_modesMax[imode]", "T_modesMin[imode]"));
-            //    }
-            //}
+            pPhi = venkat_equation(fs.gas.p, p, pMax, pMin, h, K, face_distances, nfaces, is3d);
+            TPhi = venkat_equation(fs.gas.T, T, TMax, TMin, h, K, face_distances, nfaces, is3d);
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    T_modesPhi[imode] = venkat_equation(fs.gas.T_modes[imode], T_modes[imode], T_modesMax[imode],
+                                                        T_modesMin[imode], h, K, face_distances, nfaces, is3d);
+                }
+            }
             break;
         case InterpolateOption.rhou:
             rhoPhi = venkat_equation(fs.gas.rho, rho, rhoMax, rhoMin, h, K, face_distances, nfaces, is3d);
             uPhi = venkat_equation(fs.gas.u, u, uMax, uMin, h, K, face_distances, nfaces, is3d);
-            //version(multi_T_gas) {
-            //    foreach (imode; 0 .. nmodes) {
-            //        mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
-            //                            "u_modesMax[imode]", "u_modesMin[imode]"));
-            //    }
-            //}
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    u_modesPhi[imode] = venkat_equation(fs.gas.u_modes[imode], u_modes[imode], u_modesMax[imode],
+                                                        u_modesMin[imode], h, K, face_distances, nfaces, is3d);
+                }
+            }
             break;
         case InterpolateOption.rhop:
-            //mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
-            //mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
-            //version(multi_T_gas) {
-            //    foreach (imode; 0 .. nmodes) {
-            //        mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
-            //                            "u_modesMax[imode]", "u_modesMin[imode]"));
-            //    }
-            //}
+            rhoPhi = venkat_equation(fs.gas.rho, rho, rhoMax, rhoMin, h, K, face_distances, nfaces, is3d);
+            pPhi = venkat_equation(fs.gas.p, p, pMax, pMin, h, K, face_distances, nfaces, is3d);
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    u_modesPhi[imode] = venkat_equation(fs.gas.u_modes[imode], u_modes[imode], u_modesMax[imode],
+                                                        u_modesMin[imode], h, K, face_distances, nfaces, is3d);
+                }
+            }
             break;
         case InterpolateOption.rhot:
-            //mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
-            //mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
-            //version(multi_T_gas) {
-            //    foreach (imode; 0 .. nmodes) {
-            //        mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
-            //                            "T_modesMax[imode]", "T_modesMin[imode]"));
-            //    }
-            //}
+            rhoPhi = venkat_equation(fs.gas.rho, rho, rhoMax, rhoMin, h, K, face_distances, nfaces, is3d);
+            TPhi = venkat_equation(fs.gas.T, T, TMax, TMin, h, K, face_distances, nfaces, is3d);
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) {
+                    T_modesPhi[imode] = venkat_equation(fs.gas.T_modes[imode], T_modes[imode], T_modesMax[imode],
+                                                        T_modesMin[imode], h, K, face_distances, nfaces, is3d);
+                }
+            }
             break;
         } // end switch thermo_interpolator
     } // end venkat_limit()
@@ -2237,7 +2236,7 @@ public:
         return;
     } // end interp_left()
 
-@nogc number venkat_equation(number qname, number[3] gname, number qMaxname, number qMinname, number h, double K, const Vector3[] face_distances, size_t nfaces, bool is3d, number nondim) {
+@nogc pure number venkat_equation(number qname, number[3] gname, number qMaxname, number qMinname, number h, double K, const Vector3[] face_distances, size_t nfaces, bool is3d, number nondim) {
     number U = qname;
     number delu = (qMaxname-qMinname)/nondim;
     number theta = delu/h;
@@ -2263,29 +2262,7 @@ public:
     return phi;
 }
 
-@nogc number venkat_equation(number qname, number[3] gname, number qMaxname, number qMinname, number h, double K, const Vector3[] face_distances, size_t nfaces, bool is3d) {
+@nogc pure number venkat_equation(number qname, number[3] gname, number qMaxname, number qMinname, number h, double K, const Vector3[] face_distances, size_t nfaces, bool is3d) {
     number nondim = 0.5*fabs(qMaxname + qMinname);
-    number U = qname;
-    number delu = (qMaxname-qMinname)/nondim;
-    number theta = delu/h;
-    number eps2 = (K*delu*delu)/(1.0+theta);
-    eps2 += 1.0e-25; // prevent division by zero
-
-    number phi = 1.0;
-    foreach (i; 0 .. nfaces) {
-        Vector3 dx = face_distances[i];
-        number delm = gname[0] * dx.x + gname[1] * dx.y;
-        if (is3d) { delm += gname[2] * dx.z; }
-        number delp = (delm >= 0.0) ? qMaxname - U: qMinname - U;
-        delp /= nondim;
-        delm /= nondim;
-        number phi_f;
-        if (delm == 0.0) {
-            phi_f = 1.0;
-        } else {
-            phi_f = (delp*delp + 2.0*delp*delm + eps2)/(delp*delp + 2.0*delm*delm + delp*delm + eps2);
-        }
-        phi = fmin(phi, phi_f);
-    }
-    return phi;
+    return venkat_equation(qname, gname, qMaxname, qMinname, h, K, face_distances, nfaces, is3d, nondim);
 }

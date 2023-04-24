@@ -2306,6 +2306,15 @@ public:
     } // end convective_flux_phase0()
 
     @nogc
+    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0)
+    // Compute the flux from data on either-side of the interface.
+    // For the structured-grid block, there is nothing to do.
+    // The unstructured-grid block needs to work in two phases.
+    {
+        return;
+    }
+
+    @nogc
     override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0,
                                          FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
     // Compute the flux from data on either-side of the interface.

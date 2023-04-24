@@ -851,78 +851,82 @@ public:
     } // end convective_flux-phase0()
 
     @nogc
+    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0)
+        // Compute limiter values of flow quantities for higher-order reconstruction, if required.
+        // To be used, later, in the convective flux calculation.
+    {
+        if (!allow_high_order_interpolation) return;
+        if (myConfig.interpolation_order == 1) return;
+        if (GlobalConfig.frozen_limiter) return;
+
+        switch (myConfig.unstructured_limiter) {
+        case UnstructuredLimiter.venkat:
+            foreach (i; 0 .. ncells) {
+                celldata.lsqgradients[i].venkat_limit2(celldata.flowstates[i],
+                    celldata.volumes[i], celldata.face_distances[i],
+                    celldata.nfaces[i], false, myConfig);
+            }
+        break;
+        default:
+            throw new Error("Bad limiter selected");
+        }
+    } // end convective_flux-phase0()
+
+    @nogc
     override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0,
                                          FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
         // Compute limiter values of flow quantities for higher-order reconstruction, if required.
         // To be used, later, in the convective flux calculation.
     {
-        if (cell_list.length==0) {
-        if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
-            if (GlobalConfig.frozen_limiter == false) {
-                switch (myConfig.unstructured_limiter) {
-                case UnstructuredLimiter.venkat:
-                    foreach (i; 0 .. ncells) {
-                        celldata.lsqgradients[i].venkat_limit2(celldata.flowstates[i],
-                            celldata.lsqws[i], celldata.volumes[i], celldata.face_distances[i],
-                            celldata.nfaces[i], false, myConfig);
-                    }
-                break;
-                default:
-                    throw new Error("Bad limiter selected");
-                }
-            }
-        }
-        // Compute limiter values of flow quantities for higher-order reconstruction, if required.
-        // To be used, later, in the convective flux calculation.
-        } else {
+        if (!allow_high_order_interpolation) return;
+        if (myConfig.interpolation_order == 1) return;
+        if (GlobalConfig.frozen_limiter) return;
 
-        if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
-            if (GlobalConfig.frozen_limiter == false) {
+        // It is more efficient to determine limiting factor here for some usg limiters.
+        final switch (myConfig.unstructured_limiter) {
+            case UnstructuredLimiter.svan_albada:
+                // do nothing now
+                break;
+            case UnstructuredLimiter.min_mod:
+                // do nothing now
+                break;
+            case UnstructuredLimiter.barth:
+                foreach (c; cell_list) c.gradients.barth_limit(c.cell_cloud, *(c.ws), myConfig);
+                break;
+            case UnstructuredLimiter.park:
+                foreach (c; cell_list) c.gradients.park_limit(c.cell_cloud, *(c.ws), myConfig);
+                break;
+            case UnstructuredLimiter.hvan_albada:
+                foreach (c; cell_list) c.gradients.van_albada_limit(c.cell_cloud, *(c.ws), true, myConfig);
+                break;
+            case UnstructuredLimiter.van_albada:
+                foreach (c; cell_list) c.gradients.van_albada_limit(c.cell_cloud, *(c.ws), false, myConfig);
+                break;
+            case UnstructuredLimiter.hnishikawa:
+                foreach (c; cell_list) c.gradients.nishikawa_limit(c.cell_cloud, *(c.ws), true, myConfig, gtl);
+                break;
+            case UnstructuredLimiter.nishikawa:
+                foreach (c; cell_list) c.gradients.nishikawa_limit(c.cell_cloud, *(c.ws), false, myConfig, gtl);
+                break;
+            case UnstructuredLimiter.hvenkat_mlp:
+                foreach (c; cell_list) c.gradients.venkat_mlp_limit(c.cell_cloud, *(c.ws), true, myConfig, gtl);
+                break;
+            case UnstructuredLimiter.venkat_mlp:
+                foreach (c; cell_list) c.gradients.venkat_mlp_limit(c.cell_cloud, *(c.ws), false, myConfig, gtl);
+                break;
+            case UnstructuredLimiter.hvenkat:
+                foreach (c; cell_list) c.gradients.venkat_limit(c.cell_cloud, *(c.ws), true, myConfig, gtl);
+                break;
+            case UnstructuredLimiter.venkat:
                 foreach (c; cell_list) {
-                    // It is more efficient to determine limiting factor here for some usg limiters.
-                    final switch (myConfig.unstructured_limiter) {
-                        case UnstructuredLimiter.svan_albada:
-                            // do nothing now
-                            break;
-                        case UnstructuredLimiter.min_mod:
-                            // do nothing now
-                            break;
-                        case UnstructuredLimiter.barth:
-                            c.gradients.barth_limit(c.cell_cloud, *(c.ws), myConfig);
-                            break;
-                        case UnstructuredLimiter.park:
-                            c.gradients.park_limit(c.cell_cloud, *(c.ws), myConfig);
-                            break;
-                        case UnstructuredLimiter.hvan_albada:
-                            c.gradients.van_albada_limit(c.cell_cloud, *(c.ws), true, myConfig);
-                            break;
-                        case UnstructuredLimiter.van_albada:
-                            c.gradients.van_albada_limit(c.cell_cloud, *(c.ws), false, myConfig);
-                            break;
-                        case UnstructuredLimiter.hnishikawa:
-                            c.gradients.nishikawa_limit(c.cell_cloud, *(c.ws), true, myConfig, gtl);
-                            break;
-                        case UnstructuredLimiter.nishikawa:
-                            c.gradients.nishikawa_limit(c.cell_cloud, *(c.ws), false, myConfig, gtl);
-                            break;
-                        case UnstructuredLimiter.hvenkat_mlp:
-                            c.gradients.venkat_mlp_limit(c.cell_cloud, *(c.ws), true, myConfig, gtl);
-                            break;
-                        case UnstructuredLimiter.venkat_mlp:
-                            c.gradients.venkat_mlp_limit(c.cell_cloud, *(c.ws), false, myConfig, gtl);
-                            break;
-                        case UnstructuredLimiter.hvenkat:
-                            c.gradients.venkat_limit(c.cell_cloud, *(c.ws), true, myConfig, gtl);
-                            break;
-                        case UnstructuredLimiter.venkat:
-                            c.gradients.venkat_limit(c.cell_cloud, *(c.ws), false, myConfig, gtl);
-                            break;
-                    } // end switch
-                } // end foreach c
-            } // if (frozen_limter == false)
-        } // end if interpolation_order > 1
+                    size_t i = c.id;
+                    celldata.lsqgradients[i].venkat_limit2(celldata.flowstates[i],
+                        celldata.volumes[i], celldata.face_distances[i],
+                        celldata.nfaces[i], false, myConfig);
+                }
+                break;
         }
-    } // end convective_flux-phase0()
+    } // end convective_flux-phase1()
 
     @nogc
     override void convective_flux_phase2(bool allow_high_order_interpolation, size_t gtl=0,
