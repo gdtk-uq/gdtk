@@ -1602,12 +1602,14 @@ public:
 
                     c.L_min.re = incoming_geometry_buf[ii++]; version(complex_numbers) { c.L_min.im = incoming_geometry_buf[ii++]; }
                     c.L_max.re = incoming_geometry_buf[ii++]; version(complex_numbers) { c.L_max.im = incoming_geometry_buf[ii++]; }
+                    c.update_celldata_geometry();
                 }
             } else {
                 // The other block happens to be in this MPI process so
                 // we know that we can just access the cell data directly.
                 foreach (i; 0 .. ghost_cells.length) {
                     ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
+                    ghost_cells[i].update_celldata_geometry();
                 }
             }
         } else { // not mpi_parallel
@@ -1615,6 +1617,7 @@ public:
             // we know that we can just access the data directly.
             foreach (i; 0 .. ghost_cells.length) {
                 ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
+                ghost_cells[i].update_celldata_geometry();
             }
         }
     } // end exchange_geometry_phase2()

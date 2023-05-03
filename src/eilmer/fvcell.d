@@ -1780,4 +1780,10 @@ public:
 
     } // end gather_residual_stencil_lists_for_ghost_cells()
 
+    @nogc
+    void update_celldata_geometry(size_t gtl=0){
+        fvcd.positions[id] = pos[gtl];
+        fvcd.volumes[id] = volume[gtl];
+    }
+
 } // end class FVCell

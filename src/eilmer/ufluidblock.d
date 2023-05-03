@@ -329,6 +329,7 @@ public:
         // have been handed out to the fvcells. This can happen when calling ~= on the
         // celldata flowstates, which we do during the creation of the ghost cells
         // For this reason, we want to reserve sufficient space in the array here.
+        cells.reserve(grid.cells.length + nghost);
         celldata.nfaces.length = grid.cells.length;
         celldata.volumes.length = grid.cells.length + nghost;
         celldata.positions.length = grid.cells.length + nghost;
@@ -340,12 +341,15 @@ public:
         celldata.lsqgradients.reserve(grid.cells.length);
 
         foreach (i; 0 .. grid.cells.length) celldata.flowstates ~= FlowState(gmodel, nturb);
-        foreach (i; 0 .. grid.cells.length) celldata.gradients ~= FlowGradients(myConfig);
+        foreach (i; 0 .. grid.cells.length) celldata.gradients ~= FlowGradients(myConfig); // TODO: These are now always allocated, but should only be in viscous flow
         foreach (i; 0 .. grid.cells.length) celldata.workspaces ~= WLSQGradWorkspace(); // TODO: skip if not needed
         foreach (i; 0 .. grid.cells.length) celldata.lsqgradients ~= LSQInterpGradients(nsp, nmodes, nturb); // TODO: skip if not needed
 
         facedata.f2c.length = grid.faces.length;
+        facedata.normals.length = grid.faces.length;
         facedata.positions.length = grid.faces.length;
+        facedata.left_interior_only.length = nghost;
+        facedata.right_interior_only.length = nghost;
         facedata.flowstates.reserve(grid.faces.length);
         facedata.gradients.reserve(grid.faces.length);
         facedata.workspaces.reserve(grid.faces.length);
@@ -449,8 +453,6 @@ public:
                 bc[i].outsigns ~= my_outsign;
                 my_face.i_bndry = bc[i].outsigns.length - 1;
                 if (bc[i].ghost_cell_data_available) {
-                    // Make ghost-cell id values distinct from FVCell ids so that
-                    // the warning/error messages are somewhat informative.
                     celldata.flowstates ~= FlowState(gmodel, nturb);
                     celldata.gradients ~= FlowGradients(myConfig);
                     celldata.workspaces ~= WLSQGradWorkspace();
@@ -467,6 +469,7 @@ public:
                             throw new FlowSolverException(msg);
                         } else {
                             my_face.right_cell = ghost0;
+                            facedata.f2c[bndry.face_id_list[j]].right = ghost0.id;
                         }
                     } else {
                         if (my_face.left_cell) {
@@ -476,6 +479,7 @@ public:
                             throw new FlowSolverException(msg);
                         } else {
                             my_face.left_cell = ghost0;
+                            facedata.f2c[bndry.face_id_list[j]].left = ghost0.id;
                         }
                     }
                 } // end if (bc[i].ghost_cell_data_available
@@ -483,6 +487,27 @@ public:
         } // end foreach i
         // At this point, all faces should have either one finite-volume cell
         // or one ghost cell attached to each side -- check that this is true.
+
+        // Setup dense arrays for fast checks of left or right data available (NNG)
+        foreach (i, bndry; grid.boundaries) {
+
+            // For any other kind of boundary we need to mark which side the interior cell is
+            auto nf = bndry.face_id_list.length;
+            foreach (j; 0 .. nf) {
+                size_t my_id = faces[bndry.face_id_list[j]].id;
+                size_t bid = faces[bndry.face_id_list[j]].id-ninteriorfaces;
+                int my_outsign = bndry.outsign_list[j];
+
+                // For a shared boundary both sides are okay, so we skip
+                if (startsWith(bc[i].type, "exchange_")) { continue; }
+
+                if (my_outsign == 1) { // The ghost cell is a right cell
+                    facedata.left_interior_only[bid] = true;
+                } else {               // the ghost cell is a left cell
+                    facedata.right_interior_only[bid] = true;
+                }
+            }
+        }
         foreach (f; faces) {
             bool ok = true;
             string msg = " ";
@@ -520,6 +545,7 @@ public:
                 throw new FlowSolverException(msg);
             }
         } // end foreach f
+
         //
         // Set up the cell clouds for least-squares derivative estimation for use in
         // interpolation/reconstruction of flow quantities at left- and right- sides
@@ -602,6 +628,7 @@ public:
         // in an adjoining block.
         // [TODO] think about this for the junction of usgrid and sgrid blocks.
         // The sgrid blocks will not have the gradients stored within the cells.
+        // FIXME: Check pointers here !!!!!!!!! NNG
         foreach (bci; bc) {
             if (bci.ghost_cell_data_available) {
                 foreach (c; bci.ghostcells) {
@@ -635,18 +662,6 @@ public:
                         c.cloud_pos ~= &(f.pos);
                         c.cloud_fs ~= f.fs;
                     } // end foreach face
-                }
-                // We will also need derivative storage in ghostcells because the
-                // reconstruction functions will expect to be able to access the gradients
-                // either side of each interface.
-                // We will be able to get these gradients from the mapped-cells
-                // in an adjoining block.
-                foreach (bci; bc) {
-                    if (bci.ghost_cell_data_available) {
-                        foreach (c; bci.ghostcells) {
-                            c.grad = new FlowGradients(myConfig);
-                        }
-                    }
                 }
             } // end switch (myConfig.spatial_deriv_locn)
         } // if myConfig.viscous
@@ -1023,4 +1038,55 @@ public:
         return index;
     }
 
+    @nogc override void average_lsq_cell_derivs_to_faces(int gtl){
+    /*
+        Fast averageing of the cell-based derivatives, using the expression from
+        A. Haselbacher, J. Blazek, Accurate and efficient discretization
+        of Navier-Stokes equations on mixed grids, AIAA Journal 38
+        (2000) 2094–2102. doi:10.2514/2.871.
+
+        NNG, April 2023
+    */
+        size_t nsp = myConfig.n_species;
+        size_t nmodes = myConfig.n_modes;
+        size_t nturb = myConfig.turb_model.nturb;
+        bool is3D = (myConfig.dimensions == 3);
+
+        foreach(idx; 0 .. ninteriorfaces){
+            size_t l = facedata.f2c[idx].left;
+            size_t r = facedata.f2c[idx].right;
+            apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
+                                          celldata.gradients[l], celldata.gradients[r],
+                                          celldata.flowstates[l],celldata.flowstates[r],
+                                          facedata.gradients[idx], nsp, nmodes, nturb, is3D);
+        } // Done interior faces, next we do the boundaries of this block
+
+        foreach(idx; ninteriorfaces .. nfaces){
+            size_t bidx = idx-ninteriorfaces;
+            if (facedata.left_interior_only[bidx]) {
+                size_t l = facedata.f2c[idx].left;
+                facedata.gradients[idx].copy_values_from(celldata.gradients[l]);
+
+            } else if (facedata.right_interior_only[bidx]) {
+                size_t r = facedata.f2c[idx].right;
+                facedata.gradients[idx].copy_values_from(celldata.gradients[r]);
+
+            } else {
+                // Assume we have both cells, for a shared boundary interface
+                size_t l = facedata.f2c[idx].left;
+                size_t r = facedata.f2c[idx].right;
+                //debug{
+                //    if (verbose) writefln("   lfs %s rfs %s lg %s rg %s", celldata.flowstates[l].vel.x, celldata.flowstates[r].vel.x,
+                //                                                                      celldata.gradients[l].vel[0], celldata.gradients[r].vel[0]);
+                //}
+                apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
+                                              celldata.gradients[l], celldata.gradients[r],
+                                              celldata.flowstates[l],celldata.flowstates[r],
+                                              facedata.gradients[idx], nsp, nmodes, nturb, is3D);
+            //debug{
+            //    if (verbose) writefln("blk %d Done face %d: %s", id, idx, facedata.gradients[idx]);
+            //}
+            } // end else
+        } // end main face loop
+    } // end average_lsq_cell_derivs_to_faces routine
 } // end class UFluidBlock

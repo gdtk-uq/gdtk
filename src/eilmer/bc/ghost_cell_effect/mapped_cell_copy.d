@@ -613,12 +613,14 @@ public:
 
                     c.L_min.re = buf[ii++]; version(complex_numbers) { c.L_min.im = buf[ii++]; }
                     c.L_max.re = buf[ii++]; version(complex_numbers) { c.L_max.im = buf[ii++]; }
+                    c.update_celldata_geometry();
                 }
             }
         } else { // not mpi_parallel
             // For a single process, just access the data directly.
             foreach (i, mygc; ghost_cells) {
                 mygc.copy_values_from(mapped_cells[i], CopyDataOption.grid);
+                mygc.update_celldata_geometry();
             }
         }
     } // end exchange_geometry_phase2()

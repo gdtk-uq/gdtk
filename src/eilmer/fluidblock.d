@@ -273,6 +273,7 @@ public:
                                                FVCell[] cell_list = [], FVInterface[] iface_list = [],
                                                FVVertex[] vertex_list = []);
     abstract size_t[] get_cell_write_indices();
+    @nogc abstract void average_lsq_cell_derivs_to_faces(int gtl);
 
     @nogc
     void identify_reaction_zones(int gtl)
@@ -849,6 +850,7 @@ public:
             }
         } // for cell
     } // end compute_residuals()
+
 
     @nogc
     void compute_Linf_residuals()
@@ -1940,3 +1942,92 @@ public:
     } // end evalRU()
 
 } // end class FluidBlock
+
+@nogc void apply_haschelbacher_averaging(Vector3 lpos, Vector3 rpos, Vector3 n,
+                                         ref const FlowGradients lgrad, ref const FlowGradients rgrad,
+                                         ref const FlowState lfs, ref const FlowState rfs, ref FlowGradients grad,
+                                         size_t nsp, size_t nmodes, size_t nturb, bool is3D){
+
+    // vector from left-cell-centre to right-cell-centre
+    number ex = rpos.x - lpos.x;
+    number ey = rpos.y - lpos.y;
+    number ez = rpos.z - lpos.z;
+    // ehat
+    number emag = sqrt(ex*ex + ey*ey + ez*ez);
+    number ehatx = ex/emag;
+    number ehaty = ey/emag;
+    number ehatz = ez/emag;
+    // ndotehat
+    number nx = n.x;
+    number ny = n.y;
+    number nz = n.z;
+    number ndotehat = nx*ehatx + ny*ehaty + nz*ehatz;
+    nx /= ndotehat;
+    ny /= ndotehat;
+    nz /= ndotehat;
+
+    grad.vel[0] = haselbacher(lgrad.vel[0],
+                              rgrad.vel[0],
+                              lfs.vel.x,
+                              rfs.vel.x,
+                              nx, ny, nz, ehatx, ehaty, ehatz, emag);
+
+    grad.vel[1] = haselbacher(lgrad.vel[1],
+                              rgrad.vel[1],
+                              lfs.vel.y,
+                              rfs.vel.y,
+                              nx, ny, nz, ehatx, ehaty, ehatz, emag);
+
+    if (is3D) {
+        grad.vel[2] = haselbacher(lgrad.vel[2],
+                                  rgrad.vel[2],
+                                  lfs.vel.z,
+                                  rfs.vel.z,
+                                  nx, ny, nz, ehatx, ehaty, ehatz, emag);
+    }
+    version(multi_species_gas) {
+        foreach (isp; 0 .. nsp) {
+            grad.massf[isp] = haselbacher(lgrad.massf[isp],
+                                          rgrad.massf[isp],
+                                          lfs.gas.massf[isp],
+                                          rfs.gas.massf[isp],
+                                          nx, ny, nz, ehatx, ehaty, ehatz, emag);
+        }
+    }
+    grad.T = haselbacher(lgrad.T,
+                         rgrad.T,
+                         lfs.gas.T,
+                         rfs.gas.T,
+                         nx, ny, nz, ehatx, ehaty, ehatz, emag);
+    version(multi_T_gas) {
+        foreach (imode; 0 .. nmodes) {
+            grad.T_modes[imode] = haselbacher(lgrad.T_modes[imode],
+                                              rgrad.T_modes[imode],
+                                              lfs.gas.T_modes[imode],
+                                              rfs.gas.T_modes[imode],
+                                              nx, ny, nz, ehatx, ehaty, ehatz, emag);
+        }
+    }
+    version(turbulence) {
+        foreach(i; 0 .. nturb) {
+            grad.turb[i] = haselbacher(lgrad.turb[i],
+                                       rgrad.turb[i],
+                                       lfs.turb[i],
+                                       rfs.turb[i],
+                                       nx, ny, nz, ehatx, ehaty, ehatz, emag);
+        }
+    } // end turbulence
+}
+
+
+@nogc pure number[3] haselbacher(number[3] Lgrad, number[3] Rgrad, number L, number R, number nx, number ny, number nz, number ehatx, number ehaty, number ehatz, number emag){
+    number[3] grad;
+    number avgdotehat = 0.5*(Lgrad[0]+Rgrad[0])*ehatx +
+                        0.5*(Lgrad[1]+Rgrad[1])*ehaty +
+                        0.5*(Lgrad[2]+Rgrad[2])*ehatz;
+    number jump = avgdotehat - (R - L)/emag;
+    grad[0] = 0.5*(Lgrad[0]+Rgrad[0]) - jump*(nx);
+    grad[1] = 0.5*(Lgrad[1]+Rgrad[1]) - jump*(ny);
+    grad[2] = 0.5*(Lgrad[2]+Rgrad[2]) - jump*(nz);
+    return grad;
+}

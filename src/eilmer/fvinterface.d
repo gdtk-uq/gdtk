@@ -35,10 +35,13 @@ struct LR {size_t left,right;}
 
 struct FVInterfaceData{
     LR[] f2c;
+    Vector3[] normals;
     Vector3[] positions;
     FlowState[] flowstates;
     FlowGradients[] gradients;
     WLSQGradWorkspace[] workspaces;
+    bool[] left_interior_only;
+    bool[] right_interior_only;
 }
 
 enum IndexDirection {i=0, j, k, none=666}; // Needed for StructuredGrid interpolation.
@@ -337,6 +340,7 @@ public:
             area[gtl] = length; // Assume unit depth in the Z-direction.
         }
         pos.set(Xbar, Ybar, to!number(0.0));
+        fvid.normals[id] = n;
         fvid.positions[id] = pos;
     } // end update_2D_geometric_data()
 
@@ -361,6 +365,7 @@ public:
             debug { msg ~= format("%d", vtx.length); }
             throw new FlowSolverException(msg);
         } // end switch
+        fvid.normals[id] = n;
         fvid.positions[id] = pos;
     } // end update_3D_geometric_data()
 
