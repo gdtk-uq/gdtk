@@ -13,6 +13,7 @@ import std.conv;
 import std.string;
 import std.array;
 import std.format;
+import std.math;
 import nm.complex;
 import nm.number;
 import geom;
@@ -122,7 +123,7 @@ public:
         SolidFVInterface IFs = iface[Face.south];
         SolidFVInterface IFw = iface[Face.west];
         SolidFVInterface IFt, IFb;
-         if (dimensions == 3) {
+        if (dimensions == 3) {
             IFt = iface[Face.top];
             IFb = iface[Face.bottom];
         }
@@ -136,6 +137,18 @@ public:
             integral += (-IFt.flux * IFt.area + IFb.flux * IFb.area);
         }
         dedt[ftl] = volInv * integral + Q;
+
+        if (isNaN(dedt[ftl])) {
+            string msg = "dedt is Not A Number in solid cell ::";
+            msg ~= format(" id: %d, pos: [%.8f, %.8f, %.8f],", id, pos.x, pos.y, pos.z);
+            msg ~= format(" flux: [%.8f, %.8f, %.8f, %.8f", IFn.flux, IFe.flux, IFs.flux, IFw.flux);
+            if (dimensions == 3) {
+                msg ~= format("%.8f, %.8f]", IFt.flux, IFb.flux);
+            } else {
+                msg ~= format("]");
+            }
+            throw new FlowSolverException(msg);
+        }
     }
 
     void stage1RKL1Update(double dt, int j, int s)
