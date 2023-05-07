@@ -6,8 +6,10 @@ LMR_LUA_MOD = $(LMR)/lua-modules
 LMR_CORE_FILES = $(LMR)/flowsolution.d \
 	$(LMR)/fluidblock.d \
 	$(LMR)/fvcell.d \
+	$(LMR)/init.d \
 	$(LMR)/jacobian.d \
 	$(LMR)/lmrconfig.d \
+	$(LMR)/lmrexceptions.d \
 	$(LMR)/newtonkrylovsolver.d
 
 LMR_CMD_FILES = $(LMR_CMD)/command.d \
