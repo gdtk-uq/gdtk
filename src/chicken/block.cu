@@ -863,7 +863,7 @@ struct Block {
                         number x, y, z;
                         f.getline(line, maxc);
 #                       ifdef FLOAT_NUMBERS
-                        sscanf(line "%f %f %f", &x, &y, &z);
+                        sscanf(line, "%f %f %f", &x, &y, &z);
 #                       else
                         sscanf(line, "%lf %lf %lf", &x, &y, &z);
 #                       endif

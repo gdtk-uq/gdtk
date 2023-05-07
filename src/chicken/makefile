@@ -16,6 +16,9 @@
 SELECTED_TARGETS := chkn-prep chkn-post
 ifeq ($(GPU),1)
   SELECTED_TARGETS += chicken_for_cuda
+  ifeq ($(FP32),1)
+    SELECTED_TARGETS += chicken_for_cuda_fp32
+  endif
 else
   SELECTED_TARGETS += chicken_for_cpu
 endif
@@ -52,11 +55,11 @@ chicken_for_cuda : $(CUDA_SOURCE_FILES)
 		main_with_rev_string.cu -lz -Xcompiler -fopenmp
 
 # Target for FP32 (float) numbers.
-chicken_for_cuda_f : $(CUDA_SOURCE_FILES)
+chicken_for_cuda_fp32 : $(CUDA_SOURCE_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
 		main.cu > main_with_rev_string.cu
-	nvcc -DCUDA -DFLOAT_NUMBERS -std c++17 -O2 --expt-relaxed-constexpr -lineinfo -o chkn-run -D$(GAS_MODEL) \
-		main_main_with_rev_string.cu -lz -Xcompiler -fopenmp
+	nvcc -DCUDA -DFLOAT_NUMBERS -std c++17 -O2 --expt-relaxed-constexpr -lineinfo -o chkn-run-fp32 -D$(GAS_MODEL) \
+		main_with_rev_string.cu -lz -Xcompiler -fopenmp
 
 # Target for CPU-only flavour of the code with FP64 (double) numbers.
 # -O2 is usual optimization flag
@@ -90,6 +93,7 @@ install: $(SELECTED_TARGETS)
 	- mkdir -p $(BUILD_DIR)/lib
 	- mkdir -p $(BUILD_DIR)/share
 	cp chkn-run $(BUILD_DIR)/bin
+	- cp chkn-run-fp32 $(BUILD_DIR)/bin
 	cp chkn-prep $(BUILD_DIR)/bin
 	cp chkn-post $(BUILD_DIR)/bin
 	cp -r ../lib/* $(BUILD_DIR)/lib
@@ -97,6 +101,6 @@ install: $(SELECTED_TARGETS)
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 clean :
-	- rm -f chkn-run chkn-prep chkn-post main_with_rev_string.cu
+	- rm -f chkn-run chkn-run-fp32 chkn-prep chkn-post main_with_rev_string.cu
 	- rm -rf $(BUILD_DIR)/*
 	- rm -f chicken.ncu-rep

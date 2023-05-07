@@ -368,12 +368,13 @@ vector<BConfig> read_config_file(string fileName)
     //
     // Check that we have consistent gas model.
     map<string, number> gas_model_data = jsonData["gas_model"].get<map<string, number> >();
-    if (!approxEquals(GasModel::g, gas_model_data["gamma"], 1.0e-6) ||
-        !approxEquals(GasModel::R, gas_model_data["R"], 1.0e-6) ||
-        !approxEquals(GasModel::q, gas_model_data["q"], 1.0e-6) ||
-        !approxEquals(GasModel::alpha, gas_model_data["alpha"], 1.0e-6) ||
-        !approxEquals(GasModel::Ti, gas_model_data["Ti"], 1.0e-6) ||
-        !approxEquals(GasModel::Cv, gas_model_data["Cv"], 1.0e-6)) {
+    // Loose tolerance for FP32 numbers, but still tight enough to detect blunders.
+    if (!approxEquals(GasModel::g, gas_model_data["gamma"], 1.0e-4) ||
+        !approxEquals(GasModel::R, gas_model_data["R"], 1.0e-4) ||
+        !approxEquals(GasModel::q, gas_model_data["q"], 1.0e-4) ||
+        !approxEquals(GasModel::alpha, gas_model_data["alpha"], 1.0e-4) ||
+        !approxEquals(GasModel::Ti, gas_model_data["Ti"], 1.0e-4) ||
+        !approxEquals(GasModel::Cv, gas_model_data["Cv"], 1.0e-4)) {
         cerr << "  gas_model_data: gamma:" << gas_model_data["gamma"]
              << " R:" << gas_model_data["R"]
              << " q:" << gas_model_data["q"]
