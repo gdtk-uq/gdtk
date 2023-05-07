@@ -21,7 +21,7 @@ import globalconfig;
 import fileutil;
 import flowsolution;
 import lmrconfig : lmrCfg;
-import newtonkrylovsolver : initConfiguration;
+import init : initConfiguration;
 import vtk_writer;
 
 import command;

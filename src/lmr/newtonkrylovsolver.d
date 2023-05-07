@@ -37,21 +37,21 @@ import lua_helper;
 import json_helper;
 import geom;
 
+import lmrexceptions;
 import lmrconfig;
 import conservedquantities : ConservedQuantities, copy_values_from;
 import fileutil : ensure_directory_is_present;
 
 import globalconfig;
 import globaldata;
-import simcore : synchronize_corner_coords_for_all_blocks, compute_wall_distances;
-import simcore_exchange;
+import init;
 import simcore_gasdynamic_step : detect_shocks;
+import simcore_exchange;
 import bc;
 import fluidblock : FluidBlock;
 import sfluidblock : SFluidBlock;
 import ufluidblock : UFluidBlock;
 import user_defined_source_terms : getUDFSourceTermsForCell;
-import fluidblockio_new : read_zip_solution;
 
 version(mpi_parallel) {
     import mpi;
@@ -66,19 +66,6 @@ version(mpi_parallel) {
 File diagnostics;
 string diagnosticsDir = "diagnostics";
 string diagnosticsFilename = "lmr-nk-diagnostics.dat";
-
-/*---------------------------------------------------------------------
- * Exception class to signal N-K specific exceptions.
- *---------------------------------------------------------------------
- */
-class NewtonKrylovException : Exception {
-    @nogc
-    this(string message, string file=__FILE__, size_t line=__LINE__,
-         Throwable next=null)
-    {
-        super(message, file, line, next);
-    }
-}
 
 /*---------------------------------------------------------------------
  * Enums for preconditioners
@@ -548,15 +535,14 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     cfg.n_flow_time_levels = 2;
     
     initLocalFluidBlocks();
-    initBlockIDs();
 
     initThreadPool(maxCPUs, threadsPerMPITask);
 
     initFluidBlocksBasic();
-    initFluidBlocksGridsAndGeom();
-    initFluidBlocksGlobalCellIDs();
+    initFluidBlocksMemoryAllocation();
+    initFluidBlocksGlobalCellIDStarts();
     initFluidBlocksZones();
-    initFluidBlocksFlowField(snapshotStart);
+    initFluidBlocksFlowFieldSteadyMode(snapshotStart);
 
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
     
@@ -601,349 +587,6 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
         writefln("lmr run-steady: Done initNewtonKrylovSimulation() at wall-clock(WC)= %.1f sec", wall_clock_elapsed);
         stdout.flush();
     }
-}
-
-void initConfiguration()
-{
-    // Read in config file and set parameters
-    auto cfgData = readJSONfile(lmrCfg.cfgFile);
-    set_config_for_core(cfgData);
-    set_config_for_blocks(cfgData);
-}
-
-void initLocalFluidBlocks()
-{
-    version(mpi_parallel) {
-        // Assign particular fluid (& solid) blocks to this MPI task and keep a record
-        // of the MPI rank for all blocks.
-        int my_rank = GlobalConfig.mpi_rank_for_local_task;
-        GlobalConfig.mpi_rank_for_block.length = GlobalConfig.nFluidBlocks + GlobalConfig.nSolidBlocks ;
-        auto lines = readText(lmrCfg.mpimapFile).splitLines();
-        foreach (line; lines) {
-            auto content = line.strip();
-            if (content.startsWith("#")) continue; // Skip comment
-            auto tokens = content.split();
-            int blkid = to!int(tokens[0]);
-            int taskid = to!int(tokens[1]);
-            if (taskid >= GlobalConfig.mpi_size && GlobalConfig.is_master_task) {
-                writefln("Number of MPI tasks (%d) is insufficient for "~
-                         "taskid=%d that is associated with blockid=%d. Quitting.",
-                         GlobalConfig.mpi_size, taskid, blkid);
-                MPI_Abort(MPI_COMM_WORLD, 2);
-            }
-            GlobalConfig.mpi_rank_for_block[blkid] = taskid;
-            if (taskid == my_rank) {
-                auto fblk = cast(FluidBlock) globalBlocks[blkid];
-                if (fblk) { localFluidBlocks ~= fblk; }
-		/+ [TODO] Add in solid blocks.
-                auto sblk = cast(SSolidBlock) globalBlocks[blkid];
-                if (sblk) { localSolidBlocks ~= sblk; }
-		+/
-            }
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-        if (localFluidBlocks.length == 0) {
-            writefln("MPI-task with rank %d has no FluidBlocks. Quitting.", my_rank);
-            MPI_Abort(MPI_COMM_WORLD, 2);
-        }
-    }
-    else {
-	foreach (blk; globalBlocks) {
-	    auto fblk = cast(FluidBlock) blk;
-	    if (fblk) { localFluidBlocks ~= fblk; }
-	    /+ [TODO] add in solid blocks 
-	     auto mysblk = cast(SSolidBlock) blk;
-	     if (mysblk) { localSolidBlocks ~= mysblk; }
-	     +/
-	}
-    }
-}
-
-void initBlockIDs()
-{
-    alias cfg = GlobalConfig;
-    foreach (blk; localFluidBlocks) cfg.localFluidBlockIds ~= blk.id;
-    // [TODO] add solid blocks here
-}
-
-void initThreadPool(int maxCPUs, int threadsPerMPITask)
-{
-    auto nBlocksInThreadParallel = localFluidBlocks.length; // [TODO] add solid blocks
-    int extraThreadsInPool;
-    version(mpi_parallel) {
-	extraThreadsInPool = min(threadsPerMPITask-1, nBlocksInThreadParallel-1);
-    }
-    else {
-	extraThreadsInPool = min(maxCPUs-1, nBlocksInThreadParallel-1);
-    }
-    defaultPoolThreads(extraThreadsInPool); // total = main thread + extra-threads-in-Pool
-    version(mpi_parallel) {
-	if (GlobalConfig.verbosity_level > 0) {
-	    debug {
-		int my_rank = GlobalConfig.mpi_rank_for_local_task;
-		writeln("MPI-task with rank ", my_rank, " running with ", extraThreadsInPool+1, " threads.");
-	    }
-	}
-    }
-    else {
-	if (GlobalConfig.verbosity_level > 0) {
-	    writeln("Single process running with ", extraThreadsInPool+1, " threads.");
-	}
-    }
-}
-
-void initFluidBlocksBasic()
-{
-    foreach (myblk; localFluidBlocks) {
-        myblk.myConfig.init_gas_model_bits();
-        myblk.init_workspace();
-        myblk.init_lua_globals();
-        foreach (bci; myblk.bc) { bci.post_bc_construction(); }
-        // NOTE: Removed userPad in NK solver.
-        if (GlobalConfig.udf_source_terms) {
-            luaL_dofile(myblk.myL, GlobalConfig.udf_source_terms_file.toStringz);
-        }
-        // After fully constructing the blocks and its boundary conditions,
-        // we can optionally print their representation for checking.
-        if (GlobalConfig.verbosity_level > 1) {
-            writeln("  Block[", myblk.id, "]: ", myblk);
-        }
-    }
-}
-
-void initFluidBlocksGridsAndGeom()
-{
-    bool anyBlockFail = false;
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        try {
-            string gName = gridFilenameWithoutExt(blk.id);
-            if (GlobalConfig.grid_format == "gziptext") {
-                gName ~= "." ~ lmrCfg.gzipExt;
-            }
-            else if (GlobalConfig.grid_format == "rawbinary") {
-                gName ~= "." ~ lmrCfg.rawBinExt;
-            }
-            else {
-                throw new Error(format("Oops, invalid grid_format: %s", GlobalConfig.grid_format));
-            }
-            debug { writeln("Calling init_grid_and_flow_arrays for grid: ", gName); }
-            blk.init_grid_and_flow_arrays(gName);
-            blk.compute_primary_cell_geometric_data(0);
-            blk.add_IO();
-        }
-        catch (Exception e) {
-            writefln("Block[%d] failed to initialise geometry, msg=%s", blk.id, e.msg);
-            anyBlockFail = true;
-        }
-    }
-    version(mpi_parallel) {
-        int myFlag = to!int(anyBlockFail);
-        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-        anyBlockFail = to!bool(myFlag);
-    }
-    if (anyBlockFail) {
-        throw new NewtonKrylovException("Failed at initialisation stage during grid reading and geometry calculations.");
-    }
-}
-
-void initFluidBlocksGlobalCellIDs()
-{
-    // Note that the global id is across all processes, not just the local collection of blocks.
-    foreach (i, blk; globalBlocks) {
-        auto fluidblk = cast(FluidBlock) blk;
-        if (fluidblk) {
-            if (i == 0) {
-                fluidblk.globalCellIdStart = 0;
-            } else {
-                auto prev_fluidblk = cast(FluidBlock) globalBlocks[i-1];
-                fluidblk.globalCellIdStart = prev_fluidblk.globalCellIdStart + prev_fluidblk.ncells_expected;
-            }
-        }
-    }
-}
-
-void initFluidBlocksZones()
-{
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.identify_reaction_zones(0);
-        blk.identify_turbulent_zones(0);
-        blk.identify_suppress_reconstruction_zones();
-        blk.identify_suppress_viscous_stresses_zones();
-    }
-}
-
-void initFluidBlocksFlowField(int snapshotStart)
-{
-    bool anyBlockFail = false;
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.read_zip_solution(steadyFlowFilename(snapshotStart, blk.id));
-        foreach (iface; blk.faces) iface.gvel.clear();
-        foreach (cell; blk.cells) {
-            cell.encode_conserved(0, 0, blk.omegaz);
-            // Even though the following call appears redundant at this point,
-            // fills in some gas properties such as Prandtl number that is
-            // needed for both the cfl_check and the BaldwinLomax turbulence model.
-            if (0 != cell.decode_conserved(0, 0, blk.omegaz)) {
-                writefln("Block[%d] Bad cell decode_conserved while initialising flow.", blk.id);
-                anyBlockFail = true;
-            }
-        }
-        blk.set_cell_dt_chem(-1.0);
-    }
-    version(mpi_parallel) {
-        int myFlag = to!int(anyBlockFail);
-        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-        anyBlockFail = to!bool(myFlag);
-    }
-    if (anyBlockFail) {
-        throw new NewtonKrylovException("Failed at initialisation stage during flow field initialisation.");
-    }
-}
-
-void initFullFaceDataExchange()
-{
-    bool anyBlockFail = false;
-    foreach (blk; localFluidBlocks) {
-        foreach (j, bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto my_gce = cast(GhostCellFullFaceCopy)gce;
-                if (my_gce) {
-                    // The local block thinks that it has an exchange boundary with another block,
-                    // so we need to check the ghost-cell effects of the other block's face to see
-                    // that it points back to the local block face.
-                    auto other_blk = my_gce.neighbourBlock;
-                    bool ok = false;
-                    auto other_blk_bc = other_blk.bc[my_gce.neighbourFace];
-                    foreach (gce2; other_blk_bc.preReconAction) {
-                        auto other_gce = cast(GhostCellFullFaceCopy)gce2;
-                        if (other_gce &&
-                            (other_gce.neighbourBlock.id == blk.id) &&
-                            (other_gce.neighbourFace == j)) {
-                            ok = true;
-                        }
-                    }
-                    if (!ok) {
-                        string msg = format("FullFaceCopy for local blk_id=%d face=%d", blk.id, j);
-                        msg ~= format(" is not correctly paired with other block id=%d face=%d.",
-                                      other_blk.id, my_gce.neighbourFace);
-                        writeln(msg);
-                        anyBlockFail = true;
-                    }
-                }
-            }
-        }
-    }
-    version(mpi_parallel) {
-        int myFlag = to!int(anyBlockFail);
-        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-        anyBlockFail = to!bool(myFlag);
-    }
-    if (anyBlockFail) {
-        throw new NewtonKrylovException("Failed at initialisation stage during full-face boundary data exchange.");
-    }
-}
-
-void initMappedCellDataExchange()
-{
-    // Serial loops follow because the cell-mapping function searches across
-    // all blocks local to the process.
-    // Also, there are several loops because the MPI communication,
-    // if there is any, needs to be done in phases of posting of non-blocking reads,
-    // followed by all of the sends and then waiting for all requests to be filled.
-    //
-    bool anyBlockFail = false;
-    foreach (blk; localFluidBlocks) {
-        foreach (bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce = cast(GhostCellMappedCellCopy)gce;
-                if (mygce) { mygce.set_up_cell_mapping(); }
-            }
-        }
-    }
-    foreach (blk; localFluidBlocks) {
-        foreach (bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce = cast(GhostCellFullFaceCopy)gce;
-                if (mygce && (mygce.check_cell_mapping() != 0)) { anyBlockFail = true; }
-            }
-        }
-    }
-    version(mpi_parallel) {
-        int myFlag = to!int(anyBlockFail);
-        MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-        anyBlockFail = to!bool(myFlag);
-    }
-    if (anyBlockFail) {
-        throw new NewtonKrylovException("Failed at initialisation stage during locating mapped-cell boundaries.");
-    }
-    
-    foreach (blk; localFluidBlocks) {
-        foreach (bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce = cast(GhostCellFullFaceCopy)gce;
-                if (mygce) { mygce.set_up_cell_mapping_phase0(); }
-            }
-        }
-    }
-    foreach (blk; localFluidBlocks) {
-        foreach (bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce = cast(GhostCellFullFaceCopy)gce;
-                if (mygce) { mygce.set_up_cell_mapping_phase1(); }
-            }
-        }
-    }
-    foreach (blk; localFluidBlocks) {
-        foreach (bc; blk.bc) {
-            foreach (gce; bc.preReconAction) {
-                auto mygce = cast(GhostCellFullFaceCopy)gce;
-                if (mygce) { mygce.set_up_cell_mapping_phase2(); }
-            }
-        }
-    }
-}
-
-void initGhostCellGeometry()
-{
-    exchange_ghost_cell_geometry_data();
-}
-
-void initLeastSquaresStencils()
-{
-    foreach (blk; localFluidBlocks) blk.compute_least_squares_setup(0);
-}
-
-void initMLPlimiter()
-{
-    foreach (blk; localFluidBlocks) {
-        auto ublock = cast(UFluidBlock) blk;
-        if (ublock) { ublock.build_cloud_of_cell_references_at_each_vertex(); }
-    }
-}
-
-void initMasterLuaState()
-{
-    auto L = GlobalConfig.master_lua_State;
-    lua_pushboolean(L, GlobalConfig.in_mpi_context);
-    lua_setglobal(L, "in_mpi_context");
-    lua_pushnumber(L, GlobalConfig.mpi_size);
-    lua_setglobal(L, "mpi_size");
-    lua_pushnumber(L, GlobalConfig.mpi_rank_for_local_task);
-    lua_setglobal(L, "mpi_rank_for_local_task");
-    lua_pushboolean(L, GlobalConfig.is_master_task);
-    lua_setglobal(L, "is_master_task");
-    push_array_to_Lua(L, GlobalConfig.localFluidBlockIds, "localFluidBlockIds");
-    // [TODO] think about user_pad -- does it have a use case in steady-state?
-}
-
-void initCornerCoordinates()
-{
-    synchronize_corner_coords_for_all_blocks();
-}
-
-void initWallDistances()
-{
-    compute_wall_distances();
 }
 
 /*---------------------------------------------------------------------
