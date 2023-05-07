@@ -37,14 +37,14 @@ class Matrix(T) {
         this(other._nrows, other._ncols);
         foreach(row; 0 .. _nrows)
             foreach(col; 0 .. _ncols)
-                _data[row*_ncols + col] = other._data[row*_ncols + col];
+                _data[index(row,col)] = other._data[index(row,col)];
     }
 
     this(in T[] vec, string orient="column")
     {
         if ( orient == "column" ) {
             this(vec.length, 1);
-            foreach(row; 0 .. _nrows) _data[row*_ncols + 0] = vec[row];
+            foreach(row; 0 .. _nrows) _data[index(row,0)] = vec[row];
         } else {
             this(1, vec.length);
             foreach(col; 0 .. _ncols) _data[col] = vec[col];
@@ -69,35 +69,44 @@ class Matrix(T) {
         this(other.length, other[0].length);
         foreach(row; 0 .. _nrows)
             foreach(col; 0 .. _ncols)
-                _data[row*_ncols + col] = other[row][col];
+                _data[index(row,col)] = other[row][col];
     }
 
     this(in float[][] other) {
         this(other.length, other[0].length);
         foreach(row; 0 .. _nrows)
             foreach(col; 0 .. _ncols)
-                _data[row*_ncols + col] = other[row][col];
+                _data[index(row,col)] = other[row][col];
     }
 
     this(in int[][] other) {
         this(other.length, other[0].length);
         foreach(row; 0 .. _nrows)
             foreach(col; 0 .. _ncols)
-                _data[row*_ncols + col] = other[row][col];
+                _data[index(row,col)] = other[row][col];
     }
 
     @property @nogc const size_t nrows() { return _nrows; }
     @property @nogc const size_t ncols() { return _ncols; }
 
     @nogc
+    pragma(inline, true)
+    size_t index(size_t row, size_t col) const
+    in (row < _nrows, "row out of bounds")
+    in (col < _ncols, "col out of bounds")
+    {
+        return row*_ncols + col;
+    }
+
+    @nogc
     const T opIndex(size_t row, size_t col) {
-        return _data[row*_ncols + col];
+        return _data[index(row,col)];
     }
 
     @nogc
     ref T opIndexAssign(T c, size_t row, size_t col) {
-        _data[row*_ncols + col] = c;
-        return _data[row*_ncols + col];
+        _data[index(row,col)] = c;
+        return _data[index(row,col)];
     }
 
     @nogc
@@ -105,14 +114,14 @@ class Matrix(T) {
         if ( op == "+" || op == "-" || op == "*" || op == "/" )
     {
         static if ( op == "+" )
-            _data[row*_ncols + col] += c;
+            _data[index(row,col)] += c;
         else if ( op == "-" )
-            _data[row*_ncols + col] -= c;
+            _data[index(row,col)] -= c;
         else if ( op == "*" )
-            _data[row*_ncols + col] *= c;
+            _data[index(row,col)] *= c;
         else if ( op == "/" )
-            _data[row*_ncols + col] /= c;
-        return _data[row*_ncols + col];
+            _data[index(row,col)] /= c;
+        return _data[index(row,col)];
     }
 
     // Element-by-element operations.
@@ -124,14 +133,15 @@ class Matrix(T) {
         Matrix!T result = new Matrix!T(_nrows, _ncols);
         foreach(row; 0 .. _nrows) {
             foreach(col; 0 .. _ncols) {
+                size_t i = index(row,col);
                 static if ( op == "+" ) {
-                    result._data[row*_ncols + col] = _data[row*_ncols + col] + rhs._data[row*_ncols + col];
+                    result._data[i] = _data[i] + rhs._data[i];
                 } else if ( op == "-" ) {
-                    result._data[row*_ncols + col] = _data[row*_ncols + col] - rhs._data[row*_ncols + col];
+                    result._data[i] = _data[i] - rhs._data[i];
                 } else if ( op == "*" ) {
-                    result._data[row*_ncols + col] = _data[row*_ncols + col] * rhs._data[row*_ncols + col];
+                    result._data[i] = _data[i] * rhs._data[i];
                 } else if ( op == "/" ) {
-                    result._data[row*_ncols + col] = _data[row*_ncols + col] / rhs._data[row*_ncols + col];
+                    result._data[i] = _data[i] / rhs._data[i];
                 }
             }
         }
@@ -144,14 +154,15 @@ class Matrix(T) {
         Matrix!T result = new Matrix!T(_nrows, _ncols);
         foreach(row; 0 .. _nrows) {
             foreach(col; 0 .. _ncols) {
+                size_t i = index(row,col);
                 static if ( op == "+" ) {
-                    result._data[row*_ncols + col] = _data[row*_ncols + col] + rhs;
+                    result._data[i] = _data[i] + rhs;
                 } else if ( op == "-" ) {
-                    result._data[row*_ncols + col] = _data[row*_ncols + col] - rhs;
+                    result._data[i] = _data[i] - rhs;
                 } else if ( op == "*" ) {
-                    result._data[row*_ncols + col] = _data[row*_ncols + col] * rhs;
+                    result._data[i] = _data[i] * rhs;
                 } else if ( op == "/" ) {
-                    result._data[row*_ncols + col] = _data[row*_ncols + col] / rhs;
+                    result._data[i] = _data[i] / rhs;
                 }
             }
         }
@@ -165,14 +176,15 @@ class Matrix(T) {
             Matrix!T result = new Matrix!T(_nrows, _ncols);
             foreach(row; 0 .. _nrows) {
                 foreach(col; 0 .. _ncols) {
+                    size_t i = index(row,col);
                     static if ( op == "+" ) {
-                        result._data[row*_ncols + col] = _data[row*_ncols + col] + rhs;
+                        result._data[i] = _data[i] + rhs;
                     } else if ( op == "-" ) {
-                        result._data[row*_ncols + col] = _data[row*_ncols + col] - rhs;
+                        result._data[i] = _data[i] - rhs;
                     } else if ( op == "*" ) {
-                        result._data[row*_ncols + col] = _data[row*_ncols + col] * rhs;
+                        result._data[i] = _data[i] * rhs;
                     } else if ( op == "/" ) {
-                        result._data[row*_ncols + col] = _data[row*_ncols + col] / rhs;
+                        result._data[i] = _data[i] / rhs;
                     }
                 }
             }
@@ -186,12 +198,13 @@ class Matrix(T) {
         Matrix!T result = new Matrix!T(_nrows, _ncols);
         foreach(row; 0 .. _nrows) {
             foreach(col; 0 .. _ncols) {
+                size_t i = index(row,col);
                 static if ( op == "+" ) {
-                    result._data[row*_ncols + col] = lhs + _data[row*_ncols + col];
+                    result._data[i] = lhs + _data[i];
                 } else if ( op == "-" ) {
-                    result._data[row*_ncols + col] = lhs - _data[row*_ncols + col];
+                    result._data[i] = lhs - _data[i];
                 } else if ( op == "*" ) {
-                    result._data[row*_ncols + col] = lhs * _data[row*_ncols + col];
+                    result._data[i] = lhs * _data[i];
                 }
             }
         }
@@ -205,12 +218,13 @@ class Matrix(T) {
             Matrix!T result = new Matrix!T(_nrows, _ncols);
             foreach(row; 0 .. _nrows) {
                 foreach(col; 0 .. _ncols) {
+                    size_t i = index(row,col);
                     static if ( op == "+" ) {
-                        result._data[row*_ncols + col] = lhs + _data[row*_ncols + col];
+                        result._data[i] = lhs + _data[i];
                     } else if ( op == "-" ) {
-                        result._data[row*_ncols + col] = lhs - _data[row*_ncols + col];
+                        result._data[i] = lhs - _data[i];
                     } else if ( op == "*" ) {
-                        result._data[row*_ncols + col] = lhs * _data[row*_ncols + col];
+                        result._data[i] = lhs * _data[i];
                     }
                 }
             }
@@ -223,15 +237,17 @@ class Matrix(T) {
     {
         foreach(row; 0 .. _nrows)
             foreach(col; 0 .. _ncols)
-                _data[row*_ncols + col] *= s;
+                _data[index(row,col)] *= s;
     }
 
     @nogc
     void add(in Matrix rhs)
     {
         foreach(row; 0 .. _nrows)
-            foreach(col; 0 .. _ncols)
-                _data[row*_ncols + col] += rhs._data[row*_ncols + col];
+            foreach(col; 0 .. _ncols) {
+                size_t i = index(row,col);
+                _data[i] += rhs._data[i];
+            }
     }
 
     override string toString() {
@@ -239,7 +255,7 @@ class Matrix(T) {
         foreach(row; 0 .. _nrows) {
             s ~= "[";
             foreach(col; 0 .. _ncols) {
-                s ~= to!string(_data[row*_ncols + col]);
+                s ~= to!string(_data[index(row,col)]);
                 if ( col < _ncols-1 ) s ~= ",";
             }
             s ~= "]";
@@ -252,32 +268,32 @@ class Matrix(T) {
     @nogc
     void swapRows(size_t i1, size_t i2) {
         foreach(col; 0 .. _ncols)
-            swap(_data[i1*_ncols + col], _data[i2*_ncols + col]);
+            swap(_data[index(i1,col)], _data[index(i2,col)]);
     }
 
     T[] getColumn(size_t col) {
         T[] my_column;
         my_column.length = nrows;
-        foreach(row; 0 .. nrows) { my_column[row] = _data[row*_ncols + col]; }
+        foreach(row; 0 .. nrows) { my_column[row] = _data[index(row,col)]; }
         return my_column;
     }
 
     void getColumn(T[] my_column, size_t col) {
         assert (my_column.length == nrows, "Incorrect column length.");
-        foreach(row; 0 .. nrows) { my_column[row] = _data[row*_ncols + col]; }
+        foreach(row; 0 .. nrows) { my_column[row] = _data[index(row,col)]; }
         return;
     }
 
     void setColumn(T[] my_column, size_t col) {
         assert (my_column.length == nrows, "Incorrect column length.");
-        foreach(row; 0 .. nrows) { _data[row*_ncols + col] = my_column[row]; }
+        foreach(row; 0 .. nrows) { _data[index(row,col)] = my_column[row]; }
         return;
     }
 
     T[] getRow(size_t row) {
         T[] my_row;
         my_row.length = ncols;
-        foreach(col; 0 .. _ncols) my_row[col] = _data[row*_ncols + col];
+        foreach(col; 0 .. _ncols) my_row[col] = _data[index(row,col)];
         return my_row;
     }
 
@@ -290,7 +306,7 @@ class Matrix(T) {
         Matrix sub_matrix = new Matrix(row1-row0, col1-col0);
         foreach(row; row0 .. row1) {
             foreach(col; col0 .. col1) {
-                sub_matrix[row-row0, col-col0] = this._data[row*_ncols + col];
+                sub_matrix[row-row0, col-col0] = this._data[index(row,col)];
             }
         }
         return sub_matrix;
@@ -303,7 +319,7 @@ class Matrix(T) {
                 new Error("invalid subrange"));
         foreach(row; row0 .. row1) {
             foreach(col; col0 .. col1) {
-                this._data[row*_ncols + col] = c;
+                this._data[index(row,col)] = c;
             }
         }
     }
@@ -313,7 +329,7 @@ class Matrix(T) {
     {
         foreach(row; 0 .. _nrows)
             foreach(col; 0 .. _ncols)
-                _data[row*_ncols + col] = to!T(0.0);
+                _data[index(row,col)] = to!T(0.0);
     }
 
     @nogc
@@ -321,7 +337,7 @@ class Matrix(T) {
     {
         foreach(row; 0 .. _nrows)
             foreach(col; 0 .. _ncols)
-                _data[row*_ncols + col] = to!T(1.0);
+                _data[index(row,col)] = to!T(1.0);
     }
 
     @nogc
@@ -329,9 +345,9 @@ class Matrix(T) {
     {
         foreach(row; 0 .. _nrows) {
             foreach(col; 0 .. _ncols) {
-                _data[row*_ncols + col] = to!T(0.0);
+                _data[index(row,col)] = to!T(0.0);
             }
-            _data[row*_ncols + row] = to!T(1.0);
+            _data[index(row,row)] = to!T(1.0);
         }
     }
 } // end class Matrix
