@@ -58,7 +58,7 @@ namespace rsla {
             + c[0][2]*(c[1][0]*c[2][1] - c[1][1]*c[2][0]);
         if (abs(det) <= very_small_value) return -1; // singular
         // compute inverse directly
-        number one_over_det = 1.0/det;
+        number one_over_det = one/det;
         cinv[0][0] = (c[1][1]*c[2][2] - c[1][2]*c[2][1])*one_over_det;
         cinv[0][1] = (c[0][2]*c[2][1] - c[0][1]*c[2][2])*one_over_det;
         cinv[0][2] = (c[0][1]*c[1][2] - c[0][2]*c[1][1])*one_over_det;
@@ -78,7 +78,7 @@ namespace rsla {
     void set_all_zero(number a[nrows][ncols])
     {
         for (int i=0; i < nrows; ++i) {
-            for (int j=0; j < ncols; ++j) { a[i][j] = 0.0; }
+            for (int j=0; j < ncols; ++j) { a[i][j] = zero; }
         }
     }
 

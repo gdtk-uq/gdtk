@@ -55,13 +55,13 @@ struct CubicSpline {
             throw runtime_error("Gauss-Jordan elimination failed while solving for sigma.");
         }
         // Put sigma values in place in the full array.
-        number sigma[n+1]; sigma[0] = 0.0; sigma[n] = 0.0;
+        number sigma[n+1]; sigma[0] = zero; sigma[n] = zero;
         for (int i=0; i < m; ++i) { sigma[i+1] = A[i][m]; }
         // Evaluate and store coefficients for the polynomial segments.
         for (int i=0; i < n; ++i) {
-            a[i] = (sigma[i+1]-sigma[i])/(6.0*h[i]);
-            b[i] = sigma[i]/2.0;
-            c[i] = (ys[i+1]-ys[i])/h[i] - (2.0*sigma[i] + sigma[i+1])*h[i]/6.0;
+            a[i] = (sigma[i+1]-sigma[i])/(six*h[i]);
+            b[i] = sigma[i]/two;
+            c[i] = (ys[i+1]-ys[i])/h[i] - (two*sigma[i] + sigma[i+1])*h[i]/six;
         }
     } // end set()
 

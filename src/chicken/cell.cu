@@ -171,12 +171,12 @@ struct FVCell {
         case SourceTerms::none:
             break;
         case SourceTerms::manufactured_solution:
-            dUdt[CQI::mass] += 0.0; // [TODO] implement the actual calculation.
-            dUdt[CQI::xMom] += 0.0;
-            dUdt[CQI::yMom] += 0.0;
-            dUdt[CQI::zMom] += 0.0;
-            dUdt[CQI::totEnergy] += 0.0;
-            dUdt[CQI::YB] += 0.0;
+            dUdt[CQI::mass] += zero; // [TODO] implement the actual calculation.
+            dUdt[CQI::xMom] += zero;
+            dUdt[CQI::yMom] += zero;
+            dUdt[CQI::zMom] += zero;
+            dUdt[CQI::totEnergy] += zero;
+            dUdt[CQI::YB] += zero;
             break;
         default:
             break;
@@ -188,7 +188,7 @@ struct FVCell {
     void eval_dUdt(ConservedQuantities& dUdt, FVFace faces[], int isrc)
     // These are the spatial (RHS) terms in the semi-discrete governing equations.
     {
-        number vol_inv = 1.0/volume;
+        number vol_inv = one/volume;
         auto& fim = faces[face[Face::iminus]];
         auto& fip = faces[face[Face::iplus]];
         auto& fjm = faces[face[Face::jminus]];

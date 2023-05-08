@@ -57,8 +57,8 @@ int setup_LSQ_arrays_at_face(FVFace& f, FVCell cells[], FVFace faces[])
     //
     // Set up the matrix for the normal equations.
     //
-    number xx = 0.0; number xy = 0.0; number xz = 0.0;
-    number yy = 0.0; number yz = 0.0; number zz = 0.0;
+    number xx = zero; number xy = zero; number xz = zero;
+    number yy = zero; number yz = zero; number zz = zero;
     for (int i=0; i < cloud_n; i++) {
         xx += weights2[i]*dx[i]*dx[i];
         xy += weights2[i]*dx[i]*dy[i];
@@ -73,7 +73,7 @@ int setup_LSQ_arrays_at_face(FVFace& f, FVCell cells[], FVFace faces[])
     xTx[2][0] = xz; xTx[2][1] = yz; xTx[2][2] = zz;
     //
     number xTxInv[3][3]; // Inverse of normal matrix.
-    number very_small_value = 1.0e-16; // Should be 1.0e-32 (normInf(xTx))^^3;
+    number very_small_value = (number)1.0e-16; // Should be 1.0e-32 (normInf(xTx))^^3;
     if (0 != rsla::MInverse(xTx, xTxInv, very_small_value)) {
         return 1;
     }
@@ -102,11 +102,11 @@ void add_viscous_fluxes_at_face(FVFace& f, FVCell cells[], FVFace faces[])
     FlowState fs0 = f.fs;
     // Now, compute the gradients, one flow quantity at a time.
     // On device, local memory will be faster than accumulating results in global memory.
-    Vector3 grad_T{0.0, 0.0, 0.0};
-    Vector3 grad_vx{0.0, 0.0, 0.0};
-    Vector3 grad_vy{0.0, 0.0, 0.0};
-    Vector3 grad_vz{0.0, 0.0, 0.0};
-    number dq = 0.0;
+    Vector3 grad_T{zero, zero, zero};
+    Vector3 grad_vx{zero, zero, zero};
+    Vector3 grad_vy{zero, zero, zero};
+    Vector3 grad_vz{zero, zero, zero};
+    number dq = zero;
     for (int i=0; i < cloud_n; i++) {
 	number wx = f.wx[i];
 	number wy = f.wy[i];
@@ -136,11 +136,11 @@ void add_viscous_fluxes_at_face(FVFace& f, FVCell cells[], FVFace faces[])
     // Combining the flow-quantity gradients with the transport coefficients.
     number mu, k;
     fs0.gas.trans_coeffs(mu, k);
-    number lmbda = -2.0/3.0 * mu;
+    number lmbda = -two/three * mu;
     // Shear stresses.
-    number tau_xx = 2.0*mu*grad_vx.x + lmbda*(grad_vx.x + grad_vy.y + grad_vz.z);
-    number tau_yy = 2.0*mu*grad_vy.y + lmbda*(grad_vx.x + grad_vy.y + grad_vz.z);
-    number tau_zz = 2.0*mu*grad_vz.z + lmbda*(grad_vx.x + grad_vy.y + grad_vz.z);
+    number tau_xx = two*mu*grad_vx.x + lmbda*(grad_vx.x + grad_vy.y + grad_vz.z);
+    number tau_yy = two*mu*grad_vy.y + lmbda*(grad_vx.x + grad_vy.y + grad_vz.z);
+    number tau_zz = two*mu*grad_vz.z + lmbda*(grad_vx.x + grad_vy.y + grad_vz.z);
     number tau_xy = mu * (grad_vx.y + grad_vy.x);
     number tau_xz = mu * (grad_vx.z + grad_vz.x);
     number tau_yz = mu * (grad_vy.z + grad_vz.y);
@@ -789,9 +789,12 @@ struct Block {
     // The numbers of cells are also checked.
     {
         if (vtkHeader && binary_data) {
-            throw runtime_error("Do no ask to read vtk grid file with binary data.");
+            throw runtime_error("Do not ask to read vtk grid file with binary data.");
         }
         if (binary_data) {
+# ifdef FLOAT_NUMBERS
+            throw runtime_error("Do not ask to FP32 code to read grid file with binary data.");
+# endif
             // Raw, binary data in the grid file.
             auto f = ifstream(fileName);
             if (!f) {
@@ -882,6 +885,9 @@ struct Block {
     // The cell indexing is in the same as expected in a VTK file.
     {
         if (binary_data) {
+# ifdef FLOAT_NUMBERS
+            throw runtime_error("Do not ask to FP32 code to read flow file with binary data.");
+# endif
             auto f = ifstream(fileName, ios::binary);
             if (!f) {
                 throw runtime_error("Did not open binary flow file successfully: "+fileName);
@@ -1118,7 +1124,7 @@ struct Block {
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
-                U1[j] = U0[j] + 0.25*dt*(dUdt0[j] + dUdt1[j]);
+                U1[j] = U0[j] + one_quarter*dt*(dUdt0[j] + dUdt1[j]);
             }
             int bad_cell_flag = c.fs.decode_conserved(U1);
             bad_cell_count += bad_cell_flag;
@@ -1143,7 +1149,7 @@ struct Block {
             ConservedQuantities& U0 = Q[i];
             ConservedQuantities& U1 = Q[cfg.nActiveCells + i];
             for (int j=0; j < CQI::n; j++) {
-                U1[j] = U0[j] + dt*(1.0/6.0*dUdt0[j] + 1.0/6.0*dUdt1[j] + 4.0/6.0*dUdt2[j]);
+                U1[j] = U0[j] + dt*(one_sixth*dUdt0[j] + one_sixth*dUdt1[j] + four_sixth*dUdt2[j]);
             }
             int bad_cell_flag = c.fs.decode_conserved(U1);
             bad_cell_count += bad_cell_flag;

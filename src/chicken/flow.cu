@@ -61,7 +61,7 @@ struct FlowState {
         U[CQI::yMom] = rho*vel.y;
         U[CQI::zMom] = rho*vel.z;
         // Total Energy / unit volume
-        number ke = 0.5*(vel.x*vel.x + vel.y*vel.y+vel.z*vel.z);
+        number ke = half*(vel.x*vel.x + vel.y*vel.y+vel.z*vel.z);
         U[CQI::totEnergy] = rho*(gas.e + ke);
         // Mass fraction of gas species B.
         U[CQI::YB] = rho*gas.YB;
@@ -75,15 +75,15 @@ struct FlowState {
         bool any_nans = false; for (auto v : U) { if (isnan(v)) { any_nans = true; } }
         if (any_nans) return 1;
         number rho = U[CQI::mass];
-        if (rho <= 0.0) return 1;
-        number dinv = 1.0/rho;
+        if (rho <= zero) return 1;
+        number dinv = one/rho;
         vel.set(U[CQI::xMom]*dinv, U[CQI::yMom]*dinv, U[CQI::zMom]*dinv);
         // Split the total energy per unit volume.
         // Start with the total energy, then take out the other components.
         // Internal energy is what remains.
         number e = U[CQI::totEnergy] * dinv;
         // Remove kinetic energy for bulk flow.
-        number ke = 0.5*(vel.x*vel.x + vel.y*vel.y + vel.z*vel.z);
+        number ke = half*(vel.x*vel.x + vel.y*vel.y + vel.z*vel.z);
         e -= ke;
         // Put data into cell's gas state.
         gas.rho = rho;

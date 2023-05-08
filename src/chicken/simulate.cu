@@ -130,7 +130,7 @@ void initialize_simulation(int tindx_start, bool binary_data)
 #endif
     //
     // Set up the simulation control parameters.
-    SimState::t = 0.0;
+    SimState::t = zero;
     // Read times.data file to determine starting time.
     ifstream timesFile(Config::job+"/times.data", ifstream::binary);
     if (timesFile.good()) {
@@ -218,7 +218,7 @@ void march_in_time_using_cpu_only(bool binary_data)
             }
             for (auto adt : allowed_dts) smallest_dt = fmin(smallest_dt, adt);
             // Make the transition to larger allowable time step not so sudden.
-            SimState::dt = fmin(1.5*SimState::dt, smallest_dt);
+            SimState::dt = fmin((number)1.5*SimState::dt, smallest_dt);
         }
         //
         // Gas-dynamic update over three stages with TVD-RK3 weights.
@@ -358,7 +358,7 @@ void estimate_allowed_dt_on_gpu(Block& blk, const BConfig& cfg, number cfl, long
         Vector3 inorm = blk.faces_on_gpu[c.face[Face::iminus]].n;
         Vector3 jnorm = blk.faces_on_gpu[c.face[Face::jminus]].n;
         Vector3 knorm = blk.faces_on_gpu[c.face[Face::kminus]].n;
-        long long int dt_picos = trunc(c.estimate_local_dt(inorm, jnorm, knorm, cfl)*1.0e12);
+        long long int dt_picos = trunc(c.estimate_local_dt(inorm, jnorm, knorm, cfl)*(number)1.0e12);
         atomicMin(smallest_dt_picos, dt_picos);
     }
 }
@@ -447,7 +447,7 @@ void update_stage_2_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, 
         c.eval_dUdt(dUdt1, blk.faces_on_gpu, isrc);
         blk.dQdt_on_gpu[cfg.nActiveCells + i] = dUdt1; // keep
         ConservedQuantities U = blk.Q_on_gpu[i]; // U0
-        for (int j=0; j < CQI::n; j++) { U[j] += 0.25*dt*(dUdt0[j] + dUdt1[j]); }
+        for (int j=0; j < CQI::n; j++) { U[j] += one_quarter*dt*(dUdt0[j] + dUdt1[j]); }
         blk.Q_on_gpu[cfg.nActiveCells + i] = U; // keep update
         int bad_cell_flag = c.fs.decode_conserved(U);
         atomicAdd(bad_cell_count, bad_cell_flag);
@@ -470,7 +470,7 @@ void update_stage_3_on_gpu(Block& blk, const BConfig& cfg, int isrc, number dt, 
         // blk.dQdt_on_gpu[2*cfg.nActiveCells + i] = dUdt2; // no need to keep, last stage
         ConservedQuantities U = blk.Q_on_gpu[i]; // U0
         for (int j=0; j < CQI::n; j++) {
-            U[j] += dt*(1.0/6.0*dUdt0[j] + 1.0/6.0*dUdt1[j] + 4.0/6.0*dUdt2[j]);
+            U[j] += dt*(one_sixth*dUdt0[j] + one_sixth*dUdt1[j] + four_sixth*dUdt2[j]);
         }
         blk.Q_on_gpu[cfg.nActiveCells + i] = U; // keep update
         int bad_cell_flag = c.fs.decode_conserved(U);

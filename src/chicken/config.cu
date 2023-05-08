@@ -74,7 +74,7 @@ struct BoundaryLayerProfile {
     {
         number y = pos.y;
         fs.gas.p = p_e;
-        fs.gas.YB = 0.0;
+        fs.gas.YB = zero;
         number T, velx;
         if (y <= T_spline.x0()) {
             T = T_spline.y0();
@@ -88,7 +88,7 @@ struct BoundaryLayerProfile {
         }
         fs.gas.T = T;
         fs.gas.update_from_pT();
-        fs.vel.set(velx, 0.0, 0.0);
+        fs.vel.set(velx, zero, zero);
     }
 };
 
@@ -145,7 +145,7 @@ struct BConfig {
     array<int,6> bcCodes;
     array<int,6> bc_fs;
     array<int,6> bc_TWall_form;
-    array<double,6> bc_TWall;
+    array<number,6> bc_TWall;
     array<int,6> bc_fun;
     BoundaryLayerProfile bc_bl_profile; // There is only one profile.
 
@@ -279,7 +279,7 @@ struct Schedule {
         int i = n - 1;
         while ((i > 0) && (t < t_change[i])) { i--; }
         number frac = (t-t_change[i])/(t_change[i+1]-t_change[i]);
-        number value = (1.0-frac)*values[i] + frac*values[i+1];
+        number value = (one-frac)*values[i] + frac*values[i+1];
         return value;
     }
 }; // end struct Schedule
@@ -328,9 +328,9 @@ namespace Config {
     int cfl_count = 10;
     Schedule dt_plot_schedule;
     Schedule cfl_schedule;
-    number dt_init = 1.0e-6;
-    number max_time = 1.0e-3;
-    int max_step = 100.0;
+    number dt_init = (number)1.0e-6;
+    number max_time = (number)1.0e-3;
+    int max_step = 100;
     //
     int x_order = 2;
     int t_order = 2;
@@ -463,7 +463,7 @@ vector<BConfig> read_config_file(string fileName)
             if (cfg.bcCodes[i] == BCCode::wall_no_slip_fixed_T) {
                 cfg.bc_TWall_form[i] = TWallForm::value;
                 if (bc["form"].get<string>() == "fun") cfg.bc_TWall_form[i] = TWallForm::fun;
-                cfg.bc_TWall[i] = bc["value"].get<double>();
+                cfg.bc_TWall[i] = bc["value"].get<number>();
             }
             cfg.bc_fun[i] = BCFunction::none; // Default function index.
             if (cfg.bcCodes[i] == BCCode::inflow_function) {

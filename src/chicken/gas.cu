@@ -85,9 +85,9 @@ struct GasState {
     __host__ __device__
     void set_as_average(const GasState& a, const GasState& b)
     {
-        rho = 0.5*(a.rho+b.rho);
-        e = 0.5*(a.e+b.e);
-        YB = 0.5*(a.YB+b.YB);
+        rho = half*(a.rho+b.rho);
+        e = half*(a.e+b.e);
+        YB = half*(a.YB+b.YB);
         update_from_rhoe();
     }
 
@@ -104,8 +104,8 @@ struct GasState {
     // Update the gas data, reaction is active in an isolated blob of gas.
     {
         using namespace GasModel;
-        number YA = 1.0 - YB;
-        if (T > Ti) { YB = 1.0 - YA*exp(-alpha*dt); }
+        number YA = one - YB;
+        if (T > Ti) { YB = one - YA*exp(-alpha*dt); }
         // In an isolated reactor, density and energy remain constant.
         update_from_rhoe();
     }

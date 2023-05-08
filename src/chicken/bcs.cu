@@ -329,11 +329,11 @@ FlowState compute_inflow_state_from_function(int ifn, Vector3 pos, const BConfig
     case BCFunction::supersonic_vortex:
         // [TODO]
         // Dummy value.
-        inflow.gas.p = 100.0e3;
-        inflow.gas.T = 300.0;
-        inflow.gas.YB = 0.0;
+        inflow.gas.p = (number)100.0e3;
+        inflow.gas.T = (number)300.0;
+        inflow.gas.YB = zero;
         inflow.gas.update_from_pT();
-        inflow.vel.set(0.0, 0.0, 0.0);
+        inflow.vel.set(zero, zero, zero);
         break;
     case BCFunction::laminar_boundary_layer:
         cfg.bc_bl_profile.eval(pos, inflow);
@@ -341,11 +341,11 @@ FlowState compute_inflow_state_from_function(int ifn, Vector3 pos, const BConfig
     case BCFunction::manufactured_solution:
         // [TODO]
         // Dummy value.
-        inflow.gas.p = 100.0e3;
-        inflow.gas.T = 300.0;
-        inflow.gas.YB = 0.0;
+        inflow.gas.p = (number)100.0e3;
+        inflow.gas.T = (number)300.0;
+        inflow.gas.YB = zero;
         inflow.gas.update_from_pT();
-        inflow.vel.set(0.0, 0.0, 0.0);
+        inflow.vel.set(zero, zero, zero);
         break;
     default:
         break;

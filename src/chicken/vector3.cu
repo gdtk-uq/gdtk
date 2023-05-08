@@ -16,7 +16,7 @@ struct Vector3 {
     number z;
 
     __host__ __device__
-    void set(number _x, number _y, number _z=0.0)
+    void set(number _x, number _y, number _z=zero)
     {
         x = _x; y = _y; z = _z;
     }
@@ -24,7 +24,7 @@ struct Vector3 {
     __host__ __device__
     void set_as_average(const Vector3& a, const Vector3& b)
     {
-        x = 0.5*(a.x+b.x); y = 0.5*(a.y+b.y); z = 0.5*(a.z+b.z);
+        x = half*(a.x+b.x); y = half*(a.y+b.y); z = half*(a.z+b.z);
     }
 
     __host__ __device__
@@ -79,17 +79,17 @@ struct Vector3 {
     // Scales the vector to unit magnitude.
     {
         number magnitude = sqrt(x*x + y*y + z*z);
-        if (magnitude > 0.0) {
+        if (magnitude > zero) {
             x /= magnitude; y /= magnitude; z /= magnitude;
         } else {
             // Clean up, in case dot product underflows.
-            x = y = z = 0.0;
+            x = y = z = zero;
         }
         // Flush small components to zero.
-        constexpr double small = 1.0e-30;
-        if (fabs(x) < small) { x = 0.0; }
-        if (fabs(y) < small) { y = 0.0; }
-        if (fabs(z) < small) { z = 0.0; }
+        constexpr number small = (number)1.0e-30;
+        if (fabs(x) < small) { x = zero; }
+        if (fabs(y) < small) { y = zero; }
+        if (fabs(z) < small) { z = zero; }
     }
 
     // Transform functions used to reorient vector values in the CFD codes.
@@ -125,7 +125,7 @@ struct Vector3 {
     {
         number v_x = x*n.x + y*n.y;   // normal component
         number v_y = x*t1.x + y*t1.y; // tangential component 1
-        x = v_x; y = v_y; z = 0.0;
+        x = v_x; y = v_y; z = zero;
     }
 
     __host__ __device__
@@ -134,7 +134,7 @@ struct Vector3 {
     {
         number v_x = x*n.x + y*t1.x; // global-x
         number v_y = x*n.y + y*t1.y; // global-y
-        x = v_x; y = v_y; z = 0.0;
+        x = v_x; y = v_y; z = zero;
     }
 
 }; // end Vector3
@@ -198,7 +198,7 @@ void quad_properties(const Vector3& p0, const Vector3& p1,
                      Vector3& centroid,
                      Vector3& n, Vector3& t1, Vector3& t2,
                      number& area,
-                     number tol=1.0e-12, number area_tol=1.0e-20)
+                     number tol=(number)1.0e-12, number area_tol=(number)1.0e-20)
 // Quadrilateral properties of centroid, associated unit normals and area.
 //   p3-----p2
 //   |      |
@@ -207,11 +207,11 @@ void quad_properties(const Vector3& p0, const Vector3& p1,
 // Resultant normal vector is up, toward you.
 // Assume that all points are in the one plane.
 {
-    centroid.set(0.25*(p0.x + p1.x + p2.x + p3.x),
-                 0.25*(p0.y + p1.y + p2.y + p3.y),
-                 0.25*(p0.z + p1.z + p2.z + p3.z));
+    centroid.set(one_quarter*(p0.x + p1.x + p2.x + p3.x),
+                 one_quarter*(p0.y + p1.y + p2.y + p3.y),
+                 one_quarter*(p0.z + p1.z + p2.z + p3.z));
     // Compute areas via the cross products.
-    // Vector3 vector_area = 0.25 * cross(p1-p0+p2-p3, p3-p0+p2-p1);
+    // Vector3 vector_area = one_quarter * cross(p1-p0+p2-p3, p3-p0+p2-p1);
     number p01x = p1.x-p0.x+p2.x-p3.x;
     number p01y = p1.y-p0.y+p2.y-p3.y;
     number p01z = p1.z-p0.z+p2.z-p3.z;
@@ -221,7 +221,7 @@ void quad_properties(const Vector3& p0, const Vector3& p1,
     number vector_area_x, vector_area_y, vector_area_z;
     cross_product(p01x, p01y, p01z, p03x, p03y, p03z,
                   vector_area_x, vector_area_y, vector_area_z);
-    vector_area_x *= 0.25; vector_area_y *= 0.25; vector_area_z *= 0.25;
+    vector_area_x *= one_quarter; vector_area_y *= one_quarter; vector_area_z *= one_quarter;
     // unit-normal and area
     // area = abs(vector_area);
     area = sqrt(vector_area_x*vector_area_x + vector_area_y*vector_area_y + vector_area_z*vector_area_z);
@@ -240,7 +240,7 @@ void quad_properties(const Vector3& p0, const Vector3& p1,
     } else {
         // We have nothing meaningful to put into the unit vectors,
         // so, put in an arbitrary but orthogonal set.
-        n.set(1.0,0.0,0.0); t1.set(0.0,1.0,0.0); t2.set(0.0,0.0,1.0);
+        n.set(one,zero,zero); t1.set(zero,one,zero); t2.set(zero,zero,one);
     }
 } // end quad_properties()
 
@@ -249,8 +249,8 @@ void quad_properties(const Vector3& p0, const Vector3& p1,
 // it may be that the vertices are not quite in their ideal position.
 // We need a couple of finite, but small, tolerances to deal with
 // collapsed volumes.
-constexpr number smallButSignificantVolume = 1.0e-12;
-constexpr number verySmallVolume = 1.0e-20;
+constexpr number smallButSignificantVolume = (number)1.0e-12;
+constexpr number verySmallVolume = (number)1.0e-20;
 
 // For the tetrahedron geometry, we consider p0,p1,p2 the base.
 // Looking from p3 back toward the base, a counter-clockwise cycle
@@ -266,7 +266,7 @@ number tetrahedron_volume(const Vector3& p0, const Vector3& p1,
     number cx, cy, cz;
     cross_product(dx01, dy01, dz01, dx02, dy02, dz02, cx, cy, cz);
     number dx03=p3.x-p0.x; number dy03=p3.y-p0.y; number dz03=p3.z-p0.z;
-    return dot_product(dx03, dy03, dz03, cx, cy, cz) / 6.0;
+    return dot_product(dx03, dy03, dz03, cx, cy, cz) / six;
 } // end tetrahedron_volume()
 
 void tetrahedron_properties(const Vector3& p0, const Vector3& p1,
@@ -274,9 +274,9 @@ void tetrahedron_properties(const Vector3& p0, const Vector3& p1,
                             Vector3& centroid, number& volume)
 // Variant without L_min calculation.
 {
-    centroid.set(0.25*(p0.x + p1.x + p2.x + p3.x),
-                 0.25*(p0.y + p1.y + p2.y + p3.y),
-                 0.25*(p0.z + p1.z + p2.z + p3.z));
+    centroid.set(one_quarter*(p0.x + p1.x + p2.x + p3.x),
+                 one_quarter*(p0.y + p1.y + p2.y + p3.y),
+                 one_quarter*(p0.z + p1.z + p2.z + p3.z));
     volume = tetrahedron_volume(p0, p1, p2, p3);
 } // end tetrahedron_properties()
 
@@ -292,12 +292,12 @@ number tetragonal_dipyramid_volume(const Vector3& p0, const Vector3& p1,
 // A negative volume indicates that the cycle is clockwise when looking from pc.
 {
     // number volume = dot(pc-pb, cross(p1-p0+p2-p3, p3-p0+p2-p1)) / 12.0;
-    number p01x = 0.5*(p1.x-p0.x+p2.x-p3.x);
-    number p01y = 0.5*(p1.y-p0.y+p2.y-p3.y);
-    number p01z = 0.5*(p1.z-p0.z+p2.z-p3.z);
-    number p03x = 0.5*(p3.x-p0.x+p2.x-p1.x);
-    number p03y = 0.5*(p3.y-p0.y+p2.y-p1.y);
-    number p03z = 0.5*(p3.z-p0.z+p2.z-p1.z);
+    number p01x = half*(p1.x-p0.x+p2.x-p3.x);
+    number p01y = half*(p1.y-p0.y+p2.y-p3.y);
+    number p01z = half*(p1.z-p0.z+p2.z-p3.z);
+    number p03x = half*(p3.x-p0.x+p2.x-p1.x);
+    number p03y = half*(p3.y-p0.y+p2.y-p1.y);
+    number p03z = half*(p3.z-p0.z+p2.z-p1.z);
     number vector_area_x, vector_area_y, vector_area_z;
     cross_product(p01x, p01y, p01z, p03x, p03y, p03z,
                   vector_area_x, vector_area_y, vector_area_z);
@@ -316,11 +316,11 @@ void pyramid_properties(const Vector3& p0, const Vector3& p1,
     //
     // Split into 4 tetrahedra and sum contributions to volume and moment.
     Vector3 pmB; // Mid-point of quadrilateral base.
-    pmB.set(0.25*(p0.x+p1.x+p2.x+p3.x),
-            0.25*(p0.y+p1.y+p2.y+p3.y),
-            0.25*(p0.z+p1.z+p2.z+p3.z));
+    pmB.set(one_quarter*(p0.x+p1.x+p2.x+p3.x),
+            one_quarter*(p0.y+p1.y+p2.y+p3.y),
+            one_quarter*(p0.z+p1.z+p2.z+p3.z));
     //
-    volume = 0.0; Vector3 moment = Vector3{0.0, 0.0, 0.0};
+    volume = zero; Vector3 moment = Vector3{zero, zero, zero};
     number tet_volume; Vector3 tet_centroid;
     tetrahedron_properties(p0, p1, pmB, p4, tet_centroid, tet_volume);
     volume += tet_volume; tet_centroid.mul(tet_volume); moment.add(tet_centroid);
@@ -331,7 +331,7 @@ void pyramid_properties(const Vector3& p0, const Vector3& p1,
     tetrahedron_properties(p3, p0, pmB, p4, tet_centroid, tet_volume);
     volume += tet_volume; tet_centroid.mul(tet_volume); moment.add(tet_centroid);
     //
-    if (fabs(volume) > 0.0) { moment.div(volume); } // to get overall centroid
+    if (fabs(volume) > zero) { moment.div(volume); } // to get overall centroid
     if (true_centroid) {
         centroid = moment;
     } else {
@@ -339,9 +339,9 @@ void pyramid_properties(const Vector3& p0, const Vector3& p1,
         // has shown to be more robust when importing an unstructurd grid and
         // also appears to provide a better distribution of points for the
         // least-squares gradient estimation [KAD 2022-08-03].
-        centroid.set(0.2*(p0.x+p1.x+p2.x+p3.x+p4.x),
-                     0.2*(p0.y+p1.y+p2.y+p3.y+p4.y),
-                     0.2*(p0.z+p1.z+p2.z+p3.z+p4.z));
+        centroid.set(one_fifth*(p0.x+p1.x+p2.x+p3.x+p4.x),
+                     one_fifth*(p0.y+p1.y+p2.y+p3.y+p4.y),
+                     one_fifth*(p0.z+p1.z+p2.z+p3.z+p4.z));
     }
     //
     return;
@@ -363,34 +363,34 @@ void hex_cell_properties(const Vector3& p0, const Vector3& p1,
     //
     // Estimate the centroid so that we can use it as the peak
     // of each of the pyramid sub-volumes.
-    centroid.set(0.125*(p0.x+p1.x+p2.x+p3.x+p4.x+p5.x+p6.x+p7.x),
-                 0.125*(p0.y+p1.y+p2.y+p3.y+p4.y+p5.y+p6.y+p7.y),
-                 0.125*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z+p6.z+p7.z));
+    centroid.set(one_eighth*(p0.x+p1.x+p2.x+p3.x+p4.x+p5.x+p6.x+p7.x),
+                 one_eighth*(p0.y+p1.y+p2.y+p3.y+p4.y+p5.y+p6.y+p7.y),
+                 one_eighth*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z+p6.z+p7.z));
     // Mid-points of faces.
     Vector3 pmN;
-    pmN.set(0.25*(p3.x+p2.x+p6.x+p7.x),
-            0.25*(p3.y+p2.y+p6.y+p7.y),
-            0.25*(p3.z+p2.z+p6.z+p7.z));
+    pmN.set(one_quarter*(p3.x+p2.x+p6.x+p7.x),
+            one_quarter*(p3.y+p2.y+p6.y+p7.y),
+            one_quarter*(p3.z+p2.z+p6.z+p7.z));
     Vector3 pmE;
-    pmE.set(0.25*(p1.x+p2.x+p6.x+p5.x),
-            0.25*(p1.y+p2.y+p6.y+p5.y),
-            0.25*(p1.z+p2.z+p6.z+p5.z));
+    pmE.set(one_quarter*(p1.x+p2.x+p6.x+p5.x),
+            one_quarter*(p1.y+p2.y+p6.y+p5.y),
+            one_quarter*(p1.z+p2.z+p6.z+p5.z));
     Vector3 pmS;
-    pmS.set(0.25*(p0.x+p1.x+p5.x+p4.x),
-            0.25*(p0.y+p1.y+p5.y+p4.y),
-            0.25*(p0.z+p1.z+p5.z+p4.z));
+    pmS.set(one_quarter*(p0.x+p1.x+p5.x+p4.x),
+            one_quarter*(p0.y+p1.y+p5.y+p4.y),
+            one_quarter*(p0.z+p1.z+p5.z+p4.z));
     Vector3 pmW;
-    pmW.set(0.25*(p0.x+p3.x+p7.x+p4.x),
-            0.25*(p0.y+p3.y+p7.y+p4.y),
-            0.25*(p0.z+p3.z+p7.z+p4.z));
+    pmW.set(one_quarter*(p0.x+p3.x+p7.x+p4.x),
+            one_quarter*(p0.y+p3.y+p7.y+p4.y),
+            one_quarter*(p0.z+p3.z+p7.z+p4.z));
     Vector3 pmT;
-    pmT.set(0.25*(p4.x+p5.x+p6.x+p7.x),
-            0.25*(p4.y+p5.y+p6.y+p7.y),
-            0.25*(p4.z+p5.z+p6.z+p7.z));
+    pmT.set(one_quarter*(p4.x+p5.x+p6.x+p7.x),
+            one_quarter*(p4.y+p5.y+p6.y+p7.y),
+            one_quarter*(p4.z+p5.z+p6.z+p7.z));
     Vector3 pmB;
-    pmB.set(0.25*(p0.x+p1.x+p2.x+p3.x),
-            0.25*(p0.y+p1.y+p2.y+p3.y),
-            0.25*(p0.z+p1.z+p2.z+p3.z));
+    pmB.set(one_quarter*(p0.x+p1.x+p2.x+p3.x),
+            one_quarter*(p0.y+p1.y+p2.y+p3.y),
+            one_quarter*(p0.z+p1.z+p2.z+p3.z));
     // Lengths between mid-points of faces.
     // Note that we are assuming that the hexahedron is not very skewed
     // when we later use these values as the widths of the hex cell.
@@ -405,7 +405,7 @@ void hex_cell_properties(const Vector3& p0, const Vector3& p1,
     // J. Grandy (1997) Efficient Computation of Volume of Hexahedral Cells UCRL-ID-128886.
     // Base of each dipyramid is specified clockwise from the outside.
     number sub_volume; Vector3 sub_centroid;
-    volume = 0.0; Vector3 moment = Vector3{0.0, 0.0, 0.0};
+    volume = zero; Vector3 moment = Vector3{zero, zero, zero};
     pyramid_properties(p6, p7, p3, p2, centroid, true, sub_centroid, sub_volume);
     volume += sub_volume; sub_centroid.mul(sub_volume); moment.add(sub_centroid);
     pyramid_properties(p5, p6, p2, p1, centroid, true, sub_centroid, sub_volume);
@@ -419,15 +419,15 @@ void hex_cell_properties(const Vector3& p0, const Vector3& p1,
     pyramid_properties(p0, p1, p2, p3, centroid, true, sub_centroid, sub_volume);
     volume += sub_volume; sub_centroid.mul(sub_volume); moment.add(sub_centroid);
     //
-    if ( (volume < 0.0 && fabs(volume) < smallButSignificantVolume) ||
-         (volume >= 0.0 && volume < verySmallVolume) ) {
+    if ( (volume < zero && fabs(volume) < smallButSignificantVolume) ||
+         (volume >= zero && volume < verySmallVolume) ) {
         // We assume that we have a collapsed hex cell;
         // no real problem here but it may be a problem for the client code.
         // That code should test the value of volume, on return.
-        volume = 0.0;
+        volume = zero;
     }
     //
-    if (fabs(volume) > 0.0) { moment.div(volume); } // to get overall centroid
+    if (fabs(volume) > zero) { moment.div(volume); } // to get overall centroid
     if (true_centroid) { centroid = moment; }
     return;
 } // end hex_cell_properties()
