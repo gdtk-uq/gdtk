@@ -89,39 +89,56 @@ class Matrix(T) {
     @property @nogc const size_t nrows() { return _nrows; }
     @property @nogc const size_t ncols() { return _ncols; }
 
+    // Thinking that we get only one level of inlining,
+    // let's do the index calculation explicitly for each
+    // of the following index methods.
+
     @nogc
-    pragma(inline, true)
     size_t index(size_t row, size_t col) const
     in (row < _nrows, "row out of bounds")
     in (col < _ncols, "col out of bounds")
     {
+        pragma(inline, true);
         return row*_ncols + col;
     }
 
     @nogc
-    const T opIndex(size_t row, size_t col) {
-        return _data[index(row,col)];
+    const T opIndex(size_t row, size_t col)
+    in (row < _nrows, "row out of bounds")
+    in (col < _ncols, "col out of bounds")
+    {
+        pragma(inline, true);
+        return _data[row*_ncols + col];
     }
 
     @nogc
-    ref T opIndexAssign(T c, size_t row, size_t col) {
-        _data[index(row,col)] = c;
-        return _data[index(row,col)];
+    ref T opIndexAssign(T c, size_t row, size_t col)
+    in (row < _nrows, "row out of bounds")
+    in (col < _ncols, "col out of bounds")
+    {
+        pragma(inline, true);
+        size_t i = row*_ncols + col;
+        _data[i] = c;
+        return _data[i];
     }
 
     @nogc
     ref T opIndexOpAssign(string op)(T c, size_t row, size_t col)
         if ( op == "+" || op == "-" || op == "*" || op == "/" )
+    in (row < _nrows, "row out of bounds")
+    in (col < _ncols, "col out of bounds")
     {
+        pragma(inline, true);
+        size_t i = row*_ncols + col;
         static if ( op == "+" )
-            _data[index(row,col)] += c;
+            _data[i] += c;
         else if ( op == "-" )
-            _data[index(row,col)] -= c;
+            _data[i] -= c;
         else if ( op == "*" )
-            _data[index(row,col)] *= c;
+            _data[i] *= c;
         else if ( op == "/" )
-            _data[index(row,col)] /= c;
-        return _data[index(row,col)];
+            _data[i] /= c;
+        return _data[i];
     }
 
     // Element-by-element operations.
