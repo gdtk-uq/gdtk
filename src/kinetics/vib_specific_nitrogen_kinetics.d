@@ -83,14 +83,14 @@ final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
                 rhoErr = computeDrhoDt(Q.rho, Q.T, mf1, dRhoDt1);
                 foreach (j; 0 .. L) {
                     number dFdy = (dRhoDt1[j]-dRhoDt0[j])/Q.rho/h;
-                    crhs._data[i*crhs._ncols + j] = ((i == j) ? 1.0/dt : 0.0) - dFdy.re;
+                    crhs[i,j] = ((i == j) ? 1.0/dt : 0.0) - dFdy.re;
                 }
                 // Right-hand side vector is also packed into the augmented matrix.
-                crhs._data[i*crhs._ncols + L] = dRhoDt0[i].re/Q.rho.re;
+                crhs[i,L] = dRhoDt0[i].re/Q.rho.re;
             }
             gaussJordanElimination!double(crhs);
             foreach (i; 0 .. L) {
-                mf1[i] = mf0[i] + crhs._data[i*crhs._ncols + L]; if (mf1[i] < 0.0) { mf1[i] = 0.0; }
+                mf1[i] = mf0[i] + crhs[i,L]; if (mf1[i] < 0.0) { mf1[i] = 0.0; }
             }
             scale_mass_fractions(mf1, 1.0e-6, 1.0e-3);
             //

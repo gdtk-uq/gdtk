@@ -2585,7 +2585,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                         }
                         // Assemble coefficients of the linear system in the augmented matrix.
                         foreach (k; 0 .. cqi.n) {
-                            blk.crhs._data[k*blk.crhs._ncols + j] = ((k==j) ? M/dt : 0.0) - blk.dRUdU[k];
+                            blk.crhs[k,j] = ((k==j) ? M/dt : 0.0) - blk.dRUdU[k];
                         }
                     }
                     // Evaluate the right-hand side of the linear system equations.
@@ -2593,10 +2593,10 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                     cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                     dUdt0.clear();
                     blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_rhs, reaction_fraction);
-                    foreach (k; 0 .. cqi.n) { blk.crhs._data[k*blk.crhs._ncols + cqi.n] = dUdt0[k].re; }
+                    foreach (k; 0 .. cqi.n) { blk.crhs[k,cqi.n] = dUdt0[k].re; }
                     // Solve for dU and update U.
                     gaussJordanElimination!double(blk.crhs);
-                    foreach (j; 0 .. cqi.n) { U1[j] = U0[j] + M*blk.crhs._data[j*blk.crhs._ncols + cqi.n]; }
+                    foreach (j; 0 .. cqi.n) { U1[j] = U0[j] + M*blk.crhs[j,cqi.n]; }
                     //
                     version(turbulence) {
                         foreach(j; 0 .. cqi.n_turb){
@@ -2984,7 +2984,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
                         }
                         // Assemble coefficients of the linear system in the augmented matrix.
                         foreach (k; 0 .. cqi.n) {
-                            blk.crhs._data[k*blk.crhs._ncols + j] = ((k==j) ? M/dt : 0.0) - blk.dRUdU[k];
+                            blk.crhs[k,j] = ((k==j) ? M/dt : 0.0) - blk.dRUdU[k];
                         }
                     }
                     // Evaluate the right-hand side of the linear system equations.
@@ -2992,12 +2992,12 @@ void gasdynamic_implicit_increment_with_moving_grid()
                     cell.decode_conserved(gtl0, ftl0, blk.omegaz);
                     dUdt0.clear();
                     blk.evalRU(blklocal_t0, gtl0, ftl0, cell, allow_hoi_rhs, reaction_fraction);
-                    foreach (k; 0 .. cqi.n) { blk.crhs._data[k*blk.crhs._ncols + cqi.n] = dUdt0[k].re; }
+                    foreach (k; 0 .. cqi.n) { blk.crhs[k,cqi.n] = dUdt0[k].re; }
                     // Solve for dU and update U.
                     gaussJordanElimination!double(blk.crhs);
                     // We apply the GCL scaling, also.
                     double vr = cell.volume[gtl0].re / cell.volume[gtl1].re;
-                    foreach (k; 0 .. cqi.n) { U1[k] = to!number(vr*(U0[k].re + M*blk.crhs._data[k*blk.crhs._ncols + cqi.n])); }
+                    foreach (k; 0 .. cqi.n) { U1[k] = to!number(vr*(U0[k].re + M*blk.crhs[k,cqi.n])); }
                     //
                     version(turbulence) {
                         foreach(k; 0 .. cqi.n_turb){
