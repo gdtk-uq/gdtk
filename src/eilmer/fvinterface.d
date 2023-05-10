@@ -35,11 +35,16 @@ struct LR {size_t left,right;}
 
 struct FVInterfaceData{
     LR[] f2c;
+    Vector3[] dL;
+    Vector3[] dR;
     Vector3[] normals;
+    Vector3[] tangents1;
+    Vector3[] tangents2;
     Vector3[] positions;
     FlowState[] flowstates;
     FlowGradients[] gradients;
     WLSQGradWorkspace[] workspaces;
+    ConservedQuantities fluxes;
     bool[] left_interior_only;
     bool[] right_interior_only;
 }
@@ -136,13 +141,14 @@ public:
         gvel = Vector3(0.0,0.0,0.0); // default to fixed grid
         auto gmodel = myConfig.gmodel;
         uint n_species = myConfig.n_species;
-        F = new_ConservedQuantities(myConfig.cqi.n);
-        F.clear();
+        size_t neq = myConfig.cqi.n;
 
         this.fvid = fvid;
         this.fs = &(fvid.flowstates[id]);
         this.grad = &(fvid.gradients[id]);
         this.ws_grad = &(fvid.workspaces[id]);
+        this.F = fvid.fluxes[id*neq .. (id+1)*neq];
+        F.clear();
 
         version(multi_species_gas) {
             jx.length = n_species;
@@ -341,6 +347,8 @@ public:
         }
         pos.set(Xbar, Ybar, to!number(0.0));
         fvid.normals[id] = n;
+        fvid.tangents1[id] = t1;
+        fvid.tangents2[id] = t2;
         fvid.positions[id] = pos;
     } // end update_2D_geometric_data()
 
@@ -366,6 +374,8 @@ public:
             throw new FlowSolverException(msg);
         } // end switch
         fvid.normals[id] = n;
+        fvid.tangents1[id] = t1;
+        fvid.tangents2[id] = t2;
         fvid.positions[id] = pos;
     } // end update_3D_geometric_data()
 

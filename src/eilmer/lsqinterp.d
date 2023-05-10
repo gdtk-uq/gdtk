@@ -200,6 +200,13 @@ public:
     this(ref const(LSQInterpGradients) other)
     {
         // TODO: Copy constructor doesn't set array sizes correctly. (NNG 30/05/22)
+        size_t nsp=0;
+        size_t nmodes=0;
+        size_t nturb=0;
+        version(multi_species_gas) { nsp = other.massf.length; }
+        version(multi_T_gas) { nmodes = other.T_modes.length;}
+        version(turbulence) { nturb = other.turb.length;}
+        this(nsp, nmodes, nturb);
         this.copy_values_from(other);
     }
 
@@ -1546,7 +1553,278 @@ public:
 
 } // end class LSQInterpGradients
 
+@nogc
+void interp_both(Vector3 dL, Vector3 dR, in LSQInterpGradients cLgrad, in LSQInterpGradients cRgrad,
+                 in FlowState cLfs, in FlowState cRfs,
+                 LocalConfig myConfig, ref FlowState Lft, ref FlowState Rght)
+{
+    auto gmodel = myConfig.gmodel;
+    auto nsp = myConfig.n_species;
+    auto nmodes = myConfig.n_modes;
+    auto nturb = myConfig.turb_model.nturb;
 
+    // Low-order reconstruction just copies data from adjacent FV_Cell.
+    // Even for high-order reconstruction, we depend upon this copy for
+    // the viscous-transport and diffusion coefficients.
+    // For some simulations we would like to have the boundaries to remain 1st order.
+
+    // TODO: Handle all of this upstairs
+    //if (myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary) { return; }
+    //// Enforce first order reconstruction for cells that capure the shocks,
+    //if (myConfig.suppress_reconstruction_at_shocks && ((Lft.S == 1.0) || (Rght.S == 1.0))) { return; }
+    //// else apply higher-order interpolation to all faces.
+    //if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
+
+    // TODO: Also account for the apply limiter switch, which is gone
+
+    // vector from left-cell-centre to face midpoint
+    number dLx = dL.x;
+    number dLy = dL.y;
+    number dLz = dL.z;
+    number dRx = dR.x;
+    number dRy = dR.y;
+    number dRz = dR.z;
+    number[3] mygradL, mygradR;
+    //
+    // Always reconstruct in the global frame of reference -- for now
+    //
+    string codeForReconstruction(string qname, string gname,
+                                 string tname, string lname)
+    {
+        string code = "{
+        number qL0 = cLfs."~qname~";
+        number qMinL = qL0;
+        number qMaxL = qL0;
+        mygradL[0] = cLgrad."~gname~"[0];
+        mygradL[1] = cLgrad."~gname~"[1];
+        mygradL[2] = cLgrad."~gname~"[2];
+        number qR0 = cRfs."~qname~";
+        number qMinR = qR0;
+        number qMaxR = qR0;
+        mygradR[0] = cRgrad."~gname~"[0];
+        mygradR[1] = cRgrad."~gname~"[1];
+        mygradR[2] = cRgrad."~gname~"[2];
+
+        if (myConfig.apply_limiter) {
+            final switch (myConfig.unstructured_limiter) {
+            case UnstructuredLimiter.svan_albada:
+                double eps = myConfig.smooth_limiter_coeff/100.0;
+                number qq = isNaN(qL0) ? to!number(1.0) : fmax(1.0, fabs(qL0));
+
+                number dqL = -4.0*dLx*mygradL[0] + -4.0*dLy*mygradL[1];
+                number dqR = -4.0*dRx*mygradR[0] + -4.0*dRy*mygradR[1];
+                if (myConfig.dimensions == 3) {
+                    dqL += -4.0*dLz*mygradL[2];
+                    dqR += -4.0*dRz*mygradR[2];
+                }
+
+                number qL1 = qR0 + dqL;
+                number qR1 = qL0 + dqR;
+
+                number delLminus = (qL0 - qL1);
+                number del = (qR0 - qL0);
+                number delRplus = (qR1 - qR0);
+
+                // val Albada limiter, modified with the non-dimensional
+                // smoothing parameter qq*eps. See notes 15/11/22 (NNG)
+                number sL = (delLminus*del + fabs(delLminus*del) + qq*eps) /
+                            (delLminus*delLminus + del*del + qq*eps);
+                number sR = (del*delRplus + fabs(del*delRplus) + qq*eps) /
+                            (del*del + delRplus*delRplus + qq*eps);
+
+                mygradL[0] *= sL;
+                mygradL[1] *= sL;
+                mygradL[2] *= sL;
+
+                mygradR[0] *= sR;
+                mygradR[1] *= sR;
+                mygradR[2] *= sR;
+                break;
+            case UnstructuredLimiter.min_mod:
+                min_mod_limit(mygradL[0], mygradR[0]);
+                min_mod_limit(mygradL[1], mygradR[1]);
+                min_mod_limit(mygradL[2], mygradR[2]);
+                break;
+            case UnstructuredLimiter.barth:
+                goto case UnstructuredLimiter.venkat;
+            case UnstructuredLimiter.park:
+                goto case UnstructuredLimiter.venkat;
+            case UnstructuredLimiter.hvan_albada:
+                goto case UnstructuredLimiter.venkat;
+            case UnstructuredLimiter.van_albada:
+                goto case UnstructuredLimiter.venkat;
+            case UnstructuredLimiter.hnishikawa:
+                goto case UnstructuredLimiter.venkat;
+            case UnstructuredLimiter.nishikawa:
+                goto case UnstructuredLimiter.venkat;
+            case UnstructuredLimiter.hvenkat_mlp:
+                goto case UnstructuredLimiter.venkat;
+            case UnstructuredLimiter.venkat_mlp:
+                goto case UnstructuredLimiter.venkat;
+            case UnstructuredLimiter.hvenkat:
+                goto case UnstructuredLimiter.venkat;
+            case UnstructuredLimiter.venkat:
+                mygradL[0] *= cLgrad."~lname~";
+                mygradL[1] *= cLgrad."~lname~";
+                mygradL[2] *= cLgrad."~lname~";
+                mygradR[0] *= cRgrad."~lname~";
+                mygradR[1] *= cRgrad."~lname~";
+                mygradR[2] *= cRgrad."~lname~";
+                break;
+            }
+        }
+        number qL = qL0 + dLx*mygradL[0] + dLy*mygradL[1];
+        number qR = qR0 + dRx*mygradR[0] + dRy*mygradR[1];
+        if (myConfig.dimensions == 3) {
+            qL += dLz*mygradL[2];
+            qR += dRz*mygradR[2];
+        }
+        if (myConfig.extrema_clipping) {
+            Lft."~tname~" = clip_to_limits(qL, qL0, qR0);
+            Rght."~tname~" = clip_to_limits(qR, qL0, qR0);
+        } else {
+            Lft."~tname~" = qL;
+            Rght."~tname~" = qR;
+        }
+        }
+        ";
+        return code;
+    }
+    mixin(codeForReconstruction("vel.x", "velx", "vel.x", "velxPhi"));
+    mixin(codeForReconstruction("vel.y", "vely", "vel.y", "velyPhi"));
+    mixin(codeForReconstruction("vel.z", "velz", "vel.z", "velzPhi"));
+    version(MHD) {
+        if (myConfig.MHD) {
+            mixin(codeForReconstruction("B.x", "Bx", "B.x", "BxPhi"));
+            mixin(codeForReconstruction("B.y", "By", "B.y", "ByPhi"));
+            mixin(codeForReconstruction("B.z", "Bz", "B.z", "BxPhi"));
+            if (myConfig.divergence_cleaning) {
+                mixin(codeForReconstruction("psi", "psi", "psi", "psiPhi"));
+            }
+        }
+    }
+    version(turbulence) {
+        if (myConfig.allow_reconstruction_for_turbulent_variables) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) {
+                mixin(codeForReconstruction("turb[it]","turb[it]","turb[it]","turbPhi[it]"));
+            }
+        } else {
+            Lft.turb[] = cLfs.turb[];
+            Rght.turb[] = cRfs.turb[];
+        }
+    }
+    version(multi_species_gas) {
+        if (nsp > 1) {
+            // Multiple species.
+            if (myConfig.allow_reconstruction_for_species) {
+                foreach (isp; 0 .. nsp) {
+                    mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]",
+                                                "gas.massf[isp]", "massfPhi[isp]"));
+                }
+                if (myConfig.scale_species_after_reconstruction) {
+                    scale_mass_fractions(Lft.gas.massf);
+                    scale_mass_fractions(Rght.gas.massf);
+                }
+            } else {
+                Lft.gas.massf[] = cLfs.gas.massf[];
+                Rght.gas.massf[] = cRfs.gas.massf[];
+            }
+        } else {
+            // Only one possible mass-fraction value for a single species.
+            Lft.gas.massf[0] = 1.0;
+            Rght.gas.massf[0] = 1.0;
+        }
+    }
+    // Interpolate on two of the thermodynamic quantities,
+    // and fill in the rest based on an EOS call.
+    // If an EOS call fails, fall back to just copying cell-centre data.
+    // This does presume that the cell-centre data is valid.
+    string codeForThermoUpdate(string funname)
+    {
+        string code = "
+        try {
+            gmodel.update_thermo_from_"~funname~"(Lft.gas);
+        } catch (Exception e) {
+            debug { writeln(e.msg); }
+            Lft.copy_values_from(cLfs);
+        }
+        try {
+            gmodel.update_thermo_from_"~funname~"(Rght.gas);
+        } catch (Exception e) {
+            debug { writeln(e.msg); }
+            Rght.copy_values_from(cRfs);
+        }
+        ";
+        return code;
+    }
+    final switch (myConfig.thermo_interpolator) {
+    case InterpolateOption.pt:
+        mixin(codeForReconstruction("gas.p", "p", "gas.p", "pPhi"));
+        mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
+                                                "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                }
+            } else {
+                Lft.gas.T_modes[] = cLfs.gas.T_modes[];
+                Rght.gas.T_modes[] = cRfs.gas.T_modes[];
+            }
+        }
+        mixin(codeForThermoUpdate("pT"));
+        break;
+    case InterpolateOption.rhou:
+        mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
+        mixin(codeForReconstruction("gas.u", "u", "gas.u", "uPhi"));
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
+                                                "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                }
+            } else {
+                Lft.gas.u_modes[] = cLfs.gas.u_modes[];
+                Rght.gas.u_modes[] = cRfs.gas.u_modes[];
+            }
+        }
+        mixin(codeForThermoUpdate("rhou"));
+        break;
+    case InterpolateOption.rhop:
+        mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
+        mixin(codeForReconstruction("gas.p", "p", "gas.p", "pPhi"));
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
+                                                "gas.u_modes[imode]", "u_modesPhi[imode]"));
+                }
+            } else {
+                Lft.gas.u_modes[] = cLfs.gas.u_modes[];
+                Rght.gas.u_modes[] = cRfs.gas.u_modes[];
+            }
+        }
+        mixin(codeForThermoUpdate("rhop"));
+        break;
+    case InterpolateOption.rhot:
+        mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
+        mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
+        version(multi_T_gas) {
+            if (myConfig.allow_reconstruction_for_energy_modes) {
+                foreach (imode; 0 .. nmodes) {
+                    mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
+                                                "gas.T_modes[imode]", "T_modesPhi[imode]"));
+                }
+            } else {
+                Lft.gas.T_modes[] = cLfs.gas.T_modes[];
+                Rght.gas.T_modes[] = cRfs.gas.T_modes[];
+            }
+        }
+        mixin(codeForThermoUpdate("rhoT"));
+        break;
+    } // end switch thermo_interpolator
+    return;
+} // end interp_both()
 
     @nogc
     void interp_both(LocalConfig myConfig, ref FVInterface IFace, size_t gtl,

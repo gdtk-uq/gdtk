@@ -443,6 +443,8 @@ public:
             // Allocate dense core data structures, 2023 experiment by NNG
             auto gmodel = myConfig.gmodel;
             size_t nturb = myConfig.turb_model.nturb;
+            size_t neq = myConfig.cqi.n;
+
             size_t nifaces = niv*njc*nkc;
             size_t njfaces = nic*njv*nkc;
             size_t nkfaces = nic*njc*nkv;
@@ -466,11 +468,14 @@ public:
             // Face data
             facedata.positions.length = nfaces;
             facedata.normals.length = nfaces;
+            facedata.tangents1.length = nfaces;
+            facedata.tangents2.length = nfaces;
             facedata.left_interior_only.length = nbfaces;
             facedata.right_interior_only.length = nbfaces;
             facedata.flowstates.reserve(nfaces);
             facedata.gradients.reserve(nfaces);
             facedata.workspaces.reserve(nfaces);
+            facedata.fluxes.length = nfaces*neq;
 
             foreach (n; 0 .. niv*njc*nkc) facedata.flowstates ~= FlowState(gmodel, nturb);
             foreach (n; 0 .. nic*njv*nkc) facedata.flowstates ~= FlowState(gmodel, nturb);
@@ -2375,6 +2380,15 @@ public:
     @nogc
     override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0,
                                          FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
+    // Compute the flux from data on either-side of the interface.
+    // For the structured-grid block, there is nothing to do.
+    // The unstructured-grid block needs to work in two phases.
+    {
+        return;
+    }
+
+    @nogc
+    override void convective_flux_phase2(bool allow_high_order_interpolation, size_t gtl=0)
     // Compute the flux from data on either-side of the interface.
     // For the structured-grid block, there is nothing to do.
     // The unstructured-grid block needs to work in two phases.

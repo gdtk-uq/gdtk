@@ -51,6 +51,142 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
 }
 
 @nogc
+void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght, ref FlowState fs,
+                                     LocalConfig myConfig, Vector3 gvel, Vector3 IFacepos, Vector3 n, Vector3 t1, Vector3 t2,
+                                     ConservedQuantities F)
+{
+    // Transform to interface frame of reference.
+    // Firstly, subtract interface velocity, in the case where the grid is moving
+    // we want the velocity of the flow relative to the interface.
+    double omegaz = 0.0;
+    Lft.vel.x -= gvel.x; Lft.vel.y -= gvel.y; Lft.vel.z -= gvel.z;
+    Rght.vel.x -= gvel.x; Rght.vel.y -= gvel.y; Rght.vel.z -= gvel.z;
+
+    gvel.transform_to_local_frame(n, t1, t2);
+    Lft.vel.transform_to_local_frame(n, t1, t2);
+    Rght.vel.transform_to_local_frame(n, t1, t2);
+    version(MHD) {
+        // Also transform the magnetic field
+        if (myConfig.MHD) {
+            Lft.B.transform_to_local_frame(n, t1, t2);
+            Rght.B.transform_to_local_frame(n, t1, t2);
+        }
+    }
+    // Compute the fluxes in the local frame of the interface.
+    final switch (myConfig.flux_calculator) {
+    case FluxCalculator.efm:
+        efmflx(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.ausmdv:
+        ausmdv(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.hllc:
+        hllc(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.ldfss0:
+        ldfss0(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.ldfss2:
+        ldfss2(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.hanel:
+        hanel(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.adaptive_efm_ausmdv:
+        adaptive_efm_ausmdv(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.adaptive_hanel_ausmdv:
+        adaptive_hanel_ausmdv(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.adaptive_hanel_ausm_plus_up:
+        adaptive_hanel_ausm_plus_up(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.adaptive_ldfss0_ldfss2:
+        adaptive_ldfss0_ldfss2(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.adaptive_hlle_hllc:
+        adaptive_hlle_hllc(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.adaptive_hlle_roe:
+        adaptive_hlle_roe(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.ausm_plus_up:
+        ausm_plus_up(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.hlle:
+        hlle(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.hlle2:
+        hlle2(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.roe:
+        roe(Lft, Rght, fs, F, myConfig);
+        break;
+    case FluxCalculator.osher:
+        osher(Lft, Rght, fs, F, myConfig);
+        break;
+    // FIXME: Lachlan's fluxes need the full stencil
+    case FluxCalculator.asf:
+        throw new Error("Not implemented.");
+        //ASF_242(IFace, myConfig);
+        //break;
+    case FluxCalculator.adaptive_ausmdv_asf:
+        throw new Error("Not implemented.");
+        //adaptive_ausmdv_asf(Lft, Rght, IFace, myConfig);
+        //break;
+    } // end switch
+    auto cqi = myConfig.cqi;
+    version(MHD) {
+        // Adjustment of the magnetic field flux and associated parameter psi as per Dedner et al.
+        if (myConfig.MHD) {
+            F[cqi.divB] = 0.5 * (Rght.B.x - Lft.B.x);
+            if (myConfig.divergence_cleaning) {
+                F[cqi.xB] += Lft.psi + 0.5 * (Rght.psi - Lft.psi) - (myConfig.c_h / 2.0) * (Rght.B.x - Lft.B.x);
+                F[cqi.yB] += Lft.psi + 0.5 * (Rght.psi - Lft.psi) - (myConfig.c_h / 2.0) * (Rght.B.y - Lft.B.y);
+                F[cqi.xB] += Lft.psi + 0.5 * (Rght.psi - Lft.psi) - (myConfig.c_h / 2.0) * (Rght.B.z - Lft.B.z);
+                F[cqi.psi] += (Lft.B.x + 0.5 * (Rght.B.x - Lft.B.x) -
+                               (1.0 / (2.0 * myConfig.c_h)) * (Rght.psi - Lft.psi)) * myConfig.c_h^^2;
+            }
+        }
+    }
+    if (omegaz != 0.0) {
+        // Rotating frame.
+        number x = IFacepos.x;
+        number y = IFacepos.y;
+        number rsq = x*x + y*y;
+        // The conserved quantity is rotating-frame total energy,
+        // so we need to take -(u**2)/2 off the total energy.
+        // Note that rotating frame velocity u = omegaz * r.
+        F[cqi.totEnergy] -= F[cqi.mass] * 0.5*omegaz*omegaz*rsq;
+    }
+    // Transform fluxes back from interface frame of reference to local frame of reference.
+    // Flux of Total Energy
+    number v_sqr = gvel.x*gvel.x + gvel.y*gvel.y + gvel.z*gvel.z;
+    F[cqi.totEnergy] += 0.5 * F[cqi.mass] * v_sqr +
+        (F[cqi.xMom]*gvel.x + F[cqi.yMom]*gvel.y +
+         ((cqi.threeD) ? F[cqi.zMom]*gvel.z: to!number(0.0)));
+    // Flux of momentum: Add component for interface velocity then
+    // rotate back to the global frame of reference.
+    F[cqi.xMom] += gvel.x * F[cqi.mass];
+    F[cqi.yMom] += gvel.y * F[cqi.mass];
+    if (cqi.threeD) {
+        //F[cqi.zMom] += gvel.z * F[cqi.mass];
+        transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], F[cqi.zMom], n, t1, t2);
+    } else {
+        number zDummy = to!number(0.0);
+        transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], zDummy, n, t1, t2);
+    }
+    // Also, transform the interface (grid) velocity and magnetic field.
+    //gvel.transform_to_global_frame(n, t1, t2);
+    version(MHD) {
+        if (myConfig.MHD) {
+            transform_to_global_frame(F[cqi.xB], F[cqi.yB], F[cqi.zB], n, t1, t2);
+        }
+    }
+    return;
+} // end compute_interface_flux_interior()
+
+@nogc
 void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
                                      ref FVInterface IFace,
                                      ref LocalConfig myConfig, double omegaz=0.0)
@@ -74,55 +210,55 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
     // Compute the fluxes in the local frame of the interface.
     final switch (myConfig.flux_calculator) {
     case FluxCalculator.efm:
-        efmflx(Lft, Rght, IFace, myConfig);
+        efmflx(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.ausmdv:
-        ausmdv(Lft, Rght, IFace, myConfig);
+        ausmdv(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.hllc:
-        hllc(Lft, Rght, IFace, myConfig);
+        hllc(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.ldfss0:
-        ldfss0(Lft, Rght, IFace, myConfig);
+        ldfss0(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.ldfss2:
-        ldfss2(Lft, Rght, IFace, myConfig);
+        ldfss2(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.hanel:
-        hanel(Lft, Rght, IFace, myConfig);
+        hanel(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.adaptive_efm_ausmdv:
-        adaptive_efm_ausmdv(Lft, Rght, IFace, myConfig);
+        adaptive_efm_ausmdv(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.adaptive_hanel_ausmdv:
-        adaptive_hanel_ausmdv(Lft, Rght, IFace, myConfig);
+        adaptive_hanel_ausmdv(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.adaptive_hanel_ausm_plus_up:
-        adaptive_hanel_ausm_plus_up(Lft, Rght, IFace, myConfig);
+        adaptive_hanel_ausm_plus_up(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.adaptive_ldfss0_ldfss2:
-        adaptive_ldfss0_ldfss2(Lft, Rght, IFace, myConfig);
+        adaptive_ldfss0_ldfss2(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.adaptive_hlle_hllc:
-        adaptive_hlle_hllc(Lft, Rght, IFace, myConfig);
+        adaptive_hlle_hllc(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.adaptive_hlle_roe:
-        adaptive_hlle_roe(Lft, Rght, IFace, myConfig);
+        adaptive_hlle_roe(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.ausm_plus_up:
-        ausm_plus_up(Lft, Rght, IFace, myConfig);
+        ausm_plus_up(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.hlle:
-        hlle(Lft, Rght, IFace, myConfig);
+        hlle(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.hlle2:
-        hlle2(Lft, Rght, IFace, myConfig);
+        hlle2(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.roe:
-        roe(Lft, Rght, IFace, myConfig);
+        roe(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.osher:
-        osher(Lft, Rght, IFace, myConfig);
+        osher(Lft, Rght, *IFace.fs, IFace.F, myConfig);
         break;
     case FluxCalculator.asf:
         ASF_242(IFace, myConfig);
@@ -471,7 +607,7 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
 } // end set_flux_vector_in_global_frame()
 
 @nogc
-void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+void ausmdv(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig, number factor=1.0)
 // Wada and Liou's flux calculator.
 //
 // Implemented from details in their AIAA paper (ref. [1]) with hints from Ian Johnston.
@@ -565,7 +701,6 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     number ru2_half = (0.5 + s) * ru2_AUSMV + (0.5 - s) * ru2_AUSMD;
     //
     // Assemble components of the flux vector.
-    ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
     F[cqi.mass] += factor*ru_half;
     if (ru_half >= 0.0) {
@@ -647,7 +782,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
 } // end ausmdv()
 
 @nogc
-void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+void hllc(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig, number factor=1.0)
 // The HLLC approximate Riemann solver from ref. [1] with Einfeldt's wave speed estimates (HLLE) from
 // ref. [2]. The actual implementation is based on the details from ref. [3] as noted.
 //
@@ -719,7 +854,6 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
     number S_star = (pR - pL + rL*uL*(SL - uL) - rR*uR*(SR - uR))/(rL*(SL - uL) - rR*(SR - uR));
 
     // compute HLLC flux using eqn 10.71, 10.72, and 10.73 from ref. [3]
-    ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
     // a helper function that evaluates the HLLC fluxes used to reduce repeated code
     void hllc_flux_function(bool star_region, number coeff, number r, number p, number u, number v, number w, number E, in FlowState state, number S) {
@@ -816,7 +950,7 @@ void hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
 } // end hllc()
 
 @nogc
-void ldfss0(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+void ldfss0(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig, number factor=1.0)
 // Jack Edwards' LDFSS (variant 0) flux calculator, implementation details are taken from ref. [1].
 //
 // Note: to preserve mass fraction positivity we evaluate the species mass fractions as per ref. [2].
@@ -882,7 +1016,6 @@ void ldfss0(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     number CR = alphaR*(1.0+betaR)*MR - betaR*MmR + Mhalf;
     //
     // Assemble components of the flux vector.
-    ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
     number ru_half = aL*rL*CL + aR*rR*CR;
     number ru2_half = aL*rL*CL*uL + aR*rR*CR*uR;
@@ -914,7 +1047,7 @@ void ldfss0(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
 } // end ldfss0()
 
 @nogc
-void ldfss2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+void ldfss2(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig, number factor=1.0)
 // Jack Edwards' LDFSS (variant 2) flux calculator, implementation details are mostly taken from ref. [1],
 // with some details taken from ref. [2] where noted.
 //
@@ -993,7 +1126,6 @@ void ldfss2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     number CR = alphaR*(1.0+betaR)*MR - betaR*MmR + MhalfR;
     //
     // Assemble components of the flux vector.
-    ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
     number ru_half = am*rL*CL + am*rR*CR;
     number ru2_half = am*rL*CL*uL + am*rR*CR*uR;
@@ -1025,7 +1157,7 @@ void ldfss2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
 } // end ldfss2()
 
 @nogc
-void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+void hanel(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig, number factor=1.0)
 // Hanel, Schwane, and Seider's FVS flux calculator introduced in ref. [2].
 // The algorithm is implemented from details taken from ref. [1].
 //
@@ -1101,7 +1233,6 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     // Pressure flux (eqn 8)
     number p_half = pLplus + pRminus;
     // Assemble components of the flux vector (eqn 36).
-    ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
     F[cqi.mass] += factor*(uLplus * rL + uRminus * rR);
     F[cqi.xMom] += factor*(uLplus * rL * uL + uRminus * rR * uR + p_half);
@@ -1128,7 +1259,7 @@ void hanel(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
 } // end hanel()
 
 @nogc
-void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+void efmflx(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig, number factor=1.0)
 /** \brief Compute the fluxes across an interface using
  * the Equilibrium Flux Method of Macrossan & Pullin
  *
@@ -1225,7 +1356,6 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Loca
     // Combine the fluxes.
     fmsL = (wL * rhoL * vnL) + (dL * cmpL * rhoL);
     fmsR = (wR * rhoR * vnR) + (dR * cmpR * rhoR);
-    ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
     mass_flux = factor*(fmsL + fmsR);
     F[cqi.mass] += mass_flux;
@@ -1312,7 +1442,7 @@ void exxef(number sn, ref number exx, ref number ef)
 } // end exxef
 
 @nogc
-void adaptive_efm_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+void adaptive_efm_ausmdv(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig)
 // This adaptive flux calculator uses uses the Equilibrium Flux Method
 // near shocks and AUSMDV away from shocks, however, we really don't want
 // EFM to be used across interfaces with strong shear.
@@ -1322,97 +1452,97 @@ void adaptive_efm_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IF
 //
 // The actual work is passed off to the original flux calculation functions.
 {
-    number alpha = IFace.fs.S;
+    number alpha = fs.S;
     if (alpha > 0.0) {
-        efmflx(Lft, Rght, IFace, myConfig, alpha);
+        efmflx(Lft, Rght, fs, F, myConfig, alpha);
     }
     if (alpha < 1.0) {
-        ausmdv(Lft, Rght, IFace, myConfig, 1.0-alpha);
+        ausmdv(Lft, Rght, fs, F, myConfig, 1.0-alpha);
     }
 }
 
 @nogc
-void adaptive_hanel_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+void adaptive_hanel_ausmdv(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig)
 // This adaptive flux calculator uses the Hanel flux calculator
 // near shocks and AUSMDV away from shocks.
 //
 // The actual work is passed off to the original flux calculation functions.
 {
-    number alpha = IFace.fs.S;
+    number alpha = fs.S;
     if (alpha > 0.0) {
-        hanel(Lft, Rght, IFace, myConfig, alpha);
+        hanel(Lft, Rght, fs, F, myConfig, alpha);
     }
     if (alpha < 1.0) {
-        ausmdv(Lft, Rght, IFace, myConfig, 1.0-alpha);
+        ausmdv(Lft, Rght, fs, F, myConfig, 1.0-alpha);
     }
 }
 
 @nogc
-void adaptive_hanel_ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+void adaptive_hanel_ausm_plus_up(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig)
 // This adaptive flux calculator uses the Hanel flux calculator
 // near shocks and AUSM+up away from shocks.
 //
 // The actual work is passed off to the original flux calculation functions.
 {
-    number alpha = IFace.fs.S;
+    number alpha = fs.S;
     if (alpha > 0.0) {
-        hanel(Lft, Rght, IFace, myConfig, alpha);
+        hanel(Lft, Rght, fs, F, myConfig, alpha);
     }
     if (alpha < 1.0) {
-        ausm_plus_up(Lft, Rght, IFace, myConfig, 1.0-alpha);
+        ausm_plus_up(Lft, Rght, fs, F, myConfig, 1.0-alpha);
     }
 }
 
 @nogc
-void adaptive_ldfss0_ldfss2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+void adaptive_ldfss0_ldfss2(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig)
 // This adaptive flux calculator uses the Hanel flux calculator
 // near shocks and AUSMDV away from shocks.
 //
 // The actual work is passed off to the original flux calculation functions.
 {
-    number alpha = IFace.fs.S;
+    number alpha = fs.S;
     if (alpha > 0.0) {
-        ldfss0(Lft, Rght, IFace, myConfig, alpha);
+        ldfss0(Lft, Rght, fs, F, myConfig, alpha);
     }
     if (alpha < 1.0) {
-        ldfss2(Lft, Rght, IFace, myConfig, 1.0-alpha);
+        ldfss2(Lft, Rght, fs, F, myConfig, 1.0-alpha);
     }
 }
 
 @nogc
-void adaptive_hlle_hllc(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+void adaptive_hlle_hllc(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig)
 // This adaptive flux calculator uses the standard HLLE flux calculator
 // near shocks and HLLC away from shocks.
 //
 // The actual work is passed off to the original flux calculation functions.
 {
-    number alpha = IFace.fs.S;
+    number alpha = fs.S;
     if (alpha > 0.0) {
-        hlle2(Lft, Rght, IFace, myConfig, alpha);
+        hlle2(Lft, Rght, fs, F, myConfig, alpha);
     }
     if (alpha < 1.0) {
-        hllc(Lft, Rght, IFace, myConfig, 1.0-alpha);
+        hllc(Lft, Rght, fs, F, myConfig, 1.0-alpha);
     }
 }
 
 @nogc
-void adaptive_hlle_roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+void adaptive_hlle_roe(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig)
 // This adaptive flux calculator uses uses the standard HLLE flux calculator
 // near shocks and Roe away from shocks.
 //
 // The actual work is passed off to the original flux calculation functions.
 {
-    number alpha = IFace.fs.S;
+    number alpha = fs.S;
     if (alpha > 0.0) {
-        hlle2(Lft, Rght, IFace, myConfig, alpha);
+        hlle2(Lft, Rght, fs, F, myConfig, alpha);
     }
     if (alpha < 1.0) {
-        roe(Lft, Rght, IFace, myConfig, 1.0-alpha);
+        roe(Lft, Rght, fs, F, myConfig, 1.0-alpha);
     }
 }
 
 @nogc
-void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
+void ausm_plus_up(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F,
                   ref LocalConfig myConfig, number factor=1.0)
 // Liou's 2006 AUSM+up flux calculator
 //
@@ -1556,7 +1686,6 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
 
     number mass_flux = factor*ru_half;
     // Assemble components of the flux vector.
-    ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
     F[cqi.mass] += mass_flux;
     if (ru_half >= 0.0) {
@@ -1602,7 +1731,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
 } // end ausm_plus_up()
 
 @nogc
-void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+void hlle(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig, number factor=1.0)
 // HLLE fluxes for MHD.
 // From V. Wheatley Matlab implementation
 // Author D. M. Bond
@@ -1739,7 +1868,6 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
         number iden = 1.0/(brp - blm);
         number fac1 = brp*blm;
         //
-        ConservedQuantities F = IFace.F;
         auto cqi = myConfig.cqi;
         number mass_flux = factor*(brp*fmassL - blm*fmassR + fac1*dU[0])*iden;
         F[cqi.mass] += mass_flux;
@@ -1770,7 +1898,7 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
 } // end hlle()
 
 @nogc
-void hlle2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+void hlle2(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig, number factor=1.0)
 // The Harten-Lax-van Leer Riemann solver (HLL) from ref. [1] with Einfeldt's wave speed estimates (HLLE) from
 // ref. [2]. The actual implementation is based on the details from ref. [3] and ref. [4] as noted.
 //
@@ -1836,7 +1964,6 @@ void hlle2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     number SRp = fmax(uR+aR, uhat+ahat);
 
     // compute HLLE flux (eqn 9 from ref. [3])
-    ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
     if (SLm >= 0) {
         //Right-going supersonic flow
@@ -1920,7 +2047,7 @@ void hlle2(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
 } // end hlle2()
 
 @nogc
-void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+void roe(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig, number factor=1.0)
 // Philip Roe's flux calculator with entropy fix.
 //
 // Particular implementation is based on the descriptions from
@@ -2009,7 +2136,6 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
         else { l = (l*l)/(4*lref) + lref; }
     }
     // compute fluxes
-    ConservedQuantities F = IFace.F;
     number FL; number FR;
     auto cqi = myConfig.cqi;
     // mass flux
@@ -2056,7 +2182,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
                 number eiL = gmodel.internal_energy(Lft.gas, i);
                 number eiR = gmodel.internal_energy(Rght.gas, i);
                 number eihat = (sqrt(rL)*eiL+sqrt(rR)*eiR) / (sqrt(rL) + sqrt(rR));
-                number Ri = gmodel.gas_constant(IFace.fs.gas, i);
+                number Ri = gmodel.gas_constant(fs.gas, i);
                 // equation 33b from Walters et al. (1992)
                 number psihat = Ri*That/(ghat-1.0) - eihat + kehat;
                 theta += dmassf*psihat;
@@ -2115,7 +2241,7 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalCo
 
 
 @nogc
-void osher(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
+void osher(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuantities F, ref LocalConfig myConfig, number factor=1.0)
 // An implementation of what PJ calls the Osher Riemann-solver flux calculator.
 // It is not intended for general use but, rather, to produce reference data for Christine Mittler's thesis work.
 // This implementation lifted from the Puffin program, 2022-05-27.
@@ -2152,7 +2278,6 @@ void osher(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref Local
     //
     number massFlux = factor*rho*velx;
     //
-    ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
     F[cqi.mass] += massFlux;
     F[cqi.xMom] += massFlux*velx + p;
@@ -2326,7 +2451,7 @@ void adaptive_ausmdv_asf(in FlowState Lft, in FlowState Rght, ref FVInterface IF
 {
     number alpha = IFace.fs.S;
     if (alpha > 0.0) {
-        ausmdv(Lft, Rght, IFace, myConfig, alpha);
+        ausmdv(Lft, Rght, *IFace.fs, IFace.F, myConfig, alpha);
     }
     if (alpha < 1.0) {
         ASF_242(IFace, myConfig, 1.0-alpha);

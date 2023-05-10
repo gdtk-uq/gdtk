@@ -238,6 +238,8 @@ public:
         this.fs = &(fvcd.flowstates[id]);
         this.grad = &(fvcd.gradients[id]);
         this.ws_grad = &(fvcd.workspaces[id]);
+        if (fvcd.lsqws) this.ws = &(fvcd.lsqws[id]);
+        if (fvcd.lsqgradients) this.gradients = &(fvcd.lsqgradients[id]);
         //
         version(nk_accelerator) {
             grad_save = new FlowGradients(myConfig);

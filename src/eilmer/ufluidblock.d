@@ -314,9 +314,11 @@ public:
 
         // Allocate densified face and cell data
         auto gmodel = myConfig.gmodel;
-        size_t nsp = myConfig.n_species;
-        size_t nturb =  myConfig.turb_model.nturb;
+        size_t neq    = myConfig.cqi.n;
+        size_t nsp    = myConfig.n_species;
         size_t nmodes = myConfig.n_modes;
+        size_t nturb  = myConfig.turb_model.nturb;
+
         bool lsq_workspace_at_cells = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);
         bool lsq_workspace_at_faces = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
@@ -337,8 +339,8 @@ public:
         celldata.flowstates.reserve(grid.cells.length + nghost);
         celldata.gradients.reserve(grid.cells.length + nghost);
         celldata.workspaces.reserve(grid.cells.length + nghost);
-        celldata.lsqws.length = grid.cells.length;
-        celldata.lsqgradients.reserve(grid.cells.length);
+        celldata.lsqws.length = grid.cells.length + nghost;
+        celldata.lsqgradients.reserve(grid.cells.length + nghost);
 
         foreach (i; 0 .. grid.cells.length) celldata.flowstates ~= FlowState(gmodel, nturb);
         foreach (i; 0 .. grid.cells.length) celldata.gradients ~= FlowGradients(myConfig); // TODO: These are now always allocated, but should only be in viscous flow
@@ -346,13 +348,18 @@ public:
         foreach (i; 0 .. grid.cells.length) celldata.lsqgradients ~= LSQInterpGradients(nsp, nmodes, nturb); // TODO: skip if not needed
 
         facedata.f2c.length = grid.faces.length;
+        facedata.dL.length = grid.faces.length;
+        facedata.dR.length = grid.faces.length;
         facedata.normals.length = grid.faces.length;
+        facedata.tangents1.length = grid.faces.length;
+        facedata.tangents2.length = grid.faces.length;
         facedata.positions.length = grid.faces.length;
         facedata.left_interior_only.length = nghost;
         facedata.right_interior_only.length = nghost;
         facedata.flowstates.reserve(grid.faces.length);
         facedata.gradients.reserve(grid.faces.length);
         facedata.workspaces.reserve(grid.faces.length);
+        facedata.fluxes.length = grid.faces.length*neq;
         foreach (i; 0 .. grid.faces.length) facedata.flowstates ~= FlowState(gmodel, nturb);
         foreach (i; 0 .. grid.faces.length) facedata.gradients ~= FlowGradients(myConfig);
         foreach (i; 0 .. grid.faces.length) facedata.workspaces ~= WLSQGradWorkspace();
@@ -456,6 +463,7 @@ public:
                     celldata.flowstates ~= FlowState(gmodel, nturb);
                     celldata.gradients ~= FlowGradients(myConfig);
                     celldata.workspaces ~= WLSQGradWorkspace();
+                    celldata.lsqgradients ~= LSQInterpGradients(nsp, nmodes, nturb);
                     FVCell ghost0 = new FVCell(myConfig, &celldata, ghost_cell_id);
                     ghost_cell_id++;
                     ghost0.contains_flow_data = bc[i].ghost_cell_data_available;
@@ -598,8 +606,6 @@ public:
                                 { c.cell_cloud ~= cells[cid]; cell_ids ~= cid; }
                     }
                 }
-                c.ws = &(celldata.lsqws[c.id]);
-                c.gradients = &(celldata.lsqgradients[c.id]);
             } // end foreach cell
         } else {
             foreach (c; cells) {
@@ -617,26 +623,8 @@ public:
                         }
                     }
                 } // end foreach face
-                c.ws = &(celldata.lsqws[c.id]);
-                c.gradients = &(celldata.lsqgradients[c.id]);
             } // end foreach cell
         } // end else
-        // We will also need derivative storage in ghostcells because the
-        // reconstruction functions will expect to be able to access the gradients
-        // either side of each interface.
-        // We will be able to get these gradients from the mapped-cells
-        // in an adjoining block.
-        // [TODO] think about this for the junction of usgrid and sgrid blocks.
-        // The sgrid blocks will not have the gradients stored within the cells.
-        // FIXME: Check pointers here !!!!!!!!! NNG
-        foreach (bci; bc) {
-            if (bci.ghost_cell_data_available) {
-                foreach (c; bci.ghostcells) {
-                    c.gradients = new LSQInterpGradients(nsp, nmodes, nturb);
-                }
-            }
-        }
-        //
         // We will now store the cloud of points in cloud_pos for viscous derivative calcualtions.
         // This is equivalent to store_references_for_derivative_calc(size_t gtl) in sblock.d
         if (myConfig.viscous) {
@@ -719,6 +707,7 @@ public:
                     ghost0.kLength = inside0.kLength;
                     ghost0.L_min = inside0.L_min;
                     ghost0.L_max = inside0.L_max;
+                    ghost0.update_celldata_geometry();
                 } else {
                     auto inside0 = my_face.right_cell;
                     Vector3 delta; delta = my_face.pos; delta -= inside0.pos[gtl];
@@ -729,6 +718,7 @@ public:
                     ghost0.kLength = inside0.kLength;
                     ghost0.L_min = inside0.L_min;
                     ghost0.L_max = inside0.L_max;
+                    ghost0.update_celldata_geometry();
                 } // end if my_outsign
             } // end foreach j
         } // end foreach bndry
@@ -772,6 +762,13 @@ public:
                     throw e;
                 }
             }
+            // Densified lsqgradients needs distances from the face to the left and right cells
+            foreach(idx; 0 .. nfaces){              // TODO: What about no ghost boundaries?
+                size_t l = facedata.f2c[idx].left;
+                size_t r = facedata.f2c[idx].right;
+                facedata.dL[idx] = facedata.positions[idx] - celldata.positions[l];
+                facedata.dR[idx] = facedata.positions[idx] - celldata.positions[r];
+            } // Done interior faces, next we do the boundaries of this block
         }
     } // end compute_least_squares_setup()
 
@@ -977,6 +974,68 @@ public:
     } // end convective_flux-phase1()
 
     @nogc
+    override void convective_flux_phase2(bool allow_high_order_interpolation, size_t gtl=0)
+    // Make use of the flow gradients to actually do the high-order reconstruction
+    // and then compute fluxes of conserved quantities at all faces.
+    {
+
+        if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
+            // Fill in gradients for ghost cells so that left- and right- cells at all faces,
+            // including those along block boundaries, have the latest gradient values.
+            foreach(idx; ninteriorfaces .. nfaces){
+                size_t bidx = idx-ninteriorfaces;
+                if (facedata.left_interior_only[bidx]) {
+                    size_t l = facedata.f2c[idx].left;
+                    size_t r = facedata.f2c[idx].right;
+                    celldata.lsqgradients[r].copy_values_from(celldata.lsqgradients[l]);
+
+                } else if (facedata.right_interior_only[bidx]) {
+                    size_t l = facedata.f2c[idx].left;
+                    size_t r = facedata.f2c[idx].right;
+                    celldata.lsqgradients[l].copy_values_from(celldata.lsqgradients[r]);
+                } else {
+                    // Nothing needs to be done for a shared interface,
+                    continue;
+                }
+            }
+        }
+
+        // At this point, we should have all gradient values up to date and we are now ready
+        // to reconstruct field values and compute the convective fluxes.
+        Vector3 gvel;
+        gvel.clear();
+        immutable size_t neq = myConfig.cqi.n;
+        immutable bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
+        foreach(idx; 0 .. nfaces){ // TODO: No ghost cell version
+            size_t l = facedata.f2c[idx].left;
+            size_t r = facedata.f2c[idx].right;
+            Lft.copy_values_from(celldata.flowstates[l]);
+            Rght.copy_values_from(celldata.flowstates[r]);
+            facedata.flowstates[idx].copy_average_values_from(*Lft, *Rght);
+
+            if (do_reconstruction) {
+                interp_both(facedata.dL[idx], facedata.dR[idx],
+                            celldata.lsqgradients[l], celldata.lsqgradients[r],
+                            celldata.flowstates[l], celldata.flowstates[r],
+                            myConfig, *Lft, *Rght);
+            }
+            compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
+                                            facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
+                                            facedata.fluxes[idx*neq .. (idx+1)*neq]);
+        }
+
+            //size_t neq = myConfig.cqi.n;
+            //foreach(idx; 0 .. nfaces){ // TODO: No ghost cell version
+            //    size_t l = facedata.f2c[idx].left;
+            //    size_t r = facedata.f2c[idx].right;
+            //    Lft.copy_values_from(celldata.flowstates[l]);
+            //    Rght.copy_values_from(celldata.flowstates[r]);
+            //    compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig,
+            //                                    facedata.fluxes[idx*neq .. (idx+1)*neq]);
+            //}
+    } // end convective_flux-phase2()
+
+    @nogc
     override void convective_flux_phase2(bool allow_high_order_interpolation, size_t gtl=0,
                                          FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
     // Make use of the flow gradients to actually do the high-order reconstruction
@@ -1030,7 +1089,7 @@ public:
                 assert(0, "oops, a face without attached cells");
             }
         } // end foreach face
-    } // end convective_flux-phase1()
+    } // end convective_flux-phase2()
 
     override size_t[] get_cell_write_indices() {
         size_t[] index;
