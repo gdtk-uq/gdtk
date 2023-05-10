@@ -224,37 +224,21 @@ public:
 
     override void apply(double t, int tLevel)
     {
-
         auto myBC = blk.bc[whichBoundary];
-        number q;
-        int outsign;
-
-        switch(whichBoundary){
-        case Face.north:
-            outsign = 1;
-            break;
-        case Face.east:
-            outsign = 1;
-            break;
-        case Face.south:
-            outsign = -1;
-            break;
-        case Face.west:
-            outsign = -1;
-            break;
-        case Face.top:
-            outsign = 1;
-            break;
-        case Face.bottom:
-            outsign = -1;
-            break;
-        default:
-            throw new Error("oops, wrong boundary id");
-        } // end switch
-
-        foreach ( i; 0 .. myBC.ifaces.length ) {
-            q = myBC.gasCells[i].q_solid;
-            myBC.ifaces[i].flux = outsign*q;
+        if (blk.myConfig.fluid_solid_bc_use_heat_transfer_coeff) {
+            foreach ( idx; 0 .. myBC.ifaces.length ) {
+                // Note that the heat_transfer_into_solid is the total heat transfer (e.g. q_conduction + q_diffusion),
+                // so we are assuming here that both q_conduction and q_diffusion will diminish as the fluid and solid
+                // temperatures equilibrate. TODO: we should think about whether this is a valid assumption. KAD 2023-05-09
+                number htc = myBC.gasCells[idx].heat_transfer_into_solid;
+                number dT = myBC.gasCells[idx].fs.gas.T - myBC.solidCells[idx].T;
+                myBC.ifaces[idx].flux = -htc*dT;
+            }
+        } else {
+            foreach ( idx; 0 .. myBC.ifaces.length ) {
+                number q = myBC.gasCells[idx].heat_transfer_into_solid;
+                myBC.ifaces[idx].flux = -q;
+            }
         }
     }
 }

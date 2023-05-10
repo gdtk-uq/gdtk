@@ -895,6 +895,7 @@ final class GlobalConfig {
     shared static bool solid_has_isotropic_properties = true;
     shared static bool solid_has_homogeneous_properties = true;
     shared static bool solid_domain_augmented_deriv_avg = true;
+    shared static bool fluid_solid_bc_use_heat_transfer_coeff = false;
     shared static double solid_domain_cfl = 0.85;
     //
     // Parameters related to possible motion of the grid.
@@ -1329,6 +1330,7 @@ public:
     bool solid_has_isotropic_properties;
     bool solid_has_homogeneous_properties;
     bool solid_domain_augmented_deriv_avg;
+    bool fluid_solid_bc_use_heat_transfer_coeff;
     //
     bool ignore_low_T_thermo_update_failure;
     double suggested_low_T_value;
@@ -1499,6 +1501,7 @@ public:
         solid_has_isotropic_properties = cfg.solid_has_isotropic_properties;
         solid_has_homogeneous_properties = cfg.solid_has_homogeneous_properties;
         solid_domain_augmented_deriv_avg = cfg.solid_domain_augmented_deriv_avg;
+        fluid_solid_bc_use_heat_transfer_coeff = cfg.fluid_solid_bc_use_heat_transfer_coeff;
         //
         ignore_low_T_thermo_update_failure = cfg.ignore_low_T_thermo_update_failure;
         suggested_low_T_value = cfg.suggested_low_T_value;
@@ -1859,6 +1862,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("solid_has_isotropic_properties", "solid_has_isotropic_properties"));
     mixin(update_bool("solid_has_homogeneous_properties", "solid_has_homogeneous_properties"));
     mixin(update_bool("solid_domain_augmented_deriv_avg", "solid_domain_augmented_deriv_avg"));
+    mixin(update_bool("fluid_solid_bc_use_heat_transfer_coeff", "fluid_solid_bc_use_heat_transfer_coeff"));
 
     // Parameters controlling convective update in detail
     //
@@ -1957,6 +1961,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  solid_has_isotropic_properties: ", cfg.solid_has_isotropic_properties);
         writeln("  solid_has_homogeneous_properties: ", cfg.solid_has_homogeneous_properties);
         writeln("  solid_domain_augmented_deriv_avg: ", cfg.solid_domain_augmented_deriv_avg);
+        writeln("  fluid_solid_bc_use_heat_transfer_coeff: ", cfg.fluid_solid_bc_use_heat_transfer_coeff);
         writeln("  apply_bcs_in_parallel: ", cfg.apply_bcs_in_parallel);
         writeln("  flowstate_limits_max_velocity: ", cfg.flowstate_limits.max_velocity);
         writeln("  flowstate_limits_max_tke: ", cfg.flowstate_limits.max_tke);

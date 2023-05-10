@@ -997,7 +997,7 @@ public:
                 // Prepare to exchange geometry data for the boundary cells.
                 // To match .copy_values_from(mapped_cells[i], CopyDataOption.grid) as defined in fvcell.d.
                 //
-                size_t ne = myBC.gasCells.length;
+                size_t ne = myBC.gasCells.length * 2;
                 version(complex_numbers) { ne *= 2; }
                 if (incoming_fluidstate_buf.length < ne) { incoming_fluidstate_buf.length = ne; }
                 //
@@ -1074,7 +1074,8 @@ public:
                 }
                 size_t ii = 0;
                 foreach (i, c; myBC.gasCells) {
-                    c.q_solid.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.q_solid.im = incoming_fluidstate_buf[ii++]; }
+                    c.heat_transfer_into_solid.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.heat_transfer_into_solid.im = incoming_fluidstate_buf[ii++]; }
+                    c.fs.gas.T.re = incoming_fluidstate_buf[ii++]; version(complex_numbers) { c.fs.gas.T.im = incoming_fluidstate_buf[ii++]; }
                 }
             } else {
                 // The other block happens to be in this MPI process so

@@ -1011,6 +1011,47 @@ public:
         }
     } // end exchange_solidstate_phase0()
 
+    number compute_heat_flux_into_solid(FVInterface face, int this_outsign) {
+        // evaluate the heat flux at the interface along the fluid-solid boundary
+        face.F.clear();
+        face.viscous_flux_calc();
+        face.F.clear();
+        number q = face.q_conduction + face.q_diffusion;
+
+        // determine the outsign for the neighbouring (structured) solid block
+        int other_outsign;
+        final switch (other_face) {
+        case Face.north:
+            other_outsign = 1;
+            break;
+        case Face.east:
+            other_outsign = 1;
+            break;
+        case Face.south:
+            other_outsign = -1;
+            break;
+        case Face.west:
+            other_outsign = -1;
+            break;
+        case Face.top:
+            other_outsign = 1;
+            break;
+        case Face.bottom:
+            other_outsign = -1;
+        } // end switch (other_face)
+
+        // if the outsigns are the same, then we must switch the sign of the heat flux...
+        if (this_outsign == other_outsign) { q *= -1.0; }
+        // Why? Because outsigns of the same sign imply that the normals for the interfaces along the
+        // fluid boundary and solid boundary point in the opposite direction (e.g. both negative means
+        // that the interface normals point inward for the fluid block and inward for the solid block,
+        // which means that they must point in the opposite direction. Now, the direction of the normal
+        // effects the heat flux and thus we must correct for this when transferring the heat flux
+        // from the fluid block to the solid block.
+
+        return q;
+    }
+
     // not @nogc
     void exchange_fluidstate_heat_flux_phase1()
     {
@@ -1022,24 +1063,32 @@ public:
                 // to the corresponding non-blocking receive that was posted
                 // in the other MPI process.
                 outgoing_fluidstate_tag = make_mpi_tag(blk.id, which_boundary, 3);
-                size_t ne = myBC.solidCells.length;
+                size_t ne = myBC.solidCells.length*2;
                 version(complex_numbers) { ne *= 2; }
                 if (outgoing_fluidstate_buf.length < ne) { outgoing_fluidstate_buf.length = ne; }
                 size_t ii = 0;
                 foreach (i, c; outgoing_mapped_cells) {
                     // compute the heat flux at interface on fluid/solid coupled boundary
-                    number q_total;
+                    number q_solid;
+                    number T_solid;
                     foreach(fi, f; c.iface) {
                         // TODO: This approach only works if a cell has only one face on the coupled boundary.
                         //       It might be worth thinking of a more robust solution. KAD 2022-11-08
                         if (f.is_on_boundary && f.bc_id == myBC.which_boundary) {
-                            f.F.clear();
-                            f.viscous_flux_calc();
-                            q_total = c.outsign[fi]*(f.q_conduction + f.q_diffusion);
-                            f.F.clear();
+                            q_solid = compute_heat_flux_into_solid(f, c.outsign[fi]);
+                            T_solid = f.fs.gas.T;
                         }
                     }
-                    outgoing_fluidstate_buf[ii++] = q_total.re; version(complex_numbers) { outgoing_fluidstate_buf[ii++] = 0.0; } //q_total.im; }
+                    if (this_blk.myConfig.fluid_solid_bc_use_heat_transfer_coeff) {
+                        // calculate Stanton number
+                        number dT = c.fs.gas.T - T_solid;
+                        number htc = q_solid/dT;
+                        if (fabs(dT) < 1.0) { htc = 0.0; } // improves robustness
+                        outgoing_fluidstate_buf[ii++] = htc.re; version(complex_numbers) { outgoing_fluidstate_buf[ii++] = 0.0; }
+                    } else {
+                        outgoing_fluidstate_buf[ii++] = q_solid.re; version(complex_numbers) { outgoing_fluidstate_buf[ii++] = 0.0; }
+                    }
+                    outgoing_fluidstate_buf[ii++] = c.fs.gas.T.re; version(complex_numbers) { outgoing_fluidstate_buf[ii++] = 0.0; }
                 }
                 version(mpi_timeouts) {
                     MPI_Request send_request;
@@ -1054,18 +1103,27 @@ public:
             } else {
                 foreach (i, c; myBC.gasCells) {
                     // compute the heat flux at interface on fluid/solid coupled boundary
-                    number q_total;
+                    number q_solid;
+                    number T_solid;
                     foreach(fi, f; c.iface) {
                         // TODO: This approach only works if a cell has only one face on the coupled boundary.
                         //       It might be worth thinking of a more robust solution. KAD 2022-11-08
                         if (f.is_on_boundary && f.bc_id == myBC.which_boundary) {
-                            f.F.clear();
-                            f.viscous_flux_calc();
-                            q_total = c.outsign[fi]*(f.q_conduction + f.q_diffusion);
-                            f.F.clear();
+                            q_solid = compute_heat_flux_into_solid(f, c.outsign[fi]);
+                            T_solid = f.fs.gas.T;
                         }
                     }
-                    myBC.gasCells[i].q_solid = q_total.re;
+                    if (this_blk.myConfig.fluid_solid_bc_use_heat_transfer_coeff) {
+                        // calculate Stanton number
+                        number dT = c.fs.gas.T - T_solid;
+                        number htc = q_solid/dT;
+                        if (fabs(dT) < 1.0) { htc = 0.0; } // improves robustness
+                        myBC.gasCells[i].heat_transfer_into_solid = htc.re;
+                        myBC.gasCells[i].fs.gas.T = c.fs.gas.T.re;
+                    } else {
+                        myBC.gasCells[i].heat_transfer_into_solid = q_solid.re;
+                        myBC.gasCells[i].fs.gas.T = c.fs.gas.T.re;
+                    }
                 }
                 // The other block happens to be in this MPI process so
                 // we know that we can just access the cell data directly
