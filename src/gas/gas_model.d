@@ -352,10 +352,11 @@ protected:
 // PART 2. Utility functions to transform mass-fraction and mole-fraction data arrays.
 //----------------------------------------------------------------------------------------
 
-pragma(inline, true) @nogc
+@nogc
 void scale_mass_fractions(ref number[] massf, double tolerance=0.0,
                           double assert_error_tolerance=0.1)
 {
+    pragma(inline, true);
     auto my_nsp = massf.length;
     if (my_nsp == 1) {
         // Single species, always expect massf[0]==1.0, so we can take a short-cut.

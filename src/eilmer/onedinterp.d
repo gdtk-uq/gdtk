@@ -95,7 +95,7 @@ private:
 
 public:
     @disable this();
-    
+
     this(LocalConfig myConfig)
     {
         this.myConfig = myConfig;
@@ -282,6 +282,7 @@ public:
     // They will remain constant when reconstructing the different scalar fields
     // over the same set of cells.
     {
+        pragma(inline, true);
         // Positions of the cell centres relative to interpolation point.
         number xL0 = -(0.5*lenL0);
         number xL1 = -(lenL0 + 0.5*lenL1);
@@ -307,6 +308,7 @@ public:
                             number qR0, number qR1, number qR2,
                             ref number qL, ref number qR, number beta)
     {
+        pragma(inline, true);
         // Set up differences and limiter values.
         number delLminus = (qL0 - qL1);
         number del = (qR0 - qL0);
@@ -332,7 +334,6 @@ public:
         }
     } // end of interp_l3r3_scalar()
 
-    pragma(inline, true)
     @nogc
     void l2r2_prepare(number lenL1, number lenL0, number lenR0, number lenR1)
     // Set up intermediate data that depend only on the cell geometry.
@@ -340,6 +341,7 @@ public:
     // over the same set of cells.
     // For piecewise parabolic reconstruction, see PJ workbook notes Jan 2001.
     {
+        pragma(inline, true);
         lenL0_ = lenL0;
         lenR0_ = lenR0;
         aL0 = 0.5 * lenL0 / (lenL1 + 2.0*lenL0 + lenR0);
@@ -351,11 +353,11 @@ public:
         two_lenR0_plus_lenR1 = (2.0*lenR0 + lenR1);
     } // end l2r2_prepare()
 
-    pragma(inline, true)
     @nogc
     void interp_l2r2_scalar(number qL1, number qL0, number qR0, number qR1,
                             ref number qL, ref number qR, number beta)
     {
+        pragma(inline, true);
         // Set up differences and limiter values.
         number delLminus = (qL0 - qL1) * two_over_lenL0_plus_lenL1;
         number del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
@@ -385,6 +387,7 @@ public:
 
     @nogc void l2r1_prepare(number lenL1, number lenL0, number lenR0)
     {
+        pragma(inline, true);
         lenL0_ = lenL0;
         lenR0_ = lenR0;
         aL0 = 0.5 * lenL0 / (lenL1 + 2.0*lenL0 + lenR0);
@@ -396,6 +399,7 @@ public:
 
     @nogc void interp_l2r1_scalar(number qL1, number qL0, number qR0, ref number qL, ref number qR, number beta)
     {
+        pragma(inline, true);
         number delLminus = (qL0 - qL1) * two_over_lenL0_plus_lenL1;
         number del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
         number sL = 1.0;
@@ -417,6 +421,7 @@ public:
 
     @nogc void l1r2_prepare(number lenL0, number lenR0, number lenR1)
     {
+        pragma(inline, true);
         lenL0_ = lenL0;
         lenR0_ = lenR0;
         aR0 = 0.5 * lenR0 / (lenL0 + 2.0*lenR0 + lenR1);
@@ -428,6 +433,7 @@ public:
 
     @nogc void interp_l1r2_scalar(number qL0, number qR0, number qR1, ref number qL, ref number qR, number beta)
     {
+        pragma(inline, true);
         number del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
         number delRplus = (qR1 - qR0) * two_over_lenR1_plus_lenR0;
         number sR = 1.0;
@@ -451,6 +457,7 @@ public:
 
     @nogc void linear_extrap_prepare(number len0, number len1)
     {
+        pragma(inline, true);
         // Set up weights for a linear combination if q0 and q1
         // assuming that we are extrapolating past q0 to the boundary len0/2 away.
         w0 = (2.0*len0 + len1)/(len0+len1);
@@ -459,6 +466,7 @@ public:
 
     @nogc void linear_interp_prepare(number len0, number len1)
     {
+        pragma(inline, true);
         // Set up weights for a linear combination if q0 and q1
         // assuming that we are interpolating to the cell-face between
         // the cell-centre points.
@@ -468,6 +476,7 @@ public:
 
     @nogc number weight_scalar(number q0, number q1)
     {
+        pragma(inline, true);
         // The weights for interpolation or extrapolation may be used.
         number q = q0*w0 + q1*w1;
         if (myConfig.extrema_clipping) { q = clip_to_limits(q, q0, q1); }

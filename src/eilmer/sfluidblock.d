@@ -52,10 +52,10 @@ import fluidblockio_new;
 immutable double EPSILON = 1.0e-8;
 immutable double ESSENTIALLY_ZERO = 1.0e-15;
 
-pragma(inline, true)
 @nogc
 size_t[3] cell_index_to_logical_coordinates(size_t gid, size_t nic, size_t njc)
 {
+    pragma(inline, true);
     size_t[3] ijk;
     size_t slabDim = njc * nic;
     size_t k = gid / slabDim;
@@ -294,13 +294,13 @@ public:
         return to!string(repr);
     } // end toString()
 
-    pragma(inline, true)
     @nogc
     size_t cell_index(size_t i, size_t j, size_t k=0) const
     // The i,j,k indices into the hypothetical block of active cells
     // map to the index into the single-dimensional cells array
     // that is held in the FluidBlock base class.
     {
+        pragma(inline, true);
         debug {
             if (!(i < nic && j < njc && k < nkc)) {
                 writefln("cell_index[%d,%d,%d] from [%d,%d,%d]", i, j, k, nic, njc, nkc);
@@ -310,20 +310,20 @@ public:
         return (k*njc + j)*nic + i;
     }
 
-    pragma(inline, true)
     @nogc
     size_t[3] to_ijk_indices_for_cell(size_t gid) const
     {
+        pragma(inline, true);
         return cell_index_to_logical_coordinates(gid, nic, njc);
     }
 
-    pragma(inline, true)
     @nogc
     size_t vertex_index(size_t i, size_t j, size_t k=0) const
     // The i,j,k indices into the hypothetical block of vertices
     // map to the index into the single-dimensional vertices array
     // that is held in the FluidBlock base class.
     {
+        pragma(inline, true);
         debug {
             if (!(i < niv && j < njv && k < nkv)) {
                 writefln("vertex_index[%d,%d,%d] from [%d,%d,%d]", i, j, k, niv, njv, nkv);
@@ -333,13 +333,13 @@ public:
         return (k*njv + j)*niv + i;
     }
 
-    pragma(inline, true)
     @nogc
     size_t ifi_index(size_t i, size_t j, size_t k=0) const
     // The i,j,k indices into the hypothetical block of i-faces
     // map to the index into the single-dimensional vertices array
     // that is held in the FluidBlock base class.
     {
+        pragma(inline, true);
         debug {
             if (!(i < niv && j < njc && k < nkc)) {
                 writefln("ifi_index[%d,%d,%d] from [%d,%d,%d]", i, j, k, niv, njc, nkc);
@@ -349,13 +349,13 @@ public:
         return (k*njc + j)*niv + i;
     }
 
-    pragma(inline, true)
     @nogc
     size_t ifj_index(size_t i, size_t j, size_t k=0) const
     // The i,j,k indices into the hypothetical block of j-faces
     // map to the index into the single-dimensional vertices array
     // that is held in the FluidBlock base class.
     {
+        pragma(inline, true);
         debug {
             if (!(i < nic && j < njv && k < nkc)) {
                 writefln("ifj_index[%d,%d,%d] from [%d,%d,%d]", i, j, k, nic, njv, nkc);
@@ -366,13 +366,13 @@ public:
         return (k*njv + j)*nic + i + nifaces;
     }
 
-    pragma(inline, true)
     @nogc
     size_t ifk_index(size_t i, size_t j, size_t k=0) const
     // The i,j,k indices into the hypothetical block of k-faces
     // map to the index into the single-dimensional vertices array
     // that is held in the FluidBlock base class.
     {
+        pragma(inline, true);
         debug {
             if (!(i < nic && j < njc && k < nkv)) {
                 writefln("ifj_index[%d,%d,%d] from [%d,%d,%d]", i, j, k, nic, njc, nkv);
@@ -384,29 +384,29 @@ public:
         return (k*njc + j)*nic + i + nifaces + njfaces;
     }
 
-    pragma(inline, true)
     @nogc ref FVCell get_cell(size_t i, size_t j, size_t k=0)
     {
+        pragma(inline, true);
         return cells[cell_index(i,j,k)];
     }
-    pragma(inline, true)
     @nogc ref FVVertex get_vtx(size_t i, size_t j, size_t k=0)
     {
+        pragma(inline, true);
         return vertices[vertex_index(i,j,k)];
     }
-    pragma(inline, true)
     @nogc ref FVInterface get_ifi(size_t i, size_t j, size_t k=0)
     {
+        pragma(inline, true);
         return faces[ifi_index(i,j,k)];
     }
-    pragma(inline, true)
     @nogc ref FVInterface get_ifj(size_t i, size_t j, size_t k=0)
     {
+        pragma(inline, true);
         return faces[ifj_index(i,j,k)];
     }
-    pragma(inline, true)
     @nogc ref FVInterface get_ifk(size_t i, size_t j, size_t k=0)
     {
+        pragma(inline, true);
         return faces[ifk_index(i,j,k)];
     }
 
