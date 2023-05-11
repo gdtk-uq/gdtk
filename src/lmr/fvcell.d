@@ -123,7 +123,7 @@ public:
     FlowState*[] cloud_fs; // References to flow states at those points.
 
     // Heat flux used in the loosely coupled CHT solver (we currently store this here for convenience).
-    number q_solid; // TODO: We should think about whether there is a more appropriate place to store this. KAD 2022-11-08
+    number heat_transfer_into_solid; // TODO: We should think about whether there is a more appropriate place to store this. KAD 2022-11-08
 
     // Terms for loose-coupling of radiation.
     number Q_rad_org;
