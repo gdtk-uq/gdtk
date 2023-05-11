@@ -1607,6 +1607,12 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalC
 // From V. Wheatley Matlab implementation
 // Author D. M. Bond
 // Port to D by PJ, 2014-07-24
+
+// Implementation is based on "On Godunov-Type Methods for Gas Dynamics"
+// by B. Einfeldt, SIAM Journal on Numerical Analysis Vol 25 No 2
+// and "Multidimensional HLLE Riemann Solver; Application to Euler and 
+//      Magnetohydrodynamic Flows" by D. Balsara
+
 {
     auto gmodel = myConfig.gmodel;
     @nogc number SAFESQRT(number x) { return (fabs(x)>1.0e-14) ? sqrt(x) : to!number(0.0); }
