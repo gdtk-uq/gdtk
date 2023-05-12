@@ -979,7 +979,11 @@ public:
     // and then compute fluxes of conserved quantities at all faces.
     {
 
-        if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
+        immutable size_t neq = myConfig.cqi.n;
+        immutable bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
+        immutable bool allow_reconstruction_at_boundaries = !myConfig.suppress_reconstruction_at_boundaries;
+
+        if (do_reconstruction) {
             // Fill in gradients for ghost cells so that left- and right- cells at all faces,
             // including those along block boundaries, have the latest gradient values.
             foreach(idx; ninteriorfaces .. nfaces){
@@ -1004,35 +1008,57 @@ public:
         // to reconstruct field values and compute the convective fluxes.
         Vector3 gvel;
         gvel.clear();
-        immutable size_t neq = myConfig.cqi.n;
-        immutable bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
-        foreach(idx; 0 .. nfaces){ // TODO: No ghost cell version
+        foreach(idx; 0 .. ninteriorfaces){ // TODO: No ghost cell version
             size_t l = facedata.f2c[idx].left;
             size_t r = facedata.f2c[idx].right;
-            Lft.copy_values_from(celldata.flowstates[l]);
-            Rght.copy_values_from(celldata.flowstates[r]);
-            facedata.flowstates[idx].copy_average_values_from(*Lft, *Rght);
+            facedata.flowstates[idx].copy_average_values_from(celldata.flowstates[l], celldata.flowstates[r]);
 
             if (do_reconstruction) {
                 interp_both(facedata.dL[idx], facedata.dR[idx],
                             celldata.lsqgradients[l], celldata.lsqgradients[r],
                             celldata.flowstates[l], celldata.flowstates[r],
                             myConfig, *Lft, *Rght);
+            } else {
+                Lft.copy_values_from(celldata.flowstates[l]);
+                Rght.copy_values_from(celldata.flowstates[r]);
             }
             compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
                                             facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
                                             facedata.fluxes[idx*neq .. (idx+1)*neq]);
         }
 
-            //size_t neq = myConfig.cqi.n;
-            //foreach(idx; 0 .. nfaces){ // TODO: No ghost cell version
-            //    size_t l = facedata.f2c[idx].left;
-            //    size_t r = facedata.f2c[idx].right;
-            //    Lft.copy_values_from(celldata.flowstates[l]);
-            //    Rght.copy_values_from(celldata.flowstates[r]);
-            //    compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig,
-            //                                    facedata.fluxes[idx*neq .. (idx+1)*neq]);
-            //}
+        foreach(idx; ninteriorfaces .. nfaces){
+            size_t bidx = idx-ninteriorfaces;
+            size_t l = facedata.f2c[idx].left;
+            size_t r = facedata.f2c[idx].right;
+            facedata.flowstates[idx].copy_average_values_from(celldata.flowstates[l], celldata.flowstates[r]);
+
+            if (facedata.left_interior_only[bidx] || facedata.right_interior_only[bidx]) {
+                if (do_reconstruction && allow_reconstruction_at_boundaries) {
+                    interp_both(facedata.dL[idx], facedata.dR[idx],
+                                celldata.lsqgradients[l], celldata.lsqgradients[r],
+                                celldata.flowstates[l], celldata.flowstates[r],
+                                myConfig, *Lft, *Rght);
+                } else {
+                    Lft.copy_values_from(celldata.flowstates[l]);
+                    Rght.copy_values_from(celldata.flowstates[r]);
+                }
+
+            } else { // We have a shared interface, where allow_reconstruction_at_boundaries is ignored
+                if (do_reconstruction) {
+                    interp_both(facedata.dL[idx], facedata.dR[idx],
+                                celldata.lsqgradients[l], celldata.lsqgradients[r],
+                                celldata.flowstates[l], celldata.flowstates[r],
+                                myConfig, *Lft, *Rght);
+                } else {
+                    Lft.copy_values_from(celldata.flowstates[l]);
+                    Rght.copy_values_from(celldata.flowstates[r]);
+                }
+            }
+            compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
+                                            facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
+                                            facedata.fluxes[idx*neq .. (idx+1)*neq]);
+        }
     } // end convective_flux-phase2()
 
     @nogc

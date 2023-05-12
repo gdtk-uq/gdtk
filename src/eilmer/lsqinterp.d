@@ -1563,20 +1563,6 @@ void interp_both(Vector3 dL, Vector3 dR, in LSQInterpGradients cLgrad, in LSQInt
     auto nmodes = myConfig.n_modes;
     auto nturb = myConfig.turb_model.nturb;
 
-    // Low-order reconstruction just copies data from adjacent FV_Cell.
-    // Even for high-order reconstruction, we depend upon this copy for
-    // the viscous-transport and diffusion coefficients.
-    // For some simulations we would like to have the boundaries to remain 1st order.
-
-    // TODO: Handle all of this upstairs
-    //if (myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary) { return; }
-    //// Enforce first order reconstruction for cells that capure the shocks,
-    //if (myConfig.suppress_reconstruction_at_shocks && ((Lft.S == 1.0) || (Rght.S == 1.0))) { return; }
-    //// else apply higher-order interpolation to all faces.
-    //if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
-
-    // TODO: Also account for the apply limiter switch, which is gone
-
     // vector from left-cell-centre to face midpoint
     number dLx = dL.x;
     number dLy = dL.y;
@@ -1742,18 +1728,8 @@ void interp_both(Vector3 dL, Vector3 dR, in LSQInterpGradients cLgrad, in LSQInt
     string codeForThermoUpdate(string funname)
     {
         string code = "
-        try {
             gmodel.update_thermo_from_"~funname~"(Lft.gas);
-        } catch (Exception e) {
-            debug { writeln(e.msg); }
-            Lft.copy_values_from(cLfs);
-        }
-        try {
             gmodel.update_thermo_from_"~funname~"(Rght.gas);
-        } catch (Exception e) {
-            debug { writeln(e.msg); }
-            Rght.copy_values_from(cRfs);
-        }
         ";
         return code;
     }
@@ -1823,6 +1799,8 @@ void interp_both(Vector3 dL, Vector3 dR, in LSQInterpGradients cLgrad, in LSQInt
         mixin(codeForThermoUpdate("rhoT"));
         break;
     } // end switch thermo_interpolator
+    Lft.gas.a = cLfs.gas.a;
+    Rght.gas.a = cRfs.gas.a;
     return;
 } // end interp_both()
 
