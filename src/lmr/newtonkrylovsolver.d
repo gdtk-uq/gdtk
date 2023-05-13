@@ -714,7 +714,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 	    // end condition when step is past final phase
 	    if (startStep >= nkCfg.phaseChangesAtSteps[$-1]) {
 		auto finalPhase = nkCfg.phaseChangesAtSteps.length;
-		setPhaseSettings(finalPhase);
+		setPhaseSettings(finalPhase-1);
 	    }
 	}
         if (activePhase.useAutoCFL) {
@@ -766,9 +766,10 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
          */
         residualsUpToDate = false;
         // 0a. change of phase 
-        size_t currentPhase = countUntil(nkCfg.phaseChangesAtSteps, step);
+        auto currentPhase = countUntil(nkCfg.phaseChangesAtSteps, step);
         startOfNewPhase = false;
         if (currentPhase != -1) { // start of new phase detected
+	    currentPhase++; // increment because countUntil counts from 0
             startOfNewPhase = true;
             setPhaseSettings(currentPhase);
             if (activePhase.useAutoCFL) {

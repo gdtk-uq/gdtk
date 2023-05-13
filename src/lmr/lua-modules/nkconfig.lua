@@ -108,10 +108,10 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    f:write(string.format('"cfl_reduction_factor": %.18e,\n', nkConfig.cfl_reduction_factor))
    -- phase control
    f:write(string.format('"number_of_phases": %d,\n', nkConfig.number_of_phases))
-   f:write('"phase_changes_at_steps": [ ')
+   f:write('"phase_changes_at_steps": [')
    for i,e in ipairs(nkConfig.phase_changes_at_steps) do
       f:write(string.format('%d', e))
-      if i < #(nkConfig.phase_change_at_steps) then f:write(', ') end
+      if i < #(nkConfig.phase_changes_at_steps) then f:write(', ') end
    end
    f:write('],\n')
    -- Newton stepping control and continuation
@@ -142,6 +142,7 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    f:write(string.format('"write_snapshot_on_last_step": %s,\n', tostring(nkConfig.write_snapshot_on_last_step)))
    f:write(string.format('"write_diagnostics_on_last_step": %s,\n', tostring(nkConfig.write_diagnostics_on_last_step)))
    -- write out phases
+   print("#nkPhases= ", #nkPhases)
    for i=1,#nkPhases do
       f:write(nkPhases[i]:tojson() .. ",\n")
    end
@@ -197,13 +198,13 @@ function NewtonKrylovPhase:new(o)
    -- Make a record of this phase for later construction in config file.
    -- Note that we want the phase id to start at zero for the D code.
    o.id = #(NewtonKrylovPhases)
-   NewtonKrylovPhases[#NewtonKrylovPhases+1] = o
+   NewtonKrylovPhases[o.id+1] = o
    o.label = o.label or string.format("NewtonKrylovPhase-%d", o.id)
    -- Set up defaults to use for this phase
    -- For getting started...
    defaultsForThisPhase = NewtonKrylovPhaseDefaults
    if o.id > 0 then -- on subsequent phases, inherit setting from previous phase
-      defaultsForThisPhase = NewtonKrylovPhases[o.id-1]
+      defaultsForThisPhase = NewtonKrylovPhases[o.id] -- o.id indexes previous phase
    end
    for k,v in pairs(defaultsForThisPhase) do
       -- Take values as set or use default value.
