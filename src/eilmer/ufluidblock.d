@@ -46,7 +46,6 @@ import nm;
 
 class UFluidBlock: FluidBlock {
 public:
-    size_t ncells;
     size_t nvertices;
     size_t nfaces;
     size_t nboundaries;
@@ -318,6 +317,7 @@ public:
         size_t nsp    = myConfig.n_species;
         size_t nmodes = myConfig.n_modes;
         size_t nturb  = myConfig.turb_model.nturb;
+        size_t nftl   = myConfig.n_flow_time_levels;
 
         bool lsq_workspace_at_cells = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
             && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);
@@ -331,6 +331,7 @@ public:
         // have been handed out to the fvcells. This can happen when calling ~= on the
         // celldata flowstates, which we do during the creation of the ghost cells
         // For this reason, we want to reserve sufficient space in the array here.
+        // TODO: Some of this stuff doesn't need to be allocated in the ghost cells
         cells.reserve(grid.cells.length + nghost);
         celldata.nfaces.length = grid.cells.length;
         celldata.volumes.length = grid.cells.length + nghost;
@@ -341,6 +342,8 @@ public:
         celldata.workspaces.reserve(grid.cells.length + nghost);
         celldata.lsqws.length = grid.cells.length + nghost;
         celldata.lsqgradients.reserve(grid.cells.length + nghost);
+        celldata.dUdts.length = (ncells+nghost)*nftl*neq;
+        celldata.source_terms.length = (ncells+nghost)*neq;
 
         foreach (i; 0 .. grid.cells.length) celldata.flowstates ~= FlowState(gmodel, nturb);
         foreach (i; 0 .. grid.cells.length) celldata.gradients ~= FlowGradients(myConfig); // TODO: These are now always allocated, but should only be in viscous flow
@@ -350,6 +353,7 @@ public:
         facedata.f2c.length = grid.faces.length;
         facedata.dL.length = grid.faces.length;
         facedata.dR.length = grid.faces.length;
+        facedata.areas.length = grid.faces.length;
         facedata.normals.length = grid.faces.length;
         facedata.tangents1.length = grid.faces.length;
         facedata.tangents2.length = grid.faces.length;
@@ -384,6 +388,7 @@ public:
                 f.vtx ~= vertices[j];
             }
         }
+        celldata.outsigns.length=cells.length;
         celldata.c2f.length = cells.length;
         foreach (i, c; cells) {
             foreach (j; grid.cells[i].vtx_id_list) {
@@ -402,6 +407,7 @@ public:
                 c.iface ~= my_face;
                 celldata.c2f[i] ~= grid.cells[i].face_id_list[j];
                 c.outsign ~= my_outsign;
+                celldata.outsigns[i] ~= my_outsign;
                 if (my_outsign == 1) {
                     if (my_face.left_cell) {
                         string msg = format("Already have cell %d attached to left-of-face %d. Attempt to add cell %d.",

@@ -61,11 +61,14 @@ string avg_over_iface_list(string quantity, string result)
 struct FVCellData{
     size_t[] nfaces;
     size_t[][] c2f;
+    int[][] outsigns;
     number[] volumes;
     Vector3[] positions;
     Vector3[][] face_distances;
     FlowState[] flowstates;
     FlowGradients[] gradients;
+    ConservedQuantities dUdts;
+    ConservedQuantities source_terms;
     WLSQGradWorkspace[] workspaces;
     LSQInterpWorkspace[] lsqws;
     LSQInterpGradients[] lsqgradients;
@@ -220,13 +223,18 @@ public:
         if (gmodel is null) { gmodel = GlobalConfig.gmodel_master; }
 
         size_t ncq = myConfig.cqi.n; // number of conserved quantities
-        foreach(i; 0 .. myConfig.n_flow_time_levels) {
+        size_t nftl = myConfig.n_flow_time_levels;
+
+        if (fvcd.dUdts){
+            dUdt.length = nftl;
+            foreach(i; 0 .. nftl) {
+                dUdt[i] = fvcd.dUdts[id*ncq*nftl + i*ncq + 0 .. id*ncq*nftl + i*ncq + ncq];
+            }
+        }
+        foreach(i; 0 .. nftl) {
             U ~= new_ConservedQuantities(ncq);
             U[i].clear();
-            dUdt ~= new_ConservedQuantities(ncq);
         }
-        Q = new_ConservedQuantities(ncq);
-        Q.clear();
         Qudf = new_ConservedQuantities(ncq);
         Qudf.clear();
         if (myConfig.residual_smoothing) {
@@ -240,6 +248,11 @@ public:
         this.ws_grad = &(fvcd.workspaces[id]);
         if (fvcd.lsqws) this.ws = &(fvcd.lsqws[id]);
         if (fvcd.lsqgradients) this.gradients = &(fvcd.lsqgradients[id]);
+        if (fvcd.lsqws) this.ws = &(fvcd.lsqws[id]);
+        if (fvcd.source_terms) {
+            this.Q = fvcd.source_terms[id*ncq + 0 .. id*ncq + ncq];
+            Q.clear();
+        }
         //
         version(nk_accelerator) {
             grad_save = new FlowGradients(myConfig);

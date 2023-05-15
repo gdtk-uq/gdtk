@@ -444,7 +444,9 @@ public:
             auto gmodel = myConfig.gmodel;
             size_t nturb = myConfig.turb_model.nturb;
             size_t neq = myConfig.cqi.n;
+            size_t nftl = myConfig.n_flow_time_levels;
 
+            ncells = nic*njc*nkc;
             size_t nifaces = niv*njc*nkc;
             size_t njfaces = nic*njv*nkc;
             size_t nkfaces = nic*njc*nkv;
@@ -461,12 +463,15 @@ public:
             celldata.flowstates.reserve(nic*njc*nkc + nghost);
             celldata.gradients.reserve(nic*njc*nkc + nghost);
             celldata.workspaces.reserve(nic*njc*nkc + nghost);
+            celldata.dUdts.length = (nic*njc*nkc + nghost)*neq*nftl;
+            celldata.source_terms.length = (nic*njc*nkc + nghost)*neq;
             foreach (n; 0 .. nic*njc*nkc) celldata.flowstates ~= FlowState(gmodel, nturb);
             foreach (n; 0 .. nic*njc*nkc) celldata.gradients ~= FlowGradients(myConfig);
             foreach (n; 0 .. nic*njc*nkc) celldata.workspaces ~= WLSQGradWorkspace();
 
             // Face data
             facedata.positions.length = nfaces;
+            facedata.areas.length = nfaces;
             facedata.normals.length = nfaces;
             facedata.tangents1.length = nfaces;
             facedata.tangents2.length = nfaces;
@@ -854,6 +859,22 @@ public:
                         celldata.c2f[c] ~= ifk_index(i,j,k);   // bottom
                     }
                     celldata.nfaces[c] = celldata.c2f[c].length;
+                }
+            }
+        }
+        celldata.outsigns.length = nkc*njc*nic;
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    size_t c = cell_index(i,j,k);
+                    celldata.outsigns[c] ~= 1;// north
+                    celldata.outsigns[c] ~= 1;// east
+                    celldata.outsigns[c] ~= -1;  // south
+                    celldata.outsigns[c] ~= -1;  // west
+                    if (myConfig.dimensions == 3) {
+                        celldata.outsigns[c] ~= 1; // top
+                        celldata.outsigns[c] ~= -1;   // bottom
+                    }
                 }
             }
         }

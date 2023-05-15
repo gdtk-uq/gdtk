@@ -65,6 +65,7 @@ version(mpi_parallel) {
 // knowledge in the calling code.
 class FluidBlock : Block {
 public:
+    size_t ncells;
     Grid_t grid_type; // structured or unstructured
     bool may_be_turbulent; // if true, the selected turbulence model is active
                            // within this block.
@@ -1941,6 +1942,38 @@ public:
         if (myConfig.udf_source_terms) { c.add_udf_source_vector(); }
         c.time_derivatives(gtl, ftl);
     } // end evalRU()
+
+    @nogc
+    void time_derivatives(int gtl, int ftl)
+    // These are the spatial (RHS) terms in the semi-discrete governing equations.
+    // gtl : (grid-time-level) flow derivatives are evaluated at this grid level
+    // ftl : (flow-time-level) specifies where computed derivatives are to be stored.
+    //       0: Start of stage-1 update.
+    //       1: End of stage-1.
+    //       2: End of stage-2.
+    {
+
+        size_t neq = myConfig.cqi.n;
+        size_t nftl = myConfig.n_flow_time_levels;
+
+        foreach(cidx; 0 .. ncells){
+            // Note this is the number of faces that the cell cidx has, not the total number
+            size_t nfaces = celldata.nfaces[cidx];
+            number vol_inv = 1.0 / celldata.volumes[cidx]; // Cell volume (inverted).
+
+            foreach(j; 0 .. neq){
+                number surface_integral = to!number(0.0);
+                foreach(i; 0 .. nfaces){
+                    size_t fidx = celldata.c2f[cidx][i];
+                    number area = celldata.outsigns[cidx][i]*facedata.areas[fidx];
+                    surface_integral -= facedata.fluxes[fidx*neq + j] * area;
+                }
+
+                size_t idx = cidx*neq*nftl + ftl*neq + j;
+                celldata.dUdts[idx] = vol_inv*surface_integral + celldata.source_terms[cidx*neq + j];
+            }
+        }
+    } // end time_derivatives()
 
 } // end class FluidBlock
 

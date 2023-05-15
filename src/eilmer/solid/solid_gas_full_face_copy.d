@@ -157,12 +157,16 @@ public:
         //       here since this function (set_up_cell_mapping_phase0) is only ever called in a serial loop through
         //       the array of block objects. KAD 2022-10-19.
         other_blk.myConfig.init_gas_model_bits();
+        size_t neq = other_blk.myConfig.cqi.n;
+        size_t nftl =other_blk.myConfig.n_flow_time_levels;
         //
         if (blk.myConfig.dimensions == 2) {
             // Handle the 2D case separately.
             switch (which_boundary) {
             case Face.north:
                 j_dest = this_blk.jmax;  // index of the north-most plane of active cells
+                myBC.celldata.dUdts.length = (this_blk.nicell)*neq*nftl;
+                myBC.celldata.source_terms.length = (this_blk.nicell)*neq;
                 myBC.celldata.flowstates.reserve(this_blk.nicell);
                 myBC.celldata.gradients.reserve(this_blk.nicell);
                 myBC.celldata.workspaces.reserve(this_blk.nicell);
@@ -202,6 +206,8 @@ public:
                 break;
             case Face.east:
                 i_dest = this_blk.imax;  // index of the east-most plane of active cells
+                myBC.celldata.dUdts.length        = (this_blk.njcell)*neq*nftl;
+                myBC.celldata.source_terms.length = (this_blk.njcell)*neq;
                 myBC.celldata.flowstates.reserve(this_blk.njcell);
                 myBC.celldata.gradients.reserve(this_blk.njcell);
                 myBC.celldata.workspaces.reserve(this_blk.njcell);
@@ -241,6 +247,8 @@ public:
                 break;
             case Face.south:
                 j_dest = this_blk.jmin;  // index of the south-most plane of active cells
+                myBC.celldata.dUdts.length        = (this_blk.nicell)*neq*nftl;
+                myBC.celldata.source_terms.length = (this_blk.nicell)*neq;
                 myBC.celldata.flowstates.reserve(this_blk.nicell);
                 myBC.celldata.gradients.reserve(this_blk.nicell);
                 myBC.celldata.workspaces.reserve(this_blk.nicell);
@@ -280,6 +288,8 @@ public:
                 break;
             case Face.west:
                 i_dest = this_blk.imin;  // index of the west-most plane of active cells
+                myBC.celldata.dUdts.length        = (this_blk.njcell)*neq*nftl;
+                myBC.celldata.source_terms.length = (this_blk.njcell)*neq;
                 myBC.celldata.flowstates.reserve(this_blk.njcell);
                 myBC.celldata.gradients.reserve(this_blk.njcell);
                 myBC.celldata.workspaces.reserve(this_blk.njcell);
@@ -326,6 +336,8 @@ public:
             final switch (which_boundary) {
             case Face.north:
                 j_dest = this_blk.jmax;  // index of the north-most plane of active cells
+                myBC.celldata.dUdts.length        = (this_blk.nicell*this_blk.nkcell)*neq*nftl;
+                myBC.celldata.source_terms.length = (this_blk.nicell*this_blk.nkcell)*neq;
                 myBC.celldata.flowstates.reserve(this_blk.nicell*this_blk.nkcell);
                 myBC.celldata.gradients.reserve(this_blk.nicell*this_blk.nkcell);
                 myBC.celldata.workspaces.reserve(this_blk.nicell*this_blk.nkcell);
@@ -405,6 +417,8 @@ public:
                 break;
             case Face.east:
                 i_dest = this_blk.imax;  // index of the east-most plane of active cells
+                myBC.celldata.dUdts.length        = (this_blk.njcell*this_blk.nkcell)*neq*nftl;
+                myBC.celldata.source_terms.length = (this_blk.njcell*this_blk.nkcell)*neq;
                 myBC.celldata.flowstates.reserve(this_blk.njcell*this_blk.nkcell);
                 myBC.celldata.gradients.reserve(this_blk.njcell*this_blk.nkcell);
                 myBC.celldata.workspaces.reserve(this_blk.njcell*this_blk.nkcell);
@@ -484,6 +498,8 @@ public:
                 break;
             case Face.south:
                 j_dest = this_blk.jmin;  // index of the south-most plane of active cells
+                myBC.celldata.dUdts.length        = (this_blk.nicell*this_blk.nkcell)*neq*nftl;
+                myBC.celldata.source_terms.length = (this_blk.nicell*this_blk.nkcell)*neq;
                 myBC.celldata.flowstates.reserve(this_blk.nicell*this_blk.nkcell);
                 myBC.celldata.gradients.reserve(this_blk.nicell*this_blk.nkcell);
                 myBC.celldata.workspaces.reserve(this_blk.nicell*this_blk.nkcell);
@@ -563,6 +579,8 @@ public:
                 break;
             case Face.west:
                 i_dest = this_blk.imin;  // index of the west-most plane of active cells
+                myBC.celldata.dUdts.length        = (this_blk.njcell*this_blk.nkcell)*neq*nftl;
+                myBC.celldata.source_terms.length = (this_blk.njcell*this_blk.nkcell)*neq;
                 myBC.celldata.flowstates.reserve(this_blk.njcell*this_blk.nkcell);
                 myBC.celldata.gradients.reserve(this_blk.njcell*this_blk.nkcell);
                 myBC.celldata.workspaces.reserve(this_blk.njcell*this_blk.nkcell);
@@ -642,6 +660,8 @@ public:
                 break;
             case Face.top:
                 k_dest = this_blk.kmax;  // index of the top-most plane of active cells
+                myBC.celldata.dUdts.length        = (this_blk.njcell*this_blk.nicell)*neq*nftl;
+                myBC.celldata.source_terms.length = (this_blk.njcell*this_blk.nicell)*neq;
                 myBC.celldata.flowstates.reserve(this_blk.njcell*this_blk.nicell);
                 myBC.celldata.gradients.reserve(this_blk.njcell*this_blk.nicell);
                 myBC.celldata.workspaces.reserve(this_blk.njcell*this_blk.nicell);
@@ -721,6 +741,8 @@ public:
                 break;
             case Face.bottom:
                 k_dest = this_blk.kmin;  // index of the bottom-most plane of active cells
+                myBC.celldata.dUdts.length        = (this_blk.njcell*this_blk.nicell)*neq*nftl;
+                myBC.celldata.source_terms.length = (this_blk.njcell*this_blk.nicell)*neq;
                 myBC.celldata.flowstates.reserve(this_blk.njcell*this_blk.nicell);
                 myBC.celldata.gradients.reserve(this_blk.njcell*this_blk.nicell);
                 myBC.celldata.workspaces.reserve(this_blk.njcell*this_blk.nicell);

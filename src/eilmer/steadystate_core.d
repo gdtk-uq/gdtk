@@ -1552,8 +1552,8 @@ void evalRHS(double pseudoSimTime, int ftl)
                 getUDFSourceTermsForCell(blk.myL, cell, 0, pseudoSimTime, blk.myConfig, blk.id, i_cell, j_cell, k_cell);
                 cell.add_udf_source_vector();
             }
-            cell.time_derivatives(0, ftl);
         }
+        blk.time_derivatives(0, ftl);
     }
 }
 

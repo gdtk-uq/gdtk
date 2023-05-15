@@ -447,8 +447,8 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    cell.add_inviscid_source_vector(blklocal_gtl, blk.omegaz);
 	    if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
 	    if (blk.myConfig.udf_source_terms) { cell.add_udf_source_vector(); }
-	    cell.time_derivatives(blklocal_gtl, blklocal_ftl);
 	}
+    blk.time_derivatives(blklocal_gtl, blklocal_ftl);
 	if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
         auto cqi = blk.myConfig.cqi;
         // Coefficients for the j=1 stage update.
@@ -715,8 +715,8 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 		cell.add_inviscid_source_vector(blklocal_gtl, blk.omegaz);
 		if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
 		if (blk.myConfig.udf_source_terms) { cell.add_udf_source_vector(); }
-		cell.time_derivatives(blklocal_gtl, blklocal_ftl);
 	    }
+		blk.time_derivatives(blklocal_gtl, blklocal_ftl);
 	    if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
             //
             // Coefficients for the update, stage j.
@@ -1216,8 +1216,8 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                         cell.add_inviscid_source_vector(blklocal_gtl, blk.omegaz);
                         if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
                         if (blk.myConfig.udf_source_terms) { cell.add_udf_source_vector(); }
-                        cell.time_derivatives(blklocal_gtl, blklocal_ftl);
                     }
+                    blk.time_derivatives(blklocal_gtl, blklocal_ftl);
                     if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
                     switch (stage) {
                     case 1:

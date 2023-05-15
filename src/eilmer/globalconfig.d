@@ -1807,7 +1807,11 @@ void set_config_for_core(JSONValue jsonData)
     // Parameters controlling convective update and size of storage arrays
     //
     mixin(update_enum("gasdynamic_update_scheme", "gasdynamic_update_scheme", "update_scheme_from_name"));
-    cfg.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(cfg.gasdynamic_update_scheme);
+    version(nk_accelerator) {
+        cfg.n_flow_time_levels = 2; // TODO: This second level is probably a waste of space (NNG)
+    } else {
+        cfg.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(cfg.gasdynamic_update_scheme);
+    }
     mixin(update_bool("eval_udf_source_terms_at_each_stage", "eval_udf_source_terms_at_each_stage"));
     // The CFL schedule arrives as a pair of tables that should have at least one entry each.
     int cfl_schedule_length = getJSONint(jsonData, "cfl_schedule_length", 1);

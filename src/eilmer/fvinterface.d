@@ -37,6 +37,7 @@ struct FVInterfaceData{
     LR[] f2c;
     Vector3[] dL;
     Vector3[] dR;
+    number[] areas;
     Vector3[] normals;
     Vector3[] tangents1;
     Vector3[] tangents2;
@@ -346,6 +347,7 @@ public:
             area[gtl] = length; // Assume unit depth in the Z-direction.
         }
         pos.set(Xbar, Ybar, to!number(0.0));
+        fvid.areas[id] = area[gtl];
         fvid.normals[id] = n;
         fvid.tangents1[id] = t1;
         fvid.tangents2[id] = t2;
@@ -373,6 +375,7 @@ public:
             debug { msg ~= format("%d", vtx.length); }
             throw new FlowSolverException(msg);
         } // end switch
+        fvid.areas[id] = area[gtl];
         fvid.normals[id] = n;
         fvid.tangents1[id] = t1;
         fvid.tangents2[id] = t2;
