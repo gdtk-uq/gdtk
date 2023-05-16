@@ -890,7 +890,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         else {
             if (GlobalConfig.is_master_task) {
                 writeln("WARNING: relaxation factor for Newton update is very small.");
-                writefln("step= %d, relaxation factor= %f");
+                writefln("step= %d, relaxation factor= %f", step, omega);
                 writeln("Bailing out!");
                 exit(1);
             }

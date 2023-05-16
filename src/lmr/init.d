@@ -12,6 +12,7 @@
 module init;
 
 import std.algorithm : min;
+import std.conv : to;
 import std.parallelism : parallel, defaultPoolThreads;
 import std.file : rename, readText;
 import std.stdio : File, writeln, writefln, stdout;
@@ -35,6 +36,10 @@ import bc;
 import fluidblock : FluidBlock;
 import sfluidblock : SFluidBlock;
 import ufluidblock : UFluidBlock;
+
+version(mpi_parallel) {
+    import mpi;
+}
 
 /**
  * Read from config file and set some global parameters.
