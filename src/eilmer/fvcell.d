@@ -61,6 +61,7 @@ string avg_over_iface_list(string quantity, string result)
 struct FVCellData{
     size_t[] nfaces;
     size_t[][] c2f;
+    size_t[][] c2v;
     int[][] outsigns;
     number[] volumes;
     Vector3[] positions;
@@ -70,6 +71,7 @@ struct FVCellData{
     ConservedQuantities dUdts;
     ConservedQuantities source_terms;
     WLSQGradWorkspace[] workspaces;
+    size_t[][] cell_cloud_indices;
     LSQInterpWorkspace[] lsqws;
     LSQInterpGradients[] lsqgradients;
 }

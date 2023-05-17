@@ -89,6 +89,7 @@ public:
     // Densified core datastructures
     FVCellData celldata;
     FVInterfaceData facedata;
+    FVVertexData vertexdata;
 
     // We need to know the number of cells even if the grid is not read
     // for this block in the local process.
@@ -263,6 +264,7 @@ public:
     abstract void write_underlying_grid(string fileName);
     @nogc abstract void propagate_inflow_data_west_to_east();
     @nogc abstract void set_face_flowstates_to_averages_from_cells();
+    @nogc abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0);
     @nogc abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0,
                                                FVCell[] cell_list = [], FVInterface[] iface_list = [],
                                                FVVertex[] vertex_list = []);

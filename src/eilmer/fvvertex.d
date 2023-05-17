@@ -21,6 +21,12 @@ import lsqinterp;
 import nm.complex;
 import nm.number;
 
+
+struct FVVertexData{
+    size_t[] n_indices;
+    size_t[][] cell_cloud_indices;
+}
+
 class FVVertex {
 public:
     size_t id;

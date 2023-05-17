@@ -344,6 +344,8 @@ public:
         celldata.lsqgradients.reserve(grid.cells.length + nghost);
         celldata.dUdts.length = (ncells+nghost)*nftl*neq;
         celldata.source_terms.length = (ncells+nghost)*neq;
+        celldata.cell_cloud_indices.length = ncells;
+        celldata.c2v.length = ncells;
 
         foreach (i; 0 .. grid.cells.length) celldata.flowstates ~= FlowState(gmodel, nturb);
         foreach (i; 0 .. grid.cells.length) celldata.gradients ~= FlowGradients(myConfig); // TODO: These are now always allocated, but should only be in viscous flow
@@ -367,6 +369,11 @@ public:
         foreach (i; 0 .. grid.faces.length) facedata.flowstates ~= FlowState(gmodel, nturb);
         foreach (i; 0 .. grid.faces.length) facedata.gradients ~= FlowGradients(myConfig);
         foreach (i; 0 .. grid.faces.length) facedata.workspaces ~= WLSQGradWorkspace();
+
+        if (myConfig.unstructured_limiter == UnstructuredLimiter.venkat_mlp) {
+            vertexdata.n_indices.length = grid.vertices.length;
+            vertexdata.cell_cloud_indices.length = grid.vertices.length;
+        }
 
         foreach (i, f; grid.faces) {
             auto new_face = new FVInterface(myConfig, IndexDirection.none, &facedata, to!int(i));
@@ -393,6 +400,7 @@ public:
         foreach (i, c; cells) {
             foreach (j; grid.cells[i].vtx_id_list) {
                 c.vtx ~= vertices[j];
+                celldata.c2v[i] ~= j;
             }
             auto nf = grid.cells[i].face_id_list.length;
             if (nf != grid.cells[i].outsign_list.length) {
@@ -578,11 +586,13 @@ public:
                         if (f.right_cell && f.right_cell.contains_flow_data) {
                             c.cell_cloud ~= f.right_cell;
                             cell_ids ~= f.right_cell.id;
+                            celldata.cell_cloud_indices[c.id] ~= f.right_cell.id;
                         }
                     } else {
                         if (f.left_cell && f.left_cell.contains_flow_data) {
                             c.cell_cloud ~= f.left_cell;
                             cell_ids ~= f.left_cell.id;
+                            celldata.cell_cloud_indices[c.id] ~= f.left_cell.id;
                         }
                     }
                 } // end foreach face
@@ -596,11 +606,13 @@ public:
                             if (f.right_cell && cell_ids.canFind(f.right_cell.id) == false && f.right_cell.contains_flow_data) {
                                 c.cell_cloud ~= f.right_cell;
                                 cell_ids ~= f.right_cell.id;
+                                celldata.cell_cloud_indices[c.id] ~= f.right_cell.id;
                             }
                         } else {
                             if (f.left_cell && cell_ids.canFind(f.left_cell.id) == false && f.left_cell.contains_flow_data) {
                                 c.cell_cloud ~= f.left_cell;
                                 cell_ids ~= f.left_cell.id;
+                                celldata.cell_cloud_indices[c.id] ~= f.left_cell.id;
                             }
                         }
                     } // end foreach face
@@ -609,7 +621,7 @@ public:
                     foreach(vtx; c.vtx) {
                         foreach(cid; cellIndexListPerVertex[vtx.id])
                             if (cell_ids.canFind(cid) == false && cells[cid].contains_flow_data)
-                                { c.cell_cloud ~= cells[cid]; cell_ids ~= cid; }
+                                { c.cell_cloud ~= cells[cid]; cell_ids ~= cid; celldata.cell_cloud_indices[c.id] ~= cid; }
                     }
                 }
             } // end foreach cell
@@ -622,10 +634,12 @@ public:
                     if (c.outsign[i] == 1) {
                         if (f.right_cell && f.right_cell.contains_flow_data) {
                             c.cell_cloud ~= f.right_cell;
+                            celldata.cell_cloud_indices[c.id] ~= f.right_cell.id;
                         }
                     } else {
                         if (f.left_cell && f.left_cell.contains_flow_data) {
                             c.cell_cloud ~= f.left_cell;
+                            celldata.cell_cloud_indices[c.id] ~= f.left_cell.id;
                         }
                     }
                 } // end foreach face
@@ -666,6 +680,13 @@ public:
         // For the MLP limiter, we need access to the gradients stored in the cells.
         foreach (vtx; vertices) {
             foreach(cid; cellIndexListPerVertex[vtx.id]) { vtx.cell_cloud ~= cells[cid]; }
+        }
+
+        if (myConfig.unstructured_limiter == UnstructuredLimiter.venkat_mlp) {
+            foreach (i, vtx; vertices) {
+                foreach(cid; cellIndexListPerVertex[vtx.id]) { vertexdata.cell_cloud_indices[i] ~= cells[cid].id; }
+                vertexdata.n_indices[i] = vertexdata.cell_cloud_indices[i].length;
+            }
         }
     }
 
@@ -845,6 +866,47 @@ public:
             }
         }
     }
+
+    @nogc
+    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0)
+    // Compute gradients of flow quantities for higher-order reconstruction, if required.
+    // To be used, later, in the convective flux calculation.
+    {
+        if (!allow_high_order_interpolation) return;
+        if (myConfig.interpolation_order == 1) return;
+
+        immutable bool needs_pressure_gradient =
+                myConfig.unstructured_limiter == UnstructuredLimiter.park ||
+                myConfig.unstructured_limiter == UnstructuredLimiter.hvan_albada ||
+                myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat ||
+                myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat_mlp ||
+                myConfig.unstructured_limiter == UnstructuredLimiter.hnishikawa;
+
+        if (myConfig.unstructured_limiter == UnstructuredLimiter.venkat_mlp) {
+            foreach(cid; 0 .. ncells){
+                celldata.lsqgradients[cid].reset_max_min_values(celldata.flowstates[cid], myConfig);
+
+                foreach(vid; celldata.c2v[cid]){
+                    foreach(ciid; vertexdata.cell_cloud_indices[vid]){
+                        celldata.lsqgradients[cid].accumulate_max_min_values(celldata.flowstates[ciid], myConfig);
+                    }
+                }
+            }
+        } else {
+            foreach(cid; 0 .. ncells){
+                celldata.lsqgradients[cid].reset_max_min_values(celldata.flowstates[cid], myConfig);
+                foreach(ciid; celldata.cell_cloud_indices[cid]){
+                    celldata.lsqgradients[cid].accumulate_max_min_values(celldata.flowstates[ciid], myConfig);
+                }
+            }
+        }
+
+        foreach(cid; 0 .. ncells){
+            celldata.lsqgradients[cid].compute_lsq_values(celldata.flowstates[cid], celldata.lsqws[cid],
+                                                          celldata.flowstates, celldata.cell_cloud_indices[cid],
+                                                          myConfig, needs_pressure_gradient);
+        }
+    } // end convective_flux-phase0()
 
     @nogc
     override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0,
