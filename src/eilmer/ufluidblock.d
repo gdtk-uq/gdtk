@@ -881,22 +881,26 @@ public:
                 myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat ||
                 myConfig.unstructured_limiter == UnstructuredLimiter.hvenkat_mlp ||
                 myConfig.unstructured_limiter == UnstructuredLimiter.hnishikawa;
+        immutable size_t nsp = myConfig.n_species;
+        immutable size_t nmodes = myConfig.n_modes;
+        immutable size_t nturb = myConfig.turb_model.nturb;
+        immutable size_t is3d = myConfig.dimensions==3;
 
         if (myConfig.unstructured_limiter == UnstructuredLimiter.venkat_mlp) {
             foreach(cid; 0 .. ncells){
-                celldata.lsqgradients[cid].reset_max_min_values(celldata.flowstates[cid], myConfig);
+                celldata.lsqgradients[cid].reset_max_min_values(celldata.flowstates[cid], nsp, nmodes, nturb, myConfig);
 
                 foreach(vid; celldata.c2v[cid]){
                     foreach(ciid; vertexdata.cell_cloud_indices[vid]){
-                        celldata.lsqgradients[cid].accumulate_max_min_values(celldata.flowstates[ciid], myConfig);
+                        celldata.lsqgradients[cid].accumulate_max_min_values(celldata.flowstates[ciid], nsp, nmodes, nturb, myConfig);
                     }
                 }
             }
         } else {
             foreach(cid; 0 .. ncells){
-                celldata.lsqgradients[cid].reset_max_min_values(celldata.flowstates[cid], myConfig);
+                celldata.lsqgradients[cid].reset_max_min_values(celldata.flowstates[cid], nsp, nmodes, nturb, myConfig);
                 foreach(ciid; celldata.cell_cloud_indices[cid]){
-                    celldata.lsqgradients[cid].accumulate_max_min_values(celldata.flowstates[ciid], myConfig);
+                    celldata.lsqgradients[cid].accumulate_max_min_values(celldata.flowstates[ciid], nsp, nmodes, nturb, myConfig);
                 }
             }
         }
@@ -904,7 +908,7 @@ public:
         foreach(cid; 0 .. ncells){
             celldata.lsqgradients[cid].compute_lsq_values(celldata.flowstates[cid], celldata.lsqws[cid],
                                                           celldata.flowstates, celldata.cell_cloud_indices[cid],
-                                                          myConfig, needs_pressure_gradient);
+                                                          myConfig, nsp, nmodes, nturb, is3d, needs_pressure_gradient);
         }
     } // end convective_flux-phase0()
 

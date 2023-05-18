@@ -1334,7 +1334,7 @@ public:
     } // end store_max_min_values_for_compact_stencil()
 
     @nogc
-    void reset_max_min_values(ref FlowState fs, ref LocalConfig myConfig)
+    void reset_max_min_values(ref FlowState fs, size_t nsp, size_t nmodes, size_t nturb, ref LocalConfig myConfig)
     {
         // The following function to be used at compile time.
         string codeForMaxMin(string qname, string qMaxname, string qMinname)
@@ -1361,12 +1361,11 @@ public:
             }
         }
         version(turbulence) {
-            foreach (it; 0 .. myConfig.turb_model.nturb) {
+            foreach (it; 0 .. nturb) {
                 mixin(codeForMaxMin("turb[it]", "turbMax[it]", "turbMin[it]"));
             }
         }
         version(multi_species_gas) {
-            auto nsp = myConfig.n_species;
             if (nsp > 1) {
                 // Multiple species.
                 foreach (isp; 0 .. nsp) {
@@ -1379,7 +1378,6 @@ public:
         }
         // Interpolate on two of the thermodynamic quantities,
         // and fill in the rest based on an EOS call.
-        auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
         case InterpolateOption.pt:
             mixin(codeForMaxMin("gas.p", "pMax", "pMin"));
@@ -1419,10 +1417,10 @@ public:
             break;
         } // end switch thermo_interpolator
         return;
-    } // end store_max_min_values_for_extended_stencil()
+    } // end reset_max_min_values()
 
     @nogc
-    void accumulate_max_min_values(ref FlowState fs, ref LocalConfig myConfig)
+    void accumulate_max_min_values(ref FlowState fs, size_t nsp, size_t nmodes, size_t nturb, ref LocalConfig myConfig)
     {
         // The following function to be used at compile time.
         string codeForMaxMin(string qname, string qMaxname, string qMinname)
@@ -1449,12 +1447,11 @@ public:
             }
         }
         version(turbulence) {
-            foreach (it; 0 .. myConfig.turb_model.nturb) {
+            foreach (it; 0 .. nturb) {
                 mixin(codeForMaxMin("turb[it]", "turbMax[it]", "turbMin[it]"));
             }
         }
         version(multi_species_gas) {
-            auto nsp = myConfig.n_species;
             if (nsp > 1) {
                 // Multiple species.
                 foreach (isp; 0 .. nsp) {
@@ -1467,7 +1464,6 @@ public:
         }
         // Interpolate on two of the thermodynamic quantities,
         // and fill in the rest based on an EOS call.
-        auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
         case InterpolateOption.pt:
             mixin(codeForMaxMin("gas.p", "pMax", "pMin"));
@@ -1507,7 +1503,7 @@ public:
             break;
         } // end switch thermo_interpolator
         return;
-    } // end store_max_min_values_for_extended_stencil()
+    } // end accumulate_max_min_values()
 
     @nogc
     void store_max_min_values_for_extended_stencil(FVCell[] cell_cloud, ref LocalConfig myConfig)
@@ -1730,11 +1726,9 @@ public:
     @nogc
     void compute_lsq_values(ref FlowState fs, ref LSQInterpWorkspace ws,
                             FlowState[] flowstates,  size_t[] cell_cloud_indices,
-                            ref LocalConfig myConfig, bool needs_pressure_gradient)
+                            ref LocalConfig myConfig, size_t nsp, size_t nmodes, 
+                            size_t nturb, bool is3d, bool needs_pressure_gradient)
     {
-        size_t dimensions = myConfig.dimensions;
-        auto np = cell_cloud_indices.length;
-
         // The following function to be used at compile time.
         string codeForGradients(string qname, string gname)
         {
@@ -1745,7 +1739,7 @@ public:
                     number dq = flowstates[idx]."~qname~" - q0;
                     "~gname~"[0] += ws.wx[i+1] * dq;
                     "~gname~"[1] += ws.wy[i+1] * dq;
-                    if (dimensions == 3) { "~gname~"[2] += ws.wz[i+1] * dq; }
+                    if (is3d) { "~gname~"[2] += ws.wz[i+1] * dq; }
                 }
                 }
                 ";
@@ -1766,12 +1760,11 @@ public:
             }
         }
         version(turbulence) {
-            foreach (it; 0 .. myConfig.turb_model.nturb) {
+            foreach (it; 0 .. nturb) {
                 mixin(codeForGradients("turb[it]","turb[it]"));
             }
         }
         version(multi_species_gas) {
-            auto nsp = myConfig.n_species;
             if (nsp > 1) {
                 // Multiple species.
                 foreach (isp; 0 .. nsp) {
@@ -1784,7 +1777,6 @@ public:
         }
         // Interpolate on two of the thermodynamic quantities,
         // and fill in the rest based on an EOS call.
-        auto nmodes = myConfig.n_modes;
         final switch (myConfig.thermo_interpolator) {
         case InterpolateOption.pt:
             mixin(codeForGradients("gas.p", "p"));
