@@ -328,6 +328,14 @@ extern(C) int newStructuredGrid(lua_State* L)
         string errMsg = "Error in call to StructuredGrid:new{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }
+    // Check if label has been supplied
+    string label = "";
+    lua_getfield(L, 1, "label".toStringz);
+    if (!lua_isnil(L, -1)) {
+	label = to!string(lua_tostring(L, -1));
+    }
+    lua_pop(L, 1);
+
     // Let's first see if we have been given a file that contains the grid.
     lua_getfield(L, 1, "filename".toStringz);
     if (lua_isnil(L, -1)) {
@@ -341,7 +349,7 @@ extern(C) int newStructuredGrid(lua_State* L)
         lua_getfield(L, 1, "fmt".toStringz);
         if ( lua_isstring(L, -1) ) { fmt = to!string(lua_tostring(L, -1)); }
         lua_pop(L, 1);
-        StructuredGrid importedGrid = new StructuredGrid(fileName, fmt);
+        StructuredGrid importedGrid = new StructuredGrid(fileName, fmt, label);
         structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, importedGrid);
         return 1; // our work is done
     }
@@ -490,13 +498,13 @@ extern(C) int newStructuredGrid(lua_State* L)
     //
     StructuredGrid grid;
     switch (dimensions) {
-    case 1: grid = new StructuredGrid(mypath, niv, cf); break;
+    case 1: grid = new StructuredGrid(mypath, niv, cf, label); break;
     case 2:
 	grid = useSpecial2DConstructor ?
-	    new StructuredGrid(psurface, niv, njv, cfList, r_grid, s_grid)
-            : new StructuredGrid(psurface, niv, njv, cfList, interpolation);
+	    new StructuredGrid(psurface, niv, njv, cfList, r_grid, s_grid, label)
+            : new StructuredGrid(psurface, niv, njv, cfList, interpolation, label);
 	break;
-    case 3: grid = new StructuredGrid(pvolume, niv, njv, nkv, cfList, interpolation); break;
+    case 3: grid = new StructuredGrid(pvolume, niv, njv, nkv, cfList, interpolation, label); break;
     default: throw new GeometryException("invalid number of dimensions");
     }
     structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, grid);
