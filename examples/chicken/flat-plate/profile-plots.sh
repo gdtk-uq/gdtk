@@ -14,9 +14,9 @@ set key left top
 set xrange [0:1.2]
 set yrange [0:20]
 plot "./slice-t0005.data" using ((\$11)/1390.0):((\$2)*1000) \
-     title "Chicken" with points pt 1, \
+     title "Chicken" with points pt 1 lw 2, \
      "boundary-layer-profile-clbl.data" using (\$3):((\$2)*1000) \
-     title "CLBL" with lines lt 1
+     title "CLBL" with lines lt 1 lw 2
 EOF
 
 
@@ -30,8 +30,8 @@ set key left top
 set xrange [0:1.2]
 set yrange [0:20]
 plot "./slice-t0005.data" using ((\$7)/0.011835):((\$2)*1000) \
-     title "Chicken" with points pt 1, \
+     title "Chicken" with points pt 1 lw 2, \
      "boundary-layer-profile-clbl.data" using (\$5):((\$2)*1000) \
-     title "CLBL" with lines lt 1
+     title "CLBL" with lines lt 1 lw 2
 EOF
 
