@@ -917,60 +917,18 @@ public:
 } // end of class FV_Interface
 
 @nogc
-void viscous_flux_calc(in FlowState fs, in FlowGradients grad, LocalConfig myConfig, size_t n_species, size_t n_modes, size_t nturb,
-                       double viscous_factor, number[] jx, number[] jy, number[] jz, bool isTurbulent, bool is3d, Vector3 n, double Ybar, ConservedQuantities F)
+void navier_stokes_viscous_fluxes(in FlowState fs, in FlowGradients grad, LocalConfig myConfig, size_t n_modes, size_t nturb,
+                                  bool isTurbulent, bool axisymmetric, bool is3d, Vector3 n, double Ybar,
+                                  ConservedQuantities F)
 // Unified 2D and 3D viscous-flux calculation.
 // Note that the gradient values need to be in place before calling this procedure.
 // Note, also, that the viscous fluxes are added to the flux-vector components.
 {
-    //if (in_suppress_viscous_stresses_zone) {
-    //    // We wish to ignore the viscous fluxes here.
-    //    return;
-    //}
-    auto gmodel = myConfig.gmodel;
-    //double viscous_factor = myConfig.viscous_factor;
-    number q_conduction, q_diffusion;
-
     number k_eff = fs.gas.k + fs.k_t ;
     number mu_eff = fs.gas.mu + fs.mu_t;
     number lmbda;
     lmbda = -2.0/3.0 * mu_eff;
 
-    number local_pressure = fs.gas.p;
-    number shear_stress_limit = myConfig.shear_stress_relative_limit * local_pressure;
-    number heat_transfer_limit = (mu_eff > 0.0) ? k_eff/mu_eff*shear_stress_limit : to!number(0.0);
-
-    // Species diffusion: Changed by NNG on 22/01/18.
-    // We now apply both laminar and turbulent diffusion additively, to prevent artificially low
-    // diffusion in areas with a small turbulent viscosity.
-    version(multi_species_gas) {
-        if (myConfig.mass_diffusion_model != MassDiffusionModel.none) {
-            myConfig.massDiffusion.update_mass_fluxes(fs, grad, jx, jy, jz);
-            foreach (isp; 0 .. n_species) {
-                jx[isp] *= viscous_factor;
-                jy[isp] *= viscous_factor;
-                jz[isp] *= viscous_factor;
-            }
-        } else if (isTurbulent) { // Turbulent but no mass diffusion model
-            foreach (isp; 0 .. n_species) {
-                jx[isp] = to!number(0.0);
-                jy[isp] = to!number(0.0);
-                jz[isp] = to!number(0.0);
-            }
-        }
-    }
-
-    if (isTurbulent) {
-        double Sc_t = myConfig.turbulence_schmidt_number;
-        number D_t = fs.mu_t / (fs.gas.rho * Sc_t);
-        version(multi_species_gas) {
-            foreach (isp; 0 .. n_species) {
-                jx[isp] -= fs.gas.rho * D_t * grad.massf[isp][0];
-                jy[isp] -= fs.gas.rho * D_t * grad.massf[isp][1];
-                jz[isp] -= fs.gas.rho * D_t * grad.massf[isp][2];
-            }
-        }
-    }
     number tau_xx = 0.0;
     number tau_yy = 0.0;
     number tau_zz = 0.0;
@@ -1000,7 +958,7 @@ void viscous_flux_calc(in FlowState fs, in FlowGradients grad, LocalConfig myCon
         number dudy = grad.vel[0][1];
         number dvdx = grad.vel[1][0];
         number dvdy = grad.vel[1][1];
-        if (myConfig.axisymmetric) {
+        if (axisymmetric) {
             // Viscous stresses at the mid-point of the interface.
             // Axisymmetric terms no longer include the radial multiplier
             // as that has been absorbed into the interface area calculation.
@@ -1026,28 +984,13 @@ void viscous_flux_calc(in FlowState fs, in FlowGradients grad, LocalConfig myCon
     number qz = k_eff * grad.T[2];
     version(multi_T_gas) {
         foreach (imode; 0 .. n_modes) {
-            qx += viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][0];
-            qy += viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][1];
-            qz += viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][2];
-        }
-    }
-    q_conduction = (qx*n.x + qy*n.y + qz*n.z);
-    version(multi_species_gas) {
-        if (isTurbulent ||
-            myConfig.mass_diffusion_model != MassDiffusionModel.none ) {
-            q_diffusion = to!number(0.0);
-            foreach (isp; 0 .. n_species) {
-                number h = gmodel.enthalpy(fs.gas, cast(int)isp);
-                qx -= jx[isp] * h;
-                qy -= jy[isp] * h;
-                qz -= jz[isp] * h;
-                q_diffusion -= (jx[isp]*h*n.x + jy[isp]*h*n.y + jz[isp]*h*n.z);
-            }
+            qx += fs.gas.k_modes[imode] * grad.T_modes[imode][0];
+            qy += fs.gas.k_modes[imode] * grad.T_modes[imode][1];
+            qz += fs.gas.k_modes[imode] * grad.T_modes[imode][2];
         }
     }
     version(turbulence) {
-        if ( isTurbulent &&
-             !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
+        if ( isTurbulent ) {
             // Turbulence contribution to the shear stresses.
             number tke = myConfig.turb_model.turbulent_kinetic_energy(fs);
             tau_xx -= 2.0/3.0 * fs.gas.rho * tke;
@@ -1058,79 +1001,32 @@ void viscous_flux_calc(in FlowState fs, in FlowGradients grad, LocalConfig myCon
             number[3] qtke = myConfig.turb_model.turbulent_kinetic_energy_transport(fs, grad);
             qx += qtke[0];
             qy += qtke[1];
-            if (myConfig.dimensions == 3) { qz += qtke[2]; }
+            if (is3d) { qz += qtke[2]; }
         }
     }
-    version(complex_numbers) {
-        // Do not try to limit the component values.
-        // Something in this limiting plays havoc with the complex derivatives.
-    } else {
-        // Apply limits to the component values.
-        if (myConfig.apply_shear_stress_relative_limit) {
-            tau_xx = copysign(fmin(fabs(tau_xx),shear_stress_limit), tau_xx);
-            tau_yy = copysign(fmin(fabs(tau_yy),shear_stress_limit), tau_yy);
-            tau_zz = copysign(fmin(fabs(tau_zz),shear_stress_limit), tau_zz);
-            tau_xy = copysign(fmin(fabs(tau_xy),shear_stress_limit), tau_xy);
-            tau_xz = copysign(fmin(fabs(tau_xz),shear_stress_limit), tau_xz);
-            tau_yz = copysign(fmin(fabs(tau_yz),shear_stress_limit), tau_yz);
-            qx = copysign(fmin(fabs(qx),heat_transfer_limit), qx);
-            qy = copysign(fmin(fabs(qy),heat_transfer_limit), qy);
-            qz = copysign(fmin(fabs(qz),heat_transfer_limit), qz);
-        }
-    } // end if apply_shear_stress_relative_limit
     //
     // Combine into fluxes: store as the dot product (F.n).
+    auto cqi = myConfig.cqi;
     number nx = n.x;
     number ny = n.y;
     number nz = n.z;
-    auto cqi = myConfig.cqi;
-    // In some cases, the shear and heat fluxes have been previously
-    // computed by the wall functions in the boundary condition call.
-    //if (use_wall_function_shear_and_heat_flux) {
-    //    // Mass flux -- NO CONTRIBUTION, unless there's diffusion (below)
-    //    // [TODO] As per Jason's recommendation, we need to do something
-    //    // to correct for corner cells.
-    //    // [TODO] Currently implemented for 2D; need to extend to 3D.
-    //    F[cqi.xMom] -= tau_xx*nx + tau_wall_x;
-    //    F[cqi.yMom] -= tau_yy*ny + tau_wall_y;
-    //    if (cqi.threeD) { F[cqi.zMom] -= tau_zz*nz + tau_wall_z; }
-    //    F[cqi.totEnergy] -=
-    //        tau_xx*fs.vel.x*nx + tau_yy*fs.vel.y*ny + tau_zz*fs.vel.z*nz +
-    //        tau_wall_x*fs.vel.x + tau_wall_y*fs.vel.y + tau_wall_z*fs.vel.z + q;
-    //}
-    //else { // proceed with locally computed shear and heat flux
-        // Mass flux -- NO CONTRIBUTION, unless there's diffusion (below)
-        F[cqi.xMom] -= tau_xx*nx + tau_xy*ny + tau_xz*nz;
-        F[cqi.yMom] -= tau_xy*nx + tau_yy*ny + tau_yz*nz;
-        if (cqi.threeD) { F[cqi.zMom] -= tau_xz*nx + tau_yz*ny + tau_zz*nz; }
-        F[cqi.totEnergy] -=
-            (tau_xx*fs.vel.x + tau_xy*fs.vel.y + tau_xz*fs.vel.z + qx)*nx +
-            (tau_xy*fs.vel.x + tau_yy*fs.vel.y + tau_yz*fs.vel.z + qy)*ny +
-            (tau_xz*fs.vel.x + tau_yz*fs.vel.y + tau_zz*fs.vel.z + qz)*nz;
-    //} // end if wall functions
+    F[cqi.xMom] -= tau_xx*nx + tau_xy*ny + tau_xz*nz;
+    F[cqi.yMom] -= tau_xy*nx + tau_yy*ny + tau_yz*nz;
+    if (cqi.threeD) { F[cqi.zMom] -= tau_xz*nx + tau_yz*ny + tau_zz*nz; }
+    F[cqi.totEnergy] -=
+        (tau_xx*fs.vel.x + tau_xy*fs.vel.y + tau_xz*fs.vel.z + qx)*nx +
+        (tau_xy*fs.vel.x + tau_yy*fs.vel.y + tau_yz*fs.vel.z + qy)*ny +
+        (tau_xz*fs.vel.x + tau_yz*fs.vel.y + tau_zz*fs.vel.z + qz)*nz;
+
     version(multi_T_gas) {
         foreach (imode; 0 .. n_modes) {
-            F[cqi.modes+imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][0] * nx;
-            F[cqi.modes+imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][1] * ny;
-            F[cqi.modes+imode] -= viscous_factor * fs.gas.k_modes[imode] * grad.T_modes[imode][2] * nz;
-            // Species diffusion contribution to the energy modes (added by NNG, 2022/01/26)
-            version(multi_species_gas) {
-                if (isTurbulent || (myConfig.mass_diffusion_model != MassDiffusionModel.none)) {
-                    foreach (isp; 0 .. n_species) {
-                        number hMode = gmodel.enthalpyPerSpeciesInMode(fs.gas, cast(int)isp, cast(int)imode);
-                        // The sign here needs to be opposite to the thermal conduction, hence +=
-                        F[cqi.modes+imode] += viscous_factor * hMode *(jx[isp]*n.x
-                                                                         + jy[isp]*n.y
-                                                                         + jz[isp]*n.z);
-                    }
-                }
-            }
+            F[cqi.modes+imode] -= fs.gas.k_modes[imode] * grad.T_modes[imode][0] * nx;
+            F[cqi.modes+imode] -= fs.gas.k_modes[imode] * grad.T_modes[imode][1] * ny;
+            F[cqi.modes+imode] -= fs.gas.k_modes[imode] * grad.T_modes[imode][2] * nz;
         }
     }
     version(turbulence) {
-        if ( isTurbulent &&
-             !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
-            //
+        if ( isTurbulent ) {
             // Turbulence transport of the turbulence properties themselves.
             foreach(i; 0 .. nturb){
                 number tau_tx = 0.0;
@@ -1148,14 +1044,67 @@ void viscous_flux_calc(in FlowState fs, in FlowGradients grad, LocalConfig myCon
             }
         }
     }
-    version(multi_species_gas) {
-        if (isTurbulent ||
-            myConfig.mass_diffusion_model != MassDiffusionModel.none) {
-            if (cqi.n_species > 1) {
-                foreach (isp; 0 .. cqi.n_species) {
-                    F[cqi.species+isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
-                }
+} // end viscous_flux_calc()
+
+@nogc
+void diffusion_viscous_fluxes(in FlowState fs, in FlowGradients grad, LocalConfig myConfig, size_t n_species, size_t n_modes,
+                              double Sc_t, bool laminarDiffusion, bool isTurbulent, Vector3 n, number[] jx, number[] jy, number[] jz,
+                              ConservedQuantities F) {
+version(multi_species_gas) {
+    auto gmodel = myConfig.gmodel;
+
+    // Species diffusion: Changed by NNG on 22/01/18.
+    // We now apply both laminar and turbulent diffusion additively, to prevent artificially low
+    // diffusion in areas with a small turbulent viscosity.
+    if (laminarDiffusion) {
+        myConfig.massDiffusion.update_mass_fluxes(fs, grad, jx, jy, jz);
+    } else if (isTurbulent) { // Turbulent but no mass diffusion model
+        foreach (isp; 0 .. n_species) {
+            jx[isp] = 0.0;
+            jy[isp] = 0.0;
+            jz[isp] = 0.0;
+        }
+    }
+
+    version(turbulence) {
+        if (isTurbulent) {
+            number D_t = fs.mu_t / (fs.gas.rho * Sc_t);
+            foreach (isp; 0 .. n_species) {
+                jx[isp] -= fs.gas.rho * D_t * grad.massf[isp][0];
+                jy[isp] -= fs.gas.rho * D_t * grad.massf[isp][1];
+                jz[isp] -= fs.gas.rho * D_t * grad.massf[isp][2];
             }
         }
     }
+    number qx = 0.0;
+    number qy = 0.0;
+    number qz = 0.0;
+    for(int isp=0; isp<n_species; isp++) {
+        number h = gmodel.enthalpy(fs.gas, isp);
+        qx -= jx[isp] * h;
+        qy -= jy[isp] * h;
+        qz -= jz[isp] * h;
+    }
+
+    // Combine into fluxes: store as the dot product (F.n).
+    number nx = n.x;
+    number ny = n.y;
+    number nz = n.z;
+    auto cqi = myConfig.cqi;
+    F[cqi.totEnergy] -= qx*nx + qy*ny + qz*nz;
+
+    version(multi_T_gas) {
+        for (int imode=0; imode<n_modes; imode++) {
+            // Species diffusion contribution to the energy modes (added by NNG, 2022/01/26)
+            for (int isp=0; isp<n_species; isp++) {
+                number hMode = gmodel.enthalpyPerSpeciesInMode(fs.gas, isp, imode);
+                // The sign here needs to be opposite to the thermal conduction, hence +=
+                F[cqi.modes+imode] += hMode*(jx[isp]*n.x + jy[isp]*n.y + jz[isp]*n.z);
+            }
+        }
+    }
+    foreach (isp; 0 .. cqi.n_species) {
+        F[cqi.species+isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
+    }
+} // end version(multi_species_gas)
 } // end viscous_flux_calc()

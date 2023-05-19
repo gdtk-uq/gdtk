@@ -820,15 +820,27 @@ public:
         immutable size_t nturb          = myConfig.turb_model.nturb;
         immutable bool is3d             = myConfig.dimensions == 3;
         immutable bool isTurbulent      = myConfig.turb_model.isTurbulent;
+        immutable bool axisymmetric     = myConfig.axisymmetric;
         immutable double viscous_factor = myConfig.viscous_factor;
         immutable size_t neq            = myConfig.cqi.n;
+        immutable bool laminarDiffusion = myConfig.mass_diffusion_model != MassDiffusionModel.none;
+        immutable double Sc_t = myConfig.turbulence_schmidt_number;
 
         foreach(fid; 0 .. nfaces){
-            viscous_flux_calc(facedata.flowstates[fid], facedata.gradients[fid],
-                              myConfig, n_species, n_modes, nturb,
-                              viscous_factor, jx, jy, jz, isTurbulent, is3d,
+            navier_stokes_viscous_fluxes(facedata.flowstates[fid], facedata.gradients[fid],
+                              myConfig, n_modes, nturb,
+                              isTurbulent, axisymmetric, is3d,
                               facedata.normals[fid], facedata.positions[fid].y.re,
                               facedata.fluxes[fid*neq .. (fid+1)*neq]);
+        }
+        if ((isTurbulent || laminarDiffusion)&&(n_species>1)) {
+            foreach(fid; 0 .. nfaces){
+                diffusion_viscous_fluxes(facedata.flowstates[fid], facedata.gradients[fid],
+                                  myConfig, n_species, n_modes,
+                                  Sc_t, laminarDiffusion, isTurbulent,
+                                  facedata.normals[fid], jx, jy, jz,
+                                  facedata.fluxes[fid*neq .. (fid+1)*neq]);
+            }
         }
     }
 
