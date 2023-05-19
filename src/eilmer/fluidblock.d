@@ -44,6 +44,7 @@ import block;
 import jacobian;
 import fluidblockio;
 import fluidblockio_new;
+import mass_diffusion;
 version(mpi_parallel) {
     import mpi;
 }
@@ -66,6 +67,7 @@ version(mpi_parallel) {
 class FluidBlock : Block {
 public:
     size_t ncells;
+    size_t nfaces;
     Grid_t grid_type; // structured or unstructured
     bool may_be_turbulent; // if true, the selected turbulence model is active
                            // within this block.
@@ -79,6 +81,7 @@ public:
     number c_h, divB_damping_length; //divergence cleaning parameters for MHD
     int mncell;                 // number of monitor cells
     number[] initial_T_value; // for monitor cells to check against
+    number[] jx,jy,jz;
     //
     // Collections of cells, vertices and faces are held as arrays of references.
     // These allow us to conveniently work through the items via foreach statements.
@@ -228,6 +231,13 @@ public:
         version(multi_species_gas) {
             if (myConfig.reacting) {
                 thermochem_source.length = cqi.n_species;
+            }
+            // Workspace for viscous diffusion
+            if (dedicatedConfig[id].turb_model.isTurbulent ||
+               (dedicatedConfig[id].mass_diffusion_model != MassDiffusionModel.none)) {
+                jx.length = cqi.n_species;
+                jy.length = cqi.n_species;
+                jz.length = cqi.n_species;
             }
         }
         version(multi_T_gas) {
@@ -800,6 +810,26 @@ public:
     {
         if (face_list.length == 0) { face_list = faces; }
         foreach (iface; face_list) { iface.viscous_flux_calc(); }
+    }
+
+    @nogc
+    void viscous_flux()
+    {
+        immutable size_t n_species      = myConfig.n_species;
+        immutable size_t n_modes        = myConfig.n_modes;
+        immutable size_t nturb          = myConfig.turb_model.nturb;
+        immutable bool is3d             = myConfig.dimensions == 3;
+        immutable bool isTurbulent      = myConfig.turb_model.isTurbulent;
+        immutable double viscous_factor = myConfig.viscous_factor;
+        immutable size_t neq            = myConfig.cqi.n;
+
+        foreach(fid; 0 .. nfaces){
+            viscous_flux_calc(facedata.flowstates[fid], facedata.gradients[fid],
+                              myConfig, n_species, n_modes, nturb,
+                              viscous_factor, jx, jy, jz, isTurbulent, is3d,
+                              facedata.normals[fid], facedata.positions[fid].y.re,
+                              facedata.fluxes[fid*neq .. (fid+1)*neq]);
+        }
     }
 
     @nogc

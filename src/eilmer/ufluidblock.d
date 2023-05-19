@@ -47,7 +47,6 @@ import nm;
 class UFluidBlock: FluidBlock {
 public:
     size_t nvertices;
-    size_t nfaces;
     size_t nboundaries;
     UnstructuredGrid grid;
     size_t ninteriorfaces;
@@ -827,6 +826,7 @@ public:
             faces[idx].average_turbulent_transprops();
         }
     }
+
 
     override void read_new_underlying_grid(string fileName)
     {

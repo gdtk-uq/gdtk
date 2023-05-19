@@ -450,7 +450,7 @@ public:
             size_t nifaces = niv*njc*nkc;
             size_t njfaces = nic*njv*nkc;
             size_t nkfaces = nic*njc*nkv;
-            size_t nfaces = nifaces + njfaces;
+            nfaces = nifaces + njfaces;
             if (myConfig.dimensions == 3) nfaces += nkfaces;
             size_t nbfaces = nkc*nic*2 + nkc*njc*2;
             if (myConfig.dimensions == 3) nbfaces += 2*njc*nic;
