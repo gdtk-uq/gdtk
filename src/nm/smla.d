@@ -196,6 +196,55 @@ public:
         s ~= "]";
         return s;
     }
+
+    SMatrix!T transpose()
+    {
+	// Presently, assume square matrices
+	auto tp = new SMatrix!T();
+	tp.aa.length = aa.length;
+	tp.ja.length = ja.length;
+	tp.ia.length = ia.length;
+
+	tp.ia[] = 0;
+
+	// Treat original matrix a CSC
+	// We'll count entries in the transposed rows
+	// by looking at "columns" of original.
+	foreach (row_idx; ja) {
+	    tp.ia[row_idx]++;
+	}
+
+	// To get the offsets into ia, compute a running sum
+	size_t sum = 0;
+	foreach (row; 0 .. ia.length) {
+	    size_t tmp = tp.ia[row];
+	    tp.ia[row] = sum;
+	    sum += tmp;
+	}
+
+	foreach (col; 0 .. ia.length-1) {
+	    foreach (jj; ia[col] .. ia[col+1]) {
+		auto row = ja[jj];
+		auto dest = tp.ia[row];
+		
+		tp.ja[dest] = col;
+		tp.aa[dest] = aa[jj];
+		
+		tp.ia[row]++;
+	    }
+	}
+
+	size_t last = 0;
+	foreach (row; 0 .. ia.length) {
+	    auto tmp = tp.ia[row];
+	    tp.ia[row] = last;
+	    last = tmp;
+	}
+
+	return tp;
+
+    }
+    
 } // end class SMatrix
 
 bool approxEqualMatrix(T)(SMatrix!T a, SMatrix!T b)
@@ -1025,6 +1074,25 @@ version(smla_test) {
         foreach ( i; 0 .. c.length ) {
             assert(approxEqualNumbers(c[i], expected_c[i]), failedUnitTest());
         }
+	// Test transpose
+	auto cc = new SMatrix!double();
+	cc.addRow([1.0, 3.0], [0, 2]);
+	cc.addRow([4.0], [2]);
+	cc.addRow([7.0], [1]);
+	auto ccT = cc.transpose();
+
+	double[] ccT_aa_exp = [1.0, 7.0, 3.0, 4.0];
+	size_t[] ccT_ja_exp = [0, 2, 0, 1];
+	size_t[] ccT_ia_exp = [0, 1, 2, 4];
+	foreach (i; 0 .. ccT.aa.length) {
+	    assert(isClose(ccT.aa[i], ccT_aa_exp[i]));
+	}
+	foreach (i; 0 .. ccT.ja.length) {
+	    assert(ccT.ja[i] == ccT_ja_exp[i]);
+	}
+	foreach (i; 0 .. ccT.ia.length) {
+	    assert(ccT.ia[i] == ccT_ia_exp[i]);
+	}
         // Test decompILU0
         // This example matrix and decomposition is from Gerard and Wheatley, 6th ed, Sec. 2.4
         auto d = new SMatrix!number();
