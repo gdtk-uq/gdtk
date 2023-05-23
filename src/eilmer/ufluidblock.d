@@ -335,6 +335,7 @@ public:
         celldata.nfaces.length = grid.cells.length;
         celldata.volumes.length = grid.cells.length + nghost;
         celldata.positions.length = grid.cells.length + nghost;
+        celldata.lengths.length = grid.cells.length + nghost;
         celldata.face_distances.length = grid.cells.length;
         celldata.flowstates.reserve(grid.cells.length + nghost);
         celldata.gradients.reserve(grid.cells.length + nghost);
@@ -749,6 +750,9 @@ public:
             } // end foreach j
         } // end foreach bndry
     } // end compute_primary_cell_geometric_data()
+
+    @nogc
+    override void precompute_stencil_data(size_t gtl) {}
 
     @nogc
     override void compute_least_squares_setup(size_t gtl)

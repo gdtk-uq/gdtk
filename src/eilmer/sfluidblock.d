@@ -459,6 +459,7 @@ public:
 
             celldata.nfaces.length = nic*njc*nkc;
             celldata.volumes.length = nic*njc*nkc + nghost;
+            celldata.lengths.length = nic*njc*nkc + nghost;
             celldata.positions.length = nic*njc*nkc + nghost;
             celldata.flowstates.reserve(nic*njc*nkc + nghost);
             celldata.gradients.reserve(nic*njc*nkc + nghost);
@@ -478,6 +479,8 @@ public:
             facedata.left_interior_only.length = nbfaces;
             facedata.right_interior_only.length = nbfaces;
             facedata.flowstates.reserve(nfaces);
+            facedata.interp_data.length = nfaces;
+            facedata.stencil_idxs.length = nfaces;
             facedata.gradients.reserve(nfaces);
             facedata.workspaces.reserve(nfaces);
             facedata.fluxes.length = nfaces*neq;
@@ -681,7 +684,122 @@ public:
                 }
             }
         } // end if (myConfig.dimensions == 3)
-        //
+
+        // Densified structures for the onedinterp routines in the structured formulation
+        // WIP (NNG)
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. niv) {
+                    size_t fid = ifi_index(i,j,k);
+                    if (i>1)     facedata.stencil_idxs[fid].L1 = cell_index(i-2, j, k);
+                    if (i>0)     facedata.stencil_idxs[fid].L0 = cell_index(i-1, j, k);
+                    if (i<niv-1) facedata.stencil_idxs[fid].R0 = cell_index(i+0, j, k);
+                    if (i<niv-2) facedata.stencil_idxs[fid].R1 = cell_index(i+1, j, k);
+                } // i loop
+            } // j loop
+        } // k loop
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                foreach (j; 0 .. njv) {
+                    size_t fid = ifj_index(i,j,k);
+                    if (j>1)     facedata.stencil_idxs[fid].L1 = cell_index(i, j-2, k);
+                    if (j>0)     facedata.stencil_idxs[fid].L0 = cell_index(i, j-1, k);
+                    if (j<njv-1) facedata.stencil_idxs[fid].R0 = cell_index(i, j+0, k);
+                    if (j<njv-2) facedata.stencil_idxs[fid].R1 = cell_index(i, j+1, k);
+                } // j loop
+            } // i loop
+        } // k loop
+        if (myConfig.dimensions == 3) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    foreach (k; 0 .. nkv) {
+                        size_t fid = ifk_index(i,j,k);
+                        if (k>1)     facedata.stencil_idxs[fid].L1 = cell_index(i, j, k-2);
+                        if (k>0)     facedata.stencil_idxs[fid].L0 = cell_index(i, j, k-1);
+                        if (k<nkv-1) facedata.stencil_idxs[fid].R0 = cell_index(i, j, k+0);
+                        if (k<nkv-2) facedata.stencil_idxs[fid].R1 = cell_index(i, j, k+1);
+                    } // k loop
+                } // i loop
+            } // j loop
+        } // end 3d
+
+        // Now, loop through the ghost cells and attach their indices to the face stencil objects
+        size_t cid = nic*njc*nkc;
+        // North 
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                size_t fid0 = ifj_index(i, njc, k);
+                size_t fid1 = ifj_index(i, njc-1, k);
+                facedata.stencil_idxs[fid0].R0 = cid; // TODO: Variable no of ghost cells
+                facedata.stencil_idxs[fid1].R1 = cid;
+                cid++;
+                facedata.stencil_idxs[fid0].R1 = cid; // TODO: Variable no of ghost cells
+                cid++;
+            }
+        }
+        // South
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                size_t fid0 = ifj_index(i, 0, k);
+                size_t fid1 = ifj_index(i, 1, k);
+                facedata.stencil_idxs[fid0].L0 = cid; // TODO: Variable no of ghost cells
+                facedata.stencil_idxs[fid1].L1 = cid;
+                cid++;
+                facedata.stencil_idxs[fid0].L1 = cid; // TODO: Variable no of ghost cells
+                cid++;
+            }
+        }
+        // East
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                size_t fid0 = ifi_index(nic, j, k);
+                size_t fid1 = ifi_index(nic-1, j, k);
+                facedata.stencil_idxs[fid0].R0 = cid; // TODO: Variable no of ghost cells
+                facedata.stencil_idxs[fid1].R1 = cid;
+                cid++;
+                facedata.stencil_idxs[fid0].R1 = cid; // TODO: Variable no of ghost cells
+                cid++;
+            }
+        }
+        // West
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                size_t fid0 = ifi_index(0, j, k);
+                size_t fid1 = ifi_index(1, j, k);
+                facedata.stencil_idxs[fid0].L0 = cid; // TODO: Variable no of ghost cells
+                facedata.stencil_idxs[fid1].L1 = cid;
+                cid++;
+                facedata.stencil_idxs[fid0].L1 = cid; // TODO: Variable no of ghost cells
+                cid++;
+            }
+        }
+        if (myConfig.dimensions == 3) {
+            // Top
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    size_t fid0 = ifk_index(i, j, nkc);
+                    size_t fid1 = ifk_index(i, j, nkc-1);
+                    facedata.stencil_idxs[fid0].R0 = cid; // TODO: Variable no of ghost cells
+                    facedata.stencil_idxs[fid1].R1 = cid;
+                    cid++;
+                    facedata.stencil_idxs[fid0].R1 = cid; // TODO: Variable no of ghost cells
+                    cid++;
+                }
+            }
+            // Bottom
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    size_t fid0 = ifk_index(i, j, 0);
+                    size_t fid1 = ifk_index(i, j, 1);
+                    facedata.stencil_idxs[fid0].L0 = cid; // TODO: Variable no of ghost cells
+                    facedata.stencil_idxs[fid1].L1 = cid;
+                    cid++;
+                    facedata.stencil_idxs[fid0].L1 = cid; // TODO: Variable no of ghost cells
+                    cid++;
+                }
+            }
+        } // end if (myConfig.dimensions == 3)
+
         // Now that all of the cells and faces are constructed,
         // We want to store the local structure of the grid
         // in the array of references stored in the faces.
@@ -1104,6 +1222,7 @@ public:
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     }
+                    foreach (n; 0 .. n_ghost_cell_layers) f.right_cells[n].update_celldata_geometry();
                 }
             }
         }
@@ -1134,6 +1253,7 @@ public:
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     }
+                    foreach (n; 0 .. n_ghost_cell_layers) f.left_cells[n].update_celldata_geometry();
                 }
             }
         }
@@ -1164,6 +1284,7 @@ public:
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     }
+                    foreach (n; 0 .. n_ghost_cell_layers) f.right_cells[n].update_celldata_geometry();
                 }
             }
         }
@@ -1194,6 +1315,7 @@ public:
                         extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                         ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                     }
+                    foreach (n; 0 .. n_ghost_cell_layers) f.left_cells[n].update_celldata_geometry();
                 }
             }
         }
@@ -1225,6 +1347,7 @@ public:
                             extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                             ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                         }
+                        foreach (n; 0 .. n_ghost_cell_layers) f.right_cells[n].update_celldata_geometry();
                     }
                 }
             }
@@ -1255,12 +1378,58 @@ public:
                             extrap(ghost_cell.pos[gtl], cell_1.pos[gtl], cell_2.pos[gtl]);
                             ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
                         }
+                        foreach (n; 0 .. n_ghost_cell_layers) f.left_cells[n].update_celldata_geometry();
                     }
                 }
             }
         } // end if dimensions == 3
 
     } // end compute_primary_cell_geometric_data()
+
+    @nogc
+    override void precompute_stencil_data(size_t gtl)
+    {
+        // Update stencil information, or set it all for the first time WIP (NNG)
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. niv) {
+                    size_t fid = ifi_index(i,j,k);
+                    number lenL1 = celldata.lengths[facedata.stencil_idxs[fid].L1].x;
+                    number lenL0 = celldata.lengths[facedata.stencil_idxs[fid].L0].x;
+                    number lenR0 = celldata.lengths[facedata.stencil_idxs[fid].R0].x;
+                    number lenR1 = celldata.lengths[facedata.stencil_idxs[fid].R1].x;
+                    facedata.interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
+                } // i loop
+            } // j loop
+        } // k loop
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                foreach (j; 0 .. njv) {
+                    size_t fid = ifj_index(i,j,k);
+                    number lenL1 = celldata.lengths[facedata.stencil_idxs[fid].L1].y;
+                    number lenL0 = celldata.lengths[facedata.stencil_idxs[fid].L0].y;
+                    number lenR0 = celldata.lengths[facedata.stencil_idxs[fid].R0].y;
+                    number lenR1 = celldata.lengths[facedata.stencil_idxs[fid].R1].y;
+                    facedata.interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
+                } // j loop
+            } // i loop
+        } // k loop
+        if (myConfig.dimensions == 3) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    foreach (k; 0 .. nkv) {
+                        size_t fid = ifk_index(i,j,k);
+                        number lenL1 = celldata.lengths[facedata.stencil_idxs[fid].L1].z;
+                        number lenL0 = celldata.lengths[facedata.stencil_idxs[fid].L0].z;
+                        number lenR0 = celldata.lengths[facedata.stencil_idxs[fid].R0].z;
+                        number lenR1 = celldata.lengths[facedata.stencil_idxs[fid].R1].z;
+                        facedata.interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
+                    } // k loop
+                } // i loop
+            } // j loop
+        } // end 3d
+
+    } // end precompute_stencil_data()
 
     @nogc
     override void compute_least_squares_setup(size_t gtl)
@@ -2337,53 +2506,49 @@ public:
         // The values for u, v and T may be updated subsequently by the interface-flux function.
         // (3) Apply the flux calculator to the Lft,Rght flow states.
         //
-        bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
-        FVInterface[] iface_list = faces;
-        //
-        // Low-order reconstruction just copies data from adjacent FV_Cell.
-        // Note that ,even for high-order reconstruction, we depend upon this copy for
-        // the viscous-transport and diffusion coefficients.
-        //
+        immutable bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
+        immutable bool hpl = myConfig.apply_heuristic_pressure_based_limiting;
+        immutable size_t neq = myConfig.cqi.n;
+        immutable size_t nsp = myConfig.n_species;
+        immutable size_t nmodes = myConfig.n_modes;
+        immutable size_t nturb = myConfig.turb_model.nturb;
+        immutable bool is3D = (myConfig.dimensions == 3);
 
+        number beta = 1.0;
+        Vector3 gvel;
+        gvel.clear();
+        foreach(idx; 0 .. nfaces){
+            if (do_reconstruction) {
+                size_t L1 = facedata.stencil_idxs[idx].L1;
+                size_t L0 = facedata.stencil_idxs[idx].L0;
+                size_t R0 = facedata.stencil_idxs[idx].R0;
+                size_t R1 = facedata.stencil_idxs[idx].R1;
+                if (hpl) beta =
+                    compute_heuristic_pressure_limiter(celldata.flowstates[L1],
+                                                       celldata.flowstates[L0],
+                                                       celldata.flowstates[R0],
+                                                       celldata.flowstates[R1]);
 
-        foreach (f; iface_list) {
-            if (myConfig.high_order_flux_calculator && f.is_on_boundary && !bc[f.bc_id].ghost_cell_data_available) {
-                throw new Error("ghost cell data missing");
-            }
-            if ((myConfig.flux_calculator == FluxCalculator.asf)
-                || ((myConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf) && (f.fs.S < ESSENTIALLY_ZERO))) {
-                // [FIX_ME] 2021-10-28 PJ changed the bitwise and to logical and.
-                // The high-order ASF flux calculator is a flux reconstruction scheme,
-                // so the expensive interpolation process can be bypassed if it's pure ASF flux.
-                // If we're using the hybrid flux calculator,
-                // we don't need the interpolation process if the 'shock' value is 0.
-                // This short-cut provides a significant speed-up for Lachlan's simulations.
-                ASF_242(f, myConfig);
-
-                // The viscous fluxes use the interface values, so despite them not being required for the convective
-                // flux calculation with the ASF method, we do need them later on. Maybe I re-fold the ASF method back
-                // into the general convective flux path, as its unlikely the method will ever be used without viscous
-                // effects?
-                if (myConfig.viscous) {
-                    one_d.interp(f, *Lft, *Rght);
-                    f.fs.copy_average_values_from(*Lft, *Rght);
-                }
-
+                Lft.copy_values_from(celldata.flowstates[L0]);
+                Rght.copy_values_from(celldata.flowstates[R0]);
+                interp_l2r2(celldata.flowstates[L1], celldata.flowstates[L0],
+                            celldata.flowstates[R0], celldata.flowstates[R1],
+                            facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
+                            facedata.interp_data[idx], nsp, nmodes, nturb, myConfig, *Lft, *Rght, beta);
+                facedata.flowstates[idx].copy_average_values_from(*Lft, *Rght);
             } else {
-                // Typical code path, with interpolation for the flowstates to the left and right of the interface.
-                if (do_reconstruction && !f.in_suppress_reconstruction_zone &&
-                    !(myConfig.suppress_reconstruction_at_shocks && (f.fs.S == (1.0 - ESSENTIALLY_ZERO)))) {
-                    one_d.interp(f, *Lft, *Rght);
-                } else {
-                    FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
-                    FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
-                    Lft.copy_values_from(cL0.fs);
-                    Rght.copy_values_from(cR0.fs);
-                }
-                f.fs.copy_average_values_from(*Lft, *Rght);
-                if (f.is_on_boundary && bc[f.bc_id].convective_flux_computed_in_bc) continue;
-                compute_interface_flux(*Lft, *Rght, f, myConfig, omegaz);
+                size_t l = facedata.f2c[idx].left;
+                size_t r = facedata.f2c[idx].right;
+
+                Lft.copy_values_from(celldata.flowstates[l]);
+                Rght.copy_values_from(celldata.flowstates[r]);
+                facedata.flowstates[idx].copy_average_values_from(*Lft, *Rght);
             }
+            // Just overwrite here instead of skipping
+            //if (f.is_on_boundary && bc[f.bc_id].convective_flux_computed_in_bc) continue;
+            compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
+                                            facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
+                                            facedata.fluxes[idx*neq .. (idx+1)*neq]);
         }
         return;
     } // end convective_flux_phase0()

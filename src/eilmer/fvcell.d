@@ -64,6 +64,7 @@ struct FVCellData{
     size_t[][] c2v;
     int[][] outsigns;
     number[] volumes;
+    Vector3[] lengths;
     Vector3[] positions;
     Vector3[][] face_distances;
     FlowState[] flowstates;
@@ -457,6 +458,9 @@ public:
             debug { msg ~= format("Unhandled number of vertices: %d", vtx.length); }
             throw new FlowSolverException(msg);
         } // end switch
+        fvcd.lengths[id].x = iL;
+        fvcd.lengths[id].y = jL;
+        fvcd.lengths[id].z = 0.0;
         fvcd.positions[id] = pos[gtl];
         // Cell Volume.
         if (axisymmetric) {
@@ -519,6 +523,9 @@ public:
         } // end switch
         fvcd.volumes[id] = volume[gtl];
         fvcd.positions[id] = pos[gtl];
+        fvcd.lengths[id].x = iL;
+        fvcd.lengths[id].y = jL;
+        fvcd.lengths[id].z = kL;
         if (volume[gtl] <= 0.0) {
             debug {
                 msg ~= format("Invalid volume %g for cell %d in block %d at pos %s",
@@ -1799,8 +1806,12 @@ public:
 
     @nogc
     void update_celldata_geometry(size_t gtl=0){
+        // TODO: This is a bit ungainly (NNG)
         fvcd.positions[id] = pos[gtl];
         fvcd.volumes[id] = volume[gtl];
+        fvcd.lengths[id].x = lengths[0];
+        fvcd.lengths[id].y = lengths[1];
+        fvcd.lengths[id].z = lengths[2];
     }
 
 } // end class FVCell

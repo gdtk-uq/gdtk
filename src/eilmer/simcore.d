@@ -424,12 +424,15 @@ int init_simulation(int tindx, int nextLoadsIndx,
     // exact numbers. These are copied in here from the real cells in their corresponding
     // neighbour blocks.
     exchange_ghost_cell_geometry_data();
-
     //
     // Now that we know the ghost-cell locations, we can set up the least-squares subproblems for
     // 1. reconstruction prior to convective flux calculation for the unstructured-grid blocks
     // 2. calculation of flow gradients for the viscous fluxes with least-squares gradients.
     foreach (myblk; localFluidBlocks) { myblk.compute_least_squares_setup(0); }
+    //
+    // We can also setup the precomputed stencil data for the structured interpolation
+    // In an unstructured block, the following call returns without doing anything
+    foreach (myblk; localFluidBlocks) { myblk.precompute_stencil_data(0); }
 
     version (gpu_chem) {
         initGPUChem();

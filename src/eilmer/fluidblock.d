@@ -267,6 +267,7 @@ public:
     @nogc abstract void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found);
     abstract void init_grid_and_flow_arrays(string gridFileName);
     @nogc abstract void compute_primary_cell_geometric_data(size_t gtl);
+    @nogc abstract void precompute_stencil_data(size_t gtl);
     @nogc abstract void compute_least_squares_setup(size_t gtl);
     @nogc abstract void sync_vertices_from_underlying_grid(size_t gtl=0);
     @nogc abstract void sync_vertices_to_underlying_grid(size_t gtl=0);
