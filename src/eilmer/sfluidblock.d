@@ -2513,12 +2513,16 @@ public:
         immutable size_t nmodes = myConfig.n_modes;
         immutable size_t nturb = myConfig.turb_model.nturb;
         immutable bool is3D = (myConfig.dimensions == 3);
+        immutable bool MHD = myConfig.MHD;
+        immutable bool apply_limiter = myConfig.apply_limiter;
+        immutable bool extrema_clipping = myConfig.extrema_clipping;
+        immutable InterpolateOption ti = myConfig.thermo_interpolator;
 
         number beta = 1.0;
         Vector3 gvel;
         gvel.clear();
-        foreach(idx; 0 .. nfaces){
-            if (do_reconstruction) {
+        if (do_reconstruction) {
+            foreach(idx; 0 .. nfaces){
                 size_t L1 = facedata.stencil_idxs[idx].L1;
                 size_t L0 = facedata.stencil_idxs[idx].L0;
                 size_t R0 = facedata.stencil_idxs[idx].R0;
@@ -2533,25 +2537,30 @@ public:
                 Rght.copy_values_from(celldata.flowstates[R0]);
                 interp_l2r2(celldata.flowstates[L1], celldata.flowstates[L0],
                             celldata.flowstates[R0], celldata.flowstates[R1],
-                            facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
-                            facedata.interp_data[idx], nsp, nmodes, nturb, myConfig, *Lft, *Rght, beta);
+                            facedata.interp_data[idx], nsp, nmodes, nturb,
+                            ti, MHD, apply_limiter, extrema_clipping,
+                            myConfig, *Lft, *Rght, beta);
                 facedata.flowstates[idx].copy_average_values_from(*Lft, *Rght);
-            } else {
+                compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
+                                                facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
+                                                facedata.fluxes[idx*neq .. (idx+1)*neq]);
+            }
+        } else {
+            foreach(idx; 0 .. nfaces){
                 size_t l = facedata.f2c[idx].left;
                 size_t r = facedata.f2c[idx].right;
 
                 Lft.copy_values_from(celldata.flowstates[l]);
                 Rght.copy_values_from(celldata.flowstates[r]);
                 facedata.flowstates[idx].copy_average_values_from(*Lft, *Rght);
+                compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
+                                                facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
+                                                facedata.fluxes[idx*neq .. (idx+1)*neq]);
             }
-            // Just overwrite here instead of skipping
-            //if (f.is_on_boundary && bc[f.bc_id].convective_flux_computed_in_bc) continue;
-            compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
-                                            facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
-                                            facedata.fluxes[idx*neq .. (idx+1)*neq]);
         }
         return;
     } // end convective_flux_phase0()
+
     @nogc
     override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0,
                                          FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])

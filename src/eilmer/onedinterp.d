@@ -134,8 +134,8 @@ void interp_l2r2_scalar(number qL1, number qL0, number qR0, number qR1,
 
 @nogc                                                // TODO: Check 'in' for idi
 void interp_l2r2(ref FlowState cL1fs, ref FlowState cL0fs, ref FlowState cR0fs, ref FlowState cR1fs,
-                 Vector3 n, Vector3 t1, Vector3 t2,
                  in InterpData idi, size_t nsp, size_t nmodes, size_t nturb,
+                 InterpolateOption thermo_interpolator, bool MHD, bool apply_limiter, bool extrema_clipping,
                  LocalConfig myConfig, ref FlowState Lft, ref FlowState Rght, number beta){
     // High-order reconstruction for some properties.
 
@@ -144,15 +144,13 @@ void interp_l2r2(ref FlowState cL1fs, ref FlowState cL0fs, ref FlowState cR0fs, 
     // the normal velocities are not messed up for mirror-image at walls.
     // PJ 21-feb-2012
     //if (myConfig.interpolate_in_local_frame) {
-    cL1fs.vel.transform_to_local_frame(n, t1, t2);
-    cL0fs.vel.transform_to_local_frame(n, t1, t2);
-    cR0fs.vel.transform_to_local_frame(n, t1, t2);
-    cR1fs.vel.transform_to_local_frame(n, t1, t2);
+    //cL1fs.vel.transform_to_local_frame(n, t1, t2);
+    //cL0fs.vel.transform_to_local_frame(n, t1, t2);
+    //cR0fs.vel.transform_to_local_frame(n, t1, t2);
+    //cR1fs.vel.transform_to_local_frame(n, t1, t2);
     //}
 
     GasModel gmodel = myConfig.gmodel;
-    immutable bool apply_limiter = myConfig.apply_limiter;
-    immutable bool extrema_clipping = myConfig.extrema_clipping;
 
     interp_l2r2_scalar(cL1fs.vel.x, cL0fs.vel.x, cR0fs.vel.x, cR1fs.vel.x,
                        idi, apply_limiter, extrema_clipping,
@@ -164,7 +162,7 @@ void interp_l2r2(ref FlowState cL1fs, ref FlowState cL0fs, ref FlowState cR0fs, 
                        idi, apply_limiter, extrema_clipping,
                        Lft.vel.z, Rght.vel.z, beta);
     version(MHD) {
-        if (myConfig.MHD) {
+        if (MHD) {
             interp_l2r2_scalar(cL1fs.B.x, cL0fs.B.x, cR0fs.B.x, cR1fs.B.x,
                                idi, apply_limiter, extrema_clipping,
                                Lft.B.x, Rght.B.x, beta);
@@ -182,11 +180,11 @@ void interp_l2r2(ref FlowState cL1fs, ref FlowState cL0fs, ref FlowState cR0fs, 
         }
     }
     version(turbulence) {
-            foreach (it; 0 .. nturb){
-                interp_l2r2_scalar(cL1fs.turb[it], cL0fs.turb[it], cR0fs.turb[it], cR1fs.turb[it],
-                                   idi, apply_limiter, extrema_clipping,
-                                   Lft.turb[it], Rght.turb[it], beta);
-            }
+        foreach (it; 0 .. nturb){
+            interp_l2r2_scalar(cL1fs.turb[it], cL0fs.turb[it], cR0fs.turb[it], cR1fs.turb[it],
+                               idi, apply_limiter, extrema_clipping,
+                               Lft.turb[it], Rght.turb[it], beta);
+        }
     }
     auto gL1 = &(cL1fs.gas); // Avoid construction of another object.
     auto gL0 = &(cL0fs.gas);
@@ -217,7 +215,7 @@ void interp_l2r2(ref FlowState cL1fs, ref FlowState cL0fs, ref FlowState cR0fs, 
     }
     // Interpolate on two of the thermodynamic quantities,
     // and fill in the rest based on an EOS call.
-    final switch (myConfig.thermo_interpolator) {
+    final switch (thermo_interpolator) {
     case InterpolateOption.pt:
         interp_l2r2_scalar(gL1.p, gL0.p, gR0.p, gR1.p, idi, apply_limiter, extrema_clipping, Lft.gas.p, Rght.gas.p, beta);
         interp_l2r2_scalar(gL1.T, gL0.T, gR0.T, gR1.T, idi, apply_limiter, extrema_clipping, Lft.gas.T, Rght.gas.T, beta);
@@ -291,16 +289,16 @@ void interp_l2r2(ref FlowState cL1fs, ref FlowState cL0fs, ref FlowState cR0fs, 
         gmodel.update_thermo_from_rhoT(Rght.gas);
         break;
     } // end switch thermo_interpolator
-    Lft.gas.a = gL0.a;
-    Rght.gas.a = gR0.a;
+    //Lft.gas.a = gL0.a;
+    //Rght.gas.a = gR0.a;
     //if (myConfig.interpolate_in_local_frame) {
-        // Undo the transformation made earlier. PJ 21-feb-2012
-        Lft.vel.transform_to_global_frame(n, t1, t2);
-        Rght.vel.transform_to_global_frame(n, t1, t2);
-        cL1fs.vel.transform_to_global_frame(n, t1, t2);
-        cL0fs.vel.transform_to_global_frame(n, t1, t2);
-        cR0fs.vel.transform_to_global_frame(n, t1, t2);
-        cR1fs.vel.transform_to_global_frame(n, t1, t2);
+      // Undo the transformation made earlier. PJ 21-feb-2012
+      //Lft.vel.transform_to_global_frame(n, t1, t2);
+      //Rght.vel.transform_to_global_frame(n, t1, t2);
+      //cL1fs.vel.transform_to_global_frame(n, t1, t2);
+      //cL0fs.vel.transform_to_global_frame(n, t1, t2);
+      //cR0fs.vel.transform_to_global_frame(n, t1, t2);
+      //cR1fs.vel.transform_to_global_frame(n, t1, t2);
     //}
 }
 
