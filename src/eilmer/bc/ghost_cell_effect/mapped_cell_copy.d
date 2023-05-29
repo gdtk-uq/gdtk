@@ -640,13 +640,10 @@ public:
         size_t nmodes = myConfig.n_modes;
 
         size_t nitems = 16;
-        // TODO: create a separate exchange routine for dUk values used in the LU-SGS solver [KD 19-10-2020]
-        if (myConfig.dimensions == 3) { nitems += 5 + nspecies + nmodes + myConfig.turb_model.nturb; }  // for each conserved quantity in dUk array (3D)
-        else { nitems += 4 + nspecies + nmodes + myConfig.turb_model.nturb; }  // for each conserved quantity in dUk array (2D)
         nitems += nmodes*3; // for each of T, e and k_t
         nitems += nspecies;
         version(MHD) { nitems += 5; }
-        version(turbulence) { nitems += myConfig.turb_model.nturb*2; } // *2 to account for the dUk array entries
+        version(turbulence) { nitems += myConfig.turb_model.nturb; }
 
         version(complex_numbers) {
             nitems *= 2;
@@ -743,9 +740,6 @@ public:
                     buf[ii++] = fs.mu_t.re; version(complex_numbers) { buf[ii++] = fs.mu_t.im; }
                     buf[ii++] = fs.k_t.re; version(complex_numbers) { buf[ii++] = fs.k_t.im; }
                     buf[ii++] = fs.S.re; version(complex_numbers) { buf[ii++] = fs.S.im; }
-                    foreach(j; 0..c.dUk.length) {
-                        buf[ii++] = c.dUk[j].re; version(complex_numbers) { buf[ii++] = c.dUk[j].im; }
-                    }
                 }
                 version(mpi_timeouts) {
                     MPI_Request send_request;
@@ -822,17 +816,12 @@ public:
                     fs.mu_t.re = buf[ii++]; version(complex_numbers) { fs.mu_t.im = buf[ii++]; }
                     fs.k_t.re = buf[ii++]; version(complex_numbers) { fs.k_t.im = buf[ii++]; }
                     fs.S.re = buf[ii++]; version(complex_numbers) { fs.S.im = buf[ii++]; }
-                    foreach(j; 0..c.dUk.length) {
-                        c.dUk[j].re = buf[ii++]; version(complex_numbers) { c.dUk[j].im = buf[ii++]; }
-                    }
                 }
             }
         } else { // not mpi_parallel
             // For a single process, just access the data directly.
             foreach (i, mygc; ghost_cells) {
                 mygc.fs.copy_values_from(mapped_cells[i].fs);
-                // this array is used for the LU-SGS implementation ... TODO: maybe this should be it's own routine
-                mygc.dUk = mapped_cells[i].dUk;
             }
         }
     } // end exchange_flowstate_phase2()
