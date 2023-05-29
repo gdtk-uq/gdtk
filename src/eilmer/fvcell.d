@@ -158,7 +158,7 @@ public:
 	//number[][] entry_list;
 
 	//size_t global_id;
-        number[][] dRdU;
+        double[][] dRdU;
         ConservedQuantities Q_save;
         FlowGradients* grad_save;
         // stencil of effected cells & faces used in forming the flow Jacobian
