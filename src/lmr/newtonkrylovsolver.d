@@ -683,10 +683,9 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 	if (GlobalConfig.is_master_task) {
 	    readRestartMetadata();
 	    readReferenceResidualsFromFile();
+	    // Now ditch snapshots BEYOND what was requested.
+	    snapshots.length = snapshotStart;	    
 	}
-	// Now ditch snapshots BEYOND what was requested.
-	snapshots.length = snapshotStart;
-
 	// And, in MPI, broadcast information.
 	version(mpi_parallel) {
 	    broadcastRestartInfo();
