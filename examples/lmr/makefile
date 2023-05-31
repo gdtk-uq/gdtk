@@ -1,0 +1,2 @@
+test:
+	PYTHONDONTWRITEBYTECODE=1 pytest -v

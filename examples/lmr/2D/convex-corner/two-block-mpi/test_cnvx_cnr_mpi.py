@@ -3,9 +3,16 @@
 #
 # Integration test for convex corner case using MPI.
 
+import pytest
 import subprocess
 import re
 import os
+
+# This is used to change to local directory so that subprocess runs nicely.
+@pytest.fixture(autouse=True)
+def change_test_dir(request, monkeypatch):
+    monkeypatch.chdir(request.fspath.dirname)
+
 
 expected_number_steps = 32
 expected_final_cfl = 8.134e+03
