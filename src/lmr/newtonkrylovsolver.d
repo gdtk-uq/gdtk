@@ -986,9 +986,11 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         }
 
         if (finalStep) {
-	    writeln("");
-	    writefln("FINAL-STEP: %d", step);
-	    writefln("FINAL-CFL: %.3e", cfl);
+	    if (cfg.is_master_task) {
+		writeln("");
+		writefln("FINAL-STEP: %d", step);
+		writefln("FINAL-CFL: %.3e", cfl);
+	    }
 	    break;
 	}
 
