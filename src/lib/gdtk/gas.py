@@ -412,6 +412,10 @@ class GasState(object):
         return valuep[0]
 
     @property
+    def n_species(self):
+        return self.gmodel.n_species
+
+    @property
     def massf(self):
         nsp = self.gmodel.n_species
         mf = ffi.new("double[]", [0.0]*nsp)
@@ -491,6 +495,10 @@ class GasState(object):
         return result
 
     @property
+    def n_modes(self):
+        return self.gmodel.n_modes
+
+    @property
     def u_modes(self):
         n = self.gmodel.n_modes
         if n == 0: return []
@@ -505,7 +513,7 @@ class GasState(object):
         if type(um_given) != type([]):
             raise Exception("u_modes needs to be supplied as a list.")
         if len(um_given) != n:
-            raise Exception(f"u_moodes list is not correct length. nmodes={n}; len(u_modes)={len(um_given)}")
+            raise Exception(f"u_modes list is not correct length. nmodes={n}; len(u_modes)={len(um_given)}")
         um = ffi.new("double[]", um_given)
         flag = so.gas_state_set_array_field(self.id, b"u_modes", um, n)
         if flag < 0: raise Exception("could not set u_modes.")
@@ -526,7 +534,7 @@ class GasState(object):
         if type(Tm_given) != type([]):
             raise Exception("T_modes needs to be supplied as a list.")
         if len(Tm_given) != n:
-            raise Exception(f"T_moodes list is not correct length. nmodes={n}; len(T_modes)={len(Tm_given)}")
+            raise Exception(f"T_modes list is not correct length. nmodes={n}; len(T_modes)={len(Tm_given)}")
         Tm = ffi.new("double[]", Tm_given)
         flag = so.gas_state_set_array_field(self.id, b"T_modes", Tm, n)
         if flag < 0: raise Exception("could not set T_modes.")
@@ -594,6 +602,15 @@ class GasState(object):
         self.gmodel.update_trans_coeffs(self)
         return
 
+    def update_python_data(self):
+        """
+        There are places in the gas-dynamic functions where a new GasState
+        has been filled in over in the DLang domain and
+        all of the Python-domain data needs to be updated.
+        """
+        # In this wrapper class, all of the state data is in the Dlang domain.
+        return
+
     @property
     def Cv(self):
         return self.gmodel.Cv(self)
@@ -641,8 +658,8 @@ class PyGasState(object):
     This may be more efficient for Python programs
     that access the properties a lot in between updates.
     """
-    __slots__ = ('gmodel', 'dgs', 'rho', 'p',
-                 'T', 'u', 'T_modes', 'u_modes',
+    __slots__ = ('gmodel', 'dgs', 'rho', 'p', 'T', 'u',
+                 'n_modes', 'T_modes', 'u_modes', 'k_modes',
                  'a', 'n_species', 'massf', 'k', 'mu')
 
     def __init__(self, gmodel):
@@ -653,12 +670,13 @@ class PyGasState(object):
         self.p = 0.0
         self.T = 0.0
         self.u = 0.0
-        n_modes = gmodel.n_modes
-        self.T_modes = [0.0,]*n_modes
-        self.u_modes = [0.0,]*n_modes
+        self.n_modes = gmodel.n_modes
+        self.T_modes = [0.0,]*self.n_modes
+        self.u_modes = [0.0,]*self.n_modes
+        self.k_modes = [0.0,]*self.n_modes
         self.a = 0.0
         self.n_species = gmodel.n_species
-        self.massf = [0.0,]*self.n_species
+        self.massf = [0.0,]*self.n_species if self.n_species > 1 else [1.0,]
         self.k = 0.0
         self.mu = 0.0
 
@@ -674,7 +692,10 @@ class PyGasState(object):
         if len(self.T_modes) > 0:
             text += ', T_modes=%s' % self.T_modes
             text += ', u_modes=%s' % self.u_modes
+            text += ', k_modes=%s' % self.k_modes
         text += ', a=%g' % self.a
+        text += ', mu=%g' % self.mu
+        text += ', k=%g' % self.k
         if self.n_species > 1:
             text += ', massf=%s' % str(self.massf)
         text += ', id=%d, gmodel.id=%d)' % (self.id, self.gmodel.id)
@@ -684,21 +705,29 @@ class PyGasState(object):
         id = self.id
         valuep = ffi.new("double *")
         flag = so.gas_state_get_scalar_field(id, b"rho", valuep)
-        if flag < 0: raise Exception("could not get density from Dlang")
+        if flag < 0: raise Exception("could not get density from Dlang GasState")
         self.rho = valuep[0]
         flag = so.gas_state_get_scalar_field(id, b"p", valuep)
-        if flag < 0: raise Exception("could not get pressure from Dlang")
+        if flag < 0: raise Exception("could not get pressure from Dlang GasState")
         self.p = valuep[0]
         flag = so.gas_state_get_scalar_field(id, b"T", valuep)
-        if flag < 0: raise Exception("could not get temperature from Dlang")
+        if flag < 0: raise Exception("could not get temperature from Dlang GasState")
         self.T = valuep[0]
         flag = so.gas_state_get_scalar_field(id, b"u", valuep)
-        if flag < 0: raise Exception("could not get internal-energy from Dlang")
+        if flag < 0: raise Exception("could not get internal-energy from Dlang GasState")
         self.u = valuep[0]
         mf = ffi.new("double[]", [0.0]*self.n_species)
         flag = so.gas_state_get_array_field(id, b"massf", mf, self.n_species)
-        if flag < 0: raise Exception("could not get mass-fractions from Dlang")
+        if flag < 0: raise Exception("could not get mass-fractions from Dlang GasState")
         self.massf = [mf[i] for i in range(self.n_species)]
+        if self.n_modes > 0:
+            value_modes = ffi.new("double[]", [0.0]*self.n_modes)
+            flag = so.gas_state_get_array_field(self.id, b"T_modes", value_modes, self.n_modes)
+            if flag < 0: raise Exception("could not get T_modes from Dlang GasState")
+            self.T_modes = [value_modes[i] for i in range(self.n_modes)]
+            flag = so.gas_state_get_array_field(self.id, b"u_modes", value_modes, self.n_modes)
+            if flag < 0: raise Exception("could not get u_modes from Dlang GasState")
+            self.u_modes = [value_modes[i] for i in range(self.n_modes)]
         return
 
     def copy_mass_fractions_into_dgs(self):
@@ -725,21 +754,21 @@ class PyGasState(object):
         if flag < 0: raise Exception("could not set mass-fractions in Dlang GasState")
         return
 
-    def copy_values(self, gstate):
-        self.gmodel = gstate.gmodel
-        flag = so.gas_state_copy_values(self.id, gstate.id)
-        if flag < 0: raise Exception("could not copy values in Dlang GasStates")
-        self.copy_thermo_properties_from_dgs()
-        return
-
     def update_thermo_from_pT(self):
         id = self.id
         flag = so.gas_state_set_scalar_field(id, b"p", self.p)
         if flag < 0: raise Exception("could not set pressure in Dlang GasState")
         flag = so.gas_state_set_scalar_field(id, b"T", self.T)
         if flag < 0: raise Exception("could not set temperature in Dlang GasState")
-        if len(self.massf) > 1: self.copy_mass_fractions_into_dgs()
-        if len(self.T_modes) > 0: raise NotImplementedError('T_modes')
+        if self.n_species > 1: self.copy_mass_fractions_into_dgs()
+        if self.n_modes > 0:
+            if type(self.T_modes) != type([]):
+                raise Exception("T_modes needs to be supplied as a list.")
+            if len(self.T_modes) != self.n_modes:
+                raise Exception(f"T_modes list is not correct length. nmodes={n}; len(T_modes)={len(self.T_modes)}")
+            Tm = ffi.new("double[]", self.T_modes)
+            flag = so.gas_state_set_array_field(self.id, b"T_modes", Tm, self.n_modes)
+            if flag < 0: raise Exception("could not set T_modes in Dlang GasState")
         self.gmodel.update_thermo_from_pT(self.dgs)
         self.copy_thermo_properties_from_dgs()
         return
@@ -750,8 +779,15 @@ class PyGasState(object):
         if flag < 0: raise Exception("could not set density in Dlang GasState")
         flag = so.gas_state_set_scalar_field(id, b"u", self.u)
         if flag < 0: raise Exception("could not set internal-energy in Dlang GasState")
-        if len(self.massf) > 1: self.copy_mass_fractions_into_dgs()
-        if len(self.T_modes) > 0: raise NotImplementedError('T_modes')
+        if self.n_species > 1: self.copy_mass_fractions_into_dgs()
+        if self.n_modes > 0:
+            if type(self.u_modes) != type([]):
+                raise Exception("u_modes needs to be supplied as a list.")
+            if len(self.u_modes) != self.n_modes:
+                raise Exception(f"u_modes list is not correct length. nmodes={n}; len(u_modes)={len(self.u_modes)}")
+            um = ffi.new("double[]", self.u_modes)
+            flag = so.gas_state_set_array_field(self.id, b"u_modes", um, self.n_modes)
+            if flag < 0: raise Exception("could not set u_modes in Dlang GasState")
         self.gmodel.update_thermo_from_rhou(self.dgs)
         self.copy_thermo_properties_from_dgs()
         return
@@ -762,8 +798,15 @@ class PyGasState(object):
         if flag < 0: raise Exception("could not set density in Dlang GasState")
         flag = so.gas_state_set_scalar_field(id, b"T", self.T)
         if flag < 0: raise Exception("could not set temperature in Dlang GasState")
-        if len(self.massf) > 1: self.copy_mass_fractions_into_dgs()
-        if len(self.T_modes) > 0: raise NotImplementedError('T_modes')
+        if self.n_species > 1: self.copy_mass_fractions_into_dgs()
+        if self.n_modes > 0:
+            if type(self.T_modes) != type([]):
+                raise Exception("T_modes needs to be supplied as a list.")
+            if len(self.T_modes) != self.n_modes:
+                raise Exception(f"T_modes list is not correct length. nmodes={n}; len(T_modes)={len(self.T_modes)}")
+            Tm = ffi.new("double[]", self.T_modes)
+            flag = so.gas_state_set_array_field(self.id, b"T_modes", Tm, self.n_modes)
+            if flag < 0: raise Exception("could not set T_modes in Dlang GasState")
         self.gmodel.update_thermo_from_rhoT(self.dgs)
         self.copy_thermo_properties_from_dgs()
         return
@@ -774,8 +817,8 @@ class PyGasState(object):
         if flag < 0: raise Exception("could not set density in Dlang GasState")
         flag = so.gas_state_set_scalar_field(id, b"p", self.p)
         if flag < 0: raise Exception("could not set pressure in Dlang GasState")
-        if len(self.massf) > 1: self.copy_mass_fractions_into_dgs()
-        if len(self.T_modes) > 0: raise NotImplementedError('T_modes')
+        if self.n_species > 1: self.copy_mass_fractions_into_dgs()
+        if self.n_modes > 0: raise NotImplementedError('T_modes')
         self.gmodel.update_thermo_from_rhop(self.dgs)
         self.copy_thermo_properties_from_dgs()
         return
@@ -784,15 +827,15 @@ class PyGasState(object):
         id = self.id
         flag = so.gas_state_set_scalar_field(id, b"p", self.p)
         if flag < 0: raise Exception("could not set pressure in Dlang GasState")
-        if len(self.massf) > 1: self.copy_mass_fractions_into_dgs()
-        if len(self.T_modes) > 0: raise NotImplementedError('T_modes')
+        if self.n_species > 1: self.copy_mass_fractions_into_dgs()
+        if self.n_modes > 0: raise NotImplementedError('T_modes')
         self.gmodel.update_thermo_from_ps(self.dgs, s)
         self.copy_thermo_properties_from_dgs()
         return
 
     def update_thermo_from_hs(self, h, s):
-        if len(self.massf) > 1: self.copy_mass_fractions_into_dgs()
-        if len(self.T_modes) > 0: raise NotImplementedError('T_modes')
+        if self.n_species > 1: self.copy_mass_fractions_into_dgs()
+        if self.n_modes > 0: raise NotImplementedError('T_modes')
         self.gmodel.update_thermo_from_hs(self.dgs, h, s)
         self.copy_thermo_properties_from_dgs()
         return
@@ -816,6 +859,68 @@ class PyGasState(object):
         flag = so.gas_state_get_scalar_field(id, b"k", valuep)
         if flag < 0: raise Exception("could not get thermal-conductivity from Dlang GasState")
         self.k = valuep[0]
+        if self.n_modes > 0:
+            value_modes = ffi.new("double[]", [0.0]*self.n_modes)
+            flag = so.gas_state_get_array_field(self.id, b"k_modes", value_modes, self.n_modes)
+            if flag < 0: raise Exception("could not get k_modes from Dlang")
+            self.k_modes = [value_modes[i] for i in range(self.n_modes)]
+        return
+
+    def update_python_data(self):
+        """
+        There are places in the gas-dynamic functions where a new GasState
+        has been filled in over in the DLang domain and
+        all of the Python-domain data needs to be updated.
+        """
+        id = self.id
+        valuep = ffi.new("double *")
+        flag = so.gas_state_get_scalar_field(id, b"rho", valuep)
+        if flag < 0: raise Exception("could not get density from Dlang GasState")
+        self.rho = valuep[0]
+        flag = so.gas_state_get_scalar_field(id, b"p", valuep)
+        if flag < 0: raise Exception("could not get pressure from Dlang GasState")
+        self.p = valuep[0]
+        flag = so.gas_state_get_scalar_field(id, b"T", valuep)
+        if flag < 0: raise Exception("could not get temperature from Dlang GasState")
+        self.T = valuep[0]
+        flag = so.gas_state_get_scalar_field(id, b"u", valuep)
+        if flag < 0: raise Exception("could not get internal-energy from Dlang GasState")
+        self.u = valuep[0]
+        flag = so.gas_state_get_scalar_field(id, b"a", valuep)
+        if flag < 0: raise Exception("could not get sound-speed from Dlang GasState")
+        self.a = valuep[0]
+        #
+        mf = ffi.new("double[]", [0.0]*self.n_species)
+        flag = so.gas_state_get_array_field(id, b"massf", mf, self.n_species)
+        if flag < 0: raise Exception("could not get mass-fractions from Dlang GasState")
+        self.massf = [mf[i] for i in range(self.n_species)]
+        #
+        flag = so.gas_state_get_scalar_field(id, b"mu", valuep)
+        if flag < 0: raise Exception("could not get viscosity from Dlang GasState")
+        self.mu = valuep[0]
+        flag = so.gas_state_get_scalar_field(id, b"k", valuep)
+        if flag < 0: raise Exception("could not get thermal-conductivity from Dlang GasState")
+        self.k = valuep[0]
+        #
+        if self.n_modes > 0:
+            value_modes = ffi.new("double[]", [0.0]*self.n_modes)
+            flag = so.gas_state_get_array_field(self.id, b"T_modes", value_modes, self.n_modes)
+            if flag < 0: raise Exception("could not get T_modes from Dlang GasState")
+            self.T_modes = [value_modes[i] for i in range(self.n_modes)]
+            flag = so.gas_state_get_array_field(self.id, b"u_modes", value_modes, self.n_modes)
+            if flag < 0: raise Exception("could not get u_modes from Dlang GasState")
+            self.u_modes = [value_modes[i] for i in range(self.n_modes)]
+            #
+            flag = so.gas_state_get_array_field(self.id, b"k_modes", value_modes, self.n_modes)
+            if flag < 0: raise Exception("could not get k_modes from Dlang GasState")
+            self.k_modes = [value_modes[i] for i in range(self.n_modes)]
+        return
+
+    def copy_values(self, gstate):
+        self.gmodel = gstate.gmodel
+        flag = so.gas_state_copy_values(self.id, gstate.id)
+        if flag < 0: raise Exception("could not copy values in Dlang GasStates")
+        self.update_python_data()
         return
 
     # For the following properties, we just delegate the work
