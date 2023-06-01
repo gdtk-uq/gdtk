@@ -6,7 +6,7 @@
 # To run the script:
 # $ prep-gas ideal-air.inp ideal-air-gas-model.lua
 # $ prep-gas thermal-air.inp thermal-air-gas-model.lua
-# $ python3 brayton.rb
+# $ python3 brayton.py
 #
 # Peter J and Rowan G. 2019-11-21
 from gdtk.gas import GasModel, GasState
