@@ -716,10 +716,15 @@ class PyGasState(object):
         flag = so.gas_state_get_scalar_field(id, b"u", valuep)
         if flag < 0: raise Exception("could not get internal-energy from Dlang GasState")
         self.u = valuep[0]
+        flag = so.gas_state_get_scalar_field(id, b"a", valuep)
+        if flag < 0: raise Exception("could not get sound-speed from Dlang GasState")
+        self.a = valuep[0]
+        #
         mf = ffi.new("double[]", [0.0]*self.n_species)
         flag = so.gas_state_get_array_field(id, b"massf", mf, self.n_species)
         if flag < 0: raise Exception("could not get mass-fractions from Dlang GasState")
         self.massf = [mf[i] for i in range(self.n_species)]
+        #
         if self.n_modes > 0:
             value_modes = ffi.new("double[]", [0.0]*self.n_modes)
             flag = so.gas_state_get_array_field(self.id, b"T_modes", value_modes, self.n_modes)
@@ -1043,6 +1048,7 @@ class GasFlow(object):
         my_results = ffi.new("double[]", [0.0]*2)
         flag = so.gasflow_shock_ideal(state1.id, vs, state2.id, self.gmodel.id, my_results)
         if flag < 0: raise Exception("failed to compute ideal shock jump.")
+        state2.update_python_data()
         v2 = my_results[0]
         vg = my_results[1]
         return [v2, vg]
@@ -1052,6 +1058,7 @@ class GasFlow(object):
         flag = so.gasflow_normal_shock(state1.id, vs, state2.id, self.gmodel.id, my_results,
                                        rho_tol, T_tol)
         if flag < 0: raise Exception("failed to compute normal shock jump.")
+        state2.update_python_data()
         v2 = my_results[0]
         vg = my_results[1]
         return [v2, vg]
@@ -1061,6 +1068,7 @@ class GasFlow(object):
         flag = so.gasflow_normal_shock_1(state1.id, vs, state2.id, self.gmodel.id, my_results,
                                          p_tol, T_tol)
         if flag < 0: raise Exception("failed to compute normal shock jump.")
+        state2.update_python_data()
         v2 = my_results[0]
         vg = my_results[1]
         return [v2, vg]
@@ -1070,6 +1078,7 @@ class GasFlow(object):
         flag = so.gasflow_normal_shock_p2p1(state1.id, p2p1, state2.id, self.gmodel.id,
                                             my_results)
         if flag < 0: raise Exception("failed to compute normal shock jump from p2p1.")
+        state2.update_python_data()
         vs = my_results[0]
         v2 = my_results[1]
         vg = my_results[2]
@@ -1080,6 +1089,7 @@ class GasFlow(object):
         flag = so.gasflow_reflected_shock(state2.id, vg, state5.id, self.gmodel.id,
                                           my_results)
         if flag < 0: raise Exception("failed to compute reflected shock.")
+        state5.update_python_data()
         vr = my_results[0]
         return vr
 
@@ -1088,6 +1098,7 @@ class GasFlow(object):
         flag = so.gasflow_expand_from_stagnation(state0.id, p_over_p0, state1.id,
                                                  self.gmodel.id, my_results)
         if flag < 0: raise Exception("failed to compute expansion from stagnation.")
+        state1.update_python_data()
         v = my_results[0]
         return v
 
@@ -1096,17 +1107,20 @@ class GasFlow(object):
         flag = so.gasflow_expand_to_mach(state0.id, mach, state1.id,
                                          self.gmodel.id, my_results)
         if flag < 0: raise Exception("failed to compute expansion to mach number.")
+        state1.update_python_data()
         v = my_results[0]
         return v
 
     def total_condition(self, state1, v1, state0):
         flag = so.gasflow_total_condition(state1.id, v1, state0.id, self.gmodel.id)
         if flag < 0: raise Exception("failed to compute total condition.")
+        state0.update_python_data()
         return
 
     def pitot_condition(self, state1, v1, state2pitot):
         flag = so.gasflow_pitot_condition(state1.id, v1, state2pitot.id, self.gmodel.id)
         if flag < 0: raise Exception("failed to compute pitot condition.")
+        state2pitot.update_python_data()
         return
 
     def steady_flow_with_area_change(self, state1, v1, area2_over_area1, state2,
@@ -1116,6 +1130,7 @@ class GasFlow(object):
                                                        state2.id, self.gmodel.id, tol,
                                                        p2p1_min, my_results)
         if flag < 0: raise Exception("failed to compute steady flow with area change.")
+        state2.update_python_data()
         v2 = my_results[0]
         return v2
 
@@ -1126,6 +1141,7 @@ class GasFlow(object):
                                          state2.id, self.gmodel.id, steps,
                                          my_results)
         if flag < 0: raise Exception("failed to compute (unsteady) finite wave dp.")
+        state2.update_python_data()
         v2 = my_results[0]
         return v2
 
@@ -1137,6 +1153,7 @@ class GasFlow(object):
                                          state2.id, self.gmodel.id, steps, t_min,
                                          my_results)
         if flag < 0: raise Exception("failed to compute (unsteady) finite wave dv.")
+        state2.update_python_data()
         v2 = my_results[0]
         return v2
 
@@ -1146,6 +1163,9 @@ class GasFlow(object):
                                         stateLstar.id, stateRstar.id,
                                         stateX0.id, self.gmodel.id, my_results)
         if flag < 0: raise Exception("failed to compute solution to Riemann problem.")
+        stateLstar.update_python_data()
+        stateRstar.update_python_data()
+        stateX0.update_python_data()
         pstar = my_results[0]
         wstar = my_results[1]
         wL = my_results[2]
@@ -1201,6 +1221,7 @@ class GasFlow(object):
         flag = so.gasflow_theta_oblique(state1.id, v1, beta,
                                         state2.id, self.gmodel.id, my_results)
         if flag < 0: raise Exception("failed to compute theta oblique.")
+        state2.update_python_data()
         theta = my_results[0]
         v2 = my_results[1]
         return theta, v2
@@ -1219,6 +1240,7 @@ class GasFlow(object):
                                      state_c.id, self.gmodel.id,
                                      dtheta, my_results)
         if flag < 0: raise Exception("failed to compute theta cone.")
+        state_c.update_python_data()
         theta_c = my_results[0]
         v2_c = my_results[1]
         return theta_c, v2_c
