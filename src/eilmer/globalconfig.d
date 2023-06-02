@@ -2705,6 +2705,7 @@ void init_master_lua_State()
     // There is no convenient C API expression to do the equivalent of "require"
     luaL_dostring(L, "require 'lua_helper'");
     // Set some globally available constants for the Lua state.
+    lua_pushboolean(L, SimState.is_restart); lua_setglobal(L, "is_restart");
     lua_pushnumber(L, cfg.nFluidBlocks); lua_setglobal(L, "nFluidBlocks");
     lua_pushnumber(L, cfg.n_ghost_cell_layers); lua_setglobal(L, "n_ghost_cell_layers"); // interpreters for blocks use this name
     lua_pushnumber(L, cfg.n_ghost_cell_layers); lua_setglobal(L, "nGhostCellLayers"); // keep both names

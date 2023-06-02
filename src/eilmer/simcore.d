@@ -99,6 +99,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
         }
     }
     //
+    SimState.is_restart = (tindx > 0);
     SimState.maxWallClockSeconds = timeStringToSeconds(maxWallClock);
     SimState.wall_clock_start = Clock.currTime();
     JSONValue config_jsonData = read_config_file();  // most of the configuration is in here
