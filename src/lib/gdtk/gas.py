@@ -137,6 +137,11 @@ class GasModel(object):
         for i in range(self.n_species):
             so.gas_model_species_name(self.id, i, buf, 32)
             self.species_names.append(ffi.string(buf).decode('utf-8'))
+        # Allocate ffi buffers here, so that they can be reused.
+        self._valuep = ffi.new("double *")
+        self._massf = ffi.new("double[]", [0.0]*self.n_species)
+        self._molef = ffi.new("double[]", [0.0]*self.n_species)
+        self._modes = ffi.new("double[]", [0.0]*self.n_modes)
         return
 
     def __str__(self):
@@ -160,9 +165,8 @@ class GasModel(object):
 
     @property
     def mol_masses(self):
-        mm = ffi.new("double[]", [0.0]*self.n_species)
-        so.gas_model_mol_masses(self.id, mm)
-        return [mm[i] for i in range(self.n_species)]
+        so.gas_model_mol_masses(self.id, self._massf)
+        return [self._massf[i] for i in range(self.n_species)]
 
     def update_thermo_from_pT(self, gstate):
         flag = so.gas_model_gas_state_update_thermo_from_pT(self.id, gstate.id)
@@ -204,55 +208,45 @@ class GasModel(object):
         return
 
     def Cv(self, gstate):
-        valuep = ffi.new("double *")
-        flag = so.gas_model_gas_state_Cv(self.id, gstate.id, valuep)
+        flag = so.gas_model_gas_state_Cv(self.id, gstate.id, self._valuep)
         if flag < 0: raise Exception("could not compute Cv.")
-        return valuep[0]
+        return self._valuep[0]
     def Cp(self, gstate):
-        valuep = ffi.new("double *")
-        flag = so.gas_model_gas_state_Cp(self.id, gstate.id, valuep)
+        flag = so.gas_model_gas_state_Cp(self.id, gstate.id, self._valuep)
         if flag < 0: raise Exception("could not compute Cp.")
-        return valuep[0]
+        return self._valuep[0]
     def dpdrho_const_T(self, gstate):
-        valuep = ffi.new("double *")
-        flag = so.gas_model_gas_state_dpdrho_const_T(self.id, gstate.id, valuep)
+        flag = so.gas_model_gas_state_dpdrho_const_T(self.id, gstate.id, self._valuep)
         if flag < 0: raise Exception("could not compute dpdrho_const_T.")
-        return valuep[0]
+        return self._valuep[0]
     def R(self, gstate):
-        valuep = ffi.new("double *")
-        flag = so.gas_model_gas_state_R(self.id, gstate.id, valuep)
+        flag = so.gas_model_gas_state_R(self.id, gstate.id, self._valuep)
         if flag < 0: raise Exception("could not compute R.")
-        return valuep[0]
+        return self._valuep[0]
     def gamma(self, gstate):
-        valuep = ffi.new("double *")
-        flag = so.gas_model_gas_state_gamma(self.id, gstate.id, valuep)
+        flag = so.gas_model_gas_state_gamma(self.id, gstate.id, self._valuep)
         if flag < 0: raise Exception("could not compute gamma.")
-        return valuep[0]
+        return self._valuep[0]
     def Prandtl(self, gstate):
-        valuep = ffi.new("double *")
-        flag = so.gas_model_gas_state_Prandtl(self.id, gstate.id, valuep)
+        flag = so.gas_model_gas_state_Prandtl(self.id, gstate.id, self._valuep)
         if flag < 0: raise Exception("could not compute Prandtl.")
-        return valuep[0]
+        return self._valuep[0]
     def internal_energy(self, gstate):
-        valuep = ffi.new("double *")
-        flag = so.gas_model_gas_state_internal_energy(self.id, gstate.id, valuep)
+        flag = so.gas_model_gas_state_internal_energy(self.id, gstate.id, self._valuep)
         if flag < 0: raise Exception("could not compute internal energy.")
-        return valuep[0]
+        return self._valuep[0]
     def enthalpy(self, gstate):
-        valuep = ffi.new("double *")
-        flag = so.gas_model_gas_state_enthalpy(self.id, gstate.id, valuep)
+        flag = so.gas_model_gas_state_enthalpy(self.id, gstate.id, self._valuep)
         if flag < 0: raise Exception("could not compute enthalpy.")
-        return valuep[0]
+        return self._valuep[0]
     def entropy(self, gstate):
-        valuep = ffi.new("double *")
-        flag = so.gas_model_gas_state_entropy(self.id, gstate.id, valuep)
+        flag = so.gas_model_gas_state_entropy(self.id, gstate.id, self._valuep)
         if flag < 0: raise Exception("could not compute entropy.")
-        return valuep[0]
+        return self._valuep[0]
     def molecular_mass(self, gstate):
-        valuep = ffi.new("double *")
-        flag = so.gas_model_gas_state_molecular_mass(self.id, gstate.id, valuep)
+        flag = so.gas_model_gas_state_molecular_mass(self.id, gstate.id, self._valuep)
         if flag < 0: raise Exception("could not compute molecular mass.")
-        return valuep[0]
+        return self._valuep[0]
     def binary_diffusion_coefficients(self, gstate):
         nsp = self.n_species
         Dij = ffi.new("double[]", [0.0]*nsp*nsp)
@@ -262,20 +256,17 @@ class GasModel(object):
 
 
     def enthalpy_isp(self, gstate, isp):
-        valuep = ffi.new("double *")
-        flag = so.gas_model_gas_state_enthalpy_isp(self.id, gstate.id, isp, valuep)
+        flag = so.gas_model_gas_state_enthalpy_isp(self.id, gstate.id, isp, self._valuep)
         if flag < 0: raise Exception("could not compute enthalpy for species.")
-        return valuep[0]
+        return self._valuep[0]
     def entropy_isp(self, gstate, isp):
-        valuep = ffi.new("double *")
-        flag = so.gas_model_gas_state_entropy_isp(self.id, gstate.id, isp, valuep)
+        flag = so.gas_model_gas_state_entropy_isp(self.id, gstate.id, isp, self._valuep)
         if flag < 0: raise Exception("could not compute entropy for species.")
-        return valuep[0]
+        return self._valuep[0]
     def gibbs_free_energy_isp(self, gstate, isp):
-        valuep = ffi.new("double *")
-        flag = so.gas_model_gas_state_gibbs_free_energy_isp(self.id, gstate.id, isp, valuep)
+        flag = so.gas_model_gas_state_gibbs_free_energy_isp(self.id, gstate.id, isp, self._valuep)
         if flag < 0: raise Exception("could not compute gibbs free energy for species.")
-        return valuep[0]
+        return self._valuep[0]
 
     def massf2molef(self, massf_given):
         nsp = self.n_species
@@ -291,10 +282,9 @@ class GasModel(object):
                     massf_list.append(0.0)
         if abs(sum(massf_list) - 1.0) > 1.0e-6:
             raise Exception("mass fractions do not sum to 1.")
-        my_massf = ffi.new("double[]", massf_list)
-        my_molef = ffi.new("double[]", [0.0]*self.n_species)
-        so.gas_model_massf2molef(self.id, my_massf, my_molef)
-        return [my_molef[i] for i in range(self.n_species)]
+        for i in range(self.nspecies): self._massf[i] = massf_list[i]
+        so.gas_model_massf2molef(self.id, self._massf, self._molef)
+        return [self._molef[i] for i in range(self.n_species)]
 
     def molef2massf(self, molef_given):
         nsp = self.n_species
@@ -310,10 +300,9 @@ class GasModel(object):
                     molef_list.append(0.0)
         if abs(sum(molef_list) - 1.0) > 1.0e-6:
             raise Exception("mole fractions do not sum to 1.")
-        my_molef = ffi.new("double[]", molef_list)
-        my_massf = ffi.new("double[]", [0.0]*self.n_species)
-        so.gas_model_molef2massf(self.id, my_molef, my_massf)
-        return [my_massf[i] for i in range(self.n_species)]
+        for i in range(self.n_species): self._molef[i] = molef_list[i]
+        so.gas_model_molef2massf(self.id, self._molef, self._massf)
+        return [self._massf[i] for i in range(self.n_species)]
 
 
 # -----------------------------------------------------------------------------------
