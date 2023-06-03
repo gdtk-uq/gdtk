@@ -5,6 +5,7 @@
 // classes that may be called from any language with a C-foreign-function-interface.
 //
 // PJ 2019-07-24: just enough to try integration with the gas makefile.
+//    2023-06-03: add function to get all thermo scalars at once.
 //
 
 import core.runtime;
@@ -234,6 +235,22 @@ extern (C) int gas_state_get_scalar_field(int gs_i, const char* field_name, doub
             string msg = format("Unavailable field name: %s", name);
             throw new Exception(msg);
         }
+        return 0;
+    } catch (Exception e) {
+        stderr.writeln("Exception message: ", e.msg);
+        return -1;
+    }
+}
+
+extern (C) int gas_state_get_thermo_scalars(int gs_i, double* values)
+{
+    try {
+        GasState* gs = gas_states[gs_i];
+        values[0] = gs.rho;
+        values[1] = gs.p;
+        values[2] = gs.T;
+        values[3] = gs.u;
+        values[4] = gs.a;
         return 0;
     } catch (Exception e) {
         stderr.writeln("Exception message: ", e.msg);

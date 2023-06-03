@@ -25,6 +25,7 @@ ffi.cdef("""
     int gas_state_new(int gm_i);
     int gas_state_set_scalar_field(int gs_i, char* field_name, double value);
     int gas_state_get_scalar_field(int gs_i, char* field_name, double* value);
+    int gas_state_get_thermo_scalars(int gs_i, double* values);
     int gas_state_set_array_field(int gs_i, char* field_name, double* values, int n);
     int gas_state_get_array_field(int gs_i, char* field_name, double* values, int n);
     int gas_state_get_ceaSavedData_field(int gs_i, char* field_name, double* value);
@@ -651,7 +652,7 @@ class PyGasState(object):
     __slots__ = ('gmodel', 'dgs', 'rho', 'p', 'T', 'u',
                  'n_modes', 'T_modes', 'u_modes', 'k_modes',
                  'a', 'n_species', 'massf', 'k', 'mu',
-                 '_valuep', '_mf', '_modes')
+                 '_valuep', '_mf', '_modes', '_thermo_values')
 
     def __init__(self, gmodel):
         self.gmodel = gmodel # Reference to the underlying Dlang GasModel
@@ -674,6 +675,7 @@ class PyGasState(object):
         self._valuep = ffi.new("double *")
         self._mf = ffi.new("double[]", [0.0]*gmodel.n_species)
         self._modes = ffi.new("double[]", [0.0]*gmodel.n_modes)
+        self._thermo_values = ffi.new("double[]", [0.0,]*5)
 
     @property
     def id(self):
@@ -698,26 +700,14 @@ class PyGasState(object):
 
     def copy_thermo_properties_from_dgs(self):
         id = self.id
-        flag = so.gas_state_get_scalar_field(id, b"rho", self._valuep)
-        if flag < 0: raise Exception("could not get density from Dlang GasState")
-        self.rho = self._valuep[0]
-        flag = so.gas_state_get_scalar_field(id, b"p", self._valuep)
-        if flag < 0: raise Exception("could not get pressure from Dlang GasState")
-        self.p = self._valuep[0]
-        flag = so.gas_state_get_scalar_field(id, b"T", self._valuep)
-        if flag < 0: raise Exception("could not get temperature from Dlang GasState")
-        self.T = self._valuep[0]
-        flag = so.gas_state_get_scalar_field(id, b"u", self._valuep)
-        if flag < 0: raise Exception("could not get internal-energy from Dlang GasState")
-        self.u = self._valuep[0]
-        flag = so.gas_state_get_scalar_field(id, b"a", self._valuep)
-        if flag < 0: raise Exception("could not get sound-speed from Dlang GasState")
-        self.a = self._valuep[0]
-        #
-        flag = so.gas_state_get_array_field(id, b"massf", self._mf, self.n_species)
-        if flag < 0: raise Exception("could not get mass-fractions from Dlang GasState")
-        self.massf = [self._mf[i] for i in range(self.n_species)]
-        #
+        flag = so.gas_state_get_thermo_scalars(id, self._thermo_values)
+        if flag < 0: raise Exception("could not get thermo scalars from Dlang GasState")
+        self.rho = self._thermo_values[0]
+        self.p = self._thermo_values[1]
+        self.T = self._thermo_values[2]
+        self.u = self._thermo_values[3]
+        self.a = self._thermo_values[4]
+        # We assume that the mass fractions have not have changed.
         if self.n_modes > 0:
             flag = so.gas_state_get_array_field(self.id, b"T_modes", self._modes, self.n_modes)
             if flag < 0: raise Exception("could not get T_modes from Dlang GasState")
