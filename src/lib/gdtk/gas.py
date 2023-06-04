@@ -4,7 +4,7 @@
 #
 # PJ 2019-07-24: start of experiment with FFI.
 #    2019-07-25: added Python wrapper
-#    2023-06-01: added shadow attributes
+#    2023-06-01: added PyGasState with shadow attributes
 #
 PC_P_atm = 101.325e3
 
@@ -642,6 +642,9 @@ class PyGasState(object):
                  'n_modes', 'T_modes', 'u_modes', 'k_modes',
                  'a', 'n_species', 'massf', 'k', 'mu',
                  '_valuep', '_mf', '_modes', '_thermo_values')
+    # Beyond the slots listed above, there are a number of properties defined below.
+    # Together, these attributes allow the PyGasState object to look and behave like
+    # a corresponding GasState object.
 
     def __init__(self, gmodel):
         self.gmodel = gmodel # Reference to the underlying Dlang GasModel
@@ -846,21 +849,13 @@ class PyGasState(object):
         all of the Python-domain data needs to be updated.
         """
         id = self.id
-        flag = so.gas_state_get_scalar_field(id, b"rho", self._valuep)
-        if flag < 0: raise Exception("could not get density from Dlang GasState")
-        self.rho = self._valuep[0]
-        flag = so.gas_state_get_scalar_field(id, b"p", self._valuep)
-        if flag < 0: raise Exception("could not get pressure from Dlang GasState")
-        self.p = self._valuep[0]
-        flag = so.gas_state_get_scalar_field(id, b"T", self._valuep)
-        if flag < 0: raise Exception("could not get temperature from Dlang GasState")
-        self.T = self._valuep[0]
-        flag = so.gas_state_get_scalar_field(id, b"u", self._valuep)
-        if flag < 0: raise Exception("could not get internal-energy from Dlang GasState")
-        self.u = self._valuep[0]
-        flag = so.gas_state_get_scalar_field(id, b"a", self._valuep)
-        if flag < 0: raise Exception("could not get sound-speed from Dlang GasState")
-        self.a = self._valuep[0]
+        flag = so.gas_state_get_thermo_scalars(id, self._thermo_values)
+        if flag < 0: raise Exception("could not get thermo scalars from Dlang GasState")
+        self.rho = self._thermo_values[0]
+        self.p = self._thermo_values[1]
+        self.T = self._thermo_values[2]
+        self.u = self._thermo_values[3]
+        self.a = self._thermo_values[4]
         #
         flag = so.gas_state_get_array_field(id, b"massf", self._mf, self.n_species)
         if flag < 0: raise Exception("could not get mass-fractions from Dlang GasState")
@@ -885,6 +880,56 @@ class PyGasState(object):
             if flag < 0: raise Exception("could not get k_modes from Dlang GasState")
             self.k_modes = [self._modes[i] for i in range(self.n_modes)]
         return
+
+    @property
+    def massf_as_dict(self):
+        nsp = self.n_species
+        names = self.gmodel.species_names
+        mf = self.massf
+        result = {}
+        for i in range(nsp): result[names[i]] = mf[i]
+        return result
+
+    @property
+    def molef(self):
+        nsp = self.n_species
+        flag = so.gas_model_gas_state_get_molef(self.gmodel.id, self.id, self._mf)
+        if flag < 0: raise Exception("could not get mole-fractions from Dlang GasState.")
+        return [self._mf[i] for i in range(nsp)]
+    @property
+    def molef_as_dict(self):
+        nsp = self.n_species
+        names = self.gmodel.species_names
+        mf = self.molef
+        result = {}
+        for i in range(nsp): result[names[i]] = mf[i]
+        return result
+    @molef.setter
+    def molef(self, molef_given):
+        nsp = self.gmodel.n_species
+        if len(molef_given) != nsp:
+            raise Exception(f"mole fraction list is not correct length. nsp={nsp}; len(molef)={len(molef_given)}")
+        mf_list = self.gmodel.molef2massf(molef_given)
+        for i in range(nsp): self._mf[i] = mf_list[i]
+        flag = so.gas_state_set_array_field(self.id, b"massf", self._mf, nsp)
+        if flag < 0: raise Exception("could not set mass-fractions from mole-fractions.")
+        # At this point, we may not have the mole-fractions as a list.
+        return None
+
+    @property
+    def conc(self):
+        nsp = self.n_species
+        flag = so.gas_model_gas_state_get_conc(self.gmodel.id, self.id, self._mf)
+        if flag < 0: raise Exception("could not get concentrations from Dlang GasState.")
+        return [self._mf[i] for i in range(nsp)]
+    @property
+    def conc_as_dict(self):
+        nsp = self.n_species
+        names = self.gmodel.species_names
+        conc_list = self.conc
+        result = {}
+        for i in range(nsp): result[names[i]] = conc_list[i]
+        return result
 
     def copy_values(self, gstate):
         self.gmodel = gstate.gmodel
