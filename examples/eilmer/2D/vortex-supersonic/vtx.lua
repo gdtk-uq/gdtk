@@ -33,9 +33,9 @@ bcList = {north=UserDefinedBC:new{fileName='udf-vortex-flow.lua'},
 	  south=UserDefinedBC:new{fileName='udf-vortex-flow.lua'},
 	  west=UserDefinedBC:new{fileName='udf-vortex-flow.lua'}}
 --]]
-bcList = {north=WallBC_WithSlip1:new{},
+bcList = {north=WallBC_WithSlip:new{},
 	  east=OutFlowBC_Simple:new{},
-	  south=WallBC_WithSlip1:new{},
+	  south=WallBC_WithSlip:new{},
 	  west=UserDefinedBC:new{fileName='udf-vortex-flow.lua'}}
 blk = FBArray:new{grid=grid0, nib=4, njb=1,
                       initialState=initial, bcList=bcList,

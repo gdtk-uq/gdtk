@@ -42,6 +42,7 @@ import fluidblock;
 import fluidblockio_old;
 import bc;
 import grid_motion;
+import conservedquantities;
 import grid_motion_udf;
 import geom.luawrap.luasgrid;
 import luaflowstate;
@@ -81,6 +82,7 @@ public:
     // Work-space that gets reused.
     // The following objects are used in the convective_flux method.
     OneDInterpolator one_d;
+    ConservedQuantities flux;
 
 public:
     this(int blk_id, size_t nicell, size_t njcell, size_t nkcell, string label)
@@ -446,6 +448,7 @@ public:
             size_t neq = myConfig.cqi.n;
             size_t nftl = myConfig.n_flow_time_levels;
 
+            flux = new_ConservedQuantities(neq);
             ncells = nic*njc*nkc;
             size_t nifaces = niv*njc*nkc;
             size_t njfaces = nic*njv*nkc;
@@ -456,6 +459,7 @@ public:
             if (myConfig.dimensions == 3) nbfaces += 2*njc*nic;
             size_t nghost = (2*njc*nkc + 2*nic*nkc)*n_ghost_cell_layers;
             if (myConfig.dimensions == 3) nghost += 2*nic*njc*n_ghost_cell_layers;
+
 
             celldata.nfaces.length = nic*njc*nkc;
             celldata.volumes.length = nic*njc*nkc + nghost;
@@ -479,11 +483,13 @@ public:
             facedata.left_interior_only.length = nbfaces;
             facedata.right_interior_only.length = nbfaces;
             facedata.flowstates.reserve(nfaces);
-            facedata.interp_data.length = nfaces;
             facedata.stencil_idxs.length = nfaces;
             facedata.gradients.reserve(nfaces);
             facedata.workspaces.reserve(nfaces);
             facedata.fluxes.length = nfaces*neq;
+
+            if (myConfig.interpolation_order>=2) facedata.l2r2_interp_data.length = nfaces;
+            if (myConfig.interpolation_order==3) facedata.l3r3_interp_data.length = nfaces;
 
             foreach (n; 0 .. niv*njc*nkc) facedata.flowstates ~= FlowState(gmodel, nturb);
             foreach (n; 0 .. nic*njv*nkc) facedata.flowstates ~= FlowState(gmodel, nturb);
@@ -691,10 +697,12 @@ public:
             foreach (j; 0 .. njc) {
                 foreach (i; 0 .. niv) {
                     size_t fid = ifi_index(i,j,k);
+                    if (i>2)     facedata.stencil_idxs[fid].L2 = cell_index(i-3, j, k);
                     if (i>1)     facedata.stencil_idxs[fid].L1 = cell_index(i-2, j, k);
                     if (i>0)     facedata.stencil_idxs[fid].L0 = cell_index(i-1, j, k);
                     if (i<niv-1) facedata.stencil_idxs[fid].R0 = cell_index(i+0, j, k);
                     if (i<niv-2) facedata.stencil_idxs[fid].R1 = cell_index(i+1, j, k);
+                    if (i<niv-3) facedata.stencil_idxs[fid].R2 = cell_index(i+2, j, k);
                 } // i loop
             } // j loop
         } // k loop
@@ -702,10 +710,12 @@ public:
             foreach (i; 0 .. nic) {
                 foreach (j; 0 .. njv) {
                     size_t fid = ifj_index(i,j,k);
+                    if (j>2)     facedata.stencil_idxs[fid].L2 = cell_index(i, j-3, k);
                     if (j>1)     facedata.stencil_idxs[fid].L1 = cell_index(i, j-2, k);
                     if (j>0)     facedata.stencil_idxs[fid].L0 = cell_index(i, j-1, k);
                     if (j<njv-1) facedata.stencil_idxs[fid].R0 = cell_index(i, j+0, k);
                     if (j<njv-2) facedata.stencil_idxs[fid].R1 = cell_index(i, j+1, k);
+                    if (j<njv-3) facedata.stencil_idxs[fid].R2 = cell_index(i, j+2, k);
                 } // j loop
             } // i loop
         } // k loop
@@ -714,10 +724,12 @@ public:
                 foreach (i; 0 .. nic) {
                     foreach (k; 0 .. nkv) {
                         size_t fid = ifk_index(i,j,k);
+                        if (k>2)     facedata.stencil_idxs[fid].L2 = cell_index(i, j, k-3);
                         if (k>1)     facedata.stencil_idxs[fid].L1 = cell_index(i, j, k-2);
                         if (k>0)     facedata.stencil_idxs[fid].L0 = cell_index(i, j, k-1);
                         if (k<nkv-1) facedata.stencil_idxs[fid].R0 = cell_index(i, j, k+0);
                         if (k<nkv-2) facedata.stencil_idxs[fid].R1 = cell_index(i, j, k+1);
+                        if (k<nkv-3) facedata.stencil_idxs[fid].R2 = cell_index(i, j, k+2);
                     } // k loop
                 } // i loop
             } // j loop
@@ -730,11 +742,18 @@ public:
             foreach (i; 0 .. nic) {
                 size_t fid0 = ifj_index(i, njc, k);
                 size_t fid1 = ifj_index(i, njc-1, k);
-                facedata.stencil_idxs[fid0].R0 = cid; // TODO: Variable no of ghost cells
+                size_t fid2 = ifj_index(i, njc-2, k);
+                facedata.stencil_idxs[fid0].R0 = cid;
                 facedata.stencil_idxs[fid1].R1 = cid;
+                facedata.stencil_idxs[fid2].R2 = cid;
                 cid++;
-                facedata.stencil_idxs[fid0].R1 = cid; // TODO: Variable no of ghost cells
+                facedata.stencil_idxs[fid0].R1 = cid;
+                facedata.stencil_idxs[fid1].R2 = cid;
                 cid++;
+                if (n_ghost_cell_layers>2) {
+                    facedata.stencil_idxs[fid0].R2 = cid;
+                    cid++;
+                }
             }
         }
         // South
@@ -742,11 +761,18 @@ public:
             foreach (i; 0 .. nic) {
                 size_t fid0 = ifj_index(i, 0, k);
                 size_t fid1 = ifj_index(i, 1, k);
-                facedata.stencil_idxs[fid0].L0 = cid; // TODO: Variable no of ghost cells
+                size_t fid2 = ifj_index(i, 2, k);
+                facedata.stencil_idxs[fid0].L0 = cid;
                 facedata.stencil_idxs[fid1].L1 = cid;
+                facedata.stencil_idxs[fid2].L2 = cid;
                 cid++;
-                facedata.stencil_idxs[fid0].L1 = cid; // TODO: Variable no of ghost cells
+                facedata.stencil_idxs[fid0].L1 = cid;
+                facedata.stencil_idxs[fid1].L2 = cid;
                 cid++;
+                if (n_ghost_cell_layers>2) {
+                    facedata.stencil_idxs[fid0].L2 = cid;
+                    cid++;
+                }
             }
         }
         // East
@@ -754,11 +780,18 @@ public:
             foreach (j; 0 .. njc) {
                 size_t fid0 = ifi_index(nic, j, k);
                 size_t fid1 = ifi_index(nic-1, j, k);
-                facedata.stencil_idxs[fid0].R0 = cid; // TODO: Variable no of ghost cells
+                size_t fid2 = ifi_index(nic-2, j, k);
+                facedata.stencil_idxs[fid0].R0 = cid;
                 facedata.stencil_idxs[fid1].R1 = cid;
+                facedata.stencil_idxs[fid2].R2 = cid;
                 cid++;
-                facedata.stencil_idxs[fid0].R1 = cid; // TODO: Variable no of ghost cells
+                facedata.stencil_idxs[fid0].R1 = cid;
+                facedata.stencil_idxs[fid1].R2 = cid;
                 cid++;
+                if (n_ghost_cell_layers>2) {
+                    facedata.stencil_idxs[fid0].R2 = cid;
+                    cid++;
+                }
             }
         }
         // West
@@ -766,11 +799,18 @@ public:
             foreach (j; 0 .. njc) {
                 size_t fid0 = ifi_index(0, j, k);
                 size_t fid1 = ifi_index(1, j, k);
-                facedata.stencil_idxs[fid0].L0 = cid; // TODO: Variable no of ghost cells
+                size_t fid2 = ifi_index(2, j, k);
+                facedata.stencil_idxs[fid0].L0 = cid;
                 facedata.stencil_idxs[fid1].L1 = cid;
+                facedata.stencil_idxs[fid2].L2 = cid;
                 cid++;
-                facedata.stencil_idxs[fid0].L1 = cid; // TODO: Variable no of ghost cells
+                facedata.stencil_idxs[fid0].L1 = cid;
+                facedata.stencil_idxs[fid1].L2 = cid;
                 cid++;
+                if (n_ghost_cell_layers>2) {
+                    facedata.stencil_idxs[fid0].L2 = cid;
+                    cid++;
+                }
             }
         }
         if (myConfig.dimensions == 3) {
@@ -779,11 +819,18 @@ public:
                 foreach (i; 0 .. nic) {
                     size_t fid0 = ifk_index(i, j, nkc);
                     size_t fid1 = ifk_index(i, j, nkc-1);
-                    facedata.stencil_idxs[fid0].R0 = cid; // TODO: Variable no of ghost cells
+                    size_t fid2 = ifk_index(i, j, nkc-2);
+                    facedata.stencil_idxs[fid0].R0 = cid;
                     facedata.stencil_idxs[fid1].R1 = cid;
+                    facedata.stencil_idxs[fid2].R2 = cid;
                     cid++;
-                    facedata.stencil_idxs[fid0].R1 = cid; // TODO: Variable no of ghost cells
+                    facedata.stencil_idxs[fid0].R1 = cid;
+                    facedata.stencil_idxs[fid1].R2 = cid;
                     cid++;
+                    if (n_ghost_cell_layers>2) {
+                        facedata.stencil_idxs[fid0].R2 = cid;
+                        cid++;
+                    }
                 }
             }
             // Bottom
@@ -791,11 +838,18 @@ public:
                 foreach (i; 0 .. nic) {
                     size_t fid0 = ifk_index(i, j, 0);
                     size_t fid1 = ifk_index(i, j, 1);
-                    facedata.stencil_idxs[fid0].L0 = cid; // TODO: Variable no of ghost cells
+                    size_t fid2 = ifk_index(i, j, 2);
+                    facedata.stencil_idxs[fid0].L0 = cid;
                     facedata.stencil_idxs[fid1].L1 = cid;
+                    facedata.stencil_idxs[fid2].L2 = cid;
                     cid++;
-                    facedata.stencil_idxs[fid0].L1 = cid; // TODO: Variable no of ghost cells
+                    facedata.stencil_idxs[fid0].L1 = cid;
+                    facedata.stencil_idxs[fid1].L2 = cid;
                     cid++;
+                    if (n_ghost_cell_layers>2) {
+                        facedata.stencil_idxs[fid0].L2 = cid;
+                        cid++;
+                    }
                 }
             }
         } // end if (myConfig.dimensions == 3)
@@ -1389,6 +1443,8 @@ public:
     @nogc
     override void precompute_stencil_data(size_t gtl)
     {
+        bool second_order = myConfig.interpolation_order>=2;
+        bool third_order  = myConfig.interpolation_order==3;
         // Update stencil information, or set it all for the first time WIP (NNG)
         foreach (k; 0 .. nkc) {
             foreach (j; 0 .. njc) {
@@ -1398,7 +1454,14 @@ public:
                     number lenL0 = celldata.lengths[facedata.stencil_idxs[fid].L0].x;
                     number lenR0 = celldata.lengths[facedata.stencil_idxs[fid].R0].x;
                     number lenR1 = celldata.lengths[facedata.stencil_idxs[fid].R1].x;
-                    facedata.interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
+                    if (second_order) {
+                        facedata.l2r2_interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
+                    } 
+                    if (third_order) {
+                        number lenL2 = celldata.lengths[facedata.stencil_idxs[fid].L2].x;
+                        number lenR2 = celldata.lengths[facedata.stencil_idxs[fid].R2].x;
+                        facedata.l3r3_interp_data[fid].set(lenL2, lenL1, lenL0, lenR0, lenR1, lenR2);
+                    }
                 } // i loop
             } // j loop
         } // k loop
@@ -1410,7 +1473,14 @@ public:
                     number lenL0 = celldata.lengths[facedata.stencil_idxs[fid].L0].y;
                     number lenR0 = celldata.lengths[facedata.stencil_idxs[fid].R0].y;
                     number lenR1 = celldata.lengths[facedata.stencil_idxs[fid].R1].y;
-                    facedata.interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
+                    if (second_order) {
+                        facedata.l2r2_interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
+                    }
+                    if (third_order) {
+                        number lenL2 = celldata.lengths[facedata.stencil_idxs[fid].L2].y;
+                        number lenR2 = celldata.lengths[facedata.stencil_idxs[fid].R2].y;
+                        facedata.l3r3_interp_data[fid].set(lenL2, lenL1, lenL0, lenR0, lenR1, lenR2);
+                    }
                 } // j loop
             } // i loop
         } // k loop
@@ -1423,7 +1493,14 @@ public:
                         number lenL0 = celldata.lengths[facedata.stencil_idxs[fid].L0].z;
                         number lenR0 = celldata.lengths[facedata.stencil_idxs[fid].R0].z;
                         number lenR1 = celldata.lengths[facedata.stencil_idxs[fid].R1].z;
-                        facedata.interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
+                        if (second_order) {
+                            facedata.l2r2_interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
+                        }
+                        if (third_order) {
+                            number lenL2 = celldata.lengths[facedata.stencil_idxs[fid].L2].z;
+                            number lenR2 = celldata.lengths[facedata.stencil_idxs[fid].R2].z;
+                            facedata.l3r3_interp_data[fid].set(lenL2, lenL1, lenL0, lenR0, lenR1, lenR2);
+                        }
                     } // k loop
                 } // i loop
             } // j loop
@@ -2497,16 +2574,12 @@ public:
     }
 
     @nogc
-    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0)
-    // Compute the flux from flow-field data on either-side of the interface.
+    void second_order_flux_calc(size_t gtl)
     {
-        // Barring exceptions at the block boundaries, the general process is:
-        // (1) interpolate LEFT and RIGHT interface states from cell-center properties.
-        // (2) save u, v, w, T for the viscous flux calculation by making a local average.
-        // The values for u, v and T may be updated subsequently by the interface-flux function.
-        // (3) Apply the flux calculator to the Lft,Rght flow states.
-        //
-        immutable bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
+    /*
+        Eilmer's classic second-order piece-wise parabolic reconstruction, using a
+        4 cell symmetric stencil.
+    */
         immutable bool hpl = myConfig.apply_heuristic_pressure_based_limiting;
         immutable size_t neq = myConfig.cqi.n;
         immutable size_t nsp = myConfig.n_species;
@@ -2521,43 +2594,174 @@ public:
         number beta = 1.0;
         Vector3 gvel;
         gvel.clear();
-        if (do_reconstruction) {
-            foreach(idx; 0 .. nfaces){
-                size_t L1 = facedata.stencil_idxs[idx].L1;
-                size_t L0 = facedata.stencil_idxs[idx].L0;
-                size_t R0 = facedata.stencil_idxs[idx].R0;
-                size_t R1 = facedata.stencil_idxs[idx].R1;
-                if (hpl) beta =
-                    compute_heuristic_pressure_limiter(celldata.flowstates[L1],
-                                                       celldata.flowstates[L0],
-                                                       celldata.flowstates[R0],
-                                                       celldata.flowstates[R1]);
 
-                Lft.copy_values_from(celldata.flowstates[L0]);
-                Rght.copy_values_from(celldata.flowstates[R0]);
-                interp_l2r2(celldata.flowstates[L1], celldata.flowstates[L0],
-                            celldata.flowstates[R0], celldata.flowstates[R1],
-                            facedata.interp_data[idx], nsp, nmodes, nturb,
-                            ti, MHD, apply_limiter, extrema_clipping,
-                            myConfig, *Lft, *Rght, beta);
-                facedata.flowstates[idx].copy_average_values_from(*Lft, *Rght);
-                compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
-                                                facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
-                                                facedata.fluxes[idx*neq .. (idx+1)*neq]);
-            }
-        } else {
-            foreach(idx; 0 .. nfaces){
-                size_t l = facedata.f2c[idx].left;
-                size_t r = facedata.f2c[idx].right;
+        foreach(idx; 0 .. nfaces){
+            size_t L1 = facedata.stencil_idxs[idx].L1;
+            size_t L0 = facedata.stencil_idxs[idx].L0;
+            size_t R0 = facedata.stencil_idxs[idx].R0;
+            size_t R1 = facedata.stencil_idxs[idx].R1;
+            if (hpl) beta =
+                compute_heuristic_pressure_limiter(celldata.flowstates[L1].gas.p,
+                                                   celldata.flowstates[L0].gas.p,
+                                                   celldata.flowstates[R0].gas.p,
+                                                   celldata.flowstates[R1].gas.p);
 
-                Lft.copy_values_from(celldata.flowstates[l]);
-                Rght.copy_values_from(celldata.flowstates[r]);
-                facedata.flowstates[idx].copy_average_values_from(*Lft, *Rght);
-                compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
-                                                facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
-                                                facedata.fluxes[idx*neq .. (idx+1)*neq]);
+            Lft.copy_values_from(celldata.flowstates[L0]);
+            Rght.copy_values_from(celldata.flowstates[R0]);
+
+            interp_l2r2(celldata.flowstates[L1], celldata.flowstates[L0],
+                        celldata.flowstates[R0], celldata.flowstates[R1],
+                        facedata.l2r2_interp_data[idx], nsp, nmodes, nturb,
+                        ti, MHD, apply_limiter, extrema_clipping,
+                        myConfig, *Lft, *Rght, beta);
+            facedata.flowstates[idx].copy_average_values_from(*Lft, *Rght);
+
+            compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
+                                            facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
+                                            facedata.fluxes[idx*neq .. (idx+1)*neq]);
+        }
+        return;
+    }
+
+    @nogc
+    void third_order_flux_calc(size_t gtl)
+    {
+    /*
+        Experimental high-order parabolic reconstruction, using a 6 cell
+        symmetric stencil, and possibly the unusual ASF flux calculator.
+    */
+        immutable bool hpl = myConfig.apply_heuristic_pressure_based_limiting;
+        immutable size_t neq = myConfig.cqi.n;
+        immutable size_t nsp = myConfig.n_species;
+        immutable size_t nmodes = myConfig.n_modes;
+        immutable size_t nturb = myConfig.turb_model.nturb;
+        immutable bool is3D = (myConfig.dimensions == 3);
+        immutable bool MHD = myConfig.MHD;
+        immutable bool apply_limiter = myConfig.apply_limiter;
+        immutable bool extrema_clipping = myConfig.extrema_clipping;
+        immutable InterpolateOption ti = myConfig.thermo_interpolator;
+
+        number beta = 1.0;
+        Vector3 gvel;
+        gvel.clear();
+
+        foreach(idx; 0 .. nfaces){
+            size_t L2 = facedata.stencil_idxs[idx].L2;
+            size_t L1 = facedata.stencil_idxs[idx].L1;
+            size_t L0 = facedata.stencil_idxs[idx].L0;
+            size_t R0 = facedata.stencil_idxs[idx].R0;
+            size_t R1 = facedata.stencil_idxs[idx].R1;
+            size_t R2 = facedata.stencil_idxs[idx].R2;
+            if (hpl) beta =
+                compute_heuristic_pressure_limiter(celldata.flowstates[L2].gas.p,
+                                                   celldata.flowstates[L1].gas.p,
+                                                   celldata.flowstates[L0].gas.p,
+                                                   celldata.flowstates[R0].gas.p,
+                                                   celldata.flowstates[R1].gas.p,
+                                                   celldata.flowstates[R2].gas.p);
+
+            Lft.copy_values_from(celldata.flowstates[L0]);
+            Rght.copy_values_from(celldata.flowstates[R0]);
+
+            interp_l3r3(celldata.flowstates[L2], celldata.flowstates[L1],
+                        celldata.flowstates[L0], celldata.flowstates[R0],
+                        celldata.flowstates[R1], celldata.flowstates[R2],
+                        facedata.l3r3_interp_data[idx], nsp, nmodes, nturb,
+                        ti, MHD, apply_limiter, extrema_clipping,
+                        myConfig, *Lft, *Rght, beta);
+
+            facedata.flowstates[idx].copy_average_values_from(*Lft, *Rght);
+
+            compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
+                                            facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
+                                            facedata.fluxes[idx*neq .. (idx+1)*neq]);
+        }
+        return;
+    }
+
+    @nogc
+    void first_order_flux_calc(size_t gtl)
+    {
+        immutable size_t neq = myConfig.cqi.n;
+        Vector3 gvel;
+        gvel.clear();
+        foreach(idx; 0 .. nfaces){
+            size_t l = facedata.stencil_idxs[idx].L0;
+            size_t r = facedata.stencil_idxs[idx].R0;
+
+            Lft.copy_values_from(celldata.flowstates[l]);
+            Rght.copy_values_from(celldata.flowstates[r]);
+
+            facedata.flowstates[idx].copy_average_values_from(*Lft, *Rght);
+
+            compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
+                                            facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
+                                            facedata.fluxes[idx*neq .. (idx+1)*neq]);
+        }
+    }
+
+    @nogc
+    void asf_flux_calc(size_t gtl, bool adaptive=false)
+    {
+    /*
+        Low dissipation flux calculator, using the unusual ASF method.
+    */
+        immutable size_t neq = myConfig.cqi.n;
+        immutable size_t nsp = myConfig.n_species;
+        immutable size_t nmodes = myConfig.n_modes;
+        immutable size_t nturb = myConfig.turb_model.nturb;
+        immutable bool is3D = (myConfig.dimensions == 3);
+
+        number factor = 1.0;
+        foreach(idx; 0 .. nfaces){
+            size_t L1 = facedata.stencil_idxs[idx].L1;
+            size_t L0 = facedata.stencil_idxs[idx].L0;
+            size_t R0 = facedata.stencil_idxs[idx].R0;
+            size_t R1 = facedata.stencil_idxs[idx].R1;
+
+            facedata.flowstates[idx].copy_average_values_from(celldata.flowstates[L0], celldata.flowstates[R0]);
+
+            if (adaptive) factor = 1.0 - facedata.flowstates[idx].S;
+
+            // This routine uses and reuses a "flux" vector that belongs to the SFluidBlock
+            // This is because we need to transform it to the global face, without messing
+            // with the components of facedata.fluxes
+            flux.clear();
+            ASF_242(celldata.flowstates[L1], celldata.flowstates[L0],
+                    celldata.flowstates[R0], celldata.flowstates[R1],
+                    myConfig, nsp, nmodes, nturb, 
+                    facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
+                    flux, factor);
+            foreach(i; 0 .. neq) {
+                facedata.fluxes[idx*neq +i] += flux[i];
             }
         }
+        return;
+    }
+
+    @nogc
+    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0)
+    // Compute the flux from flow-field data on either-side of the interface.
+    {
+        bool second_order = allow_high_order_interpolation && (myConfig.interpolation_order == 2);
+        bool third_order = allow_high_order_interpolation && (myConfig.interpolation_order == 3);
+        bool pure_asf = myConfig.flux_calculator == FluxCalculator.asf;
+        bool adaptive_asf = myConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf;
+        //debug{writefln("Called phase0[%d], second %s third %s pure %s adaptive %s allow %s int order %s",
+        //               id, second_order, third_order, pure_asf, adaptive_asf, allow_high_order_interpolation,
+        //               myConfig.interpolation_order);}
+
+        if (!pure_asf) {
+            if (second_order) {
+                second_order_flux_calc(gtl);
+            } else if (third_order) {
+                third_order_flux_calc(gtl);
+            } else {
+                first_order_flux_calc(gtl);
+            }
+        }
+
+        if (pure_asf || adaptive_asf) asf_flux_calc(gtl, adaptive_asf);
         return;
     } // end convective_flux_phase0()
 

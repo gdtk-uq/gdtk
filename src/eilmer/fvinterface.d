@@ -30,10 +30,10 @@ import conservedquantities;
 import globalconfig;
 import lsqinterp;
 import mass_diffusion;
-import onedinterp : InterpData;
+import onedinterp;
 
 struct LR {size_t left,right;}
-struct LLRR {size_t L1,L0,R0,R1;}
+struct LLLRRR {size_t L2,L1,L0,R0,R1,R2;}
 
 struct FVInterfaceData{
     LR[] f2c;
@@ -45,8 +45,9 @@ struct FVInterfaceData{
     Vector3[] tangents2;
     Vector3[] positions;
     FlowState[] flowstates;
-    LLRR[] stencil_idxs;
-    InterpData[] interp_data;
+    LLLRRR[] stencil_idxs;
+    L2R2InterpData[] l2r2_interp_data;
+    L3R3InterpData[] l3r3_interp_data;
     FlowGradients[] gradients;
     WLSQGradWorkspace[] workspaces;
     ConservedQuantities fluxes;

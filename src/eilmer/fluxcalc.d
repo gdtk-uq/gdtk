@@ -125,15 +125,15 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght, ref 
     case FluxCalculator.osher:
         osher(Lft, Rght, fs, F, myConfig);
         break;
-    // FIXME: Lachlan's fluxes need the full stencil
     case FluxCalculator.asf:
-        throw new Error("Not implemented.");
-        //ASF_242(IFace, myConfig);
-        //break;
+        throw new Error("Should be unreachable.");
     case FluxCalculator.adaptive_ausmdv_asf:
-        throw new Error("Not implemented.");
-        //adaptive_ausmdv_asf(Lft, Rght, IFace, myConfig);
-        //break;
+        number alpha = fs.S;
+        if (alpha > 0.0) {
+            ausmdv(Lft, Rght, fs, F, myConfig, alpha);
+        }
+        // ASF will be called later and added to F
+        break;
     } // end switch
     auto cqi = myConfig.cqi;
     version(MHD) {
@@ -2318,6 +2318,123 @@ void osher(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQu
     }
 } // end osher()
 
+@nogc
+void ASF_242(ref FlowState L1fs,ref FlowState L0fs, ref FlowState R0fs, ref FlowState R1fs,
+             ref LocalConfig myConfig, size_t n_species, size_t n_modes, size_t nturb,
+             Vector3 n, Vector3 t1, Vector3 t2,
+             ConservedQuantities F, number factor=1.0) {
+    // Lachlan's Alpha-Split Flux calculation function.
+    //
+    // This flux calculator is based on the formulation in the NASA Techmical Memo
+    // Travis C. Fisher, Mark H. Carpenter, Jan Nordstroem, Nail K. Yamaleev and R. Charles Swanson
+    // Discretely Conservative Finite-Difference Formulations for Nonlinear Conservation Laws
+    // in Split Form: Theory and Boundary Conditions
+    // NASA/TM-2011-217307  November 2011
+    //
+    // And the AIAA Paper by White et al. 2012
+    // Low-Dissipation Advection Schemes Designed for Large Eddy Simulation of Hypersonic Propulsion
+    // Systems
+
+    auto gmodel = myConfig.gmodel;
+    auto cqi = myConfig.cqi;
+    // this stencil is using references to comply with @nogc
+    // we need to convert back after we have finished with them
+    // (this is very inefficient)
+    GasState*[4] gases = [&(L1fs.gas), &(L0fs.gas),
+                          &(R0fs.gas), &(R1fs.gas)];
+    // Function-local copy of the velocity vectors.
+    Vector3[4] vels = [L1fs.vel, L0fs.vel,
+                       R0fs.vel, R1fs.vel];
+    // Start by substracting interface velocities and transforming to local frame;
+    // it is unlikely we will be using moving grids with this solver, but no harm in including this.
+    foreach (ref vel; vels) {
+        vel.transform_to_local_frame(n, t1, t2);
+    }
+    // Define the v,w factors as prescribed by White et al. 2012 for the simple convective fluxes
+    number[4][10] v, w;
+    foreach (i; 0 .. gases.length) {
+        number rho = gases[i].rho; number p = gases[i].p;
+        number e = gmodel.internal_energy(*gases[i]);
+        number velx = vels[i].x; number vely = vels[i].y; number velz = vels[i].z;
+        v[0][i] = rho;           w[0][i] = velx;  // mass
+        v[1][i] = velx*rho;      w[1][i] = velx;  // x-momentum
+        v[2][i] = vely*rho;      w[2][i] = velx;  // y-momentum
+        v[3][i] = velz*rho;      w[3][i] = velx;  // z-momentum
+        v[4][i] = e*rho;         w[4][i] = velx;  // Internal energy
+        v[5][i] = velx*velx*rho; w[5][i] = velx;  // Kinetic energy, x
+        v[6][i] = vely*vely*rho; w[6][i] = velx;  // Kinetic energy, y
+        v[7][i] = velz*velz*rho; w[7][i] = velx;  // Kinetic energy, z
+        v[8][i] = p;             w[8][i] = velx;  // Pressure work in energy equation.
+        v[9][i] = p;             w[9][i] = 1;     // Pressure in momentum equation
+    }
+    //
+    // Prepare the conservative and product rule fluxes arrays
+    number[10] f_c, f_e;
+    // Calculate conservative and product rule fluxes
+    foreach (j; 0 .. 10) {
+        // Divergence-form flux (eq 3.5 in NASA/TM-2011-217307)
+        f_c[j] = (1.0/12.0) * (-v[j][0]*w[j][0] + 7.0*v[j][1]*w[j][1] + 7.0*v[j][2]*w[j][2] - v[j][3]*w[j][3]);
+        // Product-rule flux (eq 3.6 in NASA/TM-2011-217307)
+        f_e[j] = (1.0/12.0) * (-v[j][0]*w[j][2] - v[j][2]*w[j][0] + 8*v[j][1]*w[j][2]
+                               + 8*v[j][2]*w[j][1] - v[j][1]*w[j][3] - v[j][3]*w[j][1]);
+    }
+    // Define the splitting values as per White et al,
+    // in the conservative skew-symmetric form of Honein and Moin.
+    number alpha_mass = 1.0;
+    number alpha_mom = 0.5;
+    number alpha_ie = 0.5;
+    number alpha_ke = 0.0;
+    number alpha_p = 0.0;
+    //
+    // Calculate the final flux values of the simple quantities mass, momentum and energy
+    number mass_flux = factor*(alpha_mass*f_c[0] + (1.0-alpha_mass)*f_e[0]);
+    F[cqi.mass] += mass_flux;
+    F[cqi.xMom] += factor*(alpha_mom*f_c[1] + (1.0-alpha_mom)*f_e[1] + (alpha_p*f_c[9] + (1.0-alpha_p)*f_e[9]));
+    F[cqi.yMom] += factor*(alpha_mom*f_c[2] + (1.0-alpha_mom)*f_e[2]);
+    if (cqi.threeD) { F[cqi.zMom] += factor*(alpha_mom*f_c[3] + (1.0-alpha_mom)*f_e[3]); }
+    F[cqi.totEnergy] += factor*(alpha_ie*f_c[4] + (1.0-alpha_ie)*f_e[4] +
+                                0.5*(alpha_ke*f_c[5] + (1.0-alpha_ke)*f_e[5] +
+                                     alpha_ke*f_c[6] + (1.0-alpha_ke)*f_e[6] +
+                                     alpha_ke*f_c[7] + (1.0-alpha_ke)*f_e[7]) +
+                                alpha_p*f_c[8] + (1.0-alpha_p)*f_e[8]);
+    //
+    if (cqi.threeD) {
+        transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], F[cqi.zMom], n, t1, t2);
+    } else {
+        number zDummy = to!number(0.0);
+        transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], zDummy, n, t1, t2);
+    }
+    // Other fluxes (copied from Roe flux)
+    // Here we will base these extended properties based on the left and right
+    // cell average properties rather than some reconstructed values.
+    if (mass_flux >= 0.0) {
+        /* Wind is blowing from the left */
+        version(turbulence) {
+            foreach(i; 0 .. nturb) { F[cqi.rhoturb+i] += mass_flux*L0fs.turb[i]; }
+        }
+        version(multi_species_gas) {
+            if (n_species > 1) {
+                foreach (i; 0 .. n_species) { F[cqi.species+i] += mass_flux*L0fs.gas.massf[i]; }
+            }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. n_modes) { F[cqi.modes+i] += mass_flux*L0fs.gas.u_modes[i]; }
+        }
+    } else {
+        /* Wind is blowing from the right */
+        version(turbulence) {
+            foreach(i; 0 .. nturb) { F[cqi.rhoturb+i] += mass_flux*R0fs.turb[i]; }
+        }
+        version(multi_species_gas) {
+            if (n_species > 1) {
+                foreach (i; 0 .. n_species) { F[cqi.species+i] += mass_flux*R0fs.gas.massf[i]; }
+            }
+        }
+        version(multi_T_gas) {
+            foreach (i; 0 .. n_modes) { F[cqi.modes+i] += mass_flux*R0fs.gas.u_modes[i]; }
+        }
+    }
+} // end ASF_242()
 
 @nogc
 void ASF_242(ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0) {
@@ -2458,3 +2575,4 @@ void adaptive_ausmdv_asf(in FlowState Lft, in FlowState Rght, ref FVInterface IF
     }
     return;
 }
+
