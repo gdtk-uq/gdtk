@@ -338,7 +338,8 @@ class GasState(object):
         if self.gmodel.n_modes > 0:
             gs_new.T_modes = self.T_modes
         gs_new.massf = self.massf
-        gs_new.update_thermo_from_pT()
+        if (self.p > 0.0) and (self.T > 0.0):
+            gs_new.update_thermo_from_pT()
         return gs_new
 
     def __deepcopy__(self, memo):
@@ -348,7 +349,8 @@ class GasState(object):
         if self.gmodel.n_modes > 0:
             gs_new.T_modes = self.T_modes
         gs_new.massf = self.massf
-        gs_new.update_thermo_from_pT()
+        if (self.p > 0.0) and (self.T > 0.0):
+            gs_new.update_thermo_from_pT()
         return gs_new
 
     def __str__(self):
@@ -711,7 +713,8 @@ class PyGasState(object):
         if self.gmodel.n_modes > 0:
             gs_new.T_modes = self.T_modes
         gs_new.massf = self.massf
-        gs_new.update_thermo_from_pT()
+        if (self.p > 0.0) and (self.T > 0.0):
+            gs_new.update_thermo_from_pT()
         return gs_new
 
     def __deepcopy__(self, memo):
@@ -721,7 +724,8 @@ class PyGasState(object):
         if self.gmodel.n_modes > 0:
             gs_new.T_modes = self.T_modes
         gs_new.massf = self.massf
-        gs_new.update_thermo_from_pT()
+        if (self.p > 0.0) and (self.T > 0.0):
+            gs_new.update_thermo_from_pT()
         return gs_new
 
     def __str__(self):
