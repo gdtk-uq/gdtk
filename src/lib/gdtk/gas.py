@@ -144,6 +144,14 @@ class GasModel(object):
         self._modes = ffi.new("double[]", [0.0]*self.n_modes)
         return
 
+    def __copy__(self):
+        gm_new = GasModel(self.file_name)
+        return gm_new
+
+    def __deepcopy__(self, memo):
+        gm_new = GasModel(self.file_name)
+        return gm_new
+
     def __str__(self):
         text = 'GasModel(file="%s", id=%d, species=%s)' % \
             (self.file_name, self.id, self.species_names)
@@ -321,6 +329,27 @@ class GasState(object):
         self._valuep = ffi.new("double *")
         self._mf = ffi.new("double[]", [0.0]*gmodel.n_species)
         self._modes = ffi.new("double[]", [0.0]*gmodel.n_modes)
+        return
+
+    def __copy__(self):
+        gs_new = GasState(self.gmodel)
+        gs_new.p = self.p
+        gs_new.T = self.T
+        if self.gmodel.n_modes > 0:
+            gs_new.T_modes = self.T_modes
+        gs_new.massf = self.massf
+        gs_new.update_thermo_from_pT()
+        return gs_new
+
+    def __deepcopy__(self, memo):
+        gs_new = GasState(self.gmodel)
+        gs_new.p = self.p
+        gs_new.T = self.T
+        if self.gmodel.n_modes > 0:
+            gs_new.T_modes = self.T_modes
+        gs_new.massf = self.massf
+        gs_new.update_thermo_from_pT()
+        return gs_new
 
     def __str__(self):
         text = 'GasState(rho=%g' % self.rho
@@ -404,6 +433,7 @@ class GasState(object):
 
     @property
     def massf(self):
+        nsp = self.gmodel.n_species
         flag = so.gas_state_get_array_field(self.id, b"massf", self._mf, nsp)
         if flag < 0: raise Exception("could not get mass-fractions.")
         return [self._mf[i] for i in range(nsp)]
@@ -668,10 +698,31 @@ class PyGasState(object):
         self._mf = ffi.new("double[]", [0.0]*gmodel.n_species)
         self._modes = ffi.new("double[]", [0.0]*gmodel.n_modes)
         self._thermo_values = ffi.new("double[]", [0.0,]*5)
+        return
 
     @property
     def id(self):
         return self.dgs.id
+
+    def __copy__(self):
+        gs_new = PyGasState(self.gmodel)
+        gs_new.p = self.p
+        gs_new.T = self.T
+        if self.gmodel.n_modes > 0:
+            gs_new.T_modes = self.T_modes
+        gs_new.massf = self.massf
+        gs_new.update_thermo_from_pT()
+        return gs_new
+
+    def __deepcopy__(self, memo):
+        gs_new = PyGasState(self.gmodel)
+        gs_new.p = self.p
+        gs_new.T = self.T
+        if self.gmodel.n_modes > 0:
+            gs_new.T_modes = self.T_modes
+        gs_new.massf = self.massf
+        gs_new.update_thermo_from_pT()
+        return gs_new
 
     def __str__(self):
         text = 'PyGasState(rho=%g' % self.rho
