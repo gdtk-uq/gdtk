@@ -2583,14 +2583,6 @@ void configCheckPoint2()
             throw new FlowSolverException(msg);
         }
     }
-    if (cfg.high_order_flux_calculator) {
-        if (cfg.n_ghost_cell_layers < 3) {
-            if (cfg.is_master_task) {
-                writeln("NOTE: Increasing n_ghost_cell_layers to 3.");
-            }
-            cfg.n_ghost_cell_layers = 3;
-        }
-    }
     return;
 } // end configCheckPoint2()
 

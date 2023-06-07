@@ -105,3 +105,32 @@ import std.algorithm;
         // return comp*shear;
 }
 
+@nogc number NNG_ShockDetector(GasModel gm, in FlowState L, in FlowState R, Vector3 n, const double Mx){
+    /*
+        Experimental smooth wshock detector by NNG. Use the HLLC wave speeds to 
+        look for sharp interfaces in pressure and velocity.
+        See Notes: 6th June, 2023
+        @author: Nick Gibbons
+    */
+    number pL = L.gas.p;
+    number pR = R.gas.p;
+    number uL = geom.dot(L.vel, n);
+    number uR = geom.dot(R.vel, n);
+    number yL = gm.gamma(L.gas);
+    number yR = gm.gamma(R.gas);
+    number a = 0.5*(L.gas.a + R.gas.a);
+    number rho = 0.5*(L.gas.rho + R.gas.rho);
+
+    number pstar = 0.5*(pL+pR) - 0.5*(uR-uL)*rho*a;
+    number ustar = 0.5*(uL+uR) - 0.5*(pR-pL)/rho/a;
+    number facL = sqrt(1.0 + (yL+1.0)/(2*yL)*(pstar/pL - 1.0));
+    number facR = sqrt(1.0 + (yR+1.0)/(2*yR)*(pstar/pR - 1.0));
+
+    number qL = (pstar>pL) ? facL : to!number(1.0);
+    number qR = (pstar>pR) ? facR : to!number(1.0);
+    //number q = fmax(qR, qL) - 1.0 + 1e-3;
+    number q = fmax(qR, qL) - 1.0;
+    number S = fmin(q/Mx, 1.0);
+
+    return S;
+}

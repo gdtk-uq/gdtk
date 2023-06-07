@@ -234,7 +234,7 @@ function output.write_config_file(fileName)
    f:write(string.format('"report_invalid_cells": %s,\n', tostring(config.report_invalid_cells)))
 
    if config.n_ghost_cell_layers < 3 then
-      if config.high_order_flux_calculator or (config.interpolation_order == 3) then
+      if config.interpolation_order == 3 then
          print("Increasing config.n_ghost_cell_layers to 3 (structured-grid).")
          config.n_ghost_cell_layers = 3
       end
