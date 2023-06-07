@@ -66,13 +66,13 @@ struct FVCellData{
     number[] volumes;
     Vector3[] lengths;
     Vector3[] positions;
+    size_t[][] cell_cloud_indices;
     Vector3[][] face_distances;
     FlowState[] flowstates;
     FlowGradients[] gradients;
     ConservedQuantities dUdts;
     ConservedQuantities source_terms;
     WLSQGradWorkspace[] workspaces;
-    size_t[][] cell_cloud_indices;
     LSQInterpWorkspace[] lsqws;
     LSQInterpGradients[] lsqgradients;
 }

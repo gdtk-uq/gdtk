@@ -769,18 +769,21 @@ public:
         case SpatialDerivLocn.cells:
             final switch (myConfig.spatial_deriv_calc) {
             case SpatialDerivCalc.least_squares:
-                foreach(cell; cells) {
-                    cell.grad.gradients_leastsq(myConfig, cell.cloud_fs, cell.cloud_pos, *(cell.ws_grad));
+                immutable bool is3D = (myConfig.dimensions == 3);
+                immutable size_t nsp = myConfig.n_species;
+                immutable size_t nmodes = myConfig.n_modes;
+                immutable size_t nturb = myConfig.turb_model.nturb;
+                immutable bool doSpecies = myConfig.turb_model.isTurbulent || myConfig.mass_diffusion_model != MassDiffusionModel.none;
+                foreach(i; 0 .. ncells){
+                    celldata.gradients[i].gradients_at_cells_leastsq(
+                        celldata.flowstates[i], facedata.flowstates, celldata.c2f[i],
+                        celldata.workspaces[i], celldata.nfaces[i],
+                        is3D, nsp, nmodes, nturb, doSpecies);
                 }
                 break;
             case SpatialDerivCalc.divergence:
-                foreach(iface; faces) {
-                    assert(0, "divergence thereom not implemented when computing gradients at cell centres.");
-                }
+                throw new Error("divergence thereom not implemented when computing gradients at cell centres.");
             } // end switch
-            //
-            // Cell centered gradients are transformed to interfaces in simcore.
-            //
         } // end switch (myConfig.spatial_deriv_locn)
     } // end flow_property_spatial_derivatives()
 
