@@ -2740,28 +2740,25 @@ public:
     }
 
     @nogc
-    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0)
+    override void convective_flux_phase0(bool allow_high_order_interpolation)
     // Compute the flux from flow-field data on either-side of the interface.
     {
         bool second_order = allow_high_order_interpolation && (myConfig.interpolation_order == 2);
         bool third_order = allow_high_order_interpolation && (myConfig.interpolation_order == 3);
         bool pure_asf = myConfig.flux_calculator == FluxCalculator.asf;
         bool adaptive_asf = myConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf;
-        //debug{writefln("Called phase0[%d], second %s third %s pure %s adaptive %s allow %s int order %s",
-        //               id, second_order, third_order, pure_asf, adaptive_asf, allow_high_order_interpolation,
-        //               myConfig.interpolation_order);}
 
         if (!pure_asf) {
             if (second_order) {
-                second_order_flux_calc(gtl);
+                second_order_flux_calc(0);
             } else if (third_order) {
-                third_order_flux_calc(gtl);
+                third_order_flux_calc(0);
             } else {
-                first_order_flux_calc(gtl);
+                first_order_flux_calc(0);
             }
         }
 
-        if (pure_asf || adaptive_asf) asf_flux_calc(gtl, adaptive_asf);
+        if (pure_asf || adaptive_asf) asf_flux_calc(0, adaptive_asf);
         return;
     } // end convective_flux_phase0()
 

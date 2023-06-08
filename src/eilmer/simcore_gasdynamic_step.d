@@ -346,7 +346,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     if (GlobalConfig.do_shock_detect) detect_shocks(gtl, ftl);
 
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
-	if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
+	if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation); }
     }
 
     // for unstructured blocks we need to transfer the convective gradients before the flux calc
@@ -615,7 +615,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         if (GlobalConfig.do_shock_detect) detect_shocks(gtl, ftl);
 
 	foreach (blk; parallel(localFluidBlocksBySize,1)) {
-	    if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
+	    if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation); }
 	}
 
         // for unstructured blocks we need to transfer the convective gradients before the flux calc
@@ -1028,7 +1028,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             // Phase 05a LOCAL
             try {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
+                    if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation); }
                 }
             } catch (Exception e) {
                 debug { writefln("Exception thrown in phase 05a of stage %d of explicit update: %s", stage, e.msg); }
