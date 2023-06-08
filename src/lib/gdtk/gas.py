@@ -435,6 +435,9 @@ class GasState(object):
 
     @property
     def massf(self):
+        """
+        Mass fractions are always returned as a list.
+        """
         nsp = self.gmodel.n_species
         flag = so.gas_state_get_array_field(self.id, b"massf", self._mf, nsp)
         if flag < 0: raise Exception("could not get mass-fractions.")
@@ -449,6 +452,9 @@ class GasState(object):
         return result
     @massf.setter
     def massf(self, mf_given):
+        """
+        Mass fractions may be provided as a list or dictionary.
+        """
         nsp = self.gmodel.n_species
         if type(mf_given) == type([]):
             if len(mf_given) != nsp:
@@ -470,6 +476,9 @@ class GasState(object):
 
     @property
     def molef(self):
+        """
+        Mole fractions are always returned as a list.
+        """
         nsp = self.gmodel.n_species
         flag = so.gas_model_gas_state_get_molef(self.gmodel.id, self.id, self._mf)
         if flag < 0: raise Exception("could not get mole-fractions.")
@@ -484,14 +493,17 @@ class GasState(object):
         return result
     @molef.setter
     def molef(self, molef_given):
+        """
+        Mole fractions may be provided as a list or dictionary.
+        """
         nsp = self.gmodel.n_species
-        if len(molef_given) != nsp:
-            raise Exception(f"mole fraction list is not correct length. nsp={nsp}; len(molef)={len(molef_given)}")
         mf_list = self.gmodel.molef2massf(molef_given)
         for i in range(nsp): self._mf[i] = mf_list[i]
         flag = so.gas_state_set_array_field(self.id, b"massf", self._mf, nsp)
         if flag < 0: raise Exception("could not set mass-fractions from mole-fractions.")
-        # At this point, we may not have the mole-fractions as a list.
+        # At this point, we may not have the mole-fractions as a list
+        # because it may have been provided as a dictionary.
+        # So, don't return anything.
         return None
 
     @property
@@ -947,6 +959,9 @@ class PyGasState(object):
 
     @property
     def molef(self):
+        """
+        Mole fractions are always returned as a list.
+        """
         nsp = self.n_species
         flag = so.gas_model_gas_state_get_molef(self.gmodel.id, self.id, self._mf)
         if flag < 0: raise Exception("could not get mole-fractions from Dlang GasState.")
@@ -961,9 +976,12 @@ class PyGasState(object):
         return result
     @molef.setter
     def molef(self, molef_given):
-        nsp = self.gmodel.n_species
-        if len(molef_given) != nsp:
-            raise Exception(f"mole fraction list is not correct length. nsp={nsp}; len(molef)={len(molef_given)}")
+        """
+        Mole fractions may be provided as a list or dictionary.
+
+        The object does not actually store the mole fractions but,
+        instead, the corresponding mass-fractions
+        """
         self.massf = self.gmodel.molef2massf(molef_given)
         return None
 
@@ -1061,7 +1079,7 @@ class ThermochemicalReactor(object):
                                                           t_interval, self.dt_suggestp)
         if flag < 0: raise Exception("could not update state.")
         gstate.update_python_data()
-        return dt_suggestp[0]
+        return self.dt_suggestp[0]
 
 
 # -----------------------------------------------------------------------------------
