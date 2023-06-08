@@ -1044,6 +1044,15 @@ class ThermochemicalReactor(object):
         self.id = so.thermochemical_reactor_new(self.gmodel.id,
                                                 bytes(self.filename1, 'utf-8'),
                                                 bytes(self.filename2, 'utf-8'))
+        self.dt_suggestp = ffi.new("double *")
+
+    def __copy__(self):
+        reactor_new = ThermochemicalReactor(self.gmodel, self.filename1, self.filename2)
+        return reactor_new
+
+    def __deepcopy__(self):
+        reactor_new = ThermochemicalReactor(self.gmodel, self.filename1, self.filename2)
+        return reactor_new
 
     def __str__(self):
         text = 'ThermochemicalReactor(id=%d, gmodel.id=%d, file1="%s", file2="%s")' % \
@@ -1051,11 +1060,11 @@ class ThermochemicalReactor(object):
         return text
 
     def update_state(self, gstate, t_interval, dt_suggest=-1.0):
-        dt_suggestp = ffi.new("double *")
-        dt_suggestp[0] = dt_suggest
+        self.dt_suggestp[0] = dt_suggest
         flag = so.thermochemical_reactor_gas_state_update(self.id, gstate.id,
-                                                          t_interval, dt_suggestp)
+                                                          t_interval, self.dt_suggestp)
         if flag < 0: raise Exception("could not update state.")
+        gstate.update_python_data()
         return dt_suggestp[0]
 
 
