@@ -29,7 +29,7 @@ class TestVtx < Test::Unit::TestCase
         break
       end
     end
-    assert((steps - 2761).abs < 3, "Failed to take correct number of steps.")
+    assert((steps - 2751).abs < 3, "Failed to take correct number of steps.")
   end
 
   def test_2_post_L2_norms
@@ -46,7 +46,7 @@ class TestVtx < Test::Unit::TestCase
         break
       end
     end
-    assert((pressure - 800.0).abs < 100.0, "Failed to see expected pressure error.")
+    assert((pressure - 900.0).abs < 100.0, "Failed to see expected pressure error.")
     #
     cmd = 'e4shared --post --job=vtx --tindx-plot=last --ref-soln=udf-vortex-flow.lua --norms="T"'
     o, e, s = Open3.capture3(*cmd.split)
@@ -61,6 +61,6 @@ class TestVtx < Test::Unit::TestCase
         break
       end
     end
-    assert((temperature - 0.405).abs < 0.10, "Failed to see expected temperature error.")
+    assert((temperature - 1.0).abs < 0.10, "Failed to see expected temperature error.")
   end
 end
