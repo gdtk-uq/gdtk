@@ -964,11 +964,7 @@ class PyGasState(object):
         nsp = self.gmodel.n_species
         if len(molef_given) != nsp:
             raise Exception(f"mole fraction list is not correct length. nsp={nsp}; len(molef)={len(molef_given)}")
-        mf_list = self.gmodel.molef2massf(molef_given)
-        for i in range(nsp): self._mf[i] = mf_list[i]
-        flag = so.gas_state_set_array_field(self.id, b"massf", self._mf, nsp)
-        if flag < 0: raise Exception("could not set mass-fractions from mole-fractions.")
-        # At this point, we may not have the mole-fractions as a list.
+        self.massf = self.gmodel.molef2massf(molef_given)
         return None
 
     @property
