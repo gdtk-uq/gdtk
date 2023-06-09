@@ -708,7 +708,7 @@ public:
     @nogc
     void venkat_limit2(in FlowState fs, number volume,
                        Vector3[] face_distances, size_t nfaces,
-                       bool apply_heuristic_pressure_limiter, LocalConfig myConfig)
+                       number phi_hp, LocalConfig myConfig)
     {
         // This is the classic Venkatakrishnan limiter from ref. [1], refer to ref. [2] for implementation details.
         // We use the new definition for eps2 as given in ref. [3].
@@ -738,12 +738,6 @@ public:
         }
         number eps2;
 
-        // Park heuristic pressure limiter
-        number phi_hp = 1.0;
-        //if (apply_heuristic_pressure_limiter) {
-        //    park_limit(cell_cloud, ws, myConfig);
-        //    phi_hp = velxPhi; // we choose velxPhi here since it will always be set regardless of the thermo_interpolator
-        //}
         number velMax = sqrt(velxMax*velxMax+velyMax*velyMax+velzMax*velzMax);
         number velMin = sqrt(velxMin*velxMin+velyMin*velyMin+velzMin*velzMin);
         number velnondim = 0.5*fabs(velMax+velMin) + 1.0e-25;
@@ -1135,6 +1129,78 @@ public:
             break;
         } // end switch thermo_interpolator
     } // end nishikawa_limit()
+
+    @nogc
+    void park_limit2(in LSQInterpGradients grad, FlowState[] fss, size_t id, LR[] f2c, bool is3d,
+                     Vector3[] face_distances, size_t[] face_idxs, size_t nfaces, LocalConfig myConfig)
+    {
+        // Pressure-based heuristic limiter
+        // Implementation details from
+        //     M. A. Park
+        //     Anisotropic Output-Based Adaptation with Tetrahedral Cut Cells for Compressible Flows
+        //     Thesis @ Massachusetts Institute of Technology, 2008
+        // Modified by NNG to use the harmonic mean of the s value computed at each face,
+        // instead of just the minimum s value. This smooths out the limiter spatially and
+        // removes a source of noise in the reconstruction process, while still prioritising
+        // small values of s in the averaging process. (09/08/22)
+
+        number phi = park_equation(grad, fss, id, f2c, is3d, face_distances, face_idxs, nfaces);
+
+        // the limiter value for each variable is set to the pressure-based value
+        velxPhi = phi; velyPhi = phi; velzPhi = phi;
+        version(MHD) {
+            if (myConfig.MHD) {
+                BxPhi = phi; ByPhi = phi; BzPhi = phi;
+                if (myConfig.divergence_cleaning) { psiPhi = phi; }
+            }
+        }
+        version(turbulence) {
+            foreach (it; 0 .. myConfig.turb_model.nturb) { turbPhi[it] = phi; }
+        }
+        version(multi_species_gas) {
+            auto nsp = myConfig.n_species;
+            if (nsp > 1) {
+                // Multiple species.
+                foreach (isp; 0 .. nsp) { massfPhi[isp] = phi; }
+            } else {
+                // Only one possible gradient value for a single species.
+                massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+            }
+        }
+
+        // Interpolate on two of the thermodynamic quantities,
+        // and fill in the rest based on an EOS call.
+        auto nmodes = myConfig.n_modes;
+        final switch (myConfig.thermo_interpolator) {
+        case InterpolateOption.pt:
+            pPhi = phi; TPhi = phi;
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) { T_modesPhi[imode] = phi; }
+            }
+            break;
+        case InterpolateOption.rhou:
+            rhoPhi = phi; uPhi = phi;
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) { u_modesPhi[imode] = phi; }
+            }
+            break;
+        case InterpolateOption.rhop:
+            rhoPhi = phi; pPhi = phi;
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) { u_modesPhi[imode] = phi; }
+            }
+            break;
+        case InterpolateOption.rhot:
+            rhoPhi = phi; TPhi = phi;
+            version(multi_T_gas) {
+                foreach (imode; 0 .. nmodes) { T_modesPhi[imode] = phi;
+                }
+            }
+            break;
+        } // end switch thermo_interpolator
+
+        return;
+    } // end park_limit2()
 
     @nogc
     void park_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
@@ -2796,4 +2862,47 @@ void interp_both(Vector3 dL, Vector3 dR, in LSQInterpGradients cLgrad, in LSQInt
 @nogc pure number venkat_equation(number qname, number[3] gname, number qMaxname, number qMinname, number h, double K, const Vector3[] face_distances, size_t nfaces, bool is3d) {
     number nondim = 0.5*fabs(qMaxname + qMinname);
     return venkat_equation(qname, gname, qMaxname, qMinname, h, K, face_distances, nfaces, is3d, nondim);
+}
+
+@nogc
+number park_equation(in LSQInterpGradients grad, FlowState[] fss, size_t id, LR[] f2c, bool is3d,
+                     Vector3[] face_distances, size_t[] face_idxs, size_t nfaces) {
+    // Pressure-based heuristic limiter
+    // Implementation details from
+    //     M. A. Park
+    //     Anisotropic Output-Based Adaptation with Tetrahedral Cut Cells for Compressible Flows
+    //     Thesis @ Massachusetts Institute of Technology, 2008
+    // Modified by NNG to use the harmonic mean of the s value computed at each face,
+    // instead of just the minimum s value. This smooths out the limiter spatially and
+    // removes a source of noise in the reconstruction process, while still prioritising
+    // small values of s in the averaging process. (09/08/22)
+
+    number phi = 0.0;
+    double n = 0.0;
+    foreach (i; 0 .. nfaces) {
+        size_t fidx = face_idxs[i];
+        size_t nidx = f2c[fidx].left;
+        if (nidx == id) nidx = f2c[fidx].right;
+
+        number dx1 = face_distances[i].x;
+        number dy1 = face_distances[i].y;
+        number dz1 = face_distances[i].z;
+        number pp = fss[id].gas.p;
+        number pn = fss[nidx].gas.p;
+        number dpf = (0.5*(pp + pn) - pn);
+
+        // this step is a modification on the original algorithm since we don't have cell gradients from neighbouring blocks at this point
+        number dpx = dx1*grad.p[0] - dpf;
+        number dpy = dy1*grad.p[1] - dpf;
+        number dpz = dz1*grad.p[2] - dpf;
+        number dp = dpx*dpx + dpy*dpy;
+        if (is3d) dp += dpz*dpz;
+        dp = sqrt(dp);
+        number pmin = fmin(pp, pn);
+        number s = 1.0-tanh(dp/pmin);
+        phi += 1.0/fmax(s, 1e-16);
+        n += 1.0;
+    }
+    phi = n/phi;
+    return phi;
 }

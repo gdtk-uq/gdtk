@@ -958,7 +958,11 @@ public:
                 foreach (c; cells) c.gradients.barth_limit(c.cell_cloud, *(c.ws), myConfig);
                 break;
             case UnstructuredLimiter.park:
-                foreach (c; cells) c.gradients.park_limit(c.cell_cloud, *(c.ws), myConfig);
+                immutable bool is3d = myConfig.dimensions == 3;
+                foreach (i; 0 .. ncells) {
+                    celldata.lsqgradients[i].park_limit2(celldata.lsqgradients[i], celldata.flowstates, i, facedata.f2c, is3d,
+                                                         celldata.face_distances[i], celldata.c2f[i], celldata.nfaces[i], myConfig);
+                }
                 break;
             case UnstructuredLimiter.hvan_albada:
                 foreach (c; cells) c.gradients.van_albada_limit(c.cell_cloud, *(c.ws), true, myConfig);
@@ -979,15 +983,23 @@ public:
                 foreach (c; cells) c.gradients.venkat_mlp_limit(c.cell_cloud, *(c.ws), false, myConfig, gtl);
                 break;
             case UnstructuredLimiter.hvenkat:
-                foreach (c; cells) c.gradients.venkat_limit(c.cell_cloud, *(c.ws), true, myConfig, gtl);
+                immutable bool is3d = myConfig.dimensions == 3;
+                foreach (i; 0 .. ncells) {
+                    number phi_hp = park_equation(celldata.lsqgradients[i], celldata.flowstates, i, facedata.f2c, is3d,
+                                                  celldata.face_distances[i], celldata.c2f[i], celldata.nfaces[i]);
+                    celldata.lsqgradients[i].venkat_limit2(celldata.flowstates[i],
+                        celldata.volumes[i], celldata.face_distances[i],
+                        celldata.nfaces[i], phi_hp, myConfig);
+                }
                 break;
             case UnstructuredLimiter.venkat:
+                number phi_hp = to!number(1.0);
                 foreach (i; 0 .. ncells) {
                     celldata.lsqgradients[i].venkat_limit2(celldata.flowstates[i],
                         celldata.volumes[i], celldata.face_distances[i],
-                        celldata.nfaces[i], false, myConfig);
+                        celldata.nfaces[i], phi_hp, myConfig);
                 }
-            break;
+                break;
             default:
                 throw new Error("Bad limiter selected");
         }
@@ -1039,11 +1051,12 @@ public:
                 foreach (c; cell_list) c.gradients.venkat_limit(c.cell_cloud, *(c.ws), true, myConfig, gtl);
                 break;
             case UnstructuredLimiter.venkat:
+                number phi_hp = to!number(1.0);
                 foreach (c; cell_list) {
                     size_t i = c.id;
                     celldata.lsqgradients[i].venkat_limit2(celldata.flowstates[i],
                         celldata.volumes[i], celldata.face_distances[i],
-                        celldata.nfaces[i], false, myConfig);
+                        celldata.nfaces[i], phi_hp, myConfig);
                 }
                 break;
         }
