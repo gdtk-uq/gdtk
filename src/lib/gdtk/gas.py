@@ -684,7 +684,7 @@ class PyGasState(object):
     """
     __slots__ = ('gmodel', 'dgs', 'rho', 'p', 'T', 'u',
                  'n_modes', 'T_modes', 'u_modes', 'k_modes',
-                 'a', 'n_species', 'massf', 'k', 'mu',
+                 'a', 'n_species', '_massf', 'k', 'mu',
                  '_valuep', '_mf', '_modes', '_thermo_values')
     # Beyond the slots listed above, there are a number of properties defined below.
     # Together, these attributes allow the PyGasState object to look and behave like
@@ -780,19 +780,7 @@ class PyGasState(object):
         # The mass fractions may have been specified as a dictionary
         # with species names as keys and Float values
         # or as a list of Float values.
-        if type(self.massf) == type([]):
-            if len(self.massf) != self.n_species:
-                raise Exception(f"mass fraction list is not correct length."+
-                                f" n_species={self.n_species};"+
-                                f" len(self.massf)={len(self.massf)}")
-            mf_list = self.massf.copy()
-        elif type(self.massf) == type({}):
-            mf_list = []
-            for name in self.gmodel.species_names:
-                if name in self.massf.keys():
-                    mf_list.append(self.massf[name])
-                else:
-                    mf_list.append(0.0)
+        mf_list = self.massf.copy()
         if abs(sum(mf_list) - 1.0) > 1.0e-6:
             raise Exception("mass fractions do not sum to 1.")
         for i in range(self.n_species): self._mf[i] = mf_list[i]
@@ -949,6 +937,9 @@ class PyGasState(object):
         return
 
     @property
+    def massf(self):
+        return self._massf
+    @property
     def massf_as_dict(self):
         nsp = self.n_species
         names = self.gmodel.species_names
@@ -956,6 +947,19 @@ class PyGasState(object):
         result = {}
         for i in range(nsp): result[names[i]] = mf[i]
         return result
+    @massf.setter
+    def massf(self, massf_given):
+        if isinstance(massf_given, list):
+            nsp = self.n_species
+            if len(massf_given) != nsp:
+                raise Exception(f"mass fraction list is not correct length. nsp={nsp}; len(massf)={len(mf_given)}")
+            massf_list = massf_given.copy()
+        elif isinstance(massf_given, dict):
+            massf_list = [0.0] * self.n_species
+            for ind, spcs in enumerate(self.gmodel.species_names):
+                if spcs in massf_given.keys():
+                    massf_list[ind] = massf_given[spcs]
+        self._massf = massf_list
 
     @property
     def molef(self):
