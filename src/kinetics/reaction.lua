@@ -267,7 +267,7 @@ local Reaction = lpeg.V"Reaction"
 local Mechanism = lpeg.V"Mechanism"
 
 G = lpeg.P{ Mechanism,
-	    Mechanism = lpeg.Ct(Reaction * ( FRArrow + FArrow ) * Reaction),
+	    Mechanism = lpeg.Ct(Reaction * EqnSeparator * Reaction),
 	    Reaction = lpeg.Ct(Participant * (Plus * Participant)^0 * (PressureDependent / pdstring)^0 ) * Space,
 	    Participant = lpeg.Ct(lpeg.C(Number^0) * Space * Species * Space)
 	 }
@@ -283,7 +283,7 @@ end
 
 function reaction.validateReaction(t)
    if type(t[1]) ~= 'string' then
-      print("There was an error when parsing reaction number: ", #reactions+1)
+      print("There was an error when parsing reaction number: ", t.number)
       print("The first entry should be a string denoting the reaction mechanism.")
       print("Bailing out!")
       os.exit(1)
@@ -291,14 +291,14 @@ function reaction.validateReaction(t)
 
    reac = parseReactionString(t[1])
    if reac == nil then
-      print("There was an error parsing the reaction string for reaction number: ", #reactions+1)
+      print("There was an error parsing the reaction string for reaction number: ", t.number)
       print("It seems the string is badly formed.  The given string is: ")
       print(t[1])
       print("Bailing out!")
       os.exit(1)
    end
 
-   mass, charge = checkEquationBalances(reac, #reactions+1)
+   mass, charge = checkEquationBalances(reac, t.number)
 	    
    if not mass then
       print("The mass does not balance.")
