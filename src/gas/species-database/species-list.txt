@@ -7,12 +7,13 @@ C.lua         :	C	 : carbon
 C_plus.lua    : C+   : carbon ion
 C2.lua        : C2   : dicarbon
 C2H.lua       :	C2H	 : ethynyl
-C2H2.lua      :	C2H2	 : ethyne
-C2H3.lua      :	C2H3	 : ethenyl radical
-C2H3CHO.lua   :	C2H3CHO	 : n2
-C2H4.lua      :	C2H4	 : ethene
+C2H2.lua      :	C2H2	 : ethyne, acetylene
+C2H3.lua      :	C2H3	 : ethylenyl, vinyl radical, ethynyl radical
+C2H3CHO.lua   :	C2H3CHO	 : 2-propenal
+C2H4.lua      :	C2H4	 : ethene, ethylene
 C2H5.lua      :	C2H5	 : ethyl radical
 C2H6.lua      :	C2H6	 : ethane
+C2H4O.lua     : C2H4O    : ethylene oxide
 C2O.lua       :	C2O	 : dicarbon monoxide 
 C3H2.lua      :	C3H2	 : n3
 C3H3.lua      :	C3H3	 : n4
