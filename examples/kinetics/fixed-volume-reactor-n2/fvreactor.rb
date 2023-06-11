@@ -4,7 +4,7 @@
 #
 # To prepare:
 #   $ prep-gas nitrogen-2sp.inp nitrogen-2sp.lua
-#   $ prep-chem nitrogen-2sp.lua nitrogen-2sp-2r.lua chem.lua
+#   $ prep-chem nitrogen-2sp.lua nitrogen-2sp-2r-Keq.lua chem.lua
 #
 # To run:
 #   $ ruby fvreactor.py
