@@ -163,7 +163,7 @@ private:
 class TroeRateConstant : RateConstant {
 public:
     this(ArrheniusRateConstant kInf, ArrheniusRateConstant k0, number Fcent,  bool Fcent_supplied,
-         number a, number T1, number T2, number T3, bool T2_supplied,
+         number a, number T1, number T2, number T3, bool T1_supplied, bool T2_supplied,
          Tuple!(int, double)[] efficiencies, GasModel gmodel)
     {
         _kInf = kInf.dup();
@@ -174,6 +174,7 @@ public:
         _T1 = T1;
         _T2 = T2;
         _T3 = T3;
+	_T1_supplied = T1_supplied;
         _T2_supplied = T2_supplied;
         _efficiencies = efficiencies.dup();
         _gmodel = gmodel;
@@ -196,12 +197,22 @@ public:
             lua_pop(L, 1);
         }
         else {
-            // Failng that, look for a, T1, T3 and possibly T2
+            // Failng that, look for a, T3 and possibly T1 and T2
             _Fcent_supplied = false;
             lua_pop(L, 1);
             lua_getfield(L, -1, "a"); _a = luaL_checknumber(L, -1); lua_pop(L, 1);
-            lua_getfield(L, -1, "T1"); _T1 = luaL_checknumber(L, -1); lua_pop(L, 1);
             lua_getfield(L, -1, "T3"); _T3 = luaL_checknumber(L, -1); lua_pop(L, 1);
+	    lua_getfield(L, -1, "T1");
+            if ( !lua_isnumber(L, -1) ) {
+                _T1_supplied = false;
+                _T1 = 0.0;
+            }
+            else {
+                _T1_supplied = true;
+                _T1 = luaL_checknumber(L, -1);
+            }
+            lua_pop(L, 1);
+
             lua_getfield(L, -1, "T2");
             if ( !lua_isnumber(L, -1) ) {
                 _T2_supplied = false;
@@ -220,7 +231,7 @@ public:
     TroeRateConstant dup()
     {
         return new TroeRateConstant(_kInf, _k0, _Fcent, _Fcent_supplied,
-                                    _a, _T1, _T2, _T3, _T2_supplied,
+                                    _a, _T1, _T2, _T3, _T1_supplied, _T2_supplied,
                                     _efficiencies, _gmodel);
     }
     override number eval(in GasState Q)
@@ -234,7 +245,10 @@ public:
         number T = Q.T;
 
         if ( !_Fcent_supplied ) {
-            _Fcent = (1.0 - _a)*exp(-T/_T3) + _a*exp(-T/_T1);
+            _Fcent = (1.0 - _a)*exp(-T/_T3);
+	    if ( _T1_supplied ) {
+		_Fcent += _a*exp(-T/_T1);
+	    }
             if ( _T2_supplied ) {
                 _Fcent += exp(-_T2/T);
             }
@@ -256,7 +270,7 @@ public:
 private:
     ArrheniusRateConstant _kInf, _k0;
     number _Fcent, _a, _T1, _T2, _T3;
-    bool _Fcent_supplied, _T2_supplied;
+    bool _Fcent_supplied, _T1_supplied, _T2_supplied;
     Tuple!(int, double)[] _efficiencies;
     GasModel _gmodel;
 }
@@ -536,7 +550,7 @@ version(rate_constant_test) {
     import util.msg_service;
     int main() {
         // Test 1. Rate constant for H2 + I2 reaction.
-        auto rc = new ArrheniusRateConstant(1.94e14*1e-6, 0.0, 20620.0);
+        auto rc = new ArrheniusRateConstant(1.94e14*1e-6, 0.0, 20620.0, -1);
         auto gd = GasState(1, 1);
         gd.T = 700.0;
         // debug { import std.stdio;  writeln("rc=", rc.eval(gd)); } // rc=3.12412e-05

@@ -516,7 +516,7 @@ version(reaction_test) {
         GasModel gm = init_gas_model("sample-input/H2-I2-HI.lua");
         // Find rate of forward production for H2 + I2 reaction at 700 K.
         double[] conc = [4.54, 4.54, 0.0];
-        auto rc = new ArrheniusRateConstant(1.94e14, 0.0, 20620.0);
+        auto rc = new ArrheniusRateConstant(1.94e14, 0.0, 20620.0, -1);
         auto gd = GasState(3, 1);
         gd.T = 700.0;
         auto reaction = new ElementaryReaction(rc, rc, gm, [0, 1], [1.0, 1.0],
