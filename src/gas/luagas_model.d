@@ -122,6 +122,40 @@ extern(C) int speciesName(lua_State* L)
     return 1;
 }
 
+extern(C) int thermoPU(lua_State* L)
+{
+    try {
+        auto gm = checkGasModel(L, 1);
+        auto Q = GasState(gm);
+        getGasStateFromTable(L, gm, 2, Q);
+        if ( Q.p <= 0.0 || isNaN(Q.p) ) {
+            string errMsg = "ERROR: when calling 'updateThermoFromPU'\n";
+            errMsg ~= "        The supplied pressure value is negative, 0 or has not been set.\n";
+            errMsg ~= "        Check that the 'p' field is set with a valid value.\n";
+            errMsg ~= "        The complete gas state is:\n";
+            errMsg ~= Q.toString();
+            errMsg ~= "\nBailing out\n";
+            throw new Exception(errMsg);
+        }
+	if ( isNaN(Q.u) ) {
+        string errMsg = "ERROR: when calling 'updateThermoFromPU'\n";
+        errMsg ~= "        The energy value has not been set.\n";
+        errMsg ~= "        Check that the 'u' field is set with a valid value.\n";
+        errMsg ~= "        The complete gas state is:\n";
+        errMsg ~= Q.toString();
+        errMsg ~= "\nBailing out\n";
+        throw new Error(errMsg);
+	}
+        gm.update_thermo_from_pu(Q);
+        gm.update_sound_speed(Q);
+        setGasStateInTable(L, gm, 2, Q);
+    } catch(Exception e) {
+        luaL_error(L, "%s", e.msg.toStringz);
+    }
+    return 0;
+}
+
+
 extern(C) int thermoPT(lua_State* L)
 {
     try {
@@ -1218,6 +1252,8 @@ void registerGasModel(lua_State* L)
     lua_setfield(L, -2, "speciesIndex");
     lua_pushcfunction(L, &createTableForGasState);
     lua_setfield(L, -2, "createGasState");
+    lua_pushcfunction(L, &thermoPU);
+    lua_setfield(L, -2, "updateThermoFromPU");
     lua_pushcfunction(L, &thermoPT);
     lua_setfield(L, -2, "updateThermoFromPT");
     lua_pushcfunction(L, &thermoRHOU);
