@@ -1,7 +1,7 @@
-# lrivp-test.rb
+# test_lrivp.rb
 #
 # $ prep-gas ideal-air.inp ideal-air-gas-model.lua
-# $ ruby lrivp-test.rb
+# $ ruby test_lrivp.rb
 #
 # PJ, 2020-03-30 adpated from osher-riemann-test.rb
 #

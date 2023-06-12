@@ -1,7 +1,7 @@
-# ideal-shock-test.py
+# test_ideal_shock.py
 #
 # $ prep-gas ideal-air.inp ideal-air-gas-model.lua
-# $ python3 ideal-shock-test.py
+# $ python3 test_ideal_shock.py
 #
 # PJ, 2019-11-28
 #

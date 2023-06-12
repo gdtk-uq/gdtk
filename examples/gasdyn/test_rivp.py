@@ -1,7 +1,7 @@
-# lrivp-test.py
+# test_lrivp.py
 #
 # $ prep-gas ideal-air.inp ideal-air-gas-model.lua
-# $ python3 lrivp-test.py
+# $ python3 test_lrivp.py
 #
 # PJ, 2020-03-30 adapted from osher_riemann-test.py
 #

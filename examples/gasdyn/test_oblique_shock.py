@@ -1,7 +1,7 @@
-# conical-shock-test.py
+# test_oblique_shock.py
 #
 # $ cp ${DGD_REPO}/src/gas/sample-data/cea-air13species-gas-model.lua .
-# $ python3 conical-shock-test.py
+# $ python3 test_oblique_shock.py
 #
 # PJ, 2019-12-01
 #
@@ -13,7 +13,7 @@ def approxEqual(a, b):
 from gdtk.gas import GasModel, GasState, GasFlow
 
 m1 = 1.5
-print("Conical-shock demo for m1=%g" % m1)
+print("Oblique-shock demo for m1=%g" % m1)
 
 gmodel = GasModel('cea-air13species-gas-model.lua')
 state1 = GasState(gmodel)
@@ -27,14 +27,14 @@ print("v1=%g" % v1)
 
 beta = 45.0 * math.pi/180.0
 print("  given beta(degrees)=%g" % (beta*180/math.pi))
-state_c = GasState(gmodel)
+state2 = GasState(gmodel)
 flow = GasFlow(gmodel)
-theta_c, v_c = flow.theta_cone(state1, v1, beta, state_c)
-print("  theta_c=%g degrees" % (theta_c*180/math.pi))
-print("  v_c=%g" % (v_c))
-print("  state_c: %s" % state_c)
+theta, v2 = flow.theta_oblique(state1, v1, beta, state2)
+print("  theta=%g degrees" % (theta*180/math.pi))
+print("  v2=%g" % (v2))
+print("  state2: %s" % state2)
 
-print("Conical shock angle from deflection.")
-beta2 = flow.beta_cone(state1, v1, theta_c)
+print("Oblique shock angle from deflection.")
+beta2 = flow.beta_oblique(state1, v1, theta)
 print("  beta2(degrees)=%g" % (beta2*180/math.pi))
-assert approxEqual(beta, beta2), "conical shock wave angle fail"
+assert approxEqual(beta, beta2), "shock wave angle fail"

@@ -1,7 +1,7 @@
-# ideal-shock-test.rb
+# test_ideal_shock.rb
 #
 # $ prep-gas ideal-air.inp ideal-air-gas-model.lua
-# $ ruby ideal-shock-test.rb
+# $ ruby test_ideal_shock.rb
 #
 # PJ, 2019-11-28
 #

@@ -1,7 +1,7 @@
-# normal-shock-test.py
+# test_normal_shock.py
 #
 # $ cp ${DGD_REPO}/src/gas/sample-data/cea-air13species-gas-model.lua .
-# $ python3 normal-shock-test.py
+# $ python3 test_normal_shock.py
 #
 # PJ, 2019-11-28
 #

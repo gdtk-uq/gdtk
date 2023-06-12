@@ -1,7 +1,7 @@
-# unsteady-expansion-test.rb
+# test_unsteady_expansion.rb
 #
 # $ cp ${DGD_REPO}/src/gas/sample-data/cea-air13species-gas-model.lua .
-# $ ruby unsteady-expansion-test.rb
+# $ ruby test_unsteady_expansion.rb
 #
 # PJ, 2019-12-01
 #

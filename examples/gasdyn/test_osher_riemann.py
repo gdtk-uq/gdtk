@@ -1,7 +1,7 @@
-# osher-riemann-test.py
+# test_osher_riemann.py
 #
 # $ prep-gas ideal-air.inp ideal-air-gas-model.lua
-# $ python3 osher-riemann-test.py
+# $ python3 test_osher_riemann.py
 #
 # PJ, 2020-02-07
 #     2021-04-28 flux exercise

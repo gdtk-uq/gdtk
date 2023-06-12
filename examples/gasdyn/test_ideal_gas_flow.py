@@ -1,4 +1,4 @@
-# ideal-gas-flow-test.py
+# test_ideal_gas_flow.py
 #
 # PJ, 2019-12-29, Ported from the cfpylib collection.
 

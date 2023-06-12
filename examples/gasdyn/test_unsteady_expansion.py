@@ -1,7 +1,7 @@
-# unsteady-expansion-test.py
+# test_unsteady_expansion.py
 #
 # $ cp ${DGD_REPO}/src/gas/sample-data/cea-air13species-gas-model.lua .
-# $ python3 unsteady-expansion-test.py
+# $ python3 test_unsteady_expansion.py
 #
 # PJ, 2019-12-01
 #
