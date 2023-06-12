@@ -1090,7 +1090,7 @@ final class GlobalConfig {
     // For Daryl Bond and Vince Wheatley's Single-fluid MHD additions.
     //
     shared static bool MHD = false;
-    shared static bool MHD_static_field = false;
+    shared static bool MHD_static_field = false; // A value of false allows the internal update.
     shared static bool MHD_resistive = false;
     //
     // Lachlan Whyborn's Divergence cleaning to go with MHD.
