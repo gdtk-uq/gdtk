@@ -384,7 +384,7 @@ def theta_obl(M1, beta, g=1.4):
     """
     m1sb = M1 * abs(sin(beta))
     m1cb = M1 * abs(cos(beta))
-    if m1cb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1cb)
+    if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
     t1 = 2.0 / tan(beta) * (m1sb**2 - 1.0)
     t2 = M1**2 * (g + cos(2.0 * beta)) + 2.0
     theta = atan(t1/t2)
@@ -400,7 +400,7 @@ def M2_obl(M1, beta, theta, g=1.4):
     """
     m1sb = M1 * abs(sin(beta))
     m1cb = M1 * abs(cos(beta))
-    if m1cb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1cb)
+    if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
     numer = 1.0 + (g - 1.0) * 0.5 * m1sb**2
     denom = g * m1sb**2 - (g - 1.0) * 0.5
     m2 = sqrt(numer / denom / (sin(beta - theta))**2 )
@@ -416,7 +416,7 @@ def r2_r1_obl(M1, beta, g=1.4):
     """
     m1sb = M1 * abs(sin(beta))
     m1cb = M1 * abs(cos(beta))
-    if m1cb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1cb)
+    if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
     numer = (g + 1.0) * m1sb**2
     denom = 2.0 + (g - 1.0) * m1sb**2
     return numer / denom
@@ -451,7 +451,7 @@ def p2_p1_obl(M1, beta, g=1.4):
     """
     m1sb = M1 * abs(sin(beta))
     m1cb = M1 * abs(cos(beta))
-    if m1cb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1cb)
+    if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
     return 1.0 + 2.0 * g / (g + 1.0) * (m1sb**2 - 1.0)
 
 def T2_T1_obl(M1, beta, g=1.4):
@@ -474,7 +474,7 @@ def p02_p01_obl(M1, beta, g=1.4):
     """
     m1sb = M1 * abs(sin(beta))
     m1cb = M1 * abs(cos(beta))
-    if m1cb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1cb)
+    if m1sb < 1.0: raise Exception("Subsonic normal Mach number: %g" % m1sb)
     t1 = (g + 1.0) / (2.0 * g * m1sb**2 - (g - 1.0))
     t2 = (g + 1.0) * m1sb**2 / (2.0 + (g - 1.0) * m1sb**2)
     return t1**(1.0/(g-1.0)) * t2**(g/(g-1.0))
