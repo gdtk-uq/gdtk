@@ -315,14 +315,16 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     size_t nConserved = GlobalConfig.cqi.n;
     // remove the conserved mass variable for multi-species gas
     if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
-    size_t MASS = GlobalConfig.cqi.mass;
-    size_t X_MOM = GlobalConfig.cqi.xMom;
-    size_t Y_MOM = GlobalConfig.cqi.yMom;
-    size_t Z_MOM = GlobalConfig.cqi.zMom;
-    size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
-    size_t TKE = GlobalConfig.cqi.rhoturb;
-    size_t SPECIES = GlobalConfig.cqi.species;
-    size_t MODES = GlobalConfig.cqi.modes;
+    immutable size_t MASS = GlobalConfig.cqi.mass;
+    immutable size_t X_MOM = GlobalConfig.cqi.xMom;
+    immutable size_t Y_MOM = GlobalConfig.cqi.yMom;
+    immutable size_t Z_MOM = GlobalConfig.cqi.zMom;
+    immutable size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
+    immutable size_t TKE = GlobalConfig.cqi.rhoturb;
+    immutable size_t SPECIES = GlobalConfig.cqi.species;
+    immutable size_t MODES = GlobalConfig.cqi.modes;
+    immutable size_t nftl = GlobalConfig.n_flow_time_levels;
+    immutable size_t ncq  = nConserved; // number of conserved quantities
 
     ConservedQuantities maxResiduals = new_ConservedQuantities(nConserved);
     ConservedQuantities currResiduals = new_ConservedQuantities(nConserved);
@@ -903,15 +905,22 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 version(multi_T_gas){
                     foreach(imode; 0 .. nmodes) { cell.U[1][cqi.modes+imode] = cell.U[0][cqi.modes+imode] + omega*blk.dU[cellCount+MODES+imode]; }
                 }
-                cell.decode_conserved(0, 1, 0.0);
                 cellCount += nConserved;
+            }
+            foreach (i; 0 .. blk.ncells) {
+                size_t s1 = i*ncq*nftl + 1*ncq + 0;
+                decode_conserved(blk.celldata.positions[i], blk.celldata.Us[s1 .. s1+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
             }
         }
 
         // Put flow state into U[0] ready for next iteration.
         foreach (blk; parallel(localFluidBlocks,1)) {
-            foreach (cell; blk.cells) {
-                swap(cell.U[0], cell.U[1]);
+            foreach (i; 0 .. blk.ncells) {
+                size_t s0 = i*ncq*nftl + 0*ncq + 0;
+                size_t s1 = i*ncq*nftl + 1*ncq + 0;
+                foreach(j; 0 .. blk.myConfig.cqi.n){
+                    blk.celldata.Us[s0+j] = blk.celldata.Us[s1+j];
+                }
             }
         }
 
@@ -1584,6 +1593,8 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
     size_t TKE = GlobalConfig.cqi.rhoturb;
     size_t SPECIES = GlobalConfig.cqi.species;
     size_t MODES = GlobalConfig.cqi.modes;
+    immutable size_t nftl = GlobalConfig.n_flow_time_levels;
+    immutable size_t ncq  = nConserved; // number of conserved quantities
 
     // We perform a Frechet derivative to evaluate J*D^(-1)v
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1618,8 +1629,11 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
             version(multi_T_gas){
             foreach(imode; 0 .. nmodes) { cell.U[1][cqi.modes+imode] += sigma*blk.zed[cellCount+MODES+imode]; }
             }
-            cell.decode_conserved(0, 1, 0.0);
             cellCount += nConserved;
+        }
+        foreach (i; 0 .. blk.ncells) {
+            size_t s1 = i*ncq*nftl + 1*ncq + 0;
+            decode_conserved(blk.celldata.positions[i], blk.celldata.Us[s1 .. s1+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
         }
     }
     evalRHS(pseudoSimTime, 1);
@@ -1647,8 +1661,11 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
             version(multi_T_gas){
             foreach(imode; 0 .. nmodes){ blk.zed[cellCount+MODES+imode] = (cell.dUdt[1][cqi.modes+imode] - blk.FU[cellCount+MODES+imode])/(sigma); }
             }
-            cell.decode_conserved(0, 0, 0.0);
             cellCount += nConserved;
+        }
+        foreach (i; 0 .. blk.ncells) {
+            size_t s0 = i*ncq*nftl + 0*ncq + 0;
+            decode_conserved(blk.celldata.positions[i], blk.celldata.Us[s0 .. s0+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
         }
     }
     foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(RHSeval); }
@@ -1677,6 +1694,8 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int 
         size_t TKE = GlobalConfig.cqi.rhoturb;
         size_t SPECIES = GlobalConfig.cqi.species;
         size_t MODES = GlobalConfig.cqi.modes;
+        immutable size_t nftl = GlobalConfig.n_flow_time_levels;
+        immutable size_t ncq  = nConserved; // number of conserved quantities
 
         // We perform a Frechet derivative to evaluate J*D^(-1)v
         foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1710,8 +1729,12 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int 
                 version(multi_T_gas){
                 foreach(imode; 0 .. nmodes){ cell.U[1][cqi.modes+imode] += complex(0.0, sigma*blk.zed[cellCount+MODES+imode].re); }
                 }
-                cell.decode_conserved(0, 1, 0.0);
+                //cell.decode_conserved(0, 1, 0.0);
                 cellCount += nConserved;
+            }
+            foreach (i; 0 .. blk.ncells) {
+                size_t s1 = i*ncq*nftl + 1*ncq + 0;
+                decode_conserved(blk.celldata.positions[i], blk.celldata.Us[s1 .. s1+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
             }
         }
         evalRHS(pseudoSimTime, 1);

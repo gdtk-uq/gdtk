@@ -342,6 +342,7 @@ public:
         celldata.workspaces.reserve(grid.cells.length + nghost);
         celldata.lsqws.length = grid.cells.length + nghost;
         celldata.lsqgradients.reserve(grid.cells.length + nghost);
+        celldata.Us.length = (ncells+nghost)*nftl*neq;
         celldata.dUdts.length = (ncells+nghost)*nftl*neq;
         celldata.source_terms.length = (ncells+nghost)*neq;
         celldata.cell_cloud_indices.length = ncells;

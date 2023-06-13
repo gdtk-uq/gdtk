@@ -468,6 +468,7 @@ public:
             celldata.flowstates.reserve(nic*njc*nkc + nghost);
             celldata.gradients.reserve(nic*njc*nkc + nghost);
             celldata.workspaces.reserve(nic*njc*nkc + nghost);
+            celldata.Us.length = (nic*njc*nkc + nghost)*neq*nftl;
             celldata.dUdts.length = (nic*njc*nkc + nghost)*neq*nftl;
             celldata.source_terms.length = (nic*njc*nkc + nghost)*neq;
             foreach (n; 0 .. nic*njc*nkc) celldata.flowstates ~= FlowState(gmodel, nturb);

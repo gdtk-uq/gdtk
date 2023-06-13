@@ -70,6 +70,7 @@ struct FVCellData{
     Vector3[][] face_distances;
     FlowState[] flowstates;
     FlowGradients[] gradients;
+    ConservedQuantities Us;
     ConservedQuantities dUdts;
     ConservedQuantities source_terms;
     WLSQGradWorkspace[] workspaces;
@@ -228,15 +229,18 @@ public:
         size_t ncq = myConfig.cqi.n; // number of conserved quantities
         size_t nftl = myConfig.n_flow_time_levels;
 
+        if (fvcd.Us){
+            U.length = nftl;
+            foreach(i; 0 .. nftl) {
+                U[i] = fvcd.Us[id*ncq*nftl + i*ncq + 0 .. id*ncq*nftl + i*ncq + ncq];
+                U[i].clear();
+            }
+        }
         if (fvcd.dUdts){
             dUdt.length = nftl;
             foreach(i; 0 .. nftl) {
                 dUdt[i] = fvcd.dUdts[id*ncq*nftl + i*ncq + 0 .. id*ncq*nftl + i*ncq + ncq];
             }
-        }
-        foreach(i; 0 .. nftl) {
-            U ~= new_ConservedQuantities(ncq);
-            U[i].clear();
         }
         Qudf = new_ConservedQuantities(ncq);
         Qudf.clear();
@@ -1815,3 +1819,202 @@ public:
     }
 
 } // end class FVCell
+
+// FIXME: The caller has responsibility for data_is_bad
+@nogc
+int decode_conserved(Vector3 pos, ConservedQuantities myU, ref FlowState fs, double omegaz, size_t id, LocalConfig myConfig, bool allow_k_omega_update=true, double tolerance=0.0, double assert_error_tolerance=0.1)
+{
+    auto cqi = myConfig.cqi;
+    auto gmodel = myConfig.gmodel;
+    //ConservedQuantities myU = U[ftl];
+    // The conserved quantities are carried as quantity per unit volume.
+    // mass / unit volume = density
+    number rho = 0.0;
+    if (cqi.mass == 0) {
+        rho = myU[cqi.mass];
+    } else {
+        // if cqi.mass \= 0, then we assume that we have dropped the mass continuity equation from the solver,
+        // in that case, the total density is a sum of the species densities
+        if (myConfig.enforce_species_density_positivity) {
+            // We were originally imposing positivity on the species densities here to prevent slightly negative mass fractions,
+            // this was causing noisy convergence for some problems using the steady-state accelerator due to the artificial nature
+            // of suppressing the negative mass fractions after an update (i.e. the numerical solution really should have negative
+            // mass fractions due to the numerical methods employed).
+            // We are trialing the removal of this enforcement (note that this will only take effect for the steady-state solver here).
+            // KAD 2022-08-22.
+            // NNG 2022-12-01. A runtime option (defaulting to off) has proven neccessary.
+            foreach(isp; 0 .. cqi.n_species)
+                if (myU[cqi.species+isp] < 0.0) myU[cqi.species+isp] = to!number(0.0);
+        }
+        foreach(isp; 0 .. cqi.n_species) {
+            rho += myU[cqi.species+isp];
+        }
+    }
+    if (!(rho.re > 0.0)) {
+        if (myConfig.adjust_invalid_cell_data) {
+            //data_is_bad = true;
+            // We can do nothing more with the present data but the caller may
+            // be able to replace the data with other nearby-cell data.
+            return -1;
+        } else {
+            debug {
+                writeln("FVCell.decode_conserved(): Density invalid in conserved quantities.");
+                writeln("  universe-blk-id= ", myConfig.universe_blk_id, " cell-id= ", id);
+                writeln("  x= ", pos.x, " y= ", pos.y, " z= ", pos.z);
+                writeln("  gas= ", fs.gas);
+                writeln("  U[ftl]= ", myU);
+            }
+            throw new FlowSolverException("Bad cell with negative mass.");
+        }
+    } // end if mass is not positive
+    fs.gas.rho = rho; // This is limited to nonnegative and finite values.
+    number dinv = 1.0 / rho;
+
+    // Velocities from momenta.
+    number zMom = (cqi.threeD) ? myU[cqi.zMom] : to!number(0.0);
+    fs.vel.set(myU[cqi.xMom]*dinv, myU[cqi.yMom]*dinv, zMom*dinv);
+    version(MHD) {
+        // Magnetic field.
+        if (cqi.MHD) {
+            fs.B.set(myU[cqi.xB], myU[cqi.yB], myU[cqi.zB]);
+            fs.psi = myU[cqi.psi];
+            fs.divB = myU[cqi.divB];
+        }
+    }
+    // Divide up the total energy per unit volume.
+    number rE;
+    if (omegaz != 0.0) {
+        // Rotating frame.
+        // The conserved quantity is rothalpy so we need to convert
+        // back to enthalpy to do the rest of the decode.
+        number x = pos.x;
+        number y = pos.y;
+        number rsq = x*x + y*y;
+        rE = myU[cqi.totEnergy] + rho*0.5*omegaz*omegaz*rsq;
+    } else {
+        // Non-rotating frame.
+        rE = myU[cqi.totEnergy];
+    }
+    version(MHD) {
+        number me = 0.0;
+        if (cqi.MHD) {
+            me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z);
+            rE -= me;
+        }
+    }
+    // Start with the total energy, then take out the other components.
+    // Internal energy is what remains.
+    number u = rE * dinv;
+    version(turbulence) {
+        if (cqi.turb) {
+            if (allow_k_omega_update) {
+                foreach(i; 0 .. myConfig.turb_model.nturb) {
+                    if (isNaN(myU[cqi.rhoturb+i]))
+                        throw new FlowSolverException("Turbulent quantity is Not A Number.");
+                    // enforce positivity of turbulence model conserved quantities
+                    if (myU[cqi.rhoturb+i] < 0.0) {
+                        foreach (j; 0 .. myConfig.turb_model.nturb) {
+                            // taking the absolute value has been observed to be more
+                            // stable than clipping them to a small value (e.g. 1.0e-10)
+                            myU[cqi.rhoturb+j] = fabs(myU[cqi.rhoturb+j]);
+                        }
+                    }
+                    fs.turb[i] = myU[cqi.rhoturb+i] * dinv;
+                }
+            }
+            u -= myConfig.turb_model.turbulent_kinetic_energy(fs);
+        }
+    }
+    // Remove kinetic energy for bulk flow.
+    number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y + fs.vel.z*fs.vel.z);
+    u -= ke;
+    // Other energies, if any.
+    version(multi_T_gas) {
+        number u_other = 0.0;
+        foreach(imode; 0 .. gmodel.n_modes) { fs.gas.u_modes[imode] = myU[cqi.modes+imode] * dinv; }
+        foreach(ei; fs.gas.u_modes) { u_other += ei; }
+        fs.gas.u = u - u_other;
+    } else {
+        fs.gas.u = u;
+    }
+    // Thermochemical species, if appropriate.
+    version(multi_species_gas) {
+        // scale the species densities such that they sum to the total density (this ensures massfs sum to 1)
+        // if cqi.mass \= 0, then we have dropped the mass continuity equation, so this step would be redundant
+        if (myConfig.n_species > 1 && cqi.mass == 0) {
+            number rhos_sum = 0.0;
+            foreach(isp; 0 .. cqi.n_species) {
+                // impose positivity on the species densities
+                if (myU[cqi.species+isp] < 0.0) myU[cqi.species+isp] = to!number(0.0);
+                rhos_sum += myU[cqi.species+isp];
+            }
+            if (fabs(rhos_sum - rho) > assert_error_tolerance) {
+                string msg = "Sum of species densities far from total density";
+                debug {
+                    msg ~= format(": fabs(rhos_sum - rho) = %s \n", fabs(rhos_sum - rho));
+                    msg ~= format("  assert_error_tolerance = %s \n", assert_error_tolerance);
+                    msg ~= format("  tolerance = %s \n", tolerance);
+                    msg ~= "]\n";
+                }
+                throw new FlowSolverException(msg);
+            }
+            if ( fabs(rhos_sum - rho) > tolerance ) {
+                number scale_factor = rho/rhos_sum;
+                foreach(isp; 0 .. cqi.n_species) { myU[cqi.species+isp] *= scale_factor; }
+            }
+        } // end if (myConfig.n_species > 1 && cqi.mass == 0)
+        try {
+            if (cqi.n_species > 1) {
+                foreach(isp; 0 .. cqi.n_species) { fs.gas.massf[isp] = myU[cqi.species+isp] * dinv; }
+            } else {
+                fs.gas.massf[0] = 1.0;
+            }
+    if (myConfig.sticky_electrons) { gmodel.balance_charge(fs.gas); }
+    } catch (GasModelException err) {
+    if (myConfig.adjust_invalid_cell_data) {
+        //data_is_bad = true;
+        return -2;
+    } else {
+        string msg = "Bad cell with mass fractions that do not add correctly.";
+        debug {
+        msg ~= format(" scale_mass_fractions exception with message:\n  %s", err.msg);
+        msg ~= format("The decode_conserved() failed for cell: %d\n", id);
+        msg ~= format("  This cell is located at: %s\n", pos);
+        msg ~= format("  This cell is located in block: %d\n", myConfig.universe_blk_id);
+        msg ~= format("  The gas state before thermo update is:\n   fs.gas %s", fs.gas);
+        }
+        throw new FlowSolverException(msg);
+    } // end if
+    } // end catch
+    }
+    //
+    // Fill out the other variables: P, T, a, and viscous transport coefficients.
+    try {
+        gmodel.update_thermo_from_rhou(fs.gas);
+        if (fs.gas.T<=0.0) throw new FlowSolverException("update_thermo returned negative temperature.");
+        version(multi_T_gas) {
+            foreach(i; 0 .. gmodel.n_modes) {
+                if (fs.gas.T_modes[i]<=0.0) throw new FlowSolverException("update_thermo returned negative T_modes.");
+            }
+        }
+        gmodel.update_sound_speed(fs.gas);
+        if (myConfig.viscous) gmodel.update_trans_coeffs(fs.gas);
+    } catch (GasModelException err) {
+        if (myConfig.adjust_invalid_cell_data) {
+            //data_is_bad = true;
+            return -2;
+        } else {
+            string msg = "Bad cell with failed thermodynamic update.";
+            debug {
+                msg ~= format(" thermodynamic update exception with message:\n  %s", err.msg);
+                msg ~= format("The decode_conserved() failed for cell: %d\n", id);
+                msg ~= format("  This cell is located at: %s\n", pos);
+                msg ~= format("  This cell is located in block: %d\n", myConfig.universe_blk_id);
+                msg ~= format("  The gas state after the failed update is:\n   fs.gas %s", fs.gas);
+            }
+            throw new FlowSolverException(msg);
+        } // end if
+    } // end catch
+    //
+    return 0; // success
+} // end decode_conserved()
