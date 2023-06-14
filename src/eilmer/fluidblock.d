@@ -790,7 +790,13 @@ public:
     @nogc
     void clear_fluxes_of_conserved_quantities()
     {
-        foreach (iface; faces) { iface.F.clear(); }
+        facedata.fluxes.clear();
+    }
+
+    @nogc
+    void clear_cell_source_vectors()
+    {
+        celldata.source_terms.clear();
     }
 
     @nogc
@@ -1691,8 +1697,6 @@ public:
         }
 
     } // end evalRHS()
-
-
 
     // The following two methods are used to verify the numerical Jacobian implementation.
     void verify_jacobian(double sigma)
