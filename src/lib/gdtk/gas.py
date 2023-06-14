@@ -1068,7 +1068,7 @@ class ThermochemicalReactor(object):
         reactor_new = ThermochemicalReactor(self.gmodel, self.filename1, self.filename2)
         return reactor_new
 
-    def __deepcopy__(self):
+    def __deepcopy__(self, memo):
         reactor_new = ThermochemicalReactor(self.gmodel, self.filename1, self.filename2)
         return reactor_new
 
