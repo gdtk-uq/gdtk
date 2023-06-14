@@ -1,7 +1,7 @@
-# osher-riemann-test.rb
+# test_osher_riemann.rb
 #
 # $ prep-gas ideal-air.inp ideal-air-gas-model.lua
-# $ ruby osher-riemann-test.rb
+# $ ruby test_osher_riemann.rb
 #
 # PJ, 2020-02-07
 #     2021-04-28 flux calculation

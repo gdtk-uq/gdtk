@@ -63,7 +63,7 @@ public:
     number S;         // shock indicator
 
     @disable this();
-    
+
     this(GasModel gm,
          in double p_init,
          in double T_init,

@@ -119,6 +119,8 @@ class MultiTemperatureGasMixture : ThermodynamicModel {
         }
     }
 
+    override void updateFromPU(ref GasState gs) {}
+    
     @nogc void updateFromPT(ref GasState gs){
         _update_density(gs);
         gs.u = _mixture_transrot_energy(gs);

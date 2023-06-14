@@ -45,6 +45,13 @@ public:
         }
     }
 
+    override void updateFromPU(ref GasState gs)
+    {
+        update_temperature_from_energy(gs);
+        update_density(gs);
+    }
+
+    
     @nogc
     override void updateFromPT(ref GasState gs)
     {

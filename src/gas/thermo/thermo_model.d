@@ -14,6 +14,7 @@ import gas : GasState;
 
 interface ThermodynamicModel {
 public:
+    void updateFromPU(ref GasState gs);
     // Methods related to computing thermo state.
     @nogc void updateFromPT(ref GasState gs);
     @nogc void updateFromRhoU(ref GasState gs);

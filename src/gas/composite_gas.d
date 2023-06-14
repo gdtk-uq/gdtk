@@ -117,6 +117,10 @@ public:
 
     // Service methods related to thermodynamics
     // Updates to GasState
+    override void update_thermo_from_pu(ref GasState gs)
+    {
+	mThermo.updateFromPU(gs);
+    }
     @nogc override void update_thermo_from_pT(ref GasState gs)
     {
         mThermo.updateFromPT(gs);

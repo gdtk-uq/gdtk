@@ -836,6 +836,14 @@ public:
             // Conserved quantities are stored per-unit-volume.
             my_dUdt[j] = vol_inv * surface_integral + Q[j];
         }
+        if (cqi.MHD && myConfig.MHD_static_field) {
+            // We do not want the internal update to happen for the magnetic field.
+            my_dUdt[cqi.xB] = 0.0;
+            my_dUdt[cqi.yB] = 0.0;
+            my_dUdt[cqi.zB] = 0.0;
+            my_dUdt[cqi.psi] = 0.0;
+            my_dUdt[cqi.divB] = 0.0;
+        }
     } // end time_derivatives()
 
 

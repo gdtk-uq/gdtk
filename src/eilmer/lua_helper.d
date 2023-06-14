@@ -143,6 +143,8 @@ void setSampleHelperFunctions(lua_State *L)
     lua_setglobal(L, "sampleFluidCell");
     lua_pushcfunction(L, &luafn_sampleFluidCell);
     lua_setglobal(L, "sampleFlow"); // alias for sampleFluidCell; [TODO] remove eventually
+    lua_pushcfunction(L, &luafn_setBxyzInFluidCell);
+    lua_setglobal(L, "setBxyzInFluidCell");
     lua_pushcfunction(L, &luafn_runTimeLoads);
     lua_setglobal(L, "getRunTimeLoads");
     //
@@ -209,7 +211,7 @@ extern(C) int luafn_sampleFluidCell(lua_State *L)
     auto i = lua_tointeger(L, 2);
     auto j = lua_tointeger(L, 3);
     auto k = lua_tointeger(L, 4);
-
+    //
     // Grab the appropriate cell
     auto sblk = cast(SFluidBlock) globalBlocks[blkId];
     FVCell cell;
@@ -225,7 +227,7 @@ extern(C) int luafn_sampleFluidCell(lua_State *L)
         msg ~= " You have asked for an ijk-index cell in an unstructured-grid block.";
         luaL_error(L, msg.toStringz);
     }
-
+    //
     // Return the interesting bits as a table.
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
@@ -234,6 +236,44 @@ extern(C) int luafn_sampleFluidCell(lua_State *L)
     pushFluidCellToTable(L, tblIdx, cell, 0, blk.myConfig);
     return 1;
 } // end luafn_sampleFluidCell()
+
+extern(C) int luafn_setBxyzInFluidCell(lua_State *L)
+// In Lua: setBxyzInFluidCell(blkid, i, j, k, Bx, By, Bz)
+{
+    // Get arguments from lua_stack
+    auto blkId = lua_tointeger(L, 1);
+    if (!canFind(GlobalConfig.localFluidBlockIds, blkId)) {
+        string msg = format("Block id %d is not local to process.", blkId);
+        luaL_error(L, msg.toStringz);
+    }
+    auto i = lua_tointeger(L, 2);
+    auto j = lua_tointeger(L, 3);
+    auto k = lua_tointeger(L, 4);
+    double Bx = lua_tonumber(L, 5);
+    double By = lua_tonumber(L, 6);
+    double Bz = lua_tonumber(L, 7);
+    //
+    version(MHD) {
+        // Actually set the magnetic field components.
+        // Grab the appropriate cell
+        auto sblk = cast(SFluidBlock) globalBlocks[blkId];
+        FVCell cell;
+        if (sblk) {
+            try {
+                cell = sblk.get_cell(i, j, k);
+            } catch (Exception e) {
+                string msg = format("Failed to locate cell[%d,%d,%d] in block %d.", i, j, k, blkId);
+                luaL_error(L, msg.toStringz);
+            }
+        } else {
+            string msg = "Not implemented.";
+            msg ~= " You have asked for an ijk-index cell in an unstructured-grid block.";
+            luaL_error(L, msg.toStringz);
+        }
+        cell.fs.B.set(Bx, By, Bz);
+    }
+    return 0;
+} // end luafn_setBxyzInFluidCell()
 
 extern(C) int luafn_sampleFluidFace(lua_State *L)
 {

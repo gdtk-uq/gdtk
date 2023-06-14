@@ -1,7 +1,7 @@
-# normal-shock-test.rb
+# test_normal_shock.rb
 #
 # $ cp ${DGD_REPO}/src/gas/sample-data/cea-air13species-gas-model.lua .
-# $ ruby normal-shock-test.rb
+# $ ruby test_normal_shock.rb
 #
 # PJ, 2019-11-28
 #

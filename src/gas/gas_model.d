@@ -113,6 +113,9 @@ public:
     // GasModel object in a formal sense, they are not marked const.
     // The reason for this non-const-ness is that some GasModel classes
     // have private workspace that needs to be alterable.
+    void update_thermo_from_pu(ref GasState Q) {
+	return;
+    }
     @nogc abstract void update_thermo_from_pT(ref GasState Q);
     @nogc abstract void update_thermo_from_rhou(ref GasState Q);
     @nogc abstract void update_thermo_from_rhoT(ref GasState Q);

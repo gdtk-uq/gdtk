@@ -1,7 +1,7 @@
-# conical-shock-test.rb
+# test_conical_shock.rb
 #
 # $ cp ${DGD_REPO}/src/gas/sample-data/cea-air13species-gas-model.lua .
-# $ ruby conical-shock-test.rb
+# $ ruby test_conical_shock.rb
 #
 # PJ, 2019-12-01
 #
