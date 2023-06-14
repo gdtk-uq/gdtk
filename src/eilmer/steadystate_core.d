@@ -402,39 +402,22 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         evalRHS(0.0, 0);
         max_residuals(maxResiduals);
         foreach (blk; parallel(localFluidBlocks, 1)) {
-            size_t nturb = blk.myConfig.turb_model.nturb;
-            size_t nsp = blk.myConfig.gmodel.n_species;
-            size_t nmodes = blk.myConfig.gmodel.n_modes;
-                auto cqi = blk.myConfig.cqi;
-                int cellCount = 0;
-                foreach (cell; blk.cells) {
-                    if ( nsp == 1 ) { blk.FU[cellCount+MASS] = -cell.dUdt[0][cqi.mass]; }
-                    blk.FU[cellCount+X_MOM] = -cell.dUdt[0][cqi.xMom];
-                    blk.FU[cellCount+Y_MOM] = -cell.dUdt[0][cqi.yMom];
-                    if ( GlobalConfig.dimensions == 3 )
-                        blk.FU[cellCount+Z_MOM] = -cell.dUdt[0][cqi.zMom];
-                    blk.FU[cellCount+TOT_ENERGY] = -cell.dUdt[0][cqi.totEnergy];
-                    foreach(it; 0 .. nturb) {
-                        blk.FU[cellCount+TKE+it] = -cell.dUdt[0][cqi.rhoturb+it];
-                    }
-                    version(multi_species_gas){
-                        if ( nsp > 1 ) {
-                            foreach(sp; 0 .. nsp) { blk.FU[cellCount+SPECIES+sp] = -cell.dUdt[0][cqi.species+sp]; }
-                        }
-                    }
-                    version(multi_T_gas){
-                        foreach(imode; 0 .. nmodes) { blk.FU[cellCount+MODES+imode] = -cell.dUdt[0][cqi.modes+imode]; }
-                    }
-                    cellCount += nConserved;
+            size_t cellCount = 0;
+            foreach (i; 0 .. blk.ncells) {
+                size_t s0 = i*ncq*nftl + 0*ncq + 0;
+                foreach(j; 0 .. ncq){
+                    blk.FU[cellCount+j] = -blk.celldata.dUdts[s0+j];
                 }
+                cellCount += nConserved;
+            }
         }
 
         if (GlobalConfig.sssOptions.include_turb_quantities_in_residual == false) {
             foreach (blk; parallel(localFluidBlocks,1)) {
-                auto cqi = blk.myConfig.cqi;
+                size_t nturb = blk.myConfig.cqi.n_turb;
                 int cellCount = 0;
-                foreach (i, cell; blk.cells) {
-                    foreach(it; 0 .. cqi.n_turb) { blk.FU[cellCount+TKE+it] = to!number(0.0); }
+                foreach (i; 0 .. blk.ncells) {
+                    foreach(it; 0 .. nturb) { blk.FU[cellCount+TKE+it] = to!number(0.0); }
                     cellCount += nConserved;
                 }
             }
@@ -448,15 +431,15 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
         if (GlobalConfig.sssOptions.include_turb_quantities_in_residual == false) {
             foreach (blk; parallel(localFluidBlocks,1)) {
-                auto cqi = blk.myConfig.cqi;
+                size_t nturb = blk.myConfig.cqi.n_turb;
                 int cellCount = 0;
-                foreach (i, cell; blk.cells) {
-                    foreach(it; 0 .. cqi.n_turb) { blk.FU[cellCount+TKE+it] = -cell.dUdt[0][cqi.rhoturb+it]; }
+                foreach (i; 0 .. blk.ncells) {
+                    size_t s0 = i*ncq*nftl + 0*ncq + 0;
+                    foreach(it; 0 .. nturb) { blk.FU[cellCount+TKE+it] = -blk.celldata.dUdts[s0+TKE+it]; }
                     cellCount += nConserved;
                 }
             }
         }
-
     }
 
     // if we are restarting a simulation we need read the initial residuals from a file
@@ -878,38 +861,15 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
         // If we get here, things are good
         foreach (blk; parallel(localFluidBlocks,1)) {
-            size_t nturb = blk.myConfig.turb_model.nturb;
-            size_t nsp = blk.myConfig.gmodel.n_species;
-            size_t nmodes = blk.myConfig.gmodel.n_modes;
-            int cellCount = 0;
-            auto cqi = blk.myConfig.cqi;
-            foreach (cell; blk.cells) {
-                cell.U[1].copy_values_from(cell.U[0]);
-                if (blk.myConfig.n_species == 1) { cell.U[1][cqi.mass] = cell.U[0][cqi.mass] + omega*blk.dU[cellCount+MASS]; }
-                cell.U[1][cqi.xMom] = cell.U[0][cqi.xMom] + omega*blk.dU[cellCount+X_MOM];
-                cell.U[1][cqi.yMom] = cell.U[0][cqi.yMom] + omega*blk.dU[cellCount+Y_MOM];
-                if ( blk.myConfig.dimensions == 3 )
-                    cell.U[1][cqi.zMom] = cell.U[0][cqi.zMom] + omega*blk.dU[cellCount+Z_MOM];
-                cell.U[1][cqi.totEnergy] = cell.U[0][cqi.totEnergy] + omega*blk.dU[cellCount+TOT_ENERGY];
-                foreach(it; 0 .. nturb){
-                    cell.U[1][cqi.rhoturb+it] = cell.U[0][cqi.rhoturb+it] + omega*blk.dU[cellCount+TKE+it];
-                }
-                version(multi_species_gas){
-                    if (blk.myConfig.n_species > 1) {
-                        foreach(sp; 0 .. nsp) { cell.U[1][cqi.species+sp] = cell.U[0][cqi.species+sp] + omega*blk.dU[cellCount+SPECIES+sp]; }
-                    } else {
-                        // enforce mass fraction of 1 for single species gas
-                        cell.U[1][cqi.species+0] = cell.U[1][cqi.mass];
-                    }
-                }
-                version(multi_T_gas){
-                    foreach(imode; 0 .. nmodes) { cell.U[1][cqi.modes+imode] = cell.U[0][cqi.modes+imode] + omega*blk.dU[cellCount+MODES+imode]; }
-                }
-                cellCount += nConserved;
-            }
+            size_t cellCount = 0;
             foreach (i; 0 .. blk.ncells) {
+                size_t s0 = i*ncq*nftl + 0*ncq + 0;
                 size_t s1 = i*ncq*nftl + 1*ncq + 0;
+                foreach(j; 0 .. ncq){
+                    blk.celldata.Us[s1+j] = blk.celldata.Us[s0+j] + omega*blk.dU[cellCount+j];
+                }
                 decode_conserved(blk.celldata.positions[i], blk.celldata.Us[s1 .. s1+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
+                cellCount += nConserved;
             }
         }
 
@@ -918,7 +878,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             foreach (i; 0 .. blk.ncells) {
                 size_t s0 = i*ncq*nftl + 0*ncq + 0;
                 size_t s1 = i*ncq*nftl + 1*ncq + 0;
-                foreach(j; 0 .. blk.myConfig.cqi.n){
+                foreach(j; 0 .. ncq){
                     blk.celldata.Us[s0+j] = blk.celldata.Us[s1+j];
                 }
             }
