@@ -468,8 +468,12 @@ public:
             celldata.flowstates.reserve(nic*njc*nkc + nghost);
             celldata.gradients.reserve(nic*njc*nkc + nghost);
             celldata.workspaces.reserve(nic*njc*nkc + nghost);
-            celldata.Us.length = (nic*njc*nkc + nghost)*neq*nftl;
-            celldata.dUdts.length = (nic*njc*nkc + nghost)*neq*nftl;
+            celldata.U0.length = (nic*njc*nkc + nghost)*neq*nftl;
+            if (nftl>1) celldata.U1.length = (nic*njc*nkc + nghost)*neq*nftl;
+            if (nftl>2) celldata.U2.length = (nic*njc*nkc + nghost)*neq*nftl;
+            celldata.dUdt0.length = (nic*njc*nkc + nghost)*neq*nftl;
+            if (nftl>1) celldata.dUdt1.length = (nic*njc*nkc + nghost)*neq*nftl;
+            if (nftl>2) celldata.dUdt2.length = (nic*njc*nkc + nghost)*neq*nftl;
             celldata.source_terms.length = (nic*njc*nkc + nghost)*neq;
             foreach (n; 0 .. nic*njc*nkc) celldata.flowstates ~= FlowState(gmodel, nturb);
             foreach (n; 0 .. nic*njc*nkc) celldata.gradients ~= FlowGradients(myConfig);

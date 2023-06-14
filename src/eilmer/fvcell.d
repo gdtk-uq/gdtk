@@ -70,8 +70,8 @@ struct FVCellData{
     Vector3[][] face_distances;
     FlowState[] flowstates;
     FlowGradients[] gradients;
-    ConservedQuantities Us;
-    ConservedQuantities dUdts;
+    ConservedQuantities U0, U1, U2;
+    ConservedQuantities dUdt0, dUdt1, dUdt2;
     ConservedQuantities source_terms;
     WLSQGradWorkspace[] workspaces;
     LSQInterpWorkspace[] lsqws;
@@ -229,17 +229,22 @@ public:
         size_t ncq = myConfig.cqi.n; // number of conserved quantities
         size_t nftl = myConfig.n_flow_time_levels;
 
-        if (fvcd.Us){
+        if (fvcd.U0){
             U.length = nftl;
+                        U[0] = fvcd.U0[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>1) U[1] = fvcd.U1[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>2) U[2] = fvcd.U2[id*ncq + 0 .. id*ncq + ncq];
             foreach(i; 0 .. nftl) {
-                U[i] = fvcd.Us[id*ncq*nftl + i*ncq + 0 .. id*ncq*nftl + i*ncq + ncq];
                 U[i].clear();
             }
         }
-        if (fvcd.dUdts){
+        if (fvcd.dUdt0){
             dUdt.length = nftl;
+                        dUdt[0] = fvcd.dUdt0[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>1) dUdt[1] = fvcd.dUdt1[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>2) dUdt[2] = fvcd.dUdt2[id*ncq + 0 .. id*ncq + ncq];
             foreach(i; 0 .. nftl) {
-                dUdt[i] = fvcd.dUdts[id*ncq*nftl + i*ncq + 0 .. id*ncq*nftl + i*ncq + ncq];
+                dUdt[i].clear();
             }
         }
         Qudf = new_ConservedQuantities(ncq);

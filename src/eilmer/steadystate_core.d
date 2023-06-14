@@ -404,9 +404,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         foreach (blk; parallel(localFluidBlocks, 1)) {
             size_t cellCount = 0;
             foreach (i; 0 .. blk.ncells) {
-                size_t s0 = i*ncq*nftl + 0*ncq + 0;
+                size_t s0 = i*ncq;
                 foreach(j; 0 .. ncq){
-                    blk.FU[cellCount+j] = -blk.celldata.dUdts[s0+j];
+                    blk.FU[cellCount+j] = -blk.celldata.dUdt0[s0+j];
                 }
                 cellCount += nConserved;
             }
@@ -434,8 +434,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 size_t nturb = blk.myConfig.cqi.n_turb;
                 int cellCount = 0;
                 foreach (i; 0 .. blk.ncells) {
-                    size_t s0 = i*ncq*nftl + 0*ncq + 0;
-                    foreach(it; 0 .. nturb) { blk.FU[cellCount+TKE+it] = -blk.celldata.dUdts[s0+TKE+it]; }
+                    size_t s0 = i*ncq;
+                    foreach(it; 0 .. nturb) { blk.FU[cellCount+TKE+it] = -blk.celldata.dUdt0[s0+TKE+it]; }
                     cellCount += nConserved;
                 }
             }
@@ -863,12 +863,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         foreach (blk; parallel(localFluidBlocks,1)) {
             size_t cellCount = 0;
             foreach (i; 0 .. blk.ncells) {
-                size_t s0 = i*ncq*nftl + 0*ncq + 0;
-                size_t s1 = i*ncq*nftl + 1*ncq + 0;
+                size_t s0 = i*ncq;
+                size_t s1 = i*ncq;
                 foreach(j; 0 .. ncq){
-                    blk.celldata.Us[s1+j] = blk.celldata.Us[s0+j] + omega*blk.dU[cellCount+j];
+                    blk.celldata.U1[s1+j] = blk.celldata.U0[s0+j] + omega*blk.dU[cellCount+j];
                 }
-                decode_conserved(blk.celldata.positions[i], blk.celldata.Us[s1 .. s1+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
+                decode_conserved(blk.celldata.positions[i], blk.celldata.U1[s1 .. s1+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
                 cellCount += nConserved;
             }
         }
@@ -876,10 +876,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         // Put flow state into U[0] ready for next iteration.
         foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (i; 0 .. blk.ncells) {
-                size_t s0 = i*ncq*nftl + 0*ncq + 0;
-                size_t s1 = i*ncq*nftl + 1*ncq + 0;
+                size_t s0 = i*ncq;
+                size_t s1 = i*ncq;
                 foreach(j; 0 .. ncq){
-                    blk.celldata.Us[s0+j] = blk.celldata.Us[s1+j];
+                    blk.celldata.U0[s0+j] = blk.celldata.U1[s1+j];
                 }
             }
         }
@@ -1592,8 +1592,8 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
             cellCount += nConserved;
         }
         foreach (i; 0 .. blk.ncells) {
-            size_t s1 = i*ncq*nftl + 1*ncq + 0;
-            decode_conserved(blk.celldata.positions[i], blk.celldata.Us[s1 .. s1+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
+            size_t s1 = i*ncq;
+            decode_conserved(blk.celldata.positions[i], blk.celldata.U1[s1 .. s1+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
         }
     }
     evalRHS(pseudoSimTime, 1);
@@ -1624,8 +1624,8 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
             cellCount += nConserved;
         }
         foreach (i; 0 .. blk.ncells) {
-            size_t s0 = i*ncq*nftl + 0*ncq + 0;
-            decode_conserved(blk.celldata.positions[i], blk.celldata.Us[s0 .. s0+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
+            size_t s0 = i*ncq;
+            decode_conserved(blk.celldata.positions[i], blk.celldata.U0[s0 .. s0+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
         }
     }
     foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(RHSeval); }
@@ -1693,8 +1693,8 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int 
                 cellCount += nConserved;
             }
             foreach (i; 0 .. blk.ncells) {
-                size_t s1 = i*ncq*nftl + 1*ncq + 0;
-                decode_conserved(blk.celldata.positions[i], blk.celldata.Us[s1 .. s1+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
+                size_t s1 = i*ncq;
+                decode_conserved(blk.celldata.positions[i], blk.celldata.U1[s1 .. s1+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
             }
         }
         evalRHS(pseudoSimTime, 1);

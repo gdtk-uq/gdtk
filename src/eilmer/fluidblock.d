@@ -2001,8 +2001,7 @@ public:
     //       2: End of stage-2.
     {
 
-        size_t neq = myConfig.cqi.n;
-        size_t nftl = myConfig.n_flow_time_levels;
+        immutable size_t neq = myConfig.cqi.n;
 
         foreach(cidx; 0 .. ncells){
             // Note this is the number of faces that the cell cidx has, not the total number
@@ -2017,8 +2016,10 @@ public:
                     surface_integral -= facedata.fluxes[fidx*neq + j] * area;
                 }
 
-                size_t idx = cidx*neq*nftl + ftl*neq + j;
-                celldata.dUdts[idx] = vol_inv*surface_integral + celldata.source_terms[cidx*neq + j];
+                size_t idx = cidx*neq + j;
+                if (ftl==0) celldata.dUdt0[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
+                if (ftl==1) celldata.dUdt1[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
+                if (ftl==2) celldata.dUdt2[idx] = vol_inv*surface_integral + celldata.source_terms[idx];
             }
         }
     } // end time_derivatives()
