@@ -1532,56 +1532,19 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
     size_t nConserved = GlobalConfig.cqi.n;
     // remove the conserved mass variable for multi-species gas
     if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
-    size_t MASS = GlobalConfig.cqi.mass;
-    size_t X_MOM = GlobalConfig.cqi.xMom;
-    size_t Y_MOM = GlobalConfig.cqi.yMom;
-    size_t Z_MOM = GlobalConfig.cqi.zMom;
-    size_t TOT_ENERGY = GlobalConfig.cqi.totEnergy;
-    size_t TKE = GlobalConfig.cqi.rhoturb;
-    size_t SPECIES = GlobalConfig.cqi.species;
-    size_t MODES = GlobalConfig.cqi.modes;
-    immutable size_t nftl = GlobalConfig.n_flow_time_levels;
     immutable size_t ncq  = nConserved; // number of conserved quantities
 
     // We perform a Frechet derivative to evaluate J*D^(-1)v
     foreach (blk; parallel(localFluidBlocks,1)) {
-        size_t nturb = blk.myConfig.turb_model.nturb;
-        size_t nsp = blk.myConfig.gmodel.n_species;
-        size_t nmodes = blk.myConfig.gmodel.n_modes;
-        auto cqi = blk.myConfig.cqi;
         blk.clear_fluxes_of_conserved_quantities();
         blk.clear_cell_source_vectors();
 
-        int cellCount = 0;
-        foreach (cell; blk.cells) {
-            cell.U[1].copy_values_from(cell.U[0]);
-            if ( nsp == 1 ) { cell.U[1][cqi.mass] += sigma*blk.zed[cellCount+MASS]; }
-            cell.U[1][cqi.xMom] += sigma*blk.zed[cellCount+X_MOM];
-            cell.U[1][cqi.yMom] += sigma*blk.zed[cellCount+Y_MOM];
-            if ( blk.myConfig.dimensions == 3 )
-                cell.U[1][cqi.zMom] += sigma*blk.zed[cellCount+Z_MOM];
-            cell.U[1][cqi.totEnergy] += sigma*blk.zed[cellCount+TOT_ENERGY];
-            foreach(it; 0 .. nturb){
-                cell.U[1][cqi.rhoturb+it] += sigma*blk.zed[cellCount+TKE+it];
-            }
-            version(multi_species_gas){
-            if ( nsp > 1 ) {
-                foreach(sp; 0 .. nsp) { cell.U[1][cqi.species+sp] += sigma*blk.zed[cellCount+SPECIES+sp]; }
-            } else {
-                // enforce mass fraction of 1 for single species gas
-                if (blk.myConfig.n_species == 1) {
-                    cell.U[1][cqi.species+0] = cell.U[1][cqi.mass];
-                }
-            }
-            }
-            version(multi_T_gas){
-            foreach(imode; 0 .. nmodes) { cell.U[1][cqi.modes+imode] += sigma*blk.zed[cellCount+MODES+imode]; }
-            }
-            cellCount += nConserved;
+        foreach(i; 0 .. ncq*blk.ncells){
+            blk.celldata.U1[i] = blk.celldata.U0[i] + sigma*blk.zed[i];
         }
         foreach (i; 0 .. blk.ncells) {
-            size_t s1 = i*ncq;
-            decode_conserved(blk.celldata.positions[i], blk.celldata.U1[s1 .. s1+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
+            size_t idx = i*ncq;
+            decode_conserved(blk.celldata.positions[i], blk.celldata.U1[idx .. idx+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
         }
     }
     evalRHS(pseudoSimTime, 1);
@@ -1590,30 +1553,13 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
         size_t nsp = blk.myConfig.gmodel.n_species;
         size_t nmodes = blk.myConfig.gmodel.n_modes;
         auto cqi = blk.myConfig.cqi;
-        int cellCount = 0;
-        foreach (cell; blk.cells) {
-            if ( nsp == 1 ) { blk.zed[cellCount+MASS] = (cell.dUdt[1][cqi.mass] - blk.FU[cellCount+MASS])/(sigma); }
-            blk.zed[cellCount+X_MOM] = (cell.dUdt[1][cqi.xMom] - blk.FU[cellCount+X_MOM])/(sigma);
-            blk.zed[cellCount+Y_MOM] = (cell.dUdt[1][cqi.yMom] - blk.FU[cellCount+Y_MOM])/(sigma);
-            if ( blk.myConfig.dimensions == 3 )
-                blk.zed[cellCount+Z_MOM] = (cell.dUdt[1][cqi.zMom] - blk.FU[cellCount+Z_MOM])/(sigma);
-            blk.zed[cellCount+TOT_ENERGY] = (cell.dUdt[1][cqi.totEnergy] - blk.FU[cellCount+TOT_ENERGY])/(sigma);
-            foreach(it; 0 .. nturb){
-                blk.zed[cellCount+TKE+it] = (cell.dUdt[1][cqi.rhoturb+it] - blk.FU[cellCount+TKE+it])/(sigma);
-            }
-            version(multi_species_gas){
-            if ( nsp > 1 ) {
-                foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] = (cell.dUdt[1][cqi.species+sp] - blk.FU[cellCount+SPECIES+sp])/(sigma); }
-            }
-            }
-            version(multi_T_gas){
-            foreach(imode; 0 .. nmodes){ blk.zed[cellCount+MODES+imode] = (cell.dUdt[1][cqi.modes+imode] - blk.FU[cellCount+MODES+imode])/(sigma); }
-            }
-            cellCount += nConserved;
+
+        foreach(i; 0 .. blk.ncells*ncq){
+            blk.zed[i] = (blk.celldata.dUdt1[i] - blk.FU[i])/sigma;
         }
         foreach (i; 0 .. blk.ncells) {
-            size_t s0 = i*ncq;
-            decode_conserved(blk.celldata.positions[i], blk.celldata.U0[s0 .. s0+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
+            size_t idx = i*ncq;
+            decode_conserved(blk.celldata.positions[i], blk.celldata.U0[idx .. idx+ncq], blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
         }
     }
     foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(RHSeval); }
@@ -1641,14 +1587,6 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int 
             blk.clear_fluxes_of_conserved_quantities();
             blk.clear_cell_source_vectors();
             
-            // TODO: The old code had this in it:
-            //    if ( nsp > 1 ) {
-            //        foreach(sp; 0 .. nsp){ cell.U[1][cqi.species+sp] += complex(0.0, sigma*blk.zed[cellCount+SPECIES+sp].re); }
-            //    } else {
-            //        // enforce mass fraction of 1 for single species gas
-            //        cell.U[1][cqi.species+0] = cell.U[1][cqi.mass];
-            //    }
-            // TODO: Was this a mistake?
             foreach(i; 0 .. blk.ncells*ncq){
                 blk.celldata.U1[i] = blk.celldata.U0[i];
                 blk.celldata.U1[i] += complex(0.0, sigma*blk.zed[i].re);
