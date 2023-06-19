@@ -1004,7 +1004,17 @@ int integrate_in_time(double target_time_as_requested)
             // 1.0 Maintain a stable time step size, and other maintenance, as required.
             // The user may also have some start-of-time-step maintenance to do
             // via their Lua script file.  Let them have first go.
-            if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_timestep_start(); }
+            if (GlobalConfig.udf_supervisor_file.length > 0) {
+                // Note that the following call allows the user to do almost anything
+                // at the start of the time step, including changing flow states in cells.
+                call_UDF_at_timestep_start();
+                // If the user has adjusted any of the flow states via the Lua functions,
+                // we will beed to re-encode the conserved quantities, so that they have
+                // consistent data.
+                foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                    foreach (cell; blk.cells) { cell.encode_conserved(0, 0, blk.omegaz); }
+                }
+            }
             if (!GlobalConfig.fixed_time_step) { determine_time_step_size(); }
             if (GlobalConfig.divergence_cleaning && !GlobalConfig.MHD_static_field) { update_ch_for_divergence_cleaning(); }
             // If using k-omega, we need to set mu_t and k_t BEFORE we call convective_update
