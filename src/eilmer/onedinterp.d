@@ -550,29 +550,23 @@ public:
         auto gR0 = &(cR0.fs.gas);
         auto gR1 = &(cR1.fs.gas);
         auto gR2 = &(cR2.fs.gas);
+
         version(multi_species_gas) {
             if (nsp > 1) {
-                // Multiple species.
+                // Reconstruct species densities
                 if (myConfig.allow_reconstruction_for_species) {
                     foreach (isp; 0 .. nsp) {
-                        interp_l3r3_scalar(gL2.massf[isp], gL1.massf[isp], gL0.massf[isp],
-                                           gR0.massf[isp], gR1.massf[isp], gR2.massf[isp],
-                                           Lft.gas.massf[isp], Rght.gas.massf[isp], beta);
-                    }
-                    if (myConfig.scale_species_after_reconstruction) {
-                        scale_mass_fractions(Lft.gas.massf);
-                        scale_mass_fractions(Rght.gas.massf);
+                        interp_l3r3_scalar(gL2.rho_s[isp], gL1.rho_s[isp], gL0.rho_s[isp],
+                                           gR0.rho_s[isp], gR1.rho_s[isp], gR2.rho_s[isp],
+                                           Lft.gas.rho_s[isp], Rght.gas.rho_s[isp], beta);
                     }
                 } else {
-                    Lft.gas.massf[] = gL0.massf[];
-                    Rght.gas.massf[] = gR0.massf[];
+                    Lft.gas.rho_s[]  = gL0.rho_s[];
+                    Rght.gas.rho_s[] = gR0.rho_s[];
                 }
-            } else {
-                // Only one possible mass-fraction value for a single species.
-                Lft.gas.massf[0] = 1.0;
-                Rght.gas.massf[0] = 1.0;
             }
         }
+
         // Interpolate on two of the thermodynamic quantities,
         // and fill in the rest based on an EOS call.
         final switch (myConfig.thermo_interpolator) {
@@ -592,9 +586,52 @@ public:
                 }
             }
             mixin(codeForThermoUpdateBoth("pT"));
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp]  = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    Lft.gas.massf[0]  = 1.0;
+                    Rght.gas.massf[0] = 1.0;
+                }
+            } else {
+                Lft.gas.massf[0]  = 1.0;
+                Rght.gas.massf[0] = 1.0;
+            }
             break;
         case InterpolateOption.rhou:
-            interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_L = 0.0;
+                    number rho_R = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_L += Lft.gas.rho_s[isp];
+                        rho_R += Rght.gas.rho_s[isp];
+                    }
+                    Lft.gas.rho  = rho_L;
+                    Rght.gas.rho = rho_R;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp] = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, Lft.gas.rho, Rght.gas.rho, beta);
+                }
+            } else {
+                interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            }
             interp_l3r3_scalar(gL2.u, gL1.u, gL0.u, gR0.u, gR1.u, gR2.u, Lft.gas.u, Rght.gas.u, beta);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -611,7 +648,32 @@ public:
             mixin(codeForThermoUpdateBoth("rhou"));
             break;
         case InterpolateOption.rhop:
-            interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_L = 0.0;
+                    number rho_R = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_L += Lft.gas.rho_s[isp];
+                        rho_R += Rght.gas.rho_s[isp];
+                    }
+                    Lft.gas.rho  = rho_L;
+                    Rght.gas.rho = rho_R;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp] = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, Lft.gas.rho, Rght.gas.rho, beta);
+                }
+            } else {
+                interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            }
             interp_l3r3_scalar(gL2.p, gL1.p, gL0.p, gR0.p, gR1.p, gR2.p, Lft.gas.p, Rght.gas.p, beta);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -628,7 +690,32 @@ public:
             mixin(codeForThermoUpdateBoth("rhop"));
             break;
         case InterpolateOption.rhot:
-            interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_L = 0.0;
+                    number rho_R = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_L += Lft.gas.rho_s[isp];
+                        rho_R += Rght.gas.rho_s[isp];
+                    }
+                    Lft.gas.rho  = rho_L;
+                    Rght.gas.rho = rho_R;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp] = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, Lft.gas.rho, Rght.gas.rho, beta);
+                }
+            } else {
+                interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            }
             interp_l3r3_scalar(gL2.T, gL1.T, gL0.T, gR0.T, gR1.T, gR2.T, Lft.gas.T, Rght.gas.T, beta);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -712,28 +799,22 @@ public:
         auto gL0 = &(cL0.fs.gas);
         auto gR0 = &(cR0.fs.gas);
         auto gR1 = &(cR1.fs.gas);
+
         version(multi_species_gas) {
             if (nsp > 1) {
-                // Multiple species.
+                // Reconstruct species densities
                 if (myConfig.allow_reconstruction_for_species) {
                     foreach (isp; 0 .. nsp) {
-                        interp_l2r2_scalar(gL1.massf[isp], gL0.massf[isp], gR0.massf[isp], gR1.massf[isp],
-                                           Lft.gas.massf[isp], Rght.gas.massf[isp], beta);
-                    }
-                    if (myConfig.scale_species_after_reconstruction) {
-                        scale_mass_fractions(Lft.gas.massf);
-                        scale_mass_fractions(Rght.gas.massf);
+                        interp_l2r2_scalar(gL1.rho_s[isp], gL0.rho_s[isp], gR0.rho_s[isp], gR1.rho_s[isp],
+                                           Lft.gas.rho_s[isp], Rght.gas.rho_s[isp], beta);
                     }
                 } else {
-                    Lft.gas.massf[] = gL0.massf[];
-                    Rght.gas.massf[] = gR0.massf[];
+                    Lft.gas.rho_s[]  = gL0.rho_s[];
+                    Rght.gas.rho_s[] = gR0.rho_s[];
                 }
-            } else {
-                // Only one possible mass-fraction value for a single species.
-                Lft.gas.massf[0] = 1.0;
-                Rght.gas.massf[0] = 1.0;
             }
         }
+
         // Interpolate on two of the thermodynamic quantities,
         // and fill in the rest based on an EOS call.
         final switch (myConfig.thermo_interpolator) {
@@ -752,9 +833,52 @@ public:
                 }
             }
             mixin(codeForThermoUpdateBoth("pT"));
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp]  = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    Lft.gas.massf[0]  = 1.0;
+                    Rght.gas.massf[0] = 1.0;
+                }
+            } else {
+                Lft.gas.massf[0]  = 1.0;
+                Rght.gas.massf[0] = 1.0;
+            }
             break;
         case InterpolateOption.rhou:
-            interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_L = 0.0;
+                    number rho_R = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_L += Lft.gas.rho_s[isp];
+                        rho_R += Rght.gas.rho_s[isp];
+                    }
+                    Lft.gas.rho  = rho_L;
+                    Rght.gas.rho = rho_R;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp] = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+                }
+            } else {
+                interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            }
             interp_l2r2_scalar(gL1.u, gL0.u, gR0.u, gR1.u, Lft.gas.u, Rght.gas.u, beta);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -770,7 +894,32 @@ public:
             mixin(codeForThermoUpdateBoth("rhou"));
             break;
         case InterpolateOption.rhop:
-            interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_L = 0.0;
+                    number rho_R = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_L += Lft.gas.rho_s[isp];
+                        rho_R += Rght.gas.rho_s[isp];
+                    }
+                    Lft.gas.rho  = rho_L;
+                    Rght.gas.rho = rho_R;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp] = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+                }
+            } else {
+                interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            }
             interp_l2r2_scalar(gL1.p, gL0.p, gR0.p, gR1.p, Lft.gas.p, Rght.gas.p, beta);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -786,7 +935,32 @@ public:
             mixin(codeForThermoUpdateBoth("rhop"));
             break;
         case InterpolateOption.rhot:
-            interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_L = 0.0;
+                    number rho_R = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_L += Lft.gas.rho_s[isp];
+                        rho_R += Rght.gas.rho_s[isp];
+                    }
+                    Lft.gas.rho  = rho_L;
+                    Rght.gas.rho = rho_R;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp] = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+                }
+            } else {
+                interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            }
             interp_l2r2_scalar(gL1.T, gL0.T, gR0.T, gR1.T, Lft.gas.T, Rght.gas.T, beta);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -850,28 +1024,22 @@ public:
                 }
         }
         auto gL1 = &(cL1.fs.gas); auto gL0 = &(cL0.fs.gas); auto gR0 = &(cR0.fs.gas);
+
         version(multi_species_gas) {
             if (nsp > 1) {
-                // Multiple species.
+                // Reconstruct species densities
                 if (myConfig.allow_reconstruction_for_species) {
                     foreach (isp; 0 .. nsp) {
-                        interp_l2r1_scalar(gL1.massf[isp], gL0.massf[isp], gR0.massf[isp],
-                                           Lft.gas.massf[isp], Rght.gas.massf[isp], beta);
-                    }
-                    if (myConfig.scale_species_after_reconstruction) {
-                        scale_mass_fractions(Lft.gas.massf);
-                        scale_mass_fractions(Rght.gas.massf);
+                        interp_l2r1_scalar(gL1.rho_s[isp], gL0.rho_s[isp], gR0.rho_s[isp],
+                                           Lft.gas.rho_s[isp], Rght.gas.rho_s[isp], beta);
                     }
                 } else {
-                    Lft.gas.massf[] = gL0.massf[];
-                    Rght.gas.massf[] = gR0.massf[];
+                    Lft.gas.rho_s[]  = gL0.rho_s[];
+                    Rght.gas.rho_s[] = gR0.rho_s[];
                 }
-            } else {
-                // Only one possible mass-fraction value for a single species.
-                Lft.gas.massf[0] = 1.0;
-                Rght.gas.massf[0] = 1.0;
             }
         }
+
         // Interpolate on two of the thermodynamic quantities,
         // and fill in the rest based on an EOS call.
         final switch (myConfig.thermo_interpolator) {
@@ -890,9 +1058,52 @@ public:
                 }
             }
             mixin(codeForThermoUpdateBoth("pT"));
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp]  = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    Lft.gas.massf[0]  = 1.0;
+                    Rght.gas.massf[0] = 1.0;
+                }
+            } else {
+                Lft.gas.massf[0]  = 1.0;
+                Rght.gas.massf[0] = 1.0;
+            }
             break;
         case InterpolateOption.rhou:
-            interp_l2r1_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_L = 0.0;
+                    number rho_R = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_L += Lft.gas.rho_s[isp];
+                        rho_R += Rght.gas.rho_s[isp];
+                    }
+                    Lft.gas.rho  = rho_L;
+                    Rght.gas.rho = rho_R;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                    Lft.gas.massf[isp] = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                    Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    interp_l2r1_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho, Rght.gas.rho, beta);
+                }
+            } else {
+                interp_l2r1_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            }
             interp_l2r1_scalar(gL1.u, gL0.u, gR0.u, Lft.gas.u, Rght.gas.u, beta);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -908,7 +1119,32 @@ public:
             mixin(codeForThermoUpdateBoth("rhou"));
             break;
         case InterpolateOption.rhop:
-            interp_l2r1_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_L = 0.0;
+                    number rho_R = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_L += Lft.gas.rho_s[isp];
+                        rho_R += Rght.gas.rho_s[isp];
+                    }
+                    Lft.gas.rho  = rho_L;
+                    Rght.gas.rho = rho_R;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp] = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    interp_l2r1_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho, Rght.gas.rho, beta);
+                }
+            } else {
+                interp_l2r1_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            }
             interp_l2r1_scalar(gL1.p, gL0.p, gR0.p, Lft.gas.p, Rght.gas.p, beta);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -924,7 +1160,32 @@ public:
             mixin(codeForThermoUpdateBoth("rhop"));
             break;
         case InterpolateOption.rhot:
-            interp_l2r1_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_L = 0.0;
+                    number rho_R = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_L += Lft.gas.rho_s[isp];
+                        rho_R += Rght.gas.rho_s[isp];
+                    }
+                    Lft.gas.rho  = rho_L;
+                    Rght.gas.rho = rho_R;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp] = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    interp_l2r1_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho, Rght.gas.rho, beta);
+                }
+            } else {
+                interp_l2r1_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            }
             interp_l2r1_scalar(gL1.T, gL0.T, gR0.T, Lft.gas.T, Rght.gas.T, beta);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -991,28 +1252,22 @@ public:
                 }
         }
         auto gL0 = &(cL0.fs.gas); auto gR0 = &(cR0.fs.gas); auto gR1 = &(cR1.fs.gas);
+
         version(multi_species_gas) {
             if (nsp > 1) {
-                // Multiple species.
+                // Reconstruct species densities
                 if (myConfig.allow_reconstruction_for_species) {
                     foreach (isp; 0 .. nsp) {
-                        interp_l1r2_scalar(gL0.massf[isp], gR0.massf[isp], gR1.massf[isp],
-                                           Lft.gas.massf[isp], Rght.gas.massf[isp], beta);
-                    }
-                    if (myConfig.scale_species_after_reconstruction) {
-                        scale_mass_fractions(Lft.gas.massf);
-                        scale_mass_fractions(Rght.gas.massf);
+                        interp_l1r2_scalar(gL0.rho_s[isp], gR0.rho_s[isp], gR1.rho_s[isp],
+                                           Lft.gas.rho_s[isp], Rght.gas.rho_s[isp], beta);
                     }
                 } else {
-                    Lft.gas.massf[] = gL0.massf[];
-                    Rght.gas.massf[] = gR0.massf[];
+                    Lft.gas.rho_s[]  = gL0.rho_s[];
+                    Rght.gas.rho_s[] = gR0.rho_s[];
                 }
-            } else {
-                // Only one possible mass-fraction value for a single species.
-                Lft.gas.massf[0] = 1.0;
-                Rght.gas.massf[0] = 1.0;
             }
         }
+
         // Interpolate on two of the thermodynamic quantities,
         // and fill in the rest based on an EOS call.
         final switch (myConfig.thermo_interpolator) {
@@ -1031,9 +1286,52 @@ public:
                 }
             }
             mixin(codeForThermoUpdateBoth("pT"));
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp]  = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    Lft.gas.massf[0]  = 1.0;
+                    Rght.gas.massf[0] = 1.0;
+                }
+            } else {
+                Lft.gas.massf[0]  = 1.0;
+                Rght.gas.massf[0] = 1.0;
+            }
             break;
         case InterpolateOption.rhou:
-            interp_l1r2_scalar(gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_L = 0.0;
+                    number rho_R = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_L += Lft.gas.rho_s[isp];
+                        rho_R += Rght.gas.rho_s[isp];
+                    }
+                    Lft.gas.rho  = rho_L;
+                    Rght.gas.rho = rho_R;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp] = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    interp_l1r2_scalar(gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+                }
+            } else {
+                interp_l1r2_scalar(gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            }
             interp_l1r2_scalar(gL0.u, gR0.u, gR1.u, Lft.gas.u, Rght.gas.u, beta);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -1049,7 +1347,32 @@ public:
             mixin(codeForThermoUpdateBoth("rhou"));
             break;
         case InterpolateOption.rhop:
-            interp_l1r2_scalar(gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_L = 0.0;
+                    number rho_R = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_L += Lft.gas.rho_s[isp];
+                        rho_R += Rght.gas.rho_s[isp];
+                    }
+                    Lft.gas.rho  = rho_L;
+                    Rght.gas.rho = rho_R;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp] = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    interp_l1r2_scalar(gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+                }
+            } else {
+                interp_l1r2_scalar(gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            }
             interp_l1r2_scalar(gL0.p, gR0.p, gR1.p, Lft.gas.p, Rght.gas.p, beta);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -1065,7 +1388,32 @@ public:
             mixin(codeForThermoUpdateBoth("rhop"));
             break;
         case InterpolateOption.rhot:
-            interp_l1r2_scalar(gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_L = 0.0;
+                    number rho_R = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_L += Lft.gas.rho_s[isp];
+                        rho_R += Rght.gas.rho_s[isp];
+                    }
+                    Lft.gas.rho  = rho_L;
+                    Rght.gas.rho = rho_R;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp] = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    interp_l1r2_scalar(gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+                }
+            } else {
+                interp_l1r2_scalar(gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho, beta);
+            }
             interp_l1r2_scalar(gL0.T, gR0.T, gR1.T, Lft.gas.T, Rght.gas.T, beta);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -1132,23 +1480,20 @@ public:
                 }
         }
         auto gL1 = &(cL1.fs.gas); auto gL0 = &(cL0.fs.gas);
+
         version(multi_species_gas) {
             if (nsp > 1) {
-                // Multiple species.
+                // Reconstruct species densities
                 if (myConfig.allow_reconstruction_for_species) {
                     foreach (isp; 0 .. nsp) {
-                        Lft.gas.massf[isp] = weight_scalar(gL0.massf[isp], gL1.massf[isp]);
+                        Lft.gas.rho_s[isp] = weight_scalar(gL0.rho_s[isp], gL1.rho_s[isp]);
                     }
-                    if (myConfig.scale_species_after_reconstruction)
-                        scale_mass_fractions(Lft.gas.massf);
                 } else {
-                    Lft.gas.massf[] = gL0.massf[];
+                    Lft.gas.rho_s[]  = gL0.rho_s[];
                 }
-            } else {
-                // Only one possible mass-fraction value for a single species.
-                Lft.gas.massf[0] = 1.0;
             }
         }
+
         // Interpolate on two of the thermodynamic quantities,
         // and fill in the rest based on an EOS call.
         final switch (myConfig.thermo_interpolator) {
@@ -1165,9 +1510,43 @@ public:
                 }
             }
             mixin(codeForThermoUpdateLft("pT"));
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp]  = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                    }
+                } else {
+                    Lft.gas.massf[0]  = 1.0;
+                }
+            } else {
+                Lft.gas.massf[0]  = 1.0;
+            }
             break;
         case InterpolateOption.rhou:
-            Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_L = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_L += Lft.gas.rho_s[isp];
+                    }
+                    Lft.gas.rho  = rho_L;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp] = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                    }
+                } else {
+                    Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
+                }
+            } else {
+                Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
+            }
             Lft.gas.u = weight_scalar(gL0.u, gL1.u);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -1181,7 +1560,27 @@ public:
             mixin(codeForThermoUpdateLft("rhou"));
             break;
         case InterpolateOption.rhop:
-            Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_L = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_L += Lft.gas.rho_s[isp];
+                    }
+                    Lft.gas.rho  = rho_L;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp] = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                    }
+                } else {
+                    Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
+                }
+            } else {
+                Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
+            }
             Lft.gas.p = weight_scalar(gL0.p, gL1.p);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -1195,7 +1594,27 @@ public:
             mixin(codeForThermoUpdateLft("rhop"));
             break;
         case InterpolateOption.rhot:
-            Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_L = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_L += Lft.gas.rho_s[isp];
+                    }
+                    Lft.gas.rho  = rho_L;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Lft.gas.massf[isp] = Lft.gas.rho_s[isp]/Lft.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Lft.gas.massf);
+                    }
+                } else {
+                    Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
+                }
+            } else {
+                Lft.gas.rho = weight_scalar(gL0.rho, gL1.rho);
+            }
             Lft.gas.T = weight_scalar(gL0.T, gL1.T);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -1259,23 +1678,20 @@ public:
                 }
         }
         auto gR0 = &(cR0.fs.gas); auto gR1 = &(cR1.fs.gas);
+
         version(multi_species_gas) {
             if (nsp > 1) {
-                // Multiple species.
+                // Reconstruct species densities
                 if (myConfig.allow_reconstruction_for_species) {
                     foreach (isp; 0 .. nsp) {
-                        Rght.gas.massf[isp] = weight_scalar(gR0.massf[isp], gR1.massf[isp]);
+                        Rght.gas.rho_s[isp] = weight_scalar(gR0.rho_s[isp], gR1.rho_s[isp]);
                     }
-                    if (myConfig.scale_species_after_reconstruction)
-                        scale_mass_fractions(Rght.gas.massf);
                 } else {
-                    Rght.gas.massf[] = gR0.massf[];
+                    Rght.gas.rho_s[] = gR0.rho_s[];
                 }
-            } else {
-                // Only one possible mass-fraction value for a single species.
-                Rght.gas.massf[0] = 1.0;
             }
         }
+
         // Interpolate on two of the thermodynamic quantities,
         // and fill in the rest based on an EOS call.
         final switch (myConfig.thermo_interpolator) {
@@ -1292,9 +1708,43 @@ public:
                 }
             }
             mixin(codeForThermoUpdateRght("pT"));
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    foreach (isp; 0 .. nsp) {
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    Rght.gas.massf[0] = 1.0;
+                }
+            } else {
+                Rght.gas.massf[0] = 1.0;
+            }
             break;
         case InterpolateOption.rhou:
-            Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_R = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_R += Rght.gas.rho_s[isp];
+                    }
+                    Rght.gas.rho = rho_R;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
+                }
+            } else {
+                Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
+            }
             Rght.gas.u = weight_scalar(gR0.u, gR1.u);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -1308,7 +1758,27 @@ public:
             mixin(codeForThermoUpdateRght("rhou"));
             break;
         case InterpolateOption.rhop:
-            Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_R = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_R += Rght.gas.rho_s[isp];
+                    }
+                    Rght.gas.rho = rho_R;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
+                }
+            } else {
+                Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
+            }
             Rght.gas.p = weight_scalar(gR0.p, gR1.p);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {
@@ -1322,7 +1792,27 @@ public:
             mixin(codeForThermoUpdateRght("rhop"));
             break;
         case InterpolateOption.rhot:
-            Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
+            version(multi_species_gas) {
+                if (nsp > 1) {
+                    // compute total density as a sum of species densities
+                    number rho_R = 0.0;
+                    foreach (isp; 0 .. nsp) {
+                        rho_R += Rght.gas.rho_s[isp];
+                    }
+                    Rght.gas.rho = rho_R;
+                    // compute mass fractions from total density and species densities
+                    foreach (isp; 0 .. nsp) {
+                        Rght.gas.massf[isp] = Rght.gas.rho_s[isp]/Rght.gas.rho;
+                    }
+                    if (myConfig.scale_species_after_reconstruction) {
+                        scale_mass_fractions(Rght.gas.massf);
+                    }
+                } else {
+                    Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
+                }
+            } else {
+                Rght.gas.rho = weight_scalar(gR0.rho, gR1.rho);
+            }
             Rght.gas.T = weight_scalar(gR0.T, gR1.T);
             version(multi_T_gas) {
                 if (myConfig.allow_reconstruction_for_energy_modes) {

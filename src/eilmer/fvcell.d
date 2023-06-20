@@ -727,7 +727,10 @@ public:
             } // end if (myConfig.n_species > 1 && cqi.mass == 0)
             try {
                 if (cqi.n_species > 1) {
-                    foreach(isp; 0 .. cqi.n_species) { fs.gas.massf[isp] = myU[cqi.species+isp] * dinv; }
+                    foreach(isp; 0 .. cqi.n_species) {
+                        fs.gas.massf[isp] = myU[cqi.species+isp] * dinv;
+                        fs.gas.rho_s[isp] = myU[cqi.species+isp];
+                    }
                 } else {
                     fs.gas.massf[0] = 1.0;
                 }

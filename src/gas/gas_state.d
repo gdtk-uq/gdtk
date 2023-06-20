@@ -41,6 +41,7 @@ public:
     number sigma;    /// electrical conductivity, S/m
     /// Composition
     number[] massf;  /// species mass fractions
+    number[] rho_s;  /// species densities
     number quality;  /// vapour quality
     // A place to hang on to some CEA data, so that it can be called up
     // in CEAGas methods that don't have access to the original CEA output file.
@@ -50,10 +51,11 @@ public:
 
     this(uint n_species, uint n_modes, bool includeSavedData=false)
     {
-        massf.length = n_species;
-        u_modes.length = n_modes;
-        T_modes.length = n_modes;
-        k_modes.length = n_modes;
+        massf.length     = n_species;
+        rho_s.length     = n_species;
+        u_modes.length   = n_modes;
+        T_modes.length   = n_modes;
+        k_modes.length   = n_modes;
         if (includeSavedData) { ceaSavedData = new CEASavedData; }
     }
 
@@ -77,6 +79,7 @@ public:
         u_modes.length = nmodes;
         k_modes.length = nmodes;
         massf.length = nsp;
+        rho_s.length = nsp;
         foreach(i; 0 .. nsp) {
             massf[i] = (i < massf_init.length) ? massf_init[i] : 0.0;
         }
@@ -87,6 +90,9 @@ public:
         gm.update_thermo_from_pT(this);
         gm.update_sound_speed(this);
         gm.update_trans_coeffs(this);
+        foreach(i; 0 .. nsp) {
+            rho_s[i] = rho*massf[i];
+        }
     }
 
     this(GasModel gm, in double p_init, in double T_init,
@@ -114,6 +120,7 @@ public:
         k_modes = other.k_modes.dup;
         sigma = other.sigma;
         massf = other.massf.dup;
+        rho_s = other.rho_s.dup;
         quality = other.quality;
         if (other.ceaSavedData !is null) {
             ceaSavedData = new CEASavedData(*(other.ceaSavedData));
@@ -127,6 +134,7 @@ public:
             if (T_modes.length != other.T_modes.length) { throw new Error("Incorrect T_modes length."); }
             if (k_modes.length != other.k_modes.length) { throw new Error("Incorrect k_modes length."); }
             if (massf.length != other.massf.length) { throw new Error("Incorrect massf length."); }
+            if (rho_s.length != other.rho_s.length) { throw new Error("Incorrect rho_s length."); }
         }
         rho = other.rho;
         p = other.p;
@@ -141,6 +149,7 @@ public:
         foreach (i; 0 .. k_modes.length) { k_modes[i] = other.k_modes[i]; }
         sigma = other.sigma;
         foreach (i; 0 .. massf.length) { massf[i] = other.massf[i]; }
+        foreach (i; 0 .. rho_s.length) { rho_s[i] = other.rho_s[i]; }
         quality = other.quality;
     }
 
@@ -166,6 +175,7 @@ public:
         foreach(i; 0 .. k_modes.length) { k_modes[i] = w0*gs0.k_modes[i] + w1*gs1.k_modes[i]; }
         sigma = w0*gs0.sigma + w1*gs1.sigma;
         foreach(i; 0 .. massf.length) { massf[i] = w0*gs0.massf[i] + w1*gs1.massf[i]; }
+        foreach(i; 0 .. rho_s.length) { rho_s[i] = w0*gs0.rho_s[i] + w1*gs1.rho_s[i]; }
         quality = w0*gs0.quality + w1*gs1.quality;
     }
 
@@ -185,6 +195,7 @@ public:
         foreach(ref elem; k_modes) { elem = 0.0; }
         sigma = 0.0;
         foreach(ref elem; massf) { elem = 0.0; }
+        foreach(ref elem; rho_s) { elem = 0.0; }
         quality = 0.0;
         foreach(other; others) {
             p += other.p; T += other.T; u += other.u; p_e += other.p_e; a += other.a;
@@ -194,6 +205,7 @@ public:
             foreach(i; 0 .. k_modes.length) { k_modes[i] += other.k_modes[i]; }
             sigma += other.sigma;
             foreach(i; 0 .. massf.length) { massf[i] += other.massf[i]; }
+            foreach(i; 0 .. rho_s.length) { rho_s[i] += other.rho_s[i]; }
             quality += other.quality;
         }
         p /= n; T /= n; u /= n; p_e /= n; a /= n;
@@ -203,6 +215,7 @@ public:
         foreach(ref elem; k_modes) { elem /= n; }
         sigma /= n;
         foreach(ref elem; massf) { elem /= n; }
+        foreach(ref elem; rho_s) { elem /= n; }
         quality /= n;
         // Now, make the properties consistent using the gas model.
         gm.update_thermo_from_pT(this);
@@ -270,6 +283,7 @@ public:
         repr ~= ", k=" ~ to!string(k);
         repr ~= ", k_modes=" ~ to!string(k_modes);
         repr ~= ", massf=" ~ to!string(massf);
+        repr ~= ", rho_s=" ~ to!string(rho_s);
         repr ~= ", quality=" ~ to!string(quality);
         repr ~= ", sigma=" ~ to!string(sigma);
         repr ~= ")";
@@ -295,6 +309,7 @@ version(complex_numbers) {
         foreach( i; 0..k_modes.length) k_modes[i].im = 0.0;
         sigma.im = 0.0;
         foreach( i; 0..massf.length) massf[i].im = 0.0;
+        foreach( i; 0..rho_s.length) rho_s[i].im = 0.0;
         quality.im = 0.0;
     } // end clear_imaginary_components()
 } // end version(complex)
