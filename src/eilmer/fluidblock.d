@@ -181,16 +181,16 @@ public:
     // Work-space for Newton-Krylov accelerator
     // These arrays and matrices are directly tied to using the
     // GMRES iterative solver.
-    SMatrix!number JcT; // transposed Jacobian (w.r.t conserved variables)
+    SMatrix!double JcT; // transposed Jacobian (w.r.t conserved variables)
     ConservedQuantities maxRate, residuals;
     double normAcc, dotAcc;
     size_t nvars;
-    Matrix!number Minv;
-    number[] FU, dU, DinvR, r0, x0, rhs;
-    number[] v, w, zed;
-    number[] g0, g1;
-    Matrix!number Q1;
-    Matrix!number V;
+    Matrix!double Minv;
+    double[] FU, dU, DinvR, r0, x0, rhs;
+    double[] v, w, zed;
+    double[] g0, g1;
+    Matrix!double Q1;
+    Matrix!double V;
     }
 
     FluidBlockIO[] block_io; // io handlers
@@ -1188,7 +1188,7 @@ public:
                 assert(cell.id < ghost_cell_start_id, "Oops, we expect to not find a ghost cell at this point.");
                 size_t jidx = cell.id; // column index
                 // populate entry with a place holder value
-                ptJac.local.aa[ptJac.aa_idx] = to!number(1.0);
+                ptJac.local.aa[ptJac.aa_idx] = 1.0;
                 // fill out the sparse matrix ready for the next entry in the row
                 ptJac.aa_idx += 1;
                 ptJac.local.ja[ptJac.ja_idx] = jidx;
@@ -1232,7 +1232,7 @@ public:
             foreach ( i; 0..n) {
                 foreach ( j; 0..n) {
                     // add new entry
-                    if (lev[i][j] <= p) { ptJac.local[i,j] = to!number(1.0); }
+                    if (lev[i][j] <= p) { ptJac.local[i,j] = 1.0; }
                 }
             }
         }
@@ -1254,7 +1254,7 @@ public:
                     for (size_t jp = 0; jp < nConserved; ++jp) {
                         size_t jidx = colj*nConserved + jp; // column index
                         // populate entry with a place holder value
-                        flowJacobian.local.aa[flowJacobian.aa_idx] = to!number(1.0);
+                        flowJacobian.local.aa[flowJacobian.aa_idx] = 1.0;
                         // fill out the sparse matrix ready for the next entry in the row
                         flowJacobian.aa_idx += 1;
                         flowJacobian.local.ja[flowJacobian.ja_idx] = jidx;
@@ -1313,7 +1313,7 @@ public:
          */
 
         // zero entries
-        flowJacobian.local.aa[] = to!number(0.0);
+        flowJacobian.local.aa[] = 0.0;
 
         // temporarily change flux calculator
         auto flux_calculator_save = myConfig.flux_calculator;
@@ -1409,7 +1409,7 @@ public:
                     assert(cell.id < ghost_cell_start_id, "Oops, we expect to not find a ghost cell at this point.");
                     size_t I = cell.id*nConserved + ip;
                     size_t J = pcell.id*nConserved + jp;
-                    flowJacobian.local[I,J] = cell.dRdU[ip][jp];
+                    flowJacobian.local[I,J] = cell.dRdU[ip][jp].re;
                 }
             }
         }
@@ -1532,7 +1532,7 @@ public:
                         for ( size_t j = 0; j < nConserved; ++j ) {
                             J = pcell.id*nConserved + j; // row index
                             for (size_t k = 0; k < nConserved; k++) {
-                                flowJacobian.local[I,J] = flowJacobian.local[I,J] + bcell.dRdU[i][k]*flowJacobian.dudU[k][j];
+                                flowJacobian.local[I,J] = flowJacobian.local[I,J] + bcell.dRdU[i][k].re*flowJacobian.dudU[k][j];
                             }
                         }
                     }
@@ -1654,20 +1654,20 @@ public:
         if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
 
         // create an arbitrary unit vector
-        number[] vec;
+        double[] vec;
         vec.length = cells.length*nConserved;
         foreach ( i, ref val; vec) { val = i+1; }
 
         // normalise the vector
-        number norm = 0.0;
+        double norm = 0.0;
         foreach( i; 0..vec.length) { norm += vec[i]*vec[i]; }
         norm = sqrt(norm);
         foreach( ref val; vec) { val = val/norm; }
 
         // result vectors
-        number[] sol1;
+        double[] sol1;
         sol1.length = vec.length;
-        number[] sol2;
+        double[] sol2;
         sol2.length = vec.length;
 
         // explicit multiplication of J*vec
@@ -1690,7 +1690,7 @@ public:
         Runtime.terminate();
     } // end verify_jacobian
 
-    void evalConservativeJacobianVecProd(number[] vec, ref number[] sol) {
+    void evalConservativeJacobianVecProd(double[] vec, ref double[] sol) {
         size_t nConserved = GlobalConfig.cqi.n;
         // remove the conserved mass variable for multi-species gas
         if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
@@ -1807,7 +1807,7 @@ public:
         nvars = n;
         // Now allocate arrays and matrices
         FU.length = n;
-        dU.length = n; dU[] = to!number(0.0);
+        dU.length = n; dU[] = 0.0;
         r0.length = n;
         x0.length = n;
         DinvR.length = n;
@@ -1819,12 +1819,12 @@ public:
         g1.length = mOuter+1;
         //h_outer.length = mOuter+1;
         //hR_outer.length = mOuter+1;
-        V = new Matrix!number(n, mOuter+1);
+        V = new Matrix!double(n, mOuter+1);
         //H0_outer = new Matrix!number(mOuter+1, mOuter);
         //H1_outer = new Matrix!number(mOuter+1, mOuter);
         //Gamma_outer = new Matrix!number(mOuter+1, mOuter+1);
         //Q0_outer = new Matrix!number(mOuter+1, mOuter+1);
-        Q1 = new Matrix!number(mOuter+1, mOuter+1);
+        Q1 = new Matrix!double(mOuter+1, mOuter+1);
     }
     }
 

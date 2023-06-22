@@ -57,6 +57,15 @@ void getUDFSourceTermsForCell(lua_State* L, FVCell cell, size_t gtl,
     cell.Qudf[cqi.yMom] = getNumberFromTable(L, -1, "momentum_y", false, 0.0);
     if (cqi.threeD) { cell.Qudf[cqi.zMom] = getNumberFromTable(L, -1, "momentum_z", false, 0.0); }
     cell.Qudf[cqi.totEnergy] = getNumberFromTable(L, -1, "total_energy",false, 0.0);
+    version(MHD) {
+        if (cqi.MHD) {
+            cell.Qudf[cqi.xB] = getNumberFromTable(L, -1, "xB", false, 0.0);
+            cell.Qudf[cqi.yB] = getNumberFromTable(L, -1, "yB", false, 0.0);
+            cell.Qudf[cqi.zB] = getNumberFromTable(L, -1, "zB", false, 0.0);
+            cell.Qudf[cqi.psi] = getNumberFromTable(L, -1, "psi", false, 0.0);
+            cell.Qudf[cqi.divB] = getNumberFromTable(L, -1, "divB", false, 0.0);
+        }
+    }
     version(turbulence) {
         foreach(it; 0 .. myConfig.turb_model.nturb){
             string tname = myConfig.turb_model.primitive_variable_name(it);

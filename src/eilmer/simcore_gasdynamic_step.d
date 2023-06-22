@@ -1260,7 +1260,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                 // there will be an unreasonably-large flux out of the cell.
                             }
                             version(MHD) {
-                                if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
+                                if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning && !blk.myConfig.MHD_static_field) {
                                     U1[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
@@ -1302,7 +1302,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                 }
                             }
                             version(MHD) {
-                                if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
+                                if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning && !blk.myConfig.MHD_static_field) {
                                     U2[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
@@ -1355,7 +1355,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                 }
                             }
                             version(MHD) {
-                                if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
+                                if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning && !blk.myConfig.MHD_static_field) {
                                     U3[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
@@ -1402,7 +1402,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                 }
                             }
                             version(MHD) {
-                                if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
+                                if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning && !blk.myConfig.MHD_static_field) {
                                     U4[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
@@ -1917,7 +1917,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                         }
                     }
                     version(MHD) {
-                        if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
+                        if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning && !blk.myConfig.MHD_static_field) {
                             U1[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                         }
                     }
@@ -2275,7 +2275,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                             }
                         }
                         version(MHD) {
-                            if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
+                            if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning && !blk.myConfig.MHD_static_field) {
                                 U2[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                             }
                         }

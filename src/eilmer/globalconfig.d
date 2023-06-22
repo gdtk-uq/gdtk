@@ -593,12 +593,11 @@ SolidDomainCoupling solidDomainCouplingFromName(string name)
     }
 }
 
-enum PreconditionMatrixType { lusgs, diagonal, jacobi, sgs, ilu }
+enum PreconditionMatrixType { diagonal, jacobi, sgs, ilu }
 
 string preconditionMatrixTypeName(PreconditionMatrixType i)
 {
     final switch (i) {
-    case PreconditionMatrixType.lusgs: return "lusgs";
     case PreconditionMatrixType.diagonal: return "diagonal";
     case PreconditionMatrixType.jacobi: return "jacobi";
     case PreconditionMatrixType.sgs: return "sgs";
@@ -609,7 +608,6 @@ string preconditionMatrixTypeName(PreconditionMatrixType i)
 PreconditionMatrixType preconditionMatrixTypeFromName(string name)
 {
     switch (name) {
-    case "lusgs": return PreconditionMatrixType.lusgs;
     case "diagonal": return PreconditionMatrixType.diagonal;
     case "jacobi": return PreconditionMatrixType.jacobi;
     case "sgs": return PreconditionMatrixType.sgs;
@@ -1092,7 +1090,7 @@ final class GlobalConfig {
     // For Daryl Bond and Vince Wheatley's Single-fluid MHD additions.
     //
     shared static bool MHD = false;
-    shared static bool MHD_static_field = false;
+    shared static bool MHD_static_field = false; // A value of false allows the internal update.
     shared static bool MHD_resistive = false;
     //
     // Lachlan Whyborn's Divergence cleaning to go with MHD.
@@ -2707,6 +2705,7 @@ void init_master_lua_State()
     // There is no convenient C API expression to do the equivalent of "require"
     luaL_dostring(L, "require 'lua_helper'");
     // Set some globally available constants for the Lua state.
+    lua_pushboolean(L, SimState.is_restart); lua_setglobal(L, "is_restart");
     lua_pushnumber(L, cfg.nFluidBlocks); lua_setglobal(L, "nFluidBlocks");
     lua_pushnumber(L, cfg.n_ghost_cell_layers); lua_setglobal(L, "n_ghost_cell_layers"); // interpreters for blocks use this name
     lua_pushnumber(L, cfg.n_ghost_cell_layers); lua_setglobal(L, "nGhostCellLayers"); // keep both names

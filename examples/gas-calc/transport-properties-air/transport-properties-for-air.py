@@ -3,12 +3,13 @@
 #
 # Author: Peter J. and Rowan J. Gollan
 # Date: 2019-11-21
+#       2023-06-04 Exercise the PyGasState class
 #
 # To run this script:
 # $ prep-gas thermally-perfect-N2-O2.inp thermally-perfect-N2-O2.lua
 # $ python3 transport-properties-for-air.py
 #
-from gdtk.gas import GasModel, GasState
+from gdtk.gas import GasModel, PyGasState as GasState
 
 gasModelFile = 'thermally-perfect-N2-O2.lua'
 gmodel = GasModel(gasModelFile)

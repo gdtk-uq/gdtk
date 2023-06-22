@@ -45,8 +45,6 @@ public:
     bool in_suppress_viscous_stresses_zone; // if true, we have zero viscous stresses at this face
     //
     // Geometry
-    Matrix!number T;       // For use with LU-SGS
-    Matrix!number Tinv;    // For use with LU-SGS
     IndexDirection idir;   // For StructuredGrid: in which index-direction is face pointing?
     Vector3 pos;           // position of the (approx) midpoint
     Vector3 gvel;          // grid velocity at interface, m/s
@@ -150,12 +148,6 @@ public:
         }
         q_diffusion = to!number(0.0);
         q_conduction = to!number(0.0);
-        // rotation matrices used in the LU-SGS solver
-        version(steady_state) {
-            const size_t nConserved = myConfig.cqi.n;
-            T = new Matrix!number(nConserved,nConserved);
-            Tinv = new Matrix!number(nConserved,nConserved);
-        }
     }
 
     this(FVInterface other, GasModel gm) // not const; see note below
@@ -353,45 +345,6 @@ public:
             throw new FlowSolverException(msg);
         } // end switch
     } // end update_3D_geometric_data()
-
-    void construct_rotation_matrix() {
-        // rotation matrices used in the LU-SGS solver
-
-        // Make a stack-local copy of conserved quantities info
-        size_t nConserved = myConfig.cqi.n;
-        size_t MASS = myConfig.cqi.mass;
-        size_t X_MOM = myConfig.cqi.xMom;
-        size_t Y_MOM = myConfig.cqi.yMom;
-        size_t Z_MOM = myConfig.cqi.zMom;
-        size_t TOT_ENERGY = myConfig.cqi.totEnergy;
-        size_t TKE = myConfig.cqi.rhoturb;
-
-        T.zeros;
-        T[MASS,MASS] = to!number(1.0);
-
-        T[X_MOM,X_MOM] = n.x;
-        T[X_MOM,Y_MOM] = n.y;
-        if (myConfig.dimensions == 3) { T[X_MOM,Z_MOM] = n.z; }
-
-        T[Y_MOM,X_MOM] = t1.x;
-        T[Y_MOM,Y_MOM] = t1.y;
-        if (myConfig.dimensions == 3) { T[Y_MOM,Z_MOM] = t1.z; }
-
-        if (myConfig.dimensions == 3) {
-            T[Z_MOM,X_MOM] = t2.x;
-            T[Z_MOM,Y_MOM] = t2.y;
-            T[Z_MOM,Z_MOM] = t2.z;
-        }
-
-        T[TOT_ENERGY,TOT_ENERGY] = to!number(1.0);
-
-        auto tm = myConfig.turb_model;
-        if(tm.nturb > 0) {
-            foreach(it; 0 .. tm.nturb){ T[TKE+it,TKE+it] = to!number(1.0); }
-        }
-
-        Tinv = inverse(T);
-    }
 
     @nogc
     number upwind_weighting(number M)
@@ -861,29 +814,5 @@ public:
             }
         }
     } // end viscous_flux_calc()
-
-    @nogc
-    number spectral_radius(double omega) {
-        // Spectral radii (lambda) of Jacobians of convective and approximate viscous terms at the interface between two cells
-        // as per the equation on pg. 2 of:
-        // Development of a Coupled Matrix-Free LU-SGS solver for Turbulent Compressible Flows,
-        // Furst, Computers and Fluids, 2018.
-        //
-        // omega is a tunable parameter for use in the LU-SGS implementation as described on
-        // pg. 193 of Computational Fluid Dynamics, Blazek, 2005
-
-        number lambda = 0.0;
-        auto fvel = fabs(fs.vel.dot(n));
-        lambda += omega*(fvel + fs.gas.a);
-        if (myConfig.viscous) {
-            number dr = sqrt( (left_cell.pos[0].x-right_cell.pos[0].x)^^2 +
-                              (left_cell.pos[0].y-right_cell.pos[0].y)^^2 +
-                              (left_cell.pos[0].z-right_cell.pos[0].z)^^2 );
-            auto gmodel = myConfig.gmodel;
-            number Prandtl = fs.gas.mu * gmodel.Cp(fs.gas) / fs.gas.k;
-            lambda += (1.0/dr)*fmax(4.0/(3.0*fs.gas.rho), gmodel.gamma(fs.gas)/fs.gas.rho) * ( (fs.gas.mu/Prandtl) + (fs.mu_t/myConfig.turbulence_prandtl_number) );
-        }
-        return lambda;
-    }
 
 } // end of class FV_Interface

@@ -119,57 +119,6 @@ public:
     // source terms for finite-rate chemistry
     number[] thermochem_source;
     //
-    // Shape sensitivity calculator workspace.
-    version(shape_sensitivity) {
-    FlowJacobianT flowJacobian;
-    immutable size_t MAX_PERTURBED_INTERFACES = 800;
-    FVCell cellSave;
-    FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
-    //
-    size_t[] local_pcell_global_coord_list;
-    size_t[][] local_ecell_global_coord_list;
-    number[][] local_entry_list;
-    //
-    // local objective function evaluation
-    number locObjFcn;
-    // arrays used to temporarily store data during construction of the flow Jacobian transpose
-    number[][] aa;
-    size_t[][] ja;
-    // local effects matrix for flow Jacobian transpose.
-    // dimensions: [# local cells x # primitive vars] X [# local cells x # primitive vars]
-    SMatrix!number JlocT;
-    // external effects matrix for flow Jacobian transpose.
-    // dimensions: [# local boundary cells x # primitive vars] X [# global cells x # primitive vars]
-    SMatrix!number JextT;
-    // Matrix used in preconditioning (low order, local, flow Jacobian).
-    SMatrix!number P;
-    SMatrix!number A; // Jacobian (w.r.t conserved variables)
-    SMatrix!number Aext; // Jacobian (w.r.t conserved variables)
-    // objective function senstivity w.r.t primitive variables
-    number[] f;
-    number[] b;
-    // adjoint variables
-    number[] psi;
-    number[] delpsi;
-    // residual sensitivity w.r.t. design variables (transposed)
-    Matrix!number rT;
-    // local dot product of the residual sensitivity w.r.t. design variables (transposed) with the adjoint variables
-    number[] rTdotPsi;
-    // These arrays and matrices are directly tied to using the
-    // GMRES iterative solver (use some directly from steady-state solver).
-    number[] Z, z, wext, zext;
-    //
-    // Make a block-local copy of conserved quantities info
-    size_t nConserved;
-    size_t MASS;
-    size_t X_MOM;
-    size_t Y_MOM;
-    size_t Z_MOM;
-    size_t TOT_ENERGY;
-    size_t TKE;
-    size_t SPECIES;
-    }
-
     version(newton_krylov)
     {
     double dtMin;

@@ -279,7 +279,7 @@ public:
 
     size_t id;                    // node identifier
     double[3] pos;                // node position, (x,y,z-Coordinates)
-    bool[] node_added_to_partion; // tracks what blocks the node has
+    size_t[] partitions;          // tracks what blocks the node has
                                   // been added to already
 
     this(size_t id,
@@ -288,8 +288,6 @@ public:
 
         this.id = id;
         this.pos = pos.dup();
-        this.node_added_to_partion.length = nparts;
-        foreach (ref entry; this.node_added_to_partion) { entry = false; }
     }
 
 } // end class Node
@@ -623,8 +621,8 @@ void constructGridBlocks(bool reorder, string meshFile, string mappedCellsFilena
         gridBlocks[blk_id].cells ~= cell;
         gridBlocks[blk_id].global2local_cell_transform[cid] = gridBlocks[blk_id].cells.length - 1;
         foreach(node_id;cell.node_ids) {
-            if (grid.nodes[node_id].node_added_to_partion[blk_id] == false) {
-                grid.nodes[node_id].node_added_to_partion[blk_id] = true;
+            if (!grid.nodes[node_id].partitions.canFind(blk_id)) {
+                grid.nodes[node_id].partitions ~= blk_id;
                 gridBlocks[blk_id].nodes ~= grid.nodes[node_id];
                 gridBlocks[blk_id].global2local_node_transform[node_id] = gridBlocks[blk_id].nodes.length - 1;
             }

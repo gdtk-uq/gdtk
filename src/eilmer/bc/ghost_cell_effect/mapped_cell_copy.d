@@ -640,13 +640,10 @@ public:
         size_t nmodes = myConfig.n_modes;
 
         size_t nitems = 16;
-        // TODO: create a separate exchange routine for dUk values used in the LU-SGS solver [KD 19-10-2020]
-        if (myConfig.dimensions == 3) { nitems += 5 + nspecies + nmodes + myConfig.turb_model.nturb; }  // for each conserved quantity in dUk array (3D)
-        else { nitems += 4 + nspecies + nmodes + myConfig.turb_model.nturb; }  // for each conserved quantity in dUk array (2D)
         nitems += nmodes*3; // for each of T, e and k_t
-        nitems += nspecies;
+        nitems += nspecies*2; // for massf and rho_s
         version(MHD) { nitems += 5; }
-        version(turbulence) { nitems += myConfig.turb_model.nturb*2; } // *2 to account for the dUk array entries
+        version(turbulence) { nitems += myConfig.turb_model.nturb; }
 
         version(complex_numbers) {
             nitems *= 2;
@@ -725,6 +722,7 @@ public:
                     buf[ii++] = gs.sigma.re; version(complex_numbers) { buf[ii++] = gs.sigma.im; }
                     version(multi_species_gas) {
                         foreach (j; 0 .. nspecies) { buf[ii++] = gs.massf[j].re; version(complex_numbers) { buf[ii++] = gs.massf[j].im; } }
+                        foreach (j; 0 .. nspecies) { buf[ii++] = gs.rho_s[j].re; version(complex_numbers) { buf[ii++] = gs.rho_s[j].im; } }
                     }
                     buf[ii++] = gs.quality.re; version(complex_numbers) { buf[ii++] = gs.quality.im; }
                     buf[ii++] = fs.vel.x.re; version(complex_numbers) { buf[ii++] = fs.vel.x.im; }
@@ -743,9 +741,6 @@ public:
                     buf[ii++] = fs.mu_t.re; version(complex_numbers) { buf[ii++] = fs.mu_t.im; }
                     buf[ii++] = fs.k_t.re; version(complex_numbers) { buf[ii++] = fs.k_t.im; }
                     buf[ii++] = fs.S.re; version(complex_numbers) { buf[ii++] = fs.S.im; }
-                    foreach(j; 0..c.dUk.length) {
-                        buf[ii++] = c.dUk[j].re; version(complex_numbers) { buf[ii++] = c.dUk[j].im; }
-                    }
                 }
                 version(mpi_timeouts) {
                     MPI_Request send_request;
@@ -804,6 +799,7 @@ public:
                     gs.sigma.re = buf[ii++]; version(complex_numbers) { gs.sigma.im = buf[ii++]; }
                     version(multi_species_gas) {
                         foreach (j; 0 .. nspecies) { gs.massf[j].re = buf[ii++]; version(complex_numbers) { gs.massf[j].im = buf[ii++]; } }
+                        foreach (j; 0 .. nspecies) { gs.rho_s[j].re = buf[ii++]; version(complex_numbers) { gs.rho_s[j].im = buf[ii++]; } }
                     }
                     gs.quality.re = buf[ii++]; version(complex_numbers) { gs.quality.im = buf[ii++]; }
                     fs.vel.x.re = buf[ii++]; version(complex_numbers) { fs.vel.x.im = buf[ii++]; }
@@ -822,17 +818,12 @@ public:
                     fs.mu_t.re = buf[ii++]; version(complex_numbers) { fs.mu_t.im = buf[ii++]; }
                     fs.k_t.re = buf[ii++]; version(complex_numbers) { fs.k_t.im = buf[ii++]; }
                     fs.S.re = buf[ii++]; version(complex_numbers) { fs.S.im = buf[ii++]; }
-                    foreach(j; 0..c.dUk.length) {
-                        c.dUk[j].re = buf[ii++]; version(complex_numbers) { c.dUk[j].im = buf[ii++]; }
-                    }
                 }
             }
         } else { // not mpi_parallel
             // For a single process, just access the data directly.
             foreach (i, mygc; ghost_cells) {
                 mygc.fs.copy_values_from(mapped_cells[i].fs);
-                // this array is used for the LU-SGS implementation ... TODO: maybe this should be it's own routine
-                mygc.dUk = mapped_cells[i].dUk;
             }
         }
     } // end exchange_flowstate_phase2()
@@ -1078,12 +1069,12 @@ public:
                     // multi-species
                     version(multi_species_gas) {
                         foreach (j; 0 .. nspecies) {
-                            buf[ii++] = c.massf[j][0].re; version(complex_numbers) { buf[ii++] = c.massf[j][0].im; }
-                            buf[ii++] = c.massf[j][1].re; version(complex_numbers) { buf[ii++] = c.massf[j][1].im; }
-                            buf[ii++] = c.massf[j][2].re; version(complex_numbers) { buf[ii++] = c.massf[j][2].im; }
-                            buf[ii++] = c.massfPhi[j].re; version(complex_numbers) { buf[ii++] = c.massfPhi[j].im; }
-                            buf[ii++] = c.massfMin[j].re; version(complex_numbers) { buf[ii++] = c.massfMin[j].im; }
-                            buf[ii++] = c.massfMax[j].re; version(complex_numbers) { buf[ii++] = c.massfMax[j].im; }
+                            buf[ii++] = c.rho_s[j][0].re; version(complex_numbers) { buf[ii++] = c.rho_s[j][0].im; }
+                            buf[ii++] = c.rho_s[j][1].re; version(complex_numbers) { buf[ii++] = c.rho_s[j][1].im; }
+                            buf[ii++] = c.rho_s[j][2].re; version(complex_numbers) { buf[ii++] = c.rho_s[j][2].im; }
+                            buf[ii++] = c.rho_sPhi[j].re; version(complex_numbers) { buf[ii++] = c.rho_sPhi[j].im; }
+                            buf[ii++] = c.rho_sMin[j].re; version(complex_numbers) { buf[ii++] = c.rho_sMin[j].im; }
+                            buf[ii++] = c.rho_sMax[j].re; version(complex_numbers) { buf[ii++] = c.rho_sMax[j].im; }
                         }
                     }
                     // multi-T
@@ -1228,12 +1219,12 @@ public:
                     // multi-species
                     version(multi_species_gas) {
                         foreach (j; 0 .. nspecies) {
-                            c.massf[j][0].re = buf[ii++]; version(complex_numbers) { c.massf[j][0].im = buf[ii++]; }
-                            c.massf[j][1].re = buf[ii++]; version(complex_numbers) { c.massf[j][1].im = buf[ii++]; }
-                            c.massf[j][2].re = buf[ii++]; version(complex_numbers) { c.massf[j][2].im = buf[ii++]; }
-                            c.massfPhi[j].re = buf[ii++]; version(complex_numbers) { c.massfPhi[j].im = buf[ii++]; }
-                            c.massfMin[j].re = buf[ii++]; version(complex_numbers) { c.massfMin[j].im = buf[ii++]; }
-                            c.massfMax[j].re = buf[ii++]; version(complex_numbers) { c.massfMax[j].im = buf[ii++]; }
+                            c.rho_s[j][0].re = buf[ii++]; version(complex_numbers) { c.rho_s[j][0].im = buf[ii++]; }
+                            c.rho_s[j][1].re = buf[ii++]; version(complex_numbers) { c.rho_s[j][1].im = buf[ii++]; }
+                            c.rho_s[j][2].re = buf[ii++]; version(complex_numbers) { c.rho_s[j][2].im = buf[ii++]; }
+                            c.rho_sPhi[j].re = buf[ii++]; version(complex_numbers) { c.rho_sPhi[j].im = buf[ii++]; }
+                            c.rho_sMin[j].re = buf[ii++]; version(complex_numbers) { c.rho_sMin[j].im = buf[ii++]; }
+                            c.rho_sMax[j].re = buf[ii++]; version(complex_numbers) { c.rho_sMax[j].im = buf[ii++]; }
                         }
                     }
                     // multi-T

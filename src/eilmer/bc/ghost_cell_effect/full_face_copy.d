@@ -1636,7 +1636,7 @@ public:
 
         size_t nitems = 16;
         nitems += nmodes*3;
-        nitems += nspecies;
+        nitems += nspecies*2; // for massf and rho_s
         version(MHD) { nitems += 5; }
         version(turbulence) { nitems += myConfig.turb_model.nturb; }
 
@@ -1770,6 +1770,7 @@ public:
                     outgoing_flowstate_buf[ii++] = gs.sigma.re; version(complex_numbers) { outgoing_flowstate_buf[ii++] = gs.sigma.im; }
                     version(multi_species_gas) {
                         foreach (j; 0 .. nspecies) { outgoing_flowstate_buf[ii++] = gs.massf[j].re; version(complex_numbers) { outgoing_flowstate_buf[ii++] = gs.massf[j].im; } }
+                        foreach (j; 0 .. nspecies) { outgoing_flowstate_buf[ii++] = gs.rho_s[j].re; version(complex_numbers) { outgoing_flowstate_buf[ii++] = gs.rho_s[j].im; } }
                     } else {
                         outgoing_flowstate_buf[ii++] = 1.0;  version(complex_numbers) { outgoing_flowstate_buf[ii++] = 0.0; } // single-species mass fraction
                     }
@@ -1856,6 +1857,7 @@ public:
                     gs.sigma.re = incoming_flowstate_buf[ii++]; version(complex_numbers) { gs.sigma.im = incoming_flowstate_buf[ii++]; }
                     version(multi_species_gas) {
                         foreach (j; 0 .. nspecies) { gs.massf[j].re = incoming_flowstate_buf[ii++]; version(complex_numbers) { gs.massf[j].im = incoming_flowstate_buf[ii++]; } }
+                        foreach (j; 0 .. nspecies) { gs.rho_s[j].re = incoming_flowstate_buf[ii++]; version(complex_numbers) { gs.rho_s[j].im = incoming_flowstate_buf[ii++]; } }
                     } else {
                         double junk = incoming_flowstate_buf[ii++]; version(complex_numbers) { double more_junk = incoming_flowstate_buf[ii++]; }
                     }

@@ -30,6 +30,7 @@ final class SimState {
     shared static int step;
     shared static double dt_global;     // simulation time step determined by code
     shared static double dt_allow;      // allowable global time step determined by code
+    shared static bool is_restart; // Flag indicates if this run is a restart (true) or fresh start (false).
     // for STS
     shared static double dt_global_parab;
     shared static double dt_allow_parab;

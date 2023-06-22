@@ -77,7 +77,8 @@ number[] shock_ideal(ref const(GasState) state1, number Vs, ref GasState state2,
     state2.rho = state1.rho * (gam+1.0)*M1*M1 / (2.0+(gam-1.0)*M1*M1);
     state2.p = state1.p * (2.0*gam*M1*M1 - (gam-1.0)) / (gam+1.0);
     state2.T = state2.p / (R*state2.rho);
-    state2.a = sqrt(gam*R*state2.T);
+    gm.update_thermo_from_rhoT(state2);
+    gm.update_sound_speed(state2); // be sure that state2 is complete
     //
     number V2 = state1.rho / state2.rho * V1;
     number Vg = V1 - V2;

@@ -135,7 +135,7 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
     auto cqi = myConfig.cqi;
     version(MHD) {
         // Adjustment of the magnetic field flux and associated parameter psi as per Dedner et al.
-        if (myConfig.MHD) {
+        if (myConfig.MHD && !myConfig.MHD_static_field) {
             F[cqi.divB] = 0.5 * (Rght.B.x - Lft.B.x);
             if (myConfig.divergence_cleaning) {
                 F[cqi.xB] += Lft.psi + 0.5 * (Rght.psi - Lft.psi) - (myConfig.c_h / 2.0) * (Rght.B.x - Lft.B.x);

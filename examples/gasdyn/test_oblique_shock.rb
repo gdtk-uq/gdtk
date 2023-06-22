@@ -1,7 +1,7 @@
-# oblique-shock-test.rb
+# test_oblique_shock.rb
 #
 # $ cp ${DGD_REPO}/src/gas/sample-data/cea-air13species-gas-model.lua .
-# $ ruby oblique-shock-test.rb
+# $ ruby test_oblique_shock.rb
 #
 # PJ, 2019-12-01
 #

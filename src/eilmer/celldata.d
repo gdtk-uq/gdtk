@@ -807,9 +807,9 @@ mixin(GenCellVariableAccess!("AccessConvectiveDVelzDY", "gradients.velz[1]"));
 mixin(GenCellVariableAccess!("AccessConvectiveDVelzDZ", "gradients.velz[2]"));
 
 version(multi_species_gas) {
-mixin(GenGradArrayAccess!("AccessConvectiveDMassFDX", "gradients.massf", "0"));
-mixin(GenGradArrayAccess!("AccessConvectiveDMassFDY", "gradients.massf", "1"));
-mixin(GenGradArrayAccess!("AccessConvectiveDMassFDZ", "gradients.massf", "2"));
+mixin(GenGradArrayAccess!("AccessConvectiveDMassFDX", "gradients.rho_s", "0"));
+mixin(GenGradArrayAccess!("AccessConvectiveDMassFDY", "gradients.rho_s", "1"));
+mixin(GenGradArrayAccess!("AccessConvectiveDMassFDZ", "gradients.rho_s", "2"));
 }
 
 mixin(GenCellVariableAccess!("AccessConvectiveDRhoDX", "gradients.rho[0]"));
@@ -1173,7 +1173,7 @@ mixin(GenCellVariableAccess!("AccessPPhi", "gradients.pPhi"));
 mixin(GenCellVariableAccess!("AccessTPhi", "gradients.TPhi"));
 mixin(GenCellVariableAccess!("AccessUPhi", "gradients.uPhi"));
 version(multi_species_gas) {
-    mixin(GenCellArrayVariableAccess!("AccessMassfPhi", "gradients.massfPhi"));
+    mixin(GenCellArrayVariableAccess!("AccessMassfPhi", "gradients.rho_sPhi"));
 }
 version(multi_T_gas) {
     mixin(GenCellArrayVariableAccess!("AccessUModesPhi", "gradients.u_modesPhi"));

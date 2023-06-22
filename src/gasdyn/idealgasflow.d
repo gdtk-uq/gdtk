@@ -653,7 +653,7 @@ double V2_V1_obl(double M1, double beta, double g=1.4)
 {
     double M1n = M1 * fabs(sin(beta));
     if (M1n < 1.0) {
-        throw new GasFlowException(text("V2_V1_obl: subsonic normal Mach number: ", M1n)); 
+        throw new GasFlowException(text("V2_V1_obl: subsonic normal Mach number: ", M1n));
     }
     return sqrt((sin(beta) / r2_r1_obl(M1, beta, g))^^2 + (cos(beta))^^2);
 }

@@ -71,12 +71,11 @@ string diagnosticsFilename = "lmr-nk-diagnostics.dat";
  * Enums for preconditioners
  *---------------------------------------------------------------------
  */
-enum PreconditionerType { lusgs, diagonal, jacobi, sgs, ilu }
+enum PreconditionerType { diagonal, jacobi, sgs, ilu }
 
 string preconditionerTypeName(PreconditionerType i)
 {
     final switch (i) {
-    case PreconditionerType.lusgs: return "lusgs";
     case PreconditionerType.diagonal: return "diagonal";
     case PreconditionerType.jacobi: return "jacobi";
     case PreconditionerType.sgs: return "sgs";
@@ -87,7 +86,6 @@ string preconditionerTypeName(PreconditionerType i)
 PreconditionerType preconditionerTypeFromName(string name)
 {
     switch (name) {
-    case "lusgs", "lu_sgs": return PreconditionerType.lusgs;
     case "diagonal": return PreconditionerType.diagonal;
     case "jacobi": return PreconditionerType.jacobi;
     case "sgs": return PreconditionerType.sgs;
@@ -96,7 +94,6 @@ PreconditionerType preconditionerTypeFromName(string name)
         string errMsg = "The selected 'preconditioner' is unavailable.\n";
         errMsg ~= format("You selected: '%s'\n", name);
         errMsg ~= "The available strategies are: \n";
-        errMsg ~= "   'lusgs'\n";
         errMsg ~= "   'diagonal'\n";
         errMsg ~= "   'jacobi'\n";
         errMsg ~= "   'sgs'\n";
@@ -683,10 +680,9 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 	if (GlobalConfig.is_master_task) {
 	    readRestartMetadata();
 	    readReferenceResidualsFromFile();
+	    // Now ditch snapshots BEYOND what was requested.
+	    snapshots.length = snapshotStart;	    
 	}
-	// Now ditch snapshots BEYOND what was requested.
-	snapshots.length = snapshotStart;
-
 	// And, in MPI, broadcast information.
 	version(mpi_parallel) {
 	    broadcastRestartInfo();
@@ -935,33 +931,6 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             }
         }
 
-        /*---
-         * 2b. Stopping checks.
-         *---
-         */
-        if (step == nkCfg.maxNewtonSteps) {
-            finalStep = true;
-            if (cfg.is_master_task) {
-                writeln("STOPPING: Reached maximum number of steps.");
-            }
-        }
-        if (!activePhase.ignoreStoppingCriteria) {
-            if (globalResidual <= nkCfg.stopOnAbsoluteResidual) {
-                finalStep = true;
-                if (cfg.is_master_task) {
-                    writeln("STOPPING: The absolute global residual is below target value.");
-                    writefln("         current global residual= %.6e  target value= %.6e", globalResidual, nkCfg.stopOnAbsoluteResidual);
-                }
-            }
-            if ((globalResidual/referenceGlobalResidual) <= nkCfg.stopOnRelativeResidual) {
-                finalStep = true;
-                if (cfg.is_master_task) {
-                    writeln("STOPPING: The relative global residual is below target value.");
-                    writefln("         current residual= %.6e  target value= %.6e", (globalResidual/referenceGlobalResidual), nkCfg.stopOnRelativeResidual);
-                }
-            }
-        }
-
         // [TODO] Add in a halt_now condition.
 
         /*---
@@ -989,7 +958,41 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             printStatusToScreen(step, cfl, dt, wallClockElapsed, residualsUpToDate);
         }
 
-        if (finalStep) break;
+	/*---
+         * 2b. Stopping checks.
+         *---
+         */
+        if (step == nkCfg.maxNewtonSteps) {
+            finalStep = true;
+            if (cfg.is_master_task) {
+                writeln("STOPPING: Reached maximum number of steps.");
+            }
+        }
+        if (!activePhase.ignoreStoppingCriteria) {
+            if (globalResidual <= nkCfg.stopOnAbsoluteResidual) {
+                finalStep = true;
+                if (cfg.is_master_task) {
+                    writeln("STOPPING: The absolute global residual is below target value.");
+                    writefln("         current global residual= %.6e  target value= %.6e", globalResidual, nkCfg.stopOnAbsoluteResidual);
+                }
+            }
+            if ((globalResidual/referenceGlobalResidual) <= nkCfg.stopOnRelativeResidual) {
+                finalStep = true;
+                if (cfg.is_master_task) {
+                    writeln("STOPPING: The relative global residual is below target value.");
+                    writefln("         current residual= %.6e  target value= %.6e", (globalResidual/referenceGlobalResidual), nkCfg.stopOnRelativeResidual);
+                }
+            }
+        }
+
+        if (finalStep) {
+	    if (cfg.is_master_task) {
+		writeln("");
+		writefln("FINAL-STEP: %d", step);
+		writefln("FINAL-CFL: %.3e", cfl);
+	    }
+	    break;
+	}
 
     }
 }
@@ -1038,9 +1041,6 @@ void initPreconditioner()
             break;
         case PreconditionerType.sgs:
             foreach (blk; localFluidBlocks) { blk.initialize_jacobian(0, nkCfg.preconditionerPerturbation); }
-            break;
-        case PreconditionerType.lusgs:
-            // do nothing
             break;
         case PreconditionerType.diagonal:
             // do nothing
@@ -1640,9 +1640,6 @@ void computePreconditioner()
     size_t nConserved = GlobalConfig.cqi.n;
     
     final switch (nkCfg.preconditioner) {
-    case PreconditionerType.lusgs:
-        // do nothing
-        break;
     case PreconditionerType.diagonal:
         goto case PreconditionerType.sgs;
     case PreconditionerType.jacobi:
@@ -1705,10 +1702,6 @@ void applyResidualSmoothing()
     //----
     
     final switch (nkCfg.preconditioner) {
-    case PreconditionerType.lusgs:
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = to!number(0.0); }
-        mixin(lusgs_solve("DinvR", "R"));
-        break;
     case PreconditionerType.diagonal:
         foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = to!number(0.0); }
         mixin(diagonal_solve("DinvR", "R"));
@@ -1967,10 +1960,6 @@ void applyPreconditioning()
     auto nConserved = GlobalConfig.cqi.n;
 
     final switch (nkCfg.preconditioner) {
-    case PreconditionerType.lusgs:
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = to!number(0.0); }
-        mixin(lusgs_solve("zed", "v"));
-        break;
     case PreconditionerType.diagonal:
         foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = to!number(0.0); }
         mixin(diagonal_solve("zed", "v"));
@@ -2008,10 +1997,6 @@ void removePreconditioning()
     auto nConserved = GlobalConfig.cqi.n;
     
     final switch (nkCfg.preconditioner) {
-    case PreconditionerType.lusgs:
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = to!number(0.0); }
-        mixin(lusgs_solve("dU", "zed"));
-        break;
     case PreconditionerType.diagonal:
         foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = to!number(0.0); }
         mixin(diagonal_solve("dU", "zed"));
@@ -2854,51 +2839,3 @@ string sgs_solve(string lhs_vec, string rhs_vec)
     return code;
 }
 
-string lusgs_solve(string lhs_vec, string rhs_vec)
-{
-    string code = "{
-
-    int kmax = nkCfg.preconditionerSubIterations;
-    bool matrix_based = false;
-    double omega = 2.0;
-    double dummySimTime = -1.0;
-
-    // 1. initial subiteration
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        int startIdx = 0;
-        foreach (cell; blk.cells) {
-            number dtInv = 1.0/cell.dt_local;
-            auto z_local = blk."~lhs_vec~"[startIdx .. startIdx+nConserved]; // this is actually a reference not a copy
-            cell.lusgs_startup_iteration(dtInv, omega, z_local, blk."~rhs_vec~"[startIdx .. startIdx+nConserved]);
-            startIdx += nConserved;
-        }
-    }
-
-    // 2. kmax subiterations
-    foreach (k; 0 .. kmax) {
-         // shuffle dU values
-         foreach (blk; parallel(localFluidBlocks,1)) {
-             int startIdx = 0;
-             foreach (cell; blk.cells) {
-                 cell.dUk[0 .. nConserved] = blk."~lhs_vec~"[startIdx .. startIdx+nConserved];
-                 startIdx += nConserved;
-             }
-         }
-
-         // exchange boundary dU values
-         exchange_ghost_cell_boundary_data(dummySimTime, 0, 0);
-
-         // perform subiteraion
-         foreach (blk; parallel(localFluidBlocks,1)) {
-             int startIdx = 0;
-             foreach (cell; blk.cells) {
-                  auto z_local = blk."~lhs_vec~"[startIdx .. startIdx+nConserved]; // this is actually a reference not a copy
-                  cell.lusgs_relaxation_iteration(omega, matrix_based, z_local, blk."~rhs_vec~"[startIdx .. startIdx+nConserved]);
-                  startIdx += nConserved;
-             }
-         }
-    }
-
-    }";
-    return code;
-}

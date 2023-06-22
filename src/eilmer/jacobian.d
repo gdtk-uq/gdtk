@@ -26,12 +26,12 @@ public:
 
     bool wrtConserved = true;
     size_t spatial_order;
-    SMatrix!number local;       // residual sensitivities of local cells
+    SMatrix!double local;       // residual sensitivities of local cells
                                 // to perturbations of local cells
-    SMatrix!number external;    // residual sensitivities of cells in neighbour blocks
+    SMatrix!double external;    // residual sensitivities of cells in neighbour blocks
                                 // to perturbations of local cells
 
-    number[][] dudU;            // used in the Jacobian boundary conditions to store the
+    double[][] dudU;            // used in the Jacobian boundary conditions to store the
                                 // the sensitivity of the ghost cell flow states to the internal
                                 // cell flow states
     number eps;                 // numerical perturbation parameter
@@ -41,8 +41,8 @@ public:
     size_t ja_idx = 0;
     size_t ia_idx = 0;
 
-    Matrix!number D;
-    Matrix!number Dinv;
+    Matrix!double D;
+    Matrix!double Dinv;
     this (double sigma, size_t dimensions, size_t nConserved, int spatial_order, size_t nentry, size_t ncells)
     {
         this.spatial_order = (spatial_order > 1) ? 2 : 1;
@@ -76,12 +76,12 @@ public:
     {
         // reserve memory for the local entries
         size_t size = nentry * nConserved * nConserved;
-        local = new SMatrix!number();
+        local = new SMatrix!double();
 	local.aa.length = size;
 	local.ja.length = size;
 	local.ia.length = ncells * nConserved + 1;
-        D = new Matrix!number(nConserved,nConserved);
-        Dinv = new Matrix!number(nConserved,nConserved);
+        D = new Matrix!double(nConserved,nConserved);
+        Dinv = new Matrix!double(nConserved,nConserved);
     } // end size_local_matrix()
 
     void augment_with_dt(FVCell[] cells, double dt, size_t ncells, size_t nConserved)
@@ -92,7 +92,7 @@ public:
          */
 
         foreach ( ref entry; local.aa) { entry *= -1; }
-        number dtInv;
+        double dtInv;
         foreach (i; 0..ncells) {
             foreach (j; 0..nConserved) {
                 if (GlobalConfig.with_local_time_stepping) {

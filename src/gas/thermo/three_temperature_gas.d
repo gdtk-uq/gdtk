@@ -79,6 +79,8 @@ public:
         }
     }
 
+    override void updateFromPU(ref GasState gs) {}
+    
     @nogc
     override void updateFromPT(ref GasState gs)
     {

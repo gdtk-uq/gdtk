@@ -40,9 +40,10 @@ local Slash = Space * P("/") * Space
 local Colon = P(":") * Space
 local Open = "(" * Space
 local Close = Space * ")" * Space
-local FArrow = C(P("=>")) * Space
-local FRArrow = C(P("<=>") + P("=")) * Space
-local Equals = C(P("=")) * Space
+local FArrow = C(P("=>"))
+local FRArrow = C(P("<=>"))
+local Equals = C(P("="))
+local EqnSeparator = (FArrow + FRArrow + Equals) * Space
 local Plus = P("+") * Space
 local AllColliders = C(P("*all"))
 local MolcColliders = C(P("*molcs"))
@@ -55,10 +56,11 @@ return {
    Space = Space,
    Open = Open,
    Close = Close,
+   EqnSeparator = EqnSeparator,
+   FArrow = FArrow,
+   FRArrow = FRArrow,
    Equals = Equals,
    Plus = Plus,
-   FRArrow = FRArrow,
-   FArrow = FArrow,
    Number = Number,
    Species = Species,
    DoubleTilde = DoubleTilde,
