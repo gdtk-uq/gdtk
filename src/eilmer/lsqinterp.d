@@ -1936,7 +1936,9 @@ void interp_both(Vector3 dL, Vector3 dR, in LSQInterpGradients cLgrad, in LSQInt
             final switch (myConfig.unstructured_limiter) {
             case UnstructuredLimiter.svan_albada:
                 double eps = myConfig.smooth_limiter_coeff/100.0;
-                number qq = isNaN(qL0) ? to!number(1.0) : fmax(1.0, fabs(qL0));
+                number qqL = fmax(1e-12, fabs(qL0));
+                number qqR = fmax(1e-12, fabs(qR0));
+                number qq = fmax(qqL, qqR);
 
                 number dqL = -4.0*dLx*mygradL[0] + -4.0*dLy*mygradL[1];
                 number dqR = -4.0*dRx*mygradR[0] + -4.0*dRy*mygradR[1];
@@ -2140,8 +2142,6 @@ void interp_both(Vector3 dL, Vector3 dR, in LSQInterpGradients cLgrad, in LSQInt
         mixin(codeForThermoUpdate("rhoT"));
         break;
     } // end switch thermo_interpolator
-    Lft.gas.a = cLfs.gas.a;
-    Rght.gas.a = cRfs.gas.a;
     return;
 } // end interp_both()
 
@@ -2205,7 +2205,9 @@ void interp_both(Vector3 dL, Vector3 dR, in LSQInterpGradients cLgrad, in LSQInt
                     final switch (myConfig.unstructured_limiter) {
                     case UnstructuredLimiter.svan_albada:
                         double eps = myConfig.smooth_limiter_coeff/100.0;
-                        number qq = isNaN(qL0) ? to!number(1.0) : fmax(1.0, fabs(qL0));
+                        number qqL = fmax(1e-12, fabs(qL0));
+                        number qqR = fmax(1e-12, fabs(qR0));
+                        number qq = fmax(qqL, qqR);
 
                         number dqL = -4.0*dLx*mygradL[0] + -4.0*dLy*mygradL[1];
                         number dqR = -4.0*dRx*mygradR[0] + -4.0*dRy*mygradR[1];
