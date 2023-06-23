@@ -1461,13 +1461,19 @@ string write_residuals_to_string(const(FVCell) c)
 {
     auto cqi = c.myConfig.cqi;
     auto writer = appender!string();
+    number massresid=0.0;
+    if (cqi.mass==0) {
+        massresid = -c.dUdt[0][cqi.mass];
+    } else {
+        foreach(isp; 0 .. cqi.n_species) massresid += -c.dUdt[0][cqi.species+isp];
+    }
     version(complex_numbers) {
         formattedWrite(writer, "%.18e %.18e %.18e %.18e",
-                       -c.dUdt[0][cqi.mass].re, -c.dUdt[0][cqi.xMom].re,
+                       massresid.re,            -c.dUdt[0][cqi.xMom].re,
                        -c.dUdt[0][cqi.yMom].re, -c.dUdt[0][cqi.totEnergy].re);
     } else {
         formattedWrite(writer, "%.18e %.18e %.18e %.18e",
-                       -c.dUdt[0][cqi.mass], -c.dUdt[0][cqi.xMom],
+                       massresid,            -c.dUdt[0][cqi.xMom],
                        -c.dUdt[0][cqi.yMom], -c.dUdt[0][cqi.totEnergy]);
     }
     return writer.data;

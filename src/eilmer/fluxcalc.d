@@ -149,6 +149,12 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght, ref 
             }
         }
     }
+    number massflux=0.0;
+    if (cqi.mass==0) {
+        massflux = F[cqi.mass];
+    } else {
+        foreach(isp; 0 .. cqi.n_species) massflux += F[cqi.species+isp];
+    }
     if (omegaz != 0.0) {
         // Rotating frame.
         number x = IFacepos.x;
@@ -157,18 +163,18 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght, ref 
         // The conserved quantity is rotating-frame total energy,
         // so we need to take -(u**2)/2 off the total energy.
         // Note that rotating frame velocity u = omegaz * r.
-        F[cqi.totEnergy] -= F[cqi.mass] * 0.5*omegaz*omegaz*rsq;
+        F[cqi.totEnergy] -= massflux * 0.5*omegaz*omegaz*rsq;
     }
     // Transform fluxes back from interface frame of reference to local frame of reference.
     // Flux of Total Energy
     number v_sqr = gvel.x*gvel.x + gvel.y*gvel.y + gvel.z*gvel.z;
-    F[cqi.totEnergy] += 0.5 * F[cqi.mass] * v_sqr +
+    F[cqi.totEnergy] += 0.5 * massflux * v_sqr +
         (F[cqi.xMom]*gvel.x + F[cqi.yMom]*gvel.y +
          ((cqi.threeD) ? F[cqi.zMom]*gvel.z: to!number(0.0)));
     // Flux of momentum: Add component for interface velocity then
     // rotate back to the global frame of reference.
-    F[cqi.xMom] += gvel.x * F[cqi.mass];
-    F[cqi.yMom] += gvel.y * F[cqi.mass];
+    F[cqi.xMom] += gvel.x * massflux;
+    F[cqi.yMom] += gvel.y * massflux;
     if (cqi.threeD) {
         //F[cqi.zMom] += gvel.z * F[cqi.mass];
         transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], F[cqi.zMom], n, t1, t2);
@@ -282,6 +288,12 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
             }
         }
     }
+    number massflux=0.0;
+    if (cqi.mass==0) {
+        massflux = F[cqi.mass];
+    } else {
+        foreach(isp; 0 .. cqi.n_species) massflux += F[cqi.species+isp];
+    }
     if (omegaz != 0.0) {
         // Rotating frame.
         number x = IFace.pos.x;
@@ -290,20 +302,20 @@ void compute_interface_flux_interior(ref FlowState Lft, ref FlowState Rght,
         // The conserved quantity is rotating-frame total energy,
         // so we need to take -(u**2)/2 off the total energy.
         // Note that rotating frame velocity u = omegaz * r.
-        F[cqi.totEnergy] -= F[cqi.mass] * 0.5*omegaz*omegaz*rsq;
+        F[cqi.totEnergy] -= massflux * 0.5*omegaz*omegaz*rsq;
     }
     // Transform fluxes back from interface frame of reference to local frame of reference.
     // Flux of Total Energy
     number v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z;
-    F[cqi.totEnergy] += 0.5 * F[cqi.mass] * v_sqr +
+    F[cqi.totEnergy] += 0.5 * massflux * v_sqr +
         (F[cqi.xMom]*IFace.gvel.x + F[cqi.yMom]*IFace.gvel.y +
          ((cqi.threeD) ? F[cqi.zMom]*IFace.gvel.z: to!number(0.0)));
     // Flux of momentum: Add component for interface velocity then
     // rotate back to the global frame of reference.
-    F[cqi.xMom] += IFace.gvel.x * F[cqi.mass];
-    F[cqi.yMom] += IFace.gvel.y * F[cqi.mass];
+    F[cqi.xMom] += IFace.gvel.x * massflux;
+    F[cqi.yMom] += IFace.gvel.y * massflux;
     if (cqi.threeD) {
-        F[cqi.zMom] += IFace.gvel.z * F[cqi.mass];
+        F[cqi.zMom] += IFace.gvel.z * massflux;
         transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], F[cqi.zMom], IFace.n, IFace.t1, IFace.t2);
     } else {
         number zDummy = to!number(0.0);
@@ -375,7 +387,7 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     // Fill in the fluxes.
     ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
-    F[cqi.mass] = 0.0;
+    if (cqi.mass==0) F[cqi.mass] = 0.0;
     F[cqi.xMom] = pstar;
     F[cqi.yMom] = 0.0;
     if (cqi.threeD) { F[cqi.zMom] = 0.0; }
@@ -403,7 +415,7 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     }
     // Rotate back to the global frame of reference.
     if (cqi.threeD) {
-        F[cqi.zMom] += IFace.gvel.z * F[cqi.mass];
+        F[cqi.zMom] += IFace.gvel.z * 0.0;
         transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], F[cqi.zMom], IFace.n, IFace.t1, IFace.t2);
     } else {
         number zDummy = 0.0;
@@ -475,7 +487,7 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     // Fill in the fluxes.
     ConservedQuantities F = IFace.F;
     auto cqi = myConfig.cqi;
-    F[cqi.mass] = 0.0;
+    if (cqi.mass==0) F[cqi.mass] = 0.0;
     F[cqi.xMom] = pstar;
     F[cqi.yMom] = 0.0;
     if (cqi.threeD) { F[cqi.zMom] = 0.0; }
@@ -503,7 +515,7 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     }
     // Rotate back to the global frame of reference.
     if (cqi.threeD) {
-        F[cqi.zMom] += IFace.gvel.z * F[cqi.mass];
+        F[cqi.zMom] += IFace.gvel.z * 0.0;
         transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], F[cqi.zMom], IFace.n, IFace.t1, IFace.t2);
     } else {
         number zDummy = to!number(0.0);
@@ -531,25 +543,26 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs,
     number p = fs.gas.p;
     number u = myConfig.gmodel.internal_energy(fs.gas);
     number ke = 0.5 * (vn*vn + vt1*vt1 + vt2*vt2); // Kinetic energy per unit volume.
+    number massflux = rho * vn;
     //
     // Fluxes (quantity / unit time / unit area)
     auto cqi = myConfig.cqi;
-    F[cqi.mass] = rho * vn; // The mass flux is relative to the moving interface.
-    F[cqi.xMom] = F[cqi.mass]*vn + p;
-    F[cqi.yMom] = F[cqi.mass]*vt1;
-    if (cqi.threeD) { F[cqi.zMom] = F[cqi.mass]*vt2; }
-    F[cqi.totEnergy] = F[cqi.mass]*(u+ke) + p*vn;
+    if (cqi.mass==0) F[cqi.mass] = massflux; // The mass flux is relative to the moving interface.
+    F[cqi.xMom] = massflux*vn + p;
+    F[cqi.yMom] = massflux*vt1;
+    if (cqi.threeD) { F[cqi.zMom] = massflux*vt2; }
+    F[cqi.totEnergy] = massflux*(u+ke) + p*vn;
     version(turbulence) {
         F[cqi.totEnergy] += myConfig.turb_model.turbulent_kinetic_energy(fs);
-        foreach(i; 0 .. myConfig.turb_model.nturb) { F[cqi.rhoturb+i] = F[cqi.mass] * fs.turb[i]; }
+        foreach(i; 0 .. myConfig.turb_model.nturb) { F[cqi.rhoturb+i] = massflux * fs.turb[i]; }
     }
     version(multi_species_gas) {
         if (cqi.n_species > 1) {
-            foreach (i; 0 .. cqi.n_species) { F[cqi.species+i] = F[cqi.mass]*fs.gas.massf[i]; }
+            foreach (i; 0 .. cqi.n_species) { F[cqi.species+i] = massflux*fs.gas.massf[i]; }
         }
     }
     version(multi_T_gas) {
-        foreach (i; 0 .. cqi.n_modes) { F[cqi.modes+i] = F[cqi.mass]*fs.gas.u_modes[i]; }
+        foreach (i; 0 .. cqi.n_modes) { F[cqi.modes+i] = massflux*fs.gas.u_modes[i]; }
     }
 } // end set_flux_vector_in_local_frame()
 
@@ -571,6 +584,13 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
         if (myConfig.MHD) { fs.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); }
     }
     set_flux_vector_in_local_frame(IFace.F, fs, myConfig);
+    number massflux=0.0;
+    if (cqi.mass==0) {
+        massflux = F[cqi.mass];
+    } else {
+        foreach(isp; 0 .. cqi.n_species) massflux += F[cqi.species+isp];
+    }
+
     if (omegaz != 0.0) {
         // Rotating frame.
         number x = IFace.pos.x;
@@ -579,18 +599,18 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
         // The conserved quantity is rothalpy,
         // so we need to take -(u**2)/2 off the total energy flux.
         // Note that rotating frame velocity u = omegaz * r.
-        F[cqi.totEnergy] -= F[cqi.mass] * 0.5*omegaz*omegaz*rsq;
+        F[cqi.totEnergy] -= massflux * 0.5*omegaz*omegaz*rsq;
     }
     //
     // Transform fluxes back from interface frame of reference to local frame of reference.
     // Then, rotate momentum fluxes back to the global frame of reference.
     number v_sqr = (IFace.gvel.x)^^2 + (IFace.gvel.y)^^2 + (IFace.gvel.z)^^2;
-    F[cqi.totEnergy] += 0.5*F[cqi.mass]*v_sqr + F[cqi.xMom]*IFace.gvel.x +
+    F[cqi.totEnergy] += 0.5*massflux*v_sqr + F[cqi.xMom]*IFace.gvel.x +
         F[cqi.yMom]*IFace.gvel.y + ((cqi.threeD) ? F[cqi.zMom]*IFace.gvel.z : to!number(0.0));
-    F[cqi.xMom] += F[cqi.mass] * IFace.gvel.x;
-    F[cqi.yMom] += F[cqi.mass] * IFace.gvel.y;
+    F[cqi.xMom] += massflux * IFace.gvel.x;
+    F[cqi.yMom] += massflux * IFace.gvel.y;
     if (cqi.threeD) {
-        F[cqi.zMom] += F[cqi.mass] * IFace.gvel.z;
+        F[cqi.zMom] += massflux * IFace.gvel.z;
         transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], F[cqi.zMom], IFace.n, IFace.t1, IFace.t2);
     } else {
         number zDummy = 0.0;
@@ -702,7 +722,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQ
     //
     // Assemble components of the flux vector.
     auto cqi = myConfig.cqi;
-    F[cqi.mass] += factor*ru_half;
+    if (cqi.mass==0) F[cqi.mass] += factor*ru_half;
     if (ru_half >= 0.0) {
         // Wind is blowing from the left.
         F[cqi.xMom] += (ru2_half+p_half) * factor;
@@ -755,7 +775,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQ
         if (caseB && !caseA) { d_ua = C_EFIX * ((uR + aR) - (uL + aL)); }
         //
         if (d_ua != 0.0) {
-            F[cqi.mass] -= factor*d_ua*(rR - rL);
+            if (cqi.mass==0) F[cqi.mass] -= factor*d_ua*(rR - rL);
             F[cqi.xMom] -= factor*d_ua*(rR*uR - rL*uL);
             F[cqi.yMom] -= factor*d_ua*(rR*vR - rL*vL);
             if (cqi.threeD) { F[cqi.zMom] -= factor*d_ua*(rR*wR - rL*wL); }
@@ -864,7 +884,7 @@ void hllc(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQua
         number ru_half; // we need this value later for species densities
         if (star_region) { ru_half = F_mass + S*(U_star_mass - U_mass); }
         else { ru_half = F_mass; }
-        F[cqi.mass] += factor*ru_half;
+        if (cqi.mass==0) F[cqi.mass] += factor*ru_half;
         // momentum
         // x
         number F_momx = r*u*u + p;
@@ -1020,7 +1040,7 @@ void ldfss0(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQ
     number ru_half = aL*rL*CL + aR*rR*CR;
     number ru2_half = aL*rL*CL*uL + aR*rR*CR*uR;
     number p_half = DL*pL + DR*pR;
-    F[cqi.mass] += factor*ru_half;
+    if (cqi.mass==0) F[cqi.mass] += factor*ru_half;
     F[cqi.xMom] += factor*(ru2_half+p_half);
     F[cqi.yMom] += factor*(aL*rL*CL*vL + aR*rR*CR*vR);
     if (cqi.threeD) { F[cqi.zMom] += factor*(aL*rL*CL*wL + aR*rR*CR*wR); }
@@ -1130,7 +1150,7 @@ void ldfss2(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQ
     number ru_half = am*rL*CL + am*rR*CR;
     number ru2_half = am*rL*CL*uL + am*rR*CR*uR;
     number p_half = DL*pL + DR*pR;
-    F[cqi.mass] += factor*ru_half;
+    if (cqi.mass==0) F[cqi.mass] += factor*ru_half;
     F[cqi.xMom] += factor*(ru2_half+p_half);
     F[cqi.yMom] += factor*(am*rL*CL*vL + am*rR*CR*vR);
     if (cqi.threeD) { F[cqi.zMom] += factor*(am*rL*CL*wL + am*rR*CR*wR); }
@@ -1234,7 +1254,7 @@ void hanel(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQu
     number p_half = pLplus + pRminus;
     // Assemble components of the flux vector (eqn 36).
     auto cqi = myConfig.cqi;
-    F[cqi.mass] += factor*(uLplus * rL + uRminus * rR);
+    if (cqi.mass==0) F[cqi.mass] += factor*(uLplus * rL + uRminus * rR);
     F[cqi.xMom] += factor*(uLplus * rL * uL + uRminus * rR * uR + p_half);
     F[cqi.yMom] += factor*(uLplus * rL * vL + uRminus * rR * vR);
     if (cqi.threeD) { F[cqi.zMom] += factor*(uLplus * rL * wL + uRminus * rR * wR); }
@@ -1358,7 +1378,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQ
     fmsR = (wR * rhoR * vnR) + (dR * cmpR * rhoR);
     auto cqi = myConfig.cqi;
     mass_flux = factor*(fmsL + fmsR);
-    F[cqi.mass] += mass_flux;
+    if (cqi.mass==0) F[cqi.mass] += mass_flux;
     F[cqi.xMom] += factor*(fmsL*vnL + fmsR*vnR + wL*presL + wR*presR);
     F[cqi.yMom] += factor*(fmsL*vpL + fmsR*vpR);
     if (cqi.threeD) { F[cqi.zMom] += factor*(fmsL*vqL + fmsR*vqR); }
@@ -1687,7 +1707,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, in FlowState fs, ref Cons
     number mass_flux = factor*ru_half;
     // Assemble components of the flux vector.
     auto cqi = myConfig.cqi;
-    F[cqi.mass] += mass_flux;
+    if (cqi.mass==0) F[cqi.mass] += mass_flux;
     if (ru_half >= 0.0) {
         // Wind is blowing from the left.
         F[cqi.xMom] += factor*(ru2_half+p_half);
@@ -1870,7 +1890,7 @@ void hlle(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQua
         //
         auto cqi = myConfig.cqi;
         number mass_flux = factor*(brp*fmassL - blm*fmassR + fac1*dU[0])*iden;
-        F[cqi.mass] += mass_flux;
+        if (cqi.mass==0) F[cqi.mass] += mass_flux;
         F[cqi.xMom] += factor*((brp*fmomxL - blm*fmomxR + fac1*dU[1])*iden);
         F[cqi.yMom] += factor*((brp*fmomyL - blm*fmomyR + fac1*dU[2])*iden);
         if (cqi.threeD) { F[cqi.zMom] += factor*((brp*fmomzL - blm*fmomzR + fac1*dU[3])*iden); }
@@ -1967,7 +1987,7 @@ void hlle2(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQu
     auto cqi = myConfig.cqi;
     if (SLm >= 0) {
         //Right-going supersonic flow
-        F[cqi.mass] += factor*(rL*uL);
+        if (cqi.mass==0) F[cqi.mass] += factor*(rL*uL);
         F[cqi.xMom] += factor*(rL*uL*uL+pL);
         F[cqi.yMom] += factor*(rL*uL*vL);
         if (cqi.threeD) { F[cqi.zMom] += factor*(rL*uL*wL); }
@@ -1991,7 +2011,7 @@ void hlle2(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQu
         }
     } else if (SRp <= 0) {
         // Left-going supersonic flow
-        F[cqi.mass] += factor*(rR*uR);
+        if (cqi.mass==0) F[cqi.mass] += factor*(rR*uR);
         F[cqi.xMom] += factor*(rR*uR*uR+pR);
         F[cqi.yMom] += factor*(rR*uR*vR);
         if (cqi.threeD) { F[cqi.zMom] += factor*(rR*uR*wR); }
@@ -2016,7 +2036,7 @@ void hlle2(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQu
     } else  {
         // subsonic flow
         number ru_half = ( SRp*rL*uL - SLm*rR*uR + SLm*SRp*(rR-rL) )/(SRp-SLm);  // we need this value later for species densities
-        F[cqi.mass] += factor*ru_half;
+        if (cqi.mass==0) F[cqi.mass] += factor*ru_half;
         F[cqi.xMom] += factor*(( SRp*(rL*uL*uL+pL) - SLm*(rR*uR*uR+pR) + SLm*SRp*(rR*uR-rL*uL) )/(SRp-SLm));
         F[cqi.yMom] += factor*(( SRp*(rL*uL*vL) - SLm*(rR*uR*vR) + SLm*SRp*(rR*vR-rL*vL) )/(SRp-SLm));
         if (cqi.threeD) { F[cqi.yMom] += factor*(( SRp*(rL*uL*wL) - SLm*(rR*uR*wR) + SLm*SRp*(rR*wR-rL*wL) )/(SRp-SLm)); }
@@ -2141,7 +2161,7 @@ void roe(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQuan
     // mass flux
     FL = rL*uL;
     FR = rR*uR;
-    F[cqi.mass] += factor*0.5*( FL + FR
+    if (cqi.mass==0) F[cqi.mass] += factor*0.5*( FL + FR
                                 -( fabs(lambda[0])*(dr - dp/ahat2) )
                                 -( fabs(lambda[1])*((dp + rhat*ahat*du)/(2.0*ahat2)) )
                                 -( fabs(lambda[2])*((dp - rhat*ahat*du)/(2.0*ahat2)) )
@@ -2279,7 +2299,7 @@ void osher(in FlowState Lft, in FlowState Rght, in FlowState fs, ref ConservedQu
     number massFlux = factor*rho*velx;
     //
     auto cqi = myConfig.cqi;
-    F[cqi.mass] += massFlux;
+    if (cqi.mass==0) F[cqi.mass] += massFlux;
     F[cqi.xMom] += massFlux*velx + p;
     F[cqi.yMom] += massFlux*vely;
     if (cqi.threeD) { F[cqi.zMom] += massFlux*velz; }
@@ -2388,7 +2408,7 @@ void ASF_242(ref FlowState L1fs,ref FlowState L0fs, ref FlowState R0fs, ref Flow
     //
     // Calculate the final flux values of the simple quantities mass, momentum and energy
     number mass_flux = factor*(alpha_mass*f_c[0] + (1.0-alpha_mass)*f_e[0]);
-    F[cqi.mass] += mass_flux;
+    if (cqi.mass==0) F[cqi.mass] += mass_flux;
     F[cqi.xMom] += factor*(alpha_mom*f_c[1] + (1.0-alpha_mom)*f_e[1] + (alpha_p*f_c[9] + (1.0-alpha_p)*f_e[9]));
     F[cqi.yMom] += factor*(alpha_mom*f_c[2] + (1.0-alpha_mom)*f_e[2]);
     if (cqi.threeD) { F[cqi.zMom] += factor*(alpha_mom*f_c[3] + (1.0-alpha_mom)*f_e[3]); }
@@ -2505,7 +2525,7 @@ void ASF_242(ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
     //
     // Calculate the final flux values of the simple quantities mass, momentum and energy
     number mass_flux = factor*(alpha_mass*f_c[0] + (1.0-alpha_mass)*f_e[0]);
-    F[cqi.mass] += mass_flux;
+    if (cqi.mass==0) F[cqi.mass] += mass_flux;
     F[cqi.xMom] += factor*(alpha_mom*f_c[1] + (1.0-alpha_mom)*f_e[1] + (alpha_p*f_c[9] + (1.0-alpha_p)*f_e[9]));
     F[cqi.yMom] += factor*(alpha_mom*f_c[2] + (1.0-alpha_mom)*f_e[2]);
     if (cqi.threeD) { F[cqi.zMom] += factor*(alpha_mom*f_c[3] + (1.0-alpha_mom)*f_e[3]); }
@@ -2519,7 +2539,7 @@ void ASF_242(ref FVInterface IFace, ref LocalConfig myConfig, number factor=1.0)
     // so need to transform the fluxes to the global frame here.
     if (factor == 1.0) {
         if (cqi.threeD) {
-            F[cqi.zMom] += IFace.gvel.z * F[cqi.mass];
+            F[cqi.zMom] += IFace.gvel.z * mass_flux;
             transform_to_global_frame(F[cqi.xMom], F[cqi.yMom], F[cqi.zMom], IFace.n, IFace.t1, IFace.t2);
         } else {
             number zDummy = to!number(0.0);

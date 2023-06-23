@@ -88,7 +88,7 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
     // remove the conserved mass variable for multi-species gas
-    if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
+    //if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
     size_t MASS = GlobalConfig.cqi.mass;
     size_t X_MOM = GlobalConfig.cqi.xMom;
     size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -314,7 +314,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
     // remove the conserved mass variable for multi-species gas
-    if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
+    //if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
     immutable size_t MASS = GlobalConfig.cqi.mass;
     immutable size_t X_MOM = GlobalConfig.cqi.xMom;
     immutable size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -1531,7 +1531,7 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
     // remove the conserved mass variable for multi-species gas
-    if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
+    //if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
     immutable size_t ncq  = nConserved; // number of conserved quantities
 
     // We perform a Frechet derivative to evaluate J*D^(-1)v
@@ -1579,7 +1579,7 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int 
         // Make a stack-local copy of conserved quantities info
         size_t nConserved = GlobalConfig.cqi.n;
         // remove the conserved mass variable for multi-species gas
-        if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
+        //if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
         immutable size_t ncq  = nConserved; // number of conserved quantities
 
         // We perform a Frechet derivative to evaluate J*D^(-1)v
@@ -1653,7 +1653,7 @@ void point_implicit_relaxation_solve(int step, double pseudoSimTime, double dt, 
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
     // remove the conserved mass variable for multi-species gas
-    if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
+    //if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
 
     // we start with a guess of dU = 0
     foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = to!number(0.0); }
@@ -1835,7 +1835,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
     // remove the conserved mass variable for multi-species gas
-    if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
+    //if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
     size_t MASS = GlobalConfig.cqi.mass;
     size_t X_MOM = GlobalConfig.cqi.xMom;
     size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -2519,7 +2519,7 @@ void max_residuals(ref ConservedQuantities residuals)
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
     // remove the conserved mass variable for multi-species gas
-    if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
+    //if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
     immutable size_t ncq = nConserved;
 
     foreach (blk; parallel(localFluidBlocks,1)) {

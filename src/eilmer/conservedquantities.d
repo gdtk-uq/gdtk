@@ -93,8 +93,8 @@ public:
         bool put_mass_in_last_position = false;
         version (nk_accelerator) {
             // we will drop the mass continuity equation if we are running a multi-species calculation with
-            // the steady-state solver, note that we still need an entry in the conserved quantities vector
-            // for the mass (some parts of the code expect it), so we will place it in the last position
+            // the steady-state solver, As of June 2023, the entry in ConservedQuantities is totally dropped
+            // and the other parts of the code need to check cqi.mass==0 before touching it (NNG)
             if (nspecies > 1) { put_mass_in_last_position = true; }
         }
 
@@ -140,9 +140,9 @@ public:
                 n += nmodes;
 		foreach (i; 0 .. nmodes) names ~= "mode-" ~ to!string(i);
             }
-            // we still need the mass in the conserved quantities vector in some places of the code
-            mass = n; names ~= "mass";
-            n += 1;
+            // Other parts of the code test for mass==0 to decide if it is present
+            mass = -1;
+            //n += 1; names ~= "mass";
         } else {
             // fill out the array using our standard ordering (for the transient code)
             mass = 0; names ~= "mass";

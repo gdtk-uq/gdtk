@@ -466,7 +466,9 @@ private:
         number vely_rel = vely - f.gvel.y;
         number velz_rel = velz - f.gvel.z;
         number massFlux = rho * (velx_rel*f.n.x + vely_rel*f.n.y + velz_rel*f.n.z);
-        f.F[cqi.mass] = massFlux;
+        if (cqi.mass==0){
+            f.F[cqi.mass] = massFlux;
+        }
         /++ when the boundary is moving we use the relative velocity
          + between the fluid and the boundary interface to determine
          + the amount of mass flux across the cell face (above).
@@ -579,7 +581,9 @@ private:
         number mass_flux = fs.gas.rho * dot(v_rel, face.n);
         if ((outsign*mass_flux) > 0.0) {
             // We have a true outflow flux.
-            face.F[cqi.mass] = mass_flux;
+            if (cqi.mass==0){
+                face.F[cqi.mass] = mass_flux;
+            }
             face.F[cqi.xMom] = fs.gas.p * face.n.x + fs.vel.x * mass_flux;
             face.F[cqi.yMom] = fs.gas.p * face.n.y + fs.vel.y * mass_flux;
             if (cqi.threeD) { face.F[cqi.zMom] = fs.gas.p * face.n.z + fs.vel.z * mass_flux; }
@@ -620,7 +624,9 @@ private:
             // indicates that flow should be coming into the domain.
             // Since we really do not want to have this happen,
             // we close off the face and think of it as a wall.
-            face.F[cqi.mass] = 0.0;
+            if (cqi.mass==0){
+                face.F[cqi.mass] = 0.0;
+            }
             face.F[cqi.xMom] = face.n.x * fs.gas.p;
             face.F[cqi.yMom] = face.n.y * fs.gas.p;
             if (cqi.threeD) { face.F[cqi.zMom] = face.n.z * fs.gas.p; }

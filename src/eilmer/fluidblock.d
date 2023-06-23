@@ -963,7 +963,13 @@ public:
         foreach(boundary; bc) {
             if (boundary.type != "exchange_over_full_face" && boundary.type != "exchange_using_mapped_cells") {
                 foreach(i, face; boundary.faces) {
-                    mass_balance += boundary.outsigns[i] * face.F[cqi.mass] * face.area[0];
+                    number massflux=0.0;
+                    if (cqi.mass==0) {
+                        massflux = face.F[cqi.mass];
+                    } else {
+                        foreach(isp; 0 .. cqi.n_species) massflux += face.F[cqi.species+isp];
+                    }
+                    mass_balance += boundary.outsigns[i] * massflux * face.area[0];
                 }
             }
         }
@@ -1303,7 +1309,7 @@ public:
         auto cqi = myConfig.cqi;
         auto nConserved = cqi.n;
         // remove the conserved mass variable for multi-species gas
-        if (cqi.n_species > 1) { nConserved -= 1; }
+        //if (cqi.n_species > 1) { nConserved -= 1; }
 
         flowJacobian = new FlowJacobian(sigma, myConfig.dimensions, nConserved, spatial_order_of_jacobian, ptJac.local.aa.length, ncells);
         flowJacobian.local.ia[flowJacobian.ia_idx] = 0;
@@ -1421,7 +1427,7 @@ public:
         auto cqi = myConfig.cqi; // was GlobalConfig.cqi;
         auto nConserved = cqi.n;
         // remove the conserved mass variable for multi-species gas
-        if (cqi.n_species > 1) { nConserved -= 1; }
+        //if (cqi.n_species > 1) { nConserved -= 1; }
         auto eps0 = flowJacobian.eps;
         number eps;
         int ftl = 1; int gtl = 0;
@@ -1495,7 +1501,7 @@ public:
         auto cqi = myConfig.cqi; // The block object has its own.
         auto nConserved = cqi.n;
         // remove the conserved mass variable for multi-species gas
-        if (cqi.n_species > 1) { nConserved -= 1; }
+        //if (cqi.n_species > 1) { nConserved -= 1; }
         auto eps0 = flowJacobian.eps;
         number eps;
         int gtl = 0; int ftl = 1;
@@ -1711,7 +1717,7 @@ public:
         assert(flowJacobian !is null, "Oops, we expect a flowJacobian object to be attached to the fluidblock.");
         size_t nConserved = GlobalConfig.cqi.n;
         // remove the conserved mass variable for multi-species gas
-        if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
+        //if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
 
         // create an arbitrary unit vector
         number[] vec;
@@ -1753,7 +1759,7 @@ public:
     void evalConservativeJacobianVecProd(number[] vec, ref number[] sol) {
         size_t nConserved = GlobalConfig.cqi.n;
         // remove the conserved mass variable for multi-species gas
-        if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
+        //if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
         size_t MASS = GlobalConfig.cqi.mass;
         size_t X_MOM = GlobalConfig.cqi.xMom;
         size_t Y_MOM = GlobalConfig.cqi.yMom;
@@ -1775,7 +1781,7 @@ public:
         foreach (cell; cells) {
             cell.U[1].copy_values_from(cell.U[0]);
             version(complex_numbers) {
-                cell.U[1][cqi.mass] += complex(0.0, EPS.re*vec[cellCount+MASS].re);
+                if (cqi.mass==0) cell.U[1][cqi.mass] += complex(0.0, EPS.re*vec[cellCount+MASS].re);
                 cell.U[1][cqi.xMom] += complex(0.0, EPS.re*vec[cellCount+X_MOM].re);
                 cell.U[1][cqi.yMom] += complex(0.0, EPS.re*vec[cellCount+Y_MOM].re);
                 if ( myConfig.dimensions == 3 ) { cell.U[1][cqi.zMom] += complex(0.0, EPS.re*vec[cellCount+Z_MOM].re); }
@@ -1790,7 +1796,7 @@ public:
                     foreach(imode; 0 .. nmodes) { cell.U[1][cqi.modes+imode] += complex(0.0, EPS.re*vec[cellCount+MODES+imode].re); }
                 }
             } else {
-                cell.U[1][cqi.mass] += (EPS*vec[cellCount+MASS]);
+                if (cqi.mass==0) cell.U[1][cqi.mass] += (EPS*vec[cellCount+MASS]);
                 cell.U[1][cqi.xMom] += (EPS*vec[cellCount+X_MOM]);
                 cell.U[1][cqi.yMom] += (EPS*vec[cellCount+Y_MOM]);
                 if ( myConfig.dimensions == 3 ) { cell.U[1][cqi.zMom] += (EPS*vec[cellCount+Z_MOM]); }
@@ -1814,7 +1820,7 @@ public:
         cellCount = 0;
         foreach (cell; cells) {
             version(complex_numbers) {
-                sol[cellCount+MASS] = cell.dUdt[1][cqi.mass].im/EPS;
+                if (cqi.mass==0) sol[cellCount+MASS] = cell.dUdt[1][cqi.mass].im/EPS;
                 sol[cellCount+X_MOM] = cell.dUdt[1][cqi.xMom].im/EPS;
                 sol[cellCount+Y_MOM] = cell.dUdt[1][cqi.yMom].im/EPS;
                 if ( myConfig.dimensions == 3 ) { sol[cellCount+Z_MOM] = cell.dUdt[1][cqi.zMom].im/EPS; }
@@ -1829,7 +1835,7 @@ public:
                     foreach(imode; 0 .. nmodes) { sol[cellCount+MODES+imode] = cell.dUdt[1][cqi.modes+imode].im/EPS; }
                 }
             } else {
-                sol[cellCount+MASS] = (cell.dUdt[1][cqi.mass]-cell.dUdt[0][cqi.mass])/EPS;
+                if (cqi.mass==0) sol[cellCount+MASS] = (cell.dUdt[1][cqi.mass]-cell.dUdt[0][cqi.mass])/EPS;
                 sol[cellCount+X_MOM] = (cell.dUdt[1][cqi.xMom]-cell.dUdt[0][cqi.xMom])/EPS;
                 sol[cellCount+Y_MOM] = (cell.dUdt[1][cqi.yMom]-cell.dUdt[0][cqi.yMom])/EPS;
                 if ( myConfig.dimensions == 3 ) { sol[cellCount+Z_MOM] = (cell.dUdt[1][cqi.zMom]-cell.dUdt[0][cqi.zMom])/EPS; }
@@ -1855,7 +1861,7 @@ public:
     {
         size_t nConserved = GlobalConfig.cqi.n;
         // remove the conserved mass variable for multi-species gas
-        if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
+        //if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
         int n_species = GlobalConfig.gmodel_master.n_species();
         int n_modes = GlobalConfig.gmodel_master.n_modes();
         maxRate = new_ConservedQuantities(nConserved);
