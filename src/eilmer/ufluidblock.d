@@ -345,9 +345,13 @@ public:
         celldata.U0.length = (ncells+nghost)*neq*nftl;
         if (nftl>1) celldata.U1.length = (ncells+nghost)*neq*nftl;
         if (nftl>2) celldata.U2.length = (ncells+nghost)*neq*nftl;
+        if (nftl>3) celldata.U3.length = (ncells+nghost)*neq*nftl;
+        if (nftl>4) celldata.U4.length = (ncells+nghost)*neq*nftl;
         celldata.dUdt0.length = (ncells+nghost)*neq*nftl;
         if (nftl>1) celldata.dUdt1.length = (ncells+nghost)*neq*nftl;
         if (nftl>2) celldata.dUdt2.length = (ncells+nghost)*neq*nftl;
+        if (nftl>3) celldata.dUdt3.length = (ncells+nghost)*neq*nftl;
+        if (nftl>4) celldata.dUdt4.length = (ncells+nghost)*neq*nftl;
         celldata.source_terms.length = (ncells+nghost)*neq;
         celldata.cell_cloud_indices.length = ncells;
         celldata.c2v.length = ncells;
@@ -1105,16 +1109,15 @@ public:
         foreach(idx; 0 .. ninteriorfaces){ // TODO: No ghost cell version
             size_t l = facedata.f2c[idx].left;
             size_t r = facedata.f2c[idx].right;
-            facedata.flowstates[idx].copy_average_values_from(celldata.flowstates[l], celldata.flowstates[r]);
+            Lft.copy_values_from(celldata.flowstates[l]);
+            Rght.copy_values_from(celldata.flowstates[r]);
+            facedata.flowstates[idx].copy_average_values_from(Lft, Rght);
 
             if (do_reconstruction) {
                 interp_both(facedata.dL[idx], facedata.dR[idx],
                             celldata.lsqgradients[l], celldata.lsqgradients[r],
                             celldata.flowstates[l], celldata.flowstates[r],
                             myConfig, *Lft, *Rght);
-            } else {
-                Lft.copy_values_from(celldata.flowstates[l]);
-                Rght.copy_values_from(celldata.flowstates[r]);
             }
             compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
                                             facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
@@ -1125,7 +1128,9 @@ public:
             size_t bidx = idx-ninteriorfaces;
             size_t l = facedata.f2c[idx].left;
             size_t r = facedata.f2c[idx].right;
-            facedata.flowstates[idx].copy_average_values_from(celldata.flowstates[l], celldata.flowstates[r]);
+            Lft.copy_values_from(celldata.flowstates[l]);
+            Rght.copy_values_from(celldata.flowstates[r]);
+            facedata.flowstates[idx].copy_average_values_from(Lft, Rght);
 
             if (facedata.left_interior_only[bidx] || facedata.right_interior_only[bidx]) {
                 if (do_reconstruction && allow_reconstruction_at_boundaries) {
@@ -1133,9 +1138,6 @@ public:
                                 celldata.lsqgradients[l], celldata.lsqgradients[r],
                                 celldata.flowstates[l], celldata.flowstates[r],
                                 myConfig, *Lft, *Rght);
-                } else {
-                    Lft.copy_values_from(celldata.flowstates[l]);
-                    Rght.copy_values_from(celldata.flowstates[r]);
                 }
 
             } else { // We have a shared interface, where allow_reconstruction_at_boundaries is ignored
@@ -1144,9 +1146,6 @@ public:
                                 celldata.lsqgradients[l], celldata.lsqgradients[r],
                                 celldata.flowstates[l], celldata.flowstates[r],
                                 myConfig, *Lft, *Rght);
-                } else {
-                    Lft.copy_values_from(celldata.flowstates[l]);
-                    Rght.copy_values_from(celldata.flowstates[r]);
                 }
             }
             compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,

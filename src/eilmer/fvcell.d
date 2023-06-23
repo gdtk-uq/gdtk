@@ -70,8 +70,8 @@ struct FVCellData{
     Vector3[][] face_distances;
     FlowState[] flowstates;
     FlowGradients[] gradients;
-    ConservedQuantities U0, U1, U2;
-    ConservedQuantities dUdt0, dUdt1, dUdt2;
+    ConservedQuantities U0, U1, U2, U3, U4;
+    ConservedQuantities dUdt0, dUdt1, dUdt2, dUdt3, dUdt4;
     ConservedQuantities source_terms;
     WLSQGradWorkspace[] workspaces;
     LSQInterpWorkspace[] lsqws;
@@ -234,6 +234,8 @@ public:
                         U[0] = fvcd.U0[id*ncq + 0 .. id*ncq + ncq];
             if (nftl>1) U[1] = fvcd.U1[id*ncq + 0 .. id*ncq + ncq];
             if (nftl>2) U[2] = fvcd.U2[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>3) U[3] = fvcd.U3[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>4) U[4] = fvcd.U4[id*ncq + 0 .. id*ncq + ncq];
             foreach(i; 0 .. nftl) {
                 U[i].clear();
             }
@@ -243,6 +245,8 @@ public:
                         dUdt[0] = fvcd.dUdt0[id*ncq + 0 .. id*ncq + ncq];
             if (nftl>1) dUdt[1] = fvcd.dUdt1[id*ncq + 0 .. id*ncq + ncq];
             if (nftl>2) dUdt[2] = fvcd.dUdt2[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>3) dUdt[3] = fvcd.dUdt3[id*ncq + 0 .. id*ncq + ncq];
+            if (nftl>4) dUdt[4] = fvcd.dUdt4[id*ncq + 0 .. id*ncq + ncq];
             foreach(i; 0 .. nftl) {
                 dUdt[i].clear();
             }
@@ -580,7 +584,7 @@ public:
         ConservedQuantities myU = U[ftl];
         number myrho = fs.gas.rho;
         // Mass per unit volume.
-        myU[cqi.mass] = myrho;
+        if (cqi.mass==0) myU[cqi.mass] = myrho;
         // Momentum per unit volume.
         myU[cqi.xMom] = fs.gas.rho*fs.vel.x;
         myU[cqi.yMom] = fs.gas.rho*fs.vel.y;
@@ -641,8 +645,6 @@ public:
                 }
             }
         }
-        assert(U[ftl][cqi.mass] > 0.0, "invalid density in conserved quantities vector" ~
-               " at end of FVCell.encode_conserved().");
         return;
     } // end encode_conserved()
 
