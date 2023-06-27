@@ -44,6 +44,7 @@ class TurbulenceModel{
     @nogc abstract number turbulent_kinetic_energy(ref const(FlowState) fs) const;
     @nogc abstract number[3] turbulent_kinetic_energy_transport(ref const(FlowState) fs, ref const(FlowGradients) grad) const;
     @nogc abstract string primitive_variable_name(size_t i) const;
+    abstract int primitive_variable_index(string tqName) const;
     @nogc abstract number turb_limits(size_t i) const;
     @nogc abstract number viscous_transport_coeff(ref const(FlowState) fs, size_t i) const;
     @nogc abstract bool is_valid(ref const(FlowStateLimits) fsl, const number[] turb) const;
@@ -122,6 +123,10 @@ class noTurbulenceModel : TurbulenceModel {
         return "";
     }
 
+    final override int primitive_variable_index(string tqName) const {
+        return -99;
+    }
+
     @nogc final override number turb_limits(size_t i) const {
         number def = 0.0;
         return def;
@@ -196,6 +201,8 @@ class kwTurbulenceModel : TurbulenceModel {
         this.dimensions = dimensions;
         this.max_mu_t_factor = max_mu_t_factor ;
         this.use_vorticity_based_source_term = use_vorticity_based_source_term;
+	_varindices["tke"] = 0;
+	_varindices["omega"] = 1;
     }
     @nogc final override string modelName() const {return "k_omega";}
     @nogc final override size_t nturb() const {return 2;}
@@ -421,6 +428,10 @@ class kwTurbulenceModel : TurbulenceModel {
         return _varnames[i];
     }
 
+    final override int primitive_variable_index(string tqName) const {
+        return _varindices.get(tqName, -99);
+    }
+
     @nogc final override number turb_limits(size_t i) const {
         return _varlimits[i];
     }
@@ -468,6 +479,7 @@ private:
     immutable int dimensions;
     immutable number max_mu_t_factor;
     immutable string[2] _varnames = ["tke", "omega"];
+    int[string] _varindices;
     immutable number[2] _varlimits = [0.0, 1.0];
     immutable number[2] _sigmas = [0.6, 0.5];
     immutable number[2] _rhocoeffs = [1.0, 0.0];
@@ -552,6 +564,7 @@ class saTurbulenceModel : TurbulenceModel {
 
     this (number Pr_t) {
         this.Pr_t = Pr_t;
+	_varindices["nuhat"] = 0;
     }
 
     @nogc override string modelName() const {return "spalart_allmaras";}
@@ -668,6 +681,10 @@ class saTurbulenceModel : TurbulenceModel {
         return _varnames[i];
     }
 
+    final override int primitive_variable_index(string tqName) const {
+        return _varindices.get(tqName, -99);
+    }
+
     @nogc final override number turb_limits(size_t i) const {
         return _varlimits[i];
     }
@@ -709,6 +726,7 @@ class saTurbulenceModel : TurbulenceModel {
 protected:
     immutable number Pr_t;
     immutable string[1] _varnames = ["nuhat"];
+    int[string] _varindices;
     immutable number[1] _varlimits = [0.0];
     immutable double sigma = 2.0/3.0;
     immutable double cb1 = 0.1355;
