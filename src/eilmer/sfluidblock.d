@@ -465,6 +465,7 @@ public:
             celldata.nfaces.length = nic*njc*nkc;
             celldata.areas.length = nic*njc*nkc + nghost;
             celldata.wall_distances.length = nic*njc*nkc;
+            celldata.in_turbulent_zone.length = nic*njc*nkc;
             celldata.volumes.length = nic*njc*nkc + nghost;
             celldata.lengths.length = nic*njc*nkc + nghost;
             celldata.positions.length = nic*njc*nkc + nghost;

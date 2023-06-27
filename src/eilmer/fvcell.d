@@ -68,6 +68,7 @@ struct FVCellData{
     Vector3[] positions;
     number[3][] lengths;
     number[] wall_distances;
+    bool[] in_turbulent_zone;
     size_t[][] cell_cloud_indices;
     Vector3[][] face_distances;
     FlowState[] flowstates;

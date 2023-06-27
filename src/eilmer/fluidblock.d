@@ -464,6 +464,10 @@ public:
             total_cells_in_turbulent_zones += (cell.in_turbulent_zone ? 1: 0);
             total_cells += 1;
         } // foreach cell
+
+        foreach(i, cell; cells){
+            celldata.in_turbulent_zone[i] = cell.in_turbulent_zone;
+        }
         debug {
             if (myConfig.turb_model.isTurbulent &&
                 myConfig.verbosity_level >= 2) {
@@ -2038,42 +2042,50 @@ public:
 
     @nogc void eval_source_vectors(int step, int gtl, int ftl, double omegaz=0.0)
     {
+        auto cqi = myConfig.cqi;
+        size_t ncq = myConfig.cqi.n;
+
         if (omegaz != 0.0) {
-            foreach(cell; cells){
-                add_rotating_frame_source_vector(myConfig, cell.pos[gtl], *(cell.fs), cell.areaxy[gtl], cell.volume[gtl], omegaz, cell.Q);
+            foreach(i; 0 .. ncells) {
+                size_t idx = i*ncq;
+                add_rotating_frame_source_vector(myConfig, celldata.positions[i], celldata.flowstates[i], celldata.areas[i], celldata.volumes[i], omegaz, celldata.source_terms[idx .. idx+ncq]);
             }
         }
 
         if (myConfig.axisymmetric) {
-            auto cqi = myConfig.cqi;
             size_t cqiyMom = cqi.yMom;
-            foreach(cell; cells) {
-                add_axisymmetric_source_vector(cqiyMom, *(cell.fs), cell.areaxy[gtl], cell.volume[gtl], cell.Q);
+            foreach(i; 0 .. ncells) {
+                size_t idx = i*ncq;
+                add_axisymmetric_source_vector(cqiyMom, celldata.flowstates[i], celldata.areas[i], celldata.volumes[i], celldata.source_terms[idx .. idx+ncq]);
             }
         }
 
         if (myConfig.gravity_non_zero) {
             Vector3 gravity = myConfig.gravity;
-            auto cqi = myConfig.cqi;
-            foreach(cell; cells) {
-                add_gravitational_source_vector(gravity, *cqi, *(cell.fs), cell.Q);
+            foreach(i; 0 .. ncells) {
+                size_t idx = i*ncq;
+                add_gravitational_source_vector(gravity, *cqi, celldata.flowstates[i], celldata.source_terms[idx .. idx+ncq]);
             }
         }
 
         if (myConfig.viscous && myConfig.axisymmetric){
-            size_t cqiyMom = myConfig.cqi.yMom;
-            foreach(cell; cells){
-                add_axisymmetric_viscous_source_vector(cell.pos[0].y, cqiyMom, cell.areaxy[0], cell.volume[0], *(cell.fs), *(cell.grad), cell.Q);
+            size_t cqiyMom = cqi.yMom;
+            foreach(i; 0 .. ncells) {
+                size_t idx = i*ncq;
+                add_axisymmetric_viscous_source_vector(celldata.positions[i].y, cqiyMom, celldata.areas[i], celldata.volumes[i],
+                                                       celldata.flowstates[i], celldata.gradients[i], celldata.source_terms[idx .. idx+ncq]);
             }
         }
 
         if (myConfig.viscous && myConfig.turb_model.isTurbulent){
-            size_t cqirhoturb = myConfig.cqi.rhoturb;
-            size_t n_turb = myConfig.cqi.n_turb;
-            foreach(cell; cells){
-                if (cell.in_turbulent_zone) {
-                    number[] rhoturb = cell.Q[cqirhoturb .. cqirhoturb+n_turb];
-                    myConfig.turb_model.source_terms(*(cell.fs), *(cell.grad), cell.pos[0].y, cell.dwall, cell.lengths, rhoturb);
+            size_t cqirhoturb = cqi.rhoturb;
+            size_t n_turb = cqi.n_turb;
+            foreach(i; 0 .. ncells) {
+                if (celldata.in_turbulent_zone[i]) { // TODO: See if we can remove this
+                    size_t idx = i*ncq;
+                    number[] rhoturb = celldata.source_terms[idx+cqirhoturb .. idx+cqirhoturb+n_turb];
+                    myConfig.turb_model.source_terms(celldata.flowstates[i], celldata.gradients[i], celldata.positions[i].y,
+                                                     celldata.wall_distances[i], celldata.lengths[i], rhoturb);
                 }
             }
         }
@@ -2087,10 +2099,12 @@ public:
                 limit_factor = min(1.0, S);
             }
 
-            foreach (cell; cells) {
-                add_thermochemical_source_vector(myConfig, thermochem_source, limit_factor, *(cell.fs), cell.Q);
+            foreach(i; 0 .. ncells) {
+                size_t idx = i*ncq;
+                add_thermochemical_source_vector(myConfig, thermochem_source, limit_factor, celldata.flowstates[i], celldata.source_terms[idx .. idx+ncq]);
             }
         }
+        return;
     }
 } // end class FluidBlock
 

@@ -337,6 +337,7 @@ public:
         celldata.volumes.length = grid.cells.length + nghost;
         celldata.areas.length = grid.cells.length + nghost;
         celldata.wall_distances.length = grid.cells.length;
+        celldata.in_turbulent_zone.length = grid.cells.length;
         celldata.positions.length = grid.cells.length + nghost;
         celldata.lengths.length = grid.cells.length + nghost;
         celldata.face_distances.length = grid.cells.length;
