@@ -2044,65 +2044,54 @@ public:
     {
         auto cqi = myConfig.cqi;
         size_t ncq = myConfig.cqi.n;
+        immutable bool rotating_frame = omegaz!=0.0;
+        immutable bool axisymmetric = myConfig.axisymmetric;
+        immutable bool gravity_non_zero = myConfig.gravity_non_zero;
+        immutable bool axiviscous = myConfig.viscous && myConfig.axisymmetric;
+        immutable bool turbulent = myConfig.viscous && myConfig.turb_model.isTurbulent;
+        immutable bool reacting = myConfig.reacting;
+        immutable size_t cqiyMom = cqi.yMom;
+        immutable Vector3 gravity = myConfig.gravity;
+        immutable size_t cqirhoturb = cqi.rhoturb;
+        immutable size_t n_turb = cqi.n_turb;
 
-        if (omegaz != 0.0) {
-            foreach(i; 0 .. ncells) {
-                size_t idx = i*ncq;
-                add_rotating_frame_source_vector(myConfig, celldata.positions[i], celldata.flowstates[i], celldata.areas[i], celldata.volumes[i], omegaz, celldata.source_terms[idx .. idx+ncq]);
+        double limit_factor = 1.0;
+        if (reacting) {
+            // the limit_factor is used to slowly increase the magnitude of the
+            // thermochemical source terms from 0 to 1 for problematic reacting flows
+            if (myConfig.nsteps_of_chemistry_ramp > 0) {
+                double S = step/to!double(myConfig.nsteps_of_chemistry_ramp);
+                limit_factor = min(1.0, S);
             }
         }
 
-        if (myConfig.axisymmetric) {
-            size_t cqiyMom = cqi.yMom;
-            foreach(i; 0 .. ncells) {
-                size_t idx = i*ncq;
-                add_axisymmetric_source_vector(cqiyMom, celldata.flowstates[i], celldata.areas[i], celldata.volumes[i], celldata.source_terms[idx .. idx+ncq]);
-            }
-        }
+        foreach(i; 0 .. ncells) {
+            size_t idx = i*ncq;
+            number[] Q = celldata.source_terms[idx .. idx+ncq]; // view or reference to source_terms data structure
 
-        if (myConfig.gravity_non_zero) {
-            Vector3 gravity = myConfig.gravity;
-            foreach(i; 0 .. ncells) {
-                size_t idx = i*ncq;
-                add_gravitational_source_vector(gravity, *cqi, celldata.flowstates[i], celldata.source_terms[idx .. idx+ncq]);
-            }
-        }
+            if (rotating_frame)
+                add_rotating_frame_source_vector(myConfig, celldata.positions[i], celldata.flowstates[i], celldata.areas[i], celldata.volumes[i], omegaz, Q);
 
-        if (myConfig.viscous && myConfig.axisymmetric){
-            size_t cqiyMom = cqi.yMom;
-            foreach(i; 0 .. ncells) {
-                size_t idx = i*ncq;
+            if (axisymmetric)
+                add_axisymmetric_source_vector(cqiyMom, celldata.flowstates[i], celldata.areas[i], celldata.volumes[i], Q);
+
+            if (gravity_non_zero)
+                add_gravitational_source_vector(gravity, *cqi, celldata.flowstates[i], Q);
+
+            if (axiviscous)
                 add_axisymmetric_viscous_source_vector(celldata.positions[i].y, cqiyMom, celldata.areas[i], celldata.volumes[i],
-                                                       celldata.flowstates[i], celldata.gradients[i], celldata.source_terms[idx .. idx+ncq]);
-            }
-        }
+                                                   celldata.flowstates[i], celldata.gradients[i], Q);
 
-        if (myConfig.viscous && myConfig.turb_model.isTurbulent){
-            size_t cqirhoturb = cqi.rhoturb;
-            size_t n_turb = cqi.n_turb;
-            foreach(i; 0 .. ncells) {
-                if (celldata.in_turbulent_zone[i]) { // TODO: See if we can remove this
-                    size_t idx = i*ncq;
+            if (turbulent){
+                if (celldata.in_turbulent_zone[i]) {
                     number[] rhoturb = celldata.source_terms[idx+cqirhoturb .. idx+cqirhoturb+n_turb];
                     myConfig.turb_model.source_terms(celldata.flowstates[i], celldata.gradients[i], celldata.positions[i].y,
                                                      celldata.wall_distances[i], celldata.lengths[i], rhoturb);
                 }
             }
-        }
 
-        if (myConfig.reacting) {
-            // the limit_factor is used to slowly increase the magnitude of the
-            // thermochemical source terms from 0 to 1 for problematic reacting flows
-            double limit_factor = 1.0;
-            if (myConfig.nsteps_of_chemistry_ramp > 0) {
-                double S = step/to!double(myConfig.nsteps_of_chemistry_ramp);
-                limit_factor = min(1.0, S);
-            }
-
-            foreach(i; 0 .. ncells) {
-                size_t idx = i*ncq;
-                add_thermochemical_source_vector(myConfig, thermochem_source, limit_factor, celldata.flowstates[i], celldata.source_terms[idx .. idx+ncq]);
-            }
+            if (reacting)
+                add_thermochemical_source_vector(myConfig, thermochem_source, limit_factor, celldata.flowstates[i], Q);
         }
         return;
     }
