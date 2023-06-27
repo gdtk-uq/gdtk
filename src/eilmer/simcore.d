@@ -1737,7 +1737,7 @@ void compute_wall_distances() {
     //
     // Now loop over the nodes in each of our local blocks and set dwall
     foreach(blk; localFluidBlocksBySize) {
-        foreach(cell; blk.cells){
+        foreach(i, cell; blk.cells){
             Node cellnode = {[cell.pos[0].x.re, cell.pos[0].y.re, cell.pos[0].z.re]};
             const(Node)* found = null;
             double bestDist = 0.0;
@@ -1761,6 +1761,7 @@ void compute_wall_distances() {
             double offwalldistance = fmax(dparallel - celllength/2, 0.0);
             double dwall = sqrt(dnormal*dnormal + offwalldistance*offwalldistance);
             cell.dwall = dwall;
+            blk.celldata.wall_distances[i] = dwall;
         }
     }
 } // end compute_wall_distances()

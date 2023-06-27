@@ -463,6 +463,8 @@ public:
 
 
             celldata.nfaces.length = nic*njc*nkc;
+            celldata.areas.length = nic*njc*nkc + nghost;
+            celldata.wall_distances.length = nic*njc*nkc;
             celldata.volumes.length = nic*njc*nkc + nghost;
             celldata.lengths.length = nic*njc*nkc + nghost;
             celldata.positions.length = nic*njc*nkc + nghost;
@@ -1460,16 +1462,16 @@ public:
             foreach (j; 0 .. njc) {
                 foreach (i; 0 .. niv) {
                     size_t fid = ifi_index(i,j,k);
-                    number lenL1 = celldata.lengths[facedata.stencil_idxs[fid].L1].x;
-                    number lenL0 = celldata.lengths[facedata.stencil_idxs[fid].L0].x;
-                    number lenR0 = celldata.lengths[facedata.stencil_idxs[fid].R0].x;
-                    number lenR1 = celldata.lengths[facedata.stencil_idxs[fid].R1].x;
+                    number lenL1 = celldata.lengths[facedata.stencil_idxs[fid].L1][0];
+                    number lenL0 = celldata.lengths[facedata.stencil_idxs[fid].L0][0];
+                    number lenR0 = celldata.lengths[facedata.stencil_idxs[fid].R0][0];
+                    number lenR1 = celldata.lengths[facedata.stencil_idxs[fid].R1][0];
                     if (second_order) {
                         facedata.l2r2_interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
                     } 
                     if (third_order) {
-                        number lenL2 = celldata.lengths[facedata.stencil_idxs[fid].L2].x;
-                        number lenR2 = celldata.lengths[facedata.stencil_idxs[fid].R2].x;
+                        number lenL2 = celldata.lengths[facedata.stencil_idxs[fid].L2][0];
+                        number lenR2 = celldata.lengths[facedata.stencil_idxs[fid].R2][0];
                         facedata.l3r3_interp_data[fid].set(lenL2, lenL1, lenL0, lenR0, lenR1, lenR2);
                     }
                 } // i loop
@@ -1479,16 +1481,16 @@ public:
             foreach (i; 0 .. nic) {
                 foreach (j; 0 .. njv) {
                     size_t fid = ifj_index(i,j,k);
-                    number lenL1 = celldata.lengths[facedata.stencil_idxs[fid].L1].y;
-                    number lenL0 = celldata.lengths[facedata.stencil_idxs[fid].L0].y;
-                    number lenR0 = celldata.lengths[facedata.stencil_idxs[fid].R0].y;
-                    number lenR1 = celldata.lengths[facedata.stencil_idxs[fid].R1].y;
+                    number lenL1 = celldata.lengths[facedata.stencil_idxs[fid].L1][1];
+                    number lenL0 = celldata.lengths[facedata.stencil_idxs[fid].L0][1];
+                    number lenR0 = celldata.lengths[facedata.stencil_idxs[fid].R0][1];
+                    number lenR1 = celldata.lengths[facedata.stencil_idxs[fid].R1][1];
                     if (second_order) {
                         facedata.l2r2_interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
                     }
                     if (third_order) {
-                        number lenL2 = celldata.lengths[facedata.stencil_idxs[fid].L2].y;
-                        number lenR2 = celldata.lengths[facedata.stencil_idxs[fid].R2].y;
+                        number lenL2 = celldata.lengths[facedata.stencil_idxs[fid].L2][1];
+                        number lenR2 = celldata.lengths[facedata.stencil_idxs[fid].R2][1];
                         facedata.l3r3_interp_data[fid].set(lenL2, lenL1, lenL0, lenR0, lenR1, lenR2);
                     }
                 } // j loop
@@ -1499,16 +1501,16 @@ public:
                 foreach (i; 0 .. nic) {
                     foreach (k; 0 .. nkv) {
                         size_t fid = ifk_index(i,j,k);
-                        number lenL1 = celldata.lengths[facedata.stencil_idxs[fid].L1].z;
-                        number lenL0 = celldata.lengths[facedata.stencil_idxs[fid].L0].z;
-                        number lenR0 = celldata.lengths[facedata.stencil_idxs[fid].R0].z;
-                        number lenR1 = celldata.lengths[facedata.stencil_idxs[fid].R1].z;
+                        number lenL1 = celldata.lengths[facedata.stencil_idxs[fid].L1][2];
+                        number lenL0 = celldata.lengths[facedata.stencil_idxs[fid].L0][2];
+                        number lenR0 = celldata.lengths[facedata.stencil_idxs[fid].R0][2];
+                        number lenR1 = celldata.lengths[facedata.stencil_idxs[fid].R1][2];
                         if (second_order) {
                             facedata.l2r2_interp_data[fid].set(lenL1, lenL0, lenR0, lenR1);
                         }
                         if (third_order) {
-                            number lenL2 = celldata.lengths[facedata.stencil_idxs[fid].L2].z;
-                            number lenR2 = celldata.lengths[facedata.stencil_idxs[fid].R2].z;
+                            number lenL2 = celldata.lengths[facedata.stencil_idxs[fid].L2][2];
+                            number lenR2 = celldata.lengths[facedata.stencil_idxs[fid].R2][2];
                             facedata.l3r3_interp_data[fid].set(lenL2, lenL1, lenL0, lenR0, lenR1, lenR2);
                         }
                     } // k loop

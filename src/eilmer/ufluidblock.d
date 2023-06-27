@@ -335,6 +335,8 @@ public:
         cells.reserve(grid.cells.length + nghost);
         celldata.nfaces.length = grid.cells.length;
         celldata.volumes.length = grid.cells.length + nghost;
+        celldata.areas.length = grid.cells.length + nghost;
+        celldata.wall_distances.length = grid.cells.length;
         celldata.positions.length = grid.cells.length + nghost;
         celldata.lengths.length = grid.cells.length + nghost;
         celldata.face_distances.length = grid.cells.length;

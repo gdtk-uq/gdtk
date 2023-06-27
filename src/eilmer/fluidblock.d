@@ -2073,7 +2073,7 @@ public:
             foreach(cell; cells){
                 if (cell.in_turbulent_zone) {
                     number[] rhoturb = cell.Q[cqirhoturb .. cqirhoturb+n_turb];
-                    myConfig.turb_model.source_terms(*(cell.fs), *(cell.grad), cell.pos[0].y, cell.dwall, cell.L_min, cell.L_max, rhoturb);
+                    myConfig.turb_model.source_terms(*(cell.fs), *(cell.grad), cell.pos[0].y, cell.dwall, cell.lengths, rhoturb);
                 }
             }
         }

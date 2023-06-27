@@ -37,7 +37,7 @@ class TurbulenceModel{
 
     // Methods to be overridden.
     abstract TurbulenceModel dup();
-    @nogc abstract void source_terms(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar, const number dwall, const number L_min, const number L_max, ref number[] source) const;
+    @nogc abstract void source_terms(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar, const number dwall, const number[3] L, ref number[] source) const;
     @nogc abstract number turbulent_viscosity(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar, const number dwall) const;
     @nogc abstract number turbulent_conductivity(ref const(FlowState) fs, GasModel gm) const;
     @nogc abstract number turbulent_signal_frequency(ref const(FlowState) fs) const;
@@ -85,7 +85,7 @@ class noTurbulenceModel : TurbulenceModel {
 
     @nogc final override
     void source_terms(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar,
-                      const number dwall, const number L_min, const number L_max,
+                      const number dwall, const number[3] L,
                       ref number[] source) const {
         return;
     }
@@ -208,7 +208,7 @@ class kwTurbulenceModel : TurbulenceModel {
 
     @nogc final override
     void source_terms(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar,
-                      const number dwall, const number L_min, const number L_max,
+                      const number dwall, const number[3] L,
                       ref number[] source) const {
         /*
         Compute k-omega source terms.
@@ -565,7 +565,7 @@ class saTurbulenceModel : TurbulenceModel {
 
     @nogc override
     void source_terms(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar,
-                      const number dwall, const number L_min, const number L_max,
+                      const number dwall, const number[3] L,
                       ref number[] source) const {
         /*
         Spalart Allmaras Source Terms:
@@ -585,7 +585,7 @@ class saTurbulenceModel : TurbulenceModel {
         number ft2 = compute_ft2(chi);
         number nut = nuhat*fv1;
 
-        number d = compute_d(nut,nu,grad.vel,dwall,L_min,L_max,fv1,fv2,ft2);
+        number d = compute_d(nut,nu,grad.vel,dwall,L,fv1,fv2,ft2);
         number Shat_by_nuhat = compute_Shat_mulitplied_by_nuhat(grad, nuhat, nu, d, fv1, fv2);
         number production = rho*cb1*(1.0 - ft2)*Shat_by_nuhat;
 
@@ -730,7 +730,7 @@ protected:
 
     @nogc number
     compute_d(const number nut, const number nu, const number[3][3] velgrad,
-              const number dwall, const number L_min, const number L_max,
+              const number dwall, const number[3] L,
               const number fv1,  const number fv2, const number ft2) const {
         return dwall;
     }
@@ -851,7 +851,7 @@ class sabcmTurbulenceModel : saTurbulenceModel {
 
     @nogc override
     void source_terms(ref const(FlowState) fs, ref const(FlowGradients) grad, const number ybar,
-                      const number dwall, const number L_min, const number L_max,
+                      const number dwall, const number[3] L,
                       ref number[] source) const {
         /*
         Spalart Allmaras Source Terms:
@@ -877,7 +877,7 @@ class sabcmTurbulenceModel : saTurbulenceModel {
         number chi2 = 0.02;
         number Omega = compute_Omega(grad);
 
-        number d = compute_d(nut,nu,grad.vel,dwall,L_min,L_max,fv1,fv2,ft2);
+        number d = compute_d(nut,nu,grad.vel,dwall,L,fv1,fv2,ft2);
         number Shat_by_nuhat = compute_Shat_mulitplied_by_nuhat(grad, nuhat, nu, d, fv1, fv2);
 
         //additional parmeters for sa-bcm
@@ -944,7 +944,7 @@ protected:
 
     @nogc override number
     compute_d(const number nut, const number nu, const number[3][3] velgrad,
-              const number dwall, const number L_min, const number L_max,
+              const number dwall, const number[3] L,
               const number fv1,  const number fv2, const number ft2) const {
         return to!number(1000);
     }
@@ -1070,7 +1070,7 @@ private:
 protected:
     @nogc override number
     compute_d(const number nut, const number nu, const number[3][3] velgrad,
-              const number dwall, const number L_min, const number L_max,
+              const number dwall, const number[3] L,
               const number fv1,  const number fv2, const number ft2) const {
     /*
         IDDES uses a much more complicated definition of the turbulent length scale d,
@@ -1082,6 +1082,10 @@ protected:
         number PSI_numerator = 1.0 - (cb1/cw1/kappa/kappa/fwstar*(ft2 + (1.0-ft2)*fv2));
         number PSI_denominator = fv1*fmax(1e-10, 1.0-ft2);
         number PSI = sqrt(fmin(1e2, PSI_numerator/PSI_denominator));
+        number L_min = fmin(L[0], L[1]);
+        number L_max = fmax(L[0], L[1]);
+        if (L[2]!=0.0) L_min = fmin(L_min, L[2]);
+        if (L[2]!=0.0) L_max = fmax(L_max, L[2]);
 
         number S = 0.0;
         foreach(i; 0 .. 3) foreach(j; 0 .. 3) S += velgrad[i][j]*velgrad[i][j];

@@ -63,9 +63,11 @@ struct FVCellData{
     size_t[][] c2f;
     size_t[][] c2v;
     int[][] outsigns;
+    number[] areas;
     number[] volumes;
-    Vector3[] lengths;
     Vector3[] positions;
+    number[3][] lengths;
+    number[] wall_distances;
     size_t[][] cell_cloud_indices;
     Vector3[][] face_distances;
     FlowState[] flowstates;
@@ -471,9 +473,9 @@ public:
             debug { msg ~= format("Unhandled number of vertices: %d", vtx.length); }
             throw new FlowSolverException(msg);
         } // end switch
-        fvcd.lengths[id].x = iL;
-        fvcd.lengths[id].y = jL;
-        fvcd.lengths[id].z = 0.0;
+        fvcd.lengths[id][0] = iL;
+        fvcd.lengths[id][1] = jL;
+        fvcd.lengths[id][2] = 0.0;
         fvcd.positions[id] = pos[gtl];
         // Cell Volume.
         if (axisymmetric) {
@@ -494,6 +496,7 @@ public:
             throw new FlowSolverException(msg);
         }
         fvcd.volumes[id] = vol;
+        fvcd.areas[id] = xyplane_area;
         volume[gtl] = vol;
         areaxy[gtl] = xyplane_area;
         kLength = to!number(0.0);
@@ -536,9 +539,9 @@ public:
         } // end switch
         fvcd.volumes[id] = volume[gtl];
         fvcd.positions[id] = pos[gtl];
-        fvcd.lengths[id].x = iL;
-        fvcd.lengths[id].y = jL;
-        fvcd.lengths[id].z = kL;
+        fvcd.lengths[id][0] = iL;
+        fvcd.lengths[id][1] = jL;
+        fvcd.lengths[id][2] = kL;
         if (volume[gtl] <= 0.0) {
             debug {
                 msg ~= format("Invalid volume %g for cell %d in block %d at pos %s",
@@ -1259,7 +1262,7 @@ public:
         version(turbulence) {
             if (in_turbulent_zone) {
                 number[] rhoturb = Q[cqi.rhoturb .. cqi.rhoturb+cqi.n_turb];
-                myConfig.turb_model.source_terms(*fs, *grad, pos[0].y, dwall, L_min, L_max, rhoturb);
+                myConfig.turb_model.source_terms(*fs, *grad, pos[0].y, dwall, lengths, rhoturb);
             }
         }
 
@@ -1818,11 +1821,12 @@ public:
     @nogc
     void update_celldata_geometry(size_t gtl=0){
         // TODO: This is a bit ungainly (NNG)
+        fvcd.areas[id]     = areaxy[gtl];
+        fvcd.volumes[id]   = volume[gtl];
         fvcd.positions[id] = pos[gtl];
-        fvcd.volumes[id] = volume[gtl];
-        fvcd.lengths[id].x = lengths[0];
-        fvcd.lengths[id].y = lengths[1];
-        fvcd.lengths[id].z = lengths[2];
+        fvcd.lengths[id][0] = lengths[0];
+        fvcd.lengths[id][1] = lengths[1];
+        fvcd.lengths[id][2] = lengths[2];
     }
 
 } // end class FVCell
