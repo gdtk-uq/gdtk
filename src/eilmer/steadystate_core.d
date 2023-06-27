@@ -1475,40 +1475,10 @@ void evalRHS(double pseudoSimTime, int ftl)
         }
     }
 
-    // TODO: Make this a fluid block method, with dense array data version of add_inviscid_source_vector,
-    // add_thermochemical_source_vector, add_viscous_source_vector, and the udf one too maybe???
+    immutable int step = SimState.step;
     foreach (blk; parallel(localFluidBlocks,1)) {
-        // the limit_factor is used to slowly increase the magnitude of the
-        // thermochemical source terms from 0 to 1 for problematic reacting flows
-        double limit_factor = 1.0;
-        if (blk.myConfig.nsteps_of_chemistry_ramp > 0) {
-            double S = SimState.step/to!double(blk.myConfig.nsteps_of_chemistry_ramp);
-            limit_factor = min(1.0, S);
-        }
-        foreach (i, cell; blk.cells) {
-            cell.add_inviscid_source_vector(0, 0.0);
-            if (blk.myConfig.viscous) {
-                cell.add_viscous_source_vector();
-            }
-            if (blk.myConfig.reacting) {
-                cell.add_thermochemical_source_vector(blk.thermochem_source, limit_factor);
-            }
-            if (blk.myConfig.udf_source_terms) {
-                size_t i_cell = cell.id;
-                size_t j_cell = 0;
-                size_t k_cell = 0;
-                if (blk.grid_type == Grid_t.structured_grid) {
-                    auto sblk = cast(SFluidBlock) blk;
-                    assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                    auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
-                    i_cell = ijk_indices[0];
-                    j_cell = ijk_indices[1];
-                    k_cell = ijk_indices[2];
-                }
-                getUDFSourceTermsForCell(blk.myL, cell, 0, pseudoSimTime, blk.myConfig, blk.id, i_cell, j_cell, k_cell);
-                cell.add_udf_source_vector();
-            }
-        }
+        blk.eval_source_vectors(step, 0, 0);
+        blk.eval_udf_source_vectors(pseudoSimTime);
         blk.time_derivatives(0, ftl);
     }
 }
@@ -1549,11 +1519,6 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
     }
     evalRHS(pseudoSimTime, 1);
     foreach (blk; parallel(localFluidBlocks,1)) {
-        size_t nturb = blk.myConfig.turb_model.nturb;
-        size_t nsp = blk.myConfig.gmodel.n_species;
-        size_t nmodes = blk.myConfig.gmodel.n_modes;
-        auto cqi = blk.myConfig.cqi;
-
         foreach(i; 0 .. blk.ncells*ncq){
             blk.zed[i] = (blk.celldata.dUdt1[i] - blk.FU[i])/sigma;
         }

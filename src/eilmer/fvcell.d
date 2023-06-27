@@ -2025,3 +2025,89 @@ int decode_conserved(Vector3 pos, ConservedQuantities myU, ref FlowState fs, dou
     //
     return 0; // success
 } // end decode_conserved()
+
+@nogc
+void add_rotating_frame_source_vector(LocalConfig myConfig, Vector3 pos, in FlowState fs, number areaxy, number volume, double omegaz, ConservedQuantities Q)
+// Add the components of the source vector, Q, for inviscid flow.
+//
+// Currently, the axisymmetric equations include the
+// pressure contribution to the y-momentum equation
+// here rather than in the boundary fluxes.
+// By default, assume 2D-planar, or 3D-Cartesian flow.
+{
+    auto cqi = myConfig.cqi;
+    // Rotating frame.
+    number rho = fs.gas.rho;
+    number x = pos.x;
+    number y = pos.y;
+    number wx = fs.vel.x;
+    number wy = fs.vel.y;
+    // Coriolis and centrifugal forces contribute to momenta.
+    Q[cqi.xMom] += rho * (omegaz*omegaz*x + 2.0*omegaz*wy);
+    Q[cqi.yMom] += rho * (omegaz*omegaz*y - 2.0*omegaz*wx);
+    // There is no contribution to the energy equation in the rotating frame
+    // because it is implicit in the use of rothalpy as the conserved quantity.
+}
+
+@nogc
+void add_axisymmetric_source_vector(size_t cqiyMom, in FlowState fs, number areaxy, number volume, ConservedQuantities Q)
+{
+    // For axisymmetric flow:
+    // pressure contribution from the Front and Back (radial) interfaces.
+    Q[cqiyMom] += fs.gas.p * areaxy/volume;
+}
+
+@nogc
+void add_gravitational_source_vector(Vector3 gravity, in ConservedQuantitiesIndices cqi, in FlowState fs, ConservedQuantities Q)
+{
+    number rho = fs.gas.rho;
+    // Force per unit volume.
+    Q[cqi.xMom] += gravity.x * rho;
+    Q[cqi.yMom] += gravity.y * rho;
+    if (cqi.threeD) { Q[cqi.zMom] += gravity.z * rho; }
+    // Work done per unit volume.
+    Q[cqi.totEnergy] += rho * dot(gravity, fs.vel);
+    return;
+}
+@nogc
+void add_axisymmetric_viscous_source_vector(number y, size_t cqiyMom, number areaxy, number volume, in FlowState fs, in FlowGradients grad, ConservedQuantities Q)
+{
+    // For viscous, axisymmetric flow:
+    number v_over_y = fs.vel.y / y;
+    number dudx=grad.vel[0][0];
+    number dvdy=grad.vel[1][1];
+
+    number mu  = fs.gas.mu + fs.mu_t;
+    number lmbda = -2.0/3.0 * mu;
+    number tau_00 = 2.0 * mu * v_over_y + lmbda * (dudx + dvdy + v_over_y);
+    // Y-Momentum; viscous stress contribution from the front and Back interfaces.
+    // Note that these quantities are approximated at the
+    // mid-point of the cell face and so should never be
+    // singular -- at least I hope that this is so.
+    Q[cqiyMom] -= tau_00 * areaxy / volume;
+}
+
+@nogc
+void add_thermochemical_source_vector(LocalConfig myConfig, number[] thermochem_source, double reaction_factor, ref FlowState fs, ConservedQuantities Q)
+    // Bug fixes to this function by NNG on 17/10/22. Previously we skipped
+    // calling eval_source_terms if n_species==1, which caused issues with
+    // multi-temperature single species calculations. The new code now
+    // includes a dummy entry in thermochem_source[0] if nspecies==1, but does
+    // not update Q with the results in that case.
+{
+    auto cqi = myConfig.cqi;
+    if (fs.gas.T <= myConfig.T_frozen) { return; }
+    myConfig.thermochemUpdate.eval_source_terms(myConfig.gmodel, fs.gas, thermochem_source);
+
+    version(multi_species_gas) {
+        if (cqi.n_species > 1) {
+            foreach(sp; 0 .. cqi.n_species) { Q[cqi.species+sp] += reaction_factor*thermochem_source[sp]; }
+        }
+    }
+    version(multi_T_gas) {
+        foreach(imode; 0 .. cqi.n_modes) {
+            Q[cqi.modes+imode] += reaction_factor*thermochem_source[$-cqi.n_modes+imode];
+        }
+    }
+
+} // end add_viscous_source_vector()

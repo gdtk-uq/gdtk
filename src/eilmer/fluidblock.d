@@ -289,6 +289,7 @@ public:
                                                FVVertex[] vertex_list = []);
     abstract size_t[] get_cell_write_indices();
     @nogc abstract void average_lsq_cell_derivs_to_faces(int gtl);
+    abstract void eval_udf_source_vectors(double simTime);
 
     @nogc
     void identify_reaction_zones(int gtl)
@@ -1704,6 +1705,7 @@ public:
 
     } // end evalRHS()
 
+
     // The following two methods are used to verify the numerical Jacobian implementation.
     void verify_jacobian(double sigma)
     {
@@ -2034,6 +2036,62 @@ public:
         }
     } // end time_derivatives()
 
+    @nogc void eval_source_vectors(int step, int gtl, int ftl, double omegaz=0.0)
+    {
+        if (omegaz != 0.0) {
+            foreach(cell; cells){
+                add_rotating_frame_source_vector(myConfig, cell.pos[gtl], *(cell.fs), cell.areaxy[gtl], cell.volume[gtl], omegaz, cell.Q);
+            }
+        }
+
+        if (myConfig.axisymmetric) {
+            auto cqi = myConfig.cqi;
+            size_t cqiyMom = cqi.yMom;
+            foreach(cell; cells) {
+                add_axisymmetric_source_vector(cqiyMom, *(cell.fs), cell.areaxy[gtl], cell.volume[gtl], cell.Q);
+            }
+        }
+
+        if (myConfig.gravity_non_zero) {
+            Vector3 gravity = myConfig.gravity;
+            auto cqi = myConfig.cqi;
+            foreach(cell; cells) {
+                add_gravitational_source_vector(gravity, *cqi, *(cell.fs), cell.Q);
+            }
+        }
+
+        if (myConfig.viscous && myConfig.axisymmetric){
+            size_t cqiyMom = myConfig.cqi.yMom;
+            foreach(cell; cells){
+                add_axisymmetric_viscous_source_vector(cell.pos[0].y, cqiyMom, cell.areaxy[0], cell.volume[0], *(cell.fs), *(cell.grad), cell.Q);
+            }
+        }
+
+        if (myConfig.viscous && myConfig.turb_model.isTurbulent){
+            size_t cqirhoturb = myConfig.cqi.rhoturb;
+            size_t n_turb = myConfig.cqi.n_turb;
+            foreach(cell; cells){
+                if (cell.in_turbulent_zone) {
+                    number[] rhoturb = cell.Q[cqirhoturb .. cqirhoturb+n_turb];
+                    myConfig.turb_model.source_terms(*(cell.fs), *(cell.grad), cell.pos[0].y, cell.dwall, cell.L_min, cell.L_max, rhoturb);
+                }
+            }
+        }
+
+        if (myConfig.reacting) {
+            // the limit_factor is used to slowly increase the magnitude of the
+            // thermochemical source terms from 0 to 1 for problematic reacting flows
+            double limit_factor = 1.0;
+            if (myConfig.nsteps_of_chemistry_ramp > 0) {
+                double S = step/to!double(myConfig.nsteps_of_chemistry_ramp);
+                limit_factor = min(1.0, S);
+            }
+
+            foreach (cell; cells) {
+                add_thermochemical_source_vector(myConfig, thermochem_source, limit_factor, *(cell.fs), cell.Q);
+            }
+        }
+    }
 } // end class FluidBlock
 
 @nogc void apply_haschelbacher_averaging(Vector3 lpos, Vector3 rpos, Vector3 n,

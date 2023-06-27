@@ -42,6 +42,7 @@ import geom.luawrap.luausgrid;
 import luaflowstate;
 import fluidblockio_new;
 import nm;
+import user_defined_source_terms;
 
 
 class UFluidBlock: FluidBlock {
@@ -1267,4 +1268,17 @@ public:
             } // end else
         } // end main face loop
     } // end average_lsq_cell_derivs_to_faces routine
+
+    override void eval_udf_source_vectors(double simTime)
+    {
+        if (myConfig.udf_source_terms) {
+            foreach (i, cell; cells) {
+                size_t i_cell = cell.id;
+                size_t j_cell = 0;
+                size_t k_cell = 0;
+                getUDFSourceTermsForCell(myL, cell, 0, simTime, myConfig, id, i_cell, j_cell, k_cell);
+                cell.add_udf_source_vector();
+            }
+        }
+    }
 } // end class UFluidBlock

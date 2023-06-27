@@ -47,6 +47,7 @@ import grid_motion_udf;
 import geom.luawrap.luasgrid;
 import luaflowstate;
 import fluidblockio_new;
+import user_defined_source_terms;
 
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
@@ -3144,6 +3145,20 @@ public:
             }
         } // end if (myConfig.dimensions == 3)
     } // end average_lsq_cell_derivs_to_faces routine
+
+    override void eval_udf_source_vectors(double simTime)
+    {
+        if (myConfig.udf_source_terms) {
+            foreach (i, cell; cells) {
+                auto ijk_indices = to_ijk_indices_for_cell(cell.id);
+                size_t i_cell = ijk_indices[0];
+                size_t j_cell = ijk_indices[1];
+                size_t k_cell = ijk_indices[2];
+                getUDFSourceTermsForCell(myL, cell, 0, simTime, myConfig, id, i_cell, j_cell, k_cell);
+                cell.add_udf_source_vector();
+            }
+        }
+    }
 } // end class SFluidBlock
 
 /** Indexing of the data in 2D.
