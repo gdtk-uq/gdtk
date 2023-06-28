@@ -16,6 +16,7 @@
  *
  * Author: Rowan G. and Peter J.
  * Version: 2014-09-08 -- initial cut
+ * Version: 2023-06-28 -- Optimisations by NNG
  */
 
 module gas.diffusion.wilke_mixing_therm_cond;
@@ -40,25 +41,24 @@ public:
         foreach (tcm; tcms) {
             _tcms ~= tcm.dup;
         }
+        nsp = mol_masses.length;
         _mol_masses = mol_masses.dup;
         _x.length = _mol_masses.length;
         _k.length = _mol_masses.length;
-        _phi.length = _mol_masses.length;
-        foreach (ref p; _phi) {
-            p.length = _mol_masses.length;
+        _numer.length = _mol_masses.length;
+        _denom.length = _mol_masses.length;
+        foreach (ref n; _numer) n.length = _mol_masses.length;
+        foreach (ref d; _denom) d.length = _mol_masses.length;
+
+        foreach(i; 0 .. nsp){
+            foreach(j; 0 .. nsp){
+                _numer[i][j] = pow(_mol_masses[j]/_mol_masses[i], 0.25);
+                _denom[i][j] = sqrt(8.0 + 8.0*_mol_masses[i]/_mol_masses[j]);
+            }
         }
     }
     this(in WilkeMixingThermCond src) {
-        foreach (tcm; src._tcms) {
-            _tcms ~= tcm.dup;
-        }
-        _mol_masses = src._mol_masses.dup;
-        _x.length = _mol_masses.length;
-        _k.length = _mol_masses.length;
-        _phi.length = _mol_masses.length;
-        foreach ( ref p; _phi) {
-            p.length = _mol_masses.length;
-        }
+        this(src._tcms, src._mol_masses);
     }
     override WilkeMixingThermCond dup() const {
         return new WilkeMixingThermCond(this);
@@ -68,26 +68,22 @@ public:
         // 1. Evaluate the mole fractions
         massf2molef(Q.massf, _mol_masses, _x);
         // 2. Calculate the component thermoconductivities
-        for ( auto isp = 0; isp < Q.massf.length; ++isp ) {
+        foreach(isp; 0 .. nsp) {
             _k[isp] = _tcms[isp].eval(Q, -1);
         }
-        // 3. Calculate interaction potentials
-        for ( auto i = 0; i < Q.massf.length; ++i ) {
-            for ( auto j = 0; j < Q.massf.length; ++j ) {
-                number numer = pow((1.0 + sqrt(_k[i]/_k[j])*pow(_mol_masses[j]/_mol_masses[i], 0.25)), 2.0);
-                number denom = sqrt(8.0 + 8.0*_mol_masses[i]/_mol_masses[j]);
-                _phi[i][j] = numer/denom;
-            }
-        }
+        // 3. Interaction potentials are now precalculated
         // 4. Apply mixing formula
         number sum;
         number k = 0.0;
-        for ( auto i = 0; i < Q.massf.length; ++i ) {
+        foreach (i; 0 .. nsp) {
             if ( _x[i] < SMALL_MOLE_FRACTION ) continue;
             sum = 0.0;
-            for ( auto j = 0; j < Q.massf.length; ++j ) {
+            foreach (j; 0 .. nsp) {
                 if ( _x[j] < SMALL_MOLE_FRACTION ) continue;
-                sum += _x[j]*_phi[i][j];
+                number phiij = 1.0 + sqrt(_k[i]/_k[j])*_numer[i][j];
+                phiij *= phiij;
+                phiij /= _denom[i][j];
+                sum += _x[j]*phiij;
             }
             k += _k[i]*_x[i]/sum;
         }
@@ -95,12 +91,13 @@ public:
     }
 
 private:
+    size_t nsp;
     ThermalConductivity[] _tcms; // component viscosity models
     double[] _mol_masses; // component molecular weights
+    number[][] _denom, _numer; // precomputed interation potential components
     // Working array space
     number[] _x;
     number[] _k;
-    number[][] _phi;
 }
 
 

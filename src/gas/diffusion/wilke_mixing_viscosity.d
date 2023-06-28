@@ -40,25 +40,24 @@ public:
         foreach (v; vms) {
             _vms ~= v.dup;
         }
+        nsp = mol_masses.length;
         _mol_masses = mol_masses.dup;
         _x.length = _mol_masses.length;
         _mu.length = _mol_masses.length;
-        _phi.length = _mol_masses.length;
-        foreach (ref p; _phi) {
-            p.length = _mol_masses.length;
+        _numer.length = _mol_masses.length;
+        _denom.length = _mol_masses.length;
+        foreach (ref n; _numer) n.length = _mol_masses.length;
+        foreach (ref d; _denom) d.length = _mol_masses.length;
+
+        foreach(i; 0 .. nsp){
+            foreach(j; 0 .. nsp){
+                _numer[i][j] = pow(_mol_masses[j]/_mol_masses[i], 0.25);
+                _denom[i][j] = sqrt(8.0 + 8.0*_mol_masses[i]/_mol_masses[j]);
+            }
         }
     }
     this(in WilkeMixingViscosity src) {
-        foreach (v; src._vms) {
-            _vms ~= v.dup;
-        }
-        _mol_masses = src._mol_masses.dup;
-        _x.length = _mol_masses.length;
-        _mu.length = _mol_masses.length;
-        _phi.length = _mol_masses.length;
-        foreach (ref p; _phi) {
-            p.length = _mol_masses.length;
-        }
+        this(src._vms, src._mol_masses);
     }
     override WilkeMixingViscosity dup() const {
         return new WilkeMixingViscosity(this);
@@ -69,26 +68,22 @@ public:
         // 1. Evaluate the mole fractions
         massf2molef(Q.massf, _mol_masses, _x);
         // 2. Calculate the component viscosities
-        for ( auto i = 0; i < Q.massf.length; ++i ) {
+        foreach(i; 0 .. nsp) {
             _mu[i] =  _vms[i].eval(Q);
         }
-        // 3. Calculate interaction potentials
-        for ( auto i = 0; i < Q.massf.length; ++i ) {
-            for ( auto j = 0; j < Q.massf.length; ++j ) {
-                number numer = pow((1.0 + sqrt(_mu[i]/_mu[j])*pow(_mol_masses[j]/_mol_masses[i], 0.25)), 2.0);
-                number denom = sqrt(8.0 + 8.0*_mol_masses[i]/_mol_masses[j]);
-                _phi[i][j] = numer/denom;
-            }
-        }
+        // 3. Interaction potentials are precomputed
         // 4. Apply mixing formula
         number sum;
         number mu = 0.0;
-        for ( auto i = 0; i < Q.massf.length; ++i ) {
+        foreach(i; 0 .. nsp) {
             if ( _x[i] < SMALL_MOLE_FRACTION ) continue;
             sum = 0.0;
-            for ( auto j = 0; j < Q.massf.length; ++j ) {
+            foreach(j; 0 .. nsp) {
                 if ( _x[j] < SMALL_MOLE_FRACTION ) continue;
-                sum += _x[j]*_phi[i][j];
+                number phiij = 1.0 + sqrt(_mu[i]/_mu[j])*_numer[i][j];
+                phiij *= phiij;
+                phiij /= _denom[i][j];
+                sum += _x[j]*phiij;
             }
             mu += _mu[i]*_x[i]/sum;
         }
@@ -96,12 +91,13 @@ public:
     }
 
 private:
+    size_t nsp;
     Viscosity[] _vms; // component viscosity models
     double[] _mol_masses; // component molecular weights
+    number[][] _denom, _numer; // precomputed interation potential components
     // Working array space
     number[] _x;
     number[] _mu;
-    number[][] _phi;
 }
 
 version(wilke_mixing_viscosity_test) {
