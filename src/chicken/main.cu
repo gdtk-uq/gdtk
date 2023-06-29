@@ -1,6 +1,13 @@
 // main.cu
 // Compressible-flow CFD program to try out CUDA programming.
 //
+//       MM      --
+//      <' \___/| --
+//        \_  _/  --
+//          ][   --
+//  -----------------
+//       CHICKEN
+//  -----------------
 
 #include <iostream>
 #include <string>
