@@ -2656,14 +2656,14 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
 
     if (nWrittenSnapshots <= nkCfg.totalSnapshots) {
 	// Write snapshot
-        auto dirName = steadyFlowDirectory(nWrittenSnapshots);        
+        auto dirName = snapshotDirectory(nWrittenSnapshots);        
         if (cfg.is_master_task) {
             ensure_directory_is_present(dirName);
         }
 
         foreach (blk; localFluidBlocks) {
             foreach (io; blk.block_io) {
-                auto fileName = steadyFlowFilename(nWrittenSnapshots, blk.id);
+                auto fileName = flowFilename(nWrittenSnapshots, blk.id);
                 if (io.do_save()) io.save_to_file(fileName, dummySimTime);
             }
         }
@@ -2683,15 +2683,15 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
         foreach (iSnap; 2 .. nkCfg.totalSnapshots+1) {
             foreach (blk; localFluidBlocks) {
                 foreach (io; blk.block_io) {
-                    auto fromName = steadyFlowFilename(iSnap, blk.id);
-                    auto toName = steadyFlowFilename(iSnap-1, blk.id);
+                    auto fromName = flowFilename(iSnap, blk.id);
+                    auto toName = flowFilename(iSnap-1, blk.id);
                     rename(fromName, toName);
                 }
             }
         }
         foreach (blk; localFluidBlocks) {
             foreach (io; blk.block_io) {
-                auto fileName = steadyFlowFilename(nkCfg.totalSnapshots, blk.id);
+                auto fileName = flowFilename(nkCfg.totalSnapshots, blk.id);
                 if (io.do_save()) io.save_to_file(fileName, dummySimTime);
             }
         }

@@ -45,36 +45,51 @@ function lmr_config.nkConfigFilename()
    return lmrCfg["config-directory"] .. "/" .. lmrCfg["newton-krylov-config-filename"]
 end
 
+function lmr_config.gridDirectory()
+   return lmrCfg["simulation-directory"] .. "/" .. lmrCfg["grid-directory"]
+end
+
 function lmr_config.gridMetadataFilename(id)
    -- When id is supplied give individual block
    if id then
-      return lmrCfg["grid-directory"] .. "/" .. string.format(lmrCfg["block-filename-format"], id) .. "." .. lmrCfg["grid-metadata-filename"]
+      return lmr_config.gridDirectory() .. "/" .. lmrCfg["grid-prefix"] .. "-" .. string.format(lmrCfg["block-index-format"], id) .. "." .. lmrCfg["metadata-extension"]
    end
    -- else, return global metadataname   
-   return lmrCfg["grid-directory"] .. "/" .. lmrCfg["grid-metadata-filename"]
+   return lmr_config.gridDirectory() .. "/" .. lmrCfg["grid-prefix"] .. "." .. lmrCfg["metadata-extension"]
 end
 
-function lmr_config.gridFilenameWithoutExt(id)
-   return lmrCfg["grid-directory"] .. "/" .. string.format(lmrCfg["block-filename-format"], id)
-end
+function lmr_config.gridFilename(id, ext)
+   local gname = lmr_config.gridDirectory() .. "/" .. lmrCfg["grid-prefix"] .. "-" .. string.format(lmrCfg["block-index-format"], id)
+   if ext then gname = gname .. ext end
+   return gname
+   end
 
-function lmr_config.steadyFlowDirectory(snapshot)
-   dname = lmrCfg["snapshot-directory"]
+function lmr_config.snapshotDirectory(snapshot)
+   local dname = lmrCfg["simulation-directory"]
    dname = dname .. "/"
-   dname = dname .. string.format(lmrCfg["snapshot-index-format"], snapshot)
-   dname = dname .. "/"
-   dname = dname .. lmrCfg["flow-directory"]
+   dname = dname .. lmrCfg["snapshot-directory"]
+   if snapshot then
+      dname = dname .. "/"
+      dname = dname .. string.format(lmrCfg["snapshot-index-format"], snapshot)
+   end
    return dname
 end
 
-function lmr_config.steadyFlowFilename(snapshot, blkId)
-   fname = lmr_config.steadyFlowDirectory(snapshot)
+function lmr_config.flowFilename(snapshot, blkId)
+   local fname = lmr_config.snapshotDirectory(snapshot)
    fname = fname .. "/"
-   fname = fname .. string.format(lmrCfg["block-filename-format"], blkId)
-   fname = fname .. "."
-   fname = fname .. lmrCfg["zip-extension"]
+   fname = fname .. lmrCfg["flow-prefix"] .. "-" .. string.format(lmrCfg["block-index-format"], blkId)
    return fname
 end
+
+function lmr_config.gridForSimFilename(snapshot, blkId, ext)
+   local gname = lmr_config.snapshotDirectory(snapshot)
+   gname = gname .. "/"
+   gname = gname .. lmrCfg["grid-prefix"] .. "-" .. string.format(lmrCfg["block-index-format"], blkId)
+   if ext then gname = gname .. ext end
+   return gname
+end
+
 
 return lmr_config
 

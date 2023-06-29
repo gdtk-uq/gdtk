@@ -67,7 +67,7 @@ void main_(string[] args)
         string errMsg = to!string(lua_tostring(L, -1));
         throw new FlowSolverException(errMsg);
     }
-    string userGridName = lmrCfg.gridJobName;
+    string userGridName = lmrCfg.jobFile;
     if ( luaL_dofile(L, toStringz(userGridName)) != 0 ) {
         writeln("There was a problem in the user-supplied input lua script: ", userGridName);
         string errMsg = to!string(lua_tostring(L, -1));

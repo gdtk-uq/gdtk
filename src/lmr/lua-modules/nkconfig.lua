@@ -142,7 +142,6 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    f:write(string.format('"write_snapshot_on_last_step": %s,\n', tostring(nkConfig.write_snapshot_on_last_step)))
    f:write(string.format('"write_diagnostics_on_last_step": %s,\n', tostring(nkConfig.write_diagnostics_on_last_step)))
    -- write out phases
-   print("#nkPhases= ", #nkPhases)
    for i=1,#nkPhases do
       f:write(nkPhases[i]:tojson() .. ",\n")
    end

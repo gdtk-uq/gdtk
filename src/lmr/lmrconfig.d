@@ -1,37 +1,42 @@
 /** lmrconfig.d
  * Module for configuration of Eilmer program itself.
  *
- * Authors: RJG, PJ, KAD, NNG
+ * Authors: RJG, PAJ, KAD, NNG
  * Date: 2022-08-06
  */
 
 module lmrconfig;
 
+import std.stdio;
+import std.conv : to;
 import std.format : format;
 import std.process : environment;
 import std.json;
 import json_helper : readJSONfile;
 
+import globalconfig;
+
 struct LmrCfg {
+    immutable string simDir;
+    immutable string jobFile;
     immutable string cfgDir;
     immutable string cfgFile;
     immutable string ctrlFile;
     immutable string nkCfgFile;
-    immutable string gridDir;
-    immutable string blkFmtStr;
+    immutable string blkIdxFmt;
     immutable string snapshotDir;
-    immutable string snapshotIdxFmtStr;
+    immutable string snapshotIdxFmt;
+    immutable int initialFieldDir;
+    immutable string flowMetadataFile;
     immutable string restartFile;
     immutable string referenceResidualsFile;
-    immutable string flowDir;
-    immutable string zipExt;
+    immutable string flowPrefix;
+    immutable string gridPrefix;
     immutable string gzipExt;
-    immutable string rawBinExt;
-    immutable string gridJobName;
-    immutable string flowJobName;
     immutable string blkListFile;
     immutable string vtkDir;
     immutable string mpimapFile;
+    immutable string dblVarFmt;
 };
 
 LmrCfg lmrCfg;
@@ -43,25 +48,26 @@ static this()
     readLmrConfig();
     
     // Populate struct with derived config information
+    lmrCfg.simDir = lmrJSONCfg["simulation-directory"].str;
+    lmrCfg.jobFile = lmrJSONCfg["job-filename"].str;
     lmrCfg.cfgDir = lmrJSONCfg["config-directory"].str;
     lmrCfg.cfgFile = lmrCfg.cfgDir ~ "/" ~ lmrJSONCfg["config-filename"].str;
     lmrCfg.ctrlFile = lmrCfg.cfgDir ~ "/" ~ lmrJSONCfg["control-filename"].str;
     lmrCfg.nkCfgFile = lmrCfg.cfgDir ~ "/" ~ lmrJSONCfg["newton-krylov-config-filename"].str;
-    lmrCfg.gridDir = lmrJSONCfg["grid-directory"].str;
-    lmrCfg.blkFmtStr = lmrJSONCfg["block-filename-format"].str;
-    lmrCfg.snapshotDir = lmrJSONCfg["snapshot-directory"].str;
-    lmrCfg.snapshotIdxFmtStr = lmrJSONCfg["snapshot-index-format"].str;
+    lmrCfg.blkIdxFmt = lmrJSONCfg["block-index-format"].str;
+    lmrCfg.snapshotDir = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["snapshot-directory"].str;
+    lmrCfg.snapshotIdxFmt = lmrJSONCfg["snapshot-index-format"].str;
+    lmrCfg.initialFieldDir = to!int(lmrJSONCfg["initial-field-directory"].integer);
+    lmrCfg.flowMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["flow-prefix"].str ~ "." ~ lmrJSONCfg["metadata-extension"].str;
     lmrCfg.restartFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["restart-file"].str;
     lmrCfg.referenceResidualsFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["reference-residuals-file"].str;
-    lmrCfg.flowDir = lmrJSONCfg["flow-directory"].str;
-    lmrCfg.zipExt = lmrJSONCfg["zip-extension"].str;
-    lmrCfg.gzipExt = lmrJSONCfg["gziptext-extension"].str;
-    lmrCfg.rawBinExt = lmrJSONCfg["rawbinary-extension"].str;
-    lmrCfg.gridJobName = lmrJSONCfg["user-supplied-grid-job-name"].str;
-    lmrCfg.flowJobName = lmrJSONCfg["user-supplied-flow-job-name"].str;
+    lmrCfg.flowPrefix = lmrJSONCfg["flow-prefix"].str;
+    lmrCfg.gridPrefix = lmrJSONCfg["grid-prefix"].str;
+    lmrCfg.gzipExt = lmrJSONCfg["gzip-extension"].str;
     lmrCfg.blkListFile = lmrCfg.cfgDir ~ "/" ~ lmrJSONCfg["block-list-filename"].str;
     lmrCfg.vtkDir = lmrJSONCfg["vtk-output-directory"].str;
     lmrCfg.mpimapFile = lmrCfg.cfgDir ~ "/" ~ lmrJSONCfg["mpimap-filename"].str;
+    lmrCfg.dblVarFmt = lmrJSONCfg["double-var-format"].str;
 
 }
 
@@ -78,35 +84,51 @@ void readLmrConfig()
 }
 
 /**
+ * Return the snapshot directory for index 'snapshot'
+ *
+ * Authors: RJG
+ * Date: 2023-06-27
+ */
+string snapshotDirectory(int snapshot)
+{
+    return lmrCfg.snapshotDir ~
+	"/" ~
+	format(lmrCfg.snapshotIdxFmt, snapshot);
+}
+
+
+/**
+ * Return the flow solution filename for a single block ('blkId') as a string.
+ *
+ * Authors: RJG
+ * Date: 2023-06-27
+ */
+string flowFilename(int snapshot, int blkId)
+{
+    string fname = lmrCfg.snapshotDir ~
+	"/" ~
+	format(lmrCfg.snapshotIdxFmt, snapshot) ~
+	"/" ~
+	lmrCfg.flowPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
+    if (GlobalConfig.flow_format == "gziptext")
+	fname ~= lmrCfg.gzipExt;
+    return fname;
+}
+
+/**
  * Return the grid filename for a single block ('id') as a string.
  *
  * Authors: RJG
  * Date: 2022-08-06
  */
-string gridFilenameWithoutExt(int id)
+string gridFilename(int snapshot, int blkId)
 {
-    return lmrCfg.gridDir ~ "/" ~ format(lmrCfg.blkFmtStr, id);
+    string gname = lmrCfg.snapshotDir ~
+	"/" ~
+	format(lmrCfg.snapshotIdxFmt, snapshot) ~
+	"/" ~
+	lmrCfg.gridPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
+    if (GlobalConfig.grid_format == "gziptext")
+	gname ~= lmrCfg.gzipExt;
+    return gname;
 }
-
-/**
- * Return the directory name for a snapshot of a flow field.
- *
- * Authors: RJG
- * Date: 2022-08-07
- */
-string steadyFlowDirectory(int snapshot)
-{
-    return lmrCfg.snapshotDir ~ "/" ~ format(lmrCfg.snapshotIdxFmtStr, snapshot) ~ "/" ~ lmrCfg.flowDir;
-}
-
-/**
- * Return the flow solution filename for a single block ('id') as a string.
- *
- * Authors: RJG
- * Date: 2022-08-06
- */
-string steadyFlowFilename(int snapshot, int blkId)
-{
-    return steadyFlowDirectory(snapshot) ~ "/" ~ format(lmrCfg.blkFmtStr, blkId) ~ "." ~ lmrCfg.zipExt;
-}
-

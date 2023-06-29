@@ -69,86 +69,10 @@ public:
     this(string jobName, string dir, int tindx, size_t nBlocks, int gindx=-1,
          string flow_format="", string tag="", int make_kdtree=0)
     {
-        // Default action is to set gindx to tindx. The default action
-        // is indicated by gindx = -1
-        gindx = (gindx == -1) ? tindx : gindx;
-        // -- initialising JSONData
-        // We need to set a few things here if we are constructing this object
-        // in a custom-postprocessing context.
-        string configFileName = dir ~ "/config/" ~ jobName ~ ".config";
-        string content;
-        try {
-            content = readText(configFileName);
-        } catch (Exception e) {
-            writeln("Message is: ", e.msg);
-            throw new Error(text("Failed to read config file: ", configFileName));
-        }
-        JSONValue jsonData;
-        try {
-            jsonData = parseJSON!string(content);
-        } catch (Exception e) {
-            writeln("Message is: ", e.msg);
-            throw new Error(text("Failed to parse JSON from config file: ", configFileName));
-        }
-        grid_format = jsonData["grid_format"].str;
-        string gridFileExt = "gz"; if (grid_format == "rawbinary") { gridFileExt = "bin"; }
-
-        if (flow_format == "") flow_format = jsonData["flow_format"].str;
-        if (tag == "") tag = "field";
-
-        string flowFileExt = flow_format_ext(flow_format);
-        bool new_flow_format =  !is_legacy_format(flow_format);
-
-        grid_motion = grid_motion_from_name(jsonData["grid_motion"].str);
-        // -- end initialising JSONData
-        //
-        // Use job.list to get a hint of the type of each block.
-        auto listFile = File(dir ~ "/config/" ~ jobName ~ ".list");
-        auto listFileLine = listFile.readln().chomp(); // only comments on the first line
-        //
-        foreach (ib; 0 .. nBlocks) {
-            listFileLine = listFile.readln().chomp();
-            int ib_chk;
-            string gridTypeName;
-            string label;
-            formattedRead(listFileLine, " %d %s %s", &ib_chk, &gridTypeName, &label);
-            if (ib != ib_chk) {
-                string msg = format("Reading .list file ib=%d ib_chk=%d", ib, ib_chk);
-                throw new FlowSolverException(msg);
-            }
-            auto gridType = gridTypeFromName(gridTypeName);
-            string fileName;
-            if (grid_motion != GridMotion.none) {
-                fileName = make_file_name!"grid"(jobName, to!int(ib), gindx, gridFileExt);
-            } else {
-                fileName = make_file_name!"grid"(jobName, to!int(ib), 0, gridFileExt);
-            }
-            fileName = dir ~ "/" ~ fileName;
-            final switch (gridType) {
-            case Grid_t.structured_grid:
-                gridBlocks ~= new StructuredGrid(fileName, grid_format);
-                break;
-            case Grid_t.unstructured_grid:
-                gridBlocks ~= new UnstructuredGrid(fileName, grid_format, false);
-            }
-            gridBlocks[$-1].sort_cells_into_bins();
-            if (new_flow_format) {
-                fileName = make_file_name("CellData",tag, jobName, to!int(ib), tindx, flowFileExt);
-            } else {
-                fileName = make_file_name!"flow"(jobName, to!int(ib), tindx, flowFileExt);
-            }
-            fileName = dir ~ "/" ~ fileName;
-            flowBlocks ~= new FluidBlockLite(fileName, ib, jsonData, gridType, flow_format);
-        } // end foreach ib
-        this.jobName = jobName;
-        this.nBlocks = nBlocks;
-        sim_time = flowBlocks[0].sim_time;
-
-        if (make_kdtree!=0) {
-            construct_kdtree();
-        }
-    } // end constructor
-
+	// PLACEHOLDER for transient mode constructor
+    }
+ 
+    
     // A constructor for flow fields when running steady mode
     this(int snapshot, size_t nBlocks, string tag="", int make_kdtree=0)
     {
@@ -166,11 +90,7 @@ public:
             writeln("Message is: ", e.msg);
             throw new Error(text("Failed to parse JSON from config file: ", lmrCfg.cfgFile));
         }
-        grid_format = jsonData["grid_format"].str;
-        string gridFileExt = lmrCfg.gzipExt; if (grid_format == "rawbinary") { gridFileExt = lmrCfg.rawBinExt; }
-
         string flowFmt = jsonData["flow_format"].str;
-        if (tag == "") tag = "field";
         // -- end initialising from JSONData
         //
         // Use job.list to get a hint of the type of each block.
@@ -188,7 +108,7 @@ public:
                 throw new FlowSolverException(msg);
             }
             auto gridType = gridTypeFromName(gridTypeName);
-            string gName = gridFilenameWithoutExt(to!int(ib)) ~ "." ~ gridFileExt;
+            string gName = gridFilename(snapshot, to!int(ib));
             final switch (gridType) {
             case Grid_t.structured_grid:
                 gridBlocks ~= new StructuredGrid(gName, grid_format);
@@ -197,7 +117,7 @@ public:
                 gridBlocks ~= new UnstructuredGrid(gName, grid_format, false);
             }
             gridBlocks[$-1].sort_cells_into_bins();
-            string fName = steadyFlowFilename(snapshot, to!int(ib));
+            string fName = flowFilename(snapshot, to!int(ib));
             flowBlocks ~= new FluidBlockLite(fName, ib, jsonData, gridType, flowFmt);
         } // end foreach ib
         this.jobName = "";

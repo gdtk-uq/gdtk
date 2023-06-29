@@ -18,7 +18,7 @@ local lmrconfig = require 'lmrconfig'
 local lmrCfg = lmrconfig.lmrCfg
 local gridDir = lmrCfg["grid-directory"]
 local gridMD = lmrCfg["grid-metadata-filename"]
-local blkFmt = lmrCfg["block-filename-format"]
+local blkIdxFmt = lmrCfg["block-index-format"]
 
 local configoptions = require 'configoptions'
 config = configoptions.config
@@ -151,7 +151,7 @@ end -- registerGridArray
 -- IO functions to write the grid and connection files.
 --
 function writeGridFiles()
-   os.execute("mkdir -p " .. lmrCfg["grid-directory"])
+   os.execute("mkdir -p " .. lmrconfig.gridDirectory())
    local fileName = lmrconfig.gridMetadataFilename()
    local f = assert(io.open(fileName, "w"))
    f:write('{\n')
@@ -181,11 +181,12 @@ function writeGridFiles()
          print("grid id=", g.id)
       end
       -- Write the grid proper.
-      fileName = lmrconfig.gridFilenameWithoutExt(g.id)
       if config.grid_format == "gziptext" then
-	 g.grid:write_to_gzip_file(fileName .. "." .. lmrCfg["gziptext-extension"])
+	 fileName = lmrconfig.gridFilename(g.id, lmrCfg["gzip-extension"])
+       	 g.grid:write_to_gzip_file(fileName)
       elseif config.grid_format == "rawbinary" then
-	 g.grid:write_to_raw_binary_file(fileName .. "." .. lmrCfg["rawbinary-extension"])
+	 fileName = lmrconfig.gridFilename(g.id)
+	 g.grid:write_to_raw_binary_file(fileName)
       else
 	 error(string.format("Oops, invalid grid_format: %s", config.grid_format))
       end

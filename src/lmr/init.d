@@ -25,7 +25,7 @@ import lua_helper;
 
 
 import json_helper;
-import lmrexceptions : EilmerException;
+import lmrexceptions : LmrException;
 import lmrconfig;
 import globalconfig;
 import globaldata;
@@ -214,16 +214,7 @@ void initFluidBlocksMemoryAllocation()
     bool anyBlockFail = false;
     foreach (blk; parallel(localFluidBlocks,1)) {
         try {
-            string gName = gridFilenameWithoutExt(blk.id);
-            if (GlobalConfig.grid_format == "gziptext") {
-                gName ~= "." ~ lmrCfg.gzipExt;
-            }
-            else if (GlobalConfig.grid_format == "rawbinary") {
-                gName ~= "." ~ lmrCfg.rawBinExt;
-            }
-            else {
-                throw new Error(format("Oops, invalid grid_format: %s", GlobalConfig.grid_format));
-            }
+            string gName = gridFilename(lmrCfg.initialFieldDir, blk.id);
             debug { writeln("Calling init_grid_and_flow_arrays for grid: ", gName); }
             blk.init_grid_and_flow_arrays(gName);
             blk.compute_primary_cell_geometric_data(0);
@@ -240,7 +231,7 @@ void initFluidBlocksMemoryAllocation()
         anyBlockFail = to!bool(myFlag);
     }
     if (anyBlockFail) {
-        throw new EilmerException("Failed at initialisation stage during grid reading and geometry calculations.");
+        throw new LmrException("Failed at initialisation stage during grid reading and geometry calculations.");
     }
 }
 
@@ -296,7 +287,7 @@ void initFluidBlocksFlowFieldSteadyMode(int snapshotStart)
 {
     bool anyBlockFail = false;
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.read_zip_solution(steadyFlowFilename(snapshotStart, blk.id));
+        blk.read_zip_solution(flowFilename(snapshotStart, blk.id));
         foreach (iface; blk.faces) iface.gvel.clear();
         foreach (cell; blk.cells) {
             cell.encode_conserved(0, 0, blk.omegaz);
@@ -316,7 +307,7 @@ void initFluidBlocksFlowFieldSteadyMode(int snapshotStart)
         anyBlockFail = to!bool(myFlag);
     }
     if (anyBlockFail) {
-        throw new EilmerException("Failed at initialisation stage during flow field initialisation.");
+        throw new LmrException("Failed at initialisation stage during flow field initialisation.");
     }
 }
 
@@ -365,7 +356,7 @@ void initFullFaceDataExchange()
         anyBlockFail = to!bool(myFlag);
     }
     if (anyBlockFail) {
-        throw new EilmerException("Failed at initialisation stage during full-face boundary data exchange.");
+        throw new LmrException("Failed at initialisation stage during full-face boundary data exchange.");
     }
 }
 
@@ -406,7 +397,7 @@ void initMappedCellDataExchange()
         anyBlockFail = to!bool(myFlag);
     }
     if (anyBlockFail) {
-        throw new EilmerException("Failed at initialisation stage during locating mapped-cell boundaries.");
+        throw new LmrException("Failed at initialisation stage during locating mapped-cell boundaries.");
     }
     
     foreach (blk; localFluidBlocks) {

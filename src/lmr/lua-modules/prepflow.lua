@@ -245,8 +245,14 @@ function buildRuntimeConfigFiles()
    end
 end
 
-function buildFlowFiles(jobName)
+function buildFlowAndGridFiles()
    print('Build flow files.')
+   -- 1. Write metadata file (this might be redundant in parallel, but shouldn't hurt)
+   local snapshotTopLvl = lmrconfig.snapshotDirectory()
+   os.execute("mkdir -p " .. snapshotTopLvl)
+   writeFlowMetadata();
+
+   -- 2. Now look for the work to do per block
    if #fluidBlockIdsForPrep == 0 then
       -- We'll set *all* blocks for processing.
       for i=1,#fluidBlocks do
@@ -254,37 +260,33 @@ function buildFlowFiles(jobName)
       end
    end
 
-   local snapshotNoughtDir = lmrconfig.steadyFlowDirectory(0)
+   local initDir = lmrCfg["initial-field-directory"]
+   local snapshotInitDir = lmrconfig.snapshotDirectory(initDir)
    local fileName
-   os.execute("mkdir -p " .. snapshotNoughtDir)
+   os.execute("mkdir -p " .. snapshotInitDir)
    for i, id in ipairs(fluidBlockIdsForPrep) do
-      if false then -- May activate print statement for debug.
-         print("FluidBlock id=", id)
-      end
       local idx = id+1
       local blk = fluidBlocks[idx]
       local gridMetadata = gridsList[idx]
-      fileName = lmrconfig.steadyFlowFilename(0, id)
-      --
-      if not blk.grid then
-         -- We assume a direct match between FluidBlock and grid id numbers.
-         local gridFileName = lmrconfig.gridFilenameWithoutExt(id)
-         local gridFmt
-         if config.grid_format == "gziptext" then
-            gridFileName = gridFileName .. ".gz"
-            gridFmt = "gziptext"
-         elseif config.grid_format == "rawbinary" then
-            gridFileName = gridFileName .. ".bin"
-            gridFmt = "rawbinary"
-         else
-            error(string.format("Oops, invalid grid_format: %s", config.grid_format))
-         end
-         if gridMetadata.type == "structured_grid" then
-            blk.grid = StructuredGrid:new{filename=gridFileName, fmt=gridFmt}
-         else
-            blk.grid = UnstructuredGrid:new{filename=gridFileName, fmt=gridFmt}
-         end
+      -- We assume a direct match between FluidBlock and grid id numbers.
+      local gridFilename
+      local gridForSimFilename
+      if config.grid_format == "gziptext" then
+	 gridFilename = lmrconfig.gridFilename(id, lmrCfg["gzip-extension"])
+	 gridForSimFilename = lmrconfig.gridForSimFilename(lmrCfg["initial-field-directory"], id, lmrCfg["gzip-extension"])
+      elseif config.grid_format == "rawbinary" then
+	 gridFilename = lmrconfig.gridFilename(id)
+	 gridForSimFilename = lmrconfig.gridForSimFilename(lmrCfg["initial-field-directory"], id)
+      else
+	 error(string.format("Oops, invalid grid_format: %s", config.grid_format))
       end
+      if gridMetadata.type == "structured_grid" then
+	 blk.grid = StructuredGrid:new{filename=gridFilename, fmt=config.grid_format}
+      else
+	 blk.grid = UnstructuredGrid:new{filename=gridFilename, fmt=config.grid_format}
+      end
+      -- Copy from staging area to initial snapshot area
+      os.execute("cp " .. gridFilename .. " " .. gridForSimFilename)
       --
       local ifs = blk.initialState
       -- Check if we need to do something special with initialState
@@ -297,24 +299,6 @@ function buildFlowFiles(jobName)
 	 -- leave alone
       elseif type(ifs) == "userdata" then
 	 -- presume to be a wrapped-D-language _FlowState object already
-      elseif type(ifs) == "string" then
-         -- We are given the name of a flow file and we'll copy that in place directly
-         existingFlowFile = ifs
-         -- Presume file exists and let 'cp' command complain if it doesn't
-         cmd = "cp " .. existingFlowFile .. " " .. fileName
-         returnCode = os.execute(cmd)
-         if returnCode ~= 0 then
-            errMsg = "Error while trying to copy an existing flow solution as initial flow solution.\n"
-            errMsg = errMsg .. "FluidBlock id= " .. id .. "\n"
-            errMsg = errMsg .. "Specified existing flow file: " .. existingFlowFile .. "\n"
-            errMsg = errMsg .. "Check this file exists and is readable.\n"
-            errMsg = errMsg .. "Bailing out!\n"
-            error(errMsg)
-         end
-         -- Otherwise succesful.
-         str = string.format("Initialised FluidBlock id= %d with existing flow solution: \n\t%s",
-                             id, existingFlowFile)
-         print(str)
       else
 	 error("Unexpected type for initial flow state in block.")
       end
@@ -322,11 +306,7 @@ function buildFlowFiles(jobName)
       if type(ifs) ~= "string" then
          local grid = fluidBlocks[idx].grid
          local omegaz = fluidBlocks[idx].omegaz
-         if grid:get_type() == "structured_grid" then
-            write_initial_sg_flow_file(fileName, grid, ifs, config.start_time, omegaz)
-         else
-            write_initial_usg_flow_file(fileName, grid, ifs, config.start_time, omegaz)
-         end
+	 writeInitialFlowFile(id, grid, ifs, nil, omegaz)
       end
    end
    --

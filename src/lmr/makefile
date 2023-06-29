@@ -375,4 +375,6 @@ lmr: main.d $(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DLINKFLAGS)
 
-
+blockio_with_str_subst.d : blockio.d
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		blockio.d > blockio_with_str_subst.d

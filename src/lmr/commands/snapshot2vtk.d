@@ -129,7 +129,7 @@ void main_(string[] args)
         snaps[] = availSnapshots[];
     }
     if (snapshots && !allSnapshots) {
-        foreach (i; snapshots) snaps ~= format(lmrCfg.snapshotIdxFmtStr, i);
+        foreach (i; snapshots) snaps ~= format(lmrCfg.snapshotIdxFmt, i);
     }
     if (finalSnapshot && !allSnapshots) {
         snaps ~= availSnapshots[$-1];
@@ -158,7 +158,7 @@ void main_(string[] args)
             if (verbosity > 2) {
                 writefln("lmr snapshot2vtk: Writing block %d for snapshot %s to disk.", jb, snap);
             }
-            string vtuFileName = "flow-" ~ format(lmrCfg.blkFmtStr, jb) ~ "-" ~ snap ~ ".vtu";
+            string vtuFileName = "flow-" ~ format(lmrCfg.blkIdxFmt, jb) ~ "-" ~ snap ~ ".vtu";
             add_dataset_to_PVD_file(pvdFile, to!double(snap), vtuFileName);
             add_piece_to_PVTU_file(pvtuFile, vtuFileName);
             write_VTU_file(soln.flowBlocks[jb], soln.gridBlocks[jb], lmrCfg.vtkDir~"/"~vtuFileName, binaryFormat);
