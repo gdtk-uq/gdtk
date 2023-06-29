@@ -119,9 +119,26 @@ class MultiTemperatureGasMixture : ThermodynamicModel {
         }
     }
 
-    override void updateFromPU(ref GasState gs) {}
+    override void updateFromPU(ref GasState gs) {
+        // update the thermo state from pressure and internal energy.
+        // Requires the following properties to be set:
+        //   + u
+        //   + p
+        //   + u_modes
+
+        _update_temperature(gs);
+        _update_T_modes(gs);
+        _update_density(gs);
+        _update_p_e(gs);
+    }
     
     @nogc void updateFromPT(ref GasState gs){
+        // update the thermo state from pressure and temperature.
+        // Requires the following properties to be set:
+        //   + T
+        //   + T_modes
+        //   + pressure
+
         _update_density(gs);
         gs.u = _mixture_transrot_energy(gs);
         _update_u_modes(gs);
@@ -129,26 +146,36 @@ class MultiTemperatureGasMixture : ThermodynamicModel {
     }
 
     @nogc void updateFromRhoU(ref GasState gs){
-        number sum_a = 0.0;
-        number sum_b = 0.0;
-        foreach (isp; 0 .. _n_species) {
-            if (isp == _electron_idx) continue;
-            sum_a += gs.massf[isp] * (_CpTR[isp]*T_REF - _Delta_hf[isp]);
-            sum_b += gs.massf[isp] * (_CpTR[isp] - _R[isp]);
-        }
-        gs.T = (gs.u + sum_a) / sum_b;
+        // update the thermo state from rho and internal energy.
+        // Requires the following properties to be set:
+        //   + rho
+        //   + u
+        //   + u_modes
+
+        _update_temperature(gs);
         _update_T_modes(gs);
         _update_pressure(gs);
     }
 
     @nogc void updateFromRhoT(ref GasState gs){
+        // update the thermo state from rho and temperature.
+        // Requires the following properties to be set:
+        //   + rho
+        //   + T
+        //   + T_modes
+
         _update_pressure(gs);
         gs.u = _mixture_transrot_energy(gs);
         _update_u_modes(gs);
     }
     
     @nogc void updateFromRhoP(ref GasState gs){
-        // assume that u_modes is set correctly as well as rho and p
+        // Update the thermo state from rho and pressure.
+        // Requires the following properties to be set:
+        //   + rho
+        //   + p
+        //   + u_modes
+
         _update_T_modes(gs);
         gs.T = _transrot_temp_from_rho_p(gs);
         gs.u = _mixture_transrot_energy(gs);
@@ -275,6 +302,11 @@ private:
     int[] _max_iterations;
 
     @nogc void _update_density(ref GasState gs){
+        // update the density of the gas, assumes the following are correct:
+        //   + massf
+        //   + T (and T_modes)
+        //   + p
+
         number denom = 0.0;
         foreach (isp; 0 .. _n_species) {
             number T = (_electron_idx == isp) ? gs.T_modes[_electron_mode] : gs.T;
@@ -283,7 +315,27 @@ private:
         gs.rho = gs.p/denom;
     }
 
+    @nogc void _update_temperature(ref GasState gs) {
+        // update the translational temperature, assuming the following are correct:
+        //   + massf
+        //   + u
+
+        number sum_a = 0.0;
+        number sum_b = 0.0;
+        foreach (isp; 0 .. _n_species) {
+            if (isp == _electron_idx) continue;
+            sum_a += gs.massf[isp] * (_CpTR[isp]*T_REF - _Delta_hf[isp]);
+            sum_b += gs.massf[isp] * (_CpTR[isp] - _R[isp]);
+        }
+        gs.T = (gs.u + sum_a) / sum_b;
+    }
+
     @nogc void _update_pressure(ref GasState gs) {
+        // update the pressure, assuming the following are correct:
+        //   + massf
+        //   + rho
+        //   + T (and T_modes)
+
         gs.p = 0.0;
         foreach (isp; 0 .. _n_species) {
             number T = (isp == _electron_idx) ? gs.T_modes[_electron_mode] : gs.T;
@@ -293,18 +345,30 @@ private:
     }
 
     @nogc void _update_T_modes(ref GasState gs) {
+        // update T_modes, assuming the following are correct:
+        //   + u_modes
+        //   + massf
+
         foreach (imode; 0 .. _n_modes) {
             gs.T_modes[imode] = _temperature_of_mode(gs, imode);
         }
     }
 
     @nogc void _update_u_modes(ref GasState gs) {
+        // update u_modes, assuming the following are correct:
+        //   + T_modes
+        //   + massf
+
         foreach (imode; 0 .. _n_modes) {
             gs.u_modes[imode] = _mixture_energy_in_mode(gs, imode);
         }
     }
 
     @nogc void _update_p_e(ref GasState gs){
+        // update the electron pressure, assuming the following are correct:
+        //   + massf
+        //   + T_modes
+
         if (_electron_idx != -1){
             gs.p_e = gs.rho*gs.massf[_electron_idx]*_R[_electron_idx]*gs.T_modes[_electron_mode];
         }
@@ -554,18 +618,20 @@ version(multi_temperature_gas_test) {
         string[] speciesNames;
         string[] energy_mode_names;
         getArrayOfStrings(L, "species", speciesNames);
-        getArrayOfStrings(L, "energy_mode_names", energy_mode_names);
+        getArrayOfStrings(L, "energy_modes", energy_mode_names);
         auto tm = new MultiTemperatureGasMixture(L, speciesNames, energy_mode_names);
         lua_close(L);
         auto gs = GasState(5, 4);
 
-        gs.rho = 1.10696;
-        gs.u = -67000.3;
-        gs.u_modes = [to!number(19084.572423887566), to!number(31.780590009726037), to!number(42.397165292842836), to!number(0.018510507215781596)];
+        gs.p = 1.0e6;
+        gs.T = 300.0;
+        gs.T_modes = [to!number(901), to!number(302), to!number(403), to!number(704)];
         gs.massf = [to!number(0.8), to!number(0.1), to!number(0.025), to!number(0.025), to!number(0.05)];
-        gs.p = 100000.0;
-        gs.T = 500.0;
-        gs.T_modes = [to!number(1000.0), to!number(400.0), to!number(500.0), to!number(800.0)];
+        tm.updateFromPT(gs);
+        number rho = gs.rho;
+        gs.T = 450.0;
+        gs.T_modes = [to!number(500), to!number(900), to!number(321), to!number(2000)];
+        gs.p = 1.2e6;
         tm.updateFromRhoU(gs);
 
         assert(approxEqualNumbers(to!number(300.0), gs.T, 1.0e-6), failedUnitTest());
@@ -573,6 +639,21 @@ version(multi_temperature_gas_test) {
         assert(approxEqualNumbers(to!number(302.0), gs.T_modes[1], 1.0e-6), failedUnitTest());
         assert(approxEqualNumbers(to!number(403.0), gs.T_modes[2], 1.0e-6), failedUnitTest());
         assert(approxEqualNumbers(to!number(704.0), gs.T_modes[3], 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(to!number(1.0e6), gs.p, 1.0e-6), failedUnitTest());
+
+        gs.T = 550.0;
+        gs.T_modes = [to!number(500), to!number(900), to!number(321), to!number(2000)];
+        gs.rho = 0.1;
+        tm.updateFromPU(gs);
+
+        assert(approxEqualNumbers(to!number(300.0), gs.T, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(to!number(901.0), gs.T_modes[0], 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(to!number(302.0), gs.T_modes[1], 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(to!number(403.0), gs.T_modes[2], 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(to!number(704.0), gs.T_modes[3], 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(to!number(rho), gs.rho, 1.0e-6), failedUnitTest());
+
+
 
         return 0;
     }

@@ -2,22 +2,20 @@ model = 'CompositeGas'
 species = {'N2', 'O2', 'N', 'O', 'NO'}
 
 physical_model = 'multi-temperature-gas'
-energy_mode_names = {"N2", "O2", "NO", "electronic"}
+energy_modes = {"N2", "O2", "NO", "electronic"}
 
 db = {}
 
 db.modes = {
-    N2 = {components = {"N2:vib"}},
-    O2 = {components = {"O2:vib"}},
-    NO = {components = {"NO:vib"}},
+    N2 = {"N2:vib"},
+    O2 = {"O2:vib"},
+    NO = {"NO:vib"},
     electronic = {
-        components = {
-            "N2:electronic", 
-            "O2:electronic", 
-            "N:electronic", 
-            "O:electronic", 
-            "NO:electronic"
-        }
+      "N2:electronic",
+      "O2:electronic",
+      "N:electronic",
+      "O:electronic",
+      "NO:electronic"
     }
 }
 
