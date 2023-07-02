@@ -29,6 +29,7 @@ import dyaml.event;
 import dyaml.exception;
 import dyaml.linebreak;
 import dyaml.queue;
+import dyaml.scanner;
 import dyaml.style;
 import dyaml.tagdirective;
 
@@ -77,7 +78,7 @@ struct Emitter(Range, CharType) if (isOutputRange!(Range, CharType))
         Range stream_;
 
         /// Type used for upcoming emitter steps
-        alias EmitterFunction = void function(typeof(this)*) @safe;
+        alias EmitterFunction = void function(scope typeof(this)*) @safe;
 
         ///Stack of states.
         Appender!(EmitterFunction[]) states_;
@@ -732,14 +733,14 @@ struct Emitter(Range, CharType) if (isOutputRange!(Range, CharType))
             //}
             auto writer = ScalarWriter!(Range, CharType)(&this, analysis_.scalar,
                                        context_ != Context.mappingSimpleKey);
-            with(writer) final switch(style_)
+            final switch(style_)
             {
                 case ScalarStyle.invalid:      assert(false);
-                case ScalarStyle.doubleQuoted: writeDoubleQuoted(); break;
-                case ScalarStyle.singleQuoted: writeSingleQuoted(); break;
-                case ScalarStyle.folded:       writeFolded();       break;
-                case ScalarStyle.literal:      writeLiteral();      break;
-                case ScalarStyle.plain:        writePlain();        break;
+                case ScalarStyle.doubleQuoted: writer.writeDoubleQuoted(); break;
+                case ScalarStyle.singleQuoted: writer.writeSingleQuoted(); break;
+                case ScalarStyle.folded:       writer.writeFolded();       break;
+                case ScalarStyle.literal:      writer.writeLiteral();      break;
+                case ScalarStyle.plain:        writer.writePlain();        break;
             }
             analysis_.flags.isNull = true;
             style_ = ScalarStyle.invalid;
@@ -774,7 +775,7 @@ struct Emitter(Range, CharType) if (isOutputRange!(Range, CharType))
             {
                 if(style_ == ScalarStyle.invalid){style_ = chooseScalarStyle();}
                 if((!canonical_ || (tag is null)) &&
-                   (style_ == ScalarStyle.plain ? event_.implicit : !event_.implicit && (tag is null)))
+                   ((tag == "tag:yaml.org,2002:str") || (style_ == ScalarStyle.plain ? event_.implicit : !event_.implicit && (tag is null))))
                 {
                     preparedTag_ = null;
                     return;
@@ -906,7 +907,7 @@ struct Emitter(Range, CharType) if (isOutputRange!(Range, CharType))
         {
 
             string tagString = tag;
-            if(tagString == "!"){return tagString;}
+            if (tagString == "!") return "!";
             string handle;
             string suffix = tagString;
 
@@ -949,7 +950,7 @@ struct Emitter(Range, CharType) if (isOutputRange!(Range, CharType))
         ///Prepare anchor for output.
         static string prepareAnchor(const string anchor) @safe
             in(anchor != "",  "Anchor must not be empty")
-            in(anchor.all!(c => isAlphaNum(c) || c.among!('-', '_')), "Anchor contains invalid characters")
+            in(anchor.all!isNSAnchorName, "Anchor contains invalid characters")
         {
             return anchor;
         }

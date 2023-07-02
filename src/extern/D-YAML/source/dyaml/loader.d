@@ -64,8 +64,7 @@ struct Loader
          {
             try
             {
-                auto loader = Loader(std.file.read(filename));
-                loader.name_ = filename;
+                auto loader = Loader(std.file.read(filename), filename);
                 return loader;
             }
             catch(FileException e)
@@ -77,15 +76,16 @@ struct Loader
          /// ditto
          static Loader fromFile(File file) @system
          {
-            auto loader = Loader(file.byChunk(4096).join);
-            loader.name_ = file.name;
+            auto loader = Loader(file.byChunk(4096).join, file.name);
             return loader;
          }
 
         /** Construct a Loader to load YAML from a string.
          *
-         * Params:  data = String to load YAML from. The char[] version $(B will)
-         *                 overwrite its input during parsing as D:YAML reuses memory.
+         * Params:
+         *   data = String to load YAML from. The char[] version $(B will)
+         *          overwrite its input during parsing as D:YAML reuses memory.
+         *   filename = The filename to give to the Loader, defaults to `"<unknown>"`
          *
          * Returns: Loader loading YAML from given string.
          *
@@ -93,14 +93,14 @@ struct Loader
          *
          * YAMLException if data could not be read (e.g. a decoding error)
          */
-        static Loader fromString(char[] data) @safe
+        static Loader fromString(char[] data, string filename = "<unknown>") @safe
         {
-            return Loader(cast(ubyte[])data);
+            return Loader(cast(ubyte[])data, filename);
         }
         /// Ditto
-        static Loader fromString(string data) @safe
+        static Loader fromString(string data, string filename = "<unknown>") @safe
         {
-            return fromString(data.dup);
+            return fromString(data.dup, filename);
         }
         /// Load  a char[].
         @safe unittest
@@ -140,17 +140,18 @@ struct Loader
             return Loader(yamlData);
         }
         /// Ditto
-        private this(void[] yamlData) @system
+        private this(void[] yamlData, string name = "<unknown>") @system
         {
-            this(cast(ubyte[])yamlData);
+            this(cast(ubyte[])yamlData, name);
         }
         /// Ditto
-        private this(ubyte[] yamlData) @safe
+        private this(ubyte[] yamlData, string name = "<unknown>") @safe
         {
             resolver_ = Resolver.withDefaultResolvers;
+            name_ = name;
             try
             {
-                auto reader_ = new Reader(yamlData);
+                auto reader_ = new Reader(yamlData, name);
                 scanner_ = Scanner(reader_);
                 parser_ = new Parser(scanner_);
             }
@@ -166,6 +167,7 @@ struct Loader
         void name(string name) pure @safe nothrow @nogc
         {
             name_ = name;
+            scanner_.name = name;
         }
 
         /// Specify custom Resolver to use.
@@ -392,4 +394,20 @@ struct Loader
     auto yaml = "{\n\"root\": {\n\t\"key\": \"value\"\n    }\n}";
     auto doc = Loader.fromString(yaml).load();
     assert(doc.isValid);
+}
+
+@safe unittest
+{
+    import std.exception : collectException;
+
+    auto yaml = q"EOS
+    value: invalid: string
+EOS";
+    auto filename = "invalid.yml";
+    auto loader = Loader.fromString(yaml);
+    loader.name = filename;
+
+    Node unused;
+    auto e = loader.load().collectException!ScannerException(unused);
+    assert(e.mark.name == filename);
 }

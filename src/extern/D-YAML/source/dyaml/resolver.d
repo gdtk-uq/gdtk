@@ -27,50 +27,43 @@ import dyaml.exception;
 /// Type of `regexes`
 private alias RegexType = Tuple!(string, "tag", const Regex!char, "regexp", string, "chars");
 
-private immutable RegexType[] regexes;
-
-shared static this() @safe
-{
-    RegexType[] tmp;
-    tmp ~= RegexType("tag:yaml.org,2002:bool",
-                     regex(r"^(?:yes|Yes|YES|no|No|NO|true|True|TRUE" ~
-                           "|false|False|FALSE|on|On|ON|off|Off|OFF)$"),
-                     "yYnNtTfFoO");
-    tmp ~= RegexType("tag:yaml.org,2002:float",
-                     regex(r"^(?:[-+]?([0-9][0-9_]*)\\.[0-9_]*" ~
-                           "(?:[eE][-+][0-9]+)?|[-+]?(?:[0-9][0-9_]" ~
-                           "*)?\\.[0-9_]+(?:[eE][-+][0-9]+)?|[-+]?" ~
-                           "[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]" ~
-                           "*|[-+]?\\.(?:inf|Inf|INF)|\\." ~
-                           "(?:nan|NaN|NAN))$"),
-                     "-+0123456789.");
-    tmp ~= RegexType("tag:yaml.org,2002:int",
-                     regex(r"^(?:[-+]?0b[0-1_]+" ~
-                           "|[-+]?0[0-7_]+" ~
-                           "|[-+]?(?:0|[1-9][0-9_]*)" ~
-                           "|[-+]?0x[0-9a-fA-F_]+" ~
-                           "|[-+]?[1-9][0-9_]*(?::[0-5]?[0-9])+)$"),
-                     "-+0123456789");
-    tmp ~= RegexType("tag:yaml.org,2002:merge", regex(r"^<<$"), "<");
-    tmp ~= RegexType("tag:yaml.org,2002:null",
-                     regex(r"^$|^(?:~|null|Null|NULL)$"), "~nN\0");
-    tmp ~= RegexType("tag:yaml.org,2002:timestamp",
-                     regex(r"^[0-9][0-9][0-9][0-9]-[0-9][0-9]-" ~
-                           "[0-9][0-9]|[0-9][0-9][0-9][0-9]-[0-9]" ~
-                           "[0-9]?-[0-9][0-9]?[Tt]|[ \t]+[0-9]" ~
-                           "[0-9]?:[0-9][0-9]:[0-9][0-9]" ~
-                           "(?:\\.[0-9]*)?(?:[ \t]*Z|[-+][0-9]" ~
-                           "[0-9]?(?::[0-9][0-9])?)?$"),
-                     "0123456789");
-    tmp ~= RegexType("tag:yaml.org,2002:value", regex(r"^=$"), "=");
-
+private immutable RegexType[] regexes = [
+    RegexType("tag:yaml.org,2002:bool",
+              regex(r"^(?:yes|Yes|YES|no|No|NO|true|True|TRUE" ~
+                     "|false|False|FALSE|on|On|ON|off|Off|OFF)$"),
+              "yYnNtTfFoO"),
+    RegexType("tag:yaml.org,2002:float",
+              regex(r"^(?:[-+]?([0-9][0-9_]*)\\.[0-9_]*" ~
+                     "(?:[eE][-+][0-9]+)?|[-+]?(?:[0-9][0-9_]" ~
+                     "*)?\\.[0-9_]+(?:[eE][-+][0-9]+)?|[-+]?" ~
+                     "[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]" ~
+                     "*|[-+]?\\.(?:inf|Inf|INF)|\\." ~
+                     "(?:nan|NaN|NAN))$"),
+              "-+0123456789."),
+    RegexType("tag:yaml.org,2002:int",
+              regex(r"^(?:[-+]?0b[0-1_]+" ~
+                     "|[-+]?0[0-7_]+" ~
+                     "|[-+]?(?:0|[1-9][0-9_]*)" ~
+                     "|[-+]?0x[0-9a-fA-F_]+" ~
+                     "|[-+]?[1-9][0-9_]*(?::[0-5]?[0-9])+)$"),
+              "-+0123456789"),
+    RegexType("tag:yaml.org,2002:merge", regex(r"^<<$"), "<"),
+    RegexType("tag:yaml.org,2002:null",
+              regex(r"^$|^(?:~|null|Null|NULL)$"), "~nN\0"),
+    RegexType("tag:yaml.org,2002:timestamp",
+              regex(r"^[0-9][0-9][0-9][0-9]-[0-9][0-9]-" ~
+                     "[0-9][0-9]|[0-9][0-9][0-9][0-9]-[0-9]" ~
+                     "[0-9]?-[0-9][0-9]?[Tt]|[ \t]+[0-9]" ~
+                     "[0-9]?:[0-9][0-9]:[0-9][0-9]" ~
+                     "(?:\\.[0-9]*)?(?:[ \t]*Z|[-+][0-9]" ~
+                     "[0-9]?(?::[0-9][0-9])?)?$"),
+              "0123456789"),
+    RegexType("tag:yaml.org,2002:value", regex(r"^=$"), "="),
 
     //The following resolver is only for documentation purposes. It cannot work
     //because plain scalars cannot start with '!', '&', or '*'.
-    tmp ~= RegexType("tag:yaml.org,2002:yaml", regex(r"^(?:!|&|\*)$"), "!&*");
-
-    regexes = () @trusted { return cast(immutable)tmp; }();
-}
+    RegexType("tag:yaml.org,2002:yaml", regex(r"^(?:!|&|\*)$"), "!&*"),
+];
 
 /**
  * Resolves YAML tags (data types).
@@ -170,7 +163,7 @@ struct Resolver
          *
          * Returns: Resolved tag.
          */
-        string resolve(const NodeID kind, const string tag, const string value,
+        string resolve(const NodeID kind, const string tag, scope string value,
                     const bool implicit) @safe
         {
             import std.array : empty, front;
@@ -196,7 +189,13 @@ struct Resolver
                     //If regexp matches, return tag.
                     foreach(resolver; resolvers)
                     {
-                        if(!(match(value, resolver[1]).empty))
+                        // source/dyaml/resolver.d(192,35): Error: scope variable `__tmpfordtorXXX`
+                        // assigned to non-scope parameter `this` calling
+                        // `std.regex.RegexMatch!string.RegexMatch.~this`
+                        bool isEmpty = () @trusted {
+                            return match(value, resolver[1]).empty;
+                        }();
+                        if(!isEmpty)
                         {
                             return resolver[0];
                         }

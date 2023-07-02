@@ -1,0 +1,10 @@
+{
+    "name": "benchmark",
+    "targetType": "executable",
+    "sourceFiles": ["yaml_bench.d"],
+    "mainSourceFile": "yaml_bench.d",
+    "dependencies":
+    {
+        "dyaml": { "version" : "*" }
+    }
+}

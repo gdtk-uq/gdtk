@@ -21,6 +21,7 @@ DYAML_FILES := $(DYAML_DIR)/composer.d \
 	$(DYAML_DIR)/resolver.d \
 	$(DYAML_DIR)/scanner.d \
 	$(DYAML_DIR)/serializer.d \
+	$(DYAML_DIR)/stdsumtype.d \
 	$(DYAML_DIR)/style.d \
 	$(DYAML_DIR)/tagdirective.d \
 	$(DYAML_DIR)/token.d

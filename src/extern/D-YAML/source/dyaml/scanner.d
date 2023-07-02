@@ -72,6 +72,8 @@ alias isBChar = among!('\n', '\r', '\u0085', '\u2028', '\u2029');
 
 alias isFlowScalarBreakSpace = among!(' ', '\t', '\0', '\n', '\r', '\u0085', '\u2028', '\u2029', '\'', '"', '\\');
 
+alias isNSAnchorName = c => !c.isWhiteSpace && !c.among!('[', ']', '{', '}', ',', '\uFEFF');
+
 /// Marked exception thrown at scanner errors.
 ///
 /// See_Also: MarkedYAMLException
@@ -185,6 +187,12 @@ struct Scanner
             return tokens_.empty;
         }
 
+        /// Set file name.
+        void name(string name) @safe pure nothrow @nogc
+        {
+            reader_.name = name;
+        }
+
     private:
         /// Most scanning error messages have the same format; so build them with this
         /// function.
@@ -280,7 +288,7 @@ struct Scanner
                 {
                     enforce(!key.required,
                             new ScannerException("While scanning a simple key",
-                                                 Mark(key.line, key.column),
+                                                 Mark(reader_.name, key.line, key.column),
                                                  "could not find expected ':'", reader_.mark));
                     key.isNull = true;
                 }
@@ -328,7 +336,7 @@ struct Scanner
                 const key = possibleSimpleKeys_[flowLevel_];
                 enforce(!key.required,
                         new ScannerException("While scanning a simple key",
-                                             Mark(key.line, key.column),
+                                             Mark(reader_.name, key.line, key.column),
                                              "could not find expected ':'", reader_.mark));
                 possibleSimpleKeys_[flowLevel_].isNull = true;
             }
@@ -540,7 +548,7 @@ struct Scanner
             {
                 const key = possibleSimpleKeys_[flowLevel_];
                 possibleSimpleKeys_[flowLevel_].isNull = true;
-                Mark keyMark = Mark(key.line, key.column);
+                Mark keyMark = Mark(reader_.name, key.line, key.column);
                 const idx = key.tokenIndex - tokensTaken_;
 
                 assert(idx >= 0);
@@ -753,6 +761,25 @@ struct Scanner
 
             enforce(length > 0, new ScannerException("While scanning " ~ name,
                 startMark, expected("alphanumeric, '-' or '_'", c), reader_.mark));
+
+            reader_.sliceBuilder.write(reader_.get(length));
+        }
+
+        /// Scan a string.
+        ///
+        /// Assumes that the caller is building a slice in Reader, and puts the scanned
+        /// characters into that slice.
+        void scanAnchorAliasToSlice(const Mark startMark) @safe
+        {
+            size_t length;
+            dchar c = reader_.peek();
+            while (c.isNSAnchorName)
+            {
+                c = reader_.peek(++length);
+            }
+
+            enforce(length > 0, new ScannerException("While scanning an anchor or alias",
+                startMark, expected("a printable character besides '[', ']', '{', '}' and ','", c), reader_.mark));
 
             reader_.sliceBuilder.write(reader_.get(length));
         }
@@ -982,20 +1009,14 @@ struct Scanner
         Token scanAnchor(const TokenID id) @safe
         {
             const startMark = reader_.mark;
-            const dchar i = reader_.get();
+            reader_.forward(); // The */& character was only peeked, so we drop it now
 
             reader_.sliceBuilder.begin();
-            if(i == '*') { scanAlphaNumericToSlice!"an alias"(startMark); }
-            else         { scanAlphaNumericToSlice!"an anchor"(startMark); }
+            scanAnchorAliasToSlice(startMark);
             // On error, value is discarded as we return immediately
             char[] value = reader_.sliceBuilder.finish();
 
-            enum anchorCtx = "While scanning an anchor";
-            enum aliasCtx  = "While scanning an alias";
-            enforce(reader_.peek().isWhiteSpace ||
-                reader_.peekByte().among!('?', ':', ',', ']', '}', '%', '@'),
-                new ScannerException(i == '*' ? aliasCtx : anchorCtx, startMark,
-                    expected("alphanumeric, '-' or '_'", reader_.peek()), reader_.mark));
+            assert(!reader_.peek().isNSAnchorName, "Anchor/alias name not fully scanned");
 
             if(id == TokenID.alias_)
             {
@@ -1206,7 +1227,10 @@ struct Scanner
                 // is not Strip)
                 else
                 {
-                    reader_.sliceBuilder.write(lineBreak);
+                    if (lineBreak != '\0')
+                    {
+                        reader_.sliceBuilder.write(lineBreak);
+                    }
                 }
             }
 
@@ -1785,4 +1809,18 @@ struct Scanner
             }
             return '\0';
         }
+}
+
+// Issue 309 - https://github.com/dlang-community/D-YAML/issues/309
+@safe unittest
+{
+    enum str = q"EOS
+exp: |
+  foobar
+EOS".chomp;
+
+    auto r = new Reader(cast(ubyte[])str.dup);
+    auto s = Scanner(r);
+    auto elems = s.map!"a.value".filter!"a.length > 0".array;
+    assert(elems[1] == "foobar");
 }
