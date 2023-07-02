@@ -2504,8 +2504,8 @@ struct Node
         }
 
     ///
-    public void toString (DGT) (scope DGT sink)
-        const scope @safe
+    public void toString (DGT) (DGT sink)
+        const @safe
     {
         this.value_.match!(
             (const bool v)        => formattedWrite(sink, v ? "true" : "false"),
