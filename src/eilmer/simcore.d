@@ -248,7 +248,10 @@ int init_simulation(int tindx, int nextLoadsIndx,
     // an exception will be thrown if there are negative or zero cell volumes.
     // Having messed up grids is a fairly common occurrence, so we should be ready.
     bool any_block_fail = 0;
-    foreach (myblk; parallel(localFluidBlocks,1)) {
+    foreach (myblk; localFluidBlocks) {
+        // 2023-07-04 PJ: Have changed this loop to run only on one thread
+        // because we were seeing a null value for the Tmodes dynamic array
+        // when appending elements for the construction of i-faces within the block.
         try {
             if (GlobalConfig.grid_motion != GridMotion.none) {
                 myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, SimState.current_tindx,
@@ -285,11 +288,17 @@ int init_simulation(int tindx, int nextLoadsIndx,
     }
     shared double[] time_array;
     time_array.length = localFluidBlocks.length;
-    foreach (i, myblk; parallel(localFluidBlocks,1)) {
+    foreach (myblk; localFluidBlocks) {
+        // 2023-07-04 PJ: Split this loop out and make it serial
+        // because we are having trouble with parallel and GC.
         myblk.identify_reaction_zones(0);
         myblk.identify_turbulent_zones(0);
         myblk.identify_suppress_reconstruction_zones();
         myblk.identify_suppress_viscous_stresses_zones();
+    }
+    foreach (i, myblk; localFluidBlocks) {
+        // 2023-07-04 PJ: Split this loop out and make it serial
+        // because we are having trouble with parallel and GC.
         if (GlobalConfig.new_flow_format) {
             time_array[i] = myblk.read_solution(make_file_name("CellData", CellData.tag, job_name, myblk.id, SimState.current_tindx,
                                                             GlobalConfig.flowFileExt), false);
@@ -297,7 +306,10 @@ int init_simulation(int tindx, int nextLoadsIndx,
             time_array[i] = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, SimState.current_tindx,
                                                             GlobalConfig.flowFileExt), false);
         }
-
+    }
+    foreach (myblk; localFluidBlocks) {
+        // 2023-07-04 PJ: Split this loop out and make it serial
+        // because we are having trouble with parallel and GC.
         if (myblk.myConfig.verbosity_level >= 2) { writefln("Cold start cells in block %d", myblk.id); }
         // Note that, even for grid_motion==none simulations, we use the grid velocities for setting
         // the gas velocities at boundary faces.  These will need to be set to zero for correct viscous simulation.
@@ -424,18 +436,20 @@ int init_simulation(int tindx, int nextLoadsIndx,
     // cells' volume, position, area etc. But for the internal ghost cells we really want the
     // exact numbers. These are copied in here from the real cells in their corresponding
     // neighbour blocks.
+    if (GlobalConfig.verbosity_level >= 2) { writeln("Exchange ghost-cell geometry data."); }
     exchange_ghost_cell_geometry_data();
-
     //
     // Now that we know the ghost-cell locations, we can set up the least-squares subproblems for
     // 1. reconstruction prior to convective flux calculation for the unstructured-grid blocks
     // 2. calculation of flow gradients for the viscous fluxes with least-squares gradients.
+    if (GlobalConfig.verbosity_level >= 2) { writeln("Compute least-squares setup."); }
     foreach (myblk; localFluidBlocks) { myblk.compute_least_squares_setup(0); }
 
     version (gpu_chem) {
         initGPUChem();
     }
     // solid blocks assigned prior to this
+    if (GlobalConfig.verbosity_level >= 2) { writeln("Before solid-block setup."); }
     foreach (ref mySolidBlk; localSolidBlocks) {
         mySolidBlk.assembleArrays();
         mySolidBlk.bindFacesAndVerticesToCells();
@@ -640,6 +654,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
             }
         }
     }
+    if (GlobalConfig.verbosity_level >= 2) { writeln("After solid-block setup."); }
     // For the MLP limiter (on unstructured grids only), we need access to the
     // gradients stored in the cloud of cells surrounding a vertex.
     if ((GlobalConfig.interpolation_order > 1) &&
@@ -656,7 +671,9 @@ int init_simulation(int tindx, int nextLoadsIndx,
     if (GlobalConfig.diffuseWallBCsOnInit && (SimState.time == 0.0)) {
         writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
         writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
-        foreach (myblk; parallel(localFluidBlocks,1)) {
+        foreach (myblk; localFluidBlocks) {
+            // 2023-07-04 PJ: Make this loop serial
+            // because we are having trouble with parallel and GC.
             diffuseWallBCsIntoBlock(myblk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
         }
     }
@@ -694,6 +711,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     SimState.dt_global = GlobalConfig.dt_init;
     //
     // Fill in some more global information for the master interpreter.
+    if (GlobalConfig.verbosity_level >= 2) { writeln("Fill in global information in master Lua interpreter."); }
     auto L = GlobalConfig.master_lua_State;
     lua_pushboolean(L, GlobalConfig.in_mpi_context);
     lua_setglobal(L, "in_mpi_context");
@@ -727,6 +745,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     synchronize_corner_coords_for_all_blocks();
     //
     if (GlobalConfig.turb_model.needs_dwall) compute_wall_distances();
+    if (GlobalConfig.verbosity_level >= 2) { writeln("After compute wall distances."); }
     //
 
     if (GlobalConfig.solve_electric_field){
@@ -734,8 +753,10 @@ int init_simulation(int tindx, int nextLoadsIndx,
         eField = new ElectricField(localFluidBlocks, GlobalConfig.field_conductivity_model);
     }
     // Keep our memory foot-print small.
+    if (GlobalConfig.verbosity_level >= 2) { writeln("Before GC.collect."); }
     GC.collect();
     GC.minimize();
+    if (GlobalConfig.verbosity_level >= 2) { writeln("After GC.collect."); }
     //
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
 
@@ -753,7 +774,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     }
 
     if (GlobalConfig.is_master_task) {
-        writefln("Heap memory used: %.0f MB, wasted: %.0f MB, total: %.0f MB (%.0f-%.0f MB per task)",
+        writefln("Heap memory used: %.0f MB, unused: %.0f MB, total: %.0f MB (%.0f-%.0f MB per task)",
                  heapUsed, heapFree, heapUsed+heapFree, minTotal, maxTotal);
         stdout.flush();
     }
