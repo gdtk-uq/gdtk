@@ -52,6 +52,7 @@ import fluidblock : FluidBlock;
 import sfluidblock : SFluidBlock;
 import ufluidblock : UFluidBlock;
 import user_defined_source_terms : getUDFSourceTermsForCell;
+import blockio : blkIO;
 
 version(mpi_parallel) {
     import mpi;
@@ -2665,10 +2666,8 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
         }
 
         foreach (blk; localFluidBlocks) {
-            foreach (io; blk.block_io) {
-                auto fileName = flowFilename(nWrittenSnapshots, blk.id);
-                if (io.do_save()) io.save_to_file(fileName, dummySimTime);
-            }
+	    auto fileName = flowFilename(nWrittenSnapshots, blk.id);
+	    blkIO.writeVariablesToFile(fileName, blk.cells);
         }
 
 	// Add restart info
@@ -2693,10 +2692,8 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
             }
         }
         foreach (blk; localFluidBlocks) {
-            foreach (io; blk.block_io) {
-                auto fileName = flowFilename(nkCfg.totalSnapshots, blk.id);
-                if (io.do_save()) io.save_to_file(fileName, dummySimTime);
-            }
+	    auto fileName = flowFilename(nkCfg.totalSnapshots, blk.id);
+	    blkIO.writeVariablesToFile(fileName, blk.cells);
         }
 
 	// Shuffle the restart info

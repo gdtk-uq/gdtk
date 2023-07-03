@@ -112,9 +112,9 @@ void main_(string[] args)
     /*
      * Keep up to date with lmr.cfg::snapshotIdxFmrStr
      */
-    auto twoDigits = regex(r"[0-9][0-9]");
+    auto fourDigits = regex(r"[0-9][0-9][0-9][0-9]");
     foreach (string d; dirs) {
-        auto rgxMtch = matchAll(d, twoDigits);
+        auto rgxMtch = matchAll(d, fourDigits);
         if (!rgxMtch.empty()) {
             availSnapshots ~= d;
         }

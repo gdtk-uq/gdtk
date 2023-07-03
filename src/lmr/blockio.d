@@ -28,6 +28,7 @@ import fvcellio : FVCellIO, buildFlowVariables;
 import fluidblock : FluidBlock;
 import sfluidblock : SFluidBlock;
 import ufluidblock : UFluidBlock;
+import flowsolution : FluidBlockLite;
 
 BlockIO blkIO;
 
@@ -161,6 +162,15 @@ private:
     
 }
 
+
+//-------------------------------------------------------------
+// Functions intended for use from Lua at prep stage:
+//
+//     1. luafn_writeFlowMetadata
+//     2. luafn_writeInitialFlowFile
+//
+//-------------------------------------------------------------
+
 extern(C) int luafn_writeFlowMetadata(lua_State *L)
 {
     alias cfg = GlobalConfig;
@@ -197,3 +207,53 @@ extern(C) int luafn_writeInitialFlowFile(lua_State *L)
 }
 
  
+//-------------------------------------------------------------
+// Functions intended for use at post-processing stage:
+//
+//     1. readFlowVariablesFromFlowMetadata
+//     2. readFlowVariablesFromFile
+//
+//-------------------------------------------------------------
+string[] readFlowVariablesFromFlowMetadata()
+{
+    Node metadata = dyaml.Loader.fromFile(lmrCfg.flowMetadataFile).load();
+    string[] variables;
+    foreach (node; metadata["variables"].sequence) {
+	variables ~= node.as!string;
+    }
+    return variables;
+}
+
+void readFlowVariablesFromFile(FluidBlockLite blk, string fname, string[] variables, int ncells)
+{
+    size_t nvars = variables.length;
+    blk._data.length = ncells;
+    foreach (ref d; blk._data) d.length = nvars;
+
+    final switch (blk.flow_format) {
+    case "rawbinary":
+	double[1] dbl1;
+	auto infile = File(fname, "rb");
+	foreach (ivar; 0 .. nvars) {
+	    foreach (icell; 0 .. ncells) {
+		infile.rawRead(dbl1);
+		blk._data[icell][ivar] = dbl1[0];
+	    }
+	}
+	infile.close();
+	break;
+    case "gziptext":
+	auto byLine = new GzipByLine(fname);
+	string line;
+	double dbl;
+	string dblVarFmt = lmrCfg.dblVarFmt;
+	foreach (ivar; 0 .. nvars) {
+	    foreach (icell; 0 .. ncells) {
+		line = byLine.front; byLine.popFront;
+		formattedRead(line, dblVarFmt, &dbl);
+		blk._data[icell][ivar] = dbl;
+	    }
+	}
+	break;
+    }
+}

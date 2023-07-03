@@ -43,6 +43,7 @@ import vtk_writer;
 import fluidblockio_old;
 import fluidblockio;
 import lmrconfig;
+import blockio;
 
 import util.lua;
 import geom.luawrap;
@@ -91,7 +92,10 @@ public:
             throw new Error(text("Failed to parse JSON from config file: ", lmrCfg.cfgFile));
         }
         string flowFmt = jsonData["flow_format"].str;
+	string gridFmt = jsonData["grid_format"].str;
         // -- end initialising from JSONData
+	// Find out variables from metadata file
+	auto variables = readFlowVariablesFromFlowMetadata();
         //
         // Use job.list to get a hint of the type of each block.
         auto listFile = File(lmrCfg.blkListFile);
@@ -102,23 +106,24 @@ public:
             int ib_chk;
             string gridTypeName;
             string label;
-            formattedRead(listFileLine, " %d %s %s", &ib_chk, &gridTypeName, &label);
+	    int ncells;
+            formattedRead(listFileLine, " %d %s %s %d", &ib_chk, &gridTypeName, &label, &ncells);
             if (ib != ib_chk) {
                 string msg = format("Reading %s file ib=%d ib_chk=%d", lmrCfg.blkListFile, ib, ib_chk);
                 throw new FlowSolverException(msg);
             }
             auto gridType = gridTypeFromName(gridTypeName);
-            string gName = gridFilename(snapshot, to!int(ib));
+            string gName = gridFilename(lmrCfg.initialFieldDir, to!int(ib));
             final switch (gridType) {
             case Grid_t.structured_grid:
-                gridBlocks ~= new StructuredGrid(gName, grid_format);
+                gridBlocks ~= new StructuredGrid(gName, gridFmt);
                 break;
             case Grid_t.unstructured_grid:
-                gridBlocks ~= new UnstructuredGrid(gName, grid_format, false);
+                gridBlocks ~= new UnstructuredGrid(gName, gridFmt, false);
             }
             gridBlocks[$-1].sort_cells_into_bins();
             string fName = flowFilename(snapshot, to!int(ib));
-            flowBlocks ~= new FluidBlockLite(fName, ib, jsonData, gridType, flowFmt);
+            flowBlocks ~= new FluidBlockLite(fName, ib, jsonData, gridType, flowFmt, variables, ncells);
         } // end foreach ib
         this.jobName = "";
         this.nBlocks = nBlocks;
@@ -457,10 +462,13 @@ public:
         omegaz = getJSONdouble(jsonDataForBlk, "omegaz", 0.0);
     } // end "partial" constructor
 
-    this(string filename, size_t blkID, JSONValue jsonData, Grid_t gridType, string flow_format)
+    this(string filename, size_t blkID, JSONValue jsonData, Grid_t gridType, string flow_format, string[] variables, int ncells)
     {
+	variableNames = variables.dup;
+	foreach (i, var; variables) variableIndex[var] = i;
+	this.ncells = ncells;
         this(blkID, jsonData, gridType, flow_format);
-        this.read_block_data_from_file(filename, gridType, flow_format);
+        this.readFlowVariablesFromFile(filename, variables, ncells);
     } // end constructor from file
 
     this(ref const(FluidBlockLite) other, size_t[] cellList, size_t new_dimensions,

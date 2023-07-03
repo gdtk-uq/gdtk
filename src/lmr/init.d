@@ -23,7 +23,6 @@ import util.lua;
 import util.lua_service;
 import lua_helper;
 
-
 import json_helper;
 import lmrexceptions : LmrException;
 import lmrconfig;
@@ -36,7 +35,7 @@ import bc;
 import fluidblock : FluidBlock;
 import sfluidblock : SFluidBlock;
 import ufluidblock : UFluidBlock;
-import blockio;
+import blockio : blkIO, BinaryBlockIO, GzipBlockIO;
 
 version(mpi_parallel) {
     import mpi;
@@ -287,11 +286,11 @@ void initFluidBlocksZones()
 void initFluidBlocksFlowFieldSteadyMode(int snapshotStart)
 {
     bool anyBlockFail = false;
-    BlockIO blkIO;
     if (GlobalConfig.flow_format == "rawbinary")
 	blkIO = new BinaryBlockIO();
     else
 	blkIO = new GzipBlockIO();
+
     blkIO.readMetadataFromFile(lmrCfg.flowMetadataFile);
 
     foreach (blk; parallel(localFluidBlocks,1)) {
