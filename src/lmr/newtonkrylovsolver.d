@@ -64,8 +64,13 @@ version(mpi_parallel) {
  */
 
 File diagnostics;
-string diagnosticsDir = "diagnostics";
-string diagnosticsFilename = "lmr-nk-diagnostics.dat";
+string diagDir;
+string diagFile;
+static this()
+{
+    diagDir = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["diagnostics-directory"].str;
+    diagFile = diagDir ~ "/" ~ lmrJSONCfg["nk-diagnostics-filename"].str;
+}
 
 /*---------------------------------------------------------------------
  * Enums for preconditioners
@@ -2570,9 +2575,8 @@ void applyNewtonUpdate(double relaxationFactor)
  */
 void initialiseDiagnosticsFile()
 {
-    ensure_directory_is_present(diagnosticsDir);
-    auto fname = diagnosticsDir ~ "/" ~ diagnosticsFilename;
-    diagnostics = File(fname, "w");
+    ensure_directory_is_present(diagDir);
+    diagnostics = File(diagFile, "w");
     
     alias cfg = GlobalConfig;
 
@@ -2621,8 +2625,7 @@ void writeDiagnostics(int step, double dt, double cfl, double wallClockElapsed, 
     // We don't need to proceed on ranks other than master.
     if (!cfg.is_master_task) return;
     
-    auto fname = diagnosticsDir ~ "/" ~ diagnosticsFilename;
-    diagnostics = File(fname, "a");
+    diagnostics = File(diagFile, "a");
     diagnostics.writef("%8d %20.16e %20.16e %20.16e %.8f %2d %3d %8d %20.16e %20.16e %20.16e %20.16e ",
                        step, dt, cfl, activePhase.linearSolveTolerance, wallClockElapsed, 
                        gmresInfo.nRestarts, gmresInfo.iterationCount, fnCount,

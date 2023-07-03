@@ -36,6 +36,7 @@ import bc;
 import fluidblock : FluidBlock;
 import sfluidblock : SFluidBlock;
 import ufluidblock : UFluidBlock;
+import blockio;
 
 version(mpi_parallel) {
     import mpi;
@@ -286,8 +287,15 @@ void initFluidBlocksZones()
 void initFluidBlocksFlowFieldSteadyMode(int snapshotStart)
 {
     bool anyBlockFail = false;
+    BlockIO blkIO;
+    if (GlobalConfig.flow_format == "rawbinary")
+	blkIO = new BinaryBlockIO();
+    else
+	blkIO = new GzipBlockIO();
+    blkIO.readMetadataFromFile(lmrCfg.flowMetadataFile);
+
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.read_zip_solution(flowFilename(snapshotStart, blk.id));
+        blkIO.readVariablesFromFile(flowFilename(snapshotStart, blk.id), blk.cells);
         foreach (iface; blk.faces) iface.gvel.clear();
         foreach (cell; blk.cells) {
             cell.encode_conserved(0, 0, blk.omegaz);

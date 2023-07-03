@@ -11,9 +11,10 @@ immutable string BLK_IO_VERSION = "1.0";
 
 import std.stdio;
 import std.conv : to;
-import std.format : format;
+import std.format : format, formattedRead;
 
-import gzip : GzipOut;
+import gzip : GzipOut, GzipByLine;
+import dyaml;
 
 import util.lua;
 import nm.number;
@@ -48,7 +49,7 @@ public:
     {
 	auto f = File(fname, "w");
 	f.writefln("---");
-	f.writefln("  version: %s", BLK_IO_VERSION);
+	f.writefln("  version: \"%s\"", BLK_IO_VERSION);
 	f.writeln("  revision-id: PUT_REVISION_STRING_HERE");
 	f.writefln("  variables:");
 	foreach (var; mVariables) {
@@ -56,9 +57,29 @@ public:
 	}
 	f.close();
     }
+
+    final readMetadataFromFile(string fname)
+    {
+	Node metadata = dyaml.Loader.fromFile(fname).load();
+	string blkIOversion = metadata["version"].as!string;
+	if (blkIOversion != BLK_IO_VERSION) {
+	    string errMsg = "ERROR: The flow metadata version is unknown.\n";
+	    errMsg ~= format("Expected: %s   Received: %s", BLK_IO_VERSION, blkIOversion);
+	    throw new LmrException(errMsg);
+	}
+
+	mVariables.length = 0;
+	foreach (node; metadata["variables"].sequence) {
+	    mVariables ~= node.as!string;
+	}
+	mCIO = new FVCellIO(mVariables);
+    }
     
     abstract
     void writeVariablesToFile(string fname, FVCell[] cells);
+
+    abstract
+    void readVariablesFromFile(string fname, FVCell[] cells);
 
 private:
     string[] mVariables;
@@ -74,7 +95,7 @@ public:
     void writeVariablesToFile(string fname, FVCell[] cells)
     {
 	double[1] dbl1;
-	File outfile = File(fname, "wb");
+	auto outfile = File(fname, "wb");
 	foreach (var; mVariables) {
 	    foreach (cell; cells) {
 		dbl1[0] = mCIO[cell,var];
@@ -83,6 +104,21 @@ public:
 	}
 	outfile.close();
     }
+
+    override
+    void readVariablesFromFile(string fname, FVCell[] cells)
+    {
+	double[1] dbl1;
+	auto infile = File(fname, "rb");
+	foreach (var; mVariables) {
+	    foreach (cell; cells) {
+		infile.rawRead(dbl1);
+		mCIO[cell,var] = dbl1[0];
+	    }
+	}
+	infile.close();
+    }
+    
 }
 
 class GzipBlockIO : BlockIO {
@@ -103,6 +139,21 @@ public:
 	    }
 	}
 	outfile.finish();
+    }
+
+    override
+    void readVariablesFromFile(string fname, FVCell[] cells)
+    {
+	auto byLine = new GzipByLine(fname);
+	string line;
+	double dbl;
+	foreach (var; mVariables) {
+	    foreach (cell; cells) {
+		line = byLine.front; byLine.popFront;
+		formattedRead(line, mDblVarFmt, &dbl);
+		mCIO[cell,var] = dbl;
+	    }
+	}
     }
 
 private:

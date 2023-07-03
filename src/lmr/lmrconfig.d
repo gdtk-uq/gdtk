@@ -19,7 +19,6 @@ import globalconfig;
 struct LmrCfg {
     immutable string simDir;
     immutable string jobFile;
-    immutable string cfgDir;
     immutable string cfgFile;
     immutable string ctrlFile;
     immutable string nkCfgFile;
@@ -50,24 +49,24 @@ static this()
     // Populate struct with derived config information
     lmrCfg.simDir = lmrJSONCfg["simulation-directory"].str;
     lmrCfg.jobFile = lmrJSONCfg["job-filename"].str;
-    lmrCfg.cfgDir = lmrJSONCfg["config-directory"].str;
-    lmrCfg.cfgFile = lmrCfg.cfgDir ~ "/" ~ lmrJSONCfg["config-filename"].str;
-    lmrCfg.ctrlFile = lmrCfg.cfgDir ~ "/" ~ lmrJSONCfg["control-filename"].str;
-    lmrCfg.nkCfgFile = lmrCfg.cfgDir ~ "/" ~ lmrJSONCfg["newton-krylov-config-filename"].str;
+    lmrCfg.cfgFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["config-filename"].str;
+    lmrCfg.ctrlFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["control-filename"].str;
+    lmrCfg.nkCfgFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["newton-krylov-config-filename"].str;
     lmrCfg.blkIdxFmt = lmrJSONCfg["block-index-format"].str;
     lmrCfg.snapshotDir = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["snapshot-directory"].str;
     lmrCfg.snapshotIdxFmt = lmrJSONCfg["snapshot-index-format"].str;
     lmrCfg.initialFieldDir = to!int(lmrJSONCfg["initial-field-directory"].integer);
-    lmrCfg.flowMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["flow-prefix"].str ~ "." ~ lmrJSONCfg["metadata-extension"].str;
+    lmrCfg.flowMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["flow-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
     lmrCfg.restartFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["restart-file"].str;
     lmrCfg.referenceResidualsFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["reference-residuals-file"].str;
     lmrCfg.flowPrefix = lmrJSONCfg["flow-prefix"].str;
     lmrCfg.gridPrefix = lmrJSONCfg["grid-prefix"].str;
     lmrCfg.gzipExt = lmrJSONCfg["gzip-extension"].str;
-    lmrCfg.blkListFile = lmrCfg.cfgDir ~ "/" ~ lmrJSONCfg["block-list-filename"].str;
-    lmrCfg.vtkDir = lmrJSONCfg["vtk-output-directory"].str;
-    lmrCfg.mpimapFile = lmrCfg.cfgDir ~ "/" ~ lmrJSONCfg["mpimap-filename"].str;
+    lmrCfg.blkListFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["block-list-filename"].str;
+    lmrCfg.vtkDir = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["vtk-output-directory"].str;
+    lmrCfg.mpimapFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["mpimap-filename"].str;
     lmrCfg.dblVarFmt = lmrJSONCfg["double-var-format"].str;
+
 
 }
 
