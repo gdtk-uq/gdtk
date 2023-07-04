@@ -1,0 +1,45 @@
+//tag::description[]
+= Supersonic flow over a convex corner
+`gdtk/examples/lmr/2D/convex-corner`
+
+Rowan J. Gollan
+2023-07-04
+
+This example is of supersonic flow over a convex corner: a Prandtl-Meyer expansion fan.
+It is test case B.1 in the paper by Ghia et al. (2010).
+This particular example was set up by Kyle Damm with conditions to match the example in Ghia et al.:
+latexmath:[M_{\infty} = 2.0; \delta = -10.0^{\circ}]
+//end::description[]
+
+== Reference
+
+  @inproceedings{ghia2010aiaa,
+    title={The AIAA code verification project-test cases for CFD code verification},
+    author={Ghia, Urmila and Bayyuk, Sami and Habchi, Sami and Roy, Chris and Shih, Tom
+      and Conlisk, Terrence and Hirsch, Charles and M. Powers, Joseph},
+    booktitle={48th AIAA Aerospace Sciences Meeting Including the New Horizons Forum and Aerospace Exposition},
+    number={2010-0125},
+    year={2010}
+  }
+
+PDF is on Powers' site at:
+https://www3.nd.edu/~powers/paper.list/ASM2010VandVatORLANDO.pdf
+
+
+== Description of subdirectories
+
+This test case is used to test the basics of single block and multi-block configurations,
+and how to run those multi-block configurations with distributed-memory or shared-memory parallelism.
+One can also test the various file formats ("rawbinary" or "gziptext") by setting an environment
+variable locally before running an example. For example:
+
+   > LMR_FILE_FORMAT=gziptext make prep
+
+If the environment variable is unset, the example defaults to using "rawbinary".
+The subdirectories are described here:
+
+`single-block`:: The convex corner is represented by a single block.
+`two-block-shared-memory`:: The convex corner is represented by two blocks, split at the corner.
+This case is set up to run using shared-memory parallelism.
+`two-block-mpi`:: As for the `two-block-shared-memory` however the case is set up to run using MPI
+in a distributed memory manner.
