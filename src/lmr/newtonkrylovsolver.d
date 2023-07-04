@@ -2684,11 +2684,9 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
         // We need to shuffle all of the snapshots
         foreach (iSnap; 2 .. nkCfg.totalSnapshots+1) {
             foreach (blk; localFluidBlocks) {
-                foreach (io; blk.block_io) {
-                    auto fromName = flowFilename(iSnap, blk.id);
-                    auto toName = flowFilename(iSnap-1, blk.id);
-                    rename(fromName, toName);
-                }
+		auto fromName = flowFilename(iSnap, blk.id);
+                auto toName = flowFilename(iSnap-1, blk.id);
+                rename(fromName, toName);
             }
         }
         foreach (blk; localFluidBlocks) {
