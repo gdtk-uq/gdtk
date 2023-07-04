@@ -52,10 +52,10 @@ end
 function lmr_config.gridMetadataFilename(id)
    -- When id is supplied give individual block
    if id then
-      return lmr_config.gridDirectory() .. "/" .. lmrCfg["grid-prefix"] .. "-" .. string.format(lmrCfg["block-index-format"], id) .. "." .. lmrCfg["metadata-extension"]
+      return lmr_config.gridDirectory() .. "/" .. lmrCfg["grid-prefix"] .. "-" .. string.format(lmrCfg["block-index-format"], id) .. lmrCfg["metadata-extension"]
    end
    -- else, return global metadataname   
-   return lmr_config.gridDirectory() .. "/" .. lmrCfg["grid-prefix"] .. "." .. lmrCfg["metadata-extension"]
+   return lmr_config.gridDirectory() .. "/" .. lmrCfg["grid-prefix"] .. lmrCfg["metadata-extension"]
 end
 
 function lmr_config.gridFilename(id, ext)

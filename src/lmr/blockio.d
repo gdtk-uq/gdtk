@@ -151,7 +151,7 @@ public:
 	foreach (var; mVariables) {
 	    foreach (cell; cells) {
 		line = byLine.front; byLine.popFront;
-		formattedRead(line, mDblVarFmt, &dbl);
+		formattedRead(line, "%e", &dbl);
 		mCIO[cell,var] = dbl;
 	    }
 	}
@@ -246,11 +246,10 @@ void readFlowVariablesFromFile(FluidBlockLite blk, string fname, string[] variab
 	auto byLine = new GzipByLine(fname);
 	string line;
 	double dbl;
-	string dblVarFmt = lmrCfg.dblVarFmt;
 	foreach (ivar; 0 .. nvars) {
 	    foreach (icell; 0 .. ncells) {
 		line = byLine.front; byLine.popFront;
-		formattedRead(line, dblVarFmt, &dbl);
+		formattedRead(line, "%e", &dbl);
 		blk._data[icell][ivar] = dbl;
 	    }
 	}

@@ -218,7 +218,6 @@ void initFluidBlocksMemoryAllocation()
             debug { writeln("Calling init_grid_and_flow_arrays for grid: ", gName); }
             blk.init_grid_and_flow_arrays(gName);
             blk.compute_primary_cell_geometric_data(0);
-            blk.add_IO();
         }
         catch (Exception e) {
             writefln("Block[%d] failed to initialise geometry, msg=%s", blk.id, e.msg);
