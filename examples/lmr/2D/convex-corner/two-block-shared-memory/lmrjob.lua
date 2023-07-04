@@ -6,9 +6,13 @@
 -- Kyle A. Damm [2022-08-01]
 --
 
+-- Try to get the file format from environment variable
+fileFmt = os.getenv("LMR_FILE_FORMAT") or "rawbinary"
+
 job_title = "Mach 2 air flowing around a convex corner."
 config.title = job_title
 print(job_title)
+print("File format in use: ", fileFmt)
 
 -- General settings
 config.dimensions = 2
@@ -17,7 +21,8 @@ config.print_count = 1
 config.new_flow_format = true
 config.save_residual_values = false
 config.save_limiter_values = false
-config.flow_format = "eilmer4binary"
+config.flow_format = fileFmt
+config.grid_format = fileFmt
 
 -- ==========================================================
 -- Define the flow domain using a native grid.
