@@ -31,7 +31,7 @@ def expected_output(proc):
 
 
 def test_prep():
-    make_targets = ['links', 'prep-gas', 'grid', 'init']
+    make_targets = ['prep-gas', 'grid', 'init']
     for tgt in make_targets:
         cmd = "make " + tgt
         proc = subprocess.run(cmd.split())
@@ -48,7 +48,7 @@ def test_snapshot():
     cmd = "lmr snapshot2vtk --all"
     proc = subprocess.run(cmd.split())
     assert proc.returncode == 0, "Failed during: " + cmd
-    assert os.path.exists('vtk')
+    assert os.path.exists('lmrsim/vtk')
     
 
 def test_restart():

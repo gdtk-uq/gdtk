@@ -1,4 +1,4 @@
-LMR_DIRS := config grid snapshots vtk diagnostics
+LMR_DIR := lmrsim
 
 help:
 	@echo "Main targets available are:"
@@ -6,11 +6,7 @@ help:
 	@echo -e "   run"
 	@echo -e "   post"
 
-links:
-	- ln -s lmr-job.lua lmr-grid.lua
-	- ln -s lmr-job.lua lmr-flow.lua
-
-prep: links prep-gas grid init
+prep: prep-gas grid init
 
 prep-gas: gm-ideal-air.inp
 	prep-gas gm-ideal-air.inp ideal-air.gas
@@ -31,7 +27,12 @@ post: vtk
 vtk:
 	lmr snapshot2vtk --all
 
+test:
+	PYTHONDONTWRITEBYTECODE=1 pytest -v
+
+test-gzip:
+	LMR_FILE_FORMAT=gziptext PYTHONDONTWRITEBYTECODE=1 pytest -v
 clean:
-	- rm -rf $(LMR_DIRS)
-	- rm lmr-grid.lua lmr-flow.lua ideal-air.gas
+	- rm -rf $(LMR_DIR)
+	- rm ideal-air.gas
 
