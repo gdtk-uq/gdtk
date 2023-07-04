@@ -418,7 +418,6 @@ private:
         number f_guess =  u - u_tgt;
 
         // Do at least one iteration, in case we need to set the imaginary components of T
-        size_t count = 0;
         number Cv, dT;
         immutable int MAX_ITERATIONS = 10;
         foreach (iter; 0 .. MAX_ITERATIONS) {
@@ -430,13 +429,12 @@ private:
             }
             logT_guess = log(T_guess);
             f_guess = internal_energy(nsp, gs.massf, T_guess, logT_guess) - u_tgt;
-            count++;
         }
 
         if (fabs(dT)>1e-3) {
             string msg = "update_temperature_from_energy function failed to converge.\n";
             debug {
-                msg ~= format("The final value for Tvib was: %12.6f\n", T_guess);
+                msg ~= format("The final value for T was: %12.6f\n", T_guess);
                 msg ~= "The supplied GasState was:\n";
                 msg ~= gs.toString() ~ "\n";
             }

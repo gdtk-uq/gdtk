@@ -39,7 +39,9 @@ class TestLobb < Test::Unit::TestCase
       end
     end
     # steps observed for simulation with backward-euler update at 2021-11-28
-    assert((steps - 15530).abs < 140, "Failed to take correct number of steps.")
+    #assert((steps - 15530).abs < 140, "Failed to take correct number of steps.")
+    # steps observed for new settings by NNG on 2023-07-04
+    assert((steps - 10406).abs < 10, "Failed to take correct number of steps.")
   end
 
   def test_2_shock_stand_off
@@ -54,7 +56,8 @@ class TestLobb < Test::Unit::TestCase
         shock_location = items[1].to_f
       end
     end
-    shock_ref = 0.0005384 # changed by PJ 2021-11-28
+    #shock_ref = 0.0005384 # changed by PJ 2021-11-28
+    shock_ref = 0.000519  # changed by NNG 2023-07-04
     # PJ 2021-08-05 Doing a bit more work on the shock-fitting code
     # shifts the position of the vertex a little, to a position of 0.0005500m.
     # However, looking at the temperature field near the axis shows that
