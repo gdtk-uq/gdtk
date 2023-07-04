@@ -369,6 +369,16 @@ public:
     }
 
     @nogc
+    override void enthalpies(in GasState gs, number[] hs)
+    {
+        foreach(isp; 0 .. mNSpecies){
+            number h_tr = mCpTR[isp]*(gs.T - T_REF) + mDel_hf[isp];
+            number h_ve = vibElecEnergyPerSpecies(gs.T_modes[0], isp);
+            hs[isp] = h_tr + h_ve;
+        }
+    }
+
+    @nogc
     override number enthalpyPerSpecies(in GasState gs, int isp)
     {
         number h_tr = mCpTR[isp]*(gs.T - T_REF) + mDel_hf[isp];

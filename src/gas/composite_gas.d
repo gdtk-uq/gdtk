@@ -159,6 +159,10 @@ public:
     {
         return mThermo.enthalpy(gs);
     }
+    @nogc override void enthalpies(in GasState gs, number[] hs)
+    {
+        return mThermo.enthalpies(gs, hs);
+    }
     @nogc override number enthalpy(in GasState gs, int isp)
     {
         return mThermo.enthalpyPerSpecies(gs, isp);

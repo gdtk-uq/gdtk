@@ -64,6 +64,41 @@ public:
         return _R*Cp_on_R;
     }
     @nogc
+    number eval_h(number T, number logT)
+    {
+        /* We don't try to do any fancy extrapolation beyond the limits
+         * of the curves. We will simply take Cp as constant and
+         * integrate using that assumption to get the portion of
+         * enthalpy that is contributed beyond the temperature range.
+         * Edit: NNG (This optimised version of eval_h takes advantage
+                 of a precomputed log(T), which saves time when evaluating
+                 multiple species worth of eval_h at the end of a timestep)
+         */
+        if (T < _T_breaks[0]) {
+            number T_low = _T_breaks[0];
+            // We use a recursive call so that we can evaluate h @ T_low
+            number h_low = eval_h(T_low);
+            number Cp_low = eval_Cp(T_low);
+            number h = h_low - Cp_low*(T_low - T);
+            return h;
+        }
+        if (T > _T_breaks[$-1]) {
+            number T_high = _T_breaks[$-1];
+            // We use a recursive call so that we can evaluate h @ T_high
+            number h_high = eval_h(T_high);
+            number Cp_high = eval_Cp(T_high);
+            number h = h_high + Cp_high*(T - T_high);
+            return h;
+        }
+        // For all other cases, determine the coefficients and evaluate.
+        determineCoefficients(T);
+
+        number h_on_RT = -_a[0]/T + _a[1]*logT + _a[2]*T + _a[3]*T*T/2.0;
+        h_on_RT +=  _a[4]*T*T*T/3.0 + _a[5]*T*T*T*T/4.0 + _a[6]*T*T*T*T*T/5.0 + _a[7];
+        return _R*h_on_RT;
+
+    }
+    @nogc
     number eval_h(number T)
     {
         /* We don't try to do any fancy extrapolation beyond the limits

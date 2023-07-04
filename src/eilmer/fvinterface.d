@@ -1053,7 +1053,7 @@ void navier_stokes_viscous_fluxes(in FlowState fs, in FlowGradients grad, LocalC
 
 @nogc
 void diffusion_viscous_fluxes(in FlowState fs, in FlowGradients grad, LocalConfig myConfig, size_t n_species, size_t n_modes,
-                              double Sc_t, bool laminarDiffusion, bool isTurbulent, Vector3 n, number[] jx, number[] jy, number[] jz,
+                              double Sc_t, bool laminarDiffusion, bool isTurbulent, Vector3 n, number[] jx, number[] jy, number[] jz, number[] hs,
                               ConservedQuantities F) {
 version(multi_species_gas) {
     auto gmodel = myConfig.gmodel;
@@ -1084,11 +1084,11 @@ version(multi_species_gas) {
     number qx = 0.0;
     number qy = 0.0;
     number qz = 0.0;
+    gmodel.enthalpies(fs.gas, hs);
     for(int isp=0; isp<n_species; isp++) {
-        number h = gmodel.enthalpy(fs.gas, isp);
-        qx -= jx[isp] * h;
-        qy -= jy[isp] * h;
-        qz -= jz[isp] * h;
+        qx -= jx[isp] * hs[isp];
+        qy -= jy[isp] * hs[isp];
+        qz -= jz[isp] * hs[isp];
     }
 
     // Combine into fluxes: store as the dot product (F.n).

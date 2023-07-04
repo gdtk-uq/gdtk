@@ -81,7 +81,7 @@ public:
     number c_h, divB_damping_length; //divergence cleaning parameters for MHD
     int mncell;                 // number of monitor cells
     number[] initial_T_value; // for monitor cells to check against
-    number[] jx,jy,jz;
+    number[] jx,jy,jz,hs;
     //
     // Collections of cells, vertices and faces are held as arrays of references.
     // These allow us to conveniently work through the items via foreach statements.
@@ -238,6 +238,7 @@ public:
                 jx.length = cqi.n_species;
                 jy.length = cqi.n_species;
                 jz.length = cqi.n_species;
+                hs.length = cqi.n_species;
             }
         }
         version(multi_T_gas) {
@@ -853,7 +854,7 @@ public:
                 diffusion_viscous_fluxes(facedata.flowstates[fid], facedata.gradients[fid],
                                   myConfig, n_species, n_modes,
                                   Sc_t, laminarDiffusion, isTurbulent,
-                                  facedata.normals[fid], jx, jy, jz,
+                                  facedata.normals[fid], jx, jy, jz, hs,
                                   facedata.fluxes[fid*neq .. (fid+1)*neq]);
             }
         }
