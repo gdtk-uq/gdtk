@@ -2665,6 +2665,9 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
             ensure_directory_is_present(dirName);
         }
 
+        // Wait for master to complete building the directory for the next snapshot
+        version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+
         foreach (blk; localFluidBlocks) {
 	    auto fileName = flowFilename(nWrittenSnapshots, blk.id);
 	    blkIO.writeVariablesToFile(fileName, blk.cells);
