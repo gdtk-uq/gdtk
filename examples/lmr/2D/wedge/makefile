@@ -6,12 +6,12 @@ help:
 	@echo -e "   run"
 	@echo -e "   post"
 
-prep: prep-gas grid init
+prep: gas grid init
 
-prep-gas: gm-ideal-air.inp
-	prep-gas gm-ideal-air.inp ideal-air.gas
+gas: ideal-air.lua
+	prep-gas ideal-air.lua ideal-air.gas
 
-grid:
+grid: lmrjob.lua
 	lmr prep-grid
 
 init:
@@ -27,9 +27,6 @@ vtk:
 
 test:
 	PYTHONDONTWRITEBYTECODE=1 pytest -v
-
-test-gzip:
-	LMR_FILE_FORMAT=gziptext PYTHONDONTWRITEBYTECODE=1 pytest -v
 clean:
 	- rm -rf $(LMR_DIR)
 	- rm ideal-air.gas

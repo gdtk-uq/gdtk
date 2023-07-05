@@ -2,13 +2,16 @@
 = Supersonic flow over a convex corner
 `gdtk/examples/lmr/2D/convex-corner`
 
-Rowan J. Gollan
+Kyle A. Damm & Rowan J. Gollan
 2023-07-04
 
 This example is of supersonic flow over a convex corner: a Prandtl-Meyer expansion fan.
-It is test case B.1 in the paper by Ghia et al. (2010).
+It is test case B.1 "Prandtl-Meyer Expansion Fan" in the paper by Ghia et al. (2010).
 This particular example was set up by Kyle Damm with conditions to match the example in Ghia et al.:
-latexmath:[M_{\infty} = 2.0; \delta = -10.0^{\circ}]
+[stem]
+++++
+M_{\infty} = 2.0; \quad \delta = -10.0^{\circ}; \quad \gamma = 1.4
+++++
 //end::description[]
 
 == Reference
