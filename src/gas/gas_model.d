@@ -180,6 +180,14 @@ public:
         number s = entropy(Q, isp);
         number g = h - Q.T*s;
         return g;
+     }
+    @nogc void gibbs_free_energies(ref GasState Q, number[] gibbs_energies)
+    {
+        foreach(isp; 0 .. _n_species){
+            number h = enthalpy(Q, isp);
+            number s = entropy(Q, isp);
+            gibbs_energies[isp] = h - Q.T*s;
+        }
     }
     //
     @nogc final number Cv(in GasState Q) { return dudT_const_v(Q); }

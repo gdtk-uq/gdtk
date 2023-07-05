@@ -439,6 +439,19 @@ public:
         // are equal, that is, Cp_vib = Cv_vib
         return mCpTR[isp] + vibElecCvPerSpecies(gs.T_modes[0], isp);
     }
+    @nogc override void GibbsFreeEnergies(in GasState gs, number[] gibbs_energies)
+    {
+        number T = gs.T;
+        number logp = log(gs.p/P_atm);
+
+        foreach(isp; 0 .. mNSpecies){
+            number h_tr = mCpTR[isp]*(gs.T - T_REF) + mDel_hf[isp];
+            number h_ve = vibElecEnergyPerSpecies(gs.T_modes[0], isp);
+            number h = h_tr + h_ve;
+            number s = mCurves[isp].eval_s(gs.T) - mR[isp]*logp;
+            gibbs_energies[isp] = h - T*s;
+        }
+    }
 
 
 private:

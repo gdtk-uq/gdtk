@@ -132,6 +132,12 @@ public:
     @nogc
     number eval_s(number T)
     {
+        number logT = log(T);
+        return eval_s(T, logT);
+    }
+    @nogc
+    number eval_s(number T, number logT)
+    {
         /* We don't try any fancy extrapolation beyond the limits
          * of the curves. We will simply take Cp as constant and
          * integrate using that assumption to get the portion of
@@ -155,7 +161,7 @@ public:
         }
         // For all other cases, determine the coefficients and evaluate.
         determineCoefficients(T);
-        number s_on_R = -_a[0]/(2.0*T*T) - _a[1]/T + _a[2]*log(T) + _a[3]*T;
+        number s_on_R = -_a[0]/(2.0*T*T) - _a[1]/T + _a[2]*logT + _a[3]*T;
         s_on_R += _a[4]*T*T/2.0 + _a[5]*T*T*T/3.0 + _a[6]*T*T*T*T/4.0 + _a[8];
         return _R*s_on_R;
     }

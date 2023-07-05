@@ -201,7 +201,7 @@ public:
             foreach ( isp; 0 .. nsp ) _Y[i+isp*_ncell] = _conc[isp];
 
             // 2. Compute kf and kb and store
-            _rmech.eval_rate_constants(cell.fs.gas);
+            _rmech.eval_rate_constants(_gmodel, cell.fs.gas);
             foreach ( int ir; 0 .. to!int(nreac) ) {
                 _kf[i+ir*_ncell] = _rmech.k_f(ir);
                 _kb[i+ir*_ncell] = _rmech.k_b(ir);

@@ -338,6 +338,17 @@ public:
     {
         return mCurves[isp].eval_Cp(gs.T);
     }
+    @nogc override void GibbsFreeEnergies(in GasState gs, number[] gibbs_energies)
+    {
+        number T = gs.T;
+        number logT = log(gs.T);
+        number logp = log(gs.p/P_atm);
+        foreach(isp; 0 .. n_species){
+            number h = mCurves[isp].eval_h(T, logT);
+            number s = mCurves[isp].eval_s(T, logT) - mR[isp]*logp;
+            gibbs_energies[isp] = h - T*s;
+        }
+    }
 
 private:
     size_t n_species;

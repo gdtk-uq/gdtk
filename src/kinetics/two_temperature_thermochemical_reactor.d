@@ -112,7 +112,7 @@ public:
         m_uTotal = mGmodel.internal_energy(gs);
 
         // Evaluate temperature dependent rate parameters
-        mRmech.eval_rate_constants(gs);
+        mRmech.eval_rate_constants(mGmodel, gs);
         mEES.evalRelaxationTimes(gs);
 
         // Sort out stepsize for possible subcycling.
@@ -138,7 +138,7 @@ public:
         // Final entry is energy change.
         m_y0[mNSpecies] = gs.u_modes[0];
         for ( ; cycle < mMaxSubcycles; ++cycle) {
-            mRmech.eval_rate_constants(gs);
+            mRmech.eval_rate_constants(mGmodel, gs);
             mEES.evalRelaxationTimes(gs);
             /* Copy the last good timestep suggestion before moving on.
              * If we're near the end of the interval, we want

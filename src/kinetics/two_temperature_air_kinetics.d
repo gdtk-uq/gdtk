@@ -171,7 +171,7 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
 
         // 0. Evaluate the rate constants.
         //    It helps to have these computed before doing other setup work.
-        rmech.eval_rate_constants(Q);
+        rmech.eval_rate_constants(_gmodel, Q);
         // 1. Sort out the time step for possible subcycling.
         double t = 0.0;
         double h;
@@ -298,7 +298,7 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
                 _gmodel.conc2massf(_conc0, Q);
                 Q.u = _uTotal - Q.u_modes[0];
                 _gmodel.update_thermo_from_rhou(Q);
-                rmech.eval_rate_constants(Q);
+                rmech.eval_rate_constants(_gmodel, Q);
             }
 
             if ( t >= tInterval ) { // We've done enough work.

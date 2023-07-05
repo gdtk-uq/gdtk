@@ -58,7 +58,7 @@ void main()
     gm.molef2massf(molef, gd);
     gm.update_thermo_from_pT(gd);
     double[] conc0 = [c0, c0, 0.0];
-    rmech.eval_rate_constants(gd);
+    rmech.eval_rate_constants(gm, gd);
 
     tMax = 60000.0;
     double dtInit = 4.0;
