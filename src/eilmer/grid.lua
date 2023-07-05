@@ -103,7 +103,7 @@ function Grid:new(o)
       o.nboundaries = o.grid:get_nboundaries()
       -- Attach boundary conditions from list or from the dictionary of conditions.
       for i = 0, o.nboundaries-1 do
-         o.bcTags[i] = o.grid:get_boundaryset_tag(i)
+         o.bcTags[i] = o.bcTags[i] or o.grid:get_boundaryset_tag(i)
       end
    end
    return o
