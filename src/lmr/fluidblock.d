@@ -1576,7 +1576,7 @@ public:
         }
 
     } // end evalRHS()
-    
+
     void allocate_GMRES_workspace(int maxLinearSolverIterations)
     {
         size_t nConserved = GlobalConfig.cqi.n;

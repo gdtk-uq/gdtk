@@ -72,8 +72,8 @@ public:
     {
 	// PLACEHOLDER for transient mode constructor
     }
- 
-    
+
+
     // A constructor for flow fields when running steady mode
     this(int snapshot, size_t nBlocks, string tag="", int make_kdtree=0)
     {
@@ -134,7 +134,7 @@ public:
         }
     } // end constructor
 
-    
+
     // This method is used to free up memory. The object shell still remains,
     // but all of its internals have been deallocated. You should not attempt
     // to use the object after calling this method. This method is designed

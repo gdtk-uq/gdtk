@@ -45,7 +45,7 @@ static this()
 {
     // Read base config into lmrJSONCfg
     readLmrConfig();
-    
+
     // Populate struct with derived config information
     lmrCfg.simDir = lmrJSONCfg["simulation-directory"].str;
     lmrCfg.jobFile = lmrJSONCfg["job-filename"].str;

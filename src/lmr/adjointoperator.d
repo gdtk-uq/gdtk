@@ -1,4 +1,4 @@
-/** 
+/**
  * Functions for assembling adjoint operator.
  *
  * Authors: RJG, RBO and KAD

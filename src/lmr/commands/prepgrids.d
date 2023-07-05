@@ -42,7 +42,7 @@ options ([+] can be repeated):
      Increase verbosity during grid generation.
 
 `;
-    
+
 }
 
 

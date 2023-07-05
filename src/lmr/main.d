@@ -51,7 +51,7 @@ void main(string[] args)
            std.getopt.config.stopOnFirstNonOption,
            "help|h", &helpWanted,
            "version|v", &versionWanted,
-           "version-full", &versionLongWanted, 
+           "version-full", &versionLongWanted,
     );
 
     if (versionLongWanted) {
@@ -111,7 +111,7 @@ at post-processing stage
 `;
     write(generalHelp);
     return;
-    
+
 }
 
 

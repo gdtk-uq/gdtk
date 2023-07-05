@@ -75,7 +75,7 @@ public:
 	}
 	mCIO = new FVCellIO(mVariables);
     }
-    
+
     abstract
     void writeVariablesToFile(string fname, FVCell[] cells);
 
@@ -119,7 +119,7 @@ public:
 	}
 	infile.close();
     }
-    
+
 }
 
 class GzipBlockIO : BlockIO {
@@ -159,7 +159,7 @@ public:
 
 private:
     string mDblVarFmt;
-    
+
 }
 
 
@@ -206,7 +206,7 @@ extern(C) int luafn_writeInitialFlowFile(lua_State *L)
     return 0;
 }
 
- 
+
 //-------------------------------------------------------------
 // Functions intended for use at post-processing stage:
 //

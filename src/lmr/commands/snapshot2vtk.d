@@ -98,7 +98,7 @@ void main_(string[] args)
     }
 
     initConfiguration(); // To read in GlobalConfig
-    
+
     /*
      * 0. Build list of available snapshots
      */
@@ -171,9 +171,9 @@ void main_(string[] args)
         writeln("lmr snapshot2vtk: Done.");
     }
 
-    
+
     return;
-    
+
 }
 
 

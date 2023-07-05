@@ -6,7 +6,7 @@
 --
 
 NewtonKrylovGlobalConfigHidden = {
-   
+
    -- global control based on step number
    number_of_steps_for_setting_reference_residuals = 10,
    freeze_limiter_at_step = -1,
@@ -37,7 +37,7 @@ NewtonKrylovGlobalConfigHidden = {
    min_relaxation_factor = 0.1,
    relaxation_factor_reduction_factor = 0.7,
    use_residual_smoothing = false,
-   
+
    -- linear solver and preconditioner
    max_linear_solver_iterations = 10,
    max_linear_solver_restarts = 0,
@@ -55,7 +55,7 @@ NewtonKrylovGlobalConfigHidden = {
    -- iterative solve-type preconditioner settings
    --
    preconditioner_sub_iterations = 4,
-   
+
    -- Output and diagnostics
    total_snapshots = 5,
    steps_between_snapshots = 10,
@@ -162,7 +162,7 @@ NewtonKrylovPhaseDefaults = {
 
    -- Linear solver control
    linear_solve_tolerance = 0.01,
-   
+
    -- Auto CFL control
    use_auto_cfl = false,
    threshold_relative_residual_for_cfl_growth = 0.99,
@@ -247,7 +247,7 @@ return {
    NewtonKrylovPhase = NewtonKrylovPhase,
    writeNKConfigToFile = writeNKConfigToFile,
    setIgnoreFlagInPhases = setIgnoreFlagInPhases
-   
+
 }
 
 

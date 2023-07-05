@@ -156,7 +156,7 @@ public:
     // Electromagnetic Field Variables
     double electric_potential;
     double[2] electric_field;
-    
+
     // Shape sensitivity calculator workspace
     FVCell[] cell_list;            // list of cells in the residual stencil
     FVInterface[] face_list;       // list of faces in the residual stencil
@@ -407,7 +407,7 @@ public:
         case 4:
             xyplane_quad_cell_properties(vtx[0].pos[gtl], vtx[1].pos[gtl],
                                          vtx[2].pos[gtl], vtx[3].pos[gtl],
-                                         pos[gtl], xyplane_area, iL, jL, L_min); 
+                                         pos[gtl], xyplane_area, iL, jL, L_min);
             iLength = iL; jLength = jL;
             break;
         default:

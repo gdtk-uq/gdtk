@@ -1,4 +1,4 @@
-/** 
+/**
  * Core set of functions used in the Newton-Krylov updates for steady-state convergence.
  *
  * Authors: RJG and KAD
@@ -87,7 +87,7 @@ string preconditionerTypeName(PreconditionerType i)
     case PreconditionerType.sgs: return "sgs";
     case PreconditionerType.ilu: return "ilu";
     }
-} 
+}
 
 PreconditionerType preconditionerTypeFromName(string name)
 {
@@ -107,7 +107,7 @@ PreconditionerType preconditionerTypeFromName(string name)
         errMsg ~= "Check your selection or its spelling in the input file.\n";
         throw new Error(errMsg);
     }
-} 
+}
 
 
 /*---------------------------------------------------------------------
@@ -205,8 +205,8 @@ struct NKGlobalConfig {
         stepsBetweenSnapshots = getJSONint(jsonData, "steps_between_snapshots", stepsBetweenSnapshots);
         stepsBetweenDiagnostics = getJSONint(jsonData, "steps_between_diagnostics", stepsBetweenDiagnostics);
         stepsBetweenLoadsUpdate = getJSONint(jsonData, "steps_between_loads_update", stepsBetweenLoadsUpdate);
-        writeSnapshotOnLastStep = getJSONbool(jsonData, "write_snapshot_on_last_step", writeSnapshotOnLastStep); 
-        writeDiagnosticsOnLastStep = getJSONbool(jsonData, "write_diagnostics_on_last_step", writeDiagnosticsOnLastStep); 
+        writeSnapshotOnLastStep = getJSONbool(jsonData, "write_snapshot_on_last_step", writeSnapshotOnLastStep);
+        writeDiagnosticsOnLastStep = getJSONbool(jsonData, "write_diagnostics_on_last_step", writeDiagnosticsOnLastStep);
     }
 }
 NKGlobalConfig nkCfg;
@@ -269,7 +269,7 @@ interface CFLSelector {
  *
  * The CFL is constant off the ends the step range, as shown below.
  *
- *                   endStep    
+ *                   endStep
  *                       |            cflEnd
  *                       +------------------
  *                      /
@@ -365,7 +365,7 @@ static int fnCount = 0;
 immutable double dummySimTime = -1.0;
 immutable double minScaleFactor = 1.0;
 immutable string refResidFname = "config/reference-residuals.saved";
-    
+
 ConservedQuantities referenceResiduals, currentResiduals, scale;
 double referenceGlobalResidual, globalResidual, prevGlobalResidual;
 bool residualsUpToDate = false;
@@ -406,7 +406,7 @@ struct RestartInfo {
     {
 	residuals = residuals.dup;
     }
-    
+
 }
 RestartInfo[] snapshots;
 
@@ -421,7 +421,7 @@ version(mpi_parallel){
 
 /**
  * Helper function for sending around a conserved quantities object.
- * 
+ *
  * Authors: NNG and RJG
  * Date: 2023-04-11
  */
@@ -540,7 +540,7 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
         throw new NewtonKrylovException("No FluidBlocks; no point in continuing with simulation initialisation.");
     }
     cfg.n_flow_time_levels = 2;
-    
+
     initLocalFluidBlocks();
 
     initThreadPool(maxCPUs, threadsPerMPITask);
@@ -552,7 +552,7 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     initFluidBlocksFlowFieldSteadyMode(snapshotStart);
 
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-    
+
     initFullFaceDataExchange();
     initMappedCellDataExchange();
     initGhostCellGeometry();
@@ -571,7 +571,7 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     if (cfg.turb_model.needs_dwall) initWallDistances();
 
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-    
+
     // [TODO] Add in electric field solver initialisation.
 
     // Do some memory clean-up and reporting.
@@ -624,7 +624,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
     double dt;
     bool updatePreconditionerThisStep = false;
     CFLSelector cflSelector;
-    
+
     /*----------------------------------------------
      * Initialisation
      *----------------------------------------------
@@ -655,7 +655,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         writeln("       Initialisation done.");
     }
     */
-    
+
     // Look for global CFL schedule and use to set CFL
     if (nkCfg.cflSchedule.length > 0) {
         foreach (i, startRamp; nkCfg.cflSchedule[0 .. $-1]) {
@@ -672,7 +672,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             cflSelector = new LinearRampCFL(lastEntry.step, nkCfg.maxNewtonSteps, lastEntry.cfl, lastEntry.cfl);
         }
     }
-    
+
     if (snapshotStart > 0) {
         /*----------------------------------------------
          * Special actions on restart
@@ -687,7 +687,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 	    readRestartMetadata();
 	    readReferenceResidualsFromFile();
 	    // Now ditch snapshots BEYOND what was requested.
-	    snapshots.length = snapshotStart;	    
+	    snapshots.length = snapshotStart;
 	}
 	// And, in MPI, broadcast information.
 	version(mpi_parallel) {
@@ -709,7 +709,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 	else {
 	    foreach (phase, phaseStep; nkCfg.phaseChangesAtSteps) {
 		if (startStep < phaseStep) {
-		    setPhaseSettings(phase); 
+		    setPhaseSettings(phase);
 		    break;
 		}
 	    }
@@ -748,7 +748,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 	    writefln("lmr run-steady: CFL overridden with command-line choice, cfl=%f", cfl);
 	}
     }
-    
+
     // Start timer right at beginning of stepping.
     auto wallClockStart = Clock.currTime();
     double wallClockElapsed;
@@ -756,7 +756,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
     bool startOfNewPhase = false;
 
     foreach (step; startStep .. nkCfg.maxNewtonSteps+1) {
-	
+
         /*---
          * 0. Check for any special actions based on step to perform at START of step
          *---
@@ -767,7 +767,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
          *    e. set flag on preconditioner
          */
         residualsUpToDate = false;
-        // 0a. change of phase 
+        // 0a. change of phase
         auto currentPhase = countUntil(nkCfg.phaseChangesAtSteps, step);
         startOfNewPhase = false;
         if (currentPhase != -1) { // start of new phase detected
@@ -824,7 +824,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 		}
 	    }
 	}
-	
+
         // 0d. Set the timestep for this step
         dt = setDtInCells(cfl);
 
@@ -851,7 +851,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 	if ( (omega > nkCfg.minRelaxationFactor) && nkCfg.useLineSearch ) {
 	    omega = applyLineSearch(omega);
 	}
-	
+
         if (omega >= nkCfg.minRelaxationFactor) {
             // Things are good. Apply omega-scaled update and continue on.
             // We think??? If not, we bail at this point.
@@ -897,7 +897,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
                 exit(1);
             }
         }
-        
+
         /*---
          * 2. Post-update actions
          *---
@@ -953,8 +953,8 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         }
 
 	version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-	
-        
+
+
         // [TODO] Write loads. We only need one lot of loads.
         // Any intermediate loads before steady-state have no physical meaning.
         // They might have some diagnostic purpose?
@@ -1050,7 +1050,7 @@ void initPreconditioner()
             break;
         case PreconditionerType.diagonal:
             // do nothing
-            break; 
+            break;
         } // end switch
     }
 }
@@ -1197,7 +1197,7 @@ double setDtInCells(double cfl)
             foreach (cell; blk.cells) cell.dt_local = dt;
         }
     }
-    
+
     return dt;
 }
 
@@ -1284,7 +1284,7 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
  *       1b) Check tolerance for convergence
  *    2. Post-iteration actions
  *       2a) Unscale values
- *     
+ *
  * Authors: RJG and KAD
  * Date: 2022-03-02
  * History:
@@ -1298,7 +1298,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
         writeln(" entered function.");
     }
     */
-            
+
     alias cfg = GlobalConfig;
     size_t nConserved = cfg.cqi.n;
 
@@ -1322,7 +1322,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
         writeln(" evalResidual done.");
     }
     */
-    
+
     setResiduals();
 
     /*
@@ -1331,7 +1331,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
         writeln(" calling computeGlobalResidual.");
     }
     */
-    
+
 
 
     /*
@@ -1341,7 +1341,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
     }
     */
 
-    
+
     determineScaleFactors(scale);
     // r0 = A*x0 - b
     compute_r0(scale);
@@ -1362,7 +1362,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
     if (nkCfg.useResidualSmoothing) {
 	applyResidualSmoothing();
     }
-    
+
     /*---
      * 1. Outer loop of restarted GMRES
      *---
@@ -1399,7 +1399,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
             writeln(" calling performIterations.");
         }
         */
-        
+
         isConverged = performIterations(maxIterations, beta0, targetResidual, scale, iterationCount);
         int m = iterationCount;
 
@@ -1409,7 +1409,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
             writeln(" done performIterations.");
         }
         */
-        
+
         // At end H := R up to row m
         //        g := gm up to row m
         upperSolve!number(H1, to!int(m), g1);
@@ -1482,7 +1482,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
         writeln(" done restarted GMRES iterations.");
     }
     */
-    
+
     // Set some information before leaving. This might be used in diagnostics file.
     gmresInfo.nRestarts = to!int(r_break);
     gmresInfo.initResidual = beta0.re;
@@ -1514,7 +1514,7 @@ void setResiduals()
  * The scale factors are typically the maximum rate of change found globally
  * (over all cells) per each conserved quantity. However, we place some gaurds
  * on determining those scales when rates of change are small.
- * 
+ *
  * Authors: RJG and KAD
  * Date: 2022-03-02
  */
@@ -1548,12 +1548,12 @@ void determineScaleFactors(ref ConservedQuantities scale)
     foreach (ivar; 0 .. nConserved) {
         scale[ivar] = fmax(scale[ivar], minScaleFactor);
     }
-    
+
     // Value is presently maxRate. Store as scale = 1/maxRate.
     foreach (ivar; 0 .. nConserved) {
         scale[ivar] = 1./scale[ivar];
     }
-    
+
 }
 
 
@@ -1644,7 +1644,7 @@ void prepareKrylovSpace(number beta)
 void computePreconditioner()
 {
     size_t nConserved = GlobalConfig.cqi.n;
-    
+
     final switch (nkCfg.preconditioner) {
     case PreconditionerType.diagonal:
         goto case PreconditionerType.sgs;
@@ -1706,7 +1706,7 @@ void applyResidualSmoothing()
     //----
     // 1. Compute approximate solution via dU = D^{-1} * R(U) where D = preconditioner matrix
     //----
-    
+
     final switch (nkCfg.preconditioner) {
     case PreconditionerType.diagonal:
         foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = to!number(0.0); }
@@ -1760,7 +1760,7 @@ bool performIterations(int maxIterations, number beta0, number targetResidual,
         writeln(" entered function.");
     }
     */
-    
+
     alias cfg = GlobalConfig;
 
     bool isConverged = false;
@@ -1772,7 +1772,7 @@ bool performIterations(int maxIterations, number beta0, number targetResidual,
         writeln(" starting Krylov iterations.");
     }
     */
-        
+
     foreach (j; 0 .. maxIterations) {
         iterationCount = j+1;
 
@@ -1783,7 +1783,7 @@ bool performIterations(int maxIterations, number beta0, number targetResidual,
         }
         */
 
-        
+
         // 1. Unscale v
         // v is scaled earlier when r0 copied in.
         // However, to compute Jv via Frechet, we will need
@@ -1798,7 +1798,7 @@ bool performIterations(int maxIterations, number beta0, number targetResidual,
             writeln(" apply preconditioning.");
         }
         */
-        
+
         // 2. Apply preconditioning (if requested)
         if (nkCfg.usePreconditioner) {
             applyPreconditioning();
@@ -1815,7 +1815,7 @@ bool performIterations(int maxIterations, number beta0, number targetResidual,
             writeln(" include 1/dt term.");
         }
         */
-        
+
         // 3. Jacobian-vector product
         // 3a. Prepare w vector with 1/dt term.
         //      (I/dt)(P^-1)v
@@ -1867,7 +1867,7 @@ bool performIterations(int maxIterations, number beta0, number targetResidual,
         }
         */
 
-        
+
         // 4. The remainder of the algorithm looks a lot like any standard
         // GMRES implementation (for example, see smla.d)
         foreach (i; 0 .. j+1) {
@@ -1949,8 +1949,8 @@ bool performIterations(int maxIterations, number beta0, number targetResidual,
         writeln(" done Krylov iterations.");
     }
     */
-    
-    
+
+
     return isConverged;
 }
 
@@ -2001,7 +2001,7 @@ void applyPreconditioning()
 void removePreconditioning()
 {
     auto nConserved = GlobalConfig.cqi.n;
-    
+
     final switch (nkCfg.preconditioner) {
     case PreconditionerType.diagonal:
         foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = to!number(0.0); }
@@ -2148,7 +2148,7 @@ void evalResidual(int ftl)
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.convective_flux_phase2(allow_high_order_interpolation, gtl);
     }
-    
+
     foreach (blk; localFluidBlocks) {
         blk.applyPostConvFluxAction(dummySimTime, gtl, ftl);
     }
@@ -2235,7 +2235,7 @@ void evalComplexMatVecProd(double sigma)
 {
     version(complex_numbers) {
         alias cfg = GlobalConfig;
-        
+
         foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(activePhase.jacobianInterpolationOrder); }
         if (activePhase.frozenLimiterForJacobian) {
             foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = true; }
@@ -2345,16 +2345,16 @@ double determineRelaxationFactor()
     double theta = nkCfg.allowableRelativeMassChange;
     double minOmega = nkCfg.minRelaxationFactor;
     double omegaReductionFactor = nkCfg.relaxationFactorReductionFactor;
-    
+
     size_t nConserved = cfg.cqi.n;
     size_t massIdx = cfg.cqi.mass;
-    
+
     double omega = 1.0;
 
     //----
     // 1. First determine a relaxation factor based on an allowable amount of mass change
     //----
-    
+
     foreach (blk; parallel(localFluidBlocks,1)) {
         auto cqi = blk.myConfig.cqi;
         int startIdx = 0;
@@ -2425,7 +2425,7 @@ double determineRelaxationFactor()
         // In parallel, find minimum and communicate to all processes
         MPI_Allreduce(MPI_IN_PLACE, &(omega), 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
     }
-    
+
     return omega;
 }
 
@@ -2445,7 +2445,7 @@ double applyLineSearch(double omega) {
 
     double minOmega = nkCfg.minRelaxationFactor;
     double omegaReductionFactor = nkCfg.relaxationFactorReductionFactor;
-    
+
     size_t nConserved = GlobalConfig.cqi.n;
 
     double RU0 = globalResidual;
@@ -2538,7 +2538,7 @@ void applyNewtonUpdate(double relaxationFactor)
 {
     size_t nConserved = GlobalConfig.cqi.n;
     double omega = relaxationFactor;
-    
+
     foreach (blk; parallel(localFluidBlocks, 1)) {
         size_t startIdx = 0;
         foreach (cell; blk.cells) {
@@ -2578,7 +2578,7 @@ void initialiseDiagnosticsFile()
 {
     ensure_directory_is_present(diagDir);
     diagnostics = File(diagFile, "w");
-    
+
     alias cfg = GlobalConfig;
 
     diagnostics.writeln("#  1: step");
@@ -2603,7 +2603,7 @@ void initialiseDiagnosticsFile()
     }
     diagnostics.close();
 }
-        
+
 
 /**
  * Update diagnostics file with current status.
@@ -2625,10 +2625,10 @@ void writeDiagnostics(int step, double dt, double cfl, double wallClockElapsed, 
 
     // We don't need to proceed on ranks other than master.
     if (!cfg.is_master_task) return;
-    
+
     diagnostics = File(diagFile, "a");
     diagnostics.writef("%8d %20.16e %20.16e %20.16e %.8f %2d %3d %8d %20.16e %20.16e %20.16e %20.16e ",
-                       step, dt, cfl, activePhase.linearSolveTolerance, wallClockElapsed, 
+                       step, dt, cfl, activePhase.linearSolveTolerance, wallClockElapsed,
                        gmresInfo.nRestarts, gmresInfo.iterationCount, fnCount,
                        globalResidual, globalResidual/referenceGlobalResidual,
                        massBalance, gmresInfo.finalResidual, omega);
@@ -2655,12 +2655,12 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
 	computeResiduals(currentResiduals);
 	residualsUpToDate = true;
     }
-    
+
     nWrittenSnapshots++;
 
     if (nWrittenSnapshots <= nkCfg.totalSnapshots) {
 	// Write snapshot
-        auto dirName = snapshotDirectory(nWrittenSnapshots);        
+        auto dirName = snapshotDirectory(nWrittenSnapshots);
         if (cfg.is_master_task) {
             ensure_directory_is_present(dirName);
         }
@@ -2681,7 +2681,7 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
 	snapshots[$-1].globalResidual = globalResidual;
 	snapshots[$-1].prevGlobalResidual = prevGlobalResidual;
 	snapshots[$-1].residuals = currentResiduals.dup;
-	
+
     }
     else {
         // We need to shuffle all of the snapshots
@@ -2753,7 +2753,7 @@ void readRestartMetadata()
 void printStatusToScreen(int step, double cfl, double dt, double wallClockElapsed, ref bool residualsUpToDate)
 {
     alias cfg = GlobalConfig;
-    
+
     if (!residualsUpToDate) {
         computeResiduals(currentResiduals);
         residualsUpToDate = true;
@@ -2773,7 +2773,7 @@ void printStatusToScreen(int step, double cfl, double dt, double wallClockElapse
     formattedWrite(writer, "%12s\t\t%10.6e\t\t%10.6e\n", "global", globalResidual.re/referenceGlobalResidual.re, globalResidual.re);
     foreach (ivar; 0 .. cqi.n) {
         formattedWrite(writer, "%12s\t\t%10.6e\t\t%10.6e\n", cqi.names[ivar], currentResiduals[ivar].re/referenceResiduals[ivar].re, currentResiduals[ivar].re);
-    }        
+    }
     writeln(writer.data);
 }
 

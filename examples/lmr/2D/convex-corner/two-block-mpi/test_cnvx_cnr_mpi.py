@@ -37,8 +37,8 @@ def test_prep():
         cmd = "make " + tgt
         proc = subprocess.run(cmd.split())
         assert proc.returncode == 0, "Failed during: " + cmd
-        
-    
+
+
 def test_run():
     cmd = "mpirun -np 2 lmr-mpi-run-steady"
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
@@ -50,16 +50,16 @@ def test_snapshot():
     proc = subprocess.run(cmd.split())
     assert proc.returncode == 0, "Failed during: " + cmd
     assert os.path.exists('lmrsim/vtk')
-    
+
 
 def test_restart():
     cmd = "mpirun -np 2 lmr-mpi-run-steady -s 1"
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
     assert proc.returncode == 0, "Failed during: " + cmd
     expected_output(proc)
-    
+
 def test_cleanup():
     cmd = "make clean"
     proc = subprocess.run(cmd.split())
     assert proc.returncode == 0, "Failed during: " + cmd
-    
+

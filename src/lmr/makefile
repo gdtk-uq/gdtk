@@ -280,8 +280,9 @@ install: $(PROGRAMS) $(SUB_PROGRAMS)
 clean:
 	- rm $(PROGRAMS)
 	- rm $(SUB_PROGRAMS)
-	- rm lmr.o
-	- rm lmr_with_rev_string.d
+	- rm lmr-mpi-run-steady
+	- rm *.o
+	- rm main_with_rev_string.d
 	- rm blockio_with_str_subst.d
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(MPICH_DIR); make clean

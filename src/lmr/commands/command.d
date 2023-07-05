@@ -11,7 +11,7 @@ struct Command
     string description;
     string shortDescription;
     string helpMsg;
-    
+
 }
 
 class UserInputError : Error {
@@ -30,7 +30,7 @@ string shellCommand(string[] args)
         str ~= " " ~ s;
     }
     return str;
-    
+
 }
 
 void callShellCommand(string[] args)

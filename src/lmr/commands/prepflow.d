@@ -54,7 +54,7 @@ options ([+] can be repeated):
      Select mode for file preparation. Mode can be "steady" or "transient".
 
 `;
-    
+
 }
 
 enum Mode { steady, transient };
@@ -82,9 +82,9 @@ void main_(string[] args)
             writeln("lmr prep-flow: mode=steady selected.");
         }
     }
-    
+
     if (verbosity > 1) { writeln("lmr prep-flow: Start lua connection."); }
-    
+
     auto L = initLuaStateForPrep();
     // RJG, 2023-06-27
     // Add a few more lua-wrapped functions for use in prep.
@@ -170,8 +170,8 @@ void main_(string[] args)
         throw new FlowSolverException(errMsg);
     }
     if (verbosity > 0) { writeln("lmr prep-flow: Done."); }
-    
+
     return;
 }
 
-    
+

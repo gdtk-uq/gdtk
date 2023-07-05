@@ -115,16 +115,16 @@ void initLocalFluidBlocks()
 	foreach (blk; globalBlocks) {
 	    auto fblk = cast(FluidBlock) blk;
 	    if (fblk) { localFluidBlocks ~= fblk; }
-	    /+ [TODO] add in solid blocks 
+	    /+ [TODO] add in solid blocks
 	     auto mysblk = cast(SSolidBlock) blk;
 	     if (mysblk) { localSolidBlocks ~= mysblk; }
 	     +/
 	}
     }
-    
+
     // Set block IDs
     foreach (blk; localFluidBlocks) cfg.localFluidBlockIds ~= blk.id;
-    
+
 }
 
 /**
@@ -405,7 +405,7 @@ void initMappedCellDataExchange()
     if (anyBlockFail) {
         throw new LmrException("Failed at initialisation stage during locating mapped-cell boundaries.");
     }
-    
+
     foreach (blk; localFluidBlocks) {
         foreach (bc; blk.bc) {
             foreach (gce; bc.preReconAction) {

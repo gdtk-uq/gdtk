@@ -7,7 +7,7 @@
 
 module fvcellio;
 
-import std.stdio; 
+import std.stdio;
 import std.algorithm : startsWith;
 import std.string : split;
 import std.conv : to;
@@ -77,7 +77,7 @@ string[] buildFlowVariables()
     if (cfg.with_local_time_stepping) variables ~= "dt_local";
 
     return variables;
-    
+
 }
 
 class FVCellIO {
@@ -212,7 +212,7 @@ public:
 	case "vel.x": cell.fs.vel.x.re = value; return cell.fs.vel.x.re;
 	case "vel.y": cell.fs.vel.y.re = value; return cell.fs.vel.y.re;
 	case "vel.z": cell.fs.vel.z.re = value; return cell.fs.vel.z.re;
-	case "B.x": cell.fs.B.x.re = value; return cell.fs.B.x.re; 
+	case "B.x": cell.fs.B.x.re = value; return cell.fs.B.x.re;
 	case "B.y": cell.fs.B.y.re = value; return cell.fs.B.y.re;
 	case "B.z": cell.fs.B.z.re = value; return cell.fs.B.z.re;
 	case "p": cell.fs.gas.p.re = value; return cell.fs.gas.p.re;
@@ -221,17 +221,17 @@ public:
 	case "k": cell.fs.gas.k.re = value; return cell.fs.gas.k.re;
 	case "mu_t": cell.fs.mu_t.re = value; return cell.fs.mu_t.re;
 	case "k_t": cell.fs.k_t.re = value; return cell.fs.k_t.re;
-	case "shock-detector": cell.fs.S.re = value; return cell.fs.S.re; 
+	case "shock-detector": cell.fs.S.re = value; return cell.fs.S.re;
 	case "dt_subcycle": cell.dt_chem.re = value; return cell.dt_chem.re;
 	case "dt_local": cell.dt_local.re = value; return cell.dt_local.re;
-	case "e": cell.fs.gas.u.re = value; return cell.fs.gas.u.re; 
-	case "T": cell.fs.gas.T.re = value; return cell.fs.gas.T.re; 
+	case "e": cell.fs.gas.u.re = value; return cell.fs.gas.u.re;
+	case "T": cell.fs.gas.T.re = value; return cell.fs.gas.T.re;
 	default:
 	    throw new LmrException("Invalid selection for cell variable: " ~ var);
 	}
 
     }
-    
+
 
 private:
     int[string] mSpecies;

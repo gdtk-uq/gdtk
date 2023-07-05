@@ -26,7 +26,7 @@ int determineNumberOfSnapshots()
 {
     if (!exists(lmrCfg.restartFile))
 	return 0;
-	
+
     auto f = File(lmrCfg.restartFile, "r");
     auto line = f.readln().strip();
     int count = 0;
@@ -115,7 +115,7 @@ void main(string[] args)
         GlobalConfig.in_mpi_context = false;
         GlobalConfig.is_master_task = true;
     }
-    
+
     if (GlobalConfig.is_master_task) {
         writeln("Eilmer simulation code: steady-state solver mode.");
         writeln("Revision-id: PUT_REVISION_STRING_HERE");
@@ -124,7 +124,7 @@ void main(string[] args)
 	writeln("Parallel-flavour: PUT_PARALLEL_FLAVOUR_HERE");
         writeln("Build-date: PUT_BUILD_DATE_HERE");
     }
-    
+
     int verbosity = 0;
     int snapshotStart = 0;
     int numberSnapshots = 0;
@@ -143,7 +143,7 @@ void main(string[] args)
            "max-wall-clock", &maxWallClock);
 
     GlobalConfig.verbosity_level = verbosity;
-    
+
     if (verbosity > 0 && GlobalConfig.is_master_task) {
 	writeln("lmr run-steady: Begin Newton-Krylov simulation.");
 	version(mpi_parallel) {
@@ -172,7 +172,7 @@ void main(string[] args)
     version(mpi_parallel) {
 	MPI_Bcast(&snapshotStart, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
-    
+
     if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run-steady: Initialise simulation.");
     initNewtonKrylovSimulation(snapshotStart, maxCPUs, threadsPerMPITask, maxWallClock);
 
