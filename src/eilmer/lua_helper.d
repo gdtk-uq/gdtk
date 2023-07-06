@@ -65,6 +65,7 @@ void registerLuaEnvironment(lua_State *L, LuaEnvOptions opt)
     if (opt.withGlobalConfig) registerGlobalConfig(L);
     if (opt.withGeom) {
         registerVector3(L);
+        registerGeomNomenclature(L);
         registerPaths(L);
         registerGpathUtils(L);
         registerSurfaces(L);

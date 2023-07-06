@@ -77,6 +77,7 @@ GEOM_LUAWRAP_FILES := \
 	$(GEOM_DIR)/luawrap/package.d \
 	$(GEOM_DIR)/luawrap/luaunifunction.d \
 	$(GEOM_DIR)/luawrap/luageom.d \
+	$(GEOM_DIR)/luawrap/luanomenclature.d \
 	$(GEOM_DIR)/luawrap/luagpath.d \
 	$(GEOM_DIR)/luawrap/luagpath_utils.d \
 	$(GEOM_DIR)/luawrap/luasurface.d \
