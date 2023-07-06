@@ -88,7 +88,7 @@ void main_(string[] args)
     getopt(args,
            config.bundling,
            "v|verbose+", &verbosity,
-           "snapshots|snapshot", &snapshots,
+           "s|snapshots|snapshot", &snapshots,
            "f|final", &finalSnapshot,
            "a|all", &allSnapshots,
            "b|binary-format", &binaryFormat);
@@ -132,6 +132,10 @@ void main_(string[] args)
         foreach (i; snapshots) snaps ~= format(lmrCfg.snapshotIdxFmt, i);
     }
     if (finalSnapshot && !allSnapshots) {
+        snaps ~= availSnapshots[$-1];
+    }
+    if (snaps.length == 0) { // We've picked up nothing from the command line,
+                            // so do the final snapshot.
         snaps ~= availSnapshots[$-1];
     }
     auto snaps2process = uniq(sort(snaps));
