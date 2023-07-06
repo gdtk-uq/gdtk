@@ -22,6 +22,7 @@ config.print_count = 1
 config.save_residual_values = true
 config.save_limiter_values = true
 config.flow_format = "rawbinary"
+config.grid_format = "rawbinary"
 
 -- ==========================================================
 -- Freestream conditions
@@ -47,35 +48,40 @@ theta = 15.0 * (math.pi/180.0)
 dy = L*math.tan(theta)
 
 -- define vertices
-p0 = Vector3:new{x=-L,  y=0.0}
-p1 = Vector3:new{x=0.0, y=0.0}
-p2 = Vector3:new{x=L,   y=dy}
-p3 = Vector3:new{x=L,   y=L}
-p4 = Vector3:new{x=-L,  y=L}
+p0 = {x=-L,  y=0.0}
+p1 = {x=0.0, y=0.0}
+p2 = {x=L,   y=dy}
+p3 = {x=L,   y=L}
+p4 = {x=0.0, y=L} 
+p5 = {x=-L,  y=L}
 
 -- define paths
 l01 = Line:new{p0=p0, p1=p1}
 l12 = Line:new{p0=p1, p1=p2}
-l02 = Polyline:new{segments={l01,l12}}
 l23 = Line:new{p0=p2, p1=p3}
 l43 = Line:new{p0=p4, p1=p3}
-l04 = Line:new{p0=p0, p1=p4}
+l54 = Line:new{p0=p5, p1=p4}
+l05 = Line:new{p0=p0, p1=p5}
+l14 = Line:new{p0=p1, p1=p4}
 
 -- define patch
-quad0 = makePatch{north=l43, east=l23, south=l02, west=l04}
+quad0 = makePatch{north=l54, east=l14, south=l01, west=l05}
+quad1 = makePatch{north=l43, east=l23, south=l12, west=l14}
 
 -- define grid
-nx = 30
+nx0 = 15
+nx1 = nx0
 ny = 15
--- Build a structured grid, but we'll convert to unstructured
--- when we register the grid.
---
-sgrid0 = StructuredGrid:new{psurface=quad0, niv=nx+1, njv=ny+1}
+-- Build a structured grids, join them and then 
+-- convert to unstructured when we register the grid.
+sgrid0 = StructuredGrid:new{psurface=quad0, niv=nx0+1, njv=ny+1}
+sgrid1 = StructuredGrid:new{psurface=quad1, niv=nx1+1, njv=ny+1}
+sgrid0:joinGrid(sgrid1, "east")
 
 grid0 = registerGrid{
    grid=UnstructuredGrid:new{sgrid=sgrid0},
    fsTag="initial",
-   bcTags={[0]="inflow", [1]="outflow", [2]="wall", [3]="outflow"}
+   bcTags={[Face.west]="inflow", [Face.east]="outflow", [Face.south]="wall", [Face.north]="outflow"}
 }
 
 flowDict = {}
@@ -110,7 +116,7 @@ config.residual_smoothing = false
 NewtonKrylovGlobalConfig{
    number_of_steps_for_setting_reference_residuals = 1,
    max_newton_steps = 1500,
-   stop_on_relative_residual = 1.0e-12,
+   stop_on_relative_residual = 1.0e-14,
    number_of_phases = 1,
    use_local_timestep = true,
    inviscid_cfl_only = true,
@@ -132,9 +138,9 @@ NewtonKrylovPhase:new{
    residual_interpolation_order = 2,
    jacobian_interpolation_order = 2,
    frozen_preconditioner = true,
-   frozen_limiter_for_jacobian = false,
-   use_adaptive_preconditioner = false,
    steps_between_preconditioner_update = 5,
+   use_adaptive_preconditioner = false,
+   frozen_limiter_for_jacobian = false,
    linear_solve_tolerance = 0.1,
    use_auto_cfl = true,
    threshold_relative_residual_for_cfl_growth = 1.0,

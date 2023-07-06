@@ -8,12 +8,18 @@ Kyle A. Damm & Rowan J. Gollan
 This example is of supersonic flow over a wedge: essentially, flow through an oblique shock.
 It is test case B.2 "Steady-state Oblique Shock Wave" in the paper by Ghia et al. (2010).
 This particular example was set up by Kyle Damm with conditions to match the example in Ghia et al.:
-latexmath:[M_{\infty} = 3.0; \delta = 15.0^{\circ}; \gamma = 1.4]
+[stem]
+++++
+M_{\infty} = 3.0; \delta = 15.0^{\circ}; \gamma = 1.4
+++++
 
-TIP: This example shows the use of a `Polyline` to represent a
-single path with a C1 discontinuity,
-and how to form an `UnstructuredGrid` from a `StructuredGrid`.
+[TIP]
+====
+This example shows some advanced grid manipulation:
 
+. How to join `StructuredGrid` grids; and
+. How to form an `UnstructuredGrid` from a `StructuredGrid`.
+====
 //end::description[]
 
 == Reference

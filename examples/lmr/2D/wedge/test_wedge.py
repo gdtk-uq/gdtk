@@ -14,9 +14,9 @@ def change_test_dir(request, monkeypatch):
     monkeypatch.chdir(request.fspath.dirname)
 
 expected_number_steps = 29
-expected_final_cfl = 1.139e+04
-expected_number_steps_on_restart = 30
-expected_final_cfl_on_restart = 1.152e+04
+expected_final_cfl = 2.577e+04
+expected_number_steps_on_restart = 29
+expected_final_cfl_on_restart = 2.600e+04
 
 def expected_output(proc, expected_n_steps, expected_final_cfl):
     steps = 0
