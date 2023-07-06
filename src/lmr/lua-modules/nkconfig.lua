@@ -158,7 +158,7 @@ NewtonKrylovPhaseDefaults = {
    steps_between_preconditioner_update = 10,
    use_adaptive_preconditioner = false,
    ignore_stopping_criteria = true,
-   frozen_limiter_for_jacobian = true,
+   frozen_limiter_for_jacobian = false,
 
    -- Linear solver control
    linear_solve_tolerance = 0.01,

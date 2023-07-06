@@ -218,7 +218,7 @@ struct NKPhaseConfig {
     int stepsBetweenPreconditionerUpdate = 10;
     bool useAdaptivePreconditioner = false;
     bool ignoreStoppingCriteria = true;
-    bool frozenLimiterForJacobian = true;
+    bool frozenLimiterForJacobian = false;
     double linearSolveTolerance = 0.01;
     // Auto CFL control
     bool useAutoCFL = false;
@@ -793,7 +793,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         if (step < nkCfg.freezeLimiterAtStep) {
             // Make sure that limiter is on in case it has been set
             // to frozen during a Jacobian evaluation.
-            cfg.frozen_limiter = true;
+            cfg.frozen_limiter = false;
         }
 
 	// 0c. Compute the CFL for this step
