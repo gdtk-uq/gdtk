@@ -494,7 +494,7 @@ private:
 }
 
 
-class GasGiantThermalConductivity : ThermalConductivity {
+class GasGiantThermalConductivity : ThermalConductivityMixtureModel {
 
     override GasGiantThermalConductivity dup() const {
         return new GasGiantThermalConductivity(_dbOption, _modelOption);

@@ -148,7 +148,7 @@ public:
             Q.k = _Cp*Q.mu/_Prandtl;
         }
         else {
-            _thermCondModel.update_thermal_conductivity(Q);
+            Q.k = _thermCondModel.eval(Q.T);
         }
     }
     /*

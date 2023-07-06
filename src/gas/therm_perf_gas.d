@@ -533,7 +533,7 @@ protected:
     ThermallyPerfectGasMixEOS _tpgMixEOS;
     CEAThermoCurve[] _curves;
     Viscosity _viscModel;
-    ThermalConductivity _thermCondModel;
+    ThermalConductivityMixtureModel _thermCondModel;
     // Working array space
     number[] _Cp, _Cv, _h, _s, _molef;
     // Data for binary diffusion calculations

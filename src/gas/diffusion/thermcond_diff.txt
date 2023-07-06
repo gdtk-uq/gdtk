@@ -1,0 +1,199 @@
+diff --git a/src/gas/diffusion/cea_therm_cond.d b/src/gas/diffusion/cea_therm_cond.d
+index 673db5be..b6bff98c 100644
+--- a/src/gas/diffusion/cea_therm_cond.d
++++ b/src/gas/diffusion/cea_therm_cond.d
+@@ -43,18 +43,25 @@ public:
+         D = params["D"];
+     }
+ 
+-    @nogc number eval(number T) const
++    @nogc number eval(number T, number logT) const
+     {
+-        if ( T < T_lower )
+-            throw new Exception("temperature value lower than T_lower in CEAThermCondCurve:eval()");
+-        if ( T > T_upper )
+-            throw new Exception("temperature value greater than T_upper in CEAThermCondCurve:eval()");
+-        number log_k = A*log(T) + B/T + C/(T*T) + D;
++        debug{
++            if ( T < T_lower )
++                throw new Exception("temperature value lower than T_lower in CEAThermCondCurve:eval()");
++            if ( T > T_upper )
++                throw new Exception("temperature value greater than T_upper in CEAThermCondCurve:eval()");
++        }
++        number log_k = A*logT + B/T + C/(T*T) + D;
+ 
+         /* CEA value is in microWatts/(cm.K), so convert to SI units of W/(m.K). */
+         number k = exp(log_k)*1.0e-4;
+         return k;
+     }
++    @nogc number eval(number T) const
++    {
++        number logT = log(T);
++        return eval(T, logT);
++    }
+ }
+ 
+ 
+@@ -65,6 +72,8 @@ public:
+         _curves = src._curves.dup;
+         _T_lowest = src._T_lowest;
+         _T_highest = src._T_highest;
++        _k_lowest = src._k_lowest;
++        _k_highest = src._k_highest;
+     }
+     this(in CEAThermCondCurve[] curves)
+     {
+@@ -81,35 +90,41 @@ public:
+                 throw new Exception("CEAThermalConductivity: curves are not continuous in temperature.");
+             }
+         }
++        _k_lowest = compute_k(T_lowest,  log(T_lowest));
++        _k_highest= compute_k(T_highest, log(T_highest));
+     }
+     override CEAThermalConductivity dup() const
+     {
+         return new CEAThermalConductivity(this);
+     }
+-    override number eval(ref const(GasState) Q, int imode) const
++    override number eval(ref const(GasState) Q, number logT) const
+     {
+-        number T = Q.T;
++        return compute_k(Q.T, logT);
++    }
++
++private:
++    number compute_k(number T, number logT) {
+         // At the limits of the curve, extrapolate value as a constant.
+         if ( T < _T_lowest ) {
+-            return _curves[0].eval(to!number(_T_lowest));
++            return _k_lowest;
+         }
+         if ( T > _T_highest ) {
+-            return _curves[$-1].eval(to!number(_T_highest));
++            return _k_highest;
+         }
+         // Search for curve segment and evaluate
+         foreach ( c; _curves ) {
+             if ( T >= c.T_lower && T <= c.T_upper ) {
+-                return c.eval(T);
++                return c.eval(T, logT);
+             }
+         }
+-        // We should not reach this point.
+-        throw new Exception("CEAThermalConductivity:eval() -- we should never reach this point.");
++        return _k_lowest;
+     }
+ 
+-private:
+     CEAThermCondCurve[] _curves;
+     double _T_lowest;
+     double _T_highest;
++    number _k_lowest; 
++    number _k_highest; 
+ }
+ 
+ CEAThermalConductivity createCEAThermalConductivity(lua_State* L)
+@@ -156,7 +171,7 @@ version(cea_therm_cond_test) {
+         lua_close(L);
+         auto Q = GasState(1, 1);
+         Q.T = 3500.0;
+-        assert(isClose(1.859070e-01, co2CEA.eval(Q, -1), 1.0e-6), failedUnitTest());
++        assert(isClose(1.859070e-01, co2CEA.eval(Q, log(Q.T)), 1.0e-6), failedUnitTest());
+ 
+         return 0;
+     }
+diff --git a/src/gas/diffusion/chemkin_therm_cond.d b/src/gas/diffusion/chemkin_therm_cond.d
+index df55f606..239378a6 100644
+--- a/src/gas/diffusion/chemkin_therm_cond.d
++++ b/src/gas/diffusion/chemkin_therm_cond.d
+@@ -43,18 +43,25 @@ public:
+         D = params["D"];
+     }
+ 
+-    @nogc number eval(number T) const
++    @nogc number eval(number T, number logT) const
+     {
+-        if ( T < T_lower )
+-            throw new Exception("temperature value lower than T_lower in ChemkinThermCondCurve:eval()");
+-        if ( T > T_upper )
+-            throw new Exception("temperature value greater than T_upper in ChemkinThermCondCurve:eval()");
+-        number log_k = A + B*log(T) + C*log(T)*log(T) + D*log(T)*log(T)*log(T);
++        debug{
++            if ( T < T_lower )
++                throw new Exception("temperature value lower than T_lower in ChemkinThermCondCurve:eval()");
++            if ( T > T_upper )
++                throw new Exception("temperature value greater than T_upper in ChemkinThermCondCurve:eval()");
++        }
++        number log_k = A + B*logT + C*logT*logT + D*logT*logT*logT;
+ 
+         /* Chemkin value is in W/(m.K), SI units. */
+         number k = exp(log_k);
+         return k;
+     }
++    @nogc number eval(number T) const
++    {
++        number logT = log(T);
++        return eval(T, logT);
++    }
+ }
+ 
+ 
+@@ -65,6 +72,8 @@ public:
+         _curves = src._curves.dup;
+         _T_lowest = src._T_lowest;
+         _T_highest = src._T_highest;
++        _k_lowest = src._k_lowest;
++        _k_highest = src._k_highest;
+     }
+     this(in ChemkinThermCondCurve[] curves)
+     {
+@@ -81,35 +90,40 @@ public:
+                 throw new Exception("ChemkinThermalConductivity: curves are not continuous in temperature.");
+             }
+         }
++        _k_lowest = compute_k(T_lowest,  log(T_lowest));
++        _k_highest= compute_k(T_highest, log(T_highest));
+     }
+     override ChemkinThermalConductivity dup() const
+     {
+         return new ChemkinThermalConductivity(this);
+     }
+-    override number eval(ref const(GasState) Q, int imode) const
++    override number eval(ref const(GasState) Q, number logT) const
+     {
+-        number T = Q.T;
++        return compute_k(Q.T, logT);
++    }
++
++private:
++    number compute_k(number T, number logT) {
+         // At the limits of the curve, extrapolate value as a constant.
+         if ( T < _T_lowest ) {
+-            return _curves[0].eval(to!number(_T_lowest));
++            return _k_lowest;
+         }
+         if ( T > _T_highest ) {
+-            return _curves[$-1].eval(to!number(_T_highest));
++            return _k_highest;
+         }
+         // Search for curve segment and evaluate
+         foreach ( c; _curves ) {
+             if ( T >= c.T_lower && T <= c.T_upper ) {
+-                return c.eval(T);
++                return c.eval(T, logT);
+             }
+         }
+-        // We should not reach this point.
+-        throw new Exception("ChemkinThermalConductivity:eval() -- we should never reach this point.");
++        return _k_lowest;
+     }
+-
+-private:
+     ChemkinThermCondCurve[] _curves;
+     double _T_lowest;
+     double _T_highest;
++    number _k_lowest; 
++    number _k_highest; 
+ }
+ 
+ ChemkinThermalConductivity createChemkinThermalConductivity(lua_State* L)
