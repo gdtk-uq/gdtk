@@ -144,7 +144,7 @@ public:
     }
     override void update_trans_coeffs(ref GasState Q)
     {
-        _viscModel.update_viscosity(Q);
+        Q.mu = _viscModel.eval(Q.T);
         if ( _constPrandtl ) {
             Q.k = _Cp*Q.mu/_Prandtl;
         }

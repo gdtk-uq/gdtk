@@ -532,7 +532,7 @@ protected:
     PerfectGasMixEOS _pgMixEOS;
     ThermallyPerfectGasMixEOS _tpgMixEOS;
     CEAThermoCurve[] _curves;
-    Viscosity _viscModel;
+    ViscosityMixtureModel _viscModel;
     ThermalConductivityMixtureModel _thermCondModel;
     // Working array space
     number[] _Cp, _Cv, _h, _s, _molef;

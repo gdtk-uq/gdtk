@@ -72,8 +72,11 @@ public:
       Compute the viscosity assuming that temperature is
       up-to-date in GasState Q.
     +/
-    @nogc override number eval(in GasState Q) const {
-        return sutherland_viscosity(Q.T, _T_ref, _mu_ref, _S);
+    @nogc override number eval(number T) const {
+        return sutherland_viscosity(T, _T_ref, _mu_ref, _S);
+    }
+    @nogc override number eval(number T, number logT) const {
+        return sutherland_viscosity(T, _T_ref, _mu_ref, _S);
     }
 
 private:

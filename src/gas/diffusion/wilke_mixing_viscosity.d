@@ -29,7 +29,7 @@ import gas.gas_model;
 import gas.gas_state;
 import gas.diffusion.viscosity;
 
-class WilkeMixingViscosity : Viscosity {
+class WilkeMixingViscosity : ViscosityMixtureModel {
 public:
     this(in Viscosity[] vms, in double[] mol_masses)
     in {
@@ -68,8 +68,10 @@ public:
         // 1. Evaluate the mole fractions
         massf2molef(Q.massf, _mol_masses, _x);
         // 2. Calculate the component viscosities
+        number T = Q.T;
+        number logT = log(T);
         foreach(i; 0 .. nsp) {
-            _mu[i] =  _vms[i].eval(Q);
+            _mu[i] =  _vms[i].eval(T, logT);
         }
         // 3. Interaction potentials are precomputed
         // 4. Apply mixing formula

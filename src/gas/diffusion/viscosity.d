@@ -21,12 +21,19 @@ import gas.diffusion.chemkin_viscosity;
 
 interface Viscosity {
     Viscosity dup() const;
+    @nogc number eval(number T);
+    @nogc number eval(number T, number logT);
+}
+
+interface ViscosityMixtureModel {
+    ViscosityMixtureModel dup() const;
     @nogc final void update_viscosity(ref GasState Q)
     {
         Q.mu = eval(Q);
     }
     @nogc number eval(in GasState Q);
 }
+
 
 /**
  * Create and return a new Viscosity model.

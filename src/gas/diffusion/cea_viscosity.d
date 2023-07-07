@@ -42,14 +42,21 @@ public:
         C = params["C"];
         D = params["D"];
     }
-
     @nogc number eval(number T) const
     {
-        if ( T < T_lower )
-            throw new Exception("temperature value lower than T_lower in CeaViscCurve:eval()");
-        if ( T > T_upper )
-            throw new Exception("temperature value greater than T_upper in CeaViscCurve:eval()");
-        number log_mu = A*log(T) + B/T + C/(T*T) + D;
+        number logT = log(T);
+        return eval(T, logT);
+    }
+
+    @nogc number eval(number T, number logT) const
+    {
+        debug{
+            if ( T < T_lower )
+                throw new Exception("temperature value lower than T_lower in CeaViscCurve:eval()");
+            if ( T > T_upper )
+                throw new Exception("temperature value greater than T_upper in CeaViscCurve:eval()");
+        }
+        number log_mu = A*logT + B/T + C/(T*T) + D;
 
         /* CEA value is in microPoise, so convert to SI units.
            1 P = 0.1 kg/(m.s)
@@ -89,9 +96,8 @@ public:
     {
         return new CEAViscosity(this);
     }
-    override number eval(in GasState Q) const
+    override number eval(number T, number logT) const
     {
-        number T = Q.T;
         // At the limits of the curve, extrapolate value as a constant.
         if ( T < _T_lowest ) {
             return _curves[0].eval(to!number(_T_lowest));
@@ -102,11 +108,16 @@ public:
         // Search for curve segment and evaluate
         foreach ( c; _curves ) {
             if ( T >= c.T_lower && T <= c.T_upper ) {
-                return c.eval(T);
+                return c.eval(T, logT);
             }
         }
         // We should not reach this point.
         throw new Exception("CEAViscosity:eval() -- we should never reach this point.");
+    }
+    override number eval(number T) const
+    {
+        number logT = log(T);
+        return eval(T, logT);
     }
 
 private:
