@@ -68,8 +68,10 @@ public:
         // 1. Evaluate the mole fractions
         massf2molef(Q.massf, _mol_masses, _x);
         // 2. Calculate the component thermoconductivities
+        number T = Q.T;
+        number logT = log(T);
         foreach(isp; 0 .. nsp) {
-            _k[isp] = _tcms[isp].eval(Q.T);
+            _k[isp] = _tcms[isp].eval(T, logT);
         }
         // 3. Interaction potentials are now precalculated
         // 4. Apply mixing formula

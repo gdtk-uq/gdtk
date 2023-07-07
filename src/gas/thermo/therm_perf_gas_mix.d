@@ -24,6 +24,21 @@ import gas;
 import gas.thermo.thermo_model;
 import gas.thermo.cea_thermo_curves;
 
+@nogc pure
+double approxlog(number value){
+    immutable double a = 1.4767235475800453;
+    immutable double b = -1.477808113688585;
+    immutable double c = 0.60987486544988612;
+    immutable double d = 0.43559347328148307;
+    immutable double g_rlog2_e = 0.6931471805599453094172;
+
+    int iExp;
+    double dM = frexp(value.re, iExp);
+    double x = 1.0/(c*dM + d);
+    double log2x = iExp + x * (a*dM + b);
+    return g_rlog2_e*log2x;
+}
+
 class ThermPerfGasMixture : ThermodynamicModel {
 public:
 

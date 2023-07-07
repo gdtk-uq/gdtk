@@ -45,11 +45,17 @@ public:
 
     @nogc number eval(number T) const
     {
+        number logT = log(T);
+        return eval(T, logT);
+    }
+
+    @nogc number eval(number T, number logT) const
+    {
         if ( T < T_lower )
             throw new Exception("temperature value lower than T_lower in ChemkinThermCondCurve:eval()");
         if ( T > T_upper )
             throw new Exception("temperature value greater than T_upper in ChemkinThermCondCurve:eval()");
-        number log_k = A + B*log(T) + C*log(T)*log(T) + D*log(T)*log(T)*log(T);
+        number log_k = A + B*logT + C*logT*logT + D*logT*logT*logT;
 
         /* Chemkin value is in W/(m.K), SI units. */
         number k = exp(log_k);
@@ -88,6 +94,11 @@ public:
     }
     override number eval(number T) const
     {
+        number logT = log(T);
+        return eval(T, logT);
+    }
+    override number eval(number T, number logT) const
+    {
         // At the limits of the curve, extrapolate value as a constant.
         if ( T < _T_lowest ) {
             return _curves[0].eval(to!number(_T_lowest));
@@ -98,7 +109,7 @@ public:
         // Search for curve segment and evaluate
         foreach ( c; _curves ) {
             if ( T >= c.T_lower && T <= c.T_upper ) {
-                return c.eval(T);
+                return c.eval(T, logT);
             }
         }
         // We should not reach this point.

@@ -42,14 +42,19 @@ public:
         C = params["C"];
         D = params["D"];
     }
-
     @nogc number eval(number T) const
+    {
+        number logT = log(T);
+        return eval(T, logT);
+    }
+
+    @nogc number eval(number T, number logT) const
     {
         if ( T < T_lower )
             throw new Exception("temperature value lower than T_lower in CEAThermCondCurve:eval()");
         if ( T > T_upper )
             throw new Exception("temperature value greater than T_upper in CEAThermCondCurve:eval()");
-        number log_k = A*log(T) + B/T + C/(T*T) + D;
+        number log_k = A*logT + B/T + C/(T*T) + D;
 
         /* CEA value is in microWatts/(cm.K), so convert to SI units of W/(m.K). */
         number k = exp(log_k)*1.0e-4;
@@ -86,7 +91,7 @@ public:
     {
         return new CEAThermalConductivity(this);
     }
-    override number eval(number T) const
+    override number eval(number T, number logT) const
     {
         // At the limits of the curve, extrapolate value as a constant.
         if ( T < _T_lowest ) {
@@ -98,11 +103,16 @@ public:
         // Search for curve segment and evaluate
         foreach ( c; _curves ) {
             if ( T >= c.T_lower && T <= c.T_upper ) {
-                return c.eval(T);
+                return c.eval(T, logT);
             }
         }
         // We should not reach this point.
         throw new Exception("CEAThermalConductivity:eval() -- we should never reach this point.");
+    }
+    override number eval(number T) const
+    {
+        number logT = log(T);
+        return eval(T, logT);
     }
 
 private:
