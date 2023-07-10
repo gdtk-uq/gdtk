@@ -501,92 +501,59 @@ private:
             gs.p_e = gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[EE];
         }
     }
-    version(complex_numbers) {
-        // For the complex numbers version of the code we need a Newton's method with a fixed number of iterations.
-        // An explanation can be found in:
-        //     E. J. Nielsen and W. L. Kleb
-        //     Efficient Construction of Discrete Adjoint Operators on Unstructured Grids by Using Complex Variables
-        //     AIAA Journal, vol. 44, no. 4, 2006.
-        //
-        @nogc
-        number vibration_temperature(ref GasState gs)
-        {
-            int MAX_ITERATIONS = 10;
 
-            // Take the supplied T_modes[0] as the initial guess.
-            number T_guess = gs.T_modes[0];
-            number u0 = vib_energy_mixture(gs, T_guess);
-            number f_guess =  u0 - gs.u_modes[0];
+    @nogc
+    number vibration_temperature(ref GasState gs)
+    {
+        const int MAX_ITERATIONS = 40;
+        const double TOL = 1e-8;
+        const double IMAGINARY_TOL = 1e-15;
 
-            // Begin iterating.
-            int count = 0;
-            number Cv, dT;
-            foreach (iter; 0 .. MAX_ITERATIONS) {
-                Cv = vib_Cv_mixture(gs, T_guess);
-                dT = -f_guess/Cv;
-                T_guess += dT;
-                f_guess = vib_energy_mixture(gs, T_guess) - gs.u_modes[0];
-                count++;
+        // Take the supplied T_modes[0] as the initial guess.
+        number T_guess = gs.T_modes[VIB];
+        number u0 = vib_energy_mixture(gs, T_guess);
+        number f_guess =  u0 - gs.u_modes[VIB];
+
+        // Begin iterating.
+        int count = 0;
+        number Cv, dT;
+        foreach (iter; 0 .. MAX_ITERATIONS) {
+            Cv = vib_Cv_mixture(gs, T_guess);
+            dT = -f_guess/Cv;
+            T_guess += dT;
+            version(complex_number) {
+                if (fabs(dT) < TOL && fabs(dT.im) < IMAGINARY_TOL) {
+                    break;
+                }
             }
-
-            return T_guess;
-        }
-    } else {
-        @nogc
-        number vibration_temperature(ref GasState gs)
-        {
-            int MAX_ITERATIONS = 40;
-
-            // Take the supplied T_modes[0] as the initial guess.
-            number T_guess = gs.T_modes[0];
-            number u0 = vib_energy_mixture(gs, T_guess);
-            number f_guess =  u0 - gs.u_modes[0];
-
-            // Before iterating, check if the supplied guess is
-            // good enough. Define good enough as 1/100th of a Joule.
-            double E_TOL = 1e-2;
-            if (fabs(f_guess) < E_TOL) {
-                return gs.T_modes[0];
-            }
-
-            // We'll keep adjusting our temperature estimate
-            // until it is less than TOL.
-            double TOL = 1.0e-9;
-
-            // Begin iterating.
-            int count = 0;
-            number Cv, dT;
-            foreach (iter; 0 .. MAX_ITERATIONS) {
-                Cv = vib_Cv_mixture(gs, T_guess);
-                dT = -f_guess/Cv;
-                T_guess += dT;
+            else {
                 if (fabs(dT) < TOL) {
                     break;
                 }
-                f_guess = vib_energy_mixture(gs, T_guess) - gs.u_modes[0];
-                count++;
             }
-
-            if ((count == MAX_ITERATIONS)&&(fabs(dT)>1e-3)) {
-                string msg = "The 'vibTemperature' function failed to converge.\n";
-                debug {
-                    msg ~= format("The final value for Tvib was: %12.6f\n", T_guess);
-                    msg ~= "The supplied GasState was:\n";
-                    msg ~= gs.toString() ~ "\n";
-                }
-                throw new GasModelException(msg);
-            }
-            return T_guess;
+            f_guess = vib_energy_mixture(gs, T_guess) - gs.u_modes[VIB];
+            count++;
         }
-    } // version()
+
+        if ((count == MAX_ITERATIONS)&&(fabs(dT)>1e-3)) {
+            string msg = "The 'vibTemperature' function failed to converge.\n";
+            debug {
+                msg ~= format("The final value for Tvib was: %12.6f\n", T_guess);
+                msg ~= "The supplied GasState was:\n";
+                msg ~= gs.toString() ~ "\n";
+            }
+            throw new GasModelException(msg);
+        }
+        return T_guess;
+    }
 
 
     @nogc
     number electron_electronic_temperature(ref GasState gs)
     {
         const int MAX_ITERATIONS = 200;
-        const int MIN_ITERATIONS = 10;
-        const double TOL = 1.0e-10;
+        const double TOL = 1.0e-8;
+        const double IMAGINARY_TOL = 1.0e-15;
         immutable number T_MIN = to!number(10.0);
         immutable number T_MAX = to!number(200_000.0);
 
@@ -596,9 +563,9 @@ private:
         // use the current T_modes[1] as the initial guess
         // and have an initial guess that adding 100 K will bracket
         // the root. We fix this later.
-        number Tb = gs.T_modes[EE];
-        number Ta = Tb + to!number(100.0);
-        number Tb_new = Tb;
+        number Ta = gs.T_modes[EE] - to!number(5.0);
+        number Tb = gs.T_modes[EE] + to!number(5.0);
+        number Tb_new;
 
         number zero_func(number T) {
             number u = electron_electronic_energy_mixture(gs, T);
@@ -664,7 +631,7 @@ private:
             // needs to do a minimum number of iterations to 
             // set the imaginary component correctly
             version(complex_numbers) {
-                if (fabs(T_old - Tb) < TOL && iter > MIN_ITERATIONS){
+                if (fabs(T_old - Tb) < TOL && fabs(T_old.im - Tb.im) < IMAGINARY_TOL){
                     converged = true;
                     break;
                 }
