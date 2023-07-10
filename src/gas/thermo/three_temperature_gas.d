@@ -243,6 +243,14 @@ public:
        return internalEnergy(gs) + gs.p / gs.rho;
     }
 
+    @nogc
+    override void enthalpies(in GasState gs, number[] hs)
+    {
+        foreach(isp; 0 .. mNSpecies){
+            hs[isp] = enthalpyPerSpecies(gs, isp);
+        }
+    }
+
     @nogc override number enthalpyPerSpecies(in GasState gs, int isp)
     {
         number h_tr = mCpTR[isp]*(gs.T - T_REF) + mHf[isp];

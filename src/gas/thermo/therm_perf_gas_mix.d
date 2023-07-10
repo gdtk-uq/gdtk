@@ -29,9 +29,10 @@ public:
 
     this(lua_State *L, string[] speciesNames)
     {
-        auto n_species = speciesNames.length;
+        n_species = speciesNames.length;
         mR.length = n_species;
         mVals.length = n_species;
+
         foreach (isp, spName; speciesNames) {
             lua_getglobal(L, "db");
             lua_getfield(L, -1, spName.toStringz);
@@ -61,7 +62,7 @@ public:
     @nogc
     override void updateFromRhoU(ref GasState gs)
     {
-        update_temperature_from_energy(gs);
+        gs.T = update_temperature_from_energy(gs);
         update_pressure(gs);
     }
     @nogc
@@ -282,8 +283,9 @@ public:
     @nogc
     override number internalEnergy(in GasState gs)
     {
+        number logT = log(gs.T);
         foreach (isp, ref u; mVals) {
-            u = mCurves[isp].eval_h(gs.T) - mR[isp]*gs.T;
+            u = mCurves[isp].eval_h(gs.T, logT) - mR[isp]*gs.T;
         }
         number u = mass_average(gs, mVals);
         return u;
@@ -299,11 +301,21 @@ public:
     @nogc
     override number enthalpy(in GasState gs)
     {
+        number logT = log(gs.T);
         foreach (isp, ref h; mVals) {
-            h = mCurves[isp].eval_h(gs.T);
+            h = mCurves[isp].eval_h(gs.T, logT);
         }
         number h = mass_average(gs, mVals);
         return h;
+    }
+
+    @nogc
+    override void enthalpies(in GasState gs, number[] hs)
+    {
+        number logT = log(gs.T);
+        foreach (isp; 0 .. n_species) {
+            hs[isp] = mCurves[isp].eval_h(gs.T, logT);
+        }
     }
 
     @nogc
@@ -341,6 +353,7 @@ public:
     }
 
 private:
+    size_t n_species;
     double[] mR;
     CEAThermoCurve[] mCurves;
     number[] mVals; // a private work array
@@ -379,87 +392,70 @@ private:
     }
 
     @nogc
-    void update_temperature_from_energy(ref GasState gs)
+    number internal_energy(size_t nsp, in number[] massf, in number T, in number logT)
     {
-        number Tsave = gs.T; // Keep a copy for diagnostics purpose.
-        double TOL = 1.0e-6;
-        //
-        // PJ 2020-01-01
-        // Hack to cover over low energy problems with large ionization fractions.
-        // Should not be needed if things are being solved well.
-        //   number u_original = Q.u;
-        //   Q.T = to!number(T_MIN+1.0);
-        //   update_energy(Q);
-        //   if (u_original > Q.u) { Q.u = u_original; }
-        // End of hack.
-        //
-        // The "target" energy is the value we will iterate to find.
-        // We search (via a numerical method) for the temperature
-        // value that gives this target energy.
-        number e_tgt = gs.u;
-        // delT is the initial guess for a bracket size.
-        // We set this quite agressivley at 100 K hoping to
-        // keep the number of iterations required to a small
-        // value. In general, we are taking small timesteps
-        // so the value of temperature from the previous step
-        // should not change too much. If it does, there should
-        // be enough robustness in the bracketing and
-        // the function-solving method to handle this.
-        number delT = 1000.0;
-        version(complex_numbers) {
-            number T1 = nm.complex.fmax(gs.T - 0.5*delT, to!number(T_MIN));
-        } else {
-            double T1 = std.math.fmax(gs.T - 0.5*delT, T_MIN);
+        number u = 0.0;
+        foreach (isp; 0 .. nsp) {
+            u += massf[isp]*(mCurves[isp].eval_h(T, logT) - mR[isp]*T);
         }
-        number T2 = T1 + delT;
+        return u;
+    }
 
-        number zeroFn(number T)
-        {
-            gs.T = T;
-            update_energy(gs);
-            /*
+    @nogc
+    number constant_volume_specific_heat(size_t nsp, number[] massf, number T)
+    {
+        number Cv = 0.0;
+        foreach (isp; 0 .. nsp) {
+            Cv += massf[isp]*(mCurves[isp].eval_Cp(T) - mR[isp]);
+        }
+        return Cv;
+    }
+
+    @nogc
+    number update_temperature_from_energy(ref GasState gs)
+    {
+    /*
+        Bespoke newton's method by NNG. This was turning into a major
+        bottleneck for multispecies flow, so it was time for some serious
+        corner-cutting...
+
+        @author: Nick Gibbons
+    */
+        immutable double TOL = 1e-9;
+        immutable number u_tgt = gs.u;
+        immutable size_t nsp = n_species;
+
+        number T_guess = gs.T;
+        number logT_guess = log(T_guess);
+        number u = internal_energy(nsp, gs.massf, T_guess, logT_guess);
+        number f_guess =  u - u_tgt;
+
+        // Do at least one iteration, in case we need to set the imaginary components of T
+        size_t count = 0;
+        number Cv, dT;
+        immutable int MAX_ITERATIONS = 10;
+        foreach (iter; 0 .. MAX_ITERATIONS) {
+            Cv = constant_volume_specific_heat(nsp, gs.massf, T_guess);
+            dT = -f_guess/Cv;
+            T_guess += dT;
+            if (fabs(dT.re)/T_guess.re < TOL) {
+                return T_guess;
+            }
+            logT_guess = log(T_guess);
+            f_guess = internal_energy(nsp, gs.massf, T_guess, logT_guess) - u_tgt;
+            count++;
+        }
+
+        if (fabs(dT)>1e-3) {
+            string msg = "update_temperature_from_energy function failed to converge.\n";
             debug {
-                writefln("T= %.3f  u= %.3e  Fn= %.6e ", T, Q.u, e_tgt - Q.u);
+                msg ~= format("The final value for Tvib was: %12.6f\n", T_guess);
+                msg ~= "The supplied GasState was:\n";
+                msg ~= gs.toString() ~ "\n";
             }
-            */
-            return e_tgt - gs.u;
+            throw new GasModelException(msg);
         }
-
-        number dzdT(number T)
-        {
-            // We evaluate Cv. And return the negative.
-            gs.T = T;
-            return -1.0*dudTConstV(gs);
-        }
-
-        try {
-            gs.T = nm.newton.solve!(zeroFn, dzdT)(Tsave, T1, T2, TOL);
-        }
-        catch (NumericalMethodException e) {
-            // If we fail, we'll have a second attempt with an extended temperature range.
-            try {
-                gs.T = solve!(zeroFn, dzdT)(Tsave, to!number(T_MIN), to!number(T_MAX), TOL);
-            }
-            catch (NumericalMethodException e) {
-                string msg = "There was a problem iterating to find temperature";
-                debug {
-                    msg ~= "\nin function ThermallyPerfectGasMix.update_temperature().\n";
-                    msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
-                    msg ~= format("The target energy value was: %12.6f\n", e_tgt);
-                    msg ~= format("zeroFn(Tsave)=%g\n", zeroFn(Tsave));
-                    msg ~= format("zeroFn(T_MIN)=%g\n", zeroFn(to!number(T_MIN)));
-                    msg ~= format("zeroFn(T_MAX)=%g\n", zeroFn(to!number(T_MAX)));
-                    msg ~= format("The GasState is currently:\n");
-                    msg ~= gs.toString() ~ "\n";
-                    msg ~= "The message from the solve function is:\n";
-                    msg ~= e.msg;
-                }
-                // If we fail, leave temperature at value upon entry to method.
-                gs.T = Tsave;
-                update_energy(gs);
-                throw new GasModelException(msg);
-            }
-        }
+        return T_guess;
     }
 }
 

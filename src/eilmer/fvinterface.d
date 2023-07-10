@@ -87,6 +87,7 @@ public:
     number[] jx; // diffusive mass flux in x
     number[] jy; // diffusive mass flux in y
     number[] jz; // diffusive mass flux in z
+    number[] hs; // enthalpies for diffusive flux
     number q_diffusion;
     number q_conduction;
     //
@@ -136,6 +137,7 @@ public:
             jx.length = n_species;
             jy.length = n_species;
             jz.length = n_species;
+            hs.length = n_species;
         }
         version(shape_sensitivity) {
             dFdU.length = 7; // number of conserved variables; FIX-ME for versions
@@ -691,12 +693,12 @@ public:
             if (myConfig.turb_model.isTurbulent ||
                 myConfig.mass_diffusion_model != MassDiffusionModel.none ) {
                 q_diffusion = to!number(0.0);
+                gmodel.enthalpies(fs.gas, hs);
                 foreach (isp; 0 .. n_species) {
-                    number h = gmodel.enthalpy(fs.gas, cast(int)isp);
-                    qx -= jx[isp] * h;
-                    qy -= jy[isp] * h;
-                    qz -= jz[isp] * h;
-                    q_diffusion -= (jx[isp]*h*n.x + jy[isp]*h*n.y + jz[isp]*h*n.z);
+                    qx -= jx[isp] * hs[isp];
+                    qy -= jy[isp] * hs[isp];
+                    qz -= jz[isp] * hs[isp];
+                    q_diffusion -= (jx[isp]*hs[isp]*n.x + jy[isp]*hs[isp]*n.y + jz[isp]*hs[isp]*n.z);
                 }
             }
         }

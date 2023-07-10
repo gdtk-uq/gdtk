@@ -157,6 +157,12 @@ public:
         // but we need to be careful to override this for multi-component gases.
         return enthalpy(Q);
     }
+    @nogc void enthalpies(in GasState Q, number[] hs)
+    {
+        foreach(isp; 0 .. _n_species){
+            hs[isp] = enthalpy(Q, isp);
+        }
+    }
     @nogc number enthalpyPerSpeciesInMode(in GasState Q, int isp, int imode)
     {
         // For a single-species, one-temperature gas, provide a default implementation.

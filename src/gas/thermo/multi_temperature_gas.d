@@ -251,6 +251,14 @@ class MultiTemperatureGasMixture : ThermodynamicModel {
         return u + gs.p / gs.rho;
     }
 
+    @nogc
+    override void enthalpies(in GasState gs, number[] hs)
+    {
+        foreach(isp; 0 .. _n_species){
+            hs[isp] = enthalpyPerSpecies(gs, isp);
+        }
+    }
+
     @nogc number enthalpyPerSpecies(in GasState gs, int isp){
         number h = _CpTR[isp]*(gs.T - T_REF) + _Delta_hf[isp];
         foreach (imode; 0 .. _n_modes) {
