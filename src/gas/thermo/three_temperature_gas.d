@@ -266,7 +266,7 @@ public:
     {
         switch (imode) {
             case -1:
-                return mCpTR[isp] * gs.T;
+                return mCpTR[isp] * (gs.T - T_REF) + mHf[isp];
             case 0:
                 return vib_energy_species(gs.T_modes[VIB], isp);
             case 1:
