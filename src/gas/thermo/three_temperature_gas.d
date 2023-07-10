@@ -256,6 +256,9 @@ public:
         number h_tr = mCpTR[isp]*(gs.T - T_REF) + mHf[isp];
         number h_v = vib_energy_species(gs.T_modes[VIB], isp);
         number h_e = electron_electronic_energy_species(gs.T_modes[EE], isp);
+        if (isp == mElectronIdx) {
+            h_e += (gs.T_modes[EE] - T_REF) * mR[mElectronIdx];
+        }
         return h_tr + h_v + h_e;
     }
 
@@ -267,7 +270,11 @@ public:
             case 0:
                 return vib_energy_species(gs.T_modes[VIB], isp);
             case 1:
-                return electron_electronic_energy_species(gs.T_modes[EE], isp);
+                number h_e = electron_electronic_energy_species(gs.T_modes[EE], isp);
+                if (isp == mElectronIdx) {
+                    h_e += (gs.T_modes[EE] - T_REF) * mR[mElectronIdx] + mHf[mElectronIdx];
+                }
+                return h_e;
             default:
                 throw new GasModelException("Invalid energy mode for three temperature model");
         }
