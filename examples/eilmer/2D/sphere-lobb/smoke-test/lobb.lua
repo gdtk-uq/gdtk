@@ -14,6 +14,14 @@
 -- Description:
 --   A nylon sphere, 0.5-inch diameter, fired into a ballistic test range.
 
+-- Our updated philosophy with shock fitting simulations is that they should be
+-- first order until the shock has fused with the boundary. This file was changed
+-- in July 2023 by NNG to reflect this procedure: which allows us to push the
+-- CFL more aggressively, and also remove the reliance on adjusting bad cells
+-- that made this case so weird and difficult to work with. Small changes to the
+-- ruby file used for testing were required.
+-- NNG (2023-07-06)
+
 config.title = "Sphere fired into air."
 print(config.title)
 
@@ -34,28 +42,30 @@ body_flow_time = Db/u_inf
 print("body_flow_time=", body_flow_time)
 config.reacting = true
 config.reactions_file = 'air-5sp-6r.lua'
-config.reaction_time_delay = 0.6*no_flow_times*body_flow_time
-print("reaction_time_delay=", config.reaction_time_delay)
 config.dimensions = 2
 config.axisymmetric = true
 config.grid_motion = "shock_fitting"
 config.flux_calculator = "ausmdv"
 config.interpolation_order = 2
 config.gasdynamic_update_scheme = "backward_euler"
+
+config.reaction_time_delay = 0.1*body_flow_time
+config.shock_fitting_delay = 2.0*body_flow_time
+config.interpolation_delay = 6.0*body_flow_time
 config.max_time = no_flow_times*body_flow_time
-print("max_time=", config.max_time)
+
 if useOldSoln then
    config.shock_fitting_delay = 0.0
-else
-   config.shock_fitting_delay = 2.0*body_flow_time
 end
-print("shock_ftting_delay=", config.shock_fitting_delay)
+
+print("reaction_time_delay=", config.reaction_time_delay)
+print("interpolation_delay=", config.interpolation_delay)
+print("shock_ftting_delay =", config.shock_fitting_delay)
+print("max_time           =", config.max_time)
+
 config.max_step = 80000
 config.dt_init = 1.0e-9
-config.cfl_schedule = {{0.0, 0.2}, {3.0*body_flow_time, 0.2}, {5.0*body_flow_time, 0.4}}
-config.adjust_invalid_cell_data = true
-config.report_invalid_cells = false
-config.max_invalid_cells = 10
+config.cfl_schedule = {{0.0, 0.2}, {5.0*body_flow_time, 0.5}}
 config.dt_plot = config.max_time/10
 
 -- The initial condition may be one of:
