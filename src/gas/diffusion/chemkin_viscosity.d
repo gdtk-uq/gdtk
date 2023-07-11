@@ -42,14 +42,19 @@ public:
         C = params["C"];
         D = params["D"];
     }
-
     @nogc number eval(number T) const
+    {
+        number logT = log(T);
+        return eval(T, logT);
+    }
+
+    @nogc number eval(number T, number logT) const
     {
         if ( T < T_lower )
             throw new Exception("temperature value lower than T_lower in ChemkinViscCurve:eval()");
         if ( T > T_upper )
             throw new Exception("temperature value greater than T_upper in ChemkinViscCurve:eval()");
-        number log_mu = A + B*log(T) + C*log(T)*log(T) + D*log(T)*log(T)*log(T);
+        number log_mu = A + B*logT + C*logT*logT + D*logT*logT*logT;
 
         /* Chemkin value is in SI units.
         */
@@ -87,9 +92,8 @@ public:
     {
         return new ChemkinViscosity(this);
     }
-    override number eval(in GasState Q) const
+    override number eval(number T, number logT) const
     {
-        number T = Q.T;
         // At the limits of the curve, extrapolate value as a constant.
         if ( T < _T_lowest ) {
             return _curves[0].eval(to!number(_T_lowest));
@@ -105,6 +109,11 @@ public:
         }
         // We should not reach this point.
         throw new Exception("ChemkinViscosity:eval() -- we should never reach this point.");
+    }
+    override number eval(number T) const
+    {
+        number logT = log(T);
+        return eval(T, logT);
     }
 
 private:

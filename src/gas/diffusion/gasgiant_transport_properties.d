@@ -406,7 +406,7 @@ private:
 
 }
 
-class GasGiantViscosity : Viscosity {
+class GasGiantViscosity : ViscosityMixtureModel {
 //	GasGiantCollisionCrossSections _ggccs = new GasGiantCollisionCrossSections();
     this(string dbOption) {
         setGasGiantModelParameters();
