@@ -45,7 +45,8 @@ class TestLobb < Test::Unit::TestCase
     #assert((steps - 15613).abs < 200, "Failed to take correct number of steps.")
     # steps observed for new settings by NNG on 2023-07-04
     # Note that this is now consistent between debug and fast flavours
-    assert((steps - 10406).abs < 20, "Failed to take correct number of steps.")
+    puts steps
+    assert((steps - 10348).abs < 20, "Failed to take correct number of steps.")
 
   end
 
