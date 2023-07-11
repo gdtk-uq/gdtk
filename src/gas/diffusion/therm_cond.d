@@ -22,6 +22,11 @@ import gas.diffusion.chemkin_therm_cond;
 
 interface ThermalConductivity {
     ThermalConductivity dup() const;
+    @nogc number eval(number T);
+}
+
+interface ThermalConductivityMixtureModel {
+    ThermalConductivityMixtureModel dup() const;
     @nogc final void update_thermal_conductivity(ref GasState Q)
     {
         Q.k = eval(Q, -1);

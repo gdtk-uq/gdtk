@@ -30,7 +30,7 @@ import gas.gas_model;
 import gas.gas_state;
 import gas.diffusion.therm_cond;
 
-class WilkeMixingThermCond : ThermalConductivity {
+class WilkeMixingThermCond : ThermalConductivityMixtureModel {
 public:
     this(in ThermalConductivity[] tcms, in double[] mol_masses)
     in {
@@ -69,7 +69,7 @@ public:
         massf2molef(Q.massf, _mol_masses, _x);
         // 2. Calculate the component thermoconductivities
         foreach(isp; 0 .. nsp) {
-            _k[isp] = _tcms[isp].eval(Q, -1);
+            _k[isp] = _tcms[isp].eval(Q.T);
         }
         // 3. Interaction potentials are now precalculated
         // 4. Apply mixing formula
