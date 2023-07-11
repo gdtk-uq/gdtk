@@ -202,6 +202,10 @@ public:
     {
         return mThermo.entropyPerSpecies(gs, isp);
     }
+    @nogc override void gibbs_free_energies(ref GasState Q, number[] gibbs_energies)
+    {
+        mThermo.GibbsFreeEnergies(Q, gibbs_energies);
+    }
     @nogc override number Cp(in GasState Q, int isp)
     {
         return mThermo.cpPerSpecies(Q, isp);

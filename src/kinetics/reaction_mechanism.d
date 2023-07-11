@@ -33,6 +33,7 @@ public:
         if (!_work_arrays_initialised) {
             _q.length = n_species;
             _L.length = n_species;
+            _gibbs_energies.length = n_species;
             _conc_for_source_terms.length = n_species;
             _rates_for_source_terms.length = n_species;
             _work_arrays_initialised = true;
@@ -46,13 +47,16 @@ public:
     }
 
     @nogc
-    final void eval_rate_constants(ref GasState Q)
+    final void eval_rate_constants(GasModel gm, ref GasState Q)
     {
+
         number T_save = Q.T;
         if ( Q.T < _T_lower_limit ) { Q.T = _T_lower_limit; }
         if ( Q.T > _T_upper_limit ) { Q.T = _T_upper_limit; }
+        eval_gibbs_free_energies(gm, Q);
+
         foreach ( ref r; _reactions ) {
-            r.eval_rate_constants(Q);
+            r.eval_rate_constants(Q, _gibbs_energies);
         }
         // Always reset Q.T on exit
         Q.T = T_save;
@@ -95,7 +99,7 @@ public:
     final void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source)
     {
         gmodel.massf2conc(Q, _conc_for_source_terms);
-        eval_rate_constants(Q);
+        eval_rate_constants(gmodel, Q);
         eval_rates(_conc_for_source_terms, _rates_for_source_terms);
         gmodel.rates2source(_rates_for_source_terms, source);
     }
@@ -197,6 +201,21 @@ public:
         //      writefln("dt_chem= %e", dt_chem);
         return dt_chem;
     }
+    @nogc
+    final void eval_gibbs_free_energies(GasModel gm, ref GasState Q)
+    {
+        number[5] T_modes_save;
+        number p_save = Q.p;
+        version(multi_T_gas) { foreach(imode; 0 .. gm.n_modes) T_modes_save[imode] = Q.T_modes[imode]; }
+
+        Q.p = P_atm;
+        version(multi_T_gas) { foreach(imode; 0 .. gm.n_modes) Q.T_modes[imode] = Q.T; }
+
+        gm.gibbs_free_energies(Q, _gibbs_energies);
+
+        Q.p = p_save;
+        version(multi_T_gas) { foreach(imode; 0 .. gm.n_modes) Q.T_modes[imode] = T_modes_save[imode]; }
+    }
 
 private:
     Reaction[] _reactions;
@@ -204,6 +223,7 @@ private:
     bool _work_arrays_initialised = false;
     number[] _conc_for_source_terms;
     number[] _rates_for_source_terms;
+    number[] _gibbs_energies;
     number[] _q;
     number[] _L;
     double _T_lower_limit;
@@ -258,7 +278,7 @@ version(reaction_mechanism_test) {
         auto reacMech = new ReactionMechanism([reaction], 3, 100.0, 10000.0);
         double[] rates;
         rates.length = 3;
-        reacMech.eval_rate_constants(gd);
+        reacMech.eval_rate_constants(gmodel, gd);
         reacMech.eval_rates(conc, rates);
         assert(isClose([-643.9303, -643.9303, 1287.8606], rates, 1.0e-6), failedUnitTest());
 

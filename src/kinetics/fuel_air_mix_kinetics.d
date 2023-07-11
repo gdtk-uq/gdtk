@@ -179,7 +179,7 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
             _omega_dot_F = get_omegaDotF(omega,_Y_s);
             if(_laminar_limit){
                 number[dim_species] conc;
-                rmech.eval_rate_constants(Q);
+                rmech.eval_rate_constants(_gmodel, Q);
                 _gmodel.massf2conc(Q,conc);
                 debug { writeln("concentration ",conc); }
                 rmech.eval_rates(conc,rates);
@@ -213,7 +213,7 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
             _omega_dot_F = get_omegaDotF(omega,_Y_s);   // units 1/s in here
             if(_laminar_limit) {
                 number[dim_species] conc;
-                rmech.eval_rate_constants(Q);
+                rmech.eval_rate_constants(_gmodel, Q);
                 _gmodel.massf2conc(Q,conc);
                 debug { writeln("concentration ",conc); }
                 rmech.eval_rates(conc,rates);

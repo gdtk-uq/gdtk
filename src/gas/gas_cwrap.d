@@ -905,7 +905,7 @@ extern (C) int reaction_mechanism_tickrates(int rm_i, int gm_i, int gs_i, double
         backward_tickrates.length = rm.n_reactions;
         concentrations.length = gm.n_species;
 
-        rm.eval_rate_constants(*gs);
+        rm.eval_rate_constants(gm, *gs);
         gm.massf2conc(*gs, concentrations);
         rm.eval_tickrates(concentrations, forward_tickrates, backward_tickrates);
         foreach(i; 0 .. rm.n_reactions) forwardrates[i] = forward_tickrates[i];

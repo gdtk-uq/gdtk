@@ -292,6 +292,10 @@ class MultiTemperatureGasMixture : ThermodynamicModel {
         }
         return Cp;
     }
+    @nogc override void GibbsFreeEnergies(in GasState gs, number[] gibbs_energies)
+    {
+        throw new Error("Not implemented");
+    }
 
 private:
     int[string] _species_indices;

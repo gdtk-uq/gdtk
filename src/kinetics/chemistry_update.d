@@ -146,7 +146,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
 
         // 0. Evaluate the rate constants.
         //    It helps to have these computed before doing other setup work.
-        rmech.eval_rate_constants(Q);
+        rmech.eval_rate_constants(_gmodel, Q);
         // 1. Sort out the time step for possible subcycling.
         double t = 0.0;
         double h;
@@ -266,7 +266,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
             if ( tightTempCoupling ) {
                 _gmodel.conc2massf(_conc0, Q);
                 _gmodel.update_thermo_from_rhou(Q);
-                rmech.eval_rate_constants(Q);
+                rmech.eval_rate_constants(_gmodel, Q);
             }
 
             if ( t >= tInterval ) { // We've done enough work.
@@ -693,7 +693,7 @@ version(chemistry_update_test) {
         double[] molef = [0.5, 0.5, 0.0];
         gmodel.molef2massf(molef, gd);
         gmodel.update_thermo_from_pT(gd);
-        rmech.eval_rate_constants(gd);
+        rmech.eval_rate_constants(gmodel, gd);
         double tInterval = 60000.0;
         double analyticalVal = 7.1420197868416215;
 

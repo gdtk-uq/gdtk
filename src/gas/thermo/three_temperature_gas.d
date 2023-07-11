@@ -290,6 +290,21 @@ public:
     {
         return mCpTR[isp] + vib_Cv_species(gs.T, isp) + electron_electronic_Cv_species(gs.T, isp);
     }
+    @nogc override void GibbsFreeEnergies(in GasState gs, number[] gibbs_energies)
+    {
+        // Note that this uses the transrotational temperature only. We typically only
+        // call this routine when computing the backward reaction rates, in which case
+        // we WANT to only use T, but still, there's some danger here. (NNG)
+        number T = gs.T;
+        number logT = log(T);
+        number logp = log(gs.p/P_atm);
+
+        foreach(isp; 0 .. mNSpecies){
+            number h = enthalpyPerSpecies(gs, isp);
+            number s = mCurves[isp].eval_s(T, logT) - mR[isp]*logp;
+            gibbs_energies[isp] = h - T*s;
+        }
+    }
 
 private:
     int mNSpecies;

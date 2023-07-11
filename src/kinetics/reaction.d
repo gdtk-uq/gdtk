@@ -23,14 +23,13 @@ import util.msg_service;
 import kinetics.rate_constant;
 
 @nogc
-number compute_equilibrium_constant(GasModel gmodel, ref GasState Q,
+number compute_equilibrium_constant(GasModel gmodel, ref GasState Q, in number[] gibbs_energies,
                                     in int[] participants, in double[] nu)
 {
-    Q.p = P_atm; // need to evaluate Gibbs energy at standard state.
     number dG = 0.0;
     number nuSum = 0.0;
     foreach ( isp; participants ) {
-        dG += nu[isp] * gmodel.gibbs_free_energy(Q, isp) * gmodel.mol_masses()[isp];
+        dG += nu[isp] * gibbs_energies[isp] * gmodel.mol_masses()[isp];
         nuSum += nu[isp];
     }
     number K_p = exp(-dG/(R_universal*Q.T));
@@ -82,14 +81,14 @@ public:
 
     abstract Reaction dup();
 
-    @nogc abstract void eval_equilibrium_constant(in GasState Q);
+    @nogc abstract void eval_equilibrium_constant(in GasState Q, in number[] gibbs_energies);
 
-    @nogc final void eval_rate_constants(in GasState Q)
+    @nogc final void eval_rate_constants(in GasState Q, in number[] gibbs_energies)
     {
         if ( _compute_kf_then_kb ) {
             _k_f = eval_forward_rate_constant(Q);
             if ( _backward is null ) { // we need the equilibrium constant
-                eval_equilibrium_constant(Q);
+                eval_equilibrium_constant(Q, gibbs_energies);
                 // Let's take assume that n_modes >= 1 indicates a multi-temperature
                 // simulation. In which case, we need to evaluate the k_f at equilibrium
                 // with the rate controlling temperature in order to determine k_b.
@@ -113,7 +112,7 @@ public:
         else {
             _k_b = eval_backward_rate_constant(Q);
             if ( _forward is null ) { // we need the equilibrium constant
-                eval_equilibrium_constant(Q);
+                eval_equilibrium_constant(Q, gibbs_energies);
                 _k_f = _k_b*_K_eq;
             }
             else {
@@ -233,11 +232,11 @@ public:
     }
 
     @nogc
-    override void eval_equilibrium_constant(in GasState Q)
+    override void eval_equilibrium_constant(in GasState Q, in number[] gibbs_energies)
     {
         _Qw.T = Q.T;
         if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium
-            _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
+            _K_eq = compute_equilibrium_constant(_gmodel, _Qw, gibbs_energies, _participants, _nu);
     }
 
     @nogc
@@ -356,14 +355,14 @@ public:
     }
 
     @nogc
-    override void eval_equilibrium_constant(in GasState Q)
+    override void eval_equilibrium_constant(in GasState Q, in number[] gibbs_energies)
     {
         //int rctIdx = with_backwards_rct ? _rctIndex_b : _rctIndex_f;
         //number T = (rctIdx == -1) ? Q.T : Q.T_modes[rctIdx];
 
         _Qw.T = Q.T;
         if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium
-            _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
+            _K_eq = compute_equilibrium_constant(_gmodel, _Qw, gibbs_energies, _participants, _nu);
     }
 
     @nogc
@@ -516,12 +515,14 @@ version(reaction_test) {
         GasModel gm = init_gas_model("sample-input/H2-I2-HI.lua");
         // Find rate of forward production for H2 + I2 reaction at 700 K.
         double[] conc = [4.54, 4.54, 0.0];
+        double[] gibbs_energies = [0.0, 0.0, 0.0];
         auto rc = new ArrheniusRateConstant(1.94e14, 0.0, 20620.0, -1);
         auto gd = GasState(3, 1);
         gd.T = 700.0;
+        gm.gibbs_free_energies(gd, gibbs_energies);
         auto reaction = new ElementaryReaction(rc, rc, gm, [0, 1], [1.0, 1.0],
                                                [2], [2.0], 3, -1, -1);
-        reaction.eval_rate_constants(gd);
+        reaction.eval_rate_constants(gd, gibbs_energies);
         reaction.eval_rates(conc);
         assert(isClose(0.0, reaction.production(0)), failedUnitTest());
         assert(isClose(0.0, reaction.production(1)), failedUnitTest());
@@ -532,13 +533,13 @@ version(reaction_test) {
 
         auto reaction2 = new AnonymousColliderReaction(rc, rc, gm, [0, 1], [1., 1.],
                                                        [2], [2.], [tuple(1, 1.0)], 3);
-        reaction2.eval_rate_constants(gd);
+        reaction2.eval_rate_constants(gd, gibbs_energies);
         reaction2.eval_rates(conc);
 
         // Try a reaction with backwards rate computed from equilibrium constant.
         auto reaction3 = new ElementaryReaction(rc, null, gm, [0, 1], [1., 1.],
                                                 [2], [2.], 3, -1, -1);
-        reaction3.eval_rate_constants(gd);
+        reaction3.eval_rate_constants(gd, gibbs_energies);
         reaction3.eval_rates(conc);
 
         return 0;
