@@ -69,6 +69,9 @@ public:
     @nogc override number eval(number T) const {
         return sutherland_thermal_conductivity(T, _T_ref, _k_ref, _S);
     }
+    @nogc override number eval(number T, number logT) const {
+        return sutherland_thermal_conductivity(T, _T_ref, _k_ref, _S);
+    }
 
 private:
     double _T_ref;
