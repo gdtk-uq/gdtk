@@ -50,10 +50,12 @@ public:
 
     @nogc number eval(number T, number logT) const
     {
-        if ( T < T_lower )
-            throw new Exception("temperature value lower than T_lower in CEAThermCondCurve:eval()");
-        if ( T > T_upper )
-            throw new Exception("temperature value greater than T_upper in CEAThermCondCurve:eval()");
+        debug{
+            if ( T < T_lower )
+                throw new Exception("temperature value lower than T_lower in CEAThermCondCurve:eval()");
+            if ( T > T_upper )
+                throw new Exception("temperature value greater than T_upper in CEAThermCondCurve:eval()");
+        }
         number log_k = A*logT + B/T + C/(T*T) + D;
 
         /* CEA value is in microWatts/(cm.K), so convert to SI units of W/(m.K). */
@@ -70,6 +72,8 @@ public:
         _curves = src._curves.dup;
         _T_lowest = src._T_lowest;
         _T_highest = src._T_highest;
+        _k_lowest = src._k_lowest;
+        _k_highest = src._k_highest;
     }
     this(in CEAThermCondCurve[] curves)
     {
@@ -86,6 +90,8 @@ public:
                 throw new Exception("CEAThermalConductivity: curves are not continuous in temperature.");
             }
         }
+        _k_lowest  = eval(to!number(_T_lowest));
+        _k_highest = eval(to!number(_T_highest));
     }
     override CEAThermalConductivity dup() const
     {
@@ -95,10 +101,10 @@ public:
     {
         // At the limits of the curve, extrapolate value as a constant.
         if ( T < _T_lowest ) {
-            return _curves[0].eval(to!number(_T_lowest));
+            return _k_lowest;
         }
         if ( T > _T_highest ) {
-            return _curves[$-1].eval(to!number(_T_highest));
+            return _k_highest;
         }
         // Search for curve segment and evaluate
         foreach ( c; _curves ) {
@@ -119,6 +125,8 @@ private:
     CEAThermCondCurve[] _curves;
     double _T_lowest;
     double _T_highest;
+    number _k_lowest;
+    number _k_highest;
 }
 
 CEAThermalConductivity createCEAThermalConductivity(lua_State* L)

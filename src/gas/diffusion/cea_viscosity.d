@@ -75,6 +75,8 @@ public:
         _curves = src._curves.dup;
         _T_lowest = src._T_lowest;
         _T_highest = src._T_highest;
+        _mu_lowest = src._mu_lowest;
+        _mu_highest = src._mu_highest;
     }
     this(in CEAViscCurve[] curves)
     {
@@ -91,6 +93,8 @@ public:
                 throw new Exception("CEAViscosity: curves are not continuous in temperature.");
             }
         }
+        _mu_lowest  = eval(to!number(_T_lowest));
+        _mu_highest = eval(to!number(_T_highest));
     }
     override CEAViscosity dup() const
     {
@@ -100,10 +104,10 @@ public:
     {
         // At the limits of the curve, extrapolate value as a constant.
         if ( T < _T_lowest ) {
-            return _curves[0].eval(to!number(_T_lowest));
+            return _mu_lowest;
         }
         if ( T > _T_highest ) {
-            return _curves[$-1].eval(to!number(_T_highest));
+            return _mu_highest;
         }
         // Search for curve segment and evaluate
         foreach ( c; _curves ) {
@@ -124,6 +128,8 @@ private:
     CEAViscCurve[] _curves;
     double _T_lowest;
     double _T_highest;
+    number _mu_lowest;
+    number _mu_highest;
 }
 
 CEAViscosity createCEAViscosity(lua_State* L)
