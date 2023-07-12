@@ -43,6 +43,14 @@ public:
             writeln(e.msg);
             throw new Exception(e.msg);
         }
+        T_low   = to!number(_T_breaks[0]);
+        T_high  = to!number(_T_breaks[$-1]);
+        Cp_low  = eval_Cp(T_low);
+        Cp_high = eval_Cp(T_high);
+        h_low   = eval_h(T_low);
+        h_high  = eval_h(T_high);
+        s_low   = eval_s(T_low);
+        s_high  = eval_s(T_high);
     }
     @nogc
     number eval_Cp(number T)
@@ -52,16 +60,22 @@ public:
          * of validity we simply take the value at
          * the end of the range.
          */
-        if (T < _T_breaks[0]) {
-            T = _T_breaks[0];
+        if (T < T_low) {
+            return Cp_low;
         }
-        if (T > _T_breaks[$-1]) {
-            T = _T_breaks[$-1];
+        if (T > T_high) {
+            return Cp_high;
         }
         determineCoefficients(T);
         number Cp_on_R = _a[0]/(T*T) + _a[1]/T + _a[2] + _a[3]*T;
         Cp_on_R += _a[4]*T*T + _a[5]*T*T*T + _a[6]*T*T*T*T;
         return _R*Cp_on_R;
+    }
+    @nogc
+    number eval_h(number T)
+    {
+        number logT = log(T);
+        return eval_h(T, logT);
     }
     @nogc
     number eval_h(number T, number logT)
@@ -70,25 +84,19 @@ public:
          * of the curves. We will simply take Cp as constant and
          * integrate using that assumption to get the portion of
          * enthalpy that is contributed beyond the temperature range.
+         *
          * Edit: NNG (This optimised version of eval_h takes advantage
                  of a precomputed log(T), which saves time when evaluating
                  multiple species worth of eval_h at the end of a timestep)
          */
-        if (T < _T_breaks[0]) {
-            number T_low = _T_breaks[0];
-            // We use a recursive call so that we can evaluate h @ T_low
-            number h_low = eval_h(T_low);
-            number Cp_low = eval_Cp(T_low);
-            number h = h_low - Cp_low*(T_low - T);
-            return h;
+        if (T < T_low) {
+            // We no longer use a recursive call to evaluate h @ T_low, this would involve
+            // expensive calls to log(x)
+            return h_low - Cp_low*(T_low - T);
         }
-        if (T > _T_breaks[$-1]) {
-            number T_high = _T_breaks[$-1];
-            // We use a recursive call so that we can evaluate h @ T_high
-            number h_high = eval_h(T_high);
-            number Cp_high = eval_Cp(T_high);
-            number h = h_high + Cp_high*(T - T_high);
-            return h;
+        if (T > T_high) {
+            // We no longer use a recursive call to evaluate h @ T_high
+            return h_high + Cp_high*(T - T_high);
         }
         // For all other cases, determine the coefficients and evaluate.
         determineCoefficients(T);
@@ -96,37 +104,6 @@ public:
         number h_on_RT = -_a[0]/T + _a[1]*logT + _a[2]*T + _a[3]*T*T/2.0;
         h_on_RT +=  _a[4]*T*T*T/3.0 + _a[5]*T*T*T*T/4.0 + _a[6]*T*T*T*T*T/5.0 + _a[7];
         return _R*h_on_RT;
-
-    }
-    @nogc
-    number eval_h(number T)
-    {
-        /* We don't try to do any fancy extrapolation beyond the limits
-         * of the curves. We will simply take Cp as constant and
-         * integrate using that assumption to get the portion of
-         * enthalpy that is contributed beyond the temperature range.
-         */
-        if (T < _T_breaks[0]) {
-            number T_low = _T_breaks[0];
-            // We use a recursive call so that we can evaluate h @ T_low
-            number h_low = eval_h(T_low);
-            number Cp_low = eval_Cp(T_low);
-            number h = h_low - Cp_low*(T_low - T);
-            return h;
-        }
-        if (T > _T_breaks[$-1]) {
-            number T_high = _T_breaks[$-1];
-            // We use a recursive call so that we can evaluate h @ T_high
-            number h_high = eval_h(T_high);
-            number Cp_high = eval_Cp(T_high);
-            number h = h_high + Cp_high*(T - T_high);
-            return h;
-        }
-        // For all other cases, determine the coefficients and evaluate.
-        determineCoefficients(T);
-        number h_on_RT = -_a[0]/(T*T) + _a[1]/T * log(T) + _a[2] + _a[3]*T/2.0;
-        h_on_RT +=  _a[4]*T*T/3.0 + _a[5]*T*T*T/4.0 + _a[6]*T*T*T*T/5.0 + _a[7]/T;
-        return _R*T*h_on_RT;
 
     }
     @nogc
@@ -143,21 +120,14 @@ public:
          * integrate using that assumption to get the portion of
          * entropy that is contributed beyond the temperature range.
          */
-        if (T < _T_breaks[0]) {
-            number T_low = _T_breaks[0];
-            // We use a recursive call so that we can evaluate s @ T_low
-            number s_low = eval_s(T_low);
-            number Cp_low = eval_Cp(T_low);
-            number s = s_low - Cp_low*log(T_low/T);
-            return s;
+        if (T < T_low) {
+            // The log here is a bit yikes. Hopefully this doesn't get called
+            // much. eval_s is only used for the gibbs free energy in reacting
+            // flow, which is usually turned off at below 200 K by T_frozen
+            return s_low - Cp_low*log(T_low/T);
         }
-        if (T > _T_breaks[$-1]) {
-            number T_high = _T_breaks[$-1];
-            // We use a recursive call so that we can evaluate s @ T_high
-            number s_high = eval_s(T_high);
-            number Cp_high = eval_Cp(T_high);
-            number s = s_high + Cp_high*log(T/T_high);
-            return s;
+        if (T > T_high) {
+            return s_high + Cp_high*log(T/T_high);
         }
         // For all other cases, determine the coefficients and evaluate.
         determineCoefficients(T);
@@ -171,7 +141,10 @@ private:
     double[] _T_blends;
     double[9] _a;
     double[9][] _coeffs;
-    CEAThermoCurve[] _curves;
+    number T_low, T_high;
+    number Cp_low,Cp_high;
+    number h_low, h_high;
+    number s_low, s_high;
 
     @nogc
     void determineCoefficients(number T)
