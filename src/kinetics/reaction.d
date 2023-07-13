@@ -113,7 +113,18 @@ public:
             _k_b = eval_backward_rate_constant(Q);
             if ( _forward is null ) { // we need the equilibrium constant
                 eval_equilibrium_constant(Q, gibbs_energies);
-                _k_f = _k_b*_K_eq;
+                if (_gmodel.n_modes >= 1) {
+                    // re-evaluate the backward rate constsant at the 
+                    // forward rate controlling temperature
+                    number T = (_rctIndex_f < 0) ? Q.T : Q.T_modes[_rctIndex_f];
+                    _Qw.T = T;
+                    _Qw.T_modes[] = T;
+                    number kb_rct = eval_backward_rate_constant(_Qw);
+                    _k_f = kb_rct * _K_eq;
+                }
+                else {
+                    _k_f = _k_b*_K_eq;
+                }
             }
             else {
                 _k_f = eval_forward_rate_constant(Q);
