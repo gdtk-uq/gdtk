@@ -11,10 +11,6 @@ import std.stdio;
 import std.file;
 import std.format;
 import std.getopt;
-import std.algorithm;
-import std.array;
-import std.path;
-import std.regex;
 import std.conv : to;
 
 import globalconfig;
@@ -23,6 +19,7 @@ import flowsolution;
 import lmrconfig : lmrCfg;
 import init : initConfiguration;
 import vtk_writer;
+import cmdhelper;
 
 import command;
 
@@ -98,47 +95,8 @@ void main_(string[] args)
     }
 
     initConfiguration(); // To read in GlobalConfig
-
-    /*
-     * 0. Build list of available snapshots
-     */
-    string[] availSnapshots;
-    // Build list of all available snapshots
-    auto dirs = dirEntries(lmrCfg.snapshotDir, SpanMode.shallow).
-        filter!(a => a.isDir()).
-        map!(a => a.name.baseName)().
-        array();
-    sort(dirs);
-    /*
-     * Keep up to date with lmr.cfg::snapshotIdxFmrStr
-     */
-    auto fourDigits = regex(r"[0-9][0-9][0-9][0-9]");
-    foreach (string d; dirs) {
-        auto rgxMtch = matchAll(d, fourDigits);
-        if (!rgxMtch.empty()) {
-            availSnapshots ~= d;
-        }
-    }
-
-    /*
-     * 1. Decide on which snapshots to process.
-     */
-    string[] snaps;
-    if (allSnapshots) {
-        snaps.length = availSnapshots.length;
-        snaps[] = availSnapshots[];
-    }
-    if (snapshots && !allSnapshots) {
-        foreach (i; snapshots) snaps ~= format(lmrCfg.snapshotIdxFmt, i);
-    }
-    if (finalSnapshot && !allSnapshots) {
-        snaps ~= availSnapshots[$-1];
-    }
-    if (snaps.length == 0) { // We've picked up nothing from the command line,
-                            // so do the final snapshot.
-        snaps ~= availSnapshots[$-1];
-    }
-    auto snaps2process = uniq(sort(snaps));
+    auto availSnapshots = determineAvailableSnapshots();
+    auto snaps2process = determineSnapshotsToProcess(availSnapshots, snapshots, allSnapshots, finalSnapshot);
 
     /*
      * 2. Now write vtk files for each snapshot

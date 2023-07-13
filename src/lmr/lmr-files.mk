@@ -15,6 +15,7 @@ LMR_CORE_FILES = $(LMR)/blockio_with_str_subst.d \
 	$(LMR)/newtonkrylovsolver.d
 
 LMR_CMD_FILES = $(LMR_CMD)/command.d \
+	$(LMR_CMD)/cmdhelper.d \
 	$(LMR_CMD)/prepflow.d \
 	$(LMR_CMD)/prepgrids.d \
 	$(LMR_CMD)/runsteady.d \
