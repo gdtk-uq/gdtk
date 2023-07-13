@@ -147,6 +147,7 @@ BUILD_DIR := ../../build
 BUILD_DATE := $(shell date)
 
 REVISION_STRING := $(shell git rev-parse --short HEAD)
+FULL_REVISION_STRING := $(shell git rev-parse HEAD)
 REVISION_AGE := $(shell git log -1 --format=%cd --date=relative)
 REVISION_DATE := $(shell git log -1 --format=%cd)
 REPO_DIR := $(shell cd ../../; pwd)
@@ -284,6 +285,7 @@ clean:
 	- rm *.o
 	- rm main_with_rev_string.d
 	- rm blockio_with_str_subst.d
+	- rm revisionid_with_str_subst.d
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(MPICH_DIR); make clean
 	- cd $(LUA_DIR); make clean
@@ -373,10 +375,14 @@ lmr: main.d $(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
 		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		main.d > main_with_rev_string.d
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_FULL_REVISION_STRING_HERE/$(FULL_REVISION_STRING)/' \
+		commands/revisionid.d > revisionid_with_str_subst.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)newton_krylov \
 		main_with_rev_string.d \
+		revisionid_with_str_subst.d \
 		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
 		$(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \

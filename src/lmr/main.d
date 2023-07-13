@@ -6,6 +6,8 @@ import prepgrids;
 import prepflow;
 import runsteady;
 import snapshot2vtk;
+import revisionid;
+
 // Eilmer4 imports
 import globalconfig : GlobalConfig;
 
@@ -38,6 +40,7 @@ Show help for a given Eilmer command or topic.
         commands["prep-grid"] = commands["prep-grids"];
     }
     commands["prep-flow"] = prepFlowCmd;
+    commands["revision-id"] = revisionIdCmd;
     commands["run-steady"] = runSteadyCmd;
     commands["snapshot2vtk"] = snapshot2vtkCmd;
 }
