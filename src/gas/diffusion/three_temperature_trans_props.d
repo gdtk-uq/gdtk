@@ -250,9 +250,9 @@ public:
             // electron present.
             denom = 0.0;
             foreach (jsp; 0 .. mNSpecies) {
-                denom += 1.45*mMolef[jsp]*mDelta_22[mElectronIdx][jsp];
+                denom += 1.45*fmax(0.0, mMolef[jsp])*mDelta_22[mElectronIdx][jsp];
             }
-            k_E = mMolef[mElectronIdx]/denom;
+            k_E = fmax(0.0, mMolef[mElectronIdx])/denom;
             k_E *= 2.3901e-8*(15./4.)*kB_erg;
             k_E *= (4.184/1.0e-2); // cal/(cm.s.K) --> J/(m.s.K)
         }

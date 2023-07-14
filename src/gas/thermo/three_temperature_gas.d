@@ -183,7 +183,7 @@ public:
             Cv_tr = trans_rot_Cv_species(isp);
             Cv_vib = vib_Cv_species(gs.T_modes[VIB], isp);
             Cv_ee = electron_electronic_Cv_species(gs.T_modes[EE], isp);
-            Cv += gs.massf[isp] * (Cv_tr + Cv_vib + Cv_ee);
+            Cv += fmax(0.0, gs.massf[isp]) * (Cv_tr + Cv_vib + Cv_ee);
         }
         return Cv;
     }
@@ -195,7 +195,7 @@ public:
             Cp_tr = mCpTR[isp];
             Cv_vib = vib_Cv_species(gs.T_modes[VIB], isp);
             Cv_ee = electron_electronic_Cv_species(gs.T_modes[EE], isp);
-            Cp += gs.massf[isp] * (Cp_tr + Cv_vib + Cv_ee);
+            Cp += fmax(0.0, gs.massf[isp]) * (Cp_tr + Cv_vib + Cv_ee);
         }
         return Cp;
     }
@@ -357,7 +357,7 @@ private:
     {
         number Cv = 0.0;
         foreach (isp; 0 .. mNSpecies) {
-            Cv += gs.massf[isp] * trans_rot_Cv_species(isp);
+            Cv += fmax(0.0, gs.massf[isp]) * trans_rot_Cv_species(isp);
         }
         return Cv;
     }
@@ -381,7 +381,7 @@ private:
         foreach (isp; 0 .. mNSpecies)
         {
             if (isp == mElectronIdx) continue;
-            e_tr += gs.massf[isp] * trans_rot_energy_species(gs.T, isp);
+            e_tr += fmax(0.0, gs.massf[isp]) * trans_rot_energy_species(gs.T, isp);
         }
         return e_tr;
     }
@@ -402,7 +402,7 @@ private:
     {
         number Cv = 0.0;
         foreach (isp; 0 .. mNSpecies) {
-            Cv += gs.massf[isp] * vib_Cv_species(Tv, isp);
+            Cv += fmax(0.0, gs.massf[isp]) * vib_Cv_species(Tv, isp);
         }
         return Cv;
     }
@@ -429,7 +429,7 @@ private:
         number e_v = 0.0;
         foreach (isp; 0 .. mNSpecies)
         {
-            e_v += gs.massf[isp] * vib_energy_species(Tv, isp);
+            e_v += fmax(0.0, gs.massf[isp]) * vib_energy_species(Tv, isp);
         }
         return e_v;
     }
@@ -454,7 +454,7 @@ private:
     {
         number e_ee = 0.0;
         foreach (isp; 0 .. mNSpecies){
-            e_ee += gs.massf[isp] * electron_electronic_energy_species(Tee, isp);
+            e_ee += fmax(0.0, gs.massf[isp]) * electron_electronic_energy_species(Tee, isp);
         }
         return e_ee;
     }
@@ -477,7 +477,7 @@ private:
     {
         number Cv = 0.0;
         foreach (isp; 0 .. mNSpecies) {
-            Cv += gs.massf[isp] * electron_electronic_Cv_species(Tee, isp);
+            Cv += fmax(0.0, gs.massf[isp]) * electron_electronic_Cv_species(Tee, isp);
         }
         return Cv;
     }
@@ -493,12 +493,12 @@ private:
         gs.p = 0.0;
         foreach (isp; 0 .. mNSpecies) {
             number T = (isp == mElectronIdx) ? gs.T_modes[EE] : gs.T;
-            gs.p += gs.rho * gs.massf[isp] * mR[isp] * T;
+            gs.p += gs.rho * fmax(0.0, gs.massf[isp]) * mR[isp] * T;
         }
 
         // set electron pressure whilst we're here
         if (mElectronIdx != 1) {
-            gs.p_e = gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[EE];
+            gs.p_e = gs.rho * fmax(0.0, gs.massf[mElectronIdx]) * mR[mElectronIdx] * gs.T_modes[EE];
         }
     }
 
