@@ -120,7 +120,7 @@ void main_(string[] args)
     bool finalSnapshot = false;
     bool allSnapshots = false;
     bool binaryFormat = false;
-    string[] normsVariables = ["rho"]; // default
+    string[] normsVariables;
     string outFilename;
     string region;
     string luaRefSoln;
@@ -137,6 +137,10 @@ void main_(string[] args)
 
     if (verbosity > 0) {
         writefln("lmr %s: Begin program.", cmdName);
+    }
+
+    if (normsVariables.length == 0) { // add default of "rho" when nothing supplied
+        normsVariables ~= "rho";
     }
 
     // Use stdout if no output filename is supplied,

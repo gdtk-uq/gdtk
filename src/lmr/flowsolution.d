@@ -804,7 +804,13 @@ public:
             lua_pushnumber(L, sim_time);
             lua_pushnumber(L, _data[i][variableIndex["pos.x"]]);
             lua_pushnumber(L, _data[i][variableIndex["pos.y"]]);
-            lua_pushnumber(L, _data[i][variableIndex["pos.z"]]);
+            if (GlobalConfig.dimensions == 3) {
+                lua_pushnumber(L, _data[i][variableIndex["pos.z"]]);
+            }
+            else {
+                lua_pushnumber(L, 0.0);
+            }
+
             if ( lua_pcall(L, 4, 1, 0) != 0 ) {
                 string errMsg = "Error in call to " ~ luaFnName ~
                     " from FlowSolution.subtract_ref_soln(): " ~
