@@ -107,7 +107,7 @@ options ([+] can be repeated):
      default: none (just write to STDOUT)
 
  -v, --verbose [+]
-     Increase verbosity during preparation and writing of VTK files.
+     Increase verbosity.
 
 `, cmdName);
 
