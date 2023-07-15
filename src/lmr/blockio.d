@@ -51,7 +51,7 @@ public:
 	auto f = File(fname, "w");
 	f.writefln("---");
 	f.writefln("  version: \"%s\"", BLK_IO_VERSION);
-	f.writeln("  revision-id: PUT_REVISION_STRING_HERE");
+	f.writeln("  revision-id: ", lmrCfg.revisionId);
 	f.writefln("  variables:");
 	foreach (var; mVariables) {
 	    f.writefln("   - %s", var);

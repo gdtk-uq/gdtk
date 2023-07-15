@@ -283,9 +283,8 @@ clean:
 	- rm $(SUB_PROGRAMS)
 	- rm lmr-mpi-run-steady
 	- rm *.o
-	- rm main_with_rev_string.d
-	- rm blockio_with_str_subst.d
-	- rm revisionid_with_str_subst.d
+	- rm lmrconfig_with_str_subst.d
+	- rm runsteady_shared.d runsteady_openmpi.d
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(MPICH_DIR); make clean
 	- cd $(LUA_DIR); make clean
@@ -305,23 +304,27 @@ $(LIBLUA):
 $(LIBCEQ):
 	cd $(CEQ_DIR); make
 
-lmr-run-steady: $(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
+lmrconfig_with_str_subst.d: lmrconfig.d
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
+		-e 's/PUT_FULL_REVISION_STRING_HERE/$(FULL_REVISION_STRING)/' \
+		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
+		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
+		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
+		$< > $@
+
+lmr-run-steady: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
 	$(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES)
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
-		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
-		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-		-e 's/PUT_PARALLEL_FLAVOUR_HERE/shared/' \
-		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
-		$(LMR_CMD)/runsteady.d > main_with_rev_string.d
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/shared/' $(LMR_CMD)/runsteady.d > runsteady_shared.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)runsteady_main \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)newton_krylov \
-		main_with_rev_string.d \
+		runsteady_shared.d \
+		lmrconfig_with_str_subst.d \
 		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD)/command.d \
 		$(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
@@ -332,7 +335,7 @@ lmr-run-steady: $(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
 		$(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(DLINKFLAGS)
 
-lmr-mpi-run-steady: $(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
+lmr-mpi-run-steady: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
 	$(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -340,18 +343,14 @@ lmr-mpi-run-steady: $(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES)
 	cd $(MPI_DIR); make
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
-		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
-		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-		-e 's/PUT_PARALLEL_FLAVOUR_HERE/$(PARALLEL_FLAVOUR)/' \
-		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
-		$(LMR_CMD)/runsteady.d > main_with_rev_string.d
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/openmpi/' $(LMR_CMD)/runsteady.d > runsteady_openmpi.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)runsteady_main \
 		$(DVERSION)mpi_parallel \
 		$(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)newton_krylov \
-		main_with_rev_string.d \
+		runsteady_openmpi.d \
+		lmrconfig_with_str_subst.d \
 		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD)/command.d \
 		$(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
@@ -363,26 +362,18 @@ lmr-mpi-run-steady: $(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
 		$(DLINKFLAGS) -L-lmpi
 
 
-lmr: main.d $(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
+lmr: main.d $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
 	$(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES)
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
-		-e 's/PUT_REVISION_DATE_HERE/$(REVISION_DATE)/' \
-		-e 's/PUT_COMPILER_NAME_HERE/$(DMD)/' \
-		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
-		main.d > main_with_rev_string.d
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
-		-e 's/PUT_FULL_REVISION_STRING_HERE/$(FULL_REVISION_STRING)/' \
-		commands/revisionid.d > revisionid_with_str_subst.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)newton_krylov \
-		main_with_rev_string.d \
-		revisionid_with_str_subst.d \
+		main.d \
+		lmrconfig_with_str_subst.d \
 		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
 		$(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
@@ -392,7 +383,3 @@ lmr: main.d $(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(DLINKFLAGS)
-
-blockio_with_str_subst.d : blockio.d
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' \
-		blockio.d > blockio_with_str_subst.d

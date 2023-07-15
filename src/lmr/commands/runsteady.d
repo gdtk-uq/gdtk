@@ -118,11 +118,11 @@ void main(string[] args)
 
     if (GlobalConfig.is_master_task) {
         writeln("Eilmer simulation code: steady-state solver mode.");
-        writeln("Revision-id: PUT_REVISION_STRING_HERE");
-        writeln("Revision-date: PUT_REVISION_DATE_HERE");
-        writeln("Compiler-name: PUT_COMPILER_NAME_HERE");
-	writeln("Parallel-flavour: PUT_PARALLEL_FLAVOUR_HERE");
-        writeln("Build-date: PUT_BUILD_DATE_HERE");
+        writeln("Revision-id: ", lmrCfg.revisionId);
+        writeln("Revision-date: ", lmrCfg.revisionDate);
+        writeln("Compiler-name: ", lmrCfg.compilerName);
+	writeln("Parallel-flavour: ", lmrCfg.parallelFlavour);
+        writeln("Build-date: ", lmrCfg.buildDate);
     }
 
     int verbosity = 0;

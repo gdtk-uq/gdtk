@@ -312,11 +312,18 @@ public:
             foreach (i; 0 .. flow.ncells) {
                 double x = flowBlocks[ib]["pos.x", i];
                 double y = flowBlocks[ib]["pos.y", i];
-                double z = flowBlocks[ib]["pos.z", i];
-                if (limitRegion &&
-                    (x < x0 || y < y0 || z < z0 ||
-                     x > x1 || y > y1 || z > z1)) continue;
-                double volume = flowBlocks[ib]["volume", i];
+                double z = (GlobalConfig.dimensions == 3) ? flowBlocks[ib]["pos.z", i] : 0.0;
+                if (GlobalConfig.dimensions == 3) {
+                    if (limitRegion &&
+                        (x < x0 || y < y0 || z < z0 ||
+                        x > x1 || y > y1 || z > z1)) continue;
+                }
+                else {
+                    if (limitRegion &&
+                        (x < x0 || y < y0 ||
+                        x > x1 || y > y1)) continue;
+                }
+                double volume = flowBlocks[ib]["vol", i];
                 double value = flowBlocks[ib][varName, i];
                 volume_sum += volume;
                 L1 += volume * abs(value);

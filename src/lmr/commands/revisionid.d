@@ -11,6 +11,7 @@ import std.stdio;
 import std.getopt;
 import std.string;
 
+import lmrconfig;
 import command;
 
 Command revisionIdCmd;
@@ -40,9 +41,6 @@ option:
 
 void main_(string[] args)
 {
-    string shortRevID = "PUT_REVISION_STRING_HERE";
-    string longRevID = "PUT_FULL_REVISION_STRING_HERE";
-    
     bool showFull = false;
 
     getopt(args,
@@ -50,11 +48,11 @@ void main_(string[] args)
            "f|full", &showFull);
 
     if (showFull) {
-        writeln(longRevID);
+        writeln(lmrCfg.fullRevisionId);
         return;
     }
 
-    writeln(shortRevID);
+    writeln(lmrCfg.revisionId);
     return;
 }
 

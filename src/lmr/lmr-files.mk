@@ -3,21 +3,22 @@ LMR ?= .
 LMR_CMD = $(LMR)/commands
 LMR_LUA_MOD = $(LMR)/lua-modules
 
-LMR_CORE_FILES = $(LMR)/blockio_with_str_subst.d \
+LMR_CORE_FILES = $(LMR)/blockio.d \
 	$(LMR)/flowsolution.d \
 	$(LMR)/fluidblock.d \
 	$(LMR)/fvcell.d \
 	$(LMR)/fvcellio.d \
 	$(LMR)/init.d \
 	$(LMR)/jacobian.d \
-	$(LMR)/lmrconfig.d \
 	$(LMR)/lmrexceptions.d \
 	$(LMR)/newtonkrylovsolver.d
 
 LMR_CMD_FILES = $(LMR_CMD)/command.d \
 	$(LMR_CMD)/cmdhelper.d \
+	$(LMR_CMD)/computenorms.d \
 	$(LMR_CMD)/prepflow.d \
 	$(LMR_CMD)/prepgrids.d \
+	$(LMR_CMD)/revisionid.d \
 	$(LMR_CMD)/runsteady.d \
 	$(LMR_CMD)/snapshot2vtk.d
 

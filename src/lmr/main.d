@@ -1,7 +1,10 @@
 import std.getopt;
 import std.stdio;
+import std.algorithm;
 
+import lmrconfig;
 import command;
+import computenorms;
 import prepgrids;
 import prepflow;
 import runsteady;
@@ -22,23 +25,22 @@ static this()
     helpCmd.description = "Display help information for a topic/command or a general overview.";
     helpCmd.shortDescription = "Display help about using Eilmer.";
     helpCmd.helpMsg =
-`lmr help [TOPIC]
+`lmr help [-a] <TOPIC>
 
 Show help for a given Eilmer command or topic.
 
    With no arguments, print a list of commonly used commands.
+
+   With option "-a", print all commands with short descriptions.
 
    Given a command name or topic, print specific help.
 `;
 
     // Add commands here.
     commands["help"] = helpCmd;
-
-    commands["prep-grids"] = prepGridCmd;
-    {
-        // add alias
-        commands["prep-grid"] = commands["prep-grids"];
-    }
+    // Try to add commands in alphabetical order from here down.
+    commands["compute-norms"] = compNormsCmd; 
+    commands["prep-grids"] = prepGridCmd; commands["prep-grid"] = commands["prep-grids"]; // add alias
     commands["prep-flow"] = prepFlowCmd;
     commands["revision-id"] = revisionIdCmd;
     commands["run-steady"] = runSteadyCmd;
@@ -52,16 +54,18 @@ void main(string[] args)
     bool versionLongWanted = false;
     getopt(args,
            std.getopt.config.stopOnFirstNonOption,
-           "help|h", &helpWanted,
-           "version|v", &versionWanted,
-           "version-full", &versionLongWanted,
+           "h|help", &helpWanted,
+           "v|version", &versionWanted,
+           "version-long", &versionLongWanted,
     );
 
     if (versionLongWanted) {
         printVersion(false);
+        return;
     }
     else if (versionWanted) {
         printVersion();
+        return;
     }
     if (helpWanted) printHelp(args);
 
@@ -80,20 +84,43 @@ void main(string[] args)
     return;
 }
 
+void listHelpForAllCommands()
+{
+    writeln("See 'lmr help <command>' to read about a specific subcommand.");
+    writeln("");
+    writeln("Available commands");
+    auto cmds = commands.keys;
+    cmds.sort;
+    foreach (cmd; cmds) {
+        writefln("   %-20s %s", cmd, commands[cmd].shortDescription);
+    }
+    writeln("");
+    writeln("Meta commands");
+    writefln("   %-20s Print condensed version information about lmr program.", "version");
+    writefln("   %-20s Print full version information about lmr program.", "version-long");
+}
+
 void printHelp(string[] args)
 {
     if (args.length >= 3) {
-        auto cmd = args[2];
-        if (cmd in commands) {
-            writeln(commands[cmd].helpMsg);
+        auto arg = args[2];
+        if (arg == "-a" || arg == "--all") {
+            // list all commands with short description.
+            listHelpForAllCommands();
+            return;
+        }
+        // Next look to see if a command has been supplied.
+        if (arg in commands) {
+            writeln(commands[arg].helpMsg);
             return;
         }
         // If we've made it here, then we've chosen a bad command.
-        writefln("lmr: '%s' is not an lmr command. See 'lmr help'.", cmd);
+        writefln("lmr: '%s' is not an lmr command. See 'lmr help'.", arg);
     }
     // else just print general help
     string generalHelp =
-`usage: lmr [-v |--version] [-h | --help] [--version-long]
+`usage: lmr [-h | --help] [help -a] 
+           [-v | --version] [--version-long]
             <command> [<args>]
 
 == Eilmer simulation program ==
@@ -122,10 +149,10 @@ void printVersion(bool shortVersion=true)
 {
     if (GlobalConfig.is_master_task) {
         writeln("Eilmer 4.0 compressible-flow simulation code.");
-        writeln("Revision-id: PUT_REVISION_STRING_HERE");
-        writeln("Revision-date: PUT_REVISION_DATE_HERE");
-        writeln("Compiler-name: PUT_COMPILER_NAME_HERE");
-        writeln("Build-date: PUT_BUILD_DATE_HERE");
+        writeln("Revision-id: ", lmrCfg.revisionId);
+        writeln("Revision-date: ", lmrCfg.revisionDate);
+        writeln("Compiler-name: ", lmrCfg.compilerName);
+        writeln("Build-date: ", lmrCfg.buildDate);
 
         if (shortVersion) return;
 
@@ -136,26 +163,26 @@ void printVersion(bool shortVersion=true)
         write("Profiling: ");
         version(diagnostics) { writeln("included"); } else { writeln("omitted"); }
         //
-        write("Capabilities:");
+        writeln("Capabilities:");
         version(multi_species_gas) {
-            write(" multi-species-gas");
+            writeln("   multi-species-gas");
         } else {
-            write(" single-species-gas");
+            writeln("   single-species-gas");
         }
         version(multi_T_gas) {
-            write(" multi-temperature-gas");
+            writeln("   multi-temperature-gas");
         } else {
-            write(" single-temperature-gas");
+            writeln("   single-temperature-gas");
         }
         version(MHD) {
-            write(" MHD");
+            writeln("   MHD");
         } else {
-            write(" no-MHD");
+            writeln("   no-MHD");
         }
         version(turbulence) {
-            write(" turbulence");
+            writeln("   turbulence");
         } else {
-            write(" no-turbulence-modelling");
+            writeln("   no-turbulence-modelling");
         }
     }
 }

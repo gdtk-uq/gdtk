@@ -36,6 +36,12 @@ struct LmrCfg {
     immutable string vtkDir;
     immutable string mpimapFile;
     immutable string dblVarFmt;
+    immutable string revisionId = "PUT_REVISION_STRING_HERE";
+    immutable string fullRevisionId = "PUT_FULL_REVISION_STRING_HERE";
+    immutable string revisionDate = "PUT_REVISION_DATE_HERE";
+    immutable string compilerName = "PUT_COMPILER_NAME_HERE";
+    immutable string buildDate = "PUT_BUILD_DATE_HERE";
+    immutable string parallelFlavour = "PUT_PARALLEL_FLAVOUR_HERE";
 };
 
 LmrCfg lmrCfg;
