@@ -9,6 +9,8 @@ module computenorms;
 
 import std.stdio;
 import std.file;
+import std.string;
+import std.array;
 import std.format : format;
 import std.getopt;
 import std.conv : to;
@@ -120,14 +122,14 @@ void main_(string[] args)
     bool finalSnapshot = false;
     bool allSnapshots = false;
     bool binaryFormat = false;
-    string[] normsVariables;
+    string normsStr;
     string outFilename;
     string region;
     string luaRefSoln;
     getopt(args,
            config.bundling,
            "v|verbose+", &verbosity,
-           "n|norms", &normsVariables,
+           "n|norms", &normsStr,
            "r|reference-solution", &luaRefSoln,
            "s|snapshots|snapshot", &snapshots,
            "f|final", &finalSnapshot,
@@ -139,9 +141,12 @@ void main_(string[] args)
         writefln("lmr %s: Begin program.", cmdName);
     }
 
-    if (normsVariables.length == 0) { // add default of "rho" when nothing supplied
-        normsVariables ~= "rho";
+    if (normsStr.empty) { // add default of "rho" when nothing supplied
+        normsStr ~= "rho";
     }
+
+    auto normsVariables = normsStr.split(",");
+    foreach (var; normsVariables) var = strip(var);
 
     // Use stdout if no output filename is supplied,
     // or open a file ready for use if one is.
