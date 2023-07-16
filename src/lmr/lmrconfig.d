@@ -41,7 +41,6 @@ struct LmrCfg {
     immutable string revisionDate = "PUT_REVISION_DATE_HERE";
     immutable string compilerName = "PUT_COMPILER_NAME_HERE";
     immutable string buildDate = "PUT_BUILD_DATE_HERE";
-    immutable string parallelFlavour = "PUT_PARALLEL_FLAVOUR_HERE";
 };
 
 LmrCfg lmrCfg;
