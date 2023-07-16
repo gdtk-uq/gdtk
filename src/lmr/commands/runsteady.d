@@ -121,7 +121,7 @@ void main(string[] args)
         writeln("Revision-id: ", lmrCfg.revisionId);
         writeln("Revision-date: ", lmrCfg.revisionDate);
         writeln("Compiler-name: ", lmrCfg.compilerName);
-	writeln("Parallel-flavour: ", lmrCfg.parallelFlavour);
+	writeln("Parallel-flavour: PUT_PARALLEL_FLAVOUR_HERE");
         writeln("Build-date: ", lmrCfg.buildDate);
     }
 
