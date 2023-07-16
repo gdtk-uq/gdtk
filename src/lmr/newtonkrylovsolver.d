@@ -156,6 +156,7 @@ struct NKGlobalConfig {
     // sub iterations for preconditioners
     int preconditionerSubIterations = 4;
     // output and diagnostics
+    int stepsBetweenStatus = 10;
     int totalSnapshots = 5;
     int stepsBetweenSnapshots = 10;
     int stepsBetweenDiagnostics = 10;
@@ -201,6 +202,7 @@ struct NKGlobalConfig {
         preconditioner = preconditionerTypeFromName(pString);
         iluFill = getJSONint(jsonData, "ilu_fill", iluFill);
         preconditionerSubIterations = getJSONint(jsonData, "preconditioner_sub_iterations", preconditionerSubIterations);
+        stepsBetweenStatus = getJSONint(jsonData, "steps_between_status", stepsBetweenStatus);
         totalSnapshots = getJSONint(jsonData, "total_snapshots", totalSnapshots);
         stepsBetweenSnapshots = getJSONint(jsonData, "steps_between_snapshots", stepsBetweenSnapshots);
         stepsBetweenDiagnostics = getJSONint(jsonData, "steps_between_diagnostics", stepsBetweenDiagnostics);
@@ -959,10 +961,6 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         // Any intermediate loads before steady-state have no physical meaning.
         // They might have some diagnostic purpose?
 
-        // Reporting to screen on progress.
-        if ( ((step % cfg.print_count) == 0) || finalStep ) {
-            printStatusToScreen(step, cfl, dt, wallClockElapsed, residualsUpToDate);
-        }
 
 	/*---
          * 2b. Stopping checks.
@@ -972,6 +970,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             finalStep = true;
             if (cfg.is_master_task) {
                 writeln("STOPPING: Reached maximum number of steps.");
+                writeln("STOP-REASON: maximum-steps");
             }
         }
         if (!activePhase.ignoreStoppingCriteria) {
@@ -980,6 +979,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
                 if (cfg.is_master_task) {
                     writeln("STOPPING: The absolute global residual is below target value.");
                     writefln("         current global residual= %.6e  target value= %.6e", globalResidual, nkCfg.stopOnAbsoluteResidual);
+                    writeln("STOP-REASON: absolute-global-residual-target");
                 }
             }
             if ((globalResidual/referenceGlobalResidual) <= nkCfg.stopOnRelativeResidual) {
@@ -987,13 +987,18 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
                 if (cfg.is_master_task) {
                     writeln("STOPPING: The relative global residual is below target value.");
                     writefln("         current residual= %.6e  target value= %.6e", (globalResidual/referenceGlobalResidual), nkCfg.stopOnRelativeResidual);
+                    writeln("STOP-REASON: relative-global-residual-target");
                 }
             }
         }
 
+        // Reporting to screen on progress.
+        if (((step % nkCfg.stepsBetweenStatus) == 0) || finalStep) {
+            printStatusToScreen(step, cfl, dt, wallClockElapsed, residualsUpToDate);
+        }
+
         if (finalStep) {
 	    if (cfg.is_master_task) {
-		writeln("");
 		writefln("FINAL-STEP: %d", step);
 		writefln("FINAL-CFL: %.3e", cfl);
 	    }

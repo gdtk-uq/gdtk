@@ -57,6 +57,7 @@ NewtonKrylovGlobalConfigHidden = {
    preconditioner_sub_iterations = 4,
 
    -- Output and diagnostics
+   steps_between_status = 10,
    total_snapshots = 5,
    steps_between_snapshots = 10,
    steps_between_diagnostics = 10,
@@ -135,6 +136,7 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    f:write(string.format('"ilu_fill": %d,\n', nkConfig.ilu_fill))
    f:write(string.format('"preconditioner_sub_iterations": %d,\n', nkConfig.preconditioner_sub_iterations))
    -- output and diagnostics
+   f:write(string.format('"steps_between_status": %d,\n', nkConfig.steps_between_status))
    f:write(string.format('"total_snapshots": %d,\n', nkConfig.total_snapshots))
    f:write(string.format('"steps_between_snapshots": %d,\n', nkConfig.steps_between_snapshots))
    f:write(string.format('"steps_between_diagnostics": %d,\n', nkConfig.steps_between_diagnostics))
