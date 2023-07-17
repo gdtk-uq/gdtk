@@ -12,6 +12,7 @@ import std.file;
 import std.format;
 import std.getopt;
 import std.conv : to;
+import std.range;
 
 import globalconfig;
 import fileutil;
@@ -66,6 +67,14 @@ options ([+] can be repeated):
      eg. --add-vars="mach,pitot"
      [TODO] not implemented presently
 
+ -r, --subtract-ref-solution
+     name of file containing a Lua-format reference solution
+     matching field variables in solution files and reference solution
+     will be altered as: numerical value - reference value
+     examples:
+     --subtract-ref-solution=ref-soln.lua
+     default: none
+
  -v, --verbose [+]
      Increase verbosity during preparation and writing of VTK files.
 
@@ -80,15 +89,16 @@ void main_(string[] args)
     bool finalSnapshot = false;
     bool allSnapshots = false;
     bool binaryFormat = false;
+    string luaRefSoln;
     // [TODO] implement --add-vars
-    arraySep = ",";
     getopt(args,
            config.bundling,
            "v|verbose+", &verbosity,
            "s|snapshots|snapshot", &snapshots,
            "f|final", &finalSnapshot,
            "a|all", &allSnapshots,
-           "b|binary-format", &binaryFormat);
+           "b|binary-format", &binaryFormat,
+           "r|subtract-ref-solution", &luaRefSoln);
 
     if (verbosity > 0) {
         writeln("lmr snapshot2vtk: Begin program.");
@@ -99,7 +109,7 @@ void main_(string[] args)
     auto snaps2process = determineSnapshotsToProcess(availSnapshots, snapshots, allSnapshots, finalSnapshot);
 
     /*
-     * 2. Now write vtk files for each snapshot
+     * Now write vtk files for each snapshot
      */
     if (verbosity > 0) {
         writeln("lmr snapshot2vtk: Writing VTK files to disk.");
@@ -112,8 +122,8 @@ void main_(string[] args)
             writefln("lmr snapshot2vtk: Writing snapshot %s to disk.", snap);
         }
         auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks);
+        if (!luaRefSoln.empty) soln.subtract_ref_soln(luaRefSoln);
         // [TODO] add aux variables.
-        // [TODO] luaRefSoln
         string pvtuFileName = "flow-" ~ snap ~ ".pvtu";
         File pvtuFile = begin_PVTU_file(lmrCfg.vtkDir ~ "/" ~ pvtuFileName, soln.flowBlocks[0].variableNames);
         foreach (jb; 0 .. soln.nBlocks) {
