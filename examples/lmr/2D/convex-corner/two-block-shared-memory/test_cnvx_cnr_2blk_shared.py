@@ -13,6 +13,7 @@ import os
 def change_test_dir(request, monkeypatch):
     monkeypatch.chdir(request.fspath.dirname)
 
+expected_reason_for_stop = "relative-global-residual-target"
 expected_number_steps = 32
 expected_final_cfl = 8.134e+03
 
@@ -21,10 +22,13 @@ def expected_output(proc):
     cfl = 0.0
     lines = proc.stdout.split("\n")
     for line in lines:
+        if line.find("STOP-REASON") != -1:
+            reason = line.split()[1]
         if line.find("FINAL-STEP") != -1:
             steps = int(line.split()[1])
         if line.find("FINAL-CFL") != -1:
             cfl = float(line.split()[1])
+    assert reason == expected_reason_for_stop, "Failed to stop for the expected reason."
     assert steps == expected_number_steps, "Failed to take correct number of steps."
     assert abs(cfl - expected_final_cfl)/expected_final_cfl < 0.005, \
         "Failed to arrive at expected CFL value on final step."

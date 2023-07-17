@@ -8,7 +8,7 @@
 NewtonKrylovGlobalConfigHidden = {
 
    -- global control based on step number
-   number_of_steps_for_setting_reference_residuals = 10,
+   number_of_steps_for_setting_reference_residuals = 0,
    freeze_limiter_at_step = -1,
 
    -- stopping criterion

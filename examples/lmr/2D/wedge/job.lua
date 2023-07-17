@@ -114,7 +114,7 @@ config.viscous = false
 config.residual_smoothing = false
 
 NewtonKrylovGlobalConfig{
-   number_of_steps_for_setting_reference_residuals = 1,
+   number_of_steps_for_setting_reference_residuals = 0,
    max_newton_steps = 1500,
    stop_on_relative_residual = 1.0e-14,
    number_of_phases = 1,

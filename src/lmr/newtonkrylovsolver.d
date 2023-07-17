@@ -117,7 +117,7 @@ PreconditionerType preconditionerTypeFromName(string name)
 
 struct NKGlobalConfig {
     // global control based on step
-    int numberOfStepsForSettingReferenceResiduals = 10;
+    int numberOfStepsForSettingReferenceResiduals = 0;
     int freezeLimiterAtStep = -1;
     // stopping criterion
     int maxNewtonSteps = 1000;
@@ -651,13 +651,6 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
     }
     */
 
-    /*
-    debug {
-        writeln("DEBUG: performNewtoKrylovUpdate()");
-        writeln("       Initialisation done.");
-    }
-    */
-
     // Look for global CFL schedule and use to set CFL
     if (nkCfg.cflSchedule.length > 0) {
         foreach (i, startRamp; nkCfg.cflSchedule[0 .. $-1]) {
@@ -741,7 +734,31 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         else { // Assume we have a global (phase-independent) schedule
             cfl = cflSelector.nextCFL(-1.0, startStep, -1.0, -1.0, -1.0);
         }
-    }
+
+        // On fresh start, may need to set reference residuals based on initial condition.
+        evalResidual(0);
+        setResiduals();
+        computeGlobalResidual();
+        referenceGlobalResidual = globalResidual;
+        computeResiduals(referenceResiduals);
+        if (nkCfg.numberOfStepsForSettingReferenceResiduals == 0) {
+            referenceResidualsAreSet = true;
+            if (GlobalConfig.is_master_task) {
+                writeln("*************************************************************************");
+                writeln("*");
+                writeln("*  At step 0, reference residuals have been set.");
+                writefln("*  Reference global residual: %.12e", referenceGlobalResidual);
+                writeln("*");
+                writeln("*  Reference residuals for each conservation equation:");
+                foreach (ivar; 0 .. nConserved) {
+                    writefln("* %12s: %.12e", cfg.cqi.names[ivar], referenceResiduals[ivar].re);
+                }
+                writeln("*");
+                writeln("*************************************************************************\n");
+                writeReferenceResidualsToFile();
+            }
+        }   
+    } // end actions for fresh start
 
     // Override CFL if supplied at command line.
     if (startCFL > 0.0) {
@@ -966,28 +983,29 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
          * 2b. Stopping checks.
          *---
          */
+        string reasonForStop;
         if (step == nkCfg.maxNewtonSteps) {
             finalStep = true;
             if (cfg.is_master_task) {
-                writeln("STOPPING: Reached maximum number of steps.");
-                writeln("STOP-REASON: maximum-steps");
+                writeln("*** STOPPING: Reached maximum number of steps.");
+                reasonForStop = "STOP-REASON: maximum-steps";
             }
         }
         if (!activePhase.ignoreStoppingCriteria) {
             if (globalResidual <= nkCfg.stopOnAbsoluteResidual) {
                 finalStep = true;
                 if (cfg.is_master_task) {
-                    writeln("STOPPING: The absolute global residual is below target value.");
+                    writeln("*** STOPPING: The absolute global residual is below target value.");
                     writefln("         current global residual= %.6e  target value= %.6e", globalResidual, nkCfg.stopOnAbsoluteResidual);
-                    writeln("STOP-REASON: absolute-global-residual-target");
+                    reasonForStop = "STOP-REASON: absolute-global-residual-target";
                 }
             }
             if ((globalResidual/referenceGlobalResidual) <= nkCfg.stopOnRelativeResidual) {
                 finalStep = true;
                 if (cfg.is_master_task) {
-                    writeln("STOPPING: The relative global residual is below target value.");
-                    writefln("         current residual= %.6e  target value= %.6e", (globalResidual/referenceGlobalResidual), nkCfg.stopOnRelativeResidual);
-                    writeln("STOP-REASON: relative-global-residual-target");
+                    writeln("*** STOPPING: The relative global residual is below target value.");
+                    writefln("              current residual= %.6e  target value= %.6e", (globalResidual/referenceGlobalResidual), nkCfg.stopOnRelativeResidual);
+                    reasonForStop = "STOP-REASON: relative-global-residual-target";
                 }
             }
         }
@@ -999,6 +1017,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 
         if (finalStep) {
 	    if (cfg.is_master_task) {
+                writeln(reasonForStop);
 		writefln("FINAL-STEP: %d", step);
 		writefln("FINAL-CFL: %.3e", cfl);
 	    }
@@ -1312,40 +1331,9 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
      * 0. Preparation for iterations.
      *---
      */
-    /*
-    debug {
-        writeln("DEBUG: solveNewtonStep()");
-        writeln(" calling evalResidual.");
-    }
-    */
-
     evalResidual(0);
 
-    /*
-    debug {
-        writeln("DEBUG: solveNewtonStep()");
-        writeln(" evalResidual done.");
-    }
-    */
-
     setResiduals();
-
-    /*
-    debug {
-        writeln("DEBUG: solveNewtonStep()");
-        writeln(" calling computeGlobalResidual.");
-    }
-    */
-
-
-
-    /*
-    debug {
-        writeln("DEBUG: solveNewtonStep()");
-        writeln(" computeGlobalResidual done.");
-    }
-    */
-
 
     determineScaleFactors(scale);
     // r0 = A*x0 - b

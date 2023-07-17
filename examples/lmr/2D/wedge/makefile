@@ -11,7 +11,7 @@ prep: gas grid init
 gas: ideal-air.lua
 	prep-gas ideal-air.lua ideal-air.gas
 
-grid: lmrjob.lua
+grid: job.lua
 	lmr prep-grid
 
 init:
