@@ -2487,50 +2487,154 @@ public:
     {
         if (!myConfig.turb_model.isTurbulent) return;
 
-        // FIXME: Bring in commit f879aaf4dcb3c304fc429cd66efee119dd47dbdf
+        size_t idx,l,r;
+        bool is3D = (myConfig.dimensions == 3);
+
         // ifi interior faces
-        size_t idx, l, r;
-        foreach(j; 0 .. njc){
-            foreach(i; 1 .. niv-1){
-                idx = j*niv + i;
-                l = j*niv + (i-1);
-                r = j*niv + i;
-                facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
-                facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
+        foreach(k; 0 .. nkc) {
+            foreach(j; 0 .. njc){
+                foreach(i; 1 .. niv-1){
+                    idx = ifi_index(i,j,k);
+                    l = cell_index(i-1, j, k);
+                    r = cell_index(i,   j, k);
+                    facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
+                    facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
+                }
             }
         }
         // ifj interior faces
-        size_t offset = niv*njc;
-        foreach(j; 1 .. njv-1){
-            foreach(i; 0 .. nic){
-                idx = j*nic + i + offset;
-                l = (j-1)*nic + i;
-                r = j*nic + i;
-                facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
-                facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
+        foreach(k; 0 .. nkc) {
+            foreach(j; 1 .. njv-1){
+                foreach(i; 0 .. nic){
+                    idx = ifj_index(i,j,k);
+                    l = cell_index(i, j-1, k);
+                    r = cell_index(i, j,   k);
+                    facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
+                    facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
+                }
             }
         }
 
-        // ifi edge faces
-        foreach(j; 0 .. njc){
-            size_t i = 0;
-            idx = j*niv + i;
-            faces[idx].average_turbulent_transprops();
+        // ifk interior faces
+        foreach(k; 1 .. nkv-1) {
+            foreach(j; 0 .. njc){
+                foreach(i; 0 .. nic){
+                    idx = ifk_index(i,j,k);
+                    l = cell_index(i, j, k-1);
+                    r = cell_index(i, j, k);
+                    facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
+                    facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
+                }
+            }
+        }
 
-            i = niv-1;
-            idx = j*niv + i;
-            faces[idx].average_turbulent_transprops();
+        // Boundary faces go in ghost cell order: north, south, east, west, top, bottom
+        size_t gidx = nic*njc*nkc;
+        size_t bidx = 0;
+
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                immutable size_t j=njv-1; // North
+                idx = ifj_index(i,j,k);
+                l = cell_index(i, j-1, k);
+                r = gidx;
+                if (facedata.left_interior_only[bidx]) { // ghost cells are only on the right
+                    facedata.flowstates[idx].mu_t = celldata.flowstates[l].mu_t;
+                    facedata.flowstates[idx].k_t = celldata.flowstates[l].k_t;
+                } else {
+                    facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
+                    facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
+                }
+                bidx++; gidx+=n_ghost_cell_layers;
+            }
         }
-        // ifj edge faces
-        size_t j = 0;
-        foreach(i; 0 .. nic){
-            idx = j*nic + i + offset;
-            faces[idx].average_turbulent_transprops();
+
+        foreach (k; 0 .. nkc) {
+            foreach (i; 0 .. nic) {
+                immutable size_t j=0; // South
+                idx = ifj_index(i,j,k);
+                l = gidx;
+                r = cell_index(i, j, k);
+                if (facedata.right_interior_only[bidx]) { // ghost cells are only on the left
+                    facedata.flowstates[idx].mu_t = celldata.flowstates[r].mu_t;
+                    facedata.flowstates[idx].k_t = celldata.flowstates[r].k_t;
+                } else {
+                    facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
+                    facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
+                }
+                bidx++; gidx+=n_ghost_cell_layers;
+            }
         }
-        j = njv-1;
-        foreach(i; 0 .. nic){
-            idx = j*nic + i + offset;
-            faces[idx].average_turbulent_transprops();
+
+
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                immutable size_t i=niv-1; // East
+                idx = ifi_index(i,j,k);
+                l = cell_index(i-1, j, k);
+                r = gidx;
+                if (facedata.left_interior_only[bidx]) { // ghost cells are only on the right
+                    facedata.flowstates[idx].mu_t = celldata.flowstates[l].mu_t;
+                    facedata.flowstates[idx].k_t = celldata.flowstates[l].k_t;
+                } else {
+                    facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
+                    facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
+                }
+                bidx++; gidx+=n_ghost_cell_layers;
+            }
+        }
+
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                immutable size_t i=0; // West
+                idx = ifi_index(i,j,k);
+                l = gidx;
+                r = cell_index(i, j, k);
+                if (facedata.right_interior_only[bidx]) { // ghost cells are only on the left
+                    facedata.flowstates[idx].mu_t = celldata.flowstates[r].mu_t;
+                    facedata.flowstates[idx].k_t = celldata.flowstates[r].k_t;
+                } else {
+                    facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
+                    facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
+                }
+                bidx++; gidx+=n_ghost_cell_layers;
+            }
+        }
+
+        if (is3D == 3) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    immutable size_t k=nkv-1; // Top
+                    idx = ifk_index(i,j,k);
+                    l = cell_index(i, j, k-1);
+                    r = gidx;
+                    if (facedata.left_interior_only[bidx]) { // ghost cells are only on the right
+                        facedata.flowstates[idx].mu_t = celldata.flowstates[l].mu_t;
+                        facedata.flowstates[idx].k_t = celldata.flowstates[l].k_t;
+                    } else {
+                        facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
+                        facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
+                    }
+                    bidx++; gidx+=n_ghost_cell_layers;
+                }
+            }
+
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    immutable size_t k=0; // Bot
+                    idx = ifk_index(i,j,k);
+                    l = gidx;
+                    r = cell_index(i, j, k);
+                    if (facedata.right_interior_only[bidx]) { // ghost cells are only on the left
+                        facedata.flowstates[idx].mu_t = celldata.flowstates[r].mu_t;
+                        facedata.flowstates[idx].k_t = celldata.flowstates[r].k_t;
+                    } else {
+                        facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
+                        facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
+                    }
+                    bidx++; gidx+=n_ghost_cell_layers;
+                }
+            }
         }
     }
 
