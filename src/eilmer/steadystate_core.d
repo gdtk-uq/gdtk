@@ -2311,6 +2311,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
     beta = sqrt(beta);
+    //writefln("OUTER: AT START beta= %e", beta);
     number beta0 = beta;
     g0[0] = beta;
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -2548,7 +2549,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             // Get residual
             resid = fabs(g1[j+1]);
             // DEBUG:
-            //      writefln("OUTER: restart-count= %d iteration= %d, resid= %e", r, j, resid);
+            //writefln("OUTER: restart-count= %d iteration= %d, resid= %e", r, j, resid);
             nIters = to!int(iterCount);
             linSolResid = (resid/beta0).re;
             if ( resid <= outerTol ) {
@@ -2644,23 +2645,58 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         }
 
         // Else, we prepare for restart by setting x0 and computing r0
-        // Computation of r0 as per Fraysee etal (2005)
         foreach (blk; parallel(localFluidBlocks,1)) {
             blk.x0[] = blk.dU[];
         }
 
-        foreach (blk; localFluidBlocks) copy(Q1, blk.Q1);
-        // Set all values in g0 to 0.0 except for final (m+1) value
-        foreach (i; 0 .. m) g0[i] = 0.0;
-        foreach (blk; localFluidBlocks) blk.g0[] = g0[];
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot(blk.Q1, m, m+1, blk.g0, blk.g1);
-        }
-        foreach (blk; parallel(localFluidBlocks,1)) {
+        /*
+          We were originally peforming the computation of r0 as per Fraysse etal (2005),
+          however, we have observed that the resid value at the end of the last GMRES iteration
+          and the beta value computed using the r0 as per Fraysse differed quite substantially,
+          sometimes by an order of magnitude. It hasn't been determined whether this is due to
+          a bug in the implementation of the trick or a fundamental deficiency of the method.
+          We have thus reverted to computing the r0 vector explicitly, i.e. r0 = b - Ax0 where Ax0
+          is computed using a Frechet derivative, in doing so the resid and beta values have a far
+          better agreement. [KAD 2023-07-18]
+
+          // old Fraysse method...
+          foreach (blk; localFluidBlocks) copy(Q1, blk.Q1);
+          // Set all values in g0 to 0.0 except for final (m+1) value
+          foreach (i; 0 .. m) g0[i] = 0.0;
+          foreach (blk; localFluidBlocks) blk.g0[] = g0[];
+          foreach (blk; parallel(localFluidBlocks,1)) {
+          nm.bbla.dot(blk.Q1, m, m+1, blk.g0, blk.g1);
+          }
+          foreach (blk; parallel(localFluidBlocks,1)) {
             nm.bbla.dot(blk.V, blk.nvars, m+1, blk.g1, blk.r0);
+            }
+        */
+
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            blk.zed[] = blk.x0[];
         }
 
-        /*
+        // Prepare 'w' with (I/dt)(P^-1)v term;
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            foreach (i, cell; blk.cells) {
+                foreach (k; 0..nConserved) {
+                    ulong idx = i*nConserved + k;
+                    double dtInv;
+                    if (GlobalConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
+                    else { dtInv = 1.0/dt; }
+                    blk.w[idx] = dtInv*blk.zed[idx];
+                }
+            }
+        }
+
+        // Evaluate Jz and place in z
+        evalJacobianVecProd(pseudoSimTime, sigma, LHSeval, RHSeval);
+
+        // Now we can complete calculation of w
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            foreach (k; 0 .. blk.nvars)  blk.r0[k] = blk.FU[k] - (blk.w[k] - blk.zed[k]);
+        }
+
         // apply scaling
         foreach (blk; parallel(localFluidBlocks,1)) {
             size_t nturb = blk.myConfig.turb_model.nturb;
@@ -2669,27 +2705,30 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (cell; blk.cells) {
-                blk.r0[cellCount+MASS] *= (1.0/blk.maxRate[cqi.mass]);
-                blk.r0[cellCount+X_MOM] *= (1.0/blk.maxRate[cqi.xMom]);
-                blk.r0[cellCount+Y_MOM] *= (1.0/blk.maxRate[cqi.yMom]);
+                if ( nsp == 1 ) { blk.r0[cellCount+MASS] *= (1./blk.maxRate[cqi.mass].re); }
+                blk.r0[cellCount+X_MOM] *= (1./blk.maxRate[cqi.xMom].re);
+                blk.r0[cellCount+Y_MOM] *= (1./blk.maxRate[cqi.yMom].re);
                 if ( blk.myConfig.dimensions == 3 )
-                    blk.r0[cellCount+Z_MOM] *= (1.0/blk.maxRate[cqi.zMom]);
-                blk.r0[cellCount+TOT_ENERGY] *= (1.0/blk.maxRate[cqi.totEnergy]);
+                    blk.r0[cellCount+Z_MOM] *= (1./blk.maxRate[cqi.zMom].re);
+                blk.r0[cellCount+TOT_ENERGY] *= (1./blk.maxRate[cqi.totEnergy].re);
                 foreach(it; 0 .. nturb){
-                    blk.r0[cellCount+TKE+it] *= (1.0/blk.maxRate[cqi.rhoturb+it]);
+                    blk.r0[cellCount+TKE+it] *= (1./blk.maxRate[cqi.rhoturb+it].re);
                 }
                 version(multi_species_gas){
-                if ( nsp > 1 ) {
-                    foreach(sp; 0 .. nsp){ blk.r0[cellCount+SPECIES+sp] *= (1.0/blk.maxRate[cqi.species+sp]); }
-                }
+                    if ( nsp > 1 ) {
+                        foreach(sp; 0 .. nsp){
+                            blk.r0[cellCount+SPECIES+sp] *= (1./blk.maxRate[cqi.species+sp].re);
+                        }
+                    }
                 }
                 version(multi_T_gas){
-                foreach(imode; 0 .. nmodes){ blk.r0[cellCount+MODES+imode] *= (1.0/blk.maxRate[cqi.modes+imode]); }
+                    foreach(imode; 0 .. nmodes){
+                        blk.r0[cellCount+MODES+imode] *= (1./blk.maxRate[cqi.modes+imode].re);
+                    }
                 }
                 cellCount += nConserved;
             }
         }
-        */
 
         mixin(dot_over_blocks("beta", "r0", "r0"));
         version(mpi_parallel) {
@@ -2697,7 +2736,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         }
         beta = sqrt(beta);
 
-        // DEBUG: writefln("OUTER: ON RESTART beta= %e", beta);
+        //writefln("OUTER: ON RESTART beta= %e", beta);
         foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (k; 0 .. blk.nvars) {
                 blk.v[k] = blk.r0[k]/beta;
