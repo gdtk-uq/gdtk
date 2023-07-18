@@ -839,20 +839,21 @@ struct GMRESWorkSpace(T) {
 }
 
 /**
- * A GMRES iterative solver with right preconditioning.
+ * A restarted GMRES iterative solver with right preconditioning.
  *
  * Params:
- *    A =         coefficient matrix
- *    P =         pre-conditioning matrix in LU form
- *    b =         RHS vector
- *    x0 =        initial guess for solution
- *    x =         solution vector place in x
- *    maxIters =  maximum number of iterations
- *    residTol =  stop iterations when residual below this tolerance
- *    gws =       pre-allocated workspace
+ *    A =           coefficient matrix
+ *    P =           pre-conditioning matrix in LU form
+ *    b =           RHS vector
+ *    x0 =          initial guess for solution
+ *    x =           solution vector place in x
+ *    maxIters =    maximum number of iterations
+ *    residTol =    stop iterations when residual below this tolerance
+ *    gws =         pre-allocated workspace
+ *    maxRestarts = maximum number of restarts
  */
 void rpcGMRES(T)(SMatrix!T A, SMatrix!T P, T[] b, T[] x0, T[] x,
-              int maxIters, double residTol, ref GMRESWorkSpace!T gws)
+                 int maxIters, double residTol, ref GMRESWorkSpace!T gws, int maxRestarts=1)
 in {
     assert(A.ia.length-1 == b.length);
     assert(b.length == x0.length);
@@ -862,90 +863,104 @@ do {
     T resid;
     size_t n = b.length;
     size_t m = maxIters;
-    // 0. Initialise the values in some of the pre-allocated storage
-    foreach( idx; 0..gws.g0.length) gws.g0[idx] = 0.0;
-    foreach( idx; 0..gws.g1.length) gws.g1[idx] = 0.0;
-    gws.H0.zeros();
-    gws.H1.zeros();
-    gws.Gamma.eye();
 
-    // 1. Compute r0, beta, v1
-    multiply!T(A, x0, gws.Ax0);
-    foreach (i; 0 .. n) {
-        gws.r0[i] = b[i] - gws.Ax0[i];
-    }
+    // Perform restarts
+    for (size_t r = 0; r < maxRestarts; r++) {
 
-    auto beta = norm2(gws.r0);
-    gws.g0[0] = beta;
-    foreach (i; 0 .. n) {
-        gws.v[i] = gws.r0[i]/beta;
-        gws.V[i,0] = gws.v[i];
-    }
-
-
-    // 2. Do 'm' iterations of update
-    foreach (j; 0 .. m) {
-        gws.Pv[] = gws.v[];
-        solve!T(P, gws.Pv);
-        multiply!T(A, gws.Pv, gws.w);
-        foreach (i; 0 .. j+1) {
-            foreach (k; 0 .. n ) gws.v[k] = gws.V[k,i]; // Extract column 'i'
-            gws.H0[i,j] = dot(gws.w, gws.v);
-            foreach (k; 0 .. n) gws.w[k] -= gws.H0[i,j]*gws.v[k];
-        }
-        gws.H0[j+1,j] = norm2(gws.w);
-
-        foreach (k; 0 .. n) {
-            gws.v[k] = gws.w[k]/gws.H0[j+1,j];
-            gws.V[k,j+1] = gws.v[k];
-        }
-
-        // Build rotated Hessenberg progressively
-        if ( j != 0 ) {
-            // Extract final column in H
-            foreach (i; 0 .. j+1) gws.h[i] = gws.H0[i,j];
-            // Rotate column by previous rotations (stored in Q0)
-            nm.bbla.dot!T(gws.Q0, j+1, j+1, gws.h, gws.hR);
-            // Place column back in H
-            foreach (i; 0 .. j+1) gws.H0[i,j] = gws.hR[i];
-        }
-        // Now form new Gamma
+        // 0. Initialise the values in some of the pre-allocated storage
+        foreach( idx; 0..gws.g0.length) gws.g0[idx] = 0.0;
+        foreach( idx; 0..gws.g1.length) gws.g1[idx] = 0.0;
+        gws.H0.zeros();
+        gws.H1.zeros();
         gws.Gamma.eye();
-        auto denom = sqrt(gws.H0[j,j]*gws.H0[j,j] + gws.H0[j+1,j]*gws.H0[j+1,j]);
-        auto s_j = gws.H0[j+1,j]/denom;
-        auto c_j = gws.H0[j,j]/denom;
-        gws.Gamma[j,j] = c_j; gws.Gamma[j,j+1] = s_j;
-        gws.Gamma[j+1,j] = -s_j; gws.Gamma[j+1,j+1] = c_j;
-        // Apply rotations
-        nm.bbla.dot!T(gws.Gamma, j+2, j+2, gws.H0, j+1, gws.H1);
-        nm.bbla.dot!T(gws.Gamma, j+2, j+2, gws.g0, gws.g1);
-        // Accumulate Gamma rotations in Q.
-        if ( j == 0 ) {
-            copy(gws.Gamma, gws.Q1);
+
+        // 1. Compute r0, beta, v1
+        multiply!T(A, x0, gws.Ax0);
+        foreach (i; 0 .. n) {
+            gws.r0[i] = b[i] - gws.Ax0[i];
         }
-        else {
-            nm.bbla.dot!T(gws.Gamma, j+2, j+2, gws.Q0, j+2, gws.Q1);
+
+        auto beta = norm2(gws.r0);
+        gws.g0[0] = beta;
+        //writefln("beta: %.16e", beta);
+        foreach (i; 0 .. n) {
+            gws.v[i] = gws.r0[i]/beta;
+            gws.V[i,0] = gws.v[i];
         }
-        // Get residual
-        resid = fabs(gws.g1[j+1]);
-        if ( resid <= residTol ) {
-            m = j+1;
+
+        // 2. Do 'm' iterations of update
+        foreach (j; 0 .. m) {
+            gws.Pv[] = gws.v[];
+            solve!T(P, gws.Pv);
+            multiply!T(A, gws.Pv, gws.w);
+            foreach (i; 0 .. j+1) {
+                foreach (k; 0 .. n ) gws.v[k] = gws.V[k,i]; // Extract column 'i'
+                gws.H0[i,j] = dot(gws.w, gws.v);
+                foreach (k; 0 .. n) gws.w[k] -= gws.H0[i,j]*gws.v[k];
+            }
+            gws.H0[j+1,j] = norm2(gws.w);
+
+            foreach (k; 0 .. n) {
+                gws.v[k] = gws.w[k]/gws.H0[j+1,j];
+                gws.V[k,j+1] = gws.v[k];
+            }
+
+            // Build rotated Hessenberg progressively
+            if ( j != 0 ) {
+                // Extract final column in H
+                foreach (i; 0 .. j+1) gws.h[i] = gws.H0[i,j];
+                // Rotate column by previous rotations (stored in Q0)
+                nm.bbla.dot!T(gws.Q0, j+1, j+1, gws.h, gws.hR);
+                // Place column back in H
+                foreach (i; 0 .. j+1) gws.H0[i,j] = gws.hR[i];
+            }
+            // Now form new Gamma
+            gws.Gamma.eye();
+            auto denom = sqrt(gws.H0[j,j]*gws.H0[j,j] + gws.H0[j+1,j]*gws.H0[j+1,j]);
+            auto s_j = gws.H0[j+1,j]/denom;
+            auto c_j = gws.H0[j,j]/denom;
+            gws.Gamma[j,j] = c_j; gws.Gamma[j,j+1] = s_j;
+            gws.Gamma[j+1,j] = -s_j; gws.Gamma[j+1,j+1] = c_j;
+            // Apply rotations
+            nm.bbla.dot!T(gws.Gamma, j+2, j+2, gws.H0, j+1, gws.H1);
+            nm.bbla.dot!T(gws.Gamma, j+2, j+2, gws.g0, gws.g1);
+            // Accumulate Gamma rotations in Q.
+            if ( j == 0 ) {
+                copy(gws.Gamma, gws.Q1);
+            }
+            else {
+                nm.bbla.dot!T(gws.Gamma, j+2, j+2, gws.Q0, j+2, gws.Q1);
+            }
+            // Get residual
+            resid = fabs(gws.g1[j+1]);
+            //writefln("restart: %d, iteration: %d, residual: %.8e", r, j, resid);
+            if ( resid <= residTol ) {
+                m = j+1;
+                break;
+            }
+
+            // Prepare for next iteration
+            copy(gws.H1, gws.H0);
+            gws.g0[] = gws.g1[];
+            copy(gws.Q1, gws.Q0);
+        }
+
+        // At end H := R up to row m
+        //        g := gm up to row m
+        upperSolve!T(gws.H1, to!int(m), gws.g1);
+        nm.bbla.dot!T(gws.V, n, m, gws.g1, x);
+        solve!T(P, x);
+
+        foreach (i; 0 .. n) x[i] += x0[i];
+
+        if ( resid <= residTol || r+1 == maxRestarts ) {
             break;
         }
 
-        // Prepare for next step
-        copy(gws.H1, gws.H0);
-        gws.g0[] = gws.g1[];
-        copy(gws.Q1, gws.Q0);
+        // Else, prepare for a restart by setting the inital
+        // guess to the current best estimate of the solution
+        foreach (i; 0 .. n) x0[i] = x[i];
     }
-
-    // At end H := R up to row m
-    //        g := gm up to row m
-    upperSolve!T(gws.H1, to!int(m), gws.g1);
-    nm.bbla.dot!T(gws.V, n, m, gws.g1, x);
-    solve!T(P, x);
-
-    foreach (i; 0 .. n) x[i] += x0[i];
 }
 
 T[] fGMRES(T)(SMatrix!T A, SMatrix!T P, T[] b, T[] x0, int mOuter, int mInner)
@@ -1218,6 +1233,34 @@ version(smla_test) {
         x = fGMRES!number(h, Pi, C1, x0, 5, 3);
         foreach (i; 0 .. x.length) {
             assert(approxEqualNumbers(x[i], C1_exp[i]), failedUnitTest());
+        }
+
+        // Test pre-conditioned restarted GMRES on the linear system problem
+        // outlined in Section III from:
+        // Implementation of GMRES for chemically reacting flows by Maclean and White, 2012.
+        auto mat_A = new SMatrix!number([to!number(1.), to!number(2.), to!number(-1.), to!number(3.), to!number(2.), to!number(-1.), to!number(-2.),
+                                         to!number(2.), to!number(3.), to!number(-2.), to!number(-1.), to!number(2.), to!number(4.), to!number(2.),
+                                         to!number(-2.), to!number(1.), to!number(5.), to!number(-1.), to!number(-1.), to!number(6.), to!number(-2.),
+                                         to!number(-2.), to!number(3.), to!number(-1.), to!number(-1.), to!number(-5.), to!number(4.), to!number(3.),
+                                         to!number(-2.), to!number(1.), to!number(2.), to!number(1.), to!number(-1.), to!number(3.), to!number(4.)],
+                                        [0, 1, 5, 0, 1, 2, 6, 1, 2, 3, 7, 2, 3, 4, 8, 3, 4, 9, 0, 5, 1, 5, 6, 7, 2, 6, 7, 8, 3, 7, 8, 9, 4, 8, 9],
+                                        [0, 3, 7, 11, 15, 18, 20, 24, 28, 32, 35]);
+        auto pc_A = new SMatrix!number(mat_A);
+        decompILU0!number(pc_A);
+	number[] vec_b   = [to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.),
+                            to!number(6.), to!number(7.), to!number(8.), to!number(9.), to!number(10.)];
+        number[] vec_x0  = [to!number(0.), to!number(0.), to!number(0.), to!number(0.), to!number(0.),
+                            to!number(0.), to!number(0.), to!number(0.), to!number(0.), to!number(0.)];
+        number[] vec_x   = [to!number(0.), to!number(0.), to!number(0.), to!number(0.), to!number(0.),
+                            to!number(0.), to!number(0.), to!number(0.), to!number(0.), to!number(0.)];
+        number[] vec_ref = [to!number(5.29051), to!number(-1.20438), to!number(4.15595), to!number(2.22681), to!number(0.0574555),
+                            to!number(1.88175), to!number(3.65341), to!number(2.60547), to!number(6.66703), to!number(-2.48591)];
+        int max_iterations = 5;
+        int max_restarts   = 20;
+        auto gws2 = GMRESWorkSpace!number(vec_x0.length, max_iterations);
+        rpcGMRES!number(mat_A, pc_A, vec_b, vec_x0, vec_x, max_iterations, 1.0e-14, gws2, max_restarts);
+        foreach (i; 0 .. vec_x.length) {
+            assert(approxEqualNumbers(vec_x[i], vec_ref[i]), failedUnitTest());
         }
 
         // This example tests the addition of values to zero-entries
