@@ -1,4 +1,6 @@
-= Eilmer (v5) Examples Listing
+// elc.adoc
+// elc = examples listing control
+= `Eilmer` (v5) Examples Listing
 Rowan J. Gollan; Peter A. Jacobs; Kyle A. Damm; Nick N. Gibbons
 2023-07-05
 :toc:
@@ -10,4 +12,7 @@ Rowan J. Gollan; Peter A. Jacobs; Kyle A. Damm; Nick N. Gibbons
 include::2D/convex-corner/README.adoc[tag=description]
 
 include::2D/wedge/README.adoc[tag=description]
+
+include::2D/manufactured-solutions/README.adoc[tag=description]
+
 

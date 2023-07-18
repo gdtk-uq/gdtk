@@ -1,11 +1,11 @@
 test:
 	PYTHONDONTWRITEBYTECODE=1 pytest -v
 
-examples-listing.adoc: examples-listing-control.adoc
-	asciidoctor-reducer -o $@ examples-listing-control.adoc
+examples-listing.adoc: elc.adoc
+	asciidoctor-reducer -o $@ $<
 
 examples-listing.html: examples-listing.adoc
-	asciidoctor examples-listing.adoc
+	asciidoctor $<
 
 clean:
 	- rm examples-listing.adoc

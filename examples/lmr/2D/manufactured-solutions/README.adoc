@@ -1,0 +1,46 @@
+//tag::description[]
+= Verification via manufactured solutions (in 2D)
+`gdtk/examples/lmr/2D/manufactured solutions`
+
+Rowan J. Gollan; Kyle A. Damm; Nick N. Gibbons; Peter A. Jacobs
+2023-07-18
+
+:stem: latexmath
+
+These examples form part of our verification suite using the Method of Manufactured Solutions.
+Specifically, we have manufactured solutions to test: Euler terms; Navier-Stokes terms; and
+Reynolds-averaged Navier-Stokes modelling with the latexmath:[k-\omega] turbulence model.
+These manufactured solutions are steady so they serve to exercise the spatial discretisation.
+
+This example is somewhat advanced: it makes heavy use of the user-defined customization
+points such as boundary conditions and source terms.
+It also shows how to provide a reference solution for use in post-processing.
+
+[TIP]
+====
+This example contains:
+
+. Scripted coordination (using Python) to run a series of simulations on
+grids of various refinement
+. Use of user-defined boundary conditions and use of user-defined source terms
+. Demonstration of the `compute-norms` command to find error norms through provision
+of a reference solution
+====
+//end::description[]
+
+== References
+
+*`[TODO]`*
+
+== Description of subdirectories
+
+The subdirectories are divided according to the mathematical description of
+fluid flow that we attempt to solve numerically.
+Those eponymous subdirectories are:
+
+`euler`:: This manufactured solution is a smooth, purely supersonic, inviscid flow
+for testing the Euler solver mode in `Eilmer`.
+`navier-stokes`:: *`[TODO]`*
+`rans-k-omega`:: *`[TODO]`*
+
+There are further `READMEs` in those subdirectories.
