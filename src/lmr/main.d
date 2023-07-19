@@ -4,6 +4,7 @@ import std.algorithm;
 
 import lmrconfig;
 import command;
+import checkjacobian;
 import computenorms;
 import prepgrids;
 import prepflow;
@@ -39,12 +40,15 @@ Show help for a given Eilmer command or topic.
     // Add commands here.
     commands["help"] = helpCmd;
     // Try to add commands in alphabetical order from here down.
+    // 1. Add user commands
     commands["compute-norms"] = compNormsCmd; 
     commands["prep-grids"] = prepGridCmd; commands["prep-grid"] = commands["prep-grids"]; // add alias
     commands["prep-flow"] = prepFlowCmd;
     commands["revision-id"] = revisionIdCmd;
     commands["run-steady"] = runSteadyCmd;
     commands["snapshot2vtk"] = snapshot2vtkCmd;
+    // 2. Add dev/diag commands
+    commands["check-jacobian"] = checkJacCmd;
 }
 
 void main(string[] args)
@@ -74,6 +78,17 @@ void main(string[] args)
         printHelp(args);
         return;
     }
+
+    // Special cases for version options written as commands.
+    if (args[1] == "version-long") {
+        printVersion(false);
+        return;
+    }
+    else if (args[1] == "version") {
+        printVersion();
+        return;
+    }
+
     auto cmd = args[1];
 
     if (cmd in commands) {
@@ -88,11 +103,19 @@ void listHelpForAllCommands()
 {
     writeln("See 'lmr help <command>' to read about a specific subcommand.");
     writeln("");
-    writeln("Available commands");
     auto cmds = commands.keys;
     cmds.sort;
+    // First print regular user commands
+    writeln("Available commands");
     foreach (cmd; cmds) {
-        writefln("   %-20s %s", cmd, commands[cmd].shortDescription);
+        if (commands[cmd].type == LmrCmdType.user)
+            writefln("   %-20s %s", cmd, commands[cmd].shortDescription);
+    }
+    writeln("");
+    writeln("Developer/diagnostics commands");
+    foreach (cmd; cmds) {
+        if (commands[cmd].type == LmrCmdType.dev)
+            writefln("   %-20s %s", cmd, commands[cmd].shortDescription);
     }
     writeln("");
     writeln("Meta commands");

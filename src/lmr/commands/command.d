@@ -3,6 +3,11 @@ module command;
 import core.stdc.stdlib : system;
 import std.string;
 
+enum LmrCmdType {
+    user,
+    dev
+};
+
 struct Command
 {
     /// pointer to function for command action
@@ -11,6 +16,8 @@ struct Command
     string description;
     string shortDescription;
     string helpMsg;
+    LmrCmdType type = LmrCmdType.user; // by default
+
 
 }
 
