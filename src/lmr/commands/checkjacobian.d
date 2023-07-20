@@ -17,6 +17,7 @@ import std.range : empty;
 import std.format : format;
 import std.conv : to;
 import std.math;
+import std.json : JSONValue;
 
 import nm.number : number;
 import nm.smla;
@@ -28,6 +29,8 @@ import init : initConfiguration;
 import newtonkrylovsolver;
 import cmdhelper;
 import command;
+import json_helper;
+import lmrconfig;
 
 Command checkJacCmd;
 
@@ -105,10 +108,24 @@ void main_(string[] args)
     if (verbosity > 1) writefln("lmt %s: Performing check with snapshot {%d}", cmdName, snapshot);
 
     /*
+     * 0. Initialize Newton-Krylov simulation
+     */
+    initNewtonKrylovSimulation(snapshot, 1, 1, "1000000");
+    JSONValue jsonData = readJSONfile(lmrCfg.nkCfgFile);
+    nkCfg.readValuesFromJSON(jsonData);
+    // Allocate space and configure phases
+    nkPhases.length = nkCfg.numberOfPhases;
+    foreach (i, ref phase; nkPhases) {
+        string key = "NewtonKrylovPhase_" ~ to!string(i);
+        phase.readValuesFromJSON(jsonData[key]);
+    }
+    activePhase = nkPhases[$-1]; // set to the last phase from the simulation
+    evalResidual(0); // we perform a residual evaluation here to populate the ghost-cells
+
+    /*
      * 1. Do calculation of sparse-matrix Jacobian by test vector.
      */
     // 1a. Populate Jacobian
-    initNewtonKrylovSimulation(snapshot, 1, 1, "1000000");
     alias cfg = GlobalConfig;
     auto blk = localFluidBlocks[0];
     blk.initialize_jacobian(cfg.interpolation_order, 1.0e-250, 0);
@@ -117,7 +134,13 @@ void main_(string[] args)
     number[] testVec;
     testVec.length = blk.flowJacobian.local.ia.length-1;
     Mt19937 rng;
-    foreach (ref val; testVec) val = rng.uniform01();
+    number mag = 0.0;
+    foreach (ref val; testVec) {
+        val = rng.uniform01();
+        mag += val*val;
+    }
+    testVec[] = (1./mag)*testVec[]; // we have observed that a normalized test vector behaves better
+
     // 1c. Compute c0 = J*testVec
     number[] c0;
     c0.length = testVec.length;
@@ -130,8 +153,8 @@ void main_(string[] args)
     allocateGlobalGMRESWorkspace();
     blk.allocate_GMRES_workspace(1);
 
-    blk.zed[] = testVec[];
     // 2b. Do Frechet step
+    blk.zed[] = testVec[];
     evalJacobianVectorProduct(1.0e-250);
 
     /*
@@ -148,10 +171,12 @@ void main_(string[] args)
     writefln("c0, 2-norm= %.16e", c0_2norm.re);
     writefln("c1, 2-norm= %.16e", c1_2norm.re);
 
-    outfile.writeln("# idx  c0   c1   c0-c1   abs(c0-c1)");
+    outfile.writeln("# array_idx cell_idx c0   c1   c0-c1   abs(c0-c1)");
+    size_t nConserved = cfg.cqi.n;
     foreach (i; 0 .. c0.length) {
         auto delta = c0[i] - blk.zed[i];
-        outfile.writefln("%d %20.16e %20.16e %20.16e %20.16e", i, c0[i].re, blk.zed[i].re, delta.re, fabs(delta).re);
+        size_t cell_id = i/nConserved;
+        outfile.writefln("%d %d %20.16e %20.16e %20.16e %20.16e", i, cell_id, c0[i].re, blk.zed[i].re, delta.re, fabs(delta).re);
     }
     outfile.close();
 
