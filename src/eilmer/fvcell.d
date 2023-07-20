@@ -1085,11 +1085,18 @@ public:
     void turbulence_viscosity_limit(double factor)
     // Limit the turbulent viscosity to reasonable values relative to
     // the local molecular viscosity.
-    // In shock started flows, we seem to get crazy values on the
-    // starting shock structure and the simulations do not progress.
+    // The pre 2015 code introduced these limits, along with a default factor
+    // of 300 for reasons that are now unclear. In July 2023 NNG changed  
+    // this factor to 3000, and removed it all together from the JFNK,
+    // to prevent the turbulent viscosity from being clipped in anything
+    // but a very abnormal scneario. 
     {
-        fs.mu_t = fmin(fs.mu_t, factor * fs.gas.mu);
-        fs.k_t = fmin(fs.k_t, factor * fs.gas.k); // ASSUMPTION re k
+        version(nk_accelerator) {
+            // Don't put limits in the NK solver, it messes with the gradients
+        } else {
+            fs.mu_t = fmin(fs.mu_t, factor * fs.gas.mu);
+            fs.k_t = fmin(fs.k_t, factor * fs.gas.k); // ASSUMPTION re k
+        }
     }
 
     @nogc
