@@ -31,6 +31,7 @@ struct LmrCfg {
     immutable string referenceResidualsFile;
     immutable string flowPrefix;
     immutable string gridPrefix;
+    immutable string gridDir;
     immutable string gzipExt;
     immutable string blkListFile;
     immutable string vtkDir;
@@ -66,6 +67,7 @@ static this()
     lmrCfg.referenceResidualsFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["reference-residuals-file"].str;
     lmrCfg.flowPrefix = lmrJSONCfg["flow-prefix"].str;
     lmrCfg.gridPrefix = lmrJSONCfg["grid-prefix"].str;
+    lmrCfg.gridDir = lmrJSONCfg["grid-directory"].str;
     lmrCfg.gzipExt = lmrJSONCfg["gzip-extension"].str;
     lmrCfg.blkListFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["block-list-filename"].str;
     lmrCfg.vtkDir = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["vtk-output-directory"].str;
