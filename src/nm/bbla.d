@@ -16,6 +16,123 @@ import std.math;
 import nm.complex;
 import std.exception;
 
+@nogc
+void dot(T)(in DMatrix!T a, size_t aRow, size_t aCol,
+         in DMatrix!T b, size_t bCol,
+         ref DMatrix!T c) {
+    foreach (row; 0 .. aRow) {
+        foreach (col; 0 .. bCol) {
+            c.index(row,col, to!T(0.0));
+            foreach (i; 0 .. aCol) {
+                T cc = c.index(row,col);
+                c.index(row,col, cc + a.index(row,i) * b.index(i,col));
+            }
+        }
+    }
+}
+
+@nogc
+void copy(T)(in DMatrix!T src, ref DMatrix!T tgt)
+{
+    foreach (row; 0 .. src.nrows) {
+        foreach (col; 0 .. src.ncols) {
+            tgt.index(row,col, src.index(row,col));
+        }
+    }
+}
+
+@nogc
+void upperSolve(T)(in DMatrix!T U, int n, T[] b)
+{
+    // Back subsitution
+    b[n-1] /= U.index(n-1,n-1);
+    for (int i = n-2; i >= 0; --i) {
+        T sum = b[i];
+        foreach (j; i+1 .. n) { sum -= U.index(i,j) * b[j]; }
+        b[i] = sum/U.index(i,i);
+    }
+}
+
+@nogc
+void dot(T)(in DMatrix!T a, size_t aRow, size_t aCol, T[] b, T[] c)
+{
+    foreach (idx; 0 .. c.length) c[idx] = 0.0;
+    foreach (row; 0 .. aRow) {
+        foreach (col; 0 .. aCol) {
+            c[row] += a.index(row,col) * b[col];
+        }
+    }
+}
+
+class DMatrix(T) {
+    size_t _nrows;
+    size_t _ncols;
+    T[] _data;
+
+    this(size_t n) {
+        _nrows = n;
+        _ncols = n;
+        _data.length = n*n;
+    }
+
+    this(size_t nrows, size_t ncols) {
+        _nrows = nrows;
+        _ncols = ncols;
+        _data.length = nrows*ncols;
+    }
+
+    @property @nogc const size_t nrows() { return _nrows; }
+    @property @nogc const size_t ncols() { return _ncols; }
+
+    @nogc
+    T index(size_t row, size_t col) const
+    {
+        pragma(inline, true);
+        return _data[row*_ncols + col];
+    }
+
+    @nogc
+    void index(size_t row, size_t col, T a)
+    {
+        pragma(inline, true);
+        _data[row*_ncols + col] = a;
+    }
+
+    //@nogc
+    //void index(size_t row, size_t col, double a)
+    //{
+    //    pragma(inline, true);
+    //    _data[row*_ncols + col] = to!T(a);
+    //}
+
+    @nogc
+    void zeros()
+    {
+        foreach(row; 0 .. _nrows)
+            foreach(col; 0 .. _ncols)
+                _data[row*_ncols + col] = to!T(0.0);
+    }
+
+    @nogc
+    void ones()
+    {
+        foreach(row; 0 .. _nrows)
+            foreach(col; 0 .. _ncols)
+                _data[row*_ncols + col] = to!T(1.0);
+    }
+
+    @nogc
+    void eye()
+    {
+        foreach(row; 0 .. _nrows) {
+            foreach(col; 0 .. _ncols) {
+                _data[row*_ncols + col] = to!T(0.0);
+            }
+            _data[row*_ncols + row] = to!T(1.0);
+        }
+    }
+}
+
 class Matrix(T) {
     size_t _nrows;
     size_t _ncols;

@@ -200,8 +200,8 @@ public:
     number[] FU, dU, DinvR, r0, x0, rhs;
     number[] v, w, zed;
     number[] g0, g1;
-    Matrix!number Q1;
-    Matrix!number V;
+    DMatrix!number Q1;
+    DMatrix!number V;
     }
 
     FluidBlockIO[] block_io; // io handlers
@@ -1973,12 +1973,12 @@ public:
         g1.length = mOuter+1;
         //h_outer.length = mOuter+1;
         //hR_outer.length = mOuter+1;
-        V = new Matrix!number(n, mOuter+1);
+        V = new DMatrix!number(n, mOuter+1);
         //H0_outer = new Matrix!number(mOuter+1, mOuter);
         //H1_outer = new Matrix!number(mOuter+1, mOuter);
         //Gamma_outer = new Matrix!number(mOuter+1, mOuter+1);
         //Q0_outer = new Matrix!number(mOuter+1, mOuter+1);
-        Q1 = new Matrix!number(mOuter+1, mOuter+1);
+        Q1 = new DMatrix!number(mOuter+1, mOuter+1);
     }
     }
 
