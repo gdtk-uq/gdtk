@@ -292,6 +292,87 @@ public:
     @nogc abstract void average_lsq_cell_derivs_to_faces(int gtl);
     abstract void eval_udf_source_vectors(double simTime);
 
+    void allocate_dense_celldata(size_t ncells, size_t nghost, size_t neq, size_t nftl)
+    {
+    /*
+        Both kinds of blocks now share a structure of densely packed core flow data. This routine
+        allocates the storage for these structures, attempting to keep related bits of data together
+        on the heap.
+
+        In an older draft of this code, I allocated all of the normal cells in one loop,
+        then added the ghost cells onto the end later. This caused all of the pointers
+        in the FVCell classes to no longer be pointing to the right objects, which was
+        very bad. The solution to this was to use .reserve on the arrays before
+        filling them, which prevented the pointers from being copied. Now however,
+        we do the cells and the ghost cells all at once, but we still do .reserve
+        because it should be faster.
+
+        TODO: Some of this stuff doesn't need to be allocated in the ghost cells
+        @author: Nick Gibbons
+    */
+        auto gmodel = myConfig.gmodel;
+        size_t nturb = myConfig.turb_model.nturb;
+
+        celldata.nfaces.length = ncells;
+        celldata.areas.length = ncells + nghost;
+        celldata.wall_distances.length = ncells;
+        celldata.in_turbulent_zone.length = ncells;
+        celldata.volumes.length = ncells + nghost;
+        celldata.lengths.length = ncells + nghost;
+        celldata.positions.length = ncells + nghost;
+        celldata.U0.length = (ncells + nghost)*neq*nftl;
+        if (nftl>1) celldata.U1.length = (ncells + nghost)*neq*nftl;
+        if (nftl>2) celldata.U2.length = (ncells + nghost)*neq*nftl;
+        if (nftl>3) celldata.U3.length = (ncells + nghost)*neq*nftl;
+        if (nftl>4) celldata.U4.length = (ncells + nghost)*neq*nftl;
+        celldata.dUdt0.length = (ncells + nghost)*neq*nftl;
+        if (nftl>1) celldata.dUdt1.length = (ncells + nghost)*neq*nftl;
+        if (nftl>2) celldata.dUdt2.length = (ncells + nghost)*neq*nftl;
+        if (nftl>3) celldata.dUdt3.length = (ncells + nghost)*neq*nftl;
+        if (nftl>4) celldata.dUdt4.length = (ncells + nghost)*neq*nftl;
+        celldata.source_terms.length = (ncells + nghost)*neq;
+
+        celldata.flowstates.reserve(ncells + nghost);
+        celldata.gradients.reserve(ncells + nghost);
+        celldata.workspaces.reserve(ncells + nghost);
+        foreach (n; 0 .. ncells+nghost) celldata.flowstates ~= FlowState(gmodel, nturb);
+        foreach (n; 0 .. ncells+nghost) celldata.gradients ~= FlowGradients(myConfig);
+        foreach (n; 0 .. ncells+nghost) celldata.workspaces ~= WLSQGradWorkspace();
+    }
+
+    void allocate_dense_facedata(size_t nfaces, size_t nbfaces, size_t neq, size_t nftl)
+    {
+    /*
+        Both kinds of blocks now share a structure of densely packed core flow data. This routine
+        allocates the storage for these structures, attempting to keep related bits of data together
+        on the heap.
+
+        @author: Nick Gibbons
+    */
+        auto gmodel = myConfig.gmodel;
+        size_t nturb = myConfig.turb_model.nturb;
+
+        facedata.positions.length = nfaces;
+        facedata.areas.length = nfaces;
+        facedata.normals.length = nfaces;
+        facedata.tangents1.length = nfaces;
+        facedata.tangents2.length = nfaces;
+        facedata.left_interior_only.length = nbfaces;
+        facedata.right_interior_only.length = nbfaces;
+        facedata.stencil_idxs.length = nfaces;
+        facedata.fluxes.length = nfaces*neq;
+
+        if (myConfig.interpolation_order>=2) facedata.l2r2_interp_data.length = nfaces;
+        if (myConfig.interpolation_order==3) facedata.l3r3_interp_data.length = nfaces;
+
+        facedata.flowstates.reserve(nfaces);
+        facedata.gradients.reserve(nfaces);
+        facedata.workspaces.reserve(nfaces);
+        foreach (n; 0 .. nfaces) facedata.flowstates ~= FlowState(gmodel, nturb);
+        foreach (n; 0 .. nfaces) facedata.gradients ~= FlowGradients(myConfig);
+        foreach (n; 0 .. nfaces) facedata.workspaces ~= WLSQGradWorkspace();
+    }
+
     @nogc
     void identify_reaction_zones(int gtl)
     // Adjust the reactions-allowed flag for cells in this block.

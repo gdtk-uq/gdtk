@@ -461,69 +461,8 @@ public:
             size_t nghost = (2*njc*nkc + 2*nic*nkc)*n_ghost_cell_layers;
             if (myConfig.dimensions == 3) nghost += 2*nic*njc*n_ghost_cell_layers;
 
-
-            celldata.nfaces.length = nic*njc*nkc;
-            celldata.areas.length = nic*njc*nkc + nghost;
-            celldata.wall_distances.length = nic*njc*nkc;
-            celldata.in_turbulent_zone.length = nic*njc*nkc;
-            celldata.volumes.length = nic*njc*nkc + nghost;
-            celldata.lengths.length = nic*njc*nkc + nghost;
-            celldata.positions.length = nic*njc*nkc + nghost;
-            celldata.flowstates.reserve(nic*njc*nkc + nghost);
-            celldata.gradients.reserve(nic*njc*nkc + nghost);
-            celldata.workspaces.reserve(nic*njc*nkc + nghost);
-            celldata.U0.length = (nic*njc*nkc + nghost)*neq*nftl;
-            if (nftl>1) celldata.U1.length = (nic*njc*nkc + nghost)*neq*nftl;
-            if (nftl>2) celldata.U2.length = (nic*njc*nkc + nghost)*neq*nftl;
-            if (nftl>3) celldata.U3.length = (nic*njc*nkc + nghost)*neq*nftl;
-            if (nftl>4) celldata.U4.length = (nic*njc*nkc + nghost)*neq*nftl;
-            celldata.dUdt0.length = (nic*njc*nkc + nghost)*neq*nftl;
-            if (nftl>1) celldata.dUdt1.length = (nic*njc*nkc + nghost)*neq*nftl;
-            if (nftl>2) celldata.dUdt2.length = (nic*njc*nkc + nghost)*neq*nftl;
-            if (nftl>3) celldata.dUdt3.length = (nic*njc*nkc + nghost)*neq*nftl;
-            if (nftl>4) celldata.dUdt4.length = (nic*njc*nkc + nghost)*neq*nftl;
-            celldata.source_terms.length = (nic*njc*nkc + nghost)*neq;
-            foreach (n; 0 .. nic*njc*nkc) celldata.flowstates ~= FlowState(gmodel, nturb);
-            foreach (n; 0 .. nic*njc*nkc) celldata.gradients ~= FlowGradients(myConfig);
-            foreach (n; 0 .. nic*njc*nkc) celldata.workspaces ~= WLSQGradWorkspace();
-
-            // Face data
-            facedata.positions.length = nfaces;
-            facedata.areas.length = nfaces;
-            facedata.normals.length = nfaces;
-            facedata.tangents1.length = nfaces;
-            facedata.tangents2.length = nfaces;
-            facedata.left_interior_only.length = nbfaces;
-            facedata.right_interior_only.length = nbfaces;
-            facedata.flowstates.reserve(nfaces);
-            facedata.stencil_idxs.length = nfaces;
-            facedata.gradients.reserve(nfaces);
-            facedata.workspaces.reserve(nfaces);
-            facedata.fluxes.length = nfaces*neq;
-
-            if (myConfig.interpolation_order>=2) facedata.l2r2_interp_data.length = nfaces;
-            if (myConfig.interpolation_order==3) facedata.l3r3_interp_data.length = nfaces;
-
-            foreach (n; 0 .. niv*njc*nkc) facedata.flowstates ~= FlowState(gmodel, nturb);
-            foreach (n; 0 .. nic*njv*nkc) facedata.flowstates ~= FlowState(gmodel, nturb);
-            if (myConfig.dimensions == 3) {
-                foreach (n; 0 .. nic*njc*nkv) facedata.flowstates ~= FlowState(gmodel, nturb);
-            }
-
-            foreach (n; 0 .. niv*njc*nkc) facedata.gradients ~= FlowGradients(myConfig);
-            foreach (n; 0 .. nic*njv*nkc) facedata.gradients ~= FlowGradients(myConfig);
-            if (myConfig.dimensions == 3) {
-                foreach (n; 0 .. nic*njc*nkv) facedata.gradients ~= FlowGradients(myConfig);
-            }
-
-            // TODO: We want the option to skip allocating these if they aren't needed.
-            //if (lsq_workspace_at_faces) {
-            foreach (n; 0 .. niv*njc*nkc) facedata.workspaces ~= WLSQGradWorkspace();
-            foreach (n; 0 .. nic*njv*nkc) facedata.workspaces ~= WLSQGradWorkspace();
-            if (myConfig.dimensions == 3) {
-                foreach (n; 0 .. nic*njc*nkv) facedata.workspaces ~= WLSQGradWorkspace();
-            }
-            //}
+            allocate_dense_celldata(ncells, nghost, neq, nftl);
+            allocate_dense_facedata(nfaces, nbfaces, neq, nftl);
 
             // Create the interior cell, vertex and interface objects for the block.
             foreach (n; 0 .. nic*njc*nkc) {
@@ -555,9 +494,6 @@ public:
                     foreach (i; 0 .. nic) {
                         auto f = get_ifj(i, njc, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
-                            celldata.flowstates ~= FlowState(gmodel, nturb);
-                            celldata.gradients ~= FlowGradients(myConfig);
-                            celldata.workspaces ~= WLSQGradWorkspace();
                             auto c = new FVCell(myConfig, &celldata, cell_id);
                             ++cell_id; c.is_ghost_cell = true;
                             f.right_cells ~= c;
@@ -570,9 +506,6 @@ public:
                     foreach (i; 0 .. nic) {
                         auto f = get_ifj(i, 0, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
-                            celldata.flowstates ~= FlowState(gmodel, nturb);
-                            celldata.gradients ~= FlowGradients(myConfig);
-                            celldata.workspaces ~= WLSQGradWorkspace();
                             auto c = new FVCell(myConfig, &celldata, cell_id);
                             ++cell_id; c.is_ghost_cell = true;
                             f.left_cells ~= c;
@@ -585,9 +518,6 @@ public:
                     foreach (j; 0 .. njc) {
                         auto f = get_ifi(nic, j, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
-                            celldata.flowstates ~= FlowState(gmodel, nturb);
-                            celldata.gradients ~= FlowGradients(myConfig);
-                            celldata.workspaces ~= WLSQGradWorkspace();
                             auto c = new FVCell(myConfig, &celldata, cell_id);
                             ++cell_id; c.is_ghost_cell = true;
                             f.right_cells ~= c;
@@ -600,9 +530,6 @@ public:
                     foreach (j; 0 .. njc) {
                         auto f = get_ifi(0, j, k);
                         foreach (n; 0 .. n_ghost_cell_layers) {
-                            celldata.flowstates ~= FlowState(gmodel, nturb);
-                            celldata.gradients ~= FlowGradients(myConfig);
-                            celldata.workspaces ~= WLSQGradWorkspace();
                             auto c = new FVCell(myConfig, &celldata, cell_id);
                             ++cell_id; c.is_ghost_cell = true;
                             f.left_cells ~= c;
@@ -616,9 +543,6 @@ public:
                         foreach (i; 0 .. nic) {
                             auto f = get_ifk(i, j, nkc);
                             foreach (n; 0 .. n_ghost_cell_layers) {
-                                celldata.flowstates ~= FlowState(gmodel, nturb);
-                                celldata.gradients ~= FlowGradients(myConfig);
-                                celldata.workspaces ~= WLSQGradWorkspace();
                                 auto c = new FVCell(myConfig, &celldata, cell_id);
                                 ++cell_id; c.is_ghost_cell = true;
                                 f.right_cells ~= c;
@@ -631,9 +555,6 @@ public:
                         foreach (i; 0 .. nic) {
                             auto f = get_ifk(i, j, 0);
                             foreach (n; 0 .. n_ghost_cell_layers) {
-                                celldata.flowstates ~= FlowState(gmodel, nturb);
-                                celldata.gradients ~= FlowGradients(myConfig);
-                                celldata.workspaces ~= WLSQGradWorkspace();
                                 auto c = new FVCell(myConfig, &celldata, cell_id);
                                 ++cell_id; c.is_ghost_cell = true;
                                 f.left_cells ~= c;

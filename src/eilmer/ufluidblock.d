@@ -327,61 +327,20 @@ public:
         size_t nghost = 0;
         foreach (bndry; grid.boundaries) nghost += bndry.face_id_list.length;
 
-        // It's very important to avoid having the array reallocated once the pointers 
-        // have been handed out to the fvcells. This can happen when calling ~= on the
-        // celldata flowstates, which we do during the creation of the ghost cells
-        // For this reason, we want to reserve sufficient space in the array here.
-        // TODO: Some of this stuff doesn't need to be allocated in the ghost cells
-        cells.reserve(grid.cells.length + nghost);
-        celldata.nfaces.length = grid.cells.length;
-        celldata.volumes.length = grid.cells.length + nghost;
-        celldata.areas.length = grid.cells.length + nghost;
-        celldata.wall_distances.length = grid.cells.length;
-        celldata.in_turbulent_zone.length = grid.cells.length;
-        celldata.positions.length = grid.cells.length + nghost;
-        celldata.lengths.length = grid.cells.length + nghost;
-        celldata.face_distances.length = grid.cells.length;
-        celldata.flowstates.reserve(grid.cells.length + nghost);
-        celldata.gradients.reserve(grid.cells.length + nghost);
-        celldata.workspaces.reserve(grid.cells.length + nghost);
-        celldata.lsqws.length = grid.cells.length + nghost;
-        celldata.lsqgradients.reserve(grid.cells.length + nghost);
-        celldata.U0.length = (ncells+nghost)*neq*nftl;
-        if (nftl>1) celldata.U1.length = (ncells+nghost)*neq*nftl;
-        if (nftl>2) celldata.U2.length = (ncells+nghost)*neq*nftl;
-        if (nftl>3) celldata.U3.length = (ncells+nghost)*neq*nftl;
-        if (nftl>4) celldata.U4.length = (ncells+nghost)*neq*nftl;
-        celldata.dUdt0.length = (ncells+nghost)*neq*nftl;
-        if (nftl>1) celldata.dUdt1.length = (ncells+nghost)*neq*nftl;
-        if (nftl>2) celldata.dUdt2.length = (ncells+nghost)*neq*nftl;
-        if (nftl>3) celldata.dUdt3.length = (ncells+nghost)*neq*nftl;
-        if (nftl>4) celldata.dUdt4.length = (ncells+nghost)*neq*nftl;
-        celldata.source_terms.length = (ncells+nghost)*neq;
+        allocate_dense_celldata(ncells, nghost, neq, nftl);
+        allocate_dense_facedata(nfaces, nghost, neq, nftl); // nghost==nbfaces for unstructured
+
+        // We have some unstructured specific stuff that also needs to be allocated
+        celldata.face_distances.length = ncells;
+        celldata.lsqws.length = ncells + nghost;
         celldata.cell_cloud_indices.length = ncells;
         celldata.c2v.length = ncells;
+        celldata.lsqgradients.reserve(ncells + nghost);
+        foreach (i; 0 .. ncells + nghost) celldata.lsqgradients ~= LSQInterpGradients(nsp, nmodes, nturb); // TODO: skip if not needed
 
-        foreach (i; 0 .. grid.cells.length) celldata.flowstates ~= FlowState(gmodel, nturb);
-        foreach (i; 0 .. grid.cells.length) celldata.gradients ~= FlowGradients(myConfig); // TODO: These are now always allocated, but should only be in viscous flow
-        foreach (i; 0 .. grid.cells.length) celldata.workspaces ~= WLSQGradWorkspace(); // TODO: skip if not needed
-        foreach (i; 0 .. grid.cells.length) celldata.lsqgradients ~= LSQInterpGradients(nsp, nmodes, nturb); // TODO: skip if not needed
-
-        facedata.f2c.length = grid.faces.length;
-        facedata.dL.length = grid.faces.length;
-        facedata.dR.length = grid.faces.length;
-        facedata.areas.length = grid.faces.length;
-        facedata.normals.length = grid.faces.length;
-        facedata.tangents1.length = grid.faces.length;
-        facedata.tangents2.length = grid.faces.length;
-        facedata.positions.length = grid.faces.length;
-        facedata.left_interior_only.length = nghost;
-        facedata.right_interior_only.length = nghost;
-        facedata.flowstates.reserve(grid.faces.length);
-        facedata.gradients.reserve(grid.faces.length);
-        facedata.workspaces.reserve(grid.faces.length);
-        facedata.fluxes.length = grid.faces.length*neq;
-        foreach (i; 0 .. grid.faces.length) facedata.flowstates ~= FlowState(gmodel, nturb);
-        foreach (i; 0 .. grid.faces.length) facedata.gradients ~= FlowGradients(myConfig);
-        foreach (i; 0 .. grid.faces.length) facedata.workspaces ~= WLSQGradWorkspace();
+        facedata.f2c.length = nfaces;
+        facedata.dL.length = nfaces;
+        facedata.dR.length = nfaces;
 
         if (myConfig.unstructured_limiter == UnstructuredLimiter.venkat_mlp) {
             vertexdata.n_indices.length = grid.vertices.length;
@@ -393,6 +352,7 @@ public:
             faces ~= new_face;
         }
 
+        cells.reserve(ncells + nghost);
         foreach (i, c; grid.cells) {
             // Note that the cell id and the index in the cells array are the same.
             // We will reply upon this connection in other parts of the flow code.
@@ -487,10 +447,6 @@ public:
                 bc[i].outsigns ~= my_outsign;
                 my_face.i_bndry = bc[i].outsigns.length - 1;
                 if (bc[i].ghost_cell_data_available) {
-                    celldata.flowstates ~= FlowState(gmodel, nturb);
-                    celldata.gradients ~= FlowGradients(myConfig);
-                    celldata.workspaces ~= WLSQGradWorkspace();
-                    celldata.lsqgradients ~= LSQInterpGradients(nsp, nmodes, nturb);
                     FVCell ghost0 = new FVCell(myConfig, &celldata, ghost_cell_id);
                     ghost_cell_id++;
                     ghost0.contains_flow_data = bc[i].ghost_cell_data_available;
