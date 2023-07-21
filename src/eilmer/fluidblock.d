@@ -343,9 +343,9 @@ public:
     void allocate_dense_facedata(size_t nfaces, size_t nbfaces, size_t neq, size_t nftl)
     {
     /*
-        Both kinds of blocks now share a structure of densely packed core flow data. This routine
-        allocates the storage for these structures, attempting to keep related bits of data together
-        on the heap.
+        Both kinds of blocks now share a structure of densely packed core flow
+        data. This routine allocates the storage for these structures,
+        attempting to keep related bits of data together on the heap.
 
         @author: Nick Gibbons
     */
