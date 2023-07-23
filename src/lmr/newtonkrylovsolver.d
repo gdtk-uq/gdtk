@@ -134,7 +134,6 @@ struct NKGlobalConfig {
     int numberOfPhases = 1;
     int[] phaseChangesAtSteps;
     // Newton stepping and continuation
-    bool useLocalTimestep = true;
     bool inviscidCFLOnly = true;
     bool useLineSearch = true;
     bool usePhysicalityCheck = true;
@@ -183,7 +182,6 @@ struct NKGlobalConfig {
         cflReductionFactor = getJSONdouble(jsonData, "cfl_reduction_factor", cflReductionFactor);
         numberOfPhases = getJSONint(jsonData, "number_of_phases", numberOfPhases);
         phaseChangesAtSteps = getJSONintarray(jsonData, "phase_changes_at_steps", phaseChangesAtSteps);
-        useLocalTimestep = getJSONbool(jsonData, "use_local_timestep", useLocalTimestep);
         inviscidCFLOnly = getJSONbool(jsonData, "inviscid_cfl_only", inviscidCFLOnly);
         useLineSearch = getJSONbool(jsonData, "use_line_search", useLineSearch);
         usePhysicalityCheck = getJSONbool(jsonData, "use_physicality_check", usePhysicalityCheck);
@@ -214,6 +212,7 @@ struct NKGlobalConfig {
 NKGlobalConfig nkCfg;
 
 struct NKPhaseConfig {
+    bool useLocalTimestep = true;
     int residualInterpolationOrder = 2;
     int jacobianInterpolationOrder = 2;
     bool frozenPreconditioner = true;
@@ -231,6 +230,7 @@ struct NKPhaseConfig {
 
     void readValuesFromJSON(JSONValue jsonData)
     {
+        useLocalTimestep = getJSONbool(jsonData, "use_local_timestep", useLocalTimestep);
         residualInterpolationOrder = getJSONint(jsonData, "residual_interpolation_order", residualInterpolationOrder);
         jacobianInterpolationOrder = getJSONint(jsonData, "jacobian_interpolation_order", jacobianInterpolationOrder);
         frozenPreconditioner = getJSONbool(jsonData, "frozen_preconditioner", frozenPreconditioner);
@@ -877,7 +877,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 	}
 
         // 0d. Set the timestep for this step
-        dt = setDtInCells(cfl);
+        dt = setDtInCells(cfl, activePhase.useLocalTimestep);
 
         // 0e. determine if we need to update preconditioner
 
@@ -1201,7 +1201,7 @@ void computeResiduals(ref ConservedQuantities residuals)
  * Authors: RJG and KAD
  * Date: 2022-03-08
  */
-double setDtInCells(double cfl)
+double setDtInCells(double cfl, bool useLocalTimestep)
 {
     double signal;
     double dt;
@@ -1248,7 +1248,7 @@ double setDtInCells(double cfl)
     }
 
     // When using global timestepping, make all dt_local consistent.
-    if (!nkCfg.useLocalTimestep) {
+    if (!useLocalTimestep) {
         foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (cell; blk.cells) cell.dt_local = dt;
         }
@@ -1256,26 +1256,6 @@ double setDtInCells(double cfl)
 
     return dt;
 }
-
-/**
- * Set dt_local in cells based on CFL.
- *
- * Authors: RJG and KAD
- * Date: 2022-03-08
- */
-void setDtLocalInCells(double cfl)
-{
-    double signal;
-    bool inviscidCFLOnly = nkCfg.inviscidCFLOnly;
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        foreach (cell; blk.cells) {
-            signal = cell.signal_frequency();
-            if (inviscidCFLOnly) signal = cell.signal_hyp.re;
-            cell.dt_local = cfl / signal;
-        }
-    }
-}
-
 
 /*---------------------------------------------------------------------
  * Mixins to handle shared-memory dot product and norm

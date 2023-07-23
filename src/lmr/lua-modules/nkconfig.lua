@@ -29,7 +29,6 @@ NewtonKrylovGlobalConfigHidden = {
    phase_changes_at_steps = {},
 
    -- Newton stepping control and continuation
-   use_local_timestep = true,
    inviscid_cfl_only = true,
    use_line_search = true,
    use_physicality_check = true,
@@ -116,7 +115,6 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    end
    f:write('],\n')
    -- Newton stepping control and continuation
-   f:write(string.format('"use_local_timestep": %s,\n', tostring(nkConfig.use_local_timestep)))
    f:write(string.format('"inviscid_cfl_only": %s,\n', tostring(nkConfig.inviscid_cfl_only)))
    f:write(string.format('"use_line_search": %s,\n', tostring(nkConfig.use_line_search)))
    f:write(string.format('"use_physicality_check": %s,\n', tostring(nkConfig.use_physicality_check)))
@@ -154,6 +152,8 @@ end
 
 
 NewtonKrylovPhaseDefaults = {
+   use_local_timestep = true,
+
    residual_interpolation_order = 2,
    jacobian_interpolation_order = 2, -- documentation explanation.
    frozen_preconditioner = true,
@@ -216,6 +216,7 @@ end -- end NewtonKrylovPhase:new(o)
 
 function NewtonKrylovPhase:tojson()
    local str = string.format('"NewtonKrylovPhase_%d": {\n', self.id)
+   str = str .. string.format('    "use_local_timestep": %s,\n', tostring(self.use_local_timestep))
    str = str .. string.format('    "residual_interpolation_order": %d,\n', self.residual_interpolation_order)
    str = str .. string.format('    "jacobian_interpolation_order": %d,\n', self.jacobian_interpolation_order)
    str = str .. string.format('    "frozen_preconditioner": %s,\n', tostring(self.frozen_preconditioner))
