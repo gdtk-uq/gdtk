@@ -598,16 +598,9 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     }
 }
 
-/*---------------------------------------------------------------------
- * Main iteration algorithm
- *---------------------------------------------------------------------
- */
-
-void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs, int threadsPerMPITask)
+void readNewtonKrylovConfig()
 {
     alias cfg = GlobalConfig;
-    string jobName = cfg.base_file_name;
-    cfg.print_count = 1;
 
     if (cfg.verbosity_level > 1) writeln("Read N-K config file.");
     JSONValue jsonData = readJSONfile(lmrCfg.nkCfgFile);
@@ -618,6 +611,45 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         string key = "NewtonKrylovPhase_" ~ to!string(i);
         phase.readValuesFromJSON(jsonData[key]);
     }
+
+    // Perform some consistency checks
+    if (nkCfg.phaseChangesAtSteps.length < nkCfg.numberOfPhases-1) {
+        string errMsg;
+        errMsg ~= format("ERROR: number of phases = %d but number of entries in phase changes list is: %d\n",
+                nkCfg.numberOfPhases, nkCfg.phaseChangesAtSteps.length);
+        errMsg ~= "       We expect at least (number of phases) - 1 entries in phase changes list.\n";
+        errMsg ~= "       These entries are the step number at which to change from one phase to the next.\n";
+        throw new Error(errMsg);
+    }
+    foreach (i, phase; nkPhases) {
+        // Check that the interpolation order within any phases does not exceed the globally requested order.
+        if (phase.residualInterpolationOrder > cfg.interpolation_order) {
+            string errMsg = format("ERROR: The residual interpolation order in phase %d exceeds the globally selected interpolation order.\n", i);
+            errMsg ~= format("       phase interpolation order= %d  globally-requested interpolation order= %d\n",
+                    phase.residualInterpolationOrder, cfg.interpolation_order);
+            errMsg ~= "       This is not allowed because memory is allocated based on the globally selected interpolation order.\n";
+            throw new Error(errMsg);
+        }            
+        if (phase.jacobianInterpolationOrder > cfg.interpolation_order) {
+            string errMsg = format("ERROR: The Jacobian interpolation order in phase %d exceeds the globally selected interpolation order.\n", i);
+            errMsg ~= format("       phase interpolation order= %d  globally-requested interpolation order= %d\n",
+                    phase.jacobianInterpolationOrder, cfg.interpolation_order);
+            errMsg ~= "       This is not allowed because memory is allocated based on the globally selected interpolation order.\n";
+            throw new Error(errMsg);
+        }            
+    }
+}
+
+/*---------------------------------------------------------------------
+ * Main iteration algorithm
+ *---------------------------------------------------------------------
+ */
+
+void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs, int threadsPerMPITask)
+{
+    alias cfg = GlobalConfig;
+
+    readNewtonKrylovConfig();
 
     int nWrittenSnapshots;
     int startStep = 1;
