@@ -46,10 +46,9 @@ for i=0,nblocks-1 do
    grids[i] = UnstructuredGrid:new{filename=fileName, fmt="su2text", scale=1}
 end
 
-my_bcDict = {north = OutFlowBC_Simple:new{},
-             east  = OutFlowBC_Simple:new{},
-             south = WallBC_WithSlip:new{},
-             west  = InFlowBC_Supersonic:new{flowCondition=inflow},
+my_bcDict = {outflow = OutFlowBC_Simple:new{},
+             wall = WallBC_WithSlip:new{},
+             inflow  = InFlowBC_Supersonic:new{flowCondition=inflow},
              METIS_INTERIOR   = ExchangeBC_MappedCell:new{cell_mapping_from_file=true, list_mapped_cells=false}}
 
 blks = {}

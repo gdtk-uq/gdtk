@@ -23,12 +23,21 @@ nx0 = 20; nx1 = 40; ny = 40
 grid0 = StructuredGrid:new{psurface=quad0, niv=nx0+1, njv=ny+1}
 grid1 = StructuredGrid:new{psurface=quad1, niv=nx1+1, njv=ny+1}
 
--- join all structured grids into a single grid
-singleBlockGrid = grid0
-singleBlockGrid:joinGrid(grid1, "east")
+ugrid0 = UnstructuredGrid:new{sgrid=grid0}
+ugrid1 = UnstructuredGrid:new{sgrid=grid1}
 
--- convert structured grid to unstructured grid
-usgrid=UnstructuredGrid:new{sgrid=singleBlockGrid}
+-- default structured tags are in this order: west (0), east (1), south (2), north (3)
+ugrid0:set_boundaryset_tag(0, "inflow")  -- west
+ugrid0:set_boundaryset_tag(2, "wall")    -- south
+ugrid0:set_boundaryset_tag(3, "outflow") -- north
+
+ugrid1:set_boundaryset_tag(1, "outflow") -- east
+ugrid1:set_boundaryset_tag(2, "wall")    -- south
+ugrid1:set_boundaryset_tag(3, "outflow") -- north
+
+-- join all unstructured grids into a single grid
+usgrid = ugrid0
+usgrid:joinGrid(ugrid1)
 
 -- write out unstructured grid in .su2 format
 usgrid:write_to_su2_file("ramp15.su2")
