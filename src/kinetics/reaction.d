@@ -24,12 +24,19 @@ import kinetics.rate_constant;
 
 @nogc
 number compute_equilibrium_constant(GasModel gmodel, ref GasState Q, in number[] gibbs_energies,
-                                    in int[] participants, in double[] nu)
+                                    in int[] participants, in double[] nu, bool recompute_gibbs)
 {
+    // Note on handling rate controlling temperatures: 
+    // The GasState passed in here should have all its temperatures replaced with 
+    // the rate controlling temperature. So we can expect Q.T to be the rate controlling temp.
+    // We do have to re-compute the gibbs free energy if we are using a different 
+    // rate controlling temperature. We can simply pass Q to the gas model, and it can access
+    // the rate controlling temperature through Q.T
     number dG = 0.0;
     number nuSum = 0.0;
     foreach ( isp; participants ) {
-        dG += nu[isp] * gibbs_energies[isp] * gmodel.mol_masses()[isp];
+        number gibbs_energy = (recompute_gibbs) ? gmodel.gibbs_free_energy(Q, isp) : gibbs_energies[isp];
+        dG += nu[isp] * gibbs_energy * gmodel.mol_masses()[isp];
         nuSum += nu[isp];
     }
     number K_p = exp(-dG/(R_universal*Q.T));
@@ -81,27 +88,28 @@ public:
 
     abstract Reaction dup();
 
-    @nogc abstract void eval_equilibrium_constant(in GasState Q, in number[] gibbs_energies);
+    @nogc abstract void eval_equilibrium_constant(in GasState Q, in number[] gibbs_energies, int rct_index);
 
     @nogc final void eval_rate_constants(in GasState Q, in number[] gibbs_energies)
     {
         if ( _compute_kf_then_kb ) {
             _k_f = eval_forward_rate_constant(Q);
             if ( _backward is null ) { // we need the equilibrium constant
-                eval_equilibrium_constant(Q, gibbs_energies);
                 // Let's take assume that n_modes >= 1 indicates a multi-temperature
                 // simulation. In which case, we need to evaluate the k_f at equilibrium
                 // with the rate controlling temperature in order to determine k_b.
                 if (_gmodel.n_modes >= 1) {
-                    // We need to re-evaluate the forward rate constant at the
-                    // backwards rate controlling temperature
+                    // We need to re-evaluate the forward rate constant and equilibrium
+                    // constant at the backwards rate controlling temperature
                     number T = (_rctIndex_b < 0) ? Q.T : Q.T_modes[_rctIndex_b];
                     _Qw.T = T;
                     _Qw.T_modes[] = T;
+                    eval_equilibrium_constant(Q, gibbs_energies, _rctIndex_b);
                     number kf_rct = eval_forward_rate_constant(_Qw);
                     _k_b = kf_rct/_K_eq;
                 }
                 else {
+                    eval_equilibrium_constant(Q, gibbs_energies, -1);
                     _k_b = _k_f/_K_eq;
                 }
             }
@@ -112,17 +120,18 @@ public:
         else {
             _k_b = eval_backward_rate_constant(Q);
             if ( _forward is null ) { // we need the equilibrium constant
-                eval_equilibrium_constant(Q, gibbs_energies);
                 if (_gmodel.n_modes >= 1) {
                     // re-evaluate the backward rate constsant at the 
                     // forward rate controlling temperature
                     number T = (_rctIndex_f < 0) ? Q.T : Q.T_modes[_rctIndex_f];
                     _Qw.T = T;
                     _Qw.T_modes[] = T;
-                    number kb_rct = eval_backward_rate_constant(_Qw);
+                    eval_equilibrium_constant(Q, gibbs_energies, _rctIndex_f);
+                    number kb_rct = eval_backward_rate_constant(Q);
                     _k_f = kb_rct * _K_eq;
                 }
                 else {
+                    eval_equilibrium_constant(Q, gibbs_energies, -1);
                     _k_f = _k_b*_K_eq;
                 }
             }
@@ -243,11 +252,15 @@ public:
     }
 
     @nogc
-    override void eval_equilibrium_constant(in GasState Q, in number[] gibbs_energies)
+    override void eval_equilibrium_constant(in GasState Q, in number[] gibbs_energies, int rct_index)
     {
-        _Qw.T = Q.T;
-        if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium
-            _K_eq = compute_equilibrium_constant(_gmodel, _Qw, gibbs_energies, _participants, _nu);
+        
+        bool other_rct = rct_index >= 0;
+        number T = (other_rct) ? Q.T_modes[rct_index] : Q.T;
+        _Qw.T = T;
+        _Qw.p = Q.p;
+        if (_gmodel.n_modes > 0) { _Qw.T_modes[] = T; }
+        _K_eq = compute_equilibrium_constant(_gmodel, _Qw, gibbs_energies, _participants, _nu, other_rct );
     }
 
     @nogc
@@ -366,14 +379,14 @@ public:
     }
 
     @nogc
-    override void eval_equilibrium_constant(in GasState Q, in number[] gibbs_energies)
+    override void eval_equilibrium_constant(in GasState Q, in number[] gibbs_energies, int rct_index)
     {
-        //int rctIdx = with_backwards_rct ? _rctIndex_b : _rctIndex_f;
-        //number T = (rctIdx == -1) ? Q.T : Q.T_modes[rctIdx];
-
-        _Qw.T = Q.T;
-        if (_gmodel.n_modes >= 1) _Qw.T_modes[] = Q.T; // equilibrium constant evaluated at thermal equilibrium
-            _K_eq = compute_equilibrium_constant(_gmodel, _Qw, gibbs_energies, _participants, _nu);
+        bool other_rct = rct_index >= 0;
+        number T = (other_rct) ? Q.T_modes[rct_index] : Q.T;
+        _Qw.T = T;
+        _Qw.p = Q.p;
+        if (_gmodel.n_modes > 0) { _Qw.T_modes[] = T; }
+        _K_eq = compute_equilibrium_constant(_gmodel, _Qw, gibbs_energies, _participants, _nu, other_rct );
     }
 
     @nogc
