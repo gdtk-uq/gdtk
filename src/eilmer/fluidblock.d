@@ -200,7 +200,7 @@ public:
     number[] FU, dU, DinvR, r0, x0, rhs;
     number[] v, w, zed;
     number[] g0, g1;
-    DMatrix!number Q1;
+    Matrix!number Q1;
     number[] V;
     }
 
@@ -1978,7 +1978,7 @@ public:
         //H1_outer = new Matrix!number(mOuter+1, mOuter);
         //Gamma_outer = new Matrix!number(mOuter+1, mOuter+1);
         //Q0_outer = new Matrix!number(mOuter+1, mOuter+1);
-        Q1 = new DMatrix!number(mOuter+1, mOuter+1);
+        Q1 = new Matrix!number(mOuter+1, mOuter+1);
     }
     }
 

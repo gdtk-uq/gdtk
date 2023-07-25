@@ -63,11 +63,11 @@ number[] g0;
 number[] g1;
 number[] h;
 number[] hR;
-DMatrix!number H0;
-DMatrix!number H1;
-DMatrix!number Gamma;
-DMatrix!number Q0;
-DMatrix!number Q1;
+Matrix!number H0;
+Matrix!number H1;
+Matrix!number Gamma;
+Matrix!number Q0;
+Matrix!number Q1;
 
 struct RestartInfo {
     double pseudoSimTime;
@@ -1321,11 +1321,11 @@ void allocate_global_fluid_workspace()
     g1.length = mOuter+1;
     h.length = mOuter+1;
     hR.length = mOuter+1;
-    H0 = new DMatrix!number(mOuter+1, mOuter);
-    H1 = new DMatrix!number(mOuter+1, mOuter);
-    Gamma = new DMatrix!number(mOuter+1, mOuter+1);
-    Q0 = new DMatrix!number(mOuter+1, mOuter+1);
-    Q1 = new DMatrix!number(mOuter+1, mOuter+1);
+    H0 = new Matrix!number(mOuter+1, mOuter);
+    H1 = new Matrix!number(mOuter+1, mOuter);
+    Gamma = new Matrix!number(mOuter+1, mOuter+1);
+    Q0 = new Matrix!number(mOuter+1, mOuter+1);
+    Q1 = new Matrix!number(mOuter+1, mOuter+1);
 }
 
 double determine_dt(double cflInit)
@@ -2265,7 +2265,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                     version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
                 }
-                H0.index(i,j,H0_ij);
+                H0[i,j] = H0_ij;
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     foreach (k; 0 .. blk.nvars) blk.w[k] -= H0_ij*blk.v[k];
                 }
@@ -2281,7 +2281,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
             }
             H0_jp1j = sqrt(H0_jp1j);
-            H0.index(j+1,j,H0_jp1j);
+            H0[j+1,j] = H0_jp1j;
 
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (k; 0 .. blk.nvars) {
@@ -2293,21 +2293,19 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             // Build rotated Hessenberg progressively
             if ( j != 0 ) {
                 // Extract final column in H
-                foreach (i; 0 .. j+1) h[i] = H0.index(i,j);
+                foreach (i; 0 .. j+1) h[i] = H0[i,j];
                 // Rotate column by previous rotations (stored in Q0)
                 nm.bbla.dot(Q0, j+1, j+1, h, hR);
                 // Place column back in H
-                foreach (i; 0 .. j+1) H0.index(i,j,hR[i]);
+                foreach (i; 0 .. j+1) H0[i,j] = hR[i];
             }
             // Now form new Gamma
             Gamma.eye();
-            number H0jj =  H0.index(j,j);
-            number H0j1j = H0.index(j+1,j);
-            auto denom = sqrt(H0jj*H0jj + H0j1j*H0j1j);
-            auto s_j = H0.index(j+1,j)/denom;
-            auto c_j = H0.index(j,j)/denom;
-            Gamma.index(j,j,c_j); Gamma.index(j,j+1,s_j);
-            Gamma.index(j+1,j,-s_j); Gamma.index(j+1,j+1,c_j);
+            auto denom = sqrt(H0[j,j]*H0[j,j] + H0[j+1,j]*H0[j+1,j]);
+            auto s_j = H0[j+1,j]/denom;
+            auto c_j = H0[j,j]/denom;
+            Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
+            Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
             // Apply rotations
             nm.bbla.dot(Gamma, j+2, j+2, H0, j+1, H1);
             nm.bbla.dot(Gamma, j+2, j+2, g0, g1);
