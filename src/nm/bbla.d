@@ -64,6 +64,17 @@ void dot(T)(in DMatrix!T a, size_t aRow, size_t aCol, T[] b, T[] c)
     }
 }
 
+@nogc
+void dot(T)(in T[] a, size_t a_stride, size_t aRow, size_t aCol, T[] b, T[] c)
+{
+    foreach (idx; 0 .. c.length) c[idx] = 0.0;
+    foreach (row; 0 .. aRow) {
+        foreach (col; 0 .. aCol) {
+            c[row] += a[row*a_stride+col] * b[col];
+        }
+    }
+}
+
 class DMatrix(T) {
     size_t _nrows;
     size_t _ncols;
