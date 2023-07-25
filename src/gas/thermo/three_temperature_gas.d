@@ -521,7 +521,7 @@ private:
             Cv = vib_Cv_mixture(gs, T_guess);
             dT = -f_guess/Cv;
             T_guess += dT;
-            version(complex_number) {
+            version(complex_numbers) {
                 if (fabs(dT) < TOL && fabs(dT.im) < IMAGINARY_TOL) {
                     break;
                 }
