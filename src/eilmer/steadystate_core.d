@@ -2193,14 +2193,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 number N = 0.0;
                 number sume = 0.0;
                 foreach (blk; parallel(localFluidBlocks,1)) {
-                    int cellCount = 0;
-                    foreach (cell; blk.cells) {
-                        foreach (val; cell.U[0]) {
-                            sume += eps0*abs(val) + eps0;
-                            N += 1;
-                        }
-                        cellCount += nConserved;
+                    foreach(i; 0 .. blk.nvars) {
+                        sume += eps0*abs(blk.celldata.U0[i]) + eps0;
                     }
+                    N += blk.nvars;
                 }
                 version(mpi_parallel) {
                     MPI_Allreduce(MPI_IN_PLACE, &(sume.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
