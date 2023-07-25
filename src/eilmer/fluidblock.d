@@ -201,7 +201,8 @@ public:
     number[] v, w, zed;
     number[] g0, g1;
     Matrix!number Q1;
-    number[] V;
+    number[] VT;
+    size_t Vstride;
     }
 
     FluidBlockIO[] block_io; // io handlers
@@ -1973,7 +1974,7 @@ public:
         g1.length = mOuter+1;
         //h_outer.length = mOuter+1;
         //hR_outer.length = mOuter+1;
-        V.length = n*(mOuter+1);
+        VT.length = (mOuter+1)*n;
         //H0_outer = new Matrix!number(mOuter+1, mOuter);
         //H1_outer = new Matrix!number(mOuter+1, mOuter);
         //Gamma_outer = new Matrix!number(mOuter+1, mOuter+1);

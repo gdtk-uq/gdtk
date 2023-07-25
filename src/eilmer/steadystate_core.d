@@ -1821,7 +1821,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     // to execute at least once.
     int maxRestarts = GlobalConfig.sssOptions.maxRestarts + 1;
     size_t m = to!size_t(maxIters);
-    immutable size_t Vstride = m+1;
     size_t r;
     size_t iterCount;
 
@@ -2126,7 +2125,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     foreach (blk; parallel(localFluidBlocks,1)) {
         foreach (k; 0 .. blk.nvars) {
             blk.v[k] = blk.r0[k]/beta;
-            blk.V[k*Vstride+0] = blk.v[k];
+            blk.VT[k] = blk.v[k];
         }
     }
 
@@ -2253,7 +2252,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             foreach (i; 0 .. j+1) {
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     // Extract column 'i'
-                    foreach (k; 0 .. blk.nvars ) blk.v[k] = blk.V[k*Vstride+i];
+                    size_t offset = i*blk.nvars;
+                    foreach (k; 0 .. blk.nvars ) blk.v[k] = blk.VT[offset + k];
                 }
                 number H0_ij;
                 mixin(dot_over_blocks("H0_ij", "w", "v"));
@@ -2284,9 +2284,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             H0[j+1,j] = H0_jp1j;
 
             foreach (blk; parallel(localFluidBlocks,1)) {
+                size_t offset = (j+1)*blk.nvars;
                 foreach (k; 0 .. blk.nvars) {
                     blk.v[k] = blk.w[k]/H0_jp1j;
-                    blk.V[k*Vstride+j+1] = blk.v[k];
+                    blk.VT[offset + k] = blk.v[k];
                 }
             }
 
@@ -2346,7 +2347,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         // In serial, distribute a copy of g1 to each block
         foreach (blk; localFluidBlocks) blk.g1[] = g1[];
         foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot!number(blk.V, Vstride, blk.nvars, m, blk.g1, blk.zed);
+            nm.bbla.transpose_and_dot!number(blk.VT, blk.nvars, m, blk.nvars, blk.g1, blk.zed);
         }
 
         // apply scaling
@@ -2418,7 +2419,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             nm.bbla.dot(blk.Q1, m, m+1, blk.g0, blk.g1);
         }
         foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot(blk.V, Vstride, blk.nvars, m+1, blk.g1, blk.r0);
+            nm.bbla.transpose_and_dot(blk.VT, blk.nvars, m+1, blk.nvars, blk.g1, blk.r0);
         }
 
         /*
@@ -2463,7 +2464,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (k; 0 .. blk.nvars) {
                 blk.v[k] = blk.r0[k]/beta;
-                blk.V[k*Vstride+0] = blk.v[k];
+                blk.VT[k] = blk.v[k];
             }
         }
         // Re-initialise some vectors and matrices for restart
