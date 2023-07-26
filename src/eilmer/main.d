@@ -399,6 +399,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             auto L = luaL_newstate();
             luaL_openlibs(L);
             registerVector3(L);
+            registerGeomNomenclature(L);
             registerGlobalConfig(L);
             registerFlowSolution(L);
             registerFlowState(L);
@@ -523,6 +524,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             auto L = luaL_newstate();
             luaL_openlibs(L);
             registerVector3(L);
+            registerGeomNomenclature(L);
             registerGlobalConfig(L);
             registerFlowSolution(L);
             registerFlowState(L);
@@ -578,6 +580,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             luaL_openlibs(L);
             lua_pushglobaltable(L);
             registerVector3(L);
+            registerGeomNomenclature(L);
             registerGlobalConfig(L);
             registerFlowSolution(L);
             registerFlowState(L);
@@ -834,6 +837,7 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             luaL_openlibs(L);
             lua_pushglobaltable(L);
             registerVector3(L);
+            registerGeomNomenclature(L);
             registerGlobalConfig(L);
             registerFlowSolution(L);
             registerFlowState(L);
