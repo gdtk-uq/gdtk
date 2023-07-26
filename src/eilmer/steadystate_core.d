@@ -1330,32 +1330,39 @@ void allocate_global_fluid_workspace()
 
 double determine_dt(double cflInit)
 {
-    double signal, dt;
-    bool first = true;
+    double signal;
+    double dt = double.max;
     foreach (blk; localFluidBlocks) {
-        foreach (cell; blk.cells) {
-            if (blk.myConfig.sssOptions.inviscidCFL) {
+        if (blk.myConfig.sssOptions.inviscidCFL) {
+            foreach (i; 0 .. blk.ncells) {
                 // calculate the signal using the maximum inviscid wave speed
                 // ref. Computational Fluid Dynamics: Principles and Applications, J. Blazek, 2015, pg. 175
                 // Note: this approximates cell width dx as the cell volume divided by face area
                 signal = 0.0;
-                foreach (f; cell.iface) {
-                    number un = fabs(f.fs.vel.dot(f.n));
-                    number signal_f = (un+f.fs.gas.a)*f.area[0];
+                foreach (fidx; blk.celldata.c2f[i]) {
+                    Vector3 vel = blk.facedata.flowstates[fidx].vel;
+                    Vector3 n   = blk.facedata.normals[fidx];
+                    number a = blk.facedata.flowstates[fidx].gas.a;
+                    number area = blk.facedata.areas[fidx];
+
+                    number un = fabs(vel.dot(n));
+                    number signal_f = (un+a)*area;
                     signal += signal_f.re;
                 }
-                signal *= (1.0/cell.volume[0].re);
-            } else {
-                // use the default signal frequency routine from the time-accurate code path
+                signal *= (1.0/blk.celldata.volumes[i].re);
+
+                double dt_local = cflInit/signal;
+                blk.celldata.dt_local[i] = dt_local;
+                dt = fmin(dt, dt_local);
+            }
+        } else {
+            // use the default signal frequency routine from the time-accurate code path
+            foreach (i, cell; blk.cells) {
                 signal = cell.signal_frequency();
-            }
-            cell.dt_local = cflInit / signal;
-            if (first) {
-                dt = cell.dt_local;
-                first = false;
-            }
-            else {
-                dt = fmin(dt, cell.dt_local);
+
+                double dt_local = cflInit/signal;
+                blk.celldata.dt_local[i] = dt_local;
+                dt = fmin(dt, dt_local);
             }
         }
     }
@@ -2212,18 +2219,24 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             }
 
             // Prepare 'w' with (I/dt)(P^-1)v term;
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                foreach (i, cell; blk.cells) {
-                    foreach (k; 0..nConserved) {
-                        ulong idx = i*nConserved + k;
-                        number dtInv;
-                        if (GlobalConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
-                        else { dtInv = 1.0/dt; }
+            if (GlobalConfig.with_local_time_stepping) {
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    foreach (i; 0 .. blk.ncells) {
+                        double dtInv = 1.0/blk.celldata.dt_local[i];
+                        size_t offset = i*nConserved;
+                        foreach (k; 0 .. nConserved) {
+                            blk.w[offset+k] = dtInv*blk.zed[offset+k];
+                        }
+                    }
+                }
+            } else { // Global timestepping version:
+                double dtInv = 1.0/dt;
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    foreach (idx; 0 .. blk.nvars) {
                         blk.w[idx] = dtInv*blk.zed[idx];
                     }
                 }
             }
-
 
             // Evaluate Jz and place in z
             evalJacobianVecProd(pseudoSimTime, sigma, LHSeval, RHSeval);

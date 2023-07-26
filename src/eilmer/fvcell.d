@@ -62,6 +62,7 @@ struct FVCellData{
     size_t[] nfaces;
     size_t[][] c2f;
     size_t[][] c2v;
+    double[] dt_local;
     int[][] outsigns;
     number[] areas;
     number[] volumes;

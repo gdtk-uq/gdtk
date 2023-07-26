@@ -315,6 +315,7 @@ public:
         size_t nturb = myConfig.turb_model.nturb;
 
         celldata.nfaces.length = ncells;
+        celldata.dt_local.length = ncells;
         celldata.areas.length = ncells + nghost;
         celldata.wall_distances.length = ncells;
         celldata.in_turbulent_zone.length = ncells;
@@ -1179,7 +1180,7 @@ public:
         // for local time-stepping we limit the larger time-steps by a factor of the smallest timestep
         int local_time_stepping_limit_factor = myConfig.local_time_stepping_limit_factor;
         bool first = true;
-        foreach(FVCell cell; cells) {
+        foreach(i, cell; cells) {
             signal = cell.signal_frequency();
 	    if (myConfig.with_super_time_stepping) {
                 signal_hyp = cell.signal_hyp.re;
@@ -1216,6 +1217,7 @@ public:
                     dt_allow = fmin(dt_allow, dt_local);
                 }
             }
+            celldata.dt_local[i] = cell.dt_local;
         } // foreach cell
         if (myConfig.with_super_time_stepping == false && check_cfl && (cfl_max < 0.0 || cfl_max > cfl_allow)) {
             debug { writeln("Bad cfl number encountered cfl_max=", cfl_max, " for FluidBlock ", id); }
