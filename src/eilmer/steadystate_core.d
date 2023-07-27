@@ -690,15 +690,15 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 auto cqi = blk.myConfig.cqi;
                 int cellCount = 0;
                 number rel_diff_limit, U, dU;
-                foreach (cell; blk.cells) {
+                foreach (i; 0 .. blk.ncells) {
                     if (cqi.n_species == 1) {
-                        U = cell.U[0][cqi.mass];
+                        U  = blk.celldata.U0[cellCount+MASS];
                         dU = blk.dU[cellCount+MASS];
                     } else { // sum up the species densities
                         U = 0.0;
                         dU = 0.0;
                         foreach(isp; 0 .. cqi.n_species) {
-                            U += cell.U[0][cqi.species+isp];
+                            U += blk.celldata.U0[cellCount+SPECIES+isp];
                             dU += blk.dU[cellCount+SPECIES+isp];
                         }
                     }
@@ -717,23 +717,24 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             // if it isn't, we reduce the relaxation factor by some prescribed factor and then try again
             foreach (blk; localFluidBlocks) {
                 int cellCount = 0;
-                foreach (cell; blk.cells) {
+                foreach (i; 0 .. blk.ncells) {
                     bool failed_decode = false;
                     while (omega >= omega_min) {
                         // check positivity of primitive variables
-                        cell.U[1].copy_values_from(cell.U[0]);
                         foreach (j; 0 .. nConserved) {
-                            cell.U[1][j] = cell.U[0][j] + omega*blk.dU[cellCount+j];
+                            blk.celldata.U1[cellCount+j] = blk.celldata.U0[cellCount+j] + omega*blk.dU[cellCount+j];
                         }
                         try {
-                            cell.decode_conserved(0, 1, 0.0);
+                            decode_conserved(blk.celldata.positions[i], blk.celldata.U1[cellCount .. cellCount+nConserved],
+                                             blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
                         }
                         catch (FlowSolverException e) {
                             failed_decode = true;
                         }
 
                         // return cell to original state
-                        cell.decode_conserved(0, 0, 0.0);
+                        decode_conserved(blk.celldata.positions[i], blk.celldata.U0[cellCount .. cellCount+nConserved],
+                                         blk.celldata.flowstates[i], 0.0, i, blk.myConfig);
 
                         if (failed_decode) {
                             omega *= omega_reduction_factor;

@@ -66,7 +66,7 @@ configOptionsHidden = { -- hidden from user
    --
    user_specified_velocities_are_in_non_rotating_frame = true,
    --
-   ignore_low_T_thermo_update_failure = true,
+   ignore_low_T_thermo_update_failure = false,
    suggested_low_T_value = 200.0,
    adjust_invalid_cell_data = false,
    report_invalid_cells = true,

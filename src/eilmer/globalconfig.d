@@ -940,7 +940,7 @@ final class GlobalConfig {
     // If the density is OK but the update fails to find a valid temperature,
     // it is possible that the internal energy is erroneously small and
     // it may be reasonable to ignore the failure, resetting a low temperature.
-    shared static bool ignore_low_T_thermo_update_failure = true;
+    shared static bool ignore_low_T_thermo_update_failure = false;
     shared static double suggested_low_T_value = 200.0;
     //
     /// If the cell still has invalid data and adjust_invalid_cell_data == true,
