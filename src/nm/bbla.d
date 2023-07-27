@@ -591,6 +591,45 @@ do {
     }
 }
 
+/*
+    Some additional dot product routines that use flattened bare arrays,
+    which somtimes are used as matrices in performance sensitive areas
+    of the code.
+    @author: NNG (July 2023)
+*/
+@nogc
+void dot(T)(in T[] a, size_t a_stride, size_t aRow, size_t aCol, T[] b, T[] c)
+{
+    foreach (idx; 0 .. c.length) c[idx] = 0.0;
+    foreach (row; 0 .. aRow) {
+        foreach (col; 0 .. aCol) {
+            c[row] += a[row*a_stride+col] * b[col];
+        }
+    }
+}
+
+@nogc
+void transpose_and_dot(T)(in T[] a, size_t a_stride, size_t aRow, size_t aCol, T[] b, T[] c)
+{
+/*
+    This routine does an inplace tranpose and dot, like this:
+    [a1,  a2,  a3,  a4,  a5,  a6,  a7][q]   [a1*q + b1*r + c1*z]
+    [b1,  b2,  b3,  b4,  b5,  b6,  b7][r] = [a2*q + b2*r + c2*z]
+    [c1,  c2,  c3,  c4,  c5,  c6,  c7][z]   [a3*q + b3*r + c3*z]
+                                            [a4*q + b4*r + c4*z]
+                                            [a5*q + b5*r + c5*z]
+                                            [a6*q + b6*r + c6*z]
+                                            [a7*q + b7*r + c7*z]
+    @author: NNG (July 2023)
+*/
+    foreach (idx; 0 .. c.length) c[idx] = 0.0;
+    foreach (row; 0 .. aRow) {
+        foreach (col; 0 .. aCol) {
+            c[col] += a[row*a_stride+col] * b[row];
+        }
+    }
+}
+
 @nogc
 void copy(T)(in Matrix!T src, ref Matrix!T tgt)
 in {
