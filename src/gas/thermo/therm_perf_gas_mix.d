@@ -434,7 +434,7 @@ private:
 
         @author: Nick Gibbons
     */
-        immutable double TOL = 1e-9;
+        immutable double TOL = 1e-10;
         immutable number u_tgt = gs.u;
         immutable size_t nsp = n_species;
 
