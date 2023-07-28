@@ -858,12 +858,14 @@ public:
     }
 
     @nogc
-    override void convective_flux_phase0new(bool allow_high_order_interpolation)
+    override void convective_flux_phase0new(bool allow_high_order_interpolation, size_t[] cell_idxs=[], size_t[] face_idxs=[])
     // Compute gradients of flow quantities for higher-order reconstruction, if required.
     // To be used, later, in the convective flux calculation.
     {
         if (!allow_high_order_interpolation) return;
         if (myConfig.interpolation_order == 1) return;
+
+        if (cell_idxs.length==0) cell_idxs = celldata.all_cell_idxs;
 
         immutable bool needs_pressure_gradient =
                 myConfig.unstructured_limiter == UnstructuredLimiter.park ||
@@ -877,7 +879,7 @@ public:
         immutable size_t is3d = myConfig.dimensions==3;
 
         if (myConfig.unstructured_limiter == UnstructuredLimiter.venkat_mlp) {
-            foreach(cid; 0 .. ncells){
+            foreach(cid; cell_idxs){
                 celldata.lsqgradients[cid].reset_max_min_values(celldata.flowstates[cid], nsp, nmodes, nturb, myConfig);
 
                 foreach(vid; celldata.c2v[cid]){
@@ -887,7 +889,7 @@ public:
                 }
             }
         } else {
-            foreach(cid; 0 .. ncells){
+            foreach(cid; cell_idxs){
                 celldata.lsqgradients[cid].reset_max_min_values(celldata.flowstates[cid], nsp, nmodes, nturb, myConfig);
                 foreach(ciid; celldata.cell_cloud_indices[cid]){
                     celldata.lsqgradients[cid].accumulate_max_min_values(celldata.flowstates[ciid], nsp, nmodes, nturb, myConfig);
@@ -895,7 +897,7 @@ public:
             }
         }
 
-        foreach(cid; 0 .. ncells){
+        foreach(cid; cell_idxs){
             celldata.lsqgradients[cid].compute_lsq_values(celldata.flowstates[cid], celldata.lsqws[cid],
                                                           celldata.flowstates, celldata.cell_cloud_indices[cid],
                                                           myConfig, nsp, nmodes, nturb, is3d, needs_pressure_gradient);
@@ -925,13 +927,15 @@ public:
     } // end convective_flux-phase0()
 
     @nogc
-    override void convective_flux_phase1new(bool allow_high_order_interpolation)
+    override void convective_flux_phase1new(bool allow_high_order_interpolation, size_t[] cell_idxs=[], size_t[] face_idxs=[])
         // Compute limiter values of flow quantities for higher-order reconstruction, if required.
         // To be used, later, in the convective flux calculation.
     {
         if (!allow_high_order_interpolation) return;
         if (myConfig.interpolation_order == 1) return;
         if (GlobalConfig.frozen_limiter) return;
+
+        if (cell_idxs.length==0) cell_idxs = celldata.all_cell_idxs;
 
         switch (myConfig.unstructured_limiter) {
             case UnstructuredLimiter.svan_albada:
@@ -941,36 +945,36 @@ public:
                 // do nothing now
                 break;
             case UnstructuredLimiter.barth:
-                foreach (c; cells) c.gradients.barth_limit(c.cell_cloud, *(c.ws), myConfig);
+                foreach (i; cell_idxs) { auto c = cells[i]; c.gradients.barth_limit(c.cell_cloud, *(c.ws), myConfig); }
                 break;
             case UnstructuredLimiter.park:
                 immutable bool is3d = myConfig.dimensions == 3;
-                foreach (i; 0 .. ncells) {
+                foreach (i; cell_idxs) {
                     celldata.lsqgradients[i].park_limit2(celldata.lsqgradients[i], celldata.flowstates, i, facedata.f2c, is3d,
                                                          celldata.face_distances[i], celldata.c2f[i], celldata.nfaces[i], myConfig);
                 }
                 break;
             case UnstructuredLimiter.hvan_albada:
-                foreach (c; cells) c.gradients.van_albada_limit(c.cell_cloud, *(c.ws), true, myConfig);
+                foreach (i; cell_idxs) { auto c = cells[i]; c.gradients.van_albada_limit(c.cell_cloud, *(c.ws), true, myConfig); }
                 break;
             case UnstructuredLimiter.van_albada:
-                foreach (c; cells) c.gradients.van_albada_limit(c.cell_cloud, *(c.ws), false, myConfig);
+                foreach (i; cell_idxs) { auto c = cells[i]; c.gradients.van_albada_limit(c.cell_cloud, *(c.ws), false, myConfig); }
                 break;
             case UnstructuredLimiter.hnishikawa:
-                foreach (c; cells) c.gradients.nishikawa_limit(c.cell_cloud, *(c.ws), true, myConfig, 0);
+                foreach (i; cell_idxs) { auto c = cells[i]; c.gradients.nishikawa_limit(c.cell_cloud, *(c.ws), true, myConfig, 0); }
                 break;
             case UnstructuredLimiter.nishikawa:
-                foreach (c; cells) c.gradients.nishikawa_limit(c.cell_cloud, *(c.ws), false, myConfig, 0);
+                foreach (i; cell_idxs) { auto c = cells[i]; c.gradients.nishikawa_limit(c.cell_cloud, *(c.ws), false, myConfig, 0); }
                 break;
             case UnstructuredLimiter.hvenkat_mlp:
-                foreach (c; cells) c.gradients.venkat_mlp_limit(c.cell_cloud, *(c.ws), true, myConfig, 0);
+                foreach (i; cell_idxs) { auto c = cells[i]; c.gradients.venkat_mlp_limit(c.cell_cloud, *(c.ws), true, myConfig, 0); }
                 break;
             case UnstructuredLimiter.venkat_mlp:
-                foreach (c; cells) c.gradients.venkat_mlp_limit(c.cell_cloud, *(c.ws), false, myConfig, 0);
+                foreach (i; cell_idxs) { auto c = cells[i]; c.gradients.venkat_mlp_limit(c.cell_cloud, *(c.ws), false, myConfig, 0); }
                 break;
             case UnstructuredLimiter.hvenkat:
                 immutable bool is3d = myConfig.dimensions == 3;
-                foreach (i; 0 .. ncells) {
+                foreach (i; cell_idxs) {
                     number phi_hp = park_equation(celldata.lsqgradients[i], celldata.flowstates, i, facedata.f2c, is3d,
                                                   celldata.face_distances[i], celldata.c2f[i], celldata.nfaces[i]);
                     celldata.lsqgradients[i].venkat_limit2(celldata.flowstates[i],
@@ -980,7 +984,7 @@ public:
                 break;
             case UnstructuredLimiter.venkat:
                 number phi_hp = to!number(1.0);
-                foreach (i; 0 .. ncells) {
+                foreach (i; cell_idxs) {
                     celldata.lsqgradients[i].venkat_limit2(celldata.flowstates[i],
                         celldata.volumes[i], celldata.face_distances[i],
                         celldata.nfaces[i], phi_hp, myConfig);
@@ -1000,6 +1004,9 @@ public:
         if (!allow_high_order_interpolation) return;
         if (myConfig.interpolation_order == 1) return;
         if (GlobalConfig.frozen_limiter) return;
+
+        if (cell_list.length == 0) { cell_list = cells; }
+        if (vertex_list.length == 0) { vertex_list = vertices; }
 
         // It is more efficient to determine limiting factor here for some usg limiters.
         final switch (myConfig.unstructured_limiter) {
@@ -1049,81 +1056,79 @@ public:
     } // end convective_flux-phase1()
 
     @nogc
-    override void convective_flux_phase2new(bool allow_high_order_interpolation)
+    void copy_cell_data_to_ghost_cells(size_t[] face_idxs)
+    {
+        // Fill in gradients for ghost cells so that left- and right- cells at all faces,
+        // including those along block boundaries, have the latest gradient values.
+        foreach(idx; face_idxs){
+            if (idx<ninteriorfaces) continue; // skip if given an interior face
+
+            size_t bidx = idx-ninteriorfaces;
+            if (facedata.left_interior_only[bidx]) {
+                size_t l = facedata.f2c[idx].left;
+                size_t r = facedata.f2c[idx].right;
+                celldata.lsqgradients[r].copy_values_from(celldata.lsqgradients[l]);
+            } else if (facedata.right_interior_only[bidx]) {
+                size_t l = facedata.f2c[idx].left;
+                size_t r = facedata.f2c[idx].right;
+                celldata.lsqgradients[l].copy_values_from(celldata.lsqgradients[r]);
+            } else {
+                // Nothing needs to be done for a shared interface,
+                continue;
+            }
+        }
+    }
+
+    @nogc
+    override void convective_flux_phase2new(bool allow_high_order_interpolation, size_t[] cell_idxs=[], size_t[] face_idxs=[])
     // Make use of the flow gradients to actually do the high-order reconstruction
     // and then compute fluxes of conserved quantities at all faces.
     {
 
         immutable size_t neq = myConfig.cqi.n;
-        immutable bool do_reconstruction = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
-        immutable bool allow_reconstruction_at_boundaries = !myConfig.suppress_reconstruction_at_boundaries;
+        immutable bool allow_reconstruction_anywhere = allow_high_order_interpolation && (myConfig.interpolation_order > 1);
+        immutable bool suppress_reconstruction_at_boundaries = myConfig.suppress_reconstruction_at_boundaries;
+        immutable bool do_all_faces = face_idxs.length==0;
 
-        if (do_reconstruction) {
-            // Fill in gradients for ghost cells so that left- and right- cells at all faces,
-            // including those along block boundaries, have the latest gradient values.
-            foreach(idx; ninteriorfaces .. nfaces){
-                size_t bidx = idx-ninteriorfaces;
-                if (facedata.left_interior_only[bidx]) {
-                    size_t l = facedata.f2c[idx].left;
-                    size_t r = facedata.f2c[idx].right;
-                    celldata.lsqgradients[r].copy_values_from(celldata.lsqgradients[l]);
-
-                } else if (facedata.right_interior_only[bidx]) {
-                    size_t l = facedata.f2c[idx].left;
-                    size_t r = facedata.f2c[idx].right;
-                    celldata.lsqgradients[l].copy_values_from(celldata.lsqgradients[r]);
-                } else {
-                    // Nothing needs to be done for a shared interface,
-                    continue;
-                }
+        if (allow_reconstruction_anywhere && !suppress_reconstruction_at_boundaries) {
+            if (do_all_faces) {
+                copy_cell_data_to_ghost_cells(facedata.all_face_idxs[ninteriorfaces .. nfaces]);
+            } else {
+                copy_cell_data_to_ghost_cells(face_idxs);
             }
         }
 
-        // At this point, we should have all gradient values up to date and we are now ready
-        // to reconstruct field values and compute the convective fluxes.
+        if (do_all_faces) face_idxs = facedata.all_face_idxs;
         Vector3 gvel;
         gvel.clear();
-        foreach(idx; 0 .. ninteriorfaces){ // TODO: No ghost cell version
+
+        // At this point, we should have all gradient values up to date and we are now ready
+        // to reconstruct field values and compute the convective fluxes.
+        foreach(idx; face_idxs){ // TODO: No ghost cell version
             size_t l = facedata.f2c[idx].left;
             size_t r = facedata.f2c[idx].right;
             Lft.copy_values_from(celldata.flowstates[l]);
             Rght.copy_values_from(celldata.flowstates[r]);
             facedata.flowstates[idx].copy_average_values_from(Lft, Rght);
+
+            // Sort out logic for whether to do recontruction at this face
+            bool do_reconstruction = allow_reconstruction_anywhere;
+            if (allow_reconstruction_anywhere) {
+                bool on_boundary = (idx>=ninteriorfaces);
+                if (on_boundary && suppress_reconstruction_at_boundaries){
+                    // Check for a real boundary, i.e. one that isn't an exchange boundary
+                    size_t bidx = idx-ninteriorfaces;
+                    if (facedata.left_interior_only[bidx] || facedata.right_interior_only[bidx]) {
+                        do_reconstruction = false;
+                    }
+                }
+            }
 
             if (do_reconstruction) {
                 interp_both(facedata.dL[idx], facedata.dR[idx],
                             celldata.lsqgradients[l], celldata.lsqgradients[r],
                             celldata.flowstates[l], celldata.flowstates[r],
                             myConfig, *Lft, *Rght);
-            }
-            compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
-                                            facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
-                                            facedata.fluxes[idx*neq .. (idx+1)*neq]);
-        }
-
-        foreach(idx; ninteriorfaces .. nfaces){
-            size_t bidx = idx-ninteriorfaces;
-            size_t l = facedata.f2c[idx].left;
-            size_t r = facedata.f2c[idx].right;
-            Lft.copy_values_from(celldata.flowstates[l]);
-            Rght.copy_values_from(celldata.flowstates[r]);
-            facedata.flowstates[idx].copy_average_values_from(Lft, Rght);
-
-            if (facedata.left_interior_only[bidx] || facedata.right_interior_only[bidx]) {
-                if (do_reconstruction && allow_reconstruction_at_boundaries) {
-                    interp_both(facedata.dL[idx], facedata.dR[idx],
-                                celldata.lsqgradients[l], celldata.lsqgradients[r],
-                                celldata.flowstates[l], celldata.flowstates[r],
-                                myConfig, *Lft, *Rght);
-                }
-
-            } else { // We have a shared interface, where allow_reconstruction_at_boundaries is ignored
-                if (do_reconstruction) {
-                    interp_both(facedata.dL[idx], facedata.dR[idx],
-                                celldata.lsqgradients[l], celldata.lsqgradients[r],
-                                celldata.flowstates[l], celldata.flowstates[r],
-                                myConfig, *Lft, *Rght);
-                }
             }
             compute_interface_flux_interior(*Lft, *Rght, facedata.flowstates[idx], myConfig, gvel,
                                             facedata.positions[idx], facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],

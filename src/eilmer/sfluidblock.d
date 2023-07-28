@@ -2612,7 +2612,7 @@ public:
     }
 
     @nogc
-    void second_order_flux_calc(size_t gtl)
+    void second_order_flux_calc(size_t gtl, size_t[] face_idxs)
     {
     /*
         Eilmer's classic second-order piece-wise parabolic reconstruction, using a
@@ -2633,7 +2633,7 @@ public:
         Vector3 gvel;
         gvel.clear();
 
-        foreach(idx; 0 .. nfaces){
+        foreach(idx; face_idxs){
             size_t L1 = facedata.stencil_idxs[idx].L1;
             size_t L0 = facedata.stencil_idxs[idx].L0;
             size_t R0 = facedata.stencil_idxs[idx].R0;
@@ -2662,7 +2662,7 @@ public:
     }
 
     @nogc
-    void third_order_flux_calc(size_t gtl)
+    void third_order_flux_calc(size_t gtl, size_t[] face_idxs)
     {
     /*
         Experimental high-order parabolic reconstruction, using a 6 cell
@@ -2683,7 +2683,7 @@ public:
         Vector3 gvel;
         gvel.clear();
 
-        foreach(idx; 0 .. nfaces){
+        foreach(idx; face_idxs){
             size_t L2 = facedata.stencil_idxs[idx].L2;
             size_t L1 = facedata.stencil_idxs[idx].L1;
             size_t L0 = facedata.stencil_idxs[idx].L0;
@@ -2718,12 +2718,12 @@ public:
     }
 
     @nogc
-    void first_order_flux_calc(size_t gtl)
+    void first_order_flux_calc(size_t gtl, size_t[] face_idxs)
     {
         immutable size_t neq = myConfig.cqi.n;
         Vector3 gvel;
         gvel.clear();
-        foreach(idx; 0 .. nfaces){
+        foreach(idx; face_idxs){
             size_t l = facedata.stencil_idxs[idx].L0;
             size_t r = facedata.stencil_idxs[idx].R0;
 
@@ -2739,7 +2739,7 @@ public:
     }
 
     @nogc
-    void asf_flux_calc(size_t gtl, bool adaptive=false)
+    void asf_flux_calc(size_t gtl, size_t[] face_idxs, bool adaptive=false)
     {
     /*
         Low dissipation flux calculator, using the unusual ASF method.
@@ -2751,7 +2751,7 @@ public:
         immutable bool is3D = (myConfig.dimensions == 3);
 
         number factor = 1.0;
-        foreach(idx; 0 .. nfaces){
+        foreach(idx; face_idxs){
             size_t L1 = facedata.stencil_idxs[idx].L1;
             size_t L0 = facedata.stencil_idxs[idx].L0;
             size_t R0 = facedata.stencil_idxs[idx].R0;
@@ -2778,7 +2778,7 @@ public:
     }
 
     @nogc
-    override void convective_flux_phase0new(bool allow_high_order_interpolation)
+    override void convective_flux_phase0new(bool allow_high_order_interpolation, size_t[] cell_idxs=[], size_t[] face_idxs=[])
     // Compute the flux from flow-field data on either-side of the interface.
     {
         bool second_order = allow_high_order_interpolation && (myConfig.interpolation_order == 2);
@@ -2786,17 +2786,19 @@ public:
         bool pure_asf = myConfig.flux_calculator == FluxCalculator.asf;
         bool adaptive_asf = myConfig.flux_calculator == FluxCalculator.adaptive_ausmdv_asf;
 
+        if (face_idxs.length==0) face_idxs = facedata.all_face_idxs;
+
         if (!pure_asf) {
             if (second_order) {
-                second_order_flux_calc(0);
+                second_order_flux_calc(0, face_idxs);
             } else if (third_order) {
-                third_order_flux_calc(0);
+                third_order_flux_calc(0, face_idxs);
             } else {
-                first_order_flux_calc(0);
+                first_order_flux_calc(0, face_idxs);
             }
         }
 
-        if (pure_asf || adaptive_asf) asf_flux_calc(0, adaptive_asf);
+        if (pure_asf || adaptive_asf) asf_flux_calc(0, face_idxs, adaptive_asf);
         return;
     } // end convective_flux_phase0()
 
@@ -2863,7 +2865,7 @@ public:
     } // end convective_flux_phase0()
 
     @nogc
-    override void convective_flux_phase1new(bool allow_high_order_interpolation)
+    override void convective_flux_phase1new(bool allow_high_order_interpolation, size_t[] cell_idxs=[], size_t[] face_idxs=[])
     // Compute the flux from data on either-side of the interface.
     // For the structured-grid block, there is nothing to do.
     // The unstructured-grid block needs to work in two phases.
@@ -2882,7 +2884,7 @@ public:
     }
 
     @nogc
-    override void convective_flux_phase2new(bool allow_high_order_interpolation)
+    override void convective_flux_phase2new(bool allow_high_order_interpolation, size_t[] cell_idxs=[], size_t[] face_idxs=[])
     // Compute the flux from data on either-side of the interface.
     // For the structured-grid block, there is nothing to do.
     // The unstructured-grid block needs to work in two phases.

@@ -277,15 +277,15 @@ public:
     abstract void write_underlying_grid(string fileName);
     @nogc abstract void propagate_inflow_data_west_to_east();
     @nogc abstract void set_face_flowstates_to_averages_from_cells();
-    @nogc abstract void convective_flux_phase0new(bool allow_high_order_interpolation);
+    @nogc abstract void convective_flux_phase0new(bool allow_high_order_interpolation, size_t[] cell_idxs=[], size_t[] face_idxs=[]);
     @nogc abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl,
                                                FVCell[] cell_list = [], FVInterface[] iface_list = [],
                                                FVVertex[] vertex_list = []);
-    @nogc abstract void convective_flux_phase1new(bool allow_high_order_interpolation);
+    @nogc abstract void convective_flux_phase1new(bool allow_high_order_interpolation, size_t[] cell_idxs=[], size_t[] face_idxs=[]);
     @nogc abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0,
                                                FVCell[] cell_list = [], FVInterface[] iface_list = [],
                                                FVVertex[] vertex_list = []);
-    @nogc abstract void convective_flux_phase2new(bool allow_high_order_interpolation);
+    @nogc abstract void convective_flux_phase2new(bool allow_high_order_interpolation, size_t[] cell_idxs=[], size_t[] face_idxs=[]);
     @nogc abstract void convective_flux_phase2(bool allow_high_order_interpolation, size_t gtl=0,
                                                FVCell[] cell_list = [], FVInterface[] iface_list = [],
                                                FVVertex[] vertex_list = []);
@@ -313,6 +313,10 @@ public:
     */
         auto gmodel = myConfig.gmodel;
         size_t nturb = myConfig.turb_model.nturb;
+
+        // This, apparently stupid, array is an experiment
+        celldata.all_cell_idxs.length = ncells;
+        foreach(i; 0 .. ncells) celldata.all_cell_idxs[i] = i;
 
         celldata.nfaces.length = ncells;
         celldata.dt_local.length = ncells;
@@ -353,6 +357,10 @@ public:
     */
         auto gmodel = myConfig.gmodel;
         size_t nturb = myConfig.turb_model.nturb;
+
+        // This, apparently stupid, array is an experiment
+        facedata.all_face_idxs.length = nfaces;
+        foreach(i; 0 .. nfaces) facedata.all_face_idxs[i] = i;
 
         facedata.positions.length = nfaces;
         facedata.areas.length = nfaces;

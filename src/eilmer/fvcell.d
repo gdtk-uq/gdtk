@@ -59,6 +59,7 @@ string avg_over_iface_list(string quantity, string result)
 }
 
 struct FVCellData{
+    size_t[] all_cell_idxs;
     size_t[] nfaces;
     size_t[][] c2f;
     size_t[][] c2v;

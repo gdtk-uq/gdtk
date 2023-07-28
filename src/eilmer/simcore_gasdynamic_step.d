@@ -1743,7 +1743,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         // Phase 06a LOCAL
         try {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
+                if (blk.active) { blk.convective_flux_phase1new(allow_high_order_interpolation); }
             }
         } catch (Exception e) {
             debug { writefln("Exception thrown in phase 06a of stage 1 of explicit update on moving grid: %s", e.msg); }

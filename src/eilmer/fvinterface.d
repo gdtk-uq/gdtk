@@ -36,6 +36,7 @@ struct LR {size_t left,right;}
 struct LLLRRR {size_t L2,L1,L0,R0,R1,R2;}
 
 struct FVInterfaceData{
+    size_t[] all_face_idxs;
     LR[] f2c;
     Vector3[] dL;
     Vector3[] dR;
