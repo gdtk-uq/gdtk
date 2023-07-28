@@ -858,7 +858,7 @@ public:
     }
 
     @nogc
-    override void convective_flux_phase0(bool allow_high_order_interpolation)
+    override void convective_flux_phase0new(bool allow_high_order_interpolation)
     // Compute gradients of flow quantities for higher-order reconstruction, if required.
     // To be used, later, in the convective flux calculation.
     {
@@ -925,7 +925,7 @@ public:
     } // end convective_flux-phase0()
 
     @nogc
-    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0)
+    override void convective_flux_phase1new(bool allow_high_order_interpolation)
         // Compute limiter values of flow quantities for higher-order reconstruction, if required.
         // To be used, later, in the convective flux calculation.
     {
@@ -957,16 +957,16 @@ public:
                 foreach (c; cells) c.gradients.van_albada_limit(c.cell_cloud, *(c.ws), false, myConfig);
                 break;
             case UnstructuredLimiter.hnishikawa:
-                foreach (c; cells) c.gradients.nishikawa_limit(c.cell_cloud, *(c.ws), true, myConfig, gtl);
+                foreach (c; cells) c.gradients.nishikawa_limit(c.cell_cloud, *(c.ws), true, myConfig, 0);
                 break;
             case UnstructuredLimiter.nishikawa:
-                foreach (c; cells) c.gradients.nishikawa_limit(c.cell_cloud, *(c.ws), false, myConfig, gtl);
+                foreach (c; cells) c.gradients.nishikawa_limit(c.cell_cloud, *(c.ws), false, myConfig, 0);
                 break;
             case UnstructuredLimiter.hvenkat_mlp:
-                foreach (c; cells) c.gradients.venkat_mlp_limit(c.cell_cloud, *(c.ws), true, myConfig, gtl);
+                foreach (c; cells) c.gradients.venkat_mlp_limit(c.cell_cloud, *(c.ws), true, myConfig, 0);
                 break;
             case UnstructuredLimiter.venkat_mlp:
-                foreach (c; cells) c.gradients.venkat_mlp_limit(c.cell_cloud, *(c.ws), false, myConfig, gtl);
+                foreach (c; cells) c.gradients.venkat_mlp_limit(c.cell_cloud, *(c.ws), false, myConfig, 0);
                 break;
             case UnstructuredLimiter.hvenkat:
                 immutable bool is3d = myConfig.dimensions == 3;
@@ -1049,7 +1049,7 @@ public:
     } // end convective_flux-phase1()
 
     @nogc
-    override void convective_flux_phase2(bool allow_high_order_interpolation, size_t gtl=0)
+    override void convective_flux_phase2new(bool allow_high_order_interpolation)
     // Make use of the flow gradients to actually do the high-order reconstruction
     // and then compute fluxes of conserved quantities at all faces.
     {

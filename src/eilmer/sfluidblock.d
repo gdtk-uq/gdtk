@@ -2778,7 +2778,7 @@ public:
     }
 
     @nogc
-    override void convective_flux_phase0(bool allow_high_order_interpolation)
+    override void convective_flux_phase0new(bool allow_high_order_interpolation)
     // Compute the flux from flow-field data on either-side of the interface.
     {
         bool second_order = allow_high_order_interpolation && (myConfig.interpolation_order == 2);
@@ -2863,7 +2863,7 @@ public:
     } // end convective_flux_phase0()
 
     @nogc
-    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0)
+    override void convective_flux_phase1new(bool allow_high_order_interpolation)
     // Compute the flux from data on either-side of the interface.
     // For the structured-grid block, there is nothing to do.
     // The unstructured-grid block needs to work in two phases.
@@ -2882,7 +2882,7 @@ public:
     }
 
     @nogc
-    override void convective_flux_phase2(bool allow_high_order_interpolation, size_t gtl=0)
+    override void convective_flux_phase2new(bool allow_high_order_interpolation)
     // Compute the flux from data on either-side of the interface.
     // For the structured-grid block, there is nothing to do.
     // The unstructured-grid block needs to work in two phases.

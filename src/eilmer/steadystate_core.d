@@ -1426,7 +1426,7 @@ void evalRHS(double pseudoSimTime, int ftl)
 
     bool allow_high_order_interpolation = true;
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.convective_flux_phase0(allow_high_order_interpolation);
+        blk.convective_flux_phase0new(allow_high_order_interpolation);
     }
 
     // for unstructured blocks we need to transfer the convective gradients before the flux calc
@@ -1435,7 +1435,7 @@ void evalRHS(double pseudoSimTime, int ftl)
     }
 
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.convective_flux_phase1(allow_high_order_interpolation, gtl);
+        blk.convective_flux_phase1new(allow_high_order_interpolation);
     }
 
     // for unstructured blocks we need to transfer the convective gradients before the flux calc
@@ -1444,7 +1444,7 @@ void evalRHS(double pseudoSimTime, int ftl)
     }
 
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.convective_flux_phase2(allow_high_order_interpolation, gtl);
+        blk.convective_flux_phase2new(allow_high_order_interpolation);
     }
 
     foreach (blk; localFluidBlocks) {
