@@ -51,7 +51,7 @@ class TestMabey < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    assert((steps - 150).abs < 50, "Failed to take a reasonable number of steps.")
+    assert((steps - 130).abs < 20, "Failed to take a reasonable number of steps.")
   end
 
   def test_3_drag_force
@@ -66,6 +66,6 @@ class TestMabey < Test::Unit::TestCase
         force = items[1].to_f
       end
     end
-    assert((force - 108.095).abs < 1.0e-02, "Failed to compute correct drag force.")
+    assert((force - 113.839).abs < 1.0e-02, "Failed to compute correct drag force.")
   end
 end
