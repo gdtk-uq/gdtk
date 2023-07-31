@@ -1362,6 +1362,7 @@ double determine_dt(double cflInit)
                 signal = cell.signal_frequency();
 
                 double dt_local = cflInit/signal;
+                cell.dt_local = dt_local;
                 blk.celldata.dt_local[i] = dt_local;
                 dt = fmin(dt, dt_local);
             }
@@ -1654,7 +1655,7 @@ void point_implicit_relaxation_solve(int step, double pseudoSimTime, double dt, 
         if (GlobalConfig.sssOptions.preconditionMatrixType != PreconditionMatrixType.lusgs) {
             foreach (blk; parallel(localFluidBlocks,1)) {
                 blk.evaluate_jacobian();
-                blk.flowJacobian.augment_with_dt(blk.cells, dt, blk.cells.length, nConserved);
+                blk.flowJacobian.augment_with_dt(blk.celldata.dt_local, dt, blk.ncells, nConserved);
                 nm.smla.invert_block_diagonal(blk.flowJacobian.local, blk.flowJacobian.D, blk.flowJacobian.Dinv, blk.cells.length, nConserved);
             }
         }
@@ -1862,14 +1863,14 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         case PreconditionMatrixType.sgs:
             foreach (blk; parallel(localFluidBlocks,1)) {
                 blk.evaluate_jacobian();
-                blk.flowJacobian.augment_with_dt(blk.cells, dt, blk.cells.length, nConserved);
+                blk.flowJacobian.augment_with_dt(blk.celldata.dt_local, dt, blk.ncells, nConserved);
                 nm.smla.invert_block_diagonal(blk.flowJacobian.local, blk.flowJacobian.D, blk.flowJacobian.Dinv, blk.cells.length, nConserved);
             }
             break;
         case PreconditionMatrixType.ilu:
             foreach (blk; parallel(localFluidBlocks,1)) {
                 blk.evaluate_jacobian();
-                blk.flowJacobian.augment_with_dt(blk.cells, dt, blk.cells.length, nConserved);
+                blk.flowJacobian.augment_with_dt(blk.celldata.dt_local, dt, blk.ncells, nConserved);
                 nm.smla.decompILU0(blk.flowJacobian.local);
             }
             break;
