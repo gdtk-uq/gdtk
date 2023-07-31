@@ -1,0 +1,68 @@
+NENZF1D: 1D analysis of shock-tunnel with nonequilibrium nozzle flow.
+  Revision-id: 61c8fa55
+  Revision-date: Mon Jun 27 20:46:03 2022 +1000
+  Compiler-name: ldc2
+  Build-date: Mon Aug 15 09:45:22 AM PDT 2022
+  T5-2916 2T-air with contoured nozzle.
+Initial gas in shock tube (state 1).
+  pressure    45 kPa
+  density     0.52048 kg/m^3
+  temperature 300 K
+  H1          0.00187165 MJ/kg
+Incident-shock process to state 2.
+  V2          439.594 m/s
+  Vg          3631.41 m/s
+  pressure    7739.5 kPa
+  density     4.82007 kg/m^3
+  temperature 5040.27 K
+Reflected-shock process to state 5.
+Isentropic relaxation to state 5s.
+  entropy     10095.8 J/kg/K
+  H5s         15.8715 MJ/kg
+  H5s-H1      15.8696 MJ/kg
+  pressure    47000 kPa
+  density     16.285 kg/m^3
+  temperature 8117.31 K
+Isentropic flow to throat to state 6 (Mach 1).
+  V6          1774.71 m/s
+  mflux6      17924.6
+  pressure    26538 kPa
+  density     10.1 kg/m^3
+  temperature 7500.82 K
+Isentropic flow to slightly-expanded state 6e (Mach 1.03).
+  V6e         1823.13 m/s
+  mflux6e     17909.3
+  ar6e        1.00085
+  pressure    25670.5 kPa
+  density     9.8234 kg/m^3
+  temperature 7465.81 K
+Isentropic expansion to nozzle exit of given area (state 7).
+  area_ratio  106
+  V7          4913.36 m/s
+  pressure    29.7586 kPa
+  density     0.034416 kg/m^3
+  temperature 2910.7 K
+  mflux7      17924.4
+  pitot7      814.62 kPa
+End of part A: shock-tube and frozen/eq nozzle analysis.
+Initializing gas state using CEA saved data
+Begin part B: continue supersonic expansion with finite-rate chemistry.
+Start position:
+  x           3.93087e-05 m
+  area-ratio  1.00085
+Start condition:
+  velocity    1859.98 m/s
+  sound-speed 1858.13 m/s
+  (v-V6e)/V6e 0.0202148
+  pressure    25670.5 kPa
+  density     9.81517 kg/m^3
+  temperature 7465.81 K
+  T_modes[0]  7465.81 K
+  massf[N2]   0.683111
+  massf[O2]   0.00864601
+  massf[N]    0.048463
+  massf[O]    0.18372
+  massf[NO]   0.0760601
+Exception thrown in nenzf1d.run!
+  Exception message: Coefficients for CEA curve could not be determined.
+T=-nan

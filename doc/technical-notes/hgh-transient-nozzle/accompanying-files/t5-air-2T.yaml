@@ -1,0 +1,39 @@
+# Sample input file for nenzf1d is a YAML 1.1 file.
+# t5-air-2T.yaml
+# Data for T5 shot 2946
+# HGH 2023-5-29
+#
+title: "T5-2916 2T-air with contoured nozzle."        # Any string will do.
+
+species: ['N2', 'O2', 'N', 'O', 'NO']         # List
+molef: {'N2': 0.79, 'O2': 0.21}               # Map of nonzero values will suffice.
+# Gas model and reactions files need to be consistent with the species above.
+# Gas model 1 is usually a CEAGas model file.
+# Gas model 2 is a thermally-perfect gas model for the finite-rate chemistry.
+gas-model-1: cea-air5species-gas-model.lua
+gas-model-2: air-5sp-2T.lua
+reactions: air-5sp-6r-2T.lua 
+reactions-file2: air-energy-exchange.lua
+
+# Observed parameter values for shock-tube operation from Table 1 in Appendix A.
+T1: 300         # K
+p1: 45.0e3     # Pa
+Vs: 4071.0      # m/s
+pe: 47.0e6     # Pa
+ar: 106.0       # contoured nozzle
+# pp_ps: 0.0105   # From Figure 8.
+
+meq_throat: 1.03  # To get supersonic condition with frozen-gas sound speed
+C: 0.94           # estimate of Rayleigh_Pitot/(rho*V^2) for frozen gas at exit
+
+# Define the expanding part of the nozzle as a schedule of diameters with position.
+xi: [0.0000, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0]
+di: [0.030, 0.0625, 0.13,   0.21,   0.26,   0.290,   0.306]
+
+# Optionally, we can adjust the stepping parameters for the supersonic expansion.
+# x_end: 1.0
+# t_final: 1.0e-3
+# t_inc: 1.0e-10
+# t_inc_factor: 1.0001
+# t_inc_max: 1.0e-7
+
