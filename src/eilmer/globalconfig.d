@@ -1158,7 +1158,7 @@ final class GlobalConfig {
     shared static string turbulence_model_name = "none";
     shared static double turbulence_prandtl_number = 0.89;
     shared static double turbulence_schmidt_number = 0.75;
-    shared static double max_mu_t_factor = 300.0;
+    shared static double max_mu_t_factor = 3000.0;
     shared static double transient_mu_t_factor = 1.0;
     shared static double freestream_turbulent_intensity = 0.01;
     static TurbulenceModel turb_model;

@@ -874,8 +874,6 @@ public:
                     number tau_tz = 0.0;
                     //
                     number mu_effective = myConfig.turb_model.viscous_transport_coeff(*fs, i);
-                    // Apply a limit on mu_effective in the same manner as that applied to mu_t.
-                    mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
                     tau_tx = mu_effective * grad.turb[i][0];
                     tau_ty = mu_effective * grad.turb[i][1];
                     if (myConfig.dimensions == 3) { tau_tz = mu_effective * grad.turb[i][2]; }
@@ -1040,8 +1038,6 @@ void navier_stokes_viscous_fluxes(in FlowState fs, in FlowGradients grad, LocalC
                 number tau_tz = 0.0;
                 //
                 number mu_effective = myConfig.turb_model.viscous_transport_coeff(fs, i);
-                // Apply a limit on mu_effective in the same manner as that applied to mu_t.
-                mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
                 tau_tx = mu_effective * grad.turb[i][0];
                 tau_ty = mu_effective * grad.turb[i][1];
                 if (is3d) { tau_tz = mu_effective * grad.turb[i][2]; }

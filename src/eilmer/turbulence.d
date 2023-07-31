@@ -408,7 +408,6 @@ class kwTurbulenceModel : TurbulenceModel {
         // k-w uses the same expression for \overline{rho uj" 0.5 ui" ui"} as in the tke equation
         // taken from fvinterface viscous_flux_calc
         number mu_effective = viscous_transport_coeff(fs, 0);
-        mu_effective = fmin(mu_effective, max_mu_t_factor * fs.gas.mu);
 
         number[3] qtke;
         qtke[0] = mu_effective * grad.turb[0][0];

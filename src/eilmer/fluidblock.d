@@ -584,14 +584,33 @@ public:
     }
 
     @nogc
-    void estimate_turbulence_viscosity(FVCell[] cell_list = [])
+    void estimate_turbulence_viscosity()
+    {
+    version(turbulence) { // Exit instantly if turbulence capability disabled
+        auto gmodel = myConfig.gmodel;
+        foreach (i; 0 .. ncells) {
+            if ( celldata.in_turbulent_zone[i] ) {
+                celldata.flowstates[i].mu_t = myConfig.turb_model.turbulent_viscosity(celldata.flowstates[i],
+                                                                                      celldata.gradients[i],
+                                                                                      celldata.positions[i].y,
+                                                                                      celldata.wall_distances[i]);
+                celldata.flowstates[i].k_t = myConfig.turb_model.turbulent_conductivity(celldata.flowstates[i], gmodel);
+            } else {
+                /* Presume this part of the flow is laminar; clear turbulence quantities. */
+                celldata.flowstates[i].mu_t= 0.0;
+                celldata.flowstates[i].k_t = 0.0;
+            }
+        }
+    }
+    } // end estimate_turbulence_viscosity()
+
+    @nogc
+    void estimate_turbulence_viscosity(FVCell[] cell_list)
     {
         version(turbulence) { // Exit instantly if turbulence capability disabled
         if (cell_list.length == 0) { cell_list = cells; }
         foreach (cell; cell_list) {
             cell.turbulence_viscosity();
-            cell.turbulence_viscosity_factor(myConfig.transient_mu_t_factor);
-            cell.turbulence_viscosity_limit(myConfig.max_mu_t_factor);
             cell.turbulence_viscosity_zero_if_not_in_zone();
         }
         }
