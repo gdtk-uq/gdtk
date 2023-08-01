@@ -486,7 +486,7 @@ public:
             auto nf = bndry.face_id_list.length;
             foreach (j; 0 .. nf) {
                 size_t my_id = faces[bndry.face_id_list[j]].id;
-                size_t bid = faces[bndry.face_id_list[j]].id-ninteriorfaces;
+                size_t bid = faces[bndry.face_id_list[j]].id;
                 int my_outsign = bndry.outsign_list[j];
 
                 // For a shared boundary both sides are okay, so we skip
@@ -796,13 +796,12 @@ public:
         }
 
         foreach(idx; ninteriorfaces .. nfaces){
-            size_t bidx = idx-ninteriorfaces;
-            if (facedata.left_interior_only[bidx]) {
+            if (facedata.left_interior_only[idx]) {
                 size_t l = facedata.f2c[idx].left;
                 facedata.flowstates[idx].mu_t = celldata.flowstates[l].mu_t;
                 facedata.flowstates[idx].k_t =  celldata.flowstates[l].k_t;
 
-            } else if (facedata.right_interior_only[bidx]) {
+            } else if (facedata.right_interior_only[idx]) {
                 size_t r = facedata.f2c[idx].right;
                 facedata.flowstates[idx].mu_t = celldata.flowstates[r].mu_t;
                 facedata.flowstates[idx].k_t =  celldata.flowstates[r].k_t;
@@ -1063,12 +1062,11 @@ public:
         foreach(idx; face_idxs){
             if (idx<ninteriorfaces) continue; // skip if given an interior face
 
-            size_t bidx = idx-ninteriorfaces;
-            if (facedata.left_interior_only[bidx]) {
+            if (facedata.left_interior_only[idx]) {
                 size_t l = facedata.f2c[idx].left;
                 size_t r = facedata.f2c[idx].right;
                 celldata.lsqgradients[r].copy_values_from(celldata.lsqgradients[l]);
-            } else if (facedata.right_interior_only[bidx]) {
+            } else if (facedata.right_interior_only[idx]) {
                 size_t l = facedata.f2c[idx].left;
                 size_t r = facedata.f2c[idx].right;
                 celldata.lsqgradients[l].copy_values_from(celldata.lsqgradients[r]);
@@ -1117,8 +1115,7 @@ public:
                 bool on_boundary = (idx>=ninteriorfaces);
                 if (on_boundary && suppress_reconstruction_at_boundaries){
                     // Check for a real boundary, i.e. one that isn't an exchange boundary
-                    size_t bidx = idx-ninteriorfaces;
-                    if (facedata.left_interior_only[bidx] || facedata.right_interior_only[bidx]) {
+                    if (facedata.left_interior_only[idx] || facedata.right_interior_only[idx]) {
                         do_reconstruction = false;
                     }
                 }
@@ -1222,12 +1219,11 @@ public:
         } // Done interior faces, next we do the boundaries of this block
 
         foreach(idx; ninteriorfaces .. nfaces){
-            size_t bidx = idx-ninteriorfaces;
-            if (facedata.left_interior_only[bidx]) {
+            if (facedata.left_interior_only[idx]) {
                 size_t l = facedata.f2c[idx].left;
                 facedata.gradients[idx].copy_values_from(celldata.gradients[l]);
 
-            } else if (facedata.right_interior_only[bidx]) {
+            } else if (facedata.right_interior_only[idx]) {
                 size_t r = facedata.f2c[idx].right;
                 facedata.gradients[idx].copy_values_from(celldata.gradients[r]);
 

@@ -367,8 +367,8 @@ public:
         facedata.normals.length = nfaces;
         facedata.tangents1.length = nfaces;
         facedata.tangents2.length = nfaces;
-        facedata.left_interior_only.length = nbfaces;
-        facedata.right_interior_only.length = nbfaces;
+        facedata.left_interior_only.length = nfaces;
+        facedata.right_interior_only.length = nfaces;
         facedata.stencil_idxs.length = nfaces;
         facedata.fluxes.length = nfaces*neq;
 

@@ -573,54 +573,53 @@ public:
         }
 
         // Setup dense arrays for fast checks of left or right data available (NNG)
-        size_t bidx = 0;
         // North
         foreach (k; 0 .. nkc) {
             foreach (i; 0 .. nic) {
+                size_t idx = ifj_index(i, njc, k);
                 if (!startsWith(bc[Face.north].type, "exchange_"))
-                    facedata.left_interior_only[bidx] = true;
-                bidx++;
+                    facedata.left_interior_only[idx] = true;
             }
         }
         // South
         foreach (k; 0 .. nkc) {
             foreach (i; 0 .. nic) {
+                size_t idx = ifj_index(i, 0, k);
                 if (!startsWith(bc[Face.south].type, "exchange_"))
-                    facedata.right_interior_only[bidx] = true;
-                bidx++;
+                    facedata.right_interior_only[idx] = true;
             }
         }
         // East
         foreach (k; 0 .. nkc) {
             foreach (j; 0 .. njc) {
+                size_t idx = ifi_index(nic, j, k);
                 if (!startsWith(bc[Face.east].type, "exchange_"))
-                    facedata.left_interior_only[bidx] = true;
-                bidx++;
+                    facedata.left_interior_only[idx] = true;
             }
         }
         // West
         foreach (k; 0 .. nkc) {
             foreach (j; 0 .. njc) {
+                size_t idx = ifi_index(0, j, k);
                 if (!startsWith(bc[Face.west].type, "exchange_"))
-                    facedata.right_interior_only[bidx] = true;
-                bidx++;
+                    facedata.right_interior_only[idx] = true;
             }
         }
         if (myConfig.dimensions == 3) {
             // Top
             foreach (j; 0 .. njc) {
                 foreach (i; 0 .. nic) {
+                    size_t idx = ifk_index(i, j, nkc);
                     if (!startsWith(bc[Face.top].type, "exchange_"))
-                        facedata.left_interior_only[bidx] = true;
-                    bidx++;
+                        facedata.left_interior_only[idx] = true;
                 }
             }
             // Bottom
             foreach (j; 0 .. njc) {
                 foreach (i; 0 .. nic) {
+                    size_t idx = ifk_index(i, j, 0);
                     if (!startsWith(bc[Face.bottom].type, "exchange_"))
-                        facedata.right_interior_only[bidx] = true;
-                    bidx++;
+                        facedata.right_interior_only[idx] = true;
                 }
             }
         } // end if (myConfig.dimensions == 3)
@@ -2451,7 +2450,6 @@ public:
 
         // Boundary faces go in ghost cell order: north, south, east, west, top, bottom
         size_t gidx = nic*njc*nkc;
-        size_t bidx = 0;
 
         foreach (k; 0 .. nkc) {
             foreach (i; 0 .. nic) {
@@ -2459,14 +2457,14 @@ public:
                 idx = ifj_index(i,j,k);
                 l = cell_index(i, j-1, k);
                 r = gidx;
-                if (facedata.left_interior_only[bidx]) { // ghost cells are only on the right
+                if (facedata.left_interior_only[idx]) { // ghost cells are only on the right
                     facedata.flowstates[idx].mu_t = celldata.flowstates[l].mu_t;
                     facedata.flowstates[idx].k_t = celldata.flowstates[l].k_t;
                 } else {
                     facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
                     facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
                 }
-                bidx++; gidx+=n_ghost_cell_layers;
+                gidx+=n_ghost_cell_layers;
             }
         }
 
@@ -2476,14 +2474,14 @@ public:
                 idx = ifj_index(i,j,k);
                 l = gidx;
                 r = cell_index(i, j, k);
-                if (facedata.right_interior_only[bidx]) { // ghost cells are only on the left
+                if (facedata.right_interior_only[idx]) { // ghost cells are only on the left
                     facedata.flowstates[idx].mu_t = celldata.flowstates[r].mu_t;
                     facedata.flowstates[idx].k_t = celldata.flowstates[r].k_t;
                 } else {
                     facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
                     facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
                 }
-                bidx++; gidx+=n_ghost_cell_layers;
+                gidx+=n_ghost_cell_layers;
             }
         }
 
@@ -2494,14 +2492,14 @@ public:
                 idx = ifi_index(i,j,k);
                 l = cell_index(i-1, j, k);
                 r = gidx;
-                if (facedata.left_interior_only[bidx]) { // ghost cells are only on the right
+                if (facedata.left_interior_only[idx]) { // ghost cells are only on the right
                     facedata.flowstates[idx].mu_t = celldata.flowstates[l].mu_t;
                     facedata.flowstates[idx].k_t = celldata.flowstates[l].k_t;
                 } else {
                     facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
                     facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
                 }
-                bidx++; gidx+=n_ghost_cell_layers;
+                gidx+=n_ghost_cell_layers;
             }
         }
 
@@ -2511,14 +2509,14 @@ public:
                 idx = ifi_index(i,j,k);
                 l = gidx;
                 r = cell_index(i, j, k);
-                if (facedata.right_interior_only[bidx]) { // ghost cells are only on the left
+                if (facedata.right_interior_only[idx]) { // ghost cells are only on the left
                     facedata.flowstates[idx].mu_t = celldata.flowstates[r].mu_t;
                     facedata.flowstates[idx].k_t = celldata.flowstates[r].k_t;
                 } else {
                     facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
                     facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
                 }
-                bidx++; gidx+=n_ghost_cell_layers;
+                gidx+=n_ghost_cell_layers;
             }
         }
 
@@ -2529,14 +2527,14 @@ public:
                     idx = ifk_index(i,j,k);
                     l = cell_index(i, j, k-1);
                     r = gidx;
-                    if (facedata.left_interior_only[bidx]) { // ghost cells are only on the right
+                    if (facedata.left_interior_only[idx]) { // ghost cells are only on the right
                         facedata.flowstates[idx].mu_t = celldata.flowstates[l].mu_t;
                         facedata.flowstates[idx].k_t = celldata.flowstates[l].k_t;
                     } else {
                         facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
                         facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
                     }
-                    bidx++; gidx+=n_ghost_cell_layers;
+                    gidx+=n_ghost_cell_layers;
                 }
             }
 
@@ -2546,14 +2544,14 @@ public:
                     idx = ifk_index(i,j,k);
                     l = gidx;
                     r = cell_index(i, j, k);
-                    if (facedata.right_interior_only[bidx]) { // ghost cells are only on the left
+                    if (facedata.right_interior_only[idx]) { // ghost cells are only on the left
                         facedata.flowstates[idx].mu_t = celldata.flowstates[r].mu_t;
                         facedata.flowstates[idx].k_t = celldata.flowstates[r].k_t;
                     } else {
                         facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
                         facedata.flowstates[idx].k_t = 0.5*(celldata.flowstates[l].k_t + celldata.flowstates[r].k_t);
                     }
-                    bidx++; gidx+=n_ghost_cell_layers;
+                    gidx+=n_ghost_cell_layers;
                 }
             }
         }
@@ -3062,7 +3060,6 @@ public:
 
         // Boundary faces go in ghost cell order: north, south, east, west, top, bottom
         size_t gidx = nic*njc*nkc;
-        size_t bidx = 0;
 
         foreach (k; 0 .. nkc) {
             foreach (i; 0 .. nic) {
@@ -3070,7 +3067,7 @@ public:
                 idx = ifj_index(i,j,k);
                 l = cell_index(i, j-1, k);
                 r = gidx;
-                if (facedata.left_interior_only[bidx]) { // ghost cells are only on the right
+                if (facedata.left_interior_only[idx]) { // ghost cells are only on the right
                     facedata.gradients[idx].copy_values_from(celldata.gradients[l]);
                 } else {
                     apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
@@ -3078,7 +3075,7 @@ public:
                                                   celldata.flowstates[l],celldata.flowstates[r],
                                                   facedata.gradients[idx], nsp, nmodes, nturb, is3D);
                 }
-                bidx++; gidx+=n_ghost_cell_layers;
+                gidx+=n_ghost_cell_layers;
             }
         }
 
@@ -3088,7 +3085,7 @@ public:
                 idx = ifj_index(i,j,k);
                 l = gidx;
                 r = cell_index(i, j, k);
-                if (facedata.right_interior_only[bidx]) { // ghost cells are only on the left
+                if (facedata.right_interior_only[idx]) { // ghost cells are only on the left
                     facedata.gradients[idx].copy_values_from(celldata.gradients[r]);
                 } else {
                     apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
@@ -3096,7 +3093,7 @@ public:
                                                   celldata.flowstates[l],celldata.flowstates[r],
                                                   facedata.gradients[idx], nsp, nmodes, nturb, is3D);
                 }
-                bidx++; gidx+=n_ghost_cell_layers;
+                gidx+=n_ghost_cell_layers;
             }
         }
 
@@ -3107,7 +3104,7 @@ public:
                 idx = ifi_index(i,j,k);
                 l = cell_index(i-1, j, k);
                 r = gidx;
-                if (facedata.left_interior_only[bidx]) { // ghost cells are only on the right
+                if (facedata.left_interior_only[idx]) { // ghost cells are only on the right
                     facedata.gradients[idx].copy_values_from(celldata.gradients[l]);
                 } else {
                     apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
@@ -3115,7 +3112,7 @@ public:
                                                   celldata.flowstates[l],celldata.flowstates[r],
                                                   facedata.gradients[idx], nsp, nmodes, nturb, is3D);
                 }
-                bidx++; gidx+=n_ghost_cell_layers;
+                gidx+=n_ghost_cell_layers;
             }
         }
 
@@ -3125,7 +3122,7 @@ public:
                 idx = ifi_index(i,j,k);
                 l = gidx;
                 r = cell_index(i, j, k);
-                if (facedata.right_interior_only[bidx]) { // ghost cells are only on the left
+                if (facedata.right_interior_only[idx]) { // ghost cells are only on the left
                     facedata.gradients[idx].copy_values_from(celldata.gradients[r]);
                 } else {
                     apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
@@ -3133,7 +3130,7 @@ public:
                                                   celldata.flowstates[l],celldata.flowstates[r],
                                                   facedata.gradients[idx], nsp, nmodes, nturb, is3D);
                 }
-                bidx++; gidx+=n_ghost_cell_layers;
+                gidx+=n_ghost_cell_layers;
             }
         }
 
@@ -3144,7 +3141,7 @@ public:
                     idx = ifk_index(i,j,k);
                     l = cell_index(i, j, k-1);
                     r = gidx;
-                    if (facedata.left_interior_only[bidx]) { // ghost cells are only on the right
+                    if (facedata.left_interior_only[idx]) { // ghost cells are only on the right
                         facedata.gradients[idx].copy_values_from(celldata.gradients[l]);
                     } else {
                         apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
@@ -3152,7 +3149,7 @@ public:
                                                       celldata.flowstates[l],celldata.flowstates[r],
                                                       facedata.gradients[idx], nsp, nmodes, nturb, is3D);
                     }
-                    bidx++; gidx+=n_ghost_cell_layers;
+                    gidx+=n_ghost_cell_layers;
                 }
             }
 
@@ -3162,7 +3159,7 @@ public:
                     idx = ifk_index(i,j,k);
                     l = gidx;
                     r = cell_index(i, j, k);
-                    if (facedata.right_interior_only[bidx]) { // ghost cells are only on the left
+                    if (facedata.right_interior_only[idx]) { // ghost cells are only on the left
                         facedata.gradients[idx].copy_values_from(celldata.gradients[r]);
                     } else {
                         apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
@@ -3170,7 +3167,7 @@ public:
                                                       celldata.flowstates[l],celldata.flowstates[r],
                                                       facedata.gradients[idx], nsp, nmodes, nturb, is3D);
                     }
-                    bidx++; gidx+=n_ghost_cell_layers;
+                    gidx+=n_ghost_cell_layers;
                 }
             }
         } // end if (myConfig.dimensions == 3)
