@@ -584,11 +584,13 @@ public:
     }
 
     @nogc
-    void estimate_turbulence_viscosity()
+    void estimate_turbulence_viscosity(size_t[] cell_idxs = [])
     {
     version(turbulence) { // Exit instantly if turbulence capability disabled
         auto gmodel = myConfig.gmodel;
-        foreach (i; 0 .. ncells) {
+        if (cell_idxs.length == 0) cell_idxs = celldata.all_cell_idxs;
+
+        foreach (i; cell_idxs) {
             if ( celldata.in_turbulent_zone[i] ) {
                 celldata.flowstates[i].mu_t = myConfig.turb_model.turbulent_viscosity(celldata.flowstates[i],
                                                                                       celldata.gradients[i],
