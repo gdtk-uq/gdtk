@@ -228,7 +228,7 @@ private:
         number DiZi = 0.0;
         number theta = 1.0;
         version(multi_T_gas){
-            if (Q.T_modes.length>0) theta = Q.T_modes[0]/Q.T;
+            if (Q.T_modes.length>0) theta = Q.T_modes[$-1]/Q.T;
         }
 
         // The following modified definition of Z was designed to handle
