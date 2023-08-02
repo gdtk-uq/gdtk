@@ -289,6 +289,8 @@ function output.write_config_file(fileName)
    f:write(string.format('"artificial_compressibility": %s,\n', tostring(config.artificial_compressibility)))
    f:write(string.format('"ac_alpha": %.18e,\n', config.ac_alpha))
    --
+   f:write(string.format('"radiation": %s,\n', tostring(config.radiation)))
+   --
    f:write(string.format('"grid_motion": "%s",\n', tostring(config.grid_motion)))
    f:write(string.format('"write_vertex_velocities": %s,\n', tostring(config.write_vertex_velocities)))
    f:write(string.format('"udf_grid_motion_file": "%s",\n', tostring(config.udf_grid_motion_file)))

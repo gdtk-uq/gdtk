@@ -1918,6 +1918,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_bool("artificial_compressibility", "artificial_compressibility"));
     mixin(update_double("ac_alpha", "ac_alpha"));
+    mixin(update_bool("radiation", "radiation"));
     mixin(update_bool("MHD", "MHD"));
     version(MHD) {
         // no problem
