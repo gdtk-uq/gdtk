@@ -1467,7 +1467,7 @@ void evalRHS(double pseudoSimTime, int ftl)
             // we need to average cell-centered spatial (/viscous) gradients to get approximations of the gradients
             // at the cell interfaces before the viscous flux calculation.
             if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
-                blk.average_lsq_cell_derivs_to_faces(0);
+                blk.average_lsq_cell_derivs_to_faces();
             }
             blk.estimate_turbulence_viscosity();
         }

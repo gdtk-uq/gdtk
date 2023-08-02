@@ -290,7 +290,6 @@ public:
                                                FVCell[] cell_list = [], FVInterface[] iface_list = [],
                                                FVVertex[] vertex_list = []);
     abstract size_t[] get_cell_write_indices();
-    @nogc abstract void average_lsq_cell_derivs_to_faces(int gtl);
     abstract void eval_udf_source_vectors(double simTime);
 
     void allocate_dense_celldata(size_t ncells, size_t nghost, size_t neq, size_t nftl)
@@ -371,6 +370,7 @@ public:
         facedata.right_interior_only.length = nfaces;
         facedata.stencil_idxs.length = nfaces;
         facedata.fluxes.length = nfaces*neq;
+        facedata.f2c.length = nfaces;
 
         if (myConfig.interpolation_order>=2) facedata.l2r2_interp_data.length = nfaces;
         if (myConfig.interpolation_order==3) facedata.l3r3_interp_data.length = nfaces;
@@ -2209,6 +2209,41 @@ public:
         }
         return;
     }
+
+    @nogc void average_lsq_cell_derivs_to_faces(size_t[] face_idxs=[]){
+    /*
+        Fast averageing of the cell-based derivatives, using the expression from
+        A. Haselbacher, J. Blazek, Accurate and efficient discretization
+        of Navier-Stokes equations on mixed grids, AIAA Journal 38
+        (2000) 2094–2102. doi:10.2514/2.871.
+
+        NNG, April 2023
+    */
+        size_t nsp = myConfig.n_species;
+        size_t nmodes = myConfig.n_modes;
+        size_t nturb = myConfig.turb_model.nturb;
+        bool is3D = (myConfig.dimensions == 3);
+        if (face_idxs.length==0) face_idxs = facedata.all_face_idxs;
+
+        foreach(idx; face_idxs){
+            size_t l = facedata.f2c[idx].left;
+            size_t r = facedata.f2c[idx].right;
+
+            if (facedata.left_interior_only[idx]) {
+                facedata.gradients[idx].copy_values_from(celldata.gradients[l]);
+
+            } else if (facedata.right_interior_only[idx]) {
+                facedata.gradients[idx].copy_values_from(celldata.gradients[r]);
+
+            } else {
+                // Assume we have both cells, for a shared or internal boundary interface
+                apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
+                                              celldata.gradients[l], celldata.gradients[r],
+                                              celldata.flowstates[l],celldata.flowstates[r],
+                                              facedata.gradients[idx], nsp, nmodes, nturb, is3D);
+            }
+        } // end main face loop
+    } // end average_lsq_cell_derivs_to_faces routine
 } // end class FluidBlock
 
 @nogc void apply_haschelbacher_averaging(Vector3 lpos, Vector3 rpos, Vector3 n,

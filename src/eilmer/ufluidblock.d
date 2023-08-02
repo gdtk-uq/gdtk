@@ -338,7 +338,6 @@ public:
         celldata.lsqgradients.reserve(ncells + nghost);
         foreach (i; 0 .. ncells + nghost) celldata.lsqgradients ~= LSQInterpGradients(nsp, nmodes, nturb); // TODO: skip if not needed
 
-        facedata.f2c.length = nfaces;
         facedata.dL.length = nfaces;
         facedata.dR.length = nfaces;
 
@@ -1194,57 +1193,6 @@ public:
         index = iota(0, ncells, myConfig.nic_write).array();
         return index;
     }
-
-    @nogc override void average_lsq_cell_derivs_to_faces(int gtl){
-    /*
-        Fast averageing of the cell-based derivatives, using the expression from
-        A. Haselbacher, J. Blazek, Accurate and efficient discretization
-        of Navier-Stokes equations on mixed grids, AIAA Journal 38
-        (2000) 2094–2102. doi:10.2514/2.871.
-
-        NNG, April 2023
-    */
-        size_t nsp = myConfig.n_species;
-        size_t nmodes = myConfig.n_modes;
-        size_t nturb = myConfig.turb_model.nturb;
-        bool is3D = (myConfig.dimensions == 3);
-
-        foreach(idx; 0 .. ninteriorfaces){
-            size_t l = facedata.f2c[idx].left;
-            size_t r = facedata.f2c[idx].right;
-            apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
-                                          celldata.gradients[l], celldata.gradients[r],
-                                          celldata.flowstates[l],celldata.flowstates[r],
-                                          facedata.gradients[idx], nsp, nmodes, nturb, is3D);
-        } // Done interior faces, next we do the boundaries of this block
-
-        foreach(idx; ninteriorfaces .. nfaces){
-            if (facedata.left_interior_only[idx]) {
-                size_t l = facedata.f2c[idx].left;
-                facedata.gradients[idx].copy_values_from(celldata.gradients[l]);
-
-            } else if (facedata.right_interior_only[idx]) {
-                size_t r = facedata.f2c[idx].right;
-                facedata.gradients[idx].copy_values_from(celldata.gradients[r]);
-
-            } else {
-                // Assume we have both cells, for a shared boundary interface
-                size_t l = facedata.f2c[idx].left;
-                size_t r = facedata.f2c[idx].right;
-                //debug{
-                //    if (verbose) writefln("   lfs %s rfs %s lg %s rg %s", celldata.flowstates[l].vel.x, celldata.flowstates[r].vel.x,
-                //                                                                      celldata.gradients[l].vel[0], celldata.gradients[r].vel[0]);
-                //}
-                apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
-                                              celldata.gradients[l], celldata.gradients[r],
-                                              celldata.flowstates[l],celldata.flowstates[r],
-                                              facedata.gradients[idx], nsp, nmodes, nturb, is3D);
-            //debug{
-            //    if (verbose) writefln("blk %d Done face %d: %s", id, idx, facedata.gradients[idx]);
-            //}
-            } // end else
-        } // end main face loop
-    } // end average_lsq_cell_derivs_to_faces routine
 
     override void eval_udf_source_vectors(double simTime)
     {

@@ -787,6 +787,12 @@ public:
             }
         } // end if (myConfig.dimensions == 3)
 
+        // TODO: Redundant storage. But we use these in some areas of the code that are structure agnostic
+        foreach(idx; 0 .. nfaces){
+            facedata.f2c[idx].left  = facedata.stencil_idxs[idx].L0;
+            facedata.f2c[idx].right = facedata.stencil_idxs[idx].R0;
+        }
+
         // Now that all of the cells and faces are constructed,
         // We want to store the local structure of the grid
         // in the array of references stored in the faces.
@@ -2999,179 +3005,6 @@ public:
         }
         return index;
     }
-
-    @nogc override void average_lsq_cell_derivs_to_faces(int gtl){
-    /*
-        Fast averaging of the cell-based derivatives, using the expression from
-        A. Haselbacher, J. Blazek, Accurate and efficient discretization
-        of Navier-Stokes equations on mixed grids, AIAA Journal 38
-        (2000) 2094–2102. doi:10.2514/2.871.
-
-        NNG, April 2023
-    */
-        size_t nsp = myConfig.n_species;
-        size_t nmodes = myConfig.n_modes;
-        size_t nturb = myConfig.turb_model.nturb;
-        bool is3D = (myConfig.dimensions == 3);
-
-        // ifi interior faces
-        size_t l, r, idx;
-        foreach(k; 0 .. nkc) {
-            foreach(j; 0 .. njc){
-                foreach(i; 1 .. niv-1){
-                    idx = ifi_index(i,j,k);
-                    l = cell_index(i-1, j, k);
-                    r = cell_index(i,   j, k);
-                    apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
-                                                  celldata.gradients[l], celldata.gradients[r],
-                                                  celldata.flowstates[l],celldata.flowstates[r],
-                                                  facedata.gradients[idx], nsp, nmodes, nturb, is3D);
-                }
-            }
-        }
-        // ifj interior faces
-        foreach(k; 0 .. nkc) {
-            foreach(j; 1 .. njv-1){
-                foreach(i; 0 .. nic){
-                    idx = ifj_index(i,j,k);
-                    l = cell_index(i, j-1, k);
-                    r = cell_index(i, j,   k);
-                    apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
-                                                  celldata.gradients[l], celldata.gradients[r],
-                                                  celldata.flowstates[l],celldata.flowstates[r],
-                                                  facedata.gradients[idx], nsp, nmodes, nturb, is3D);
-                }
-            }
-        }
-        // ifk interior faces
-        foreach(k; 1 .. nkv-1) {
-            foreach(j; 0 .. njc){
-                foreach(i; 0 .. nic){
-                    idx = ifk_index(i,j,k);
-                    l = cell_index(i, j, k-1);
-                    r = cell_index(i, j, k);
-                    apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
-                                                  celldata.gradients[l], celldata.gradients[r],
-                                                  celldata.flowstates[l],celldata.flowstates[r],
-                                                  facedata.gradients[idx], nsp, nmodes, nturb, is3D);
-                }
-            }
-        }
-
-        // Boundary faces go in ghost cell order: north, south, east, west, top, bottom
-        size_t gidx = nic*njc*nkc;
-
-        foreach (k; 0 .. nkc) {
-            foreach (i; 0 .. nic) {
-                immutable size_t j=njv-1; // North
-                idx = ifj_index(i,j,k);
-                l = cell_index(i, j-1, k);
-                r = gidx;
-                if (facedata.left_interior_only[idx]) { // ghost cells are only on the right
-                    facedata.gradients[idx].copy_values_from(celldata.gradients[l]);
-                } else {
-                    apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
-                                                  celldata.gradients[l], celldata.gradients[r],
-                                                  celldata.flowstates[l],celldata.flowstates[r],
-                                                  facedata.gradients[idx], nsp, nmodes, nturb, is3D);
-                }
-                gidx+=n_ghost_cell_layers;
-            }
-        }
-
-        foreach (k; 0 .. nkc) {
-            foreach (i; 0 .. nic) {
-                immutable size_t j=0; // South
-                idx = ifj_index(i,j,k);
-                l = gidx;
-                r = cell_index(i, j, k);
-                if (facedata.right_interior_only[idx]) { // ghost cells are only on the left
-                    facedata.gradients[idx].copy_values_from(celldata.gradients[r]);
-                } else {
-                    apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
-                                                  celldata.gradients[l], celldata.gradients[r],
-                                                  celldata.flowstates[l],celldata.flowstates[r],
-                                                  facedata.gradients[idx], nsp, nmodes, nturb, is3D);
-                }
-                gidx+=n_ghost_cell_layers;
-            }
-        }
-
-
-        foreach (k; 0 .. nkc) {
-            foreach (j; 0 .. njc) {
-                immutable size_t i=niv-1; // East
-                idx = ifi_index(i,j,k);
-                l = cell_index(i-1, j, k);
-                r = gidx;
-                if (facedata.left_interior_only[idx]) { // ghost cells are only on the right
-                    facedata.gradients[idx].copy_values_from(celldata.gradients[l]);
-                } else {
-                    apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
-                                                  celldata.gradients[l], celldata.gradients[r],
-                                                  celldata.flowstates[l],celldata.flowstates[r],
-                                                  facedata.gradients[idx], nsp, nmodes, nturb, is3D);
-                }
-                gidx+=n_ghost_cell_layers;
-            }
-        }
-
-        foreach (k; 0 .. nkc) {
-            foreach (j; 0 .. njc) {
-                immutable size_t i=0; // West
-                idx = ifi_index(i,j,k);
-                l = gidx;
-                r = cell_index(i, j, k);
-                if (facedata.right_interior_only[idx]) { // ghost cells are only on the left
-                    facedata.gradients[idx].copy_values_from(celldata.gradients[r]);
-                } else {
-                    apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
-                                                  celldata.gradients[l], celldata.gradients[r],
-                                                  celldata.flowstates[l],celldata.flowstates[r],
-                                                  facedata.gradients[idx], nsp, nmodes, nturb, is3D);
-                }
-                gidx+=n_ghost_cell_layers;
-            }
-        }
-
-        if (is3D == 3) {
-            foreach (j; 0 .. njc) {
-                foreach (i; 0 .. nic) {
-                    immutable size_t k=nkv-1; // Top
-                    idx = ifk_index(i,j,k);
-                    l = cell_index(i, j, k-1);
-                    r = gidx;
-                    if (facedata.left_interior_only[idx]) { // ghost cells are only on the right
-                        facedata.gradients[idx].copy_values_from(celldata.gradients[l]);
-                    } else {
-                        apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
-                                                      celldata.gradients[l], celldata.gradients[r],
-                                                      celldata.flowstates[l],celldata.flowstates[r],
-                                                      facedata.gradients[idx], nsp, nmodes, nturb, is3D);
-                    }
-                    gidx+=n_ghost_cell_layers;
-                }
-            }
-
-            foreach (j; 0 .. njc) {
-                foreach (i; 0 .. nic) {
-                    immutable size_t k=0; // Bot
-                    idx = ifk_index(i,j,k);
-                    l = gidx;
-                    r = cell_index(i, j, k);
-                    if (facedata.right_interior_only[idx]) { // ghost cells are only on the left
-                        facedata.gradients[idx].copy_values_from(celldata.gradients[r]);
-                    } else {
-                        apply_haschelbacher_averaging(celldata.positions[l], celldata.positions[r], facedata.normals[idx],
-                                                      celldata.gradients[l], celldata.gradients[r],
-                                                      celldata.flowstates[l],celldata.flowstates[r],
-                                                      facedata.gradients[idx], nsp, nmodes, nturb, is3D);
-                    }
-                    gidx+=n_ghost_cell_layers;
-                }
-            }
-        } // end if (myConfig.dimensions == 3)
-    } // end average_lsq_cell_derivs_to_faces routine
 
     override void eval_udf_source_vectors(double simTime)
     {
