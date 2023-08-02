@@ -782,40 +782,6 @@ public:
         foreach (i; 0 .. vertices.length) { grid[i].set(vertices[i].pos[gtl]); }
     }
 
-    @nogc
-    override void average_turbulent_transprops_to_faces()
-    {
-        if (!myConfig.turb_model.isTurbulent) return;
-
-        foreach(idx; 0 .. ninteriorfaces){
-            size_t l = facedata.f2c[idx].left;
-            size_t r = facedata.f2c[idx].right;
-            facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
-            facedata.flowstates[idx].k_t =  0.5*(celldata.flowstates[l].k_t  + celldata.flowstates[r].k_t);
-        }
-
-        foreach(idx; ninteriorfaces .. nfaces){
-            if (facedata.left_interior_only[idx]) {
-                size_t l = facedata.f2c[idx].left;
-                facedata.flowstates[idx].mu_t = celldata.flowstates[l].mu_t;
-                facedata.flowstates[idx].k_t =  celldata.flowstates[l].k_t;
-
-            } else if (facedata.right_interior_only[idx]) {
-                size_t r = facedata.f2c[idx].right;
-                facedata.flowstates[idx].mu_t = celldata.flowstates[r].mu_t;
-                facedata.flowstates[idx].k_t =  celldata.flowstates[r].k_t;
-
-            } else {
-                // Assume we have both cells, for a shared boundary interface
-                size_t l = facedata.f2c[idx].left;
-                size_t r = facedata.f2c[idx].right;
-                facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
-                facedata.flowstates[idx].k_t =  0.5*(celldata.flowstates[l].k_t  + celldata.flowstates[r].k_t);
-            } // end else
-        } // end main face loop
-    }
-
-
     override void read_new_underlying_grid(string fileName)
     {
         if (myConfig.verbosity_level > 1) { writeln("read_new_underlying_grid() for block ", id); }

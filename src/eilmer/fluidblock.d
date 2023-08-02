@@ -926,11 +926,29 @@ public:
     }
 
     @nogc
-    void average_turbulent_transprops_to_faces()
+    void average_turbulent_transprops_to_faces(size_t[] face_idxs=[])
     {
-        if (myConfig.turb_model.isTurbulent){
-            foreach (iface; faces) { iface.average_turbulent_transprops(); }
-        }
+        if (!myConfig.turb_model.isTurbulent) return;
+        if (face_idxs.length==0) face_idxs = facedata.all_face_idxs;
+
+        foreach(idx; face_idxs){
+            size_t l = facedata.f2c[idx].left;
+            size_t r = facedata.f2c[idx].right;
+
+            if (facedata.left_interior_only[idx]) {
+                facedata.flowstates[idx].mu_t = celldata.flowstates[l].mu_t;
+                facedata.flowstates[idx].k_t =  celldata.flowstates[l].k_t;
+
+            } else if (facedata.right_interior_only[idx]) {
+                facedata.flowstates[idx].mu_t = celldata.flowstates[r].mu_t;
+                facedata.flowstates[idx].k_t =  celldata.flowstates[r].k_t;
+
+            } else {
+                // Assume we have both cells, for a shared or internal boundary interface
+                facedata.flowstates[idx].mu_t = 0.5*(celldata.flowstates[l].mu_t + celldata.flowstates[r].mu_t);
+                facedata.flowstates[idx].k_t =  0.5*(celldata.flowstates[l].k_t  + celldata.flowstates[r].k_t);
+            }
+        } // end main face loop
     }
 
     @nogc
