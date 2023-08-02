@@ -1179,9 +1179,23 @@ public:
             // Add value to total energy
             // FIX-ME: - assuming electronic mode is the last in the vector of energies
             //         - what about Q_renergies[0]?
+            number rho = fs.gas.rho;
+            number T_rad_limit = 12000.0;
+            number T = fmin(fs.gas.T, T_rad_limit);
+            version(multi_T_gas) {
+                if (cqi.n_modes>0){
+                    T = fmin(fs.gas.T_modes[0], T_rad_limit);
+                }
+            }
+            //import core.stdc.stdio: printf;
+            //printf("T = %lf", fs.gas.T);
+            number kp = 7.9*(rho/1.225)^^1.10*(T/10000)^^6.95;
+            Q_rE_rad = -kp*5.670374419e-8*T^^4/PI;
             Q[cqi.totEnergy] += Q_rE_rad;
             version(multi_T_gas) {
-                // Q[cqi.modes+cqi.n_modes-1] += Q_rE_rad; // FIX-ME old C++ code
+                if (cqi.n_modes>0){
+                    Q[cqi.modes+cqi.n_modes-1] += Q_rE_rad; // FIX-ME old C++ code
+                }
             }
         }
         return;

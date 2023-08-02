@@ -116,6 +116,8 @@ configOptionsHidden = { -- hidden from user
    artificial_compressibility = false,
    ac_alpha = 0.1,
    --
+   radiation = false,
+   --
    grid_motion = "none",
    write_vertex_velocities = false,
    udf_grid_motion_file = "dummy-grid-motion-file.txt",
