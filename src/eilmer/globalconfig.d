@@ -1130,6 +1130,8 @@ final class GlobalConfig {
     shared static bool save_limiter_values = false;
     // save the cell residual values to file
     shared static bool save_residual_values = false;
+    // save the cell timestep values to file
+    shared static bool save_timestep_values = false;
     // how often in space to save the state to disk
     shared static int nic_write = 1;
     shared static int njc_write = 1;
@@ -1393,6 +1395,7 @@ public:
     bool save_viscous_gradients;
     bool save_limiter_values;
     bool save_residual_values;
+    bool save_timestep_values;
     //
     int nic_write;
     int njc_write;
@@ -1575,6 +1578,7 @@ public:
         save_viscous_gradients = cfg.save_viscous_gradients;
         save_limiter_values = cfg.save_limiter_values;
         save_residual_values = cfg.save_residual_values;
+        save_timestep_values = cfg.save_timestep_values;
         nic_write = cfg.nic_write;
         njc_write = cfg.njc_write;
         nkc_write = cfg.nkc_write;
@@ -2033,6 +2037,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("save_viscous_gradients", "save_viscous_gradients"));
     mixin(update_bool("save_limiter_values", "save_limiter_values"));
     mixin(update_bool("save_residual_values", "save_residual_values"));
+    mixin(update_bool("save_timestep_values", "save_timestep_values"));
     mixin(update_int("nic_write", "nic_write"));
     mixin(update_int("njc_write", "njc_write"));
     mixin(update_int("nkc_write", "nkc_write"));
@@ -2061,6 +2066,7 @@ void set_config_for_core(JSONValue jsonData)
         writeln("  save_viscous_gradients: ", cfg.save_viscous_gradients);
         writeln("  save_limiter_values: ", cfg.save_limiter_values);
         writeln("  save_residual_values: ", cfg.save_residual_values);
+        writeln("  save_timestep_values: ", cfg.save_timestep_values);
         writeln("  viscous_delay: ", cfg.viscous_delay);
         writeln("  viscous_factor_increment: ", cfg.viscous_factor_increment);
         writeln("  shear_stress_relative_limit: ", cfg.shear_stress_relative_limit);

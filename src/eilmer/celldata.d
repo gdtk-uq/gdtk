@@ -93,6 +93,11 @@ class AuxCellData
             if (name == FieldData.tag) return counter;
         }
 
+        if (GlobalConfig.save_timestep_values) {
+            counter += 1;
+            if (name == CellTimestepData.tag) return counter;
+        }
+
         if (name == "") {
             return counter; // hack to get number of items
         } else {
@@ -133,6 +138,8 @@ class AuxCellData
         i = get_order(FieldData.tag);
         if (i >= 0) aux_data[i] = new FieldData();
 
+        i = get_order(CellTimestepData.tag);
+        if (i >= 0) aux_data[i] = new CellTimestepData();
 
         foreach (ref aux; aux_data) {
             aux.init(config);
@@ -1327,6 +1334,41 @@ class FieldData : AuxCellData
         acc["electric_potential"] = new AccessElectricPotential();
         acc["electric_field_x"] = new AccessElectricFieldX();
         acc["electric_field_y"] = new AccessElectricFieldY();
+
+        return acc;
+    }
+}
+
+//=============================================================================
+// Cell Timestep Values
+//=============================================================================
+
+mixin(GenCellVariableAccess!("AccessHyperbolicTimestep", "dt_hyper"));
+mixin(GenCellVariableAccess!("AccessParabolicTimestep", "dt_parab"));
+
+class CellTimestepData : AuxCellData
+// An empty auxiliary data item that acts as a pass-through for accessing
+// the cell timestep values
+{
+    public:
+
+    static tag = "timestep";
+
+    this(){
+        index = AuxCellData.get_order(tag);
+    }
+
+    override void init(LocalConfig myConfig){}
+
+    override @nogc void update(FVCell cell, double dt, double time, size_t step){}
+
+    static VariableAccess[string] get_accessors(LocalConfig myConfig)
+    {
+        VariableAccess[string] acc;
+
+        auto cqi = myConfig.cqi;
+        acc["dt_hyper"] = new AccessHyperbolicTimestep();
+        acc["dt_parab"] = new AccessParabolicTimestep();
 
         return acc;
     }

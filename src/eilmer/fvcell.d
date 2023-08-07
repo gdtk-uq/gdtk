@@ -71,6 +71,8 @@ public:
     // super time-stepping
     number signal_hyp;
     number signal_parab;
+    number dt_hyper;
+    number dt_parab;
     //
     bool fr_reactions_allowed; // if true, will call thermochemical_increment
     double dt_chem; // acceptable time step for finite-rate chemistry

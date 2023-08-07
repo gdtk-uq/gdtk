@@ -138,6 +138,7 @@ configOptionsHidden = { -- hidden from user
    save_viscous_gradients = false,
    save_limiter_values = false,
    save_residual_values = false,
+   save_timestep_values = false,
    nic_write = 1,
    njc_write = 1,
    nkc_write = 1,

@@ -510,6 +510,9 @@ FluidBlockIO[] get_fluid_block_io(FluidBlock blk=null)
     if (GlobalConfig.solve_electric_field) {
         io_list ~= new FieldIO(blk);
     }
+    if (GlobalConfig.save_timestep_values) {
+        io_list ~= new CellTimestepIO(blk);
+    }
 
     return io_list;
 }
@@ -852,3 +855,30 @@ class FieldIO : FluidBlockIO
     }
 }
 
+class CellTimestepIO : FluidBlockIO
+{
+    public:
+
+    this(FluidBlock blk=null)
+    {
+        tag = CellTimestepData.tag;
+        size_t n_cells = 0;
+        LocalConfig myConfig;
+        if (blk !is null) {
+            block = blk;
+            myConfig = block.myConfig;
+            n_cells = block.cells.length;
+        } else {
+            myConfig = new LocalConfig(-1);
+            myConfig.gmodel = GlobalConfig.gmodel_master;
+        }
+        // get all of the cells data
+        index = blk.get_cell_write_indices();
+        set_binary(myConfig.flow_format == "eilmer4binary");
+        // get the accessors
+        foreach (key, acc ; CellTimestepData.get_accessors(myConfig)) {
+            add_accessor(key, acc);
+        }
+        make_buffers(n_cells);
+    }
+}

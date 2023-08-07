@@ -1038,6 +1038,8 @@ public:
                 }
                 // Set the allowable time-step based on hyperbolic time-step.
                 dt_allow = fmin(dt_allow_hyp, GlobalConfig.dt_max);
+                cell.dt_hyper = cfl_value / signal_hyp;
+                cell.dt_parab = cfl_value / signal_parab;
             } else {
                 // no STS
                 dt_allow_hyp = 0;
