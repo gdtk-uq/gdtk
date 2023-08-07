@@ -534,32 +534,28 @@ immutable MAX_STEPS = 30;
     // equation of state with some starting values for density
     // and internal energy.
     gmodel.update_thermo_from_rhou(Q);
-
     T_old = Q.T;
     R_eff = Q.p / (Q.rho * T_old);
     de = 0.01 * Q.u;
     Q.u += de;
-
     try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
-        string msg = "Starting guess at iteration 1 failed in update_thermo_state_pT.";
+        string msg = "Getting gas properties, failed in update_thermo_state_pT.";
         debug {
             msg ~= format("\nException message from update_thermo_from_rhou() was:\n\n");
             msg ~= to!string(caughtException);
         }
         throw new GasModelException(msg);
     }
-
     Cv_eff = de / (Q.T - T_old);
     // Now, get a better guess for the appropriate density and
     // internal energy.
     e_old = Q.u + (T_given - Q.T) * Cv_eff;
     rho_old = p_given / (R_eff * T_given);
-
-    // Evaluate state variables using this guess.
+    //
+    // Evaluate the error functions using this guess.
     Q.rho = rho_old;
     Q.u = e_old;
-
     try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
         string msg = "Starting guess at iteration 2 failed in update_thermo_state_pT.";
@@ -569,9 +565,9 @@ immutable MAX_STEPS = 30;
         }
         throw new GasModelException(msg);
     }
-
     fp_old = p_given - Q.p;
     fT_old = T_given - Q.T;
+    //
     // Update the guess using Newton iterations
     // with the partial derivatives being estimated
     // via finite differences.
@@ -993,10 +989,13 @@ immutable MAX_STEPS = 30;
     number fs_tol_fail = 0.02 * s_given;
 
     // Guess the thermo state assuming that T is a good guess.
+    if (isNaN(Q.T)) {
+        throw new Exception("Q.T is presently Nan but it should have been set to a reasonable guess.");
+    }
     T_old = Q.T;
     try { gmodel.update_thermo_from_pT(Q); }
     catch (Exception caughtException) {
-        string msg = "Starting guess at iteration 0 failed in update_thermo_state_ps.";
+        string msg = "Starting guess for T: failed in update_thermo_state_ps.";
         debug {
             msg ~= format("\nException message from update_thermo_from_pT() was:\n\n");
             msg ~= to!string(caughtException);
@@ -1012,7 +1011,7 @@ immutable MAX_STEPS = 30;
 
     try { gmodel.update_thermo_from_pT(Q); }
     catch (Exception caughtException) {
-        string msg = "Starting guess at iteration 1 failed in update_thermo_state_ps.";
+        string msg = "Starting guess perturbed T: failed in update_thermo_state_ps.";
         debug {
             msg ~= format("\nException message from update_thermo_from_pT() was:\n\n");
             msg ~= to!string(caughtException);

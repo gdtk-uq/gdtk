@@ -540,6 +540,12 @@ public:
     }
     override void update_thermo_from_ps(ref GasState Q, number s)
     {
+        // Assume the p and mass-fractions are correctly set but that T may be NaN.
+        // Since a guess for T is required by the called function, we have to set a value.
+        Q.T = 1000.0;
+        // [TODO] PJ 2023-08-07
+        // We set an arbitrary number for the moment but we should do better,
+        // maybe setting up a list of candidates and selecting the best.
         update_thermo_state_ps(this, Q, s);
     }
     override void update_thermo_from_hs(ref GasState Q, number h, number s)
