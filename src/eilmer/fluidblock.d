@@ -889,23 +889,31 @@ public:
         case SpatialDerivLocn.cells:
             final switch (myConfig.spatial_deriv_calc) {
             case SpatialDerivCalc.least_squares:
-                immutable bool is3D = (myConfig.dimensions == 3);
-                immutable size_t nsp = myConfig.n_species;
-                immutable size_t nmodes = myConfig.n_modes;
-                immutable size_t nturb = myConfig.turb_model.nturb;
-                immutable bool doSpecies = myConfig.turb_model.isTurbulent || myConfig.mass_diffusion_model != MassDiffusionModel.none;
-                foreach(i; 0 .. ncells){
-                    celldata.gradients[i].gradients_at_cells_leastsq(
-                        celldata.flowstates[i], facedata.flowstates, celldata.c2f[i],
-                        celldata.workspaces[i], celldata.nfaces[i],
-                        is3D, nsp, nmodes, nturb, doSpecies);
-                }
+                compute_gradients_at_cells_leastsq();
                 break;
             case SpatialDerivCalc.divergence:
                 throw new Error("divergence thereom not implemented when computing gradients at cell centres.");
             } // end switch
         } // end switch (myConfig.spatial_deriv_locn)
     } // end flow_property_spatial_derivatives()
+
+    @nogc
+    void compute_gradients_at_cells_leastsq(size_t[] cell_idxs=[])
+    {
+        immutable bool is3D = (myConfig.dimensions == 3);
+        immutable size_t nsp = myConfig.n_species;
+        immutable size_t nmodes = myConfig.n_modes;
+        immutable size_t nturb = myConfig.turb_model.nturb;
+        immutable bool doSpecies = myConfig.turb_model.isTurbulent || myConfig.mass_diffusion_model != MassDiffusionModel.none;
+
+        if (cell_idxs.length==0) cell_idxs = celldata.all_cell_idxs;
+        foreach(id; cell_idxs){
+            celldata.gradients[id].gradients_at_cells_leastsq(
+                celldata.flowstates[id], facedata.flowstates, celldata.c2f[id],
+                celldata.workspaces[id], celldata.nfaces[id],
+                is3D, nsp, nmodes, nturb, doSpecies);
+        }
+    }
 
     @nogc
     void clear_fluxes_of_conserved_quantities()
@@ -1759,12 +1767,8 @@ public:
         auto cqi = myConfig.cqi;
         immutable size_t ncq = myConfig.cqi.n;
 
-        foreach(id; halo_face_ids) {
-            foreach(i; 0 .. ncq) facedata.fluxes[id*ncq + i] = 0.0;
-        }
-        foreach(id; halo_cell_ids) {
-            foreach(i; 0 .. ncq) celldata.source_terms[id*ncq + i] = 0.0;
-        }
+        foreach(id; halo_face_ids) { foreach(i; 0 .. ncq) facedata.fluxes[id*ncq + i] = 0.0; }
+        foreach(id; halo_cell_ids) { foreach(i; 0 .. ncq) celldata.source_terms[id*ncq + i] = 0.0; }
 
         bool do_reconstruction = ( flowJacobian.spatial_order > 1 );
 
@@ -1789,19 +1793,7 @@ public:
             }
 
             // currently only for least-squares at faces
-            // TODO: generalise for all spatial gradient methods
-            bool is3D = (myConfig.dimensions == 3);
-            size_t nsp = myConfig.n_species;
-            size_t nmodes = myConfig.n_modes;
-            size_t nturb = myConfig.turb_model.nturb;
-            bool doSpecies = myConfig.turb_model.isTurbulent || myConfig.mass_diffusion_model != MassDiffusionModel.none;
-            foreach(id; halo_cell_ids){
-                celldata.gradients[id].gradients_at_cells_leastsq(
-                    celldata.flowstates[id], facedata.flowstates, celldata.c2f[id],
-                    celldata.workspaces[id], celldata.nfaces[id],
-                    is3D, nsp, nmodes, nturb, doSpecies);
-            }
-
+            compute_gradients_at_cells_leastsq(halo_cell_ids);
             average_lsq_cell_derivs_to_faces(halo_face_ids);
             estimate_turbulence_viscosity(halo_cell_ids);
             average_turbulent_transprops_to_faces(halo_face_ids);
