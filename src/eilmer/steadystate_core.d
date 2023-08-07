@@ -1486,7 +1486,8 @@ void evalRHS(double pseudoSimTime, int ftl)
 
     immutable int step = SimState.step;
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.eval_source_vectors(step, 0, 0);
+        blk.eval_fluid_source_vectors(blk.omegaz);
+        blk.eval_thermochem_source_vector(step);
         blk.eval_udf_source_vectors(pseudoSimTime);
         blk.time_derivatives(0, ftl);
     }

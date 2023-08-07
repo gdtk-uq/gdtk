@@ -2851,10 +2851,12 @@ public:
         return index;
     }
 
-    override void eval_udf_source_vectors(double simTime)
+    override void eval_udf_source_vectors(double simTime, size_t[] cell_list=[])
     {
         if (myConfig.udf_source_terms) {
-            foreach (i, cell; cells) {
+            if (cell_list.length==0) cell_list = celldata.all_cell_idxs;
+            foreach (i; cell_list) {
+                auto cell = cells[i];
                 auto ijk_indices = to_ijk_indices_for_cell(cell.id);
                 size_t i_cell = ijk_indices[0];
                 size_t j_cell = ijk_indices[1];

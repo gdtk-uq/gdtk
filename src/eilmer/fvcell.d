@@ -65,6 +65,8 @@ struct FVCellData{
     size_t[][] c2v;
     double[] dt_local;
     int[][] outsigns;
+    size_t[][] halo_cell_ids;
+    size_t[][] halo_face_ids;
     number[] areas;
     number[] volumes;
     Vector3[] positions;
@@ -1763,6 +1765,12 @@ public:
                 }
             }
         } // finished gathering faces
+
+        // Store relevant ids in the densified structures
+        fvcd.halo_cell_ids[id].length = cell_ids.length;
+        fvcd.halo_face_ids[id].length = face_ids.length;
+        foreach(i, cid; cell_ids) fvcd.halo_cell_ids[id][i] = cid;
+        foreach(i, fid; face_ids) fvcd.halo_face_ids[id][i] = fid;
 
     } // end gather_residual_stencil_lists()
 

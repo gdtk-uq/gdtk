@@ -290,7 +290,7 @@ public:
                                                FVCell[] cell_list = [], FVInterface[] iface_list = [],
                                                FVVertex[] vertex_list = []);
     abstract size_t[] get_cell_write_indices();
-    abstract void eval_udf_source_vectors(double simTime);
+    abstract void eval_udf_source_vectors(double simTime, size_t[] cell_idxs=[]);
 
     void allocate_dense_celldata(size_t ncells, size_t nghost, size_t neq, size_t nftl)
     {
@@ -315,6 +315,8 @@ public:
 
         // This, apparently stupid, array is an experiment
         celldata.all_cell_idxs.length = ncells;
+        celldata.halo_cell_ids.length = ncells;
+        celldata.halo_face_ids.length = ncells;
         foreach(i; 0 .. ncells) celldata.all_cell_idxs[i] = i;
 
         celldata.nfaces.length = ncells;
@@ -952,14 +954,14 @@ public:
     }
 
     @nogc
-    void viscous_flux(FVInterface[] face_list = [])
+    void viscous_flux(FVInterface[] face_list)
     {
         if (face_list.length == 0) { face_list = faces; }
         foreach (iface; face_list) { iface.viscous_flux_calc(); }
     }
 
     @nogc
-    void viscous_flux()
+    void viscous_flux(size_t[] face_idxs=[])
     {
         immutable size_t n_species      = myConfig.n_species;
         immutable size_t n_modes        = myConfig.n_modes;
@@ -972,7 +974,8 @@ public:
         immutable bool laminarDiffusion = myConfig.mass_diffusion_model != MassDiffusionModel.none;
         immutable double Sc_t = myConfig.turbulence_schmidt_number;
 
-        foreach(fid; 0 .. nfaces){
+        if (face_idxs.length==0) face_idxs = facedata.all_face_idxs;
+        foreach(fid; face_idxs){
             navier_stokes_viscous_fluxes(facedata.flowstates[fid], facedata.gradients[fid],
                               myConfig, n_modes, nturb,
                               isTurbulent, axisymmetric, is3d,
@@ -980,7 +983,7 @@ public:
                               facedata.fluxes[fid*neq .. (fid+1)*neq]);
         }
         if ((isTurbulent || laminarDiffusion)&&(n_species>1)) {
-            foreach(fid; 0 .. nfaces){
+            foreach(fid; face_idxs){
                 diffusion_viscous_fluxes(facedata.flowstates[fid], facedata.gradients[fid],
                                   myConfig, n_species, n_modes,
                                   Sc_t, laminarDiffusion, isTurbulent,
@@ -1746,6 +1749,86 @@ public:
         } // foreach ( bndary; bc )
     } // end apply_jacobian_bcs()
 
+    void evalRHS2(int gtl, int ftl, size_t[] halo_cell_ids, size_t[] halo_face_ids, size_t pidx)
+    /*
+     *  This method evaluates the RHS residual on a subset of cells for a given FluidBlock.
+     *  It is used when constructing the numerical Jacobian.
+     *  Its effect should replicate evalRHS() in steadystatecore.d for a subset of cells.
+     */
+    {
+        auto cqi = myConfig.cqi;
+        immutable size_t ncq = myConfig.cqi.n;
+
+        foreach(id; halo_face_ids) {
+            foreach(i; 0 .. ncq) facedata.fluxes[id*ncq + i] = 0.0;
+        }
+        foreach(id; halo_cell_ids) {
+            foreach(i; 0 .. ncq) celldata.source_terms[id*ncq + i] = 0.0;
+        }
+
+        bool do_reconstruction = ( flowJacobian.spatial_order > 1 );
+
+        // convective flux update
+        convective_flux_phase0new(do_reconstruction, halo_cell_ids, halo_face_ids);
+        convective_flux_phase1new(do_reconstruction, halo_cell_ids, halo_face_ids);
+        convective_flux_phase2new(do_reconstruction, halo_cell_ids, halo_face_ids);
+
+        foreach(id; halo_face_ids) {
+            if (facedata.left_interior_only[id] || facedata.right_interior_only[id]) {
+                applyPostConvFluxAction(0.0, gtl, ftl, faces[id]);
+            }
+        }
+
+        // Viscous flux update
+        if (myConfig.viscous) {
+
+            foreach(id; halo_face_ids) {
+                if (facedata.left_interior_only[id] || facedata.right_interior_only[id]) {
+                    applyPreSpatialDerivActionAtBndryFaces(0.0, gtl, ftl, faces[id]); 
+                }
+            }
+
+            // currently only for least-squares at faces
+            // TODO: generalise for all spatial gradient methods
+            bool is3D = (myConfig.dimensions == 3);
+            size_t nsp = myConfig.n_species;
+            size_t nmodes = myConfig.n_modes;
+            size_t nturb = myConfig.turb_model.nturb;
+            bool doSpecies = myConfig.turb_model.isTurbulent || myConfig.mass_diffusion_model != MassDiffusionModel.none;
+            foreach(id; halo_cell_ids){
+                celldata.gradients[id].gradients_at_cells_leastsq(
+                    celldata.flowstates[id], facedata.flowstates, celldata.c2f[id],
+                    celldata.workspaces[id], celldata.nfaces[id],
+                    is3D, nsp, nmodes, nturb, doSpecies);
+            }
+
+            average_lsq_cell_derivs_to_faces(halo_face_ids);
+            estimate_turbulence_viscosity(halo_cell_ids);
+            average_turbulent_transprops_to_faces(halo_face_ids);
+            viscous_flux(halo_face_ids);
+
+            foreach(id; halo_face_ids) {
+                if (facedata.left_interior_only[id] || facedata.right_interior_only[id]) {
+                    applyPostDiffFluxAction(0.0, gtl, ftl, faces[id]);
+                }
+            }
+        }
+
+        // Compute source terms. Note we only compute the thermochem source for the pcell,
+        // which should always be the first entry in halo_cell_ids. This is because
+        // the thermochem sources have no spatial dependance, so they do not change
+        // when pcell is perturbed.
+        assert(halo_cell_ids[0] == pidx);
+        eval_fluid_source_vectors(omegaz, halo_cell_ids);
+        eval_thermochem_source_vector(SimState.step, halo_cell_ids[0 .. 1]);
+        eval_udf_source_vectors(0.0, halo_cell_ids);
+
+        // Compute time derivatives
+        time_derivatives(gtl, ftl, halo_cell_ids);
+
+    } // end evalRHS()
+
+
     void evalRHS(int gtl, int ftl, ref FVCell[] cell_list, FVInterface[] iface_list, FVCell pcell)
     /*
      *  This method evaluates the RHS residual on a subset of cells for a given FluidBlock.
@@ -1753,7 +1836,6 @@ public:
      *  Its effect should replicate evalRHS() in steadystatecore.d for a subset of cells.
      */
     {
-
         foreach(iface; iface_list) iface.F.clear();
         foreach(cell; cell_list) cell.clear_source_vector();
 
@@ -2140,7 +2222,7 @@ public:
     } // end evalRU()
 
     @nogc
-    void time_derivatives(int gtl, int ftl)
+    void time_derivatives(int gtl, int ftl, size_t[] cell_idxs=[])
     // These are the spatial (RHS) terms in the semi-discrete governing equations.
     // gtl : (grid-time-level) flow derivatives are evaluated at this grid level
     // ftl : (flow-time-level) specifies where computed derivatives are to be stored.
@@ -2150,8 +2232,9 @@ public:
     {
 
         immutable size_t neq = myConfig.cqi.n;
+        if (cell_idxs.length == 0) cell_idxs = celldata.all_cell_idxs;
 
-        foreach(cidx; 0 .. ncells){
+        foreach(cidx; cell_idxs){
             // Note this is the number of faces that the cell cidx has, not the total number
             size_t nfaces = celldata.nfaces[cidx];
             number vol_inv = 1.0 / celldata.volumes[cidx]; // Cell volume (inverted).
@@ -2172,7 +2255,7 @@ public:
         }
     } // end time_derivatives()
 
-    @nogc void eval_source_vectors(int step, int gtl, int ftl, double omegaz=0.0)
+    @nogc void eval_fluid_source_vectors(double omegaz=0.0, size_t[] cell_idxs=[])
     {
         auto cqi = myConfig.cqi;
         size_t ncq = myConfig.cqi.n;
@@ -2181,23 +2264,13 @@ public:
         immutable bool gravity_non_zero = myConfig.gravity_non_zero;
         immutable bool axiviscous = myConfig.viscous && myConfig.axisymmetric;
         immutable bool turbulent = myConfig.viscous && myConfig.turb_model.isTurbulent;
-        immutable bool reacting = myConfig.reacting;
         immutable size_t cqiyMom = cqi.yMom;
         immutable Vector3 gravity = myConfig.gravity;
         immutable size_t cqirhoturb = cqi.rhoturb;
         immutable size_t n_turb = cqi.n_turb;
 
-        double limit_factor = 1.0;
-        if (reacting) {
-            // the limit_factor is used to slowly increase the magnitude of the
-            // thermochemical source terms from 0 to 1 for problematic reacting flows
-            if (myConfig.nsteps_of_chemistry_ramp > 0) {
-                double S = step/to!double(myConfig.nsteps_of_chemistry_ramp);
-                limit_factor = min(1.0, S);
-            }
-        }
-
-        foreach(i; 0 .. ncells) {
+        if (cell_idxs.length==0) cell_idxs = celldata.all_cell_idxs;
+        foreach(i; cell_idxs) {
             size_t idx = i*ncq;
             number[] Q = celldata.source_terms[idx .. idx+ncq]; // view or reference to source_terms data structure
 
@@ -2221,9 +2294,29 @@ public:
                                                      celldata.wall_distances[i], celldata.lengths[i], rhoturb);
                 }
             }
+        }
+        return;
+    }
 
-            if (reacting)
-                add_thermochemical_source_vector(myConfig, thermochem_source, limit_factor, celldata.flowstates[i], Q);
+    @nogc void eval_thermochem_source_vector(int step, size_t[] cell_idxs=[])
+    {
+        if (!myConfig.reacting) return;
+        auto cqi = myConfig.cqi;
+        size_t ncq = myConfig.cqi.n;
+
+        double limit_factor = 1.0;
+        // the limit_factor is used to slowly increase the magnitude of the
+        // thermochemical source terms from 0 to 1 for problematic reacting flows
+        if (myConfig.nsteps_of_chemistry_ramp > 0) {
+            double S = step/to!double(myConfig.nsteps_of_chemistry_ramp);
+            limit_factor = min(1.0, S);
+        }
+
+        if (cell_idxs.length==0) cell_idxs = celldata.all_cell_idxs;
+        foreach(i; cell_idxs) {
+            size_t idx = i*ncq;
+            number[] Q = celldata.source_terms[idx .. idx+ncq]; // view or reference to source_terms data structure
+            add_thermochemical_source_vector(myConfig, thermochem_source, limit_factor, celldata.flowstates[i], Q);
         }
         return;
     }
