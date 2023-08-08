@@ -1558,7 +1558,7 @@ public:
         }
 
         // fill out the rows of the Jacobian for a cell
-        foreach(cell; cells) { evaluate_cell_contribution_to_jacobian(cell); }
+        foreach(i; celldata.all_cell_idxs) { evaluate_cell_contribution_to_jacobian(i); }
 
         // add boundary condition corrections to boundary cells
         apply_jacobian_bcs();
@@ -1570,54 +1570,54 @@ public:
         myConfig.interpolation_order = interpolation_order_save;
     } // end evaluate_jacobian()
 
-    void evaluate_cell_contribution_to_jacobian(FVCell pcell)
+    void evaluate_cell_contribution_to_jacobian(size_t pid)
     {
         auto cqi = myConfig.cqi; // was GlobalConfig.cqi;
         auto nConserved = cqi.n;
-        // remove the conserved mass variable for multi-species gas
-        //if (cqi.n_species > 1) { nConserved -= 1; }
+        size_t idx = nConserved*pid;
+
         auto eps0 = flowJacobian.eps;
         number eps;
         int ftl = 1; int gtl = 0;
 
         // save a copy of the flowstate and copy conserved quantities
-        fs_save.copy_values_from(pcell.fs);
-        pcell.U[ftl].copy_values_from(pcell.U[0]);
+        fs_save.copy_values_from(celldata.flowstates[pid]);
+        foreach(j; 0..nConserved) celldata.U1[idx + j] = celldata.U0[idx + j];
 
         // perturb the current cell's conserved quantities
         // and then evaluate the residuals for each cell in
         // the local domain of influence
-        foreach(j; 0..nConserved) {
+        foreach(j; 0 .. nConserved) {
 
             // peturb conserved quantity
             version(complex_numbers) { eps = complex(0.0, eps0.re); }
-            else { eps = eps0*fabs(pcell.U[ftl][j]) + eps0; }
-            pcell.U[ftl][j] += eps;
-            pcell.decode_conserved(gtl, ftl, 0.0);
+            else { eps = eps0*fabs(celldata.U1[idx + j]) + eps0; }
+            celldata.U1[idx + j] += eps;
+            decode_conserved(celldata.positions[pid], celldata.U1[idx .. idx+nConserved], celldata.flowstates[pid], 0.0, pid, myConfig);
 
             // evaluate perturbed residuals in local stencil
-            size_t pid = pcell.id;
             evalRHS2(gtl, ftl, celldata.halo_cell_ids[pid], celldata.halo_face_ids[pid], pid);
 
             // fill local Jacobians
-            foreach (cell; pcell.cell_list) {
-                foreach(i; 0..nConserved) {
+            foreach (cid; celldata.halo_cell_ids[pid]) {
+                size_t cidx = cid*nConserved;
+                foreach(i; 0 .. nConserved) {
 
                     number cell_dRdU_ij;
-                    version(complex_numbers) { cell_dRdU_ij = cell.dUdt[ftl][i].im/eps.im; }
-                    else { cell_dRdU_ij = (cell.dUdt[ftl][i]-cell.dUdt[0][i])/eps; }
+                    version(complex_numbers) { cell_dRdU_ij = celldata.dUdt1[cidx + i].im/eps.im; }
+                    else { cell_dRdU_ij = (celldata.dUdt1[cidx + i] - celldata.dUdt0[cidx + i])/eps; }
 
-                    size_t I = cell.id*nConserved + i;
-                    size_t J = pcell.id*nConserved + j;
+                    size_t I = cidx + i;
+                    size_t J = idx + j;
                     flowJacobian.local[I,J] = cell_dRdU_ij;
                 }
             }
 
             // return cell to original state
-            pcell.U[ftl].copy_values_from(pcell.U[0]);
-            pcell.fs.copy_values_from(*fs_save);
-            if (myConfig.viscous) {
-                foreach (cell; pcell.cell_list) { cell.grad.copy_values_from(*(cell.grad_save)); }
+            foreach(k; 0..nConserved) celldata.U1[idx + k] = celldata.U0[idx + k]; // Needed?
+            celldata.flowstates[pid].copy_values_from(*fs_save);
+            if (myConfig.viscous) { // TODO
+                foreach (cell; cells[pid].cell_list) { cell.grad.copy_values_from(*(cell.grad_save)); }
             }
         }
     } // end evaluate_cell_contribution_to_jacobian()
