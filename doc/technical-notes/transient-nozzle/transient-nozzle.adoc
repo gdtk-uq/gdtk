@@ -185,7 +185,7 @@ image::trace2.png[width=70%,align=center]
 
 = Nozzle flow computation
 
-The next step is to run the nozzle-start program in Euler4. (See 
+The next step is to run the nozzle-start program in Eilmer4. (See 
 accompanying file `t5ns.lua`.) This requires as input the same gas
 files, that are now actually used, as well as the nozzle profile
 which is specified as a spline through many coordinate points. 
