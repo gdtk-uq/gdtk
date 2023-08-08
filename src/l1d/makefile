@@ -133,7 +133,7 @@ default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "L1d4 simulation code built."
 
-install: $(PROGRAMS) prep-gas prep-chem chemkin2eilmer libgas
+install: $(PROGRAMS) prep-gas prep-chem prep-kinetics chemkin2eilmer libgas
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
@@ -201,6 +201,9 @@ libgas:
 
 prep-chem:
 	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-chem
+
+prep-kinetics:
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-kinetics
 
 chemkin2eilmer:
 	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-chemkin2eilmer
