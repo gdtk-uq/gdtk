@@ -147,6 +147,25 @@ local function buildChemistryCouplingModel(m, participating_species, db)
    if m.model == "ImpartialDissociation" then
        ccm.Thetav = db[participating_species].theta_v or db[participating_species].vib_data.theta_v
        ccm.D = mechanism.calculateDissociationEnergy(participating_species, db)
+   elseif m.model == "MarroneTreanorDissociation" then
+       Runiv = 8.3145
+       ccm.Thetav = m.Thetav or db[participating_species].theta_v or db[participating_species].vib_data.theta_v
+      ccm.D = m.D or mechanism.calculateDissociationEnergy(participating_species, db)
+      if m.U then
+         ccm.U = m.U
+      elseif m.TD_on_U then
+         ccm.U = ccm.D / m.TD_on_U / Runiv
+      else
+         print("Either U or TD_on_U needs to be provided for Marrone-Treanor chemistry exchange coupling")
+         print("Bailing out!")
+         os.exit(1)
+      end
+   elseif m.model == "ModifiedMarroneTreanorDissociation" then
+       Runiv = 8.3145
+      ccm.Thetav = m.Thetav
+      ccm.Ustar = m.Ustar
+      ccm.aU = m.aU
+      ccm.T_D = m.T_D or mechanism.calculateDissociationEnergy(participating_species, db) / Runiv
    elseif m.model == "HeavyParticleCollisionIonisation" then
       -- nothing extra to do
    elseif m.model == "ImpartialChem" then
@@ -217,6 +236,10 @@ local function chemistryCouplingTypeToLuaStr(ct)
    local str = ""
    if ct.model == "ImpartialDissociation" then
       str = string.format("{model='ImpartialDissociation', D=%f, Thetav=%f}", ct.D, ct.Thetav)
+   elseif ct.model == "MarroneTreanorDissociation" then
+      str = string.format("{model='MarroneTreanorDissociation', D=%f, Thetav=%f, U=%f}", ct.D, ct.Thetav, ct.U)
+   elseif ct.model == "ModifiedMarroneTreanorDissociation" then
+      str = string.format("{model='ModifiedMarroneTreanorDissociation', T_D=%f, Thetav=%f, Ustar=%f, aU=%f}", ct.T_D, ct.Thetav, ct.Ustar, ct.aU)
    elseif ct.model == "ImpartialChem" or ct.model == "HeavyParticleCollisionIonisation" then
       str = "{model = 'ImpartialChem'}"
    else

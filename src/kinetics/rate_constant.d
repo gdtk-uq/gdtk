@@ -406,10 +406,10 @@ private:
 //                           rate = {model='Arrhenius', A=, ...}}
 class MarroneTreanorRateConstant : RateConstant {
 public:
-    this(RateConstant rate, number U, number D, number theta, int mode)
+    this(RateConstant rate, number U, number T_D, number theta, int mode)
     {
        _rate = rate; 
-       _D = D;
+       _T_D = T_D;
        _theta = theta;
        _U = U;
        _mode = mode;
@@ -418,7 +418,7 @@ public:
     this(lua_State* L, Tuple!(int, double)[] efficiencies, GasModel gmodel)
     {
         _U = getDouble(L, -1, "U");
-        _D = getDouble(L, -1, "D");
+        _T_D = getDouble(L, -1, "T_D");
         _theta = getDouble(L, -1, "theta");
         _mode = getInt(L, -1, "mode");
         lua_getfield(L, -1, "rate");
@@ -428,7 +428,7 @@ public:
 
     MarroneTreanorRateConstant dup()
     {
-        return new MarroneTreanorRateConstant(_rate, _U, _D, _theta, _mode);
+        return new MarroneTreanorRateConstant(_rate, _U, _T_D, _theta, _mode);
     }
 
     @nogc number eval(in GasState Q)
@@ -438,16 +438,16 @@ public:
 
         // then compute the non-eq factor
         number Gamma = 1./(1./Q.T_modes[_mode] - 1./Q.T - 1./_U);
-        number Q_T = _Q(Q.T, _D, _theta);
-        number Q_Gamma = _Q(Gamma, _D, _theta);
-        number Q_Tv = _Q(Q.T_modes[_mode], _D, _theta);
-        number Q_U = _Q(-_U, _D, _theta);
+        number Q_T = _Q(Q.T, _T_D, _theta);
+        number Q_Gamma = _Q(Gamma, _T_D, _theta);
+        number Q_Tv = _Q(Q.T_modes[_mode], _T_D, _theta);
+        number Q_U = _Q(-_U, _T_D, _theta);
         return kEQ * Q_T * Q_Gamma / (Q_Tv * Q_U);
     }
 
 private:
     RateConstant _rate; // the underlying rate constant
-    number _D; // dissociation temperature (K)
+    number _T_D; // dissociation temperature (K)
     number _theta; // characteristic vibration temperature (K)
     number _U; // model parameter (K)
     int _mode;
@@ -455,10 +455,10 @@ private:
 
 class MMTRateConstant : RateConstant {
 public:
-    this(RateConstant rate, number D, number theta, number aU, number U_star, int mode)
+    this(RateConstant rate, number T_D, number theta, number aU, number U_star, int mode)
     {
         _rate = rate;
-        _D = D;
+        _T_D = T_D;
         _theta = theta;
         _aU = aU;
         _U_star = U_star;
@@ -467,14 +467,14 @@ public:
 
     MMTRateConstant dup()
     {
-        return new MMTRateConstant(_rate, _D, _theta, _aU, _U_star, _mode);
+        return new MMTRateConstant(_rate, _T_D, _theta, _aU, _U_star, _mode);
     }
 
     this(lua_State* L, Tuple!(int, double)[] efficiencies, GasModel gmodel)
     {
         _aU = getDouble(L, -1, "aU");
         _U_star = getDouble(L, -1, "Ustar");
-        _D = getDouble(L, -1, "D");
+        _T_D = getDouble(L, -1, "T_D");
         _theta = getDouble(L, -1, "theta");
         _mode = getInt(L, -1, "mode");
         lua_getfield(L, -1, "rate");
@@ -491,16 +491,16 @@ public:
         number Uinv = _aU*Tinv + 1./_U_star;
         number U = 1./Uinv;
         number TF = 1./(Tvinv - Tinv - Uinv);
-        number Q_T = _Q(Q.T, _D, _theta);
-        number Q_TF = _Q(TF, _D, _theta);
-        number Q_Tv = _Q(Q.T_modes[_mode], _D, _theta);
-        number Q_U = _Q(-U, _D, _theta);
+        number Q_T = _Q(Q.T, _T_D, _theta);
+        number Q_TF = _Q(TF, _T_D, _theta);
+        number Q_Tv = _Q(Q.T_modes[_mode], _T_D, _theta);
+        number Q_U = _Q(-U, _T_D, _theta);
         return kEQ * Q_T * Q_TF / (Q_Tv * Q_U);
     }
 
 private:
     RateConstant _rate; // the underlying rate constant
-    number _D; // dissociation temperature (K)
+    number _T_D; // dissociation temperature (K)
     number _theta; // characteristic vibration temperature (K)
     number _aU; // model parameter (unitless)
     number _U_star; // model parameter (K)

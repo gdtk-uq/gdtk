@@ -29,11 +29,43 @@ import util.lua;
 import util.lua_service;
 import gas;
 
+immutable number iGammaSwitchThreshold = to!number(1e-7); // Determined by trial and error, see notes 26/05/21
+immutable double iGammaOverflowThreshold = 0.001; // See NNG notes 01/09/22
 
 interface ExchangeChemistryCoupling {
     ExchangeChemistryCoupling dup();
     @nogc number Gvanish(in GasState gs);
     @nogc number Gappear(in GasState gs);
+}
+
+@nogc number L(number iT, double Y, double Thetav) {
+    /*
+    Equation (39) from Knab, 1995, the molar vibrational energy content of the
+    harmonic oscillator.
+
+    Notes: We use the inverse pseudo-temperature iT=1/T to save some division operations
+    */
+    return R_universal*Thetav/(exp(Thetav*iT) - 1.0) - Y/(exp(Y/R_universal*iT) - 1.0);
+}
+
+@nogc number L2(number iT, double Y, double Thetav){
+    /*
+    Equation (39) from Knab, 1995, the molar vibrational energy content of the harmonic oscillator.
+
+    Notes: This expression is a limit as Y/Ru*iT -> large, which catches a NaN that otherwise
+           appears due to exp(Y/R_u*iT) overflowing. It's technically possible, but very
+           unlikely, that exp(Thetav*iT) can overflow as well, but we have no check for that
+           presently. (NNG 01/09/22)
+    */
+    return R_universal*Thetav/(exp(Thetav*iT) - 1.0) - Y*exp(-Y/R_universal*iT);
+}
+
+@nogc number LTaylorSeries1(number iT, double Y, double Thetav){
+    /*
+    First order Taylor series expansion of equation 39, to handle precision 
+    loss issues near iT=0.
+    */
+    return 0.5*(Y - Thetav*R_universal) + iT*(Thetav*Thetav*R_universal*R_universal - Y*Y)/12.0/R_universal;
 }
 
 class ImpartialDissociation : ExchangeChemistryCoupling {
@@ -72,14 +104,14 @@ class ImpartialDissociation : ExchangeChemistryCoupling {
         // Equation (39) gives garbage results when T and Tv are close to one another, so we switch
         // to a non-singular approximation if iGamma gets too small.
         if (fabs(iGamma)<iGammaSwitchThreshold){
-            return LTaylorSeries1(iGamma, D);
+            return LTaylorSeries1(iGamma, D, Thetav);
         // Equation (39) can also overflow if the translational temp is much higher than the Tv.
         // L2 has been derived using a limit that turns the troublesome exp(x) into an exp(-x),
         // which safely underflows to zero instead of a nasty floating point infinity.
         } else if (iGamma>iGammaOverflowThreshold) {
-            return L2(iGamma, D);
+            return L2(iGamma, D, Thetav);
         } else {
-            return L(iGamma, D);
+            return L(iGamma, D, Thetav);
         }
     }
 
@@ -96,44 +128,105 @@ class ImpartialDissociation : ExchangeChemistryCoupling {
 private:
     const double D, Thetav;
     int mode;
-    immutable number iGammaSwitchThreshold = to!number(1e-7); // Determined by trial and error, see notes 26/05/21
-    immutable double iGammaOverflowThreshold = 0.001; // See NNG notes 01/09/22
-
-    @nogc const number L(number iT, double Y){
-    /*
-        Equation (39) from Knab, 1995, the molar vibrational energy content of the harmonic oscillator.
-
-        Notes: We use the inverse pseudo-temperature iT=1/T to save some division operations
-    */
-        return R_universal*Thetav/(exp(Thetav*iT) - 1.0) - Y/(exp(Y/R_universal*iT) - 1.0);
-    }
-
-    @nogc const number L2(number iT, double Y){
-    /*
-        Equation (39) from Knab, 1995, the molar vibrational energy content of the harmonic oscillator.
-
-        Notes: This expression is a limit as Y/Ru*iT -> large, which catches a NaN that otherwise
-               appears due to exp(Y/R_u*iT) overflowing. It's technically possible, but very
-               unlikely, that exp(Thetav*iT) can overflow as well, but we have no check for that
-               presently. (NNG 01/09/22)
-    */
-        return R_universal*Thetav/(exp(Thetav*iT) - 1.0) - Y*exp(-Y/R_universal*iT);
-    }
-
-    @nogc const number LTaylorSeries1(number iT, double Y){
-    /*
-        First order Taylor series expansion of equation 39, to handle precision loss issues near iT=0.
-    */
-        return 0.5*(Y - Thetav*R_universal) + iT*(Thetav*Thetav*R_universal*R_universal - Y*Y)/12.0/R_universal;
-    }
 }
 
-/* 
- *  This exchange mechanism should allow a species to be born or destroyed
- *  without changing the temperature of the species in the absence of
- *  other exchange mechanisms.
- */
+class MarroneTreanorDissociation : ExchangeChemistryCoupling {
+    this (double theta_v, double D, double U, int mode) {
+        this._theta_v = theta_v;
+        this._D = D;
+        this._U = U;
+        this._D = D;
+        this._mode = mode;
+    }
+
+    this (lua_State *L, int mode) {
+        double theta_v = getDouble(L, -1, "Thetav");
+        double D = getDouble(L, -1, "D");
+        double U = getDouble(L, -1, "U");
+        this(theta_v, D, U, mode);
+    }
+
+    ExchangeChemistryCoupling dup() {
+        return new MarroneTreanorDissociation(_theta_v, _D, _U, _mode);
+    }
+
+    @nogc
+    number Gvanish(in GasState gs) {
+        number T = gs.T;
+        number Tv = gs.T_modes[_mode];
+        number iGamma = 1./Tv - 1./T - 1./_U;
+
+        // see notes for ImpartialDissociation
+        if (fabs(iGamma) < iGammaSwitchThreshold) {
+            return LTaylorSeries1(iGamma, _D, _theta_v);
+        }
+        else if (iGamma > iGammaOverflowThreshold) {
+            return L2(iGamma, _D, _theta_v);
+        }
+        return L(iGamma, _D, _theta_v);
+    }
+
+    @nogc
+    number Gappear(in GasState gs) {
+        // see notes in ImpartialDissociation
+        double L0 = 0.5 * (_D - _theta_v * R_universal);
+        return to!number(L0);
+    }
+
+private:
+    int _mode;
+    double _U, _theta_v, _D;
+}
+
+class ModifiedMarroneTreanorDissociation : ExchangeChemistryCoupling {
+    this (double theta_v, double T_D, double aU, double Ustar, int mode) {
+        this._theta_v = theta_v;
+        this._T_D = T_D;
+        this._aU = aU;
+        this._Ustar = Ustar;
+        this._mode = mode;
+    }
+
+    this (lua_State *L, int mode) {
+        double theta_v = getDouble(L, -1, "Thetav");
+        double T_D = getDouble(L, -1, "T_D");
+        double aU = getDouble(L, -1, "aU");
+        double Ustar = getDouble(L, -1, "Ustar");
+        this(theta_v, T_D, aU, Ustar, mode);
+    }
+
+    ExchangeChemistryCoupling dup() {
+        return new ModifiedMarroneTreanorDissociation(_theta_v, _T_D, _aU, _Ustar, _mode);
+    }
+
+    @nogc
+    number Gvanish(in GasState gs) {
+        number T = gs.T;
+        number Tv = gs.T_modes[_mode];
+        number Uinv = _aU / T + 1 / _Ustar;
+        number T_F_inv = 1./Tv - 1./T - Uinv;
+
+        return R_universal * ( _theta_v / (exp(_theta_v * T_F_inv) - 1.) - _T_D / (exp(_T_D * T_F_inv) - 1.));
+    }
+
+    @nogc
+    number Gappear(in GasState gs) {
+        double L0 = 0.5 * (_T_D * R_universal - _theta_v * R_universal);
+        return to!number(L0);
+    }
+
+private:
+    int _mode;
+    double _aU, _Ustar, _theta_v, _T_D;
+}
+
+
 class ImpartialChem : ExchangeChemistryCoupling {
+    /* 
+     *  This exchange mechanism should allow a species to be born or destroyed
+     *  without changing the temperature of the species in the absence of
+     *  other exchange mechanisms.
+     */
 public:
     this (GasModel gmodel, int mode, int isp){
         this._isp = isp;
@@ -169,6 +262,10 @@ ExchangeChemistryCoupling createExchangeChemistryCoupling(lua_State *L, GasModel
     switch (model) {
     case "ImpartialDissociation":
         return new ImpartialDissociation(L, mode);
+    case "MarroneTreanorDissociation":
+        return new MarroneTreanorDissociation(L, mode);
+    case "ModifiedMarroneTreanorDissociation":
+        return new ModifiedMarroneTreanorDissociation(L, mode);
     case "ImpartialChem":
         return new ImpartialChem(gmodel, mode, isp);
     default:

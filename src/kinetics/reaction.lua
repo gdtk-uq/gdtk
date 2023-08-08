@@ -107,18 +107,35 @@ local function transformRateConstant(t, coeffs, anonymousCollider, energyModes, 
       end
    elseif m.model == "Marrone-Treanor" then
        Runiv = 8.3145
-       m.D = calculateDissociationEnergy(t.D, db) / Runiv
-       m.U = m.D / t.U
-       m.theta = db[t.D].theta_v
-       m.mode = energyModes[t.mode]
+       if t.T_D then 
+          m.T_D = t.T_D
+       else
+          m.T_D = calculateDissociationEnergy(t.D, db) / Runiv
+       end
+       if t.U then
+          m.U = t.U 
+       elseif t.TD_on_U then
+          D = calculateDissociationEnergy(t.D, db) / Runiv
+          m.U = D / t.TD_on_U
+       else
+          print("Either U or TD_on_U needs to be provided for Marrone-Treanor reaction rate")
+          print("Bailing out!")
+          os.exit(1)
+       end
+       if t.theta_v then
+          m.theta = t.theta_v
+       else
+          m.theta = db[t.D].theta_v or db[t.D].vib_data.theta_v
+       end
+       m.mode = energyModes[t.mode] or 0
        m.rate = transformRateConstant(t.rate, coeffs, anonymousCollider, energyModes, db)
    elseif m.model == "Modified-Marrone-Treanor" then
        Runiv = 8.3145
-       m.D = calculateDissociationEnergy(t.D, db) / Runiv
-       m.theta = db[t.D].theta_v
+       m.T_D = t.T_D or calculateDissociationEnergy(t.D_sp, db) / Runiv
+       m.theta = t.Thetav --db[t.D].theta_v
        m.aU = t.aU
        m.Ustar = t.Ustar
-       m.mode = energyModes[t.mode]
+       m.mode = energyModes[t.mode] or 0
        m.rate = transformRateConstant(t.rate, coeffs, anonymousCollider, energyModes, db)
    else
       print("The rate constant model: ", m.model, " is not known.")
@@ -160,12 +177,12 @@ local function rateConstantToLuaStr(rc)
       str = str .. "\n}"
    elseif rc.model == 'Marrone-Treanor' then
        str = "{model='Marrone-Treanor', "
-       str = str .. string.format("D=%16.12e, U=%16.12e, theta=%16.12e, mode=%d, rate=", rc.D, rc.U, rc.theta, rc.mode)
+       str = str .. string.format("T_D=%16.12e, U=%16.12e, theta=%16.12e, mode=%d, rate=", rc.T_D, rc.U, rc.theta, rc.mode)
        str = str .. rateConstantToLuaStr(rc.rate)
        str = str .. "}"
    elseif rc.model == 'Modified-Marrone-Treanor' then
        str = "{model='Modified-Marrone-Treanor', "
-       str = str .. string.format("D=%16.12e, aU=%16.12e, Ustar=%16.12e, theta=%16.12e, mode=%d, rate=", rc.D, rc.aU, rc.Ustar, rc.theta, rc.mode)
+       str = str .. string.format("T_D=%16.12e, aU=%16.12e, Ustar=%16.12e, theta=%16.12e, mode=%d, rate=", rc.T_D, rc.aU, rc.Ustar, rc.theta, rc.mode)
        str = str .. rateConstantToLuaStr(rc.rate)
        str = str .. "}"
    elseif rc.model == 'fromEqConst' then
