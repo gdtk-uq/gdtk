@@ -83,6 +83,10 @@ struct FVCellData{
     WLSQGradWorkspace[] workspaces;
     LSQInterpWorkspace[] lsqws;
     LSQInterpGradients[] lsqgradients;
+    version(nk_accelerator) {
+        FlowGradients[] saved_gradients;
+        ConservedQuantities saved_source_terms;
+    }
 }
 
 class FVCell {
@@ -278,8 +282,8 @@ public:
         }
         //
         version(nk_accelerator) {
-            grad_save = new FlowGradients(myConfig);
-            Q_save = new_ConservedQuantities(ncq);
+            if (fvcd.saved_gradients) this.grad_save = &(fvcd.saved_gradients[id]);
+            if (fvcd.saved_source_terms) this.Q_save = fvcd.saved_source_terms[id*ncq .. id*ncq + ncq];
             dRdU.length = ncq; // number of conserved variables
             foreach (ref a; dRdU) a.length = ncq;
             foreach (i; 0..dRdU.length) {

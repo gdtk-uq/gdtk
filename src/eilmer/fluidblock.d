@@ -345,6 +345,12 @@ public:
         foreach (n; 0 .. ncells+nghost) celldata.flowstates ~= FlowState(gmodel, nturb);
         foreach (n; 0 .. ncells+nghost) celldata.gradients ~= FlowGradients(myConfig);
         foreach (n; 0 .. ncells+nghost) celldata.workspaces ~= WLSQGradWorkspace();
+
+        version(nk_accelerator) {
+            celldata.saved_gradients.reserve(ncells + nghost);
+            foreach (n; 0 .. ncells+nghost) celldata.saved_gradients ~= FlowGradients(myConfig);
+            celldata.saved_source_terms.length = (ncells + nghost)*neq;
+        }
     }
 
     void allocate_dense_facedata(size_t nfaces, size_t nbfaces, size_t neq, size_t nftl)
