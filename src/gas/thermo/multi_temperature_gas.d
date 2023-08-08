@@ -39,6 +39,7 @@ class MultiTemperatureGasMixture : ThermodynamicModel {
         _R.length = _n_species;
         _Delta_hf.length = _n_species;
         _CpTR.length = _n_species;
+        _thermo_curves.length = _n_species;
         _energy_modes.length = _n_modes;
         _energy_modes_isp.length = _n_modes;
         _reference_energies.length = _n_modes;
@@ -54,9 +55,9 @@ class MultiTemperatureGasMixture : ThermodynamicModel {
             double m = getDouble(L, -1, "M");
             _R[isp] = R_universal/m;
             lua_getfield(L, -1, "thermoCoeffs");
-            CEAThermoCurve thermo = new CEAThermoCurve(L, _R[isp]);
+            _thermo_curves[isp] = new CEAThermoCurve(L, _R[isp]);
             lua_pop(L, 1);
-            _Delta_hf[isp] = thermo.eval_h(to!number(T_REF)); //getDouble(L, -1, "Hf");
+            _Delta_hf[isp] = _thermo_curves[isp].eval_h(to!number(T_REF)); //getDouble(L, -1, "Hf");
             string type = getString(L, -1, "type");
             switch (type) {
             case "electron":
@@ -294,7 +295,15 @@ class MultiTemperatureGasMixture : ThermodynamicModel {
     }
     @nogc override void GibbsFreeEnergies(in GasState gs, number[] gibbs_energies)
     {
-        throw new Error("Not implemented");
+        number T = gs.T;
+        number logT = log(T);
+        number logp = log(gs.p/P_atm);
+
+        foreach(isp; 0 .. _n_species) {
+            number h = enthalpyPerSpecies(gs, isp);
+            number s = _thermo_curves[isp].eval_s(T, logT) - _R[isp]*logp;
+            gibbs_energies[isp] = h - T*s;
+        }
     }
 
 private:
@@ -309,6 +318,7 @@ private:
     InternalEnergy[][] _energy_modes;
     int[][] _energy_modes_isp; // keeps track of which species is contributing
                                // to each energy mode
+    CEAThermoCurve[] _thermo_curves;
     number[][] _reference_energies; // The energy of each mode evaluated at T_REF
     double[] _tolerances;
     int[] _max_iterations;
