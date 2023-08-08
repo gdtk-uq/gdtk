@@ -1,7 +1,7 @@
 # shock-he-n2.py
 config.title = 'Shock tube, helium driving 2T air, 2020-06-14'
 gm_he = add_gas_model('ideal-helium-gas-model.lua')
-gm_air = add_gas_model('air-11sp-2T.lua', 'air-11sp-2T-chem.lua', 'air-energy-exchange.lua')
+gm_air = add_gas_model('air-11sp-2T.gas', 'air-11sp-2T.chem', 'air-11sp-2T.exch')
 config.reacting = True
 
 # Define the tube walls.
