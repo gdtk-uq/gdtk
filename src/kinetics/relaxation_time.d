@@ -212,6 +212,46 @@ protected:
     }
 }
 
+class Schwarzentruber : RelaxationTime {
+public:
+    this (double m_low, double n_low, double m_high, double n_high, int q) {
+        _m_low = m_low;
+        _n_low = n_low;
+        _m_high = m_high;
+        _n_high = n_high;
+        _q = q;
+    }
+
+    this(lua_State *L, int q) {
+        double m_low = getDouble(L, -1, "m_low");
+        double n_low = getDouble(L, -1, "n_low");
+        double m_high = getDouble(L, -1, "m_high");
+        double n_high = getDouble(L, -1, "n_high");
+        this(m_low, n_low, m_high, n_high, q);
+    }
+
+    RelaxationTime dup() {
+        return new Schwarzentruber(_m_low, _n_low, _m_high, _n_high, _q);
+    }
+
+    @nogc
+    number eval(in GasState gs, number[] molef, number[] numden) {
+        if (molef[_q] <= SMALL_MOLE_FRACTION) {
+            return to!number(-1.0);
+        }
+
+        number Tinv = pow(gs.T, -1./3.);
+        number P_bath = molef[_q] * gs.p / P_atm;
+        number low = _m_low*Tinv + _n_low;
+        number high = _m_high*Tinv + _n_high;
+        return (exp(low) + exp(high)) / P_bath;
+    }
+
+private:
+    double _m_low, _n_low, _m_high, _n_high;
+    int _q;
+}
+
 
 /* 
    Some functions used in SSH theory for V-V and V-T relaxation times
@@ -541,6 +581,8 @@ RelaxationTime createRelaxationTime(lua_State *L, int p, int q, GasModel gmodel)
     switch (model) {
     case "Millikan-White":
 	return new MillikanWhiteVT(L, q);
+    case "Schwarzentruber":
+        return new Schwarzentruber(L, q);
     case "ParkHTC":
 	return new ParkHTCVT(L, p, q, gmodel);
     case "ParkHTC2":

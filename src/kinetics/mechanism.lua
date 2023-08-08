@@ -53,6 +53,11 @@ local function transformRelaxationTime(rt, p, q, db)
       else
          t.b = rt.b
        end
+   elseif t.model == "Schwarzentruber" then
+      t.m_low = rt.m_low
+      t.n_low = rt.n_low
+      t.m_high = rt.m_high
+      t.n_high = rt.n_high
    elseif t.model == "ParkHTC" then
       t.submodel = transformRelaxationTime(rt.submodel, p, q, db)
       if rt.sigma == nil then
@@ -186,6 +191,8 @@ local function relaxationTimeToLuaStr(rt)
    local str = ""
    if rt.model == "Millikan-White" then
       str = string.format("{model='Millikan-White', a=%.3f, b=%.6f}", rt.a, rt.b)
+   elseif rt.model == "Schwarzentruber" then
+      str = string.format("{model='Schwarzentruber', m_low=%.3f, n_low=%.3f, m_high=%.3f, n_high=%.3f}", rt.m_low, rt.n_low, rt.m_high, rt.n_high)
    elseif rt.model == "ParkHTC" then
       submodelstr = relaxationTimeToLuaStr(rt.submodel)
       str = string.format("{model='ParkHTC', sigma=%.4e, submodel=%s}", rt.sigma, submodelstr)
