@@ -504,7 +504,7 @@ do {
 */
 
 immutable MAX_RELATIVE_STEP = 0.1;
-immutable MAX_STEPS = 30;
+immutable MAX_STEPS = 50;
 
 @nogc void update_thermo_state_pT(GasModel gmodel, ref GasState Q)
 {
@@ -987,10 +987,16 @@ immutable MAX_STEPS = 30;
     // don't get shifted noticeably.
     number fs_tol = 1.0e-6 * s_given;
     number fs_tol_fail = 0.02 * s_given;
-
-    // Guess the thermo state assuming that T is a good guess.
+    //
+    // Fill in the thermo state assuming that T is a good guess.
+    // Note that pressure and mass fractions must be correctly set but,
+    // maybe T is not already set.
     if (isNaN(Q.T)) {
-        throw new Exception("Q.T is presently Nan but it should have been set to a reasonable guess.");
+        // Since a guess for T is required, we have to set a value.
+        Q.T = 1000.0;
+        // [TODO] PJ 2023-08-07
+        // We set an arbitrary number for the moment but we should do better,
+        // maybe setting up a list of candidates and selecting the best.
     }
     T_old = Q.T;
     try { gmodel.update_thermo_from_pT(Q); }
@@ -1002,13 +1008,12 @@ immutable MAX_STEPS = 30;
         }
         throw new GasModelException(msg);
     }
-    ////**** Need to check this is the correct method - is called 2 more times*****/////
     number s_old = gmodel.entropy(Q);
     fs_old = s_given - s_old;
+    //
     // Perturb T to get a derivative estimate
     T_new = T_old * 1.001;
     Q.T = T_new;
-
     try { gmodel.update_thermo_from_pT(Q); }
     catch (Exception caughtException) {
         string msg = "Starting guess perturbed T: failed in update_thermo_state_ps.";
@@ -1059,9 +1064,9 @@ immutable MAX_STEPS = 30;
         T_old = T_new;
         converged = (fabs(fs_old) < fs_tol);
     }   // end while
+    //
     // Ensure that we have the current data for all EOS variables.
     Q.T = T_old;
-
     try { gmodel.update_thermo_from_pT(Q); }
     catch (Exception caughtException) {
         string msg = "Function update_thermo_state_ps failed after finishing iterations.";
@@ -1074,7 +1079,7 @@ immutable MAX_STEPS = 30;
     if ( count >= MAX_STEPS ) {
         string msg = "Iterations did not converge in update_thermo_state_ps.";
         debug {
-            msg ~= format("\n    fs_old = %g\n", fs_old);
+            msg ~= format("\n    fs_old = %g  count=%d MAX_STEPS=%d\n", fs_old, count, MAX_STEPS);
             msg ~= format("    p_given = %.8s, s_given, %.5s\n", p_given, s_given);
             msg ~= "  Supplied Q:" ~ Q.toString;
         }

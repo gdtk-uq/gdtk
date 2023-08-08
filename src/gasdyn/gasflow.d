@@ -493,7 +493,8 @@ void total_condition(ref const(GasState) state1, number V1,
         // the total enthalpy of the stream.
         state0.p = x * state1.p;
         gm.update_thermo_from_ps(state0, s1);
-        return (H1 - gm.enthalpy(state0))/abs(H1);
+        number err = (H1 - gm.enthalpy(state0))/abs(H1);
+        return err;
     };
     number x1 = 1.0; number x2 = 1.01;
     // [TODO] could probably do better with an ideal gas guess
