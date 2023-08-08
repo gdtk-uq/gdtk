@@ -1602,8 +1602,14 @@ public:
             // fill local Jacobians
             foreach (cell; pcell.cell_list) {
                 foreach(i; 0..nConserved) {
-                    version(complex_numbers) { cell.dRdU[i][j] = cell.dUdt[ftl][i].im/eps.im; }
-                    else { cell.dRdU[i][j] = (cell.dUdt[ftl][i]-cell.dUdt[0][i])/eps; }
+
+                    number cell_dRdU_ij;
+                    version(complex_numbers) { cell_dRdU_ij = cell.dUdt[ftl][i].im/eps.im; }
+                    else { cell_dRdU_ij = (cell.dUdt[ftl][i]-cell.dUdt[0][i])/eps; }
+
+                    size_t I = cell.id*nConserved + i;
+                    size_t J = pcell.id*nConserved + j;
+                    flowJacobian.local[I,J] = cell_dRdU_ij;
                 }
             }
 
@@ -1614,23 +1620,8 @@ public:
                 foreach (cell; pcell.cell_list) { cell.grad.copy_values_from(*(cell.grad_save)); }
             }
         }
-
-        // we now populate the pre-sized sparse matrix representation of the flow Jacobian
-        size_t jidx; // column index into the matrix
-        // loop through nConserved rows
-        for (size_t ip = 0; ip < nConserved; ++ip) {
-            // loop through cells that will have non-zero entries
-            foreach(cell; pcell.cell_list) {
-                // loop through nConserved columns for each effected cell
-                for ( size_t jp = 0; jp < nConserved; ++jp ) {
-                    assert(!cell.is_ghost_cell, "Oops, we expect to not find a ghost cell at this point.");
-                    size_t I = cell.id*nConserved + ip;
-                    size_t J = pcell.id*nConserved + jp;
-                    flowJacobian.local[I,J] = cell.dRdU[ip][jp];
-                }
-            }
-        }
     } // end evaluate_cell_contribution_to_jacobian()
+
     void apply_jacobian_bcs() {
         /*
           This method accounts for the boundary conditions for the boundary cell entries in the flow Jacobian.
