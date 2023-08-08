@@ -1596,7 +1596,8 @@ public:
             pcell.decode_conserved(gtl, ftl, 0.0);
 
             // evaluate perturbed residuals in local stencil
-            evalRHS(gtl, ftl, pcell.cell_list, pcell.face_list, pcell);
+            size_t pid = pcell.id;
+            evalRHS2(gtl, ftl, celldata.halo_cell_ids[pid], celldata.halo_face_ids[pid], pid);
 
             // fill local Jacobians
             foreach (cell; pcell.cell_list) {
@@ -1757,7 +1758,7 @@ public:
         } // foreach ( bndary; bc )
     } // end apply_jacobian_bcs()
 
-    void evalRHS2(int gtl, int ftl, size_t[] halo_cell_ids, size_t[] halo_face_ids, size_t pidx)
+    void evalRHS2(int gtl, int ftl, size_t[] halo_cell_ids, size_t[] halo_face_ids, size_t pid)
     /*
      *  This method evaluates the RHS residual on a subset of cells for a given FluidBlock.
      *  It is used when constructing the numerical Jacobian.
@@ -1810,9 +1811,10 @@ public:
         // which should always be the first entry in halo_cell_ids. This is because
         // the thermochem sources have no spatial dependance, so they do not change
         // when pcell is perturbed.
-        assert(halo_cell_ids[0] == pidx);
+        size_t[1] this_cell_id = [pid];
+
         eval_fluid_source_vectors(omegaz, halo_cell_ids);
-        eval_thermochem_source_vector(SimState.step, halo_cell_ids[0 .. 1]);
+        eval_thermochem_source_vector(SimState.step, this_cell_id[0 .. 1]);
         eval_udf_source_vectors(0.0, halo_cell_ids);
 
         // Compute time derivatives
