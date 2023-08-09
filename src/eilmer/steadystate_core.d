@@ -1760,18 +1760,18 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     size_t MODES = GlobalConfig.cqi.modes;
     immutable size_t ncq = nConserved;
 
-    number resid;
-
     int interpOrderSave = GlobalConfig.interpolation_order;
-    // Presently, just do one block
-    int maxIters = GlobalConfig.sssOptions.maxOuterIterations;
     // We add 1 because the user thinks of "re"starts, so they
     // might legitimately ask for no restarts. We still have
     // to execute at least once.
     int maxRestarts = GlobalConfig.sssOptions.maxRestarts + 1;
+    int maxIters = GlobalConfig.sssOptions.maxOuterIterations;
     size_t m = to!size_t(maxIters);
     size_t r;
     size_t iterCount;
+    double beta, beta0;
+    double outerTol;
+    number resid;
 
     // Variables for max rates of change
     // Use these for equation scaling.
@@ -1780,13 +1780,15 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                                // then we'll avoid non-dimensionalising by
                                // values close to zero.
 
-
-    // 1. Evaluate r0, beta, v1
-
-    // compute RHS residual
+    // Compute the RHS residual and store dUdt[0] as F(U)
     evalRHS(pseudoSimTime, 0);
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        foreach(i; 0 .. blk.ncells*ncq) {
+            blk.FU[i] = blk.celldata.dUdt0[i].re;
+        }
+    }
 
-    // compute approximate Jacobian matrix for preconditioning
+    // Compute the approximate Jacobian matrix for preconditioning, if requested
     pc_matrix_evaluated = false;
     if (usePreconditioner && ( (m == nIters && GlobalConfig.sssOptions.useAdaptivePreconditioner) ||
                                (step == startStep) ||
@@ -1814,14 +1816,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         }
     }
 
-    // store dUdt[0] as F(U)
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        foreach(i; 0 .. blk.ncells*ncq) {
-            blk.FU[i] = blk.celldata.dUdt0[i].re;
-        }
-    }
-
-    // apply residual smoothing to RHS if requested
+    // Apply residual smoothing to RHS, if requested
     // ref. A Residual Smoothing Strategy for Accelerating Newton Method Continuation, D. J. Mavriplis, Computers & Fluids, 2021
     if (GlobalConfig.residual_smoothing) {
         // compute approximate solution via dU = D^{-1}*F(U) where we set D = precondition matrix
@@ -1861,7 +1856,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         }
     }
 
-    // determine max rates in F(U) for scaling the linear system
+    // Determine the max rates in F(U) for scaling the linear system
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.maxRate.clear();
         // determine max rates
@@ -1930,6 +1925,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             }
         }
     }
+
     // Place some guards when time-rate-of-changes are very small.
     if ( GlobalConfig.gmodel_master.n_species == 1 ) { maxMass = fmax(maxMass, minNonDimVal); }
     maxMomX = fmax(maxMomX, minNonDimVal);
@@ -2000,6 +1996,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         }
     }
 
+    // Compute the unscaled L2 norm for reporting the residual of the non-linear system of equations
+    double unscaledNorm2;
+    // we optionally remove the turbulent conserved quantities from the global residual since their
+    // magnitude can be several orders larger than the flow quantities, and thus their convergence
+    // history can adversely dominate the CFL growth algorithm.
     if (GlobalConfig.sssOptions.include_turb_quantities_in_residual == false) {
         foreach (blk; parallel(localFluidBlocks,1)) {
             auto cqi = blk.myConfig.cqi;
@@ -2011,13 +2012,14 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         }
     }
 
-    double unscaledNorm2;
+    // L2 norm calculation
     mixin(dot_over_blocks("unscaledNorm2", "FU", "FU"));
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &unscaledNorm2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
     unscaledNorm2 = sqrt(unscaledNorm2);
 
+    // if we removed the turbulent conserved quantities in the global residual, we have to add them back in
     if (GlobalConfig.sssOptions.include_turb_quantities_in_residual == false) {
         foreach (blk; parallel(localFluidBlocks,1)) {
             auto cqi = blk.myConfig.cqi;
@@ -2029,67 +2031,102 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         }
     }
 
+    // the remainder of the routine closely follows the structure of rpcGMRES found in nm/smla.d
+    // we set the initial guess to zero
+    foreach (blk; parallel(localFluidBlocks,1)) { blk.x0[] = 0.0; }
 
-    // Initialise some arrays and matrices that have already been allocated
-    g0[] = 0.0;
-    g1[] = 0.0;
-    H0.zeros();
-    H1.zeros();
+    // Start outer-loop of restarted GMRES
+    for ( r = 0; r < maxRestarts; r++ ) {
 
-    // We'll scale r0 against these max rates of change.
-    // r0 = b - A*x0
-    // Taking x0 = [0] (as is common) gives r0 = b = FU
-    // apply scaling
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.x0[] = 0.0;
-        foreach(i; 0 .. blk.ncells){
-            foreach(j; 0 .. ncq){
-                size_t idx = i*ncq;
-                blk.r0[idx+j] = (1./blk.maxRate[j].re)*blk.FU[idx+j];
+        // 0. Initialise some arrays and matrices that have already been allocated
+        g0[] = 0.0;
+        g1[] = 0.0;
+        H0.zeros();
+        H1.zeros();
+        Gamma.eye();
+
+        // 1. Evaluate r0 = b - A.x0, beta, v1
+
+        // evaluate A.x0 using a Frechet derivative (note that the zed[] array is baked into the evalJacobianVecProd routine).
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = blk.x0[]; }
+
+        // Prepare 'w' with (I/dt)(P^-1)v term;
+        if (GlobalConfig.with_local_time_stepping) {
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                foreach (i; 0 .. blk.ncells) {
+                    double dtInv = 1.0/blk.celldata.dt_local[i];
+                    size_t offset = i*nConserved;
+                    foreach (k; 0 .. nConserved) {
+                        blk.w[offset+k] = dtInv*blk.zed[offset+k];
+                    }
+                }
+            }
+        } else { // Global timestepping version:
+            double dtInv = 1.0/dt;
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                foreach (idx; 0 .. blk.nvars) {
+                    blk.w[idx] = dtInv*blk.zed[idx];
+                }
             }
         }
-    }
 
-    // Then compute v = r0/||r0||
-    double beta;
-    mixin(dot_over_blocks("beta", "r0", "r0"));
-    version(mpi_parallel) {
-        // NOTE: this dot product has been observed to be sensitive to the order of operations,
-        //       the use of MPI_Allreduce means that the same convergence behaviour can not be expected
-        //       for a different mapping of blocks over the MPI tasks and/or a shared memory calculation
-        //       2022-09-30 (KAD).
-        MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    }
-    beta = sqrt(beta);
-    number beta0 = beta;
-    g0[0] = beta;
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        foreach (k; 0 .. blk.nvars) {
-            blk.v[k] = blk.r0[k]/beta;
-            blk.VT[k] = blk.v[k];
+        // Evaluate Jz and place in z
+        evalJacobianVecProd(pseudoSimTime, sigma, LHSeval, RHSeval);
+
+        // Now we can complete calculation of r0
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            foreach (k; 0 .. blk.nvars)  blk.r0[k] = blk.FU[k] - (blk.w[k] - blk.zed[k]);
         }
-    }
 
-    // Compute tolerance
-    auto outerTol = eta*beta;
+        // apply the system scaling to r0
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            foreach(i; 0 .. blk.ncells){
+                size_t idx = i*ncq;
+                foreach(j; 0 .. ncq){
+                    blk.r0[idx+j] *= 1.0/blk.maxRate[j].re;
+                }
+            }
+        }
+        // then compute v = r0/||r0|| and set first residual entry
+        mixin(dot_over_blocks("beta", "r0", "r0"));
+        version(mpi_parallel) {
+            // NOTE: this dot product has been observed to be sensitive to the order of operations,
+            //       the use of MPI_Allreduce means that the same convergence behaviour can not be expected
+            //       for a different mapping of blocks over the MPI tasks and/or a shared memory calculation
+            //       2022-09-30 (KAD).
+            MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        }
+        beta = sqrt(beta);
+        g0[0] = beta;
+        //writefln("beta= %e", beta);
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            foreach (k; 0 .. blk.nvars) {
+                blk.v[k] = blk.r0[k]/beta;
+                blk.VT[k] = blk.v[k];
+            }
+        }
 
-    // 2. Start outer-loop of restarted GMRES
-    for ( r = 0; r < maxRestarts; r++ ) {
-        // 2a. Begin iterations
+        // Compute outer tolerance on first restart and store initial residual
+        if (r == 0) {
+            outerTol = eta*beta;
+            beta0 = beta;
+        }
+
+        // 2. Do 'm' iterations of update
         foreach (j; 0 .. m) {
             iterCount = j+1;
 
-            // apply scaling
+            // Undo the linear system scaling for Jacobian-vector evaluation
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach(i; 0 .. blk.ncells){
                     size_t idx = i*ncq;
                     foreach(j; 0 .. ncq){
-                        blk.v[idx+j] *= (blk.maxRate[j].re);
+                        blk.v[idx+j] *= blk.maxRate[j].re;
                     }
                 }
             }
 
-            // apply preconditioning
+            // Apply preconditioning step
             if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
                 final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
                 case PreconditionMatrixType.diagonal:
@@ -2117,8 +2154,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 }
             }
 
+            // evaluate Jz using either a real or complex valued Frechet derivative...
+            // for the real-valued solver we compute an ideal perturbation parameter for the Frechet derivative as per equation 11/12 from
+            // Knoll, D.A. and McHugh, P.R., Newton-Krylov Methods Applied to a System of Convection-Diffusion-Reaction Equations, 1994
+            // note: calculate this parameter WITHOUT scaling applied
             if (!GlobalConfig.sssOptions.useComplexMatVecEval) {
-                // calculate sigma without scaling
                 number sumv = 0.0;
                 mixin(dot_over_blocks("sumv", "zed", "zed"));
                 version(mpi_parallel) {
@@ -2145,7 +2185,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 }
 
                 sigma = (sume/(N*sqrt(sumv))).re;
-                //writeln("sigma : ", sigma, ", ", sume, ", ", sumv, ", ", N);
             }
 
             // Prepare 'w' with (I/dt)(P^-1)v term;
@@ -2176,7 +2215,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 foreach (k; 0 .. blk.nvars)  blk.w[k] = blk.w[k] - blk.zed[k];
             }
 
-            // apply scaling
+            // apply the linear system scaling
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach(i; 0 .. blk.ncells){
                     size_t idx = i*ncq;
@@ -2186,8 +2225,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 }
             }
 
-            // The remainder of the algorithm looks a lot like any standard
-            // GMRES implementation (for example, see smla.d)
+            // The remainder of the algorithm looks a lot like any standard GMRES implementation (for example, see smla.d)
             foreach (i; 0 .. j+1) {
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     // Extract column 'i'
@@ -2255,15 +2293,9 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 nm.bbla.dot!double(Gamma, j+2, j+2, Q0, j+2, Q1);
             }
 
-            // Prepare for next step
-            copy(H1, H0);
-            g0[] = g1[];
-            copy(Q1, Q0);
-
             // Get residual
             resid = fabs(g1[j+1]);
-            // DEBUG:
-            //      writefln("OUTER: restart-count= %d iteration= %d, resid= %e", r, j, resid);
+            //writefln("OUTER: restart-count= %d iteration= %d, resid= %e", r, j, resid);
             nIters = to!int(iterCount);
             linSolResid = (resid/beta0).re;
             if ( resid <= outerTol ) {
@@ -2273,6 +2305,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 //      writefln("RANK %d: tolerance achieved on iteration: %d", GlobalConfig.mpi_rank_for_local_task, m);
                 break;
             }
+
+            // Prepare for next iteration
+            copy(H1, H0);
+            g0[] = g1[];
+            copy(Q1, Q0);
         }
 
         if (iterCount == maxIters)
@@ -2287,7 +2324,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             nm.bbla.transpose_and_dot!double(blk.VT, blk.nvars, m, blk.nvars, blk.g1, blk.zed);
         }
 
-        // apply scaling
+        // Undo the linear system scaling to recover the unscaled solution vector
         foreach (blk; parallel(localFluidBlocks,1)) {
             foreach(i; 0 .. blk.ncells){
                 size_t idx = i*ncq;
@@ -2297,7 +2334,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             }
         }
 
-        // apply preconditioning
+        // Apply preconditioning step
         if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
             final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
                 case PreconditionMatrixType.diagonal:
@@ -2326,7 +2363,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             }
         }
 
-
         foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (k; 0 .. blk.nvars) blk.dU[k] += blk.x0[k];
         }
@@ -2338,75 +2374,32 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             break;
         }
 
-        // Else, we prepare for restart by setting x0 and computing r0
-        // Computation of r0 as per Fraysee etal (2005)
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            blk.x0[] = blk.dU[];
-        }
-
-        foreach (blk; localFluidBlocks) copy(Q1, blk.Q1);
-        // Set all values in g0 to 0.0 except for final (m+1) value
-        foreach (i; 0 .. m) g0[i] = 0.0;
-        foreach (blk; localFluidBlocks) blk.g0[] = g0[];
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot(blk.Q1, m, m+1, blk.g0, blk.g1);
-        }
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.transpose_and_dot(blk.VT, blk.nvars, m+1, blk.nvars, blk.g1, blk.r0);
-        }
+        // Else, prepare for a restart by setting the inital
+        // guess to the current best estimate of the solution
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.x0[] = blk.dU[]; }
 
         /*
-        // apply scaling
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            size_t nturb = blk.myConfig.turb_model.nturb;
-            size_t nsp = blk.myConfig.gmodel.n_species;
-            size_t nmodes = blk.myConfig.gmodel.n_modes;
-            auto cqi = blk.myConfig.cqi;
-            int cellCount = 0;
-            foreach (cell; blk.cells) {
-                blk.r0[cellCount+MASS] *= (1.0/blk.maxRate[cqi.mass]);
-                blk.r0[cellCount+X_MOM] *= (1.0/blk.maxRate[cqi.xMom]);
-                blk.r0[cellCount+Y_MOM] *= (1.0/blk.maxRate[cqi.yMom]);
-                if ( blk.myConfig.dimensions == 3 )
-                    blk.r0[cellCount+Z_MOM] *= (1.0/blk.maxRate[cqi.zMom]);
-                blk.r0[cellCount+TOT_ENERGY] *= (1.0/blk.maxRate[cqi.totEnergy]);
-                foreach(it; 0 .. nturb){
-                    blk.r0[cellCount+TKE+it] *= (1.0/blk.maxRate[cqi.rhoturb+it]);
-                }
-                version(multi_species_gas){
-                if ( nsp > 1 ) {
-                    foreach(sp; 0 .. nsp){ blk.r0[cellCount+SPECIES+sp] *= (1.0/blk.maxRate[cqi.species+sp]); }
-                }
-                }
-                version(multi_T_gas){
-                foreach(imode; 0 .. nmodes){ blk.r0[cellCount+MODES+imode] *= (1.0/blk.maxRate[cqi.modes+imode]); }
-                }
-                cellCount += nConserved;
+          We were originally peforming the computation of r0 as per Fraysse etal (2005),
+          however, we have observed that the resid value at the end of the last GMRES iteration
+          and the beta value computed using the r0 as per Fraysse differed quite substantially,
+          sometimes by an order of magnitude. It hasn't been determined whether this is due to
+          a bug in the implementation of the trick or a fundamental deficiency of the method.
+          We have thus reverted to computing the r0 vector explicitly, i.e. r0 = b - Ax0 where Ax0
+          is computed using a Frechet derivative, in doing so the resid and beta values have a far
+          better agreement. [KAD 2023-07-18]
+
+          // old Fraysse method...
+          foreach (blk; localFluidBlocks) copy(Q1, blk.Q1);
+          // Set all values in g0 to 0.0 except for final (m+1) value
+          foreach (i; 0 .. m) g0[i] = 0.0;
+          foreach (blk; localFluidBlocks) blk.g0[] = g0[];
+          foreach (blk; parallel(localFluidBlocks,1)) {
+          nm.bbla.dot(blk.Q1, m, m+1, blk.g0, blk.g1);
+          }
+          foreach (blk; parallel(localFluidBlocks,1)) {
+            nm.bbla.transpose_and_dot(blk.VT, blk.nvars, m+1, blk.nvars, blk.g1, blk.r0);
             }
-        }
         */
-
-        mixin(dot_over_blocks("beta", "r0", "r0"));
-        version(mpi_parallel) {
-            MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        }
-        beta = sqrt(beta);
-
-        // DEBUG: writefln("OUTER: ON RESTART beta= %e", beta);
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            foreach (k; 0 .. blk.nvars) {
-                blk.v[k] = blk.r0[k]/beta;
-                blk.VT[k] = blk.v[k];
-            }
-        }
-        // Re-initialise some vectors and matrices for restart
-        g0[] = 0.0;
-        g1[] = 0.0;
-        H0.zeros();
-        H1.zeros();
-        // And set first residual entry
-        g0[0] = beta;
-
     }
 
     residual = unscaledNorm2;
