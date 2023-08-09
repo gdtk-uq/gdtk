@@ -1547,20 +1547,20 @@ public:
 
         // copy some data for later use
         if (myConfig.viscous) {
-            foreach(cell; cells) { cell.grad_save.copy_values_from(*(cell.grad)); }
+            foreach(id; 0 .. ncells) celldata.saved_gradients[id].copy_values_from(celldata.gradients[id]);
         }
         if (myConfig.reacting) {
-            foreach(cell; cells) {
-                cell.clear_source_vector();
-                cell.add_thermochemical_source_vector(thermochem_source, 1.0);
-                cell.Q_save.copy_values_from(cell.Q);
-            }
+            clear_cell_source_vectors();
+            eval_thermochem_source_vector(0);
+            size_t cncq = ncells*myConfig.cqi.n;
+            foreach(i; 0 .. cncq) celldata.saved_source_terms[i] = celldata.source_terms[i];
         }
 
         // the real-valued finite difference needs a base residual (R0)
         version(complex_numbers) { } // do nothing
-        else {
-            foreach(cell; cells) { evalRHS(0, 0, cell.cell_list, cell.face_list, cell); }
+        else { // TODO: Shouldn't this be done upstairs using the real evalRHS?
+            // TODO: Also testme in real mode...
+            foreach(i; 0 .. ncells) { evalRHS2(0, 0, celldata.halo_cell_ids[i], celldata.halo_face_ids[i], i); }
         }
 
         // fill out the rows of the Jacobian for a cell
@@ -1622,8 +1622,10 @@ public:
             // return cell to original state
             foreach(k; 0..nConserved) celldata.U1[idx + k] = celldata.U0[idx + k]; // Needed?
             celldata.flowstates[pid].copy_values_from(*fs_save);
-            if (myConfig.viscous) { // TODO
-                foreach (cell; cells[pid].cell_list) { cell.grad.copy_values_from(*(cell.grad_save)); }
+            if (myConfig.viscous) {
+                foreach (cid; celldata.halo_cell_ids[pid]) {
+                    celldata.gradients[cid].copy_values_from(celldata.saved_gradients[cid]);
+                }
             }
         }
     } // end evaluate_cell_contribution_to_jacobian()
