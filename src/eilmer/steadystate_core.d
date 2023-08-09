@@ -59,15 +59,15 @@ version(mpi_parallel) {
 static int fnCount = 0;
 
 // Module-local, global memory arrays and matrices
-number[] g0;
-number[] g1;
-number[] h;
-number[] hR;
-Matrix!number H0;
-Matrix!number H1;
-Matrix!number Gamma;
-Matrix!number Q0;
-Matrix!number Q1;
+double[] g0;
+double[] g1;
+double[] h;
+double[] hR;
+Matrix!double H0;
+Matrix!double H1;
+Matrix!double Gamma;
+Matrix!double Q0;
+Matrix!double Q1;
 
 struct RestartInfo {
     double pseudoSimTime;
@@ -329,12 +329,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     ConservedQuantities maxResiduals = new_ConservedQuantities(nConserved);
     ConservedQuantities currResiduals = new_ConservedQuantities(nConserved);
     number mass_balance = 0.0;
-    number omega = 1.0;                  // nonlinear update relaxation factor
-    number omega_allow_cfl_growth = 0.1; // we freeze the CFL for a relaxation factor below this value
-    number omega_min = 0.01;             // minimum allowable relaxation factor to accept an update
-    number omega_reduction_factor = 0.7; // factor by which the relaxation factor is reduced during
+    double omega = 1.0;                  // nonlinear update relaxation factor
+    double omega_allow_cfl_growth = 0.1; // we freeze the CFL for a relaxation factor below this value
+    double omega_min = 0.01;             // minimum allowable relaxation factor to accept an update
+    double omega_reduction_factor = 0.7; // factor by which the relaxation factor is reduced during
                                          // the physicality check and line search
-    number theta = GlobalConfig.sssOptions.physicalityCheckTheta;
+    double theta = GlobalConfig.sssOptions.physicalityCheckTheta;
     bool pc_matrix_evaluated = false;
 
     double cfl, cflTrial;
@@ -400,7 +400,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         max_residuals(maxResiduals);
         foreach (blk; parallel(localFluidBlocks, 1)) {
             foreach (i; 0 .. blk.ncells*ncq) {
-                blk.FU[i] = -blk.celldata.dUdt0[i];
+                blk.FU[i] = -blk.celldata.dUdt0[i].re;
             }
         }
 
@@ -409,7 +409,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 size_t nturb = blk.myConfig.cqi.n_turb;
                 int cellCount = 0;
                 foreach (i; 0 .. blk.ncells) {
-                    foreach(it; 0 .. nturb) { blk.FU[cellCount+TKE+it] = to!number(0.0); }
+                    foreach(it; 0 .. nturb) { blk.FU[cellCount+TKE+it] = 0.0; }
                     cellCount += nConserved;
                 }
             }
@@ -427,7 +427,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 int cellCount = 0;
                 foreach (i; 0 .. blk.ncells) {
                     size_t s0 = i*ncq;
-                    foreach(it; 0 .. nturb) { blk.FU[cellCount+TKE+it] = -blk.celldata.dUdt0[s0+TKE+it]; }
+                    foreach(it; 0 .. nturb) { blk.FU[cellCount+TKE+it] = -blk.celldata.dUdt0[s0+TKE+it].re; }
                     cellCount += nConserved;
                 }
             }
@@ -700,14 +700,14 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         }
                     }
                     rel_diff_limit = fabs(dU/(theta*U));
-                    omega = 1.0/(fmax(rel_diff_limit,1.0/omega));
+                    omega = 1.0/(fmax(rel_diff_limit.re,1.0/omega));
                     cellCount += nConserved;
                 }
             }
 
             // communicate minimum relaxation factor based on conserved mass to all processes
             version(mpi_parallel) {
-                MPI_Allreduce(MPI_IN_PLACE, &(omega.re), 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+                MPI_Allreduce(MPI_IN_PLACE, &(omega), 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
             }
 
             // we now check if the current relaxation factor is sufficient enough to produce realizable primitive variables
@@ -747,7 +747,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
             // the relaxation factor may have been updated, so communicate minimum omega to all processes again
             version(mpi_parallel) {
-                MPI_Allreduce(MPI_IN_PLACE, &(omega.re), 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+                MPI_Allreduce(MPI_IN_PLACE, &(omega), 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
             }
 
         } // end physicality check
@@ -769,7 +769,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     int cellCount = 0;
                     foreach (cell; blk.cells) {
-                        number dtInv;
+                        double dtInv;
                         if (blk.myConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
                         else { dtInv = 1.0/dt; }
                         foreach (j; 0 .. nConserved) {
@@ -796,7 +796,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     int cellCount = 0;
                     foreach (cell; blk.cells) {
                         foreach (j; 0 .. nConserved) {
-                            blk.FU[cellCount+j] += cell.dUdt[1][j];
+                            blk.FU[cellCount+j] += cell.dUdt[1][j].re;
                         }
                         // return cell to original state
                         cell.decode_conserved(0, 0, 0.0);
@@ -809,7 +809,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     foreach (blk; parallel(localFluidBlocks,1)) {
                         int cellCount = 0;
                         foreach (cell; blk.cells) {
-                            number dtInv;
+                            double dtInv;
                             if (blk.myConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
                             else { dtInv = 1.0/dt; }
                             foreach (k; 0 .. nConserved) {
@@ -994,7 +994,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 fResid.writef("%20.16e ", fabs(mass_balance.re));
                 fResid.writef("%20.16e ", linSolResid);
                 if (GlobalConfig.sssOptions.useLineSearch || GlobalConfig.sssOptions.usePhysicalityCheck) {
-                    fResid.writef("%20.16e ", omega.re);
+                    fResid.writef("%20.16e ", omega);
                 }
                 fResid.writef("%d ", pc_matrix_evaluated);
                 fResid.write("\n");
@@ -1319,11 +1319,11 @@ void allocate_global_fluid_workspace()
     g1.length = mOuter+1;
     h.length = mOuter+1;
     hR.length = mOuter+1;
-    H0 = new Matrix!number(mOuter+1, mOuter);
-    H1 = new Matrix!number(mOuter+1, mOuter);
-    Gamma = new Matrix!number(mOuter+1, mOuter+1);
-    Q0 = new Matrix!number(mOuter+1, mOuter+1);
-    Q1 = new Matrix!number(mOuter+1, mOuter+1);
+    H0 = new Matrix!double(mOuter+1, mOuter);
+    H1 = new Matrix!double(mOuter+1, mOuter);
+    Gamma = new Matrix!double(mOuter+1, mOuter+1);
+    Q0 = new Matrix!double(mOuter+1, mOuter+1);
+    Q1 = new Matrix!double(mOuter+1, mOuter+1);
 }
 
 double determine_dt(double cflInit)
@@ -1527,7 +1527,7 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
     evalRHS(pseudoSimTime, 1);
     foreach (blk; parallel(localFluidBlocks,1)) {
         foreach(i; 0 .. blk.ncells*ncq){
-            blk.zed[i] = (blk.celldata.dUdt1[i] - blk.FU[i])/sigma;
+            blk.zed[i] = (blk.celldata.dUdt1[i].re - blk.FU[i])/sigma;
         }
         foreach (i; 0 .. blk.ncells) {
             size_t idx = i*ncq;
@@ -1628,7 +1628,7 @@ void point_implicit_relaxation_solve(int step, double pseudoSimTime, double dt, 
     //if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
 
     // we start with a guess of dU = 0
-    foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = to!number(0.0); }
+    foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = 0.0; }
 
     // evaluate R.H.S. residual vector R
     evalRHS(pseudoSimTime, 0);
@@ -1637,7 +1637,7 @@ void point_implicit_relaxation_solve(int step, double pseudoSimTime, double dt, 
     foreach (blk; parallel(localFluidBlocks,1)) {
         int cellCount = 0;
         foreach (cell; blk.cells) {
-            foreach (j; 0 .. nConserved) { blk.FU[cellCount+j] = cell.dUdt[0][j]; }
+            foreach (j; 0 .. nConserved) { blk.FU[cellCount+j] = cell.dUdt[0][j].re; }
             cellCount += nConserved;
         }
     }
@@ -1705,11 +1705,11 @@ string jacobi_solve(string lhs_vec, string rhs_vec)
     int kmax = GlobalConfig.sssOptions.maxSubIterations;
     foreach (k; 0 .. kmax) {
          foreach (blk; parallel(localFluidBlocks,1)) {
-               blk.rhs[] = to!number(0.0);
+               blk.rhs[] = 0.0;
                nm.smla.multiply_block_upper_triangular(blk.flowJacobian.local, blk."~lhs_vec~"[], blk.rhs[], blk.cells.length, nConserved);
                nm.smla.multiply_block_lower_triangular(blk.flowJacobian.local, blk."~lhs_vec~"[], blk.rhs[], blk.cells.length, nConserved);
                blk.rhs[] = blk."~rhs_vec~"[] - blk.rhs[];
-               blk."~lhs_vec~"[] = to!number(0.0);
+               blk."~lhs_vec~"[] = 0.0;
                nm.smla.multiply_block_diagonal(blk.flowJacobian.local, blk.rhs[], blk."~lhs_vec~"[], blk.cells.length, nConserved);
          }
     }
@@ -1726,13 +1726,13 @@ string sgs_solve(string lhs_vec, string rhs_vec)
     foreach (k; 0 .. kmax) {
          foreach (blk; parallel(localFluidBlocks,1)) {
              // forward sweep
-             blk.rhs[] = to!number(0.0);
+             blk.rhs[] = 0.0;
              nm.smla.multiply_block_upper_triangular(blk.flowJacobian.local, blk."~lhs_vec~", blk.rhs, blk.cells.length, nConserved);
              blk.rhs[] = blk."~rhs_vec~"[] - blk.rhs[];
              nm.smla.block_lower_triangular_solve(blk.flowJacobian.local, blk.rhs[], blk."~lhs_vec~"[], blk.cells.length, nConserved);
 
              // backward sweep
-             blk.rhs[] = to!number(0.0);
+             blk.rhs[] = 0.0;
              nm.smla.multiply_block_lower_triangular(blk.flowJacobian.local, blk."~lhs_vec~"[], blk.rhs[], blk.cells.length, nConserved);
              blk.rhs[] = blk."~rhs_vec~"[] - blk.rhs[];
              nm.smla.block_upper_triangular_solve(blk.flowJacobian.local, blk.rhs, blk."~lhs_vec~"[], blk.cells.length, nConserved);
@@ -1817,7 +1817,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     // store dUdt[0] as F(U)
     foreach (blk; parallel(localFluidBlocks,1)) {
         foreach(i; 0 .. blk.ncells*ncq) {
-            blk.FU[i] = blk.celldata.dUdt0[i];
+            blk.FU[i] = blk.celldata.dUdt0[i].re;
         }
     }
 
@@ -1827,15 +1827,15 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         // compute approximate solution via dU = D^{-1}*F(U) where we set D = precondition matrix
         final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
         case PreconditionMatrixType.diagonal:
-            foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = to!number(0.0); }
+            foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = 0.0; }
             mixin(diagonal_solve("DinvR", "FU"));
             break;
         case PreconditionMatrixType.jacobi:
-            foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = to!number(0.0); }
+            foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = 0.0; }
             mixin(jacobi_solve("DinvR", "FU"));
             break;
         case PreconditionMatrixType.sgs:
-            foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = to!number(0.0); }
+            foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = 0.0; }
             mixin(sgs_solve("DinvR", "FU"));
             break;
         case PreconditionMatrixType.ilu:
@@ -1850,7 +1850,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         foreach (blk; parallel(localFluidBlocks,1)) {
             int cellCount = 0;
             foreach (cell; blk.cells) {
-                number dtInv;
+                double dtInv;
                 if (blk.myConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
                 else { dtInv = 1.0/dt; }
                 foreach (k; 0 .. nConserved) {
@@ -2005,7 +2005,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (i; 0 .. blk.ncells) {
-                foreach(it; 0 .. cqi.n_turb) { blk.FU[cellCount+TKE+it] = to!number(0.0); }
+                foreach(it; 0 .. cqi.n_turb) { blk.FU[cellCount+TKE+it] = 0.0; }
                 cellCount += nConserved;
             }
         }
@@ -2023,7 +2023,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (i; 0 .. blk.ncells) {
-                foreach(it; 0 .. cqi.n_turb) { blk.FU[cellCount+TKE+it] = blk.celldata.dUdt0[cellCount+cqi.rhoturb+it]; }
+                foreach(it; 0 .. cqi.n_turb) { blk.FU[cellCount+TKE+it] = blk.celldata.dUdt0[cellCount+cqi.rhoturb+it].re; }
                 cellCount += nConserved;
             }
         }
@@ -2031,8 +2031,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
 
     // Initialise some arrays and matrices that have already been allocated
-    g0[] = to!number(0.0);
-    g1[] = to!number(0.0);
+    g0[] = 0.0;
+    g1[] = 0.0;
     H0.zeros();
     H1.zeros();
 
@@ -2041,17 +2041,17 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     // Taking x0 = [0] (as is common) gives r0 = b = FU
     // apply scaling
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.x0[] = to!number(0.0);
+        blk.x0[] = 0.0;
         foreach(i; 0 .. blk.ncells){
             foreach(j; 0 .. ncq){
                 size_t idx = i*ncq;
-                blk.r0[idx+j] = (1./blk.maxRate[j])*blk.FU[idx+j];
+                blk.r0[idx+j] = (1./blk.maxRate[j].re)*blk.FU[idx+j];
             }
         }
     }
 
     // Then compute v = r0/||r0||
-    number beta;
+    double beta;
     mixin(dot_over_blocks("beta", "r0", "r0"));
     version(mpi_parallel) {
         // NOTE: this dot product has been observed to be sensitive to the order of operations,
@@ -2059,7 +2059,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         //       for a different mapping of blocks over the MPI tasks and/or a shared memory calculation
         //       2022-09-30 (KAD).
         MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
     }
     beta = sqrt(beta);
     number beta0 = beta;
@@ -2085,7 +2084,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 foreach(i; 0 .. blk.ncells){
                     size_t idx = i*ncq;
                     foreach(j; 0 .. ncq){
-                        blk.v[idx+j] *= (blk.maxRate[j]);
+                        blk.v[idx+j] *= (blk.maxRate[j].re);
                     }
                 }
             }
@@ -2094,15 +2093,15 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
                 final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
                 case PreconditionMatrixType.diagonal:
-                    foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = to!number(0.0); }
+                    foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = 0.0; }
                     mixin(diagonal_solve("zed", "v"));
                     break;
                 case PreconditionMatrixType.jacobi:
-                    foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = to!number(0.0); }
+                    foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = 0.0; }
                     mixin(jacobi_solve("zed", "v"));
                     break;
                 case PreconditionMatrixType.sgs:
-                    foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = to!number(0.0); }
+                    foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = 0.0; }
                     mixin(sgs_solve("zed", "v"));
                     break;
                 case PreconditionMatrixType.ilu:
@@ -2182,7 +2181,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 foreach(i; 0 .. blk.ncells){
                     size_t idx = i*ncq;
                     foreach(j; 0 .. ncq){
-                        blk.w[idx+j] *= 1.0/blk.maxRate[j];
+                        blk.w[idx+j] *= 1.0/blk.maxRate[j].re;
                     }
                 }
             }
@@ -2195,7 +2194,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     size_t offset = i*blk.nvars;
                     foreach (k; 0 .. blk.nvars ) blk.v[k] = blk.VT[offset + k];
                 }
-                number H0_ij;
+                double H0_ij;
                 mixin(dot_over_blocks("H0_ij", "w", "v"));
                 version(mpi_parallel) {
                     // NOTE: this dot product has been observed to be sensitive to the order of operations,
@@ -2203,14 +2202,13 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     //       for a different mapping of blocks over the MPI tasks and/or a shared memory calculation
                     //       2022-09-30 (KAD).
                     MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
                 }
                 H0[i,j] = H0_ij;
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     foreach (k; 0 .. blk.nvars) blk.w[k] -= H0_ij*blk.v[k];
                 }
             }
-            number H0_jp1j;
+            double H0_jp1j;
             mixin(dot_over_blocks("H0_jp1j", "w", "w"));
             version(mpi_parallel) {
                 // NOTE: this dot product has been observed to be sensitive to the order of operations,
@@ -2218,7 +2216,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 //       for a different mapping of blocks over the MPI tasks and/or a shared memory calculation
                 //       2022-09-30 (KAD).
                 MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
             }
             H0_jp1j = sqrt(H0_jp1j);
             H0[j+1,j] = H0_jp1j;
@@ -2255,7 +2252,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 copy(Gamma, Q1);
             }
             else {
-                nm.bbla.dot!number(Gamma, j+2, j+2, Q0, j+2, Q1);
+                nm.bbla.dot!double(Gamma, j+2, j+2, Q0, j+2, Q1);
             }
 
             // Prepare for next step
@@ -2283,11 +2280,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
         // At end H := R up to row m
         //        g := gm up to row m
-        upperSolve!number(H1, to!int(m), g1);
+        upperSolve!double(H1, to!int(m), g1);
         // In serial, distribute a copy of g1 to each block
         foreach (blk; localFluidBlocks) blk.g1[] = g1[];
         foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.transpose_and_dot!number(blk.VT, blk.nvars, m, blk.nvars, blk.g1, blk.zed);
+            nm.bbla.transpose_and_dot!double(blk.VT, blk.nvars, m, blk.nvars, blk.g1, blk.zed);
         }
 
         // apply scaling
@@ -2295,7 +2292,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             foreach(i; 0 .. blk.ncells){
                 size_t idx = i*ncq;
                 foreach(j; 0 .. ncq){
-                    blk.zed[idx+j] *= blk.maxRate[j];
+                    blk.zed[idx+j] *= blk.maxRate[j].re;
                 }
             }
         }
@@ -2304,15 +2301,15 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
             final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
                 case PreconditionMatrixType.diagonal:
-                    foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = to!number(0.0); }
+                    foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = 0.0; }
                     mixin(diagonal_solve("dU", "zed"));
                     break;
                 case PreconditionMatrixType.jacobi:
-                    foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = to!number(0.0); }
+                    foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = 0.0; }
                     mixin(jacobi_solve("dU", "zed"));
                     break;
                 case PreconditionMatrixType.sgs:
-                    foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = to!number(0.0); }
+                    foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = 0.0; }
                     mixin(sgs_solve("dU", "zed"));
                     break;
                 case PreconditionMatrixType.ilu:
@@ -2392,7 +2389,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         mixin(dot_over_blocks("beta", "r0", "r0"));
         version(mpi_parallel) {
             MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
         }
         beta = sqrt(beta);
 
@@ -2404,8 +2400,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             }
         }
         // Re-initialise some vectors and matrices for restart
-        g0[] = to!number(0.0);
-        g1[] = to!number(0.0);
+        g0[] = 0.0;
+        g1[] = 0.0;
         H0.zeros();
         H1.zeros();
         // And set first residual entry
