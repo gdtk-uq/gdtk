@@ -378,9 +378,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         evalRHS(0.0, 0);
         // initialize the flow Jacobians used as local precondition matrices for GMRES
         final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
-            case PreconditionMatrixType.lusgs:
-                // do nothing
-                break;
             case PreconditionMatrixType.diagonal:
                 foreach (blk; localFluidBlocks) { blk.initialize_jacobian(-1, GlobalConfig.sssOptions.preconditionerSigma); }
                 break;
@@ -1652,21 +1649,15 @@ void point_implicit_relaxation_solve(int step, double pseudoSimTime, double dt, 
 
     // evaluate Jacobian for use in the implicit operator [A] for matrix-based solvers
     if (step == startStep || step%GlobalConfig.sssOptions.frozenPreconditionerCount == 0) {
-        // matrix-free LU-SGS method doesn't need the Jacobian
-        if (GlobalConfig.sssOptions.preconditionMatrixType != PreconditionMatrixType.lusgs) {
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                blk.evaluate_jacobian();
-                blk.flowJacobian.augment_with_dt(blk.celldata.dt_local, dt, blk.ncells, nConserved);
-                nm.smla.invert_block_diagonal(blk.flowJacobian.local, blk.flowJacobian.D, blk.flowJacobian.Dinv, blk.cells.length, nConserved);
-            }
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            blk.evaluate_jacobian();
+            blk.flowJacobian.augment_with_dt(blk.celldata.dt_local, dt, blk.ncells, nConserved);
+            nm.smla.invert_block_diagonal(blk.flowJacobian.local, blk.flowJacobian.D, blk.flowJacobian.Dinv, blk.cells.length, nConserved);
         }
     }
 
     // solve linear system [A].dU = R
     final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
-    case PreconditionMatrixType.lusgs:
-        mixin(lusgs_solve("dU", "FU"));
-        break;
     case PreconditionMatrixType.diagonal:
         mixin(diagonal_solve("dU", "FU"));
         break;
@@ -1680,21 +1671,19 @@ void point_implicit_relaxation_solve(int step, double pseudoSimTime, double dt, 
         throw new Error("ILU cannot be used in the point implicit relaxation update.");
     } // end switch
 
-    // compute linear solve residual (TODO: how to do this for the matrix-free LU-SGS method?)
-    if (GlobalConfig.sssOptions.preconditionMatrixType != PreconditionMatrixType.lusgs) {
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            // we need to temporarily reinvert the diagonal blocks, since we store A = L + D^(-1) + U
-            nm.smla.invert_block_diagonal(blk.flowJacobian.local, blk.flowJacobian.D, blk.flowJacobian.Dinv, blk.cells.length, nConserved);
-            nm.smla.multiply(blk.flowJacobian.local, blk.dU, blk.rhs[]);
-            nm.smla.invert_block_diagonal(blk.flowJacobian.local, blk.flowJacobian.D, blk.flowJacobian.Dinv, blk.cells.length, nConserved);
-            blk.rhs[] = blk.rhs[] - blk.FU[];
-        }
-        mixin(dot_over_blocks("linSolResid", "rhs", "rhs"));
-        version(mpi_parallel) {
-            MPI_Allreduce(MPI_IN_PLACE, &(linSolResid), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        }
-        linSolResid = sqrt(linSolResid)/residual; // relative drop in the residual
+    // compute linear solve residual
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        // we need to temporarily reinvert the diagonal blocks, since we store A = L + D^(-1) + U
+        nm.smla.invert_block_diagonal(blk.flowJacobian.local, blk.flowJacobian.D, blk.flowJacobian.Dinv, blk.cells.length, nConserved);
+        nm.smla.multiply(blk.flowJacobian.local, blk.dU, blk.rhs[]);
+        nm.smla.invert_block_diagonal(blk.flowJacobian.local, blk.flowJacobian.D, blk.flowJacobian.Dinv, blk.cells.length, nConserved);
+        blk.rhs[] = blk.rhs[] - blk.FU[];
     }
+    mixin(dot_over_blocks("linSolResid", "rhs", "rhs"));
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &(linSolResid), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+    linSolResid = sqrt(linSolResid)/residual; // relative drop in the residual
 }
 
 string diagonal_solve(string lhs_vec, string rhs_vec)
@@ -1754,56 +1743,6 @@ string sgs_solve(string lhs_vec, string rhs_vec)
     return code;
 }
 
-string lusgs_solve(string lhs_vec, string rhs_vec)
-{
-    string code = "{
-
-    int kmax = GlobalConfig.sssOptions.maxSubIterations;
-    bool matrix_based = false;
-    double omega = 2.0;
-
-    // 1. initial subiteration
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        int cellCount = 0;
-        foreach (cell; blk.cells) {
-            number dtInv;
-            if (blk.myConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
-            else { dtInv = 1.0/dt; }
-            auto z_local = blk."~lhs_vec~"[cellCount..cellCount+nConserved]; // this is actually a reference not a copy
-            cell.lusgs_startup_iteration(dtInv, omega, z_local, blk."~rhs_vec~"[cellCount..cellCount+nConserved]);
-            cellCount += nConserved;
-        }
-    }
-
-    // 2. kmax subiterations
-    foreach (k; 0 .. kmax) {
-         // shuffle dU values
-         foreach (blk; parallel(localFluidBlocks,1)) {
-             int cellCount = 0;
-             foreach (cell; blk.cells) {
-                 cell.dUk[0..nConserved] = blk."~lhs_vec~"[cellCount..cellCount+nConserved];
-                 cellCount += nConserved;
-             }
-         }
-
-         // exchange boundary dU values
-         exchange_ghost_cell_boundary_data(pseudoSimTime, 0, 0);
-
-         // perform subiteraion
-         foreach (blk; parallel(localFluidBlocks,1)) {
-             int cellCount = 0;
-             foreach (cell; blk.cells) {
-                  auto z_local = blk."~lhs_vec~"[cellCount..cellCount+nConserved]; // this is actually a reference not a copy
-                  cell.lusgs_relaxation_iteration(omega, matrix_based, z_local, blk."~rhs_vec~"[cellCount..cellCount+nConserved]);
-                  cellCount += nConserved;
-             }
-         }
-    }
-
-    }";
-    return code;
-}
-
 void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, double sigma, bool usePreconditioner,
                     ref double residual, ref int nRestarts, ref int nIters, ref double linSolResid, int startStep, int LHSeval, int RHSeval, ref bool pc_matrix_evaluated)
 {
@@ -1854,9 +1793,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                                (step%GlobalConfig.sssOptions.frozenPreconditionerCount == 0) )) {
         pc_matrix_evaluated = true;
         final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
-        case PreconditionMatrixType.lusgs:
-            // do nothing
-            break;
         case PreconditionMatrixType.diagonal:
             goto case PreconditionMatrixType.sgs;
         case PreconditionMatrixType.jacobi:
@@ -1890,10 +1826,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     if (GlobalConfig.residual_smoothing) {
         // compute approximate solution via dU = D^{-1}*F(U) where we set D = precondition matrix
         final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
-        case PreconditionMatrixType.lusgs:
-            foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = to!number(0.0); }
-            mixin(lusgs_solve("DinvR", "FU"));
-            break;
         case PreconditionMatrixType.diagonal:
             foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = to!number(0.0); }
             mixin(diagonal_solve("DinvR", "FU"));
@@ -2161,10 +2093,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             // apply preconditioning
             if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
                 final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
-                case PreconditionMatrixType.lusgs:
-                    foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = to!number(0.0); }
-                    mixin(lusgs_solve("zed", "v"));
-                    break;
                 case PreconditionMatrixType.diagonal:
                     foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = to!number(0.0); }
                     mixin(diagonal_solve("zed", "v"));
@@ -2375,10 +2303,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         // apply preconditioning
         if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
             final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
-                case PreconditionMatrixType.lusgs:
-                    foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = to!number(0.0); }
-                    mixin(lusgs_solve("dU", "zed"));
-                    break;
                 case PreconditionMatrixType.diagonal:
                     foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = to!number(0.0); }
                     mixin(diagonal_solve("dU", "zed"));

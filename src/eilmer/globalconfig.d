@@ -593,12 +593,11 @@ SolidDomainCoupling solidDomainCouplingFromName(string name)
     }
 }
 
-enum PreconditionMatrixType { lusgs, diagonal, jacobi, sgs, ilu }
+enum PreconditionMatrixType { diagonal, jacobi, sgs, ilu }
 
 string preconditionMatrixTypeName(PreconditionMatrixType i)
 {
     final switch (i) {
-    case PreconditionMatrixType.lusgs: return "lusgs";
     case PreconditionMatrixType.diagonal: return "diagonal";
     case PreconditionMatrixType.jacobi: return "jacobi";
     case PreconditionMatrixType.sgs: return "sgs";
@@ -609,7 +608,6 @@ string preconditionMatrixTypeName(PreconditionMatrixType i)
 PreconditionMatrixType preconditionMatrixTypeFromName(string name)
 {
     switch (name) {
-    case "lusgs": return PreconditionMatrixType.lusgs;
     case "diagonal": return PreconditionMatrixType.diagonal;
     case "jacobi": return PreconditionMatrixType.jacobi;
     case "sgs": return PreconditionMatrixType.sgs;
