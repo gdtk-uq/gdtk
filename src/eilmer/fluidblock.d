@@ -1329,6 +1329,9 @@ public:
         if (myConfig.viscous) {
             foreach(cell; cells) { cell.grad_save.copy_values_from(*(cell.grad)); }
         }
+        if (flowJacobian.spatial_order >= 2) {
+            foreach(cell; cells) { cell.gradients_save.copy_values_from(*(cell.gradients)); }
+        }
         if (myConfig.reacting) {
             foreach(cell; cells) {
                 cell.clear_source_vector();
@@ -1397,6 +1400,9 @@ public:
             pcell.fs.copy_values_from(*fs_save);
             if (myConfig.viscous) {
                 foreach (cell; pcell.cell_list) { cell.grad.copy_values_from(*(cell.grad_save)); }
+            }
+            if (flowJacobian.spatial_order >= 2) {
+                foreach(cell; pcell.cell_list) { cell.gradients.copy_values_from(*(cell.gradients_save)); }
             }
         }
 
@@ -1521,6 +1527,9 @@ public:
                     ghost_cell.fs.copy_values_from(*fs_save);
                     if (myConfig.viscous) {
                         foreach (cell; ghost_cell.cell_list) { cell.grad.copy_values_from(*(cell.grad_save)); }
+                    }
+                    if (flowJacobian.spatial_order >= 2) {
+                        foreach(cell; ghost_cell.cell_list) { cell.gradients.copy_values_from(*(cell.gradients_save)); }
                     }
                 }
 

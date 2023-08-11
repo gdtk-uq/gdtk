@@ -163,6 +163,7 @@ public:
         double[][] dRdU;
         ConservedQuantities Q_save;
         FlowGradients* grad_save;
+        LSQInterpGradients* gradients_save;
         // stencil of effected cells & faces used in forming the flow Jacobian
         //FVCell[] jacobian_cell_stencil;
         //FVInterface[] jacobian_face_stencil;
@@ -227,6 +228,7 @@ public:
         //
         version(nk_accelerator) {
             grad_save = new FlowGradients(myConfig);
+            gradients_save = new LSQInterpGradients(myConfig.n_species, myConfig.n_modes, myConfig.turb_model.nturb);
             Q_save = new_ConservedQuantities(ncq);
             dRdU.length = ncq; // number of conserved variables
             foreach (ref a; dRdU) a.length = ncq;

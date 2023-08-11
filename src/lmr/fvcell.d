@@ -166,6 +166,7 @@ public:
         number[][] dRdU;
         ConservedQuantities Q_save;
         FlowGradients* grad_save;
+        LSQInterpGradients* gradients_save;
         Matrix!number dConservative;
     }
 
@@ -220,6 +221,7 @@ public:
         //
         version(newton_krylov) {
             grad_save = new FlowGradients(myConfig);
+            gradients_save = new LSQInterpGradients(myConfig.n_species, myConfig.n_modes, myConfig.turb_model.nturb);
             Q_save = new_ConservedQuantities(ncq);
             dRdU.length = ncq; // number of conserved variables
             foreach (ref a; dRdU) a.length = ncq;
