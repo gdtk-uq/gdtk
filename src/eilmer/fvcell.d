@@ -1574,6 +1574,11 @@ public:
                 }
             }
         } // finished gathering faces
+        // Store relevant ids in the densified structures
+        fvcd.halo_cell_ids[id].length = cell_list.length;
+        fvcd.halo_face_ids[id].length = face_ids.length;
+        foreach(i, cell; cell_list) fvcd.halo_cell_ids[id][i] = cell.id;
+        foreach(i, fid; face_ids) fvcd.halo_face_ids[id][i] = fid;
 
     } // end gather_residual_stencil_lists_for_ghost_cells()
 
@@ -1788,6 +1793,76 @@ int decode_conserved(Vector3 pos, ConservedQuantities myU, ref FlowState fs, dou
     //
     return 0; // success
 } // end decode_conserved()
+
+@nogc
+void encode_conserved(Vector3 pos, in FlowState fs, double omegaz, LocalConfig myConfig, ConservedQuantities myU)
+{
+    auto cqi = myConfig.cqi;
+    number myrho = fs.gas.rho;
+    // Mass per unit volume.
+    if (cqi.mass==0) myU[cqi.mass] = myrho;
+    // Momentum per unit volume.
+    myU[cqi.xMom] = fs.gas.rho*fs.vel.x;
+    myU[cqi.yMom] = fs.gas.rho*fs.vel.y;
+    if (cqi.threeD) { myU[cqi.zMom] = fs.gas.rho*fs.vel.z; }
+    version(MHD) {
+        // Magnetic field
+        if (cqi.MHD) {
+            myU[cqi.xB] = fs.B.x;
+            myU[cqi.yB] = fs.B.y;
+            myU[cqi.zB] = fs.B.z;
+            myU[cqi.psi] = fs.psi;
+            myU[cqi.divB] = fs.divB;
+        }
+    }
+    // Total Energy / unit volume
+    number u = myConfig.gmodel.internal_energy(fs.gas);
+    number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y+fs.vel.z*fs.vel.z);
+    myU[cqi.totEnergy] = fs.gas.rho*(u + ke);
+    version(turbulence) {
+        if (cqi.turb) {
+            foreach(i; 0 .. myConfig.turb_model.nturb){
+                myU[cqi.rhoturb+i] = fs.gas.rho * fs.turb[i];
+            }
+            myU[cqi.totEnergy] += fs.gas.rho * myConfig.turb_model.turbulent_kinetic_energy(fs);
+        }
+    }
+    version(MHD) {
+        if (myConfig.MHD) {
+            number me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z);
+            myU[cqi.totEnergy] += me;
+        }
+    }
+    version(multi_T_gas) {
+        // Other internal energies: energy in mode per unit volume.
+        foreach(imode; 0 .. cqi.n_modes) {
+            myU[cqi.modes+imode] = fs.gas.rho*fs.gas.u_modes[imode];
+        }
+    }
+    if (omegaz != 0.0) {
+        // Rotating frame.
+        // Finally, we adjust the total energy to make rothalpy.
+        // We do this last because the gas models don't know anything
+        // about rotating frames and we don't want to mess their
+        // energy calculations around.
+        number rho = fs.gas.rho;
+        number x = pos.x;
+        number y = pos.y;
+        number rsq = x*x + y*y;
+        // The conserved quantity is rothalpy. I = E - (u**2)/2
+        // where rotating frame velocity  u = omegaz * r.
+        myU[cqi.totEnergy] -= rho*0.5*omegaz*omegaz*rsq;
+    }
+    version(multi_species_gas) {
+        // Species densities: mass of species is per unit volume.
+        if (cqi.n_species > 1) {
+            foreach(isp; 0 .. cqi.n_species) {
+                myU[cqi.species+isp] = fs.gas.rho*fs.gas.massf[isp];
+            }
+        }
+    }
+    return;
+} // end encode_conserved()
 
 @nogc
 void add_rotating_frame_source_vector(LocalConfig myConfig, Vector3 pos, in FlowState fs, number areaxy, number volume, double omegaz, ConservedQuantities Q)

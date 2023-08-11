@@ -315,8 +315,8 @@ public:
 
         // This, apparently stupid, array is an experiment
         celldata.all_cell_idxs.length = ncells;
-        celldata.halo_cell_ids.length = ncells;
-        celldata.halo_face_ids.length = ncells;
+        celldata.halo_cell_ids.length = (ncells + nghost);
+        celldata.halo_face_ids.length = (ncells + nghost);
         foreach(i; 0 .. ncells) celldata.all_cell_idxs[i] = i;
 
         celldata.nfaces.length = ncells;
@@ -1559,7 +1559,6 @@ public:
         // the real-valued finite difference needs a base residual (R0)
         version(complex_numbers) { } // do nothing
         else { // TODO: Shouldn't this be done upstairs using the real evalRHS?
-            // TODO: Also testme in real mode...
             foreach(i; 0 .. ncells) { evalRHS2(0, 0, celldata.halo_cell_ids[i], celldata.halo_face_ids[i], i); }
         }
 
@@ -1648,8 +1647,6 @@ public:
          */
         auto cqi = myConfig.cqi; // The block object has its own.
         auto nConserved = cqi.n;
-        // remove the conserved mass variable for multi-species gas
-        //if (cqi.n_species > 1) { nConserved -= 1; }
         auto eps0 = flowJacobian.eps;
         number eps;
         int gtl = 0; int ftl = 1;
@@ -1659,48 +1656,52 @@ public:
             if ( bndary.type == "exchange_using_mapped_cells" || bndary.type == "exchange_over_full_face") { continue; }
             foreach ( bi, bface; bndary.faces) {
                 FVCell ghost_cell; FVCell pcell;
+                size_t fid = bface.id;
+                size_t ghost_cell_id; size_t pcell_id;
                 if (bndary.outsigns[bi] == 1) {
-                    pcell = bface.left_cell;
-                    ghost_cell = bface.right_cell;
+                    pcell_id = facedata.f2c[fid].left;
+                    ghost_cell_id = facedata.f2c[fid].right;
                 } else {
-                    pcell = bface.right_cell;
-                    ghost_cell = bface.left_cell;
+                    pcell_id = facedata.f2c[fid].right;
+                    ghost_cell_id = facedata.f2c[fid].left;
                 }
+                size_t pidx = nConserved*pcell_id;
+                size_t gidx = nConserved*ghost_cell_id;
 
                 // Step 1. Calculate du/dU
                 // u: ghost cell conserved quantities
                 // U: interior cell conserved quantities
 
                 // save a copy of the flowstate and copy conserved quantities
-                fs_save.copy_values_from(pcell.fs);
-                pcell.U[ftl].copy_values_from(pcell.U[0]);
-                ghost_cell.encode_conserved(gtl, 0, 0.0);
+                fs_save.copy_values_from(celldata.flowstates[pcell_id]);
+                foreach(j; 0..nConserved) celldata.U1[pidx + j] = celldata.U0[pidx + j];
+                encode_conserved(celldata.positions[ghost_cell_id], celldata.flowstates[ghost_cell_id], 0.0, myConfig, celldata.U0[gidx .. gidx+nConserved]);
 
                 foreach(idx; 0..nConserved) {
 
                     // peturb conserved quantity
                     version(complex_numbers) { eps = complex(0.0, eps0.re); }
-                    else { eps = eps0*fabs(pcell.U[ftl][idx]) + eps0; }
-                    pcell.U[ftl][idx] += eps;
-                    pcell.decode_conserved(gtl, ftl, 0.0);
+                    else { eps = eps0*fabs(celldata.U1[pidx + idx]) + eps0; }
+                    celldata.U1[pidx + idx] += eps;
+                    decode_conserved(celldata.positions[pcell_id], celldata.U1[pidx .. pidx+nConserved], celldata.flowstates[pcell_id], 0.0, pcell_id, myConfig);
 
                     // update (ghost cell) boundary conditions
-                    if (bc[bface.bc_id].preReconAction.length > 0) { bc[bface.bc_id].applyPreReconAction(0.0, 0, 0, bface); }
-                    ghost_cell.encode_conserved(gtl, ftl, 0.0);
+                    if (bndary.preReconAction.length > 0) { bndary.applyPreReconAction(0.0, 0, 0, bface); }
+                    encode_conserved(celldata.positions[ghost_cell_id], celldata.flowstates[ghost_cell_id], 0.0, myConfig, celldata.U1[gidx .. gidx+nConserved]);
 
                     // fill local Jacobian
                     foreach(jdx; 0..nConserved) {
-                        version(complex_numbers) { flowJacobian.dudU[jdx][idx] = ghost_cell.U[ftl][jdx].im/(eps.im); }
-                        else { flowJacobian.dudU[jdx][idx] = (ghost_cell.U[ftl][jdx]-ghost_cell.U[0][jdx])/eps; }
+                        version(complex_numbers) { flowJacobian.dudU[jdx][idx] = celldata.U1[gidx + jdx].im/eps.im; }
+                        else { flowJacobian.dudU[jdx][idx] = (celldata.U1[gidx + jdx]-celldata.U0[gidx + jdx])/eps; }
                     }
 
                     // return cells to original state
-                    pcell.U[ftl].copy_values_from(pcell.U[0]);
-                    pcell.fs.copy_values_from(*fs_save);
+                    foreach(k; 0..nConserved) celldata.U1[pidx + k] = celldata.U0[pidx + k]; // Needed?
+                    celldata.flowstates[pcell_id].copy_values_from(*fs_save);
 
                     // update (ghost cell) boundary conditions
-                    if (bc[bface.bc_id].preReconAction.length > 0) { bc[bface.bc_id].applyPreReconAction(0.0, 0, 0, bface); }
-                    ghost_cell.encode_conserved(gtl, ftl, 0.0);
+                    if (bndary.preReconAction.length > 0) { bndary.applyPreReconAction(0.0, 0, 0, bface); }
+                    encode_conserved(celldata.positions[ghost_cell_id], celldata.flowstates[ghost_cell_id], 0.0, myConfig, celldata.U1[gidx .. gidx+nConserved]);
                 }
 
                 // Step 2. Calculate dR/du
@@ -1708,48 +1709,43 @@ public:
                 // u: ghost cell conserved quantities
 
                 // save a copy of the flowstate and copy conserved quantities
-                fs_save.copy_values_from(ghost_cell.fs);
-                ghost_cell.U[ftl].copy_values_from(ghost_cell.U[0]);
+                fs_save.copy_values_from(celldata.flowstates[ghost_cell_id]);
+                foreach(j; 0..nConserved) celldata.U1[gidx + j] = celldata.U0[gidx + j];
 
                 foreach(idx; 0..nConserved) {
 
                     // peturb conserved quantity
                     version(complex_numbers) { eps = complex(0.0, eps0.re); }
-                    else { eps = eps0*fabs(ghost_cell.U[ftl][idx]) + eps0; }
-                    ghost_cell.U[ftl][idx] += eps;
-                    ghost_cell.decode_conserved(gtl, ftl, 0.0);
+                    else { eps = eps0*fabs(celldata.U1[gidx + idx]) + eps0; }
+                    celldata.U1[gidx + idx] += eps;
+                    decode_conserved(celldata.positions[ghost_cell_id], celldata.U1[gidx .. gidx+nConserved], celldata.flowstates[ghost_cell_id], 0.0, pidx, myConfig);
 
                     // evaluate perturbed residuals in local stencil
-                    evalRHS(gtl, ftl, ghost_cell.cell_list, ghost_cell.face_list, ghost_cell);
+                    evalRHS2(gtl, ftl, celldata.halo_cell_ids[ghost_cell_id], celldata.halo_face_ids[ghost_cell_id], ghost_cell_id);
 
                     // fill local Jacobians
-                    foreach (cell; ghost_cell.cell_list) {
+                    foreach (cid; celldata.halo_cell_ids[ghost_cell_id]) {
                         foreach(jdx; 0..nConserved) {
-                            version(complex_numbers) { cell.dRdU[jdx][idx] = cell.dUdt[ftl][jdx].im/eps.im; }
-                            else { cell.dRdU[jdx][idx] = (cell.dUdt[ftl][jdx]-cell.dUdt[0][jdx])/eps; }
+                            double dRdu_ji;
+                            version(complex_numbers) { dRdu_ji = celldata.dUdt1[cid*nConserved + jdx].im/eps.im; }
+                            else { dRdu_ji = (celldata.dUdt1[cid*nConserved + jdx]-celldata.dUdt0[cid*nConserved + jdx])/eps; }
+
+                            // Step 3. Calculate dR/dU and add corrections to Jacobian
+                            // dR/dU = dR/du * du/dU
+                            size_t J = cid*nConserved + jdx; // column index
+                            foreach(kdx; 0 .. nConserved) {
+                                size_t K = pcell_id*nConserved + kdx; // row index
+                                flowJacobian.local[J,K] = flowJacobian.local[J,K] + dRdu_ji*flowJacobian.dudU[idx][kdx];
+                            }
                         }
                     }
 
                     // return cell to original state
-                    ghost_cell.U[ftl].copy_values_from(ghost_cell.U[0]);
-                    ghost_cell.fs.copy_values_from(*fs_save);
+                    foreach(j; 0..nConserved) celldata.U1[gidx + j] = celldata.U0[gidx + j];
+                    celldata.flowstates[ghost_cell_id].copy_values_from(*fs_save);
                     if (myConfig.viscous) {
-                        foreach (cell; ghost_cell.cell_list) { cell.grad.copy_values_from(*(cell.grad_save)); }
-                    }
-                }
-
-                // Step 3. Calculate dR/dU and add corrections to Jacobian
-                // dR/dU = dR/du * du/dU
-                foreach(bcell; ghost_cell.cell_list) { //
-                    assert(!bcell.is_ghost_cell, "Oops, we expect to not find a ghost cell at this point.");
-                    size_t I, J;
-                    for ( size_t i = 0; i < nConserved; ++i ) {
-                        I = bcell.id*nConserved + i; // column index
-                        for ( size_t j = 0; j < nConserved; ++j ) {
-                            J = pcell.id*nConserved + j; // row index
-                            for (size_t k = 0; k < nConserved; k++) {
-                                flowJacobian.local[I,J] = flowJacobian.local[I,J] + bcell.dRdU[i][k].re*flowJacobian.dudU[k][j];
-                            }
+                        foreach (cid; celldata.halo_cell_ids[ghost_cell_id]) {
+                            celldata.gradients[cid].copy_values_from(celldata.saved_gradients[cid]);
                         }
                     }
                 }
