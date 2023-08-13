@@ -136,7 +136,6 @@ public:
     this(FVCellIO cio)
     {
 	super(cio);
-	mDblVarFmt = lmrCfg.dblVarFmt;
     }
 
     override
@@ -145,7 +144,7 @@ public:
 	auto outfile = new GzipOut(fname);
 	foreach (var; mCIO.variables) {
 	    foreach (cell; cells) {
-		outfile.compress(format(mDblVarFmt ~ "\n", mCIO[cell,var]));
+		outfile.compress(format(lmrCfg.dblVarFmt ~ "\n", mCIO[cell,var]));
 	    }
 	}
 	outfile.finish();
@@ -165,10 +164,6 @@ public:
 	    }
 	}
     }
-
-private:
-    string mDblVarFmt;
-
 }
 
 
