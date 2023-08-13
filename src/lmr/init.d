@@ -36,6 +36,7 @@ import fluidblock : FluidBlock;
 import sfluidblock : SFluidBlock;
 import ufluidblock : UFluidBlock;
 import blockio : blkIO, BinaryBlockIO, GzipBlockIO;
+import fvcellio;
 
 version(mpi_parallel) {
     import mpi;

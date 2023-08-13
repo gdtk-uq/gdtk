@@ -11,12 +11,39 @@ import std.stdio;
 import std.algorithm : startsWith;
 import std.string : split;
 import std.conv : to;
+import std.format : format;
 
 import nm.number;
 
 import globalconfig;
 import lmrexceptions : LmrException;
 import fvcell : FVCell;
+
+enum FieldVarsType { flow };
+
+string fieldVarsTypeName(FieldVarsType i)
+{
+    final switch(i) {
+	case FieldVarsType.flow: return "flow";
+//	case BlockIOType.limiter: return "limiter";
+    }
+}
+
+FieldVarsType fieldVarsTypeFromName(string name)
+{
+    switch (name) {
+	case "flow": return FieldVarsType.flow;
+//	case "limiter": return BlockIOType.limiter;
+	default:
+	    string errMsg = "The selection of FieldVarsType is unavailable.\n";
+	    errMsg ~= format("You selected '%s'\n", name);
+	    errMsg ~= "The available BlockIOTypes are: \n";
+	    errMsg ~= "   'flow'\n";
+	    errMsg ~= "   'limiter'\n";
+	    errMsg ~= "Check the selection or its spelling.\n";
+	    throw new Error(errMsg);
+    }	
+}
 
 /**
  * Build the list of variables for the flow field, based on modelling configuation options.
@@ -80,11 +107,30 @@ string[] buildFlowVariables()
 
 }
 
-class FVCellIO {
+abstract class FVCellIO {
 public:
+    @nogc @property final ref string[] variables() { return mVariables; }
+
+abstract:
+    static FieldVarsType FVT;
+    FVCellIO dup();
+    const double opIndex(FVCell cell, string var);
+    ref double opIndexAssign(double value, FVCell cell, string var);
+
+private:
+    string[] mVariables;
+}
+
+
+class FVCellFlowIO : FVCellIO {
+public:
+
+    static FieldVarsType FVT = FieldVarsType.flow;
 
     this(string[] variables)
     {
+	mVariables = variables.dup;
+
 	alias cfg = GlobalConfig;
 	foreach (var; variables) {
 	    if (var.startsWith("massf-")) {
@@ -130,7 +176,12 @@ public:
 	}
     }
 
-    const double opIndex(FVCell cell, string var)
+    override FVCellFlowIO dup()
+    {
+	return new FVCellFlowIO(this.mVariables);
+    }
+
+    override const double opIndex(FVCell cell, string var)
     {
 	// First handle array-stored values:
 	// species, modes and turbulence quantities
@@ -179,7 +230,7 @@ public:
 	}
     }
 
-    ref double opIndexAssign(double value, FVCell cell, string var)
+    override ref double opIndexAssign(double value, FVCell cell, string var)
     {
 	if (var in mSpecies) {
 	    cell.fs.gas.massf[mSpecies[var]].re = value;
@@ -240,3 +291,14 @@ private:
     int[string] mkModes;
     int[string] mTurbQuants;
 }
+
+
+FVCellIO createFVCellIO(FieldVarsType fvt, string[] variables)
+{
+    final switch (fvt) {
+	case FieldVarsType.flow: return new FVCellFlowIO(variables);
+    }
+}
+
+
+

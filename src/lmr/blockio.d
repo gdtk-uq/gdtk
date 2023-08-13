@@ -24,21 +24,21 @@ import lmrexceptions : LmrException;
 import globalconfig : GlobalConfig;
 import lmrconfig;
 import fvcell : FVCell;
-import fvcellio : FVCellIO, buildFlowVariables;
+import fvcellio;
 import fluidblock : FluidBlock;
 import sfluidblock : SFluidBlock;
 import ufluidblock : UFluidBlock;
 import flowsolution : FluidBlockLite;
 
+
 BlockIO blkIO;
 
 class BlockIO {
 public:
-
-    this()
+    this() {}
+    this(FVCellIO cio)
     {
-	mVariables = buildFlowVariables();
-	mCIO = new FVCellIO(mVariables);
+	mCIO = cio.dup;
     }
     /**
      * Writes metadata for field data files as YAML
@@ -52,8 +52,9 @@ public:
 	f.writefln("---");
 	f.writefln("  version: \"%s\"", BLK_IO_VERSION);
 	f.writeln("  revision-id: ", lmrCfg.revisionId);
+	f.writefln("  field-type: \"%s\"", fieldVarsTypeName(mCIO.FVT));
 	f.writefln("  variables:");
-	foreach (var; mVariables) {
+	foreach (var; mCIO.variables) {
 	    f.writefln("   - %s", var);
 	}
 	f.close();
@@ -69,35 +70,41 @@ public:
 	    throw new LmrException(errMsg);
 	}
 
-	mVariables.length = 0;
+	string fvtString = metadata["field-type"].as!string;
+	FieldVarsType fvt = fieldVarsTypeFromName(fvtString);
+
+	string[] variables;
+	variables.length = 0;
 	foreach (node; metadata["variables"].sequence) {
-	    mVariables ~= node.as!string;
+	    variables ~= node.as!string;
 	}
-	mCIO = new FVCellIO(mVariables);
+	mCIO = createFVCellIO(fvt, variables);
     }
 
-    abstract
+abstract:
     void writeVariablesToFile(string fname, FVCell[] cells);
-
-    abstract
     void readVariablesFromFile(string fname, FVCell[] cells);
 
 private:
-    string[] mVariables;
     FVCellIO mCIO;
 }
 
 class BinaryBlockIO : BlockIO {
 public:
 
-    this() { super(); }
+    this() {}
+
+    this(FVCellIO cio)
+    {
+	super(cio);
+    }
 
     override
     void writeVariablesToFile(string fname, FVCell[] cells)
     {
 	double[1] dbl1;
 	auto outfile = File(fname, "wb");
-	foreach (var; mVariables) {
+	foreach (var; mCIO.variables) {
 	    foreach (cell; cells) {
 		dbl1[0] = mCIO[cell,var];
 		outfile.rawWrite(dbl1);
@@ -111,7 +118,7 @@ public:
     {
 	double[1] dbl1;
 	auto infile = File(fname, "rb");
-	foreach (var; mVariables) {
+	foreach (var; mCIO.variables) {
 	    foreach (cell; cells) {
 		infile.rawRead(dbl1);
 		mCIO[cell,var] = dbl1[0];
@@ -124,9 +131,11 @@ public:
 
 class GzipBlockIO : BlockIO {
 public:
+    this() {}
 
-    this() {
-	super();
+    this(FVCellIO cio)
+    {
+	super(cio);
 	mDblVarFmt = lmrCfg.dblVarFmt;
     }
 
@@ -134,7 +143,7 @@ public:
     void writeVariablesToFile(string fname, FVCell[] cells)
     {
 	auto outfile = new GzipOut(fname);
-	foreach (var; mVariables) {
+	foreach (var; mCIO.variables) {
 	    foreach (cell; cells) {
 		outfile.compress(format(mDblVarFmt ~ "\n", mCIO[cell,var]));
 	    }
@@ -148,7 +157,7 @@ public:
 	auto byLine = new GzipByLine(fname);
 	string line;
 	double dbl;
-	foreach (var; mVariables) {
+	foreach (var; mCIO.variables) {
 	    foreach (cell; cells) {
 		line = byLine.front; byLine.popFront;
 		formattedRead(line, "%e", &dbl);
@@ -174,12 +183,13 @@ private:
 extern(C) int luafn_writeFlowMetadata(lua_State *L)
 {
     alias cfg = GlobalConfig;
+    FVCellIO cio = new FVCellFlowIO(buildFlowVariables());
 
     if (cfg.flow_format == "rawbinary") {
-	blkIO = new BinaryBlockIO();
+	blkIO = new BinaryBlockIO(cio);
     }
     else if (cfg.flow_format == "gziptext") {
-	blkIO = new GzipBlockIO();
+	blkIO = new GzipBlockIO(cio);
     }
     else {
 	throw new LmrException(format("Flow format type '%s' unknown", cfg.flow_format));
