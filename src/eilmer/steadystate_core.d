@@ -2102,7 +2102,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     // we currently expect no more than 32 species
     number[32] maxSpecies;
     foreach (sp; 0 .. maxSpecies.length) { maxSpecies[sp] = 0.0; }
-    number[2] maxModes;
+    number[8] maxModes;
     foreach (imode; 0 .. maxModes.length) { maxModes[imode] = 0.0; }
 
     foreach (blk; localFluidBlocks) {
@@ -2739,7 +2739,7 @@ void max_residuals(ref ConservedQuantities residuals)
         number[2] turbLocal;
         // we currently expect no more than 32 species
         number[32] speciesLocal;
-        number[2] modesLocal;
+        number[8] modesLocal;
 
         foreach (cell; blk.cells) {
             if ( nsp == 1 ) { massLocal = fabs(cell.dUdt[0][cqi.mass]); }
