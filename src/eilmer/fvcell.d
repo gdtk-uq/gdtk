@@ -1192,7 +1192,7 @@ public:
             //import core.stdc.stdio: printf;
             //printf("T = %lf", fs.gas.T);
             number kp = 7.9*(rho/1.225)^^1.10*(T/10000)^^6.95;
-            Q_rE_rad = -kp*5.670374419e-8*T^^4/PI;
+            Q_rE_rad = -4.0*kp*5.670374419e-8*T^^4;
             Q[cqi.totEnergy] += Q_rE_rad;
             version(multi_T_gas) {
                 if (cqi.n_modes>0){
