@@ -74,6 +74,9 @@ static this()
     diagFile = diagDir ~ "/" ~ lmrJSONCfg["nk-diagnostics-filename"].str;
 }
 
+FVCellIO limCIO;
+BlockIO limBlkIO;
+
 /*---------------------------------------------------------------------
  * Enums for preconditioners
  *---------------------------------------------------------------------
@@ -163,6 +166,7 @@ struct NKGlobalConfig {
     int stepsBetweenLoadsUpdate = 20;
     bool writeSnapshotOnLastStep = true;
     bool writeDiagnosticsOnLastStep = true;
+    bool writeLimiterValues = false;
 
     void readValuesFromJSON(JSONValue jsonData)
     {
@@ -208,6 +212,7 @@ struct NKGlobalConfig {
         stepsBetweenLoadsUpdate = getJSONint(jsonData, "steps_between_loads_update", stepsBetweenLoadsUpdate);
         writeSnapshotOnLastStep = getJSONbool(jsonData, "write_snapshot_on_last_step", writeSnapshotOnLastStep);
         writeDiagnosticsOnLastStep = getJSONbool(jsonData, "write_diagnostics_on_last_step", writeDiagnosticsOnLastStep);
+        writeLimiterValues = getJSONbool(jsonData, "write_limiter_values", writeLimiterValues);
     }
 }
 NKGlobalConfig nkCfg;
@@ -673,6 +678,14 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
     if (cfg.is_master_task) {
         initialiseDiagnosticsFile();
     }
+    if (nkCfg.writeLimiterValues) {
+        limCIO = new FVCellLimiterIO(buildLimiterVariables());
+        if (cfg.flow_format == "rawbinary")
+            limBlkIO = new BinaryBlockIO(limCIO);
+        else
+            limBlkIO = new GzipBlockIO(limCIO);
+        limBlkIO.writeMetadataToFile(lmrCfg.limiterMetadataFile);
+    }
     allocateGlobalGMRESWorkspace();
     foreach (blk; localFluidBlocks) {
         blk.allocate_GMRES_workspace(nkCfg.maxLinearSolverIterations);
@@ -1002,6 +1015,9 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 
         if (((step % nkCfg.stepsBetweenSnapshots) == 0) || (finalStep && nkCfg.writeSnapshotOnLastStep)) {
             writeSnapshot(step, dt, cfl, nWrittenSnapshots);
+            if (nkCfg.writeLimiterValues) {
+                writeLimiterValues(step, nWrittenSnapshots);
+            }
         }
 
 	version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
@@ -1049,11 +1065,6 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         }
 
         if (finalStep) {
-            // Some special final step actions.
-            if (cfg.apply_limiter) {
-                writeLimiterValues(step, nWrittenSnapshots);
-            }
-
 	    if (cfg.is_master_task) {
                 writeln(reasonForStop);
 		writefln("FINAL-STEP: %d", step);
@@ -2656,7 +2667,6 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
         writefln("+++++++++++++++++++++++++++++++++++++++");
         writefln("+   Writing snapshot at step = %4d   +", step);
         writefln("+++++++++++++++++++++++++++++++++++++++");
-        writeln();
     }
 
     if (!residualsUpToDate) {
@@ -2799,22 +2809,11 @@ void writeLimiterValues(int step, int nWrittenSnapshots)
 {
     alias cfg = GlobalConfig;
     if (cfg.is_master_task) {
-        writeln();
-        writefln("++++++++++++++++++++++++++++++++++++++++++++");
-        writefln("+   Writing limiter values at step = %4d   +", step);
-        writefln("++++++++++++++++++++++++++++++++++++++++++++");
-        writeln();
+        writefln("    |");
+        writefln("    |-->  Writing limiter values at step = %4d  ", step);
     }
 
     int iSnap = (nWrittenSnapshots <= nkCfg.totalSnapshots) ? nWrittenSnapshots : nkCfg.totalSnapshots;
-    FVCellIO limCIO = new FVCellLimiterIO(buildLimiterVariables());
-    BlockIO limBlkIO;
-    if (cfg.flow_format == "rawbinary")
-        limBlkIO = new BinaryBlockIO(limCIO);
-    else
-        limBlkIO = new GzipBlockIO(limCIO);
-
-    limBlkIO.writeMetadataToFile(lmrCfg.limiterMetadataFile);
     foreach (blk; localFluidBlocks) {
         auto fileName = limiterFilename(iSnap, blk.id);
         limBlkIO.writeVariablesToFile(fileName, blk.cells);

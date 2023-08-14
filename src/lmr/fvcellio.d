@@ -311,10 +311,24 @@ string[] buildLimiterVariables()
 {
     alias cfg = GlobalConfig;
     string[] variables;
-    variables ~= "rho";
-    variables ~= "p";
-    variables ~= "T";
-    variables ~= "e";
+    final switch (cfg.thermo_interpolator) {
+	case InterpolateOption.pt:
+	    variables ~= "p"; 
+	    variables ~= "T";
+	    break;
+	case InterpolateOption.rhou:
+	    variables ~= "rho"; 
+	    variables ~= "e";
+	    break;
+	case InterpolateOption.rhop:
+	    variables ~= "rho"; 
+	    variables ~= "p";
+	    break;
+	case InterpolateOption.rhot:
+	    variables ~= "rho"; 
+	    variables ~= "T";
+	    break;
+    }
     variables ~= "vel.x";
     variables ~= "vel.y";
     if (cfg.dimensions == 3) variables ~= "vel.z";
@@ -325,8 +339,13 @@ string[] buildLimiterVariables()
     }
     if (cfg.gmodel_master.n_modes > 1) {
         foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
-	    variables ~= "e-" ~ cfg.gmodel_master.energy_mode_name(imode);
-	    variables ~= "T-" ~ cfg.gmodel_master.energy_mode_name(imode);
+	    if (cfg.thermo_interpolator == InterpolateOption.rhou ||
+		cfg.thermo_interpolator == InterpolateOption.rhop ) {
+		variables ~= "e-" ~ cfg.gmodel_master.energy_mode_name(imode);
+	    }
+	    else {
+		variables ~= "T-" ~ cfg.gmodel_master.energy_mode_name(imode);
+	    }
 	}
     }
     if (cfg.turbulence_model_name != "none") {

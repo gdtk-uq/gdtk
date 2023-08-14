@@ -63,6 +63,7 @@ NewtonKrylovGlobalConfigHidden = {
    steps_between_loads_update = 20,
    write_snapshot_on_last_step = true,
    write_diagnostics_on_last_step = true,
+   write_limiter_values = false,
 
    __index = function (t, k)
       return NewtonKrylovGlobalConfigHidden[k]
@@ -141,6 +142,7 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    f:write(string.format('"steps_between_loads_update": %d,\n', nkConfig.steps_between_loads_update))
    f:write(string.format('"write_snapshot_on_last_step": %s,\n', tostring(nkConfig.write_snapshot_on_last_step)))
    f:write(string.format('"write_diagnostics_on_last_step": %s,\n', tostring(nkConfig.write_diagnostics_on_last_step)))
+   f:write(string.format('"write_limiter_values": %s,\n', tostring(nkConfig.write_limiter_values)))
    -- write out phases
    for i=1,#nkPhases do
       f:write(nkPhases[i]:tojson() .. ",\n")

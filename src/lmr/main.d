@@ -6,6 +6,7 @@ import lmrconfig;
 import command;
 import checkjacobian;
 import computenorms;
+import limiter2vtk;
 import prepgrids;
 import prepflow;
 import runsteady;
@@ -41,7 +42,8 @@ Show help for a given Eilmer command or topic.
     commands["help"] = helpCmd;
     // Try to add commands in alphabetical order from here down.
     // 1. Add user commands
-    commands["compute-norms"] = compNormsCmd; 
+    commands["compute-norms"] = compNormsCmd;
+    commands["limiter2vtk"] = limiter2vtkCmd;
     commands["prep-grids"] = prepGridCmd; commands["prep-grid"] = commands["prep-grids"]; // add alias
     commands["prep-flow"] = prepFlowCmd;
     commands["revision-id"] = revisionIdCmd;

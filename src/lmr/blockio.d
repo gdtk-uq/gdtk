@@ -217,7 +217,13 @@ extern(C) int luafn_writeInitialFlowFile(lua_State *L)
 //
 //     1. readFlowVariablesFromFlowMetadata
 //     2. readFlowVariablesFromFile
+//     3. readVariablesFromMetadata
+//     4. readValuesFromFile
 //
+//  1. and 2. are special cases because we may want to do further
+//  manipulations with flow data, so we load a FluidBlockLite.
+//  3. and 4. are general functions. We simply want to pick up
+//  from Eilmer-native format and write out in some other format.
 //-------------------------------------------------------------
 string[] readFlowVariablesFromFlowMetadata()
 {
@@ -256,6 +262,49 @@ void readFlowVariablesFromFile(FluidBlockLite blk, string fname, string[] variab
 		line = byLine.front; byLine.popFront;
 		formattedRead(line, "%e", &dbl);
 		blk._data[icell][ivar] = dbl;
+	    }
+	}
+	break;
+    }
+}
+
+string[] readVariablesFromMetadata(string metadataFile)
+{
+    Node metadata = dyaml.Loader.fromFile(metadataFile).load();
+    string[] variables;
+    foreach (node; metadata["variables"].sequence) {
+	variables ~= node.as!string;
+    }
+    return variables;
+}
+
+void readValuesFromFile(ref double[][] data, string fname, string[] variables, size_t ncells, string fileFmt)
+{
+    size_t nvars = variables.length;
+    data.length = ncells;
+    foreach (ref d; data) d.length = nvars;
+
+    final switch (fileFmt) {
+    case "rawbinary":
+	double[1] dbl1;
+	auto infile = File(fname, "rb");
+	foreach (ivar; 0 .. nvars) {
+	    foreach (icell; 0 .. ncells) {
+		infile.rawRead(dbl1);
+		data[icell][ivar] = dbl1[0];
+	    }
+	}
+	infile.close();
+	break;
+    case "gziptext":
+	auto byLine = new GzipByLine(fname);
+	string line;
+	double dbl;
+	foreach (ivar; 0 .. nvars) {
+	    foreach (icell; 0 .. ncells) {
+		line = byLine.front; byLine.popFront;
+		formattedRead(line, "%e", &dbl);
+		data[icell][ivar] = dbl;
 	    }
 	}
 	break;

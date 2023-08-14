@@ -17,6 +17,7 @@ LMR_CMD_FILES = $(LMR_CMD)/checkjacobian.d \
 	$(LMR_CMD)/cmdhelper.d \
 	$(LMR_CMD)/command.d \
 	$(LMR_CMD)/computenorms.d \
+	$(LMR_CMD)/limiter2vtk.d \
 	$(LMR_CMD)/prepflow.d \
 	$(LMR_CMD)/prepgrids.d \
 	$(LMR_CMD)/revisionid.d \
