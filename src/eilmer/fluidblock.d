@@ -1697,8 +1697,8 @@ public:
         }
 
         // stop the program at this point
-        import core.runtime;
-        Runtime.terminate();
+        import core.stdc.stdlib : exit;
+        exit(0);
     } // end verify_jacobian
 
     void evalConservativeJacobianVecProd(double[] vec, ref double[] sol) {
@@ -1726,7 +1726,7 @@ public:
         foreach (cell; cells) {
             cell.U[1].copy_values_from(cell.U[0]);
             version(complex_numbers) {
-                cell.U[1][cqi.mass] += complex(0.0, EPS.re*vec[cellCount+MASS].re);
+                if (myConfig.n_species==1) cell.U[1][cqi.mass] += complex(0.0, EPS.re*vec[cellCount+MASS].re);
                 cell.U[1][cqi.xMom] += complex(0.0, EPS.re*vec[cellCount+X_MOM].re);
                 cell.U[1][cqi.yMom] += complex(0.0, EPS.re*vec[cellCount+Y_MOM].re);
                 if ( myConfig.dimensions == 3 ) { cell.U[1][cqi.zMom] += complex(0.0, EPS.re*vec[cellCount+Z_MOM].re); }
@@ -1741,7 +1741,7 @@ public:
                     foreach(imode; 0 .. nmodes) { cell.U[1][cqi.modes+imode] += complex(0.0, EPS.re*vec[cellCount+MODES+imode].re); }
                 }
             } else {
-                cell.U[1][cqi.mass] += (EPS*vec[cellCount+MASS]);
+                if (myConfig.n_species==1) cell.U[1][cqi.mass] += (EPS*vec[cellCount+MASS]);
                 cell.U[1][cqi.xMom] += (EPS*vec[cellCount+X_MOM]);
                 cell.U[1][cqi.yMom] += (EPS*vec[cellCount+Y_MOM]);
                 if ( myConfig.dimensions == 3 ) { cell.U[1][cqi.zMom] += (EPS*vec[cellCount+Z_MOM]); }
@@ -1765,7 +1765,7 @@ public:
         cellCount = 0;
         foreach (cell; cells) {
             version(complex_numbers) {
-                sol[cellCount+MASS] = cell.dUdt[1][cqi.mass].im/EPS;
+                if (myConfig.n_species==1) sol[cellCount+MASS] = cell.dUdt[1][cqi.mass].im/EPS;
                 sol[cellCount+X_MOM] = cell.dUdt[1][cqi.xMom].im/EPS;
                 sol[cellCount+Y_MOM] = cell.dUdt[1][cqi.yMom].im/EPS;
                 if ( myConfig.dimensions == 3 ) { sol[cellCount+Z_MOM] = cell.dUdt[1][cqi.zMom].im/EPS; }
@@ -1780,7 +1780,7 @@ public:
                     foreach(imode; 0 .. nmodes) { sol[cellCount+MODES+imode] = cell.dUdt[1][cqi.modes+imode].im/EPS; }
                 }
             } else {
-                sol[cellCount+MASS] = (cell.dUdt[1][cqi.mass]-cell.dUdt[0][cqi.mass])/EPS;
+                if (myConfig.n_species==1) sol[cellCount+MASS] = (cell.dUdt[1][cqi.mass]-cell.dUdt[0][cqi.mass])/EPS;
                 sol[cellCount+X_MOM] = (cell.dUdt[1][cqi.xMom]-cell.dUdt[0][cqi.xMom])/EPS;
                 sol[cellCount+Y_MOM] = (cell.dUdt[1][cqi.yMom]-cell.dUdt[0][cqi.yMom])/EPS;
                 if ( myConfig.dimensions == 3 ) { sol[cellCount+Z_MOM] = (cell.dUdt[1][cqi.zMom]-cell.dUdt[0][cqi.zMom])/EPS; }
