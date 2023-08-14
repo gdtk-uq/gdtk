@@ -11,6 +11,9 @@
 -- Updated for Eilmer v5 by RJG, 2023-07-05
 --
 
+-- Try to get the file format from environment variable
+fileFmt = os.getenv("LMR_FILE_FORMAT") or "rawbinary"
+
 job_title = "Mach 3 air flowing over a 15 degree wedge."
 config.title = job_title
 print(job_title)
@@ -21,8 +24,8 @@ config.axisymmetric = false
 config.print_count = 1
 config.save_residual_values = true
 config.save_limiter_values = true
-config.flow_format = "rawbinary"
-config.grid_format = "rawbinary"
+config.flow_format = fileFmt
+config.grid_format = fileFmt
 
 -- ==========================================================
 -- Freestream conditions
@@ -118,7 +121,6 @@ NewtonKrylovGlobalConfig{
    max_newton_steps = 1500,
    stop_on_relative_residual = 1.0e-14,
    number_of_phases = 1,
-   use_local_timestep = true,
    inviscid_cfl_only = true,
    use_line_search = false,
    use_physicality_check = false,
@@ -135,6 +137,7 @@ NewtonKrylovGlobalConfig{
 }
 
 NewtonKrylovPhase:new{
+   use_local_timestep = true,
    residual_interpolation_order = 2,
    jacobian_interpolation_order = 2,
    frozen_preconditioner = true,

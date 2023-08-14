@@ -27,9 +27,11 @@ struct LmrCfg {
     immutable string snapshotIdxFmt;
     immutable int initialFieldDir;
     immutable string flowMetadataFile;
+    immutable string limiterMetadataFile;
     immutable string restartFile;
     immutable string referenceResidualsFile;
     immutable string flowPrefix;
+    immutable string limiterPrefix;
     immutable string gridPrefix;
     immutable string gridDir;
     immutable string gzipExt;
@@ -63,9 +65,11 @@ static this()
     lmrCfg.snapshotIdxFmt = lmrJSONCfg["snapshot-index-format"].str;
     lmrCfg.initialFieldDir = to!int(lmrJSONCfg["initial-field-directory"].integer);
     lmrCfg.flowMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["flow-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
+    lmrCfg.limiterMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["limiter-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
     lmrCfg.restartFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["restart-file"].str;
     lmrCfg.referenceResidualsFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["reference-residuals-file"].str;
     lmrCfg.flowPrefix = lmrJSONCfg["flow-prefix"].str;
+    lmrCfg.limiterPrefix = lmrJSONCfg["limiter-prefix"].str;
     lmrCfg.gridPrefix = lmrJSONCfg["grid-prefix"].str;
     lmrCfg.gridDir = lmrJSONCfg["grid-directory"].str;
     lmrCfg.gzipExt = lmrJSONCfg["gzip-extension"].str;
@@ -116,6 +120,24 @@ string flowFilename(int snapshot, int blkId)
 	format(lmrCfg.snapshotIdxFmt, snapshot) ~
 	"/" ~
 	lmrCfg.flowPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
+    if (GlobalConfig.flow_format == "gziptext")
+	fname ~= lmrCfg.gzipExt;
+    return fname;
+}
+
+/**
+ * Return the limiter values filename for a single block ('blkId') as a string.
+ *
+ * Authors: RJG
+ * Date: 2023-08-13
+ */
+string limiterFilename(int snapshot, int blkId)
+{
+    string fname = lmrCfg.snapshotDir ~
+	"/" ~
+	format(lmrCfg.snapshotIdxFmt, snapshot) ~
+	"/" ~
+	lmrCfg.limiterPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
     if (GlobalConfig.flow_format == "gziptext")
 	fname ~= lmrCfg.gzipExt;
     return fname;

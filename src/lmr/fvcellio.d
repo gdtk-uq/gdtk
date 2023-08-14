@@ -11,6 +11,7 @@ import std.stdio;
 import std.algorithm : startsWith;
 import std.string : split;
 import std.conv : to;
+import std.format : format;
 
 import nm.number;
 
@@ -18,13 +19,39 @@ import globalconfig;
 import lmrexceptions : LmrException;
 import fvcell : FVCell;
 
+enum FieldVarsType { flow, limiter };
+
+string fieldVarsTypeName(FieldVarsType i)
+{
+    final switch(i) {
+	case FieldVarsType.flow: return "flow";
+	case FieldVarsType.limiter: return "limiter";
+    }
+}
+
+FieldVarsType fieldVarsTypeFromName(string name)
+{
+    switch (name) {
+	case "flow": return FieldVarsType.flow;
+	case "limiter": return FieldVarsType.limiter;
+	default:
+	    string errMsg = "The selection of FieldVarsType is unavailable.\n";
+	    errMsg ~= format("You selected '%s'\n", name);
+	    errMsg ~= "The available BlockIOTypes are: \n";
+	    errMsg ~= "   'flow'\n";
+	    errMsg ~= "   'limiter'\n";
+	    errMsg ~= "Check the selection or its spelling.\n";
+	    throw new Error(errMsg);
+    }	
+}
+
 /**
  * Build the list of variables for the flow field, based on modelling configuation options.
  *
  * The string names for variables should match those used later in this module in:
  *
- *    FVCellIO.opIndex; and
- *    FVCellIO.opIndexAssign.
+ *    FVCellFlowIO.opIndex; and
+ *    FVCellFlowIO.opIndexAssign.
  *
  * Authors: RJG
  */
@@ -80,11 +107,30 @@ string[] buildFlowVariables()
 
 }
 
-class FVCellIO {
+abstract class FVCellIO {
+public:
+    @nogc @property final ref string[] variables() { return mVariables; }
+    @nogc @property final FieldVarsType FVT() { return cFVT; }
+
+abstract:
+    FVCellIO dup();
+    const double opIndex(FVCell cell, string var);
+    ref double opIndexAssign(double value, FVCell cell, string var);
+
+private:
+    string[] mVariables;
+    FieldVarsType cFVT;
+}
+
+
+class FVCellFlowIO : FVCellIO {
 public:
 
     this(string[] variables)
     {
+	cFVT = FieldVarsType.flow;
+	mVariables = variables.dup;
+
 	alias cfg = GlobalConfig;
 	foreach (var; variables) {
 	    if (var.startsWith("massf-")) {
@@ -130,6 +176,13 @@ public:
 	}
     }
 
+    override
+    FVCellFlowIO dup()
+    {
+	return new FVCellFlowIO(this.mVariables);
+    }
+
+    override
     const double opIndex(FVCell cell, string var)
     {
 	// First handle array-stored values:
@@ -179,6 +232,7 @@ public:
 	}
     }
 
+    override
     ref double opIndexAssign(double value, FVCell cell, string var)
     {
 	if (var in mSpecies) {
@@ -232,11 +286,187 @@ public:
 
     }
 
-
 private:
     int[string] mSpecies;
     int[string] mTModes;
     int[string] muModes;
     int[string] mkModes;
     int[string] mTurbQuants;
+}
+
+
+
+/**
+ * Build the list of limiter variables based on modelling configuration.
+ *
+ * The string names for variables should match those in this module in:
+ *
+ *   FVCellLimiterIO.opIndex; and
+ *   FVCellLimiterIO.opIndexAssign.
+ *
+ * Authors: RJG
+ * Date: 2023-08-13
+ */
+string[] buildLimiterVariables()
+{
+    alias cfg = GlobalConfig;
+    string[] variables;
+    variables ~= "rho";
+    variables ~= "p";
+    variables ~= "T";
+    variables ~= "e";
+    variables ~= "vel.x";
+    variables ~= "vel.y";
+    if (cfg.dimensions == 3) variables ~= "vel.z";
+    if (cfg.gmodel_master.n_species > 1) {
+	foreach (isp; 0 .. cfg.gmodel_master.n_species) {
+	    variables ~= "massf-" ~ cfg.gmodel_master.species_name(isp);
+	}
+    }
+    if (cfg.gmodel_master.n_modes > 1) {
+        foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
+	    variables ~= "e-" ~ cfg.gmodel_master.energy_mode_name(imode);
+	    variables ~= "T-" ~ cfg.gmodel_master.energy_mode_name(imode);
+	}
+    }
+    if (cfg.turbulence_model_name != "none") {
+	foreach (iturb; 0 .. cfg.turb_model.nturb) {
+	    variables ~= "tq-" ~ cfg.turb_model.primitive_variable_name(iturb);
+	}
+    }
+    return variables;
+}
+
+
+
+class FVCellLimiterIO : FVCellIO {
+public:
+
+    this(string[] variables)
+    {
+	cFVT = FieldVarsType.limiter;
+	mVariables = variables.dup;
+	
+	alias cfg = GlobalConfig;
+	foreach (var; variables) {
+	    if (var.startsWith("massf-")) {
+		auto spName = var.split("-")[1];
+		auto spIdx = cfg.gmodel_master.species_index(spName);
+		if (spIdx != -1)
+		    mSpecies[var.idup] = spIdx;
+		else
+		    throw new LmrException("Invalid species name: " ~ spName);
+	    }
+	    if (var.startsWith("T-")) {
+		auto modeName = var.split("-")[1];
+		auto modeIdx = cfg.gmodel_master.energy_mode_index(modeName);
+		if (modeIdx != -1)
+		    mTModes[var.idup] = modeIdx;
+		else
+		    throw new LmrException("Invalid mode name: " ~ modeName);
+	    }
+	    if (var.startsWith("e-")) {
+		auto modeName = var.split("-")[1];
+		auto modeIdx = cfg.gmodel_master.energy_mode_index(modeName);
+		if (modeIdx != -1)
+		    muModes[var.idup] = modeIdx;
+		else
+		    throw new LmrException("Invalid mode name: " ~ modeName);
+	    }
+	    if (var.startsWith("tq-")) {
+		auto tqName = var.split("-")[1];
+		auto tqIdx = cfg.turb_model.primitive_variable_index(tqName);
+		if (tqIdx != -1)
+		    mTurbQuants[var.idup] = tqIdx;
+		else
+		    throw new LmrException("Invalid turbulence quantity name: " ~ tqName);
+	    }
+	}
+    }
+
+    override
+    FVCellLimiterIO dup()
+    {
+	return new FVCellLimiterIO(mVariables);
+    }
+
+    override
+    const double opIndex(FVCell cell, string var)
+    {
+	// First handle array-stored values:
+	// species, modes and turbulence quantities
+	if (var in mSpecies) {
+	    return cell.gradients.rho_sPhi[mSpecies[var]].re;
+	}
+	if (var in mTModes) {
+	    return cell.gradients.T_modesPhi[mTModes[var]].re;
+	}
+	if (var in muModes) {
+	    return cell.gradients.u_modesPhi[muModes[var]].re;
+	}
+	if (var in mTurbQuants) {
+	    return cell.gradients.turbPhi[mTurbQuants[var]].re;
+	}
+
+	// For everything else, find appropriate case
+	switch(var) {
+	case "rho": return cell.gradients.rhoPhi.re;
+	case "p": return cell.gradients.pPhi.re;
+	case "T": return cell.gradients.TPhi.re;
+	case "e": return cell.gradients.uPhi.re;
+	case "vel.x": return cell.gradients.velxPhi.re;
+	case "vel.y": return cell.gradients.velyPhi.re;
+	case "vel.z": return cell.gradients.velzPhi.re;
+	default:
+	    throw new LmrException("Invalid selection for cell gradient variable: " ~ var);
+	}
+    }
+
+    override
+    ref double opIndexAssign(double value, FVCell cell, string var)
+    {
+	if (var in mSpecies) {
+	    cell.gradients.rho_sPhi[mSpecies[var]].re = value;
+	    return cell.gradients.rho_sPhi[mSpecies[var]].re;
+	}
+	if (var in mTModes) {
+	    cell.gradients.T_modesPhi[mTModes[var]].re = value;
+	    return cell.gradients.T_modesPhi[mTModes[var]].re;
+	}
+	if (var in muModes) {
+	    cell.gradients.u_modesPhi[muModes[var]].re = value;
+	    return cell.gradients.u_modesPhi[muModes[var]].re;
+	}
+	if (var in mTurbQuants) {
+	    cell.gradients.turbPhi[mTurbQuants[var]].re = value;
+	    return cell.gradients.turbPhi[mTurbQuants[var]].re;
+	}
+
+	// For everything else, find appropriate case
+	switch(var) {
+	case "rho": cell.gradients.rhoPhi.re = value; return cell.gradients.rhoPhi.re;
+	case "p": cell.gradients.pPhi.re = value; return cell.gradients.pPhi.re;
+	case "T": cell.gradients.TPhi.re = value; return cell.gradients.TPhi.re;
+	case "e": cell.gradients.uPhi.re = value; return cell.gradients.uPhi.re;
+	case "vel.x": cell.gradients.velxPhi.re = value; return cell.gradients.velxPhi.re;
+	case "vel.y": cell.gradients.velyPhi.re = value; return cell.gradients.velyPhi.re;
+	case "vel.z": cell.gradients.velzPhi.re = value; return cell.gradients.velzPhi.re;
+	default:
+	    throw new LmrException("Invalid selection for cell gradient variable: " ~ var);
+	}
+    }
+
+private:
+    int[string] mSpecies;
+    int[string] mTModes;
+    int[string] muModes;
+    int[string] mTurbQuants;
+}
+
+FVCellIO createFVCellIO(FieldVarsType fvt, string[] variables)
+{
+    final switch (fvt) {
+	case FieldVarsType.flow: return new FVCellFlowIO(variables);
+	case FieldVarsType.limiter: return new FVCellLimiterIO(variables);
+    }
 }

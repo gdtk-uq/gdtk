@@ -52,7 +52,8 @@ import fluidblock : FluidBlock;
 import sfluidblock : SFluidBlock;
 import ufluidblock : UFluidBlock;
 import user_defined_source_terms : getUDFSourceTermsForCell;
-import blockio : blkIO;
+import blockio;
+import fvcellio;
 
 version(mpi_parallel) {
     import mpi;
@@ -1048,6 +1049,11 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         }
 
         if (finalStep) {
+            // Some special final step actions.
+            if (cfg.apply_limiter) {
+                writeLimiterValues(step, nWrittenSnapshots);
+            }
+
 	    if (cfg.is_master_task) {
                 writeln(reasonForStop);
 		writefln("FINAL-STEP: %d", step);
@@ -1055,11 +1061,8 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 	    }
 	    break;
 	}
-
     }
 }
-
-
 
 /*---------------------------------------------------------------------
  * Auxiliary functions related to initialisation of stepping
@@ -2782,6 +2785,41 @@ void printStatusToScreen(int step, double cfl, double dt, double wallClockElapse
     writeln(writer.data);
 }
 
+/**
+ * Write limiter values to disk.
+ *
+ * Presently, the only use case for this is on the final step.
+ * We write the limiter values so that the adjoint solver can
+ * read them in at initialisation time.
+ *
+ * Authors: RJG
+ * Date: 2023-08-13
+ */
+void writeLimiterValues(int step, int nWrittenSnapshots)
+{
+    alias cfg = GlobalConfig;
+    if (cfg.is_master_task) {
+        writeln();
+        writefln("++++++++++++++++++++++++++++++++++++++++++++");
+        writefln("+   Writing limiter values at step = %4d   +", step);
+        writefln("++++++++++++++++++++++++++++++++++++++++++++");
+        writeln();
+    }
+
+    int iSnap = (nWrittenSnapshots <= nkCfg.totalSnapshots) ? nWrittenSnapshots : nkCfg.totalSnapshots;
+    FVCellIO limCIO = new FVCellLimiterIO(buildLimiterVariables());
+    BlockIO limBlkIO;
+    if (cfg.flow_format == "rawbinary")
+        limBlkIO = new BinaryBlockIO(limCIO);
+    else
+        limBlkIO = new GzipBlockIO(limCIO);
+
+    limBlkIO.writeMetadataToFile(lmrCfg.limiterMetadataFile);
+    foreach (blk; localFluidBlocks) {
+        auto fileName = limiterFilename(iSnap, blk.id);
+        limBlkIO.writeVariablesToFile(fileName, blk.cells);
+    }
+}
 
 /*---------------------------------------------------------------------
  * Mixins for performing preconditioner actions
