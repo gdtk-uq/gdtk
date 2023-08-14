@@ -85,8 +85,8 @@ class MultiTemperatureGasMixture : ThermodynamicModel {
             lua_getfield(L, -1, "modes");
             getArrayOfStrings(L, -1, mode_name, components);
             lua_pop(L, 1); // modes
-            _max_iterations[i_mode] = 100;
-            _tolerances[i_mode] = 1e-6;
+            _max_iterations[i_mode] = 200;
+            _tolerances[i_mode] = 1e-8;
             _energy_modes[i_mode].length = to!int(components.length);
             _energy_modes_isp[i_mode].length = to!int(components.length);
             _reference_energies[i_mode].length = to!int(components.length);
@@ -509,22 +509,23 @@ private:
     }
 
     @nogc number _temperature_of_mode(in GasState gs, int imode){
-        // This method is based on Dekker/Brent's method, but 
-        // uses Newton's method rather than secant/interpolation. 
-        // The idea is to try to use Newton's method, but fall 
-        // back to bisection if a Newton step is unstable
+        // Use a Newton-Raphson method to solve for a modal temperature.
+        // From experience, this can sometimes fail since we don't
+        // necessarily have nicely behaved functions. So we stabalise 
+        // it by using bisection alongside. This implementation is based
+        // on `rtsafe` from "numerical recipes in C", second edition, page 366.
 
-        immutable int MIN_ITERATIONS = 10;
         immutable int max_iterations = _max_iterations[imode];
         immutable number T_MIN = to!number(10.0);
         immutable number T_MAX = to!number(200_000.0);
         immutable double tol = _tolerances[imode];
+        immutable double IMAGINARY_TOL = 1.0e-30;
         immutable number target_u = gs.u_modes[imode];
 
-        // use the current temperature as the initial guess
-        number Tb = gs.T_modes[imode];
-        number Ta = Tb + to!number(100.0);
-        number Tb_new = Tb;
+        // guess that the new temperature is within +/- 5 Kelvin of gs.T_modes[imode]
+        // this guess will be adjusted later by a bracketing algorithm
+        number Ta = gs.T_modes[imode] - to!number(5.0);
+        number Tb = gs.T_modes[imode] + to!number(5.0);
 
 
         number zero_func(number T) {
@@ -555,73 +556,75 @@ private:
             throw new GasModelException(msg);
         }
 
-        number Cv, mid, newton;
-        number f_Ta, f_Tb, f_Tb_new;
+        // the function evaluation at the bounds
+        number fa, fb;
+        fa = zero_func(Ta);
+        fb = zero_func(Tb);
+        number dT = fabs(Tb - Ta);
+        number dT_old = dT;
+
+        // use gs.T_modes[imode] as the initial guess
+        number T = gs.T_modes[imode];
+
+        // the function evaluation and derivative at the current guess
+        number f = zero_func(T);
+        number df = _mixture_Cv_in_mode_at_temp(gs, T, imode);
+
         bool converged = false;
-        foreach (i; 0 .. max_iterations) {
-            // bisection
-            mid = (Ta + Tb) / 2;
-
-            // newton
-            Cv = _mixture_Cv_in_mode_at_temp(gs, Tb, imode);
-            f_Tb = zero_func(Tb);
-            newton = Tb - f_Tb / Cv;
-
-            // If the newton step is between the mid point and Tb, we will use
-            // the newton step. Otherwise we'll use the midpoint
-            if ((newton > mid && newton < Tb) || (newton < mid && newton > Tb)) {
-                Tb_new = newton;
+        foreach (iter; 0 .. max_iterations) {
+            bool newton_unstable = ((((T-Tb)*df-f) * ((T-Ta)*df-f)) > 0.0);
+            bool newton_slow = (fabs(2.0*f) > fabs(dT_old*df));
+            if (newton_unstable || newton_slow) {
+                // use bisection
+                dT_old = dT;
+                dT = 0.5*(Tb-Ta);
+                T = Ta + dT;
             }
             else {
-                Tb_new = mid;
+                // use Newton
+                dT_old = dT;
+                dT = f/df;
+                T -= dT;
             }
 
-            // choose new contra-point
-            f_Ta = zero_func(Ta);
-            f_Tb_new = zero_func(Tb_new);
-            if (f_Ta * f_Tb_new > 0.0) {
-                Ta = Tb;
-                f_Ta = f_Tb;
-            }
-            Tb = Tb_new;
-            f_Tb = f_Tb_new;
-
-            // make sure that b is a better guess than a
-            if (fabs(f_Ta) < fabs(f_Tb)) {
-                swap(Ta, Tb);
-                swap(f_Ta, f_Tb);
-            }
-
-            // Check for convergence. The complex number version
-            // needs to do a minimum number of iterations to 
-            // set the imaginary component correctly
+            // check for convergence
             version(complex_numbers) {
-                if (fabs(f_Tb) < tol && i > MIN_ITERATIONS){
+                if ((fabs(dT) < tol) && fabs(dT.im) < IMAGINARY_TOL) {
                     converged = true;
                     break;
                 }
             }
             else {
-                if (fabs(f_Tb) < tol) {
+                if (fabs(dT) < tol) {
                     converged = true;
                     break;
                 }
+            }
+
+            // evaluate function for next iteration
+            f = zero_func(T);
+            df = _mixture_Cv_in_mode_at_temp(gs, T, imode);
+
+            // maintain the brackets on the root
+            if (f < 0.0) {
+                Ta = T;
+            }
+            else {
+                Tb = T;
             }
         }
 
         if (!converged) {
-            string msg = "Failed to converge modal temperature.";
+            string msg = "MultiTemperatureGas: Modal temperature failed to converge.\n";
             debug {
-                msg ~= format(" Mode %d failed to converge. ", imode);
-                msg ~= format("The final guess was %g K. ", Tb);
-                msg ~= "The supplied gas state was:\n";
-                msg ~= gs.toString();
-                msg ~= "\n";
+                msg ~= format("mode: %d\n", imode);
+                msg ~= format("The final value was: %.16f\n", T);
+                msg ~= "The supplied GasState was:\n";
+                msg ~= gs.toString() ~ "\n";
             }
             throw new GasModelException(msg);
         }
-
-        return Tb;
+        return T;
     }
 }
 
@@ -652,7 +655,7 @@ version(multi_temperature_gas_test) {
         tm.updateFromPT(gs);
         number rho = gs.rho;
         gs.T = 450.0;
-        gs.T_modes = [to!number(500), to!number(900), to!number(321), to!number(2000)];
+        gs.T_modes = [to!number(500), to!number(900), to!number(321), to!number(1500)];
         gs.p = 1.2e6;
         tm.updateFromRhoU(gs);
 
@@ -664,7 +667,7 @@ version(multi_temperature_gas_test) {
         assert(approxEqualNumbers(to!number(1.0e6), gs.p, 1.0e-6), failedUnitTest());
 
         gs.T = 550.0;
-        gs.T_modes = [to!number(500), to!number(900), to!number(321), to!number(2000)];
+        gs.T_modes = [to!number(500), to!number(900), to!number(321), to!number(700)];
         gs.rho = 0.1;
         tm.updateFromPU(gs);
 
