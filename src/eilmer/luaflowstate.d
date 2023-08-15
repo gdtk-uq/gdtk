@@ -255,6 +255,7 @@ The value should be a number.`;
     lua_getfield(L, tblindx, "turb");
     if (lua_isnil(L, -1)) {
         auto tm = GlobalConfig.turb_model;
+        turb.length = tm.nturb;
         foreach(it; 0 .. tm.nturb){
             string tvname = tm.primitive_variable_name(it);
             double tv = getNumberFromTable(L, tblindx, tvname, false, 0.0, true, format(errMsgTmplt, tvname));
