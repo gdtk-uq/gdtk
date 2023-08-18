@@ -365,29 +365,50 @@ void decompILUp(T)(SMatrix!T a, int k)
 
 void solve(T)(SMatrix!T LU, T[] b)
 {
-    int n = to!int(LU.ia.length-1);
+    /*
+    Solve a linear system using a prefactored sparse LU decomposition.
+
+    Refactor by NNG, 18/08/23, Tangalooma QLD
+    */
+
+    // Note that ia has an extra element at the end, so the number of rows
+    // n is actually ia.length-1. Meanwhile nn is the length of the under
+    // -lying data array LU.aa, i.e. the number of nonzero entries in the matrix
+    size_t n = LU.ia.length-1;
+    size_t nn = LU.ja.length;
     assert(b.length == n);
+
     // Forward elimination
     foreach ( i; 1 .. n ) {
-        foreach ( j; LU.ja[LU.ia[i] .. LU.ia[i+1]] ) {
+        foreach ( ii; LU.ia[i] .. LU.ia[i+1] ) {
             // Only work up to i
+            size_t j = LU.ja[ii];
             if ( j >= i ) break;
-            T multiplier = LU[i,j];
+            T multiplier = LU.aa[ii];
             b[i] -= multiplier * b[j];
         }
     }
+
     // Back substitution
-    b[n-1] /= LU[n-1,n-1];
+    b[n-1] /= LU.aa[nn-1];
     for ( int i = to!int(n-2); i >= 0; --i ) {
         T sum = b[i];
-        foreach ( j; LU.ja[LU.ia[i] .. LU.ia[i+1]] ) {
-            // Only work with j >= i+1
-            if ( j <= i ) continue;
-            sum -= LU[i,j] * b[j];
+        size_t diag_index;
+        foreach ( ii; LU.ia[i] .. LU.ia[i+1] ) {
+            size_t j = LU.ja[ii];
+            // If we run across the diagonal element keep a note of where it is
+            if ( j == i ) {
+                diag_index = ii;
+                continue;
+            // Otherwise only work with j >= i+1
+            } else if( j > i ) {
+                sum -= LU.aa[ii] * b[j];
+            }
         }
-        b[i] = sum/LU[i,i];
+        b[i] = sum/LU.aa[diag_index];
     }
 }
+
 
 /**
  * This algorithm inverts the diagonal blocks of the sparse matrix A
@@ -1133,9 +1154,9 @@ version(smla_test) {
         e.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [1, 2, 3]);
         e.addRow([to!number(-1.), to!number(2.)], [2, 3]);
 
-	number[] B = [to!number(1.), to!number(0.), to!number(0.), to!number(1.)];
+        number[] B = [to!number(1.), to!number(0.), to!number(0.), to!number(1.)];
         solve(e, B);
-	number[] B_exp = [to!number(1.), to!number(1.), to!number(1.), to!number(1.)];
+        number[] B_exp = [to!number(1.), to!number(1.), to!number(1.), to!number(1.)];
         foreach ( i; 0 .. B.length ) {
             assert(approxEqualNumbers(B[i], B_exp[i]), failedUnitTest());
         }
