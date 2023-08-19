@@ -64,6 +64,8 @@ PROGRAMS := lmr
 SUB_PROGRAMS := lmr-run-steady
 SHARE_FILES :=
 ETC_FILES := lmr.cfg
+PY_PROG_DIR := python-programs
+PY_PROGRAMS := lmr-verify
 
 ifeq ($(WITH_MPI),1)
     PARALLEL_FLAVOUR = openmpi
@@ -271,9 +273,10 @@ endif
 
 default: lmr lmr-run-steady
 
-install: $(PROGRAMS) $(SUB_PROGRAMS)
+install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS)
 	cp $(PROGRAMS) $(INSTALL_DIR)/bin
 	cp $(SUB_PROGRAMS) $(INSTALL_DIR)/bin
+	cp $(PY_PROGRAMS) $(INSTALL_DIR)/bin
 	cp lua-modules/*.lua $(INSTALL_DIR)/lib/
 	- mkdir -p $(INSTALL_DIR)/etc
 	cp lmr.cfg $(INSTALL_DIR)/etc/
@@ -281,6 +284,7 @@ install: $(PROGRAMS) $(SUB_PROGRAMS)
 clean:
 	- rm $(PROGRAMS)
 	- rm $(SUB_PROGRAMS)
+	- rm $(PY_PROGRAMS)
 	- rm lmr-mpi-run-steady
 	- rm *.o
 	- rm lmrconfig_with_str_subst.d
@@ -383,3 +387,8 @@ lmr: main.d $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(DLINKFLAGS)
+
+#### Python programs
+lmr-verify: $(PY_PROG_DIR)/lmr_verify.py
+	cp $< $@
+	chmod +x $@
