@@ -560,12 +560,10 @@ private:
         // we're aiming to find a temperature corresponding to this energy
         number target_u = gs.u_modes[EE];
 
-        // use the current T_modes[1] as the initial guess
-        // and have an initial guess that adding 100 K will bracket
-        // the root. We fix this later.
+        // guess that the new temperature is within +/- 5 K of gs.T_modes[imode]
+        // this guess will be adjusted later by a bracketing algorithm
         number Ta = gs.T_modes[EE] - to!number(5.0);
         number Tb = gs.T_modes[EE] + to!number(5.0);
-        number Tb_new;
 
         number zero_func(number T) {
             number u = electron_electronic_energy_mixture(gs, T);
@@ -586,74 +584,75 @@ private:
             throw new GasModelException("Undefined electron/electronic temperature");
         }
 
-        number Cv, mid, newton;
-        number f_Ta, f_Tb, f_Tb_new, T_old;
+        // the function evaluation at the bounds
+        number fa, fb;
+        fa = zero_func(Ta);
+        fb = zero_func(Tb);
+        number dT = fabs(Tb - Ta);
+        number dT_old = dT;
+
+
+        // use gs.T_modes[EE] as the initial guess
+        number T = gs.T_modes[EE];
+
+        // the function evaluation and derivative at the current guess
+        number f = zero_func(T);
+        number df = electron_electronic_Cv_mixture(gs, T);
+
         bool converged = false;
         foreach (iter; 0 .. MAX_ITERATIONS) {
-            // keep track of the current guess
-            T_old = Tb;
-
-            // bisection
-            mid = (Ta + Tb) / 2;
-
-            // newton
-            Cv = electron_electronic_Cv_mixture(gs, Tb);
-            f_Tb = zero_func(Tb);
-            newton = Tb - f_Tb / Cv;
-
-            // If the newton step is between the mid point and Tb, we will use
-            // the newton step. Otherwise we'll use the midpoint
-            if ((newton > mid && newton < Tb) || (newton < mid && newton > Tb)) {
-                Tb_new = newton;
+            bool newton_unstable = ((((T-Tb)*df-f) * ((T-Ta)*df-f)) > 0.0);
+            bool newton_slow = (fabs(2.0*f) > fabs(dT_old*df));
+            if (newton_unstable || newton_slow) {
+                // use bisection
+                dT_old = dT;
+                dT = 0.5*(Tb-Ta);
+                T = Ta + dT;
             }
             else {
-                Tb_new = mid;
+                // use Newton
+                dT_old = dT;
+                dT = f/df;
+                T -= dT;
             }
 
-            // choose new contra-point
-            f_Ta = zero_func(Ta);
-            f_Tb_new = zero_func(Tb_new);
-            if (f_Ta * f_Tb_new > 0.0) {
-                Ta = Tb;
-                f_Ta = f_Tb;
-            }
-            Tb = Tb_new;
-            f_Tb = f_Tb_new;
-
-            // make sure that b is a better guess than a
-            if (fabs(f_Ta) < fabs(f_Tb)) {
-                swap(Ta, Tb);
-                swap(f_Ta, f_Tb);
-            }
-
-
-            // Check for convergence. The complex number version
-            // needs to do a minimum number of iterations to 
-            // set the imaginary component correctly
+            // check for convergence
             version(complex_numbers) {
-                if (fabs(T_old - Tb) < TOL && fabs(T_old.im - Tb.im) < IMAGINARY_TOL){
+                if ((fabs(dT) < TOL) && fabs(dT.im) < IMAGINARY_TOL) {
                     converged = true;
                     break;
                 }
             }
             else {
-                if (fabs(T_old - Tb) < TOL) {
+                if (fabs(dT) < TOL) {
                     converged = true;
                     break;
                 }
+            }
+
+            // evaluate function for next iteration
+            f = zero_func(T);
+            df = electron_electronic_Cv_mixture(gs, T);
+
+            // maintain the brackets on the root
+            if (f < 0.0) {
+                Ta = T;
+            }
+            else {
+                Tb = T;
             }
         }
 
         if (!converged) {
-            string msg = "ThreeTemperatureGas: The 'electron_electronic_temperature' function failed to converge.\n";
+            string msg = "ThreeTemperatureGas: Electron/electronic temperature failed to converge.\n";
             debug {
-                msg ~= format("The final value for Te was: %.16f\n", Tb);
+                msg ~= format("The final value was: %.16f\n", T);
                 msg ~= "The supplied GasState was:\n";
                 msg ~= gs.toString() ~ "\n";
             }
             throw new GasModelException(msg);
         }
-        return Tb;
+        return T;
     }
 }
 
