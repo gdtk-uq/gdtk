@@ -2144,7 +2144,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 case PreconditionMatrixType.ilu:
                     foreach (blk; parallel(localFluidBlocks,1)) {
                         blk.zed[] = blk.v[];
-                        nm.smla.solve(blk.flowJacobian.local, blk.zed);
+                        nm.smla.solve(blk.flowJacobian.local, blk.flowJacobian.local_diags, blk.zed);
                     }
                     break;
                 } // end switch

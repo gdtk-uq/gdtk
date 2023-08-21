@@ -1392,6 +1392,10 @@ public:
         }
 
         jacobian_nonzero_pattern(spatial_order_of_jacobian, nentry, cells.length, sigma);
+
+        // Setup a helper array for use with the smla.solve later
+        flowJacobian.local_diags.length = flowJacobian.local.ia.length-1;
+        get_smatrix_diag_indices(flowJacobian.local, flowJacobian.local_diags);
     } // end initialize_jacobian()
 
     void jacobian_nonzero_pattern(int spatial_order_of_jacobian, size_t nentry, size_t ncells, double sigma) {

@@ -26,6 +26,7 @@ public:
 
     bool wrtConserved = true;
     size_t spatial_order;
+    size_t[] local_diags;
     SMatrix!double local;       // residual sensitivities of local cells
                                 // to perturbations of local cells
     SMatrix!double external;    // residual sensitivities of cells in neighbour blocks

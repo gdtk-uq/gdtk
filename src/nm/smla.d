@@ -314,6 +314,67 @@ void decompILUp(T)(SMatrix!T a, int k)
     decompILU0!T(a);
 }
 
+void get_smatrix_diag_indices(T)(SMatrix!T LU, size_t[] LU_diags)
+{
+/*
+    For an LU sparse matrix, it is helpful for optimisation to know
+    where in the data the L->U transition is. This can be used
+    for faster backward substituion later on.
+
+    @author: Nick Gibbons (21/08/23)
+*/
+    size_t n = LU.ia.length-1;
+
+    foreach ( i; 1 .. n ) {
+        foreach ( ii; LU.ia[i] .. LU.ia[i+1] ) {
+            size_t j = LU.ja[ii];
+            if ( j == i ) {
+                LU_diags[i] = ii;
+                break;
+            }
+            assert(ii<LU.ia[i+1]-1);
+        }
+    }
+}
+
+void solve(T)(SMatrix!T LU, size_t[] LU_diags, T[] b)
+{
+    // Note that ia has an extra element at the end, so the number of rows
+    // n is actually ia.length-1. Meanwhile nn is the length of the under
+    // -lying data array LU.aa, i.e. the number of nonzero entries in the matrix
+    size_t n = LU.ia.length-1;
+    size_t nn = LU.ja.length;
+    assert(b.length == n);
+
+    // Forward elimination
+    foreach ( i; 1 .. n ) {
+        size_t di = LU_diags[i];
+        T sum = b[i];
+
+        foreach ( ii; LU.ia[i] .. di ) {
+            // Only work up to i
+            size_t j = LU.ja[ii];
+            sum -= LU.aa[ii] * b[j];
+        }
+        b[i] = sum;
+    }
+
+    // Back substitution
+    b[n-1] /= LU.aa[nn-1];
+    for ( int i = to!int(n-2); i >= 0; --i ) {
+        T sum = b[i];
+        size_t di = LU_diags[i];
+        T aadi = LU.aa[di];
+
+        foreach ( ii; di+1 .. LU.ia[i+1] ) {
+            size_t j = LU.ja[ii];
+            sum -= LU.aa[ii] * b[j];
+        }
+
+        b[i] = sum/aadi;
+    }
+}
+
 void solve(T)(SMatrix!T LU, T[] b)
 {
     // Note that ia has an extra element at the end, so the number of rows
@@ -1059,7 +1120,7 @@ version(smla_test) {
         // Test solve.
         // Let's give the ILU(0) method a triangular matrix that is can solve exactly.
         // This example is taken from Faires and Burden (1993), Sec. 6.6, example 3.
-	auto e = new SMatrix!number();
+        auto e = new SMatrix!number();
         e.addRow([to!number(2.), to!number(-1.)], [0, 1]);
         e.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [0, 1, 2]);
         e.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [1, 2, 3]);
@@ -1070,6 +1131,25 @@ version(smla_test) {
         number[] B_exp = [to!number(1.), to!number(1.), to!number(1.), to!number(1.)];
         foreach ( i; 0 .. B.length ) {
             assert(approxEqualNumbers(B[i], B_exp[i]), failedUnitTest());
+        }
+
+        // Test alternative solve, using the diagonal index array.
+        // Let's give the ILU(0) method a triangular matrix that is can solve exactly.
+        // This example is taken from Faires and Burden (1993), Sec. 6.6, example 3.
+        auto ee = new SMatrix!number();
+        ee.addRow([to!number(2.), to!number(-1.)], [0, 1]);
+        ee.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [0, 1, 2]);
+        ee.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [1, 2, 3]);
+        ee.addRow([to!number(-1.), to!number(2.)], [2, 3]);
+        size_t[] ee_diags;
+        ee_diags.length = ee.ia.length-1;
+        get_smatrix_diag_indices(ee, ee_diags);
+
+        number[] BB = [to!number(1.), to!number(0.), to!number(0.), to!number(1.)];
+        solve(ee, ee_diags, BB);
+        number[] BB_exp = [to!number(1.), to!number(1.), to!number(1.), to!number(1.)];
+        foreach ( i; 0 .. BB.length ) {
+            assert(approxEqualNumbers(BB[i], BB_exp[i]), failedUnitTest());
         }
 
         // Now let's see how we go at an approximate solve by using a non-triangular matrix.
