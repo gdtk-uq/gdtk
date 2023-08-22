@@ -1143,9 +1143,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                             // to get approximations of the gradients
                             // at the cell interfaces before the viscous flux calculation.
                             if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
-                                foreach(f; blk.faces) {
-                                    f.average_cell_deriv_values(0);
-                                }
+                                blk.average_lsq_cell_derivs_to_faces();
                             }
                         }
                     }
@@ -1212,13 +1210,12 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     int blklocal_gtl = gtl;
                     bool blklocal_with_local_time_stepping = with_local_time_stepping;
                     double blklocal_dt_global = SimState.dt_global;
-                    foreach (cell; blk.cells) {
-                        cell.add_inviscid_source_vector(blklocal_gtl, blk.omegaz);
-                        if (blk.myConfig.viscous) { cell.add_viscous_source_vector(); }
-                        if (blk.myConfig.udf_source_terms) { cell.add_udf_source_vector(); }
-                    }
+
+                    blk.eval_fluid_source_vectors(blk.omegaz);
+                    blk.eval_udf_source_vectors(t0);
                     blk.time_derivatives(blklocal_gtl, blklocal_ftl);
                     if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
+
                     switch (stage) {
                     case 1:
                         double gamma_1 = 1.0; // for normal Predictor-Corrector or Euler update.
