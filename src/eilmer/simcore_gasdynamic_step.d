@@ -1192,7 +1192,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     double blklocal_dt_global = SimState.dt_global;
 
                     blk.eval_fluid_source_vectors(blk.omegaz);
-                    blk.eval_udf_source_vectors(t0);
+                    blk.eval_udf_source_vectors(SimState.time);
                     blk.time_derivatives(blklocal_gtl, blklocal_ftl);
                     if (blk.myConfig.residual_smoothing) { blk.residual_smoothing_dUdt(blklocal_ftl); }
 
