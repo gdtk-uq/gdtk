@@ -7,6 +7,8 @@
 sssOptionsHidden = { -- hidden from user
    -- set defaults here
 
+   temporal_integration_mode = 0,
+
    -- preconditioner settings
    use_preconditioner = true,
    precondition_matrix_type = "ilu",

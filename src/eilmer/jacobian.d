@@ -84,7 +84,7 @@ public:
         Dinv = new Matrix!double(nConserved,nConserved);
     } // end size_local_matrix()
 
-    void augment_with_dt(FVCell[] cells, double dt, size_t ncells, size_t nConserved)
+    void augment_with_dt(FVCell[] cells, double dt, size_t ncells, size_t nConserved, bool dual_time_stepping, int temporal_order, double dt_physical)
     {
         /*
           This method augments the Jacobian by adding the inverse pseudo-time term in the form A = 1/dt - dR/dU
@@ -100,6 +100,10 @@ public:
                     dtInv = 1.0/cell.dt_local;
                 } else {
                     dtInv = 1.0/dt;
+                }
+                if (dual_time_stepping) {
+                    if (temporal_order == 1) { dtInv = dtInv + 1.0/dt_physical; }
+                    else { dtInv = dtInv + 1.5/dt_physical; }
                 }
                 ulong idx = i*nConserved + j;
                 local[idx,idx] = local[idx,idx] + dtInv;
