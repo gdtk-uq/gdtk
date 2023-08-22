@@ -375,6 +375,15 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         throw new Error("Invalid temporal_integration_mode set in user input script, please select either 0 (for steady-state), 1 (for BDF1), or 2 (for BDF2)");
     }
 
+    // fill out all entries in the conserved quantity vector with the initial state
+    foreach (blk; parallel(localFluidBlocks, 1)) {
+        foreach (cell; blk.cells) {
+            foreach (ftl; 0..blk.myConfig.n_flow_time_levels) {
+                cell.U[ftl].copy_values_from(cell.U[0]);
+            }
+        }
+    }
+
     // No need to have more task threads than blocks
     int extraThreadsInPool;
     auto nBlocksInThreadParallel = localFluidBlocks.length;
