@@ -972,7 +972,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) {
                         blk.clear_fluxes_of_conserved_quantities();
-                        foreach (cell; blk.cells) { cell.clear_source_vector(); }
+                        blk.clear_cell_source_vectors();
                     }
                 }
             } catch (Exception e) {

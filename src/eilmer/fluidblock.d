@@ -276,7 +276,6 @@ public:
     abstract void read_new_underlying_grid(string fileName);
     abstract void write_underlying_grid(string fileName);
     @nogc abstract void propagate_inflow_data_west_to_east();
-    @nogc abstract void set_face_flowstates_to_averages_from_cells();
     @nogc abstract void convective_flux_phase0new(bool allow_high_order_interpolation, size_t[] cell_idxs=[], size_t[] face_idxs=[]);
     @nogc abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl,
                                                FVCell[] cell_list = [], FVInterface[] iface_list = [],
@@ -581,6 +580,27 @@ public:
             }
         }
     } // end identify_turbulent_zones()
+
+    @nogc void set_face_flowstates_to_averages_from_cells(size_t[] face_idxs=[])
+    {
+        if (face_idxs.length==0) face_idxs = facedata.all_face_idxs;
+
+        foreach(idx; face_idxs){
+            size_t l = facedata.f2c[idx].left;
+            size_t r = facedata.f2c[idx].right;
+
+            if (facedata.left_interior_only[idx]) {
+                facedata.flowstates[idx] = celldata.flowstates[l];
+
+            } else if (facedata.right_interior_only[idx]) {
+                facedata.flowstates[idx] = celldata.flowstates[r];
+
+            } else {
+                // Assume we have both cells, for a shared or internal boundary interface
+                facedata.flowstates[idx].copy_average_values_from(celldata.flowstates[l], celldata.flowstates[r]);
+            }
+        } // end main face loop
+    }
 
     // Increment the local DFT in each cell.
     // Do we need garbage collection here? I don't think so?

@@ -802,26 +802,6 @@ public:
     }
 
     @nogc
-    override void set_face_flowstates_to_averages_from_cells()
-    {
-        // It turns out that some shock-detectors need flow derivatives before the
-        // convective-flux calculation is done.  That used to be the only place
-        // that the face FlowState was filled in and it was done as a side-effect,
-        // which has confused just about everyone at some time in their work on the code.
-        foreach (f; faces) {
-            if (f.left_cell && f.right_cell) {
-                f.fs.copy_average_values_from(f.left_cell.fs, f.right_cell.fs);
-            } else if (f.right_cell) {
-                f.fs.copy_values_from(f.right_cell.fs);
-            } else if (f.left_cell) {
-                f.fs.copy_values_from(f.left_cell.fs);
-            } else {
-                assert(0, "oops, a face without attached cells");
-            }
-        }
-    }
-
-    @nogc
     override void convective_flux_phase0new(bool allow_high_order_interpolation, size_t[] cell_idxs=[], size_t[] face_idxs=[])
     // Compute gradients of flow quantities for higher-order reconstruction, if required.
     // To be used, later, in the convective flux calculation.

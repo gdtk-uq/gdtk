@@ -2447,20 +2447,6 @@ public:
     } // end propagate_inflow_data_west_to_east()
 
     @nogc
-    override void set_face_flowstates_to_averages_from_cells()
-    {
-        // It turns out that some shock-detectors need flow derivatives before the
-        // convective-flux calculation is done.  That used to be the only place
-        // that the face FlowState was filled in and it was done as a side-effect,
-        // which has confused just about everyone at some time in their work on the code.
-        foreach (f; faces) {
-            FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
-            FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
-            f.fs.copy_average_values_from(cL0.fs, cR0.fs);
-        }
-    }
-
-    @nogc
     void second_order_flux_calc(size_t gtl, size_t[] face_idxs)
     {
     /*
