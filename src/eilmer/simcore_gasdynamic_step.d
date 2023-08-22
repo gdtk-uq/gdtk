@@ -949,26 +949,6 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             }
             // Phase 01 LOCAL
             try {
-                if (GlobalConfig.udf_source_terms &&
-                    ((stage == 1) || GlobalConfig.eval_udf_source_terms_at_each_stage)) {
-                    foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
-                        if (!blk.active) continue;
-                        int blklocal_ftl = ftl;
-                        int blklocal_gtl = gtl;
-                        double blklocal_sim_time = SimState.time;
-                        foreach (cell; blk.cells) {
-                            size_t i_cell = cell.id; size_t j_cell = 0; size_t k_cell = 0;
-                            if (blk.grid_type == Grid_t.structured_grid) {
-                                auto sblk = cast(SFluidBlock) blk;
-                                assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
-                                auto ijk_indices = sblk.to_ijk_indices_for_cell(cell.id);
-                                i_cell = ijk_indices[0]; j_cell = ijk_indices[1]; k_cell = ijk_indices[2];
-                            }
-                            getUDFSourceTermsForCell(blk.myL, cell, blklocal_gtl, blklocal_sim_time,
-                                                     blk.myConfig, blk.id, i_cell, j_cell, k_cell);
-                        }
-                    }
-                }
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) {
                         blk.clear_fluxes_of_conserved_quantities();
