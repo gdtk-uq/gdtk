@@ -1297,7 +1297,7 @@ class Driver(object):
             reference_gas_state.update_thermo_from_pT()
             reference_gas_state.update_sound_speed()
 
-            reference_gas_state.gmodel = fill_gmodel
+            reference_gas_state.gmodel = self.gmodel
 
         else:
 
