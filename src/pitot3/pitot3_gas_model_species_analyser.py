@@ -105,11 +105,20 @@ with open(CEA_thermo_inp_location) as CEA_thermo_inp_file:
                 if species_name in total_species_list:
                     species_MW_dict[species_name] = molecular_weight
 
-
+print('-'*60)
+print("The list of species found in CEA are:")
 print(total_species_list)
+
+print("Their molecular weights are:")
 print(species_MW_dict)
-print(len(total_species_list))
-print(len(species_MW_dict.keys()))
+
+print(f"We have found {len(species_MW_dict)} total species in CEA.")
+
+print('-'*60)
+if len(total_species_list) == len(species_MW_dict.keys()):
+    print("The anount of species in the code and the amount of species found from CEA agree.")
+else:
+    print("WARNING: The anount of species in the code and the amount of species found from CEA DO NOT agree. There may be an issue")
 
 # now output to file...
 

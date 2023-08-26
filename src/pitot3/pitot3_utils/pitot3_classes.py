@@ -1266,20 +1266,61 @@ class Driver(object):
         # we assume that the state 4 driver is stationary
         v4 = 0.0
 
-        # make a reference gas state here...
-        reference_gas_state = GasState(self.gmodel)
-        reference_gas_state.p = p_0
-        reference_gas_state.T = T_0
+        # I have had to add some of the room temperature only gas state stuff to here for detonation driver
+        # configurations, as I was having some issues setting the reference gas state with H2/O2/He gas compositions:
 
-        if self.driver_gas_model == 'thermally-perfect':
-            reference_gas_state.massf = self.driver_fill_composition_massf
+        if self.driver_gas_model == 'CEAGas' and hasattr(self, 'driver_fill_gas_name') and self.driver_fill_gas_name:
+            fill_gmodel_location = '{0}/cea-{1}-gas-model.lua'.format(preset_gas_models_folder, self.driver_fill_gas_name)
+            # we create this link and then use if it exists...
+            fill_room_temperature_only_gmodel_location = '{0}/cea-{1}-room-temperature-only-gas-model.lua'.format(preset_gas_models_folder, self.driver_fill_gas_name)
+        elif self.driver_gas_model == 'custom' and self.driver_fill_gas_filename:
+            fill_gmodel_location = self.driver_fill_gas_filename
+            # we make it the gas name with -room-temperature-only-gas-model added... (in the same folder)
+            fill_room_temperature_only_gmodel_location = fill_gmodel_location.split('.')[0] + '-room-temperature-only-gas-model.' + fill_gmodel_location.split('.')[-1]
 
-        reference_gas_state.update_thermo_from_pT()
-        reference_gas_state.update_sound_speed()
+            print(fill_room_temperature_only_gmodel_location)
+
+        fill_gmodel = GasModel(os.path.expandvars(fill_gmodel_location))
+
+        if os.path.exists(os.path.expandvars(fill_room_temperature_only_gmodel_location)):
+
+            # if there is a room temperature only object we "trick" the fill state gas model to use that when it sets the gas
+            # state and then replace the correct gas state after. This seemed to be the best / cleanest way to do it.
+
+            room_temperature_only_gmodel = GasModel(os.path.expandvars(fill_room_temperature_only_gmodel_location))
+
+            reference_gas_state = GasState(self.gmodel)
+
+            reference_gas_state.gmodel = room_temperature_only_gmodel
+
+            reference_gas_state.p = p_0
+            reference_gas_state.T = T_0
+
+            reference_gas_state.update_thermo_from_pT()
+            reference_gas_state.update_sound_speed()
+
+            reference_gas_state.gmodel = fill_gmodel
+
+        else:
+
+            # we don't do anything abnormal...
+
+            room_temperature_only_gmodel = None
+
+            # make a reference gas state here...
+            reference_gas_state = GasState(self.gmodel)
+            reference_gas_state.p = p_0
+            reference_gas_state.T = T_0
+
+            if self.driver_gas_model == 'thermally-perfect':
+                reference_gas_state.massf = self.driver_fill_composition_massf
+
+            reference_gas_state.update_thermo_from_pT()
+            reference_gas_state.update_sound_speed()
 
         # now make our facility driver object...
         self.state4 = Facility_State('s4', state4, v4,
-                                     reference_gas_state=reference_gas_state,
+                                     reference_gas_state=reference_gas_state, room_temperature_only_gmodel = room_temperature_only_gmodel,
                                      outputUnits=outputUnits, species_MW_dict=species_MW_dict)
 
         #-------------------- M throat ---------------------------------------------------------
