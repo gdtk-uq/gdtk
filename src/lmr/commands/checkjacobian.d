@@ -31,6 +31,8 @@ import cmdhelper;
 import command;
 import json_helper;
 import lmrconfig;
+import blockio;
+import flowsolution;
 
 Command checkJacCmd;
 
@@ -79,11 +81,13 @@ void main_(string[] args)
     int verbosity = 0;
     int snapshot = -1;
     string outFilename;
+    bool readFrozenLimiterValues = false;
     getopt(args,
            config.bundling,
            "v|verbose+", &verbosity,
            "s|snapshot", &snapshot,
-           "o|output", &outFilename);
+           "o|output", &outFilename,
+           "r|read-frozen-limiter-values", &readFrozenLimiterValues);
 
     if (verbosity > 0) writefln("lmr %s: Begin program.", cmdName);
 
@@ -128,6 +132,7 @@ void main_(string[] args)
     // 1a. Populate Jacobian
     alias cfg = GlobalConfig;
     auto blk = localFluidBlocks[0];
+    if (readFrozenLimiterValues) readLimiterValues(snapshot);
     blk.initialize_jacobian(cfg.interpolation_order, 1.0e-250, 0);
     blk.evaluate_jacobian();
     // 1b. Prepare a test vector
@@ -183,3 +188,37 @@ void main_(string[] args)
     return;
 }
 
+void readLimiterValues(int snapshot)
+{
+    /* 
+    Reads limiter values from file and then freezes limiter.
+    localFluidBlocks must be initialised prior to calling this function.
+    */
+    alias cfg = GlobalConfig;
+    double[][] data;
+    string[] variables;
+    string fileFmt;
+
+    fileFmt = cfg.flow_format;
+    variables = readVariablesFromMetadata(lmrCfg.limiterMetadataFile);
+    auto soln = new FlowSolution(to!int(snapshot), cfg.nFluidBlocks);
+    foreach (i, blk; localFluidBlocks) {
+        readValuesFromFile(data, limiterFilename(to!int(snapshot), to!int(i)), variables, 
+            soln.flowBlocks[0].ncells, fileFmt);
+        foreach (j, cell; blk.cells) {
+            cell.gradients.rhoPhi = data[j][0];
+            cell.gradients.pPhi = data[j][1];
+            cell.gradients.velxPhi = data[j][2];
+            cell.gradients.velyPhi = data[j][3];
+            if (blk.myConfig.dimensions == 3) {
+                cell.gradients.velzPhi = data[j][4];
+            } else {
+                cell.gradients.velzPhi = 0.0;
+            }
+            foreach(it; 0 .. blk.myConfig.turb_model.nturb){
+                cell.gradients.turbPhi[it] = data[j][5+it];
+	    }
+        }
+    }
+    cfg.frozen_limiter = true;
+}
