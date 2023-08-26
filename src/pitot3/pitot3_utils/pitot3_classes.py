@@ -1277,12 +1277,10 @@ class Driver(object):
             fill_gmodel_location = self.driver_fill_gas_filename
             # we make it the gas name with -room-temperature-only-gas-model added... (in the same folder)
             fill_room_temperature_only_gmodel_location = fill_gmodel_location.split('.')[0] + '-room-temperature-only-gas-model.' + fill_gmodel_location.split('.')[-1]
+        else:
+            fill_room_temperature_only_gmodel_location = None
 
-            print(fill_room_temperature_only_gmodel_location)
-
-        fill_gmodel = GasModel(os.path.expandvars(fill_gmodel_location))
-
-        if os.path.exists(os.path.expandvars(fill_room_temperature_only_gmodel_location)):
+        if fill_room_temperature_only_gmodel_location and os.path.exists(os.path.expandvars(fill_room_temperature_only_gmodel_location)):
 
             # if there is a room temperature only object we "trick" the fill state gas model to use that when it sets the gas
             # state and then replace the correct gas state after. This seemed to be the best / cleanest way to do it.
@@ -2536,10 +2534,12 @@ class Tube(object):
             fill_gmodel_location = self.fill_gas_filename
             # we make it the gas name with -room-temperature-only-gas-model added... (in the same folder)
             fill_room_temperature_only_gmodel_location = fill_gmodel_location.split('.')[0] + '-room-temperature-only-gas-model.' + fill_gmodel_location.split('.')[-1]
+        else:
+            fill_room_temperature_only_gmodel_location = None
 
         fill_gmodel = GasModel(os.path.expandvars(fill_gmodel_location))
 
-        if os.path.exists(os.path.expandvars(fill_room_temperature_only_gmodel_location)):
+        if fill_room_temperature_only_gmodel_location and os.path.exists(os.path.expandvars(fill_room_temperature_only_gmodel_location)):
 
             # if there is a room temperature only object we "trick" the fill state gas model to use that when it sets the gas
             # state and then replace the correct gas state after. This seemed to be the best / cleanest way to do it.
