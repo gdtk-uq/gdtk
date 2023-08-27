@@ -15,4 +15,6 @@ include::2D/wedge/README.adoc[tag=description]
 
 include::2D/manufactured-solutions/README.adoc[tag=description]
 
+include::3D/manufactured-solutions/README.adoc[tag=description]
+
 
