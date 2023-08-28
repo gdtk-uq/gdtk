@@ -352,25 +352,26 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     int nStartUpSteps = GlobalConfig.sssOptions.nStartUpSteps;
     bool inexactNewtonPhase = false;
 
-    // temporal integration parameters for dual time-stepping
+    // temporal integration parameters for time-accurate simulations using dual time-stepping
     bool dual_time_stepping;
-    int temporal_order, target_steps, physical_steps = 0;
-    double dt_physical, physicalSimTime = 0.0;
+    int temporal_order, max_physical_steps, physical_step = 0;
+    double dt_physical, dt_physical_old, target_physical_time, physicalSimTime = 0.0;
     if (GlobalConfig.sssOptions.temporalIntegrationMode == 0) {
         // steady-state operation via a backward Euler method
         dual_time_stepping = false;
         temporal_order = 0;
-        target_steps = 1; // only perform one nonlinear solve
+        dt_physical = GlobalConfig.dt_init;
+        target_physical_time = dt_physical;
+        max_physical_steps = 1; // only perform one nonlinear solve
     } else if (GlobalConfig.sssOptions.temporalIntegrationMode == 1 ||
                GlobalConfig.sssOptions.temporalIntegrationMode == 2) {
         // time-accurate operation via a backward-difference formula (BDF)
         dual_time_stepping = true;
-        // set the order to 1 even for second-order simulations since the first time-step is
-        // always first-order because higher-order BDF schemes are not self-starting
-        temporal_order = 1;
+        temporal_order = 1; // higher-order BDF schemes are not self-starting
         dt_physical = GlobalConfig.dt_init;
-        double target_time = GlobalConfig.max_time;
-        target_steps = to!int(ceil(target_time/dt_physical));
+        dt_physical_old = dt_physical;
+        target_physical_time = GlobalConfig.max_time;
+        max_physical_steps = to!int(ceil(target_physical_time/dt_physical)); // maximum number of expected steps to reach target_physical_time
     } else {
         throw new Error("Invalid temporal_integration_mode set in user input script, please select either 0 (for steady-state), 1 (for BDF1), or 2 (for BDF2)");
     }
@@ -682,12 +683,13 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     }
 
     // start of main time-stepping loop
-    while (physical_steps < target_steps) {
+    while (physicalSimTime < target_physical_time &&
+           physical_step < max_physical_steps) {
 
         // we need to evaluate time-dependent boundary conditions and source terms
         // at the future state, so we update the time at the start of a step
         physicalSimTime += dt_physical;
-        physical_steps += 1;
+        physical_step += 1;
 
         // calculate the initial pseudo time step
         dt = determine_dt(cfl);
@@ -740,9 +742,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             }
 
             // solve linear system for dU
-            version(pir) { point_implicit_relaxation_solve(step, simTime, dt, normNew, linSolResid, startStep, dual_time_stepping, temporal_order, dt_physical); }
+            version(pir) { point_implicit_relaxation_solve(step, simTime, dt, normNew, linSolResid, startStep, dual_time_stepping, temporal_order, dt_physical, dt_physical_old); }
             else { rpcGMRES_solve(step, simTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts, nIters, linSolResid, startStep, LHSeval, RHSeval, pc_matrix_evaluated,
-                                  dual_time_stepping, temporal_order, dt_physical); }
+                                  dual_time_stepping, temporal_order, dt_physical, dt_physical_old); }
 
 
             // calculate a relaxation factor for the nonlinear update via a physicality check
@@ -1367,40 +1369,24 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         startStep = SimState.step+1;
         finalStep = false;
 
-        // the second-order accurate BDF2 scheme is not self-starting, so we take a first-order BDF1 step
-        // to start the simulation and switch to BDF2 here for all subsequent time-steps
-        if (GlobalConfig.sssOptions.temporalIntegrationMode == 2) {
+        // Note that the BDF2 scheme is not self-starting, so we need to take at least one BDF1 step at startup.
+        // In practice we take 10 BDF1 steps as suggested on page 110 of
+        //     Adaptive Finite Element Simulation of Flow and Transport Applications on Parallel Computers
+        //     B. S. Kirk
+        //     PhD thesis @ University of Texas at Austin (2007)
+        //
+        if (GlobalConfig.sssOptions.temporalIntegrationMode == 2 && physical_step >= 10) {
             temporal_order = 2;
         }
 
         // we set the nIters to the max value to trigger a preconditioner update at the next linear solver iteration. TODO: we should handle this better.
         nIters = GlobalConfig.sssOptions.maxOuterIterations;
 
-        // shuffle conserved quantities:
-        // note that the [1] entry is reserved for use in the nonlinear solver
-        if (temporal_order == 1) {
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                foreach (cell; blk.cells) {
-                    // U_n+1 => U_n
-                    cell.U[2].copy_values_from(cell.U[0]);
-                }
-            }
-        } else { // temporal_order == 2
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                foreach (cell; blk.cells) {
-                    // U_n => U_n-1
-                    cell.U[3].copy_values_from(cell.U[2]);
-                    // U_n+1 => U_n
-                    cell.U[2].copy_values_from(cell.U[0]);
-                }
-            }
-        }
-
         // When dual time-stepping, we only write out the time-accurate flow field solutions here
         if (GlobalConfig.is_master_task) {
-            writefln("-----------------------------------------------------------------------");
-            writefln("Writing flow solution at physical-time= %6.3e dt_physical= %6.3e", physicalSimTime, dt_physical);
-            writefln("-----------------------------------------------------------------------\n");
+            writefln("-----------------------------------------------------------------------------------------");
+            writefln("Writing flow solution at physical-step= %d | physical-time= %6.3e | dt_physical= %6.3e", physical_step, physicalSimTime, dt_physical);
+            writefln("-----------------------------------------------------------------------------------------\n");
         }
         FluidBlockIO[] io_list = localFluidBlocks[0].block_io;
         bool legacy = is_legacy_format(GlobalConfig.flow_format);
@@ -1502,6 +1488,104 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         // 24/05/22 (NNG)
         GC.collect();
 
+        if (!GlobalConfig.fixed_time_step) {
+            // If the time-step isn't fixed, then we go ahead and update (hopefully grow) the physical time-step,
+            // our implementation follows closely to the procedure from,
+            //     Finite Element Modeling and Optimization of High-Speed Aerothermoelastic Systems
+            //     M. A. Howard
+            //     PhD thesis @ Univesity of Colorado (2010)
+            // All equation numbers below are in reference to this document.
+
+            // model parameters used in eqn. 2.112
+            double a,b;
+            if (temporal_order == 1) {
+                a = 0.5;
+                b = 2.0;
+            } else { // temporal_order == 2
+                a = 1.0/3.0;
+                b = 3.0*(1.0+dt_physical_old/dt_physical);
+            }
+
+            // save the previous physical time-step
+            dt_physical_old = dt_physical;
+
+            // degrees of freedom (from eqn 2.113) // TODO: could calculate this once at start-up
+            number ndof = 0.0;
+            foreach (blk; localFluidBlocks) {
+                ndof = blk.cells.length * nConserved;
+            }
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &(ndof.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            }
+
+            // Reference conserved quantity magnitude (from eqn 2.113)
+            number U_inf_mag = 0.0;
+            foreach (blk; localFluidBlocks) {
+                foreach (cell; blk.cells) {
+                    number U_inf_mag_tmp = 0.0;
+                    foreach (j; 0 .. nConserved) {
+                        U_inf_mag_tmp += cell.U[0][j]*cell.U[0][j];
+                    }
+                    U_inf_mag_tmp = sqrt(U_inf_mag_tmp);
+                    U_inf_mag = fmax(U_inf_mag, U_inf_mag_tmp);
+                }
+            }
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &(U_inf_mag.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            }
+
+            // L2 norm of conserved quantity update (from eqn 2.113)
+            number U_L2 = 0.0;
+            foreach (blk; localFluidBlocks) {
+                foreach (cell; blk.cells) {
+                    foreach (j; 0 .. nConserved) {
+                        U_L2 += pow((cell.U[0][j] - cell.U[2][j]), 2.0);
+                    }
+                }
+            }
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &(U_L2.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            }
+            U_L2 = sqrt(U_L2);
+
+            // this is an estimate of the (relative) norm of the local truncation error for the step just completed (from eqn. 2.113)
+            double d = (U_L2/(sqrt(ndof)*U_inf_mag)).re;
+
+            // This input value is the maximum permissible value of the relative error in a single step,
+            // we set this value to 1.0e-03 as recommended in
+            //     On the Time-Dependent FEM Solution of the Incompressible Navier-Stokes Equations in Two- and Three-Dimensions
+            //     P. M. Gresho, R. L. Lee, R. L. Sani, and T. W. Stullich
+            //     International Conference on Numerical Methods in Laminar and Turbulent Flow (1978)
+            double eps = 1.0e-03;
+
+            // time-step update (eqn. 2.112)
+            dt_physical = dt_physical_old*pow((b*eps/d),a);
+            // Howard mentions that the time-step is typically limited to grow by no more than 10% to 20%
+            dt_physical = fmin(1.1*dt_physical_old, dt_physical);
+            // we will also limit the time-step to some maximum allowable value
+            dt_physical = fmin(dt_physical, GlobalConfig.dt_max);
+        }
+
+        // shuffle conserved quantities:
+        // note that the [1] entry is reserved for use in the nonlinear solver
+        if (GlobalConfig.sssOptions.temporalIntegrationMode == 1) {
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                foreach (cell; blk.cells) {
+                    // U_n+1 => U_n
+                    cell.U[2].copy_values_from(cell.U[0]);
+                }
+            }
+        } else { // temporal_order == 2
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                foreach (cell; blk.cells) {
+                    // U_n => U_n-1
+                    cell.U[3].copy_values_from(cell.U[2]);
+                    // U_n+1 => U_n
+                    cell.U[2].copy_values_from(cell.U[0]);
+                }
+            }
+        }
+
         // We need to calculate a new reference (unsteady) residual for the next nonlinear solve
         evalRHS(physicalSimTime, 0);
         // add unsteady term TODO: could we need to handle this better?
@@ -1512,7 +1596,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                         if (temporal_order == 1) {
                             cell.dUdt[0][j] = cell.dUdt[0][j] - (1.0/dt_physical)*cell.U[0][j] + (1.0/dt_physical)*cell.U[2][j];
                         } else { // temporal_order = 2
-                            cell.dUdt[0][j] = cell.dUdt[0][j] - (1.5/dt_physical)*cell.U[0][j] + (2.0/dt_physical)*cell.U[2][j] - (0.5/dt_physical)*cell.U[3][j];
+                            // compute BDF2 coefficients for the adaptive time-stepping implementation
+                            // note that for a fixed time-step, the coefficients should reduce down to the standard BDF2 coefficients, i.e. c1 = 3/2, c2 = 2, and c3 = 1/2
+                            double c1 = 1.0/dt_physical + 1.0/dt_physical_old - dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
+                            double c2 = 1.0/dt_physical + 1.0/dt_physical_old;
+                            double c3 = dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
+                            cell.dUdt[0][j] = cell.dUdt[0][j] - c1*cell.U[0][j] + c2*cell.U[2][j] - c3*cell.U[3][j];
                         }
                     }
                 }
@@ -2009,7 +2098,8 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
 
 }
 
-void point_implicit_relaxation_solve(int step, double pseudoSimTime, double dt, ref double residual, ref double linSolResid, int startStep, bool dual_time_stepping, int temporal_order, double dt_physical)
+void point_implicit_relaxation_solve(int step, double pseudoSimTime, double dt, ref double residual, ref double linSolResid, int startStep,
+                                     bool dual_time_stepping, int temporal_order, double dt_physical, double dt_physical_old)
 {
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
@@ -2040,7 +2130,7 @@ void point_implicit_relaxation_solve(int step, double pseudoSimTime, double dt, 
     if (step == startStep || step%GlobalConfig.sssOptions.frozenPreconditionerCount == 0) {
         foreach (blk; parallel(localFluidBlocks,1)) {
             blk.evaluate_jacobian();
-            blk.flowJacobian.augment_with_dt(blk.cells, dt, blk.cells.length, nConserved, dual_time_stepping, temporal_order, dt_physical);
+            blk.flowJacobian.augment_with_dt(blk.cells, dt, blk.cells.length, nConserved, dual_time_stepping, temporal_order, dt_physical, dt_physical_old);
             nm.smla.invert_block_diagonal(blk.flowJacobian.local, blk.flowJacobian.D, blk.flowJacobian.Dinv, blk.cells.length, nConserved);
         }
     }
@@ -2134,7 +2224,7 @@ string sgs_solve(string lhs_vec, string rhs_vec)
 
 void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, double sigma, bool usePreconditioner,
                     ref double residual, ref int nRestarts, ref int nIters, ref double linSolResid, int startStep, int LHSeval, int RHSeval, ref bool pc_matrix_evaluated,
-                    bool dual_time_stepping, int temporal_order, double dt_physical)
+                    bool dual_time_stepping, int temporal_order, double dt_physical, double dt_physical_old)
 {
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
@@ -2179,7 +2269,12 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     if (temporal_order == 1) {
                         cell.dUdt[0][j] = cell.dUdt[0][j] - (1.0/dt_physical)*cell.U[0][j] + (1.0/dt_physical)*cell.U[2][j];
                     } else { // temporal_order = 2
-                        cell.dUdt[0][j] = cell.dUdt[0][j] - (1.5/dt_physical)*cell.U[0][j] + (2.0/dt_physical)*cell.U[2][j] - (0.5/dt_physical)*cell.U[3][j];
+                        // compute BDF2 coefficients for the adaptive time-stepping implementation
+                        // note that for a fixed time-step, the coefficients should reduce down to the standard BDF2 coefficients, i.e. c1 = 3/2, c2 = 2, and c3 = 1/2
+                        double c1 = 1.0/dt_physical + 1.0/dt_physical_old - dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
+                        double c2 = 1.0/dt_physical + 1.0/dt_physical_old;
+                        double c3 = dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
+                        cell.dUdt[0][j] = cell.dUdt[0][j] - c1*cell.U[0][j] + c2*cell.U[2][j] - c3*cell.U[3][j];
                     }
                 }
             }
@@ -2228,14 +2323,14 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         case PreconditionMatrixType.sgs:
             foreach (blk; parallel(localFluidBlocks,1)) {
                 blk.evaluate_jacobian();
-                blk.flowJacobian.augment_with_dt(blk.cells, dt, blk.cells.length, nConserved, dual_time_stepping, temporal_order, dt_physical);
+                blk.flowJacobian.augment_with_dt(blk.cells, dt, blk.cells.length, nConserved, dual_time_stepping, temporal_order, dt_physical, dt_physical_old);
                 nm.smla.invert_block_diagonal(blk.flowJacobian.local, blk.flowJacobian.D, blk.flowJacobian.Dinv, blk.cells.length, nConserved);
             }
             break;
         case PreconditionMatrixType.ilu:
             foreach (blk; parallel(localFluidBlocks,1)) {
                 blk.evaluate_jacobian();
-                blk.flowJacobian.augment_with_dt(blk.cells, dt, blk.cells.length, nConserved, dual_time_stepping, temporal_order, dt_physical);
+                blk.flowJacobian.augment_with_dt(blk.cells, dt, blk.cells.length, nConserved, dual_time_stepping, temporal_order, dt_physical, dt_physical_old);
                 nm.smla.decompILU0(blk.flowJacobian.local);
             }
             break;
@@ -2524,8 +2619,12 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     if (blk.myConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
                     else { dtInv = 1.0/dt; }
                     if (dual_time_stepping) {
-                        if (temporal_order == 1) { dtInv = dtInv + 1.0/dt_physical; }
-                        else { dtInv = dtInv + 1.5/dt_physical; }
+                        if (temporal_order == 1) {
+                            dtInv = dtInv + 1.0/dt_physical;
+                        } else {
+                            double dtInv_physical  = 1.0/dt_physical + 1.0/dt_physical_old - dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
+                            dtInv = dtInv + dtInv_physical;
+                        }
                     }
                     blk.w[idx] = dtInv*blk.zed[idx];
                 }
@@ -2705,8 +2804,12 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                         if (GlobalConfig.with_local_time_stepping) { dtInv = 1.0/cell.dt_local; }
                         else { dtInv = 1.0/dt; }
                         if (dual_time_stepping) {
-                            if (temporal_order == 1) { dtInv = dtInv + 1.0/dt_physical; }
-                            else { dtInv = dtInv + 1.5/dt_physical; }
+                            if (temporal_order == 1) {
+                                dtInv = dtInv + 1.0/dt_physical;
+                            } else {
+                                double dtInv_physical  = 1.0/dt_physical + 1.0/dt_physical_old - dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
+                                dtInv = dtInv + dtInv_physical;
+                            }
                         }
                         blk.w[idx] = dtInv*blk.zed[idx];
                     }
