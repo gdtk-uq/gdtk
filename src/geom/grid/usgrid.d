@@ -1385,7 +1385,7 @@ public:
     // https://su2code.github.io/docs_v7/Mesh-File/
     // scale = unit length in metres
     {
-        writeln("Begin importing SU2 grid with scale=", scale);
+        writef("Importing: %s ", fileName);
         auto f = File(fileName, "r");
         string getHeaderContent(string target)
         // Helper function to proceed through file, line-by-line,
@@ -1403,19 +1403,16 @@ public:
             return ""; // didn't find the target
         }
         dimensions = to!int(getHeaderContent("NDIME"));
-        writeln("dimensions=", dimensions);
         //
         // Since we are not sure of the order of the blocks (elements or points),
         // let's be safe and look from the beginning.
         f.rewind();
         ncells = to!size_t(getHeaderContent("NELEM"));
-        writeln("ncells=", ncells);
         cells.length = ncells;
-        bool stars_written = false;
         foreach(i; 0 .. ncells) {
             // For very large files, emit a character periodically,
             // to show that work is being done.
-            if ((i % 100_000) == 0) { stdout.write("*"); stdout.flush(); stars_written = true; }
+            if ((i % 100_000) == 0) { stdout.write("."); stdout.flush();}
             auto lineContent = f.readln().strip();
             // We are expecting the following items on the line:
             // a. vtk-element-type
@@ -1458,7 +1455,6 @@ public:
             // outsign_list for each cell.
             cells[indx] = new USGCell(cell_type, indx, vtx_id_list, face_id_list, outsign_list);
         } // end foreach i .. ncells
-        if (stars_written) { stdout.write("\n"); }
         //
         size_t uninitialized_cell_count = 0;
         foreach(i; 0 .. cells.length) {
@@ -1478,13 +1474,11 @@ public:
         // the start of the file.
         f.rewind();
         nvertices = to!size_t(getHeaderContent("NPOIN"));
-        writeln("nvertices=", nvertices);
         vertices.length = nvertices;
-        stars_written = false;
         foreach(i; 0 .. nvertices) {
             // For very large files, emit a character periodically,
             // to show that work is being done.
-            if ((i % 100_000) == 0) { stdout.write("*"); stdout.flush(); stars_written = true; }
+            if ((i % 100_000) == 0) { stdout.write("."); stdout.flush();}
             auto tokens = f.readln().strip().split();
             auto ntokens = tokens.length;
             double x=0.0; double y=0.0; double z = 0.0; size_t indx = 0;
@@ -1512,7 +1506,6 @@ public:
             }
             vertices[indx].set(x, y, z);
         } // end foreach i .. nvertices
-        if (stars_written) { stdout.write("\n"); }
         //
         if (dimensions == 2) {
             // In 2D, the flow solver code assumes that the cycle of vertices
@@ -1631,12 +1624,10 @@ public:
             return;
         } // end add_face_to_cell()
         //
-        writeln("Assemble faces to cells.");
-        stars_written = false;
         foreach(i, cell; cells) {
             // For a very large grid, emit a character periodically,
             // to show that work is being done.
-            if ((i % 100_000) == 0) { stdout.write("*"); stdout.flush(); stars_written = true; }
+            if ((i % 100_000) == 0) { stdout.write("."); stdout.flush();}
             if (!cell) continue;
             // Attach the faces to each cell. In 2D, faces are defined as lines.
             // As we progress along the line the face normal is pointing to the right.
@@ -1709,25 +1700,20 @@ public:
                 throw new GeometryException(errMsg);
             }
         } // end foreach cell
-        if (stars_written) { stdout.write("\n"); }
         nfaces = faces.length;
-        writeln("nfaces=", nfaces);
         //
         // Now that we have a full set of cells and faces,
         // make lists of the boundary faces.
         //
-        writeln("Boundary sets for faces.");
         foreach (myface; faces) { myface.is_on_boundary = false; } // will remark boundary faces below
         // Note that we do not rewind the file because
         // we expect the boundary sets last, always.
         nboundaries = to!size_t(getHeaderContent("NMARK"));
         foreach(i; 0 .. nboundaries) {
             string tag = getHeaderContent("MARKER_TAG");
-            writeln("boundary i=", i, " tag=", tag);
             size_t[] face_id_list;
             int[] outsign_list;
             size_t nelem = to!size_t(getHeaderContent("MARKER_ELEMS"));
-            // writeln("nelem=", nelem);
             foreach(j; 0 .. nelem) {
                 auto tokens = f.readln().strip().split();
                 int vtk_type = to!int(tokens[0]);
@@ -1777,7 +1763,6 @@ public:
             nboundaries = boundaries.length;
         }
         //
-        writeln("Check that the region bounded by the grid is closed.");
         Vector3 varea = Vector3(0,0,0);
         foreach (b; boundaries) {
             foreach (j, fid; b.face_id_list) {
@@ -1791,7 +1776,7 @@ public:
         }
         //
         // If we arrive here, the import of the SU2 grid seems to have been successful
-        writeln("Finished importing SU2 grid.");
+        writefln(" (done) scale=%s dim=%s ncells=%d nbfs= %d", scale, dimensions, ncells, boundaries.length);
         return;
     } // end read_from_su2_text_file()
 
