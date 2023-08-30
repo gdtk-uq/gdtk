@@ -930,7 +930,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     int flagTooManyBadCells = 0;
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) {
-            foreach (cell; blk.cells) { cell.data_is_bad = false; }
+            foreach (i; 0 .. blk.ncells) { blk.celldata.data_is_bad[i] = false; }
         }
     }
     do {
@@ -1241,7 +1241,8 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                     U1[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
-                            cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
+                            int okay = cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
+                            if (okay!=0) blk.celldata.data_is_bad[cell.id] = true;
                         } // end foreach cell
                         break;
                     case 2:
@@ -1283,7 +1284,8 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                     U2[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
-                            cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
+                            int okay = cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
+                            if (okay!=0) blk.celldata.data_is_bad[cell.id] = true;
                         } // end foreach cell
                         break;
                     case 3:
@@ -1336,7 +1338,8 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                     U3[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
-                            cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
+                            int okay = cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
+                            if (okay!=0) blk.celldata.data_is_bad[cell.id] = true;
                         } // end foreach cell
                         break;
                     case 4:
@@ -1383,13 +1386,18 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                                     U4[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
-                            cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
+                            int okay = cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
+                            if (okay!=0) blk.celldata.data_is_bad[cell.id] = true;
                         } // end foreach cell
                         break;
                     default: throw new Error("Invalid state for explicit update.");
                     } // end switch (stage)
                     //
-                    local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+                    if (blk.myConfig.adjust_invalid_cell_data) {
+                        local_invalid_cell_count[i] = blk.count_invalid_cells(blklocal_gtl, blklocal_ftl+1);
+                    } else {
+                        local_invalid_cell_count[i] = 0;
+                    }
                 } // end foreach blk
             } catch (Exception e) {
                 debug { writefln("Exception thrown in phase 13 of stage %d of explicit update: %s", stage, e.msg); }

@@ -65,6 +65,7 @@ struct FVCellData{
     size_t[][] c2v;
     double[] dt_local;
     int[][] outsigns;
+    bool[] data_is_bad;
     size_t[][] halo_cell_ids;
     size_t[][] halo_face_ids;
     number[] areas;
@@ -1738,29 +1739,13 @@ int decode_conserved(Vector3 pos, ConservedQuantities myU, ref FlowState fs, dou
                 foreach(isp; 0 .. cqi.n_species) { myU[cqi.species+isp] *= scale_factor; }
             }
         } // end if (myConfig.n_species > 1 && cqi.mass == 0)
-        try {
-            if (cqi.n_species > 1) {
-                foreach(isp; 0 .. cqi.n_species) { fs.gas.massf[isp] = myU[cqi.species+isp] * dinv; }
-            } else {
-                fs.gas.massf[0] = 1.0;
-            }
-    if (myConfig.sticky_electrons) { gmodel.balance_charge(fs.gas); }
-    } catch (GasModelException err) {
-    if (myConfig.adjust_invalid_cell_data) {
-        //data_is_bad = true;
-        return -2;
-    } else {
-        string msg = "Bad cell with mass fractions that do not add correctly.";
-        debug {
-        msg ~= format(" scale_mass_fractions exception with message:\n  %s", err.msg);
-        msg ~= format("The decode_conserved() failed for cell: %d\n", id);
-        msg ~= format("  This cell is located at: %s\n", pos);
-        msg ~= format("  This cell is located in block: %d\n", myConfig.universe_blk_id);
-        msg ~= format("  The gas state before thermo update is:\n   fs.gas %s", fs.gas);
+
+        if (cqi.n_species > 1) {
+            foreach(isp; 0 .. cqi.n_species) { fs.gas.massf[isp] = myU[cqi.species+isp] * dinv; }
+        } else {
+            fs.gas.massf[0] = 1.0;
         }
-        throw new FlowSolverException(msg);
-    } // end if
-    } // end catch
+        if (myConfig.sticky_electrons) { gmodel.balance_charge(fs.gas); }
     }
     //
     // Fill out the other variables: P, T, a, and viscous transport coefficients.

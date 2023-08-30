@@ -322,6 +322,7 @@ public:
         celldata.dt_local.length = ncells;
         celldata.areas.length = ncells + nghost;
         celldata.wall_distances.length = ncells;
+        celldata.data_is_bad.length = ncells;
         celldata.in_turbulent_zone.length = ncells;
         celldata.volumes.length = ncells + nghost;
         celldata.lengths.length = ncells + nghost;
@@ -781,7 +782,7 @@ public:
     {
         int number_of_invalid_cells = 0;
         foreach(cell; cells) {
-            if (cell.data_is_bad || cell.fs.check_data(cell.pos[0], myConfig) == false) {
+            if (cell.data_is_bad || celldata.data_is_bad[cell.id] || cell.fs.check_data(cell.pos[0], myConfig) == false) {
                 ++number_of_invalid_cells;
                 if (myConfig.report_invalid_cells) {
                     writefln("count_invalid_cells: block_id=%d, cell_id=%d at pos %s\n",
