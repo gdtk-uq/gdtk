@@ -2610,6 +2610,9 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         // evaluate A.x0 using a Frechet derivative (note that the zed[] array is baked into the evalJacobianVecProd routine).
         foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = blk.x0[]; }
 
+        // for the real-valued solver we compute an ideal perturbation parameter for the Frechet derivative
+        if (!GlobalConfig.sssOptions.useComplexMatVecEval) { sigma = eval_perturbation_param(); }
+
         // Prepare 'w' with (I/dt) term
         foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (i, cell; blk.cells) {
@@ -2758,42 +2761,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 }
             }
 
-            // evaluate Jz using either a real or complex valued Frechet derivative...
-            // for the real-valued solver we compute an ideal perturbation parameter for the Frechet derivative as per equation 11/12 from
-            // Knoll, D.A. and McHugh, P.R., Newton-Krylov Methods Applied to a System of Convection-Diffusion-Reaction Equations, 1994
-            // note: calculate this parameter WITHOUT scaling applied
-            if (!GlobalConfig.sssOptions.useComplexMatVecEval) {
-                number sumv = 0.0;
-                mixin(dot_over_blocks("sumv", "zed", "zed"));
-                version(mpi_parallel) {
-                    MPI_Allreduce(MPI_IN_PLACE, &(sumv.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(sumv.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
-                }
-
-                auto eps0 = GlobalConfig.sssOptions.sigma1;
-                number N = 0.0;
-                number sume = 0.0;
-                foreach (blk; parallel(localFluidBlocks,1)) {
-                    int cellCount = 0;
-                    foreach (cell; blk.cells) {
-                        foreach (val; cell.U[0]) {
-                            sume += eps0*abs(val) + eps0;
-                            N += 1;
-                        }
-                        cellCount += nConserved;
-                    }
-                }
-                version(mpi_parallel) {
-                    MPI_Allreduce(MPI_IN_PLACE, &(sume.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(sume.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
-                }
-                version(mpi_parallel) {
-                    MPI_Allreduce(MPI_IN_PLACE, &(N.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(N.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
-                }
-
-                sigma = (sume/(N*sqrt(sumv))).re;
-            }
+            // for the real-valued solver we compute an ideal perturbation parameter for the Frechet derivative
+            if (!GlobalConfig.sssOptions.useComplexMatVecEval) { sigma = eval_perturbation_param(); }
 
             // Prepare 'w' with (I/dt)(P^-1)v term;
             foreach (blk; parallel(localFluidBlocks,1)) {
@@ -3052,6 +3021,45 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
     residual = unscaledNorm2;
     nRestarts = to!int(r);
+}
+
+double eval_perturbation_param() {
+    // For the real-valued solver we compute an ideal perturbation parameter for the Frechet derivative as per equation 11/12 from
+    // Knoll, D.A. and McHugh, P.R., Newton-Krylov Methods Applied to a System of Convection-Diffusion-Reaction Equations, 1994
+    // note: calculate this parameter WITHOUT scaling applied
+    number v_L2 = 0.0;
+    mixin(dot_over_blocks("v_L2", "zed", "zed"));
+
+    double eps_sum = 0.0, N = 0.0;
+    auto eps0 = GlobalConfig.sssOptions.sigma1;
+    foreach (blk; localFluidBlocks) {
+        foreach (cell; blk.cells) {
+            foreach (val; cell.U[0]) {
+                eps_sum += eps0*fabs(val.re) + eps0;
+                N += 1;
+            }
+        }
+    }
+
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &(v_L2), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &(eps_sum), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &(N), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+
+    double sigma;
+    // we protect against the scenario where the L2 norm of zed is 0.0
+    if (v_L2 > 1.0e-15) {
+        sigma = (eps_sum/(N*sqrt(v_L2.re)));
+    } else {
+        sigma = eps0;
+    }
+
+    return sigma;
 }
 
 void max_residuals(ref ConservedQuantities residuals)
