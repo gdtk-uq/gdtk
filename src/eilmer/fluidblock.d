@@ -1396,13 +1396,24 @@ public:
             }
 
             // return cell to original state
-            pcell.U[ftl].copy_values_from(pcell.U[0]);
-            pcell.fs.copy_values_from(*fs_save);
-            if (myConfig.viscous) {
-                foreach (cell; pcell.cell_list) { cell.grad.copy_values_from(*(cell.grad_save)); }
-            }
-            if (flowJacobian.spatial_order >= 2) {
-                foreach(cell; pcell.cell_list) { cell.gradients.copy_values_from(*(cell.gradients_save)); }
+            version(complex_numbers) {
+                pcell.U[ftl].copy_values_from(pcell.U[0]);
+                pcell.fs.copy_values_from(*fs_save);
+                if (myConfig.viscous) {
+                    foreach (cell; pcell.cell_list) { cell.grad.copy_values_from(*(cell.grad_save)); }
+                }
+                if (flowJacobian.spatial_order >= 2) {
+                    foreach(cell; pcell.cell_list) { cell.gradients.copy_values_from(*(cell.gradients_save)); }
+                }
+            } else {
+                // TODO: for structured grids employing a real-valued low-order numerical Jacobian as
+                // the precondition matrix the above code doesn't completely clean up the effect of the
+                // perturbuation. Note that this does not occur for unstructured grids.
+                // This is currently under investigation, in the interim we will apply the more costly
+                // method of re-evaluating evalRHS with the unperturbed conserved state. KAD 2023-08-31
+                pcell.U[ftl].copy_values_from(pcell.U[0]);
+                pcell.decode_conserved(gtl, 0, 0.0);
+                evalRHS(gtl, 0, pcell.cell_list, pcell.face_list, pcell);
             }
         }
 
@@ -1523,13 +1534,24 @@ public:
                     }
 
                     // return cell to original state
-                    ghost_cell.U[ftl].copy_values_from(ghost_cell.U[0]);
-                    ghost_cell.fs.copy_values_from(*fs_save);
-                    if (myConfig.viscous) {
-                        foreach (cell; ghost_cell.cell_list) { cell.grad.copy_values_from(*(cell.grad_save)); }
-                    }
-                    if (flowJacobian.spatial_order >= 2) {
-                        foreach(cell; ghost_cell.cell_list) { cell.gradients.copy_values_from(*(cell.gradients_save)); }
+                    version(complex_numbers) {
+                        ghost_cell.U[ftl].copy_values_from(ghost_cell.U[0]);
+                        ghost_cell.fs.copy_values_from(*fs_save);
+                        if (myConfig.viscous) {
+                            foreach (cell; ghost_cell.cell_list) { cell.grad.copy_values_from(*(cell.grad_save)); }
+                        }
+                        if (flowJacobian.spatial_order >= 2) {
+                            foreach(cell; ghost_cell.cell_list) { cell.gradients.copy_values_from(*(cell.gradients_save)); }
+                        }
+                    } else {
+                        // TODO: for structured grids employing a real-valued low-order numerical Jacobian as
+                        // the precondition matrix the above code doesn't completely clean up the effect of the
+                        // perturbuation. Note that this does not occur for unstructured grids.
+                        // This is currently under investigation, in the interim we will apply the more costly
+                        // method of re-evaluating evalRHS with the unperturbed conserved state. KAD 2023-08-31
+                        ghost_cell.U[ftl].copy_values_from(ghost_cell.U[0]);
+                        ghost_cell.decode_conserved(gtl, 0, 0.0);
+                        evalRHS(gtl, 0, ghost_cell.cell_list, ghost_cell.face_list, ghost_cell);
                     }
                 }
 
