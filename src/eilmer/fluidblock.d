@@ -817,6 +817,7 @@ public:
                         scale_mass_fractions(cell.fs.gas.massf, 0.0, 0.9); // big assertion-error-tolerance
                     }
                     cell.data_is_bad = false; // assume that we've fixed it at this point.
+                    celldata.data_is_bad[cell.id] = false;
                     cell.encode_conserved(gtl, ftl, omegaz);
                     if (0 != cell.decode_conserved(gtl, ftl, omegaz)) {
                         string msg = "Block::count_invalid_cells(): " ~
