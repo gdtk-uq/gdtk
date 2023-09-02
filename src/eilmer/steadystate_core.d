@@ -3029,6 +3029,10 @@ double eval_perturbation_param() {
     // note: calculate this parameter WITHOUT scaling applied
     number v_L2 = 0.0;
     mixin(dot_over_blocks("v_L2", "zed", "zed"));
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &(v_L2), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+    v_L2 = sqrt(v_L2);
 
     double eps_sum = 0.0, N = 0.0;
     auto eps0 = GlobalConfig.sssOptions.sigma1;
@@ -3040,10 +3044,6 @@ double eval_perturbation_param() {
             }
         }
     }
-
-    version(mpi_parallel) {
-        MPI_Allreduce(MPI_IN_PLACE, &(v_L2), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    }
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &(eps_sum), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
@@ -3052,12 +3052,14 @@ double eval_perturbation_param() {
     }
 
     double sigma;
-    // we protect against the scenario where the L2 norm of zed is 0.0
-    if (v_L2 > 1.0e-15) {
-        sigma = (eps_sum/(N*sqrt(v_L2.re)));
-    } else {
-        sigma = eps0;
-    }
+
+    // When the L2 norm of the Krylov vector is small, the sigma calculated from this routine
+    // has been observed to result in noisy residuals (typically once a solution is nearly converged).
+    // We enforce a minimum value that is used in the equation for sigma to guard against this behaviour.
+    // From some experimentation a minimum value of sqrt(1.0e-07) appears sufficient.
+    double min_v_L2 = sqrt(1.0e-07);
+    if (v_L2.re <= min_v_L2) { v_L2.re = min_v_L2; }
+    sigma = eps_sum/(N*v_L2.re);
 
     return sigma;
 }
