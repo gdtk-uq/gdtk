@@ -1588,25 +1588,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
         // We need to calculate a new reference (unsteady) residual for the next nonlinear solve
         evalRHS(physicalSimTime, 0);
-        // add unsteady term TODO: could we need to handle this better?
-        if (dual_time_stepping) {
-            foreach (blk; parallel(localFluidBlocks, 1)) {
-                foreach (cell; blk.cells) {
-                    foreach (j; 0 .. nConserved) {
-                        if (temporal_order == 1) {
-                            cell.dUdt[0][j] = cell.dUdt[0][j] - (1.0/dt_physical)*cell.U[0][j] + (1.0/dt_physical)*cell.U[2][j];
-                        } else { // temporal_order = 2
-                            // compute BDF2 coefficients for the adaptive time-stepping implementation
-                            // note that for a fixed time-step, the coefficients should reduce down to the standard BDF2 coefficients, i.e. c1 = 3/2, c2 = 2, and c3 = 1/2
-                            double c1 = 1.0/dt_physical + 1.0/dt_physical_old - dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
-                            double c2 = 1.0/dt_physical + 1.0/dt_physical_old;
-                            double c3 = dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
-                            cell.dUdt[0][j] = cell.dUdt[0][j] - c1*cell.U[0][j] + c2*cell.U[2][j] - c3*cell.U[3][j];
-                        }
-                    }
-                }
-            }
-        }
         max_residuals(maxResiduals);
         foreach (blk; parallel(localFluidBlocks, 1)) {
             size_t nturb = blk.myConfig.turb_model.nturb;
@@ -1615,22 +1596,19 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (cell; blk.cells) {
-                if ( nsp == 1 ) { blk.FU[cellCount+MASS] = -cell.dUdt[0][cqi.mass].re; }
-                blk.FU[cellCount+X_MOM] = -cell.dUdt[0][cqi.xMom].re;
-                blk.FU[cellCount+Y_MOM] = -cell.dUdt[0][cqi.yMom].re;
-                if ( GlobalConfig.dimensions == 3 )
-                    blk.FU[cellCount+Z_MOM] = -cell.dUdt[0][cqi.zMom].re;
-                blk.FU[cellCount+TOT_ENERGY] = -cell.dUdt[0][cqi.totEnergy].re;
-                foreach(it; 0 .. nturb) {
-                    blk.FU[cellCount+TKE+it] = -cell.dUdt[0][cqi.rhoturb+it].re;
-                }
-                version(multi_species_gas){
-                    if ( nsp > 1 ) {
-                        foreach(sp; 0 .. nsp) { blk.FU[cellCount+SPECIES+sp] = -cell.dUdt[0][cqi.species+sp].re; }
+                foreach (j; 0 .. nConserved) {
+                    if (temporal_order == 0) {
+                        blk.FU[cellCount+j] = cell.dUdt[0][j].re;
+                    } else if (temporal_order == 1) { // add unsteady term TODO: could we need to handle this better?
+                        blk.FU[cellCount+j] = cell.dUdt[0][j].re - (1.0/dt_physical)*cell.U[0][j].re + (1.0/dt_physical)*cell.U[2][j].re;
+                    } else { // temporal_order = 2
+                        // compute BDF2 coefficients for the adaptive time-stepping implementation
+                        // note that for a fixed time-step, the coefficients should reduce down to the standard BDF2 coefficients, i.e. c1 = 3/2, c2 = 2, and c3 = 1/2
+                        double c1 = 1.0/dt_physical + 1.0/dt_physical_old - dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
+                        double c2 = 1.0/dt_physical + 1.0/dt_physical_old;
+                        double c3 = dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
+                        blk.FU[cellCount+j] = cell.dUdt[0][j].re - c1*cell.U[0][j].re + c2*cell.U[2][j].re - c3*cell.U[3][j].re;
                     }
-                }
-                version(multi_T_gas){
-                    foreach(imode; 0 .. nmodes) { blk.FU[cellCount+MODES+imode] = -cell.dUdt[0][cqi.modes+imode].re; }
                 }
                 cellCount += nConserved;
             }
@@ -1878,6 +1856,7 @@ void evalJacobianVecProd(double pseudoSimTime, double sigma, int LHSeval, int RH
 
 void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHSeval)
 {
+    int end_ftl = to!int(GlobalConfig.n_flow_time_levels-1);
     foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(LHSeval); }
     bool frozen_limiter_save = GlobalConfig.frozen_limiter;
     if (GlobalConfig.sssOptions.frozenLimiterOnLHS) {
@@ -1941,22 +1920,22 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
         auto cqi = blk.myConfig.cqi;
         int cellCount = 0;
         foreach (cell; blk.cells) {
-            if ( nsp == 1 ) { blk.zed[cellCount+MASS] = (cell.dUdt[1][cqi.mass].re - blk.FU[cellCount+MASS])/(sigma); }
-            blk.zed[cellCount+X_MOM] = (cell.dUdt[1][cqi.xMom].re - blk.FU[cellCount+X_MOM])/(sigma);
-            blk.zed[cellCount+Y_MOM] = (cell.dUdt[1][cqi.yMom].re - blk.FU[cellCount+Y_MOM])/(sigma);
+            if ( nsp == 1 ) { blk.zed[cellCount+MASS] = (cell.dUdt[1][cqi.mass].re - cell.dUdt[end_ftl][cqi.mass].re)/(sigma); }
+            blk.zed[cellCount+X_MOM] = (cell.dUdt[1][cqi.xMom].re - cell.dUdt[end_ftl][cqi.xMom].re)/(sigma);
+            blk.zed[cellCount+Y_MOM] = (cell.dUdt[1][cqi.yMom].re - cell.dUdt[end_ftl][cqi.yMom].re)/(sigma);
             if ( blk.myConfig.dimensions == 3 )
-                blk.zed[cellCount+Z_MOM] = (cell.dUdt[1][cqi.zMom].re - blk.FU[cellCount+Z_MOM])/(sigma);
-            blk.zed[cellCount+TOT_ENERGY] = (cell.dUdt[1][cqi.totEnergy].re - blk.FU[cellCount+TOT_ENERGY])/(sigma);
+                blk.zed[cellCount+Z_MOM] = (cell.dUdt[1][cqi.zMom].re - cell.dUdt[end_ftl][cqi.zMom].re)/(sigma);
+            blk.zed[cellCount+TOT_ENERGY] = (cell.dUdt[1][cqi.totEnergy].re - cell.dUdt[end_ftl][cqi.totEnergy].re)/(sigma);
             foreach(it; 0 .. nturb){
-                blk.zed[cellCount+TKE+it] = (cell.dUdt[1][cqi.rhoturb+it].re - blk.FU[cellCount+TKE+it])/(sigma);
+                blk.zed[cellCount+TKE+it] = (cell.dUdt[1][cqi.rhoturb+it].re - cell.dUdt[end_ftl][cqi.rhoturb+it].re)/(sigma);
             }
             version(multi_species_gas){
             if ( nsp > 1 ) {
-                foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] = (cell.dUdt[1][cqi.species+sp].re - blk.FU[cellCount+SPECIES+sp])/(sigma); }
+                foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] = (cell.dUdt[1][cqi.species+sp].re - cell.dUdt[end_ftl][cqi.species+sp].re)/(sigma); }
             }
             }
             version(multi_T_gas){
-            foreach(imode; 0 .. nmodes){ blk.zed[cellCount+MODES+imode] = (cell.dUdt[1][cqi.modes+imode].re - blk.FU[cellCount+MODES+imode])/(sigma); }
+            foreach(imode; 0 .. nmodes){ blk.zed[cellCount+MODES+imode] = (cell.dUdt[1][cqi.modes+imode].re - cell.dUdt[end_ftl][cqi.modes+imode].re)/(sigma); }
             }
             cell.decode_conserved(0, 0, 0.0);
             cellCount += nConserved;
@@ -2261,25 +2240,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
     // Compute the RHS residual and store dUdt[0] as F(U)
     evalRHS(pseudoSimTime, 0);
-    // add unsteady term TODO: could we need to handle this better?
-    if (dual_time_stepping) {
-        foreach (blk; parallel(localFluidBlocks, 1)) {
-            foreach (cell; blk.cells) {
-                foreach (j; 0 .. nConserved) {
-                    if (temporal_order == 1) {
-                        cell.dUdt[0][j] = cell.dUdt[0][j] - (1.0/dt_physical)*cell.U[0][j] + (1.0/dt_physical)*cell.U[2][j];
-                    } else { // temporal_order = 2
-                        // compute BDF2 coefficients for the adaptive time-stepping implementation
-                        // note that for a fixed time-step, the coefficients should reduce down to the standard BDF2 coefficients, i.e. c1 = 3/2, c2 = 2, and c3 = 1/2
-                        double c1 = 1.0/dt_physical + 1.0/dt_physical_old - dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
-                        double c2 = 1.0/dt_physical + 1.0/dt_physical_old;
-                        double c3 = dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
-                        cell.dUdt[0][j] = cell.dUdt[0][j] - c1*cell.U[0][j] + c2*cell.U[2][j] - c3*cell.U[3][j];
-                    }
-                }
-            }
-        }
-    }
 
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
@@ -2288,24 +2248,55 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         auto cqi = blk.myConfig.cqi;
         int cellCount = 0;
         foreach (i, cell; blk.cells) {
-            if ( nsp == 1 ) { blk.FU[cellCount+MASS] = cell.dUdt[0][cqi.mass].re; }
-            blk.FU[cellCount+X_MOM] = cell.dUdt[0][cqi.xMom].re;
-            blk.FU[cellCount+Y_MOM] = cell.dUdt[0][cqi.yMom].re;
-            if ( blk.myConfig.dimensions == 3 )
-                blk.FU[cellCount+Z_MOM] = cell.dUdt[0][cqi.zMom].re;
-            blk.FU[cellCount+TOT_ENERGY] = cell.dUdt[0][cqi.totEnergy].re;
-            foreach(it; 0 .. nturb){
-                blk.FU[cellCount+TKE+it] = cell.dUdt[0][cqi.rhoturb+it].re;
-            }
-            version(multi_species_gas){
-            if ( nsp > 1 ) {
-                foreach(sp; 0 .. nsp){ blk.FU[cellCount+SPECIES+sp] = cell.dUdt[0][cqi.species+sp].re; }
-            }
-            }
-            version(multi_T_gas){
-            foreach(imode; 0 .. nmodes){ blk.FU[cellCount+MODES+imode] = cell.dUdt[0][cqi.modes+imode].re; }
+            foreach (j; 0 .. nConserved) {
+                if (temporal_order == 0) {
+                    blk.FU[cellCount+j] = cell.dUdt[0][j].re;
+                } else if (temporal_order == 1) {
+                    // add BDF1 unsteady term TODO: could we need to handle this better?
+                    blk.FU[cellCount+j] = cell.dUdt[0][j].re - (1.0/dt_physical)*cell.U[0][j].re + (1.0/dt_physical)*cell.U[2][j].re;
+                } else { // temporal_order = 2
+                    // add BDF2 unsteady term TODO: could we need to handle this better?
+                    // compute BDF2 coefficients for the adaptive time-stepping implementation
+                    // note that for a fixed time-step, the coefficients should reduce down to the standard BDF2 coefficients, i.e. c1 = 3/2, c2 = 2, and c3 = 1/2
+                    double c1 = 1.0/dt_physical + 1.0/dt_physical_old - dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
+                    double c2 = 1.0/dt_physical + 1.0/dt_physical_old;
+                    double c3 = dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
+                    blk.FU[cellCount+j] = cell.dUdt[0][j].re - c1*cell.U[0][j].re + c2*cell.U[2][j].re - c3*cell.U[3][j].re;
+                }
             }
             cellCount += nConserved;
+        }
+    }
+
+    // For the real-valued Frechet derivative, we cannot use the dUdt[0] evaluation above when employing an
+    // implicit operator (LHS of the linear system) that uses different numerical approximations to the RHS.
+    // When the LHS and RHS differ (either first-order LHS or frozen limiter LHS) then we will need to
+    // evaluate an additional dUdt and store it for later use in the Frechet derivative evluation.
+    if (GlobalConfig.sssOptions.useComplexMatVecEval == false) {
+        bool require_residual_eval = GlobalConfig.sssOptions.frozenLimiterOnLHS || LHSeval != GlobalConfig.interpolation_order;
+        int end_ftl = to!int(GlobalConfig.n_flow_time_levels-1);
+
+        if (require_residual_eval) {
+            foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(LHSeval); }
+            bool frozen_limiter_save = GlobalConfig.frozen_limiter;
+            if (GlobalConfig.sssOptions.frozenLimiterOnLHS) {
+                foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = true; }
+            }
+
+            evalRHS(pseudoSimTime, end_ftl);
+
+            foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(RHSeval); }
+            if (GlobalConfig.sssOptions.frozenLimiterOnLHS) {
+                foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = frozen_limiter_save; }
+            }
+        } else {
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                foreach (i, cell; blk.cells) {
+                    foreach (j; 0 .. nConserved) {
+                        cell.dUdt[end_ftl][j] = cell.dUdt[0][j];
+                    }
+                }
+            }
         }
     }
 

@@ -1828,7 +1828,7 @@ void set_config_for_core(JSONValue jsonData)
         auto sssOptions = jsonCntrlData["steady_state_solver_options"];
         auto ssso = &(cfg.sssOptions);
         ssso.temporalIntegrationMode = getJSONint(sssOptions, "temporal_integration_mode", ssso.temporalIntegrationMode);
-        cfg.n_flow_time_levels = 2 + cfg.sssOptions.temporalIntegrationMode;
+        cfg.n_flow_time_levels = 3 + cfg.sssOptions.temporalIntegrationMode;
     } else {
         cfg.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(cfg.gasdynamic_update_scheme);
     }
