@@ -356,6 +356,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     bool dual_time_stepping;
     int temporal_order, max_physical_steps, physical_step = 0;
     double dt_physical, dt_physical_old, target_physical_time, physicalSimTime = 0.0;
+    double t_plot = GlobalConfig.dt_plot, dt_plot = GlobalConfig.dt_plot;
     if (GlobalConfig.sssOptions.temporalIntegrationMode == 0) {
         // steady-state operation via a backward Euler method
         dual_time_stepping = false;
@@ -1383,110 +1384,114 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         nIters = GlobalConfig.sssOptions.maxOuterIterations;
 
         // When dual time-stepping, we only write out the time-accurate flow field solutions here
-        if (GlobalConfig.is_master_task) {
-            writefln("-----------------------------------------------------------------------------------------");
-            writefln("Writing flow solution at physical-step= %d | physical-time= %6.3e | dt_physical= %6.3e", physical_step, physicalSimTime, dt_physical);
-            writefln("-----------------------------------------------------------------------------------------\n");
-        }
-        FluidBlockIO[] io_list = localFluidBlocks[0].block_io;
-        bool legacy = is_legacy_format(GlobalConfig.flow_format);
-        nWrittenSnapshots++;
-        if ( nWrittenSnapshots <= nTotalSnapshots ) {
-            if (GlobalConfig.is_master_task){
-                if (legacy) {
-                    ensure_directory_is_present(make_path_name!"flow"(nWrittenSnapshots));
-                } else {
-                    foreach(io; io_list) {
-                        string path = "CellData/"~io.tag;
-                        if (io.do_save()) ensure_directory_is_present(make_path_name(path, nWrittenSnapshots));
+        if (physicalSimTime >= t_plot) {
+            t_plot += dt_plot;
+
+            if (GlobalConfig.is_master_task) {
+                writefln("-----------------------------------------------------------------------------------------");
+                writefln("Writing flow solution at physical-step= %d | physical-time= %6.3e | dt_physical= %6.3e", physical_step, physicalSimTime, dt_physical);
+                writefln("-----------------------------------------------------------------------------------------\n");
+            }
+            FluidBlockIO[] io_list = localFluidBlocks[0].block_io;
+            bool legacy = is_legacy_format(GlobalConfig.flow_format);
+            nWrittenSnapshots++;
+            if ( nWrittenSnapshots <= nTotalSnapshots ) {
+                if (GlobalConfig.is_master_task){
+                    if (legacy) {
+                        ensure_directory_is_present(make_path_name!"flow"(nWrittenSnapshots));
+                    } else {
+                        foreach(io; io_list) {
+                            string path = "CellData/"~io.tag;
+                            if (io.do_save()) ensure_directory_is_present(make_path_name(path, nWrittenSnapshots));
+                        }
                     }
+                    ensure_directory_is_present(make_path_name!"solid"(nWrittenSnapshots));
                 }
-                ensure_directory_is_present(make_path_name!"solid"(nWrittenSnapshots));
-            }
-            version(mpi_parallel) {
-                MPI_Barrier(MPI_COMM_WORLD);
-            }
-            foreach (blk; localFluidBlocks) {
-                if (legacy) {
-                    auto fileName = make_file_name!"flow"(jobName, blk.id, nWrittenSnapshots, GlobalConfig.flowFileExt);
-                    blk.write_solution(fileName, physicalSimTime);
-                } else {
-                    foreach(io; blk.block_io) {
-                        auto fileName = make_file_name("CellData", io.tag, jobName, blk.id, nWrittenSnapshots, GlobalConfig.flowFileExt);
-                        if (io.do_save()) io.save_to_file(fileName, physicalSimTime);
-                    }
+                version(mpi_parallel) {
+                    MPI_Barrier(MPI_COMM_WORLD);
                 }
-            }
-            foreach (sblk; localSolidBlocks) {
-                auto fileName = make_file_name!"solid"(jobName, sblk.id, nWrittenSnapshots, "gz");
-                sblk.writeSolution(fileName, physicalSimTime);
-            }
-            restartInfo.pseudoSimTime = pseudoSimTime;
-            restartInfo.dt = dt;
-            restartInfo.cfl = cfl;
-            restartInfo.step = SimState.step;
-            restartInfo.globalResidual = normNew;
-            restartInfo.residuals = currResiduals;
-            times ~= restartInfo;
-            if (GlobalConfig.is_master_task) { rewrite_times_file(times); }
-        } else {
-            // We need to shuffle all of the fluid snapshots...
-            foreach ( iSnap; 2 .. nTotalSnapshots+1) {
                 foreach (blk; localFluidBlocks) {
                     if (legacy) {
-                        auto fromName = make_file_name!"flow"(jobName, blk.id, iSnap, "gz");
-                        auto toName = make_file_name!"flow"(jobName, blk.id, iSnap-1, "gz");
-                        rename(fromName, toName);
+                        auto fileName = make_file_name!"flow"(jobName, blk.id, nWrittenSnapshots, GlobalConfig.flowFileExt);
+                        blk.write_solution(fileName, physicalSimTime);
                     } else {
-                        foreach (io; io_list) {
-                            auto fromName = make_file_name("CellData", io.tag, jobName, blk.id, iSnap, GlobalConfig.flowFileExt);
-                            auto toName = make_file_name("CellData", io.tag, jobName, blk.id, iSnap-1, GlobalConfig.flowFileExt);
-                            rename(fromName, toName);
+                        foreach(io; blk.block_io) {
+                            auto fileName = make_file_name("CellData", io.tag, jobName, blk.id, nWrittenSnapshots, GlobalConfig.flowFileExt);
+                            if (io.do_save()) io.save_to_file(fileName, physicalSimTime);
                         }
                     }
                 }
-            }
-            // ... and add the new fluid snapshot.
-            foreach (blk; localFluidBlocks) {
-                if (legacy) {
-                    auto fileName = make_file_name!"flow"(jobName, blk.id, nTotalSnapshots, "gz");
-                    blk.write_solution(fileName, physicalSimTime);
-                } else {
-                    foreach(io; blk.block_io) {
-                        auto fileName = make_file_name("CellData", io.tag, jobName, blk.id, nTotalSnapshots, GlobalConfig.flowFileExt);
-                        if (io.do_save()) io.save_to_file(fileName, physicalSimTime);
-
+                foreach (sblk; localSolidBlocks) {
+                    auto fileName = make_file_name!"solid"(jobName, sblk.id, nWrittenSnapshots, "gz");
+                    sblk.writeSolution(fileName, physicalSimTime);
+                }
+                restartInfo.pseudoSimTime = pseudoSimTime;
+                restartInfo.dt = dt;
+                restartInfo.cfl = cfl;
+                restartInfo.step = SimState.step;
+                restartInfo.globalResidual = normNew;
+                restartInfo.residuals = currResiduals;
+                times ~= restartInfo;
+                if (GlobalConfig.is_master_task) { rewrite_times_file(times); }
+            } else {
+                // We need to shuffle all of the fluid snapshots...
+                foreach ( iSnap; 2 .. nTotalSnapshots+1) {
+                    foreach (blk; localFluidBlocks) {
+                        if (legacy) {
+                            auto fromName = make_file_name!"flow"(jobName, blk.id, iSnap, "gz");
+                            auto toName = make_file_name!"flow"(jobName, blk.id, iSnap-1, "gz");
+                            rename(fromName, toName);
+                        } else {
+                            foreach (io; io_list) {
+                                auto fromName = make_file_name("CellData", io.tag, jobName, blk.id, iSnap, GlobalConfig.flowFileExt);
+                                auto toName = make_file_name("CellData", io.tag, jobName, blk.id, iSnap-1, GlobalConfig.flowFileExt);
+                                rename(fromName, toName);
+                            }
+                        }
                     }
                 }
-            }
-            // We need to shuffle all of the solid snapshots...
-            foreach ( iSnap; 2 .. nTotalSnapshots+1) {
-                foreach (blk; localSolidBlocks) {
-                    auto fromName = make_file_name!"solid"(jobName, blk.id, iSnap, "gz");
-                    auto toName = make_file_name!"solid"(jobName, blk.id, iSnap-1, "gz");
-                    rename(fromName, toName);
+                // ... and add the new fluid snapshot.
+                foreach (blk; localFluidBlocks) {
+                    if (legacy) {
+                        auto fileName = make_file_name!"flow"(jobName, blk.id, nTotalSnapshots, "gz");
+                        blk.write_solution(fileName, physicalSimTime);
+                    } else {
+                        foreach(io; blk.block_io) {
+                            auto fileName = make_file_name("CellData", io.tag, jobName, blk.id, nTotalSnapshots, GlobalConfig.flowFileExt);
+                            if (io.do_save()) io.save_to_file(fileName, physicalSimTime);
+
+                        }
+                    }
                 }
+                // We need to shuffle all of the solid snapshots...
+                foreach ( iSnap; 2 .. nTotalSnapshots+1) {
+                    foreach (blk; localSolidBlocks) {
+                        auto fromName = make_file_name!"solid"(jobName, blk.id, iSnap, "gz");
+                        auto toName = make_file_name!"solid"(jobName, blk.id, iSnap-1, "gz");
+                        rename(fromName, toName);
+                    }
+                }
+                // ... and add the new solid snapshot.
+                foreach (sblk; localSolidBlocks) {
+                    auto fileName = make_file_name!"solid"(jobName, sblk.id, nTotalSnapshots, "gz");
+                    sblk.writeSolution(fileName, physicalSimTime);
+                }
+                remove(times, 1);
+                restartInfo.pseudoSimTime = pseudoSimTime;
+                restartInfo.dt = dt;
+                restartInfo.cfl = cfl;
+                restartInfo.step = SimState.step;
+                restartInfo.globalResidual = normNew;
+                restartInfo.residuals = currResiduals;
+                times[$-1] = restartInfo;
+                if (GlobalConfig.is_master_task) { rewrite_times_file(times); }
             }
-            // ... and add the new solid snapshot.
-            foreach (sblk; localSolidBlocks) {
-                auto fileName = make_file_name!"solid"(jobName, sblk.id, nTotalSnapshots, "gz");
-                sblk.writeSolution(fileName, physicalSimTime);
-            }
-            remove(times, 1);
-            restartInfo.pseudoSimTime = pseudoSimTime;
-            restartInfo.dt = dt;
-            restartInfo.cfl = cfl;
-            restartInfo.step = SimState.step;
-            restartInfo.globalResidual = normNew;
-            restartInfo.residuals = currResiduals;
-            times[$-1] = restartInfo;
-            if (GlobalConfig.is_master_task) { rewrite_times_file(times); }
-        }
-        // Writing to file produces a large amount of temporary storage that needs to be cleaned up.
-        // Forcing the Garbage Collector to go off here prevents this freeable memory from
-        // accumulating over time, which can upset the queueing systems in HPC Jobs.
-        // 24/05/22 (NNG)
-        GC.collect();
+            // Writing to file produces a large amount of temporary storage that needs to be cleaned up.
+            // Forcing the Garbage Collector to go off here prevents this freeable memory from
+            // accumulating over time, which can upset the queueing systems in HPC Jobs.
+            // 24/05/22 (NNG)
+            GC.collect();
+        } // end IO
 
         if (!GlobalConfig.fixed_time_step) {
             // If the time-step isn't fixed, then we go ahead and update (hopefully grow) the physical time-step,
