@@ -949,55 +949,32 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             default: throw new Error("Invalid state for explicit update.");
             }
             // Phase 01 LOCAL
-            try {
-                foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) {
-                        blk.clear_fluxes_of_conserved_quantities();
-                        blk.clear_cell_source_vectors();
-                    }
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) {
+                    blk.clear_fluxes_of_conserved_quantities();
+                    blk.clear_cell_source_vectors();
                 }
-            } catch (Exception e) {
-                debug { writefln("Exception thrown in phase 01 of stage %d of explicit update: %s", stage, e.msg); }
-                step_failed = 1;
             }
-            version(mpi_parallel) {
-                MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-            }
-            if (step_failed) {
-                // Start the step over again with a reduced time step.
-                SimState.dt_global = SimState.dt_global * 0.2;
-                break;
-            }
+
             // Phase 02 (maybe) MPI
             // We are relying on exchanging boundary data as a pre-reconstruction activity.
             exchange_ghost_cell_boundary_data(SimState.time, gtl, ftl);
             exchange_ghost_cell_gas_solid_boundary_data();
+
             // Phase 03 LOCAL
-            try {
-                if (GlobalConfig.apply_bcs_in_parallel) {
-                    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                        if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
-                    }
-                } else {
-                    foreach (blk; localFluidBlocksBySize) {
-                        if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
-                    }
-                }
+            if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) { blk.set_face_flowstates_to_averages_from_cells(); }
+                    if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
                 }
-            } catch (Exception e) {
-                debug { writefln("Exception thrown in phase 03 of stage %d of explicit update: %s", stage, e.msg); }
-                step_failed = 1;
+            } else {
+                foreach (blk; localFluidBlocksBySize) {
+                    if (blk.active) { blk.applyPreReconAction(SimState.time, gtl, ftl); }
+                }
             }
-            version(mpi_parallel) {
-                MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) { blk.set_face_flowstates_to_averages_from_cells(); }
             }
-            if (step_failed) {
-                // Start the step over again with a reduced time step.
-                SimState.dt_global = SimState.dt_global * 0.2;
-                break;
-            }
+
             // Phase 04 MPI
             // We've put this detector step here because it needs the ghost-cell data
             // to be current, as it should be just after a call to apply_convective_bc().
@@ -1007,109 +984,60 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 detect_shocks(gtl, ftl);
             }
             // Phase 05a LOCAL
-            try {
-                foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) { blk.convective_flux_phase0new(allow_high_order_interpolation); }
-                }
-            } catch (Exception e) {
-                debug { writefln("Exception thrown in phase 05a of stage %d of explicit update: %s", stage, e.msg); }
-                step_failed = 1;
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) { blk.convective_flux_phase0new(allow_high_order_interpolation); }
             }
-            version(mpi_parallel) {
-                MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-            }
-            if (step_failed) {
-                // Start the step over again with a reduced time step.
-                SimState.dt_global = SimState.dt_global * 0.2;
-                break;
-            }
+
             // Phase 05b MPI
             // for unstructured blocks we need to transfer the convective gradients before the flux calc
             if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
                 exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
             }
             // Phase 06a LOCAL
-            try {
-                foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) { blk.convective_flux_phase1new(allow_high_order_interpolation); }
-                }
-            } catch (Exception e) {
-                debug { writefln("Exception thrown in phase 06a of stage %d of explicit update: %s", stage, e.msg); }
-                step_failed = 1;
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) { blk.convective_flux_phase1new(allow_high_order_interpolation); }
             }
-            version(mpi_parallel) {
-                MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-            }
-            if (step_failed) {
-                // Start the step over again with a reduced time step.
-                SimState.dt_global = SimState.dt_global * 0.2;
-                break;
-            }
+
             // Phase 06b MPI
             // for unstructured blocks we need to transfer the convective gradients before the flux calc
             if (allow_high_order_interpolation && (GlobalConfig.interpolation_order > 1)) {
                 exchange_ghost_cell_boundary_convective_gradient_data(SimState.time, gtl, ftl);
             }
-            // Phase 07 LOCAL
-            try {
+
+            foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                if (blk.active) { blk.convective_flux_phase2new(allow_high_order_interpolation); }
+            }
+            if (GlobalConfig.apply_bcs_in_parallel) {
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                    if (blk.active) { blk.convective_flux_phase2new(allow_high_order_interpolation); }
+                    if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
                 }
+            } else {
+                foreach (blk; localFluidBlocksBySize) {
+                    if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
+                }
+            }
+
+            if (GlobalConfig.viscous) {
+                // Phase 08 LOCAL
                 if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                        if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
+                        if (blk.active) {
+                            blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                            blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
+                        }
                     }
                 } else {
                     foreach (blk; localFluidBlocksBySize) {
-                        if (blk.active) { blk.applyPostConvFluxAction(SimState.time, gtl, ftl); }
-                    }
-                }
-            } catch (Exception e) {
-                debug { writefln("Exception thrown in phase 07 of stage %d of explicit update: %s", stage, e.msg); }
-                step_failed = 1;
-            }
-            version(mpi_parallel) {
-                MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-            }
-            if (step_failed) {
-                // Start the step over again with a reduced time step.
-                SimState.dt_global = SimState.dt_global * 0.2;
-                break;
-            }
-            if (GlobalConfig.viscous) {
-                // Phase 08 LOCAL
-                try {
-                    if (GlobalConfig.apply_bcs_in_parallel) {
-                        foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                            if (blk.active) {
-                                blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
-                                blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
-                            }
-                        }
-                    } else {
-                        foreach (blk; localFluidBlocksBySize) {
-                            if (blk.active) {
-                                blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
-                                blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
-                            }
-                        }
-                    }
-                    foreach (blk; parallel(localFluidBlocksBySize,1)) {
                         if (blk.active) {
-                            blk.flow_property_spatial_derivatives(gtl);
+                            blk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, gtl, ftl);
+                            blk.applyPreSpatialDerivActionAtBndryCells(SimState.time, gtl, ftl);
                         }
                     }
-                } catch (Exception e) {
-                    debug { writefln("Exception thrown in phase 08 of stage %d of explicit update: %s", stage, e.msg); }
-                    step_failed = 1;
                 }
-                version(mpi_parallel) {
-                    MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-                }
-                if (step_failed) {
-                    // Start the step over again with a reduced time step.
-                    SimState.dt_global = SimState.dt_global * 0.2;
-                    break;
+                foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                    if (blk.active) {
+                        blk.flow_property_spatial_derivatives(gtl);
+                    }
                 }
                 // Phase 09 MPI
                 // For unstructured blocks employing the cell-centered spatial (/viscous) gradient method,
@@ -1117,34 +1045,22 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 exchange_ghost_cell_boundary_viscous_gradient_data(SimState.time, gtl, ftl);
                 //
                 // Phase 10 LOCAL
-                try {
-                    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                        if (blk.active) {
-                            // we need to average cell-centered spatial (/viscous) gradients
-                            // to get approximations of the gradients
-                            // at the cell interfaces before the viscous flux calculation.
-                            if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
-                                blk.average_lsq_cell_derivs_to_faces();
-                            }
+                foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                    if (blk.active) {
+                        // we need to average cell-centered spatial (/viscous) gradients
+                        // to get approximations of the gradients
+                        // at the cell interfaces before the viscous flux calculation.
+                        if (blk.myConfig.spatial_deriv_locn == SpatialDerivLocn.cells) {
+                            blk.average_lsq_cell_derivs_to_faces();
                         }
                     }
-                    foreach (blk; parallel(localFluidBlocks,1)) {
-                        if (blk.active) {
-                            blk.estimate_turbulence_viscosity();
-                        }
+                }
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    if (blk.active) {
+                        blk.estimate_turbulence_viscosity();
                     }
-                } catch (Exception e) {
-                    debug { writefln("Exception thrown in phase 10 of stage %d of explicit update: %s", stage, e.msg); }
-                    step_failed = 1;
                 }
-                version(mpi_parallel) {
-                    MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-                }
-                if (step_failed) {
-                    // Start the step over again with a reduced time step.
-                    SimState.dt_global = SimState.dt_global * 0.2;
-                    break;
-                }
+
                 // Phase 11 MPI
                 // We exchange boundary data at this point to ensure the
                 // ghost cells along block-block boundaries have the most
@@ -1152,33 +1068,20 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 exchange_ghost_cell_turbulent_viscosity();
                 //
                 // Phase 12 LOCAL
-                try {
+                foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                    if (blk.active) {
+                        blk.average_turbulent_transprops_to_faces();
+                        blk.viscous_flux();
+                    }
+                }
+                if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                        if (blk.active) {
-                            blk.average_turbulent_transprops_to_faces();
-                            blk.viscous_flux();
-                        }
+                        if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
                     }
-                    if (GlobalConfig.apply_bcs_in_parallel) {
-                        foreach (blk; parallel(localFluidBlocksBySize,1)) {
-                            if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
-                        }
-                    } else {
-                        foreach (blk; localFluidBlocksBySize) {
-                            if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
-                        }
+                } else {
+                    foreach (blk; localFluidBlocksBySize) {
+                        if (blk.active) { blk.applyPostDiffFluxAction(SimState.time, gtl, ftl); }
                     }
-                } catch (Exception e) {
-                    debug { writefln("Exception thrown in phase 12 of stage %d of explicit update: %s", stage, e.msg); }
-                    step_failed = 1;
-                }
-                version(mpi_parallel) {
-                    MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-                }
-                if (step_failed) {
-                    // Start the step over again with a reduced time step.
-                    SimState.dt_global = SimState.dt_global * 0.2;
-                    break;
                 }
             } // end if viscous
             //
@@ -1422,19 +1325,21 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 break;
             }
             // Phase 14 LOCAL
-            flagTooManyBadCells = 0;
-            foreach (i, blk; localFluidBlocksBySize) { // serial loop
-                if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
-                    flagTooManyBadCells = 1;
-                    writefln("Following stage %d gasdynamic update: %d bad cells in block[%d].",
-                             stage, local_invalid_cell_count[i], i);
+            if (GlobalConfig.adjust_invalid_cell_data){
+                flagTooManyBadCells = 0;
+                foreach (i, blk; localFluidBlocksBySize) { // serial loop
+                    if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
+                        flagTooManyBadCells = 1;
+                        writefln("Following stage %d gasdynamic update: %d bad cells in block[%d].",
+                                 stage, local_invalid_cell_count[i], i);
+                    }
                 }
-            }
-            version(mpi_parallel) {
-                MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-            }
-            if (flagTooManyBadCells > 0) {
-                throw new FlowSolverException("Too many bad cells during explicit gasdynamic update.");
+                version(mpi_parallel) {
+                    MPI_Allreduce(MPI_IN_PLACE, &flagTooManyBadCells, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+                }
+                if (flagTooManyBadCells > 0) {
+                    throw new FlowSolverException("Too many bad cells during explicit gasdynamic update.");
+                }
             }
             //
             if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
@@ -1442,60 +1347,47 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 // Next do solid domain update IMMEDIATELY after at same flow time level
                 // exchange_ghost_cell_gas_solid_boundary_data();
                 exchange_ghost_cell_solid_boundary_data();
-                try {
-                    if (GlobalConfig.apply_bcs_in_parallel) {
-                        foreach (sblk; parallel(localSolidBlocks, 1)) {
-                            if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
-                        }
-                        foreach (sblk; parallel(localSolidBlocks, 1)) {
-                            if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
-                        }
-                    } else {
-                        foreach (sblk; localSolidBlocks) {
-                            if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
-                        }
-                        foreach (sblk; localSolidBlocks) {
-                            if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
-                        }
+                if (GlobalConfig.apply_bcs_in_parallel) {
+                    foreach (sblk; parallel(localSolidBlocks, 1)) {
+                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
                     }
                     foreach (sblk; parallel(localSolidBlocks, 1)) {
-                        if (!sblk.active) continue;
-                        sblk.averageTemperatures();
-                        sblk.clearSources();
-                        sblk.computeSpatialDerivatives(ftl);
+                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
                     }
-                } catch (Exception e) {
-                    debug { writefln("Exception thrown in phase 15 of stage %d of explicit update: %s", stage, e.msg); }
-                    step_failed = 1;
+                } else {
+                    foreach (sblk; localSolidBlocks) {
+                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl); }
+                    }
+                    foreach (sblk; localSolidBlocks) {
+                        if (sblk.active) { sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl); }
+                    }
                 }
-                version(mpi_parallel) {
-                    MPI_Allreduce(MPI_IN_PLACE, &step_failed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-                }
-                if (step_failed) {
-                    // Start the step over again with a reduced time step.
-                    SimState.dt_global = SimState.dt_global * 0.2;
-                    break;
+                foreach (sblk; parallel(localSolidBlocks, 1)) {
+                    if (!sblk.active) continue;
+                    sblk.averageTemperatures();
+                    sblk.clearSources();
+                    sblk.computeSpatialDerivatives(ftl);
                 }
                 //
                 // Phase 16 MPI
                 exchange_ghost_cell_solid_boundary_data();
                 //
                 // Phase 17 LOCAL
-                try {
+                foreach (sblk; parallel(localSolidBlocks, 1)) {
+                    if (!sblk.active) continue;
+                    sblk.computeFluxes();
+                }
+                if (GlobalConfig.apply_bcs_in_parallel) {
                     foreach (sblk; parallel(localSolidBlocks, 1)) {
-                        if (!sblk.active) continue;
-                        sblk.computeFluxes();
+                        if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
                     }
-                    if (GlobalConfig.apply_bcs_in_parallel) {
-                        foreach (sblk; parallel(localSolidBlocks, 1)) {
-                            if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
-                        }
-                    } else {
-                        foreach (sblk; localSolidBlocks) {
-                            if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
-                        }
+                } else {
+                    foreach (sblk; localSolidBlocks) {
+                        if (sblk.active) { sblk.applyPostFluxAction(SimState.time, ftl); }
                     }
-                    // We need to synchronise before updating
+                }
+                // We need to synchronise before updating
+                try {
                     foreach (sblk; parallel(localSolidBlocks, 1)) {
                         foreach (scell; sblk.activeCells) {
                             if (GlobalConfig.udfSolidSourceTerms) {
