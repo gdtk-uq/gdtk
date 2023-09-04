@@ -357,6 +357,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
     int temporal_order, max_physical_steps, physical_step = 0;
     double dt_physical, dt_physical_old, target_physical_time, physicalSimTime = 0.0;
     double t_plot = GlobalConfig.dt_plot, dt_plot = GlobalConfig.dt_plot;
+    double t_loads = GlobalConfig.dt_plot, dt_loads = GlobalConfig.dt_loads;
     if (GlobalConfig.sssOptions.temporalIntegrationMode == 0) {
         // steady-state operation via a backward Euler method
         dual_time_stepping = false;
@@ -1098,7 +1099,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             }
 
             // write out the loads
-            if ( (step % writeLoadsCount) == 0 || finalStep || step == GlobalConfig.write_loads_at_step) {
+            if (!dual_time_stepping &&  ( (step % writeLoadsCount) == 0 || finalStep || step == GlobalConfig.write_loads_at_step )) {
                 if (GlobalConfig.is_master_task) {
                     init_current_loads_tindx_dir(step);
                 }
@@ -1382,6 +1383,21 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
         // we set the nIters to the max value to trigger a preconditioner update at the next linear solver iteration. TODO: we should handle this better.
         nIters = GlobalConfig.sssOptions.maxOuterIterations;
+
+        // When dual time-stepping, we only write out the time-accurate loads data here
+        if (physicalSimTime >= t_loads) {
+            t_loads += dt_loads;
+
+            if (GlobalConfig.is_master_task) {
+                init_current_loads_tindx_dir(physical_step);
+            }
+            version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+            wait_for_current_tindx_dir(physical_step);
+            write_boundary_loads_to_file(physicalSimTime, physical_step);
+            if (GlobalConfig.is_master_task) {
+                update_loads_times_file(physicalSimTime, physical_step);
+            }
+        }
 
         // When dual time-stepping, we only write out the time-accurate flow field solutions here
         if (physicalSimTime >= t_plot) {
