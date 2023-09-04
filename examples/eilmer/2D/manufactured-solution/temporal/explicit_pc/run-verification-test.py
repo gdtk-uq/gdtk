@@ -46,7 +46,7 @@ def buildCaseStr(dt):
 def buildRunStr():
     str = "python3 make_lua_files.py\n"
     str += "e4shared --job=temporal-mms --prep\n"
-    str += "e4-nk-shared --job=temporal-mms --max-cpus=1\n"
+    str += "e4shared --job=temporal-mms --run --max-cpus=1\n"
     str += 'e4shared --job=temporal-mms --post --tindx-plot=last --ref-soln=ref-soln.lua  --norms="rho" --verbosity=0 | sed -n -e 6p -e 15p > rho-norms.txt\n'
     return str
 

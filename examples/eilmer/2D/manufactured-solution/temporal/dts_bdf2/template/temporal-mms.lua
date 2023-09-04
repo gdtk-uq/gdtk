@@ -1,11 +1,8 @@
 --
--- Method of Manufactored Solutions, temporal order of accuracy verification example taken from
---     M.R. Nived, Sai Saketha Chandra Athkuri, Vinayak Eswaran
---     On the application of higher-order Backward Diﬀerence (BDF) methods for computing turbulent ﬂows
---     Computers and Mathematics with Applications, vol. 117 (2022) pg. 299-311
+-- Method of Manufactored Solutions, temporal order of accuracy verification example
 -- 
 -- author: Kyle A. Damm
--- date:   22-08-2023
+-- date:   29-08-2023
 --
 
 job_title = "Method of Manufactured Solutions, temporal verification case."
@@ -30,7 +27,6 @@ setGasModel('very-viscous-air.lua')
 -- Load initial condition fill functions from file
 dofile('fill-fn.lua')
 
--- ==========================================================
 -- Define the flow domain using an native grid
 -- ==========================================================
 config.dimensions = 2
@@ -90,8 +86,7 @@ identifyBlockConnections()
 -- ==========================================================
 
 -- invsicid flux settings
-config.flux_calculator     = 'ausm_plus_up'
-config.M_inf               = 0.1
+config.flux_calculator     = 'ldfss2'
 config.interpolation_order = 2
 config.apply_limiter       = false
 config.extrema_clipping    = false
@@ -106,8 +101,9 @@ config.udf_source_terms_file               = 'udf-source-terms.lua'
 config.eval_udf_source_terms_at_each_stage = true
 
 -- Set temporal integration settings
-config.max_time                 = 2.0 - 1.0e-8 -- to allow for round-off when trying to hit 0.001 
+config.max_time                 = 1.75*0.001 - 1.0e-08 -- to allow for round-off when trying to hit 0.001 
 config.dt_init                  = dt
+config.dt_plot                  = config.max_time/20
 config.fixed_time_step          = true
 config.with_local_time_stepping = true
 SteadyStateSolver{

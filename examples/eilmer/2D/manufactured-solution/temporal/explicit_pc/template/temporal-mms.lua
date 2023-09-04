@@ -101,64 +101,11 @@ config.udf_source_terms_file               = 'udf-source-terms.lua'
 config.eval_udf_source_terms_at_each_stage = true
 
 -- Set temporal integration settings
+config.gasdynamic_update_scheme = 'pc'
 config.max_time                 = 1.75*0.001 - 1.0e-08 -- to allow for round-off when trying to hit 0.001 
 config.dt_init                  = dt
-config.dt_plot                  = config.max_time/20
 config.fixed_time_step          = true
-config.with_local_time_stepping = true
-SteadyStateSolver{
-   -- transient or steady-state
-   temporal_integration_mode = 2,
+config.max_step                 = 1e6
+config.max_attempts_for_step    = 1
+config.dt_plot                  = config.max_time/20
 
-   -- preconditioner settings
-   use_preconditioner = true,
-   precondition_matrix_type = "ilu",
-   ilu_fill = 0,
-   frozen_preconditioner_count = 1,
-   start_preconditioning = 0,
-   preconditioner_sigma = 1.0e-50,
-   use_adaptive_preconditioner = true,
-
-   -- linear solve general settings
-   use_scaling = true,
-   use_physicality_check = true,
-   physicality_check_theta = 0.5,
-   use_complex_matvec_eval = true,
-
-   -- freeze limiter
-   limiter_freezing_residual_reduction = 1.0e-20,
-   limiter_freezing_count = 1,
-
-   -- stopping criteria
-   number_pre_steps = 0,
-   number_total_steps = 5e6,
-   stop_on_relative_global_residual = 1.0e-12,
-   stop_on_absolute_global_residual = 1.0e-03,
-   
-   -- settings for GMRES iterative solver
-   max_outer_iterations = 100,
-   max_restarts = 0,
-
-   -- CFL settings
-   residual_based_cfl_scheduling = true,
-   inviscid_cfl = true,
-
-   -- start-up phase settings
-   number_start_up_steps = 0,
-   sigma0 = 1.0e-50,
-   cfl0 = 1.0,
-
-   -- final phase settings
-   sigma1 = 1.0e-50,
-   cfl1 = 1.0e6,
-   p1 = 1.0,
-   tau1 = 1.0e-16,
-   eta1 = 1.0e-04,
-   eta_strategy = "constant",
-
-   -- output settings
-   snapshots_count = 1,
-   number_total_snapshots = 5000,
-   write_diagnostics_count = 1,
-   write_loads_count = 250,
-}

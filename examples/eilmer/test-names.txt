@@ -34,6 +34,8 @@
 2D/manufactured-solution/steady-state/euler/smoke-test/mms-euler-test.rb
 2D/manufactured-solution/steady-state/ns/smoke-test/mms-ns-test.rb
 2D/manufactured-solution/steady-state/rans/smoke-test/mms-rans-test.rb
+2D/manufactured-solution/temporal/explicit_pc/smoke-test/mms-temporal-test.rb
+2D/manufactured-solution/temporal/sts_rkl2/smoke-test/mms-temporal-test.rb
 2D/manufactured-solution/temporal/dts_bdf2/smoke-test/mms-temporal-test.rb
 3D/manufactured-solution/steady-state/euler/smoke-test/mms-euler-test.rb
 3D/manufactured-solution/steady-state/ns/smoke-test/mms-ns-test.rb
