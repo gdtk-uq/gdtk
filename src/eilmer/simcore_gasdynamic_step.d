@@ -26,6 +26,7 @@ import conservedquantities;
 import globalconfig;
 import globaldata;
 import flowstate;
+import fvcell;
 import fluidblock;
 import sfluidblock;
 import ufluidblock;
@@ -1190,6 +1191,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     int blklocal_gtl = gtl;
                     bool blklocal_with_local_time_stepping = with_local_time_stepping;
                     double blklocal_dt_global = SimState.dt_global;
+                    size_t ncq = cqi.n;
 
                     blk.eval_fluid_source_vectors(blk.omegaz);
                     blk.eval_udf_source_vectors(SimState.time);
@@ -1214,17 +1216,18 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                         case GasdynamicUpdate.rkl2: assert(false, "invalid option");
                         case GasdynamicUpdate.classic_rk4: gamma_1 = 1.0 / 2.0; break;
                         }
-                        foreach (cell; blk.cells) {
-                            auto dt = (blklocal_with_local_time_stepping) ? cell.dt_local : blklocal_dt_global;
-                            auto dUdt0 = cell.dUdt[0];
-                            auto U0 = cell.U[0];
-                            auto U1 = cell.U[1];
-                            foreach (j; 0 .. cqi.n) {
-                                U1[j] = U0[j] + dt*gamma_1*dUdt0[j];
+                        foreach (id; 0 .. blk.ncells) {
+                            auto dt = (blklocal_with_local_time_stepping) ? blk.celldata.dt_local[id] : blklocal_dt_global;
+                            auto dUdt0 = blk.celldata.dUdt0;
+                            auto U0 = blk.celldata.U0;
+                            auto U1 = blk.celldata.U1;
+                            size_t idx = id*ncq;
+                            foreach (j; 0 .. ncq) {
+                                U1[idx+j] = U0[idx+j] + dt*gamma_1*dUdt0[idx+j];
                             }
                             version(turbulence) {
                                 foreach(j; 0 .. cqi.n_turb){
-                                    U1[cqi.rhoturb+j] = fmax(U1[cqi.rhoturb+j], U0[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
+                                    U1[idx+cqi.rhoturb+j] = fmax(U1[idx+cqi.rhoturb+j], U0[idx+cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
                                 }
                                 // ...assuming a minimum value of 1.0 for omega
                                 // It may occur (near steps in the wall) that a large flux of romega
@@ -1238,11 +1241,12 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                             }
                             version(MHD) {
                                 if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
-                                    U1[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
+                                    U1[idx+cqi.psi] *= blk.cells[id].divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
-                            int okay = cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
-                            if (okay!=0) blk.celldata.data_is_bad[cell.id] = true;
+                            int okay = decode_conserved(blk.celldata.positions[id], blk.celldata.U1[idx .. idx+ncq],
+                                             blk.celldata.flowstates[id], 0.0, id, blk.myConfig);
+                            if (okay!=0) blk.celldata.data_is_bad[id] = true;
                         } // end foreach cell
                         break;
                     case 2:
@@ -1264,28 +1268,30 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                         case GasdynamicUpdate.rkl2: assert(false, "invalid option");
                         case GasdynamicUpdate.classic_rk4: gamma_1 = 0.0; gamma_2 = 1.0 / 2.0; break;
                         }
-                        foreach (cell; blk.cells) {
-                            auto dt = (blklocal_with_local_time_stepping) ? cell.dt_local : blklocal_dt_global;
-                            auto dUdt0 = cell.dUdt[0];
-                            auto dUdt1 = cell.dUdt[1];
-                            auto U_old = cell.U[0];
-                            if (blk.myConfig.gasdynamic_update_scheme == GasdynamicUpdate.denman_rk3) { U_old = cell.U[1]; }
-                            auto U2 = cell.U[2];
+                        foreach (id; 0 .. blk.ncells) {
+                            auto dt = (blklocal_with_local_time_stepping) ? blk.celldata.dt_local[id] : blklocal_dt_global;
+                            auto dUdt0 = blk.celldata.dUdt0;
+                            auto dUdt1 = blk.celldata.dUdt1;
+                            auto U_old = blk.celldata.U0;
+                            if (blk.myConfig.gasdynamic_update_scheme == GasdynamicUpdate.denman_rk3) { U_old = blk.celldata.U1; }
+                            auto U2 = blk.celldata.U2;
+                            size_t idx = id*ncq;
                             foreach (j; 0 .. cqi.n) {
-                                U2[j] = U_old[j] + dt*(gamma_1*dUdt0[j] + gamma_2*dUdt1[j]);
+                                U2[idx+j] = U_old[idx+j] + dt*(gamma_1*dUdt0[idx+j] + gamma_2*dUdt1[idx+j]);
                             }
                             version(turbulence) {
                                 foreach(j; 0 .. cqi.n_turb){
-                                    U2[cqi.rhoturb+j] = fmax(U2[cqi.rhoturb+j], U_old[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
+                                    U2[idx+cqi.rhoturb+j] = fmax(U2[idx+cqi.rhoturb+j], U_old[idx+cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
                                 }
                             }
                             version(MHD) {
                                 if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
-                                    U2[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
+                                    U2[idx+cqi.psi] *= blk.cells[id].divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
-                            int okay = cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
-                            if (okay!=0) blk.celldata.data_is_bad[cell.id] = true;
+                            int okay = decode_conserved(blk.celldata.positions[id], blk.celldata.U2[idx .. idx+ncq],
+                                             blk.celldata.flowstates[id], 0.0, id, blk.myConfig);
+                            if (okay!=0) blk.celldata.data_is_bad[id] = true;
                         } // end foreach cell
                         break;
                     case 3:
@@ -1317,29 +1323,31 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                             gamma_1 = 0.0; gamma_2 = 0.0; gamma_3 = 1.0;
                             break;
                         }
-                        foreach (cell; blk.cells) {
-                            auto dt = (blklocal_with_local_time_stepping) ? cell.dt_local : blklocal_dt_global;
-                            auto dUdt0 = cell.dUdt[0];
-                            auto dUdt1 = cell.dUdt[1];
-                            auto dUdt2 = cell.dUdt[2];
-                            auto U_old = cell.U[0];
-                            if (blk.myConfig.gasdynamic_update_scheme == GasdynamicUpdate.denman_rk3) { U_old = cell.U[2]; }
-                            auto U3 = cell.U[3];
+                        foreach (id; 0 .. blk.ncells) {
+                            auto dt = (blklocal_with_local_time_stepping) ? blk.celldata.dt_local[id] : blklocal_dt_global;
+                            auto dUdt0 = blk.celldata.dUdt0;
+                            auto dUdt1 = blk.celldata.dUdt1;
+                            auto dUdt2 = blk.celldata.dUdt2;
+                            auto U_old = blk.celldata.U0;
+                            if (blk.myConfig.gasdynamic_update_scheme == GasdynamicUpdate.denman_rk3) { U_old = blk.celldata.U2; }
+                            auto U3 = blk.celldata.U3;
+                            size_t idx = id*ncq;
                             foreach (j; 0 .. cqi.n) {
-                                U3[j] = U_old[j] + dt * (gamma_1*dUdt0[j] + gamma_2*dUdt1[j] + gamma_3*dUdt2[j]);
+                                U3[idx+j] = U_old[idx+j] + dt * (gamma_1*dUdt0[idx+j] + gamma_2*dUdt1[idx+j] + gamma_3*dUdt2[idx+j]);
                             }
                             version(turbulence) {
                                 foreach(j; 0 .. cqi.n_turb){
-                                    U3[cqi.rhoturb+j] = fmax(U3[cqi.rhoturb+j], U_old[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
+                                    U3[idx+cqi.rhoturb+j] = fmax(U3[idx+cqi.rhoturb+j], U_old[idx+cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
                                 }
                             }
                             version(MHD) {
                                 if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
-                                    U3[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
+                                    U3[idx+cqi.psi] *= blk.cells[id].divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
-                            int okay = cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
-                            if (okay!=0) blk.celldata.data_is_bad[cell.id] = true;
+                            int okay = decode_conserved(blk.celldata.positions[id], blk.celldata.U3[idx .. idx+ncq],
+                                             blk.celldata.flowstates[id], 0.0, id, blk.myConfig);
+                            if (okay!=0) blk.celldata.data_is_bad[id] = true;
                         } // end foreach cell
                         break;
                     case 4:
@@ -1364,30 +1372,32 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                             gamma_1 = 1.0 / 6.0; gamma_2 = 1.0 / 3.0; gamma_3 = 1.0 / 3.0; gamma_4 = 1.0 / 6.0;
                             break;
                         }
-                        foreach (cell; blk.cells) {
-                            auto dt = (blklocal_with_local_time_stepping) ? cell.dt_local : blklocal_dt_global;
-                            auto dUdt0 = cell.dUdt[0];
-                            auto dUdt1 = cell.dUdt[1];
-                            auto dUdt2 = cell.dUdt[2];
-                            auto dUdt3 = cell.dUdt[3];
-                            auto U_old = cell.U[0];
-                            if (blk.myConfig.gasdynamic_update_scheme == GasdynamicUpdate.denman_rk3) { U_old = cell.U[2]; }
-                            auto U4 = cell.U[4];
+                        foreach (id; 0 .. blk.ncells) {
+                            auto dt = (blklocal_with_local_time_stepping) ? blk.celldata.dt_local[id] : blklocal_dt_global;
+                            auto dUdt0 = blk.celldata.dUdt0;
+                            auto dUdt1 = blk.celldata.dUdt1;
+                            auto dUdt2 = blk.celldata.dUdt2;
+                            auto dUdt3 = blk.celldata.dUdt3;
+                            auto U_old = blk.celldata.U0;
+                            auto U4 = blk.celldata.U4;
+                            size_t idx = id*ncq;
+
                             foreach (j; 0 .. cqi.n) {
-                                U4[j] = U_old[j] + dt * (gamma_1*dUdt0[j] + gamma_2*dUdt1[j] + gamma_3*dUdt2[j] + gamma_4 * dUdt3[j]);
+                                U4[idx+j] = U_old[idx+j] + dt * (gamma_1*dUdt0[idx+j] + gamma_2*dUdt1[idx+j] + gamma_3*dUdt2[idx+j] + gamma_4 * dUdt3[idx+j]);
                             }
                             version(turbulence) {
                                 foreach(j; 0 .. cqi.n_turb){
-                                    U4[cqi.rhoturb+j] = fmax(U4[cqi.rhoturb+j], U_old[cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
+                                    U4[idx+cqi.rhoturb+j] = fmax(U4[idx+cqi.rhoturb+j], U_old[idx+cqi.mass] * blk.myConfig.turb_model.turb_limits(j));
                                 }
                             }
                             version(MHD) {
                                 if (blk.myConfig.MHD && blk.myConfig.divergence_cleaning) {
-                                    U4[cqi.psi] *= cell.divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
+                                    U4[idx+cqi.psi] *= blk.cells[id].divergence_damping_factor(dt, blk.myConfig.c_h, blk.myConfig.divB_damping_length);
                                 }
                             }
-                            int okay = cell.decode_conserved(blklocal_gtl, blklocal_ftl+1, blk.omegaz);
-                            if (okay!=0) blk.celldata.data_is_bad[cell.id] = true;
+                            int okay = decode_conserved(blk.celldata.positions[id], blk.celldata.U4[idx .. idx+ncq],
+                                             blk.celldata.flowstates[id], 0.0, id, blk.myConfig);
+                            if (okay!=0) blk.celldata.data_is_bad[id] = true;
                         } // end foreach cell
                         break;
                     default: throw new Error("Invalid state for explicit update.");
@@ -1531,7 +1541,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) {
             size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
-            foreach (cell; blk.cells) { swap(cell.U[0], cell.U[end_indx]); }
+            foreach (cell; blk.cells) { cell.U[0].copy_values_from(cell.U[end_indx]); }
         }
     } // end foreach blk
     //
@@ -2363,7 +2373,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         if (blk.active) {
             size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
-            foreach (cell; blk.cells) { swap(cell.U[0], cell.U[end_indx]); }
+            foreach (cell; blk.cells) { cell.U[0].copy_values_from(cell.U[end_indx]); }
         }
     }
     foreach (sblk; localSolidBlocks) {
@@ -2717,7 +2727,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
         if (blk.active) {
             size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
             assert (end_indx == 1, "Unexpected value for end_index.");
-            foreach (cell; blk.cells) { swap(cell.U[0], cell.U[end_indx]); }
+            foreach (cell; blk.cells) { cell.U[0].copy_values_from(cell.U[end_indx]); }
         }
     } // end foreach blk
     //
@@ -3120,7 +3130,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
             size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
             assert (end_indx == 1, "Unexpected value for end_index.");
             foreach (cell; blk.cells) {
-                swap(cell.U[0], cell.U[end_indx]);
+                cell.U[0].copy_values_from(cell.U[end_indx]);
                 cell.copy_grid_level_to_level(gtl1, gtl0);
             }
             blk.compute_primary_cell_geometric_data(gtl0);
