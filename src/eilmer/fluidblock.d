@@ -666,6 +666,14 @@ public:
                 iface.fs.S = PJ_ShockDetector(iface, comp_tol, shear_tol);
             }
             break;
+        case ShockDetector.NNG:
+            auto gm = myConfig.gmodel;
+            foreach (idx; 0 .. nfaces) {
+                size_t l = facedata.f2c[idx].left;
+                size_t r = facedata.f2c[idx].right;
+                facedata.flowstates[idx].S = NNG_ShockDetector(gm, celldata.flowstates[l],  celldata.flowstates[r], facedata.normals[idx], comp_tol.re);
+            }
+            break;
         }
 
         // Set the outflow interfaces to be shocked for high-order simulations with boundary layers
