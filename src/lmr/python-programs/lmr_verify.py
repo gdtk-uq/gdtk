@@ -79,7 +79,13 @@ The filenames listed in FILES_TO_COPY are used in all case directories
 for the verification runs.
 """
               )
-def verify(caseFile, caseNumber, caseTag, normsStr, gridLevelFile, levelsToExec, commonDir):
+@click.option("-ppo", "--post-process-only", "postProcessOnly",
+              is_flag=True,
+              default=False,
+              show_default=True,
+              help="Only perform post-processing portion (norm and observed order calcs)"
+              )
+def verify(caseFile, caseNumber, caseTag, normsStr, gridLevelFile, levelsToExec, commonDir, postProcessOnly):
     """Run a verification test.
 
     \b
@@ -102,15 +108,16 @@ def verify(caseFile, caseNumber, caseTag, normsStr, gridLevelFile, levelsToExec,
 
     # 1. Prepare gridLevels and simFiles
     exec(open(gridLevelFile).read(), globals())
-    simFiles = assembleSimFiles(commonDir)
     if len(levelsToExec) == 1 and levelsToExec[0] == -1:
         levelsToExec = list(reversed(range(len(gridLevels))))
 
-    # 1. Execute verification runs
-    prepareGridLevels(case, gridLevels, levelsToExec, commonDir, simFiles)
-    runGridLevels(case, levelsToExec)
+    if not postProcessOnly:
+        simFiles = assembleSimFiles(commonDir)
+        # 2. Execute verification runs
+        prepareGridLevels(case, gridLevels, levelsToExec, commonDir, simFiles)
+        runGridLevels(case, levelsToExec)
 
-    # 2. Post-process results
+    # 3. Post-process results
     computeNorms(case, levelsToExec, normsStr)
     assembleResults(case, gridLevels, levelsToExec, norms)
 
