@@ -362,7 +362,12 @@ ifeq ($(DMD), ldc2)
     # -fprofile-generate will result in profraw files being written
     # that may be viewed, showing the top 10 functions with internal block counts
     # llvm-profdata show -text -topn=10 <profraw-file>
-    DEBUG_DFLAGS := -w -g -link-defaultlib-debug -L-export-dynamic -d-debug -d-version=flavour_debug
+    DEBUG_DFLAGS := -w -g -link-defaultlib-debug -d-debug -d-version=flavour_debug
+    ifeq ($(PLATFORM), macosx)
+	DEBUG_DFLAGS += -L-export_dynamic
+    else
+	DEBUG_DFLAGS += -L-export-dynamic
+    endif
     PROFILE_DFLAGS := -fprofile-generate -g -w -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_profile
     FAST_DFLAGS := -w -g -O2 -release -enable-inlining -boundscheck=off -d-version=flavour_fast -flto=full
     # DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
