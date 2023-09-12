@@ -475,9 +475,9 @@ function reaction.reacToLuaStr(r, i)
       rstr = rstr .. string.format("  ec = %s,\n", ecModelToLuaStr(r.ec))
    end
    rstr = rstr .. string.format("  reacIdx = %s,\n", arrayIntsToStr(r.reacIdx))
-   rstr = rstr .. string.format("  reacCoeffs = %s,\n", arrayNumbersToStr(r.reacCoeffs))
+   rstr = rstr .. string.format("  reacCoeffs = %s,\n",  arrayIntsToStr(r.reacCoeffs))
    rstr = rstr .. string.format("  prodIdx = %s,\n", arrayIntsToStr(r.prodIdx))
-   rstr = rstr .. string.format("  prodCoeffs = %s,\n", arrayNumbersToStr(r.prodCoeffs))
+   rstr = rstr .. string.format("  prodCoeffs = %s,\n",   arrayIntsToStr(r.prodCoeffs))
    if r.efficiencies then
       rstr = rstr .. string.format("  efficiencies = {\n")
       -- Sort indices

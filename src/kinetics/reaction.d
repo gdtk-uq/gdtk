@@ -24,7 +24,7 @@ import kinetics.rate_constant;
 
 @nogc
 number compute_equilibrium_constant(GasModel gmodel, ref GasState Q, in number[] gibbs_energies,
-                                    in int[] participants, in double[] nu)
+                                    in int[] participants, in int[] nu)
 {
     number dG = 0.0;
     number nuSum = 0.0;
@@ -174,7 +174,7 @@ class ElementaryReaction : Reaction
 {
 public:
     this(RateConstant forward, RateConstant backward, GasModel gmodel,
-         int[] reac_spidx, double[] reac_coeffs, int[] prod_spidx, double[] prod_coeffs,
+         int[] reac_spidx, int[] reac_coeffs, int[] prod_spidx, int[] prod_coeffs,
          size_t n_species)
     {
         assert(reac_spidx.length == reac_coeffs.length,
@@ -194,14 +194,14 @@ public:
         _participants = pmap.keys.dup();
         sort(_participants);
         foreach ( isp; 0 .. n_species ) {
-            double nu1 = 0.0;
+            int nu1 = 0;
             foreach ( ref r; _reactants ) {
                 if ( r[0] == isp ) {
                     nu1 = r[1];
                     break;
                 }
             }
-            double nu2 = 0.0;
+            int nu2 = 0;
             foreach ( ref p; _products ) {
                 if ( p[0] == isp ) {
                     nu2 = p[1];
@@ -212,7 +212,7 @@ public:
         }
     }
     this(RateConstant forward, RateConstant backward, GasModel gmodel, in int[] participants,
-         in Tuple!(int, double)[] reactants, in Tuple!(int, double)[] products, in double[] nu)
+         in Tuple!(int, int)[] reactants, in Tuple!(int, int)[] products, in int[] nu)
     {
         super(forward, backward, gmodel);
         _participants = participants.dup();
@@ -239,9 +239,9 @@ public:
     @nogc
     override number production(int isp) const
     {
-        if ( _nu[isp] >  0.0 )
+        if ( _nu[isp] >  0 )
             return _nu[isp]*_w_f;
-        else if ( _nu[isp] < 0.0 )
+        else if ( _nu[isp] < 0 )
             return -_nu[isp]*_w_b;
         else
             return to!number(0.0);
@@ -250,9 +250,9 @@ public:
     @nogc
     override number loss(int isp) const
     {
-        if ( _nu[isp] > 0.0 )
+        if ( _nu[isp] > 0 )
             return _nu[isp]*_w_b;
-        else if ( _nu[isp] < 0.0 )
+        else if ( _nu[isp] < 0 )
             return -_nu[isp]*_w_f;
         else
             return to!number(0.0);
@@ -264,7 +264,7 @@ protected:
         number val = _k_f;
         foreach ( ref r; _reactants ) {
             int isp = r[0];
-            double coeff = r[1].re;
+            int coeff = r[1];
             val *= pow(conc[isp], coeff);
         }
         return val;
@@ -276,16 +276,16 @@ protected:
         number val = _k_b;
         foreach ( ref p; _products ) {
             int isp = p[0];
-            double coeff = p[1].re;
+            int coeff = p[1];
             val *= pow(conc[isp], coeff);
         }
         return val;
     }
 
 private:
-    Tuple!(int, double)[] _reactants;
-    Tuple!(int, double)[] _products;
-    double[] _nu;
+    Tuple!(int, int)[] _reactants;
+    Tuple!(int, int)[] _products;
+    int[] _nu;
 }
 
 /++
@@ -297,7 +297,7 @@ class AnonymousColliderReaction : Reaction
 {
 public:
     this(RateConstant forward, RateConstant backward, GasModel gmodel,
-         int[] reac_spidx, double[] reac_coeffs, int[] prod_spidx, double[] prod_coeffs,
+         int[] reac_spidx, int[] reac_coeffs, int[] prod_spidx, int[] prod_coeffs,
          Tuple!(int,double)[] efficiencies, size_t n_species)
     {
         assert(reac_spidx.length == reac_coeffs.length,
@@ -317,14 +317,14 @@ public:
         _participants = pmap.keys.dup();
         sort(_participants);
         foreach ( isp; 0 .. n_species ) {
-            double nu1 = 0;
+            int nu1 = 0;
             foreach ( ref r; _reactants ) {
                 if ( r[0] == isp ) {
                     nu1 = r[1];
                     break;
                 }
             }
-            double nu2 = 0;
+            int nu2 = 0;
             foreach ( ref p; _products ) {
                 if ( p[0] == isp ) {
                     nu2 = p[1];
@@ -336,7 +336,7 @@ public:
         _efficiencies = efficiencies.dup();
     }
     this(RateConstant forward, RateConstant backward, GasModel gmodel, in int[] participants,
-         in Tuple!(int, double)[] reactants, in Tuple!(int, double)[] products, in double[] nu, in Tuple!(int, double)[] efficiencies)
+         in Tuple!(int, int)[] reactants, in Tuple!(int, int)[] products, in int[] nu, in Tuple!(int, double)[] efficiencies)
     {
         super(forward, backward, gmodel);
         _participants = participants.dup();
@@ -364,9 +364,9 @@ public:
     @nogc
     override number production(int isp) const
     {
-        if ( _nu[isp] >  0.0 )
+        if ( _nu[isp] >  0 )
             return _nu[isp]*_w_f;
-        else if ( _nu[isp] < 0.0 )
+        else if ( _nu[isp] < 0 )
             return -_nu[isp]*_w_b;
         else
             return to!number(0.0);
@@ -375,9 +375,9 @@ public:
     @nogc
     override number loss(int isp) const
     {
-        if ( _nu[isp] > 0.0 )
+        if ( _nu[isp] > 0 )
             return _nu[isp]*_w_b;
-        else if ( _nu[isp] < 0.0 )
+        else if ( _nu[isp] < 0 )
             return -_nu[isp]*_w_f;
         else
             return to!number(0.0);
@@ -392,7 +392,7 @@ protected:
         number val = _k_f*_anonymousColliderTerm;
         foreach ( ref r; _reactants ) {
             int isp = r[0];
-            double coeff = r[1];
+            int coeff = r[1];
             val *= pow(conc[isp], coeff);
         }
         return val;
@@ -404,16 +404,16 @@ protected:
         number val = _k_b*_anonymousColliderTerm;
         foreach ( ref p; _products ) {
             int isp = p[0];
-            double coeff = p[1];
+            int coeff = p[1];
             val *= pow(conc[isp], coeff);
         }
         return val;
     }
 
 private:
-    Tuple!(int, double)[] _reactants;
-    Tuple!(int, double)[] _products;
-    double[] _nu;
+    Tuple!(int, int)[] _reactants;
+    Tuple!(int, int)[] _products;
+    int[] _nu;
     Tuple!(int, double)[] _efficiencies;
     number _anonymousColliderTerm;
 
@@ -472,11 +472,11 @@ Reaction createReaction(lua_State* L, GasModel gmodel)
 
     // And most use reacIdx, reacCoeffs, prodIdx and prodCoeffs lists.
     int[] reacIdx, prodIdx;
-    double[] reacCoeffs, prodCoeffs;
+    int[] reacCoeffs, prodCoeffs;
     getArrayOfInts(L, -1, "reacIdx", reacIdx);
-    getArrayOfDoubles(L, -1, "reacCoeffs", reacCoeffs);
+    getArrayOfInts(L, -1, "reacCoeffs", reacCoeffs);
     getArrayOfInts(L, -1, "prodIdx", prodIdx);
-    getArrayOfDoubles(L, -1, "prodCoeffs", prodCoeffs);
+    getArrayOfInts(L, -1, "prodCoeffs", prodCoeffs);
 
     // We need to specialise the creation of a Reaction
     // based on type.
@@ -508,8 +508,8 @@ version(reaction_test) {
         auto gd = GasState(3, 1);
         gd.T = 700.0;
         gm.gibbs_free_energies(gd, gibbs_energies);
-        auto reaction = new ElementaryReaction(rc, rc, gm, [0, 1], [1.0, 1.0],
-                                               [2], [2.0], 3);
+        auto reaction = new ElementaryReaction(rc, rc, gm, [0, 1], [1, 1],
+                                               [2], [2], 3);
         reaction.eval_rate_constants(gd, gibbs_energies);
         reaction.eval_rates(conc);
         assert(isClose(0.0, reaction.production(0)), failedUnitTest());
@@ -519,14 +519,14 @@ version(reaction_test) {
         assert(isClose(643.9303, reaction.loss(1), 1.0e-6), failedUnitTest());
         assert(isClose(0.0, reaction.loss(2)), failedUnitTest());
 
-        auto reaction2 = new AnonymousColliderReaction(rc, rc, gm, [0, 1], [1., 1.],
-                                                       [2], [2.], [tuple(1, 1.0)], 3);
+        auto reaction2 = new AnonymousColliderReaction(rc, rc, gm, [0, 1], [1, 1],
+                                                       [2], [2], [tuple(1, 1.0)], 3);
         reaction2.eval_rate_constants(gd, gibbs_energies);
         reaction2.eval_rates(conc);
 
         // Try a reaction with backwards rate computed from equilibrium constant.
-        auto reaction3 = new ElementaryReaction(rc, null, gm, [0, 1], [1., 1.],
-                                                [2], [2.], 3);
+        auto reaction3 = new ElementaryReaction(rc, null, gm, [0, 1], [1, 1],
+                                                [2], [2], 3);
         reaction3.eval_rate_constants(gd, gibbs_energies);
         reaction3.eval_rates(conc);
 
