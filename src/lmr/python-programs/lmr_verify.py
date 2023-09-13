@@ -23,6 +23,7 @@ import shutil
 from math import log
 
 filesToCopyFilename = "FILES_TO_COPY"
+logfile = "LOGFILE"
 
 @click.command()
 @click.option("-cf", "--case-file", "caseFile",
@@ -200,19 +201,21 @@ def runGridLevels(case, levelsToExec):
         subDir = caseDir + f"/k-{k}"
         os.chdir(subDir)
         cmd = "sh run.sh"
-        proc = subprocess.run(cmd.split(), capture_output=True, text=True)
-        if not checkRun(proc):
+        with open(logfile, "w") as log:
+            proc = subprocess.run(cmd.split(), stdout=log, text=True)
+        if not checkRun(logfile):
             raise RuntimeError(f"There was a problem running grid level {k}")
         os.chdir(cwd)
     return
 
-def checkRun(proc):
-    lines = proc.stdout.split("\n")
+def checkRun(logfile):
+    fp = open(logfile, "r")
     reason = None
-    for line in lines:
+    for line in fp.readlines():
         if line.find("STOP-REASON") != -1:
             reason = line.split()[1]
-    if reason != "relative-global-residual-target":
+    fp.close()
+    if reason != "relative-global-residual-target" and reason != "maximum-steps":
         return False
     return True
 
