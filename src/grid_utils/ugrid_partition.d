@@ -771,6 +771,24 @@ void writeGridBlockFiles(string meshFile, string mappedCellsFilename, Block[] gr
         nCurrentBlocks = to!int(splitLines(output[1])[0]);
     }
 
+    // first we add the mapped block information
+    foreach(i;0..gridBlocks.length) {
+        string mapped_blocks_tag = "MappedBlocks in BLOCK[" ~ to!string(i+nCurrentBlocks) ~ "]= ";
+        outFile_mappedcells.writef(mapped_blocks_tag);
+
+        // let's begin by writing out the mapped cells for the block
+        size_t[] added_block_id_list;
+        foreach(mapped_cell; gridBlocks[i].mapped_cells){
+            size_t neighbour_block_id = mapped_cell.neighbour_block_id+nCurrentBlocks;
+            if (!added_block_id_list.canFind(neighbour_block_id)) {
+                outFile_mappedcells.writef("%s ", to!string(neighbour_block_id));
+                added_block_id_list ~= neighbour_block_id;
+            }
+        }
+        outFile_mappedcells.writef(" \n");
+    }
+    nCurrentBlocks=0; // reset block count for reparsing of data
+
     // Strip out the filename. The file itself may be in another directory (NNG 22/06/22)
     string meshFileName = baseName(meshFile);
     // We are ready to construct those partition files!
