@@ -143,10 +143,13 @@ identifyBlockConnections()
 
 -- Set a few more config options
 config.flux_calculator = "adaptive"
-config.thermo_interpolator = "pT"
+config.thermo_interpolator = "rhop"
 config.gasdynamic_update_scheme="euler"
 config.max_time = Rc/V_inf * 30
 print("max_time=", config.max_time)
 config.max_step = 40000
 config.dt_init = 1.0e-9
 config.dt_plot = config.max_time/10
+-- This calculation is pretty extreme, so tolerate some bad cells.
+config.adjust_invalid_cell_data = true
+config.max_invalid_cells = 20
