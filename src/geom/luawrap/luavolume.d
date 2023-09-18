@@ -21,6 +21,7 @@ import geom;
 import geom.luawrap.luageom;
 import geom.luawrap.luagpath;
 import geom.luawrap.luasurface;
+import geom.elements.nomenclature;
 
 /// Name of the metatables -- these are the Lua access name.
 immutable string TFIVolumeMT = "TFIVolume";
@@ -88,9 +89,10 @@ ParametricSurface[] get6Surfaces(lua_State *L, string ctorName)
     // Assume that table containing the Surfaces is at top of stack.
     string errMsgTmplt = "Error in call to %s:new. " ~
         "The value set for the face[%s] was not of ParametricSurface type.";
-    string[] face_names = ["north", "east", "south", "west", "top", "bottom"];
+
+    // face_name is defined in geom/elements/nomenclature.d
     ParametricSurface[] faces;
-    foreach(i, name; face_names) {
+    foreach(i, name; face_name) {
         lua_getfield(L, -1, name.toStringz());
         faces ~= checkSurface(L, -1);
         if ( faces[i] is null ) {
