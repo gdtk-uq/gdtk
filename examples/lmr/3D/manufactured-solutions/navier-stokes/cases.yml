@@ -1,0 +1,7 @@
+---
+flux_calculator: ausmdv
+interpolation_order: 2
+spatial_deriv_calc: least_squares
+tag: ausmdv-o2-lsq
+...
+
