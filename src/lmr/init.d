@@ -11,13 +11,14 @@
 
 module init;
 
-import std.algorithm : min;
+import std.algorithm : min, sort;
 import std.conv : to;
 import std.parallelism : parallel, defaultPoolThreads;
 import std.file : rename, readText;
 import std.stdio : File, writeln, writefln, stdout;
 import std.format : format, formattedWrite;
 import std.string;
+import std.typecons : Tuple, tuple;
 
 import util.lua;
 import util.lua_service;
@@ -518,4 +519,17 @@ void initWallDistances()
 }
 
 
-
+void orderBlocksBySize()
+{
+    // We simply use the cell count as an estimate of load.
+    Tuple!(int,int)[] blockLoads;
+    blockLoads.length = localFluidBlocks.length;
+    foreach (iblk, blk; localFluidBlocks) {
+        // Here 'iblk' is equal to the local-to-process id of the block.
+        blockLoads[iblk] = tuple(to!int(iblk), to!int(localFluidBlocks[iblk].cells.length));
+    }
+    sort!("a[1] > b[1]")(blockLoads);
+    foreach (blkpair; blockLoads) {
+        localFluidBlocksBySize ~= localFluidBlocks[blkpair[0]]; // [0] holds the block id
+    }
+}

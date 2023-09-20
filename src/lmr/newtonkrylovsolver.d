@@ -572,8 +572,7 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
         initMLPlimiter();
     }
 
-    // [TODO] Think about whether re-ordering localBlocksBySize is needed.
-
+    orderBlocksBySize();
     initMasterLuaState();
     initCornerCoordinates();
     if (cfg.turb_model.needs_dwall) initWallDistances();
