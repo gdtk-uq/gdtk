@@ -1617,6 +1617,12 @@ public:
                 ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
             }
         }
+        // Need to have the ghost cells to have the correct position for the viscous calc
+        if (reorient_vector_quantities) {
+            foreach (i; 0 .. ghost_cells.length) {
+                ghost_cells[i].pos[0].apply_matrix_transform(Rmatrix);
+            }
+        }
     } // end exchange_geometry_phase2()
 
     @nogc
@@ -2335,6 +2341,12 @@ public:
             // we know that we can just access the data directly.
             foreach (i; 0 .. ghost_cells.length) {
                 ghost_cells[i].grad.copy_values_from(*(mapped_cells[i].grad));
+            }
+        }
+        // Rotate the viscous gradients stored at the cells
+        if (reorient_vector_quantities) {
+            foreach (i; 0 .. ghost_cells.length) {
+                ghost_cells[i].rotate_gradients(Rmatrix);
             }
         }
         // Done with copying from source cells.

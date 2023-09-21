@@ -1386,6 +1386,74 @@ public:
         grad.scale_values_by(to!number(1.0/iface.length));
     } // end average_interface_deriv_values()
 
+    @nogc
+    void rotate_gradients(const(double[]) Rmatrix)
+    {
+        // Rotate velocity gradients
+        // This is a gradient of a vector, so the result is a tensor. Apply T*A*transpose(T)
+        // where T is the rotation matrix and A is the velocity gradient tensor.
+        // Some literature reports it as T*A*inv(T), fortunately the rotation matrices have
+        // the property that the inverse and the tranpose are equivalent i.e. its an
+        // orthogonal matrix
+
+        // Perform the T*A operation
+        number old_x, old_y, old_z;
+        foreach (i; 0 .. 3) {
+            old_x = grad.vel[i][0]; old_y = grad.vel[i][1]; old_z = grad.vel[i][2];
+
+            grad.vel[i][0] = Rmatrix[0] * old_x + Rmatrix[1] * old_y + Rmatrix[2] * old_z;
+            grad.vel[i][1] = Rmatrix[3] * old_x + Rmatrix[4] * old_y + Rmatrix[5] * old_z;
+            grad.vel[i][2] = Rmatrix[6] * old_x + Rmatrix[7] * old_y + Rmatrix[8] * old_z;
+        }
+
+        // Now apply the *inv(T)
+        foreach (i; 0 .. 3) {
+            old_x = grad.vel[0][i]; old_y = grad.vel[1][i]; old_z = grad.vel[2][i];
+
+            grad.vel[0][i] = Rmatrix[0] * old_x + Rmatrix[1] * old_y + Rmatrix[2] * old_z;
+            grad.vel[1][i] = Rmatrix[3] * old_x + Rmatrix[4] * old_y + Rmatrix[5] * old_z;
+            grad.vel[2][i] = Rmatrix[6] * old_x + Rmatrix[7] * old_y + Rmatrix[8] * old_z;
+        }
+
+        // Rotate temperature gradients- just a vector rotation
+        old_x = grad.T[0]; old_y = grad.T[1]; old_z = grad.T[2];
+
+        grad.T[0] = Rmatrix[0] * old_x + Rmatrix[1] * old_y + Rmatrix[2] * old_z;
+        grad.T[1] = Rmatrix[3] * old_x + Rmatrix[4] * old_y + Rmatrix[5] * old_z;
+        grad.T[2] = Rmatrix[6] * old_x + Rmatrix[7] * old_y + Rmatrix[8] * old_z;
+
+        version(multi_species_gas) {
+            foreach (i; 0 .. myConfig.n_species) {
+                old_x = grad.massf[i][0]; old_y = grad.massf[i][1]; old_z = grad.massf[i][2];
+
+                grad.massf[i][0] = Rmatrix[0] * old_x + Rmatrix[1] * old_y + Rmatrix[2] * old_z;
+                grad.massf[i][1] = Rmatrix[3] * old_x + Rmatrix[4] * old_y + Rmatrix[5] * old_z;
+                grad.massf[i][2] = Rmatrix[6] * old_x + Rmatrix[7] * old_y + Rmatrix[8] * old_z;
+            }
+        }
+
+        version(multi_T_gas) {
+            foreach (i; 0 .. myConfig.n_modes) {
+                old_x = grad.T_modes[i][0]; old_y = grad.T_modes[i][1]; old_z = grad.T_modes[i][2];
+
+                grad.T_modes[i][0] = Rmatrix[0] * old_x + Rmatrix[1] * old_y + Rmatrix[2] * old_z;
+                grad.T_modes[i][1] = Rmatrix[3] * old_x + Rmatrix[4] * old_y + Rmatrix[5] * old_z;
+                grad.T_modes[i][2] = Rmatrix[6] * old_x + Rmatrix[7] * old_y + Rmatrix[8] * old_z;
+            }
+        }
+
+        version(turbulence) {
+            foreach (i; 0 .. myConfig.turb_model.nturb) {
+                old_x = grad.turb[i][0]; old_y = grad.turb[i][1]; old_z = grad.turb[i][2];
+
+                grad.turb[i][0] = Rmatrix[0] * old_x + Rmatrix[1] * old_y + Rmatrix[2] * old_z;
+                grad.turb[i][1] = Rmatrix[3] * old_x + Rmatrix[4] * old_y + Rmatrix[5] * old_z;
+                grad.turb[i][2] = Rmatrix[6] * old_x + Rmatrix[7] * old_y + Rmatrix[8] * old_z;
+            }
+        }
+    }
+    // End rotate_gradients
+
     // Think this should be fine as nogc? Taking transform of pressure in this example
     @nogc
     void increment_local_DFT(size_t DFT_step) {
