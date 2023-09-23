@@ -40,7 +40,8 @@ Those eponymous subdirectories are:
 
 `euler`:: This manufactured solution is a smooth, purely supersonic, inviscid flow
 for testing the Euler solver mode in `Eilmer`.
-`navier-stokes`:: *`[TODO]`*
+`navier-stokes`:: This manufactured solution tests the diffusive terms
+(along with the convective) through use of a highly-inflated viscosity value.
+The flow field is smooth and subsonic.
 `rans-k-omega`:: *`[TODO]`*
 
-There are further `READMEs` in those subdirectories.
