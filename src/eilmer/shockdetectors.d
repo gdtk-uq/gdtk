@@ -105,3 +105,40 @@ import std.algorithm;
         // return comp*shear;
 }
 
+@nogc number NNG_ShockDetector(GasModel gm, in FlowState L, in FlowState R, Vector3 n, const double Mx){
+/*
+    Experimental continuous shock detector by NNG. Use the HLLC wave speeds from
+    Toro (1994) to look for sharp interfaces in pressure and velocity.
+
+    "Restoration of the contact surface in the HLL-Riemann solver"
+    E. R. Toro and M. Spruce and W. Speares, Shock Waves (1994)
+
+    @author: Nick Gibbons (See Notes: 6th June, 2023)
+*/
+    number pL = L.gas.p;
+    number pR = R.gas.p;
+    number uL = geom.dot(L.vel, n);
+    number uR = geom.dot(R.vel, n);
+    number yL = gm.gamma(L.gas);
+    number yR = gm.gamma(R.gas);
+    number a = 0.5*(L.gas.a + R.gas.a);
+    number rho = 0.5*(L.gas.rho + R.gas.rho);
+
+    // Toro's "Hybrid estimates", equation 15 and 16, define a factor
+    // q for the wave speeds that is one for a mach wave, but greater
+    // than one for a shockwave.
+    number pstar = 0.5*(pL+pR) - 0.5*(uR-uL)*rho*a;
+    number ustar = 0.5*(uL+uR) - 0.5*(pR-pL)/rho/a;
+    number facL = sqrt(1.0 + (yL+1.0)/(2*yL)*(pstar/pL - 1.0));
+    number facR = sqrt(1.0 + (yR+1.0)/(2*yR)*(pstar/pR - 1.0));
+
+    number qL = (pstar>pL) ? facL : to!number(1.0);
+    number qR = (pstar>pR) ? facR : to!number(1.0);
+
+    // Subtracting 1 and scaling by a tuning parameter Mx, gives the shock detector
+    //number q = fmax(qR, qL) - 1.0;
+    number q = 0.5*(qR+qL) - 1.0;
+    number S = fmin(q/Mx, 1.0);
+
+    return S;
+}

@@ -491,10 +491,25 @@ public:
     {
         number comp_tol = myConfig.compression_tolerance;
         number shear_tol = myConfig.shear_tolerance;
+        if (comp_tol>0.0) throw new Error("compression_tolerance should be negative!");
+
         final switch (myConfig.shock_detector) {
         case ShockDetector.PJ:
             foreach (iface; faces) {
                 iface.fs.S = PJ_ShockDetector(iface, comp_tol, shear_tol);
+            }
+            break;
+        case ShockDetector.NNG:
+            // Re-use comp_tol as our tunable parameter. It needs to be
+            // positive however. From the users point of view, larger (more
+            // negative) values make the shock detector more sensitive, and
+            // hence on more often. This is consistent with the PJ behaviour.
+            auto gm = myConfig.gmodel;
+            double Mx = -1.0*comp_tol.re;
+            foreach (iface; faces) {
+                iface.fs.S = NNG_ShockDetector(gm, iface.left_cell.fs,
+                                                   iface.right_cell.fs,
+                                                   iface.n, Mx);
             }
             break;
         }
