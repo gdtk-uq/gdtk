@@ -115,7 +115,6 @@ NewtonKrylovGlobalConfig{
    max_newton_steps = 50,
    stop_on_relative_residual = 1.0e-12,
    number_of_phases = 1,
-   use_local_timestep = true,
    inviscid_cfl_only = true,
    use_line_search = false,
    use_physicality_check = false,
