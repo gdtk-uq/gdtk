@@ -86,6 +86,8 @@ void main_(string[] args)
     if (verbosity > 1) { writeln("lmr prep-flow: Start lua connection."); }
 
     auto L = initLuaStateForPrep();
+    lua_pushinteger(L, verbosity);
+    lua_setglobal(L, "verbosity");
     // RJG, 2023-06-27
     // Add a few more lua-wrapped functions for use in prep.
     // These functions are not backported into Eilmer 4, and

@@ -91,15 +91,21 @@ json = require 'json'
 -- since this should have been done earlier at the prep-grid stage.
 -- So, we disable any actions related to those function calls.
 function registerGrid()
-   print("    registerGrid(): Do NOTHING when in prep-flow mode.")
+   if verbosity >= 1 then
+      print("    registerGrid(): Do NOTHING when in prep-flow mode.")
+   end
 end
 
 function registerGridArray()
-   print("    registerGridArray(): Do NOTHING when in prep-flow mode.")
+   if verbosity >= 1 then
+      print("    registerGridArray(): Do NOTHING when in prep-flow mode.")
+   end
 end
 
 function identifyGridConnections()
-   print("    identifyGridConnections(): Do NOTHING when in prep-flow mode.")
+   if verbosity >= 1 then
+      print("    identifyGridConnections(): Do NOTHING when in prep-flow mode.")
+   end
 end
 
 

@@ -99,7 +99,9 @@ check_DFT_settings = prep_check.check_DFT_settings
 -- we are in a grid-only prep mode.
 -- So, we disable any action related to that function call.
 function makeFluidBlocks()
-   print("    makeFluidBlocks(): Do NOTHING when in prep-grid mode.")
+   if verbosity >= 1 then
+      print("    makeFluidBlocks(): Do NOTHING when in prep-grid mode.")
+   end
 end
 
 -------------------------------------------------------------------------

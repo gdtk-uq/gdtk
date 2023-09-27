@@ -60,6 +60,8 @@ void main_(string[] args)
 
     if (verbosity > 1) writeln("lmr prep-grids: Start lua connection.");
     auto L = initLuaStateForPrep();
+    lua_pushinteger(L, verbosity);
+    lua_setglobal(L, "verbosity");
     // Now that we have set the Lua interpreter context,
     // process the Lua scripts.
     if ( luaL_dofile(L, toStringz(dirName(thisExePath())~"/../lib/prepgrids.lua")) != 0 ) {
