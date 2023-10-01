@@ -292,6 +292,7 @@ local tabulatedData = {
 
 connections3D = {}
 vtxPairs3D = {}
+vtxPairs3DwTableKey = {}
 -- When reading GridPro block connectivity file,
 -- we need to look up Eilmer notation for connection orientations.
 eilmer_orientation = {}
@@ -301,6 +302,8 @@ for _,v in ipairs(tabulatedData) do
    connections3D[vtxPairs] = connection
    local this_face, other_face, orientation, axis_map = unpack(connection)
    vtxPairs3D[this_face..other_face..orientation] = vtxPairs
+   -- Also add key-as-table form
+   vtxPairs3DwTableKey[{this_face, other_face, orientation}] = vtxPairs
    eilmer_orientation[this_face..other_face..axis_map] = orientation
 end
 
