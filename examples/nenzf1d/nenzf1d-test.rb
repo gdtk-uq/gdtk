@@ -26,19 +26,25 @@ class TestNENZF1D < Test::Unit::TestCase
     cmd = "prep-chem air-5sp-1T.lua GuptaEtAl-air-reactions.lua air-5sp-1T-reactions.lua"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
-    cmd = "cp #{ENV['DGD_REPO']}/examples/kinetics/air-chemistry-2T/air-5sp-2T.inp ."
+    cmd = "cp #{ENV['DGD_REPO']}/examples/kinetics/air-chemistry-2T/air-5sp-gas-model.lua ./air-5sp-2T.inp"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
-    cmd = "cp #{ENV['DGD_REPO']}/examples/kinetics/air-chemistry-2T/GuptaEtAl-air-2T.lua ."
+    cmd = "cp #{ENV['DGD_REPO']}/examples/kinetics/air-chemistry-2T/GuptaEtAl-air-reactions-2T.lua ./GuptaEtAl-air-2T.lua"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
-    cmd = "cp #{ENV['DGD_REPO']}/examples/kinetics/air-chemistry-2T/air-energy-exchange.lua ."
+    cmd = "cp #{ENV['DGD_REPO']}/examples/kinetics/air-chemistry-2T/air-energy-exchange.lua ./air-energy-exchange.inp"
+    o, e, s = Open3.capture3(*cmd.split)
+    assert_equal(s.success?, true)
+    cmd = "sed -i s+11-species-air+5-species-air+g GuptaEtAl-air-2T.lua"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     cmd = "prep-gas air-5sp-2T.inp air-5sp-2T.lua"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
     cmd = "prep-chem air-5sp-2T.lua GuptaEtAl-air-2T.lua air-5sp-6r-2T.lua"
+    o, e, s = Open3.capture3(*cmd.split)
+    assert_equal(s.success?, true)
+    cmd = "prep-kinetics air-5sp-2T.lua air-5sp-6r-2T.lua air-energy-exchange.inp air-energy-exchange.lua"
     o, e, s = Open3.capture3(*cmd.split)
     assert_equal(s.success?, true)
   end
