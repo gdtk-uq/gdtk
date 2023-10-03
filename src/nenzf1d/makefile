@@ -143,7 +143,7 @@ default: $(PROGRAMS) libnenzf1d.so $(NENZF1D_FILES)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "nenzf1d code built."
 
-install: $(PROGRAMS) libnenzf1d.so prep-gas prep-chem chemkin2eilmer
+install: $(PROGRAMS) libnenzf1d.so prep-gas prep-chem chemkin2eilmer prep-kinetics
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
@@ -233,3 +233,6 @@ prep-chem:
 
 chemkin2eilmer:
 	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-chemkin2eilmer
+
+prep-kinetics:
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-kinetics
