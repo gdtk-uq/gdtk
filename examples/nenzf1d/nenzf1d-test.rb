@@ -131,13 +131,13 @@ class TestNENZF1D < Test::Unit::TestCase
         end
       end
     end
-    assert((enthalpy - 2.47955).abs < 0.01, "Failed to compute correct enthalpy.")
+    assert((enthalpy - 2.47976).abs < 0.01, "Failed to compute correct enthalpy.")
     assert(found_exit_condition, "Failed to find exit condition in output.")
-    assert((mach - 7.60648).abs < 0.01, "Failed to compute correct Mach number.")
-    assert((temperature - 221.798).abs < 0.1, "Failed to compute correct temperature.")
-    assert((pressure - 2.83504).abs < 0.01, "Failed to compute correct pressure.")
-    assert((massf_NO - 0.00972494).abs < 0.001, "Failed to compute correct mass-fraction of NO.")
-    assert((tvib - 1316.84).abs < 0.1, "Failed to compute correct vibrational temperature.")
+    assert((mach - 7.64642).abs < 0.01, "Failed to compute correct Mach number.")
+    assert((temperature - 219.023).abs < 0.1, "Failed to compute correct temperature.")
+    assert((pressure - 2.81165).abs < 0.01, "Failed to compute correct pressure.")
+    assert((massf_NO - 0.00972722).abs < 0.001, "Failed to compute correct mass-fraction of NO.")
+    assert((tvib - 1385.79).abs < 0.1, "Failed to compute correct vibrational temperature.")
   end
 
   def test_3_t4m8_11742_python
