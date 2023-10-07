@@ -784,17 +784,18 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                 // we now check if the current relaxation factor is sufficient enough to produce realizable primitive variables
                 // if it isn't, we reduce the relaxation factor by some prescribed factor and then try again
                 foreach (blk; localFluidBlocks) {
+                    int ftl = to!int(blk.myConfig.n_flow_time_levels-1);
                     int cellCount = 0;
                     foreach (cell; blk.cells) {
                         bool failed_decode = false;
                         while (omega >= omega_min) {
                             // check positivity of primitive variables
-                            cell.U[1].copy_values_from(cell.U[0]);
+                            cell.U[ftl].copy_values_from(cell.U[0]);
                             foreach (j; 0 .. nConserved) {
-                                cell.U[1][j] = cell.U[0][j] + omega*blk.dU[cellCount+j];
+                                cell.U[ftl][j] = cell.U[0][j] + omega*blk.dU[cellCount+j];
                             }
                             try {
-                                cell.decode_conserved(0, 1, 0.0);
+                                cell.decode_conserved(0, ftl, 0.0);
                             }
                             catch (FlowSolverException e) {
                                 failed_decode = true;
@@ -852,23 +853,24 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     }
 
                     // 2. compute residual at updated state term
+                    int ftl = to!int(GlobalConfig.n_flow_time_levels-1);
                     foreach (blk; parallel(localFluidBlocks,1)) {
                         int cellCount = 0;
                         foreach (cell; blk.cells) {
-                            cell.U[1].copy_values_from(cell.U[0]);
+                            cell.U[ftl].copy_values_from(cell.U[0]);
                             foreach (j; 0 .. nConserved) {
-                                cell.U[1][j] = cell.U[0][j] + omega*blk.dU[cellCount+j].re;
+                                cell.U[ftl][j] = cell.U[0][j] + omega*blk.dU[cellCount+j].re;
                             }
-                            cell.decode_conserved(0, 1, 0.0);
+                            cell.decode_conserved(0, ftl, 0.0);
                             cellCount += nConserved;
                         }
                     }
-                    evalRHS(0.0, 1);
+                    evalRHS(0.0, ftl);
                     foreach (blk; parallel(localFluidBlocks,1)) {
                         int cellCount = 0;
                         foreach (cell; blk.cells) {
                             foreach (j; 0 .. nConserved) {
-                                blk.FU[cellCount+j] += cell.dUdt[1][j].re;
+                                blk.FU[cellCount+j] += cell.dUdt[ftl][j].re;
                             }
                             // return cell to original state
                             cell.decode_conserved(0, 0, 0.0);
@@ -926,42 +928,44 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
 
             // If we get here, things are good
             foreach (blk; parallel(localFluidBlocks,1)) {
+                int ftl = to!int(blk.myConfig.n_flow_time_levels-1);
                 size_t nturb = blk.myConfig.turb_model.nturb;
                 size_t nsp = blk.myConfig.gmodel.n_species;
                 size_t nmodes = blk.myConfig.gmodel.n_modes;
                 int cellCount = 0;
                 auto cqi = blk.myConfig.cqi;
                 foreach (cell; blk.cells) {
-                    cell.U[1].copy_values_from(cell.U[0]);
-                    if (blk.myConfig.n_species == 1) { cell.U[1][cqi.mass] = cell.U[0][cqi.mass] + omega*blk.dU[cellCount+MASS]; }
-                    cell.U[1][cqi.xMom] = cell.U[0][cqi.xMom] + omega*blk.dU[cellCount+X_MOM];
-                    cell.U[1][cqi.yMom] = cell.U[0][cqi.yMom] + omega*blk.dU[cellCount+Y_MOM];
+                    cell.U[ftl].copy_values_from(cell.U[0]);
+                    if (blk.myConfig.n_species == 1) { cell.U[ftl][cqi.mass] = cell.U[0][cqi.mass] + omega*blk.dU[cellCount+MASS]; }
+                    cell.U[ftl][cqi.xMom] = cell.U[0][cqi.xMom] + omega*blk.dU[cellCount+X_MOM];
+                    cell.U[ftl][cqi.yMom] = cell.U[0][cqi.yMom] + omega*blk.dU[cellCount+Y_MOM];
                     if ( blk.myConfig.dimensions == 3 )
-                        cell.U[1][cqi.zMom] = cell.U[0][cqi.zMom] + omega*blk.dU[cellCount+Z_MOM];
-                    cell.U[1][cqi.totEnergy] = cell.U[0][cqi.totEnergy] + omega*blk.dU[cellCount+TOT_ENERGY];
+                        cell.U[ftl][cqi.zMom] = cell.U[0][cqi.zMom] + omega*blk.dU[cellCount+Z_MOM];
+                    cell.U[ftl][cqi.totEnergy] = cell.U[0][cqi.totEnergy] + omega*blk.dU[cellCount+TOT_ENERGY];
                     foreach(it; 0 .. nturb){
-                        cell.U[1][cqi.rhoturb+it] = cell.U[0][cqi.rhoturb+it] + omega*blk.dU[cellCount+TKE+it];
+                        cell.U[ftl][cqi.rhoturb+it] = cell.U[0][cqi.rhoturb+it] + omega*blk.dU[cellCount+TKE+it];
                     }
                     version(multi_species_gas){
                         if (blk.myConfig.n_species > 1) {
-                            foreach(sp; 0 .. nsp) { cell.U[1][cqi.species+sp] = cell.U[0][cqi.species+sp] + omega*blk.dU[cellCount+SPECIES+sp]; }
+                            foreach(sp; 0 .. nsp) { cell.U[ftl][cqi.species+sp] = cell.U[0][cqi.species+sp] + omega*blk.dU[cellCount+SPECIES+sp]; }
                         } else {
                             // enforce mass fraction of 1 for single species gas
-                            cell.U[1][cqi.species+0] = cell.U[1][cqi.mass];
+                            cell.U[ftl][cqi.species+0] = cell.U[ftl][cqi.mass];
                         }
                     }
                     version(multi_T_gas){
-                        foreach(imode; 0 .. nmodes) { cell.U[1][cqi.modes+imode] = cell.U[0][cqi.modes+imode] + omega*blk.dU[cellCount+MODES+imode]; }
+                        foreach(imode; 0 .. nmodes) { cell.U[ftl][cqi.modes+imode] = cell.U[0][cqi.modes+imode] + omega*blk.dU[cellCount+MODES+imode]; }
                     }
-                    cell.decode_conserved(0, 1, 0.0);
+                    cell.decode_conserved(0, ftl, 0.0);
                     cellCount += nConserved;
                 }
             }
 
             // Put flow state into U[0] ready for next iteration.
             foreach (blk; parallel(localFluidBlocks,1)) {
+                int ftl = to!int(blk.myConfig.n_flow_time_levels-1);
                 foreach (cell; blk.cells) {
-                    swap(cell.U[0], cell.U[1]);
+                    swap(cell.U[0], cell.U[ftl]);
                 }
             }
 
@@ -1560,7 +1564,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
             foreach (blk; localFluidBlocks) {
                 foreach (cell; blk.cells) {
                     foreach (j; 0 .. nConserved) {
-                        U_L2 += pow((cell.U[0][j] - cell.U[2][j]), 2.0);
+                        U_L2 += pow((cell.U[0][j] - cell.U[1][j]), 2.0);
                     }
                 }
             }
@@ -1588,21 +1592,20 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
         }
 
         // shuffle conserved quantities:
-        // note that the [1] entry is reserved for use in the nonlinear solver
         if (GlobalConfig.sssOptions.temporalIntegrationMode == 1) {
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (cell; blk.cells) {
                     // U_n+1 => U_n
-                    cell.U[2].copy_values_from(cell.U[0]);
+                    cell.U[1].copy_values_from(cell.U[0]);
                 }
             }
         } else { // temporal_order == 2
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (cell; blk.cells) {
                     // U_n => U_n-1
-                    cell.U[3].copy_values_from(cell.U[2]);
+                    cell.U[2].copy_values_from(cell.U[1]);
                     // U_n+1 => U_n
-                    cell.U[2].copy_values_from(cell.U[0]);
+                    cell.U[1].copy_values_from(cell.U[0]);
                 }
             }
         }
@@ -1621,14 +1624,14 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     if (temporal_order == 0) {
                         blk.FU[cellCount+j] = cell.dUdt[0][j].re;
                     } else if (temporal_order == 1) { // add unsteady term TODO: could we need to handle this better?
-                        blk.FU[cellCount+j] = cell.dUdt[0][j].re - (1.0/dt_physical)*cell.U[0][j].re + (1.0/dt_physical)*cell.U[2][j].re;
+                        blk.FU[cellCount+j] = cell.dUdt[0][j].re - (1.0/dt_physical)*cell.U[0][j].re + (1.0/dt_physical)*cell.U[1][j].re;
                     } else { // temporal_order = 2
                         // compute BDF2 coefficients for the adaptive time-stepping implementation
                         // note that for a fixed time-step, the coefficients should reduce down to the standard BDF2 coefficients, i.e. c1 = 3/2, c2 = 2, and c3 = 1/2
                         double c1 = 1.0/dt_physical + 1.0/dt_physical_old - dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
                         double c2 = 1.0/dt_physical + 1.0/dt_physical_old;
                         double c3 = dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
-                        blk.FU[cellCount+j] = cell.dUdt[0][j].re - c1*cell.U[0][j].re + c2*cell.U[2][j].re - c3*cell.U[3][j].re;
+                        blk.FU[cellCount+j] = cell.dUdt[0][j].re - c1*cell.U[0][j].re + c2*cell.U[1][j].re - c3*cell.U[2][j].re;
                     }
                 }
                 cellCount += nConserved;
@@ -1877,7 +1880,8 @@ void evalJacobianVecProd(double pseudoSimTime, double sigma, int LHSeval, int RH
 
 void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHSeval)
 {
-    int end_ftl = to!int(GlobalConfig.n_flow_time_levels-1);
+    int perturbed_ftl = to!int(GlobalConfig.n_flow_time_levels-1);
+    int unperturbed_ftl = to!int(GlobalConfig.n_flow_time_levels-2);
     foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(LHSeval); }
     bool frozen_limiter_save = GlobalConfig.frozen_limiter;
     if (GlobalConfig.sssOptions.frozenLimiterOnLHS) {
@@ -1906,34 +1910,34 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
         foreach (cell; blk.cells) cell.clear_source_vector();
         int cellCount = 0;
         foreach (cell; blk.cells) {
-            cell.U[1].copy_values_from(cell.U[0]);
-            if ( nsp == 1 ) { cell.U[1][cqi.mass] += sigma*blk.zed[cellCount+MASS]; }
-            cell.U[1][cqi.xMom] += sigma*blk.zed[cellCount+X_MOM];
-            cell.U[1][cqi.yMom] += sigma*blk.zed[cellCount+Y_MOM];
+            cell.U[perturbed_ftl].copy_values_from(cell.U[0]);
+            if ( nsp == 1 ) { cell.U[perturbed_ftl][cqi.mass] += sigma*blk.zed[cellCount+MASS]; }
+            cell.U[perturbed_ftl][cqi.xMom] += sigma*blk.zed[cellCount+X_MOM];
+            cell.U[perturbed_ftl][cqi.yMom] += sigma*blk.zed[cellCount+Y_MOM];
             if ( blk.myConfig.dimensions == 3 )
-                cell.U[1][cqi.zMom] += sigma*blk.zed[cellCount+Z_MOM];
-            cell.U[1][cqi.totEnergy] += sigma*blk.zed[cellCount+TOT_ENERGY];
+                cell.U[perturbed_ftl][cqi.zMom] += sigma*blk.zed[cellCount+Z_MOM];
+            cell.U[perturbed_ftl][cqi.totEnergy] += sigma*blk.zed[cellCount+TOT_ENERGY];
             foreach(it; 0 .. nturb){
-                cell.U[1][cqi.rhoturb+it] += sigma*blk.zed[cellCount+TKE+it];
+                cell.U[perturbed_ftl][cqi.rhoturb+it] += sigma*blk.zed[cellCount+TKE+it];
             }
             version(multi_species_gas){
             if ( nsp > 1 ) {
-                foreach(sp; 0 .. nsp) { cell.U[1][cqi.species+sp] += sigma*blk.zed[cellCount+SPECIES+sp]; }
+                foreach(sp; 0 .. nsp) { cell.U[perturbed_ftl][cqi.species+sp] += sigma*blk.zed[cellCount+SPECIES+sp]; }
             } else {
                 // enforce mass fraction of 1 for single species gas
                 if (blk.myConfig.n_species == 1) {
-                    cell.U[1][cqi.species+0] = cell.U[1][cqi.mass];
+                    cell.U[perturbed_ftl][cqi.species+0] = cell.U[perturbed_ftl][cqi.mass];
                 }
             }
             }
             version(multi_T_gas){
-            foreach(imode; 0 .. nmodes) { cell.U[1][cqi.modes+imode] += sigma*blk.zed[cellCount+MODES+imode]; }
+            foreach(imode; 0 .. nmodes) { cell.U[perturbed_ftl][cqi.modes+imode] += sigma*blk.zed[cellCount+MODES+imode]; }
             }
-            cell.decode_conserved(0, 1, 0.0);
+            cell.decode_conserved(0, perturbed_ftl, 0.0);
             cellCount += nConserved;
         }
     }
-    evalRHS(pseudoSimTime, 1);
+    evalRHS(pseudoSimTime, perturbed_ftl);
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t nturb = blk.myConfig.turb_model.nturb;
         size_t nsp = blk.myConfig.gmodel.n_species;
@@ -1941,22 +1945,22 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
         auto cqi = blk.myConfig.cqi;
         int cellCount = 0;
         foreach (cell; blk.cells) {
-            if ( nsp == 1 ) { blk.zed[cellCount+MASS] = (cell.dUdt[1][cqi.mass].re - cell.dUdt[end_ftl][cqi.mass].re)/(sigma); }
-            blk.zed[cellCount+X_MOM] = (cell.dUdt[1][cqi.xMom].re - cell.dUdt[end_ftl][cqi.xMom].re)/(sigma);
-            blk.zed[cellCount+Y_MOM] = (cell.dUdt[1][cqi.yMom].re - cell.dUdt[end_ftl][cqi.yMom].re)/(sigma);
+            if ( nsp == 1 ) { blk.zed[cellCount+MASS] = (cell.dUdt[perturbed_ftl][cqi.mass].re - cell.dUdt[unperturbed_ftl][cqi.mass].re)/(sigma); }
+            blk.zed[cellCount+X_MOM] = (cell.dUdt[perturbed_ftl][cqi.xMom].re - cell.dUdt[unperturbed_ftl][cqi.xMom].re)/(sigma);
+            blk.zed[cellCount+Y_MOM] = (cell.dUdt[perturbed_ftl][cqi.yMom].re - cell.dUdt[unperturbed_ftl][cqi.yMom].re)/(sigma);
             if ( blk.myConfig.dimensions == 3 )
-                blk.zed[cellCount+Z_MOM] = (cell.dUdt[1][cqi.zMom].re - cell.dUdt[end_ftl][cqi.zMom].re)/(sigma);
-            blk.zed[cellCount+TOT_ENERGY] = (cell.dUdt[1][cqi.totEnergy].re - cell.dUdt[end_ftl][cqi.totEnergy].re)/(sigma);
+                blk.zed[cellCount+Z_MOM] = (cell.dUdt[perturbed_ftl][cqi.zMom].re - cell.dUdt[unperturbed_ftl][cqi.zMom].re)/(sigma);
+            blk.zed[cellCount+TOT_ENERGY] = (cell.dUdt[perturbed_ftl][cqi.totEnergy].re - cell.dUdt[unperturbed_ftl][cqi.totEnergy].re)/(sigma);
             foreach(it; 0 .. nturb){
-                blk.zed[cellCount+TKE+it] = (cell.dUdt[1][cqi.rhoturb+it].re - cell.dUdt[end_ftl][cqi.rhoturb+it].re)/(sigma);
+                blk.zed[cellCount+TKE+it] = (cell.dUdt[perturbed_ftl][cqi.rhoturb+it].re - cell.dUdt[unperturbed_ftl][cqi.rhoturb+it].re)/(sigma);
             }
             version(multi_species_gas){
             if ( nsp > 1 ) {
-                foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] = (cell.dUdt[1][cqi.species+sp].re - cell.dUdt[end_ftl][cqi.species+sp].re)/(sigma); }
+                foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] = (cell.dUdt[perturbed_ftl][cqi.species+sp].re - cell.dUdt[unperturbed_ftl][cqi.species+sp].re)/(sigma); }
             }
             }
             version(multi_T_gas){
-            foreach(imode; 0 .. nmodes){ blk.zed[cellCount+MODES+imode] = (cell.dUdt[1][cqi.modes+imode].re - cell.dUdt[end_ftl][cqi.modes+imode].re)/(sigma); }
+            foreach(imode; 0 .. nmodes){ blk.zed[cellCount+MODES+imode] = (cell.dUdt[perturbed_ftl][cqi.modes+imode].re - cell.dUdt[unperturbed_ftl][cqi.modes+imode].re)/(sigma); }
             }
             cell.decode_conserved(0, 0, 0.0);
             cellCount += nConserved;
@@ -1971,6 +1975,7 @@ void evalRealMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHS
 void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int RHSeval)
 {
     version(complex_numbers) {
+        int perturbed_ftl = to!int(GlobalConfig.n_flow_time_levels-1);
         foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(LHSeval); }
         bool frozen_limiter_save = GlobalConfig.frozen_limiter;
         if (GlobalConfig.sssOptions.frozenLimiterOnLHS) {
@@ -2000,32 +2005,32 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int 
             auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (cell; blk.cells) {
-                cell.U[1].copy_values_from(cell.U[0]);
-                if ( nsp == 1 ) { cell.U[1][cqi.mass] += complex(0.0, sigma*blk.zed[cellCount+MASS].re); }
-                cell.U[1][cqi.xMom] += complex(0.0, sigma*blk.zed[cellCount+X_MOM].re);
-                cell.U[1][cqi.yMom] += complex(0.0, sigma*blk.zed[cellCount+Y_MOM].re);
+                cell.U[perturbed_ftl].copy_values_from(cell.U[0]);
+                if ( nsp == 1 ) { cell.U[perturbed_ftl][cqi.mass] += complex(0.0, sigma*blk.zed[cellCount+MASS].re); }
+                cell.U[perturbed_ftl][cqi.xMom] += complex(0.0, sigma*blk.zed[cellCount+X_MOM].re);
+                cell.U[perturbed_ftl][cqi.yMom] += complex(0.0, sigma*blk.zed[cellCount+Y_MOM].re);
                 if ( blk.myConfig.dimensions == 3 )
-                    cell.U[1][cqi.zMom] += complex(0.0, sigma*blk.zed[cellCount+Z_MOM].re);
-                cell.U[1][cqi.totEnergy] += complex(0.0, sigma*blk.zed[cellCount+TOT_ENERGY].re);
+                    cell.U[perturbed_ftl][cqi.zMom] += complex(0.0, sigma*blk.zed[cellCount+Z_MOM].re);
+                cell.U[perturbed_ftl][cqi.totEnergy] += complex(0.0, sigma*blk.zed[cellCount+TOT_ENERGY].re);
                 foreach(it; 0 .. nturb){
-                    cell.U[1][cqi.rhoturb+it] += complex(0.0, sigma*blk.zed[cellCount+TKE+it].re);
+                    cell.U[perturbed_ftl][cqi.rhoturb+it] += complex(0.0, sigma*blk.zed[cellCount+TKE+it].re);
                 }
                 version(multi_species_gas){
                 if ( nsp > 1 ) {
-                    foreach(sp; 0 .. nsp){ cell.U[1][cqi.species+sp] += complex(0.0, sigma*blk.zed[cellCount+SPECIES+sp].re); }
+                    foreach(sp; 0 .. nsp){ cell.U[perturbed_ftl][cqi.species+sp] += complex(0.0, sigma*blk.zed[cellCount+SPECIES+sp].re); }
                 } else {
                     // enforce mass fraction of 1 for single species gas
-                    cell.U[1][cqi.species+0] = cell.U[1][cqi.mass];
+                    cell.U[perturbed_ftl][cqi.species+0] = cell.U[perturbed_ftl][cqi.mass];
                 }
                 }
                 version(multi_T_gas){
-                foreach(imode; 0 .. nmodes){ cell.U[1][cqi.modes+imode] += complex(0.0, sigma*blk.zed[cellCount+MODES+imode].re); }
+                foreach(imode; 0 .. nmodes){ cell.U[perturbed_ftl][cqi.modes+imode] += complex(0.0, sigma*blk.zed[cellCount+MODES+imode].re); }
                 }
-                cell.decode_conserved(0, 1, 0.0);
+                cell.decode_conserved(0, perturbed_ftl, 0.0);
                 cellCount += nConserved;
             }
         }
-        evalRHS(pseudoSimTime, 1);
+        evalRHS(pseudoSimTime, perturbed_ftl);
         foreach (blk; parallel(localFluidBlocks,1)) {
             size_t nturb = blk.myConfig.turb_model.nturb;
             size_t nsp = blk.myConfig.gmodel.n_species;
@@ -2033,22 +2038,22 @@ void evalComplexMatVecProd(double pseudoSimTime, double sigma, int LHSeval, int 
             auto cqi = blk.myConfig.cqi;
             int cellCount = 0;
             foreach (cell; blk.cells) {
-                if ( nsp == 1 ) { blk.zed[cellCount+MASS] = cell.dUdt[1][cqi.mass].im/(sigma); }
-                blk.zed[cellCount+X_MOM] = cell.dUdt[1][cqi.xMom].im/(sigma);
-                blk.zed[cellCount+Y_MOM] = cell.dUdt[1][cqi.yMom].im/(sigma);
+                if ( nsp == 1 ) { blk.zed[cellCount+MASS] = cell.dUdt[perturbed_ftl][cqi.mass].im/(sigma); }
+                blk.zed[cellCount+X_MOM] = cell.dUdt[perturbed_ftl][cqi.xMom].im/(sigma);
+                blk.zed[cellCount+Y_MOM] = cell.dUdt[perturbed_ftl][cqi.yMom].im/(sigma);
                 if ( blk.myConfig.dimensions == 3 )
-                    blk.zed[cellCount+Z_MOM] = cell.dUdt[1][cqi.zMom].im/(sigma);
-                blk.zed[cellCount+TOT_ENERGY] = cell.dUdt[1][cqi.totEnergy].im/(sigma);
+                    blk.zed[cellCount+Z_MOM] = cell.dUdt[perturbed_ftl][cqi.zMom].im/(sigma);
+                blk.zed[cellCount+TOT_ENERGY] = cell.dUdt[perturbed_ftl][cqi.totEnergy].im/(sigma);
                 foreach(it; 0 .. nturb){
-                    blk.zed[cellCount+TKE+it] = cell.dUdt[1][cqi.rhoturb+it].im/(sigma);
+                    blk.zed[cellCount+TKE+it] = cell.dUdt[perturbed_ftl][cqi.rhoturb+it].im/(sigma);
                 }
                 version(multi_species_gas){
                 if ( nsp > 1 ) {
-                    foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] = cell.dUdt[1][cqi.species+sp].im/(sigma); }
+                    foreach(sp; 0 .. nsp){ blk.zed[cellCount+SPECIES+sp] = cell.dUdt[perturbed_ftl][cqi.species+sp].im/(sigma); }
                 }
                 }
                 version(multi_T_gas){
-                foreach(imode; 0 .. nmodes){ blk.zed[cellCount+MODES+imode] = cell.dUdt[1][cqi.modes+imode].im/(sigma); }
+                foreach(imode; 0 .. nmodes){ blk.zed[cellCount+MODES+imode] = cell.dUdt[perturbed_ftl][cqi.modes+imode].im/(sigma); }
                 }
                 cellCount += nConserved;
             }
@@ -2274,7 +2279,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     blk.FU[cellCount+j] = cell.dUdt[0][j].re;
                 } else if (temporal_order == 1) {
                     // add BDF1 unsteady term TODO: could we need to handle this better?
-                    blk.FU[cellCount+j] = cell.dUdt[0][j].re - (1.0/dt_physical)*cell.U[0][j].re + (1.0/dt_physical)*cell.U[2][j].re;
+                    blk.FU[cellCount+j] = cell.dUdt[0][j].re - (1.0/dt_physical)*cell.U[0][j].re + (1.0/dt_physical)*cell.U[1][j].re;
                 } else { // temporal_order = 2
                     // add BDF2 unsteady term TODO: could we need to handle this better?
                     // compute BDF2 coefficients for the adaptive time-stepping implementation
@@ -2282,7 +2287,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     double c1 = 1.0/dt_physical + 1.0/dt_physical_old - dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
                     double c2 = 1.0/dt_physical + 1.0/dt_physical_old;
                     double c3 = dt_physical/(dt_physical_old*(dt_physical+dt_physical_old));
-                    blk.FU[cellCount+j] = cell.dUdt[0][j].re - c1*cell.U[0][j].re + c2*cell.U[2][j].re - c3*cell.U[3][j].re;
+                    blk.FU[cellCount+j] = cell.dUdt[0][j].re - c1*cell.U[0][j].re + c2*cell.U[1][j].re - c3*cell.U[2][j].re;
                 }
             }
             cellCount += nConserved;
@@ -2295,7 +2300,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     // evaluate an additional dUdt and store it for later use in the Frechet derivative evluation.
     if (GlobalConfig.sssOptions.useComplexMatVecEval == false) {
         bool require_residual_eval = GlobalConfig.sssOptions.frozenLimiterOnLHS || LHSeval != GlobalConfig.interpolation_order;
-        int end_ftl = to!int(GlobalConfig.n_flow_time_levels-1);
+        int unperturbed_ftl = to!int(GlobalConfig.n_flow_time_levels-2);
 
         if (require_residual_eval) {
             foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(LHSeval); }
@@ -2304,7 +2309,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 foreach (blk; parallel(localFluidBlocks,1)) { GlobalConfig.frozen_limiter = true; }
             }
 
-            evalRHS(pseudoSimTime, end_ftl);
+            evalRHS(pseudoSimTime, unperturbed_ftl);
 
             foreach (blk; parallel(localFluidBlocks,1)) { blk.set_interpolation_order(RHSeval); }
             if (GlobalConfig.sssOptions.frozenLimiterOnLHS) {
@@ -2314,7 +2319,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (i, cell; blk.cells) {
                     foreach (j; 0 .. nConserved) {
-                        cell.dUdt[end_ftl][j] = cell.dUdt[0][j];
+                        cell.dUdt[unperturbed_ftl][j] = cell.dUdt[0][j];
                     }
                 }
             }

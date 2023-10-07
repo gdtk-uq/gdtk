@@ -1382,7 +1382,7 @@ public:
         if (cqi.n_species > 1) { nConserved -= 1; }
         auto eps0 = flowJacobian.eps;
         number eps;
-        int ftl = 1; int gtl = 0;
+        int ftl = to!int(myConfig.n_flow_time_levels-1); int gtl = 0;
 
         // save a copy of the flowstate and copy conserved quantities
         fs_save.copy_values_from(pcell.fs);
@@ -1470,7 +1470,7 @@ public:
         if (cqi.n_species > 1) { nConserved -= 1; }
         auto eps0 = flowJacobian.eps;
         number eps;
-        int gtl = 0; int ftl = 1;
+        int gtl = 0; int ftl = to!int(myConfig.n_flow_time_levels-1);
 
         foreach ( bndary; bc ) {
             if (!bndary.ghost_cell_data_available) { continue; }
