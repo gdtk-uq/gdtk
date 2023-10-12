@@ -599,7 +599,7 @@ def pitot3_pickle_output_file_creator(dict_of_objects, output_filename):
     import pickle
 
     with open(output_filename, "wb") as output_file:
-        pickle.dump(dict_of_objects, output_file, pickle.HIGHEST_PROTOCOL)
+        pickle.dump(dict_of_objects['states_dict'], output_file, pickle.HIGHEST_PROTOCOL)
 
     return
 
@@ -2592,6 +2592,7 @@ class Tube(object):
         self.unsteadily_expanded_entrance_state_name = unsteadily_expanded_entrance_state_name
 
         self.expand_to = expand_to
+        self.expansion_factor = expansion_factor
 
         self.unsteady_expansion_steps = unsteady_expansion_steps
 
@@ -2762,25 +2763,38 @@ class Tube(object):
 
             unsteadily_expanded_gas_state = GasState(unsteadily_expanding_state_gmodel)
 
-            # TO DO: need to get finite wave dv working so we can get the expansion factor stuff in here...
-            # need something like below...
-            #State 7 is being expanded to V6 (8050.30994903) multiplied by an expansion factor of 1.0.
-
             if self.expand_to == 'flow_behind_shock':
                 # just do the same calculation as the secant solver, this is the ideal case
 
-                v3g = finite_wave_dp_wrapper(self.unsteadily_expanding_state.get_gas_state(),
-                                             self.unsteadily_expanding_state.get_v(),
-                                             'cplus', p3, unsteadily_expanded_gas_state,
-                                             unsteadily_expanding_state_gas_flow,
-                                             steps=self.unsteady_expansion_steps,
-                                             gmodel_without_ions=self.unsteadily_expanding_state.get_gas_state_gmodel_without_ions())
+                print(
+                    f"Unsteadily expanding state {self.entrance_state_name} to the post-shock velocity ({v2g:.2f} m/s) multiplied by an expansion factor of {self.expansion_factor} to become state {self.unsteadily_expanded_entrance_state_name}.")
+
+                if self.expansion_factor == 1.0:
+                    # we just do the pressure calculation (as that will match pressures across the shock better)
+                    v3g = finite_wave_dp_wrapper(self.unsteadily_expanding_state.get_gas_state(),
+                                                 self.unsteadily_expanding_state.get_v(),
+                                                 'cplus', p3, unsteadily_expanded_gas_state,
+                                                 unsteadily_expanding_state_gas_flow,
+                                                 steps=self.unsteady_expansion_steps,
+                                                 gmodel_without_ions=self.unsteadily_expanding_state.get_gas_state_gmodel_without_ions())
+                else:
+                    # otherwisw need to do it to the velocity instead...
+                    v3g = finite_wave_dv_wrapper(self.unsteadily_expanding_state.get_gas_state(),
+                                                 self.unsteadily_expanding_state.get_v(),
+                                                 'cplus', v2g*self.expansion_factor, unsteadily_expanded_gas_state,
+                                                 unsteadily_expanding_state_gas_flow,
+                                                 steps=self.unsteady_expansion_steps,
+                                                 gmodel_without_ions=self.unsteadily_expanding_state.get_gas_state_gmodel_without_ions())
 
             elif self.expand_to == 'shock_speed':
+
+                print(
+                    f"Unsteadily expanding state {self.entrance_state_name} to the shock-speed ({self.vs:.2f} m/s) multiplied by an expansion factor of {self.expansion_factor} to become state {self.unsteadily_expanded_entrance_state_name}.")
+
                 # we use finite wave_dv and expand to the shock speed instead...
                 v3g = finite_wave_dv_wrapper(self.unsteadily_expanding_state.get_gas_state(),
                                              self.unsteadily_expanding_state.get_v(),
-                                             'cplus', self.vs, unsteadily_expanded_gas_state,
+                                             'cplus', self.vs*self.expansion_factor, unsteadily_expanded_gas_state,
                                              unsteadily_expanding_state_gas_flow,
                                              steps=self.unsteady_expansion_steps,
                                              gmodel_without_ions=self.unsteadily_expanding_state.get_gas_state_gmodel_without_ions())
