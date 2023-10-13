@@ -12,7 +12,8 @@
 
 CIDBFileName = {
    gupta = "gupta_etal_1990_CI_data.lua",
-   wright = "wright_etal_CI_data.lua"
+   wright = "wright_etal_CI_data.lua",
+   wright_full = "wrightmars_etal_CI_data.lua"
 }
 
 
