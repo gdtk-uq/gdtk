@@ -6,7 +6,13 @@ DMD ?= ldc2
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
 FLAVOUR ?= debug
-PLATFORM ?= linux
+
+ifeq ($(shell uname -s), Darwin)
+    PLATFORM := macosx
+else
+    PLATFORM := linux
+endif
+$(info PLATFORM=$(PLATFORM))
 
 PROGRAMS := l1d4 l1d4-prep l1d4-xt-viewer
 

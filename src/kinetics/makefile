@@ -1,7 +1,14 @@
 # makefile for kinetics module
 # Can be used to perform unit tests
 # and build stand-alone programs.
-PLATFORM ?= linux
+
+ifeq ($(shell uname -s), Darwin)
+    PLATFORM := macosx
+else
+    PLATFORM := linux
+endif
+$(info PLATFORM=$(PLATFORM))
+
 WITH_DVODE ?= 0
 INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR ?= ../../build
@@ -39,6 +46,9 @@ LIBLUA := ${LUA_DIR}/install/lib/liblua.a
 LIBLUAPATH := ${LUA_DIR}/lib
 
 DLINKFLAGS :=  -w -L-ldl
+ifeq ($(PLATFORM), macosx)
+    DLINKFLAGS += -L-ld_classic
+endif
 
 ifeq ($(WITH_DVODE),1)
     DFLAGS += -version=with_dvode

@@ -5,7 +5,12 @@
 #          October 2016 bring into line with makefile from geom
 #
 
-PLATFORM ?= linux
+ifeq ($(shell uname -s), Darwin)
+    PLATFORM := macosx
+else
+    PLATFORM := linux
+endif
+$(info PLATFORM=$(PLATFORM))
 
 DEMO_PROGRAMS := idealgasflow_demo luaidealgasflow_demo \
 	gasflow_demo luagasflow_demo
@@ -40,6 +45,9 @@ include $(KINETICS_DIR)/kinetics_files.mk
 DFLAGS := -w -debug -g -dip1008 -I..
 OF := -of
 DLINKFLAGS := -L-ldl -L-lgfortran
+ifeq ($(PLATFORM), macosx)
+    DLINKFLAGS += -L-ld_classic
+endif
 
 DFLAGS_LUA := -w -debug -g -dip1008 -I.. -I$(LUAD_DIR)
 DLINKFLAGS_LUA := -L-L$(LIBLUAPATH) $(DLINKFLAGS)
@@ -63,7 +71,7 @@ $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local
 
 $(LIBGASF):
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=dmd libgasf.a
 
 $(LIBCEQ):
 	cd $(CEQ_DIR); make

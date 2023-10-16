@@ -17,7 +17,12 @@ GPP ?= g++
 FLAVOUR ?= debug
 
 # PLATFORM options are linux, macosx
-PLATFORM ?= linux
+ifeq ($(shell uname -s), Darwin)
+    PLATFORM := macosx
+else
+    PLATFORM := linux
+endif
+$(info PLATFORM=$(PLATFORM))
 
 # PARALLEL_FLAVOUR options are: shared, openmpi, mpich
 PARALLEL_FLAVOUR ?= shared
@@ -171,6 +176,9 @@ ifeq ($(DMD), dmd)
     ifneq ($(TECPLOT_BIN_DIR), unavailable)
         DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
 endif
 ifeq ($(DMD), ldc2)
     # -fprofile-generate will result in profraw files being written
@@ -205,20 +213,8 @@ ifeq ($(DMD), ldc2)
     ifneq ($(TECPLOT_BIN_DIR), unavailable)
         DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
-endif
-ifeq ($(DMD), gdc-8)
-    DEBUG_DFLAGS := -Wall -Og -g -fversion=flavour_debug
-    PROFILE_DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_profile
-    FAST_DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_fast
-    OF := -o
-    DVERSION := -fversion=
-    ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
-        DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
-        DLINKFLAGS := $(DLINKFLAGS) -lplot
-    endif
-    DLINKFLAGS := $(DLINKFLAGS) -ldl -lcurl
-    ifneq ($(TECPLOT_BIN_DIR), unavailable)
-        DLINKFLAGS += $(TECPLOT_BIN_DIR)/libtecio.so $(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
     endif
 endif
 
@@ -235,10 +231,6 @@ endif
 
 # DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
 # This rules out the use of gdc for compiling the code.
-# gdc-8 built on 2.069.2 with updates to 2016-01-15
-# gdc-9 built on 2.076.0 which appeared 2017-09-01
-# gdc-10 will back-port static foreach, which we also use.
-# Expect gdc-10 to be out in May 2020.
 DFLAGS += -dip1008
 DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
 

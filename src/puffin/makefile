@@ -6,7 +6,13 @@ DMD ?= ldc2
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
 FLAVOUR ?= debug
-PLATFORM ?= linux
+
+ifeq ($(shell uname -s), Darwin)
+    PLATFORM := macosx
+else
+    PLATFORM := linux
+endif
+$(info PLATFORM=$(PLATFORM))
 
 PROGRAMS := puffin puffin-prep puffin-post lrkt-run lrkt-prep lrkt-post
 
@@ -75,8 +81,10 @@ ifeq ($(DMD), dmd)
     endif
     OF := -of
     DVERSION := -version=
-    DLINKFLAGS :=
-    DLINKFLAGS := $(DLINKFLAGS) -L-ldl
+    DLINKFLAGS := -L-ldl
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
 endif
 ifeq ($(DMD), ldmd2)
     ifeq ($(FLAVOUR), debug)
@@ -92,6 +100,9 @@ ifeq ($(DMD), ldmd2)
     DVERSION := -version=
     DLINKFLAGS :=
     DLINKFLAGS := $(DLINKFLAGS) -L-ldl
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
 endif
 ifeq ($(DMD), ldc2)
     ifeq ($(FLAVOUR), debug)
@@ -108,18 +119,13 @@ ifeq ($(DMD), ldc2)
     endif
     OF := -of=
     DVERSION := -d-version=
-    DLINKFLAGS :=
-    #ifeq ($(FLAVOUR), profile)
-    #    DLINKFLAGS := $(DLINKFLAGS) -Wl,-fprofile-generate
-    #endif
-    DLINKFLAGS := $(DLINKFLAGS) -L-ldl
+    DLINKFLAGS := -L-ldl
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
 endif
 # DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
 # This rules out the use of gdc for compiling the code.
-# gdc-8 built on 2.069.2 with updates to 2016-01-15
-# gdc-9 built on 2.076.0 which appeared 2017-09-01
-# gdc-10 will back-port static foreach, which we also use.
-# Expect gdc-10 to be out in May 2020.
 DFLAGS += -dip1008 -preview=in
 DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
 

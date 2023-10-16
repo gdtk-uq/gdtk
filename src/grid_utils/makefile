@@ -3,7 +3,14 @@
 # We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
 # when invoking this makefile.  Can also ask for gdc.
 DMD ?= ldc2
-PLATFORM ?= linux
+
+ifeq ($(shell uname -s), Darwin)
+    PLATFORM := macosx
+else
+    PLATFORM := linux
+endif
+$(info PLATFORM=$(PLATFORM))
+
 INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR ?= ../../build
 

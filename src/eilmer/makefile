@@ -17,7 +17,12 @@ GPP ?= g++
 FLAVOUR ?= debug
 
 # PLATFORM options are linux, macosx
-PLATFORM ?= linux
+ifeq ($(shell uname -s), Darwin)
+    PLATFORM := macosx
+else
+    PLATFORM := linux
+endif
+$(info PLATFORM=$(PLATFORM))
 
 WITH_MPI ?= 0
 WITH_CHT ?= 0

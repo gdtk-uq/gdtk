@@ -2,7 +2,14 @@
 # Builds all of the demonstration programs.
 
 DMD ?= ldmd2
-PLATFORM ?= linux
+
+ifeq ($(shell uname -s), Darwin)
+    PLATFORM := macosx
+else
+    PLATFORM := linux
+endif
+$(info PLATFORM=$(PLATFORM))
+
 INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR := ../../build
 REPO_DIR := $(shell cd ../../; pwd)

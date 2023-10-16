@@ -6,7 +6,13 @@ DMD ?= ldc2
 # Flags for each compiler will be determined on this option.
 FLAVOUR ?= debug
 
-PLATFORM ?= linux
+ifeq ($(shell uname -s), Darwin)
+    PLATFORM := macosx
+else
+    PLATFORM := linux
+endif
+$(info PLATFORM=$(PLATFORM))
+
 WITH_DVODE ?= 0
 INSTALL_DIR ?= $(HOME)/gdtkinst
 BUILD_DIR := ../../build
@@ -119,21 +125,6 @@ ifeq ($(DMD), ldc2)
     ifeq ($(PLATFORM), macosx)
 	DLINKFLAGS += -L-ld_classic
     endif
-endif
-ifeq ($(DMD), gdc-8)
-    ifeq ($(FLAVOUR), debug)
-        DFLAGS := -Wall -Og -g -fversion=flavour_debug
-    endif
-    ifeq ($(FLAVOUR), profile)
-        DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_profile
-    endif
-    ifeq ($(FLAVOUR), fast)
-        DFLAGS := -Wall -O2 -frelease -fno-debug -fversion=flavour_fast
-    endif
-    PIC := -fPIC
-    DVERSION := -fversion=
-    OF := -o
-    DLINKFLAGS := -ldl
 endif
 
 ifeq ($(WITH_DVODE),1)

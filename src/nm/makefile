@@ -3,7 +3,12 @@
 # We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
 # when invoking this makefile.  Can also ask for gdc.
 DMD ?= ldmd2
-PLATFORM ?= linux
+ifeq ($(shell uname -s), Darwin)
+    PLATFORM := macosx
+else
+    PLATFORM := linux
+endif
+$(info PLATFORM=$(PLATFORM))
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
@@ -45,16 +50,25 @@ ifeq ($(DMD), dmd)
     DFLAGS := -w -O -release -inline -boundscheck=off
     OF := -of
     DLINKFLAGS := -L-L$(LIBLUAPATH) -L-ldl
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
 endif
 ifeq ($(DMD), ldmd2)
     DFLAGS := -w -O -release -inline -boundscheck=off
     OF := -of
     DLINKFLAGS := -L-L$(LIBLUAPATH) -L-ldl
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
 endif
 ifeq ($(DMD), gdc)
     DFLAGS := -Wall -O2 -frelease -fno-debug
     OF := -o
     DLINKFLAGS := -L$(LIBLUAPATH) -ldl
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
 endif
 
 # DIP1008 allows throwing of exceptions in @nogc code.
@@ -95,95 +109,95 @@ $(LIBLUA):
 
 bbla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 bbla_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=bbla_test -version=complex_numbers \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 bracketing_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 bracketing_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=bracketing_test -version=complex_numbers \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 gaussquad_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 gaussquad_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=gaussquad_test -version=complex_numbers \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 linesearch_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 linesearch_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=linesearch_test -version=complex_numbers \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 newtoncotes_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 newtoncotes_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=newtoncotes_test -version=complex_numbers \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 ridder_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 ridder_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=ridder_test -version=complex_number \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 secant_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 secant_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=ridder_test -version=complex_number \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 rungekutta_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 rungekutta_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=rungekutta_test -version=complex_numbers \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 brent_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 brent_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=brent_test -version=complex_numbers \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 schedule_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 smla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 smla_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=smla_test -version=complex_numbers \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 rsla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 rsla_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=rsla_test -version=complex_numbers \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 luabbla_test: luabbla.d bbla.d complex.d number.d $(UTIL_FILES) $(LIBLUA) $(UTIL_FILES)
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
@@ -191,68 +205,68 @@ luabbla_test: luabbla.d bbla.d complex.d number.d $(UTIL_FILES) $(LIBLUA) $(UTIL
 
 complex_number_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=complex_number_test -version=complex_numbers \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 newton_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 newton_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=newton_test -version=complex_numbers \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 stmatrix_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 nelmin_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 nelmin_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=nelmin_test -version=complex_numbers \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 spline_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 splinelsq_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 # Some demo targets. These are left over from the early days of development.
 # They should continue to work and provide a minimal example of how to get
 # going with particular modules.
 
 ridder_demo: ridder_demo.d ridder.d bracketing.d complex.d
-	$(DMD) -g ridder_demo.d ridder.d bracketing.d complex.d
+	$(DMD) -g ridder_demo.d ridder.d bracketing.d complex.d $(DLINKFLAGS)
 
 linesearch_demo: linesearch_demo.d linesearch.d complex.d
-	$(DMD) -g linesearch_demo.d linesearch.d complex.d
+	$(DMD) -g linesearch_demo.d linesearch.d complex.d $(DLINKFLAGS)
 
 nelmin_demo: nelmin_demo.d nelmin.d complex.d number.d
-	$(DMD) -g nelmin_demo.d nelmin.d complex.d number.d
+	$(DMD) -g nelmin_demo.d nelmin.d complex.d number.d $(DLINKFLAGS)
 
 nelmin_complex_demo: nelmin_demo.d nelmin.d complex.d number.d
-	$(DMD) -of$@ -g nelmin_demo.d nelmin.d complex.d number.d -version=complex_numbers
+	$(DMD) -of$@ -g nelmin_demo.d nelmin.d complex.d number.d -version=complex_numbers $(DLINKFLAGS)
 
 rungekutta_demo: rungekutta_demo.d rungekutta.d complex.d
-	$(DMD) -g rungekutta_demo.d rungekutta.d complex.d
+	$(DMD) -g rungekutta_demo.d rungekutta.d complex.d $(DLINKFLAGS)
 
 newtoncotes_demo: newtoncotes_demo.d newtoncotes.d complex.d
-	$(DMD) -g newtoncotes_demo.d newtoncotes.d complex.d
+	$(DMD) -g newtoncotes_demo.d newtoncotes.d complex.d $(DLINKFLAGS)
 
 gaussquad_demo: gaussquad_demo.d gaussquad.d complex.d
-	$(DMD) -g gaussquad_demo.d gaussquad.d complex.d
+	$(DMD) -g gaussquad_demo.d gaussquad.d complex.d $(DLINKFLAGS)
 
 bbla_demo: bbla_demo.d bbla.d complex.d
-	$(DMD) -g -dip1008 bbla_demo.d bbla.d complex.d
+	$(DMD) -g -dip1008 bbla_demo.d bbla.d complex.d $(DLINKFLAGS)
 
 # Rules for building the benchmark programs
 
 rungekutta_bench_d: rungekutta_bench.d
-	$(DMD) -of$@ -g -O -boundscheck=off rungekutta_bench.d
+	$(DMD) -of$@ -g -O -boundscheck=off rungekutta_bench.d $(DLINKFLAGS)
 
 rungekutta_bench_cr: rungekutta_bench.cr
 	crystal build -o$@ --release rungekutta_bench.cr
