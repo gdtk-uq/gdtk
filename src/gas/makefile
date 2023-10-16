@@ -77,6 +77,9 @@ ifeq ($(DMD), dmd)
     DVERSION := -version=
     OF := -of
     DLINKFLAGS := -L-ldl
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
 endif
 ifeq ($(DMD), ldmd2)
     ifeq ($(FLAVOUR), debug)
@@ -92,6 +95,9 @@ ifeq ($(DMD), ldmd2)
     DVERSION := -version=
     OF := -of
     DLINKFLAGS := -L-ldl
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
 endif
 ifeq ($(DMD), ldc2)
     ifeq ($(FLAVOUR), debug)
@@ -110,6 +116,9 @@ ifeq ($(DMD), ldc2)
     DVERSION := -d-version=
     OF := -of=
     DLINKFLAGS := -L-ldl
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
 endif
 ifeq ($(DMD), gdc-8)
     ifeq ($(FLAVOUR), debug)

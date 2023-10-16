@@ -85,6 +85,9 @@ ifeq ($(findstring libplot,$(LIBPLOT_VERSION_STR)), libplot)
     DLINKFLAGS := $(DLINKFLAGS) -L-lplot
 endif
 DLINKFLAGS := $(DLINKFLAGS) -L-ldl
+ifeq ($(PLATFORM), macosx)
+    DLINKFLAGS += -L-ld_classic
+endif
 
 DFLAGS_LUA := -w -dip1008 -g -I..
 ifeq ($(findstring libplot,$(LIBPLOT_VERSION_STR)), libplot)

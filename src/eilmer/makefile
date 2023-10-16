@@ -337,6 +337,9 @@ ifeq ($(DMD), dmd)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
     endif
     DLINKFLAGS := $(DLINKFLAGS) -L-ldl
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
     ifneq ($(TECPLOT_BIN_DIR), unavailable)
         DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
@@ -354,6 +357,9 @@ ifeq ($(DMD), ldmd2)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
     endif
     DLINKFLAGS := $(DLINKFLAGS) -L-ldl
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
     ifneq ($(TECPLOT_BIN_DIR), unavailable)
         DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
@@ -381,6 +387,9 @@ ifeq ($(DMD), ldc2)
     OF := -of=
     DVERSION := -d-version=
     DLINKFLAGS :=
+    ifeq ($(PLATFORM), macosx)
+	DLINKFLAGS += -L-ld_classic
+    endif
     ifeq ($(WITH_THREAD_SANITIZER), 1)
         DLINKFLAGS := $(DLINKFLAGS) -fsanitize=thread
     endif
@@ -551,22 +560,22 @@ clean:
 	- cd $(CEQ_DIR); make clean
 
 prep-gas:
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-prep-gas
 
 ugrid_partition:
-	cd $(GRID_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) ugrid_partition
+	cd $(GRID_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) ugrid_partition
 
 prep-chem:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-chem
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) PLATFORM=$(PLATFORM) build-prep-chem
 
 chemkin2eilmer:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-chemkin2eilmer
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) PLATFORM=$(PLATFORM) build-chemkin2eilmer
 
 prep-kinetics:
-	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-kinetics
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) PLATFORM=$(PLATFORM) build-prep-kinetics
 
 $(LIBGASF):
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) libgasf.a
 
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local
