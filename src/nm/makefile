@@ -3,6 +3,7 @@
 # We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
 # when invoking this makefile.  Can also ask for gdc.
 DMD ?= ldmd2
+
 ifeq ($(shell uname -s), Darwin)
     PLATFORM := macosx
 else
@@ -45,6 +46,7 @@ TEST_PROGRAMS := bbla_test bbla_complex_test \
 LUA := ../../extern/lua-5.4.3
 LIBLUA := $(LUA)/install/lib/liblua.a
 LIBLUAPATH := $(LUA)/lib
+
 ifeq ($(DMD), dmd)
     # DFLAGS := -w
     DFLAGS := -w -O -release -inline -boundscheck=off
@@ -58,14 +60,6 @@ ifeq ($(DMD), ldmd2)
     DFLAGS := -w -O -release -inline -boundscheck=off
     OF := -of
     DLINKFLAGS := -L-L$(LIBLUAPATH) -L-ldl
-    ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
-    endif
-endif
-ifeq ($(DMD), gdc)
-    DFLAGS := -Wall -O2 -frelease -fno-debug
-    OF := -o
-    DLINKFLAGS := -L$(LIBLUAPATH) -ldl
     ifeq ($(PLATFORM), macosx)
 	DLINKFLAGS += -L-ld_classic
     endif
@@ -105,7 +99,7 @@ clean:
 # Specific targets, for individual artefacts.
 
 $(LIBLUA):
-	cd $(LUA); make $(PLATFORM) local
+	cd $(LUA); make $(PLATFORM) local PLATFORM=$(PLATFORM)
 
 bbla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
@@ -199,7 +193,7 @@ rsla_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=rsla_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
-luabbla_test: luabbla.d bbla.d complex.d number.d $(UTIL_FILES) $(LIBLUA) $(UTIL_FILES)
+luabbla_test: luabbla.d bbla.d complex.d number.d $(UTIL_FILES) $(LIBLUA)
 	$(DMD) -of$@ -debug -g -w -dip1008 -version=$@ \
 		luabbla.d bbla.d complex.d number.d $(UTIL_FILES) $(LIBLUA) $(DLINKFLAGS)
 

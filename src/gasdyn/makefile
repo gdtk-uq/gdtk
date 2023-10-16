@@ -44,7 +44,7 @@ include $(KINETICS_DIR)/kinetics_files.mk
 # For development work, we have put on -debug.
 DFLAGS := -w -debug -g -dip1008 -I..
 OF := -of
-DLINKFLAGS := -L-ldl -L-lgfortran
+DLINKFLAGS := -L-ldl
 ifeq ($(PLATFORM), macosx)
     DLINKFLAGS += -L-ld_classic
 endif
@@ -68,30 +68,30 @@ clean:
 	- cd $(CEQ_DIR); make clean
 
 $(LIBLUA):
-	cd $(LUA_DIR); make $(PLATFORM) local
+	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
 
 $(LIBGASF):
-	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=dmd libgasf.a
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=ldmd2 libgasf.a
 
 $(LIBCEQ):
 	cd $(CEQ_DIR); make
 
 idealgasflow_demo: idealgasflow_demo.d idealgasflow.d $(NM_FILES) $(LIBLUA) \
 	$(UTIL_FILES)
-	dmd $(DFLAGS) $(OF)idealgasflow_demo \
+	ldmd2 $(DFLAGS) $(OF)idealgasflow_demo \
 		idealgasflow_demo.d idealgasflow.d gasflowexception.d \
 		$(NM_FILES) $(LIBLUA) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
 luaidealgasflow_demo: luaidealgasflow_demo.d $(NM_FILES) $(LIBLUA) \
 	$(UTIL_FILES) idealgasflow.d luaidealgasflow.d
-	dmd $(DFLAGS_LUA) $(OF)luaidealgasflow_demo \
+	ldmd2 $(DFLAGS_LUA) $(OF)luaidealgasflow_demo \
 		luaidealgasflow_demo.d idealgasflow.d luaidealgasflow.d \
 		gasflowexception.d \
 		$(NM_FILES) $(LIBLUA) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
 gasflow_demo: gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES)
-	dmd $(DFLAGS) $(OF)gasflow_demo \
+	ldmd2 $(DFLAGS) $(OF)gasflow_demo \
 		gasflow_demo.d gasflow.d idealgasflow.d gasflowexception.d \
 		$(NM_FILES) $(UTIL_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(KINETICS_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(DLINKFLAGS_LUA)
@@ -101,7 +101,7 @@ luagasflow_demo: luagasflow_demo.d luagasflow.d luaidealgasflow.d \
 	$(NM_FILES) $(LIBLUA) $(LIBCEQ) $(LIBGASF) \
 	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(CEQ_SRC_FILES) $(GAS_LUA_FILES) \
 	$(KINETICS_FILES) $(KINETICS_LUA_FILES)
-	dmd $(DFLAGS) $(OF)luagasflow_demo \
+	ldmd2 $(DFLAGS) $(OF)luagasflow_demo \
 		luagasflow_demo.d luagasflow.d luaidealgasflow.d \
 		gasflow.d idealgasflow.d gasflowexception.d \$(NM_FILES) $(UTIL_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \

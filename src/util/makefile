@@ -19,7 +19,7 @@ LUAD_FILES := $(LUAD_DIR)/luad/*.d \
 	$(LUAD_DIR)/luad/conversions/*.d
 
 $(LIBLUA):
-	cd $(LUA); make $(PLATFORM) local
+	cd $(LUA); make $(PLATFORM) local PLATFORM=$(PLATFORM)
 
 lua_service : lua_service.d $(LIBLUA)
 	dmd -main -unittest -g lua_service.d ${LUAD_FILES} -L-L$(LIBLUAPATH) -L-llua $(DLINKFLAGS)

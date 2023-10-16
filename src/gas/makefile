@@ -238,7 +238,7 @@ libgas.so: gas_cwrap.d $(LIBLUA) $(GAS_FILES) $(KINETICS_FILES) \
 		-L-L=$(INSTALL_DIR)/lib $(DLINKFLAGS)
 
 $(LIBLUA):
-	cd $(LUA_DIR); make $(PLATFORM) local
+	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
 
 $(LIBCEQ):
 	cd $(CEQ_DIR); make

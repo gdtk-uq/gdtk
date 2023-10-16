@@ -176,7 +176,7 @@ clean:
 	- cd $(TINYENDIAN_DIR); rm -rf *.o
 
 $(LIBLUA):
-	cd $(LUA_DIR); make $(PLATFORM) local
+	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
 
 $(LIBGASF):
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) libgasf.a

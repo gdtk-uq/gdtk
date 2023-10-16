@@ -144,7 +144,7 @@ all-clean:
 # Specific targets, for individual artefacts.
 
 $(LIBLUA):
-	cd $(LUA_DIR); make $(PLATFORM) local
+	cd $(LUA_DIR); make $(PLATFORM) local PLATFORM=$(PLATFORM)
 
 foamMesh: foamMesh.d $(LIBLUA) $(GEOM_FILES) $(GEOM_LUA_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' foamMesh.d > foamMesh_with_rev_string.d
