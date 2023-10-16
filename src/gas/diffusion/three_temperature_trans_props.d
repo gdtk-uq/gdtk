@@ -405,7 +405,7 @@ private:
 }
 
 
-version(two_temperature_trans_props_test)
+version(three_temperature_trans_props_test)
 {
     int main()
     {
@@ -423,7 +423,7 @@ version(two_temperature_trans_props_test)
         doLuaFile(L, "sample-data/N2-N.lua");
         string[] speciesNames;
         getArrayOfStrings(L, "species", speciesNames);
-        auto ttp = new TwoTemperatureTransProps(L, speciesNames);
+        auto ttp = new ThreeTemperatureTransProps(L, speciesNames);
         lua_close(L);
         auto gs = GasState(2, 1);
         gs.p = 1.0e5;

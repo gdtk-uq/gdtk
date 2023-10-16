@@ -173,7 +173,7 @@ version(cea_therm_cond_test) {
         lua_close(L);
         auto Q = GasState(1, 1);
         Q.T = 3500.0;
-        assert(isClose(1.859070e-01, co2CEA.eval(Q, -1), 1.0e-6), failedUnitTest());
+        assert(isClose(1.859070e-01, co2CEA.eval(Q.T), 1.0e-6), failedUnitTest());
 
         return 0;
     }

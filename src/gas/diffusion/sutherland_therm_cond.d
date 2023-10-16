@@ -101,7 +101,7 @@ version(sutherland_therm_cond_test) {
         auto gd = GasState(1, 0);
         gd.T = 300.0;
         gd.k = 0.0;
-        tcm.update_thermal_conductivity(gd);
+        tcm.eval(gd.T);
         assert(approxEqualNumbers(gd.k, to!number(0.0262449), 1.0e-6), failedUnitTest());
 
         return 0;
