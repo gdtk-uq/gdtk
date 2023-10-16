@@ -98,11 +98,8 @@ version(sutherland_therm_cond_test) {
                                   1.0e-6), failedUnitTest());
 
         auto tcm = new SutherlandThermCond(T_ref, k_ref, S);
-        auto gd = GasState(1, 0);
-        gd.T = 300.0;
-        gd.k = 0.0;
-        tcm.eval(gd.T);
-        assert(approxEqualNumbers(gd.k, to!number(0.0262449), 1.0e-6), failedUnitTest());
+        double k = tcm.eval(300.0);
+        assert(approxEqualNumbers(k, to!number(0.0262449), 1.0e-6), failedUnitTest());
 
         return 0;
     }

@@ -103,18 +103,16 @@ version(sutherland_viscosity_test) {
         assert(isClose(sutherland_viscosity(T, T_ref, mu_ref, S), 1.84691e-05, 1.0e-3), failedUnitTest());
 
         auto vm = new SutherlandViscosity(T_ref, mu_ref, S);
-        auto gd = GasState(1, 1);
-        gd.T = 300.0;
-        vm.eval(gd.T);
-        assert(approxEqualNumbers(gd.mu, to!number(1.84691e-05), 1.0e-5), failedUnitTest());
+        double mu = vm.eval(300.0);
+        assert(approxEqualNumbers(mu, to!number(1.84691e-05), 1.0e-5), failedUnitTest());
 
         lua_State* L = init_lua_State();
         doLuaFile(L, "sample-data/O2-viscosity.lua");
         lua_getglobal(L, "Sutherland");
         vm = createSutherlandViscosity(L);
         lua_close(L);
-        vm.eval(gd.T);
-        assert(approxEqualNumbers(gd.mu, to!number(1.84691e-05), 1.0e-3), failedUnitTest());
+        mu = vm.eval(300.0);
+        assert(approxEqualNumbers(mu, to!number(1.84691e-05), 1.0e-3), failedUnitTest());
 
         return 0;
     }
