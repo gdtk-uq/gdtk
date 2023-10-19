@@ -37,6 +37,15 @@ struct Result{
     double massflux_rel_err, enthalpy_rel_err, pitot_rel_err;
 }
 
+class Nenzf1dAnalysisException : Exception {
+    @nogc
+    this(string message, string file=__FILE__, size_t line=__LINE__,
+         Throwable next=null)
+    {
+        super(message, file, line, next);
+    }
+}
+
 Result analyse(int verbosityLevel, Config config)
 {
     // The core of the nenzf1d program is a sequence of state-to-state calculations
@@ -63,6 +72,7 @@ Result analyse(int verbosityLevel, Config config)
     double C = config.C;
     double[] xi = config.xi;
     double[] di = config.di;
+    bool check_supersonic_expansion = true;
     if (verbosityLevel >= 2) {
         writeln("Input data.");
         writeln("  gas-model-1= ", gm1_filename);
@@ -81,6 +91,7 @@ Result analyse(int verbosityLevel, Config config)
         writeln("  C= ", C);
         writeln("  xi= ", xi);
         writeln("  di= ", di);
+	writeln("  check_supersonic_expansion= ", check_supersonic_expansion);
     }
     //
     // ---------------------------
@@ -153,7 +164,7 @@ Result analyse(int verbosityLevel, Config config)
     }
     double x6 = 1.0;
     try {
-        // Note that with the CEA2 calculations, we rally cannot get the
+        // Note that with the CEA2 calculations, we really cannot get the
         // following iteration to converge better then 1.0e-4.
         x6 = nm.secant.solve!(error_at_throat, double)(0.95, 0.90, 1.0e-4);
     } catch (Exception e) {
@@ -184,7 +195,7 @@ Result analyse(int verbosityLevel, Config config)
     }
     double x6e = x6;
     try {
-        // Note that with the CEA2 calculations, we rally cannot get the
+        // Note that with the CEA2 calculations, we really cannot get the
         // following iteration to converge better then 1.0e-4.
         x6e = nm.secant.solve!(error_at_small_expansion, double)(0.95*x6, 0.90*x6, 1.0e-4);
     } catch (Exception e) {
@@ -535,6 +546,13 @@ Result analyse(int verbosityLevel, Config config)
         if (verbosityLevel >= 2) {
             writeln(sample_data(x1, area1, v1, gas1, dt_suggest));
         }
+	// Check that we are going down the supersonic-branch of the expansion.
+	if (check_supersonic_expansion && (dv < 0.0 || du_gda > 0.0)) {
+            string msg = format("We seem to be going down the subsonic branch dv=%g du_gda=%g", dv, du_gda);
+	    msg ~= "\nMaybe the equilibrium-flow analysis did not continue far enough past M=1 at the throat.";
+	    msg ~= "\nTry increasing the value of meq_throat.";
+	    throw new Nenzf1dAnalysisException(msg);
+	}
         // House-keeping for the next step.
         v = v1; t = t1; x = x1; d =  d1; area = area1;
         gas0.copy_values_from(gas1);
