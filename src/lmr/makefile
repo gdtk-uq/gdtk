@@ -15,6 +15,7 @@ GPP ?= g++
 # that will have better checks and more detailed error messages.
 # The 'fast' option requests production mode and to include optimisations.
 FLAVOUR ?= debug
+WITH_FPE ?= 1
 
 # PLATFORM options are linux, macosx
 ifeq ($(shell uname -s), Darwin)

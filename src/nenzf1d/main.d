@@ -7,6 +7,7 @@ import std.stdio;
 import std.string;
 import std.getopt;
 import std.file;
+import std.math;
 import dyaml;
 import configuration;
 import shock_tube_nozzle;
@@ -14,6 +15,13 @@ import shock_tube_nozzle;
 int main(string[] args)
 {
     int exitFlag = 0; // Presume OK in the beginning.
+    version(enable_fp_exceptions) {
+        FloatingPointControl fpctrl;
+        // Enable hardware exceptions for division by zero, overflow to infinity,
+        // invalid operations, and uninitialized floating-point variables.
+        // Copied from https://dlang.org/library/std/math/floating_point_control.html
+        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    }
     //
     // Be careful with the usageMsg string; it has embedded newline characters.
     string usageMsg = "Usage: nenzf1d <input-file>

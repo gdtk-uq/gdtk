@@ -38,6 +38,13 @@ ReactionMechanism[] reaction_mechanisms;
 extern (C) int cwrap_gas_init()
 {
     Runtime.initialize();
+    version(enable_fp_exceptions) {
+        FloatingPointControl fpctrl;
+        // Enable hardware exceptions for division by zero, overflow to infinity,
+        // invalid operations, and uninitialized floating-point variables.
+        // Copied from https://dlang.org/library/std/math/floating_point_control.html
+        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    }
     gas_models.length = 0;
     gas_states.length = 0;
     thermochemical_reactors.length = 0;

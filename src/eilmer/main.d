@@ -64,7 +64,15 @@ void moveFileToBackup(string fileName)
 int main(string[] args)
 {
     version(diagnostics) { ProfilerStart(); }
-
+    //
+    version(enable_fp_exceptions) {
+        FloatingPointControl fpctrl;
+        // Enable hardware exceptions for division by zero, overflow to infinity,
+        // invalid operations, and uninitialized floating-point variables.
+        // Copied from https://dlang.org/library/std/math/floating_point_control.html
+        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    }
+    //
     int exitFlag = 0; // Presume OK in the beginning.
     version(mpi_parallel) {
         // This preamble copied directly from the OpenMPI hello-world example.

@@ -5,6 +5,7 @@ DMD ?= ldc2
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
 FLAVOUR ?= debug
+WITH_FPE ?= 1
 
 ifeq ($(shell uname -s), Darwin)
     PLATFORM := macosx
@@ -125,6 +126,10 @@ ifeq ($(DMD), ldc2)
     ifeq ($(PLATFORM), macosx)
 	DLINKFLAGS += -L-ld_classic
     endif
+endif
+
+ifeq ($(WITH_FPE),1)
+    DFLAGS += $(DVERSION)enable_fp_exceptions
 endif
 
 ifeq ($(WITH_DVODE),1)

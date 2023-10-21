@@ -13,6 +13,7 @@ import std.getopt;
 import std.conv;
 import std.algorithm;
 import std.parallelism;
+import std.math;
 
 import config;
 import transient_calc;
@@ -21,7 +22,14 @@ import fluidblock;
 int main(string[] args)
 {
     int exitFlag = 0; // Presume OK in the beginning.
-
+    version(enable_fp_exceptions) {
+        FloatingPointControl fpctrl;
+        // Enable hardware exceptions for division by zero, overflow to infinity,
+        // invalid operations, and uninitialized floating-point variables.
+        // Copied from https://dlang.org/library/std/math/floating_point_control.html
+        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    }
+    //
     // We assemble the usage messages as multi-line strings.
     // Be careful when editing them and try to limit the line length
     // to something that is likely to easily fit on a console,
