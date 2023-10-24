@@ -137,7 +137,7 @@ struct L3R3InterpData {
 pragma(inline, true)
 @nogc
 void interp_l2r2_scalar(number qL1, number qL0, number qR0, number qR1,
-                        in L2R2InterpData idi, bool apply_limiter, bool extrema_clipping, double smooth_limiter_coeff,
+                        in L2R2InterpData idi, bool apply_limiter, bool extrema_clipping, double epsilon_van_albada,
                         ref number qL, ref number qR, number beta)
 {
     // Set up differences and limiter values.
@@ -149,7 +149,7 @@ void interp_l2r2_scalar(number qL1, number qL0, number qR0, number qR1,
     number qqL = fmax(1e-12, fabs(qL0));
     number qqR = fmax(1e-12, fabs(qR0));
     number qq = fmax(qqL, qqR);
-    number epsilon = qq*smooth_limiter_coeff*idi.two_over_lenR0_plus_lenL0;
+    number epsilon = qq*epsilon_van_albada*idi.two_over_lenR0_plus_lenL0;
     // Presume unlimited high-order reconstruction.
     number sL = 1.0;
     number sR = 1.0;
@@ -175,7 +175,7 @@ pragma(inline, true)
 @nogc
 void interp_l3r3_scalar(number qL2, number qL1, number qL0,
                         number qR0, number qR1, number qR2,
-                        in L3R3InterpData d, bool apply_limiter, bool extrema_clipping, double smooth_limiter_coeff,
+                        in L3R3InterpData d, bool apply_limiter, bool extrema_clipping, double epsilon_van_albada,
                         ref number qL, ref number qR, number beta)
 {
     // Set up differences and limiter values.
@@ -186,7 +186,7 @@ void interp_l3r3_scalar(number qL2, number qL1, number qL0,
     number qqL = fmax(1e-12, fabs(qL0));
     number qqR = fmax(1e-12, fabs(qR0));
     number qq = fmax(qqL, qqR);
-    number epsilon = qq*smooth_limiter_coeff;
+    number epsilon = qq*epsilon_van_albada;
     // Presume unlimited high-order reconstruction.
     number sL = 1.0;
     number sR = 1.0;
@@ -227,31 +227,31 @@ void interp_l2r2(in FlowState cL1fs, in FlowState cL0fs, in FlowState cR0fs, in 
     //}
 
     GasModel gmodel = myConfig.gmodel;
-    double smooth_limiter_coeff = myConfig.smooth_limiter_coeff/300.0;
+    double epsilon_van_albada = myConfig.epsilon_van_albada;
 
     interp_l2r2_scalar(cL1fs.vel.x, cL0fs.vel.x, cR0fs.vel.x, cR1fs.vel.x,
-                       idi, apply_limiter, extrema_clipping, smooth_limiter_coeff,
+                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
                        Lft.vel.x, Rght.vel.x, beta);
     interp_l2r2_scalar(cL1fs.vel.y, cL0fs.vel.y, cR0fs.vel.y, cR1fs.vel.y,
-                       idi, apply_limiter, extrema_clipping,smooth_limiter_coeff,
+                       idi, apply_limiter, extrema_clipping,epsilon_van_albada,
                        Lft.vel.y, Rght.vel.y, beta);
     interp_l2r2_scalar(cL1fs.vel.z, cL0fs.vel.z, cR0fs.vel.z, cR1fs.vel.z,
-                       idi, apply_limiter, extrema_clipping,smooth_limiter_coeff,
+                       idi, apply_limiter, extrema_clipping,epsilon_van_albada,
                        Lft.vel.z, Rght.vel.z, beta);
     version(MHD) {
         if (MHD) {
             interp_l2r2_scalar(cL1fs.B.x, cL0fs.B.x, cR0fs.B.x, cR1fs.B.x,
-                               idi, apply_limiter, extrema_clipping,smooth_limiter_coeff,
+                               idi, apply_limiter, extrema_clipping,epsilon_van_albada,
                                Lft.B.x, Rght.B.x, beta);
             interp_l2r2_scalar(cL1fs.B.y, cL0fs.B.y, cR0fs.B.y, cR1fs.B.y,
-                               idi, apply_limiter, extrema_clipping,smooth_limiter_coeff,
+                               idi, apply_limiter, extrema_clipping,epsilon_van_albada,
                                Lft.B.y, Rght.B.y, beta);
             interp_l2r2_scalar(cL1fs.B.z, cL0fs.B.z, cR0fs.B.z, cR1fs.B.z,
-                               idi, apply_limiter, extrema_clipping,smooth_limiter_coeff,
+                               idi, apply_limiter, extrema_clipping,epsilon_van_albada,
                                Lft.B.z, Rght.B.z, beta);
             if (myConfig.divergence_cleaning) {
                 interp_l2r2_scalar(cL1fs.psi, cL0fs.psi, cR0fs.psi, cR1fs.psi,
-                                   idi, apply_limiter, extrema_clipping,smooth_limiter_coeff,
+                                   idi, apply_limiter, extrema_clipping,epsilon_van_albada,
                                    Lft.psi, Rght.psi, beta);
             }
         }
@@ -259,7 +259,7 @@ void interp_l2r2(in FlowState cL1fs, in FlowState cL0fs, in FlowState cR0fs, in 
     version(turbulence) {
         foreach (it; 0 .. nturb){
             interp_l2r2_scalar(cL1fs.turb[it], cL0fs.turb[it], cR0fs.turb[it], cR1fs.turb[it],
-                               idi, apply_limiter, extrema_clipping,smooth_limiter_coeff,
+                               idi, apply_limiter, extrema_clipping,epsilon_van_albada,
                                Lft.turb[it], Rght.turb[it], beta);
         }
     }
@@ -273,7 +273,7 @@ void interp_l2r2(in FlowState cL1fs, in FlowState cL0fs, in FlowState cR0fs, in 
             if (myConfig.allow_reconstruction_for_species) {
                 foreach (isp; 0 .. nsp) {
                     interp_l2r2_scalar(gL1.massf[isp], gL0.massf[isp], gR0.massf[isp], gR1.massf[isp],
-                                       idi, apply_limiter, extrema_clipping,smooth_limiter_coeff,
+                                       idi, apply_limiter, extrema_clipping,epsilon_van_albada,
                                        Lft.gas.massf[isp], Rght.gas.massf[isp], beta);
                 }
                 if (myConfig.scale_species_after_reconstruction) {
@@ -294,13 +294,13 @@ void interp_l2r2(in FlowState cL1fs, in FlowState cL0fs, in FlowState cR0fs, in 
     // and fill in the rest based on an EOS call.
     final switch (thermo_interpolator) {
     case InterpolateOption.pt:
-        interp_l2r2_scalar(gL1.p, gL0.p, gR0.p, gR1.p, idi, apply_limiter, extrema_clipping,smooth_limiter_coeff, Lft.gas.p, Rght.gas.p, beta);
-        interp_l2r2_scalar(gL1.T, gL0.T, gR0.T, gR1.T, idi, apply_limiter, extrema_clipping,smooth_limiter_coeff, Lft.gas.T, Rght.gas.T, beta);
+        interp_l2r2_scalar(gL1.p, gL0.p, gR0.p, gR1.p, idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.p, Rght.gas.p, beta);
+        interp_l2r2_scalar(gL1.T, gL0.T, gR0.T, gR1.T, idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.T, Rght.gas.T, beta);
         version(multi_T_gas) {
             if (myConfig.allow_reconstruction_for_energy_modes) {
                 foreach (i; 0 .. nmodes) {
                     interp_l2r2_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i],
-                                       idi, apply_limiter, extrema_clipping,smooth_limiter_coeff,
+                                       idi, apply_limiter, extrema_clipping,epsilon_van_albada,
                                        Lft.gas.T_modes[i], Rght.gas.T_modes[i], beta);
                 }
             } else {
@@ -312,13 +312,13 @@ void interp_l2r2(in FlowState cL1fs, in FlowState cL0fs, in FlowState cR0fs, in 
         gmodel.update_thermo_from_pT(Rght.gas);
         break;
     case InterpolateOption.rhou:
-        interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, idi, apply_limiter, extrema_clipping,smooth_limiter_coeff, Lft.gas.rho, Rght.gas.rho, beta);
-        interp_l2r2_scalar(gL1.u, gL0.u, gR0.u, gR1.u, idi, apply_limiter, extrema_clipping,smooth_limiter_coeff, Lft.gas.u, Rght.gas.u, beta);
+        interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.rho, Rght.gas.rho, beta);
+        interp_l2r2_scalar(gL1.u, gL0.u, gR0.u, gR1.u, idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.u, Rght.gas.u, beta);
         version(multi_T_gas) {
             if (myConfig.allow_reconstruction_for_energy_modes) {
                 foreach (i; 0 .. nmodes) {
                     interp_l2r2_scalar(gL1.u_modes[i], gL0.u_modes[i], gR0.u_modes[i], gR1.u_modes[i],
-                                       idi, apply_limiter, extrema_clipping,smooth_limiter_coeff,
+                                       idi, apply_limiter, extrema_clipping,epsilon_van_albada,
                                        Lft.gas.u_modes[i], Rght.gas.u_modes[i], beta);
                 }
             } else {
@@ -330,13 +330,13 @@ void interp_l2r2(in FlowState cL1fs, in FlowState cL0fs, in FlowState cR0fs, in 
         gmodel.update_thermo_from_rhou(Rght.gas);
         break;
     case InterpolateOption.rhop:
-        interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, idi, apply_limiter, extrema_clipping,smooth_limiter_coeff, Lft.gas.rho, Rght.gas.rho, beta);
-        interp_l2r2_scalar(gL1.p, gL0.p, gR0.p, gR1.p, idi, apply_limiter, extrema_clipping,smooth_limiter_coeff, Lft.gas.p, Rght.gas.p, beta);
+        interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.rho, Rght.gas.rho, beta);
+        interp_l2r2_scalar(gL1.p, gL0.p, gR0.p, gR1.p, idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.p, Rght.gas.p, beta);
         version(multi_T_gas) {
             if (myConfig.allow_reconstruction_for_energy_modes) {
                 foreach (i; 0 .. nmodes) {
                     interp_l2r2_scalar(gL1.u_modes[i], gL0.u_modes[i], gR0.u_modes[i], gR1.u_modes[i],
-                                       idi, apply_limiter, extrema_clipping,smooth_limiter_coeff,
+                                       idi, apply_limiter, extrema_clipping,epsilon_van_albada,
                                        Lft.gas.u_modes[i], Rght.gas.u_modes[i], beta);
                 }
             } else {
@@ -348,13 +348,13 @@ void interp_l2r2(in FlowState cL1fs, in FlowState cL0fs, in FlowState cR0fs, in 
         gmodel.update_thermo_from_rhop(Rght.gas);
         break;
     case InterpolateOption.rhot:
-        interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, idi, apply_limiter, extrema_clipping,smooth_limiter_coeff, Lft.gas.rho, Rght.gas.rho, beta);
-        interp_l2r2_scalar(gL1.T, gL0.T, gR0.T, gR1.T,idi, apply_limiter, extrema_clipping,smooth_limiter_coeff, Lft.gas.T, Rght.gas.T, beta);
+        interp_l2r2_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.rho, Rght.gas.rho, beta);
+        interp_l2r2_scalar(gL1.T, gL0.T, gR0.T, gR1.T,idi, apply_limiter, extrema_clipping,epsilon_van_albada, Lft.gas.T, Rght.gas.T, beta);
         version(multi_T_gas) {
             if (myConfig.allow_reconstruction_for_energy_modes) {
                 foreach (i; 0 .. nmodes) {
                     interp_l2r2_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i],
-                                       idi, apply_limiter, extrema_clipping,smooth_limiter_coeff,
+                                       idi, apply_limiter, extrema_clipping,epsilon_van_albada,
                                        Lft.gas.T_modes[i], Rght.gas.T_modes[i], beta);
                 }
             } else {
@@ -395,32 +395,32 @@ void interp_l3r3(in FlowState cL2fs, in FlowState cL1fs, in FlowState cL0fs, in 
     //cR1fs.vel.transform_to_local_frame(n, t1, t2);
     //}
 
-    double smooth_limiter_coeff = myConfig.smooth_limiter_coeff;
+    double epsilon_van_albada = myConfig.epsilon_van_albada;
     GasModel gmodel = myConfig.gmodel;
 
     interp_l3r3_scalar(cL2fs.vel.x, cL1fs.vel.x, cL0fs.vel.x, cR0fs.vel.x, cR1fs.vel.x, cR2fs.vel.x,
-                       idi, apply_limiter, extrema_clipping, smooth_limiter_coeff,
+                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
                        Lft.vel.x, Rght.vel.x, beta);
     interp_l3r3_scalar(cL2fs.vel.y, cL1fs.vel.y, cL0fs.vel.y, cR0fs.vel.y, cR1fs.vel.y, cR2fs.vel.y,
-                       idi, apply_limiter, extrema_clipping, smooth_limiter_coeff,
+                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
                        Lft.vel.y, Rght.vel.y, beta);
     interp_l3r3_scalar(cL2fs.vel.z, cL1fs.vel.z, cL0fs.vel.z, cR0fs.vel.z, cR1fs.vel.z, cR2fs.vel.z,
-                       idi, apply_limiter, extrema_clipping, smooth_limiter_coeff,
+                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
                        Lft.vel.z, Rght.vel.z, beta);
     version(MHD) {
         if (MHD) {
             interp_l3r3_scalar(cL2fs.B.x, cL1fs.B.x, cL0fs.B.x, cR0fs.B.x, cR1fs.B.x, cR2fs.B.x,
-                               idi, apply_limiter, extrema_clipping, smooth_limiter_coeff,
+                               idi, apply_limiter, extrema_clipping, epsilon_van_albada,
                                Lft.B.x, Rght.B.x, beta);
             interp_l3r3_scalar(cL2fs.B.y, cL1fs.B.y, cL0fs.B.y, cR0fs.B.y, cR1fs.B.y, cR2fs.B.y,
-                               idi, apply_limiter, extrema_clipping, smooth_limiter_coeff,
+                               idi, apply_limiter, extrema_clipping, epsilon_van_albada,
                                Lft.B.y, Rght.B.y, beta);
             interp_l3r3_scalar(cL2fs.B.z, cL1fs.B.z, cL0fs.B.z, cR0fs.B.z, cR1fs.B.z, cR2fs.B.z,
-                               idi, apply_limiter, extrema_clipping, smooth_limiter_coeff,
+                               idi, apply_limiter, extrema_clipping, epsilon_van_albada,
                                Lft.B.z, Rght.B.z, beta);
             if (myConfig.divergence_cleaning) {
                 interp_l3r3_scalar(cL2fs.psi, cL1fs.psi, cL0fs.psi, cR0fs.psi, cR1fs.psi, cR2fs.psi,
-                                   idi, apply_limiter, extrema_clipping, smooth_limiter_coeff,
+                                   idi, apply_limiter, extrema_clipping, epsilon_van_albada,
                                    Lft.psi, Rght.psi, beta);
             }
         }
@@ -428,7 +428,7 @@ void interp_l3r3(in FlowState cL2fs, in FlowState cL1fs, in FlowState cL0fs, in 
     version(turbulence) {
         foreach (it; 0 .. nturb){
             interp_l3r3_scalar(cL2fs.turb[it], cL1fs.turb[it], cL0fs.turb[it], cR0fs.turb[it], cR1fs.turb[it], cR2fs.turb[it],
-                               idi, apply_limiter, extrema_clipping, smooth_limiter_coeff,
+                               idi, apply_limiter, extrema_clipping, epsilon_van_albada,
                                Lft.turb[it], Rght.turb[it], beta);
         }
     }
@@ -444,7 +444,7 @@ void interp_l3r3(in FlowState cL2fs, in FlowState cL1fs, in FlowState cL0fs, in 
             if (myConfig.allow_reconstruction_for_species) {
                 foreach (isp; 0 .. nsp) {
                     interp_l3r3_scalar(gL2.massf[isp], gL1.massf[isp], gL0.massf[isp], gR0.massf[isp], gR1.massf[isp], gR2.massf[isp],
-                                       idi, apply_limiter, extrema_clipping, smooth_limiter_coeff,
+                                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
                                        Lft.gas.massf[isp], Rght.gas.massf[isp], beta);
                 }
                 if (myConfig.scale_species_after_reconstruction) {
@@ -465,13 +465,13 @@ void interp_l3r3(in FlowState cL2fs, in FlowState cL1fs, in FlowState cL0fs, in 
     // and fill in the rest based on an EOS call.
     final switch (thermo_interpolator) {
     case InterpolateOption.pt:
-        interp_l3r3_scalar(gL2.p, gL1.p, gL0.p, gR0.p, gR1.p, gR2.p, idi, apply_limiter, extrema_clipping, smooth_limiter_coeff, Lft.gas.p, Rght.gas.p, beta);
-        interp_l3r3_scalar(gL2.T, gL1.T, gL0.T, gR0.T, gR1.T, gR2.T, idi, apply_limiter, extrema_clipping, smooth_limiter_coeff, Lft.gas.T, Rght.gas.T, beta);
+        interp_l3r3_scalar(gL2.p, gL1.p, gL0.p, gR0.p, gR1.p, gR2.p, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.p, Rght.gas.p, beta);
+        interp_l3r3_scalar(gL2.T, gL1.T, gL0.T, gR0.T, gR1.T, gR2.T, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.T, Rght.gas.T, beta);
         version(multi_T_gas) {
             if (myConfig.allow_reconstruction_for_energy_modes) {
                 foreach (i; 0 .. nmodes) {
                     interp_l3r3_scalar(gL2.T_modes[i], gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i], gR2.T_modes[i],
-                                       idi, apply_limiter, extrema_clipping, smooth_limiter_coeff,
+                                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
                                        Lft.gas.T_modes[i], Rght.gas.T_modes[i], beta);
                 }
             } else {
@@ -483,13 +483,13 @@ void interp_l3r3(in FlowState cL2fs, in FlowState cL1fs, in FlowState cL0fs, in 
         gmodel.update_thermo_from_pT(Rght.gas);
         break;
     case InterpolateOption.rhou:
-        interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, idi, apply_limiter, extrema_clipping, smooth_limiter_coeff, Lft.gas.rho, Rght.gas.rho, beta);
-        interp_l3r3_scalar(gL2.u, gL1.u, gL0.u, gR0.u, gR1.u, gR2.u, idi, apply_limiter, extrema_clipping, smooth_limiter_coeff, Lft.gas.u, Rght.gas.u, beta);
+        interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.rho, Rght.gas.rho, beta);
+        interp_l3r3_scalar(gL2.u, gL1.u, gL0.u, gR0.u, gR1.u, gR2.u, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.u, Rght.gas.u, beta);
         version(multi_T_gas) {
             if (myConfig.allow_reconstruction_for_energy_modes) {
                 foreach (i; 0 .. nmodes) {
                     interp_l3r3_scalar(gL2.u_modes[i], gL1.u_modes[i], gL0.u_modes[i], gR0.u_modes[i], gR1.u_modes[i], gR1.u_modes[i],
-                                       idi, apply_limiter, extrema_clipping, smooth_limiter_coeff,
+                                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
                                        Lft.gas.u_modes[i], Rght.gas.u_modes[i], beta);
                 }
             } else {
@@ -501,13 +501,13 @@ void interp_l3r3(in FlowState cL2fs, in FlowState cL1fs, in FlowState cL0fs, in 
         gmodel.update_thermo_from_rhou(Rght.gas);
         break;
     case InterpolateOption.rhop:
-        interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, idi, apply_limiter, extrema_clipping, smooth_limiter_coeff, Lft.gas.rho, Rght.gas.rho, beta);
-        interp_l3r3_scalar(gL2.p, gL1.p, gL0.p, gR0.p, gR1.p, gR2.p, idi, apply_limiter, extrema_clipping, smooth_limiter_coeff, Lft.gas.p, Rght.gas.p, beta);
+        interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.rho, Rght.gas.rho, beta);
+        interp_l3r3_scalar(gL2.p, gL1.p, gL0.p, gR0.p, gR1.p, gR2.p, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.p, Rght.gas.p, beta);
         version(multi_T_gas) {
             if (myConfig.allow_reconstruction_for_energy_modes) {
                 foreach (i; 0 .. nmodes) {
                     interp_l3r3_scalar(gL2.u_modes[i], gL1.u_modes[i], gL0.u_modes[i], gR0.u_modes[i], gR1.u_modes[i], gR2.u_modes[i],
-                                       idi, apply_limiter, extrema_clipping, smooth_limiter_coeff,
+                                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
                                        Lft.gas.u_modes[i], Rght.gas.u_modes[i], beta);
                 }
             } else {
@@ -519,13 +519,13 @@ void interp_l3r3(in FlowState cL2fs, in FlowState cL1fs, in FlowState cL0fs, in 
         gmodel.update_thermo_from_rhop(Rght.gas);
         break;
     case InterpolateOption.rhot:
-        interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, idi, apply_limiter, extrema_clipping, smooth_limiter_coeff, Lft.gas.rho, Rght.gas.rho, beta);
-        interp_l3r3_scalar(gL2.T, gL1.T, gL0.T, gR0.T, gR1.T, gR2.T, idi, apply_limiter, extrema_clipping, smooth_limiter_coeff, Lft.gas.T, Rght.gas.T, beta);
+        interp_l3r3_scalar(gL2.rho, gL1.rho, gL0.rho, gR0.rho, gR1.rho, gR2.rho, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.rho, Rght.gas.rho, beta);
+        interp_l3r3_scalar(gL2.T, gL1.T, gL0.T, gR0.T, gR1.T, gR2.T, idi, apply_limiter, extrema_clipping, epsilon_van_albada, Lft.gas.T, Rght.gas.T, beta);
         version(multi_T_gas) {
             if (myConfig.allow_reconstruction_for_energy_modes) {
                 foreach (i; 0 .. nmodes) {
                     interp_l3r3_scalar(gL2.T_modes[i], gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i], gR2.T_modes[i],
-                                       idi, apply_limiter, extrema_clipping, smooth_limiter_coeff,
+                                       idi, apply_limiter, extrema_clipping, epsilon_van_albada,
                                        Lft.gas.T_modes[i], Rght.gas.T_modes[i], beta);
                 }
             } else {
