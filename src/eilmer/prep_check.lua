@@ -119,6 +119,13 @@ function prep_check.warn_if_blocks_not_connected()
    end
 end
 
+function prep_check.check_fixed_time_step()
+    if config.fixed_time_step then
+        config.max_attempts_for_step = 1
+        print("Note: Setting config.fixed_time_step = true disallows restarting of the explicit update with a smaller time step.")
+    end
+end
+
 function prep_check.check_DFT_settings()
     -- Check to see that the DFT has been correctly configured.
 

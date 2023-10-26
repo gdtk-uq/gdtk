@@ -2624,6 +2624,13 @@ void configCheckPoint2()
             cfg.n_ghost_cell_layers = 3;
         }
     }
+
+    if (cfg.fixed_time_step) {
+        cfg.max_attempts_for_step = 1;
+        if (cfg.is_master_task) {
+            writeln("NOTE: disallowing restarting of the explicit step due to fixed_time_step = true");
+        }
+    }
     return;
 } // end configCheckPoint2()
 

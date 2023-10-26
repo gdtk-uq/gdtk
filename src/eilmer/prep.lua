@@ -81,6 +81,7 @@ initTurbulence = prep_check.initTurbulence
 checkCellVolumes = prep_check.checkCellVolumes
 perform_spatial_gradient_consistency_check = prep_check.perform_spatial_gradient_consistency_check
 warn_if_blocks_not_connected = prep_check.warn_if_blocks_not_connected
+check_fixed_time_step = prep_check.check_fixed_time_step
 check_DFT_settings = prep_check.check_DFT_settings
 
 -- ---------------------------------------------------------------------------------------
@@ -125,6 +126,7 @@ suppressViscousStressesZones = {}
 function build_config_files(job)
    perform_spatial_gradient_consistency_check()
    warn_if_blocks_not_connected()
+   check_fixed_time_step()
    if config.do_temporal_DFT then
        check_DFT_settings()
    end
