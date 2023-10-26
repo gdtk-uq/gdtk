@@ -1263,8 +1263,13 @@ class Driver(object):
         state4.update_thermo_from_pT()
         state4.update_sound_speed()
 
-        # we assume that the state 4 driver is stationary
-        v4 = 0.0
+
+        if 'v4' in cfg:
+            # this is the rare cause (for us) of a moving driver, which is basically for a detonation driver
+            v4 = float(cfg['v4'])
+        else:
+            # we assume that the state 4 driver is stationary
+            v4 = 0.0
 
         # I have had to add some of the room temperature only gas state stuff to here for detonation driver
         # configurations, as I was having some issues setting the reference gas state with H2/O2/He gas compositions:
@@ -4053,7 +4058,7 @@ def pitot3_results_output(config_data, gas_path, object_dict, generate_output_fi
         dict_of_objects = {'config_data':config_data, 'gas_path':gas_path,
                            'object_dict':object_dict, 'states_dict':states_dict}
 
-        pitot3_pickle_output_file_creator(dict_of_objects, config_data['output_filename'] + '.pickle')
+        #pitot3_pickle_output_file_creator(dict_of_objects, config_data['output_filename'] + '.pickle')
 
         # and we output a one line csv of the output too...
         pitot3_single_line_output_file_creator(config_data, object_dict, states_dict)

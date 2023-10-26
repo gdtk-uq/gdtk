@@ -6,7 +6,7 @@ Chris James (c.james4@uq.edu.au) - (01/01/21)
 
 """
 
-VERSION_STRING = '12-Oct-2023'
+VERSION_STRING = '26-Oct-2023'
 
 import sys, os, math
 import yaml
@@ -224,7 +224,14 @@ def run_pitot3(config_dict = {}, config_filename = None,
     else:
         print(f"Driver gas {state4.get_gamma_and_R_string()}.")
 
-    print (f"Driver rupture conditions are p4 = {state4.get_gas_state().p/1.0e6:.2f} MPa, T4 = {state4.get_gas_state().T:.2f} K, M_throat = {driver.get_M_throat():.2f}.")
+    v4 = state4.get_v()
+
+    if v4 == 0.0:
+        print (f"Driver rupture conditions are p4 = {state4.get_gas_state().p/1.0e6:.2f} MPa, T4 = {state4.get_gas_state().T:.2f} K, "
+               f"M_throat = {driver.get_M_throat():.2f}.")
+    elif v4 > 0.0:
+        print (f"Driver rupture conditions are p4 = {state4.get_gas_state().p/1.0e6:.2f} MPa, T4 = {state4.get_gas_state().T:.2f} K, "
+               f"v4 = {state4.get_v():.2f} m/s, M_throat = {driver.get_M_throat():.2f}.")
 
     gas_path.append(driver)
     object_dict['driver'] = driver
