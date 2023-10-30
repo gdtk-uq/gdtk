@@ -228,13 +228,13 @@ LUA_MODULES := configoptions.lua \
 	zones.lua \
 	output.lua \
 	sssoptions.lua \
-	prep_check.lua
+	prep_check.lua \
+	fsi/fsioptions.lua \
+	fsi/fsi_check.lua \
+	fsi/fsi_weights.lua \
+	fsi/fsi_prep.lua
 
 ifeq ($(WITH_FSI),1)
-	LUA_MODULES += fsi/fsioptions.lua \
-				   fsi/fsi_check.lua \
-				   fsi/fsi_weights.lua \
-				   fsi/fsi_prep.lua
 	EILMER_FILES += fsi/package.d \
 					fsi/FEMmodel.d \
 					fsi/FEMconfig.d \
