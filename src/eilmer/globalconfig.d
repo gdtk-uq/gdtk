@@ -205,7 +205,8 @@ GasdynamicUpdate update_scheme_from_name(string name)
 }  // end scheme_from_name()
 
 // Symbolic names for grid motion types
-enum GridMotion { none, user_defined, shock_fitting }
+version(FSI) { enum GridMotion { none, user_defined, shock_fitting, FSI } }
+else { enum GridMotion { none, user_defined, shock_fitting } }
 
 @nogc
 string grid_motion_name(GridMotion i)
@@ -214,6 +215,7 @@ string grid_motion_name(GridMotion i)
     case GridMotion.none: return "none";
     case GridMotion.user_defined: return "user_defined";
     case GridMotion.shock_fitting: return "shock_fitting";
+    version(FSI) { case GridMotion.FSI: return "FSI"; }
     }
 }
 
@@ -224,6 +226,7 @@ GridMotion grid_motion_from_name(string name)
     case "none": return GridMotion.none;
     case "user_defined": return GridMotion.user_defined;
     case "shock_fitting": return GridMotion.shock_fitting;
+    version(FSI) { case "FSI": return GridMotion.FSI; }
     default: return GridMotion.none;
     }
 }
@@ -660,6 +663,27 @@ EtaStrategy etaStrategyFromName(string name)
     }
 } // end etaStrategyFromName()
 
+version (FSI) {
+    enum FEMModelForFSI { eulerBernoulli }
+
+    string FEMModelName(FEMModelForFSI FEMModel) {
+        final switch (FEMModel) {
+            case FEMModelForFSI.eulerBernoulli: return "eulerBernoulli";
+        }
+    }
+
+    FEMModelForFSI FEMModelFromName(string name) {
+        switch (name) {
+            case "eulerBernoulli": return FEMModelForFSI.eulerBernoulli;
+            default:
+               string errMsg = "The selected FEM model";
+               errMsg ~= format(" %s ", name);
+               errMsg ~= "is not valid. Available options are:\n";
+               errMsg ~= "\t'eulerBernoulli'";
+               throw new Error(errMsg);
+        }
+    }
+}
 
 // ---------------------
 // PART 2. Special zones
@@ -1282,6 +1306,8 @@ final class GlobalConfig {
     //
     shared static bool do_flow_average = false;
     //
+    version(FSI) { static FEMModelForFSI FEMModel; }
+    //
     // Parameters related to the gpu chemistry mode
     version (gpu_chem) {
         static GPUChem gpuChem;
@@ -1464,6 +1490,8 @@ public:
     //
     bool do_flow_average;
     //
+    version(FSI) { FEMModelForFSI FEMModel; }
+    //
     version (nk_accelerator) {
         SteadyStateSolverOptions sssOptions;
     }
@@ -1630,6 +1658,8 @@ public:
         DFT_step_interval = cfg.DFT_step_interval;
         //
         do_flow_average = cfg.do_flow_average;
+        //
+        version(FSI) { FEMModel = cfg.FEMModel; }
         //
         version (nk_accelerator) { sssOptions = cfg.sssOptions; }
         version (shape_sensitivity) { sscOptions = cfg.sscOptions; }
@@ -2180,6 +2210,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_int("DFT_n_modes", "DFT_n_modes"));
     mixin(update_int("DFT_step_interval", "DFT_step_interval"));
     mixin(update_bool("do_flow_average", "do_flow_average"));
+    version(FSI) { mixin(update_enum("FEMModel", "FEMModel", "FEMModelFromName")); }
     if (cfg.verbosity_level > 1) {
         writeln("  diffuse_wall_bcs_on_init: ", cfg.diffuseWallBCsOnInit);
         writeln("  number_init_passes: ", cfg.nInitPasses);
@@ -2281,6 +2312,8 @@ void set_config_for_core(JSONValue jsonData)
         ssco.maxStepsBezierCurveFit = getJSONint(sscOptions, "max_steps_bezier_curve_fit", ssco.maxStepsBezierCurveFit);
         ssco.userDefinedObjectiveFile = sscOptions["user_defined_objective_file"].str;
     }
+    //
+
     //
     // Enough configuration should be known, such we can build a list of variable names
     // for which data will be written into the flow data files.

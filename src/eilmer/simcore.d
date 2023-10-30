@@ -65,6 +65,8 @@ version (cuda_gpu_chem) {
 version(mpi_parallel) {
     import mpi;
 }
+version(FSI) { import fsi; }
+
 import simcore_gasdynamic_step;
 import simcore_solid_step;
 import simcore_exchange;
@@ -267,6 +269,12 @@ int init_simulation(int tindx, int nextLoadsIndx,
             any_block_fail = true;
         }
     }
+    version(FSI) {
+        foreach (FEMModel; FEMModels) {
+            FEMModel.plateSetup();
+        }
+    }
+
     version(mpi_parallel) {
         int myFlag = to!int(any_block_fail);
         MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);

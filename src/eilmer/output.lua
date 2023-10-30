@@ -392,6 +392,8 @@ function output.write_config_file(fileName)
    --
    f:write(string.format('"do_flow_average": %s,\n', tostring(config.do_flow_average)))
    --
+   f:write(string.format('"FEMModel": \"%s\",\n', tostring(config.FEMModel)))
+   --
    f:write('"shape_sensitivity_calculator_options" : {\n')
    f:write(string.format('   "pseudotime": %s,\n', tostring(ShapeSensitivityCalculator.pseudotime)))
    f:write(string.format('   "pseudotime_lhs_jacobian_order": %d,\n', ShapeSensitivityCalculator.pseudotime_lhs_jacobian_order))

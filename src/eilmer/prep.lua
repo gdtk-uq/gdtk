@@ -76,6 +76,9 @@ write_shock_fitting_helper_files = output.write_shock_fitting_helper_files
 
 require 'sssoptions'
 
+local FSI = require 'fsi_prep'
+write_FSI_config = FSI.write_FSI_config
+
 local prep_check = require 'prep_check'
 initTurbulence = prep_check.initTurbulence
 checkCellVolumes = prep_check.checkCellVolumes
@@ -140,6 +143,9 @@ function build_config_files(job)
    write_fluidBlockArrays_file("config/" .. job .. ".fluidBlockArrays")
    if config.grid_motion == "shock_fitting" then
       write_shock_fitting_helper_files(job)
+   end
+   if config.grid_motion == "FSI" then
+       write_FSI_config(job)
    end
    print("Done building config files.")
 end

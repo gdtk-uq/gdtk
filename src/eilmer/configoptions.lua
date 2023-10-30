@@ -226,6 +226,8 @@ configOptionsHidden = { -- hidden from user
    --
    do_flow_average = false,
    --
+   FEMModel = "eulerBernoulli",
+   --
    __index = function (t, k)
       return configOptionsHidden[k]
    end,

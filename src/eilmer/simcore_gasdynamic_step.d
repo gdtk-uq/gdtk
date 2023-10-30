@@ -44,6 +44,7 @@ import grid_motion_shock_fitting;
 version(mpi_parallel) {
     import mpi;
 }
+version(FSI) { import fsi; }
 import simcore_exchange;
 
 
@@ -1630,6 +1631,16 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 if (fba.shock_fitting) { compute_vtx_velocities_for_sf(fba); }
             }
         }
+        break;
+    version(FSI) {
+        case GridMotion.FSI:
+            foreach (FEMModel; FEMModels) {
+                if (SimState.step % FEMModel.myConfig.couplingStep == 0) {
+                    FEMModel.computeVtxVelocitiesForFSI(SimState.dt_global);
+                }
+            }
+            break;
+        }
     } // end switch grid_motion
     //
     int flagTooManyBadCells;
@@ -2806,6 +2817,16 @@ void gasdynamic_implicit_increment_with_moving_grid()
             foreach (i, fba; fluidBlockArrays) {
                 if (fba.shock_fitting) { compute_vtx_velocities_for_sf(fba); }
             }
+        }
+        break;
+    version(FSI) {
+        case GridMotion.FSI:
+            foreach (FEMModel; FEMModels) {
+                if (SimState.step % FEMModel.myConfig.couplingStep == 0) {
+                    FEMModel.computeVtxVelocitiesForFSI(SimState.dt_global);
+                }
+            }
+            break;
         }
     } // end switch grid_motion
     //

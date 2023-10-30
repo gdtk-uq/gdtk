@@ -230,6 +230,17 @@ LUA_MODULES := configoptions.lua \
 	sssoptions.lua \
 	prep_check.lua
 
+ifeq ($(WITH_FSI),1)
+	LUA_MODULES += fsi/fsioptions.lua \
+				   fsi/fsi_check.lua \
+				   fsi/fsi_weights.lua \
+				   fsi/fsi_prep.lua
+	EILMER_FILES += fsi/package.d \
+					fsi/FEMmodel.d \
+					fsi/FEMconfig.d \
+					fsi/eulerbernoulli.d
+endif
+
 FIELD_FILES := field/field.d \
 	field/fieldgmres.d \
 	field/fieldconductivity.d \
@@ -465,6 +476,10 @@ endif
 
 ifeq ($(MULTI_T_GAS),1)
     DFLAGS += $(DVERSION)multi_T_gas
+endif
+
+ifeq ($(WITH_FSI),1)
+	DFLAGS += $(DVERSION)FSI
 endif
 
 ifeq ($(MHD),1)

@@ -45,6 +45,7 @@ import grid_motion_shock_fitting;
 version(mpi_parallel) {
     import mpi;
 }
+version(FSI) { import fsi; }
 
 // Keep a record of simulation time and dt for snapshots
 Tuple!(double, "t", double, "dt")[] snapshotInfo;
@@ -116,6 +117,11 @@ void write_solution_files()
             blk.sync_vertices_to_underlying_grid(0);
             auto fileName = make_file_name!"grid"(job_name, blk.id, SimState.current_tindx, GlobalConfig.gridFileExt);
             blk.write_underlying_grid(fileName);
+        }
+    }
+    version(FSI) {
+        foreach (FEMModel; FEMModels) {
+            FEMModel.writeToFile(SimState.current_tindx);
         }
     }
     // Update times file, connecting the tindx value to SimState.time.
