@@ -142,8 +142,8 @@ public:
 
         // Read in the weights and indices files for each moving block
         foreach (i, blkId; myConfig.movingBlks) {
-            auto byLineInd = File(format("FSIWeights/%04d.indices", blkId), "r").byLine;
-            auto byLineWeight = File(format("FSIWeights/%04d.weights", blkId), "r").byLine();
+            auto byLineInd = File(format("FSI/Weights/%04d.indices", blkId), "r").byLine;
+            auto byLineWeight = File(format("FSI/Weights/%04d.weights", blkId), "r").byLine();
 
 
             auto lineInd = byLineInd.front(); auto lineWeight = byLineWeight.front();
@@ -185,7 +185,7 @@ public:
         int[] _NodeIds, _CellIds;
         size_t[] sortIndx;
         if (myConfig.northForcing == ForcingType.Fluid) {
-            auto mapFile = File("FSIWeights/northC2N.mapping", "r").byLine();
+            auto mapFile = File("FSI/Weights/northC2N.mapping", "r").byLine();
             auto line = mapFile.front(); mapFile.popFront();
             while (!line.empty) {
                 // First line is the block id
@@ -214,7 +214,7 @@ public:
         }
 
         if (myConfig.southForcing == ForcingType.Fluid) {
-            auto mapFile = File("FSIWeights/southC2N.mapping", "r").byLine();
+            auto mapFile = File("FSI/Weights/southC2N.mapping", "r").byLine();
             auto line = mapFile.front(); mapFile.popFront();
             while (!line.empty) {
                 // First line is the block id

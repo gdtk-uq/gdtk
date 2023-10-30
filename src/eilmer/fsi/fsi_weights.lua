@@ -347,7 +347,7 @@ function fsi_weights.cellToNodeMapping(FBA, Nx, Nz, Length, Width, Side)
     end
 
     -- Now run through the FEM nodes and find out between which vertices do they reside
-    mappingFile = assert(io.open("FSIWeights/"..Side.."C2N.mapping", "w"))
+    mappingFile = assert(io.open("FSI/Weights/"..Side.."C2N.mapping", "w"))
 
     for i = 0, Nx do
         iVtx = 1

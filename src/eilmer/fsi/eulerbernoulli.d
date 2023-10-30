@@ -20,7 +20,6 @@ public:
     this(string jobName, int id) { super(jobName, id); }
 
     override void plateSetup() {
-        super.plateSetup();
 
         // Allocate memory to the vectors/matrices- 2 DoFs per node
         size_t TotalDoF = (myConfig.Nx + 1) * 2;
@@ -31,6 +30,7 @@ public:
         M = new Matrix!number(TotalDoF); M.zeros();
         K = new Matrix!number(TotalDoF); K.zeros();
         F = new Matrix!number(TotalDoF, 1); F.zeros();
+        super.plateSetup();
     }
 
     // begin generateMassStiffnessMatrices
@@ -176,7 +176,7 @@ public:
         auto writeFile = File(format("FSI/t%04d.dat", tindx), "w+");
         writeFile.write("# x\ttheta_x\tdxdt\tdtheta_xdt\n");
         foreach (i; 0 .. (myConfig.Nx + 1)) {
-            writeFile.write(format("%1.8e %1.8e %1.8e %1.8e\n", X[i * 3].re, X[i * 3 + 1].re, V[i * 3].re, V[i * 3 + 1].re));
+            writeFile.write(format("%1.8e %1.8e %1.8e %1.8e\n", X[i * 2].re, X[i * 2 + 1].re, V[i * 2].re, V[i * 2 + 1].re));
         }
     }
 

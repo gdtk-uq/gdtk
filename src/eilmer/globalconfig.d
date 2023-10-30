@@ -60,6 +60,7 @@ import grid_motion_udf;
 import mass_diffusion;
 import loads;
 import turbulence;
+version(FSI) { import fsi; }
 
 // --------------------------------
 // PART 1. Symbolic names and enums
@@ -2405,6 +2406,17 @@ void set_config_for_blocks(JSONValue jsonData)
             myblk.init_boundary_conditions(jsonData["block_" ~ to!string(myblk.id)]);
         }
     }
+    version(FSI) {
+        if (cfg.grid_motion == GridMotion.FSI) {
+            // Only a single structure for now, but maybe more in future
+            foreach (i; cfg.nBlocks .. cfg.nBlocks + 1) {
+                final switch (cfg.FEMModel) {
+                    case FEMModelForFSI.eulerBernoulli: FEMModels ~= new eulerBernoulliBeam(cfg.base_file_name, i); break;
+                }
+            }
+        }
+    }
+
     // Now that the blocks are partly configured, we can initialize
     // the lua_State that holds the user's functions
     // for simulation supervision and for defining grid motion.
