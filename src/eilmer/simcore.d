@@ -1133,8 +1133,14 @@ int integrate_in_time(double target_time_as_requested)
             if ((SimState.step % GlobalConfig.print_count) == 0) {
                 // Print the current time-stepping status.
                 auto writer = appender!string();
-                formattedWrite(writer, "Step=%7d t=%10.3e dt=%10.3e cfl=%.2f ",
+                if (!GlobalConfig.fixed_time_step) {
+                    formattedWrite(writer, "Step=%7d t=%10.3e dt=%10.3e cfl=%.2f ",
                                SimState.step, SimState.time, SimState.dt_global, SimState.cfl_max);
+                } else {
+                    formattedWrite(writer, "Step=%7d t=%10.3e dt=%10.3e cfl=N/A ",
+                               SimState.step, SimState.time, SimState.dt_global);
+                }
+
                 // For reporting wall-clock time, convert to seconds with precision of milliseconds.
                 double wall_clock_elapsed = to!double((Clock.currTime()-SimState.wall_clock_start).total!"msecs"())/1000.0;
                 double wall_clock_per_step = wall_clock_elapsed / SimState.step;
