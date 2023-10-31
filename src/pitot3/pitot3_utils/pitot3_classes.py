@@ -2442,7 +2442,13 @@ class Facility_State(object):
         v = self.get_v()
         mu = self.get_mu()
 
-        return (gas_state.rho*v)/mu
+        if mu > 0.0:
+            unit_Re = (gas_state.rho*v)/mu
+        else:
+            # I have found some cases where it didn't work...
+            unit_Re = None
+
+        return unit_Re
 
     def get_dictionary_output(self, add_trans_coeffs_and_unit_Re = False):
         """
@@ -4023,8 +4029,14 @@ def pitot3_results_output(config_data, gas_path, object_dict, generate_output_fi
             print(f"Calculation with a Wedge angle of {test_section.wedge_angle_degrees:.2f} degrees was attempted but it failed.",
                   file=output_stream)
 
-        print(f"Freestream ({freestream_state.get_state_name()}) unit Reynolds number is {freestream_state.get_unit_Reynolds_number():.2f} /m (related mu is {freestream_state.get_mu():.2e} Pa.s).",
-              file=output_stream)
+        freestream_unit_Re = freestream_state.get_unit_Reynolds_number()
+
+        if freestream_unit_Re:
+            print(f"Freestream ({freestream_state.get_state_name()}) unit Reynolds number is {freestream_state.get_unit_Reynolds_number():.2f} /m (related mu is {freestream_state.get_mu():.2e} Pa.s).",
+                  file=output_stream)
+        else:
+            print(f"Freestream ({freestream_state.get_state_name()}) unit Reynolds number could not be found, so it is not being printed.",
+                file=output_stream)
 
         print(f"Post normal shock equilibrium ({test_section_post_normal_shock_state.get_state_name()}) unit Reynolds number is {test_section_post_normal_shock_state.get_unit_Reynolds_number():.2f} /m (related mu is {test_section_post_normal_shock_state.get_mu():.2e} Pa.s).",
               file=output_stream)
