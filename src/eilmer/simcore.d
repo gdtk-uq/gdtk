@@ -106,15 +106,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     SimState.wall_clock_start = Clock.currTime();
     JSONValue config_jsonData = read_config_file();  // most of the configuration is in here
     read_control_file(); // some of the configuration is in here
-    //
-    version(enable_fp_exceptions) {
-        FloatingPointControl fpctrl;
-        // Enable hardware exceptions for division by zero, overflow to infinity,
-        // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
-    }
-    //
+
     if (GlobalConfig.grid_format == "rawbinary") { GlobalConfig.gridFileExt = "bin"; }
 
     if (GlobalConfig.new_flow_format) {
@@ -927,14 +919,6 @@ void march_over_blocks()
 
 int integrate_in_time(double target_time_as_requested)
 {
-    version(enable_fp_exceptions) {
-        FloatingPointControl fpctrl;
-        // Enable hardware exceptions for division by zero, overflow to infinity,
-        // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
-    }
-    //
     number mass_balance = to!number(0.0);
     number L2_residual = to!number(0.0);
     auto Linf_residuals = new_ConservedQuantities(GlobalConfig.cqi.n);

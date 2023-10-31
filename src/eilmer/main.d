@@ -70,7 +70,16 @@ int main(string[] args)
         // Enable hardware exceptions for division by zero, overflow to infinity,
         // invalid operations, and uninitialized floating-point variables.
         // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+        //fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+
+        // Unfortunately invalidException objects to even writing a NaN
+        // to the screen. Since this behaviour is undesirable we really
+        // can't leave this one enabled, though the other two are fine.
+        // (NNG, Oct 23)
+        //fpctrl.enableExceptions(FloatingPointControl.invalidException);
+        fpctrl.enableExceptions(FloatingPointControl.divByZeroException);
+        fpctrl.enableExceptions(FloatingPointControl.overflowException);
+
     }
     //
     int exitFlag = 0; // Presume OK in the beginning.
