@@ -7,7 +7,7 @@ Chris James (c.james4@uq.edu.au) - 02/01/23
 
 """
 
-CONDITION_BUILDER_VERSION_STRING = '14-Mar-2023'
+CONDITION_BUILDER_VERSION_STRING = '31-Oct-2023'
 
 #----------------------------------------------------------------------------------------
 
@@ -25,8 +25,7 @@ import time
 
 from pitot3 import run_pitot3
 from pitot3_utils.pitot3_classes import pitot3_remote_run_creator, pitot3_pickle_output_file_loader, \
-    pitot3_single_line_output_file_creator, pitot3_pickle_output_file_creator, pitot3_states_dict_json_output_file_loader,\
-    Facility
+    pitot3_single_line_output_file_creator, pitot3_pickle_output_file_creator, pitot3_json_output_file_loader, Facility
 
 #----------------------------------------------------------------------------------------
 
@@ -375,29 +374,22 @@ def run_pitot3_condition_builder(config_dict = {}, config_filename = None,
 
             files_in_the_current_run_directory = os.listdir(os.getcwd())
 
-            pickle_filename = f'{test_name}.pickle'
-
             json_filename = f'{test_name}.json'
 
             # this should ignore anything that failed...
-            if pickle_filename in files_in_the_current_run_directory:
-                dict_of_objects = pitot3_pickle_output_file_loader(pickle_filename)
+            if  json_filename in files_in_the_current_run_directory:
 
-                config_data = dict_of_objects['config_data']
-                object_dict = dict_of_objects['object_dict']
-                states_dict = dict_of_objects['states_dict']
+                json_output_dict = pitot3_json_output_file_loader(json_filename)
 
-                # we need to load the dictionary output from the json file here too, as with proper multi processing
-                # the states dictionary loses the connection to the gas objects and fails if we try to access them
-                # to make a new dictionary output for any state...
+                # I added the single line output stuff from each PITOT3 run to the .json output
+                # so I could use it here instead of re-creating it like I did before...
 
-                json_output_states_dict = pitot3_states_dict_json_output_file_loader(json_filename)
+                single_line_output_dict = json_output_dict['single_line_output_dict']
 
-                title_line, result_line, title_list, result_list = pitot3_single_line_output_file_creator(config_data, object_dict,
-                                                                                                          states_dict = None,
-                                                                                                          json_output_states_dict = json_output_states_dict,
-                                                                                                          output_to_file=False,
-                                                                                                          return_title_and_result_lists = True)
+                title_line = single_line_output_dict['title_line']
+                result_line = single_line_output_dict['result_line']
+                title_list = single_line_output_dict['title_list']
+                result_list = single_line_output_dict['result_list']
 
                 if not have_added_title_line:
                     condition_builder_output_file.write(title_line + '\n')
@@ -413,12 +405,12 @@ def run_pitot3_condition_builder(config_dict = {}, config_filename = None,
                         results_dict[title] = []
                     results_dict[title].append(result)
 
-                # add the dict_of_objects to the dictionary for that too...
+                # add the json_output_dict to the dictionary for that too...
 
-                results_objects_dict[test_name] = dict_of_objects
+                results_objects_dict[test_name] = json_output_dict
 
             else:
-                print(f"{test_name} does not have a .pickle output file so it must have failed.")
+                print(f"{test_name} does not have a .json output file so it must have failed.")
                 unsuccessful_simulations.append(test_number)
 
             # return to the original directory when we're done... (this may actually be unnecessary except for at teh end?)
@@ -440,7 +432,7 @@ def run_pitot3_condition_builder(config_dict = {}, config_filename = None,
     # And we pickle the
 
     print('-'*60)
-    print("Saving the complete result for each simulation to a .pickle file.")
+    print("Saving the json result for each simulation to a .pickle file.")
     print('-'*60)
 
     pickle_results_dict_output_filename = f'{base_output_filename}_final_result_dict_output.pickle'
@@ -572,6 +564,8 @@ def run_pitot3_condition_builder(config_dict = {}, config_filename = None,
                         summary_line = f"Variable {variable} varies from {min_value:.4e} - {max_value:.4e} /m."
                     elif 'mu' in variable:
                         summary_line = f"Variable {variable} varies from {min_value:.4e} - {max_value:.4e} Pa.s."
+                    elif variable == 'basic_test_time_us':
+                        summary_line = f"Variable {variable} varies from {min_value:.2f} - {max_value:.2f} us."
                     elif 'X' in variable or 'c' in variable:
                         # this needs a bit more care as we get big and small numbers
                         if min_value == 0.0:
@@ -624,22 +618,22 @@ def pitot3_condition_builder_test_run(test_name, changing_input_config_dict, var
 
     # we implement a few checks here to see if we need to re-run the simulation or not
 
-    if f'{test_name}.pickle' not in files_in_the_current_run_directory and f'{test_name}_failed.txt' not in files_in_the_current_run_directory:
+    if f'{test_name}.json' not in files_in_the_current_run_directory and f'{test_name}_failed.txt' not in files_in_the_current_run_directory:
         # this is one of the output files, so the simulation has not been ran.
         run_simulation = True
-    elif f'{test_name}.pickle' not in files_in_the_current_run_directory and f'{test_name}_failed.txt' in files_in_the_current_run_directory:
+    elif f'{test_name}.json' not in files_in_the_current_run_directory and f'{test_name}_failed.txt' in files_in_the_current_run_directory:
         # {test_name}_failed.txt file is just a dummy file which tells the condition builder that this run failed.
         # it is no point re-running the simulation if this is in the folder!
         run_simulation = False
     else:
-        # we need to load the pickle file to double check that this result is the same as the input file
+        # we need to load the json file to double check that this result is the same as the input file
         # (it could have been an old simulation)
 
-        pickle_filename = f'{test_name}.pickle'
+        json_filename = f'{test_name}.json'
 
-        dict_of_objects = pitot3_pickle_output_file_loader(pickle_filename)
+        json_output_dict = pitot3_json_output_file_loader(json_filename)
 
-        config_data = dict_of_objects['config_data']
+        config_data = json_output_dict['config_data']
 
         for variable in variables_we_iterate_through:
             if changing_input_config_dict[test_name][variable] != config_data[variable]:
@@ -676,7 +670,7 @@ def pitot3_condition_builder_test_run(test_name, changing_input_config_dict, var
             with open(failure_filename, 'w') as failure_file:
                 pass
     else:
-        print("Simulation has already been ran. This simulation will be skipped.")
+        print(f"Test {test_name} has already been ran. This test will not be re-ran.")
 
     # return to the original directory when we're done... (this may actually be uncessary?)
     os.chdir(starting_working_directory)

@@ -537,7 +537,7 @@ def pitot3_input_yaml_file_creator(config_dict, output_filename):
 
     return
 
-def pitot3_states_dict_json_output_file_creator(states_dict, output_filename):
+def pitot3_json_output_file_creator(states_dict, config_data, single_line_output_dict, output_filename):
 
     """
     Function that takes the PITOT3 result states dictionary and makes a dictionary output version of each state
@@ -565,12 +565,15 @@ def pitot3_states_dict_json_output_file_creator(states_dict, output_filename):
         else:
             states_dict_output_dict[state_name] = facility_state.get_dictionary_output()
 
+
+    output_dict = {'states_dict':  states_dict_output_dict, 'config_data': config_data, 'single_line_output_dict': single_line_output_dict}
+
     with open(output_filename, "w") as output_file:
-        json.dump(states_dict_output_dict, output_file)
+        json.dump(output_dict, output_file)
 
     return
 
-def pitot3_states_dict_json_output_file_loader(json_output_filename):
+def pitot3_json_output_file_loader(json_output_filename):
     """
 
     Just a simple function to load the json output file back into Python.
@@ -582,9 +585,9 @@ def pitot3_states_dict_json_output_file_loader(json_output_filename):
     import json
 
     with open(json_output_filename, "r") as json_output_file:
-        states_dict_output_dict = json.load(json_output_file)
+        output_dict = json.load(json_output_file)
 
-    return states_dict_output_dict
+    return output_dict
 
 def pitot3_pickle_output_file_creator(dict_of_objects, output_filename):
 
@@ -599,7 +602,7 @@ def pitot3_pickle_output_file_creator(dict_of_objects, output_filename):
     import pickle
 
     with open(output_filename, "wb") as output_file:
-        pickle.dump(dict_of_objects['states_dict'], output_file, pickle.HIGHEST_PROTOCOL)
+        pickle.dump(dict_of_objects, output_file, pickle.HIGHEST_PROTOCOL)
 
     return
 
@@ -717,6 +720,14 @@ def pitot3_single_line_output_file_creator(config_data, object_dict, states_dict
 
         title_list.append(variable)
         value_list.append(freestream_facilty_state_dictionary_output[variable])
+
+    if facility_type == 'expansion_tube':
+
+        if object_dict['acceleration_tube'].tube_length:
+            basic_test_time = expansion_tube_test_time_calculator(object_dict['acceleration_tube'])
+
+            title_list.append('basic_test_time_us')
+            value_list.append(basic_test_time*1.0e6)
 
     # now we go through states and print some values, with some special values printed out when it recognises certain states...
 
@@ -4061,19 +4072,21 @@ def pitot3_results_output(config_data, gas_path, object_dict, generate_output_fi
         states_dict[state_name] = state
 
     if generate_output_files:
-        # and we output a cut down version of the states to a json file...
-
-        pitot3_states_dict_json_output_file_creator(states_dict, config_data['output_filename'] + '.json')
 
         # and the full result to a pickle...
 
-        dict_of_objects = {'config_data':config_data, 'gas_path':gas_path,
-                           'object_dict':object_dict, 'states_dict':states_dict}
+        #dict_of_objects = {'config_data':config_data, 'gas_path':gas_path,
+        #                   'object_dict':object_dict, 'states_dict':states_dict}
 
         #pitot3_pickle_output_file_creator(dict_of_objects, config_data['output_filename'] + '.pickle')
 
-        # and we output a one line csv of the output too...
-        pitot3_single_line_output_file_creator(config_data, object_dict, states_dict)
+        # we output a one line csv of the output too...
+        title_line, result_line, title_list, result_list = pitot3_single_line_output_file_creator(config_data, object_dict, states_dict, return_title_and_result_lists = True)
+
+        single_line_output_dict = {'title_line':title_line, 'result_line': result_line, 'title_list': title_list, 'result_list':result_list}
+
+        # we also output the one line csv to the json file too, as it seems like  good summary of the simulation...
+        pitot3_json_output_file_creator(states_dict, config_data, single_line_output_dict, config_data['output_filename'] + '.json')
 
     return states_dict
 
