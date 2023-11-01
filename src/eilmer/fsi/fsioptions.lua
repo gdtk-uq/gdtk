@@ -5,7 +5,7 @@ fsiOptionsHidden = {
 
     -- Discretization of the plate
     Nx = 5,
-    Nz = 5,
+    Nz = 0,
 
     -- The mapping of the fluid domain relative to the moving plate
     northFBA = false,

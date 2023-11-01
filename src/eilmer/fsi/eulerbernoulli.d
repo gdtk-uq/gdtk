@@ -39,9 +39,9 @@ public:
 
         // Generate the local stiffness and mass matrices- for uniform meshes, these are the same for every element
         Matrix!number KL = LocalStiffnessMatrix(l);
-        KL.scale(myConfig.youngsModulus * (myConfig.width * pow(myConfig.thickness, 3)) / (12 * pow(l, 3)));
-        Matrix!number ML = LocalStiffnessMatrix(l);
-        ML.scale(myConfig.thickness * l * myConfig.density);
+        KL.scale(2 * myConfig.youngsModulus * (pow(myConfig.thickness, 3) / 12) / pow(l, 3));
+        Matrix!number ML = LocalMassMatrix(l);
+        ML.scale(myConfig.thickness * l * myConfig.density / 420);
 
         size_t GlobalNodeIndx, GlobalRowIndx, GlobalColIndx, LocalRowIndx, LocalColIndx;
         foreach (i; 0 .. myConfig.Nx) {
@@ -106,6 +106,10 @@ public:
             }
             FL[] = ElementPressure * Fc[] / 2;
             F._data[i * 2 .. (i + 2) * 2] += FL[];
+        }
+
+        foreach (ZeroedIndx; ZeroedIndices) {
+            F._data[ZeroedIndx] = 0.0;
         }
     } // end updateForceVector
 
@@ -192,5 +196,3 @@ public:
         }
     }
 }
-
-        

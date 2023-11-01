@@ -112,7 +112,12 @@ function fsi_weights.generateInterpolationWeights(FBA, Nx, Nz, Length, Width, Si
     -- This means we can always trivially determine which FEM nodes are relevant if we
     -- can work where the CFD vertex is
     -- At the very least, we will assume the grid lines in the CFD are straight
-    dxFEM = 1 / Nx; dzFEM = 1 / Nz;
+    dxFEM = 1 / Nx;
+    if Nz > 0 then
+        dzFEM = 1 / Nz;
+    else
+        dzFEM = 1
+    end
 
     if Side == "north" then
         j = 0
@@ -285,7 +290,7 @@ function ijkFBAIndxToFBIndx(FBA, i, j, k)
     -- Convert to blkId and cellId
 
     if config.dimensions == 3 then blkId = FBA.blockArray[iBlk][jBlk][kBlk].id else blkId = FBA.blockArray[iBlk][jBlk].id end
-    cellId = iInBlk * (FBA.nkcs[kBlk] * FBA.njcs[jBlk]) + jInBlk * FBA.nkcs[kBlk] + kInBlk
+    cellId = kInBlk * (FBA.nics[iBlk] * FBA.njcs[jBlk]) + jInBlk * FBA.nics[iBlk] + iInBlk
 
     return blkId, cellId
 end
@@ -304,7 +309,12 @@ function fsi_weights.cellToNodeMapping(FBA, Nx, Nz, Length, Width, Side)
     end
 
     -- The machinery here looks quite similar to that in GenerateInterpolationWeights
-    dxFEM = 1 / Nx; dzFEM = 1 / Nz;
+    dxFEM = 1 / Nx;
+    if Nz > 0 then
+        dzFEM = 1 / Nz;
+    else
+        dzFEM = 1
+    end
     niv = FBA.niv; nkv = FBA.nkv
     --ref_point = FBA.gridArray.grid:get_vtx(0, j, 0)
     
