@@ -22,6 +22,7 @@ import util.lua_service;
 import nm.complex;
 import nm.number;
 import nm.bracketing;
+import nm.brent;
 
 import gas;
 import gas.thermo.thermo_model;
@@ -40,6 +41,7 @@ class MultiTemperatureGasMixture : ThermodynamicModel {
         _Delta_hf.length = _n_species;
         _CpTR.length = _n_species;
         _thermo_curves.length = _n_species;
+        _ms.length = _n_species;
         _energy_modes.length = _n_modes;
         _energy_modes_isp.length = _n_modes;
         _reference_energies.length = _n_modes;
@@ -188,7 +190,107 @@ class MultiTemperatureGasMixture : ThermodynamicModel {
     }
 
     @nogc void updateFromHS(ref GasState gs, number h, number s){
-        throw new Error("Not implemented");
+        /*
+            TODO: This implementation enforces that T_modes[i]==T, since that
+            is what we expect at nozzle inflow boundaries, which is what
+            this routine is typically used for. Beware however, that
+            this may not be true in general.
+            @author: NNG (23/11/22), copied from therm_perf_gas_mix.d
+        */
+
+        // We do this in two stages.
+        // First, from enthalpy we compute temperature.
+        double TOL = 1.0e-6;
+        number delT = 100.0;
+        number T1 = gs.T;
+        // It's possible that T is 'nan' if it's never been set, so:
+        if (isNaN(T1))
+            T1 = 300.0; // Just set at some value to get started.
+        number Tsave = T1;
+        number T2 = T1 + delT;
+
+        number zeroFun(number T)
+        {
+            gs.T = T;
+            gs.T_modes[] = T;
+            number h_guess = enthalpy(gs);
+            return h - h_guess;
+        }
+
+        if (bracket!(zeroFun,number)(T1, T2) == -1) {
+            string msg = "The 'bracket' function failed to find temperature values";
+            debug {
+                msg ~= "\nthat bracketed the zero function in GasMixtureThermo.update_thermo_from_hs().\n";
+                msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
+            }
+            throw new Exception(msg);
+        }
+
+        if (T1 < T_MIN)
+            T1 = T_MIN;
+
+        try {
+            gs.T = nm.brent.solve!(zeroFun,number)(T1, T2, TOL);
+            gs.T_modes[] = gs.T;
+        }
+        catch ( Exception e ) {
+            string msg = "There was a problem iterating to find temperature";
+            debug {
+                msg ~= "\nin function GasMixtureThermo.update_thermo_from_hs().\n";
+                msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
+                msg ~= format("The target enthalpy value was: %12.6f\n", h);
+                msg ~= format("The GasState is currently:\n");
+                msg ~= gs.toString();
+                msg ~= "The message from the brent.solve function is:\n";
+                msg ~= e.msg;
+            }
+            throw new Exception(msg);
+        }
+
+        // Second, we can iterate to find the pressure that gives
+        // correct entropy.
+        TOL = 1.0e-3;
+        number delp = 1000.0;
+        number p1 = gs.p;
+        number psave = p1;
+        number p2 = p1 + delp;
+
+        number zeroFun2(number p)
+        {
+            gs.p = p;
+            number s_guess = entropy(gs);
+            return s - s_guess;
+        }
+
+        if ( bracket!(zeroFun2,number)(p1, p2) == -1 ) {
+            string msg = "The 'bracket' function failed to find pressure values";
+            debug {
+                msg ~= "\nthat bracketed the zero function in GasMixtureThermo.update_thermo_from_hs().\n";
+                msg ~= format("The final values are: p1 = %12.6f and p2 = %12.6f\n", p1, p2);
+            }
+            throw new Exception(msg);
+        }
+
+        if ( p1 < 0.0 )
+            p1 = 1.0;
+
+        try {
+            gs.p = nm.brent.solve!(zeroFun2,number)(p1, p2, TOL);
+        }
+        catch ( Exception e ) {
+            string msg = "There was a problem iterating to find pressure";
+            debug {
+                msg ~= "\nin function GasMixtureThermo.update_thermo_from_hs().\n";
+                msg ~= format("The initial pressure guess was: %12.6f\n", psave);
+                msg ~= format("The target entropy value was: %12.6f\n", s);
+                msg ~= format("The GasState is currently:\n");
+                msg ~= gs.toString();
+                msg ~= "The message from the brent.solve function is:\n";
+                msg ~= e.msg;
+            }
+            throw new Exception(msg);
+        }
+        updateFromPT(gs);
     }
     
     @nogc void updateSoundSpeed(ref GasState gs){
@@ -277,11 +379,14 @@ class MultiTemperatureGasMixture : ThermodynamicModel {
     }
 
     @nogc number entropy(in GasState gs){
-        throw new Error("Not implemented");
+        foreach (isp; 0 .. _n_species){
+            _ms[isp] = entropyPerSpecies(gs, isp) - _R[isp]*log(gs.p/P_atm); 
+        }
+        return mass_average(gs, _ms);
     }
 
     @nogc number entropyPerSpecies(in GasState gs, int isp){
-        throw new Error("Not implemented");
+        return _thermo_curves[isp].eval_s(gs.T);
     }
 
     @nogc number cpPerSpecies(in GasState gs, int isp){
@@ -322,6 +427,7 @@ private:
     number[][] _reference_energies; // The energy of each mode evaluated at T_REF
     double[] _tolerances;
     int[] _max_iterations;
+    number[] _ms;
 
     @nogc void _update_density(ref GasState gs){
         // update the density of the gas, assumes the following are correct:
