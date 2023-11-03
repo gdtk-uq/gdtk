@@ -39,7 +39,7 @@ public:
 
         // Generate the local stiffness and mass matrices- for uniform meshes, these are the same for every element
         Matrix!number KL = LocalStiffnessMatrix(l);
-        KL.scale(2 * myConfig.youngsModulus * (pow(myConfig.thickness, 3) / 12) / pow(l, 3));
+        KL.scale(myConfig.youngsModulus * (pow(myConfig.thickness, 3) / 12) / pow(l, 3));
         Matrix!number ML = LocalMassMatrix(l);
         ML.scale(myConfig.thickness * l * myConfig.density / 420);
 

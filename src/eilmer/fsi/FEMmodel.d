@@ -119,6 +119,7 @@ public:
         // Address boundary conditions first as they affect the formation of the matrices
         determineBoundaryConditions(myConfig.BCs);
         generateMassStiffnessMatrices();
+        writeMatricesToFile();
         MpermuteList = decomp!number(M);
 
     } // end plate_setup()
@@ -290,6 +291,24 @@ public:
         // And then empty F
         F._data[] = 0.0;
     } // end compute_vtx_velocities_for_FSI
+
+    void writeMatricesToFile() {
+        // It will often be useful to write the mass and stiffness matrices to file,
+        // which can be passed elsewhere to compute eigendecomposition, sparsity patterns etc.
+        auto MFile = File("FSI/M.dat", "w+");
+        auto KFile = File("FSI/K.dat", "w+");
+        foreach (row; 0 .. M._nrows) {
+            MFile.writef("%1.8e", M[row, 0]);
+            KFile.writef("%1.8e", K[row, 0]);
+            foreach (col; 1 .. M._ncols) {
+                MFile.writef(" %1.8e", M[row, col]);
+                KFile.writef(" %1.8e", K[row, col]);
+            }
+            MFile.write("\n");
+            KFile.write("\n");
+        }
+        MFile.close(); KFile.close();
+    }
 
     // Methods that are model dependent
     abstract void generateMassStiffnessMatrices();
