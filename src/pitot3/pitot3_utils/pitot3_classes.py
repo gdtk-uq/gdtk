@@ -1199,6 +1199,66 @@ class Driver(object):
             self.p4 = float(cfg['p4'])
             self.T4 = float(cfg['T4'])
 
+        if self.driver_condition_type == 'empirical-a4':
+            # we just need to take p4 and a4 out of the file and then make a gas object...
+
+            self.p4 = float(cfg['p4'])
+            self.a4 = float(cfg['a4'])
+
+            # this is an empirical state where a4 is specified instead of T4, we iteratively find T4 from a4
+
+            # we guess 2000.0 K to start with...
+
+            print('-' * 60)
+            print("This driver specifies a4 instead of T4 so we need to iterate to find T4.")
+            print("Iterating to find T4 from a4.")
+
+            if 'T4_first_guess' not in cfg:
+                T4_first_guess = 2500.0
+            else:
+                T4_first_guess = cfg['T4_first_guess']
+
+            print(f"Using a T4_first_guess of {T4_first_guess} K.")
+
+            print(f"a4 = {self.a4}")
+
+            from scipy.optimize import newton
+
+            state4 = GasState(self.gmodel)
+
+            def calculate_a4_eqn(T4, p4 = self.p4, gas_state = state4):
+
+                #print(T4)
+
+                state4.p = self.p4
+                state4.T = T4
+
+                state4.update_thermo_from_pT()
+                state4.update_sound_speed()
+
+                a4 = state4.a
+
+                return a4
+
+            def T4_eqn(T4, a4 = self.a4):
+
+                print('-'*60)
+
+                print(f"guessed T4 = {T4} K")
+
+                print(f"related guessed a4 = {calculate_a4_eqn(T4)} m/s")
+
+                print(f"actual a4 - guessed a4 = {self.a4 - calculate_a4_eqn(T4)}")
+
+                return self.a4 - calculate_a4_eqn(T4)
+
+            T4 = newton(T4_eqn, T4_first_guess, tol = 1.0e-1)
+
+            print('-' * 60)
+            print(f"Final T4 = {T4:.2f} K")
+
+            self.T4 = T4
+
         elif self.driver_condition_type == 'cold-driven-ideal':
             # this is similar to empirical above, but in this case the driver
             # is assumed to be at room temperature so PITOT's ambient temp can be used
