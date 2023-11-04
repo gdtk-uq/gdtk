@@ -690,7 +690,13 @@ def pitot3_single_line_output_file_creator(config_data, object_dict, states_dict
 
     for variable in config_dict_initial_variables:
         title_list.append(variable)
-        value_list.append(config_data[variable])
+
+        if variable == 'area_ratio' and 'area_ratio' not in config_data:
+            # this is because a default nozzle area ratio value for the facility would have been used...
+            area_ratio = object_dict['facility'].get_nozzle_geometric_area_ratio()
+            value_list.append(area_ratio)
+        else:
+            value_list.append(config_data[variable])
 
     # now add the shock speeds...
 
@@ -2959,7 +2965,8 @@ class Tube(object):
             self.Mr = (shocked_gas_v + self.vr)/ shocked_gas_gas_state.a #normally this would be V2 - Vr, but it's plus here as Vr has been left positive
 
             self.stagnated_fill_gas = Facility_State('s5', stagnated_fill_gas_state, 0.0,
-                                                     reference_gas_state=self.get_shocked_state().get_reference_gas_state())
+                                                     reference_gas_state=self.get_shocked_state().get_reference_gas_state(),
+                                                     outputUnits = self.shocked_state.outputUnits, species_MW_dict = self.shocked_state.species_MW_dict)
 
             # then do the same thing for the unsteadily expanded driver gas as this is important for RSTs as well...
 
@@ -2976,7 +2983,8 @@ class Tube(object):
             self.Mrd = (unsteadily_expanded_state_v + self.vrd) / unsteadily_expanded_gas_state.a  # normally this would be V3 - Vr, but it's plus here as Vr has been left positive
 
             self.stagnated_unsteadily_expanding_gas = Facility_State('s5d', stagnated_unsteadily_expanded_gas_state, 0.0,
-                                                                     reference_gas_state=self.get_unsteadily_expanded_state().get_reference_gas_state())
+                                                                     reference_gas_state=self.get_unsteadily_expanded_state().get_reference_gas_state(),
+                                                                     outputUnits = self.unsteadily_expanded_state.outputUnits, species_MW_dict = self.unsteadily_expanded_state.species_MW_dict)
 
             for facility_state in [self.stagnated_fill_gas, self.stagnated_unsteadily_expanding_gas]:
                 print('-'*60)
