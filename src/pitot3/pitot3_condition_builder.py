@@ -7,7 +7,7 @@ Chris James (c.james4@uq.edu.au) - 02/01/23
 
 """
 
-CONDITION_BUILDER_VERSION_STRING = '31-Oct-2023'
+CONDITION_BUILDER_VERSION_STRING = '05-Nov-2023'
 
 #----------------------------------------------------------------------------------------
 
@@ -391,6 +391,18 @@ def run_pitot3_condition_builder(config_dict = {}, config_filename = None,
                 title_list = single_line_output_dict['title_list']
                 result_list = single_line_output_dict['result_list']
 
+                # we need to add the test number and test name here as it won't be in the original output...
+
+                title_line = 'test_number,test_name,' + title_line
+
+                result_line = f'{test_number},{test_name},' + result_line
+
+                title_list.insert(0, 'test_number')
+                result_list.insert(0, test_number)
+
+                title_list.insert(1, 'test_name')
+                result_list.insert(1, test_name)
+
                 if not have_added_title_line:
                     condition_builder_output_file.write(title_line + '\n')
 
@@ -653,22 +665,21 @@ def pitot3_condition_builder_test_run(test_name, changing_input_config_dict, var
 
         print(f"Piping run output to logfile {simulation_logfile}.")
 
-        try:
-
-            with open(simulation_logfile, 'w') as logfile:
-                with redirect_stdout(logfile):
-                    with redirect_stderr(logfile):
+        with open(simulation_logfile, 'w') as logfile:
+            with redirect_stdout(logfile):
+                with redirect_stderr(logfile):
+                    try:
                         run_pitot3(config_filename=pitot_3_input_file_filename)
-        except Exception as e:
-            print("The run appears to have failed:")
-            print(e)
-            print("The result will not be added to the output.")
+                    except Exception as e:
+                        print("The run appears to have failed. The error message is:")
+                        print(e)
+                        print("The result will not be added to the output.")
 
-            failure_filename = f'{test_name}_failed.txt'
-            print(f"Te dummy file {failure_filename} will also be created in the folder so the program knows that the run failed.")
+                        failure_filename = f'{test_name}_failed.txt'
+                        print(f"The dummy file {failure_filename} will also be created in the folder so the program knows that the run failed.")
 
-            with open(failure_filename, 'w') as failure_file:
-                pass
+                        with open(failure_filename, 'w') as failure_file:
+                            pass
     else:
         print(f"Test {test_name} has already been ran. This test will not be re-ran.")
 

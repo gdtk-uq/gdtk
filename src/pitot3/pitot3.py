@@ -6,7 +6,7 @@ Chris James (c.james4@uq.edu.au) - (01/01/21)
 
 """
 
-VERSION_STRING = '4-Nov-2023'
+VERSION_STRING = '05-Nov-2023'
 
 import sys, os, math
 import yaml
@@ -157,8 +157,6 @@ def run_pitot3(config_dict = {}, config_filename = None,
         facility_type = config_data['facility_type']
         secondary_driver_flag = config_data['secondary_driver']
         nozzle_flag = config_data['nozzle']
-
-    object_dict['facility'] = facility
 
     print (f"Facility type is '{facility_type}'.")
     if nozzle_flag:
