@@ -91,7 +91,7 @@ def run_pitot3_condition_builder(config_dict = {}, config_filename = None,
         # this is teh end of the filename, the base filename will be added to it
         filenames_to_remove_list = ['_condition_builder_output.csv', '_final_result_dict_output.json',
                                     '_final_result_dict_output.pickle','_individual_log_and_result_files.zip',
-                                    '_summary.txt']
+                                    '_condition_builder_summary.txt']
 
         for partial_filename in filenames_to_remove_list:
             filename = f'{base_output_filename}{partial_filename}'
