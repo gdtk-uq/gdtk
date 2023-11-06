@@ -460,6 +460,7 @@ function write3TGas(f, species, db, optsTable)
    end
    f:write("}\n\n")
    f:write("physical_model = 'three-temperature-gas'\n")
+   f:write(string.format("electronic_mode = %i\n", optsTable.electronic_mode or 1))
    f:write("db = {}\n")
    for _,sp in ipairs(species) do
       f:write(string.format("db['%s'] = {}\n", sp))

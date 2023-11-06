@@ -18,7 +18,7 @@ import gas.thermo.cea_thermo_curves;
 
 immutable double T_REF = 298.15; // K (temperature the heat of formation is given at)
 immutable ulong VIB = 0; // The vibrational energy goes in index 0
-immutable ulong EE = 1; // the electron/electronic energy goes in index 1
+immutable ulong FREE_ELECTRON = 1; // the free electron energy goes in index 1
 
 class ThreeTemperatureGasMixture : ThermodynamicModel {
 public:
@@ -35,6 +35,10 @@ public:
         mM.length = mNSpecies;
         ms.length = mNSpecies;
         m_tr_entropy_constant.length = mNSpecies;
+        mElectronicMode = getInt(L, "electronic_mode");  
+        if (!(mElectronicMode == 0 || mElectronicMode == 1)){
+            throw new GasModelException("3T gas: Electronic mode should be 0 or 1");
+        }
         foreach (isp, spName; speciesNames) {
             if (spName == "e-") mElectronIdx = to!int(isp);
             lua_getglobal(L, "db");
@@ -90,19 +94,19 @@ public:
         // first, update the density
         number denom = 0.0;
         foreach (isp; 0 .. mNSpecies) {
-            number T = (isp == mElectronIdx) ? gs.T_modes[EE] : gs.T;
+            number T = (isp == mElectronIdx) ? gs.T_modes[FREE_ELECTRON] : gs.T;
             denom += gs.massf[isp] * mR[isp] * T;
         }
         gs.rho = gs.p/denom;
 
         // now update energies
         gs.u = trans_rot_energy_mixture(gs);
-        gs.u_modes[VIB] = vib_energy_mixture(gs);
-        gs.u_modes[EE] = electron_electronic_energy_mixture(gs);
+        gs.u_modes[VIB] = mixture_energy_in_mode(gs, VIB);
+        gs.u_modes[FREE_ELECTRON] = mixture_energy_in_mode(gs, FREE_ELECTRON);
 
         // update electron pressure, if needed
         if (mElectronIdx != -1)
-            gs.p_e = gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[EE];
+            gs.p_e = gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[FREE_ELECTRON];
     }
 
     @nogc
@@ -116,12 +120,8 @@ public:
             formation_energy += gs.massf[isp] * (mHf[isp] - mCpTR[isp] * T_REF);
         }
         gs.T = (gs.u - formation_energy) / Cv;
-
-        // iterate to find vibrational temperature
-        gs.T_modes[VIB] = vibration_temperature(gs);
-
-        // iterate to find electron/electronic temperature
-        gs.T_modes[EE] = electron_electronic_temperature(gs);
+        gs.T_modes[VIB] = temperature_of_mode(gs, VIB);
+        gs.T_modes[FREE_ELECTRON] = temperature_of_mode(gs, FREE_ELECTRON);
 
         // finally, we can calculate p
         update_pressure(gs);
@@ -132,8 +132,8 @@ public:
     {
         update_pressure(gs);
         gs.u = trans_rot_energy_mixture(gs);
-        gs.u_modes[VIB] = vib_energy_mixture(gs);
-        gs.u_modes[EE] = electron_electronic_energy_mixture(gs);
+        gs.u_modes[VIB] = mixture_energy_in_mode(gs, VIB);
+        gs.u_modes[FREE_ELECTRON] = mixture_energy_in_mode(gs, FREE_ELECTRON);
     }
 
     @nogc
@@ -142,7 +142,7 @@ public:
         // First, calculate the temperature
         number p_heavy = gs.p;
         if (mElectronIdx != -1)
-            p_heavy -= gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[EE];
+            p_heavy -= gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[FREE_ELECTRON];
         number denom = 0.0;
         foreach (isp; 0 .. mNSpecies) {
             denom += gs.massf[isp] * gs.rho * mR[isp];
@@ -151,10 +151,10 @@ public:
         gs.u = trans_rot_energy_mixture(gs);
 
         // We assume that u_modes is set correctly
-        gs.T_modes[VIB] = vibration_temperature(gs);
-        gs.T_modes[EE] = electron_electronic_temperature(gs);
+        gs.T_modes[VIB] = temperature_of_mode(gs, VIB);
+        gs.T_modes[FREE_ELECTRON] = temperature_of_mode(gs, FREE_ELECTRON);
         if (mElectronIdx != -1)
-            gs.p_e = gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[EE];
+            gs.p_e = gs.rho * gs.massf[mElectronIdx] * mR[mElectronIdx] * gs.T_modes[FREE_ELECTRON];
     }
 
     @nogc override void updateFromPS(ref GasState gs, number s)
@@ -178,11 +178,12 @@ public:
     @nogc override number dudTConstV(in GasState gs)
     {
         number Cv = 0.0;
-        number Cv_tr, Cv_vib, Cv_ee;
+        number Cv_tr, Cv_vib, Cv_ee, Cv_e;
         foreach (isp; 0 .. mNSpecies){
             Cv_tr = trans_rot_Cv_species(isp);
             Cv_vib = vib_Cv_species(gs.T_modes[VIB], isp);
-            Cv_ee = electron_electronic_Cv_species(gs.T_modes[EE], isp);
+            Cv_ee = electronic_Cv_species(gs.T_modes[mElectronicMode], isp);
+            Cv_e = electron_Cv_species(gs.T_modes[FREE_ELECTRON], isp);
             Cv += fmax(0.0, gs.massf[isp]) * (Cv_tr + Cv_vib + Cv_ee);
         }
         return Cv;
@@ -190,11 +191,12 @@ public:
     @nogc override number dhdTConstP(in GasState gs)
     {
         number Cp = 0.0;
-        number Cp_tr, Cv_vib, Cv_ee;
+        number Cp_tr, Cv_vib, Cv_ee, Cv_e;
         foreach (isp; 0 .. mNSpecies){
             Cp_tr = mCpTR[isp];
             Cv_vib = vib_Cv_species(gs.T_modes[VIB], isp);
-            Cv_ee = electron_electronic_Cv_species(gs.T_modes[EE], isp);
+            Cv_ee = electronic_Cv_species(gs.T_modes[FREE_ELECTRON], isp);
+            Cv_e = electron_Cp_species(gs.T_modes[FREE_ELECTRON], isp);
             Cp += fmax(0.0, gs.massf[isp]) * (Cp_tr + Cv_vib + Cv_ee);
         }
         return Cp;
@@ -219,8 +221,15 @@ public:
     {
         number e_tr = trans_rot_energy_mixture(gs);
         number e_v = vib_energy_mixture(gs);
-        number e_ee = electron_electronic_energy_mixture(gs);
-        return e_tr + e_v + e_ee;
+        number e_e = electron_energy_mixture(gs);
+        number electronic_energy = electronic_energy_mixture(gs);
+        if (mElectronicMode == 0){
+            e_v += electronic_energy;
+        }
+        else {
+            e_e += electronic_energy;
+        }
+        return e_tr + e_v + e_e;
     }
 
     @nogc
@@ -230,9 +239,17 @@ public:
             case -1:
                 return trans_rot_energy_species(gs.T, isp);
             case 0:
-                return vib_energy_species(gs.T_modes[VIB], isp);
+                number energy = vib_energy_species(gs.T_modes[VIB], isp);
+                if (mElectronicMode == 0) {
+                    energy += electronic_energy_species(gs.T_modes[VIB], isp);
+                } 
+                return energy;
             case 1:
-                return electron_electronic_energy_species(gs.T_modes[EE], isp);
+                number energy = electron_energy_species(gs.T_modes[FREE_ELECTRON], isp); 
+                if (mElectronicMode == 1){
+                    energy += electronic_energy_species(gs.T_modes[FREE_ELECTRON], isp);
+                }
+                return energy;
             default:
                 throw new GasModelException("Invalid energy mode for three temperature model");
         }
@@ -255,10 +272,13 @@ public:
     {
         number h_tr = mCpTR[isp]*(gs.T - T_REF) + mHf[isp];
         number h_v = vib_energy_species(gs.T_modes[VIB], isp);
-        number h_e = electron_electronic_energy_species(gs.T_modes[EE], isp);
+        number h_e = electron_energy_species(gs.T_modes[FREE_ELECTRON], isp);
+        number h_electronic = electronic_energy_species(gs.T_modes[mElectronicMode], isp);
         if (isp == mElectronIdx) {
-            h_e += (gs.T_modes[EE] - T_REF) * mR[mElectronIdx];
+            h_e += (gs.T_modes[FREE_ELECTRON] - T_REF) * mR[mElectronIdx];
         }
+        if (mElectronicMode == 0) {h_v += h_electronic;}
+        else {h_e += h_electronic;}
         return h_tr + h_v + h_e;
     }
 
@@ -268,11 +288,18 @@ public:
             case -1:
                 return mCpTR[isp] * (gs.T - T_REF) + mHf[isp];
             case 0:
-                return vib_energy_species(gs.T_modes[VIB], isp);
+                number h_v = vib_energy_species(gs.T_modes[VIB], isp);
+                if (mElectronicMode == 0) {
+                    h_v += electronic_energy_species(gs.T_modes[VIB], isp);
+                }
+                return h_v;
             case 1:
-                number h_e = electron_electronic_energy_species(gs.T_modes[EE], isp);
+                number h_e = electron_energy_species(gs.T_modes[FREE_ELECTRON], isp);
+                if (mElectronicMode == 1){
+                    h_e += electronic_energy_species(gs.T_modes[FREE_ELECTRON], isp);
+                }
                 if (isp == mElectronIdx) {
-                    h_e += (gs.T_modes[EE] - T_REF) * mR[mElectronIdx] + mHf[mElectronIdx];
+                    h_e += (gs.T_modes[FREE_ELECTRON] - T_REF) * mR[mElectronIdx] + mHf[mElectronIdx];
                 }
                 return h_e;
             default:
@@ -295,8 +322,13 @@ public:
 
     @nogc override number cpPerSpecies(in GasState gs, int isp)
     {
-        return mCpTR[isp] + vib_Cv_species(gs.T, isp) + electron_electronic_Cv_species(gs.T, isp);
+        number CpTR = mCpTR[isp];
+        number vib_Cp = vib_Cv_species(gs.T_modes[VIB], isp);
+        number electronic_Cp = electronic_Cv_species(gs.T_modes[mElectronicMode], isp);
+        number electron_Cp = electron_Cp_species(gs.T_modes[FREE_ELECTRON], isp);
+        return CpTR + vib_Cp + electronic_Cp + electron_Cp;
     }
+
     @nogc override void GibbsFreeEnergies(in GasState gs, number[] gibbs_energies)
     {
         // Note that this uses the transrotational temperature only. We typically only
@@ -316,6 +348,7 @@ public:
 private:
     int mNSpecies;
     int mElectronIdx = -1;
+    int mElectronicMode;
     double[] mM; // molar masses
     double[] mCpTR;
     double[] mR;
@@ -329,15 +362,45 @@ private:
     CEAThermoCurve[] mCurves;
 
     @nogc
-    number energy_in_mode(in GasState gs, int mode)
+    number mixture_energy_in_mode(in GasState gs, int mode)
     {
         switch (mode) {
             case -1:
                 return trans_rot_energy_mixture(gs);
             case 0:
-                return vib_energy_mixture(gs);
+                number e_v = vib_energy_mixture(gs);
+                if (mElectronicMode == 0) {
+                    e_v += electronic_energy_mixture(gs, gs.T_modes[VIB]);
+                }
+                return e_v;
             case 1:
-                return electron_electronic_energy_mixture(gs);
+                number e_e = electron_energy_mixture(gs);
+                if (mElectronicMode == 1){
+                    e_e += electronic_energy_mixture(gs, gs.T_modes[FREE_ELECTRON]);
+                }
+                return e_e;
+            default:
+                throw new GasModelException("Invalid energy mode for three temperature model");
+        }
+    }
+
+    @nogc
+    number mixture_energy_in_mode(in GasState gs, number T, int mode){
+        switch (mode) {
+            case -1:
+                return trans_rot_energy_mixture(gs, T);
+            case 0:
+                number e_v = vib_energy_mixture(gs, T);
+                if (mElectronicMode == 0) {
+                    e_v += electronic_energy_mixture(gs, T);
+                }
+                return e_v;
+            case 1:
+                number e_e = electron_energy_mixture(gs, T);
+                if (mElectronicMode == 1){
+                    e_e += electronic_energy_mixture(gs, T);
+                }
+                return e_e;
             default:
                 throw new GasModelException("Invalid energy mode for three temperature model");
         }
@@ -377,11 +440,17 @@ private:
     @nogc
     number trans_rot_energy_mixture(in GasState gs)
     {
+        return trans_rot_energy_mixture(gs, gs.T);
+    }
+
+    @nogc
+    number trans_rot_energy_mixture(in GasState gs, number T)
+    {
         number e_tr = 0.0;
         foreach (isp; 0 .. mNSpecies)
         {
             if (isp == mElectronIdx) continue;
-            e_tr += fmax(0.0, gs.massf[isp]) * trans_rot_energy_species(gs.T, isp);
+            e_tr += fmax(0.0, gs.massf[isp]) * trans_rot_energy_species(T, isp);
         }
         return e_tr;
     }
@@ -393,8 +462,25 @@ private:
 
         // For internal modes, Cv = Cp, so we can evaluate Cp
         number cp_at_Tv = mCurves[isp].eval_Cp(Tv);
-        number cp = cp_at_Tv - mCpTR[isp] - electron_electronic_Cv_species(Tv, isp);
+        number cp = cp_at_Tv - mCpTR[isp] - electronic_Cv_species(Tv, isp);
         return cp;
+    }
+
+    @nogc
+    number electronic_Cv_species(number Te, int isp)
+    {
+        if (isp == mElectronIdx) return to!number(0.0);
+        return m_electronic_internal_energy[isp].Cv(Te);
+    }
+
+    @nogc
+    number electronic_Cv_mixture(in GasState gs, number Te)
+    {
+        number Cv = 0.0;
+        foreach (isp; 0 .. mNSpecies){
+            Cv += fmax(0.0, gs.massf[isp])*electronic_Cv_species(Te, isp);
+        }
+        return Cv;
     }
 
     @nogc
@@ -419,7 +505,7 @@ private:
         //return m_vibration_internal_energy[isp].energy(Tv);
         if (isp == mElectronIdx) return to!number(0.0);
         number h_at_Tv = mCurves[isp].eval_h(Tv);
-        number h_v = h_at_Tv - mCpTR[isp]*(Tv - T_REF) - mHf[isp] - electron_electronic_energy_species(Tv, isp);
+        number h_v = h_at_Tv - mCpTR[isp]*(Tv - T_REF) - mHf[isp] - electronic_energy_species(Tv, isp);
         return h_v - m_reference_vibration_energy[isp];
     }
 
@@ -440,51 +526,69 @@ private:
         return vib_energy_mixture(gs, gs.T_modes[VIB]);
     }
 
-    @nogc
-    number electron_electronic_energy_species(number Tee, int isp)
+    @nogc 
+    number electron_energy_species(number Te, int isp)
     {
-        // free electrons have no electronic component, but they do contribute
-        // to the energy via their translation degrees of freedom
-        if (isp == mElectronIdx) return (3.0/2.0) * (Tee-T_REF) * mR[mElectronIdx];
-        return m_electronic_internal_energy[isp].energy(Tee) - m_reference_electronic_energy[isp];
+        return (isp == mElectronIdx) ? (3.0/2.0)*(Te-T_REF)*mR[mElectronIdx] : to!number(0.0);
     }
 
     @nogc
-    number electron_electronic_energy_mixture(in GasState gs, number Tee)
+    number electronic_energy_species(number Te, int isp)
     {
-        number e_ee = 0.0;
+        if (isp == mElectronIdx) return to!number(0.0);
+        return m_electronic_internal_energy[isp].energy(Te) - m_reference_electronic_energy[isp];
+    }
+
+    @nogc
+    number electronic_energy_mixture(in GasState gs, number Te)
+    {
+        number e_e = 0.0;
         foreach (isp; 0 .. mNSpecies){
-            e_ee += fmax(0.0, gs.massf[isp]) * electron_electronic_energy_species(Tee, isp);
+            e_e += fmax(0.0, gs.massf[isp]) * electronic_energy_species(Te, isp);
         }
-        return e_ee;
+        return e_e;
     }
 
     @nogc
-    number electron_electronic_energy_mixture(in GasState gs)
+    number electronic_energy_mixture(in GasState gs)
     {
-        return electron_electronic_energy_mixture(gs, gs.T_modes[EE]);
+        return electronic_energy_mixture(gs, gs.T_modes[mElectronicMode]);
     }
 
-    @nogc number electron_electronic_Cv_species(number Tee, int isp)
+
+    @nogc
+    number electron_energy_mixture(in GasState gs, number Te) {
+        return fmax(0.0, gs.massf[mElectronIdx]) * electron_energy_species(Te, mElectronIdx); 
+    }
+
+    @nogc electron_energy_mixture(in GasState gs){
+        return electron_energy_mixture(gs, gs.T_modes[FREE_ELECTRON]);
+    }
+
+    @nogc
+    number electron_Cv_species(number Te, int isp)
     {
-        // free electrons have no electronic component, but they do contribute
-        // to Cv via their translation degrees of freedom
         if (isp == mElectronIdx) return to!number(3.0/2.0) * mR[isp];
-        return m_electronic_internal_energy[isp].Cv(Tee);
+        return to!number(0.0);
     }
 
-    @nogc number electron_electronic_Cv_mixture(in GasState gs, number Tee)
+    @nogc
+    number electron_Cp_species(number Te, int isp)
     {
-        number Cv = 0.0;
-        foreach (isp; 0 .. mNSpecies) {
-            Cv += fmax(0.0, gs.massf[isp]) * electron_electronic_Cv_species(Tee, isp);
-        }
-        return Cv;
+        if (isp == mElectronIdx) return to!number (5.0/2.0) * mR[isp];
+        return to!number(0.0);
     }
 
-    @nogc number electron_electronic_Cv_mixture(in GasState gs)
+    @nogc
+    number electron_Cv_mixture(in GasState gs, number Te)
     {
-        return electron_electronic_Cv_mixture(gs, gs.T_modes[EE]);
+        return fmax(0.0, gs.massf[mElectronIdx])*electron_Cv_species(Te, mElectronIdx);
+    }
+
+    @nogc
+    number electron_Cv_mixture(in GasState gs)
+    {
+        return electron_Cv_mixture(gs, gs.T_modes[FREE_ELECTRON]);
     }
 
     @nogc
@@ -492,14 +596,45 @@ private:
     {
         gs.p = 0.0;
         foreach (isp; 0 .. mNSpecies) {
-            number T = (isp == mElectronIdx) ? gs.T_modes[EE] : gs.T;
+            number T = (isp == mElectronIdx) ? gs.T_modes[FREE_ELECTRON] : gs.T;
             gs.p += gs.rho * fmax(0.0, gs.massf[isp]) * mR[isp] * T;
         }
 
         // set electron pressure whilst we're here
         if (mElectronIdx != 1) {
-            gs.p_e = gs.rho * fmax(0.0, gs.massf[mElectronIdx]) * mR[mElectronIdx] * gs.T_modes[EE];
+            gs.p_e = gs.rho * fmax(0.0, gs.massf[mElectronIdx]) * mR[mElectronIdx] * gs.T_modes[FREE_ELECTRON];
         }
+    }
+
+    @nogc
+    number temperature_of_mode(ref GasState gs, int mode) 
+    {
+        switch (mode) {
+            case 0:
+                if (mElectronicMode == 0){
+                    return vibration_electronic_temperature(gs);
+                }
+                else {
+                    return vibration_temperature(gs);
+                }
+            case 1:
+                if (mElectronicMode == 0){
+                    return electron_electronic_temperature(gs);
+                }
+                else {
+                    return electron_temperature(gs);
+                }
+            default:
+                throw new GasModelException("Invalid energy mode for three temperature gas");
+        }
+    }
+
+    @nogc
+    number electron_temperature(ref GasState gs)
+    {
+        if (gs.massf[mElectronIdx] < 1e-30) {return gs.T_modes[FREE_ELECTRON];}
+        number e_e = gs.u_modes[FREE_ELECTRON];
+        return e_e / (3.0 / 2.0 * gs.massf[mElectronIdx] * mR[mElectronIdx]) + T_REF;
     }
 
     @nogc
@@ -558,15 +693,15 @@ private:
         immutable number T_MAX = to!number(200_000.0);
 
         // we're aiming to find a temperature corresponding to this energy
-        number target_u = gs.u_modes[EE];
+        number target_u = gs.u_modes[FREE_ELECTRON];
 
         // guess that the new temperature is within +/- 5 K of gs.T_modes[imode]
         // this guess will be adjusted later by a bracketing algorithm
-        number Ta = gs.T_modes[EE] - to!number(5.0);
-        number Tb = gs.T_modes[EE] + to!number(5.0);
+        number Ta = gs.T_modes[FREE_ELECTRON] - to!number(5.0);
+        number Tb = gs.T_modes[FREE_ELECTRON] + to!number(5.0);
 
         number zero_func(number T) {
-            number u = electron_electronic_energy_mixture(gs, T);
+            number u = electron_energy_mixture(gs, T) + electronic_energy_mixture(gs, T);
             return u - target_u;
         }
 
@@ -577,7 +712,7 @@ private:
             // that was already there. It is probably a pre-shock free stream
             // value, so has been explicitly set by the user.
             if (fabs(zero_func(Tb)) < 1e-1) {
-                return gs.T_modes[EE];
+                return gs.T_modes[FREE_ELECTRON];
             }
 
             // otherwise there's not much we can do...
@@ -593,11 +728,11 @@ private:
 
 
         // use gs.T_modes[EE] as the initial guess
-        number T = gs.T_modes[EE];
+        number T = gs.T_modes[FREE_ELECTRON];
 
         // the function evaluation and derivative at the current guess
         number f = zero_func(T);
-        number df = electron_electronic_Cv_mixture(gs, T);
+        number df = electronic_Cv_mixture(gs, T) + electron_Cv_mixture(gs, T);
 
         bool converged = false;
         foreach (iter; 0 .. MAX_ITERATIONS) {
@@ -632,7 +767,114 @@ private:
 
             // evaluate function for next iteration
             f = zero_func(T);
-            df = electron_electronic_Cv_mixture(gs, T);
+            df = electron_Cv_mixture(gs, T) + electronic_Cv_mixture(gs, T);
+
+            // maintain the brackets on the root
+            if (f < 0.0) {
+                Ta = T;
+            }
+            else {
+                Tb = T;
+            }
+        }
+
+        if (!converged) {
+            string msg = "ThreeTemperatureGas: Electron/electronic temperature failed to converge.\n";
+            debug {
+                msg ~= format("The final value was: %.16f\n", T);
+                msg ~= "The supplied GasState was:\n";
+                msg ~= gs.toString() ~ "\n";
+            }
+            throw new GasModelException(msg);
+        }
+        return T;
+    }
+
+    @nogc
+    number vibration_electronic_temperature(ref GasState gs)
+    {
+        const int MAX_ITERATIONS = 200;
+        const double TOL = 1.0e-8;
+        const double IMAGINARY_TOL = 1.0e-15;
+        immutable number T_MIN = to!number(10.0);
+        immutable number T_MAX = to!number(200_000.0);
+
+        // we're aiming to find a temperature corresponding to this energy
+        number target_u = gs.u_modes[VIB];
+
+        // guess that the new temperature is within +/- 5 K of gs.T_modes[imode]
+        // this guess will be adjusted later by a bracketing algorithm
+        number Ta = gs.T_modes[VIB] - to!number(5.0);
+        number Tb = gs.T_modes[VIB] + to!number(5.0);
+
+        number zero_func(number T) {
+            number u = vib_energy_mixture(gs,T) + electronic_energy_mixture(gs, T);
+            return u - target_u;
+        }
+
+        // try to bracket the root
+        if (bracket!(zero_func, number)(Ta, Tb, T_MIN, T_MAX) == -1){
+            // If bracketing fails, there probably isn't any energy in this mode...
+            // If our energy is already close, we'll just accept the temperature
+            // that was already there. It is probably a pre-shock free stream
+            // value, so has been explicitly set by the user.
+            if (fabs(zero_func(Tb)) < 1e-1) {
+                return gs.T_modes[VIB];
+            }
+
+            // otherwise there's not much we can do...
+            throw new GasModelException("Undefined electron/electronic temperature");
+        }
+
+        // the function evaluation at the bounds
+        number fa, fb;
+        fa = zero_func(Ta);
+        fb = zero_func(Tb);
+        number dT = fabs(Tb - Ta);
+        number dT_old = dT;
+
+
+        // use gs.T_modes[EE] as the initial guess
+        number T = gs.T_modes[VIB];
+
+        // the function evaluation and derivative at the current guess
+        number f = zero_func(T);
+        number df = electronic_Cv_mixture(gs, T) + vib_Cv_mixture(gs, T);
+
+        bool converged = false;
+        foreach (iter; 0 .. MAX_ITERATIONS) {
+            bool newton_unstable = ((((T-Tb)*df-f) * ((T-Ta)*df-f)) > 0.0);
+            bool newton_slow = (fabs(2.0*f) > fabs(dT_old*df));
+            if (newton_unstable || newton_slow) {
+                // use bisection
+                dT_old = dT;
+                dT = 0.5*(Tb-Ta);
+                T = Ta + dT;
+            }
+            else {
+                // use Newton
+                dT_old = dT;
+                dT = f/df;
+                T -= dT;
+            }
+
+            // check for convergence
+            version(complex_numbers) {
+                if ((fabs(dT) < TOL) && fabs(dT.im) < IMAGINARY_TOL) {
+                    converged = true;
+                    break;
+                }
+            }
+            else {
+                if (fabs(dT) < TOL) {
+                    converged = true;
+                    break;
+                }
+            }
+
+            // evaluate function for next iteration
+            f = zero_func(T);
+            df = vib_Cv_mixture(gs, T) + electronic_Cv_mixture(gs, T);
 
             // maintain the brackets on the root
             if (f < 0.0) {

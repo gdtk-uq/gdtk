@@ -166,7 +166,7 @@ function main()
          elseif db[sp].type == "electron" then
             energy_modes[sp].electron = 1
          end
-         energy_modes[sp].electronic = 1
+         energy_modes[sp].electronic = electronic_mode
       end
    end
 
