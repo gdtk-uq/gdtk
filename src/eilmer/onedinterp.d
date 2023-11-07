@@ -209,7 +209,8 @@ void interp_l3r3_scalar(number qL2, number qL1, number qL0,
 } // end of interp_l3r3_scalar()
 
 @nogc
-void interp_l2r2(in FlowState cL1fs, in FlowState cL0fs, in FlowState cR0fs, in FlowState cR1fs,
+void interp_l2r2(ref FlowState cL1fs, ref FlowState cL0fs, ref FlowState cR0fs, ref FlowState cR1fs,
+                 Vector3 n, Vector3 t1, Vector3 t2,
                  in L2R2InterpData idi, size_t nsp, size_t nmodes, size_t nturb,
                  InterpolateOption thermo_interpolator, bool MHD, bool apply_limiter, bool extrema_clipping,
                  LocalConfig myConfig, ref FlowState Lft, ref FlowState Rght, number beta){
@@ -220,10 +221,10 @@ void interp_l2r2(in FlowState cL1fs, in FlowState cL0fs, in FlowState cR0fs, in 
     // the normal velocities are not messed up for mirror-image at walls.
     // PJ 21-feb-2012
     //if (myConfig.interpolate_in_local_frame) {
-    //cL1fs.vel.transform_to_local_frame(n, t1, t2);
-    //cL0fs.vel.transform_to_local_frame(n, t1, t2);
-    //cR0fs.vel.transform_to_local_frame(n, t1, t2);
-    //cR1fs.vel.transform_to_local_frame(n, t1, t2);
+    cL1fs.vel.transform_to_local_frame(n, t1, t2);
+    cL0fs.vel.transform_to_local_frame(n, t1, t2);
+    cR0fs.vel.transform_to_local_frame(n, t1, t2);
+    cR1fs.vel.transform_to_local_frame(n, t1, t2);
     //}
 
     GasModel gmodel = myConfig.gmodel;
@@ -370,12 +371,12 @@ void interp_l2r2(in FlowState cL1fs, in FlowState cL0fs, in FlowState cR0fs, in 
     //Rght.gas.a = gR0.a;
     //if (myConfig.interpolate_in_local_frame) {
       // Undo the transformation made earlier. PJ 21-feb-2012
-      //Lft.vel.transform_to_global_frame(n, t1, t2);
-      //Rght.vel.transform_to_global_frame(n, t1, t2);
-      //cL1fs.vel.transform_to_global_frame(n, t1, t2);
-      //cL0fs.vel.transform_to_global_frame(n, t1, t2);
-      //cR0fs.vel.transform_to_global_frame(n, t1, t2);
-      //cR1fs.vel.transform_to_global_frame(n, t1, t2);
+      Lft.vel.transform_to_global_frame(n, t1, t2);
+      Rght.vel.transform_to_global_frame(n, t1, t2);
+      cL1fs.vel.transform_to_global_frame(n, t1, t2);
+      cL0fs.vel.transform_to_global_frame(n, t1, t2);
+      cR0fs.vel.transform_to_global_frame(n, t1, t2);
+      cR1fs.vel.transform_to_global_frame(n, t1, t2);
     //}
 }
 

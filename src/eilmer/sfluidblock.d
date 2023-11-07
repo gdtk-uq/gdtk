@@ -2484,6 +2484,7 @@ public:
 
             interp_l2r2(celldata.flowstates[L1], celldata.flowstates[L0],
                         celldata.flowstates[R0], celldata.flowstates[R1],
+                        facedata.normals[idx], facedata.tangents1[idx], facedata.tangents2[idx],
                         facedata.l2r2_interp_data[idx], nsp, nmodes, nturb,
                         ti, MHD, apply_limiter, extrema_clipping,
                         myConfig, *Lft, *Rght, beta);
