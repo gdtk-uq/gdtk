@@ -12,6 +12,7 @@ config.turbulence_model = "spalart_allmaras_bcm"
 config.freestream_turbulent_intensity = 0.017 -- Chosen to match experiments
 config.viscous = true
 config.flux_calculator = "ausmdv"
+config.with_local_time_stepping = true
 
 -- Gas model and flow conditions to match Table 1, the first entry
 nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
@@ -102,7 +103,8 @@ SteadyStateSolver{
    cfl1 = 1.0,
    sigma1 = 1.0e-50,
    eta1 = 0.01,
-   tau1 = 10.0,
+   tau1 = 0.9,
+   p1   = 0.9,
 
    -- Settings control write-out
    snapshots_count = 100,

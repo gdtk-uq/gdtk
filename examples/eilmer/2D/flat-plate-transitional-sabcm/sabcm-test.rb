@@ -35,7 +35,7 @@ class TestSABCM < Test::Unit::TestCase
         steps = items[1].to_i
       end
     end
-    assert((steps - 808).abs < 40, "Failed to take correct number of steps.")
+    assert((steps - 1111).abs < 20, "Failed to take correct number of steps.")
   end
 
   def test_2_drag_force

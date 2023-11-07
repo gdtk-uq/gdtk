@@ -10,7 +10,7 @@ config.title = "Mabey Mach 4.5 flow over a flat plate (k-omega)"
 print(config.title)
 config.dimensions = 2
 config.turbulence_model = "k_omega"
-config.smooth_limiter_coeff = 0.1
+config.smooth_limiter_coeff = 0.01
 
 -- Gas model and flow conditions to match Mabey's data set 74021802
 nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
