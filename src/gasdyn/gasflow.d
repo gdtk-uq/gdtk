@@ -51,15 +51,17 @@ number[] shock_ideal(ref const(GasState) state1, number Vs, ref GasState state2,
  *   state1: reference to pre-shock Gas state (given)
  *   Vs: speed of gas coming into shock (given)
  *   state2: reference to post-shock Gas state (to be estimated)
- *     Note that only the 'rho','p','T' and 'a' attributes of state2
- *     are estimated using the ideal-gas model, which may not be
- *     fully consistent with the actual gas model.
- *     Other attributes, such as internal energy are not updated.
+ *     Note that only the 'rho','p' and 'T' attributes of state2
+ *     are estimated using the ideal-gas model, and then the actual
+ *     gas model is used to make the rest of the gas state consistent.
  *   gm: the gas model in use
  *
  * Returns: the dynamic array [V2, Vg], containing the post-shock gas speeds,
  *   V2 in the shock-reference frame,
  *   Vg in the lab frame.
+ *
+ * Note that the intention is to provide a reasonable starting point
+ * for the normal-shock calculation in the following function.
  */
 {
     number M1 = Vs / state1.a;
@@ -77,6 +79,19 @@ number[] shock_ideal(ref const(GasState) state1, number Vs, ref GasState state2,
     state2.rho = state1.rho * (gam+1.0)*M1*M1 / (2.0+(gam-1.0)*M1*M1);
     state2.p = state1.p * (2.0*gam*M1*M1 - (gam-1.0)) / (gam+1.0);
     state2.T = state2.p / (R*state2.rho);
+    // For gas models other than the calorically-perfect model,
+    // not all of the attributes of state2 will be consistent.
+    if (cast(CEAGas) gm !is null) {
+        // The ideal gas estimate may have an unreasonably high value for temperature
+	// that will upset the CEA2 program, if we are using it for the gas model.
+        // I vaguely recall Malcolm McIntosh had a correlation with shock velocity or
+        // Mach number for his adjustments to the ideal-gas initial guess, however,
+        // this is Chris James' simple adjustment that seems to allow the calculation
+        // to proceed.
+        state2.T = fmin(state2.T, 20000.0);
+    }
+    // We have a choice is how we update: pT or rhoT.
+    // gm.update_thermo_from_pT(state2);
     gm.update_thermo_from_rhoT(state2);
     gm.update_sound_speed(state2); // be sure that state2 is complete
     //
@@ -111,17 +126,6 @@ number[] normal_shock(ref const(GasState) state1, number Vs, ref GasState state2
     // Initial guess via ideal gas relations.
     number[] velocities = shock_ideal(state1, Vs, state2, gm);
     number V2 = velocities[0]; number Vg = velocities[1];
-    // For gas models other than the calorically-perfect model,
-    // not all of the attributes of state2 will be consistent.
-    if (cast(CEAGas) gm !is null) {
-        // The ideal gas estimate may have an unreasonably high value for temperature.
-        // I vaguely recall Malcolm McIntosh had a correlation with shock velocity or
-        // Mach number for his adjustments to the ideal-gas initial guess, however,
-        // this is Chris James' simple adjustment that seems to allow the calculation
-        // to proceed.
-        state2.T = fmin(state2.T, 20000.0);
-    }
-    gm.update_thermo_from_pT(state2);
     // We assume that state2 now contains a fair initial guess
     // and set up the target values for the Rankine-Hugoniot relations.
     number V1 = Vs;
