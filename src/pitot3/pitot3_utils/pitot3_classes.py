@@ -11,6 +11,8 @@ Chris James (c.james4@uq.edu.au) 01/01/21
 import sys, os, math
 import yaml
 
+from datetime import datetime
+
 from gdtk.gas import GasModel, GasState, GasFlow
 from gdtk.ideal_gas_flow import p0_p
 from gdtk.numeric.zero_solvers import secant
@@ -19,7 +21,6 @@ def eilmer4_CEAGas_input_file_creator(output_filename, mixtureName, speciesList,
                                       inputUnits, withIons, trace = 1.0e-6,
                                       header = '-- CEA Gas model made automatically by PITOT3'):
     """Just a function to make an input file for the CEAGas object..."""
-
 
     if '.lua' not in output_filename:
         output_filename += '.lua'
@@ -32,27 +33,23 @@ def eilmer4_CEAGas_input_file_creator(output_filename, mixtureName, speciesList,
         gas_file.write('\n')
 
         gas_file.write('CEAGas = {' + '\n')
-        gas_file.write('  mixtureName = "{0}",'.format(mixtureName) + '\n')
-        gas_file.write('  speciesList = {0},'.format(speciesList).replace('[','{').replace(']','}') + '\n')
-        gas_file.write('  reactants = {0},'.format(reactants).replace(':',' =').replace("'",'') + '\n')
-        gas_file.write("  inputUnits = '{0}',".format(inputUnits) + '\n')
+        gas_file.write(f'  mixtureName = "{mixtureName}",' + '\n')
+        gas_file.write(f'  speciesList = {speciesList},'.replace('[','{').replace(']','}') + '\n')
+        gas_file.write(f'  reactants = {reactants},'.replace(':',' =').replace("'",'') + '\n')
+        gas_file.write(f"  inputUnits = '{inputUnits}'," + '\n')
         if withIons:
             gas_file.write('  withIons = true,' + '\n')
         else:
             gas_file.write('  withIons = false,' + '\n')
-        gas_file.write('  trace = {0}'.format(trace) + '\n')
+        gas_file.write(f'  trace = {trace}' + '\n')
         gas_file.write('}')
 
     return
 
-def eilmer4_CEAGas_gmodel_without_ions_creator(gmodel_filename):
-
+def eilmer4_CEAGas_input_file_reader(gmodel_filename):
     """
-    This is a function which takes a link to a CEA Gas file with ions and makes a version of it without ions
-    in the current folder. It then returns the filename so the gmodel can be used in the program.
-
-    This function is needed as sometimes PITOT3 fails in expansions at low temperatures where ions asre not needed, anyway,
-    this gmodel without ions will hopefully allow these cases to be solved.
+    This is a function to load CEAGas input files into PITOT3, this was originally inside
+    eilmer4_CEAGas_gmodel_without_ions_creator below but I realised it would be useful if it was more generic...
 
     :param gmodel_filename:
     :return:
@@ -61,8 +58,9 @@ def eilmer4_CEAGas_gmodel_without_ions_creator(gmodel_filename):
     # first we load the file line by line and pull out what we need
     # we are making the assumption that what we have is a proper good quality functioning CEA Gas gas model...
 
-    variables_to_look_for_list = ['mixtureName', 'speciesList', 'reactants', 'inputUnits', 'trace']
+    variables_to_look_for_list = ['mixtureName', 'speciesList', 'reactants', 'inputUnits', 'withIons', 'trace']
 
+    # this is an example gas model below...
     # model = "CEAGas"
     #
     # CEAGas = {
@@ -77,7 +75,7 @@ def eilmer4_CEAGas_gmodel_without_ions_creator(gmodel_filename):
     with open(gmodel_filename) as gmodel_file:
         for line in gmodel_file:
 
-            if line[0:2] != '--' and '=' in line: # -- is the lua comment character and any line we need will have = in it...
+            if line[0:2] != '--' and '=' in line:  # -- is the lua comment character and any line we need will have = in it...
 
                 split_line = line.strip().split('=')
 
@@ -94,7 +92,7 @@ def eilmer4_CEAGas_gmodel_without_ions_creator(gmodel_filename):
                         for character in characters_to_replace:
                             variable = variable.replace(character, '')
 
-                        mixtureName = variable + '-without-ions'
+                        mixtureName = variable
                     if variable_name == 'speciesList':
                         # we need to split the input into a list...
                         split_species_list = variable.split(',')
@@ -107,9 +105,7 @@ def eilmer4_CEAGas_gmodel_without_ions_creator(gmodel_filename):
                             for character in characters_to_replace:
                                 species = species.replace(character, '')
 
-                            # any species with a + or a - in it is a charged particle, remove them!
-
-                            if '+' not in species and '-' not in species and species:
+                            if species:
                                 speciesList.append(species)
 
                     if variable_name == 'reactants':
@@ -142,11 +138,46 @@ def eilmer4_CEAGas_gmodel_without_ions_creator(gmodel_filename):
 
                         inputUnits = variable
 
-                    if variable_name == 'trace':
+                    if variable_name == 'withIons':
+                        withIons = variable
 
+                    if variable_name == 'trace':
                         trace = float(variable)
 
-    # now the final variable is withIons which will be False
+    return mixtureName, speciesList, reactants, inputUnits, withIons, trace
+
+def eilmer4_CEAGas_gmodel_without_ions_creator(gmodel_filename):
+
+    """
+    This is a function which takes a link to a CEA Gas file with ions and makes a version of it without ions
+    in the current folder. It then returns the filename so the gmodel can be used in the program.
+
+    This function is needed as sometimes PITOT3 fails in expansions at low temperatures where ions asre not needed, anyway,
+    this gmodel without ions will hopefully allow these cases to be solved.
+
+    :param gmodel_filename:
+    :return:
+    """
+
+    mixtureName, speciesList, reactants, inputUnits, withIons, trace = eilmer4_CEAGas_input_file_reader(gmodel_filename)
+
+    # now we need to do what we need to do to make the objects without ions...
+
+    mixtureName = mixtureName + '-without-ions'
+
+    # and we remove any species which have ions in them by going through our species list...
+
+    speciesList_without_ions = []
+
+    for species in speciesList:
+
+        # any species with a + or a - in it is a charged particle, remove them!
+        if '+' not in species and '-' not in species:
+            speciesList_without_ions.append(species)
+
+    speciesList = speciesList_without_ions
+
+    # we need to just set withIons to False now as that is what we are doing...
     withIons = False
 
     # now we just need to give ourselves a filename for the new gmodel
@@ -167,8 +198,10 @@ def eilmer4_CEAGas_gmodel_without_ions_creator(gmodel_filename):
 
     gmodel_without_ions_filename = f'cea-{gmodel_name}-without-ions-gas-model.lua'
 
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
 
-    header = '-- modified gas model made with PITOT3 without ions for low temperature operation'
+    header = f'-- modified gas model made by PITOT3 on the {dt_string} without ions for low temperature operation'
 
     eilmer4_CEAGas_input_file_creator(gmodel_without_ions_filename, mixtureName, speciesList, reactants, inputUnits,
                                       withIons, trace, header)
@@ -196,10 +229,12 @@ def eilmer4_IdealGas_gas_model_creator(gas_state):
     molecular_mass = gas_state.ceaSavedData['Mmass']
 
     with open(ideal_gas_gmodel_filename, mode = 'w') as ideal_gas_gmodel_file:
+        now = datetime.now()
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
 
         gas_model_string = \
-f"""-- this is a dummy ideal gas gas model made by PITOT3 purely 
--- to perform a frozen shock over the test model.
+f"""-- this is a dummy ideal gas gas model made by PITOT3 on the {dt_string}
+-- purely to perform a frozen shock over the test model.
 -- Do not use it for anything else! As the entropy, viscosity and 
 -- thermal conductivity values are just dummy values for air.
 
@@ -690,13 +725,7 @@ def pitot3_single_line_output_file_creator(config_data, object_dict, states_dict
 
     for variable in config_dict_initial_variables:
         title_list.append(variable)
-
-        if variable == 'area_ratio' and 'area_ratio' not in config_data:
-            # this is because a default nozzle area ratio value for the facility would have been used...
-            area_ratio = object_dict['facility'].get_nozzle_geometric_area_ratio()
-            value_list.append(area_ratio)
-        else:
-            value_list.append(config_data[variable])
+        value_list.append(config_data[variable])
 
     # now add the shock speeds...
 
@@ -1124,8 +1153,13 @@ class Driver(object):
 
             # now build a gas model file and attach it to this object...
 
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+
+            header = f'-- Driver CEA Gas model made automatically by PITOT3 on the {dt_string}'
+
             eilmer4_CEAGas_input_file_creator('PITOT3_cea_driver_condition', 'driver_gas', self.driver_speciesList, self.driver_fill_composition,
-                                              self.driver_inputUnits, self.driver_withIons)
+                                              self.driver_inputUnits, self.driver_withIons, header=header)
 
             driver_gmodel_location = 'PITOT3_cea_driver_condition.lua'
 
@@ -2965,8 +2999,7 @@ class Tube(object):
             self.Mr = (shocked_gas_v + self.vr)/ shocked_gas_gas_state.a #normally this would be V2 - Vr, but it's plus here as Vr has been left positive
 
             self.stagnated_fill_gas = Facility_State('s5', stagnated_fill_gas_state, 0.0,
-                                                     reference_gas_state=self.get_shocked_state().get_reference_gas_state(),
-                                                     outputUnits = self.shocked_state.outputUnits, species_MW_dict = self.shocked_state.species_MW_dict)
+                                                     reference_gas_state=self.get_shocked_state().get_reference_gas_state())
 
             # then do the same thing for the unsteadily expanded driver gas as this is important for RSTs as well...
 
@@ -2983,8 +3016,7 @@ class Tube(object):
             self.Mrd = (unsteadily_expanded_state_v + self.vrd) / unsteadily_expanded_gas_state.a  # normally this would be V3 - Vr, but it's plus here as Vr has been left positive
 
             self.stagnated_unsteadily_expanding_gas = Facility_State('s5d', stagnated_unsteadily_expanded_gas_state, 0.0,
-                                                                     reference_gas_state=self.get_unsteadily_expanded_state().get_reference_gas_state(),
-                                                                     outputUnits = self.unsteadily_expanded_state.outputUnits, species_MW_dict = self.unsteadily_expanded_state.species_MW_dict)
+                                                                     reference_gas_state=self.get_unsteadily_expanded_state().get_reference_gas_state())
 
             for facility_state in [self.stagnated_fill_gas, self.stagnated_unsteadily_expanding_gas]:
                 print('-'*60)
