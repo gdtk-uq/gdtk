@@ -737,8 +737,14 @@ def pitot3_single_line_output_file_creator(config_data, object_dict, states_dict
     if facility_type == 'expansion_tube': config_dict_initial_variables += ['p5']
 
     for variable in config_dict_initial_variables:
+
         title_list.append(variable)
-        value_list.append(config_data[variable])
+        if variable == 'area_ratio' and 'area_ratio' not in config_data:
+            # we can get it from the facility object...
+            area_ratio = object_dict['facility'].get_nozzle_geometric_area_ratio()
+            value_list.append(area_ratio)
+        else:
+            value_list.append(config_data[variable])
 
     # now add the shock speeds...
 
