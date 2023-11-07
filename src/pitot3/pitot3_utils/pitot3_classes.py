@@ -706,16 +706,29 @@ def pitot3_single_line_output_file_creator(config_data, object_dict, states_dict
 
     config_dict_initial_variables += ['driver_condition']
 
+    if config_data['driver_condition'] == 'custom' and 'driver_condition_filename' in config_data:
+        config_dict_initial_variables += ['driver_condition_filename']
+
     if nozzle_flag:
         config_dict_initial_variables += ['area_ratio']
 
     if secondary_driver_flag:
         config_dict_initial_variables += ['secondary_driver_gas_gas_model', 'secondary_driver_gas_name']
 
-    config_dict_initial_variables += ['test_gas_gas_model', 'test_gas_name']
+    config_dict_initial_variables += ['test_gas_gas_model']
+
+    if config_data['test_gas_gas_model'] != 'custom':
+        config_dict_initial_variables += ['test_gas_name']
+    else:
+        config_dict_initial_variables += ['test_gas_filename']
 
     if facility_type == 'expansion_tube':
-        config_dict_initial_variables += ['accelerator_gas_gas_model', 'accelerator_gas_name']
+        config_dict_initial_variables += ['accelerator_gas_gas_model']
+
+        if config_data['accelerator_gas_gas_model'] != 'custom':
+            config_dict_initial_variables += ['accelerator_gas_name']
+        else:
+            config_dict_initial_variables += ['accelerator_gas_filename']
 
     if secondary_driver_flag: config_dict_initial_variables += ['psd1']
 
@@ -724,8 +737,14 @@ def pitot3_single_line_output_file_creator(config_data, object_dict, states_dict
     if facility_type == 'expansion_tube': config_dict_initial_variables += ['p5']
 
     for variable in config_dict_initial_variables:
+
         title_list.append(variable)
-        value_list.append(config_data[variable])
+        if variable == 'area_ratio' and 'area_ratio' not in config_data:
+            # we can get it from the facility object...
+            area_ratio = object_dict['facility'].get_nozzle_geometric_area_ratio()
+            value_list.append(area_ratio)
+        else:
+            value_list.append(config_data[variable])
 
     # now add the shock speeds...
 
@@ -883,19 +902,17 @@ def pitot3_single_line_output_file_creator(config_data, object_dict, states_dict
     # now we output the results to a file
 
     title_line = ''
-
-    for variable_name in title_list:
-        if variable_name != title_list[-1]:
-            title_line += f'{variable_name},'
-        else:
-            title_line += f'{variable_name}'
-
     result_line = ''
 
-    for value in value_list:
-        if value != value_list[-1]:
+    # we do this together to remove a bug in the values where we can have values that are the same
+    # but we can't have variable names that are the same...
+    # this was a big issue, as maybe compositions can be 0.0!
+    for variable_name, value in zip(title_list, value_list):
+        if variable_name != title_list[-1]:
+            title_line += f'{variable_name},'
             result_line += f'{value},'
         else:
+            title_line += f'{variable_name}'
             result_line += f'{value}'
 
     if output_to_file:
@@ -2537,7 +2554,14 @@ class Facility_State(object):
         gas_state = self.get_gas_state()
 
         if gas_state.mu == 0.0: # this seems to be the default value before it is set. We only set it if needed, as we may be trying to load a pickle object and not want to use CEA again...
-            gas_state.update_trans_coeffs()
+            try:
+                gas_state.update_trans_coeffs()
+            except Exception as e:
+                print("Getting the dynamic viscosity of this facility state has failed.")
+                print(e)
+                print("None will be returned instead.")
+
+                return None
 
         return gas_state.mu
 
@@ -2553,7 +2577,7 @@ class Facility_State(object):
         v = self.get_v()
         mu = self.get_mu()
 
-        if mu > 0.0:
+        if mu and mu > 0.0:
             unit_Re = (gas_state.rho*v)/mu
         else:
             # I have found some cases where it didn't work...
@@ -3628,40 +3652,49 @@ class Test_Section(object):
         print("Test section freestream state is:")
         print(self.test_section_state)
 
-        # start by getting the shock angle (beta)
-        beta = test_section_state_gas_flow_object.beta_cone(self.test_section_state.get_gas_state(),
-                                                            self.test_section_state.get_v(),
-                                                            cone_half_angle)
+        try:
 
-        self.conical_shock_half_angle_degrees = math.degrees(beta)
+            # start by getting the shock angle (beta)
+            beta = test_section_state_gas_flow_object.beta_cone(self.test_section_state.get_gas_state(),
+                                                                self.test_section_state.get_v(),
+                                                                cone_half_angle)
 
-        print(f"Shock angle over the cone is {self.conical_shock_half_angle_degrees} degrees")
+            self.conical_shock_half_angle_degrees = math.degrees(beta)
 
-        cone_half_angle_calculated, v10c = test_section_state_gas_flow_object.theta_cone(self.test_section_state.get_gas_state(),
-                                                                                   self.test_section_state.get_v(),
-                                                                                   beta,
-                                                                                   post_conical_shock_gas_state)
+            print(f"Shock angle over the cone is {self.conical_shock_half_angle_degrees} degrees")
 
-        cone_half_angle_calculated_degrees = math.degrees(cone_half_angle_calculated)
+            cone_half_angle_calculated, v10c = test_section_state_gas_flow_object.theta_cone(self.test_section_state.get_gas_state(),
+                                                                                       self.test_section_state.get_v(),
+                                                                                       beta,
+                                                                                       post_conical_shock_gas_state)
 
-        print (f"The calculated cone half-angle should be the same as the specified one: {cone_half_angle_calculated_degrees} deg = {self.cone_half_angle_degrees} deg")
+            cone_half_angle_calculated_degrees = math.degrees(cone_half_angle_calculated)
 
-        # if the entrance state has a reference gas state, we can grab that as the post-shock state will have the same one.
-        if self.entrance_state.reference_gas_state:
-            reference_gas_state = self.entrance_state.get_reference_gas_state()
-        else:
-            reference_gas_state = None
+            print (f"The calculated cone half-angle should be the same as the specified one: {cone_half_angle_calculated_degrees} deg = {self.cone_half_angle_degrees} deg")
 
-        self.post_conical_shock_state = Facility_State(f'{self.test_section_post_shock_state_name}c',
-                                                       post_conical_shock_gas_state, v10c,
-                                                       reference_gas_state=reference_gas_state,
-                                                       outputUnits=self.entrance_state.outputUnits,
-                                                       species_MW_dict=self.entrance_state.species_MW_dict)
+            # if the entrance state has a reference gas state, we can grab that as the post-shock state will have the same one.
+            if self.entrance_state.reference_gas_state:
+                reference_gas_state = self.entrance_state.get_reference_gas_state()
+            else:
+                reference_gas_state = None
 
-        print(self.post_conical_shock_state)
+            self.post_conical_shock_state = Facility_State(f'{self.test_section_post_shock_state_name}c',
+                                                           post_conical_shock_gas_state, v10c,
+                                                           reference_gas_state=reference_gas_state,
+                                                           outputUnits=self.entrance_state.outputUnits,
+                                                           species_MW_dict=self.entrance_state.species_MW_dict)
 
-        if self.post_conical_shock_state.get_gas_state_gmodel_type() == 'CEAGas':
-            print(self.post_conical_shock_state.get_reduced_composition_two_line_output_string())
+            print(self.post_conical_shock_state)
+
+            if self.post_conical_shock_state.get_gas_state_gmodel_type() == 'CEAGas':
+                print(self.post_conical_shock_state.get_reduced_composition_two_line_output_string())
+
+        except Exception as e:
+            print("Conical shock calculation failed:")
+            print(e)
+            print("Result will not be added to the output.")
+
+            self.post_conical_shock_state = None
 
         return
 
@@ -3727,7 +3760,7 @@ class Test_Section(object):
                 print(self.post_wedge_shock_state.get_reduced_composition_two_line_output_string())
 
         except Exception as e:
-            print("Wedge shock calculation has failed:")
+            print("Wedge shock calculation failed:")
             print(e)
             print("Result will not be added to the output.")
 
@@ -3750,7 +3783,7 @@ class Test_Section(object):
         else:
             facility_state_list = [self.post_normal_shock_state]
 
-        if hasattr(self, 'post_conical_shock_state'):
+        if hasattr(self, 'post_conical_shock_state') and self.post_conical_shock_state:
             facility_state_list += [self.post_conical_shock_state]
 
         if hasattr(self, 'post_wedge_shock_state') and self.post_wedge_shock_state:
