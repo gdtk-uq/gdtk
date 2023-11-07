@@ -239,12 +239,15 @@ public:
     @nogc
     void predictor_step(double dt)
     {
-        if (is_restrain || brakes_on) {
+        if (is_restrain) {
             x = x0;
             vel = vel0;
         } else {
             x = x0 + dxdt[0]*dt;
             vel = vel0 + dvdt[0]*dt;
+	    if (brakes_on && (vel*vel0 < 0.0)) {
+                vel = 0.0; // Come to full stop.
+	    }
         }
         return;
     }
@@ -252,12 +255,15 @@ public:
     @nogc
     void corrector_step(double dt)
     {
-        if (is_restrain || brakes_on) {
+        if (is_restrain) {
             x = x0;
             vel = vel0;
         } else {
             x = x0 + 0.5*(dxdt[0]+dxdt[1])*dt;
             vel = vel0 + 0.5*(dvdt[0]+dvdt[1])*dt;
+	    if (brakes_on && (vel*vel0 < 0.0)) {
+                vel = 0.0; // Come to full stop.
+	    }
         }
         return;
     }
