@@ -216,15 +216,6 @@ number[] normal_shock_1(ref const(GasState) state1, number Vs, ref GasState stat
     // Initial guess via ideal gas relations.
     number[] velocities = shock_ideal(state1, Vs, state2, gm);
     number V2 = velocities[0]; number Vg = velocities[1];
-    if (cast(CEAGas) gm !is null) {
-        // The ideal gas estimate may have an unreasonably high value for temperature.
-        // I vaguely recall Malcolm McIntosh had a correlation with shock velocity or
-        // Mach number for his adjustments to the ideal-gas initial guess, however,
-        // this is Chris James' simple adjustment that seems to allow the calculation
-        // to proceed.
-        state2.T = fmin(state2.T, 20000.0);
-        gm.update_thermo_from_pT(state2);
-    }
     // We assume that state2 now contains a fair initial guess
     // and set up the target values for the Rankine-Hugoniot relations.
     number V1 = Vs;
