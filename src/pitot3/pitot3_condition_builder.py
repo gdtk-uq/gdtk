@@ -7,7 +7,7 @@ Chris James (c.james4@uq.edu.au) - 02/01/23
 
 """
 
-CONDITION_BUILDER_VERSION_STRING = '05-Nov-2023'
+CONDITION_BUILDER_VERSION_STRING = '08-Nov-2023'
 
 #----------------------------------------------------------------------------------------
 
@@ -19,13 +19,15 @@ import itertools
 from contextlib import redirect_stdout, redirect_stderr
 from natsort import natsorted
 import json
+import zlib
 import zipfile
 import shutil
 import time
 
 from pitot3 import run_pitot3
 from pitot3_utils.pitot3_classes import pitot3_remote_run_creator, pitot3_pickle_output_file_loader, \
-    pitot3_single_line_output_file_creator, pitot3_pickle_output_file_creator, pitot3_json_output_file_loader, Facility
+    pitot3_single_line_output_file_creator, pitot3_pickle_output_file_creator, pitot3_json_output_file_loader, Facility, \
+    cleanup_function
 
 #----------------------------------------------------------------------------------------
 
@@ -463,7 +465,8 @@ def run_pitot3_condition_builder(config_dict = {}, config_filename = None,
 
     zipfile_name = f'{base_output_filename}_individual_log_and_result_files.zip'
 
-    with zipfile.ZipFile(zipfile_name, "w") as zf:
+    # compression level of 9 to get the smallest file...
+    with zipfile.ZipFile(zipfile_name, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
 
         for dirname, subdirs, files in os.walk(cwd):
 
@@ -674,6 +677,10 @@ def pitot3_condition_builder_test_run(test_name, changing_input_config_dict, var
                         print("The run appears to have failed. The error message is:")
                         print(e)
                         print("The result will not be added to the output.")
+
+                        print("Cleaning the simulation folder of run files as this is normally done at the end of each simulation.")
+
+                        cleanup_function()
 
                         failure_filename = f'{test_name}_failed.txt'
                         print(f"The dummy file {failure_filename} will also be created in the folder so the program knows that the run failed.")
