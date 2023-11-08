@@ -101,7 +101,8 @@ number[] shock_ideal(ref const(GasState) state1, number Vs, ref GasState state2,
 } // end shock_ideal()
 
 number[] normal_shock(ref const(GasState) state1, number Vs, ref GasState state2,
-                      GasModel gm, double rho_tol=1.0e-6, double T_tol = 0.1)
+                      GasModel gm, double rho_tol=1.0e-6, double T_tol = 0.1,
+		      bool update_initial_state2=true)
 /**
  * Computes post-shock conditions in a shock-stationary frame.
  * (This version iterates on rho2, T2.)
@@ -113,6 +114,8 @@ number[] normal_shock(ref const(GasState) state1, number Vs, ref GasState state2
  *   gm: the gas model in use
  *   rho_tol: tolerance in kg/m^3
  *   T_tol: temperature tolerance in degrees K
+ *   update_initial_state2: by default do this initial update.
+ *      Chris James has a case where he does not want to do this update.
  *
  * Returns: the dynamic array [V2, Vg], containing the post-shock gas speeds,
  *   V2 in the shock-reference frame,
@@ -122,7 +125,7 @@ number[] normal_shock(ref const(GasState) state1, number Vs, ref GasState state2
 {
     // Assume a chemically-frozen gas, so copy mass-fractions and the like from state1.
     state2.copy_values_from(state1);
-    gm.update_thermo_from_pT(state2);
+    if (update_initial_state2) { gm.update_thermo_from_pT(state2); }
     // Initial guess via ideal gas relations.
     number[] velocities = shock_ideal(state1, Vs, state2, gm);
     number V2 = velocities[0]; number Vg = velocities[1];

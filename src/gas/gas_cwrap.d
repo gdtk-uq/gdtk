@@ -965,12 +965,12 @@ int gasflow_shock_ideal(int state1_id, double vs, int state2_id, int gm_id,
 
 extern(C)
 int gasflow_normal_shock(int state1_id, double vs, int state2_id, int gm_id,
-                         double* results, double rho_tol, double T_tol)
+                         double* results, double rho_tol, double T_tol, int update_initial_state2)
 {
     try {
         double[] my_results = normal_shock(*(gas_states[state1_id]), vs,
                                            *(gas_states[state2_id]), gas_models[gm_id],
-                                           rho_tol, T_tol);
+                                           rho_tol, T_tol, to!bool(update_initial_state2));
         results[0] = my_results[0]; // v2
         results[1] = my_results[1]; // vg
         return 0;

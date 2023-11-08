@@ -66,7 +66,7 @@ module Gas
   extern 'int gasflow_shock_ideal(int state1_id, double Vs, int state2_id, int gm_id,
                                   double* results)'
   extern 'int gasflow_normal_shock(int state1_id, double Vs, int state2_id, int gm_id,
-                                   double* results, double rho_tol, double T_tol)'
+                                   double* results, double rho_tol, double T_tol, int update_initial_state2)'
   extern 'int gasflow_normal_shock_1(int state1_id, double Vs, int state2_id, int gm_id,
                                      double* results, double p_tol, double T_tol)'
   extern 'int gasflow_normal_shock_p2p1(int state1_id, double p2p1, int state2_id, int gm_id,
@@ -663,10 +663,10 @@ class GasFlow
     return my_results[0, my_results.size].unpack("dd") # [v2, vg]
   end
 
-  def normal_shock(state1, vs, state2, rho_tol=1.0e-6, t_tol=0.1)
+  def normal_shock(state1, vs, state2, rho_tol=1.0e-6, t_tol=0.1, update_initial_state2=1)
     my_results = [0.0, 0.0].pack("d*")
     flag = Gas.gasflow_normal_shock(state1.id, vs, state2.id, @gmodel.id, my_results,
-                                    rho_tol, t_tol)
+                                    rho_tol, t_tol, update_initial_state2)
     if flag < 0 then raise "failed to compute normal shock jump from shock speed." end
     return my_results[0, my_results.size].unpack("dd") # [v2, vg]
   end
