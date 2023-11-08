@@ -1917,12 +1917,9 @@ class Facility_State(object):
         return
 
     def __str__(self):
-        text = "Facility_State(state {0}: p = {1:.2f} Pa, T = {2:.2f} K, gam = {3:.2f}, R = {4:.2f} J/kg K, V = {5:.2f} m/s, M = {6:.2f})".format(self.state_name,
-                                                                                                               self.gas_state.p,
-                                                                                                               self.gas_state.T,
-                                                                                                               self.gas_state.gamma,
-                                                                                                               self.gas_state.R,
-                                                                                                               self.v, self.M)
+        text = (f"Facility_State(state {self.state_name}: p = {self.gas_state.p:.2f} Pa, T = {self.gas_state.T:.2f} K, "
+                f"rho = {self.gas_state.rho:.2e} kg/m**3, gam = {self.gas_state.gamma:.2f}, R = {self.gas_state.R:.2f} J/kg K, "
+                f"V = {self.v:.2f} m/s, M = {self.M:.2f})")
 
         return text
 
