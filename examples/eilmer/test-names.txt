@@ -42,6 +42,7 @@
 3D/manufactured-solution/steady-state/rans/smoke-test/mms-rans-test.rb
 3D/manufactured-solution/steady-state/Spalart-Allmaras/smoke-test/mms-SA-test.rb
 2D/cht-manufactured-solution/spatial-verification/smoke-tests/single-thread-test.rb
+2D/cht-hollow-cylinder/steady-fluid-transient-solid/cht-cylinder-test.rb
 2D/efield-solver/mes-single/elec-field-test.rb
 2D/efield-solver/skew-split/skew-efield-test.rb
 2D/MHDShockTube/MHD-ShockTube-Test.rb
