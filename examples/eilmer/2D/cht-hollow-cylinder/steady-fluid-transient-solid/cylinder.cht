@@ -1,0 +1,12 @@
+{
+"npoints": 5,
+"constant_freestream": true,
+"warm_start_fluid_solve": true,
+"super_time_steps": 100,
+"n_startup_steps": 0,
+"dt_couple_init": 1.0,
+"dt_couple_max": 1.0,
+"point_0": {
+"flowstate": {"p": 6.4811e+02, "T": 2.415e+02, "T_modes": [], "massf": [1.0], "velx": 2.034235e+03, "vely": 0.0e+00, "velz": 0.0e+00, "turb": []}
+},
+}
