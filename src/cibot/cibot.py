@@ -23,11 +23,12 @@ USER = 'testbot'
 SENDER = "eilmer4bot@gmail.com"
 HANDLER = 'n.gibbons@uq.edu.au'
 DEVS = ['n.gibbons@uq.edu.au',
+        'lachlan.whyborn@uqconnect.edu.au',
         'kyle.damm@uqconnect.edu.au',
         'p.jacobs@uq.edu.au',
         'r.gollan@uq.edu.au']
 INSTALL_DIR = f'/home/{USER}/gdtkinst'
-BUILD = "make DMD=ldc2 WITH_MPI=1 WITH_COMPLEX_NUMBERS=1 WITH_NK=1 WITH_E4DEBUG=1 FLAVOUR=fast INSTALL_DIR={}".format(INSTALL_DIR)
+BUILD = "make DMD=ldc2 WITH_MPI=1 WITH_COMPLEX_NUMBERS=1 WITH_NK=1 WITH_CHT=1 WITH_E4DEBUG=1 FLAVOUR=fast INSTALL_DIR={}".format(INSTALL_DIR)
 LOCKFILE = f'/home/{USER}/lockfile.lock'
 LMR_SRC_DIR = f'/home/{USER}/source/gdtk/src/eilmer'
 TEST_DIR = f'/home/{USER}/tests'
@@ -319,6 +320,7 @@ def main(ignorenew=False):
 if __name__=='__main__':
     print("Hello world!")
     ignorenew=False
+    print(sys.argv)
     if len(sys.argv)>1:
         if sys.argv[1]=='ignorenew': ignorenew=True
     #with Lock():
