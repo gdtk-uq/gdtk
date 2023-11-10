@@ -1718,7 +1718,7 @@ class Diaphragm(object):
             self.vr = self.Mr * entrance_gas_gas_state.a - entrance_gas_v
 
             v2r, v2rg = entrance_gas_gas_flow.normal_shock(entrance_gas_gas_state, self.vr + entrance_gas_v,
-                                                         reflected_shocked_gas_gas_state, update_initial_state2=0)
+                                                         reflected_shocked_gas_gas_state)
 
             reflected_shocked_gas_v = entrance_gas_v - v2rg
 
@@ -2770,7 +2770,7 @@ class Tube(object):
 
             # do the shock
 
-            v2, v2g = fill_state_gas_flow.normal_shock(fill_state.get_gas_state(), vs, shocked_gas_state, update_initial_state2=0)
+            v2, v2g = fill_state_gas_flow.normal_shock(fill_state.get_gas_state(), vs, shocked_gas_state)
 
             # now set up and do the unsteady expansion
 
@@ -2882,7 +2882,7 @@ class Tube(object):
             shocked_gas_state = GasState(fill_state_gmodel)
             fill_state_gas_flow = GasFlow(fill_state_gmodel)
 
-            v2, v2g = fill_state_gas_flow.normal_shock(self.fill_state.get_gas_state(), self.vs, shocked_gas_state, update_initial_state2=0)
+            v2, v2g = fill_state_gas_flow.normal_shock(self.fill_state.get_gas_state(), self.vs, shocked_gas_state)
 
             # for the shocked state we can just use the fill state as the reference state...
             # we need to carry around the room temperature only gas model for if we need it for CO2 gases in the nozzle expansion...
@@ -3579,7 +3579,7 @@ class Test_Section(object):
 
         v10, v10g = test_section_state_gas_flow_object.normal_shock(self.test_section_state.get_gas_state(),
                                                                     self.test_section_state.get_v(),
-                                                                    post_normal_shock_gas_state, update_initial_state2=0)
+                                                                    post_normal_shock_gas_state)
 
         # if the entrance state has a reference gas state, we can grab that as the post-shock state will have the same one.
         if self.entrance_state.reference_gas_state:
