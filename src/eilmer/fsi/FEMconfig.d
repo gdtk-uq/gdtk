@@ -43,6 +43,7 @@ public:
     string BCs;
     int couplingStep;
     double[3] plateNormal;
+    bool quasi3D;
     int[] movingBlks;
 
     this(string jobName) {
@@ -62,6 +63,7 @@ public:
         this.BCs = getJSONstring(jsonData, "BCs", "CF");
         this.plateNormal = getJSONdoublearray(jsonData, "plateNormal", [0.0, 1.0, 0.0]);
         this.couplingStep = getJSONint(jsonData, "couplingStep", 1);
+        this.quasi3D = getJSONbool(jsonData, "quasi3D", false);
         this.movingBlks = getJSONintarray(jsonData, "movingBlks", [-1]);
     }
 }

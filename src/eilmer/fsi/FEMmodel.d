@@ -26,6 +26,9 @@ public:
     FEMConfig myConfig;
     int id;
 
+    // Metadata about the FEM model
+    size_t nNodes, nQuadPoints, nDoF;
+
     // The FEM node motion --> CFD vertex motion mapping helpers
     // What we have here is:
     // a) a 3D array, where the outermost dimensions denotes each block, second dimension for each CFD vertex
@@ -62,8 +65,10 @@ public:
     // where A = M, x = Vd, B = (-KX + F). For this, we need the permutation matrix of M.
     size_t[2][] MpermuteList;
 
-    // Finally, preallocate a vector to store the KX operation
-    number[] KDotX;
+    // Preallocate memory to be used during the time stepping calculation
+    number[] KDotX, Xstage, Vstage;
+    number[][] dX, dV;
+    Matrix!number rhs;
 
     // Vector of node velocities in the reference frame of the plate, with the x direction being
     // normal to the plate.
@@ -72,8 +77,8 @@ public:
     // Orientation of the plate, to go from the plate reference frame to the global.
     Vector3 plateNormal, plateTangent1, plateTangent2;
     
-    // Pressure at each node, taken from the fluid or UDF.
-    number[] nodeNorthPressure, nodeSouthPressure;
+    // Pressure at each node, taken from the fluid or UDF, at the quadrature points.
+    number[] northPressureAtQuads, southPressureAtQuads;
 
     // The boundary conditions requires certain DoFs to be set to 0
     size_t[] ZeroedIndices;
@@ -103,15 +108,22 @@ public:
         plateTangent1 = Vector3(myConfig.plateNormal[1], -myConfig.plateNormal[0], myConfig.plateNormal[2]);
         cross(plateTangent2, plateNormal, plateTangent1);
 
-
         // Set up the interface between the CFD and the FEM
         prepareGridMotionSetup();
         prepareNodeToVertexMap();
 
-        int totalNodes = (myConfig.Nx + 1) * (myConfig.Nz + 1);
-        nodeNorthPressure.length = totalNodes;
-        nodeSouthPressure.length = totalNodes;
-        FEMNodeVel.length = totalNodes;
+        // Allocate memory for the ODEs
+        K = new Matrix!number(nDoF); M = new Matrix!number(nDoF); F = new Matrix!number(nDoF, 1);
+        K.zeros(); M.zeros(); F.zeros();
+
+        X.length = nDoF; V.length = nDoF; Xstage.length = nDoF; Vstage.length = nDoF; KDotX.length = nDoF;
+        X[] = 0.0; V[] = 0.0; KDotX[] = 0.0;
+
+        dX = new number[][](nDoF, 4); dV = new number[][](nDoF, 4);
+        rhs = new Matrix!number(nDoF, 1);
+
+        northPressureAtQuads.length = nQuadPoints; southPressureAtQuads.length = nQuadPoints;
+        FEMNodeVel.length = nNodes;
 
         // The memory for the vectors and matrices is assigned in the model files, as they may have different numbers of
         // degrees of freedom therefore different numbers of elements.
@@ -168,11 +180,14 @@ public:
     // begin applyFSIMotionToBlock
     void applyFSIMotionToBlock(int movingBlkIndx, int blkId) {
         // Apply grid motion to a block
-        FluidBlock blk = localFluidBlocks[blkId];
+        SFluidBlock blk = cast(SFluidBlock) localFluidBlocks[blkId];
         Vector3 netVel;
         foreach (iv, vtx; blk.vertices) {
             netVel.clear();
             foreach (node; 0 .. 2) {
+                if (myConfig.quasi3D) {
+                    iv = iv % (blk.niv * blk.njv);
+                }
                 netVel.add(FEMNodeVel[nodeVelIds[movingBlkIndx][iv][node]], nodeVelWeights[movingBlkIndx][iv][node]);
             }
             netVel.transform_to_global_frame(plateNormal, plateTangent1, plateTangent2);
@@ -192,12 +207,12 @@ public:
                 // First line is the block id
                 northSurfaceBlks ~= parse!int(line);
                 northFEMNodeIds.length++; northCFDCellIds.length++;
-                // Next line is the NodeIds
-                line = mapFile.front(); mapFile.popFront();
-                _NodeIds = map!(to!int)(splitter(line)).array;
                 // Then the cell Ids
                 line = mapFile.front(); mapFile.popFront();
                 _CellIds = map!(to!int)(splitter(line)).array;
+                // Next line is the NodeIds
+                line = mapFile.front(); mapFile.popFront();
+                _NodeIds = map!(to!int)(splitter(line)).array;
 
                 // Due to retrieving data from a Lua table does not have
                 // a guaranteed order, we should re-order the indices to
@@ -221,12 +236,12 @@ public:
                 // First line is the block id
                 southSurfaceBlks ~= parse!int(line);
                 southFEMNodeIds.length++; southCFDCellIds.length++;
-                // Next line is the NodeIds
-                line = mapFile.front(); mapFile.popFront();
-                _NodeIds = map!(to!int)(splitter(line)).array;
                 // Then the cell Ids
                 line = mapFile.front(); mapFile.popFront();
                 _CellIds = map!(to!int)(splitter(line)).array;
+                // Next line is the NodeIds
+                line = mapFile.front(); mapFile.popFront();
+                _NodeIds = map!(to!int)(splitter(line)).array;
 
                 // Due to retrieving data from a Lua table does not have
                 // a guaranteed order, we should re-order the indices to
@@ -252,7 +267,17 @@ public:
             foreach (i, blkId; northSurfaceBlks) {
                 blk = cast(SFluidBlock) globalBlocks[blkId];
                 foreach (n; 0 .. northFEMNodeIds[i].length) {
-                    nodeNorthPressure[northFEMNodeIds[i][n]] = blk.cells[northCFDCellIds[i][n]].fs.gas.p;
+                    if (myConfig.quasi3D) {
+                        northPressureAtQuads[northFEMNodeIds[i][n]] = 0.0;
+                        size_t[3] twoD_indx = blk.to_ijk_indices_for_cell(northCFDCellIds[i][n]);
+                        foreach (k; 0 .. blk.nkc) {
+                            size_t threeD_indx = blk.cell_index(twoD_indx[0], twoD_indx[1], k);
+                            northPressureAtQuads[northFEMNodeIds[i][n]] += blk.cells[threeD_indx].fs.gas.p;
+                        }
+                        northPressureAtQuads[northFEMNodeIds[i][n]] /= blk.nkc;
+                    } else {
+                        northPressureAtQuads[northFEMNodeIds[i][n]] = blk.cells[northCFDCellIds[i][n]].fs.gas.p;
+                    }
                 }
             }
         }
@@ -260,7 +285,17 @@ public:
             foreach (i, blkId; southSurfaceBlks) {
                 blk = cast(SFluidBlock) globalBlocks[blkId];
                 foreach (n; 0 .. southFEMNodeIds[i].length) {
-                    nodeSouthPressure[southFEMNodeIds[i][n]] = blk.cells[southCFDCellIds[i][n]].fs.gas.p;
+                    if (myConfig.quasi3D) {
+                        southPressureAtQuads[southFEMNodeIds[i][n]] = 0.0;
+                        size_t[3] twoD_indx = blk.to_ijk_indices_for_cell(southCFDCellIds[i][n]);
+                        foreach (k; 0 .. blk.nkc) {
+                            size_t threeD_indx = blk.cell_index(twoD_indx[0], twoD_indx[1], k);
+                            southPressureAtQuads[southFEMNodeIds[i][n]] += blk.cells[threeD_indx].fs.gas.p;
+                        }
+                        southPressureAtQuads[southFEMNodeIds[i][n]] /= blk.nkc;
+                    } else {
+                        southPressureAtQuads[southFEMNodeIds[i][n]] = blk.cells[southCFDCellIds[i][n]].fs.gas.p;
+                    }
                 }
             }
         }
@@ -273,23 +308,57 @@ public:
         retrievePressures();
 
         // Then use these to fill in the force vector
+        F._data[] = 0.0;
         updateForceVector();
 
         // Now we can solve the ODE- reuse F to store the result of the linear system solution
         dt *= myConfig.couplingStep;
-        dot(K, X, KDotX);
-        F._data[] -= KDotX[];
-        solve!number(M, F, MpermuteList);
 
-        X[] += V[] * dt;
-        V[] += F._data[] * dt;
+        // Attempt an RK4 step
+        // First stage
+        dot(K, X, KDotX);
+        rhs._data[] = F._data[] - KDotX[];
+        solve!number(M, rhs, MpermuteList);
+        dV[][0] = rhs._data[];
+        dX[][0] = V[];
+
+        Xstage[] = X[] + 0.5 * dX[0][] * dt;
+        Vstage[] = V[] + 0.5 * dV[0][] * dt;
+
+        dot(K, Xstage, KDotX);
+        rhs._data[] = F._data[] - KDotX[];
+        solve!number(M, rhs, MpermuteList);
+        dV[][1] = rhs._data[];
+        dX[][1] = Vstage[];
+
+        Xstage[] = X[] + 0.5 * dX[1][] * dt;
+        Vstage[] = V[] + 0.5 * dV[1][] * dt;
+
+        dot(K, Xstage, KDotX);
+        rhs._data[] = F._data[] - KDotX[];
+        solve!number(M, rhs, MpermuteList);
+        dV[][2] = rhs._data[];
+        dX[][2] = Vstage[];
+
+        Xstage[] = X[] + dX[2][] * dt;
+        Vstage[] = V[] + dV[2][] * dt;
+
+        dot(K, Xstage, KDotX);
+        rhs._data[] = F._data[] - KDotX[];
+        solve!number(M, rhs, MpermuteList);
+        dV[][3] = rhs._data[];
+        dX[][3] = Vstage[];
+
+        foreach (i; 0 .. X.length) {
+            X[i] += (1./6.) * (dX[0][i] + 2. * dX[1][i] + 2. * dX[2][i] + dX[3][i]) * dt;
+            V[i] += (1./6.) * (dV[0][i] + 2. * dV[1][i] + 2. * dV[2][i] + dV[3][i]) * dt;
+        }
 
         // Convert to the node displacement velocities used by the fluid mesh
         convertToNodeVel();
         broadcastGridMotion();
 
         // And then empty F
-        F._data[] = 0.0;
     } // end compute_vtx_velocities_for_FSI
 
     void writeMatricesToFile() {

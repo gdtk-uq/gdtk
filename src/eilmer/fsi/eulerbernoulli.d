@@ -22,14 +22,10 @@ public:
     override void plateSetup() {
 
         // Allocate memory to the vectors/matrices- 2 DoFs per node
-        size_t TotalDoF = (myConfig.Nx + 1) * 2;
+        nNodes = myConfig.Nx + 1;
+        nDoF = nNodes * 2;
+        nQuadPoints = myConfig.Nx * 2;
 
-        X.length = TotalDoF; V.length = TotalDoF; KDotX.length = TotalDoF;
-        X[] = 0.0; V[] = 0.0; KDotX[] = 0.0;
-
-        M = new Matrix!number(TotalDoF); M.zeros();
-        K = new Matrix!number(TotalDoF); K.zeros();
-        F = new Matrix!number(TotalDoF, 1); F.zeros();
         super.plateSetup();
     }
 
@@ -84,30 +80,57 @@ public:
             FEMNodeVel[node].x = V[2 * node];
             FEMNodeVel[node].y = 0.0;
             FEMNodeVel[node].z = 0.0;
+            //FEMNodeVel[node].transform_to_global_frame(plateNormal, plateTangent1, plateTangent2);
+            //writeln(node, " Vel: ", FEMNodeVel[node]);
         }
     } // end convertToNodeVel
 
     // begin updateForceVector
+    number[4] ShapeFunctionEval(number L, number x) {
+        number[4] N;
+        N[0] = (1 / pow(L, 3)) * (pow(L, 3) - 3 * L * pow(x, 2) + 2 * pow(x, 3));
+        N[1] = (1 / pow(L, 2)) * (pow(L, 2) * x - 2 * L * pow(x, 2) + pow(x, 3));
+        N[2] = (1 / pow(L, 3)) * (3 * L * pow(x, 2) - 2 * pow(x, 3));
+        N[3] = (1 / pow(L, 2)) * (pow(x, 3) - L * pow(x, 2));
+        return N;
+    }
+
     override void updateForceVector() {
         number l = myConfig.length / myConfig.Nx;
+
+        number[4] Nq1, Nq2;
+        Nq1 = ShapeFunctionEval(l, (l / 2) * (-1 / sqrt(3.) + 1));
+        Nq2 = ShapeFunctionEval(l, (l / 2) * (1 / sqrt(3.) + 1));
+
+        foreach (i; 0 .. myConfig.Nx) {
+            // -1/sqrt(3) quad point
+            number q1 = southPressureAtQuads[2*i] - northPressureAtQuads[2*i];
+            number q2 = southPressureAtQuads[2*i+1] - northPressureAtQuads[2*i+1];
+
+            F._data[i*2 .. (i+2)*2] += (l / 2) * (q1 * Nq1[] + q2 * Nq2[]);
+        }
+
+        /*
+        // Evaluate the shape functions
         // Compute the force vector L based on Eq. 2.26 in 
         // "Programming the Finite Element Method" by Smith et al.
         // Currently, the approximation is that the distributed force
         // over the element is approximated by the average of the 
         // pressures at the element's nodes.
         number[4] Fc, FL;
-        Fc = l * [0.5, l / 2, 0.5, -l / 2];
+        Fc = l / 12 * [6, l, 6, -l];
 
         foreach (i; 0 .. myConfig.Nx) {
             number ElementPressure = to!number(0.0);
             foreach (node; 0 .. 2) {
                 size_t GlobalNodeIndx = i + node;
-                ElementPressure += nodeSouthPressure[GlobalNodeIndx] - nodeNorthPressure[GlobalNodeIndx];
+                ElementPressure += southPressureAtQuads[GlobalNodeIndx] - northPressureAtQuads[GlobalNodeIndx];
             }
             FL[] = ElementPressure * Fc[] / 2;
             F._data[i * 2 .. (i + 2) * 2] += FL[];
         }
 
+        */
         foreach (ZeroedIndx; ZeroedIndices) {
             F._data[ZeroedIndx] = 0.0;
         }

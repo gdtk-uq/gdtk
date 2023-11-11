@@ -168,7 +168,7 @@ function fsi_weights.generateInterpolationWeights(FBA, Nx, Nz, Length, Width, Si
 
             -- iIndxFEM * dxFEM, kIndxFEM * dzFEM denote fractionally how far we along the plate in each direction
             -- xNormalized/zNormalized denote where the CFD vertex is along the plate
-            if config.dimensions == 3 then
+            if (config.dimensions == 3 and not FSIOptions.quasi3D) then
                 interpWeights[k][i][1] = (1 - (xNormalised - (iIndxFEM - 1) * dxFEM) / dxFEM) * (1 - (zNormalised - (kIndxFEM - 1) * dzFEM) / dzFEM)
                 interpIndices[k][i][1] = (kIndxFEM - 1) * (Nx + 1) + (iIndxFEM - 1)
                 interpWeights[k][i][2] = (xNormalised - (iIndxFEM - 1) * dxFEM) / dxFEM * (1 - (zNormalised - (kIndxFEM - 1) * dzFEM) / dzFEM)
@@ -203,14 +203,14 @@ function fsi_weights.writeWeightsToFile(FBA, distanceWeights, interpWeights, int
                 weightsFile = assert(io.open(string.format("FSI/Weights/%04d.weights", blkId), "w"))
                 indicesFile = assert(io.open(string.format("FSI/Weights/%04d.indices", blkId), "w"))
                 niv = FBA.gridArray.nics[ib]+1; njv = FBA.gridArray.njcs[jb]+1;
-                if config.dimensions == 3 then nkv = FBA.gridArray.nkcs[kb]+1 else nkv = 1 end
+                if (config.dimensions == 3 and not FSIOptions.quasi3D) then nkv = FBA.gridArray.nkcs[kb]+1 else nkv = 1 end
 
                 for k = 0, nkv-1 do
                     for j = 0, njv-1 do
                         for i = 0, niv-1 do
                             -- Indices in the FBA
                             ig = i + ni_total; jg = j + nj_total; kg = k + nk_total
-                            if config.dimensions == 3 then nVerts = 4 else nVerts = 2 end
+                            if (config.dimensions == 3 and not FSIOptions.quasi3D) then nVerts = 4 else nVerts = 2 end
                             for n = 1, nVerts do
                                 if location == "plate" then
                                     weightsFile:write(string.format("%.18e ", interpWeights[kg][ig][n] * distanceWeights[kg][jg][ig]))
@@ -295,6 +295,62 @@ function ijkFBAIndxToFBIndx(FBA, i, j, k)
     return blkId, cellId
 end
 
+function fsi_weights.cellToQuadratureMapping(FBA, Nx, Nz, Length, Width, Side)
+    -- Every element has 2 quadrature points, located at +-1/sqrt(3), in the space where an element width
+    -- is (-1, 1)
+    cellToQuadratureMap = {}
+    if Side == "north" then
+        j = 0
+        j_cell = 0
+    elseif Side == "south" then
+        j = FBA.njv-1
+        j_cell = FBA.njv-2
+    end
+
+    -- Work out where the quadrature points are along the surface
+    quadLoc = (1 - 1 / math.sqrt(3)) / 2
+    dxFEM = Length / Nx
+    quadPoints = {}
+    for i = 1, Nx do
+        quadPoints[#quadPoints+1] = ((i-1) + quadLoc) * dxFEM
+        quadPoints[#quadPoints+1] = ((i-1) + (1-quadLoc)) * dxFEM
+    end
+
+    ref_point = FBA.gridArray.grid:get_vtx(0, j, 0)
+    cellPoints = {}
+    for i = 1, FBA.niv-1 do
+        xPos = vabs(FBA.gridArray.grid:get_vtx(i, j, 0) - ref_point)
+        cellPoints[i] = xPos
+    end
+
+    iCell = 1
+    for iQuad = 1, 2*Nx do
+        while cellPoints[iCell] < quadPoints[iQuad] do
+            iCell = iCell + 1
+        end
+        blkId, cellId = ijkFBAIndxToFBIndx(FBA, iCell-1, j, 0)
+        if cellToQuadratureMap[blkId] then
+            cellToQuadratureMap[blkId][iQuad] = cellId
+        else
+            cellToQuadratureMap[blkId] = {}
+            cellToQuadratureMap[blkId][iQuad] = cellId
+        end
+    end
+
+    mappingFile = assert(io.open("FSI/Weights/"..Side.."C2N.mapping", "w"))
+    for blkId, blkTable in pairs(cellToQuadratureMap) do
+        mappingFile:write(string.format("%d\n", blkId))
+        for _, cellId in pairs(blkTable) do
+            mappingFile:write(string.format("%d ", cellId))
+        end
+        mappingFile:write("\n")
+        for quadId, _ in pairs(blkTable) do
+            mappingFile:write(string.format("%s ", quadId-1))
+        end
+        mappingFile:write("\n")
+    end
+end
+
 function fsi_weights.cellToNodeMapping(FBA, Nx, Nz, Length, Width, Side)
     -- Each node in the FEM model has a cell associated with it; determine which cell this is
     -- The mapping table contains key : value pairs of blkId : {CellIndices}
@@ -369,7 +425,7 @@ function fsi_weights.cellToNodeMapping(FBA, Nx, Nz, Length, Width, Side)
         end
 
         for k = 0, Nz do
-            if config.dimensions == 3 then
+            if (config.dimensions == 3 and not FSIOptions.quasi3D) then
                 kVtx = 1
                 for _kVtx = 1, nkv-1 do
                     if dzFEM * k <= zNormalised[_kVtx] then

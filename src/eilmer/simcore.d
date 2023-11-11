@@ -307,6 +307,14 @@ int init_simulation(int tindx, int nextLoadsIndx,
                                                             GlobalConfig.flowFileExt), false);
         }
     }
+    version (FSI) {
+        if ((SimState.is_restart) && (GlobalConfig.grid_motion == GridMotion.FSI)) {
+            foreach (FEMModel; FEMModels) {
+                FEMModel.readFromFile(SimState.current_tindx);
+            }
+        }
+    }
+
     foreach (myblk; localFluidBlocks) {
         // 2023-07-04 PJ: Split this loop out and make it serial
         // because we are having trouble with parallel and GC.
