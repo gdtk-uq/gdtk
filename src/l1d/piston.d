@@ -40,6 +40,7 @@ public:
     bool is_restrain;
     bool with_brakes;
     bool brakes_on;
+    bool full_stop;
     double brakes_friction_force; // in N
     double x_buffer;
     bool on_buffer;
@@ -210,6 +211,11 @@ public:
         }
         //
         // Rate of change of velocity is acceleration.
+	// Normally, we would use these derivative values in the
+	// predictor and corrector updates.
+	// If the brakes have stopped the piston, we have an unusual update
+	// and don't want to use those derivatives.
+	full_stop = false;
         immutable vel_tol = 1.0e-6;
         if (vel > vel_tol) {
             // Moving forward, apply full friction in reverse.
@@ -225,9 +231,10 @@ public:
                     (pressure_force-friction_force)/mass :
                     (pressure_force+friction_force)/mass;
             } else {
-                // Friction force dominates; let's remain stationary.
-                vel = 0.0; // Full stop.
+                // Friction force dominates; let's remain stationary for now.
+                vel = 0.0;
                 dvdt[level] = 0.0;
+		full_stop = true;
             } // end if sufficient pressure to accelerate
         } // end if vel...
         //
@@ -244,10 +251,7 @@ public:
             vel = vel0;
         } else {
             x = x0 + dxdt[0]*dt;
-            vel = vel0 + dvdt[0]*dt;
-	    if (brakes_on && (vel*vel0 < 0.0)) {
-                vel = 0.0; // Come to full stop.
-	    }
+            vel = (full_stop) ? 0.0 : vel0 + dvdt[0]*dt;
         }
         return;
     }
@@ -260,10 +264,7 @@ public:
             vel = vel0;
         } else {
             x = x0 + 0.5*(dxdt[0]+dxdt[1])*dt;
-            vel = vel0 + 0.5*(dvdt[0]+dvdt[1])*dt;
-	    if (brakes_on && (vel*vel0 < 0.0)) {
-                vel = 0.0; // Come to full stop.
-	    }
+            vel = (full_stop) ? 0.0 : vel0 + 0.5*(dvdt[0]+dvdt[1])*dt;
         }
         return;
     }
