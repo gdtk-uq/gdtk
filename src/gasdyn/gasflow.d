@@ -297,7 +297,6 @@ number[] normal_shock_p2p1(ref const(GasState) state1, number p2p1,
  */
 {
     state2.copy_values_from(state1);
-    gm.update_thermo_from_pT(state2);
     // Initial guess via ideal gas relations.
     number g = gm.gamma(state1);
     number Ms = sqrt(1+(g+1)/2/g*(p2p1-1.0));

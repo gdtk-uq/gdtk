@@ -108,7 +108,7 @@ public:
         create_species_reverse_lookup();
         //
         // Make sure that all of the pieces are in place to run CEA calculations.
-        string dgdinst = expandTilde(environment.get("DGD", "~/dgdinst"));
+        string dgdinst = expandTilde(environment.get("DGD", "~/gdtkinst"));
         _cea_exe_path = buildPath(dgdinst, "bin", "cea2");
         _cea_cases_path = buildPath(dgdinst, "share", "cea-cases");
         // writeln("_cea_exe_path=", _cea_exe_path); // DEBUG
@@ -326,13 +326,27 @@ private:
         if (!exists(inpFile)) {
             throw new Exception(format("CEAGas cannot find %s", inpFile));
         }
-        if (exists(outFile)) { remove(outFile); }
-        if (exists(pltFile)) { remove(pltFile); }
-        auto pp = pipeProcess(_cea_exe_path, Redirect.all);
-        pp.stdin.writeln(jobName);
-        pp.stdin.flush();
-        pp.stdin.close();
-        auto returnCode = wait(pp.pid);
+        if (exists(outFile)) { core.stdc.stdio.remove(outFile.toStringz); }
+        if (exists(pltFile)) { core.stdc.stdio.remove(pltFile.toStringz); }
+	int returnCode = 0;
+	try {
+            // debug { import std.stdio; writeln("DEBUG Z2: About to create pipeProcess."); }
+	    // Putting a pause here improves the chances of the call working in a Ruby environment
+	    // but we still get an eventual failure with the message:
+	    // Could not read from pipe to get child status (Interrupted system call).
+	    // The problem does not occur when being called in a Python environment.
+	    // import core.thread.osthread; import core.time; Thread.sleep(dur!("msecs")(100));
+            auto pp = pipeProcess(_cea_exe_path, Redirect.all);
+            // debug { import std.stdio; writeln("DEBUG Z3: About to send jobName."); }
+            pp.stdin.writeln(jobName);
+            pp.stdin.flush();
+            pp.stdin.close();
+            // debug { import std.stdio; writeln("DEBUG Z4: About to wait for process."); }
+            returnCode = wait(pp.pid);
+            // debug { import std.stdio; writeln("DEBUG Z5: After waiting for process."); }
+	} catch (Exception e) {
+            throw new Exception(format("Exception while trying to run CEA2 as a pipeProcess: %s", e.msg));
+	}
         if (returnCode) {
             throw new Exception(format("CEAGas: cea program return code nonzero %d",
                                        returnCode));
