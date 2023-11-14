@@ -6,7 +6,7 @@
 # PJ, 2020-02-07
 #     2021-04-28 flux calculation
 #
-$LOAD_PATH << '~/dgdinst/lib'
+$LOAD_PATH << '~/gdtkinst/lib'
 require 'gdtk/gas'
 
 # Set up something like Sod's shock tube.

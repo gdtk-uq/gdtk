@@ -8,7 +8,7 @@
 #
 # To run:
 #   $ ruby fvreactor.py
-$LOAD_PATH << '~/dgdinst/lib'
+$LOAD_PATH << '~/gdtkinst/lib'
 require 'gdtk/gas'
 
 gm = GasModel.new("nitrogen-2sp.lua")

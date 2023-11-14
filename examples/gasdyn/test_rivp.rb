@@ -5,7 +5,7 @@
 #
 # PJ, 2020-03-30 adpated from osher-riemann-test.rb
 #
-$LOAD_PATH << '~/dgdinst/lib'
+$LOAD_PATH << '~/gdtkinst/lib'
 require 'gdtk/gas'
 
 # Set up something like Sod's shock tube.

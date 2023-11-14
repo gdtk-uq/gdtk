@@ -6,7 +6,7 @@
 #
 # PJ, 2020-02-10 adapted from the Lua and Python scripts
 
-$LOAD_PATH << '~/dgdinst/lib'
+$LOAD_PATH << '~/gdtkinst/lib'
 require 'gdtk/gas'
 require 'gdtk/numeric/zero_solvers'
 include ZeroSolvers

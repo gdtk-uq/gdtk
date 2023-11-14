@@ -7,7 +7,7 @@
 # $ prep-gas O2.inp O2-gas-model.lua
 # $ ruby thermo-curves-for-O2.rb
 #
-$LOAD_PATH << '~/dgdinst/lib'
+$LOAD_PATH << '~/gdtkinst/lib'
 require 'gdtk/gas'
 
 gasModelFile = 'O2-gas-model.lua'

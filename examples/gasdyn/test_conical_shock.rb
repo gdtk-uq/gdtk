@@ -5,7 +5,7 @@
 #
 # PJ, 2019-12-01
 #
-$LOAD_PATH << '~/dgdinst/lib'
+$LOAD_PATH << '~/gdtkinst/lib'
 require 'gdtk/gas'
 
 m1 = 1.5

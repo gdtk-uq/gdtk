@@ -12,8 +12,8 @@
 #                 and run jobs in their own directories
 
 import sys, os
-DGDINST = os.path.expandvars("$HOME/dgdinst")
-sys.path.append(DGDINST)
+GDTKINST = os.path.expandvars("$HOME/gdtkinst")
+sys.path.append(GDTKINST)
 
 import shutil, shlex, subprocess, queue
 import string, math

@@ -7,7 +7,7 @@
 #
 # PJ, 2019-11-30
 #
-$LOAD_PATH << '~/dgdinst/lib'
+$LOAD_PATH << '~/gdtkinst/lib'
 require 'gdtk/gas'
 
 gmodel = GasModel.new('cea-air13species-gas-model.lua')

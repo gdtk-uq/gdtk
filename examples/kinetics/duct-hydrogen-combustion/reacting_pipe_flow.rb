@@ -15,7 +15,7 @@
 # $ ruby reacting_pipe_flow.rb
 #
 #------------------------------------------------------------------
-$LOAD_PATH << '~/dgdinst/lib'
+$LOAD_PATH << '~/gdtkinst/lib'
 require 'gdtk/gas'
 
 # Things that we'll make use of shortly.

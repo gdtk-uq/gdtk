@@ -23,6 +23,7 @@ module Gas
   extern 'int gas_state_new(int gm_i)'
   extern 'int gas_state_set_scalar_field(int gs_i, char* field_name, double value)'
   extern 'int gas_state_get_scalar_field(int gs_i, char* field_name, double* value)'
+  extern 'int gas_state_get_thermo_scalars(int gs_i, double* values)'
   extern 'int gas_state_set_array_field(int gs_i, char* field_name, double* values, int n)'
   extern 'int gas_state_get_array_field(int gs_i, char* field_name, double* values, int n)'
   extern 'int gas_state_get_ceaSavedData_field(int gs_i, char* field_name, double* value)'
@@ -49,6 +50,7 @@ module Gas
   extern 'int gas_model_gas_state_enthalpy(int gm_i, int gs_i, double* result)'
   extern 'int gas_model_gas_state_entropy(int gm_i, int gs_i, double* result)'
   extern 'int gas_model_gas_state_molecular_mass(int gm_i, int gs_i, double* result)'
+  extern 'int gas_model_gas_state_binary_diffusion_coefficients(int gm_i, int gs_i, double* dij)'
 
   extern 'int gas_model_gas_state_enthalpy_isp(int gm_i, int gs_i, int isp, double* result)'
   extern 'int gas_model_gas_state_entropy_isp(int gm_i, int gs_i, int isp, double* result)'
@@ -62,6 +64,12 @@ module Gas
   extern 'int thermochemical_reactor_new(int gm_i, char* filename1, char* filename2)'
   extern 'int thermochemical_reactor_gas_state_update(int cr_i, int gs_i, double t_interval,
                                                       double* dt_suggest)'
+  extern 'int thermochemical_reactor_eval_source_terms(int cr_i, int gm_i, int gs_i,
+                                                       int nsp, int nmodes, double* source)'
+
+  extern 'int reaction_mechanism_new(int gm_i, char* filename)'
+  extern 'int reaction_mechanism_n_reactions(int rm_i)'
+  extern 'int reaction_mechanism_tickrates(int rm_i, int gm_i, int gs_i, double* forwardrates, double* backwardrates)'
 
   extern 'int gasflow_shock_ideal(int state1_id, double Vs, int state2_id, int gm_id,
                                   double* results)'

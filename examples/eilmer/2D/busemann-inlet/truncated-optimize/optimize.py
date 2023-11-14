@@ -6,8 +6,8 @@
 # PJ, 2020-09-19, adapt from the 2D/scramjet example, single worker thread.
 
 import sys, os
-DGDINST = os.path.expandvars("$HOME/dgdinst")
-sys.path.append(DGDINST)
+GDTKINST = os.path.expandvars("$HOME/gdtkinst")
+sys.path.append(GDTKINST)
 
 import shlex, subprocess, string, math
 from gdtk.numeric.nelmin import minimize

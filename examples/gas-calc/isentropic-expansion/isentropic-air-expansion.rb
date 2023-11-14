@@ -6,7 +6,7 @@
 #
 # Ruby port, PJ, 2019-11-21
 #
-$LOAD_PATH << '~/dgdinst/lib'
+$LOAD_PATH << '~/gdtkinst/lib'
 require 'gdtk/gas'
 
 gmodel = GasModel.new('ideal-air-gas-model.lua')

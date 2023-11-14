@@ -10,7 +10,7 @@
 # PJ 2019-07-24 direct use of FFI
 #    2019-07-27 using Ruby wrapper
 #
-$LOAD_PATH << '~/dgdinst/lib'
+$LOAD_PATH << '~/gdtkinst/lib'
 require 'gdtk/gas'
 
 gmodel = GasModel.new("ideal-air-gas-model.lua")

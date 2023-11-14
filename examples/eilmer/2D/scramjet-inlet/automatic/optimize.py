@@ -6,8 +6,8 @@
 # PJ, 2020-08-03, adapt from the nozzle-optimize-bell example.
 
 import sys, os
-DGDINST = os.path.expandvars("$HOME/dgdinst")
-sys.path.append(DGDINST)
+GDTKINST = os.path.expandvars("$HOME/gdtkinst")
+sys.path.append(GDTKINST)
 
 import shlex, subprocess, string, math
 from scipy.optimize import minimize

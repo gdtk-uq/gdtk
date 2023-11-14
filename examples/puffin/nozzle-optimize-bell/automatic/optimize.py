@@ -14,8 +14,8 @@
 #     2022-02-11, Return to the Bezier representation of the bell profile.
 
 import sys, os
-DGDINST = os.path.expandvars("$HOME/dgdinst")
-sys.path.append(DGDINST)
+GDTKINST = os.path.expandvars("$HOME/gdtkinst")
+sys.path.append(GDTKINST)
 
 import shutil, shlex, subprocess, queue
 import string, math

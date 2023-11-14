@@ -8,7 +8,7 @@
 # $ prep-gas thermally-perfect-N2-O2.inp thermally-perfect-N2-O2.lua
 # $ ruby transport-properties-for-air.rb
 #
-$LOAD_PATH << '~/dgdinst/lib'
+$LOAD_PATH << '~/gdtkinst/lib'
 require 'gdtk/gas'
 
 gasModelFile = 'thermally-perfect-N2-O2.lua'
