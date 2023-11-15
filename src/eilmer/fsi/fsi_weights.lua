@@ -227,12 +227,42 @@ function fsi_weights.writeWeightsToFile(FBA, distanceWeights, interpWeights, int
                                 elseif location == "top" then
                                     weightsFile:write(string.format("%1.8e ", interpWeights[#interpWeights][ig][n] * distanceWeights[#distanceWeights][jg][ig]))
                                     indicesFile:write(string.format("%d ", interpIndices[#interpIndices][ig][n]))
+                                elseif location == "west-bottom" then
+                                    weightsFile:write(string.format("%1.8e ", interpWeights[0][0][n] * distanceWeights[0][jg][0]))
+                                    indicesFile:write(string.format("%d ", interpIndices[0][0][n]))
+                                elseif location == "west-top" then
+                                    weightsFile:write(string.format("%1.8e ", interpWeights[#interpWeights][0][n] * distanceWeights[#distanceWeights][jg][0]))
+                                    indicesFile:write(string.format("%d ", interpIndices[#interpIndices][0][n]))
+                                elseif location == "east-bottom" then
+                                    weightsFile:write(string.format("%1.8e ", interpWeights[0][#interpWeights[0]][n] * distanceWeights[0][jg][#distanceWeights[0][jg]]))
+                                    indicesFile:write(string.format("%d ", interpIndices[0][#interpIndices[0]][n]))
+                                elseif location == "west-top" then
+                                    weightsFile:write(string.format("%1.8e ", interpWeights[#interpWeights][#interpWeights[#interWeights]][n] * distanceWeights[#distanceWeights][jg][#distanceWeights[#distanceWeights][jg]]))
+                                    indicesFile:write(string.format("%d ", interpIndices[#interpIndices][#interpIndices[#interpIndices]][n]))
                                 elseif location == "west-adjacent" then
                                     weightsFile:write(string.format("%1.8e ", interpWeights[kg][0][n]))
                                     indicesFile:write(string.format("%d ", interpIndices[kg][0][n]))
                                 elseif location == "east-adjacent" then
                                     weightsFile:write(string.format("%1.8e ", interpWeights[kg][#interpWeights[kg]][n]))
                                     indicesFile:write(string.format("%d ", interpIndices[kg][#interpIndices[kg]][n]))
+                                elseif location == "bottom-adjacent" then
+                                    weightsFile:write(string.format("%1.8e ", interpWeights[0][ig][n]))
+                                    indicesFile:write(string.format("%d ", interpIndices[0][ig][n]))
+                                elseif location == "top-adjacent" then
+                                    weightsFile:write(string.format("%1.8e ", interpWeights[#interpWeights][ig][n]))
+                                    indicesFile:write(string.format("%d ", interpIndices[#interpWeights][ig][n]))
+                                elseif location == "west-bottom-adjacent" then
+                                    weightsFile:write(string.format("%1.8e ", interpWeights[0][0][n]))
+                                    indicesFile:write(string.format("%d ", interpIndices[0][0][n]))
+                                elseif location == "west-top-adjacent" then
+                                    weightsFile:write(string.format("%1.8e ", interpWeights[#interpWeights][0][n]))
+                                    indicesFile:write(string.format("%d ", interpIndices[#interpWeights][0][n]))
+                                elseif location == "east-bottom-adjacent" then
+                                    weightsFile:write(string.format("%1.8e ", interpWeights[0][#interpWeights[0]][n]))
+                                    indicesFile:write(string.format("%d ", interpIndices[0][#interpWeights[0]][n]))
+                                elseif location == "east-top-adjacent" then
+                                    weightsFile:write(string.format("%1.8e ", interpWeights[#interpWeights][#interpWeights[#interpWeights]][n]))
+                                    indicesFile:write(string.format("%d ", interpIndices[#interpWeights][#interpWeights[#interpWeights]][n]))
                                 end
                             end
                             weightsFile:write("\n")

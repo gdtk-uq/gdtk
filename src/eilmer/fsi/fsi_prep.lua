@@ -97,7 +97,19 @@ function fsi_prep.write_FSI_weights()
             writeWeightsToFile(FSIOptions.northBottomFBA, NorthDistanceWeights, NorthInterpWeights, NorthInterpIndices, "bottom")
         end
         if FSIOptions.northNorthFBA then
-            writeWeightsToFile(FSIOptions.northTopFBA, NorthDistanceWeights, NorthInterpWeights, NorthInterpIndices, "north")
+            writeWeightsToFile(FSIOptions.northTopFBA, NorthDistanceWeights, NorthInterpWeights, NorthInterpIndices, "top")
+        end
+        if FSIOptions.northWestBottomFBA then
+            writeWeightsToFile(FSIOptions.northWestBottomFBA, NorthDistanceWeights, NorthInterpWeights, NorthInterpIndices, "west-bottom")
+        end
+        if FSIOptions.northWestTopFBA then
+            writeWeightsToFile(FSIOptions.northWestTopFBA, NorthDistanceWeights, NorthInterpWeights, NorthInterpIndices, "west-top")
+        end
+        if FSIOptions.northEastBottomFBA then
+            writeWeightsToFile(FSIOptions.northEastBottomFBA, NorthDistanceWeights, NorthInterpWeights, NorthInterpIndices, "east-bottom")
+        end
+        if FSIOptions.northEastTopFBA then
+            writeWeightsToFile(FSIOptions.northEastTopFBA, NorthDistanceWeights, NorthInterpWeights, NorthInterpIndices, "east-top")
         end
         if FSIOptions.westAdjacentFBA then
             writeWeightsToFile(FSIOptions.westAdjacentFBA, NorthDistanceWeights, NorthInterpWeights, NorthInterpIndices, "west-adjacent")
@@ -105,8 +117,25 @@ function fsi_prep.write_FSI_weights()
         if FSIOptions.eastAdjacentFBA then
             writeWeightsToFile(FSIOptions.eastAdjacentFBA, NorthDistanceWeights, NorthInterpWeights, NorthInterpIndices, "east-adjacent")
         end
+        if FSIOptions.bottomAdjacentFBA then
+            writeWeightsToFile(FSIOptions.bottomAdjacentFBA, NorthDistanceWeights, NorthInterpWeights, NorthInterpIndices, "bottom-adjacent")
+        end
+        if FSIOptions.topAdjacentFBA then
+            writeWeightsToFile(FSIOptions.topAdjacentFBA, NorthDistanceWeights, NorthInterpWeights, NorthInterpIndices, "top-adjacent")
+        end
+        if FSIOptions.westBottomAdjacentFBA then
+            writeWeightsToFile(FSIOptions.westBottomAdjacentFBA, NorthDistanceWeights, NorthInterpWeights, NorthInterpIndices, "west-bottom-adjacent")
+        end
+        if FSIOptions.westTopAdjacentFBA then
+            writeWeightsToFile(FSIOptions.westTopAdjacentFBA, NorthDistanceWeights, NorthInterpWeights, NorthInterpIndices, "west-top-adjacent")
+        end
+        if FSIOptions.eastBottomAdjacentFBA then
+            writeWeightsToFile(FSIOptions.eastBottomAdjacentFBA, NorthDistanceWeights, NorthInterpWeights, NorthInterpIndices, "east-bottom-adjacent")
+        end
+        if FSIOptions.eastTopAdjacentFBA then
+            writeWeightsToFile(FSIOptions.eastTopAdjacentFBA, NorthDistanceWeights, NorthInterpWeights, NorthInterpIndices, "east-top-adjacent")
+        end
     end
-    print("Finish north")
     if FSIOptions.southFBA then
         SouthDistanceWeights = generateDistanceWeights(FSIOptions.southFBA, true)
         SouthInterpWeights, SouthInterpIndices = generateInterpolationWeights(FSIOptions.southFBA, FSIOptions.Nx, FSIOptions.Nz, FSIOptions.length, FSIOptions.width, "south")
@@ -124,6 +153,18 @@ function fsi_prep.write_FSI_weights()
         if FSIOptions.southTopFBA then
             writeWeightsToFile(FSIOptions.southTopFBA, SouthDistanceWeights, SouthInterpWeights, SouthInterpIndices, "top")
         end
+        if FSIOptions.southWestBottomFBA then
+            writeWeightsToFile(FSIOptions.southWestBottomFBA, SouthDistanceWeights, SouthInterpWeights, SouthInterpIndices, "west-bottom")
+        end
+        if FSIOptions.southWestTopFBA then
+            writeWeightsToFile(FSIOptions.southWestTopFBA, SouthDistanceWeights, SouthInterpWeights, SouthInterpIndices, "west-top")
+        end
+        if FSIOptions.southEastBottomFBA then
+            writeWeightsToFile(FSIOptions.southEastBottomFBA, SouthDistanceWeights, SouthInterpWeights, SouthInterpIndices, "east-bottom")
+        end
+        if FSIOptions.southEastTopFBA then
+            writeWeightsToFile(FSIOptions.southEastTopFBA, SouthDistanceWeights, SouthInterpWeights, SouthInterpIndices, "east-top")
+        end
         -- Just repeat these 2 as insurance in case we dont have a top FBA
         if FSIOptions.westAdjacentFBA then
             writeWeightsToFile(FSIOptions.westAdjacentFBA, SouthDistanceWeights, SouthInterpWeights, SouthInterpIndices, "west-adjacent")
@@ -132,8 +173,6 @@ function fsi_prep.write_FSI_weights()
             writeWeightsToFile(FSIOptions.eastAdjacentFBA, SouthDistanceWeights, SouthInterpWeights, SouthInterpIndices, "east-adjacent")
         end
     end
-    print("Finish south")
-
     if FSIOptions.northFBA then
         cellToQuadratureMapping(FSIOptions.northFBA, FSIOptions.Nx, FSIOptions.Nz, FSIOptions.length, FSIOptions.width, "north")
     end

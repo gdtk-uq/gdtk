@@ -21,6 +21,21 @@ fsiOptionsHidden = {
     southBottomFBA = false,
     southTopFBA = false,
 
+    westBottomFBA = false,
+    westTopFBA = false,
+    eastBottomFBA = false,
+    eastTopFBA = false,
+
+    northWestTopFBA = false,
+    northWestBottomFBA = false,
+    northEastTopFBA = false,
+    northEastBottomFBA = false,
+
+    southWestTopFBA = false,
+    southWestBottomFBA = false,
+    southEastTopFBA = false,
+    southEastBottomFBA = false,
+
     westAdjacentFBA = false,
     eastAdjacentFBA = false,
     bottomAdjacentFBA = false,
@@ -37,6 +52,8 @@ fsiOptionsHidden = {
     -- Plate orientation
     plateNormal = {0.0, 1.0, 0.0},
 
+    -- Optional run in quasi-3D mode- integrate the pressure in the z direction
+    quasi3D = false,
     -- BCs
     BCs = "CFFF",
 

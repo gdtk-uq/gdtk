@@ -198,6 +198,11 @@ public:
         return ML;
     } // end LocalMassMatrix
 
+    computeNaturalFrequency(size_t i) {
+        double[3] k = [1.875, 4.694, 7.855];
+        return to!number(sqrt(myConfig.youngsModulus * pow(myConfig.t, 2) / (12 * myConfig.density)) * pow(k[i] / myConfig.Length, 2));
+    }
+
     // begin write
     override void writeToFile(size_t tindx) {
         auto writeFile = File(format("FSI/t%04d.dat", tindx), "w+");

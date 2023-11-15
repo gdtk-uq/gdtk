@@ -29,7 +29,7 @@ function fsi_check.checkPlateDimensions()
     tol = 1e-6
     if FSIOptions.northForcing == "Fluid" then
         FBA = FSIOptions.northFBA
-        niv = FBA.niv; nkv = FBA.nkv
+        niv = FBA.niv; njv = FBA.njv; nkv = FBA.nkv
         p000 = FBA.gridArray.grid:get_vtx(0, 0, 0)
         p100 = FBA.gridArray.grid:get_vtx(niv-1, 0, 0)
         p001 = FBA.gridArray.grid:get_vtx(0, 0, nkv-1)
@@ -39,10 +39,10 @@ function fsi_check.checkPlateDimensions()
     end
     if FSIOptions.southForcing == "Fluid" then
         FBA = FSIOptions.southFBA
-        niv = FBA.niv; nkv = FBA.nkv
-        p000 = FBA.gridArray.grid:get_vtx(0, 0, 0)
-        p100 = FBA.gridArray.grid:get_vtx(niv-1, 0, 0)
-        p001 = FBA.gridArray.grid:get_vtx(0, 0, nkv-1)
+        niv = FBA.niv; njv = FBA.njv; nkv = FBA.nkv
+        p000 = FBA.gridArray.grid:get_vtx(0, njv-1, 0)
+        p100 = FBA.gridArray.grid:get_vtx(niv-1, njv-1, 0)
+        p001 = FBA.gridArray.grid:get_vtx(0, njv-1, nkv-1)
         length = vabs(p100 - p000); width = vabs(p001 - p000)
         assert(math.abs(length - FSIOptions.length) < tol, "Specified plate length and actual plate length are different")
         if config.dimensions == 3 then assert(math.abs(width - FSIOptions.width) < tol, "Specified plate width and actual plate width are different") end

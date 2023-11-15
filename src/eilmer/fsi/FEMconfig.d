@@ -21,8 +21,7 @@ import fsi;
 //}
 
 enum ForcingType {
-    Fluid,
-    UserDefined
+    Fluid, UserDefined
 }
 
 ForcingType ForcingType_from_name(string name) {
@@ -30,6 +29,17 @@ ForcingType ForcingType_from_name(string name) {
         case "Fluid": return ForcingType.Fluid;
         case "UserDefined": return ForcingType.UserDefined;
         default: return ForcingType.Fluid;
+    }
+}
+
+enum DampingModel {
+    None, Rayleigh2Parameter
+}
+
+DampingModel DampingModel_from_name(string name) {
+    switch (name) {
+        case "Rayleigh2Parameter": return DampingModel.Rayleigh2Parameter;
+        default: return DampingModel.None;
     }
 }
 
@@ -45,6 +55,8 @@ public:
     double[3] plateNormal;
     bool quasi3D;
     int[] movingBlks;
+    DampingModel dampingModel;
+    double dampingRatio;
 
     this(string jobName) {
         string fileName = "config/" ~ jobName ~ ".fsi";
@@ -65,5 +77,7 @@ public:
         this.couplingStep = getJSONint(jsonData, "couplingStep", 1);
         this.quasi3D = getJSONbool(jsonData, "quasi3D", false);
         this.movingBlks = getJSONintarray(jsonData, "movingBlks", [-1]);
+        this.dampingModel = DampingModel_from_name(getJSONstring(jsonData, "dampingModel", "none"));
+        this.dampingRatio = getJSONdouble(jsonData, "dampingRatio", 0.001);
     }
 }
