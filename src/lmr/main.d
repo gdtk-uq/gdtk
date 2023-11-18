@@ -9,6 +9,7 @@ import computenorms;
 import limiter2vtk;
 import prepgrids;
 import prepflow;
+import prepmappedcells;
 import runsteady;
 import snapshot2vtk;
 import revisionid;
@@ -46,6 +47,7 @@ Show help for a given Eilmer command or topic.
     commands["limiter2vtk"] = limiter2vtkCmd;
     commands["prep-grids"] = prepGridCmd; commands["prep-grid"] = commands["prep-grids"]; // add alias
     commands["prep-flow"] = prepFlowCmd;
+    commands["prep-mapped-cells"] = prepMappedCellsCmd;
     commands["revision-id"] = revisionIdCmd;
     commands["run-steady"] = runSteadyCmd;
     commands["snapshot2vtk"] = snapshot2vtkCmd;

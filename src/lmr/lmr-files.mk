@@ -20,6 +20,7 @@ LMR_CMD_FILES = $(LMR_CMD)/checkjacobian.d \
 	$(LMR_CMD)/limiter2vtk.d \
 	$(LMR_CMD)/prepflow.d \
 	$(LMR_CMD)/prepgrids.d \
+	$(LMR_CMD)/prepmappedcells.d \
 	$(LMR_CMD)/revisionid.d \
 	$(LMR_CMD)/runsteady.d \
 	$(LMR_CMD)/snapshot2vtk.d

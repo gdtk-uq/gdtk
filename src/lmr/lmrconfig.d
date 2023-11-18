@@ -39,6 +39,7 @@ struct LmrCfg {
     immutable string blkListFile;
     immutable string vtkDir;
     immutable string mpimapFile;
+    immutable string mappedCellsFile;
     immutable string dblVarFmt;
     immutable string revisionId = "PUT_REVISION_STRING_HERE";
     immutable string fullRevisionId = "PUT_FULL_REVISION_STRING_HERE";
@@ -78,6 +79,7 @@ static this()
     lmrCfg.blkListFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["block-list-filename"].str;
     lmrCfg.vtkDir = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["vtk-output-directory"].str;
     lmrCfg.mpimapFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["mpimap-filename"].str;
+    lmrCfg.mappedCellsFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["mappedcells-filename"].str;
     lmrCfg.dblVarFmt = lmrJSONCfg["double-var-format"].str;
 
 
