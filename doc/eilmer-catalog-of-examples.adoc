@@ -74,7 +74,7 @@ include::{examplesdir}/eilmer/2D/wall-catalysis/readme.adoc[]
 
 = Flows with Conjugate Heat Transfer (CHT)
 
-include::{examplesdir}/eilmer/2D/solid/hollow-cylinder/readme.adoc[]
+include::{examplesdir}/eilmer/2D/cht-hollow-cylinder/transient-fluid-transient-solid/readme.adoc[]
 
 :leveloffset: -1
 
