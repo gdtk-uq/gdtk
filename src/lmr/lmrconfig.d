@@ -32,6 +32,7 @@ struct LmrCfg {
     immutable string referenceResidualsFile;
     immutable string flowPrefix;
     immutable string limiterPrefix;
+    immutable string loadsPrefix;
     immutable string gridPrefix;
     immutable string gridDir;
     immutable string gridDirectory;
@@ -72,6 +73,7 @@ static this()
     lmrCfg.referenceResidualsFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["reference-residuals-file"].str;
     lmrCfg.flowPrefix = lmrJSONCfg["flow-prefix"].str;
     lmrCfg.limiterPrefix = lmrJSONCfg["limiter-prefix"].str;
+    lmrCfg.loadsPrefix = lmrJSONCfg["loads-prefix"].str;
     lmrCfg.gridPrefix = lmrJSONCfg["grid-prefix"].str;
     lmrCfg.gridDir = lmrJSONCfg["grid-directory"].str;
     lmrCfg.gridDirectory = lmrCfg.simDir ~ "/" ~ lmrCfg.gridDir;
@@ -144,6 +146,25 @@ string limiterFilename(int snapshot, int blkId)
 	lmrCfg.limiterPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
     if (GlobalConfig.flow_format == "gziptext")
 	fname ~= lmrCfg.gzipExt;
+    return fname;
+}
+
+/**
+ * Return the loads filename for a single block+boundary combo as a string.
+ *
+ * Authors: RJG
+ * Date: 2023-11-19
+ */
+string loadsFilename(int snapshot, int blkId, size_t bndryId, string group)
+{
+    string fname = lmrCfg.snapshotDir ~
+	"/" ~
+	format(lmrCfg.snapshotIdxFmt, snapshot) ~
+	"/" ~
+	lmrCfg.loadsPrefix ~
+	"-blk-" ~ format(lmrCfg.blkIdxFmt, blkId) ~
+	"-bndry-" ~ format("%d", bndryId) ~
+	"-" ~ group ~ ".dat";
     return fname;
 }
 

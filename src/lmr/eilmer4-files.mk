@@ -21,7 +21,6 @@ LMR4_CORE_FILES := $(LMR4)/block.d \
 	$(LMR4)/grid_motion_shock_fitting.d \
 	$(LMR4)/grid_motion_udf.d \
 	$(LMR4)/history.d \
-	$(LMR4)/loads.d \
 	$(LMR4)/lsqinterp.d \
 	$(LMR4)/mass_diffusion.d \
 	$(LMR4)/onedinterp.d \

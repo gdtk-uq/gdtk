@@ -54,6 +54,7 @@ import ufluidblock : UFluidBlock;
 import user_defined_source_terms : getUDFSourceTermsForCell;
 import blockio;
 import fvcellio;
+import loads : writeLoadsToFile;
 
 version(mpi_parallel) {
     import mpi;
@@ -167,6 +168,7 @@ struct NKGlobalConfig {
     bool writeSnapshotOnLastStep = true;
     bool writeDiagnosticsOnLastStep = true;
     bool writeLimiterValues = false;
+    bool writeLoads = false;
 
     void readValuesFromJSON(JSONValue jsonData)
     {
@@ -213,6 +215,7 @@ struct NKGlobalConfig {
         writeSnapshotOnLastStep = getJSONbool(jsonData, "write_snapshot_on_last_step", writeSnapshotOnLastStep);
         writeDiagnosticsOnLastStep = getJSONbool(jsonData, "write_diagnostics_on_last_step", writeDiagnosticsOnLastStep);
         writeLimiterValues = getJSONbool(jsonData, "write_limiter_values", writeLimiterValues);
+        writeLoads = getJSONbool(jsonData, "write_loads", writeLoads);
     }
 }
 NKGlobalConfig nkCfg;
@@ -1017,15 +1020,12 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             if (nkCfg.writeLimiterValues) {
                 writeLimiterValues(step, nWrittenSnapshots);
             }
+            if (nkCfg.writeLoads) {
+                writeLoads(step, nWrittenSnapshots);
+            }
         }
 
 	version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-
-
-        // [TODO] Write loads. We only need one lot of loads.
-        // Any intermediate loads before steady-state have no physical meaning.
-        // They might have some diagnostic purpose?
-
 
 	/*---
          * 2b. Stopping checks.
@@ -2818,6 +2818,27 @@ void writeLimiterValues(int step, int nWrittenSnapshots)
         limBlkIO.writeVariablesToFile(fileName, blk.cells);
     }
 }
+
+/**
+ * Write loads to disk.
+ *
+ * Authors: RJG
+ * Date: 2023-11-19
+ */
+void writeLoads(int step, int nWrittenSnapshots)
+{
+    alias cfg = GlobalConfig;
+    if (cfg.is_master_task) {
+        writefln("    |");
+        writefln("    |-->  Writing loads at step = %4d  ", step);
+    }
+
+    int iSnap = (nWrittenSnapshots <= nkCfg.totalSnapshots) ? nWrittenSnapshots : nkCfg.totalSnapshots;
+    foreach (blk; localFluidBlocks) {
+        writeLoadsToFile(iSnap, blk);
+    }
+}
+
 
 /*---------------------------------------------------------------------
  * Mixins for performing preconditioner actions

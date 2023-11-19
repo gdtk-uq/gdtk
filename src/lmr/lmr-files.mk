@@ -11,6 +11,7 @@ LMR_CORE_FILES = $(LMR)/blockio.d \
 	$(LMR)/init.d \
 	$(LMR)/jacobian.d \
 	$(LMR)/lmrexceptions.d \
+	$(LMR)/loads.d \
 	$(LMR)/newtonkrylovsolver.d
 
 LMR_CMD_FILES = $(LMR_CMD)/checkjacobian.d \
