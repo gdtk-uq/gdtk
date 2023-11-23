@@ -61,7 +61,7 @@ DEMO_PROGRAMS := vector3_demo gpath_demo surface_demo volume_demo \
 
 include geom_files.mk
 
-COMPLEX_DIR := ../extern/complex/source
+COMPLEX_DIR := ../extern/complex-numbers/source
 COMPLEX_FILES := $(COMPLEX_DIR)/complex.d
 
 GZIP_DIR := ../extern/gzip

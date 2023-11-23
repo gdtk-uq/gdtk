@@ -17,7 +17,7 @@ DEMO_PROGRAMS := idealgasflow_demo luaidealgasflow_demo \
 
 include gasdyn_files.mk
 
-COMPLEX_DIR := ../extern/complex/source
+COMPLEX_DIR := ../extern/complex-numbers/source
 COMPLEX_FILES := $(COMPLEX_DIR)/complex.d
 
 GZIP_DIR := ../extern/gzip

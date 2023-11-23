@@ -27,7 +27,7 @@ TEST_PROGRAMS := chemistry_update_test \
 		electronically_specific_kinetics_test \
 		two_temperature_gasgiant_kinetics_test
 
-COMPLEX_DIR := ../extern/complex/source
+COMPLEX_DIR := ../extern/complex-numbers/source
 COMPLEX_FILES := $(COMPLEX_DIR)/complex.d
 
 UTIL_DIR := ../util

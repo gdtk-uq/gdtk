@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/complex
+libcomplex-numbers.so
+libcomplex-numbers.dylib
+libcomplex-numbers.dll
+libcomplex-numbers.a
+libcomplex-numbers.lib
+complex-numbers-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst

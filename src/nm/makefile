@@ -11,7 +11,7 @@ else
 endif
 $(info PLATFORM=$(PLATFORM))
 
-COMPLEX_DIR := ../extern/complex/source
+COMPLEX_DIR := ../extern/complex-numbers/source
 COMPLEX_FILES := $(COMPLEX_DIR)/complex.d
 
 UTIL_DIR := ../util
