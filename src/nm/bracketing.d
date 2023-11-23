@@ -17,7 +17,7 @@
 module nm.bracketing;
 import std.math;
 import std.algorithm;
-import complex;
+import complex_numbers;
 debug { import std.stdio; }
 
 int bracket(alias f, T)(ref T x1, ref T x2,

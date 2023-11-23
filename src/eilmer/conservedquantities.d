@@ -14,7 +14,7 @@ module conservedquantities;
 import std.string;
 import std.format;
 import std.conv;
-import complex;
+import complex_numbers;
 import nm.number;
 import geom;
 import gas;

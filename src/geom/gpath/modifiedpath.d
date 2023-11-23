@@ -6,7 +6,7 @@ module geom.gpath.modifiedpath;
 import std.conv;
 import std.math;
 
-import complex;
+import complex_numbers;
 import nm.number;
 
 import geom.elements;

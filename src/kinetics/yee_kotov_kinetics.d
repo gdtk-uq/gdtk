@@ -23,7 +23,7 @@ module kinetics.yee_kotov_kinetics;
 import std.stdio;
 import std.math;
 import std.format;
-import complex;
+import complex_numbers;
 import nm.number;
 
 import gas;

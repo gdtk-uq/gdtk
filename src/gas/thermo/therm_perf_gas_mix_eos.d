@@ -23,7 +23,7 @@ import std.stdio;
 import std.string;
 import std.conv;
 import nm.nm_exception : NumericalMethodException;
-import complex;
+import complex_numbers;
 import nm.number;
 import nm.newton : solve;
 import util.lua;
@@ -93,7 +93,7 @@ public:
         // the function-solving method to handle this.
         number delT = 1000.0;
         version(complex_numbers) {
-            number T1 = complex.fmax(Q.T - 0.5*delT, to!number(T_MIN));
+            number T1 = complex_numbers.fmax(Q.T - 0.5*delT, to!number(T_MIN));
         } else {
             double T1 = std.math.fmax(Q.T - 0.5*delT, T_MIN);
         }

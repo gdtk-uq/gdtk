@@ -11,7 +11,7 @@ import std.stdio;
 import std.conv;
 import std.math;
 import std.algorithm;
-import complex;
+import complex_numbers;
 import nm.number;
 version(mpi_parallel) {
     import mpi;

@@ -13,7 +13,7 @@ module gas.pseudo_species;
 import std.conv : to;
 import std.string : format;
 
-import complex;
+import complex_numbers;
 import nm.number;
 import util.lua;
 import util.lua_service;

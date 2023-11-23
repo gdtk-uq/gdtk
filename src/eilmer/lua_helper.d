@@ -15,7 +15,7 @@ import std.string;
 import std.algorithm;
 
 import util.lua;
-import complex;
+import complex_numbers;
 import nm.number;
 import geom.luawrap;
 import gas;

@@ -13,7 +13,7 @@ module nm.brent;
 import std.string;
 import std.math;
 import std.algorithm;
-import complex;
+import complex_numbers;
 
 /**
  * Locate a root of f(x) known to lie between x1 and x2. The method

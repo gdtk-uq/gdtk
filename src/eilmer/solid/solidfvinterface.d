@@ -7,7 +7,7 @@
 
 module solidfvinterface;
 
-import complex;
+import complex_numbers;
 import nm.number;
 
 import geom;

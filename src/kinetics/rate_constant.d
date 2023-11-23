@@ -11,7 +11,7 @@ import std.math;
 import std.algorithm;
 import std.typecons;
 import std.string;
-import complex;
+import complex_numbers;
 import nm.number;
 
 import util.lua;

@@ -10,7 +10,7 @@ import std.stdio;
 
 import util.lua;
 import util.lua_service;
-import complex;
+import complex_numbers;
 import nm.number;
 import nm.luabbla;
 import lua_helper;

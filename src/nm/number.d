@@ -6,7 +6,7 @@
 module nm.number;
 
 import std.math;
-import complex;
+import complex_numbers;
 
 version(complex_numbers) {
     immutable alias number = Complex!double;

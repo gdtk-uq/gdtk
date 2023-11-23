@@ -12,7 +12,7 @@ import std.stdio: File;
 import std.string;
 
 import nm.bbla;
-import complex;
+import complex_numbers;
 import nm.number;
 
 import geom.elements;

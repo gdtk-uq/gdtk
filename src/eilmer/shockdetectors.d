@@ -15,7 +15,7 @@ import flowstate;
 import fvinterface;
 import fvcell;
 import nm.number;
-import complex;
+import complex_numbers;
 import std.algorithm;
 
 // Consider passing in lower level things to make testing easier

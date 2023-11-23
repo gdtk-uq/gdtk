@@ -1,6 +1,6 @@
 module util.lua;
 
-import complex;
+import complex_numbers;
 void lua_pushnumber(lua_State* L, Complex!double n) { lua_pushnumber(L, n.re); }
 
 extern (C):

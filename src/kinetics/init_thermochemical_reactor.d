@@ -8,7 +8,7 @@
 
 module kinetics.init_thermochemical_reactor;
 
-import complex;
+import complex_numbers;
 import nm.number;
 
 import gas;

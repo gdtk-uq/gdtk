@@ -26,7 +26,7 @@ import std.file;
 // numerical methods
 import nm.smla;
 import nm.bbla;
-import complex;
+import complex_numbers;
 import nm.number;
 
 // eilmer

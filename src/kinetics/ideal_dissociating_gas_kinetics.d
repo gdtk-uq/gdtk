@@ -16,7 +16,7 @@
 module kinetics.ideal_dissociating_gas_kinetics;
 
 import std.math;
-import complex;
+import complex_numbers;
 import nm.number;
 
 import gas;

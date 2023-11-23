@@ -13,7 +13,7 @@ module nm.bbla;
 import std.conv;
 import std.algorithm;
 import std.math;
-import complex;
+import complex_numbers;
 import std.exception;
 
 class Matrix(T) {
@@ -648,7 +648,7 @@ do {
 version(bbla_test) {
     import util.msg_service;
     import std.conv;
-    import complex;
+    import complex_numbers;
     import nm.number;
     int test_basic_operations() {
         Matrix!number a = eye!number(3);

@@ -8,7 +8,7 @@ module kinetics.luavib_specific_nitrogen_kinetics;
 import std.stdio;
 import std.conv;
 import std.string;
-import complex;
+import complex_numbers;
 import nm.number;
 
 import util.lua;

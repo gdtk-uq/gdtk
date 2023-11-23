@@ -31,7 +31,7 @@ import std.file;
 import gzip;
 import fileutil;
 
-import complex;
+import complex_numbers;
 import nm.number;
 import geom;
 import gas;

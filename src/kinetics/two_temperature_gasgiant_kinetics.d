@@ -10,7 +10,7 @@
 module kinetics.two_temperature_gasgiant_kinetics;
 
 import std.math;
-import complex;
+import complex_numbers;
 import nm.number;
 
 import gas;

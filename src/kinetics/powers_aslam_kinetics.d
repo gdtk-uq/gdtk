@@ -18,7 +18,7 @@ module kinetics.powers_aslam_kinetics;
 
 import std.math;
 import std.conv;
-import complex;
+import complex_numbers;
 import nm.number;
 
 import gas;

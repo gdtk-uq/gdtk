@@ -16,7 +16,7 @@ import std.stdio;
 import std.conv;
 import std.format;
 import std.math;
-import complex;
+import complex_numbers;
 import nm.number;
 
 import nm.bbla;

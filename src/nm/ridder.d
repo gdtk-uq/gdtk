@@ -11,7 +11,7 @@
 module nm.ridder;
 import std.math;
 import std.algorithm;
-import complex;
+import complex_numbers;
 
 /**
  * Locate a root of f(x) by subdividing the original range,

@@ -8,7 +8,7 @@
 */
 
 module nm.linesearch;
-import complex;
+import complex_numbers;
 
 /**
  * Returns the bracket xL,xR containing the minimum of the function f.

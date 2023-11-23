@@ -6,7 +6,7 @@ module geom.elements.projection;
 
 import std.math;
 import std.conv;
-import complex;
+import complex_numbers;
 import nm.number;
 import geom.geometry_exception;
 import geom.elements.vector3;

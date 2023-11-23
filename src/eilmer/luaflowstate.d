@@ -18,7 +18,7 @@ import std.traits;
 import gzip;
 import util.lua;
 import util.lua_service;
-import complex;
+import complex_numbers;
 import nm.number;
 
 import gas;

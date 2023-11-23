@@ -14,7 +14,7 @@ import std.conv : to;
 import util.lua;
 import util.lua_service;
 import std.algorithm : canFind;
-import complex;
+import complex_numbers;
 import nm.number;
 
 import gas.gas_model;

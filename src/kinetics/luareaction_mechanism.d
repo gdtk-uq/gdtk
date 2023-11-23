@@ -8,7 +8,7 @@ module kinetics.luareaction_mechanism;
 import std.stdio;
 import std.conv;
 import std.string;
-import complex;
+import complex_numbers;
 import nm.number;
 import util.lua;
 import util.lua_service;

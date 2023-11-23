@@ -9,7 +9,7 @@
 module nm.secant;
 import std.math;
 import std.algorithm;
-import complex;
+import complex_numbers;
 
 /**
  * The iterative secant method for zero-finding in one-dimension.

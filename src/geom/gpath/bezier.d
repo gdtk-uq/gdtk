@@ -5,7 +5,7 @@ module geom.gpath.bezier;
 
 import std.conv;
 import std.math;
-import complex;
+import complex_numbers;
 import nm.number;
 
 import geom.geometry_exception;

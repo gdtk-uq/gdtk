@@ -13,7 +13,7 @@ import std.string;
 import std.conv;
 import std.stdio;
 import std.math;
-import complex;
+import complex_numbers;
 import nm.number;
 import nm.brent;
 import nm.bracketing;

@@ -21,7 +21,7 @@
 module gas.diffusion.wilke_mixing_viscosity;
 
 import std.math;
-import complex;
+import complex_numbers;
 import nm.number;
 import util.msg_service;
 

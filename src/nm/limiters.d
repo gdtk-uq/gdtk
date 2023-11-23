@@ -3,7 +3,7 @@
 module nm.limiters;
 
 import std.math;
-import complex;
+import complex_numbers;
 import nm.number;
 
 @nogc void min_mod_limit(ref number a, ref number b)

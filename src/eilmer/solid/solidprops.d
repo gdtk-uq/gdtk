@@ -11,7 +11,7 @@ import std.stdio;
 import std.array;
 import std.format;
 import std.json;
-import complex;
+import complex_numbers;
 import nm.number;
 
 import json_helper;

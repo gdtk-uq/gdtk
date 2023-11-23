@@ -12,7 +12,7 @@ import std.stdio;
 import std.string;
 import std.math;
 import std.algorithm;
-import complex;
+import complex_numbers;
 import nm.number;
 import util.lua;
 import util.lua_service;

@@ -8,7 +8,7 @@ module kinetics.luapseudo_species_kinetics;
 import std.stdio;
 import std.conv;
 import std.string;
-import complex;
+import complex_numbers;
 import nm.number;
 
 import util.lua;

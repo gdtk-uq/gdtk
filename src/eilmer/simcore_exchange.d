@@ -13,7 +13,7 @@ import std.format;
 import std.string;
 import std.algorithm;
 import std.parallelism;
-import complex;
+import complex_numbers;
 import nm.number;
 
 import geom;

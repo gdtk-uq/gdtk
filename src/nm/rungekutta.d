@@ -13,7 +13,7 @@
 module nm.rungekutta;
 
 import std.math;
-import complex;
+import complex_numbers;
 
 /**
  * Allocate workspace arrays for the ODE stepper.

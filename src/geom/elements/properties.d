@@ -8,7 +8,7 @@ import std.conv;
 import geom.geometry_exception;
 import geom.elements.nomenclature;
 import geom.elements.vector3;
-import complex;
+import complex_numbers;
 import nm.number;
 
 @nogc
