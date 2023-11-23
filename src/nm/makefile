@@ -12,7 +12,7 @@ endif
 $(info PLATFORM=$(PLATFORM))
 
 COMPLEX_DIR := ../extern/complex-numbers/source
-COMPLEX_FILES := $(COMPLEX_DIR)/complex.d
+COMPLEX_FILES := $(COMPLEX_DIR)/complex_numbers.d
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk

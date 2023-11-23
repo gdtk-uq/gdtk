@@ -50,7 +50,7 @@ LIBCEQ := $(CEQ_DIR)/libceq.a
 include $(CEQ_DIR)/ceq_files.mk
 
 COMPLEX_DIR := ../extern/complex-numbers/source
-COMPLEX_FILES := $(COMPLEX_DIR)/complex.d
+COMPLEX_FILES := $(COMPLEX_DIR)/complex_numbers.d
 
 GZIP_DIR := ../extern/gzip
 GZIP_FILES := $(GZIP_DIR)/gzip.d
