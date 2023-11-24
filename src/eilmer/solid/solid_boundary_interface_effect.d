@@ -6,7 +6,7 @@ import std.string;
 import std.format;
 import util.lua;
 import std.math;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 import simcore;

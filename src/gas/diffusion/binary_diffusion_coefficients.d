@@ -6,7 +6,7 @@
 module gas.diffusion.binary_diffusion_coefficients;
 
 import gas.gas_state;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 interface BinaryDiffusionCoefficients {

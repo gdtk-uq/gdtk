@@ -8,7 +8,7 @@ import std.math;
 import std.stdio;
 import std.algorithm;
 import std.conv;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 import nm.rsla;
 import nm.limiters;

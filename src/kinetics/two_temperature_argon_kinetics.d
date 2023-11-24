@@ -18,7 +18,7 @@ import std.stdio : writeln, writefln;
 import std.format;
 import std.math;
 import std.conv;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 import nm.bbla;
 

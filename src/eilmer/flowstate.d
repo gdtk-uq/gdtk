@@ -16,7 +16,7 @@ import std.array;
 import std.format;
 import std.stdio;
 import std.math;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 import json_helper;

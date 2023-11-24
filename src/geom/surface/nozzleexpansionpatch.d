@@ -23,7 +23,7 @@
 module geom.surface.nozzleexpansionpatch;
 
 import std.conv;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 import std.math;
 

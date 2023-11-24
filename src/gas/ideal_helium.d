@@ -26,7 +26,7 @@ import std.json;
 import std.conv;
 import util.lua;
 import util.lua_service;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 class IdealHelium: GasModel {

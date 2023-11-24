@@ -15,7 +15,7 @@ import std.stdio;
 import std.conv;
 import std.string;
 
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 import util.lua;
 import gas;

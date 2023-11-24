@@ -12,7 +12,7 @@ import std.stdio;
 import std.conv;
 import std.algorithm;
 import std.format;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 import geom;

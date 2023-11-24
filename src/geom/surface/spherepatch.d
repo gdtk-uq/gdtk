@@ -11,7 +11,7 @@ import std.conv;
 import std.algorithm;
 import std.string;
 import std.math;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 import geom.elements;

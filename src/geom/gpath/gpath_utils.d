@@ -12,7 +12,7 @@ import std.string;
 import std.range : iota;
 import geom;
 import nm.nelmin;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 

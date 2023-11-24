@@ -17,7 +17,7 @@ import std.stdio;
 import std.algorithm;
 import std.range : enumerate;
 import std.string;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 import gas;

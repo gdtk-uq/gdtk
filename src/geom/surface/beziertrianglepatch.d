@@ -40,7 +40,7 @@ import std.conv : text, to;
 import std.range : iota;
 import std.string : format;
 import std.algorithm.comparison : max;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 import nm.nelmin;

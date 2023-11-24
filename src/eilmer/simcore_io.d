@@ -14,7 +14,7 @@ import std.string;
 import std.algorithm;
 import std.typecons;
 import std.parallelism;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 import geom;

@@ -34,7 +34,7 @@ import std.algorithm.iteration : sum;
 
 import nm.bbla;
 import nm.bdfLU;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 import util.msg_service;
 

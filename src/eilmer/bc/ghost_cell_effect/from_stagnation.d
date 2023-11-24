@@ -7,7 +7,7 @@ import std.string;
 import std.conv;
 import std.stdio;
 import std.math;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 import util.lua;
 import util.lua_service;

@@ -28,7 +28,7 @@ import solidprops;
 import block;
 
 import nm.number;
-import complex_numbers;
+import ntypes.complex;
 
 import nm.smla;
 import nm.bbla;

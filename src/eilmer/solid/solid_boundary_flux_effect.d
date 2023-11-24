@@ -16,7 +16,7 @@ import globalconfig;
 import solidfvinterface;
 import ssolidblock;
 import solidfvcell;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 SolidBoundaryFluxEffect makeSolidBFEfromJson(JSONValue jsonData, int blk_id, int boundary)

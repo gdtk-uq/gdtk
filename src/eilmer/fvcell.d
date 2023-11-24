@@ -15,7 +15,7 @@ import std.format;
 import std.stdio;
 import std.math;
 import std.algorithm;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 import nm.bbla;
 import geom;

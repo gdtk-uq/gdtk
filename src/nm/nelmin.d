@@ -43,7 +43,7 @@ import std.math;
 import std.stdio;
 import std.format;
 import std.algorithm;
-import complex_numbers;
+import ntypes.complex;
 
 //-----------------------------------------------------------------------
 // The public face of the minimizer...

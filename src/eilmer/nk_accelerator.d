@@ -34,7 +34,7 @@ import std.datetime;
 
 import nm.smla;
 import nm.bbla;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 import steadystate_core;

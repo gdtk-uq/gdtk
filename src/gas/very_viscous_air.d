@@ -15,7 +15,7 @@ import std.string;
 import std.file;
 import std.json;
 import std.conv;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 import util.msg_service;
 import util.lua;

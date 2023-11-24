@@ -4,7 +4,7 @@ module geom.volume.tfivolume;
 
 import std.conv;
 import std.format;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 import geom.geometry_exception;

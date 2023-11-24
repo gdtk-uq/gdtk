@@ -19,7 +19,7 @@ import std.algorithm : reduce, fill;
 import std.algorithm.sorting : sort;
 import std.typecons : Tuple;
 import nm.bbla;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 import nm.stmatrix;
 

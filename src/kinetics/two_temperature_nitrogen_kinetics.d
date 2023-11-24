@@ -10,7 +10,7 @@ module kinetics.two_temperature_nitrogen_kinetics;
 
 import std.math;
 import std.conv;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 import util.lua;

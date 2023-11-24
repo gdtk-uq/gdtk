@@ -19,7 +19,7 @@ import std.string;
 import std.conv : to;
 import util.lua;
 import util.lua_service;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 import gas.gas_model;

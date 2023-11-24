@@ -17,7 +17,7 @@ import std.array;
 import std.algorithm;
 import std.math;
 import std.range;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 import util.lua;

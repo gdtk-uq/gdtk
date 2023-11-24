@@ -31,7 +31,7 @@ import std.math;
 import std.string;
 import std.stdio;
 import std.algorithm;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 import nm.bbla;
 import nm.bracketing;

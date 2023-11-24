@@ -13,7 +13,7 @@ import std.conv;
 import std.format;
 import std.array;
 import std.math;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 import std.json;
 import util.lua;

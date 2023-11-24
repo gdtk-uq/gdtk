@@ -30,7 +30,7 @@ import std.math;
 import std.stdio;
 import std.string;
 import std.algorithm.searching : canFind;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 import util.lua;

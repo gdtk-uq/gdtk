@@ -21,7 +21,7 @@ import std.json : JSONValue;
 
 import nm.number : number;
 import nm.smla;
-import complex_numbers;
+import ntypes.complex;
 
 import globalconfig;
 import globaldata : localFluidBlocks;

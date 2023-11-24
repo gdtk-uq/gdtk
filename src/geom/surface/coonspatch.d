@@ -3,7 +3,7 @@
 module geom.surface.coonspatch;
 
 import std.conv;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 import geom.elements;

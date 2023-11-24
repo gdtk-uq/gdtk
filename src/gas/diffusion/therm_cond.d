@@ -9,7 +9,7 @@
 module gas.diffusion.therm_cond;
 
 import std.string;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 import util.lua;
 import util.lua_service;

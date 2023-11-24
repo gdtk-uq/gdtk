@@ -20,7 +20,7 @@ module gas.diffusion.rps_diffusion_coefficients;
 
 import std.math;
 import std.conv : to;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 

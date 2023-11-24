@@ -40,7 +40,7 @@
     --------------------------------------------------------------------------------------
 
 */
-module complex_numbers;
+module ntypes.complex;
 
 version(complex_numbers) {
     // PJ's 2018-05-28 hack to avoid compiler problems for most users.

@@ -4,7 +4,7 @@ module geom.surface.meshpatch;
 
 import std.conv;
 import std.algorithm;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 
 import geom.elements;

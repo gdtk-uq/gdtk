@@ -9,7 +9,7 @@
 module gas.diffusion.sutherland_therm_cond;
 
 import std.math;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 import gas.gas_model;
 import gas.gas_state;

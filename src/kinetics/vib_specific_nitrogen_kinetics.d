@@ -21,7 +21,7 @@ module kinetics.vib_specific_nitrogen_kinetics;
 
 import std.math;
 import std.algorithm;
-import complex_numbers;
+import ntypes.complex;
 import nm.number;
 import nm.bbla;
 
