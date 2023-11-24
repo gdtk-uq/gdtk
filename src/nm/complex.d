@@ -509,7 +509,10 @@ if (isFloatingPoint!T)
         if (op == "^^" && isIntegral!U)
     {
         Complex!double p  = complex(this.re, this.im);
-        foreach ( i; 0..l-1) this *= p;
+        foreach ( i; 0..abs(l)-1) this *= p;
+        if (l < 0) {
+            this = 1.0/this;
+        }
         return this;
     }
 
@@ -810,8 +813,10 @@ bool isNaN(Complex!double z) @safe pure nothrow
 Complex!double pow(Complex!double z, int w) @safe pure nothrow
 {
     Complex!double p  = complex(z.re, z.im);
-    foreach ( i; 0..w-1) z *= p;
-
+    foreach ( i; 0..abs(w)-1) z *= p;
+    if (w < 0) {
+        z = 1/z;
+    }
     return z;
 }
 
@@ -1529,6 +1534,23 @@ version(complex_number_test) {
 
         // pow(complex, int)
         cpow = pow(z, 2);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(Complex, Double)
+        result = complex(-0.05988165680473373, 0.04828402366863906);
+        cpow = pow(z, -2.0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^double
+        cpow = z^^(-2.0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^int
+        cpow = z^^(-2);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(complex, int)
+        cpow = pow(z, -2);
         assert(approxEqualNumbers(cpow, result), failedUnitTest());
 
         // pow(Double, Complex)
