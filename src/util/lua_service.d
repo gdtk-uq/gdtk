@@ -33,6 +33,15 @@ void doLuaFile(lua_State* L, string fname)
     }
 }
 
+void warnOnStackChange(lua_State* L, int old_top, string file=__FILE__, size_t line=__LINE__)
+{
+    int new_top = lua_gettop(L);
+    if (new_top - old_top != 0) {
+        writefln("WARNING unexpected stack size change old_top=%d new_top=%d at line %d in file %s",
+                 old_top, new_top, line, file);
+    }
+}
+
 bool tableEmpty(lua_State* L, int tblIdx)
 {
     lua_pushnil(L); // first key
@@ -49,6 +58,7 @@ bool tableEmpty(lua_State* L, int tblIdx)
 
 string getString(lua_State* L, int tblIdx, string key)
 {
+    int old_top = lua_gettop(L);
     if (!lua_istable(L, tblIdx)) {
         string errMsg = format("getString was expecting a table at stack index: %d", tblIdx);
         throw new Error(errMsg);
@@ -61,11 +71,13 @@ string getString(lua_State* L, int tblIdx, string key)
     }
     string val = to!string(lua_tostring(L, -1));
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
     return val;
 }
 
 string getString(lua_State* L, string key)
 {
+    int old_top = lua_gettop(L);
     lua_getglobal(L, key.toStringz);
     if ( !lua_isstring(L, -1) ) {
         string errMsg = format("A string was expected in field: %s", key);
@@ -74,11 +86,13 @@ string getString(lua_State* L, string key)
     }
     string val = to!string(lua_tostring(L, -1));
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
     return val;
 }
 
 string getStringWithDefault(lua_State* L, int tblIdx, string key, string defaultValue)
 {
+    int old_top = lua_gettop(L);
     string val = defaultValue;
     if (!lua_istable(L, tblIdx)) {
         string errMsg = format("getStringWithDefault was expecting a table at stack index: %d", tblIdx);
@@ -89,11 +103,13 @@ string getStringWithDefault(lua_State* L, int tblIdx, string key, string default
         val = to!string(lua_tostring(L, -1));
     }
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
     return val;
 }
 
 double getDouble(lua_State* L, int tblIdx, string key)
 {
+    int old_top = lua_gettop(L);
     if (!lua_istable(L, tblIdx)) {
         string errMsg = format("getDouble was expecting a table at stack index: %d", tblIdx);
         throw new Error(errMsg);
@@ -106,11 +122,13 @@ double getDouble(lua_State* L, int tblIdx, string key)
     }
     double val = lua_tonumber(L, -1);
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
     return val;
 }
 
 double getDouble(lua_State* L, string key)
 {
+    int old_top = lua_gettop(L);
     lua_getglobal(L, key.toStringz);
     if ( !lua_isnumber(L, -1) ) {
         string errMsg = format("A double was expected in field: %s", key);
@@ -119,11 +137,13 @@ double getDouble(lua_State* L, string key)
     }
     double val = lua_tonumber(L, -1);
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
     return val;
 }
 
 double getDoubleWithDefault(lua_State* L, int tblIdx, string key, double defaultValue)
 {
+    int old_top = lua_gettop(L);
     if (!lua_istable(L, tblIdx)) {
         string errMsg = format("getDoubleWithDefault was expecting a table at stack index: %d", tblIdx);
         throw new Error(errMsg);
@@ -134,11 +154,13 @@ double getDoubleWithDefault(lua_State* L, int tblIdx, string key, double default
         val = lua_tonumber(L, -1);
     }
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
     return val;
 }
 
 int getInt(lua_State* L, int tblIdx, string key)
 {
+    int old_top = lua_gettop(L);
     if (!lua_istable(L, tblIdx)) {
         string errMsg = format("getInt was expecting a table at stack index: %d", tblIdx);
         throw new Error(errMsg);
@@ -151,11 +173,13 @@ int getInt(lua_State* L, int tblIdx, string key)
     }
     int val = to!int(lua_tointeger(L, -1));
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
     return val;
 }
 
 int getInt(lua_State* L, string key)
 {
+    int old_top = lua_gettop(L);
     lua_getglobal(L, key.toStringz);
     if ( !lua_isinteger(L, -1) ) {
         string errMsg = format("An integer was expected in field: %s", key);
@@ -164,11 +188,13 @@ int getInt(lua_State* L, string key)
     }
     int val = to!int(lua_tointeger(L, -1));
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
     return val;
 }
 
 int getIntWithDefault(lua_State* L, int tblIdx, string key, int defaultValue)
 {
+    int old_top = lua_gettop(L);
     if (!lua_istable(L, tblIdx)) {
         string errMsg = format("getIntWithDefault was expecting a table at stack index: %d", tblIdx);
         throw new Error(errMsg);
@@ -179,11 +205,13 @@ int getIntWithDefault(lua_State* L, int tblIdx, string key, int defaultValue)
         val = to!int(lua_tointeger(L, -1));
     }
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
     return val;
 }
 
 bool getBool(lua_State* L, int tblIdx, string key)
 {
+    int old_top = lua_gettop(L);
     if (!lua_istable(L, tblIdx)) {
         string errMsg = format("getBool was expecting a table at stack index: %d", tblIdx);
         throw new Error(errMsg);
@@ -196,11 +224,13 @@ bool getBool(lua_State* L, int tblIdx, string key)
     }
     bool val = to!bool(lua_toboolean(L, -1));
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
     return val;
 }
 
 bool getBool(lua_State* L, string key)
 {
+    int old_top = lua_gettop(L);
     lua_getglobal(L, key.toStringz);
     if ( !lua_isboolean(L, -1) ) {
         string errMsg = format("A boolean value was expected in field: %s", key);
@@ -209,11 +239,13 @@ bool getBool(lua_State* L, string key)
     }
     bool val = to!bool(lua_toboolean(L, -1));
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
     return val;
 }
 
 bool getBoolWithDefault(lua_State* L, int tblIdx, string key, bool defaultValue)
 {
+    int old_top = lua_gettop(L);
     if (!lua_istable(L, tblIdx)) {
         string errMsg = format("getBoolWithDefault was expecting a table at stack index: %d", tblIdx);
         throw new Error(errMsg);
@@ -224,11 +256,13 @@ bool getBoolWithDefault(lua_State* L, int tblIdx, string key, bool defaultValue)
         val = to!bool(lua_toboolean(L, -1));
     }
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
     return val;
 }
 
 void getArrayOfStrings(lua_State* L, int tblIdx, string key, out string[] values)
 {
+    int old_top = lua_gettop(L);
     if (!lua_istable(L, tblIdx)) {
         string errMsg = format("getArrayOfStrings was expecting a table at stack index: %d", tblIdx);
         throw new Error(errMsg);
@@ -248,10 +282,12 @@ void getArrayOfStrings(lua_State* L, int tblIdx, string key, out string[] values
         lua_pop(L, 1);
     }
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
 }
 
 void getArrayOfStrings(lua_State* L, string key, out string[] values)
 {
+    int old_top = lua_gettop(L);
     values.length = 0;
     lua_getglobal(L, key.toStringz);
     if ( !lua_istable(L, -1) ) {
@@ -267,6 +303,7 @@ void getArrayOfStrings(lua_State* L, string key, out string[] values)
         lua_pop(L, 1);
     }
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
 }
 
 /**
@@ -275,6 +312,7 @@ void getArrayOfStrings(lua_State* L, string key, out string[] values)
 
 void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out double[] values)
 {
+    int old_top = lua_gettop(L);
     if (!lua_istable(L, tblIdx)) {
         string errMsg = format("getArrayOfDoubles was expecting a table at stack index: %d", tblIdx);
         throw new Error(errMsg);
@@ -294,10 +332,12 @@ void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out double[] values
         lua_pop(L, 1);
     }
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
 }
 
 void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out Complex!double[] values)
 {
+    int old_top = lua_gettop(L);
     if (!lua_istable(L, tblIdx)) {
         string errMsg = format("getArrayOfDoubles was expecting a table at stack index: %d", tblIdx);
         throw new Error(errMsg);
@@ -317,6 +357,7 @@ void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out Complex!double[
         lua_pop(L, 1);
     }
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
 }
 
 /**
@@ -325,6 +366,7 @@ void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out Complex!double[
 
 void getArrayOfInts(lua_State* L, int tblIdx, string key, out int[] values)
 {
+    int old_top = lua_gettop(L);
     if (!lua_istable(L, tblIdx)) {
         string errMsg = format("getArrayOfInts was expecting a table at stack index: %d", tblIdx);
         throw new Error(errMsg);
@@ -344,10 +386,12 @@ void getArrayOfInts(lua_State* L, int tblIdx, string key, out int[] values)
         lua_pop(L, 1);
     }
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
 }
 
 void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out double[string] params)
 {
+    int old_top = lua_gettop(L);
     if (!lua_istable(L, -1)) {
         string errMsg = format("getAssocArrayOfDoubles was expecting a table at stack index: %d", -1);
         throw new Error(errMsg);
@@ -362,10 +406,12 @@ void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out double
         params[p] = getDouble(L, -1, p);
     }
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
 }
 
 void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out Complex!double[string] params)
 {
+    int old_top = lua_gettop(L);
     if (!lua_istable(L, -1)) {
         string errMsg = format("getAssocArrayOfDoubles was expecting a table at stack index: %d", -1);
         throw new Error(errMsg);
@@ -380,12 +426,14 @@ void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out Comple
         params[p] = Complex!double(getDouble(L, -1, p), 0.0);
     }
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
 }
 
 // Get matrix of numbers from table at a particular stack index.
 
 void getMatrixOfDoubles(size_t N)(lua_State* L, int tblIdx, out double[N][N] values)
 {
+    int old_top = lua_gettop(L);
     if (!lua_istable(L, tblIdx)) {
         string errMsg = format("getArrayOfDoubles was expecting a table at stack index: %d", tblIdx);
         throw new Error(errMsg);
@@ -399,7 +447,8 @@ void getMatrixOfDoubles(size_t N)(lua_State* L, int tblIdx, out double[N][N] val
         }
         lua_pop(L, 1);
     }
-    // Table is left on stack.
+    // Table is left on stack but no other items should be added to stack.
+    warnOnStackChange(L, old_top);
 }
 
 // Push a matrix of numbers onto the stack as a table of tables.
@@ -407,6 +456,7 @@ void getMatrixOfDoubles(size_t N)(lua_State* L, int tblIdx, out double[N][N] val
 void pushMatrixOfDoubles(size_t N)(lua_State* L, double[N][N] values)
 {
     lua_newtable(L); // for whole matrix
+    int old_top = lua_gettop(L);
     foreach (i; 0 .. N) {
         // Build a new row.
         lua_newtable(L);
@@ -417,7 +467,8 @@ void pushMatrixOfDoubles(size_t N)(lua_State* L, double[N][N] values)
         // Completed row sitting at top of stack.
         lua_rawseti(L, -2, to!int(i+1));
     }
-    // Table is left on stack.
+    // Table is left on stack but we have cleaned up otherwise.
+    warnOnStackChange(L, old_top);
 }
 
 
@@ -548,6 +599,7 @@ double getNumberFromTable(lua_State* L, int index, string field,
                           bool errorIfNotFound=false, double valIfError=double.init,
                           bool errorIfNotValid=false, string errMsg="")
 {
+    int old_top = lua_gettop(L);
     lua_getfield(L, index, field.toStringz);
     if ( lua_isnil(L, -1) ) {
         if ( errorIfNotFound ) {
@@ -555,6 +607,7 @@ double getNumberFromTable(lua_State* L, int index, string field,
         }
         else { // We didn't really care
             lua_pop(L, 1);
+            warnOnStackChange(L, old_top);
             return valIfError;
         }
     }
@@ -562,6 +615,7 @@ double getNumberFromTable(lua_State* L, int index, string field,
     if ( lua_isnumber(L, -1) ) {
         auto val = lua_tonumber(L, -1);
         lua_pop(L, 1);
+        warnOnStackChange(L, old_top);
         return val;
     }
     // else, failed to find a number value.
@@ -570,6 +624,7 @@ double getNumberFromTable(lua_State* L, int index, string field,
     }
     // We didn't want to fail, so give back double.init
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
     return valIfError;
 } // end getNumberFromTable()
 
@@ -579,12 +634,15 @@ int getIntegerFromTable(lua_State* L, int index, string field,
                         bool errorIfNotFound=false, int valIfError=int.init,
                         bool errorIfNotValid=false, string errMsg="")
 {
+    int old_top = lua_gettop(L);
     lua_getfield(L, index, field.toStringz);
     if ( lua_isnil(L, -1) ) {
         if ( errorIfNotFound ) {
             luaL_error(L, errMsg.toStringz);
         }
         else { // We didn't really care
+            lua_pop(L, 1);
+            warnOnStackChange(L, old_top);
             return valIfError;
         }
     }
@@ -592,6 +650,7 @@ int getIntegerFromTable(lua_State* L, int index, string field,
     if ( lua_isnumber(L, -1) ) {
         auto val = to!int(lua_tonumber(L, -1));
         lua_pop(L, 1);
+        warnOnStackChange(L, old_top);
         return val;
     }
     // else, failed to find an integer value.
@@ -599,6 +658,7 @@ int getIntegerFromTable(lua_State* L, int index, string field,
         luaL_error(L, errMsg.toStringz);
     }
     // We didn't want to fail, so give back int.init
+    warnOnStackChange(L, old_top);
     return valIfError;
 } // end getIntegerFromTable()
 
@@ -606,12 +666,15 @@ bool getBooleanFromTable(lua_State* L, int index, string field,
                          bool errorIfNotFound=false, bool valIfError=bool.init,
                          bool errorIfNotValid=false, string errMsg="")
 {
+    int old_top = lua_gettop(L);
     lua_getfield(L, index, field.toStringz);
     if ( lua_isnil(L, -1) ) {
         if ( errorIfNotFound ) {
             luaL_error(L, errMsg.toStringz);
         }
         else { // We didn't really care
+            lua_pop(L, 1);
+            warnOnStackChange(L, old_top);
             return valIfError;
         }
     }
@@ -619,6 +682,7 @@ bool getBooleanFromTable(lua_State* L, int index, string field,
     if ( lua_isboolean(L, -1) ) {
         auto val = lua_toboolean(L, -1);
         lua_pop(L, 1);
+        warnOnStackChange(L, old_top);
         return val;
     }
     // else, failed to find a boolean value.
@@ -626,11 +690,13 @@ bool getBooleanFromTable(lua_State* L, int index, string field,
         luaL_error(L, errMsg.toStringz);
     }
     // We didn't want to fail, so give back bool.init
+    warnOnStackChange(L, old_top);
     return valIfError;
 } // end getBooleanFromTable()
 
 bool checkAllowedNames(lua_State* L, int tblIndx, string[] allowedNames)
 {
+    int old_top = lua_gettop(L);
     bool namesOk = true;
     // Iterate through the table and check each key (name).
     lua_pushnil(L); // first key
@@ -647,6 +713,7 @@ bool checkAllowedNames(lua_State* L, int tblIndx, string[] allowedNames)
         }
         lua_pop(L, 1); // discard value but keep key for next
     } // end while
+    warnOnStackChange(L, old_top);
     return namesOk;
 } // end checkAllowedNames()
 

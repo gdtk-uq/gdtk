@@ -173,6 +173,7 @@ private:
     // not @nogc
     void putFlowStateIntoGhostCell(lua_State* L, int tblIdx, FVCell ghostCell)
     {
+        int old_top = lua_gettop(L);
         auto gmodel = blk.myConfig.gmodel;
         try {
             ghostCell.fs.gas.p = getDouble(L, tblIdx, "p");
@@ -223,7 +224,8 @@ private:
                 ghostCell.fs.turb[it] = getNumberFromTable(L, -1, tname, false, 0.0);
             }
         }
-    }
+        warnOnStackChange(L, old_top);
+    } // end putFlowStateIntoGhostCell()
 
     // not @nogc because of Lua functions
     void callGhostCellUDF(double t, int gtl, int ftl, size_t i, size_t j, size_t k,
@@ -231,11 +233,13 @@ private:
     {
         // 1. Set up for calling function
         auto L = blk.bc[which_boundary].myL;
+        lua_settop(L, 0);
         bool nghost3 = (blk.n_ghost_cell_layers == 3);
-       // 1a. Place function to call at TOS
+        // 1a. Place function to call at TOS
         lua_getglobal(L, "ghostCells");
         // 1b. Then put arguments (as single table) at TOS
         lua_newtable(L);
+        int old_top = lua_gettop(L);
         lua_pushnumber(L, t); lua_setfield(L, -2, "t");
         lua_pushnumber(L, SimState.dt_global); lua_setfield(L, -2, "dt");
         lua_pushinteger(L, SimState.step); lua_setfield(L, -2, "timeStep");
@@ -265,6 +269,7 @@ private:
             lua_pushnumber(L, ghostCells[ig].pos[0].y); lua_setfield(L, -2, format("gc%dy", ig).toStringz);
             lua_pushnumber(L, ghostCells[ig].pos[0].z); lua_setfield(L, -2, format("gc%dz", ig).toStringz);
         }
+        warnOnStackChange(L, old_top);
 
         // 2. Call LuaFunction and expect two tables of ghost cell flow state
         int number_args = 1;
@@ -274,14 +279,19 @@ private:
                        which_boundary, lua_tostring(L, -1));
         }
 
-        // 3. Grab Flowstate data from table and populate ghost cell
+        // 3. Grab Flowstate data from tables from stack and populate ghost-cell FlowStates.
+        // We assume that the user-defined function returns the correct number of tables
+        // representing the flow states in the ghost cells.
         // Stack positions for ghost cells:
         //    -3 :: ghostCell0  -2 :: ghostCell0  -1 :: ghostCell0
         //    -2 :: ghostCell1  -1 :: ghostCell1
         //    -1 :: ghostCell2
         foreach (ig; 0 .. blk.n_ghost_cell_layers) {
             int stack_location = -(to!int(blk.n_ghost_cell_layers-ig));
-            if (lua_isnil(L, stack_location)) { break; }
+            if (lua_isnil(L, stack_location)) {
+                writefln("Oops, expected a table for the ghost-cell flow-state ig=%d, but got nil.", ig);
+                break;
+            }
             if (lua_istable(L, stack_location) && !tableEmpty(L, stack_location)) {
                 putFlowStateIntoGhostCell(L, stack_location, ghostCells[ig]);
             }

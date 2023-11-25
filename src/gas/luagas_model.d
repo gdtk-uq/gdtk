@@ -699,6 +699,7 @@ extern(C) int binary_diffusion_coefficients(lua_State* L)
 void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
                              ref double[] vals, string tabName)
 {
+    int old_top = lua_gettop(L);
     assert(vals.length == gm.n_species(), "Array for species fractions wrong length.");
     // 1. Check all keys are valid species names.
     lua_pushnil(L);
@@ -736,6 +737,7 @@ void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
         }
         lua_pop(L, 1);
     }
+    warnOnStackChange(L, old_top);
 } // end getSpeciesValsFromTable()
 
 void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
@@ -810,6 +812,7 @@ extern(C) int newTableForGasState(lua_State* L)
 
 void getGasStateFromTable(lua_State* L, GasModel gm, int idx, ref GasState Q)
 {
+    int old_top = lua_gettop(L);
     lua_getfield(L, idx, "rho");
     if ( lua_isnumber(L, -1) ) {
         Q.rho = lua_tonumber(L, -1);
@@ -1079,10 +1082,12 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, ref GasState Q)
         // We skip the table of mass fractions within the ceaSavedData.
     }
     lua_pop(L, 1);
+    warnOnStackChange(L, old_top);
 } // end getGasStateFromTable()
 
 void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
 {
+    int old_top = lua_gettop(L);
     lua_pushnumber(L, Q.rho);
     lua_setfield(L, idx, "rho");
 
@@ -1196,6 +1201,7 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
 
         lua_setfield(L, idx, "ceaSavedData");
     }
+    warnOnStackChange(L, old_top);
 } // end setGasStateInTable()
 
 extern(C) int printValues(lua_State* L)
