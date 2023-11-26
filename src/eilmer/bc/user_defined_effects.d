@@ -24,6 +24,7 @@ import util.lua;
 import util.lua_service;
 import gas.gas_model;
 import gas.luagas_model;
+import gas.gas_state;
 
 import geom;
 import simcore;
@@ -175,29 +176,30 @@ private:
     {
         int old_top = lua_gettop(L);
         auto gmodel = blk.myConfig.gmodel;
+        GasState* gs = &(ghostCell.fs.gas);
         try {
-            ghostCell.fs.gas.p = getDouble(L, tblIdx, "p");
-            ghostCell.fs.gas.T = getDouble(L, tblIdx, "T");
+            gs.p = getDouble(L, tblIdx, "p");
+            gs.T = getDouble(L, tblIdx, "T");
             version(multi_T_gas) {
                 if (gmodel.n_modes > 0) {
-                    getArrayOfDoubles(L, tblIdx, "T_modes", ghostCell.fs.gas.T_modes);
+                    getArrayOfDoubles(L, tblIdx, "T_modes", gs.T_modes);
                 }
             }
             version(multi_species_gas) {
                 lua_getfield(L, tblIdx, "massf");
                 if ( lua_istable(L, -1) ) {
                     int massfIdx = lua_gettop(L);
-                    getSpeciesValsFromTable(L, gmodel, massfIdx, ghostCell.fs.gas.massf, "massf");
+                    getSpeciesValsFromTable(L, gmodel, massfIdx, gs.massf, "massf");
                 } else {
                     if ( gmodel.n_species() == 1 ) {
-                        ghostCell.fs.gas.massf[0] = 1.0;
+                        gs.massf[0] = 1.0;
                     } else {
                         // There's no clear choice for multi-species.
                         // Maybe best to set everything to zero to
                         // trigger some bad behaviour rather than
                         // one value to 1.0 and have the calculation
                         // proceed but not follow the users' intent.
-                        foreach (ref mf; ghostCell.fs.gas.massf) { mf = 0.0; }
+                        foreach (ref mf; gs.massf) { mf = 0.0; }
                     }
                 }
                 lua_pop(L, 1);
@@ -209,11 +211,15 @@ private:
             errMsg ~= e.toString();
             throw new Exception(errMsg);
         }
-        gmodel.update_thermo_from_pT(ghostCell.fs.gas);
-        gmodel.update_sound_speed(ghostCell.fs.gas);
+        gmodel.update_thermo_from_pT(*gs);
+        gmodel.update_sound_speed(*gs);
+        // Once we have mass fractions and density, we need to construct values for the species densities
+        // because these individual densities are now used by the core gas dynamics (since 20 June 2023).
+        foreach (i; 0 .. gmodel.n_species()) { gs.rho_s[i] = gs.massf[i] * gs.rho; }
         // For UserDefinedGhostCellBC, the following call to update_trans_coeffs() is done
         // a little later via an action in the preSpatialDerivActionAtBndryFaces list.
-        // gmodel.update_trans_coeffs(ghostCell.fs.gas);
+        // gmodel.update_trans_coeffs(*gs);
+
         ghostCell.fs.vel.x = getNumberFromTable(L, tblIdx, "velx", false, 0.0);
         ghostCell.fs.vel.y = getNumberFromTable(L, tblIdx, "vely", false, 0.0);
         ghostCell.fs.vel.z = getNumberFromTable(L, tblIdx, "velz", false, 0.0);
@@ -453,9 +459,20 @@ private:
 
         version(multi_species_gas) {
             lua_getfield(L, tblIdx, "massf");
-            if ( !lua_isnil(L, -1) ) {
+            if ( lua_istable(L, -1) ) {
                 int massfIdx = lua_gettop(L);
                 getSpeciesValsFromTable(L, gmodel, massfIdx, fs.gas.massf, "massf");
+            } else {
+                if ( gmodel.n_species() == 1 ) {
+                    fs.gas.massf[0] = 1.0;
+                } else {
+                    // There's no clear choice for multi-species.
+                    // Maybe best to set everything to zero to
+                    // trigger some bad behaviour rather than
+                    // one value to 1.0 and have the calculation
+                    // proceed but not follow the users' intent.
+                    foreach (ref mf; fs.gas.massf) { mf = 0.0; }
+                }
             }
             lua_pop(L, 1);
         }
@@ -497,6 +514,9 @@ private:
         }
 
         gmodel.update_thermo_from_pT(fs.gas);
+        // Once we have mass fractions and density, we need to construct values for the species densities
+        // because these individual densities are now used by the core gas dynamics (since 20 June 2023).
+        foreach (i; 0 .. gmodel.n_species()) { fs.gas.rho_s[i] = fs.gas.massf[i] * fs.gas.rho; }
         gmodel.update_trans_coeffs(fs.gas);
         gmodel.update_sound_speed(fs.gas);
 
