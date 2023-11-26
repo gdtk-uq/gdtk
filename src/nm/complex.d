@@ -13,8 +13,32 @@
     License:    $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
     Source:     $(PHOBOSSRC std/_complex.d)
 
-    Adapted for use in complexifying the Eilmer code
-    Kyle Damm, 2018
+    --------------------------------------------------------------------------------------
+    This module has been adapted for use in complexifying our multi-physics fluid solver.
+    We use this module as the basis to perform complex variable differentiation to construct
+    numerical Jacobians and design sensitivities for shape optimization. For more information
+    on complex variable differentiation, refer to:
+
+    [1] Squire et al., Using Complex Variables to Estimate Derivatives of Real Functions,
+        SIAM review, vol. 40, No. 1, pp. 110-112, March 1998.
+
+    I have marked all modifications made to the original module and provided an accompanying
+    description or reference. For further information on developing a complex number module for
+    complex variable differentation, refer to:
+
+    [1] Martins et al., An Automated Method for Sensitivity Analysis using Complex Variables,
+        38th Aerospace Sciences Meeting and Exhibit, AIAA paper 2000-0689, 2000.
+
+    [2] Martins, A Coupled-Adjoint Method for High-Fidelity Aero-Structural Optimization,
+        Stanford University, 2002.
+
+    [3] Nielsen et al., Efficient Construction of Discrete Adjoint Operators on Unstructured Grids
+        by Using Complex Variables, AIAA Journal, Vol. 44, No. 4, 2006, pp. 827–836.
+
+    author: Kyle A. Damm
+    date:   2018 (modified 2020 and 2023)
+    --------------------------------------------------------------------------------------
+
 */
 module nm.complex;
 
@@ -238,6 +262,11 @@ if (isFloatingPoint!T)
 
     // COMPARISON OPERATORS
 
+    // For the opEquals comparison operators, we only want the real component to be checked,
+    // the imaginary component will most likely (and necessarily) have a different value, since
+    // it encodes the sensitivity information which is propagated forward through the calculations.
+    // KAD 2018
+
     // this == complex
     bool opEquals(R : T)(Complex!R z) const
     {
@@ -250,16 +279,19 @@ if (isFloatingPoint!T)
         return re == r; // && im == 0;
     }
 
-    // OpCmp structure from sources:
-    // https://forum.dlang.org/post/p1qa9n$2hje$1@digitalmars.com
-    // http://www.angelcode.com/angelscript/sdk/docs/manual/doc_script_class_ops.html
+    // added an OpCmp comparison operator
+    // implemented from sources:
+    // + https://forum.dlang.org/post/p1qa9n$2hje$1@digitalmars.com
+    // + http://www.angelcode.com/angelscript/sdk/docs/manual/doc_script_class_ops.html
+    // KAD 2018
 
-    // this = complex (KD, 2018)
+    // complex version
     int opCmp(Complex!double z) const
     {
+        import std.math: fabs;
         auto diff = re - z.re;
         auto epsilon = 1.0e-50;
-        if (  std.math.fabs(diff) < epsilon )
+        if (  fabs(diff) < epsilon )
             return 0;
         else if ( diff < 0 )
             return -1;
@@ -267,12 +299,13 @@ if (isFloatingPoint!T)
             return 1;
     }
 
-    // this = numeric (KD, 2018)
+    // numeric version
     int opCmp(double z) const
     {
+        import std.math: fabs;
         auto diff = re - z.re;
         auto epsilon = 1.0e-50;
-        if (  std.math.fabs(diff) < epsilon )
+        if (  fabs(diff) < epsilon )
             return 0;
         else if ( diff < 0 )
             return -1;
@@ -428,27 +461,11 @@ if (isFloatingPoint!T)
     }
 
     // complex ^^= complex
-    // same as pow(Complex!double z, Complex!double w)
-    ref Complex opOpAssign(string op, C)(C w)
-        if (op == "^^" && is(C R == Complex!R))
-    {
-        double a = this.re; double b = this.im;
-        double c = w.re; double d = w.im;
-        double r = std.math.sqrt(a*a + b*b);
-        double theta = arg(this); Complex!double i = complex(0.0, 1.0);
-        double logr = std.math.log(to!double(r));
-        re = exp(logr*w+i*theta*w).re;
-        im = exp(logr*w+i*theta*w).im;
-        return this;
-    }
-
-    // removed (KD, 2018)
-    /*
-      ref Complex opOpAssign(string op, C)(C z)
+    ref Complex opOpAssign(string op, C)(C z)
         if (op == "^^" && is(C R == Complex!R))
     {
         import std.math : exp, log, cos, sin;
-        immutable r = abs(this);
+        immutable r = cabs(this);
         immutable t = arg(this);
         immutable ab = r^^z.re * exp(-t*z.im);
         immutable ar = t*z.re + log(r)*z.im;
@@ -457,7 +474,6 @@ if (isFloatingPoint!T)
         im = ab*sin(ar);
         return this;
     }
-    */
 
     // complex += numeric,  complex -= numeric
     ref Complex opOpAssign(string op, U : T)(U a)
@@ -476,48 +492,19 @@ if (isFloatingPoint!T)
         return this;
     }
 
-    // complex ^^= real (KD, 2018)
-    ref Complex opOpAssign(string op, R)(R r)
-        if (op == "^^" && isFloatingPoint!R)
-    {
-        double a = this.re; double b = this.im;
-        double p = std.math.sqrt(a*a + b*b);
-        double logp = std.math.log(to!double(p));
-        double theta = arg(this); Complex!double i = complex(0.0, 1.0);
-        re = exp(logp*r+i*theta*r).re;
-        im = exp(logp*r+i*theta*r).im;
-        return this;
-    }
-
-    // removed (KD, 2018)
-    /*
+    // complex ^^= real
     ref Complex opOpAssign(string op, R)(R r)
         if (op == "^^" && isFloatingPoint!R)
     {
         import std.math : cos, sin;
-        immutable ab = abs(this)^^r;
+        immutable ab = cabs(this)^^r;
         immutable ar = arg(this)*r;
         re = ab*cos(ar);
         im = ab*sin(ar);
         return this;
     }
-    */
 
-    // complex ^^= int (KD, 2018)
-    // same as pow(Complex!double z, int w)
-    ref Complex opOpAssign(string op, U)(U l)
-        if (op == "^^" && isIntegral!U)
-    {
-        Complex!double p  = complex(this.re, this.im);
-        foreach ( i; 0..abs(l)-1) this *= p;
-        if (l < 0) {
-            this = 1.0/this;
-        }
-        return this;
-    }
-
-    // removed (KD, 2018)
-    /*
+    // complex ^^= int
     ref Complex opOpAssign(string op, U)(U i)
         if (op == "^^" && isIntegral!U)
     {
@@ -543,7 +530,7 @@ if (isFloatingPoint!T)
         }
         return this;
     }
-    */
+
 }
 
 @safe pure nothrow unittest
@@ -573,11 +560,11 @@ if (isFloatingPoint!T)
     assert(cmc.im == c1.im - c2.im);
 
     auto ctc = c1 * c2;
-    assert(isClose(abs(ctc), abs(c1)*abs(c2), EPS));
+    assert(isClose(cabs(ctc), cabs(c1)*cabs(c2), EPS));
     assert(isClose(arg(ctc), arg(c1)+arg(c2), EPS));
 
     auto cdc = c1 / c2;
-    assert(isClose(abs(cdc), abs(c1)/abs(c2), EPS));
+    assert(isClose(cabs(cdc), cabs(c1)/cabs(c2), EPS));
     assert(isClose(arg(cdc), arg(c1)-arg(c2), EPS));
 
     auto cec = c1^^c2;
@@ -600,11 +587,11 @@ if (isFloatingPoint!T)
     assert(ctr.im == c1.im*a);
 
     auto cdr = c1 / a;
-    assert(isClose(abs(cdr), abs(c1)/a, EPS));
+    assert(isClose(cabs(cdr), cabs(c1)/a, EPS));
     assert(isClose(arg(cdr), arg(c1), EPS));
 
     auto cer = c1^^3.0;
-    assert(isClose(abs(cer), abs(c1)^^3, EPS));
+    assert(isClose(cabs(cer), cabs(c1)^^3, EPS));
     assert(isClose(arg(cer), arg(c1)*3, EPS));
 
     auto rpc = a + c1;
@@ -618,11 +605,11 @@ if (isFloatingPoint!T)
     assert(rtc == ctr);
 
     auto rdc = a / c1;
-    assert(isClose(abs(rdc), a/abs(c1), EPS));
+    assert(isClose(cabs(rdc), a/cabs(c1), EPS));
     assert(isClose(arg(rdc), -arg(c1), EPS));
 
     rdc = a / c2;
-    assert(isClose(abs(rdc), a/abs(c2), EPS));
+    assert(isClose(cabs(rdc), a/cabs(c2), EPS));
     assert(isClose(arg(rdc), -arg(c2), EPS));
 
     auto rec1a = 1.0 ^^ c1;
@@ -634,7 +621,7 @@ if (isFloatingPoint!T)
     assert(rec2a.im == 0.0);
 
     auto rec1b = (-1.0) ^^ c1;
-    assert(isClose(abs(rec1b), std.math.exp(-PI * c1.im), EPS));
+    assert(isClose(cabs(rec1b), std.math.exp(-PI * c1.im), EPS));
     auto arg1b = arg(rec1b);
     /* The argument _should_ be PI, but floating-point rounding error
      * means that in fact the imaginary part is very slightly negative.
@@ -642,7 +629,7 @@ if (isFloatingPoint!T)
     assert(isClose(arg1b, PI, EPS) || isClose(arg1b, -PI, EPS));
 
     auto rec2b = (-1.0) ^^ c2;
-    assert(isClose(abs(rec2b), std.math.exp(-2 * PI), EPS));
+    assert(isClose(cabs(rec2b), std.math.exp(-2 * PI), EPS));
     assert(isClose(arg(rec2b), PI_2, EPS));
 
     auto rec3a = 0.79 ^^ complex(6.8, 5.7);
@@ -684,7 +671,7 @@ if (isFloatingPoint!T)
     foreach (i; 0 .. 6)
     {
         auto cei = c1^^i;
-        assert(isClose(abs(cei), abs(c1)^^i, EPS));
+        assert(isClose(cabs(cei), cabs(c1)^^i, EPS));
         // Use cos() here to deal with arguments that go outside
         // the (-pi,pi] interval (only an issue for i>3).
         assert(isClose(std.math.cos(arg(cei)), std.math.cos(arg(c1)*i), EPS));
@@ -798,169 +785,193 @@ if (is(T R == Complex!R))
     assert(z1 == z2);
 }
 
-// std.math library function overloads (KD, 2018)
+// Added several std.math library function overloads...
+// most of these are taken from the references in the header of this file.
+// The original complex module definitions for sin, cos, sqrt and abs are unmodified.
+// KAD 2018, 2020, 2023
 @nogc
-bool isNaN(Complex!double z) @safe pure nothrow
+bool isNaN(T)(Complex!T z) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double x = z.re;
-    if (std.math.isNaN(x))
+    import std.math: isNaN;
+    immutable x = z.re;
+    if (isNaN(x))
         return true;
     else
         return false;
 }
 
 @nogc
-Complex!double pow(Complex!double z, int w) @safe pure nothrow
+Complex!T pow(T)(Complex!T z, int w) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    Complex!double p  = complex(z.re, z.im);
-    foreach ( i; 0..abs(w)-1) z *= p;
-    if (w < 0) {
-        z = 1/z;
+    switch (w)
+    {
+    case 0:
+        z.re = 1.0;
+        z.im = 0.0;
+        break;
+    case 1:
+        // identity; do nothing
+        break;
+    Case:
+        z *= z;
+        break;
+    case 3:
+        auto p = z;
+        z *= p;
+        z *= p;
+        break;
+    default:
+        z ^^= cast(real) w;
     }
     return z;
 }
 
 @nogc
-Complex!double pow(Complex!double z, Complex!double w) @safe pure nothrow
+Complex!T pow(T)(Complex!T z, Complex!T w) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double a = z.re; double b = z.im;
-    double c = w.re; double d = w.im;
-    double r = std.math.sqrt(a*a + b*b);
-    double theta = arg(z); Complex!double i = complex(0.0, 1.0);
-    double logr = std.math.log(to!double(r));
-    return exp(logr*w+i*theta*w);
+    import std.math: sqrt, log;
+    immutable r = sqrt(z.re*z.re + z.im*z.im);
+    immutable theta = arg(z);
+    Complex!double i = complex(0.0, 1.0);
+    immutable logr = log(r);
+    return typeof(return)(exp(logr*w+i*theta*w));
 }
 
 @nogc
-Complex!double pow(Complex!double z, double w) @safe pure nothrow
+Complex!T pow(T)(Complex!T z, T w) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double a = z.re; double b = z.im;
-    double c = w; double d = 0.0;
-    double r = std.math.sqrt(a*a + b*b);
-    double theta = arg(z); Complex!double i = complex(0.0, 1.0);
-    double logr = std.math.log(to!double(r));
-    return exp(logr*w+i*theta*w);
+    import std.math: sqrt, log;
+    immutable r = sqrt(z.re*z.re + z.im*z.im);
+    immutable theta = arg(z);
+    Complex!double i = complex(0.0, 1.0);
+    immutable logr = log(r);
+    return typeof(return)(exp(logr*w+i*theta*w));
 }
 
 @nogc
-Complex!double pow(double z, Complex!double w) @safe pure nothrow
+Complex!T pow(T)(T z, Complex!T w) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double a = z; double b = 0.0;
-    double c = w.re; double d = w.im;
-    double r = std.math.sqrt(a*a + b*b);
-    double theta = arg(complex(a, b)); Complex!double i = complex(0.0, 1.0);
-    double logr = std.math.log(to!double(r));
-    return exp(logr*w+i*theta*w);
+    import std.math: sqrt, log;
+    immutable theta = arg(complex(z, 0.0));
+    Complex!double i = complex(0.0, 1.0);
+    immutable logr = log(z);
+    return typeof(return)(exp(logr*w+i*theta*w));
 }
 
 @nogc
-Complex!double fabs(Complex!double z) @safe pure nothrow
+Complex!T fabs(T)(Complex!T z) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    // The standard library abs() function does not satisfy analyticity, hence will not yield correct sensitivity
-    // information when used in the flow solver. Below is an implementation that imposes analyticity, referenced from
-    // An Automated Method for Sensitivity Analysis using Complex Variables (Martins et al, 2000).
-    // A thorough explanation of the reasoning behind this implementation is provided in Martins' thesis,
-    // A Coupled-Adjoint Method For High-Fidelity Aero-Structural Optimization (pg. 42, 2003).
-
-    double x = z.re;
+    // A standard library implementation of the abs() function does not satisfy analyticity.
+    // Below is an implementation that imposes analyticity, taken from the references in the header.
+    // KAD 2018
+    immutable x = z.re;
     if ( x < 0.0)
         return -z;
     else
         return z;
 }
 
-@nogc
-Complex!double exp(Complex!double z) @safe pure nothrow
+Complex!T exp(T)(Complex!T z) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double x = z.re; double y = z.im;
-    double e = std.math.exp(x);
-    return e*complex(std.math.cos(y), std.math.sin(y));
+    import std.math: exp, cos, sin;
+    immutable e = exp(z.re);
+    return e*complex(cos(z.im), sin(z.im));
 }
 
 @nogc
-Complex!double sqrt(Complex!double z) @safe pure nothrow
+Complex!T tan(T)(Complex!T z) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double x = z.re; double y = z.im;
-    double zarg = arg(z);
-    double zabs = std.math.sqrt(x*x + y*y);
-    return std.math.sqrt(zabs)*complex( std.math.cos(zarg/2.0), std.math.sin(zarg/2.0) );
-}
-
-@nogc
-Complex!double sin(Complex!double z) @safe pure nothrow
-{
-    // The definition provided in ref.:
-    // An Automated Method for Sensitivity Analysis using Complex Variables (Martins et al, 2000)
-    // exhibits some error when evaluating the second example derivative computation from ref.:
-    // Using Complex Variables to Estimate Derivatives of Real Functions (Squire & Trapp, 1998)
-    // despite passing it's own unittest.
-    // Hence we use an alternate ref.: https://proofwiki.org/wiki/Sine_of_Complex_Number
-    Complex!double i = complex(0, 1);
-    double a = z.re; double b = z.im;
-    return std.math.sin(a) * std.math.cosh(b) + i*std.math.cos(a)*std.math.sinh(b);
-}
-
-@nogc
-Complex!double cos(Complex!double z) @safe pure nothrow
-{
-    // Use same ref. as sin() for consistency: https://proofwiki.org/wiki/Cosine_of_Complex_Number
-    Complex!double i = complex(0, 1);
-    double a = z.re; double b = z.im;
-    return std.math.cos(a) * std.math.cosh(b) - i*std.math.sin(a)*std.math.sinh(b);
- }
-
-@nogc
-Complex!double tan(Complex!double z) @safe pure nothrow
-{
-    double x = z.re; double y = z.im;
-    Complex!double numer;
-    numer = complex( std.math.sin(x)*std.math.cosh(y), std.math.cos(x)*std.math.sinh(y));
-    Complex!double denom;
-    denom = complex( std.math.cos(x)*std.math.cosh(y), -std.math.sin(x)*std.math.sinh(y));
+    import std.math: cos, sin, cosh, sinh;
+    immutable re = z.re;
+    immutable im = z.im;
+    Complex!T numer = complex( sin(re)*cosh(im), cos(re)*sinh(im));
+    Complex!T denom = complex( cos(re)*cosh(im), -sin(re)*sinh(im));
     return numer/denom;
 }
 
 @nogc
-Complex!double log(Complex!double z) @safe pure nothrow
+Complex!T log(T)(Complex!T z) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double x = z.re; double y = z.im;
-    double zabs = std.math.sqrt(x*x + y*y);
-    return complex( to!double(std.math.log(zabs)), arg(z));
+    import std.math: sqrt, log;
+    immutable re = z.re;
+    immutable im = z.im;
+    immutable zabs = sqrt(re*re + im*im);
+    return typeof(return)(complex( log(zabs), arg(z) ));
 }
 
 @nogc
-Complex!double log10(Complex!double z) @safe pure nothrow
+Complex!T log10(T)(Complex!T z) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double ln10 = std.math.log(10.0);
-    return log(z)/ln10;
+    import std.math;
+    immutable ln10 = std.math.log(10.0);
+    return typeof(return)(log(z)/ln10);
 }
 
 @nogc
-Complex!double sinh(Complex!double z) @safe pure nothrow
+Complex!T sinh(T)(Complex!T z) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double x = z.re; double y = z.im;
     return (exp(z) - exp(-z))/2.0;
 }
 
 @nogc
-Complex!double cosh(Complex!double z) @safe pure nothrow
+Complex!T cosh(T)(Complex!T z) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double x = z.re; double y = z.im;
     return (exp(z) + exp(-z))/2.0;
 }
 
 @nogc
-Complex!double tanh(Complex!double z) @safe pure nothrow
+Complex!T tanh(T)(Complex!T z) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    Complex!double zsinh = sinh(z);
-    Complex!double zcosh = cosh(z);
-    return zsinh/zcosh;
+    return sinh(z)/cosh(z);
 }
 
 @nogc
-Complex!double fmax(Complex!double z1, Complex!double z2) @safe pure nothrow
+Complex!T fmax(T)(Complex!T z1, Complex!T z2) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-        double x1 = z1.re; double x2 = z2.re;
+    immutable x1 = z1.re;
+    immutable x2 = z2.re;
     if (x1 >= x2)
         return z1;
     else
@@ -968,9 +979,13 @@ Complex!double fmax(Complex!double z1, Complex!double z2) @safe pure nothrow
 }
 
 @nogc
-Complex!double fmax(Complex!double z1, double z2) @safe pure nothrow
+Complex!T fmax(T)(Complex!T z1, T z2) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double x1 = z1.re; double x2 = z2;
+    immutable x1 = z1.re;
+    immutable x2 = z2;
     if (x1 >= x2)
         return z1;
     else
@@ -978,20 +993,27 @@ Complex!double fmax(Complex!double z1, double z2) @safe pure nothrow
 }
 
 @nogc
-Complex!double fmax(double z1, Complex!double z2) @safe pure nothrow
+Complex!T fmax(T)(T z1, Complex!T z2) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double x1 = z1; double x2 = z2.re;
+    immutable x1 = z1;
+    immutable x2 = z2.re;
     if (x1 >= x2)
         return complex(z1);
     else
         return z2;
 }
 
-
 @nogc
-Complex!double fmin(Complex!double z1, Complex!double z2) @safe pure nothrow
+Complex!T fmin(T)(Complex!T z1, Complex!T z2) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double x1 = z1.re; double x2 = z2.re;
+    immutable x1 = z1.re;
+    immutable x2 = z2.re;
     if (x1 <= x2)
         return z1;
     else
@@ -999,8 +1021,13 @@ Complex!double fmin(Complex!double z1, Complex!double z2) @safe pure nothrow
 }
 
 @nogc
-Complex!double fmin(double z1, Complex!double z2) { @safe pure nothrow
-    double x1 = z1; double x2 = z2.re;
+Complex!T fmin(T)(T z1, Complex!T z2)  @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
+{
+    immutable x1 = z1;
+    immutable x2 = z2.re;
     if (x1 <= x2)
         return complex(z1);
     else
@@ -1008,9 +1035,13 @@ Complex!double fmin(double z1, Complex!double z2) { @safe pure nothrow
 }
 
 @nogc
-Complex!double fmin(Complex!double z1, double z2) @safe pure nothrow
+Complex!T fmin(T)(Complex!T z1, T z2) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double x1 = z1.re; double x2 = z2;
+    immutable x1 = z1.re;
+    immutable x2 = z2;
     if (x1 <= x2)
         return z1;
     else
@@ -1030,34 +1061,50 @@ Complex!double sgn(Complex!double z1, Complex!double z2) @safe pure nothrow
 */
 
 @nogc
-Complex!double copysign(Complex!double z1, Complex!double z2) @safe pure nothrow
+Complex!T copysign(T)(Complex!T z1, Complex!T z2) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double x1 = z1.re; double x2 = z2.re;
+    import std.math: abs;
+    immutable x1 = z1.re;
+    immutable x2 = z2.re;
     if (x2 >= 0.0)
-        return complex( +std.math.abs(z1.re), z1.im);
+        return complex( +abs(z1.re), z1.im);
     else
-        return complex( -std.math.abs(z1.re), z1.im);
+        return complex( -abs(z1.re), z1.im);
 }
 
 @nogc
-Complex!double copysign(double z1, Complex!double z2) @safe pure nothrow
+Complex!T copysign(T)(T z1, Complex!T z2) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
-    double x1 = z1.re; double x2 = z2.re;
+    import std.math: abs;
+    immutable x1 = z1.re;
+    immutable x2 = z2.re;
     if (x2 >= 0.0)
-        return complex( +std.math.abs(z1), 0.0);
+        return complex( +abs(z1), 0.0);
     else
-        return complex( -std.math.abs(z1), 0.0);
+        return complex( -abs(z1), 0.0);
 }
 
 @nogc
-Complex!double asin(Complex!double z) @safe pure nothrow
+Complex!T asin(T)(Complex!T z) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
     Complex!double i = complex(0.0, 1.0);
     return -i * log( i*z + sqrt(1.0-z*z) );
 }
 
 @nogc
-Complex!double acos(Complex!double z) @safe pure nothrow
+Complex!T acos(T)(Complex!T z) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
     // Corrected with +ve i
     // An Automated Method for Sensitivity Analysis using Complex Variables (Martins et al, 2000).
@@ -1066,14 +1113,20 @@ Complex!double acos(Complex!double z) @safe pure nothrow
 }
 
 @nogc
-Complex!double atan(Complex!double z) @safe pure nothrow
+Complex!T atan(T)(Complex!T z) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
     Complex!double i = complex(0.0, 1.0);
     return 1.0/(2.0*i) * log( (i-z) / (i+z) );
 }
 
 @nogc
-Complex!double atan2(Complex!double z, Complex!double w) @safe pure nothrow
+Complex!T atan2(T)(Complex!T z, Complex!T w) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
 {
     // ref.: https://www.medcalc.org/manual/atan2_function.php - extension of this method to complex numbers proves problematic.
     // Below implementation provided from WolframAlpha
@@ -1081,29 +1134,23 @@ Complex!double atan2(Complex!double z, Complex!double w) @safe pure nothrow
     return -i * log( ((w+i*z))/(sqrt((z*z+w*w))) );
 }
 
-// end of overloaded function additions (KD, 2018)
+// end of overloaded function additions
+// KAD 2018, 2020, 2023
 
-// removed (KD, 2018)
-/**
-   Params: z = A complex number.
-   Returns: The absolute value (or modulus) of `z`.
-*/
-/*
-T abs(T)(Complex!T z) @safe pure nothrow @nogc
+T cabs(T)(Complex!T z) @safe pure nothrow @nogc
 {
     import std.math : hypot;
     return hypot(z.re, z.im);
 }
-*/
+
 ///
 @safe pure nothrow unittest
 {
     static import std.math;
-    assert(abs(complex(1.0)) == 1.0);
-    assert(abs(complex(0.0, 1.0)) == 1.0);
-    assert(abs(complex(1.0L, -2.0L)) == std.math.sqrt(5.0L));
+    assert(cabs(complex(1.0)) == 1.0);
+    assert(cabs(complex(0.0, 1.0)) == 1.0);
+    assert(cabs(complex(1.0L, -2.0L)) == std.math.sqrt(5.0L));
 }
-
 
 /++
    Params:
@@ -1207,31 +1254,25 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
     assert(isClose(z.im, 1.0L, real.epsilon));
 }
 
-// removed (KD, 2018)
 /**
     Trigonometric functions on complex numbers.
 
     Params: z = A complex number.
     Returns: The sine and cosine of `z`, respectively.
 */
-/*
 Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 {
     auto cs = expi(z.re);
     auto csh = coshisinh(z.im);
     return typeof(return)(cs.im * csh.re, cs.re * csh.im);
 }
-*/
 ///
-/*
 @safe pure nothrow unittest
 {
     static import std.math;
     assert(sin(complex(0.0)) == 0.0);
     assert(sin(complex(2.0L, 0)) == std.math.sin(2.0L));
 }
-*/
-/*
 /// ditto
 Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 {
@@ -1254,7 +1295,6 @@ deprecated
     assert(cos(complex(0, 5.2L)) == cosh(5.2L));
     assert(cos(complex(1.3L)) == std.math.cos(1.3L));
 }
-*/
 /**
     Params: y = A real number.
     Returns: The value of cos(y) + i sin(y).
@@ -1338,12 +1378,10 @@ deprecated
     }
 }
 
-// removed (KD, 2018)
 /**
     Params: z = A complex number.
     Returns: The square root of `z`.
 */
-/*
 Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 {
     static import std.math;
@@ -1412,7 +1450,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     assert(isClose(c2s.re, 1.1317134));
     assert(isClose(c2s.im, 0.8836155));
 }
-*/
+
 // Issue 10881: support %f formatting of complex numbers
 @safe unittest
 {
