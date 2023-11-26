@@ -14,7 +14,7 @@
 
 module kinetics.two_temperature_argon_kinetics;
 
-import std.stdio : writeln;
+import std.stdio : writeln, writefln;
 import std.format;
 import std.math;
 import std.conv;
@@ -220,16 +220,36 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         } // end if Q.T > _T_min_for_reaction
     } // end opCall()
 
-    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source) {
-        string errMsg = "eval_source_terms not implemented for two_temperature_argon_kinetics.";
-        throw new ThermochemicalReactorUpdateException(errMsg);
+    @nogc override void eval_source_terms(GasModel gmodel, ref GasState Q, ref number[] source)
+    {
+        number[2] myF = rates(Q);
+
+        number electron_formation_rate_in_numden    = myF[0];
+        number energy_to_translation_per_kg_mixture = myF[1];
+
+        if (Q.T > _T_min_for_reaction) {
+            source[0] = -1.0*electron_formation_rate_in_numden*_m_Ar;
+            source[1] =  1.0*electron_formation_rate_in_numden*_m_Arp;
+            source[2] =  1.0*electron_formation_rate_in_numden*_m_e;
+            source[3] = -1.0*energy_to_translation_per_kg_mixture*Q.rho;
+        } else {
+            source[0] = 0.0;
+            source[1] = 0.0;
+            source[2] = 0.0;
+            source[3] = 0.0;
+        }
     }
 
     private:
     @nogc
     number[2] F(ref const(number[2]) y, ref GasState Q)
-    // Compute the rate of change of the state vector for the ionisation reactions.
-    // It also has the side effect of keeping the GasState up to date with y vector.
+    {
+        update_Q_from_state_vector(y, Q);
+        return rates(Q);
+    }
+
+    @nogc
+    void update_Q_from_state_vector(ref const(number[2]) y, ref GasState Q)
     {
         // Definition of our state vector:
         // [0] number density of electrons and
@@ -260,6 +280,27 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         _gmodel.numden2massf(nden, Q);
         _gmodel.update_thermo_from_rhou(Q);
         _gmodel.update_sound_speed(Q);
+    }
+
+    @nogc
+    number[2] rates(in GasState Q)
+    // Compute the rate of change of the state vector for the ionisation reactions.
+    // It no longer has the side effect of keeping the GasState up to date with y vector.
+    {
+        // Definition of our state vector:
+        // [0] number density of electrons and
+        // [1] translational energy of heavy particles
+        number[2] y_dash; y_dash[0] = 0.0; y_dash[1] = 0.0;
+
+        number[3] numden;
+        _gmodel.massf2numden(Q, numden);
+        number n_e = numden[2]; // number density of electrons
+        number n_Arp= numden[1]; // number density of Ar
+        number n_Ar = numden[0]; // number density of Ar
+        number n_total = n_e + n_Ar;
+        number alpha = n_e/(n_total);
+        number Te = (alpha > _ion_tol) ? Q.T_modes[0] : to!number(_Te_default);
+        number T = Q.T;
 
         //=====================================================================
         // Rate constants for ionisation reactions.
@@ -282,7 +323,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 
         //=====================================================================
         // Energy moving to electronic mode due to reactions.
-        number alpha_dot = n_dot/_n_total;
+        number alpha_dot = n_dot/n_total;
         number u_dot_reac = 3.0/2.0*_Rgas*alpha_dot*Te
             + alpha_dot*_Rgas*_theta_ion - n_dot_e*_Kb*_theta_ion/Q.rho;
         //
@@ -299,7 +340,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             Q_ea *= 1.0e-20;
             //
             // Calculate Q_ei
-            Q_ei = 1.95e-10*pow(Te,-2)*log(1.53e8*pow(Te,3)/(n_e/1.0e6));
+            Q_ei = 1.95e-10/Te/Te*log(1.53e8*pow(Te,3)/(n_e/1.0e6));
             if (Q_ei < 0.0) { Q_ei = 0.0; }
             //
             // Find the collision frequencies
@@ -376,12 +417,13 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     }
 
 private:
-    double _m_Ar = 6.6335209e-26; // mass of argon (kg)
-    double _m_e = 9.10938e-31; // mass of electron (kg)
-    double _Kb = Boltzmann_constant;
-    double _Rgas = 208.0;
-    double _theta_ion = 183100.0;
-    double _theta_A1star = 135300.0;
+    immutable double _m_Ar = 6.6335209e-26; // mass of argon (kg)
+    immutable double _m_e = 9.10938e-31; // mass of electron (kg)
+    immutable double _m_Arp = _m_Ar - _m_e; // mass of argon ion (kg)
+    immutable double _Kb = Boltzmann_constant;
+    immutable double _Rgas = 208.0;
+    immutable double _theta_ion = 183100.0;
+    immutable double _theta_A1star = 135300.0;
 
     // Adjustable parameters, will be set in the constructor.
     string _integration_method;
