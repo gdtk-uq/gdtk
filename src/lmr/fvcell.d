@@ -274,6 +274,11 @@ public:
         aux_cell_data = AuxCellData.get_aux_cell_data_items(myConfig);
     }
 
+    @nogc
+    void setLocalConfig(LocalConfig lcfg)
+    {
+        myConfig = lcfg;
+    }
     // length in the i-index direction
     @property @nogc number iLength() const { return lengths[0]; }
     @property @nogc number iLength(number l) { return lengths[0] = l; }

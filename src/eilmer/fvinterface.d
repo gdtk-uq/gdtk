@@ -198,6 +198,11 @@ public:
     }
 
     @nogc
+    void setLocalConfig(LocalConfig lcfg)
+    {
+        myConfig = lcfg;
+    }
+    @nogc
     void copy_values_from(in FVInterface other, uint type_of_copy)
     {
         switch (type_of_copy) {
