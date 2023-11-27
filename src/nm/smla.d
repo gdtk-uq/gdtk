@@ -226,10 +226,10 @@ public:
 	    foreach (jj; ia[col] .. ia[col+1]) {
 		auto row = ja[jj];
 		auto dest = tp.ia[row];
-		
+
 		tp.ja[dest] = col;
 		tp.aa[dest] = aa[jj];
-		
+
 		tp.ia[row]++;
 	    }
 	}
@@ -244,7 +244,7 @@ public:
 	return tp;
 
     }
-    
+
 } // end class SMatrix
 
 bool approxEqualMatrix(T)(SMatrix!T a, SMatrix!T b)
@@ -261,19 +261,20 @@ bool approxEqualMatrix(T)(SMatrix!T a, SMatrix!T b)
     return true;
 }
 
-void multiply(T)(SMatrix!T a, T[] b, T[] c)
-in {
-    assert(a.ia.length-1 == c.length);
-    // Some faith is given that the user provides an appropriate length
-    // input vector b, since in CRS we cannot easily determine the number of columns.
- }
-do {
+void multiply(T)(SMatrix!T a, T[] b, T[] c, size_t nrows=0)
+{
     size_t k0, k1;
-    foreach ( i; 0 .. a.ia.length-1 ) {
+    if (nrows == 0) { // just multiply using every row matrix
+        nrows = a.ia.length-1;
+    }
+    if (nrows > a.ia.length-1) { // don't fail, but reset to maximum available rows
+        nrows = a.ia.length-1;
+    }
+    foreach (i; 0 .. nrows) {
         k0 = a.ia[i];
         k1 = a.ia[i+1];
         c[i] = 0.0;
-        foreach ( k; k0 .. k1 ) c[i] += a.aa[k] * b[a.ja[k]];
+        foreach (k; k0 .. k1) c[i] += a.aa[k] * b[a.ja[k]];
     }
 }
 
