@@ -26,5 +26,6 @@ LMR_CMD_FILES = $(LMR_CMD)/checkjacobian.d \
 	$(LMR_CMD)/runsteady.d \
 	$(LMR_CMD)/snapshot2vtk.d
 
-LMR_LUA_MODULES = $(LMR_LUA_MOD)/lmrconfig.lua \
+LMR_LUA_MODULES = $(LMR_LUA_MOD)/gridproimport.lua \
+	$(LMR_LUA_MOD)/lmrconfig.lua \
 	$(LMR_LUA_MOD)/nkconfig.lua

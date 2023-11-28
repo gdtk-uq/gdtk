@@ -35,6 +35,10 @@ applyGridproConnectivity = gridpro.applyGridproConnectivity
 applyGridproBoundaryConditions = gridpro.applyGridproBoundaryConditions
 to_eilmer_axis_map = gridpro.to_eilmer_axis_map
 
+local gridproimport = require 'gridproimport'
+importGridproConnectivity = gridproimport.importGridproConnectivity
+importGridproBCs = gridproimport.importGridproBCs
+
 local grid = require 'grid'
 Grid = grid.Grid
 connectGrids = grid.connectGrids
