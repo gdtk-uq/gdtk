@@ -18,7 +18,7 @@ import std.math;
 import std.conv;
 import std.stdio;
 
-import nm.complex;
+import complex;
 import nm.number;
 
 import util.lua;

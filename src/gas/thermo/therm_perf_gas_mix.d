@@ -14,7 +14,7 @@ import std.stdio;
 import util.lua;
 import util.lua_service;
 import nm.nm_exception : NumericalMethodException;
-import nm.complex;
+import complex;
 import nm.number;
 import nm.brent;
 import nm.newton;

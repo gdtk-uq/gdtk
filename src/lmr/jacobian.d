@@ -10,7 +10,7 @@ module jacobian;
 
 import std.conv;
 
-import nm.complex;
+import complex;
 import nm.number;
 import nm.smla;
 import nm.bbla;

@@ -8,7 +8,7 @@ module kinetics.luaelectronically_specific_kinetics;
 import std.stdio;
 import std.conv;
 import std.string;
-import nm.complex;
+import complex;
 import nm.number;
 
 import util.lua;

@@ -22,7 +22,7 @@ import geom.gpath.bezier;
 import geom.gpath.nurbs;
 import geom.gpath.polyline;
 import geom.surface;
-import nm.complex;
+import complex;
 import nm.number;
 import nm.bbla;
 import nm.linesearch;

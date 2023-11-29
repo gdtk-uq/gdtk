@@ -28,7 +28,7 @@ import std.array;
 import std.format;
 import util.lua;
 import util.lua_service;
-import nm.complex;
+import complex;
 import nm.number;
 
 import gas.gas_model;

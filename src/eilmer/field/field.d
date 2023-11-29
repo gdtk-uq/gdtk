@@ -13,7 +13,7 @@ import std.algorithm;
 import std.format;
 import std.stdio;
 import std.math;
-import nm.complex;
+import complex;
 import nm.number;
 
 import fvcell;

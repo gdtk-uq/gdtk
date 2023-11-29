@@ -7,7 +7,7 @@ module geom.surface.bezierpatch;
 
 import std.stdio : File;
 import std.conv;
-import nm.complex;
+import complex;
 import nm.number;
 
 import geom.elements;

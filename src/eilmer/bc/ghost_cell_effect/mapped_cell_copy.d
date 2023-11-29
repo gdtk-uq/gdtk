@@ -10,7 +10,7 @@ import std.stdio;
 import std.math;
 import std.file;
 import std.algorithm;
-import nm.complex;
+import complex;
 import nm.number;
 version(mpi_parallel) {
     import mpi;

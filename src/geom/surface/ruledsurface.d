@@ -3,7 +3,7 @@
 module geom.surface.ruledsurface;
 
 import std.conv;
-import nm.complex;
+import complex;
 import nm.number;
 
 import geom.elements;

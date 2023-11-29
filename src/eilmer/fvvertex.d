@@ -18,7 +18,7 @@ import flowgradients;
 import fvcell;
 import fvinterface;
 import lsqinterp;
-import nm.complex;
+import complex;
 import nm.number;
 
 class FVVertex {

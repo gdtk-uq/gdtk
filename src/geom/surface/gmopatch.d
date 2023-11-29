@@ -6,7 +6,7 @@
 module geom.surface.gmopatch;
 
 import std.conv;
-import nm.complex;
+import complex;
 import nm.number;
 
 import geom.elements;

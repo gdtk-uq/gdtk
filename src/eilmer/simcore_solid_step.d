@@ -12,7 +12,7 @@ import std.format;
 import std.string;
 import std.algorithm;
 import std.parallelism;
-import nm.complex;
+import complex;
 import nm.number;
 
 import geom;

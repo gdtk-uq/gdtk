@@ -14,7 +14,7 @@ module gas_solid_interface;
 
 import std.stdio;
 import std.math;
-import nm.complex;
+import complex;
 import nm.number;
 import nm.bbla;
 

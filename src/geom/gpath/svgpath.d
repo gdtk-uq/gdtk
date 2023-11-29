@@ -11,7 +11,7 @@ import std.string;
 import std.algorithm;
 
 import nm.bbla;
-import nm.complex;
+import complex;
 import nm.number;
 
 import geom.elements;

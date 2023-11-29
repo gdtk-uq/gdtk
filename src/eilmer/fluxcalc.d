@@ -11,7 +11,7 @@ module fluxcalc;
 import std.math;
 import std.stdio;
 import std.conv;
-import nm.complex;
+import complex;
 import nm.number;
 
 import geom;

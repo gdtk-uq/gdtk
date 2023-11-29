@@ -17,7 +17,7 @@ import geom.volume.parametricvolume;
 import nurbs_utils;
 
 import nm.number;
-import nm.complex;
+import complex;
 
 class NURBSVolume : ParametricVolume {
 public:

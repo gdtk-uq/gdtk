@@ -10,7 +10,7 @@ import std.string;
 import std.math;
 import std.conv : to;
 
-import nm.complex;
+import complex;
 import nm.number;
 
 import gas.gas_model;

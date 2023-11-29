@@ -10,7 +10,7 @@ import std.conv;
 import std.algorithm;
 import std.string;
 import std.math;
-import nm.complex;
+import complex;
 import nm.number;
 
 import geom.elements;

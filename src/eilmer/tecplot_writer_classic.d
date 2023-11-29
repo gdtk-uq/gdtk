@@ -16,7 +16,7 @@ import std.algorithm;
 import std.bitmanip;
 import std.stdint;
 import std.range;
-import nm.complex;
+import complex;
 import nm.number;
 import gzip;
 import fileutil;

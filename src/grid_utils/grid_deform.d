@@ -11,7 +11,7 @@ import std.stdio;
 import fluidblock;
 import std.math;
 import std.algorithm;
-import nm.complex;
+import complex;
 import nm.number;
 import geom;
 

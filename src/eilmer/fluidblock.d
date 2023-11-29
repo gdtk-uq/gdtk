@@ -15,7 +15,7 @@ import std.json;
 import std.format;
 import std.array;
 import util.lua;
-import nm.complex;
+import complex;
 import nm.number;
 import nm.bbla;
 import nm.smla;

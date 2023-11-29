@@ -10,7 +10,7 @@
 module nm.newton;
 
 import std.math;
-import nm.complex;
+import complex;
 import std.format;
 
 /**

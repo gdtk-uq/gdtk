@@ -20,7 +20,7 @@ import std.stdio;
 import std.math;
 import std.string;
 import std.json;
-import nm.complex;
+import complex;
 import nm.number;
 
 struct Vector3 {

@@ -16,7 +16,7 @@ import std.format;
 import std.math;
 import std.range : iota;
 import gzip;
-import nm.complex;
+import complex;
 import nm.number;
 import nm.nelmin;
 

@@ -11,7 +11,7 @@ module special_block_init;
 
 import std.stdio;
 import std.algorithm.searching;
-import nm.complex;
+import complex;
 import nm.number;
 
 import globalconfig;

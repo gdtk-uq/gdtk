@@ -17,7 +17,7 @@ import std.math;
 import std.algorithm;
 import std.file;
 
-import nm.complex;
+import complex;
 import nm.number;
 import nm.smla;
 import util.lua;

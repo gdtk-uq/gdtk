@@ -18,7 +18,7 @@ module bc.user_defined_effects;
 import std.conv;
 import std.string;
 import std.stdio;
-import nm.complex;
+import complex;
 import nm.number;
 import util.lua;
 import util.lua_service;

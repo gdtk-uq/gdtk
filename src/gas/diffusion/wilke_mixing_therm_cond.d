@@ -22,7 +22,7 @@
 module gas.diffusion.wilke_mixing_therm_cond;
 
 import std.math;
-import nm.complex;
+import complex;
 import nm.number;
 import util.msg_service;
 

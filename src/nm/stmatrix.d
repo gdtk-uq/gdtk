@@ -13,7 +13,7 @@ import std.stdio;
 import std.string;
 import std.conv;
 import std.typecons : Tuple, tuple;
-import nm.complex;
+import complex;
 import nm.number;
 
 class STMatrix(T) {

@@ -79,7 +79,6 @@ NM_FILES := $(NM_DIR)/ridder.d \
 	$(NM_DIR)/spline.d \
 	$(NM_DIR)/splinelsq.d \
 	$(NM_DIR)/nelmin.d \
-	$(NM_DIR)/complex.d \
 	$(NM_DIR)/number.d
 
 LUA_DIR := ../../extern/lua-5.4.3

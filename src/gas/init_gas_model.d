@@ -182,7 +182,7 @@ version(init_gas_model_test) {
         import std.math;
         import std.stdio;
         import std.conv;
-        import nm.complex;
+        import complex;
         import nm.number;
 
         // Methods for testing gas state class

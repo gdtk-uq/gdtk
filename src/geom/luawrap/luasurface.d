@@ -15,7 +15,7 @@ import std.conv;
 import std.uni;
 import util.lua;
 import util.lua_service;
-import nm.complex;
+import complex;
 import nm.number;
 import geom;
 import geom.luawrap.luageom;

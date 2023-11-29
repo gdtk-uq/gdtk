@@ -6,7 +6,7 @@ import std.string;
 import std.conv;
 import util.lua;
 import util.lua_service;
-import nm.complex;
+import complex;
 import nm.number;
 
 import gas;

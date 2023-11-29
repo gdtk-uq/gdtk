@@ -14,7 +14,7 @@ import std.string;
 import std.array;
 import std.format;
 import std.math;
-import nm.complex;
+import complex;
 import nm.number;
 import geom;
 import solidfvinterface;

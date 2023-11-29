@@ -13,7 +13,7 @@ import std.string;
 import std.math;
 import std.json;
 import std.format;
-import nm.complex;
+import complex;
 import nm.number;
 import geom;
 import globalconfig;

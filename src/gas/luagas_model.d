@@ -15,7 +15,7 @@ import std.conv;
 import std.string;
 import util.lua;
 import util.lua_service;
-import nm.complex;
+import complex;
 import nm.number;
 
 import kinetics.luathermochemical_reactor;

@@ -11,7 +11,7 @@
 module gas.diffusion.sutherland_viscosity;
 
 import std.math;
-import nm.complex;
+import complex;
 import nm.number;
 import gas.gas_model;
 import gas.gas_state;

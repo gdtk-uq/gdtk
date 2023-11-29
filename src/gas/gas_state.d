@@ -9,7 +9,7 @@ module gas.gas_state;
 import std.stdio;
 import std.conv;
 import std.math : isFinite;
-import nm.complex;
+import complex;
 import nm.number;
 
 import gas.gas_model;

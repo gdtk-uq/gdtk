@@ -12,7 +12,7 @@ module gas.electronic_species;
 import std.conv : to;
 import std.string : format;
 
-import nm.complex;
+import complex;
 import nm.number;
 import util.lua;
 import util.lua_service;

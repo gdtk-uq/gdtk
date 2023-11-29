@@ -21,7 +21,7 @@ module geom.luawrap.luagrid;
 
 import std.conv;
 import std.string;
-import nm.complex;
+import complex;
 import nm.number;
 
 import util.lua;
