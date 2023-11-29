@@ -1,0 +1,11 @@
+{
+	"authors": [
+		"Lars Tandle Kyllingstad", 
+		"Don Clugston",
+		"Kyle Damm"
+	],
+	"copyright": "Copyright (c) 2010, Lars T. Kyllingstad.",
+	"description": "This module contains the Complex type, which is used to represent complex numbers, along with related mathematical operations and functions. Modified to allow for specific generation of `double`-type complex numbers." ,
+	"license": "BSL-1.0",
+	"name": "complex"
+}
