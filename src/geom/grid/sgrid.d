@@ -511,11 +511,20 @@ public:
                 new_nic = niv-1; new_njc = njv-1; new_nkc = 1; break;
             } // end switch boundary_indx
         } else {
-            throw new GeometryException("Extraction from 2D grid not implemented yet.");
+            final switch (boundary_indx) {
+            case Face.north:
+                new_nic = niv-1; new_njc = 1; new_nkc = 1; break;
+            case Face.south:
+                new_nic = niv-1; new_njc = 1; new_nkc = 1; break;
+            case Face.west:
+                new_nic = njv-1; new_njc = 1; new_nkc = 1; break;
+            case Face.east:
+                new_nic = njv-1; new_njc = 1; new_nkc = 1; break;
+            }
         }
         cellList.length = new_nic * new_njc * new_nkc;
+        size_t single_cell_index(size_t i, size_t j, size_t k) { return i + (niv-1)*(j + (njv-1)*k); }
         if (dimensions == 3) {
-            size_t single_cell_index(size_t i, size_t j, size_t k) { return i + (niv-1)*(j + (njv-1)*k); }
             final switch (boundary_indx) {
             case Face.north:
                 foreach (i; 0 .. new_nic) {
@@ -549,7 +558,20 @@ public:
                 break;
             } // end switch boundary_indx
         } else {
-            throw new GeometryException("Extraction from 2D grid not implemented yet.");
+            final switch (boundary_indx) {
+            case Face.north:
+                foreach (i; 0 .. new_nic) cellList[i] = single_cell_index(i,njv-2,0);
+                break;
+            case Face.south:
+                foreach (i; 0 .. new_nic) cellList[i] = single_cell_index(i,0,0);
+                break;
+            case Face.west:
+                foreach (i; 0 .. new_nic) cellList[i] = single_cell_index(0,i,0);
+                break;
+            case Face.east:
+                foreach (i; 0 .. new_nic) cellList[i] = single_cell_index(niv-2,i,0);
+                break;
+            }
         }
         return cellList;
     } // end get_list_of_boundary_cells()
