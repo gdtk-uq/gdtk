@@ -10,7 +10,7 @@ import std.stdio;
 import std.algorithm;
 import std.math;
 import std.conv;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 import gas;

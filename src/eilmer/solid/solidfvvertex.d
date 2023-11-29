@@ -7,7 +7,7 @@
 
 module solidfvvertex;
 
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 import geom;
 

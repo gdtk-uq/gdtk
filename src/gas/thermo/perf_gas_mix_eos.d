@@ -10,7 +10,7 @@
 
 module gas.thermo.perf_gas_mix_eos;
 
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 import gas.gas_model;

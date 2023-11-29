@@ -11,7 +11,7 @@ import std.math;
 import std.format;
 import std.conv;
 import std.stdio;
-import nm.complex;
+import ntypes.complex;
 
 @nogc
 T normInf(size_t N, size_t NDIM, size_t NDIM2, T)(ref T[NDIM2][NDIM] c)

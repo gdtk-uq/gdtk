@@ -15,7 +15,7 @@ import std.json;
 import std.string;
 import std.conv;
 import std.math;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 import nm.bbla;
 import nm.brent;

@@ -15,7 +15,7 @@ import std.conv : to;
 import std.algorithm;
 import util.lua;
 import util.lua_service;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 import nm.brent;
 import nm.bracketing;

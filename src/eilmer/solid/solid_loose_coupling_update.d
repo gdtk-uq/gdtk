@@ -23,7 +23,7 @@ import std.datetime;
 
 import nm.smla;
 import nm.bbla;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 import globalconfig;

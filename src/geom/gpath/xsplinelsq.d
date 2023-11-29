@@ -11,7 +11,7 @@ import std.math;
 import std.stdio: File;
 import std.string;
 
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 import nm.spline;
 import nm.splinelsq;

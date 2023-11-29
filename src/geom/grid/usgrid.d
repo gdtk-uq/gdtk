@@ -18,7 +18,7 @@ import std.format;
 import std.math;
 import std.datetime;
 import gzip;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 import geom;

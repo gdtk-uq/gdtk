@@ -13,7 +13,7 @@ import std.stdio;
 import std.string;
 import std.conv;
 import std.uni;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 import util.lua;
 import util.lua_service;

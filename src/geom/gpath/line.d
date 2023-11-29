@@ -5,7 +5,7 @@ module geom.gpath.line;
 
 import std.math;
 import std.conv: to;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 import geom.elements;

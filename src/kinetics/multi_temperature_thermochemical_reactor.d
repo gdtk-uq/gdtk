@@ -10,7 +10,7 @@ import std.math;
 import std.algorithm;
 import std.conv;
 import std.stdio;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 import util.lua;

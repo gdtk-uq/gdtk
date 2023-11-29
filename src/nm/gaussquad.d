@@ -9,7 +9,7 @@
 
 module nm.gaussquad;
 import std.math;
-import nm.complex;
+import ntypes.complex;
 
 // Rule coefficients computed by Maxima. 
 // See the scripts in directory ./notes

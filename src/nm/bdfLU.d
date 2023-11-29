@@ -33,7 +33,7 @@ import std.conv;
 import std.algorithm;
 import std.exception;
 import nm.bbla;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 //BDF1 or backwards euler formula

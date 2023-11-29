@@ -22,7 +22,7 @@ import std.math;
 import std.conv;
 import std.typecons : Tuple;
 import std.json;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 import lmrconfig;

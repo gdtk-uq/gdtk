@@ -14,7 +14,7 @@ import geom;
 import fvcell;
 import simcore;
 import globalconfig;
-import nm.complex;
+import ntypes.complex;
 import fluidblockio_old;
 
 

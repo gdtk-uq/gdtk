@@ -13,7 +13,7 @@ import std.math;
 import std.string;
 import std.typecons;
 import std.algorithm;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 import util.lua;

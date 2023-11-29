@@ -26,7 +26,7 @@ import std.string;
 import std.conv : to;
 import std.typecons : Tuple, tuple;
 
-import nm.complex;
+import ntypes.complex;
 import nm.number : number;
 import nm.smla;
 import nm.bbla;

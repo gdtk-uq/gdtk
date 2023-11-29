@@ -23,7 +23,7 @@ import util.lua_service;
 import nm.bbla;
 import nm.smla;
 import nm.luabbla;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 import special_block_init;

@@ -6,7 +6,7 @@ import std.conv;
 import std.math;
 import std.stdio;
 
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 import geom.elements;

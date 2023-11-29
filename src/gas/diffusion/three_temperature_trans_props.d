@@ -28,7 +28,7 @@ import std.algorithm;
 
 import util.lua;
 import util.lua_service;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 import gas;

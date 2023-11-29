@@ -19,7 +19,7 @@ import std.stdio : writeln;
 import std.format;
 import std.math;
 import std.conv;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 import nm.bbla;
 

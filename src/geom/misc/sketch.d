@@ -26,7 +26,7 @@ import std.math;
 import std.string;
 import std.algorithm;
 
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 import svg;

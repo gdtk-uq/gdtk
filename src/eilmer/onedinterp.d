@@ -9,7 +9,7 @@ module onedinterp;
 import std.math;
 import std.stdio;
 import std.conv;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 import nm.limiters;
 

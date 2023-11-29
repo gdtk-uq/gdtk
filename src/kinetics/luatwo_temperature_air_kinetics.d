@@ -8,7 +8,7 @@ module kinetics.luatwo_temperature_air_kinetics;
 import std.stdio;
 import std.conv;
 import std.string;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 import util.lua;

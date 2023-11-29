@@ -13,7 +13,7 @@ module gas.two_temperature_nitrogen;
 import std.math;
 import std.conv;
 import std.stdio;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 import gas.gas_model;

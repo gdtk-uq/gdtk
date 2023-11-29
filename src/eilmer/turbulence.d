@@ -13,7 +13,7 @@ import flowgradients;
 import gas;
 import json_helper;
 import nm.number;
-import nm.complex;
+import ntypes.complex;
 import globalconfig;
 import geom;
 import fvcell;

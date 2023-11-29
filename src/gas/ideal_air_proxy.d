@@ -17,7 +17,7 @@ import std.string;
 import std.file;
 import std.json;
 import std.conv;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 
 import gas.gas_model;

@@ -15,7 +15,7 @@ version(mpi_parallel) {
 }
 
 import nm.number;
-import nm.complex;
+import ntypes.complex;
 import geom;
 import json_helper;
 import globalconfig;

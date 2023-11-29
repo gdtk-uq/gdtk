@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/complex
+libntypes.so
+libntypes.dylib
+libntypes.dll
+libntypes.a
+libntypes.lib
+ntypes-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst

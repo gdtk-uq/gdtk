@@ -16,7 +16,7 @@ import std.math;
 import std.algorithm;
 import std.string;
 import std.conv;
-import nm.complex;
+import ntypes.complex;
 import nm.number;
 import util.lua;
 import util.lua_service;

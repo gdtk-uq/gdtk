@@ -8,7 +8,7 @@
  */
 module nm.newtoncotes;
 import std.math;
-import nm.complex;
+import ntypes.complex;
 
 /**
  * Apply Newton-Cotes 5- and 3-point quadrature rules to the segment [a,b].

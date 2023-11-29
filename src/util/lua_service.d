@@ -14,7 +14,7 @@ import std.stdio;
 import std.string;
 import std.conv;
 import std.algorithm;
-import nm.complex;
+import ntypes.complex;
 
 import util.lua;
 
