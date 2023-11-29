@@ -818,7 +818,7 @@ if ( is(typeof(T(0.0)) == double) ||
     case 1:
         // identity; do nothing
         break;
-    Case:
+    case:
         z *= z;
         break;
     case 3:
