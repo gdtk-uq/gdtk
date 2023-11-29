@@ -12,6 +12,7 @@ import prepflow;
 import prepmappedcells;
 import runsteady;
 import snapshot2vtk;
+import structured2unstructured;
 import revisionid;
 
 // Eilmer4 imports
@@ -45,12 +46,17 @@ Show help for a given Eilmer command or topic.
     // 1. Add user commands
     commands["compute-norms"] = compNormsCmd;
     commands["limiter2vtk"] = limiter2vtkCmd;
-    commands["prep-grids"] = prepGridCmd; commands["prep-grid"] = commands["prep-grids"]; // add alias
+    commands["prep-grids"] = prepGridCmd;
+    // add alias from prep-grids
+    commands["prep-grid"] = commands["prep-grids"];
     commands["prep-flow"] = prepFlowCmd;
     commands["prep-mapped-cells"] = prepMappedCellsCmd;
     commands["revision-id"] = revisionIdCmd;
     commands["run-steady"] = runSteadyCmd;
     commands["snapshot2vtk"] = snapshot2vtkCmd;
+    commands["structured2unstructured"] = structured2unstructuredCmd;
+    // add alias for structured2unstructured
+    commands["sgrid2ugrid"] = commands["structured2unstructured"];
     // 2. Add dev/diag commands
     commands["check-jacobian"] = checkJacCmd;
 }

@@ -24,7 +24,8 @@ LMR_CMD_FILES = $(LMR_CMD)/checkjacobian.d \
 	$(LMR_CMD)/prepmappedcells.d \
 	$(LMR_CMD)/revisionid.d \
 	$(LMR_CMD)/runsteady.d \
-	$(LMR_CMD)/snapshot2vtk.d
+	$(LMR_CMD)/snapshot2vtk.d \
+	$(LMR_CMD)/structured2unstructured.d
 
 LMR_LUA_MODULES = $(LMR_LUA_MOD)/gridproimport.lua \
 	$(LMR_LUA_MOD)/lmrconfig.lua \

@@ -36,6 +36,8 @@ struct LmrCfg {
     immutable string gridPrefix;
     immutable string gridDir;
     immutable string gridDirectory;
+    immutable string gridMetadataFile;
+    immutable string savedSgridDir;
     immutable string gzipExt;
     immutable string blkListFile;
     immutable string vtkDir;
@@ -77,6 +79,8 @@ static this()
     lmrCfg.gridPrefix = lmrJSONCfg["grid-prefix"].str;
     lmrCfg.gridDir = lmrJSONCfg["grid-directory"].str;
     lmrCfg.gridDirectory = lmrCfg.simDir ~ "/" ~ lmrCfg.gridDir;
+    lmrCfg.gridMetadataFile = lmrCfg.gridDirectory ~ "/" ~ lmrJSONCfg["grid-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
+    lmrCfg.savedSgridDir = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["saved-sgrid-directory"].str;
     lmrCfg.gzipExt = lmrJSONCfg["gzip-extension"].str;
     lmrCfg.blkListFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["block-list-filename"].str;
     lmrCfg.vtkDir = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["vtk-output-directory"].str;
@@ -90,7 +94,7 @@ static this()
 /**
  * Read Eilmer program configuration file.
  *
- * Authors: RJG
+ * Authors: RJG  
  * Date: 2022-08-06
  */
 void readLmrConfig()
