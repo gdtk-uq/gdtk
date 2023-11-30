@@ -551,6 +551,7 @@ Result analyse(int verbosityLevel, Config config)
             string msg = format("We seem to be going down the subsonic branch dv=%g du_gda=%g", dv, du_gda);
 	    msg ~= "\nMaybe the equilibrium-flow analysis did not continue far enough past M=1 at the throat.";
 	    msg ~= "\nTry increasing the value of meq_throat.";
+            msg ~= format(" Present value: meq_throat=%g", meq_throat);
 	    throw new Nenzf1dAnalysisException(msg);
 	}
         // House-keeping for the next step.
@@ -570,12 +571,21 @@ Result analyse(int verbosityLevel, Config config)
     //
     double rayleigh_pitot = 0.0;
     try {
-        // We need the gas model to be able to compute entropy in order
-        // to apply the Rayleigh-Pitot formula.
+        // Note that we need the gas model to be able to compute entropy
+        // in order to apply the Rayleigh-Pitot formula.
+        // Not all gas models provide and implementation, so test by calling it first.
         GasState gs_pitot = GasState(gas0);
+        auto s = gm2.entropy(gs_pitot);
+        gm2.update_thermo_from_ps(gs_pitot, s);
         pitot_condition(gas0, v, gs_pitot, gm2);
         rayleigh_pitot = gs_pitot.p;
-    } catch (Exception e) { /* Do nothing. */ }
+    } catch (Exception e) {
+        debug {
+            writeln("The calculation of the Rayleigh Pitot pressure has failed.");
+            writeln("The exception message is: ", e.msg);
+        }
+        // Leave zero value for Rayleigh Pitot pressure and continue anyway.
+    }
     result.rayleigh_pitot = rayleigh_pitot;
     result.pressure = gas0.p;
     result.density = gas0.rho;

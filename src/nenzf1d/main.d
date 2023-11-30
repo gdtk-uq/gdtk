@@ -92,8 +92,10 @@ Options:
         writefln("  velocity    %g m/s", result.velocity);
         writefln("  Mach        %g", result.Mach_number);
         writefln("  p_pitot     %g kPa (C.rho.V^2)", result.p_pitot/1000);
-        if (result.rayleigh_pitot > 0.0)
-            writefln("  p_pitot     %g kPa (Rayleigh-Pitot, frozen)", result.rayleigh_pitot/1000);
+        if (result.rayleigh_pitot > 0.0) {
+            writefln("  p_pitot     %g kPa (Rayleigh-Pitot, frozen kinetics)",
+                    result.rayleigh_pitot/1000);
+        }
         writefln("  pressure    %g kPa", result.pressure/1000.0);
         writefln("  density     %g kg/m^3", result.density);
         writefln("  temperature %g K", result.temperature);
