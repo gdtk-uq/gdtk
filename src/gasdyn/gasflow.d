@@ -491,9 +491,9 @@ void total_condition(ref const(GasState) state1, number V1,
     // Let's start with an ideal gas guess for the pressure ratio.
     auto M1 = V1/state1.a;
     auto g = gm.gamma(state1);
-    auto p0_over_p1 = p0_p(M1, g); 
+    auto p0_over_p1 = p0_p(M1.re, g.re); 
     number x1 = 0.9*p0_over_p1; number x2 = 1.1*p0_over_p1;
-    if (bracket!error_in_total_enthalpy(x1, x2, 1.0e-6) < 0) {
+    if (bracket!error_in_total_enthalpy(x1, x2, to!number(1.0e-6)) < 0) {
         throw new GasFlowException("total_condition() could not bracket the pressure ratio.");
     }
     number x_total = solve!error_in_total_enthalpy(x1, x2, 1.0e-4);
