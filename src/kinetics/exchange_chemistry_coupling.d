@@ -211,8 +211,8 @@ class ModifiedMarroneTreanorDissociation : ExchangeChemistryCoupling {
 
     @nogc
     number Gappear(in GasState gs) {
-        double L0 = 0.5 * (_T_D * R_universal - _theta_v * R_universal);
-        return to!number(L0);
+        number T_F_inv = - _aU / gs.T - 1 / _Ustar;
+        return R_universal * (_theta_v / (exp(_theta_v * T_F_inv) - 1.) - _T_D / (exp(_T_D * T_F_inv) - 1.));
     }
 
 private:
