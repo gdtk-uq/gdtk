@@ -307,14 +307,14 @@ void writeUnstructuredGridMetadata(UnstructuredGrid[] ugrids, JSONValue[] sgrids
     foreach (ig, ugrid; ugrids) {
         of = File(gridMetadataName(ig), "w");
         of.writeln("{");
-        of.writefln("  \"tag\": %s,", sgridsMetadata[ig]["tag"].str);
-        of.writefln("  \"fsTag\": %s,", sgridsMetadata[ig]["fsTag"].str);
+        of.writefln("  \"tag\": \"%s\",", sgridsMetadata[ig]["tag"].str);
+        of.writefln("  \"fsTag\": \"%s\",", sgridsMetadata[ig]["fsTag"].str);
         of.writefln("  \"type\": \"unstructured_grid\",");
         of.writefln("  \"dimensions\": %d,", ugrid.dimensions);
         of.writefln("  \"nvertices\": %d,", ugrid.nvertices);
         of.writefln("  \"ncells\": %d,", ugrid.ncells);
         of.writefln("  \"nfaces\": %d,", ugrid.nfaces);
-        of.writefln("  \"nboundaries\": %d", ugrid.nboundaries);
+        of.writefln("  \"nboundaries\": %d,", ugrid.nboundaries);
         of.writeln("  \"bcTags\": {");
         foreach (itag; 0 .. ugrid.nboundaries) {
             string tag = "";
