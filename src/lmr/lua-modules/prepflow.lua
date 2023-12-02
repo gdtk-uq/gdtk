@@ -108,6 +108,17 @@ function identifyGridConnections()
    end
 end
 
+function importGridproConnectivity()
+   if verbosity >= 1 then
+      print("    importGridproConnectivity(): Do NOTHING when in prep-flow mode.")
+   end
+end
+
+function importGridproBCs()
+   if verbosity >= 1 then
+      print("    importGridproBCs(): Do NOTHING when in prep-flow mode.")
+   end
+end
 
 -- ---------------------------------------------------------------------------------------
 
