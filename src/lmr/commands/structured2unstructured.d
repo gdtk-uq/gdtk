@@ -75,13 +75,13 @@ void main_(string[] args)
     }
 
     /* 0. Pick up metadata and see if we can do anything with it. */
-    if (verbosity >= 2) {
-        writefln("      Reading grid metadata from '%s'", lmrCfg.gridMetadataFile);
+    if (verbosity >= 1) {
+        writefln("   Reading grid metadata from '%s'", lmrCfg.gridMetadataFile);
     }
     JSONValue gridMetadata = readJSONfile(lmrCfg.gridMetadataFile);
     int ngrids = to!int(gridMetadata["ngrids"].integer);
-    if (verbosity >= 2) {
-        writefln("      Number of grids to convert: %d", ngrids);
+    if (verbosity >= 1) {
+        writefln("   Number of grids to convert: %d", ngrids);
     }
     // Pass over all grids and check that they are structured.
     foreach (ig; 0 .. ngrids) {
@@ -126,7 +126,7 @@ void main_(string[] args)
     /* 3. Work through connections creating mapped cells. */
     BlockAndCellId[string][size_t] mappedCellsList;
     string[size_t][size_t] newTags;
-    string[size_t][size_t] globalFaceTags;
+    string[CellAndFaceId][size_t] globalFaceTags;
     convertConnections(gridMetadata, sgrids, mappedCellsList, newTags, globalFaceTags);
 
     /* 4. Move structured grid out of the way */
@@ -136,8 +136,8 @@ void main_(string[] args)
         }
         rmdirRecurse(lmrCfg.savedSgridDir);
     }
-    if (verbosity >= 2) {
-       writefln("      Moving structured grids into: %s", lmrCfg.savedSgridDir);
+    if (verbosity >= 1) {
+       writefln("   Moving structured grids into: %s", lmrCfg.savedSgridDir);
     }
     rename(lmrCfg.gridDirectory, lmrCfg.savedSgridDir);
 
@@ -183,8 +183,12 @@ struct CellAndFacePos {
     size_t cellId;
     Vector3 facePos;
 }
+struct CellAndFaceId {
+    size_t cellId;
+    size_t faceId;
+}
 
-void createFaceMap(size_t bid, StructuredGrid sgrid, size_t face, ref CellAndFacePos[string] faceMap, ref string[size_t][size_t] globalFaceTags) {
+void createFaceMap(size_t bid, StructuredGrid sgrid, size_t face, ref CellAndFacePos[string] faceMap, ref string[CellAndFaceId][size_t] globalFaceTags) {
 
    auto bcells = sgrid.get_list_of_boundary_cells(face);
 
@@ -207,12 +211,12 @@ void createFaceMap(size_t bid, StructuredGrid sgrid, size_t face, ref CellAndFac
        ctr /= vtx_on_face.length;
        auto faceTag = makeFaceTag(vtx_on_face);
        faceMap[faceTag] = CellAndFacePos(id, ctr);
-       globalFaceTags[bid][id] = faceTag;
+       globalFaceTags[bid][CellAndFaceId(id, face)] = faceTag;
    }
 }
 
 void convertConnections(JSONValue gridMetadata, StructuredGrid[] sgrids, ref BlockAndCellId[string][size_t] mappedCellsList,
-                        ref string[size_t][size_t] newTags, ref string[size_t][size_t] globalFaceTags)
+                        ref string[size_t][size_t] newTags, ref string[CellAndFaceId][size_t] globalFaceTags)
 {
     auto gridConns = gridMetadata["grid-connections"].array;
     foreach (conn; gridConns) {
@@ -258,7 +262,7 @@ void convertConnections(JSONValue gridMetadata, StructuredGrid[] sgrids, ref Blo
 }
 
 void writeMappedCellsFile(StructuredGrid[] sgrids, ref BlockAndCellId[string][size_t] mappedCellsList,
-                          ref string[size_t][size_t] newTags, ref string[size_t][size_t] globalFaceTags)
+                          ref string[size_t][size_t] newTags, ref string[CellAndFaceId][size_t] globalFaceTags)
 {
 
     auto of = File(lmrCfg.mappedCellsFile, "w");
@@ -284,7 +288,7 @@ void writeMappedCellsFile(StructuredGrid[] sgrids, ref BlockAndCellId[string][si
                 }
                 auto bcells = sgrid.get_list_of_boundary_cells(ib);
                 foreach (cellId; bcells) {
-                    auto faceTag = globalFaceTags[ig][cellId];
+                    auto faceTag = globalFaceTags[ig][CellAndFaceId(cellId,ib)];
                     of.writefln("%-20s %4d %6d", faceTag, mappedCellsList[ig][faceTag].blkId, mappedCellsList[ig][faceTag].cellId);
                 }
             }
