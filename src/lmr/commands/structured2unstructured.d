@@ -88,7 +88,7 @@ void main_(string[] args)
         JSONValue thisGridMetadata = readJSONfile(gridMetadataName(ig));
         if (thisGridMetadata["type"].str != "structured_grid") {
             string errMsg = format("Grid %d does not have type 'structured_grid'.\n", ig);
-            errMsg ~= format("%s command will not proceed.\n");
+            errMsg ~= format("%s command will not proceed.\n", cmdName);
             throw new Error(errMsg);
         }
     }
@@ -143,7 +143,7 @@ void main_(string[] args)
 
     /* 5. Write out mapped cells file. */
     if (verbosity >= 1) {
-        writeln("   Writing %s file.", lmrCfg.mappedCellsFile);
+        writefln("   Writing %s file.", lmrCfg.mappedCellsFile);
     }
     writeMappedCellsFile(sgrids, mappedCellsList, newTags, globalFaceTags);
 
@@ -163,7 +163,7 @@ void main_(string[] args)
             ugrid.write_to_raw_binary_file(gridName(ig, gridType));
         }
     }
-      
+
     /* 7. Write out new metadata. */
     // We'll build a local metadata writer at the moment.
     // TODO: consolidate this in one place because presently there is a
