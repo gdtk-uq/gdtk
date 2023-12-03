@@ -44,7 +44,7 @@ public:
     size_t[] hicell, hjcell, hkcell; // locations of sample cells for history record
     SolidBoundaryCondition[] bc;
     SolidFVCell[] cells;
-
+    SolidFVInterface[] faces;
 private:
     StructuredGrid grid; // for reading and writing
 
@@ -218,6 +218,8 @@ public:
             // in standard order for a structured grid.
             // These arrays are held by the FluidBlock base class and allow us to handle
             // a structured-grid block much as we would an unstructured-grid block.
+            //
+            // Gather cells
             if (myConfig.dimensions == 2) {
                 foreach (j; jmin .. jmax+1) {
                     foreach (i; imin .. imax+1) {
@@ -231,6 +233,98 @@ public:
                         foreach (i; imin .. imax+1) {
                             cells ~= getCell(i, j, k);
                             cells[$-1].is_ghost = false;
+                        }
+                    }
+                }
+            } // end if dimensions
+            //
+            // Gather interfaces
+            SolidFVInterface face;
+            if ( myConfig.dimensions == 2 ) {
+                // East-facing interfaces
+                for ( size_t j = jmin; j <= jmax; ++j ) {
+                    for ( size_t i = imin; i <= imax + 1; ++i ) {
+                        face = getIfi(i,j);
+                        face.i_bndry = faces.length;
+                        if ( i == imin ) {
+                            face.is_on_boundary = true;
+                            face.bc_id = Face.west;
+                        }
+                        if ( i == imax+1 ) {
+                            face.is_on_boundary = true;
+                            face.bc_id = Face.east;
+                        }
+                        faces ~= face;
+                    }
+                }
+                // North-facing interfaces
+                for ( size_t j = jmin; j <= jmax + 1; ++j ) {
+                    for ( size_t i = imin; i <= imax; ++i ) {
+                        face = getIfj(i,j);
+                        face.i_bndry = faces.length;
+                        if ( j == jmin ) {
+                            face.is_on_boundary = true;
+                            face.bc_id = Face.south;
+                        }
+                        if ( j == jmax+1 ) {
+                            face.is_on_boundary = true;
+                            face.bc_id = Face.north;
+                        }
+                        faces ~= face;
+                    }
+                }
+            } else { // assume myConfig.dimensions == 3 (3D)
+                // East-facing interfaces
+                for ( size_t k = kmin; k <= kmax; ++k) {
+                    for ( size_t j = jmin; j <= jmax; ++j) {
+                        for ( size_t i = imin; i <= imax+1; ++i) {
+                            face = getIfi(i,j,k);
+                            face.i_bndry = faces.length;
+                            if ( i == imin ) {
+                                face.is_on_boundary = true;
+                                face.bc_id = Face.west;
+                            }
+                            if ( i == imax+1 ) {
+                                face.is_on_boundary = true;
+                                face.bc_id = Face.east;
+                            }
+                            faces ~= face;
+                        }
+                    }
+                }
+                // North-facing interfaces
+                for ( size_t k = kmin; k <= kmax; ++k) {
+                    for ( size_t i = imin; i <= imax; ++i) {
+                        for ( size_t j = jmin; j <= jmax+1; ++j) {
+                            face = getIfj(i,j,k);
+                            face.i_bndry = faces.length;
+                            if ( j == jmin ) {
+                                face.is_on_boundary = true;
+                                face.bc_id = Face.south;
+                            }
+                            if ( j == jmax+1 ) {
+                                face.is_on_boundary = true;
+                                face.bc_id = Face.north;
+                            }
+                            faces ~= face;
+                        }
+                    }
+                }
+                // Top-facing interfaces
+                for ( size_t i = imin; i <= imax; ++i) {
+                    for ( size_t j = jmin; j <= jmax; ++j) {
+                        for ( size_t k = kmin; k <= kmax+1; ++k) {
+                            face = getIfk(i,j,k);
+                            face.i_bndry = faces.length;
+                            if ( k == kmin ) {
+                                face.is_on_boundary = true;
+                                face.bc_id = Face.bottom;
+                            }
+                            if ( k == kmax+1 ) {
+                                face.is_on_boundary = true;
+                                face.bc_id = Face.top;
+                            }
+                            faces ~= face;
                         }
                     }
                 }
@@ -284,6 +378,63 @@ public:
             } // for j
         } // for k
     }
+
+    override void bindCellsToFaces() {
+        // When computing the fluxes through an interface it is convenient to have
+        // easy access to the cells that are either side of it, this routine
+        // gathers that information for each of the interfaces.
+        size_t i, j, k;
+        SolidFVInterface IFace;
+        if ( myConfig.dimensions == 2 ) {
+            // East-facing interfaces
+            for ( j = jmin; j <= jmax; ++j ) {
+                for ( i = imin; i <= imax + 1; ++i ) {
+                    IFace = getIfi(i, j);
+                    IFace.cellLeft = getCell(i-1, j);
+                    IFace.cellRight = getCell(i, j);
+                }
+            }
+            // North-facing interfaces
+            for ( j = jmin; j <= jmax + 1; ++j ) {
+                for ( i = imin; i <= imax; ++i ) {
+                    IFace = getIfj(i, j);
+                    IFace.cellLeft = getCell(i, j-1);
+                    IFace.cellRight = getCell(i, j);
+                }
+            }
+        } else { // assume myConfig.dimensions == 3 (3D)
+            // East-facing interfaces
+            for (k = kmin; k <= kmax; ++k) {
+                for (j = jmin; j <= jmax; ++j) {
+                    for (i = imin; i <= imax+1; ++i) {
+                        IFace = getIfi(i, j, k);
+                        IFace.cellLeft = getCell(i-1, j, k);
+                        IFace.cellRight = getCell(i, j, k);
+                    }
+                }
+            }
+            // North-facing interfaces
+            for (k = kmin; k <= kmax; ++k) {
+                for (i = imin; i <= imax; ++i) {
+                    for (j = jmin; j <= jmax+1; ++j) {
+                        IFace = getIfj(i, j, k);
+                        IFace.cellLeft = getCell(i, j-1, k);
+                        IFace.cellRight = getCell(i, j, k);
+                      }
+                }
+            }
+            // Top-facing interfaces
+            for (i = imin; i <= imax; ++i) {
+                for (j = jmin; j <= jmax; ++j) {
+                    for (k = kmin; k <= kmax+1; ++k) {
+                        IFace = getIfk(i, j, k);
+                        IFace.cellLeft = getCell(i, j, k-1);
+                        IFace.cellRight = getCell(i, j, k);
+                    }
+                }
+            }
+        } // end if/else
+    } // end bindFacesToCells()
 
     override void readGrid(string filename)
     {
@@ -808,6 +959,7 @@ public:
         }
     }
 
+    @nogc
     override void computeSpatialDerivatives(int ftl)
     {
         int dim = myConfig.dimensions;
@@ -817,257 +969,31 @@ public:
     }
 
     @nogc
-    void averageCellDerivatives(SolidFVInterface f, SolidFVCell cL0, SolidFVCell cR0,ref number dTdx, ref number dTdy, ref number dTdz)
-    {
-        number qL; number qR;
-        // interface normal
-        number nx = f.n.x;
-        number ny = f.n.y;
-        number nz = f.n.z;
-        // vector from left-cell-centre to face midpoint
-        number rLx = f.pos.x - cL0.pos.x;
-        number rLy = f.pos.y - cL0.pos.y;
-        number rLz = f.pos.z - cL0.pos.z;
-        number rRx = f.pos.x - cR0.pos.x;
-        number rRy = f.pos.y - cR0.pos.y;
-        number rRz = f.pos.z - cR0.pos.z;
-        // vector from left-cell-centre to right-cell-centre
-        number ex = cR0.pos.x - cL0.pos.x;
-        number ey = cR0.pos.y - cL0.pos.y;
-        number ez = cR0.pos.z - cL0.pos.z;
-        // ehat
-        number emag = sqrt(ex*ex + ey*ey + ez*ez);
-        number ehatx = ex/emag;
-        number ehaty = ey/emag;
-        number ehatz = ez/emag;
-        // ndotehat
-        number ndotehat = nx*ehatx + ny*ehaty + nz*ehatz;
-        number avgdotehat;
-        number jump;
-
-        avgdotehat = 0.5*(cL0.dTdx+cR0.dTdx)*ehatx +
-            0.5*(cL0.dTdy+cR0.dTdy)*ehaty +
-            0.5*(cL0.dTdz+cR0.dTdz)*ehatz;
-        jump = avgdotehat - (cR0.T - cL0.T)/emag;
-
-        if (cL0.is_ghost) {
-            dTdx = cR0.dTdx;
-            dTdy = cR0.dTdy;
-            dTdz = cR0.dTdz;
-        } else if (cR0.is_ghost) {
-            dTdx = cL0.dTdx;
-            dTdy = cL0.dTdy;
-            dTdz = cL0.dTdz;
-        } else {
-            dTdx = 0.5*(cL0.dTdx+cR0.dTdx);
-            dTdy = 0.5*(cL0.dTdy+cR0.dTdy);
-            dTdz = 0.5*(cL0.dTdz+cR0.dTdz);
-            if (myConfig.solid_domain_augmented_deriv_avg) {
-                dTdx -= jump*(nx/ndotehat);
-                dTdy -= jump*(ny/ndotehat);
-                dTdz -= jump*(nz/ndotehat);
-            }
-        }
-    } // end averageCellSpatialDerivatives()
-
-    void averageTemperatures() {
-        size_t i, j, k;
-        SolidFVInterface IFace;
-        SolidFVCell cellLeft, cellRight;
-        if ( myConfig.dimensions == 2 ) {
-            // East-facing interfaces
-            for ( j = jmin; j <= jmax; ++j ) {
-                for ( i = imin; i <= imax + 1; ++i ) {
-                    IFace = getIfi(i, j);
-                    cellLeft = getCell(i-1, j);
-                    cellRight = getCell(i, j);
-                    if (cellLeft.is_ghost || cellRight.is_ghost) { continue; }
-                    else { IFace.T = 0.5*(cellLeft.T + cellRight.T); }
-                }
-            }
-            // North-facing interfaces
-            for ( j = jmin; j <= jmax + 1; ++j ) {
-                for ( i = imin; i <= imax; ++i ) {
-                    IFace = getIfj(i, j);
-                    cellLeft = getCell(i, j-1);
-                    cellRight = getCell(i, j);
-                    if (cellLeft.is_ghost || cellRight.is_ghost) { continue; }
-                    else { IFace.T = 0.5*(cellLeft.T + cellRight.T); }
-                }
-            }
-        } else { // 3D
-            // ifi interfaces are west interfaces, with their unit normal pointing east.
-            for (k = kmin; k <= kmax; ++k) {
-                for (j = jmin; j <= jmax; ++j) {
-                    for (i = imin; i <= imax+1; ++i) {
-                        IFace = getIfi(i, j, k);
-                        cellLeft = getCell(i-1, j, k);
-                        cellRight = getCell(i, j, k);
-                        if (cellLeft.is_ghost || cellRight.is_ghost) { continue; }
-                        else { IFace.T = 0.5*(cellLeft.T + cellRight.T); }
-                    }  // i loop
-                } // j loop
-            } // k loop
-
-            // ifj interfaces are south interfaces, with their unit normal pointing north.
-            for (k = kmin; k <= kmax; ++k) {
-                for (i = imin; i <= imax; ++i) {
-                    for (j = jmin; j <= jmax+1; ++j) {
-                        IFace = getIfj(i, j, k);
-                        cellLeft = getCell(i, j-1, k);
-                        cellRight = getCell(i, j, k);
-                        if (cellLeft.is_ghost || cellRight.is_ghost) { continue; }
-                        else { IFace.T = 0.5*(cellLeft.T + cellRight.T); }
-                    } // j loop
-                } // i loop
-            } // k loop
-            // ifk interfaces are bottom interfaces, with unit normal pointing to top.
-            for (i = imin; i <= imax; ++i) {
-                for (j = jmin; j <= jmax; ++j) {
-                    for (k = kmin; k <= kmax+1; ++k) {
-                        IFace = getIfk(i, j, k);
-                        cellLeft = getCell(i, j, k-1);
-                        cellRight = getCell(i, j, k);
-                        if (cellLeft.is_ghost || cellRight.is_ghost) { continue; }
-                        else { IFace.T = 0.5*(cellLeft.T + cellRight.T); }
-                    } // j loop
-                } // i loop
-            } // k loop
+    override void averageTemperatures() {
+        foreach (f; faces) {
+            f.averageTemperature();
         }
     }
 
-    override void computeFluxes()
-    {
-        size_t i, j, k;
-        SolidFVInterface IFace;
-        SolidFVCell cellLeft, cellRight;
-        number dTdx, dTdy, dTdz;
-        number qx, qy, qz;
-        if ( myConfig.dimensions == 2 ) {
-            // East-facing interfaces
-            for ( j = jmin; j <= jmax; ++j ) {
-                for ( i = imin; i <= imax + 1; ++i ) {
-                    if ( i == imin && bc[Face.west].setsFluxDirectly )
-                        continue;
-                    if ( i == imax+1 && bc[Face.east].setsFluxDirectly )
-                        continue;
-                    IFace = getIfi(i, j);
-                    cellLeft = getCell(i-1, j);
-                    cellRight = getCell(i, j);
-                    averageCellDerivatives(IFace, cellLeft, cellRight, dTdx, dTdy, dTdz);
-                    if (myConfig.solid_has_isotropic_properties) {
-                        qx = -IFace.sp.k * dTdx;
-                        qy = -IFace.sp.k * dTdy;
-                    }
-                    else if (myConfig.solid_has_homogeneous_properties) {
-                        qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy;
-                        qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
-                    }
-                    IFace.flux = qx * IFace.n.x + qy * IFace.n.y;
-                }
+    @nogc
+    override void averageTGradients() {
+        foreach (f; faces) {
+            f.averageTGradient();
+        }
+        if (myConfig.solid_domain_augmented_deriv_avg) {
+            foreach (f; faces) {
+                f.augmentTGradient();
             }
-            // North-facing interfaces
-            for ( j = jmin; j <= jmax + 1; ++j ) {
-                for ( i = imin; i <= imax; ++i ) {
-                    if ( j == jmin && bc[Face.south].setsFluxDirectly )
-                        continue;
-                    if ( j == jmax+1 && bc[Face.north].setsFluxDirectly )
-                        continue;
-                    IFace = getIfj(i, j);
-                    cellLeft = getCell(i, j-1);
-                    cellRight = getCell(i, j);
-                    averageCellDerivatives(IFace, cellLeft, cellRight, dTdx, dTdy, dTdz);
-                    if (myConfig.solid_has_isotropic_properties) {
-                        qx = -IFace.sp.k * dTdx;
-                        qy = -IFace.sp.k * dTdy;
-                    }
-                    else if (myConfig.solid_has_homogeneous_properties) {
-                        qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy;
-                        qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
-                    }
-                    IFace.flux = qx * IFace.n.x + qy * IFace.n.y;
-                }
-            }
-        } else { // 3D
-            // ifi interfaces are west interfaces, with their unit normal pointing east.
-            for (k = kmin; k <= kmax; ++k) {
-                for (j = jmin; j <= jmax; ++j) {
-                    for (i = imin; i <= imax+1; ++i) {
-                    if ( i == imin && bc[Face.west].setsFluxDirectly )
-                        continue;
-                    if ( i == imax+1 && bc[Face.east].setsFluxDirectly )
-                        continue;
-                    IFace = getIfi(i, j, k);
-                    cellLeft = getCell(i-1, j, k);
-                    cellRight = getCell(i, j, k);
-                    averageCellDerivatives(IFace, cellLeft, cellRight, dTdx, dTdy, dTdz);
-                    if (myConfig.solid_has_isotropic_properties) {
-                        qx = -IFace.sp.k * dTdx;
-                        qy = -IFace.sp.k * dTdy;
-                        qz = -IFace.sp.k * dTdz;
-                    }
-                    else if (myConfig.solid_has_homogeneous_properties) {
-                        throw new Error("solid_has_homogeneous_properties not implemented for 3D yet.");
-                        //qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy;
-                        //qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
-                    }
-                    IFace.flux = qx * IFace.n.x + qy * IFace.n.y + qz * IFace.n.z;
-                    }  // i loop
-                } // j loop
-            } // k loop
+        }
+    }
 
-            // ifj interfaces are south interfaces, with their unit normal pointing north.
-            for (k = kmin; k <= kmax; ++k) {
-                for (i = imin; i <= imax; ++i) {
-                    for (j = jmin; j <= jmax+1; ++j) {
-                        if ( j == jmin && bc[Face.south].setsFluxDirectly )
-                            continue;
-                        if ( j == jmax+1 && bc[Face.north].setsFluxDirectly )
-                            continue;
-                        IFace = getIfj(i, j, k);
-                        cellLeft = getCell(i, j-1, k);
-                        cellRight = getCell(i, j, k);
-                        averageCellDerivatives(IFace, cellLeft, cellRight, dTdx, dTdy, dTdz);
-                        if (myConfig.solid_has_isotropic_properties) {
-                            qx = -IFace.sp.k * dTdx;
-                            qy = -IFace.sp.k * dTdy;
-                            qz = -IFace.sp.k * dTdz;
-                        }
-                        else if (myConfig.solid_has_homogeneous_properties) {
-                            throw new Error("solid_has_homogeneous_properties not implemented for 3D yet.");
-                            //qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy;
-                            //qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
-                        }
-                        IFace.flux = qx * IFace.n.x + qy * IFace.n.y + qz * IFace.n.z;
-                    } // j loop
-                } // i loop
-            } // k loop
-            // ifk interfaces are bottom interfaces, with unit normal pointing to top.
-            for (i = imin; i <= imax; ++i) {
-                for (j = jmin; j <= jmax; ++j) {
-                    for (k = kmin; k <= kmax+1; ++k) {
-                        if ( k == kmin && bc[Face.bottom].setsFluxDirectly )
-                            continue;
-                        if ( k == kmax+1 && bc[Face.top].setsFluxDirectly )
-                            continue;
-                        IFace = getIfk(i, j, k);
-                        cellLeft = getCell(i, j, k-1);
-                        cellRight = getCell(i, j, k);
-                        averageCellDerivatives(IFace, cellLeft, cellRight, dTdx, dTdy, dTdz);
-                        if (myConfig.solid_has_isotropic_properties) {
-                            qx = -IFace.sp.k * dTdx;
-                            qy = -IFace.sp.k * dTdy;
-                            qz = -IFace.sp.k * dTdz;
-                        }
-                        else if (myConfig.solid_has_homogeneous_properties) {
-                            throw new Error("solid_has_homogeneous_properties not implemented for 3D yet.");
-                            //qx = -IFace.sp.k11 * dTdx - IFace.sp.k12 * dTdy;
-                            //qy = -IFace.sp.k21 * dTdx - IFace.sp.k22 * dTdy;
-                        }
-                        IFace.flux = qx * IFace.n.x + qy * IFace.n.y + qz * IFace.n.z;
-                    } // j loop
-                } // i loop
-            } // k loop
+    @nogc
+    override void computeFluxes() {
+        foreach (f; faces) {
+            bool flux_already_set = f.is_on_boundary && bc[f.bc_id].setsFluxDirectly;
+            if (!flux_already_set) {
+                f.computeFlux(myConfig.dimensions, myConfig.solid_has_isotropic_properties);
+            }
         }
     }
 

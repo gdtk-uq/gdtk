@@ -70,6 +70,7 @@ public:
     abstract void initLuaGlobals();
     abstract void initBoundaryConditions(JSONValue jsonData);
     abstract void bindFacesAndVerticesToCells();
+    abstract void bindCellsToFaces();
     abstract void assignCellLocationsForDerivCalc();
     abstract void readGrid(string filename);
     abstract void writeGrid(string filename, double sim_time);
@@ -82,6 +83,8 @@ public:
     abstract void applyPreSpatialDerivActionAtBndryCells(double t, int tLevel);
     abstract void applyPostFluxAction(double t, int tLevel);
     abstract void computeSpatialDerivatives(int ftl);
+    abstract void averageTemperatures();
+    abstract void averageTGradients();
     abstract void computeFluxes();
     abstract void clearSources();
 

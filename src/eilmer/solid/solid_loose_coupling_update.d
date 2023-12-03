@@ -151,6 +151,7 @@ void evalRHS(double pseudoSimTime, int ftl)
     exchange_ghost_cell_solid_boundary_data();
 
     foreach (sblk; parallel(localSolidBlocks, 1)) {
+        sblk.averageTGradients();
         sblk.computeFluxes();
     }
 

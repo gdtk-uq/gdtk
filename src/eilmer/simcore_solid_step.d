@@ -103,6 +103,7 @@ void solid_step(double dt_solid)
     exchange_ghost_cell_solid_boundary_data();
     foreach (sblk; parallel(localSolidBlocks, 1)) {
         if (!sblk.active) continue;
+        sblk.averageTGradients();
         sblk.computeFluxes();
     }
     if (GlobalConfig.apply_bcs_in_parallel) {

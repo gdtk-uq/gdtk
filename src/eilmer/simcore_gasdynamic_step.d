@@ -519,6 +519,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         exchange_ghost_cell_gas_solid_boundary_data();
         foreach (sblk; parallel(localSolidBlocks, 1)) {
             if (!sblk.active) continue;
+            sblk.averageTGradients();
             sblk.computeFluxes();
 	}
 	if (GlobalConfig.apply_bcs_in_parallel) {
@@ -815,6 +816,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
             exchange_ghost_cell_solid_boundary_data(); // we need to transfer the spatial derivatives for the flux eval.
             foreach (sblk; parallel(localSolidBlocks, 1)) {
                 if (!sblk.active) continue;
+                sblk.averageTGradients();
                 sblk.computeFluxes();
 	    }
 	    if (GlobalConfig.apply_bcs_in_parallel) {
@@ -1490,6 +1492,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 try {
                     foreach (sblk; parallel(localSolidBlocks, 1)) {
                         if (!sblk.active) continue;
+                        sblk.averageTGradients();
                         sblk.computeFluxes();
                     }
                     if (GlobalConfig.apply_bcs_in_parallel) {
@@ -1993,6 +1996,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         try {
             foreach (sblk; parallel(localSolidBlocks, 1)) {
                 if (!sblk.active) continue;
+                sblk.averageTGradients();
                 sblk.computeFluxes();
                 sblk.applyPostFluxAction(SimState.time, ftl);
                 foreach (scell; sblk.activeCells) {
@@ -2351,6 +2355,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
             try {
                 foreach (sblk; parallel(localSolidBlocks, 1)) {
                     if (!sblk.active) continue;
+                    sblk.averageTGradients();
                     sblk.computeFluxes();
                     sblk.applyPostFluxAction(SimState.time, ftl);
                     foreach (scell; sblk.activeCells) {
@@ -2692,6 +2697,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
             try {
                 foreach (sblk; parallel(localSolidBlocks, 1)) {
                     if (!sblk.active) continue;
+                    sblk.averageTGradients();
                     sblk.computeFluxes();
                 }
                 if (GlobalConfig.apply_bcs_in_parallel) {
@@ -3103,6 +3109,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
             try {
                 foreach (sblk; parallel(localSolidBlocks, 1)) {
                     if (!sblk.active) continue;
+                    sblk.averageTGradients();
                     sblk.computeFluxes();
                 }
                 if (GlobalConfig.apply_bcs_in_parallel) {

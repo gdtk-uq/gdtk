@@ -461,6 +461,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     foreach (ref mySolidBlk; localSolidBlocks) {
         mySolidBlk.assembleArrays();
         mySolidBlk.bindFacesAndVerticesToCells();
+        mySolidBlk.bindCellsToFaces();
         writeln("mySolidBlk= ", mySolidBlk);
         mySolidBlk.readGrid(make_file_name!"solid-grid"(job_name, mySolidBlk.id, 0, "gz")); // tindx==0 fixed grid
         mySolidBlk.readSolution(make_file_name!"solid"(job_name, mySolidBlk.id, tindx, "gz"));
