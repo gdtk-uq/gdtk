@@ -74,7 +74,7 @@ public:
 
     this(SMatrix other)
     {
-        this(other.aa.dup, other.ja.dup, other.ia.dup);
+        this(other.aa, other.ja, other.ia);
     }
 
     this(STMatrix!T stMat)
