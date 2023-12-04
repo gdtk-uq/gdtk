@@ -142,10 +142,12 @@ void main_(string[] args)
     rename(lmrCfg.gridDirectory, lmrCfg.savedSgridDir);
 
     /* 5. Write out mapped cells file. */
-    if (verbosity >= 1) {
-        writefln("   Writing %s file.", lmrCfg.mappedCellsFile);
+    if (ngrids > 1) {
+        if (verbosity >= 1) {
+            writefln("   Writing %s file.", lmrCfg.mappedCellsFile);
+        }
+        writeMappedCellsFile(sgrids, mappedCellsList, newTags, globalFaceTags);
     }
-    writeMappedCellsFile(sgrids, mappedCellsList, newTags, globalFaceTags);
 
     /* 6. Write out new grids. */
     if (verbosity >= 1) {
@@ -308,6 +310,7 @@ void writeUnstructuredGridMetadata(UnstructuredGrid[] ugrids, JSONValue[] sgrids
     of.writeln("}");
     of.close();
 
+    size_t ngrids = ugrids.length;
     foreach (ig, ugrid; ugrids) {
         of = File(gridMetadataName(ig), "w");
         of.writeln("{");
@@ -322,10 +325,14 @@ void writeUnstructuredGridMetadata(UnstructuredGrid[] ugrids, JSONValue[] sgrids
         of.writeln("  \"bcTags\": {");
         foreach (itag; 0 .. ugrid.nboundaries) {
             string tag = "";
-            if (itag in newTags[ig]) {
-                tag = newTags[ig][itag];
-            }
-            else {
+            if (ngrids > 1) {
+                if (itag in newTags[ig]) {
+                    tag = newTags[ig][itag];
+                }
+                else {
+                    tag = sgridsMetadata[ig]["bcTags"][face_name[itag]].str;
+                }
+            } else {
                 tag = sgridsMetadata[ig]["bcTags"][face_name[itag]].str;
             }
             of.writefln("    \"%d\": \"%s\",", itag, tag);
