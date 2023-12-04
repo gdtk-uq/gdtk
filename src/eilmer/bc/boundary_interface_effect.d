@@ -191,6 +191,22 @@ public:
     abstract void apply_structured_grid(double t, int gtl, int ftl);
 } // end class BoundaryInterfaceEffect
 
+class BIE_DoNothing : BoundaryInterfaceEffect {
+    this(int id, int boundary) {
+        super(id, boundary, "DoNothing");
+    }
+
+    override string toString() const
+    {
+        return "DoNothing()";
+    }
+    // If these methods look like they do nothing, then that's correct.
+    // The intention is to do nothing.
+    override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f) {}
+    override void apply_unstructured_grid(double t, int gtl, int ftl) {}
+    override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f) {}
+    override void apply_structured_grid(double t, int gtl, int ftl) {}
+}
 
 class BIE_CopyCellData : BoundaryInterfaceEffect {
     this(int id, int boundary, double Twall=300.0)
