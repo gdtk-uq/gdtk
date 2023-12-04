@@ -135,7 +135,6 @@ class MarroneTreanorDissociation : ExchangeChemistryCoupling {
         this._theta_v = theta_v;
         this._D = D;
         this._U = U;
-        this._D = D;
         this._mode = mode;
     }
 
@@ -168,9 +167,9 @@ class MarroneTreanorDissociation : ExchangeChemistryCoupling {
 
     @nogc
     number Gappear(in GasState gs) {
-        // see notes in ImpartialDissociation
-        double L0 = 0.5 * (_D - _theta_v * R_universal);
-        return to!number(L0);
+        // compute the energy per dissociation, but with T_v = T_tr
+        number T_F_inv = -1./_U;
+        return R_universal * (_theta_v / (exp(_theta_v * T_F_inv) - 1.) - _D / (exp(_D / R_universal * T_F_inv) - 1.));
     }
 
 private:
@@ -211,6 +210,7 @@ class ModifiedMarroneTreanorDissociation : ExchangeChemistryCoupling {
 
     @nogc
     number Gappear(in GasState gs) {
+        // compute the energy per dissociation, but with T_v = T_tr
         number T_F_inv = - _aU / gs.T - 1 / _Ustar;
         return R_universal * (_theta_v / (exp(_theta_v * T_F_inv) - 1.) - _T_D / (exp(_T_D * T_F_inv) - 1.));
     }
