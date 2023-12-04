@@ -57,12 +57,15 @@ public:
     // We have a symbolic name for the type of boundary condition
     // when thinking about the flow problem conceptually. 
     string type;
+    SolidFVInterface[] faces;
+    int[] outsigns;
     // Sometimes it is convenient to think of individual boundaries
     // grouped together.
     string group;
     SolidGhostCellEffect[] preSpatialDerivActionAtBndryCells;
     SolidBoundaryInterfaceEffect[] preSpatialDerivActionAtBndryFaces;
     SolidBoundaryFluxEffect[] postFluxAction;
+    // data structures used for the special coupled fluid-solid boundary condition
     FVCell[] gasCells;
     SolidFVCell[] solidCells;
     SolidFVInterface[] ifaces;

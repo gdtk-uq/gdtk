@@ -23,7 +23,7 @@ class SolidFVInterface {
 public:
     size_t id;
     bool is_on_boundary = false;  // by default, assume not on boundary
-    size_t bc_id;  // if the face is on a block boundary, which one
+    size_t bc_id;   // if the face is on a block boundary, which one
     size_t i_bndry; // if the face is on a block boundary, store index into the array of faces attached to bc
     // Geometry
     Vector3 pos;
@@ -33,7 +33,7 @@ public:
     Vector3 n;
     Vector3 t1;
     Vector3 t2;
-    // Material propertis
+    // Material properties
     SolidProps sp;
     // State
     number T;

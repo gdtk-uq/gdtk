@@ -239,38 +239,17 @@ public:
             } // end if dimensions
             //
             // Gather interfaces
-            SolidFVInterface face;
             if ( myConfig.dimensions == 2 ) {
                 // East-facing interfaces
                 for ( size_t j = jmin; j <= jmax; ++j ) {
                     for ( size_t i = imin; i <= imax + 1; ++i ) {
-                        face = getIfi(i,j);
-                        face.i_bndry = faces.length;
-                        if ( i == imin ) {
-                            face.is_on_boundary = true;
-                            face.bc_id = Face.west;
-                        }
-                        if ( i == imax+1 ) {
-                            face.is_on_boundary = true;
-                            face.bc_id = Face.east;
-                        }
-                        faces ~= face;
+                        faces ~= getIfi(i,j);
                     }
                 }
                 // North-facing interfaces
                 for ( size_t j = jmin; j <= jmax + 1; ++j ) {
                     for ( size_t i = imin; i <= imax; ++i ) {
-                        face = getIfj(i,j);
-                        face.i_bndry = faces.length;
-                        if ( j == jmin ) {
-                            face.is_on_boundary = true;
-                            face.bc_id = Face.south;
-                        }
-                        if ( j == jmax+1 ) {
-                            face.is_on_boundary = true;
-                            face.bc_id = Face.north;
-                        }
-                        faces ~= face;
+                        faces ~= getIfj(i,j);
                     }
                 }
             } else { // assume myConfig.dimensions == 3 (3D)
@@ -278,17 +257,7 @@ public:
                 for ( size_t k = kmin; k <= kmax; ++k) {
                     for ( size_t j = jmin; j <= jmax; ++j) {
                         for ( size_t i = imin; i <= imax+1; ++i) {
-                            face = getIfi(i,j,k);
-                            face.i_bndry = faces.length;
-                            if ( i == imin ) {
-                                face.is_on_boundary = true;
-                                face.bc_id = Face.west;
-                            }
-                            if ( i == imax+1 ) {
-                                face.is_on_boundary = true;
-                                face.bc_id = Face.east;
-                            }
-                            faces ~= face;
+                            faces ~= getIfi(i,j,k);
                         }
                     }
                 }
@@ -296,17 +265,7 @@ public:
                 for ( size_t k = kmin; k <= kmax; ++k) {
                     for ( size_t i = imin; i <= imax; ++i) {
                         for ( size_t j = jmin; j <= jmax+1; ++j) {
-                            face = getIfj(i,j,k);
-                            face.i_bndry = faces.length;
-                            if ( j == jmin ) {
-                                face.is_on_boundary = true;
-                                face.bc_id = Face.south;
-                            }
-                            if ( j == jmax+1 ) {
-                                face.is_on_boundary = true;
-                                face.bc_id = Face.north;
-                            }
-                            faces ~= face;
+                            faces ~= getIfj(i,j,k);
                         }
                     }
                 }
@@ -314,18 +273,78 @@ public:
                 for ( size_t i = imin; i <= imax; ++i) {
                     for ( size_t j = jmin; j <= jmax; ++j) {
                         for ( size_t k = kmin; k <= kmax+1; ++k) {
-                            face = getIfk(i,j,k);
-                            face.i_bndry = faces.length;
-                            if ( k == kmin ) {
-                                face.is_on_boundary = true;
-                                face.bc_id = Face.bottom;
-                            }
-                            if ( k == kmax+1 ) {
-                                face.is_on_boundary = true;
-                                face.bc_id = Face.top;
-                            }
-                            faces ~= face;
+                            faces ~= getIfk(i,j,k);
                         }
+                    }
+                }
+            } // end if dimensions
+            // Set references to boundary faces in bc objects.
+            SolidFVInterface face;
+            // North boundary
+            for ( size_t k = kmin; k <= kmax; ++k ) {
+                for ( size_t i = imin; i <= imax; ++i ) {
+                    face = getIfj(i, jmax + 1, k);
+                    face.is_on_boundary = true;
+                    face.bc_id = Face.north;
+                    face.i_bndry = bc[Face.north].faces.length;
+                    bc[Face.north].faces ~= face;
+                    bc[Face.north].outsigns ~= 1;
+                }
+            }
+            // East boundary
+            for ( size_t k = kmin; k <= kmax; ++k ) {
+                for (size_t j = jmin; j <= jmax; ++j ) {
+                    face = getIfi(imax + 1, j, k);
+                    face.is_on_boundary = true;
+                    face.bc_id = Face.east;
+                    face.i_bndry = bc[Face.east].faces.length;
+                    bc[Face.east].faces ~= face;
+                    bc[Face.east].outsigns ~= 1;
+                }
+            }
+            // South boundary
+            for ( size_t k = kmin; k <= kmax; ++k ) {
+                for ( size_t i = imin; i <= imax; ++i ) {
+                    face = getIfj(i, jmin, k);
+                    face.is_on_boundary = true;
+                    face.bc_id = Face.south;
+                    face.i_bndry = bc[Face.south].faces.length;
+                    bc[Face.south].faces ~= face;
+                    bc[Face.south].outsigns ~= -1;
+                }
+            }
+            // West boundary
+            for ( size_t k = kmin; k <= kmax; ++k ) {
+                for ( size_t j = jmin; j <= jmax; ++j ) {
+                    face = getIfi(imin, j, k);
+                    face.is_on_boundary = true;
+                    face.bc_id = Face.west;
+                    face.i_bndry = bc[Face.west].faces.length;
+                    bc[Face.west].faces ~= face;
+                    bc[Face.west].outsigns ~= -1;
+                }
+            }
+            if ( myConfig.dimensions == 3 ) {
+                // Top boundary
+                for ( size_t i = imin; i <= imax; ++i ) {
+                    for ( size_t j = jmin; j <= jmax; ++j ) {
+                        face = getIfk(i, j, kmax + 1);
+                        face.is_on_boundary = true;
+                        face.bc_id = Face.top;
+                        face.i_bndry = bc[Face.top].faces.length;
+                        bc[Face.top].faces ~= face;
+                        bc[Face.top].outsigns ~= 1;
+                    }
+                }
+                // Bottom boundary
+                for ( size_t i = imin; i <= imax; ++i ) {
+                    for ( size_t j = jmin; j <= jmax; ++j ) {
+                        face = getIfk(i, j, kmin);
+                        face.is_on_boundary = true;
+                        face.bc_id = Face.bottom;
+                        face.i_bndry = bc[Face.bottom].faces.length;
+                        bc[Face.bottom].faces ~= face;
+                        bc[Face.bottom].outsigns ~= -1;
                     }
                 }
             } // end if dimensions

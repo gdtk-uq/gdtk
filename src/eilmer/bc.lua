@@ -1843,19 +1843,6 @@ function SolidBIE_UserDefined:tojson()
    return str
 end
 
-SolidBIE_ConnectionBoundary = SolidBoundaryInterfaceEffect:new{otherBlock=-1,
-							       otherFace=nil,
-							       orientation=-1}
-SolidBIE_ConnectionBoundary.type = "connection_boundary"
-function SolidBIE_ConnectionBoundary:tojson()
-   local str = string.format('          {"type" : "%s", ', self.type)
-   str = str .. string.format('"otherBlock" : %d, ', self.otherBlock)
-   str = str .. string.format('"otherFace" : "%s", ', self.otherFace)
-   str = str .. string.format('"orientation" : %d ', self.orientation)
-   str = str .. ' } '
-   return str
-end
-
 SolidGhostCellEffect = {
    type = ""
 }
@@ -2061,17 +2048,6 @@ function SolidAdjacentToGasBC2:new(o)
    o.preSpatialDerivActionAtBndryFaces = { SolidBIE_CopyAdjacentCellT:new{} }
    o.postFluxAction = { SolidBFE_ConstantFluxFromSolidGasInterface:new{} }
    o.setsFluxDirectly = true
-   return o
-end
-
-SolidConnectionBoundaryBC = SolidBoundaryCondition:new()
-SolidConnectionBoundaryBC.type = "SolidConnectionBoundary"
-function SolidConnectionBoundaryBC:new(o)
-   o = SolidBoundaryCondition.new(self, o)
-   o.setsFluxDirectly = true
-   o.preSpatialDerivActionAtBndryFaces = { SolidBIE_ConnectionBoundary:new{otherBlock=o.otherBlock,
-                                                                           otherFace=o.otherFace,
-                                                                           orientation=o.orientation} }
    return o
 end
 
