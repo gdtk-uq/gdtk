@@ -168,6 +168,7 @@ public:
         FlowGradients* grad_save;
         LSQInterpGradients* gradients_save;
         Matrix!number dConservative;
+        bool doNotPerturb = false;
     }
 
     // 2021-03-12: Note that we have moved the IO functions for the cell into fluidblockio.d

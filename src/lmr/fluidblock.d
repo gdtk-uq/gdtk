@@ -1108,7 +1108,12 @@ public:
 
         // gather the expected number of non-zero entries in the flow Jacobian
         foreach (cell; cells) {
-            cell.gather_residual_stencil_lists(spatial_order_of_jacobian);
+            if (cell.doNotPerturb) {
+                cell.cell_list ~= cell; 
+            }
+            else {
+                cell.gather_residual_stencil_lists(spatial_order_of_jacobian);
+            }
             nentry += cell.cell_list.length;
         }
 
@@ -1117,7 +1122,12 @@ public:
         // when we apply the boundary condition corrections later
         foreach ( bndary; bc ) {
             if (!bndary.ghost_cell_data_available) { continue; }
-            if (bndary.type == "exchange_using_mapped_cells" || bndary.type == "exchange_over_full_face") { continue; }
+            if (bndary.type == "exchange_using_mapped_cells" ||
+                bndary.type == "exchange_over_full_face" ||
+                bndary.type == "do_nothing")
+            {
+                continue;
+            }
             foreach ( iface, face; bndary.faces) {
                 FVCell ghost_cell; FVCell cell;
                 if (bndary.outsigns[iface] == 1) {
@@ -1299,11 +1309,24 @@ public:
         // the real-valued finite difference needs a base residual (R0)
         version(complex_numbers) { } // do nothing
         else {
-            foreach(cell; cells) { evalRHS(0, 0, cell.cell_list, cell.face_list, cell); }
+            foreach(cell; cells) {
+                if (cell.doNotPerturb) continue;
+                evalRHS(0, 0, cell.cell_list, cell.face_list, cell);
+            }
         }
 
         // fill out the rows of the Jacobian for a cell
-        foreach(cell; cells) { evaluate_cell_contribution_to_jacobian(cell); }
+        foreach(cell; cells) {
+            if (cell.doNotPerturb) continue;
+                /*
+                debug {
+                    writefln("cell.id= %d, pos= %s ", cell.id, cell.pos[0]);
+                    foreach (cl; cell.cell_list) writef("[%d: %s] ", cl.id, cl.pos[0]);
+                    writeln();
+                }
+                */
+            evaluate_cell_contribution_to_jacobian(cell);
+        }
 
         // add boundary condition corrections to boundary cells
         apply_jacobian_bcs();
@@ -1402,7 +1425,11 @@ public:
 
         foreach ( bndary; bc ) {
             if (!bndary.ghost_cell_data_available) { continue; }
-            if ( bndary.type == "exchange_using_mapped_cells" || bndary.type == "exchange_over_full_face") { continue; }
+            if (bndary.type == "exchange_using_mapped_cells" ||
+                bndary.type == "exchange_over_full_face" ||
+                bndary.type == "do_nothing") {
+                continue;
+            }
             foreach ( bi, bface; bndary.faces) {
                 FVCell ghost_cell; FVCell pcell;
                 if (bndary.outsigns[bi] == 1) {
