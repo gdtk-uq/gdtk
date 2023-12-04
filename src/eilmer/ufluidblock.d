@@ -777,10 +777,12 @@ public:
 
         if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             foreach (c; cell_list) {
-                if (myConfig.unstructured_limiter == UnstructuredLimiter.venkat_mlp) {
-                    c.gradients.store_max_min_values_for_extended_stencil(c.cell_cloud, myConfig);
-                } else {
-                    c.gradients.store_max_min_values_for_compact_stencil(c.cell_cloud, myConfig);
+                if (GlobalConfig.frozen_limiter == false) {
+                    if (myConfig.unstructured_limiter == UnstructuredLimiter.venkat_mlp) {
+                        c.gradients.store_max_min_values_for_extended_stencil(c.cell_cloud, myConfig);
+                    } else {
+                        c.gradients.store_max_min_values_for_compact_stencil(c.cell_cloud, myConfig);
+                    }
                 }
                 c.gradients.compute_lsq_values(c.cell_cloud, *(c.ws), myConfig);
             }
