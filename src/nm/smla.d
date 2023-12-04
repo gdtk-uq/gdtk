@@ -17,6 +17,7 @@ import std.array;
 import core.memory;
 import std.algorithm : reduce, fill;
 import std.algorithm.sorting : sort;
+import std.algorithm.searching : maxElement;
 import std.typecons : Tuple;
 import nm.bbla;
 import ntypes.complex;
@@ -73,7 +74,7 @@ public:
 
     this(SMatrix other)
     {
-        this(other.aa, other.ja, other.ia);
+        this(other.aa.dup, other.ja.dup, other.ia.dup);
     }
 
     this(STMatrix!T stMat)
@@ -121,6 +122,17 @@ public:
         aa ~= ai[];
         ja ~= ji[];
         ia ~= aa.length; // Now ia is already ready for next addition.
+    }
+
+    void dropRows(size_t nDrop)
+    {
+        if (nDrop > (ia.length-1)) {
+            nDrop = ia.length-1;
+        }
+        size_t nvals = ia[$-1] - ia[$-(1+nDrop)];
+        ja.length = ja.length - nvals;
+        aa.length = aa.length - nvals;
+        ia.length = ia.length - nDrop;
     }
 
     void scaleRow(size_t row, T scaleFactor)
@@ -184,11 +196,12 @@ public:
     }
 
     override string toString() {
+        auto jmax = ja.maxElement;
         string s = "SMatrix[\n";
         foreach (row; 0 .. ia.length-1) {
-            foreach (col; 0 .. ia.length-1) {
+            foreach (col; 0 .. jmax+1) {
                 s ~= to!string(this[row,col]);
-                if ( col < ia.length-2 )
+                if ( col < jmax )
                     s ~= ", ";
             }
             s ~= "\n";
@@ -1102,6 +1115,15 @@ version(smla_test) {
         b.addRow([to!number(10.), to!number(11.)], [2, 3]);
         b.addRow([to!number(12.)], [4]);
         assert(approxEqualMatrix(a, b), failedUnitTest());
+        // Test dropping rows
+        auto aa = new SMatrix!number(a);
+        aa.dropRows(2);
+        auto aaRef = new SMatrix!number([to!number(1.), to!number(2.), to!number(3.), to!number(4.),
+                                         to!number(5.), to!number(6.), to!number(7.), to!number(8.),
+                                         to!number(9.)],
+                                        [0, 3, 0, 1, 3, 0, 2, 3, 4],
+                                        [0, 2, 5, 9]);
+        assert(approxEqualMatrix(aa, aaRef), failedUnitTest());
         // Test matrix multiply
         number[] v = [to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.)];
         number[] c;
