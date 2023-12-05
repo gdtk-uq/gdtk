@@ -93,14 +93,29 @@ public:
         foreach (sgce; preSpatialDerivActionAtBndryCells) sgce.apply(t, tLevel);
     }
 
+    final void applyPreSpatialDerivActionAtBndryCells(double t, int tLevel, SolidFVInterface f)
+    {
+        foreach (sgce; preSpatialDerivActionAtBndryCells) sgce.apply_for_interface(t, tLevel, f);
+    }
+
     final void applyPreSpatialDerivActionAtBndryFaces(double t, int tLevel)
     {
         foreach (bie; preSpatialDerivActionAtBndryFaces) bie.apply(t, tLevel);
     }
 
+    final void applyPreSpatialDerivActionAtBndryFaces(double t, int tLevel, SolidFVInterface f)
+    {
+        foreach (bie; preSpatialDerivActionAtBndryFaces) bie.apply_for_interface(t, tLevel, f);
+    }
+
     final void applyPostFluxAction(double t, int tLevel)
     {
         foreach (bfe; postFluxAction) bfe.apply(t, tLevel);
+    }
+
+    final void applyPostFluxAction(double t, int tLevel, SolidFVInterface f)
+    {
+        foreach (bfe; postFluxAction) bfe.apply_for_interface(t, tLevel, f);
     }
 
 }

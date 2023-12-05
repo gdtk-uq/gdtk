@@ -286,7 +286,7 @@ public:
                     face = getIfj(i, jmax + 1, k);
                     face.is_on_boundary = true;
                     face.bc_id = Face.north;
-                    face.i_bndry = bc[Face.north].faces.length;
+                    face.bc_idx = bc[Face.north].faces.length;
                     bc[Face.north].faces ~= face;
                     bc[Face.north].outsigns ~= 1;
                 }
@@ -297,7 +297,7 @@ public:
                     face = getIfi(imax + 1, j, k);
                     face.is_on_boundary = true;
                     face.bc_id = Face.east;
-                    face.i_bndry = bc[Face.east].faces.length;
+                    face.bc_idx = bc[Face.east].faces.length;
                     bc[Face.east].faces ~= face;
                     bc[Face.east].outsigns ~= 1;
                 }
@@ -308,7 +308,7 @@ public:
                     face = getIfj(i, jmin, k);
                     face.is_on_boundary = true;
                     face.bc_id = Face.south;
-                    face.i_bndry = bc[Face.south].faces.length;
+                    face.bc_idx = bc[Face.south].faces.length;
                     bc[Face.south].faces ~= face;
                     bc[Face.south].outsigns ~= -1;
                 }
@@ -319,7 +319,7 @@ public:
                     face = getIfi(imin, j, k);
                     face.is_on_boundary = true;
                     face.bc_id = Face.west;
-                    face.i_bndry = bc[Face.west].faces.length;
+                    face.bc_idx = bc[Face.west].faces.length;
                     bc[Face.west].faces ~= face;
                     bc[Face.west].outsigns ~= -1;
                 }
@@ -331,7 +331,7 @@ public:
                         face = getIfk(i, j, kmax + 1);
                         face.is_on_boundary = true;
                         face.bc_id = Face.top;
-                        face.i_bndry = bc[Face.top].faces.length;
+                        face.bc_idx = bc[Face.top].faces.length;
                         bc[Face.top].faces ~= face;
                         bc[Face.top].outsigns ~= 1;
                     }
@@ -342,7 +342,7 @@ public:
                         face = getIfk(i, j, kmin);
                         face.is_on_boundary = true;
                         face.bc_id = Face.bottom;
-                        face.i_bndry = bc[Face.bottom].faces.length;
+                        face.bc_idx = bc[Face.bottom].faces.length;
                         bc[Face.bottom].faces ~= face;
                         bc[Face.bottom].outsigns ~= -1;
                     }

@@ -59,6 +59,7 @@ public:
     }
     void postBCconstruction() {}
     abstract void apply(double t, int tLevel);
+    abstract void apply_for_interface(double t, int tLevel, SolidFVInterface f);
 }
 
 class SolidBIE_FixedT : SolidBoundaryInterfaceEffect {
@@ -69,10 +70,15 @@ public:
         _Twall = Twall;
     }
 
+    override void apply_for_interface(double t, int tLevel, SolidFVInterface f)
+    {
+        f.T = _Twall;
+    }
+
     override void apply(double t, int tLevel)
     {
         SolidBoundaryCondition bc = blk.bc[whichBoundary];
-        foreach (face; bc.faces) { face.T = _Twall; }
+        foreach (face; bc.faces) { apply_for_interface(t, tLevel, face); }
     }
     
 private:
@@ -86,16 +92,21 @@ public:
         super(id, boundary, "CopyAdjacentCellT");
     }
 
+    override void apply_for_interface(double t, int tLevel, SolidFVInterface f)
+    {
+        SolidBoundaryCondition bc = blk.bc[whichBoundary];
+        auto c = (bc.outsigns[f.bc_idx] == 1) ? f.cellLeft : f.cellRight;
+        f.T = c.T;
+    }
+
     override void apply(double t, int tLevel)
     {
         SolidBoundaryCondition bc = blk.bc[whichBoundary];
-        foreach (i, f; bc.faces) {
-            auto c = (bc.outsigns[i] == 1) ? f.cellLeft : f.cellRight;
-            f.T = c.T;
+        foreach (face; bc.faces) {
+            apply_for_interface(t, tLevel, face);
         }
     }
 }
-
 
 class SolidBIE_UserDefined : SolidBoundaryInterfaceEffect {
 public:
@@ -127,6 +138,15 @@ public:
                        luafname.toStringz, lua_tostring(blk.bc[whichBoundary].myL, -1));
         }
     }
+
+    override void apply_for_interface(double t, int tLevel, SolidFVInterface f)
+    {
+        // This is an approximation to allow for steady-state simulations to operate with a user-defined BIE,
+        // it will not give an analytically accurate contribution to the Jacobian.
+        size_t j = 0, k = 0;
+        callSolidIfaceUDF(t, tLevel, f.bc_idx, j, k, f, "null");
+    }
+
     override void apply(double t, int tLevel)
     {
         size_t i, j, k;
@@ -237,6 +257,11 @@ public:
     this(int id, int boundary)
     {
         super(id, boundary, "SolidGasInterface");
+    }
+
+    override void apply_for_interface(double t, int tLevel, SolidFVInterface f)
+    {
+	throw new Error("SolidBIE_TemperatureAndFluxFromSolidGasInterface.apply_for_interface() not implemented");
     }
 
     override void apply(double t, int tLevel)

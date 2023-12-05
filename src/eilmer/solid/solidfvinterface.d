@@ -24,7 +24,7 @@ public:
     size_t id;
     bool is_on_boundary = false;  // by default, assume not on boundary
     size_t bc_id;   // if the face is on a block boundary, which one
-    size_t i_bndry; // if the face is on a block boundary, store index into the array of faces attached to bc
+    size_t bc_idx;  // if the face is on a block boundary, store index into the array of faces attached to bc
     // Geometry
     Vector3 pos;
     number Ybar;

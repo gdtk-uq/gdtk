@@ -61,6 +61,7 @@ public:
     }
     void postBCconstruction() {}
     abstract void apply(double t, int tLevel);
+    abstract void apply_for_interface(double t, int tLevel, SolidFVInterface f);
 }
 
 class SolidBFE_ZeroFlux : SolidBoundaryFluxEffect {
@@ -70,10 +71,15 @@ public:
         super(id, boundary, "ZeroFlux");
     }
 
+    override void apply_for_interface(double t, int tLevel, SolidFVInterface f)
+    {
+        f.flux = 0.0;
+    }
+
     override void apply(double t, int tLevel)
     {
         SolidBoundaryCondition bc = blk.bc[whichBoundary];
-        foreach (face; bc.faces) { face.flux = 0.0; }
+        foreach (face; bc.faces) { apply_for_interface(t, tLevel, face); }
     }
 }
 
@@ -85,10 +91,16 @@ public:
         _fluxValue = fluxValue;
     }
 
+    override void apply_for_interface(double t, int tLevel, SolidFVInterface f)
+    {
+        SolidBoundaryCondition bc = blk.bc[whichBoundary];
+        f.flux = bc.outsigns[f.bc_idx]*_fluxValue;
+    }
+
     override void apply(double t, int tLevel)
     {
         SolidBoundaryCondition bc = blk.bc[whichBoundary];
-        foreach (idx, face; bc.faces) { face.flux = bc.outsigns[idx]*_fluxValue; }
+        foreach (face; bc.faces) { apply_for_interface(t, tLevel, face); }
     }
 
 private:
@@ -102,6 +114,32 @@ public:
         super(id, boundary, "SolidGasInterface");
     }
 
+    override void apply_for_interface(double t, int tLevel, SolidFVInterface f)
+    {
+        auto myBC = blk.bc[whichBoundary];
+        if (blk.myConfig.fluid_solid_bc_use_heat_transfer_coeff) {
+            // Note that the heat_transfer_into_solid is the total heat transfer (e.g. q_conduction + q_diffusion),
+            // so we are assuming here that both q_conduction and q_diffusion will diminish as the fluid and solid
+            // temperatures equilibrate. TODO: we should think about whether this is a valid assumption. KAD 2023-05-09
+            number htc = myBC.gasCells[f.bc_idx].heat_transfer_into_solid;
+            number dT = myBC.gasCells[f.bc_idx].fs.gas.T - myBC.solidCells[f.bc_idx].T;
+            myBC.ifaces[f.bc_idx].flux = -htc*dT;
+        } else {
+            number q = myBC.gasCells[f.bc_idx].heat_transfer_into_solid;
+            myBC.ifaces[f.bc_idx].flux = -q;
+        }
+    }
+
+    override void apply(double t, int tLevel)
+    {
+        auto myBC = blk.bc[whichBoundary];
+        foreach ( idx; 0 .. myBC.ifaces.length ) {
+            SolidFVInterface face = myBC.ifaces[idx];
+            apply_for_interface(t, tLevel, face);
+        }
+    }
+
+    /*
     override void apply(double t, int tLevel)
     {
         auto myBC = blk.bc[whichBoundary];
@@ -121,6 +159,7 @@ public:
             }
         }
     }
+    */
 }
 
 class SolidBFE_UserDefined : SolidBoundaryFluxEffect {
@@ -155,6 +194,15 @@ public:
                        luafname.toStringz, lua_tostring(blk.bc[whichBoundary].myL, -1));
         }
     }
+
+    override void apply_for_interface(double t, int tLevel, SolidFVInterface f)
+    {
+        // This is an approximation to allow for steady-state simulations to operate with a user-defined BIE,
+        // it will not give an analytically accurate contribution to the Jacobian.
+        size_t j = 0, k = 0;
+        callSolidFluxUDF(t, tLevel, f.bc_idx, j, k, f, "null");
+    }
+
     override void apply(double t, int tLevel)
     {
         size_t i, j, k;

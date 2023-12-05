@@ -78,4 +78,5 @@ public:
         return "SolidGhostCellEffect()";
     }
     abstract void apply(double t, int tLevel);
+    abstract void apply_for_interface(double t, int tLevel, SolidFVInterface f);
 } // end class SolidGhostCellEffect

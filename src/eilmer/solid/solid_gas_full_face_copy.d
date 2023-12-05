@@ -1094,6 +1094,12 @@ public:
     } // end exchange_fluidstate_phase2()
 
     @nogc
+    override void apply_for_interface(double t, int tLevel, SolidFVInterface f)
+    {
+	throw new Error("GhostCellSolidGasFullFaceCopy.apply_for_interface() not implemented");
+    }
+
+    @nogc
     override void apply(double t, int ftl)
     {
         // We presume that all of the exchange of data happened earlier,
