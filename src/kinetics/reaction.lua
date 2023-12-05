@@ -89,6 +89,7 @@ local function transformRateConstant(t, coeffs, anonymousCollider, energyModes)
       else
 	 m.model = 'Lindemann-Hinshelwood'
       end
+   elseif m.model == 'None' then
    else
       print("The rate constant model: ", m.model, " is not known.")
       print("Bailing out!")
@@ -129,6 +130,8 @@ local function rateConstantToLuaStr(rc)
       str = str .. "\n}"
    elseif rc.model == 'fromEqConst' then
       str = "{model='fromEqConst'}"
+   elseif rc.model == 'None' then
+      str = "{model='None'}"
    else
       print(string.format("ERROR: rate constant model '%s' is not known.", rc.model))
       os.exit(1)

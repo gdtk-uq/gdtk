@@ -384,6 +384,26 @@ private:
 }
 }
 
+class NoRateConstant : RateConstant {
+public:
+    this()
+    {
+    }
+    this(lua_State* L)
+    {
+    }
+    NoRateConstant dup()
+    {
+        return new NoRateConstant();
+    }
+    override number eval(in GasState Q)
+    {
+        return zero;
+    }
+private:
+    immutable number zero = number(0.0);
+}
+
 /++
  + Create a RateConstant object based on information in a LuaTable.
  +
@@ -411,6 +431,8 @@ RateConstant createRateConstant(lua_State* L, Tuple!(int, double)[] efficiencies
     case "Park":
         return new Park2TRateConstant(L);
     }
+    case "None":
+        return new NoRateConstant();
     case "fromEqConst":
         return null;
     default:
