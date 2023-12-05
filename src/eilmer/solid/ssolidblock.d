@@ -944,37 +944,37 @@ public:
 
     override void applyPreSpatialDerivActionAtBndryFaces(double t, int tLevel)
     {
-        bc[Face.north].applyPreSpatialDerivActionAtBndryFaces(t, tLevel);
-        bc[Face.east].applyPreSpatialDerivActionAtBndryFaces(t, tLevel);
-        bc[Face.south].applyPreSpatialDerivActionAtBndryFaces(t, tLevel);
-        bc[Face.west].applyPreSpatialDerivActionAtBndryFaces(t, tLevel);
-        if ( myConfig.dimensions == 3 ) {
-            bc[Face.top].applyPreSpatialDerivActionAtBndryFaces(t, tLevel);
-            bc[Face.bottom].applyPreSpatialDerivActionAtBndryFaces(t, tLevel);
+        foreach(boundary; bc) { boundary.applyPreSpatialDerivActionAtBndryFaces(t, tLevel); }
+    }
+
+    override void applyPreSpatialDerivActionAtBndryFaces(double t, int tLevel, SolidFVInterface f)
+    {
+        foreach(boundary; bc) {
+            if (boundary.whichBoundary == f.bc_id) { boundary.applyPreSpatialDerivActionAtBndryFaces(t, tLevel, f); }
         }
     }
 
     override void applyPreSpatialDerivActionAtBndryCells(double t, int tLevel)
     {
-        bc[Face.north].applyPreSpatialDerivActionAtBndryCells(t, tLevel);
-        bc[Face.east].applyPreSpatialDerivActionAtBndryCells(t, tLevel);
-        bc[Face.south].applyPreSpatialDerivActionAtBndryCells(t, tLevel);
-        bc[Face.west].applyPreSpatialDerivActionAtBndryCells(t, tLevel);
-        if ( myConfig.dimensions == 3 ) {
-            bc[Face.top].applyPreSpatialDerivActionAtBndryCells(t, tLevel);
-            bc[Face.bottom].applyPreSpatialDerivActionAtBndryCells(t, tLevel);
+        foreach(boundary; bc) { boundary.applyPreSpatialDerivActionAtBndryCells(t, tLevel); }
+    }
+
+    override void applyPreSpatialDerivActionAtBndryCells(double t, int tLevel, SolidFVInterface f)
+    {
+        foreach(boundary; bc) {
+            if (boundary.whichBoundary == f.bc_id) { boundary.applyPreSpatialDerivActionAtBndryCells(t, tLevel, f); }
         }
     }
 
     override void applyPostFluxAction(double t, int tLevel)
     {
-        bc[Face.north].applyPostFluxAction(t, tLevel);
-        bc[Face.east].applyPostFluxAction(t, tLevel);
-        bc[Face.south].applyPostFluxAction(t, tLevel);
-        bc[Face.west].applyPostFluxAction(t, tLevel);
-        if ( myConfig.dimensions == 3 ) {
-            bc[Face.top].applyPostFluxAction(t, tLevel);
-            bc[Face.bottom].applyPostFluxAction(t, tLevel);
+        foreach(boundary; bc) { boundary.applyPostFluxAction(t, tLevel); }
+    }
+
+    override void applyPostFluxAction(double t, int tLevel, SolidFVInterface f)
+    {
+        foreach(boundary; bc) {
+            if (boundary.whichBoundary == f.bc_id) { boundary.applyPostFluxAction(t, tLevel, f); }
         }
     }
 

@@ -23,6 +23,7 @@ import geom;
 import globaldata;
 import globalconfig;
 import solidfvcell;
+import solidfvinterface;
 import solidbc;
 import solidprops;
 import block;
@@ -80,8 +81,11 @@ public:
     abstract double determine_time_step_size(double cfl_value);
 
     abstract void applyPreSpatialDerivActionAtBndryFaces(double t, int tLevel);
+    abstract void applyPreSpatialDerivActionAtBndryFaces(double t, int tLevel, SolidFVInterface f);
     abstract void applyPreSpatialDerivActionAtBndryCells(double t, int tLevel);
+    abstract void applyPreSpatialDerivActionAtBndryCells(double t, int tLevel, SolidFVInterface f);
     abstract void applyPostFluxAction(double t, int tLevel);
+    abstract void applyPostFluxAction(double t, int tLevel, SolidFVInterface f);
     abstract void computeSpatialDerivatives(int ftl);
     abstract void averageTemperatures();
     abstract void averageTGradients();
