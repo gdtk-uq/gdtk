@@ -4,7 +4,7 @@
  * This command is not intended for users.
  * We'll put it in the development/diagnostics bucket.
  *
- * Authors: KAD and RJD
+ * Authors: KAD and RJG
  * Date: 2023-07-18
  */
 
@@ -62,14 +62,17 @@ options ([+] can be repeated):
      examples:
        --snapshot=5 : process snapshot 5
        -s 2 : process snapshot 2
-     default: none 
-
+     default: none
 
  -o, --output
      write output to a file
      example:
        --output=norms-data.txt
      default: none (just write to STDOUT)
+
+ -rfl, --read-frozen-limiter-values
+     read limiter values associated with snapshot
+     default: false, do NOT read limiter values
 
  -v, --verbose [+]
      Increase verbosity.
@@ -87,7 +90,7 @@ void main_(string[] args)
            "v|verbose+", &verbosity,
            "s|snapshot", &snapshot,
            "o|output", &outFilename,
-           "r|read-frozen-limiter-values", &readFrozenLimiterValues);
+           "rfl|read-frozen-limiter-values", &readFrozenLimiterValues);
 
     if (verbosity > 0) writefln("lmr %s: Begin program.", cmdName);
 
@@ -190,7 +193,7 @@ void main_(string[] args)
 
 void readLimiterValues(int snapshot)
 {
-    /* 
+    /*
     Reads limiter values from file and then freezes limiter.
     localFluidBlocks must be initialised prior to calling this function.
     */
@@ -203,7 +206,7 @@ void readLimiterValues(int snapshot)
     variables = readVariablesFromMetadata(lmrCfg.limiterMetadataFile);
     auto soln = new FlowSolution(to!int(snapshot), cfg.nFluidBlocks);
     foreach (i, blk; localFluidBlocks) {
-        readValuesFromFile(data, limiterFilename(to!int(snapshot), to!int(i)), variables, 
+        readValuesFromFile(data, limiterFilename(to!int(snapshot), to!int(i)), variables,
             soln.flowBlocks[0].ncells, fileFmt);
         foreach (j, cell; blk.cells) {
             cell.gradients.rhoPhi = data[j][0];
