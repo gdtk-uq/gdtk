@@ -2645,7 +2645,7 @@ void writeDiagnostics(int step, double dt, double cfl, double wallClockElapsed, 
     if (!cfg.is_master_task) return;
 
     diagnostics = File(diagFile, "a");
-    diagnostics.writef("%8d %20.16e %20.16e %20.16e %.8f %2d %3d %8d %20.16e %20.16e %20.16e %20.16e ",
+    diagnostics.writef("%8d %20.16e %20.16e %20.16e %.8f %2d %3d %8d %20.16e %20.16e %20.16e %20.16e %20.16e ",
                        step, dt, cfl, activePhase.linearSolveTolerance, wallClockElapsed,
                        gmresInfo.nRestarts, gmresInfo.iterationCount, fnCount,
                        globalResidual, globalResidual/referenceGlobalResidual,
