@@ -274,10 +274,10 @@ bool approxEqualMatrix(T)(SMatrix!T a, SMatrix!T b)
     return true;
 }
 
-void multiply(T)(SMatrix!T a, T[] b, T[] c, size_t nrows=0)
+void multiply(T)(SMatrix!T a, T[] b, T[] c, size_t nrows=0, size_t ncols=0)
 {
     size_t k0, k1;
-    if (nrows == 0) { // just multiply using every row matrix
+    if (nrows == 0) { // just multiply using every row in matrix
         nrows = a.ia.length-1;
     }
     if (nrows > a.ia.length-1) { // don't fail, but reset to maximum available rows
@@ -287,7 +287,10 @@ void multiply(T)(SMatrix!T a, T[] b, T[] c, size_t nrows=0)
         k0 = a.ia[i];
         k1 = a.ia[i+1];
         c[i] = 0.0;
-        foreach (k; k0 .. k1) c[i] += a.aa[k] * b[a.ja[k]];
+        foreach (k; k0 .. k1) {
+            if (ncols >= 1 && a.ja[k] >= ncols) continue;
+            c[i] += a.aa[k] * b[a.ja[k]];
+        }
     }
 }
 
