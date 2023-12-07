@@ -526,7 +526,14 @@ if (isFloatingPoint!T)
             this *= z;
             break;
         default:
-            this ^^= cast(real) i;
+            // Robb Watt found that for the instances when re is some
+            // small negative number and im is 0.0 calling the ^^= real
+            // opOpAssign was returning a value with a non-zero im component.
+            // For int powers we are able to perform an explicit loop, which
+            // appears to be more robust. See pow(Complex!T, int). KAD 2023.
+            Complex!T p = complex(this.re, this.im);
+            foreach (k; 0..abs(i)-1) this *= p;
+            if (i < 0) this = 1.0/this;
         }
         return this;
     }
@@ -827,7 +834,14 @@ if ( is(typeof(T(0.0)) == double) ||
         z *= p;
         break;
     default:
-        z ^^= cast(real) w;
+        // Robb Watt found that for the instances when re is some
+        // small negative number and im is 0.0 calling the ^^= real
+        // opOpAssign was returning a value with a non-zero im component.
+        // For int powers we are able to perform an explicit loop, which
+        // appears to be more robust. See ^^= int. KAD 2023.
+        Complex!T p = complex(z.re, z.im);
+        foreach (k; 0..abs(w)-1) z *= p;
+        if (w < 0) z = 1/z;
     }
     return z;
 }
@@ -1558,6 +1572,40 @@ version(complex_number_test) {
         assert(approxEqualNumbers(cpow, result), failedUnitTest());
 
         // pow(Complex, Double)
+        result = complex(1.0, 0.0);
+        cpow = pow(z, 0.0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^double
+        cpow = z^^0.0;
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^int
+        cpow = z^^(0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(complex, int)
+        cpow = pow(z, 0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(Complex, Double)
+        result = z;
+        cpow = pow(z, 1.0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^double
+        cpow = z^^1.0;
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^int
+        cpow = z^^(1);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(complex, int)
+        cpow = pow(z, 1);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(Complex, Double)
         result = complex(-10.12, -8.16);
         cpow = pow(z, 2.0);
         assert(approxEqualNumbers(cpow, result), failedUnitTest());
@@ -1575,6 +1623,74 @@ version(complex_number_test) {
         assert(approxEqualNumbers(cpow, result), failedUnitTest());
 
         // pow(Complex, Double)
+        result = complex(-39.888, 24.616);
+        cpow = pow(z, 3.0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^double
+        cpow = z^^3.0;
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^int
+        cpow = z^^(3);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(complex, int)
+        cpow = pow(z, 3);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(Complex, Double)
+        result = complex(985.105088, -1963.766016);
+        cpow = pow(z, 6.0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^double
+        cpow = z^^6.0;
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^int
+        cpow = z^^(6);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(complex, int)
+        cpow = pow(z, 6);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(Complex, Double)
+        result = complex(1.0, 0.0);
+        cpow = pow(z, -0.0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^double
+        cpow = z^^(-0.0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^int
+        cpow = z^^(-0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(complex, int)
+        cpow = pow(z, -0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(Complex, Double)
+        result = complex(0.09230769230769233, 0.26153846153846155);
+        cpow = pow(z, -1.0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^double
+        cpow = z^^(-1.0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^int
+        cpow = z^^(-1);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(complex, int)
+        cpow = pow(z, -1);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(Complex, Double)
         result = complex(-0.05988165680473373, 0.04828402366863906);
         cpow = pow(z, -2.0);
         assert(approxEqualNumbers(cpow, result), failedUnitTest());
@@ -1589,6 +1705,40 @@ version(complex_number_test) {
 
         // pow(complex, int)
         cpow = pow(z, -2);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(Complex, Double)
+        result = complex(-0.018155666818388715, -0.011204369594902138);
+        cpow = pow(z, -3.0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^double
+        cpow = z^^(-3.0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^int
+        cpow = z^^(-3);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(complex, int)
+        cpow = pow(z, -3);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(Complex, Double)
+        result = complex(0.00020409033960117344, 0.0004068456025502563);
+        cpow = pow(z, -6.0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^double
+        cpow = z^^(-6.0);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // Complex^^int
+        cpow = z^^(-6);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(complex, int)
+        cpow = pow(z, -6);
         assert(approxEqualNumbers(cpow, result), failedUnitTest());
 
         // pow(Double, Complex)
