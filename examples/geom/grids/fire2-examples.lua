@@ -65,43 +65,11 @@ ruledGrid:write_to_vtk_file('fire2-ruled-surface-grid.vtk')
 
 -- Example 4: Control-point patch
 -- Use ChannelPatch as means to generate control pointe because these will be orthogonal to surface.
-ctrlPts = {}
 ncpi = 4
 ncpj = 13
-dr = 1/(ncpi - 2)
-ds = 1/(ncpj - 2)
-r_pos = {0}
-for i=1,ncpi-2 do
-   r_pos[#r_pos+1] = dr/2 + (i-1)*dr
-end
-r_pos[#r_pos+1] = 1
-s_pos = {0}
-for j=1,ncpj-2 do
-   s_pos[#s_pos+1] = ds/2 + (j-1)*ds
-end
-s_pos[#s_pos+1] = 1
-
-for i=1,ncpi do
-   ctrlPts[i] = {}
-   for j=1,ncpj-1 do -- ncpj-1: don't use channel patch on final j
-      ctrlPts[i][j] = channelPatch(s_pos[j], r_pos[i])
-   end
-end
--- at jmax
-j = ncpj
-for i=1,ncpi do
-   ctrlPts[i][j] = coonsPatch(r_pos[i], s_pos[j])
-end
-
-dofile('write_ctrl_points.lua')
-writeCtrlPts2VTK(ctrlPts, 'fire2-ctrl-pts.vtk')
 
 ctrlPtPatch = ControlPointPatch:new{north=dodi, south=aoai, east=aidi, west=aodo,
-                                    control_points=ctrlPts}
+                                    ncpi=ncpi, ncpj=ncpj, guide_patch="channel-e2w"}
+ctrlPtPatch:writeCtrlPtsAsVtkXml('fire2-ctrl-pts')
 ctrlPtGrid = StructuredGrid:new{psurface=ctrlPtPatch, niv=niv, njv=njv}
 ctrlPtGrid:write_to_vtk_file('fire2-ctrl-pt-patch-grid.vtk')
-
-      
-
-
-
