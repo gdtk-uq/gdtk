@@ -112,13 +112,38 @@ This might be useful for purely two-dimensional constructions.
 == Control point patch
 The control point patch is an algebraic surface type with
 interior control of grid lines by means of control points.
-The constructor is:
+There are two constructors available.
+One accepts the control points directly, as created independently by the caller.
+The other constructor acceps the number of control points in each logical
+dimension and a guide patch.
+The guide patch is used to create and distribute the control points.
+The constructors are:
 ----
 ControlPointPatch:new{north, south, east, west, control_points}
 ----
+----
+ControlPointPatch:new{north, south, east, west,
+                      ncpi, ncpi, guide_patch}
+----
 
-The control points are listed as a table of tables such
+For the first constructor, the `control_points` are listed as a table of tables such
 that the points are given as a 2D array.
+
+For the second constructor, `ncpi` and `ncpj` are integers specifying the numbers
+of control points in the `i` and `j` dimensions, respectively.
+The `guide_patch` is given as a string; supported options are:
+
+* `"coons"`
+* `"aopatch"`
+* `"channel"`
+* `"channel-e2w"`
+
+The channel patch is defined assuming that the north and south boundaries are the
+bounding walls of the channel.
+When using a channel patch as a guide patch for the ControlPointPatch,
+it is sometimes convenient to have the channel oriented with
+east and west boundaries as bounding walls.
+The `guide_patch` set to `"channel-e2w"` gives that option.
 
 More information about the control point patch is
 available in the technical note
