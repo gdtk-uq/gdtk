@@ -172,6 +172,34 @@ public:
     {
 	mC[i][j] = p;
     }
+    
+    void writeCtrlPtsAsVtkXml(string baseFileName)
+    {
+	auto n = mC.length;
+        auto m = mC[0].length;
+
+	// We'll take care of the extension because the VTK-XML files
+	// are fussy about extensions when using the XML
+	string ext = ".vts";
+        auto f = File(baseFileName ~ ext, "w");
+        f.writeln("<VTKFile type=\"StructuredGrid\" version=\"1.0\" header_type=\"UInt64\">");
+        f.writefln("  <StructuredGrid WholeExtent=\"%d %d %d %d 0 0\">", 0, n-1, 0, m-1);
+        f.writefln("    <Piece Extent=\"%d %d %d %d 0 0\">",  0, n-1, 0, m-1);
+        f.writeln("      <Points>");
+        f.writeln("        <DataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\">");
+        foreach (j; 0 .. m) {
+            foreach (i; 0 .. n) {
+                auto p = mC[i][j];
+                f.writefln("       %20.16e %20.16e %20.16e", p.x, p.y, p.z);
+            }
+        }
+        f.writeln("        </DataArray>");
+        f.writeln("      </Points>");
+        f.writeln("    </Piece>");
+        f.writeln("  </StructuredGrid>");
+        f.writeln("</VTKFile>");
+        f.close();
+    }
 private:
     double Omega(double r) const
     {
@@ -249,32 +277,6 @@ private:
 
 version(controlpointpatch_test) {
 
-    import std.stdio;
-    void writeCtrlPtsAsVtkXml(Vector3[][] C, string fileName)
-    {
-        auto n = C.length;
-        auto m = C[0].length;
-
-        auto f = File(fileName, "w");
-        f.writeln("<VTKFile type=\"StructuredGrid\" version=\"1.0\" header_type=\"UInt64\">");
-        f.writefln("  <StructuredGrid WholeExtent=\"%d %d %d %d 0 0\">", 0, n-1, 0, m-1);
-        f.writefln("    <Piece Extent=\"%d %d %d %d 0 0\">",  0, n-1, 0, m-1);
-        f.writeln("      <Points>");
-        f.writeln("        <DataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\">");
-        foreach (j; 0 .. m) {
-            foreach (i; 0 .. n) {
-                auto p = C[i][j];
-                f.writefln("       %20.16e %20.16e %20.16e", p.x, p.y, p.z);
-            }
-        }
-        f.writeln("        </DataArray>");
-        f.writeln("      </Points>");
-        f.writeln("    </Piece>");
-        f.writeln("  </StructuredGrid>");
-        f.writeln("</VTKFile>");
-        f.close();
-    }
-
     import util.msg_service;
     int main() {
         int N = 4;
@@ -314,8 +316,6 @@ version(controlpointpatch_test) {
         p = ctrlPtPatch(1.0, 1.0);
         assert(approxEqualVectors(p, Vector3(1.0, 1.0)), failedUnitTest());
 
-        //writeSurfaceAsVtkXml(ctrlPtPatch, "ctrl-pt-test.vtk", 10, 10);
-        //writeCtrlPtsAsVtkXml(C, "ctrl-pts.vtk");
         return 0;
     }
 }

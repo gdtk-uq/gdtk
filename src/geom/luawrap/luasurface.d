@@ -1136,6 +1136,18 @@ extern(C) int luaSetCtrlPtInPatch(lua_State *L)
     return 0;
 }
 
+extern(C) int luaWriteCtrlPtsInPatchAsVtkXml(lua_State *L)
+{
+    int narg = lua_gettop(L);
+    if (narg < 2) {
+        string errMsg = "Not enough arguments passed to ControlPointPatch:writeCtrlPtsAsVtkXml\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    auto ctrlPatch = checkObj!(ControlPointPatch, ControlPointPatchMT)(L, 1);
+    string bfn = to!string(luaL_checkstring(L, 2));
+    ctrlPatch.writeCtrlPtsAsVtkXml(bfn);
+    return 0;
+}
 /**
  * This is the constructor for a NURBSPatch to be used from the Lua interface.
  *
@@ -1791,6 +1803,8 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "area");
     lua_pushcfunction(L, &luaSetCtrlPtInPatch);
     lua_setfield(L, -2, "setCtrlPt");
+    lua_pushcfunction(L, &luaWriteCtrlPtsInPatchAsVtkXml);
+    lua_setfield(L, -2, "writeCtrlPtsAsVtkXml");
 
     lua_setglobal(L, ControlPointPatchMT.toStringz);
     lua_getglobal(L, ControlPointPatchMT.toStringz); lua_setglobal(L, "ControlPointSurface"); // alias
