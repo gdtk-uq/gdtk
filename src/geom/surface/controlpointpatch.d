@@ -18,10 +18,14 @@ module geom.surface.controlpointpatch;
 
 import std.conv;
 import std.stdio;
+import std.format : format;
 
 import geom.elements;
 import geom.gpath;
 import geom.surface.parametricsurface;
+import geom.surface.coonspatch;
+import geom.surface.channelpatch;
+import geom.surface.aopatch;
 
 class ControlPointPatch : ParametricSurface {
 private:
@@ -38,7 +42,7 @@ public:
     {
         mN = to!int(C.length);
         mM = to!int(C[0].length);
-        
+
 	mNorth = north.dup();
 	mEast = east.dup();
 	mSouth = south.dup();
@@ -46,6 +50,85 @@ public:
 
 	mC.length = mN;
 	foreach (i; 0 .. mN) mC[i] = C[i].dup();
+    }
+
+    this(in Path south, in Path north, in Path west, in Path east,
+	 int ncpi, int ncpj, string guidePatch)
+    {
+	// Let's construct, then alter
+	Vector3[][] C;
+	C.length = ncpi;
+	foreach (ref CC; C) CC.length = ncpj;
+
+	this(south, north, west, east, C);
+
+	double dr = 1.0/(ncpi - 2);
+	double ds = 1.0/(ncpj - 2);
+	double[] rPos; rPos.length = ncpi;
+	double[] sPos; sPos.length = ncpj;
+
+	rPos[0] = 0.0;
+	foreach (i; 1 .. ncpi-1) rPos[i] = dr/2.0 + (i-1)*dr;
+	rPos[$-1] = 1.0;
+
+	sPos[0] = 0.0;
+	foreach (i; 1 .. ncpj-1) sPos[i] = ds/2.0 + (i-1)*ds;
+	sPos[$-1] = 1.0;
+
+	ParametricSurface gpatch;
+	bool usingChannelAsGuide = false;
+	bool channelBoundedOnEW = false;
+	switch (guidePatch) {
+	case "coons", "Coons", "COONS", "tfi", "TFI":
+	    gpatch = new CoonsPatch(south, north, west, east);
+	    break;
+	case "channel", "Channel", "CHANNEL":
+	    gpatch = new ChannelPatch(south, north, false, true);
+	    usingChannelAsGuide = true;
+	    break;
+	case "channel-e2w", "Channel-e2w", "CHANNEL-E2W", "channel_e2w":
+	    gpatch = new ChannelPatch(west, east, false, true);
+	    usingChannelAsGuide = true;
+	    channelBoundedOnEW = true;
+	    break;
+	case "aopatch", "AOPatch", "AOPATCH", "area-orthogonal", "area_orthogonal":
+	    gpatch = new AOPatch(south, north, west, east);
+	    break;
+	default:
+	    string errMsg = "Error in constructor to ControlPointPatch.\n";
+	    errMsg ~= format("The guide patch type '%s' is not supported.\n", guidePatch);
+	    errMsg ~= "Check the spelling or what you are requesting.";
+	    errMsg ~= "Supported guide patches are: 'coons', 'channel', 'channel-e2w' and 'aopatch'";
+	    throw new Error(errMsg);
+	}
+
+	if (!channelBoundedOnEW) {
+	    foreach (i; 0 .. ncpi) {
+		foreach (j; 0 .. ncpj) {
+		    mC[i][j] = gpatch(rPos[i], sPos[j]);
+		}
+	    }
+	    if (usingChannelAsGuide) {
+		// correct the boundaries: east and west
+		foreach (j; 0 .. ncpj) {
+		    mC[0][j] = east(sPos[j]);
+		    mC[$-1][j] = west(sPos[j]);
+		}
+	    }
+	}
+	else {
+	    // This case must be with a channel patch bounded on east-west
+	    foreach (i; 0 .. ncpi) {
+		foreach (j; 0 .. ncpj) {
+		    mC[i][j] = gpatch(sPos[j], rPos[i]);
+		}
+	    }
+	    // Correct the boundaries: south and north
+	    foreach (i; 0 .. ncpi) {
+		mC[i][0] = south(rPos[i]);
+		mC[i][$-1] = north(rPos[i]);
+	    }
+	}
     }
 
     this(ref const(ControlPointPatch) other)
@@ -64,7 +147,7 @@ public:
     {
 	return new ControlPointPatch(this.mSouth, this.mNorth, this.mWest, this.mEast, this.mC);
     }
-    
+
     override Vector3 opCall(double r, double s) const
     {
 	// Convert r, s to r_hat, s_hat
@@ -85,6 +168,10 @@ public:
         return "ControlPointPatch()";
     }
 
+    void setCtrlPt(int i, int j, Vector3 p)
+    {
+	mC[i][j] = p;
+    }
 private:
     double Omega(double r) const
     {
@@ -121,7 +208,7 @@ private:
 	// It looks like we only ever use the displacement Vectors (C_alpha,j - C_alpha-1,j)
 	// so we could pre-compute and store these.
 	// (Plus we'd need starting points.)
-	
+
 	// Implements Eq (7) in Eiseman (1988)
 	// The alpha index is annoying here.
 	// We need to work with 1-based in the G function call.
@@ -167,7 +254,7 @@ version(controlpointpatch_test) {
     {
         auto n = C.length;
         auto m = C[0].length;
-        
+
         auto f = File(fileName, "w");
         f.writeln("<VTKFile type=\"StructuredGrid\" version=\"1.0\" header_type=\"UInt64\">");
         f.writefln("  <StructuredGrid WholeExtent=\"%d %d %d %d 0 0\">", 0, n-1, 0, m-1);
@@ -231,5 +318,4 @@ version(controlpointpatch_test) {
         //writeCtrlPtsAsVtkXml(C, "ctrl-pts.vtk");
         return 0;
     }
-
 }

@@ -1022,14 +1022,19 @@ extern(C) int luaWriteCtrlPtsAsVtkXml(lua_State *L)
  *
  * Construction is:
  * -------------------------
- * patch = ControlPointBezierPatch:new{north=nPath, east=ePath, south=sPath, west=wPath, control_points=C}
+ * patch = ControlPointPatch:new{north=nPath, east=ePath, south=sPath, west=wPath, control_points=C}
+ * <OR>
+ * patch = ControlPointPatch:new{north=nPath, east=ePath, south=sPath, west=wPath,
+ *                               ncpi=5, ncpj=3, guide_patch="channel"}
  * --------------------------
  *
  * paths   : see CoonsPatch (above)
  * control_points  : an array of points C[N][M]
+ * ncpi : no. control points in i-direction
+ * ncpj : no. control points in j-direction
+ * guide_patch : a patch type to use for laying down control points
  *
  * @author: Rowan J. Gollan
- * 
  */
 
 extern(C) int newControlPointPatch(lua_State* L)
@@ -1047,52 +1052,89 @@ extern(C) int newControlPointPatch(lua_State* L)
             "A table with input parameters is expected as the first argument.";
         luaL_error(L, errMsg.toStringz);
     }
-    if (!checkAllowedNames(L, 1, ["north", "east", "south", "west", "control_points"])) {
+    if (!checkAllowedNames(L, 1, ["north", "east", "south", "west", "control_points",
+                                  "ncpi", "ncpj", "guide_patch"])) {
         string errMsg = "Error in call to ControlPointPatch:new{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }
 
     Path[string] paths;
     getPaths(L, "ControlPointPatch", paths);
-    
+
     lua_getfield(L, 1, "control_points");
-    if (!lua_istable(L, -1)) {
-        string errMsg = "There's a problem in call to ControlPointsPatch:new{}. " ~
-            "An array of arrays for 'control_points' is expected.";
-        luaL_error(L, errMsg.toStringz);
-    }
-    int N = to!int(lua_objlen(L, -1));
-    int M;
-    Vector3[][] C;
-    C.length = N;
-    foreach (i; 0 .. N) {
-        lua_rawgeti(L, -1, i+1); // +1 for Lua offset
-        if (i == 0) {
-            M = to!int(lua_objlen(L, -1));
+    if (!lua_isnil(L, -1)) {
+            // Proceed with constructor based on supplied control points
+        if (!lua_istable(L, -1)) {
+            string errMsg = "There's a problem in call to ControlPointsPatch:new{}. " ~
+                "An array of arrays for 'control_points' is expected.";
+            luaL_error(L, errMsg.toStringz);
         }
-        else {
-            if (M != lua_objlen(L, -1)) {
-                string errMsg = "There's a problem in call to ControlPointPatch:new{}. " ~
-                    "Inconsistent numbers of points in array of 'control_points'.";
-                luaL_error(L, errMsg.toStringz);
+        int N = to!int(lua_objlen(L, -1));
+        int M;
+        Vector3[][] C;
+        C.length = N;
+        foreach (i; 0 .. N) {
+            lua_rawgeti(L, -1, i+1); // +1 for Lua offset
+            if (i == 0) {
+                M = to!int(lua_objlen(L, -1));
             }
-        }
-        C[i].length = M;
-        foreach (j; 0 .. M) {
-            lua_rawgeti(L, -1, j+1);
-            auto p = toVector3(L, -1);
-            C[i][j].set(p);
+            else {
+                if (M != lua_objlen(L, -1)) {
+                    string errMsg = "There's a problem in call to ControlPointPatch:new{}. " ~
+                        "Inconsistent numbers of points in array of 'control_points'.";
+                    luaL_error(L, errMsg.toStringz);
+                }
+            }
+            C[i].length = M;
+            foreach (j; 0 .. M) {
+                lua_rawgeti(L, -1, j+1);
+                auto p = toVector3(L, -1);
+                C[i][j].set(p);
+                lua_pop(L, 1);
+            }
             lua_pop(L, 1);
         }
         lua_pop(L, 1);
+        // Try to construct object.
+        auto ctrlPtPatch = new ControlPointPatch(paths["south"], paths["north"], paths["west"], paths["east"], C);
+        surfaceStore ~= pushObj!(ControlPointPatch, ControlPointPatchMT)(L, ctrlPtPatch);
+        return 1;
     }
-    lua_pop(L, 1);
-    // Try to construct object.
-    auto ctrlPtPatch = new ControlPointPatch(paths["south"], paths["north"], paths["west"], paths["east"], C);
-    surfaceStore ~= pushObj!(ControlPointPatch, ControlPointPatchMT)(L, ctrlPtPatch);
-    return 1;
+    else {
+        // Assume that the constructor based on a guidePatch is at play
+        lua_getfield(L, 1, "ncpi");
+        int ncpi = to!int(lua_tonumber(L, -1));
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "ncpj");
+        int ncpj = to!int(lua_tonumber(L, -1));
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "guide_patch");
+        string guidePatch = to!string(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        // Try to construct object.
+        auto ctrlPtPatch = new ControlPointPatch(paths["south"], paths["north"], paths["west"], paths["east"], ncpi, ncpj, guidePatch);
+        surfaceStore ~= pushObj!(ControlPointPatch, ControlPointPatchMT)(L, ctrlPtPatch);
+        return 1;
+    }
+
+
+
 } // end newControlPointPatch()
 
+extern(C) int luaSetCtrlPtInPatch(lua_State *L)
+{
+    int narg = lua_gettop(L);
+    if (narg < 4) {
+        string errMsg = "Not enough arguments passed to ControlPointPatch:setCtrlPt\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    auto ctrlPatch = checkObj!(ControlPointPatch, ControlPointPatchMT)(L, 1);
+    int i = to!int(luaL_checkinteger(L, 2));
+    int j = to!int(luaL_checkinteger(L, 2));
+    auto p = toVector3(L, 4);
+    ctrlPatch.setCtrlPt(i, j, p);
+    return 0;
+}
 
 /**
  * This is the constructor for a NURBSPatch to be used from the Lua interface.
@@ -1131,7 +1173,7 @@ extern(C) int newNURBSPatch(lua_State* L)
         string errMsg = "Error in call to NURBSPatch:new{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }
-    
+
     lua_getfield(L, 1, "points");
     if (!lua_istable(L, -1)) {
         string errMsg = "There's a problem in call to NURBSPatch:new{}. " ~
@@ -1199,7 +1241,7 @@ extern(C) int newNURBSPatch(lua_State* L)
 	}
     }
     lua_pop(L, 1);
-    
+
     // Get "u_knots"
     double[] U;
     getArrayOfDoubles(L, 1, "u_knots", U);
@@ -1207,7 +1249,7 @@ extern(C) int newNURBSPatch(lua_State* L)
     // Get "v_knots"
     double[] V;
     getArrayOfDoubles(L, 1, "v_knots", V);
-    
+
     // Get "u_degree"
     int p = getInt(L, 1, "u_degree");
 
@@ -1747,6 +1789,8 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &areaOfSurface!(ControlPointPatch, ControlPointPatchMT));
     lua_setfield(L, -2, "area");
+    lua_pushcfunction(L, &luaSetCtrlPtInPatch);
+    lua_setfield(L, -2, "setCtrlPt");
 
     lua_setglobal(L, ControlPointPatchMT.toStringz);
     lua_getglobal(L, ControlPointPatchMT.toStringz); lua_setglobal(L, "ControlPointSurface"); // alias
@@ -1762,7 +1806,7 @@ void registerSurfaces(lua_State* L)
     /* Register methods for use. */
     lua_pushcfunction(L, &newNURBSPatch);
     lua_setfield(L, -2, "new");
-    
+
     lua_pushcfunction(L, &opCallSurface!(NURBSSurface, NURBSPatchMT));
     lua_setfield(L, -2, "__call");
 
@@ -1778,7 +1822,7 @@ void registerSurfaces(lua_State* L)
     lua_setglobal(L, NURBSPatchMT.toStringz);
     lua_getglobal(L, NURBSPatchMT.toStringz); lua_setglobal(L, "NURBSSurface"); // alias
 
-    
+
     // Register utility functions.
     lua_pushcfunction(L, &isSurface); lua_setglobal(L, "isSurface");
     lua_pushcfunction(L, &makePatch); lua_setglobal(L, "makePatch");
