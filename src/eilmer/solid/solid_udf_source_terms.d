@@ -40,14 +40,11 @@ void addUDFSourceTermsToSolidCell(lua_State* L, SolidFVCell cell, double t, SSol
     lua_pushnumber(L, cell.volume); lua_setfield(L, -2, "vol");
     // We want cell indices in the Lua domain to look like cell indices for a SFluidBlock.
     auto ijk = blk.toIJKIndices(cell.id);
-    assert(ijk[0] >= blk.imin, "Invalid i index for solid block.");
-    int i = to!int(ijk[0] - blk.imin);
-    assert(ijk[1] >= blk.jmin, "Invalid j index for solid block.");
-    int j = to!int(ijk[1] - blk.jmin);
+    int i = to!int(ijk[0]);
+    int j = to!int(ijk[1]);
     int k = 0;
     if (GlobalConfig.dimensions == 3) {
-        assert(ijk[2] >= blk.kmin, "Invalid k index for solid block.");
-        k = to!int(ijk[2] - blk.kmin);
+        k = to!int(ijk[2]);
     }
     lua_pushinteger(L, i); lua_setfield(L, -2, "i");
     lua_pushinteger(L, j); lua_setfield(L, -2, "j");

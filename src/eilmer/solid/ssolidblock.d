@@ -31,6 +31,7 @@ import solidfvinterface;
 import solidfvvertex;
 import solidbc;
 import solidprops;
+import block;
 
 class SSolidBlock : SolidBlock {
 public:
@@ -162,9 +163,9 @@ public:
 
     size_t[] toIJKIndices(size_t gid) const
     {
-        size_t k = gid / (_njdim * _nidim);
-        size_t j = (gid - k * (_njdim * _nidim)) / _nidim;
-        size_t i = gid - k * (_njdim * _nidim) - j * _nidim;
+        size_t k = gid / (njcell * nicell);
+        size_t j = (gid - k * (njcell * nicell)) / nicell;
+        size_t i = gid - k * (njcell * nicell) - j * njcell;
         return [i, j, k];
     }
 
@@ -192,8 +193,9 @@ public:
         try {
             // Create the cell and interface objects for the entire block.
             foreach (gid; 0 .. ntot) {
-                _ctr ~= new SolidFVCell(myConfig); _ctr[gid].id = to!int(gid);
-                auto ijk = toIJKIndices(gid);
+                // we want the ghost cells to have an id that can distinguish them from interior cells
+                // note that we will loop through interior cells later and correct their ids
+                _ctr ~= new SolidFVCell(myConfig); _ctr[gid].id = to!int(ghost_cell_start_id+gid);
                 _ifi ~= new SolidFVInterface(); _ifi[gid].id = gid;
                 _ifj ~= new SolidFVInterface(); _ifj[gid].id = gid;
                 if ( myConfig.dimensions == 3 ) {
@@ -206,16 +208,19 @@ public:
                     _sifk ~= new SolidFVInterface(); _sifk[gid].id = gid;
                 }
             } // gid loop
-            // Now, assemble the lists of references to the cells, vertices and faces
-            // in standard order for a structured grid.
-            // These arrays are held by the FluidBlock base class and allow us to handle
+            // Now, assemble the lists of references to the cells and faces in standard order for a structured grid.
+            // These arrays are held by the SolidBlock base class and allow us to handle
             // a structured-grid block much as we would an unstructured-grid block.
+            // We also make the cell and face id value consistent with the index in the array.
+            // We will depend on this equality in other parts of the solver.
+            // We also note that these cells are interior to the block (i.e. not ghost cells)
             //
             // Gather cells
             if (myConfig.dimensions == 2) {
                 foreach (j; jmin .. jmax+1) {
                     foreach (i; imin .. imax+1) {
                         cells ~= getCell(i, j);
+                        cells[$-1].id = cells.length - 1;
                         cells[$-1].is_ghost = false;
                     }
                 }
@@ -224,6 +229,7 @@ public:
                     foreach (j; jmin .. jmax+1) {
                         foreach (i; imin .. imax+1) {
                             cells ~= getCell(i, j, k);
+                            cells[$-1].id = cells.length - 1;
                             cells[$-1].is_ghost = false;
                         }
                     }
@@ -236,12 +242,14 @@ public:
                 for ( size_t j = jmin; j <= jmax; ++j ) {
                     for ( size_t i = imin; i <= imax + 1; ++i ) {
                         faces ~= getIfi(i,j);
+                        faces[$-1].id = faces.length-1;
                     }
                 }
                 // North-facing interfaces
                 for ( size_t j = jmin; j <= jmax + 1; ++j ) {
                     for ( size_t i = imin; i <= imax; ++i ) {
                         faces ~= getIfj(i,j);
+                        faces[$-1].id = faces.length-1;
                     }
                 }
             } else { // assume myConfig.dimensions == 3 (3D)
@@ -250,6 +258,7 @@ public:
                     for ( size_t j = jmin; j <= jmax; ++j) {
                         for ( size_t i = imin; i <= imax+1; ++i) {
                             faces ~= getIfi(i,j,k);
+                            faces[$-1].id = faces.length-1;
                         }
                     }
                 }
@@ -258,6 +267,7 @@ public:
                     for ( size_t i = imin; i <= imax; ++i) {
                         for ( size_t j = jmin; j <= jmax+1; ++j) {
                             faces ~= getIfj(i,j,k);
+                            faces[$-1].id = faces.length-1;
                         }
                     }
                 }
@@ -266,6 +276,7 @@ public:
                     for ( size_t j = jmin; j <= jmax; ++j) {
                         for ( size_t k = kmin; k <= kmax+1; ++k) {
                             faces ~= getIfk(i,j,k);
+                            faces[$-1].id = faces.length-1;
                         }
                     }
                 }

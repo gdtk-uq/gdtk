@@ -53,14 +53,6 @@ version(mpi_parallel) {
 // import std.format;
 // }
 
-
-
-// To distinguish ghost cells from active cells, we start their id values at
-// an arbitrarily high value.  It seem high to me (PJ) but feel free to adjust it
-// if you start using grids larger I expect.
-enum ghost_cell_start_id = 1_000_000_000;
-
-
 // The flow solver handles structured- and unstructured-grid blocks via this base class.
 // Mostly, we view the block as an unstructured bag of cells because that requires least
 // knowledge in the calling code.

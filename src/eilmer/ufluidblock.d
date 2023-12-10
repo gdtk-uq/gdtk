@@ -42,7 +42,7 @@ import geom.luawrap.luausgrid;
 import luaflowstate;
 import fluidblockio_new;
 import nm;
-
+import block;
 
 class UFluidBlock: FluidBlock {
 public:
