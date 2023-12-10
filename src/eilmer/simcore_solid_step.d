@@ -117,7 +117,7 @@ void solid_step(double dt_solid)
     }
     // We need to synchronise before updating
     foreach (sblk; parallel(localSolidBlocks, 1)) {
-        foreach (scell; sblk.activeCells) {
+        foreach (scell; sblk.cells) {
             if (GlobalConfig.udfSolidSourceTerms) {
                 addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
             }
@@ -130,7 +130,7 @@ void solid_step(double dt_solid)
         if (sblk.active) {
             //size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
             size_t end_indx = 1;
-            foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[end_indx]; }
+            foreach (scell; sblk.cells) { scell.e[0] = scell.e[end_indx]; }
         }
     } // end foreach sblk
 } // end solid_step()

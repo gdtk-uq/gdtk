@@ -40,7 +40,8 @@ public:
     Vector3 energyResidualLoc; // location of worst case
     int hncell; // number of history cells
 
-    SolidFVCell[] activeCells; // collection of references to active cells in the domain
+    SolidFVCell[] cells; // collection of references to active cells in the domain
+    SolidFVInterface[] faces; // collection of references to active faces in the domain
     SolidBoundaryCondition[] bc; // collection of references to boundary conditions
 
     version(nk_accelerator)
@@ -97,7 +98,7 @@ public:
     {
         size_t mOuter = to!size_t(GlobalConfig.sssOptions.maxOuterIterations);
         size_t mInner = to!size_t(GlobalConfig.sssOptions.nInnerIterations);
-        size_t n = 1*activeCells.length;
+        size_t n = 1*cells.length;
         nvars = n;
         // Now allocate arrays and matrices
         Fe.length = n;

@@ -42,9 +42,6 @@ public:
     size_t jmin, jmax;
     size_t kmin, kmax;
     size_t[] hicell, hjcell, hkcell; // locations of sample cells for history record
-    SolidBoundaryCondition[] bc;
-    SolidFVCell[] cells;
-    SolidFVInterface[] faces;
 private:
     StructuredGrid grid; // for reading and writing
 
@@ -197,11 +194,6 @@ public:
             foreach (gid; 0 .. ntot) {
                 _ctr ~= new SolidFVCell(myConfig); _ctr[gid].id = to!int(gid);
                 auto ijk = toIJKIndices(gid);
-                if ( ijk[0] >= imin && ijk[0] <= imax &&
-                     ijk[1] >= jmin && ijk[1] <= jmax &&
-                     ijk[2] >= kmin && ijk[2] <= kmax ) {
-                    activeCells ~= _ctr[gid];
-                }
                 _ifi ~= new SolidFVInterface(); _ifi[gid].id = gid;
                 _ifj ~= new SolidFVInterface(); _ifj[gid].id = gid;
                 if ( myConfig.dimensions == 3 ) {
@@ -1018,7 +1010,7 @@ public:
 
     override void clearSources()
     {
-        foreach ( cell; activeCells ) cell.Q = 0.0;
+        foreach ( cell; cells ) cell.Q = 0.0;
     }
 
     @nogc
@@ -1026,7 +1018,7 @@ public:
     {
         number alpha, L_min, dt_local, dt_allow;
         bool first = true;
-        foreach(cell; activeCells) {
+        foreach(cell; cells) {
 
             if (GlobalConfig.dimensions == 2) {
                 L_min = double.max;

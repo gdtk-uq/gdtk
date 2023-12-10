@@ -533,7 +533,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	}
 	// We need to synchronise before updating
 	foreach (sblk; parallel(localSolidBlocks, 1)) {
-	    foreach (scell; sblk.activeCells) {
+	    foreach (scell; sblk.cells) {
 		if (GlobalConfig.udfSolidSourceTerms) {
 		    addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
 		}
@@ -830,7 +830,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
 	    }
 	    // We need to synchronise before updating
 	    foreach (sblk; parallel(localSolidBlocks, 1)) {
-		foreach (scell; sblk.activeCells) {
+		foreach (scell; sblk.cells) {
 		    if (GlobalConfig.udfSolidSourceTerms) {
 			addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
 		    }
@@ -858,7 +858,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
             GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
             foreach (sblk; parallel(localSolidBlocks,1)) {
                 if (sblk.active) {
-                    foreach (scell; sblk.activeCells) {
+                    foreach (scell; sblk.cells) {
                         scell.e[0] = scell.e[1];
                         scell.e[1] = scell.e[2];
                     }
@@ -887,7 +887,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
         foreach (sblk; localSolidBlocks) {
             if (sblk.active) {
-                foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[end_indx]; }
+                foreach (scell; sblk.cells) { scell.e[0] = scell.e[end_indx]; }
             }
         } // end foreach sblk
     }
@@ -1506,7 +1506,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                     }
                     // We need to synchronise before updating
                     foreach (sblk; parallel(localSolidBlocks, 1)) {
-                        foreach (scell; sblk.activeCells) {
+                        foreach (scell; sblk.cells) {
                             if (GlobalConfig.udfSolidSourceTerms) {
                                 addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
                             }
@@ -1558,7 +1558,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         foreach (sblk; localSolidBlocks) {
             if (sblk.active) {
                 size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
-                foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[end_indx]; }
+                foreach (scell; sblk.cells) { scell.e[0] = scell.e[end_indx]; }
             }
         } // end foreach sblk
     }
@@ -1999,7 +1999,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 sblk.averageTGradients();
                 sblk.computeFluxes();
                 sblk.applyPostFluxAction(SimState.time, ftl);
-                foreach (scell; sblk.activeCells) {
+                foreach (scell; sblk.cells) {
                     if (GlobalConfig.udfSolidSourceTerms) {
                         addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
                     }
@@ -2358,7 +2358,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                     sblk.averageTGradients();
                     sblk.computeFluxes();
                     sblk.applyPostFluxAction(SimState.time, ftl);
-                    foreach (scell; sblk.activeCells) {
+                    foreach (scell; sblk.cells) {
                         if (GlobalConfig.udfSolidSourceTerms) {
                             addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
                         }
@@ -2400,7 +2400,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
     foreach (sblk; localSolidBlocks) {
         if (sblk.active) {
             size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
-            foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[end_indx]; }
+            foreach (scell; sblk.cells) { scell.e[0] = scell.e[end_indx]; }
         }
     }
     //
@@ -2711,7 +2711,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
                 }
                 // We need to synchronise before updating
                 foreach (sblk; parallel(localSolidBlocks, 1)) {
-                    foreach (scell; sblk.activeCells) {
+                    foreach (scell; sblk.cells) {
                         if (GlobalConfig.udfSolidSourceTerms) {
                             addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
                         }
@@ -2757,7 +2757,7 @@ void gasdynamic_implicit_increment_with_fixed_grid()
         foreach (sblk; localSolidBlocks) {
             if (sblk.active) {
                 size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
-                foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[end_indx]; }
+                foreach (scell; sblk.cells) { scell.e[0] = scell.e[end_indx]; }
             }
         } // end foreach sblk
     }
@@ -3123,7 +3123,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
                 }
                 // We need to synchronise before updating
                 foreach (sblk; parallel(localSolidBlocks, 1)) {
-                    foreach (scell; sblk.activeCells) {
+                    foreach (scell; sblk.cells) {
                         if (GlobalConfig.udfSolidSourceTerms) {
                             addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
                         }
@@ -3175,7 +3175,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
         foreach (sblk; localSolidBlocks) {
             if (sblk.active) {
                 size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
-                foreach (scell; sblk.activeCells) { scell.e[0] = scell.e[end_indx]; }
+                foreach (scell; sblk.cells) { scell.e[0] = scell.e[end_indx]; }
             }
         } // end foreach sblk
     }
