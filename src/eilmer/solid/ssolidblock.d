@@ -9,6 +9,7 @@ module ssolidblock;
 
 import std.stdio;
 import std.algorithm;
+import std.parallelism;
 import std.conv;
 import std.format;
 import std.array;
@@ -18,6 +19,7 @@ import nm.number;
 import std.json;
 import util.lua;
 import nm.rsla;
+import nm.smla;
 import json_helper;
 import lua_helper;
 import gzip;
@@ -32,6 +34,7 @@ import solidfvvertex;
 import solidbc;
 import solidprops;
 import block;
+import jacobian;
 
 class SSolidBlock : SolidBlock {
 public:
@@ -1059,6 +1062,201 @@ public:
         return dt_allow.re;
     } // end determine_time_step_size()
 
+    void initialize_jacobian(int spatial_order_of_jacobian, double eps)
+    {
+        // This routine initializes the Jacobian matrix attached to this SolidBlock object.
+
+        size_t nentry = 0;
+        // gather the expected number of non-zero entries in the flow Jacobian
+        foreach (cell; cells) {
+            cell.gather_residual_stencil_lists(spatial_order_of_jacobian);
+            nentry += cell.cell_list.length;
+        }
+
+        // TODO: gather ghost-cell stencils
+
+        // pre-size the sparse matrix arrays associated with the Jacobian matrix
+        jacobian_nonzero_pattern(spatial_order_of_jacobian, nentry, cells.length, eps, 0);
+    } // end initialize_jacobian()
+
+    void jacobian_nonzero_pattern(int spatial_order_of_jacobian, size_t nentry, size_t ncells, double sigma, int iluFill) {
+        // This routine pre-sizes the sparse matrix with the appropriate non-zero structure
+
+        jacobian = new FlowJacobian(sigma, myConfig.dimensions, 1, spatial_order_of_jacobian, nentry, ncells);
+        jacobian.local.ia[jacobian.ia_idx] = 0; // the first entry will always be filled
+        jacobian.ia_idx += 1;
+        foreach (pcell; cells) {
+            // loop through cells that will have non-zero entries
+            foreach(cell; pcell.cell_list) {
+                assert(!cell.is_ghost, "Oops, we expect to not find a ghost cell at this point.");
+                size_t jidx = cell.id; // column index
+                // populate entry with a place holder value
+                jacobian.local.aa[jacobian.aa_idx] = 1.0;
+                // fill out the sparse matrix ready for the next entry in the row
+                jacobian.aa_idx += 1;
+                jacobian.local.ja[jacobian.ja_idx] = jidx;
+                jacobian.ja_idx += 1;
+            }
+            // prepare the sparse matrix for a new row
+            jacobian.local.ia[jacobian.ia_idx] = jacobian.aa_idx;
+            jacobian.ia_idx += 1;
+        }
+
+        // For ILU(p>0) we need to modify the sparsity pattern
+        if (iluFill > 0) {
+
+            // [TODO] think about making the lev matrix sparse as well KAD 2022-03-31
+            // construct a level matrix
+            int p = iluFill;
+            int n = to!int(jacobian.local.ia.length)-1;
+            int[][] lev; // fill levels
+            lev.length = n;
+            foreach ( i; 0..n) lev[i].length = n;
+            // assign initial fill levels
+            foreach ( i; 0 .. n ) {
+                foreach ( j; 0 .. n ) {
+                    if (jacobian.local[i,j] < 1.0) lev[i][j] = n-1;
+                    else lev[i][j] = 0;
+                }
+            }
+
+            // apply symbolic phase algorithm
+            foreach ( i; 1 .. n ) { // Begin from 2nd row
+                foreach ( k; 0 .. i ) {
+                    if (lev[i][k] <= p) {
+                        foreach ( j ; k+1..n) {
+                            lev[i][j] = min(lev[i][j], lev[i][k]+lev[k][j]+1);
+                        }
+                    }
+                }
+            }
+
+            // modify the sparse matrix non-zero pattern based on the level matrix
+            foreach ( i; 0..n) {
+                foreach ( j; 0..n) {
+                    // add new entry
+                    if (lev[i][j] <= p) { jacobian.local[i,j] = 1.0; }
+                }
+            }
+        }
+
+    } // end jacobian_nonzero_pattern()
+
+    void evaluate_jacobian()
+    {
+        // Higher level routine used to evaluate the Jacobian attached to this SolidBlock object.
+
+        // zero entries
+        jacobian.local.aa[] = 0.0;
+        version(complex_numbers) {
+            // do nothing
+        } else {
+            // the real-valued finite difference needs a base residual (R0)
+            foreach(cell; cells) { evalRHS(myConfig.dimensions, 0, 0, cell.cell_list, cell.face_list, cell); }
+        }
+
+        // construct the Jacobian
+        foreach (cell; cells) { evaluate_cell_contribution_to_jacobian(cell); }
+
+        // TODO: add boundary condition corrections to boundary cells
+
+    } // end evaluate_jacobian()
+
+    void evaluate_cell_contribution_to_jacobian(SolidFVCell pcell)
+    {
+        int dim = myConfig.dimensions;
+        int ftl = 2; int gtl = 0;
+        auto eps0 = jacobian.eps;
+        number eps;
+
+        // save a copy of the original cell state
+        number T_save = pcell.T;
+        number e_save = pcell.e[0];
+
+        // perturb the current cell conserved quantities and then evaluate
+        // the residuals for each cell in the local domain of influence
+        version(complex_numbers) { eps = complex(0.0, eps0.re); }
+        else { eps = eps0*fabs(pcell.e[0]) + eps0; }
+        pcell.e[ftl] = pcell.e[0];
+        pcell.e[ftl] += eps;
+        pcell.T = updateTemperature(pcell.sp, pcell.e[ftl]);
+
+        // evaluate perturbed residuals in local stencil
+        evalRHS(dim, gtl, ftl, pcell.cell_list, pcell.face_list, pcell);
+
+        // fill local Jacobian entries
+        foreach (cell; pcell.cell_list) {
+            version(complex_numbers) {
+                cell.dRde = cell.dedt[ftl].im/eps.im;
+            } else {
+                cell.dRde = (cell.dedt[ftl]-cell.dedt[0])/eps;
+            }
+        }
+
+        // clear imaginary components
+        version (complex_numbers) {
+            foreach (cell; pcell.cell_list) {
+                cell.clear_imaginary_components();
+            }
+        } else {
+            pcell.T = T_save;
+            pcell.e[0] = e_save;
+            evalRHS(dim, gtl, ftl, pcell.cell_list, pcell.face_list, pcell);
+        }
+
+        // we now populate the pre-sized sparse matrix representation of the Jacobian
+        foreach(cell; pcell.cell_list) {
+            assert(!cell.is_ghost, "Oops, we expect to not find a ghost cell at this point.");
+            size_t I = cell.id;
+            size_t J = pcell.id;
+            jacobian.local[I,J] = cell.dRde.re;
+        }
+    } // end evaluate_cell_contribution_to_jacobian()
+
+    void evalRHS(int dim, int gtl, int ftl, ref SolidFVCell[] cell_list, SolidFVInterface[] iface_list, SolidFVCell pcell)
+    {
+        // This routine evaluates the RHS residual on a subset of cells in the SolidBlock.
+        // It is used when constructing the numerical Jacobian.
+        // Its effect should replicate evalRHS() in solid_loose_coupling_update.d.
+
+        // average T at cell interfaces
+        foreach (f; iface_list) {
+            f.averageTemperature();
+        }
+
+        // apply BCs
+        foreach(f; iface_list) {
+            if (f.is_on_boundary) { applyPreSpatialDerivActionAtBndryFaces(0.0, 0, f); }
+        }
+
+        // compute lsq gradient
+        foreach(cell; cell_list) {
+            gradients_T_lsq(cell, dim);
+        }
+
+        // evaluate fluxes
+        foreach (f; iface_list) {
+            f.averageTGradient();
+            if (myConfig.solid_domain_augmented_deriv_avg) {
+                f.augmentTGradient();
+            }
+            bool flux_already_set = f.is_on_boundary && bc[f.bc_id].setsFluxDirectly;
+            if (!flux_already_set) {
+                f.computeFlux(myConfig.dimensions, myConfig.solid_has_isotropic_properties);
+            }
+        }
+
+        // apply BCs
+        foreach(f; iface_list) {
+            if (f.is_on_boundary) { applyPostFluxAction(0.0, 0, f); }
+        }
+
+        // sum fluxes
+        foreach(cell; cell_list) {
+            cell.timeDerivatives(ftl, dim);
+        }
+
+    } // end evalRHS()
 }
 
 @nogc

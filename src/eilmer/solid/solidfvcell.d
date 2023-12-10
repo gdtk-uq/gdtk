@@ -14,6 +14,7 @@ import std.string;
 import std.array;
 import std.format;
 import std.math;
+import std.algorithm;
 import ntypes.complex;
 import nm.number;
 import geom;
@@ -50,6 +51,11 @@ public:
     number dTdy;
     number dTdz;
     bool is_ghost = true;
+    // list of cells and faces in the residual stencil
+    SolidFVCell[] cell_list;
+    SolidFVInterface[] face_list;
+    // storage for local Jacobian entry
+    double dRde;
 
 private:
     LocalConfig myConfig;
@@ -372,16 +378,96 @@ public:
             throw new FlowSolverException(msg);
         }
     }
+
+    void gather_residual_stencil_lists(int spatial_order_of_jacobian)
+    {
+        /*
+          This function gathers the interfaces and cells that make up the residual stencil.
+          These stencils are used in constructing the residual/flux Jacobian.
+          The stencils can be thought of in terms of what neighbouring cells will have perturbed
+          residuals in the event this cells conserved quantities are perturbed.
+
+          Note that we need the cells to be in numerical order according to their local id for
+          entry into the flow Jacobian later.
+
+          We expect the spatial_order_of_jacobian will either be:
+          -1 : include just this cell (i.e. we will later form only the diagonal components of the Jacobian)
+          0  : include nearest neighbours (approximate Jacobian)
+          2  : include full stencil
+         */
+
+        SolidFVCell[] unordered_cell_list;  // TODO: think about possibly pre-sizing this array
+        size_t[size_t] cell_pos_array;      // this is used to retrieve a cell from the unordered list
+
+        // always add this cell
+        size_t[] cell_ids;
+        unordered_cell_list ~= this;
+        cell_pos_array[this.id] = unordered_cell_list.length-1;
+        cell_ids ~= this.id;
+        bool nearest_neighbours = false;
+        if ( spatial_order_of_jacobian >= 0) { nearest_neighbours = true; }
+
+        if (nearest_neighbours) {
+            foreach(f; iface) {
+                foreach (cell; [f.cellLeft, f.cellRight]) {
+                    bool cell_exists = cell_ids.canFind(cell.id);
+                    if (!cell_exists && cell.id < 1_000_000_000) {
+                        unordered_cell_list ~= cell;
+                        cell_pos_array[cell.id] = unordered_cell_list.length-1;
+                        cell_ids ~= cell.id;
+                    }
+                }
+            }
+        } // end if (nearest_neighbours)
+
+        bool extended_neighbours = false;
+        if ( nearest_neighbours && spatial_order_of_jacobian > 0) { extended_neighbours = true; }
+
+        if (extended_neighbours) {
+            size_t np = unordered_cell_list.length;
+            foreach (idx; 1 .. np) {
+                foreach(f; unordered_cell_list[idx].iface) {
+                    foreach (cell; [f.cellLeft, f.cellRight]) {
+                        bool cell_exists = cell_ids.canFind(cell.id);
+                        if (!cell_exists && cell.id < 1_000_000_000) {
+                            unordered_cell_list ~= cell;
+                            cell_pos_array[cell.id] = unordered_cell_list.length-1;
+                            cell_ids ~= cell.id;
+                        }
+                    }
+                }
+            }
+        } // end if (extended_neighbours)
+
+        // now sort the cells
+        cell_ids.sort();
+        foreach (id; cell_ids) { cell_list ~= unordered_cell_list[cell_pos_array[id]]; }
+
+        // gather the interfaces of those cells
+        size_t[] face_ids;
+        foreach (cell; cell_list) {
+            foreach (face; cell.iface) {
+                bool face_exists = face_ids.canFind(face.id);
+                if (!face_exists) {
+                    face_list ~= face;
+                    face_ids ~= face.id;
+                }
+            }
+        } // finished gathering faces
+
+    } // end gather_residual_stencil_lists()
+
     version(complex_numbers) {
         @nogc void clear_imaginary_components()
-        // When performing the complex-step Frechet derivative in the Newton-Krylov accelerator,
-        // the flowstate values accumulate imaginary components, so we have to start with a clean slate, so to speak.
+        // When performing complex-step differentiation the variables used in the flux evaluation accumulate imaginary components,
+        // this routine clears out these components so that we start with a clean slate, so to speak.
         {
-            e[0].im = 0.0;
-            e[1].im = 0.0;
-            dedt[0].im = 0.0;
-            dedt[1].im = 0.0;
+            foreach (i; 0 .. e.length) { e[i].im = 0.0; }
+            foreach (i; 0 .. dedt.length) { dedt[i].im = 0.0; }
             T.im = 0.0;
+            dTdx.im = 0.0;
+            dTdy.im = 0.0;
+            dTdz.im = 0.0;
             foreach (face; iface) {
                 face.T.im = 0.0;
                 face.e.im = 0.0;

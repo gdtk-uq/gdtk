@@ -240,6 +240,8 @@ int main(string[] args)
         foreach (sblk; localSolidBlocks) { sblk.allocate_GMRES_workspace(); }
     }
 
+    // verify_jacobian();
+
     // read .cht JSON file
     int npoints, super_time_steps, n_startup_steps;
     bool constant_freestream, warm_start_fluid_solve, init_precondition_matrix;

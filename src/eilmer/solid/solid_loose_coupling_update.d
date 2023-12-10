@@ -35,6 +35,7 @@ import solid_udf_source_terms;
 import solidprops;
 import simcore_io;
 import simcore;
+import ssolidblock;
 
 version(mpi_parallel) {
     import mpi;
@@ -540,3 +541,88 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     }
 }
 
+void verify_jacobian() {
+    // This routine performs a verification of the numerical Jacobian implementation.
+    // It does this by first constructing a numerical Jacobian and a test vector and
+    // then comparing the output of an explicit matrix-vector product of the Jacobian
+    // and test vector to the output of a Frechet derivative using the test vector.
+
+    // check we are only operating with a single solid block (we expect 1 FluidBlock and 1 SolidBlock)
+    if (GlobalConfig.nBlocks > 2) {
+        throw new Error("ERROR: the solid domain Jacobian verification routine currently only operates on a single solid block.");
+    }
+    SSolidBlock sblk = localSolidBlocks[0];
+
+    // perturbation parameter used in numerical Jacobian construction and Frechet derivative evaluation
+    double eps = 1.0e-50;
+
+    // we perform a residual evaluation to ensure the ghost cells are filled with good data
+    evalRHS(0.0, 0);
+
+    // calculate the numerical Jacobian
+    int spatial_order = 2;
+    sblk.initialize_jacobian(spatial_order, eps);
+    // write out some intermediate information about the cell and face stencils
+    foreach (cell; sblk.cells) {
+        writef("cell: %d    cell_list: %d    face_list: %d \n", cell.id, cell.cell_list.length, cell.face_list.length);
+    }
+    sblk.evaluate_jacobian();
+
+    // create an arbitrary unit vector
+    double[] vec;
+    vec.length = sblk.cells.length;
+    foreach ( i, ref val; vec) { val = i+1; }
+
+    // normalise the vector
+    double norm = 0.0;
+    foreach( i; 0..vec.length) { norm += vec[i]*vec[i]; }
+    norm = sqrt(norm);
+    foreach( ref val; vec) { val = val/norm; }
+
+    // prepare the result vectors
+    double[] sol1;
+    sol1.length = vec.length;
+    double[] sol2;
+    sol2.length = vec.length;
+
+    // explicit multiplication of J*vec
+    nm.smla.multiply(sblk.jacobian.local, vec, sol1);
+
+    // Frechet derivative of J*vec
+    evalRHS(0.0, 0);
+    evalJacobianVecProd(eps, vec, sol2);
+
+    // write out results
+    string fileName = "jacobian_test.output";
+    auto outFile = File(fileName, "w");
+    foreach( i; 0..vec.length ) {
+        outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", i, fabs((sol1[i]-sol2[i])/sol1[i]).re, fabs(sol1[i]-sol2[i]).re, sol1[i].re, sol2[i].re);
+    }
+
+    // stop the program at this point
+    import core.stdc.stdlib : exit;
+    exit(0);
+} // end verify_jacobian
+
+void evalJacobianVecProd(double eps, double[] vec, ref double[] sol) {
+    SSolidBlock sblk = localSolidBlocks[0];
+    version(complex_numbers) {
+        // We perform a Frechet derivative to evaluate J*D^(-1)v
+        sblk.clearSources();
+        foreach (i, cell; sblk.cells) {
+            cell.e[2] = cell.e[0];
+            cell.e[2] += complex(0.0, eps*vec[i].re);
+            cell.T = updateTemperature(cell.sp, cell.e[2]);
+        }
+        evalRHS(0.0, 2);
+        foreach (i, cell; sblk.cells) {
+            sol[i] = cell.dedt[2].im/eps;
+        }
+        // we must explicitly remove the imaginary components from the cell and interface flowstates
+        foreach(i, cell; sblk.cells) {
+            cell.clear_imaginary_components();
+        }
+    } else {
+        throw new Error("ERROR: the Jacobian verification test is currently only implemented for the complex-number code path.");
+    }
+}

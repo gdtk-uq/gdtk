@@ -27,6 +27,7 @@ import solidfvinterface;
 import solidbc;
 import solidprops;
 import block;
+import jacobian;
 
 import nm.number;
 import ntypes.complex;
@@ -43,6 +44,8 @@ public:
     SolidFVCell[] cells; // collection of references to active cells in the domain
     SolidFVInterface[] faces; // collection of references to active faces in the domain
     SolidBoundaryCondition[] bc; // collection of references to boundary conditions
+
+    FlowJacobian jacobian; // storage space for a Jacobian matrix
 
     version(nk_accelerator)
     {
