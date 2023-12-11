@@ -265,7 +265,7 @@ void broadcastRestartInfo(ref RestartInfo[] times){
 
 } // end version(mpi_parallel)
 
-void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITask, bool include_solid_domain = true, bool init_precondition_matrix = true)
+void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITask, bool init_precondition_matrix = true)
 {
     auto wallClockStart = Clock.currTime();
     string jobName = GlobalConfig.base_file_name;
@@ -968,9 +968,6 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs, int threadsPerMPITa
                     swap(cell.U[0], cell.U[ftl]);
                 }
             }
-
-            // after a successful fluid domain update, proceed to perform a solid domain update
-            if (include_solid_domain && localSolidBlocks.length > 0) { solid_update(step, simTime, cfl, eta, sigma); }
 
             pseudoSimTime += dt;
             wallClockElapsed = 1.0e-3*(Clock.currTime() - wallClockStart).total!"msecs"();

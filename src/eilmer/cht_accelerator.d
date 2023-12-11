@@ -230,23 +230,16 @@ int main(string[] args)
         return exitFlag;
     }
 
-    bool include_solid_domain_in_nk_solve = false;
-
-    // Additional memory allocation specific to steady-state solver
-    allocate_global_fluid_workspace();
-    foreach (blk; localFluidBlocks) { blk.allocate_GMRES_workspace(); }
-    if (include_solid_domain_in_nk_solve) {
-        allocate_global_solid_workspace();
-        foreach (sblk; localSolidBlocks) { sblk.allocate_GMRES_workspace(); }
-    }
 
     // verify_jacobian();
 
     // read .cht JSON file
+    string solid_time_integration;
     int npoints, super_time_steps, n_startup_steps;
     bool constant_freestream, warm_start_fluid_solve, init_precondition_matrix;
     double dt_couple_max, dt_couple_init;
     JSONValue jsonData     = readJSONfile(jobName~".cht");
+    solid_time_integration = getJSONstring(jsonData, "solid_time_integration", "");
     npoints                = to!int(jsonData["npoints"].integer);
     constant_freestream    = jsonData["constant_freestream"].boolean;
     warm_start_fluid_solve = jsonData["warm_start_fluid_solve"].boolean;
@@ -254,6 +247,10 @@ int main(string[] args)
     dt_couple_max          = jsonData["dt_couple_max"].floating;
     dt_couple_init         = jsonData["dt_couple_init"].floating;
     n_startup_steps        = to!int(jsonData["n_startup_steps"].integer);
+
+    if (solid_time_integration != "explicit" && solid_time_integration != "implicit") {
+        throw new Error("ERROR: incorrect solid_time_integration method selected, please choose either implicit or explicit.");
+    }
 
     if (n_startup_steps > npoints) {
         if (GlobalConfig.is_master_task) {
@@ -263,6 +260,17 @@ int main(string[] args)
         }
         exitFlag = 1;
         return exitFlag;
+    }
+
+    // Additional memory allocation specific to steady-state solver
+    allocate_global_fluid_workspace();
+    foreach (blk; localFluidBlocks) { blk.allocate_GMRES_workspace(); }
+    if (solid_time_integration == "implicit") {
+        if (GlobalConfig.is_master_task) {
+            writeln("Allocating memory for Newton-Krylov solver in solid domain...");
+        }
+        allocate_global_solid_workspace();
+        foreach (sblk; localSolidBlocks) { sblk.allocate_GMRES_workspace(); }
     }
 
     // bootstrap the coupled boundary condition by sending the initial solid temperature to the fluid domain
@@ -310,7 +318,7 @@ int main(string[] args)
         }
 
         // fluid domain solver
-        iterate_to_steady_state(snapshotStart, maxCPUs, threadsPerMPITask, include_solid_domain_in_nk_solve, init_precondition_matrix);
+        iterate_to_steady_state(snapshotStart, maxCPUs, threadsPerMPITask, init_precondition_matrix);
         if (GlobalConfig.is_master_task) {
             // save a copy of the steady-state solver diagnostics file
             string file_name = "e4-nk.diagnostics.dat";
@@ -328,7 +336,13 @@ int main(string[] args)
         send_gas_domain_boundary_heat_flux_data_to_solid_domain();
 
         // solid domain solver
-        integrate_solid_in_time(super_time_steps, dt_couple);
+        if (solid_time_integration == "explicit") {
+            integrate_solid_in_time_explicit(super_time_steps, dt_couple);
+        } else if (solid_time_integration == "implicit") {
+            integrate_solid_in_time_implicit(dt_couple, 10000, init_precondition_matrix);
+        } else {
+            throw new Error("ERROR: incorrect solid_time_integration method selected, please choose either implicit or explicit.");
+        }
 
         // transfer temperature data from solid domain to fluid domain (Temperature Back)
         send_solid_domain_boundary_temperature_data_to_gas_domain();

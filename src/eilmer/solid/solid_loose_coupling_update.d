@@ -58,7 +58,8 @@ Matrix!double Q1;
 @nogc
 double determine_dt(double cfl_value)
 {
-    double dt_local, dt;
+    double dt = double.max;
+    double dt_local = double.max;
     bool first = true;
     foreach (sblk; localSolidBlocks) {
         dt_local = sblk.determine_time_step_size(cfl_value);
@@ -72,7 +73,7 @@ double determine_dt(double cfl_value)
     return dt;
 } // end determine_dt
 
-void integrate_solid_in_time(int super_time_steps, double dt_couple)
+void integrate_solid_in_time_explicit(int super_time_steps, double dt_couple)
 {
     GlobalConfig.max_time = dt_couple;
     SimState.s_RKL = super_time_steps;
@@ -82,36 +83,105 @@ void integrate_solid_in_time(int super_time_steps, double dt_couple)
     foreach (blk; parallel(localFluidBlocks,1)) { blk.active = true; }
 }
 
-void solid_update(int step, double pseudoSimTime, double cfl, double eta, double sigma)
+void integrate_solid_in_time_implicit(double dt_couple, double cfl, bool init_precondition_matrix)
 {
-    // determine the allowable timestep
-    double dt = determine_dt(cfl);
-    version(mpi_parallel) {
-        MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-    }
+    // set some time parameters
+    int temporal_order = 1;
+    int startStep = 0;
+    int nSteps = 10000;
+    bool dual_time_stepping = true;
+    double target_physical_time = dt_couple;
+    double physicalSimTime = 0.0;
+    double dt_physical = GlobalConfig.dt_init;
+    int physical_step = 0;
+    double residual = 0.0;
 
-    // transfer data between solid and fluid domains before performing the solid domain update
-    exchange_ghost_cell_gas_solid_boundary_data();
+    double eta = 0.1;
+    double sigma = 1.0e-50;
+    double tol = 1.0e08;
 
-    // implicit solid update
-    rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma);
+    // fill out all entries in the conserved quantity vector with the initial state
     foreach (sblk; parallel(localSolidBlocks,1)) {
         foreach (i, scell; sblk.cells) {
-            scell.e[1] = scell.e[0] + sblk.de[i];
-            scell.T = updateTemperature(scell.sp, scell.e[1]);
+            foreach (ftl; 0..sblk.myConfig.n_flow_time_levels) {
+                scell.e[ftl] = scell.e[0];
+            }
         }
     }
 
-    // Put new solid state into e[0] ready for next iteration.
-    foreach (sblk; parallel(localSolidBlocks,1)) {
-        foreach (scell; sblk.cells) {
-            scell.e[0] = scell.e[1];
+    // initialize the precondition matrix
+    if (init_precondition_matrix) {
+        double eps = 1.0e-50;
+        int spatial_order = 0;
+        evalRHS(0.0, 0); // ensure the ghost cells are filled with good data
+        foreach (sblk; parallel(localSolidBlocks,1)) {
+            sblk.initialize_jacobian(spatial_order, eps);
         }
     }
 
-    // transfer data between solid and fluid domains after updating the solid domain
-    exchange_ghost_cell_gas_solid_boundary_data();
-    return;
+    // start of main time-stepping loop
+    while (physicalSimTime < target_physical_time) {
+        if (GlobalConfig.is_master_task) {
+            writeln("time: ", physicalSimTime, ", ", dt_physical);
+        }
+        // we need to evaluate time-dependent boundary conditions and source terms
+        // at the future state, so we update the time at the start of a step
+        physicalSimTime += dt_physical;
+        physical_step += 1;
+
+        // determine the allowable timestep
+        double dt = determine_dt(cfl);
+        version(mpi_parallel) {
+            MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+        }
+
+        // Begin Newton steps ...
+        foreach (step; startStep .. nSteps+1) {
+            SimState.step = step;
+
+            // implicit solid update
+            rpcGMRES_solve(step, physicalSimTime, dt, eta, sigma, dual_time_stepping, temporal_order, dt_physical, residual);
+            foreach (sblk; parallel(localSolidBlocks,1)) {
+                foreach (i, scell; sblk.cells) {
+                    scell.e[2] = scell.e[0] + sblk.de[i];
+                    scell.T = updateTemperature(scell.sp, scell.e[2]);
+                }
+            }
+
+            // Put new solid state into e[0] ready for next iteration.
+            foreach (sblk; parallel(localSolidBlocks,1)) {
+                foreach (scell; sblk.cells) {
+                    swap(scell.e[0],scell.e[2]);
+                }
+            }
+
+            if (GlobalConfig.is_master_task) {
+                writeln("residual: ", residual);
+            }
+            if (residual < tol) { break; }
+        }
+
+        startStep = SimState.step+1;
+
+        // shuffle conserved quantities:
+        if (temporal_order == 1) {
+            foreach (sblk; parallel(localSolidBlocks,1)) {
+                foreach (scell; sblk.cells) {
+                    // U_n+1 => U_n
+                    scell.e[1] = scell.e[0];
+                }
+            }
+        } else { // temporal_order == 2
+            foreach (sblk; parallel(localSolidBlocks,1)) {
+                foreach (scell; sblk.cells) {
+                    // U_n => U_n-1
+                    scell.e[2] = scell.e[1];
+                    // U_n+1 => U_n
+                    scell.e[1] = scell.e[0];
+                }
+            }
+        }
+    }
 }
 
 void allocate_global_solid_workspace()
@@ -128,19 +198,18 @@ void allocate_global_solid_workspace()
     Q1 = new Matrix!double(mOuter+1, mOuter+1);
 }
 
-
-void evalRHS(double pseudoSimTime, int ftl)
+void evalRHS(double sim_time, int ftl)
 {
     fnCount++;
 
     exchange_ghost_cell_solid_boundary_data();
 
     foreach (sblk; localSolidBlocks) {
-        sblk.applyPreSpatialDerivActionAtBndryFaces(SimState.time, ftl);
+        sblk.applyPreSpatialDerivActionAtBndryFaces(sim_time, ftl);
     }
 
     foreach (sblk; localSolidBlocks) {
-        sblk.applyPreSpatialDerivActionAtBndryCells(SimState.time, ftl);
+        sblk.applyPreSpatialDerivActionAtBndryCells(sim_time, ftl);
     }
 
     foreach (sblk; parallel(localSolidBlocks, 1)) {
@@ -150,6 +219,7 @@ void evalRHS(double pseudoSimTime, int ftl)
     }
 
     exchange_ghost_cell_solid_boundary_data();
+    exchange_ghost_cell_gas_solid_boundary_data();
 
     foreach (sblk; parallel(localSolidBlocks, 1)) {
         sblk.averageTGradients();
@@ -157,20 +227,19 @@ void evalRHS(double pseudoSimTime, int ftl)
     }
 
     foreach (sblk; localSolidBlocks) {
-        sblk.applyPostFluxAction(SimState.time, ftl);
+        sblk.applyPostFluxAction(sim_time, ftl);
     }
 
     foreach (sblk; parallel(localSolidBlocks, 1)) {
         foreach (scell; sblk.cells) {
             if (GlobalConfig.udfSolidSourceTerms) {
-                addUDFSourceTermsToSolidCell(sblk.myL, scell, SimState.time, sblk);
+                addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time, sblk);
             }
             scell.timeDerivatives(ftl, GlobalConfig.dimensions);
         }
     }
 
 } // end evalRHS
-
 
 void evalMatVecProd(double pseudoSimTime, double sigma)
 {
@@ -180,22 +249,23 @@ void evalMatVecProd(double pseudoSimTime, double sigma)
         foreach (sblk; parallel(localSolidBlocks,1)) {
             sblk.clearSources();
             foreach (i, scell; sblk.cells) {
-                scell.e[1] = scell.e[0];
-                scell.e[1] += complex(0.0, sigma*sblk.zed[i].re);
-                scell.T = updateTemperature(scell.sp, scell.e[1]);
+                scell.e[2] = scell.e[0];
+                scell.e[2] += complex(0.0, sigma*sblk.zed[i].re);
+                scell.T = updateTemperature(scell.sp, scell.e[2]);
             }
         }
 
-        evalRHS(pseudoSimTime, 1);
+        evalRHS(pseudoSimTime, 2);
 
         foreach (sblk; parallel(localSolidBlocks,1)) {
             foreach (i, scell; sblk.cells) {
-                sblk.zed[i] = scell.dedt[1].im/(sigma);
+                sblk.zed[i] = scell.dedt[2].im/(sigma);
             }
             // we must explicitly remove the imaginary components from the cell and interface flowstates
             foreach(i, scell; sblk.cells) {
                 scell.clear_imaginary_components();
             }
+
         }
     } else {
         throw new Error("Oops. Steady-State Solver setting: useComplexMatVecEval is not compatible with real-number version of the code.");
@@ -216,7 +286,8 @@ foreach (sblk; localSolidBlocks) `~dot~` += sblk.dotAcc;`;
 
 }
 
-void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, double sigma)
+void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, double sigma,
+                    bool dual_time_stepping, int temporal_order, double dt_physical, ref double residual)
 {
     number resid;
     int maxIters = GlobalConfig.sssOptions.maxOuterIterations;
@@ -243,7 +314,20 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         int cellCount = 0;
         sblk.maxRate = 0.0;
         foreach (i, scell; sblk.cells) {
-            sblk.Fe[cellCount] = scell.dedt[0].re;
+            if (temporal_order == 0) {
+                sblk.Fe[cellCount] = scell.dedt[0].re;
+            } else if (temporal_order == 1) {
+                // add BDF1 unsteady term TODO: could we need to handle this better?
+                sblk.Fe[cellCount] = scell.dedt[0].re - (1.0/dt_physical)*scell.e[0].re + (1.0/dt_physical)*scell.e[1].re;
+            } else { // temporal_order = 2
+                // add BDF2 unsteady term TODO: could we need to handle this better?
+                // compute BDF2 coefficients for the adaptive time-stepping implementation
+                // note that for a fixed time-step, the coefficients should reduce down to the standard BDF2 coefficients, i.e. c1 = 3/2, c2 = 2, and c3 = 1/2
+                double c1 = 1.5*dt_physical;
+                double c2 = 2.0/dt_physical;
+                double c3 = 0.5*dt_physical;
+                sblk.Fe[cellCount] = scell.dedt[0].re - c1*scell.e[0].re + c2*scell.e[1].re - c3*scell.e[2].re;
+            }
             cellCount += 1;
             sblk.maxRate = fmax(sblk.maxRate, fabs(scell.dedt[0].re));
         }
@@ -279,6 +363,25 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         MPI_Allreduce(MPI_IN_PLACE, &unscaledNorm2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
     unscaledNorm2 = sqrt(unscaledNorm2);
+
+    // evaluate precondition matrix
+    foreach (sblk; parallel(localSolidBlocks,1)) {
+        sblk.evaluate_jacobian();
+        foreach ( ref entry; sblk.jacobian.local.aa) { entry *= -1; }
+        foreach (cell; sblk.cells) {
+            double dtInv = 1.0/dt;
+            if (dual_time_stepping) {
+                if (temporal_order == 1) {
+                    dtInv = dtInv + 1.0/dt_physical;
+                } else {
+                    double dtInv_physical  = 1.5/dt_physical;
+                    dtInv = dtInv + dtInv_physical;
+                }
+            }
+            sblk.jacobian.local[cell.id,cell.id] = sblk.jacobian.local[cell.id,cell.id] + dtInv;
+        }
+        nm.smla.decompILU0(sblk.jacobian.local);
+    }
 
     // Initialise some arrays and matrices that have already been allocated
     g0[] = 0.0;
@@ -333,8 +436,12 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             }
 
             // TODO: apply preconditioning here
+            //foreach (sblk; parallel(localSolidBlocks,1)) {
+            //    sblk.zed[] = sblk.v[];
+            //}
             foreach (sblk; parallel(localSolidBlocks,1)) {
                 sblk.zed[] = sblk.v[];
+                nm.smla.solve(sblk.jacobian.local, sblk.zed);
             }
 
             // Prepare 'w' with (I/dt)(P^-1)v term;
@@ -344,6 +451,14 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                         ulong idx = i*1 + k;
                         double dtInv;
                         dtInv = 1.0/(dt);
+                        if (dual_time_stepping) {
+                            if (temporal_order == 1) {
+                                dtInv = dtInv + 1.0/dt_physical;
+                            } else {
+                                double dtInv_physical  = 1.5/dt_physical;
+                                dtInv = dtInv + dtInv_physical;
+                            }
+                        }
                         sblk.w[idx] = dtInv*sblk.zed[idx];
                     }
                 }
@@ -465,8 +580,12 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         }
 
         // TODO: apply preconditioning here
+        //foreach(sblk; parallel(localSolidBlocks,1)) {
+        //    sblk.de[] = sblk.zed[];
+        //}
         foreach(sblk; parallel(localSolidBlocks,1)) {
             sblk.de[] = sblk.zed[];
+            nm.smla.solve(sblk.jacobian.local, sblk.de);
         }
 
         foreach (sblk; parallel(localSolidBlocks,1)) {
@@ -528,13 +647,14 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         g0[0] = beta;
 
     }
-
     if (GlobalConfig.is_master_task) {
+        writeln(r, ", ", iterCount);
         // TODO: handle this output in a more production-ready way
         auto outFile = File("e4-nk.solid.diagnostics.dat", "a");
         outFile.writef("%d %.16e %.16e \n", step, dt, unscaledNorm2);
         outFile.close();
     }
+    residual = unscaledNorm2;
 }
 
 void verify_jacobian() {
