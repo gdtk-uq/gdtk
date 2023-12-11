@@ -1130,6 +1130,30 @@ public:
                 // in the final phase.
             }
         } else { // not mpi_parallel
+            foreach (i, c; myBC.gasCells) {
+                // compute the heat flux at interface on fluid/solid coupled boundary
+                number q_solid;
+                number T_solid;
+                foreach(fi, f; c.iface) {
+                    // TODO: This approach only works if a cell has only one face on the coupled boundary.
+                    //       It might be worth thinking of a more robust solution. KAD 2022-11-08
+                    if (f.is_on_boundary && f.bc_id == myBC.which_boundary) {
+                        q_solid = compute_heat_flux_into_solid(f, c.outsign[fi]);
+                        T_solid = f.fs.gas.T;
+                    }
+                }
+                if (this_blk.myConfig.fluid_solid_bc_use_heat_transfer_coeff) {
+                    // calculate Stanton number
+                    number dT = c.fs.gas.T - T_solid;
+                    number htc = q_solid/dT;
+                    if (fabs(dT) < 1.0) { htc = 0.0; } // improves robustness
+                    myBC.gasCells[i].heat_transfer_into_solid = htc.re;
+                    myBC.gasCells[i].fs.gas.T = c.fs.gas.T.re;
+                } else {
+                    myBC.gasCells[i].heat_transfer_into_solid = q_solid.re;
+                    myBC.gasCells[i].fs.gas.T = c.fs.gas.T.re;
+                }
+            }
             // For a single process,
             // we know that we can just access the data directly
             // in the final phase.
