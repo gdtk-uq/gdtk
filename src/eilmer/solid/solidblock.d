@@ -52,16 +52,14 @@ public:
         // Work-space for Newton-Krylov accelerator
         // These arrays and matrices are directly tied to using the
         // GMRES iterative solver.
-        SMatrix!number JcT; // transposed Jacobian (w.r.t conserved variables)
-        number maxRate, residuals;
+        double maxRate, residuals;
         double normAcc, dotAcc;
         size_t nvars;
-        Matrix!number Minv;
-        number[] Fe, de, Dinv, r0, x0;
-        number[] v, w, zed;
-        number[] g0, g1;
-        Matrix!number Q1;
-        Matrix!number V;
+        double[] Fe, de, Dinv, r0, x0;
+        double[] v, w, zed;
+        double[] g0, g1;
+        Matrix!double Q1;
+        Matrix!double V;
     }
 
     this(int id, string label)
@@ -105,7 +103,7 @@ public:
         nvars = n;
         // Now allocate arrays and matrices
         Fe.length = n;
-        de.length = n; de[] = to!number(0.0);
+        de.length = n; de[] = 0.0;
         r0.length = n;
         x0.length = n;
         Dinv.length = n;
@@ -116,12 +114,12 @@ public:
         g1.length = mOuter+1;
         //h_outer.length = mOuter+1;
         //hR_outer.length = mOuter+1;
-        V = new Matrix!number(n, mOuter+1);
+        V = new Matrix!double(n, mOuter+1);
         //H0_outer = new Matrix!number(mOuter+1, mOuter);
         //H1_outer = new Matrix!number(mOuter+1, mOuter);
         //Gamma_outer = new Matrix!number(mOuter+1, mOuter+1);
         //Q0_outer = new Matrix!number(mOuter+1, mOuter+1);
-        Q1 = new Matrix!number(mOuter+1, mOuter+1);
+        Q1 = new Matrix!double(mOuter+1, mOuter+1);
     }
     }
 }

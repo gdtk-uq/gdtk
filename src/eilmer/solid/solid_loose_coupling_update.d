@@ -45,15 +45,15 @@ version(mpi_parallel) {
 static int fnCount = 0;
 
 // Module-local, global memory arrays and matrices
-number[] g0;
-number[] g1;
-number[] h;
-number[] hR;
-Matrix!number H0;
-Matrix!number H1;
-Matrix!number Gamma;
-Matrix!number Q0;
-Matrix!number Q1;
+double[] g0;
+double[] g1;
+double[] h;
+double[] hR;
+Matrix!double H0;
+Matrix!double H1;
+Matrix!double Gamma;
+Matrix!double Q0;
+Matrix!double Q1;
 
 @nogc
 double determine_dt(double cfl_value)
@@ -121,11 +121,11 @@ void allocate_global_solid_workspace()
     g1.length = mOuter+1;
     h.length = mOuter+1;
     hR.length = mOuter+1;
-    H0 = new Matrix!number(mOuter+1, mOuter);
-    H1 = new Matrix!number(mOuter+1, mOuter);
-    Gamma = new Matrix!number(mOuter+1, mOuter+1);
-    Q0 = new Matrix!number(mOuter+1, mOuter+1);
-    Q1 = new Matrix!number(mOuter+1, mOuter+1);
+    H0 = new Matrix!double(mOuter+1, mOuter);
+    H1 = new Matrix!double(mOuter+1, mOuter);
+    Gamma = new Matrix!double(mOuter+1, mOuter+1);
+    Q0 = new Matrix!double(mOuter+1, mOuter+1);
+    Q1 = new Matrix!double(mOuter+1, mOuter+1);
 }
 
 
@@ -243,13 +243,13 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         int cellCount = 0;
         sblk.maxRate = 0.0;
         foreach (i, scell; sblk.cells) {
-            sblk.Fe[cellCount] = scell.dedt[0];
+            sblk.Fe[cellCount] = scell.dedt[0].re;
             cellCount += 1;
-            sblk.maxRate = fmax(sblk.maxRate, fabs(scell.dedt[0]));
+            sblk.maxRate = fmax(sblk.maxRate, fabs(scell.dedt[0].re));
         }
     }
 
-    number maxRate = 0.0;
+    double maxRate = 0.0;
     foreach (sblk; localSolidBlocks) {
         maxRate = fmax(maxRate, sblk.maxRate);
     }
@@ -281,8 +281,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     unscaledNorm2 = sqrt(unscaledNorm2);
 
     // Initialise some arrays and matrices that have already been allocated
-    g0[] = to!number(0.0);
-    g1[] = to!number(0.0);
+    g0[] = 0.0;
+    g1[] = 0.0;
     H0.zeros();
     H1.zeros();
 
@@ -291,7 +291,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     // Taking x0 = [0] (as is common) gives r0 = b = FU
     // apply scaling
     foreach (sblk; parallel(localSolidBlocks,1)) {
-        sblk.x0[] = to!number(0.0);
+        sblk.x0[] = 0.0;
         int cellCount = 0;
         foreach (scell; sblk.cells) {
             sblk.r0[cellCount] = (1./sblk.maxRate)*sblk.Fe[cellCount];
@@ -300,11 +300,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     }
 
     // Then compute v = r0/||r0||
-    number beta;
+    double beta;
     mixin(dot_over_blocks("beta", "r0", "r0"));
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
     }
     beta = sqrt(beta);
     g0[0] = beta;
@@ -343,7 +342,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 foreach (i, cell; sblk.cells) {
                     foreach (k; 0..1) {
                         ulong idx = i*1 + k;
-                        number dtInv;
+                        double dtInv;
                         dtInv = 1.0/(dt);
                         sblk.w[idx] = dtInv*sblk.zed[idx];
                     }
@@ -374,22 +373,20 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     // Extract column 'i'
                     foreach (k; 0 .. sblk.nvars ) sblk.v[k] = sblk.V[k,i];
                 }
-                number H0_ij;
+                double H0_ij;
                 mixin(dot_over_blocks("H0_ij", "w", "v"));
                 version(mpi_parallel) {
                     MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
                 }
                 H0[i,j] = H0_ij;
                 foreach (sblk; parallel(localSolidBlocks,1)) {
                     foreach (k; 0 .. sblk.nvars) sblk.w[k] -= H0_ij*sblk.v[k];
                 }
             }
-            number H0_jp1j;
+            double H0_jp1j;
             mixin(dot_over_blocks("H0_jp1j", "w", "w"));
             version(mpi_parallel) {
                 MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
             }
             H0_jp1j = sqrt(H0_jp1j);
             H0[j+1,j] = H0_jp1j;
@@ -425,7 +422,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 copy(Gamma, Q1);
             }
             else {
-                nm.bbla.dot!number(Gamma, j+2, j+2, Q0, j+2, Q1);
+                nm.bbla.dot!double(Gamma, j+2, j+2, Q0, j+2, Q1);
             }
 
             // Prepare for next step
@@ -451,11 +448,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
         // At end H := R up to row m
         //        g := gm up to row m
-        upperSolve!number(H1, to!int(m), g1);
+        upperSolve!double(H1, to!int(m), g1);
         // In serial, distribute a copy of g1 to each block
         foreach (sblk; localSolidBlocks) sblk.g1[] = g1[];
         foreach (sblk; parallel(localSolidBlocks,1)) {
-            nm.bbla.dot!number(sblk.V, sblk.nvars, m, sblk.g1, sblk.zed);
+            nm.bbla.dot!double(sblk.V, sblk.nvars, m, sblk.g1, sblk.zed);
         }
 
         // apply scaling
@@ -512,7 +509,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         mixin(dot_over_blocks("beta", "r0", "r0"));
         version(mpi_parallel) {
             MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
         }
         beta = sqrt(beta);
 
@@ -524,8 +520,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             }
         }
         // Re-initialise some vectors and matrices for restart
-        g0[] = to!number(0.0);
-        g1[] = to!number(0.0);
+        g0[] = 0.0;
+        g1[] = 0.0;
         H0.zeros();
         H1.zeros();
         // And set first residual entry
