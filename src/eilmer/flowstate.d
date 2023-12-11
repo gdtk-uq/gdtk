@@ -627,6 +627,7 @@ public:
                 foreach (i; 0 .. gm.n_species) { fs.gas.massf[i] = to!double(items[6+i]); }
                 foreach (i; 0 .. gm.n_modes) { fs.gas.T_modes[i] = to!double(items[6+gm.n_species+i]); }
                 gm.update_thermo_from_pT(fs.gas);
+                foreach (i; 0 .. gm.n_species) { fs.gas.rho_s[i] = fs.gas.massf[i] * fs.gas.rho; }
                 version(turbulence) {
                     foreach(i; 0 .. nturb) { fs.turb[i] = to!double(items[6+gm.n_species+gm.n_modes+i]); }
                 }
@@ -672,6 +673,7 @@ public:
                     fstate[i+1].gas.T_modes[j]*frac;
             }
             gm.update_thermo_from_pT(fs.gas);
+            foreach (j; 0 .. gm.n_species) { fs.gas.rho_s[j] = fs.gas.massf[j] * fs.gas.rho; }
             version(turbulence) {
                 foreach(j; 0 .. GlobalConfig.turb_model.nturb) {
                     fs.turb[j] = fstate[i].turb[j]*(1.0-frac) + fstate[i+1].turb[j]*frac;
@@ -728,13 +730,10 @@ public:
         fs.gas.p = base_p;
         fs.gas.T = base_T;
         fs.gas.massf[0] = 1.0;
-        foreach (j; 1 .. gm.n_species) {
-            fs.gas.massf[j] = 0.0;
-        }
-        foreach (j; 0 .. gm.n_modes) {
-            fs.gas.T_modes[j] = base_T;
-        }
+        foreach (j; 1 .. gm.n_species) { fs.gas.massf[j] = 0.0; }
+        foreach (j; 0 .. gm.n_modes) { fs.gas.T_modes[j] = base_T; }
         gm.update_thermo_from_pT(fs.gas);
+        foreach (j; 0 .. gm.n_species) { fs.gas.rho_s[j] = fs.gas.massf[j] * fs.gas.rho; }
         return;
     } // end set_flowstate()
 

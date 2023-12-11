@@ -1853,6 +1853,9 @@ void scan_cell_data_from_fixed_order_string
         }
         if (with_local_time_stepping) { dt_local = to!double(items.front); items.popFront(); }
     } // end version double_numbers
+    version(multi_species_gas) {
+        foreach(i; 0 .. fs.gas.massf.length) { fs.gas.rho_s[i] = fs.gas.massf[i] * fs.gas.rho; }
+    }
 } // end scan_values_from_fixed_order_string()
 
 void scan_cell_data_from_variable_order_string
@@ -1944,6 +1947,9 @@ void scan_cell_data_from_variable_order_string
         }
     }
     if (with_local_time_stepping) { dt_local = values[countUntil(varNameList, flowVarName(FlowVar.dt_local))].re; }
+    version(multi_species_gas) {
+        foreach(i; 0 .. fs.gas.massf.length) { fs.gas.rho_s[i] = fs.gas.massf[i] * fs.gas.rho; }
+    }
 } // end scan_values_from_variable_order_string()
 
 void raw_binary_to_cell_data(ref File fin,
@@ -2087,4 +2093,7 @@ void raw_binary_to_cell_data(ref File fin,
         }
         if (with_local_time_stepping) { fin.rawRead(dbl1); dt_local = dbl1[0]; }
     } // end version double_numbers
+    version(multi_species_gas) {
+        foreach(i; 0 .. fs.gas.massf.length) { fs.gas.rho_s[i] = fs.gas.massf[i] * fs.gas.rho; }
+    }
 } // end raw_binary_to_cell_data()
