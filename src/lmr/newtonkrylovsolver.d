@@ -385,15 +385,15 @@ bool referenceResidualsAreSet = false;
 
 // Module-local, global memory arrays and matrices
 // TODO: Think about these, maybe they shouldn't be globals
-number[] g0;
-number[] g1;
-number[] h;
-number[] hR;
-Matrix!number H0;
-Matrix!number H1;
-Matrix!number Gamma;
-Matrix!number Q0;
-Matrix!number Q1;
+double[] g0;
+double[] g1;
+double[] h;
+double[] hR;
+Matrix!double H0;
+Matrix!double H1;
+Matrix!double Gamma;
+Matrix!double Q0;
+Matrix!double Q1;
 
 /*---------------------------------------------------------------------
  * Locally used data structures
@@ -1156,11 +1156,11 @@ void allocateGlobalGMRESWorkspace()
     g1.length = m+1;
     h.length = m+1;
     hR.length = m+1;
-    H0 = new Matrix!number(m+1, m);
-    H1 = new Matrix!number(m+1, m);
-    Gamma = new Matrix!number(m+1, m+1);
-    Q0 = new Matrix!number(m+1, m+1);
-    Q1 = new Matrix!number(m+1, m+1);
+    H0 = new Matrix!double(m+1, m);
+    H1 = new Matrix!double(m+1, m);
+    Gamma = new Matrix!double(m+1, m+1);
+    Q0 = new Matrix!double(m+1, m+1);
+    Q1 = new Matrix!double(m+1, m+1);
 }
 
 /*---------------------------------------------------------------------
@@ -1365,8 +1365,8 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
     compute_r0(scale);
 
     // beta = ||r0||
-    number beta = computeLinearSystemResidual();
-    number beta0 = beta; // Store a copy as initial residual
+    double beta = computeLinearSystemResidual();
+    double beta0 = beta; // Store a copy as initial residual
                          // because we will look for relative drop in residual
                          // compared to this.
     // v = r0/beta
@@ -1403,8 +1403,8 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
 
     foreach (r; 0 .. nAttempts) {
         // Initialise some working arrays and matrices for this step.
-        g0[] = to!number(0.0);
-        g1[] = to!number(0.0);
+        g0[] = 0.0;
+        g1[] = 0.0;
         H0.zeros();
         H1.zeros();
         // Set first residual entry.
@@ -1430,11 +1430,11 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
 
         // At end H := R up to row m
         //        g := gm up to row m
-        upperSolve!number(H1, to!int(m), g1);
+        upperSolve!double(H1, to!int(m), g1);
         // In serial, distribute a copy of g1 to each block
         foreach (blk; localFluidBlocks) blk.g1[] = g1[];
         foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot!number(blk.V, blk.nvars, m, blk.g1, blk.zed);
+            nm.bbla.dot!double(blk.V, blk.nvars, m, blk.g1, blk.zed);
             unscaleVector(blk.zed, nConserved);
         }
 
@@ -1482,7 +1482,6 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
         mixin(dotOverBlocks("beta", "r0", "r0"));
         version(mpi_parallel) {
             MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
         }
         beta = sqrt(beta);
 
@@ -1520,7 +1519,9 @@ void setResiduals()
     foreach (blk; parallel(localFluidBlocks,1)) {
         size_t startIdx = 0;
         foreach (i, cell; blk.cells) {
-            blk.R[startIdx .. startIdx+nConserved] = cell.dUdt[0][0 .. nConserved];
+            foreach (ivar; 0 .. nConserved) {
+                blk.R[startIdx+ivar] = cell.dUdt[0][ivar].re;
+            }
             startIdx += nConserved;
         }
     }
@@ -1610,10 +1611,10 @@ void compute_r0(ConservedQuantities scale)
 {
     size_t nConserved = GlobalConfig.cqi.n;
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.x0[] = to!number(0.0);
+        blk.x0[] = 0.0;
         foreach (i; 0 .. blk.r0.length) {
             size_t ivar = i % nConserved;
-            blk.r0[i] = scale[ivar]*blk.R[i];
+            blk.r0[i] = scale[ivar].re*blk.R[i];
         }
     }
 }
@@ -1624,13 +1625,12 @@ void compute_r0(ConservedQuantities scale)
  * Authors: RJG and KAD
  * Date: 2022-03-02
  */
-number computeLinearSystemResidual()
+double computeLinearSystemResidual()
 {
-    number beta;
+    double beta;
     mixin(dotOverBlocks("beta", "r0", "r0"));
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(beta.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
     }
     beta = sqrt(beta);
     return beta;
@@ -1642,7 +1642,7 @@ number computeLinearSystemResidual()
  * Authors: RJG and KAD
  * Date: 2022-03-02
  */
-void prepareKrylovSpace(number beta)
+void prepareKrylovSpace(double beta)
 {
     g0[0] = beta;
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1690,19 +1690,19 @@ void computePreconditioner()
  *---------------------------------------------------------------------
  */
 
-void scaleVector(ref number[] vec, size_t nConserved)
+void scaleVector(ref double[] vec, size_t nConserved)
 {
     foreach (k, ref v; vec) {
         size_t ivar = k % nConserved;
-        v *= scale[ivar];
+        v *= scale[ivar].re;
     }
 }
 
-void unscaleVector(ref number[] vec, size_t nConserved)
+void unscaleVector(ref double[] vec, size_t nConserved)
 {
     foreach (k, ref v; vec) {
         size_t ivar = k % nConserved;
-        v /= scale[ivar];
+        v /= scale[ivar].re;
     }
 }
 
@@ -1727,15 +1727,15 @@ void applyResidualSmoothing()
 
     final switch (nkCfg.preconditioner) {
     case PreconditionerType.diagonal:
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = to!number(0.0); }
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = 0.0; }
         mixin(diagonal_solve("DinvR", "R"));
         break;
     case PreconditionerType.jacobi:
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = to!number(0.0); }
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = 0.0; }
         mixin(jacobi_solve("DinvR", "R"));
         break;
     case PreconditionerType.sgs:
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = to!number(0.0); }
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = 0.0; }
         mixin(sgs_solve("DinvR", "R"));
         break;
     case PreconditionerType.ilu:
@@ -1768,7 +1768,7 @@ void applyResidualSmoothing()
  * Authors: RJG and KAD
  * Date: 2022-03-02
  */
-bool performIterations(int maxIterations, number beta0, number targetResidual,
+bool performIterations(int maxIterations, double beta0, double targetResidual,
                        ref ConservedQuantities scale, ref int iterationCount)
 {
 
@@ -1840,7 +1840,7 @@ bool performIterations(int maxIterations, number beta0, number targetResidual,
         foreach (blk; parallel(localFluidBlocks,1)) {
             size_t startIdx = 0;
             foreach (cell; blk.cells) {
-                number dtInv = 1.0/cell.dt_local;
+                double dtInv = 1.0/cell.dt_local;
                 blk.w[startIdx .. startIdx + nConserved] = dtInv*blk.zed[startIdx .. startIdx + nConserved];
                 startIdx += nConserved;
             }
@@ -1893,22 +1893,20 @@ bool performIterations(int maxIterations, number beta0, number targetResidual,
                 // Extract column 'i'
                 foreach (k; 0 .. blk.nvars ) blk.v[k] = blk.V[k,i];
             }
-            number H0_ij;
+            double H0_ij;
             mixin(dotOverBlocks("H0_ij", "w", "v"));
             version(mpi_parallel) {
                 MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
             }
             H0[i,j] = H0_ij;
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (k; 0 .. blk.nvars) blk.w[k] -= H0_ij*blk.v[k];
             }
         }
-        number H0_jp1j;
+        double H0_jp1j;
         mixin(dotOverBlocks("H0_jp1j", "w", "w"));
         version(mpi_parallel) {
             MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            version(complex_numbers) { MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.im), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); }
         }
         H0_jp1j = sqrt(H0_jp1j);
         H0[j+1,j] = H0_jp1j;
@@ -1944,7 +1942,7 @@ bool performIterations(int maxIterations, number beta0, number targetResidual,
             copy(Gamma, Q1);
         }
         else {
-            nm.bbla.dot!number(Gamma, j+2, j+2, Q0, j+2, Q1);
+            nm.bbla.dot!double(Gamma, j+2, j+2, Q0, j+2, Q1);
         }
 
         // Prepare for next step
@@ -1985,15 +1983,15 @@ void applyPreconditioning()
 
     final switch (nkCfg.preconditioner) {
     case PreconditionerType.diagonal:
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = to!number(0.0); }
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = 0.0; }
         mixin(diagonal_solve("zed", "v"));
         break;
     case PreconditionerType.jacobi:
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = to!number(0.0); }
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = 0.0; }
         mixin(jacobi_solve("zed", "v"));
         break;
     case PreconditionerType.sgs:
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = to!number(0.0); }
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.zed[] = 0.0; }
         mixin(sgs_solve("zed", "v"));
         break;
     case PreconditionerType.ilu:
@@ -2022,15 +2020,15 @@ void removePreconditioning()
 
     final switch (nkCfg.preconditioner) {
     case PreconditionerType.diagonal:
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = to!number(0.0); }
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = 0.0; }
         mixin(diagonal_solve("dU", "zed"));
         break;
     case PreconditionerType.jacobi:
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = to!number(0.0); }
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = 0.0; }
         mixin(jacobi_solve("dU", "zed"));
         break;
     case PreconditionerType.sgs:
-        foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = to!number(0.0); }
+        foreach (blk; parallel(localFluidBlocks,1)) { blk.dU[] = 0.0; }
         mixin(sgs_solve("dU", "zed"));
         break;
     case PreconditionerType.ilu:
@@ -2051,10 +2049,10 @@ void removePreconditioning()
  * Authors: KAD and RJG
  * Date: 2022-03-02
  */
-number computePerturbationSize()
+double computePerturbationSize()
 {
     // calculate sigma without scaling
-    number sumv = 0.0;
+    double sumv = 0.0;
     mixin(dotOverBlocks("sumv", "zed", "zed"));
     version(mpi_parallel) {
         MPI_Allreduce(MPI_IN_PLACE, &(sumv.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -2063,13 +2061,13 @@ number computePerturbationSize()
     size_t nConserved = GlobalConfig.cqi.n;
     auto eps0 = 1.0e-6; // FIX ME: Check with Kyle about what to call this
                         //         and how to set the value.
-    number N = 0.0;
-    number sume = 0.0;
+    double N = 0.0;
+    double sume = 0.0;
     foreach (blk; parallel(localFluidBlocks,1)) {
         int cellCount = 0;
         foreach (cell; blk.cells) {
             foreach (val; cell.U[0]) {
-                sume += eps0*abs(val) + eps0;
+                sume += eps0*abs(val.re) + eps0;
                 N += 1;
             }
             cellCount += nConserved;
@@ -2082,7 +2080,7 @@ number computePerturbationSize()
         MPI_Allreduce(MPI_IN_PLACE, &(N.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
 
-    number sigma = (sume/(N*sqrt(sumv))).re;
+    double sigma = (sume/(N*sqrt(sumv))).re;
     return sigma;
 }
 
@@ -2335,7 +2333,7 @@ void evalRealMatVecProd(double sigma)
         size_t startIdx = 0;
         foreach (cell; blk.cells) {
             foreach (ivar; 0 .. nConserved) {
-                blk.zed[startIdx+ivar] = (cell.dUdt[1][ivar] - blk.R[startIdx+ivar])/(sigma);
+                blk.zed[startIdx+ivar] = (cell.dUdt[1][ivar].re - blk.R[startIdx+ivar])/(sigma);
             }
             cell.decode_conserved(0, 0, 0.0);
             startIdx += nConserved;
@@ -2377,17 +2375,17 @@ double determineRelaxationFactor()
         auto cqi = blk.myConfig.cqi;
         int startIdx = 0;
         blk.omegaLocal = 1.0;
-        number U, dU, relDiffLimit;
+        double U, dU, relDiffLimit;
         foreach (cell; blk.cells) {
             if (cqi.n_species == 1) {
-                U = cell.U[0][cqi.mass];
+                U = cell.U[0][cqi.mass].re;
                 dU = blk.dU[startIdx+cqi.mass];
             }
             else {
                 U = 0.0;
                 dU = 0.0;
                 foreach (isp; 0 .. cqi.n_species) {
-                    U += cell.U[0][cqi.species+isp];
+                    U += cell.U[0][cqi.species+isp].re;
                     dU += blk.dU[startIdx+cqi.species+isp];
                 }
             }
@@ -2501,8 +2499,10 @@ double applyLineSearch(double omega) {
 	foreach (blk; parallel(localFluidBlocks,1)) {
 	    size_t startIdx = 0;
 	    foreach (cell; blk.cells) {
-		blk.R[startIdx .. startIdx+nConserved] += cell.dUdt[1][0 .. nConserved];
-		// return cell to original state
+		foreach (ivar; 0 .. nConserved) {
+                    blk.R[startIdx+ivar] += cell.dUdt[1][ivar].re;
+                }
+                // return cell to original state
 		cell.decode_conserved(0, 0, 0.0);
 		startIdx += nConserved;
 	    }
@@ -2864,11 +2864,11 @@ string jacobi_solve(string lhs_vec, string rhs_vec)
     int kmax = nkCfg.preconditionerSubIterations;
     foreach (k; 0 .. kmax) {
          foreach (blk; parallel(localFluidBlocks,1)) {
-               blk.rhs[] = to!number(0.0);
+               blk.rhs[] = 0.0;
                nm.smla.multiply_block_upper_triangular(blk.flowJacobian.local, blk."~lhs_vec~"[], blk.rhs[], blk.cells.length, nConserved);
                nm.smla.multiply_block_lower_triangular(blk.flowJacobian.local, blk."~lhs_vec~"[], blk.rhs[], blk.cells.length, nConserved);
                blk.rhs[] = blk."~rhs_vec~"[] - blk.rhs[];
-               blk."~lhs_vec~"[] = to!number(0.0);
+               blk."~lhs_vec~"[] = 0.0;
                nm.smla.multiply_block_diagonal(blk.flowJacobian.local, blk.rhs[], blk."~lhs_vec~"[], blk.cells.length, nConserved);
          }
     }
@@ -2885,13 +2885,13 @@ string sgs_solve(string lhs_vec, string rhs_vec)
     foreach (k; 0 .. kmax) {
          foreach (blk; parallel(localFluidBlocks,1)) {
              // forward sweep
-             blk.rhs[] = to!number(0.0);
+             blk.rhs[] = 0.0;
              nm.smla.multiply_block_upper_triangular(blk.flowJacobian.local, blk."~lhs_vec~", blk.rhs, blk.cells.length, nConserved);
              blk.rhs[] = blk."~rhs_vec~"[] - blk.rhs[];
              nm.smla.block_lower_triangular_solve(blk.flowJacobian.local, blk.rhs[], blk."~lhs_vec~"[], blk.cells.length, nConserved);
 
              // backward sweep
-             blk.rhs[] = to!number(0.0);
+             blk.rhs[] = 0.0;
              nm.smla.multiply_block_lower_triangular(blk.flowJacobian.local, blk."~lhs_vec~"[], blk.rhs[], blk.cells.length, nConserved);
              blk.rhs[] = blk."~rhs_vec~"[] - blk.rhs[];
              nm.smla.block_upper_triangular_solve(blk.flowJacobian.local, blk.rhs, blk."~lhs_vec~"[], blk.cells.length, nConserved);

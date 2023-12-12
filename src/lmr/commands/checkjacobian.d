@@ -139,10 +139,10 @@ void main_(string[] args)
     blk.initialize_jacobian(cfg.interpolation_order, 1.0e-250, 0);
     blk.evaluate_jacobian();
     // 1b. Prepare a test vector
-    number[] testVec;
+    double[] testVec;
     testVec.length = blk.flowJacobian.local.ia.length-1;
     Mt19937 rng;
-    number mag = 0.0;
+    double mag = 0.0;
     foreach (ref val; testVec) {
         val = rng.uniform01();
         mag += val*val;
@@ -150,7 +150,7 @@ void main_(string[] args)
     testVec[] = (1./mag)*testVec[]; // we have observed that a normalized test vector behaves better
 
     // 1c. Compute c0 = J*testVec
-    number[] c0;
+    double[] c0;
     c0.length = testVec.length;
     multiply(blk.flowJacobian.local, testVec, c0);
 
@@ -168,11 +168,11 @@ void main_(string[] args)
     /*
      * 3. Compare vectors and write result to file.
      */
-    number c0_2norm = 0.0;
+    double c0_2norm = 0.0;
     foreach (val; c0) c0_2norm += val*val;
     c0_2norm = sqrt(c0_2norm);
 
-    number c1_2norm = 0.0;
+    double c1_2norm = 0.0;
     foreach (val; blk.zed) c1_2norm += val*val;
     c1_2norm = sqrt(c1_2norm);
 

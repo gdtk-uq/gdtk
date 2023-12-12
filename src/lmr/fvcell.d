@@ -140,12 +140,12 @@ public:
     number dwall;
 
     // For use with LU-SGS solver/preconditioner (note: we don't need complex numbers here)
-    number[] LU;
-    number[] dUk;
-    number[] dF;
-    number[] scalar_diag_inv;
-    Matrix!number dFdU;
-    Matrix!number dFdU_rotated;
+    double[] LU;
+    double[] dUk;
+    double[] dF;
+    double[] scalar_diag_inv;
+    Matrix!double dFdU;
+    Matrix!double dFdU_rotated;
 
     // Arrays to store the local DFT values
     // Lengths are known at run time (globalconfig.n_DFT_modes) but not at compile time, handle lengths later
@@ -163,7 +163,7 @@ public:
     FVCell[] cell_list;            // list of cells in the residual stencil
     FVInterface[] face_list;       // list of faces in the residual stencil
     version(newton_krylov) {
-        number[][] dRdU;
+        double[][] dRdU;
         ConservedQuantities Q_save;
         FlowGradients* grad_save;
         LSQInterpGradients* gradients_save;
