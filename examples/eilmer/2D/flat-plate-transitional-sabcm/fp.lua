@@ -12,6 +12,7 @@ config.turbulence_model = "spalart_allmaras_bcm"
 config.freestream_turbulent_intensity = 0.017 -- Chosen to match experiments
 config.viscous = true
 config.flux_calculator = "ausmdv"
+config.epsilon_van_albada = 1e-5
 
 -- Gas model and flow conditions to match Table 1, the first entry
 nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
@@ -82,7 +83,7 @@ SteadyStateSolver{
    use_scaling = true,
    use_complex_matvec_eval = true,
 
-   number_total_steps = 6000,
+   number_total_steps = 1500,
    stop_on_relative_global_residual = 1.0e-8,
 
    -- Settings for FGMRES iterative solver
