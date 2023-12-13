@@ -43,10 +43,10 @@ public:
         mN = to!int(C.length);
         mM = to!int(C[0].length);
 
-	mNorth = north.dup();
-	mEast = east.dup();
-	mSouth = south.dup();
-	mWest = west.dup();
+	if (north !is null) mNorth = north.dup();
+	if (east !is null) mEast = east.dup();
+	if (south !is null) mSouth = south.dup();
+	if (west !is null) mWest = west.dup();
 
 	mC.length = mN;
 	foreach (i; 0 .. mN) mC[i] = C[i].dup();
@@ -135,10 +135,10 @@ public:
     {
 	mN = other.mN;
 	mM = other.mM;
-	mNorth = other.mNorth.dup();
-	mEast = other.mEast.dup();
-	mSouth = other.mSouth.dup();
-	mWest = other.mWest.dup();
+	if (other.mNorth) mNorth = other.mNorth.dup();
+	if (other.mEast) mEast = other.mEast.dup();
+	if (other.mSouth) mSouth = other.mSouth.dup();
+	if (other.mWest) mWest = other.mWest.dup();
 	mC.length = other.mC.length;
 	foreach (i; 0 .. mC.length) mC[i] = other.mC[i].dup();
     }
@@ -148,6 +148,16 @@ public:
 	return new ControlPointPatch(this.mSouth, this.mNorth, this.mWest, this.mEast, this.mC);
     }
 
+    /**
+     * From Eisemann's paper, we can selectively apply boundary conformity or not.
+     *
+     * Eisemann (1998) p. 1172
+     * "Variarions of eq. 18 now arise naturally: boundary conformity can be applied selectively.
+     * By dropping any conforming term, the associated boundary can be manipulated into the desired shape."
+     *
+     * In implementation, we'll take the approach of first computing the non-conforming position,
+     * and then selectively applying conformity if the edge is specified.
+     */
     override Vector3 opCall(double r, double s) const
     {
 	// Convert r, s to r_hat, s_hat
@@ -155,11 +165,11 @@ public:
 	double r_hat = r*(mN-2) + 1.0;
 	double s_hat = s*(mM-2) + 1.0;
 
-	Vector3 p = T(r_hat, s_hat) +
-            (1.0 - G(r_hat, 1))*(mWest(s) - F(s_hat, 1)) +
-            G(r_hat, mN-1)*(mEast(s) - F(s_hat, mN)) +
-            (1.0 - H(s_hat, 1))*(mSouth(r) - E(r_hat, 1)) +
-            H(s_hat, mM-1)*(mNorth(r) - E(r_hat, mM));
+	Vector3 p = T(r_hat, s_hat);
+	if (mWest) p += (1.0 - G(r_hat, 1))*(mWest(s) - F(s_hat, 1));
+	if (mEast) p += G(r_hat, mN-1)*(mEast(s) - F(s_hat, mN));
+	if (mSouth) p += (1.0 - H(s_hat, 1))*(mSouth(r) - E(r_hat, 1));
+	if (mNorth) p += H(s_hat, mM-1)*(mNorth(r) - E(r_hat, mM));
 	return p;
     }
 
@@ -172,7 +182,7 @@ public:
     {
 	mC[i][j] = p;
     }
-    
+
     void writeCtrlPtsAsVtkXml(string baseFileName)
     {
 	auto n = mC.length;

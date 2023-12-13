@@ -124,7 +124,7 @@ extern(C) int luaWriteSurfaceAsVtkXml(lua_State *L)
 
 // Helper functions for constructors.
 
-void getPaths(lua_State *L, string ctorName, out Path[string] paths)
+void getPaths(lua_State *L, string ctorName, out Path[string] paths, bool allowNull=false)
 {
     string errMsgTmplt = "Error in call to %s:new. " ~
         "The value set for the '%s' path was not of Path type.";
@@ -133,7 +133,9 @@ void getPaths(lua_State *L, string ctorName, out Path[string] paths)
     foreach (name; path_names) {
         lua_getfield(L, index, name.toStringz());
         paths[name] = checkPath(L, -1);
-        if (paths[name] is null) luaL_error(L, toStringz(format(errMsgTmplt, ctorName, name)));
+        if (paths[name] is null && !allowNull) {
+            luaL_error(L, toStringz(format(errMsgTmplt, ctorName, name)));
+        }
         lua_pop(L, 1);
     }
 }
@@ -1059,7 +1061,7 @@ extern(C) int newControlPointPatch(lua_State* L)
     }
 
     Path[string] paths;
-    getPaths(L, "ControlPointPatch", paths);
+    getPaths(L, "ControlPointPatch", paths, true);
 
     lua_getfield(L, 1, "control_points");
     if (!lua_isnil(L, -1)) {
