@@ -16,6 +16,7 @@ import core.thread;
 import core.runtime;
 
 import std.stdio;
+import std.format;
 import std.conv;
 import std.parallelism;
 import std.algorithm;
@@ -23,6 +24,7 @@ import std.getopt;
 import std.json;
 import std.file;
 import std.math;
+import std.array;
 
 import fileutil;
 import json_helper;
@@ -348,7 +350,7 @@ int main(string[] args)
         send_solid_domain_boundary_temperature_data_to_gas_domain();
 
         // write out a flow/solid solution
-        write_cht_solution(jobName, time, io_idx);
+        write_cht_solution(jobName, time, io_idx, dt_couple);
 
         // increase dt_couple
         dt_couple = fmin(dt_couple_max, dt_couple*dt_factor);
@@ -423,7 +425,7 @@ void set_inflow_condition(FlowState inflow) {
     return;
 }
 
-void write_cht_solution(string jobName, double time, int idx) {
+void write_cht_solution(string jobName, double time, int idx, double dt) {
     // helper function to write a flow and solid solution
     int tindx = 1_000_000 + idx; // TODO: temporary hack, we need a more elegant solution. KAD 2022-11-18
     FluidBlockIO[] io_list = localFluidBlocks[0].block_io;
@@ -456,6 +458,13 @@ void write_cht_solution(string jobName, double time, int idx) {
     foreach (sblk; localSolidBlocks) {
         auto fileName = make_file_name!"solid"(jobName, sblk.id, tindx, "gz");
         sblk.writeSolution(fileName, time);
+    }
+
+    // Update times file
+    if (GlobalConfig.is_master_task) {
+        auto writer = appender!string();
+        formattedWrite(writer, "%04d %.18e %.18e\n", tindx, time, dt);
+        append("config/" ~ GlobalConfig.base_file_name ~ ".times", writer.data);
     }
 
 }
