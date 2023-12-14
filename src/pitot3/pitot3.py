@@ -158,6 +158,8 @@ def run_pitot3(config_dict = {}, config_filename = None,
         secondary_driver_flag = config_data['secondary_driver']
         nozzle_flag = config_data['nozzle']
 
+    object_dict['facility'] = facility
+
     print (f"Facility type is '{facility_type}'.")
     if nozzle_flag:
 
