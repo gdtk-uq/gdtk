@@ -1,11 +1,21 @@
 module util.lua;
 
-import ntypes.complex;
-void lua_pushnumber(lua_State* L, Complex!double n) { lua_pushnumber(L, n.re); }
+// A.M.M - 01/12/2023
+// Create a trait that allows us to check if a type can be cast to another.
+// We require this, as the traditional "isFloatingPoint" cannot be extended
+// to custom types, such as Complex and Dual. 
+public template canCastTo(T, U) {
+    // Check if T can be implicitly or explicitly cast to U
+    static if ( is(T : U) ) {
+        enum canCastTo = true;
+    } else {
+        enum canCastTo = false;
+    }
+}
 
 extern (C):
 
-const LUAI_MAXSTACK = 1000000;
+const LUAI_MAXSTACK = 1_000_000;
 
 
 const LUA_REGISTRYINDEX = -LUAI_MAXSTACK - 1000;
@@ -28,7 +38,7 @@ const LUA_GCSETSTEPMUL = 7;
 
 struct lua_State {}
 alias int function(lua_State* L) lua_CFunction;
-alias int  function(lua_State *L, int status, lua_KContext ctx) lua_KFunction;
+alias int function(lua_State *L, int status, lua_KContext ctx) lua_KFunction;
 
 alias double lua_Number;
 alias int lua_KContext;
@@ -45,6 +55,8 @@ void lua_replace(lua_State* L, int idx);
 
 void lua_pushnil(lua_State* L);
 void lua_pushnumber(lua_State* L, lua_Number n);
+// Templated version, to allow for Complex and Dual numbers without coupling packages
+void lua_pushnumber(T)(lua_State* L, T n) if (canCastTo!(T, lua_Number)) { lua_pushnumber(L, cast(lua_Number) n); }
 void lua_pushinteger(lua_State* L, lua_Integer n);
 void lua_pushstring(lua_State* L, const(char)* s);
 void lua_pushcclosure(lua_State* L, lua_CFunction fn, int n);
