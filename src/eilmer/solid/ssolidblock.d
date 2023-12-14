@@ -1165,7 +1165,8 @@ public:
     void evaluate_cell_contribution_to_jacobian(SolidFVCell pcell)
     {
         int dim = myConfig.dimensions;
-        int ftl = 2; int gtl = 0;
+        int ftl = to!int(myConfig.n_flow_time_levels-1);
+        int gtl = 0;
         auto eps0 = jacobian.eps;
         number eps;
 

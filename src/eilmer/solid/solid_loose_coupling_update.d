@@ -88,7 +88,7 @@ void integrate_solid_in_time_implicit(double dt_couple, double cfl, bool init_pr
     // set some time parameters
     int temporal_order = 1;
     int startStep = 0;
-    int nSteps = 10000;
+    int nSteps = 1_000_000;
     bool dual_time_stepping = true;
     double target_physical_time = dt_couple;
     double physicalSimTime = 0.0;
@@ -98,7 +98,7 @@ void integrate_solid_in_time_implicit(double dt_couple, double cfl, bool init_pr
 
     double eta = 0.1;
     double sigma = 1.0e-50;
-    double tol = 1.0e08;
+    double tol = 1.0e1;
 
     // fill out all entries in the conserved quantity vector with the initial state
     foreach (sblk; parallel(localSolidBlocks,1)) {
@@ -120,7 +120,7 @@ void integrate_solid_in_time_implicit(double dt_couple, double cfl, bool init_pr
     }
 
     // start of main time-stepping loop
-    while (physicalSimTime < target_physical_time) {
+    while (physicalSimTime <= target_physical_time) {
         if (GlobalConfig.is_master_task) {
             writeln("time: ", physicalSimTime, ", ", dt_physical);
         }
@@ -142,16 +142,18 @@ void integrate_solid_in_time_implicit(double dt_couple, double cfl, bool init_pr
             // implicit solid update
             rpcGMRES_solve(step, physicalSimTime, dt, eta, sigma, dual_time_stepping, temporal_order, dt_physical, residual);
             foreach (sblk; parallel(localSolidBlocks,1)) {
+                int ftl = to!int(sblk.myConfig.n_flow_time_levels-1);
                 foreach (i, scell; sblk.cells) {
-                    scell.e[2] = scell.e[0] + sblk.de[i];
-                    scell.T = updateTemperature(scell.sp, scell.e[2]);
+                    scell.e[ftl] = scell.e[0] + sblk.de[i];
+                    scell.T = updateTemperature(scell.sp, scell.e[ftl]);
                 }
             }
 
             // Put new solid state into e[0] ready for next iteration.
             foreach (sblk; parallel(localSolidBlocks,1)) {
+                int ftl = to!int(sblk.myConfig.n_flow_time_levels-1);
                 foreach (scell; sblk.cells) {
-                    swap(scell.e[0],scell.e[2]);
+                    swap(scell.e[0],scell.e[ftl]);
                 }
             }
 
@@ -162,6 +164,7 @@ void integrate_solid_in_time_implicit(double dt_couple, double cfl, bool init_pr
         }
 
         startStep = SimState.step+1;
+        if (physical_step > 0) temporal_order = 2;
 
         // shuffle conserved quantities:
         if (temporal_order == 1) {
@@ -244,22 +247,22 @@ void evalRHS(double sim_time, int ftl)
 void evalMatVecProd(double pseudoSimTime, double sigma)
 {
     version(complex_numbers) {
-
+        int perturbed_ftl = to!int(GlobalConfig.n_flow_time_levels-1);
         // We perform a Frechet derivative to evaluate J*D^(-1)v
         foreach (sblk; parallel(localSolidBlocks,1)) {
             sblk.clearSources();
             foreach (i, scell; sblk.cells) {
-                scell.e[2] = scell.e[0];
-                scell.e[2] += complex(0.0, sigma*sblk.zed[i].re);
-                scell.T = updateTemperature(scell.sp, scell.e[2]);
+                scell.e[perturbed_ftl] = scell.e[0];
+                scell.e[perturbed_ftl] += complex(0.0, sigma*sblk.zed[i].re);
+                scell.T = updateTemperature(scell.sp, scell.e[perturbed_ftl]);
             }
         }
 
-        evalRHS(pseudoSimTime, 2);
+        evalRHS(pseudoSimTime, perturbed_ftl);
 
         foreach (sblk; parallel(localSolidBlocks,1)) {
             foreach (i, scell; sblk.cells) {
-                sblk.zed[i] = scell.dedt[2].im/(sigma);
+                sblk.zed[i] = scell.dedt[perturbed_ftl].im/(sigma);
             }
             // we must explicitly remove the imaginary components from the cell and interface flowstates
             foreach(i, scell; sblk.cells) {
@@ -323,9 +326,9 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 // add BDF2 unsteady term TODO: could we need to handle this better?
                 // compute BDF2 coefficients for the adaptive time-stepping implementation
                 // note that for a fixed time-step, the coefficients should reduce down to the standard BDF2 coefficients, i.e. c1 = 3/2, c2 = 2, and c3 = 1/2
-                double c1 = 1.5*dt_physical;
+                double c1 = 1.5/dt_physical;
                 double c2 = 2.0/dt_physical;
-                double c3 = 0.5*dt_physical;
+                double c3 = 0.5/dt_physical;
                 sblk.Fe[cellCount] = scell.dedt[0].re - c1*scell.e[0].re + c2*scell.e[1].re - c3*scell.e[2].re;
             }
             cellCount += 1;
@@ -397,7 +400,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         sblk.x0[] = 0.0;
         int cellCount = 0;
         foreach (scell; sblk.cells) {
-            sblk.r0[cellCount] = (1./sblk.maxRate)*sblk.Fe[cellCount];
+            sblk.r0[cellCount] = (1./sblk.maxRate)*sblk.Fe[cellCount]+1.0e-50;
             cellCount += 1;
         }
     }
