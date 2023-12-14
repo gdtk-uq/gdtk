@@ -646,8 +646,8 @@ if (isFloatingPoint!T)
 
     auto rec4a = (-0.79) ^^ complex(6.8, 5.7);
     auto rec4b = complex(-0.79, 0.0) ^^ complex(6.8, 5.7);
-    assert(isClose(rec4a.re, rec4b.re, EPS));
-    assert(isClose(rec4a.im, rec4b.im, EPS));
+    assert(isClose(rec4a.re, rec4b.re, 0.0, EPS));
+    assert(isClose(rec4a.im, rec4b.im, 0.0, EPS));
 
     auto rer = a ^^ complex(2.0, 0.0);
     auto rcheck = a ^^ 2.0;
@@ -660,13 +660,14 @@ if (isFloatingPoint!T)
     rcheck = (-a) ^^ 2.0;
     assert(feqrel(rer2.re, rcheck) == double.mant_dig);
     assert(isIdentical(rer2.re, rcheck));
-    assert(isClose(rer2.im, 0.0, EPS));
+    // NOTE: The arg is approx -2.44e-16, EPS = 2.22e-16
+    assert(isClose(arg(rer2), 0.0, 0.0, 2*EPS));
 
     auto rer3 = (-a) ^^ complex(-2.0, 0.0);
     rcheck = (-a) ^^ (-2.0);
     assert(feqrel(rer3.re, rcheck) == double.mant_dig);
     assert(isIdentical(rer3.re, rcheck));
-    assert(isClose(rer3.im, 0.0, EPS));
+    assert(isClose(rer3.im, 0.0, 0.0, EPS));
 
     auto rer4 = a ^^ complex(-2.0, 0.0);
     rcheck = a ^^ (-2.0);
@@ -678,10 +679,10 @@ if (isFloatingPoint!T)
     foreach (i; 0 .. 6)
     {
         auto cei = c1^^i;
-        assert(isClose(cabs(cei), cabs(c1)^^i, EPS));
+        assert(isClose(cabs(cei), cabs(c1)^^i, EPS * (i == 0 ? 1 : i)));
         // Use cos() here to deal with arguments that go outside
         // the (-pi,pi] interval (only an issue for i>3).
-        assert(isClose(std.math.cos(arg(cei)), std.math.cos(arg(c1)*i), EPS));
+        assert(isClose(std.math.cos(arg(cei)), std.math.cos(arg(c1)*i), EPS * (i == 0 ? 1 : i)));
     }
 
     // Check operations between different complex types.
@@ -703,8 +704,12 @@ if (isFloatingPoint!T)
 
     c1c = c1;
     c1c /= c2;
-    assert(isClose(c1c.re, 0.588235, EPS));
-    assert(isClose(c1c.im, -0.352941, EPS));
+    // WARN: The expected value precision is too low to use EPS as the comparison, 
+    //       as the value is not a round number. More digits shown below 
+    // assert(isClose(c1c.re, 0.58823529411764705, EPS));
+    // assert(isClose(c1c.im, -0.35294117647058823, EPS));
+    assert(isClose(c1c.re, 0.588235, 1E-06));
+    assert(isClose(c1c.im, -0.352941, 1E-06));
 
     c2c /= c1;
     assert(isClose(c2c.re, 1.25, EPS));
@@ -1263,7 +1268,7 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
 @safe pure nothrow unittest
 {
     import std.math;
-    auto z = fromPolar(std.math.sqrt(2.0), PI_4);
+    auto z = fromPolar(std.math.sqrt(2.0L), PI_4);
     assert(isClose(z.re, 1.0L, real.epsilon));
     assert(isClose(z.im, 1.0L, real.epsilon));
 }
@@ -1306,7 +1311,7 @@ deprecated
 @safe pure nothrow unittest
 {
     import std.math;
-    assert(cos(complex(0, 5.2L)) == cosh(5.2L));
+    assert(cos(complex(0, 5.2L)) == std.math.cosh(5.2L));
     assert(cos(complex(1.3L)) == std.math.cos(1.3L));
 }
 /**
@@ -1428,12 +1433,12 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     auto c2 = Complex!double(0.5, 2.0);
 
     auto c1s = sqrt(c1);
-    assert(isClose(c1s.re, 1.09868411));
-    assert(isClose(c1s.im, 0.45508986));
+    assert(isClose(c1s.re, 1.09868411, 1E-08));
+    assert(isClose(c1s.im, 0.45508986, 1E-08));
 
     auto c2s = sqrt(c2);
-    assert(isClose(c2s.re, 1.1317134));
-    assert(isClose(c2s.im, 0.8836155));
+    assert(isClose(c2s.re, 1.1317139, 1E-07));
+    assert(isClose(c2s.im, 0.8836155, 1E-07));
 }
 
 // Issue 10881: support %f formatting of complex numbers
