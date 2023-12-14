@@ -1334,17 +1334,6 @@ Complex!real expi(real y)  @trusted pure nothrow @nogc
     assert(expi(1.3e5L) == complex(cos(1.3e5L), sin(1.3e5L)));
 }
 
-deprecated
-@safe pure nothrow unittest
-{
-    static import std.math;
-
-    assert(expi(1.3e5L) == complex(std.math.cos(1.3e5L), std.math.sin(1.3e5L)));
-    auto z1 = expi(1.234);
-    auto z2 = std.math.expi(1.234);
-    assert(z1.re == z2.re && z1.im == z2.im);
-}
-
 /**
     Params: y = A real number.
     Returns: The value of cosh(y) + i sinh(y)
@@ -1372,24 +1361,6 @@ Complex!real coshisinh(real y) @safe pure nothrow @nogc
 {
     import std.math : cosh, sinh;
     assert(coshisinh(3.0L) == complex(cosh(3.0L), sinh(3.0L)));
-}
-
-deprecated
-@safe pure nothrow @nogc unittest
-{
-    static import std.math;
-    assert(coshisinh(3.0L) == complex(std.math.cosh(3.0L), std.math.sinh(3.0L)));
-    auto z1 = coshisinh(1.234);
-    auto z2 = std.math.coshisinh(1.234);
-    static if (real.mant_dig == 53)
-    {
-        assert(std.math.feqrel(z1.re, z2.re) >= real.mant_dig - 1 &&
-               std.math.feqrel(z1.im, z2.im) >= real.mant_dig - 1);
-    }
-    else
-    {
-        assert(z1.re == z2.re && z1.im == z2.im);
-    }
 }
 
 /**
