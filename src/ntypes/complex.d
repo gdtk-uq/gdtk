@@ -552,6 +552,15 @@ if (isFloatingPoint!T)
 
 }
 
+@("Test casting")
+@safe pure nothrow unittest
+{
+    auto c1 = complex(1.0, 1.0);
+    auto c2 = cast(double) c1;
+    assert(is(typeof(c2) == double));
+    assert(c2 == 1.0);
+}
+
 @safe pure nothrow unittest
 {
     import std.complex;
