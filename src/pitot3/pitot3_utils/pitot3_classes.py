@@ -2469,13 +2469,21 @@ class Facility_State(object):
 
         output_string = ''
 
-        for species in str_reduced_species_moles_dict:
-            if species == list(str_reduced_species_moles_dict.keys())[0]:
-                output_string += f"{{'{species}': {str_reduced_species_moles_dict[species]}, "
-            elif species == list(str_reduced_species_moles_dict.keys())[-1]:
-                output_string += f"'{species}': {str_reduced_species_moles_dict[species]}}}"
-            else:
-                output_string += f"'{species}': {str_reduced_species_moles_dict[species]}, "
+        if len(list(str_reduced_species_moles_dict.keys())) > 1:
+
+            for species in str_reduced_species_moles_dict:
+                if species == list(str_reduced_species_moles_dict.keys())[0]:
+                    output_string += f"{{'{species}': {str_reduced_species_moles_dict[species]}, "
+                elif species == list(str_reduced_species_moles_dict.keys())[-1]:
+                    output_string += f"'{species}': {str_reduced_species_moles_dict[species]}}}"
+                else:
+                    output_string += f"'{species}': {str_reduced_species_moles_dict[species]}, "
+
+        else:
+            # it is much simpler...
+            species = list(str_reduced_species_moles_dict.keys())[0]
+            species_value = str_reduced_species_moles_dict[species]
+            output_string = f"{{'{species}': {species_value}}}"
 
         return output_string
 
@@ -3423,8 +3431,20 @@ class Nozzle(object):
                                          outputUnits=self.entrance_state.outputUnits, species_MW_dict=self.entrance_state.species_MW_dict)
 
         print (self.exit_state)
+
         if self.exit_state.get_gas_state_gmodel_type() == 'CEAGas':
             print(self.exit_state.get_reduced_composition_two_line_output_string())
+
+        # add the stagnation enthalpy, if we can:
+        if  self.exit_state.reference_gas_state:
+            total_enthalpy = self.exit_state.get_total_enthalpy()
+
+            if total_enthalpy:
+                print(
+                    f"The total enthalpy (Ht) at state {self.exit_state.get_state_name()} is {total_enthalpy / 1.0e6:.2f} MJ/kg.")
+            else:
+                print(
+                    f"Was unable to calculate the total enthalpy at state {self.exit_state.get_state_name()} so it cannot be printed")
 
         return
 
@@ -4065,7 +4085,17 @@ def pitot3_results_output(config_data, gas_path, object_dict, generate_output_fi
         shock_speed_output = f'vs1 = {shock_tube.get_shock_speed():.2f} m/s, Ms1 = {shock_tube.get_shock_Mach_number():.2f}'
 
         if 'acceleration_tube' in locals():
+
+            shock_tube_shock_speed = shock_tube.get_shock_speed()
+            acc_tube_shock_speed = acceleration_tube.get_shock_speed()
+
+            vs1_over_vs2_ratio = shock_tube_shock_speed / acc_tube_shock_speed
+
+            vs2_over_vs1_ratio = acc_tube_shock_speed / shock_tube_shock_speed
+
             shock_speed_output += f', vs2 = {acceleration_tube.get_shock_speed():.2f} m/s, Ms2 = {acceleration_tube.get_shock_Mach_number():.2f}'
+
+            shock_speed_output += f', vs1/vs2 ratio = {vs1_over_vs2_ratio:.2f}, vs2/vs1 ratio = {vs2_over_vs1_ratio:.2f}'
 
         print(shock_speed_output, file=output_stream)
 
