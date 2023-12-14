@@ -5,12 +5,64 @@ module util.lua;
 // We require this, as the traditional "isFloatingPoint" cannot be extended
 // to custom types, such as Complex and Dual. 
 public template canCastTo(T, U) {
+    import std.traits : ReturnType;
     // Check if T can be implicitly or explicitly cast to U
-    static if ( is(T : U) ) {
+    static if ( is(T : U) || is(ReturnType!(T.opCast!U) == U) ) {
         enum canCastTo = true;
     } else {
         enum canCastTo = false;
     }
+}
+
+
+@("canCastTo Trait")
+unittest {
+    struct MyType(T) {
+        T inner;
+
+        R opCast(R : T)() const {
+            return inner;
+        }
+    }
+
+    auto value = MyType!(double)(1.0);
+    auto casted = cast(double)(value);
+    assert( is(typeof(value) == MyType!double) );
+    assert( is(typeof(casted) == double) );
+
+    static assert(canCastTo!(MyType!double, double));
+    static assert(canCastTo!(MyType!float, float));
+    static assert(canCastTo!(MyType!double, float));
+    static assert(canCastTo!(MyType!float, double));
+
+    static assert(canCastTo!(double, double));
+    static assert(canCastTo!(float, double));
+    static assert(canCastTo!(double, float));
+
+    int i1 = 1;
+    double d1 = cast(double) i1;
+    assert( is(typeof(d1) == double) );
+    assert( d1 == 1.0 );
+    
+    static assert(!canCastTo!(string, double));
+}
+
+@("Implicit casting")
+unittest {
+    import std.math;
+    
+    double foo(double val) {
+        return sqrt(val);
+    }
+
+    double bar(T)(T val)
+    if (canCastTo!(T, double))    
+    {
+        return sqrt(val);
+    }
+
+    auto d1 = 4.0;
+    auto i1 = 4;
 }
 
 extern (C):
