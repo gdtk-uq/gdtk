@@ -44,25 +44,10 @@ unittest {
     assert( is(typeof(d1) == double) );
     assert( d1 == 1.0 );
     
+    static assert(canCastTo!(int, double));
+    static assert(canCastTo!(char, double));
+    static assert(canCastTo!(bool, double));
     static assert(!canCastTo!(string, double));
-}
-
-@("Implicit casting")
-unittest {
-    import std.math;
-    
-    double foo(double val) {
-        return sqrt(val);
-    }
-
-    double bar(T)(T val)
-    if (canCastTo!(T, double))    
-    {
-        return sqrt(val);
-    }
-
-    auto d1 = 4.0;
-    auto i1 = 4;
 }
 
 extern (C):
