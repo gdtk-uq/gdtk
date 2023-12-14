@@ -238,10 +238,11 @@ int main(string[] args)
     // read .cht JSON file
     string solid_time_integration;
     int npoints, super_time_steps, n_startup_steps;
-    bool constant_freestream, warm_start_fluid_solve, init_precondition_matrix;
+    bool constant_freestream, warm_start_fluid_solve, init_precondition_matrix, solid_only;
     double dt_couple_max, dt_couple_init;
     JSONValue jsonData     = readJSONfile(jobName~".cht");
     solid_time_integration = getJSONstring(jsonData, "solid_time_integration", "");
+    solid_only             = jsonData["solid_only"].boolean;
     npoints                = to!int(jsonData["npoints"].integer);
     constant_freestream    = jsonData["constant_freestream"].boolean;
     warm_start_fluid_solve = jsonData["warm_start_fluid_solve"].boolean;
@@ -290,54 +291,9 @@ int main(string[] args)
         dt_factor = pow(dt_couple_max/dt_couple_init, 1.0/n_startup_steps);
     }
 
-    foreach (idx; 0..npoints) {
-
-        int io_idx = idx;
-
-        // we only need to initialise the precondition matrix for the steady-state solver on the first iteration
-        init_precondition_matrix = (idx == 0) ? true: false;
-
-        // if we have a constant freestream then we only have one entry (point_0) in the .cht file
-        if (constant_freestream) { idx = 0; }
-
-        if (GlobalConfig.is_master_task) {
-            writefln("#################################################");
-            writefln("### Simulating point %d at t = %.5f seconds ###", idx, time);
-            writefln("#################################################");
-        }
-        time += dt_couple;
-
-        // set the inflow condition for this point
-        if (!constant_freestream) {
-            FlowState inflow = FlowState(jsonData["point_"~to!string(idx)]["flowstate"], GlobalConfig.gmodel_master);
-            set_inflow_condition(inflow);
-        }
-
-        // set the initial condition for this point if not warm starting with previous flow solution
-        if (!warm_start_fluid_solve) {
-            FlowState initial = FlowState(jsonData["point_"~to!string(idx)]["flowstate"], GlobalConfig.gmodel_master);
-            set_initial_condition(initial);
-        }
-
-        // fluid domain solver
-        iterate_to_steady_state(snapshotStart, maxCPUs, threadsPerMPITask, init_precondition_matrix);
-        if (GlobalConfig.is_master_task) {
-            // save a copy of the steady-state solver diagnostics file
-            string file_name = "e4-nk.diagnostics.dat";
-            if (exists(file_name)) {
-                rename(file_name, to!string(io_idx)~"_"~file_name);
-            } else {
-                writef("WARNING: Could not find %s, no copy has been saved. \n", file_name);
-            }
-        }
-
-        // write loads file
-        write_loads(io_idx);
-
-        // transfer heat flux data from fluid domain to solid domain (Flux Forward)
-        send_gas_domain_boundary_heat_flux_data_to_solid_domain();
-
-        // solid domain solver
+    if (solid_only) {
+        // we will only run the solid domain solver
+        init_precondition_matrix = true;
         if (solid_time_integration == "explicit") {
             integrate_solid_in_time_explicit(super_time_steps, dt_couple);
         } else if (solid_time_integration == "implicit") {
@@ -346,22 +302,83 @@ int main(string[] args)
             throw new Error("ERROR: incorrect solid_time_integration method selected, please choose either implicit or explicit.");
         }
 
-        // transfer temperature data from solid domain to fluid domain (Temperature Back)
-        send_solid_domain_boundary_temperature_data_to_gas_domain();
-
         // write out a flow/solid solution
-        write_cht_solution(jobName, time, io_idx, dt_couple);
+        write_cht_solution(jobName, dt_couple, 0, dt_couple);
+    } else {
+        // we alternate bewteen fluid and solid solves...
+        foreach (idx; 0..npoints) {
 
-        // increase dt_couple
-        dt_couple = fmin(dt_couple_max, dt_couple*dt_factor);
+            int io_idx = idx;
+
+            // we only need to initialise the precondition matrix for the steady-state solver on the first iteration
+            init_precondition_matrix = (idx == 0) ? true: false;
+
+            // if we have a constant freestream then we only have one entry (point_0) in the .cht file
+            if (constant_freestream) { idx = 0; }
+
+            if (GlobalConfig.is_master_task) {
+                writefln("#################################################");
+                writefln("### Simulating point %d at t = %.5f seconds ###", idx, time);
+                writefln("#################################################");
+            }
+            time += dt_couple;
+
+            // set the inflow condition for this point
+            if (!constant_freestream) {
+                FlowState inflow = FlowState(jsonData["point_"~to!string(idx)]["flowstate"], GlobalConfig.gmodel_master);
+                set_inflow_condition(inflow);
+            }
+
+            // set the initial condition for this point if not warm starting with previous flow solution
+            if (!warm_start_fluid_solve) {
+                FlowState initial = FlowState(jsonData["point_"~to!string(idx)]["flowstate"], GlobalConfig.gmodel_master);
+                set_initial_condition(initial);
+            }
+
+            // fluid domain solver
+            iterate_to_steady_state(snapshotStart, maxCPUs, threadsPerMPITask, init_precondition_matrix);
+            if (GlobalConfig.is_master_task) {
+                // save a copy of the steady-state solver diagnostics file
+                string file_name = "e4-nk.diagnostics.dat";
+                if (exists(file_name)) {
+                    rename(file_name, to!string(io_idx)~"_"~file_name);
+                } else {
+                    writef("WARNING: Could not find %s, no copy has been saved. \n", file_name);
+                }
+            }
+
+            // write loads file
+            write_loads(io_idx);
+
+            // transfer heat flux data from fluid domain to solid domain (Flux Forward)
+            send_gas_domain_boundary_heat_flux_data_to_solid_domain();
+
+            // solid domain solver
+            if (solid_time_integration == "explicit") {
+                integrate_solid_in_time_explicit(super_time_steps, dt_couple);
+            } else if (solid_time_integration == "implicit") {
+                integrate_solid_in_time_implicit(dt_couple, 10000, init_precondition_matrix);
+            } else {
+                throw new Error("ERROR: incorrect solid_time_integration method selected, please choose either implicit or explicit.");
+            }
+
+            // transfer temperature data from solid domain to fluid domain (Temperature Back)
+            send_solid_domain_boundary_temperature_data_to_gas_domain();
+
+            // write out a flow/solid solution
+            write_cht_solution(jobName, time, io_idx, dt_couple);
+
+            // increase dt_couple
+            dt_couple = fmin(dt_couple_max, dt_couple*dt_factor);
+        }
+
+        // Perform RHS evaluation to fill the fluid/solid BC with the latest solid temperature...
+        steadystate_core.evalRHS(0.0, 0);
+
+        // ... and write out the final loads file
+        // NOTE: the heat flux in this loads file will not be physical
+        write_loads(npoints);
     }
-
-    // Perform RHS evaluation to fill the fluid/solid BC with the latest solid temperature...
-    steadystate_core.evalRHS(0.0, 0);
-
-    // ... and write out the final loads file
-    // NOTE: the heat flux in this loads file will not be physical
-    write_loads(npoints);
 
     if (GlobalConfig.is_master_task) {
         writeln("Done simulation.");
