@@ -25,6 +25,7 @@ import std.json;
 import std.file;
 import std.array;
 import std.format;
+import std.algorithm;
 
 import util.lua;
 import util.lua_service;
@@ -1863,6 +1864,12 @@ void set_config_for_core(JSONValue jsonData)
         auto ssso = &(cfg.sssOptions);
         ssso.temporalIntegrationMode = getJSONint(sssOptions, "temporal_integration_mode", ssso.temporalIntegrationMode);
         cfg.n_flow_time_levels = 3 + cfg.sssOptions.temporalIntegrationMode;
+        if (cfg.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
+            // for the steady-fluid transient-solid CHT solver we need to ensure that the arrays are sized appropriately
+            // for both the implicit and explicit update schemes.
+            auto n_flow_time_levels_for_explicit_update = 1 + number_of_stages_for_update_scheme(cfg.gasdynamic_update_scheme);
+            cfg.n_flow_time_levels = max(cfg.n_flow_time_levels, n_flow_time_levels_for_explicit_update);
+        }
     } else {
         cfg.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(cfg.gasdynamic_update_scheme);
     }
