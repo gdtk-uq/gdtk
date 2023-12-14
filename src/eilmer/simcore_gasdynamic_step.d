@@ -176,66 +176,70 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     int S;
 
     if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
-
-        // We determine the allowable timestep here to overwrite the timestep calculated for the fluid domain
-        // TODO: think about a more appropriate place to calculate the timestep. KAD 2022-11-08
-        double cfl_value = GlobalConfig.cfl_schedule.interpolate_value(SimState.time);
-        double dt_local = double.max;
-        dt_global = double.max;
-        bool first = true;
-        foreach (sblk; localSolidBlocks) {
-            dt_local = sblk.determine_time_step_size(cfl_value);
-            if (first) {
-                dt_global = dt_local;
-                first = false;
-            } else {
-                dt_global = fmin(dt_global, dt_local);
-            }
-        }
-        version(mpi_parallel) {
-            MPI_Allreduce(MPI_IN_PLACE, &dt_global, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-        }
-
-        // set the super-time-step
-        SimState.dt_global_parab = dt_global;
-        S = SimState.s_RKL;
-        double dt_super;
-        if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
-            dt_super = dt_global * (S*S+S)/(2.0); // RKL1
+        if (GlobalConfig.fixed_time_step) {
+            // if we have a fixed time step then we need to specify the number of super-steps
+            S = SimState.s_RKL;
+            dt_global = GlobalConfig.dt_init;
         } else {
-            dt_super = dt_global * (S*S+S-2.0)/(4.0); // RKL2
-        }
-
-        // check for a couple of edge cases when using the user specified S is not appropriate...
-        double dt_remainder = SimState.target_time - SimState.time;
-        if (dt_global > dt_remainder) {
-            // the explicit time-step is larger than the remaining simulation time,
-            // so we just set the super-time-step to the remaining time and perform an Euler step
-            S = 1;
-            dt_super = dt_remainder;
-        }
-        else if (dt_remainder < dt_super) {
-            // the remaining time is larger than the explicit time-step but smaller than the super-time-step,
-            // we borrow from the mixed equation formulation to find a suitable S
-            alpha = dt_remainder/dt_global;
-            if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
-                s_RKL = 0.5*(-1.0+sqrt(1+8.0*alpha)); // RKL1
-            } else {
-                s_RKL = 0.5*(-1.0+sqrt(9+16.0*alpha));  // RKL2
+            // We determine the allowable timestep here to overwrite the timestep calculated for the fluid domain
+            // TODO: think about a more appropriate place to calculate the timestep. KAD 2022-11-08
+            double cfl_value = GlobalConfig.cfl_schedule.interpolate_value(SimState.time);
+            double dt_local = double.max;
+            dt_global = double.max;
+            bool first = true;
+            foreach (sblk; localSolidBlocks) {
+                dt_local = sblk.determine_time_step_size(cfl_value);
+                if (first) {
+                    dt_global = dt_local;
+                    first = false;
+                } else {
+                    dt_global = fmin(dt_global, dt_local);
+                }
             }
-            S = to!int(floor(s_RKL));
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &dt_global, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            }
+
+            // set the super-time-step
+            SimState.dt_global_parab = dt_global;
+            S = SimState.s_RKL;
+            double dt_super;
             if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
                 dt_super = dt_global * (S*S+S)/(2.0); // RKL1
             } else {
                 dt_super = dt_global * (S*S+S-2.0)/(4.0); // RKL2
             }
+
+            // check for a couple of edge cases when using the user specified S is not appropriate...
+            double dt_remainder = SimState.target_time - SimState.time;
+            if (dt_global > dt_remainder) {
+                // the explicit time-step is larger than the remaining simulation time,
+                // so we just set the super-time-step to the remaining time and perform an Euler step
+                S = 1;
+                dt_super = dt_remainder;
+            }
+            else if (dt_remainder < dt_super) {
+                // the remaining time is larger than the explicit time-step but smaller than the super-time-step,
+                // we borrow from the mixed equation formulation to find a suitable S
+                alpha = dt_remainder/dt_global;
+                if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
+                    s_RKL = 0.5*(-1.0+sqrt(1+8.0*alpha)); // RKL1
+                } else {
+                    s_RKL = 0.5*(-1.0+sqrt(9+16.0*alpha));  // RKL2
+                }
+                S = to!int(floor(s_RKL));
+                if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.rkl1) {
+                    dt_super = dt_global * (S*S+S)/(2.0); // RKL1
+                } else {
+                    dt_super = dt_global * (S*S+S-2.0)/(4.0); // RKL2
+                }
+            }
+
+            // place the super-time-step into the dt_global variables
+            if (S == 1) { euler_step = true; }
+            dt_global = dt_super;
+            SimState.dt_global = dt_global;
         }
-
-        // place the super-time-step into the dt_global variables
-        if (S == 1) { euler_step = true; }
-        dt_global = dt_super;
-        SimState.dt_global = dt_global;
-
     } else {
         if (GlobalConfig.fixed_time_step) {
 
