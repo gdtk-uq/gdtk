@@ -1,0 +1,23 @@
+# X2's 80%He 2.0 mm driver condition with isentropic compression
+# Values from Table 3 of Gildfind et al. (2011)
+# Free-piston driver optimisation for simulation of high Mach number scramjet flow conditions
+#
+# Chris James (c.james4@uq.edu.au) - 14/12/23
+
+driver_condition_name : 'x2-lwp-2.0mm-0-isentropic'
+driver_condition_type : 'isentropic-compression-p4'
+
+driver_gas_model : 'CEAGas'
+driver_fill_composition : {'He':0.8,'Ar':0.2} 
+driver_speciesList : ['He','Ar']
+driver_inputUnits : 'moles' 
+driver_withIons : False
+
+driver_p : 92.8e3 # driver fill pressure, Pa
+driver_T : 298.15 # driver fill temperature, K
+
+p4 : 27.9e6 # Pa
+
+M_throat : 1.0 
+
+
