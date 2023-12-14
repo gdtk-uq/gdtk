@@ -292,7 +292,7 @@ foreach (sblk; localSolidBlocks) `~dot~` += sblk.dotAcc;`;
 void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, double sigma,
                     bool dual_time_stepping, int temporal_order, double dt_physical, ref double residual)
 {
-    number resid;
+
     int maxIters = GlobalConfig.sssOptions.maxOuterIterations;
     // We add 1 because the user thinks of "re"starts, so they
     // might legitimately ask for no restarts. We still have
@@ -301,6 +301,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     size_t m = to!size_t(maxIters);
     size_t r;
     size_t iterCount;
+    double beta, beta0;
+    double outerTol;
+    number resid;
+    double linSolResid;
 
     // Variables for max rates of change
     // Use these for equation scaling.
@@ -309,65 +313,25 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                                // then we'll avoid non-dimensionalising by
                                // values close to zero.
 
-    // 1. Evaluate r0, beta, v1
+    // Compute the RHS residual and store dedt[0] as F(e)
     evalRHS(pseudoSimTime, 0);
 
-    // Store dedt[0] as F(e)
     foreach (sblk; parallel(localSolidBlocks,1)) {
-        int cellCount = 0;
         sblk.maxRate = 0.0;
         foreach (i, scell; sblk.cells) {
             if (temporal_order == 0) {
-                sblk.Fe[cellCount] = scell.dedt[0].re;
+                sblk.Fe[i] = scell.dedt[0].re;
             } else if (temporal_order == 1) {
                 // add BDF1 unsteady term TODO: could we need to handle this better?
-                sblk.Fe[cellCount] = scell.dedt[0].re - (1.0/dt_physical)*scell.e[0].re + (1.0/dt_physical)*scell.e[1].re;
+                sblk.Fe[i] = scell.dedt[0].re - (1.0/dt_physical)*scell.e[0].re + (1.0/dt_physical)*scell.e[1].re;
             } else { // temporal_order = 2
                 // add BDF2 unsteady term TODO: could we need to handle this better?
-                // compute BDF2 coefficients for the adaptive time-stepping implementation
-                // note that for a fixed time-step, the coefficients should reduce down to the standard BDF2 coefficients, i.e. c1 = 3/2, c2 = 2, and c3 = 1/2
-                double c1 = 1.5/dt_physical;
-                double c2 = 2.0/dt_physical;
-                double c3 = 0.5/dt_physical;
-                sblk.Fe[cellCount] = scell.dedt[0].re - c1*scell.e[0].re + c2*scell.e[1].re - c3*scell.e[2].re;
+                sblk.Fe[i] = scell.dedt[0].re - (1.5/dt_physical)*scell.e[0].re + (2.0/dt_physical)*scell.e[1].re - (0.5/dt_physical)*scell.e[2].re;
             }
-            cellCount += 1;
-            sblk.maxRate = fmax(sblk.maxRate, fabs(scell.dedt[0].re));
         }
     }
 
-    double maxRate = 0.0;
-    foreach (sblk; localSolidBlocks) {
-        maxRate = fmax(maxRate, sblk.maxRate);
-    }
-
-    // In distributed memory, reduce the max values and ensure everyone has a copy
-    version(mpi_parallel) {
-        MPI_Allreduce(MPI_IN_PLACE, &(maxRate.re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-    }
-
-    // Place some guards when time-rate-of-changes are very small.
-    maxRate = fmax(maxRate, minNonDimVal);
-
-    // Get a copy of the maxes out to each block
-    bool useScaling = true;
-    foreach (sblk; parallel(localSolidBlocks,1)) {
-        if (useScaling) {
-            sblk.maxRate = maxRate;
-        }
-        else { // just scale by 1
-            sblk.maxRate = 1.0;
-        }
-    }
-
-    double unscaledNorm2;
-    mixin(dot_over_blocks("unscaledNorm2", "Fe", "Fe"));
-    version(mpi_parallel) {
-        MPI_Allreduce(MPI_IN_PLACE, &unscaledNorm2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    }
-    unscaledNorm2 = sqrt(unscaledNorm2);
-
-    // evaluate precondition matrix
+    // Compute the approximate Jacobian matrix for preconditioning
     foreach (sblk; parallel(localSolidBlocks,1)) {
         sblk.evaluate_jacobian();
         foreach ( ref entry; sblk.jacobian.local.aa) { entry *= -1; }
@@ -386,59 +350,135 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         nm.smla.decompILU0(sblk.jacobian.local);
     }
 
-    // Initialise some arrays and matrices that have already been allocated
-    g0[] = 0.0;
-    g1[] = 0.0;
-    H0.zeros();
-    H1.zeros();
-
-    // We'll scale r0 against these max rates of change.
-    // r0 = b - A*x0
-    // Taking x0 = [0] (as is common) gives r0 = b = FU
-    // apply scaling
+    // Determine the max rates in F(e) for scaling the linear system
     foreach (sblk; parallel(localSolidBlocks,1)) {
-        sblk.x0[] = 0.0;
-        int cellCount = 0;
-        foreach (scell; sblk.cells) {
-            sblk.r0[cellCount] = (1./sblk.maxRate)*sblk.Fe[cellCount]+1.0e-50;
-            cellCount += 1;
+        sblk.maxRate = 0.0;
+        foreach (i, cell; sblk.cells) {
+            sblk.maxRate = fmax(sblk.maxRate, fabs(sblk.Fe[i]));
         }
     }
+    double maxRate = 0.0;
+    foreach (sblk; localSolidBlocks) {
+        maxRate = fmax(maxRate, sblk.maxRate);
+    }
 
-    // Then compute v = r0/||r0||
-    double beta;
-    mixin(dot_over_blocks("beta", "r0", "r0"));
+    // In distributed memory, reduce the max values and ensure everyone has a copy
     version(mpi_parallel) {
-        MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &(maxRate.re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
     }
-    beta = sqrt(beta);
-    g0[0] = beta;
+
+    // Place some guards when time-rate-of-changes are very small
+    maxRate = fmax(maxRate, minNonDimVal);
+
+    // Get a copy of the maxRate out to each block
+    bool useScaling = true;
     foreach (sblk; parallel(localSolidBlocks,1)) {
-        foreach (k; 0 .. sblk.nvars) {
-            sblk.v[k] = sblk.r0[k]/beta;
-            sblk.V[k,0] = sblk.v[k];
+        if (useScaling) {
+            sblk.maxRate = maxRate;
+        }
+        else { // just scale by 1
+            sblk.maxRate = 1.0;
         }
     }
 
-    // Compute tolerance
-    auto outerTol = eta*beta;
+    // Compute the unscaled L2 norm for reporting the residual of the non-linear system of equations
+    double unscaledNorm2;
+    mixin(dot_over_blocks("unscaledNorm2", "Fe", "Fe"));
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &unscaledNorm2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+    unscaledNorm2 = sqrt(unscaledNorm2);
 
-    // 2. Start outer-loop of restarted GMRES
+    // the remainder of the routine closely follows the structure of rpcGMRES found in nm/smla.d
+    // we set the initial guess to zero
+    foreach (sblk; parallel(localSolidBlocks,1)) { sblk.x0[] = 0.0; }
+
+    // Start outer-loop of restarted GMRES
     for ( r = 0; r < maxRestarts; r++ ) {
-        // 2a. Begin iterations
+
+        // Initialise some arrays and matrices that have already been allocated
+        g0[] = 0.0;
+        g1[] = 0.0;
+        H0.zeros();
+        H1.zeros();
+        Gamma.eye();
+
+        // 1. Evaluate r0 = b - A.x0, beta, v1
+
+        // evaluate A.x0 using a Frechet derivative (note that the zed[] array is baked into the evalJacobianVecProd routine).
+        foreach (sblk; parallel(localSolidBlocks,1)) { sblk.zed[] = sblk.x0[]; }
+
+        // Prepare 'w' with (I/dt)(P^-1)v term;
+        foreach (sblk; parallel(localSolidBlocks,1)) {
+            foreach (i, cell; sblk.cells) {
+                double dtInv = 1.0/dt;
+                if (dual_time_stepping) {
+                    if (temporal_order == 1) {
+                        dtInv = dtInv + 1.0/dt_physical;
+                    } else {
+                        dtInv = dtInv + 1.5/dt_physical;
+                    }
+                }
+                sblk.w[i] = dtInv*sblk.zed[i];
+            }
+        }
+
+        // Evaluate Jz and place in z
+        evalMatVecProd(pseudoSimTime, sigma);
+
+        // Now we can complete calculation of r0
+        foreach (sblk; parallel(localSolidBlocks,1)) {
+            foreach (k; 0 .. sblk.nvars) sblk.r0[k] = sblk.Fe[k] - (sblk.w[k] - sblk.zed[k]);
+        }
+
+        // apply the system scaling to r0
+        double eps = 1.0e-50;
+        foreach (sblk; parallel(localSolidBlocks,1)) {
+            foreach (i, cell; sblk.cells) {
+                sblk.r0[i] = (1.0/sblk.maxRate)*sblk.Fe[i];
+                // we have observed that sometimes the nonlinear solver can find a solution such that F(e) is exactly 0.0,
+                // this causes division by zero throughout the GMRES algorithm, so we add on a very small finite number
+                // to r0. This appears to alleviate the issue without degrading convergence.
+                sblk.r0[i] += eps;
+            }
+        }
+
+        // then compute v = r0/||r0|| and set first residual entry
+        mixin(dot_over_blocks("beta", "r0", "r0"));
+        version(mpi_parallel) {
+            // NOTE: this dot product has been observed to be sensitive to the order of operations,
+            //       the use of MPI_Allreduce means that the same convergence behaviour can not be expected
+            //       for a different mapping of blocks over the MPI tasks and/or a shared memory calculation
+            //       2022-09-30 (KAD).
+            MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        }
+        beta = sqrt(beta);
+        g0[0] = beta;
+        foreach (sblk; parallel(localSolidBlocks,1)) {
+            foreach (k; 0 .. sblk.nvars) {
+                sblk.v[k] = sblk.r0[k]/beta;
+                sblk.V[k,0] = sblk.v[k];
+            }
+        }
+
+        // Compute outer tolerance on first restart and store initial residual
+        if (r == 0) {
+            outerTol = eta*beta;
+            beta0 = beta;
+        }
+
+        // 2. Do 'm' iterations of update
         foreach (j; 0 .. m) {
             iterCount = j+1;
 
-            // apply scaling
+            // Undo the linear system scaling for Jacobian-vector evaluation
             foreach (sblk; parallel(localSolidBlocks,1)) {
-                int cellCount = 0;
-                foreach (cell; sblk.cells) {
-                    sblk.v[cellCount] *= (sblk.maxRate);
-                    cellCount += 1;
+                foreach (i, cell; sblk.cells) {
+                    sblk.v[i] *= (sblk.maxRate);
                 }
             }
 
-            // TODO: apply preconditioning here
+            // apply preconditioning here
             //foreach (sblk; parallel(localSolidBlocks,1)) {
             //    sblk.zed[] = sblk.v[];
             //}
@@ -450,20 +490,15 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             // Prepare 'w' with (I/dt)(P^-1)v term;
             foreach (sblk; parallel(localSolidBlocks,1)) {
                 foreach (i, cell; sblk.cells) {
-                    foreach (k; 0..1) {
-                        ulong idx = i*1 + k;
-                        double dtInv;
-                        dtInv = 1.0/(dt);
-                        if (dual_time_stepping) {
-                            if (temporal_order == 1) {
-                                dtInv = dtInv + 1.0/dt_physical;
-                            } else {
-                                double dtInv_physical  = 1.5/dt_physical;
-                                dtInv = dtInv + dtInv_physical;
-                            }
+                    double dtInv = 1.0/(dt);
+                    if (dual_time_stepping) {
+                        if (temporal_order == 1) {
+                            dtInv = dtInv + 1.0/dt_physical;
+                        } else {
+                            dtInv = dtInv + 1.5/dt_physical;
                         }
-                        sblk.w[idx] = dtInv*sblk.zed[idx];
                     }
+                    sblk.w[i] = dtInv*sblk.zed[i];
                 }
             }
 
@@ -475,25 +510,26 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 foreach (k; 0 .. sblk.nvars)  sblk.w[k] = sblk.w[k] - sblk.zed[k];
             }
 
-            // apply scaling
+            // apply the linear system scaling
             foreach (sblk; parallel(localSolidBlocks,1)) {
-                int cellCount = 0;
-                foreach (cell; sblk.cells) {
-                    sblk.w[cellCount] *= (1./sblk.maxRate);
-                    cellCount += 1;
+                foreach (i, cell; sblk.cells) {
+                    sblk.w[i] *= (1.0/sblk.maxRate);
                 }
             }
 
-            // The remainder of the algorithm looks a lot like any standard
-            // GMRES implementation (for example, see smla.d)
+            // The remainder of the algorithm looks a lot like any standard GMRES implementation (for example, see smla.d)
             foreach (i; 0 .. j+1) {
                 foreach (sblk; parallel(localSolidBlocks,1)) {
                     // Extract column 'i'
-                    foreach (k; 0 .. sblk.nvars ) sblk.v[k] = sblk.V[k,i];
+                    foreach (k; 0 .. sblk.nvars) sblk.v[k] = sblk.V[k,i];
                 }
                 double H0_ij;
                 mixin(dot_over_blocks("H0_ij", "w", "v"));
                 version(mpi_parallel) {
+                    // NOTE: this dot product has been observed to be sensitive to the order of operations,
+                    //       the use of MPI_Allreduce means that the same convergence behaviour can not be expected
+                    //       for a different mapping of blocks over the MPI tasks and/or a shared memory calculation
+                    //       2022-09-30 (KAD).
                     MPI_Allreduce(MPI_IN_PLACE, &(H0_ij.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                 }
                 H0[i,j] = H0_ij;
@@ -504,6 +540,10 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             double H0_jp1j;
             mixin(dot_over_blocks("H0_jp1j", "w", "w"));
             version(mpi_parallel) {
+                // NOTE: this dot product has been observed to be sensitive to the order of operations,
+                //       the use of MPI_Allreduce means that the same convergence behaviour can not be expected
+                //       for a different mapping of blocks over the MPI tasks and/or a shared memory calculation
+                //       2022-09-30 (KAD).
                 MPI_Allreduce(MPI_IN_PLACE, &(H0_jp1j.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
             }
             H0_jp1j = sqrt(H0_jp1j);
@@ -550,8 +590,8 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
 
             // Get residual
             resid = fabs(g1[j+1]);
-            // DEBUG:
-            //      writefln("OUTER: restart-count= %d iteration= %d, resid= %e", r, j, resid);
+            //nIters = to!int(iterCount);
+            linSolResid = (resid/beta0).re;
             if ( resid <= outerTol ) {
                 m = j+1;
                 // DEBUG:
@@ -559,6 +599,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                 //      writefln("RANK %d: tolerance achieved on iteration: %d", GlobalConfig.mpi_rank_for_local_task, m);
                 break;
             }
+
+            // Prepare for next iteration
+            copy(H1, H0);
+            g0[] = g1[];
+            copy(Q1, Q0);
         }
 
         if (iterCount == maxIters)
@@ -573,16 +618,14 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             nm.bbla.dot!double(sblk.V, sblk.nvars, m, sblk.g1, sblk.zed);
         }
 
-        // apply scaling
+        // Undo the linear system scaling to recover the unscaled solution vector
         foreach (sblk; parallel(localSolidBlocks,1)) {
-            int cellCount = 0;
-            foreach (cell; sblk.cells) {
-                sblk.zed[cellCount] *= (sblk.maxRate);
-                cellCount += 1;
+            foreach (i, cell; sblk.cells) {
+                sblk.zed[i] *= (sblk.maxRate);
             }
         }
 
-        // TODO: apply preconditioning here
+        // Apply preconditioning step
         //foreach(sblk; parallel(localSolidBlocks,1)) {
         //    sblk.de[] = sblk.zed[];
         //}
@@ -602,59 +645,17 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             break;
         }
 
-        // Else, we prepare for restart by setting x0 and computing r0
-        // Computation of r0 as per Fraysee etal (2005)
-        foreach (sblk; parallel(localSolidBlocks,1)) {
-            sblk.x0[] = sblk.de[];
-        }
-
-        foreach (sblk; localSolidBlocks) copy(Q1, sblk.Q1);
-        // Set all values in g0 to 0.0 except for final (m+1) value
-        foreach (i; 0 .. m) g0[i] = 0.0;
-        foreach (sblk; localSolidBlocks) sblk.g0[] = g0[];
-        foreach (sblk; parallel(localSolidBlocks,1)) {
-            nm.bbla.dot(sblk.Q1, m, m+1, sblk.g0, sblk.g1);
-        }
-        foreach (sblk; parallel(localSolidBlocks,1)) {
-            nm.bbla.dot(sblk.V, sblk.nvars, m+1, sblk.g1, sblk.r0);
-        }
-
-        // apply scaling
-        foreach (sblk; parallel(localSolidBlocks,1)) {
-            int cellCount = 0;
-            foreach (cell; sblk.cells) {
-                sblk.r0[cellCount] *= (1.0/sblk.maxRate);
-                cellCount += 1;
-            }
-        }
-
-        mixin(dot_over_blocks("beta", "r0", "r0"));
-        version(mpi_parallel) {
-            MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        }
-        beta = sqrt(beta);
-
-        // DEBUG: writefln("OUTER: ON RESTART beta= %e", beta);
-        foreach (sblk; parallel(localSolidBlocks,1)) {
-            foreach (k; 0 .. sblk.nvars) {
-                sblk.v[k] = sblk.r0[k]/beta;
-                sblk.V[k,0] = sblk.v[k];
-            }
-        }
-        // Re-initialise some vectors and matrices for restart
-        g0[] = 0.0;
-        g1[] = 0.0;
-        H0.zeros();
-        H1.zeros();
-        // And set first residual entry
-        g0[0] = beta;
+        // Else, prepare for a restart by setting the inital
+        // guess to the current best estimate of the solution
+        foreach (sblk; parallel(localSolidBlocks,1)) { sblk.x0[] = sblk.de[]; }
 
     }
+
     if (GlobalConfig.is_master_task) {
         writeln(r, ", ", iterCount);
         // TODO: handle this output in a more production-ready way
         auto outFile = File("e4-nk.solid.diagnostics.dat", "a");
-        outFile.writef("%d %.16e %.16e \n", step, dt, unscaledNorm2);
+        outFile.writef("%d    %.16e    %d    %d    %.16e    %.16e \n", step, dt, r, iterCount, linSolResid, unscaledNorm2);
         outFile.close();
     }
     residual = unscaledNorm2;
