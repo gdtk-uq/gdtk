@@ -156,6 +156,7 @@ sdluOptionsHidden = { -- hidden from user
    newton_solve_tolerance = 1.0e-2,
    max_gmres_iterations = 10,
    gmres_solve_tolerance = 1.0e-3,
+   max_gmres_restarts = 0,
    perturbation_size = 1.0e-50,
    cfl = 1.0,
    solid_time_integration_scheme = "explicit",

@@ -374,11 +374,11 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
                     bool dual_time_stepping, int temporal_order, double dt_physical, ref double residual)
 {
 
-    int maxIters = GlobalConfig.sssOptions.maxOuterIterations;
+    int maxIters = GlobalConfig.sdluOptions.maxGMRESIterations;
     // We add 1 because the user thinks of "re"starts, so they
     // might legitimately ask for no restarts. We still have
     // to execute at least once.
-    int maxRestarts = GlobalConfig.sssOptions.maxRestarts + 1;
+    int maxRestarts = GlobalConfig.sdluOptions.maxGMRESRestarts + 1;
     size_t m = to!size_t(maxIters);
     size_t r;
     size_t iterCount;
@@ -662,11 +662,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             else {
                 nm.bbla.dot!double(Gamma, j+2, j+2, Q0, j+2, Q1);
             }
-
-            // Prepare for next step
-            copy(H1, H0);
-            g0[] = g1[];
-            copy(Q1, Q0);
 
             // Get residual
             resid = fabs(g1[j+1]);

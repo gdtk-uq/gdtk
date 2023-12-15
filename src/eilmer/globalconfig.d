@@ -769,6 +769,7 @@ struct SolidDomainLooseUpdateOptions {
     int maxNewtonIterations = 10;
     double NewtonSolveTolerance = 1.0e-2;
     int maxGMRESIterations = 10;
+    int maxGMRESRestarts = 0;
     double GMRESSolveTolerance = 1.0e-3;
     double perturbationSize = 1.0e-50;
     double cfl = 1.0;
@@ -2305,6 +2306,7 @@ void set_config_for_core(JSONValue jsonData)
     sdluo.maxNewtonIterations = getJSONint(sdluOptions, "max_newton_iterations", sdluo.maxNewtonIterations);
     sdluo.NewtonSolveTolerance = getJSONdouble(sdluOptions, "newton_solve_tolerance", sdluo.NewtonSolveTolerance);
     sdluo.maxGMRESIterations = getJSONint(sdluOptions, "max_gmres_iterations", sdluo.maxGMRESIterations);
+    sdluo.maxGMRESRestarts = getJSONint(sdluOptions, "max_gmres_restarts", sdluo.maxGMRESRestarts);
     sdluo.GMRESSolveTolerance = getJSONdouble(sdluOptions, "gmres_solve_tolerance", sdluo.GMRESSolveTolerance);
     sdluo.perturbationSize = getJSONdouble(sdluOptions, "perturbation_size", sdluo.perturbationSize);
     sdluo.cfl = getJSONdouble(sdluOptions, "cfl", sdluo.cfl);
