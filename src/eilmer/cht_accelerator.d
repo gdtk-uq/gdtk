@@ -269,7 +269,6 @@ int main(string[] args)
         // we will only run the solid domain solver
         init_precondition_matrix = true;
         double target_time = GlobalConfig.max_time;
-        writeln("TIME: ", SimState.target_time);
         final switch (solid_time_integration_scheme) {
             case SolidTimeIntegrationScheme.explicit:
                 integrate_solid_in_time_explicit(target_time);
