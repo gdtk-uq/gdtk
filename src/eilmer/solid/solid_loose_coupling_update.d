@@ -732,7 +732,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
     }
 
     if (GlobalConfig.is_master_task) {
-        writeln(r, ", ", iterCount);
         // TODO: handle this output in a more production-ready way
         auto outFile = File("e4-nk.solid.diagnostics.dat", "a");
         outFile.writef("%d    %.16e    %d    %d    %.16e    %.16e \n", step, dt, r, iterCount, linSolResid, unscaledNorm2);
