@@ -270,7 +270,7 @@ void integrate_solid_in_time_implicit(double target_time, bool init_precondition
 
 void allocate_global_solid_workspace()
 {
-    size_t mOuter = to!size_t(GlobalConfig.sssOptions.maxOuterIterations);
+    size_t mOuter = to!size_t(GlobalConfig.sdluOptions.maxGMRESIterations);
     g0.length = mOuter+1;
     g1.length = mOuter+1;
     h.length = mOuter+1;
