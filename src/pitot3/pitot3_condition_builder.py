@@ -7,7 +7,7 @@ Chris James (c.james4@uq.edu.au) - 02/01/23
 
 """
 
-CONDITION_BUILDER_VERSION_STRING = '08-Nov-2023'
+CONDITION_BUILDER_VERSION_STRING = '15-Dec-2023'
 
 #----------------------------------------------------------------------------------------
 
@@ -465,21 +465,45 @@ def run_pitot3_condition_builder(config_dict = {}, config_filename = None,
 
     zipfile_name = f'{base_output_filename}_individual_log_and_result_files.zip'
 
-    # compression level of 9 to get the smallest file...
-    with zipfile.ZipFile(zipfile_name, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+    try:
 
-        for dirname, subdirs, files in os.walk(cwd):
+        # compression level of 9 to get the smallest file...
+        with zipfile.ZipFile(zipfile_name, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
 
-            #remove the working directory from the dirname and then check if what is left is in the test_names, if so,
-            # we want to zip up that folder and all of its subfiles
-            if len(dirname) > len(cwd): # we're not the working directory...
-                dirname_for_comparison = dirname[len(cwd) + 1:] # +1 to remove the slash...
+            for dirname, subdirs, files in os.walk(cwd):
 
-                if dirname_for_comparison in test_names:
+                #remove the working directory from the dirname and then check if what is left is in the test_names, if so,
+                # we want to zip up that folder and all of its subfiles
+                if len(dirname) > len(cwd): # we're not the working directory...
+                    dirname_for_comparison = dirname[len(cwd) + 1:] # +1 to remove the slash...
 
-                    zf.write(dirname)
-                    for filename in files:
-                        zf.write(os.path.join(dirname, filename))
+                    if dirname_for_comparison in test_names:
+
+                        zf.write(dirname)
+                        for filename in files:
+                            zf.write(os.path.join(dirname, filename))
+
+    except Exception as e:
+        print(e)
+        print("We failed to zip up the files, will try again without specifying the compression level")
+        print("as this causes issues sometimes.")
+
+        # compression level of 9 to get the smallest file...
+        with zipfile.ZipFile(zipfile_name, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+
+            for dirname, subdirs, files in os.walk(cwd):
+
+                # remove the working directory from the dirname and then check if what is left is in the test_names, if so,
+                # we want to zip up that folder and all of its subfiles
+                if len(dirname) > len(cwd):  # we're not the working directory...
+                    dirname_for_comparison = dirname[len(cwd) + 1:]  # +1 to remove the slash...
+
+                    if dirname_for_comparison in test_names:
+
+                        zf.write(dirname)
+                        for filename in files:
+                            zf.write(os.path.join(dirname, filename))
+
 
     #----------------------------------------------------------------------------------------
     # now to finish off we delete the results folders that we just zipped up...
@@ -523,6 +547,10 @@ def run_pitot3_condition_builder(config_dict = {}, config_filename = None,
 
             if facility_type == 'expansion_tube':
                 facility_type_statement = 'an expansion tube'
+            elif facility_type == 'non_reflected_shock_tube':
+                facility_type_statement = 'a non-reflected shock tube (NRST)'
+            elif facility_type == 'reflected_shock_tunnel':
+                facility_type_statement = 'a reflected shock tunnel (RST)'
 
             if nozzle_flag:
                 nozzle_statement = 'with a nozzle'

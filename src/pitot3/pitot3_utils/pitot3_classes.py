@@ -730,11 +730,13 @@ def pitot3_single_line_output_file_creator(config_data, object_dict, states_dict
         else:
             config_dict_initial_variables += ['accelerator_gas_filename']
 
-    if secondary_driver_flag: config_dict_initial_variables += ['psd1']
+    if secondary_driver_flag:
+        config_dict_initial_variables += ['psd1']
 
     config_dict_initial_variables += ['p1']
 
-    if facility_type == 'expansion_tube': config_dict_initial_variables += ['p5']
+    if facility_type == 'expansion_tube':
+        config_dict_initial_variables += ['p5']
 
     for variable in config_dict_initial_variables:
 
@@ -794,6 +796,8 @@ def pitot3_single_line_output_file_creator(config_data, object_dict, states_dict
 
     if facility_type == 'expansion_tube':
         states_to_print_list += ['s7', 's6']
+    elif facility_type == 'reflected_shock_tunnel':
+        states_to_print_list += ['s5', 's5d']
 
     if nozzle_flag:
         states_to_print_list += ['s8']
@@ -2187,17 +2191,20 @@ class Facility_State(object):
             # if we use this function it will return it if we already have it, or calculate it if we don't
             total_state = self.get_total_condition()
 
-            if total_state:
+            reference_gas_state = self.get_reference_gas_state()
 
-                reference_gas_state = self.get_reference_gas_state()
+            if total_state:
 
                 # total enthalpy is the sensible enthalpy of the total condition - the sensible enthalpy of the reference state
                 total_enthalpy = total_state.enthalpy - reference_gas_state.enthalpy
 
                 self.total_enthalpy = total_enthalpy
             else:
-                print("Total state could not be calculated, so self.total_enthalpy will be set to None.")
-                self.total_enthalpy = None
+                print("Total state could not be calculated, so instead we'll find Ht as h + 0.5*U**2.")
+
+                total_enthalpy = self.get_gas_state().enthalpy + 0.5*self.get_v()**2.0 - reference_gas_state.enthalpy
+
+                self.total_enthalpy = total_enthalpy
 
         return
 
@@ -3028,7 +3035,10 @@ class Tube(object):
             self.Mr = (shocked_gas_v + self.vr)/ shocked_gas_gas_state.a #normally this would be V2 - Vr, but it's plus here as Vr has been left positive
 
             self.stagnated_fill_gas = Facility_State('s5', stagnated_fill_gas_state, 0.0,
-                                                     reference_gas_state=self.get_shocked_state().get_reference_gas_state())
+                                                     reference_gas_state=self.get_shocked_state().get_reference_gas_state(),
+                                                     outputUnits=self.get_shocked_state().outputUnits,
+                                                     species_MW_dict=self.get_shocked_state().species_MW_dict,
+                                                     )
 
             # then do the same thing for the unsteadily expanded driver gas as this is important for RSTs as well...
 
@@ -3044,8 +3054,16 @@ class Tube(object):
 
             self.Mrd = (unsteadily_expanded_state_v + self.vrd) / unsteadily_expanded_gas_state.a  # normally this would be V3 - Vr, but it's plus here as Vr has been left positive
 
+            if self.unsteadily_expanding_state.get_gas_state_gmodel_without_ions():
+                make_gmodel_without_ions = True
+            else:
+                make_gmodel_without_ions = None
+
             self.stagnated_unsteadily_expanding_gas = Facility_State('s5d', stagnated_unsteadily_expanded_gas_state, 0.0,
-                                                                     reference_gas_state=self.get_unsteadily_expanded_state().get_reference_gas_state())
+                                                                     reference_gas_state=self.get_unsteadily_expanded_state().get_reference_gas_state(),
+                                                                     outputUnits=self.get_unsteadily_expanded_state().outputUnits,
+                                                                     species_MW_dict=self.get_unsteadily_expanded_state().species_MW_dict,
+                                                                     make_gmodel_without_ions=make_gmodel_without_ions)
 
             for facility_state in [self.stagnated_fill_gas, self.stagnated_unsteadily_expanding_gas]:
                 print('-'*60)
@@ -4209,8 +4227,14 @@ def pitot3_results_output(config_data, gas_path, object_dict, generate_output_fi
             print(f"Freestream ({freestream_state.get_state_name()}) unit Reynolds number could not be found, so it is not being printed.",
                 file=output_stream)
 
-        print(f"Post normal shock equilibrium ({test_section_post_normal_shock_state.get_state_name()}) unit Reynolds number is {test_section_post_normal_shock_state.get_unit_Reynolds_number():.2f} /m (related mu is {test_section_post_normal_shock_state.get_mu():.2e} Pa.s).",
-              file=output_stream)
+        post_shock_unit_Re = test_section_post_normal_shock_state.get_unit_Reynolds_number()
+
+        if post_shock_unit_Re:
+            print(f"Post normal shock equilibrium ({test_section_post_normal_shock_state.get_state_name()}) unit Reynolds number is {test_section_post_normal_shock_state.get_unit_Reynolds_number():.2f} /m (related mu is {test_section_post_normal_shock_state.get_mu():.2e} Pa.s).",
+                  file=output_stream)
+        else:
+            print(f"Post normal shock equilibrium ({test_section_post_normal_shock_state.get_state_name()}) unit Reynolds number could not be found, so it is not being printed.",
+                  file=output_stream)
 
         if freestream_state.get_gas_state_gmodel_type()== 'CEAGas':
             print(f"Species in the freestream state ({freestream_state.get_state_name()}) at equilibrium (by {freestream_state.outputUnits}):",
