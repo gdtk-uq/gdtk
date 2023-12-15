@@ -153,10 +153,15 @@ setmetatable(ShapeSensitivityCalculator, sscOptionsHidden)
 sdluOptionsHidden = { -- hidden from user
    -- set defaults here
    max_newton_iterations = 10,
-   tolerance_newton_update = 1.0e-2,
+   newton_solve_tolerance = 1.0e-2,
    max_gmres_iterations = 10,
-   tolerance_gmres_solve = 1.0e-3,
-   perturbation_size = 1.0e-2,
+   gmres_solve_tolerance = 1.0e-3,
+   perturbation_size = 1.0e-50,
+   cfl = 1.0,
+   solid_time_integration_scheme = "explicit",
+   solid_domain_only = false,
+   super_time_steps = 1,
+   implicit_time_integration_mode = 1,
 
    __index = function (t, k)
       return sdluOptionsHidden[k]

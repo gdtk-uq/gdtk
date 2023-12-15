@@ -179,6 +179,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
         if (GlobalConfig.fixed_time_step) {
             // if we have a fixed time step then we need to specify the number of super-steps
             S = SimState.s_RKL;
+            if (S == 1) { euler_step = true; }
             dt_global = GlobalConfig.dt_init;
         } else {
             // We determine the allowable timestep here to overwrite the timestep calculated for the fluid domain

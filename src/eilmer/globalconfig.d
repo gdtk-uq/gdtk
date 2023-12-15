@@ -601,6 +601,27 @@ SolidDomainCoupling solidDomainCouplingFromName(string name)
     }
 }
 
+enum SolidTimeIntegrationScheme { explicit, implicit }
+
+@nogc
+string solidTimeIntegrationSchemeName(SolidTimeIntegrationScheme i)
+{
+    final switch (i) {
+    case SolidTimeIntegrationScheme.explicit: return "explicit";
+    case SolidTimeIntegrationScheme.implicit: return "implicit";
+    }
+}
+
+@nogc
+SolidTimeIntegrationScheme solidTimeIntegrationSchemeFromName(string name)
+{
+    switch (name) {
+    case "explicit": return SolidTimeIntegrationScheme.explicit;
+    case "implicit": return SolidTimeIntegrationScheme.implicit;
+    default: return SolidTimeIntegrationScheme.explicit;
+    }
+}
+
 enum PreconditionMatrixType { diagonal, jacobi, sgs, ilu }
 
 string preconditionMatrixTypeName(PreconditionMatrixType i)
@@ -746,10 +767,15 @@ class IgnitionZone : BlockZone {
 
 struct SolidDomainLooseUpdateOptions {
     int maxNewtonIterations = 10;
-    double toleranceNewtonUpdate = 1.0e-2;
+    double NewtonSolveTolerance = 1.0e-2;
     int maxGMRESIterations = 10;
-    double toleranceGMRESSolve = 1.0e-3;
-    double perturbationSize = 1.0e-2;
+    double GMRESSolveTolerance = 1.0e-3;
+    double perturbationSize = 1.0e-50;
+    double cfl = 1.0;
+    SolidTimeIntegrationScheme solidTimeIntegrationScheme = SolidTimeIntegrationScheme.explicit;
+    bool solidDomainOnly = false;
+    int superTimeSteps = 1;
+    int implicitTimeIntegrationMode = 1;
 }
 
 struct ShapeSensitivityCalculatorOptions {
@@ -1972,29 +1998,6 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("solve_electric_field", "solve_electric_field"));
     mixin(update_string("field_conductivity_model", "field_conductivity_model"));
 
-    // Parameters controlling size of storage arrays
-    version(nk_accelerator) {
-        // We need temporalIntegrationMode to fill n_flow_time_levels for the Newton-Krylov solver,
-        // this parameter is sitting in the steady-state solver options in the control file,
-        // which at this point in the initialisation hasn't been read in yet. So we need to dip
-        // into the control file and pull this information out here. The remainder of the control
-        // file will be imported at a later stage.
-        // TODO: should we consider reading the control file earlier or setting this variable later? KAD 23-08-2023
-        JSONValue jsonCntrlData = readJSONfile("config/"~cfg.base_file_name~".control");
-        auto sssOptions = jsonCntrlData["steady_state_solver_options"];
-        auto ssso = &(cfg.sssOptions);
-        ssso.temporalIntegrationMode = getJSONint(sssOptions, "temporal_integration_mode", ssso.temporalIntegrationMode);
-        cfg.n_flow_time_levels = 3 + cfg.sssOptions.temporalIntegrationMode;
-        if (cfg.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
-            // for the steady-fluid transient-solid CHT solver we need to ensure that the arrays are sized appropriately
-            // for both the implicit and explicit update schemes.
-            auto n_flow_time_levels_for_explicit_update = 1 + number_of_stages_for_update_scheme(cfg.gasdynamic_update_scheme);
-            cfg.n_flow_time_levels = max(cfg.n_flow_time_levels, n_flow_time_levels_for_explicit_update);
-        }
-    } else {
-        cfg.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(cfg.gasdynamic_update_scheme);
-    }
-
     // Checking of constraints.
     // The following checks/overrides must happen after the relevant config elements
     // have been set.  This is the first such check.  For details, see the function below.
@@ -2300,10 +2303,53 @@ void set_config_for_core(JSONValue jsonData)
     auto sdluOptions = jsonData["solid_domain_loose_update_options"];
     auto sdluo = &(cfg.sdluOptions);
     sdluo.maxNewtonIterations = getJSONint(sdluOptions, "max_newton_iterations", sdluo.maxNewtonIterations);
-    sdluo.toleranceNewtonUpdate = getJSONdouble(sdluOptions, "tolerance_newton_update", sdluo.toleranceNewtonUpdate);
+    sdluo.NewtonSolveTolerance = getJSONdouble(sdluOptions, "newton_solve_tolerance", sdluo.NewtonSolveTolerance);
     sdluo.maxGMRESIterations = getJSONint(sdluOptions, "max_gmres_iterations", sdluo.maxGMRESIterations);
-    sdluo.toleranceGMRESSolve = getJSONdouble(sdluOptions, "tolerance_gmres_solve", sdluo.toleranceGMRESSolve);
+    sdluo.GMRESSolveTolerance = getJSONdouble(sdluOptions, "gmres_solve_tolerance", sdluo.GMRESSolveTolerance);
     sdluo.perturbationSize = getJSONdouble(sdluOptions, "perturbation_size", sdluo.perturbationSize);
+    sdluo.cfl = getJSONdouble(sdluOptions, "cfl", sdluo.cfl);
+    auto mySaveValue0 = sdluo.solidTimeIntegrationScheme;
+    try {
+        string name = sdluOptions["solid_time_integration_scheme"].str;
+        sdluo.solidTimeIntegrationScheme = solidTimeIntegrationSchemeFromName(name);
+    } catch (Exception e) {
+        sdluo.solidTimeIntegrationScheme = mySaveValue0;
+    }
+    sdluo.solidDomainOnly = getJSONbool(sdluOptions, "solid_domain_only",  sdluo.solidDomainOnly);
+    sdluo.superTimeSteps = getJSONint(sdluOptions, "super_time_steps", sdluo.superTimeSteps);
+    sdluo.implicitTimeIntegrationMode = getJSONint(sdluOptions, "implicit_time_integration_mode", sdluo.implicitTimeIntegrationMode);
+
+    // Parameters controlling size of storage arrays - we set this here since we key it off some of the other config parameters
+    version(nk_accelerator) {
+        // We need temporalIntegrationMode to fill n_flow_time_levels for the Newton-Krylov solver,
+        // this parameter is sitting in the steady-state solver options in the control file,
+        // which at this point in the initialisation hasn't been read in yet. So we need to dip
+        // into the control file and pull this information out here. The remainder of the control
+        // file will be imported at a later stage.
+        // TODO: should we consider reading the control file earlier or setting this variable later? KAD 23-08-2023
+        JSONValue jsonCntrlData = readJSONfile("config/"~cfg.base_file_name~".control");
+        auto sssOptions = jsonCntrlData["steady_state_solver_options"];
+        auto ssso = &(cfg.sssOptions);
+        ssso.temporalIntegrationMode = getJSONint(sssOptions, "temporal_integration_mode", ssso.temporalIntegrationMode);
+        cfg.n_flow_time_levels = 3 + cfg.sssOptions.temporalIntegrationMode;
+        if (cfg.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
+            // for the steady-fluid transient-solid CHT solver we need to ensure that the arrays
+            // are sized appropriately for both the fluid and solid update schemes.
+            size_t n_flow_time_levels_for_solid_update;
+            final switch (cfg.sdluOptions.solidTimeIntegrationScheme) {
+                case SolidTimeIntegrationScheme.explicit:
+                    n_flow_time_levels_for_solid_update = 1 + number_of_stages_for_update_scheme(cfg.gasdynamic_update_scheme);
+                    break;
+                case SolidTimeIntegrationScheme.implicit:
+                    n_flow_time_levels_for_solid_update = 3 + cfg.sdluOptions.implicitTimeIntegrationMode;
+                    break;
+            } // end switch
+            cfg.n_flow_time_levels = max(cfg.n_flow_time_levels, n_flow_time_levels_for_solid_update);
+        }
+    } else {
+        cfg.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(cfg.gasdynamic_update_scheme);
+    }
+
     //
     version (shape_sensitivity) {
         auto sscOptions = jsonData["shape_sensitivity_calculator_options"];
