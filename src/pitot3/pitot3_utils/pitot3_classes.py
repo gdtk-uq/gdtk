@@ -1738,10 +1738,9 @@ class Diaphragm(object):
                                                       species_MW_dict=entrance_state.species_MW_dict)
 
         print(f'Mr = {self.Mr:.2f}, vr = {self.vr:.2f}')
-        print(self.reflected_shocked_state)
 
-        if self.reflected_shocked_state.get_gas_state_gmodel_type() == 'CEAGas':
-            print(self.reflected_shocked_state.get_reduced_composition_two_line_output_string())
+        self.reflected_shocked_state.detailed_print()
+
 
         return
 
@@ -1764,7 +1763,8 @@ class Diaphragm(object):
                                                          reference_gas_state=reference_gas_state,
                                                          outputUnits=self.diaphragm_entrance_state.outputUnits,
                                                          species_MW_dict=self.diaphragm_entrance_state.species_MW_dict)
-        print(self.velocity_loss_factor_state)
+
+        self.velocity_loss_factor_state.detailed_print()
 
         return
 
@@ -1926,6 +1926,34 @@ class Facility_State(object):
                 f"V = {self.v:.2f} m/s, M = {self.M:.2f})")
 
         return text
+
+    def detailed_print(self):
+        """
+        This is a function that prints the gas state (the string above), the species (if it can), and the total enthalpy (if it can)
+
+        I made this as I had that happening everywhere in the code and realised I should just make a function for it...
+
+        :return:
+        """
+
+        print(self)
+
+        if self.get_gas_state_gmodel_type() == 'CEAGas':
+            print(self.get_reduced_composition_two_line_output_string())
+
+        # add the stagnation enthalpy, if we can:
+        if self.reference_gas_state:
+
+            total_enthalpy = self.get_total_enthalpy()
+
+            if total_enthalpy:
+                print(
+                    f"The total enthalpy (Ht) at state {self.get_state_name()} is {total_enthalpy / 1.0e6:.2f} MJ/kg.")
+            else:
+                print(
+                    f"Was unable to calculate the total enthalpy at state {self.get_state_name()} so it cannot be printed")
+
+        return
 
     def get_state_name(self):
         """
@@ -2988,18 +3016,9 @@ class Tube(object):
 
             for facility_state in [self.shocked_state, self.unsteadily_expanded_state]:
                 print('-'*60)
-                print(facility_state)
-                if facility_state.get_gas_state_gmodel_type() == 'CEAGas':
-                    print(facility_state.get_reduced_composition_two_line_output_string())
 
-                # add the stagnation enthalpy, if we can:
-                if facility_state.reference_gas_state:
-                    total_enthalpy = facility_state.get_total_enthalpy()
+                facility_state.detailed_print()
 
-                    if total_enthalpy:
-                        print (f"The total enthalpy (Ht) at state {facility_state.get_state_name()} is {total_enthalpy/1.0e6:.2f} MJ/kg.")
-                    else:
-                        print(f"Was unable to calculate the total enthalpy at state {facility_state.get_state_name()} so it cannot be printed")
             return
 
         else:
@@ -3067,15 +3086,8 @@ class Tube(object):
 
             for facility_state in [self.stagnated_fill_gas, self.stagnated_unsteadily_expanding_gas]:
                 print('-'*60)
-                print(facility_state)
-                if facility_state.get_gas_state_gmodel_type() == 'CEAGas':
-                    print(facility_state.get_reduced_composition_two_line_output_string())
 
-                # add the stagnation enthalpy, if we can:
-                if facility_state.reference_gas_state:
-                    total_enthalpy = facility_state.get_total_enthalpy()
-
-                    print (f"The total enthalpy (Ht) at state {facility_state.get_state_name()} is {total_enthalpy/1.0e6:.2f} MJ/kg.")
+                facility_state.detailed_print()
 
         else:
             print("Shocked and unsteadily expanded states must have been calculated for this function to be used.")
@@ -3357,87 +3369,87 @@ class Nozzle(object):
                                          reference_gas_state=reference_gas_state,
                                          outputUnits=self.entrance_state.outputUnits, species_MW_dict=self.entrance_state.species_MW_dict)
 
-            v_exit = entrance_state_gas_flow_object.steady_flow_with_area_change(self.state6.get_gas_state(),
-                                                                                 self.state6.get_v(),
-                                                                                 self.area_ratio, exit_gas_state,
-                                                                                 tol=nozzle_expansion_tolerance)
+            self.state6.detailed_print()
+
+        # now set up the supersonic nozzle for all of the cases...
+        # we can put the variables in a dictionary and parse them using keyword arguments...
+        # we need to have: state1, v1, area2_over_area1, state2, tol=1.0e-4, p2p1_min=0.0001
+
+        supersonic_expansion_input_dict = {}
+
+        if facility_type in ['expansion_tube', 'non_reflected_shock_tube']:
+            supersonic_nozzle_entrance_state = self.entrance_state
+        elif facility_type == 'reflected_shock_tunnel':
+            supersonic_nozzle_entrance_state = self.state6
+
+        supersonic_expansion_input_dict['state1'] = supersonic_nozzle_entrance_state .get_gas_state()
+        supersonic_expansion_input_dict['v1'] = supersonic_nozzle_entrance_state .get_v()
 
 
-        elif facility_type == 'expansion_tube' and expansion_tube_nozzle_expansion_minimum_p2_over_p1:
+        supersonic_expansion_input_dict['area2_over_area1'] = self.area_ratio
+        supersonic_expansion_input_dict['state2'] = exit_gas_state
+        supersonic_expansion_input_dict['tol'] = nozzle_expansion_tolerance
 
-            # for expansion tube cases, I reduced the default p2p1_min to 0.01 as most expansion tube nozzles do not have large area ratios.
-            # 0.01 was a value which should work with large nozzles such as the X3 Mach 12 nozzle
-            # (this now stored in the default config so the user can change it if they want).
-            # the main case that fails is CO2 cases, everything else seems to be able to cope with it.
+        # for the expansion tube we normally cut down p2p1_min too
+        if facility_type == 'expansion_tube' and expansion_tube_nozzle_expansion_minimum_p2_over_p1:
+            supersonic_expansion_input_dict['p2p1_min'] = expansion_tube_nozzle_expansion_minimum_p2_over_p1
 
-            try:
+        try:
 
-                v_exit = entrance_state_gas_flow_object.steady_flow_with_area_change(self.entrance_state.get_gas_state(),
-                                                                                     self.entrance_state.get_v(),
-                                                                                     self.area_ratio, exit_gas_state,
-                                                                                     tol=nozzle_expansion_tolerance,
-                                                                                     p2p1_min=expansion_tube_nozzle_expansion_minimum_p2_over_p1)
-            except Exception as e:
-                print(e)
-                print("Nozzle expansion has failed.")
+            v_exit = entrance_state_gas_flow_object.steady_flow_with_area_change(**supersonic_expansion_input_dict)
 
-                # we have a case for using the room temperature only gs model for CO2
-                # and turning off ionisation for cases with ionisaton...
+        except Exception as e:
+            print(e)
+            print("Nozzle expansion has failed.")
 
-                if self.entrance_state.get_room_temperature_only_gmodel() and self.entrance_state.get_gas_state().T < maximum_temp_for_room_temperature_only_gmodel:
-                    print(f"Our gas state has a room temperature only gas model and we are below the maximum temperature for using that model of {maximum_temp_for_room_temperature_only_gmodel}.")
-                    print('So we are going to try doing the nozzle expansion with that model.')
+            # we have a case for using the room temperature only gs model for CO2
+            # and turning off ionisation for cases with ionisaton...
 
-                    original_gmodel = self.entrance_state.get_gas_state_gmodel()
+            if self.entrance_state.get_room_temperature_only_gmodel() and self.entrance_state.get_gas_state().T < maximum_temp_for_room_temperature_only_gmodel:
+                print(f"Our gas state has a room temperature only gas model and we are below the maximum temperature for using that model of {maximum_temp_for_room_temperature_only_gmodel}.")
+                print('So we are going to try doing the nozzle expansion with that model.')
 
-                    room_temperature_only_gmodel = self.entrance_state.get_room_temperature_only_gmodel()
-                    room_temperature_only_gas_flow = GasFlow(room_temperature_only_gmodel)
+                original_gmodel = supersonic_nozzle_entrance_state.get_gas_state_gmodel()
 
-                    entrance_gas_state = self.entrance_state.get_gas_state()
+                room_temperature_only_gmodel = supersonic_nozzle_entrance_state.get_room_temperature_only_gmodel()
+                room_temperature_only_gas_flow = GasFlow(room_temperature_only_gmodel)
 
-                    entrance_gas_state.gmodel = room_temperature_only_gmodel
+                entrance_gas_state = supersonic_nozzle_entrance_state.get_gas_state()
 
-                    exit_gas_state = GasState(room_temperature_only_gmodel)
+                entrance_gas_state.gmodel = room_temperature_only_gmodel
 
-                    v_exit = room_temperature_only_gas_flow.steady_flow_with_area_change(
-                        entrance_gas_state,
-                        self.entrance_state.get_v(),
-                        self.area_ratio, exit_gas_state,
-                        tol=nozzle_expansion_tolerance,
-                        p2p1_min=expansion_tube_nozzle_expansion_minimum_p2_over_p1)
+                exit_gas_state = GasState(room_temperature_only_gmodel)
 
-                    entrance_gas_state.gmodel = original_gmodel
-                    exit_gas_state.gmodel = original_gmodel
+                supersonic_expansion_input_dict['state1'] = entrance_gas_state
+                supersonic_expansion_input_dict['state2'] = exit_gas_state
 
-                elif self.entrance_state.get_gas_state_gmodel_without_ions() and self.entrance_state.get_gas_state().T < cutoff_temp_for_no_ions:
-                    print(
-                        f"We are below the set cutoff temperature of {cutoff_temp_for_no_ions} K so we are going to try performing the nozzle expansion without ions.")
+                v_exit = room_temperature_only_gas_flow.steady_flow_with_area_change(**supersonic_expansion_input_dict)
 
-                    original_gmodel = self.entrance_state.get_gas_state_gmodel()
+                entrance_gas_state.gmodel = original_gmodel
+                exit_gas_state.gmodel = original_gmodel
 
-                    gmodel_without_ions = self.entrance_state.get_gas_state_gmodel_without_ions()
-                    gas_flow_without_ions = GasFlow(gmodel_without_ions )
+            elif self.entrance_state.get_gas_state_gmodel_without_ions() and self.entrance_state.get_gas_state().T < cutoff_temp_for_no_ions:
+                print(
+                    f"We are below the set cutoff temperature of {cutoff_temp_for_no_ions} K so we are going to try performing the nozzle expansion without ions.")
 
-                    entrance_gas_state = self.entrance_state.get_gas_state()
+                original_gmodel = supersonic_nozzle_entrance_state.get_gas_state_gmodel()
 
-                    entrance_gas_state.gmodel = gmodel_without_ions
+                gmodel_without_ions = supersonic_nozzle_entrance_state.get_gas_state_gmodel_without_ions()
+                gas_flow_without_ions = GasFlow(gmodel_without_ions)
 
-                    exit_gas_state = GasState(gmodel_without_ions)
+                entrance_gas_state = supersonic_nozzle_entrance_state.get_gas_state()
 
-                    v_exit = gas_flow_without_ions.steady_flow_with_area_change(
-                        entrance_gas_state,
-                        self.entrance_state.get_v(),
-                        self.area_ratio, exit_gas_state,
-                        tol=nozzle_expansion_tolerance,
-                        p2p1_min=expansion_tube_nozzle_expansion_minimum_p2_over_p1)
+                entrance_gas_state.gmodel = gmodel_without_ions
 
-                    entrance_gas_state.gmodel = original_gmodel
-                    exit_gas_state.gmodel = original_gmodel
+                exit_gas_state = GasState(gmodel_without_ions)
 
-        else:
-            v_exit = entrance_state_gas_flow_object.steady_flow_with_area_change(self.entrance_state.get_gas_state(), self.entrance_state.get_v(),
-                                                                                 self.area_ratio, exit_gas_state,
-                                                                                 tol=nozzle_expansion_tolerance)
+                supersonic_expansion_input_dict['state1'] = entrance_gas_state
+                supersonic_expansion_input_dict['state2'] = exit_gas_state
+
+                v_exit = gas_flow_without_ions.steady_flow_with_area_change(**supersonic_expansion_input_dict)
+
+                entrance_gas_state.gmodel = original_gmodel
+                exit_gas_state.gmodel = original_gmodel
 
         # if the entrance state has a reference gas state, we can grab that as the exit state will have the same one.
         if self.entrance_state.reference_gas_state:
@@ -3448,21 +3460,7 @@ class Nozzle(object):
                                          reference_gas_state=reference_gas_state,
                                          outputUnits=self.entrance_state.outputUnits, species_MW_dict=self.entrance_state.species_MW_dict)
 
-        print (self.exit_state)
-
-        if self.exit_state.get_gas_state_gmodel_type() == 'CEAGas':
-            print(self.exit_state.get_reduced_composition_two_line_output_string())
-
-        # add the stagnation enthalpy, if we can:
-        if  self.exit_state.reference_gas_state:
-            total_enthalpy = self.exit_state.get_total_enthalpy()
-
-            if total_enthalpy:
-                print(
-                    f"The total enthalpy (Ht) at state {self.exit_state.get_state_name()} is {total_enthalpy / 1.0e6:.2f} MJ/kg.")
-            else:
-                print(
-                    f"Was unable to calculate the total enthalpy at state {self.exit_state.get_state_name()} so it cannot be printed")
+        self.exit_state.detailed_print()
 
         return
 
@@ -3605,7 +3603,7 @@ class Test_Section(object):
             self.post_normal_shock_ideal_gas_state = Facility_State(f'{self.test_section_post_shock_state_name}f',
                                                                     post_normal_shock_ideal_gas_gas_state, v10f)
 
-            print (self.post_normal_shock_ideal_gas_state)
+            self.post_normal_shock_ideal_gas_state.detailed_print()
 
         print('-'*60)
         print("Starting equilibrium normal shock calculation over the test model.")
@@ -3632,10 +3630,7 @@ class Test_Section(object):
                                                       outputUnits=self.entrance_state.outputUnits,
                                                       species_MW_dict=self.entrance_state.species_MW_dict)
 
-        print (self.post_normal_shock_state)
-
-        if self.post_normal_shock_state.get_gas_state_gmodel_type() == 'CEAGas':
-            print(self.post_normal_shock_state.get_reduced_composition_two_line_output_string())
+        self.post_normal_shock_state.detailed_print()
 
     def get_post_normal_shock_state(self):
         """
@@ -3719,10 +3714,7 @@ class Test_Section(object):
                                                            outputUnits=self.entrance_state.outputUnits,
                                                            species_MW_dict=self.entrance_state.species_MW_dict)
 
-            print(self.post_conical_shock_state)
-
-            if self.post_conical_shock_state.get_gas_state_gmodel_type() == 'CEAGas':
-                print(self.post_conical_shock_state.get_reduced_composition_two_line_output_string())
+            self.post_normal_shock_state.detailed_print()
 
         except Exception as e:
             print("Conical shock calculation failed:")
@@ -3789,10 +3781,7 @@ class Test_Section(object):
                                                          outputUnits=self.entrance_state.outputUnits,
                                                          species_MW_dict=self.entrance_state.species_MW_dict)
 
-            print(self.post_wedge_shock_state)
-
-            if self.post_wedge_shock_state.get_gas_state_gmodel_type() == 'CEAGas':
-                print(self.post_wedge_shock_state.get_reduced_composition_two_line_output_string())
+            self.post_wedge_shock_state.detailed_print()
 
         except Exception as e:
             print("Wedge shock calculation failed:")
