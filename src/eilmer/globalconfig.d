@@ -777,6 +777,8 @@ struct SolidDomainLooseUpdateOptions {
     bool solidDomainOnly = false;
     int superTimeSteps = 1;
     int implicitTimeIntegrationMode = 1;
+    int frozenPreconditionerCount = 1;
+    bool usePreconditioner = true;
 }
 
 struct ShapeSensitivityCalculatorOptions {
@@ -2320,7 +2322,8 @@ void set_config_for_core(JSONValue jsonData)
     sdluo.solidDomainOnly = getJSONbool(sdluOptions, "solid_domain_only",  sdluo.solidDomainOnly);
     sdluo.superTimeSteps = getJSONint(sdluOptions, "super_time_steps", sdluo.superTimeSteps);
     sdluo.implicitTimeIntegrationMode = getJSONint(sdluOptions, "implicit_time_integration_mode", sdluo.implicitTimeIntegrationMode);
-
+    sdluo.frozenPreconditionerCount = getJSONint(sdluOptions, "frozen_preconditioner_count", sdluo.frozenPreconditionerCount);
+    sdluo.usePreconditioner = getJSONbool(sdluOptions, "use_preconditioner",  sdluo.usePreconditioner);
     // Parameters controlling size of storage arrays - we set this here since we key it off some of the other config parameters
     version(nk_accelerator) {
         // We need temporalIntegrationMode to fill n_flow_time_levels for the Newton-Krylov solver,

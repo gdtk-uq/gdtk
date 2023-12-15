@@ -163,6 +163,8 @@ sdluOptionsHidden = { -- hidden from user
    solid_domain_only = false,
    super_time_steps = 1,
    implicit_time_integration_mode = 1,
+   frozen_preconditioner_count = 1,
+   use_preconditioner = true,
 
    __index = function (t, k)
       return sdluOptionsHidden[k]
