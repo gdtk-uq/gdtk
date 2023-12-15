@@ -148,6 +148,10 @@ config.dt_init   = 1.0e-12
 config.max_time  = 1.0
 config.max_step  = 1e8
 config.dt_plot   = config.max_time
+SolidDomainLooseUpdate {
+   solid_time_integration_scheme = "explicit",
+   super_time_steps = 100,
+}
 
 -- invsicid flux settings
 config.flux_calculator       = "adaptive_hanel_ausmdv"

@@ -1,10 +1,7 @@
 {
 "npoints": 5,
-"solid_time_integration": "explicit",
-"solid_only": false,
 "constant_freestream": true,
 "warm_start_fluid_solve": true,
-"super_time_steps": 100,
 "n_startup_steps": 0,
 "dt_couple_init": 1.0,
 "dt_couple_max": 1.0,
