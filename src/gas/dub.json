@@ -1,0 +1,11 @@
+{
+	"authors": [
+		"GDTK Dev Group"
+	],
+	"copyright": "Copyright © 2023, GDTK Dev Group",
+	"description": "Gas Model Library",
+	"license": "GPL-3.0",
+	"name": "gas",
+	"sourcePaths": ["."],
+	"importPaths": [".", ".."],
+}

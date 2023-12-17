@@ -1,0 +1,16 @@
+{
+	"authors": [
+		"GDTK Dev Group"
+	],
+	"copyright": "Copyright © 2023, GDTK Dev Group",
+	"description": "Eilmer application",
+	"license": "GPL-3.0",
+	"name": "eilmer",
+	"sourcePaths": ["."],
+	"importPaths": [".", ".."],
+	"dependencies": {
+		"gperftools_d": {
+			"path": "../extern/gperftools_d"
+		}
+	}
+}

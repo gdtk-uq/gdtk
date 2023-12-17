@@ -1,0 +1,11 @@
+{
+	"authors": [
+		"GDTK Dev Group"
+	],
+	"copyright": "Copyright © 2023, GDTK Dev Group",
+	"description": "Utility Packages for GDTK",
+	"license": "GPL-3.0",
+	"name": "util",
+	"sourcePaths": ["."],
+	"importPaths": [".", ".."],
+}

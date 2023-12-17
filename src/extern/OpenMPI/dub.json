@@ -1,0 +1,41 @@
+{
+    "name": "mpi",
+    "authors": ["Jude Young", "John Colvin"],
+
+    "subPackages": [
+        {
+            "name": "configure",
+            "sourcePaths": ["gen/configure/"],
+            "targetType": "executable"
+        },
+        {
+            "name": "splice",
+            "sourcePaths": ["gen/splice/"],
+            "targetType": "executable"
+        }
+    ],
+
+    "configurations": [
+        {
+            "name": "with-libs",
+            "dflags-gdc": ["-L/usr/lib/x86_64-linux-gnu/openmpi/lib", "-lmpi",],
+            "lflags-dmd": ["-L/usr/lib/x86_64-linux-gnu/openmpi/lib", "-lmpi",],
+            "lflags-ldc": ["-L/usr/lib/x86_64-linux-gnu/openmpi/lib", "-lmpi",]
+        },
+        {
+            "name": "noLibs"
+        }
+    ],
+
+    "buildTypes": {
+        "DSddox": {
+            "buildOptions": ["syntaxOnly"],
+            "dflags": ["-c", "-Df__dummy.html", "-Xfdocs.json"],
+            "postBuildCommands": [
+                "rm -rf site/api",
+                "ddox filter --min-protection=Protected docs.json",
+                "ddox generate-html --navigation-type=ModuleTree docs.json site/api"
+            ]
+        }
+    }
+}
