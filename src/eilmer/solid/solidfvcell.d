@@ -391,9 +391,9 @@ public:
           entry into the flow Jacobian later.
 
           We expect the spatial_order_of_jacobian will either be:
-          -1 : include just this cell (i.e. we will later form only the diagonal components of the Jacobian)
-          0  : include nearest neighbours (approximate Jacobian)
-          2  : include full stencil
+          0 : include just this cell (i.e. we will later form only the diagonal components of the Jacobian)
+          1 : include nearest neighbours (approximate Jacobian)
+          2 : include full stencil
          */
 
         SolidFVCell[] unordered_cell_list;  // TODO: think about possibly pre-sizing this array
@@ -405,7 +405,7 @@ public:
         cell_pos_array[this.id] = unordered_cell_list.length-1;
         cell_ids ~= this.id;
         bool nearest_neighbours = false;
-        if ( spatial_order_of_jacobian >= 0) { nearest_neighbours = true; }
+        if ( spatial_order_of_jacobian >= 1) { nearest_neighbours = true; }
 
         if (nearest_neighbours) {
             foreach(f; iface) {
@@ -421,7 +421,7 @@ public:
         } // end if (nearest_neighbours)
 
         bool extended_neighbours = false;
-        if ( nearest_neighbours && spatial_order_of_jacobian > 0) { extended_neighbours = true; }
+        if ( nearest_neighbours && spatial_order_of_jacobian > 1) { extended_neighbours = true; }
 
         if (extended_neighbours) {
             size_t np = unordered_cell_list.length;

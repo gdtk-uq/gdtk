@@ -164,6 +164,8 @@ sdluOptionsHidden = { -- hidden from user
    super_time_steps = 1,
    implicit_time_integration_mode = 1,
    frozen_preconditioner_count = 1,
+   preconditioner_fill_in = 0,
+   preconditioner_approximation = 0,
    use_preconditioner = true,
 
    __index = function (t, k)

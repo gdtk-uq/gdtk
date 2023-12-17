@@ -1062,9 +1062,12 @@ public:
         return dt_allow.re;
     } // end determine_time_step_size()
 
-    void initialize_jacobian(int spatial_order_of_jacobian, double eps)
+    void initialize_jacobian(int spatial_order_of_jacobian, double eps, int fill_in)
     {
         // This routine initializes the Jacobian matrix attached to this SolidBlock object.
+        if (spatial_order_of_jacobian < 0 || spatial_order_of_jacobian > 2) {
+            throw new FlowSolverException("ERROR: invalid preconditioner approximation for solid domain, select either 0 1 2");
+        }
 
         size_t nentry = 0;
         // gather the expected number of non-zero entries in the flow Jacobian
@@ -1076,7 +1079,7 @@ public:
         // TODO: gather ghost-cell stencils
 
         // pre-size the sparse matrix arrays associated with the Jacobian matrix
-        jacobian_nonzero_pattern(spatial_order_of_jacobian, nentry, cells.length, eps, 0);
+        jacobian_nonzero_pattern(spatial_order_of_jacobian, nentry, cells.length, eps, fill_in);
     } // end initialize_jacobian()
 
     void jacobian_nonzero_pattern(int spatial_order_of_jacobian, size_t nentry, size_t ncells, double sigma, int iluFill) {
