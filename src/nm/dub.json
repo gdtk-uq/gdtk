@@ -3,9 +3,9 @@
 		"GDTK Dev Group"
 	],
 	"copyright": "Copyright © 2023, GDTK Dev Group",
-	"description": "Eilmer application",
+	"description": "Numerical Methods Library",
 	"license": "GPL-3.0",
-	"name": "eilmer",
+	"name": "nm",
 	"sourcePaths": ["."],
 	"importPaths": [".", ".."],
 }
