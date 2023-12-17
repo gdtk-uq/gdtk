@@ -1,0 +1,11 @@
+{
+	"authors": [
+		"GDTK Dev Group"
+	],
+	"copyright": "Copyright © 2023, GDTK Dev Group",
+	"description": "Eilmer 5 Application",
+	"license": "GPL-3.0",
+	"name": "lmr",
+	"sourcePaths": ["."],
+	"importPaths": [".", ".."],
+}
