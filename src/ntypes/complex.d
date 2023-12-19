@@ -1372,6 +1372,19 @@ Complex!real coshisinh(real y) @safe pure nothrow @nogc
     Params: z = A complex number.
     Returns: The square root of `z`.
 */
+@nogc
+Complex!T sqrt(T)(Complex!T z) @safe pure nothrow
+if ( is(typeof(T(0.0)) == double) ||
+     is(typeof(T(0.0)) == float)  ||
+     is(typeof(T(0.0)) == real))
+{
+    import std.math : sqrt, cos, sin;
+    T x = z.re; T y = z.im;
+    T zarg = arg(z);
+    T zabs = std.math.sqrt(x*x + y*y);
+    return sqrt(zabs)*complex( cos(zarg/2.0), sin(zarg/2.0) );
+}
+/*
 Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 {
     static import std.math;
@@ -1415,7 +1428,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     }
     return c;
 }
-
+*/
 ///
 @safe pure nothrow unittest
 {
