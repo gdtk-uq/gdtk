@@ -20,6 +20,7 @@ import std.datetime;
 import gzip;
 import ntypes.complex;
 import nm.number;
+import geom.misc.kdtree;
 
 import geom;
 import paver: PavedGrid, POINT_LIST, FACE_LIST, CELL_LIST;
@@ -2227,23 +2228,42 @@ public:
                 }
             }
             vtx_ids_other_boundary = array(vtx_ids_other_boundary.sort().uniq());
+            bool[] other_vtx_is_on_boundary;
+            other_vtx_is_on_boundary.length = other.vertices.length;
+            foreach(vid; vtx_ids_other_boundary) other_vtx_is_on_boundary[vid] = true;
             //
-            // Compare vertics on boundaries and add them to master grid if new.
+            // Assemble KDTree of this block's vertices
+            size_t nvtxs = vtx_ids_boundary.length;
+            Node[] nodes;
+            nodes.length = nvtxs;
+            foreach(i, id; vtx_ids_boundary) {
+                Node node = {[vertices[id].x.re, vertices[id].y.re, vertices[id].z.re]};
+                node.cellid = id;
+                nodes[i] = node;
+            }
+            auto root = makeTree(nodes);
+            //
+            // Compare vertices on boundaries and add them to master grid if new.
             new_vtx_ids.length = other.vertices.length;
             foreach (i; vtx_ids_other_boundary) {
                 bool found = false;
                 size_t jsave;
                 Vector3 vtx;
                 vtx = other.vertices[i];
-                foreach (j; vtx_ids_boundary) {
-                    Vector3 v;
-                    v = vertices[j];
-                    if (approxEqualVectors(v, vtx, relTol, absTol)) {
-                        found = true;
-                        jsave = j; // Remember where we found it.
-                        break;
-                    }
+
+                // Search for the nearest vertex in this grid
+                Node vtxnode = {[vtx.x.re, vtx.y.re, vtx.z.re]};
+                const(Node)* foundNode = null;
+                double bestDist = 0.0;
+                size_t nVisited = 0;
+                root.fast_nearest(vtxnode, 0, foundNode, bestDist, nVisited);
+                double dist = sqrt(bestDist);
+
+                if (dist<absTol) {
+                    found = true;
+                    jsave = foundNode.cellid; // Remember where we found it.
                 }
+
                 if (!found) {
                     // We have a new vertex for the master grid.
                     vertices ~= vtx;
@@ -2256,7 +2276,7 @@ public:
             //
             // Add internal vertices from other to master grid
             foreach (i, vtx; other.vertices) {
-                if ( !canFind(vtx_ids_other_boundary, i)) {
+                if ( !other_vtx_is_on_boundary[i] ) {
                     // We have a new vertex for the master grid.
                     vertices ~= vtx;
                     new_vtx_ids[i]= vertices.length - 1;
