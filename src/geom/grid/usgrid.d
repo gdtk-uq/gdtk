@@ -2206,28 +2206,10 @@ public:
             // Search only vertices on boundaries of the grids.
             //
             // First, collect vertices on boundaries that need to be compared.
-            size_t[] vtx_ids_boundary;
-            foreach (i,b; boundaries) {
-                // For OpenFOAM 2-D meshes the top and bottom boundaries
-                // (index 4 and 5 and mutiples) can be skipped because
-                // we will not be joining grids across those boundaries.
-                if (openFoam && dimensions == 2  && ( (i%6)==4  || (i%6)==5) ) { continue; }
-                foreach (j,f; b.face_id_list) {
-                    vtx_ids_boundary ~= faces[f].vtx_id_list;
-                }
-            }
-            vtx_ids_boundary = array(vtx_ids_boundary.sort().uniq());
+            size_t[] vtx_ids_boundary = getVertexIdsOnBoundaries();
+            size_t[] vtx_ids_other_boundary = other.getVertexIdsOnBoundaries();
             //
-            size_t[] vtx_ids_other_boundary;
-            foreach (i,b; other.boundaries) {
-                // For OpenFOAM 2-D meshes the top and bottom boundaries
-                // (index 4 and 5) can be skipped.
-                if (openFoam && dimensions == 2 && (i == 4 || i == 5)) { continue; }
-                foreach (f; b.face_id_list) {
-                    vtx_ids_other_boundary ~= other.faces[f].vtx_id_list;
-                }
-            }
-            vtx_ids_other_boundary = array(vtx_ids_other_boundary.sort().uniq());
+            // We want a fast way to look up whether a face is on a boundary
             bool[] other_vtx_is_on_boundary;
             other_vtx_is_on_boundary.length = other.vertices.length;
             foreach(vid; vtx_ids_other_boundary) other_vtx_is_on_boundary[vid] = true;
@@ -2259,7 +2241,7 @@ public:
                 root.fast_nearest(vtxnode, 0, foundNode, bestDist, nVisited);
                 double dist = sqrt(bestDist);
 
-                if (dist<absTol) {
+                if (isClose(dist, 0.0, absTol, relTol)) {
                     found = true;
                     jsave = foundNode.cellid; // Remember where we found it.
                 }
@@ -2454,6 +2436,35 @@ public:
         //
         return;
     } // end writeStats()
+
+    const size_t[] getVertexIdsOnBoundaries() {
+    /*
+        Return a sorted array of the ids of the vertices on the boundary of this block.
+        @author: Nick Gibbons
+    */
+        size_t n_boundary_vtxs;
+        foreach (b; boundaries) {
+            foreach (f; b.face_id_list) {
+                n_boundary_vtxs += faces[f].vtx_id_list.length;
+            }
+        }
+
+        // Collect all of the non-unique nodes that are implicated in being on a boundary
+        size_t[] vtx_ids_boundary;
+        vtx_ids_boundary.length = n_boundary_vtxs;
+
+        size_t j = 0;
+        foreach (b; boundaries) {
+            foreach (f; b.face_id_list) {
+                foreach(id; faces[f].vtx_id_list){
+                    vtx_ids_boundary[j] = id;
+                    j += 1;
+                }
+            }
+        }
+        vtx_ids_boundary = array(vtx_ids_boundary.sort().uniq());
+        return vtx_ids_boundary;
+    }
 
 } // end class UnstructuredGrid
 
