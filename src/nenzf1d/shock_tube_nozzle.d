@@ -66,6 +66,7 @@ Result analyse(int verbosityLevel, Config config)
     double p1 = config.p1;
     double Vs = config.Vs;
     double pe = config.pe;
+    double Te = config.Te;
     double meq_throat = config.meq_throat;
     double ar = config.ar;
     double pp_ps = config.pp_ps;
@@ -85,6 +86,7 @@ Result analyse(int verbosityLevel, Config config)
         writeln("  p1= ", p1);
         writeln("  Vs= ", Vs);
         writeln("  pe= ", pe);
+        writeln("  Te= ", Te);
         writeln("  meq_throat= ", meq_throat);
         writeln("  ar= ", ar);
         writeln("  pp_ps= ", pp_ps);
@@ -94,9 +96,12 @@ Result analyse(int verbosityLevel, Config config)
 	writeln("  check_supersonic_expansion= ", check_supersonic_expansion);
     }
     //
-    // ---------------------------
-    // ANALYSIS PART A, SHOCK TUBE
-    // ---------------------------
+    // --------------------------------------------
+    // ANALYSIS PART A, SHOCK TUBE to NOZZLE-SUPPLY
+    // --------------------------------------------
+    //
+    // Set up equilibrium-gas or frozen-kinetics flow analysis of shock tube.
+    // Usually, this will involve a cea2 gas model that allows high-temperature effects.
     //
     void write_cea_state(ref const(GasState) gs, string fill="  ")
     {
@@ -104,51 +109,69 @@ Result analyse(int verbosityLevel, Config config)
         writefln("%sdensity     %g kg/m^3", fill, gs.rho);
         writefln("%stemperature %g K", fill, gs.T);
     }
-    // Set up equilibrium-gas flow analysis of shock tube.
-    // Let's assume a cea2 gas model.
-    if (verbosityLevel >= 1) { writeln("Initial gas in shock tube (state 1)."); }
-    auto state1 = GasState(gm1);
-    state1.p = p1; state1.T = T1; state1.massf = [1.0,];
-    gm1.update_thermo_from_pT(state1);
-    gm1.update_sound_speed(state1);
-    double H1 = gm1.internal_energy(state1) + state1.p/state1.rho;
-    if (verbosityLevel >= 1) {
-        write_cea_state(state1);
-        writefln("  H1          %g MJ/kg", H1/1.0e6);
-        if (verbosityLevel >= 3) { writeln("  state1: ", state1); }
-    }
-    //
-    if (verbosityLevel >= 1) { writeln("Incident-shock process to state 2."); }
-    auto state2 = GasState(gm1);
-    double[2] velocities = normal_shock(state1, Vs, state2, gm1);
-    double V2 = velocities[0];
-    double Vg = velocities[1];
-    if (verbosityLevel >= 1) {
-        writefln("  V2          %g m/s", V2);
-        writefln("  Vg          %g m/s", Vg);
-        write_cea_state(state2);
-        if (verbosityLevel >= 3) { writeln("  state2: ", state2); }
-    }
-    //
-    if (verbosityLevel >= 1) { writeln("Reflected-shock process to state 5."); }
-    GasState state5 = GasState(gm1);
-    double Vr = reflected_shock(state2, Vg, state5, gm1);
-    //
-    if (verbosityLevel >= 1) { writeln("Isentropic relaxation to state 5s."); }
     auto state5s = GasState(gm1);
-    state5s.copy_values_from(state5);
-    // Entropy is set, then pressure is relaxed via an isentropic process.
-    state5s.p = (pe > 0.0) ? pe : state5.p;
-    double entropy5 = gm1.entropy(state5);
-    gm1.update_thermo_from_ps(state5s, entropy5);
-    double H5s = gm1.internal_energy(state5s) + state5s.p/state5s.rho; // stagnation enthalpy
-    if (verbosityLevel >= 1) {
-        writefln("  entropy     %g J/kg/K", entropy5);
-        writefln("  H5s         %g MJ/kg", H5s/1.0e6);
-        writefln("  H5s-H1      %g MJ/kg", (H5s-H1)/1.0e6);
-        write_cea_state(state5s);
-        if (verbosityLevel >= 3) { writeln("  state5s= ", state5s); }
-    }
+    if (Te > 0.0 && pe > 0.0) {
+        // We skip straight to setting the nozzle-supply condition.
+        if (verbosityLevel >= 1) { writeln("Directly set nozzle-supply (stagnation) state 5s."); }
+        state5s.p = pe;
+        state5s.T = Te;
+        gm1.update_thermo_from_pT(state5s);
+        gm1.update_sound_speed(state5s);
+        double H5s = gm1.internal_energy(state5s) + state5s.p/state5s.rho; // stagnation enthalpy
+        if (verbosityLevel >= 1) {
+            writefln("  H5s         %g MJ/kg", H5s/1.0e6);
+            write_cea_state(state5s);
+            if (verbosityLevel >= 3) { writeln("  state5s= ", state5s); }
+        }
+    } else {
+        // Process the gas through initial and reflected shocks
+        // to get the nozzle-supply condition.
+        if (verbosityLevel >= 1) { writeln("Initial gas in shock tube (state 1)."); }
+        auto state1 = GasState(gm1);
+        state1.p = p1; state1.T = T1; state1.massf = [1.0,];
+        gm1.update_thermo_from_pT(state1);
+        gm1.update_sound_speed(state1);
+        double H1 = gm1.internal_energy(state1) + state1.p/state1.rho;
+        if (verbosityLevel >= 1) {
+            write_cea_state(state1);
+            writefln("  H1          %g MJ/kg", H1/1.0e6);
+            if (verbosityLevel >= 3) { writeln("  state1: ", state1); }
+        }
+        //
+        if (verbosityLevel >= 1) { writeln("Incident-shock process to state 2."); }
+        auto state2 = GasState(gm1);
+        double[2] velocities = normal_shock(state1, Vs, state2, gm1);
+        double V2 = velocities[0];
+        double Vg = velocities[1];
+        if (verbosityLevel >= 1) {
+            writefln("  V2          %g m/s", V2);
+            writefln("  Vg          %g m/s", Vg);
+            write_cea_state(state2);
+            if (verbosityLevel >= 3) { writeln("  state2: ", state2); }
+        }
+        //
+        if (verbosityLevel >= 1) { writeln("Reflected-shock process to state 5."); }
+        GasState state5 = GasState(gm1);
+        double Vr = reflected_shock(state2, Vg, state5, gm1);
+        //
+        if (verbosityLevel >= 1) { writeln("Isentropic relaxation to state 5s."); }
+        state5s.copy_values_from(state5);
+        // Entropy is set, then pressure is relaxed via an isentropic process.
+        state5s.p = (pe > 0.0) ? pe : state5.p;
+        double entropy5 = gm1.entropy(state5);
+        gm1.update_thermo_from_ps(state5s, entropy5);
+        double H5s = gm1.internal_energy(state5s) + state5s.p/state5s.rho; // stagnation enthalpy
+        if (verbosityLevel >= 1) {
+            writefln("  entropy     %g J/kg/K", entropy5);
+            writefln("  H5s         %g MJ/kg", H5s/1.0e6);
+            writefln("  H5s-H1      %g MJ/kg", (H5s-H1)/1.0e6);
+            write_cea_state(state5s);
+            if (verbosityLevel >= 3) { writeln("  state5s= ", state5s); }
+        }
+    } // end shock processing analysis
+    //
+    // At this point, we have the stagnation condition that drives the flow
+    // through the nozzle expansion.
     //
     if (verbosityLevel >= 1) {
         writeln("Isentropic flow to throat to state 6 (Mach 1).");

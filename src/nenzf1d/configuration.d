@@ -20,10 +20,11 @@ struct Config{
     string reactions_filename2="";
     string[] species;
     double[] molef;
-    double T1;
-    double p1;
-    double Vs;
+    double T1=300.0;
+    double p1=1.0e5;
+    double Vs=0.0;
     double pe=0.0;
+    double Te=0.0;
     double meq_throat=1.0;
     double ar=1.0;
     double pp_ps=0.0;
@@ -61,20 +62,31 @@ Config process_config(Node configdata) {
     }
     //
     // Initial gas state in shock tube.
-    config.T1 = to!double(configdata["T1"].as!string);
-    config.p1 = to!double(configdata["p1"].as!string);
-    config.Vs = to!double(configdata["Vs"].as!string);
+    // These initial-state and shock speed data are needed for the shock-tube analysis
+    // but not for the case of skipping to the direct setting of the nozzle-supply condition.
+    try { config.T1 = to!double(configdata["T1"].as!string); } catch (YAMLException e) {}
+    try { config.p1 = to!double(configdata["p1"].as!string); } catch (YAMLException e) {}
+    try { config.Vs = to!double(configdata["Vs"].as!string); } catch (YAMLException e) {}
+    //
     // Observed relaxation pressure for reflected-shock, nozzle-supply region.
     // A value of 0.0 indicates that we should use the ideal shock-reflection pressure.
     try { config.pe = to!double(configdata["pe"].as!string); } catch (YAMLException e) {}
+    // Specified temperature for nozzle-supply region.
+    // A value of 0.0 indicates that we should use do the analysis of the shock-tube processes,
+    // but a nonzero value (together with a nonzero pe) skips directly to setting the
+    // stagnation condition for the nozzle-supply region.
+    try { config.Te = to!double(configdata["Te"].as!string); } catch (YAMLException e) {}
+    //
     // Mach number (in equilibrium gas) at nozzle throat.
     // Nominally, it would be 1.0 for sonic flow.
     // It may be good to expand a little more so that,
     // on changing to the frozen-gas sound speed in the nonequilibrium gas model,
     // the flow remains slightly supersonic.
     try { config.meq_throat = to!double(configdata["meq_throat"].as!string); } catch (YAMLException e) {}
+    //
     // Nozzle-exit area ratio for terminating expansion.
     try { config.ar = to!double(configdata["ar"].as!string); } catch (YAMLException e) {}
+    //
     // Alternatively, we might stop on pPitot/pSupply becoming less than pp_ps.
     try { config.pp_ps = to!double(configdata["pp_ps"].as!string); } catch (YAMLException e) {}
     // pPitot = C * rho*V^^2
@@ -82,6 +94,7 @@ Config process_config(Node configdata) {
     // In a number of sphere simulations, for flows representative of T4 flow conditions,
     // values of pPitot/(rho*v^^2) appeared to be in the range 0.96 to 1.0.
     try { config.C = to!double(configdata["C"].as!string); } catch (YAMLException e) {}
+    //
     // Nozzle x,diameter schedule.
     foreach(string val; configdata["xi"]) { config.xi ~= to!double(val); }
     foreach(string val; configdata["di"]) { config.di ~= to!double(val); }
