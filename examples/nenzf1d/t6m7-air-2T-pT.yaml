@@ -19,10 +19,10 @@ reactions-file2: air-energy-exchange.lua
 # p1: 200.0e3     # Pa
 # Vs: 1679.0      # m/s
 # Parameter values are guessed from Tamara's numbers for the nominal T6 shot in the Pitot paper. 
-pe: 24.10e6     # Pa (3. Guess to get static pressure target.)
-Te: 2395.0      # K (2. Guess based on Hs=0.5V^2/Cp with V=2214m/s then adjusted again after pe.)
+pe: 25.46e6     # Pa 
+Te: 2389.6      # K 
 ar: 132.9       # Geometric area ratio from profile below
-pp_ps: 0.0140   # (1. Guess to make exit M=7.1 as per Tamara's T6 Eilmer simulation.)
+pp_ps: 0.01375  # Measured Pitot pressure for shot 88,89 is 350kPa
 
 meq_throat: 1.10  # To get supersonic condition with frozen-gas sound speed
 C: 0.94           # Estimate of Rayleigh_Pitot/(rho*V^2) from CFD sphere simulations
