@@ -3,6 +3,7 @@
 -- PJ 2019-05-25
 --    2022-06-29 introduce quadrant==3 option
 --    2022-07-04, Allow different x and y scales
+--    2023-12-22, Allow the user to specify the y-sample points.
 
 local billig = require 'billig'
 local billig_patch = {}
@@ -86,7 +87,9 @@ function billig_patch.make_patch(t)
    -- a few sample points along the expected shock position.
    print("Points on Billig's correlation.")
    local xys = {}
-   for i,y in ipairs({0.0, 0.2, 0.4, 0.6, 1.0, 1.4, 1.6, 2.0, 2.37}) do
+   local y_samples = {0.0, 0.2, 0.4, 0.6, 1.0, 1.4, 1.6, 2.0, 2.37}
+   if t.y_samples then y_samples = t.y_samples end
+   for i,y in ipairs(y_samples) do
       -- y is normalized for R=1
       local x = billig.x_from_y(y*R, Minf, theta, axisymmetric, R)
       xys[#xys+1] = {x=x, y=y*R}  -- a new coordinate pair
