@@ -178,6 +178,11 @@ public:
         return "ControlPointPatch()";
     }
 
+    Vector3 getCtrlPt(int i, int j)
+    {
+	return mC[i][j];
+    }
+
     void setCtrlPt(int i, int j, Vector3 p)
     {
 	mC[i][j] = p;
