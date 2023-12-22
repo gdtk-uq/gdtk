@@ -2,6 +2,7 @@
 LMR ?= .
 LMR_CMD = $(LMR)/commands
 LMR_LUA_MOD = $(LMR)/lua-modules
+LMR_LUA_WRAP = $(LMR)/luawrap
 
 LMR_CORE_FILES = $(LMR)/blockio.d \
 	$(LMR)/flowsolution.d \
@@ -13,6 +14,8 @@ LMR_CORE_FILES = $(LMR)/blockio.d \
 	$(LMR)/lmrexceptions.d \
 	$(LMR)/loads.d \
 	$(LMR)/newtonkrylovsolver.d
+
+LMR_LUA_FILES = $(LMR_LUA_WRAP)/luaflowsolution.d
 
 LMR_CMD_FILES = $(LMR_CMD)/checkjacobian.d \
 	$(LMR_CMD)/cmdhelper.d \

@@ -35,8 +35,7 @@ LMR4_CORE_FILES := $(LMR4)/block.d \
 	$(LMR4)/turbulence.d \
 	$(LMR4)/ufluidblock.d
 
-LMR4_LUA_FILES := $(LMR4)/luaflowsolution.d \
-	$(LMR4)/luaflowstate.d \
+LMR4_LUA_FILES := $(LMR4)/luaflowstate.d \
 	$(LMR4)/lua_helper.d \
 	$(LMR4)/user_defined_source_terms.d
 

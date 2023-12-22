@@ -312,7 +312,7 @@ lmrconfig_with_str_subst.d: lmrconfig.d
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		$< > $@
 
-lmr-run-steady: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
+lmr-run-steady: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
 	$(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -325,7 +325,7 @@ lmr-run-steady: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(
 		$(DVERSION)newton_krylov \
 		runsteady_shared.d \
 		lmrconfig_with_str_subst.d \
-		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD)/command.d \
+		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
 		$(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
@@ -335,7 +335,7 @@ lmr-run-steady: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(
 		$(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(DLINKFLAGS)
 
-lmr-mpi-run-steady: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
+lmr-mpi-run-steady: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
 	$(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -351,7 +351,7 @@ lmr-mpi-run-steady: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES
 		$(DVERSION)newton_krylov \
 		runsteady_openmpi.d \
 		lmrconfig_with_str_subst.d \
-		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD)/command.d \
+		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
 		$(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
@@ -362,7 +362,7 @@ lmr-mpi-run-steady: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES
 		$(DLINKFLAGS) -L-lmpi
 
 
-lmr: main.d $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
+lmr: main.d $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
 	$(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -374,7 +374,7 @@ lmr: main.d $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_
 		$(DVERSION)newton_krylov \
 		main.d \
 		lmrconfig_with_str_subst.d \
-		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) \
+		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
 		$(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \

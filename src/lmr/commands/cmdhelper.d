@@ -18,12 +18,13 @@ import std.path;
 
 import lmrconfig : lmrCfg;
 
-string[] determineAvailableSnapshots()
+string[] determineAvailableSnapshots(string dir="")
 {
-    
+    string snapshotDir = (dir == "") ? lmrCfg.snapshotDir : dir;
+
     string[] availSnapshots;
     // Build list of all available snapshots
-    auto dirs = dirEntries(lmrCfg.snapshotDir, SpanMode.shallow).
+    auto dirs = dirEntries(snapshotDir, SpanMode.shallow).
         filter!(a => a.isDir()).
         map!(a => a.name.baseName)().
         array();

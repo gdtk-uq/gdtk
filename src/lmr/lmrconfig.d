@@ -94,7 +94,7 @@ static this()
 /**
  * Read Eilmer program configuration file.
  *
- * Authors: RJG  
+ * Authors: RJG
  * Date: 2022-08-06
  */
 void readLmrConfig()
@@ -123,14 +123,14 @@ string snapshotDirectory(int snapshot)
  * Authors: RJG
  * Date: 2023-06-27
  */
-string flowFilename(int snapshot, int blkId)
+string flowFilename(int snapshot, int blkId, string flowFmt="rawbinary")
 {
     string fname = lmrCfg.snapshotDir ~
 	"/" ~
 	format(lmrCfg.snapshotIdxFmt, snapshot) ~
 	"/" ~
 	lmrCfg.flowPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
-    if (GlobalConfig.flow_format == "gziptext")
+    if (flowFmt == "gziptext")
 	fname ~= lmrCfg.gzipExt;
     return fname;
 }
@@ -178,14 +178,14 @@ string loadsFilename(int snapshot, int blkId, size_t bndryId, string group)
  * Authors: RJG
  * Date: 2022-08-06
  */
-string gridFilename(int snapshot, int blkId)
+string gridFilename(int snapshot, int blkId, string gridFmt="rawbinary")
 {
     string gname = lmrCfg.snapshotDir ~
 	"/" ~
 	format(lmrCfg.snapshotIdxFmt, snapshot) ~
 	"/" ~
 	lmrCfg.gridPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
-    if (GlobalConfig.grid_format == "gziptext")
+    if (gridFmt == "gziptext")
 	gname ~= lmrCfg.gzipExt;
     return gname;
 }

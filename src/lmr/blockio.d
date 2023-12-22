@@ -225,9 +225,10 @@ extern(C) int luafn_writeInitialFlowFile(lua_State *L)
 //  3. and 4. are general functions. We simply want to pick up
 //  from Eilmer-native format and write out in some other format.
 //-------------------------------------------------------------
-string[] readFlowVariablesFromFlowMetadata()
+string[] readFlowVariablesFromFlowMetadata(string flowMetadataFile="")
 {
-    Node metadata = dyaml.Loader.fromFile(lmrCfg.flowMetadataFile).load();
+    flowMetadataFile = (flowMetadataFile == "") ? lmrCfg.flowMetadataFile : flowMetadataFile;
+    Node metadata = dyaml.Loader.fromFile(flowMetadataFile).load();
     string[] variables;
     foreach (node; metadata["variables"].sequence) {
 	variables ~= node.as!string;

@@ -59,7 +59,6 @@ class FlowSolution {
     // The collection of flow blocks and grid blocks that define the flow
     // and the domain at one particular instant in time.
 public:
-    string jobName;
     double sim_time;
     size_t nBlocks;
     string grid_format;
@@ -75,30 +74,35 @@ public:
 
 
     // A constructor for flow fields when running steady mode
-    this(int snapshot, size_t nBlocks, string tag="", int make_kdtree=0)
+    this(int snapshot, size_t nBlocks, string dir=".", bool make_kdtree=true)
     {
+        string cfgFile = (dir == ".") ? lmrCfg.cfgFile : dir ~ "/" ~ lmrCfg.cfgFile;
         string content;
         try {
-            content = readText(lmrCfg.cfgFile);
+            content = readText(cfgFile);
         } catch (Exception e) {
             writeln("Message is: ", e.msg);
-            throw new Error(text("Failed to read config file: ", lmrCfg.cfgFile));
+            throw new Error(text("Failed to read config file: ", cfgFile));
         }
         JSONValue jsonData;
         try {
             jsonData = parseJSON!string(content);
         } catch (Exception e) {
             writeln("Message is: ", e.msg);
-            throw new Error(text("Failed to parse JSON from config file: ", lmrCfg.cfgFile));
+            throw new Error(text("Failed to parse JSON from config file: ", cfgFile));
         }
         string flowFmt = jsonData["flow_format"].str;
 	string gridFmt = jsonData["grid_format"].str;
+        writefln("flowFmt= %s   gridFmt= %s", flowFmt, gridFmt);
         // -- end initialising from JSONData
+
 	// Find out variables from metadata file
-	auto variables = readFlowVariablesFromFlowMetadata();
+        string flowMetadataFile = (dir == ".") ? lmrCfg.flowMetadataFile : dir ~ "/" ~ lmrCfg.flowMetadataFile;
+	auto variables = readFlowVariablesFromFlowMetadata(flowMetadataFile);
         //
-        // Use job.list to get a hint of the type of each block.
-        auto listFile = File(lmrCfg.blkListFile);
+        // Use <block-list-filename> to get a hint of the type of each block.
+        string blkListFile = (dir == ".") ? lmrCfg.blkListFile : dir ~ "/" ~ lmrCfg.blkListFile;
+        auto listFile = File(blkListFile);
         auto listFileLine = listFile.readln().chomp(); // only comments on the first line
         //
         foreach (ib; 0 .. nBlocks) {
@@ -109,11 +113,12 @@ public:
 	    int ncells;
             formattedRead(listFileLine, " %d %s %s %d", &ib_chk, &gridTypeName, &label, &ncells);
             if (ib != ib_chk) {
-                string msg = format("Reading %s file ib=%d ib_chk=%d", lmrCfg.blkListFile, ib, ib_chk);
+                string msg = format("Reading %s file ib=%d ib_chk=%d", blkListFile, ib, ib_chk);
                 throw new FlowSolverException(msg);
             }
             auto gridType = gridTypeFromName(gridTypeName);
-            string gName = gridFilename(lmrCfg.initialFieldDir, to!int(ib));
+            string gName = gridFilename(lmrCfg.initialFieldDir, to!int(ib), gridFmt);
+            gName = (dir == ".") ? gName : dir ~ "/" ~ gName;
             final switch (gridType) {
             case Grid_t.structured_grid:
                 gridBlocks ~= new StructuredGrid(gName, gridFmt);
@@ -122,14 +127,14 @@ public:
                 gridBlocks ~= new UnstructuredGrid(gName, gridFmt, false);
             }
             gridBlocks[$-1].sort_cells_into_bins();
-            string fName = flowFilename(snapshot, to!int(ib));
+            string fName = flowFilename(snapshot, to!int(ib), flowFmt);
+            fName = (dir == ".") ? fName : dir ~ "/" ~ fName;
             flowBlocks ~= new FluidBlockLite(fName, ib, jsonData, gridType, flowFmt, variables, ncells);
         } // end foreach ib
-        this.jobName = "";
         this.nBlocks = nBlocks;
         sim_time = -1.0; // For steady-state signal no meaningful time with -1.0
 
-        if (make_kdtree!=0) {
+        if (make_kdtree) {
             construct_kdtree();
         }
     } // end constructor
@@ -149,8 +154,7 @@ public:
     override string toString()
     {
         string str = "FlowSolution(";
-        str ~= "jobName=" ~ jobName ~ ", sim_time=" ~ to!string(sim_time);
-        str ~= ", nBlocks=" ~ to!string(nBlocks);
+        str ~= "nBlocks=" ~ to!string(nBlocks);
         str ~= ", variables=" ~ to!string(flowBlocks[0].variableNames);
         str ~= ")";
         return str;
