@@ -7,7 +7,7 @@ import std.conv;
 import std.file;
 import std.format;
 import std.string;
-import number;
+import nm.number;
 
 void prep_matrix(ref double[][] a, size_t ncols, size_t nrows) {
     a.length = nrows;

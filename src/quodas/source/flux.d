@@ -3,8 +3,8 @@ module flux;
 import std.conv;
 import std.math;
 import finite_volume;
-import number;
-import complexify;
+import nm.number;
+import ntypes.complex;
 
 
 void compute_flux(FVInterface f, number gamma, string flux_calc) {

@@ -1,7 +1,7 @@
 // flow_solver.d
 module flowsolve;
-import complexify;
-import number;
+import ntypes.complex;
+import nm.number;
 import config;
 import block;
 

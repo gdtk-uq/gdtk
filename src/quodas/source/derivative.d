@@ -4,7 +4,7 @@ import std.stdio;
 import std.conv;
 import std.math;
 import config;
-import number;
+import nm.number;
 import block;
 import finite_volume;
 import linalg;

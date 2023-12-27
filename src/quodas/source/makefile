@@ -18,9 +18,14 @@ else
 	CMPLXFLAG := -version=real_numbers
 endif
 
+NTYPES := ../../ntypes
+NM := ../../nm
+UTIL_DIR := ../../util
+include $(UTIL_DIR)/util_files.mk
+
 FILES := main.d \
-	complex.d \
-	number.d \
+	$(NTYPES)/complex.d \
+	$(NM)/number.d \
 	config.d \
 	block.d \
 	finite_volume.d \
@@ -28,20 +33,12 @@ FILES := main.d \
 	flow_solver.d \
 	optimizer.d \
 	linalg.d \
-	derivative.d
+	derivative.d \
+	$(UTIL_DIR)/msg_service.d
 
 quodas: $(FILES)
 	$(DMD) $(DFLAGS) $(OF)$@ $(FILES) $(CMPLXFLAG)
 
-complex_number_test: complexify.d number.d
-	$(DMD) $(DFLAGS) $(OF)$@ complexify.d number.d -version=complex_numbers -version=complex_number_test
-
-matrix_test: matrix.d number.d complexify.d
-	$(DMD) $(DFLAGS) $(OF)$@ matrix.d number.d complexify.d -version=matrix_test
-
 clean:
 	- rm *.o
-	- rm test
 	- rm quodas
-	- rm complex_number_test
-	- rm matrix_test

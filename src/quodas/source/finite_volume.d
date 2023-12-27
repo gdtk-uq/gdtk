@@ -3,8 +3,8 @@ module finite_volume;
 import std.stdio;
 import std.conv;
 import std.math;
-import number;
-import complexify;
+import nm.number;
+import ntypes.complex;
 
 struct FlowState
 {
