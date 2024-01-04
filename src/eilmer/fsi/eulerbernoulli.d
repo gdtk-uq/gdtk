@@ -60,7 +60,7 @@ public:
 
         // Set the rows/cols corresponding to fixed DoFs to diagonal ones
         foreach (ZeroedIndx; ZeroedIndices) {
-            foreach (DoF; 0 .. myConfig.Nx + 1) {
+            foreach (DoF; 0 .. (myConfig.Nx + 1) * 2) {
                 if (ZeroedIndx == DoF) {
                     K[ZeroedIndx, DoF] = 1.0;
                     M[ZeroedIndx, DoF] = 1.0;
@@ -162,7 +162,7 @@ public:
     Matrix!number LocalStiffnessMatrix(number l) {
         // Generate the element stiffness matrix from equation 2.26 in
         // "Programming the Finite Element Method" by Smith et al.
-        // (with scaling performed in the higher level)
+        // (with scaling performed in the higher function)
         Matrix!number KL = new Matrix!number(4);
         KL[0, 0] = 12; KL[0, 1] = 6 * l; KL[0, 2] = -12; KL[0, 3] = 6 * l;
         KL[1, 1] = 4 * pow(l, 2); KL[1, 2] = -6 * l; KL[1, 3] = 2 * pow(l, 2);
