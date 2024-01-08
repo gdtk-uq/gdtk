@@ -20,6 +20,7 @@ Last Modified: 17/05/2017
 
 2017-09-26: RJG added deepcopy
 2021-03-16: PAJ added sleep and checkAllowedNames
+2024-01-08: PAJ added dump function from stackoverflow
 --]]
 
 --// returns a "Lua" portable version of the string
@@ -179,6 +180,11 @@ function sleep(n)  -- seconds
    while clock() - t0 <= n do end
 end
 
+-- Misspelling table entries is one of the common errors made
+-- while preparing Lua input files for Eilmer and it is good
+-- to provide an early warning when user input is not valid.
+-- This function checks that all entries in a table have a key
+-- that exists in the set of allowed names.
 function checkAllowedNames(myTable, allowedNames)
    local setOfNames = {}
    local namesOk = true
@@ -193,3 +199,21 @@ function checkAllowedNames(myTable, allowedNames)
    end
    return namesOk
 end
+
+-- dump() function copied from 
+-- https://stackoverflow.com/questions/9168058/how-to-dump-a-table-to-console
+-- It is handy for dumping table data while debugging user-defined source terms
+-- and boundary conditions.
+function dump(o)
+   if type(o) == 'table' then
+      local s = '{ '
+      for k,v in pairs(o) do
+         if type(k) ~= 'number' then k = '"'..k..'"' end
+         s = s .. '['..k..'] = ' .. dump(v) .. ','
+      end
+      return s .. '} '
+   else
+      return tostring(o)
+   end
+end
+
