@@ -58,6 +58,12 @@ db.N2.r_eq = {
    description = "Equilibrium intermolecular distance",
    reference = "Hirschfelder, Curtis, Bird"
 }
+db.N2.SSH_mass_factor = {
+   value = 1.0,
+   units = "unitless",
+   description = 'Mass factor = ( M ( Ma^2 + Mb^2 ) / ( 2 Ma Mb ( Ma + Mb ) )',
+   reference = 'Thivet et al (1991) Phys. Fluids A 3 (11)'
+}
 db.N2.Lewis = {
    value = 1.152
 }

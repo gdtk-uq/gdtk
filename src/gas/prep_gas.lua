@@ -403,6 +403,7 @@ function write2TGas(f, species, db, optsTable)
       f:write(string.format("db['%s'].type = '%s'\n", sp, db[sp].type))
       if db[sp].type == "molecule" then
          f:write(string.format("db['%s'].molecule_type = '%s'\n", sp, db[sp].molecule_type))
+	 f:write(string.format("db['%s'].SSH_mass_factor = %.8e\n", sp, db[sp].SSH_mass_factor.value))
          f:write(string.format("db['%s'].theta_v = %.3f\n", sp, db[sp].theta_v.value))
       end
       f:write(string.format("db['%s'].atomicConstituents = { ", sp))
@@ -567,6 +568,7 @@ function writeMultiTGas(f, species, db, optsTable)
       f:write(string.format("db['%s'].type = '%s'\n", sp, db[sp].type))
       if db[sp].type == "molecule" then
          f:write(string.format("db['%s'].molecule_type = '%s'\n", sp, db[sp].molecule_type))
+	 f:write(string.format("db['%s'].SSH_mass_factor = %.8e\n", sp, db[sp].SSH_mass_factor.value))
          f:write(string.format("db['%s'].vib_data = {\n", sp))
 	 f:write("  model = 'from-cea-thermo-curve',\n")
 	 f:write(string.format("  theta_v = %.3f,\n", db[sp].theta_v.value))

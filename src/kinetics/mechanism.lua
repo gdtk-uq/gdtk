@@ -20,17 +20,6 @@ local function SSHSigma(p, db)
    end
 end
 
-local function computeMassFactor(p, db)
-   local m = {}
-   for k, v in pairs(db[p].atomicConstituents) do
-      for _=1,v do
-         m[#m+1] = db[k].M
-      end
-   end
-   Cp2 = (m[1]*m[1] + m[2]*m[2]) / (2*m[1]*m[2]*(m[1] + m[2]))
-   return 1. / (db[p].M * Cp2)
-end
-
 local function transformRelaxationTime(rt, p, q, db)
    local t = {}
    t.model = rt[1]
@@ -90,8 +79,8 @@ local function transformRelaxationTime(rt, p, q, db)
       t.theta_v_q = db[q].theta_v or db[q].vib_data.theta_v
       t.sigma = 0.5*(SSHSigma(p, db) + SSHSigma(q, db))
       t.epsilon = sqrt(db[p].epsilon * db[q].epsilon)
-      t.f_m_p = computeMassFactor(p, db)
-      t.f_m_q = computeMassFactor(q, db)
+      t.f_m_p = db[p].SSH_mass_factor
+      t.f_m_q = db[q].SSH_mass_factor
       t.r_eq_p = db[p].r_eq
       t.r_eq_q = db[q].r_eq
    elseif t.model == "SSH-VT" then
@@ -104,7 +93,7 @@ local function transformRelaxationTime(rt, p, q, db)
       t.theta_v_p = db[p].theta_v or db[p].vib_data.theta_v
       t.sigma = 0.5*(SSHSigma(p, db) + SSHSigma(q, db))
       t.epsilon = sqrt(db[p].epsilon * db[q].epsilon)
-      t.f_m_p = computeMassFactor(p, db)
+      t.f_m_p = db[p].SSH_mass_factor
       t.r_eq_p = db[p].r_eq
    elseif t.model == "ParkN2e-" then
       t.a_low = rt.a_low

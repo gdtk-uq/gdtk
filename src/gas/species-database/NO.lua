@@ -52,6 +52,12 @@ db.NO.epsilon = {
    description = 'Lennard-Jones potential well depth.',
    reference = 'GRI-Mech 3.0 transport file.'
 }
+db.NO.SSH_mass_factor = {
+   value = 9.912182e-01,
+   units = "unitless",
+   description = 'Mass factor = ( M ( Ma^2 + Mb^2 ) / ( 2 Ma Mb ( Ma + Mb ) )',
+   reference = 'Thivet et al (1991) Phys. Fluids A 3 (11)'
+}
 db.NO.r_eq = {
    value = 1.15e-10,
    units = 'm',
