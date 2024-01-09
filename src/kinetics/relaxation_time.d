@@ -373,8 +373,8 @@ public:
         _mu_qq = mu_qq;
         _sigma = sigma;
         _epsilon = epsilon;
-        _theta_v_p = _theta_v_p;
-        _theta_v_q = _theta_v_q;
+        _theta_v_p = theta_p;
+        _theta_v_q = theta_q;
         _delta_E = Boltzmann_constant * (_theta_v_p - _theta_v_q);
         _f_m_p = f_m_p;
         _f_m_q = f_m_q;
