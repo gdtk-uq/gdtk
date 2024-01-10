@@ -65,9 +65,10 @@ void main_(string[] args)
     int verbosity = 0;
     GridType gridType;
     getopt(args,
-            config.bundling,
+           config.bundling,
            "v|verbose+", &verbosity,
-           "gt|grid-type", &gridType
+           config.noBundling,
+           "t|grid-type", &gridType
           );
 
     if (verbosity >= 0) {
