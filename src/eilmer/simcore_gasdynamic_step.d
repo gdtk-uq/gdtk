@@ -185,17 +185,19 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
             // We determine the allowable timestep here to overwrite the timestep calculated for the fluid domain
             // TODO: think about a more appropriate place to calculate the timestep. KAD 2022-11-08
             double cfl_value = GlobalConfig.cfl_schedule.interpolate_value(SimState.time);
-            double dt_local = double.max;
             dt_global = double.max;
             bool first = true;
-            foreach (sblk; localSolidBlocks) {
-                dt_local = sblk.determine_time_step_size(cfl_value);
+            foreach (i, sblk; parallel(localSolidBlocks, 1)) {
+                double dt_local = sblk.determine_time_step_size(cfl_value);
                 if (first) {
-                    dt_global = dt_local;
+                    local_dt_allow[i] = dt_local;
                     first = false;
                 } else {
-                    dt_global = fmin(dt_global, dt_local);
+                    local_dt_allow[i] = fmin(local_dt_allow[i], dt_local);
                 }
+            }
+            foreach (i,sblk; localSolidBlocks) {
+                dt_global = fmin(dt_global, local_dt_allow[i]);
             }
             version(mpi_parallel) {
                 MPI_Allreduce(MPI_IN_PLACE, &dt_global, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
@@ -890,7 +892,7 @@ void sts_gasdynamic_explicit_increment_with_fixed_grid()
     //
     if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ||
         GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.steady_fluid_transient_solid) {
-        foreach (sblk; localSolidBlocks) {
+        foreach (sblk; parallel(localSolidBlocks, 1)) {
             if (sblk.active) {
                 foreach (scell; sblk.cells) { scell.e[0] = scell.e[end_indx]; }
             }

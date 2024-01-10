@@ -987,7 +987,7 @@ int integrate_in_time(double target_time_as_requested)
         throw new Error("Did not set a valid gasdynamic_step function.");
     }
     //
-    local_dt_allow.length = localFluidBlocks.length; // prepare array for use later
+    local_dt_allow.length = localFluidBlocks.length+localSolidBlocks.length; // prepare array for use later (we use this for solid blocks as well)
     local_cfl_max.length = localFluidBlocks.length; // prepare array for use later
     local_dt_allow_parab.length = localFluidBlocks.length;
     local_invalid_cell_count.length = localFluidBlocks.length;
