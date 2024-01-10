@@ -117,7 +117,7 @@ public:
                 throw new FlowSolverException(msg);
             }
             auto gridType = gridTypeFromName(gridTypeName);
-            string gName = gridFilename(lmrCfg.initialFieldDir, to!int(ib), gridFmt);
+            string gName = gridFilename(lmrCfg.initialFieldDir, to!int(ib));
             gName = (dir == ".") ? gName : dir ~ "/" ~ gName;
             final switch (gridType) {
             case Grid_t.structured_grid:
@@ -127,7 +127,7 @@ public:
                 gridBlocks ~= new UnstructuredGrid(gName, gridFmt, false);
             }
             gridBlocks[$-1].sort_cells_into_bins();
-            string fName = flowFilename(snapshot, to!int(ib), flowFmt);
+            string fName = flowFilename(snapshot, to!int(ib));
             fName = (dir == ".") ? fName : dir ~ "/" ~ fName;
             flowBlocks ~= new FluidBlockLite(fName, ib, jsonData, gridType, flowFmt, variables, ncells);
         } // end foreach ib
