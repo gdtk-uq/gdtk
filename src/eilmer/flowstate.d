@@ -587,6 +587,7 @@ public:
     string fileName;
     FlowState[] fstate;
     double[] times;
+    size_t nturb;
 
     this (string fileName)
     // Construct a FlowHistory object from a file of data values.
@@ -605,7 +606,7 @@ public:
         this.fileName = fileName;
         // Open filename and read all time and flow data.
         auto gm = GlobalConfig.gmodel_master;
-        auto nturb = GlobalConfig.turb_model.nturb;
+        nturb = GlobalConfig.turb_model.nturb;
         auto f = new File(fileName);
         auto range = f.byLine();
         auto line = range.front;
@@ -675,7 +676,7 @@ public:
             gm.update_thermo_from_pT(fs.gas);
             foreach (j; 0 .. gm.n_species) { fs.gas.rho_s[j] = fs.gas.massf[j] * fs.gas.rho; }
             version(turbulence) {
-                foreach(j; 0 .. GlobalConfig.turb_model.nturb) {
+                foreach(j; 0 .. nturb) {
                     fs.turb[j] = fstate[i].turb[j]*(1.0-frac) + fstate[i+1].turb[j]*frac;
                 }
             }
