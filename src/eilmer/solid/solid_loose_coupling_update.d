@@ -55,20 +55,25 @@ Matrix!double Gamma;
 Matrix!double Q0;
 Matrix!double Q1;
 
-@nogc
+// To avoid race conditions, there are a couple of locations where
+// each block will put its result for the suggested time-step
+// into the following arrays, then we will reduce across the arrays.
+shared static double[] local_dt_allow;
 double determine_dt(double cfl_value)
 {
     double dt = double.max;
-    double dt_local = double.max;
     bool first = true;
-    foreach (sblk; localSolidBlocks) {
-        dt_local = sblk.determine_time_step_size(cfl_value);
+    foreach (i, sblk; parallel(localSolidBlocks, 1)) {
+        double dt_local = sblk.determine_time_step_size(cfl_value);
         if (first) {
-            dt = dt_local;
+            local_dt_allow[i] = dt_local;
             first = false;
         } else {
-            dt = fmin(dt, dt_local);
+            local_dt_allow[i] = fmin(local_dt_allow[i], dt_local);
         }
+    }
+    foreach (i,sblk; localSolidBlocks) {
+        dt = fmin(dt, local_dt_allow[i]);
     }
     return dt;
 } // end determine_dt
@@ -98,6 +103,7 @@ void integrate_solid_in_time_implicit(double target_time, bool init_precondition
     double wallClockElapsed;
 
     // set some time integration parameters
+    local_dt_allow.length = localSolidBlocks.length; // prepare array for use later
     bool dual_time_stepping = false;
     double physicalSimTime = 0.0;
     int physical_step = 0;
