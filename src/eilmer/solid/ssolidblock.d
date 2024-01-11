@@ -1039,9 +1039,9 @@ public:
                 foreach (iface; cell.iface) { L_min = fmin(L_min, iface.length.re); }
             } else { // dimensions == 3
                 number dx, dy, dz;
-                auto nface = cell.iface[0]; auto eface = cell.iface[1];
-                auto sface = cell.iface[2]; auto wface = cell.iface[3];
-                auto tface = cell.iface[4]; auto bface = cell.iface[5];
+                auto nface = cell.iface[Face.north]; auto eface = cell.iface[Face.east];
+                auto sface = cell.iface[Face.south]; auto wface = cell.iface[Face.west];
+                auto tface = cell.iface[Face.top]; auto bface = cell.iface[Face.bottom];
                 dx = eface.pos.x - wface.pos.x; dy = eface.pos.y - wface.pos.y; dz = eface.pos.z - wface.pos.z;
                 auto iLen = sqrt(dx^^2 + dy^^2 + dz^^2);
                 dx = nface.pos.x - sface.pos.x; dy = nface.pos.y - sface.pos.y; dz = nface.pos.z - sface.pos.z;
