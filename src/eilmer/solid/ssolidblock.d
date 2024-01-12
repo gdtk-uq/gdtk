@@ -1051,6 +1051,16 @@ public:
                 L_min = min(iLen, jLen, kLen);
             }
             alpha = cell.sp.k / (cell.sp.rho*cell.sp.Cp);
+            // Computational Fluid Mechanics and Heat Transfer
+            // J. C. Tannehill, D. A. Anderson, and R. H Pletcher
+            // Second Edition, Taylor & Francis, 1997
+            //
+            // The above reference defines the stable time-step for the heat equation (on pg.126 eq. 4.75) as
+            // dt = r * (dx^2/alpha) where 0 <= r <= 0.5 for an explicit one-step scheme
+            // since the CFL value set by the user may be used in both the fluid and solid domain, we absorb the
+            // factor of 1/2 into the time-step calculation below. In effect it means that if a user sets
+            // the cfl_value to be 1, to satisfy a stable explicit one-step scheme applied to the wave equation,
+            // then that will equate to a cfl of 0.5 for the time-step used here in the heat equation
             dt_local = cfl_value * (L_min^^2) / (2.0*alpha);
             if (first) {
                 dt_allow = dt_local;
