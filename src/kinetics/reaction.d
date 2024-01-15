@@ -21,6 +21,7 @@ import util.lua_service;
 import gas;
 import util.msg_service;
 import kinetics.rate_constant;
+import kinetics.thermochemical_reactor : ThermochemicalReactorUpdateException;
 
 @nogc
 number compute_equilibrium_constant(GasModel gmodel, ref GasState Q, in number[] gibbs_energies,
@@ -44,7 +45,7 @@ number compute_equilibrium_constant(GasModel gmodel, ref GasState Q, in number[]
     debug{
     if (K_c==0.0) {
         string msg=format("Bad equilibrium constant %e detected in reaction %s", K_c, participants);
-        throw new Exception(msg);
+        throw new ThermochemicalReactorUpdateException(msg);
     }
     }
     return K_c;
