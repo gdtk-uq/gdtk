@@ -120,11 +120,9 @@ extern(C) int nReactions(lua_State* L)
 extern(C) int evalRateConstants(lua_State* L)
 {
     auto rmech = checkReactionMechanism(L, 1);
-    lua_getfield(L, 2, "gasmodel");
-    auto gm = checkGasModel(L, -1);
-    lua_pop(L, 1);
+    auto gm = checkGasModel(L, 2);
     auto Q = GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, gm, 2, Q);
+    getGasStateFromTable(L, gm, 3, Q);
     rmech.eval_rate_constants(gm, Q);
     return 0;
 }
@@ -132,11 +130,9 @@ extern(C) int evalRateConstants(lua_State* L)
 extern(C) int evalRates(lua_State* L)
 {
     auto rmech = checkReactionMechanism(L, 1);
-    lua_getfield(L, 2, "gasmodel");
-    auto gm = checkGasModel(L, -1);
-    lua_pop(L, 1);
+    auto gm = checkGasModel(L, 2);
     auto Q = GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, gm, 2, Q);
+    getGasStateFromTable(L, gm, 3, Q);
     number[] conc;
     conc.length = gm.n_species;
     gm.massf2conc(Q, conc);
