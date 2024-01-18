@@ -7,6 +7,12 @@ db['NO+'].theta_v = {
    description = 'characteristic vibrational temperature',
    reference = 'Copied from NO'
 }
+db['NO+'].theta_D = {
+   value = 75297.96,
+   units = 'K',
+   description = 'characteristic dissociation temperature',
+   reference = 'Copied from NO'
+}
 db['NO+'].electronic_levels = {
   Te = {
     value={0.0, 52190.00, 59240.00, 61880.0, 67720.0, 71450.0, 73471.72},

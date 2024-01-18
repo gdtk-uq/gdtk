@@ -97,10 +97,10 @@ class MultiTemperatureGasMixture : ThermodynamicModel {
                 component_tokens = component.split(":");
                 string species = component_tokens[0];
                 int isp = _species_indices[species];
-                _energy_modes_isp[i_mode][i_comp] = isp;
                 if (isp == _electron_idx){
                     _electron_mode = to!int(i_mode);
                 }
+                _energy_modes_isp[i_mode][i_comp] = isp;
                 string energy_type = component_tokens[1];
                 lua_getfield(L, -1, species.toStringz);
                 switch (energy_type) {
@@ -109,6 +109,9 @@ class MultiTemperatureGasMixture : ThermodynamicModel {
                         break;
                     case "electronic":
                         _energy_modes[i_mode][i_comp] = create_electronic_energy_model(L, _R[isp]);
+                        break;
+                    case "electron":
+                        _energy_modes[i_mode][i_comp] = new ZeroEnergy();
                         break;
                     default:
                         throw new Error("Unknown energy type");

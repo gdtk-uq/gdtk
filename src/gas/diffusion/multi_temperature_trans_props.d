@@ -88,6 +88,11 @@ public:
                         // we will need to include the electronic
                         // contribution at some point
                         break;
+                    case "electron":
+                        // we don't need to do anything, this is
+                        // treated as a special case when computing
+                        // the transport properties
+                        break;
                     default:
                         throw new Error("Unknown energy type");
                 }

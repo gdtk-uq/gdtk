@@ -81,7 +81,11 @@ local function buildEnergyModes(mode_names, modes)
          if not energy_modes[species] then
             energy_modes[species] = {}
          end
-         energy_modes[species][energy_type] = imode-1
+         if species == "e-" then
+            energy_modes[species].electron = imode-1
+         else
+            energy_modes[species][energy_type] = imode-1
+         end
       end
    end
    return energy_modes

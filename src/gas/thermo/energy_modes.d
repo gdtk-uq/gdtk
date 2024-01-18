@@ -261,7 +261,7 @@ private:
 
 }
 
-class ZeroElectronic : InternalEnergy
+class ZeroEnergy : InternalEnergy
 {
 public:
     this () {}
@@ -289,7 +289,7 @@ InternalEnergy create_vibrational_energy_model(lua_State * L, double R)
         case "from-cea-thermo-curve":
             return new CEAThermoCurveVib(L, R);
         case "frozen":
-            return new ZeroVibration();
+            return new ZeroEnergy();
         default:
             throw new Error("Vibrational internal energy model not recognised");
     }
@@ -315,7 +315,7 @@ InternalEnergy create_electronic_energy_model(lua_State * L, double R)
         case "multi-level":
             return new MultiLevelElectronic(theta_e, R, g);
         case "frozen":
-            return new ZeroElectronic();
+            return new ZeroEnergy();
         default:
             throw new Error("Electronic internal energy model not recognised");
     }

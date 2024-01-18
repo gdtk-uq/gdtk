@@ -56,8 +56,8 @@ public:
             string type = getString(L, -1, "type");
             switch (type) {
             case "electron":
-                m_vibration_internal_energy[isp] = new ZeroVibration();
-                m_electronic_internal_energy[isp] = new ZeroElectronic();
+                m_vibration_internal_energy[isp] = new ZeroEnergy();
+                m_electronic_internal_energy[isp] = new ZeroEnergy();
                 mCpTR[isp] = 0.0;
                 break;
             case "atom" :
