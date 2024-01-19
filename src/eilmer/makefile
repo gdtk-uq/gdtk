@@ -238,7 +238,8 @@ ifeq ($(WITH_FSI),1)
 	EILMER_FILES += fsi/package.d \
 					fsi/FEMmodel.d \
 					fsi/FEMconfig.d \
-					fsi/eulerbernoulli.d
+					fsi/eulerbernoulli.d \
+					fsi/kirchhofflove.d
 endif
 
 FIELD_FILES := field/field.d \

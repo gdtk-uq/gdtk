@@ -1,4 +1,4 @@
-module fsi.kirchofflove;
+module fsi.kirchhofflove;
 
 import std.math;
 import std.conv;
@@ -7,6 +7,7 @@ import std.stdio;
 import core.time;
 import std.format;
 import std.array;
+import std.range;
 
 import nm.number;
 import nm.bbla;
@@ -60,8 +61,8 @@ public:
             } // end foreach i
         } // end foreach k
 
-        foreach (zeroedIndx; zeroedIndices) {
-            foreach (DoF; 0 .. nDoFs) {
+        foreach (zeroedIndx; ZeroedIndices) {
+            foreach (DoF; 0 .. nDoF) {
                 if (zeroedIndx == DoF) {
                     M[zeroedIndx, DoF] = 1.0;
                     K[zeroedIndx, DoF] = 1.0;
@@ -75,9 +76,27 @@ public:
         } // end foreach zeroedIndx
     } // end GenerateMassStiffnessMatrices
 
+    size_t LocalNodeToGlobalNode(int node, int i, int k) {
+        // Get the global node index from the index of a node of an element
+        // Note the ordering of the nodes as per Fig 5.8 in
+        // "Structural Analysis with the Finite Element Method: Linear Statics, Vol 2"
+        switch (node) {
+            case 0:
+                return (k * (myConfig.Nx + 1) + i);
+            case 1:
+                return (k * (myConfig.Nx + 1) + i + 1);
+            case 2:
+                return ((k + 1) * (myConfig.Nx + 1) + i + 1);
+            case 3:
+                return ((k + 1) * (myConfig.Nx + 1) + i);
+            default:
+                throw new Error("Something went wrong in assigning the global node index from the local index in FSI.");
+        }
+    } // end LocalNodeToGlobalNode
+        
     Matrix!number LocalStiffnessMatrix(number a, number b, number v) {
         // Allocate memory for the local stiffness matrix
-        Matrix!number K = new Matrix!number(12); K.zeros();
+        Matrix!number KL = new Matrix!number(12); KL.zeros();
 
         // Build the constituitive matrix as per Eq 5.12 in 
         // "Structural Analysis with the Finite Element Method: Linear Statics, Vol 2"
@@ -89,14 +108,15 @@ public:
         D[2, 2] = (1 - v) / 2;
 
         // Use two point quadrature to evaluate the integral
-        double[4] xi_quad  = [-1, 1, 1, -1]; xi_quad[]  *= (1 / sqrt(3));
-        double[4] eta_quad = [-1, -1, 1, 1]; eta_quad[] *= (1 / sqrt(3));
+        double[4] xi_quad  = [-1, 1, 1, -1]; xi_quad[]  *= (1 / sqrt(3.0));
+        double[4] eta_quad = [-1, -1, 1, 1]; eta_quad[] *= (1 / sqrt(3.0));
 
         // Allocate memory for the B matrix, which is evaluated at each quad point
         Matrix!number B = new Matrix!number(3, 12);
 
         // Iterate through the quadrature points
-        foreach (xi, eta; zip(xi_quad, eta_quad)) {
+        foreach (quadPoint; 0 .. 4) {
+            double xi = xi_quad[quadPoint]; double eta = eta_quad[quadPoint];
             // This is transcribed from Eq. 4.40 in
             // "R for Finite Element Analysis of Size-Dependent Microscale Structures"
             // They are the second and mixed derivatives of the shape functions at each node
@@ -137,9 +157,10 @@ public:
             B[2,10] = (3 * xi * xi - 2 * xi - 1) / (4 * b);
             B[2,11] = (-3 * eta * eta - 2 * eta + 1) / (4 * a);
 
-            Matrix!number BDB = dot(dot(transpose(B), C), B);
+            Matrix!number BDB = dot(dot(transpose(B), D), B);
             KL._data[] += BDB._data[];
         } // end foreach xi, eta
+        writeln(KL._data);
         return KL;
     } // LocalStiffnessMatrix
 
@@ -155,13 +176,14 @@ public:
         double[4] xn = [-1, 1, 1, -1]; double[4] yn = [-1, -1, 1, 1];
 
         // Quadrature locations
-        double[4] xi_quad = xn[] * (1 / sqrt(3)); double[4] eta_quad = yn[] * (1 / sqrt(3));
+        double[4] xi_quad = xn[] * (1 / sqrt(3.0)); double[4] eta_quad = yn[] * (1 / sqrt(3.0));
 
         // Allocate memory for the N matrix
         Matrix!number N = new Matrix!number(3, 12);
 
         // Iterate through quadrature points
-        foreach (xi, eta; zip(xi_quad, eta_quad)) {
+        foreach (quadPoint; 0 .. 4) {
+            double xi = xi_quad[quadPoint]; double eta = eta_quad[quadPoint];
             // Iterate through nodes on the element
             foreach (i; 0 .. 4) {
                 double x = xn[i]; double y = yn[i];
@@ -181,11 +203,193 @@ public:
         return ML;
     } // end LocalMassMatrix
 
-    Matrix!number updateForceVector() {
+    override void updateForceVector() {
+        // Update the external forcing vector using the fluid pressures at the quadrature
+        // locations
         number a = myConfig.length / (2 * myConfig.Nx);
         number b = myConfig.width / (2 * myConfig.Nz);
 
+        // We need to evaluate Eq. 5.46 in 
+        // "Structural Analysis with the Finite Element Method: Linear Statics, Vol 2"
+        // The integral is computed using two point quadrature. For now, we're going to
+        // assume that the external bending moments are 0, so fz is the only non-zero
+        // term in the column vector. That means we only need the first column of the 
+        // shape matrix. The changes to the global force matrix are only going to be 
+        // [N[0, 0] * f, N[1, 0] * f, N[2, 0] * f] where N is the shape matrix
 
+        // Node locations
+        double[4] xn = [-1, 1, 1, -1]; double[4] yn = [-1, -1, 1, 1];
 
+        // Quadrature locations
+        double[4] xi_quad = xn[] * (1 / sqrt(3.0)); double[4] eta_quad = yn[] * (1 / sqrt(3.0));
 
+        // Iterate through the elements
+        size_t globalNodeIndx, globalRowIndx, globalQuadId;
+        number externalForce;
+        foreach (k; 0 .. myConfig.Nz) {
+            foreach (i; 0 .. myConfig.Nx) {
+                // Iterate through nodes on the element
+                foreach (node; 0 .. 4) {
+                    globalNodeIndx = LocalNodeToGlobalNode(node, i, k);
+                    double x = xn[node]; double y = yn[node];
+                    // Iterate through quadrature points
+                    foreach (quadPoint; 0 .. 4) {
+                        double xi = xi_quad[quadPoint]; double eta = eta_quad[quadPoint];
+                        globalQuadId = LocalNodeToGlobalNode(quadPoint, i, k); // The same logic can be applied to the quadrature points as nodes
+                        externalForce = (southPressureAtQuads[globalQuadId] - northPressureAtQuads[globalQuadId]);
+                        F._data[globalNodeIndx] += externalForce * (1 + x * xi) * (1 + y * eta) * (2 + x * xi + y * eta - pow(xi, 2) - pow(eta, 2)) / 8;
+                        F._data[globalNodeIndx+1] += externalForce * a * (pow(xi, 2) - 1) * (xi + x) * (1 + y * eta) / 8;
+                        F._data[globalNodeIndx+2] += externalForce * b * (pow(eta, 2) - 1) * (eta + y) * (1 + x + xi) / 8;
+                    } // end foreach quadPoint
+                } // end foreach node
+            } // end foreach i
+        } // end foreach k
+
+        // Scale the vector by a * b
+        F._data[] *= a * b;
+
+        // Set the boundary conditions
+        foreach (ZeroedIndx; ZeroedIndices) {
+            F._data[ZeroedIndx] = 0.0;
+        }
+    }
+
+    override void determineBoundaryConditions(string BCs) {
+        // Determine the boundary conditions. The BC string should be 4 characters long,
+        // each character denoting a boundary. The order of the BCs are "(-x)(+x)(-z)(+z)".
+        // The boundary may be:
+        //      F: Free, no constraints on the boundary
+        //      C: Clamped, all 3 degrees of freedom are fixed to 0
+        //      P: Pinned, the displacement and slope along the boundary are fixed to 0
+
+        // Negative x
+        switch (BCs[0]) {
+            case 'C':
+                foreach (node; 0 .. myConfig.Nz + 1) {
+                    // All DoFs
+                    foreach (DoF; 0 .. 3) {
+                        ZeroedIndices ~= (node + (myConfig.Nx + 1)) * 3 + DoF;
+                    }
+                }
+                break;
+            case 'P':
+                foreach (node; 0 .. myConfig.Nz + 1) {
+                    // The displacement DoF
+                    ZeroedIndices ~= (node + (myConfig.Nx + 1)) * 3;
+                    // The z slope is 0, which is the 3rd DoF
+                    ZeroedIndices ~= (node + (myConfig.Nx + 1)) * 3 + 2;
+                }
+                break;
+            case 'F':
+                break;
+            default:
+                throw new Error("Unrecognised BC specification in FSI; should be 'F', 'C' or 'P'");
+        }
+
+        // Positive x
+        switch (BCs[1]) {
+            case 'C':
+                foreach (node; 0 .. myConfig.Nz + 1) {
+                    // All DoFs
+                    foreach (DoF; 0 .. 3) {
+                        ZeroedIndices ~= (node + (2 * myConfig.Nx + 1)) * 3 + DoF;
+                    }
+                }
+                break;
+            case 'P':
+                foreach (node; 0 .. myConfig.Nz + 1) {
+                    // The displacement DoF
+                    ZeroedIndices ~= (node + (2 * myConfig.Nx + 1)) * 3;
+                    // The z slope is 0, which is the 3rd DoF
+                    ZeroedIndices ~= (node + (2 * myConfig.Nx + 1)) * 3 + 2;
+                }
+                break;
+            case 'F':
+                break;
+            default:
+                throw new Error("Unrecognised BC specification in FSI; should be 'F', 'C' or 'P'");
+        }
+
+        // Negative z
+        switch (BCs[2]) {
+            case 'C':
+                foreach (node; 0 .. myConfig.Nz + 1) {
+                    // All DoFs
+                    foreach (DoF; 0 .. 3) {
+                        ZeroedIndices ~= node * 3 + DoF;
+                    }
+                }
+                break;
+            case 'P':
+                foreach (node; 0 .. myConfig.Nz + 1) {
+                    // The displacement DoF
+                    ZeroedIndices ~= node * 3;
+                    // The x slope is 0, which is the 2nd DoF
+                    ZeroedIndices ~= node * 3 + 1;
+                }
+                break;
+            case 'F':
+                break;
+            default:
+                throw new Error("Unrecognised BC specification in FSI; should be 'F', 'C' or 'P'");
+        }
         
+        // Positive z
+        switch (BCs[2]) {
+            case 'C':
+                foreach (node; 0 .. myConfig.Nz + 1) {
+                    // All DoFs
+                    foreach (DoF; 0 .. 3) {
+                        ZeroedIndices ~= (myConfig.Nz * 2 * (myConfig.Nx + 1) + node) * 3 + DoF;
+                    }
+                }
+                break;
+            case 'P':
+                foreach (node; 0 .. myConfig.Nz + 1) {
+                    // The displacement DoF
+                    ZeroedIndices ~= (myConfig.Nz * 2 * (myConfig.Nx + 1) + node) * 3;
+                    // The x slope is 0, which is the 2nd DoF
+                    ZeroedIndices ~= (myConfig.Nz * 2 * (myConfig.Nx + 1) + node) * 3 + 1;
+                }
+                break;
+            case 'F':
+                break;
+            default:
+                throw new Error("Unrecognised BC specification in FSI; should be 'F', 'C' or 'P'");
+        }
+
+    } // end determineBoundaryConditions
+
+    override void writeToFile(size_t tindx) {
+        auto writeFile = File(format("FSI/t%04d.dat", tindx), "w+");
+        // Set the header to describe the columns (w = displacement, theta_x = x slope, theta_z = z slope)
+        writeFile.write("# w\ttheta_x\ttheta_z\tdxdt\tdtheta_xdt\tdtheta_zdt\n");
+        // Write the position and velocities for each DoF
+        foreach (node; 0 .. (myConfig.Nx + 1) * (myConfig.Nz + 1)) {
+            writeFile.write(format("%.18e %1.8e %1.8e %1.8e %1.8e %1.8e\n", X[node*3].re, X[node*3+1], X[node*3+2].re, V[node*3].re, V[node*3+1].re, V[node*3+2].re));
+        }
+    } // end writeToFile
+
+    override void readFromFile(size_t tindx) {
+        auto readFile = File(format("FSI/t%04d.dat", tindx), "r").byLine();
+        // Pop the header line
+        readFile.popFront();
+        double[6] line;
+        // Take out each line and put into the relevant locations in X, V
+        foreach (node; 0 .. (myConfig.Nx + 1) * (myConfig.Nz + 1)) {
+            line = map!(to!double)(splitter(readFile.front())).array; readFile.popFront();
+            X[node*3 .. (node+1)*3] = to!(number[3])(line[0 .. 3]);
+            V[node*3 .. (node+1)*3] = to!(number[3])(line[3 .. 6]);
+        }
+    } // end readFromFile
+
+    override void convertToNodeVel() {
+        // Convert from the rate of change of the DoFs to velocities usable by the mesh
+        foreach (node; 0 .. (myConfig.Nx + 1) * (myConfig.Nz + 1)) {
+            FEMNodeVel[node].x = V[node * 3];
+            FEMNodeVel[node].y = 0.0;
+            FEMNodeVel[node].z = 0.0;
+            FEMNodeVel[node].transform_to_global_frame(plateNormal, plateTangent1, plateTangent2);
+        }
+    } // end convertToNodeVel
+}

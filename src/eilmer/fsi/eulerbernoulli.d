@@ -19,14 +19,14 @@ public:
 
     this(string jobName, int id) { super(jobName, id); }
 
-    override void plateSetup() {
+    override void modelSetup() {
 
         // Allocate memory to the vectors/matrices- 2 DoFs per node
         nNodes = myConfig.Nx + 1;
         nDoF = nNodes * 2;
         nQuadPoints = myConfig.Nx * 2;
 
-        super.plateSetup();
+        super.modelSetup();
     }
 
     // begin generateMassStiffnessMatrices
@@ -197,11 +197,6 @@ public:
 
         return ML;
     } // end LocalMassMatrix
-
-    computeNaturalFrequency(size_t i) {
-        double[3] k = [1.875, 4.694, 7.855];
-        return to!number(sqrt(myConfig.youngsModulus * pow(myConfig.t, 2) / (12 * myConfig.density)) * pow(k[i] / myConfig.Length, 2));
-    }
 
     // begin write
     override void writeToFile(size_t tindx) {

@@ -687,17 +687,19 @@ EtaStrategy etaStrategyFromName(string name)
 } // end etaStrategyFromName()
 
 version (FSI) {
-    enum FEMModelForFSI { eulerBernoulli }
+    enum FEMModelForFSI { eulerBernoulli, kirchhoffLove }
 
     string FEMModelName(FEMModelForFSI FEMModel) {
         final switch (FEMModel) {
             case FEMModelForFSI.eulerBernoulli: return "eulerBernoulli";
+            case FEMModelForFSI.kirchhoffLove: return "kirchhoffLove";
         }
     }
 
     FEMModelForFSI FEMModelFromName(string name) {
         switch (name) {
             case "eulerBernoulli": return FEMModelForFSI.eulerBernoulli;
+            case "kirchhoffLove": return FEMModelForFSI.kirchhoffLove;
             default:
                string errMsg = "The selected FEM model";
                errMsg ~= format(" %s ", name);
@@ -2476,6 +2478,7 @@ void set_config_for_blocks(JSONValue jsonData)
             foreach (i; cfg.nBlocks .. cfg.nBlocks + 1) {
                 final switch (cfg.FEMModel) {
                     case FEMModelForFSI.eulerBernoulli: FEMModels ~= new eulerBernoulliBeam(cfg.base_file_name, i); break;
+                    case FEMModelForFSI.kirchhoffLove: FEMModels ~= new kirchhoffLovePlate(cfg.base_file_name, i); break;
                 }
             }
         }

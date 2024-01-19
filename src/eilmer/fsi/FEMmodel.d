@@ -101,8 +101,8 @@ public:
         lua_setglobal(myL, "blkId");
     }
 
-    // begin plate_setup()
-    void plateSetup() {
+    // begin modelSetup()
+    void modelSetup() {
         // Set up the plate orientation
         plateNormal = Vector3(myConfig.plateNormal[0], myConfig.plateNormal[1], myConfig.plateNormal[2]);
         plateTangent1 = Vector3(myConfig.plateNormal[1], -myConfig.plateNormal[0], myConfig.plateNormal[2]);

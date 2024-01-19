@@ -326,9 +326,44 @@ function ijkFBAIndxToFBIndx(FBA, i, j, k)
 end
 
 function fsi_weights.cellToQuadratureMapping(FBA, Nx, Nz, Length, Width, Side)
-    -- Every element has 2 quadrature points, located at +-1/sqrt(3), in the space where an element width
+    -- Every element has 2^Dims quadrature points, located at +-1/sqrt(3), in the space where an element width
     -- is (-1, 1)
-    cellToQuadratureMap = {}
+    -- Find which cell lies on each of these quadrature points. The map is a table of tables,
+    -- with the highest level key:value pair being blockID:blockTable, where blockTable has
+    -- the key:value pair of quadratureID:cellID. The quadrature points are indexed in the
+    -- x direction then the z direction.
+    --
+    --[[
+    Layout of a single element in 2 solid dimensions (3 fluid)
+    (-1, 1)                                     (1, 1)
+    ---------------------------------------------
+    |                                           |
+    |                                           |
+    | id: (k*Ni+i+Ni)*2  id: (k*Ni+i+Ni)*2 + 1  |
+    |         o                    o            |
+    | (-1/rt(3), 1/rt(3))  (1/rt(3), 1/rt(3))   |
+    |                                           |
+    |                                           |
+    |              element (i, k)               |
+    |                                           |
+    |                                           |
+    |   id: (k*Ni + i)*2   id: (k*Ni + i)*2 + 1 |
+    |         o                    o            |
+    | (-1/rt(3), -1/rt(3))  (1/rt(3), -1/rt(3)) |
+    |                                           |
+    |                                           |
+    |                                           |
+    ---------------------------------------------
+    (-1, -1)                                    (1, -1)
+    --]]
+
+    -- The key to this is building a list of the x and z quadrature locations and the x and z vertex
+    -- locations. Then we run through the quadrature locations, and find the vertex immediately
+    -- proceeding that quadrature location. This vertex will always be the "positive-most" vertex
+    -- of the cell lying on that quadrature point, which we want to use for the external forcing
+    -- in the FEM model.
+
+    -- Choose the starting point, depending on whether the surface is a north or south surface
     if Side == "north" then
         j = 0
         j_cell = 0
@@ -337,33 +372,68 @@ function fsi_weights.cellToQuadratureMapping(FBA, Nx, Nz, Length, Width, Side)
         j_cell = FBA.njv-2
     end
 
-    -- Work out where the quadrature points are along the surface
-    quadLoc = (1 - 1 / math.sqrt(3)) / 2
+    -- Shift the quadrature points from [-1, 1] to [0, 1]
+    quadLoc0 = (1 - 1 / math.sqrt(3)) / 2
+    quadLoc1 = (1 + 1 / math.sqrt(3)) / 2
+
+    -- How large is each element?
     dxFEM = Length / Nx
-    quadPoints = {}
-    for i = 1, Nx do
-        quadPoints[#quadPoints+1] = ((i-1) + quadLoc) * dxFEM
-        quadPoints[#quadPoints+1] = ((i-1) + (1-quadLoc)) * dxFEM
+    if Nz > 0 then dzFEM = Width / Nz else dzFEM = 0 end
+
+    -- Work out where the quadrature points are along the surface
+    xQuadPoints = {}; zQuadPoints = {[0] = 0}
+    for i = 0, Nx-1 do
+        xQuadPoints[i*2] = (i + quadLoc0) * dxFEM
+        xQuadPoints[i*2 + 1] = (i + quadLoc1) * dxFEM
+    end
+    for k = 0, Nz-1 do
+        zQuadPoints[k*2] = (k + quadLoc0) * dzFEM
+        zQuadPoints[k*2 + 1] = (k + quadLoc1) * dzFEM
     end
 
+    -- The corner that forms the bottom left corner of the block
     ref_point = FBA.gridArray.grid:get_vtx(0, j, 0)
-    cellPoints = {}
+    
+    -- Grab the vertex locations to use in the search- don't need the bottom left corner
+    -- We're assuming the grid lines are going to be straight, allowing this simplification
+    -- of using (_, j, 0) and (0, j, _)
+    xVertexPoints = {}; zVertexPoints = {[0] = 0}
     for i = 1, FBA.niv-1 do
-        xPos = vabs(FBA.gridArray.grid:get_vtx(i, j, 0) - ref_point)
-        cellPoints[i] = xPos
+        xVertexPoints[i] = vabs(FBA.gridArray.grid:get_vtx(i, j, 0) - ref_point)
     end
 
-    iCell = 1
-    for iQuad = 1, 2*Nx do
-        while cellPoints[iCell] < quadPoints[iQuad] do
-            iCell = iCell + 1
+    for k = 1, FBA.nkv-1 do
+        zVertexPoints[k] = vabs(FBA.gridArray.grid:get_vtx(0, j, k) - ref_point)
+    end
+
+    -- Now run through the quadrature points in each dimension and find the proceeding vertex
+    -- In 1 dimension (2 fluid dimensions), the zQuadPoints and zCellPoints tables should
+    -- just be {0 = 0} so that zCellId should just be 0
+    cellToQuadratureMap = {}
+    for zQuadId, zQuadLoc in pairs(zQuadPoints) do
+        kCellId = 0
+        while kCellId < FBA.nkv-1 and zQuadLoc > zVertexPoints[kCellId+1] do
+            kCellId = kCellId + 1
         end
-        blkId, cellId = ijkFBAIndxToFBIndx(FBA, iCell-1, j, 0)
-        if cellToQuadratureMap[blkId] then
-            cellToQuadratureMap[blkId][iQuad] = cellId
-        else
-            cellToQuadratureMap[blkId] = {}
-            cellToQuadratureMap[blkId][iQuad] = cellId
+
+        for xQuadId, xQuadLoc in pairs(xQuadPoints) do
+            iCellId = 0
+            while iCellId < FBA.niv-1 and xQuadLoc > xVertexPoints[iCellId+1] do
+                iCellId = iCellId + 1
+            end
+
+            -- Now convert these to single indices for both quadrature and cells
+            blkId, cellId = ijkFBAIndxToFBIndx(FBA, iCellId, j, kCellId)
+            
+            quadId = zQuadId * Nx * 2 + xQuadId
+            if cellToQuadratureMap[blkId] then
+                -- If this block already has an entry in the table
+                cellToQuadratureMap[blkId][quadId] = cellId
+            else
+                -- No table for this block yet
+                cellToQuadratureMap[blkId] = {}
+                cellToQuadratureMap[blkId][quadId] = cellId
+            end
         end
     end
 
@@ -375,7 +445,7 @@ function fsi_weights.cellToQuadratureMapping(FBA, Nx, Nz, Length, Width, Side)
         end
         mappingFile:write("\n")
         for quadId, _ in pairs(blkTable) do
-            mappingFile:write(string.format("%s ", quadId-1))
+            mappingFile:write(string.format("%s ", quadId))
         end
         mappingFile:write("\n")
     end

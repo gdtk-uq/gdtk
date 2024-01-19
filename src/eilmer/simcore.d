@@ -263,7 +263,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     }
     version(FSI) {
         foreach (FEMModel; FEMModels) {
-            FEMModel.plateSetup();
+            FEMModel.modelSetup();
         }
     }
 
