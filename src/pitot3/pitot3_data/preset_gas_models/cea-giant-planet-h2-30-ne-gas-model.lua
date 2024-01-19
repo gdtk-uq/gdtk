@@ -8,6 +8,9 @@
 
 -- Lewis Barltrop (l.barltrop@uq.net.au) - 28/06/21
 -- Adapted from cea-giant-planet-h2-80-ne-gas-model.lua
+-- updated the trace to 1.0e-10 as running the CEA calculations in massf (which is the GDTk's only way to do it)
+-- suppresses ionisation otherwise as electrons are very light so their mass fraction is very small
+-- Chris James (c.james4@uq.edu.au) - 19/01/24
 
 model = "CEAGas"
 
@@ -17,5 +20,5 @@ CEAGas = {
   reactants = {H2=0.7, Ne=0.3},
   inputUnits = "moles",
   withIons = true,
-  trace = 1.0e-6
+  trace = 1.0e-10
 }

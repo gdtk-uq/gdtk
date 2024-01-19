@@ -10,6 +10,9 @@
 -- Journal of Spacecraft and Rockets
 -- I got the species list from very high temperature (14,000 K) H2/He post-shock calculations using the old PITOT code.
 -- Chris James (c.james4@uq.edu.au) - 12/06/21
+-- updated the trace to 1.0e-10 as running the CEA calculations in massf (which is the GDTk's only way to do it)
+-- suppresses ionisation otherwise as electrons are very light so their mass fraction is very small
+-- Chris James (c.james4@uq.edu.au) - 19/01/24
 
 model = "CEAGas"
 
@@ -19,5 +22,5 @@ CEAGas = {
   reactants = {H2=0.85, He=0.15},
   inputUnits = "moles",
   withIons = true,
-  trace = 1.0e-6
+  trace = 1.0e-10
 }

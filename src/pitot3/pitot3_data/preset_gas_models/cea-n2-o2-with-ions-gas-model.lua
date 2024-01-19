@@ -6,6 +6,9 @@
 -- I got the species list from intuition and various old PITOT runs with this composition.
 -- Chris James (c.james4@uq.edu.au) - 12/06/21
 -- updated 14/09/21 when I realised that I was mising NO+ in the species list... CMJ
+-- updated the trace to 1.0e-10 as running the CEA calculations in massf (which is the GDTk's only way to do it)
+-- suppresses ionisation otherwise as electrons are very light so their mass fraction is very small
+-- Chris James (c.james4@uq.edu.au) - 19/01/24
 
 model = "CEAGas"
 
@@ -15,5 +18,5 @@ CEAGas = {
   reactants = {N2=0.79,O2=0.21},
   inputUnits = "moles",
   withIons = true,
-  trace = 1.0e-6
+  trace = 1.0e-10
 }

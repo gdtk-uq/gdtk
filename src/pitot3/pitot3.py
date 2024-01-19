@@ -6,7 +6,7 @@ Chris James (c.james4@uq.edu.au) - (01/01/21)
 
 """
 
-VERSION_STRING = '16-Dec-2023'
+VERSION_STRING = '19-Jan-2024'
 
 import sys, os, math
 import yaml
@@ -599,6 +599,9 @@ def run_pitot3(config_dict = {}, config_filename = None,
         else:
             expansion_tube_nozzle_expansion_minimum_p2_over_p1 = None
 
+        maximum_temp_for_room_temperature_only_gmodel = config_data['maximum_temp_for_room_temperature_only_gmodel']
+        cutoff_temp_for_no_ions = config_data['cutoff_temp_for_no_ions']
+
         nozzle_exit_state_name = config_data['nozzle_exit_state_name']
 
         nozzle = Nozzle(entrance_state_name=gas_path[-1].get_exit_state_name(),
@@ -606,7 +609,9 @@ def run_pitot3(config_dict = {}, config_filename = None,
                         exit_state_name=nozzle_exit_state_name, area_ratio=area_ratio,
                         nozzle_expansion_tolerance=nozzle_expansion_tolerance,
                         facility_type = facility_type,
-                        expansion_tube_nozzle_expansion_minimum_p2_over_p1 = expansion_tube_nozzle_expansion_minimum_p2_over_p1)
+                        expansion_tube_nozzle_expansion_minimum_p2_over_p1 = expansion_tube_nozzle_expansion_minimum_p2_over_p1,
+                        maximum_temp_for_room_temperature_only_gmodel = maximum_temp_for_room_temperature_only_gmodel,
+                        cutoff_temp_for_no_ions = cutoff_temp_for_no_ions)
 
         gas_path.append(nozzle)
         object_dict['nozzle'] = nozzle

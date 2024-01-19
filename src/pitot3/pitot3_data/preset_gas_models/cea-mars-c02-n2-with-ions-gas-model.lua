@@ -9,6 +9,9 @@
 -- I got the species list from my working co2-with-ions species list and species I added after doing
 -- old PITOT code runs with this composition at various conditions to see what the N2 added.
 -- Chris James (c.james4@uq.edu.au) - 12/06/21
+-- updated the trace to 1.0e-10 as running the CEA calculations in massf (which is the GDTk's only way to do it)
+-- suppresses ionisation otherwise as electrons are very light so their mass fraction is very small
+-- Chris James (c.james4@uq.edu.au) - 19/01/24
 
 model = "CEAGas"
 
@@ -18,5 +21,5 @@ CEAGas = {
   reactants = {CO2=0.96,N2=0.04},
   inputUnits = "moles",
   withIons = false,
-  trace = 1.0e-6
+  trace = 1.0e-10
 }

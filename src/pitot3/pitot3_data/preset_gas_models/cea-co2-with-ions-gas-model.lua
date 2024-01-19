@@ -5,6 +5,9 @@
 -- I then went into CEA to check the full set of species and added any other species which did not cause
 -- PITOT3 to fail when setting up the test gas state at room temperature. I added C302, C3, and O2+.
 -- Chris James (c.james4@uq.edu.au) - 12/06/21
+-- updated the trace to 1.0e-10 as running the CEA calculations in massf (which is the GDTk's only way to do it)
+-- suppresses ionisation otherwise as electrons are very light so their mass fraction is very small
+-- Chris James (c.james4@uq.edu.au) - 19/01/24
 
 model = "CEAGas"
 
@@ -14,5 +17,5 @@ CEAGas = {
   reactants = {CO2=1.0},
   inputUnits = "moles",
   withIons = true,
-  trace = 1.0e-6
+  trace = 1.0e-10
 }

@@ -8,11 +8,9 @@ INSTALL_DIR ?= $(HOME)/gdtkinst
 GAS_DIR := ../gas
 CEA_DIR := ../../extern/cea2
 
-DMD ?= ldc2
-
 install : $(INSTALL_DIR)
 	@echo installing gas library
-	cd $(GAS_DIR); make DMD=$(DMD) install
+	cd $(GAS_DIR); make install
 	@echo installing cea
 	cd $(CEA_DIR); make install
 	@echo Copying pitot3.py to $(INSTALL_DIR)/bin

@@ -25,6 +25,9 @@
 -- I also couldn't fit the final three trace species ('C2H2,acetylene', 'C4H2,butadiyne', and 'C2H2,vinylidene')
 -- due to some kind of line length issue? and maybe they were causing a crash, so I didn't add them either
 -- Chris James (c.james4@uq.edu.au) - 31/08/21
+-- updated the trace to 1.0e-10 as running the CEA calculations in massf (which is the GDTk's only way to do it)
+-- suppresses ionisation otherwise as electrons are very light so their mass fraction is very small
+-- Chris James (c.james4@uq.edu.au) - 19/01/24
 
 model = "CEAGas"
 
@@ -38,5 +41,5 @@ CEAGas = {
   reactants = {N2=0.98,CH4=0.015,Ar=0.05},
   inputUnits = "moles",
   withIons = true,
-  trace = 1.0e-6
+  trace = 1.0e-10
 }
