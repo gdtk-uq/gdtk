@@ -14,31 +14,35 @@ import nm.smla;
 import fsi;
 import geom;
 
-class eulerBernoulliBeam : FEMModel {
+class EulerBernoulliBeam : FEMModel {
 public:
 
     this(string jobName, int id) { super(jobName, id); }
 
-    override void modelSetup() {
+    // Use snake case for formatting this function since it appears in the main code
+    override void model_setup() {
 
-        // Allocate memory to the vectors/matrices- 2 DoFs per node
+        // Set some constants used in the master initialiser to allocate the correct amount 
+        // of memory to the vectors/matrices- 2 DoFs per node
         nNodes = myConfig.Nx + 1;
         nDoF = nNodes * 2;
         nQuadPoints = myConfig.Nx * 2;
 
-        super.modelSetup();
-    }
+        super.model_setup();
+    } // end model_setup
 
     // begin generateMassStiffnessMatrices
-    override void generateMassStiffnessMatrices() {
+    override void GenerateMassStiffnessMatrices() {
         number l = myConfig.length / myConfig.Nx;
 
         // Generate the local stiffness and mass matrices- for uniform meshes, these are the same for every element
+        // See function signatures for descriptions on where to find the specifications of the matrices.
         Matrix!number KL = LocalStiffnessMatrix(l);
         KL.scale(myConfig.youngsModulus * (pow(myConfig.thickness, 3) / 12) / pow(l, 3));
         Matrix!number ML = LocalMassMatrix(l);
         ML.scale(myConfig.thickness * l * myConfig.density / 420);
 
+        // Iterate through the elements, then the nodes per element, then DoFs etc.
         size_t GlobalNodeIndx, GlobalRowIndx, GlobalColIndx, LocalRowIndx, LocalColIndx;
         foreach (i; 0 .. myConfig.Nx) {
             foreach (node; 0 .. 2) {
@@ -52,14 +56,15 @@ public:
                             GlobalColIndx = (i + n_node) * 2 + D_DoF;
                             M[GlobalRowIndx, GlobalColIndx] += ML[LocalRowIndx, LocalColIndx];
                             K[GlobalRowIndx, GlobalColIndx] += KL[LocalRowIndx, LocalColIndx];
-                        }
-                    }
-                }
-            }
-        }
+                        } // end foreach D_DoF
+                    } // end foreach n_node
+                } // end foreach DoF
+            } // end foreach node
+        } // end foreach i
 
-        // Set the rows/cols corresponding to fixed DoFs to diagonal ones
-        foreach (ZeroedIndx; ZeroedIndices) {
+        // Set the boundary conditions, by setting the rows/cols corresponding
+        // to fixed DoFs to diagonal ones
+        foreach (ZeroedIndx; zeroedIndices) {
             foreach (DoF; 0 .. (myConfig.Nx + 1) * 2) {
                 if (ZeroedIndx == DoF) {
                     K[ZeroedIndx, DoF] = 1.0;
@@ -74,88 +79,95 @@ public:
         }
     } // end GenerateMassStiffnessMatrices
 
-    // begin convertToNodeVel
-    override void convertToNodeVel() {
+    override void ConvertToNodeVel() {
+        // Convert the rates of change of the degrees of freedom to velocities usable by the mesh
         foreach (node; 0 .. myConfig.Nx + 1) {
             FEMNodeVel[node].x = V[2 * node];
             FEMNodeVel[node].y = 0.0;
             FEMNodeVel[node].z = 0.0;
-            //FEMNodeVel[node].transform_to_global_frame(plateNormal, plateTangent1, plateTangent2);
-            //writeln(node, " Vel: ", FEMNodeVel[node]);
+            FEMNodeVel[node].transform_to_global_frame(plateNormal, plateTangent1, plateTangent2);
         }
-    } // end convertToNodeVel
+    } // end ConvertToNodeVel
 
-    // begin updateForceVector
     number[4] ShapeFunctionEval(number L, number x) {
+        // Evaluate the shape functions, Eq 2.22 in
+        // "Programming the Finite Element Method"
+        // at the quadrature points
         number[4] N;
         N[0] = (1 / pow(L, 3)) * (pow(L, 3) - 3 * L * pow(x, 2) + 2 * pow(x, 3));
         N[1] = (1 / pow(L, 2)) * (pow(L, 2) * x - 2 * L * pow(x, 2) + pow(x, 3));
         N[2] = (1 / pow(L, 3)) * (3 * L * pow(x, 2) - 2 * pow(x, 3));
         N[3] = (1 / pow(L, 2)) * (pow(x, 3) - L * pow(x, 2));
         return N;
-    }
+    } // end ShapeFunctionEval
 
-    override void updateForceVector() {
+    override void UpdateForceVector() {
+        // Update the force vector based on the external pressures using equation 2.25 in
+        // "Programming the Finite Element Method" by Smith et al.
+        // with the modification that q be a function x and moced inside the integral.
+        
         number l = myConfig.length / myConfig.Nx;
 
+        // Evaluate the shape functions
         number[4] Nq1, Nq2;
         Nq1 = ShapeFunctionEval(l, (l / 2) * (-1 / sqrt(3.) + 1));
         Nq2 = ShapeFunctionEval(l, (l / 2) * (1 / sqrt(3.) + 1));
 
+        // Perform two point gauss quadrature to compute the integral
         foreach (i; 0 .. myConfig.Nx) {
-            // -1/sqrt(3) quad point
             number q1 = southPressureAtQuads[2*i] - northPressureAtQuads[2*i];
             number q2 = southPressureAtQuads[2*i+1] - northPressureAtQuads[2*i+1];
 
             F._data[i*2 .. (i+2)*2] += (l / 2) * (q1 * Nq1[] + q2 * Nq2[]);
         }
 
-        /*
-        // Evaluate the shape functions
-        // Compute the force vector L based on Eq. 2.26 in 
-        // "Programming the Finite Element Method" by Smith et al.
-        // Currently, the approximation is that the distributed force
-        // over the element is approximated by the average of the 
-        // pressures at the element's nodes.
-        number[4] Fc, FL;
-        Fc = l / 12 * [6, l, 6, -l];
-
-        foreach (i; 0 .. myConfig.Nx) {
-            number ElementPressure = to!number(0.0);
-            foreach (node; 0 .. 2) {
-                size_t GlobalNodeIndx = i + node;
-                ElementPressure += southPressureAtQuads[GlobalNodeIndx] - northPressureAtQuads[GlobalNodeIndx];
-            }
-            FL[] = ElementPressure * Fc[] / 2;
-            F._data[i * 2 .. (i + 2) * 2] += FL[];
-        }
-
-        */
-        foreach (ZeroedIndx; ZeroedIndices) {
+        // Apply the boundary conditions
+        foreach (ZeroedIndx; zeroedIndices) {
             F._data[ZeroedIndx] = 0.0;
         }
     } // end updateForceVector
 
     // begin determineBoundaryConditions
-    override void determineBoundaryConditions(string BCs) {
-        // Determine which DoFs are fixed. For the moment, we only consider fixed 0 conditions.
-        // C is clamped i.e. displacement and slope are 0.
-        // P is pinned  i.e. displacement is zero, slope is free.
-        if (BCs[0] == 'C') {
-            foreach (DoF; 0 .. 2) {
-                ZeroedIndices ~= DoF;
-            }
-        } else if (BCs[0] == 'P') {
-            ZeroedIndices ~= 1;
+    override void DetermineBoundaryConditions(string BCs) {
+        // Determine the boundary conditions. The BC string should be 2 characters long,
+        // each character denoting a boundary. The order of the BCs are "(-x)(+x)".
+        // The boundary may be:
+        //      F: Free, no constraints on the boundary
+        //      C: Clamped, all 3 degrees of freedom are fixed to 0
+        //      P: Pinned, the displacement and slope along the boundary are fixed to 0
+
+        // Negative x
+        switch (BCs[0]) {
+            case 'C':
+                foreach (DoF; 0 .. 2) {
+                    zeroedIndices ~= DoF;
+                }
+                break;
+            case 'P':
+                zeroedIndices ~= 0;
+                break;
+            case 'F':
+                break;
+            default:
+                throw new Error("Unrecognised BC specification in FSI; should be 'F', 'C' or 'P'");
         }
 
-        if (BCs[1] == 'C') {
-            foreach (DoF; 0 .. 2) {
-                ZeroedIndices ~= (myConfig.Nx + 1) * 2 + DoF;
-            }
-        } else if (BCs[1] == 'P') {
-            ZeroedIndices ~= (myConfig.Nx + 1) * 2;
+        // Positive x
+        switch (BCs[1]) {
+            case 'C':
+                foreach (DoF; 0 .. 2) {
+                    zeroedIndices ~= (myConfig.Nx + 1) * 2 + DoF;
+                }
+                break;
+            case 'P':
+                zeroedIndices ~= myConfig.Nx * 2;
+                break;
+            case 'F':
+                break;
+            default:
+                throw new Error("Unrecognised BC specification in FSI; should be 'F', 'C' or 'P'");
         }
+
     } // end determineBoundaryConditions
 
     // begin LocalStiffnessMatrix
@@ -199,7 +211,7 @@ public:
     } // end LocalMassMatrix
 
     // begin write
-    override void writeToFile(size_t tindx) {
+    override void WriteToFile(size_t tindx) {
         auto writeFile = File(format("FSI/t%04d.dat", tindx), "w+");
         writeFile.write("# x\ttheta_x\tdxdt\tdtheta_xdt\n");
         foreach (i; 0 .. (myConfig.Nx + 1)) {
@@ -207,7 +219,7 @@ public:
         }
     }
 
-    override void readFromFile(size_t tindx) {
+    override void ReadFromFile(size_t tindx) {
         auto readFile = File(format("FSI/t%04d.dat", tindx), "r").byLine();
         // Pop the header line
         readFile.popFront();

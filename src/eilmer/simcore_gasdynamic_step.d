@@ -1646,7 +1646,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         case GridMotion.FSI:
             foreach (FEMModel; FEMModels) {
                 if (SimState.step % FEMModel.myConfig.couplingStep == 0) {
-                    FEMModel.computeVtxVelocitiesForFSI(SimState.dt_global);
+                    FEMModel.compute_vtx_velocities_for_FSI(SimState.dt_global);
                 }
             }
             break;
@@ -2836,7 +2836,7 @@ void gasdynamic_implicit_increment_with_moving_grid()
         case GridMotion.FSI:
             foreach (FEMModel; FEMModels) {
                 if (SimState.step % FEMModel.myConfig.couplingStep == 0) {
-                    FEMModel.computeVtxVelocitiesForFSI(SimState.dt_global);
+                    FEMModel.compute_vtx_velocities_for_FSI(SimState.dt_global);
                 }
             }
             break;

@@ -263,7 +263,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     }
     version(FSI) {
         foreach (FEMModel; FEMModels) {
-            FEMModel.modelSetup();
+            FEMModel.model_setup();
         }
     }
 
@@ -310,7 +310,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     version (FSI) {
         if ((SimState.is_restart) && (GlobalConfig.grid_motion == GridMotion.FSI)) {
             foreach (FEMModel; FEMModels) {
-                FEMModel.readFromFile(SimState.current_tindx);
+                FEMModel.ReadFromFile(SimState.current_tindx);
             }
         }
     }

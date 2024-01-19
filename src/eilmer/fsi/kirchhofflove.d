@@ -15,22 +15,24 @@ import nm.smla;
 import fsi;
 import geom;
 
-class kirchhoffLovePlate : FEMModel {
+class KirchhoffLovePlate : FEMModel {
 public:
 
     this(string jobName, int id) { super(jobName, id); }
 
-    override void modelSetup() {
+    // Use snake case for formatting this function since it appears in the main code
+    override void model_setup() {
 
-        // Set the number of nodes, DoFs and quad points
+        // Set some constants used in the master initialiser to allocate the correct amount 
+        // of memory to the vectors/matrices- 2 DoFs per node
         nNodes = (myConfig.Nx + 1) * (myConfig.Nz + 1);
         nDoF = nNodes * 3;
         nQuadPoints = myConfig.Nx * myConfig.Nz * 4;
 
-        super.modelSetup();
+        super.model_setup();
     }
 
-    override void generateMassStiffnessMatrices() {
+    override void GenerateMassStiffnessMatrices() {
         number a = myConfig.length / (2 * myConfig.Nx);
         number b = myConfig.width / (2 * myConfig.Nz);
 
@@ -39,7 +41,7 @@ public:
         Matrix!number ML = LocalMassMatrix(a, b);
         ML.scale(myConfig.density * myConfig.thickness * a * b);
 
-        size_t globalNodeIndx, globalNodeIndx_2, globalRowIndx, globalColIndx, localRowIndx, localColIndx;
+        size_t globalNodeIndx, globalNodeIndxInner, globalRowIndx, globalColIndx, localRowIndx, localColIndx;
         foreach (k; 0 .. myConfig.Nz) {
             foreach (i; 0 .. myConfig.Nx) {
                 foreach (node; 0 .. 4) {
@@ -48,10 +50,10 @@ public:
                         localRowIndx = node * 3 + DoF;
                         globalRowIndx = globalNodeIndx * 3 + DoF;
                         foreach (n_node; 0 .. 4) {
-                            globalNodeIndx_2 = LocalNodeToGlobalNode(n_node, i, k);
+                            globalNodeIndxInner = LocalNodeToGlobalNode(n_node, i, k);
                             foreach (D_DoF; 0 .. 3) {
                                 localColIndx = n_node * 3 + D_DoF;
-                                globalColIndx = globalNodeIndx_2 * 3 + D_DoF;
+                                globalColIndx = globalNodeIndxInner * 3 + D_DoF;
                                 M[globalRowIndx, globalColIndx] += ML[localRowIndx, localColIndx];
                                 K[globalRowIndx, globalColIndx] += KL[localRowIndx, localColIndx];
                             } // end foreach D_DoF
@@ -61,7 +63,7 @@ public:
             } // end foreach i
         } // end foreach k
 
-        foreach (zeroedIndx; ZeroedIndices) {
+        foreach (zeroedIndx; zeroedIndices) {
             foreach (DoF; 0 .. nDoF) {
                 if (zeroedIndx == DoF) {
                     M[zeroedIndx, DoF] = 1.0;
@@ -108,15 +110,15 @@ public:
         D[2, 2] = (1 - v) / 2;
 
         // Use two point quadrature to evaluate the integral
-        double[4] xi_quad  = [-1, 1, 1, -1]; xi_quad[]  *= (1 / sqrt(3.0));
-        double[4] eta_quad = [-1, -1, 1, 1]; eta_quad[] *= (1 / sqrt(3.0));
+        double[4] xiQuad  = [-1, 1, 1, -1]; xiQuad[]  *= (1 / sqrt(3.0));
+        double[4] etaQuad = [-1, -1, 1, 1]; etaQuad[] *= (1 / sqrt(3.0));
 
         // Allocate memory for the B matrix, which is evaluated at each quad point
         Matrix!number B = new Matrix!number(3, 12);
 
         // Iterate through the quadrature points
         foreach (quadPoint; 0 .. 4) {
-            double xi = xi_quad[quadPoint]; double eta = eta_quad[quadPoint];
+            double xi = xiQuad[quadPoint]; double eta = etaQuad[quadPoint];
             // This is transcribed from Eq. 4.40 in
             // "R for Finite Element Analysis of Size-Dependent Microscale Structures"
             // They are the second and mixed derivatives of the shape functions at each node
@@ -176,14 +178,14 @@ public:
         double[4] xn = [-1, 1, 1, -1]; double[4] yn = [-1, -1, 1, 1];
 
         // Quadrature locations
-        double[4] xi_quad = xn[] * (1 / sqrt(3.0)); double[4] eta_quad = yn[] * (1 / sqrt(3.0));
+        double[4] xiQuad = xn[] * (1 / sqrt(3.0)); double[4] etaQuad = yn[] * (1 / sqrt(3.0));
 
         // Allocate memory for the N matrix
         Matrix!number N = new Matrix!number(3, 12);
 
         // Iterate through quadrature points
         foreach (quadPoint; 0 .. 4) {
-            double xi = xi_quad[quadPoint]; double eta = eta_quad[quadPoint];
+            double xi = xiQuad[quadPoint]; double eta = etaQuad[quadPoint];
             // Iterate through nodes on the element
             foreach (i; 0 .. 4) {
                 double x = xn[i]; double y = yn[i];
@@ -203,7 +205,7 @@ public:
         return ML;
     } // end LocalMassMatrix
 
-    override void updateForceVector() {
+    override void UpdateForceVector() {
         // Update the external forcing vector using the fluid pressures at the quadrature
         // locations
         number a = myConfig.length / (2 * myConfig.Nx);
@@ -221,7 +223,7 @@ public:
         double[4] xn = [-1, 1, 1, -1]; double[4] yn = [-1, -1, 1, 1];
 
         // Quadrature locations
-        double[4] xi_quad = xn[] * (1 / sqrt(3.0)); double[4] eta_quad = yn[] * (1 / sqrt(3.0));
+        double[4] xiQuad = xn[] * (1 / sqrt(3.0)); double[4] etaQuad = yn[] * (1 / sqrt(3.0));
 
         // Iterate through the elements
         size_t globalNodeIndx, globalRowIndx, globalQuadId;
@@ -234,7 +236,7 @@ public:
                     double x = xn[node]; double y = yn[node];
                     // Iterate through quadrature points
                     foreach (quadPoint; 0 .. 4) {
-                        double xi = xi_quad[quadPoint]; double eta = eta_quad[quadPoint];
+                        double xi = xiQuad[quadPoint]; double eta = etaQuad[quadPoint];
                         globalQuadId = LocalNodeToGlobalNode(quadPoint, i, k); // The same logic can be applied to the quadrature points as nodes
                         externalForce = (southPressureAtQuads[globalQuadId] - northPressureAtQuads[globalQuadId]);
                         F._data[globalNodeIndx] += externalForce * (1 + x * xi) * (1 + y * eta) * (2 + x * xi + y * eta - pow(xi, 2) - pow(eta, 2)) / 8;
@@ -249,12 +251,22 @@ public:
         F._data[] *= a * b;
 
         // Set the boundary conditions
-        foreach (ZeroedIndx; ZeroedIndices) {
-            F._data[ZeroedIndx] = 0.0;
+        foreach (zeroedIndx; zeroedIndices) {
+            F._data[zeroedIndx] = 0.0;
         }
     }
 
-    override void determineBoundaryConditions(string BCs) {
+    override void ConvertToNodeVel() {
+        // Convert from the rate of change of the DoFs to velocities usable by the mesh
+        foreach (node; 0 .. (myConfig.Nx + 1) * (myConfig.Nz + 1)) {
+            FEMNodeVel[node].x = V[node * 3];
+            FEMNodeVel[node].y = 0.0;
+            FEMNodeVel[node].z = 0.0;
+            FEMNodeVel[node].transform_to_global_frame(plateNormal, plateTangent1, plateTangent2);
+        }
+    } // end convertToNodeVel
+
+    override void DetermineBoundaryConditions(string BCs) {
         // Determine the boundary conditions. The BC string should be 4 characters long,
         // each character denoting a boundary. The order of the BCs are "(-x)(+x)(-z)(+z)".
         // The boundary may be:
@@ -268,16 +280,16 @@ public:
                 foreach (node; 0 .. myConfig.Nz + 1) {
                     // All DoFs
                     foreach (DoF; 0 .. 3) {
-                        ZeroedIndices ~= (node + (myConfig.Nx + 1)) * 3 + DoF;
+                        zeroedIndices ~= (node + (myConfig.Nx + 1)) * 3 + DoF;
                     }
                 }
                 break;
             case 'P':
                 foreach (node; 0 .. myConfig.Nz + 1) {
                     // The displacement DoF
-                    ZeroedIndices ~= (node + (myConfig.Nx + 1)) * 3;
+                    zeroedIndices ~= (node + (myConfig.Nx + 1)) * 3;
                     // The z slope is 0, which is the 3rd DoF
-                    ZeroedIndices ~= (node + (myConfig.Nx + 1)) * 3 + 2;
+                    zeroedIndices ~= (node + (myConfig.Nx + 1)) * 3 + 2;
                 }
                 break;
             case 'F':
@@ -292,16 +304,16 @@ public:
                 foreach (node; 0 .. myConfig.Nz + 1) {
                     // All DoFs
                     foreach (DoF; 0 .. 3) {
-                        ZeroedIndices ~= (node + (2 * myConfig.Nx + 1)) * 3 + DoF;
+                        zeroedIndices ~= (node + (2 * myConfig.Nx + 1)) * 3 + DoF;
                     }
                 }
                 break;
             case 'P':
                 foreach (node; 0 .. myConfig.Nz + 1) {
                     // The displacement DoF
-                    ZeroedIndices ~= (node + (2 * myConfig.Nx + 1)) * 3;
+                    zeroedIndices ~= (node + (2 * myConfig.Nx + 1)) * 3;
                     // The z slope is 0, which is the 3rd DoF
-                    ZeroedIndices ~= (node + (2 * myConfig.Nx + 1)) * 3 + 2;
+                    zeroedIndices ~= (node + (2 * myConfig.Nx + 1)) * 3 + 2;
                 }
                 break;
             case 'F':
@@ -316,16 +328,16 @@ public:
                 foreach (node; 0 .. myConfig.Nz + 1) {
                     // All DoFs
                     foreach (DoF; 0 .. 3) {
-                        ZeroedIndices ~= node * 3 + DoF;
+                        zeroedIndices ~= node * 3 + DoF;
                     }
                 }
                 break;
             case 'P':
                 foreach (node; 0 .. myConfig.Nz + 1) {
                     // The displacement DoF
-                    ZeroedIndices ~= node * 3;
+                    zeroedIndices ~= node * 3;
                     // The x slope is 0, which is the 2nd DoF
-                    ZeroedIndices ~= node * 3 + 1;
+                    zeroedIndices ~= node * 3 + 1;
                 }
                 break;
             case 'F':
@@ -340,16 +352,16 @@ public:
                 foreach (node; 0 .. myConfig.Nz + 1) {
                     // All DoFs
                     foreach (DoF; 0 .. 3) {
-                        ZeroedIndices ~= (myConfig.Nz * 2 * (myConfig.Nx + 1) + node) * 3 + DoF;
+                        zeroedIndices ~= (myConfig.Nz * 2 * (myConfig.Nx + 1) + node) * 3 + DoF;
                     }
                 }
                 break;
             case 'P':
                 foreach (node; 0 .. myConfig.Nz + 1) {
                     // The displacement DoF
-                    ZeroedIndices ~= (myConfig.Nz * 2 * (myConfig.Nx + 1) + node) * 3;
+                    zeroedIndices ~= (myConfig.Nz * 2 * (myConfig.Nx + 1) + node) * 3;
                     // The x slope is 0, which is the 2nd DoF
-                    ZeroedIndices ~= (myConfig.Nz * 2 * (myConfig.Nx + 1) + node) * 3 + 1;
+                    zeroedIndices ~= (myConfig.Nz * 2 * (myConfig.Nx + 1) + node) * 3 + 1;
                 }
                 break;
             case 'F':
@@ -360,7 +372,7 @@ public:
 
     } // end determineBoundaryConditions
 
-    override void writeToFile(size_t tindx) {
+    override void WriteToFile(size_t tindx) {
         auto writeFile = File(format("FSI/t%04d.dat", tindx), "w+");
         // Set the header to describe the columns (w = displacement, theta_x = x slope, theta_z = z slope)
         writeFile.write("# w\ttheta_x\ttheta_z\tdxdt\tdtheta_xdt\tdtheta_zdt\n");
@@ -370,7 +382,7 @@ public:
         }
     } // end writeToFile
 
-    override void readFromFile(size_t tindx) {
+    override void ReadFromFile(size_t tindx) {
         auto readFile = File(format("FSI/t%04d.dat", tindx), "r").byLine();
         // Pop the header line
         readFile.popFront();
@@ -382,14 +394,4 @@ public:
             V[node*3 .. (node+1)*3] = to!(number[3])(line[3 .. 6]);
         }
     } // end readFromFile
-
-    override void convertToNodeVel() {
-        // Convert from the rate of change of the DoFs to velocities usable by the mesh
-        foreach (node; 0 .. (myConfig.Nx + 1) * (myConfig.Nz + 1)) {
-            FEMNodeVel[node].x = V[node * 3];
-            FEMNodeVel[node].y = 0.0;
-            FEMNodeVel[node].z = 0.0;
-            FEMNodeVel[node].transform_to_global_frame(plateNormal, plateTangent1, plateTangent2);
-        }
-    } // end convertToNodeVel
 }

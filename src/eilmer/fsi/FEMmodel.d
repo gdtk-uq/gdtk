@@ -1,4 +1,35 @@
-// Beginning of a structure model to run fluid-structure interaction simulations
+// Master class for the solid models used in Fluid-Structure Interaction simulations
+// Built by Lachlan Whyborn in late 2023/early 2024.
+
+/+ To implement a new solid model, a few things are required, most of which are outlined
+by the abstract functions defined at the end of this template.
+        - model_setup(): tell the model how big the matrices/vectors should be, by defining
+                1. nNodes: number of nodes in the solid model
+                2. nDoF: total number of degrees of freedom (usually scalar * nNodes)
+                3. nQuadPoints: how many quadrature points on the model (usually scalar * number of                     elements)
+        - GenerateMassStiffnessMatrices(): build the mass and stiffness matrices for the solid
+                model.
+        - UpdateForceVector(): Update the force vector using the external forces (pressure or
+                otherwise).
+        - DetermineBoundaryConditions(string BCs): Build the vector of indices that denote which
+                indices of the matrix to set to diagonal ones/elements of the vector to set to 0.
+        - WriteToFile(size_t tindx): How to write the resulting position and velocity vectors
+                to file.
+        - ReadFromFile(size_t tindx): How to read a file containg position and velocity data to
+                the relevant vectors, used for restarting simulations.
+        - ConvertToNodeVel(): Conversion from the rates of change of the DoFs of the system to
+                velocities applied to the mesh.
+
+The master model currently defines methods for setting up the interfacing between the solid
+and the fluid, allocating the memory required for the matrices and vectors, updating the ODEs
+and broadcasting the results to the mesh.
++/
+
+// I have tried to be consistent with formatting style, using camelCase for variables and
+// UpperCamelCase for function names. The place I have not kept this consistent is with
+// model_setup() and compute_vtx_velocities_for_FSI(), as they are called in the main code
+// which uses primarily snake_case.
+
 module fsi.femmodel;
 
 import std.stdio;
@@ -63,10 +94,10 @@ public:
 
     // Rather than inverting the mass matrix to solve the first ODE, solve the linear system Ax=B
     // where A = M, x = Vd, B = (-KX + F). For this, we need the permutation matrix of M.
-    size_t[2][] MpermuteList;
+    size_t[2][] MPermuteList;
 
     // Preallocate memory to be used during the time stepping calculation
-    number[] KDotX, Xstage, Vstage;
+    number[] KDotX, XStage, VStage;
     number[][] dX, dV;
     Matrix!number rhs;
 
@@ -81,7 +112,7 @@ public:
     number[] northPressureAtQuads, southPressureAtQuads;
 
     // The boundary conditions requires certain DoFs to be set to 0
-    size_t[] ZeroedIndices;
+    size_t[] zeroedIndices;
 
     // Initialise the FEM model- follows the template used by the FluidBlocks, as we
     // may want to attach a lua interpreter for user-defined forcing.
@@ -102,21 +133,21 @@ public:
     }
 
     // begin modelSetup()
-    void modelSetup() {
+    void model_setup() {
         // Set up the plate orientation
         plateNormal = Vector3(myConfig.plateNormal[0], myConfig.plateNormal[1], myConfig.plateNormal[2]);
         plateTangent1 = Vector3(myConfig.plateNormal[1], -myConfig.plateNormal[0], myConfig.plateNormal[2]);
         cross(plateTangent2, plateNormal, plateTangent1);
 
         // Set up the interface between the CFD and the FEM
-        prepareGridMotionSetup();
-        prepareNodeToVertexMap();
+        PrepareGridMotionSetup();
+        PrepareNodeToVertexMap();
 
         // Allocate memory for the ODEs
         K = new Matrix!number(nDoF); M = new Matrix!number(nDoF); F = new Matrix!number(nDoF, 1);
         K.zeros(); M.zeros(); F.zeros();
 
-        X.length = nDoF; V.length = nDoF; Xstage.length = nDoF; Vstage.length = nDoF; KDotX.length = nDoF;
+        X.length = nDoF; V.length = nDoF; XStage.length = nDoF; VStage.length = nDoF; KDotX.length = nDoF;
         X[] = 0.0; V[] = 0.0; KDotX[] = 0.0;
 
         dX = new number[][](nDoF, 4); dV = new number[][](nDoF, 4);
@@ -129,10 +160,10 @@ public:
         // degrees of freedom therefore different numbers of elements.
 
         // Address boundary conditions first as they affect the formation of the matrices
-        determineBoundaryConditions(myConfig.BCs);
-        generateMassStiffnessMatrices();
-        writeMatricesToFile();
-        MpermuteList = decomp!number(M);
+        DetermineBoundaryConditions(myConfig.BCs);
+        GenerateMassStiffnessMatrices();
+        WriteMatricesToFile();
+        MPermuteList = decomp!number(M);
 
     } // end plate_setup()
 
@@ -145,7 +176,7 @@ public:
     }
 
     // begin prepareGridMotionSetup
-    void prepareGridMotionSetup() {
+    void PrepareGridMotionSetup() {
         // Set the size of the arrays
         nodeVelIds.length = myConfig.movingBlks.length;
         nodeVelWeights.length = myConfig.movingBlks.length;
@@ -170,15 +201,15 @@ public:
     } // end prepareGridMotionSetup
 
     // begin broadcastGridMotion()
-    void broadcastGridMotion() {
+    void BroadcastGridMotion() {
         // Apply the grid motion to the relevant blocks
         foreach (i, blkId; parallel(myConfig.movingBlks)) {
-            applyFSIMotionToBlock(to!int(i), blkId);
+            ApplyFSIMotionToBlock(to!int(i), blkId);
         }
     } // end broadcastGridMotion()
 
     // begin applyFSIMotionToBlock
-    void applyFSIMotionToBlock(int movingBlkIndx, int blkId) {
+    void ApplyFSIMotionToBlock(int movingBlkIndx, int blkId) {
         // Apply grid motion to a block
         SFluidBlock blk = cast(SFluidBlock) localFluidBlocks[blkId];
         Vector3 netVel;
@@ -196,7 +227,7 @@ public:
     } // end applyFSIMotionToBlock
 
     // begin prepareNodeToVertexMap
-    void prepareNodeToVertexMap() {
+    void PrepareNodeToVertexMap() {
         // We're going to put the indices in a nice order, so we need some temporary storage space
         int[] _NodeIds, _CellIds;
         size_t[] sortIndx;
@@ -260,7 +291,7 @@ public:
     }
 
     // begin retrievePressures
-    void retrievePressures() {
+    void RetrievePressures() {
         // Use the previously generated mapping to grab the relevant fluid pressures
         SFluidBlock blk;
         if (myConfig.northForcing == ForcingType.Fluid) {
@@ -301,15 +332,15 @@ public:
         }
     }
 
-    // begin compute_vtx_velocities_for_FSI
-    void computeVtxVelocitiesForFSI(double dt) {
+    // begin compute_vtx_velocities_for_FSI (called in main code, so use snake_case).
+    void compute_vtx_velocities_for_FSI(double dt) {
         // Solve the set of ODEs
         // First, pull in the fluid pressures
-        retrievePressures();
+        RetrievePressures();
 
         // Then use these to fill in the force vector
         F._data[] = 0.0;
-        updateForceVector();
+        UpdateForceVector();
 
         // Now we can solve the ODE- reuse F to store the result of the linear system solution
         dt *= myConfig.couplingStep;
@@ -318,36 +349,36 @@ public:
         // First stage
         dot(K, X, KDotX);
         rhs._data[] = F._data[] - KDotX[];
-        solve!number(M, rhs, MpermuteList);
+        solve!number(M, rhs, MPermuteList);
         dV[][0] = rhs._data[];
         dX[][0] = V[];
 
-        Xstage[] = X[] + 0.5 * dX[0][] * dt;
-        Vstage[] = V[] + 0.5 * dV[0][] * dt;
+        XStage[] = X[] + 0.5 * dX[0][] * dt;
+        VStage[] = V[] + 0.5 * dV[0][] * dt;
 
-        dot(K, Xstage, KDotX);
+        dot(K, XStage, KDotX);
         rhs._data[] = F._data[] - KDotX[];
-        solve!number(M, rhs, MpermuteList);
+        solve!number(M, rhs, MPermuteList);
         dV[][1] = rhs._data[];
-        dX[][1] = Vstage[];
+        dX[][1] = VStage[];
 
-        Xstage[] = X[] + 0.5 * dX[1][] * dt;
-        Vstage[] = V[] + 0.5 * dV[1][] * dt;
+        XStage[] = X[] + 0.5 * dX[1][] * dt;
+        VStage[] = V[] + 0.5 * dV[1][] * dt;
 
-        dot(K, Xstage, KDotX);
+        dot(K, XStage, KDotX);
         rhs._data[] = F._data[] - KDotX[];
-        solve!number(M, rhs, MpermuteList);
+        solve!number(M, rhs, MPermuteList);
         dV[][2] = rhs._data[];
-        dX[][2] = Vstage[];
+        dX[][2] = VStage[];
 
-        Xstage[] = X[] + dX[2][] * dt;
-        Vstage[] = V[] + dV[2][] * dt;
+        XStage[] = X[] + dX[2][] * dt;
+        VStage[] = V[] + dV[2][] * dt;
 
-        dot(K, Xstage, KDotX);
+        dot(K, XStage, KDotX);
         rhs._data[] = F._data[] - KDotX[];
-        solve!number(M, rhs, MpermuteList);
+        solve!number(M, rhs, MPermuteList);
         dV[][3] = rhs._data[];
-        dX[][3] = Vstage[];
+        dX[][3] = VStage[];
 
         foreach (i; 0 .. X.length) {
             X[i] += (1./6.) * (dX[0][i] + 2. * dX[1][i] + 2. * dX[2][i] + dX[3][i]) * dt;
@@ -355,13 +386,12 @@ public:
         }
 
         // Convert to the node displacement velocities used by the fluid mesh
-        convertToNodeVel();
-        broadcastGridMotion();
+        ConvertToNodeVel();
+        BroadcastGridMotion();
 
-        // And then empty F
     } // end compute_vtx_velocities_for_FSI
 
-    void writeMatricesToFile() {
+    void WriteMatricesToFile() {
         // It will often be useful to write the mass and stiffness matrices to file,
         // which can be passed elsewhere to compute eigendecomposition, sparsity patterns etc.
         auto MFile = File("FSI/M.dat", "w+");
@@ -380,10 +410,10 @@ public:
     }
 
     // Methods that are model dependent
-    abstract void generateMassStiffnessMatrices();
-    abstract void updateForceVector();
-    abstract void determineBoundaryConditions(string BCs);
-    abstract void writeToFile(size_t tindx);
-    abstract void readFromFile(size_t tindx);
-    abstract void convertToNodeVel();
+    abstract void GenerateMassStiffnessMatrices();
+    abstract void UpdateForceVector();
+    abstract void DetermineBoundaryConditions(string BCs);
+    abstract void WriteToFile(size_t tindx);
+    abstract void ReadFromFile(size_t tindx);
+    abstract void ConvertToNodeVel();
 }

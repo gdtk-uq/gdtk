@@ -2477,8 +2477,8 @@ void set_config_for_blocks(JSONValue jsonData)
             // Only a single structure for now, but maybe more in future
             foreach (i; cfg.nBlocks .. cfg.nBlocks + 1) {
                 final switch (cfg.FEMModel) {
-                    case FEMModelForFSI.eulerBernoulli: FEMModels ~= new eulerBernoulliBeam(cfg.base_file_name, i); break;
-                    case FEMModelForFSI.kirchhoffLove: FEMModels ~= new kirchhoffLovePlate(cfg.base_file_name, i); break;
+                    case FEMModelForFSI.eulerBernoulli: FEMModels ~= new EulerBernoulliBeam(cfg.base_file_name, i); break;
+                    case FEMModelForFSI.kirchhoffLove: FEMModels ~= new KirchhoffLovePlate(cfg.base_file_name, i); break;
                 }
             }
         }
