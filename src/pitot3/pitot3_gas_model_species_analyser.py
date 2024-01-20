@@ -11,6 +11,8 @@ VERSION_STRING = '19-Jan-2024'
 import os
 from datetime import date
 
+from pitot3_utils.pitot3_classes import eilmer4_CEAGas_input_file_reader
+
 pitot3_preset_gas_models_folder = os.path.expanduser("~") + '/gdtkinst/share/pitot3_data/preset_gas_models'
 
 CEA_thermo_inp_location = os.path.expanduser("~") + '/gdtkinst/share/cea-cases/thermo.inp'
@@ -21,112 +23,33 @@ total_species_list = []
 
 with os.scandir(pitot3_preset_gas_models_folder) as folder_contents:
 
+    # just to ensure that everything stays in the same order...
+    folder_contents.sort()
+
     for file in folder_contents: #technically there could be folders too, but don't worry about that...
         # first check that it is a .lua file
 
         filename = file.name
 
-        if '.lua' in filename: # open the file and we work through it
+        if '.lua' in filename and 'cea' in filename: # open the file and we work through it
+            print('-'*60)
             print(filename)
 
-            # we are after two lines, one with 'model' in it which also has "CEAGas" in it and one with speciesList in it.
-            # so we loop through looking for those...
+            # now we just open this with our gas model opening function...
 
-            is_a_CEAGas_gas_model = False # start by assuming it is false...
+            gmodel_filename = f"{pitot3_preset_gas_models_folder}/{filename}"
 
-            with open(f"{pitot3_preset_gas_models_folder}/{filename}") as file:
+            mixtureName, speciesList, reactants, inputUnits, withIons, trace = eilmer4_CEAGas_input_file_reader(gmodel_filename)
 
-                speciesList = []
+            print(speciesList)
 
-                characters_to_replace = ['{', '}', "'", '"', ' ']
+            if speciesList:
 
-                more_species = False
+                # add any species which aren't already in the species list
 
-                for line in file:
-                    if 'model' in line and 'CEAGas' in line: # it is a CEAGas gas model...
-                        is_a_CEAGas_gas_model = True
-                    elif 'speciesList' in line: # this is the line with the species starting
-
-                        split_line = line.strip().split('=') # split it into before and after the variable name, after the variable name will be the specieslist
-
-                        raw_species_list_string = split_line[1].strip()
-
-                        # we need to split the input into a list...
-                        split_species_list = raw_species_list_string.split(',')
-
-                        for species in split_species_list:
-
-                            for character in characters_to_replace:
-                                species = species.replace(character, '')
-
-                            if species: # to remove empty values
-
-                                # we have to something about 'C2H2,acetylene', 'C4H2,butadiyne', 'C2H2,vinylidene'
-                                # as they don't split well due to their form...
-                                # I think we just keep one and remove the others
-                                # we will use the names as they are unique.
-
-                                if species in ['C2H2', 'C4H2']:
-                                    continue # i.e. don't do anything
-                                elif species == 'acetylene':
-                                    species = 'C2H2,acetylene'
-                                elif species == 'butadiyne':
-                                    species = 'C4H2,butadiyne'
-                                elif species == 'vinylidene':
-                                    species = 'C2H2,vinylidene'
-
-                                speciesList.append(species)
-
-                        if '}' not in line:
-                            more_species = True
-                        else:
-                            # the species end here...
-                            break
-
-                    elif more_species:
-
-                        raw_species_list_string = line.strip()
-
-                        # we need to split the input into a list...
-                        split_species_list = raw_species_list_string.split(',')
-
-                        for species in split_species_list:
-                            for character in characters_to_replace:
-                                species = species.replace(character, '')
-
-                            if species: # to remove empty values
-
-                                # we have to something about 'C2H2,acetylene', 'C4H2,butadiyne', 'C2H2,vinylidene'
-                                # as they don't split well due to their form...
-                                # I think we just keep one and remove the others
-                                # we will use the names as they are unique.
-
-                                if species in ['C2H2', 'C4H2']:
-                                    continue  # i.e. don't do anything
-                                elif species == 'acetylene':
-                                    species = 'C2H2,acetylene'
-                                elif species == 'butadiyne':
-                                    species = 'C4H2,butadiyne'
-                                elif species == 'vinylidene':
-                                    species = 'C2H2,vinylidene'
-
-                                speciesList.append(species)
-
-                        if '}' not in line:
-                            more_species = True
-                        else:
-                            # the species end here...
-                            break
-
-                print(speciesList)
-
-                if is_a_CEAGas_gas_model and speciesList:
-
-                    # add any species which isn't already in the species list
-
-                    for species in speciesList:
-                        if species not in total_species_list:
-                            total_species_list.append(species)
+                for species in speciesList:
+                    if species not in total_species_list:
+                        total_species_list.append(species)
 
 # now sort out final species list and then print it...
 total_species_list.sort()

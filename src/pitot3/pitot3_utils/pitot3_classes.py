@@ -75,77 +75,130 @@ def eilmer4_CEAGas_input_file_reader(gmodel_filename):
     with open(os.path.expandvars(gmodel_filename)) as gmodel_file:
         for line in gmodel_file:
 
-            if line[0:2] != '--' and '=' in line:  # -- is the lua comment character and any line we need will have = in it...
+            if line[0:2] != '--':  # -- is the lua comment character
 
-                split_line = line.strip().split('=')
+                if '=' in line:
 
-                variable_name = split_line[0].strip()
-                variable = split_line[1].strip()
+                    split_line = line.strip().split('=')
 
-                if variable_name in variables_to_look_for_list:
-                    # we just have a case for each variable as that seemed easiest to me...
-                    if variable_name == 'mixtureName':
-                        # we add without ions to the end of it
+                    variable_name = split_line[0].strip()
+                    variable = split_line[1].strip()
+                else:
+                    split_line = None
+                    variable_name = None
+                    variable = None
 
-                        characters_to_replace = ["'", '"', ',']
+                if variable_name == 'mixtureName':
+                    # we add without ions to the end of it
 
-                        for character in characters_to_replace:
-                            variable = variable.replace(character, '')
+                    characters_to_replace = ["'", '"', ',']
 
-                        mixtureName = variable
-                    if variable_name == 'speciesList':
-                        # we need to split the input into a list...
-                        split_species_list = variable.split(',')
+                    for character in characters_to_replace:
+                        variable = variable.replace(character, '')
 
-                        speciesList = []
+                    mixtureName = variable
+                elif variable_name == 'speciesList':
 
-                        characters_to_replace = ['{', '}', "'", '"']
+                    # the species list could be over multiple lines so we gotta be careful here...
+                    # if we do not have a '}' in the line, it will go over multiple lines...
+                    if '}' not in line:
+                        more_species = True
+                    else:
+                        more_species = False
 
-                        for species in split_species_list:
-                            for character in characters_to_replace:
-                                species = species.replace(character, '')
+                    # we need to split the input into a list...
+                    split_species_list = variable.split(',')
 
-                            if species:
-                                speciesList.append(species)
+                    speciesList = []
 
-                    if variable_name == 'reactants':
-                        # this will already be kind of split for us by the original = split... so let us recombine that
-                        # and then keep going
+                    characters_to_replace = ['{', '}', "'", '"', ' ']
 
-                        variable = '='.join(split_line[1:])
-
-                        split_reactants_list = variable.split(',')
-
-                        characters_to_replace = ['{', '}', "'", '"', ' ', ',']
-
-                        reactants = {}
-
-                        for reactant in split_reactants_list:
-                            for character in characters_to_replace:
-                                reactant = reactant.replace(character, '')
-
-                            split_reactant = reactant.split('=')
-
-                            if len(split_reactant) == 2:
-                                reactants[split_reactant[0]] = float(split_reactant[1])
-
-                    if variable_name == 'inputUnits':
-
-                        characters_to_replace = ["'", '"', ',']
+                    for species in split_species_list:
 
                         for character in characters_to_replace:
-                            variable = variable.replace(character, '')
+                            species = species.replace(character, '')
 
-                        inputUnits = variable
+                        if species in ['C2H2', 'C4H2']:
+                            continue  # i.e. don't do anything
+                        elif species == 'acetylene':
+                            species = 'C2H2,acetylene'
+                        elif species == 'butadiyne':
+                            species = 'C4H2,butadiyne'
+                        elif species == 'vinylidene':
+                            species = 'C2H2,vinylidene'
 
-                    if variable_name == 'withIons':
-                        withIons = variable
+                        if species:
+                            speciesList.append(species)
 
-                    if variable_name == 'trace':
-                        trace = float(variable)
+                # as this will be needed if the species go over multiple lines...
+                elif 'more_species' in locals() and more_species:
+
+                    # see if we have finally got to the end yet...
+
+                    if '}' not in line:
+                        more_species = True
+                    else:
+                        more_species = False
+
+                    # we need to split the input into a list...
+                    split_species_list = line.strip().split(',')
+
+                    characters_to_replace = ['{', '}', "'", '"', ' ']
+
+                    for species in split_species_list:
+
+                        for character in characters_to_replace:
+                            species = species.replace(character, '')
+
+                        if species in ['C2H2', 'C4H2']:
+                            continue  # i.e. don't do anything
+                        elif species == 'acetylene':
+                            species = 'C2H2,acetylene'
+                        elif species == 'butadiyne':
+                            species = 'C4H2,butadiyne'
+                        elif species == 'vinylidene':
+                            species = 'C2H2,vinylidene'
+
+                        if species:
+                            speciesList.append(species)
+
+                elif variable_name == 'reactants':
+                    # this will already be kind of split for us by the original = split... so let us recombine that
+                    # and then keep going
+
+                    variable = '='.join(split_line[1:])
+
+                    split_reactants_list = variable.split(',')
+
+                    characters_to_replace = ['{', '}', "'", '"', ' ', ',']
+
+                    reactants = {}
+
+                    for reactant in split_reactants_list:
+                        for character in characters_to_replace:
+                            reactant = reactant.replace(character, '')
+
+                        split_reactant = reactant.split('=')
+
+                        if len(split_reactant) == 2:
+                            reactants[split_reactant[0]] = float(split_reactant[1])
+
+                elif variable_name == 'inputUnits':
+
+                    characters_to_replace = ["'", '"', ',']
+
+                    for character in characters_to_replace:
+                        variable = variable.replace(character, '')
+
+                    inputUnits = variable
+
+                elif variable_name == 'withIons':
+                    withIons = variable
+
+                elif variable_name == 'trace':
+                    trace = float(variable)
 
     return mixtureName, speciesList, reactants, inputUnits, withIons, trace
-
 
 def eilmer4_CEAGas_gmodel_room_temperature_only_creator(gmodel_filename):
 
