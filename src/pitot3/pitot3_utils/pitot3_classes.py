@@ -336,6 +336,40 @@ IdealGas = {{
 
     return ideal_gas_gmodel_filename
 
+def pitot3_species_MW_dict_loader(species_molecular_weights_filename):
+
+    import yaml
+
+    # some stuff I had to do get NO to load in yaml...
+    # from here https://stackoverflow.com/questions/36463531/pyyaml-automatically-converting-certain-keys-to-boolean-values
+
+    from yaml.loader import Reader, Scanner, Parser, Composer, SafeConstructor, Resolver
+
+    class StrictBoolSafeResolver(Resolver):
+        pass
+
+    # remove resolver entries for On/Off/Yes/No
+    for ch in "OoYyNn":
+        if len(StrictBoolSafeResolver.yaml_implicit_resolvers[ch]) == 1:
+            del StrictBoolSafeResolver.yaml_implicit_resolvers[ch]
+        else:
+            StrictBoolSafeResolver.yaml_implicit_resolvers[ch] = [x for x in
+                                                                  StrictBoolSafeResolver.yaml_implicit_resolvers[ch] if
+                                                                  x[0] != 'tag:yaml.org,2002:bool']
+
+    class StrictBoolSafeLoader(Reader, Scanner, Parser, Composer, SafeConstructor, StrictBoolSafeResolver):
+        def __init__(self, stream):
+            Reader.__init__(self, stream)
+            Scanner.__init__(self)
+            Parser.__init__(self)
+            Composer.__init__(self)
+            SafeConstructor.__init__(self)
+            StrictBoolSafeResolver.__init__(self)
+
+    species_molecular_weights_file = open(os.path.expandvars(species_molecular_weights_filename))
+    species_MW_dict = yaml.load(species_molecular_weights_file, Loader=StrictBoolSafeLoader)
+
+    return species_MW_dict
 
 def finite_wave_dp_wrapper(state1, v1, characteristic, p2, state2, gas_flow, steps=100,
                            gmodel_without_ions = None, cutoff_temp_for_no_ions = 5000.0, number_of_calculations = 10):
@@ -1931,7 +1965,7 @@ class Facility_State(object):
     """
 
     def __init__(self, state_name, gas_state, v, reference_gas_state = None, room_temperature_only_gmodel = None,
-                 outputUnits = 'massf', species_MW_dict = None, make_gmodel_without_ions = None):
+                 outputUnits = 'moles', species_MW_dict = None, make_gmodel_without_ions = None):
         """
 
         :param state_name: just a string labelled the state, probably just '4', '3s', '1' etc.
