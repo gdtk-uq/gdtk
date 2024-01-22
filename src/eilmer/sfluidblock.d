@@ -48,6 +48,7 @@ import geom.luawrap.luasgrid;
 import luaflowstate;
 import fluidblockio_new;
 import user_defined_source_terms;
+import CatalystAdaptor;
 
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
@@ -213,6 +214,13 @@ public:
         block_io = get_fluid_block_io(this);
         if (lua_fs) { lua_settop(L, 0); }
     } // end constructor from Lua state
+
+    ~this()
+    {
+        // At this stage it looks like the catalyst stuff  has to be explicitly malloc/free'd
+        FinalizeGrid(&cgrid);
+        FinalizeAttributes(&attributes);
+    }
 
     override JSONValue get_header()
     // return information in JSON format that describes this block
@@ -1151,6 +1159,9 @@ public:
         foreach (i, f; faces) {
             foreach (vtx; f.vtx) { faceIndexListPerVertex[vtx.id] ~= i; }
         }
+
+        InitializeGrid(&cgrid, this.grid);
+        InitializeAttributes(&attributes, &cgrid);
     } // end init_grid_and_flow_arrays()
 
     @nogc

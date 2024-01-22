@@ -299,6 +299,11 @@ GPERF_FILES := $(GPERF_DIR)/heap_profiler.d \
 	$(GPERF_DIR)/stacktrace.d \
 	$(GPERF_DIR)/tcmalloc.d \
 
+CATALYST := 1
+CATALYST_DIR := ../extern/catalyst
+CATALYST_FILES := $(CATALYST_DIR)/CatalystAdaptor.d $(CATALYST_DIR)/CatalystAdaptor.o
+CATALYST_LINKFLAGS := -L-lcatalyst
+
 # The install destination.
 INSTALL_DIR ?= $(HOME)/gdtkinst
 
@@ -543,6 +548,7 @@ clean:
 	- cd $(KINETICS_DIR); make clean
 	- cd $(GRID_DIR); make clean
 	- cd $(CEQ_DIR); make clean
+	- cd $(CATALYST_DIR); make clean
 
 prep-gas:
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) build-prep-gas
@@ -568,6 +574,9 @@ $(LIBLUA):
 $(LIBCEQ):
 	cd $(CEQ_DIR); make
 
+$(CATALYST):
+	cd $(CATALYST_DIR); make
+
 gdtk-module:
 	sed -e 's+PUT_REVISION_STRING_HERE+$(REVISION_STRING)+' \
 		-e 's+PUT_COMPILER_NAME_HERE+$(DMD)+' \
@@ -583,7 +592,7 @@ e4monitor: e4monitor.d
 
 e4shared: main.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
-	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(CATALYST) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES)
@@ -597,11 +606,11 @@ e4shared: main.d $(EILMER_FILES) \
 		main_with_rev_string.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(FIELD_FILES) $(GEOM_FILES) $(GRID_FILES) \
-		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(CATALYST_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) $(CATALYST_LINKFLAGS) \
 		$(DLINKFLAGS)
 
 e4shared-debug: main.d $(EILMER_FILES) \

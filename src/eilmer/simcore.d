@@ -71,6 +71,7 @@ import simcore_exchange;
 import simcore_io;
 import celldata;
 import util.time_utils;
+import CatalystAdaptor;
 
 // The shared double[] flavour of GlobalConfig.userPad can give trouble,
 // so we need a normal array for the MPI task to work with.
@@ -1156,6 +1157,8 @@ int integrate_in_time(double target_time_as_requested)
                 GC.minimize();
             }
             if ((SimState.time >= SimState.t_plot) && !SimState.output_just_written) {
+                UpdateFields(&(localFluidBlocks[0].attributes), localFluidBlocks[0].celldata.flowstates);
+                do_catalyt_execute(SimState.step, SimState.time, &(localFluidBlocks[0].cgrid), &(localFluidBlocks[0].attributes));
                 write_solution_files();
                 if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_write_to_file(); }
                 SimState.output_just_written = true;

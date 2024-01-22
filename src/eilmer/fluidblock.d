@@ -45,6 +45,7 @@ import jacobian;
 import fluidblockio;
 import fluidblockio_new;
 import mass_diffusion;
+import CatalystAdaptor;
 version(mpi_parallel) {
     import mpi;
 }
@@ -204,6 +205,9 @@ public:
     double[] VT;
     size_t Vstride;
     }
+
+    CatalystGrid cgrid;
+    Attributes attributes;
 
     FluidBlockIO[] block_io; // io handlers
 

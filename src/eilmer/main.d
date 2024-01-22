@@ -43,6 +43,7 @@ import postprocess;
 import luaidealgasflow;
 import luagasflow;
 import turbulence;
+import CatalystAdaptor;
 
 version(mpi_parallel) {
     import mpi;
@@ -695,6 +696,9 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             exitFlag = 1;
             return exitFlag;
         }
+        do_catalyst_initialization();
+        scope(success) { do_catalyt_finalization(); }
+
         GlobalConfig.base_file_name = jobName;
         GlobalConfig.verbosity_level = verbosityLevel;
         GlobalConfig.report_residuals = reportResiduals;
