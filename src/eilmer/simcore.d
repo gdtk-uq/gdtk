@@ -71,7 +71,9 @@ import simcore_exchange;
 import simcore_io;
 import celldata;
 import util.time_utils;
-import CatalystAdaptor;
+version (catalyst) {
+    import CatalystAdaptor;
+}
 
 // The shared double[] flavour of GlobalConfig.userPad can give trouble,
 // so we need a normal array for the MPI task to work with.
@@ -738,8 +740,10 @@ int init_simulation(int tindx, int nextLoadsIndx,
     }
     //
     if (GlobalConfig.dt_catalyst > 0.0) {
-        do_catalyst_initialization();
-        InitializeCatalystData(&catalyst_data, localFluidBlocks);
+        version(catalyst) {
+            do_catalyst_initialization();
+            InitializeCatalystData(&catalyst_data, localFluidBlocks);
+        }
     }
     // Keep our memory foot-print small.
     GC.collect();
@@ -1219,14 +1223,16 @@ int integrate_in_time(double target_time_as_requested)
                 }
             }
             // 4.4 Possibly execute a catalyst pipeline, if configured for it.
-            if ((GlobalConfig.dt_catalyst > 0.0) && ((SimState.time >= SimState.t_catalyst) && !SimState.catalyst_just_called)){
-                if (GlobalConfig.is_master_task) {
-                    writefln("    Execute catalyst pipeline: (step %d, time %03.03e)", SimState.step, SimState.time);
+            version(catalyst){
+                if ((GlobalConfig.dt_catalyst > 0.0) && ((SimState.time >= SimState.t_catalyst) && !SimState.catalyst_just_called)){
+                    if (GlobalConfig.is_master_task) {
+                        writefln("    Execute catalyst pipeline: (step %d, time %03.03e)", SimState.step, SimState.time);
+                    }
+                    UpdateCatalystFieldData(&catalyst_data, localFluidBlocks);
+                    do_catalyt_execute(SimState.step, SimState.time, &catalyst_data);
+                    SimState.catalyst_just_called = true;
+                    SimState.t_catalyst = SimState.t_catalyst + GlobalConfig.dt_catalyst;
                 }
-                UpdateCatalystFieldData(&catalyst_data, localFluidBlocks);
-                do_catalyt_execute(SimState.step, SimState.time, &catalyst_data);
-                SimState.catalyst_just_called = true;
-                SimState.t_catalyst = SimState.t_catalyst + GlobalConfig.dt_catalyst;
             }
             //
             // 5.0 Update the run-time loads calculation, if required
@@ -1662,8 +1668,10 @@ void finalize_simulation()
         }
     }
     if (GlobalConfig.dt_catalyst > 0.0) {
-        FinalizeCatalystData(&catalyst_data);
-        do_catalyt_finalization();
+        version(catalyst) {
+            FinalizeCatalystData(&catalyst_data);
+            do_catalyt_finalization();
+        }
     }
 } // end finalize_simulation()
 

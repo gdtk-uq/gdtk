@@ -22,7 +22,9 @@ import block;
 import loads;
 import fluidblockio_new;
 import field;
-import CatalystAdaptor;
+version(catalyst){
+    import CatalystAdaptor;
+}
 
 // State data for simulation.
 // Needs to be seen by all of the coordination functions in simcore.d.
@@ -106,4 +108,6 @@ __gshared static FluidBlockIO[] globalFluidBlockIO;
 // It may cooperate with other ElectricFields in other processes
 __gshared static ElectricField eField;
 
-__gshared static CatalystData catalyst_data;
+version(catalyst){
+    __gshared static CatalystData catalyst_data;
+}
