@@ -52,4 +52,28 @@ proc main() {
   if !v1.approxEquals(new Vector3(1.0, 0.0, 0.0), 1.0e-9) {
     writeln("Vector3 transformToGlobalFrame error v1=", v1);
   }
+
+  var p0, p1, p2, p3: Vector3;
+  p0.set(0.0, 0.0); p1.set(1.0, 0.0); p2.set(1.0, 1.0); p3.set(0.0, 1.0);
+  var centroid: Vector3;
+  var area: real;
+  quadProperties(p0, p1, p2, p3, centroid, n, t1, t2, area);
+  // writeln("centroid=", centroid);
+  // writeln("area=", area);
+  // writeln("n=", n, " t1=", t1, " t2=", t2);
+  if !centroid.approxEquals(new Vector3(0.5, 0.5, 0.0), 1.0e-9) {
+    writeln("Vector3 quadProperties error centroid=", centroid);
+  }
+  if !approxEquals(area, 1.0) {
+    writeln("Vector3 quadProperties area error area=", area);
+  }
+  if !n.approxEquals(new Vector3(0.0, 0.0, 1.0), 1.0e-9) {
+    writeln("Vector3 quadProperties error n=", n);
+  }
+  if !t1.approxEquals(new Vector3(1.0, 0.0, 0.0), 1.0e-9) {
+    writeln("Vector3 quadProperties error t1=", t1);
+  }
+  if !t2.approxEquals(new Vector3(0.0, 1.0, 0.0), 1.0e-9) {
+    writeln("Vector3 quadProperties error t2=", v1);
+  }
 }

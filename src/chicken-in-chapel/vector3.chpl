@@ -12,12 +12,17 @@ module Geom {
     return abs(a-b)/(0.5*(abs(a)+abs(b))+1.0) <= tol;
   }
 
+  const zero: real = 0.0;
+  const one: real = 1.0;
+  const half: real = 0.5;
+  const one_quarter = 0.25;
+
   record Vector3 {
     var x, y, z: real;
 
     // Methods that do not allocate, I think.
 
-    proc ref set(x: real, y: real, z: real = 0.0) {
+    proc ref set(x: real, y: real, z: real = zero) {
       this.x = x; this.y = y; this.z = z;
     }
 
@@ -26,7 +31,7 @@ module Geom {
     }
 
     proc ref setAsAverage(a: Vector3, b: Vector3) {
-      x = 0.5*(a.x+b.x); y = 0.5*(a.x+b.x); z = 0.5*(a.x+b.x);
+      x = half*(a.x+b.x); y = half*(a.x+b.x); z = half*(a.x+b.x);
     }
 
     proc ref approxEquals(other: Vector3, tol: real = 1.0e-6): bool {
@@ -62,13 +67,13 @@ module Geom {
         x /= magnitude; y /= magnitude; z /= magnitude;
       } else {
         // Clean up, in case dot product underflows.
-        x = 0.0; y = 0.0; z = 0.0;
+        x = zero; y = zero; z = zero;
       }
       // Flush small components to zero.
       const small = 1.0e-30;
-      if abs(x) < small { x = 0.0; }
-      if abs(y) < small { y = 0.0; }
-      if abs(z) < small { z = 0.0; }
+      if abs(x) < small { x = zero; }
+      if abs(y) < small { y = zero; }
+      if abs(z) < small { z = zero; }
     }
 
     // Transform functions used to reorient vector values in the CFD codes.
@@ -98,14 +103,14 @@ module Geom {
     proc ref transformToLocalFrame(n: Vector3, t1: Vector3) {
       var v_x = x*n.x + y*n.y;   // normal component
       var v_y = x*t1.x + y*t1.y; // tangential component 1
-      x = v_x; y = v_y; z = 0.0;
+      x = v_x; y = v_y; z = zero;
     }
 
     // Rotate v back into the global (xy) coordinate system.
     proc ref transformToGlobalFrame(n: Vector3, t1: Vector3) {
       var v_x = x*n.x + y*t1.x; // global-x
       var v_y = x*n.y + y*t1.y; // global-y
-      x = v_x; y = v_y; z = 0.0;
+      x = v_x; y = v_y; z = zero;
     }
 
     // Vector cross product for use in a single statement that will not make temporaries.
@@ -138,9 +143,52 @@ module Geom {
   }
 
   proc cross(v1: Vector3, v2: Vector3): Vector3 {
-    var v3 = new Vector3(0.0, 0.0, 0.0);
+    var v3 = new Vector3(zero, zero, zero);
     v3.cross(v1, v2);
     return v3;
   }
-}
+
+  // Quadrilateral properties of centroid, associated unit normals and area.
+  //   p3-----p2
+  //   |      |
+  //   |      |
+  //   p0-----p1
+  // Resultant normal vector is up, toward you.
+  // Assume that all points are in the one plane.
+  proc quadProperties(p0: Vector3, p1: Vector3, p2: Vector3, p3: Vector3,
+                      ref centroid: Vector3,
+                      ref n: Vector3, ref t1: Vector3, ref t2: Vector3,
+                      ref area: real,
+                      tol: real = 1.0e-12, area_tol: real = 1.0e-20) {
+    centroid.set(p0); centroid.add(p1); centroid.add(p2); centroid.add(p3);
+    centroid.mul(one_quarter);
+    // Compute areas via the cross products.
+    // Vector3 vector_area = one_quarter * cross(p1-p0+p2-p3, p3-p0+p2-p1);
+    var p01, p03, vectorArea: Vector3;
+    p01.set(p1); p01.sub(p0); p01.add(p2); p01.sub(p3);
+    p03.set(p3); p03.sub(p0); p03.add(p2); p03.sub(p1);
+    vectorArea.cross(p01, p03); vectorArea.mul(one_quarter);
+    // unit-normal and area
+    // area = abs(vector_area);
+    area = sqrt(vectorArea.dot(vectorArea));
+    if (area > area_tol) {
+      // n = unit(vectorArea);
+      n.set(vectorArea); n.div(area);
+      // Tangent unit-vectors:
+      // t1 is parallel to side01 and side32,
+      // t2 is normal to n and t1
+      // t1 = unit((p1-p0)+(p2-p3)); // Works even if one edge has zero length.
+      t1.set(p01);
+      t1.normalize();
+      // t2 = unit(cross(n, t1)); // Calling unit() to tighten up the magnitude.
+      t2.cross(n, t1);
+      t2.normalize();
+    } else {
+      // We have nothing meaningful to put into the unit vectors,
+      // so, put in an arbitrary but orthogonal set.
+      n.set(one,zero,zero); t1.set(zero,one,zero); t2.set(zero,zero,one);
+    }
+  } // end quad_properties()
+
+} // end module Geom
 
