@@ -194,6 +194,7 @@ configOptionsHidden = { -- hidden from user
    dt_history = 1.0e-3,
    --
    dt_loads = 1.0e-3,
+   dt_catalyst = -1.0,
    boundary_groups_for_loads = "loads",
    write_loads = false,
    compute_run_time_loads = false,

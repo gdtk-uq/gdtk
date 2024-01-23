@@ -45,12 +45,14 @@ final class SimState {
     shared static double t_plot;
     shared static double t_history;
     shared static double t_loads;
+    shared static double t_catalyst;
     // Once we write some data to files, we don't want to write another set of files
     // until we have done some more stepping.  The following flags help us remember
     // the state of the solution output.
     shared static bool output_just_written = true;
     shared static bool history_just_written = true;
     shared static bool loads_just_written = true;
+    shared static bool catalyst_just_called = true;
     // We connect the sets of files to the simulation time at which they were written
     // with an index that gets incremented each time we write a set of files.
     shared static int current_tindx;

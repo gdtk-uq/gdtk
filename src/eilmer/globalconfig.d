@@ -1234,6 +1234,7 @@ final class GlobalConfig {
     shared static int write_flow_solution_at_step = -1; // flag for premature writing of flow solution files
     shared static double dt_history = 1.0e-3; // interval for writing sample
     shared static double dt_loads = 1.0e-3; // interval for writing loads on boundary groups
+    shared static double dt_catalyst = -1.0; // interval for executing catalyst piplines
     // For controlling the writing of snapshots
     shared static int snapshotCount = 1_000_000_000; // Set to something very large so that default behaviour
     //                                               // does not attempt to write snapshots.
@@ -2385,6 +2386,7 @@ void read_control_file()
     mixin(update_double("dt_plot", "dt_plot"));
     mixin(update_double("dt_history", "dt_history"));
     mixin(update_double("dt_loads", "dt_loads"));
+    mixin(update_double("dt_catalyst", "dt_catalyst"));
     mixin(update_int("write_loads_at_step", "write_loads_at_step"));
     mixin(update_int("write_flow_solution_at_step", "write_flow_solution_at_step"));
     mixin(update_int("snapshot_count", "snapshotCount"));
@@ -2410,6 +2412,7 @@ void read_control_file()
         writeln("  dt_plot: ", cfg.dt_plot);
         writeln("  dt_history: ", cfg.dt_history);
         writeln("  dt_loads: ", cfg.dt_loads);
+        writeln("  dt_catalyst: ", cfg.dt_catalyst);
         writeln("  write_loads_at_step: ", cfg.write_loads_at_step);
         writeln("  write_flow_solution_at_step: ", cfg.write_flow_solution_at_step);
         writeln("  snapshot_count: ", cfg.snapshotCount);

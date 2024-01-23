@@ -690,6 +690,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     SimState.output_just_written = true;
     SimState.history_just_written = true;
     SimState.loads_just_written = true;
+    SimState.catalyst_just_called = true;
     // When starting a new calculation,
     // set the global time step to the initial value.
     // If we have elected to run with a variable time step,
@@ -736,8 +737,10 @@ int init_simulation(int tindx, int nextLoadsIndx,
         eField = new ElectricField(localFluidBlocks, GlobalConfig.field_conductivity_model);
     }
     //
-    do_catalyst_initialization();
-    InitializeCatalystData(&catalyst_data, localFluidBlocks);
+    if (GlobalConfig.dt_catalyst > 0.0) {
+        do_catalyst_initialization();
+        InitializeCatalystData(&catalyst_data, localFluidBlocks);
+    }
     // Keep our memory foot-print small.
     GC.collect();
     GC.minimize();
@@ -915,6 +918,7 @@ int integrate_in_time(double target_time_as_requested)
     SimState.t_plot = SimState.time + GlobalConfig.dt_plot;
     SimState.t_history = SimState.time + GlobalConfig.dt_history;
     SimState.t_loads = SimState.time + GlobalConfig.dt_loads;
+    SimState.t_catalyst = SimState.time + GlobalConfig.dt_catalyst;
     // Overall iteration count.
     SimState.step = 0;
     //
@@ -1078,6 +1082,7 @@ int integrate_in_time(double target_time_as_requested)
             SimState.output_just_written = false;
             SimState.history_just_written = false;
             SimState.loads_just_written = false;
+            SimState.catalyst_just_called = false;
             if ((SimState.step % GlobalConfig.print_count) == 0) {
                 // Print the current time-stepping status.
                 auto writer = appender!string();
@@ -1160,8 +1165,6 @@ int integrate_in_time(double target_time_as_requested)
                 GC.minimize();
             }
             if ((SimState.time >= SimState.t_plot) && !SimState.output_just_written) {
-                UpdateCatalystFieldData(&catalyst_data, localFluidBlocks);
-                do_catalyt_execute(SimState.step, SimState.time, &catalyst_data);
                 write_solution_files();
                 if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_write_to_file(); }
                 SimState.output_just_written = true;
@@ -1214,6 +1217,16 @@ int integrate_in_time(double target_time_as_requested)
                 foreach (blk; localFluidBlocks) {
                     blk.increment_DFT(SimState.step / GlobalConfig.DFT_step_interval - 1);
                 }
+            }
+            // 4.4 Possibly execute a catalyst pipeline, if configured for it.
+            if ((GlobalConfig.dt_catalyst > 0.0) && ((SimState.time >= SimState.t_catalyst) && !SimState.catalyst_just_called)){
+                if (GlobalConfig.is_master_task) {
+                    writefln("    Execute catalyst pipeline: (step %d, time %03.03e)", SimState.step, SimState.time);
+                }
+                UpdateCatalystFieldData(&catalyst_data, localFluidBlocks);
+                do_catalyt_execute(SimState.step, SimState.time, &catalyst_data);
+                SimState.catalyst_just_called = true;
+                SimState.t_catalyst = SimState.t_catalyst + GlobalConfig.dt_catalyst;
             }
             //
             // 5.0 Update the run-time loads calculation, if required
@@ -1648,8 +1661,10 @@ void finalize_simulation()
             // do nothing
         }
     }
-    FinalizeCatalystData(&catalyst_data);
-    do_catalyt_finalization();
+    if (GlobalConfig.dt_catalyst > 0.0) {
+        FinalizeCatalystData(&catalyst_data);
+        do_catalyt_finalization();
+    }
 } // end finalize_simulation()
 
 void compute_wall_distances() {
