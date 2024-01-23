@@ -6,28 +6,18 @@
 
 // Datastructure definitions moved here by NNG
 // This must be kept consistent with the D version!
-typedef struct CatalystGrid
+typedef struct CatalystData
 {
   unsigned int NumberOfPoints; // Note the change to from uint64_t
   unsigned int NumberOfCells;  // Also changed to 32 from 64
   double* Points;
   long* Cells;
 
-} CatalystGrid;
-
-typedef struct Attributes
-{
-  // A structure for generating and storing point and cell fields.
-  // Velocity is stored at the points and pressure is stored
-  // for the cells. The current velocity profile is for a
-  // shearing flow with U(y,t) = y*t, V = 0 and W = 0.
-  // Pressure is constant through the domain.
   double* velx;
   double* vely;
   double* velz;
   double* Pressure;
-  CatalystGrid* GridPtr;
-} Attributes;
+} CatalystData;
 
 //-----------------------------------------------------------------------------
 /**
@@ -55,7 +45,7 @@ void do_catalyst_initialization()
  * Execute per cycle
  */
 //-----------------------------------------------------------------------------
-void do_catalyt_execute(int cycle, double time, CatalystGrid* grid, Attributes* attribs)
+void do_catalyt_execute(int cycle, double time, CatalystData* data)
 {
   conduit_node* catalyst_exec_params = conduit_node_create();
   conduit_node_set_path_int64(catalyst_exec_params, "catalyst/state/timestep", cycle);
@@ -77,15 +67,15 @@ void do_catalyt_execute(int cycle, double time, CatalystGrid* grid, Attributes* 
   conduit_node_set_path_char8_str(mesh, "coordsets/coords/type", "explicit");
   conduit_node_set_path_char8_str(mesh, "coordsets/coords/type", "explicit");
   conduit_node_set_path_external_float64_ptr_detailed(mesh, "coordsets/coords/values/x",
-    /*data=*/grid->Points, /*num_elements=*/grid->NumberOfPoints, /*offset=*/0,
+    /*data=*/data->Points, /*num_elements=*/data->NumberOfPoints, /*offset=*/0,
     /*stride=*/3 * sizeof(double), /*element_bytes=*/sizeof(double),
     /*endianness=*/CONDUIT_ENDIANNESS_DEFAULT_ID);
   conduit_node_set_path_external_float64_ptr_detailed(mesh, "coordsets/coords/values/y",
-    /*data=*/grid->Points, /*num_elements=*/grid->NumberOfPoints, /*offset=*/1 * sizeof(double),
+    /*data=*/data->Points, /*num_elements=*/data->NumberOfPoints, /*offset=*/1 * sizeof(double),
     /*stride=*/3 * sizeof(double), /*element_bytes=*/sizeof(double),
     /*endianness=*/CONDUIT_ENDIANNESS_DEFAULT_ID);
   conduit_node_set_path_external_float64_ptr_detailed(mesh, "coordsets/coords/values/z",
-    /*data=*/grid->Points, /*num_elements=*/grid->NumberOfPoints, /*offset=*/2 * sizeof(double),
+    /*data=*/data->Points, /*num_elements=*/data->NumberOfPoints, /*offset=*/2 * sizeof(double),
     /*stride=*/3 * sizeof(double), /*element_bytes=*/sizeof(double),
     /*endianness=*/CONDUIT_ENDIANNESS_DEFAULT_ID);
 
@@ -94,30 +84,30 @@ void do_catalyt_execute(int cycle, double time, CatalystGrid* grid, Attributes* 
   conduit_node_set_path_char8_str(mesh, "topologies/mesh/coordset", "coords");
   conduit_node_set_path_char8_str(mesh, "topologies/mesh/elements/shape", "hex");
   conduit_node_set_path_external_int64_ptr(
-    mesh, "topologies/mesh/elements/connectivity", grid->Cells, grid->NumberOfCells * 8);
+    mesh, "topologies/mesh/elements/connectivity", data->Cells, data->NumberOfCells * 8);
 
   // add velocity (cell-field)
   conduit_node_set_path_char8_str(mesh, "fields/velx/association", "element");
   conduit_node_set_path_char8_str(mesh, "fields/velx/topology", "mesh");
   conduit_node_set_path_char8_str(mesh, "fields/velx/volume_dependent", "false");
-  conduit_node_set_path_external_float64_ptr(mesh, "fields/velx/values", attribs->velx, grid->NumberOfCells);
+  conduit_node_set_path_external_float64_ptr(mesh, "fields/velx/values", data->velx, data->NumberOfCells);
 
   conduit_node_set_path_char8_str(mesh, "fields/vely/association", "element");
   conduit_node_set_path_char8_str(mesh, "fields/vely/topology", "mesh");
   conduit_node_set_path_char8_str(mesh, "fields/vely/volume_dependent", "false");
-  conduit_node_set_path_external_float64_ptr(mesh, "fields/vely/values", attribs->vely, grid->NumberOfCells);
+  conduit_node_set_path_external_float64_ptr(mesh, "fields/vely/values", data->vely, data->NumberOfCells);
 
   conduit_node_set_path_char8_str(mesh, "fields/velz/association", "element");
   conduit_node_set_path_char8_str(mesh, "fields/velz/topology", "mesh");
   conduit_node_set_path_char8_str(mesh, "fields/velz/volume_dependent", "false");
-  conduit_node_set_path_external_float64_ptr(mesh, "fields/velz/values", attribs->velz, grid->NumberOfCells);
+  conduit_node_set_path_external_float64_ptr(mesh, "fields/velz/values", data->velz, data->NumberOfCells);
 
   // add pressure (cell-field)
   conduit_node_set_path_char8_str(mesh, "fields/pressure/association", "element");
   conduit_node_set_path_char8_str(mesh, "fields/pressure/topology", "mesh");
   conduit_node_set_path_char8_str(mesh, "fields/pressure/volume_dependent", "false");
   conduit_node_set_path_external_float64_ptr(
-    mesh, "fields/pressure/values", attribs->Pressure, grid->NumberOfCells);
+    mesh, "fields/pressure/values", data->Pressure, data->NumberOfCells);
   conduit_node_set_path_external_node(catalyst_exec_params, "catalyst/channels/grid/data", mesh);
 
 #if 0

@@ -206,8 +206,7 @@ public:
     size_t Vstride;
     }
 
-    CatalystGrid cgrid;
-    Attributes attributes;
+    CatalystData catalyst_data;
 
     FluidBlockIO[] block_io; // io handlers
 

@@ -218,8 +218,7 @@ public:
     ~this()
     {
         // At this stage it looks like the catalyst stuff  has to be explicitly malloc/free'd
-        FinalizeGrid(&cgrid);
-        FinalizeAttributes(&attributes);
+        FinalizeCatalystData(&catalyst_data);
     }
 
     override JSONValue get_header()
@@ -1160,8 +1159,7 @@ public:
             foreach (vtx; f.vtx) { faceIndexListPerVertex[vtx.id] ~= i; }
         }
 
-        InitializeGrid(&cgrid, this.grid);
-        InitializeAttributes(&attributes, &cgrid);
+        InitializeCatalystData(&catalyst_data, this.grid);
     } // end init_grid_and_flow_arrays()
 
     @nogc
