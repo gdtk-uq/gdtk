@@ -1,0 +1,15 @@
+Chapel is a programming language for HPC that has modern comforts.
+https://chapel-lang.org
+
+Now that Chapel drives GPUs, let's rewrite Chicken in Chapel.
+
+We will continue to use the Python pre- and post-processing
+tools from the chiken (in CUDA) directory, for the moment.
+We will probably port those tools to use the Python Arkouda
+project in time.
+
+Peter J. 2024-01-23
+
+Some History:
+2024-01-23: Start the port with the geometry functions.
+
