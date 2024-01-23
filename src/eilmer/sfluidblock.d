@@ -48,7 +48,6 @@ import geom.luawrap.luasgrid;
 import luaflowstate;
 import fluidblockio_new;
 import user_defined_source_terms;
-import CatalystAdaptor;
 
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
@@ -214,12 +213,6 @@ public:
         block_io = get_fluid_block_io(this);
         if (lua_fs) { lua_settop(L, 0); }
     } // end constructor from Lua state
-
-    ~this()
-    {
-        // At this stage it looks like the catalyst stuff  has to be explicitly malloc/free'd
-        FinalizeCatalystData(&catalyst_data);
-    }
 
     override JSONValue get_header()
     // return information in JSON format that describes this block
@@ -961,6 +954,28 @@ public:
                 }
             }
         }
+        // Now do the id based mapping to vertices used for the new datastructures
+        size_t nvtxs = 4;
+        if (myConfig.dimensions == 3) nvtxs = 8;
+        celldata.c2v.length = nkc*njc*nic;
+        foreach (k; 0 .. nkc) {
+            foreach (j; 0 .. njc) {
+                foreach (i; 0 .. nic) {
+                    size_t c = cell_index(i,j,k);
+                    celldata.c2v[c].length = nvtxs;
+                    celldata.c2v[c][0] = vertex_index(i,j,k);
+                    celldata.c2v[c][1] = vertex_index(i+1,j,k);
+                    celldata.c2v[c][2] = vertex_index(i+1,j+1,k);
+                    celldata.c2v[c][3] = vertex_index(i,j+1,k);
+                    if (myConfig.dimensions == 3) {
+                        celldata.c2v[c][4] = vertex_index(i,j,k+1);
+                        celldata.c2v[c][5] = vertex_index(i+1,j,k+1);
+                        celldata.c2v[c][6] = vertex_index(i+1,j+1,k+1);
+                        celldata.c2v[c][7] = vertex_index(i,j+1,k+1);
+                    }
+                }
+            }
+        }
 
         // Test out a index based cell to face mapping
         celldata.c2f.length = nkc*njc*nic;
@@ -1159,7 +1174,6 @@ public:
             foreach (vtx; f.vtx) { faceIndexListPerVertex[vtx.id] ~= i; }
         }
 
-        InitializeCatalystData(&catalyst_data, this.grid);
     } // end init_grid_and_flow_arrays()
 
     @nogc

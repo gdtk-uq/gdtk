@@ -735,6 +735,9 @@ int init_simulation(int tindx, int nextLoadsIndx,
     if (GlobalConfig.solve_electric_field){
         eField = new ElectricField(localFluidBlocks, GlobalConfig.field_conductivity_model);
     }
+    //
+    do_catalyst_initialization();
+    InitializeCatalystData(&catalyst_data, localFluidBlocks);
     // Keep our memory foot-print small.
     GC.collect();
     GC.minimize();
@@ -1157,8 +1160,8 @@ int integrate_in_time(double target_time_as_requested)
                 GC.minimize();
             }
             if ((SimState.time >= SimState.t_plot) && !SimState.output_just_written) {
-                UpdateCatalystFieldData(&(localFluidBlocks[0].catalyst_data), localFluidBlocks[0].celldata.flowstates);
-                do_catalyt_execute(SimState.step, SimState.time, &(localFluidBlocks[0].catalyst_data));
+                UpdateCatalystFieldData(&catalyst_data, localFluidBlocks);
+                do_catalyt_execute(SimState.step, SimState.time, &catalyst_data);
                 write_solution_files();
                 if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_write_to_file(); }
                 SimState.output_just_written = true;
@@ -1645,6 +1648,8 @@ void finalize_simulation()
             // do nothing
         }
     }
+    FinalizeCatalystData(&catalyst_data);
+    do_catalyt_finalization();
 } // end finalize_simulation()
 
 void compute_wall_distances() {

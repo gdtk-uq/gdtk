@@ -18,7 +18,7 @@ function tube_volume(r, s, t)
    return {x=1.0*r, y=0.1*s, z=0.1*t}
 end
 pvol=LuaFnVolume:new{luaFnName="tube_volume"}
-grid0 = StructuredGrid:new{pvolume=pvol, niv=101, njv=3, nkv=3}
+grid0 = StructuredGrid:new{pvolume=pvol, niv=201, njv=9, nkv=9}
 
 nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
 print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
@@ -42,7 +42,9 @@ end
 FluidBlock:new{grid=grid0, initialState=tube_gas}
 
 config.flux_calculator = "ausmdv"
-config.max_time = 0.6e-3  -- seconds
-config.max_step = 600
+config.cfl_value=0.2
+config.dt_plot  = 0.5e-4  -- seconds
+config.max_time = 1.0e-3  -- seconds
+config.max_step = 6000
 -- config.dt_init = 1.0e-6
 

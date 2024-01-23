@@ -9,8 +9,7 @@ import std.stdio;
 import std.conv;
 import core.stdc.stdlib;
 import core.runtime;
-import geom.grid.sgrid;
-import flowstate;
+import fluidblock;
 
 struct CatalystData
 {
@@ -25,45 +24,45 @@ struct CatalystData
   double* Pressure;
 }
 
-void InitializeCatalystData(CatalystData* data, StructuredGrid grid)
+void InitializeCatalystData(CatalystData* data, FluidBlock[] localFluidBlocks)
 {
 
-  assert(grid.dimensions==3);
-
   if (data.Points) free(data.Points);
-
-  uint numPoints = to!uint(grid.nvertices);
+  
+  uint numPoints = 0;
+  foreach(blk; localFluidBlocks) numPoints += to!uint(blk.vertices.length);
   data.Points = cast(double*)malloc(3 * double.sizeof * numPoints);
 
   uint counter = 0;
-  foreach(vtx; grid.vertices) {
-      data.Points[counter + 0] = vtx.x;
-      data.Points[counter + 1] = vtx.y;
-      data.Points[counter + 2] = vtx.z;
-      counter += 3;
+  foreach(blk; localFluidBlocks){
+      foreach(vtx; blk.vertices) {
+          data.Points[counter + 0] = vtx.pos[0].x;
+          data.Points[counter + 1] = vtx.pos[0].y;
+          data.Points[counter + 2] = vtx.pos[0].z;
+          counter += 3;
+      }
   }
-
   data.NumberOfPoints = numPoints;
 
   // create the cell to vertex mapping array
   if (data.Cells) free(data.Cells);
 
-  uint numCells = to!uint(grid.ncells);
+  uint numCells = 0;
+  foreach(blk; localFluidBlocks) numCells += to!uint(blk.cells.length);
   data.Cells = cast(long*)malloc(8 * long.sizeof * numCells);
 
+  uint offset = 0;
   counter = 0;
-  foreach(k; 0 .. grid.nkv-1){
-      foreach(j; 0 .. grid.njv-1){
-          foreach(i; 0 .. grid.niv-1){
-              size_t[] vtxs = grid.get_vtx_id_list_for_cell(i, j, k);
-              foreach(vid; vtxs) {
-                  data.Cells[counter] = vid;
-                  counter += 1;
-              }
-
+  foreach(blk; localFluidBlocks) {
+      foreach(cell; blk.cells){
+          foreach(vtx; cell.vtx){
+              data.Cells[counter] = vtx.id + offset;
+              counter += 1;
           }
       }
+      offset += blk.vertices.length;
   }
+
   data.NumberOfCells = numCells;
 
   if (data.velx) free(data.velx);
@@ -90,14 +89,17 @@ void FinalizeCatalystData(CatalystData* data)
 }
 
 
-void UpdateCatalystFieldData(CatalystData* data, FlowState[] flowstates)
+void UpdateCatalystFieldData(CatalystData* data, FluidBlock[] localFluidBlocks)
 {
-    uint numCells = data.NumberOfCells;
-    foreach(i; 0 .. numCells) {
-        data.velx[i]     = flowstates[i].vel.x;
-        data.vely[i]     = flowstates[i].vel.y;
-        data.velz[i]     = flowstates[i].vel.z;
-        data.Pressure[i] = flowstates[i].gas.p;
+    uint offset = 0;
+    foreach(blk; localFluidBlocks){
+        foreach(i; 0 .. blk.ncells) {
+            data.velx[offset+i]     = blk.celldata.flowstates[i].vel.x;
+            data.vely[offset+i]     = blk.celldata.flowstates[i].vel.y;
+            data.velz[offset+i]     = blk.celldata.flowstates[i].vel.z;
+            data.Pressure[offset+i] = blk.celldata.flowstates[i].gas.p;
+        }
+        offset += blk.ncells;
     }
 }
 
