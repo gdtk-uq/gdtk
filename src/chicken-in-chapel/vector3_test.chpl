@@ -76,4 +76,29 @@ proc main() {
   if !t2.approxEquals(new Vector3(0.0, 1.0, 0.0), 1.0e-9) {
     writeln("Vector3 quadProperties error t2=", v1);
   }
+
+  var p4, p5, p6, p7: Vector3;
+  var volume, iLen, jLen, kLen: real;
+  // Put a top on the box, one unit above p0-p1-p2-p3
+  p4.set(0.0,0.0,1.0); p5.set(1.0,0.0,1.0); p6.set(1.0,1.0,1.0); p7.set(0.0,1.0,1.0);
+  hexCellProperties(p0, p1, p2, p3, p4, p5, p6, p7, trueCentroid=true,
+                    centroid, volume, iLen, jLen, kLen);
+  // writeln("centroid=", centroid);
+  // writeln("volume=", volume);
+  // writeln("iLen=", iLen, " jLen=", jLen, " kLen=", kLen);
+  if !centroid.approxEquals(new Vector3(0.5, 0.5, 0.5), 1.0e-9) {
+    writeln("Vector3 hexCellProperties error centroid=", centroid);
+  }
+  if !approxEquals(volume, 1.0) {
+    writeln("Vector3 hexCellProperties error volume=", volume);
+  }
+  if !approxEquals(iLen, 1.0) {
+    writeln("Vector3 hexCellProperties error iLen=", iLen);
+  }
+  if !approxEquals(jLen, 1.0) {
+    writeln("Vector3 hexCellProperties error jLen=", jLen);
+  }
+  if !approxEquals(kLen, 1.0) {
+    writeln("Vector3 hexCellProperties error kLen=", kLen);
+  }
 }
