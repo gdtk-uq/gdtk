@@ -2,6 +2,10 @@
   CatalystAdaptor.d
   Adapted from a D port of the CFullExample from Paraview's catalyst 2 catalogue
 
+  TODO:
+   - Unstructured support
+   - Add the rest of the field data
+
   Author: Nick Gibbons
 */
 
@@ -13,8 +17,10 @@ import fluidblock;
 
 struct CatalystData
 {
+  uint dimensions;
   uint NumberOfPoints;
   uint NumberOfCells;
+  uint Cell2VertexSize;
   double* Points;
   long* Cells;
 
@@ -24,11 +30,12 @@ struct CatalystData
   double* Pressure;
 }
 
-void InitializeCatalystData(CatalystData* data, FluidBlock[] localFluidBlocks)
+void InitializeCatalystData(CatalystData* data, FluidBlock[] localFluidBlocks, int dimensions)
 {
 
+  data.dimensions = dimensions;
+
   if (data.Points) free(data.Points);
-  
   uint numPoints = 0;
   foreach(blk; localFluidBlocks) numPoints += to!uint(blk.vertices.length);
   data.Points = cast(double*)malloc(3 * double.sizeof * numPoints);
@@ -48,8 +55,14 @@ void InitializeCatalystData(CatalystData* data, FluidBlock[] localFluidBlocks)
   if (data.Cells) free(data.Cells);
 
   uint numCells = 0;
-  foreach(blk; localFluidBlocks) numCells += to!uint(blk.cells.length);
-  data.Cells = cast(long*)malloc(8 * long.sizeof * numCells);
+  uint c2vSize = 0;
+  foreach(blk; localFluidBlocks) {
+      numCells += to!uint(blk.cells.length);
+      foreach(cell; blk.cells){
+          c2vSize += cell.vtx.length;
+      }
+  }
+  data.Cells = cast(long*)malloc(long.sizeof * c2vSize);
 
   uint offset = 0;
   counter = 0;
@@ -64,6 +77,7 @@ void InitializeCatalystData(CatalystData* data, FluidBlock[] localFluidBlocks)
   }
 
   data.NumberOfCells = numCells;
+  data.Cell2VertexSize = c2vSize;
 
   if (data.velx) free(data.velx);
   data.velx = cast(double*)malloc(double.sizeof * numCells);

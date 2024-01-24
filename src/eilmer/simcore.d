@@ -742,7 +742,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     if (GlobalConfig.dt_catalyst > 0.0) {
         version(catalyst) {
             do_catalyst_initialization();
-            InitializeCatalystData(&catalyst_data, localFluidBlocks);
+            InitializeCatalystData(&catalyst_data, localFluidBlocks, GlobalConfig.dimensions);
         }
     }
     // Keep our memory foot-print small.

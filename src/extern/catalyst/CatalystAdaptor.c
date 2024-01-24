@@ -8,8 +8,10 @@
 // This must be kept consistent with the D version!
 typedef struct CatalystData
 {
+  int dimensions;
   unsigned int NumberOfPoints; // Note the change to from uint64_t
   unsigned int NumberOfCells;  // Also changed to 32 from 64
+  unsigned int Cell2VertexSize;
   double* Points;
   long* Cells;
 
@@ -82,9 +84,18 @@ void do_catalyt_execute(int cycle, double time, CatalystData* data)
   // add topologies
   conduit_node_set_path_char8_str(mesh, "topologies/mesh/type", "unstructured");
   conduit_node_set_path_char8_str(mesh, "topologies/mesh/coordset", "coords");
-  conduit_node_set_path_char8_str(mesh, "topologies/mesh/elements/shape", "hex");
+
+  // This could be expanded for unstructured
+  if (data->dimensions==2) {
+      conduit_node_set_path_char8_str(mesh, "topologies/mesh/elements/shape", "quad");
+  } else if (data->dimensions==3) {
+      conduit_node_set_path_char8_str(mesh, "topologies/mesh/elements/shape", "hex");
+  } else {
+      printf("Error, incorrect dimensions %d ", data->dimensions);
+      exit(1);
+  }
   conduit_node_set_path_external_int64_ptr(
-    mesh, "topologies/mesh/elements/connectivity", data->Cells, data->NumberOfCells * 8);
+      mesh, "topologies/mesh/elements/connectivity", data->Cells, data->Cell2VertexSize);
 
   // add velocity (cell-field)
   conduit_node_set_path_char8_str(mesh, "fields/velx/association", "element");
