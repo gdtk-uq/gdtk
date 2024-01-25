@@ -213,7 +213,7 @@ public:
     // begin write
     override void WriteToFile(size_t tindx) {
         auto writeFile = File(format("FSI/t%04d.dat", tindx), "w+");
-        writeFile.write("# x\ttheta_x\tdxdt\tdtheta_xdt\n");
+        writeFile.write("# x theta_x dxdt dtheta_xdt\n");
         foreach (i; 0 .. (myConfig.Nx + 1)) {
             writeFile.write(format("%1.8e %1.8e %1.8e %1.8e\n", X[i * 2].re, X[i * 2 + 1].re, V[i * 2].re, V[i * 2 + 1].re));
         }

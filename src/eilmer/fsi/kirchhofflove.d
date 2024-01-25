@@ -95,7 +95,7 @@ public:
                 throw new Error("Something went wrong in assigning the global node index from the local index in FSI.");
         }
     } // end LocalNodeToGlobalNode
-        
+ 
     Matrix!number LocalStiffnessMatrix(number a, number b, number v) {
         // Allocate memory for the local stiffness matrix
         Matrix!number KL = new Matrix!number(12); KL.zeros();
@@ -128,7 +128,7 @@ public:
             B[0, 3] = 3 * xi * (-1 + eta) / (4 * a * a);
             B[0, 4] = (3 * xi + 1) * (1 - eta) / (4 * a);
             B[0, 5] = 0;
-            B[0, 6] = 3 * xi * (1 + eta) / (4 * a * a);
+            B[0, 6] = 3 * xi * (-1 - eta) / (4 * a * a);
             B[0, 7] = (3 * xi + 1) * (1 + eta) / (4 * a);
             B[0, 8] = 0;
             B[0, 9] = 3 * xi * (1 + eta) / (4 * a * a);
@@ -136,11 +136,11 @@ public:
             B[0,11] = 0;
             B[1, 0] = 3 * eta * (1 - xi) / (4 * b * b);
             B[1, 1] = 0;
-            B[1, 2] = (3 * eta - 1) * (1 + xi) / (4 * b);
+            B[1, 2] = (3 * eta - 1) * (1 - xi) / (4 * b);
             B[1, 3] = 3 * eta * (1 + xi) / (4 * b * b);
             B[1, 4] = 0;
             B[1, 5] = (3 * eta - 1) * (1 + xi) / (4 * b);
-            B[1, 6] = 3 * eta * (-1 + xi) / (4 * b * b);
+            B[1, 6] = 3 * eta * (-1 - xi) / (4 * b * b);
             B[1, 7] = 0;
             B[1, 8] = (3 * eta + 1) * (1 + xi) / (4 * b);
             B[1, 9] = 3 * eta * (-1 + xi) / (4 * b * b);
@@ -162,7 +162,6 @@ public:
             Matrix!number BDB = dot(dot(transpose(B), D), B);
             KL._data[] += BDB._data[];
         } // end foreach xi, eta
-        writeln(KL._data);
         return KL;
     } // LocalStiffnessMatrix
 
@@ -210,6 +209,7 @@ public:
         // locations
         number a = myConfig.length / (2 * myConfig.Nx);
         number b = myConfig.width / (2 * myConfig.Nz);
+        number[12] FL;
 
         // We need to evaluate Eq. 5.46 in 
         // "Structural Analysis with the Finite Element Method: Linear Statics, Vol 2"
@@ -226,23 +226,35 @@ public:
         double[4] xiQuad = xn[] * (1 / sqrt(3.0)); double[4] etaQuad = yn[] * (1 / sqrt(3.0));
 
         // Iterate through the elements
-        size_t globalNodeIndx, globalRowIndx, globalQuadId;
+        size_t globalNodeIndx, globalQuadId;
         number externalForce;
         foreach (k; 0 .. myConfig.Nz) {
             foreach (i; 0 .. myConfig.Nx) {
-                // Iterate through nodes on the element
+                // Iterate through nodes on the element to build the local force matrix
+                // Reset the local force vector to zeros
+                FL[] = 0.0;
                 foreach (node; 0 .. 4) {
-                    globalNodeIndx = LocalNodeToGlobalNode(node, i, k);
                     double x = xn[node]; double y = yn[node];
                     // Iterate through quadrature points
                     foreach (quadPoint; 0 .. 4) {
                         double xi = xiQuad[quadPoint]; double eta = etaQuad[quadPoint];
-                        globalQuadId = LocalNodeToGlobalNode(quadPoint, i, k); // The same logic can be applied to the quadrature points as nodes
+                        // Locate which global quadrature point we're looking at
+                        globalQuadId = LocalQuadToGlobalQuad(quadPoint, i, k);
+
+                        // Then compute the net applied pressure
                         externalForce = (southPressureAtQuads[globalQuadId] - northPressureAtQuads[globalQuadId]);
-                        F._data[globalNodeIndx] += externalForce * (1 + x * xi) * (1 + y * eta) * (2 + x * xi + y * eta - pow(xi, 2) - pow(eta, 2)) / 8;
-                        F._data[globalNodeIndx+1] += externalForce * a * (pow(xi, 2) - 1) * (xi + x) * (1 + y * eta) / 8;
-                        F._data[globalNodeIndx+2] += externalForce * b * (pow(eta, 2) - 1) * (eta + y) * (1 + x + xi) / 8;
+
+                        // Use the shape functions to compute the additions to the local force matrix
+                        FL[3 * node] += externalForce * (1 + x * xi) * (1 + y * eta) * (2 + x * xi + y * eta - pow(xi, 2) - pow(eta, 2)) / 8;
+                        FL[3 * node + 1] += externalForce * a * (pow(xi, 2) - 1) * (xi + x) * (1 + y * eta) / 8;
+                        FL[3 * node + 2] += externalForce * b * (pow(eta, 2) - 1) * (eta + y) * (1 + x + xi) / 8;
+
                     } // end foreach quadPoint
+                } // end foreach node
+                // Add to the global force matrix
+                foreach (node; 0 .. 4) {
+                    globalNodeIndx = LocalNodeToGlobalNode(node, i, k);
+                    F._data[3 * globalNodeIndx .. 3 * globalNodeIndx + 3] += FL[3 * node .. 3 * node + 3];
                 } // end foreach node
             } // end foreach i
         } // end foreach k
@@ -255,6 +267,25 @@ public:
             F._data[zeroedIndx] = 0.0;
         }
     }
+
+    size_t LocalQuadToGlobalQuad(size_t quad, size_t i, size_t k) {
+        // Convert from the quadrature index on an element to a global quadrature index so
+        // we retreive the correct pressure. Order is the same as nodes, but since the
+        // elements don't share quadrature points, the indexing is not the same as the nodes.
+        switch (quad) {
+            case 0:
+                return ((2 * k) * myConfig.Nx + i) * 2;
+            case 1:
+                return ((2 * k) * myConfig.Nx + i) * 2 + 1;
+            case 2:
+                return ((2 * k + 1) * myConfig.Nx + i) * 2 + 1;
+            case 3:
+                return ((2 * k + 1) * myConfig.Nx + i) * 2;
+            default:
+                throw new Error("Something went wrong in assigning the global node index from the local index in FSI.");
+        }
+    } // end LocalNodeToGlobalNode
+        
 
     override void ConvertToNodeVel() {
         // Convert from the rate of change of the DoFs to velocities usable by the mesh
@@ -280,16 +311,16 @@ public:
                 foreach (node; 0 .. myConfig.Nz + 1) {
                     // All DoFs
                     foreach (DoF; 0 .. 3) {
-                        zeroedIndices ~= (node + (myConfig.Nx + 1)) * 3 + DoF;
+                        zeroedIndices ~= (node * (myConfig.Nx + 1)) * 3 + DoF;
                     }
                 }
                 break;
             case 'P':
                 foreach (node; 0 .. myConfig.Nz + 1) {
                     // The displacement DoF
-                    zeroedIndices ~= (node + (myConfig.Nx + 1)) * 3;
+                    zeroedIndices ~= (node * (myConfig.Nx + 1)) * 3;
                     // The z slope is 0, which is the 3rd DoF
-                    zeroedIndices ~= (node + (myConfig.Nx + 1)) * 3 + 2;
+                    zeroedIndices ~= (node * (myConfig.Nx + 1)) * 3 + 2;
                 }
                 break;
             case 'F':
@@ -304,7 +335,7 @@ public:
                 foreach (node; 0 .. myConfig.Nz + 1) {
                     // All DoFs
                     foreach (DoF; 0 .. 3) {
-                        zeroedIndices ~= (node + (2 * myConfig.Nx + 1)) * 3 + DoF;
+                        zeroedIndices ~= (node * (2 * myConfig.Nx + 1)) * 3 + DoF;
                     }
                 }
                 break;
@@ -369,13 +400,12 @@ public:
             default:
                 throw new Error("Unrecognised BC specification in FSI; should be 'F', 'C' or 'P'");
         }
-
     } // end determineBoundaryConditions
 
     override void WriteToFile(size_t tindx) {
         auto writeFile = File(format("FSI/t%04d.dat", tindx), "w+");
         // Set the header to describe the columns (w = displacement, theta_x = x slope, theta_z = z slope)
-        writeFile.write("# w\ttheta_x\ttheta_z\tdxdt\tdtheta_xdt\tdtheta_zdt\n");
+        writeFile.write("# w theta_x theta_z dxdt dtheta_xdt dtheta_zdt\n");
         // Write the position and velocities for each DoF
         foreach (node; 0 .. (myConfig.Nx + 1) * (myConfig.Nz + 1)) {
             writeFile.write(format("%.18e %1.8e %1.8e %1.8e %1.8e %1.8e\n", X[node*3].re, X[node*3+1], X[node*3+2].re, V[node*3].re, V[node*3+1].re, V[node*3+2].re));
