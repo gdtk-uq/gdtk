@@ -200,7 +200,7 @@ void integrate_solid_in_time_implicit(double target_time, bool init_precondition
             SimState.step = step;
 
             // implicit solid update
-            rpcGMRES_solve(step, physicalSimTime, dt, eta, sigma, dual_time_stepping, temporal_order, dt_physical, normNew, use_preconditioner);
+            rpcGMRES_solve(step, physicalSimTime, dt, eta, sigma, dual_time_stepping, temporal_order, dt_physical, use_preconditioner);
             foreach (sblk; parallel(localSolidBlocks,1)) {
                 int ftl = to!int(sblk.myConfig.n_flow_time_levels-1);
                 foreach (i, scell; sblk.cells) {
@@ -216,6 +216,27 @@ void integrate_solid_in_time_implicit(double target_time, bool init_precondition
                     swap(scell.e[0],scell.e[ftl]);
                 }
             }
+
+            // check for convergence
+            evalRHS(physicalSimTime, 0);
+            foreach (sblk; parallel(localSolidBlocks,1)) {
+                foreach (i, scell; sblk.cells) {
+                    if (temporal_order == 0) {
+                        sblk.Fe[i] = scell.dedt[0].re;
+                    } else if (temporal_order == 1) {
+                        // add BDF1 unsteady term TODO: could we need to handle this better?
+                        sblk.Fe[i] = scell.dedt[0].re - (1.0/dt_physical)*scell.e[0].re + (1.0/dt_physical)*scell.e[1].re;
+                    } else { // temporal_order = 2
+                        // add BDF2 unsteady term TODO: could we need to handle this better?
+                        sblk.Fe[i] = scell.dedt[0].re - (1.5/dt_physical)*scell.e[0].re + (2.0/dt_physical)*scell.e[1].re - (0.5/dt_physical)*scell.e[2].re;
+                    }
+                }
+            }
+            mixin(dot_over_blocks("normNew", "Fe", "Fe"));
+            version(mpi_parallel) {
+                MPI_Allreduce(MPI_IN_PLACE, &normNew, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            }
+            normNew = sqrt(normNew);
 
             if (GlobalConfig.is_master_task) {
                 writeln("RELATIVE RESIDUAL: ", normNew/normRef);
@@ -379,7 +400,7 @@ foreach (sblk; localSolidBlocks) `~dot~` += sblk.dotAcc;`;
 }
 
 void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, double sigma,
-                    bool dual_time_stepping, int temporal_order, double dt_physical, ref double residual, bool use_preconditioner)
+                    bool dual_time_stepping, int temporal_order, double dt_physical, bool use_preconditioner)
 {
 
     int maxIters = GlobalConfig.sdluOptions.maxGMRESIterations;
@@ -749,7 +770,6 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         outFile.writef("%d    %.16e    %d    %d    %.16e    %.16e \n", step, dt, r, iterCount, linSolResid, unscaledNorm2);
         outFile.close();
     }
-    residual = unscaledNorm2;
 }
 
 void verify_jacobian() {
