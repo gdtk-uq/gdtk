@@ -48,7 +48,15 @@ module Geom {
       x += other.x; y += other.y; z += other.z;
     }
 
+    operator+=(other: Vector3) {
+      x += other.x; y += other.y; z += other.z;
+    }
+
     proc ref sub(other: Vector3) {
+      x -= other.x; y -= other.y; z -= other.z;
+    }
+
+    operator-=(other: Vector3) {
       x -= other.x; y -= other.y; z -= other.z;
     }
 
@@ -56,7 +64,15 @@ module Geom {
       x *= other; y *= other; z *= other;
     }
 
+    operator*=(other: real) {
+      x *= other; y *= other; z *= other;
+    }
+
     proc ref div(other: real) {
+      x /= other; y /= other; z /= other;
+    }
+
+    operator/=(other: real) {
       x /= other; y /= other; z /= other;
     }
 

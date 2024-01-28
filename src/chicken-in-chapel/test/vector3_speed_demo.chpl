@@ -3,7 +3,7 @@
 // as we might like to use them in our CFD code.
 //
 // Build with:
-// $ chpl --fast vector3_speed_demo.chpl vector3.chpl
+// $ chpl --fast vector3_speed_demo.chpl ../vector3.chpl
 //
 // Run example on Lenovo T490:
 // $ ./vector3_speed_demo

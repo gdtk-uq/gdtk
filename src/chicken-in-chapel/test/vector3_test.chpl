@@ -2,7 +2,7 @@
  * Try out some of the Vector3 functions.
  *
  * Build with:
- * $ chpl vector3_test.chpl vector3.chpl
+ * $ chpl vector3_test.chpl ../vector3.chpl
  *
  * Run with:
  * $ ./vector3_test
@@ -30,7 +30,13 @@ proc main() {
   v1.set(1.0, 2.0, 3.0);
   v1.add(v2); v1.mul(2.0); v1.sub(new Vector3(1.0, 1.0, 1.0));
   if !v1.approxEquals(v3, 1.0e-9) {
-    writeln("Vector3 add sub mul error v1=", v1, " v3=", v3);
+    writeln("Vector3 add mul sub error v1=", v1, " v3=", v3);
+  }
+
+  v1.set(1.0, 2.0, 3.0);
+  v1 += v2; v1 *= 2.0; v1 -= new Vector3(1.0, 1.0, 1.0);
+  if !v1.approxEquals(v3, 1.0e-9) {
+    writeln("Vector3 += *= -= error v1=", v1, " v3=", v3);
   }
 
   var n = new Vector3(1.0, 1.0); n.normalize();

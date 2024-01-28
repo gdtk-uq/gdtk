@@ -3,7 +3,7 @@
 // as we might like to use them in our CFD code.
 //
 // Build with:
-// $ chpl --fast vector3_speed_gpu.chpl vector3.chpl
+// $ chpl --fast vector3_speed_gpu.chpl ../vector3.chpl
 //
 // Run example on Dell Optiplex 990 with NVIDIA GTX 1650:
 // peterj@helmholtz ~/work/play/chapel/geom $ ./vector3_speed_gpu 
