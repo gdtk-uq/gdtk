@@ -17,7 +17,6 @@
 #include "vector3.cu"
 #include "config.cu"
 #include "gas.cu"
-#include "vertex.cu"
 #include "flow.cu"
 #include "face.cu"
 #include "cell.cu"

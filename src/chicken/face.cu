@@ -14,7 +14,6 @@
 #include "number.cu"
 #include "vector3.cu"
 #include "gas.cu"
-#include "vertex.cu"
 #include "flow.cu"
 
 using namespace std;
