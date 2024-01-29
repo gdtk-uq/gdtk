@@ -48,7 +48,7 @@ module Flow {
       U[totEnergy] = rho * (gs.e + 0.5*vel.dot(vel));
     } // end encodeConserved()
 
-    proc ref decodeConserved(const ref U: [DCon]real, gm: GasModel) throws {
+    proc ref decodeConserved(const ref U: [DCon]real, const ref gm: GasModel) throws {
       var rho = 0.0;
       for i in DS do rho += U[mass+i];
       if !(rho > 0.0) {

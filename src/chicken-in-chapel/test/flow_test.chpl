@@ -30,7 +30,7 @@ proc main() {
   fs1.encodeConserved(U1);
   writeln("U1=", U1);
   var fs2 = new FlowState();
-  fs2.decodeConserved(U1, gm1:GasModel);
+  fs2.decodeConserved(U1, gm1:borrowed GasModel);
   writeln("fs2=", fs2);
-  // gm1.checkMassFractions(fs2.gs); // oops, dead value because ownership transferred above
+  gm1.checkMassFractions(fs2.gs);
 }
