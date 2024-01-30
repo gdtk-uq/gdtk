@@ -13,8 +13,8 @@
 use Geom;
 
 proc main() {
-  var v1 = new Vector3(1.0, 2.0, 3.0);           // One way to initialize.
-  var v2 = new Vector3(x=1.1, y=2.2, z=3.3); // Another way to initialize.
+  var v1: Vector3 = new Vector3(1.0, 2.0, 3.0); // One way to initialize.
+  var v2 = new Vector3(x=1.1, y=2.2, z=3.3);    // Another way to initialize.
   v1 = (v1+v2)*2.0 - (new Vector3(1.0, 1.0, 1.0));
   var v3 = new Vector3(x=3.2, y=7.4, z=11.6);
   if !v1.approxEquals(v3, 1.0e-9) {

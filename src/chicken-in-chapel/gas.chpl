@@ -23,7 +23,7 @@ module Gas {
     var T: real;          // Trans-rotational temperature, degrees K
     var a: real;          // sound speed, m/s
 
-    proc setAsAverage(const ref gs0: GasState, const ref gs1: GasState) {
+    proc ref setAsAverage(const ref gs0: GasState, const ref gs1: GasState) {
       rho = 0.5*(gs0.rho + gs1.rho);
       forall i in DS do massf[i] = 0.5*(gs0.massf[i] + gs1.massf[i]);
       e = 0.5*(gs0.e + gs1.e);

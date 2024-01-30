@@ -24,17 +24,17 @@ module Flow {
     var gs: GasState;
     var vel: Vector3;
 
-    proc set(const ref gs: GasState, const ref vel: Vector3) {
+    proc ref set(const ref gs: GasState, const ref vel: Vector3) {
       this.gs = gs;
       this.vel = vel;
     }
 
-    proc set(const ref fs: FlowState) {
+    proc ref set(const ref fs: FlowState) {
       this.gs = fs.gs;
       this.vel = vel;
     }
 
-    proc setAsAverage(const ref a: FlowState, const ref b: FlowState) {
+    proc ref setAsAverage(const ref a: FlowState, const ref b: FlowState) {
       gs.setAsAverage(a.gs, b.gs);
       vel.setAsAverage(a.vel, b.vel);
     }
