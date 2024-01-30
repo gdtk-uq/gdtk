@@ -10,7 +10,8 @@ module Face {
   use Flow;
 
   // Boundary condition codes, to decide what to do for the ghost cells.
-  // Periodic boundary conditions should just work if we wrap the index in each direction.
+  // Periodic boundary conditions should just work if we wrap the index
+  // in each direction.
   // There's not enough information here to have arbitrary block connections.
   enum BCCode {
     wall_with_slip,
