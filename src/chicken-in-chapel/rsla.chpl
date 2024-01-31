@@ -32,12 +32,16 @@ module Rsla {
         return;
       }
       otherwise {
-        // [TODO]
+        const cRows = c.dim(0);
+        const cCols = c.dim(1);
+        forall i in cRows {
+          result[i] = 0.0;
+          forall j in cCols do result[i] += c[i,j]*x[j];
+        }
         return;
       }
     }
   } // end proc MVMult
-
 
   proc MInverse(const ref c: []real, ref cinv: []real,
                 const very_small_value: real=1.0e-12): int
@@ -71,10 +75,56 @@ module Rsla {
         return 0;
       }
       otherwise {
-        // [TODO] using the GaussJordan elimination function
-        return -2; // not implemented
+        var A = c; // Make a copy so that we don't mess with c.
+        cinv = 0.0;
+        for i in cinv.dim(0) do cinv[i,i] = 1.0;
+        return gaussJordanElimination(A, cinv, very_small_value);
       }
     } // end select
   } // end MInverse
+
+  // Perform Gauss-Jordan elimination on an augmented matrix [A|b]
+  // such that the mutated matrix becomes [I|x]
+  // where x is the solution vector(s) to A.x = b
+  // Returns  0 on success
+  //         -1 if matrix A is singular
+  //         -2 if A and b are not compatible
+  //         -3 if A is not square
+  // Note that we expect b to be a 2-dimensional array.
+  proc gaussJordanElimination(ref A: []real, ref b: []real,
+                              very_small_value: real = 1.0e-16): int
+  {
+    var (rowsA, colsA) = A.dims();
+    var (rowsB, colsB) = b.dims();
+    if colsA != rowsB then return -2; // A and b not compatible
+    if rowsA != colsA then return -3; // A not square
+    for j in rowsA {
+      // Select pivot.
+      var p = j;
+      for i in {(j+1)..rowsA.high} {
+        if abs(A[i,j]) > abs(A[p,j]) then p = i;
+      }
+      if (abs(A[p,j]) < very_small_value) {
+        return -1; // Matrix is essentially singular.
+      }
+      if (p != j) {
+        forall k in colsA do (A[p,k], A[j,k]) = (A[j,k], A[p,k]);
+        forall k in colsB do (b[p,k], b[j,k]) = (b[j,k], b[p,k]);
+      }
+      // Scale row j to get unity on the diagonal.
+      const Ajj = A[j,j];
+      forall k in colsA do A[j,k] /= Ajj;
+      forall k in colsB do b[j,k] /= Ajj;
+      // Do the elimination to get zeros in all off diagonal values in column j.
+      for i in rowsA {
+        if i != j {
+          const Aij = A[i,j];
+          for k in colsA do A[i,k] -= Aij * A[j,k];
+          for k in colsB do b[i,k] -= Aij * b[j,k];
+        }
+      }
+    } // end for j
+    return 0; // success
+  } // end proc gaussJordanElimination()
 
 } // end module Rsla
