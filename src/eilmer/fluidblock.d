@@ -671,7 +671,9 @@ public:
             foreach (idx; 0 .. nfaces) {
                 size_t l = facedata.f2c[idx].left;
                 size_t r = facedata.f2c[idx].right;
-                facedata.flowstates[idx].S = NNG_ShockDetector(gm, celldata.flowstates[l],  celldata.flowstates[r], facedata.normals[idx], comp_tol.re);
+                number S1 = NNG_ShockDetector(gm, celldata.flowstates[l],  celldata.flowstates[r], facedata.normals[idx], comp_tol.re);
+                number S2 = NNG_DiscoDectector(gm, celldata.flowstates[l],  celldata.flowstates[r]);
+                facedata.flowstates[idx].S = fmax(S1, S2);
             }
             break;
         }

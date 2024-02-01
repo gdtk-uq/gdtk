@@ -128,9 +128,38 @@ import std.algorithm;
 
     number qL = (pstar>pL) ? facL : to!number(1.0);
     number qR = (pstar>pR) ? facR : to!number(1.0);
-    //number q = fmax(qR, qL) - 1.0 + 1e-3;
+    //number q = fmax(qR, qL) - 1.0 + 1e-1;
     number q = fmax(qR, qL) - 1.0;
     number S = fmin(q/Mx, 1.0);
 
     return S;
 }
+
+@nogc number NNG_DiscoDectector(GasModel gm, in FlowState L, in FlowState R) {
+    /*
+        Experimental discontinuity detector by NNG, based on formulas derived 29/01/24, see back of diary.
+        @author: Nick Gibbons
+    */
+
+    number rho1 = L.gas.rho;
+    number rho2 = R.gas.rho;
+    number p1 = L.gas.p;
+    number p2 = R.gas.p;
+    number T1 = L.gas.T;
+    number T2 = R.gas.T;
+
+    number R_L = gm.gas_constant(L.gas);
+    number R_R = gm.gas_constant(R.gas);
+    number R_av = 0.5*(R_L+R_R); // Check in multispecies??
+
+    number drho = fabs(rho2 - rho1);
+    number dp   = fabs(p2-p1);
+    number dp_rho = dp/R_av/T1;
+
+    immutable double factor = 0.20; // TBD: This seems to be flow dependant. Maybe make it a config 
+    number argument = (drho - dp_rho)/factor;
+    number S = 0.5*tanh(argument - 4.0) + 0.5;
+
+    return S;
+}
+
