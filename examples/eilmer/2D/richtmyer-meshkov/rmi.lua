@@ -13,7 +13,17 @@ axes_velocity = 300
 state1 = FlowState:new{p=100.0e3, T=300.0, velx=0.0-axes_velocity, vely=0.0} -- pre-shock
 state2 = FlowState:new{p=497.8e3, T=531.1, velx=469.9-axes_velocity, vely=0.0} -- post-shock
 state3 = FlowState:new{p=100.0e3, T=75.0, velx=0.0-axes_velocity, vely=0.0} -- dense gas
-config.flux_calculator = 'ausmdv'
+
+config.flux_calculator = "adaptive_ausmdv_asf"
+config.viscous = true
+config.extrema_clipping = false
+config.thermo_interpolator = "rhop"
+config.shock_detector = "NNG"
+
+config.compression_tolerance=0.1
+config.shock_detector_smoothing = 4
+config.strict_shock_detector = false
+config.gasdynamic_update_scheme="classic_rk3"
 config.flow_format='rawbinary'
 
 
@@ -51,7 +61,7 @@ spongepatch2= CoonsPatch:new{p00=Vector3:new{x=L,   y=0.0},
                              p11=Vector3:new{x=L+E2, y=H  },
                              p01=Vector3:new{x=L,   y=H  }}
 
-nx = 200
+nx = 400
 nsponge = math.floor((nx+1)/4)
 ny = math.floor((nx+1)*(H/L))
 dx_main = L/nx
@@ -93,6 +103,14 @@ spong2blk = FBArray:new{grid=sponge2grid, nib=1, njb=1,
 identifyBlockConnections()
 
 config.max_time = 200.0e-3  -- seconds
-config.dt_plot = 5.0e-4
 config.max_step = 10000000
 config.dt_init = 5.0e-6
+config.cfl_value=0.5
+
+with_catalyst = false
+if with_catalyst then
+   config.dt_plot = 10.0e-3
+   config.dt_catalyst= 5.0e-4
+else
+   config.dt_plot = 1.0e-3
+end
