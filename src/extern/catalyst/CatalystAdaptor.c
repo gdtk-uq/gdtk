@@ -19,6 +19,7 @@ typedef struct CatalystData
   double* vely;
   double* velz;
   double* Pressure;
+  double* temperature;
 } CatalystData;
 
 //-----------------------------------------------------------------------------
@@ -119,6 +120,14 @@ void do_catalyt_execute(int cycle, double time, CatalystData* data)
   conduit_node_set_path_char8_str(mesh, "fields/pressure/volume_dependent", "false");
   conduit_node_set_path_external_float64_ptr(
     mesh, "fields/pressure/values", data->Pressure, data->NumberOfCells);
+
+  // add temperature (cell-field)
+  conduit_node_set_path_char8_str(mesh, "fields/temperature/association", "element");
+  conduit_node_set_path_char8_str(mesh, "fields/temperature/topology", "mesh");
+  conduit_node_set_path_char8_str(mesh, "fields/temperature/volume_dependent", "false");
+  conduit_node_set_path_external_float64_ptr(
+    mesh, "fields/temperature/values", data->temperature, data->NumberOfCells);
+
   conduit_node_set_path_external_node(catalyst_exec_params, "catalyst/channels/grid/data", mesh);
 
 #if 0

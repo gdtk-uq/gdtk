@@ -28,6 +28,7 @@ struct CatalystData
   double* vely;
   double* velz;
   double* Pressure;
+  double* temperature;
 }
 
 void InitializeCatalystData(CatalystData* data, FluidBlock[] localFluidBlocks, int dimensions)
@@ -90,6 +91,9 @@ void InitializeCatalystData(CatalystData* data, FluidBlock[] localFluidBlocks, i
 
   if (data.Pressure) free(data.Pressure);
   data.Pressure = cast(double*)malloc(double.sizeof * numCells);
+
+  if (data.temperature) free(data.temperature);
+  data.temperature = cast(double*)malloc(double.sizeof * numCells);
 }
 
 void FinalizeCatalystData(CatalystData* data)
@@ -100,6 +104,7 @@ void FinalizeCatalystData(CatalystData* data)
   if (data.vely) free(data.vely);
   if (data.velz) free(data.velz);
   if (data.Pressure) free(data.Pressure);
+  if (data.temperature) free(data.temperature);
 }
 
 
@@ -112,6 +117,7 @@ void UpdateCatalystFieldData(CatalystData* data, FluidBlock[] localFluidBlocks)
             data.vely[offset+i]     = blk.celldata.flowstates[i].vel.y;
             data.velz[offset+i]     = blk.celldata.flowstates[i].vel.z;
             data.Pressure[offset+i] = blk.celldata.flowstates[i].gas.p;
+            data.temperature[offset+i] = blk.celldata.flowstates[i].gas.T;
         }
         offset += blk.ncells;
     }
