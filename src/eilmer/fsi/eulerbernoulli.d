@@ -7,6 +7,7 @@ import std.stdio;
 import core.time;
 import std.format;
 import std.array;
+import std.file;
 
 import nm.number;
 import nm.bbla;
@@ -218,7 +219,7 @@ public:
         foreach (i; 0 .. (myConfig.Nx + 1)) {
             formattedWrite(writer, "%1.18e %1.18e %1.18e %1.18e\n", X[i * 2].re, X[i * 2 + 1].re, V[i * 2].re, V[i * 2 + 1].re);
         }
-    }
+    } // end WriteToString
 
     override void ReadFromString(GzipByLine reader) {
         // Treat the reader like a regular file
@@ -230,5 +231,13 @@ public:
             X[i * 2 .. (i + 1) * 2] = line[0 .. 2];
             V[i * 2 .. (i + 1) * 2] = line[2 .. 4];
         }
-    }
+    } // end ReadFromString
+
+    override void WriteFSIToHistory(double t) {
+        // Write the ODE values to the history file
+        
+        foreach (node; myConfig.historyNodes) {
+            append(format("FSI/hist/%04d.dat", node), format("%1.18e %1.18e %1.18e %1.18e %1.18e\n", t, X[node * 2].re, X[node * 2 + 1].re, V[node * 2].re, V[node * 2 + 1].re));
+        }
+    } // end WriteToHistory
 }

@@ -54,9 +54,11 @@ public:
     int couplingStep;
     double[3] plateNormal;
     bool quasi3D;
+    bool writeMatrices;
     int[] movingBlks;
     DampingModel dampingModel;
     double dampingRatio;
+    int[] historyNodes;
 
     this(string jobName) {
         string fileName = "config/" ~ jobName ~ ".fsi";
@@ -76,8 +78,10 @@ public:
         this.plateNormal = getJSONdoublearray(jsonData, "plateNormal", [0.0, 1.0, 0.0]);
         this.couplingStep = getJSONint(jsonData, "couplingStep", 1);
         this.quasi3D = getJSONbool(jsonData, "quasi3D", false);
+        this.writeMatrices = getJSONbool(jsonData, "writeMatrices", false);
         this.movingBlks = getJSONintarray(jsonData, "movingBlks", [-1]);
         this.dampingModel = DampingModel_from_name(getJSONstring(jsonData, "dampingModel", "none"));
         this.dampingRatio = getJSONdouble(jsonData, "dampingRatio", 0.001);
+        this.historyNodes = getJSONintarray(jsonData, "historyNodes", []);
     }
 }

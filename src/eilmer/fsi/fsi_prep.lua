@@ -36,8 +36,17 @@ function fsi_prep.write_FSI_config_file(fileName)
     f:write(string.format('"youngsModulus" : %1.8e,\n', FSIOptions.youngsModulus))
     f:write(string.format('"poissonsRatio" : %1.8e,\n', FSIOptions.poissonsRatio))
     f:write(string.format('"quasi3D" : %s,\n', FSIOptions.quasi3D))
+    f:write(string.format('"writeMatrices" : %s,\n', FSIOptions.writeMatrices))
     f:write(string.format('"BCs" : "%s",\n', FSIOptions.BCs))
     f:write(string.format('"couplingStep" : %d,\n', FSIOptions.couplingStep))
+    f:write('"historyNodes" : [ ')
+    for _i, _nodeId in ipairs(FSIOptions.historyNodes) do
+        if _i == #FSIOptions.historyNodes then
+            f:write(string.format("%d ],\n", _nodeId))
+        else
+            f:write(string.format("%d, ", _nodeId))
+        end
+    end
     f:write('"movingBlks" : [ ')
     movingBlks = getMovingBlocks(FSIOptions)
     for _i, _blkId in ipairs(movingBlks) do

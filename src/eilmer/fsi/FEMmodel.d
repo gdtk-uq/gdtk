@@ -39,6 +39,7 @@ import std.conv;
 import std.algorithm;
 import std.regex;
 import std.format;
+import std.file;
 
 import util.lua_service;
 import util.lua;
@@ -129,6 +130,7 @@ public:
 
         if (!myL) { throw new Error("Could not allocate memory for Lua interpreter."); }
         luaL_openlibs(myL);
+
     }
 
     // begin modelSetup()
@@ -161,9 +163,11 @@ public:
         // Address boundary conditions first as they affect the formation of the matrices
         DetermineBoundaryConditions(myConfig.BCs);
         GenerateMassStiffnessMatrices();
-        WriteMatricesToFile();
+        if (myConfig.writeMatrices) { WriteMatricesToFile(); }
         MPermuteList = decomp!double(M);
 
+        // Prepare any history files
+        PrepareFSIHistoryFiles();
     } // end plate_setup()
 
     void finalize()
@@ -411,7 +415,7 @@ public:
             KFile.write("\n");
         }
         MFile.close(); KFile.close();
-    }
+    } // end WriteMatricesToFile
 
     void WriteFSIToFile(size_t tindx) {
         // Loosely off the write_solution(sblk...) function in fluidblockio_old.d.
@@ -423,15 +427,26 @@ public:
         // Compress the output
         outfile.compress(writer.data);
         outfile.finish();
-    }
+    } // end WriteFSIToFile
 
     void ReadFSIFromFile(size_t tindx) {
         // Read in the FSI file from a Gzipped file
         auto readFileByLine = new GzipByLine(format("FSI/t%04d.gzip", tindx));
         // Call the child reader method
         this.ReadFromString(readFileByLine);
-    }
+    } // end ReadFSIFromFile
 
+    void PrepareFSIHistoryFiles() {
+        // Prepare the history files
+
+        if (myConfig.historyNodes.length > 0) {
+            mkdir("FSI/hist");
+        }
+
+        foreach (node; myConfig.historyNodes) {
+            auto histFile = File(format("FSI/hist/%04d.dat", node), "w");
+        }
+    } // end PrepareFSIHistoryFiles
 
     // Methods that are model dependent
     abstract void GenerateMassStiffnessMatrices();
@@ -440,4 +455,5 @@ public:
     abstract void WriteToString(Appender!string writer);
     abstract void ReadFromString(GzipByLine reader);
     abstract void ConvertToNodeVel();
+    abstract void WriteFSIToHistory(double t);
 }

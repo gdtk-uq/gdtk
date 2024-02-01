@@ -1233,6 +1233,11 @@ int integrate_in_time(double target_time_as_requested)
             //
             // 4.2 (Occasionally) Write out the cell history data and loads on boundary groups data
             if ((SimState.time >= SimState.t_history) && !SimState.history_just_written) {
+                version(FSI) {
+                    foreach (FEMModel; FEMModels) {
+                        FEMModel.WriteFSIToHistory(SimState.time);
+                    }
+                }
                 write_history_cells_to_files(SimState.time);
                 SimState.history_just_written = true;
                 SimState.t_history = SimState.t_history + GlobalConfig.dt_history;
@@ -1678,7 +1683,15 @@ void finalize_simulation()
         write_solution_files();
         if (GlobalConfig.udf_supervisor_file.length > 0) { call_UDF_at_write_to_file(); }
     }
-    if (!SimState.history_just_written) { write_history_cells_to_files(SimState.time); }
+    if (!SimState.history_just_written) { 
+        write_history_cells_to_files(SimState.time);
+        version(FSI) {
+            foreach (FEMModel; FEMModels) {
+                FEMModel.WriteFSIToHistory(SimState.time);
+            }
+        }
+    }
+        
     if (!SimState.loads_just_written) {
         if (GlobalConfig.is_master_task) {
             init_current_loads_tindx_dir(SimState.current_loads_tindx);

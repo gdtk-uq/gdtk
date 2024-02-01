@@ -54,11 +54,18 @@ fsiOptionsHidden = {
 
     -- Optional run in quasi-3D mode- integrate the pressure in the z direction
     quasi3D = false,
+
+    -- Whether to write out the mass and stiffness matrices for post-processing
+    writeMatrices = false,
+
     -- BCs
     BCs = "CFFF",
 
     -- Every how many time steps do we update the plate
     couplingStep = 10,
+
+    -- Which nodes to write out at the history frequency
+    historyNodes = {},
 
     __index = function (t, k)
        return fsiOptionsHidden[k]

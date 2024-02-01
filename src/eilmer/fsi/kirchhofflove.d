@@ -8,6 +8,7 @@ import core.time;
 import std.format;
 import std.array;
 import std.range;
+import std.file;
 
 import nm.number;
 import nm.bbla;
@@ -410,7 +411,7 @@ public:
         foreach (node; 0 .. (myConfig.Nx + 1) * (myConfig.Nz + 1)) {
             formattedWrite(writer, "%.18e %1.8e %1.8e %1.8e %1.8e %1.8e\n", X[node*3].re, X[node*3+1], X[node*3+2].re, V[node*3].re, V[node*3+1].re, V[node*3+2].re);
         }
-    } // end writeToFile
+    } // end WriteToString
 
     override void ReadFromString(GzipByLine reader) {
         // Pop the header line
@@ -422,5 +423,13 @@ public:
             X[node*3 .. (node+1)*3] = to!(double[3])(line[0 .. 3]);
             V[node*3 .. (node+1)*3] = to!(double[3])(line[3 .. 6]);
         }
-    } // end readFromFile
+    } // end ReadFromString
+
+    override void WriteFSIToHistory(double t) {
+        // Write the node ODE solutions to history file
+
+        foreach (node; myConfig.historyNodes) {
+            append(format("FSI/hist/%04d.dat", node), format("%1.18e %1.18e %1.18e %1.18e %1.18e %1.18e %1.18e\n", t, X[node * 3], X[node * 3 + 1], X[node * 3 + 2], V[node * 3], V[node * 3 + 1], V[node * 3 + 2]));
+        }
+    } // end WriteFSIToHistory
 }
