@@ -310,7 +310,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
     version (FSI) {
         if ((SimState.is_restart) && (GlobalConfig.grid_motion == GridMotion.FSI)) {
             foreach (FEMModel; FEMModels) {
-                FEMModel.ReadFromFile(SimState.current_tindx);
+                FEMModel.ReadFSIFromFile(SimState.current_tindx);
             }
         }
     }

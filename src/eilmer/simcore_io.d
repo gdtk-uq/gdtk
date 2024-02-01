@@ -121,7 +121,7 @@ void write_solution_files()
     }
     version(FSI) {
         foreach (FEMModel; FEMModels) {
-            FEMModel.WriteToFile(SimState.current_tindx);
+            FEMModel.WriteFSIToFile(SimState.current_tindx);
         }
     }
     // Update times file, connecting the tindx value to SimState.time.

@@ -13,6 +13,7 @@ import nm.number;
 import nm.bbla;
 import nm.smla;
 import fsi;
+import gzip;
 import geom;
 
 class KirchhoffLovePlate : FEMModel {
@@ -402,24 +403,22 @@ public:
         }
     } // end determineBoundaryConditions
 
-    override void WriteToFile(size_t tindx) {
-        auto writeFile = File(format("FSI/t%04d.dat", tindx), "w+");
+    override void WriteToString(Appender!string writer) {
         // Set the header to describe the columns (w = displacement, theta_x = x slope, theta_z = z slope)
-        writeFile.write("# w theta_x theta_z dxdt dtheta_xdt dtheta_zdt\n");
+        formattedWrite(writer, "# w theta_x theta_z dxdt dtheta_xdt dtheta_zdt\n");
         // Write the position and velocities for each DoF
         foreach (node; 0 .. (myConfig.Nx + 1) * (myConfig.Nz + 1)) {
-            writeFile.write(format("%.18e %1.8e %1.8e %1.8e %1.8e %1.8e\n", X[node*3].re, X[node*3+1], X[node*3+2].re, V[node*3].re, V[node*3+1].re, V[node*3+2].re));
+            formattedWrite(writer, "%.18e %1.8e %1.8e %1.8e %1.8e %1.8e\n", X[node*3].re, X[node*3+1], X[node*3+2].re, V[node*3].re, V[node*3+1].re, V[node*3+2].re);
         }
     } // end writeToFile
 
-    override void ReadFromFile(size_t tindx) {
-        auto readFile = File(format("FSI/t%04d.dat", tindx), "r").byLine();
+    override void ReadFromString(GzipByLine reader) {
         // Pop the header line
-        readFile.popFront();
+        reader.popFront();
         double[6] line;
         // Take out each line and put into the relevant locations in X, V
         foreach (node; 0 .. (myConfig.Nx + 1) * (myConfig.Nz + 1)) {
-            line = map!(to!double)(splitter(readFile.front())).array; readFile.popFront();
+            line = map!(to!double)(splitter(reader.front())).array; reader.popFront();
             X[node*3 .. (node+1)*3] = to!(number[3])(line[0 .. 3]);
             V[node*3 .. (node+1)*3] = to!(number[3])(line[3 .. 6]);
         }

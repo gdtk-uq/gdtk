@@ -42,6 +42,7 @@ import std.format;
 
 import util.lua_service;
 import util.lua;
+import gzip;
 import geom;
 import fsi.femconfig;
 import nm.number;
@@ -412,11 +413,31 @@ public:
         MFile.close(); KFile.close();
     }
 
+    void WriteFSIToFile(size_t tindx) {
+        // Loosely off the write_solution(sblk...) function in fluidblockio_old.d.
+        // Open a zipfile, and pass it to the respective model writers.
+        auto outfile = new GzipOut("FSI/t%04d.gzip");
+        auto writer = appender!string();
+        // Call the child writer method
+        this.WriteToString(writer);
+        // Compress the output
+        outfile.compress(writer.data);
+        outfile.finish();
+    }
+
+    void ReadFSIFromFile(size_t tindx) {
+        // Read in the FSI file from a Gzipped file
+        auto readFileByLine = new GzipByLine(format("FSI/t%04d.gzip"));
+        // Call the child reader method
+        this.ReadFromString(readFileByLine);
+    }
+
+
     // Methods that are model dependent
     abstract void GenerateMassStiffnessMatrices();
     abstract void UpdateForceVector();
     abstract void DetermineBoundaryConditions(string BCs);
-    abstract void WriteToFile(size_t tindx);
-    abstract void ReadFromFile(size_t tindx);
+    abstract void WriteToString(Appender!string writer);
+    abstract void ReadFromString(GzipByLine reader);
     abstract void ConvertToNodeVel();
 }

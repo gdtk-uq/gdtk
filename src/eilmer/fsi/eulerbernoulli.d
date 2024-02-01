@@ -11,6 +11,7 @@ import std.array;
 import nm.number;
 import nm.bbla;
 import nm.smla;
+import gzip;
 import fsi;
 import geom;
 
@@ -211,21 +212,21 @@ public:
     } // end LocalMassMatrix
 
     // begin write
-    override void WriteToFile(size_t tindx) {
-        auto writeFile = File(format("FSI/t%04d.dat", tindx), "w+");
-        writeFile.write("# x theta_x dxdt dtheta_xdt\n");
+    override void WriteToString(Appender!string writer) {
+        // Use formattedWrite to pass strings to the appender
+        formattedWrite(writer, "x theta_x dxdt dtheta_xdt\n");
         foreach (i; 0 .. (myConfig.Nx + 1)) {
-            writeFile.write(format("%1.8e %1.8e %1.8e %1.8e\n", X[i * 2].re, X[i * 2 + 1].re, V[i * 2].re, V[i * 2 + 1].re));
+            formattedWrite(writer, "%1.18e %1.18e %1.18e %1.18e\n", X[i * 2].re, X[i * 2 + 1].re, V[i * 2].re, V[i * 2 + 1].re);
         }
     }
 
-    override void ReadFromFile(size_t tindx) {
-        auto readFile = File(format("FSI/t%04d.dat", tindx), "r").byLine();
+    override void ReadFromString(GzipByLine reader) {
+        // Treat the reader like a regular file
         // Pop the header line
-        readFile.popFront();
+        reader.popFront();
         double[4] line;
         foreach (i; 0 .. (myConfig.Nx + 1)) {
-            line = map!(to!double)(splitter(readFile.front())).array; readFile.popFront();
+            line = map!(to!double)(splitter(reader.front())).array; reader.popFront();
             X[i * 2 .. (i + 1) * 2] = line[0 .. 2];
             V[i * 2 .. (i + 1) * 2] = line[2 .. 4];
         }
