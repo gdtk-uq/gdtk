@@ -9,24 +9,23 @@
 
 module Spline {
 
-  param nSpline = 4;  // number of cubic-polynomial segments
-  // [TODO] Make this more like the C++ template so that the one program
-  // can have several splines of various sizes.
+  class CubicSpline {
+    param n: int;                // number of cubic-polynomial segments
+    var xs, ys: [{0..n}]real;    // n+1 interpolation points
+    var a, b, c: [{0..n}]real;   // cubic-polynomial coefficients
 
-  record CubicSpline {
-    var xs, ys: [{0..nSpline}]real;    // n+1 interpolation points
-    var a, b, c: [{0..<nSpline}]real;  // cubic-polynomial coefficients
-    //
+    // There will be n+1 knots, n segments and n-1 interior knots.
+    proc init(param n: int) {
+      this.n = n;
+    }
+
     // Sets up the interpolatory cubic spline through the (x, y) points.
     //   xs : sequence of x-coordinates
     //   ys : sequence of y-coordinates
-    //
-    // There will be n+1 knots, n segments and n-1 interior knots.
     proc ref set(xs: []real, ys: []real) throws
     {
-      const n = nSpline;
-      if n != xs.size-1 {
-        writeln("Incorrect size for xs, ys; nSpline=", nSpline);
+      if n != xs.size-1 || n != ys.size-1 {
+        writeln("Inconsistent size for xs, ys; n=", n);
         throw new owned Error();
       }
       this.xs = xs;
@@ -72,7 +71,7 @@ module Spline {
       if x < xs[0] then
         i = 0; // The point is off range to the left.
       else {
-        i = nSpline-1; // Start the search from the right-hand end.
+        i = n-1; // Start the search from the right-hand end.
         while x < xs[i] && i > 0 do i -= 1;
       }
       // Now that the have found the relevant segment,
@@ -83,8 +82,8 @@ module Spline {
 
     proc ref x0(): real { return xs[0]; }
     proc ref y0(): real { return ys[0]; }
-    proc ref xn(): real { return xs[nSpline]; }
-    proc ref yn(): real { return ys[nSpline]; }
+    proc ref xn(): real { return xs[n]; }
+    proc ref yn(): real { return ys[n]; }
   } // end record CubicSpline
 
 } // end module Spline

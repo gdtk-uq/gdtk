@@ -24,7 +24,8 @@ proc main() {
     const xx = x0 + dx*i;
     x_sample[i] = xx; y_sample[i] = runge(xx);
   }
-  var s: CubicSpline; s.set(x_sample, y_sample);
+  var s = new CubicSpline(4);
+  s.set(x_sample, y_sample);
   writeln("s=", s);
 }
 
