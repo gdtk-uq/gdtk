@@ -4,9 +4,9 @@
 /+ To implement a new solid model, a few things are required, most of which are outlined
 by the abstract functions defined at the end of this template.
         - model_setup(): tell the model how big the matrices/vectors should be, by defining
-                1. nNodes: number of nodes in the solid model
-                2. nDoF: total number of degrees of freedom (usually scalar * nNodes)
-                3. nQuadPoints: how many quadrature points on the model (usually scalar * number of                     elements)
+                1. nNodes: double of nodes in the solid model
+                2. nDoF: total double of degrees of freedom (usually scalar * nNodes)
+                3. nQuadPoints: how many quadrature points on the model (usually scalar * double of                     elements)
         - GenerateMassStiffnessMatrices(): build the mass and stiffness matrices for the solid
                 model.
         - UpdateForceVector(): Update the force vector using the external forces (pressure or
@@ -87,20 +87,20 @@ public:
     //                                      V = Xd
     // Assign pointers to the state vectors X, V and F, and allocate memory to them later when we
     // know how many elements in these vectors.
-    number[] X, V;
+    double[] X, V;
 
     // For the moment, just use dense matrices for the M, K matrices. Likely move to sparse 
     // matrices in future once kinks in implementation are ironed out.
-    Matrix!number K, M, F;
+    Matrix!double K, M, F;
 
     // Rather than inverting the mass matrix to solve the first ODE, solve the linear system Ax=B
     // where A = M, x = Vd, B = (-KX + F). For this, we need the permutation matrix of M.
     size_t[2][] MPermuteList;
 
     // Preallocate memory to be used during the time stepping calculation
-    number[] KDotX, XStage, VStage;
-    number[][] dX, dV;
-    Matrix!number rhs;
+    double[] KDotX, XStage, VStage;
+    double[][] dX, dV;
+    Matrix!double rhs;
 
     // Vector of node velocities in the reference frame of the plate, with the x direction being
     // normal to the plate.
@@ -110,7 +110,7 @@ public:
     Vector3 plateNormal, plateTangent1, plateTangent2;
     
     // Pressure at each node, taken from the fluid or UDF, at the quadrature points.
-    number[] northPressureAtQuads, southPressureAtQuads;
+    double[] northPressureAtQuads, southPressureAtQuads;
 
     // The boundary conditions requires certain DoFs to be set to 0
     size_t[] zeroedIndices;
@@ -143,26 +143,26 @@ public:
         PrepareNodeToVertexMap();
 
         // Allocate memory for the ODEs
-        K = new Matrix!number(nDoF); M = new Matrix!number(nDoF); F = new Matrix!number(nDoF, 1);
+        K = new Matrix!double(nDoF); M = new Matrix!double(nDoF); F = new Matrix!double(nDoF, 1);
         K.zeros(); M.zeros(); F.zeros();
 
         X.length = nDoF; V.length = nDoF; XStage.length = nDoF; VStage.length = nDoF; KDotX.length = nDoF;
         X[] = 0.0; V[] = 0.0; KDotX[] = 0.0;
 
-        dX = new number[][](nDoF, 4); dV = new number[][](nDoF, 4);
-        rhs = new Matrix!number(nDoF, 1);
+        dX = new double[][](nDoF, 4); dV = new double[][](nDoF, 4);
+        rhs = new Matrix!double(nDoF, 1);
 
         northPressureAtQuads.length = nQuadPoints; southPressureAtQuads.length = nQuadPoints;
         FEMNodeVel.length = nNodes;
 
-        // The memory for the vectors and matrices is assigned in the model files, as they may have different numbers of
-        // degrees of freedom therefore different numbers of elements.
+        // The memory for the vectors and matrices is assigned in the model files, as they may have different doubles of
+        // degrees of freedom therefore different doubles of elements.
 
         // Address boundary conditions first as they affect the formation of the matrices
         DetermineBoundaryConditions(myConfig.BCs);
         GenerateMassStiffnessMatrices();
         WriteMatricesToFile();
-        MPermuteList = decomp!number(M);
+        MPermuteList = decomp!double(M);
 
     } // end plate_setup()
 
@@ -302,11 +302,11 @@ public:
                         size_t[3] twoD_indx = blk.to_ijk_indices_for_cell(northCFDCellIds[i][n]);
                         foreach (k; 0 .. blk.nkc) {
                             size_t threeD_indx = blk.cell_index(twoD_indx[0], twoD_indx[1], k);
-                            northPressureAtQuads[northFEMNodeIds[i][n]] += blk.cells[threeD_indx].fs.gas.p;
+                            northPressureAtQuads[northFEMNodeIds[i][n]] += blk.cells[threeD_indx].fs.gas.p.re;
                         }
                         northPressureAtQuads[northFEMNodeIds[i][n]] /= blk.nkc;
                     } else {
-                        northPressureAtQuads[northFEMNodeIds[i][n]] = blk.cells[northCFDCellIds[i][n]].fs.gas.p;
+                        northPressureAtQuads[northFEMNodeIds[i][n]] = blk.cells[northCFDCellIds[i][n]].fs.gas.p.re;
                     }
                 }
             }
@@ -320,11 +320,11 @@ public:
                         size_t[3] twoD_indx = blk.to_ijk_indices_for_cell(southCFDCellIds[i][n]);
                         foreach (k; 0 .. blk.nkc) {
                             size_t threeD_indx = blk.cell_index(twoD_indx[0], twoD_indx[1], k);
-                            southPressureAtQuads[southFEMNodeIds[i][n]] += blk.cells[threeD_indx].fs.gas.p;
+                            southPressureAtQuads[southFEMNodeIds[i][n]] += blk.cells[threeD_indx].fs.gas.p.re;
                         }
                         southPressureAtQuads[southFEMNodeIds[i][n]] /= blk.nkc;
                     } else {
-                        southPressureAtQuads[southFEMNodeIds[i][n]] = blk.cells[southCFDCellIds[i][n]].fs.gas.p;
+                        southPressureAtQuads[southFEMNodeIds[i][n]] = blk.cells[southCFDCellIds[i][n]].fs.gas.p.re;
                     }
                 }
             }
@@ -353,7 +353,7 @@ public:
         // First stage
         dot(K, X, KDotX);
         rhs._data[] = F._data[] - KDotX[];
-        solve!number(M, rhs, MPermuteList);
+        solve!double(M, rhs, MPermuteList);
         dV[][0] = rhs._data[];
         dX[][0] = V[];
 
@@ -362,7 +362,7 @@ public:
 
         dot(K, XStage, KDotX);
         rhs._data[] = F._data[] - KDotX[];
-        solve!number(M, rhs, MPermuteList);
+        solve!double(M, rhs, MPermuteList);
         dV[][1] = rhs._data[];
         dX[][1] = VStage[];
 
@@ -371,7 +371,7 @@ public:
 
         dot(K, XStage, KDotX);
         rhs._data[] = F._data[] - KDotX[];
-        solve!number(M, rhs, MPermuteList);
+        solve!double(M, rhs, MPermuteList);
         dV[][2] = rhs._data[];
         dX[][2] = VStage[];
 
@@ -380,7 +380,7 @@ public:
 
         dot(K, XStage, KDotX);
         rhs._data[] = F._data[] - KDotX[];
-        solve!number(M, rhs, MPermuteList);
+        solve!double(M, rhs, MPermuteList);
         dV[][3] = rhs._data[];
         dX[][3] = VStage[];
 
@@ -416,7 +416,7 @@ public:
     void WriteFSIToFile(size_t tindx) {
         // Loosely off the write_solution(sblk...) function in fluidblockio_old.d.
         // Open a zipfile, and pass it to the respective model writers.
-        auto outfile = new GzipOut("FSI/t%04d.gzip");
+        auto outfile = new GzipOut(format("FSI/t%04d.gzip", tindx));
         auto writer = appender!string();
         // Call the child writer method
         this.WriteToString(writer);
@@ -427,7 +427,7 @@ public:
 
     void ReadFSIFromFile(size_t tindx) {
         // Read in the FSI file from a Gzipped file
-        auto readFileByLine = new GzipByLine(format("FSI/t%04d.gzip"));
+        auto readFileByLine = new GzipByLine(format("FSI/t%04d.gzip", tindx));
         // Call the child reader method
         this.ReadFromString(readFileByLine);
     }

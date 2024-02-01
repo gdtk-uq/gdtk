@@ -34,13 +34,13 @@ public:
 
     // begin generateMassStiffnessMatrices
     override void GenerateMassStiffnessMatrices() {
-        number l = myConfig.length / myConfig.Nx;
+        double l = myConfig.length / myConfig.Nx;
 
         // Generate the local stiffness and mass matrices- for uniform meshes, these are the same for every element
         // See function signatures for descriptions on where to find the specifications of the matrices.
-        Matrix!number KL = LocalStiffnessMatrix(l);
+        Matrix!double KL = LocalStiffnessMatrix(l);
         KL.scale(myConfig.youngsModulus * (pow(myConfig.thickness, 3) / 12) / pow(l, 3));
-        Matrix!number ML = LocalMassMatrix(l);
+        Matrix!double ML = LocalMassMatrix(l);
         ML.scale(myConfig.thickness * l * myConfig.density / 420);
 
         // Iterate through the elements, then the nodes per element, then DoFs etc.
@@ -90,11 +90,11 @@ public:
         }
     } // end ConvertToNodeVel
 
-    number[4] ShapeFunctionEval(number L, number x) {
+    double[4] ShapeFunctionEval(double L, double x) {
         // Evaluate the shape functions, Eq 2.22 in
         // "Programming the Finite Element Method"
         // at the quadrature points
-        number[4] N;
+        double[4] N;
         N[0] = (1 / pow(L, 3)) * (pow(L, 3) - 3 * L * pow(x, 2) + 2 * pow(x, 3));
         N[1] = (1 / pow(L, 2)) * (pow(L, 2) * x - 2 * L * pow(x, 2) + pow(x, 3));
         N[2] = (1 / pow(L, 3)) * (3 * L * pow(x, 2) - 2 * pow(x, 3));
@@ -107,17 +107,17 @@ public:
         // "Programming the Finite Element Method" by Smith et al.
         // with the modification that q be a function x and moced inside the integral.
         
-        number l = myConfig.length / myConfig.Nx;
+        double l = myConfig.length / myConfig.Nx;
 
         // Evaluate the shape functions
-        number[4] Nq1, Nq2;
+        double[4] Nq1, Nq2;
         Nq1 = ShapeFunctionEval(l, (l / 2) * (-1 / sqrt(3.) + 1));
         Nq2 = ShapeFunctionEval(l, (l / 2) * (1 / sqrt(3.) + 1));
 
         // Perform two point gauss quadrature to compute the integral
         foreach (i; 0 .. myConfig.Nx) {
-            number q1 = southPressureAtQuads[2*i] - northPressureAtQuads[2*i];
-            number q2 = southPressureAtQuads[2*i+1] - northPressureAtQuads[2*i+1];
+            double q1 = southPressureAtQuads[2*i] - northPressureAtQuads[2*i];
+            double q2 = southPressureAtQuads[2*i+1] - northPressureAtQuads[2*i+1];
 
             F._data[i*2 .. (i+2)*2] += (l / 2) * (q1 * Nq1[] + q2 * Nq2[]);
         }
@@ -172,11 +172,11 @@ public:
     } // end determineBoundaryConditions
 
     // begin LocalStiffnessMatrix
-    Matrix!number LocalStiffnessMatrix(number l) {
+    Matrix!double LocalStiffnessMatrix(double l) {
         // Generate the element stiffness matrix from equation 2.26 in
         // "Programming the Finite Element Method" by Smith et al.
         // (with scaling performed in the higher function)
-        Matrix!number KL = new Matrix!number(4);
+        Matrix!double KL = new Matrix!double(4);
         KL[0, 0] = 12; KL[0, 1] = 6 * l; KL[0, 2] = -12; KL[0, 3] = 6 * l;
         KL[1, 1] = 4 * pow(l, 2); KL[1, 2] = -6 * l; KL[1, 3] = 2 * pow(l, 2);
         KL[2, 2] = 12; KL[2, 3] = -6 * l;
@@ -192,11 +192,11 @@ public:
     } // end LocalStiffnessMatrix
 
     // begin LocalMassMatrix
-    Matrix!number LocalMassMatrix(number l) {
+    Matrix!double LocalMassMatrix(double l) {
         // Generate the element mass matrix from equation 2.30 in
         // "Programming the Finite Element Method" by Smith et al.
         // (with scaling performed in the higher level)
-        Matrix!number ML = new Matrix!number(4);
+        Matrix!double ML = new Matrix!double(4);
         ML[0, 0] = 156; ML[0, 1] = 22 * l; ML[0, 2] = 54; ML[0, 3] = -13 * l;
         ML[1, 1] = 4 * pow(l, 2); ML[1, 2] = 13 * l; ML[1, 3] = -3 * pow(l, 2);
         ML[2, 2] = 156; ML[2, 3] = -22 * l;

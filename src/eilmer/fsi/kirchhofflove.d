@@ -34,12 +34,12 @@ public:
     }
 
     override void GenerateMassStiffnessMatrices() {
-        number a = myConfig.length / (2 * myConfig.Nx);
-        number b = myConfig.width / (2 * myConfig.Nz);
+        double a = myConfig.length / (2 * myConfig.Nx);
+        double b = myConfig.width / (2 * myConfig.Nz);
 
-        Matrix!number KL = LocalStiffnessMatrix(a, b, myConfig.poissonsRatio);
+        Matrix!double KL = LocalStiffnessMatrix(a, b, myConfig.poissonsRatio);
         KL.scale(myConfig.youngsModulus * pow(myConfig.thickness, 3) * a * b / (12 * (1 - pow(myConfig.poissonsRatio, 2))));
-        Matrix!number ML = LocalMassMatrix(a, b);
+        Matrix!double ML = LocalMassMatrix(a, b);
         ML.scale(myConfig.density * myConfig.thickness * a * b);
 
         size_t globalNodeIndx, globalNodeIndxInner, globalRowIndx, globalColIndx, localRowIndx, localColIndx;
@@ -97,15 +97,15 @@ public:
         }
     } // end LocalNodeToGlobalNode
  
-    Matrix!number LocalStiffnessMatrix(number a, number b, number v) {
+    Matrix!double LocalStiffnessMatrix(double a, double b, double v) {
         // Allocate memory for the local stiffness matrix
-        Matrix!number KL = new Matrix!number(12); KL.zeros();
+        Matrix!double KL = new Matrix!double(12); KL.zeros();
 
         // Build the constituitive matrix as per Eq 5.12 in 
         // "Structural Analysis with the Finite Element Method: Linear Statics, Vol 2"
         // The coefficient E/(1-v^2) is applied later
 
-        Matrix!number D = new Matrix!number(3); D.zeros();
+        Matrix!double D = new Matrix!double(3); D.zeros();
         D[0, 0] = 1; D[0, 1] = v;
         D[1, 0] = v; D[1, 1] = 1;
         D[2, 2] = (1 - v) / 2;
@@ -115,7 +115,7 @@ public:
         double[4] etaQuad = [-1, -1, 1, 1]; etaQuad[] *= (1 / sqrt(3.0));
 
         // Allocate memory for the B matrix, which is evaluated at each quad point
-        Matrix!number B = new Matrix!number(3, 12);
+        Matrix!double B = new Matrix!double(3, 12);
 
         // Iterate through the quadrature points
         foreach (quadPoint; 0 .. 4) {
@@ -160,15 +160,15 @@ public:
             B[2,10] = (3 * xi * xi - 2 * xi - 1) / (4 * b);
             B[2,11] = (-3 * eta * eta - 2 * eta + 1) / (4 * a);
 
-            Matrix!number BDB = dot(dot(transpose(B), D), B);
+            Matrix!double BDB = dot(dot(transpose(B), D), B);
             KL._data[] += BDB._data[];
         } // end foreach xi, eta
         return KL;
     } // LocalStiffnessMatrix
 
-    Matrix!number LocalMassMatrix(number a, number b) {
+    Matrix!double LocalMassMatrix(double a, double b) {
         // Allocate memory for the local mass matrix
-        Matrix!number ML = new Matrix!number(12); ML.zeros();
+        Matrix!double ML = new Matrix!double(12); ML.zeros();
 
         // Here, we only need the shape functions and their first derivatives,
         // so it's easy enough to write out by hand. So we will loop through the nodes,
@@ -181,7 +181,7 @@ public:
         double[4] xiQuad = xn[] * (1 / sqrt(3.0)); double[4] etaQuad = yn[] * (1 / sqrt(3.0));
 
         // Allocate memory for the N matrix
-        Matrix!number N = new Matrix!number(3, 12);
+        Matrix!double N = new Matrix!double(3, 12);
 
         // Iterate through quadrature points
         foreach (quadPoint; 0 .. 4) {
@@ -208,9 +208,9 @@ public:
     override void UpdateForceVector() {
         // Update the external forcing vector using the fluid pressures at the quadrature
         // locations
-        number a = myConfig.length / (2 * myConfig.Nx);
-        number b = myConfig.width / (2 * myConfig.Nz);
-        number[12] FL;
+        double a = myConfig.length / (2 * myConfig.Nx);
+        double b = myConfig.width / (2 * myConfig.Nz);
+        double[12] FL;
 
         // We need to evaluate Eq. 5.46 in 
         // "Structural Analysis with the Finite Element Method: Linear Statics, Vol 2"
@@ -228,7 +228,7 @@ public:
 
         // Iterate through the elements
         size_t globalNodeIndx, globalQuadId;
-        number externalForce;
+        double externalForce;
         foreach (k; 0 .. myConfig.Nz) {
             foreach (i; 0 .. myConfig.Nx) {
                 // Iterate through nodes on the element to build the local force matrix
@@ -419,8 +419,8 @@ public:
         // Take out each line and put into the relevant locations in X, V
         foreach (node; 0 .. (myConfig.Nx + 1) * (myConfig.Nz + 1)) {
             line = map!(to!double)(splitter(reader.front())).array; reader.popFront();
-            X[node*3 .. (node+1)*3] = to!(number[3])(line[0 .. 3]);
-            V[node*3 .. (node+1)*3] = to!(number[3])(line[3 .. 6]);
+            X[node*3 .. (node+1)*3] = to!(double[3])(line[0 .. 3]);
+            V[node*3 .. (node+1)*3] = to!(double[3])(line[3 .. 6]);
         }
     } // end readFromFile
 }
