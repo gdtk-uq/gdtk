@@ -161,6 +161,7 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
     case "mapped_cell_exchange_copy": // old name is also allowed
         bool cmff = getJSONbool(jsonData, "cell_mapping_from_file", false);
         string fname = getJSONstring(jsonData, "filename", "none");
+        bool symmetric_mapping = getJSONbool(jsonData, "symmetric_mapping", false);
         bool transform_pos = getJSONbool(jsonData, "transform_position", false);
         Vector3 c0 = getJSONVector3(jsonData, "c0", Vector3(0.0,0.0,0.0));
         Vector3 n = getJSONVector3(jsonData, "n", Vector3(0.0,0.0,1.0));
@@ -171,7 +172,7 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
         double[] Rmatrix = getJSONdoublearray(jsonData, "Rmatrix",
                                               [1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0]);
         newGCE = new GhostCellMappedCellCopy(blk_id, boundary,
-                                             cmff, fname,
+                                             cmff, fname, symmetric_mapping,
                                              transform_pos, c0, n, alpha, delta, lmc,
                                              rvq, Rmatrix);
         break;

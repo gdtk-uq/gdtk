@@ -47,7 +47,7 @@ public:
     size_t[string] ghost_cell_index_from_faceTag;
     // For each ghost-cell associated with the current boundary,
     // we will have a corresponding "mapped cell", also known as "source cell"
-    // from which we will copy the flow conditions.
+    // from which we will copy the :flow conditions.
     // In the shared-memory flavour of the code, it is easy to get a direct
     // reference to each such mapped cell and store that for easy access.
     FVCell[] mapped_cells;
@@ -59,6 +59,7 @@ public:
     // with the ghost cell via the faceTag.
     bool cell_mapping_from_file;
     string mapped_cells_filename;
+    bool symmetric_mapping;
     BlockAndCellId[string][size_t] mapped_cells_list;
     version(mpi_parallel) {
         // In the MPI-parallel code, we do not have such direct access and so
@@ -107,6 +108,7 @@ public:
     this(int id, int boundary,
          bool cell_mapping_from_file,
          string mapped_cells_filename,
+         bool symmetric_mapping_,
          bool transform_pos,
          ref const(Vector3) c0, ref const(Vector3) n, double alpha,
          ref const(Vector3) delta,
@@ -117,6 +119,7 @@ public:
         super(id, boundary, "MappedCellCopy");
         this.cell_mapping_from_file = cell_mapping_from_file;
         this.mapped_cells_filename = mapped_cells_filename;
+        this.symmetric_mapping = symmetric_mapping_;
         this.transform_position = transform_pos;
         this.c0 = c0;
         this.n = n; this.n.normalize();
@@ -174,91 +177,178 @@ public:
             case Grid_t.structured_grid:
                 throw new Error("cell mapping from file is not implemented for structured grids");
             } // end switch grid_type
+
             auto f = File(mapped_cells_filename, "r");
-            string getHeaderContent(string target)
-            {
-                // Helper function to proceed through file, line-by-line,
-                // looking for a particular header line.
-                // Returns the content from the header line and leaves the file
-                // at the next line to be read, presumably with expected data.
-                while (!f.eof) {
-                    auto line = f.readln().strip();
-                    if (canFind(line, target)) {
-                        auto tokens = line.split("=");
-                        return tokens[1].strip();
-                    }
-                } // end while
-                return ""; // didn't find the target
-            }
-            //
-            // Read the entire mapped_cells file.
-            // The single mapped_cell file contains the indices mapped cells
-            // for all ghost-cells, for all blocks.
-            //
-            // They are in sections labelled by the block id.
-            // Each boundary face is identified by its "faceTag",
-            // which is a string composed of the vertex indices, in ascending order.
-            // The order of the ghost-cells is assumed the same as for each
-            // grids underlying the FluidBlock.
-            //
-            // For the shared memory code, we only need the section for the block
-            // associated with the current boundary.
-            // For the MPI-parallel code, we need the mappings for all blocks,
-            // so that we know what requests for data to expect from other blocks.
-            //
-            string txt = getHeaderContent(format("MappedBlocks in BLOCK[%d]", blk.id));
-            if (!txt.length) {
-                string msg = format("Did not find mapped blocks section for block id=%d.", blk.id);
-                throw new FlowSolverException(msg);
-            }
+            /*
+             * RJG, 2024-02-03
+             * Introduce new code path here for handling symmetric-type mapped cells.
+             *
+             * The first branch of the code that follows works for METIS-type mapped cell arrangements.
+             * In the METIS-type, a single boundary condition per block handles all mapped cell
+             * connections to all other blocks that might adjoin.
+             *
+             * The other arrangement we support is a symmetric-type mapping, in the second branch.
+             * A block might have multiple BCs with mapped cells. Each of those BCs is involved in a
+             * one-for-one mapped cell exchange with a boundary on a different block. This arrangement might
+             * typically arise if one converts a structured grid to an unstructured grid.
+             */
             size_t[] neighbour_block_id_list;
-            neighbour_block_id_list ~= blk.id;
-            foreach (id; txt.split()) {
-                neighbour_block_id_list ~= to!int(id);
-            }
-            neighbour_block_id_list.sort();
-            //
-            foreach (dest_blk_id; neighbour_block_id_list) {
-                txt = getHeaderContent(format("NMappedCells in BLOCK[%d]", dest_blk_id));
+            if (!symmetric_mapping) {
+                // What we'll call a METIS-type arrangement.
+                //
+                // Read the entire mapped_cells file.
+                // The single mapped_cell file contains the indices mapped cells
+                // for all ghost-cells, for all blocks.
+                //
+                // They are in sections labelled by the block id.
+                // Each boundary face is identified by its "faceTag",
+                // which is a string composed of the vertex indices, in ascending order.
+                // The order of the ghost-cells is assumed the same as for each
+                // grids underlying the FluidBlock.
+                //
+                // For the shared memory code, we only need the section for the block
+                // associated with the current boundary.
+                // For the MPI-parallel code, we need the mappings for all blocks,
+                // so that we know what requests for data to expect from other blocks.
+                //
+                string getHeaderContent(string target)
+                {
+                    // Helper function to proceed through file, line-by-line,
+                    // looking for a particular header line.
+                    // Returns the content from the header line and leaves the file
+                    // at the next line to be read, presumably with expected data.
+                    while (!f.eof) {
+                        auto line = f.readln().strip();
+                        if (canFind(line, target)) {
+                            auto tokens = line.split("=");
+                            return tokens[1].strip();
+                        }
+                    } // end while
+                    return ""; // didn't find the target
+                }
+
+                string txt = getHeaderContent(format("MappedBlocks in BLOCK[%d]", blk.id));
                 if (!txt.length) {
-                    string msg = format("Did not find mapped cells section for destination block id=%d.",
-                                        dest_blk_id);
+                    string msg = format("Did not find mapped blocks section for block id=%d.", blk.id);
                     throw new FlowSolverException(msg);
                 }
-                size_t nfaces  = to!size_t(txt);
-                foreach(i; 0 .. nfaces) {
+                neighbour_block_id_list ~= blk.id;
+                foreach (id; txt.split()) {
+                    neighbour_block_id_list ~= to!int(id);
+                }
+                neighbour_block_id_list.sort();
+                //
+                foreach (dest_blk_id; neighbour_block_id_list) {
+                    txt = getHeaderContent(format("NMappedCells in BLOCK[%d]", dest_blk_id));
+                    if (!txt.length) {
+                        string msg = format("Did not find mapped cells section for destination block id=%d.",
+                                            dest_blk_id);
+                        throw new FlowSolverException(msg);
+                    }
+                    size_t nfaces = to!size_t(txt);
+                    foreach(i; 0 .. nfaces) {
+                        auto lineContent = f.readln().strip();
+                        auto tokens = lineContent.split();
+                        string faceTag = tokens[0];
+                        size_t src_blk_id = to!size_t(tokens[1]);
+                        size_t src_cell_id = to!size_t(tokens[2]);
+                        mapped_cells_list[dest_blk_id][faceTag] = BlockAndCellId(src_blk_id, src_cell_id);
+                        version(mpi_parallel) {
+                            // These lists will be used to direct data when packing and unpacking
+                            // the buffers used to send data between the MPI tasks.
+                            src_cell_ids[src_blk_id][dest_blk_id] ~= src_cell_id;
+                            ghost_cell_indices[src_blk_id][dest_blk_id] ~= i;
+                            // If we are presently reading the section for the current block,
+                            // we check that the listed faces are in the same order as the
+                            // underlying grid.
+                            if (blk.id == dest_blk_id) {
+                                if (canFind(ghost_cell_index_from_faceTag.keys(), faceTag)) {
+                                    if (i != ghost_cell_index_from_faceTag[faceTag]) {
+                                        throw new Error(format("Oops, ghost-cell indices do not match: %d %d",
+                                                               i, ghost_cell_index_from_faceTag[faceTag]));
+                                    }
+                                } else {
+                                    throw new Error(format("Oops, cannot find faceTag=\"%s\" for block id=%d", faceTag, blk.id));
+                                }
+                            }
+                        } // end version(mpi_parallel)
+                    }
+                } // end foreach dest_blk_id
+            } // end (!symmetric_mapping)
+            else { // mapped cells are symmetric in terms of BCs.
+                // Look for relevant section in file.
+                bool findSection(string sectionLabel, ref size_t otherBlkId, ref size_t otherBcId, ref size_t nfaces)
+                {
+                    while (!f.eof) {
+                        auto line = f.readln.strip;
+                        if (canFind(line, sectionLabel)) {
+                            auto tokens = line.split(":");
+                            otherBlkId = to!size_t(tokens[1].strip);
+                            otherBcId = to!size_t(tokens[2].strip);
+                            nfaces = to!size_t(tokens[3].strip);
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+                size_t blkId = blk.id;
+                auto sectionLabel = format("block-%d-boundary-%d", blkId, which_boundary);
+                size_t src_blk_id, src_bndry_id, nfaces;
+                if (!findSection(sectionLabel, src_blk_id, src_bndry_id, nfaces)) {
+                    throw new Error(format("Oops, failed to find section in mapped-cells file: %s", sectionLabel));
+                }
+                neighbour_block_id_list ~= src_blk_id;
+                // We treat ourself as a neighbour block. This is to do with setting up MPI connections later.
+                neighbour_block_id_list ~= blkId;
+                neighbour_block_id_list.sort;
+
+                // Read to find connections on src block
+                f.rewind;
+                sectionLabel = format("block-%d-boundary-%d", src_blk_id, src_bndry_id);
+                size_t dummy;
+                if (!findSection(sectionLabel, dummy, dummy, dummy)) {
+                    throw new Error(format("Oops, failed to find section in mapped-cells file: %s", sectionLabel));
+                }
+                foreach (i; 0 .. nfaces) {
                     auto lineContent = f.readln().strip();
                     auto tokens = lineContent.split();
                     string faceTag = tokens[0];
-                    size_t src_blk_id = to!size_t(tokens[1]);
-                    size_t src_cell_id = to!size_t(tokens[2]);
-                    mapped_cells_list[dest_blk_id][faceTag] = BlockAndCellId(src_blk_id, src_cell_id);
-                    version(mpi_parallel) {
-                        // These lists will be used to direct data when packing and unpacking
-                        // the buffers used to send data between the MPI tasks.
-                        src_cell_ids[src_blk_id][dest_blk_id] ~= src_cell_id;
-                        ghost_cell_indices[src_blk_id][dest_blk_id] ~= i;
-                        // If we are presently reading the section for the current block,
-                        // we check that the listed faces are in the same order as the
-                        // underlying grid.
-                        if (blk.id == dest_blk_id) {
-                            if (canFind(ghost_cell_index_from_faceTag.keys(), faceTag)) {
-                                if (i != ghost_cell_index_from_faceTag[faceTag]) {
-                                    throw new Error(format("Oops, ghost-cell indices do not match: %d %d",
-                                                           i, ghost_cell_index_from_faceTag[faceTag]));
-                                }
-                            } else {
-                                foreach (ft; ghost_cell_index_from_faceTag.keys()) {
-                                    writefln("ghost_cell_index_from_faceTag[\"%s\"] = %d",
-                                             ft, ghost_cell_index_from_faceTag[ft]);
-                                }
-                                throw new Error(format("Oops, cannot find faceTag=\"%s\" for block id=%d", faceTag, blk.id));
+                    size_t src_cell_id = to!size_t(tokens[1]);
+                    mapped_cells_list[src_blk_id][faceTag] = BlockAndCellId(src_blk_id, src_cell_id);
+                    version (mpi_parallel) {
+                        src_cell_ids[blkId][src_blk_id] ~= src_cell_id;
+                        ghost_cell_indices[blkId][src_blk_id] ~= i;
+                    }
+                }
+                // Find connections on this block.
+                f.rewind;
+                sectionLabel = format("block-%d-boundary-%d", blkId, which_boundary);
+                findSection(sectionLabel, dummy, dummy, dummy);
+                // We add these reverse connections too.
+                foreach (i; 0 .. nfaces) {
+                    auto lineContent = f.readln.strip;
+                    auto tokens = lineContent.split();
+                    string faceTag = tokens[0];
+                    size_t src_cell_id = to!size_t(tokens[1]);
+                    mapped_cells_list[blkId][faceTag] = BlockAndCellId(blkId, src_cell_id);
+                    version (mpi_parallel) {
+                        src_cell_ids[src_blk_id][blkId] ~= src_cell_id;
+                        ghost_cell_indices[src_blk_id][blkId] ~= i;
+                        // We can check that the listed faces are the same order as the underlying grid
+                        // at this point.
+                        if (canFind(ghost_cell_index_from_faceTag.keys(), faceTag)) {
+                            if (i != ghost_cell_index_from_faceTag[faceTag]) {
+                                throw new Error(format("Oops, ghost-cell indices do not match: %d %d",
+                                                       i, ghost_cell_index_from_faceTag[faceTag]));
                             }
+                        }
+                        else {
+                            throw new Error(format("Oops, cannot find faceTag=\"%s\" for block id=%d boundary= %d", faceTag, blk.id, which_boundary));
                         }
                     }
                 }
-            } // end foreach dest_blk_id
-            //
+            } // end else (symmetric_mapping)
             version(mpi_parallel) {
                 //
                 // No communication needed just now because all MPI tasks have the full mapping,
@@ -503,7 +593,7 @@ public:
                 mapped_cells ~= closest_cell;
             }
         } // end foreach mygc
-	// TODO: temporarily removing the GC calls below, they are (oddly) computationally expensive - KD 26/03/2019. 
+	// TODO: temporarily removing the GC calls below, they are (oddly) computationally expensive - KD 26/03/2019.
         //GC.collect();
         //GC.minimize();
     } // end set_up_cell_mapping_via_search()
@@ -554,10 +644,11 @@ public:
                 auto buf = outgoing_geometry_buf_list[i];
                 size_t ii = 0;
                 foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
+                    writefln("blkId= %d, i= %d outBlk= %d cid= %d", blk.id, i, outgoing_block_list[i], cid);
                     auto c = blk.cells[cid];
                     foreach (j; 0 .. blk.myConfig.n_grid_time_levels) {
                         buf[ii++] = c.pos[j].x.re; version(complex_numbers) { buf[ii++] = c.pos[j].x.im; }
-                        buf[ii++] = c.pos[j].y.re; version(complex_numbers) { buf[ii++] = c.pos[j].y.im; } 
+                        buf[ii++] = c.pos[j].y.re; version(complex_numbers) { buf[ii++] = c.pos[j].y.im; }
                         buf[ii++] = c.pos[j].z.re; version(complex_numbers) { buf[ii++] = c.pos[j].z.im; }
                         buf[ii++] = c.volume[j].re; version(complex_numbers) { buf[ii++] = c.volume[j].im; }
                         buf[ii++] = c.areaxy[j].re; version(complex_numbers) { buf[ii++] = c.areaxy[j].im; }
@@ -630,8 +721,8 @@ public:
     size_t flowstate_buffer_entry_size(const LocalConfig myConfig)
     {
         /*
-        Compute the amount of space needed for one flowstate in the SEND/RECV buffer 
-        Previously, this code was duplicated in two places, and it was easy to 
+        Compute the amount of space needed for one flowstate in the SEND/RECV buffer
+        Previously, this code was duplicated in two places, and it was easy to
         get bitten by not changing both at once when adding things to the flowstate variables
 
         Note: This routine must be kept consistent with the buffer packing in exchange_flowstate

@@ -52,7 +52,7 @@ options ([+] can be repeated):
 
  -v, --verbose [+]
      Increase the verbosity during grid conversion process.
- -gt, --grid-type=gziptext|rawbinary
+ -t, --grid-type=gziptext|rawbinary
      Set the grid type. Default: gziptext
 
 `, cmdName, lmrCfg.savedSgridDir, lmrCfg.gridDirectory, lmrCfg.savedSgridDir);
@@ -71,17 +71,17 @@ void main_(string[] args)
            "t|grid-type", &gridType
           );
 
-    if (verbosity >= 0) {
+    if (verbosity >= 1) {
         writefln("lmr %s: Begin conversion of structured grids to unstructured grids.", cmdName);
     }
 
     /* 0. Pick up metadata and see if we can do anything with it. */
-    if (verbosity >= 1) {
+    if (verbosity >= 2) {
         writefln("   Reading grid metadata from '%s'", lmrCfg.gridMetadataFile);
     }
     JSONValue gridMetadata = readJSONfile(lmrCfg.gridMetadataFile);
     int ngrids = to!int(gridMetadata["ngrids"].integer);
-    if (verbosity >= 1) {
+    if (verbosity >= 2) {
         writefln("   Number of grids to convert: %d", ngrids);
     }
     // Pass over all grids and check that they are structured.
@@ -96,13 +96,13 @@ void main_(string[] args)
     // If we get this far, we at least have structured grids (and only structured grids) to work with.
 
     /* 1. Let's read in the grids. */
-    if (verbosity >= 1) {
+    if (verbosity >= 2) {
         writefln("   Reading in structured grids.");
     }
     StructuredGrid[] sgrids;
     JSONValue[] sgridsMetadata;
     foreach (ig; 0 .. ngrids) {
-        if (verbosity >= 2) {
+        if (verbosity >= 3) {
             writefln("      Reading in structured grid: %04d", ig);
         }
         sgridsMetadata ~= readJSONfile(gridMetadataName(ig));
@@ -113,12 +113,12 @@ void main_(string[] args)
     }
 
     /* 2. Now, form unstructured grids from the structured grids. */
-    if (verbosity >= 1) {
+    if (verbosity >= 2) {
         writeln("   Creating unstructured grids.");
     }
     UnstructuredGrid[] ugrids;
     foreach (ig, sgrid; sgrids) {
-        if (verbosity >= 2) {
+        if (verbosity >= 3) {
             writefln("      Creating unstructured grid: %04d", ig);
         }
         ugrids ~= new UnstructuredGrid(sgrid);
@@ -128,35 +128,36 @@ void main_(string[] args)
     BlockAndCellId[string][size_t] mappedCellsList;
     string[size_t][size_t] newTags;
     string[CellAndFaceId][size_t] globalFaceTags;
-    convertConnections(gridMetadata, sgrids, mappedCellsList, newTags, globalFaceTags);
+    BlockAndBoundary[BlockAndBoundary] connMap;
+    convertConnections(gridMetadata, sgrids, mappedCellsList, newTags, globalFaceTags, connMap);
 
     /* 4. Move structured grid out of the way */
     if (exists(lmrCfg.savedSgridDir)) {
-        if (verbosity >= 2) {
+        if (verbosity >= 3) {
             writefln("      Making room for saving sgrids. Removing: %s", lmrCfg.savedSgridDir);
         }
         rmdirRecurse(lmrCfg.savedSgridDir);
     }
-    if (verbosity >= 1) {
+    if (verbosity >= 2) {
        writefln("   Moving structured grids into: %s", lmrCfg.savedSgridDir);
     }
     rename(lmrCfg.gridDirectory, lmrCfg.savedSgridDir);
 
     /* 5. Write out mapped cells file. */
     if (ngrids > 1) {
-        if (verbosity >= 1) {
+        if (verbosity >= 2) {
             writefln("   Writing %s file.", lmrCfg.mappedCellsFile);
         }
-        writeMappedCellsFile(sgrids, mappedCellsList, newTags, globalFaceTags);
+        writeMappedCellsFile(sgrids, mappedCellsList, newTags, globalFaceTags, connMap);
     }
 
     /* 6. Write out new grids. */
-    if (verbosity >= 1) {
+    if (verbosity >= 2) {
         writeln("   Writing unstructured grids.");
     }
     mkdirRecurse(lmrCfg.gridDirectory);
     foreach (ig, ugrid; ugrids) {
-        if (verbosity >= 2) {
+        if (verbosity >= 3) {
             writefln("      Writing unstructured grid: %04d", ig);
         }
         if (gridType == GridType.gziptext) {
@@ -171,12 +172,12 @@ void main_(string[] args)
     // We'll build a local metadata writer at the moment.
     // TODO: consolidate this in one place because presently there is a
     //       Lua implementation and this implementation.
-    if (verbosity >=1 ) {
+    if (verbosity >= 2) {
         writeln("   Writing metadata for unstructured grids.");
     }
     writeUnstructuredGridMetadata(ugrids, sgridsMetadata, newTags);
 
-    if (verbosity >= 0) {
+    if (verbosity >= 1) {
         writefln("lmr %s: Done.", cmdName);
     }
 
@@ -189,6 +190,11 @@ struct CellAndFacePos {
 struct CellAndFaceId {
     size_t cellId;
     size_t faceId;
+}
+
+struct BlockAndBoundary {
+    size_t blkId;
+    size_t bndryId;
 }
 
 void createFaceMap(size_t bid, StructuredGrid sgrid, size_t face, ref CellAndFacePos[string] faceMap, ref string[CellAndFaceId][size_t] globalFaceTags) {
@@ -219,7 +225,8 @@ void createFaceMap(size_t bid, StructuredGrid sgrid, size_t face, ref CellAndFac
 }
 
 void convertConnections(JSONValue gridMetadata, StructuredGrid[] sgrids, ref BlockAndCellId[string][size_t] mappedCellsList,
-                        ref string[size_t][size_t] newTags, ref string[CellAndFaceId][size_t] globalFaceTags)
+                        ref string[size_t][size_t] newTags, ref string[CellAndFaceId][size_t] globalFaceTags,
+                        ref BlockAndBoundary[BlockAndBoundary] connMap)
 {
     auto gridConns = gridMetadata["grid-connections"].array;
     foreach (conn; gridConns) {
@@ -260,12 +267,14 @@ void convertConnections(JSONValue gridMetadata, StructuredGrid[] sgrids, ref Blo
         // Assuming we were successful, let's record the new tags
         newTags[idA][fAidx] = "mapped_cells";
         newTags[idB][fBidx] = "mapped_cells";
-
+        connMap[BlockAndBoundary(idA, fAidx)] = BlockAndBoundary(idB, fBidx);
+        connMap[BlockAndBoundary(idB, fBidx)] = BlockAndBoundary(idA, fAidx);
     }
 }
 
 void writeMappedCellsFile(StructuredGrid[] sgrids, ref BlockAndCellId[string][size_t] mappedCellsList,
-                          ref string[size_t][size_t] newTags, ref string[CellAndFaceId][size_t] globalFaceTags)
+                          ref string[size_t][size_t] newTags, ref string[CellAndFaceId][size_t] globalFaceTags,
+                          ref BlockAndBoundary[BlockAndBoundary] connMap)
 {
 
     auto of = File(lmrCfg.mappedCellsFile, "w");
@@ -281,18 +290,16 @@ void writeMappedCellsFile(StructuredGrid[] sgrids, ref BlockAndCellId[string][si
         of.writef("\n");
     }
     foreach (ig, sgrid; sgrids) {
-        bool headerWritten = false;
         int nboundaries = (sgrid.dimensions == 3) ? 6 : 4;
         foreach (ib; 0 .. nboundaries) {
             if (ib in newTags[ig]) {
-                if (!headerWritten) {
-                    of.writefln("NMappedCells in BLOCK[%d]= %d", ig, mappedCellsList[ig].length);
-                    headerWritten = true;
-                }
                 auto bcells = sgrid.get_list_of_boundary_cells(ib);
+                // find src block and boundary
+                auto src = connMap[BlockAndBoundary(ig, ib)];
+                of.writefln("block-%d-boundary-%d : %d : %d : %d ", ig, ib, src.blkId, src.bndryId, bcells.length);
                 foreach (cellId; bcells) {
                     auto faceTag = globalFaceTags[ig][CellAndFaceId(cellId,ib)];
-                    of.writefln("%-20s %4d %6d", faceTag, mappedCellsList[ig][faceTag].blkId, mappedCellsList[ig][faceTag].cellId);
+                    of.writefln("%-20s %6d", faceTag, mappedCellsList[ig][faceTag].cellId);
                 }
             }
         }
@@ -300,8 +307,7 @@ void writeMappedCellsFile(StructuredGrid[] sgrids, ref BlockAndCellId[string][si
     of.close();
 }
 
-void writeUnstructuredGridMetadata(UnstructuredGrid[] ugrids, JSONValue[] sgridsMetadata,
-        string[size_t][size_t] newTags)
+void writeUnstructuredGridMetadata(UnstructuredGrid[] ugrids, JSONValue[] sgridsMetadata, string[size_t][size_t] newTags)
 {
     auto of = File(lmrCfg.gridMetadataFile, "w");
     of.writeln("{");

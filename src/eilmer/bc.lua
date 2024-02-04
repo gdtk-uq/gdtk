@@ -197,7 +197,7 @@ function FullFaceCopy:tojson()
    str = str .. '}' -- end of JSON value
    return str
 end
-MappedCellCopy = GhostCellEffect:new{cell_mapping_from_file=false, fileName='mapped_cells',
+MappedCellCopy = GhostCellEffect:new{cell_mapping_from_file=false, fileName='mapped_cells', symmetric_mapping=false,
                                      transform_position=false,
                                      c0=Vector3:new{x=0.0,y=0.0,z=0.0},
                                      n=Vector3:new{x=0.0,y=0.0,z=1.0},
@@ -212,6 +212,8 @@ function MappedCellCopy:tojson()
    str = str .. string.format('"cell_mapping_from_file": %s, ',
 			      tostring(self.cell_mapping_from_file))
    str = str .. string.format('"filename": "%s", ', self.fileName)
+   str = str .. string.format('"symmetric_mapping": %s, ',
+			      tostring(self.symmetric_mapping))
    str = str .. string.format('"transform_position": %s, ',
 			      tostring(self.transform_position))
    str = str .. string.format('"c0": [%.18e, %.18e, %.18e], ', self.c0.x, self.c0.y, self.c0.z)
@@ -1644,7 +1646,7 @@ function ExchangeBC_MappedCell:new(o)
                " and not ExchangeBC_MappedCell.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"cell_mapping_from_file", "fileName", "filename",
+   flag = checkAllowedNames(o, {"cell_mapping_from_file", "fileName", "filename", "symmetric_mapping",
                                 "transform_position", "c0", "n", "alpha", "delta",
                                 "list_mapped_cells",
                                 "reorient_vector_quantities", "Rmatrix",
@@ -1657,6 +1659,7 @@ function ExchangeBC_MappedCell:new(o)
    o.fileName = o.fileName or o.filename
    o.preReconAction = { MappedCellCopy:new{cell_mapping_from_file=o.cell_mapping_from_file,
                                            fileName=o.fileName,
+                                           symmetric_mapping=o.symmetric_mapping,
                                            transform_position=o.transform_position,
                                            c0=o.c0, n=o.n, alpha=o.alpha, delta=o.delta,
                                            list_mapped_cells=o.list_mapped_cells,
