@@ -93,7 +93,6 @@ public:
         }
         string flowFmt = jsonData["flow_format"].str;
 	string gridFmt = jsonData["grid_format"].str;
-        writefln("flowFmt= %s   gridFmt= %s", flowFmt, gridFmt);
         // -- end initialising from JSONData
 
 	// Find out variables from metadata file
