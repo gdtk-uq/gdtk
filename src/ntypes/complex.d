@@ -497,6 +497,11 @@ if (isFloatingPoint!T)
         if (op == "^^" && isFloatingPoint!R)
     {
         import std.math : cos, sin;
+        if (isInteger(r)) {
+            int p = cast(int) r;
+            this ^^= p;
+            return this;
+        }
         immutable ab = cabs(this)^^r;
         immutable ar = arg(this)*r;
         re = ab*cos(ar);
@@ -802,6 +807,29 @@ if (is(T R == Complex!R))
 // The original complex module definitions for sin, cos, sqrt and abs are unmodified.
 // KAD 2018, 2020, 2023
 @nogc
+bool isInteger(double n) @safe pure nothrow
+{
+    import std.math: fabs;
+
+    // we will return false immediately if n is
+    // not representable as an integer since we use
+    // this routine to determine whether it is safe
+    // to cast a double as an integer
+    if (n > int.max) { return false; }
+
+    // convert float to integer
+    int x = cast(int) n;
+
+    double diff = n - x;
+
+    // if n is not equivalent to any integer
+    if (fabs(diff) > 0) { return false; }
+
+    // else n is an integer
+    return true;
+}
+
+@nogc
 bool isNaN(T)(Complex!T z) @safe pure nothrow
 if ( is(typeof(T(0.0)) == double) ||
      is(typeof(T(0.0)) == float)  ||
@@ -872,6 +900,10 @@ if ( is(typeof(T(0.0)) == double) ||
      is(typeof(T(0.0)) == real))
 {
     import std.math: sqrt, log;
+    if (isInteger(w)) {
+        int p = cast(int) w;
+        return pow(z, p);
+    }
     immutable r = sqrt(z.re*z.re + z.im*z.im);
     immutable theta = arg(z);
     Complex!double i = complex(0.0, 1.0);
@@ -1528,6 +1560,29 @@ version(complex_number_test) {
         Complex!double ze = "5.0";
         assert(ze.re == 5.0, failedUnitTest());
         assert(ze.im == 0.0, failedUnitTest());
+
+        // test isInteger() routine
+        double val1 = 10.234;
+        bool result1 = isInteger(val1);
+        assert( result1 == false, failedUnitTest());
+        double val2 = -10.234;
+        bool result2 = isInteger(val2);
+        assert( result2 == false, failedUnitTest());
+        double val3 = 10.0;
+        bool result3 = isInteger(val3);
+        assert( result3 == true, failedUnitTest());
+        double val4 = -10.0;
+        bool result4 = isInteger(val4);
+        assert( result4 == true, failedUnitTest());
+        double val5 = 10.0 + 1.0e-15;
+        bool result5 = isInteger(val5);
+        assert( result5 == false, failedUnitTest());
+        double val6 = 10.0 + 1.0e-16;
+        bool result6 = isInteger(val6);
+        assert( result6 == true, failedUnitTest());
+        double val7 = 2.0 * int.max;
+        bool result7 = isInteger(val7);
+        assert( result7 == false, failedUnitTest());
 
         // complex number reference solutions from Python 2.7.12 cmath library.
         //
