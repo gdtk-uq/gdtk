@@ -70,6 +70,7 @@ void init_simulation(int tindx)
         b.read_grid_data();
         b.set_up_geometry();
         b.read_flow_data(tindx);
+        // [TODO] Should shift the initialization of the kinetics into fluidblock module.
         if (Config.reacting) {
             b.thermochemUpdate =
                 init_thermochemical_reactor(b.gmodel, Config.reaction_file_1, Config.reaction_file_2);

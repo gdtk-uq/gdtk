@@ -33,6 +33,7 @@ class StreamTube {
 public:
     int indx;
     GasModel gmodel;
+    ThermochemicalReactor thermochemUpdate;
     CQIndex cqi;
     GasState gs;
     Vector3 vel;
@@ -433,6 +434,12 @@ public:
         }
         return;
     } // end corrector_step()
+
+    @nogc
+    void thermochemical_increment(double dt)
+    {
+        foreach (c; cells) { c.thermochemical_increment(dt, gmodel, thermochemUpdate); }
+    }
 
     @nogc
     void transfer_conserved_quantities(size_t from, size_t dest)

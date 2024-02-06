@@ -21,6 +21,7 @@ import json_helper;
 import geom;
 import config;
 import streamtube;
+import kinetics.init_thermochemical_reactor;
 
 // We use __gshared so that several threads may access
 // the following array concurrently.
@@ -57,10 +58,16 @@ void init_calculation()
     foreach (st; streams) {
         st.set_up_data_storage();
         st.set_up_inflow_boundary();
-        if (st.active.get_value(0.) == 1) {
+        if (st.active.get_value(0.0) == 1) {
             st.write_flow_data(true, true);
         } else {
             st.write_flow_data(true, false);
+        }
+        // [TODO] Should shift the initialization of the kinetics into stream module.
+        if (Config.reacting) {
+            st.thermochemUpdate = init_thermochemical_reactor(st.gmodel,
+                                                              Config.reaction_file_1,
+                                                              Config.reaction_file_2);
         }
     }
     progress.step = 0;
@@ -158,6 +165,7 @@ void relax_slice_to_steady_flow(double xmid)
                 st.predictor_step(dt);
             }
         }
+        // 2. (possible) corrector step.
         if (Config.t_order > 1) {
             apply_boundary_conditions(xmid);
             foreach (st; parallel(streams, 1)) {
@@ -166,16 +174,24 @@ void relax_slice_to_steady_flow(double xmid)
                 }
             }
         }
-        //
-        // Add source terms to conserved quantities
+        // 3. Add source terms to conserved quantities
         add_source_terms(xmid, progress.dx);
         //
-        // Prepare for next step.
+        // 4. Chemistry step is loosely coupled to the gas dynamics.
+        if (Config.reacting) {
+            foreach (st; parallel(streams, 1)) {
+                if (st.active.get_value(xmid) == 1) {
+                    writeln("DEBUG: chemistry");
+                    st.thermochemical_increment(dt);
+                }
+            }
+        }
+        // 5. Prepare for next step.
         foreach (st; parallel(streams, 1)) {
             st.transfer_conserved_quantities(1, 0);
         }
-        // 3. [TODO] measure residuals overall
-        // break early, if residuals are small enough
+        // 6. [TODO] measure residuals overall
+        // break relaxation loop early, if residuals are small enough
     }
     return;
 } // end relax_slice_to_steady_flow()

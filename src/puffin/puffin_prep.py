@@ -182,7 +182,7 @@ def init_gas_model(fileName, reaction_file_1="", reaction_file_2=""):
             raise Exception("Reaction file 1 not found: " + reaction_file_1)
         if reaction_file_2 and (not os.path.exists(reaction_file_2)):
             raise Exception("Reaction file 2 not found: " + reaction_file_2)
-        reactor = ThermochemicalReactor(gmodel, reaction_file_1, reaction_file_2)
+        reactor = ThermochemicalReactor(config.gmodel, reaction_file_1, reaction_file_2)
     else:
         reactor = None
     config.reactor = reactor
