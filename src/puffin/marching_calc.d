@@ -181,7 +181,6 @@ void relax_slice_to_steady_flow(double xmid)
         if (Config.reacting) {
             foreach (st; parallel(streams, 1)) {
                 if (st.active.get_value(xmid) == 1) {
-                    writeln("DEBUG: chemistry");
                     st.thermochemical_increment(dt);
                 }
             }

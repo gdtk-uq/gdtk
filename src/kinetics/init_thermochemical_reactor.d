@@ -61,12 +61,12 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     Construct a new ThermochemicalReactor object that is appropriate for use with GasModel gmodel.
     Since thermochemical reactors are tied to specific gas models, this routine needs to test
     the actual type of gasmodel that we have, even though OOP normally avoids this.
-    
+
     In d, this can be done in one of two ways:
 
     (cast(ObjectType) object) !is null
 
-    or 
+    or
 
     typeid(object) is typeid(ObjectType)
 
