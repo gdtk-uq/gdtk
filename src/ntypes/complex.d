@@ -815,7 +815,7 @@ bool isInteger(double n) @safe pure nothrow
     // not representable as an integer since we use
     // this routine to determine whether it is safe
     // to cast a double as an integer
-    if (n > int.max) { return false; }
+    if (fabs(n) > int.max) { return false; }
 
     // convert float to integer
     int x = cast(int) n;
