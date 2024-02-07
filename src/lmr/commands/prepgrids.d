@@ -12,7 +12,7 @@ import std.stdio : writeln, writefln;
 import std.string : toStringz;
 import std.conv : to;
 import std.path : dirName;
-import std.file : thisExePath;
+import std.file : thisExePath, exists;
 
 import util.lua;
 import geom.luawrap;
@@ -34,12 +34,14 @@ static this()
     prepGridCmd.helpMsg =
 `lmr prep-grids [options]
 
-Prepare a grid based on a job called lmr-grid.lua.
+Prepare a grid based on a job called job.lua.
 
 options ([+] can be repeated):
 
  -v, --verbose [+]
      Increase verbosity during grid generation.
+ -j, --job=grid.lua
+     Specify the input file to be different from job.lua.
 
 `;
 
@@ -49,13 +51,21 @@ options ([+] can be repeated):
 void main_(string[] args)
 {
     int verbosity = 0;
+    string userGridName = lmrCfg.jobFile;
     getopt(args,
            config.bundling,
-           "v|verbose+", &verbosity
+           "v|verbose+", &verbosity,
+           "j|job", &userGridName,
            );
 
     if (verbosity > 0) {
         writeln("lmr prep-grids: Begin preparation of grid files.");
+    }
+
+    if (!exists(userGridName)) {
+        writefln("The file %s does not seems to exist.", userGridName);
+        writeln("Did you mean to specify a different job name?");
+        return;
     }
 
     if (verbosity > 1) writeln("lmr prep-grids: Start lua connection.");
@@ -69,7 +79,6 @@ void main_(string[] args)
         string errMsg = to!string(lua_tostring(L, -1));
         throw new FlowSolverException(errMsg);
     }
-    string userGridName = lmrCfg.jobFile;
     if ( luaL_dofile(L, toStringz(userGridName)) != 0 ) {
         writeln("There was a problem in the user-supplied input lua script: ", userGridName);
         string errMsg = to!string(lua_tostring(L, -1));
