@@ -11,14 +11,17 @@ prep: gas grid init
 gas: ideal-air.lua
 	prep-gas ideal-air.lua ideal-air.gas
 
-grid: job.lua
-	lmr prep-grid
+grid: grid.lua
+	lmr prep-grid --job=grid.lua
 
-init:
-	lmr prep-flow --mode=steady
+init: steady.lua
+	lmr prep-flow --job=steady.lua
 
-run:
+run-steady:
 	lmr run-steady
+
+run-transient:
+	lmr run-transient
 
 post: vtk
 

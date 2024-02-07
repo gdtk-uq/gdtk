@@ -1,5 +1,7 @@
-config.title = "Mach 1.5 flow over a 20 degree cone."
-print(config.title)
+-- steady.lua
+print("Set up steady-state solve of Mach 1.5 flow over a 20 degree cone.")
+--
+-- 0. Assume that a previous processing step has set up the grids.
 --
 -- 1. Domain type, gas model and flow states
 config.axisymmetric = true
@@ -8,34 +10,15 @@ initial = FlowState:new{p=5955.0, T=304.0} -- Pa, degrees K
 inflow = FlowState:new{p=95.84e3, T=1103.0, velx=1000.0}
 flowDict = {initial=initial, inflow=inflow}
 --
--- 2. Geometry and grids
-a0 = {x=0.0, y=0.0};     a1 = {x=0.0, y=1.0}
-b0 = {x=0.2, y=0.0};     b1 = {x=0.2, y=1.0}
-c0 = {x=1.0, y=0.29118}; c1 = {x=1.0, y=1.0}
---
-quad0 = CoonsPatch:new{p00=a0, p10=b0, p11=b1, p01=a1}
-quad1 = AOPatch:new{p00=b0, p10=c0, p11=c1, p01=b1}
---
-grid0 = registerGrid{
-   grid=StructuredGrid:new{psurface=quad0, niv=11, njv=41},
-   fsTag="inflow",
-   bcTags={west="inflow"}
-}
-grid1 = registerGrid{
-   grid=StructuredGrid:new{psurface=quad1, niv=31, njv=41},
-   fsTag="initial",
-   bcTags={east="outflow"}
-}
-identifyGridConnections()
---
--- 3. Fluid blocks, with initial flow states and boundary conditions.
+-- 2. Fluid blocks, with initial flow states and boundary conditions.
 bcDict = {
    inflow=InFlowBC_Supersonic:new{flowState=inflow},
    outflow=OutFlowBC_Simple:new{}
 }
 --
 makeFluidBlocks(bcDict, flowDict)
--- 4. Simulation parameters.
+--
+-- 3. Simulation parameters.
 config.flux_calculator= "ausmdv"
 config.interpolation_order = 2
 
