@@ -22,6 +22,7 @@ import block;
 import loads;
 import fluidblockio_new;
 import field;
+import stats;
 version(catalyst){
     import CatalystAdaptor;
 }
@@ -107,6 +108,9 @@ __gshared static FluidBlockIO[] globalFluidBlockIO;
 // An object for solving the electric field across the entire simulation
 // It may cooperate with other ElectricFields in other processes
 __gshared static ElectricField eField;
+
+// Storage for flow-wide statistics
+__gshared static FlowStats flowstats;
 
 version(catalyst){
     __gshared static CatalystData catalyst_data;

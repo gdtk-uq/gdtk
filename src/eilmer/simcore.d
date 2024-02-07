@@ -56,6 +56,7 @@ import loads;
 import conservedquantities;
 import special_block_init;
 import field;
+import stats;
 version (opencl_gpu_chem) {
     import opencl_gpu_chem;
 }
@@ -745,6 +746,8 @@ int init_simulation(int tindx, int nextLoadsIndx,
             InitializeCatalystData(&catalyst_data, localFluidBlocks, GlobalConfig.dimensions);
         }
     }
+    // if stats TODO
+    flowstats = new FlowStats(GlobalConfig.turb_model.nturb, GlobalConfig.n_species, 20);
     // Keep our memory foot-print small.
     GC.collect();
     GC.minimize();
@@ -1234,6 +1237,19 @@ int integrate_in_time(double target_time_as_requested)
                     SimState.t_catalyst = SimState.t_catalyst + GlobalConfig.dt_catalyst;
                 }
             }
+            // 4.5 FlowStats if they are asked for TODO
+            foreach(blk; localFluidBlocks) {
+                flowstats.update(SimState.time, blk.celldata.positions, blk.celldata.flowstates);
+            }
+
+            flowstats.increment_time_index();
+            if (flowstats.tidx==flowstats.NTIME) {
+                writefln("    Flushing stats buffer to file and reseting...");
+                flowstats.dump_stats_to_file(GlobalConfig.turb_model, GlobalConfig.gmodel_master);
+                flowstats.reset_buffers();
+                flowstats.reset_time_index();
+            }
+
             //
             // 5.0 Update the run-time loads calculation, if required
             if (GlobalConfig.compute_run_time_loads) {
