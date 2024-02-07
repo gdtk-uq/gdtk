@@ -1,5 +1,5 @@
 /**
- * Module for doing preparation of flow fields.
+ * Module for doing preparation of flow fields and simulation parameters.
  *
  * Authors: RJG, PJ, KAD, NNG
  * Date: 2022-08-09
@@ -12,7 +12,7 @@ import std.stdio : writeln, writefln;
 import std.string : toStringz, strip, split, format;
 import std.conv : to;
 import std.path : dirName;
-import std.file : thisExePath;
+import std.file : thisExePath, exists;
 import std.json : JSONValue;
 import std.algorithm : sort, uniq;
 
@@ -38,50 +38,37 @@ Command prepFlowCmd;
 static this()
 {
     prepFlowCmd.main = &main_;
-    prepFlowCmd.description = "Prepare initial flow fields for an Eilmer simulation.";
+    prepFlowCmd.description = "Prepare initial flow fields and parameters for a simulation.";
     prepFlowCmd.shortDescription = prepFlowCmd.description;
     prepFlowCmd.helpMsg =
-`lmr prep-flow [options]
+`lmr prep-sim [options]
 
-Prepare an initial flow field based on a job called lmr-flow.lua.
+Prepare an initial flow field and simulation parameters based on a file called job.lua.
 
 options ([+] can be repeated):
 
  -v, --verbose [+]
-     Increase verbosity during grid generation.
+     Increase verbosity during preparation of the simulation files.
 
- -m, --mode=<mode>
-     Select mode for file preparation. Mode can be "steady" or "transient".
+ -j, --job=flow.lua
+     Specify the input file to be different from job.lua.
 
 `;
 
 }
 
-enum Mode { steady, transient };
+enum Mode { steady, transient, block_marching };
 
 void main_(string[] args)
 {
     string blocksForPrep = "";
     int verbosity = 0;
-    Mode mode;
+    string userFlowName = lmrCfg.jobFile;
     getopt(args,
            config.bundling,
            "v|verbose+", &verbosity,
-           "mode", &mode,
+           "j|job", &userFlowName,
            );
-
-    if (mode == Mode.transient) {
-        writeln("lmr prep-flow: You have selected transient mode. Unfortunately, that's not yet implemented.");
-        writeln("lmr prep-flow: Exiting.");
-        return;
-    }
-
-    if (verbosity > 0) {
-        writeln("lmr prep-flow: Begin preparation of initial flow field files.");
-        if (mode == Mode.steady) {
-            writeln("lmr prep-flow: mode=steady selected.");
-        }
-    }
 
     if (verbosity > 1) { writeln("lmr prep-flow: Start lua connection."); }
 
@@ -150,13 +137,31 @@ void main_(string[] args)
         string errMsg = to!string(lua_tostring(L, -1));
         throw new FlowSolverException(errMsg);
     }
+    //
     // We are ready for the user's input script.
-    string userFlowName = lmrCfg.jobFile;
+    if (!exists(userFlowName)) {
+        writefln("The file %s does not seems to exist.", userFlowName);
+        writeln("Did you mean to specify a different job name?");
+        return;
+    }
     if (luaL_dofile(L, toStringz(userFlowName)) != 0) {
         writeln("There was a problem in the user-supplied input lua script: ", userFlowName);
         string errMsg = to!string(lua_tostring(L, -1));
         throw new FlowSolverException(errMsg);
     }
+    Mode mode = Mode.steady;  // [TODO] need to get this from the user's input script
+    if (mode == Mode.transient) {
+        writeln("lmr prep-sim: You have selected transient mode. Unfortunately, that's not yet implemented.");
+        writeln("lmr prep-sim: Exiting.");
+        return;
+    }
+    if (verbosity > 0) {
+        writeln("lmr prep-sim: Begin preparation of initial flow field files.");
+        if (mode == Mode.steady) {
+            writeln("lmr prep-flow: mode=steady selected.");
+        }
+    }
+    //
     if (luaL_dostring(L, toStringz("buildRuntimeConfigFiles()")) != 0) {
         writeln("There was a problem in the Eilmer build function buildRuntimeConfigFiles() in prepflow.lua");
         string errMsg = to!string(lua_tostring(L, -1));
@@ -171,7 +176,7 @@ void main_(string[] args)
         string errMsg = to!string(lua_tostring(L, -1));
         throw new FlowSolverException(errMsg);
     }
-    if (verbosity > 0) { writeln("lmr prep-flow: Done."); }
+    if (verbosity > 0) { writeln("lmr prep-sim: Done."); }
 
     return;
 }

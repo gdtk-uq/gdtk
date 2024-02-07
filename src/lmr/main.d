@@ -47,9 +47,9 @@ Show help for a given Eilmer command or topic.
     commands["compute-norms"] = compNormsCmd;
     commands["limiter2vtk"] = limiter2vtkCmd;
     commands["prep-grids"] = prepGridCmd;
-    // add alias from prep-grids
-    commands["prep-grid"] = commands["prep-grids"];
+    commands["prep-grid"] = commands["prep-grids"]; // alias
     commands["prep-flow"] = prepFlowCmd;
+    commands["prep-sim"] = commands["prep-flow"]; // alias
     commands["prep-mapped-cells"] = prepMappedCellsCmd;
     commands["revision-id"] = revisionIdCmd;
     commands["run-steady"] = runSteadyCmd;

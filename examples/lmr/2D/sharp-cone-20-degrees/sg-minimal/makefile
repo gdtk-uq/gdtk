@@ -15,7 +15,7 @@ grid: grid.lua
 	lmr prep-grid --job=grid.lua
 
 init: steady.lua
-	lmr prep-flow --job=steady.lua
+	lmr prep-sim --job=steady.lua
 
 run-steady:
 	lmr run-steady

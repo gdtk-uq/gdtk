@@ -29,12 +29,12 @@ Command prepGridCmd;
 static this()
 {
     prepGridCmd.main = &main_;
-    prepGridCmd.description = "Prepare grids for an Eilmer simulation.";
+    prepGridCmd.description = "Prepare grids for a simulation.";
     prepGridCmd.shortDescription = prepGridCmd.description;
     prepGridCmd.helpMsg =
 `lmr prep-grids [options]
 
-Prepare a grid based on a job called job.lua.
+Prepare a grid or set of grids based on a file called job.lua.
 
 options ([+] can be repeated):
 
