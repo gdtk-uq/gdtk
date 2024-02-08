@@ -404,26 +404,41 @@ public:
         }
     } // end determineBoundaryConditions
 
-    override void WriteToString(Appender!string writer) {
+    override void WriteFSIToFile(size_t tindx) {
+        // Initialise the gzipped writer
+        auto outfile = new GzipOut(format("FSI/t%04d.gz", tindx));
+        auto writer = appender!string();
+
         // Set the header to describe the columns (w = displacement, theta_x = x slope, theta_z = z slope)
         formattedWrite(writer, "# w theta_x theta_z dxdt dtheta_xdt dtheta_zdt\n");
         // Write the position and velocities for each DoF
         foreach (node; 0 .. (myConfig.Nx + 1) * (myConfig.Nz + 1)) {
             formattedWrite(writer, "%.18e %1.8e %1.8e %1.8e %1.8e %1.8e\n", X[node*3].re, X[node*3+1], X[node*3+2].re, V[node*3].re, V[node*3+1].re, V[node*3+2].re);
         }
-    } // end WriteToString
+        outfile.compress(writer.data);
+        outfile.finish();
+    } // end WriteFSIToFile
 
-    override void ReadFromString(GzipByLine reader) {
+    override void ReadFSIFromFile(size_t tindx) {
+        // Open the Gzip reader
+        auto readFileByLine = new GzipByLine(format("FSI/t%04d.gz", tindx));
+
         // Pop the header line
-        reader.popFront();
+        readFileByLine.popFront();
         double[6] line;
         // Take out each line and put into the relevant locations in X, V
         foreach (node; 0 .. (myConfig.Nx + 1) * (myConfig.Nz + 1)) {
-            line = map!(to!double)(splitter(reader.front())).array; reader.popFront();
+            line = map!(to!double)(splitter(readFileByLine.front())).array; readFileByLine.popFront();
             X[node*3 .. (node+1)*3] = to!(double[3])(line[0 .. 3]);
             V[node*3 .. (node+1)*3] = to!(double[3])(line[3 .. 6]);
         }
-    } // end ReadFromString
+    } // end ReadFSIFromFile
+
+    override string GetHistoryHeader() {
+        // Get the history header string- should look basically the same as the writer header,
+        // with the inclusion of t in the first slot
+        return "# t w theta_x theta_z dwdt dtheta_xdt dtheta_zdt\n";
+    } // end GetHistoryHeader
 
     override void WriteFSIToHistory(double t) {
         // Write the node ODE solutions to history file

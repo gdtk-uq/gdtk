@@ -213,25 +213,40 @@ public:
     } // end LocalMassMatrix
 
     // begin write
-    override void WriteToString(Appender!string writer) {
+    override void WriteFSIToFile(size_t tindx) {
+        // Initialise the gzipped writer
+        auto outfile = new GzipOut(format("FSI/t%04d.gz", tindx));
+        auto writer = appender!string();
+
         // Use formattedWrite to pass strings to the appender
-        formattedWrite(writer, "x theta_x dxdt dtheta_xdt\n");
+        formattedWrite(writer, "# w theta_x dwdt dtheta_xdt\n");
         foreach (i; 0 .. (myConfig.Nx + 1)) {
             formattedWrite(writer, "%1.18e %1.18e %1.18e %1.18e\n", X[i * 2].re, X[i * 2 + 1].re, V[i * 2].re, V[i * 2 + 1].re);
         }
-    } // end WriteToString
 
-    override void ReadFromString(GzipByLine reader) {
-        // Treat the reader like a regular file
+        outfile.compress(writer.data);
+        outfile.finish();
+    } // end WriteFSIToFile
+
+    override void ReadFSIFromFile(size_t tindx) {
+        // Open the Gzip reader
+        auto readFileByLine = new GzipByLine(format("FSI/t%04d.gz", tindx));
+
         // Pop the header line
-        reader.popFront();
+        readFileByLine.popFront();
         double[4] line;
         foreach (i; 0 .. (myConfig.Nx + 1)) {
-            line = map!(to!double)(splitter(reader.front())).array; reader.popFront();
+            line = map!(to!double)(splitter(readFileByLine.front())).array; readFileByLine.popFront();
             X[i * 2 .. (i + 1) * 2] = line[0 .. 2];
             V[i * 2 .. (i + 1) * 2] = line[2 .. 4];
         }
     } // end ReadFromString
+
+    override string GetHistoryHeader() {
+        // Get the history header string- should look basically the same as the writer header,
+        // with the inclusion of t in the first slot
+        return "t x theta_x dxdt dtheta_xdt\n";
+    } // end GetHistoryHeader()
 
     override void WriteFSIToHistory(double t) {
         // Write the ODE values to the history file

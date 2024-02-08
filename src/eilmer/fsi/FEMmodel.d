@@ -51,6 +51,7 @@ import nm.bbla;
 import globaldata;
 import fluidblock;
 import sfluidblock;
+import fileutil;
 import fsi;
 
 class FEMModel {
@@ -417,34 +418,16 @@ public:
         MFile.close(); KFile.close();
     } // end WriteMatricesToFile
 
-    void WriteFSIToFile(size_t tindx) {
-        // Loosely off the write_solution(sblk...) function in fluidblockio_old.d.
-        // Open a zipfile, and pass it to the respective model writers.
-        auto outfile = new GzipOut(format("FSI/t%04d.gzip", tindx));
-        auto writer = appender!string();
-        // Call the child writer method
-        this.WriteToString(writer);
-        // Compress the output
-        outfile.compress(writer.data);
-        outfile.finish();
-    } // end WriteFSIToFile
-
-    void ReadFSIFromFile(size_t tindx) {
-        // Read in the FSI file from a Gzipped file
-        auto readFileByLine = new GzipByLine(format("FSI/t%04d.gzip", tindx));
-        // Call the child reader method
-        this.ReadFromString(readFileByLine);
-    } // end ReadFSIFromFile
-
     void PrepareFSIHistoryFiles() {
         // Prepare the history files
 
         if (myConfig.historyNodes.length > 0) {
-            mkdir("FSI/hist");
+            ensure_directory_is_present("FSI/hist");
         }
 
         foreach (node; myConfig.historyNodes) {
             auto histFile = File(format("FSI/hist/%04d.dat", node), "w");
+            append(format("FSI/hist/%04d.dat", node), GetHistoryHeader());
         }
     } // end PrepareFSIHistoryFiles
 
@@ -452,8 +435,9 @@ public:
     abstract void GenerateMassStiffnessMatrices();
     abstract void UpdateForceVector();
     abstract void DetermineBoundaryConditions(string BCs);
-    abstract void WriteToString(Appender!string writer);
-    abstract void ReadFromString(GzipByLine reader);
+    abstract void WriteFSIToFile(size_t tindx);
+    abstract void ReadFSIFromFile(size_t tindx);
     abstract void ConvertToNodeVel();
+    abstract string GetHistoryHeader();
     abstract void WriteFSIToHistory(double t);
 }
