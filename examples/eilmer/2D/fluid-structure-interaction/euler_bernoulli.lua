@@ -66,14 +66,15 @@ identifyBlockConnections()
 config.fixed_time_step = true
 config.dt_init = 1e-8
 config.print_count = 1000
-config.max_step = 100000
+config.max_step = 1000
 config.grid_motion = "FSI"          -- set config.grid_motion
 config.FEMModel = "eulerBernoulli"  -- set config.FEMModel
 config.gasdynamic_update_scheme = "moving_grid_1_stage"     -- set a temporal scheme with grid motion
-config.dt_plot = 5e-5
-config.max_time = 1e-3
+config.dt_plot = 1e-5
+config.max_time = 1e-5
 config.report_invalid_cells = false
 config.max_attempts_for_step = 1
+config.dt_history = 1e-6
 -- It is important to either a) set config.fixed_time_step = true or b) set config.cfl_count to be a multiple of FSIOptions.couplingStep.
 -- Otherwise, the fluid time step may change in the middle of a structure update and de-sync the systems.
 
@@ -96,5 +97,6 @@ FSIOptions{northForcing = "Fluid",          -- Type of external forcing, current
            BCs = "CF",                              -- Boundary conditions, west end then east end. "C" denotes clamped (0 displacement and slope),
                                                     -- "P" denotes pinned (0 displacement and non-zero slope), "F" denotes free (non-zero displacement
                                                     -- and slope)
-           couplingStep = 100                       -- Every how many fluid steps do we update the beam dynamics
+           couplingStep = 100,                      -- Every how many fluid steps do we update the beam dynamics
+           historyNodes = {5, 10}
        }

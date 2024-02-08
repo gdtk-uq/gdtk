@@ -52,6 +52,8 @@
 2D/shock-fitting/shock-tube/sodsf-test.rb
 2D/shock-fitting/cylinder/cyl-sf-test.rb
 2D/shock-fitting/cylinder-mpi/cyl-sf-mpi-test.rb
+2D/fluid-structure-interaction/fsi-euler-bernoulli-test.rb
+3D/fluid-structure-interaction/fsi-kirchhoff-love-test.rb
 2D/oblique-detonation-wave/odw-test.rb
 2D/duct-hydrogen-combustion/bittker-test.rb
 2D/cylinder-giordano/two-temperature/inf_cyl-test.rb
