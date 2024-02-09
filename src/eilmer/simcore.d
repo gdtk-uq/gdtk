@@ -748,6 +748,10 @@ int init_simulation(int tindx, int nextLoadsIndx,
     }
     // if stats TODO
     flowstats = new FlowStats(GlobalConfig.turb_model.nturb, GlobalConfig.n_species, 20);
+    foreach(blk; localFluidBlocks) {
+        flowstats.init_map_arrays_for_block(blk.celldata.positions, blk.celldata.cell_to_bin_map,
+                                            blk.celldata.bin_weights);
+    }
     // Keep our memory foot-print small.
     GC.collect();
     GC.minimize();
@@ -1239,7 +1243,8 @@ int integrate_in_time(double target_time_as_requested)
             }
             // 4.5 FlowStats if they are asked for TODO
             foreach(blk; localFluidBlocks) {
-                flowstats.update(SimState.time, blk.celldata.positions, blk.celldata.flowstates);
+                flowstats.update(SimState.time, blk.celldata.cell_to_bin_map,
+                                 blk.celldata.bin_weights, blk.celldata.flowstates);
             }
 
             flowstats.increment_time_index();

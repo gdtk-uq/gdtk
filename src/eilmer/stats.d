@@ -79,7 +79,7 @@ class FlowStats {
     double dz, filter_width, b_squared;
     size_t tidx=0;
 
-    double[][NTIME] weights;
+    double[] weights;
     double[NTIME] times;
     StatInstance[][NTIME] data;
 
@@ -88,35 +88,83 @@ class FlowStats {
         dz = (zmax - zmin)/NSPACE;
         filter_width = 2.0*dz;
         b_squared = filter_width*filter_width;
+
         z.length = NSPACE;
         foreach(j; 0 .. NSPACE) {
             z[j] = zmin + dz/2.0 + j*dz;
         }
+
+        weights.length = NSPACE;
+
         foreach(t; 0 .. NTIME) {
-            weights[t].length = NSPACE;
             foreach(i; 0 .. NSPACE) {
                 data[t] ~= StatInstance(nspecies, nturb);
             }
         }
+
+        weights[] = 0.0;
         reset_buffers();
     }
 
-    void update(double time, Vector3[] positions, FlowState[] fss){
-        assert(tidx<=NTIME);
+    void init_map_arrays_for_block(Vector3[] positions, ref size_t[][] cell_to_bin_map, ref double[][] bin_weights){
+    /*
+        We don't want to have to compute the weights and stuff every time, so each
+        block should store a precomputed array of them.
+
+        Maybe this should be called with FluidBLock? Or cell data? Good questions.
+    */
+
+        size_t[30] nbins;
+        nbins[] = 0;
+        bin_weights.length = positions.length;
+        cell_to_bin_map.length = positions.length;
+
+        immutable double threshold = 1e-4;
 
         foreach(i; 0 .. positions.length){
-            // TDB: Actually we want to store these weights and indices for any cells 
-            // whose weights are above a threshold, which means ragged arrays stored 
-            // in the relevant blocks.
-            times[tidx] = time;
             foreach(j, zj; z){
                 double dist = (positions[i].y - zj);
                 double arg = -1.0*(dist*dist)/2.0/b_squared;
                 double weight = exp(arg);
-                weights[tidx][j] += weight;
-                data[tidx][j].plus_equals(weight, &(fss[i]));
+
+                // Many of the cells will be quite far from the bin,
+                // so discard any that have weights below a threshold
+                if (weight < threshold) continue;
+
+                // otherwise let's save both the weight and record of which bins
+                // this cell cares about.
+                cell_to_bin_map[i] ~= j;
+                bin_weights[i]     ~= weight;
+
+                // Also, the actual weight array in bin-space does change with time,
+                // so we can compute that here and keep it saved.
+                weights[j] += weight;
+            }
+            nbins[cell_to_bin_map[i].length] += 1;
+        }
+        //foreach(i, j; nbins){
+        //    writefln("%d cells have %d bins", j, i);
+        //}
+    }
+
+    void update(double time, size_t[][] cell_to_bin_map, double[][] bin_weights, FlowState[] fss){
+        assert(tidx<=NTIME);
+        size_t[] ncheck;
+        ncheck.length = NSPACE;
+        ncheck[] = 0;
+
+        times[tidx] = time;
+        foreach(i; 0 .. cell_to_bin_map.length){
+            foreach(jj, bin; cell_to_bin_map[i]){
+                double weight = bin_weights[i][jj];
+                data[tidx][bin].plus_equals(weight, &(fss[i]));
+                ncheck[bin] += 1;
             }
         }
+
+        //foreach(bin, ncells; ncheck) {
+        //    writefln("Bin %d received contributions from %d cells", bin, ncells);
+        //}
     }
 
     void increment_time_index(){
@@ -134,7 +182,7 @@ class FlowStats {
         immutable string filename = "stats.txt";
         if (!exists(filename)) {
             auto statsfile = File(filename, "w");
-            statsfile.write("rho velx vely velz p a mu k mu_t k_t S");
+            statsfile.write("rho velx vely velz p a mu k mu_t k_t S u T");
             version(turbulence) {
                 foreach(it; 0 .. tm.nturb){
                     statsfile.writef(" %s", tm.primitive_variable_name(it));
@@ -149,7 +197,6 @@ class FlowStats {
             statsfile.close();
         }
 
-
         // IN MPI we do a reduce here and only the master program writes.
         // We mnight have to rethink this if using this code for full 
         // grid stats. I guess in that case we can do block local writes
@@ -160,7 +207,7 @@ class FlowStats {
             f.writef("t= %.18e n= %d\n", times[t], NSPACE);
             foreach(j; 0 .. NSPACE){
                 StatInstance* s = &(data[t][j]);
-                double weight = weights[t][j];
+                double weight = weights[j];
                 f.writef("%.18e",  s.rho.re/weight);
                 f.writef(" %.18e", s.velx.re/weight);
                 f.writef(" %.18e", s.vely.re/weight);
@@ -192,7 +239,6 @@ class FlowStats {
         foreach(t; 0 .. NTIME) {
             times[t] = 0.0;
             foreach(j; 0 .. NSPACE) {
-                weights[t][j] = 0.0;
                 data[t][j].reset();
             }
         }

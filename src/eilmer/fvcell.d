@@ -88,6 +88,9 @@ struct FVCellData{
         FlowGradients[] saved_gradients;
         ConservedQuantities saved_source_terms;
     }
+    // Temp arrays for stats code FIXME
+    size_t[][] cell_to_bin_map;
+    double[][] bin_weights;
 }
 
 class FVCell {
