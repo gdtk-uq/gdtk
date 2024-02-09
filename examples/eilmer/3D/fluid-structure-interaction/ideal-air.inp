@@ -1,2 +1,0 @@
-model = "IdealGas"
-species = {'air'}
