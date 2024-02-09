@@ -345,11 +345,6 @@ public:
         // Then use these to fill in the force vector
         F._data[] = 0.0;
         UpdateForceVector();
-        auto FFile = File("FSI/F.dat", "w+");
-        FFile.writef("%1.8e", F._data[0]);
-        foreach (i; 1 .. F._data.length) {
-            FFile.writef(" %1.8e", F._data[i]);
-        }
 
         // Now we can solve the ODE- reuse F to store the result of the linear system solution
         dt *= myConfig.couplingStep;
