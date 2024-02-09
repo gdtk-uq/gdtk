@@ -21,50 +21,43 @@ import gas;
 import turbulence;
 
 
-struct StatInstance {
-    double rho, velx, vely, velz, p, a, mu, k, mu_t, k_t, S, u, T;
-    double[] turb;
-    double[] massf;
+struct StatsData {
+    size_t ntimes, nspace, nvars, nturb, nspecies;
+    double[] buffer;
 
-    this(size_t nturb, size_t nspecies){
-        turb.length = nturb;
-        massf.length = nspecies;
+    this(size_t ntimes, size_t nspace, size_t nturb, size_t nspecies){
+        this.ntimes = ntimes;
+        this.nspace = nspace;
+        this.nvars = 13+nturb+nspecies;
+        this.nturb = nturb;
+        this.nspecies=nspecies;
+        buffer.length = ntimes*nspace*nvars;
     }
 
     void reset() {
-        rho = 0.0;
-        velx = 0.0;
-        vely = 0.0;
-        velz = 0.0;
-        p = 0.0;
-        a = 0.0;
-        mu = 0.0;
-        k = 0.0;
-        mu_t = 0.0;
-        k_t = 0.0;
-        S = 0.0;
-        u = 0.0;
-        T = 0.0;
-        turb[] = 0.0;
-        massf[] = 0.0;
+        buffer[] = 0.0;
     }
 
-    void plus_equals(double weight, FlowState* fs){
-        rho   += weight * fs.gas.rho.re; 
-        velx  += weight * fs.vel.x.re; 
-        vely  += weight * fs.vel.y.re;
-        velz  += weight * fs.vel.z.re;
-        p     += weight * fs.gas.p.re;
-        a     += weight * fs.gas.a.re;
-        mu    += weight * fs.gas.mu.re;
-        k     += weight * fs.gas.k.re; 
-        mu_t  += weight * fs.mu_t;
-        k_t   += weight * fs.k_t.re;
-        S     += weight * fs.S.re;
-        u     += weight * fs.gas.u;
-        T     += weight * fs.gas.T;
-        version(turbulence) { foreach(it; 0 .. turb.length) turb[it] += weight*fs.turb[it].re; }
-        version(multi_species_gas) { foreach(isp; 0 .. massf.length) massf[isp] += weight*fs.gas.massf[isp].re; }
+    void plus_equals(size_t srt, size_t end, double weight, FlowState* fs){
+        double[] section = buffer[srt .. end];
+
+        section[0]  += weight * fs.gas.rho.re;
+        section[1]  += weight * fs.vel.x.re;
+        section[2]  += weight * fs.vel.y.re;
+        section[3]  += weight * fs.vel.z.re;
+        section[4]  += weight * fs.gas.p.re;
+        section[5]  += weight * fs.gas.a.re;
+        section[6]  += weight * fs.gas.mu.re;
+        section[7]  += weight * fs.gas.k.re;
+        section[8]  += weight * fs.mu_t;
+        section[9]  += weight * fs.k_t.re;
+        section[10] += weight * fs.S.re;
+        section[11] += weight * fs.gas.u;
+        section[12] += weight * fs.gas.T;
+        version(turbulence) { foreach(it; 0 .. nturb) section[13+it] += weight*fs.turb[it].re; }
+        version(multi_species_gas) {
+            foreach(isp; 0 .. nspecies) section[13+nturb+isp] += weight*fs.gas.massf[isp].re;
+        }
     }
 }
 
@@ -74,16 +67,17 @@ class FlowStats {
     immutable double zmax =  10e-3;
     immutable double zmin = -10e-3;
     immutable size_t NTIME = 100;
-    size_t NSPACE;
+    size_t NSPACE, NVARS;
     double[] z;
     double dz, filter_width, b_squared;
     size_t tidx=0;
 
     double[] weights;
     double[NTIME] times;
-    StatInstance[][NTIME] data;
+    StatsData data;
 
-    this(size_t nspecies, size_t nturb, size_t NSPACE) {
+    this(size_t nturb, size_t nspecies, size_t NSPACE) {
+        this.NVARS = 13+nspecies+nturb;
         this.NSPACE=NSPACE;
         dz = (zmax - zmin)/NSPACE;
         filter_width = 2.0*dz;
@@ -95,15 +89,10 @@ class FlowStats {
         }
 
         weights.length = NSPACE;
-
-        foreach(t; 0 .. NTIME) {
-            foreach(i; 0 .. NSPACE) {
-                data[t] ~= StatInstance(nspecies, nturb);
-            }
-        }
+        data = StatsData(NTIME, NSPACE, nturb, nspecies);
 
         weights[] = 0.0;
-        reset_buffers();
+        data.reset();
     }
 
     void init_map_arrays_for_block(Vector3[] positions, ref size_t[][] cell_to_bin_map, ref double[][] bin_weights){
@@ -156,8 +145,10 @@ class FlowStats {
         times[tidx] = time;
         foreach(i; 0 .. cell_to_bin_map.length){
             foreach(jj, bin; cell_to_bin_map[i]){
+                size_t srt = tidx*NSPACE*NVARS + bin*NVARS;
+                size_t end = tidx*NSPACE*NVARS + bin*NVARS + NVARS;
                 double weight = bin_weights[i][jj];
-                data[tidx][bin].plus_equals(weight, &(fss[i]));
+                data.plus_equals(srt, end, weight, &(fss[i]));
                 ncheck[bin] += 1;
             }
         }
@@ -206,28 +197,14 @@ class FlowStats {
         foreach(t; 0 .. tidx){
             f.writef("t= %.18e n= %d\n", times[t], NSPACE);
             foreach(j; 0 .. NSPACE){
-                StatInstance* s = &(data[t][j]);
                 double weight = weights[j];
-                f.writef("%.18e",  s.rho.re/weight);
-                f.writef(" %.18e", s.velx.re/weight);
-                f.writef(" %.18e", s.vely.re/weight);
-                f.writef(" %.18e", s.velz.re/weight);
-                f.writef(" %.18e", s.p.re/weight);
-                f.writef(" %.18e", s.a.re/weight);
-                f.writef(" %.18e", s.mu.re/weight);
-                f.writef(" %.18e", s.k.re/weight);
-                f.writef(" %.18e", s.mu_t.re/weight);
-                f.writef(" %.18e", s.k_t.re/weight);
-                f.writef(" %.18e", s.S.re/weight);
-                f.writef(" %.18e", s.u.re/weight);
-                f.writef(" %.18e", s.T.re/weight);
-                version(turbulence) {
-                    foreach(turb; s.turb){
-                        f.writef(" %.18e", turb.re/weight);
+                foreach(k; 0 .. NVARS){
+                    size_t index = t*(NSPACE*NVARS) + j*NVARS + k;
+                    if (k==0) {
+                        f.writef("%.18e",  data.buffer[index]/weight);
+                    } else {
+                        f.writef(" %.18e",  data.buffer[index]/weight);
                     }
-                }
-                version(multi_species_gas) {
-                    foreach (Y; s.massf) { f.writef(" %.18e", Y.re/weight); }
                 }
                 f.write("\n");
             }
@@ -236,12 +213,8 @@ class FlowStats {
     }
 
     void reset_buffers(){
-        foreach(t; 0 .. NTIME) {
-            times[t] = 0.0;
-            foreach(j; 0 .. NSPACE) {
-                data[t][j].reset();
-            }
-        }
+        data.reset();
+        times[] = 0.0;
     }
 }
         
