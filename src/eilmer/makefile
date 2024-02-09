@@ -153,19 +153,43 @@ ifeq ($(WITH_E4DEBUG),1)
     PROGRAMS += e4shared-debug
 endif
 
-EILMER_CORE_FILES := simcore.d simcore_gasdynamic_step.d simcore_solid_step.d \
-	simcore_exchange.d simcore_io.d \
-	fileutil.d fvcell.d fvvertex.d fvinterface.d \
-	fluxcalc.d onedinterp.d flowgradients.d lsqinterp.d \
-	conservedquantities.d flowstate.d \
-	globalconfig.d globaldata.d \
-	block.d fluidblock.d sfluidblock.d ufluidblock.d \
-	fluidblockarray.d fluidblockio_old.d fluidblockio_new.d \
+EILMER_CORE_FILES := block.d \
+	celldata.d \
+	conservedquantities.d \
+	fileutil.d \
+	flowgradients.d \
+	flowstate.d \
+	fluidblock.d \
+	fluidblockarray.d \
+	fluidblockio.d \
+	fluidblockio_new.d \
+	fluidblockio_old.d \
+	fluxcalc.d \
+	fvcell.d \
+	fvinterface.d \
+	fvvertex.d \
 	gas_solid_interface.d \
-	grid_motion.d grid_motion_udf.d grid_motion_shock_fitting.d \
-	history.d loads.d special_block_init.d \
-	mass_diffusion.d shockdetectors.d turbulence.d jacobian.d \
-	fluidblockio.d celldata.d
+	globalconfig.d \
+	globaldata.d \
+	grid_motion.d \
+	grid_motion_shock_fitting.d \
+	grid_motion_udf.d \
+	history.d \
+	jacobian.d \
+	loads.d \
+	lsqinterp.d \
+	mass_diffusion.d \
+	onedinterp.d \
+	sfluidblock.d \
+	shockdetectors.d \
+	simcore.d \
+	simcore_exchange.d \
+	simcore_gasdynamic_step.d \
+	simcore_io.d \
+	simcore_solid_step.d \
+	special_block_init.d \
+	turbulence.d \
+	ufluidblock.d
 
 EILMER_LUA_FILES := lua_helper.d \
 	luaflowsolution.d luaflowstate.d user_defined_source_terms.d

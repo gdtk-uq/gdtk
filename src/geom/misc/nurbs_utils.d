@@ -4,7 +4,7 @@
  * Date: 2021-03-09
  */
 
-module nurbs_utils;
+module geom.misc.nurbs_utils;
 
 import std.conv;
 import std.format;

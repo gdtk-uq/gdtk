@@ -1,0 +1,18 @@
+{
+	"authors": [
+		"GDTK Dev Group"
+	],
+	"copyright": "Copyright © 2023, GDTK Dev Group",
+	"description": "Grid Utilities Library",
+	"license": "GPL-3.0",
+	"name": "grid_utils",
+	"sourcePaths": ["."],
+	"importPaths": [".", ".."],
+	"excludedSourceFiles": ["ugrid_partition.d"],
+	"configurations": [
+		{
+			"name": "library",
+			"targetType": "sourceLibrary",
+		}
+	]
+}

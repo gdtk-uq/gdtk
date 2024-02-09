@@ -1,0 +1,45 @@
+{
+	"authors": [
+		"GDTK Dev Group"
+	],
+	"copyright": "Copyright © 2023, GDTK Dev Group",
+	"description": "Eilmer application",
+	"license": "GPL-3.0",
+	"name": "eilmer",
+	"targetType": "executable",
+	"sourcePaths": ["."],
+	"importPaths": [".", ".."],
+	"dependencies": {
+		"ceq": { "path": "../extern/ceq" },
+		"util": { "path": "../util" },
+		"geom": { "path": "../geom" },
+		"gzip": { "path": "../extern/gzip" },
+		"gasdyn": { "path": "../gasdyn" },
+		"grid_utils": { "path": "../grid_utils" }
+	},
+	"excludedSourceFiles": [
+		"cht_accelerator.d",
+		"cuda_gpu_chem.d",
+		"e4monitor.d",
+		"loadbalance.d",
+		"nk_accelerator.d",
+		"opencl_gpu_chem.d",
+		"optdriver.d",
+		"shape_sensitivity_calc.d",
+		"shape_sensitivity_core.d",
+		"steadystate_core.d",
+		"solid/solid_loose_coupling_update.d"
+	],
+	"configurations": [
+		{
+			"name": "e4shared",
+			"mainSourceFile": "main.d"
+		},
+		{
+			"name": "e4shared_diagnostic",
+			"dependencies": {
+				"gperftools_d": { "path": "../extern/gperftools_d" },
+			}
+		}
+	]
+}

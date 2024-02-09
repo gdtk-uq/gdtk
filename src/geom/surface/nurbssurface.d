@@ -13,7 +13,7 @@ import std.format;
 
 import geom.elements;
 import geom.surface.parametricsurface;
-import nurbs_utils;
+import geom.misc.nurbs_utils;
 
 class NURBSSurface : ParametricSurface {
 public:

@@ -16,7 +16,7 @@
  *     2016-05-18 Ported from cfcfd3/lib/cfpylib/svg_render.py.
  *
  */
-module svg;
+module misc.svg;
 
 import std.stdio;
 import std.math;

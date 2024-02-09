@@ -4,7 +4,7 @@
  * Heather Muir - Undergraduate Thesis, 15/4/2016
  */
 
-module paver;
+module grid.paver;
 
 import std.stdio;
 import std.math;

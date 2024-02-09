@@ -1,0 +1,33 @@
+{
+	"authors": [
+		"GDTK Dev Group"
+	],
+	"copyright": "Copyright © 2023, GDTK Dev Group",
+	"description": "Gas Kinetics Library",
+	"license": "GPL-3.0",
+	"name": "kinetics",
+	"sourcePaths": ["."],
+	"importPaths": [".", ".."],
+	"dflags": ["-dip1008", "-preview=in"],
+	"excludedSourceFiles": ["notes/*"],
+	"dependencies": {
+		"ceq": { "path": "../extern/ceq" },
+		"ntypes": { "path": "../ntypes" },
+		"util": { "path": "../util" }
+	}, 
+	"configurations": [
+		{
+			"name": "library", 
+			"excludedSourceFiles": [
+				"pseudo_species_kinetics.d",
+				"dvode.o",
+				"pseudosp_solve_ode.o",
+				"pseudosp_rhs_ode.o",
+				"luapseudo_species_kinetics.d",
+			]
+		},
+		{
+			"name": "with-dvode"
+		}
+	]
+}

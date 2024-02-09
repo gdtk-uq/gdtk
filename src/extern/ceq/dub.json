@@ -1,0 +1,12 @@
+{
+	"authors": [
+		"Nick Gibbons"
+	],
+	"copyright": "Copyright © 2024, Nick Gibbons",
+	"description": "Chemistry Equilibrium wrapper library",
+	"license": "GPL-3.0",
+	"name": "ceq",
+	"targetName": "ceq",
+	"sourceFiles": ["source/*.o", "source/libceq.a"],
+	"preGenerateCommands": ["cd source && make all"],
+}

@@ -1,0 +1,16 @@
+{
+	"authors": [
+		"GDTK Dev Group"
+	],
+	"copyright": "Copyright © 2023, GDTK Dev Group",
+	"description": "Numerical Methods Library",
+	"license": "GPL-3.0",
+	"name": "nm",
+	"sourcePaths": ["."],
+	"importPaths": [".", ".."],
+	"excludedSourceFiles": ["play/*.d", "*_demo.d", "*_bench*.d"],
+	"dflags": ["-dip1008", "-preview=in"],
+	"dependencies": {
+		"util": { "path": "../util" }
+	}
+}

@@ -14,7 +14,7 @@ import std.string;
 
 import geom.elements;
 import geom.volume.parametricvolume;
-import nurbs_utils;
+import geom.misc.nurbs_utils;
 
 import nm.number;
 import ntypes.complex;

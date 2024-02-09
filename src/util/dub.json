@@ -1,0 +1,27 @@
+{
+	"authors": [
+		"GDTK Dev Group"
+	],
+	"copyright": "Copyright © 2023, GDTK Dev Group",
+	"description": "Utility Packages for GDTK",
+	"license": "GPL-3.0",
+	"name": "util",
+	"targetType": "sourceLibrary", 
+	"sourcePaths": ["."],
+	"sourceFiles": ["../../extern/lua-5.4.3/install/lib/liblua.a"],
+	"injectSourceFiles": ["../../extern/lua-5.4.3/install/lib/liblua.a", "lua.d"],
+	"importPaths": [".", ".."],
+	"lflags": ["-L../../extern/lua-5.4.3/lib"],
+	"preGenerateCommands": ["make"],
+	"subPackages": [
+		{
+			"name": "lua-service",
+			"sourcePaths": [],
+			"sourceFiles": [
+				"lua.d", "lua_service.d", 
+				"../../extern/lua-5.4.3/install/lib/liblua.a"
+			],
+			"preGenerateCommands": ["make"]
+		}
+	]
+}

@@ -1,0 +1,12 @@
+{
+	"authors": [
+		"Peter Jacobs"
+	],
+	"copyright": "Copyright © 2024, Peter Jacobs",
+	"description": "GZip module",
+	"license": "GPL-3.0",
+	"name": "gzip",
+	"sourcePaths": ["."],
+	"importPaths": ["."],
+	"excludedSourceFiles": ["*demo.d"]
+}

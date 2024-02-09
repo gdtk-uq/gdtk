@@ -3,7 +3,7 @@ ifeq ($(shell uname -s), Darwin)
 else
     PLATFORM := linux
 endif
-$(info PLATFORM=$(PLATFORM))
+# $(info PLATFORM=$(PLATFORM))
 
 DLINKFLAGS := -L-ldl
 ifeq ($(PLATFORM), macosx)

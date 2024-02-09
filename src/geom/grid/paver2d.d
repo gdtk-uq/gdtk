@@ -4,7 +4,7 @@
 // PJ, 2018-02-26
 //
 
-module paver2d;
+module grid.paver2d;
 
 import std.stdio;
 import geom;

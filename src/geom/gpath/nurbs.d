@@ -12,7 +12,7 @@ import std.format;
 
 import geom.elements;
 import geom.gpath.path;
-import nurbs_utils;
+import geom.misc.nurbs_utils;
 
 class NURBS : Path {
 public:

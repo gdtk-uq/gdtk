@@ -39,6 +39,7 @@ import nm.ridder;
 import nm.linesearch;
 import gas;
 import gas.cea_gas;
+import gas.gas_state;
 import gasflowexception;
 import idealgasflow;
 
