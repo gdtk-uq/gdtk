@@ -1,0 +1,188 @@
+= Fluid Structure Interaction in Eilmer
+Lachlan Whyborn <lachlan.s.whyborn@gmail.com>, 07-02-2024
+
+:toc: right
+:stylesheet: ../../readthedocs.css
+:sectnums:
+:imagesdir: resources
+:stem: latexmath
+:eqnnums:
+
+Fluid structure interactions occur when the pressures exerted by the flow impact the model, which in turn affects the flow, creating a complex two-way interaction. Eilmer provides fluid structure interaction capability on limited geometries.
+
+== Models for the Structure
+
+A simple mass-spring-damper model is used to compute the motion of the structure due to the external fluid pressures. The ODE system is described as:
+
+[latexmath#ODE,reftext={counter:eqs}]
+++++
+\begin{equation}
+\mathbf{M}\ddot{X}=F-\mathbf{D}\dot{X}-\mathbf{K}X
+\end{equation}
+++++
+
+which we reduce to a set of first ODEs using the usual method of setting
+
+[latexmath#ToODEs,reftext={counter:eqs}]
+++++
+\begin{equation}
+\dot{X}=V
+\end{equation}
+++++
+
+and rewriting the single second order ODE as
+
+[latexmath#ODEs, reftext={counter:eqs}]
+++++
+\begin{equation}
+\begin{aligned}
+\mathbf{M}\dot{V}&=F-\mathbf{D}V-\mathbf{K}X\\
+\dot{X}&=V
+\end{aligned}
+\end{equation}
+++++
+
+The mass and stiffness matrices are formed using the finite element method, with the damping matrix either neglected or formed in some ad-hoc manner. Without damping present, the system is prone to instability, so a 4th order Runge-Kutta temporal scheme is used. This is expensive, and lower order schemes will be made available for instances where the damping sufficiently stabilises the system. In contrast to the finite volume element we use in the fluid, where the values represent volume averaged quantities, the latexmath:[$X$] and latexmath:[$V$] vectors denote point values at nodes, at the corners of the elements.
+
+There are currently two models available to build the mass and stiffness matrices the structure. Currently, there is no damping model available, but a simple two-parameter Rayleigh model will be added in in the near future.
+
+* Euler-Bernoulli, a one dimensional thin beam model for two dimensional flows. In this model, each node has 2 degrees of freedom, a deflection and a slope.
+* Kirchhoff-Love, a two dimensional thin plate model for three dimensional flows. In this model, each node has 3 degrees of freedom, a deflection and the slope along the two axis of the plate.
+
+Both are simple models, which assume uniform spacing in each direction with 2 (4) noded straight (rectangular) elements in one (two) dimensions. A simple setup with be something like Figure 1, with P~0~ != P~1~ and the left edge being clamped to some larger structure.
+
+.Demonstration of a simple fluid structure interaction setup
+[#Demo-Setup]
+image::FSI-Demo-0.png[]
+
+To illustrate the interfacing between the fluid and the structure, we will zoom in on a small section of the beam and inspect at what it would look like when the fluid and structure are discretized by volumes and elements respectively. The figure below shows beam segment discetized by nodes (the elements are the links between the nodes) sandwiched between fluid meshes on either side, with the fluid indices denoting vertex indices rather than cell. The components of the external force vector are built by taking the difference between fluid pressures in the cells either side of each node. The beam is deformed according the ODEs described above. The internal node velocities are communicated to the fluid vertices at the wall via linear interpolation (bi-linear in 3D fluid/2D solid). The fluid vertices away from the wall receive a linearly decreasing fraction of the wall velocity. The linear decrease is described later, when setting the fluid interaction is detailed.
+
+.The interface between the fluid and structure
+[#Interfacing]
+image::FSI-Demo-1.png[]
+
+== Using the Fluid Structure Interaction Module
+
+To activate the fluid structure interaction module, Eilmer must be compiled with the "WITH_FSI=1" flag. In the preparation Lua script, set the configuration options:
+
+[source,lua]
+----
+config.grid_motion = "FSI"
+config.grid_motion = "moving_grid_1_stage"
+config.FEMModel = "euler-bernoulli" # or "kirchhoff-love"
+----
+
+To configure the fluid structure interaction, a config table is required. Build the config table using 
+
+[source,lua]
+----
+FSIOptions{ ... }
+----
+
+=== Options for the Solid Model
+
+This is a list of the FSIOptions relating to the finite element model, with their default values.
+
+northForcing::      "Fluid", type of forcing to use for the north surface. Currently this is the only option, "user-defined" for a Lua defined forcing is in the works.
+southForcing::      "Fluid", see northForcing.
+Nx::                5, number of elements in the x direction.
+Nz::                0, number of elements in the z direction.
+length::            1.0, length of the structure in the x direction in m.
+width::             1.0, width of the structure in the z direction in m.
+thickness::         0.001, thickness of the plate in the transverse direction in m.
+density::           8000, density of the solid material in kg/m^3^.
+youngsModulus::     190e9, Youngs modulus of the material in Pa.
+poissonsRatio::     0.33, Poisson's ratio of the material.
+plateNormal::       {0.0, 1.0, 0.0}, normal of the solid surface.
+quasi3D::           false, whether to use a 1D model in a 3D flow by average pressure across the width.
+BCs::               "CFFF", characters representing the boundary conditions at each edge.
+writeMatrices::     false, whether to write out the generated mass and stiffness matrices to disk, to "FSI/K.dat" and "FSI/M.dat".
+couplingStep::      10, every how many fluid steps to update the solid motion.
+historyNodes::      {}, list of nodes to write at the config.dt_history frequency.
+
+The "x" and "z" direction are in solid's reference frame, which is not necessarily the same as the fluid reference frame. The plateNormal vector is the solid's normal in the fluid's reference frame, which is used to map motion in the solid's reference to the fluid.
+
+==== The Boundary Conditions
+
+The boundary condition is set using a string of characters, each character representing one edge of the solid. There are three options for each boundary:
+
+* "F":  The edge is free, no constraints are set to the nodes along this boundary.
+* "C":  The edge is clamped, the nodes along this boundary are fixed in place with 0 displacement and slope.
+* "P":  The edge is pinned, the nodes along this boundary have 0 displacement and 0 slope along said boundary, but can          have non-zero slope in the other direction for 2D solid models.
+
+The order of the boundary conditions is (-x)(+x)(-z)(+z). The full 4 character code can be set in 1D, but the second 2 characters are ignored.
+
+=== Options setting the Fluid Interaction
+
+The solid interaction with the fluid is achieved through the motion of the fluid mesh, while the fluid interaction with the solid is achieved through the changing external pressure. We need to provide Eilmer with some assistance in setting up these interactions. First, we need to provide information about where in the fluid the moving structure is, to assist in retrieving the correct pressures. This is done using these two FSIOptions:
+
+northFBA::      false, which fluid block array is on the north surface of the plate. This must be provided if northForcing is "Fluid".
+southFBA::      false. which fluid block array is on the south surface of the plate. This must be provided if southForcing is "Fluid".
+
+We also need to provide information about how the mesh is set up around the moving structure. There are a series of possible options, which listed are:
+
+* For 1D solid/2D flow- northWestFBA, northEastFBA, southWestFBA, southEastFBA, WestAdjacentFBA, eastAdjacentFBA.
+* for 2D solid/3D flow- the above, plus northBottomFBA, northTopFBA, southBottomFBA, southTopFBA, westBottomFBA, westTopFBA, eastBottomFBA, eastTopFBA, northWestBottomFBA, northWestTopFBA, northEastBottomFBA, northEastTopFBA, southWestBottomFBA, southWestTopFBA, southEastBottomFBA, southEastTopFBA, bottomAdjacentFBA, topAdjacentFBA.
+
+The names are fairly self-descriptive, referring to their location relative to the structure of interest. To illustrate, we will return to Figure 1 and redraw it with a typical blocking setup in Figure 3. In this case, the entries that would be set in the FSIOptions table are:
+
+northFBA::          FBA0. The fluid vertices in this block array depend on all the nodes in the structure.
+southFBA::          FBA1. As with FBA0, it depends on all the nodes in the structure.
+northEastFBA::      FBA2. This block moves in lockstep with the east boundary of FBA0.
+eastAdjacentFBA::   FBA3. All vertices in this block receive the same velocity as the tip node in the structure.
+southEastFBA::      FBA4. This block moves in lockstop with the east boundary of FBA1.
+
+.Blocking structure for the simple fluid structure interaction setup.
+[#Demo-blocking]
+image::FSI-Demo-2.png[width=60%]
+
+Then in 3D, the northBottomFBA would move in lockstep with the bottom boundary of the northFBA, northWestBottomFBA would move in lockstop with the west/bottom edge of the northFBA and so on.
+
+The linear decrease of the vertex velocities mentioned prior is based on the blocks prescribed as northFBA and southFBA. The "outer" boundaries of these block arrays are fixed in place (north for northFBA, south for southFBA). The velocity applied to the velocities linearly decreases to 0 based on distance as they approach this fixed boundary.
+
+== Bringing it Together
+
+We will not go over the full Lua script required to run this simulation, only the additions that need to be made to convert the example shown in Figure 3 from a static fluid simulation to the fluid structure interaction simulation. As mentioned above, first set the grid motion options:
+
+[source,lua]
+----
+config.grid_motion = "FSI"
+config.grid_motion = "moving_grid_1_stage"
+config.FEMModel = "euler-bernoulli" # or "kirchhoff-love"
+----
+
+Now set up the FSIOptions table. For this example, we'll use the material properties of steel and discretize the beam with 20 elements. The left edge is clamped and the right edge is free. The solid dynamics are updated every 10 fluid steps. The last node (id = 20) is set to write out its position and velocity at the config.dt_history frequency. Note that if we try to set the length and width to values that are different than measured by the fluid mesh (by taking the distance between the start and end vertices), you will receive an error.
+
+[source,lua]
+----
+FSIOptions{
+    northForcing = "Fluid", southForcing = "Fluid",
+    northFBA = FBA0, southFBA = FBA1,
+    northEastFBA = FBA2, eastAdjacentFBA = FBA3, southEastFBA = FBA4,
+    Nx = 20,
+    length = 1.0, thickness = 0.01,
+    density = 7850, youngsModulus = 200e9,
+    BCs = "CF",
+    couplingStep = 10,
+    historyNodes = {20}
+}
+----
+
+It is important to make sure that the fluid and the solid do not get out of sync. To do this, ensure that the size of the fluid step can not change between solid updates by setting either setting
+
+[source,lua]
+----
+config.cfl_count = 10   # A multiple of the couplingStep
+config.max_attempts_for_step = 1    # Make sure we can't reattempt a step with a smaller timestep
+----
+
+or
+
+[source,lua]
+----
+config.fixed_time_step = true
+----
+
+== Reading the Results
+
+All the results are written to the FSI directory, which will live in the simulation directory. If writeMatrices is set to true in the FSIOptions table, then "K.dat" and "M.dat" are written in space-delimited matrix format. The snapshots are stored as "t\{tidx\}.gz". The precise contents of this file will depend on the solid model used, but the convention is the order of the columns are the "position" of the degrees of freedom followed by the "velocity" of the degrees of freedom. So for the Euler-Bernoulli model, the first column is the displacement of each node, second column the slope, third column the rate of change of displacement, fourth column rate of change of slope. The same convention is followed for the history, with the addition of a time column and that the rows represent time snapshots rather than the nodes.
