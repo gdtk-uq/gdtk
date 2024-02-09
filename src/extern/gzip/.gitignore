@@ -1,0 +1,7 @@
+# Build artifacts
+**/*.a
+**/*.o
+**/*.so
+
+# Dub artifacts
+*-test-library

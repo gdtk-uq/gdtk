@@ -1,0 +1,10 @@
+install/
+
+# Ignore object files
+**/*.o
+**/*.so
+**/*.a
+
+# Build artifacts
+src/dgd-lua
+src/dgd-luac
