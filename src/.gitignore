@@ -1,0 +1,7 @@
+# Ignore build artifacts
+**/*.a
+**/*.o
+**/*.so
+
+# Ignore Dub test artifacts
+**/*-test-library
