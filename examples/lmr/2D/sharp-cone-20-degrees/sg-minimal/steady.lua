@@ -11,6 +11,8 @@ inflow = FlowState:new{p=95.84e3, T=1103.0, velx=1000.0}
 flowDict = {initial=initial, inflow=inflow}
 --
 -- 2. Fluid blocks, with initial flow states and boundary conditions.
+-- Block boundaries that are not otherwise assigned a boundary condition
+-- are initialized as WallBC_WithSlip.
 bcDict = {
    inflow=InFlowBC_Supersonic:new{flowState=inflow},
    outflow=OutFlowBC_Simple:new{}

@@ -11,16 +11,15 @@ inflow = FlowState:new{p=95.84e3, T=1103.0, velx=1000.0}
 flowDict = {initial=initial, inflow=inflow}
 --
 -- 2. Fluid blocks, with initial flow states and boundary conditions.
--- Block boundaries that are not otherwise assigned a boundary condition
--- are initialized as WallBC_WithSlip.
 bcDict = {
    inflow=InFlowBC_Supersonic:new{flowState=inflow},
-   outflow=OutFlowBC_Simple:new{}
+   outflow=OutFlowBC_Simple:new{},
+   wall=WallBC_WithSlip:new{group="wall"}
 }
 --
 makeFluidBlocks(bcDict, flowDict)
 --
--- 3. Simulation parameters.
+-- 4. Simulation parameters.
 config.flux_calculator= "ausmdv"
 config.interpolation_order = 2
 config.max_time = 5.0e-3  -- seconds
@@ -30,3 +29,5 @@ config.cfl_value = 0.5
 config.dt_plot = 1.5e-3
 config.dt_history = 10.0e-5
 config.extrema_clipping = false
+
+config.boundary_groups_for_loads = "wall"
