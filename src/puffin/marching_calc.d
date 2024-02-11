@@ -125,10 +125,10 @@ void do_space_marching_calculation()
         //
         // 5. Write a flow slice (maybe).
         if (progress.x >= progress.plot_at_x) {
-            foreach (st; streams) { 
+            foreach (st; streams) {
                 if (st.active.get_value(progress.x) == 1) {
                     st.write_flow_data(false, true);
-                } 
+                }
             }
             progress.steps_since_last_plot_write = 0;
             progress.plot_at_x += Config.plot_dx;
@@ -162,7 +162,7 @@ void relax_slice_to_steady_flow(double xmid)
         foreach (st; parallel(streams, 1)) {
             if (st.active.get_value(xmid) == 1) {
                 st.mark_shock_cells();
-                st.predictor_step(dt);
+                st.predictor_step(dt, xmid);
             }
         }
         // 2. (possible) corrector step.
@@ -170,14 +170,11 @@ void relax_slice_to_steady_flow(double xmid)
             apply_boundary_conditions(xmid);
             foreach (st; parallel(streams, 1)) {
                 if (st.active.get_value(xmid) == 1) {
-                    st.corrector_step(dt);
+                    st.corrector_step(dt, xmid);
                 }
             }
         }
-        // 3. Add source terms to conserved quantities
-        add_source_terms(xmid, progress.dx);
-        //
-        // 4. Chemistry step is loosely coupled to the gas dynamics.
+        // 3. Chemistry step is loosely coupled to the gas dynamics.
         if (Config.reacting) {
             foreach (st; parallel(streams, 1)) {
                 if (st.active.get_value(xmid) == 1) {
@@ -185,40 +182,15 @@ void relax_slice_to_steady_flow(double xmid)
                 }
             }
         }
-        // 5. Prepare for next step.
+        // 4. Prepare for next step.
         foreach (st; parallel(streams, 1)) {
             st.transfer_conserved_quantities(1, 0);
         }
-        // 6. [TODO] measure residuals overall
+        // 5. [TODO] measure residuals overall
         // break relaxation loop early, if residuals are small enough
     }
     return;
 } // end relax_slice_to_steady_flow()
-
-void add_source_terms(double xmid, double dx)
-// Look up source terms at xmid and add these to all cells in
-// streamtube.
-{
-    foreach (j, st; parallel(streams, 1)) {
-        // add rho source term
-        if (st.add_rho.get_value(xmid) != 0) {
-            st.add_mass_source_term(st.add_rho.get_value(xmid), 1);
-        }
-        // add x momentum source term
-        if (st.add_xmom.get_value(xmid) != 0) {
-            st.add_xmom_source_term(st.add_xmom.get_value(xmid), 1);
-        }
-        // add y momentum source term
-        if (st.add_ymom.get_value(xmid) != 0) {
-            st.add_ymom_source_term(st.add_ymom.get_value(xmid), 1);
-        }
-        // add total Energy source term
-        if (st.add_tE.get_value(xmid) != 0) {
-            st.add_totenergy_source_term(st.add_tE.get_value(xmid), 1);
-        }
-    }
-    return;
-} // add_source_terms(double xmid)
 
 void apply_boundary_conditions(double xmid)
 // Look up boundary conditions at xmid and apply boundary conditions.

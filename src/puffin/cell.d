@@ -221,20 +221,6 @@ public:
     } // end decode_conserved()
 
     @nogc
-    void add_source_term(ulong ind, double dU, size_t ftl)
-    // Add source term to conserved quantities.
-    // Quantities per unit volume.
-    // Inputs:
-    //   ind: index to conserved quantity
-    //   dU: increment for conserved quantity
-    //   ftl: index to the particular vector of conserved quantities to decode.
-    {
-        auto myU = U[ftl];
-        myU[ind] = myU[ind] + dU*volume;
-        return;
-    } // end add_source_term()
-
-    @nogc
     void thermochemical_increment(double dt, GasModel gmodel, ThermochemicalReactor reactor)
     {
         double[maxParams] params; // An artifact from Eilmer.
@@ -271,7 +257,8 @@ public:
     } // end thermochemical_increment()
 
     @nogc
-    void eval_dUdt(size_t ftl, bool axiFlag)
+    void eval_dUdt(size_t ftl, bool axiFlag,
+                   double[] dUdt_usst, bool uSSTFlag)
     // These are the spatial (RHS) terms in the semi-discrete governing equations.
     // ftl : (flow-time-level) specifies where computed derivatives are to be stored.
     //       0: predictor update.
@@ -290,19 +277,28 @@ public:
         if (axiFlag) {
             my_dUdt[cqi.yMom] += fs.gas.p * xyplane_area * vol_inv;
         }
+        if (uSSTFlag) {
+            // Ingo's user-supplied source terms.
+            my_dUdt[cqi.mass] += dUdt_usst[cqi.mass];
+            my_dUdt[cqi.xMom] += dUdt_usst[cqi.xMom];
+            my_dUdt[cqi.yMom] += dUdt_usst[cqi.yMom];
+            my_dUdt[cqi.totEnergy] += dUdt_usst[cqi.totEnergy];
+        }
         return;
     } // end eval_dUdt()
 
     @nogc
-    void update_conserved_for_stage(int stage, double dt, bool axiFlag, GasModel gmodel)
+    void update_conserved_for_stage(int stage, double dt, bool axiFlag,
+                                    double[] dUdt_usst, bool uSSTFlag,
+                                    GasModel gmodel)
     {
         if (stage == 1) {
             // Predictor.
-            eval_dUdt(0, axiFlag);
+            eval_dUdt(0, axiFlag, dUdt_usst, uSSTFlag);
             U[1][] = U[0][] + dt*dUdt[0][];
         } else {
             // Corrector.
-            eval_dUdt(1, axiFlag);
+            eval_dUdt(1, axiFlag, dUdt_usst, uSSTFlag);
             U[1][] = U[0][] + 0.5*dt*(dUdt[0][] + dUdt[1][]);
         }
         decode_conserved(1, gmodel);

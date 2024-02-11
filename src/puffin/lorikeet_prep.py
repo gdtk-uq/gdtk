@@ -84,7 +84,7 @@ class GlobalConfig():
     __slots__ = 'job_name', 'title', \
         'gas_model_file', 'gmodel', 'iovar_names', \
         'reaction_file_1', 'reaction_file_2', 'reactor', 'reacting', 'T_frozen', \
-        'axisymmetric', \
+        'axisymmetric', 'add_user_supplied_source_terms', \
         'nib', 'njb', 'blk_ids', 'nics', 'njcs', \
         'dt_init', 'cfl', 'cfl_count', 'print_count', \
         'plot_dt', 'max_time', 'max_step', \
@@ -106,6 +106,7 @@ class GlobalConfig():
         self.reacting = False
         self.T_frozen = 300.0
         self.axisymmetric = False
+        self.add_user_supplied_source_terms = False
         self.nib = None
         self.njb = None
         self.dt_init = 1.0e-6
@@ -138,6 +139,7 @@ class GlobalConfig():
         fp.write('  "reacting": %s,\n' % json.dumps(self.reacting))
         fp.write('  "T_frozen": %e,\n' % self.T_frozen)
         fp.write('  "axisymmetric": %s,\n' % json.dumps(self.axisymmetric))
+        fp.write('  "add_user_supplied_source_terms": %s,\n' % json.dumps(self.add_user_supplied_source_terms))
         fp.write('  "max_time": %e,\n' % self.max_time)
         fp.write('  "max_step": %d,\n' % self.max_step)
         fp.write('  "dt_init": %e,\n' % self.dt_init)

@@ -59,6 +59,8 @@ public:
     CQIndex cqi;
     int nic, njc;
     bool axiFlag;
+    bool uSSTFlag;
+    double[] dUdt_usst;
     double cfl;
     FluxCalcCode flux_calc;
     int x_order;
@@ -85,6 +87,9 @@ public:
         gmodel = init_gas_model(Config.gas_model_file);
         cqi = CQIndex(gmodel.n_species, gmodel.n_modes);
         axiFlag = Config.axisymmetric;
+        uSSTFlag = Config.add_user_supplied_source_terms;
+        dUdt_usst.length = cqi.n;
+        foreach (ref du; dUdt_usst) du = 0.0;
         cfl = Config.cfl;
         x_order = Config.x_order;
         flux_calc = Config.flux_calc;
@@ -142,6 +147,7 @@ public:
         repr ~= format(", gmodel=%s", gmodel);
         repr ~= format(", cqi=%s", cqi);
         repr ~= format(", axiFlag=%s", axiFlag);
+        repr ~= format(", uSSTFlag=%s", uSSTFlag);
         repr ~= format(", flux_calc=%s", to!string(flux_calc));
         repr ~= format(", compression_tol=%g, shear_tol=%g", compression_tol, shear_tol);
         repr ~= format(", x_order=%d", x_order);
@@ -419,7 +425,8 @@ public:
     {
         foreach (f; ifaces) { f.calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi); }
         foreach (f; jfaces) { f.calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi); }
-        foreach (c; cells) { c.update_conserved_for_stage(stage, dt, axiFlag, gmodel); }
+        // [TODO] One day, we should implement user-defined source terms.
+        foreach (c; cells) { c.update_conserved_for_stage(stage, dt, axiFlag, dUdt_usst, uSSTFlag, gmodel); }
     }
 
     @nogc

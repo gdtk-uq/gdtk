@@ -39,6 +39,8 @@ public:
     Vector3 vel;
     int ncells;
     bool axiFlag;
+    bool uSSTFlag;
+    double[] dUdt_usst;
     double cfl;
     FluxCalcCode flux_calc;
     int x_order;
@@ -72,6 +74,9 @@ public:
         gmodel = init_gas_model(Config.gas_model_file);
         cqi = CQIndex(gmodel.n_species, gmodel.n_modes);
         axiFlag = Config.axisymmetric;
+        uSSTFlag = Config.add_user_supplied_source_terms;
+        dUdt_usst.length = cqi.n;
+        foreach (ref du; dUdt_usst) du = 0.0;
         cfl = Config.cfl;
         x_order = Config.x_order;
         flux_calc = Config.flux_calc;
@@ -285,42 +290,6 @@ public:
     } // end set_up_slice()
 
     @nogc
-    void add_mass_source_term(double dU, size_t ftl)
-    // Loop over cells in current slide and add source term
-    {
-        CQIndex cqi;
-        foreach (c; cells) { c.add_source_term(cqi.mass, dU, ftl); }
-        return;
-    } // end add_mass_source_term()
-
-    @nogc
-    void add_xmom_source_term(double dU, size_t ftl)
-    // Loop over cells in current slide and add source term
-    {
-        CQIndex cqi;
-        foreach (c; cells) { c.add_source_term(cqi.xMom, dU, ftl); }
-        return;
-    } // end add_xmom_source_term()
-
-    @nogc
-    void add_ymom_source_term(double dU, size_t ftl)
-    // Loop over cells in current slide and add source term
-    {
-        CQIndex cqi;
-        foreach (c; cells) { c.add_source_term(cqi.yMom, dU, ftl); }
-        return;
-    } // end add_ymom_source_term()
-
-    @nogc
-    void add_totenergy_source_term(double dU, size_t ftl)
-    // Loop over cells in current slide and add source term
-    {
-        CQIndex cqi;
-        foreach (c; cells) { c.add_source_term(cqi.totEnergy, dU, ftl); }
-        return;
-    } // end add_totenergy_source_term()
-
-    @nogc
     void shuffle_data_west()
     // At the end of relaxation process (and reaching steady-state),
     // we copy the geometry and flow states over to the west side
@@ -404,7 +373,7 @@ public:
     }
 
     @nogc
-    void predictor_step(double dt)
+    void predictor_step(double dt, double xmid)
     {
         foreach (c; cells) { c.estimate_local_dt(cfl); }
         foreach (j; 0 .. ncells) {
@@ -414,14 +383,26 @@ public:
         foreach (j; 0 .. ncells+1) {
             jfaces[j].calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
         }
+        if (uSSTFlag) {
+            // Ingo's user-supplied source terms.
+            dUdt_usst[cqi.mass] = add_rho.get_value(xmid);
+            dUdt_usst[cqi.xMom] = add_xmom.get_value(xmid);
+            dUdt_usst[cqi.yMom] = add_ymom.get_value(xmid);
+            dUdt_usst[cqi.totEnergy] = add_tE.get_value(xmid);
+        } else {
+            dUdt_usst[cqi.mass] = 0.0;
+            dUdt_usst[cqi.xMom] = 0.0;
+            dUdt_usst[cqi.yMom] = 0.0;
+            dUdt_usst[cqi.totEnergy] = 0.0;
+        }
         foreach (c; cells) {
-            c.update_conserved_for_stage(1, dt, axiFlag, gmodel);
+            c.update_conserved_for_stage(1, dt, axiFlag, dUdt_usst, uSSTFlag, gmodel);
         }
         return;
     } // end predictor_step()
 
     @nogc
-    void corrector_step(double dt)
+    void corrector_step(double dt, double xmid)
     {
         foreach (j; 0 .. ncells) {
             ifaces_east[j].simple_flux(cells[j].fs, gmodel, cqi);
@@ -429,8 +410,20 @@ public:
         foreach (j; 0 .. ncells+1) {
             jfaces[j].calculate_flux(fsL, fsR, gmodel, flux_calc, x_order, cqi);
         }
+        if (uSSTFlag) {
+            // Ingo's user-supplied source terms.
+            dUdt_usst[cqi.mass] = add_rho.get_value(xmid);
+            dUdt_usst[cqi.xMom] = add_xmom.get_value(xmid);
+            dUdt_usst[cqi.yMom] = add_ymom.get_value(xmid);
+            dUdt_usst[cqi.totEnergy] = add_tE.get_value(xmid);
+        } else {
+            dUdt_usst[cqi.mass] = 0.0;
+            dUdt_usst[cqi.xMom] = 0.0;
+            dUdt_usst[cqi.yMom] = 0.0;
+            dUdt_usst[cqi.totEnergy] = 0.0;
+        }
         foreach (c; cells) {
-            c.update_conserved_for_stage(2, dt, axiFlag, gmodel);
+            c.update_conserved_for_stage(2, dt, axiFlag, dUdt_usst, uSSTFlag, gmodel);
         }
         return;
     } // end corrector_step()

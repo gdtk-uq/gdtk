@@ -39,6 +39,7 @@ public:
     shared static bool reacting = false;
     shared static double T_frozen;
     shared static bool axisymmetric;
+    shared static bool add_user_supplied_source_terms;
     shared static double cfl;
     shared static int max_step;
     shared static int print_count;
@@ -79,6 +80,7 @@ void parse_config_data_for_transient_solver(JSONValue configData)
     Config.reacting = getJSONbool(configData, "reacting", false);
     Config.T_frozen = getJSONdouble(configData, "T_frozen", 300.0);
     Config.axisymmetric = getJSONbool(configData, "axisymmetric", false);
+    Config.add_user_supplied_source_terms = getJSONbool(configData, "add_user_supplied_source_terms", false);
     Config.max_t = getJSONdouble(configData, "max_time", 0.0);
     Config.max_step = getJSONint(configData, "max_step", 0);
     Config.dt_init = getJSONdouble(configData, "dt_init", 1.0e-6);
@@ -146,6 +148,7 @@ void parse_config_data_for_marching_solver(JSONValue configData)
     Config.reacting = getJSONbool(configData, "reacting", false);
     Config.T_frozen = getJSONdouble(configData, "T_frozen", 300.0);
     Config.axisymmetric = getJSONbool(configData, "axisymmetric", false);
+    Config.add_user_supplied_source_terms = getJSONbool(configData, "add_user_supplied_source_terms", false);
     Config.max_x = getJSONdouble(configData, "max_x", 0.0);
     Config.max_step = getJSONint(configData, "max_step", 0);
     Config.dx = getJSONdouble(configData, "dx", 0.0);

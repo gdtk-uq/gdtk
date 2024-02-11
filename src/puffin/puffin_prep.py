@@ -76,7 +76,7 @@ class GlobalConfig(object):
     __slots__ = 'job_name', 'title', \
                 'gas_model_file', 'gmodel', \
                 'reaction_file_1', 'reaction_file_2', 'reactor', 'reacting', 'T_frozen', \
-                'axisymmetric', \
+                'axisymmetric', 'add_user_supplied_source_terms', \
                 'dx', 'print_count', 'plot_dx', 'max_x', 'max_step', \
                 'cfl', 'max_step_relax', 'x_order', 't_order', \
                 'flux_calc', 'compression_tol', 'shear_tol'
@@ -96,6 +96,7 @@ class GlobalConfig(object):
         self.reacting = False
         self.T_frozen = 300.0
         self.axisymmetric = False
+        self.add_user_supplied_source_terms = False
         self.dx = 1.0e-3
         self.print_count = 50
         self.plot_dx = 1.0e-2
@@ -129,6 +130,7 @@ class GlobalConfig(object):
         fp.write('  "reacting": %s,\n' % json.dumps(self.reacting))
         fp.write('  "T_frozen": %e,\n' % self.T_frozen)
         fp.write('  "axisymmetric": %s,\n' % json.dumps(self.axisymmetric))
+        fp.write('  "add_user_supplied_source_terms": %s,\n' % json.dumps(self.add_user_supplied_source_terms))
         fp.write('  "dx": %e,\n' % self.dx)
         fp.write('  "print_count": %d,\n' % self.print_count)
         fp.write('  "plot_dx": %e,\n' % self.plot_dx)
