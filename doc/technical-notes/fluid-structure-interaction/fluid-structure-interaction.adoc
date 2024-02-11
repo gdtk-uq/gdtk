@@ -1,6 +1,6 @@
 = Fluid Structure Interaction in Eilmer
-Lachlan Whyborn <lachlan.s.whyborn@gmail.com>, 07-02-2024
-
+Lachlan Whyborn <lachlan.s.whyborn@gmail.com>
+2024-02-09
 :toc: right
 :stylesheet: ../../readthedocs.css
 :sectnums:
@@ -10,7 +10,9 @@ Lachlan Whyborn <lachlan.s.whyborn@gmail.com>, 07-02-2024
 
 Fluid structure interactions occur when the pressures exerted by the flow impact the model, which in turn affects the flow, creating a complex two-way interaction. Eilmer provides fluid structure interaction capability on limited geometries.
 
-== Models for the Structure
+:leveloffset: +1
+
+= Models for the Structure
 
 A simple mass-spring-damper model is used to compute the motion of the structure due to the external fluid pressures. The ODE system is described as:
 
@@ -61,7 +63,7 @@ To illustrate the interfacing between the fluid and the structure, we will zoom 
 [#Interfacing]
 image::FSI-Demo-1.png[]
 
-== Using the Fluid Structure Interaction Module
+= Using the Fluid Structure Interaction Module
 
 To activate the fluid structure interaction module, Eilmer must be compiled with the "WITH_FSI=1" flag. In the preparation Lua script, set the configuration options:
 
@@ -79,7 +81,7 @@ To configure the fluid structure interaction, a config table is required. Build 
 FSIOptions{ ... }
 ----
 
-=== Options for the Solid Model
+== Options for the Solid Model
 
 This is a list of the FSIOptions relating to the finite element model, with their default values.
 
@@ -102,7 +104,7 @@ historyNodes::      {}, list of nodes to write at the config.dt_history frequenc
 
 The "x" and "z" direction are in solid's reference frame, which is not necessarily the same as the fluid reference frame. The plateNormal vector is the solid's normal in the fluid's reference frame, which is used to map motion in the solid's reference to the fluid.
 
-==== The Boundary Conditions
+=== The Boundary Conditions
 
 The boundary condition is set using a string of characters, each character representing one edge of the solid. There are three options for each boundary:
 
@@ -112,7 +114,7 @@ The boundary condition is set using a string of characters, each character repre
 
 The order of the boundary conditions is (-x)(+x)(-z)(+z). The full 4 character code can be set in 1D, but the second 2 characters are ignored.
 
-=== Options setting the Fluid Interaction
+== Options setting the Fluid Interaction
 
 The solid interaction with the fluid is achieved through the motion of the fluid mesh, while the fluid interaction with the solid is achieved through the changing external pressure. We need to provide Eilmer with some assistance in setting up these interactions. First, we need to provide information about where in the fluid the moving structure is, to assist in retrieving the correct pressures. This is done using these two FSIOptions:
 
@@ -140,7 +142,7 @@ Then in 3D, the northBottomFBA would move in lockstep with the bottom boundary o
 
 The linear decrease of the vertex velocities mentioned prior is based on the blocks prescribed as northFBA and southFBA. The "outer" boundaries of these block arrays are fixed in place (north for northFBA, south for southFBA). The velocity applied to the velocities linearly decreases to 0 based on distance as they approach this fixed boundary.
 
-== Bringing it Together
+= Bringing it Together
 
 We will not go over the full Lua script required to run this simulation, only the additions that need to be made to convert the example shown in Figure 3 from a static fluid simulation to the fluid structure interaction simulation. As mentioned above, first set the grid motion options:
 
@@ -183,6 +185,6 @@ or
 config.fixed_time_step = true
 ----
 
-== Reading the Results
+= Reading the Results
 
 All the results are written to the FSI directory, which will live in the simulation directory. If writeMatrices is set to true in the FSIOptions table, then "K.dat" and "M.dat" are written in space-delimited matrix format. The snapshots are stored as "t\{tidx\}.gz". The precise contents of this file will depend on the solid model used, but the convention is the order of the columns are the "position" of the degrees of freedom followed by the "velocity" of the degrees of freedom. So for the Euler-Bernoulli model, the first column is the displacement of each node, second column the slope, third column the rate of change of displacement, fourth column rate of change of slope. The same convention is followed for the history, with the addition of a time column and that the rows represent time snapshots rather than the nodes.
