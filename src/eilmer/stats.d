@@ -8,10 +8,10 @@
 
 module stats;
 
-import std.string;
 import std.format;
 import std.array;
 import std.stdio;
+import std.conv;
 import std.math;
 import std.file;
 
@@ -19,10 +19,14 @@ import geom;
 import flowstate;
 import gas;
 import turbulence;
+version(mpi_parallel) {
+    import mpi;
+}
 
 
 struct StatsData {
     size_t ntimes, nspace, nvars, nturb, nspecies;
+    int nbuffer;
     double[] buffer;
 
     this(size_t ntimes, size_t nspace, size_t nturb, size_t nspecies){
@@ -32,6 +36,7 @@ struct StatsData {
         this.nturb = nturb;
         this.nspecies=nspecies;
         buffer.length = ntimes*nspace*nvars;
+        nbuffer = to!int(buffer.length);
     }
 
     void reset() {
@@ -103,8 +108,6 @@ class FlowStats {
         Maybe this should be called with FluidBLock? Or cell data? Good questions.
     */
 
-        size_t[30] nbins;
-        nbins[] = 0;
         bin_weights.length = positions.length;
         cell_to_bin_map.length = positions.length;
 
@@ -129,18 +132,24 @@ class FlowStats {
                 // so we can compute that here and keep it saved.
                 weights[j] += weight;
             }
-            nbins[cell_to_bin_map[i].length] += 1;
         }
-        //foreach(i, j; nbins){
-        //    writefln("%d cells have %d bins", j, i);
-        //}
+    }
+
+    void sum_weights_over_mpi(bool is_master_task){
+        // In MPI only the master task needs to know the total weights
+        version(mpi_parallel){
+            int n = to!int(weights.length);
+
+            if (is_master_task) {
+                MPI_Reduce(MPI_IN_PLACE, weights.ptr, n, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+            } else {
+                MPI_Reduce(weights.ptr, weights.ptr, n, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+            }
+        }
     }
 
     void update(double time, size_t[][] cell_to_bin_map, double[][] bin_weights, FlowState[] fss){
         assert(tidx<=NTIME);
-        size_t[] ncheck;
-        ncheck.length = NSPACE;
-        ncheck[] = 0;
 
         times[tidx] = time;
         foreach(i; 0 .. cell_to_bin_map.length){
@@ -149,13 +158,8 @@ class FlowStats {
                 size_t end = tidx*NSPACE*NVARS + bin*NVARS + NVARS;
                 double weight = bin_weights[i][jj];
                 data.plus_equals(srt, end, weight, &(fss[i]));
-                ncheck[bin] += 1;
             }
         }
-
-        //foreach(bin, ncells; ncheck) {
-        //    writefln("Bin %d received contributions from %d cells", bin, ncells);
-        //}
     }
 
     void increment_time_index(){
@@ -166,12 +170,13 @@ class FlowStats {
         tidx = 0;
     } 
 
-    void dump_stats_to_file(TurbulenceModel tm, GasModel gm){
+    void dump_stats_to_file(bool is_master_task, TurbulenceModel tm, GasModel gm){
         // First check if the file exists and write the header, and then the positions
         // of the averaging kernels
 
         immutable string filename = "stats.txt";
-        if (!exists(filename)) {
+        if (!exists(filename) && is_master_task) {
+            writef(" Creating file stats.txt...");
             auto statsfile = File(filename, "w");
             statsfile.write("rho velx vely velz p a mu k mu_t k_t S u T");
             version(turbulence) {
@@ -189,27 +194,36 @@ class FlowStats {
         }
 
         // IN MPI we do a reduce here and only the master program writes.
-        // We mnight have to rethink this if using this code for full 
-        // grid stats. I guess in that case we can do block local writes
-        // to separate files.
-
-        auto f = File(filename, "a");
-        foreach(t; 0 .. tidx){
-            f.writef("t= %.18e n= %d\n", times[t], NSPACE);
-            foreach(j; 0 .. NSPACE){
-                double weight = weights[j];
-                foreach(k; 0 .. NVARS){
-                    size_t index = t*(NSPACE*NVARS) + j*NVARS + k;
-                    if (k==0) {
-                        f.writef("%.18e",  data.buffer[index]/weight);
-                    } else {
-                        f.writef(" %.18e",  data.buffer[index]/weight);
-                    }
-                }
-                f.write("\n");
+        version(mpi_parallel){
+            if (is_master_task) {
+                MPI_Reduce(MPI_IN_PLACE, data.buffer.ptr, data.nbuffer, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+            } else {
+                MPI_Reduce(data.buffer.ptr, data.buffer.ptr, data.nbuffer, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
             }
         }
-        f.close();
+
+        if (is_master_task) {
+            writef(" flushing %d lines of data...", tidx);
+            auto f = File(filename, "a");
+            foreach(t; 0 .. tidx){
+                f.writef("t= %.18e n= %d\n", times[t], NSPACE);
+                foreach(j; 0 .. NSPACE){
+                    double weight = weights[j];
+                    foreach(k; 0 .. NVARS){
+                        size_t index = t*(NSPACE*NVARS) + j*NVARS + k;
+                        if (k==0) {
+                            f.writef("%.18e",  data.buffer[index]/weight);
+                        } else {
+                            f.writef(" %.18e",  data.buffer[index]/weight);
+                        }
+                    }
+                    f.write("\n");
+                }
+            }
+            f.close();
+            writefln(" Complete.");
+        }
+        return;
     }
 
     void reset_buffers(){
@@ -217,5 +231,3 @@ class FlowStats {
         times[] = 0.0;
     }
 }
-        
-

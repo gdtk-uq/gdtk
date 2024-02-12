@@ -752,6 +752,7 @@ int init_simulation(int tindx, int nextLoadsIndx,
         flowstats.init_map_arrays_for_block(blk.celldata.positions, blk.celldata.cell_to_bin_map,
                                             blk.celldata.bin_weights);
     }
+    flowstats.sum_weights_over_mpi(GlobalConfig.is_master_task);
     // Keep our memory foot-print small.
     GC.collect();
     GC.minimize();
@@ -1249,8 +1250,10 @@ int integrate_in_time(double target_time_as_requested)
 
             flowstats.increment_time_index();
             if (flowstats.tidx==flowstats.NTIME) {
-                writefln("    Flushing stats buffer to file and reseting...");
-                flowstats.dump_stats_to_file(GlobalConfig.turb_model, GlobalConfig.gmodel_master);
+                if (GlobalConfig.is_master_task) {
+                    writef(" -- Flushing stats buffer to file...");
+                }
+                flowstats.dump_stats_to_file(GlobalConfig.is_master_task, GlobalConfig.turb_model, GlobalConfig.gmodel_master);
                 flowstats.reset_buffers();
                 flowstats.reset_time_index();
             }
