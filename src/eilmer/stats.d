@@ -226,6 +226,75 @@ class FlowStats {
         return;
     }
 
+    void dump_stats_to_file_binary(bool is_master_task, TurbulenceModel tm, GasModel gm){
+        // First check if the file exists and write the header, and then the positions
+        // of the averaging kernels
+
+        immutable string filename = "stats.h";
+        if (!exists(filename) && is_master_task) {
+            writef(" Creating file stats.h...");
+            auto statsfile = File(filename, "w");
+            statsfile.write("rho velx vely velz p a mu k mu_t k_t S u T");
+            version(turbulence) {
+                foreach(it; 0 .. tm.nturb){
+                    statsfile.writef(" %s", tm.primitive_variable_name(it));
+                }
+            }
+            version(multi_species_gas) {
+                foreach (isp; 0 .. gm.n_species) {
+                    statsfile.writef(" Y_%s", gm.species_name(isp));
+                }
+            }
+            statsfile.write("\n");
+            statsfile.close();
+        }
+
+        // IN MPI we do a reduce here and only the master program writes.
+        version(mpi_parallel){
+            if (is_master_task) {
+                MPI_Reduce(MPI_IN_PLACE, data.buffer.ptr, data.nbuffer, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+            } else {
+                MPI_Reduce(data.buffer.ptr, data.buffer.ptr, data.nbuffer, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+            }
+        }
+
+        if (is_master_task) {
+            // First apply the weighting to the entire buffer
+            foreach(t; 0 .. tidx){
+                foreach(j; 0 .. NSPACE){
+                    double weight = weights[j];
+                    foreach(k; 0 .. NVARS){
+                        size_t index = t*(NSPACE*NVARS) + j*NVARS + k;
+                        data.buffer[index] /= weight;
+                    }
+                }
+            }
+            // Now flush the data in entirely binary form to the file
+            writef(" flushing %d lines of data...", tidx);
+            auto f = File("stats.bin", "a");
+            double[1] time;
+            size_t[1] space;
+            size_t[1] vars;
+            foreach(t; 0 .. tidx){
+                time[0] = times[t];
+                f.rawWrite(time);
+
+                space[0] = NSPACE;
+                f.rawWrite(space);
+
+                vars[0] = NVARS;
+                f.rawWrite(vars);
+
+                size_t srt = t*(NSPACE*NVARS);
+                size_t end = (t+1)*(NSPACE*NVARS);
+                f.rawWrite(data.buffer[srt .. end]);
+            }
+            f.close();
+            writefln(" Complete.");
+        }
+        return;
+    }
+
     void reset_buffers(){
         data.reset();
         times[] = 0.0;

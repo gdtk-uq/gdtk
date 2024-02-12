@@ -1253,7 +1253,7 @@ int integrate_in_time(double target_time_as_requested)
                 if (GlobalConfig.is_master_task) {
                     writef(" -- Flushing stats buffer to file...");
                 }
-                flowstats.dump_stats_to_file(GlobalConfig.is_master_task, GlobalConfig.turb_model, GlobalConfig.gmodel_master);
+                flowstats.dump_stats_to_file_binary(GlobalConfig.is_master_task, GlobalConfig.turb_model, GlobalConfig.gmodel_master);
                 flowstats.reset_buffers();
                 flowstats.reset_time_index();
             }
