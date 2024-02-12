@@ -747,12 +747,14 @@ int init_simulation(int tindx, int nextLoadsIndx,
         }
     }
     // if stats TODO
-    flowstats = new FlowStats(GlobalConfig.turb_model.nturb, GlobalConfig.n_species, 20);
-    foreach(blk; localFluidBlocks) {
-        flowstats.init_map_arrays_for_block(blk.celldata.positions, blk.celldata.cell_to_bin_map,
-                                            blk.celldata.bin_weights);
+    if (GlobalConfig.save_flowstats){
+        flowstats = new FlowStats(GlobalConfig.turb_model.nturb, GlobalConfig.n_species, 20);
+        foreach(blk; localFluidBlocks) {
+            flowstats.init_map_arrays_for_block(blk.celldata.positions, blk.celldata.cell_to_bin_map,
+                                                blk.celldata.bin_weights);
+        }
+        flowstats.sum_weights_over_mpi(GlobalConfig.is_master_task);
     }
-    flowstats.sum_weights_over_mpi(GlobalConfig.is_master_task);
     // Keep our memory foot-print small.
     GC.collect();
     GC.minimize();
@@ -1243,19 +1245,21 @@ int integrate_in_time(double target_time_as_requested)
                 }
             }
             // 4.5 FlowStats if they are asked for TODO
-            foreach(blk; localFluidBlocks) {
-                flowstats.update(SimState.time, blk.celldata.cell_to_bin_map,
-                                 blk.celldata.bin_weights, blk.celldata.flowstates);
-            }
-
-            flowstats.increment_time_index();
-            if (flowstats.tidx==flowstats.NTIME) {
-                if (GlobalConfig.is_master_task) {
-                    writef(" -- Flushing stats buffer to file...");
+            if (GlobalConfig.save_flowstats) {
+                foreach(blk; localFluidBlocks) {
+                    flowstats.update(SimState.time, blk.celldata.cell_to_bin_map,
+                                     blk.celldata.bin_weights, blk.celldata.flowstates);
                 }
-                flowstats.dump_stats_to_file_binary(GlobalConfig.is_master_task, GlobalConfig.turb_model, GlobalConfig.gmodel_master);
-                flowstats.reset_buffers();
-                flowstats.reset_time_index();
+
+                flowstats.increment_time_index();
+                if (flowstats.tidx==flowstats.NTIME) {
+                    if (GlobalConfig.is_master_task) {
+                        writef(" -- Flushing stats buffer to file...");
+                    }
+                    flowstats.dump_stats_to_file_binary(GlobalConfig.is_master_task, GlobalConfig.turb_model, GlobalConfig.gmodel_master);
+                    flowstats.reset_buffers();
+                    flowstats.reset_time_index();
+                }
             }
 
             //

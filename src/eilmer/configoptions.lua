@@ -199,6 +199,7 @@ configOptionsHidden = { -- hidden from user
    write_loads = false,
    compute_run_time_loads = false,
    run_time_loads_count = 100,
+   save_flowstats = false,
    --
    diffuse_wall_bcs_on_init = false,
    number_init_passes = 30,

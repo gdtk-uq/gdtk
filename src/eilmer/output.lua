@@ -430,6 +430,8 @@ function output.write_config_file(fileName)
       f:write('   "dummy_entry_without_trailing_comma": 0\n') -- no comma on last entry
       f:write('},\n')
    end
+   f:write(string.format('"save_flowstats": %s,\n',
+			 tostring(config.save_flowstats)))
    f:write(string.format('"nhcell": %d,\n', #historyCells))
    for i,hcell in ipairs(historyCells) do
       f:write(string.format('"history-cell-%d": [%d, %d],\n', i-1, hcell.ib, hcell.i))

@@ -1246,6 +1246,7 @@ final class GlobalConfig {
     shared static bool write_loads = false;
     shared static bool compute_run_time_loads = false;
     shared static int run_time_loads_count = 100;
+    shared static bool save_flowstats = false;
     shared static Tuple!(size_t, size_t)[] hcells;
     shared static Tuple!(size_t, size_t)[] solid_hcells;
     //
@@ -2151,6 +2152,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("write_loads", "write_loads"));
     mixin(update_bool("compute_run_time_loads", "compute_run_time_loads"));
     mixin(update_int("run_time_loads_count", "run_time_loads_count"));
+    mixin(update_bool("save_flowstats", "save_flowstats"));
     mixin(update_bool("do_temporal_DFT", "do_temporal_DFT"));
     mixin(update_int("DFT_n_modes", "DFT_n_modes"));
     mixin(update_int("DFT_step_interval", "DFT_step_interval"));
