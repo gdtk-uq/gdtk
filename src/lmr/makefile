@@ -270,9 +270,11 @@ endif
 default: lmr lmr-run
 
 install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS)
+	- mkdir -p $(INSTALL_DIR)/bin
 	cp $(PROGRAMS) $(INSTALL_DIR)/bin
 	cp $(SUB_PROGRAMS) $(INSTALL_DIR)/bin
 	cp $(PY_PROGRAMS) $(INSTALL_DIR)/bin
+	- mkdir -p $(INSTALL_DIR)/lib
 	cp lua-modules/*.lua $(INSTALL_DIR)/lib/
 	- mkdir -p $(INSTALL_DIR)/etc
 	cp lmr.cfg $(INSTALL_DIR)/etc/
