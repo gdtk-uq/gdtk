@@ -456,7 +456,7 @@ int integrateInTime(double targetTimeAsRequested)
                 double WCtMS = (GlobalConfig.max_step - SimState.step) * wall_clock_per_step;
                 formattedWrite(writer, "WC=%.1f WCtFT=%.1f WCtMS=%.1f",
                                wall_clock_elapsed, WCtFT, WCtMS);
-                if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
+                if (GlobalConfig.verbosity_level >= 0 && GlobalConfig.is_master_task) {
                     writeln(writer.data);
                     stdout.flush();
                 }

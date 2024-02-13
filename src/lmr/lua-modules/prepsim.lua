@@ -72,8 +72,6 @@ write_mpimap_file = output.write_mpimap_file
 write_fluidBlockArrays_file = output.write_fluidBlockArrays_file
 write_shock_fitting_helper_files = output.write_shock_fitting_helper_files
 
-require 'sssoptions'
-
 local prep_check = require 'prep_check'
 initTurbulence = prep_check.initTurbulence
 checkCellVolumes = prep_check.checkCellVolumes

@@ -5,8 +5,6 @@
 
 local output = {}
 
-require 'sssoptions'
-
 function output.write_control_file(fileName)
    local f = assert(io.open(fileName, "w"))
    f:write("{\n")
@@ -116,6 +114,7 @@ function output.write_config_file(fileName)
    f:write(string.format('"solid_has_homogeneous_properties": %s,\n', tostring(config.solid_has_homogeneous_properties)))
    f:write(string.format('"solid_domain_augmented_deriv_avg": %s,\n', tostring(config.solid_domain_augmented_deriv_avg)))
    f:write(string.format('"fluid_solid_bc_use_heat_transfer_coeff": %s,\n', tostring(config.fluid_solid_bc_use_heat_transfer_coeff)))
+   --[[ RJG, 2024-02-13 disabled temporarily
    f:write('"solid_domain_loose_update_options" : {\n')
    f:write(string.format('   "max_newton_iterations" : %d,\n', SolidDomainLooseUpdate.max_newton_iterations))
    f:write(string.format('   "newton_solve_tolerance" : %.18e,\n', SolidDomainLooseUpdate.newton_solve_tolerance))
@@ -134,6 +133,7 @@ function output.write_config_file(fileName)
    f:write(string.format('   "use_preconditioner" : %s \n', tostring(SolidDomainLooseUpdate.use_preconditioner)))
    -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
    f:write('},\n')
+   --]]
    f:write(string.format('"MHD": %s,\n', tostring(config.MHD)))
    f:write(string.format('"MHD_static_field": %s,\n', tostring(config.MHD_static_field)))
    f:write(string.format('"MHD_resistive": %s,\n', tostring(config.MHD_resistive)))

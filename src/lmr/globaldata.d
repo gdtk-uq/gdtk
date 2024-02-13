@@ -21,7 +21,7 @@ import fluidblockarray;
 import ssolidblock;
 import block;
 import loads;
-import field;
+import efield;
 version(FSI) { import fsi; }
 
 // State data for simulation.

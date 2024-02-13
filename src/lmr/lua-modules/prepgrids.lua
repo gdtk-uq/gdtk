@@ -20,8 +20,8 @@ local gridDir = lmrCfg["grid-directory"]
 local gridMD = lmrCfg["grid-metadata-filename"]
 local blkIdxFmt = lmrCfg["block-index-format"]
 
-local configoptions = require 'configoptions'
-config = configoptions.config
+local globalconfig = require 'globalconfig'
+config = globalconfig.config
 
 local nkconfig = require 'nkconfig'
 NewtonKrylovGlobalConfig = nkconfig.NewtonKrylovGlobalConfig

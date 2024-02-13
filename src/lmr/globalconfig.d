@@ -2234,6 +2234,7 @@ void set_config_for_core(JSONValue jsonData)
         cfg.suppress_viscous_stresses_zones ~= new BlockZone(p0, p1);
     }
     //
+    /* [TODO] RJG, 2024-02-13 disabled presently.
     auto sdluOptions = jsonData["solid_domain_loose_update_options"];
     auto sdluo = &(cfg.sdluOptions);
     sdluo.maxNewtonIterations = getJSONint(sdluOptions, "max_newton_iterations", sdluo.maxNewtonIterations);
@@ -2257,6 +2258,7 @@ void set_config_for_core(JSONValue jsonData)
     sdluo.preconditionerFillIn = getJSONint(sdluOptions, "preconditioner_fill_in", sdluo.preconditionerFillIn);
     sdluo.preconditionerApproximation = getJSONint(sdluOptions, "preconditioner_approximation", sdluo.preconditionerApproximation);
     sdluo.usePreconditioner = getJSONbool(sdluOptions, "use_preconditioner",  sdluo.usePreconditioner);
+    */
     // Parameters controlling size of storage arrays - we set this here since we key it off some of the other config parameters
     cfg.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(cfg.gasdynamic_update_scheme);
     // [TODO] RJG, 2024-02-11

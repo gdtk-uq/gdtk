@@ -57,7 +57,7 @@ import history;
 import loads;
 import conservedquantities;
 import special_block_init;
-import field;
+import efield;
 version (opencl_gpu_chem) {
     import opencl_gpu_chem;
 }

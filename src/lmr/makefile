@@ -50,16 +50,6 @@ WITH_E4DEBUG ?= 0
 WITH_THREAD_SANITIZER ?= 0
 WITH_ADDRESS_SANITIZER ?= 0
 
-TECPLOT_BIN_DIR ?= unavailable
-TECPLOT_BIN_VERSION_STR = tecplot_unavailable
-ifneq ($(TECPLOT_BIN_DIR), unavailable)
-    TECPLOT_BIN_VERSION_STR = with_tecplot_binary
-endif
-TECPLOT_FILES :=
-ifneq ($(TECPLOT_BIN_DIR), unavailable)
-    TECPLOT_FILES += tecio.d
-endif
-
 OPENMPI_DIR := ../extern/OpenMPI
 OPENMPI_FILES := $(OPENMPI_DIR)/source/mpi/package.d
 
@@ -72,6 +62,7 @@ SHARE_FILES :=
 ETC_FILES := lmr.cfg
 PY_PROG_DIR := python-programs
 PY_PROGRAMS := lmr-verify
+AUX_PROGRAMS := prep-gas ugrid_partition prep-chem chemkin2eilmer prep-kinetics
 
 ifeq ($(WITH_MPI),1)
     PARALLEL_FLAVOUR = openmpi
@@ -82,15 +73,7 @@ ifeq ($(WITH_MPI),1)
     MPI_FILES = $(OPENMPI_FILES)
 endif
 
-include eilmer4-files.mk
 include lmr-files.mk
-
-EILMER4_FILES = $(LMR4_CORE_FILES) \
-	$(LMR4_LUA_FILES) \
-	$(LMR4_BC_FILES) \
-	$(LMR4_SOLID_FILES) \
-	$(LMR4_EFIELD_FILES) \
-	$(LMR4_EXTRA_FILES)
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
@@ -177,9 +160,6 @@ ifeq ($(DMD), dmd)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
     endif
     DLINKFLAGS := $(DLINKFLAGS) -L-ldl
-    ifneq ($(TECPLOT_BIN_DIR), unavailable)
-        DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
-    endif
     ifeq ($(PLATFORM), macosx)
 	DLINKFLAGS += -L-ld_classic
     endif
@@ -214,9 +194,6 @@ ifeq ($(DMD), ldc2)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
     endif
     DLINKFLAGS := $(DLINKFLAGS) -L-ldl
-    ifneq ($(TECPLOT_BIN_DIR), unavailable)
-        DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
-    endif
     ifeq ($(PLATFORM), macosx)
 	DLINKFLAGS += -L-ld_classic
     endif
@@ -269,15 +246,21 @@ endif
 
 default: lmr lmr-run
 
-install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS)
+install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS)
 	- mkdir -p $(INSTALL_DIR)/bin
+	- mkdir -p $(INSTALL_DIR)/lib
+	- mkdir -p $(INSTALL_DIR)/etc
+	- mkdir -p $(INSTALL_DIR)/share
 	cp $(PROGRAMS) $(INSTALL_DIR)/bin
 	cp $(SUB_PROGRAMS) $(INSTALL_DIR)/bin
 	cp $(PY_PROGRAMS) $(INSTALL_DIR)/bin
-	- mkdir -p $(INSTALL_DIR)/lib
 	cp lua-modules/*.lua $(INSTALL_DIR)/lib/
-	- mkdir -p $(INSTALL_DIR)/etc
 	cp lmr.cfg $(INSTALL_DIR)/etc/
+	cp $(LUA_DIR)/install/bin/* $(BUILD_DIR)/bin
+	cp $(LUA_DIR)/install/lib/lpeg.so $(BUILD_DIR)/lib
+	cp -r ../lib/* $(BUILD_DIR)/lib
+	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
+	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 clean:
 	- rm $(PROGRAMS)
@@ -314,7 +297,8 @@ lmrconfig_with_str_subst.d: lmrconfig.d
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		$< > $@
 
-lmr-run: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+lmr-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+	$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
 	$(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -327,16 +311,18 @@ lmr-run: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD
 		runsim_shared.d \
 		lmrconfig_with_str_subst.d \
 		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
+		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
 		$(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(DLINKFLAGS)
 
 lmr-mpi-run: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+	$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
 	$(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -353,6 +339,7 @@ lmr-mpi-run: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR
 		runsim_openmpi.d \
 		lmrconfig_with_str_subst.d \
 		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
+		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
 		$(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
@@ -364,6 +351,7 @@ lmr-mpi-run: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR
 
 
 lmr: main.d $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+	$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
 	$(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -376,11 +364,12 @@ lmr: main.d $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_
 		main.d \
 		lmrconfig_with_str_subst.d \
 		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
 		$(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(DLINKFLAGS)
@@ -389,3 +378,20 @@ lmr: main.d $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_
 lmr-verify: $(PY_PROG_DIR)/lmr_verify.py
 	cp $< $@
 	chmod +x $@
+
+#### Auxiliary programs but part of making an eilmer install useful
+prep-gas:
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-prep-gas
+
+ugrid_partition:
+	cd $(GRID_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) ugrid_partition
+
+prep-chem:
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) PLATFORM=$(PLATFORM) build-prep-chem
+
+chemkin2eilmer:
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) PLATFORM=$(PLATFORM) build-chemkin2eilmer
+
+prep-kinetics:
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) PLATFORM=$(PLATFORM) build-prep-kinetics
+
