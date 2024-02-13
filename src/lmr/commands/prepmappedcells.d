@@ -81,7 +81,7 @@ void main_(string[] args)
     initFluidBlocksMemoryAllocation();
     initFluidBlocksGlobalCellIDStarts();
     initFluidBlocksZones();
-    initFluidBlocksFlowFieldSteadyMode(0);
+    initFluidBlocksFlowField(0);
 
     BlockAndCellId[string][size_t] mappedCellsList;
 

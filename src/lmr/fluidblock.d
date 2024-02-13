@@ -42,8 +42,6 @@ import sfluidblock; // needed for some special-case processing, below
 import shockdetectors;
 import block;
 import jacobian;
-import fluidblockio;
-import fluidblockio_new;
 version(mpi_parallel) {
     import mpi;
 }
@@ -135,8 +133,6 @@ public:
     Matrix!double V;
     }
 
-    FluidBlockIO[] block_io; // io handlers
-
     this(int id, string label)
     {
         super(id, label);
@@ -172,12 +168,6 @@ public:
         version(newton_krylov) {
             fs_save = new FlowState(dedicatedConfig[id].gmodel, dedicatedConfig[id].turb_model.nturb);
         }
-    }
-
-    void add_IO()
-    {
-        if (!is_legacy_format(GlobalConfig.flow_format))
-            block_io = get_fluid_block_io(this);
     }
 
     override string toString() const { return "Block(id=" ~ to!string(id) ~ ")"; }
@@ -1652,16 +1642,6 @@ public:
     }
 
     } // end version(newton_krylov)
-
-    void update_aux(double dt, double time, size_t step)
-    {
-        foreach (cell ; cells) {
-            foreach(aux ; cell.aux_cell_data) {
-                aux.update(cell, dt, time, step);
-            }
-        }
-    }
-
 
     void evalRU(double t, int gtl, int ftl, FVCell c, bool do_reconstruction, double reaction_fraction)
     {

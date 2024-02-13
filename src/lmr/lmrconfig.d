@@ -21,14 +21,19 @@ struct LmrCfg {
     immutable string jobFile;
     immutable string cfgFile;
     immutable string ctrlFile;
+    immutable string progFile;
     immutable string nkCfgFile;
     immutable string blkIdxFmt;
+    immutable string cellIdxFmt;
     immutable string snapshotDir;
     immutable string snapshotIdxFmt;
+    immutable string historyDir;
+    immutable string historyPrefix;
     immutable int initialFieldDir;
     immutable string flowMetadataFile;
     immutable string limiterMetadataFile;
     immutable string restartFile;
+    immutable string timesFile;
     immutable string referenceResidualsFile;
     immutable string flowPrefix;
     immutable string limiterPrefix;
@@ -64,14 +69,19 @@ static this()
     lmrCfg.jobFile = lmrJSONCfg["job-filename"].str;
     lmrCfg.cfgFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["config-filename"].str;
     lmrCfg.ctrlFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["control-filename"].str;
+    lmrCfg.progFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["progress-filename"].str;
     lmrCfg.nkCfgFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["newton-krylov-config-filename"].str;
     lmrCfg.blkIdxFmt = lmrJSONCfg["block-index-format"].str;
+    lmrCfg.cellIdxFmt = lmrJSONCfg["cell-index-format"].str;
     lmrCfg.snapshotDir = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["snapshot-directory"].str;
     lmrCfg.snapshotIdxFmt = lmrJSONCfg["snapshot-index-format"].str;
+    lmrCfg.historyDir = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["history-directory"].str;
+    lmrCfg.historyPrefix = lmrJSONCfg["history-prefix"].str;
     lmrCfg.initialFieldDir = to!int(lmrJSONCfg["initial-field-directory"].integer);
     lmrCfg.flowMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["flow-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
     lmrCfg.limiterMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["limiter-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
-    lmrCfg.restartFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["restart-file"].str;
+    lmrCfg.restartFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["restart-filename"].str;
+    lmrCfg.timesFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["times-filename"].str;
     lmrCfg.referenceResidualsFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["reference-residuals-file"].str;
     lmrCfg.flowPrefix = lmrJSONCfg["flow-prefix"].str;
     lmrCfg.limiterPrefix = lmrJSONCfg["limiter-prefix"].str;
@@ -188,4 +198,18 @@ string gridFilename(int snapshot, int blkId)
     if (GlobalConfig.grid_format == "gziptext")
 	gname ~= lmrCfg.gzipExt;
     return gname;
+}
+
+/**
+ * Return the name of a history file based on block and cell.
+ *
+ * Authors: RJG
+ * Date: 2024-02-07
+ */
+string historyFilename(size_t blkId, size_t cellId)
+{
+    string hname = lmrCfg.historyDir ~
+	"/" ~
+	lmrCfg.historyPrefix ~ "-blk-" ~ format(lmrCfg.blkIdxFmt, blkId) ~ "-cell-" ~ format(lmrCfg.cellIdxFmt, cellId) ~ ".dat";
+    return hname;
 }

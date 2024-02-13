@@ -36,7 +36,7 @@ static this()
     compNormsCmd.description = "Compute field norms (possibly with respect to a reference solution).";
     compNormsCmd.shortDescription = compNormsCmd.description;
     compNormsCmd.helpMsg = format(
-`lmr %s [options] 
+`lmr %s [options]
 
 Compute norms for a snapshot based on selection of field variables.
 
@@ -65,7 +65,7 @@ options ([+] can be repeated):
 
      the reference solution will be subtracted from the field variables
      depending on which variables are provided in the reference solution
-     
+
      examples:
        --reference-solution=my_ref_soln.lua
        -r ref-solution.lua
@@ -166,7 +166,7 @@ void main_(string[] args)
         }
         auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks);
         outfile.writeln("---"); // YAML document opener
-        outfile.writefln("snapshot: %s", snap); 
+        outfile.writefln("snapshot: %s", snap);
         if (!luaRefSoln.empty) {
             soln.subtract_ref_soln(luaRefSoln);
             outfile.writefln("error-norms-computed: yes");
@@ -176,9 +176,9 @@ void main_(string[] args)
             if (verbosity > 2) {
                 writefln("lmr %s: Computing norm for variable= %s", cmdName, var);
             }
-            if (!canFind(soln.flowBlocks[0].variableNames, var)) {  
+            if (!canFind(soln.flowBlocks[0].variableNames, var)) {
                 writeln(format("Ignoring requested variable \"%s\". This does not appear in list of flow solution variables.", var));
-                continue;                
+                continue;
             }
             auto norms = soln.compute_volume_weighted_norms(var, region);
             outfile.writefln("%s:", var);

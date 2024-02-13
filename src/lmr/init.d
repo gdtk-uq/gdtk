@@ -11,14 +11,15 @@
 
 module init;
 
-import std.algorithm : min, sort;
+import std.algorithm : min, sort, find;
 import std.conv : to;
 import std.parallelism : parallel, defaultPoolThreads;
-import std.file : rename, readText;
+import std.file : rename, readText, dirEntries, SpanMode;
 import std.stdio : File, writeln, writefln, stdout;
 import std.format : format, formattedWrite;
 import std.string;
 import std.typecons : Tuple, tuple;
+import std.json;
 
 import util.lua;
 import util.lua_service;
@@ -31,13 +32,13 @@ import globalconfig;
 import globaldata;
 import simcore;
 import simcore_exchange : exchange_ghost_cell_geometry_data;
-import fluidblockio_new : read_zip_solution;
 import bc;
 import fluidblock : FluidBlock;
 import sfluidblock : SFluidBlock;
 import ufluidblock : UFluidBlock;
 import blockio : blkIO, BinaryBlockIO, GzipBlockIO;
 import fvcellio;
+import fileutil : ensure_directory_is_present;
 
 version(mpi_parallel) {
     import mpi;
@@ -59,6 +60,76 @@ void initConfiguration()
     auto cfgData = readJSONfile(lmrCfg.cfgFile);
     set_config_for_core(cfgData);
     set_config_for_blocks(cfgData);
+}
+
+/**
+ * Read from the control file.
+ *
+ * We will need to do this at initialisation, and then repeatedly
+ * throughout the simulation to control certain behaviours
+ * of the time-marching mode. How often we re-read this is
+ * set by GlobalConfig.control_count.
+ *
+ * Authors: RJG and PAJ
+ * Date: 2024-02-07
+ */
+void readControl()
+{
+    alias cfg = GlobalConfig;
+    if (cfg.verbosity_level > 1) writeln("readControl()");
+    JSONValue jsonData = readJSONfile(lmrCfg.ctrlFile);
+    mixin(update_double("dt_init", "dt_init"));
+    mixin(update_double("dt_max", "dt_max"));
+    mixin(update_double("cfl_scale_factor", "cfl_scale_factor"));
+    mixin(update_bool("stringent_cfl", "stringent_cfl"));
+    mixin(update_double("viscous_signal_factor", "viscous_signal_factor"));
+    mixin(update_double("turbulent_signal_factor", "turbulent_signal_factor"));
+    mixin(update_enum("residual_smoothing_type", "residual_smoothing_type", "residual_smoothing_type_from_name"));
+    mixin(update_double("residual_smoothing_weight", "residual_smoothing_weight"));
+    mixin(update_int("residual_smoothing_iterations", "residual_smoothing_iterations"));
+    mixin(update_bool("fixed_time_step", "fixed_time_step"));
+    mixin(update_int("print_count", "print_count"));
+    mixin(update_int("cfl_count", "cfl_count"));
+    mixin(update_double("max_time", "max_time"));
+    mixin(update_int("max_step", "max_step"));
+    mixin(update_double("dt_plot", "dt_plot"));
+    mixin(update_double("dt_history", "dt_history"));
+    mixin(update_double("dt_loads", "dt_loads"));
+    mixin(update_int("write_loads_at_step", "write_loads_at_step"));
+    mixin(update_int("write_flow_solution_at_step", "write_flow_solution_at_step"));
+    mixin(update_int("snapshot_count", "snapshotCount"));
+    mixin(update_int("number_total_snapshots", "nTotalSnapshots"));
+    //
+    mixin(update_int("halt_now", "halt_now"));
+    //
+    if (cfg.verbosity_level > 1) {
+        writeln("  dt_init: ", cfg.dt_init);
+        writeln("  dt_max: ", cfg.dt_max);
+        writeln("  cfl_scale_factor: ", cfg.cfl_scale_factor);
+        writeln("  stringent_cfl: ", cfg.stringent_cfl);
+        writeln("  viscous_signal_factor: ", cfg.viscous_signal_factor);
+        writeln("  turbulent_signal_factor: ", cfg.turbulent_signal_factor);
+        writeln("  residual_smoothing_type: ", cfg.residual_smoothing_type);
+        writeln("  residual_smoothing_weight: ", cfg.residual_smoothing_weight);
+        writeln("  residual_smoothing_iterations: ", cfg.residual_smoothing_iterations);
+        writeln("  fixed_time_step: ", cfg.fixed_time_step);
+        writeln("  print_count: ", cfg.print_count);
+        writeln("  cfl_count: ", cfg.cfl_count);
+        writeln("  max_time: ", cfg.max_time);
+        writeln("  max_step: ", cfg.max_step);
+        writeln("  dt_plot: ", cfg.dt_plot);
+        writeln("  dt_history: ", cfg.dt_history);
+        writeln("  dt_loads: ", cfg.dt_loads);
+        writeln("  write_loads_at_step: ", cfg.write_loads_at_step);
+        writeln("  write_flow_solution_at_step: ", cfg.write_flow_solution_at_step);
+        writeln("  snapshot_count: ", cfg.snapshotCount);
+        writeln("  number_total_snapshots: ", cfg.nTotalSnapshots);
+        writeln("  halt_now: ", cfg.halt_now);
+    }
+    // Propagate new values to the local copies of config.
+    foreach (localConfig; dedicatedConfig) {
+        localConfig.update_control_parameters();
+    }
 }
 
 /**
@@ -140,7 +211,9 @@ void initLocalFluidBlocks()
  */
 void initThreadPool(int maxCPUs, int threadsPerMPITask)
 {
+    // Local blocks may be handled with thread-parallelism.
     auto nBlocksInThreadParallel = localFluidBlocks.length; // [TODO] add solid blocks
+    // There is no need to have more task threads than blocks local to the process.
     int extraThreadsInPool;
     version(mpi_parallel) {
 	extraThreadsInPool = min(threadsPerMPITask-1, nBlocksInThreadParallel-1);
@@ -177,14 +250,19 @@ void initThreadPool(int maxCPUs, int threadsPerMPITask)
  * Authors: RJG and PAJ
  * Date: 2023-05-07
  */
-void initFluidBlocksBasic()
+void initFluidBlocksBasic(bool withUserPad=false)
 {
     foreach (myblk; localFluidBlocks) {
         myblk.myConfig.init_gas_model_bits();
         myblk.init_workspace();
         myblk.init_lua_globals();
         foreach (bci; myblk.bc) { bci.post_bc_construction(); }
-        // NOTE: Removed userPad in NK solver.
+        if (withUserPad && GlobalConfig.user_pad_length > 0) {
+            push_array_to_Lua(myblk.myL, GlobalConfig.userPad, "userPad");
+            foreach (bci; myblk.bc) {
+                if (bci.myL) { push_array_to_Lua(bci.myL, GlobalConfig.userPad, "userPad"); }
+            }
+        }
         if (GlobalConfig.udf_source_terms) {
             luaL_dofile(myblk.myL, GlobalConfig.udf_source_terms_file.toStringz);
         }
@@ -216,8 +294,15 @@ void initFluidBlocksMemoryAllocation()
     bool anyBlockFail = false;
     foreach (blk; parallel(localFluidBlocks,1)) {
         try {
-            string gName = gridFilename(lmrCfg.initialFieldDir, blk.id);
-            debug { writeln("Calling init_grid_and_flow_arrays for grid: ", gName); }
+            string gName;
+            if (GlobalConfig.grid_motion != GridMotion.none) {
+                gName = gridFilename(SimState.current_tindx, blk.id);
+            }
+            else {
+                gName = gridFilename(lmrCfg.initialFieldDir, blk.id);
+            }
+            if (GlobalConfig.verbosity_level > 0)
+                writeln("Calling init_grid_and_flow_arrays for grid: ", gName);
             blk.init_grid_and_flow_arrays(gName);
             blk.compute_primary_cell_geometric_data(0);
         }
@@ -267,7 +352,9 @@ void initFluidBlocksGlobalCellIDStarts()
  */
 void initFluidBlocksZones()
 {
-    foreach (blk; parallel(localFluidBlocks,1)) {
+    foreach (blk; localFluidBlocks) {
+        // 2023-07-04 PJ: Split this loop out and make it serial
+        // because we are having trouble with parallel and GC.
         blk.identify_reaction_zones(0);
         blk.identify_turbulent_zones(0);
         blk.identify_suppress_reconstruction_zones();
@@ -276,7 +363,7 @@ void initFluidBlocksZones()
 }
 
 /**
- * Initiliase flow fields for all blocks for steady mode iterations.
+ * Initiliase flow fields for all blocks.
  *
  * This function reads from a snapshot to fill in the flow field
  * data as for all blocks to be used as an initial condition.
@@ -284,7 +371,7 @@ void initFluidBlocksZones()
  * Authors: RJG and PAJ
  * Date: 2023-05-07
  */
-void initFluidBlocksFlowFieldSteadyMode(int snapshotStart)
+void initFluidBlocksFlowField(int snapshotStart)
 {
     bool anyBlockFail = false;
     if (GlobalConfig.flow_format == "rawbinary")
@@ -294,10 +381,16 @@ void initFluidBlocksFlowFieldSteadyMode(int snapshotStart)
 
     blkIO.readMetadataFromFile(lmrCfg.flowMetadataFile);
 
-    foreach (blk; parallel(localFluidBlocks,1)) {
+    foreach (blk; localFluidBlocks) {
         blkIO.readVariablesFromFile(flowFilename(snapshotStart, blk.id), blk.cells);
+        // Note that, even for grid_motion==none simulations, we use the grid velocities for setting
+        // the gas velocities at boundary faces.  These will need to be set to zero for correct viscous simulation.
         foreach (iface; blk.faces) iface.gvel.clear();
         foreach (cell; blk.cells) {
+            // Set rho_s now. It's not read in, and it's not part of encode_conserved
+            version(multi_species_gas) {
+                foreach (i; 0 .. cell.fs.gas.massf.length) cell.fs.gas.rho_s[i] = cell.fs.gas.massf[i] * cell.fs.gas.rho;
+            }
             cell.encode_conserved(0, 0, blk.omegaz);
             // Even though the following call appears redundant at this point,
             // fills in some gas properties such as Prandtl number that is
@@ -317,6 +410,35 @@ void initFluidBlocksFlowFieldSteadyMode(int snapshotStart)
     if (anyBlockFail) {
         throw new LmrException("Failed at initialisation stage during flow field initialisation.");
     }
+    /*
+    writeln("blk-0, cell-0");
+    writeln(localFluidBlocks[0].cells[0]);
+    writeln("blk-1, cell-0");
+    writeln(localFluidBlocks[1].cells[0]);
+    import core.stdc.stdlib : exit;
+    exit(1);
+    */
+}
+
+/**
+ * Initialise the simulation start time (for a transient simulation).
+ *
+ * Authors: RJG and PAJ
+ * Date: 2024-02-12
+ */
+void initSimStateTime(int snapshotStart)
+{
+    if (snapshotStart == 0) {
+        SimState.time = 0.0;
+        return;
+    }
+
+    // For all other starts, we need to look up the times file.
+    // [TODO] RJG, 2024-02-12
+    // This will need to be done when implementing restarts for transient mode.
+    writefln("Restart is offline for transient mode, sorry.");
+    import core.stdc.stdlib : exit;
+    exit(1);
 }
 
 /**
@@ -532,4 +654,47 @@ void orderBlocksBySize()
     foreach (blkpair; blockLoads) {
         localFluidBlocksBySize ~= localFluidBlocks[blkpair[0]]; // [0] holds the block id
     }
+}
+
+/**
+ * Initialise directory and files for history cells.
+ *
+ * Authors: RJG and PAJ
+ * Date: 2024-02-07
+ */
+void initHistoryCells()
+{
+    string histDir = lmrCfg.historyDir;
+    if (GlobalConfig.is_master_task) ensure_directory_is_present(histDir);
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+
+    foreach (hcell; GlobalConfig.hcells) {
+        auto blkId = hcell[0];
+        auto cellId = hcell[1];
+        auto blk = cast(FluidBlock) globalBlocks[blkId];
+        assert(blk !is null, "Oops, this should be a FluidBlock object.");
+        if (find(GlobalConfig.localFluidBlockIds, blkId).empty) { continue; }
+        if ( cellId >= blk.cells.length ) {
+            string errMsg = "ERROR: init_history_cell_files()\n";
+            errMsg ~= format("The requested history cell index %d is not valid for block %d.\n", cellId, blkId);
+            errMsg ~= format("This block only has %d cells.\n", blk.cells.length);
+            throw new FlowSolverException(errMsg);
+        }
+        string basicName = historyFilename(blkId, cellId);
+        auto foundTheseEntries = dirEntries(histDir, basicName~".*", SpanMode.shallow);
+        string[] foundTheseNames;
+        foreach (entry; foundTheseEntries) { foundTheseNames ~= entry.name; }
+        string fname = format("%s.%d", histDir, basicName, foundTheseNames.length);
+        auto f = File(fname, "w");
+        f.write("# 1:t ");
+        foreach (i, var; GlobalConfig.flow_variable_list) {
+            f.write(format("%d:%s ", i+2, var));
+        }
+        f.write("\n");
+        f.close();
+    } // end foreach hcell
+
+    // [TODO] RJG, 2024-02-07
+    // Add something similar for solid domain cells.
+
 }

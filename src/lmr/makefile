@@ -67,7 +67,7 @@ MPICH_DIR := ../extern/cray-mpich
 MPICH_FILES := $(MPICH_DIR)/mpi.d
 
 PROGRAMS := lmr
-SUB_PROGRAMS := lmr-run-steady
+SUB_PROGRAMS := lmr-run
 SHARE_FILES :=
 ETC_FILES := lmr.cfg
 PY_PROG_DIR := python-programs
@@ -267,7 +267,7 @@ ifeq ($(TURBULENCE),1)
     DFLAGS += $(DVERSION)turbulence
 endif
 
-default: lmr lmr-run-steady
+default: lmr lmr-run
 
 install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS)
 	cp $(PROGRAMS) $(INSTALL_DIR)/bin
@@ -284,7 +284,7 @@ clean:
 	- rm lmr-mpi-run-steady
 	- rm *.o
 	- rm lmrconfig_with_str_subst.d
-	- rm runsteady_shared.d runsteady_openmpi.d
+	- rm runsim_shared.d runsim_openmpi.d
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(MPICH_DIR); make clean
 	- cd $(LUA_DIR); make clean
@@ -312,18 +312,17 @@ lmrconfig_with_str_subst.d: lmrconfig.d
 		-e 's/PUT_BUILD_DATE_HERE/$(BUILD_DATE)/' \
 		$< > $@
 
-lmr-run-steady: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+lmr-run: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
 	$(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES)
-	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/shared/' $(LMR_CMD)/runsteady.d > runsteady_shared.d
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)runsteady_main \
-		$(DVERSION)complex_numbers \
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/shared/' $(LMR_CMD)/runsim.d > runsim_shared.d
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)run_main \
 		$(DVERSION)newton_krylov \
-		runsteady_shared.d \
+		runsim_shared.d \
 		lmrconfig_with_str_subst.d \
 		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
 		$(GEOM_FILES) $(GRID_FILES) \
@@ -335,7 +334,7 @@ lmr-run-steady: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(
 		$(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(DLINKFLAGS)
 
-lmr-mpi-run-steady: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+lmr-mpi-run: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
 	$(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -343,13 +342,13 @@ lmr-mpi-run-steady: $(EILMER4_FILES) lmrconfig_with_str_subst.d $(LMR_CORE_FILES
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES)
 	cd $(MPI_DIR); make
-	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/openmpi/' $(LMR_CMD)/runsteady.d > runsteady_openmpi.d
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)runsteady_main \
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/openmpi/' $(LMR_CMD)/runsim.d > runsim_openmpi.d
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)run_main \
 		$(DVERSION)mpi_parallel \
 		$(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)complex_numbers \
 		$(DVERSION)newton_krylov \
-		runsteady_openmpi.d \
+		runsim_openmpi.d \
 		lmrconfig_with_str_subst.d \
 		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
 		$(GEOM_FILES) $(GRID_FILES) \

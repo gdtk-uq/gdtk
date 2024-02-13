@@ -40,8 +40,6 @@ import globalconfig;
 import json_helper;
 import flowstate;
 import vtk_writer;
-import fluidblockio_old;
-import fluidblockio;
 import lmrconfig;
 import blockio;
 

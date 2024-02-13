@@ -560,7 +560,7 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     initFluidBlocksMemoryAllocation();
     initFluidBlocksGlobalCellIDStarts();
     initFluidBlocksZones();
-    initFluidBlocksFlowFieldSteadyMode(snapshotStart);
+    initFluidBlocksFlowField(snapshotStart);
 
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
 
@@ -637,14 +637,14 @@ void readNewtonKrylovConfig()
                     phase.residualInterpolationOrder, cfg.interpolation_order);
             errMsg ~= "       This is not allowed because memory is allocated based on the globally selected interpolation order.\n";
             throw new Error(errMsg);
-        }            
+        }
         if (phase.jacobianInterpolationOrder > cfg.interpolation_order) {
             string errMsg = format("ERROR: The Jacobian interpolation order in phase %d exceeds the globally selected interpolation order.\n", i);
             errMsg ~= format("       phase interpolation order= %d  globally-requested interpolation order= %d\n",
                     phase.jacobianInterpolationOrder, cfg.interpolation_order);
             errMsg ~= "       This is not allowed because memory is allocated based on the globally selected interpolation order.\n";
             throw new Error(errMsg);
-        }            
+        }
     }
 }
 
@@ -805,7 +805,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
                 writeln("*************************************************************************\n");
                 writeReferenceResidualsToFile();
             }
-        }   
+        }
     } // end actions for fresh start
 
     // Override CFL if supplied at command line.
@@ -2698,7 +2698,6 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
 	snapshots[$-1].globalResidual = globalResidual;
 	snapshots[$-1].prevGlobalResidual = prevGlobalResidual;
 	snapshots[$-1].residuals = currentResiduals.dup;
-
     }
     else {
         // We need to shuffle all of the snapshots

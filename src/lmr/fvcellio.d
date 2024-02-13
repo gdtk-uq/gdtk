@@ -12,12 +12,16 @@ import std.algorithm : startsWith;
 import std.string : split;
 import std.conv : to;
 import std.format : format;
+import std.range.primitives : front, popFront;
 
 import nm.number;
+import ntypes.complex;
 
 import globalconfig;
 import lmrexceptions : LmrException;
 import fvcell : FVCell;
+import flowstate : FlowState;
+import geom : Vector3;
 
 enum FieldVarsType { flow, limiter };
 
@@ -42,7 +46,7 @@ FieldVarsType fieldVarsTypeFromName(string name)
 	    errMsg ~= "   'limiter'\n";
 	    errMsg ~= "Check the selection or its spelling.\n";
 	    throw new Error(errMsg);
-    }	
+    }
 }
 
 /**
@@ -89,10 +93,8 @@ string[] buildFlowVariables()
 	}
     }
     variables ~= "shock-detector";
-    if (cfg.gmodel_master.n_species > 1) {
-	foreach (isp; 0 .. cfg.gmodel_master.n_species) {
-	    variables ~= "massf-" ~ cfg.gmodel_master.species_name(isp);
-	}
+    foreach (isp; 0 .. cfg.gmodel_master.n_species) {
+        variables ~= "massf-" ~ cfg.gmodel_master.species_name(isp);
     }
     if (cfg.gmodel_master.n_species > 1) variables ~= "dt_subcycle";
     variables ~= "e";
@@ -313,29 +315,27 @@ string[] buildLimiterVariables()
     string[] variables;
     final switch (cfg.thermo_interpolator) {
 	case InterpolateOption.pt:
-	    variables ~= "p"; 
+	    variables ~= "p";
 	    variables ~= "T";
 	    break;
 	case InterpolateOption.rhou:
-	    variables ~= "rho"; 
+	    variables ~= "rho";
 	    variables ~= "e";
 	    break;
 	case InterpolateOption.rhop:
-	    variables ~= "rho"; 
+	    variables ~= "rho";
 	    variables ~= "p";
 	    break;
 	case InterpolateOption.rhot:
-	    variables ~= "rho"; 
+	    variables ~= "rho";
 	    variables ~= "T";
 	    break;
     }
     variables ~= "vel.x";
     variables ~= "vel.y";
     if (cfg.dimensions == 3) variables ~= "vel.z";
-    if (cfg.gmodel_master.n_species > 1) {
-	foreach (isp; 0 .. cfg.gmodel_master.n_species) {
-	    variables ~= "massf-" ~ cfg.gmodel_master.species_name(isp);
-	}
+    foreach (isp; 0 .. cfg.gmodel_master.n_species) {
+	variables ~= "massf-" ~ cfg.gmodel_master.species_name(isp);
     }
     if (cfg.gmodel_master.n_modes > 1) {
         foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
@@ -365,7 +365,7 @@ public:
     {
 	cFVT = FieldVarsType.limiter;
 	mVariables = variables.dup;
-	
+
 	alias cfg = GlobalConfig;
 	foreach (var; variables) {
 	    if (var.startsWith("massf-")) {
@@ -489,3 +489,177 @@ FVCellIO createFVCellIO(FieldVarsType fvt, string[] variables)
 	case FieldVarsType.limiter: return new FVCellLimiterIO(variables);
     }
 }
+
+
+/**
+ * Function moved from Eilmer4. Will need some maintenance.
+ *
+ * RJG, 2024-02-12
+ */
+void scan_cell_data_from_fixed_order_string
+(string buffer,
+ ref Vector3 pos, ref number volume, ref FlowState fs,
+ ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
+ bool with_local_time_stepping, ref double dt_local, ref double dt_chem, ref double dt_therm,
+ bool include_quality, bool MHDflag, bool divergence_cleaning, bool radiation, size_t nturb)
+{
+    // This function needs to be kept consistent with cell_data_as_string() above.
+    auto items = split(buffer);
+    version(complex_numbers) {
+        // For complex_numbers, we presently set only the real parts.
+        // [TODO] Maybe we should read full complex numbers.
+        pos.x = Complex!double(items.front); items.popFront();
+        pos.y = Complex!double(items.front); items.popFront();
+        pos.z = Complex!double(items.front); items.popFront();
+        volume = Complex!double(items.front); items.popFront();
+        fs.gas.rho = Complex!double(items.front); items.popFront();
+        fs.vel.x = Complex!double(items.front); items.popFront();
+        fs.vel.y = Complex!double(items.front); items.popFront();
+        fs.vel.z = Complex!double(items.front); items.popFront();
+        version(MHD) {
+            if (MHDflag) {
+                fs.B.x = Complex!double(items.front); items.popFront();
+                fs.B.y = Complex!double(items.front); items.popFront();
+                fs.B.z = Complex!double(items.front); items.popFront();
+                fs.divB = Complex!double(items.front); items.popFront();
+                if (divergence_cleaning) {
+                    fs.psi = Complex!double(items.front); items.popFront();
+                } else {
+                    fs.psi = 0.0;
+                }
+            } else {
+                fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
+            }
+        }
+        if (include_quality) {
+            fs.gas.quality = Complex!double(items.front); items.popFront();
+        } else {
+            fs.gas.quality = 1.0;
+        }
+        fs.gas.p = Complex!double(items.front); items.popFront();
+        fs.gas.a = Complex!double(items.front); items.popFront();
+        fs.gas.mu = Complex!double(items.front); items.popFront();
+        fs.gas.k = Complex!double(items.front); items.popFront();
+        version(multi_T_gas) {
+            foreach(i; 0 .. fs.gas.k_modes.length) {
+                fs.gas.k_modes[i] = Complex!double(items.front); items.popFront();
+            }
+        }
+        fs.mu_t = Complex!double(items.front); items.popFront();
+        fs.k_t = Complex!double(items.front); items.popFront();
+        fs.S = Complex!double(items.front); items.popFront();
+        if (radiation) {
+            Q_rad_org = Complex!double(items.front); items.popFront();
+            f_rad_org = Complex!double(items.front); items.popFront();
+            Q_rE_rad = Complex!double(items.front); items.popFront();
+        } else {
+            Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
+        }
+        version(turbulence) {
+            foreach(it; 0 .. nturb) {
+                fs.turb[it] = Complex!double(items.front); items.popFront();
+            }
+        }
+        version(multi_species_gas) {
+            foreach(i; 0 .. fs.gas.massf.length) {
+                fs.gas.massf[i] = Complex!double(items.front); items.popFront();
+            }
+            if (fs.gas.massf.length > 1) {
+                dt_chem = to!double(items.front); items.popFront();
+            }
+        } else {
+            items.popFront(); // discard the single-species mass fraction, assumed 1.0
+        }
+        fs.gas.u = Complex!double(items.front); items.popFront();
+        fs.gas.T = Complex!double(items.front); items.popFront();
+        version(multi_T_gas) {
+            foreach(i; 0 .. fs.gas.u_modes.length) {
+                fs.gas.u_modes[i] = Complex!double(items.front); items.popFront();
+                fs.gas.T_modes[i] = Complex!double(items.front); items.popFront();
+            }
+            if (fs.gas.u_modes.length > 0) {
+                dt_therm = to!double(items.front); items.popFront();
+            }
+        }
+        if (with_local_time_stepping) { dt_local = to!double(items.front); items.popFront(); }
+    } else {
+        // version double_numbers
+        pos.x = to!double(items.front); items.popFront();
+        pos.y = to!double(items.front); items.popFront();
+        pos.z = to!double(items.front); items.popFront();
+        volume = to!double(items.front); items.popFront();
+        fs.gas.rho = to!double(items.front); items.popFront();
+        fs.vel.x = to!double(items.front); items.popFront();
+        fs.vel.y = to!double(items.front); items.popFront();
+        fs.vel.z = to!double(items.front); items.popFront();
+        version(MHD) {
+            if (MHDflag) {
+                fs.B.x = to!double(items.front); items.popFront();
+                fs.B.y = to!double(items.front); items.popFront();
+                fs.B.z = to!double(items.front); items.popFront();
+                fs.divB = to!double(items.front); items.popFront();
+                if (divergence_cleaning) {
+                    fs.psi = to!double(items.front); items.popFront();
+                } else {
+                    fs.psi = 0.0;
+                }
+            } else {
+                fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
+            }
+        }
+        if (include_quality) {
+            fs.gas.quality = to!double(items.front); items.popFront();
+        } else {
+            fs.gas.quality = 1.0;
+        }
+        fs.gas.p = to!double(items.front); items.popFront();
+        fs.gas.a = to!double(items.front); items.popFront();
+        fs.gas.mu = to!double(items.front); items.popFront();
+        fs.gas.k = to!double(items.front); items.popFront();
+        version(multi_T_gas) {
+            foreach(i; 0 .. fs.gas.k_modes.length) {
+                fs.gas.k_modes[i] = to!double(items.front); items.popFront();
+            }
+        }
+        fs.mu_t = to!double(items.front); items.popFront();
+        fs.k_t = to!double(items.front); items.popFront();
+        fs.S = to!double(items.front); items.popFront();
+        if (radiation) {
+            Q_rad_org = to!double(items.front); items.popFront();
+            f_rad_org = to!double(items.front); items.popFront();
+            Q_rE_rad = to!double(items.front); items.popFront();
+        } else {
+            Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
+        }
+        version(turbulence) {
+            foreach(it; 0 .. nturb) {
+                fs.turb[it] = to!double(items.front); items.popFront();
+            }
+        }
+        version(multi_species_gas) {
+            foreach(i; 0 .. fs.gas.massf.length) {
+                fs.gas.massf[i] = to!double(items.front); items.popFront();
+            }
+            if (fs.gas.massf.length > 1) {
+                dt_chem = to!double(items.front); items.popFront();
+            }
+        } else {
+            items.popFront(); // discard single-species mass fraction
+        }
+        fs.gas.u = to!double(items.front); items.popFront();
+        fs.gas.T = to!double(items.front); items.popFront();
+        version(multi_T_gas) {
+            foreach(i; 0 .. fs.gas.u_modes.length) {
+                fs.gas.u_modes[i] = to!double(items.front); items.popFront();
+                fs.gas.T_modes[i] = to!double(items.front); items.popFront();
+            }
+            if (fs.gas.u_modes.length > 0) {
+                dt_therm = to!double(items.front); items.popFront();
+            }
+        }
+        if (with_local_time_stepping) { dt_local = to!double(items.front); items.popFront(); }
+    } // end version double_numbers
+    version(multi_species_gas) {
+        foreach(i; 0 .. fs.gas.massf.length) { fs.gas.rho_s[i] = fs.gas.massf[i] * fs.gas.rho; }
+    }
+} // end scan_values_from_fixed_order_string()

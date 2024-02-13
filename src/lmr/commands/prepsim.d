@@ -3,9 +3,12 @@
  *
  * Authors: RJG, PJ, KAD, NNG
  * Date: 2022-08-09
+ * History:
+ *   2024-02-11 -- Renamed module: prepflow --> prepsim
+ *                 to better reflect its more general role
  */
 
-module prepflow;
+module prepsim;
 
 import std.getopt;
 import std.stdio : writeln, writefln;
@@ -17,6 +20,7 @@ import std.json : JSONValue;
 import std.algorithm : sort, uniq;
 
 import util.lua;
+import util.lua_service : getString;
 import geom.luawrap;
 import gas;
 import gas.luagas_model;
@@ -33,14 +37,14 @@ import luaidealgasflow;
 import luagasflow;
 import blockio : luafn_writeFlowMetadata, luafn_writeInitialFlowFile;
 
-Command prepFlowCmd;
+Command prepSimCmd;
 
 static this()
 {
-    prepFlowCmd.main = &main_;
-    prepFlowCmd.description = "Prepare initial flow fields and parameters for a simulation.";
-    prepFlowCmd.shortDescription = prepFlowCmd.description;
-    prepFlowCmd.helpMsg =
+    prepSimCmd.main = &main_;
+    prepSimCmd.description = "Prepare initial flow fields and parameters for a simulation.";
+    prepSimCmd.shortDescription = prepSimCmd.description;
+    prepSimCmd.helpMsg =
 `lmr prep-sim [options]
 
 Prepare an initial flow field and simulation parameters based on a file called job.lua.
@@ -51,13 +55,11 @@ options ([+] can be repeated):
      Increase verbosity during preparation of the simulation files.
 
  -j, --job=flow.lua
-     Specify the input file to be different from job.lua.
-
+     Specify the input file to be different from job.luu (default).
+     default: job.lua
 `;
 
 }
-
-enum Mode { steady, transient, block_marching };
 
 void main_(string[] args)
 {
@@ -70,7 +72,7 @@ void main_(string[] args)
            "j|job", &userFlowName,
            );
 
-    if (verbosity > 1) { writeln("lmr prep-flow: Start lua connection."); }
+    if (verbosity > 1) { writeln("lmr prep-sim: Start lua connection."); }
 
     auto L = initLuaStateForPrep();
     lua_pushinteger(L, verbosity);
@@ -127,13 +129,13 @@ void main_(string[] args)
     lua_pop(L, 1);
     // Now that we have set the Lua interpreter context,
     // process the Lua scripts.
-    if (luaL_dofile(L, toStringz(dirName(thisExePath())~"/../lib/prepflow.lua")) != 0) {
-        writeln("There was a problem in the Eilmer Lua code: prepflow.lua");
+    if (luaL_dofile(L, toStringz(dirName(thisExePath())~"/../lib/prepsim.lua")) != 0) {
+        writeln("There was a problem in the Eilmer Lua code: prepsim.lua");
         string errMsg = to!string(lua_tostring(L, -1));
         throw new FlowSolverException(errMsg);
     }
     if (luaL_dostring(L, toStringz("readGridMetadata()")) != 0) {
-        writeln("There was a problem in the Eilmer build function readGridMetadata() in prepflow.lua");
+        writeln("There was a problem in the Eilmer build function readGridMetadata() in prepsim.lua");
         string errMsg = to!string(lua_tostring(L, -1));
         throw new FlowSolverException(errMsg);
     }
@@ -149,21 +151,9 @@ void main_(string[] args)
         string errMsg = to!string(lua_tostring(L, -1));
         throw new FlowSolverException(errMsg);
     }
-    Mode mode = Mode.steady;  // [TODO] need to get this from the user's input script
-    if (mode == Mode.transient) {
-        writeln("lmr prep-sim: You have selected transient mode. Unfortunately, that's not yet implemented.");
-        writeln("lmr prep-sim: Exiting.");
-        return;
-    }
-    if (verbosity > 0) {
-        writeln("lmr prep-sim: Begin preparation of initial flow field files.");
-        if (mode == Mode.steady) {
-            writeln("lmr prep-flow: mode=steady selected.");
-        }
-    }
     //
     if (luaL_dostring(L, toStringz("buildRuntimeConfigFiles()")) != 0) {
-        writeln("There was a problem in the Eilmer build function buildRuntimeConfigFiles() in prepflow.lua");
+        writeln("There was a problem in the Eilmer build function buildRuntimeConfigFiles() in prepsim.lua");
         string errMsg = to!string(lua_tostring(L, -1));
         throw new FlowSolverException(errMsg);
     }
@@ -172,7 +162,7 @@ void main_(string[] args)
     // We may not proceed to building of block files if the config parameters are incompatible.
     checkGlobalConfig();
     if (luaL_dostring(L, toStringz("buildFlowAndGridFiles()")) != 0) {
-        writeln("There was a problem in the Eilmer build function buildFlowAndGridFiles() in prepflow.lua");
+        writeln("There was a problem in the Eilmer build function buildFlowAndGridFiles() in prepsim.lua");
         string errMsg = to!string(lua_tostring(L, -1));
         throw new FlowSolverException(errMsg);
     }

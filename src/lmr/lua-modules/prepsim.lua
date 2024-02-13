@@ -4,9 +4,6 @@
 --
 -- Authors: RJG, KAD, NNG, PJ
 --
-if false then -- debug
-   print("Loading prep-steady.lua.")
-end
 
 require 'lua_helper'
 require 'blk_conn'
@@ -16,8 +13,8 @@ require 'bc'
 local lmrconfig = require 'lmrconfig'
 local lmrCfg = lmrconfig.lmrCfg
 
-local configoptions = require 'configoptions'
-config = configoptions.config
+local globalconfig = require 'globalconfig'
+config = globalconfig.config
 
 local nkconfig = require 'nkconfig'
 NewtonKrylovGlobalConfig = nkconfig.NewtonKrylovGlobalConfig
@@ -250,12 +247,16 @@ function buildRuntimeConfigFiles()
    local cfgDir = lmrconfig.lmrCfg["config-directory"]
    os.execute("mkdir -p " .. cfgDir)
    write_config_file(lmrconfig.simulationConfigFilename())
-   -- write_control_file(cfgDir .. "/" .. lmrCfg["control-filename"])
+   if (config.solver_mode == "transient") then
+      write_control_file(cfgDir .. "/" .. lmrCfg["control-filename"])
+   end
    write_block_list_file(lmrconfig.blockListFilename())
    write_mpimap_file(lmrconfig.mpimapFilename())
-   --write_fluidBlockArrays_file(cfgDir .. "/" .. lmrCfg["fluidblock-arrays-filename"])
-   nkconfig.setIgnoreFlagInPhases(nkPhases)
-   nkconfig.writeNKConfigToFile(NewtonKrylovGlobalConfig, nkPhases, lmrconfig.nkConfigFilename())
+   write_fluidBlockArrays_file(cfgDir .. "/" .. lmrCfg["fluidblock-arrays-filename"])
+   if (config.solver_mode == "steady") then
+      nkconfig.setIgnoreFlagInPhases(nkPhases)
+      nkconfig.writeNKConfigToFile(NewtonKrylovGlobalConfig, nkPhases, lmrconfig.nkConfigFilename())
+   end
 
    if false then -- debug
       print("Done buildRuntimeConfigFiles.")

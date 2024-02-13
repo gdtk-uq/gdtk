@@ -31,7 +31,6 @@ import lsqinterp;
 import gas.fuel_air_mix;
 import globaldata : SimState;
 import turbulence;
-import celldata;
 
 import kinetics.chemistry_update;
 import kinetics.reaction_mechanism;
@@ -152,9 +151,6 @@ public:
     number[] DFT_local_real;
     number[] DFT_local_imag;
 
-    // array of auxiliary data
-    AuxCellData[] aux_cell_data;
-
     // Electromagnetic Field Variables
     double electric_potential;
     double[2] electric_field;
@@ -256,8 +252,6 @@ public:
         DFT_local_real.length = myConfig.DFT_n_modes;
         DFT_local_imag.length = myConfig.DFT_n_modes;
         //
-        // generate auxiliary data items
-        aux_cell_data = AuxCellData.get_aux_cell_data_items(myConfig);
     }
 
     this(LocalConfig myConfig, in Vector3 pos, FlowState fs, in number volume, int id_init=-1)
@@ -270,9 +264,6 @@ public:
         this.volume.length = 1;
         this.volume[0] = volume;
         this.fs = fs;
-
-        // generate auxiliary data items
-        aux_cell_data = AuxCellData.get_aux_cell_data_items(myConfig);
     }
 
     @nogc

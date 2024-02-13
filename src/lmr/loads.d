@@ -273,6 +273,9 @@ void wait_for_current_tindx_dir(int current_loads_tindx)
     wait_for_directory_to_be_present(dirName);
 }
 
+// [TODO] RJG, 2024-02-12
+// Disabled the next two functions because they have a dependency on base_file_name.
+/*
 void init_loads_times_file()
 {
     string fname = loadsDir ~ "/" ~ GlobalConfig.base_file_name ~ "-loads.times";
@@ -284,6 +287,7 @@ void update_loads_times_file(double sim_time, int current_loads_tindx)
     string fname = loadsDir ~ "/" ~ GlobalConfig.base_file_name ~ "-loads.times";
     std.file.append(fname, format("%04d %.18e \n", current_loads_tindx, sim_time));
 }
+*/
 
 void write_boundary_loads_to_file(double sim_time, int current_loads_tindx) {
     foreach (blk; localFluidBlocks) {

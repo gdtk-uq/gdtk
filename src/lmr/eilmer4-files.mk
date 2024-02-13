@@ -2,41 +2,28 @@ LMR4 ?= ../eilmer
 
 # Try to add to list in alphabetical order.
 LMR4_CORE_FILES := $(LMR4)/block.d \
-	$(LMR4)/celldata.d \
 	$(LMR4)/conservedquantities.d \
 	$(LMR4)/fileutil.d \
 	$(LMR4)/flowgradients.d \
-	$(LMR4)/flowstate.d \
 	$(LMR4)/fluidblockarray.d \
-	$(LMR4)/fluidblockio.d \
-	$(LMR4)/fluidblockio_new.d \
-	$(LMR4)/fluidblockio_old.d \
 	$(LMR4)/fluxcalc.d \
 	$(LMR4)/fvinterface.d \
 	$(LMR4)/fvvertex.d \
 	$(LMR4)/gas_solid_interface.d \
-	$(LMR4)/globalconfig.d \
-	$(LMR4)/globaldata.d \
 	$(LMR4)/grid_motion.d \
 	$(LMR4)/grid_motion_shock_fitting.d \
 	$(LMR4)/grid_motion_udf.d \
-	$(LMR4)/history.d \
 	$(LMR4)/lsqinterp.d \
 	$(LMR4)/mass_diffusion.d \
 	$(LMR4)/onedinterp.d \
-	$(LMR4)/sfluidblock.d \
 	$(LMR4)/shockdetectors.d \
-	$(LMR4)/simcore.d \
 	$(LMR4)/simcore_exchange.d \
 	$(LMR4)/simcore_gasdynamic_step.d \
-	$(LMR4)/simcore_io.d \
 	$(LMR4)/simcore_solid_step.d \
 	$(LMR4)/special_block_init.d \
-	$(LMR4)/turbulence.d \
-	$(LMR4)/ufluidblock.d
+	$(LMR4)/turbulence.d
 
-LMR4_LUA_FILES := $(LMR4)/luaflowstate.d \
-	$(LMR4)/lua_helper.d \
+LMR4_LUA_FILES := $(LMR4)/lua_helper.d \
 	$(LMR4)/user_defined_source_terms.d
 
 LMR4_BC_FILES := $(LMR4)/bc/package.d \
@@ -77,8 +64,7 @@ LMR4_SOLID_FILES := $(LMR4)/solid/solidbc.d \
 	$(LMR4)/solid/solid_udf_source_terms.d \
 	$(LMR4)/solid/luasolidprops.d
 
-LMR4_LUA_MODULES := $(LMR4)/configoptions.lua \
-	$(LMR4)/blk_conn.lua \
+LMR4_LUA_MODULES := $(LMR4)/blk_conn.lua \
 	$(LMR4)/bc.lua \
 	$(LMR4)/gridpro.lua \
 	$(LMR4)/grid.lua \
@@ -91,7 +77,6 @@ LMR4_LUA_MODULES := $(LMR4)/configoptions.lua \
 	$(LMR4)/mpi.lua \
 	$(LMR4)/history.lua \
 	$(LMR4)/zones.lua \
-	$(LMR4)/output.lua \
 	$(LMR4)/sssoptions.lua \
 	$(LMR4)/prep_check.lua
 
@@ -103,7 +88,6 @@ LMR4_EFIELD_FILES := $(LMR4)/field/field.d \
 	$(LMR4)/field/fieldderivatives.d \
 	$(LMR4)/field/fieldbc.d
 
-LMR4_EXTRA_FILES := $(LMR4)/postprocess.d \
-	$(LMR4)/vtk_writer.d \
+LMR4_EXTRA_FILES := $(LMR4)/vtk_writer.d \
 	$(LMR4)/tecplot_writer_classic.d \
 	$(LMR4)/tecplot_writer.d	

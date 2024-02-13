@@ -3,20 +3,29 @@
  *
  * Authors: RJG, KAD, NNG, PJ
  * Date: 2022-08-13
+ * History:
+ *   2024-02-12 -- renamed module runsteady --> runsim
+ *                 this command will use "solver_mode"
+ *                 to decide how the execution is delegated
  */
 
-module runsteady;
+module runsim;
 
 import core.runtime;
 import std.getopt;
 import std.stdio : File, writeln, writefln;
 import std.string;
 import std.file : exists;
+import core.stdc.stdlib : exit;
+import std.parallelism : totalCPUs;
+
+import json_helper : readJSONfile;
 
 import lmrconfig;
 import globalconfig;
 import command;
 import newtonkrylovsolver : initNewtonKrylovSimulation, performNewtonKrylovUpdates;
+import timemarching: initTimeMarchingSimulation, integrateInTime, finalizeSimulation_timemarching;
 
 version(mpi_parallel) {
     import mpi;
@@ -39,26 +48,27 @@ int determineNumberOfSnapshots()
     return count;
 }
 
-Command runSteadyCmd;
+Command runCmd;
+string cmdName = "run";
 
 static this()
 {
-    runSteadyCmd.main = &command.callShellCommand;
-    runSteadyCmd.description = "Run a steady-state simulation with Eilmer.";
-    runSteadyCmd.shortDescription = runSteadyCmd.description;
-    runSteadyCmd.helpMsg =
-`lmr run-steady
+    runCmd.main = &command.callShellCommand;
+    runCmd.description = "Run a simulation with Eilmer.";
+    runCmd.shortDescription = runCmd.description;
+    runCmd.helpMsg = format(
+`lmr %s [options]
 
-Run a simulation in steady-state mode.
+Run an Eilmer simulation.
 
 When invoking this command, the shared memory model of execution is used.
 This command assumes that a simulation has been pre-processed
 and is available in the working directory.
 
-For distributed memory (using MPI), use the stand-alone executable 'lmr-mpi-run-steady'.
+For distributed memory (using MPI), use the stand-alone executable 'lmr-mpi-run'.
 For example:
 
-   $ mpirun -np 4 lmr-mpi-run-steady
+   $ mpirun -np 4 lmr-mpi-run
 
 options ([+] can be repeated):
 
@@ -75,23 +85,52 @@ options ([+] can be repeated):
            number of snapshots available, then the iterations will
            begin from the final snapshot.
 
- --start-with-cfl|--cfl
+ --start-with-cfl <or>
+ --cfl
      Override the starting CFL on the command line.
 
      --start-with-cfl=100 : start stepping with cfl of 100
      --cfl 3.5 : start stepping with cfl of 3.5
-
+     default: no override
 
      NOTE: When not set, the starting CFL comes from input file
            or is computed for the case of a restart.
 
- -v, --verbose [+]
-     Increase verbosity during progression of iterative solver.
+ --max-cpus=<int>
+     Sets maximum number of CPUs for shared-memory parallelism.
+     default: %d (on this machine)
 
-`;
+ --threads-per-mpi-task=<int>
+     Sets threads for MPI tasks when running in MPI mode.
+     Leave the default value at 1 unless you know what you're doing
+     and know about the distributed/shared memory parallel processing
+     model used in Eilmer.
+     default: 1
+
+ --max-wall-clock=hh:mm:ss
+     This the maximum simultion duration given in hours, minutes and seconds.
+     default: 24:00:00
+
+ -v, --verbose [+]
+     Increase verbosity during progression of the simulation.
+
+`, cmdName, totalCPUs);
 }
 
-version(runsteady_main)
+/* Why the version(run_main)?
+ * Eilmer has a small set of exectuables and each requires a "main" function.
+ * The main "main" is the Eilmer command dispatcher and it lives in main.d.
+ * Here we need the capability to build two flavours of "run" executable:
+ * one for shared memory and one for distributed memory (MPI).
+ * We require a "main" function exposed at compile time, but don't want
+ * this to collide with the one in main.d.
+ * So we wrap this in a version clause and only enable when building those
+ * specific executables.
+ *
+ * RJG, 2024-02-12
+ */
+
+version(run_main)
 {
 
 void main(string[] args)
@@ -117,7 +156,7 @@ void main(string[] args)
     }
 
     if (GlobalConfig.is_master_task) {
-        writeln("Eilmer simulation code: steady-state solver mode.");
+        writeln("Eilmer simulation code.");
         writeln("Revision-id: ", lmrCfg.revisionId);
         writeln("Revision-date: ", lmrCfg.revisionDate);
         writeln("Compiler-name: ", lmrCfg.compilerName);
@@ -145,9 +184,9 @@ void main(string[] args)
     GlobalConfig.verbosity_level = verbosity;
 
     if (verbosity > 0 && GlobalConfig.is_master_task) {
-	writeln("lmr run-steady: Begin Newton-Krylov simulation.");
+	writeln("lmr run: Begin simulation.");
 	version(mpi_parallel) {
-	    writefln("lmr-mpi-run-steady: number of MPI ranks= %d", size);
+	    writefln("lmr-mpi-run: number of MPI ranks= %d", size);
 	}
     }
 
@@ -157,14 +196,14 @@ void main(string[] args)
 	if (snapshotStart == -1) {
 	    snapshotStart = numberSnapshots;
 	    if (verbosity > 1) {
-		writeln("lmr run-steady: snapshot requested is '-1' -- final snapshot");
-		writefln("lmr run-steady: starting from final snapshot, index= %02d", snapshotStart);
+		writeln("lmr run: snapshot requested is '-1' -- final snapshot");
+		writefln("lmr run: starting from final snapshot, index= %02d", snapshotStart);
 	    }
 	}
 	if (snapshotStart > numberSnapshots) {
 	    if (verbosity > 1) {
-		writefln("lmr run-steady: snapshot requested is %02d; this is greater than number of available snapshots", snapshotStart);
-		writefln("lmr run-steady: starting from final snapshot, index= %02d", numberSnapshots);
+		writefln("lmr run: snapshot requested is %02d; this is greater than number of available snapshots", snapshotStart);
+		writefln("lmr run: starting from final snapshot, index= %02d", numberSnapshots);
 	    }
 	    snapshotStart = numberSnapshots;
 	}
@@ -173,13 +212,39 @@ void main(string[] args)
 	MPI_Bcast(&snapshotStart, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
 
-    if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run-steady: Initialise simulation.");
-    initNewtonKrylovSimulation(snapshotStart, maxCPUs, threadsPerMPITask, maxWallClock);
+    // We just want to pull out solver mode at this point, so that we can direct the execution flow.
+    // We choose to execute these few lines rather than invoking the overhead of reading the entire
+    // config file into GlobalConfig.
+    auto cfgJSON = readJSONfile(lmrCfg.cfgFile);
+    string solverModeStr = cfgJSON["solver_mode"].str;
+    auto solverMode = solverModeFromName(solverModeStr);
 
-    if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run-steady: Perform Newton steps.");
-    performNewtonKrylovUpdates(snapshotStart, startCFL, maxCPUs, threadsPerMPITask);
+    final switch (solverMode) {
+    case SolverMode.steady:
+	if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run: Initialise Newton-Krylov simulation.");
+	initNewtonKrylovSimulation(snapshotStart, maxCPUs, threadsPerMPITask, maxWallClock);
+
+        if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run: Perform Newton steps.");
+	performNewtonKrylovUpdates(snapshotStart, startCFL, maxCPUs, threadsPerMPITask);
+	break;
+    case SolverMode.transient:
+	if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run: Initialise transient simulation.");
+	initTimeMarchingSimulation(snapshotStart, maxCPUs, threadsPerMPITask, maxWallClock);
+
+	if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run: Perform integration in time.");
+	auto flag = integrateInTime(GlobalConfig.max_time);
+	if (flag != 0 && GlobalConfig.is_master_task) writeln("Note that integrateInTime failed.");
+
+	finalizeSimulation_timemarching();
+	break;
+    case SolverMode.block_marching:
+	writeln("NOT IMPLEMENTED: block marching is not available right now.");
+	exit(1);
+    }
+
+    GlobalConfig.finalize();
 
     return;
 }
 
-}
+} // end: version(run_main)

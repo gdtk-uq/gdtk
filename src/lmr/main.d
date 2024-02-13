@@ -8,9 +8,9 @@ import checkjacobian;
 import computenorms;
 import limiter2vtk;
 import prepgrids;
-import prepflow;
+import prepsim;
 import prepmappedcells;
-import runsteady;
+import runsim;
 import snapshot2vtk;
 import structured2unstructured;
 import revisionid;
@@ -47,12 +47,12 @@ Show help for a given Eilmer command or topic.
     commands["compute-norms"] = compNormsCmd;
     commands["limiter2vtk"] = limiter2vtkCmd;
     commands["prep-grids"] = prepGridCmd;
-    commands["prep-grid"] = commands["prep-grids"]; // alias
-    commands["prep-flow"] = prepFlowCmd;
-    commands["prep-sim"] = commands["prep-flow"]; // alias
+    commands["prep-grid"] = commands["prep-grids"]; // alias for prep-grids
+    commands["prep-sim"] = prepSimCmd;
+    commands["prep-flow"] = commands["prep-sim"]; // alias for prep-sim
     commands["prep-mapped-cells"] = prepMappedCellsCmd;
     commands["revision-id"] = revisionIdCmd;
-    commands["run-steady"] = runSteadyCmd;
+    commands["run"] = runCmd;
     commands["snapshot2vtk"] = snapshot2vtkCmd;
     commands["structured2unstructured"] = structured2unstructuredCmd;
     // add alias for structured2unstructured
