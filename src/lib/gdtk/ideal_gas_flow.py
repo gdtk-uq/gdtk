@@ -314,7 +314,14 @@ def beta_obl(M1, theta, g=1.4, tol=1.0e-6):
     if M1 < 1.0: raise Exception("M1 is subsonic")
     sign_beta = -1 if theta < 0.0 else 1
     theta = abs(theta)
-    b1 = asin(1.0/M1);
+    # AM and RJG, 2024-02-13
+    # We add a small value (epislon) to our starting guess.
+    # We found we needed this in the unlucky situation
+    # where floating point precision in going from
+    # sin() and back through asin() would put the
+    # value on the wrong side of 1.0, ie. < 1.0.
+    EPS = 1.0e-12
+    b1 = asin(1.0/M1) + EPS;
     if theta < tol:
         # Small deflection will produce a very weak shock.
         return sign_beta * b1
