@@ -4,6 +4,7 @@ print("Set up transient solve of Mach 1.5 flow over a 20 degree cone.")
 -- 0. Assume that a previous processing has step set up the grids.
 --
 -- 1. Domain type, gas model and flow states
+config.solver_mode = "transient"
 config.axisymmetric = true
 setGasModel('ideal-air.gas')
 initial = FlowState:new{p=5955.0, T=304.0} -- Pa, degrees K
@@ -21,12 +22,7 @@ bcDict = {
 makeFluidBlocks(bcDict, flowDict)
 --
 -- 3. Simulation parameters.
-config.flux_calculator= "ausmdv"
-config.interpolation_order = 2
 config.max_time = 5.0e-3  -- seconds
 config.max_step = 3000
--- config.dt_init = 1.0e-6
-config.cfl_value = 0.5
 config.dt_plot = 1.5e-3
-config.dt_history = 10.0e-5
 config.extrema_clipping = false

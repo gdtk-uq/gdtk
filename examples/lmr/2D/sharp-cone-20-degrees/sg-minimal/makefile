@@ -6,7 +6,7 @@ help:
 	@echo -e "   run"
 	@echo -e "   post"
 
-prep: gas grid init
+prep: gas grid init-steady
 
 gas: ideal-air.lua
 	prep-gas ideal-air.lua ideal-air.gas
@@ -14,14 +14,14 @@ gas: ideal-air.lua
 grid: grid.lua
 	lmr prep-grid --job=grid.lua
 
-init: steady.lua
+init-steady: steady.lua
 	lmr prep-sim --job=steady.lua
 
-run-steady:
-	lmr run-steady
+init-transient: transient.lua
+	lmr prep-sim --job=transient.lua
 
-run-transient:
-	lmr run-transient
+run:
+	lmr run
 
 post: vtk
 
