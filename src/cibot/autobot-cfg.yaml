@@ -1,0 +1,6 @@
+---
+lmrDir: '/Users/rjg/gdtk/src/lmr'
+testDir: '/Users/rjg/lmr-test'
+exDir: '/Users/rjg/gdtk/examples/lmr'
+logFilePrefix: 'lmr-test'
+...
