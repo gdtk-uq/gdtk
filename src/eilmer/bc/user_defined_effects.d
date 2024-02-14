@@ -458,23 +458,18 @@ private:
         }
 
         version(multi_species_gas) {
-            lua_getfield(L, tblIdx, "massf");
-            if ( lua_istable(L, -1) ) {
-                int massfIdx = lua_gettop(L);
-                getSpeciesValsFromTable(L, gmodel, massfIdx, fs.gas.massf, "massf");
+            // If we only have one species, set it to one for safety
+            if ( gmodel.n_species() == 1 ) {
+                fs.gas.massf[0] = 1.0;
             } else {
-                if ( gmodel.n_species() == 1 ) {
-                    fs.gas.massf[0] = 1.0;
-                } else {
-                    // There's no clear choice for multi-species.
-                    // Maybe best to set everything to zero to
-                    // trigger some bad behaviour rather than
-                    // one value to 1.0 and have the calculation
-                    // proceed but not follow the users' intent.
-                    foreach (ref mf; fs.gas.massf) { mf = 0.0; }
+                // If the user provided a table, pull it in, otherwise do nothing
+                lua_getfield(L, tblIdx, "massf");
+                if ( lua_istable(L, -1) ) {
+                    int massfIdx = lua_gettop(L);
+                    getSpeciesValsFromTable(L, gmodel, massfIdx, fs.gas.massf, "massf");
                 }
+                lua_pop(L, 1);
             }
-            lua_pop(L, 1);
         }
 
         lua_getfield(L, tblIdx, "velx");
