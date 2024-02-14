@@ -4,7 +4,7 @@ all: clean prep run post
 
 clean:
 	rm -rf flow grid hist loads plot solid config *.log catalytic.o* catalytic.e* \
-		air-5sp-2T.inp air-5sp-2T.lua GuptaEtAl-air-2T.lua air-5sp-2T-chem.lua air-energy-exchange.lua
+		air-5sp-gas-model.lua GuptaEtAl-air-reactions-2T.lua air-energy-exchange.lua gm.lua rr.lua ee.lua
 
 prep:
 	./prep-gas-and-chem.sh

@@ -38,10 +38,10 @@ config.write_loads = true
 config.dt_loads = config.max_time/N_solutions
 config.boundary_groups_for_loads = "wall"
 
-nsp, nmodes, gmodel = setGasModel('air-5sp-2T.lua')
+nsp, nmodes, gmodel = setGasModel('gm.lua')
 config.reacting = true
-config.reactions_file = 'air-5sp-2T-chem.lua'
-config.energy_exchange_file = 'air-energy-exchange.lua'
+config.reactions_file = 'rr.lua'
+config.energy_exchange_file = 'ee.lua'
 
 T_inf = 238.0  -- K
 rho_inf = 2.3e-4  -- kg/m^3
@@ -110,7 +110,8 @@ blocks = FBArray:new{grid=grid,
                         initialState=initial,
                         bcList={south=WallBC_WithSlip:new{},
                                 --east=WallBC_NoSlip_FixedT:new{catalytic_type="equilibrium", Twall=2200.0, group="wall"},
-                                east=WallBC_NoSlip_UserDefinedT:new{catalytic_type="equilibrium", Twall="udf-twall.lua", group="wall"},
+                                --east=WallBC_NoSlip_UserDefinedT:new{catalytic_type="equilibrium", Twall="udf-twall.lua", group="wall"},
+                                east=WallBC_NoSlip_UserDefinedT:new{Twall="udf-twall.lua", group="wall"},
                                 --east=WallBC_NoSlip_FixedT:new{catalytic_type="none", Twall=2200.0, group="wall"},
                                 --east=WallBC_NoSlip_FixedT:new{catalytic_type="fixed_composition", wall_massf_composition=mass_fraction, Twall=2200.0, group="wall"},
                                 north=OutFlowBC_Simple:new{},
