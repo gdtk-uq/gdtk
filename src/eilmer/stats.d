@@ -54,11 +54,11 @@ struct StatsData {
         section[5]  += weight * fs.gas.a.re;
         section[6]  += weight * fs.gas.mu.re;
         section[7]  += weight * fs.gas.k.re;
-        section[8]  += weight * fs.mu_t;
+        section[8]  += weight * fs.mu_t.re;
         section[9]  += weight * fs.k_t.re;
         section[10] += weight * fs.S.re;
-        section[11] += weight * fs.gas.u;
-        section[12] += weight * fs.gas.T;
+        section[11] += weight * fs.gas.u.re;
+        section[12] += weight * fs.gas.T.re;
         version(turbulence) { foreach(it; 0 .. nturb) section[13+it] += weight*fs.turb[it].re; }
         version(multi_species_gas) {
             foreach(isp; 0 .. nspecies) section[13+nturb+isp] += weight*fs.gas.massf[isp].re;
@@ -115,7 +115,7 @@ class FlowStats {
 
         foreach(i; 0 .. positions.length){
             foreach(j, zj; z){
-                double dist = (positions[i].y - zj);
+                double dist = (positions[i].y.re - zj);
                 double arg = -1.0*(dist*dist)/2.0/b_squared;
                 double weight = exp(arg);
 
