@@ -239,7 +239,8 @@ ifeq ($(WITH_FSI),1)
 					fsi/FEMmodel.d \
 					fsi/FEMconfig.d \
 					fsi/eulerbernoulli.d \
-					fsi/kirchhofflove.d
+					fsi/kirchhofflove.d \
+					fsi/damping_models.d
 endif
 
 FIELD_FILES := field/field.d \
