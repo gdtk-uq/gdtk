@@ -120,12 +120,12 @@ public:
             double q1 = southPressureAtQuads[2*i] - northPressureAtQuads[2*i];
             double q2 = southPressureAtQuads[2*i+1] - northPressureAtQuads[2*i+1];
 
-            F._data[i*2 .. (i+2)*2] += (l / 2) * (q1 * Nq1[] + q2 * Nq2[]);
+            F[i*2 .. (i+2)*2] += (l / 2) * (q1 * Nq1[] + q2 * Nq2[]);
         }
 
         // Apply the boundary conditions
         foreach (ZeroedIndx; zeroedIndices) {
-            F._data[ZeroedIndx] = 0.0;
+            F[ZeroedIndx] = 0.0;
         }
     } // end updateForceVector
 

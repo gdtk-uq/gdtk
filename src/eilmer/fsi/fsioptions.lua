@@ -67,6 +67,14 @@ fsiOptionsHidden = {
     -- Which nodes to write out at the history frequency
     historyNodes = {},
 
+    -- Information about the damping model
+    dampingModel = "none",
+    dampingRatios = {0.001, 0.001},
+    naturalFrequencies = {100, 100},
+
+    -- Time stepper
+    temporalScheme = "RK4",
+
     __index = function (t, k)
        return fsiOptionsHidden[k]
     end,

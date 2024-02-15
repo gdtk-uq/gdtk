@@ -46,6 +46,7 @@ import util.lua;
 import gzip;
 import geom;
 import fsi.femconfig;
+import fsi.damping_models;
 import nm.number;
 import nm.bbla;
 import globaldata;
@@ -82,25 +83,30 @@ public:
     int[][] northFEMNodeIds, southFEMNodeIds;
     int[][] northCFDCellIds, southCFDCellIds;
 
-    // At this stage, the FEM models are all classic ODEs of the form -KX + F = MA
-    // Where K is stiffness matrix, X is the position vector, F is the applied force vector,
+    // At this stage, the FEM models are all classic ODEs of the form -KX - CV + F = MA
+    // Where K is stiffness matrix, X is the position vector, C is the damping matrix,
+    // V is the velocity vector, F is the applied force vector,
     // M is mass matrix and A is the acceleration vector.
-    // Express as 2 first order ODEs: -KX + F = MVd        (d denotes time derivative)
-    //                                      V = Xd
+    // Express as 2 first order ODEs: -KX - CV + F = MVdot      (dot denotes time derivative)
+    //                                           V = Xdot
     // Assign pointers to the state vectors X, V and F, and allocate memory to them later when we
     // know how many elements in these vectors.
-    double[] X, V;
+    double[] X, V, F;
 
-    // For the moment, just use dense matrices for the M, K matrices. Likely move to sparse 
+    // For the moment, just use dense matrices for the M, K and C matrices. Likely move to sparse 
     // matrices in future once kinks in implementation are ironed out.
-    Matrix!double K, M, F;
+    Matrix!double K, M, C;
+
+    // Set a boolean to track whether damping is included or not, better retrieving data from
+    // an enum every step.
+    bool includeDamping = false;
 
     // Rather than inverting the mass matrix to solve the first ODE, solve the linear system Ax=B
-    // where A = M, x = Vd, B = (-KX + F). For this, we need the permutation matrix of M.
+    // where A = M, x = Vdot, B = (-KX - CV + F). For this, we need the permutation matrix of M.
     size_t[2][] MPermuteList;
 
     // Preallocate memory to be used during the time stepping calculation
-    double[] KDotX, XStage, VStage;
+    double[] KDotX, CDotV, XStage, VStage;
     double[][] dX, dV;
     Matrix!double rhs;
 
@@ -136,6 +142,11 @@ public:
 
     // begin modelSetup()
     void model_setup() {
+        // The individual models have their own model_setup(), which specifies the number of nodes and DoFs
+        // based on the specified number of elements. They then call this parent method, which uses those
+        // computed number of nodes and DoFs to allocate memory and do other setup operations which are
+        // common across all models.
+
         // Set up the plate orientation
         plateNormal = Vector3(myConfig.plateNormal[0], myConfig.plateNormal[1], myConfig.plateNormal[2]);
         plateTangent1 = Vector3(myConfig.plateNormal[1], -myConfig.plateNormal[0], myConfig.plateNormal[2]);
@@ -146,26 +157,67 @@ public:
         PrepareNodeToVertexMap();
 
         // Allocate memory for the ODEs
-        K = new Matrix!double(nDoF); M = new Matrix!double(nDoF); F = new Matrix!double(nDoF, 1);
-        K.zeros(); M.zeros(); F.zeros();
+        // Start with the matrices. Don't include the damping matrix yet, because in most instances we want
+        // to build the damping matrix based on the stiffness and mass matrices.
+        K = new Matrix!double(nDoF); M = new Matrix!double(nDoF);
+        K.zeros(); M.zeros();
 
-        X.length = nDoF; V.length = nDoF; XStage.length = nDoF; VStage.length = nDoF; KDotX.length = nDoF;
-        X[] = 0.0; V[] = 0.0; KDotX[] = 0.0;
+        if (myConfig.dampingModel != DampingModel.None) {   // Only allocate for the damping if we use it
+            C = new Matrix!double(nDoF); C.zeros();
+            includeDamping = true;
+        }
 
-        dX = new double[][](nDoF, 4); dV = new double[][](nDoF, 4);
+        // Allocate the vector memory for the states
+        X.length = nDoF; V.length = nDoF; F.length = nDoF; XStage.length = nDoF; VStage.length = nDoF; KDotX.length = nDoF;
+        X[] = 0.0; V[] = 0.0; F[] = 0.0;
+        
+        XStage.length = nDoF; VStage.length = nDoF; KDotX.length = nDoF; CDotV.length = nDoF;   // Don't need to zero these
+
+        // Allocate memory for the derivate stages
+        switch (myConfig.temporalScheme) {
+            case FEMTemporalScheme.RK4:
+                // 4 Stages
+                dX = new double[][](nDoF, 4); dV = new double[][](nDoF, 4);
+                break;
+            case FEMTemporalScheme.euler:
+                // 1 Stage
+                dX = new double[][](nDoF, 1); dV = new double[][](nDoF, 1);
+                break;
+            default:
+                throw new Error("Something went wrong in choosing the temporal scheme.");
+        }
+
+         // Allocate memory to store the results of the linear solve of the ODe
         rhs = new Matrix!double(nDoF, 1);
 
+        // Finally, allocate memory for the interfacing vectors i.e. external pressures from fluid to solid 
+        // and node velocities from solid to fluid.
         northPressureAtQuads.length = nQuadPoints; southPressureAtQuads.length = nQuadPoints;
         FEMNodeVel.length = nNodes;
 
-        // The memory for the vectors and matrices is assigned in the model files, as they may have different doubles of
-        // degrees of freedom therefore different doubles of elements.
-
         // Address boundary conditions first as they affect the formation of the matrices
         DetermineBoundaryConditions(myConfig.BCs);
+
+        // Compute the mass and stiffness matrices by calling on the child method.
         GenerateMassStiffnessMatrices();
-        if (myConfig.writeMatrices) { WriteMatricesToFile(); }
+
+        // Now that we have the mass and stiffness matrices, we can call the damping matrix builder
+        switch (myConfig.dampingModel) {
+            case DampingModel.Rayleigh2Parameter:
+                // Use the Rayleigh 2 parameter model
+                RayleighDampingMatrix(C, K, M, myConfig.dampingRatios, myConfig.naturalFrequencies);
+                break;
+            case DampingModel.None:
+                goto default;
+            default:
+                break;
+        }
+
+        // Pre-compute the permutation list used to solve the linear system.
         MPermuteList = decomp!double(M);
+
+        // If the user desires, write the mass and stiffness matrices to file for later analysis.
+        if (myConfig.writeMatrices) { WriteMatricesToFile(); }
 
         // Prepare any history files
         PrepareFSIHistoryFiles();
@@ -343,50 +395,19 @@ public:
         RetrievePressures();
 
         // Then use these to fill in the force vector
-        F._data[] = 0.0;
+        F[] = 0.0;
         UpdateForceVector();
 
         // Now we can solve the ODE- reuse F to store the result of the linear system solution
         dt *= myConfig.couplingStep;
 
-        // Attempt an RK4 step
-        // First stage
-        dot(K, X, KDotX);
-        rhs._data[] = F._data[] - KDotX[];
-        solve!double(M, rhs, MPermuteList);
-        dV[][0] = rhs._data[];
-        dX[][0] = V[];
-
-        XStage[] = X[] + 0.5 * dX[0][] * dt;
-        VStage[] = V[] + 0.5 * dV[0][] * dt;
-
-        dot(K, XStage, KDotX);
-        rhs._data[] = F._data[] - KDotX[];
-        solve!double(M, rhs, MPermuteList);
-        dV[][1] = rhs._data[];
-        dX[][1] = VStage[];
-
-        XStage[] = X[] + 0.5 * dX[1][] * dt;
-        VStage[] = V[] + 0.5 * dV[1][] * dt;
-
-        dot(K, XStage, KDotX);
-        rhs._data[] = F._data[] - KDotX[];
-        solve!double(M, rhs, MPermuteList);
-        dV[][2] = rhs._data[];
-        dX[][2] = VStage[];
-
-        XStage[] = X[] + dX[2][] * dt;
-        VStage[] = V[] + dV[2][] * dt;
-
-        dot(K, XStage, KDotX);
-        rhs._data[] = F._data[] - KDotX[];
-        solve!double(M, rhs, MPermuteList);
-        dV[][3] = rhs._data[];
-        dX[][3] = VStage[];
-
-        foreach (i; 0 .. X.length) {
-            X[i] += (1./6.) * (dX[0][i] + 2. * dX[1][i] + 2. * dX[2][i] + dX[3][i]) * dt;
-            V[i] += (1./6.) * (dV[0][i] + 2. * dV[1][i] + 2. * dV[2][i] + dV[3][i]) * dt;
+        switch (myConfig.temporalScheme) {
+            case FEMTemporalScheme.RK4:
+                RK4FEMUpdate(dt); break;
+            case FEMTemporalScheme.euler:
+                eulerFEMUpdate(dt); break;
+            default:
+                throw new Error("Something bad happened when choosing the FEM temporal update.");
         }
 
         // Convert to the node displacement velocities used by the fluid mesh
@@ -394,6 +415,86 @@ public:
         BroadcastGridMotion();
 
     } // end compute_vtx_velocities_for_FSI
+
+    void RK4FEMUpdate(double dt) {
+        // Perform a temporal update using 4th order RK.
+
+        // First stage
+        dot(K, X, KDotX);
+        rhs._data[] = F[] - KDotX[];
+        if (includeDamping) {
+            dot(C, V, CDotV);
+            rhs._data[] -= CDotV[];
+        }
+        solve!double(M, rhs, MPermuteList);
+        dV[][0] = rhs._data[];
+        dX[][0] = V[];
+
+        XStage[] = X[] + 0.5 * dX[0][] * dt;
+        VStage[] = V[] + 0.5 * dV[0][] * dt;
+
+        // Second stage
+        dot(K, XStage, KDotX);
+        rhs._data[] = F[] - KDotX[];
+        if (includeDamping) {
+            dot(C, VStage, CDotV);
+            rhs._data[] -= CDotV[];
+        }
+        solve!double(M, rhs, MPermuteList);
+        dV[][1] = rhs._data[];
+        dX[][1] = VStage[];
+
+        XStage[] = X[] + 0.5 * dX[1][] * dt;
+        VStage[] = V[] + 0.5 * dV[1][] * dt;
+
+        // Third stage
+        dot(K, XStage, KDotX);
+        rhs._data[] = F[] - KDotX[];
+        if (includeDamping) {
+            dot(C, VStage, CDotV);
+            rhs._data[] -= CDotV[];
+        }
+        solve!double(M, rhs, MPermuteList);
+        dV[][2] = rhs._data[];
+        dX[][2] = VStage[];
+
+        XStage[] = X[] + dX[2][] * dt;
+        VStage[] = V[] + dV[2][] * dt;
+
+        // Fourth stage
+        dot(K, XStage, KDotX);
+        rhs._data[] = F[] - KDotX[];
+        if (includeDamping) {
+            dot(C, VStage, CDotV);
+            rhs._data[] -= CDotV[];
+        }
+        solve!double(M, rhs, MPermuteList);
+        dV[][3] = rhs._data[];
+        dX[][3] = VStage[];
+
+        X[] += (1./6.) * (dX[0][] + 2. * dX[1][] + 2. * dX[2][] + dX[3][]) * dt;
+        V[] += (1./6.) * (dV[0][] + 2. * dV[1][] + 2. * dV[2][] + dV[3][]) * dt;
+        //foreach (i; 0 .. X.length) {
+            //X[i] += (1./6.) * (dX[0][i] + 2. * dX[1][i] + 2. * dX[2][i] + dX[3][i]) * dt;
+            //V[i] += (1./6.) * (dV[0][i] + 2. * dV[1][i] + 2. * dV[2][i] + dV[3][i]) * dt;
+        //}
+    } // end RK4FEMUpdate
+
+    void eulerFEMUpdate(double dt) {
+        // Perform a simple euler temporal update
+        dot(K, X, KDotX);
+        rhs._data[] = F[] - KDotX[];
+        if (includeDamping) {
+            dot(C, V, CDotV);
+            rhs._data[] -= CDotV[];
+        }
+        solve!double(M, rhs, MPermuteList);
+        dV[][0] = rhs._data[];
+        dX[][0] = V[];
+
+        X[] += dX[0][] * dt;
+        V[] += dV[0][] * dt;
+    } // end eulerFEMUpdate
 
     void WriteMatricesToFile() {
         // It will often be useful to write the mass and stiffness matrices to file,

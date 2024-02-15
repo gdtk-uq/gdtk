@@ -35,22 +35,31 @@ public:
     }
 
     override void GenerateMassStiffnessMatrices() {
+        // Assign the constants bsaed on the structure geometry
         double a = myConfig.length / (2 * myConfig.Nx);
         double b = myConfig.width / (2 * myConfig.Nz);
 
+        // Build the local mass and stiffness matrices- these are constant in both time and across elements,
+        // because our elements are of uniform size.
         Matrix!double KL = LocalStiffnessMatrix(a, b, myConfig.poissonsRatio);
         KL.scale(myConfig.youngsModulus * pow(myConfig.thickness, 3) * a * b / (12 * (1 - pow(myConfig.poissonsRatio, 2))));
         Matrix!double ML = LocalMassMatrix(a, b);
         ML.scale(myConfig.density * myConfig.thickness * a * b);
 
+        // Assign our indexers
         size_t globalNodeIndx, globalNodeIndxInner, globalRowIndx, globalColIndx, localRowIndx, localColIndx;
+
+        // First, we iterate over all the elements
         foreach (k; 0 .. myConfig.Nz) {
             foreach (i; 0 .. myConfig.Nx) {
+                // Then, we iterate over each node and DoF in the element to build the equation corresponding to that DoF
                 foreach (node; 0 .. 4) {
                     globalNodeIndx = LocalNodeToGlobalNode(node, i, k);
                     foreach (DoF; 0 .. 3) {
                         localRowIndx = node * 3 + DoF;
                         globalRowIndx = globalNodeIndx * 3 + DoF;
+                        // Finally, we do an inner iteration across the DoFs to compute the contributions from each DoF
+                        // to the outer DoF's equation.
                         foreach (n_node; 0 .. 4) {
                             globalNodeIndxInner = LocalNodeToGlobalNode(n_node, i, k);
                             foreach (D_DoF; 0 .. 3) {
@@ -65,6 +74,7 @@ public:
             } // end foreach i
         } // end foreach k
 
+        // Apply the boundary conditions, diagonal ones for fixed nodes.
         foreach (zeroedIndx; zeroedIndices) {
             foreach (DoF; 0 .. nDoF) {
                 if (zeroedIndx == DoF) {
@@ -105,7 +115,6 @@ public:
         // Build the constituitive matrix as per Eq 5.12 in 
         // "Structural Analysis with the Finite Element Method: Linear Statics, Vol 2"
         // The coefficient E/(1-v^2) is applied later
-
         Matrix!double D = new Matrix!double(3); D.zeros();
         D[0, 0] = 1; D[0, 1] = v;
         D[1, 0] = v; D[1, 1] = 1;
@@ -256,17 +265,17 @@ public:
                 // Add to the global force matrix
                 foreach (node; 0 .. 4) {
                     globalNodeIndx = LocalNodeToGlobalNode(node, i, k);
-                    F._data[3 * globalNodeIndx .. 3 * globalNodeIndx + 3] += FL[3 * node .. 3 * node + 3];
+                    F[3 * globalNodeIndx .. 3 * globalNodeIndx + 3] += FL[3 * node .. 3 * node + 3];
                 } // end foreach node
             } // end foreach i
         } // end foreach k
 
         // Scale the vector by a * b
-        F._data[] *= a * b;
+        F[] *= a * b;
 
         // Set the boundary conditions
         foreach (zeroedIndx; zeroedIndices) {
-            F._data[zeroedIndx] = 0.0;
+            F[zeroedIndx] = 0.0;
         }
     }
 
