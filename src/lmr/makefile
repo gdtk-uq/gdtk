@@ -56,7 +56,7 @@ OPENMPI_FILES := $(OPENMPI_DIR)/source/mpi/package.d
 MPICH_DIR := ../extern/cray-mpich
 MPICH_FILES := $(MPICH_DIR)/mpi.d
 
-PROGRAMS := lmr
+PROGRAMS := lmr gdtk-module
 SUB_PROGRAMS := lmr-run
 SHARE_FILES :=
 ETC_FILES := lmr.cfg
@@ -244,7 +244,7 @@ ifeq ($(TURBULENCE),1)
     DFLAGS += $(DVERSION)turbulence
 endif
 
-default: lmr lmr-run
+default: lmr lmr-run gdtk-module
 
 install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS)
 	- mkdir -p $(INSTALL_DIR)/bin
@@ -260,6 +260,7 @@ install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS)
 	cp $(LUA_DIR)/install/lib/lpeg.so $(BUILD_DIR)/lib
 	cp -r ../lib/* $(BUILD_DIR)/lib
 	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
+	cp gdtk-module $(INSTALL_DIR)/share
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 clean:
@@ -270,6 +271,7 @@ clean:
 	- rm *.o
 	- rm lmrconfig_with_str_subst.d
 	- rm runsim_shared.d runsim_openmpi.d
+	- rm -f gdtk-module
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(MPICH_DIR); make clean
 	- cd $(LUA_DIR); make clean
@@ -395,3 +397,12 @@ chemkin2eilmer:
 prep-kinetics:
 	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) PLATFORM=$(PLATFORM) build-prep-kinetics
 
+gdtk-module:
+	sed -e 's+PUT_REVISION_STRING_HERE+$(REVISION_STRING)+' \
+		-e 's+PUT_COMPILER_NAME_HERE+$(DMD)+' \
+		-e 's+PUT_INSTALL_DIR_HERE+$(INSTALL_DIR)+' \
+		-e 's+PUT_REPO_DIR_HERE+$(REPO_DIR)+' \
+		-e 's+PUT_BUILD_DATE_HERE+$(BUILD_DATE)+' \
+		-e 's+PUT_REVISION_AGE_HERE+$(REVISION_AGE)+' \
+		-e 's+PUT_REPO_DIR_HERE+$(REPO_DIR)+' \
+		../eilmer/gdtk-module-template > gdtk-module
