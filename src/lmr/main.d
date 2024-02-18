@@ -68,11 +68,13 @@ void main(string[] args)
     bool helpWanted = false;
     bool versionWanted = false;
     bool versionLongWanted = false;
+    NumberType numberType;
     getopt(args,
            std.getopt.config.stopOnFirstNonOption,
            "h|help", &helpWanted,
            "v|version", &versionWanted,
            "version-long", &versionLongWanted,
+           "number-type", &numberType
     );
 
     if (versionLongWanted) {
@@ -101,7 +103,17 @@ void main(string[] args)
         return;
     }
 
+    if (args[1].startsWith("--number-type")) {
+        args.remove(1);
+    }
+
     auto cmd = args[1];
+
+    if (cmd == "run") {
+        // We need to treat this one specially because of how delegation
+        // is made based on number type (real or complex)
+        return runsim.delegateAndExecute(args, numberType);
+    }
 
     if (cmd in commands) {
         return (*commands[cmd].main)(args);
@@ -156,6 +168,7 @@ void printHelp(string[] args)
     string generalHelp =
 `usage: lmr [-h | --help] [help -a]
            [-v | --version] [--version-long]
+           [--number-type=real_values|complex_values]
             <command> [<args>]
 
 == Eilmer simulation program ==
@@ -174,6 +187,10 @@ at post-processing stage
    snapshot2vtk    convert a snapshot to VTK format for visualisation
    probe-flow      reports the flow-field data at specified location(s)
 
+== Notes ==
+--number-type option, if used, must appear before "run" command.
+It is advanced usage to control delegation of "run" to lmr-run (reals)
+or lmrZ-run (complex).
 `;
     write(generalHelp);
     return;

@@ -12,6 +12,7 @@
 module runsim;
 
 import core.runtime;
+import core.stdc.stdlib : system;
 import std.getopt;
 import std.stdio : File, writeln, writefln;
 import std.string;
@@ -30,6 +31,8 @@ import timemarching: initTimeMarchingSimulation, integrateInTime, finalizeSimula
 version(mpi_parallel) {
     import mpi;
 }
+
+enum NumberType {default_type, real_values, complex_values};
 
 int determineNumberOfSnapshots()
 {
@@ -53,7 +56,7 @@ string cmdName = "run";
 
 static this()
 {
-    runCmd.main = &command.callShellCommand;
+    // no main field, treated specially
     runCmd.description = "Run a simulation with Eilmer.";
     runCmd.shortDescription = runCmd.description;
     runCmd.helpMsg = format(
@@ -117,6 +120,54 @@ options ([+] can be repeated):
 `, cmdName, totalCPUs);
 }
 
+void delegateAndExecute(string[] args, NumberType numberType)
+{
+    // We just want to pull out solver mode at this point, so that we can direct the execution flow.
+    // We choose to execute these few lines rather than invoking the overhead of reading the entire
+    // config file into GlobalConfig.
+    auto cfgJSON = readJSONfile(lmrCfg.cfgFile);
+    string solverModeStr = cfgJSON["solver_mode"].str;
+    auto solverMode = solverModeFromName(solverModeStr);
+
+    string shellStr;
+
+    final switch(solverMode) {
+    case SolverMode.steady:
+	// Our first choice is to run with complex values.
+	final switch(numberType) {
+	case NumberType.default_type:
+	case NumberType.complex_values:
+	    shellStr = args[0] ~ "Z-" ~ args[1];
+	    break;
+	case NumberType.real_values:
+	    shellStr = args[0] ~ "-" ~ args[1];
+	    break;
+	}
+	break;
+    case SolverMode.transient:
+    case SolverMode.block_marching:
+	// Our first choice is to run with real values.
+	final switch(numberType) {
+	case NumberType.default_type:
+	case NumberType.real_values:
+	    shellStr = args[0] ~ "-" ~ args[1];
+	    break;
+	case NumberType.complex_values:
+	    shellStr = args[0] ~ "Z-" ~ args[1];
+	    break;
+	}
+	break;
+    }
+
+    foreach (s; args[2 .. $]) {
+	shellStr ~= " " ~ s;
+    }
+    writeln("shellStr= ", shellStr);
+
+    system(shellStr.toStringz);
+}
+
+
 /* Why the version(run_main)?
  * Eilmer has a small set of exectuables and each requires a "main" function.
  * The main "main" is the Eilmer command dispatcher and it lives in main.d.
@@ -161,6 +212,7 @@ void main(string[] args)
         writeln("Revision-date: ", lmrCfg.revisionDate);
         writeln("Compiler-name: ", lmrCfg.compilerName);
 	writeln("Parallel-flavour: PUT_PARALLEL_FLAVOUR_HERE");
+	writeln("Number-type: PUT_NUMBER_TYPE_HERE");
         writeln("Build-date: ", lmrCfg.buildDate);
     }
 

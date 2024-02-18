@@ -1707,27 +1707,6 @@ string update_enum(string key, string field, string enum_from_name)
     }";
 }
 
-// To check if we are starting up with a suitable gas model,
-// we need to know about all of the gas-model modules that are in play.
-import gas.ideal_gas;
-import gas.cea_gas;
-import gas.therm_perf_gas;
-import gas.very_viscous_air;
-import gas.uniform_lut;
-import gas.adaptive_lut_CEA;
-import gas.ideal_air_proxy;
-import gas.ideal_gas_ab;
-import gas.pseudo_species_gas;
-import gas.two_temperature_reacting_argon;
-import gas.ideal_dissociating_gas;
-import gas.two_temperature_air;
-import gas.two_temperature_nitrogen;
-import gas.vib_specific_nitrogen;
-import gas.fuel_air_mix;
-import gas.equilibrium_gas;
-import gas.electronically_specific_gas: ElectronicallySpecificGas;
-import gas.two_temperature_gasgiant: TwoTemperatureGasGiant;
-
 void set_config_for_core(JSONValue jsonData)
 {
     // Now that we have parsed JSON data, proceed to update those config values.

@@ -301,7 +301,7 @@ void initFluidBlocksMemoryAllocation()
             else {
                 gName = gridFilename(lmrCfg.initialFieldDir, blk.id);
             }
-            if (GlobalConfig.verbosity_level > 0)
+            if (GlobalConfig.verbosity_level > 1)
                 writeln("Calling init_grid_and_flow_arrays for grid: ", gName);
             blk.init_grid_and_flow_arrays(gName);
             blk.compute_primary_cell_geometric_data(0);
