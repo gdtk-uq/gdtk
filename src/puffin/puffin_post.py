@@ -6,6 +6,7 @@ PA Jacobs
 
 2022-01-26: First code, now that we have some solutions to look at.
 2022-02-04: Refactor to introduce stream line writer.
+2024-02-18: Filled in cross-stream writer code.
 """
 
 # ----------------------------------------------------------------------
@@ -121,9 +122,30 @@ def writeStreamLineFile(jobName, streamIndex, ncells, cellIndex):
 
 def writeCrossFile(jobName, n_streams, ncells_all, xLocation):
     """
-    Write the data for a line of points across all stream tubes.
+    Write the GNUPlot data for a line of points across all stream tubes.
     """
-    raise RuntimeError("Not yet implemented.")
+    for i in range(n_streams):
+        ncells = ncells_all[i]
+        streamData, variableNames = readStreamFlowFile("flow-%d.data" % i, ncells)
+        if streamData:
+            nxs = len(streamData)
+            print("nxs=", nxs, "ncells=", ncells)
+            plotFile = open("%s-cross-%d.txt" % (jobName, i), "w")
+            plotFile.write("# %s\n" % (' '.join(variableNames)))
+            xFound = False
+            for ix in range(nxs):
+                x = streamData[ix][0][0]
+                if x < xLocation: continue
+                # Once we encounter the xLocation, write slice and stop.
+                for j in range(ncells):
+                    for iv in range(len(variableNames)):
+                        fmt = '%g' if iv == 0 else ' %g'
+                        plotFile.write(fmt % (streamData[ix][j][iv],))
+                    plotFile.write("\n")
+                xFound = True
+                break
+            if not xFound: print("Warning: did not find data for x=", xLocation)
+            plotFile.close()
     return
 
 # ----------------------------------------------------------------------
@@ -188,8 +210,16 @@ if __name__ == '__main__':
             cellIndex = int(cellindexStr)
         print("cellIndex=", cellIndex)
         writeStreamLineFile(jobName, streamIndex, ncells_all[streamIndex], cellIndex)
-    else:
+    elif plotFormat == "cross":
+        if "--x-location" in uoDict:
+            xLocation = float(uoDict.get("--x-location", ""))
+        elif "-x" in uoDict:
+            xLocation = float(uoDict.get("-x", ""))
+        else:
+            raise Exception("x-location is not specified.")
         writeCrossFile(jobName, n_streams, ncells_all, xLocation)
+    else:
+        raise Exception("Not a valid plot format (vtk, stream, cross).")
     os.chdir(startDir)
     print("Done in {:.3f} seconds.".format(time.process_time()))
     sys.exit(0)
