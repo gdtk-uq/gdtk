@@ -37,7 +37,7 @@ GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/electronic_species.d \
 	$(GAS_DIR)/two_temperature_gasgiant.d
 
-THERMO_FILES := \
+THERMO_FILES := $(GAS_DIR)/thermo/package.d \
 	$(GAS_DIR)/thermo/cea_thermo_curves.d \
 	$(GAS_DIR)/thermo/evt_eos.d \
 	$(GAS_DIR)/thermo/perf_gas_mix_eos.d \
@@ -50,7 +50,7 @@ THERMO_FILES := \
 	$(GAS_DIR)/thermo/multi_temperature_gas.d \
 	$(GAS_DIR)/thermo/energy_modes.d
 
-DIFFUSION_FILES := \
+DIFFUSION_FILES := $(GAS_DIR)/diffusion/package.d \
 	$(GAS_DIR)/diffusion/cea_therm_cond.d \
 	$(GAS_DIR)/diffusion/cea_viscosity.d \
 	$(GAS_DIR)/diffusion/chemkin_therm_cond.d \

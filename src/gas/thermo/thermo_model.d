@@ -9,7 +9,7 @@
 module gas.thermo.thermo_model;
 
 import nm.number;
-import gas : GasState;
+import gas.gas_state : GasState;
 
 
 interface ThermodynamicModel {

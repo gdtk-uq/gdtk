@@ -16,7 +16,7 @@ import ntypes.complex;
 import nm.number;
 import util.lua;
 import util.lua_service;
-import gas : GasModelException;
+import gas.gas_model : GasModelException;
 
 class CEAThermoCurve
 {

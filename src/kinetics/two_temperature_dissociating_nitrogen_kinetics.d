@@ -18,7 +18,7 @@ import util.lua;
 import util.lua_service;
 
 import gas;
-import gas.two_temperature_dissociating_nitrogen;
+import gas.two_temperature_dissociating_nitrogen : Species, TwoTemperatureDissociatingNitrogen;
 import kinetics.thermochemical_reactor;
 import kinetics.chemistry_update;
 

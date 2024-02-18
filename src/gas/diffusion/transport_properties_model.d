@@ -9,8 +9,8 @@
 module gas.diffusion.transport_properties_model;
 
 import nm.number;
-import gas : GasState;
-import gas : GasModel;
+import gas.gas_state : GasState;
+import gas.gas_model : GasModel;
 
 interface TransportPropertiesModel {
 public:

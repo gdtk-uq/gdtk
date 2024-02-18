@@ -1,0 +1,20 @@
+module gas.diffusion;
+
+public import gas.diffusion.cea_therm_cond;
+public import gas.diffusion.cea_viscosity;
+public import gas.diffusion.chemkin_therm_cond;
+public import gas.diffusion.chemkin_viscosity;
+public import gas.diffusion.gas_mixtures;
+public import gas.diffusion.sutherland_therm_cond;
+public import gas.diffusion.sutherland_viscosity;
+public import gas.diffusion.therm_cond;
+public import gas.diffusion.transport_properties_model;
+public import gas.diffusion.two_temperature_trans_props;
+public import gas.diffusion.multi_temperature_trans_props;
+public import gas.diffusion.three_temperature_trans_props;
+public import gas.diffusion.viscosity;
+public import gas.diffusion.wilke_mixing_therm_cond;
+public import gas.diffusion.wilke_mixing_viscosity;
+public import gas.diffusion.gasgiant_transport_properties;
+public import gas.diffusion.binary_diffusion_coefficients;
+public import gas.diffusion.rps_diffusion_coefficients;
