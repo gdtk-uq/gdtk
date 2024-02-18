@@ -84,7 +84,7 @@ LMR_SOLID_FILES := $(LMR)/solid/solidbc.d \
 	$(LMR)/solid/solidsolution.d \
 	$(LMR)/solid/solid_udf_source_terms.d \
 	$(LMR)/solid/luasolidprops.d
-	       
+
 LMR_EFIELD_FILES := $(LMR)/efield/efield.d \
 	$(LMR)/efield/efieldgmres.d \
 	$(LMR)/efield/efieldconductivity.d \
@@ -99,6 +99,7 @@ LMR_CMD_FILES = $(LMR_CMD)/checkjacobian.d \
 	$(LMR_CMD)/cmdhelper.d \
 	$(LMR_CMD)/command.d \
 	$(LMR_CMD)/computenorms.d \
+	$(LMR_CMD)/probeflow.d \
 	$(LMR_CMD)/limiter2vtk.d \
 	$(LMR_CMD)/prepsim.d \
 	$(LMR_CMD)/prepgrids.d \

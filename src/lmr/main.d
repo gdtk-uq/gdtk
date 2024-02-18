@@ -6,6 +6,7 @@ import lmrconfig;
 import command;
 import checkjacobian;
 import computenorms;
+import probeflow;
 import limiter2vtk;
 import prepgrids;
 import prepsim;
@@ -45,6 +46,7 @@ Show help for a given Eilmer command or topic.
     // Try to add commands in alphabetical order from here down.
     // 1. Add user commands
     commands["compute-norms"] = compNormsCmd;
+    commands["probe-flow"] = probeFlowCmd;
     commands["limiter2vtk"] = limiter2vtkCmd;
     commands["prep-grids"] = prepGridCmd;
     commands["prep-grid"] = commands["prep-grids"]; // alias for prep-grids
@@ -152,7 +154,7 @@ void printHelp(string[] args)
     }
     // else just print general help
     string generalHelp =
-`usage: lmr [-h | --help] [help -a] 
+`usage: lmr [-h | --help] [help -a]
            [-v | --version] [--version-long]
             <command> [<args>]
 
@@ -170,6 +172,7 @@ at simulation stage
 
 at post-processing stage
    snapshot2vtk    convert a snapshot to VTK format for visualisation
+   probe-flow      reports the flow-field data at specified location(s)
 
 `;
     write(generalHelp);
