@@ -36,7 +36,8 @@ import gas.vib_specific_nitrogen;
 import gas.vib_specific_co;
 import gas.fuel_air_mix;
 import gas.equilibrium_gas;
-import gas.electronically_specific_gas: ElectronicallySpecificGas;
+// RJG, disabled while I figure out the cyclic dependency in static constructors
+// import gas.electronically_specific_gas: ElectronicallySpecificGas;
 import gas.two_temperature_gasgiant: TwoTemperatureGasGiant;
 
 GasModel init_gas_model(string file_name="gas-model.lua")
@@ -157,9 +158,12 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         case "EquilibriumGas":
             gm = new EquilibriumGas(L);
             break;
+        // RJG, disabled while I figure out the cyclic dependency in static constructors
+        /*
         case "ElectronicallySpecificGas":
             gm = new ElectronicallySpecificGas(L);
             break;
+        */
         case "TwoTemperatureGasGiant":
             gm = new TwoTemperatureGasGiant();
             break;

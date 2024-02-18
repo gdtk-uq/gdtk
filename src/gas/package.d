@@ -30,8 +30,6 @@ public import gas.fuel_air_mix;
 public import gas.equilibrium_gas;
 public import gas.pseudo_species_gas;
 public import gas.pseudo_species;
-public import gas.electronically_specific_gas;
-public import gas.electronic_species;
 public import gas.two_temperature_gasgiant;
 public import gas.luagas_model;
 

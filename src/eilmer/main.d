@@ -28,7 +28,6 @@ import kinetics.luathermochemical_reactor;
 import kinetics.luareaction_mechanism;
 import kinetics.luachemistry_update;
 import kinetics.luatwo_temperature_air_kinetics;
-import kinetics.luaelectronically_specific_kinetics;
 import kinetics.luaequilibrium_calculator;
 import nm.luabbla;
 import globalconfig;
@@ -871,7 +870,6 @@ longUsageMsg ~= to!string(totalCPUs) ~" on this machine
             registerThermochemicalReactor(L);
             registerReactionMechanism(L);
             registerChemistryUpdate(L);
-            registerElectronicallySpecificKinetics(L);
             registeridealgasflowFunctions(L);
             registergasflowFunctions(L);
             registerBBLA(L);

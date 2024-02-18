@@ -6,8 +6,6 @@ KINETICS_FILES := $(KINETICS_DIR)/package.d \
 	$(KINETICS_DIR)/energy_exchange_mechanism.d \
 	$(KINETICS_DIR)/energy_exchange_system.d \
 	$(KINETICS_DIR)/equilibrium_update.d \
-	$(KINETICS_DIR)/electronic_update.d \
-	$(KINETICS_DIR)/electronically_specific_kinetics.d \
 	$(KINETICS_DIR)/ideal_dissociating_gas_kinetics.d \
 	$(KINETICS_DIR)/fuel_air_mix_kinetics.d \
 	$(KINETICS_DIR)/powers_aslam_kinetics.d \
@@ -38,7 +36,6 @@ endif
 KINETICS_LUA_FILES := $(KINETICS_DIR)/luathermochemical_reactor.d \
 	$(KINETICS_DIR)/luachemistry_update.d \
 	$(KINETICS_DIR)/luaequilibrium_calculator.d \
-	$(KINETICS_DIR)/luaelectronically_specific_kinetics.d \
 	$(KINETICS_DIR)/luareaction_mechanism.d \
 	$(KINETICS_DIR)/luatwo_temperature_air_kinetics.d \
 	$(KINETICS_DIR)/luavib_specific_nitrogen_kinetics.d

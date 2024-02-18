@@ -1783,7 +1783,6 @@ import gas.two_temperature_nitrogen;
 import gas.vib_specific_nitrogen;
 import gas.fuel_air_mix;
 import gas.equilibrium_gas;
-import gas.electronically_specific_gas: ElectronicallySpecificGas;
 import gas.two_temperature_gasgiant: TwoTemperatureGasGiant;
 
 JSONValue read_config_file()
