@@ -19,7 +19,7 @@ init:
 	lmr prep-sim
 
 run:
-	lmr run-steady
+	lmr run
 
 post: vtk
 

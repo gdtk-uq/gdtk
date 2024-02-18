@@ -10,11 +10,11 @@
 fileFmt = os.getenv("LMR_FILE_FORMAT") or "rawbinary"
 
 job_title = "Mach 2 air flowing around a convex corner."
-config.title = job_title
 print(job_title)
 print("File format in use: ", fileFmt)
 
 -- General settings
+config.solver_mode = "steady"
 config.dimensions = 2
 config.axisymmetric = false
 config.print_count = 1
@@ -122,7 +122,6 @@ NewtonKrylovGlobalConfig{
    max_newton_steps = 50,
    stop_on_relative_residual = 1.0e-12,
    number_of_phases = 1,
-   use_local_timestep = true,
    inviscid_cfl_only = true,
    use_line_search = false,
    use_physicality_check = false,
@@ -140,6 +139,7 @@ NewtonKrylovGlobalConfig{
 }
 
 NewtonKrylovPhase:new{
+   use_local_timestep = true,
    residual_interpolation_order = 2,
    jacobian_interpolation_order = 2,
    frozen_preconditioner = true,

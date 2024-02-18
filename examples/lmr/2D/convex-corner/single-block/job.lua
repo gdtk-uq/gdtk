@@ -10,11 +10,11 @@
 fileFmt = os.getenv("LMR_FILE_FORMAT") or "rawbinary"
 
 job_title = "Mach 2 air flowing around a convex corner."
-config.title = job_title
 print(job_title)
 print("File format in use: ", fileFmt)
 
 -- General settings
+config.solver_mode = "steady"
 config.dimensions = 2
 config.axisymmetric = false
 config.print_count = 1
