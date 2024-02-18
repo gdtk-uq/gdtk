@@ -77,6 +77,12 @@ void main(string[] args)
            "number-type", &numberType
     );
 
+    if (args.length < 2) {
+        // Nothing asked for. Print help and exit.
+        printHelp(args);
+        return;
+    }
+
     if (versionLongWanted) {
         printVersion(false);
         return;
@@ -86,12 +92,6 @@ void main(string[] args)
         return;
     }
     if (helpWanted) printHelp(args);
-
-    if (args.length < 2) {
-        // Nothing asked for. Print help and exit.
-        printHelp(args);
-        return;
-    }
 
     // Special cases for version options written as commands.
     if (args[1] == "version-long") {
@@ -133,18 +133,18 @@ void listHelpForAllCommands()
     writeln("Available commands");
     foreach (cmd; cmds) {
         if (commands[cmd].type == LmrCmdType.user)
-            writefln("   %-20s %s", cmd, commands[cmd].shortDescription);
+            writefln("   %-24s %s", cmd, commands[cmd].shortDescription);
     }
     writeln("");
     writeln("Developer/diagnostics commands");
     foreach (cmd; cmds) {
         if (commands[cmd].type == LmrCmdType.dev)
-            writefln("   %-20s %s", cmd, commands[cmd].shortDescription);
+            writefln("   %-24s %s", cmd, commands[cmd].shortDescription);
     }
     writeln("");
     writeln("Meta commands");
-    writefln("   %-20s Print condensed version information about lmr program.", "version");
-    writefln("   %-20s Print full version information about lmr program.", "version-long");
+    writefln("   %-24s Print condensed version information about lmr program.", "version");
+    writefln("   %-24s Print full version information about lmr program.", "version-long");
 }
 
 void printHelp(string[] args)
@@ -177,11 +177,10 @@ List of commonly used commands:
 
 at preparation stage
    prep-grids      build grids for simulation
-   prep-flow       build initial flow field for simulation
+   prep-sim        build initial flow field for simulation
 
 at simulation stage
-   run-steady      run steady-state solver
-   ...
+   run             run flow solver
 
 at post-processing stage
    snapshot2vtk    convert a snapshot to VTK format for visualisation
@@ -189,8 +188,9 @@ at post-processing stage
 
 == Notes ==
 --number-type option, if used, must appear before "run" command.
-It is advanced usage to control delegation of "run" to lmr-run (reals)
-or lmrZ-run (complex).
+It is advanced usage to control delegation of "run" to lmr-run
+(which uses real numbers) or lmrZ-run (which uses complex numbers).
+
 `;
     write(generalHelp);
     return;
