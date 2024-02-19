@@ -69,29 +69,47 @@ void main(string[] args)
     bool versionWanted = false;
     bool versionLongWanted = false;
     NumberType numberType;
-    getopt(args,
-           std.getopt.config.stopOnFirstNonOption,
-           "h|help", &helpWanted,
-           "v|version", &versionWanted,
-           "version-long", &versionLongWanted,
-           "number-type", &numberType
-    );
-
-    if (args.length < 2) {
-        // Nothing asked for. Print help and exit.
-        printHelp(args);
+    try {
+        getopt(args,
+               std.getopt.config.stopOnFirstNonOption,
+               "h|help", &helpWanted,
+               "v|version", &versionWanted,
+               "version-long", &versionLongWanted,
+               "number-type", &numberType
+               );
+    } catch (Exception e) {
+        writeln("Eilmer top-level program quitting.");
+        writeln("There is something wrong with the command-line arguments/options.");
+        writeln(e.msg);
+        writeln("");
+        printHelp([""]);
         return;
     }
 
     if (versionLongWanted) {
         printVersion(false);
+        if (helpWanted || canFind(args, "help")) {
+            writeln("");
+            printHelp([""]); // general help
+        }
         return;
     }
     else if (versionWanted) {
         printVersion();
+        if (helpWanted || canFind(args, "help")) {
+            writeln("");
+            printHelp([""]); // general help
+        }
         return;
     }
-    if (helpWanted) printHelp(args);
+
+    if (args.length < 2) {
+        writeln("Eilmer top-level program quitting.");
+        writeln("No subcommand supplied as the first command-line argument.");
+        writeln("");
+        printHelp([""]); // general help
+        return;
+    }
 
     // Special cases for version options written as commands.
     if (args[1] == "version-long") {
@@ -166,14 +184,19 @@ void printHelp(string[] args)
     }
     // else just print general help
     string generalHelp =
-`usage: lmr [-h | --help] [help -a]
+`== Eilmer simulation program ==
+
+Usage: lmr [-h | --help] [help -a]
            [-v | --version] [--version-long]
            [--number-type=real_values|complex_values]
             <command> [<args>]
 
-== Eilmer simulation program ==
+Examples:
+lmr help             ==> prints this general help
+lmr help -a          ==> lists all commands
+lmr help <command>   ==> prints help for <command>
 
-List of commonly used commands:
+== Commonly used commands ==
 
 at preparation stage
    prep-grids      build grids for simulation

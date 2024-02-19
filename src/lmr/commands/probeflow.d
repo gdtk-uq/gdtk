@@ -109,15 +109,23 @@ void main_(string[] args)
     string outFilename;
     string locationStr;
     string luaRefSoln;
-    getopt(args,
-           config.bundling,
-           "v|verbose+", &verbosity,
-           "n|names", &namesStr,
-           "s|snapshots|snapshot", &snapshots,
-           "f|final", &finalSnapshot,
-           "a|all", &allSnapshots,
-           "o|output", &outFilename,
-           "l|location", &locationStr);
+    try {
+        getopt(args,
+               config.bundling,
+               "v|verbose+", &verbosity,
+               "n|names", &namesStr,
+               "s|snapshots|snapshot", &snapshots,
+               "f|final", &finalSnapshot,
+               "a|all", &allSnapshots,
+               "o|output", &outFilename,
+               "l|location", &locationStr
+               );
+    } catch (Exception e) {
+        writefln("Eilmer %s program quitting.", cmdName);
+        writeln("There is something wrong with the command-line arguments/options.");
+        writeln(e.msg);
+        return;
+    }
 
     if (verbosity > 0) {
         writefln("lmr %s: Begin program.", cmdName);

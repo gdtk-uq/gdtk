@@ -55,7 +55,7 @@ options ([+] can be repeated):
      Increase verbosity during preparation of the simulation files.
 
  -j, --job=flow.lua
-     Specify the input file to be different from job.luu (default).
+     Specify the input file to be something other than job.lua.
      default: job.lua
 `;
 
