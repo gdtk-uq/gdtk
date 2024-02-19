@@ -120,7 +120,7 @@ options ([+] can be repeated):
 `, cmdName, totalCPUs);
 }
 
-void delegateAndExecute(string[] args, NumberType numberType)
+int delegateAndExecute(string[] args, NumberType numberType)
 {
     // We just want to pull out solver mode at this point, so that we can direct the execution flow.
     // We choose to execute these few lines rather than invoking the overhead of reading the entire
@@ -164,7 +164,7 @@ void delegateAndExecute(string[] args, NumberType numberType)
     }
     writeln("shellStr= ", shellStr);
 
-    system(shellStr.toStringz);
+    return system(shellStr.toStringz);
 }
 
 
@@ -184,7 +184,7 @@ void delegateAndExecute(string[] args, NumberType numberType)
 version(run_main)
 {
 
-void main(string[] args)
+int main(string[] args)
 {
 
     version(mpi_parallel) {
@@ -296,7 +296,7 @@ void main(string[] args)
 
     GlobalConfig.finalize();
 
-    return;
+    return 0;
 }
 
 } // end: version(run_main)

@@ -11,7 +11,7 @@ enum LmrCmdType {
 struct Command
 {
     /// pointer to function for command action
-    void function(string[]) main;
+    int function(string[]) main;
 
     string description;
     string shortDescription;
@@ -40,9 +40,8 @@ string shellCommand(string[] args)
 
 }
 
-void callShellCommand(string[] args)
+int callShellCommand(string[] args)
 {
     auto shellCmd = shellCommand(args);
-    system(shellCmd.toStringz);
-    return;
+    return system(shellCmd.toStringz);
 }

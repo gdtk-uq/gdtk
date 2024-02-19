@@ -63,7 +63,7 @@ Show help for a given Eilmer command or topic.
     commands["check-jacobian"] = checkJacCmd;
 }
 
-void main(string[] args)
+int main(string[] args)
 {
     bool helpWanted = false;
     bool versionWanted = false;
@@ -83,7 +83,7 @@ void main(string[] args)
         writeln(e.msg);
         writeln("");
         printHelp([""]);
-        return;
+        return 1;
     }
 
     if (versionLongWanted) {
@@ -92,7 +92,7 @@ void main(string[] args)
             writeln("");
             printHelp([""]); // general help
         }
-        return;
+        return 0;
     }
     else if (versionWanted) {
         printVersion();
@@ -100,7 +100,7 @@ void main(string[] args)
             writeln("");
             printHelp([""]); // general help
         }
-        return;
+        return 0;
     }
 
     if (args.length < 2) {
@@ -108,17 +108,17 @@ void main(string[] args)
         writeln("No subcommand supplied as the first command-line argument.");
         writeln("");
         printHelp([""]); // general help
-        return;
+        return 1;
     }
 
     // Special cases for version options written as commands.
     if (args[1] == "version-long") {
         printVersion(false);
-        return;
+        return 0;
     }
     else if (args[1] == "version") {
         printVersion();
-        return;
+        return 0;
     }
 
     if (args[1].startsWith("--number-type")) {
@@ -138,7 +138,7 @@ void main(string[] args)
     }
     // If we've made it here, then we've chosen a bad command.
     writefln("lmr: '%s' is not an lmr command. See 'lmr help'.", cmd);
-    return;
+    return 1;
 }
 
 void listHelpForAllCommands()
@@ -165,19 +165,19 @@ void listHelpForAllCommands()
     writefln("   %-24s Print full version information about lmr program.", "version-long");
 }
 
-void printHelp(string[] args)
+int printHelp(string[] args)
 {
     if (args.length >= 3) {
         auto arg = args[2];
         if (arg == "-a" || arg == "--all") {
             // list all commands with short description.
             listHelpForAllCommands();
-            return;
+            return 0;
         }
         // Next look to see if a command has been supplied.
         if (arg in commands) {
             writeln(commands[arg].helpMsg);
-            return;
+            return 0;
         }
         // If we've made it here, then we've chosen a bad command.
         writefln("lmr: '%s' is not an lmr command. See 'lmr help'.", arg);
@@ -216,8 +216,7 @@ It is advanced usage to control delegation of "run" to lmr-run
 
 `;
     write(generalHelp);
-    return;
-
+    return 0;
 }
 
 

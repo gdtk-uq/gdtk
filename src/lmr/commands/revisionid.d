@@ -39,7 +39,7 @@ option:
 
 }
 
-void main_(string[] args)
+int main_(string[] args)
 {
     bool showFull = false;
 
@@ -49,11 +49,11 @@ void main_(string[] args)
 
     if (showFull) {
         writeln(lmrCfg.fullRevisionId);
-        return;
+        return 0;
     }
 
     writeln(lmrCfg.revisionId);
-    return;
+    return 0;
 }
 
 

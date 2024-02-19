@@ -79,7 +79,7 @@ options ([+] can be repeated):
 `, cmdName);
 }
 
-void main_(string[] args)
+int main_(string[] args)
 {
     int verbosity = 0;
     int snapshot = -1;
@@ -188,7 +188,7 @@ void main_(string[] args)
     }
     outfile.close();
 
-    return;
+    return 0;
 }
 
 void readLimiterValues(int snapshot)

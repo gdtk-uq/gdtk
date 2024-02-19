@@ -49,7 +49,7 @@ options ([+] can be repeated):
 
 }
 
-void main_(string[] args)
+int main_(string[] args)
 {
     int verbosity = 0;
     getopt(args,
@@ -66,7 +66,7 @@ void main_(string[] args)
      */
 
     alias cfg = GlobalConfig;
-    
+
     initConfiguration();
     if (cfg.nFluidBlocks == 0 && cfg.is_master_task) {
         throw new Error("No FluidBlocks; no point in continuing with mapped cell search.");
@@ -129,7 +129,7 @@ void main_(string[] args)
         }
     }
     of.close();
-
+    return 0;
 }
 
 

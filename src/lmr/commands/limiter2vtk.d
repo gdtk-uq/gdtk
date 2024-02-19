@@ -75,7 +75,7 @@ options ([+] can be repeated):
 
 }
 
-void main_(string[] args)
+int main_(string[] args)
 {
     double[][] data;
     string[] variables;
@@ -135,7 +135,7 @@ void main_(string[] args)
 
     if (verbosity > 0) writefln("lmr %s: Done.", cmdName);
 
-    return;
+    return 0;
 }
 
 void writeVTUfile(double[][] data, Grid grid, string[] variables, string fileName, bool binaryFormat)

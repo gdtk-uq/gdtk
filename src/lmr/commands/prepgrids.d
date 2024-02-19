@@ -48,7 +48,7 @@ options ([+] can be repeated):
 }
 
 
-void main_(string[] args)
+int main_(string[] args)
 {
     int verbosity = 0;
     string userGridName = lmrCfg.jobFile;
@@ -65,7 +65,7 @@ void main_(string[] args)
     if (!exists(userGridName)) {
         writefln("The file %s does not seems to exist.", userGridName);
         writeln("Did you mean to specify a different job name?");
-        return;
+        return 1;
     }
 
     if (verbosity > 1) writeln("lmr prep-grids: Start lua connection.");
@@ -90,5 +90,5 @@ void main_(string[] args)
         throw new FlowSolverException(errMsg);
     }
     if (verbosity > 0) { writeln("lmr prep-grids: Done."); }
-    return;
+    return 0;
 }

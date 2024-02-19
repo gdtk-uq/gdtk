@@ -61,7 +61,7 @@ options ([+] can be repeated):
 
 }
 
-void main_(string[] args)
+int main_(string[] args)
 {
     string blocksForPrep = "";
     int verbosity = 0;
@@ -144,7 +144,7 @@ void main_(string[] args)
     if (!exists(userFlowName)) {
         writefln("The file %s does not seems to exist.", userFlowName);
         writeln("Did you mean to specify a different job name?");
-        return;
+        return 1;
     }
     if (luaL_dofile(L, toStringz(userFlowName)) != 0) {
         writeln("There was a problem in the user-supplied input lua script: ", userFlowName);
@@ -168,7 +168,7 @@ void main_(string[] args)
     }
     if (verbosity > 0) { writeln("lmr prep-sim: Done."); }
 
-    return;
+    return 0;
 }
 
 

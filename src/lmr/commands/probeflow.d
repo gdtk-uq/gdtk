@@ -98,7 +98,7 @@ options ([+] can be repeated):
 
 }
 
-void main_(string[] args)
+int main_(string[] args)
 {
     int verbosity = 0;
     int[] snapshots;
@@ -124,7 +124,7 @@ void main_(string[] args)
         writefln("Eilmer %s program quitting.", cmdName);
         writeln("There is something wrong with the command-line arguments/options.");
         writeln(e.msg);
-        return;
+        return 1;
     }
 
     if (verbosity > 0) {
@@ -199,7 +199,7 @@ void main_(string[] args)
         writefln("lmr %s: Done.", cmdName);
     }
     outfile.close();
-    return;
+    return 0;
 }
 
 

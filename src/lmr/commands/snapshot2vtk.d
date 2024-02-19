@@ -82,7 +82,7 @@ options ([+] can be repeated):
 
 }
 
-void main_(string[] args)
+int main_(string[] args)
 {
     int verbosity = 0;
     int[] snapshots;
@@ -142,10 +142,7 @@ void main_(string[] args)
     if (verbosity > 0) {
         writeln("lmr snapshot2vtk: Done.");
     }
-
-
-    return;
-
+    return 0;
 }
 
 

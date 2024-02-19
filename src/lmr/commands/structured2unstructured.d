@@ -60,7 +60,7 @@ options ([+] can be repeated):
 
 enum GridType { gziptext, rawbinary }
 
-void main_(string[] args)
+int main_(string[] args)
 {
     int verbosity = 0;
     GridType gridType;
@@ -180,7 +180,7 @@ void main_(string[] args)
     if (verbosity >= 1) {
         writefln("lmr %s: Done.", cmdName);
     }
-
+    return 0;
 }
 
 struct CellAndFacePos {
