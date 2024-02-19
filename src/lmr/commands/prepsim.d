@@ -38,6 +38,7 @@ import luagasflow;
 import blockio : luafn_writeFlowMetadata, luafn_writeInitialFlowFile;
 
 Command prepSimCmd;
+string cmdName = "prep-sim";
 
 static this()
 {
@@ -66,11 +67,18 @@ int main_(string[] args)
     string blocksForPrep = "";
     int verbosity = 0;
     string userFlowName = lmrCfg.jobFile;
-    getopt(args,
-           config.bundling,
-           "v|verbose+", &verbosity,
-           "j|job", &userFlowName,
-           );
+    try {
+        getopt(args,
+               config.bundling,
+               "v|verbose+", &verbosity,
+               "j|job", &userFlowName,
+               );
+    } catch (Exception e) {
+        writefln("Eilmer %s program quitting.", cmdName);
+        writeln("There is something wrong with the command-line arguments/options.");
+        writeln(e.msg);
+        return 1;
+    }
 
     if (verbosity > 1) { writeln("lmr prep-sim: Start lua connection."); }
 

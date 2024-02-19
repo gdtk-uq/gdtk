@@ -25,6 +25,7 @@ import cmdhelper;
 import command;
 
 Command snapshot2vtkCmd;
+string cmdName = "snapshot2vtk";
 
 static this()
 {
@@ -91,14 +92,21 @@ int main_(string[] args)
     bool binaryFormat = false;
     string luaRefSoln;
     // [TODO] implement --add-vars
-    getopt(args,
-           config.bundling,
-           "v|verbose+", &verbosity,
-           "s|snapshots|snapshot", &snapshots,
-           "f|final", &finalSnapshot,
-           "a|all", &allSnapshots,
-           "b|binary-format", &binaryFormat,
-           "r|subtract-ref-solution", &luaRefSoln);
+    try {
+        getopt(args,
+               config.bundling,
+               "v|verbose+", &verbosity,
+               "s|snapshots|snapshot", &snapshots,
+               "f|final", &finalSnapshot,
+               "a|all", &allSnapshots,
+               "b|binary-format", &binaryFormat,
+               "r|subtract-ref-solution", &luaRefSoln);
+    } catch (Exception e) {
+        writefln("Eilmer %s program quitting.", cmdName);
+        writeln("There is something wrong with the command-line arguments/options.");
+        writeln(e.msg);
+        return 1;
+    }
 
     if (verbosity > 0) {
         writeln("lmr snapshot2vtk: Begin program.");

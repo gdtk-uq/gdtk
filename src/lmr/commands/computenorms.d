@@ -126,16 +126,23 @@ int main_(string[] args)
     string outFilename;
     string region;
     string luaRefSoln;
-    getopt(args,
-           config.bundling,
-           "v|verbose+", &verbosity,
-           "n|norms", &normsStr,
-           "r|reference-solution", &luaRefSoln,
-           "s|snapshots|snapshot", &snapshots,
-           "f|final", &finalSnapshot,
-           "a|all", &allSnapshots,
-           "o|output", &outFilename,
-           "limit-to-region", &region);
+    try {
+        getopt(args,
+               config.bundling,
+               "v|verbose+", &verbosity,
+               "n|norms", &normsStr,
+               "r|reference-solution", &luaRefSoln,
+               "s|snapshots|snapshot", &snapshots,
+               "f|final", &finalSnapshot,
+               "a|all", &allSnapshots,
+               "o|output", &outFilename,
+               "limit-to-region", &region);
+    } catch (Exception e) {
+        writefln("Eilmer %s program quitting.", cmdName);
+        writeln("There is something wrong with the command-line arguments/options.");
+        writeln(e.msg);
+        return 1;
+    }
 
     if (verbosity > 0) {
         writefln("lmr %s: Begin program.", cmdName);

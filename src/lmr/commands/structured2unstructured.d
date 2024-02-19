@@ -64,12 +64,19 @@ int main_(string[] args)
 {
     int verbosity = 0;
     GridType gridType;
-    getopt(args,
-           config.bundling,
-           "v|verbose+", &verbosity,
-           config.noBundling,
-           "t|grid-type", &gridType
-          );
+    try {
+        getopt(args,
+               config.bundling,
+               "v|verbose+", &verbosity,
+               config.noBundling,
+               "t|grid-type", &gridType
+               );
+    } catch (Exception e) {
+        writefln("Eilmer %s program quitting.", cmdName);
+        writeln("There is something wrong with the command-line arguments/options.");
+        writeln(e.msg);
+        return 1;
+    }
 
     if (verbosity >= 1) {
         writefln("lmr %s: Begin conversion of structured grids to unstructured grids.", cmdName);

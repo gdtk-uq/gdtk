@@ -25,6 +25,7 @@ import luaflowsolution;
 import luaflowstate;
 
 Command prepGridCmd;
+string cmdName = "prep-grids";
 
 static this()
 {
@@ -52,11 +53,18 @@ int main_(string[] args)
 {
     int verbosity = 0;
     string userGridName = lmrCfg.jobFile;
-    getopt(args,
-           config.bundling,
-           "v|verbose+", &verbosity,
-           "j|job", &userGridName,
-           );
+    try {
+        getopt(args,
+               config.bundling,
+               "v|verbose+", &verbosity,
+               "j|job", &userGridName,
+               );
+    } catch (Exception e) {
+        writefln("Eilmer %s program quitting.", cmdName);
+        writeln("There is something wrong with the command-line arguments/options.");
+        writeln(e.msg);
+        return 1;
+    }
 
     if (verbosity > 0) {
         writeln("lmr prep-grids: Begin preparation of grid files.");

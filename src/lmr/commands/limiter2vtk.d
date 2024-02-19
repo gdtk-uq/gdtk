@@ -87,13 +87,20 @@ int main_(string[] args)
     bool finalSnapshot = false;
     bool allSnapshots = false;
     bool binaryFormat = false;
-    getopt(args,
-           config.bundling,
-           "v|verbose+", &verbosity,
-           "s|snapshots|snapshot", &snapshots,
-           "f|final", &finalSnapshot,
-           "a|all", &allSnapshots,
-           "b|binary-format", &binaryFormat);
+    try {
+        getopt(args,
+               config.bundling,
+               "v|verbose+", &verbosity,
+               "s|snapshots|snapshot", &snapshots,
+               "f|final", &finalSnapshot,
+               "a|all", &allSnapshots,
+               "b|binary-format", &binaryFormat);
+    } catch (Exception e) {
+        writefln("Eilmer %s program quitting.", cmdName);
+        writeln("There is something wrong with the command-line arguments/options.");
+        writeln(e.msg);
+        return 1;
+    }
 
     if (verbosity > 0) writefln("lmr %s: Begin program.", cmdName);
 

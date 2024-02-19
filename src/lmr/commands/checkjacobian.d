@@ -85,12 +85,19 @@ int main_(string[] args)
     int snapshot = -1;
     string outFilename;
     bool readFrozenLimiterValues = false;
-    getopt(args,
-           config.bundling,
-           "v|verbose+", &verbosity,
-           "s|snapshot", &snapshot,
-           "o|output", &outFilename,
-           "rfl|read-frozen-limiter-values", &readFrozenLimiterValues);
+    try {
+        getopt(args,
+               config.bundling,
+               "v|verbose+", &verbosity,
+               "s|snapshot", &snapshot,
+               "o|output", &outFilename,
+               "rfl|read-frozen-limiter-values", &readFrozenLimiterValues);
+    } catch (Exception e) {
+        writefln("Eilmer %s program quitting.", cmdName);
+        writeln("There is something wrong with the command-line arguments/options.");
+        writeln(e.msg);
+        return 1;
+    }
 
     if (verbosity > 0) writefln("lmr %s: Begin program.", cmdName);
 

@@ -24,6 +24,7 @@ import geom;
 import bc;
 
 Command prepMappedCellsCmd;
+string cmdName = "prep-mapped-cells";
 
 static this()
 {
@@ -52,10 +53,17 @@ options ([+] can be repeated):
 int main_(string[] args)
 {
     int verbosity = 0;
-    getopt(args,
-           config.bundling,
-           "v|verbose+", &verbosity,
-          );
+    try {
+        getopt(args,
+               config.bundling,
+               "v|verbose+", &verbosity,
+               );
+    } catch (Exception e) {
+        writefln("Eilmer %s program quitting.", cmdName);
+        writeln("There is something wrong with the command-line arguments/options.");
+        writeln(e.msg);
+        return 1;
+    }
 
     if (verbosity > 0) {
         writeln("lmr prep-mapped-cells: Begin preparation of mapped cells list.");
