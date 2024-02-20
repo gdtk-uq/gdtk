@@ -291,7 +291,7 @@ class GasModel(object):
                     massf_list.append(0.0)
         if abs(sum(massf_list) - 1.0) > 1.0e-6:
             raise Exception("mass fractions do not sum to 1.")
-        for i in range(self.nspecies): self._massf[i] = massf_list[i]
+        for i in range(self.n_species): self._massf[i] = massf_list[i]
         so.gas_model_massf2molef(self.id, self._massf, self._molef)
         return [self._molef[i] for i in range(self.n_species)]
 
