@@ -402,13 +402,18 @@ def pitot3_species_MW_dict_loader(species_molecular_weights_filename):
         pass
 
     # remove resolver entries for On/Off/Yes/No
+
     for ch in "OoYyNn":
-        if len(StrictBoolSafeResolver.yaml_implicit_resolvers[ch]) == 1:
-            del StrictBoolSafeResolver.yaml_implicit_resolvers[ch]
-        else:
-            StrictBoolSafeResolver.yaml_implicit_resolvers[ch] = [x for x in
-                                                                  StrictBoolSafeResolver.yaml_implicit_resolvers[ch] if
-                                                                  x[0] != 'tag:yaml.org,2002:bool']
+        # this if statement below seems to be needed as when the function is ran a second time (i.e. scripted pitot runs)
+        # it rememebrs something and the species are already gone so it bails out. annoying, but that is Python for you.
+        if ch in StrictBoolSafeResolver.yaml_implicit_resolvers:
+            if len(StrictBoolSafeResolver.yaml_implicit_resolvers[ch]) == 1:
+                del StrictBoolSafeResolver.yaml_implicit_resolvers[ch]
+            else:
+                StrictBoolSafeResolver.yaml_implicit_resolvers[ch] = [x for x in
+                                                                      StrictBoolSafeResolver.yaml_implicit_resolvers[ch] if
+                                                                      x[0] != 'tag:yaml.org,2002:bool']
+
 
     class StrictBoolSafeLoader(Reader, Scanner, Parser, Composer, SafeConstructor, StrictBoolSafeResolver):
         def __init__(self, stream):

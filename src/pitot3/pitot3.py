@@ -6,7 +6,7 @@ Chris James (c.james4@uq.edu.au) - (01/01/21)
 
 """
 
-VERSION_STRING = '19-Jan-2024'
+VERSION_STRING = '21-Feb-2024'
 
 import sys, os, math
 import yaml
