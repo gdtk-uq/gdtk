@@ -43,7 +43,7 @@ def test_prep():
 
 
 def test_run():
-    cmd = "mpirun -np 2 lmr-mpi-run-steady"
+    cmd = "mpirun -np 2 lmrZ-mpi-run"
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
     assert proc.returncode == 0, "Failed during: " + cmd
     expected_output(proc)
@@ -56,7 +56,7 @@ def test_snapshot():
 
 
 def test_restart():
-    cmd = "mpirun -np 2 lmr-mpi-run-steady -s 1"
+    cmd = "mpirun -np 2 lmrZ-mpi-run -s 1"
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
     assert proc.returncode == 0, "Failed during: " + cmd
     expected_output(proc)

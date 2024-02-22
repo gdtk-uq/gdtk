@@ -45,7 +45,7 @@ def test_prep():
 
 
 def test_run():
-    cmd = "lmr run-steady"
+    cmd = "lmr run"
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
     assert proc.returncode == 0, "Failed during: " + cmd
     expected_output(proc, expected_number_steps, expected_final_cfl)
@@ -58,7 +58,7 @@ def test_snapshot():
 
 
 def test_restart():
-    cmd = "lmr run-steady -s 1"
+    cmd = "lmr run -s 1"
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
     assert proc.returncode == 0, "Failed during: " + cmd
     expected_output(proc, expected_number_steps_on_restart, expected_final_cfl_on_restart)

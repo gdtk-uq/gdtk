@@ -15,10 +15,10 @@ grid: job.lua
 	lmr prep-grid
 
 init:
-	lmr prep-flow --mode=steady
+	lmr prep-flow
 
 run:
-	lmr run-steady
+	lmr run
 
 post: vtk
 

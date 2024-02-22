@@ -15,10 +15,10 @@
 fileFmt = os.getenv("LMR_FILE_FORMAT") or "rawbinary"
 
 job_title = "Mach 3 air flowing over a 15 degree wedge."
-config.title = job_title
 print(job_title)
 
 -- General settings
+config.solver_mode = 'steady'
 config.dimensions = 2
 config.axisymmetric = false
 config.print_count = 1
@@ -137,7 +137,6 @@ NewtonKrylovGlobalConfig{
 }
 
 NewtonKrylovPhase:new{
-   use_local_timestep = true,
    residual_interpolation_order = 2,
    jacobian_interpolation_order = 2,
    frozen_preconditioner = true,

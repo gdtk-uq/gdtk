@@ -11,19 +11,17 @@ prep: prep-gas grid init
 prep-gas: gm-ideal-air.inp
 	prep-gas gm-ideal-air.inp ideal-air.gas
 
-.PHONY: grid
 grid:
 	lmr prep-grid
 
 init:
-	lmr prep-flow --mode=steady
+	lmr prep-sim
 
 run:
-	mpirun -np 2 lmr-mpi-run-steady
+	mpirun -np 2 lmrZ-mpi-run
 
 post: vtk
 
-.PHONY: vtk
 vtk:
 	lmr snapshot2vtk --all
 
@@ -32,8 +30,6 @@ test:
 
 test-gzip:
 	LMR_FILE_FORMAT=gziptext PYTHONDONTWRITEBYTECODE=1 pytest -v
-
 clean:
 	- rm -rf $(LMR_DIR)
 	- rm ideal-air.gas
-

@@ -139,7 +139,6 @@ NewtonKrylovGlobalConfig{
 }
 
 NewtonKrylovPhase:new{
-   use_local_timestep = true,
    residual_interpolation_order = 2,
    jacobian_interpolation_order = 2,
    frozen_preconditioner = true,
