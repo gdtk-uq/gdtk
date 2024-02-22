@@ -8,6 +8,8 @@
 DMD ?= ldc2
 NVCC ?= nvcc
 GPP ?= g++
+# default is NOT to opt out of MPI build
+OPT_OUT_MPI ?= 0
 
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
@@ -25,10 +27,6 @@ else
 endif
 $(info PLATFORM=$(PLATFORM))
 
-# PARALLEL_FLAVOUR options are: shared, openmpi, mpich
-PARALLEL_FLAVOUR ?= shared
-
-WITH_MPI ?= 0
 WITH_NK ?= 0
 WITH_PIR ?= 0
 WITH_SSC ?= 0
@@ -58,21 +56,19 @@ MPICH_FILES := $(MPICH_DIR)/mpi.d
 
 PROGRAMS := lmr gdtk-module
 SUB_PROGRAMS := lmr-run lmrZ-run
+ifeq ($(OPT_OUT_MPI), 0)
+	SUB_PROGRAMS += lmr-mpi-run lmrZ-mpi-run
+endif
 SHARE_FILES :=
 ETC_FILES := lmr.cfg
 PY_PROG_DIR := python-programs
 PY_PROGRAMS := lmr-verify
 AUX_PROGRAMS := prep-gas ugrid_partition prep-chem chemkin2eilmer prep-kinetics
 
-ifeq ($(WITH_MPI),1)
-    PARALLEL_FLAVOUR = openmpi
-    SUB_PROGRAMS += lmr-mpi-run
-    SUB_PROGRAMS += lmrZ-mpi-run
-    MPI_LIBRARY_DIRS = $(shell mpicc --showme:libdirs)
-    MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L-L$d)
-    MPI_DIR = $(OPENMPI_DIR)
-    MPI_FILES = $(OPENMPI_FILES)
-endif
+MPI_LIBRARY_DIRS = $(shell mpicc --showme:libdirs)
+MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L-L$d)
+MPI_DIR = $(OPENMPI_DIR)
+MPI_FILES = $(OPENMPI_FILES)
 
 include lmr-files.mk
 
@@ -246,7 +242,7 @@ ifeq ($(TURBULENCE),1)
     DFLAGS += $(DVERSION)turbulence
 endif
 
-default: lmr lmr-run lmrZ-run gdtk-module
+default: $(PROGRAMS) $(SUB_PROGRAMS)
 
 install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS)
 	- mkdir -p $(INSTALL_DIR)/bin
