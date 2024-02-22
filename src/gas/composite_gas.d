@@ -11,6 +11,7 @@ module gas.composite_gas;
 import std.string;
 import std.conv;
 import std.algorithm;
+import std.stdio;
 
 import util.lua;
 import util.lua_service;
@@ -62,7 +63,6 @@ public:
         }
 
         mPhysicalModel = getString(L, "physical_model");
-
         switch (mPhysicalModel) {
         case "thermally-perfect-gas":
             _n_modes = 0;
@@ -71,17 +71,24 @@ public:
             break;
         case "two-temperature-gas":
             _n_modes = 1;
+            _energy_mode_names.length = _n_modes;
+            _energy_mode_names[0] = "vibroelectronic";
+            create_energy_mode_reverse_lookup();
             mThermo = new TwoTemperatureGasMixture(L, _species_names);
             mTransProps = new TwoTemperatureTransProps(L, _species_names);
             break;
         case "three-temperature-gas":
             _n_modes = 2;
+            _energy_mode_names.length = _n_modes;
+            _energy_mode_names[0] = "vibrational";
+            _energy_mode_names[1] = "electronic";
+            create_energy_mode_reverse_lookup();
             mThermo = new ThreeTemperatureGasMixture(L, _species_names);
             mTransProps = new ThreeTemperatureTransProps(L, _species_names);
             break;
         case "multi-temperature-gas":
             getArrayOfStrings(L, "energy_modes", _energy_mode_names);
-            create_energy_mode_reverse_lookup(); 
+            create_energy_mode_reverse_lookup();
             _n_modes = to!int(_energy_mode_names.length);
             mThermo = new MultiTemperatureGasMixture(L, _species_names, _energy_mode_names);
             mTransProps = new MultiTemperatureTransProps(L, _species_names, _energy_mode_names);
