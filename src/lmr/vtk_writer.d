@@ -241,7 +241,7 @@ void write_VTU_file(FluidBlockLite flow, Grid grid, string fileName, bool binary
     //
     // Write the special variables:
     // i.e. variables constructed from those in the dictionary.
-    if (canFind(flow.variableNames, "vel.x") && canFind(flow.variableNames, "vel.y") && canFind(flow.variableNames, "vel.z")) {
+    if (canFind(flow.variableNames, "vel.x") && canFind(flow.variableNames, "vel.y")) {
         fp.write(" <DataArray Name=\"vel.vector\" type=\"Float32\" NumberOfComponents=\"3\"");
         if (binary_format) {
             fp.writef(" format=\"appended\" offset=\"%d\">", binary_data_offset);
@@ -249,10 +249,17 @@ void write_VTU_file(FluidBlockLite flow, Grid grid, string fileName, bool binary
         } else {
             fp.write(" format=\"ascii\">\n");
         }
+
+        bool isThreeDimensional = canFind(flow.variableNames, "vel.z");
         foreach (i; 0 .. flow.ncells) {
             float x = uflowz(flow["vel.x",i]);
             float y = uflowz(flow["vel.y",i]);
-            float z = uflowz(flow["vel.z",i]);
+            float z;
+            if (isThreeDimensional) {
+                z = uflowz(flow["vel.z",i]);
+            } else {
+                z = 0.0;
+            }
             if (binary_format) {
                 binary_data ~= nativeToBigEndian(x);
                 binary_data ~= nativeToBigEndian(y);
