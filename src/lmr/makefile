@@ -66,7 +66,8 @@ AUX_PROGRAMS := prep-gas ugrid_partition prep-chem chemkin2eilmer prep-kinetics
 
 ifeq ($(WITH_MPI),1)
     PARALLEL_FLAVOUR = openmpi
-    SUB_PROGRAMS += lmr-mpi-run-steady
+    SUB_PROGRAMS += lmr-mpi-run
+    SUB_PROGRAMS += lmrZ-mpi-run
     MPI_LIBRARY_DIRS = $(shell mpicc --showme:libdirs)
     MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L-L$d)
     MPI_DIR = $(OPENMPI_DIR)
@@ -268,7 +269,6 @@ clean:
 	- rm $(PROGRAMS)
 	- rm $(SUB_PROGRAMS)
 	- rm $(PY_PROGRAMS)
-	- rm lmr-mpi-run-steady
 	- rm *.o
 	- rm lmrconfig_with_str_subst.d
 	- rm runsim_shared.d runsim_openmpi.d
@@ -331,8 +331,9 @@ lmr-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA
 	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES)
-	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/shared/' $(LMR_CMD)/runsim.d > runsim_shared.d
-	sed -e 's/PUT_NUMBER_TYPE_HERE/real/' $(LMR_CMD)/runsim.d > runsim_shared.d
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/shared/' \
+	    -e 's/PUT_NUMBER_TYPE_HERE/real/' \
+	$(LMR_CMD)/runsim.d > runsim_shared.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)run_main \
 		$(DVERSION)newton_krylov \
 		runsim_shared.d \
@@ -356,8 +357,9 @@ lmrZ-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LU
 	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES)
-	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/shared/' $(LMR_CMD)/runsim.d > runsim_shared.d
-	sed -e 's/PUT_NUMBER_TYPE_HERE/complex/' $(LMR_CMD)/runsim.d > runsim_shared.d
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/shared/' \
+	    -e 's/PUT_NUMBER_TYPE_HERE/complex/' \
+	$(LMR_CMD)/runsim.d > runsim_shared.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)run_main \
 		$(DVERSION)newton_krylov \
 		$(DVERSION)complex_numbers \
@@ -383,7 +385,9 @@ lmr-mpi-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES)
 	cd $(MPI_DIR); make
-	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/openmpi/' $(LMR_CMD)/runsim.d > runsim_openmpi.d
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/openmpi/' \
+	    -e 's/PUT_NUMBER_TYPE_HERE/real/' \
+	$(LMR_CMD)/runsim.d > runsim_openmpi.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)run_main \
 		$(DVERSION)mpi_parallel \
 		$(MPI_LIB_DIRS_SEARCH) \
@@ -410,7 +414,9 @@ lmrZ-mpi-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LM
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES)
 	cd $(MPI_DIR); make
-	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/openmpi/' $(LMR_CMD)/runsim.d > runsim_openmpi.d
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/openmpi/' \
+	    -e 's/PUT_NUMBER_TYPE_HERE/complex/' \
+	$(LMR_CMD)/runsim.d > runsim_openmpi.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)run_main \
 		$(DVERSION)mpi_parallel \
 		$(MPI_LIB_DIRS_SEARCH) \

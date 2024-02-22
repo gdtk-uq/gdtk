@@ -54,6 +54,10 @@ import fileutil : ensure_directory_is_present;
 import blockio : blkIO;
 import loads : computeRunTimeLoads;
 
+version(mpi_parallel) {
+    import mpi;
+}
+
 void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMPITask, string maxWallClock)
 {
     alias cfg = GlobalConfig;
