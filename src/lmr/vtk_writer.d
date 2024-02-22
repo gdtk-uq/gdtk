@@ -254,12 +254,7 @@ void write_VTU_file(FluidBlockLite flow, Grid grid, string fileName, bool binary
         foreach (i; 0 .. flow.ncells) {
             float x = uflowz(flow["vel.x",i]);
             float y = uflowz(flow["vel.y",i]);
-            float z;
-            if (isThreeDimensional) {
-                z = uflowz(flow["vel.z",i]);
-            } else {
-                z = 0.0;
-            }
+            float z = (isThreeDimensional) ? uflowz(flow["vel.z",i]) : 0.0;
             if (binary_format) {
                 binary_data ~= nativeToBigEndian(x);
                 binary_data ~= nativeToBigEndian(y);
