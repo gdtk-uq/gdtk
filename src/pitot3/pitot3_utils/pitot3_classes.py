@@ -2108,6 +2108,11 @@ class Facility_State(object):
         if self.get_gas_state_gmodel_type() == 'CEAGas':
             print(self.get_reduced_composition_two_line_output_string())
 
+            electron_number_density_output_string = self.get_electron_number_density_single_line_output_string(return_None_if_no_electrons=True)
+
+            if electron_number_density_output_string:
+                print(electron_number_density_output_string)
+
         # add the stagnation enthalpy, if we can:
         if self.reference_gas_state:
 
@@ -2560,13 +2565,11 @@ class Facility_State(object):
 
         if self.get_gas_state_gmodel_type() == 'CEAGas':
 
-            # start by getting the reduced mass fractions
-
             species_massf_dict = self.get_species_massf_dict()
 
             species_moles_dict = {}
 
-            gas_total_MW = self.get_molecular_mass()*1000.0 # to get into g/mol
+            gas_total_MW = self.get_molecular_mass()*1000.0 # to get into g/mol (or kg/kmol)
 
             for species in species_massf_dict:
                 mass_fraction = species_massf_dict[species]
@@ -2577,6 +2580,43 @@ class Facility_State(object):
                 species_moles_dict[species] = mole_fraction
 
             return species_moles_dict
+
+    def get_species_number_density_dict(self):
+        """
+        This is like the massf function above, but it converts the massf dictionary to number density in particles/m**3
+
+        :return:
+        """
+
+        if self.species_MW_dict:
+
+            from scipy.constants import N_A
+
+            N_A = N_A * 1000.0  # so I get this per kmol too
+
+            species_massf_dict = self.get_species_massf_dict()
+
+            species_number_density_dict = {}
+
+            rho = self.get_gas_state().rho #kg/m**3
+
+            for species in species_massf_dict:
+                mass_fraction = species_massf_dict[species]
+                species_MW = self.species_MW_dict[species]
+
+                rho_species = rho*mass_fraction # this is partial density (like partial pressure but mass base)
+
+                # from here http://stcorp.github.io/harp/doc/html/algorithms/derivations/number_density.html
+
+                n = (rho_species * N_A) / species_MW
+
+                species_number_density_dict[species] = n
+
+            return species_number_density_dict
+
+        else:
+            print("We do not have a species MW dict so this can't be done. Will return None.")
+            return None
 
     def get_reduced_species_massf_dict(self):
         """
@@ -2589,7 +2629,7 @@ class Facility_State(object):
         """
 
         if self.get_gas_state_gmodel_type() == 'CEAGas':
-            # a fill state will not have many different species, so we should just the species which actually exist
+            # a fill state will not have many different species, so we should just keep the species which actually exist
             species_massf_dict = self.get_species_massf_dict()
             reduced_species_massf_dict = {}
             for species in species_massf_dict.keys():
@@ -2610,34 +2650,14 @@ class Facility_State(object):
         """
 
         if self.get_gas_state_gmodel_type() == 'CEAGas':
+            # a fill state will not have many different species, so we should just keep the species which actually exist
+            species_moles_dict = self.get_species_moles_dict()
+            reduced_species_moles_dict = {}
+            for species in species_moles_dict.keys():
+                if species_moles_dict[species] > 0.0:
+                    reduced_species_moles_dict[species] = species_moles_dict[species]
 
-            # # start by getting the reduced mass fractions
-            #
-            # reduced_species_massf_dict = self.get_reduced_species_massf_dict()
-            #
-            # reduced_species_moles_dict = {}
-            #
-            # gas_total_MW = self.get_molecular_mass()*1000.0 # to get into g/mol
-            #
-            # for species in reduced_species_massf_dict:
-            #     mass_fraction = reduced_species_massf_dict[species]
-            #     species_MW = self.species_MW_dict[species]
-            #
-            #     mole_fraction = mass_fraction*(gas_total_MW/species_MW)
-            #
-            #     reduced_species_moles_dict[species] = mole_fraction
-            #
-            # return reduced_species_moles_dict
-
-            if self.get_gas_state_gmodel_type() == 'CEAGas':
-                # a fill state will not have many different species, so we should just the species which actually exist
-                species_moles_dict = self.get_species_moles_dict()
-                reduced_species_moles_dict = {}
-                for species in species_moles_dict.keys():
-                    if species_moles_dict[species] > 0.0:
-                        reduced_species_moles_dict[species] = species_moles_dict[species]
-
-                return reduced_species_moles_dict
+            return reduced_species_moles_dict
 
         else:
             print("GasModel is not a CEAGas, so this function isn't useful. Will return None.")
@@ -2688,6 +2708,58 @@ class Facility_State(object):
             output_string = f"{{'{species}': {species_value}}}"
 
         return output_string
+
+    def get_reduced_number_density_dict(self):
+        """
+        This is like the function above, but for number densities.
+
+        :return:
+        """
+
+        if self.get_gas_state_gmodel_type() == 'CEAGas':
+            # a fill state will not have many different species, so we should just keep the species which actually exist
+            species_number_density_dict = self.get_species_number_density_dict()
+            reduced_species_number_density_dict = {}
+            for species in species_number_density_dict.keys():
+                if species_number_density_dict[species] > 0.0:
+                    reduced_species_number_density_dict[species] = species_number_density_dict[species]
+
+            return reduced_species_number_density_dict
+
+        else:
+            print("GasModel is not a CEAGas, so this function isn't useful. Will return None.")
+            return None
+
+    def get_electron_number_density(self):
+        """ Function to return the electron number density. If it is zero or there are not electrons, it just returns 0.0"""
+
+        if self.get_gas_state_gmodel_type() == 'CEAGas':
+
+            species_number_density_dict = self.get_species_number_density_dict()
+
+            if 'e-' in species_number_density_dict:
+                electron_number_density = species_number_density_dict['e-']
+            else:
+                electron_number_density = 0.0
+
+        else:
+            electron_number_density = 0.0
+
+        return electron_number_density
+
+    def get_electron_number_density_single_line_output_string(self, optional_description = None, return_None_if_no_electrons = False):
+
+        electron_number_density = self.get_electron_number_density()
+
+        if optional_description:
+            electron_number_density_output_string = f"Electron number density {optional_description} at equilibrium is {electron_number_density:.4e} particles / m**3 ({electron_number_density / 1.0e6:.4e} particles / cm**3)"
+        else:
+            electron_number_density_output_string = f"Electron number density at equilibrium is {electron_number_density:.4e} particles / m**3 ({electron_number_density / 1.0e6:.4e} particles / cm**3)"
+
+        if not electron_number_density and return_None_if_no_electrons:
+            electron_number_density_output_string = None
+
+        return electron_number_density_output_string
 
     def get_reduced_composition(self):
         """
@@ -4394,6 +4466,11 @@ def pitot3_results_output(config_data, gas_path, object_dict, generate_output_fi
             print(f"Species in the shock layer at equilibrium ({test_section.get_post_normal_shock_state().get_state_name()}) (by {test_section.get_post_normal_shock_state().outputUnits}):",
                   file=output_stream)
             print(test_section.get_post_normal_shock_state().get_reduced_species_moles_dict_for_printing(), file=output_stream)
+
+            electron_number_density_output_string = \
+                test_section.get_post_normal_shock_state().get_electron_number_density_single_line_output_string(optional_description = 'in the shock layer')
+
+            print(electron_number_density_output_string, file=output_stream)
 
     # some extra stuff at the bottom here, we make a states dict so we can return it later on...
 
