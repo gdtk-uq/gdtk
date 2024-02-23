@@ -18,10 +18,10 @@ ifeq ($(DMD), dmd)
     DFLAGS := -w -g -O -release -inline -boundscheck=off
 endif
 ifeq ($(DMD), ldmd2)
-    DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -ffast-math -flto=full -dip1008
+    DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -ffast-math -dip1008
 endif
 ifeq ($(DMD), ldc2)
-    DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -ffast-math -flto=full -dip1008
+    DFLAGS := -w -g -O -release -enable-inlining -boundscheck=off -ffast-math -dip1008
 endif
 ifeq ($(PLATFORM), macosx)
     DLINKFLAGS += -L-ld_classic
