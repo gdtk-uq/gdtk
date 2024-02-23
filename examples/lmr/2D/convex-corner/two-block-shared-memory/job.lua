@@ -145,7 +145,7 @@ NewtonKrylovPhase:new{
    frozen_limiter_for_jacobian = false,
    use_adaptive_preconditioner = false,
    steps_between_preconditioner_update = 5,
-   linear_solve_tolerance = 0.1,
+   linear_solve_tolerance = 0.01,
    use_auto_cfl = true,
    threshold_relative_residual_for_cfl_growth = 0.99,
    start_cfl = 1.0,
