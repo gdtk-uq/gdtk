@@ -1,7 +1,7 @@
 # Author: Rowan J. Gollan
-# Date: 2023-05-31
+# Date: 2023-05-31; 2024-02-23 adjusted by PJ
 #
-# Integration test for convex corner case on single block.
+# Integration test for convex corner case on two blocks.
 
 import pytest
 import subprocess
@@ -15,7 +15,7 @@ def change_test_dir(request, monkeypatch):
 
 expected_reason_for_stop = "relative-global-residual-target"
 expected_number_steps = 28
-expected_final_cfl = 7.17e+03
+expected_final_cfl = 7.21e+03
 
 def expected_output(proc):
     steps = 0
