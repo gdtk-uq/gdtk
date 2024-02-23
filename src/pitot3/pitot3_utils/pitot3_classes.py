@@ -2709,7 +2709,7 @@ class Facility_State(object):
 
         return output_string
 
-    def get_reduced_number_density_dict(self):
+    def get_reduced_species_number_density_dict(self):
         """
         This is like the function above, but for number densities.
 
