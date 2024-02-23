@@ -247,7 +247,7 @@ struct NKPhaseConfig {
         useAdaptivePreconditioner = getJSONbool(jsonData, "use_adaptive_preconditioner", useAdaptivePreconditioner);
         ignoreStoppingCriteria = getJSONbool(jsonData, "ignore_stopping_criteria", ignoreStoppingCriteria);
         frozenLimiterForJacobian = getJSONbool(jsonData, "frozen_limiter_for_jacobian", frozenLimiterForJacobian);
-        linearSolveTolerance = getJSONdouble(jsonData, "linear_solver_tolerance", linearSolveTolerance);
+        linearSolveTolerance = getJSONdouble(jsonData, "linear_solve_tolerance", linearSolveTolerance);
         useAutoCFL = getJSONbool(jsonData, "use_auto_cfl", useAutoCFL);
         thresholdRelativeResidualForCFLGrowth = getJSONdouble(jsonData, "threshold_relative_residual_for_cfl_growth", thresholdRelativeResidualForCFLGrowth);
         startCFL = getJSONdouble(jsonData, "start_cfl", startCFL);
@@ -1348,6 +1348,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
     }
     */
 
+    double linearSolveResidual;
     alias cfg = GlobalConfig;
     size_t nConserved = cfg.cqi.n;
 
@@ -1418,7 +1419,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
         }
         */
 
-        isConverged = performIterations(maxIterations, beta0, targetResidual, scale, iterationCount);
+        isConverged = performIterations(maxIterations, targetResidual, scale, iterationCount, linearSolveResidual);
         int m = iterationCount;
 
         /*
@@ -1503,7 +1504,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
     // Set some information before leaving. This might be used in diagnostics file.
     gmresInfo.nRestarts = to!int(r_break);
     gmresInfo.initResidual = beta0.re;
-    gmresInfo.finalResidual = beta.re;
+    gmresInfo.finalResidual = linearSolveResidual.re;
     gmresInfo.iterationCount = iterationCount;
 }
 
@@ -1768,8 +1769,9 @@ void applyResidualSmoothing()
  * Authors: RJG and KAD
  * Date: 2022-03-02
  */
-bool performIterations(int maxIterations, double beta0, double targetResidual,
-                       ref ConservedQuantities scale, ref int iterationCount)
+bool performIterations(int maxIterations, double targetResidual,
+                       ref ConservedQuantities scale, ref int iterationCount,
+                       ref double resid)
 {
 
     /*
@@ -1951,8 +1953,7 @@ bool performIterations(int maxIterations, double beta0, double targetResidual,
         copy(Q1, Q0);
 
         // Get residual
-        auto resid = fabs(g1[j+1]);
-        auto linSolResid = (resid/beta0).re;
+        resid = fabs(g1[j+1]);
         if (resid <= targetResidual) {
             isConverged = true;
             break;
@@ -2602,15 +2603,15 @@ void initialiseDiagnosticsFile()
     diagnostics.writeln("#  1: step");
     diagnostics.writeln("#  2: dt");
     diagnostics.writeln("#  3: CFL");
-    diagnostics.writeln("#  4: linear-solve-residual-target");
-    diagnostics.writeln("#  5: nRestarts");
-    diagnostics.writeln("#  6: nIters");
-    diagnostics.writeln("#  7: nFnCalls");
-    diagnostics.writeln("#  8: wall-clock, s");
+    diagnostics.writeln("#  4: linear-solve-residual-rel-target");
+    diagnostics.writeln("#  5: wall-clock, s");
+    diagnostics.writeln("#  6: nRestarts");
+    diagnostics.writeln("#  7: nIters");
+    diagnostics.writeln("#  8: nFnCalls");
     diagnostics.writeln("#  9: global-residual-abs");
     diagnostics.writeln("# 10: global-residual-rel");
     diagnostics.writeln("# 11: mass-balance");
-    diagnostics.writeln("# 12: linear-solve-residual");
+    diagnostics.writeln("# 12: linear-solve-residual-rel");
     diagnostics.writeln("# 13: omega");
     int n_entry = 14;
     foreach (ivar; 0 .. cfg.cqi.n) {
@@ -2649,7 +2650,7 @@ void writeDiagnostics(int step, double dt, double cfl, double wallClockElapsed, 
                        step, dt, cfl, activePhase.linearSolveTolerance, wallClockElapsed,
                        gmresInfo.nRestarts, gmresInfo.iterationCount, fnCount,
                        globalResidual, globalResidual/referenceGlobalResidual,
-                       massBalance, gmresInfo.finalResidual, omega);
+                       massBalance, gmresInfo.finalResidual/gmresInfo.initResidual, omega);
     foreach (ivar; 0 .. cfg.cqi.n) {
         diagnostics.writef("%20.16e %20.16e ", currentResiduals[ivar].re, currentResiduals[ivar].re/referenceResiduals[ivar].re);
     }
