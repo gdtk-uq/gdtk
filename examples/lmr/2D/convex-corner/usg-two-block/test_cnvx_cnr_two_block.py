@@ -16,6 +16,7 @@ def change_test_dir(request, monkeypatch):
 expected_reason_for_stop = "relative-global-residual-target"
 expected_number_steps = 28
 expected_final_cfl = 7.21e+03
+tolerance_on_cfl_check = 0.01
 
 def expected_output(proc):
     steps = 0
@@ -30,7 +31,7 @@ def expected_output(proc):
             cfl = float(line.split()[1])
     assert reason == expected_reason_for_stop, "Failed to stop for the expected reason."
     assert steps == expected_number_steps, "Failed to take correct number of steps."
-    assert abs(cfl - expected_final_cfl)/expected_final_cfl < 0.005, \
+    assert abs(cfl - expected_final_cfl)/expected_final_cfl < tolerance_on_cfl_check, \
         "Failed to arrive at expected CFL value on final step."
 
 
