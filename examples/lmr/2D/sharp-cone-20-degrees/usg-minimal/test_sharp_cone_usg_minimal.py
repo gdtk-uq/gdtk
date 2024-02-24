@@ -8,6 +8,7 @@ import pytest
 import subprocess
 import re
 import os
+import sys
 
 # This is used to change to local directory so that subprocess runs nicely.
 @pytest.fixture(autouse=True)
@@ -34,9 +35,25 @@ def test_run_steady():
     cmd = "lmr run"
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
     assert proc.returncode == 0, "Failed during: " + cmd
+    tolerance_on_cfl_check = 0.01
     expected_reason_for_stop = "relative-global-residual-target"
-    expected_number_steps = 38
-    expected_final_cfl = 9.95e+03
+    # RJG, 2024-02-25
+    # This case behaves subtly differently on linux and macos
+    # The macos version takes one extra step to convergence,
+    # but because of how we grow the CFL with a power law
+    # that extra step makes quite a difference in expected CFL.
+    # Also, the linux version seems to need to take a course
+    # correction and drop the CFL around setp 30. The macos
+    # doesn't. I suspect this is related to our overly aggressive
+    # use of the physicality check. I'll ask Kyle his thoughts.
+    #
+    # So we specialise the expected values based on OS
+    if (sys.platform == 'linux'):
+        expected_number_steps = 40
+        expected_final_cfl = 4.624e+03
+    else:
+        expected_number_steps = 41
+        expected_final_cfl = 1.143e+04
     reason = ""
     steps = 0
     cfl = 0.0
@@ -50,7 +67,7 @@ def test_run_steady():
             cfl = float(line.split()[1])
     assert reason == expected_reason_for_stop, "Failed to stop for the expected reason."
     assert abs(steps-expected_number_steps) < 5, "Failed to take correct number of steps."
-    assert abs(cfl - expected_final_cfl)/expected_final_cfl < 0.01, \
+    assert abs(cfl - expected_final_cfl)/expected_final_cfl < tolerance_on_cfl_check, \
         "Failed to arrive at expected CFL value on final step."
 
 def test_snapshot_steady():

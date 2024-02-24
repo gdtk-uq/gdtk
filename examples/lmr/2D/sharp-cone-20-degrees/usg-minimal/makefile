@@ -25,6 +25,9 @@ post: vtk
 vtk:
 	lmr snapshot2vtk --all
 
+test:
+	PYTHONDONTWRITEBYTECODE=1 pytest -v
+	
 clean:
 	- rm -rf $(LMR_DIR)
 	- rm ideal-air.gas
