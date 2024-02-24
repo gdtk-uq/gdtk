@@ -37,6 +37,7 @@ def test_run_steady():
     expected_reason_for_stop = "relative-global-residual-target"
     expected_number_steps = 38
     expected_final_cfl = 9.95e+03
+    reason = ""
     steps = 0
     cfl = 0.0
     lines = proc.stdout.split("\n")
