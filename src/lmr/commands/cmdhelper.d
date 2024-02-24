@@ -88,7 +88,7 @@ auto mapTimesToSnapshots(string[] snaps)
     double[] times;
     Node timesData = dyaml.Loader.fromFile(lmrCfg.timesFile).load();
     foreach (snap; snaps) {
-        Node snapData = timesData[to!int(snap)];
+        Node snapData = timesData[snap];
         times ~= snapData["time"].as!double;
     }
     return times;

@@ -788,7 +788,7 @@ void addToTimesFile()
     // Add entry in times file
     auto f = File(lmrCfg.timesFile, "a");
     string key = format(lmrCfg.snapshotIdxFmt, SimState.current_tindx);
-    f.writefln("%s:", key);
+    f.writefln("'%s':", key);
     f.writefln("   time: %.18e", SimState.time);
     f.writefln("   dt:   %.18e", SimState.dt_global);
     f.writefln("   cfl:  %.18e", SimState.cfl_max);
