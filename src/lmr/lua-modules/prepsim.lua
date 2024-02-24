@@ -87,19 +87,19 @@ json = require 'json'
 -- So, we disable any actions related to those function calls.
 function registerGrid()
    if verbosity >= 1 then
-      print("    registerGrid(): Do NOTHING when in prep-flow mode.")
+      print("    registerGrid(): Do NOTHING when in prep-sim mode.")
    end
 end
 
 function registerGridArray()
    if verbosity >= 1 then
-      print("    registerGridArray(): Do NOTHING when in prep-flow mode.")
+      print("    registerGridArray(): Do NOTHING when in prep-sim mode.")
    end
 end
 
 function identifyGridConnections()
    if verbosity >= 1 then
-      print("    identifyGridConnections(): Do NOTHING when in prep-flow mode.")
+      print("    identifyGridConnections(): Do NOTHING when in prep-sim mode.")
    end
 end
 
