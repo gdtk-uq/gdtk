@@ -188,7 +188,7 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     // We can put an initial entry in the times file now.
     if (!SimState.is_restart) {
         // Clean out any existing times file.
-        lmrCfg.timesFile.remove;
+        if (lmrCfg.timesFile.exists) lmrCfg.timesFile.remove;
         addToTimesFile();
     }
 
