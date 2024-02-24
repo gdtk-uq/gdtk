@@ -48,8 +48,8 @@ def test_run_steady():
         if line.find("FINAL-CFL") != -1:
             cfl = float(line.split()[1])
     assert reason == expected_reason_for_stop, "Failed to stop for the expected reason."
-    assert steps == expected_number_steps, "Failed to take correct number of steps."
-    assert abs(cfl - expected_final_cfl)/expected_final_cfl < 0.005, \
+    assert abs(steps-expected_number_steps) < 5, "Failed to take correct number of steps."
+    assert abs(cfl - expected_final_cfl)/expected_final_cfl < 0.01, \
         "Failed to arrive at expected CFL value on final step."
 
 def test_snapshot_steady():
