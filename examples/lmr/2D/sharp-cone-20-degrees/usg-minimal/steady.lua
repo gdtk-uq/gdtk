@@ -4,6 +4,7 @@ print("Set up steady-state solve of Mach 1.5 flow over a 20 degree cone.")
 -- 0. Assume that a previous processing step has set up the grid.
 --
 -- 1. Domain type, gas model and flow states
+config.solver_mode = "steady"
 config.axisymmetric = true
 setGasModel('ideal-air.gas')
 initial = FlowState:new{p=5955.0, T=304.0} -- Pa, degrees K

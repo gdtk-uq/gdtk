@@ -3,7 +3,7 @@ LMR_DIR := lmrsim
 help:
 	@echo "Main targets available are:"
 	@echo -e "   prep"
-	@echo -e "   run"
+	@echo -e "   run-steady"
 	@echo -e "   post"
 
 prep: gas grid init
@@ -18,10 +18,7 @@ init: steady.lua
 	lmr prep-sim --job=steady.lua
 
 run-steady:
-	lmr run-steady
-
-run-transient:
-	lmr run-transient
+	lmr run
 
 post: vtk
 

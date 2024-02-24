@@ -1,9 +1,10 @@
 -- transient.lua
 print("Set up transient solve of Mach 1.5 flow over a 20 degree cone.")
 --
--- 0. Assume that a previous processing has step set up the grids.
+-- 0. Assume that a previous processing has step set up the grid.
 --
 -- 1. Domain type, gas model and flow states
+config.solver_mode = "transient"
 config.axisymmetric = true
 setGasModel('ideal-air.gas')
 initial = FlowState:new{p=5955.0, T=304.0} -- Pa, degrees K
