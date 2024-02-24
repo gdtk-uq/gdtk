@@ -117,6 +117,14 @@ int main_(string[] args)
     auto snaps2process = determineSnapshotsToProcess(availSnapshots, snapshots, allSnapshots, finalSnapshot);
 
     /*
+     * When doing time-marching, also add timestep information.
+     */
+    double[] times;
+    if (GlobalConfig.solverMode == SolverMode.transient) {
+        times = mapTimesToSnapshots(snaps2process);
+    }
+
+    /*
      * Now write vtk files for each snapshot
      */
     if (verbosity > 0) {
@@ -125,23 +133,28 @@ int main_(string[] args)
 
     ensure_directory_is_present(lmrCfg.vtkDir);
     File pvdFile = begin_PVD_file(lmrCfg.vtkDir~"/"~lmrCfg.flowPrefix~".pvd");
-    foreach (snap; snaps2process) {
+    foreach (isnap, snap; snaps2process) {
         if (verbosity > 1) {
             writefln("lmr snapshot2vtk: Writing snapshot %s to disk.", snap);
         }
         auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks);
         if (!luaRefSoln.empty) soln.subtract_ref_soln(luaRefSoln);
         // [TODO] add aux variables.
-        string pvtuFileName = lmrCfg.flowPrefix ~ snap ~ ".pvtu";
+        string pvtuFileName = lmrCfg.flowPrefix ~ "-s" ~ snap ~ ".pvtu";
         File pvtuFile = begin_PVTU_file(lmrCfg.vtkDir ~ "/" ~ pvtuFileName, soln.flowBlocks[0].variableNames);
         foreach (jb; 0 .. soln.nBlocks) {
             if (verbosity > 2) {
                 writefln("lmr snapshot2vtk: Writing block %d for snapshot %s to disk.", jb, snap);
             }
-            string vtuFileName = lmrCfg.flowPrefix ~ format(lmrCfg.blkIdxFmt, jb) ~ "-" ~ snap ~ ".vtu";
-            add_dataset_to_PVD_file(pvdFile, to!double(snap), vtuFileName);
+            string vtuFileName = lmrCfg.flowPrefix ~ "-s" ~ snap ~ "-b" ~ format(lmrCfg.blkIdxFmt, jb) ~ ".vtu";
             add_piece_to_PVTU_file(pvtuFile, vtuFileName);
             write_VTU_file(soln.flowBlocks[jb], soln.gridBlocks[jb], lmrCfg.vtkDir~"/"~vtuFileName, binaryFormat);
+            if (GlobalConfig.solverMode == SolverMode.transient) {
+                add_dataset_to_PVD_file(pvdFile, times[isnap], vtuFileName);
+            }
+            else {
+                add_dataset_to_PVD_file(pvdFile, to!double(snap), vtuFileName);
+            }
         }
         finish_PVTU_file(pvtuFile);
     }

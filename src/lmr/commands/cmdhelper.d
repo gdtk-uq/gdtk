@@ -12,9 +12,12 @@ import std.stdio;
 import std.file;
 import std.format : format;
 import std.algorithm;
-import std.array;
+import std.range : array;
 import std.regex;
 import std.path;
+import std.conv : to;
+
+import dyaml;
 
 import lmrconfig : lmrCfg;
 
@@ -53,7 +56,7 @@ string[] determineAvailableSnapshots(string dir="")
  * Date: 2023-07-14
  */
 
-auto determineSnapshotsToProcess(string[] availSnapshots, int[] snapshots,
+string[] determineSnapshotsToProcess(string[] availSnapshots, int[] snapshots,
     bool allSnapshots, bool finalSnapshot)
 {
     string[] snaps;
@@ -71,7 +74,24 @@ auto determineSnapshotsToProcess(string[] availSnapshots, int[] snapshots,
                              // so do the final snapshot.
         snaps ~= availSnapshots[$-1];
     }
-    return uniq(sort(snaps));
+    return uniq(sort(snaps)).array;
+}
+
+/**
+ * Find timesteps associated with snapshots from times file.
+ *
+ * Author: Rowan J. Gollan
+ * Date: 2024-02-24
+ */
+auto mapTimesToSnapshots(string[] snaps)
+{
+    double[] times;
+    Node timesData = dyaml.Loader.fromFile(lmrCfg.timesFile).load();
+    foreach (snap; snaps) {
+        Node snapData = timesData[to!int(snap)];
+        times ~= snapData["time"].as!double;
+    }
+    return times;
 }
 
 

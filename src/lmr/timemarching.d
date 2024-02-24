@@ -150,11 +150,6 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     // [TODO] RJG, 2024-02-07
     // Implement initialisation of loads files.
 
-    // [TODO] RJG, 2024-02-07
-    // Implement initialisation of shock-fitting. This involves reading
-    // rails and velocity weights.
-    // Commented code is from Eilmer4
-    /* taken on 2024-02-07
     // For a simulation with shock fitting, the files defining the rails for
     // vertex motion and the scaling of vertex velocities throughout the blocks
     // will have been written by prep.lua + output.lua.
@@ -174,7 +169,6 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
             }
         }
     }
-    end: code from Eilmer4 for shock-fitting setup reading. */
 
     // [TODO] RJG, 2024-02-07
     // When we have solid domains in place, we'll need to implement the initialisation of
@@ -191,6 +185,12 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     // If we have elected to run with a variable time step,
     // this value may get revised on the very first step.
     SimState.dt_global = GlobalConfig.dt_init;
+    // We can put an initial entry in the times file now.
+    if (!SimState.is_restart) {
+        // Clean out any existing times file.
+        lmrCfg.timesFile.remove;
+        addToTimesFile();
+    }
 
     initMasterLuaState();
     initCornerCoordinates();
@@ -753,28 +753,48 @@ void writeSnapshotFiles_timemarching()
     // Wait for master to complete building the directory for the next snapshot
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
 
-    foreach (blk; localFluidBlocks) {
+    foreach (blk; parallel(localFluidBlocksBySize, 1)) {
         auto fileName = flowFilename(SimState.current_tindx, blk.id);
         blkIO.writeVariablesToFile(fileName, blk.cells);
     }
 
+    if (cfg.grid_motion != GridMotion.none) {
+        foreach (blk; parallel(localFluidBlocksBySize, 1)) {
+            blk.sync_vertices_to_underlying_grid(0);
+            auto gridName = gridFilename(SimState.current_tindx, blk.id);
+            blk.write_underlying_grid(gridName);
+        }
+    }
+
+    addToTimesFile();
+}
+
+/**
+ * Add an entry in the times file.
+ * 
+ * NOTE: 
+ * What happens if this is a restart from some earlier tindx?
+ * Perhaps there is already an entry for this particular tindx (from a previous run).
+ * Using YAML, we just stick the duplicate key at the end.
+ * The parsers should hold onto the *last* duplicate key they find, which is what we want on restarted sims.
+ * We might need to think about properly scrubbing the file during initialisation.
+ *
+ * Author: Rowan J. Gollan
+ * Date: 2024-02-24
+ */
+
+void addToTimesFile()
+{
     // Add entry in times file
-    // What happens if this is a restart from some earlier tindx?
-    // Perhaps there is already an entry for this particular tindx (from a previous run).
-    // Using YAML, we just stick the duplicate key at the end.
-    // The parsers should hold onto the *last* duplicate key they find, which is what we want on restarted sims.
-    // We might need to think about properly scrubbing the file during initialisation.
     auto f = File(lmrCfg.timesFile, "a");
     string key = format(lmrCfg.snapshotIdxFmt, SimState.current_tindx);
-    f.writeln(key);
+    f.writefln("%s:", key);
     f.writefln("   time: %.18e", SimState.time);
     f.writefln("   dt:   %.18e", SimState.dt_global);
     f.writefln("   cfl:  %.18e", SimState.cfl_max);
-    auto wall_clock_elapsed = (Clock.currTime() - SimState.wall_clock_start).total!"seconds"();
-    f.writefln("   wall-clock-elaped: %g", wall_clock_elapsed);
+    double wall_clock_elapsed = to!double((Clock.currTime() - SimState.wall_clock_start).total!"msecs"())/1000.0;
+    f.writefln("   wall-clock-elaped: %.3f", wall_clock_elapsed);
     f.close();
-
-
 }
 
 /**
