@@ -673,9 +673,9 @@ int integrateInTime(double targetTimeAsRequested)
             MPI_Allreduce(MPI_IN_PLACE, &localFinishFlag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
             finished_time_stepping = to!bool(localFinishFlag);
         }
-        if(finished_time_stepping && GlobalConfig.verbosity_level >= 1 && GlobalConfig.is_master_task) {
+        if(finished_time_stepping && GlobalConfig.is_master_task) {
             // Make an announcement about why we are finishing time-stepping.
-            write("Integration stopped: ");
+            write("STOP-REASON: ");
             if (caughtException) {
                 writeln("An exception was caught during the time step.");
             }
@@ -689,6 +689,8 @@ int integrateInTime(double targetTimeAsRequested)
             if (SimState.maxWallClockSeconds > 0 && (wall_clock_elapsed > SimState.maxWallClockSeconds)) {
                 writefln("Reached maximum wall-clock time with elapsed time %s.", to!string(wall_clock_elapsed));
             }
+            writefln("FINAL-STEP: %d", SimState.step);
+            writefln("FINAL-TIME: %g", SimState.time);
             stdout.flush();
         }
     } // end while !finished_time_stepping
