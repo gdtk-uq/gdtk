@@ -262,10 +262,11 @@ install: $(PROGRAMS) $(SUB_PROGRAMS) $(PY_PROGRAMS) $(AUX_PROGRAMS)
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 clean:
+	- rm *.o
+	- rm -rf $(BUILD_DIR)/*
 	- rm $(PROGRAMS)
 	- rm $(SUB_PROGRAMS)
 	- rm $(PY_PROGRAMS)
-	- rm *.o
 	- rm lmrconfig_with_str_subst.d
 	- rm runsim_shared.d runsim_openmpi.d
 	- rm -f gdtk-module
