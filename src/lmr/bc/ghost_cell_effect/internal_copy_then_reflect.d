@@ -13,7 +13,7 @@ import globalconfig;
 import globaldata;
 import flowstate;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell;
 import fluidblock;
 import sfluidblock;
 import gas;
@@ -43,7 +43,7 @@ public:
         // If the grid is clustered toward the boundary, the error
         // introduced by this zero-order reconstruction will be mitigated.
         // PJ 2016-04-12
-        FVCell src_cell, ghost0;
+        FluidFVCell src_cell, ghost0;
         BoundaryCondition bc = blk.bc[which_boundary];
         if (bc.outsigns[f.i_bndry] == 1) {
 	    src_cell = f.left_cell;
@@ -67,7 +67,7 @@ public:
         // If the grid is clustered toward the boundary, the error
         // introduced by this zero-order reconstruction will be mitigated.
         // PJ 2016-04-12
-        FVCell src_cell, ghost0;
+        FluidFVCell src_cell, ghost0;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             if (bc.outsigns[i] == 1) {
@@ -86,7 +86,7 @@ public:
     @nogc
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        FVCell src_cell, dest_cell;
+        FluidFVCell src_cell, dest_cell;
         auto copy_opt = CopyDataOption.minimal_flow;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
@@ -110,7 +110,7 @@ public:
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        FVCell src_cell, dest_cell;
+        FluidFVCell src_cell, dest_cell;
         auto copy_opt = CopyDataOption.minimal_flow;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");

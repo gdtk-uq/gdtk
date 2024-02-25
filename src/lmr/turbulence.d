@@ -16,7 +16,7 @@ import nm.number;
 import ntypes.complex;
 import globalconfig;
 import geom;
-import fvcell;
+import lmr.fluidfvcell;
 import fvinterface;
 
 /*
@@ -49,7 +49,7 @@ class TurbulenceModel{
     @nogc abstract number viscous_transport_coeff(ref const(FlowState) fs, size_t i) const;
     @nogc abstract bool is_valid(ref const(FlowStateLimits) fsl, const number[] turb) const;
     @nogc abstract number tke_rhoturb_derivatives(ref const(FlowState) fs, size_t i) const;
-    @nogc abstract void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FVCell cell, ref FlowState fs) const;
+    @nogc abstract void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FluidFVCell cell, ref FlowState fs) const;
 
     // Common methods
     override string toString() const
@@ -144,7 +144,7 @@ class noTurbulenceModel : TurbulenceModel {
     }
 
     @nogc final override
-    void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FVCell cell, ref FlowState fs) const {
+    void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FluidFVCell cell, ref FlowState fs) const {
         /*
             Set the interface value of each turbulent primitive,
             given the nearest cell above it inside the flow domain
@@ -456,7 +456,7 @@ class kwTurbulenceModel : TurbulenceModel {
     }
 
     @nogc final override
-    void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FVCell cell, ref FlowState fs) const {
+    void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FluidFVCell cell, ref FlowState fs) const {
         /*
             Set the interface value of each turbulent primitive,
             given the nearest cell above it inside the flow domain
@@ -516,7 +516,7 @@ private:
     }
 
     @nogc const
-    number ideal_omega_at_wall(const FVCell cell, number d0)
+    number ideal_omega_at_wall(const FluidFVCell cell, number d0)
     // As recommended by Wilson Chan, we use Menter's correction
     // for omega values at the wall. This appears as Eqn A12 in
     // Menter's paper.
@@ -713,7 +713,7 @@ class saTurbulenceModel : TurbulenceModel {
     }
 
     @nogc final override
-    void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FVCell cell, ref FlowState fs) const {
+    void set_flowstate_at_wall(const int gtl, const FVInterface IFace, const FluidFVCell cell, ref FlowState fs) const {
         /*
         nuhat is set to zero at no slip walls in accord with Allmaras (2012), eqn 7
         */

@@ -17,10 +17,10 @@ import util.lua;
 import util.lua_service;
 import lua_helper;
 import gas;
-import fvcell;
+import lmr.fluidfvcell;
 import globalconfig;
 
-void getUDFSourceTermsForCell(lua_State* L, FVCell cell, size_t gtl,
+void getUDFSourceTermsForCell(lua_State* L, FluidFVCell cell, size_t gtl,
                               double t, LocalConfig myConfig,
                               size_t blkId, size_t i, size_t j, size_t k)
 {

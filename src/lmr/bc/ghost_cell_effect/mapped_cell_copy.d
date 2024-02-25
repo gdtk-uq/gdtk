@@ -22,7 +22,7 @@ import globalconfig;
 import globaldata;
 import flowstate;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell;
 import fluidblock;
 import sfluidblock;
 import gas;
@@ -43,14 +43,14 @@ struct BlockAndCellId {
 class GhostCellMappedCellCopy : GhostCellEffect {
 public:
     // Flow data along the boundary is stored in ghost cells.
-    FVCell[] ghost_cells;
+    FluidFVCell[] ghost_cells;
     size_t[string] ghost_cell_index_from_faceTag;
     // For each ghost-cell associated with the current boundary,
     // we will have a corresponding "mapped cell", also known as "source cell"
     // from which we will copy the :flow conditions.
     // In the shared-memory flavour of the code, it is easy to get a direct
     // reference to each such mapped cell and store that for easy access.
-    FVCell[] mapped_cells;
+    FluidFVCell[] mapped_cells;
     // We may specify which source cell and block from which a particular ghost-cell
     // (a.k.a. destination cell) will copy its flow and geometry data.
     // This mapping information is prepared externally and provided in
@@ -578,7 +578,7 @@ public:
             }
             if (!found) {
                 // Fall back to nearest cell search.
-                FVCell closest_cell = localFluidBlocks[0].cells[0];
+                FluidFVCell closest_cell = localFluidBlocks[0].cells[0];
                 Vector3 cellpos = closest_cell.pos[0];
                 double min_distance = distance_between(cellpos, mypos);
                 foreach (blk; localFluidBlocks) {
@@ -599,7 +599,7 @@ public:
     } // end set_up_cell_mapping_via_search()
 
     @nogc
-    ref FVCell get_mapped_cell(size_t i)
+    ref FluidFVCell get_mapped_cell(size_t i)
     {
         if (i < mapped_cells.length) {
             return mapped_cells[i];

@@ -23,7 +23,7 @@ import geom.luawrap;
 import lmrexceptions : LmrException;
 import globalconfig : GlobalConfig;
 import lmrconfig;
-import fvcell : FVCell;
+import lmr.fluidfvcell : FluidFVCell;
 import fvcellio;
 import fluidblock : FluidBlock;
 import sfluidblock : SFluidBlock;
@@ -78,12 +78,12 @@ public:
 	foreach (node; metadata["variables"].sequence) {
 	    variables ~= node.as!string;
 	}
-	mCIO = createFVCellIO(fvt, variables);
+	mCIO = createFluidFVCellIO(fvt, variables);
     }
 
 abstract:
-    void writeVariablesToFile(string fname, FVCell[] cells);
-    void readVariablesFromFile(string fname, FVCell[] cells);
+    void writeVariablesToFile(string fname, FluidFVCell[] cells);
+    void readVariablesFromFile(string fname, FluidFVCell[] cells);
 
 private:
     FVCellIO mCIO;
@@ -100,7 +100,7 @@ public:
     }
 
     override
-    void writeVariablesToFile(string fname, FVCell[] cells)
+    void writeVariablesToFile(string fname, FluidFVCell[] cells)
     {
 	double[1] dbl1;
 	auto outfile = File(fname, "wb");
@@ -114,7 +114,7 @@ public:
     }
 
     override
-    void readVariablesFromFile(string fname, FVCell[] cells)
+    void readVariablesFromFile(string fname, FluidFVCell[] cells)
     {
 	double[1] dbl1;
 	auto infile = File(fname, "rb");
@@ -139,7 +139,7 @@ public:
     }
 
     override
-    void writeVariablesToFile(string fname, FVCell[] cells)
+    void writeVariablesToFile(string fname, FluidFVCell[] cells)
     {
 	auto outfile = new GzipOut(fname);
 	foreach (var; mCIO.variables) {
@@ -151,7 +151,7 @@ public:
     }
 
     override
-    void readVariablesFromFile(string fname, FVCell[] cells)
+    void readVariablesFromFile(string fname, FluidFVCell[] cells)
     {
 	auto byLine = new GzipByLine(fname);
 	string line;

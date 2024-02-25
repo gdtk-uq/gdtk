@@ -22,7 +22,7 @@ import globalconfig;
 import globaldata;
 import flowstate;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell;
 import fluidblock;
 import sfluidblock;
 import ssolidblock;
@@ -80,7 +80,7 @@ public:
     // we will have a corresponding "mapped" or "source" cell
     // from which we will copy the flow conditions.
     SolidFVCell[] solidCells;
-    FVCell[] mapped_cells;
+    FluidFVCell[] mapped_cells;
     size_t[] mapped_cell_ids;
     // Later, it is convenient to use a different notation for the data exchange.
     // Also, note that we require structured-grid blocks.
@@ -165,7 +165,7 @@ public:
                 foreach (i; 0 .. this_blk.nicell) {
                     i_dest = i + this_blk.imin;
                     myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest+1);
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                    myBC.gasCells ~= new FluidFVCell(other_blk.myConfig);
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -198,7 +198,7 @@ public:
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     myBC.ifaces ~= this_blk.getIfi(i_dest+1, j_dest);
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                    myBC.gasCells ~= new FluidFVCell(other_blk.myConfig);
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -231,7 +231,7 @@ public:
                 foreach (i; 0 .. this_blk.nicell) {
                     i_dest = i + this_blk.imin;
                     myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest);
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig); //other_blk.myConfig, false, this_blk.id);
+                    myBC.gasCells ~= new FluidFVCell(other_blk.myConfig); //other_blk.myConfig, false, this_blk.id);
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -264,7 +264,7 @@ public:
                 foreach (j; 0 .. this_blk.njcell) {
                     j_dest = j + this_blk.jmin;
                     myBC.ifaces ~= this_blk.getIfi(i_dest, j_dest);
-                    myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                    myBC.gasCells ~= new FluidFVCell(other_blk.myConfig);
                     myBC.solidCells ~= this_blk.getCell(i_dest,j_dest);
                     switch (other_face) {
                     case Face.north:
@@ -306,7 +306,7 @@ public:
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest+1, k_dest);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                        myBC.gasCells ~= new FluidFVCell(other_blk.myConfig);
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -379,7 +379,7 @@ public:
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfi(i_dest+1, j_dest, k_dest);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                        myBC.gasCells ~= new FluidFVCell(other_blk.myConfig);
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -452,7 +452,7 @@ public:
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfj(i_dest, j_dest, k_dest);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                        myBC.gasCells ~= new FluidFVCell(other_blk.myConfig);
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -525,7 +525,7 @@ public:
                     foreach (k; 0 .. this_blk.nkcell) {
                         k_dest = k + this_blk.kmin;
                         myBC.ifaces ~= this_blk.getIfi(i_dest, j_dest, k_dest);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                        myBC.gasCells ~= new FluidFVCell(other_blk.myConfig);
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -598,7 +598,7 @@ public:
                     foreach (i; 0 .. this_blk.nicell) {
                         i_dest = i + this_blk.imin;
                         myBC.ifaces ~= this_blk.getIfk(i_dest, j_dest, k_dest+1);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                        myBC.gasCells ~= new FluidFVCell(other_blk.myConfig);
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -671,7 +671,7 @@ public:
                     foreach (i; 0 .. this_blk.nicell) {
                         i_dest = i + this_blk.imin;
                         myBC.ifaces ~= this_blk.getIfk(i_dest, j_dest, k_dest);
-                        myBC.gasCells ~= new FVCell(other_blk.myConfig);
+                        myBC.gasCells ~= new FluidFVCell(other_blk.myConfig);
                         myBC.solidCells ~= this_blk.getCell(i_dest,j_dest,k_dest);
                         final switch (other_face) {
                         case Face.north:
@@ -839,7 +839,7 @@ public:
     } // end set_up_cell_mapping_phase2()
 
     @nogc
-    ref FVCell get_mapped_cell(size_t i)
+    ref FluidFVCell get_mapped_cell(size_t i)
     {
         if (i < mapped_cells.length) {
             return mapped_cells[i];

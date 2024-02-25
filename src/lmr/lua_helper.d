@@ -23,7 +23,7 @@ import gas.luagas_model;
 import nm.luabbla;
 import geom: gridTypeName, Grid_t;
 
-import fvcell;
+import lmr.fluidfvcell;
 import fvinterface;
 import luaflowstate;
 import luaflowsolution;
@@ -215,7 +215,7 @@ extern(C) int luafn_sampleFluidCell(lua_State *L)
     //
     // Grab the appropriate cell
     auto sblk = cast(SFluidBlock) globalBlocks[blkId];
-    FVCell cell;
+    FluidFVCell cell;
     if (sblk) {
         try {
             cell = sblk.get_cell(i, j, k);
@@ -258,7 +258,7 @@ extern(C) int luafn_setBxyzInFluidCell(lua_State *L)
         // Actually set the magnetic field components.
         // Grab the appropriate cell
         auto sblk = cast(SFluidBlock) globalBlocks[blkId];
-        FVCell cell;
+        FluidFVCell cell;
         if (sblk) {
             try {
                 cell = sblk.get_cell(i, j, k);
@@ -355,10 +355,10 @@ extern(C) int luafn_runTimeLoads(lua_State *L)
 // D code functions
 
 /**
- * Push the interesting data from a FVCell and FVInterface to a Lua table
+ * Push the interesting data from a FluidFVCell and FVInterface to a Lua table
  *
  */
-void pushFluidCellToTable(lua_State* L, int tblIdx, ref const(FVCell) cell,
+void pushFluidCellToTable(lua_State* L, int tblIdx, ref const(FluidFVCell) cell,
                           size_t gtl, LocalConfig myConfig)
 {
     lua_pushnumber(L, cell.pos[gtl].x); lua_setfield(L, tblIdx, "x");

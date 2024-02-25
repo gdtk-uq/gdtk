@@ -1,12 +1,13 @@
 /**
- * fvcell.d
- * Finite-volume cell class for use in the CFD codes.
+ * (Fluid) Finite-volume cell class for use in the CFD codes.
  *
  * Author: Peter J. and Rowan G.
  * Version: 2014-07-17: initial cut, to explore options.
+ * History:
+ *   2024-02-05 -- rename class FVCell --> FluidFVCell
  */
 
-module fvcell;
+module lmr.fluidfvcell;
 
 import std.conv;
 import std.string;
@@ -57,7 +58,7 @@ string avg_over_iface_list(string quantity, string result)
     return code;
 }
 
-class FVCell {
+class FluidFVCell {
 public:
     int id;  // allows us to work out where, in the block, the cell is
     bool data_is_bad; // Set to false at the start of an update.
@@ -87,7 +88,7 @@ public:
     FVInterface[] iface;  // references to defining interfaces of cell
     int[] outsign; // +1 if iface is outward-facing; -1 for an inward-facing iface
     FVVertex[] vtx;  // references to vertices for quad (2D) and hexahedral (3D) cells
-    FVCell[] cell_cloud; // references to neighbouring cells
+    FluidFVCell[] cell_cloud; // references to neighbouring cells
     // More geometry
     number[] volume; // Cell volume for time-levels (per unit depth or radian in 2D), m**3
     number[] areaxy; // (x,y)-plane area for time-levels, m**2
@@ -148,7 +149,7 @@ public:
     double[2] electric_field;
 
     // Shape sensitivity calculator workspace
-    FVCell[] cell_list;            // list of cells in the residual stencil
+    FluidFVCell[] cell_list;            // list of cells in the residual stencil
     FVInterface[] face_list;       // list of faces in the residual stencil
     version(newton_krylov) {
         double[][] dRdU;
@@ -263,7 +264,7 @@ public:
     @property @nogc number kLength(number l) { return lengths[2] = l; }
 
     @nogc
-    void copy_values_from(FVCell other, int type_of_copy)
+    void copy_values_from(FluidFVCell other, int type_of_copy)
     {
         switch ( type_of_copy ) {
         case CopyDataOption.minimal_flow:
@@ -342,7 +343,7 @@ public:
     override string toString() const
     {
         char[] repr;
-        repr ~= "FVCell(";
+        repr ~= "FluidFVCell(";
         repr ~= "id=" ~ to!string(id);
         repr ~= ", universe_blk_id=" ~ to!string(myConfig.universe_blk_id);
         repr ~= ", pos=" ~ to!string(pos);
@@ -377,7 +378,7 @@ public:
     @nogc
     void update_2D_geometric_data(size_t gtl, bool axisymmetric)
     {
-        string msg = "FVCell.update_2D_geometric_data(): ";
+        string msg = "FluidFVCell.update_2D_geometric_data(): ";
         number vol, xyplane_area, iL, jL;
         switch (vtx.length) {
         case 3:
@@ -422,7 +423,7 @@ public:
     @nogc
     void update_3D_geometric_data(size_t gtl, bool true_centroid)
     {
-        string msg = "FVCell.update_3D_geometric_data(): ";
+        string msg = "FluidFVCell.update_3D_geometric_data(): ";
         number iL, jL, kL;
         switch (vtx.length) {
         case 4:
@@ -467,7 +468,7 @@ public:
         L_max = fmax(fmax(iLength, jLength), kLength);
     } // end update_3D_geometric_data()
 
-    void replace_flow_data_with_average(in FVCell[] others)
+    void replace_flow_data_with_average(in FluidFVCell[] others)
     {
         auto gmodel = myConfig.gmodel;
         size_t n = others.length;
@@ -560,7 +561,7 @@ public:
             }
         }
         assert(U[ftl][cqi.mass] > 0.0, "invalid density in conserved quantities vector" ~
-               " at end of FVCell.encode_conserved().");
+               " at end of FluidFVCell.encode_conserved().");
         return;
     } // end encode_conserved()
 
@@ -602,7 +603,7 @@ public:
                 return -1;
             } else {
                 debug {
-                    writeln("FVCell.decode_conserved(): Density invalid in conserved quantities.");
+                    writeln("FluidFVCell.decode_conserved(): Density invalid in conserved quantities.");
                     writeln("  universe-blk-id= ", myConfig.universe_blk_id, " cell-id= ", id);
                     writeln("  x= ", pos[gtl].x, " y= ", pos[gtl].y, " z= ", pos[gtl].z);
                     writeln("  gas= ", fs.gas);
@@ -1470,7 +1471,7 @@ public:
           TODO: extend to handle structured grid solver
          */
 
-        FVCell[] unordered_cell_list;  // TODO: think about possibly pre-sizing this array
+        FluidFVCell[] unordered_cell_list;  // TODO: think about possibly pre-sizing this array
         size_t[size_t] cell_pos_array; // this is used to retrieve a cell from the unordered list
 
         bool include_viscous_effects = myConfig.viscous;
@@ -1495,7 +1496,7 @@ public:
             // nearest neighbour cells in the cell cloud, so care must be taken to gather the correct cells
             size_t np = iface.length + 1;
             foreach (i; 1 .. np) {
-                FVCell cell = cell_cloud[i];
+                FluidFVCell cell = cell_cloud[i];
                 bool cell_exists = cell_ids.canFind(cell.id);
                 if (!cell_exists && cell.id < 1_000_000_000 && is_interior_to_domain) {
                     unordered_cell_list ~= cell;
@@ -1546,7 +1547,7 @@ public:
 
     } // end gather_residual_stencil_lists()
 
-    void gather_residual_stencil_lists_for_ghost_cells(int spatial_order_of_jacobian, FVCell[] neighbour_cell_cloud)
+    void gather_residual_stencil_lists_for_ghost_cells(int spatial_order_of_jacobian, FluidFVCell[] neighbour_cell_cloud)
     {
         /*
           This function gathers references to the interfaces and cells
@@ -1601,4 +1602,4 @@ public:
 
     } // end gather_residual_stencil_lists_for_ghost_cells()
 
-} // end class FVCell
+} // end class FluidFVCell

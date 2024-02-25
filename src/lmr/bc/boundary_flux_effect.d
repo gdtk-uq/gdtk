@@ -28,11 +28,10 @@ import globaldata;
 import fluidblock;
 import sfluidblock;
 import ufluidblock;
-import fvcell;
+import lmr.fluidfvcell;
 import fvinterface;
 import solidfvcell;
 import solidfvinterface;
-import gas_solid_interface;
 import flowstate;
 import gas;
 import bc;
@@ -307,7 +306,7 @@ private:
     // We'll pack data into these can pass out
     // to a routine that can compute the flux and
     // temperatures that balance at the interface.
-    FVCell[] _gasCells;
+    FluidFVCell[] _gasCells;
     FVInterface[] _gasIFaces;
     SolidFVCell[] _solidCells;
     SolidFVInterface[] _solidIFaces;
@@ -522,7 +521,7 @@ public:
         //
         BoundaryCondition bc = blk.bc[which_boundary];
 	int outsign = bc.outsigns[f.i_bndry];
-	FVCell interior_cell = (outsign == 1) ? f.left_cell : f.right_cell;
+	FluidFVCell interior_cell = (outsign == 1) ? f.left_cell : f.right_cell;
 	compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, f);
     }
 
@@ -536,7 +535,7 @@ public:
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, face; bc.faces) {
             int outsign = bc.outsigns[i];
-            FVCell interior_cell = (outsign == 1) ? face.left_cell : face.right_cell;
+            FluidFVCell interior_cell = (outsign == 1) ? face.left_cell : face.right_cell;
             compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, face);
         }
     }
@@ -549,7 +548,7 @@ public:
         assert(!(blk.myConfig.MHD), "Oops, not implemented for MHD.");
         BoundaryCondition bc = blk.bc[which_boundary];
 	int outsign = bc.outsigns[f.i_bndry];
-	FVCell interior_cell = (outsign == 1) ? f.left_cells[0] : f.right_cells[0];
+	FluidFVCell interior_cell = (outsign == 1) ? f.left_cells[0] : f.right_cells[0];
 	compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, f);
     } // end apply_for_interface_structured_grid()
 
@@ -563,7 +562,7 @@ public:
         //
         foreach (i, f; bc.faces) {
             int outsign = bc.outsigns[i];
-            FVCell interior_cell = (outsign == 1) ? f.left_cells[0] : f.right_cells[0];
+            FluidFVCell interior_cell = (outsign == 1) ? f.left_cells[0] : f.right_cells[0];
             compute_outflow_flux(interior_cell.fs, outsign, blk.omegaz, f);
         }
     } // end apply_structured_grid()

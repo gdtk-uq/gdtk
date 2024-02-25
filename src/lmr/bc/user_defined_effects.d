@@ -29,7 +29,7 @@ import gas.gas_state;
 import geom;
 import simcore;
 import flowstate;
-import fvcell;
+import lmr.fluidfvcell;
 import fvinterface;
 import sfluidblock: SFluidBlock;
 import sfluidblock : cell_index_to_logical_coordinates;
@@ -61,7 +61,7 @@ public:
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
         size_t j = 0, k = 0;
-        FVCell[1] ghostCells;
+        FluidFVCell[1] ghostCells;
         BoundaryCondition bc = blk.bc[which_boundary];
 	if (bc.outsigns[f.i_bndry] == 1) {
 	    ghostCells[0] = f.right_cell;
@@ -75,7 +75,7 @@ public:
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         size_t j = 0, k = 0;
-        FVCell[1] ghostCells;
+        FluidFVCell[1] ghostCells;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             if (bc.outsigns[i] == 1) {
@@ -172,7 +172,7 @@ public:
 
 private:
     // not @nogc
-    void putFlowStateIntoGhostCell(lua_State* L, int tblIdx, FVCell ghostCell)
+    void putFlowStateIntoGhostCell(lua_State* L, int tblIdx, FluidFVCell ghostCell)
     {
         int old_top = lua_gettop(L);
         auto gmodel = blk.myConfig.gmodel;
@@ -235,7 +235,7 @@ private:
 
     // not @nogc because of Lua functions
     void callGhostCellUDF(double t, int gtl, int ftl, size_t i, size_t j, size_t k,
-                          in FVInterface IFace, FVCell[] ghostCells)
+                          in FVInterface IFace, FluidFVCell[] ghostCells)
     {
         // 1. Set up for calling function
         auto L = blk.bc[which_boundary].myL;
@@ -599,7 +599,7 @@ public:
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
         size_t j = 0, k = 0;
-        FVCell ghost0, ghost1;
+        FluidFVCell ghost0, ghost1;
         BoundaryCondition bc = blk.bc[which_boundary];
         int outsign = bc.outsigns[f.i_bndry];
         callFluxUDF(t, gtl, ftl, f.i_bndry, j, k, f, outsign);
@@ -610,7 +610,7 @@ public:
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         size_t j = 0, k = 0;
-        FVCell ghost0, ghost1;
+        FluidFVCell ghost0, ghost1;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             int outsign = bc.outsigns[f.i_bndry];

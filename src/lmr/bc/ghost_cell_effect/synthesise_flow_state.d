@@ -19,7 +19,6 @@ import globalconfig;
 import globaldata;
 import flowstate;
 import fvinterface;
-import fvcell;
 import fluidblock;
 import sfluidblock;
 import gas;

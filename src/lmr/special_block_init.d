@@ -16,13 +16,13 @@ import nm.number;
 
 import globalconfig;
 import fluidblock;
-import fvcell;
+import lmr.fluidfvcell;
 import fvinterface;
 
 void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
 {
-    FVCell[] cellsAlongWalls;
-    FVCell[size_t] cellsInDiffusionZone;
+    FluidFVCell[] cellsAlongWalls;
+    FluidFVCell[size_t] cellsInDiffusionZone;
     size_t[] cellsAddedLastStep;
     size_t[] cellsAddedThisStep;
     double eps = 1.0e-25;

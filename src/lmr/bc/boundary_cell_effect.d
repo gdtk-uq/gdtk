@@ -12,7 +12,7 @@ import std.json;
 import std.string;
 
 import globalconfig: FlowSolverException;
-import fvcell;
+import lmr.fluidfvcell;
 import fvinterface;
 import geom;
 import fluidblock;
@@ -109,14 +109,14 @@ public:
         // Apply the cell flags, just once.
         if (_cells_need_to_be_flagged) {
             foreach (i, f; bc.faces) {
-                FVCell c = (bc.outsigns[i] == 1) ? f.left_cells[0] : f.right_cells[0];
+                FluidFVCell c = (bc.outsigns[i] == 1) ? f.left_cells[0] : f.right_cells[0];
                 c.allow_k_omega_update = false;
             }
             _cells_need_to_be_flagged = false;
         }
         // Do some real work.
         foreach (i, f; bc.faces) {
-            FVCell c = (bc.outsigns[i] == 1) ? f.left_cells[0] : f.right_cells[0];
+            FluidFVCell c = (bc.outsigns[i] == 1) ? f.left_cells[0] : f.right_cells[0];
             version(turbulence) {
                 c.fs.turb[0] = f.fs.turb[0];
                 c.fs.turb[1] = f.fs.turb[1];

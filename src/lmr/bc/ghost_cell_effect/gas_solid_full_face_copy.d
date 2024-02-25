@@ -22,7 +22,7 @@ import globalconfig;
 import globaldata;
 import flowstate;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell;
 import fluidblock;
 import sfluidblock;
 import ssolidblock;
@@ -79,7 +79,7 @@ public:
     // For each ghost cell associated with the boundary,
     // we will have a corresponding "mapped" or "source" cell
     // from which we will copy the flow conditions.
-    FVCell[] gasCells;
+    FluidFVCell[] gasCells;
     SolidFVCell[] mapped_cells;
     size_t[] mapped_cell_ids;
     // Later, it is convenient to use a different notation for the data exchange.
@@ -96,7 +96,7 @@ public:
         // the other source block so these the cells in the current block
         // for which data should be sent to the source block.
         size_t[] outgoing_mapped_cell_ids;
-        FVCell[] outgoing_mapped_cells;
+        FluidFVCell[] outgoing_mapped_cells;
         int other_blk_rank;
         int outgoing_cell_ids_tag, incoming_cell_ids_tag;
         MPI_Request incoming_cell_ids_request;

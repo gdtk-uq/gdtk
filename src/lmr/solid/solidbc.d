@@ -17,7 +17,7 @@ import solid_boundary_interface_effect;
 import solid_boundary_flux_effect;
 import ssolidblock;
 import globaldata;
-import fvcell;
+import lmr.fluidfvcell;
 import solidfvcell;
 import solidfvinterface;
 
@@ -66,7 +66,7 @@ public:
     SolidBoundaryInterfaceEffect[] preSpatialDerivActionAtBndryFaces;
     SolidBoundaryFluxEffect[] postFluxAction;
     // data structures used for the special coupled fluid-solid boundary condition
-    FVCell[] gasCells;
+    FluidFVCell[] gasCells;
     SolidFVCell[] solidCells;
     SolidFVInterface[] ifaces;
     

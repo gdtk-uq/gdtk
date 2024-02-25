@@ -13,7 +13,7 @@ import globalconfig;
 import globaldata;
 import flowstate;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell;
 import fluidblock;
 import sfluidblock;
 import gas;
@@ -37,7 +37,7 @@ public:
 
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        FVCell src_cell, ghost0;
+        FluidFVCell src_cell, ghost0;
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
     	if (bc.outsigns[f.i_bndry] == 1) {
@@ -55,7 +55,7 @@ public:
     @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        FVCell src_cell, ghost0;
+        FluidFVCell src_cell, ghost0;
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
         foreach (i, f; bc.faces) {
@@ -75,7 +75,7 @@ public:
     @nogc
     override void apply_for_interface_structured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        FVCell src_cell, dest_cell;
+        FluidFVCell src_cell, dest_cell;
         auto gmodel = blk.myConfig.gmodel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
@@ -97,7 +97,7 @@ public:
     @nogc
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        FVCell src_cell, dest_cell;
+        FluidFVCell src_cell, dest_cell;
         auto gmodel = blk.myConfig.gmodel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");

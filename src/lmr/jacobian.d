@@ -16,7 +16,7 @@ import nm.smla;
 import nm.bbla;
 
 import globalconfig;
-import fvcell;
+import lmr.fluidfvcell;
 import fvinterface;
 
 
@@ -84,7 +84,7 @@ public:
         Dinv = new Matrix!double(nConserved,nConserved);
     } // end size_local_matrix()
 
-    void augment_with_dt(FVCell[] cells, size_t nConserved)
+    void augment_with_dt(FluidFVCell[] cells, size_t nConserved)
     {
         /*
           This method augments the Jacobian by adding the inverse pseudo-time term in the form A = 1/dt - dR/dU

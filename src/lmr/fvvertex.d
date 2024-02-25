@@ -15,7 +15,7 @@ import gas;
 import globalconfig;
 import flowstate;
 import flowgradients;
-import fvcell;
+import lmr.fluidfvcell : FluidFVCell;
 import fvinterface;
 import lsqinterp;
 import ntypes.complex;
@@ -32,7 +32,7 @@ public:
     number radial_pos_norm = 0;
     Vector3*[] cloud_pos; // Positions of flow points for derivative calculation.
     FlowState*[] cloud_fs; // References to flow states at those points.
-    FVCell[] cell_cloud; // for the MLP limiter we need access to the gradients within each cell
+    FluidFVCell[] cell_cloud; // for the MLP limiter we need access to the gradients within each cell
     WLSQGradWorkspace* ws_grad;
     LSQInterpGradients* gradients; // needed for the MLP limiter
 

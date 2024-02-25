@@ -20,7 +20,7 @@ import globalconfig;
 import globaldata;
 import flowstate;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell;
 import fluidblock;
 import sfluidblock;
 import gas;
@@ -44,7 +44,7 @@ public:
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
         BoundaryCondition bc = blk.bc[which_boundary];
-        FVCell inside, ghost;
+        FluidFVCell inside, ghost;
         bool upwind_is_inside;
         if (bc.outsigns[f.i_bndry] == 1) {
             ghost = f.right_cell;
@@ -78,7 +78,7 @@ public:
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
-        FVCell inside, ghost;
+        FluidFVCell inside, ghost;
         bool upwind_is_inside;
         if (bc.outsigns[f.i_bndry] == 1) {
             ghost = f.right_cells[0];
@@ -143,7 +143,7 @@ public:
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
         BoundaryCondition bc = blk.bc[which_boundary];
-        FVCell inside, ghost;
+        FluidFVCell inside, ghost;
         bool upwind_is_inside;
         if (bc.outsigns[f.i_bndry] == 1) {
             ghost = f.right_cell;
@@ -178,7 +178,7 @@ public:
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         BoundaryCondition bc = blk.bc[which_boundary];
-        FVCell inside, ghost;
+        FluidFVCell inside, ghost;
         bool upwind_is_inside;
         if (bc.outsigns[f.i_bndry] == 1) {
             ghost = f.right_cells[0];

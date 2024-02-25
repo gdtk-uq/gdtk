@@ -13,7 +13,7 @@ import std.format;
 import std.conv;
 import std.json;
 
-import fvcell;
+import lmr.fluidfvcell;
 import fvinterface;
 import geom;
 import json_helper;
@@ -32,7 +32,7 @@ interface FieldBC {
     double rhs_direct_component(double sign, double fac, const FVInterface face);
     double rhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface);
     double lhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface);
-    double compute_current(const double sign, const FVInterface face, const FVCell cell);
+    double compute_current(const double sign, const FVInterface face, const FluidFVCell cell);
 }
 
 class ZeroNormalGradient : FieldBC {
@@ -47,7 +47,7 @@ class ZeroNormalGradient : FieldBC {
     final double rhs_direct_component(double sign, double fac, const FVInterface face){ return 0.0;}
     final double rhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){ return 0.0; }
     final double lhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){ return 0.0; }
-    final double compute_current(const double sign, const FVInterface face, const FVCell cell){ return 0.0; }
+    final double compute_current(const double sign, const FVInterface face, const FluidFVCell cell){ return 0.0; }
 
     override string toString() const
     {
@@ -72,7 +72,7 @@ class FixedField : FieldBC {
     }
     final double lhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface) { return 0.0; }
 
-    final double compute_current(const double sign, const FVInterface face, const FVCell cell){
+    final double compute_current(const double sign, const FVInterface face, const FluidFVCell cell){
         double S = face.length.re;
         double d = distance_between(face.pos, cell.pos[0]);
         double phigrad = (value - cell.electric_potential)/d; // This implicitly points out of the domain.
@@ -167,7 +167,7 @@ class MixedField : FieldBC {
         }
     }
 
-    final double compute_current(const double sign, const FVInterface face, const FVCell cell){
+    final double compute_current(const double sign, const FVInterface face, const FluidFVCell cell){
         double I;
         if (face.pos.x<xinsulator){
             I = nose.compute_current(sign, face, cell);
@@ -199,7 +199,7 @@ class FixedField_Test : FieldBC {
     }
     final double lhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface) { return 0.0; }
 
-    final double compute_current(const double sign, const FVInterface face, const FVCell cell){
+    final double compute_current(const double sign, const FVInterface face, const FluidFVCell cell){
         double S = face.length.re;
         double d = distance_between(face.pos, cell.pos[0]);
         double phi = test_field(face.pos.x.re, face.pos.y.re);
@@ -239,7 +239,7 @@ class FixedGradient_Test : FieldBC {
     final double rhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){ return 0.0; }
     final double lhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface) { return 0.0; }
 
-    final double compute_current(const double sign, const FVInterface face, const FVCell cell){
+    final double compute_current(const double sign, const FVInterface face, const FluidFVCell cell){
         double S = face.length.re;
         Vector3 phigrad = test_field_gradient(face.pos.x.re, face.pos.y.re);
         number phigrad_dot_n = sign*phigrad.dot(face.n); // TODO: Should this be negative sign?
@@ -309,7 +309,7 @@ class SharedField : FieldBC {
     final double lhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){
         return (facx*fdx + facy*fdy)/D;
     }
-    final double compute_current(const double sign, const FVInterface face, const FVCell cell){
+    final double compute_current(const double sign, const FVInterface face, const FluidFVCell cell){
         return 0.0;
     }
 }
@@ -384,7 +384,7 @@ class MPISharedField : FieldBC {
     final double lhs_stencil_component(double D, double facx, double facy, double fdx, double fdy, FVInterface jface){
         return (facx*fdx + facy*fdy)/D;
     }
-    final double compute_current(const double sign, const FVInterface face, const FVCell cell){
+    final double compute_current(const double sign, const FVInterface face, const FluidFVCell cell){
         return 0.0;
     }
 

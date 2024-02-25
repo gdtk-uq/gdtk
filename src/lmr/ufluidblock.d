@@ -31,7 +31,7 @@ import fluxcalc;
 import flowgradients;
 import fvvertex;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell : FluidFVCell;
 import lsqinterp;
 import fluidblock;
 import bc;
@@ -174,7 +174,7 @@ public:
                     luaL_error(L, errMsg.toStringz);
                 }
             }
-            cells[cell_idx] = new FVCell(myConfig, pos, *myfs, volume, to!int(cell_idx));
+            cells[cell_idx] = new FluidFVCell(myConfig, pos, *myfs, volume, to!int(cell_idx));
         }
         if (lua_fs) { lua_settop(L, 0); }
     } // end constructor from Lua state
@@ -311,7 +311,7 @@ public:
             // We will reply upon this connection in other parts of the flow code.
             bool lsq_workspace_at_cells = (myConfig.viscous) && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
                 && (myConfig.spatial_deriv_locn == SpatialDerivLocn.cells);
-            auto new_cell = new FVCell(myConfig, lsq_workspace_at_cells, to!int(i));
+            auto new_cell = new FluidFVCell(myConfig, lsq_workspace_at_cells, to!int(i));
             new_cell.contains_flow_data = true;
             new_cell.is_interior_to_domain = true;
             cells ~= new_cell;
@@ -393,9 +393,9 @@ public:
 		bc[i].outsigns ~= my_outsign;
 		my_face.i_bndry = bc[i].outsigns.length - 1;
 		if (bc[i].ghost_cell_data_available) {
-                    // Make ghost-cell id values distinct from FVCell ids so that
+                    // Make ghost-cell id values distinct from FluidFVCell ids so that
                     // the warning/error messages are somewhat informative.
-                    FVCell ghost0 = new FVCell(myConfig, false, ghost_cell_start_id+ghost_cell_count);
+                    FluidFVCell ghost0 = new FluidFVCell(myConfig, false, ghost_cell_start_id+ghost_cell_count);
                     ghost_cell_count++;
                     ghost0.contains_flow_data = bc[i].ghost_cell_data_available;
                     bc[i].ghostcells ~= ghost0;
@@ -764,7 +764,7 @@ public:
 
     @nogc
     override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0,
-                                         FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
+                                         FluidFVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
     // Compute gradients of flow quantities for higher-order reconstruction, if required.
     // To be used, later, in the convective flux calculation.
     {
@@ -788,7 +788,7 @@ public:
 
         @nogc
     override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0,
-                                         FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
+                                         FluidFVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
         // Compute limiter values of flow quantities for higher-order reconstruction, if required.
         // To be used, later, in the convective flux calculation.
     {
@@ -845,7 +845,7 @@ public:
 
     @nogc
     override void convective_flux_phase2(bool allow_high_order_interpolation, size_t gtl=0,
-                                         FVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
+                                         FluidFVCell[] cell_list = [], FVInterface[] iface_list = [], FVVertex[] vertex_list = [])
     // Make use of the flow gradients to actually do the high-order reconstruction
     // and then compute fluxes of conserved quantities at all faces.
     {

@@ -17,7 +17,7 @@ import globalconfig;
 import globaldata;
 import flowstate;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell;
 import fluidblock;
 import sfluidblock;
 import gas;
@@ -139,7 +139,7 @@ public:
             number rhovzA = 0.0;
             number rhoA = 0.0;
             number pA = 0.0;
-            FVCell cell;
+            FluidFVCell cell;
             //
             foreach (i, face; bc.faces) {
                 int outsign = bc.outsigns[i];
@@ -217,7 +217,7 @@ public:
         lua_settop(L, 0);
     } // end callUDFstagnationPT()
 
-    void determine_inflow_condition_at_face(FVInterface face, FVCell cell, int outsign, GasModel gmodel)
+    void determine_inflow_condition_at_face(FVInterface face, FluidFVCell cell, int outsign, GasModel gmodel)
     {
         number inflow_speed = -outsign * dot(cell.fs.vel, face.n);
         // Block any outflow with stagnation condition.
@@ -249,8 +249,8 @@ public:
             throw new Error("GhostCellFromStagnation.apply_for_interface_unstructured_grid() with lua UDF not yet implemented");
         }
         int outsign = bc.outsigns[face.i_bndry];
-        FVCell cell = (outsign == 1) ? face.left_cell : face.right_cell;
-        FVCell ghost0 = (outsign == 1) ? face.right_cell : face.left_cell;
+        FluidFVCell cell = (outsign == 1) ? face.left_cell : face.right_cell;
+        FluidFVCell ghost0 = (outsign == 1) ? face.right_cell : face.left_cell;
         determine_inflow_condition_at_face(face, cell, outsign, gmodel);
         ghost0.fs.copy_values_from(inflow_condition);
     }
@@ -265,8 +265,8 @@ public:
         // Now, apply the ghost-cell conditions
         foreach (i, face; bc.faces) {
             int outsign = bc.outsigns[i];
-            FVCell cell = (outsign == 1) ? face.left_cell : face.right_cell;
-            FVCell ghost0 = (outsign == 1) ? face.right_cell : face.left_cell;
+            FluidFVCell cell = (outsign == 1) ? face.left_cell : face.right_cell;
+            FluidFVCell ghost0 = (outsign == 1) ? face.right_cell : face.left_cell;
             determine_inflow_condition_at_face(face, cell, outsign, gmodel);
             ghost0.fs.copy_values_from(inflow_condition);
         }
@@ -277,10 +277,10 @@ public:
         auto gmodel = blk.myConfig.gmodel;
         auto bc = blk.bc[which_boundary];
         int outsign = bc.outsigns[f.i_bndry];
-        FVCell cell = (outsign == 1) ? f.left_cells[0] : f.right_cells[0];
+        FluidFVCell cell = (outsign == 1) ? f.left_cells[0] : f.right_cells[0];
         determine_inflow_condition_at_face(f, cell, outsign, gmodel);
         foreach (n; 0 .. blk.n_ghost_cell_layers) {
-            FVCell ghost = (outsign == 1) ? f.right_cells[n] : f.left_cells[n];
+            FluidFVCell ghost = (outsign == 1) ? f.right_cells[n] : f.left_cells[n];
             ghost.fs.copy_values_from(inflow_condition);
         }
     }
@@ -297,10 +297,10 @@ public:
         }
         foreach (i, face; bc.faces) {
             int outsign = bc.outsigns[i];
-            FVCell cell = (outsign == 1) ? face.left_cells[0] : face.right_cells[0];
+            FluidFVCell cell = (outsign == 1) ? face.left_cells[0] : face.right_cells[0];
             determine_inflow_condition_at_face(face, cell, outsign, gmodel);
             foreach (n; 0 .. blk.n_ghost_cell_layers) {
-                FVCell ghost = (outsign == 1) ? face.right_cells[n] : face.left_cells[n];
+                FluidFVCell ghost = (outsign == 1) ? face.right_cells[n] : face.left_cells[n];
                 ghost.fs.copy_values_from(inflow_condition);
             }
         }

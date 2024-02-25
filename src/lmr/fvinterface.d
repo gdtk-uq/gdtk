@@ -23,7 +23,7 @@ import nm.bbla;
 import geom;
 import gas;
 import fvvertex;
-import fvcell;
+import lmr.fluidfvcell;
 import flowstate;
 import flowgradients;
 import conservedquantities;
@@ -61,12 +61,12 @@ public:
     // These are references to either active cells or ghost cells.
     // The reference may be nil if no cell has been assigned,
     // maybe for a boundary without ghost cells.
-    FVCell left_cell;      // interface normal points out of this adjoining cell
-    FVCell right_cell;     // interface normal points into this adjoining cell
+    FluidFVCell left_cell;      // interface normal points out of this adjoining cell
+    FluidFVCell right_cell;     // interface normal points into this adjoining cell
     // For structured grids, the structure of the grid allows us to carry
     // references for several left- and right- cells.
-    FVCell[] left_cells;
-    FVCell[] right_cells;
+    FluidFVCell[] left_cells;
+    FluidFVCell[] right_cells;
     //
     // Flow
     FlowState fs;          // Flow properties
@@ -374,7 +374,7 @@ public:
             if (!left_cell && !right_cell) {
                 throw new Exception("Oops! This face does not have at least one cell attached.");
             }
-            FVCell c = (right_cell && right_cell.is_interior_to_domain) ? right_cell : left_cell;
+            FluidFVCell c = (right_cell && right_cell.is_interior_to_domain) ? right_cell : left_cell;
             Vector3 tangent;
             foreach (i; 0 .. vtx.length) {
                 tangent.set(pos); tangent -= vtx[i].pos[0]; tangent.normalize();
@@ -421,7 +421,7 @@ public:
             // that doesn't have a mapping to a cell in a neighbouring block.
             // This means that the interface is along a domain boundary.
             // We just copy the gradient from the interior-cell to the interface.
-            FVCell c = (right_cell && right_cell.is_interior_to_domain) ? right_cell : left_cell;
+            FluidFVCell c = (right_cell && right_cell.is_interior_to_domain) ? right_cell : left_cell;
             // vel-x
             grad.vel[0][0] = c.grad.vel[0][0];
             grad.vel[0][1] = c.grad.vel[0][1];
@@ -466,8 +466,8 @@ public:
             // With two attached cells, we are at a face that is internal to the domain
             // and so we can proceed to compute the average of the gradient values.
             number qL; number qR;
-            FVCell cL0 = left_cell; // i
-            FVCell cR0 = right_cell; // j
+            FluidFVCell cL0 = left_cell; // i
+            FluidFVCell cR0 = right_cell; // j
             // interface normal
             number nx = n.x;
             number ny = n.y;

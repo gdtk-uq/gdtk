@@ -18,9 +18,9 @@ import gas;
 import globalconfig;
 import flowstate;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell;
 
-immutable size_t cloud_nmax = 112;
+immutable size_t cloud_nmax = 112; // ??? WHY? [TODO] Add some comment for this selection please
 immutable double ESSENTIALLY_ZERO = 1.0e-50;
 
 
@@ -37,7 +37,7 @@ public:
     }
 
     @nogc
-    void assemble_and_invert_normal_matrix(FVCell[] cell_cloud, int dimensions, size_t gtl)
+    void assemble_and_invert_normal_matrix(FluidFVCell[] cell_cloud, int dimensions, size_t gtl)
     {
         auto np = cell_cloud.length;
         assert(np <= cloud_nmax, "Too many points in cloud.");
@@ -281,7 +281,7 @@ public:
     } // end copy_values_from()
 
     @nogc
-    void barth_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
+    void barth_limit(FluidFVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
     {
         // This is the classic Barth and Jespersen limiter from ref. [1], refer to ref. [2] for implementation details.
         //
@@ -401,7 +401,7 @@ public:
     } // end barth_limit()
 
     @nogc
-    void venkat_mlp_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
+    void venkat_mlp_limit(FluidFVCell[] cell_cloud, ref LSQInterpWorkspace ws,
                           bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig, size_t gtl=0)
     {
         // This is an implementation of the multi-dimensional limiting process from ref. [1],
@@ -564,7 +564,7 @@ public:
     } // end venkat_mlp_limit()
 
     @nogc
-    void van_albada_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
+    void van_albada_limit(FluidFVCell[] cell_cloud, ref LSQInterpWorkspace ws,
                           bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig, size_t gtl=0)
     {
         // This is the classic Van Albada limiter from ref. [1] implemented in the unstructured grid
@@ -712,7 +712,7 @@ public:
     } // end van_albada_limit()
 
     @nogc
-    void venkat_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
+    void venkat_limit(FluidFVCell[] cell_cloud, ref LSQInterpWorkspace ws,
                       bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig, size_t gtl=0)
     {
         // This is the classic Venkatakrishnan limiter from ref. [1], refer to ref. [2] for implementation details.
@@ -871,7 +871,7 @@ public:
     } // end venkat_limit()
 
     @nogc
-    void nishikawa_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
+    void nishikawa_limit(FluidFVCell[] cell_cloud, ref LSQInterpWorkspace ws,
                          bool apply_heuristic_pressure_limiter, ref LocalConfig myConfig, size_t gtl=0)
     {
         // This is the R3 limiter from ref. [1].
@@ -1020,7 +1020,7 @@ public:
     } // end nishikawa_limit()
 
     @nogc
-    void park_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
+    void park_limit(FluidFVCell[] cell_cloud, ref LSQInterpWorkspace ws,
                     ref LocalConfig myConfig, size_t gtl=0)
     {
         // Pressure-based heuristic limiter
@@ -1033,7 +1033,7 @@ public:
         // removes a source of noise in the reconstruction process, while still prioritising
         // small values of s in the averaging process. (09/08/22)
 
-        FVCell ncell;
+        FluidFVCell ncell;
         number pmin;
         number phi = 0.0;
         number n = 0.0;
@@ -1120,7 +1120,7 @@ public:
     } // end park_limit()
 
     @nogc
-    void store_max_min_values_for_compact_stencil(FVCell[] cell_cloud, ref LocalConfig myConfig)
+    void store_max_min_values_for_compact_stencil(FluidFVCell[] cell_cloud, ref LocalConfig myConfig)
     {
         // Some of the limiters require the maximum and minimum flowstate variables in the reconstruction stencil
 
@@ -1217,7 +1217,7 @@ public:
     } // end store_max_min_values_for_compact_stencil()
 
     @nogc
-    void store_max_min_values_for_extended_stencil(FVCell[] cell_cloud, ref LocalConfig myConfig)
+    void store_max_min_values_for_extended_stencil(FluidFVCell[] cell_cloud, ref LocalConfig myConfig)
     {
         // the MLP limiter is unique in that it requires the max/min values from a stencil that includes all cells attached to the vertices of a cell
 
@@ -1316,7 +1316,7 @@ public:
     } // end store_max_min_values_for_extended_stencil()
 
     @nogc
-    void compute_lsq_values(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
+    void compute_lsq_values(FluidFVCell[] cell_cloud, ref LSQInterpWorkspace ws,
                             ref LocalConfig myConfig)
     {
         size_t dimensions = myConfig.dimensions;
@@ -1449,8 +1449,8 @@ public:
         auto nsp = myConfig.n_species;
         auto nmodes = myConfig.n_modes;
         auto nturb = myConfig.turb_model.nturb;
-        FVCell cL0 = IFace.left_cell;
-        FVCell cR0 = IFace.right_cell;
+        FluidFVCell cL0 = IFace.left_cell;
+        FluidFVCell cR0 = IFace.right_cell;
         // Low-order reconstruction just copies data from adjacent FV_Cell.
         // Even for high-order reconstruction, we depend upon this copy for
         // the viscous-transport and diffusion coefficients.
@@ -1811,7 +1811,7 @@ public:
         auto nsp = myConfig.n_species;
         auto nmodes = myConfig.n_modes;
         auto nturb = myConfig.turb_model.nturb;
-        FVCell cR0 = IFace.right_cell;
+        FluidFVCell cR0 = IFace.right_cell;
         // Low-order reconstruction just copies data from adjacent FV_Cell.
         // Even for high-order reconstruction, we depend upon this copy for
         // the viscous-transport and diffusion coefficients.
@@ -2082,7 +2082,7 @@ public:
         auto nsp = myConfig.n_species;
         auto nmodes = myConfig.n_modes;
         auto nturb = myConfig.turb_model.nturb;
-        FVCell cL0 = IFace.left_cell;
+        FluidFVCell cL0 = IFace.left_cell;
         // Low-order reconstruction just copies data from adjacent FV_Cell.
         // Even for high-order reconstruction, we depend upon this copy for
         // the viscous-transport and diffusion coefficients.

@@ -14,7 +14,7 @@ import globalconfig;
 import globaldata;
 import flowstate;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell;
 import fluidblock;
 import sfluidblock;
 import gas;
@@ -43,7 +43,7 @@ public:
     // not @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        FVCell ghost0;
+        FluidFVCell ghost0;
         BoundaryCondition bc = blk.bc[which_boundary];
         auto gmodel = blk.myConfig.gmodel;
         fhistory.set_flowstate(my_fs, t, gmodel);

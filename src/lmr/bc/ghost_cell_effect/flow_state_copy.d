@@ -14,7 +14,7 @@ import globalconfig;
 import globaldata;
 import flowstate;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell;
 import fluidblock;
 import sfluidblock;
 import gas;
@@ -108,7 +108,7 @@ public:
 
 private:
     @nogc
-    void compute_source_flow(FVCell c)
+    void compute_source_flow(FluidFVCell c)
     {
         auto cqi = blk.myConfig.cqi;
         // Start by assuming uniform, parallel flow.

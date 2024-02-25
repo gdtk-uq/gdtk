@@ -14,11 +14,10 @@ LMR_CORE_FILES = $(LMR)/block.d \
 	$(LMR)/fluidblock.d \
 	$(LMR)/fluidblockarray.d \
 	$(LMR)/fluxcalc.d \
-	$(LMR)/fvcell.d \
+	$(LMR)/fluidfvcell.d \
 	$(LMR)/fvcellio.d \
 	$(LMR)/fvinterface.d \
 	$(LMR)/fvvertex.d \
-	$(LMR)/gas_solid_interface.d \
 	$(LMR)/globalconfig.d \
 	$(LMR)/globaldata.d \
 	$(LMR)/grid_motion.d \

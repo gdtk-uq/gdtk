@@ -13,7 +13,7 @@ import globalconfig;
 import globaldata;
 import flowstate;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell;
 import fluidblock;
 import sfluidblock;
 import gas;
@@ -38,27 +38,27 @@ public:
     @nogc
     override void apply_for_interface_unstructured_grid(double t, int gtl, int ftl, FVInterface f)
     {
-        FVCell src_cell, ghost0;
+        FluidFVCell src_cell, ghost0;
         BoundaryCondition bc = blk.bc[which_boundary];
-	if (bc.outsigns[f.i_bndry] == 1) {
-	    src_cell = f.left_cell;
-	    ghost0 = f.right_cell;
-	} else {
-	    src_cell = f.right_cell;
-	    ghost0 = f.left_cell;
-	}
-	if (xOrder == 1) {
-	    throw new Error("Linear extrapolation not implemented.");
-	} else {
-	    // Zero-order extrapolation.
-	    ghost0.fs.copy_values_from(src_cell.fs);
-	}
+        if (bc.outsigns[f.i_bndry] == 1) {
+            src_cell = f.left_cell;
+            ghost0 = f.right_cell;
+        } else {
+        src_cell = f.right_cell;
+        ghost0 = f.left_cell;
+        }
+        if (xOrder == 1) {
+            throw new Error("Linear extrapolation not implemented.");
+        } else {
+        // Zero-order extrapolation.
+        ghost0.fs.copy_values_from(src_cell.fs);
+        }
     } // end apply_unstructured_grid()
 
     @nogc
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        FVCell src_cell, ghost0;
+        FluidFVCell src_cell, ghost0;
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             if (bc.outsigns[i] == 1) {
@@ -88,7 +88,7 @@ public:
             // using zero-order extrapolation (i.e. just copy the data).
             // We assume that this boundary is an outflow boundary.
             foreach (n; 0 .. blk.n_ghost_cell_layers) {
-                FVCell src_cell, dest_cell;
+                FluidFVCell src_cell, dest_cell;
                 if (bc.outsigns[f.i_bndry] == 1) {
                     src_cell = f.left_cells[0];
                     dest_cell = f.right_cells[n];
@@ -103,7 +103,7 @@ public:
             //    |---c0---|---c1---|---c2---|
             // This extrapolation assumes that cell-spacing is uniform.
             if (blk.n_ghost_cell_layers > 0)  {
-                FVCell c0, c1, c2;
+                FluidFVCell c0, c1, c2;
                 if (bc.outsigns[f.i_bndry] == 1) {
                     c0 = f.left_cells[1]; c1 = f.left_cells[0]; c2 = f.right_cells[0];
                 } else {
@@ -132,7 +132,7 @@ public:
             // We assume that this boundary is an outflow boundary.
             foreach (i, f; bc.faces) {
                 foreach (n; 0 .. blk.n_ghost_cell_layers) {
-                    FVCell src_cell, dest_cell;
+                    FluidFVCell src_cell, dest_cell;
                     if (bc.outsigns[i] == 1) {
                         src_cell = f.left_cells[0];
                         dest_cell = f.right_cells[n];
@@ -149,7 +149,7 @@ public:
             // This extrapolation assumes that cell-spacing is uniform.
             foreach (i, f; bc.faces) {
                 if (blk.n_ghost_cell_layers == 0) continue;
-                FVCell c0, c1, c2;
+                FluidFVCell c0, c1, c2;
                 if (bc.outsigns[i] == 1) {
                     c0 = f.left_cells[1]; c1 = f.left_cells[0]; c2 = f.right_cells[0];
                 } else {

@@ -19,7 +19,7 @@ import ntypes.complex;
 
 import globalconfig;
 import lmrexceptions : LmrException;
-import fvcell : FVCell;
+import lmr.fluidfvcell : FluidFVCell;
 import flowstate : FlowState;
 import geom : Vector3;
 
@@ -116,8 +116,8 @@ public:
 
 abstract:
     FVCellIO dup();
-    const double opIndex(FVCell cell, string var);
-    ref double opIndexAssign(double value, FVCell cell, string var);
+    const double opIndex(FluidFVCell cell, string var);
+    ref double opIndexAssign(double value, FluidFVCell cell, string var);
 
 private:
     string[] mVariables;
@@ -185,7 +185,7 @@ public:
     }
 
     override
-    const double opIndex(FVCell cell, string var)
+    const double opIndex(FluidFVCell cell, string var)
     {
 	// First handle array-stored values:
 	// species, modes and turbulence quantities
@@ -235,7 +235,7 @@ public:
     }
 
     override
-    ref double opIndexAssign(double value, FVCell cell, string var)
+    ref double opIndexAssign(double value, FluidFVCell cell, string var)
     {
 	if (var in mSpecies) {
 	    cell.fs.gas.massf[mSpecies[var]].re = value;
@@ -410,7 +410,7 @@ public:
     }
 
     override
-    const double opIndex(FVCell cell, string var)
+    const double opIndex(FluidFVCell cell, string var)
     {
 	// First handle array-stored values:
 	// species, modes and turbulence quantities
@@ -442,7 +442,7 @@ public:
     }
 
     override
-    ref double opIndexAssign(double value, FVCell cell, string var)
+    ref double opIndexAssign(double value, FluidFVCell cell, string var)
     {
 	if (var in mSpecies) {
 	    cell.gradients.rho_sPhi[mSpecies[var]].re = value;
@@ -482,7 +482,7 @@ private:
     int[string] mTurbQuants;
 }
 
-FVCellIO createFVCellIO(FieldVarsType fvt, string[] variables)
+FVCellIO createFluidFVCellIO(FieldVarsType fvt, string[] variables)
 {
     final switch (fvt) {
 	case FieldVarsType.flow: return new FVCellFlowIO(variables);

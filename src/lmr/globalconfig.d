@@ -2288,7 +2288,7 @@ void set_config_for_blocks(JSONValue jsonData)
             break;
         case "unstructured_grid":
             globalBlocks ~= new UFluidBlock(i, jsonDataForBlock);
-            dedicatedConfig[i].stringent_cfl = true; // for signal_frequency calc in FVCell.
+            dedicatedConfig[i].stringent_cfl = true; // for signal_frequency calc in FluidFVCell.
             break;
         default:
             throw new Error(format("Construction of fluidblock[%d], unknown grid type: %s", i, gridType));

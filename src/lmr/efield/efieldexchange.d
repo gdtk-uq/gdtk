@@ -12,7 +12,6 @@ import std.math;
 import std.algorithm;
 import std.conv;
 
-import fvcell;
 import fvinterface;
 import geom;
 import efieldbc;

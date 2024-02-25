@@ -13,7 +13,6 @@ import gas;
 import geom;
 import flowstate;
 import fvinterface;
-import fvcell;
 import nm.number;
 import ntypes.complex;
 import std.algorithm;

@@ -23,7 +23,6 @@ import json_helper;
 import gzip;
 import geom;
 import gas;
-import fvcell;
 import fvcellio : scan_cell_data_from_fixed_order_string;
 import globalconfig;
 

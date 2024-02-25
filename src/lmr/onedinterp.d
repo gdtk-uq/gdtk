@@ -17,7 +17,7 @@ import gas;
 import globalconfig;
 import flowstate;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell;
 
 //------------------------------------------------------------------------------
 
@@ -117,8 +117,8 @@ public:
     void  interp(ref FVInterface f, ref FlowState Lft, ref FlowState Rght)
     // Top-level interpolation function delegates to the specific functions, below.
     {
-        FVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
-        FVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
+        FluidFVCell cL0 = (f.left_cells.length > 0) ? f.left_cells[0] : f.right_cells[0];
+        FluidFVCell cR0 = (f.right_cells.length > 0) ? f.right_cells[0]: f.left_cells[0];
         Lft.copy_values_from(cL0.fs);
         Rght.copy_values_from(cR0.fs);
 
@@ -487,8 +487,8 @@ public:
 
     @nogc
     void interp_l3r3(ref FVInterface IFace,
-                     ref FVCell cL2, ref FVCell cL1, ref FVCell cL0,
-                     ref FVCell cR0, ref FVCell cR1, ref FVCell cR2,
+                     ref FluidFVCell cL2, ref FluidFVCell cL1, ref FluidFVCell cL0,
+                     ref FluidFVCell cR0, ref FluidFVCell cR1, ref FluidFVCell cR2,
                      number cL2Length, number cL1Length, number cL0Length,
                      number cR0Length, number cR1Length, number cR2Length,
                      ref FlowState Lft, ref FlowState Rght, number beta)
@@ -749,7 +749,7 @@ public:
 
     @nogc
     void interp_l2r2(ref FVInterface IFace,
-                     ref FVCell cL1, ref FVCell cL0, ref FVCell cR0, ref FVCell cR1,
+                     ref FluidFVCell cL1, ref FluidFVCell cL0, ref FluidFVCell cR0, ref FluidFVCell cR1,
                      number cL1Length, number cL0Length,
                      number cR0Length, number cR1Length,
                      ref FlowState Lft, ref FlowState Rght, number beta)
@@ -989,7 +989,7 @@ public:
 
     @nogc
     void interp_l2r1(ref FVInterface IFace,
-                     ref FVCell cL1, ref FVCell cL0, ref FVCell cR0,
+                     ref FluidFVCell cL1, ref FluidFVCell cL0, ref FluidFVCell cR0,
                      number cL1Length, number cL0Length, number cR0Length,
                      ref FlowState Lft, ref FlowState Rght, number beta)
     {
@@ -1213,7 +1213,7 @@ public:
 
     @nogc
     void interp_l1r2(ref FVInterface IFace,
-                     ref FVCell cL0, ref FVCell cR0, ref FVCell cR1,
+                     ref FluidFVCell cL0, ref FluidFVCell cR0, ref FluidFVCell cR1,
                      number cL0Length, number cR0Length, number cR1Length,
                      ref FlowState Lft, ref FlowState Rght, number beta)
     // Reconstruct flow properties at an interface from cells L0,R0,R1.
@@ -1441,7 +1441,7 @@ public:
 
     @nogc
     void interp_l2r0(ref FVInterface IFace,
-                     ref FVCell cL1, ref FVCell cL0,
+                     ref FluidFVCell cL1, ref FluidFVCell cL0,
                      number cL1Length, number cL0Length,
                      ref FlowState Lft)
     {
@@ -1638,7 +1638,7 @@ public:
 
     @nogc
     void interp_l0r2(ref FVInterface IFace,
-                     ref FVCell cR0, ref FVCell cR1,
+                     ref FluidFVCell cR0, ref FluidFVCell cR1,
                      number cR0Length, number cR1Length,
                      ref FlowState Rght)
     {

@@ -24,14 +24,13 @@ import globalconfig;
 import globaldata;
 import flowstate;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell;
 import fluidblock;
 import sfluidblock;
 import gas;
 import bc;
 import solidfvcell;
 import solidfvinterface;
-import gas_solid_interface;
 import kinetics.equilibrium_update;
 import mass_diffusion;
 
@@ -948,7 +947,7 @@ class BIE_WallTurbulent : BoundaryInterfaceEffect {
 
 
     //@nogc
-    //number ideal_omega_at_wall(in FVCell cell, number d0)
+    //number ideal_omega_at_wall(in FluidFVCell cell, number d0)
     //// As recommended by Wilson Chan, we use Menter's correction
     //// for omega values at the wall. This appears as Eqn A12 in
     //// Menter's paper.
@@ -1015,7 +1014,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
         }
     } // end apply_structured_grid()
 
-    void wall_function(const FVCell cell, FVInterface IFace)
+    void wall_function(const FluidFVCell cell, FVInterface IFace)
     // Implement Nichols' and Nelson's wall function boundary condition
     // Reference:
     //  Nichols RH & Nelson CC (2004)
@@ -1104,7 +1103,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
     } // end wall_function()
 
 protected:
-    void SolveShearStressAndHeatTransfer(const FVCell cell, FVInterface IFace,
+    void SolveShearStressAndHeatTransfer(const FluidFVCell cell, FVInterface IFace,
                                          GasModel gmodel, const number du,
                                          ref number tau_wall, ref number q_wall){
         // Compute wall gas properties from either ...
@@ -1156,7 +1155,7 @@ protected:
         return;
     }
 
-    void komegaVariables(const FVCell cell, const FVInterface IFace, const number du,
+    void komegaVariables(const FluidFVCell cell, const FVInterface IFace, const number du,
                          const number tau_wall, const number mu_t, ref number tke, ref number omega){
         // Compute omega (Eq 19 - 21)
         const number C_mu = 0.09;
@@ -1175,7 +1174,7 @@ protected:
         tke = omega * mu_t / rho;                         // Compute tke (Eq 22)
     }
 
-    number TurbulentViscosity(const FVCell cell, const FVInterface IFace, GasModel gmodel,
+    number TurbulentViscosity(const FluidFVCell cell, const FVInterface IFace, GasModel gmodel,
                               const number u, const number tau_wall, const number q_wall){
         // Turbulence model boundary conditions (Eq 15 & 14)
         // Note that the formulation of y_white_y_plus (Eq 15) is now directly
@@ -1356,7 +1355,7 @@ class BIE_AdiabaticWallFunction : BIE_WallFunction {
     }
 
 protected:
-    override void SolveShearStressAndHeatTransfer(const FVCell cell, FVInterface IFace, GasModel gmodel,
+    override void SolveShearStressAndHeatTransfer(const FluidFVCell cell, FVInterface IFace, GasModel gmodel,
                                                   const number du, ref number tau_wall, ref number q_wall){
         number cp = gmodel.Cp(cell.fs.gas);
         number Pr = cell.fs.gas.mu * cp / cell.fs.gas.k;
@@ -1687,7 +1686,7 @@ protected:
     immutable double Qe = 1.60217662e-19;     // Elementary charge.           Units: C
 
     @nogc
-    void solve_for_wall_temperature_and_energy_flux(FVCell cell, FVInterface IFace, int outsign)
+    void solve_for_wall_temperature_and_energy_flux(FluidFVCell cell, FVInterface IFace, int outsign)
     {
     /*
         Set the temperature of the wall interface to satisfy the thermionic+radiative energy
@@ -1741,7 +1740,7 @@ protected:
     } // end solve_for_wall_temperature_and_energy_flux()
 
     @nogc
-    number ThermionicRadiativeEnergyBalance(GasModel gmodel, FVCell cell, FVInterface IFace,
+    number ThermionicRadiativeEnergyBalance(GasModel gmodel, FluidFVCell cell, FVInterface IFace,
                                             uint n_modes, int outsign, number Twall){
     /*
         Energy flux balance at the wall, from Alkandry, 2014 equations 6 and 10.

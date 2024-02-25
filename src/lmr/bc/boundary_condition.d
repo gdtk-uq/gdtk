@@ -24,7 +24,7 @@ import globaldata;
 import flowstate;
 import fvinterface;
 import fvvertex;
-import fvcell;
+import lmr.fluidfvcell;
 import fluidblock;
 import sfluidblock;
 import fluxcalc;
@@ -109,7 +109,7 @@ public:
     bool convective_flux_computed_in_bc = false;
     double emissivity = 0.0;
     FVInterface[] faces;
-    FVCell[] ghostcells;
+    FluidFVCell[] ghostcells;
     int[] outsigns;
 
     // list of vertices along boundary, used for the mesh perturbation stage of the
@@ -123,7 +123,7 @@ public:
         // When forming the block local Jacobian matrices for parallel execution of the shape sensitivity calculator,
         // we need to have copies of the neighbour block cells and interfaces that are effected
         // by perturbations in the parent block. We will reference the objects in these arrays by their global ids.
-        FVCell[size_t] neighbour_block_cells;
+        FluidFVCell[size_t] neighbour_block_cells;
         FVInterface[] neighbour_block_faces;
     }
 
@@ -131,7 +131,7 @@ public:
     // to solid domain.
     // We need to keep these public because the sub-component BCs are going
     // to poke and prod the data here as needed.
-    FVCell[] gasCells;
+    FluidFVCell[] gasCells;
     SolidFVCell[] solidCells;
     FVInterface[] ifaces;
 

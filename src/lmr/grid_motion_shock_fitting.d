@@ -22,7 +22,7 @@ import globaldata;
 import flowstate;
 import fvvertex;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell;
 import onedinterp;
 import bc;
 import fluidblock;
@@ -115,8 +115,8 @@ void compute_vtx_velocities_for_sf(FBArray fba)
                             // the flow states in the first two cells.
                             // Note that the actual order of reconstruction will be
                             // determined by GlobalConfig.interpolation_order.
-                            FVCell cR0 = blk.get_cell(0,j,k);
-                            FVCell cR1 = blk.get_cell(1,j,k);
+                            FluidFVCell cR0 = blk.get_cell(0,j,k);
+                            FluidFVCell cR1 = blk.get_cell(1,j,k);
                             Rght.copy_values_from(cR0.fs);
                             // blk.one_d.interp_l0r2(f, cR0, cR1, cR0.iLength, cR1.iLength, Rght);
                             blk.one_d.interp_l0r2(f, Rght, Rght); // note that Rght is used as a dummy variable here

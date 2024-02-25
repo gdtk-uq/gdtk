@@ -15,7 +15,7 @@ import std.math;
 import ntypes.complex;
 import nm.number;
 
-import fvcell;
+import lmr.fluidfvcell;
 import fvinterface;
 import fluidblock;
 import geom;
@@ -78,7 +78,7 @@ class ElectricField {
         b[] = 0.0;
         Ai[] = -1;
 
-        FVCell other;
+        FluidFVCell other;
         foreach(blkid, block; localFluidBlocks){
             auto gmodel = block.myConfig.gmodel;
             foreach(cell; block.cells){
@@ -353,7 +353,7 @@ class ElectricField {
         @author: Nick Gibbons
     */
 
-        FVCell other;
+        FluidFVCell other;
         foreach(blkid, block; localFluidBlocks){
             foreach(cell; block.cells){
                 double[4] dx, dy, nx, ny, phis;

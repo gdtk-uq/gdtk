@@ -29,7 +29,7 @@ import globaldata;
 import flowstate;
 import fvvertex;
 import fvinterface;
-import fvcell;
+import lmr.fluidfvcell;
 import flowgradients;
 import bc;
 import user_defined_source_terms;
@@ -72,7 +72,7 @@ public:
     //
     // Collections of cells, vertices and faces are held as arrays of references.
     // These allow us to conveniently work through the items via foreach statements.
-    FVCell[] cells;
+    FluidFVCell[] cells;
     FVInterface[] faces;
     FVVertex[] vertices;
     BoundaryCondition[] bc; // collection of references to the boundary conditions
@@ -189,13 +189,13 @@ public:
     @nogc abstract void propagate_inflow_data_west_to_east();
     @nogc abstract void set_face_flowstates_to_averages_from_cells();
     @nogc abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0,
-                                               FVCell[] cell_list = [], FVInterface[] iface_list = [],
+                                               FluidFVCell[] cell_list = [], FVInterface[] iface_list = [],
                                                FVVertex[] vertex_list = []);
     @nogc abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0,
-                                               FVCell[] cell_list = [], FVInterface[] iface_list = [],
+                                               FluidFVCell[] cell_list = [], FVInterface[] iface_list = [],
                                                FVVertex[] vertex_list = []);
     @nogc abstract void convective_flux_phase2(bool allow_high_order_interpolation, size_t gtl=0,
-                                               FVCell[] cell_list = [], FVInterface[] iface_list = [],
+                                               FluidFVCell[] cell_list = [], FVInterface[] iface_list = [],
                                                FVVertex[] vertex_list = []);
     abstract size_t[] get_cell_write_indices();
 
@@ -397,7 +397,7 @@ public:
     }
 
     @nogc
-    void estimate_turbulence_viscosity(FVCell[] cell_list = [])
+    void estimate_turbulence_viscosity(FluidFVCell[] cell_list = [])
     {
         version(turbulence) { // Exit instantly if turbulence capability disabled
         if (cell_list.length == 0) { cell_list = cells; }
@@ -747,7 +747,7 @@ public:
         mass_residual_loc.clear();
         energy_residual = 0.0;
         energy_residual_loc.clear();
-        foreach(FVCell cell; cells) {
+        foreach(FluidFVCell cell; cells) {
             cell.rho_at_start_of_step = cell.fs.gas.rho;
             cell.rE_at_start_of_step = cell.U[0][cqi.totEnergy];
         }
@@ -771,7 +771,7 @@ public:
         mass_residual_loc.clear();
         energy_residual = 0.0;
         energy_residual_loc.clear();
-        foreach(FVCell cell; cells) {
+        foreach(FluidFVCell cell; cells) {
             number local_residual = (cell.fs.gas.rho - cell.rho_at_start_of_step) / cell.fs.gas.rho;
             local_residual = fabs(local_residual);
             if ( local_residual > mass_residual ) {
@@ -908,7 +908,7 @@ public:
         double min_L_for_block, cfl_local, cfl_max;
         bool first = true;
         bool gridFlag = grid_type == Grid_t.structured_grid;
-        foreach(FVCell cell; cells) {
+        foreach(FluidFVCell cell; cells) {
             // Search for the minimum length scale and the maximum CFL value in the block.
             if (first) {
                 min_L_for_block = cell.L_min.re;
@@ -970,7 +970,7 @@ public:
         int local_time_stepping_limit_factor = myConfig.local_time_stepping_limit_factor;
         bool first = true;
         bool gridFlag = grid_type == Grid_t.structured_grid;
-        foreach(FVCell cell; cells) {
+        foreach(FluidFVCell cell; cells) {
             signal = cell.signal_frequency(gridFlag);
 	    if (myConfig.with_super_time_stepping) {
                 signal_hyp = cell.signal_hyp.re;
@@ -1115,7 +1115,7 @@ public:
                 continue;
             }
             foreach ( iface, face; bndary.faces) {
-                FVCell ghost_cell; FVCell cell;
+                FluidFVCell ghost_cell, cell;
                 if (bndary.outsigns[iface] == 1) {
                     cell = face.left_cell;
                     ghost_cell = face.right_cell;
@@ -1328,7 +1328,7 @@ public:
         myConfig.interpolation_order = interpolation_order_save;
     } // end evaluate_jacobian()
 
-    void evaluate_cell_contribution_to_jacobian(FVCell pcell)
+    void evaluate_cell_contribution_to_jacobian(FluidFVCell pcell)
     {
         auto cqi = myConfig.cqi; // was GlobalConfig.cqi;
         auto nConserved = cqi.n;
@@ -1434,7 +1434,7 @@ public:
                 continue;
             }
             foreach ( bi, bface; bndary.faces) {
-                FVCell ghost_cell; FVCell pcell;
+                FluidFVCell ghost_cell, pcell;
                 if (bndary.outsigns[bi] == 1) {
                     pcell = bface.left_cell;
                     ghost_cell = bface.right_cell;
@@ -1547,7 +1547,7 @@ public:
         } // foreach ( bndary; bc )
     } // end apply_jacobian_bcs()
 
-    void evalRHS(int gtl, int ftl, ref FVCell[] cell_list, FVInterface[] iface_list, FVCell pcell)
+    void evalRHS(int gtl, int ftl, ref FluidFVCell[] cell_list, FVInterface[] iface_list, FluidFVCell pcell)
     /*
      *  This method evaluates the RHS residual on a subset of cells for a given FluidBlock.
      *  It is used when constructing the numerical Jacobian.
@@ -1673,19 +1673,19 @@ public:
 
     } // end version(newton_krylov)
 
-    void evalRU(double t, int gtl, int ftl, FVCell c, bool do_reconstruction, double reaction_fraction)
+    void evalRU(double t, int gtl, int ftl, FluidFVCell c, bool do_reconstruction, double reaction_fraction)
     {
         // This method evaluates the R(U) for a single cell.
         // It is used when constructing the numerical Jacobian.
         // Adapted from Kyle's evalRHS().
         //
-        // [TODO] PJ 2021-05-15 Might be good to move this code to the FVCell class
+        // [TODO] PJ 2021-05-15 Might be good to move this code to the FluidFVCell class
         // but we will need to make the flux-calculation functions more cell centric.
         //
         foreach(f; c.iface) { f.F.clear(); }
         c.clear_source_vector();
         //
-        FVCell[1] cell_list = [c];
+        FluidFVCell[1] cell_list = [c];
         convective_flux_phase0(do_reconstruction, gtl, cell_list, c.iface);
         convective_flux_phase1(do_reconstruction, gtl, cell_list, c.iface);
         convective_flux_phase2(do_reconstruction, gtl, cell_list, c.iface);
