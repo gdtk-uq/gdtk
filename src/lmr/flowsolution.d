@@ -64,14 +64,6 @@ public:
     FluidBlockLite[] flowBlocks;
     Grid[] gridBlocks;
 
-    this(string jobName, string dir, int tindx, size_t nBlocks, int gindx=-1,
-         string flow_format="", string tag="", int make_kdtree=0)
-    {
-	// PLACEHOLDER for transient mode constructor
-    }
-
-
-    // A constructor for flow fields when running steady mode
     this(int snapshot, size_t nBlocks, string dir=".", bool make_kdtree=true)
     {
         string cfgFile = (dir == ".") ? lmrCfg.cfgFile : dir ~ "/" ~ lmrCfg.cfgFile;
@@ -90,12 +82,13 @@ public:
             throw new Error(text("Failed to parse JSON from config file: ", cfgFile));
         }
         string flowFmt = jsonData["flow_format"].str;
-	string gridFmt = jsonData["grid_format"].str;
+        string gridFmt = jsonData["grid_format"].str;
+        grid_motion = grid_motion_from_name(jsonData["grid_motion"].str);
         // -- end initialising from JSONData
 
-	// Find out variables from metadata file
+	    // Find out variables from metadata file
         string flowMetadataFile = (dir == ".") ? lmrCfg.flowMetadataFile : dir ~ "/" ~ lmrCfg.flowMetadataFile;
-	auto variables = readFlowVariablesFromFlowMetadata(flowMetadataFile);
+        auto variables = readFlowVariablesFromFlowMetadata(flowMetadataFile);
         //
         // Use <block-list-filename> to get a hint of the type of each block.
         string blkListFile = (dir == ".") ? lmrCfg.blkListFile : dir ~ "/" ~ lmrCfg.blkListFile;
@@ -107,14 +100,20 @@ public:
             int ib_chk;
             string gridTypeName;
             string label;
-	    int ncells;
+            int ncells;
             formattedRead(listFileLine, " %d %s %s %d", &ib_chk, &gridTypeName, &label, &ncells);
             if (ib != ib_chk) {
                 string msg = format("Reading %s file ib=%d ib_chk=%d", blkListFile, ib, ib_chk);
                 throw new FlowSolverException(msg);
             }
             auto gridType = gridTypeFromName(gridTypeName);
-            string gName = gridFilename(lmrCfg.initialFieldDir, to!int(ib));
+            string gName;
+            if (grid_motion != GridMotion.none) {
+                gName = gridFilename(snapshot, to!int(ib));
+            }
+            else {
+                gName = gridFilename(lmrCfg.initialFieldDir, to!int(ib));
+            }
             gName = (dir == ".") ? gName : dir ~ "/" ~ gName;
             final switch (gridType) {
             case Grid_t.structured_grid:
