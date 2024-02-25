@@ -36,6 +36,7 @@ struct LmrCfg {
     immutable string timesFile;
     immutable string referenceResidualsFile;
     immutable string flowPrefix;
+    immutable string solidPrefix;
     immutable string limiterPrefix;
     immutable string loadsPrefix;
     immutable string gridPrefix;
@@ -84,6 +85,7 @@ static this()
     lmrCfg.timesFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["times-filename"].str;
     lmrCfg.referenceResidualsFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["reference-residuals-file"].str;
     lmrCfg.flowPrefix = lmrJSONCfg["flow-prefix"].str;
+    lmrCfg.solidPrefix = lmrJSONCfg["solid-prefix"].str;
     lmrCfg.limiterPrefix = lmrJSONCfg["limiter-prefix"].str;
     lmrCfg.loadsPrefix = lmrJSONCfg["loads-prefix"].str;
     lmrCfg.gridPrefix = lmrJSONCfg["grid-prefix"].str;
@@ -146,6 +148,24 @@ string flowFilename(int snapshot, int blkId)
 }
 
 /**
+ * Return the solid solution filename for a single block ('blkId') as a string.
+ *
+ * Authors: RJG
+ * Date: 2024-02-25
+ */
+string solidFilename(int snapshot, int blkId)
+{
+    string fname = lmrCfg.snapshotDir ~
+	"/" ~
+	format(lmrCfg.snapshotIdxFmt, snapshot) ~
+	"/" ~
+	lmrCfg.solidPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
+    if (GlobalConfig.flow_format == "gziptext")
+	fname ~= lmrCfg.gzipExt;
+    return fname;
+}
+
+/**
  * Return the limiter values filename for a single block ('blkId') as a string.
  *
  * Authors: RJG
@@ -200,6 +220,23 @@ string gridFilename(int snapshot, int blkId)
     return gname;
 }
 
+/**
+ * Return the solid grid filename for a single block ('id') as a string.
+ *
+ * Authors: RJG
+ * Date: 2024-02-25
+ */
+string solidGridFilename(int snapshot, int blkId)
+{
+    string gname = lmrCfg.snapshotDir ~
+	"/" ~
+	format(lmrCfg.snapshotIdxFmt, snapshot) ~
+	"/" ~
+	lmrCfg.solidPrefix ~ "-" ~ lmrCfg.gridPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
+    if (GlobalConfig.grid_format == "gziptext")
+	gname ~= lmrCfg.gzipExt;
+    return gname;
+}
 /**
  * Return the name of a history file based on block and cell.
  *

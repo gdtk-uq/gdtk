@@ -23,12 +23,13 @@ import lmr.fluidfvcell : FluidFVCell;
 import flowstate : FlowState;
 import geom : Vector3;
 
-enum FieldVarsType { flow, limiter };
+enum FieldVarsType { flow, solid, limiter };
 
 string fieldVarsTypeName(FieldVarsType i)
 {
     final switch(i) {
 	case FieldVarsType.flow: return "flow";
+    case FieldVarsType.solid: return "solid";
 	case FieldVarsType.limiter: return "limiter";
     }
 }
@@ -37,12 +38,14 @@ FieldVarsType fieldVarsTypeFromName(string name)
 {
     switch (name) {
 	case "flow": return FieldVarsType.flow;
+    case "solid": return FieldVarsType.solid;
 	case "limiter": return FieldVarsType.limiter;
 	default:
 	    string errMsg = "The selection of FieldVarsType is unavailable.\n";
 	    errMsg ~= format("You selected '%s'\n", name);
 	    errMsg ~= "The available BlockIOTypes are: \n";
 	    errMsg ~= "   'flow'\n";
+	    errMsg ~= "   'solid'\n";
 	    errMsg ~= "   'limiter'\n";
 	    errMsg ~= "Check the selection or its spelling.\n";
 	    throw new Error(errMsg);
@@ -296,8 +299,101 @@ private:
     int[string] mTurbQuants;
 }
 
+/**
+ * Build the list of solid variables.
+ *
+ * Authors: RJG
+ * Date: 2024-02-25
+ */
+string[] buildSolidVariables()
+{
 
+    alias cfg = GlobalConfig;
+    string[] variables;
+    variables ~= "pos.x";
+    variables ~= "pos.y";
+    if (cfg.dimensions == 3) variables ~= "pos.z";
+    variables ~= "vol";
+    variables ~= "e";
+    variables ~= "T";
+    variables ~= "rho";
+    variables ~= "Cp";
+    variables ~= "k";
+    return variables;
+}
 
+class FVCellSolid : FVCellIO {
+public:
+
+    this(string[] variables)
+    {
+        cFVT = FieldVarsType.solid;
+        mVariables = variables.dup;
+    }
+
+    override
+    FVCellSolidIO dup()
+    {
+	    return new FVCellSolidIO(this.mVariables);
+    }
+
+    override
+    const double opIndex(FVCell cell, string var)
+    {
+	    switch (var) {
+        case "pos.x": return cell.pos.x.re;
+        case "pos.y": return cell.pos.y.re;
+        case "pos.z": return cell.pos.z.re;
+        case "vol": return cell.volume.re;
+        case "e": return cell.e[0].re;
+        case "T": return cell.T;
+        case "rho": return cell.sp.rho;
+        case "Cp": return cell.sp.Cp;
+        case "k": return cell.sp.k;
+        default:
+            throw new LmrException("Invalid selection for solid cell variable: " ~ var);
+        }
+	}
+
+    override
+    ref double opIndexAssign(double value, FVCell cell, string var)
+    {
+
+	// For everything else, find by cases
+	switch (var) {
+	case "pos.x": cell.pos[0].x.re = value; return cell.pos[0].x.re;
+	case "pos.y": cell.pos[0].y.re = value; return cell.pos[0].y.re;
+	case "pos.z": cell.pos[0].z.re = value; return cell.pos[0].z.re;
+	case "vol": cell.volume[0].re = value; return cell.volume[0].re;
+	case "rho": cell.fs.gas.rho.re = value; return cell.fs.gas.rho.re;
+	case "vel.x": cell.fs.vel.x.re = value; return cell.fs.vel.x.re;
+	case "vel.y": cell.fs.vel.y.re = value; return cell.fs.vel.y.re;
+	case "vel.z": cell.fs.vel.z.re = value; return cell.fs.vel.z.re;
+	case "B.x": cell.fs.B.x.re = value; return cell.fs.B.x.re;
+	case "B.y": cell.fs.B.y.re = value; return cell.fs.B.y.re;
+	case "B.z": cell.fs.B.z.re = value; return cell.fs.B.z.re;
+	case "p": cell.fs.gas.p.re = value; return cell.fs.gas.p.re;
+	case "a": cell.fs.gas.a.re = value; return cell.fs.gas.a.re;
+	case "mu": cell.fs.gas.mu.re = value; return cell.fs.gas.mu.re;
+	case "k": cell.fs.gas.k.re = value; return cell.fs.gas.k.re;
+	case "mu_t": cell.fs.mu_t.re = value; return cell.fs.mu_t.re;
+	case "k_t": cell.fs.k_t.re = value; return cell.fs.k_t.re;
+	case "shock-detector": cell.fs.S.re = value; return cell.fs.S.re;
+	case "dt_subcycle": cell.dt_chem.re = value; return cell.dt_chem.re;
+	case "dt_local": cell.dt_local.re = value; return cell.dt_local.re;
+	case "e": cell.fs.gas.u.re = value; return cell.fs.gas.u.re;
+	case "T": cell.fs.gas.T.re = value; return cell.fs.gas.T.re;
+	default:
+	    throw new LmrException("Invalid selection for cell variable: " ~ var);
+	}
+
+    }
+
+private:
+    int[string] mSpecies;
+    int[string] mTModes;
+
+    
 /**
  * Build the list of limiter variables based on modelling configuration.
  *

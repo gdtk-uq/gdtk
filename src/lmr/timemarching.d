@@ -62,7 +62,7 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
 {
     alias cfg = GlobalConfig;
     if (cfg.verbosity_level > 0 && cfg.is_master_task) {
-	writeln("lmr run: Begin initTimeMarchingSimulation()...");
+        writeln("lmr run: Begin initTimeMarchingSimulation()...");
     }
 
     SimState.is_restart = (snapshotStart > 0);
@@ -107,7 +107,7 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     }
     end: code from eilmer4 for loads file initialisation */
 
-    initLocalFluidBlocks();
+    initLocalBlocks();
     initThreadPool(maxCPUs, threadsPerMPITask);
     initFluidBlocksBasic(true);
     initFluidBlocksMemoryAllocation();
@@ -129,10 +129,7 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     // Here is where initialise GPU chemistry, if we are going to continue
     // with that particular implementation.
 
-    // [TODO] RJG, 2024-04-07
-    // NO SOLID BLOCKS PRESENTLY.
-    // We'll try to get those in soon.
-
+    initSolidBlocks();
     // [TODO] RJG, 2024-02-12
     // Re-implement writing to history cells.
     /*

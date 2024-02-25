@@ -133,21 +133,24 @@ void readControl()
 }
 
 /**
- * Assign fluid blocks to the localFluidBlocks container and set IDs.
+ * Assign (fluid/solid) blocks to the local(Fluid/Solid)Blocks container and set IDs.
  *
- * Each process only works on updating blocks that reside in localFluidBlocks.
- * For MPI simulations, localFluidBlocks contains different blocks on different ranks.
- * This function is resposnsible for doing that assignment of blocks at the
+ * Each process only works on updating blocks that reside in local(Fluid)Blocks.
+ * For MPI simulations, local(Fluid)Blocks contains different blocks on different ranks.
+ * This function is responsible for doing that assignment of blocks at the
  * initialisation stage.
  *
  * For a shared-memory simulation, *all* blocks are assigned to the localFluidBlocks container.
  *
- * Additionally the block ids are set in loclFluidBlockIds
+ * Additionally the block ids are set in local(Fluid)BlockIds
  *
  * Authors: RJG and PAJ
  * Date: 2023-05-07
+ * History:
+ *   2024-02-25 -- add in handling for solid blocks
+ *
  */
-void initLocalFluidBlocks()
+void initLocalBlocks()
 {
     alias cfg = GlobalConfig;
     version(mpi_parallel) {
@@ -172,10 +175,8 @@ void initLocalFluidBlocks()
             if (taskid == my_rank) {
                 auto fblk = cast(FluidBlock) globalBlocks[blkid];
                 if (fblk) { localFluidBlocks ~= fblk; }
-		/+ [TODO] Add in solid blocks.
                 auto sblk = cast(SSolidBlock) globalBlocks[blkid];
                 if (sblk) { localSolidBlocks ~= sblk; }
-		+/
             }
         }
         MPI_Barrier(MPI_COMM_WORLD);
@@ -185,18 +186,16 @@ void initLocalFluidBlocks()
         }
     }
     else {
-	foreach (blk; globalBlocks) {
-	    auto fblk = cast(FluidBlock) blk;
-	    if (fblk) { localFluidBlocks ~= fblk; }
-	    /+ [TODO] add in solid blocks
-	     auto mysblk = cast(SSolidBlock) blk;
-	     if (mysblk) { localSolidBlocks ~= mysblk; }
-	     +/
-	}
+	    foreach (blk; globalBlocks) {
+            auto fblk = cast(FluidBlock) blk;
+	        if (fblk) { localFluidBlocks ~= fblk; }
+            auto mysblk = cast(SSolidBlock) blk;
+            if (mysblk) { localSolidBlocks ~= mysblk; }
+	    }
     }
-
     // Set block IDs
-    foreach (blk; localFluidBlocks) cfg.localFluidBlockIds ~= blk.id;
+    foreach (blk; localFluidBlocks) { cfg.localFluidBlockIds ~= blk.id; }
+    foreach (blk; localSolidBlocks) { cfg.localSolidBlockIds ~= blk.id; }
 
 }
 
@@ -212,7 +211,7 @@ void initLocalFluidBlocks()
 void initThreadPool(int maxCPUs, int threadsPerMPITask)
 {
     // Local blocks may be handled with thread-parallelism.
-    auto nBlocksInThreadParallel = localFluidBlocks.length; // [TODO] add solid blocks
+    auto nBlocksInThreadParallel = localFluidBlocks.length + localSolidBlocks.length;
     // There is no need to have more task threads than blocks local to the process.
     int extraThreadsInPool;
     version(mpi_parallel) {
@@ -697,4 +696,80 @@ void initHistoryCells()
     // [TODO] RJG, 2024-02-07
     // Add something similar for solid domain cells.
 
+}
+
+/**
+ * Initialise solid blocks.
+ *
+ * Authors: RJG and KAD
+ * Date: 2024-02-25
+ */
+void initSolidBlocks()
+{
+    foreach (ref mySolidBlk; localSolidBlocks) {
+        mySolidBlk.assembleArrays();
+        mySolidBlk.bindFacesAndVerticesToCells();
+        mySolidBlk.bindCellsToFaces();
+        mySolidBlk.readGrid(make_file_name!"solid-grid"(job_name, mySolidBlk.id, 0, "gz")); // tindx==0 fixed grid
+        mySolidBlk.readSolution(make_file_name!"solid"(job_name, mySolidBlk.id, tindx, "gz"));
+        mySolidBlk.computePrimaryCellGeometricData();
+        mySolidBlk.assignCellLocationsForDerivCalc();
+    }
+    // setup communication across blocks
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase2(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solid_data_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solid_data_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(SolidGCE_SolidGhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solid_data_phase2(); }
+            }
+        }
+    }
+    // Now that we know the ghost-cell locations, we can set up the least-squares subproblems for
+    // calculation of temperature gradients for the solid solver with least-squares gradients.
+    foreach (ref mySolidBlk; localSolidBlocks) {
+        mySolidBlk.setupSpatialDerivativeCalc();
+    }
+    if (localSolidBlocks.length > 0) {
+        initPropertiesAtSolidInterfaces(localSolidBlocks);
+    }
 }
