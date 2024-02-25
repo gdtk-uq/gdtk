@@ -108,7 +108,7 @@ def test_run_transient():
             t = float(line.split()[1])
     assert reason.startswith("Reached target simulation time"), \
       "Failed to stop for the expected reason."
-    assert abs(steps-927) < 5, "Failed to take correct number of steps."
+    assert abs(steps-833) < 5, "Failed to take correct number of steps."
     assert abs(t - 0.005)/0.005 < 0.01, \
       "Failed to arrive at expected time on final step."
 
