@@ -220,7 +220,9 @@ function readGridMetadata()
    print(string.format('  #connections: %d', #gridConnections))
    --
    gridArraysMetadata = jsonData["gridarrays"]
-   print(string.format('  #gridArraysMetadata: %d', #gridArraysMetadata))
+   if gridArraysMetadata then
+      print(string.format('  #gridArraysMetadata: %d', #gridArraysMetadata))
+   end
    --
    local ngrids = jsonData["ngrids"]
    for i=1, ngrids do
