@@ -91,7 +91,7 @@ public:
     this(int dimensions, size_t nturb, bool MHD, size_t nspecies, size_t nmodes) {
 
         bool put_mass_in_last_position = false;
-        version (nk_accelerator) {
+        version (newton_krylov) {
             // we will drop the mass continuity equation if we are running a multi-species calculation with
             // the steady-state solver, note that we still need an entry in the conserved quantities vector
             // for the mass (some parts of the code expect it), so we will place it in the last position

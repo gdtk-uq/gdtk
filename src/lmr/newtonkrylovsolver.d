@@ -604,6 +604,18 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
         writefln("lmr run-steady: Done initNewtonKrylovSimulation() at wall-clock(WC)= %.1f sec", wall_clock_elapsed);
         stdout.flush();
     }
+
+    // Note that for a multi-species simulation, the n species conservation equations and the
+    // total mass conservation equation are linearly dependent. Because of this, we deduct the
+    // number of conserved quantities by 1 for multi-species simulations, this effectively removes
+    // the total mass conservation equation from the system of equations we are solving. For a discussion
+    // on this and other possible approaches see pg. 8 of Multicomponent Flow Modelling by V. Giovangigli (1999).
+    if (GlobalConfig.cqi.n_species > 1) {
+        GlobalConfig.cqi.n -= 1;
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            blk.myConfig.cqi.n -= 1;
+        }
+    }
 }
 
 void readNewtonKrylovConfig()
@@ -1177,10 +1189,8 @@ void setPhaseSettings(size_t phase)
 void computeResiduals(ref ConservedQuantities residuals)
 {
     size_t nConserved = GlobalConfig.cqi.n;
-
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.residuals[] = blk.cells[0].dUdt[0][];
-        foreach (ivar; 0 .. nConserved) blk.residuals[ivar] = fabs(blk.residuals[ivar]);
+        foreach (ivar; 0 .. nConserved) blk.residuals[ivar] = fabs(blk.cells[0].dUdt[0][ivar]);
 
         foreach (cell; blk.cells) {
             foreach (ivar; 0 .. nConserved) blk.residuals[ivar] = fmax(blk.residuals[ivar], fabs(cell.dUdt[0][ivar]));

@@ -1198,8 +1198,6 @@ public:
         // we now construct the full sparse matrix by replacing each entry with an nConserved x nConserved block
         auto cqi = myConfig.cqi;
         auto nConserved = cqi.n;
-        // remove the conserved mass variable for multi-species gas
-        if (cqi.n_species > 1) { nConserved -= 1; }
 
         flowJacobian = new FlowJacobian(sigma, myConfig.dimensions, nConserved, spatial_order_of_jacobian, ptJac.local.aa.length, ncells);
         flowJacobian.local.ia[flowJacobian.ia_idx] = 0;
@@ -1332,8 +1330,6 @@ public:
     {
         auto cqi = myConfig.cqi; // was GlobalConfig.cqi;
         auto nConserved = cqi.n;
-        // remove the conserved mass variable for multi-species gas
-        if (cqi.n_species > 1) { nConserved -= 1; }
         auto eps0 = flowJacobian.eps;
         number eps;
         int ftl = 1; int gtl = 0;
@@ -1420,8 +1416,6 @@ public:
          */
         auto cqi = myConfig.cqi; // The block object has its own.
         auto nConserved = cqi.n;
-        // remove the conserved mass variable for multi-species gas
-        if (cqi.n_species > 1) { nConserved -= 1; }
         auto eps0 = flowJacobian.eps;
         number eps;
         int gtl = 0; int ftl = 1;
@@ -1645,8 +1639,6 @@ public:
     void allocate_GMRES_workspace(int maxLinearSolverIterations)
     {
         size_t nConserved = GlobalConfig.cqi.n;
-        // remove the conserved mass variable for multi-species gas
-        if (GlobalConfig.cqi.n_species > 1) { nConserved -= 1; }
         int n_species = GlobalConfig.gmodel_master.n_species();
         int n_modes = GlobalConfig.gmodel_master.n_modes();
         maxRate = new ConservedQuantities(nConserved);
