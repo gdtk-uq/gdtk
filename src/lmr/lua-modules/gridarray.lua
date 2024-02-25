@@ -365,7 +365,10 @@ function GridArray:new(o)
    return o
 end -- GridArray:new
 
-function GridArray:tojson(o)
+function GridArray:tojson()
+   -- Write enough of the GridArray metadata to a JSON string
+   -- so that we can later reconstruct the array of blocks
+   -- in the prep-sim stage of preparation.
    local str = '{\n'
    str = str .. string.format('  "tag": "%s",\n', self.tag)
    str = str .. string.format('  "fsTag": "%s",\n', self.fsTag)

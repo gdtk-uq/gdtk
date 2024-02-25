@@ -219,6 +219,9 @@ function readGridMetadata()
    end
    print(string.format('  #connections: %d', #gridConnections))
    --
+   gridArraysMetadata = jsonData["gridarrays"]
+   print(string.format('  #gridArraysMetadata: %d', #gridArraysMetadata))
+   --
    local ngrids = jsonData["ngrids"]
    for i=1, ngrids do
       fileName = lmrconfig.gridMetadataFilename(i-1)
