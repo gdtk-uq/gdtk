@@ -123,7 +123,7 @@ public:
     Vector3*[] cloud_pos; // Positions of flow points for gradients calculation.
     FlowState*[] cloud_fs; // References to flow states at those points.
 
-    // Heat flux used in the loosely coupled CHT solver (we currently store this here for convenience).
+    // Heat transfer used in the loosely coupled CHT solver (we currently store this here for convenience).
     number heat_transfer_into_solid; // TODO: We should think about whether there is a more appropriate place to store this. KAD 2022-11-08
 
     // Terms for loose-coupling of radiation.
@@ -137,14 +137,6 @@ public:
     number rho_at_start_of_step, rE_at_start_of_step;
     // distance to nearest viscous wall (only computed if turb_model.needs_dwall)
     number dwall;
-
-    // For use with LU-SGS solver/preconditioner (note: we don't need complex numbers here)
-    double[] LU;
-    double[] dUk;
-    double[] dF;
-    double[] scalar_diag_inv;
-    Matrix!double dFdU;
-    Matrix!double dFdU_rotated;
 
     // Arrays to store the local DFT values
     // Lengths are known at run time (globalconfig.n_DFT_modes) but not at compile time, handle lengths later
@@ -235,19 +227,6 @@ public:
             savedGasState = GasState(gmodel);
         }
         //
-        // some data structures used in the LU-SGS solver
-        version(steady_state) {
-            size_t nConserved = myConfig.cqi.n;
-            scalar_diag_inv.length = nConserved;
-            dFdU = new Matrix!number(nConserved,nConserved);
-            dFdU.zeros;
-            dFdU_rotated = new Matrix!number(nConserved,nConserved);
-            dFdU_rotated.zeros;
-            dF.length = nConserved;
-            dUk.length = nConserved;
-            dUk[] = to!number(0.0);
-            LU.length = nConserved;
-        }
         //
         DFT_local_real.length = myConfig.DFT_n_modes;
         DFT_local_imag.length = myConfig.DFT_n_modes;
@@ -340,6 +319,7 @@ public:
                 U[i].copy_values_from(other.U[i]);
                 dUdt[i].copy_values_from(other.dUdt[i]);
             }
+            heat_transfer_into_solid = other.heat_transfer_into_solid;
         } // end switch
     }
 
@@ -599,14 +579,18 @@ public:
         } else {
             // if cqi.mass \= 0, then we assume that we have dropped the mass continuity equation from the solver,
             // in that case, the total density is a sum of the species densities
-            foreach(isp; 0 .. cqi.n_species) {
-                // if (myU[cqi.species+isp] < 0.0) myU[cqi.species+isp] = to!number(0.0);
+            if (myConfig.enforce_species_density_positivity) {
                 // We were originally imposing positivity on the species densities here to prevent slightly negative mass fractions,
                 // this was causing noisy convergence for some problems using the steady-state accelerator due to the artificial nature
                 // of suppressing the negative mass fractions after an update (i.e. the numerical solution really should have negative
                 // mass fractions due to the numerical methods employed).
                 // We are trialing the removal of this enforcement (note that this will only take effect for the steady-state solver here).
                 // KAD 2022-08-22.
+                // NNG 2022-12-01. A runtime option (defaulting to off) has proven neccessary.
+                foreach(isp; 0 .. cqi.n_species)
+                    if (myU[cqi.species+isp] < 0.0) myU[cqi.species+isp] = to!number(0.0);
+            }
+            foreach(isp; 0 .. cqi.n_species) {
                 rho += myU[cqi.species+isp];
             }
         }
@@ -729,7 +713,10 @@ public:
             } // end if (myConfig.n_species > 1 && cqi.mass == 0)
             try {
                 if (cqi.n_species > 1) {
-                    foreach(isp; 0 .. cqi.n_species) { fs.gas.massf[isp] = myU[cqi.species+isp] * dinv; }
+                    foreach(isp; 0 .. cqi.n_species) {
+                        fs.gas.massf[isp] = myU[cqi.species+isp] * dinv;
+                        fs.gas.rho_s[isp] = myU[cqi.species+isp];
+                    }
                 } else {
                     fs.gas.massf[0] = 1.0;
                 }
@@ -837,6 +824,14 @@ public:
             // Then evaluate the derivatives of conserved quantities.
             // Conserved quantities are stored per-unit-volume.
             my_dUdt[j] = vol_inv * surface_integral + Q[j];
+        }
+        if (cqi.MHD && myConfig.MHD_static_field) {
+            // We do not want the internal update to happen for the magnetic field.
+            my_dUdt[cqi.xB] = 0.0;
+            my_dUdt[cqi.yB] = 0.0;
+            my_dUdt[cqi.zB] = 0.0;
+            my_dUdt[cqi.psi] = 0.0;
+            my_dUdt[cqi.divB] = 0.0;
         }
     } // end time_derivatives()
 
@@ -959,7 +954,7 @@ public:
     } // end thermochemical_increment()
 
     @nogc
-    double signal_frequency()
+    double signal_frequency(bool using_structured_grid)
     // Remember to use stringent_cfl=true for unstructured-grid.
     {
         number signal = 0; // Signal speed is something like a frequency, with units 1/s.
@@ -972,10 +967,15 @@ public:
         //
         // Get the local normal velocities by rotating the local frame of reference.
         // Also, compute the velocity magnitude and recall the minimum length.
-        number un_N = fabs(fs.vel.dot(iface[Face.north].n));
-        number un_E = fabs(fs.vel.dot(iface[Face.east].n));
-        // just in case we are given a non-hex cell
-        size_t third_face = min(Face.top, iface.length-1);
+        size_t first_face = 0; // west, assuming quad or hex cells from a structured grid conversion
+        size_t second_face = 1; // south, assuming quad or hex cells from a structured grid conversion
+        size_t third_face = iface.length - 1; // will be Face.top for structured grid
+        if (using_structured_grid) {
+            first_face = Face.north;
+            second_face = Face.east;
+        }
+        number un_N = fabs(fs.vel.dot(iface[first_face].n));
+        number un_E = fabs(fs.vel.dot(iface[second_face].n));
         number un_T = (myConfig.dimensions == 3) ? fabs(fs.vel.dot(iface[third_face].n)) : to!number(0.0);
         if (myConfig.stringent_cfl) {
             // Compute the speed with the shortest length and the highest speed.
@@ -1071,11 +1071,18 @@ public:
     void turbulence_viscosity_limit(double factor)
     // Limit the turbulent viscosity to reasonable values relative to
     // the local molecular viscosity.
-    // In shock started flows, we seem to get crazy values on the
-    // starting shock structure and the simulations do not progress.
+    // The pre 2015 code introduced these limits, along with a default factor
+    // of 300 for reasons that are now unclear. In July 2023 NNG changed
+    // this factor to 3000, and removed it all together from the JFNK,
+    // to prevent the turbulent viscosity from being clipped in anything
+    // but a very abnormal scneario.
     {
-        fs.mu_t = fmin(fs.mu_t, factor * fs.gas.mu);
-        fs.k_t = fmin(fs.k_t, factor * fs.gas.k); // ASSUMPTION re k
+        version(newton_krylov) {
+            // Don't put limits in the NK solver, it messes with the gradients
+        } else {
+            fs.mu_t = fmin(fs.mu_t, factor * fs.gas.mu);
+            fs.k_t = fmin(fs.k_t, factor * fs.gas.k); // ASSUMPTION re k
+        }
     }
 
     @nogc
@@ -1158,9 +1165,23 @@ public:
             // Add value to total energy
             // FIX-ME: - assuming electronic mode is the last in the vector of energies
             //         - what about Q_renergies[0]?
+            number rho = fs.gas.rho;
+            number T_rad_limit = 12000.0;
+            number T = fmin(fs.gas.T, T_rad_limit);
+            version(multi_T_gas) {
+                if (cqi.n_modes>0){
+                    T = fmin(fs.gas.T_modes[0], T_rad_limit);
+                }
+            }
+            //import core.stdc.stdio: printf;
+            //printf("T = %lf", fs.gas.T);
+            number kp = 7.9*(rho/1.225)^^1.10*(T/10000)^^6.95;
+            Q_rE_rad = -4.0*kp*5.670374419e-8*T^^4;
             Q[cqi.totEnergy] += Q_rE_rad;
             version(multi_T_gas) {
-                // Q[cqi.modes+cqi.n_modes-1] += Q_rE_rad; // FIX-ME old C++ code
+                if (cqi.n_modes>0){
+                    Q[cqi.modes+cqi.n_modes-1] += Q_rE_rad; // FIX-ME old C++ code
+                }
             }
         }
         return;
@@ -1340,6 +1361,14 @@ public:
     } // end average_vertex_deriv_values()
 
     @nogc
+    void average_interface_deriv_values()
+    {
+        grad.copy_values_from(*(iface[0].grad));
+        foreach (i; 1 .. iface.length) grad.accumulate_values_from(*(iface[i].grad));
+        grad.scale_values_by(to!number(1.0/iface.length));
+    } // end average_interface_deriv_values()
+
+    @nogc
     void rotate_gradients(const(double[]) Rmatrix)
     {
         // Rotate velocity gradients
@@ -1406,14 +1435,6 @@ public:
         }
     }
     // End rotate_gradients
-
-    @nogc
-    void average_interface_deriv_values()
-    {
-        grad.copy_values_from(*(iface[0].grad));
-        foreach (i; 1 .. iface.length) grad.accumulate_values_from(*(iface[i].grad));
-        grad.scale_values_by(to!number(1.0/iface.length));
-    } // end average_interface_deriv_values()
 
     // Think this should be fine as nogc? Taking transform of pressure in this example
     @nogc

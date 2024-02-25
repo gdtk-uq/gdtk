@@ -237,7 +237,6 @@ public:
     // Adjust the in_suppress_reconstruction-zone flag for faces in this block.
     {
         foreach(f; faces) {
-            f.in_suppress_reconstruction_zone = false;
             if (myConfig.suppress_reconstruction_zones.length > 0 ) {
                 foreach(srz; myConfig.suppress_reconstruction_zones) {
                     if (srz.is_inside(f.pos, myConfig.dimensions)) {
@@ -246,7 +245,9 @@ public:
                 } // foreach srz
             }
             if (myConfig.suppress_reconstruction_at_boundaries && f.is_on_boundary) {
-                f.in_suppress_reconstruction_zone = true;
+                if (!startsWith(bc[f.bc_id].type, "exchange_")) {
+                    f.in_suppress_reconstruction_zone = true;
+                }
             }
         } // foreach face
         //
@@ -906,16 +907,17 @@ public:
     {
         double min_L_for_block, cfl_local, cfl_max;
         bool first = true;
+        bool gridFlag = grid_type == Grid_t.structured_grid;
         foreach(FVCell cell; cells) {
             // Search for the minimum length scale and the maximum CFL value in the block.
             if (first) {
                 min_L_for_block = cell.L_min.re;
-                cfl_local = cell.signal_frequency() * dt_current;
+                cfl_local = cell.signal_frequency(gridFlag) * dt_current;
                 cfl_max = cfl_local;
                 first = false;
             } else {
                 min_L_for_block = fmin(cell.L_min.re, min_L_for_block);
-                cfl_local = cell.signal_frequency() * dt_current;
+                cfl_local = cell.signal_frequency(gridFlag) * dt_current;
                 cfl_max = fmax(cfl_local, cfl_max);
             }
         }
@@ -967,8 +969,9 @@ public:
         // for local time-stepping we limit the larger time-steps by a factor of the smallest timestep
         int local_time_stepping_limit_factor = myConfig.local_time_stepping_limit_factor;
         bool first = true;
+        bool gridFlag = grid_type == Grid_t.structured_grid;
         foreach(FVCell cell; cells) {
-            signal = cell.signal_frequency();
+            signal = cell.signal_frequency(gridFlag);
 	    if (myConfig.with_super_time_stepping) {
                 signal_hyp = cell.signal_hyp.re;
                 signal_parab = cell.signal_parab.re;
@@ -982,6 +985,8 @@ public:
                 }
                 // Set the allowable time-step based on hyperbolic time-step.
                 dt_allow = fmin(dt_allow_hyp, GlobalConfig.dt_max);
+                cell.dt_hyper = cfl_value / signal_hyp;
+                cell.dt_parab = cfl_value / signal_parab;
             } else {
                 // no STS
                 dt_allow_hyp = 0;
@@ -1106,8 +1111,7 @@ public:
             if (!bndary.ghost_cell_data_available) { continue; }
             if (bndary.type == "exchange_using_mapped_cells" ||
                 bndary.type == "exchange_over_full_face" ||
-                bndary.type == "do_nothing")
-            {
+                bndary.type == "do_nothing") {
                 continue;
             }
             foreach ( iface, face; bndary.faces) {
@@ -1269,6 +1273,10 @@ public:
         // zero entries
         flowJacobian.local.aa[] = 0.0;
 
+        // temporarily change flux calculator
+        auto flux_calculator_save = myConfig.flux_calculator;
+        myConfig.flux_calculator = myConfig.flux_calculator; // TODO: add preconditionMatrixFluxCalculator back
+
         // temporarily change interpolation order
         shared int interpolation_order_save = GlobalConfig.interpolation_order;
         myConfig.interpolation_order = to!int(flowJacobian.spatial_order);
@@ -1313,6 +1321,9 @@ public:
         // add boundary condition corrections to boundary cells
         apply_jacobian_bcs();
 
+        // return flux calculator to its original state
+        myConfig.flux_calculator = flux_calculator_save;
+
         // return the interpolation order to its original state
         myConfig.interpolation_order = interpolation_order_save;
     } // end evaluate_jacobian()
@@ -1354,15 +1365,25 @@ public:
             }
 
             // return cell to original state
-            pcell.U[ftl].copy_values_from(pcell.U[0]);
-            pcell.fs.copy_values_from(*fs_save);
-            if (myConfig.viscous) {
-                foreach (cell; pcell.cell_list) { cell.grad.copy_values_from(*(cell.grad_save)); }
+            version(complex_numbers) {
+                pcell.U[ftl].copy_values_from(pcell.U[0]);
+                pcell.fs.copy_values_from(*fs_save);
+                if (myConfig.viscous) {
+                    foreach (cell; pcell.cell_list) { cell.grad.copy_values_from(*(cell.grad_save)); }
+                }
+                if (flowJacobian.spatial_order >= 2) {
+                    foreach(cell; pcell.cell_list) { cell.gradients.copy_values_from(*(cell.gradients_save)); }
+                }
+            } else {
+                // TODO: for structured grids employing a real-valued low-order numerical Jacobian as
+                // the precondition matrix the above code doesn't completely clean up the effect of the
+                // perturbuation. Note that this does not occur for unstructured grids.
+                // This is currently under investigation, in the interim we will apply the more costly
+                // method of re-evaluating evalRHS with the unperturbed conserved state. KAD 2023-08-31
+                pcell.U[ftl].copy_values_from(pcell.U[0]);
+                pcell.decode_conserved(gtl, 0, 0.0);
+                evalRHS(gtl, 0, pcell.cell_list, pcell.face_list, pcell);
             }
-            if (flowJacobian.spatial_order >= 2) {
-                foreach(cell; pcell.cell_list) { cell.gradients.copy_values_from(*(cell.gradients_save)); }
-            }
-
         }
 
         // we now populate the pre-sized sparse matrix representation of the flow Jacobian
@@ -1376,7 +1397,7 @@ public:
                     assert(cell.id < ghost_cell_start_id, "Oops, we expect to not find a ghost cell at this point.");
                     size_t I = cell.id*nConserved + ip;
                     size_t J = pcell.id*nConserved + jp;
-                    flowJacobian.local[I,J] = cell.dRdU[ip][jp];
+                    flowJacobian.local[I,J] = cell.dRdU[ip][jp].re;
                 }
             }
         }
@@ -1486,15 +1507,25 @@ public:
                     }
 
                     // return cell to original state
-                    ghost_cell.U[ftl].copy_values_from(ghost_cell.U[0]);
-                    ghost_cell.fs.copy_values_from(*fs_save);
-                    if (myConfig.viscous) {
-                        foreach (cell; ghost_cell.cell_list) { cell.grad.copy_values_from(*(cell.grad_save)); }
+                    version(complex_numbers) {
+                        ghost_cell.U[ftl].copy_values_from(ghost_cell.U[0]);
+                        ghost_cell.fs.copy_values_from(*fs_save);
+                        if (myConfig.viscous) {
+                            foreach (cell; ghost_cell.cell_list) { cell.grad.copy_values_from(*(cell.grad_save)); }
+                        }
+                        if (flowJacobian.spatial_order >= 2) {
+                            foreach(cell; ghost_cell.cell_list) { cell.gradients.copy_values_from(*(cell.gradients_save)); }
+                        }
+                    } else {
+                        // TODO: for structured grids employing a real-valued low-order numerical Jacobian as
+                        // the precondition matrix the above code doesn't completely clean up the effect of the
+                        // perturbuation. Note that this does not occur for unstructured grids.
+                        // This is currently under investigation, in the interim we will apply the more costly
+                        // method of re-evaluating evalRHS with the unperturbed conserved state. KAD 2023-08-31
+                        ghost_cell.U[ftl].copy_values_from(ghost_cell.U[0]);
+                        ghost_cell.decode_conserved(gtl, 0, 0.0);
+                        evalRHS(gtl, 0, ghost_cell.cell_list, ghost_cell.face_list, ghost_cell);
                     }
-                    if (flowJacobian.spatial_order >= 2) {
-                        foreach(cell; ghost_cell.cell_list) { cell.gradients.copy_values_from(*(cell.gradients_save)); }
-                    }
-
                 }
 
                 // Step 3. Calculate dR/dU and add corrections to Jacobian
@@ -1507,7 +1538,7 @@ public:
                         for ( size_t j = 0; j < nConserved; ++j ) {
                             J = pcell.id*nConserved + j; // row index
                             for (size_t k = 0; k < nConserved; k++) {
-                                flowJacobian.local[I,J] = flowJacobian.local[I,J] + bcell.dRdU[i][k]*flowJacobian.dudU[k][j];
+                                flowJacobian.local[I,J] = flowJacobian.local[I,J] + bcell.dRdU[i][k].re*flowJacobian.dudU[k][j];
                             }
                         }
                     }
@@ -1515,7 +1546,6 @@ public:
             } // foreach ( bi, bface; bndary.faces)
         } // foreach ( bndary; bc )
     } // end apply_jacobian_bcs()
-
 
     void evalRHS(int gtl, int ftl, ref FVCell[] cell_list, FVInterface[] iface_list, FVCell pcell)
     /*

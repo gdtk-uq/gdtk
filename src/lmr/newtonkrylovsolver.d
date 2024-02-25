@@ -1221,6 +1221,7 @@ double setDtInCells(double cfl, bool useLocalTimestep)
     bool inviscidCFLOnly = nkCfg.inviscidCFLOnly;
     bool firstCell;
     foreach (blk; parallel(localFluidBlocks,1)) {
+        bool gridFlag = blk.grid_type == Grid_t.structured_grid;
         firstCell = true;
         foreach (i, cell; blk.cells) {
             if (inviscidCFLOnly) {
@@ -1237,7 +1238,7 @@ double setDtInCells(double cfl, bool useLocalTimestep)
             }
             else {
                 // use the default signal frequency routine from the time-accurate code path
-                signal = cell.signal_frequency();
+                signal = cell.signal_frequency(gridFlag);
             }
             cell.dt_local = cfl / signal;
             if (firstCell) {
