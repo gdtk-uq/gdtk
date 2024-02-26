@@ -17,7 +17,7 @@ import std.math : FloatingPointControl;
 import std.parallelism : parallel;
 import std.algorithm : min;
 import std.file;
-import std.math : floor;
+import std.math : floor, isNaN;
 import std.format : format, formattedWrite;
 import std.array : appender;
 
@@ -791,7 +791,15 @@ void addToTimesFile()
     f.writefln("'%s':", key);
     f.writefln("   time: %.18e", SimState.time);
     f.writefln("   dt:   %.18e", SimState.dt_global);
-    f.writefln("   cfl:  %.18e", SimState.cfl_max);
+    if (isNaN(SimState.cfl_max)) {
+        // Then it has never been set.
+        // This might occur on initialisation, or if we are running with fixed timestepping.
+        // Put a value of -1.0 as the signal to outside world.
+        f.writeln("   cfl:  -1.0");
+    }
+    else {
+        f.writefln("   cfl:  %.18e", SimState.cfl_max);
+    }
     double wall_clock_elapsed = to!double((Clock.currTime() - SimState.wall_clock_start).total!"msecs"())/1000.0;
     f.writefln("   wall-clock-elaped: %.3f", wall_clock_elapsed);
     f.close();
