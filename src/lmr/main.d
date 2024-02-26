@@ -6,6 +6,7 @@ import lmrconfig;
 import command;
 import checkjacobian;
 import computenorms;
+import customscript;
 import probeflow;
 import limiter2vtk;
 import prepgrids;
@@ -46,6 +47,7 @@ Show help for a given Eilmer command or topic.
     // Try to add commands in alphabetical order from here down.
     // 1. Add user commands
     commands["compute-norms"] = compNormsCmd;
+    commands["custom-script"] = customScriptCmd;
     commands["probe-flow"] = probeFlowCmd;
     commands["limiter2vtk"] = limiter2vtkCmd;
     commands["prep-grids"] = prepGridCmd;

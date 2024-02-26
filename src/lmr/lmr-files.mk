@@ -98,6 +98,7 @@ LMR_CMD_FILES = $(LMR_CMD)/checkjacobian.d \
 	$(LMR_CMD)/cmdhelper.d \
 	$(LMR_CMD)/command.d \
 	$(LMR_CMD)/computenorms.d \
+	$(LMR_CMD)/customscript.d \
 	$(LMR_CMD)/probeflow.d \
 	$(LMR_CMD)/limiter2vtk.d \
 	$(LMR_CMD)/prepsim.d \
