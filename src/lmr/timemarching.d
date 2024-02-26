@@ -801,7 +801,7 @@ void addToTimesFile()
         f.writefln("   cfl:  %.18e", SimState.cfl_max);
     }
     double wall_clock_elapsed = to!double((Clock.currTime() - SimState.wall_clock_start).total!"msecs"())/1000.0;
-    f.writefln("   wall-clock-elaped: %.3f", wall_clock_elapsed);
+    f.writefln("   wall-clock-elapsed: %.3f", wall_clock_elapsed);
     f.close();
 }
 
