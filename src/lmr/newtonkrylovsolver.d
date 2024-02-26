@@ -144,7 +144,8 @@ struct NKGlobalConfig {
     bool useLineSearch = true;
     bool usePhysicalityCheck = true;
     double allowableRelativeMassChange = 0.2;
-    double minRelaxationFactor = 0.1;
+    double minRelaxationFactorForCFLGrowth = 0.1;
+    double minRelaxationFactorForUpdate = 0.01;
     double relaxationFactorReductionFactor = 0.7;
     bool useResidualSmoothing = false;
     // Linear solver and preconditioning
@@ -194,7 +195,7 @@ struct NKGlobalConfig {
         useLineSearch = getJSONbool(jsonData, "use_line_search", useLineSearch);
         usePhysicalityCheck = getJSONbool(jsonData, "use_physicality_check", usePhysicalityCheck);
         allowableRelativeMassChange = getJSONdouble(jsonData, "allowable_relative_mass_change", allowableRelativeMassChange);
-        minRelaxationFactor = getJSONdouble(jsonData, "min_relaxation_factor", minRelaxationFactor);
+        minRelaxationFactorForUpdate = getJSONdouble(jsonData, "min_relaxation_factor_for_update", minRelaxationFactorForUpdate);
         relaxationFactorReductionFactor = getJSONdouble(jsonData, "relaxation_factor_reduction_factor", relaxationFactorReductionFactor);
 	useResidualSmoothing = getJSONbool(jsonData, "use_residual_smoothing", useResidualSmoothing);
 	maxLinearSolverIterations = getJSONint(jsonData, "max_linear_solver_iterations", maxLinearSolverIterations);
@@ -834,6 +835,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
     double wallClockElapsed;
     int numberBadSteps = 0;
     bool startOfNewPhase = false;
+    double omega = 1.0;
 
     foreach (step; startStep .. nkCfg.maxNewtonSteps+1) {
 
@@ -885,7 +887,8 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 		    // On step 1, we have no previous residual, so we can't make an adjustment.
 		    // Also, we need to check on a residual drop, but this makes no sense
 		    // until the reference residuals are established.
-		    if (step > nkCfg.numberOfStepsForSettingReferenceResiduals) {
+		    if (step > nkCfg.numberOfStepsForSettingReferenceResiduals &&
+                        omega >= nkCfg.minRelaxationFactorForCFLGrowth) { // TODO: consider only limiting CFL growth based on the relaxation factor for the residual-based cflSelector
 			cfl = cflSelector.nextCFL(cfl, step, globalResidual, prevGlobalResidual, globalResidual/referenceGlobalResidual);
 		    }
 		}
@@ -925,14 +928,14 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 	computeGlobalResidual();
 
 	/* 1a. perform a physicality check if required */
-        double omega = nkCfg.usePhysicalityCheck ? determineRelaxationFactor() : 1.0;
+        omega = nkCfg.usePhysicalityCheck ? determineRelaxationFactor() : 1.0;
 
 	/* 1b. do a line search if required */
-	if ( (omega > nkCfg.minRelaxationFactor) && nkCfg.useLineSearch ) {
+	if ( (omega > nkCfg.minRelaxationFactorForUpdate) && nkCfg.useLineSearch ) {
 	    omega = applyLineSearch(omega);
 	}
 
-        if (omega >= nkCfg.minRelaxationFactor) {
+        if (omega >= nkCfg.minRelaxationFactorForUpdate) {
             // Things are good. Apply omega-scaled update and continue on.
             // We think??? If not, we bail at this point.
             try {
@@ -953,7 +956,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             }
             numberBadSteps = 0;
         }
-        else if (omega < nkCfg.minRelaxationFactor && activePhase.useAutoCFL) {
+        else if (omega < nkCfg.minRelaxationFactorForUpdate && activePhase.useAutoCFL) {
             numberBadSteps++;
             if (numberBadSteps == nkCfg.maxConsecutiveBadSteps) {
                 writeln("Too many consecutive bad steps while trying to update flow state.\n");
@@ -2372,7 +2375,7 @@ double determineRelaxationFactor()
 {
     alias GlobalConfig cfg;
     double theta = nkCfg.allowableRelativeMassChange;
-    double minOmega = nkCfg.minRelaxationFactor;
+    double minOmega = nkCfg.minRelaxationFactorForUpdate;
     double omegaReductionFactor = nkCfg.relaxationFactorReductionFactor;
 
     size_t nConserved = cfg.cqi.n;
@@ -2472,7 +2475,7 @@ double determineRelaxationFactor()
  */
 double applyLineSearch(double omega) {
 
-    double minOmega = nkCfg.minRelaxationFactor;
+    double minOmega = nkCfg.minRelaxationFactorForUpdate;
     double omegaReductionFactor = nkCfg.relaxationFactorReductionFactor;
 
     size_t nConserved = GlobalConfig.cqi.n;
