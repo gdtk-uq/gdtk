@@ -1376,7 +1376,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
 
     setResiduals();
 
-    determineScaleFactors(scale);
+    determineScaleFactors(scale, nkCfg.useScaling);
     // r0 = A*x0 - b
     compute_r0(scale);
 
@@ -1553,8 +1553,13 @@ void setResiduals()
  * Authors: RJG and KAD
  * Date: 2022-03-02
  */
-void determineScaleFactors(ref ConservedQuantities scale)
+void determineScaleFactors(ref ConservedQuantities scale, bool useScaling)
 {
+    if (!useScaling) {
+        scale[] = to!number(1.0);
+        return;
+    }
+    // else we go ahead and determine the scale factors
     scale[] = to!number(0.0);
     // First do this for each block.
     size_t nConserved = GlobalConfig.cqi.n;
