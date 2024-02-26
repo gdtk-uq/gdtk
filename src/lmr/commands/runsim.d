@@ -19,6 +19,7 @@ import std.string;
 import std.file : exists;
 import core.stdc.stdlib : exit;
 import std.parallelism : totalCPUs;
+import std.math : FloatingPointControl;
 
 import json_helper : readJSONfile;
 
@@ -211,8 +212,8 @@ int main(string[] args)
         writeln("Revision-id: ", lmrCfg.revisionId);
         writeln("Revision-date: ", lmrCfg.revisionDate);
         writeln("Compiler-name: ", lmrCfg.compilerName);
-	writeln("Parallel-flavour: PUT_PARALLEL_FLAVOUR_HERE");
-	writeln("Number-type: PUT_NUMBER_TYPE_HERE");
+        writeln("Parallel-flavour: PUT_PARALLEL_FLAVOUR_HERE");
+        writeln("Number-type: PUT_NUMBER_TYPE_HERE");
         writeln("Build-date: ", lmrCfg.buildDate);
     }
 
@@ -228,7 +229,7 @@ int main(string[] args)
            config.bundling,
            "v|verbose+", &verbosity,
            "s|snapshot-start", &snapshotStart,
-	   "start-with-cfl|cfl", &startCFL,
+           "start-with-cfl|cfl", &startCFL,
            "max-cpus", &maxCPUs,
            "threads-per-mpi-task", &threadsPerMPITask,
            "max-wall-clock", &maxWallClock);
@@ -236,12 +237,27 @@ int main(string[] args)
     GlobalConfig.verbosity_level = verbosity;
 
     if (verbosity > 0 && GlobalConfig.is_master_task) {
-	writeln("lmr run: Begin simulation.");
-	version(mpi_parallel) {
-	    writefln("lmr-mpi-run: number of MPI ranks= %d", size);
-	}
+        writeln("lmr run: Begin simulation.");
+        version(mpi_parallel) {
+            writefln("lmr-mpi-run: number of MPI ranks= %d", size);
+        }
     }
 
+    version(enable_fp_exceptions) {
+        FloatingPointControl fpctrl;
+        // Enable hardware exceptions for division by zero, overflow to infinity,
+        // invalid operations, and uninitialized floating-point variables.
+        // Copied from https://dlang.org/library/std/math/floating_point_control.html
+        //fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+
+        // Unfortunately invalidException objects to even writing a NaN
+        // to the screen. Since this behaviour is undesirable we really
+        // can't leave this one enabled, though the other two are fine.
+        // (NNG, Oct 23)
+        //fpctrl.enableExceptions(FloatingPointControl.invalidException);
+        fpctrl.enableExceptions(FloatingPointControl.divByZeroException);
+        fpctrl.enableExceptions(FloatingPointControl.overflowException);
+    }
     // Figure out which snapshot to start from
     if (GlobalConfig.is_master_task) {
 	numberSnapshots = determineNumberOfSnapshots();

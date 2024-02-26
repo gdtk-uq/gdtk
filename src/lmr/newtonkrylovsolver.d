@@ -539,14 +539,6 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     SimState.maxWallClockSeconds = timeStringToSeconds(maxWallClock);
     SimState.wall_clock_start = Clock.currTime();
 
-    version(enable_fp_exceptions) {
-        FloatingPointControl fpctrl;
-        // Enable hardware exceptions for division by zero, overflow to infinity,
-        // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
-    }
-
     // Initialise baseline configuration
     initConfiguration();
     if (cfg.nFluidBlocks == 0 && cfg.is_master_task) {
