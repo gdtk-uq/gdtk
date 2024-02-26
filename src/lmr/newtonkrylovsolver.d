@@ -45,6 +45,7 @@ import fileutil : ensure_directory_is_present;
 import globalconfig;
 import globaldata;
 import init;
+import simcore: compute_mass_balance;
 import simcore_gasdynamic_step : detect_shocks;
 import simcore_exchange;
 import bc;
@@ -2645,9 +2646,7 @@ void writeDiagnostics(int step, double dt, double cfl, double wallClockElapsed, 
 {
     alias cfg = GlobalConfig;
 
-    // [TODO] compute mass balance
-    // double massBalance = computeMassBalance();
-    double massBalance = 100.0;
+    double massBalance = compute_mass_balance();
     if (!residualsUpToDate) {
         computeResiduals(currentResiduals);
         residualsUpToDate = true;

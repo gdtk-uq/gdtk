@@ -365,15 +365,19 @@ void compute_L2_residual(ref number L2_residual)
     }
 } // end compute_L2_residuals()
 
-void compute_mass_balance(ref number mass_balance)
+double compute_mass_balance()
 {
-    mass_balance = to!number(0.0);
+    double mass_balance = 0.0;
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
         blk.compute_mass_balance();
     }
     foreach (blk; localFluidBlocksBySize) {
         mass_balance += blk.mass_balance;
     }
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &(mass_balance), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+    return fabs(mass_balance);
 } // end compute_mass_balance()
 
 void compute_wall_distances() {

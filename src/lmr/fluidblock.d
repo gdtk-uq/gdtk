@@ -61,7 +61,7 @@ public:
                            // within this block.
     double omegaz; // Angular velocity (in rad/s) of the rotating frame.
                    // There is only one component, about the z-axis.
-    number mass_balance; // domain mass balance used to monitor for steady state
+    double mass_balance; // domain mass balance used to assess convergence of steady-state simulations
     number L2_residual; // L2 norm of the global residual
     number mass_residual, energy_residual; // monitor these for steady state
     Vector3 mass_residual_loc, energy_residual_loc; // locations of worst case
@@ -846,7 +846,7 @@ public:
         foreach(boundary; bc) {
             if (boundary.type != "exchange_over_full_face" && boundary.type != "exchange_using_mapped_cells") {
                 foreach(i, face; boundary.faces) {
-                    mass_balance += boundary.outsigns[i] * face.F[cqi.mass] * face.area[0];
+                    mass_balance += boundary.outsigns[i] * face.F[cqi.mass].re * face.area[0].re;
                 }
             }
         }
