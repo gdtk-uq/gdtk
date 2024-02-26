@@ -443,7 +443,9 @@ prep-gas:
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) build-prep-gas
 
 ugrid_partition:
+	- mkdir -p $(BUILD_DIR)/bin
 	cd $(GRID_DIR); make BUILD_DIR=$(BUILD_DIR) DMD=$(DMD) PLATFORM=$(PLATFORM) ugrid_partition
+	cd $(GRID_DIR); cp ugrid_partition $(BUILD_DIR)/bin
 
 prep-chem:
 	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) PLATFORM=$(PLATFORM) build-prep-chem
