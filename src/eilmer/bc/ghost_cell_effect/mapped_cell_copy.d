@@ -644,7 +644,6 @@ public:
                 auto buf = outgoing_geometry_buf_list[i];
                 size_t ii = 0;
                 foreach (cid; src_cell_ids[blk.id][outgoing_block_list[i]]) {
-                    writefln("blkId= %d, i= %d outBlk= %d cid= %d", blk.id, i, outgoing_block_list[i], cid);
                     auto c = blk.cells[cid];
                     foreach (j; 0 .. blk.myConfig.n_grid_time_levels) {
                         buf[ii++] = c.pos[j].x.re; version(complex_numbers) { buf[ii++] = c.pos[j].x.im; }
