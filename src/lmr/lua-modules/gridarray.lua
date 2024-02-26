@@ -29,7 +29,7 @@ function GridArray:new(o)
    if not flag then
       error("GridArray constructor expected to receive a single table with named entries", 2)
    end
-   local flag = checkAllowedNames(o, {"tag", "fsTag", "bcTags",
+   local flag = checkAllowedNames(o, {"tag", "fsTag", "bcTags", "shock_fitting",
                                       "grid", "gridArray", "nib", "njb", "nkb"})
    if not flag then
       error("Invalid name for item supplied to GridArray constructor.", 2)
@@ -46,6 +46,7 @@ function GridArray:new(o)
    assert(o.grid:get_type() == "structured_grid", "supplied grid needs to be a structured grid")
    o.tag = o.tag or ""
    o.fsTag = o.fsTag or ""
+   o.shock_fitting = o.shock_fitting or false
    o.bcTags = o.bcTags or {} -- for boundary conditions to be applied to the FluidBlocks
    for _,face in ipairs(faceList(config.dimensions)) do
       o.bcTags[face] = o.bcTags[face] or o.grid:get_tag(face)
@@ -322,6 +323,39 @@ function GridArray:new(o)
    -- At this point, we have an array of StructuredGrid objects and
    -- the overall StructuredGrid.
    --
+   if o.shock_fitting then
+      -- Prepare the velocity-weights for later writing to file.
+      -- Note that vertex indicies start at 0 in each direction.
+      o.velocity_weights = {}
+      for i = 0, o.niv-1 do
+         o.velocity_weights[i] = {}
+         for j = 0, o.njv-1 do
+            o.velocity_weights[i][j] = {}
+         end
+      end
+      for j = 0, o.njv-1 do
+         for k = 0, o.nkv-1 do
+            distances = {}
+            i = o.niv-1
+            p0 = o.grid:get_vtx(i,j,k)
+            distances[i] = 0.0
+            for irev = 1, o.niv-1 do
+               i = o.niv-1-irev
+               p1 = o.grid:get_vtx(i,j,k)
+               ds = vabs(p1-p0)
+               distances[i] = distances[i+1] + ds
+               p0 = p1 -- for next step
+            end
+            local arc_length = distances[0]
+            for i = 0, o.niv-1 do
+               o.velocity_weights[i][j][k] = distances[i] / arc_length
+            end
+         end
+      end
+   else
+      o.velocity_weights = nil
+   end
+   --
    local gridCollection = {}
    o.myGrids = {}
    for ib = 1, o.nib do
@@ -373,6 +407,7 @@ function GridArray:tojson()
    str = str .. string.format('  "tag": "%s",\n', self.tag)
    str = str .. string.format('  "fsTag": "%s",\n', self.fsTag)
    str = str .. string.format('  "type": "%s",\n', self.myType)
+   str = str .. string.format('  "shock_fitting": %s,\n', tostring(self.shock_fitting))
    str = str .. '    "ids": ['
    for ib = 1, self.nib do
       str = str .. '['

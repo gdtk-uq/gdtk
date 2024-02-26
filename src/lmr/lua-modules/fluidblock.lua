@@ -18,7 +18,7 @@ function FluidBlock:new(o)
    o = o or {}
    flag = checkAllowedNames(o, {"grid", "gridMetadata", "initialState", "fillCondition", "active",
                                 "label", "omegaz", "may_be_turbulent", "bcList", "bcDict",
-                                "hcellList", "xforceList", "fluidBlockArrayId"})
+                                "hcellList", "xforceList"})
    if not flag then
       error("Invalid name for item supplied to FluidBlock constructor.", 2)
    end
@@ -34,8 +34,6 @@ function FluidBlock:new(o)
       error('Have previously defined a FluidBlock with label "' .. o.label .. '"', 2)
    end
    fluidBlocksDict[o.label] = o.id
-   -- Set to -1 if NOT part of a fluid-block-array, otherwise use supplied value
-   o.fluidBlockArrayId = o.fluidBlockArrayId or -1
    -- Must have a grid and initialState
    assert(o.grid or o.gridMetadata, "need to supply a grid or its metadata")
    assert(o.initialState, "need to supply an initialState")
@@ -185,7 +183,6 @@ function FluidBlock:tojson()
    str = str .. string.format('    "type": "%s",\n', self.myType)
    str = str .. string.format('    "label": "%s",\n', self.label)
    str = str .. string.format('    "active": %s,\n', tostring(self.active))
-   str = str .. string.format('    "fluidBlockArrayId": %d,\n', self.fluidBlockArrayId)
    str = str .. string.format('    "omegaz": %.18e,\n', self.omegaz)
    str = str .. string.format('    "may_be_turbulent": %s,\n', tostring(self.may_be_turbulent))
    local grid_type

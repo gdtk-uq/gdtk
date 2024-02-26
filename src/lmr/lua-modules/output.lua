@@ -300,7 +300,7 @@ function output.write_config_file(fileName)
    --
    f:write(string.format('"control_count": %d,\n', config.control_count))
    f:write(string.format('"nfluidblock": %d,\n', #(fluidBlocks)))
-   f:write(string.format('"nfluidblockarrays": %d,\n', #(fluidBlockArrays)))
+   f:write(string.format('"ngridarrays": %d,\n', #(gridArraysList)))
    --
    f:write(string.format('"diffuse_wall_bcs_on_init": %s,\n', tostring(config.diffuse_wall_bcs_on_init)))
    f:write(string.format('"number_init_passes": %d,\n', config.number_init_passes))
@@ -385,8 +385,8 @@ function output.write_config_file(fileName)
    f:write(string.format('"udf_solid_source_terms": %s,\n', tostring(config.udf_solid_source_terms)))
    f:write(string.format('"nsolidblock": %d,\n', #solidBlocks))
    --
-   for i = 1, #fluidBlockArrays do
-      f:write(fluidBlockArrays[i]:tojson() .. ",\n")
+   for i = 1, #gridArraysList do
+      f:write(gridArraysList[i]:tojson() .. ",\n")
    end
    for i = 1, #fluidBlocks do
       f:write(fluidBlocks[i]:tojson() .. ",\n")
@@ -428,9 +428,9 @@ function output.write_mpimap_file(fileName)
    if not mpiTasks then
       -- The user's input script has not set up mpiTasks, so we need to do it now.
       if config.block_marching then
-         -- Work through the fluidBlockArrays and allocate MPI tasks for each block array.
-         for _,fba in ipairs(fluidBlockArrays) do
-            mpiDistributeFBArray{fba=fba, ntasks=fba.njb*fba.nkb}
+         -- Work through the gridArraysList and allocate MPI tasks for each block array.
+         for _,ga in ipairs(gridArraysList) do
+            mpiDistributeGridArray{ga=ga, ntasks=ga.njb*ga.nkb}
          end
       else
          -- Work through the single-dimensional fluidBlocks list
@@ -448,49 +448,43 @@ function output.write_mpimap_file(fileName)
    f:close()
 end
 
-function output.write_fluidBlockArrays_file(fileName)
+function output.write_gridArrays_file(fileName)
    local f = assert(io.open(fileName, "w"))
-   f:write("-- A description of the fluidBlockArrays in Lua code.\n")
+   f:write("-- A description of the gridArrays in Lua code.\n")
    f:write("-- Use dofile() to get the content into your interpreter.\n")
-   f:write("fluidBlockArrays = {\n")
-   for i = 1, #(fluidBlockArrays) do
-      local fba = fluidBlockArrays[i]
-      f:write(string.format("  [%d]={label=\"%s\",\n", fba.id, fba.label))
-      f:write(string.format("    nib=%d, njb=%d, nkb=%d,\n", fba.nib, fba.njb, fba.nkb))
+   f:write("gridArrays = {\n")
+   for i = 1, #(gridArraysList) do
+      local ga = gridArraysList[i]
+      f:write(string.format("  [%d]={label=\"%s\",\n", ga.id, ga.label))
+      f:write(string.format("    nib=%d, njb=%d, nkb=%d,\n", ga.nib, ga.njb, ga.nkb))
       local blkId = 0
       if config.dimensions == 3 then
-         blkId = fba.blockArray[1][1][1].id
+         blkId = ga.gridArray[1][1][1].id
       else
-         blkId = fba.blockArray[1][1].id
+         blkId = ga.gridArray[1][1].id
       end
       f:write(string.format("    p00=function() return infoFluidBlock(%d).p00 end,\n", blkId));
       if config.dimensions == 3 then
-         blkId = fba.blockArray[fba.nib][1][1].id
+         blkId = ga.gridArray[ga.nib][1][1].id
       else
-         blkId = fba.blockArray[fba.nib][1].id
+         blkId = ga.gridArray[ga.nib][1].id
       end
       f:write(string.format("    p10=function() return infoFluidBlock(%d).p10 end,\n", blkId));
       if config.dimensions == 3 then
-         blkId = fba.blockArray[fba.nib][fba.njb][1].id
+         blkId = ga.gridArray[ga.nib][ga.njb][1].id
       else
-         blkId = fba.blockArray[fba.nib][fba.njb].id
+         blkId = ga.gridArray[ga.nib][ga.njb].id
       end
       f:write(string.format("    p11=function() return infoFluidBlock(%d).p11 end,\n", blkId));
       if config.dimensions == 3 then
-         blkId = fba.blockArray[1][fba.njb][1].id
+         blkId = ga.gridArray[1][ga.njb][1].id
       else
-         blkId = fba.blockArray[1][fba.njb].id
+         blkId = ga.gridArray[1][ga.njb].id
       end
       f:write(string.format("    p01=function() return infoFluidBlock(%d).p01 end,\n", blkId));
-      --
-      f:write("    blockCollection={")
-      for _,blk in ipairs(fba.blockCollection) do
-         f:write(string.format("%d, ", blk.id))
-      end
-      f:write("}, -- end blockCollection\n")
-      --
-      f:write("    blockArray={\n")
-      for ib,itable in pairs(fba.blockArray) do
+     --
+      f:write("    gridArray={\n")
+      for ib,itable in pairs(ga.gridArray) do
          f:write(string.format("      [%d]={", ib))
          for jb,jitem in pairs(itable) do
             f:write(string.format("[%d]={", jb))
@@ -506,89 +500,38 @@ function output.write_fluidBlockArrays_file(fileName)
          end
          f:write("}, -- end [ib]\n")
       end
-      f:write("    }, -- end blockArray\n")
+      f:write("    }, -- end gridArray\n")
       f:write("  },\n")
    end
-   f:write("} -- end fluidBlockArrays\n")
-   --
-   f:write("-- Dictionary of FluidBlockArrays\n")
-   f:write("fluidBlockArraysDict = {\n")
-   for label,id in pairs(fluidBlockArraysDict) do
-      f:write(string.format(' ["%s"]=%d,\n', label, id))
-   end
-   f:write("} -- end fluidBlockArraysDict\n")
-   --
-   f:write("-- Map from FluidBlock id to FluidBlockArray id\n")
-   f:write("whichFluidBlockArray = {\n")
-   for i,blk in ipairs(fluidBlocks) do
-      if blk.fluidBlockArrayId >= 0 then
-         f:write(string.format(" [%d]=%d,", blk.id, blk.fluidBlockArrayId))
-      end
-      if (i > 1 and i%5 == 0) or i == #fluidBlocks then f:write("\n") end
-   end
-   f:write("} -- end whichFluidBlockArray\n")
-   --
-   f:write("-- Map from FluidBlock id to FluidBlockArray label\n")
-   f:write("whichFluidBlockArrayLabel = {\n")
-   for i,blk in ipairs(fluidBlocks) do
-      if blk.fluidBlockArrayId >= 0 then
-         fba = fluidBlockArrays[blk.fluidBlockArrayId+1]
-         f:write(string.format(' [%d]="%s",', blk.id, fba.label))
-      end
-      if (i > 1 and i%5 == 0) or i == #fluidBlocks then f:write("\n") end
-   end
-   f:write("} -- end whichFluidBlockArrayLabel\n")
-   --
-   f:write("-- Dictionary of FluidBlocks\n")
-   f:write("fluidBlocksDict = {\n")
-   for label,id in pairs(fluidBlocksDict) do
-      f:write(string.format(' ["%s"]=%d,\n', label, id))
-   end
-   f:write("} -- end fluidBlocksDict\n")
-   --
-   local fnBodyStr = [[
-function is_in_FluidBlockArray(blkId, label)
-   -- Returns true if a block is in a particular FluidBlockArray.
-   local myfba = whichFluidBlockArrayLabel[blkId]
-   if not myfba then
-      return false
-   end
-   if label == myfba then
-      return true
-   else
-      return false
-   end
-end
-]]
-   f:write(fnBodyStr)
+   f:write("} -- end gridArrays\n")
    --
    f:close()
-end -- function write_fluidBlockArrays_file
+end -- function write_gridArrays_file
 
-function output.write_shock_fitting_helper_files(job)
+function output.write_shock_fitting_helper_files()
    print("For shock-fitting, write rails and weights files.")
-   for i = 1, #(fluidBlockArrays) do
-      local fba = fluidBlockArrays[i]
-      if fba.shock_fitting then
-         local filename = string.format("config/fba-%04d.rails", fba.id)
+   for i = 1, #(gridArraysList) do
+      local ga = gridArraysList[i]
+      if ga.shock_fitting then
+         local filename = string.format("lmrsim/grid/ga-%04d.rails", ga.id)
          local f = assert(io.open(filename, "w"))
          f:write("# Rails are presently described by the initial west- and east-boundary coordinates.\n")
-         for k = 0, fba.nkv-1 do
-            for j = 0, fba.njv-1 do
-               local pw = fba.grid:get_vtx(0,j,k)
-               local pe = fba.grid:get_vtx(fba.niv-1,j,k)
+         for k = 0, ga.nkv-1 do
+            for j = 0, ga.njv-1 do
+               local pw = ga.grid:get_vtx(0,j,k)
+               local pe = ga.grid:get_vtx(ga.niv-1,j,k)
                f:write(string.format("%.18e %.18e %.18e %.18e %.18e %.18e\n",
                                      pw.x, pw.y, pw.z, pe.x, pe.y, pe.z))
             end
          end
          f:close()
-         local filename = string.format("config/fba-%04d.weights", fba.id)
+         local filename = string.format("lmrsim/grid/ga-%04d.weights", ga.id)
          local f = assert(io.open(filename, "w"))
          f:write("# Weights represent the arc-length distance of each vertex from the east-boundary vertex.\n")
-         for k = 0, fba.nkv-1 do
-            for j = 0, fba.njv-1 do
-               for i = 0, fba.niv-1 do
-                  f:write(string.format("%.18e\n", fba.velocity_weights[i][j][k]))
+         for k = 0, ga.nkv-1 do
+            for j = 0, ga.njv-1 do
+               for i = 0, ga.niv-1 do
+                  f:write(string.format("%.18e\n", ga.velocity_weights[i][j][k]))
                end
             end
          end

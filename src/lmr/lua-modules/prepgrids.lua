@@ -58,10 +58,6 @@ SBlock2UBlock = fluidblock.SBlock2UBlock
 connectBlocks = fluidblock.connectBlocks
 identifyBlockConnections = fluidblock.identifyBlockConnections
 
-local fbarray = require 'fbarray'
-FBArray = fbarray.FBArray
-FluidBlockArray = fbarray.FluidBlockArray
-
 local solidblock = require 'solidblock'
 SolidBlock = solidblock.SolidBlock
 SolidBlockArray = solidblock.SolidBlockArray

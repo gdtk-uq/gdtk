@@ -21,7 +21,6 @@ NewtonKrylovGlobalConfig = nkconfig.NewtonKrylovGlobalConfig
 nkPhases = nkconfig.NewtonKrylovPhases
 NewtonKrylovPhase = nkconfig.NewtonKrylovPhase
 
-
 local grid = require 'grid'
 Grid = grid.Grid
 connectGrids = grid.connectGrids
@@ -39,10 +38,6 @@ FluidBlock = fluidblock.FluidBlock
 SBlock2UBlock = fluidblock.SBlock2UBlock
 connectBlocks = fluidblock.connectBlocks
 identifyBlockConnections = fluidblock.identifyBlockConnections
-
-local fbarray = require 'fbarray'
-FBArray = fbarray.FBArray
-FluidBlockArray = fbarray.FluidBlockArray
 
 local solidblock = require 'solidblock'
 SolidBlock = solidblock.SolidBlock
@@ -69,7 +64,7 @@ write_config_file = output.write_config_file
 write_times_file = output.write_times_file
 write_block_list_file = output.write_block_list_file
 write_mpimap_file = output.write_mpimap_file
-write_fluidBlockArrays_file = output.write_fluidBlockArrays_file
+write_gridArrays_file = output.write_gridArrays_file
 write_shock_fitting_helper_files = output.write_shock_fitting_helper_files
 
 local prep_check = require 'prep_check'
@@ -125,12 +120,10 @@ gridsList = {}
 fluidBlocks = {}
 -- Storage for later definitions of GridArray and FBArray objects.
 gridArraysList = {}
-fluidBlockArrays = {}
 -- We may want to look up the blocks via labels rather than numerical id
 -- in user-defined procedures.
 -- The following dictionaries store the connections.
 fluidBlocksDict = {}
-fluidBlockArraysDict = {}
 
 -- The user may assign the MPI task id for eack block manually
 -- but, if they don't, a default distribution will be made.
@@ -255,7 +248,7 @@ function buildRuntimeConfigFiles()
    end
    write_block_list_file(lmrconfig.blockListFilename())
    write_mpimap_file(lmrconfig.mpimapFilename())
-   write_fluidBlockArrays_file(cfgDir .. "/" .. lmrCfg["fluidblock-arrays-filename"])
+   write_gridArrays_file(cfgDir .. "/" .. lmrCfg["grid-arrays-filename"])
    if (config.solver_mode == "steady") then
       nkconfig.setIgnoreFlagInPhases(nkPhases)
       nkconfig.writeNKConfigToFile(NewtonKrylovGlobalConfig, nkPhases, lmrconfig.nkConfigFilename())
