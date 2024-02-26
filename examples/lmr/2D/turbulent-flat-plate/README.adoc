@@ -1,0 +1,24 @@
+//tag::description[]
+= Supersonic turbulent flow over a flat plate
+`gdtk/examples/lmr/2D/turbulent-flat-plate`
+
+Nick N. Gibbons
+2024-02-26
+
+This example is a turbulent, supersonic flow over a flat plate at Mach 6.5,
+from Ye and Morgan (1994). In T4, the boundary layer at this condition is
+actually transitional, though here it is treated as fully turbulent from the
+leading edge. Both structured and unstructured variants are available, and
+the one equation "Edwards" variant of the Spalart-Allmaras turbulence model
+is used.
+
+//end::description[]
+
+== Reference
+  @inproceedings{ye_transition94,
+    title={Transition of compressible high enthalpy boundary layer flow over a flat plate},
+    author={Y. He and R. G. Morgan},
+    journal={Aeronautical Journal},
+    year={1994}
+  }
+
