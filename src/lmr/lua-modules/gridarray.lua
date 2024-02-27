@@ -1,5 +1,5 @@
 -- gridarray.lua
--- A module for constructing arrays of structured grids.
+-- A module for registering arrays of structured grids.
 --
 -- PJ, 2021-10-04
 --
@@ -11,7 +11,9 @@ local GridArray = {
 
 function GridArray:new(o)
    -- Construct a GridArray object which contains both the overall structured grid and
-   -- an array of structured grids.  We may be given either for starters.
+   -- an array of (registered) structured grids.
+   -- Eventually, we may be given either for starters.
+   -- For the moment, we always expect a single structured-grid to subdivide.
    --
    -- If we are given an initial overall grid, then we also expect to be given
    -- the number of subgrids to be formed in each index direction.
@@ -168,6 +170,7 @@ function GridArray:new(o)
       end -- ib loop
       -- Finished generating subgrids
    else
+      error("We should not have arrived here. Presently, a single grid to be subdivided is required.", 2)
       -- We were not given a single grid,
       -- so we assume that we were given the array of subgrids.
       -- Join these into a single overall grid.
@@ -369,7 +372,7 @@ function GridArray:new(o)
 	    if ib == o.nib then bcTags['east'] = o.bcTags['east'] end
 	    if jb == 1 then bcTags['south'] = o.bcTags['south'] end
 	    if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
-	    local g = Grid:new{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=o.id}
+	    local g = RegisteredGrid:new{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=o.id}
 	    gridCollection[#gridCollection+1] = g
             o.myGrids[ib][jb] = g
 	 else
@@ -384,7 +387,7 @@ function GridArray:new(o)
 	       if jb == o.njb then bcTags['north'] = o.bcTags['north'] end
 	       if kb == 1 then bcTags['bottom'] = o.bcTags['bottom'] end
 	       if kb == o.nkb then bcTags['top'] = o.bcTags['top'] end
-	       local g = Grid:new{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=o.id}
+	       local g = RegisteredGrid:new{grid=subgrid, fsTag=o.fsTag, bcTags=bcTags, gridArrayId=o.id}
 	       gridCollection[#gridCollection+1] = g
                o.myGrids[ib][jb][kb] = g
 	    end -- kb loop

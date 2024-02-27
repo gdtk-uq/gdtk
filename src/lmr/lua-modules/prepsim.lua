@@ -22,7 +22,7 @@ nkPhases = nkconfig.NewtonKrylovPhases
 NewtonKrylovPhase = nkconfig.NewtonKrylovPhase
 
 local grid = require 'grid'
-Grid = grid.Grid
+RegisteredGrid = grid.RegisteredGrid
 connectGrids = grid.connectGrids
 connectionAsJSON = grid.connectionAsJSON
 
@@ -248,7 +248,6 @@ function buildRuntimeConfigFiles()
    end
    write_block_list_file(lmrconfig.blockListFilename())
    write_mpimap_file(lmrconfig.mpimapFilename())
-   write_gridArrays_file(cfgDir .. "/" .. lmrCfg["grid-arrays-filename"])
    if (config.solver_mode == "steady") then
       nkconfig.setIgnoreFlagInPhases(nkPhases)
       nkconfig.writeNKConfigToFile(NewtonKrylovGlobalConfig, nkPhases, lmrconfig.nkConfigFilename())

@@ -1,17 +1,17 @@
 -- grid.lua
 --
--- Each Grid object, in the Lua domain, will hold a reference to a Dlang
+-- Each RegisteredGrid object, in the Lua domain, will hold a reference to a Dlang
 -- StructuredGrid or UnstructuredGrid, plus some metadata needed to assign
--- boundary conditions and the like.
+-- boundary conditions (and the like) at a later point in time.
 --
 -- PJ, 2021-10-05 pulled out of prep-grids.lua
 --
 
-local Grid = {
-   myType = "Grid"
+local RegisteredGrid = {
+   myType = "RegisteredGrid"
 }
 
-function Grid:new(o)
+function RegisteredGrid:new(o)
    -- Input:
    -- A single table with named items.
    -- grid: a StructuredGrid or UnstructuredGrid object that has been generated
@@ -22,13 +22,13 @@ function Grid:new(o)
    -- bcTags: a table of strings that will be used to attach boundary conditions
    --    from a dictionary when the FluidBlock is later constructed.
    -- gridArrayId: needs to be supplied only if the grid is part of a larger array.
-   local flag = type(self)=='table' and self.myType=='Grid'
+   local flag = type(self)=='table' and self.myType=='RegisteredGrid'
    if not flag then
-      error("Make sure that you are using Grid:new{} and not Grid.new{}", 2)
+      error("Make sure that you are using RegisteredGrid:new{} and not RegisteredGrid.new{}", 2)
    end
    local flag = type(o)=='table'
    if not flag then
-      error("Grid constructor expects a single table with named items.", 2)
+      error("RegisteredGrid constructor expects a single table with named items.", 2)
    end
    flag = checkAllowedNames(o, {"grid", "tag", "fsTag", "bcTags", "gridArrayId"})
    if not flag then
@@ -109,7 +109,7 @@ function Grid:new(o)
    return o
 end -- Grid:new
 
-function Grid:tojson()
+function RegisteredGrid:tojson()
    str = '{\n'
    str = str .. string.format('  "tag": "%s",\n', self.tag)
    str = str .. string.format('  "fsTag": "%s",\n', self.fsTag)
@@ -264,7 +264,7 @@ local function identifyGridConnections(includeList, excludeList, tolerance)
 end -- identifyGridConnections
 
 return {
-   Grid = Grid,
+   RegisteredGrid = RegisteredGrid,
    connectGrids = connectGrids,
    connectionAsJSON = connectionAsJSON,
    identifyGridConnections = identifyGridConnections

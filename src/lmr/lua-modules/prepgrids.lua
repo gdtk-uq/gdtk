@@ -40,7 +40,7 @@ importGridproConnectivity = gridproimport.importGridproConnectivity
 importGridproBCs = gridproimport.importGridproBCs
 
 local grid = require 'grid'
-Grid = grid.Grid
+RegisteredGrid = grid.RegisteredGrid
 connectGrids = grid.connectGrids
 connectionAsJSON = grid.connectionAsJSON
 identifyGridConnections = grid.identifyGridConnections
@@ -83,7 +83,7 @@ write_config_file = output.write_config_file
 write_times_file = output.write_times_file
 write_block_list_file = output.write_block_list_file
 write_mpimap_file = output.write_mpimap_file
-write_fluidBlockArrays_file = output.write_fluidBlockArrays_file
+write_gridArrays_file = output.write_gridArrays_file
 write_shock_fitting_helper_files = output.write_shock_fitting_helper_files
 
 local prep_check = require 'prep_check'
@@ -127,7 +127,7 @@ function registerGrid(o)
    -- Returns:
    -- the grid id number so that we may assign it and use it when making connections.
    --
-   local rgrid = Grid:new(o)
+   local rgrid = RegisteredGrid:new(o)
    return rgrid.id
 end -- function registerGrid
 
@@ -198,6 +198,9 @@ function writeGridFiles()
       f:write(g:tojson() .. '\n')
       f:close()
    end
+   local cfgDir = lmrconfig.lmrCfg["config-directory"]
+   write_gridArrays_file(cfgDir .. "/" .. lmrCfg["grid-arrays-filename"])
+   write_shock_fitting_helper_files()
    print(string.format("  #grids %d", #gridsList))
    print(string.format("  #gridArrays %d", #gridArraysList))
 end

@@ -449,6 +449,13 @@ function output.write_mpimap_file(fileName)
 end
 
 function output.write_gridArrays_file(fileName)
+   -- This gridArrays file is intended to hold Lua code that the user's
+   -- Lua scripts can read in and make use of at run time.
+   --
+   -- 2024-02-27: In the transition to Eilmer 5 code, this function has been gutted.
+   -- When we want to restore some of its former glory, the fluidBlockArrays file
+   -- in the Eilmer 4 code base is the place to look for suitable bits.
+   --
    local f = assert(io.open(fileName, "w"))
    f:write("-- A description of the gridArrays in Lua code.\n")
    f:write("-- Use dofile() to get the content into your interpreter.\n")
@@ -459,32 +466,32 @@ function output.write_gridArrays_file(fileName)
       f:write(string.format("    nib=%d, njb=%d, nkb=%d,\n", ga.nib, ga.njb, ga.nkb))
       local blkId = 0
       if config.dimensions == 3 then
-         blkId = ga.gridArray[1][1][1].id
+         blkId = ga.myGrids[1][1][1].id
       else
-         blkId = ga.gridArray[1][1].id
+         blkId = ga.myGrids[1][1].id
       end
       f:write(string.format("    p00=function() return infoFluidBlock(%d).p00 end,\n", blkId));
       if config.dimensions == 3 then
-         blkId = ga.gridArray[ga.nib][1][1].id
+         blkId = ga.myGrids[ga.nib][1][1].id
       else
-         blkId = ga.gridArray[ga.nib][1].id
+         blkId = ga.myGrids[ga.nib][1].id
       end
       f:write(string.format("    p10=function() return infoFluidBlock(%d).p10 end,\n", blkId));
       if config.dimensions == 3 then
-         blkId = ga.gridArray[ga.nib][ga.njb][1].id
+         blkId = ga.myGrids[ga.nib][ga.njb][1].id
       else
-         blkId = ga.gridArray[ga.nib][ga.njb].id
+         blkId = ga.myGrids[ga.nib][ga.njb].id
       end
       f:write(string.format("    p11=function() return infoFluidBlock(%d).p11 end,\n", blkId));
       if config.dimensions == 3 then
-         blkId = ga.gridArray[1][ga.njb][1].id
+         blkId = ga.myGrids[1][ga.njb][1].id
       else
-         blkId = ga.gridArray[1][ga.njb].id
+         blkId = ga.myGrids[1][ga.njb].id
       end
       f:write(string.format("    p01=function() return infoFluidBlock(%d).p01 end,\n", blkId));
      --
       f:write("    gridArray={\n")
-      for ib,itable in pairs(ga.gridArray) do
+      for ib,itable in pairs(ga.myGrids) do
          f:write(string.format("      [%d]={", ib))
          for jb,jitem in pairs(itable) do
             f:write(string.format("[%d]={", jb))
@@ -508,12 +515,15 @@ function output.write_gridArrays_file(fileName)
    f:close()
 end -- function write_gridArrays_file
 
+-- Extract grid directory and names from central config.
+local lmrconfig = require 'lmrconfig'
+
 function output.write_shock_fitting_helper_files()
    print("For shock-fitting, write rails and weights files.")
    for i = 1, #(gridArraysList) do
       local ga = gridArraysList[i]
       if ga.shock_fitting then
-         local filename = string.format("lmrsim/grid/ga-%04d.rails", ga.id)
+         local filename = string.format(lmrconfig.gridDirectory() .. "/ga-%04d.rails", ga.id)
          local f = assert(io.open(filename, "w"))
          f:write("# Rails are presently described by the initial west- and east-boundary coordinates.\n")
          for k = 0, ga.nkv-1 do
@@ -525,7 +535,7 @@ function output.write_shock_fitting_helper_files()
             end
          end
          f:close()
-         local filename = string.format("lmrsim/grid/ga-%04d.weights", ga.id)
+         local filename = string.format(lmrconfig.gridDirectory() .. "/ga-%04d.weights", ga.id)
          local f = assert(io.open(filename, "w"))
          f:write("# Weights represent the arc-length distance of each vertex from the east-boundary vertex.\n")
          for k = 0, ga.nkv-1 do
