@@ -243,21 +243,46 @@ int main(string[] args)
         }
     }
 
-    version(enable_fp_exceptions) {
-        FloatingPointControl fpctrl;
-        // Enable hardware exceptions for division by zero, overflow to infinity,
-        // invalid operations, and uninitialized floating-point variables.
-        // Copied from https://dlang.org/library/std/math/floating_point_control.html
-        //fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
-
-        // Unfortunately invalidException objects to even writing a NaN
-        // to the screen. Since this behaviour is undesirable we really
-        // can't leave this one enabled, though the other two are fine.
-        // (NNG, Oct 23)
-        //fpctrl.enableExceptions(FloatingPointControl.invalidException);
-        fpctrl.enableExceptions(FloatingPointControl.divByZeroException);
-        fpctrl.enableExceptions(FloatingPointControl.overflowException);
+    // Enable hardware exceptions for division by zero, overflow to infinity,
+    // invalid operations, and uninitialized floating-point variables.
+    // Copied from https://dlang.org/library/std/math/hardware/floating_point_control.html
+    // fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    //
+    // Unfortunately invalidException objects to even writing a NaN
+    // to the screen. Since this behaviour is undesirable we really
+    // can't leave this one enabled, though the other two are fine.
+    // (NNG, Oct 23)
+    //
+    // When compiling in fast mode (e.g. with -O1, -O2, etc.) the LDC2 compiler
+    // optimizes the code to pre-calculate both branches of conditional statements.
+    // This can cause problems when floating point exceptions are enabled, since
+    // one of the branches, the invalid or 'forbidden' branch, may peform an invalid
+    // floating point operation, such as division by zero. We have observed that
+    // the routine in the complex number module which handles complex number division
+    // exhibits this behaviour. This does not occur for the debug version of the code
+    // since no optimizations are enabled, and thus only the 'safe' branch of the code
+    // is executed. For this reason we only switch on floating point exceptions for
+    // the debug flavour of the complex number version.
+    // (KAD, Feb 24)
+    version(complex_numbers) {
+        debug {
+            version(enable_fp_exceptions) {
+                FloatingPointControl fpctrl;
+                //fpctrl.enableExceptions(FloatingPointControl.invalidException);
+                fpctrl.enableExceptions(FloatingPointControl.divByZeroException);
+                fpctrl.enableExceptions(FloatingPointControl.overflowException);
+            }
+        }
     }
+    else {
+        version(enable_fp_exceptions) {
+            FloatingPointControl fpctrl;
+            //fpctrl.enableExceptions(FloatingPointControl.invalidException);
+            fpctrl.enableExceptions(FloatingPointControl.divByZeroException);
+            fpctrl.enableExceptions(FloatingPointControl.overflowException);
+        }
+    }
+
     // Figure out which snapshot to start from
     if (GlobalConfig.is_master_task) {
 	numberSnapshots = determineNumberOfSnapshots();
