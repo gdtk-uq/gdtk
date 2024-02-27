@@ -1842,53 +1842,17 @@ bool performIterations(int maxIterations, double targetResidual,
         }
 
         /*
-        debug {
-            writeln("DEBUG: performIterations()");
-            writeln(" include 1/dt term.");
-        }
+          debug {
+              writeln("DEBUG: performIterations()");
+              writeln(" Jz calc.");
+          }
         */
 
         // 3. Jacobian-vector product
-        // 3a. Prepare w vector with 1/dt term.
-        //      (I/dt)(P^-1)v
+        evalAugmentedJacobianVectorProduct();
+
+        // apply scaling
         foreach (blk; parallel(localFluidBlocks,1)) {
-            size_t startIdx = 0;
-            foreach (cell; blk.cells) {
-                double dtInv = 1.0/cell.dt_local;
-                blk.w[startIdx .. startIdx + nConserved] = dtInv*blk.zed[startIdx .. startIdx + nConserved];
-                startIdx += nConserved;
-            }
-        }
-
-        // 3b. Determine perturbation size, sigma
-        // Kyle's experiments show one needs to recompute on every step
-        // if using the method to estimate a perturbation size based on
-        // vector 'v'.
-        double sigma;
-        version (complex_numbers) {
-            // For complex-valued Frechet derivative, a very small perturbation
-            // works well (almost) all the time.
-            sigma = nkCfg.frechetDerivativePerturbation;
-        }
-        else {
-            // For real-valued Frechet derivative, we may need to attempt to compute
-            // a perturbation size.
-            sigma =  (nkCfg.frechetDerivativePerturbation < 0.0) ? computePerturbationSize() : nkCfg.frechetDerivativePerturbation;
-        }
-
-        /*
-        debug {
-            writeln("DEBUG: performIterations()");
-            writeln(" Jz calc.");
-        }
-        */
-
-        // 3b. Evaluate Jz and place result in z
-        evalJacobianVectorProduct(sigma);
-
-        // 3c. Complete the calculation of w
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            foreach (k; 0 .. blk.nvars)  blk.w[k] = blk.w[k] - blk.zed[k];
             scaleVector(blk.w, nConserved);
         }
 
@@ -2098,6 +2062,56 @@ double computePerturbationSize()
 }
 
 /**
+ * Evaluate the augmented Jacobian-vector product w = A*z where A = I/dt - J,
+ * here J is the Jacobian matrix and I/dt is the time-step augmentation term.
+ *
+ * Note that this routine expects the z (or zed) vector to be set prior to calling,
+ * and returns the product A*z stored in the w vector
+ *
+ * Authors: KAD and RJG
+ * Date: 2023-02-27
+ */
+void evalAugmentedJacobianVectorProduct()
+{
+    // Make a stack-local copy of conserved quantities info
+    size_t nConserved = GlobalConfig.cqi.n;
+
+    // Prepare w vector with 1/dt term: (I/dt)z
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        size_t startIdx = 0;
+        foreach (cell; blk.cells) {
+            double dtInv = 1.0/cell.dt_local;
+            blk.w[startIdx .. startIdx + nConserved] = dtInv*blk.zed[startIdx .. startIdx + nConserved];
+            startIdx += nConserved;
+        }
+    }
+
+    // Determine perturbation size, sigma
+    double sigma;
+    version (complex_numbers) {
+        // For complex-valued Frechet derivative, a very small perturbation
+        // works well (almost) all the time.
+        sigma = nkCfg.frechetDerivativePerturbation;
+    }
+    else {
+        // For real-valued Frechet derivative, we may need to attempt to compute
+        // a perturbation size.
+        // Note: Kyle's experiments show one needs to recompute on every step
+        //       if using the method to estimate a perturbation size based on
+        //       vector 'z'.
+        sigma = (nkCfg.frechetDerivativePerturbation < 0.0) ? computePerturbationSize() : nkCfg.frechetDerivativePerturbation;
+    }
+
+    // Evaluate Jz and place result in zed vector
+    evalJacobianVectorProduct(sigma);
+
+    // Complete the calculation of w: (I/dt)z - Jz
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        foreach (k; 0 .. blk.nvars)  blk.w[k] = blk.w[k] - blk.zed[k];
+    }
+}
+
+/**
  * Evaluate J*v via a Frechet derivative.
  *
  * This is just a delegator function through to a complex-valued perturbation evaulation
@@ -2118,7 +2132,6 @@ void evalJacobianVectorProduct(double sigma)
         evalRealMatVecProd(sigma);
     }
 }
-
 
 
 void evalResidual(int ftl)
