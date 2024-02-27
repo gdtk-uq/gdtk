@@ -523,7 +523,7 @@ function output.write_shock_fitting_helper_files()
    for i = 1, #(gridArraysList) do
       local ga = gridArraysList[i]
       if ga.shock_fitting then
-         local filename = string.format(lmrconfig.gridDirectory() .. "/ga-%04d.rails", ga.id)
+         local filename = string.format(lmrconfig.gridDirectory() .. "/gridarray-%04d.rails", ga.id)
          local f = assert(io.open(filename, "w"))
          f:write("# Rails are presently described by the initial west- and east-boundary coordinates.\n")
          for k = 0, ga.nkv-1 do
@@ -535,7 +535,7 @@ function output.write_shock_fitting_helper_files()
             end
          end
          f:close()
-         local filename = string.format(lmrconfig.gridDirectory() .. "/ga-%04d.weights", ga.id)
+         local filename = string.format(lmrconfig.gridDirectory() .. "/gridarray-%04d.weights", ga.id)
          local f = assert(io.open(filename, "w"))
          f:write("# Weights represent the arc-length distance of each vertex from the east-boundary vertex.\n")
          for k = 0, ga.nkv-1 do
