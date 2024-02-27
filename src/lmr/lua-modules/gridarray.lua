@@ -406,14 +406,18 @@ function GridArray:tojson()
    -- Write enough of the GridArray metadata to a JSON string
    -- so that we can later reconstruct the array of blocks
    -- in the prep-sim stage of preparation.
+   -- We will also use this data to construct a FluidBlockArray
+   -- in the dlang simulation code, when doing shock fitting.
    local str = '{\n'
    str = str .. string.format('  "tag": "%s",\n', self.tag)
    str = str .. string.format('  "fsTag": "%s",\n', self.fsTag)
    str = str .. string.format('  "type": "%s",\n', self.myType)
    str = str .. string.format('  "shock_fitting": %s,\n', tostring(self.shock_fitting))
-   str = str .. '    "ids": ['
+   -- Write the block ids as a list of lists because that if the
+   -- highest quality information.
+   str = str .. '  "idarray": [\n'
    for ib = 1, self.nib do
-      str = str .. '['
+      str = str .. '    ['
       for jb = 1, self.njb do
          if config.dimensions == 2 then
             str = str .. string.format("%d", self.myGrids[ib][jb].id)
@@ -432,31 +436,52 @@ function GridArray:tojson()
       if ib < self.nib then str = str .. ',' end
       str = str .. '\n'
    end
-   str = str .. '    ],\n' -- end of ids array
-   str = str .. string.format('    "nib": %d,\n', self.nib)
-   str = str .. string.format('    "njb": %d,\n', self.njb)
-   str = str .. string.format('    "nkb": %d,\n', self.nkb)
-   str = str .. string.format('    "niv": %d,\n', self.niv)
-   str = str .. string.format('    "njv": %d,\n', self.njv)
-   str = str .. string.format('    "nkv": %d,\n', self.nkv)
+   str = str .. '    ],\n' -- end of idarray
    --
-   str = str .. string.format('    "nics": [ ')
+   -- We write the block ids again as a flattened list because the main dlang code
+   -- expects them in that layout.
+   str = str .. '  "idflatlist": ['
+   for ib = 1, self.nib do
+      for jb = 1, self.njb do
+         if config.dimensions == 2 then
+            str = str .. string.format("%d", self.myGrids[ib][jb].id)
+         else
+            -- 3D has an extra level
+            for kb = 1, self.nkb do
+               str = str .. string.format("%d", self.myGrids[ib][jb][kb].id)
+               if kb < self.nkb then str = str .. ',' end
+            end
+         end
+         if jb < self.njb then str = str .. ',' end
+      end
+      if ib < self.nib then str = str .. ',' end
+   end
+   str = str .. '],\n' -- end of idlist
+   --
+   str = str .. string.format('  "nib": %d,\n', self.nib)
+   str = str .. string.format('  "njb": %d,\n', self.njb)
+   str = str .. string.format('  "nkb": %d,\n', self.nkb)
+   str = str .. string.format('  "niv": %d,\n', self.niv)
+   str = str .. string.format('  "njv": %d,\n', self.njv)
+   str = str .. string.format('  "nkv": %d,\n', self.nkv)
+   --
+   str = str .. string.format('  "nics": [')
    for i=1,#(self.nics)-1 do
       str = str .. string.format('%d, ', self.nics[i])
    end
-   str = str .. string.format('%d ],\n', self.nics[#self.nics])
+   str = str .. string.format('%d],\n', self.nics[#self.nics])
    --
-   str = str .. string.format('    "njcs": [ ')
+   str = str .. string.format('  "njcs": [')
    for i=1,#(self.njcs)-1 do
       str = str .. string.format('%d, ', self.njcs[i])
    end
-   str = str .. string.format('%d ],\n', self.njcs[#self.njcs])
+   str = str .. string.format('%d],\n', self.njcs[#self.njcs])
    --
-   str = str .. string.format('    "nkcs": [ ')
+   str = str .. string.format('  "nkcs": [')
    for i=1,#(self.nkcs)-1 do
       str = str .. string.format('%d, ', self.nkcs[i])
    end
-   str = str .. string.format('%d ]\n', self.nkcs[#self.nkcs]) -- Note last item with no comma.
+   str = str .. string.format('%d]\n', self.nkcs[#self.nkcs]) -- Note last item with no comma.
    --
    str = str .. '}'
    return str

@@ -120,6 +120,7 @@ gridsList = {}
 fluidBlocks = {}
 -- Storage for later definitions of GridArray and FBArray objects.
 gridArraysList = {}
+fluidBlockArrays = {}
 -- We may want to look up the blocks via labels rather than numerical id
 -- in user-defined procedures.
 -- The following dictionaries store the connections.

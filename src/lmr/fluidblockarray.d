@@ -129,7 +129,7 @@ class FBArray {
         int njb = getJSONint(json_data, "njb", 0);
         int nkb = getJSONint(json_data, "nkb", 0);
         int[] oops; oops.length = nib*njb*nkb; foreach(ref item; oops) { item = -1; }
-        int[] ids = getJSONintarray(json_data, "blockIds", oops);
+        int[] ids = getJSONintarray(json_data, "idflatlist", oops);
         bool all_positive = true;
         foreach (item; ids) { if (item < 0) { all_positive = false; } }
         assert(all_positive, "One or more blocks ids are not as expected.");

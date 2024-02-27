@@ -299,8 +299,8 @@ function output.write_config_file(fileName)
    f:write(string.format('"radiation_energy_dump_temperature_limit": %.18e,\n', config.radiation_energy_dump_temperature_limit))
    --
    f:write(string.format('"control_count": %d,\n', config.control_count))
-   f:write(string.format('"nfluidblock": %d,\n', #(fluidBlocks)))
-   f:write(string.format('"ngridarrays": %d,\n', #(gridArraysList)))
+   f:write(string.format('"nfluidblock": %d,\n', #fluidBlocks))
+   f:write(string.format('"nfluidblockarrays": %d,\n', #fluidBlockArrays))
    --
    f:write(string.format('"diffuse_wall_bcs_on_init": %s,\n', tostring(config.diffuse_wall_bcs_on_init)))
    f:write(string.format('"number_init_passes": %d,\n', config.number_init_passes))
@@ -385,6 +385,7 @@ function output.write_config_file(fileName)
    f:write(string.format('"udf_solid_source_terms": %s,\n', tostring(config.udf_solid_source_terms)))
    f:write(string.format('"nsolidblock": %d,\n', #solidBlocks))
    --
+   -- [FIX-ME] PJ 2024-02-27 Write fluid_flock_array_#i in a format suitable for Dlang
    for i = 1, #gridArraysList do
       f:write(gridArraysList[i]:tojson() .. ",\n")
    end
