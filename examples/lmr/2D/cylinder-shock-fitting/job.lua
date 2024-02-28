@@ -44,7 +44,7 @@ registerGridArray{
    nib=4, njb=2,
    fsTag="initial",
    shock_fitting=true,
-   bcTags={west="inflow_sf", east="outflow"}
+   bcTags={west="inflow_sf", north="outflow"}
 }
 --
 bcDict = {
