@@ -83,8 +83,6 @@ write_config_file = output.write_config_file
 write_times_file = output.write_times_file
 write_block_list_file = output.write_block_list_file
 write_mpimap_file = output.write_mpimap_file
-write_gridArrays_file = output.write_gridArrays_file
-write_shock_fitting_helper_files = output.write_shock_fitting_helper_files
 
 local prep_check = require 'prep_check'
 initTurbulence = prep_check.initTurbulence
@@ -198,9 +196,40 @@ function writeGridFiles()
       f:write(g:tojson() .. '\n')
       f:close()
    end
-   local cfgDir = lmrconfig.lmrCfg["config-directory"]
-   write_gridArrays_file(cfgDir .. "/" .. lmrCfg["grid-arrays-filename"])
    write_shock_fitting_helper_files()
    print(string.format("  #grids %d", #gridsList))
    print(string.format("  #gridArrays %d", #gridArraysList))
 end
+
+
+function write_shock_fitting_helper_files()
+   print("For shock-fitting, write rails and weights files.")
+   for i = 1, #(gridArraysList) do
+      local ga = gridArraysList[i]
+      if ga.shock_fitting then
+         local filename = string.format(lmrconfig.gridDirectory() .. "/gridarray-%04d.rails", ga.id)
+         local f = assert(io.open(filename, "w"))
+         f:write("# Rails are presently described by the initial west- and east-boundary coordinates.\n")
+         for k = 0, ga.nkv-1 do
+            for j = 0, ga.njv-1 do
+               local pw = ga.grid:get_vtx(0,j,k)
+               local pe = ga.grid:get_vtx(ga.niv-1,j,k)
+               f:write(string.format("%.18e %.18e %.18e %.18e %.18e %.18e\n",
+                                     pw.x, pw.y, pw.z, pe.x, pe.y, pe.z))
+            end
+         end
+         f:close()
+         local filename = string.format(lmrconfig.gridDirectory() .. "/gridarray-%04d.weights", ga.id)
+         local f = assert(io.open(filename, "w"))
+         f:write("# Weights represent the arc-length distance of each vertex from the east-boundary vertex.\n")
+         for k = 0, ga.nkv-1 do
+            for j = 0, ga.njv-1 do
+               for i = 0, ga.niv-1 do
+                  f:write(string.format("%.18e\n", ga.velocity_weights[i][j][k]))
+               end
+            end
+         end
+         f:close()
+      end
+   end
+end -- function write_shock_fitting_helper_files

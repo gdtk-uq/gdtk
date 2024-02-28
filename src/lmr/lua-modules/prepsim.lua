@@ -64,8 +64,7 @@ write_config_file = output.write_config_file
 write_times_file = output.write_times_file
 write_block_list_file = output.write_block_list_file
 write_mpimap_file = output.write_mpimap_file
-write_gridArrays_file = output.write_gridArrays_file
-write_shock_fitting_helper_files = output.write_shock_fitting_helper_files
+write_fluidBlockArrays_file = output.write_fluidBlockArrays_file
 
 local prep_check = require 'prep_check'
 initTurbulence = prep_check.initTurbulence
@@ -118,8 +117,8 @@ end
 -- Yes, this is confusing...
 gridsList = {}
 fluidBlocks = {}
--- Storage for later definitions of GridArray and FBArray objects.
-gridArraysList = {}
+-- Storage for metadata on FluidBlockArrays, which correspond to gridArrays
+-- as defined in prepgrids.lua.
 fluidBlockArrays = {}
 -- We may want to look up the blocks via labels rather than numerical id
 -- in user-defined procedures.
@@ -213,9 +212,12 @@ function readGridMetadata()
    end
    print(string.format('  #connections: %d', #gridConnections))
    --
-   gridArraysMetadata = jsonData["gridarrays"]
-   if gridArraysMetadata then
-      print(string.format('  #gridArraysMetadata: %d', #gridArraysMetadata))
+   local gridArrayMetadata = jsonData["gridarrays"]
+   if gridArrayMetadata then
+      -- Only assign the data if it is not nil, else the initial empty table will be retained.
+      fluidBlockArrays = gridArrayMetadata
+      print(string.format('  #fluidBlockArrays: %d', #fluidBlockArrays))
+      -- for i,fba in ipairs(fluidBlockArrays) do print(string.format("fba[%d]=%s", i, json.stringify(fba))) end
    end
    --
    local ngrids = jsonData["ngrids"]
@@ -249,6 +251,7 @@ function buildRuntimeConfigFiles()
    end
    write_block_list_file(lmrconfig.blockListFilename())
    write_mpimap_file(lmrconfig.mpimapFilename())
+   write_fluidBlockArrays_file(cfgDir .. "/" .. lmrCfg["fluid-block-arrays-filename"])
    if (config.solver_mode == "steady") then
       nkconfig.setIgnoreFlagInPhases(nkPhases)
       nkconfig.writeNKConfigToFile(NewtonKrylovGlobalConfig, nkPhases, lmrconfig.nkConfigFilename())

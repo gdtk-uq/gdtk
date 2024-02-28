@@ -156,8 +156,9 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
                     // that communicator.
                     MPI_Comm_split(MPI_COMM_WORLD, to!int(i), 0, &(fba.mpicomm));
                 }
-                fba.read_rails_file(format("config/fba-%04d.rails", i));
-                fba.read_velocity_weights(format("config/fba-%04d.weights", i));
+                // FIX-ME 2024-02-28 PJ Make use of Rowan's config information to find files.
+                fba.read_rails_file(format("lmrsim/grid/gridarray-%04d.rails", i));
+                fba.read_velocity_weights(format("lmrsim/grid/gridarray-%04d.weights", i));
             }
         }
     }

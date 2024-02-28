@@ -385,9 +385,9 @@ function output.write_config_file(fileName)
    f:write(string.format('"udf_solid_source_terms": %s,\n', tostring(config.udf_solid_source_terms)))
    f:write(string.format('"nsolidblock": %d,\n', #solidBlocks))
    --
-   -- [FIX-ME] PJ 2024-02-27 Write fluid_flock_array_#i in a format suitable for Dlang
-   for i = 1, #gridArraysList do
-      f:write(gridArraysList[i]:tojson() .. ",\n")
+   for i = 1, #fluidBlockArrays do
+      f:write(string.format('"fluid_block_array_%d": ', (i-1)))
+      f:write(json.stringify(fluidBlockArrays[i]) .. ",\n")
    end
    for i = 1, #fluidBlocks do
       f:write(fluidBlocks[i]:tojson() .. ",\n")
@@ -429,9 +429,9 @@ function output.write_mpimap_file(fileName)
    if not mpiTasks then
       -- The user's input script has not set up mpiTasks, so we need to do it now.
       if config.block_marching then
-         -- Work through the gridArraysList and allocate MPI tasks for each block array.
-         for _,ga in ipairs(gridArraysList) do
-            mpiDistributeGridArray{ga=ga, ntasks=ga.njb*ga.nkb}
+         -- Work through fluidBlockArrays and allocate MPI tasks for each block array.
+         for _,fba in ipairs(fluidBlockArrays) do
+            mpiDistributeFluidBlockArray{fba=fba, ntasks=fba.njb*fba.nkb}
          end
       else
          -- Work through the single-dimensional fluidBlocks list
@@ -449,8 +449,8 @@ function output.write_mpimap_file(fileName)
    f:close()
 end
 
-function output.write_gridArrays_file(fileName)
-   -- This gridArrays file is intended to hold Lua code that the user's
+function output.write_fluidBlockArrays_file(fileName)
+   -- This fluidBlockArrays file is intended to hold Lua code that the user's
    -- Lua scripts can read in and make use of at run time.
    --
    -- 2024-02-27: In the transition to Eilmer 5 code, this function has been gutted.
@@ -458,97 +458,18 @@ function output.write_gridArrays_file(fileName)
    -- in the Eilmer 4 code base is the place to look for suitable bits.
    --
    local f = assert(io.open(fileName, "w"))
-   f:write("-- A description of the gridArrays in Lua code.\n")
+   f:write("-- A description of the fluidBlockArrays/gridArrays in Lua code.\n")
    f:write("-- Use dofile() to get the content into your interpreter.\n")
-   f:write("gridArrays = {\n")
-   for i = 1, #(gridArraysList) do
-      local ga = gridArraysList[i]
-      f:write(string.format("  [%d]={label=\"%s\",\n", ga.id, ga.label))
-      f:write(string.format("    nib=%d, njb=%d, nkb=%d,\n", ga.nib, ga.njb, ga.nkb))
+   f:write("fluidBlockArrays = {\n")
+   for i = 1, #(fluidBlockArrays) do
+      local fba = fluidBlockArrays[i]
       local blkId = 0
-      if config.dimensions == 3 then
-         blkId = ga.myGrids[1][1][1].id
-      else
-         blkId = ga.myGrids[1][1].id
-      end
-      f:write(string.format("    p00=function() return infoFluidBlock(%d).p00 end,\n", blkId));
-      if config.dimensions == 3 then
-         blkId = ga.myGrids[ga.nib][1][1].id
-      else
-         blkId = ga.myGrids[ga.nib][1].id
-      end
-      f:write(string.format("    p10=function() return infoFluidBlock(%d).p10 end,\n", blkId));
-      if config.dimensions == 3 then
-         blkId = ga.myGrids[ga.nib][ga.njb][1].id
-      else
-         blkId = ga.myGrids[ga.nib][ga.njb].id
-      end
-      f:write(string.format("    p11=function() return infoFluidBlock(%d).p11 end,\n", blkId));
-      if config.dimensions == 3 then
-         blkId = ga.myGrids[1][ga.njb][1].id
-      else
-         blkId = ga.myGrids[1][ga.njb].id
-      end
-      f:write(string.format("    p01=function() return infoFluidBlock(%d).p01 end,\n", blkId));
-     --
-      f:write("    gridArray={\n")
-      for ib,itable in pairs(ga.myGrids) do
-         f:write(string.format("      [%d]={", ib))
-         for jb,jitem in pairs(itable) do
-            f:write(string.format("[%d]={", jb))
-            if config.dimensions == 3 then
-               for kb,blk in pairs(jitem) do
-                  f:write(string.format("[%d]=%d, ", kb, blk.id))
-               end
-            else
-               -- For 2D
-               f:write(string.format("[1]=%d" , jitem.id))
-            end
-            f:write("}, ") -- end [ib][jb]
-         end
-         f:write("}, -- end [ib]\n")
-      end
-      f:write("    }, -- end gridArray\n")
+      -- [FIX-ME] Guts go here.  Need to pick data elements out of the reloaded metadata.
       f:write("  },\n")
    end
-   f:write("} -- end gridArrays\n")
+   f:write("} -- end fluidBlockArrays\n")
    --
    f:close()
-end -- function write_gridArrays_file
-
--- Extract grid directory and names from central config.
-local lmrconfig = require 'lmrconfig'
-
-function output.write_shock_fitting_helper_files()
-   print("For shock-fitting, write rails and weights files.")
-   for i = 1, #(gridArraysList) do
-      local ga = gridArraysList[i]
-      if ga.shock_fitting then
-         local filename = string.format(lmrconfig.gridDirectory() .. "/gridarray-%04d.rails", ga.id)
-         local f = assert(io.open(filename, "w"))
-         f:write("# Rails are presently described by the initial west- and east-boundary coordinates.\n")
-         for k = 0, ga.nkv-1 do
-            for j = 0, ga.njv-1 do
-               local pw = ga.grid:get_vtx(0,j,k)
-               local pe = ga.grid:get_vtx(ga.niv-1,j,k)
-               f:write(string.format("%.18e %.18e %.18e %.18e %.18e %.18e\n",
-                                     pw.x, pw.y, pw.z, pe.x, pe.y, pe.z))
-            end
-         end
-         f:close()
-         local filename = string.format(lmrconfig.gridDirectory() .. "/gridarray-%04d.weights", ga.id)
-         local f = assert(io.open(filename, "w"))
-         f:write("# Weights represent the arc-length distance of each vertex from the east-boundary vertex.\n")
-         for k = 0, ga.nkv-1 do
-            for j = 0, ga.njv-1 do
-               for i = 0, ga.niv-1 do
-                  f:write(string.format("%.18e\n", ga.velocity_weights[i][j][k]))
-               end
-            end
-         end
-         f:close()
-      end
-   end
-end -- function write_shock_fitting_helper_files
+end -- function write_fluidBlockArrays_file
 
 return output
