@@ -56,7 +56,7 @@ makeFluidBlocks(bcDict, flowDict)
 --
 -- Set a few more config options
 config.flux_calculator = "ausmdv"
-config.gasdynamic_update_scheme = "moving_grid_1_stage"
+config.gasdynamic_update_scheme = "moving_grid_2_stage"
 config.max_time = (radius*2)/u_inf * 20
 config.max_step = 400000
 config.cfl_value = 0.5
