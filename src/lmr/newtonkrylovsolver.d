@@ -2397,7 +2397,10 @@ void evalRealMatVecProd(double sigma)
  * factor gets smaller than what we're prepared to accept then we just break the search
  * in that block of cells.
  *
- * [TODO:KAD] Add reference please
+ * REFERENCE: A. Yildirim, G. K. W. Kenway, C. A. Mader, and J. R. R. A. Martins,
+ *            A Jacobian-free approximate Newton-Krylov startup strategy for RANS simulations,
+ *            Journal of Computational Physics,
+ *            2019
  *
  * Authors: KAD and RJG
  * Date: 2022-03-05
@@ -2415,7 +2418,7 @@ double determineRelaxationFactor()
     double omega = 1.0;
 
     //----
-    // 1. First determine a relaxation factor based on an allowable amount of mass change
+    // 1. First determine a relaxation factor based on an allowable amount of mass change (based on Algorithm 1 from ref.)
     //----
 
     foreach (blk; parallel(localFluidBlocks,1)) {
