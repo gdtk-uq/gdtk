@@ -2032,43 +2032,57 @@ void removePreconditioning()
 /**
  * Compute perturbation size estimate for real-valued Frechet derivative.
  *
- * REFERENCE: [ASK KYLE]
+ * REFERENCE: Knoll, D.A. and McHugh, P.R.,
+ *            Newton-Krylov Methods Applied to a System of Convection-Diffusion-Reaction Equations,
+ *            Computer Physics Communications,
+ *            1994
  *
  * Authors: KAD and RJG
- * Date: 2022-03-02
+ * Date: 2024-02-29
  */
 double computePerturbationSize()
 {
-    // calculate sigma without scaling
-    double sumv = 0.0;
-    mixin(dotOverBlocks("sumv", "zed", "zed"));
-    version(mpi_parallel) {
-        MPI_Allreduce(MPI_IN_PLACE, &(sumv.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    }
+    // perturbation constant, Knoll and McHugh suggest a value on the order of the square
+    // root of machine roundoff, however, we have observed that this value can be somewhat
+    // problem dependent.
+    auto a = nkCfg.frechetDerivativePerturbation;
 
-    size_t nConserved = GlobalConfig.cqi.n;
-    auto eps0 = 1.0e-6; // FIX ME: Check with Kyle about what to call this
-                        //         and how to set the value.
-    double N = 0.0;
-    double sume = 0.0;
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        int cellCount = 0;
+    // calculate L2 norm of zed vector
+    number z_L2 = 0.0;
+    mixin(dotOverBlocks("z_L2", "zed", "zed"));
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &(z_L2.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+    z_L2 = sqrt(z_L2);
+    // When the L2 norm of the zed vector is small, the sigma calculated from this routine
+    // has been observed to result in noisy convergence as observed in the global residual.
+    // We enforce a minimum value to guard against this behaviour.
+    // From some experimentation a minimum value of sqrt(1.0e-07) appears sufficient.
+    double min_z_L2 = sqrt(1.0e-07);
+    if (z_L2.re <= min_z_L2) { z_L2.re = min_z_L2; }
+
+    // compute sum of individual component perturbations, eps_i,
+    // where eps_i is calculated using Eq. 12, i.e. eps_i = a*|var_i| + a
+    double eps_sum = 0.0;
+    double nvars = 0.0;
+    foreach (blk; localFluidBlocks) {
         foreach (cell; blk.cells) {
-            foreach (val; cell.U[0]) {
-                sume += eps0*abs(val.re) + eps0;
-                N += 1;
+            foreach (var; cell.U[0]) {
+                eps_sum += a*fabs(var.re) + a;
+                nvars += 1;
             }
-            cellCount += nConserved;
         }
     }
     version(mpi_parallel) {
-        MPI_Allreduce(MPI_IN_PLACE, &(sume.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &(eps_sum.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
     version(mpi_parallel) {
-        MPI_Allreduce(MPI_IN_PLACE, &(N.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &(nvars.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
 
-    double sigma = (sume/(N*sqrt(sumv))).re;
+    // compute perturbation parameter via Eq. 11
+    double sigma = eps_sum/(nvars*z_L2.re);
+
     return sigma;
 }
 
@@ -2104,12 +2118,9 @@ void evalAugmentedJacobianVectorProduct()
         sigma = nkCfg.frechetDerivativePerturbation;
     }
     else {
-        // For real-valued Frechet derivative, we may need to attempt to compute
-        // a perturbation size.
-        // Note: Kyle's experiments show one needs to recompute on every step
-        //       if using the method to estimate a perturbation size based on
-        //       vector 'z'.
-        sigma = (nkCfg.frechetDerivativePerturbation < 0.0) ? computePerturbationSize() : nkCfg.frechetDerivativePerturbation;
+        // For real-valued Frechet derivative, we compute a perturbation size
+        // based on the zed vector.
+        sigma = computePerturbationSize();
     }
 
     // Evaluate Jz and place result in zed vector
