@@ -40,8 +40,8 @@ psurf = makePatch{
    west=Bezier:new{points={d, e, f, g}}
 }
 registerGridArray{
-   grid=StructuredGrid:new{psurface=psurf, niv=41, njv=41},
-   nib=4, njb=2,
+   grid=StructuredGrid:new{psurface=psurf, niv=31, njv=41},
+   nib=3, njb=2,
    fsTag="initial",
    shock_fitting=true,
    bcTags={west="inflow_sf", north="outflow"}
@@ -56,12 +56,12 @@ makeFluidBlocks(bcDict, flowDict)
 --
 -- Set a few more config options
 config.flux_calculator = "ausmdv"
-config.gasdynamic_update_scheme = "backward_euler"
+config.gasdynamic_update_scheme = "moving_grid_1_stage"
 config.max_time = (radius*2)/u_inf * 20
 config.max_step = 400000
 config.cfl_value = 0.5
 config.dt_init = 1e-7
-config.dt_plot = config.max_time/100
+config.dt_plot = config.max_time/50
 config.grid_motion = "shock_fitting"
 config.shock_fitting_delay = (radius*2)/u_inf  -- allow for one flow length
 config.max_invalid_cells = 10
