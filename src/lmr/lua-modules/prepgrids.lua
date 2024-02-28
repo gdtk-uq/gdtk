@@ -196,15 +196,16 @@ function writeGridFiles()
       f:write(g:tojson() .. '\n')
       f:close()
    end
-   write_shock_fitting_helper_files()
-   print(string.format("  #grids %d", #gridsList))
-   print(string.format("  #gridArrays %d", #gridArraysList))
-end
-
-
-function write_shock_fitting_helper_files()
-   print("For shock-fitting, write rails and weights files.")
-   for i = 1, #(gridArraysList) do
+   --
+   local any = false
+   for i = 1, #gridArraysList do
+      local ga = gridArraysList[i]
+      if ga.shock_fitting then any = true end
+   end
+   if any then
+      print("  For shock-fitting, write rails and weights files.")
+   end
+   for i = 1, #gridArraysList do
       local ga = gridArraysList[i]
       if ga.shock_fitting then
          local filename = string.format(lmrconfig.gridDirectory() .. "/gridarray-%04d.rails", ga.id)
@@ -232,4 +233,7 @@ function write_shock_fitting_helper_files()
          f:close()
       end
    end
-end -- function write_shock_fitting_helper_files
+   --
+   print(string.format("  #grids %d", #gridsList))
+   print(string.format("  #gridArrays %d", #gridArraysList))
+end
