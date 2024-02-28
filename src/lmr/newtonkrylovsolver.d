@@ -1369,18 +1369,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
     setResiduals();
 
     determineScaleFactors(scale, nkCfg.useScaling);
-    // r0 = A*x0 - b
-    compute_r0(scale);
 
-    // beta = ||r0||
-    double beta = computeLinearSystemResidual();
-    double beta0 = beta; // Store a copy as initial residual
-                         // because we will look for relative drop in residual
-                         // compared to this.
-    // v = r0/beta
-    prepareKrylovSpace(beta);
-
-    auto targetResidual = activePhase.linearSolveTolerance * beta;
     if (nkCfg.usePreconditioner && updatePreconditionerThisStep) {
         computePreconditioner();
     }
@@ -1388,6 +1377,8 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
     if (nkCfg.useResidualSmoothing) {
 	applyResidualSmoothing();
     }
+
+    setInitialGuess();
 
     /*---
      * 1. Outer loop of restarted GMRES
@@ -1408,15 +1399,37 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
     }
     */
 
-
+    double beta, beta0, targetResidual;
     foreach (r; 0 .. nAttempts) {
         // Initialise some working arrays and matrices for this step.
         g0[] = 0.0;
         g1[] = 0.0;
         H0.zeros();
         H1.zeros();
+        Gamma.eye();
+
+        // r0 = b - A*x0
+        compute_r0();
+
+        // scale r0
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            scaleVector(blk.r0, nConserved);
+        }
+
+        // beta = ||r0||
+        beta = computeLinearSystemResidual();
+
         // Set first residual entry.
         g0[0] = beta;
+
+        // v = r0/beta
+        prepareKrylovSpace(beta);
+
+        // Compute target residual on first restart
+        if (r == 0) {
+            targetResidual = activePhase.linearSolveTolerance * beta;
+            beta0 = beta; // store a copy of the initial residual for the diagnostics output
+        }
 
         // Delegate inner iterations
         /*
@@ -1469,35 +1482,10 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
             break;
         }
 
-        // If we get here, we need to prepare for next restart.
-        // This requires setting x0[] and r0[].
-        // We'll compute r0[] using the approach of Fraysee et al. (2005)
+        // If we get here, we need to prepare for next restart by setting
+        // the initial guess to the current estimate of the solution
         foreach (blk; parallel(localFluidBlocks, 1)) {
             blk.x0[] = blk.dU[];
-        }
-
-        foreach (blk; localFluidBlocks) copy(Q1, blk.Q1);
-        // Set all values in g0 to 0.0 except for final (m+1) value
-        foreach (i; 0 .. m) g0[i] = 0.0;
-        foreach (blk; localFluidBlocks) blk.g0[] = g0[];
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot(blk.Q1, m, m+1, blk.g0, blk.g1);
-        }
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot(blk.V, blk.nvars, m+1, blk.g1, blk.r0);
-        }
-
-        mixin(dotOverBlocks("beta", "r0", "r0"));
-        version(mpi_parallel) {
-            MPI_Allreduce(MPI_IN_PLACE, &(beta.re), 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        }
-        beta = sqrt(beta);
-
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            foreach (k; 0 .. blk.nvars) {
-                blk.v[k] = blk.r0[k]/beta;
-                blk.V[k,0] = blk.v[k];
-            }
         }
     }
 
@@ -1608,27 +1596,48 @@ void computeGlobalResidual()
     globalResidual = sqrt(globalResidual);
 }
 
-
 /**
- * Compute the initial scaled residual vector for GMRES method.
+ * Set initial guess vector, currently we set this to 0 (as is common)
  *
- * r0 = b - A*x0
- *
- * With x0 = [0] (as is common), r0 = b = R
- * However, we apply scaling also at this point.
+ * x0 = [0]
  *
  * Authors: KAD and RJG
  * Date: 2022-03-02
  */
-void compute_r0(ConservedQuantities scale)
+void setInitialGuess()
 {
-    size_t nConserved = GlobalConfig.cqi.n;
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.x0[] = 0.0;
-        foreach (i; 0 .. blk.r0.length) {
-            size_t ivar = i % nConserved;
-            blk.r0[i] = scale[ivar].re*blk.R[i];
-        }
+    }
+}
+
+/**
+ * Compute the initial residual vector for GMRES method for any arbitrary x0,
+ *
+ * r0 = b - A*x0
+ *
+ * where b is the residual vector R, and A is the augmented Jacobian (I/dt - J).
+ *
+ * Note that this routine expects the x0 vector to be set prior to calling.
+ *
+ * Authors: KAD and RJG
+ * Date: 2024-02-27
+ */
+void compute_r0()
+{
+    size_t nConserved = GlobalConfig.cqi.n;
+
+    // place x0 in zed
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        blk.zed[] = blk.x0[];
+    }
+
+    // evaluate A*zed
+    evalAugmentedJacobianVectorProduct();
+
+    // set r0 := R - A*zed
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        foreach (k; 0 .. blk.nvars) blk.r0[k] = blk.R[k] - blk.w[k];
     }
 }
 
@@ -2073,7 +2082,6 @@ double computePerturbationSize()
  */
 void evalAugmentedJacobianVectorProduct()
 {
-    // Make a stack-local copy of conserved quantities info
     size_t nConserved = GlobalConfig.cqi.n;
 
     // Prepare w vector with 1/dt term: (I/dt)z
