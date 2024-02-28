@@ -130,7 +130,7 @@ public:
     double[] v, w, zed;
     double[] g0, g1;
     Matrix!double Q1;
-    Matrix!double V;
+    double[] VT;
     }
 
     this(int id, string label)
@@ -1659,7 +1659,7 @@ public:
         zed.length = n;
         g0.length = m+1;
         g1.length = m+1;
-        V = new Matrix!double(n, m+1);
+        VT.length = (m+1)*n;
         Q1 = new Matrix!double(m+1, m+1);
     }
 

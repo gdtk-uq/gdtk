@@ -1455,7 +1455,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
         // In serial, distribute a copy of g1 to each block
         foreach (blk; localFluidBlocks) blk.g1[] = g1[];
         foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot!double(blk.V, blk.nvars, m, blk.g1, blk.zed);
+            nm.bbla.transpose_and_dot!double(blk.VT, blk.nvars, m, blk.nvars, blk.g1, blk.zed);
             unscaleVector(blk.zed, nConserved);
         }
 
@@ -1670,7 +1670,7 @@ void prepareKrylovSpace(double beta)
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.v[] = (1./beta)*blk.r0[];
         foreach (k; 0 .. blk.nvars) {
-            blk.V[k,0] = blk.v[k];
+            blk.VT[k] = blk.v[k];
         }
     }
 }
@@ -1878,7 +1878,8 @@ bool performIterations(int maxIterations, double targetResidual,
         foreach (i; 0 .. j+1) {
             foreach (blk; parallel(localFluidBlocks,1)) {
                 // Extract column 'i'
-                foreach (k; 0 .. blk.nvars ) blk.v[k] = blk.V[k,i];
+                size_t offset = i*blk.nvars;
+                foreach (k; 0 .. blk.nvars ) blk.v[k] = blk.VT[offset + k];
             }
             double H0_ij;
             mixin(dotOverBlocks("H0_ij", "w", "v"));
@@ -1899,9 +1900,10 @@ bool performIterations(int maxIterations, double targetResidual,
         H0[j+1,j] = H0_jp1j;
 
         foreach (blk; parallel(localFluidBlocks,1)) {
+            size_t offset = (j+1)*blk.nvars;
             foreach (k; 0 .. blk.nvars) {
                 blk.v[k] = blk.w[k]/H0_jp1j;
-                blk.V[k,j+1] = blk.v[k];
+                blk.VT[offset + k] = blk.v[k];
             }
         }
 
