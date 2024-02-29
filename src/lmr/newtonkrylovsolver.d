@@ -379,7 +379,7 @@ immutable double dummySimTime = -1.0;
 immutable double minScaleFactor = 1.0;
 immutable string refResidFname = "config/reference-residuals.saved";
 
-ConservedQuantities referenceResiduals, currentResiduals, scale;
+ConservedQuantities referenceResiduals, currentResiduals, rowScale, colScale;
 double referenceGlobalResidual, globalResidual, prevGlobalResidual;
 bool residualsUpToDate = false;
 bool referenceResidualsAreSet = false;
@@ -682,7 +682,8 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
     size_t nConserved = cfg.cqi.n;
     referenceResiduals = new ConservedQuantities(nConserved);
     currentResiduals = new ConservedQuantities(nConserved);
-    scale = new ConservedQuantities(nConserved);
+    rowScale = new ConservedQuantities(nConserved);
+    colScale = new ConservedQuantities(nConserved);
     if (cfg.is_master_task) {
         initialiseDiagnosticsFile();
     }
@@ -1318,6 +1319,24 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
  * The particular linear solver used here is GMRES. It uses right-preconditioning,
  * scaling and possibly restarts.
  *
+ * In this implementation we opt to precondition first and scale second, the scaled
+ * preconditioned linear system is then:
+ *
+ *     (Dr * J * P^(-1) * Dc) (Dc^(-1) * P * dU) = (Dr * R)
+ *
+ * where Dr and Dc are the row and column scaling (diagonal) matrices, respectively.
+ * J is the Jacobian matrix, P is the precondition matrix, dU is the conserved
+ * quantity update vector, and R is the residual vector.
+ *
+ * We never explicitly store J. We instead apply the scaling and preconditioning in a
+ * Jacobian-free manner by following an approach similar to that presented as the
+ * SP-GMRES algorithm in:
+ *
+ *     P. N. Brown and Y. Saad,
+ *     Hybrid Krylov methods for nonlinear systems of equations,
+ *     SIAM Journal of Scientific and Statistical Computing,
+ *     Vol. 11, Iss. 3 (1990)
+ *
  * The linear solver is baked in-place here because the "sytem" is so closely
  * tied to the the flow field. In other words, we require several flow field
  * residual evaluations. This coupling between linear solver and fluid updates
@@ -1368,7 +1387,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
 
     setResiduals();
 
-    determineScaleFactors(scale, nkCfg.useScaling);
+    determineScaleFactors(rowScale, colScale, nkCfg.useScaling);
 
     if (nkCfg.usePreconditioner && updatePreconditionerThisStep) {
         computePreconditioner();
@@ -1411,9 +1430,9 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
         // r0 = b - A*x0
         compute_r0();
 
-        // scale r0
+        // scale the r0 vector
         foreach (blk; parallel(localFluidBlocks,1)) {
-            scaleVector(blk.r0, nConserved);
+            scaleVector(rowScale, blk.r0, nConserved);
         }
 
         // beta = ||r0||
@@ -1439,7 +1458,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
         }
         */
 
-        isConverged = performIterations(maxIterations, targetResidual, scale, iterationCount, linearSolveResidual);
+        isConverged = performIterations(maxIterations, targetResidual, rowScale, colScale, iterationCount, linearSolveResidual);
         int m = iterationCount;
 
         /*
@@ -1456,12 +1475,18 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
         foreach (blk; localFluidBlocks) blk.g1[] = g1[];
         foreach (blk; parallel(localFluidBlocks,1)) {
             nm.bbla.transpose_and_dot!double(blk.VT, blk.nvars, m, blk.nvars, blk.g1, blk.zed);
-            unscaleVector(blk.zed, nConserved);
         }
 
-        // Prepare dU values (for Newton update)
+        // At this point we have zed = Dc^(-1) * P * dU
+        // we need to prepare the dU values (for Newton update)
+
+        // We first multiply zed by the column scaling to recover zed *= Dc = P * dU
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            scaleVector(colScale, blk.zed, nConserved);
+        }
+
+        // Next we remove preconditioner effect to finally recover dU
         if (nkCfg.usePreconditioner) {
-            // Remove preconditioner effect from values.
             removePreconditioning();
         }
         else {
@@ -1526,21 +1551,31 @@ void setResiduals()
 /**
  * Determine scale factors per conserved quantity.
  *
- * The scale factors are typically the maximum rate of change found globally
- * (over all cells) per each conserved quantity. However, we place some gaurds
+ * The row scale factors are typically the inverse of the maximum rate of change found
+ * globally (over all cells) per each conserved quantity. However, we place some gaurds
  * on determining those scales when rates of change are small.
+ *
+ * The column scale factors are taken to be the reciprocal of the row scale factors
+ * as suggested by Chisholm and Zingg (2009).
+ *
+ * REFERENCE: T. T. Chisholm and D. W. Zingg,
+ *            A Jacobian-Free Newton-Krylov algorithm for compressible turbulent fluid flows,
+ *            Journal of Computational Physics,
+ *            Vol. 228, Iss. 9 (2009)
  *
  * Authors: RJG and KAD
  * Date: 2022-03-02
  */
-void determineScaleFactors(ref ConservedQuantities scale, bool useScaling)
+void determineScaleFactors(ref ConservedQuantities rowScale, ref ConservedQuantities colScale, bool useScaling)
 {
     if (!useScaling) {
-        scale[] = to!number(1.0);
+        rowScale[] = to!number(1.0);
+        colScale[] = to!number(1.0);
         return;
     }
     // else we go ahead and determine the scale factors
-    scale[] = to!number(0.0);
+    rowScale[] = to!number(0.0);
+    colScale[] = to!number(0.0);
     // First do this for each block.
     size_t nConserved = GlobalConfig.cqi.n;
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1554,28 +1589,27 @@ void determineScaleFactors(ref ConservedQuantities scale, bool useScaling)
     // Next, reduce that maxR information across all blocks and processes
     foreach (blk; localFluidBlocks) {
         foreach (ivar; 0 .. nConserved) {
-            scale[ivar] = fmax(scale[ivar], blk.maxRate[ivar]);
+            colScale[ivar] = fmax(colScale[ivar], blk.maxRate[ivar]);
         }
     }
     // In distributed memory, reduce max values and make sure everyone has a copy.
     version(mpi_parallel) {
         foreach (ivar; 0 .. nConserved) {
-            MPI_Allreduce(MPI_IN_PLACE, &(scale[ivar].re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+            MPI_Allreduce(MPI_IN_PLACE, &(colScale[ivar].re), 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
         }
     }
 
     // Use a guard on scale values if they get small
     foreach (ivar; 0 .. nConserved) {
-        scale[ivar] = fmax(scale[ivar], minScaleFactor);
+        colScale[ivar] = fmax(colScale[ivar], minScaleFactor);
     }
 
-    // Value is presently maxRate. Store as scale = 1/maxRate.
+    // The row scaling is the reciprocal of the column scaling
     foreach (ivar; 0 .. nConserved) {
-        scale[ivar] = 1./scale[ivar];
+        rowScale[ivar] = 1./colScale[ivar];
     }
 
 }
-
 
 /**
  * Compute the global residual based on vector R.
@@ -1707,24 +1741,18 @@ void computePreconditioner()
     }
 }
 
-/*---------------------------------------------------------------------
- * Mixins to scale and unscale vectors
- *---------------------------------------------------------------------
+/*
+ * Routine to scale a vector
+ *
+ * Authors: KAD and RJG
+ * Date: 2023-03-13
  */
 
-void scaleVector(ref double[] vec, size_t nConserved)
+void scaleVector(ConservedQuantities scale, ref double[] vec, size_t nConserved)
 {
     foreach (k, ref v; vec) {
         size_t ivar = k % nConserved;
         v *= scale[ivar].re;
-    }
-}
-
-void unscaleVector(ref double[] vec, size_t nConserved)
-{
-    foreach (k, ref v; vec) {
-        size_t ivar = k % nConserved;
-        v /= scale[ivar].re;
     }
 }
 
@@ -1791,7 +1819,8 @@ void applyResidualSmoothing()
  * Date: 2022-03-02
  */
 bool performIterations(int maxIterations, double targetResidual,
-                       ref ConservedQuantities scale, ref int iterationCount,
+                       ref ConservedQuantities rowScale, ref ConservedQuantities colScale,
+                       ref int iterationCount,
                        ref double resid)
 {
 
@@ -1825,12 +1854,9 @@ bool performIterations(int maxIterations, double targetResidual,
         */
 
 
-        // 1. Unscale v
-        // v is scaled earlier when r0 copied in.
-        // However, to compute Jv via Frechet, we will need
-        // unscaled values.
+        // 1. apply column scaling to v
         foreach (blk; parallel(localFluidBlocks,1)) {
-            unscaleVector(blk.v, nConserved);
+            scaleVector(colScale, blk.v, nConserved);
         }
 
         /*
@@ -1860,9 +1886,9 @@ bool performIterations(int maxIterations, double targetResidual,
         // 3. Jacobian-vector product
         evalAugmentedJacobianVectorProduct();
 
-        // apply scaling
+        // apply row scaling to w
         foreach (blk; parallel(localFluidBlocks,1)) {
-            scaleVector(blk.w, nConserved);
+            scaleVector(rowScale, blk.w, nConserved);
         }
 
         /*
