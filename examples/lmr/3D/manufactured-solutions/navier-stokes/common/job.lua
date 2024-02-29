@@ -52,7 +52,7 @@ for face,idx in pairs(Face) do
    bcTags[idx] = "udf"
 end
 
-grid = registerGrid{
+grid = registerFluidGrid{
    grid=UnstructuredGrid:new{sgrid=sgrid},
    fsTag="initial",
    bcTags=bcTags

@@ -10,12 +10,12 @@ quad0 = CoonsPatch:new{p00=a0, p10=b0, p11=b1, p01=a1}
 quad1 = AOPatch:new{p00=b0, p10=c0, p11=c1, p01=b1}
 --
 -- 2. Grids
-grid0 = registerGrid{
+grid0 = registerFluidGrid{
    grid=StructuredGrid:new{psurface=quad0, niv=11, njv=41},
    fsTag="inflow",
    bcTags={west="inflow"}
 }
-grid1 = registerGrid{
+grid1 = registerFluidGrid{
    grid=StructuredGrid:new{psurface=quad1, niv=31, njv=41},
    fsTag="initial",
    bcTags={east="outflow"}

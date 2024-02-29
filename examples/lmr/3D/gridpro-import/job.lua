@@ -20,7 +20,7 @@ scale = 1.0
 grids = importGridproGrid(gproGrid, scale)
 
 for i,g in ipairs(grids) do
-   registerGrid{grid=g, fsTag="initial"}
+   registerFluidGrid{grid=g, fsTag="initial"}
 end
 
 importGridproConnectivity(gproConn)

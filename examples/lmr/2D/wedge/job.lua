@@ -81,7 +81,7 @@ sgrid0 = StructuredGrid:new{psurface=quad0, niv=nx0+1, njv=ny+1}
 sgrid1 = StructuredGrid:new{psurface=quad1, niv=nx1+1, njv=ny+1}
 sgrid0:joinGrid(sgrid1, "east")
 
-grid0 = registerGrid{
+grid0 = registerFluidGrid{
    grid=UnstructuredGrid:new{sgrid=sgrid0},
    fsTag="initial",
    bcTags={[Face.west]="inflow", [Face.east]="outflow", [Face.south]="wall", [Face.north]="outflow"}

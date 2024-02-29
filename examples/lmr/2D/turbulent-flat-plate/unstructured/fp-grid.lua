@@ -6,7 +6,7 @@ end
 
 for i=0,nblocks-1 do
    fileName = string.format("su2grid/block_%d_grid.su2", i)
-   grid = registerGrid{
+   grid = registerFluidGrid{
       grid = UnstructuredGrid:new{filename=fileName, fmt="su2text", scale=1.0},
       fsTag="inflow",
    }

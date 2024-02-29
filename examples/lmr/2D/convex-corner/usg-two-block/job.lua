@@ -60,12 +60,12 @@ nx = 15
 ny = 15
 sgrid0 = StructuredGrid:new{psurface=quad0, niv=nx+1, njv=ny+1}
 sgrid1 = StructuredGrid:new{psurface=quad1, niv=nx+1, njv=ny+1}
-grid0 = registerGrid{
+grid0 = registerFluidGrid{
    grid=UnstructuredGrid:new{sgrid=sgrid0},
    fsTag="initial",
    bcTags={[Face.north]="outflow",[Face.east]="connection",[Face.west]="inflow"}
 }
-grid1 = registerGrid{
+grid1 = registerFluidGrid{
    grid=UnstructuredGrid:new{sgrid=sgrid1},
    fsTag="initial",
    bcTags={[Face.north]="outflow",[Face.west]="connection",[Face.east]="outflow"}

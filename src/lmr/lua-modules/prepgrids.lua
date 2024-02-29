@@ -110,7 +110,7 @@ gridArraysList = {} -- to hold GridArray objects
 connectionList = {}
 
 
-function registerGrid(o)
+function registerFluidGrid(o)
    -- Input:
    -- A single table with named items.
    -- grid: a StructuredGrid or UnstructuredGrid object that has been generated
@@ -127,9 +127,9 @@ function registerGrid(o)
    --
    local rgrid = RegisteredGrid:new(o)
    return rgrid.id
-end -- function registerGrid
+end -- function registerFluidGrid
 
-function registerGridArray(o)
+function registerFluidGridArray(o)
    -- Input:
    -- A single table with named items.
    -- grid: a StructuredGrid object that has been generated or imported.
@@ -143,7 +143,7 @@ function registerGridArray(o)
    -- the id of GridArray object so that the user may use the interior pieces later in their script.
    local rga = GridArray:new(o)
    return rga.id
-end -- registerGridArray
+end -- registerFluidGridArray
 
 
 -------------------------------------------------------------------------

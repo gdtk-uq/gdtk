@@ -15,7 +15,7 @@ sgrid1 = StructuredGrid:new{psurface=quad1, niv=31, njv=41}
 -- We make a single structured grid and then
 -- construct an unstructured grid from it.
 sgrid0:joinGrid(sgrid1, "east")
-grid0 = registerGrid{
+grid0 = registerFluidGrid{
    grid=UnstructuredGrid:new{sgrid=sgrid0},
    fsTag="inflow",
    bcTags={[Face.west]="inflow", [Face.east]="outflow",

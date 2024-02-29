@@ -79,15 +79,15 @@ json = require 'json'
 -- When this is the case, we do NOT want to do anything with registering grids
 -- since this should have been done earlier at the prep-grid stage.
 -- So, we disable any actions related to those function calls.
-function registerGrid()
+function registerFluidGrid()
    if verbosity >= 1 then
-      print("    registerGrid(): Do NOTHING when in prep-sim mode.")
+      print("    registerFluidGrid(): Do NOTHING when in prep-sim mode.")
    end
 end
 
-function registerGridArray()
+function registerFluidGridArray()
    if verbosity >= 1 then
-      print("    registerGridArray(): Do NOTHING when in prep-sim mode.")
+      print("    registerFluidGridArray(): Do NOTHING when in prep-sim mode.")
    end
 end
 

@@ -107,7 +107,7 @@ function RegisteredGrid:new(o)
       end
    end
    return o
-end -- Grid:new
+end -- RegisteredGrid:new
 
 function RegisteredGrid:tojson()
    str = '{\n'

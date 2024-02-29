@@ -13,7 +13,7 @@
 --
 --          2023-07-18, RJG
 --          Updated for lmr5, specifically:
---          1. staged prep (using registerGrid); and
+--          1. staged prep (using registerFluidGrid); and
 --          2. new input for steady-state solver configuration
 --
 
@@ -41,7 +41,7 @@ p11 = Vector3:new{x=1.0, y=1.0}
 nicell = ncells; njcell = ncells
 sgrid=StructuredGrid:new{psurface=CoonsPatch:new{p00=p00, p10=p10, p11=p11, p01=p01},
                          niv=nicell+1, njv=njcell+1}
-grid = registerGrid{
+grid = registerFluidGrid{
    grid=UnstructuredGrid:new{sgrid=sgrid},
    fsTag="initial",
    bcTags={[Face.north]="udf", [Face.east]="udf", [Face.south]="udf", [Face.west]="udf"}

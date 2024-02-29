@@ -57,7 +57,7 @@ cflist = {north=cfx, east=GeometricFunction:new{a=0.0003, r=1.2, N=njv, reverse=
 cfx = RobertsFunction:new{end0=true,end1=false,beta=1.05}
 
 grd = StructuredGrid:new{psurface=patch, niv=niv, njv=njv, cfList=cflist}
-grid0 = registerGridArray{
+grid0 = registerFluidGridArray{
    grid = grd,
    nib = 4,
    njb = 2,

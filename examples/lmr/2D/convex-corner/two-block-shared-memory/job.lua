@@ -59,12 +59,12 @@ quad1 = makePatch{north=l43, east=l23, south=l12, west=l14}
 -- define grid
 nx = 15
 ny = 15
-grid0 = registerGrid{
+grid0 = registerFluidGrid{
    grid=StructuredGrid:new{psurface=quad0, niv=nx+1, njv=ny+1},
    fsTag="initial",
    bcTags={north="outflow",west="inflow"}
 }
-grid1 = registerGrid{
+grid1 = registerFluidGrid{
    grid=StructuredGrid:new{psurface=quad1, niv=nx+1, njv=ny+1},
    fsTag="initial",
    bcTags={north="outflow",east="outflow"}

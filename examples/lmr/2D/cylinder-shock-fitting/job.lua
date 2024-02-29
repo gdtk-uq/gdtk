@@ -39,7 +39,7 @@ psurf = makePatch{
    south=Line:new{p0=d, p1=b},
    west=Bezier:new{points={d, e, f, g}}
 }
-registerGridArray{
+registerFluidGridArray{
    grid=StructuredGrid:new{psurface=psurf, niv=31, njv=41},
    nib=3, njb=2,
    fsTag="initial",
