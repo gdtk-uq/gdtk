@@ -262,12 +262,12 @@ function buildRuntimeConfigFiles()
    end
 end
 
-function buildFlowAndGridFiles()
-   print('Build flow files.')
+function buildFluidAndGridFiles()
+   print('Build fluid files.')
    -- 1. Write metadata file (this might be redundant in parallel, but shouldn't hurt)
    local snapshotTopLvl = lmrconfig.snapshotDirectory()
    os.execute("mkdir -p " .. snapshotTopLvl)
-   writeFlowMetadata();
+   writeFluidMetadata();
 
    -- 2. Now look for the work to do per block
    if #fluidBlockIdsForPrep == 0 then
@@ -317,13 +317,13 @@ function buildFlowAndGridFiles()
       elseif type(ifs) == "userdata" then
 	 -- presume to be a wrapped-D-language _FlowState object already
       else
-	 error("Unexpected type for initial flow state in block.")
+         error("Unexpected type for initial flow state in block.")
       end
       -- Ready to use initialState in the Dlang function.
       if type(ifs) ~= "string" then
          local grid = fluidBlocks[idx].grid
          local omegaz = fluidBlocks[idx].omegaz
-	 writeInitialFlowFile(id, grid, ifs, nil, omegaz)
+         writeInitialFluidFile(id, grid, ifs, nil, omegaz)
       end
    end
    --

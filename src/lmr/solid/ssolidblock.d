@@ -559,35 +559,6 @@ public:
         } // for k
     } // end read_solution()
 
-    override void writeSolution(string fileName, double simTime)
-    {
-        if ( myConfig.verbosity_level >= 1 && id == 0 ) {
-            writeln("write_solution(): Start solid_block ", id);
-        }
-        auto outfile = new GzipOut(fileName);
-        auto writer = appender!string();
-        formattedWrite(writer, "%.18e\n", simTime);
-        outfile.compress(writer.data);
-        writer = appender!string();
-        foreach(varname; varListForSolidCell()) {
-            formattedWrite(writer, " \"%s\"", varname);
-        }
-        formattedWrite(writer, "\n");
-        outfile.compress(writer.data);
-        writer = appender!string();
-        formattedWrite(writer, "%d %d %d\n", nicell, njcell, nkcell);
-        outfile.compress(writer.data);
-        for ( size_t k = kmin; k <= kmax; ++k ) {
-            for ( size_t j = jmin; j <= jmax; ++j ) {
-                for ( size_t i = imin; i <= imax; ++i ) {
-                    outfile.compress(" " ~ getCell(i,j,k).writeValuesToString() ~ "\n");
-                } // for i
-            } // for j
-        } // for k
-        outfile.finish();
-    }
-
-
     override void computePrimaryCellGeometricData()
     {
         if ( myConfig.dimensions == 2 ) {

@@ -13,8 +13,7 @@ configOptionsHidden = { -- hidden from user
    -- set defaults here
    solver_mode = "time-marching",
    grid_format = "gziptext",
-   flow_format = "gziptext",
-   new_flow_format = false,
+   field_format = "gziptext",
    --
    gas_model_file = "gas-model.lua",
    sticky_electrons = false,

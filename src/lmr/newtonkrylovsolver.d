@@ -546,7 +546,7 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     }
     cfg.n_flow_time_levels = 2;
 
-    initLocalFluidBlocks();
+    initLocalBlocks();
 
     initThreadPool(maxCPUs, threadsPerMPITask);
 
@@ -687,8 +687,8 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         initialiseDiagnosticsFile();
     }
     if (nkCfg.writeLimiterValues) {
-        limCIO = new FVCellLimiterIO(buildLimiterVariables());
-        if (cfg.flow_format == "rawbinary")
+        limCIO = new FluidFVCellLimiterIO(buildLimiterVariables());
+        if (cfg.field_format == "rawbinary")
             limBlkIO = new BinaryBlockIO(limCIO);
         else
             limBlkIO = new GzipBlockIO(limCIO);
@@ -2734,8 +2734,8 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
         version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
 
         foreach (blk; localFluidBlocks) {
-	    auto fileName = flowFilename(nWrittenSnapshots, blk.id);
-	    blkIO.writeVariablesToFile(fileName, blk.cells);
+        auto fileName = fluidFilename(nWrittenSnapshots, blk.id);
+	    fluidBlkIO.writeVariablesToFile(fileName, blk.cells);
         }
 
 	// Add restart info
@@ -2751,14 +2751,14 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
         // We need to shuffle all of the snapshots
         foreach (iSnap; 2 .. nkCfg.totalSnapshots+1) {
             foreach (blk; localFluidBlocks) {
-		auto fromName = flowFilename(iSnap, blk.id);
-                auto toName = flowFilename(iSnap-1, blk.id);
+                auto fromName = fluidFilename(iSnap, blk.id);
+                auto toName = fluidFilename(iSnap-1, blk.id);
                 rename(fromName, toName);
             }
         }
         foreach (blk; localFluidBlocks) {
-	    auto fileName = flowFilename(nkCfg.totalSnapshots, blk.id);
-	    blkIO.writeVariablesToFile(fileName, blk.cells);
+	    auto fileName = fluidFilename(nkCfg.totalSnapshots, blk.id);
+	    fluidBlkIO.writeVariablesToFile(fileName, blk.cells);
         }
 
 	// Shuffle the restart info

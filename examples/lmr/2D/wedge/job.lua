@@ -24,7 +24,7 @@ config.axisymmetric = false
 config.print_count = 1
 config.save_residual_values = true
 config.save_limiter_values = true
-config.flow_format = fileFmt
+config.field_format = fileFmt
 config.grid_format = fileFmt
 
 -- ==========================================================

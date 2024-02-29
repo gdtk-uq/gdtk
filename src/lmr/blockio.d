@@ -29,56 +29,53 @@ import fluidblock : FluidBlock;
 import sfluidblock : SFluidBlock;
 import ufluidblock : UFluidBlock;
 import flowsolution : FluidBlockLite;
-
-
-BlockIO blkIO;
+import globaldata : fluidBlkIO;
 
 class BlockIO {
 public:
     this() {}
     this(FVCellIO cio)
     {
-	mCIO = cio.dup;
+        mCIO = cio.dup;
     }
     /**
      * Writes metadata for field data files as YAML
      *
      * Authors: Rowan J. Gollan
      */
-    final
-    void writeMetadataToFile(string fname)
+    final void writeMetadataToFile(string fname)
     {
-	auto f = File(fname, "w");
-	f.writefln("---");
-	f.writefln("  version: \"%s\"", BLK_IO_VERSION);
-	f.writeln("  revision-id: ", lmrCfg.revisionId);
-	f.writefln("  field-type: \"%s\"", fieldVarsTypeName(mCIO.FVT));
-	f.writefln("  variables:");
-	foreach (var; mCIO.variables) {
-	    f.writefln("   - %s", var);
-	}
-	f.close();
+    	auto f = File(fname, "w");
+	    f.writefln("---");
+    	f.writefln("  version: \"%s\"", BLK_IO_VERSION);
+	    f.writeln("  revision-id: ", lmrCfg.revisionId);
+    	f.writefln("  field-type: \"%s\"", fieldVarsTypeName(mCIO.FVT));
+	    f.writefln("  variables:");
+	    foreach (var; mCIO.variables) {
+	        f.writefln("   - %s", var);
+	    }
+	    f.close();
     }
 
     final readMetadataFromFile(string fname)
     {
-	Node metadata = dyaml.Loader.fromFile(fname).load();
-	string blkIOversion = metadata["version"].as!string;
-	if (blkIOversion != BLK_IO_VERSION) {
-	    string errMsg = "ERROR: The flow metadata version is unknown.\n";
-	    errMsg ~= format("Expected: %s   Received: %s", BLK_IO_VERSION, blkIOversion);
-	    throw new LmrException(errMsg);
-	}
+	    Node metadata = dyaml.Loader.fromFile(fname).load();
+	    string blkIOversion = metadata["version"].as!string;
+	    if (blkIOversion != BLK_IO_VERSION) {
+	        string errMsg = "ERROR: The flow metadata version is unknown.\n";
+	        errMsg ~= format("Expected: %s   Received: %s", BLK_IO_VERSION, blkIOversion);
+	        throw new LmrException(errMsg);
+	    }
 
-	string fvtString = metadata["field-type"].as!string;
-	FieldVarsType fvt = fieldVarsTypeFromName(fvtString);
+	    string fvtString = metadata["field-type"].as!string;
+	    FieldVarsType fvt = fieldVarsTypeFromName(fvtString);
 
-	string[] variables;
-	variables.length = 0;
-	foreach (node; metadata["variables"].sequence) {
-	    variables ~= node.as!string;
-	}
-	mCIO = createFluidFVCellIO(fvt, variables);
+    	string[] variables;
+	    variables.length = 0;
+    	foreach (node; metadata["variables"].sequence) {
+	        variables ~= node.as!string;
+	    }
+	    mCIO = createFVCellIO(fvt, variables);
     }
 
 abstract:
@@ -170,44 +167,44 @@ public:
 //-------------------------------------------------------------
 // Functions intended for use from Lua at prep stage:
 //
-//     1. luafn_writeFlowMetadata
-//     2. luafn_writeInitialFlowFile
+//     1. luafn_writeFluidMetadata
+//     2. luafn_writeInitialFluidFile
 //
 //-------------------------------------------------------------
 
-extern(C) int luafn_writeFlowMetadata(lua_State *L)
+extern(C) int luafn_writeFluidMetadata(lua_State *L)
 {
     alias cfg = GlobalConfig;
-    FVCellIO cio = new FVCellFlowIO(buildFlowVariables());
+    FVCellIO cio = new FluidFVCellIO(buildFluidVariables());
 
-    if (cfg.flow_format == "rawbinary") {
-	blkIO = new BinaryBlockIO(cio);
+    if (cfg.field_format == "rawbinary") {
+    	fluidBlkIO = new BinaryBlockIO(cio);
     }
-    else if (cfg.flow_format == "gziptext") {
-	blkIO = new GzipBlockIO(cio);
+    else if (cfg.field_format == "gziptext") {
+	    fluidBlkIO = new GzipBlockIO(cio);
     }
     else {
-	throw new LmrException(format("Flow format type '%s' unknown", cfg.flow_format));
+	    throw new LmrException(format("Flow format type '%s' unknown", cfg.field_format));
     }
 
-    blkIO.writeMetadataToFile(lmrCfg.flowMetadataFile);
+    fluidBlkIO.writeMetadataToFile(lmrCfg.fluidMetadataFile);
 
     return 0;
 }
 
-extern(C) int luafn_writeInitialFlowFile(lua_State *L)
+extern(C) int luafn_writeInitialFluidFile(lua_State *L)
 {
     auto blkId = to!int(luaL_checkinteger(L, 1));
-    auto fname = flowFilename(lmrCfg.initialFieldDir, blkId);
+    auto fname = fluidFilename(lmrCfg.initialFieldDir, blkId);
     auto grid = checkStructuredGrid(L, 2);
     FluidBlock blk;
     if (grid) { // We do have a structured grid
-	blk = new SFluidBlock(L);
+    	blk = new SFluidBlock(L);
     }
     else { // Assume an unstructured grid
-	blk = new UFluidBlock(L);
+	    blk = new UFluidBlock(L);
     }
-    blkIO.writeVariablesToFile(fname, blk.cells);
+    fluidBlkIO.writeVariablesToFile(fname, blk.cells);
     return 0;
 }
 
@@ -215,20 +212,20 @@ extern(C) int luafn_writeInitialFlowFile(lua_State *L)
 //-------------------------------------------------------------
 // Functions intended for use at post-processing stage:
 //
-//     1. readFlowVariablesFromFlowMetadata
-//     2. readFlowVariablesFromFile
+//     1. readFluidVariablesFromFlowMetadata
+//     2. readFluidVariablesFromFile
 //     3. readVariablesFromMetadata
 //     4. readValuesFromFile
 //
 //  1. and 2. are special cases because we may want to do further
-//  manipulations with flow data, so we load a FluidBlockLite.
+//  manipulations with fluid data, so we load a FluidBlockLite.
 //  3. and 4. are general functions. We simply want to pick up
 //  from Eilmer-native format and write out in some other format.
 //-------------------------------------------------------------
-string[] readFlowVariablesFromFlowMetadata(string flowMetadataFile="")
+string[] readFluidVariablesFromFluidMetadata(string fluidMetadataFile="")
 {
-    flowMetadataFile = (flowMetadataFile == "") ? lmrCfg.flowMetadataFile : flowMetadataFile;
-    Node metadata = dyaml.Loader.fromFile(flowMetadataFile).load();
+    fluidMetadataFile = (fluidMetadataFile == "") ? lmrCfg.fluidMetadataFile : fluidMetadataFile;
+    Node metadata = dyaml.Loader.fromFile(fluidMetadataFile).load();
     string[] variables;
     foreach (node; metadata["variables"].sequence) {
 	variables ~= node.as!string;
@@ -236,7 +233,7 @@ string[] readFlowVariablesFromFlowMetadata(string flowMetadataFile="")
     return variables;
 }
 
-void readFlowVariablesFromFile(FluidBlockLite blk, string fname, string[] variables, int ncells)
+void readFluidVariablesFromFile(FluidBlockLite blk, string fname, string[] variables, int ncells)
 {
     size_t nvars = variables.length;
     blk._data.length = ncells;

@@ -132,7 +132,7 @@ int main_(string[] args)
     }
 
     ensure_directory_is_present(lmrCfg.vtkDir);
-    File pvdFile = begin_PVD_file(lmrCfg.vtkDir~"/"~lmrCfg.flowPrefix~".pvd");
+    File pvdFile = begin_PVD_file(lmrCfg.vtkDir~"/"~lmrCfg.fluidPrefix~".pvd");
     foreach (isnap, snap; snaps2process) {
         if (verbosity > 1) {
             writefln("lmr snapshot2vtk: Writing snapshot %s to disk.", snap);
@@ -140,13 +140,13 @@ int main_(string[] args)
         auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks);
         if (!luaRefSoln.empty) soln.subtract_ref_soln(luaRefSoln);
         // [TODO] add aux variables.
-        string pvtuFileName = lmrCfg.flowPrefix ~ "-s" ~ snap ~ ".pvtu";
+        string pvtuFileName = lmrCfg.fluidPrefix ~ "-s" ~ snap ~ ".pvtu";
         File pvtuFile = begin_PVTU_file(lmrCfg.vtkDir ~ "/" ~ pvtuFileName, soln.flowBlocks[0].variableNames);
         foreach (jb; 0 .. soln.nBlocks) {
             if (verbosity > 2) {
                 writefln("lmr snapshot2vtk: Writing block %d for snapshot %s to disk.", jb, snap);
             }
-            string vtuFileName = lmrCfg.flowPrefix ~ "-s" ~ snap ~ "-b" ~ format(lmrCfg.blkIdxFmt, jb) ~ ".vtu";
+            string vtuFileName = lmrCfg.fluidPrefix ~ "-s" ~ snap ~ "-b" ~ format(lmrCfg.blkIdxFmt, jb) ~ ".vtu";
             add_piece_to_PVTU_file(pvtuFile, vtuFileName);
             write_VTU_file(soln.flowBlocks[jb], soln.gridBlocks[jb], lmrCfg.vtkDir~"/"~vtuFileName, binaryFormat);
             if (GlobalConfig.solverMode == SolverMode.transient) {

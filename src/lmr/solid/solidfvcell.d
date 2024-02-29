@@ -23,8 +23,9 @@ import solidfvvertex;
 import solidprops;
 import std.stdio;
 import globalconfig;
+import lmr.fvcell : FVCell;
 
-class SolidFVCell {
+class SolidFVCell : FVCell {
 public:
     size_t id;
     // Cell properties
@@ -108,19 +109,6 @@ public:
         sp.k32 = to!double(items.front); items.popFront();
         sp.k33 = to!double(items.front); items.popFront();
     }
-
-    string writeValuesToString() const
-    {
-        auto writer = appender!string();
-        formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
-                       pos.x.re, pos.y.re, pos.z.re, volume.re, e[0].re, T.re,
-                       sp.rho.re, sp.Cp.re, sp.k.re,
-                       sp.k11.re, sp.k12.re, sp.k13.re,
-                       sp.k21.re, sp.k22.re, sp.k23.re,
-                       sp.k31.re, sp.k32.re, sp.k33.re);
-        return writer.data;
-    }
-
 
     void timeDerivatives(int ftl, int dimensions)
     {

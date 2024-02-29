@@ -36,6 +36,7 @@ import ssolidblock;
 import sfluidblock;
 import ufluidblock;
 import fluidblock;
+import blockio : luafn_writeFluidMetadata, luafn_writeInitialFluidFile;
 
 struct LuaEnvOptions {
     bool withGlobalConfig = true;
@@ -56,6 +57,10 @@ lua_State* initLuaStateForPrep()
     luaOpts.withFlow = true;
     luaOpts.withNumerics = true;
     registerLuaEnvironment(L, luaOpts);
+    lua_pushcfunction(L, &luafn_writeFluidMetadata);
+    lua_setglobal(L, "writeFluidMetadata");
+    lua_pushcfunction(L, &luafn_writeInitialFluidFile);
+    lua_setglobal(L, "writeInitialFluidFile");
     return L;
 }
 

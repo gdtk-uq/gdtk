@@ -78,7 +78,6 @@ public:
     abstract void readGrid(string filename);
     abstract void writeGrid(string filename, double sim_time);
     abstract void readSolution(string filename);
-    abstract void writeSolution(string fileName, double simTime);
     abstract void computePrimaryCellGeometricData();
     abstract double determine_time_step_size(double cfl_value);
 

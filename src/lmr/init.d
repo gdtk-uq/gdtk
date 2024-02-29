@@ -33,10 +33,13 @@ import globaldata;
 import simcore;
 import simcore_exchange : exchange_ghost_cell_geometry_data;
 import bc;
+import solid_full_face_copy : SolidGCE_SolidGhostCellFullFaceCopy;
+import solidfvinterface : initPropertiesAtSolidInterfaces;
 import fluidblock : FluidBlock;
 import sfluidblock : SFluidBlock;
 import ufluidblock : UFluidBlock;
-import blockio : blkIO, BinaryBlockIO, GzipBlockIO;
+import ssolidblock : SSolidBlock;
+import blockio : BinaryBlockIO, GzipBlockIO;
 import fvcellio;
 import fileutil : ensure_directory_is_present;
 
@@ -373,15 +376,15 @@ void initFluidBlocksZones()
 void initFluidBlocksFlowField(int snapshotStart)
 {
     bool anyBlockFail = false;
-    if (GlobalConfig.flow_format == "rawbinary")
-	blkIO = new BinaryBlockIO();
+    if (GlobalConfig.field_format == "rawbinary")
+        fluidBlkIO = new BinaryBlockIO();
     else
-	blkIO = new GzipBlockIO();
+        fluidBlkIO = new GzipBlockIO();
 
-    blkIO.readMetadataFromFile(lmrCfg.flowMetadataFile);
+    fluidBlkIO.readMetadataFromFile(lmrCfg.fluidMetadataFile);
 
     foreach (blk; localFluidBlocks) {
-        blkIO.readVariablesFromFile(flowFilename(snapshotStart, blk.id), blk.cells);
+        fluidBlkIO.readVariablesFromFile(fluidFilename(snapshotStart, blk.id), blk.cells);
         // Note that, even for grid_motion==none simulations, we use the grid velocities for setting
         // the gas velocities at boundary faces.  These will need to be set to zero for correct viscous simulation.
         foreach (iface; blk.faces) iface.gvel.clear();
@@ -710,8 +713,7 @@ void initSolidBlocks()
         mySolidBlk.assembleArrays();
         mySolidBlk.bindFacesAndVerticesToCells();
         mySolidBlk.bindCellsToFaces();
-        mySolidBlk.readGrid(make_file_name!"solid-grid"(job_name, mySolidBlk.id, 0, "gz")); // tindx==0 fixed grid
-        mySolidBlk.readSolution(make_file_name!"solid"(job_name, mySolidBlk.id, tindx, "gz"));
+        // [TODO] RJG, add in grid reading and solution reading
         mySolidBlk.computePrimaryCellGeometricData();
         mySolidBlk.assignCellLocationsForDerivCalc();
     }

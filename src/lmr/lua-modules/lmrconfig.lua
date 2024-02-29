@@ -75,10 +75,10 @@ function lmr_config.snapshotDirectory(snapshot)
    return dname
 end
 
-function lmr_config.flowFilename(snapshot, blkId)
+function lmr_config.fluidFilename(snapshot, blkId)
    local fname = lmr_config.snapshotDirectory(snapshot)
    fname = fname .. "/"
-   fname = fname .. lmrCfg["flow-prefix"] .. "-" .. string.format(lmrCfg["block-index-format"], blkId)
+   fname = fname .. lmrCfg["fluid-prefix"] .. "-" .. string.format(lmrCfg["block-index-format"], blkId)
    return fname
 end
 

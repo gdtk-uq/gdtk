@@ -34,7 +34,7 @@ import luaflowsolution;
 import luaflowstate;
 import luaidealgasflow;
 import luagasflow;
-import blockio : luafn_writeFlowMetadata, luafn_writeInitialFlowFile;
+import blockio : luafn_writeFluidMetadata, luafn_writeInitialFluidFile;
 
 Command customScriptCmd;
 string cmdName = "custom-script";
@@ -83,12 +83,6 @@ int main_(string[] args)
     auto L = initLuaStateForPrep();
     lua_pushinteger(L, verbosity);
     lua_setglobal(L, "verbosity");
-    // NNG: We copy the initialisation from prep-sim, which should load
-    // everything that the user is likely to need.
-    lua_pushcfunction(L, &luafn_writeFlowMetadata);
-    lua_setglobal(L, "writeFlowMetadata");
-    lua_pushcfunction(L, &luafn_writeInitialFlowFile);
-    lua_setglobal(L, "writeInitialFlowFile");
 
     // We are ready for the user's input script.
     if (!exists(scriptFile)) {

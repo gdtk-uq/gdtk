@@ -106,7 +106,7 @@ int main_(string[] args)
 
     initConfiguration(); // To read in GlobalConfig
     nBlocks = GlobalConfig.nFluidBlocks;
-    fileFmt = GlobalConfig.flow_format;
+    fileFmt = GlobalConfig.field_format;
     variables = readVariablesFromMetadata(lmrCfg.limiterMetadataFile); 
 
     auto availSnapshots = determineAvailableSnapshots();

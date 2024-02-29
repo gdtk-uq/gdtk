@@ -830,7 +830,7 @@ final class GlobalConfig {
     shared static int[] localSolidBlockIds; // We will search this array to see if the solid block is local.
     //
     shared static string grid_format = "gziptext"; // alternative is "rawbinary"
-    shared static string flow_format = "gziptext";
+    shared static string field_format = "gziptext";
     // Depending on the format of the contained data, grid and solution files will have
     // a particular file extension.
     shared static string gridFileExt = "gz";
@@ -1312,7 +1312,7 @@ public:
     bool in_mpi_context;
     int universe_blk_id;
     string grid_format;
-    string flow_format;
+    string field_format;
     //
     int dimensions;
     bool true_centroids;
@@ -1484,7 +1484,7 @@ public:
         in_mpi_context = cfg.in_mpi_context;
         this.universe_blk_id = universe_blk_id;
         grid_format = cfg.grid_format;
-        flow_format = cfg.flow_format;
+        field_format = cfg.field_format;
         dimensions = cfg.dimensions;
         true_centroids = cfg.true_centroids;
         axisymmetric = cfg.axisymmetric;
@@ -1717,7 +1717,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_enum("solver_mode", "solverMode", "solverModeFromName"));
     mixin(update_double("start_time", "start_time"));
     mixin(update_string("grid_format", "grid_format"));
-    mixin(update_string("flow_format", "flow_format"));
+    mixin(update_string("field_format", "field_format"));
     mixin(update_string("gas_model_file", "gas_model_file"));
     // The gas model may have been initialized earlier, possibly by a setGasModel call
     // in the user's Lua script.
@@ -1771,7 +1771,7 @@ void set_config_for_core(JSONValue jsonData)
     cfg.gravity_non_zero = !((cfg.gravity_x == 0.0) && (cfg.gravity_y == 0.0) && (cfg.gravity_z == 0.0));
     if (cfg.verbosity_level > 1) {
         writeln("  grid_format: ", to!string(cfg.grid_format));
-        writeln("  flow_format: ", to!string(cfg.flow_format));
+        writeln("  field_format: ", to!string(cfg.field_format));
         writeln("  gas_model_file: ", to!string(cfg.gas_model_file));
         writeln("  udf_supervisor_file: ", to!string(cfg.udf_supervisor_file));
         writeln("  user_pad_length: ", cfg.user_pad_length);

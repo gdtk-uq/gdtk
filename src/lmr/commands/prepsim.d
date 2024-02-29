@@ -35,7 +35,6 @@ import luaflowsolution;
 import luaflowstate;
 import luaidealgasflow;
 import luagasflow;
-import blockio : luafn_writeFlowMetadata, luafn_writeInitialFlowFile;
 
 Command prepSimCmd;
 string cmdName = "prep-sim";
@@ -85,16 +84,6 @@ int main_(string[] args)
     auto L = initLuaStateForPrep();
     lua_pushinteger(L, verbosity);
     lua_setglobal(L, "verbosity");
-    // RJG, 2023-06-27
-    // Add a few more lua-wrapped functions for use in prep.
-    // These functions are not backported into Eilmer 4, and
-    // I don't want to hijack initLuaStateForPrep() just yet.
-    // At some point in the future, this can be handled inside
-    // initLuaStateForPrep().
-    lua_pushcfunction(L, &luafn_writeFlowMetadata);
-    lua_setglobal(L, "writeFlowMetadata");
-    lua_pushcfunction(L, &luafn_writeInitialFlowFile);
-    lua_setglobal(L, "writeInitialFlowFile");
 
     // Determine which fluidBlocks we need to process.
     int[] blockIdList;
@@ -169,8 +158,8 @@ int main_(string[] args)
     set_config_for_core(jsonData);
     // We may not proceed to building of block files if the config parameters are incompatible.
     checkGlobalConfig();
-    if (luaL_dostring(L, toStringz("buildFlowAndGridFiles()")) != 0) {
-        writeln("There was a problem in the Eilmer build function buildFlowAndGridFiles() in prepsim.lua");
+    if (luaL_dostring(L, toStringz("buildFluidAndGridFiles()")) != 0) {
+        writeln("There was a problem in the Eilmer build function buildFluidAndGridFiles() in prepsim.lua");
         string errMsg = to!string(lua_tostring(L, -1));
         throw new FlowSolverException(errMsg);
     }

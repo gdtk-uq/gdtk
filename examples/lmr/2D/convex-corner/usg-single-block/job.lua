@@ -18,10 +18,9 @@ config.solver_mode = "steady"
 config.dimensions = 2
 config.axisymmetric = false
 config.print_count = 1
-config.new_flow_format = true
 config.save_residual_values = false
 config.save_limiter_values = false
-config.flow_format = fileFmt
+config.field_format = fileFmt
 config.grid_format = fileFmt
 
 -- ==========================================================

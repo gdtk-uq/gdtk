@@ -42,7 +42,7 @@ function output.write_config_file(fileName)
    f:write(string.format('"solver_mode": "%s",\n', config.solver_mode))
    f:write(string.format('"start_time": %.18e,\n', config.start_time))
    f:write(string.format('"grid_format": "%s",\n', config.grid_format))
-   f:write(string.format('"flow_format": "%s",\n', config.flow_format))
+   f:write(string.format('"field_format": "%s",\n', config.field_format))
    f:write(string.format('"gas_model_file": "%s",\n', config.gas_model_file))
    f:write(string.format('"udf_supervisor_file": "%s",\n', tostring(config.udf_supervisor_file)))
    if type(user_pad_data) == 'table' then

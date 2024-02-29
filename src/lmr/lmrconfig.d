@@ -30,12 +30,12 @@ struct LmrCfg {
     immutable string historyDir;
     immutable string historyPrefix;
     immutable int initialFieldDir;
-    immutable string flowMetadataFile;
+    immutable string fluidMetadataFile;
     immutable string limiterMetadataFile;
     immutable string restartFile;
     immutable string timesFile;
     immutable string referenceResidualsFile;
-    immutable string flowPrefix;
+    immutable string fluidPrefix;
     immutable string solidPrefix;
     immutable string limiterPrefix;
     immutable string loadsPrefix;
@@ -79,12 +79,12 @@ static this()
     lmrCfg.historyDir = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["history-directory"].str;
     lmrCfg.historyPrefix = lmrJSONCfg["history-prefix"].str;
     lmrCfg.initialFieldDir = to!int(lmrJSONCfg["initial-field-directory"].integer);
-    lmrCfg.flowMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["flow-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
+    lmrCfg.fluidMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["fluid-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
     lmrCfg.limiterMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["limiter-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
     lmrCfg.restartFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["restart-filename"].str;
     lmrCfg.timesFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["times-filename"].str;
     lmrCfg.referenceResidualsFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["reference-residuals-file"].str;
-    lmrCfg.flowPrefix = lmrJSONCfg["flow-prefix"].str;
+    lmrCfg.fluidPrefix = lmrJSONCfg["fluid-prefix"].str;
     lmrCfg.solidPrefix = lmrJSONCfg["solid-prefix"].str;
     lmrCfg.limiterPrefix = lmrJSONCfg["limiter-prefix"].str;
     lmrCfg.loadsPrefix = lmrJSONCfg["loads-prefix"].str;
@@ -124,26 +124,26 @@ void readLmrConfig()
 string snapshotDirectory(int snapshot)
 {
     return lmrCfg.snapshotDir ~
-	"/" ~
-	format(lmrCfg.snapshotIdxFmt, snapshot);
+    	"/" ~
+	    format(lmrCfg.snapshotIdxFmt, snapshot);
 }
 
 
 /**
- * Return the flow solution filename for a single block ('blkId') as a string.
+ * Return the fluid solution filename for a single block ('blkId') as a string.
  *
  * Authors: RJG
  * Date: 2023-06-27
  */
-string flowFilename(int snapshot, int blkId)
+string fluidFilename(int snapshot, int blkId)
 {
     string fname = lmrCfg.snapshotDir ~
-	"/" ~
-	format(lmrCfg.snapshotIdxFmt, snapshot) ~
-	"/" ~
-	lmrCfg.flowPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
-    if (GlobalConfig.flow_format == "gziptext")
-	fname ~= lmrCfg.gzipExt;
+        "/" ~
+    	format(lmrCfg.snapshotIdxFmt, snapshot) ~
+	    "/" ~
+	    lmrCfg.fluidPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
+    if (GlobalConfig.field_format == "gziptext")
+	    fname ~= lmrCfg.gzipExt;
     return fname;
 }
 
@@ -156,12 +156,12 @@ string flowFilename(int snapshot, int blkId)
 string solidFilename(int snapshot, int blkId)
 {
     string fname = lmrCfg.snapshotDir ~
-	"/" ~
-	format(lmrCfg.snapshotIdxFmt, snapshot) ~
-	"/" ~
-	lmrCfg.solidPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
-    if (GlobalConfig.flow_format == "gziptext")
-	fname ~= lmrCfg.gzipExt;
+    	"/" ~
+	    format(lmrCfg.snapshotIdxFmt, snapshot) ~
+	    "/" ~
+	    lmrCfg.solidPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
+    if (GlobalConfig.field_format == "gziptext")
+	    fname ~= lmrCfg.gzipExt;
     return fname;
 }
 
@@ -174,12 +174,12 @@ string solidFilename(int snapshot, int blkId)
 string limiterFilename(int snapshot, int blkId)
 {
     string fname = lmrCfg.snapshotDir ~
-	"/" ~
-	format(lmrCfg.snapshotIdxFmt, snapshot) ~
-	"/" ~
-	lmrCfg.limiterPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
-    if (GlobalConfig.flow_format == "gziptext")
-	fname ~= lmrCfg.gzipExt;
+    	"/" ~
+	    format(lmrCfg.snapshotIdxFmt, snapshot) ~
+	    "/" ~
+	    lmrCfg.limiterPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
+    if (GlobalConfig.field_format == "gziptext")
+	    fname ~= lmrCfg.gzipExt;
     return fname;
 }
 

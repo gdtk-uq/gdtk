@@ -81,14 +81,14 @@ public:
             writeln("Message is: ", e.msg);
             throw new Error(text("Failed to parse JSON from config file: ", cfgFile));
         }
-        string flowFmt = jsonData["flow_format"].str;
+        string fieldFmt = jsonData["field_format"].str;
         string gridFmt = jsonData["grid_format"].str;
         grid_motion = grid_motion_from_name(jsonData["grid_motion"].str);
         // -- end initialising from JSONData
 
 	    // Find out variables from metadata file
-        string flowMetadataFile = (dir == ".") ? lmrCfg.flowMetadataFile : dir ~ "/" ~ lmrCfg.flowMetadataFile;
-        auto variables = readFlowVariablesFromFlowMetadata(flowMetadataFile);
+        string fluidMetadataFile = (dir == ".") ? lmrCfg.fluidMetadataFile : dir ~ "/" ~ lmrCfg.fluidMetadataFile;
+        auto variables = readFluidVariablesFromFluidMetadata(fluidMetadataFile);
         //
         // Use <block-list-filename> to get a hint of the type of each block.
         string blkListFile = (dir == ".") ? lmrCfg.blkListFile : dir ~ "/" ~ lmrCfg.blkListFile;
@@ -123,9 +123,9 @@ public:
                 gridBlocks ~= new UnstructuredGrid(gName, gridFmt, false);
             }
             gridBlocks[$-1].sort_cells_into_bins();
-            string fName = flowFilename(snapshot, to!int(ib));
+            string fName = fluidFilename(snapshot, to!int(ib));
             fName = (dir == ".") ? fName : dir ~ "/" ~ fName;
-            flowBlocks ~= new FluidBlockLite(fName, ib, jsonData, gridType, flowFmt, variables, ncells);
+            flowBlocks ~= new FluidBlockLite(fName, ib, jsonData, gridType, fieldFmt, variables, ncells);
         } // end foreach ib
         this.nBlocks = nBlocks;
         sim_time = -1.0; // For steady-state signal no meaningful time with -1.0
@@ -476,7 +476,7 @@ public:
 	foreach (i, var; variables) variableIndex[var] = i;
 	this.ncells = ncells;
         this(blkID, jsonData, gridType, flow_format);
-        this.readFlowVariablesFromFile(filename, variables, ncells);
+        this.readFluidVariablesFromFile(filename, variables, ncells);
     } // end constructor from file
 
     this(ref const(FluidBlockLite) other, size_t[] cellList, size_t new_dimensions,

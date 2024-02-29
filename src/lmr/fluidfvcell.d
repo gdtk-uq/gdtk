@@ -32,6 +32,7 @@ import lsqinterp;
 import gas.fuel_air_mix;
 import globaldata : SimState;
 import turbulence;
+import lmr.fvcell : FVCell;
 
 import kinetics.chemistry_update;
 import kinetics.reaction_mechanism;
@@ -58,7 +59,7 @@ string avg_over_iface_list(string quantity, string result)
     return code;
 }
 
-class FluidFVCell {
+class FluidFVCell : FVCell {
 public:
     int id;  // allows us to work out where, in the block, the cell is
     bool data_is_bad; // Set to false at the start of an update.

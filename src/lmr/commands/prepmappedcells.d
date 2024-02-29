@@ -81,7 +81,7 @@ int main_(string[] args)
     }
     cfg.n_flow_time_levels = 2;
 
-    initLocalFluidBlocks();
+    initLocalBlocks();
 
     initThreadPool(1, 1);
 

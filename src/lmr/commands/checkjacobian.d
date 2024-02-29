@@ -209,7 +209,7 @@ void readLimiterValues(int snapshot)
     string[] variables;
     string fileFmt;
 
-    fileFmt = cfg.flow_format;
+    fileFmt = cfg.field_format;
     variables = readVariablesFromMetadata(lmrCfg.limiterMetadataFile);
     auto soln = new FlowSolution(to!int(snapshot), cfg.nFluidBlocks);
     foreach (i, blk; localFluidBlocks) {

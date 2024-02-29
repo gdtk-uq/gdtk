@@ -51,7 +51,6 @@ import globalconfig;
 import globaldata;
 import init;
 import fileutil : ensure_directory_is_present;
-import blockio : blkIO;
 import loads : computeRunTimeLoads;
 
 version(mpi_parallel) {
@@ -744,8 +743,8 @@ void writeSnapshotFiles_timemarching()
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
 
     foreach (blk; parallel(localFluidBlocksBySize, 1)) {
-        auto fileName = flowFilename(SimState.current_tindx, blk.id);
-        blkIO.writeVariablesToFile(fileName, blk.cells);
+        auto fileName = fluidFilename(SimState.current_tindx, blk.id);
+        fluidBlkIO.writeVariablesToFile(fileName, blk.cells);
     }
 
     if (cfg.grid_motion != GridMotion.none) {
