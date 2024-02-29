@@ -924,7 +924,7 @@ size_t[] decode_range_indices(string rangeStr, size_t first, size_t endplus1)
             if (new_endplus1 < endplus1) endplus1 = new_endplus1;
         }
     } else if (rangeStr == "$") {
-        // Wit just a single "$" specified, we want only the last index.
+        // With just a single "$" specified, we want only the last index.
         first = endplus1 - 1;
     }else {
         // Presume that we have a single integer.

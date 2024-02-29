@@ -52,7 +52,7 @@ options ([+] can be repeated):
  -n, --names
      comma separated list of variable names for reporting
      examples:
-       --names="rho,velx,vely"
+       --names="rho,vel.x,vel.y"
        --names="rho"
      default:
        --names="rho"

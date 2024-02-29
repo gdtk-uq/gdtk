@@ -1,5 +1,5 @@
 /** flowsolution.d
- * Eilmer4 compressible-flow simulation code, postprocessing functions.
+ * Eilmer compressible-flow simulation code, postprocessing functions.
  *
  * The role of the post-processing functions is just to pick up data
  * from a previously-run simulation and either write plotting files
