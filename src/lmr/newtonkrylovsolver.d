@@ -805,7 +805,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
                 writeln("*");
                 writeln("*  Reference residuals for each conservation equation:");
                 foreach (ivar; 0 .. nConserved) {
-                    writefln("* %12s: %.12e", cfg.cqi.names[ivar], referenceResiduals[ivar].re);
+                    writefln("* %15s: %.12e", cfg.cqi.names[ivar], referenceResiduals[ivar].re);
                 }
                 writeln("*");
                 writeln("*************************************************************************\n");
@@ -2833,10 +2833,10 @@ void printStatusToScreen(int step, double cfl, double dt, double wallClockElapse
     formattedWrite(writer, "step= %6d\tcfl=%10.3e\tdt=%10.3e\tWC=%.1f\n",
                    step, cfl, dt, wallClockElapsed);
     formattedWrite(writer, hrule);
-    formattedWrite(writer, "%12s\t\tRELATIVE\t\tABSOLUTE\n", "RESIDUALS");
-    formattedWrite(writer, "%12s\t\t%10.6e\t\t%10.6e\n", "global", globalResidual.re/referenceGlobalResidual.re, globalResidual.re);
+    formattedWrite(writer, "%15s\t\tRELATIVE\t\tABSOLUTE\n", "RESIDUALS");
+    formattedWrite(writer, "%15s\t\t%10.6e\t\t%10.6e\n", "global", globalResidual.re/referenceGlobalResidual.re, globalResidual.re);
     foreach (ivar; 0 .. cqi.n) {
-        formattedWrite(writer, "%12s\t\t%10.6e\t\t%10.6e\n", cqi.names[ivar], currentResiduals[ivar].re/referenceResiduals[ivar].re, currentResiduals[ivar].re);
+        formattedWrite(writer, "%15s\t\t%10.6e\t\t%10.6e\n", cqi.names[ivar], currentResiduals[ivar].re/referenceResiduals[ivar].re, currentResiduals[ivar].re);
     }
     writeln(writer.data);
 }

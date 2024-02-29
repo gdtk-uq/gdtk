@@ -2251,7 +2251,7 @@ void set_config_for_core(JSONValue jsonData)
     */
     //
     // We have enough information here to create the ConservedQuantitiesIndices struct.
-    cfg.cqi = new ConservedQuantitiesIndices(cfg.dimensions, cfg.turb_model.nturb, cfg.MHD, cfg.n_species, cfg.n_modes);
+    cfg.cqi = new ConservedQuantitiesIndices(cfg.dimensions, cfg.turb_model.nturb, cfg.MHD, cfg.n_species, cfg.n_modes, cfg.gmodel_master, cfg.turb_model);
 } // end set_config_for_core()
 
 void set_config_for_blocks(JSONValue jsonData)

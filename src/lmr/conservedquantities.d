@@ -16,9 +16,10 @@ import std.format;
 import std.conv;
 import ntypes.complex;
 import nm.number;
+import globalconfig;
 import geom;
 import gas;
-
+import turbulence;
 
 // Underlying definition of the conserved quantities collection,
 // as seen by the transient solver, is just an array.
@@ -88,7 +89,7 @@ public:
     size_t modes;
     string[] names;
 
-    this(int dimensions, size_t nturb, bool MHD, size_t nspecies, size_t nmodes) {
+    this(int dimensions, size_t nturb, bool MHD, size_t nspecies, size_t nmodes, ref GasModel gmodel, ref TurbulenceModel turb_model) {
 
         bool put_mass_in_last_position = false;
         version (newton_krylov) {
@@ -117,7 +118,7 @@ public:
                 turb = true;
                 rhoturb = n; // Start of turbulence elements.
                 n += nturb;
-		foreach (i; 0 .. nturb) names ~= "turb-quant-" ~ to!string(i);
+		foreach (i; 0 .. nturb) names ~= turb_model.primitive_variable_name(to!int(i));
             } else {
                 turb = false;
             }
@@ -133,12 +134,12 @@ public:
             n_species = nspecies;
             species = n; // Start of species elements.
             n += nspecies;
-	    foreach (i; 0 .. nspecies) names ~= "species-" ~ to!string(i);
+	    foreach (i; 0 .. nspecies) names ~= gmodel.species_name(to!int(i)).toUpper;
             n_modes = nmodes;
             if (nmodes > 0) {
                 modes = n; // Start of modes elements.
                 n += nmodes;
-		foreach (i; 0 .. nmodes) names ~= "mode-" ~ to!string(i);
+		foreach (i; 0 .. nmodes) names ~= gmodel.energy_mode_name(to!int(i));
             }
             // we still need the mass in the conserved quantities vector in some places of the code
             mass = n; names ~= "mass";
@@ -164,7 +165,7 @@ public:
                 turb = true;
                 rhoturb = n; // Start of turbulence elements.
                 n += nturb;
-		foreach (i; 0 .. nturb) names ~= "turb-quant-" ~ to!string(i);
+		foreach (i; 0 .. nturb) names ~= turb_model.primitive_variable_name(to!int(i));
             } else {
                 turb = false;
             }
@@ -181,7 +182,7 @@ public:
             if (nspecies > 1) {
                 species = n; // Start of species elements.
                 n += nspecies;
-		foreach (i; 0 .. nspecies) names ~= "species-" ~ to!string(i);
+		foreach (i; 0 .. nspecies) names ~= gmodel.species_name(to!int(i)).toUpper;
                 // Note that we only carry species in the conserved-quantities vector
                 // if we have a multi-species gas model.
                 // A single-species gas model assumes a species fraction on 1.0
@@ -191,7 +192,7 @@ public:
             if (nmodes > 0) {
                 modes = n; // Start of modes elements.
                 n += nmodes;
-		foreach (i; 0 .. nmodes) names ~= "mode-" ~ to!string(i);
+		foreach (i; 0 .. nmodes) names ~= gmodel.energy_mode_name(to!int(i));
             }
         }
     } // end constructor
