@@ -64,7 +64,10 @@ options ([+] can be repeated):
      "blk-range,i-range,j-range:k-range;"
 
      example:
-       --slice-list="0:2,:,0,0;3,0,:,0"
+       --slice-list="0:2,:,0,0;2,$,:,0"
+       will select blocks 0 and 1, writing out a strip of cells stepping in i, keeping j=0, k=0, plus
+       from block 2, write out a strip of cells stepping in j, keeping i=nic-1 and k=0
+       Note that you can specify the last value of an index with $.
 
      default: none (report nothing)
 
@@ -159,7 +162,9 @@ int main_(string[] args)
         }
         outfile.writefln("# snapshot: %s", snap);
         auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks);
-        outfile.write("# pos.x pos.y pos.z");
+        bool is3dimensional =  canFind(soln.flowBlocks[0].variableNames, "pos.z");
+        outfile.write("# pos.x pos.y");
+        if (is3dimensional) outfile.write(" pos.z");
         foreach (var; namesVariables) {
             if (!canFind(soln.flowBlocks[0].variableNames, var)) {
                 writefln("Ignoring requested variable %q.", var);
@@ -170,26 +175,23 @@ int main_(string[] args)
         }
         outfile.write("\n");
         foreach (sliceStr; sliceListStr.split(";")) {
-            std.stdio.writeln("sliceStr=", sliceStr);
             auto rangeStrings = sliceStr.split(",");
-            std.stdio.writeln("rangeStrings=", rangeStrings);
             auto blk_range = decode_range_indices(rangeStrings[0], 0, soln.nBlocks);
             foreach (ib; blk_range[0] .. blk_range[1]) {
                 auto blk = soln.flowBlocks[ib];
-                std.stdio.writeln("nic=", blk.nic, " njc=", blk.njc, " nkc=", blk.nkc);
                 // We need to do the decode in the context of each block because
                 // the upper limits to the indices are specific to the block.
                 auto i_range = decode_range_indices(rangeStrings[1], 0, blk.nic);
                 auto j_range = decode_range_indices(rangeStrings[2], 0, blk.njc);
                 auto k_range = decode_range_indices(rangeStrings[3], 0, blk.nkc);
-                std.stdio.writeln("ib=", ib, " i_range=", i_range, " j_range=", j_range, " k_range=", k_range);
                 foreach (k; k_range[0] .. k_range[1]) {
                     foreach (j; j_range[0] .. j_range[1]) {
                         foreach (i; i_range[0] .. i_range[1]) {
-                            outfile.write(format(" %g %g %g",
-                                                 soln.flowBlocks[ib]["pos.x", i, j, k],
-                                                 soln.flowBlocks[ib]["pos.y", i, j, k],
-                                                 soln.flowBlocks[ib]["pos.z", i, j, k]));
+                            outfile.write(format(" %g %g", soln.flowBlocks[ib]["pos.x", i, j, k],
+                                                 soln.flowBlocks[ib]["pos.y", i, j, k]));
+                            if (is3dimensional) {
+                                outfile.write(format(" %g", soln.flowBlocks[ib]["pos.z", i, j, k]));
+                            }
                             foreach (var; namesVariables) {
                                 if (canFind(soln.flowBlocks[0].variableNames, var)) {
                                     outfile.write(format(" %g", soln.flowBlocks[ib][var, i, j, k]));

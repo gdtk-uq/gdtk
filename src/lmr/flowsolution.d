@@ -125,7 +125,20 @@ public:
             gridBlocks[$-1].sort_cells_into_bins();
             string fName = fluidFilename(snapshot, to!int(ib));
             fName = (dir == ".") ? fName : dir ~ "/" ~ fName;
-            flowBlocks ~= new FluidBlockLite(fName, ib, jsonData, gridType, fieldFmt, variables, ncells);
+            auto fb = new FluidBlockLite(fName, ib, jsonData, gridType, fieldFmt, variables, ncells);
+            final switch (gridType) {
+            case Grid_t.structured_grid:
+                auto g = gridBlocks[$-1];
+                fb.nic = g.niv - 1;
+                fb.njc = g.njv - 1;
+                fb.nkc = max(g.nkv-1, 1);
+                break;
+            case Grid_t.unstructured_grid:
+                fb.nic = ncells;
+                fb.njc = 1;
+                fb.nkc = 1;
+            }
+            flowBlocks ~= fb;
         } // end foreach ib
         this.nBlocks = nBlocks;
         sim_time = -1.0; // For steady-state signal no meaningful time with -1.0

@@ -20,10 +20,13 @@ init-transient: job.lua
 run:
 	lmr run
 
-post: vtk
+post: vtk slice
 
 vtk:
 	lmr snapshot2vtk --all
+
+slice:
+	lmr slice-flow --slice-list="0,:,0,0;2,:,0,0;4,:,0,0"
 
 clean:
 	- rm -rf $(LMR_DIR)
