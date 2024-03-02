@@ -23,13 +23,16 @@ import geom.luawrap;
 import lmrexceptions : LmrException;
 import globalconfig : GlobalConfig;
 import lmrconfig;
-import lmr.fluidfvcell : FluidFVCell;
+import lmr.fvcell : FVCell;
 import fvcellio;
 import fluidblock : FluidBlock;
 import sfluidblock : SFluidBlock;
 import ufluidblock : UFluidBlock;
 import flowsolution : FluidBlockLite;
-import globaldata : fluidBlkIO;
+import solidblock : SolidBlock;
+import ssolidblock : SSolidBlock;
+//import solidsolution : SolidBlockLite;
+import globaldata : fluidBlkIO, solidBlkIO;
 
 class BlockIO {
 public:
@@ -79,8 +82,8 @@ public:
     }
 
 abstract:
-    void writeVariablesToFile(string fname, FluidFVCell[] cells);
-    void readVariablesFromFile(string fname, FluidFVCell[] cells);
+    void writeVariablesToFile(string fname, FVCell[] cells);
+    void readVariablesFromFile(string fname, FVCell[] cells);
 
 private:
     FVCellIO mCIO;
@@ -97,7 +100,7 @@ public:
     }
 
     override
-    void writeVariablesToFile(string fname, FluidFVCell[] cells)
+    void writeVariablesToFile(string fname, FVCell[] cells)
     {
 	double[1] dbl1;
 	auto outfile = File(fname, "wb");
@@ -111,7 +114,7 @@ public:
     }
 
     override
-    void readVariablesFromFile(string fname, FluidFVCell[] cells)
+    void readVariablesFromFile(string fname, FVCell[] cells)
     {
 	double[1] dbl1;
 	auto infile = File(fname, "rb");
@@ -136,42 +139,49 @@ public:
     }
 
     override
-    void writeVariablesToFile(string fname, FluidFVCell[] cells)
+    void writeVariablesToFile(string fname, FVCell[] cells)
     {
-	auto outfile = new GzipOut(fname);
-	foreach (var; mCIO.variables) {
-	    foreach (cell; cells) {
-		outfile.compress(format(lmrCfg.dblVarFmt ~ "\n", mCIO[cell,var]));
-	    }
-	}
-	outfile.finish();
+        auto outfile = new GzipOut(fname);
+        foreach (var; mCIO.variables) {
+            foreach (cell; cells) {
+                outfile.compress(format(lmrCfg.dblVarFmt ~ "\n", mCIO[cell,var]));
+            }
+        }
+        outfile.finish();
     }
 
     override
-    void readVariablesFromFile(string fname, FluidFVCell[] cells)
+    void readVariablesFromFile(string fname, FVCell[] cells)
     {
-	auto byLine = new GzipByLine(fname);
-	string line;
-	double dbl;
-	foreach (var; mCIO.variables) {
-	    foreach (cell; cells) {
-		line = byLine.front; byLine.popFront;
-		formattedRead(line, "%e", &dbl);
-		mCIO[cell,var] = dbl;
-	    }
-	}
+        auto byLine = new GzipByLine(fname);
+        string line;
+        double dbl;
+        foreach (var; mCIO.variables) {
+            foreach (cell; cells) {
+                line = byLine.front; byLine.popFront;
+                formattedRead(line, "%e", &dbl);
+                mCIO[cell,var] = dbl;
+            }
+        }
     }
 }
-
 
 //-------------------------------------------------------------
 // Functions intended for use from Lua at prep stage:
 //
 //     1. luafn_writeFluidMetadata
 //     2. luafn_writeInitialFluidFile
+//     3. luafn_writeSolidMetadata
+//     4. luafn_writeInitialSolidFile
 //
 //-------------------------------------------------------------
 
+/**
+ * Lua-exposed function to write fluid metadata.
+ *
+ * Author: RJG
+ * Date: 2023
+ */
 extern(C) int luafn_writeFluidMetadata(lua_State *L)
 {
     alias cfg = GlobalConfig;
@@ -184,7 +194,7 @@ extern(C) int luafn_writeFluidMetadata(lua_State *L)
 	    fluidBlkIO = new GzipBlockIO(cio);
     }
     else {
-	    throw new LmrException(format("Flow format type '%s' unknown", cfg.field_format));
+	    throw new LmrException(format("Fluid format type '%s' unknown", cfg.field_format));
     }
 
     fluidBlkIO.writeMetadataToFile(lmrCfg.fluidMetadataFile);
@@ -192,6 +202,12 @@ extern(C) int luafn_writeFluidMetadata(lua_State *L)
     return 0;
 }
 
+/**
+ * Lua-exposed function to write an initial fluid field file.
+ *
+ * Author: RJG
+ * Date: 2023
+ */
 extern(C) int luafn_writeInitialFluidFile(lua_State *L)
 {
     auto blkId = to!int(luaL_checkinteger(L, 1));
@@ -202,12 +218,70 @@ extern(C) int luafn_writeInitialFluidFile(lua_State *L)
     	blk = new SFluidBlock(L);
     }
     else { // Assume an unstructured grid
-	    blk = new UFluidBlock(L);
+        blk = new UFluidBlock(L);
     }
-    fluidBlkIO.writeVariablesToFile(fname, blk.cells);
+    // Make temporary holder because we can't pass
+    // an array of type FluidFVCells, so promote
+    FVCell[] cells;
+    cells.length = blk.cells.length;
+    foreach (i, ref c; cells) c = blk.cells[i];
+    fluidBlkIO.writeVariablesToFile(fname, cells);
     return 0;
 }
 
+/**
+ * Lua-exposed function to write solid metadata.
+ *
+ * Author: RJG
+ * Date: 2024-03-02
+ */
+extern(C) int luafn_writeSolidMetadata(lua_State *L)
+{
+    FVCellIO cio = new SolidFVCellIO(buildFluidVariables());
+
+    if (GlobalConfig.field_format == "rawbinary") {
+    	solidBlkIO = new BinaryBlockIO(cio);
+    }
+    else if (GlobalConfig.field_format == "gziptext") {
+	    solidBlkIO = new GzipBlockIO(cio);
+    }
+    else {
+	    throw new LmrException(format("Solid format type '%s' unknown", GlobalConfig.field_format));
+    }
+
+    solidBlkIO.writeMetadataToFile(lmrCfg.fluidMetadataFile);
+
+    return 0;
+}
+
+/**
+ * Lua-exposed function to write an initial solid field file.
+ *
+ * Author: RJG
+ * Date: 2024-03-02
+ */
+/*
+extern(C) int luafn_writeInitialSolidFile(lua_State *L)
+{
+    auto blkId = to!int(luaL_checkinteger(L, 1));
+    auto fname = solidFilename(lmrCfg.initialFieldDir, blkId);
+    auto grid = checkStructuredGrid(L, 2);
+    SolidBlock solidBlk;
+    if (grid) { // We do have a structured grid
+    	solidBlk = new SSolidBlock(L);
+    }
+    else { // Assume an unstructured grid
+        throw new LmrException("Unstuctured solid blocks are not implemented.");
+    }
+    // Make temporary holder because we can't pass
+    // an array of type SolidFVCells, so promote
+    FVCell[] cells;
+    cells.length = solidBlk.cells.length;
+    foreach (i, ref c; cells) c = solidBlk.cells[i];
+    solidBlkIO.writeVariablesToFile(fname, cells);
+    return 0;
+}
+*/
 
 //-------------------------------------------------------------
 // Functions intended for use at post-processing stage:
@@ -228,7 +302,7 @@ string[] readFluidVariablesFromFluidMetadata(string fluidMetadataFile="")
     Node metadata = dyaml.Loader.fromFile(fluidMetadataFile).load();
     string[] variables;
     foreach (node; metadata["variables"].sequence) {
-	variables ~= node.as!string;
+        variables ~= node.as!string;
     }
     return variables;
 }
@@ -241,37 +315,72 @@ void readFluidVariablesFromFile(FluidBlockLite blk, string fname, string[] varia
 
     final switch (blk.flow_format) {
     case "rawbinary":
-	double[1] dbl1;
-	auto infile = File(fname, "rb");
-	foreach (ivar; 0 .. nvars) {
-	    foreach (icell; 0 .. ncells) {
-		infile.rawRead(dbl1);
-		blk._data[icell][ivar] = dbl1[0];
+        double[1] dbl1;
+        auto infile = File(fname, "rb");
+        foreach (ivar; 0 .. nvars) {
+            foreach (icell; 0 .. ncells) {
+                infile.rawRead(dbl1);
+                blk._data[icell][ivar] = dbl1[0];
+	        }
 	    }
-	}
-	infile.close();
-	break;
+	    infile.close();
+	    break;
     case "gziptext":
-	auto byLine = new GzipByLine(fname);
-	string line;
-	double dbl;
-	foreach (ivar; 0 .. nvars) {
-	    foreach (icell; 0 .. ncells) {
-		line = byLine.front; byLine.popFront;
-		formattedRead(line, "%e", &dbl);
-		blk._data[icell][ivar] = dbl;
-	    }
-	}
-	break;
+        auto byLine = new GzipByLine(fname);
+        string line;
+        double dbl;
+        foreach (ivar; 0 .. nvars) {
+            foreach (icell; 0 .. ncells) {
+                line = byLine.front; byLine.popFront;
+                formattedRead(line, "%e", &dbl);
+                blk._data[icell][ivar] = dbl;
+            }
+        }
+        break;
     }
 }
+
+/*
+void readSolidVariablesFromFile(SolidBlockLite blk, string fname, string[] variables, int ncells)
+{
+    size_t nvars = variables.length;
+    blk.data.length = ncells;
+    foreach (ref d; blk.data) d.length = nvars;
+
+    final switch (blk.fieldFmt) {
+    case "rawbinary":
+        double[1] dbl1;
+        auto infile = File(fname, "rb");
+        foreach (ivar; 0 .. nvars) {
+            foreach (icell; 0 .. ncells) {
+                infile.rawRead(dbl1);
+                blk.data[icell][ivar] = dbl1[0];
+            }            
+        }
+        infile.close();
+        break;
+    case "gziptext":
+        auto byLine = new GzipByLine(fname);
+        string line;
+        double dbl;
+        foreach (ivar; 0 .. nvars) {
+            foreach (icell; 0 .. ncells) {
+                line = byLine.front; byLine.popFront;
+                formattedRead(line, "%e", &dbl);
+                blk.data[icell][ivar] = dbl;
+            }
+        }
+	    break;
+    }
+}
+*/
 
 string[] readVariablesFromMetadata(string metadataFile)
 {
     Node metadata = dyaml.Loader.fromFile(metadataFile).load();
     string[] variables;
     foreach (node; metadata["variables"].sequence) {
-	variables ~= node.as!string;
+        variables ~= node.as!string;
     }
     return variables;
 }
@@ -287,9 +396,9 @@ void readValuesFromFile(ref double[][] data, string fname, string[] variables, s
 	double[1] dbl1;
 	auto infile = File(fname, "rb");
 	foreach (ivar; 0 .. nvars) {
-	    foreach (icell; 0 .. ncells) {
-		infile.rawRead(dbl1);
-		data[icell][ivar] = dbl1[0];
+        foreach (icell; 0 .. ncells) {
+            infile.rawRead(dbl1);
+            data[icell][ivar] = dbl1[0];
 	    }
 	}
 	infile.close();
@@ -300,9 +409,9 @@ void readValuesFromFile(ref double[][] data, string fname, string[] variables, s
 	double dbl;
 	foreach (ivar; 0 .. nvars) {
 	    foreach (icell; 0 .. ncells) {
-		line = byLine.front; byLine.popFront;
-		formattedRead(line, "%e", &dbl);
-		data[icell][ivar] = dbl;
+            line = byLine.front; byLine.popFront;
+            formattedRead(line, "%e", &dbl);
+            data[icell][ivar] = dbl;
 	    }
 	}
 	break;

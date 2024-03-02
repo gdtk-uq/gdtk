@@ -40,6 +40,7 @@ import sfluidblock : SFluidBlock;
 import ufluidblock : UFluidBlock;
 import ssolidblock : SSolidBlock;
 import blockio : BinaryBlockIO, GzipBlockIO;
+import lmr.fvcell : FVCell;
 import fvcellio;
 import fileutil : ensure_directory_is_present;
 
@@ -384,7 +385,10 @@ void initFluidBlocksFlowField(int snapshotStart)
     fluidBlkIO.readMetadataFromFile(lmrCfg.fluidMetadataFile);
 
     foreach (blk; localFluidBlocks) {
-        fluidBlkIO.readVariablesFromFile(fluidFilename(snapshotStart, blk.id), blk.cells);
+        FVCell[] cells;
+        cells.length = blk.cells.length;
+        foreach (i, ref c; cells) c = blk.cells[i];
+        fluidBlkIO.readVariablesFromFile(fluidFilename(snapshotStart, blk.id), cells);
         // Note that, even for grid_motion==none simulations, we use the grid velocities for setting
         // the gas velocities at boundary faces.  These will need to be set to zero for correct viscous simulation.
         foreach (iface; blk.faces) iface.gvel.clear();
@@ -709,13 +713,20 @@ void initHistoryCells()
  */
 void initSolidBlocks()
 {
-    foreach (ref mySolidBlk; localSolidBlocks) {
-        mySolidBlk.assembleArrays();
-        mySolidBlk.bindFacesAndVerticesToCells();
-        mySolidBlk.bindCellsToFaces();
-        // [TODO] RJG, add in grid reading and solution reading
-        mySolidBlk.computePrimaryCellGeometricData();
-        mySolidBlk.assignCellLocationsForDerivCalc();
+    solidBlkIO = (GlobalConfig.field_format == "rawbinary") ? new BinaryBlockIO() : new GzipBlockIO();
+    solidBlkIO.readMetadataFromFile(lmrCfg.solidMetadataFile);
+    foreach (ref solidBlk; localSolidBlocks) {
+        solidBlk.assembleArrays();
+        solidBlk.bindFacesAndVerticesToCells();
+        solidBlk.bindCellsToFaces();
+        auto gName = solidGridFilename(SimState.current_tindx, solidBlk.id);
+        solidBlk.readGrid(gName);
+        FVCell[] cells;
+        cells.length = solidBlk.cells.length;
+        foreach (i, ref c; cells) c = solidBlk.cells[i];
+        solidBlkIO.readVariablesFromFile(solidFilename(SimState.current_tindx, solidBlk.id), cells);
+        solidBlk.computePrimaryCellGeometricData();
+        solidBlk.assignCellLocationsForDerivCalc();
     }
     // setup communication across blocks
     foreach (myblk; localSolidBlocks) {

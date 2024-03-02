@@ -31,6 +31,7 @@ struct LmrCfg {
     immutable string historyPrefix;
     immutable int initialFieldDir;
     immutable string fluidMetadataFile;
+    immutable string solidMetadataFile;
     immutable string limiterMetadataFile;
     immutable string restartFile;
     immutable string timesFile;
@@ -80,6 +81,7 @@ static this()
     lmrCfg.historyPrefix = lmrJSONCfg["history-prefix"].str;
     lmrCfg.initialFieldDir = to!int(lmrJSONCfg["initial-field-directory"].integer);
     lmrCfg.fluidMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["fluid-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
+    lmrCfg.solidMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["solid-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
     lmrCfg.limiterMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["limiter-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
     lmrCfg.restartFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["restart-filename"].str;
     lmrCfg.timesFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["times-filename"].str;
@@ -192,13 +194,14 @@ string limiterFilename(int snapshot, int blkId)
 string loadsFilename(int snapshot, int blkId, size_t bndryId, string group)
 {
     string fname = lmrCfg.snapshotDir ~
-	"/" ~
-	format(lmrCfg.snapshotIdxFmt, snapshot) ~
-	"/" ~
-	lmrCfg.loadsPrefix ~
-	"-blk-" ~ format(lmrCfg.blkIdxFmt, blkId) ~
-	"-bndry-" ~ format("%d", bndryId) ~
-	"-" ~ group ~ ".dat";
+        "/" ~
+        format(lmrCfg.snapshotIdxFmt, snapshot) ~
+        "/" ~
+        lmrCfg.loadsPrefix ~
+        "-blk-" ~ format(lmrCfg.blkIdxFmt, blkId) ~
+        "-bndry-" ~ format("%d", bndryId) ~
+        "-" ~ group ~
+         ".dat";
     return fname;
 }
 
@@ -211,12 +214,11 @@ string loadsFilename(int snapshot, int blkId, size_t bndryId, string group)
 string gridFilename(int snapshot, int blkId)
 {
     string gname = lmrCfg.snapshotDir ~
-	"/" ~
-	format(lmrCfg.snapshotIdxFmt, snapshot) ~
-	"/" ~
-	lmrCfg.gridPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
-    if (GlobalConfig.grid_format == "gziptext")
-	gname ~= lmrCfg.gzipExt;
+        "/" ~
+        format(lmrCfg.snapshotIdxFmt, snapshot) ~
+        "/" ~
+        lmrCfg.gridPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
+    if (GlobalConfig.grid_format == "gziptext") gname ~= lmrCfg.gzipExt;
     return gname;
 }
 
@@ -229,12 +231,11 @@ string gridFilename(int snapshot, int blkId)
 string solidGridFilename(int snapshot, int blkId)
 {
     string gname = lmrCfg.snapshotDir ~
-	"/" ~
-	format(lmrCfg.snapshotIdxFmt, snapshot) ~
-	"/" ~
-	lmrCfg.solidPrefix ~ "-" ~ lmrCfg.gridPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
-    if (GlobalConfig.grid_format == "gziptext")
-	gname ~= lmrCfg.gzipExt;
+        "/" ~
+        format(lmrCfg.snapshotIdxFmt, snapshot) ~
+        "/" ~
+        lmrCfg.solidPrefix ~ "-" ~ lmrCfg.gridPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
+    if (GlobalConfig.grid_format == "gziptext") gname ~= lmrCfg.gzipExt;
     return gname;
 }
 /**
@@ -246,7 +247,10 @@ string solidGridFilename(int snapshot, int blkId)
 string historyFilename(size_t blkId, size_t cellId)
 {
     string hname = lmrCfg.historyDir ~
-	"/" ~
-	lmrCfg.historyPrefix ~ "-blk-" ~ format(lmrCfg.blkIdxFmt, blkId) ~ "-cell-" ~ format(lmrCfg.cellIdxFmt, cellId) ~ ".dat";
+        "/" ~
+        lmrCfg.historyPrefix ~
+         "-blk-" ~ format(lmrCfg.blkIdxFmt, blkId) ~
+         "-cell-" ~ format(lmrCfg.cellIdxFmt, cellId) ~
+         ".dat";
     return hname;
 }

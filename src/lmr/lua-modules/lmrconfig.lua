@@ -62,7 +62,13 @@ function lmr_config.gridFilename(id, ext)
    local gname = lmr_config.gridDirectory() .. "/" .. lmrCfg["grid-prefix"] .. "-" .. string.format(lmrCfg["block-index-format"], id)
    if ext then gname = gname .. ext end
    return gname
-   end
+end
+
+function lmr_config.solidGridFilename(id, ext)
+   local gname = lmr_config.gridDirectory() .. "/" .. lmrCfg["solid-prefix"] .. "-" .. lmrCfg["grid-prefix"] .. "-" .. string.format(lmrCfg["block-index-format"], id)
+   if ext then gname = gname .. ext end
+   return gname
+end
 
 function lmr_config.snapshotDirectory(snapshot)
    local dname = lmrCfg["simulation-directory"]
@@ -79,6 +85,13 @@ function lmr_config.fluidFilename(snapshot, blkId)
    local fname = lmr_config.snapshotDirectory(snapshot)
    fname = fname .. "/"
    fname = fname .. lmrCfg["fluid-prefix"] .. "-" .. string.format(lmrCfg["block-index-format"], blkId)
+   return fname
+end
+
+function lmr_config.solidFilename(snapshot, blkId)
+   local fname = lmr_config.snapshotDirectory(snapshot)
+   fname = fname .. "/"
+   fname = fname .. lmrCfg["solid-prefix"] .. "-" .. string.format(lmrCfg["block-index-format"], blkId)
    return fname
 end
 

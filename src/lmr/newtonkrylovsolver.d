@@ -55,6 +55,7 @@ import ufluidblock : UFluidBlock;
 import user_defined_source_terms : getUDFSourceTermsForCell;
 import blockio;
 import fvcellio;
+import lmr.fvcell : FVCell;
 import loads : writeLoadsToFile;
 
 version(mpi_parallel) {
@@ -2760,8 +2761,11 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
         version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
 
         foreach (blk; localFluidBlocks) {
-        auto fileName = fluidFilename(nWrittenSnapshots, blk.id);
-	    fluidBlkIO.writeVariablesToFile(fileName, blk.cells);
+            auto fileName = fluidFilename(nWrittenSnapshots, blk.id);
+            FVCell[] cells;
+            cells.length = blk.cells.length;
+            foreach (i, ref c; cells) c = blk.cells[i];
+            fluidBlkIO.writeVariablesToFile(fileName, cells);
         }
 
 	// Add restart info
@@ -2783,8 +2787,11 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
             }
         }
         foreach (blk; localFluidBlocks) {
-	    auto fileName = fluidFilename(nkCfg.totalSnapshots, blk.id);
-	    fluidBlkIO.writeVariablesToFile(fileName, blk.cells);
+            auto fileName = fluidFilename(nkCfg.totalSnapshots, blk.id);
+            FVCell[] cells;
+            cells.length = blk.cells.length;
+            foreach (i, ref c; cells) c = blk.cells[i];
+            fluidBlkIO.writeVariablesToFile(fileName, cells);
         }
 
 	// Shuffle the restart info
@@ -2888,7 +2895,10 @@ void writeLimiterValues(int step, int nWrittenSnapshots)
     int iSnap = (nWrittenSnapshots <= nkCfg.totalSnapshots) ? nWrittenSnapshots : nkCfg.totalSnapshots;
     foreach (blk; localFluidBlocks) {
         auto fileName = limiterFilename(iSnap, blk.id);
-        limBlkIO.writeVariablesToFile(fileName, blk.cells);
+        FVCell[] cells;
+        cells.length = blk.cells.length;
+        foreach (i, ref c; cells) c = blk.cells[i];
+        limBlkIO.writeVariablesToFile(fileName, cells);
     }
 }
 

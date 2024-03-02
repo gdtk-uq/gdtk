@@ -52,6 +52,7 @@ import globaldata;
 import init;
 import fileutil : ensure_directory_is_present;
 import loads : computeRunTimeLoads;
+import lmr.fvcell : FVCell;
 
 version(mpi_parallel) {
     import mpi;
@@ -128,7 +129,9 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     // Here is where initialise GPU chemistry, if we are going to continue
     // with that particular implementation.
 
-    initSolidBlocks();
+    if (cfg.nSolidBlocks > 0) {
+        initSolidBlocks();
+    }
     // [TODO] RJG, 2024-02-12
     // Re-implement writing to history cells.
     /*
@@ -744,7 +747,10 @@ void writeSnapshotFiles_timemarching()
 
     foreach (blk; parallel(localFluidBlocksBySize, 1)) {
         auto fileName = fluidFilename(SimState.current_tindx, blk.id);
-        fluidBlkIO.writeVariablesToFile(fileName, blk.cells);
+        FVCell[] cells;
+        cells.length = blk.cells.length;
+        foreach (i, ref c; cells) c = blk.cells[i];
+        fluidBlkIO.writeVariablesToFile(fileName, cells);
     }
 
     if (cfg.grid_motion != GridMotion.none) {

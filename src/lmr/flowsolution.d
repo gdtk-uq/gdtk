@@ -59,7 +59,6 @@ class FlowSolution {
 public:
     double sim_time;
     size_t nBlocks;
-    string grid_format;
     GridMotion grid_motion;
     FluidBlockLite[] flowBlocks;
     Grid[] gridBlocks;
@@ -403,12 +402,12 @@ private:
     Node[] nodes;
     Node* root;
 
-    void construct_kdtree() {
-    /*
-        Assemble the cells in this flow solution into a kdtree for fast nearest neighbour matching.
-
-        @author: Nick Gibbons
+   /**
+    * Assemble the cells in this flow solution into a kdtree for fast nearest neighbour matching.
+    *
+    *   @author: Nick Gibbons
     */
+    void construct_kdtree() {
         // Avoid use of ~= by preallocating the nodes array, since it could get quite large.
         size_t totalcells = 0;
         foreach (ib; 0 .. nBlocks) totalcells += gridBlocks[ib].ncells;
@@ -485,9 +484,9 @@ public:
 
     this(string filename, size_t blkID, JSONValue jsonData, Grid_t gridType, string flow_format, string[] variables, int ncells)
     {
-	variableNames = variables.dup;
-	foreach (i, var; variables) variableIndex[var] = i;
-	this.ncells = ncells;
+        variableNames = variables.dup;
+        foreach (i, var; variables) variableIndex[var] = i;
+        this.ncells = ncells;
         this(blkID, jsonData, gridType, flow_format);
         this.readFluidVariablesFromFile(filename, variables, ncells);
     } // end constructor from file
