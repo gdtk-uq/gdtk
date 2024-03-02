@@ -402,7 +402,10 @@ local function identifyBlockConnections(blockList, excludeList, tolerance, impor
    -- Put UFluidBlock objects into the exclude list because they don't
    -- have a simple topology that can always be matched to an SFluidBlock.
    for _,A in ipairs(myBlockList) do
-      if A.grid:get_type() == "unstructured_grid" then excludeList[#excludeList+1] = A end
+      if (A.grid and A.grid:get_type() == "unstructured_grid") or
+         (A.gridMetadata and A.gridMetadata.type == "unstructured_grid") then
+         excludeList[#excludeList+1] = A
+      end
    end
    tolerance = tolerance or 1.0e-6
    for _,A in ipairs(myBlockList) do

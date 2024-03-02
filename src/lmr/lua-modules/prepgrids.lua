@@ -101,6 +101,11 @@ function makeFluidBlocks()
       print("    makeFluidBlocks(): Do NOTHING when in prep-grid mode.")
    end
 end
+function identifyBlockConnections()
+   if verbosity >= 1 then
+      print("    identifyBlockConnections(): Do NOTHING when in prep-grid mode.")
+   end
+end
 
 -------------------------------------------------------------------------
 
