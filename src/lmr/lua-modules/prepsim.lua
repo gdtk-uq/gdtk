@@ -246,7 +246,7 @@ function buildRuntimeConfigFiles()
    local cfgDir = lmrconfig.lmrCfg["config-directory"]
    os.execute("mkdir -p " .. cfgDir)
    write_config_file(lmrconfig.simulationConfigFilename())
-   if (config.solver_mode == "transient") then
+   if (config.solver_mode ~= "steady") then
       write_control_file(cfgDir .. "/" .. lmrCfg["control-filename"])
    end
    write_block_list_file(lmrconfig.blockListFilename())
