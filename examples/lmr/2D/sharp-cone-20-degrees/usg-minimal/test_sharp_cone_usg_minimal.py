@@ -42,18 +42,14 @@ def test_run_steady():
     # The macos version takes one extra step to convergence,
     # but because of how we grow the CFL with a power law
     # that extra step makes quite a difference in expected CFL.
-    # Also, the linux version seems to need to take a course
-    # correction and drop the CFL around setp 30. The macos
-    # doesn't. I suspect this is related to our overly aggressive
-    # use of the physicality check. I'll ask Kyle his thoughts.
     #
     # So we specialise the expected values based on OS
     if (sys.platform == 'linux'):
-        expected_number_steps = 44
-        expected_final_cfl = 1.408e+04
+        expected_number_steps = 43
+        expected_final_cfl = 1.709e+04
     else:
-        expected_number_steps = 41
-        expected_final_cfl = 1.143e+04
+        expected_number_steps = 44
+        expected_final_cfl = 7.405e+03
     reason = ""
     steps = 0
     cfl = 0.0

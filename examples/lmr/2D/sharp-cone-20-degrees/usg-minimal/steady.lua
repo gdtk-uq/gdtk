@@ -48,7 +48,7 @@ NewtonKrylovPhase:new{
    threshold_relative_residual_for_cfl_growth = 0.9,
    start_cfl = 2.0,
    max_cfl = 1.0e6,
-   auto_cfl_exponent = 1.0
+   auto_cfl_exponent = 0.9
 }
 
 NewtonKrylovPhase:new{
