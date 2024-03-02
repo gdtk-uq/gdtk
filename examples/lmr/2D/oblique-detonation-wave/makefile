@@ -13,10 +13,9 @@ prep: job.lua
 run:
 	lmr run
 
-post: vtk
-
-vtk:
+post:
 	lmr snapshot2vtk --all
+	lmr custom-script --job=estimate_shock_angle.lua
 
 clean:
 	- rm -rf $(LMR_DIR)

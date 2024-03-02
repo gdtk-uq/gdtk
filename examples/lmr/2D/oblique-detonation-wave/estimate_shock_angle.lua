@@ -1,13 +1,13 @@
 -- estimate_shock_angle.lua
 -- Invoke with the command line:
--- $ e4shared --custom-post --script-file=estimate_shock_angle.lua
--- PAJ, 2017-01-08
+-- $ lmr custom-script --job=estimate_shock_angle.lua
+-- PAJ, 2017-01-08, 2024-03-02
 -- Ported from sharp-cone-20-degrees/sg/ but making better use of
--- the cell-finding methods available in FlowSolution.      
+-- the cell-finding methods available in FlowSolution.
 --
 print("Begin estimate_shock_angle")
 nb = 16
-fsol = FlowSolution:new{jobName="odw", dir=".", tindx=39, nBlocks=nb}
+fsol = FlowSolution:new{dir=".", snapshot=39, nBlocks=nb}
 print("fsol=", fsol)
 
 function locate_shock_along_strip()
@@ -60,7 +60,7 @@ end
 
 -- Least-squares fit of a straight line for the shock
 -- Model is y = alpha0 + alpha1 * x
-sum_x = 0.0; sum_y = 0.0; sum_x2 = 0.0; sum_xy = 0.0 
+sum_x = 0.0; sum_y = 0.0; sum_x2 = 0.0; sum_xy = 0.0
 for j = 1, #xshock do
    sum_x = sum_x + xshock[j]
    sum_x2 = sum_x2 + xshock[j]*xshock[j]
