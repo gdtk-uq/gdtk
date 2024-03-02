@@ -29,7 +29,7 @@ NewtonKrylovGlobalConfig{
    number_of_steps_for_setting_reference_residuals = 3,
    stop_on_relative_residual = 1.0e-6,
    number_of_phases = 2,
-   phase_changes_at_steps = { 10 },
+   phase_changes_at_steps = { 15 },
    use_physicality_check = true,
    max_linear_solver_iterations = 10,
    total_snapshots = 3,
@@ -46,7 +46,7 @@ NewtonKrylovPhase:new{
    threshold_relative_residual_for_cfl_growth = 0.9,
    start_cfl = 2.0,
    max_cfl = 1.0e6,
-   auto_cfl_exponent = 1.0
+   auto_cfl_exponent = 0.9
 }
 
 NewtonKrylovPhase:new{

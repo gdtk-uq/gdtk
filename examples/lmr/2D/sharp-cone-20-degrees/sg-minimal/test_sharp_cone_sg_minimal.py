@@ -8,6 +8,7 @@ import pytest
 import subprocess
 import re
 import os
+import sys
 
 # This is used to change to local directory so that subprocess runs nicely.
 @pytest.fixture(autouse=True)
@@ -35,8 +36,11 @@ def test_run_steady():
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
     assert proc.returncode == 0, "Failed during: " + cmd
     expected_reason_for_stop = "relative-global-residual-target"
-    expected_number_steps = 69
-    expected_final_cfl = 1.0e+06
+    expected_number_steps = 60
+    if (sys.platform == 'linux'):
+        expected_final_cfl = 6.226e+05
+    else:
+        expected_final_cfl = 5.787e+05
     steps = 0
     cfl = 0.0
     lines = proc.stdout.split("\n")
