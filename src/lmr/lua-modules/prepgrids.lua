@@ -151,6 +151,35 @@ function registerFluidGridArray(o)
 end -- registerFluidGridArray
 
 
+function registerSolidGrid(o)
+   -- Input:
+   -- A single table with named items.
+   -- grid: a StructuredGrid or UnstructuredGrid object that has been generated
+   --    or imported.
+   -- tag: a string to identify the grid later in the user's script
+   -- ssTag: a string that will be used to select the initial solid condition from
+   --    a dictionary when the SolidBlock is later constructed.
+   -- bcTags: a table of strings that will be used to attach boundary conditions
+   --    from a dictionary when the FluidBlock is later constructed.
+   -- solidPropsTag: a string that will be used to select the properties model
+   --   from a dictionary when the SolidBlock is later constructed.
+   --
+   -- Returns:
+   -- the grid id number so that we may assign it and use it when making connections.
+   --
+
+   -- This function does some translation of parameter names.
+   -- The user provides what seems sensible withing a registerSolidGrid function.
+   -- We re-pack the table here with the names expected by the back-end RegisteredGrid object.
+   t = {}
+   t.grid = o.grid
+   t.tag = o.tag
+   t.ssTag = o.ssTag
+   t.solidPropsTag = o.solidPropsTag
+   t.solidBCTags = o.bcTags
+   local rgrid = RegisteredGrid:new(t)
+   return rgrid.id
+end -- function registerSolidGrid
 -------------------------------------------------------------------------
 --
 -- IO functions to write the grid and connection files.

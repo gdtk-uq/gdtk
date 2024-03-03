@@ -5,6 +5,7 @@
 -- boundary conditions (and the like) at a later point in time.
 --
 -- PJ, 2021-10-05 pulled out of prep-grids.lua
+-- RJG, 2024-03-03 add handling of solid domains
 --
 
 local RegisteredGrid = {
@@ -22,6 +23,12 @@ function RegisteredGrid:new(o)
    -- bcTags: a table of strings that will be used to attach boundary conditions
    --    from a dictionary when the FluidBlock is later constructed.
    -- gridArrayId: needs to be supplied only if the grid is part of a larger array.
+   -- ssTag: a string that will be used to select the initial solid condition from
+   --    a dictionary when the SolidBlock is later constructed.
+   -- solidPropsTag: a string that will be used to select the properties model
+   --    for the solid from a dictionary when the SolidBlock is later constructed
+   -- solidBCTags: a table of strings that will be used to attach boundary conditions
+   --    from a dictionary when the SolidBlock is later constructed
    local flag = type(self)=='table' and self.myType=='RegisteredGrid'
    if not flag then
       error("Make sure that you are using RegisteredGrid:new{} and not RegisteredGrid.new{}", 2)
@@ -30,7 +37,8 @@ function RegisteredGrid:new(o)
    if not flag then
       error("RegisteredGrid constructor expects a single table with named items.", 2)
    end
-   flag = checkAllowedNames(o, {"grid", "tag", "fsTag", "bcTags", "gridArrayId"})
+   flag = checkAllowedNames(o, {"grid", "tag", "fsTag", "bcTags", "gridArrayId",
+                                "ssTag", "solidPropsTag", "solidBCTags"})
    if not flag then
       error("Invalid name for item supplied to Grid constructor.", 2)
    end
@@ -49,6 +57,10 @@ function RegisteredGrid:new(o)
    o.gridArrayId = o.gridArrayId or -1
    -- Initial FlowState tag
    o.fsTag = o.fsTag or ""
+   -- Initial SolidState tag
+   o.ssTag = o.ssTag or ""
+   -- Solid properties tag
+   o.solidPropsTag = o.solidPropsTag or ""
    -- Must have a grid.
    assert(o.grid, "need to supply a grid")
    -- Check the grid information.
@@ -58,6 +70,7 @@ function RegisteredGrid:new(o)
       error(msg)
    end
    o.bcTags = o.bcTags or {}
+   o.solidBCTags = o.solidBCTags or {}
    o.type = o.grid:get_type()
    if o.type == "structured_grid" then
       -- Extract some information from the StructuredGrid
@@ -65,34 +78,32 @@ function RegisteredGrid:new(o)
       o.nic = o.grid:get_niv() - 1
       o.njc = o.grid:get_njv() - 1
       if config.dimensions == 3 then
-	 o.nkc = o.grid:get_nkv() - 1
+         o.nkc = o.grid:get_nkv() - 1
       else
-	 o.nkc = 1
+         o.nkc = 1
       end
       o.ncells = o.nic * o.njc * o.nkc
       -- The following table p for the corner locations,
       -- is to be used later for testing for grid connections.
       o.p = {}
       if config.dimensions == 3 then
-	 o.p[0] = o.grid:get_vtx(0, 0, 0)
-	 o.p[1] = o.grid:get_vtx(o.nic, 0, 0)
-	 o.p[2] = o.grid:get_vtx(o.nic, o.njc, 0)
-	 o.p[3] = o.grid:get_vtx(0, o.njc, 0)
-	 o.p[4] = o.grid:get_vtx(0, 0, o.nkc)
-	 o.p[5] = o.grid:get_vtx(o.nic, 0, o.nkc)
-	 o.p[6] = o.grid:get_vtx(o.nic, o.njc, o.nkc)
-	 o.p[7] = o.grid:get_vtx(0, o.njc, o.nkc)
+         o.p[0] = o.grid:get_vtx(0, 0, 0)
+         o.p[1] = o.grid:get_vtx(o.nic, 0, 0)
+         o.p[2] = o.grid:get_vtx(o.nic, o.njc, 0)
+         o.p[3] = o.grid:get_vtx(0, o.njc, 0)
+         o.p[4] = o.grid:get_vtx(0, 0, o.nkc)
+         o.p[5] = o.grid:get_vtx(o.nic, 0, o.nkc)
+         o.p[6] = o.grid:get_vtx(o.nic, o.njc, o.nkc)
+         o.p[7] = o.grid:get_vtx(0, o.njc, o.nkc)
       else
-	 o.p[0] = o.grid:get_vtx(0, 0)
-	 o.p[1] = o.grid:get_vtx(o.nic, 0)
-	 o.p[2] = o.grid:get_vtx(o.nic, o.njc)
-	 o.p[3] = o.grid:get_vtx(0, o.njc)
+         o.p[0] = o.grid:get_vtx(0, 0)
+         o.p[1] = o.grid:get_vtx(o.nic, 0)
+         o.p[2] = o.grid:get_vtx(o.nic, o.njc)
+         o.p[3] = o.grid:get_vtx(0, o.njc)
       end
-      --[[print("Grid id=", o.id, "p0=", tostring(o.p[0]), "p1=", tostring(o.p[1]),
-         "p2=", tostring(o.p[2]), "p3=", tostring(o.p[3])) ]]
       -- Attach default boundary conditions for those not specified.
       for _,face in ipairs(faceList(config.dimensions)) do
-	 o.bcTags[face] = o.bcTags[face] or o.grid:get_tag(face)
+         o.bcTags[face] = o.bcTags[face] or o.grid:get_tag(face)
       end
    end
    if o.type == "unstructured_grid" then
@@ -105,6 +116,9 @@ function RegisteredGrid:new(o)
       for i = 0, o.nboundaries-1 do
          o.bcTags[i] = o.bcTags[i] or o.grid:get_boundaryset_tag(i)
       end
+      -- [TODO] RJG, 2024-03-03
+      -- Presently, we don't handle unstructured solid domains.
+      -- When we do, we'll need to set that information on boundaries here.
    end
    return o
 end -- RegisteredGrid:new
@@ -150,6 +164,15 @@ function RegisteredGrid:tojson()
       for j=0, self.grid:get_nboundaries()-1 do
          str = str .. string.format('    "%d": "%s",\n', j, self.bcTags[j])
       end
+   end
+   str = str .. '    "dummy_entry_without_trailing_comma": "xxxx"\n'
+   str = str .. '  },\n'
+   str = str .. string.format('  "ssTag": "%s",\n', self.ssTag)
+   str = str .. string.format('  "solidPropsTag": "%s",\n', self.solidPropsTag)
+   str = str .. '  "solidBCTags": {\n'
+   -- Only handle structured case presently
+   for k, v in pairs(self.solidBCTags) do
+      str = str .. string.format('    "%s": "%s",\n', k, v)
    end
    str = str .. '    "dummy_entry_without_trailing_comma": "xxxx"\n'
    str = str .. '  },\n'
@@ -228,37 +251,37 @@ local function identifyGridConnections(includeList, excludeList, tolerance)
    --
    for _,A in ipairs(myGridList) do
       for _,B in ipairs(myGridList) do
-	 if (A ~= B) and (not isPairInList({A, B}, excludeList)) then
-	    -- print("Proceed with test for coincident vertices.") -- DEBUG
-	    local connectionCount = 0
-	    if config.dimensions == 2 then
-	       -- print("2D test A.id=", A.id, " B.id=", B.id) -- DEBUG
-	       for vtxPairs,connection in pairs(connections2D) do
+         if (A ~= B) and (not isPairInList({A, B}, excludeList)) then
+            -- print("Proceed with test for coincident vertices.") -- DEBUG
+            local connectionCount = 0
+            if config.dimensions == 2 then
+	          -- print("2D test A.id=", A.id, " B.id=", B.id) -- DEBUG
+               for vtxPairs,connection in pairs(connections2D) do
                   if false then -- debug
                      print("vtxPairs=", tostringVtxPairList(vtxPairs),
                            "connection=", tostringConnection(connection))
                   end
                   if verticesAreCoincident(A, B, vtxPairs, tolerance) then
-		     local faceA, faceB, orientation = unpack(connection)
-		     connectGrids(A.id, faceA, B.id, faceB, 0)
-		     connectionCount = connectionCount + 1
-		  end
-	       end
-	    else
-	       -- print("   3D test")
+                     local faceA, faceB, orientation = unpack(connection)
+                     connectGrids(A.id, faceA, B.id, faceB, 0)
+                     connectionCount = connectionCount + 1
+                  end
+               end
+            else
+	             -- print("   3D test")
                for vtxPairs,connection in pairs(connections3D) do
-		  if verticesAreCoincident(A, B, vtxPairs, tolerance) then
-		     local faceA, faceB, orientation = unpack(connection)
-		     connectGrids(A.id, faceA, B.id, faceB, orientation)
-		     connectionCount = connectionCount + 1
-		  end
-	       end
-	    end
-	    if connectionCount > 0 then
-	       -- So we don't double-up on connections.
-	       excludeList[#excludeList+1] = {A,B}
-	    end
-	 end -- if (A ~= B...
+                  if verticesAreCoincident(A, B, vtxPairs, tolerance) then
+                     local faceA, faceB, orientation = unpack(connection)
+                     connectGrids(A.id, faceA, B.id, faceB, orientation)
+                     connectionCount = connectionCount + 1
+                  end
+	             end
+	          end
+	          if connectionCount > 0 then
+	             -- So we don't double-up on connections.
+	             excludeList[#excludeList+1] = {A,B}
+	          end
+	       end -- if (A ~= B...
       end -- for _,B
    end -- for _,A
 end -- identifyGridConnections

@@ -91,6 +91,12 @@ function registerFluidGridArray()
    end
 end
 
+function registerSolidGrid()
+   if verbosity >= 1 then
+      print("    registerSolidGrid(): Do NOTHING when in prep-sim mode.")
+   end
+end
+
 function identifyGridConnections()
    if verbosity >= 1 then
       print("    identifyGridConnections(): Do NOTHING when in prep-sim mode.")
@@ -99,13 +105,13 @@ end
 
 function importGridproConnectivity()
    if verbosity >= 1 then
-      print("    importGridproConnectivity(): Do NOTHING when in prep-flow mode.")
+      print("    importGridproConnectivity(): Do NOTHING when in prep-sim mode.")
    end
 end
 
 function importGridproBCs()
    if verbosity >= 1 then
-      print("    importGridproBCs(): Do NOTHING when in prep-flow mode.")
+      print("    importGridproBCs(): Do NOTHING when in prep-sim mode.")
    end
 end
 
