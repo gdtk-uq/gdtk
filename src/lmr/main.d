@@ -9,6 +9,7 @@ import computenorms;
 import customscript;
 import probeflow;
 import sliceflow;
+import extractline;
 import limiter2vtk;
 import prepgrids;
 import prepsim;
@@ -51,6 +52,7 @@ Show help for a given Eilmer command or topic.
     commands["custom-script"] = customScriptCmd;
     commands["probe-flow"] = probeFlowCmd;
     commands["slice-flow"] = sliceFlowCmd;
+    commands["extract-line"] = extractLineCmd;
     commands["limiter2vtk"] = limiter2vtkCmd;
     commands["prep-grids"] = prepGridCmd;
     commands["prep-grid"] = commands["prep-grids"]; // alias for prep-grids
@@ -213,6 +215,7 @@ at post-processing stage
    snapshot2vtk    convert a snapshot to VTK format for visualisation
    probe-flow      reports the flow-field data at specified location(s)
    slice-flow      reports the flow-field data along slices, in index directions
+   extract-line    reports the flow-field data along lines in 3D space
 
 == Notes ==
 --number-type option, if used, must appear before "run" command.
