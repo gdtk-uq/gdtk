@@ -28,6 +28,7 @@ import lua_helper;
 import gzip;
 import geom;
 import globalconfig;
+import globaldata : dedicatedConfig;
 import fluidblock;
 import sfluidblock;
 import solidblock;
@@ -70,6 +71,7 @@ public:
     this(int id, size_t nicell, size_t njcell, size_t nkcell, string label)
     {
         super(id, label);
+        myConfig = dedicatedConfig[id];
         this.n_ghost_cell_layers = GlobalConfig.n_ghost_cell_layers;
         this.nicell = nicell;
         this.njcell = njcell;

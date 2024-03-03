@@ -131,6 +131,7 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
 
     if (cfg.nSolidBlocks > 0) {
         initSolidBlocks();
+        initFluidSolidExchangeBoundaries();
     }
     // [TODO] RJG, 2024-02-12
     // Re-implement writing to history cells.

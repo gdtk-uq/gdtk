@@ -33,6 +33,8 @@ import globaldata;
 import simcore;
 import simcore_exchange : exchange_ghost_cell_geometry_data;
 import bc;
+import bc.ghost_cell_effect.gas_solid_full_face_copy;
+import solid_gas_full_face_copy;
 import solid_full_face_copy : SolidGCE_SolidGhostCellFullFaceCopy;
 import solidfvinterface : initPropertiesAtSolidInterfaces;
 import fluidblock : FluidBlock;
@@ -784,5 +786,111 @@ void initSolidBlocks()
     }
     if (localSolidBlocks.length > 0) {
         initPropertiesAtSolidInterfaces(localSolidBlocks);
+    }
+}
+
+/**
+ * Initialise the boundary conditions related to fluid-solid interfaces.
+ *
+ * Authors: KAD and RJG
+ * Date: 2024-03-04
+ */
+void initFluidSolidExchangeBoundaries()
+{
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase2(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase2(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solidstate_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_fluidstate_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_fluidstate_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solidstate_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellGasSolidFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_solidstate_phase2(); }
+            }
+        }
+    }
+    foreach (myblk; localSolidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preSpatialDerivActionAtBndryCells) {
+                auto mygce = cast(GhostCellSolidGasFullFaceCopy)gce;
+                if (mygce) { mygce.exchange_fluidstate_phase2(); }
+            }
+        }
     }
 }
