@@ -159,7 +159,7 @@ int main_(string[] args)
     // We may not proceed to building of block files if the config parameters are incompatible.
     checkGlobalConfig();
     if (luaL_dostring(L, toStringz("buildGridAndFieldFiles()")) != 0) {
-        writeln("There was a problem in the Eilmer build function buildFluidAndGridFiles() in prepsim.lua");
+        writeln("There was a problem in the Eilmer build function buildGridAndFieldFiles() in prepsim.lua");
         string errMsg = to!string(lua_tostring(L, -1));
         throw new FlowSolverException(errMsg);
     }
