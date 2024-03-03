@@ -2,9 +2,9 @@ LMR_DIR := lmrsim
 
 help:
 	@echo "Main targets available are:"
-	@echo -e "   prep"
-	@echo -e "   run"
-	@echo -e "   post"
+	@echo "    prep"
+	@echo "    run"
+	@echo "    post"
 
 prep: gas grid init
 
@@ -15,7 +15,7 @@ grid: job.lua
 	lmr prep-grid
 
 init:
-	lmr prep-flow
+	lmr prep-sim
 
 run:
 	lmr run
