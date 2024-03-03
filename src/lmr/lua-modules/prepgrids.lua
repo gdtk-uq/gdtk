@@ -101,6 +101,11 @@ function makeFluidBlocks()
       print("    makeFluidBlocks(): Do NOTHING when in prep-grid mode.")
    end
 end
+function makeSolidBlocks()
+   if verbosity >= 1 then
+      print("    makeSolidBlocks(): Do NOTHING when in prep-grid mode.")
+   end
+end
 function identifyBlockConnections()
    if verbosity >= 1 then
       print("    identifyBlockConnections(): Do NOTHING when in prep-grid mode.")
@@ -130,6 +135,7 @@ function registerFluidGrid(o)
    -- Returns:
    -- the grid id number so that we may assign it and use it when making connections.
    --
+   o.fieldType = "fluid"
    local rgrid = RegisteredGrid:new(o)
    return rgrid.id
 end -- function registerFluidGrid
@@ -161,8 +167,8 @@ function registerSolidGrid(o)
    --    a dictionary when the SolidBlock is later constructed.
    -- bcTags: a table of strings that will be used to attach boundary conditions
    --    from a dictionary when the FluidBlock is later constructed.
-   -- solidPropsTag: a string that will be used to select the properties model
-   --   from a dictionary when the SolidBlock is later constructed.
+   -- propsTag: a string that will be used to select the properties model
+   --    from a dictionary when the SolidBlock is later constructed.
    --
    -- Returns:
    -- the grid id number so that we may assign it and use it when making connections.
@@ -172,10 +178,11 @@ function registerSolidGrid(o)
    -- The user provides what seems sensible withing a registerSolidGrid function.
    -- We re-pack the table here with the names expected by the back-end RegisteredGrid object.
    t = {}
+   t.fieldType = "solid"
    t.grid = o.grid
    t.tag = o.tag
    t.ssTag = o.ssTag
-   t.solidPropsTag = o.solidPropsTag
+   t.solidPropsTag = o.propsTag
    t.solidBCTags = o.bcTags
    local rgrid = RegisteredGrid:new(t)
    return rgrid.id

@@ -70,6 +70,25 @@ public:
         dedt.length = myConfig.n_flow_time_levels;
     }
 
+    /**
+     * A stripped down initialisation for use in file writing.
+     *
+     * Authors: RJG
+     * Date: 2024-03-03
+     */
+    this(in Vector3 pos, number volume, double T, SolidProps sp, int id_init=-1)
+    // stripped down initialisation
+    {
+        id = id_init;
+        this.pos = pos;
+        this.volume = volume;
+        this.T = T;
+        this.sp = sp;
+        this.e.length = 1;
+        this.e[0] = updateEnergy(sp, this.T);
+    }
+
+
     @nogc
     void copy_values_from(SolidFVCell other) {
         volume = other.volume;

@@ -14,7 +14,7 @@ function SolidBlock:new(o)
       error("Make sure that you are using SolidBlock:new{} and not SolidBlock.new{}", 2)
    end
    o = o or {}
-   flag = checkAllowedNames(o, {"grid", "initTemperature", "active",
+   flag = checkAllowedNames(o, {"grid", "gridMetadata", "initTemperature", "active",
                                 "label", "bcList", "properties"})
    if not flag then
       error("Invalid name for item supplied to SolidBlock constructor.", 2)
@@ -27,19 +27,11 @@ function SolidBlock:new(o)
    print("Adding new solid block.")
    o.id = #solidBlocks + #fluidBlocks
    solidBlocks[#solidBlocks+1] = o
-   -- Must have a grid and initial temperature
-   if not o.grid then
-      error("You need to supply a grid to SolidBlock constructor.", 2)
-   end
-   if (not o.grid.get_type) or o.grid:get_type() ~= "structured_grid" then
-      error("You need to supply a structured_grid to SolidBlock constructor.", 2)
-   end
-   if not o.initTemperature then
-      error("You need to supply an initTemperature to SolidBlock constructor.", 2)
-   end
-   if not o.properties then
-      error("You need to supply physical properties for the block.", 2)
-   end
+   o.label = o.label or string.format("SolidBlock-%d", o.id)
+   -- Must have a grid, initial temperature and properties
+   assert(o.grid or o.gridMetadata, "need to supply a grid or its metadata")
+   assert(o.initTemperature, "need to supply an initTemperature")
+   assert(o.properties, "need to supply")
    if (type(o.properties) == 'table') then
       local flag2 = checkAllowedNames(o.properties, {"rho", "k", "Cp",
 						     "k11", "k12", "k13",
@@ -48,51 +40,102 @@ function SolidBlock:new(o)
       if not flag2 then
          error("Invalid name for item supplied in SolidBlock properties table.", 2)
       end
-      -- Fill in the k values as 0.0 if not set.
-      local kProps = {"k", "k11", "k12", "k13", "k21", "k22", "k23", "k31", "k32", "k33"}
+      -- Fill in the k-directional values as 0.0 if not set.
+      local kProps = {"k11", "k12", "k13", "k21", "k22", "k23", "k31", "k32", "k33"}
       for _,kName in ipairs(kProps) do
-	 o.properties[kName] = o.properties[kName] or 0.0
+         o.properties[kName] = o.properties[kName] or 0.0
       end
    end
    -- Fill in some defaults, if not already set
    if o.active == nil then
       o.active = true
    end
-   o.label = o.label or string.format("SOLIDBLOCK-%d", o.id)
    if o.bcList then
       o.bcList = deepclone(o.bcList, false)
    else
       o.bcList =  {} -- boundary conditions
    end
-   for _,face in ipairs(faceList(config.dimensions)) do
-      o.bcList[face] = o.bcList[face] or SolidAdiabaticBC:new{}
-   end
-   -- Extract some information from the StructuredGrid
-   o.nic = o.grid:get_niv() - 1
-   o.njc = o.grid:get_njv() - 1
-   if config.dimensions == 3 then
-      o.nkc = o.grid:get_nkv() - 1
-   else
-      o.nkc = 1
-   end
-   o.ncells = o.nic * o.njc * o.nkc
-   -- The following table p for the corner locations,
-   -- is to be used later for testing for block connections.
-   o.p = {}
-   if config.dimensions == 3 then
-      o.p[0] = o.grid:get_vtx(0, 0, 0)
-      o.p[1] = o.grid:get_vtx(o.nic, 0, 0)
-      o.p[2] = o.grid:get_vtx(o.nic, o.njc, 0)
-      o.p[3] = o.grid:get_vtx(0, o.njc, 0)
-      o.p[4] = o.grid:get_vtx(0, 0, o.nkc)
-      o.p[5] = o.grid:get_vtx(o.nic, 0, o.nkc)
-      o.p[6] = o.grid:get_vtx(o.nic, o.njc, o.nkc)
-      o.p[7] = o.grid:get_vtx(0, o.njc, o.nkc)
-   else
-      o.p[0] = o.grid:get_vtx(0, 0)
-      o.p[1] = o.grid:get_vtx(o.nic, 0)
-      o.p[2] = o.grid:get_vtx(o.nic, o.njc)
-      o.p[3] = o.grid:get_vtx(0, o.njc)
+   -- Check the grid information.
+   if o.grid then
+      if config.dimensions ~= o.grid:get_dimensions() then
+         local msg = string.format("Mismatch in dimensions, config %d grid %d.",
+                                   config.dimensions, o.grid:get_dimensions())
+         error(msg)
+      end
+      if o.grid:get_type() == "structured_grid" then
+         -- Extract some information from the StructuredGrid
+         -- Note 0-based indexing for vertices and cells.
+         o.nic = o.grid:get_niv() - 1
+         o.njc = o.grid:get_njv() - 1
+         if config.dimensions == 3 then
+            o.nkc = o.grid:get_nkv() - 1
+         else
+            o.nkc = 1
+         end
+         o.ncells = o.nic * o.njc * o.nkc
+         -- The following table p for the corner locations,
+         -- is to be used later for testing for block connections.
+         o.p = {}
+         if config.dimensions == 3 then
+            o.p[0] = o.grid:get_vtx(0, 0, 0)
+            o.p[1] = o.grid:get_vtx(o.nic, 0, 0)
+            o.p[2] = o.grid:get_vtx(o.nic, o.njc, 0)
+            o.p[3] = o.grid:get_vtx(0, o.njc, 0)
+            o.p[4] = o.grid:get_vtx(0, 0, o.nkc)
+            o.p[5] = o.grid:get_vtx(o.nic, 0, o.nkc)
+            o.p[6] = o.grid:get_vtx(o.nic, o.njc, o.nkc)
+            o.p[7] = o.grid:get_vtx(0, o.njc, o.nkc)
+         else
+            o.p[0] = o.grid:get_vtx(0, 0)
+            o.p[1] = o.grid:get_vtx(o.nic, 0)
+            o.p[2] = o.grid:get_vtx(o.nic, o.njc)
+            o.p[3] = o.grid:get_vtx(0, o.njc)
+         end
+         for _,face in ipairs(faceList(config.dimensions)) do
+            o.bcList[face] = o.bcList[face] or SolidAdiabaticBC:new{}
+         end
+      end
+      if o.grid:get_type() == "unstructured_grid" then
+         error("Unstructured grids not available for solid blocks.")
+      end
+   else -- We have gridMetadata
+      if config.dimensions ~= o.gridMetadata.dimensions then
+         local msg = string.format("Mismatch in dimensions, config %d grid %d.",
+                                   config.dimensions, o.gridMetadata.dimensions)
+         error(msg)
+      end
+      if o.gridMetadata.type == "structured_grid" then
+         -- Extract some information from the StructuredGrid
+         -- Note 0-based indexing for vertices and cells.
+         o.nic = o.gridMetadata.nic
+         o.njc = o.gridMetadata.njc
+         o.nkc = o.gridMetadata.nkc
+         o.ncells = o.nic * o.njc * o.nkc
+         -- The following table p for the corner locations,
+         -- may be used later for testing for block connections.
+         o.p = {}
+         if config.dimensions == 3 then
+            o.p[0] = o.gridMetadata.p0
+            o.p[1] = o.gridMetadata.p1
+            o.p[2] = o.gridMetadata.p2
+            o.p[3] = o.gridMetadata.p3
+            o.p[4] = o.gridMetadata.p4
+            o.p[5] = o.gridMetadata.p5
+            o.p[6] = o.gridMetadata.p6
+            o.p[7] = o.gridMetadata.p7
+         else
+            o.p[0] = o.gridMetadata.p0
+            o.p[1] = o.gridMetadata.p1
+            o.p[2] = o.gridMetadata.p2
+            o.p[3] = o.gridMetadata.p3
+         end
+         for _,face in ipairs(faceList(config.dimensions)) do
+            o.bcList[face] = o.bcList[face] or SolidAdiabaticBC:new{}
+         end
+      end
+      if o.gridMetadata.type == "unstructured_grid" then
+         error("Unstructured grids not available for solid blocks.")
+      end
    end
    return o
 end

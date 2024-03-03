@@ -719,7 +719,7 @@ void initSolidBlocks()
         solidBlk.assembleArrays();
         solidBlk.bindFacesAndVerticesToCells();
         solidBlk.bindCellsToFaces();
-        auto gName = solidGridFilename(SimState.current_tindx, solidBlk.id);
+        auto gName = gridFilename(SimState.current_tindx, solidBlk.id);
         solidBlk.readGrid(gName);
         FVCell[] cells;
         cells.length = solidBlk.cells.length;

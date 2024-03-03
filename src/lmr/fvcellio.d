@@ -133,60 +133,65 @@ private:
 class FluidFVCellIO : FVCellIO {
 public:
 
+    this()
+    {
+        this(buildFluidVariables());
+    }
+
     this(string[] variables)
     {
-    cFVT = FieldVarsType.fluid;
-	mVariables = variables.dup;
+        cFVT = FieldVarsType.fluid;
+	    mVariables = variables.dup;
 
-	alias cfg = GlobalConfig;
-	foreach (var; variables) {
-	    if (var.startsWith("massf-")) {
-		auto spName = var.split("-")[1];
-		auto spIdx = cfg.gmodel_master.species_index(spName);
-		if (spIdx != -1)
-		    mSpecies[var.idup] = spIdx;
-		else
-		    throw new LmrException("Invalid species name: " ~ spName);
-	    }
-	    if (var.startsWith("T-")) {
-		auto modeName = var.split("-")[1];
-		auto modeIdx = cfg.gmodel_master.energy_mode_index(modeName);
-		if (modeIdx != -1)
-		    mTModes[var.idup] = modeIdx;
-		else
-		    throw new LmrException("Invalid mode name: " ~ modeName);
-	    }
-	    if (var.startsWith("e-")) {
-		auto modeName = var.split("-")[1];
-		auto modeIdx = cfg.gmodel_master.energy_mode_index(modeName);
-		if (modeIdx != -1)
-		    muModes[var.idup] = modeIdx;
-		else
-		    throw new LmrException("Invalid mode name: " ~ modeName);
-	    }
-	    if (var.startsWith("k-")) {
-		auto modeName = var.split("-")[1];
-		auto modeIdx = cfg.gmodel_master.energy_mode_index(modeName);
-		if (modeIdx != -1)
-		    mkModes[var.idup] = modeIdx;
-		else
-		    throw new LmrException("Invalid mode name: " ~ modeName);
-	    }
-	    if (var.startsWith("tq-")) {
-		auto tqName = var.split("-")[1];
-		auto tqIdx = cfg.turb_model.primitive_variable_index(tqName);
-		if (tqIdx != -1)
-		    mTurbQuants[var.idup] = tqIdx;
-		else
-		    throw new LmrException("Invalid turbulence quantity name: " ~ tqName);
-	    }
-	}
+        alias cfg = GlobalConfig;
+        foreach (var; variables) {
+            if (var.startsWith("massf-")) {
+                auto spName = var.split("-")[1];
+                auto spIdx = cfg.gmodel_master.species_index(spName);
+                if (spIdx != -1)
+                    mSpecies[var.idup] = spIdx;
+                else
+                    throw new LmrException("Invalid species name: " ~ spName);
+            }
+            if (var.startsWith("T-")) {
+                auto modeName = var.split("-")[1];
+                auto modeIdx = cfg.gmodel_master.energy_mode_index(modeName);
+                if (modeIdx != -1)
+                    mTModes[var.idup] = modeIdx;
+                else
+                    throw new LmrException("Invalid mode name: " ~ modeName);
+            }
+            if (var.startsWith("e-")) {
+                auto modeName = var.split("-")[1];
+                auto modeIdx = cfg.gmodel_master.energy_mode_index(modeName);
+                if (modeIdx != -1)
+                    muModes[var.idup] = modeIdx;
+                else
+                    throw new LmrException("Invalid mode name: " ~ modeName);
+            }
+            if (var.startsWith("k-")) {
+                auto modeName = var.split("-")[1];
+                auto modeIdx = cfg.gmodel_master.energy_mode_index(modeName);
+                if (modeIdx != -1)
+                    mkModes[var.idup] = modeIdx;
+                else
+                    throw new LmrException("Invalid mode name: " ~ modeName);
+            }
+            if (var.startsWith("tq-")) {
+                auto tqName = var.split("-")[1];
+                auto tqIdx = cfg.turb_model.primitive_variable_index(tqName);
+                if (tqIdx != -1)
+                    mTurbQuants[var.idup] = tqIdx;
+                else
+                    throw new LmrException("Invalid turbulence quantity name: " ~ tqName);
+            }
+        }
     }
 
     override
     FluidFVCellIO dup()
     {
-    	return new FluidFVCellIO(this.mVariables);
+        return new FluidFVCellIO(mVariables);
     }
 
     override
@@ -336,6 +341,11 @@ string[] buildSolidVariables()
 class SolidFVCellIO : FVCellIO {
 public:
 
+    this()
+    {
+        this(buildSolidVariables());
+    }
+
     this(string[] variables)
     {
         cFVT = FieldVarsType.solid;
@@ -345,7 +355,7 @@ public:
     override
     SolidFVCellIO dup()
     {
-	    return new SolidFVCellIO(this.mVariables);
+        return new SolidFVCellIO(mVariables);
     }
 
     override
@@ -458,6 +468,11 @@ string[] buildLimiterVariables()
 
 class FluidFVCellLimiterIO : FVCellIO {
 public:
+
+    this()
+    {
+        this(buildLimiterVariables());
+    }
 
     this(string[] variables)
     {

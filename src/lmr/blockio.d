@@ -78,7 +78,7 @@ public:
     	foreach (node; metadata["variables"].sequence) {
 	        variables ~= node.as!string;
 	    }
-	    mCIO = createFVCellIO(fvt, variables);
+        mCIO = createFVCellIO(fvt, variables);
     }
 
 abstract:
@@ -185,7 +185,7 @@ public:
 extern(C) int luafn_writeFluidMetadata(lua_State *L)
 {
     alias cfg = GlobalConfig;
-    FVCellIO cio = new FluidFVCellIO(buildFluidVariables());
+    FVCellIO cio = new FluidFVCellIO();
 
     if (cfg.field_format == "rawbinary") {
     	fluidBlkIO = new BinaryBlockIO(cio);
@@ -237,7 +237,7 @@ extern(C) int luafn_writeInitialFluidFile(lua_State *L)
  */
 extern(C) int luafn_writeSolidMetadata(lua_State *L)
 {
-    FVCellIO cio = new SolidFVCellIO(buildFluidVariables());
+    FVCellIO cio = new SolidFVCellIO();
 
     if (GlobalConfig.field_format == "rawbinary") {
     	solidBlkIO = new BinaryBlockIO(cio);
@@ -249,7 +249,7 @@ extern(C) int luafn_writeSolidMetadata(lua_State *L)
 	    throw new LmrException(format("Solid format type '%s' unknown", GlobalConfig.field_format));
     }
 
-    solidBlkIO.writeMetadataToFile(lmrCfg.fluidMetadataFile);
+    solidBlkIO.writeMetadataToFile(lmrCfg.solidMetadataFile);
 
     return 0;
 }
@@ -260,7 +260,6 @@ extern(C) int luafn_writeSolidMetadata(lua_State *L)
  * Author: RJG
  * Date: 2024-03-02
  */
-/*
 extern(C) int luafn_writeInitialSolidFile(lua_State *L)
 {
     auto blkId = to!int(luaL_checkinteger(L, 1));
@@ -281,7 +280,6 @@ extern(C) int luafn_writeInitialSolidFile(lua_State *L)
     solidBlkIO.writeVariablesToFile(fname, cells);
     return 0;
 }
-*/
 
 //-------------------------------------------------------------
 // Functions intended for use at post-processing stage:

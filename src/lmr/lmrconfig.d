@@ -223,22 +223,6 @@ string gridFilename(int snapshot, int blkId)
 }
 
 /**
- * Return the solid grid filename for a single block ('id') as a string.
- *
- * Authors: RJG
- * Date: 2024-02-25
- */
-string solidGridFilename(int snapshot, int blkId)
-{
-    string gname = lmrCfg.snapshotDir ~
-        "/" ~
-        format(lmrCfg.snapshotIdxFmt, snapshot) ~
-        "/" ~
-        lmrCfg.solidPrefix ~ "-" ~ lmrCfg.gridPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
-    if (GlobalConfig.grid_format == "gziptext") gname ~= lmrCfg.gzipExt;
-    return gname;
-}
-/**
  * Return the name of a history file based on block and cell.
  *
  * Authors: RJG

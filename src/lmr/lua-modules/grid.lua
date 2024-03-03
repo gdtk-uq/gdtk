@@ -18,6 +18,7 @@ function RegisteredGrid:new(o)
    -- grid: a StructuredGrid or UnstructuredGrid object that has been generated
    --    or imported.
    -- tag: a string to identify the grid later in the user's script
+   -- fieldType: a string labelling the intended domain as 'fluid' or 'solid'
    -- fsTag: a string that will be used to select the initial flow condition from
    --    a dictionary when the FluidBlock is later constructed.
    -- bcTags: a table of strings that will be used to attach boundary conditions
@@ -37,7 +38,7 @@ function RegisteredGrid:new(o)
    if not flag then
       error("RegisteredGrid constructor expects a single table with named items.", 2)
    end
-   flag = checkAllowedNames(o, {"grid", "tag", "fsTag", "bcTags", "gridArrayId",
+   flag = checkAllowedNames(o, {"grid", "tag", "fieldType", "fsTag", "bcTags", "gridArrayId",
                                 "ssTag", "solidPropsTag", "solidBCTags"})
    if not flag then
       error("Invalid name for item supplied to Grid constructor.", 2)
@@ -53,6 +54,9 @@ function RegisteredGrid:new(o)
       error('Have previously defined a Grid with tag "' .. o.tag .. '"', 2)
    end
    gridsDict[o.tag] = o.id
+   -- Set the field type
+   -- (we expect the call from registerFluidGrid of registerSolidGrid to set this correctly)
+   o.fieldType = o.fieldType or "fluid"
    -- Set to -1 if NOT part of a grid-array, otherwise use supplied value
    o.gridArrayId = o.gridArrayId or -1
    -- Initial FlowState tag
@@ -128,6 +132,7 @@ function RegisteredGrid:tojson()
    str = str .. string.format('  "tag": "%s",\n', self.tag)
    str = str .. string.format('  "fsTag": "%s",\n', self.fsTag)
    str = str .. string.format('  "type": "%s",\n', self.type)
+   str = str .. string.format('  "fieldType": "%s",\n', self.fieldType)
    if self.type == "structured_grid" then
       str = str .. string.format('  "dimensions": %d,\n', self.grid:get_dimensions())
       str = str .. string.format('  "niv": %d,\n', self.grid:get_niv())

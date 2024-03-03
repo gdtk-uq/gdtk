@@ -82,8 +82,7 @@ LMR_SOLID_FILES := $(LMR)/solid/solidbc.d \
 	$(LMR)/solid/solidfvvertex.d \
 	$(LMR)/solid/solidprops.d \
 	$(LMR)/solid/solidsolution.d \
-	$(LMR)/solid/solid_udf_source_terms.d \
-	$(LMR)/solid/luasolidprops.d
+	$(LMR)/solid/solid_udf_source_terms.d
 
 LMR_EFIELD_FILES := $(LMR)/efield/efield.d \
 	$(LMR)/efield/efieldgmres.d \
