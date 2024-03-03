@@ -16,6 +16,11 @@ def change_test_dir(request, monkeypatch):
     monkeypatch.chdir(request.fspath.dirname)
 
 
+def test_prep_gas():
+    cmd = "prep-gas ideal-air.lua ideal-air.gas"
+    proc = subprocess.run(cmd.split())
+    assert proc.returncode == 0, "Failed during: " + cmd
+
 def test_prep_grid():
     cmd = "lmr prep-grid"
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
