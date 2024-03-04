@@ -149,7 +149,8 @@ int main_(string[] args)
         if (verbosity > 1) {
             writefln("lmr snapshot2vtk: Writing fluid snapshot %s to disk.", snap);
         }
-        auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks);
+        double simTime = (GlobalConfig.solverMode == SolverMode.transient) ? times[isnap] : -1.0;
+        auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks, simTime);
         if (!luaRefSoln.empty) soln.subtract_ref_soln(luaRefSoln);
         // [TODO] add aux variables.
         string pvtuFileName = lmrCfg.fluidPrefix ~ "-s" ~ snap ~ ".pvtu";
@@ -178,7 +179,8 @@ int main_(string[] args)
             if (verbosity > 1) {
                 writefln("lmr snapshot2vtk: Writing solid snapshot %s to disk.", snap);
             }
-            auto soln = new SolidSolution(to!int(snap), GlobalConfig.nSolidBlocks);
+            double simTime = (GlobalConfig.solverMode == SolverMode.transient) ? times[isnap] : -1.0;
+            auto soln = new SolidSolution(to!int(snap), GlobalConfig.nSolidBlocks, simTime);
             if (!luaSolidRefSoln.empty) soln.subtract_ref_soln(luaSolidRefSoln);
             string pvtuFileName = lmrCfg.solidPrefix ~ "-s" ~ snap ~ ".pvtu";
             File pvtuFile = begin_PVTU_file(lmrCfg.vtkDir ~ "/" ~ pvtuFileName, soln.solidBlocks[0].variableNames);

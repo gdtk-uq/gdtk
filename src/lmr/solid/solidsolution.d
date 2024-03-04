@@ -39,7 +39,7 @@ public:
     SolidBlockLite[] solidBlocks;
     StructuredGrid[] gridBlocks;
 
-    this(int snapshot, size_t nBlocks, string dir=".")
+    this(int snapshot, size_t nBlocks, double simTime=-1.0, string dir=".")
     {
         size_t nFluidBlocks = GlobalConfig.nFluidBlocks;
         // We'll open the config file ourselves to read
@@ -79,7 +79,7 @@ public:
             g.sort_cells_into_bins();
             int ncells = to!int(g.ncells);
             string sName = dir ~ "/" ~ solidFilename(snapshot, to!int(id));
-            auto sb = new SolidBlockLite(sName, fieldFmt, variables, ncells);
+            auto sb = new SolidBlockLite(sName, simTime, fieldFmt, variables, ncells);
             sb.nic = g.niv - 1;
             sb.njc = g.njv - 1;
             sb.nkc = max(g.nkv - 1, 1);
@@ -244,6 +244,7 @@ public:
 class SolidBlockLite {
 public:
     double[][] data; // public because we read into it in blockio module.
+    double simTime;
     size_t ncells;
     size_t nic;
     size_t njc;
@@ -263,8 +264,9 @@ public:
         return i + nic*(j + njc*k);
     }
 
-    this(string filename, string fieldFmt, string[] variables, int ncells)
+    this(string filename, double simTime, string fieldFmt, string[] variables, int ncells)
     {
+        this.simTime = simTime;
         variableNames = variables.dup;
         foreach (i, var; variables) variableIndex[var] = i;
         this.ncells = ncells;
@@ -339,10 +341,15 @@ public:
                     // Call back to the Lua function to get a table of values.
                     // function refSolidSoln(x, y, z)
                     lua_getglobal(L, luaFnName.toStringz);
-                    lua_pushnumber(L, sim_time);
+                    lua_pushnumber(L, simTime);
                     lua_pushnumber(L, data[single_index(i,j,k)][variableIndex["pos.x"]]);
                     lua_pushnumber(L, data[single_index(i,j,k)][variableIndex["pos.y"]]);
-                    lua_pushnumber(L, data[single_index(i,j,k)][variableIndex["pos.z"]]);
+                    if (GlobalConfig.dimensions == 3) {
+                        lua_pushnumber(L, data[single_index(i,j,k)][variableIndex["pos.z"]]);
+                    }
+                    else {
+                        lua_pushnumber(L, 0.0);
+                    }
                     if ( lua_pcall(L, 4, 1, 0) != 0 ) {
                         string errMsg = "Error in call to " ~ luaFnName ~ 
                             " from user-supplied reference solution file: " ~ 

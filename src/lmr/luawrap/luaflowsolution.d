@@ -61,7 +61,7 @@ extern(C) int newFlowSolution(lua_State* L)
         errMsg ~= " A table is expected as first (and only) argument.";
         luaL_error(L, errMsg.toStringz);
     }
-    string[] allowedNames = ["dir", "snapshot", "nBlocks", "tag", "make_kdtree"];
+    string[] allowedNames = ["dir", "snapshot", "nBlocks", "sim_time", "tag", "make_kdtree"];
     if ( !checkAllowedNames(L, 1, allowedNames) ) {
         string errMsg = "Error in call to FlowSolution:new.";
         errMsg ~= " The table contains unexpected names.";
@@ -148,7 +148,20 @@ extern(C) int newFlowSolution(lua_State* L)
     }
     lua_pop(L, 1);
 
-    auto fsol = new FlowSolution(snapshot, nBlocks, dir, make_kdtree);
+    double simTime;
+    lua_getfield(L, 1, "sim_time");
+    if (lua_isnil(L, -1)) {
+        simTime = -1.0;
+    } else if (lua_isnumber(L, -1)) {
+        simTime = luaL_checknumber(L, -1);
+    } else {
+        string errMsg = "Error in call to FlowSolution:new.\n";
+        errMsg ~= "  A field for 'sim_time' was found, but the content was not valid.\n";
+        errMsg ~= "  The value should be given as a number.\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+
+    auto fsol = new FlowSolution(snapshot, nBlocks, simTime, dir, make_kdtree);
     flowSolutionStore ~= pushObj!(FlowSolution, FlowSolutionMT)(L, fsol);
     return 1;
 } // end newFlowSolution()
@@ -439,7 +452,7 @@ extern(C) int get_sim_time(lua_State* L)
 {
     auto fsol = checkFlowSolution(L, 1);
     lua_settop(L, 0);
-    lua_pushnumber(L, fsol.sim_time);
+    lua_pushnumber(L, fsol.simTime);
     return 1;
 }
 

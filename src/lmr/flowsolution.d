@@ -57,13 +57,13 @@ class FlowSolution {
     // The collection of flow blocks and grid blocks that define the flow
     // and the domain at one particular instant in time.
 public:
-    double sim_time;
+    double simTime;
     size_t nBlocks;
     GridMotion grid_motion;
     FluidBlockLite[] flowBlocks;
     Grid[] gridBlocks;
 
-    this(int snapshot, size_t nBlocks, string dir=".", bool make_kdtree=true)
+    this(int snapshot, size_t nBlocks, double simTime=-1.0, string dir=".", bool make_kdtree=true)
     {
         string cfgFile = (dir == ".") ? lmrCfg.cfgFile : dir ~ "/" ~ lmrCfg.cfgFile;
         string content;
@@ -124,7 +124,7 @@ public:
             gridBlocks[$-1].sort_cells_into_bins();
             string fName = fluidFilename(snapshot, to!int(ib));
             fName = (dir == ".") ? fName : dir ~ "/" ~ fName;
-            auto fb = new FluidBlockLite(fName, ib, jsonData, gridType, fieldFmt, variables, ncells);
+            auto fb = new FluidBlockLite(fName, ib, simTime, jsonData, gridType, fieldFmt, variables, ncells);
             final switch (gridType) {
             case Grid_t.structured_grid:
                 auto g = gridBlocks[$-1];
@@ -140,7 +140,7 @@ public:
             flowBlocks ~= fb;
         } // end foreach ib
         this.nBlocks = nBlocks;
-        sim_time = -1.0; // For steady-state signal no meaningful time with -1.0
+        this.simTime = simTime;
 
         if (make_kdtree) {
             construct_kdtree();
@@ -452,7 +452,7 @@ public:
     string[] bcGroups;
     string[] variableNames;
     size_t[string] variableIndex;
-    double sim_time;
+    double simTime;
     string flow_format;
     double omegaz; // Angular velocity (in rad/s) of the rotating frame.
                    // There is only one component, about the z-axis.
@@ -482,8 +482,9 @@ public:
         omegaz = getJSONdouble(jsonDataForBlk, "omegaz", 0.0);
     } // end "partial" constructor
 
-    this(string filename, size_t blkID, JSONValue jsonData, Grid_t gridType, string flow_format, string[] variables, int ncells)
+    this(string filename, size_t blkID, double simTime, JSONValue jsonData, Grid_t gridType, string flow_format, string[] variables, int ncells)
     {
+        this.simTime = simTime;
         variableNames = variables.dup;
         foreach (i, var; variables) variableIndex[var] = i;
         this.ncells = ncells;
@@ -504,7 +505,7 @@ public:
         omegaz = other.omegaz;
         ncells = cellList.length;
         nic = new_nic; njc = new_njc; nkc = new_nkc;
-        sim_time = other.sim_time;
+        simTime = other.simTime;
         variableNames = other.variableNames.dup();
         foreach(i, var; variableNames) { variableIndex[var] = i; }
         _data.length = ncells;
@@ -814,7 +815,7 @@ public:
             // Call back to the Lua function to get a table of values.
             // function refSoln(x, y, z)
             lua_getglobal(L, luaFnName.toStringz);
-            lua_pushnumber(L, sim_time);
+            lua_pushnumber(L, simTime);
             lua_pushnumber(L, _data[i][variableIndex["pos.x"]]);
             lua_pushnumber(L, _data[i][variableIndex["pos.y"]]);
             if (GlobalConfig.dimensions == 3) {
