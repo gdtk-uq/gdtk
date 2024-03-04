@@ -2553,7 +2553,7 @@ double applyLineSearch(double omega) {
 	foreach (blk; parallel(localFluidBlocks,1)) {
 	    size_t startIdx = 0;
 	    foreach (cell; blk.cells) {
-		blk.R[startIdx .. startIdx+nConserved] = -cell.dt_local * omega * blk.dU[startIdx .. startIdx+nConserved];
+		blk.R[startIdx .. startIdx+nConserved] = -(1.0/cell.dt_local) * omega * blk.dU[startIdx .. startIdx+nConserved];
 		startIdx += nConserved;
 	    }
 	}
