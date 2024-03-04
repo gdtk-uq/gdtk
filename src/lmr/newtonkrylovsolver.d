@@ -2524,12 +2524,20 @@ double determineRelaxationFactor()
 
 
 /**
- * Apply a line search to modify relaxation of factor.
+ * Apply a line search to determine/modify the relaxation factor.
  *
- * The line search is used *after* the physicality check is performed
+ * The line search is typically used *after* the physicality check is performed
  * to ensure that the unsteady residual is reduced in this step.
  *
- * [TODO:KAD] Add reference please
+ * The current algorithm is the basic implementation of a backtracking
+ * line search, where we begin with a maximum allowable step in a given
+ * search direction and then reduce this step-size by a constant factor
+ * until the unsteady residual has been reduced.
+ *
+ * REFERENCE: Algorithm from pg. 49 of
+ *            J. M. Modisette
+ *            An automated reliable method for two-dimensional RANS simulations
+ *            PhD thesis, Massachusetts Institute of Technology (2011)
  *
  * Authors: KAD and RJG
  * Date: 2023-03-13
