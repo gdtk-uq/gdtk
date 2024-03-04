@@ -55,8 +55,7 @@ options ([+] can be repeated):
        --names="rho,vel.x,vel.y"
        --names="rho"
      default:
-       --names="rho"
-       If no names-list supplied, then just process density.
+       --names="rho,p,T,vel.x,vel.y"
 
  -l, --location
      probes the flow field at locations 0, 1 and 2 by accepting a string of the form
@@ -131,8 +130,8 @@ int main_(string[] args)
         writefln("lmr %s: Begin program.", cmdName);
     }
 
-    if (namesStr.empty) { // add default of "rho" when nothing supplied
-        namesStr ~= "rho";
+    if (namesStr.empty) { // add default of "rho,p,T,vel.x,vel.y" when nothing supplied
+        namesStr ~= "rho,p,T,vel.x,vel.y";
     }
 
     auto namesVariables = namesStr.split(",");
