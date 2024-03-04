@@ -762,6 +762,14 @@ void writeSnapshotFiles_timemarching()
         }
     }
 
+    foreach (blk; parallel(localSolidBlocks, 1)) {
+        auto filename = solidFilename(SimState.current_tindx, blk.id);
+        FVCell[] cells;
+        cells.length = blk.cells.length;
+        foreach (i, ref c; cells) c = blk.cells[i];
+        solidBlkIO.writeVariablesToFile(filename, cells);
+    }
+
     addToTimesFile();
 }
 
