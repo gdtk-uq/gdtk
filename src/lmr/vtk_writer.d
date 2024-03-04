@@ -23,8 +23,9 @@ import fileutil;
 import geom;
 import gas;
 import globalconfig;
-import flowsolution;
-import solidsolution;
+import flowsolution : FluidBlockLite;
+import solidsolution : SolidBlockLite;
+import lmrexceptions : LmrPostProcessingException;
 
 
 File begin_PVD_file(string fileName)
@@ -101,7 +102,7 @@ void write_VTU_file(FluidBlockLite flow, Grid grid, string fileName, bool binary
     if (flow.ncells != grid.ncells) {
         string msg = text("Mismatch between grid and flow grid.ncells=",
                           grid.ncells, " flow.ncells=", flow.ncells);
-        throw new FlowSolverException(msg);
+        throw new LmrPostProcessingException(msg);
     }
     size_t NumberOfCells = flow.ncells;
     fp.write("<VTKFile type=\"UnstructuredGrid\" byte_order=\"BigEndian\">\n");
@@ -346,7 +347,7 @@ void write_VTU_file(FluidBlockLite flow, Grid grid, string fileName, bool binary
 
 
 // This version is for the solid domain.
-void write_VTU_file(SBlockSolid solid, StructuredGrid grid, string fileName, bool binary_format)
+void write_VTU_file(SolidBlockLite solid, StructuredGrid grid, string fileName, bool binary_format)
 // Write the cell-centred flow data from a single block (index jb)
 // as an unstructured grid of finite-volume cells.
 {

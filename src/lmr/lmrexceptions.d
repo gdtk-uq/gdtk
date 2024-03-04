@@ -35,3 +35,18 @@ class NewtonKrylovException : LmrException {
         super(message, file, line, next);
     }
 }
+
+/**
+ * Class to signal an exception at post-processing stage.
+ *
+ * Authors: RJG
+ * Date: 2024-03-04
+ */
+class LmrPostProcessingException : LmrException {
+    @nogc
+    this(string message, string file=__FILE__, size_t line=__LINE__,
+         Throwable next=null)
+    {
+        super(message, file, line, next);
+    }
+}

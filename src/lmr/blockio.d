@@ -31,7 +31,7 @@ import ufluidblock : UFluidBlock;
 import flowsolution : FluidBlockLite;
 import solidblock : SolidBlock;
 import ssolidblock : SSolidBlock;
-//import solidsolution : SolidBlockLite;
+import solidsolution : SolidBlockLite;
 import globaldata : fluidBlkIO, solidBlkIO;
 
 class BlockIO {
@@ -305,6 +305,14 @@ string[] readFluidVariablesFromFluidMetadata(string fluidMetadataFile="")
     return variables;
 }
 
+/*
+ NOTE: RJG, 2024-03-04
+ It would be possible to unify the next two functions,
+ but it would require creation of a BlockLite superclass.
+ Perhaps that overhead isn't worth it for the small
+ amount of duplication here.
+*/
+
 void readFluidVariablesFromFile(FluidBlockLite blk, string fname, string[] variables, int ncells)
 {
     size_t nvars = variables.length;
@@ -338,7 +346,6 @@ void readFluidVariablesFromFile(FluidBlockLite blk, string fname, string[] varia
     }
 }
 
-/*
 void readSolidVariablesFromFile(SolidBlockLite blk, string fname, string[] variables, int ncells)
 {
     size_t nvars = variables.length;
@@ -371,7 +378,6 @@ void readSolidVariablesFromFile(SolidBlockLite blk, string fname, string[] varia
 	    break;
     }
 }
-*/
 
 string[] readVariablesFromMetadata(string metadataFile)
 {

@@ -17,6 +17,7 @@ import std.range;
 import globalconfig;
 import fileutil;
 import flowsolution;
+import solidsolution : SolidSolution;
 import lmrconfig : lmrCfg;
 import init : initConfiguration;
 import vtk_writer;
@@ -76,6 +77,14 @@ options ([+] can be repeated):
      --subtract-ref-solution=ref-soln.lua
      default: none
 
+ --subtract-solid-ref-solution
+     name of file containing a Lua-format reference solution for the solid domains
+     matching field variables in solution files and reference solution
+     will be altered as: numerical value - reference value
+     examples:
+     --subtract-solid-ref-solution=solid-ref-soln.lua
+     default: none
+
  -v, --verbose [+]
      Increase verbosity during preparation and writing of VTK files.
 
@@ -91,6 +100,7 @@ int main_(string[] args)
     bool allSnapshots = false;
     bool binaryFormat = false;
     string luaRefSoln;
+    string luaSolidRefSoln;
     // [TODO] implement --add-vars
     try {
         getopt(args,
@@ -100,7 +110,8 @@ int main_(string[] args)
                "f|final", &finalSnapshot,
                "a|all", &allSnapshots,
                "b|binary-format", &binaryFormat,
-               "r|subtract-ref-solution", &luaRefSoln);
+               "r|subtract-ref-solution", &luaRefSoln,
+               "subtract-solid-ref-solution", &luaSolidRefSoln);
     } catch (Exception e) {
         writefln("Eilmer %s program quitting.", cmdName);
         writeln("There is something wrong with the command-line arguments/options.");
@@ -113,6 +124,7 @@ int main_(string[] args)
     }
 
     initConfiguration(); // To read in GlobalConfig
+    size_t nFluidBlocks = GlobalConfig.nFluidBlocks;
     auto availSnapshots = determineAvailableSnapshots();
     auto snaps2process = determineSnapshotsToProcess(availSnapshots, snapshots, allSnapshots, finalSnapshot);
 
@@ -135,7 +147,7 @@ int main_(string[] args)
     File pvdFile = begin_PVD_file(lmrCfg.vtkDir~"/"~lmrCfg.fluidPrefix~".pvd");
     foreach (isnap, snap; snaps2process) {
         if (verbosity > 1) {
-            writefln("lmr snapshot2vtk: Writing snapshot %s to disk.", snap);
+            writefln("lmr snapshot2vtk: Writing fluid snapshot %s to disk.", snap);
         }
         auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks);
         if (!luaRefSoln.empty) soln.subtract_ref_soln(luaRefSoln);
@@ -144,7 +156,7 @@ int main_(string[] args)
         File pvtuFile = begin_PVTU_file(lmrCfg.vtkDir ~ "/" ~ pvtuFileName, soln.flowBlocks[0].variableNames);
         foreach (jb; 0 .. soln.nBlocks) {
             if (verbosity > 2) {
-                writefln("lmr snapshot2vtk: Writing block %d for snapshot %s to disk.", jb, snap);
+                writefln("lmr snapshot2vtk: Writing fluid block %d for snapshot %s to disk.", jb, snap);
             }
             string vtuFileName = lmrCfg.fluidPrefix ~ "-s" ~ snap ~ "-b" ~ format(lmrCfg.blkIdxFmt, jb) ~ ".vtu";
             add_piece_to_PVTU_file(pvtuFile, vtuFileName);
@@ -159,6 +171,36 @@ int main_(string[] args)
         finish_PVTU_file(pvtuFile);
     }
     finish_PVD_file(pvdFile);
+
+    if (GlobalConfig.nSolidBlocks > 0) {
+        pvdFile = begin_PVD_file(lmrCfg.vtkDir~"/"~lmrCfg.solidPrefix~".pvd");
+        foreach (isnap, snap; snaps2process) {
+            if (verbosity > 1) {
+                writefln("lmr snapshot2vtk: Writing solid snapshot %s to disk.", snap);
+            }
+            auto soln = new SolidSolution(to!int(snap), GlobalConfig.nSolidBlocks);
+            if (!luaSolidRefSoln.empty) soln.subtract_ref_soln(luaSolidRefSoln);
+            string pvtuFileName = lmrCfg.solidPrefix ~ "-s" ~ snap ~ ".pvtu";
+            File pvtuFile = begin_PVTU_file(lmrCfg.vtkDir ~ "/" ~ pvtuFileName, soln.solidBlocks[0].variableNames);
+            foreach (jb; 0 .. soln.nBlocks) {
+                auto id = jb + nFluidBlocks;
+                if (verbosity > 2) {
+                    writefln("lmr snapshot2vtk: Writing solid block %d for snapshot %s to disk.", id, snap);
+                }
+                string vtuFileName = lmrCfg.solidPrefix ~ "-s" ~ snap ~ "-b" ~ format(lmrCfg.blkIdxFmt, id) ~ ".vtu";
+                add_piece_to_PVTU_file(pvtuFile, vtuFileName);
+                write_VTU_file(soln.solidBlocks[jb], soln.gridBlocks[jb], lmrCfg.vtkDir~"/"~vtuFileName, binaryFormat);
+                if (GlobalConfig.solverMode == SolverMode.transient) {
+                    add_dataset_to_PVD_file(pvdFile, times[isnap], vtuFileName);
+                }
+                else {
+                    add_dataset_to_PVD_file(pvdFile, to!double(snap), vtuFileName);
+                }
+            }
+            finish_PVTU_file(pvtuFile);
+        }
+        finish_PVD_file(pvdFile);
+    }
 
     if (verbosity > 0) {
         writeln("lmr snapshot2vtk: Done.");
