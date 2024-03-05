@@ -200,6 +200,9 @@ public:
         if ((ns<1.0) || (ns>N)) throw new Error("Problematic parameters in GeometricFunction ns= "~to!string(ns));
         this.ts = ns/(N-1);
         this.ns = ns;
+        double error = a*(1.0-pow(r,ns))/(1.0-r) + (N-1.0-ns)*a*pow(r,ns-1);
+        writefln("Created geom function with ts %f and ns %f", ts, ns);
+        writefln("Output in solved function is %e", error);
     }
 
     this(const GeometricFunction other)
@@ -236,10 +239,14 @@ private:
     int N;
     bool reverse;
 
-    double lambertW(double z, double wguess=1.0, double tol=1e-12){
+    double lambertW(double z, double wguess=1.0, double tol=1e-15){
         /*
             Lamberts W function: solve for w given z=w*exp(w)
             See: en.wikipedia.org/wiki/Lambert_W_function#Numerical_evaluation
+
+            Notes: Adjustments were performed to the tol parameter on March 2024.
+            This required a concerningly tight tolerance to function properly.
+            In the future, perhaps revisit this to avoid possible numerical issues.
         */
         double w, expw, zt, wexpw;
         w = wguess;
