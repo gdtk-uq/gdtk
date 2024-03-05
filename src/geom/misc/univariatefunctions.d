@@ -200,9 +200,6 @@ public:
         if ((ns<1.0) || (ns>N)) throw new Error("Problematic parameters in GeometricFunction ns= "~to!string(ns));
         this.ts = ns/(N-1);
         this.ns = ns;
-        double error = a*(1.0-pow(r,ns))/(1.0-r) + (N-1.0-ns)*a*pow(r,ns-1);
-        writefln("Created geom function with ts %f and ns %f", ts, ns);
-        writefln("Output in solved function is %e", error);
     }
 
     this(const GeometricFunction other)
