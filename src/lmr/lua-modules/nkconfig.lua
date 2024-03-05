@@ -31,6 +31,7 @@ NewtonKrylovGlobalConfigHidden = {
    -- Newton stepping control and continuation
    inviscid_cfl_only = true,
    use_line_search = true,
+   line_search_order = 1,
    use_physicality_check = true,
    allowable_relative_mass_change = 0.2,
    min_relaxation_factor = 0.1,
@@ -119,6 +120,7 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    -- Newton stepping control and continuation
    f:write(string.format('"inviscid_cfl_only": %s,\n', tostring(nkConfig.inviscid_cfl_only)))
    f:write(string.format('"use_line_search": %s,\n', tostring(nkConfig.use_line_search)))
+   f:write(string.format('"line_search_order": %d,\n', nkConfig.line_search_order))
    f:write(string.format('"use_physicality_check": %s,\n', tostring(nkConfig.use_physicality_check)))
    f:write(string.format('"allowable_relative_mass_change": %.18e,\n', nkConfig.allowable_relative_mass_change))
    f:write(string.format('"min_relaxation_factor": %.18e,\n', nkConfig.min_relaxation_factor))

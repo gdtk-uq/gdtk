@@ -143,6 +143,7 @@ struct NKGlobalConfig {
     // Newton stepping and continuation
     bool inviscidCFLOnly = true;
     bool useLineSearch = true;
+    int lineSearchOrder = 1;
     bool usePhysicalityCheck = true;
     double allowableRelativeMassChange = 0.2;
     double minRelaxationFactorForCFLGrowth = 0.1;
@@ -194,6 +195,7 @@ struct NKGlobalConfig {
         phaseChangesAtSteps = getJSONintarray(jsonData, "phase_changes_at_steps", phaseChangesAtSteps);
         inviscidCFLOnly = getJSONbool(jsonData, "inviscid_cfl_only", inviscidCFLOnly);
         useLineSearch = getJSONbool(jsonData, "use_line_search", useLineSearch);
+        lineSearchOrder = getJSONint(jsonData, "line_search_order", lineSearchOrder);
         usePhysicalityCheck = getJSONbool(jsonData, "use_physicality_check", usePhysicalityCheck);
         allowableRelativeMassChange = getJSONdouble(jsonData, "allowable_relative_mass_change", allowableRelativeMassChange);
         minRelaxationFactorForUpdate = getJSONdouble(jsonData, "min_relaxation_factor_for_update", minRelaxationFactorForUpdate);
@@ -2524,36 +2526,70 @@ double determineRelaxationFactor()
 
 
 /**
- * Apply a line search to determine/modify the relaxation factor.
+ * Apply a backtracking line search to determine a relaxation factor that reduces the unsteady residual.
  *
- * The line search is typically used *after* the physicality check is performed
- * to ensure that the unsteady residual is reduced in this step.
+ * The line search is applied *after* the physicality check is performed, so we assume
+ * that the maximum allowable step (omega*dU) recovers a physically realizable state.
  *
- * The current algorithm is the basic implementation of a backtracking
- * line search, where we begin with a maximum allowable step in a given
- * search direction and then reduce this step-size by a constant factor
- * until the unsteady residual has been reduced.
+ * This implementation is based on Algorithm A6.3.1 from pg. 325 of Dennis and Schnabel.
  *
- * REFERENCE: Algorithm from pg. 49 of
- *            J. M. Modisette
- *            An automated reliable method for two-dimensional RANS simulations
- *            PhD thesis, Massachusetts Institute of Technology (2011)
+ * The algorithm frames the problem in terms of finding a vector x* which
+ * minimizes the objective function f defined as f(x) = 1/2 F(x)^T F(x)
+ * where in our fluid solver context F = R (the residual function) and
+ * x = U (the conserved quantities vector). See Section 6.5 from Dennis and
+ * Schnabel for more details.
+ *
+ * Note that this particular algorithm is based on satisfying the Armijo
+ * condition of sufficient decrease and does not consider the sufficient
+ * curvature condition (together these constitute the Wolfe conditions).
+ * This is typically acceptable when using backtracking to determine an
+ * appropriate step length, see Nocedal (pg. 37).
+ *
+ *
+ * REFERENCES: J.E. Dennis, Jr., and R. B. Schnabel,
+ *             Numerical Methods for Unconstrained Optimization and Nonlinear Equations,
+ *             Classics Appl. Math. 16, SIAM, Philadelphia (1996)
+ *
+ *             J. Nocedal, and S. J. Wright,
+ *             Numerical Optimization (2nd edition),
+ *             Springer Science & Business Media (2006)
+ *
  *
  * Authors: KAD and RJG
- * Date: 2023-03-13
+ * Date: 2024-03-04
  */
-double applyLineSearch(double omega) {
-
-    double minOmega = nkCfg.minRelaxationFactorForUpdate;
-    double omegaReductionFactor = nkCfg.relaxationFactorReductionFactor;
-
+double applyLineSearch(double omega)
+{
     size_t nConserved = GlobalConfig.cqi.n;
+    int lineSearchOrder = nkCfg.lineSearchOrder;
+    if (lineSearchOrder < 1 || lineSearchOrder > 3) {
+        throw new NewtonKrylovException("Invalid line_search_order; valid options: 1 (linear), 2 (quadratic), 3 (cubic).");
+    }
+    double minOmega = nkCfg.minRelaxationFactorForUpdate;
+    double lambdaReductionFactor = nkCfg.relaxationFactorReductionFactor;
+    double alpha = 1.0e-04;                       // a constant used in the step-acceptance test
+    double lambda = 1.0, lambdaPrev = 1.0;        // step length
+    double f = 0.5*globalResidual*globalResidual; // objective function evaluated at starting point
+    double fPlus, fPlusPrev;                      // objective function evaluated at new point
+    double initSlope = 0.0;                       // intial slope used in the step-acceptance test
 
-    double RU0 = globalResidual;
-    double RUn;
+    // evaluate the initial slope := - F(x)^T J(x) p
+    // where we take p = omega*dU as the search direction, see Dennis and Schnabel (pg. 148)
+    //
+    // 1. evaluate J(x).p via a Frechet derivative
+    // 1.a. place omega*dU in zed
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        foreach (k; 0 .. blk.nvars) blk.zed[k] = omega*blk.dU[k];
+    }
+    // 1.b. evaluate Jacobian-vector product w := A . zed
+    evalAugmentedJacobianVectorProduct();
+    //
+    // 2. evaluate slope := - F(x)^T w(x,p)
+    mixin(dotOverBlocks("initSlope", "w", "R"));
+    initSlope = -initSlope;
 
-    bool reduceOmega = true;
-    while (reduceOmega) {
+    bool reduceLambda = true;
+    while (reduceLambda) {
 
 	//----
 	// 1. Compute unsteady term
@@ -2561,7 +2597,7 @@ double applyLineSearch(double omega) {
 	foreach (blk; parallel(localFluidBlocks,1)) {
 	    size_t startIdx = 0;
 	    foreach (cell; blk.cells) {
-		blk.R[startIdx .. startIdx+nConserved] = -(1.0/cell.dt_local) * omega * blk.dU[startIdx .. startIdx+nConserved];
+		blk.R[startIdx .. startIdx+nConserved] = -(1.0/cell.dt_local) * lambda * omega * blk.dU[startIdx .. startIdx+nConserved];
 		startIdx += nConserved;
 	    }
 	}
@@ -2574,7 +2610,7 @@ double applyLineSearch(double omega) {
 	    foreach (cell; blk.cells) {
 		cell.U[1].copy_values_from(cell.U[0]);
 		foreach (ivar; 0 .. nConserved) {
-		    cell.U[1][ivar] = cell.U[0][ivar] + omega * blk.dU[startIdx+ivar];
+		    cell.U[1][ivar] = cell.U[0][ivar] + lambda * omega * blk.dU[startIdx+ivar];
 		}
 		cell.decode_conserved(0, 1, 0.0);
 		startIdx += nConserved;
@@ -2608,27 +2644,67 @@ double applyLineSearch(double omega) {
 	}
 
 	//----
-	// 4. Compute norm of unsteady residual
+	// 4. Compute objective function at new point
 	//----
-	mixin(dotOverBlocks("RUn", "R", "R"));
+	mixin(dotOverBlocks("fPlus", "R", "R"));
 	version(mpi_parallel) {
-	    MPI_Allreduce(MPI_IN_PLACE, &RUn, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	    MPI_Allreduce(MPI_IN_PLACE, &fPlus, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	}
-	RUn = sqrt(RUn);
+	fPlus = 0.5*fPlus;
+
+        //debug {
+        //    writefln("lambda: %.8e    RUn: %.8e    RU0: %.8e    test: %.8e", lambda, fPlus, f, f + alpha*lambda*initSlope);
+        //}
 
 	//----
-	// 5. Check if unsteady residual is reduced
+	// 5. Check if objective function is reduced
 	//----
-	if ( (RUn < RU0) || (omega < minOmega) ) {
-	    // we are done, don't attempt to reduce omega any further
-	    reduceOmega = false;
+	if ( (fPlus <= f + alpha*lambda*initSlope) || (lambda*omega < minOmega) ) {
+	    // we are done, don't attempt to reduce lambda any further
+	    reduceLambda = false;
 	}
 	else {
-	    omega *= omegaReductionFactor;
+            if (lineSearchOrder == 1) {
+                // just backtrack
+                lambda *= lambdaReductionFactor;
+            } else {
+                double lambdaNext;
+                if (lineSearchOrder == 2 || (lineSearchOrder == 3 && lambda == 1.0)) {
+                    // use a quadratic fit
+                    lambdaNext = -initSlope / (2*(fPlus-f-initSlope));
+                } else {
+                    // use a cubic fit
+                    double v1 = fPlus-f-lambda*initSlope;
+                    double v2 = fPlusPrev-f-lambdaPrev*initSlope;
+                    double a  = (v1/(lambda*lambda) - v2/(lambdaPrev*lambdaPrev))/(lambda-lambdaPrev);
+                    double b  = (-lambdaPrev*v1/(lambda*lambda) + lambda*v2/(lambdaPrev*lambdaPrev))/(lambda-lambdaPrev);
+                    double d  = b*b - 3*a*initSlope;
+                    if (d < 0.0) d = 0.0; // prevent taking sqrt of -ve number
+                    if (a == 0.0) {
+                        // the cubic is a quadratic
+                        lambdaNext = -initSlope/(2.0*b);
+                    } else {
+                        // legitimate cubic
+                        lambdaNext = (-b + sqrt(d))/(3.0*a);
+                    }
+                }
+                // setup for the next step
+                lambdaPrev = lambda;
+                fPlusPrev = fPlus;
+                // place some bounds on lambda
+                if (lambdaNext > 0.5*lambda) {
+                    lambdaNext = 0.5*lambda;
+                }
+                if (lambdaNext <= 0.1*lambda) {
+                    lambda = 0.1*lambda;
+                } else {
+                    lambda = lambdaNext;
+                }
+            }
 	}
     }
 
-    return omega;
+    return lambda*omega;
 }
 
 /**
