@@ -16,6 +16,8 @@ import subprocess
 import sys
 import pytest
 from datetime import datetime
+from time import sleep
+import shlex
 
 cfgFile = 'autobot-cfg.yaml'
 cfg = {}
@@ -43,7 +45,6 @@ def launchTests(dryRun, ignoreNew):
     readConfig()
     global mailfile
     mailfile = f"{cfg['logDir']}/{cfg['mailFilePrefix']}-{datetime.now().strftime('%Y-%m-%d+%H-%M-%S')}.txt"
-    print(mailfile)
     isnew, revid = pullCode()
     if isnew or ignoreNew:
         buildAndTest(revid)
@@ -64,16 +65,23 @@ def mailout(subject, message):
     global mailfile, DRY_RUN
     with open(mailfile, "w") as f:
         f.write(message)
+    # pause a little while, just to give a network
+    # file system enough time to get the file written
+    sleep(1)
     addresses = compileAddressList()
     recv = ",".join(addresses)
-    cmd = f"mail -s \"{subject}\" {recv} < {mailfile}"
+    cmd = f"mail -s '{subject}' {recv} < {mailfile}"
     if DRY_RUN:
         print(cmd)
         return 0
     else:
         # just do it!
-        process = subprocess.run(cmd.split(), capture_output=True, text=True)
-    return process.returncode
+        flag = os.system(cmd)
+        # pause another few seconds
+        # we need the backgrounded mail process
+        # to finish before the main process finishes
+        sleep(3)
+        return flag
 
 def readConfig():
     with open(cfgFile, "r") as f:
@@ -108,7 +116,6 @@ def pullCode():
     isnew = newhead!=oldhead
     revid = subprocess.check_output('git rev-parse --short HEAD'.split()).decode(sys.stdout.encoding)
     revid = revid.strip()
-    print("revid= ", revid)
     if isnew:
         print("Found new commit(s): {}",format(newhead.strip()))
     return isnew, revid
@@ -118,18 +125,24 @@ def buildCode():
     # 0. clean
     subprocess.run("make clean".split(), check=True)
     # 1. now build, Bob!
-    flag, out = logrun(cfg['buildCommand'])
-    isgood = flag==0
-    return isgood, out
+    cmd = cfg['buildCommand']
+    process = subprocess.run(shlex.split(cmd), capture_output=True, text=True)
+    isgood = process.returncode==0
+    return isgood, process.stdout, process.stderr
 
-def whenBuildIsBad(output):
+def whenBuildIsBad(output, error):
     os.chdir(cfg['lmrDir'])
     commithash = subprocess.check_output('git log -1 --pretty=format:%h'.split(), text=True)
     subject = f"lmr-autobot> Build failed in commit {commithash} ({datetime.now()})"
 
     commitinfo = subprocess.check_output('git log -1'.split(), text=True)
-    body = f"Build failure detected in the following commit:\n\n{commitinfo}"
-    body += "Output from build (stdout and stderr):\n"
+    body = f"lmr-autobot> Build failure detected in the following commit:\n\n"
+    body += '\t'.join(('\n'+commitinfo).splitlines(True))
+    body += "\n"
+    body += "lmr-autobot> STDERR:\n\n"
+    body += error
+    body += "\n"
+    body += "lmr-autobot> STDOUT:\n\n"
     body += output
 
     return subject, body
@@ -148,10 +161,8 @@ def runTests(revid):
     subprocess.run(cmd.split(), check=True)
     # 2. Launch
     os.chdir("lmr")
-    cmd = "pytest "
-    for ignored in cfg['ignoredTestDirs']:
-        cmd += f"--ignore={ignored} "
-    process = subprocess.run(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    cmd = "pytest"
+    process = subprocess.run(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     global logfile
     logfile = f"{cfg['logDir']}/{cfg['logFilePrefix']}-{revid}.log"
     with open(logfile, "w") as f:
@@ -177,7 +188,7 @@ def checkTests(returncode):
     commithash = subprocess.check_output('git log -1 --pretty=format:%h'.split(), text=True)
     commitinfo = subprocess.check_output('git log -1'.split(), text=True)
     if returncode == 0:
-        subject = f"lmr-autobot> Build sucessful; all tests passed for commit {commithash} ({datetime.now()})"
+        subject = f"lmr-autobot> Build successful; all tests passed for commit {commithash} ({datetime.now()})"
         msg += "lmr-autobot> Integration tests passed for the following commit:\n\n"
     else:
         # all other codes are some form of failure
@@ -193,15 +204,15 @@ def checkTests(returncode):
 
 
 def buildAndTest(revid):
-    isgood, out = buildCode()
+    isgood, out, err = buildCode()
     if isgood:
         installCode()
         returncode = runTests(revid)
         subject, message = checkTests(returncode)
     else:
-        subject, message = whenBuildIsBad(out)
+        subject, message = whenBuildIsBad(out, err)
 
-    mailout(subject, message)
+    flag = mailout(subject, message)
     return 0
 
 if __name__ == '__main__':

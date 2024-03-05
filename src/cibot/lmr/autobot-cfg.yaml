@@ -1,16 +1,15 @@
 ---
 devsOnReceiveList:
-  - "r.gollan@uq.edu.au"
-  - "rjgollan@gmail.com"
-lmrDir: '/home/groups/gdtk-dev'
+    - "n.gibbons@uq.edu.au"
+    - "r.gollan@uq.edu.au"
+    - "kyle.damm@uqconnect.edu.au"
+    - "p.jacobs@uq.edu.au"
+lmrDir: '/home/groups/gdtk-dev/gdtk/src/lmr'
 testDir: '/home/groups/gdtk-dev/lmr-test'
 exDir: '/home/groups/gdtk-dev/gdtk/examples/lmr'
 logDir: '/home/groups/gdtk-dev/lmr-test/logs'
 logFilePrefix: 'lmr-test'
 mailFilePrefix: 'autobot-mail'
 buildCommand: 'make FLAVOUR=fast'
-ignoredTestDirs:
-  - "2D/convex-corner/two-block-mpi"
-  - "2D/wedge"
 testEmail: "r.gollan@uq.edu.au"
 ...
