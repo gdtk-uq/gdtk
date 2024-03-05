@@ -220,7 +220,7 @@ int main(string[] args)
     int verbosity = 0;
     int snapshotStart = 0;
     int numberSnapshots = 0;
-    int maxCPUs = 1;
+    int maxCPUs = totalCPUs;
     int threadsPerMPITask = 1;
     double startCFL = -1.0;
     string maxWallClock = "24:00:00";

@@ -44,7 +44,7 @@ def test_prep():
 
 
 def test_run():
-    cmd = "lmr run"
+    cmd = "lmr run --max-cpus=1"
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
     assert proc.returncode == 0, "Failed during: " + cmd
     expected_output(proc)

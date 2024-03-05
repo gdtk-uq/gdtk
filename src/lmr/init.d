@@ -296,7 +296,7 @@ void initFluidBlocksBasic(bool withUserPad=false)
  */
 void initFluidBlocksMemoryAllocation()
 {
-    bool anyBlockFail = false;
+    shared bool anyBlockFail = false;
     foreach (blk; parallel(localFluidBlocks,1)) {
         try {
             string gName;
@@ -378,6 +378,8 @@ void initFluidBlocksZones()
  */
 void initFluidBlocksFlowField(int snapshotStart)
 {
+    // Note that we are not doing the work here in parallel, for a shared-memory run.
+    // [TODO] PJ 2024-03-05 Maybe we could.
     bool anyBlockFail = false;
     if (GlobalConfig.field_format == "rawbinary")
         fluidBlkIO = new BinaryBlockIO();

@@ -746,7 +746,7 @@ void writeSnapshotFiles_timemarching()
     // Wait for master to complete building the directory for the next snapshot
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
 
-    foreach (blk; parallel(localFluidBlocksBySize, 1)) {
+    foreach (blk; localFluidBlocksBySize) { // 2024-03-05 PJ remove parallel
         auto fileName = fluidFilename(SimState.current_tindx, blk.id);
         FVCell[] cells;
         cells.length = blk.cells.length;
@@ -755,14 +755,14 @@ void writeSnapshotFiles_timemarching()
     }
 
     if (cfg.grid_motion != GridMotion.none) {
-        foreach (blk; parallel(localFluidBlocksBySize, 1)) {
+        foreach (blk; localFluidBlocksBySize) { // 2024-03-05 PJ remove parallel
             blk.sync_vertices_to_underlying_grid(0);
             auto gridName = gridFilename(SimState.current_tindx, blk.id);
             blk.write_underlying_grid(gridName);
         }
     }
 
-    foreach (blk; parallel(localSolidBlocks, 1)) {
+    foreach (blk; localSolidBlocks) { // 2024-03-05 PJ remove parallel
         auto filename = solidFilename(SimState.current_tindx, blk.id);
         FVCell[] cells;
         cells.length = blk.cells.length;
@@ -775,8 +775,8 @@ void writeSnapshotFiles_timemarching()
 
 /**
  * Add an entry in the times file.
- * 
- * NOTE: 
+ *
+ * NOTE:
  * What happens if this is a restart from some earlier tindx?
  * Perhaps there is already an entry for this particular tindx (from a previous run).
  * Using YAML, we just stick the duplicate key at the end.

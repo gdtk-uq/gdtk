@@ -32,7 +32,7 @@ def test_init_steady():
     assert proc.returncode == 0, "Failed during: " + cmd
 
 def test_run_steady():
-    cmd = "lmr run"
+    cmd = "lmr run --max-cpus=1"
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
     assert proc.returncode == 0, "Failed during: " + cmd
     tolerance_on_cfl_check = 0.01
