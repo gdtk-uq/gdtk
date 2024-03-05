@@ -104,12 +104,16 @@ options ([+] can be repeated):
      Sets maximum number of CPUs for shared-memory parallelism.
      default: %d (on this machine)
 
+     NOTE: in solver_mode=steady, this option has no effect.
+
  --threads-per-mpi-task=<int>
      Sets threads for MPI tasks when running in MPI mode.
      Leave the default value at 1 unless you know what you're doing
      and know about the distributed/shared memory parallel processing
      model used in Eilmer.
      default: 1
+
+     NOTE: in solver_mode=steady, this option has no effect.
 
  --max-wall-clock=hh:mm:ss
      This the maximum simultion duration given in hours, minutes and seconds.

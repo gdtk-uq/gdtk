@@ -501,7 +501,7 @@ void broadcastRestartInfo()
         MPI_Bcast(&(snapshots[i].cfl), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         MPI_Bcast(&(snapshots[i].step), 1, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Bcast(&(snapshots[i].globalResidual), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	MPI_Bcast(&(snapshots[i].prevGlobalResidual), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&(snapshots[i].prevGlobalResidual), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         broadcastResiduals(snapshots[i].residuals);
     }
 }
@@ -551,7 +551,11 @@ void initNewtonKrylovSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
 
     initLocalBlocks();
 
-    initThreadPool(maxCPUs, threadsPerMPITask);
+    /* RJG, 2024-03-05
+     * The shared memory model is not playing nicely with how the Newton-Krylov module
+     * is set up. For the present, we limit the threads to 1.
+     */
+    initThreadPool(1, 1);
 
     initFluidBlocksBasic();
     initFluidBlocksMemoryAllocation();
@@ -680,7 +684,6 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
      * Initialisation
      *----------------------------------------------
      */
-    setAndReportThreads(maxCPUs, threadsPerMPITask);
     if (nkCfg.usePreconditioner) initPreconditioner();
     size_t nConserved = cfg.cqi.n;
     referenceResiduals = new ConservedQuantities(nConserved);
@@ -1090,29 +1093,6 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
  * Auxiliary functions related to initialisation of stepping
  *---------------------------------------------------------------------
  */
-
-void setAndReportThreads(int maxCPUs, int threadsPerMPITask)
-{
-    alias cfg = GlobalConfig;
-
-    // 1. Check we aren't using more task threads than blocks
-    int extraThreadsInPool;
-    auto nBlocksInThreadParallel = localFluidBlocks.length;
-    version(mpi_parallel) {
-        extraThreadsInPool = min(threadsPerMPITask-1, nBlocksInThreadParallel-1);
-    } else {
-        extraThreadsInPool = min(maxCPUs-1, nBlocksInThreadParallel-1);
-    }
-    defaultPoolThreads(extraThreadsInPool);
-
-    // 2. Report out the thread configuration for run-time
-    version(mpi_parallel) {
-        writefln("MPI-task %d : running with %d threads.", cfg.mpi_rank_for_local_task, extraThreadsInPool+1);
-    }
-    else {
-        writefln("Single process running with %d threads.", extraThreadsInPool+1); // +1 for main thread.
-    }
-}
 
 void initPreconditioner()
 {
