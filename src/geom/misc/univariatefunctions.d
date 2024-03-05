@@ -236,10 +236,14 @@ private:
     int N;
     bool reverse;
 
-    double lambertW(double z, double wguess=1.0, double tol=1e-12){
+    double lambertW(double z, double wguess=1.0, double tol=1e-15){
         /*
             Lamberts W function: solve for w given z=w*exp(w)
             See: en.wikipedia.org/wiki/Lambert_W_function#Numerical_evaluation
+
+            Notes: Adjustments were performed to the tol parameter on March 2024.
+            This required a concerningly tight tolerance to function properly.
+            In the future, perhaps revisit this to avoid possible numerical issues.
         */
         double w, expw, zt, wexpw;
         w = wguess;
