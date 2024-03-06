@@ -186,7 +186,11 @@ function makeFluidBlocks(bcDict, flowDict)
             local tag = g.bcTags[face] -- get the user's spec for this face
             if tag and tag ~= "" then
                local bc = bcDict[tag]
-               if bc then bcs[face] = bc end
+               if bc then
+                  bcs[face] = bc
+               else
+                  print("WARNING: there is no bcDict entry for user-supplied tag:", tag)
+               end
             end
          end
       else -- unstructured_grid
