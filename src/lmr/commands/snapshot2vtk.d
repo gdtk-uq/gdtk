@@ -137,6 +137,16 @@ int main_(string[] args)
     }
 
     /*
+     * We should clean out if the vtk/ area already has stuff in it.
+     * It gets confusing when the meta files don't align with the pieces
+     * sitting around in the directory.
+     */
+    if (lmrCfg.vtkDir.exists) {
+        if (verbosity > 1) { writeln("lmr snapshot2vtk: Removing old VTK files."); }
+        lmrCfg.vtkDir.rmdirRecurse;
+    }
+    
+    /*
      * Now write vtk files for each snapshot
      */
     if (verbosity > 0) {
