@@ -668,11 +668,18 @@ public:
             break;
         case ShockDetector.NNG:
             auto gm = myConfig.gmodel;
+            if (!facedata.stencil_idxs) throw new Error("NNG Shock detector needs a 4 cell stencil");
             foreach (idx; 0 .. nfaces) {
                 size_t l = facedata.f2c[idx].left;
                 size_t r = facedata.f2c[idx].right;
                 number S1 = NNG_ShockDetector(gm, celldata.flowstates[l],  celldata.flowstates[r], facedata.normals[idx], comp_tol.re);
-                number S2 = NNG_DiscoDectector(gm, celldata.flowstates[l],  celldata.flowstates[r]);
+
+                size_t LL = facedata.stencil_idxs[idx].L1;
+                size_t  L = facedata.stencil_idxs[idx].L0;
+                size_t  R = facedata.stencil_idxs[idx].R0;
+                size_t RR = facedata.stencil_idxs[idx].R1;
+
+                number S2 = NNG_DiscoDectector1(gm, celldata.flowstates[LL], celldata.flowstates[L], celldata.flowstates[R], celldata.flowstates[RR]);
                 facedata.flowstates[idx].S = fmax(S1, S2);
             }
             break;
