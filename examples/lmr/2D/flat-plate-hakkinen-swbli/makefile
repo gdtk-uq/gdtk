@@ -4,6 +4,7 @@ help:
 	@echo "Main targets available are:"
 	@echo -e "   prep"
 	@echo -e "   run-transient"
+	@echo -e "   run-steady"
 	@echo -e "   post"
 
 prep:
@@ -12,6 +13,10 @@ prep:
 
 run-transient:
 	lmr prep-sim --job=transient.lua
+	lmr run
+
+run-steady:
+	lmr prep-sim --job=steady.lua
 	lmr run
 
 post:
