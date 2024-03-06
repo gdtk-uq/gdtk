@@ -1,0 +1,29 @@
+== 2D/sphere-nonaka
+
+image::nonaka-temperature-contours.png[width=100%,title="Temperature fields in the shock layer in front of a sphere fired in air."]
+
+This example simulates the flow of air over a sphere.
+It is an example of using the two-temperature air model for high-speed flow.
+The particular conditions are chosen to replicate the physical experiments performed by Nonaka et al. (2000).
+Those conditions are Case 18 in Table 1.
+These conditions were chosen because they align with Figure 10 in their article.
+Figure 10 is one of the only cases where the full shock shape was reported.
+Having access to the full shock shape is very useful for validation.
+The conditions of this case are:
+
+* sphere radius : 7mm
+* free stream velocity : 3490 m/s
+* free stream pressure : 4850 Pa
+* free stream temperature : 293.0 K (assumed, not stated)
+* free stream composition : f_N2 = 0.767, f_O2 = 0.233
+
+A comparison of the computed shock shape to the experiment is shown here.
+
+image::nonaka-2T-model-shock-shape.png[width=100%,title="Comparison of Eilmer solution to experimental measurement of shock shape."]
+
+Reference:
+
+1.  *Nonaka, S., Mizuno, H., Takayama, K. and Park, C.* (2000), +
+    _Measurement of Shock Standoff Distance for Sphere in Ballistic Range_, +
+    Journal of Thermophysics & Heat Transfer, *14*(2).
+

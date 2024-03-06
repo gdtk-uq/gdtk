@@ -22,6 +22,9 @@ run:
 
 post:
 	lmr snapshot2vtk --all
+	lmr custom-script --job=shock-shape.lua
+	gnuplot plot-shock-shape.gplot
+	python3 compute-error.py
 
 clean:
 	- rm -rf $(LMR_DIR)
