@@ -54,7 +54,8 @@ def test_run_steady():
         expected_number_steps = 57
         expected_final_cfl = 9.315e+03
     else:
-        assert False, "NOT TESTED ON MAC"
+        expected_number_steps = 55
+        expected_final_cfl = 1.270e+04
     reason = ""
     steps = 0
     cfl = 0.0
