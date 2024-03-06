@@ -15,7 +15,7 @@ import std.stdio : writeln, writefln;
 import std.string : toStringz, strip, split, format;
 import std.conv : to;
 import std.path : dirName;
-import std.file : thisExePath, exists;
+import std.file : thisExePath, exists, rmdirRecurse;
 import std.json : JSONValue;
 import std.algorithm : sort, uniq;
 
@@ -158,6 +158,13 @@ int main_(string[] args)
     set_config_for_core(jsonData);
     // We may not proceed to building of block files if the config parameters are incompatible.
     checkGlobalConfig();
+
+    // Clean out anything in snapshots area if present from earlier run
+    if (lmrCfg.snapshotDir.exists) {
+        if (verbosity > 1) { writeln("lmr prep-sim: Removing old snapshots."); }
+        lmrCfg.snapshotDir.rmdirRecurse;
+    }
+    // and now we're ready to build new stuff!
     if (luaL_dostring(L, toStringz("buildGridAndFieldFiles()")) != 0) {
         writeln("There was a problem in the Eilmer build function buildGridAndFieldFiles() in prepsim.lua");
         string errMsg = to!string(lua_tostring(L, -1));
@@ -167,5 +174,3 @@ int main_(string[] args)
 
     return 0;
 }
-
-
