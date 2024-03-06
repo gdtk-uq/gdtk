@@ -315,7 +315,7 @@ public:
                     auto tokens = lineContent.split();
                     string faceTag = tokens[0];
                     size_t src_cell_id = to!size_t(tokens[1]);
-                    mapped_cells_list[src_blk_id][faceTag] = BlockAndCellId(src_blk_id, src_cell_id);
+                    mapped_cells_list[src_blk_id][faceTag] = BlockAndCellId(blkId, src_cell_id);
                     version (mpi_parallel) {
                         src_cell_ids[blkId][src_blk_id] ~= src_cell_id;
                         ghost_cell_indices[blkId][src_blk_id] ~= i;
@@ -331,7 +331,7 @@ public:
                     auto tokens = lineContent.split();
                     string faceTag = tokens[0];
                     size_t src_cell_id = to!size_t(tokens[1]);
-                    mapped_cells_list[blkId][faceTag] = BlockAndCellId(blkId, src_cell_id);
+                    mapped_cells_list[blkId][faceTag] = BlockAndCellId(src_blk_id, src_cell_id);
                     version (mpi_parallel) {
                         src_cell_ids[src_blk_id][blkId] ~= src_cell_id;
                         ghost_cell_indices[src_blk_id][blkId] ~= i;
@@ -432,9 +432,9 @@ public:
                         auto src_blk_id = mapped_cells_list[blk.id][faceTag].blkId;
                         auto src_cell_id = mapped_cells_list[blk.id][faceTag].cellId;
                         if (!find(GlobalConfig.localFluidBlockIds, src_blk_id).empty) {
-                            auto blk = cast(FluidBlock) globalBlocks[src_blk_id];
-                            assert(blk !is null, "Oops, this should be a FluidBlock object.");
-                            mapped_cells ~= blk.cells[src_cell_id];
+                            auto srcBlk = cast(FluidBlock) globalBlocks[src_blk_id];
+                            assert(srcBlk !is null, "Oops, this should be a FluidBlock object.");
+                            mapped_cells ~= srcBlk.cells[src_cell_id];
                         } else {
                             auto msg = format("block id %d is not in localFluidBlocks", src_blk_id);
                             throw new FlowSolverException(msg);
@@ -448,6 +448,7 @@ public:
         } else { // !cell_mapping_from_file
             set_up_cell_mapping_via_search();
         } // end if !cell_mapping_from_file
+        writefln("for block %d, mapped_cells.length= %d", blk.id, mapped_cells.length);
     } // end set_up_cell_mapping()
 
     // not @nogc

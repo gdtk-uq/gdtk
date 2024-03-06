@@ -197,7 +197,7 @@ function FullFaceCopy:tojson()
    str = str .. '}' -- end of JSON value
    return str
 end
-MappedCellCopy = GhostCellEffect:new{cell_mapping_from_file=false, fileName='mapped_cells', symmetric_mapping=false,
+MappedCellCopy = GhostCellEffect:new{cell_mapping_from_file=false, fileName='lmrsim/mapped-cells', symmetric_mapping=false,
                                      transform_position=false,
                                      c0=Vector3:new{x=0.0,y=0.0,z=0.0},
                                      n=Vector3:new{x=0.0,y=0.0,z=1.0},
