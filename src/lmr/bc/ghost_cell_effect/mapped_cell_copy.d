@@ -448,7 +448,6 @@ public:
         } else { // !cell_mapping_from_file
             set_up_cell_mapping_via_search();
         } // end if !cell_mapping_from_file
-        writefln("for block %d, mapped_cells.length= %d", blk.id, mapped_cells.length);
     } // end set_up_cell_mapping()
 
     // not @nogc
