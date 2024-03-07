@@ -205,11 +205,11 @@ public:
                     foreach (i; 0 .. solid.nic) {
                         double x = solidBlocks[ib]["pos.x", i, j, k];
                         double y = solidBlocks[ib]["pos.y", i, j, k];
-                        double z = solidBlocks[ib]["pos.z", i, j, k];
+                        double z = (GlobalConfig.dimensions == 3) ? solidBlocks[ib]["pos.z", i, j, k] : 0.0;
                         if (limitRegion && 
                             (x < x0 || y < y0 || z < z0 ||
                              x > x1 || y > y1 || z > z1)) continue;
-                        double volume = solidBlocks[ib]["volume", i, j, k];
+                        double volume = solidBlocks[ib]["vol", i, j, k];
                         double value = solidBlocks[ib][varName, i, j, k];
                         volume_sum += volume;
                         L1 += volume * abs(value);

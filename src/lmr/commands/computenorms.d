@@ -20,6 +20,7 @@ import std.algorithm;
 import globalconfig;
 import fileutil;
 import flowsolution;
+import solidsolution;
 import lmrconfig : lmrCfg;
 import init : initConfiguration;
 import cmdhelper;
@@ -59,6 +60,12 @@ options ([+] can be repeated):
      default:
        --norms="rho"
        If no norms-list supplied, then just process density.
+
+ --solid-norms
+     comma separated list of variables for norms calculation in solid domains
+     examples:
+       --solid-norms="T,e"
+     default: none (don't do anything for solid domain)
 
  -r, --reference-solution
      a reference solution provided in a Lua file
@@ -121,8 +128,8 @@ int main_(string[] args)
     int[] snapshots;
     bool finalSnapshot = false;
     bool allSnapshots = false;
-    bool binaryFormat = false;
     string normsStr;
+    string solidNormsStr;
     string outFilename;
     string region;
     string luaRefSoln;
@@ -131,6 +138,7 @@ int main_(string[] args)
                config.bundling,
                "v|verbose+", &verbosity,
                "n|norms", &normsStr,
+               "solid-norms", &solidNormsStr,
                "r|reference-solution", &luaRefSoln,
                "s|snapshots|snapshot", &snapshots,
                "f|final", &finalSnapshot,
@@ -154,6 +162,8 @@ int main_(string[] args)
 
     auto normsVariables = normsStr.split(",");
     foreach (var; normsVariables) var = strip(var);
+    auto solidNormsVariables = solidNormsStr.split(",");
+    foreach (var; solidNormsVariables) var = strip(var);
 
     // Use stdout if no output filename is supplied,
     // or open a file ready for use if one is.
@@ -169,11 +179,12 @@ int main_(string[] args)
 
     foreach (snap; snaps2process) {
         if (verbosity > 1) {
-            writefln("lmr %s: Computing norms for snapshot %s.", cmdName, snap);
+            writefln("lmr %s: Computing norms for fluid snapshot %s.", cmdName, snap);
         }
         auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks);
         outfile.writeln("---"); // YAML document opener
         outfile.writefln("snapshot: %s", snap);
+        outfile.writeln("field_type: fluid");
         if (!luaRefSoln.empty) {
             soln.subtract_ref_soln(luaRefSoln);
             outfile.writefln("error-norms-computed: yes");
@@ -195,6 +206,39 @@ int main_(string[] args)
             outfile.writefln("   Linf-pos: {x: %.6e, y: %.6e, z: %.6e }", norms[3], norms[4], norms[5]);
         }
         outfile.writeln("..."); // YAML document closer
+    }
+
+    if (GlobalConfig.nSolidBlocks > 0 && solidNormsVariables.length > 0) {
+        foreach (snap; snaps2process) {
+            if (verbosity > 1) {
+                writefln("lmr %s: Computing norms for solid snapshot %s.", cmdName, snap);
+            }
+            auto soln = new SolidSolution(to!int(snap), GlobalConfig.nFluidBlocks);
+            outfile.writeln("---"); // YAML document opener
+            outfile.writefln("snapshot: %s", snap);
+            outfile.writeln("field_type: solid");
+            if (!luaRefSoln.empty) {
+                soln.subtract_ref_soln(luaRefSoln);
+                outfile.writefln("error-norms-computed: yes");
+                outfile.writefln("reference-solution-file: %s", luaRefSoln);
+            }
+            foreach (var; solidNormsVariables) {
+                if (verbosity > 2) {
+                    writefln("lmr %s: Computing norm for variable= %s", cmdName, var);
+                }
+                if (!canFind(soln.solidBlocks[0].variableNames, var)) {
+                    writeln(format("Ignoring requested variable \"%s\". This does not appear in list of solid solution variables.", var));
+                    continue;
+                }
+                auto norms = soln.compute_volume_weighted_norms(var, region);
+                outfile.writefln("%s:", var);
+                outfile.writefln("   L1: " ~ lmrCfg.dblVarFmt, norms[0]);
+                outfile.writefln("   L2: " ~ lmrCfg.dblVarFmt, norms[1]);
+                outfile.writefln("   Linf: " ~ lmrCfg.dblVarFmt, norms[2]);
+                outfile.writefln("   Linf-pos: {x: %.6e, y: %.6e, z: %.6e }", norms[3], norms[4], norms[5]);
+            }
+            outfile.writeln("..."); // YAML document closer
+        }
     }
 
     if (verbosity > 0) {
