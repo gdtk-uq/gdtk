@@ -924,7 +924,6 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
          */
         prevGlobalResidual = globalResidual;
         solveNewtonStep(updatePreconditionerThisStep);
-	computeGlobalResidual();
 
 	/* 1a. perform a physicality check if required */
         omega = nkCfg.usePhysicalityCheck ? determineRelaxationFactor() : 1.0;
@@ -1370,6 +1369,8 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
 
     setResiduals();
 
+    computeGlobalResidual();
+
     determineScaleFactors(rowScale, colScale, nkCfg.useScaling);
 
     if (nkCfg.usePreconditioner && updatePreconditionerThisStep) {
@@ -1377,6 +1378,7 @@ void solveNewtonStep(bool updatePreconditionerThisStep)
     }
 
     if (nkCfg.useResidualSmoothing) {
+        evalResidualSmoothing();
 	applyResidualSmoothing();
     }
 
@@ -1740,24 +1742,21 @@ void scaleVector(ConservedQuantities scale, ref double[] vec, size_t nConserved)
 }
 
 /**
- * Apply residual smoothing.
+ * Routines for evaluating and applying residual smoothing.
  *
- * Reference:
- * Mavriplis (2021)
- * A residual smoothing strategy for accelerating Newton method continuation.
- * Computers & Fluids
+ * REFERENCE:    D. J. Mavriplis
+ *               A residual smoothing strategy for accelerating Newton method continuation.
+ *               Computers & Fluids, Vol. 220 (2021)
  *
  * Authors: KAD and RJG
  * Date: 2023-03-13
  */
-void applyResidualSmoothing()
+void evalResidualSmoothing()
 {
+    // Compute an approximate solution: dU = D^{-1} * R(U),
+    // where D is some approximation of the Jacobian, here we use the
+    // same approximation as the precondition matrix out of convenience
     size_t nConserved = GlobalConfig.cqi.n;
-
-    //----
-    // 1. Compute approximate solution via dU = D^{-1} * R(U) where D = preconditioner matrix
-    //----
-
     final switch (nkCfg.preconditioner) {
     case PreconditionerType.diagonal:
         foreach (blk; parallel(localFluidBlocks,1)) { blk.DinvR[] = 0.0; }
@@ -1778,15 +1777,16 @@ void applyResidualSmoothing()
         }
         break;
     } // end switch
+}
 
-    //----
-    // 2. Add smoothing source term to RHS
-    //----
+void applyResidualSmoothing()
+{
+    // Add the smoothing source term to the Residual vector
+    size_t nConserved = GlobalConfig.cqi.n;
     foreach (blk; parallel(localFluidBlocks,1)) {
 	size_t startIdx = 0;
 	foreach (cell; blk.cells) {
-	    double dtInv = 1.0/cell.dt_local;
-	    blk.R[startIdx .. startIdx+nConserved] += dtInv * blk.DinvR[startIdx .. startIdx+nConserved];
+	    blk.R[startIdx .. startIdx+nConserved] += (1.0/cell.dt_local) * blk.DinvR[startIdx .. startIdx+nConserved];
 	    startIdx += nConserved;
 	}
     }
@@ -2547,11 +2547,19 @@ double applyLineSearch(double omega)
     }
     double minOmega = nkCfg.minRelaxationFactorForUpdate;
     double lambdaReductionFactor = nkCfg.relaxationFactorReductionFactor;
-    double alpha = 1.0e-04;                       // a constant used in the step-acceptance test
-    double lambda = 1.0, lambdaPrev = 1.0;        // step length
-    double f = 0.5*globalResidual*globalResidual; // objective function evaluated at starting point
-    double fPlus, fPlusPrev;                      // objective function evaluated at new point
-    double initSlope = 0.0;                       // intial slope used in the step-acceptance test
+    double alpha = 1.0e-04;                // a constant used in the step-acceptance test
+    double lambda = 1.0, lambdaPrev = 1.0; // step length
+    double f = 0.0;                        // objective function evaluated at starting point
+    double fPlus, fPlusPrev;               // objective function evaluated at new point
+    double initSlope = 0.0;                // intial slope used in the step-acceptance test
+
+
+    // evaluate objective function at starting point
+    mixin(dotOverBlocks("f", "R", "R"));
+    version(mpi_parallel) {
+        MPI_Allreduce(MPI_IN_PLACE, &f, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+    f = 0.5*f;
 
     // evaluate the initial slope := - F(x)^T J(x) p
     // where we take p = omega*dU as the search direction, see Dennis and Schnabel (pg. 148)
@@ -2613,14 +2621,7 @@ double applyLineSearch(double omega)
 	// 3. Add smoothing source term
 	//----
 	if (nkCfg.useResidualSmoothing) {
-	    foreach (blk; parallel(localFluidBlocks,1)) {
-		size_t startIdx = 0;
-		foreach (cell; blk.cells) {
-		    auto dtInv = 1.0/cell.dt_local;
-		    blk.R[startIdx .. startIdx+nConserved] += dtInv * blk.DinvR[startIdx .. startIdx+nConserved];
-		}
-		startIdx += nConserved;
-	    }
+            applyResidualSmoothing();
 	}
 
 	//----
