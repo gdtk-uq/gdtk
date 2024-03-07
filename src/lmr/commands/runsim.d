@@ -14,7 +14,7 @@ module runsim;
 import core.runtime;
 import core.stdc.stdlib : system;
 import std.getopt;
-import std.stdio : File, writeln, writefln;
+import std.stdio : File, write, writeln, writefln;
 import std.string;
 import std.file : exists;
 import core.stdc.stdlib : exit;
@@ -218,6 +218,10 @@ int main(string[] args)
         writeln("Compiler-name: ", lmrCfg.compilerName);
         writeln("Parallel-flavour: PUT_PARALLEL_FLAVOUR_HERE");
         writeln("Number-type: PUT_NUMBER_TYPE_HERE");
+        write("Build-flavour: ");
+        version(flavour_debug) { writeln("debug"); }
+        version(flavour_profile) { writeln("profile"); }
+        version(flavour_fast) { writeln("fast"); }
         writeln("Build-date: ", lmrCfg.buildDate);
     }
 
