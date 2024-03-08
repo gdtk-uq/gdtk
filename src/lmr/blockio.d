@@ -50,12 +50,12 @@ public:
     {
     	auto f = File(fname, "w");
 	    f.writefln("---");
-    	f.writefln("  version: \"%s\"", BLK_IO_VERSION);
+            f.writefln("  version: \"%s\"", BLK_IO_VERSION);
 	    f.writeln("  revision-id: ", lmrCfg.revisionId);
-    	f.writefln("  field-type: \"%s\"", fieldVarsTypeName(mCIO.FVT));
+            f.writefln("  field-type: \"%s\"", fieldVarsTypeName(mCIO.FVT));
 	    f.writefln("  variables:");
 	    foreach (var; mCIO.variables) {
-	        f.writefln("   - %s", var);
+	        f.writefln("   - '%s'", var);
 	    }
 	    f.close();
     }

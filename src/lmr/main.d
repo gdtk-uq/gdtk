@@ -11,6 +11,7 @@ import probeflow;
 import sliceflow;
 import extractline;
 import limiter2vtk;
+import residual2vtk;
 import prepgrids;
 import prepsim;
 import prepmappedcells;
@@ -54,6 +55,7 @@ Show help for a given Eilmer command or topic.
     commands["slice-flow"] = sliceFlowCmd;
     commands["extract-line"] = extractLineCmd;
     commands["limiter2vtk"] = limiter2vtkCmd;
+    commands["residual2vtk"] = residual2vtkCmd;
     commands["prep-grids"] = prepGridCmd;
     commands["prep-grid"] = commands["prep-grids"]; // alias for prep-grids
     commands["prep-sim"] = prepSimCmd;

@@ -33,12 +33,14 @@ struct LmrCfg {
     shared immutable string fluidMetadataFile;
     shared immutable string solidMetadataFile;
     shared immutable string limiterMetadataFile;
+    shared immutable string residualMetadataFile;
     shared immutable string restartFile;
     shared immutable string timesFile;
     shared immutable string referenceResidualsFile;
     shared immutable string fluidPrefix;
     shared immutable string solidPrefix;
     shared immutable string limiterPrefix;
+    shared immutable string residualPrefix;
     shared immutable string loadsPrefix;
     shared immutable string gridPrefix;
     shared immutable string gridDir;
@@ -83,12 +85,14 @@ static this()
     lmrCfg.fluidMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["fluid-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
     lmrCfg.solidMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["solid-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
     lmrCfg.limiterMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["limiter-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
+    lmrCfg.residualMetadataFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["residual-prefix"].str ~ lmrJSONCfg["metadata-extension"].str;
     lmrCfg.restartFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["restart-filename"].str;
     lmrCfg.timesFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["times-filename"].str;
     lmrCfg.referenceResidualsFile = lmrCfg.snapshotDir ~ "/" ~ lmrJSONCfg["reference-residuals-file"].str;
     lmrCfg.fluidPrefix = lmrJSONCfg["fluid-prefix"].str;
     lmrCfg.solidPrefix = lmrJSONCfg["solid-prefix"].str;
     lmrCfg.limiterPrefix = lmrJSONCfg["limiter-prefix"].str;
+    lmrCfg.residualPrefix = lmrJSONCfg["residual-prefix"].str;
     lmrCfg.loadsPrefix = lmrJSONCfg["loads-prefix"].str;
     lmrCfg.gridPrefix = lmrJSONCfg["grid-prefix"].str;
     lmrCfg.gridDir = lmrJSONCfg["grid-directory"].str;
@@ -182,6 +186,24 @@ string limiterFilename(int snapshot, int blkId)
 	    lmrCfg.limiterPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
     if (GlobalConfig.field_format == "gziptext")
 	    fname ~= lmrCfg.gzipExt;
+    return fname;
+}
+
+/**
+ * Return the residual values filename for a single block ('blkId') as a string.
+ *
+ * Authors: KAD and RJG
+ * Date: 2024-03-07
+ */
+string residualFilename(int snapshot, int blkId)
+{
+    string fname = lmrCfg.snapshotDir ~
+        "/" ~
+        format(lmrCfg.snapshotIdxFmt, snapshot) ~
+        "/" ~
+        lmrCfg.residualPrefix ~ "-" ~ format(lmrCfg.blkIdxFmt, blkId);
+    if (GlobalConfig.field_format == "gziptext")
+        fname ~= lmrCfg.gzipExt;
     return fname;
 }
 

@@ -8,7 +8,7 @@
 module fvcellio;
 
 import std.stdio;
-import std.algorithm : startsWith;
+import std.algorithm : canFind, startsWith;
 import std.string : split;
 import std.conv : to;
 import std.format : format;
@@ -25,14 +25,15 @@ import solidfvcell : SolidFVCell;
 import flowstate : FlowState;
 import geom : Vector3;
 
-enum FieldVarsType { fluid, solid, limiter };
+enum FieldVarsType { fluid, solid, limiter, residual };
 
 string fieldVarsTypeName(FieldVarsType i)
 {
     final switch(i) {
 	case FieldVarsType.fluid: return "fluid";
-    case FieldVarsType.solid: return "solid";
+        case FieldVarsType.solid: return "solid";
 	case FieldVarsType.limiter: return "limiter";
+        case FieldVarsType.residual: return "residual";
     }
 }
 
@@ -49,6 +50,7 @@ FieldVarsType fieldVarsTypeFromName(string name)
 	    errMsg ~= "   'fluid'\n";
 	    errMsg ~= "   'solid'\n";
 	    errMsg ~= "   'limiter'\n";
+	    errMsg ~= "   'residual'\n";
 	    errMsg ~= "Check the selection or its spelling.\n";
 	    throw new Error(errMsg);
     }
@@ -603,12 +605,173 @@ private:
     int[string] mTurbQuants;
 }
 
+/**
+ * Build the list of residual variables based on modelling configuration.
+ *
+ * The string names for variables should match those in this module in:
+ *
+ *   FluidFVCellResidualIO.opIndex; and
+ *   FluidFVCellResidualIO.opIndexAssign.
+ *
+ * Authors: KAD and RJG
+ * Date: 2024-03-07
+ */
+string[] buildResidualVariables()
+{
+    alias cfg = GlobalConfig;
+    string[] variables;
+    // we do not have a (total) mass residual for multi-species simulations
+    if (cfg.gmodel_master.n_species == 1) {
+        variables ~= "mass";
+    }
+    variables ~= "x-momentum";
+    variables ~= "y-momentum";
+    if (cfg.dimensions == 3) variables ~= "z-momentum";
+    variables ~= "total-energy";
+    foreach (isp; 0 .. cfg.gmodel_master.n_species) {
+	variables ~= cfg.gmodel_master.species_name(isp);
+    }
+    foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
+        variables ~= cfg.gmodel_master.energy_mode_name(imode);
+    }
+    if (cfg.turbulence_model_name != "none") {
+	foreach (iturb; 0 .. cfg.turb_model.nturb) {
+	    variables ~= cfg.turb_model.primitive_variable_name(iturb);
+	}
+    }
+    return variables;
+}
+
+
+
+class FluidFVCellResidualIO : FVCellIO {
+public:
+
+    this()
+    {
+        this(buildResidualVariables());
+    }
+
+    this(string[] variables)
+    {
+	cFVT = FieldVarsType.residual;
+	mVariables = variables.dup;
+
+	alias cfg = GlobalConfig;
+
+        string[] spList;
+        foreach (i; 0 .. cfg.gmodel_master.n_species) {
+            spList ~= cfg.gmodel_master.species_name(i);
+        }
+        string[] umList;
+        foreach (i; 0 .. cfg.gmodel_master.n_modes) {
+            umList ~= cfg.gmodel_master.energy_mode_name(i);
+        }
+        string[] tbList;
+        foreach (i; 0 .. cfg.turb_model.nturb) {
+            tbList ~= cfg.turb_model.primitive_variable_name(i);
+        }
+
+	foreach (var; variables) {
+            if (spList.canFind(var)) {
+                mSpecies[var] = cfg.gmodel_master.species_index(var);
+            }
+            if (umList.canFind(var)) {
+                muModes[var] = cfg.gmodel_master.energy_mode_index(var);
+            }
+            if (tbList.canFind(var)) {
+                mTurbQuants[var] = cfg.turb_model.primitive_variable_index(var);
+            }
+	}
+    }
+
+    override
+    FluidFVCellResidualIO dup()
+    {
+        return new FluidFVCellResidualIO(mVariables);
+    }
+
+    override
+    const double opIndex(FVCell cell, string var)
+    {
+	alias cfg = GlobalConfig;
+
+        auto fcell = cast(FluidFVCell) cell;
+        if (fcell is null) {
+            throw new LmrException("Invalid cast to FluidFVCell.");
+        }
+        // First handle array-stored values:
+        // species, modes and turbulence quantities
+        if (var in mSpecies) {
+            return fcell.dUdt[0][cfg.cqi.species+mSpecies[var]].re;
+        }
+        if (var in muModes) {
+            return fcell.dUdt[0][cfg.cqi.modes+muModes[var]].re;
+        }
+        if (var in mTurbQuants) {
+            return fcell.dUdt[0][cfg.cqi.turb+mTurbQuants[var]].re;
+        }
+
+        // For everything else, find appropriate case
+        switch(var) {
+        case "mass": return fcell.dUdt[0][cfg.cqi.mass].re;
+        case "x-momentum": return fcell.dUdt[0][cfg.cqi.xMom].re;
+        case "y-momentum": return fcell.dUdt[0][cfg.cqi.yMom].re;
+        case "z-momentum": return fcell.dUdt[0][cfg.cqi.zMom].re;
+        case "total-energy": return fcell.dUdt[0][cfg.cqi.totEnergy].re;
+        default:
+            throw new LmrException("Invalid selection for cell dUdt entry: " ~ var);
+	}
+    }
+
+    override
+    ref double opIndexAssign(double value, FVCell cell, string var)
+    {
+	alias cfg = GlobalConfig;
+
+        auto fcell = cast(FluidFVCell) cell;
+        if (fcell is null) {
+            throw new LmrException("Invalid cast to FluidFVCell.");
+        }
+        if (var in mSpecies) {
+            fcell.dUdt[0][cfg.cqi.species+mSpecies[var]].re = value;
+            return fcell.dUdt[0][cfg.cqi.species+mSpecies[var]].re;
+        }
+        if (var in muModes) {
+            fcell.dUdt[0][cfg.cqi.modes+muModes[var]].re = value;
+            return fcell.dUdt[0][cfg.cqi.modes+muModes[var]].re;
+        }
+        if (var in mTurbQuants) {
+            fcell.dUdt[0][cfg.cqi.turb+mTurbQuants[var]].re = value;
+            return fcell.dUdt[0][cfg.cqi.turb+mTurbQuants[var]].re;
+        }
+
+        // For everything else, find appropriate case
+        switch(var) {
+        case "mass": fcell.dUdt[0][cfg.cqi.mass].re = value; return fcell.dUdt[0][cfg.cqi.mass].re;
+        case "x-momentum": fcell.dUdt[0][cfg.cqi.xMom].re = value; return fcell.dUdt[0][cfg.cqi.xMom].re;
+        case "y-momentum": fcell.dUdt[0][cfg.cqi.yMom].re = value; return fcell.dUdt[0][cfg.cqi.yMom].re;
+        case "z-momentum": fcell.dUdt[0][cfg.cqi.zMom].re = value; return fcell.dUdt[0][cfg.cqi.zMom].re;
+        case "total-energy": fcell.dUdt[0][cfg.cqi.totEnergy].re = value; return fcell.dUdt[0][cfg.cqi.totEnergy].re;
+        default:
+            throw new LmrException("Invalid selection for cell dUdt entry: " ~ var);
+        }
+    }
+
+private:
+    int[string] mSpecies;
+    int[string] muModes;
+    int[string] mTurbQuants;
+}
+
+
 FVCellIO createFVCellIO(FieldVarsType fvt, string[] variables)
 {
     final switch (fvt) {
-    case FieldVarsType.fluid: return new FluidFVCellIO(variables);
+        case FieldVarsType.fluid: return new FluidFVCellIO(variables);
 	case FieldVarsType.solid: return new SolidFVCellIO(variables);
 	case FieldVarsType.limiter: return new FluidFVCellLimiterIO(variables);
+	case FieldVarsType.residual: return new FluidFVCellResidualIO(variables);
     }
 }
 

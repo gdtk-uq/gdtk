@@ -80,6 +80,9 @@ static this()
 FVCellIO limCIO;
 BlockIO limBlkIO;
 
+FVCellIO residCIO;
+BlockIO residBlkIO;
+
 /*---------------------------------------------------------------------
  * Enums for preconditioners
  *---------------------------------------------------------------------
@@ -172,6 +175,7 @@ struct NKGlobalConfig {
     bool writeSnapshotOnLastStep = true;
     bool writeDiagnosticsOnLastStep = true;
     bool writeLimiterValues = false;
+    bool writeResidualValues = false;
     bool writeLoads = false;
 
     void readValuesFromJSON(JSONValue jsonData)
@@ -220,6 +224,7 @@ struct NKGlobalConfig {
         writeSnapshotOnLastStep = getJSONbool(jsonData, "write_snapshot_on_last_step", writeSnapshotOnLastStep);
         writeDiagnosticsOnLastStep = getJSONbool(jsonData, "write_diagnostics_on_last_step", writeDiagnosticsOnLastStep);
         writeLimiterValues = getJSONbool(jsonData, "write_limiter_values", writeLimiterValues);
+        writeResidualValues = getJSONbool(jsonData, "write_residual_values", writeResidualValues);
         writeLoads = getJSONbool(jsonData, "write_loads", writeLoads);
     }
 }
@@ -701,6 +706,14 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             limBlkIO = new GzipBlockIO(limCIO);
         limBlkIO.writeMetadataToFile(lmrCfg.limiterMetadataFile);
     }
+    if (nkCfg.writeResidualValues) {
+        residCIO = new FluidFVCellResidualIO(buildResidualVariables());
+        if (cfg.field_format == "rawbinary")
+            residBlkIO = new BinaryBlockIO(residCIO);
+        else
+            residBlkIO = new GzipBlockIO(residCIO);
+        residBlkIO.writeMetadataToFile(lmrCfg.residualMetadataFile);
+    }
     allocateGlobalGMRESWorkspace();
     foreach (blk; localFluidBlocks) {
         blk.allocate_GMRES_workspace(nkCfg.maxLinearSolverIterations);
@@ -1033,6 +1046,9 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             writeSnapshot(step, dt, cfl, nWrittenSnapshots);
             if (nkCfg.writeLimiterValues) {
                 writeLimiterValues(step, nWrittenSnapshots);
+            }
+            if (nkCfg.writeResidualValues) {
+                writeResidualValues(step, nWrittenSnapshots);
             }
             if (nkCfg.writeLoads) {
                 writeLoads(step, nWrittenSnapshots);
@@ -2964,6 +2980,30 @@ void writeLimiterValues(int step, int nWrittenSnapshots)
         cells.length = blk.cells.length;
         foreach (i, ref c; cells) c = blk.cells[i];
         limBlkIO.writeVariablesToFile(fileName, cells);
+    }
+}
+
+/**
+ * Write residual values to disk.
+ *
+ * Authors: KAD and RJG
+ * Date: 2024-03-07
+ */
+void writeResidualValues(int step, int nWrittenSnapshots)
+{
+    alias cfg = GlobalConfig;
+    if (cfg.is_master_task) {
+        writefln("    |");
+        writefln("    |-->  Writing residual values at step = %4d  ", step);
+    }
+
+    int iSnap = (nWrittenSnapshots <= nkCfg.totalSnapshots) ? nWrittenSnapshots : nkCfg.totalSnapshots;
+    foreach (blk; localFluidBlocks) {
+        auto fileName = residualFilename(iSnap, blk.id);
+        FVCell[] cells;
+        cells.length = blk.cells.length;
+        foreach (i, ref c; cells) c = blk.cells[i];
+        residBlkIO.writeVariablesToFile(fileName, cells);
     }
 }
 
