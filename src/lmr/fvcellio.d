@@ -447,16 +447,14 @@ string[] buildLimiterVariables()
     foreach (isp; 0 .. cfg.gmodel_master.n_species) {
 	variables ~= "massf-" ~ cfg.gmodel_master.species_name(isp);
     }
-    if (cfg.gmodel_master.n_modes > 1) {
-        foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
-	    if (cfg.thermo_interpolator == InterpolateOption.rhou ||
-		cfg.thermo_interpolator == InterpolateOption.rhop ) {
-		variables ~= "e-" ~ cfg.gmodel_master.energy_mode_name(imode);
-	    }
-	    else {
-		variables ~= "T-" ~ cfg.gmodel_master.energy_mode_name(imode);
-	    }
-	}
+    foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
+        if (cfg.thermo_interpolator == InterpolateOption.rhou ||
+            cfg.thermo_interpolator == InterpolateOption.rhop ) {
+            variables ~= "e-" ~ cfg.gmodel_master.energy_mode_name(imode);
+        }
+        else {
+            variables ~= "T-" ~ cfg.gmodel_master.energy_mode_name(imode);
+        }
     }
     if (cfg.turbulence_model_name != "none") {
 	foreach (iturb; 0 .. cfg.turb_model.nturb) {
