@@ -618,17 +618,18 @@ string[] buildResidualVariables()
 {
     alias cfg = GlobalConfig;
     string[] variables;
-    // we do not have a (total) mass residual for multi-species simulations
-    if (cfg.gmodel_master.n_species == 1) {
+    if (cfg.gmodel_master.n_species > 1) {
+        // we do not have a (total) mass residual for multi-species simulations
+        foreach (isp; 0 .. cfg.gmodel_master.n_species) {
+            variables ~= cfg.gmodel_master.species_name(isp);
+        }
+    } else {
         variables ~= "mass";
     }
     variables ~= "x-momentum";
     variables ~= "y-momentum";
     if (cfg.dimensions == 3) variables ~= "z-momentum";
     variables ~= "total-energy";
-    foreach (isp; 0 .. cfg.gmodel_master.n_species) {
-	variables ~= cfg.gmodel_master.species_name(isp);
-    }
     foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
         variables ~= cfg.gmodel_master.energy_mode_name(imode);
     }
