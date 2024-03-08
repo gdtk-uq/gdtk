@@ -1044,12 +1044,6 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 
         if (((step % nkCfg.stepsBetweenSnapshots) == 0) || (finalStep && nkCfg.writeSnapshotOnLastStep)) {
             writeSnapshot(step, dt, cfl, nWrittenSnapshots);
-            if (nkCfg.writeLimiterValues) {
-                writeLimiterValues(step, nWrittenSnapshots);
-            }
-            if (nkCfg.writeResidualValues) {
-                writeResidualValues(step, nWrittenSnapshots);
-            }
             if (nkCfg.writeLoads) {
                 writeLoads(step, nWrittenSnapshots);
             }
@@ -2841,12 +2835,12 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
         // Wait for master to complete building the directory for the next snapshot
         version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
 
-        foreach (blk; localFluidBlocks) {
-            auto fileName = fluidFilename(nWrittenSnapshots, blk.id);
-            FVCell[] cells;
-            cells.length = blk.cells.length;
-            foreach (i, ref c; cells) c = blk.cells[i];
-            fluidBlkIO.writeVariablesToFile(fileName, cells);
+        writeFluidValues(nWrittenSnapshots);
+        if (nkCfg.writeLimiterValues) {
+            writeLimiterValues(nWrittenSnapshots);
+        }
+        if (nkCfg.writeResidualValues) {
+            writeResidualValues(nWrittenSnapshots);
         }
 
 	// Add restart info
@@ -2865,14 +2859,25 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
                 auto fromName = fluidFilename(iSnap, blk.id);
                 auto toName = fluidFilename(iSnap-1, blk.id);
                 rename(fromName, toName);
+                if (nkCfg.writeLimiterValues) {
+                    fromName = limiterFilename(iSnap, blk.id);
+                    toName = limiterFilename(iSnap-1, blk.id);
+                    rename(fromName, toName);
+                }
+                if (nkCfg.writeResidualValues) {
+                    fromName = residualFilename(iSnap, blk.id);
+                    toName = residualFilename(iSnap-1, blk.id);
+                    rename(fromName, toName);
+                }
             }
         }
-        foreach (blk; localFluidBlocks) {
-            auto fileName = fluidFilename(nkCfg.totalSnapshots, blk.id);
-            FVCell[] cells;
-            cells.length = blk.cells.length;
-            foreach (i, ref c; cells) c = blk.cells[i];
-            fluidBlkIO.writeVariablesToFile(fileName, cells);
+
+        writeFluidValues(nkCfg.totalSnapshots);
+        if (nkCfg.writeLimiterValues) {
+            writeLimiterValues(nkCfg.totalSnapshots);
+        }
+        if (nkCfg.writeResidualValues) {
+            writeResidualValues(nkCfg.totalSnapshots);
         }
 
 	// Shuffle the restart info
@@ -2956,24 +2961,42 @@ void printStatusToScreen(int step, double cfl, double dt, double wallClockElapse
 }
 
 /**
- * Write limiter values to disk.
+ * Write fluid field values to disk.
  *
- * Presently, the only use case for this is on the final step.
- * We write the limiter values so that the adjoint solver can
- * read them in at initialisation time.
- *
- * Authors: RJG
- * Date: 2023-08-13
+ * Authors: RJG and KAD
+ * Date: 2024-03-08
  */
-void writeLimiterValues(int step, int nWrittenSnapshots)
+void writeFluidValues(int iSnap)
 {
     alias cfg = GlobalConfig;
     if (cfg.is_master_task) {
         writefln("    |");
-        writefln("    |-->  Writing limiter values at step = %4d  ", step);
+        writefln("    |-->  Writing fluid values");
     }
 
-    int iSnap = (nWrittenSnapshots <= nkCfg.totalSnapshots) ? nWrittenSnapshots : nkCfg.totalSnapshots;
+    foreach (blk; localFluidBlocks) {
+        auto fileName = fluidFilename(iSnap, blk.id);
+        FVCell[] cells;
+        cells.length = blk.cells.length;
+        foreach (i, ref c; cells) c = blk.cells[i];
+        fluidBlkIO.writeVariablesToFile(fileName, cells);
+    }
+}
+
+/**
+ * Write limiter values to disk.
+ *
+ * Authors: RJG and KAD
+ * Date: 2023-08-13
+ */
+void writeLimiterValues(int iSnap)
+{
+    alias cfg = GlobalConfig;
+    if (cfg.is_master_task) {
+        writefln("    |");
+        writefln("    |-->  Writing limiter values");
+    }
+
     foreach (blk; localFluidBlocks) {
         auto fileName = limiterFilename(iSnap, blk.id);
         FVCell[] cells;
@@ -2989,15 +3012,14 @@ void writeLimiterValues(int step, int nWrittenSnapshots)
  * Authors: KAD and RJG
  * Date: 2024-03-07
  */
-void writeResidualValues(int step, int nWrittenSnapshots)
+void writeResidualValues(int iSnap)
 {
     alias cfg = GlobalConfig;
     if (cfg.is_master_task) {
         writefln("    |");
-        writefln("    |-->  Writing residual values at step = %4d  ", step);
+        writefln("    |-->  Writing residual values");
     }
 
-    int iSnap = (nWrittenSnapshots <= nkCfg.totalSnapshots) ? nWrittenSnapshots : nkCfg.totalSnapshots;
     foreach (blk; localFluidBlocks) {
         auto fileName = residualFilename(iSnap, blk.id);
         FVCell[] cells;
