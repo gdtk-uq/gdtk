@@ -8,17 +8,13 @@ p_inf = 66.43 -- Pa
 u_inf = 1589.8 -- m/s
 T_inf = 41.92 -- degree K
 T_vib = 1000.0 -- freestream has frozen vibrational energy
-T_wall = 296.0 -- degre K, assumed cold-wall temperature
-
--- End of ramp, and of the whole flow domain.
-m_per_inch = 0.0254
-L2 = 10.0*m_per_inch
+T_wall = 296.0 -- degree K, assumed cold-wall temperature
 
 nsp, nmodes = setGasModel('air-5sp-2T.gas')
 print('5-species, 2T air model: nsp= ', nsp, ' nmodes= ', nmodes)
 inflow = FlowState:new{p=p_inf, T=T_inf, T_modes={T_vib,}, velx=u_inf,
                        massf={N2=0.767,O2=0.233}}
-initial = FlowState:new{p=p_inf, T=T_inf, T_modes={T_inf,}, velx=0,
+initial = FlowState:new{p=p_inf/5, T=T_inf, T_modes={T_inf,}, velx=0,
                         massf={N2=0.767,O2=0.233}}
 flowDict = {
    initial=initial,
@@ -39,6 +35,7 @@ config.viscous = true
 config.spatial_deriv_locn = 'vertices'
 config.spatial_deriv_calc = 'divergence'
 config.cfl_value = 1.0
+L2 = 0.254 -- End of ramp, and of the whole flow domain.
 config.max_time = 10.0*L2/u_inf -- time in flow lengths
 config.max_step = 200000
 config.dt_init = 1.0e-8
