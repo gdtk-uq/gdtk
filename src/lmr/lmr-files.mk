@@ -104,6 +104,7 @@ LMR_CMD_FILES = $(LMR_CMD)/checkjacobian.d \
 	$(LMR_CMD)/extractline.d \
 	$(LMR_CMD)/limiter2vtk.d \
 	$(LMR_CMD)/residual2vtk.d \
+	$(LMR_CMD)/prepgas.d \
 	$(LMR_CMD)/prepsim.d \
 	$(LMR_CMD)/prepgrids.d \
 	$(LMR_CMD)/prepmappedcells.d \

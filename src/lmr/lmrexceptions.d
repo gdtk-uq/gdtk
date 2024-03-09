@@ -65,3 +65,18 @@ class LmrPostProcessingException : LmrException {
         super(message, file, line, next);
     }
 }
+
+/**
+ * Class to signal an exception at pre-processing stage.
+ *
+ * Authors: RJG
+ * Date: 2024-03-09
+ */
+class LmrPreProcessingException : LmrException {
+    @nogc
+    this(string message, string file=__FILE__, size_t line=__LINE__,
+         Throwable next=null)
+    {
+        super(message, file, line, next);
+    }
+}
