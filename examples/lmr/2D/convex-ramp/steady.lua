@@ -3,7 +3,12 @@
 print("Model of Mohammadian's convex-ramp experiment with thermal nonequilibrium.")
 config.solver_mode = 'steady'
 config.dimensions = 2
-print("Set up steady-state solve for Hakkinen et al's 1959 experiment.")
+
+p_inf = 66.43 -- Pa
+u_inf = 1589.8 -- m/s
+T_inf = 41.92 -- degree K
+T_vib = 1000.0 -- freestream has frozen vibrational energy
+T_wall = 296.0 -- degre K, assumed cold-wall temperature
 --
 nsp, nmodes = setGasModel('air-5sp-2T.gas')
 print('5-species, 2T air model: nsp= ', nsp, ' nmodes= ', nmodes)
