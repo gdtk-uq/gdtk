@@ -301,7 +301,7 @@ extern(C) int find_nearest_cell_centre_sg(lua_State *L)
  *                             interpolation="linear",
  *                             label="A-3D-Grid"}
  *
- * importedGrid = StructuredGrid:new{file="myFileName.dat", fmt="vtk"}
+ * importedGrid = StructuredGrid:new{filename="myFileName.dat", fmt="vtk"}
  * The (default) format "vtk" is the legacy text format for the VTK system.
  * Other format values could be "gziptext", which is the Eilmer4 native file
  * or "text", which is essentially the Eilmer3 native file uncompressed.
@@ -324,7 +324,7 @@ extern(C) int newStructuredGrid(lua_State* L)
     }
     if (!checkAllowedNames(L, 1, ["path","psurface","pvolume","niv","njv","nkv",
                                   "cf","cfList","label","filename","fileName","fmt",
-				  "r_grid","s_grid","interpolation"])) {
+                                  "r_grid","s_grid","interpolation"])) {
         string errMsg = "Error in call to StructuredGrid:new{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }

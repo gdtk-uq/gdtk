@@ -44,15 +44,15 @@ FieldVarsType fieldVarsTypeFromName(string name)
     case "solid": return FieldVarsType.solid;
 	case "limiter": return FieldVarsType.limiter;
 	default:
-	    string errMsg = "The selection of FieldVarsType is unavailable.\n";
-	    errMsg ~= format("You selected '%s'\n", name);
-	    errMsg ~= "The available BlockIOTypes are: \n";
-	    errMsg ~= "   'fluid'\n";
-	    errMsg ~= "   'solid'\n";
-	    errMsg ~= "   'limiter'\n";
-	    errMsg ~= "   'residual'\n";
-	    errMsg ~= "Check the selection or its spelling.\n";
-	    throw new Error(errMsg);
+        string errMsg = "The selection of FieldVarsType is unavailable.\n";
+        errMsg ~= format("You selected '%s'\n", name);
+        errMsg ~= "The available BlockIOTypes are: \n";
+        errMsg ~= "   'fluid'\n";
+        errMsg ~= "   'solid'\n";
+        errMsg ~= "   'limiter'\n";
+        errMsg ~= "   'residual'\n";
+        errMsg ~= "Check the selection or its spelling.\n";
+        throw new Error(errMsg);
     }
 }
 
@@ -79,25 +79,25 @@ string[] buildFluidVariables()
     variables ~= "vel.y";
     if (cfg.dimensions == 3) variables ~= "vel.z";
     if (cfg.MHD) {
-	variables ~= "B.x";
-	variables ~= "B.y";
-	if (cfg.dimensions == 3) variables ~= "B.z";
+	    variables ~= "B.x";
+        variables ~= "B.y";
+        if (cfg.dimensions == 3) variables ~= "B.z";
     }
     variables ~= "p";
     variables ~= "a";
     if (cfg.viscous) {
-	variables ~= "mu";
-	variables ~= "k";
-	foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
-	    variables ~= "k-" ~ cfg.gmodel_master.energy_mode_name(imode);
-	}
+        variables ~= "mu";
+        variables ~= "k";
+        foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
+            variables ~= "k-" ~ cfg.gmodel_master.energy_mode_name(imode);
+        }
     }
     if (cfg.turbulence_model_name != "none") {
-	variables ~= "mu_t";
-	variables ~= "k_t";
-	foreach (iturb; 0 .. cfg.turb_model.nturb) {
-	    variables ~= "tq-" ~ cfg.turb_model.primitive_variable_name(iturb);
-	}
+        variables ~= "mu_t";
+        variables ~= "k_t";
+        foreach (iturb; 0 .. cfg.turb_model.nturb) {
+            variables ~= "tq-" ~ cfg.turb_model.primitive_variable_name(iturb);
+        }
     }
     variables ~= "shock-detector";
     foreach (isp; 0 .. cfg.gmodel_master.n_species) {
@@ -107,8 +107,8 @@ string[] buildFluidVariables()
     variables ~= "e";
     variables ~= "T";
     foreach (imode; 0 .. cfg.gmodel_master.n_modes) {
-	variables ~= "e-" ~ cfg.gmodel_master.energy_mode_name(imode);
-	variables ~= "T-" ~ cfg.gmodel_master.energy_mode_name(imode);
+        variables ~= "e-" ~ cfg.gmodel_master.energy_mode_name(imode);
+        variables ~= "T-" ~ cfg.gmodel_master.energy_mode_name(imode);
     }
     if (cfg.with_local_time_stepping) variables ~= "dt_local";
 

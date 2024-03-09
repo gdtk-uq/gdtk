@@ -37,6 +37,21 @@ class NewtonKrylovException : LmrException {
 }
 
 /**
+ * Class to signal timemarching specific exceptions.
+ *
+ * Author: RJG
+ * Date: 2024-03-09
+ */
+class TimeMarchingException : LmrException {
+    @nogc
+    this(string message, string file=__FILE__, size_t line=__LINE__,
+         Throwable next=null)
+    {
+        super(message, file, line, next);
+    }
+}
+
+/**
  * Class to signal an exception at post-processing stage.
  *
  * Authors: RJG

@@ -5,6 +5,10 @@
 
 local history = {}
 
+local lmrconfig = require 'lmrconfig'
+local globalconfig = require 'globalconfig'
+config = globalconfig.config
+
 function history.setHistoryPoint(args)
    -- Accepts a variety of arguments:
    --  1. x, y, z coordinates
@@ -28,12 +32,21 @@ function history.setHistoryPoint(args)
       local blkId = 0
       local cellId = 0
       for ib,blk in ipairs(fluidBlocks) do
-	 local indx, dist = blk.grid:find_nearest_cell_centre{x=x, y=y, z=z}
-	 if (dist < minDist) then
-	    minDist = dist
-	    blkId = ib
-	    cellId = indx
-	 end
+         if (blk.grid == nil) then
+            -- Likely we've initialised only based on metadata
+            if (blk.gridMetadata['type'] == 'structured_grid') then
+               blk.grid = StructuredGrid:new{filename=lmrconfig.gridFilename(blk.id), fmt=config.grid_format}
+            end
+            if (blk.gridMetadata['type'] == 'unstructured_grid') then
+               blk.grid = UnstructuredGrid:new{filename=lmrconfig.gridFilename(blk.id), fmt=config.grid_format}
+            end
+         end
+         local indx, dist = blk.grid:find_nearest_cell_centre{x=x, y=y, z=z}
+         if (dist < minDist) then
+            minDist = dist
+            blkId = ib
+	          cellId = indx
+	       end
       end
       -- Convert blkId to 0-offset
       blkId = blkId - 1

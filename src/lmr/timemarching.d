@@ -53,6 +53,7 @@ import init;
 import fileutil : ensure_directory_is_present;
 import loads : computeRunTimeLoads;
 import lmr.fvcell : FVCell;
+import lmr.history : initHistoryCells, writeHistoryCellsToFiles;
 
 version(mpi_parallel) {
     import mpi;
@@ -133,11 +134,8 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
         initSolidBlocks();
         initFluidSolidExchangeBoundaries();
     }
-    // [TODO] RJG, 2024-02-12
-    // Re-implement writing to history cells.
-    /*
+
     initHistoryCells();
-    */
 
     // [TODO] RJG, 2024-02-07
     // Implement initialisation of loads files.
@@ -559,22 +557,19 @@ int integrateInTime(double targetTimeAsRequested)
                 GC.minimize();
             }
             */
-            //
             // 4.2 (Occasionally) Write out the cell history data and loads on boundary groups data
-            /* RJG, 2024-02-12  commented out during initial testing.
             if ((SimState.time >= SimState.t_history) && !SimState.history_just_written) {
                 version(FSI) {
                     foreach (FEMModel; FEMModels) {
                         FEMModel.WriteFSIToHistory(SimState.time);
                     }
                 }
-                write_history_cells_to_files(SimState.time);
+                writeHistoryCellsToFiles(SimState.time);
                 SimState.history_just_written = true;
                 SimState.t_history = SimState.t_history + GlobalConfig.dt_history;
                 GC.collect();
                 GC.minimize();
             }
-            */
 
             /* RJG, 2024-02-12  commented out during initial testing.
             if (GlobalConfig.write_loads &&

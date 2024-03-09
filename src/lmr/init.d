@@ -667,49 +667,6 @@ void orderBlocksBySize()
 }
 
 /**
- * Initialise directory and files for history cells.
- *
- * Authors: RJG and PAJ
- * Date: 2024-02-07
- */
-void initHistoryCells()
-{
-    string histDir = lmrCfg.historyDir;
-    if (GlobalConfig.is_master_task) ensure_directory_is_present(histDir);
-    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-
-    foreach (hcell; GlobalConfig.hcells) {
-        auto blkId = hcell[0];
-        auto cellId = hcell[1];
-        auto blk = cast(FluidBlock) globalBlocks[blkId];
-        assert(blk !is null, "Oops, this should be a FluidBlock object.");
-        if (find(GlobalConfig.localFluidBlockIds, blkId).empty) { continue; }
-        if ( cellId >= blk.cells.length ) {
-            string errMsg = "ERROR: init_history_cell_files()\n";
-            errMsg ~= format("The requested history cell index %d is not valid for block %d.\n", cellId, blkId);
-            errMsg ~= format("This block only has %d cells.\n", blk.cells.length);
-            throw new FlowSolverException(errMsg);
-        }
-        string basicName = historyFilename(blkId, cellId);
-        auto foundTheseEntries = dirEntries(histDir, basicName~".*", SpanMode.shallow);
-        string[] foundTheseNames;
-        foreach (entry; foundTheseEntries) { foundTheseNames ~= entry.name; }
-        string fname = format("%s.%d", histDir, basicName, foundTheseNames.length);
-        auto f = File(fname, "w");
-        f.write("# 1:t ");
-        foreach (i, var; GlobalConfig.flow_variable_list) {
-            f.write(format("%d:%s ", i+2, var));
-        }
-        f.write("\n");
-        f.close();
-    } // end foreach hcell
-
-    // [TODO] RJG, 2024-02-07
-    // Add something similar for solid domain cells.
-
-}
-
-/**
  * Initialise solid blocks.
  *
  * Authors: RJG and KAD

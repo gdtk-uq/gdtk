@@ -66,10 +66,6 @@ local mpi = require 'mpi'
 mpiDistributeBlocks = mpi.mpiDistributeBlocks
 mpiDistributeFBArray = mpi.mpiDistributeFBArray
 
-local history = require 'history'
-setHistoryPoint = history.setHistoryPoint
-setSolidHistoryPoint = history.setSolidHistoryPoint
-
 local zones = require 'zones'
 ReactionZone = zones.ReactionZone
 IgnitionZone = zones.IgnitionZone
@@ -109,6 +105,11 @@ end
 function identifyBlockConnections()
    if verbosity >= 1 then
       print("    identifyBlockConnections(): Do NOTHING when in prep-grid mode.")
+   end
+end
+function setHistoryPoint()
+   if verbosity >= 1 then
+      print("    setHistoryPoint(): Do NOTHING when in prep-grid mode.")
    end
 end
 

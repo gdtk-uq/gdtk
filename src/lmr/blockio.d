@@ -49,15 +49,15 @@ public:
     final void writeMetadataToFile(string fname)
     {
     	auto f = File(fname, "w");
-	    f.writefln("---");
-            f.writefln("  version: \"%s\"", BLK_IO_VERSION);
-	    f.writeln("  revision-id: ", lmrCfg.revisionId);
-            f.writefln("  field-type: \"%s\"", fieldVarsTypeName(mCIO.FVT));
-	    f.writefln("  variables:");
-	    foreach (var; mCIO.variables) {
-	        f.writefln("   - '%s'", var);
-	    }
-	    f.close();
+        f.writefln("---");
+        f.writefln("  version: \"%s\"", BLK_IO_VERSION);
+        f.writeln("  revision-id: ", lmrCfg.revisionId);
+        f.writefln("  field-type: \"%s\"", fieldVarsTypeName(mCIO.FVT));
+        f.writefln("  variables:");
+        foreach (var; mCIO.variables) {
+            f.writefln("   - '%s'", var);
+        }
+        f.close();
     }
 
     final readMetadataFromFile(string fname)
