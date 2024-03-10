@@ -12,6 +12,7 @@ import sliceflow;
 import extractline;
 import limiter2vtk;
 import residual2vtk;
+import lmr.commands.listspecies;
 import lmr.commands.prepgas;
 import prepgrids;
 import prepsim;
@@ -56,6 +57,9 @@ Show help for a given Eilmer command or topic.
     commands["slice-flow"] = sliceFlowCmd;
     commands["extract-line"] = extractLineCmd;
     commands["limiter2vtk"] = limiter2vtkCmd;
+    commands["list-species"] = listSpeciesCmd;
+    // alias for list-species, provided for consistency with prep-gas tool
+    commands["list-available-species"] = commands["list-species"];
     commands["residual2vtk"] = residual2vtkCmd;
     commands["prep-gas"] = prepGasCmd;
     commands["prep-grids"] = prepGridCmd;
