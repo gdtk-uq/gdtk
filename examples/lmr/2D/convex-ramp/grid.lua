@@ -60,13 +60,15 @@ local nj0 = math.floor(40*factor)
 -- We split the patches into roughly equal blocks so that
 -- we make good use of our multicore machines.
 registerFluidGridArray{
-   grid=StructuredGrid:new{psurface=wedge, niv=nj0+1, njv=nj0+1},
+   grid=StructuredGrid:new{psurface=wedge, niv=ni0+1, njv=nj0+1,
+                           cfList={north=rcfx,east=rcfy,south=rcfx,west=rcfy}},
    nib=10, njb=2,
    fsTag="initial",
    bcTags={west="inflow", north="inflow", south="noslipwall"}
 }
 registerFluidGridArray{
-   grid=StructuredGrid:new{psurface=tail, niv=ni1+1, njv=nj0+1},
+   grid=StructuredGrid:new{psurface=tail, niv=ni1+1, njv=nj0+1,
+                           cfList={east=rcfy, west=rcfy}},
    nib=4, njb=2,
    fsTag="initial",
    bcTags={east="outflow", north="inflow", south="noslipwall"}
