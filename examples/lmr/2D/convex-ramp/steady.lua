@@ -25,33 +25,44 @@ bcDict = {
 }
 --
 makeFluidBlocks(bcDict, flowDict)
+mpiDistributeBlocks{ntasks=8}
 --
 config.flux_calculator= "ausmdv"
 config.interpolation_order = 2
 config.viscous = true
--- config.spatial_deriv_locn = 'vertices'
--- config.spatial_deriv_calc = 'divergence'
+config.thermo_interpolator = "rhop"
+config.extrema_clipping = false
+config.spatial_deriv_locn = "cells"
+config.spatial_deriv_calc = "least_squares"
 
 NewtonKrylovGlobalConfig{
-   number_of_steps_for_setting_reference_residuals = 3,
+   number_of_steps_for_setting_reference_residuals = 0,
    stop_on_relative_residual = 1.0e-6,
    number_of_phases = 2,
-   phase_changes_at_steps = { 15 },
+   phase_changes_at_steps = { 170 },
+   inviscid_cfl_only = true,
    use_physicality_check = true,
-   max_linear_solver_iterations = 10,
+   max_linear_solver_iterations = 50,
+   frechet_derivative_perturbation = 1.0e-50,
+   use_preconditioner = true,
+   preconditioner = "ilu",
+   ilu_fill = 0,
    total_snapshots = 3,
-   steps_between_status = 1,
-   steps_between_snapshots = 5,
+   steps_between_status = 5,
+   steps_between_snapshots = 10,
    steps_between_diagnostics = 1
 }
 
 NewtonKrylovPhase:new{
    residual_interpolation_order = 1,
    jacobian_interpolation_order = 1,
+   frozen_preconditioner = true,
+   steps_between_preconditioner_update = 5,
+   use_adaptive_preconditioner = false,
    linear_solve_tolerance = 0.1,
    use_auto_cfl = true,
    threshold_relative_residual_for_cfl_growth = 0.9,
-   start_cfl = 2.0,
+   start_cfl = 5.0,
    max_cfl = 1.0e6,
    auto_cfl_exponent = 0.9
 }
@@ -59,5 +70,5 @@ NewtonKrylovPhase:new{
 NewtonKrylovPhase:new{
    residual_interpolation_order = 2,
    jacobian_interpolation_order = 2,
-   start_cfl = 10.0
+   start_cfl = 5.0
 }

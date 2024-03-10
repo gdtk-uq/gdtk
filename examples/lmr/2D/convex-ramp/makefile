@@ -33,8 +33,11 @@ prep-transient: transient.lua
 prep-steady: steady.lua
 	lmr prep-sim --job=steady.lua
 
-run:
+run-transient:
 	lmr run
+
+run-steady:
+	mpirun --use-hwthread-cpus -np 8 lmrZ-mpi-run
 
 post:
 	lmr snapshot2vtk --all
