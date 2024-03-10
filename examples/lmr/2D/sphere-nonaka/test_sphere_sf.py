@@ -35,10 +35,10 @@ def test_prep_gas():
         else:
             f.write(line)
     f.close()
-    cmd = "prep-gas air-5sp-gas-model.lua air-5sp-2T.gas"
+    cmd = "lmr prep-gas -i air-5sp-gas-model.lua -o air-5sp-2T.gas"
     proc = subprocess.run(cmd.split())
     assert proc.returncode == 0, "Failed during: " + cmd
-    cmd = "prep-chem air-5sp-2T.gas GuptaEtAl-air-reactions-2T.lua air-5sp-6r-2T.chem"
+    cmd = "lmr prep-reactions -g air-5sp-2T.gas -i GuptaEtAl-air-reactions-2T.lua -o air-5sp-6r-2T.chem"
     proc = subprocess.run(cmd.split())
     assert proc.returncode == 0, "Failed during: " + cmd
     cmd = "prep-kinetics air-5sp-2T.gas air-5sp-6r-2T.chem air-energy-exchange.lua air-VT.exch"
