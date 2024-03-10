@@ -24,7 +24,7 @@ else
 endif
 	lmr prep-gas -i air-5sp-gas-model.lua -o air-5sp-2T.gas
 	lmr prep-reactions -g air-5sp-2T.gas -i GuptaEtAl-air-reactions-2T.lua -o air-5sp-6r-2T.chem
-	prep-kinetics air-5sp-2T.gas air-5sp-6r-2T.chem air-energy-exchange.lua air-VT.exch
+	lmr prep-energy-exchange -g air-5sp-2T.gas -r air-5sp-6r-2T.chem -i air-energy-exchange.lua -o air-VT.exch
 	lmr prep-grid
 	lmr prep-sim
 

@@ -41,7 +41,7 @@ def test_prep_gas():
     cmd = "lmr prep-reactions -g air-5sp-2T.gas -i GuptaEtAl-air-reactions-2T.lua -o air-5sp-6r-2T.chem"
     proc = subprocess.run(cmd.split())
     assert proc.returncode == 0, "Failed during: " + cmd
-    cmd = "prep-kinetics air-5sp-2T.gas air-5sp-6r-2T.chem air-energy-exchange.lua air-VT.exch"
+    cmd = "lmr prep-energy-exchange -g air-5sp-2T.gas -r air-5sp-6r-2T.chem -i air-energy-exchange.lua -o air-VT.exch"
     proc = subprocess.run(cmd.split())
     assert proc.returncode == 0, "Failed during: " + cmd
 
