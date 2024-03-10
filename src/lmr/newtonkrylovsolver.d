@@ -815,6 +815,12 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         computeGlobalResidual();
         referenceGlobalResidual = globalResidual;
         computeResiduals(referenceResiduals);
+        // Add value of 1.0 to each residaul.
+        // If values are very large, 1.0 makes no difference.
+        // If values are zero, the 1.0 should mean the reference residual
+        // asymptotes to an absolute residual.
+        referenceResiduals[] = referenceResiduals[] + 1.0;
+
         if (nkCfg.numberOfStepsForSettingReferenceResiduals == 0) {
             referenceResidualsAreSet = true;
             if (GlobalConfig.is_master_task) {
