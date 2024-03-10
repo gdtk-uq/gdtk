@@ -18,6 +18,9 @@ import std.conv : to;
 import std.path : dirName;
 import std.file : thisExePath, exists;
 import std.format : format;
+version(macosx) {
+    import core.stdc.stdlib : system;
+}
 
 import util.lua;
 
@@ -98,30 +101,43 @@ int main_(string[] args)
         writefln("Reactions input file: %s", inputFile);
     }
 
-    auto L = luaL_newstate();
-    luaL_openlibs(L);
+    version(macosx) {
+        // RJG, 2024-03-10
+        // On macosx, I can't get lmr program to play nicely with lpeg.so
+        // So we'll do raw system call to the Lua program prep-chem
+        string cmd = "prep-chem ";
+        if (withCompact) cmd ~= "--compact ";
+        cmd ~= format("%s %s %s", gasFile, inputFile, outputFile);
+        auto flag = system(cmd.toStringz);
+        if (flag != 0) return flag;
+    }
+    else {
+        // On linux, we can execute the Lua environment from this program
+        auto L = luaL_newstate();
+        luaL_openlibs(L);
 
-    // Set arg table for prep-chem.
-    lua_newtable(L);
-    int index = 1;
-    if (withCompact) {
-        lua_pushstring(L, "--compact");
+        // Set arg table for prep-chem.
+        lua_newtable(L);
+        int index = 1;
+        if (withCompact) {
+            lua_pushstring(L, "--compact");
+            lua_rawseti(L, -2, index++);
+        }
+        lua_pushstring(L, gasFile.toStringz);
         lua_rawseti(L, -2, index++);
-    }
-    lua_pushstring(L, gasFile.toStringz);
-    lua_rawseti(L, -2, index++);
-    lua_pushstring(L, inputFile.toStringz);
-    lua_rawseti(L, -2, index++);
-    lua_pushstring(L, outputFile.toStringz);
-    lua_rawseti(L, -2, index++);
-    lua_setglobal(L, "arg");
+        lua_pushstring(L, inputFile.toStringz);
+        lua_rawseti(L, -2, index++);
+        lua_pushstring(L, outputFile.toStringz);
+        lua_rawseti(L, -2, index++);
+        lua_setglobal(L, "arg");
 
-    // Now call main()
-    if (luaL_dofile(L, toStringz(dirName(thisExePath())~"/prep-chem")) != 0) {
-        writeln("There was a problem when trying to use the Lua program prep-chem.");
-        string errMsg = to!string(lua_tostring(L, -1));
-        throw new LmrPreProcessingException(errMsg);
-    }
+        // Now call main()
+        if (luaL_dofile(L, toStringz(dirName(thisExePath())~"/prep-chem")) != 0) {
+            writeln("There was a problem when trying to use the Lua program prep-chem.");
+            string errMsg = to!string(lua_tostring(L, -1));
+            throw new LmrPreProcessingException(errMsg);
+        }
+    } // end else-version
 
     if (verbosity > 1) {
         writefln("Reactions output file: %s", outputFile);

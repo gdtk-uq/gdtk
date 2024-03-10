@@ -19,6 +19,9 @@ import std.path : dirName;
 import std.file : thisExePath, exists;
 import std.format : format;
 import std.range : empty;
+version(macosx) {
+    import core.stdc.stdlib : system;
+}
 
 import util.lua;
 
@@ -97,31 +100,42 @@ int main_(string[] args)
         writefln("Energy exchange input file: %s", inputFile);
     }
 
-    auto L = luaL_newstate();
-    luaL_openlibs(L);
+    version(macosx) {
+        // RJG, 2024-03-10
+        // On macosx, I can't get lmr program to play nicely with lpeg.so
+        // So we'll do raw system call to the Lua program prep-kinetics
+        string cmd = format("prep-kinetics %s ", gasFile);
+        if (!reacFile.empty) cmd ~= format("%s ", reacFile);
+        cmd ~= format("%s %s", inputFile, outputFile);
+        auto flag = system(cmd.toStringz);
+        if (flag != 0) return flag;
+    }
+    else {
+        auto L = luaL_newstate();
+        luaL_openlibs(L);
 
-    // Set arg table for prep-chem.
-    lua_newtable(L);
-    int index = 1;
-    lua_pushstring(L, gasFile.toStringz);
-    lua_rawseti(L, -2, index++);
-    if (!reacFile.empty) {
-        lua_pushstring(L, reacFile.toStringz);
+        // Set arg table for prep-chem.
+        lua_newtable(L);
+        int index = 1;
+        lua_pushstring(L, gasFile.toStringz);
         lua_rawseti(L, -2, index++);
-    }
-    lua_pushstring(L, inputFile.toStringz);
-    lua_rawseti(L, -2, index++);
-    lua_pushstring(L, outputFile.toStringz);
-    lua_rawseti(L, -2, index++);
-    lua_setglobal(L, "arg");
+        if (!reacFile.empty) {
+            lua_pushstring(L, reacFile.toStringz);
+            lua_rawseti(L, -2, index++);
+        }
+        lua_pushstring(L, inputFile.toStringz);
+        lua_rawseti(L, -2, index++);
+        lua_pushstring(L, outputFile.toStringz);
+        lua_rawseti(L, -2, index++);
+        lua_setglobal(L, "arg");
 
-    // Now call main()
-    if (luaL_dofile(L, toStringz(dirName(thisExePath())~"/prep-kinetics")) != 0) {
-        writeln("There was a problem when trying to use the Lua program prep-kinetics.");
-        string errMsg = to!string(lua_tostring(L, -1));
-        throw new LmrPreProcessingException(errMsg);
+        // Now call main()
+        if (luaL_dofile(L, toStringz(dirName(thisExePath())~"/prep-kinetics")) != 0) {
+            writeln("There was a problem when trying to use the Lua program prep-kinetics.");
+            string errMsg = to!string(lua_tostring(L, -1));
+            throw new LmrPreProcessingException(errMsg);
+        }
     }
-
     if (verbosity > 1) {
         writefln("Energy exchange output file: %s", outputFile);
     }

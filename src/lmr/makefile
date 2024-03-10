@@ -213,6 +213,11 @@ ifeq ($(FLAVOUR), fast)
     FLAVOUR_FLAGS := $(FAST_DFLAGS)
 endif
 
+# Add platform version if necessary
+ifeq ($(PLATFORM), macosx)
+	DFLAGS += $(DVERSION)macosx
+endif
+
 # DIP1008 allows throwing of exceptions in @nogc code. Appeared in 2.079.0, 2018-03-01.
 # This rules out the use of gdc for compiling the code.
 DFLAGS += -dip1008
