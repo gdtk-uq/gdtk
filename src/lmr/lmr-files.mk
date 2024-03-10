@@ -105,6 +105,7 @@ LMR_CMD_FILES = $(LMR_CMD)/checkjacobian.d \
 	$(LMR_CMD)/listspecies.d \
 	$(LMR_CMD)/limiter2vtk.d \
 	$(LMR_CMD)/residual2vtk.d \
+	$(LMR_CMD)/prepenergyexchange.d \
 	$(LMR_CMD)/prepgas.d \
 	$(LMR_CMD)/prepsim.d \
 	$(LMR_CMD)/prepgrids.d \
