@@ -252,16 +252,15 @@ void printVersion(bool shortVersion=true)
         writeln("Revision-date: ", lmrCfg.revisionDate);
         writeln("Compiler-name: ", lmrCfg.compilerName);
         writeln("Build-date: ", lmrCfg.buildDate);
-
-        if (shortVersion) return;
-
         write("Build-flavour: ");
         version(flavour_debug) { writeln("debug"); }
         version(flavour_profile) { writeln("profile"); }
         version(flavour_fast) { writeln("fast"); }
         write("Profiling: ");
         version(diagnostics) { writeln("included"); } else { writeln("omitted"); }
-        //
+
+        if (shortVersion) return;
+
         writeln("Capabilities:");
         version(multi_species_gas) {
             writeln("   multi-species-gas");
