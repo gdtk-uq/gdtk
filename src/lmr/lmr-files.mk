@@ -109,6 +109,7 @@ LMR_CMD_FILES = $(LMR_CMD)/checkjacobian.d \
 	$(LMR_CMD)/prepsim.d \
 	$(LMR_CMD)/prepgrids.d \
 	$(LMR_CMD)/prepmappedcells.d \
+	$(LMR_CMD)/prepreactions.d \
 	$(LMR_CMD)/revisionid.d \
 	$(LMR_CMD)/runsim.d \
 	$(LMR_CMD)/snapshot2vtk.d \

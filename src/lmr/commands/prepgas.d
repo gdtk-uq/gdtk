@@ -69,7 +69,7 @@ int main_(string[] args)
     }
 
     if (verbosity > 0) {
-        writefln("lmr %s: Begin creation of gas file.");
+        writefln("lmr %s: Begin creation of gas file.", cmdName);
     }
     if (verbosity > 1) {
         writefln("Input file: %s", inputFile);
@@ -98,7 +98,7 @@ int main_(string[] args)
     }
 
     if (verbosity > 0) {
-        writefln("lmr %s: Done creating gas file.");
+        writefln("lmr %s: Done creating gas file.", cmdName);
     }
     return 0;
 }

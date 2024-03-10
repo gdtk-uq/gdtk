@@ -14,6 +14,7 @@ import limiter2vtk;
 import residual2vtk;
 import lmr.commands.listspecies;
 import lmr.commands.prepgas;
+import lmr.commands.prepreactions;
 import prepgrids;
 import prepsim;
 import prepmappedcells;
@@ -64,6 +65,9 @@ Show help for a given Eilmer command or topic.
     commands["prep-gas"] = prepGasCmd;
     commands["prep-grids"] = prepGridCmd;
     commands["prep-grid"] = commands["prep-grids"]; // alias for prep-grids
+    commands["prep-reactions"] = prepReacCmd;
+    // alias for 'prep-reactions' provided for consistency with prep-chem tool
+    commands["prep-chem"] = commands["prep-reactions"];
     commands["prep-sim"] = prepSimCmd;
     commands["prep-flow"] = commands["prep-sim"]; // alias for prep-sim
     commands["prep-mapped-cells"] = prepMappedCellsCmd;
