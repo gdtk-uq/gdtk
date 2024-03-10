@@ -2,12 +2,12 @@ LMR_DIR := lmrsim
 
 help:
 	@echo "Main targets available are:"
-	@echo -e "   prep"
-	@echo -e "   run"
-	@echo -e "   post"
+	@echo "   prep"
+	@echo "   run"
+	@echo "   post"
 
 prep: ideal-air.lua job.lua
-	prep-gas ideal-air.lua ideal-air.gas
+	lmr prep-gas -i ideal-air.lua -o ideal-air.gas
 	lmr prep-grid
 	lmr prep-sim
 

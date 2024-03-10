@@ -6,7 +6,7 @@ grid:
 	lmr custom-script --job=gengrid.lua
 
 clean:
-	rm -rf lmrsim ideal-air.lua
+	rm -rf lmrsim ideal-air.gas
 
 deepclean: clean
 	rm -rf grid.su2 su2grid mapped_cells
@@ -20,7 +20,7 @@ run:
 	mpirun -np 8 lmrZ-mpi-run
 			
 prep:
-	prep-gas ideal-air.inp ideal-air.lua
+	lmr prep-gas -i ideal-air.lua -o ideal-air.gas
 	lmr prep-grid --job=fp-grid.lua
 	lmr prep-flow --job=fp.lua
 

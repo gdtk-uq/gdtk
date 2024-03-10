@@ -17,7 +17,7 @@ def change_test_dir(request, monkeypatch):
 
 
 def test_prep_gas():
-    cmd = "prep-gas ideal-air.lua ideal-air.gas"
+    cmd = "lmr prep-gas -i ideal-air.lua -o ideal-air.gas"
     proc = subprocess.run(cmd.split())
     assert proc.returncode == 0, "Failed during: " + cmd
 

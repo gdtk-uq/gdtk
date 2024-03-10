@@ -17,7 +17,7 @@ config.extrema_clipping=false
 config.smooth_limiter_coeff = 1e-3
 
 -- Gas model and flow conditions to match Table 1, the first entry
-nsp, nmodes, gm = setGasModel('ideal-air.lua')
+nsp, nmodes, gm = setGasModel('ideal-air.gas')
 p_inf = 3.25e3  -- Pa
 u_inf = 2100.0  -- m/s
 T_inf = 254     -- K

@@ -9,7 +9,7 @@ help:
 prep: gas grid init-steady
 
 gas: ideal-air.lua
-	prep-gas ideal-air.lua ideal-air.gas
+	lmr prep-gas -i ideal-air.lua -o ideal-air.gas
 
 grid: ../sg-minimal/grid.lua
 	lmr prep-grid --job=../sg-minimal/grid.lua

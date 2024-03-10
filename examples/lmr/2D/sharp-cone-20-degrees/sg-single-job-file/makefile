@@ -9,7 +9,7 @@ help:
 prep: gas grid init
 
 gas: ideal-air.lua
-	prep-gas ideal-air.lua ideal-air.gas
+	lmr prep-gas -i ideal-air.lua -o ideal-air.gas
 
 grid: job.lua
 	lmr prep-grid
