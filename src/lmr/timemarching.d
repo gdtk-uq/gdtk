@@ -20,6 +20,7 @@ import std.file;
 import std.math : floor, isNaN;
 import std.format : format, formattedWrite;
 import std.array : appender;
+import dyaml;
 
 import util.time_utils : timeStringToSeconds;
 import nm.number : number;
@@ -118,8 +119,6 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     initFluidBlocksGlobalCellIDStarts();
     initFluidBlocksZones();
     initFluidBlocksFlowField(snapshotStart);
-    initSimStateTime(snapshotStart);
-
 
     initFullFaceDataExchange();
     initMappedCellDataExchange();
@@ -176,11 +175,19 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     // If we have elected to run with a variable time step,
     // this value may get revised on the very first step.
     SimState.dt_global = GlobalConfig.dt_init;
-    // We can put an initial entry in the times file now.
+    // dt_global will be updated if restart branch is selected below.
+
     if (!SimState.is_restart) {
+        SimState.time = 0.0;
         // Clean out any existing times file.
         if (lmrCfg.timesFile.exists) lmrCfg.timesFile.remove;
+        // We can put an initial entry in the times file now.
         addToTimesFile();
+    }
+    else {
+        // SimState.time and SimState.dt_global set in prepareTimesFileOnRestart
+        // It's convenient to do that while we have the times file loaded.
+        prepareTimesFileOnRestart(SimState.current_tindx);
     }
 
     initMasterLuaState();
@@ -802,6 +809,36 @@ void addToTimesFile()
     double wall_clock_elapsed = to!double((Clock.currTime() - SimState.wall_clock_start).total!"msecs"())/1000.0;
     f.writefln("   wall-clock-elapsed: %.3f", wall_clock_elapsed);
     f.close();
+}
+
+/**
+ * Prepare times file on restart.
+ *
+ * When we restart, we want to keep all times file entries up
+ * to and including restart index. For those beyond,
+ * we want to remove.
+ *
+ * Authors: RJG
+ * Date: 2024-03-10
+ */
+void prepareTimesFileOnRestart(int restartIdx)
+{
+    Node timesData = dyaml.Loader.fromFile(lmrCfg.timesFile).load();
+    string snap;
+    Node snapData;
+    auto f = File(lmrCfg.timesFile, "w");
+    foreach (i; 0 .. restartIdx+1) {
+        snap = format(lmrCfg.snapshotIdxFmt, i);
+        snapData = timesData[snap];
+        f.writefln("'%s':", snap);
+        f.writefln("   time: %.18e", snapData["time"].as!double);
+        f.writefln("   dt:   %.18e", snapData["dt"].as!double);
+        f.writefln("   cfl:  %.18e", snapData["cfl"].as!double);
+        f.writefln("   wall-clock-elapsed: %.3f", snapData["wall-clock-elapsed"].as!double);
+    }
+    f.close();
+    SimState.time = snapData["time"].as!double;
+    SimState.dt_global = snapData["dt"].as!double;
 }
 
 /**

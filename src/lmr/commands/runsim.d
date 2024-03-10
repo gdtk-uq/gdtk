@@ -20,6 +20,8 @@ import std.file : exists;
 import core.stdc.stdlib : exit;
 import std.parallelism : totalCPUs;
 import std.math : FloatingPointControl;
+import std.conv : to;
+import dyaml;
 
 import json_helper : readJSONfile;
 
@@ -37,19 +39,25 @@ enum NumberType {default_type, real_values, complex_values};
 
 int determineNumberOfSnapshots()
 {
-    if (!exists(lmrCfg.restartFile))
-	return 0;
+    if (!exists(lmrCfg.restartFile)) return 1;
 
     auto f = File(lmrCfg.restartFile, "r");
     auto line = f.readln().strip();
     int count = 0;
     while (line.length > 0) {
-	if (line[0] != '#')
-	    ++count;
-	line = f.readln().strip();
+        if (line[0] != '#') ++count;
+        line = f.readln().strip();
     }
     f.close();
-    return count;
+    return count + 1; // +1 because restarts file does not have a 0 entry
+}
+
+int determineNumberOfTimesEntries()
+{
+    if (!exists(lmrCfg.timesFile)) return 1;
+
+    Node timesData = dyaml.Loader.fromFile(lmrCfg.timesFile).load();
+    return to!int(timesData.length);
 }
 
 Command runCmd;
@@ -138,36 +146,35 @@ int delegateAndExecute(string[] args, NumberType numberType)
 
     final switch(solverMode) {
     case SolverMode.steady:
-	// Our first choice is to run with complex values.
-	final switch(numberType) {
-	case NumberType.default_type:
-	case NumberType.complex_values:
-	    shellStr = args[0] ~ "Z-" ~ args[1];
-	    break;
-	case NumberType.real_values:
-	    shellStr = args[0] ~ "-" ~ args[1];
-	    break;
-	}
-	break;
+        // Our first choice is to run with complex values.
+        final switch(numberType) {
+        case NumberType.default_type:
+        case NumberType.complex_values:
+            shellStr = args[0] ~ "Z-" ~ args[1];
+            break;
+        case NumberType.real_values:
+            shellStr = args[0] ~ "-" ~ args[1];
+             break;
+	    }
+        break;
     case SolverMode.transient:
     case SolverMode.block_marching:
-	// Our first choice is to run with real values.
-	final switch(numberType) {
-	case NumberType.default_type:
-	case NumberType.real_values:
-	    shellStr = args[0] ~ "-" ~ args[1];
-	    break;
-	case NumberType.complex_values:
-	    shellStr = args[0] ~ "Z-" ~ args[1];
-	    break;
-	}
-	break;
+        // Our first choice is to run with real values.
+        final switch(numberType) {
+        case NumberType.default_type:
+        case NumberType.real_values:
+            shellStr = args[0] ~ "-" ~ args[1];
+            break;
+        case NumberType.complex_values:
+            shellStr = args[0] ~ "Z-" ~ args[1];
+            break;
+        }
+        break;
     }
 
     foreach (s; args[2 .. $]) {
-	shellStr ~= " " ~ s;
+        shellStr ~= " " ~ s;
     }
-    writeln("shellStr= ", shellStr);
 
     return system(shellStr.toStringz);
 }
@@ -193,8 +200,8 @@ int main(string[] args)
 {
 
     version(mpi_parallel) {
-	// This preamble copied directly from the OpenMPI hello-world example.
-	auto c_args = Runtime.cArgs;
+        // This preamble copied directly from the OpenMPI hello-world example.
+        auto c_args = Runtime.cArgs;
         MPI_Init(&(c_args.argc), &(c_args.argv));
         int rank, size;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -293,24 +300,29 @@ int main(string[] args)
 
     // Figure out which snapshot to start from
     if (GlobalConfig.is_master_task) {
-	numberSnapshots = determineNumberOfSnapshots();
-	if (snapshotStart == -1) {
-	    snapshotStart = numberSnapshots;
-	    if (verbosity > 1) {
-		writeln("lmr run: snapshot requested is '-1' -- final snapshot");
-		writefln("lmr run: starting from final snapshot, index= %02d", snapshotStart);
-	    }
-	}
-	if (snapshotStart > numberSnapshots) {
-	    if (verbosity > 1) {
-		writefln("lmr run: snapshot requested is %02d; this is greater than number of available snapshots", snapshotStart);
-		writefln("lmr run: starting from final snapshot, index= %02d", numberSnapshots);
-	    }
-	    snapshotStart = numberSnapshots;
-	}
+        if (GlobalConfig.solverMode == SolverMode.steady) {
+            numberSnapshots = determineNumberOfSnapshots();
+        }
+        else {
+            numberSnapshots = determineNumberOfTimesEntries();
+        }
+        if (snapshotStart == -1) {
+	        snapshotStart = numberSnapshots-1;
+            if (verbosity > 1) {
+                writeln("lmr run: snapshot requested is '-1' -- final snapshot");
+                writefln("lmr run: starting from final snapshot, index= %02d", snapshotStart);
+            }
+        }
+        if (snapshotStart >= numberSnapshots) {
+            if (verbosity > 1) {
+                writefln("lmr run: snapshot requested is %02d; this is greater than number of available snapshots", snapshotStart);
+                writefln("lmr run: starting from final snapshot, index= %02d", numberSnapshots);
+            }
+            snapshotStart = numberSnapshots-1;
+        }
     }
     version(mpi_parallel) {
-	MPI_Bcast(&snapshotStart, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&snapshotStart, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
 
     // We just want to pull out solver mode at this point, so that we can direct the execution flow.
@@ -322,25 +334,24 @@ int main(string[] args)
 
     final switch (solverMode) {
     case SolverMode.steady:
-	if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run: Initialise Newton-Krylov simulation.");
-	initNewtonKrylovSimulation(snapshotStart, maxCPUs, threadsPerMPITask, maxWallClock);
+        if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run: Initialise Newton-Krylov simulation.");
+        initNewtonKrylovSimulation(snapshotStart, maxCPUs, threadsPerMPITask, maxWallClock);
 
         if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run: Perform Newton steps.");
-	performNewtonKrylovUpdates(snapshotStart, startCFL, maxCPUs, threadsPerMPITask);
-	break;
+        performNewtonKrylovUpdates(snapshotStart, startCFL, maxCPUs, threadsPerMPITask);
+        break;
     case SolverMode.transient:
-	if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run: Initialise transient simulation.");
-	initTimeMarchingSimulation(snapshotStart, maxCPUs, threadsPerMPITask, maxWallClock);
+        if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run: Initialise transient simulation.");
+        initTimeMarchingSimulation(snapshotStart, maxCPUs, threadsPerMPITask, maxWallClock);
 
-	if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run: Perform integration in time.");
-	auto flag = integrateInTime(GlobalConfig.max_time);
-	if (flag != 0 && GlobalConfig.is_master_task) writeln("Note that integrateInTime failed.");
-
-	finalizeSimulation_timemarching();
-	break;
+        if (verbosity > 0 && GlobalConfig.is_master_task) writeln("lmr run: Perform integration in time.");
+        auto flag = integrateInTime(GlobalConfig.max_time);
+        if (flag != 0 && GlobalConfig.is_master_task) writeln("Note that integrateInTime failed.");
+        finalizeSimulation_timemarching();
+        break;
     case SolverMode.block_marching:
-	writeln("NOT IMPLEMENTED: block marching is not available right now.");
-	exit(1);
+        writeln("NOT IMPLEMENTED: block marching is not available right now.");
+	    exit(1);
     }
 
     GlobalConfig.finalize();

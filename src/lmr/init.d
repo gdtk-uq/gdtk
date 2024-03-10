@@ -82,7 +82,7 @@ void initConfiguration()
 void readControl()
 {
     alias cfg = GlobalConfig;
-    if (cfg.verbosity_level > 1) writeln("readControl()");
+    if (cfg.verbosity_level > 2) writeln("readControl()");
     JSONValue jsonData = readJSONfile(lmrCfg.ctrlFile);
     mixin(update_double("dt_init", "dt_init"));
     mixin(update_double("dt_max", "dt_max"));
@@ -108,7 +108,7 @@ void readControl()
     //
     mixin(update_int("halt_now", "halt_now"));
     //
-    if (cfg.verbosity_level > 1) {
+    if (cfg.verbosity_level > 2) {
         writeln("  dt_init: ", cfg.dt_init);
         writeln("  dt_max: ", cfg.dt_max);
         writeln("  cfl_scale_factor: ", cfg.cfl_scale_factor);
@@ -428,27 +428,6 @@ void initFluidBlocksFlowField(int snapshotStart)
     import core.stdc.stdlib : exit;
     exit(1);
     */
-}
-
-/**
- * Initialise the simulation start time (for a transient simulation).
- *
- * Authors: RJG and PAJ
- * Date: 2024-02-12
- */
-void initSimStateTime(int snapshotStart)
-{
-    if (snapshotStart == 0) {
-        SimState.time = 0.0;
-        return;
-    }
-
-    // For all other starts, we need to look up the times file.
-    // [TODO] RJG, 2024-02-12
-    // This will need to be done when implementing restarts for transient mode.
-    writefln("Restart is offline for transient mode, sorry.");
-    import core.stdc.stdlib : exit;
-    exit(1);
 }
 
 /**
