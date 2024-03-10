@@ -157,9 +157,10 @@ ifeq ($(DMD), dmd)
         DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
     endif
-    DLINKFLAGS := $(DLINKFLAGS) -L-ldl
+	# For note on "-Wl,-E", see: https://web.tecgraf.puc-rio.br/~lhf/ftp/lua/install.html#adding
+	DLINKFLAGS := $(DLINKFLAGS) -L-Wl,-E -L-ldl
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
+		DLINKFLAGS += -L-ld_classic
     endif
 endif
 ifeq ($(DMD), ldc2)
@@ -191,9 +192,10 @@ ifeq ($(DMD), ldc2)
         DFLAGS := $(DFLAGS) $(DVERSION)$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
     endif
-    DLINKFLAGS := $(DLINKFLAGS) -L-ldl
+	# For note on "-Wl,-E", see: https://web.tecgraf.puc-rio.br/~lhf/ftp/lua/install.html#adding
+	DLINKFLAGS := $(DLINKFLAGS) -L-Wl,-E -L-ldl
     ifeq ($(PLATFORM), macosx)
-	DLINKFLAGS += -L-ld_classic
+		DLINKFLAGS += -L-ld_classic
     endif
 endif
 
