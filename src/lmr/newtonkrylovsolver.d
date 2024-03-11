@@ -149,8 +149,8 @@ struct NKGlobalConfig {
     int lineSearchOrder = 1;
     bool usePhysicalityCheck = true;
     double allowableRelativeMassChange = 0.2;
-    double minRelaxationFactorForCFLGrowth = 0.1;
     double minRelaxationFactorForUpdate = 0.01;
+    double minRelaxationFactorForCFLGrowth = 0.1;
     double relaxationFactorReductionFactor = 0.7;
     bool useResidualSmoothing = false;
     // Linear solver and preconditioning
@@ -203,6 +203,7 @@ struct NKGlobalConfig {
         usePhysicalityCheck = getJSONbool(jsonData, "use_physicality_check", usePhysicalityCheck);
         allowableRelativeMassChange = getJSONdouble(jsonData, "allowable_relative_mass_change", allowableRelativeMassChange);
         minRelaxationFactorForUpdate = getJSONdouble(jsonData, "min_relaxation_factor_for_update", minRelaxationFactorForUpdate);
+        minRelaxationFactorForCFLGrowth = getJSONdouble(jsonData, "min_relaxation_factor_for_cfl_growth", minRelaxationFactorForCFLGrowth);
         relaxationFactorReductionFactor = getJSONdouble(jsonData, "relaxation_factor_reduction_factor", relaxationFactorReductionFactor);
 	useResidualSmoothing = getJSONbool(jsonData, "use_residual_smoothing", useResidualSmoothing);
 	maxLinearSolverIterations = getJSONint(jsonData, "max_linear_solver_iterations", maxLinearSolverIterations);

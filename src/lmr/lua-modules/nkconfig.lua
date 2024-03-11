@@ -34,7 +34,8 @@ NewtonKrylovGlobalConfigHidden = {
    line_search_order = 1,
    use_physicality_check = true,
    allowable_relative_mass_change = 0.2,
-   min_relaxation_factor = 0.1,
+   min_relaxation_factor_for_update = 0.01,
+   min_relaxation_factor_for_cfl_growth = 0.1,
    relaxation_factor_reduction_factor = 0.7,
    use_residual_smoothing = false,
 
@@ -124,7 +125,8 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    f:write(string.format('"line_search_order": %d,\n', nkConfig.line_search_order))
    f:write(string.format('"use_physicality_check": %s,\n', tostring(nkConfig.use_physicality_check)))
    f:write(string.format('"allowable_relative_mass_change": %.18e,\n', nkConfig.allowable_relative_mass_change))
-   f:write(string.format('"min_relaxation_factor": %.18e,\n', nkConfig.min_relaxation_factor))
+   f:write(string.format('"min_relaxation_factor_for_update": %.18e,\n', nkConfig.min_relaxation_factor_for_update))
+   f:write(string.format('"min_relaxation_factor_for_cfl_growth": %.18e,\n', nkConfig.min_relaxation_factor_for_cfl_growth))
    f:write(string.format('"relaxation_factor_reduction_factor": %.18e,\n', nkConfig.relaxation_factor_reduction_factor))
    f:write(string.format('"use_residual_smoothing": %s,\n', tostring(nkConfig.use_residual_smoothing)))
    -- linear solver and preconditioner
