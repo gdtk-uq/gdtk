@@ -53,6 +53,7 @@ struct LmrCfg {
     shared immutable string vtkDir;
     shared immutable string mpimapFile;
     shared immutable string mappedCellsFile;
+    shared immutable string transResidFile;
     shared immutable string dblVarFmt;
     shared immutable string revisionId = "PUT_REVISION_STRING_HERE";
     shared immutable string fullRevisionId = "PUT_FULL_REVISION_STRING_HERE";
@@ -106,6 +107,7 @@ static this()
     lmrCfg.vtkDir = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["vtk-output-directory"].str;
     lmrCfg.mpimapFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["mpimap-filename"].str;
     lmrCfg.mappedCellsFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["mappedcells-filename"].str;
+    lmrCfg.transResidFile = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["transient-residuals-filename"].str;
     lmrCfg.dblVarFmt = lmrJSONCfg["double-var-format"].str;
 
 

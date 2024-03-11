@@ -17,12 +17,13 @@ import std.math : FloatingPointControl;
 import std.parallelism : parallel;
 import std.algorithm : min;
 import std.file;
-import std.math : floor, isNaN;
+import std.math;
 import std.format : format, formattedWrite;
 import std.array : appender, split;
 import std.string : splitLines;
 import dyaml;
 
+import ntypes.complex;
 import util.time_utils : timeStringToSeconds;
 import nm.number : number;
 import conservedquantities : new_ConservedQuantities;
@@ -33,7 +34,10 @@ import simcore : check_run_time_configuration,
        call_UDF_at_write_to_file,
        update_ch_for_divergence_cleaning,
        set_mu_and_k,
-       chemistry_step;
+       chemistry_step,
+       compute_Linf_residuals,
+       compute_L2_residual,
+       compute_mass_balance;
 import simcore_gasdynamic_step : sts_gasdynamic_explicit_increment_with_fixed_grid,
        gasdynamic_explicit_increment_with_fixed_grid,
        gasdynamic_implicit_increment_with_fixed_grid,
@@ -84,8 +88,11 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     // and read the control because it sets up part of initial configuration
     readControl();
     // [TODO] RJG, 2024-02-07
-    // Implement opening of progress file and residuals files
-    // somewhere in the initialisation.
+    // Implement opening of progress file.
+
+    if (GlobalConfig.writeTransientResiduals && GlobalConfig.is_master_task && (snapshotStart == 0)) {
+        std.file.write(lmrCfg.transResidFile, "# step time wall-clock mass x-mom y-mom z-mom energy L2 mass-balance\n");
+    }
 
     SimState.current_tindx = snapshotStart;
 
@@ -471,15 +478,11 @@ int integrateInTime(double targetTimeAsRequested)
                 }
                 version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
 
-                // [TODO] RJG, 2024-02-07
-                // Disable residual reporting just for now.
-                // The question is whether this should be harmonised with the steady-state solver.
-                /*
-                if (GlobalConfig.report_residuals) {
+                if (GlobalConfig.writeTransientResiduals) {
                     // We also compute the residual information and write to residuals file.
                     // These data can be used to monitor the progress of a steady-state calculation.
                     compute_mass_balance(mass_balance);
-		    compute_L2_residual(L2_residual);
+	                compute_L2_residual(L2_residual);
                     compute_Linf_residuals(Linf_residuals);
                     auto cqi = GlobalConfig.cqi;
                     version(mpi_parallel) {
@@ -493,13 +496,12 @@ int integrateInTime(double targetTimeAsRequested)
                         my_local_value = mass_balance.re;
                         MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                         mass_balance.re = my_local_value;
-			my_local_value = L2_residual.re;
+                        my_local_value = L2_residual.re;
                         MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                         L2_residual.re = my_local_value;
-		    }
+                    }
                     L2_residual = sqrt(L2_residual);
                     if (GlobalConfig.is_master_task) {
-                        string residualsFile = "config/"~GlobalConfig.base_file_name~"-residuals.txt";
                         string txt = format("%7d %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e\n",
                                             SimState.step, SimState.time, wall_clock_elapsed,
                                             Linf_residuals[cqi.mass].re,
@@ -508,10 +510,9 @@ int integrateInTime(double targetTimeAsRequested)
                                             (cqi.threeD) ? Linf_residuals[cqi.zMom].re : 0.0,
                                             Linf_residuals[cqi.totEnergy].re,
                                             fabs(L2_residual.re), fabs(mass_balance.re));
-                        std.file.append(residualsFile, txt);
+                        std.file.append(lmrCfg.transResidFile, txt);
                     }
-                } // end if report_residuals
-                */
+                } // end if writeTransienResiduals
                 version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
                 if (GlobalConfig.with_super_time_stepping) {
                     if (GlobalConfig.is_master_task) {

@@ -299,6 +299,7 @@ function output.write_config_file(fileName)
    f:write(string.format('"radiation_energy_dump_temperature_limit": %.18e,\n', config.radiation_energy_dump_temperature_limit))
    --
    f:write(string.format('"control_count": %d,\n', config.control_count))
+   f:write(string.format('"write_transient_residuals": %s,\n', tostring(config.write_transient_residuals)))
    f:write(string.format('"nfluidblock": %d,\n', #fluidBlocks))
    f:write(string.format('"nfluidblockarrays": %d,\n', #fluidBlockArrays))
    --

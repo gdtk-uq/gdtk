@@ -1216,8 +1216,8 @@ final class GlobalConfig {
     // 2 : plus verbose init messages
     // 3 : plus verbose boundary condition messages
     //
-    shared static bool report_residuals; // indicate if residuals are computed and reported
-    //                                   // to a file for time-integrated simulations
+    shared static bool writeTransientResiduals = false; // indicate if residuals are computed and reported
+    //                                                  // to a file for time-integrated simulations
     //
     shared static double start_time = 0.0; // Initial solution time, in seconds.
     shared static double max_time = 1.0e-3; // final solution time, in seconds, set by user
@@ -2116,6 +2116,7 @@ void set_config_for_core(JSONValue jsonData)
     mixin(update_bool("diffuse_wall_bcs_on_init", "diffuseWallBCsOnInit"));
     mixin(update_int("number_init_passes", "nInitPasses"));
     mixin(update_double("wall_temperature_on_init", "initTWall"));
+    mixin(update_bool("write_transient_residuals", "writeTransientResiduals"));
     mixin(update_int("control_count", "control_count"));
     mixin(update_bool("block_marching", "block_marching"));
     mixin(update_int("nib", "nib"));

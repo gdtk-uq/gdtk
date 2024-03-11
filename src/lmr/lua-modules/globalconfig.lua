@@ -182,6 +182,7 @@ configOptionsHidden = { -- hidden from user
    halt_now = 0,
    print_count = 20,
    control_count = 10,
+   write_transient_residuals = false,
    verbosity_level = 1,
    start_time = 0.0,
    max_time = 1.0e-3,

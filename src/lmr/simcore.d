@@ -364,6 +364,19 @@ void compute_L2_residual(ref number L2_residual)
     }
 } // end compute_L2_residuals()
 
+/* This version used in timemarching.d */
+void compute_mass_balance(ref number mass_balance)
+{
+    mass_balance = to!number(0.0);
+    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+        blk.compute_mass_balance();
+    }
+    foreach (blk; localFluidBlocksBySize) {
+        mass_balance += blk.mass_balance;
+    }
+} // end compute_mass_balance()
+
+/* This version used in newtonkrylovsolver.d */
 double compute_mass_balance()
 {
     double mass_balance = 0.0;
