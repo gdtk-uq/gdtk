@@ -19,7 +19,8 @@ import std.algorithm : min;
 import std.file;
 import std.math : floor, isNaN;
 import std.format : format, formattedWrite;
-import std.array : appender;
+import std.array : appender, split;
+import std.string : splitLines;
 import dyaml;
 
 import util.time_utils : timeStringToSeconds;
@@ -88,16 +89,13 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
 
     SimState.current_tindx = snapshotStart;
 
-    // [TODO] RJG, 2024-02-07
-    // Implement initialisation of the loads file.
-    // Commented code below is taken from eilmer4;
-    // it will need some rework.
-    /* taken on 2024-02-07
-    SimState.current_loads_tindx = nextLoadsIndx;
-    if (SimState.current_loads_tindx == -1) {
-        // This is used to indicate that we should look at the old -loads.times file
-        // to find the index where the previous simulation stopped.
-        string fname = "loads/" ~ GlobalConfig.base_file_name ~ "-loads.times";
+    if (SimState.current_tindx == 0) {
+        // On a fresh start, set loads tindx to 0
+        SimState.current_loads_tindx = 0;
+    }
+    else {
+        // We'll need to work a little harder and find out how many loads we've already written.
+        string fname = lmrCfg.loadsDir ~ "/" ~ lmrCfg.loadsPrefix ~ ".times";
         if (exists(fname)) {
             auto finalLine = readText(fname).splitLines()[$-1];
             if (finalLine[0] == '#') {
@@ -107,11 +105,11 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
                 // assume we have a valid line to work with
                 SimState.current_loads_tindx = to!int(finalLine.split[0]) + 1;
             }
-        } else {
+        }
+        else {
             SimState.current_loads_tindx = 0;
         }
     }
-    end: code from eilmer4 for loads file initialisation */
 
     initLocalBlocks();
     initThreadPool(maxCPUs, threadsPerMPITask);
@@ -472,6 +470,7 @@ int integrateInTime(double targetTimeAsRequested)
                     stdout.flush();
                 }
                 version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+
                 // [TODO] RJG, 2024-02-07
                 // Disable residual reporting just for now.
                 // The question is whether this should be harmonised with the steady-state solver.
@@ -879,18 +878,20 @@ void finalizeSimulation_timemarching()
             }
         }
     }
-
+    */
+    
     if (!SimState.loads_just_written) {
         if (GlobalConfig.is_master_task) {
             init_current_loads_tindx_dir(SimState.current_loads_tindx);
         }
         version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
         wait_for_current_tindx_dir(SimState.current_loads_tindx);
-        write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx);
+        writeLoadsToFile_timemarching(SimState.time, SimState.current_loads_tindx);
         if (GlobalConfig.is_master_task) {
             update_loads_times_file(SimState.time, SimState.current_loads_tindx);
         }
     }
+    /*
     if (!GlobalConfig.new_flow_format && GlobalConfig.do_temporal_DFT) {
         write_DFT_files();
     }
