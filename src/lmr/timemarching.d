@@ -189,7 +189,9 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
         // Clean out any existing times file.
         if (lmrCfg.timesFile.exists) lmrCfg.timesFile.remove;
         // We can put an initial entry in the times file now.
-        addToTimesFile();
+        if (cfg.is_master_task) {
+            addToTimesFile();
+        }
     }
     else {
         // SimState.time and SimState.dt_global set in prepareTimesFileOnRestart
@@ -777,7 +779,9 @@ void writeSnapshotFiles_timemarching()
         solidBlkIO.writeVariablesToFile(filename, cells);
     }
 
-    addToTimesFile();
+    if (cfg.is_master_task) {
+        addToTimesFile();
+    }
 }
 
 /**
