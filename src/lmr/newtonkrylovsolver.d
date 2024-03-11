@@ -931,7 +931,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 
         // 0e. determine if we need to update preconditioner
 
-        if (step == startStep || startOfNewPhase || (step % activePhase.stepsBetweenPreconditionerUpdate) == 0) {
+        if (step == startStep || startOfNewPhase || (step % activePhase.stepsBetweenPreconditionerUpdate) == 0 || numberBadSteps > 0) {
             updatePreconditionerThisStep = true;
         }
         else {
