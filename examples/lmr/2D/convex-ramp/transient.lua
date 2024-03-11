@@ -23,7 +23,7 @@ flowDict = {
 bcDict = {
    inflow=InFlowBC_Supersonic:new{flowState=inflow},
    outflow=OutFlowBC_FixedPT:new{p_outside=p_inf/5, T_outside=T_inf},
-   noslipwall=WallBC_NoSlip_FixedT:new{Twall=T_wall},
+   noslipwall=WallBC_NoSlip_FixedT:new{Twall=T_wall, group='loads'},
 }
 --
 makeFluidBlocks(bcDict, flowDict)
@@ -40,3 +40,5 @@ config.max_time = 5.0*L2/u_inf -- time in flow lengths
 config.max_step = 200000
 config.dt_init = 1.0e-8
 config.dt_plot = config.max_time/10
+config.write_loads = true
+config.dt_loads = config.max_time/50
