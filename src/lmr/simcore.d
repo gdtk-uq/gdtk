@@ -53,7 +53,7 @@ import solid_udf_source_terms;
 import grid_motion;
 import grid_motion_udf;
 import grid_motion_shock_fitting;
-import loads;
+import lmr.loads;
 import conservedquantities;
 import special_block_init;
 import efield;

@@ -45,6 +45,7 @@ import blockio : BinaryBlockIO, GzipBlockIO;
 import lmr.fvcell : FVCell;
 import fvcellio;
 import fileutil : ensure_directory_is_present;
+import lmr.loads : init_loads_times_file;
 
 version(mpi_parallel) {
     import mpi;
@@ -831,4 +832,16 @@ void initFluidSolidExchangeBoundaries()
             }
         }
     }
+}
+
+/**
+ * Initialise the loads writing infrastructure.
+ *
+ * Authors: RJG
+ * Date: 2024-03-11
+ */
+void initLoadsFiles()
+{
+    ensure_directory_is_present(lmrCfg.loadsDir);
+    init_loads_times_file();
 }

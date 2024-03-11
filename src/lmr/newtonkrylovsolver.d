@@ -56,7 +56,7 @@ import user_defined_source_terms : getUDFSourceTermsForCell;
 import blockio;
 import fvcellio;
 import lmr.fvcell : FVCell;
-import loads : writeLoadsToFile;
+import lmr.loads : writeLoadsToFile_steady;
 
 version(mpi_parallel) {
     import mpi;
@@ -3052,7 +3052,7 @@ void writeLoads(int step, int nWrittenSnapshots)
 
     int iSnap = (nWrittenSnapshots <= nkCfg.totalSnapshots) ? nWrittenSnapshots : nkCfg.totalSnapshots;
     foreach (blk; localFluidBlocks) {
-        writeLoadsToFile(iSnap, blk);
+        writeLoadsToFile_steady(iSnap, blk);
     }
 }
 

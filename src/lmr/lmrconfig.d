@@ -41,6 +41,7 @@ struct LmrCfg {
     shared immutable string solidPrefix;
     shared immutable string limiterPrefix;
     shared immutable string residualPrefix;
+    shared immutable string loadsDir;
     shared immutable string loadsPrefix;
     shared immutable string gridPrefix;
     shared immutable string gridDir;
@@ -93,6 +94,7 @@ static this()
     lmrCfg.solidPrefix = lmrJSONCfg["solid-prefix"].str;
     lmrCfg.limiterPrefix = lmrJSONCfg["limiter-prefix"].str;
     lmrCfg.residualPrefix = lmrJSONCfg["residual-prefix"].str;
+    lmrCfg.loadsDir = lmrCfg.simDir ~ "/" ~ lmrJSONCfg["loads-directory"].str;
     lmrCfg.loadsPrefix = lmrJSONCfg["loads-prefix"].str;
     lmrCfg.gridPrefix = lmrJSONCfg["grid-prefix"].str;
     lmrCfg.gridDir = lmrJSONCfg["grid-directory"].str;
@@ -210,10 +212,13 @@ string residualFilename(int snapshot, int blkId)
 /**
  * Return the loads filename for a single block+boundary combo as a string.
  *
+ * This function is intended for the steady-mode because loads get written
+ * at the same time as snapshots. So they land in that area of the code.
+ *
  * Authors: RJG
  * Date: 2023-11-19
  */
-string loadsFilename(int snapshot, int blkId, size_t bndryId, string group)
+string loadsFilename_steady(int snapshot, int blkId, size_t bndryId, string group)
 {
     string fname = lmrCfg.snapshotDir ~
         "/" ~
@@ -227,6 +232,27 @@ string loadsFilename(int snapshot, int blkId, size_t bndryId, string group)
     return fname;
 }
 
+/**
+ * Return the loads filename for a single block+boundary combo as a string.
+ *
+ * This function is intended for the steady-mode because loads get written
+ * at the same time as snapshots. So they land in that area of the code.
+ *
+ * Authors: RJG
+ * Date: 2023-11-19
+ */
+string loadsFilename_timemarching(int tindx, int blkId, int bndryId, string group)
+{
+    string fname = lmrCfg.loadsDir ~
+        "/" ~
+        "t" ~ format(lmrCfg.snapshotIdxFmt, tindx) ~
+        "/" ~
+        "blk-" ~ format(lmrCfg.blkIdxFmt, blkId) ~
+        "-bndry-" ~ format("%d", bndryId) ~
+        "-" ~ group ~
+         ".dat";
+    return fname;
+}
 /**
  * Return the grid filename for a single block ('id') as a string.
  *

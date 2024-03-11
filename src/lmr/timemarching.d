@@ -52,7 +52,11 @@ import globalconfig;
 import globaldata;
 import init;
 import fileutil : ensure_directory_is_present;
-import loads : computeRunTimeLoads;
+import lmr.loads : computeRunTimeLoads,
+       init_current_loads_tindx_dir,
+       wait_for_current_tindx_dir,
+       writeLoadsToFile_timemarching,
+       update_loads_times_file;
 import lmr.fvcell : FVCell;
 import lmr.history : initHistoryCells, writeHistoryCellsToFiles;
 
@@ -136,8 +140,11 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
 
     initHistoryCells();
 
-    // [TODO] RJG, 2024-02-07
-    // Implement initialisation of loads files.
+    if (GlobalConfig.write_loads && (SimState.current_loads_tindx == 0)) {
+        if (GlobalConfig.is_master_task) {
+            initLoadsFiles();
+        }
+    }
 
     // For a simulation with shock fitting, the files defining the rails for
     // vertex motion and the scaling of vertex velocities throughout the blocks
@@ -578,7 +585,6 @@ int integrateInTime(double targetTimeAsRequested)
                 GC.minimize();
             }
 
-            /* RJG, 2024-02-12  commented out during initial testing.
             if (GlobalConfig.write_loads &&
                 ( ((SimState.time >= SimState.t_loads) && !SimState.loads_just_written) ||
                   SimState.step == GlobalConfig.write_loads_at_step )) {
@@ -587,7 +593,7 @@ int integrateInTime(double targetTimeAsRequested)
                 }
                 version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
                 wait_for_current_tindx_dir(SimState.current_loads_tindx);
-                write_boundary_loads_to_file(SimState.time, SimState.current_loads_tindx);
+                writeLoadsToFile_timemarching(SimState.time, SimState.current_loads_tindx);
                 if (GlobalConfig.is_master_task) {
                     update_loads_times_file(SimState.time, SimState.current_loads_tindx);
                 }
@@ -597,7 +603,6 @@ int integrateInTime(double targetTimeAsRequested)
                 GC.collect();
                 GC.minimize();
             }
-            */
 
             /* RJG, 2024-02-12  commented out during initial testing.
             //
