@@ -298,16 +298,23 @@ int main(string[] args)
         }
     }
 
+    // We just want to pull out solver mode at this point, so that we can direct the execution flow.
+    // We choose to execute these few lines rather than invoking the overhead of reading the entire
+    // config file into GlobalConfig.
+    auto cfgJSON = readJSONfile(lmrCfg.cfgFile);
+    string solverModeStr = cfgJSON["solver_mode"].str;
+    auto solverMode = solverModeFromName(solverModeStr);
+
     // Figure out which snapshot to start from
     if (GlobalConfig.is_master_task) {
-        if (GlobalConfig.solverMode == SolverMode.steady) {
+        if (solverMode == SolverMode.steady) {
             numberSnapshots = determineNumberOfSnapshots();
         }
         else {
             numberSnapshots = determineNumberOfTimesEntries();
         }
         if (snapshotStart == -1) {
-	        snapshotStart = numberSnapshots-1;
+            snapshotStart = numberSnapshots-1;
             if (verbosity > 1) {
                 writeln("lmr run: snapshot requested is '-1' -- final snapshot");
                 writefln("lmr run: starting from final snapshot, index= %02d", snapshotStart);
@@ -321,16 +328,10 @@ int main(string[] args)
             snapshotStart = numberSnapshots-1;
         }
     }
+
     version(mpi_parallel) {
         MPI_Bcast(&snapshotStart, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
-
-    // We just want to pull out solver mode at this point, so that we can direct the execution flow.
-    // We choose to execute these few lines rather than invoking the overhead of reading the entire
-    // config file into GlobalConfig.
-    auto cfgJSON = readJSONfile(lmrCfg.cfgFile);
-    string solverModeStr = cfgJSON["solver_mode"].str;
-    auto solverMode = solverModeFromName(solverModeStr);
 
     final switch (solverMode) {
     case SolverMode.steady:
