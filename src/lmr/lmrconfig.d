@@ -210,44 +210,16 @@ string residualFilename(int snapshot, int blkId)
         fname ~= lmrCfg.gzipExt;
     return fname;
 }
-
 /**
  * Return the loads filename for a single block+boundary combo as a string.
- *
- * This function is intended for the steady-mode because loads get written
- * at the same time as snapshots. So they land in that area of the code.
  *
  * Authors: RJG
  * Date: 2023-11-19
  */
-string loadsFilename_steady(int snapshot, int blkId, size_t bndryId, string group)
-{
-    string fname = lmrCfg.snapshotDir ~
-        "/" ~
-        format(lmrCfg.snapshotIdxFmt, snapshot) ~
-        "/" ~
-        lmrCfg.loadsPrefix ~
-        "-blk-" ~ format(lmrCfg.blkIdxFmt, blkId) ~
-        "-bndry-" ~ format("%d", bndryId) ~
-        "-" ~ group ~
-         ".dat";
-    return fname;
-}
-
-/**
- * Return the loads filename for a single block+boundary combo as a string.
- *
- * This function is intended for the steady-mode because loads get written
- * at the same time as snapshots. So they land in that area of the code.
- *
- * Authors: RJG
- * Date: 2023-11-19
- */
-string loadsFilename_timemarching(int tindx, int blkId, int bndryId, string group)
+string loadsFilename(int tindx, int blkId, int bndryId, string group)
 {
     string fname = lmrCfg.loadsDir ~
-        "/" ~
-        "t" ~ format(lmrCfg.snapshotIdxFmt, tindx) ~
+        "/" ~ format(lmrCfg.snapshotIdxFmt, tindx) ~
         "/" ~
         "blk-" ~ format(lmrCfg.blkIdxFmt, blkId) ~
         "-bndry-" ~ format("%d", bndryId) ~

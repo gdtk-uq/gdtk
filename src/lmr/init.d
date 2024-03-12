@@ -45,7 +45,7 @@ import blockio : BinaryBlockIO, GzipBlockIO;
 import lmr.fvcell : FVCell;
 import fvcellio;
 import fileutil : ensure_directory_is_present;
-import lmr.loads : init_loads_times_file;
+import lmr.loads : init_loads_metadata_file;
 
 version(mpi_parallel) {
     import mpi;
@@ -843,5 +843,5 @@ void initFluidSolidExchangeBoundaries()
 void initLoadsFiles()
 {
     ensure_directory_is_present(lmrCfg.loadsDir);
-    init_loads_times_file();
+    init_loads_metadata_file();
 }

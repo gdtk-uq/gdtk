@@ -17,7 +17,7 @@ import std.algorithm.searching : countUntil;
 import std.datetime : DateTime, Clock;
 import std.parallelism : parallel, defaultPoolThreads;
 import std.stdio : File, writeln, writefln, stdout;
-import std.file : rename, readText;
+import std.file : rename, readText, exists;
 import std.array : appender;
 import std.format : formattedWrite;
 import std.json : JSONValue;
@@ -56,7 +56,12 @@ import user_defined_source_terms : getUDFSourceTermsForCell;
 import blockio;
 import fvcellio;
 import lmr.fvcell : FVCell;
-import lmr.loads : writeLoadsToFile_steady;
+import lmr.loads : writeLoadsToFile;
+import lmr.loads : init_current_loads_indx_dir,
+                   wait_for_current_indx_dir,
+                   writeLoadsToFile,
+                   count_written_loads,
+                   update_loads_metadata_file;
 
 version(mpi_parallel) {
     import mpi;
@@ -174,6 +179,7 @@ struct NKGlobalConfig {
     int stepsBetweenLoadsUpdate = 20;
     bool writeSnapshotOnLastStep = true;
     bool writeDiagnosticsOnLastStep = true;
+    bool writeLoadsOnLastStep = true;
     bool writeLimiterValues = false;
     bool writeResidualValues = false;
     bool writeLoads = false;
@@ -224,6 +230,7 @@ struct NKGlobalConfig {
         stepsBetweenLoadsUpdate = getJSONint(jsonData, "steps_between_loads_update", stepsBetweenLoadsUpdate);
         writeSnapshotOnLastStep = getJSONbool(jsonData, "write_snapshot_on_last_step", writeSnapshotOnLastStep);
         writeDiagnosticsOnLastStep = getJSONbool(jsonData, "write_diagnostics_on_last_step", writeDiagnosticsOnLastStep);
+        writeLoadsOnLastStep = getJSONbool(jsonData, "write_loads_on_last_step", writeLoadsOnLastStep);
         writeLimiterValues = getJSONbool(jsonData, "write_limiter_values", writeLimiterValues);
         writeResidualValues = getJSONbool(jsonData, "write_residual_values", writeResidualValues);
         writeLoads = getJSONbool(jsonData, "write_loads", writeLoads);
@@ -679,6 +686,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
     readNewtonKrylovConfig();
 
     int nWrittenSnapshots;
+    int nWrittenLoads = count_written_loads();
     int startStep = 1;
     bool finalStep = false;
     double cfl;
@@ -698,6 +706,11 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
     colScale = new ConservedQuantities(nConserved);
     if (cfg.is_master_task) {
         initialiseDiagnosticsFile();
+    }
+    if (nkCfg.writeLoads && (nWrittenLoads == 0)) {
+        if (cfg.is_master_task) {
+            initLoadsFiles();
+        }
     }
     if (nkCfg.writeLimiterValues) {
         limCIO = new FluidFVCellLimiterIO(buildLimiterVariables());
@@ -1051,8 +1064,11 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
 
         if (((step % nkCfg.stepsBetweenSnapshots) == 0) || (finalStep && nkCfg.writeSnapshotOnLastStep)) {
             writeSnapshot(step, dt, cfl, nWrittenSnapshots);
+        }
+
+        if (((step % nkCfg.stepsBetweenLoadsUpdate) == 0) || (finalStep && nkCfg.writeLoadsOnLastStep)) {
             if (nkCfg.writeLoads) {
-                writeLoads(step, nWrittenSnapshots);
+                writeLoads(step, nWrittenLoads);
             }
         }
 
@@ -3039,23 +3055,33 @@ void writeResidualValues(int iSnap)
 /**
  * Write loads to disk.
  *
- * Authors: RJG
+ * Authors: RJG and KAD
  * Date: 2023-11-19
  */
-void writeLoads(int step, int nWrittenSnapshots)
+void writeLoads(int step, ref int nWrittenLoads)
 {
     alias cfg = GlobalConfig;
     if (cfg.is_master_task) {
-        writefln("    |");
-        writefln("    |-->  Writing loads at step = %4d  ", step);
+        writeln();
+        writefln("+++++++++++++++++++++++++++++++++++++++");
+        writefln("+   Writing loads at step = %4d   +", step);
+        writefln("+++++++++++++++++++++++++++++++++++++++");
+        writeln();
     }
 
-    int iSnap = (nWrittenSnapshots <= nkCfg.totalSnapshots) ? nWrittenSnapshots : nkCfg.totalSnapshots;
-    foreach (blk; localFluidBlocks) {
-        writeLoadsToFile_steady(iSnap, blk);
+    if (cfg.is_master_task) {
+        init_current_loads_indx_dir(nWrittenLoads);
     }
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    wait_for_current_indx_dir(nWrittenLoads);
+    writeLoadsToFile(-1, nWrittenLoads);
+    if (cfg.is_master_task) {
+        update_loads_metadata_file(-1, step, nWrittenLoads);
+    }
+
+    nWrittenLoads++;
+
 }
-
 
 /*---------------------------------------------------------------------
  * Mixins for performing preconditioner actions

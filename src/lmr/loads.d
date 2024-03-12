@@ -50,54 +50,13 @@ version(mpi_parallel) {
     import mpi;
 }
 
-
-void writeLoadsToFile_steady(int snapshot, FluidBlock blk)
-{
-    final switch (blk.grid_type) {
-    case Grid_t.unstructured_grid:
-        auto ublk = cast(UFluidBlock) blk;
-        assert(ublk !is null, "Oops, this should be a UFluidBlock object.");
-        applyUnstructuredGrid_steady(snapshot, ublk);
-        break;
-    case Grid_t.structured_grid:
-        throw new Error("lmr5 implementation job: writing loads for structured grids not yet available.");
-    } // end final switch
-}
-
-string generateBoundaryLoadFile_steady(int snapshot, int blkId, size_t bndryId, string group)
-{
-    string fname = loadsFilename_steady(snapshot, blkId, bndryId, group);
-    auto f = File(fname, "w");
-    f.writeln("# 1:pos.x 2:pos.y 3:pos.z 4:n.x 5:n.y 6:n.z 7:area 8:cellWidthNormalToSurface 9:outsign "~
-              "10:p 11:rho 12:T 13:velx 14:vely 15:velz 16:mu 17:a "~
-              "18:Re 19:y+ "~
-              "20:tau_wall_x 21:tau_wall_y 22:tau_wall_z "~
-              "23:q_total 24:q_cond 25:q_diff");
-    f.close();
-    return fname;
-}
-
-void applyUnstructuredGrid_steady(int snapshot, UFluidBlock blk)
-{
-    foreach (ibndry, bndry; blk.bc) {
-        if (canFind(GlobalConfig.group_names_for_loads, bndry.group)) {
-            string fname = generateBoundaryLoadFile_steady(snapshot, blk.id, ibndry, bndry.group);
-            foreach (i, iface; bndry.faces) {
-                // cell width normal to surface
-                number w = (bndry.outsigns[i] == 1) ? iface.left_cell.L_min : iface.right_cell.L_min;
-                computeAndStoreLoads(iface, bndry.outsigns[i], w, fname);
-            }
-        }
-    }
-}
-
 /**
  * Write loads when in timemarching mode.
  *
  * Authors: KAD, PAJ and RJG
  * Date: 2024-03-11
  */
-void writeLoadsToFile_timemarching(double sim_time, int current_loads_tindx) {
+void writeLoadsToFile(double sim_time, int current_loads_tindx) {
     foreach (blk; localFluidBlocks) {
         if (blk.active) {
             final switch (blk.grid_type) {
@@ -205,7 +164,7 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
 string generate_boundary_load_file(int blkid, int bcid, int current_loads_tindx, double sim_time, string group)
 {
     // generate data file -- naming format tindx_groupname.dat
-    string fname = loadsFilename_timemarching(current_loads_tindx, blkid, bcid, group);
+    string fname = loadsFilename(current_loads_tindx, blkid, bcid, group);
     // create file
     auto f = File(fname, "w");
     f.writeln("# t = ", sim_time);
@@ -218,28 +177,48 @@ string generate_boundary_load_file(int blkid, int bcid, int current_loads_tindx,
     return fname;
 } // end generate_boundary_load_file()
 
-void init_current_loads_tindx_dir(int current_loads_tindx)
+int count_written_loads()
 {
-    string dirName = lmrCfg.loadsDir ~ "/t" ~ format(lmrCfg.snapshotIdxFmt, current_loads_tindx);
+    int nPrevLoadsWritten;
+    string fname = lmrCfg.loadsDir ~ "/" ~ lmrCfg.loadsPrefix ~ "-metadata";
+    if (exists(fname)) {
+        auto finalLine = readText(fname).splitLines()[$-1];
+        if (finalLine[0] == '#') {
+            // looks like we found a single comment line.
+            nPrevLoadsWritten = 0;
+            } else {
+            // assume we have a valid line to work with
+            nPrevLoadsWritten = to!int(finalLine.split[0]) + 1;
+        }
+    } else {
+        nPrevLoadsWritten = 0;
+    }
+
+    return nPrevLoadsWritten;
+}
+
+void init_current_loads_indx_dir(int current_loads_tindx)
+{
+    string dirName = lmrCfg.loadsDir ~ "/" ~ format(lmrCfg.snapshotIdxFmt, current_loads_tindx);
     ensure_directory_is_present(dirName);
 }
 
-void wait_for_current_tindx_dir(int current_loads_tindx)
+void wait_for_current_indx_dir(int current_loads_tindx)
 {
-    string dirName = lmrCfg.loadsDir ~ "/t" ~ format(lmrCfg.snapshotIdxFmt, current_loads_tindx);
+    string dirName = lmrCfg.loadsDir ~ "/" ~ format(lmrCfg.snapshotIdxFmt, current_loads_tindx);
     wait_for_directory_to_be_present(dirName);
 }
 
-void init_loads_times_file()
+void init_loads_metadata_file()
 {
-    string fname = lmrCfg.loadsDir ~ "/" ~ lmrCfg.loadsPrefix ~ ".times";
-    std.file.write(fname, "# 1:loads_index 2:sim_time\n");
+    string fname = lmrCfg.loadsDir ~ "/" ~ lmrCfg.loadsPrefix ~ "-metadata";
+    std.file.write(fname, "# 1:loads_index    2:sim_time    3:step\n");
 }
 
-void update_loads_times_file(double sim_time, int current_loads_tindx)
+void update_loads_metadata_file(double sim_time, int step, int current_loads_tindx)
 {
-    string fname = lmrCfg.loadsDir ~ "/" ~ lmrCfg.loadsPrefix ~ ".times";
-    std.file.append(fname, format("%04d %.18e \n", current_loads_tindx, sim_time));
+    string fname = lmrCfg.loadsDir ~ "/" ~ lmrCfg.loadsPrefix ~ "-metadata";
+    std.file.append(fname, format("%04d %.18e %d\n", current_loads_tindx, sim_time, step));
 }
 
 void computeAndStoreLoads(FVInterface iface, int outsign, number cellWidthNormalToSurface, string fname)

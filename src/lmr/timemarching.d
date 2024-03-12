@@ -58,10 +58,11 @@ import globaldata;
 import init;
 import fileutil : ensure_directory_is_present;
 import lmr.loads : computeRunTimeLoads,
-       init_current_loads_tindx_dir,
-       wait_for_current_tindx_dir,
-       writeLoadsToFile_timemarching,
-       update_loads_times_file;
+       init_current_loads_indx_dir,
+       wait_for_current_indx_dir,
+       writeLoadsToFile,
+       count_written_loads,
+       update_loads_metadata_file;
 import lmr.fvcell : FVCell;
 import lmr.history : initHistoryCells, writeHistoryCellsToFiles;
 
@@ -102,20 +103,7 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
     }
     else {
         // We'll need to work a little harder and find out how many loads we've already written.
-        string fname = lmrCfg.loadsDir ~ "/" ~ lmrCfg.loadsPrefix ~ ".times";
-        if (exists(fname)) {
-            auto finalLine = readText(fname).splitLines()[$-1];
-            if (finalLine[0] == '#') {
-                // looks like we found a single comment line.
-                SimState.current_loads_tindx = 0;
-            } else {
-                // assume we have a valid line to work with
-                SimState.current_loads_tindx = to!int(finalLine.split[0]) + 1;
-            }
-        }
-        else {
-            SimState.current_loads_tindx = 0;
-        }
+        SimState.current_loads_tindx = count_written_loads();
     }
 
     initLocalBlocks();
@@ -591,13 +579,13 @@ int integrateInTime(double targetTimeAsRequested)
                 ( ((SimState.time >= SimState.t_loads) && !SimState.loads_just_written) ||
                   SimState.step == GlobalConfig.write_loads_at_step )) {
                 if (GlobalConfig.is_master_task) {
-                    init_current_loads_tindx_dir(SimState.current_loads_tindx);
+                    init_current_loads_indx_dir(SimState.current_loads_tindx);
                 }
                 version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-                wait_for_current_tindx_dir(SimState.current_loads_tindx);
-                writeLoadsToFile_timemarching(SimState.time, SimState.current_loads_tindx);
+                wait_for_current_indx_dir(SimState.current_loads_tindx);
+                writeLoadsToFile(SimState.time, SimState.current_loads_tindx);
                 if (GlobalConfig.is_master_task) {
-                    update_loads_times_file(SimState.time, SimState.current_loads_tindx);
+                    update_loads_metadata_file(SimState.time, SimState.step, SimState.current_loads_tindx);
                 }
                 SimState.loads_just_written = true;
                 SimState.current_loads_tindx = SimState.current_loads_tindx + 1;
@@ -883,13 +871,13 @@ void finalizeSimulation_timemarching()
     
     if (!SimState.loads_just_written) {
         if (GlobalConfig.is_master_task) {
-            init_current_loads_tindx_dir(SimState.current_loads_tindx);
+            init_current_loads_indx_dir(SimState.current_loads_tindx);
         }
         version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-        wait_for_current_tindx_dir(SimState.current_loads_tindx);
-        writeLoadsToFile_timemarching(SimState.time, SimState.current_loads_tindx);
+        wait_for_current_indx_dir(SimState.current_loads_tindx);
+        writeLoadsToFile(SimState.time, SimState.current_loads_tindx);
         if (GlobalConfig.is_master_task) {
-            update_loads_times_file(SimState.time, SimState.current_loads_tindx);
+            update_loads_metadata_file(SimState.time, SimState.step, SimState.current_loads_tindx);
         }
     }
     /*
