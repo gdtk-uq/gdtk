@@ -21,13 +21,14 @@ flowDict = {
 bcDict = {
    inflow=InFlowBC_Supersonic:new{flowState=inflow},
    outflow=OutFlowBC_FixedPT:new{p_outside=p_inf/5, T_outside=T_inf},
-   noslipwall=WallBC_NoSlip_FixedT:new{Twall=T_wall},
+   noslipwall=WallBC_NoSlip_FixedT:new{Twall=T_wall, group='loads'},
 }
 --
 makeFluidBlocks(bcDict, flowDict)
 mpiDistributeBlocks{ntasks=8}
 --
-config.flux_calculator= "ausmdv"
+config.write_loads = true
+config.flux_calculator = "ausmdv"
 config.interpolation_order = 2
 config.viscous = true
 config.thermo_interpolator = "rhop"

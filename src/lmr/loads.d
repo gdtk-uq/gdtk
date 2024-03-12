@@ -7,7 +7,7 @@
  *
  * 2018-01-20 Some code clean up by PJ;
  * [TODO] more is needed for MPI context.
- * 
+ *
  * History:
  *   2024-03-11 RJG update for eilmer 5
  */
@@ -167,12 +167,11 @@ string generate_boundary_load_file(int blkid, int bcid, int current_loads_tindx,
     string fname = loadsFilename(current_loads_tindx, blkid, bcid, group);
     // create file
     auto f = File(fname, "w");
-    f.writeln("# t = ", sim_time);
-    f.writeln("# 1:pos.x 2:pos.y 3:pos.z 4:n.x 5:n.y 6:n.z 7:area 8:cellWidthNormalToSurface 9:outsign "~
-              "10:p 11:rho 12:T 13:velx 14:vely 15:velz 16:mu 17:a "~
-              "18:Re 19:y+ "~
-              "20:tau_wall_x 21:tau_wall_y 22:tau_wall_z "~
-              "23:q_total 24:q_cond 25:q_diff");
+    f.writeln("pos.x pos.y pos.z n.x n.y n.z area cellWidthNormalToSurface outsign"~
+              " p rho T vel.x vel.y vel.z mu a"~
+              " Re y+"~
+              " tau_wall.x tau_wall.y tau_wall.z"~
+              " q_total q_cond q_diff");
     f.close();
     return fname;
 } // end generate_boundary_load_file()
@@ -212,7 +211,7 @@ void wait_for_current_indx_dir(int current_loads_tindx)
 void init_loads_metadata_file()
 {
     string fname = lmrCfg.loadsDir ~ "/" ~ lmrCfg.loadsPrefix ~ "-metadata";
-    std.file.write(fname, "# 1:loads_index    2:sim_time    3:step\n");
+    std.file.write(fname, "loads_index    sim_time    step\n");
 }
 
 void update_loads_metadata_file(double sim_time, int step, int current_loads_tindx)
