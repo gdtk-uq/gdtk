@@ -33,6 +33,9 @@ makeFluidBlocks(bcDict, flowDict)
 config.flux_calculator= "ausmdv"
 config.interpolation_order = 2
 config.viscous = true
+config.extrema_clipping = false
+config.apply_limiter = false
+config.apply_heuristic_pressure_based_limiting = true
 -- config.spatial_deriv_locn = 'vertices'
 -- config.spatial_deriv_calc = 'divergence'
 
@@ -42,7 +45,7 @@ NewtonKrylovGlobalConfig{
    number_of_phases = 2,
    phase_changes_at_steps = { 15 },
    use_physicality_check = true,
-   max_linear_solver_iterations = 10,
+   max_linear_solver_iterations = 20,
    total_snapshots = 3,
    steps_between_status = 1,
    steps_between_snapshots = 5,
