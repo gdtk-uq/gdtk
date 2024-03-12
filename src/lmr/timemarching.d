@@ -179,6 +179,7 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
 
     if (!SimState.is_restart) {
         SimState.time = 0.0;
+        SimState.step = 0;
         // Clean out any existing times file.
         if (lmrCfg.timesFile.exists) lmrCfg.timesFile.remove;
         // We can put an initial entry in the times file now.
@@ -187,7 +188,7 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
         }
     }
     else {
-        // SimState.time and SimState.dt_global set in prepareTimesFileOnRestart
+        // SimState.time, SimState.step and SimState.dt_global set in prepareTimesFileOnRestart
         // It's convenient to do that while we have the times file loaded.
         prepareTimesFileOnRestart(SimState.current_tindx);
     }
@@ -261,8 +262,6 @@ int integrateInTime(double targetTimeAsRequested)
     SimState.t_plot = SimState.time + GlobalConfig.dt_plot;
     SimState.t_history = SimState.time + GlobalConfig.dt_history;
     SimState.t_loads = SimState.time + GlobalConfig.dt_loads;
-    // Overall iteration count.
-    SimState.step = 0;
     //
     if (GlobalConfig.viscous) {
         // We have requested viscous effects but their application may be delayed
@@ -792,6 +791,7 @@ void addToTimesFile()
     auto f = File(lmrCfg.timesFile, "a");
     string key = format(lmrCfg.snapshotIdxFmt, SimState.current_tindx);
     f.writefln("'%s':", key);
+    f.writefln("   step: %d", SimState.step);
     f.writefln("   time: %.18e", SimState.time);
     f.writefln("   dt:   %.18e", SimState.dt_global);
     if (isNaN(SimState.cfl_max)) {
@@ -828,12 +828,14 @@ void prepareTimesFileOnRestart(int restartIdx)
         snap = format(lmrCfg.snapshotIdxFmt, i);
         snapData = timesData[snap];
         f.writefln("'%s':", snap);
+        f.writefln("   step: %d", snapData["step"].as!int);
         f.writefln("   time: %.18e", snapData["time"].as!double);
         f.writefln("   dt:   %.18e", snapData["dt"].as!double);
         f.writefln("   cfl:  %.18e", snapData["cfl"].as!double);
         f.writefln("   wall-clock-elapsed: %.3f", snapData["wall-clock-elapsed"].as!double);
     }
     f.close();
+    SimState.step = snapData["step"].as!int;
     SimState.time = snapData["time"].as!double;
     SimState.dt_global = snapData["dt"].as!double;
 }
