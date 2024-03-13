@@ -27,7 +27,6 @@ bcDict = {
 makeFluidBlocks(bcDict, flowDict)
 mpiDistributeBlocks{ntasks=8}
 --
-config.write_loads = true
 config.flux_calculator = "ausmdv"
 config.interpolation_order = 2
 config.viscous = true
@@ -51,7 +50,9 @@ NewtonKrylovGlobalConfig{
    total_snapshots = 3,
    steps_between_status = 5,
    steps_between_snapshots = 10,
-   steps_between_diagnostics = 1
+   steps_between_diagnostics = 1,
+   write_loads = true,
+   steps_between_loads_update = 20,
 }
 
 NewtonKrylovPhase:new{
