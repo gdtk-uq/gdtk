@@ -203,3 +203,45 @@ import std.algorithm;
 
     return S;
 }
+
+@nogc number NNG_DiscoDectector2(GasModel gm, in FlowState LL, in FlowState L, in FlowState R, in FlowState RR) {
+    /*
+        Experimental discontinuity detector by NNG, based on formulas derived 21/02/24, see purple book.
+        @author: Nick Gibbons
+    */
+
+    number T0 =LL.gas.T;
+    number T1 = L.gas.T;
+    number T2 = R.gas.T;
+    number T3 =RR.gas.T;
+
+    number p0 =LL.gas.p;
+    number p1 = L.gas.p;
+    number p2 = R.gas.p;
+    number p3 =RR.gas.p;
+
+    number y_L = gm.gamma(LL.gas);
+    number y_R = gm.gamma(RR.gas);
+
+    number pgrad = (-1.5*p0 + -0.5*p1 + 0.5*p2 + 1.5*p3)/5;
+    number pavg  = (p0 + p1 + p2 + p3)/4;
+
+    // Use the left rho and T to compute a an estimated right state
+    number pright = pavg + pgrad*1.5;
+    number Tright = T0*pow(pright/p0, (y_L-1.0)/y_L);
+
+    // Now do the same thing from the other side
+    number pleft = pavg - pgrad*1.5;
+    number Tleft = T3*pow(pleft/p3, (y_R-1.0)/y_R);
+
+    number dT_p1= fabs(Tleft-T0)/T0;
+    number dT_p2= fabs(Tright-T3)/T3;
+    number dT_p = dT_p1 + dT_p2;
+
+    number width = 0.1;
+    number shift = 0.5;
+    number S = 0.5*tanh(3.0*(dT_p - shift)/width) + 0.5;
+    S = fmax(S, 0.1);
+
+    return S;
+}
