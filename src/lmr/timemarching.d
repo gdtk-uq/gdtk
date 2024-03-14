@@ -577,15 +577,7 @@ int integrateInTime(double targetTimeAsRequested)
             if (GlobalConfig.write_loads &&
                 ( ((SimState.time >= SimState.t_loads) && !SimState.loads_just_written) ||
                   SimState.step == GlobalConfig.write_loads_at_step )) {
-                if (GlobalConfig.is_master_task) {
-                    init_current_loads_indx_dir(SimState.current_loads_tindx);
-                }
-                version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-                wait_for_current_indx_dir(SimState.current_loads_tindx);
-                writeLoadsToFile(SimState.time, SimState.current_loads_tindx);
-                if (GlobalConfig.is_master_task) {
-                    update_loads_metadata_file(SimState.time, SimState.step, SimState.current_loads_tindx);
-                }
+                writeLoadsFiles_timemarching();
                 SimState.loads_just_written = true;
                 SimState.current_loads_tindx = SimState.current_loads_tindx + 1;
                 SimState.t_loads = SimState.t_loads + GlobalConfig.dt_loads;
@@ -716,6 +708,32 @@ int integrateInTime(double targetTimeAsRequested)
 }
 
 /**
+ * This function writes the loads files
+ *
+ * Authors: KAD
+ * Date: 2024-03-15
+ */
+void writeLoadsFiles_timemarching()
+{
+    alias cfg = GlobalConfig;
+    if (cfg.is_master_task) {
+        writefln("++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+        writefln("+   Writing loads at step = %6d; t = %8.3e s    +", SimState.step, SimState.time);
+        writefln("++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+    }
+
+    if (cfg.is_master_task) {
+        init_current_loads_indx_dir(SimState.current_loads_tindx);
+    }
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    wait_for_current_indx_dir(SimState.current_loads_tindx);
+    writeLoadsToFile(SimState.time, SimState.current_loads_tindx);
+    if (cfg.is_master_task) {
+        update_loads_metadata_file(SimState.time, SimState.step, SimState.current_loads_tindx);
+    }
+}
+
+/**
  * This function writes the flow field files, but also takes care of accompanying step <-> time mapping.
  *
  * Authors: RJG
@@ -725,9 +743,8 @@ void writeSnapshotFiles_timemarching()
 {
     alias cfg = GlobalConfig;
     if (cfg.is_master_task) {
-        writeln();
         writefln("++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-        writefln("+   Writing snapshot at step = %4d; t = %8.3e s   +", SimState.step, SimState.time);
+        writefln("+   Writing snapshot at step = %6d; t = %8.3e s +", SimState.step, SimState.time);
         writefln("++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
     }
 
@@ -872,15 +889,7 @@ void finalizeSimulation_timemarching()
     */
     
     if (!SimState.loads_just_written) {
-        if (GlobalConfig.is_master_task) {
-            init_current_loads_indx_dir(SimState.current_loads_tindx);
-        }
-        version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-        wait_for_current_indx_dir(SimState.current_loads_tindx);
-        writeLoadsToFile(SimState.time, SimState.current_loads_tindx);
-        if (GlobalConfig.is_master_task) {
-            update_loads_metadata_file(SimState.time, SimState.step, SimState.current_loads_tindx);
-        }
+        writeLoadsFiles_timemarching();
     }
     /*
     if (!GlobalConfig.new_flow_format && GlobalConfig.do_temporal_DFT) {

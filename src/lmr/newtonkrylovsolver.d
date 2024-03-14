@@ -2835,9 +2835,8 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
     alias cfg = GlobalConfig;
     size_t nConserved = cfg.cqi.n;
     if (cfg.is_master_task) {
-        writeln();
         writefln("+++++++++++++++++++++++++++++++++++++++");
-        writefln("+   Writing snapshot at step = %4d   +", step);
+        writefln("+   Writing snapshot at step = %6d +", step);
         writefln("+++++++++++++++++++++++++++++++++++++++");
     }
 
@@ -2916,6 +2915,7 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
 
     if (GlobalConfig.is_master_task) {
 	writeRestartMetadata(snapshots);
+        writeln(); // write a blank line for aesthetic purposes
     }
 }
 
@@ -3062,13 +3062,11 @@ void writeLoads(int step, ref int nWrittenLoads)
 {
     alias cfg = GlobalConfig;
     if (cfg.is_master_task) {
-        writeln();
         writefln("+++++++++++++++++++++++++++++++++++++++");
-        writefln("+   Writing loads at step = %4d   +", step);
+        writefln("+   Writing loads at step = %6d    +", step);
         writefln("+++++++++++++++++++++++++++++++++++++++");
         writeln();
     }
-
     if (cfg.is_master_task) {
         init_current_loads_indx_dir(nWrittenLoads);
     }
