@@ -16,7 +16,11 @@ run:
 
 post:
 	lmr snapshot2vtk --all
+	python3 sod-driving-left.py > sod-driving-left.transcript
+	lmr slice-flow --output=eilmer.data --slice-list=":,:,0,0"
+	./plot.sh
 
 clean:
 	- rm -rf $(LMR_DIR)
+	- rm *.eps eilmer.data analytic.data sod-driving-left.transcript
 	- rm ideal-air.gas
