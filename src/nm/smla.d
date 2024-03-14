@@ -143,6 +143,19 @@ public:
         }
     }
 
+    void scaleCol(size_t col, T scaleFactor)
+    {
+        assert(col < ia.length-1);
+        foreach (row; 0..ia.length-1) {
+            foreach (offset, j; ja[ia[row]..ia[row+1]]) {
+                if ( j == col ) {
+                    aa[ia[row]+offset] *= scaleFactor;
+                    break;
+                }
+            }
+        }
+    }
+
     void scale(T scaleFactor) {
         foreach (ref elem; aa) {
             elem *= scaleFactor;
