@@ -59,7 +59,7 @@ public:
     // with the ghost cell via the faceTag.
     bool cell_mapping_from_file;
     string mapped_cells_filename;
-    BlockAndCellId[string][] mapped_cells_list;
+    BlockAndCellId[string][size_t] mapped_cells_list;
     version(mpi_parallel) {
         // In the MPI-parallel code, we do not have such direct access and so
         // we store the integral ids of the source cell and block and send requests
@@ -68,8 +68,8 @@ public:
         // data pipes need to be known at the source and destination ends of the pipes.
         // So, we store those cell indices in a matrix of lists with the indices
         // into the matrix being the source and destination block ids.
-        size_t[][][] src_cell_ids;
-        size_t[][][] ghost_cell_indices;
+        size_t[][size_t][size_t] src_cell_ids;
+        size_t[][size_t][size_t] ghost_cell_indices;
         //
         size_t n_incoming, n_outgoing;
         size_t[] outgoing_ncells_list, incoming_ncells_list;
@@ -152,6 +152,10 @@ public:
     void set_up_cell_mapping()
     {
         if (cell_mapping_from_file) {
+            if (!exists(mapped_cells_filename)) {
+                string msg = format("mapped_cells file %s does not exist.", mapped_cells_filename);
+                throw new FlowSolverException(msg);
+            }
             final switch (blk.grid_type) {
             case Grid_t.unstructured_grid:
                 // We set up the ghost-cell reference list to have the same order as
@@ -170,37 +174,6 @@ public:
             case Grid_t.structured_grid:
                 throw new Error("cell mapping from file is not implemented for structured grids");
             } // end switch grid_type
-            //
-            // Read the entire mapped_cells file.
-            // The single mapped_cell file contains the indices mapped cells
-            // for all ghost-cells, for all blocks.
-            //
-            // They are in sections labelled by the block id.
-            // Each boundary face is identified by its "faceTag",
-            // which is a string composed of the vertex indices, in ascending order.
-            // The order of the ghost-cells is assumed the same as for each
-            // grids underlying the FluidBlock.
-            //
-            // For the shared memory code, we only need the section for the block
-            // associated with the current boundary.
-            // For the MPI-parallel code, we need the mappings for all blocks,
-            // so that we know what requests for data to expect from other blocks.
-            //
-            size_t nblks = GlobalConfig.nFluidBlocks;
-            mapped_cells_list.length = nblks;
-            version(mpi_parallel) {
-                src_cell_ids.length = nblks;
-                ghost_cell_indices.length = nblks;
-                foreach (i; 0 .. nblks) {
-                    src_cell_ids[i].length = nblks;
-                    ghost_cell_indices[i].length = nblks;
-                }
-            }
-            //
-            if (!exists(mapped_cells_filename)) {
-                string msg = format("mapped_cells file %s does not exist.", mapped_cells_filename);
-                throw new FlowSolverException(msg);
-            }
             auto f = File(mapped_cells_filename, "r");
             string getHeaderContent(string target)
             {
@@ -217,8 +190,36 @@ public:
                 } // end while
                 return ""; // didn't find the target
             }
-            foreach (dest_blk_id; 0 .. nblks) {
-                string txt = getHeaderContent(format("NMappedCells in BLOCK[%d]", dest_blk_id));
+            //
+            // Read the entire mapped_cells file.
+            // The single mapped_cell file contains the indices mapped cells
+            // for all ghost-cells, for all blocks.
+            //
+            // They are in sections labelled by the block id.
+            // Each boundary face is identified by its "faceTag",
+            // which is a string composed of the vertex indices, in ascending order.
+            // The order of the ghost-cells is assumed the same as for each
+            // grids underlying the FluidBlock.
+            //
+            // For the shared memory code, we only need the section for the block
+            // associated with the current boundary.
+            // For the MPI-parallel code, we need the mappings for all blocks,
+            // so that we know what requests for data to expect from other blocks.
+            //
+            string txt = getHeaderContent(format("MappedBlocks in BLOCK[%d]", blk.id));
+            if (!txt.length) {
+                string msg = format("Did not find mapped blocks section for block id=%d.", blk.id);
+                throw new FlowSolverException(msg);
+            }
+            size_t[] neighbour_block_id_list;
+            neighbour_block_id_list ~= blk.id;
+            foreach (id; txt.split()) {
+                neighbour_block_id_list ~= to!int(id);
+            }
+            neighbour_block_id_list.sort();
+            //
+            foreach (dest_blk_id; neighbour_block_id_list) {
+                txt = getHeaderContent(format("NMappedCells in BLOCK[%d]", dest_blk_id));
                 if (!txt.length) {
                     string msg = format("Did not find mapped cells section for destination block id=%d.",
                                         dest_blk_id);
@@ -274,7 +275,8 @@ public:
                 incoming_flowstate_tag_list.length = 0;
                 incoming_convective_gradient_tag_list.length = 0;
                 incoming_viscous_gradient_tag_list.length = 0;
-                foreach (src_blk_id; 0 .. nblks) {
+                foreach (src_blk_id; neighbour_block_id_list) {
+                    if (src_blk_id == blk.id) {continue;}
                     size_t nc = src_cell_ids[src_blk_id][blk.id].length;
                     if (nc > 0) {
                         incoming_ncells_list ~= nc;
@@ -309,7 +311,8 @@ public:
                 outgoing_flowstate_tag_list.length = 0;
                 outgoing_convective_gradient_tag_list.length = 0;
                 outgoing_viscous_gradient_tag_list.length = 0;
-                foreach (dest_blk_id; 0 .. nblks) {
+                foreach (dest_blk_id; neighbour_block_id_list) {
+                    if (dest_blk_id == blk.id) {continue;}
                     size_t nc = src_cell_ids[blk.id][dest_blk_id].length;
                     if (nc > 0) {
                         outgoing_ncells_list ~= nc;
