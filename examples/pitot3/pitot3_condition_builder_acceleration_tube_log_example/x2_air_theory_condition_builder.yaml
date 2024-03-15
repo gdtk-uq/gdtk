@@ -1,0 +1,33 @@
+# x2_air_theory_condition_builder.yaml: 
+#
+# This is an example with a single driver condition, single shock tube fill pressure, and a logarithmically spaced acceleration tube fill pressure.
+# Chris James (c.james4@uq.edu.au) - 15/03/24
+
+# initial code set up
+mode : 'fully_theoretical'
+output_filename : 'x2_air_theory'
+no_of_processes : 7 # set this to one below the maximum cores on your machine as this gives the best speed up while still letting you work on your machine.
+condition_builder_cleanup : True
+
+# facility set up
+facility : 'x2_nozzle'
+# note, the condition builder currently cannot use custom driver conditions. They must be named ones.
+driver_condition : 'x2-lwp-2.5mm-100He-0-empirical'
+
+# shock tube
+test_gas_gas_model : 'CEAGas'
+test_gas_name : 'n2-o2-with-ions'
+p1 : 1500.0 # Pa
+
+# acceleration tube
+p5_range : [0.5, 100.0]
+p5_no_of_samples : 20
+p5_spacing : 'log'
+acceleration_tube_expand_to : 'shock_speed'
+
+# nozzle area ratio
+area_ratio : 5.64
+
+# test section stuff
+cone_half_angle_degrees : 15.0 # degrees
+wedge_angle_degrees : 54.0 # degrees
