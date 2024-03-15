@@ -810,6 +810,11 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         else { // Assume we have a global (phase-independent) schedule
             cfl = cflSelector.nextCFL(-1.0, startStep, -1.0, -1.0, -1.0);
         }
+        if (cfg.is_master_task) {
+            writeln("*** RESTARTING SIMULATION ***");
+            writefln("RESTART-SNAPSHOT: %d", snapshots.length);
+            writefln("RESTART-STEP: %d", startStep);
+        }
     }
     else {
         // On fresh start, the phase setting must be at 0

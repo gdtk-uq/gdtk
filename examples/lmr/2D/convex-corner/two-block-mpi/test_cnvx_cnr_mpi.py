@@ -16,8 +16,9 @@ def change_test_dir(request, monkeypatch):
 expected_reason_for_stop = "relative-global-residual-target"
 expected_number_steps = 32
 expected_final_cfl = 8.134e+03
+expected_restart_step = 21
 
-def expected_output(proc):
+def expected_output(proc, check_start_step=False):
     steps = 0
     cfl = 0.0
     lines = proc.stdout.split("\n")
@@ -28,11 +29,14 @@ def expected_output(proc):
             steps = int(line.split()[1])
         if line.find("FINAL-CFL") != -1:
             cfl = float(line.split()[1])
+        if line.find("RESTART-STEP") != -1:
+            restart_step = float(line.split()[1])
     assert steps == expected_number_steps, "Failed to take correct number of steps."
     assert reason == expected_reason_for_stop, "Failed to stop for the expected reason."
     assert abs(cfl - expected_final_cfl)/expected_final_cfl < 0.005, \
         "Failed to arrive at expected CFL value on final step."
-
+    if (check_start_step):
+        assert  restart_step == expected_restart_step, "Failed to restart at the expected step."
 
 def test_prep():
     make_targets = ['prep-gas', 'grid', 'init']
@@ -59,7 +63,7 @@ def test_restart():
     cmd = "mpirun -np 2 lmrZ-mpi-run -s 1"
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
     assert proc.returncode == 0, "Failed during: " + cmd
-    expected_output(proc)
+    expected_output(proc, True)
 
 def test_cleanup():
     cmd = "make clean"

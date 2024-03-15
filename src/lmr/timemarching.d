@@ -191,6 +191,12 @@ void initTimeMarchingSimulation(int snapshotStart, int maxCPUs, int threadsPerMP
         // SimState.time, SimState.step and SimState.dt_global set in prepareTimesFileOnRestart
         // It's convenient to do that while we have the times file loaded.
         prepareTimesFileOnRestart(SimState.current_tindx);
+        if (cfg.is_master_task) {
+            writeln("*** RESTARTING SIMULATION ***");
+            writefln("RESTART-SNAPSHOT: %d", SimState.current_tindx);
+            writefln("RESTART-STEP: %d", SimState.step);
+            writefln("RESTART-TIME: %8.3e", SimState.time);
+        }
     }
 
     initMasterLuaState();
