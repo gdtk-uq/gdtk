@@ -15,9 +15,8 @@
 --          3. case configuration via 'config.txt'
 --
 
-config.title = "Method of Manufactured Solutions."
-print(config.title)
 config.dimensions = 2
+config.solver_mode = "steady"
 
 -- Case is configured by a higher-level controller.
 -- Options are placed in config.txt as simple
