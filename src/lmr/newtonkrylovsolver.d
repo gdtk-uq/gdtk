@@ -890,7 +890,13 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         auto currentPhase = countUntil(nkCfg.phaseChangesAtSteps, step);
         startOfNewPhase = false;
         if (currentPhase != -1) { // start of new phase detected
-	    currentPhase++; // increment because countUntil counts from 0
+            if (cfg.is_master_task) {
+                writefln("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+                writefln("+   Start of New Phase at step = %6d; global relative residual = %10.6e +", step, globalResidual/referenceGlobalResidual);
+                writefln("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+                writeln();
+            }
+            currentPhase++; // increment because countUntil counts from 0
             startOfNewPhase = true;
             setPhaseSettings(currentPhase);
             if (activePhase.useAutoCFL) {
