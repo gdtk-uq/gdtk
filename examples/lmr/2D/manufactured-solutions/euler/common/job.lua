@@ -17,9 +17,8 @@
 --          2. new input for steady-state solver configuration
 --
 
-config.title = "Method of Manufactured Solutions."
-print(config.title)
 config.dimensions = 2
+config.solver_mode = "steady"
 
 -- Case is configured by a higher-level controller.
 -- Options are placed in config.txt as simple
@@ -68,7 +67,6 @@ NewtonKrylovGlobalConfig{
    stop_on_relative_residual = 1.0e-12,
    number_of_phases = 2,
    phase_changes_at_steps = { 100 },
-   use_local_timestep = true,
    inviscid_cfl_only = true,
    use_line_search = false,
    use_physicality_check = false,
