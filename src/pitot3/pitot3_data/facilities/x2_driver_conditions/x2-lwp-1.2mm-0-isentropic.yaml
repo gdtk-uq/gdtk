@@ -1,15 +1,18 @@
-# X2's 80%He/20%Ar 1.2 mm thick diaphragm driver condition 
-# with isentropic compression to the rupture pressure
-# from Gildfind et al. (2011)
-# Free-piston driver optimisation for simulation of high Mach
-# number scramjet flow conditions
-# Shock Waves, Vol 21, pages 559–572
-# https://doi.org/10.1007/s00193-011-0336-9
+# X2's 80%He/20%Ar 1.2 mm driver condition with isentropic compression to the specified compression ratio
 #
-# Chris James (c.james4@uq.edu.au) - 17/09/21
+# The fill pressure and composition are from Table 3 of Gildfind et al. (2011)
+# “Free-Piston Driver Optimisation for Simulation of High Mach Number Scramjet Flow Conditions,” 
+# Shock Waves, Vol. 21, No. 6, 2011, pp. 559–572.
+# The compression ratio (lambda) is from Table 4 of the same paper.
+#
+# This driver condition used to be specified with the rupture pressure (p4) of 15.5 MPa (15.5e6 Pa)
+# but I have changed it to the compression ratio as it feels more physical.
+# I have also specified D_throat instead of M_throat for a similar reason.
+#
+# Chris James (c.james4@uq.edu.au) - 16/03/24
 
 driver_condition_name : 'x2-lwp-1.2mm-0-isentropic'
-driver_condition_type : 'isentropic-compression-p4'
+driver_condition_type : 'isentropic-compression-compression-ratio'
 
 driver_gas_model : 'CEAGas'
 driver_fill_composition : {'He':0.8,'Ar':0.2} 
@@ -20,8 +23,8 @@ driver_withIons : False
 driver_p : 110.3e3 # driver fill pressure, Pa
 driver_T : 298.15 # driver fill temperature, K
 
-p4 : 15.5e6 # Pa
+compression_ratio : 19.4
 
-M_throat : 1.0
+D_throat : 0.085 # m (85 mm), (this is just the shock tube diameter, i.e. M_throat = 1 )
 
 

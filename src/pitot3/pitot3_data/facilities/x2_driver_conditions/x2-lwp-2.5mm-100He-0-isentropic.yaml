@@ -1,11 +1,25 @@
-# X2's 100%He 2.5 mm driver condition with isentropic compression
-# Values from Table 3 of Gildfind et al. (2011)
-# Free-piston driver optimisation for simulation of high Mach number scramjet flow conditions
-# M_throat for the 65 mm orifice plate is from the text of Gildfind et al. (2015) 
-# Free-piston driver performance characterisation using experimental shock speeds through helium
+# X2's 100%He 2.5 mm driver condition with isentropic compression to the specified compression ratio
+#
+# The fill pressure is from Table 3 of Gildfind et al. (2011)
+# “Free-Piston Driver Optimisation for Simulation of High Mach Number Scramjet Flow Conditions,” 
+# Shock Waves, Vol. 21, No. 6, 2011, pp. 559–572.
+# The compression ratio (lambda) is from Table 4 of the same paper.
+#
+# M_throat was calculated using the formula from Gildfind et al. (2015) 
+# “Free-Piston Driver Performance Characterisation Using Experimental Shock Speeds Through Helium,” 
+# Shock Waves, Vol. 25, No. 2, 2015, pp. 169–176.
+# for the specified composition (which includes more helium than the original driver condition from Gildfind et al. (2011))
+# the goal is to basically maintain the mass flow out of the driver per unit time as the driver condition becomes lighter,
+# by constricting the driver exit. This means that driver performance changes but piston dynamics remain the same.
+#
+# This driver condition used to be specified with the rupture pressure (p4) of 35.7 MPa (35.7e6 Pa)
+# but I have changed it to the compression ratio as it feels more physical.
+# I have also specified D_throat instead of M_throat for a similar reason.
+#
+# Chris James (c.james4@uq.edu.au) - 16/03/24
 
 driver_condition_name : 'x2-lwp-2.5mm-100He-0-isentropic'
-driver_condition_type : 'isentropic-compression-p4'
+driver_condition_type : 'isentropic-compression-compression-ratio'
 
 driver_gas_model : 'CEAGas'
 driver_fill_composition : {'He':1.0} 
@@ -16,8 +30,8 @@ driver_withIons : False
 driver_p : 77.2e3 # driver fill pressure, Pa
 driver_T : 298.15 # driver fill temperature, K
 
-p4 : 35.7e6 # Pa
+compression_ratio : 39.7 
 
-M_throat : 2.17
+D_throat : 0.065 #m (65 mm), (the related M_throat is 2.17)
 
 

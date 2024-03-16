@@ -1,4 +1,4 @@
-# X2's 80%He/20%Ar 1.2 mm thick diaphragm driver condition with empirically derived conditions
+# X2's 95%He/5%Ar 1.2 mm thick diaphragm driver condition with empirically derived conditions
 #
 # The fill pressure and composition are from Table 3 of Gildfind et al. (2011)
 # “Free-Piston Driver Optimisation for Simulation of High Mach Number Scramjet Flow Conditions,” 
@@ -29,11 +29,11 @@
 #
 # Chris James (c.james4@uq.edu.au) - 16/03/24
 
-driver_condition_name : 'x2-lwp-1.2mm-0-empirical'
+driver_condition_name : 'x2-lwp-1.2mm-90He-0-empirical'
 driver_condition_type : 'isentropic-compression-compression-ratio'
 
 driver_gas_model : 'CEAGas'
-driver_fill_composition : {'He':0.8,'Ar':0.2} 
+driver_fill_composition : {'He':0.95,'Ar':0.05} 
 driver_speciesList : ['He','Ar']
 driver_inputUnits : 'moles' 
 driver_withIons : False
@@ -43,6 +43,8 @@ driver_T : 298.15 # driver fill temperature, K
 
 compression_ratio : 17.4375
 
-D_throat : 0.085 # m (85 mm), (this is just the shock tube diameter, i.e. M_throat = 1 )
+D_throat : 0.0721 # m (72.1 mm rounded to one decimal place) 
+
+#(M_throat = 1.84 but I specified it with D_throat above so it was more 'physical' for users)
 
 

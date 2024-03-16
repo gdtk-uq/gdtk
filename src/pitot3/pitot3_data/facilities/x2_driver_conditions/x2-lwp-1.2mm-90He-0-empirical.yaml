@@ -1,11 +1,36 @@
-# X2's 90%He/20%Ar 1.2 mm thick diaphragm driver condition 
-# with empirical T4 and p4 values which I got from David Gildfind.
-# this is what we called 'lwp-1.2mm-dave-mhd' in PITOT2
+# X2's 90%He/10%Ar 1.2 mm thick diaphragm driver condition with empirically derived conditions
 #
-# Chris James (c.james4@uq.edu.au) - 17/09/21
+# The fill pressure and composition are from Table 3 of Gildfind et al. (2011)
+# “Free-Piston Driver Optimisation for Simulation of High Mach Number Scramjet Flow Conditions,” 
+# Shock Waves, Vol. 21, No. 6, 2011, pp. 559–572.
+# 
+# The original numbers used for this driver were empirical T4 and p4 values which I got from 
+# David Gildfind at some point
+# this driver was called 'lwp-1.2mm-dave-mhd' in PITOT2 and it was added to PITOT3 in September 2021
+# it had a p4 = 8.89e6 Pa and a T4 = 1726.0 K
+# From my recent analysis, it seems to be an isentropic compression with a compression ratio of 13.93
+#
+# Recently (i.e. 2023), while the isentropic compression driver does appear to overestimate shock speeds for this condition,
+# this empirical driver has severely underpredicted things, probably due to changing diaphragm batches. So I sat down to make new numbers.
+# I used the PITOT3 effective driver condition optimiser (see gdtk/examples/pitot3/pitot3_x2_effective_driver_condition_optimiser)
+# to get compression ratios for several recent X2 experiments with 1.2 mm diaphragms and the results are listed below:
+# shock tube shock speeds were sd1-sd3
+# x2s5564, Daisy-May Air condition 1, 100%He, p1 = 50 kPa, test gas = Zero Air, effective compression ratio = 17.79
+# x2s5566, Daisy-May Air condition 2, 80%He/20%Ar, p1 = 20 kPa, test gas = Zero Air, effective compression ratio = 17.62
+# x2s5567, Wallington IXV Condition, 80%He/20%Ar, p1 = 9 kPa, test gas = Zero Air, effective compression ratio = 16.87
+# x2s5617, Sam Lock Mars condition, 100%He, p1 = 10.5 kPa, test gas = CO2, effective compression ratio = 17.47
+# taking the mean of all of these (17.79 + 17.62 + 16.87 + 17.47) / 4 = 17.4375
+# this is between the design number of 19.4 and the last empirical value of 13.93 and it only has a standard deviation of
+# 0.35 so it seems like a reasonable estimate for now, which may need to be updated again in the future.
+#
+# This driver condition will now be specified as an 'isentropic-compression-compression-ratio' driver with the found
+# effective compression ratio. I will also take the opportunity to specify D_throat instead of M_throat as I have done
+# with other driver conditions today too.
+#
+# Chris James (c.james4@uq.edu.au) - 16/03/24
 
 driver_condition_name : 'x2-lwp-1.2mm-90He-0-empirical'
-driver_condition_type : 'empirical'
+driver_condition_type : 'isentropic-compression-compression-ratio'
 
 driver_gas_model : 'CEAGas'
 driver_fill_composition : {'He':0.9,'Ar':0.1} 
@@ -13,9 +38,11 @@ driver_speciesList : ['He','Ar']
 driver_inputUnits : 'moles' 
 driver_withIons : False
 
-p4 : 8.89e6 # Pa
-T4 : 1726.0 # K
+driver_p : 110.3e3 # driver fill pressure, Pa
+driver_T : 298.15 # driver fill temperature, K
 
-M_throat : 1.59
+compression_ratio : 17.4375
+
+D_throat : 0.0772 # m (77.2 mm), (the old M_throat was 1.59, but this actually gives 1.61, just FYI! so old PITOT3 results will be slightly different...)
 
 
