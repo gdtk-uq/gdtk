@@ -601,13 +601,12 @@ void plottingTableToFlowStateTable(lua_State *L)
     lua_setfield(L, tblIdx, "Bz");
 
     // 3. Convert temperatures
-    lua_getfield(L, tblIdx, "T"); // 2017-12-04, CHECK ME, redundant with today's name change
-    lua_setfield(L, tblIdx, "T");
     lua_newtable(L);
-    foreach ( i; 0 .. n_modes ) {
-        string key = format("T_modes[%d]", i);
+    foreach ( imode; 0 .. n_modes ) {
+        string modeName = managedGasModel.energy_mode_name(imode);
+        string key = format("T-%s", modeName);
         lua_getfield(L, tblIdx, toStringz(key));
-        lua_rawseti(L, -2, i+1);
+        lua_rawseti(L, -2, imode+1);
     }
     lua_setfield(L, tblIdx, "T_modes");
 

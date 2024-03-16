@@ -201,7 +201,7 @@ local function makeFlowStateFn(flowSol)
       -- If that fails, we'll just grab a 'nearest' cell.
       -- This should never fail.
       if not cell.ib then
-	 cell = flowSol:find_nearest_cell_centre{x=x, y=y, z=z}
+         cell = flowSol:find_nearest_cell_centre{x=x, y=y, z=z}
       end
       cell.fmt = "FlowState"
       -- The table for a cell's data should be enough to set the FlowState.
