@@ -14,7 +14,7 @@ There is a similar, slightly more complicated procedure in Gildfind et al. (2015
 Free-piston driver performance characterisation using experimental shock speeds through helium
 for those who are interested.
 
-Chris James (c.james4@uq.edu.au) - 15/03/24
+Chris James (c.james4@uq.edu.au) - 17/03/24
 
 """
 
@@ -34,38 +34,50 @@ from scipy.optimize import newton
 
 start_time = time.perf_counter()
 
-# just noting that this is not a real condition, I was just playing around...
+# this is kind of a 12A shock tube condition...
 
-# default driver values, we will change compression ratio to match stuff up...
-driver_dict = {'driver_condition_name': 'x2-lwp-2.5mm-0', 'driver_condition_type': 'isentropic-compression-compression-ratio',
-               'driver_gas_model': 'CEAGas',
-               'driver_fill_composition': {'He': 0.8, 'Ar': 0.2}, 'driver_speciesList': ['He', 'Ar'],
-               'driver_inputUnits': 'moles', 'driver_withIons': False,
-               'driver_p': 77.2e3, 'driver_T': 298.15, 'compression_ratio': 40.0,
-               'D_throat': 0.085}
+# it requires a driver specified with a compression ratio...
+driver_condition = 'x2-lwp-2.5mm-100He-0-isentropic'
 
 # just nrst mode so it runs fast
 config_dict = {'mode': 'fully_theoretical', 'output_filename': 'compression_ratio_test_results',
-               'facility': 'x2_nrst_85_mm_shock_tube', 'driver_condition': 'custom_from_dict',
-               'driver_dict': driver_dict,
+               'facility': 'x2_nrst_85_mm_shock_tube', 'driver_condition': driver_condition,
                'test_gas_gas_model': 'CEAGas', 'test_gas_name': 'n2-o2-with-ions', 'p1': 1800.0}
 
-vs1_experimental = 5200.0 # m/s
+vs1_experimental = 6500.0 # m/s
 
 print('-' * 60)
 print(f"Experimental vs1 = {vs1_experimental} m/s.")
 
-def error_in_vs1_eqn(compression_ratio, pitot3_config_dict = config_dict, vs1_experimental = vs1_experimental):
+# we start by running pitot in just_setup_simulation mode so we can pull out the driver object which we want to change for each sim
+# and the original compression ratio to use as the first guess
+
+config_data, object_dict, = run_pitot3(config_dict = config_dict, just_setup_simulation = True, verbose = False)
+
+compression_ratio_guess = object_dict['driver'].get_compression_ratio()
+original_driver_dict = object_dict['driver'].get_original_driver_config_dict()
+
+def error_in_vs1_eqn(compression_ratio, pitot3_config_dict = config_dict, pitot3_driver_dict = original_driver_dict,
+                     vs1_experimental = vs1_experimental):
+
     print('-' * 60)
 
     print(f"Guessed compression ratio = {compression_ratio:.2f}.")
 
     print("Running pitot 3 with this compression ratio.")
 
-    # doing a deepcopy here so we can change values but not mess with the original values...
+    # doing deepcopys here so we can change values but not mess with the original values...
+
+    pitot3_driver_dict = copy.deepcopy(pitot3_driver_dict)
+
     pitot3_config_dict = copy.deepcopy(pitot3_config_dict)
 
-    # change the compression ratio to the guessed one...
+    # now we change it so the driver is specified with a dictionary
+
+    pitot3_config_dict['driver_condition'] = 'custom_from_dict'
+    pitot3_config_dict['driver_dict'] = pitot3_driver_dict
+
+    # now we change the compression ratio to the guessed one...
     pitot3_config_dict['driver_dict']['compression_ratio'] = compression_ratio
 
     # and the output filename too...
@@ -89,9 +101,6 @@ def error_in_vs1_eqn(compression_ratio, pitot3_config_dict = config_dict, vs1_ex
     print(f"vs1 found - vs1 experimental = {vs1 - vs1_experimental} m/s.")
 
     return vs1 - vs1_experimental
-
-# just use the ideal value from above...
-compression_ratio_guess = driver_dict['compression_ratio']
 
 compression_ratio, results_info = newton(error_in_vs1_eqn, compression_ratio_guess, tol=1.0e-2, full_output=True)
 

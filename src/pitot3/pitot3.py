@@ -6,7 +6,7 @@ Chris James (c.james4@uq.edu.au) - (01/01/21)
 
 """
 
-VERSION_STRING = '16-Mar-2024'
+VERSION_STRING = '17-Mar-2024'
 
 import sys, os, math
 import yaml
@@ -20,13 +20,27 @@ from pitot3_utils.pitot3_classes import eilmer4_CEAGas_input_file_creator, expan
 #-----------------------------------------------------------------------------------
 
 def run_pitot3(config_dict = {}, config_filename = None,
-               pitot3_data_folder = '$PITOT3_DATA', default_config_yaml_filename = 'PITOT3_default_config.yaml'):
+               pitot3_data_folder = '$PITOT3_DATA', default_config_yaml_filename = 'PITOT3_default_config.yaml',
+               just_setup_simulation = False, verbose = True):
+    """
 
-    print('-'*60)
-    print (f"Running PITOT3 version: {VERSION_STRING}")
-    print('-'*60)
+    :param config_dict:
+    :param config_filename:
+    :param pitot3_data_folder:
+    :param default_config_yaml_filename:
+    :param just_setup_simulation: I did this so I could just load the config, just set up the facility and driver and then stop
+        This doesn't sound useful but it is useful if say you want to load information from the driver condition
+        but don't want to have to run a simulation to do it. Defaults to False as it is rare one would need it.
+    :param verbose: Set to true to make the code print stuff. I will probably implement this over time, but good to finally do it...
+    :return:
+    """
 
-    print("Let's get started, shall we:")
+    if verbose:
+        print('-'*60)
+        print (f"Running PITOT3 version: {VERSION_STRING}")
+        print('-'*60)
+
+        print("Let's get started, shall we:")
 
     #--------------------------------------------------------------------------------
     # load the default config which loads everything which runs the program...
@@ -87,7 +101,8 @@ def run_pitot3(config_dict = {}, config_filename = None,
 
     mode = config_data['mode']
 
-    print(f"Calculation mode is '{mode}'.")
+    if verbose:
+        print(f"Calculation mode is '{mode}'.")
 
     # facility set up stuff
     if 'facility' in config_data:
@@ -107,7 +122,8 @@ def run_pitot3(config_dict = {}, config_filename = None,
     #--------------------------------------------------------------------------------
     # load facility
     if facility_name:
-        print (f"Chosen facility is '{facility_name}'.")
+        if verbose:
+            print (f"Chosen facility is '{facility_name}'.")
 
         facility_yaml_filename = '{0}/{1}.yaml'.format(facilities_folder, facility_name)
         facility_yaml_file = open(os.path.expandvars(facility_yaml_filename))
@@ -135,7 +151,8 @@ def run_pitot3(config_dict = {}, config_filename = None,
 
     object_dict['facility'] = facility
 
-    print (f"Facility type is '{facility_type}'.")
+    if verbose:
+        print (f"Facility type is '{facility_type}'.")
     if nozzle_flag:
 
         if 'area_ratio' in config_data:
@@ -144,76 +161,66 @@ def run_pitot3(config_dict = {}, config_filename = None,
             # TO DO: need to throw some kind of exception here if they have not chosen a facility...
             # otherwise get the facility's geometric area ratio...
             area_ratio = facility.get_nozzle_geometric_area_ratio()
-            print(f"User has not specified an area ratio, so the geometric area ratio of this facility's nozzle ({area_ratio}) will be used.")
-
-    #-------------------------------------------------------------------------------------------------------
-    # go through driver conditions
-    # TO DO: this might be a useful method on the facility object? but isn't that useful here...
-
-    # print ("Available facility driver conditions are:")
-    #
-    # for file in os.listdir('facilities/' + facility.get_driver_conditions_folder()):
-    #     # print without the .yaml...
-    #     print (file[:-5])
-    #
-    #     driver_condition_file_location = 'facilities/' + facility.get_driver_conditions_folder() + '/' + file
-    #     driver_yaml_file = open(driver_condition_file_location)
-    #     driver_condition_input_data = yaml.load(driver_yaml_file, Loader=yaml.FullLoader)
-    #
-    #     driver_condition = Driver_Condition(driver_condition_input_data)
-    #     print(driver_condition.get_driver_condition_name())
+            if verbose:
+                print(f"User has not specified an area ratio, so the geometric area ratio of this facility's nozzle ({area_ratio}) will be used.")
 
     #-------------------------------------------------------------------------------------------------
 
-    print('-' * 60)
-    print("Setting up facility driver condition.")
+    if verbose:
+        print('-' * 60)
+        print("Setting up facility driver condition.")
 
     # pick a driver condition
     if driver_condition_name != 'custom_from_dict':
         if driver_condition_name != 'custom':
-            print(f"Chosen driver condition is '{driver_condition_name}'.")
+            if verbose:
+                print(f"Chosen driver condition is '{driver_condition_name}'.")
             selected_facility_driver_conditions_folder = facilities_folder + '/' + facility.get_driver_conditions_folder()
             driver_condition_file_location = selected_facility_driver_conditions_folder + '/' + driver_condition_name + '.yaml'
         else :
-            print(f"Using custom driver condition from the file {config_data['driver_condition_filename']}.")
+            if verbose:
+                print(f"Using custom driver condition from the file {config_data['driver_condition_filename']}.")
             driver_condition_file_location = config_data['driver_condition_filename']
 
         if os.path.isfile(os.path.expandvars(driver_condition_file_location)):
             driver_yaml_file = open(os.path.expandvars(driver_condition_file_location))
             driver_condition_input_data = yaml.load(driver_yaml_file, Loader=yaml.FullLoader)
         elif not os.path.isfile(os.path.expandvars(driver_condition_file_location)) and driver_condition_name != 'custom':
-            print(f"Your selected facility is {facility_name}. ")
-            print(f"Its driver conditions are stored in the folder {selected_facility_driver_conditions_folder}")
-            print(f"Your selected driver condition ('{driver_condition_name}') does not appear to exist in that folder.")
-            print("Below is the list of driver conditions in that folder. Are you sure you didn't mean one of those instead?")
+            if verbose:
+                print(f"Your selected facility is {facility_name}. ")
+                print(f"Its driver conditions are stored in the folder {selected_facility_driver_conditions_folder}")
+                print(f"Your selected driver condition ('{driver_condition_name}') does not appear to exist in that folder.")
+                print("Below is the list of driver conditions in that folder. Are you sure you didn't mean one of those instead?")
 
-            selected_facility_driver_conditions_folder_files = os.listdir(os.path.expandvars(selected_facility_driver_conditions_folder))
+                selected_facility_driver_conditions_folder_files = os.listdir(os.path.expandvars(selected_facility_driver_conditions_folder))
 
-            selected_facility_driver_conditions_folder_files.sort()
+                selected_facility_driver_conditions_folder_files.sort()
 
-            for filename in selected_facility_driver_conditions_folder_files:
-                filename = filename.replace('.yaml', '')
-                print(filename)
+                for filename in selected_facility_driver_conditions_folder_files:
+                    filename = filename.replace('.yaml', '')
+                    print(filename)
 
             raise Exception(f"pitot3.py: Specified facility driver condition does not exist in the {facility_name} facility driver condition folder.")
 
         elif not os.path.isfile(os.path.expandvars(driver_condition_file_location)) and driver_condition_name == 'custom':
-            print(f"Your selected driver condition filename ('{driver_condition_file_location}') does not appear to exist.")
-            print("Below is the list of files in your current working directory. Are you sure you didn't mean one of these files?")
+            if verbose:
+                print(f"Your selected driver condition filename ('{driver_condition_file_location}') does not appear to exist.")
+                print("Below is the list of files in your current working directory. Are you sure you didn't mean one of these files?")
 
-            cwd_files = os.listdir('.')
+                cwd_files = os.listdir('.')
 
-            cwd_files.sort()
+                cwd_files.sort()
 
-            for filename in cwd_files:
-                print(filename)
+                for filename in cwd_files:
+                    print(filename)
 
             raise Exception(f"pitot3.py: Specified custom facility driver condition file does not exist in the location the user has specified.")
         else:
             raise Exception(f"pitot3.py: There is some issue loading the driver condition.")
 
     else:
-        print("Using driver condition specified in a dictionary in the input config.")
+        if verbose:
+            print("Using driver condition specified in a dictionary in the input config.")
         driver_condition_input_data = config_data['driver_dict']
 
     if facility.shock_tube_diameter:
@@ -224,24 +231,27 @@ def run_pitot3(config_dict = {}, config_filename = None,
     # TO DO: I was thinking that it would be good to make this have lots of inputs, but it is almost too complicated
     # + it generally comes from a file...
     driver = Driver(driver_condition_input_data, p_0=p_0, T_0=T_0, preset_gas_models_folder = preset_gas_models_folder,
-                    outputUnits = outputUnits, species_MW_dict = species_MW_dict, D_shock_tube = D_shock_tube)
+                    outputUnits = outputUnits, species_MW_dict = species_MW_dict, D_shock_tube = D_shock_tube,
+                    verbose = verbose)
 
     state4 = driver.get_driver_rupture_state()
-    print(f"Driver gas model is {state4.get_gas_state().gmodel.type_str}.")
+    if verbose:
+        print(f"Driver gas model is {state4.get_gas_state().gmodel.type_str}.")
 
-    if state4.get_gas_state().gmodel.type_str == 'CEAGas':
-        print(f"Driver gas composition is {state4.get_reduced_composition_single_line_output_string()} ({state4.get_gamma_and_R_string()}).")
-    else:
-        print(f"Driver gas {state4.get_gamma_and_R_string()}.")
+        if state4.get_gas_state().gmodel.type_str == 'CEAGas':
+            print(f"Driver gas composition is {state4.get_reduced_composition_single_line_output_string()} ({state4.get_gamma_and_R_string()}).")
+        else:
+            print(f"Driver gas {state4.get_gamma_and_R_string()}.")
 
     v4 = state4.get_v()
 
-    if v4 == 0.0:
-        print (f"Driver rupture conditions are p4 = {state4.get_gas_state().p/1.0e6:.2f} MPa, T4 = {state4.get_gas_state().T:.2f} K, "
-               f"M_throat = {driver.get_M_throat():.2f}.")
-    elif v4 > 0.0:
-        print (f"Driver rupture conditions are p4 = {state4.get_gas_state().p/1.0e6:.2f} MPa, T4 = {state4.get_gas_state().T:.2f} K, "
-               f"v4 = {state4.get_v():.2f} m/s, M_throat = {driver.get_M_throat():.2f}.")
+    if verbose:
+        if v4 == 0.0:
+            print (f"Driver rupture conditions are p4 = {state4.get_gas_state().p/1.0e6:.2f} MPa, T4 = {state4.get_gas_state().T:.2f} K, "
+                   f"M_throat = {driver.get_M_throat():.2f}.")
+        elif v4 > 0.0:
+            print (f"Driver rupture conditions are p4 = {state4.get_gas_state().p/1.0e6:.2f} MPa, T4 = {state4.get_gas_state().T:.2f} K, "
+                   f"v4 = {state4.get_v():.2f} m/s, M_throat = {driver.get_M_throat():.2f}.")
 
     gas_path.append(driver)
     object_dict['driver'] = driver
@@ -253,11 +263,12 @@ def run_pitot3(config_dict = {}, config_filename = None,
     # (that may be hard without some changes to make the code set everything up and then make stuff run, but we will see
     # there may be some way)
 
-    print('-' * 60)
-    if facility_type == 'expansion_tube':
-        print("The configuration in the driven tubes is as follows:")
-    else:
-        print("The configuration in the driven tube is as follows:")
+    if verbose:
+        print('-' * 60)
+        if facility_type == 'expansion_tube':
+            print("The configuration in the driven tubes is as follows:")
+        else:
+            print("The configuration in the driven tube is as follows:")
 
     if secondary_driver_flag:
         # secondary driver stuff
@@ -279,18 +290,19 @@ def run_pitot3(config_dict = {}, config_filename = None,
 
         # TO DO: I really need to make the gas objects etc. so that we can actually get more data here...
 
-        if secondary_driver_gas_gas_model != 'custom':
-            print(f"Secondary driver gas is {secondary_driver_gas_name}. Secondary driver gas gas model is {secondary_driver_gas_gas_model}.")
-        else:
-            print(f"Using custom secondary driver gas from the file {secondary_driver_gas_filename}.")
-            print(f"Secondary driver gas gas model is {secondary_driver_gas_gas_model}.")
+        if verbose:
+            if secondary_driver_gas_gas_model != 'custom':
+                print(f"Secondary driver gas is {secondary_driver_gas_name}. Secondary driver gas gas model is {secondary_driver_gas_gas_model}.")
+            else:
+                print(f"Using custom secondary driver gas from the file {secondary_driver_gas_filename}.")
+                print(f"Secondary driver gas gas model is {secondary_driver_gas_gas_model}.")
 
-        print(f"Secondary driver fill pressure (p{secondary_driver_fill_state_name[1:]}) is {psd1:.2f} Pa.")
-        print(f"Secondary driver fill temperature (T{secondary_driver_fill_state_name[1:]}) is {Tsd1:.2f} K.")
+            print(f"Secondary driver fill pressure (p{secondary_driver_fill_state_name[1:]}) is {psd1:.2f} Pa.")
+            print(f"Secondary driver fill temperature (T{secondary_driver_fill_state_name[1:]}) is {Tsd1:.2f} K.")
 
-        if mode in ['fully_experimental']:
-            vsd = float(config_data['vsd'])
-            print(f"Selected secondary driver shock speed (vsd) is {vsd:.2f} m/s.")
+            if mode in ['fully_experimental']:
+                vsd = float(config_data['vsd'])
+                print(f"Selected secondary driver shock speed (vsd) is {vsd:.2f} m/s.")
 
     # shock tube stuff
     test_gas_gas_model = config_data['test_gas_gas_model']
@@ -300,6 +312,7 @@ def run_pitot3(config_dict = {}, config_filename = None,
     else:
         test_gas_name = None
         test_gas_filename = config_data['test_gas_filename']
+
     p1 = float(config_data['p1'])
 
     shock_tube_fill_state_name = config_data['shock_tube_fill_state_name']
@@ -309,18 +322,20 @@ def run_pitot3(config_dict = {}, config_filename = None,
     if T1 == 'T_0':
         T1 = T_0
 
-    if test_gas_gas_model != 'custom':
-        print(f"Test gas is {test_gas_name}. Test gas gas model is {test_gas_gas_model}.")
-    else:
-        print(f"Using custom test gas from the file {test_gas_filename}.")
-        print(f"Test gas gas model is {test_gas_gas_model}.")
+    if verbose:
+        if test_gas_gas_model != 'custom':
+            print(f"Test gas is {test_gas_name}. Test gas gas model is {test_gas_gas_model}.")
+        else:
+            print(f"Using custom test gas from the file {test_gas_filename}.")
+            print(f"Test gas gas model is {test_gas_gas_model}.")
 
-    print(f"Shock tube fill pressure (p{shock_tube_fill_state_name[1:]}) is {p1:.2f} Pa.")
-    print(f"Shock tube fill temperature (T{shock_tube_fill_state_name[1:]}) is {T1:.2f} K.")
+        print(f"Shock tube fill pressure (p{shock_tube_fill_state_name[1:]}) is {p1:.2f} Pa.")
+        print(f"Shock tube fill temperature (T{shock_tube_fill_state_name[1:]}) is {T1:.2f} K.")
 
     if mode in ['fully_experimental', 'experimental_shock_tube_theoretical_acceleration_tube']:
         vs1 = float(config_data['vs1'])
-        print(f"Selected shock tube shock speed (vs1) is {vs1:.2f} m/s.")
+        if verbose:
+            print(f"Selected shock tube shock speed (vs1) is {vs1:.2f} m/s.")
 
     if facility_type == 'expansion_tube':
 
@@ -343,21 +358,28 @@ def run_pitot3(config_dict = {}, config_filename = None,
         if T5 == 'T_0':
             T5 = T_0
 
-        if accelerator_gas_gas_model != 'custom':
-            print(f"Accelerator gas is {accelerator_gas_name}. Accelerator gas gas model is {accelerator_gas_gas_model}.")
-        else:
-            print(f"Using custom accelerator gas from the file {accelerator_gas_filename}.")
-            print(f"Accelerator gas gas model is {accelerator_gas_gas_model}.")
+        if verbose:
+            if accelerator_gas_gas_model != 'custom':
+                print(f"Accelerator gas is {accelerator_gas_name}. Accelerator gas gas model is {accelerator_gas_gas_model}.")
+            else:
+                print(f"Using custom accelerator gas from the file {accelerator_gas_filename}.")
+                print(f"Accelerator gas gas model is {accelerator_gas_gas_model}.")
 
-        print(f"Acceleration tube fill pressure (p{acceleration_tube_fill_state_name[1:]}) is {p5:.2f} Pa.")
-        print(f"Acceleration tube fill temperature (T{acceleration_tube_fill_state_name[1:]}) is {T5:.2f} K.")
+            print(f"Acceleration tube fill pressure (p{acceleration_tube_fill_state_name[1:]}) is {p5:.2f} Pa.")
+            print(f"Acceleration tube fill temperature (T{acceleration_tube_fill_state_name[1:]}) is {T5:.2f} K.")
 
         if mode in ['fully_experimental', 'theoretical_shock_tube_experimental_acceleration_tube']:
             vs2 = float(config_data['vs2'])
-            print(f"Selected acceleration tube shock speed (vs2) is {vs2:.2f} m/s.")
+            if verbose:
+                print(f"Selected acceleration tube shock speed (vs2) is {vs2:.2f} m/s.")
 
-    if nozzle_flag:
+    if nozzle_flag and verbose:
         print(f"Nozzle area ratio is {area_ratio}.")
+
+    #-------------------------------------------------------------------------------------------------
+    # this is point where we bail out if we just want to setup the simulation...
+    if just_setup_simulation:
+        return config_data, object_dict
 
     #-------------------------------------------------------------------------------------------------
     # pick a primary diaphragm model
@@ -657,9 +679,10 @@ def run_pitot3(config_dict = {}, config_filename = None,
         # cleanup temporary files (and potentially generated gas models) before exiting...
         cleanup_function(cleanup_generated_gas_models = config_data['cleanup_generated_gas_models'])
 
-    print('-'*60)
-    print("Run finished successfully.")
-    print('-'*60)
+    if verbose:
+        print('-'*60)
+        print("Run finished successfully.")
+        print('-'*60)
 
     return config_data, gas_path, object_dict, states_dict
 

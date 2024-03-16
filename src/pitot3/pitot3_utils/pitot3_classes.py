@@ -1332,7 +1332,7 @@ class Driver(object):
     """
 
     def __init__(self, cfg, p_0 = None, T_0 = None, preset_gas_models_folder = None, outputUnits = 'massf',
-                 species_MW_dict = None, D_shock_tube = None):
+                 species_MW_dict = None, D_shock_tube = None, verbose = True):
         """
 
         :param cfg: Python dictionary which contains configuration information which is loaded into the class,
@@ -1463,18 +1463,22 @@ class Driver(object):
 
             # we guess 2000.0 K to start with...
 
-            print('-' * 60)
-            print("This driver specifies a4 instead of T4 so we need to iterate to find T4.")
-            print("Iterating to find T4 from a4.")
+            if verbose:
+
+                print('-' * 60)
+                print("This driver specifies a4 instead of T4 so we need to iterate to find T4.")
+                print("Iterating to find T4 from a4.")
 
             if 'T4_first_guess' not in cfg:
                 T4_first_guess = 2500.0
             else:
                 T4_first_guess = cfg['T4_first_guess']
 
-            print(f"Using a T4_first_guess of {T4_first_guess} K.")
 
-            print(f"a4 = {self.a4}")
+            if verbose:
+                print(f"Using a T4_first_guess of {T4_first_guess} K.")
+
+                print(f"a4 = {self.a4}")
 
             from scipy.optimize import newton
 
@@ -1496,20 +1500,23 @@ class Driver(object):
 
             def T4_eqn(T4, a4 = self.a4):
 
-                print('-'*60)
+                if verbose:
 
-                print(f"guessed T4 = {T4} K")
+                    print('-'*60)
 
-                print(f"related guessed a4 = {calculate_a4_eqn(T4)} m/s")
+                    print(f"guessed T4 = {T4} K")
 
-                print(f"actual a4 - guessed a4 = {self.a4 - calculate_a4_eqn(T4)}")
+                    print(f"related guessed a4 = {calculate_a4_eqn(T4)} m/s")
+
+                    print(f"actual a4 - guessed a4 = {self.a4 - calculate_a4_eqn(T4)}")
 
                 return self.a4 - calculate_a4_eqn(T4)
 
             T4 = newton(T4_eqn, T4_first_guess, tol = 1.0e-1)
 
-            print('-' * 60)
-            print(f"Final T4 = {T4:.2f} K")
+            if verbose:
+                print('-' * 60)
+                print(f"Final T4 = {T4:.2f} K")
 
             self.T4 = T4
 
@@ -1526,7 +1533,8 @@ class Driver(object):
             if 'driver_T' in cfg:
                 self.driver_T = float(cfg['driver_T'])
             else:
-                print(f"Setting driver temperature to the default value of {T:.2f} K")
+                if verbose:
+                    print(f"Setting driver temperature to the default value of {T:.2f} K")
                 self.driver_T = T_0
 
             # we call this state 4i
@@ -1547,16 +1555,16 @@ class Driver(object):
 
             if self.driver_condition_type == 'isentropic-compression-p4':
                 self.p4 = float(cfg['p4'])
-
-                print (f"Performing isentropic compression from the driver fill condition to {self.p4/1.0e6:.2f} MPa.")
+                if verbose:
+                    print (f"Performing isentropic compression from the driver fill condition to {self.p4/1.0e6:.2f} MPa.")
 
                 self.T4 = state4i.T * (self.p4 / state4i.p) ** (1.0 - (1.0 / gamma))  # K
 
             elif self.driver_condition_type == 'isentropic-compression-compression-ratio':
 
                 self.compression_ratio = cfg['compression_ratio']
-
-                print (f"Performing isentropic compression from driver fill condition over compression ratio of {self.compression_ratio}.")
+                if verbose:
+                    print (f"Performing isentropic compression from driver fill condition over compression ratio of {self.compression_ratio}.")
                 pressure_ratio =  self.compression_ratio**gamma #pressure ratio is compression ratio to the power of gamma
 
                 self.p4 = state4i.p*pressure_ratio
@@ -1596,11 +1604,13 @@ class Driver(object):
             reference_gas_state.update_sound_speed()
 
         except Exception as e:
-            print(e)
+            if verbose:
+                print(e)
 
             if self.driver_gas_model == 'CEAGas':
-                print(
-                    "We failed to set the gas state using the standard gas model, so we will try a room temperature only gas model.")
+                if verbose:
+                    print(
+                        "We failed to set the gas state using the standard gas model, so we will try a room temperature only gas model.")
 
                 reference_gas_state, room_temperature_only_gmodel = \
                     room_temperature_only_gas_model_gas_state_setter(gas_state=reference_gas_state,
@@ -1630,37 +1640,41 @@ class Driver(object):
         if 'M_throat' in cfg:
 
             self.M_throat = cfg['M_throat']
-
-            print(f'M_throat = {self.M_throat}')
+            if verbose:
+                print(f'M_throat = {self.M_throat}')
 
         elif 'M_throat' not in cfg and 'D_throat' in cfg and D_shock_tube:
             # we can calculate M_throat ourselves using the throat diameter and the shock tube diameter
 
             from gdtk.ideal_gas_flow import A_Astar
             from scipy.optimize import newton
-
-            print("Calculating M_throat from the provided D_throat and D_shock_tube values:")
+            if verbose:
+                print("Calculating M_throat from the provided D_throat and D_shock_tube values:")
 
             D_throat = cfg['D_throat']
             A_throat = (math.pi/4.0)*D_throat**2.0
 
             A_shock_tube = (math.pi/4.0)*D_shock_tube**2.0
 
-            print(f'D_throat = {D_throat} m ({D_throat*1000.0} mm)')
-            print(f'D_shock_tube = {D_shock_tube} m ({D_shock_tube*1000.0} mm)')
+            if verbose:
+                print(f'D_throat = {D_throat} m ({D_throat*1000.0} mm)')
+                print(f'D_shock_tube = {D_shock_tube} m ({D_shock_tube*1000.0} mm)')
 
-            print(f'A_throat = {A_throat:.2e} m**2 ({A_throat*1.0e6:.2f} mm**2)')
-            print(f'A_shock_tube = {A_shock_tube:.2e} m**2 ({A_shock_tube*1.0e6:.2f} mm**2)')
+                print(f'A_throat = {A_throat:.2e} m**2 ({A_throat*1.0e6:.2f} mm**2)')
+                print(f'A_shock_tube = {A_shock_tube:.2e} m**2 ({A_shock_tube*1.0e6:.2f} mm**2)')
 
             A_shock_tube_over_A_throat = A_shock_tube/A_throat
 
-            print(f"A_shock_tube / A_throat = {A_shock_tube_over_A_throat:.2f}")
+            if verbose:
+                print(f"A_shock_tube / A_throat = {A_shock_tube_over_A_throat:.2f}")
 
             M_throat_eqn = lambda M_throat : A_shock_tube_over_A_throat - A_Astar(M_throat, g=self.state4.get_gas_state().gamma)
 
             self.M_throat = newton(M_throat_eqn, 1.1)
+            self.D_throat = D_throat
 
-            print(f"Calculated M_throat = {self.M_throat:.2f}")
+            if verbose:
+                print(f"Calculated M_throat = {self.M_throat:.2f}")
 
         if self.M_throat > 0.0:
             self.driver_exit_state_name = '3s'
@@ -1702,6 +1716,21 @@ class Driver(object):
 
         return
 
+    def get_original_driver_config_dict(self):
+        """
+        Return the original driver config dict.
+
+        I did set this as a private variable as I don't necessarily
+        want people messing with it, but there might be a time when you want to
+        do something with it. This will return a copy of it to ensure
+        the original version is not messed with...
+        :return:
+        """
+
+        import copy
+
+        return copy.deepcopy(self.__cfg)
+
     def get_driver_condition_name(self):
         """
         Return the facility name
@@ -1724,6 +1753,18 @@ class Driver(object):
 
         return self.driver_exit_state_name
 
+    def get_compression_ratio(self):
+        """
+        Return the compression ratio value
+        :return:
+        """
+
+        if hasattr(self, 'compression_ratio'):
+            return self.compression_ratio
+        else:
+            print("This driver does not have compression_ratio specified. Will return None")
+            return None
+
     def get_M_throat(self):
         """
         Return the M_throat value
@@ -1731,6 +1772,18 @@ class Driver(object):
         """
 
         return self.M_throat
+
+    def get_D_throat(self):
+        """
+        Return the D_throat value
+        :return:
+        """
+
+        if hasattr(self, 'D_throat'):
+            return self.D_throat
+        else:
+            print("This driver does not have D_throat specified. Will return None")
+            return None
 
     def get_exit_state(self):
         """
