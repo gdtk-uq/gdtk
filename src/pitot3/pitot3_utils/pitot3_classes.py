@@ -2956,7 +2956,47 @@ class Tube(object):
         elif self.fill_gas_model == 'custom' and self.fill_gas_filename:
             fill_gmodel_location = self.fill_gas_filename
 
-        fill_gmodel = GasModel(os.path.expandvars(fill_gmodel_location))
+        if os.path.isfile(os.path.expandvars(fill_gmodel_location)):
+            fill_gmodel = GasModel(os.path.expandvars(fill_gmodel_location))
+        elif not os.path.isfile(os.path.expandvars(fill_gmodel_location)) and self.fill_gas_model == 'CEAGas' and self.fill_gas_name:
+            print(f"The PITOT3 pre-set gas models folder is {preset_gas_models_folder}")
+            print(f"Your selected pre-set CEAGas gas model of '{self.fill_gas_name}' does not appear to exist in that folder.")
+            print("Below is the list of pre-set CEAGas gas models in that folder. Are you sure you didn't mean one of those instead?")
+
+            preset_gas_model_files = os.listdir(os.path.expandvars(preset_gas_models_folder))
+
+            preset_gas_model_files.sort()
+
+            for preset_gas_model_filename in preset_gas_model_files:
+                if 'cea' in preset_gas_model_filename:
+                    # remove the cea part
+                    preset_gas_model_filename_cutdown = preset_gas_model_filename.replace('cea-', '')
+                    # remove the gas-model and .lua part
+                    preset_gas_model_filename_cutdown = preset_gas_model_filename_cutdown.replace('-gas-model.lua', '')
+
+                    print(f"'{preset_gas_model_filename_cutdown}' ('{preset_gas_model_filename}')")
+
+            raise Exception(f"Tube: Selected preset gas model ('{self.fill_gas_name}') for the {self.tube_name} does not appear to exist in the preset gas models folder.")
+
+        elif not os.path.isfile(os.path.expandvars(fill_gmodel_location)) and self.fill_gas_model == 'custom' and self.fill_gas_filename:
+
+            print(f"Your selected fill gas filename ('{self.fill_gas_filename}') does not appear to exist.")
+            print("Below is the list of files in your current working directory. Are you sure you didn't mean one of these files?")
+
+            cwd_files = os.listdir('.')
+
+            cwd_files.sort()
+
+            for filename in cwd_files:
+                print(filename)
+
+            raise Exception(f"Tube: Specified fille gas filename for the {self.tube_name} does not exist in the location the user has specified.")
+
+        else:
+            raise Exception(f"Tube: There is some issue loading the gas model for the {self.tube_name}.")
+
+
+
         fill_state_gas_object = GasState(fill_gmodel)
 
         try:

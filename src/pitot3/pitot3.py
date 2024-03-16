@@ -6,7 +6,7 @@ Chris James (c.james4@uq.edu.au) - (01/01/21)
 
 """
 
-VERSION_STRING = '23-Feb-2024'
+VERSION_STRING = '16-Mar-2024'
 
 import sys, os, math
 import yaml
@@ -172,13 +172,46 @@ def run_pitot3(config_dict = {}, config_filename = None,
     if driver_condition_name != 'custom_from_dict':
         if driver_condition_name != 'custom':
             print(f"Chosen driver condition is '{driver_condition_name}'.")
-            driver_condition_file_location = facilities_folder + '/' + facility.get_driver_conditions_folder() + '/' + driver_condition_name + '.yaml'
+            selected_facility_driver_conditions_folder = facilities_folder + '/' + facility.get_driver_conditions_folder()
+            driver_condition_file_location = selected_facility_driver_conditions_folder + '/' + driver_condition_name + '.yaml'
         else :
             print(f"Using custom driver condition from the file {config_data['driver_condition_filename']}.")
             driver_condition_file_location = config_data['driver_condition_filename']
 
-        driver_yaml_file = open(os.path.expandvars(driver_condition_file_location))
-        driver_condition_input_data = yaml.load(driver_yaml_file, Loader=yaml.FullLoader)
+        if os.path.isfile(os.path.expandvars(driver_condition_file_location)):
+            driver_yaml_file = open(os.path.expandvars(driver_condition_file_location))
+            driver_condition_input_data = yaml.load(driver_yaml_file, Loader=yaml.FullLoader)
+        elif not os.path.isfile(os.path.expandvars(driver_condition_file_location)) and driver_condition_name != 'custom':
+            print(f"Your selected facility is {facility_name}. ")
+            print(f"Its driver conditions are stored in the folder {selected_facility_driver_conditions_folder}")
+            print(f"Your selected driver condition ('{driver_condition_name}') does not appear to exist in that folder.")
+            print("Below is the list of driver conditions in that folder. Are you sure you didn't mean one of those instead?")
+
+            selected_facility_driver_conditions_folder_files = os.listdir(os.path.expandvars(selected_facility_driver_conditions_folder))
+
+            selected_facility_driver_conditions_folder_files.sort()
+
+            for filename in selected_facility_driver_conditions_folder_files:
+                filename = filename.replace('.yaml', '')
+                print(filename)
+
+            raise Exception(f"pitot3.py: Specified facility driver condition does not exist in the {facility_name} facility driver condition folder.")
+
+        elif not os.path.isfile(os.path.expandvars(driver_condition_file_location)) and driver_condition_name == 'custom':
+            print(f"Your selected driver condition filename ('{driver_condition_file_location}') does not appear to exist.")
+            print("Below is the list of files in your current working directory. Are you sure you didn't mean one of these files?")
+
+            cwd_files = os.listdir('.')
+
+            cwd_files.sort()
+
+            for filename in cwd_files:
+                print(filename)
+
+            raise Exception(f"pitot3.py: Specified custom facility driver condition file does not exist in the location the user has specified.")
+        else:
+            raise Exception(f"pitot3.py: There is some issue loading the driver condition.")
+
     else:
         print("Using driver condition specified in a dictionary in the input config.")
         driver_condition_input_data = config_data['driver_dict']
