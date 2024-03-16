@@ -614,7 +614,7 @@ void plottingTableToFlowStateTable(lua_State *L)
     lua_newtable(L);
     foreach ( isp; 0 .. n_species ) {
         string spName = managedGasModel.species_name(isp);
-        string key = format("massf[%d]-%s", isp, spName);
+        string key = format("massf-%s", spName);
         lua_getfield(L, tblIdx, toStringz(key));
         lua_setfield(L, -2, toStringz(spName));
     }
