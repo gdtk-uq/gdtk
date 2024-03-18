@@ -181,12 +181,13 @@ int count_written_loads()
     int nPrevLoadsWritten;
     string fname = lmrCfg.loadsDir ~ "/" ~ lmrCfg.loadsPrefix ~ "-metadata";
     if (exists(fname)) {
-        auto finalLine = readText(fname).splitLines()[$-1];
-        if (finalLine[0] == '#') {
-            // looks like we found a single comment line.
+        auto lines = readText(fname).splitLines();
+        if (lines.length == 1) {
+            // looks like we found a single line.
             nPrevLoadsWritten = 0;
-            } else {
+        } else {
             // assume we have a valid line to work with
+            auto finalLine = lines[$-1];
             nPrevLoadsWritten = to!int(finalLine.split[0]) + 1;
         }
     } else {
