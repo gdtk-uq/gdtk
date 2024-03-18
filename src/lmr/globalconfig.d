@@ -2389,7 +2389,7 @@ void configCheckPoint1()
         cfg.flux_calculator == FluxCalculator.adaptive_ausmdv_asf) {
         cfg.do_shock_detect = true;
     }
-    if (cfg.do_shock_detect && cfg.is_master_task) {
+    if (cfg.do_shock_detect && cfg.is_master_task && cfg.verbosity_level > 1) {
         writeln("NOTE: shock detector is on.");
     }
     if (!cfg.high_order_flux_calculator) {
