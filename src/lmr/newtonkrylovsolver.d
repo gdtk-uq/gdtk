@@ -928,13 +928,20 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
             setPhaseSettings(currentPhase);
             if (currentPhase == nkCfg.numberOfPhases-1) terminalPhase = true;
             if (activePhase.useAutoCFL) {
-                // When we change phase, we reset CFL to user's selection if using auto CFL.
-                cfl = activePhase.startCFL;
+                // If the user gives us a positive startCFL, use that.
+                // Otherwise we continue with the CFL we have. In other words, do nothing special here.
+                if (activePhase.startCFL > 0.0) cfl = activePhase.startCFL;
             }
             if (cfg.is_master_task) {
                 writefln("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
                 writefln("+   Start of Phase %d (out of %d) at step = %6d; global relative residual = %10.6e   +",
                          currentPhase+1, nkCfg.numberOfPhases, step, globalResidual/referenceGlobalResidual);
+                if (activePhase.startCFL > 0.0) {
+                    writefln("+   ---> CFL reset for the start of this phase: cfl=%10.3e                              +", cfl);
+                }
+                else {
+                    writefln("+   ---> CFL continues from previous phase end: cfl=%10.3e                              +", cfl);
+                }
                 writefln("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
                 writeln();
             }
