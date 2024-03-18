@@ -26,7 +26,8 @@ NewtonKrylovGlobalConfigHidden = {
 
    -- phase control
    number_of_phases = 1,
-   phase_changes_at_steps = {},
+   max_steps_in_initial_phases = {},
+   phase_changes_at_relative_residual = {},
 
    -- Newton stepping control and continuation
    inviscid_cfl_only = true,
@@ -114,10 +115,16 @@ local function writeNKConfigToFile(nkConfig, nkPhases, fileName)
    f:write(string.format('"cfl_reduction_factor": %.18e,\n', nkConfig.cfl_reduction_factor))
    -- phase control
    f:write(string.format('"number_of_phases": %d,\n', nkConfig.number_of_phases))
-   f:write('"phase_changes_at_steps": [')
-   for i,e in ipairs(nkConfig.phase_changes_at_steps) do
+   f:write('"max_steps_in_initial_phases": [')
+   for i,e in ipairs(nkConfig.max_steps_in_initial_phases) do
       f:write(string.format('%d', e))
-      if i < #(nkConfig.phase_changes_at_steps) then f:write(', ') end
+      if i < #(nkConfig.max_steps_in_initial_phases) then f:write(', ') end
+   end
+   f:write('],\n')
+   f:write('"phase_changes_at_relative_residual": [')
+   for i,e in ipairs(nkConfig.phase_changes_at_relative_residual) do
+      f:write(string.format('%f', e))
+      if i < #(nkConfig.phase_changes_at_relative_residual) then f:write(', ') end
    end
    f:write('],\n')
    -- Newton stepping control and continuation

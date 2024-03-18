@@ -39,7 +39,7 @@ NewtonKrylovGlobalConfig{
    number_of_steps_for_setting_reference_residuals = 0,
    stop_on_relative_residual = 1.0e-6,
    number_of_phases = 2,
-   phase_changes_at_steps = { 170 },
+   max_steps_in_initial_phases = { 170 },
    inviscid_cfl_only = true,
    use_physicality_check = true,
    max_linear_solver_iterations = 50,

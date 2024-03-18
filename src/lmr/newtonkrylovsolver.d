@@ -147,7 +147,8 @@ struct NKGlobalConfig {
     double cflReductionFactor = 0.5;
     // phase control
     int numberOfPhases = 1;
-    int[] phaseChangesAtSteps;
+    int[] maxStepsInInitialPhases;
+    double[] phaseChangesAtRelativeResidual;
     // Newton stepping and continuation
     bool inviscidCFLOnly = true;
     bool useLineSearch = true;
@@ -202,7 +203,8 @@ struct NKGlobalConfig {
         }
         cflReductionFactor = getJSONdouble(jsonData, "cfl_reduction_factor", cflReductionFactor);
         numberOfPhases = getJSONint(jsonData, "number_of_phases", numberOfPhases);
-        phaseChangesAtSteps = getJSONintarray(jsonData, "phase_changes_at_steps", phaseChangesAtSteps);
+        maxStepsInInitialPhases = getJSONintarray(jsonData, "max_steps_in_initial_phases", maxStepsInInitialPhases);
+        phaseChangesAtRelativeResidual = getJSONdoublearray(jsonData, "phase_changes_at_relative_residual", phaseChangesAtRelativeResidual);
         inviscidCFLOnly = getJSONbool(jsonData, "inviscid_cfl_only", inviscidCFLOnly);
         useLineSearch = getJSONbool(jsonData, "use_line_search", useLineSearch);
         lineSearchOrder = getJSONint(jsonData, "line_search_order", lineSearchOrder);
@@ -425,6 +427,8 @@ struct RestartInfo {
     double globalResidual;
     double prevGlobalResidual;
     ConservedQuantities residuals;
+    int phase;
+    int stepsIntoPhase;
 
     this(size_t n)
     {
@@ -515,6 +519,8 @@ void broadcastRestartInfo()
         MPI_Bcast(&(snapshots[i].step), 1, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Bcast(&(snapshots[i].globalResidual), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         MPI_Bcast(&(snapshots[i].prevGlobalResidual), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&(snapshots[i].phase), 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&(snapshots[i].stepsIntoPhase), 1, MPI_INT, 0, MPI_COMM_WORLD);
         broadcastResiduals(snapshots[i].residuals);
     }
 }
@@ -647,25 +653,52 @@ void readNewtonKrylovConfig()
     }
 
     // Perform some consistency checks
-    if (nkCfg.phaseChangesAtSteps.length < nkCfg.numberOfPhases-1) {
+
+    // we enforce that the user always has the correct number of entries in the max_steps_in_initial_phases list
+    if (cfg.is_master_task && nkCfg.maxStepsInInitialPhases.length != nkCfg.numberOfPhases-1) {
         string errMsg;
-        errMsg ~= format("ERROR: number of phases = %d but number of entries in phase changes list is: %d\n",
-                nkCfg.numberOfPhases, nkCfg.phaseChangesAtSteps.length);
-        errMsg ~= "       We expect at least (number of phases) - 1 entries in phase changes list.\n";
-        errMsg ~= "       These entries are the step number at which to change from one phase to the next.\n";
+        errMsg ~= "\n";
+        errMsg ~= format("ERROR: number of phases = %d but number of entries in max_steps_in_initial_phases list is: %d\n",
+                         nkCfg.numberOfPhases, nkCfg.maxStepsInInitialPhases.length);
+        errMsg ~= "       We expect  (number of phases) - 1 entries in max_steps_in_initial_phases list.\n";
+        errMsg ~= "       These entries are the maximum number of steps that will be taken in each initial phase,\n";
+        errMsg ~= "       note that we do not need an entry for the terminal phase.\n";
         throw new Error(errMsg);
     }
+
+    // we will allow the phase_changes_at_relative_residual list to be empty, if it is empty, we will only key the phase changes off of the steps
+    if (nkCfg.phaseChangesAtRelativeResidual.length == 0) {
+        size_t nentries = nkCfg.maxStepsInInitialPhases.length;
+        nkCfg.phaseChangesAtRelativeResidual.length = nentries;
+        foreach (ref val; nkCfg.phaseChangesAtRelativeResidual) { val = 0.0; }
+    }
+
+    // if the user has defined a nonempty phase_changes_at_relative_residual list, we enforce that the user has the correct number of entries
+    if (cfg.is_master_task && nkCfg.phaseChangesAtRelativeResidual.length != nkCfg.maxStepsInInitialPhases.length ) {
+        string errMsg;
+        errMsg ~= "\n";
+        errMsg ~= format("ERROR: number of phases = %d but number of entries in phase_changes_at_relative_residual list is: %d\n",
+                         nkCfg.numberOfPhases, nkCfg.phaseChangesAtRelativeResidual.length);
+        errMsg ~= "       We expect at least (number of phases) - 1 entries in phase_changes_at_relative_residual list.\n";
+        errMsg ~= "       These entries are the relative residual at which to change from one phase to the next.\n";
+        throw new Error(errMsg);
+    }
+
     foreach (i, phase; nkPhases) {
         // Check that the interpolation order within any phases does not exceed the globally requested order.
-        if (phase.residualInterpolationOrder > cfg.interpolation_order) {
-            string errMsg = format("ERROR: The residual interpolation order in phase %d exceeds the globally selected interpolation order.\n", i);
+        if (cfg.is_master_task && phase.residualInterpolationOrder > cfg.interpolation_order) {
+            string errMsg;
+            errMsg ~= "\n";
+            errMsg ~= format("ERROR: The residual interpolation order in phase %d exceeds the globally selected interpolation order.\n", i);
             errMsg ~= format("       phase interpolation order= %d  globally-requested interpolation order= %d\n",
                     phase.residualInterpolationOrder, cfg.interpolation_order);
             errMsg ~= "       This is not allowed because memory is allocated based on the globally selected interpolation order.\n";
             throw new Error(errMsg);
         }
-        if (phase.jacobianInterpolationOrder > cfg.interpolation_order) {
-            string errMsg = format("ERROR: The Jacobian interpolation order in phase %d exceeds the globally selected interpolation order.\n", i);
+        if (cfg.is_master_task && phase.jacobianInterpolationOrder > cfg.interpolation_order) {
+            string errMsg;
+            errMsg ~= "\n";
+            errMsg ~= format("ERROR: The Jacobian interpolation order in phase %d exceeds the globally selected interpolation order.\n", i);
             errMsg ~= format("       phase interpolation order= %d  globally-requested interpolation order= %d\n",
                     phase.jacobianInterpolationOrder, cfg.interpolation_order);
             errMsg ~= "       This is not allowed because memory is allocated based on the globally selected interpolation order.\n";
@@ -691,6 +724,8 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
     bool finalStep = false;
     double cfl;
     double dt;
+    int currentPhase = 0;
+    int stepsIntoCurrentPhase = 0;
     bool updatePreconditionerThisStep = false;
     CFLSelector cflSelector;
 
@@ -784,24 +819,9 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         startStep = restart.step + 1;
         globalResidual = restart.globalResidual;
         prevGlobalResidual = restart.prevGlobalResidual;
-        // Determine phase
-	if (nkCfg.phaseChangesAtSteps.length == 0) {
-	    // Only a single phase
-	    setPhaseSettings(0);
-	}
-	else {
-	    foreach (phase, phaseStep; nkCfg.phaseChangesAtSteps) {
-		if (startStep < phaseStep) {
-		    setPhaseSettings(phase);
-		    break;
-		}
-	    }
-	    // end condition when step is past final phase
-	    if (startStep >= nkCfg.phaseChangesAtSteps[$-1]) {
-		auto finalPhase = nkCfg.phaseChangesAtSteps.length;
-		setPhaseSettings(finalPhase-1);
-	    }
-	}
+        currentPhase = restart.phase;
+        stepsIntoCurrentPhase = restart.stepsIntoPhase;
+        setPhaseSettings(currentPhase);
         if (activePhase.useAutoCFL) {
             cflSelector = new ResidualBasedAutoCFL(activePhase.autoCFLExponent, activePhase.maxCFL,
 						   activePhase.thresholdRelativeResidualForCFLGrowth);
@@ -873,6 +893,15 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
     int numberBadSteps = 0;
     bool startOfNewPhase = false;
     double omega = 1.0;
+    bool terminalPhase = false;
+    if (currentPhase == nkCfg.numberOfPhases-1) terminalPhase = true; // we are beginning in the terminal phase
+    if (cfg.is_master_task) {
+        writefln("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+        writefln("+   Starting in Phase %d (out of %d) at step = %6d; global relative residual = %10.6e   +",
+                 currentPhase+1, nkCfg.numberOfPhases, startStep, globalResidual/referenceGlobalResidual);
+        writefln("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+        writeln();
+    }
 
     foreach (step; startStep .. nkCfg.maxNewtonSteps+1) {
 
@@ -887,21 +916,27 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
          */
         residualsUpToDate = false;
         // 0a. change of phase
-        auto currentPhase = countUntil(nkCfg.phaseChangesAtSteps, step);
+        stepsIntoCurrentPhase++;
         startOfNewPhase = false;
-        if (currentPhase != -1) { // start of new phase detected
-            if (cfg.is_master_task) {
-                writefln("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-                writefln("+   Start of New Phase at step = %6d; global relative residual = %10.6e +", step, globalResidual/referenceGlobalResidual);
-                writefln("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-                writeln();
-            }
-            currentPhase++; // increment because countUntil counts from 0
+        if (!terminalPhase &&
+            (stepsIntoCurrentPhase >= nkCfg.maxStepsInInitialPhases[currentPhase] ||
+             globalResidual/referenceGlobalResidual <= nkCfg.phaseChangesAtRelativeResidual[currentPhase])) {
+            // start of new phase detected
             startOfNewPhase = true;
+            currentPhase++;
+            stepsIntoCurrentPhase = 0;
             setPhaseSettings(currentPhase);
+            if (currentPhase == nkCfg.numberOfPhases-1) terminalPhase = true;
             if (activePhase.useAutoCFL) {
                 // When we change phase, we reset CFL to user's selection if using auto CFL.
                 cfl = activePhase.startCFL;
+            }
+            if (cfg.is_master_task) {
+                writefln("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+                writefln("+   Start of Phase %d (out of %d) at step = %6d; global relative residual = %10.6e   +",
+                         currentPhase+1, nkCfg.numberOfPhases, step, globalResidual/referenceGlobalResidual);
+                writefln("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+                writeln();
             }
         }
 
@@ -1074,7 +1109,7 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         }
 
         if (((step % nkCfg.stepsBetweenSnapshots) == 0) || (finalStep && nkCfg.writeSnapshotOnLastStep)) {
-            writeSnapshot(step, dt, cfl, nWrittenSnapshots);
+            writeSnapshot(step, dt, cfl, currentPhase, stepsIntoCurrentPhase, nWrittenSnapshots);
         }
 
         if (((step % nkCfg.stepsBetweenLoadsUpdate) == 0) || (finalStep && nkCfg.writeLoadsOnLastStep)) {
@@ -2841,7 +2876,7 @@ void writeDiagnostics(int step, double dt, double cfl, double wallClockElapsed, 
     diagnostics.close();
 }
 
-void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
+void writeSnapshot(int step, double dt, double cfl, int currentPhase, int stepsIntoCurrentPhase, ref int nWrittenSnapshots)
 {
     alias cfg = GlobalConfig;
     size_t nConserved = cfg.cqi.n;
@@ -2881,6 +2916,8 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
 	snapshots[$-1].step = step;
 	snapshots[$-1].dt = dt;
 	snapshots[$-1].cfl = cfl;
+	snapshots[$-1].phase = currentPhase;
+	snapshots[$-1].stepsIntoPhase = stepsIntoCurrentPhase;
 	snapshots[$-1].globalResidual = globalResidual;
 	snapshots[$-1].prevGlobalResidual = prevGlobalResidual;
 	snapshots[$-1].residuals = currentResiduals.dup;
@@ -2919,6 +2956,8 @@ void writeSnapshot(int step, double dt, double cfl, ref int nWrittenSnapshots)
 	snapshots[$-1].step = step;
 	snapshots[$-1].dt = dt;
 	snapshots[$-1].cfl = cfl;
+	snapshots[$-1].phase = currentPhase;
+	snapshots[$-1].stepsIntoPhase = stepsIntoCurrentPhase;
 	snapshots[$-1].globalResidual = globalResidual;
 	snapshots[$-1].prevGlobalResidual = prevGlobalResidual;
 	snapshots[$-1].residuals = currentResiduals.dup;
@@ -2935,9 +2974,9 @@ void writeRestartMetadata(RestartInfo[] snapshots)
     auto f = File(lmrCfg.restartFile, "w");
     auto timeNow =  cast(DateTime)(Clock.currTime());
     f.writefln("# Restart metadata written at: %s", timeNow.toSimpleString());
-    f.writefln("# step,  dt,  cfl, global-residual, pre-global-residual, n-conserved quantities residuals");
+    f.writefln("# step,  dt,  cfl, phase, steps-taken-into-phase, global-residual, pre-global-residual, n-conserved quantities residuals");
     foreach (snap; snapshots) {
-	f.writef("%04d %.18e %.18e %.18e %.18e", snap.step, snap.dt, snap.cfl, snap.globalResidual, snap.prevGlobalResidual);
+	f.writef("%04d %.18e %.18e %04d %04d %.18e %.18e", snap.step, snap.dt, snap.cfl, snap.phase, snap.stepsIntoPhase, snap.globalResidual, snap.prevGlobalResidual);
 	foreach (r; snap.residuals) f.writef(" %.18e", r.re);
 	f.writef("\n");
     }
@@ -2957,9 +2996,11 @@ void readRestartMetadata()
 	    snapshots[$-1].step = to!int(tks[0]);
 	    snapshots[$-1].dt = to!double(tks[1]);
 	    snapshots[$-1].cfl = to!double(tks[2]);
-	    snapshots[$-1].globalResidual = to!double(tks[3]);
-	    snapshots[$-1].prevGlobalResidual = to!double(tks[4]);
-	    size_t start_idx = 5;
+            snapshots[$-1].phase = to!int(tks[3]);
+            snapshots[$-1].stepsIntoPhase = to!int(tks[4]);
+	    snapshots[$-1].globalResidual = to!double(tks[5]);
+	    snapshots[$-1].prevGlobalResidual = to!double(tks[6]);
+	    size_t start_idx = 7;
 	    foreach (i, ref r; snapshots[$-1].residuals) r = to!double(tks[start_idx+i]);
 	}
 	line = f.readln().strip();

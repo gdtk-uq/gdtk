@@ -84,7 +84,7 @@ NewtonKrylovGlobalConfig{
    max_newton_steps = 70,
    stop_on_relative_residual = 1e-15,
    number_of_phases = 2,
-   phase_changes_at_steps = { 20 },
+   max_steps_in_initial_phases = { 20 },
    inviscid_cfl_only = true,
    use_line_search = false,
    use_physicality_check = false,
