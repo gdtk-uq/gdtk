@@ -1098,36 +1098,16 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
                     }
                     writeln("*");
                     writeln("*************************************************************************\n");
-
-		    writeReferenceResidualsToFile();
+                    writeReferenceResidualsToFile();
                 }
             }
         }
 
         // [TODO] Add in a halt_now condition.
 
+
+
         /*---
-         * 2c. Reporting (to files and screen)
-         *---
-         */
-        wallClockElapsed = 1.0e-3*(Clock.currTime() - wallClockStart).total!"msecs"();
-        if (((step % nkCfg.stepsBetweenDiagnostics) == 0) || (finalStep && nkCfg.writeDiagnosticsOnLastStep)) {
-            writeDiagnostics(step, dt, cfl, wallClockElapsed, omega, residualsUpToDate);
-        }
-
-        if (((step % nkCfg.stepsBetweenSnapshots) == 0) || (finalStep && nkCfg.writeSnapshotOnLastStep)) {
-            writeSnapshot(step, dt, cfl, currentPhase, stepsIntoCurrentPhase, nWrittenSnapshots);
-        }
-
-        if (((step % nkCfg.stepsBetweenLoadsUpdate) == 0) || (finalStep && nkCfg.writeLoadsOnLastStep)) {
-            if (nkCfg.writeLoads) {
-                writeLoads(step, nWrittenLoads);
-            }
-        }
-
-	version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
-
-	/*---
          * 2b. Stopping checks.
          *---
          */
@@ -1157,6 +1137,25 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
                 }
             }
         }
+        /*---
+         * 2c. Reporting (to files and screen)
+         *---
+         */
+        wallClockElapsed = 1.0e-3*(Clock.currTime() - wallClockStart).total!"msecs"();
+        if (((step % nkCfg.stepsBetweenDiagnostics) == 0) || (finalStep && nkCfg.writeDiagnosticsOnLastStep)) {
+            writeDiagnostics(step, dt, cfl, wallClockElapsed, omega, residualsUpToDate);
+        }
+
+        if (((step % nkCfg.stepsBetweenSnapshots) == 0) || (finalStep && nkCfg.writeSnapshotOnLastStep)) {
+            writeSnapshot(step, dt, cfl, currentPhase, stepsIntoCurrentPhase, nWrittenSnapshots);
+        }
+
+        if (((step % nkCfg.stepsBetweenLoadsUpdate) == 0) || (finalStep && nkCfg.writeLoadsOnLastStep)) {
+            if (nkCfg.writeLoads) {
+                writeLoads(step, nWrittenLoads);
+            }
+        }
+        version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
 
         // Reporting to screen on progress.
         if (((step % nkCfg.stepsBetweenStatus) == 0) || finalStep) {
@@ -1164,13 +1163,13 @@ void performNewtonKrylovUpdates(int snapshotStart, double startCFL, int maxCPUs,
         }
 
         if (finalStep) {
-	    if (cfg.is_master_task) {
+            if (cfg.is_master_task) {
                 writeln(reasonForStop);
-		writefln("FINAL-STEP: %d", step);
-		writefln("FINAL-CFL: %.3e", cfl);
-	    }
-	    break;
-	}
+                writefln("FINAL-STEP: %d", step);
+                writefln("FINAL-CFL: %.3e", cfl);
+	        }
+            break;
+        }
     }
 }
 
