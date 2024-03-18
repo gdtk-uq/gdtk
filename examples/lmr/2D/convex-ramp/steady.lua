@@ -39,7 +39,7 @@ NewtonKrylovGlobalConfig{
    number_of_steps_for_setting_reference_residuals = 0,
    stop_on_relative_residual = 1.0e-6,
    number_of_phases = 2,
-   max_steps_in_initial_phases = { 170 },
+   max_steps_in_initial_phases = { 200 },
    inviscid_cfl_only = true,
    use_physicality_check = true,
    max_linear_solver_iterations = 50,
@@ -56,7 +56,7 @@ NewtonKrylovGlobalConfig{
 }
 
 NewtonKrylovPhase:new{
-   residual_interpolation_order = 1,
+   residual_interpolation_order = 2,
    jacobian_interpolation_order = 1,
    frozen_preconditioner = true,
    steps_between_preconditioner_update = 5,
@@ -72,5 +72,5 @@ NewtonKrylovPhase:new{
 NewtonKrylovPhase:new{
    residual_interpolation_order = 2,
    jacobian_interpolation_order = 2,
-   start_cfl = 5.0
+   start_cfl = 10.0
 }
