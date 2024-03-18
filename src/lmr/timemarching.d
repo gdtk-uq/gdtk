@@ -894,7 +894,7 @@ void finalizeSimulation_timemarching()
     }
     */
     
-    if (!SimState.loads_just_written) {
+    if (GlobalConfig.write_loads && !SimState.loads_just_written) {
         writeLoadsFiles_timemarching();
     }
     /*
