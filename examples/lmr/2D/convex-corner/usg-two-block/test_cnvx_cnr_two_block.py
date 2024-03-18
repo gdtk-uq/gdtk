@@ -17,7 +17,7 @@ expected_reason_for_stop = "relative-global-residual-target"
 expected_number_steps = 28
 expected_final_cfl = 7.21e+03
 tolerance_on_cfl_check = 0.01
-expected_restart_step = 16
+expected_restart_step = 21
 
 def expected_output(proc, check_start_step=False):
     steps = 0

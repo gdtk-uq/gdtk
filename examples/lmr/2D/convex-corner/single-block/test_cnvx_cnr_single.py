@@ -16,7 +16,7 @@ def change_test_dir(request, monkeypatch):
 expected_reason_for_stop = "relative-global-residual-target"
 expected_number_steps = 32
 expected_final_cfl = 7.288e+03
-expected_restart_step = 21
+expected_restart_step = 26
 
 def expected_output(proc, check_start_step=False):
     steps = 0
