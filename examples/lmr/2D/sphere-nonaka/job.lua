@@ -54,8 +54,3 @@ bcDict = {
 --
 makeFluidBlocks(bcDict, flowDict)
 --
--- Set some recording points to capture flow data
--- setHistoryPoint{x=0.0, y=0.0}
--- setHistoryPoint{x=Rc, y=Rc}
--- setHistoryPoint{ib=0, i=0, j=0}
-config.dt_history = 1.0e-7
