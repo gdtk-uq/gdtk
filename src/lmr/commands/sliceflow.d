@@ -134,10 +134,10 @@ int main_(string[] args)
         writefln("lmr %s: Begin program.", cmdName);
     }
 
-    if (namesStr.empty) { // add default, for when nothing supplied
+    if (namesStr.empty) {
+        // add default, for when nothing supplied
         namesStr ~= "rho,p,T,vel.x,vel.y";
     }
-
     auto namesVariables = namesStr.split(",");
     foreach (var; namesVariables) var = strip(var);
 
@@ -148,63 +148,55 @@ int main_(string[] args)
     initConfiguration(); // To read in GlobalConfig
     auto availSnapshots = determineAvailableSnapshots();
     auto snaps2process = determineSnapshotsToProcess(availSnapshots, snapshots, allSnapshots, finalSnapshot);
-
+    auto snap = snaps2process[$-1];
     if (verbosity > 0) {
-        writefln("lmr %s: Slicing flow field.", cmdName);
+        writefln("lmr %s: Slicing flow field for snapshot %s.", cmdName, snap);
     }
-
     sliceListStr = sliceListStr.strip();
     sliceListStr = sliceListStr.replaceAll(regex("\""), "");
 
-    foreach (snap; snaps2process) {
-        if (verbosity > 1) {
-            writefln("lmr %s: Slicing flow field for snapshot %s.", cmdName, snap);
+    auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks);
+    bool is3dimensional =  canFind(soln.flowBlocks[0].variableNames, "pos.z");
+    outfile.write("pos.x pos.y");
+    if (is3dimensional) outfile.write(" pos.z");
+    foreach (var; namesVariables) {
+        if (!canFind(soln.flowBlocks[0].variableNames, var)) {
+            writefln("Ignoring requested variable %q.", var);
+            writeln("This does not appear in list of flow solution variables.");
+            continue;
         }
-        outfile.writefln("# snapshot: %s", snap);
-        auto soln = new FlowSolution(to!int(snap), GlobalConfig.nFluidBlocks);
-        bool is3dimensional =  canFind(soln.flowBlocks[0].variableNames, "pos.z");
-        outfile.write("# pos.x pos.y");
-        if (is3dimensional) outfile.write(" pos.z");
-        foreach (var; namesVariables) {
-            if (!canFind(soln.flowBlocks[0].variableNames, var)) {
-                writefln("Ignoring requested variable %q.", var);
-                writeln("This does not appear in list of flow solution variables.");
-                continue;
-            }
-            outfile.write(" ", var);
-        }
-        outfile.write("\n");
-        foreach (sliceStr; sliceListStr.split(";")) {
-            auto rangeStrings = sliceStr.split(",");
-            auto blk_range = decode_range_indices(rangeStrings[0], 0, soln.nBlocks);
-            foreach (ib; blk_range[0] .. blk_range[1]) {
-                auto blk = soln.flowBlocks[ib];
-                // We need to do the decode in the context of each block because
-                // the upper limits to the indices are specific to the block.
-                auto i_range = decode_range_indices(rangeStrings[1], 0, blk.nic);
-                auto j_range = decode_range_indices(rangeStrings[2], 0, blk.njc);
-                auto k_range = decode_range_indices(rangeStrings[3], 0, blk.nkc);
-                foreach (k; k_range[0] .. k_range[1]) {
-                    foreach (j; j_range[0] .. j_range[1]) {
-                        foreach (i; i_range[0] .. i_range[1]) {
-                            outfile.write(format(" %g %g", soln.flowBlocks[ib]["pos.x", i, j, k],
-                                                 soln.flowBlocks[ib]["pos.y", i, j, k]));
-                            if (is3dimensional) {
-                                outfile.write(format(" %g", soln.flowBlocks[ib]["pos.z", i, j, k]));
-                            }
-                            foreach (var; namesVariables) {
-                                if (canFind(soln.flowBlocks[0].variableNames, var)) {
-                                    outfile.write(format(" %g", soln.flowBlocks[ib][var, i, j, k]));
-                                }
-                            }
-                            outfile.write("\n");
+        outfile.write(" ", var);
+    }
+    outfile.write("\n");
+    foreach (sliceStr; sliceListStr.split(";")) {
+        auto rangeStrings = sliceStr.split(",");
+        auto blk_range = decode_range_indices(rangeStrings[0], 0, soln.nBlocks);
+        foreach (ib; blk_range[0] .. blk_range[1]) {
+            auto blk = soln.flowBlocks[ib];
+            // We need to do the decode in the context of each block because
+            // the upper limits to the indices are specific to the block.
+            auto i_range = decode_range_indices(rangeStrings[1], 0, blk.nic);
+            auto j_range = decode_range_indices(rangeStrings[2], 0, blk.njc);
+            auto k_range = decode_range_indices(rangeStrings[3], 0, blk.nkc);
+            foreach (k; k_range[0] .. k_range[1]) {
+                foreach (j; j_range[0] .. j_range[1]) {
+                    foreach (i; i_range[0] .. i_range[1]) {
+                        outfile.write(format(" %g %g", soln.flowBlocks[ib]["pos.x", i, j, k],
+                                             soln.flowBlocks[ib]["pos.y", i, j, k]));
+                        if (is3dimensional) {
+                            outfile.write(format(" %g", soln.flowBlocks[ib]["pos.z", i, j, k]));
                         }
+                        foreach (var; namesVariables) {
+                            if (canFind(soln.flowBlocks[0].variableNames, var)) {
+                                outfile.write(format(" %g", soln.flowBlocks[ib][var, i, j, k]));
+                            }
+                        }
+                        outfile.write("\n");
                     }
                 }
-            } // end foreach ib
-        } // end foreach sliceStr
-        outfile.writeln(""); // A blank line between snapshots
-    }
+            }
+        } // end foreach ib
+    } // end foreach sliceStr
 
     if (verbosity > 0) {
         writefln("lmr %s: Done.", cmdName);

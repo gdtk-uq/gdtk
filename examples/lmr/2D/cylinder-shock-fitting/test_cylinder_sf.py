@@ -62,9 +62,8 @@ def test_slice():
     proc = subprocess.run(cmd.split(), capture_output=True, text=True)
     assert proc.returncode == 0, "Failed during: " + cmd
     lines = proc.stdout.split("\n")
-    # Discard comment lines and look at first data line for cell position.
-    while lines[0].startswith("#"):
-        lines = lines[1:]
+    # Discard column-label line and look at first data line for cell position.
+    lines = lines[1:]
     xpos = float(lines[0].split()[0])
     assert abs(xpos+1.41994) < 0.01, "Failed to move to correct shock position."
     # Discard tailing empty lines and pick stagnation pressure from last line.
