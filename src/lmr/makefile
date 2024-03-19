@@ -51,6 +51,9 @@ WITH_ADDRESS_SANITIZER ?= 0
 OPENMPI_DIR := ../extern/OpenMPI
 OPENMPI_FILES := $(OPENMPI_DIR)/source/mpi/package.d
 
+MPI_DIR = $(OPENMPI_DIR)
+MPI_FILES = $(OPENMPI_FILES)
+
 MPICH_DIR := ../extern/cray-mpich
 MPICH_FILES := $(MPICH_DIR)/mpi.d
 
@@ -58,6 +61,13 @@ PROGRAMS := lmr gdtk-module
 SUB_PROGRAMS := lmr-run lmrZ-run
 ifeq ($(OPT_OUT_MPI), 0)
 	SUB_PROGRAMS += lmr-mpi-run lmrZ-mpi-run
+endif
+ifeq ($(WITH_MPICH),1)
+    SUB_PROGRAMS += lmrZ-mpich-run
+    MPI_LIBRARY_DIRS = $(shell mpicc -link_info | cut -d' ' -f 3)
+    MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L$d)
+    MPI_DIR = $(MPICH_DIR)
+    MPI_FILES = $(MPICH_FILES)
 endif
 SHARE_FILES :=
 ETC_FILES := lmr.cfg
@@ -67,8 +77,6 @@ AUX_PROGRAMS := prep-gas ugrid_partition prep-chem chemkin2eilmer prep-kinetics
 
 MPI_LIBRARY_DIRS = $(shell mpicc --showme:libdirs)
 MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L-L$d)
-MPI_DIR = $(OPENMPI_DIR)
-MPI_FILES = $(OPENMPI_FILES)
 
 include lmr-files.mk
 
@@ -441,6 +449,37 @@ lmrZ-mpi-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LM
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(DLINKFLAGS) -L-lmpi
+
+lmrZ-mpich-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
+	$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
+	$(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
+	$(DYAML_FILES) $(TINYENDIAN_FILES)
+	cd $(MPI_DIR); make
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/cray-mpich/' \
+	    -e 's/PUT_NUMBER_TYPE_HERE/complex/' \
+	$(LMR_CMD)/runsim.d > runsim_mpich.d
+	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)run_main \
+		$(DVERSION)mpi_parallel \
+		$(MPI_LIB_DIRS_SEARCH) \
+		$(DVERSION)newton_krylov \
+		$(DVERSION)complex_numbers \
+		runsim_mpich.d \
+		lmrconfig_with_str_subst.d \
+		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
+		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
+		$(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(MPI_FILES) \
+		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
+		$(DYAML_FILES) $(TINYENDIAN_FILES) \
+		$(DLINKFLAGS) -L-lmpi
+
 
 
 #### Python programs
