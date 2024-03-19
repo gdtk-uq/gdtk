@@ -10,6 +10,9 @@ NVCC ?= nvcc
 GPP ?= g++
 # default is NOT to opt out of MPI build
 OPT_OUT_MPI ?= 0
+MPI_IMPLEMENTATION := OpenMPI
+# default is NOT to use MPICH
+WITH_MPICH ?= 0
 
 # FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
@@ -63,11 +66,11 @@ ifeq ($(OPT_OUT_MPI), 0)
 	SUB_PROGRAMS += lmr-mpi-run lmrZ-mpi-run
 endif
 ifeq ($(WITH_MPICH),1)
-    SUB_PROGRAMS += lmrZ-mpich-run
     MPI_LIBRARY_DIRS = $(shell mpicc -link_info | cut -d' ' -f 3)
     MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L$d)
     MPI_DIR = $(MPICH_DIR)
     MPI_FILES = $(MPICH_FILES)
+	MPI_IMPLEMENTATION := MPICH
 endif
 SHARE_FILES :=
 ETC_FILES := lmr.cfg
@@ -286,7 +289,7 @@ clean:
 	- rm $(SUB_PROGRAMS)
 	- rm $(PY_PROGRAMS)
 	- rm lmrconfig_with_str_subst.d
-	- rm runsim_shared.d runsim_openmpi.d
+	- rm runsim_shared.d runsim_mpi.d
 	- rm -f gdtk-module
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(MPICH_DIR); make clean
@@ -400,14 +403,14 @@ lmr-mpi-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES)
 	cd $(MPI_DIR); make
-	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/openmpi/' \
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/$(MPI_IMPLEMENTATION)/' \
 	    -e 's/PUT_NUMBER_TYPE_HERE/real/' \
-	$(LMR_CMD)/runsim.d > runsim_openmpi.d
+	$(LMR_CMD)/runsim.d > runsim_mpi.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)run_main \
 		$(DVERSION)mpi_parallel \
 		$(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)newton_krylov \
-		runsim_openmpi.d \
+		runsim_mpi.d \
 		lmrconfig_with_str_subst.d \
 		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
 		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
@@ -429,15 +432,15 @@ lmrZ-mpi-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LM
 	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
 	$(DYAML_FILES) $(TINYENDIAN_FILES)
 	cd $(MPI_DIR); make
-	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/openmpi/' \
+	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/$(MPI_IMPLEMENTATION)/' \
 	    -e 's/PUT_NUMBER_TYPE_HERE/complex/' \
-	$(LMR_CMD)/runsim.d > runsim_openmpi.d
+	$(LMR_CMD)/runsim.d > runsim_mpi.d
 	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)run_main \
 		$(DVERSION)mpi_parallel \
 		$(MPI_LIB_DIRS_SEARCH) \
 		$(DVERSION)newton_krylov \
 		$(DVERSION)complex_numbers \
-		runsim_openmpi.d \
+		runsim_mpi.d \
 		lmrconfig_with_str_subst.d \
 		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
 		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
@@ -449,38 +452,6 @@ lmrZ-mpi-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LM
 		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
 		$(DYAML_FILES) $(TINYENDIAN_FILES) \
 		$(DLINKFLAGS) -L-lmpi
-
-lmrZ-mpich-run: lmrconfig_with_str_subst.d $(LMR_CORE_FILES) $(LMR_CMD_FILES) $(LMR_LUA_FILES) \
-	$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
-	$(GEOM_FILES) $(GRID_FILES) \
-	$(GAS_FILES) $(CEQ_SRC_FILES) $(LIBCEQ) $(LIBGASF) $(LIBLUA) $(GZIP_FILES) \
-	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-	$(NM_FILES) $(NTYPES_FILES) $(UTIL_FILES) \
-	$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) \
-	$(DYAML_FILES) $(TINYENDIAN_FILES)
-	cd $(MPI_DIR); make
-	sed -e 's/PUT_PARALLEL_FLAVOUR_HERE/cray-mpich/' \
-	    -e 's/PUT_NUMBER_TYPE_HERE/complex/' \
-	$(LMR_CMD)/runsim.d > runsim_mpich.d
-	$(DMD) $(FLAVOUR_FLAGS) $(DFLAGS) $(OF)$@ $(DVERSION)run_main \
-		$(DVERSION)mpi_parallel \
-		$(MPI_LIB_DIRS_SEARCH) \
-		$(DVERSION)newton_krylov \
-		$(DVERSION)complex_numbers \
-		runsim_mpich.d \
-		lmrconfig_with_str_subst.d \
-		$(EILMER4_FILES) $(LMR_CORE_FILES) $(LMR_LUA_FILES) $(LMR_CMD)/command.d $(LMR_CMD)/cmdhelper.d \
-		$(LMR_BC_FILES) $(LMR_SOLID_FILES) $(LMR_EFIELD_FILES) \
-		$(GEOM_FILES) $(GRID_FILES) \
-		$(GAS_FILES) $(CEQ_SRC_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(NTYPES_FILES) \
-		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(GASDYN_LUA_FILES) $(NM_LUA_FILES) $(MPI_FILES) \
-		$(LIBCEQ) $(LIBGASF) $(LIBLUA) \
-		$(DYAML_FILES) $(TINYENDIAN_FILES) \
-		$(DLINKFLAGS) -L-lmpi
-
-
 
 #### Python programs
 lmr-verify: $(PY_PROG_DIR)/lmr_verify.py
