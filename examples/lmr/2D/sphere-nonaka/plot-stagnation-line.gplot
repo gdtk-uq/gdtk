@@ -1,0 +1,20 @@
+set term pdfcairo enhanced font "Courier,20"
+set output "temperatures-on-stagnation-line.pdf"
+Db = 14.0e-3
+set xlabel "x/D"
+set ylabel "temperature, K"
+set yrange [0:6500]
+set key left
+plot 'stagnation-profile-T.dat' u (-column("pos.x")/Db):"T" t "T_{tr}" w l lw 3, \
+     '' u (-column("pos.x")/Db):"T-vibroelectronic" t "T_{v}" w l lw 3
+
+set output "species-massf-on-stagnation-line.pdf"
+set ylabel "mass fractions"
+set yrange [*:1]
+set logscale y
+set key bottom
+plot 'stagnation-profile-species.dat' u (-column("pos.x")/Db):"massf-N2" t 'N_2' w l lw 3, \
+     '' u (-column("pos.x")/Db):"massf-O2" t 'O_2' w l lw 3, \
+	 '' u (-column("pos.x")/Db):"massf-N" t 'N' w l lw 3, \
+	 '' u (-column("pos.x")/Db):"massf-O" t 'O' w l lw 3, \
+	 '' u (-column("pos.x")/Db):"massf-NO" t 'NO' w l lw 3

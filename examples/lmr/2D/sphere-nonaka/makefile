@@ -26,6 +26,10 @@ post:
 	gnuplot plot-shock-shape.gplot
 	python3 compute-error.py
 
+slice:
+	lmr slice-flow --final --slice-list="0,:,0,0" --names="T,T-vibroelectronic" --output=stagnation-profile-T.dat
+	lmr slice-flow --final --slice-list="0,:,0,0" --names="massf-N2,massf-O2,massf-N,massf-O,massf-NO" --output=stagnation-profile-species.dat
+
 test:
 	PYTHONDONTWRITEBYTECODE=1 pytest -v
 
