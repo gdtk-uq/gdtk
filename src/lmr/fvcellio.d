@@ -148,7 +148,7 @@ public:
         alias cfg = GlobalConfig;
         foreach (var; variables) {
             if (var.startsWith("massf-")) {
-                auto spName = var.split("-")[1];
+                auto spName = var["massf-".length..$];
                 auto spIdx = cfg.gmodel_master.species_index(spName);
                 if (spIdx != -1)
                     mSpecies[var.idup] = spIdx;
@@ -482,7 +482,7 @@ public:
 	alias cfg = GlobalConfig;
 	foreach (var; variables) {
 	    if (var.startsWith("massf-")) {
-		auto spName = var.split("-")[1];
+                auto spName = var["massf-".length..$];
 		auto spIdx = cfg.gmodel_master.species_index(spName);
 		if (spIdx != -1)
 		    mSpecies[var.idup] = spIdx;
